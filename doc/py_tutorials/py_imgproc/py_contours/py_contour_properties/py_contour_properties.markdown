@@ -8,50 +8,54 @@ documentation](http://www.mathworks.in/help/images/ref/regionprops.html).
 *(NB : Centroid, Area, Perimeter etc also belong to this category, but we have seen it in last
 chapter)*
 
--# Aspect Ratio
+1. Aspect Ratio
 ---------------
 
 It is the ratio of width to height of bounding rect of the object.
 
 \f[Aspect \; Ratio = \frac{Width}{Height}\f]
-@code{.python}
+@code{.py}
 x,y,w,h = cv2.boundingRect(cnt)
 aspect_ratio = float(w)/h
 @endcode
+
 2. Extent
 ---------
 
 Extent is the ratio of contour area to bounding rectangle area.
 
 \f[Extent = \frac{Object \; Area}{Bounding \; Rectangle \; Area}\f]
-@code{.python}
+@code{.py}
 area = cv2.contourArea(cnt)
 x,y,w,h = cv2.boundingRect(cnt)
 rect_area = w*h
 extent = float(area)/rect_area
 @endcode
+
 3. Solidity
 -----------
 
 Solidity is the ratio of contour area to its convex hull area.
 
 \f[Solidity = \frac{Contour \; Area}{Convex \; Hull \; Area}\f]
-@code{.python}
+@code{.py}
 area = cv2.contourArea(cnt)
 hull = cv2.convexHull(cnt)
 hull_area = cv2.contourArea(hull)
 solidity = float(area)/hull_area
 @endcode
+
 4. Equivalent Diameter
 ----------------------
 
 Equivalent Diameter is the diameter of the circle whose area is same as the contour area.
 
 \f[Equivalent \; Diameter = \sqrt{\frac{4 \times Contour \; Area}{\pi}}\f]
-@code{.python}
+@code{.py}
 area = cv2.contourArea(cnt)
 equi_diameter = np.sqrt(4*area/np.pi)
 @endcode
+
 5. Orientation
 --------------
 
@@ -60,6 +64,7 @@ Minor Axis lengths.
 @code{.py}
 (x,y),(MA,ma),angle = cv2.fitEllipse(cnt)
 @endcode
+
 6. Mask and Pixel Points
 ------------------------
 
@@ -75,13 +80,14 @@ are given to do the same. Results are also same, but with a slight difference. N
 coordinates in **(row, column)** format, while OpenCV gives coordinates in **(x,y)** format. So
 basically the answers will be interchanged. Note that, **row = x** and **column = y**.
 
--# Maximum Value, Minimum Value and their locations
+7. Maximum Value, Minimum Value and their locations
 ---------------------------------------------------
 
 We can find these parameters using a mask image.
 @code{.py}
 min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(imgray,mask = mask)
 @endcode
+
 8. Mean Color or Mean Intensity
 -------------------------------
 
@@ -90,6 +96,7 @@ grayscale mode. We again use the same mask to do it.
 @code{.py}
 mean_val = cv2.mean(im,mask = mask)
 @endcode
+
 9. Extreme Points
 -----------------
 
@@ -111,4 +118,3 @@ Exercises
 ---------
 
 -#  There are still some features left in matlab regionprops doc. Try to implement them.
-

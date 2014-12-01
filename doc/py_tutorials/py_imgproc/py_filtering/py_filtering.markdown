@@ -5,7 +5,7 @@ Goals
 -----
 
 Learn to:
-   -   Blur the images with various low pass filters
+    -   Blur the images with various low pass filters
     -   Apply custom-made filters to images (2D convolution)
 
 2D Convolution ( Image Filtering )
@@ -61,7 +61,9 @@ specify the width and height of kernel. A 3x3 normalized box filter would look l
 \f[K =  \frac{1}{9} \begin{bmatrix} 1 & 1 & 1  \\ 1 & 1 & 1 \\ 1 & 1 & 1 \end{bmatrix}\f]
 
 @note If you don't want to use normalized box filter, use **cv2.boxFilter()**. Pass an argument
-normalize=False to the function. Check a sample demo below with a kernel of 5x5 size:
+normalize=False to the function.
+
+Check a sample demo below with a kernel of 5x5 size:
 @code{.py}
 import cv2
 import numpy as np

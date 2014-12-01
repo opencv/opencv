@@ -55,26 +55,35 @@ So each contour has its own information regarding what hierarchy it is, who is i
 parent etc. OpenCV represents it as an array of four values : **[Next, Previous, First_Child,
 Parent]**
 
+<center>*"Next denotes next contour at the same hierarchical level."*</center>
+
 For eg, take contour-0 in our picture. Who is next contour in its same level ? It is contour-1. So
 simply put Next = 1. Similarly for Contour-1, next is contour-2. So Next = 2.
 
 What about contour-2? There is no next contour in the same level. So simply, put Next = -1. What
 about contour-4? It is in same level with contour-5. So its next contour is contour-5, so Next = 5.
 
+<center>*"Previous denotes previous contour at the same hierarchical level."*</center>
+
 It is same as above. Previous contour of contour-1 is contour-0 in the same level. Similarly for
 contour-2, it is contour-1. And for contour-0, there is no previous, so put it as -1.
+
+<center>*"First_Child denotes its first child contour."*</center>
 
 There is no need of any explanation. For contour-2, child is contour-2a. So it gets the
 corresponding index value of contour-2a. What about contour-3a? It has two children. But we take
 only first child. And it is contour-4. So First_Child = 4 for contour-3a.
 
+<center>*"Parent denotes index of its parent contour."*</center>
+
 It is just opposite of **First_Child**. Both for contour-4 and contour-5, parent contour is
 contour-3a. For contour-3a, it is contour-3 and so on.
 
-@note If there is no child or parent, that field is taken as -1 So now we know about the hierarchy
-style used in OpenCV, we can check into Contour Retrieval Modes in OpenCV with the help of same
-image given above. ie what do flags like cv2.RETR_LIST, cv2.RETR_TREE, cv2.RETR_CCOMP,
-cv2.RETR_EXTERNAL etc mean?
+@note If there is no child or parent, that field is taken as -1
+
+So now we know about the hierarchy style used in OpenCV, we can check into Contour Retrieval Modes
+in OpenCV with the help of same image given above. ie what do flags like cv2.RETR_LIST,
+cv2.RETR_TREE, cv2.RETR_CCOMP, cv2.RETR_EXTERNAL etc mean?
 
 Contour Retrieval Mode
 ----------------------
@@ -92,7 +101,7 @@ Below is the result I got, and each row is hierarchy details of corresponding co
 row corresponds to contour 0. Next contour is contour 1. So Next = 1. There is no previous contour,
 so Previous = 0. And the remaining two, as told before, it is -1.
 @code{.py}
-hierarchy
+>>> hierarchy
 array([[[ 1, -1, -1, -1],
         [ 2,  0, -1, -1],
         [ 3,  1, -1, -1],
@@ -114,7 +123,7 @@ So, in our image, how many extreme outer contours are there? ie at hierarchy-0 l
 contours 0,1,2, right? Now try to find the contours using this flag. Here also, values given to each
 element is same as above. Compare it with above result. Below is what I got :
 @code{.py}
-hierarchy
+>>> hierarchy
 array([[[ 1, -1, -1, -1],
         [ 2,  0, -1, -1],
         [-1,  1, -1, -1]]])
@@ -159,7 +168,7 @@ no child, parent is contour-3. So array is [-1,-1,-1,3].
 
 Remaining you can fill up. This is the final answer I got:
 @code{.py}
-hierarchy
+>>> hierarchy
 array([[[ 3, -1,  1, -1],
         [ 2, -1, -1,  0],
         [-1,  1, -1,  0],
@@ -170,6 +179,7 @@ array([[[ 3, -1,  1, -1],
         [ 8,  5, -1, -1],
         [-1,  7, -1, -1]]])
 @endcode
+
 ### 4. RETR_TREE
 
 And this is the final guy, Mr.Perfect. It retrieves all the contours and creates a full family
@@ -189,7 +199,7 @@ contour-2. Parent is contour-0. So array is [-1,-1,2,0].
 
 And remaining, try yourself. Below is the full answer:
 @code{.py}
-hierarchy
+>>> hierarchy
 array([[[ 7, -1,  1, -1],
         [-1, -1,  2,  0],
         [-1, -1,  3,  1],
@@ -200,6 +210,7 @@ array([[[ 7, -1,  1, -1],
         [ 8,  0, -1, -1],
         [-1,  7, -1, -1]]])
 @endcode
+
 Additional Resources
 --------------------
 

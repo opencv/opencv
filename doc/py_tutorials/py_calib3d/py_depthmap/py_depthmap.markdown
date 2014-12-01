@@ -5,7 +5,7 @@ Goal
 ----
 
 In this session,
-   -   We will learn to create depth map from stereo images.
+    -   We will learn to create depth map from stereo images.
 
 Basics
 ------

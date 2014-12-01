@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will learn to use marker-based image segmentation using watershed algorithm
+    -   We will learn to use marker-based image segmentation using watershed algorithm
     -   We will see: **cv2.watershed()**
 
 Theory
@@ -146,4 +146,3 @@ Exercises
 
 -#  OpenCV samples has an interactive sample on watershed segmentation, watershed.py. Run it, Enjoy
     it, then learn it.
-

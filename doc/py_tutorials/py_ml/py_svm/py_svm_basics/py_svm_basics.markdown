@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter
-   -   We will see an intuitive understanding of SVM
+    -   We will see an intuitive understanding of SVM
 
 Theory
 ------
@@ -79,11 +79,15 @@ mapping function which maps a two-dimensional point to three-dimensional space a
 
 Let us define a kernel function \f$K(p,q)\f$ which does a dot product between two points, shown below:
 
-\f[K(p,q)  = \phi(p).\phi(q) &= \phi(p)^T \phi(q) \\
+\f[
+\begin{aligned}
+K(p,q)  = \phi(p).\phi(q) &= \phi(p)^T \phi(q) \\
                           &= (p_{1}^2,p_{2}^2,\sqrt{2} p_1 p_2).(q_{1}^2,q_{2}^2,\sqrt{2} q_1 q_2) \\
                           &= p_1 q_1 + p_2 q_2 + 2 p_1 q_1 p_2 q_2 \\
                           &= (p_1 q_1 + p_2 q_2)^2 \\
-          \phi(p).\phi(q) &= (p.q)^2\f]
+          \phi(p).\phi(q) &= (p.q)^2
+\end{aligned}
+\f]
 
 It means, a dot product in three-dimensional space can be achieved using squared dot product in
 two-dimensional space. This can be applied to higher dimensional space. So we can calculate higher

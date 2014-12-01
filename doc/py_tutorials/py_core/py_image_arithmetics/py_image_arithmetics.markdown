@@ -16,15 +16,17 @@ res = img1 + img2. Both images should be of same depth and type, or second image
 scalar value.
 
 @note There is a difference between OpenCV addition and Numpy addition. OpenCV addition is a
-saturated operation while Numpy addition is a modulo operation. For example, consider below sample:
-@code{.py}
-x = np.uint8([250])
-y = np.uint8([10])
+saturated operation while Numpy addition is a modulo operation.
 
-print cv2.add(x,y) # 250+10 = 260 => 255
+For example, consider below sample:
+@code{.py}
+>>> x = np.uint8([250])
+>>> y = np.uint8([10])
+
+>>> print cv2.add(x,y) # 250+10 = 260 => 255
 [[255]]
 
-print x+y          # 250+10 = 260 % 256 = 4
+>>> print x+y          # 250+10 = 260 % 256 = 4
 [4]
 @endcode
 It will be more visible when you add two images. OpenCV function will provide a better result. So
@@ -114,4 +116,3 @@ Exercises
 
 -#  Create a slide show of images in a folder with smooth transition between images using
     cv2.addWeighted function
-

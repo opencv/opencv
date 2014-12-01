@@ -43,7 +43,7 @@ determine if a window can contain a corner or not.
 \f[R = det(M) - k(trace(M))^2\f]
 
 where
-   -   \f$det(M) = \lambda_1 \lambda_2\f$
+    -   \f$det(M) = \lambda_1 \lambda_2\f$
     -   \f$trace(M) = \lambda_1 + \lambda_2\f$
     -   \f$\lambda_1\f$ and \f$\lambda_2\f$ are the eigen values of M
 

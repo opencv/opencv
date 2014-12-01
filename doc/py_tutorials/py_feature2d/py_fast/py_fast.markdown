@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will understand the basics of FAST algorithm
+    -   We will understand the basics of FAST algorithm
     -   We will find corners using OpenCV functionalities for FAST algorithm.
 
 Theory

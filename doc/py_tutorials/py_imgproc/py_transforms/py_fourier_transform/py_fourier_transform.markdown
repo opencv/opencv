@@ -5,7 +5,7 @@ Goal
 ----
 
 In this section, we will learn
-   -   To find the Fourier Transform of images using OpenCV
+    -   To find the Fourier Transform of images using OpenCV
     -   To utilize the FFT functions available in Numpy
     -   Some applications of Fourier Transform
     -   We will see following functions : **cv2.dft()**, **cv2.idft()** etc
@@ -134,11 +134,14 @@ plt.subplot(122),plt.imshow(magnitude_spectrum, cmap = 'gray')
 plt.title('Magnitude Spectrum'), plt.xticks([]), plt.yticks([])
 plt.show()
 @endcode
+
 @note You can also use **cv2.cartToPolar()** which returns both magnitude and phase in a single shot
+
 So, now we have to do inverse DFT. In previous session, we created a HPF, this time we will see how
 to remove high frequency contents in the image, ie we apply LPF to image. It actually blurs the
 image. For this, we create a mask first with high value (1) at low frequencies, ie we pass the LF
 content, and 0 at HF region.
+
 @code{.py}
 rows, cols = img.shape
 crow,ccol = rows/2 , cols/2
@@ -165,7 +168,10 @@ See the result:
 
 @note As usual, OpenCV functions **cv2.dft()** and **cv2.idft()** are faster than Numpy
 counterparts. But Numpy functions are more user-friendly. For more details about performance issues,
-see below section. Performance Optimization of DFT ==================================
+see below section.
+
+Performance Optimization of DFT
+===============================
 
 Performance of DFT calculation is better for some array size. It is fastest when array size is power
 of two. The arrays whose size is a product of 2’s, 3’s, and 5’s are also processed quite

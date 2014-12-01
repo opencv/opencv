@@ -54,7 +54,9 @@ for i in xrange(6):
 plt.show()
 @endcode
 @note To plot multiple images, we have used plt.subplot() function. Please checkout Matplotlib docs
-for more details. Result is given below :
+for more details.
+
+Result is given below :
 
 ![image](images/threshold.jpg)
 
@@ -70,7 +72,7 @@ results for images with varying illumination.
 It has three ‘special’ input params and only one output argument.
 
 **Adaptive Method** - It decides how thresholding value is calculated.
-   -   cv2.ADAPTIVE_THRESH_MEAN_C : threshold value is the mean of neighbourhood area.
+    -   cv2.ADAPTIVE_THRESH_MEAN_C : threshold value is the mean of neighbourhood area.
     -   cv2.ADAPTIVE_THRESH_GAUSSIAN_C : threshold value is the weighted sum of neighbourhood
         values where weights are a gaussian window.
 
@@ -229,4 +231,3 @@ Exercises
 ---------
 
 -#  There are some optimizations available for Otsu's binarization. You can search and implement it.
-

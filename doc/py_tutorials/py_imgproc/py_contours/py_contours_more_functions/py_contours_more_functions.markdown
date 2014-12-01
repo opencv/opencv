@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter, we will learn about
-   -   Convexity defects and how to find them.
+    -   Convexity defects and how to find them.
     -   Finding shortest distance from a point to a polygon
     -   Matching different shapes
 
@@ -23,11 +23,15 @@ call would look like below:
 hull = cv2.convexHull(cnt,returnPoints = False)
 defects = cv2.convexityDefects(cnt,hull)
 @endcode
+
 @note Remember we have to pass returnPoints = False while finding convex hull, in order to find
-convexity defects. It returns an array where each row contains these values - **[ start point, end
-point, farthest point, approximate distance to farthest point ]**. We can visualize it using an
-image. We draw a line joining start point and end point, then draw a circle at the farthest point.
-Remember first three values returned are indices of cnt. So we have to bring those values from cnt.
+convexity defects.
+
+It returns an array where each row contains these values - **[ start point, end point, farthest
+point, approximate distance to farthest point ]**. We can visualize it using an image. We draw a
+line joining start point and end point, then draw a circle at the farthest point. Remember first
+three values returned are indices of cnt. So we have to bring those values from cnt.
+
 @code{.py}
 import cv2
 import numpy as np
@@ -72,8 +76,9 @@ False, it finds whether the point is inside or outside or on the contour (it ret
 respectively).
 
 @note If you don't want to find the distance, make sure third argument is False, because, it is a
-time consuming process. So, making it False gives about 2-3X speedup. 3. Match
-Shapes -----------------
+time consuming process. So, making it False gives about 2-3X speedup.
+
+### 3. Match Shapes
 
 OpenCV comes with a function **cv2.matchShapes()** which enables us to compare two shapes, or two
 contours and returns a metric showing the similarity. The lower the result, the better match it is.
@@ -110,7 +115,10 @@ See, even image rotation doesn't affect much on this comparison.
 
 @sa [Hu-Moments](http://en.wikipedia.org/wiki/Image_moment#Rotation_invariant_moments) are seven
 moments invariant to translation, rotation and scale. Seventh one is skew-invariant. Those values
-can be found using **cv2.HuMoments()** function. Additional Resources =====================
+can be found using **cv2.HuMoments()** function.
+
+Additional Resources
+====================
 
 Exercises
 ---------
@@ -120,6 +128,5 @@ Exercises
     inside curve is blue depending on the distance. Similarly outside points are red. Contour edges
     are marked with White. So problem is simple. Write a code to create such a representation of
     distance.
-2.  Compare images of digits or letters using **cv2.matchShapes()**. ( That would be a simple step
+-#  Compare images of digits or letters using **cv2.matchShapes()**. ( That would be a simple step
     towards OCR )
-

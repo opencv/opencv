@@ -5,7 +5,7 @@ Goal
 ----
 
 Learn to
-   -   Find histograms, using both OpenCV and Numpy functions
+    -   Find histograms, using both OpenCV and Numpy functions
     -   Plot histograms, using OpenCV and Matplotlib functions
     -   You will see these functions : **cv2.calcHist()**, **np.histogram()** etc.
 
@@ -39,8 +39,8 @@ terminologies related with histograms.
 **BINS** :The above histogram shows the number of pixels for every pixel value, ie from 0 to 255. ie
 you need 256 values to show the above histogram. But consider, what if you need not find the number
 of pixels for all pixel values separately, but number of pixels in a interval of pixel values? say
-for example, you need to find the number of pixels lying between 0 to 15, then 16 to 31, ..., 240 to
-255. You will need only 16 values to represent the histogram. And that is what is shown in example
+for example, you need to find the number of pixels lying between 0 to 15, then 16 to 31, ..., 240 to 255.
+You will need only 16 values to represent the histogram. And that is what is shown in example
 given in [OpenCV Tutorials on
 histograms](http://docs.opencv.org/doc/tutorials/imgproc/histograms/histogram_calculation/histogram_calculation.html#histogram-calculation).
 
@@ -60,18 +60,20 @@ intensity values.
 So now we use **cv2.calcHist()** function to find the histogram. Let's familiarize with the function
 and its parameters :
 
+<center><em>cv2.calcHist(images, channels, mask, histSize, ranges[, hist[, accumulate]])</em></center>
+
 -#  images : it is the source image of type uint8 or float32. it should be given in square brackets,
     ie, "[img]".
-2.  channels : it is also given in square brackets. It is the index of channel for which we
+-#  channels : it is also given in square brackets. It is the index of channel for which we
     calculate histogram. For example, if input is grayscale image, its value is [0]. For color
     image, you can pass [0], [1] or [2] to calculate histogram of blue, green or red channel
     respectively.
-3.  mask : mask image. To find histogram of full image, it is given as "None". But if you want to
+-#  mask : mask image. To find histogram of full image, it is given as "None". But if you want to
     find histogram of particular region of image, you have to create a mask image for that and give
     it as mask. (I will show an example later.)
-4.  histSize : this represents our BIN count. Need to be given in square brackets. For full scale,
+-#  histSize : this represents our BIN count. Need to be given in square brackets. For full scale,
     we pass [256].
-5.  ranges : this is our RANGE. Normally, it is [0,256].
+-#  ranges : this is our RANGE. Normally, it is [0,256].
 
 So let's start with a sample image. Simply load an image in grayscale mode and find its full
 histogram.
@@ -98,13 +100,15 @@ np.histogram(). So for one-dimensional histograms, you can better try that. Don'
 minlength = 256 in np.bincount. For example, hist = np.bincount(img.ravel(),minlength=256)
 
 @note OpenCV function is more faster than (around 40X) than np.histogram(). So stick with OpenCV
-function. Now we should plot histograms, but how ?
+function.
+
+Now we should plot histograms, but how?
 
 Plotting Histograms
 -------------------
 
 There are two ways for this,
-   -#  Short Way : use Matplotlib plotting functions
+    -#  Short Way : use Matplotlib plotting functions
     -#  Long Way : use OpenCV drawing functions
 
 ### 1. Using Matplotlib

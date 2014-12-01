@@ -113,8 +113,11 @@ working on this issue)*
 
 @note Python scalar operations are faster than Numpy scalar operations. So for operations including
 one or two elements, Python scalar is better than Numpy arrays. Numpy takes advantage when size of
-array is a little bit bigger. We will try one more example. This time, we will compare the
-performance of **cv2.countNonZero()** and **np.count_nonzero()** for same image.
+array is a little bit bigger.
+
+We will try one more example. This time, we will compare the performance of **cv2.countNonZero()**
+and **np.count_nonzero()** for same image.
+
 @code{.py}
 In [35]: %timeit z = cv2.countNonZero(img)
 100000 loops, best of 3: 15.8 us per loop

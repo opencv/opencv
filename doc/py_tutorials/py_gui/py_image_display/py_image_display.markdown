@@ -23,8 +23,9 @@ Second argument is a flag which specifies the way image should be read.
 -   cv2.IMREAD_GRAYSCALE : Loads image in grayscale mode
 -   cv2.IMREAD_UNCHANGED : Loads image as such including alpha channel
 
-@note Instead of these three flags, you can simply pass integers 1, 0 or -1 respectively. See the
-code below:
+@note Instead of these three flags, you can simply pass integers 1, 0 or -1 respectively.
+
+See the code below:
 @code{.py}
 import numpy as np
 import cv2
@@ -32,6 +33,7 @@ import cv2
 # Load an color image in grayscale
 img = cv2.imread('messi5.jpg',0)
 @endcode
+
 **warning**
 
 Even if the image path is wrong, it won't throw any error, but print img will give you None
@@ -58,15 +60,19 @@ the program continues. If **0** is passed, it waits indefinitely for a key strok
 set to detect specific key strokes like, if key a is pressed etc which we will discuss below.
 
 @note Besides binding keyboard events this function also processes many other GUI events, so you
-MUST use it to actually display the image. **cv2.destroyAllWindows()** simply destroys all the
-windows we created. If you want to destroy any specific window, use the function
-**cv2.destroyWindow()** where you pass the exact window name as the argument.
+MUST use it to actually display the image.
+
+**cv2.destroyAllWindows()** simply destroys all the windows we created. If you want to destroy any
+specific window, use the function **cv2.destroyWindow()** where you pass the exact window name as
+the argument.
 
 @note There is a special case where you can already create a window and load image to it later. In
 that case, you can specify whether window is resizable or not. It is done with the function
 **cv2.namedWindow()**. By default, the flag is cv2.WINDOW_AUTOSIZE. But if you specify flag to be
 cv2.WINDOW_NORMAL, you can resize window. It will be helpful when image is too large in dimension
-and adding track bar to windows. See the code below:
+and adding track bar to windows.
+
+See the code below:
 @code{.py}
 cv2.namedWindow('image', cv2.WINDOW_NORMAL)
 cv2.imshow('image',img)
@@ -100,6 +106,7 @@ elif k == ord('s'): # wait for 's' key to save and exit
     cv2.imwrite('messigray.png',img)
     cv2.destroyAllWindows()
 @endcode
+
 **warning**
 
 If you are using a 64-bit machine, you will have to modify k = cv2.waitKey(0) line as follows :
@@ -126,9 +133,13 @@ A screen-shot of the window will look like this :
 ![image](images/matplotlib_screenshot.jpg)
 
 @sa Plenty of plotting options are available in Matplotlib. Please refer to Matplotlib docs for more
-details. Some, we will see on the way. .. warning:: Color image loaded by OpenCV is in BGR mode. But
-Matplotlib displays in RGB mode. So color images will not be displayed correctly in Matplotlib if
-image is read with OpenCV. Please see the exercises for more details.
+details. Some, we will see on the way.
+
+__warning__
+
+Color image loaded by OpenCV is in BGR mode. But Matplotlib displays in RGB mode. So color images
+will not be displayed correctly in Matplotlib if image is read with OpenCV. Please see the exercises
+for more details.
 
 Additional Resources
 --------------------
@@ -140,4 +151,3 @@ Exercises
 
 -#  There is some problem when you try to load color image in OpenCV and display it in Matplotlib.
     Read [this discussion](http://stackoverflow.com/a/15074748/1134940) and understand it.
-

@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will mix up the feature matching and findHomography from calib3d module to find known
+    -   We will mix up the feature matching and findHomography from calib3d module to find known
         objects in a complex image.
 
 Basics
