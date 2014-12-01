@@ -353,43 +353,6 @@ inline unsigned RNG::next()
     return (unsigned)state;
 }
 
-
-
-///////////////////////////////////////// LineIterator ////////////////////////////////////////
-
-inline
-uchar* LineIterator::operator *()
-{
-    return ptr;
-}
-
-inline
-LineIterator& LineIterator::operator ++()
-{
-    int mask = err < 0 ? -1 : 0;
-    err += minusDelta + (plusDelta & mask);
-    ptr += minusStep + (plusStep & mask);
-    return *this;
-}
-
-inline
-LineIterator LineIterator::operator ++(int)
-{
-    LineIterator it = *this;
-    ++(*this);
-    return it;
-}
-
-inline
-Point LineIterator::pos() const
-{
-    Point p;
-    p.y = (int)((ptr - ptr0)/step);
-    p.x = (int)(((ptr - ptr0) - p.y*step)/elemSize);
-    return p;
-}
-
-
 //! returns the next unifomly-distributed random number of the specified type
 template<typename _Tp> static inline _Tp randu()
 {

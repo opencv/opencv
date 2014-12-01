@@ -170,7 +170,7 @@ CV_EXPORTS void updateWindow(const String& winname);
 struct QtFont
 {
     const char* nameFont;  // Qt: nameFont
-    Scalar      color;     // Qt: ColorFont -> cvScalar(blue_component, green_component, red\_component[, alpha_component])
+    Scalar      color;     // Qt: ColorFont -> cvScalar(blue_component, green_component, red_component[, alpha_component])
     int         font_face; // Qt: bool italic
     const int*  ascii;     // font data and metrics
     const int*  greek;

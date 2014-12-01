@@ -804,6 +804,36 @@ public:
 //! @{
 
 /** @brief struct returned by cv::moments
+
+The spatial moments \f$\texttt{Moments::m}_{ji}\f$ are computed as:
+
+\f[\texttt{m} _{ji}= \sum _{x,y}  \left ( \texttt{array} (x,y)  \cdot x^j  \cdot y^i \right )\f]
+
+The central moments \f$\texttt{Moments::mu}_{ji}\f$ are computed as:
+
+\f[\texttt{mu} _{ji}= \sum _{x,y}  \left ( \texttt{array} (x,y)  \cdot (x -  \bar{x} )^j  \cdot (y -  \bar{y} )^i \right )\f]
+
+where \f$(\bar{x}, \bar{y})\f$ is the mass center:
+
+\f[\bar{x} = \frac{\texttt{m}_{10}}{\texttt{m}_{00}} , \; \bar{y} = \frac{\texttt{m}_{01}}{\texttt{m}_{00}}\f]
+
+The normalized central moments \f$\texttt{Moments::nu}_{ij}\f$ are computed as:
+
+\f[\texttt{nu} _{ji}= \frac{\texttt{mu}_{ji}}{\texttt{m}_{00}^{(i+j)/2+1}} .\f]
+
+@note
+\f$\texttt{mu}_{00}=\texttt{m}_{00}\f$, \f$\texttt{nu}_{00}=1\f$
+\f$\texttt{nu}_{10}=\texttt{mu}_{10}=\texttt{mu}_{01}=\texttt{mu}_{10}=0\f$ , hence the values are not
+stored.
+
+The moments of a contour are defined in the same way but computed using the Green's formula (see
+<http://en.wikipedia.org/wiki/Green_theorem>). So, due to a limited raster resolution, the moments
+computed for a contour are slightly different from the moments computed for the same rasterized
+contour.
+
+@note
+Since the contour moments are computed using Green formula, you may get seemingly odd results for
+contours with self-intersections, e.g. a zero area (m00) for butterfly-shaped contours.
  */
 class CV_EXPORTS_W_MAP Moments
 {
