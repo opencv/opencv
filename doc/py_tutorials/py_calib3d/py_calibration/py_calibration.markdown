@@ -5,7 +5,7 @@ Goal
 ----
 
 In this section,
-   -   We will learn about distortions in camera, intrinsic and extrinsic parameters of camera etc.
+    -   We will learn about distortions in camera, intrinsic and extrinsic parameters of camera etc.
     -   We will learn to find these parameters, undistort images etc.
 
 Basics
@@ -96,9 +96,11 @@ ones.
 
 @sa Instead of chess board, we can use some circular grid, but then use the function
 **cv2.findCirclesGrid()** to find the pattern. It is said that less number of images are enough when
-using circular grid. Once we find the corners, we can increase their accuracy using
-**cv2.cornerSubPix()**. We can also draw the pattern using **cv2.drawChessboardCorners()**. All
-these steps are included in below code:
+using circular grid.
+
+Once we find the corners, we can increase their accuracy using **cv2.cornerSubPix()**. We can also
+draw the pattern using **cv2.drawChessboardCorners()**. All these steps are included in below code:
+
 @code{.py}
 import numpy as np
 import cv2
@@ -225,4 +227,3 @@ Exercises
 ---------
 
 -#  Try camera calibration with circular grid.
-

@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will understand the concepts of optical flow and its estimation using Lucas-Kanade
+    -   We will understand the concepts of optical flow and its estimation using Lucas-Kanade
         method.
     -   We will use functions like **cv2.calcOpticalFlowPyrLK()** to track feature points in a
         video.

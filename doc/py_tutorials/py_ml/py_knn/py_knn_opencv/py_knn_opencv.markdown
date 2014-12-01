@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter
-   -   We will use our knowledge on kNN to build a basic OCR application.
+    -   We will use our knowledge on kNN to build a basic OCR application.
     -   We will try with Digits and Alphabets data available that comes with OpenCV.
 
 OCR of Hand-written Digits

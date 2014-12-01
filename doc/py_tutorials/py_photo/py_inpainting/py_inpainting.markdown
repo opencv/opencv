@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will learn how to remove small noises, strokes etc in old photographs by a method called
+    -   We will learn how to remove small noises, strokes etc in old photographs by a method called
         inpainting
     -   We will see inpainting functionalities in OpenCV.
 

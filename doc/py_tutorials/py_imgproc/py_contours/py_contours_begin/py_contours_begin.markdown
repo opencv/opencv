@@ -62,8 +62,11 @@ But most of the time, below method will be useful:
 cnt = contours[4]
 cv2.drawContours(img, [cnt], 0, (0,255,0), 3)
 @endcode
+
 @note Last two methods are same, but when you go forward, you will see last one is more useful.
-Contour Approximation Method ================================
+
+Contour Approximation Method
+============================
 
 This is the third argument in cv2.findContours function. What does it denote actually?
 

@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will learn different morphological operations like Erosion, Dilation, Opening, Closing
+    -   We will learn different morphological operations like Erosion, Dilation, Opening, Closing
         etc.
     -   We will see different functions like : **cv2.erode()**, **cv2.dilate()**,
         **cv2.morphologyEx()** etc.
@@ -122,9 +122,9 @@ We manually created a structuring elements in the previous examples with help of
 rectangular shape. But in some cases, you may need elliptical/circular shaped kernels. So for this
 purpose, OpenCV has a function, **cv2.getStructuringElement()**. You just pass the shape and size of
 the kernel, you get the desired kernel.
-@code{.python}
+@code{.py}
 # Rectangular Kernel
-cv2.getStructuringElement(cv2.MORPH_RECT,(5,5))
+>>> cv2.getStructuringElement(cv2.MORPH_RECT,(5,5))
 array([[1, 1, 1, 1, 1],
        [1, 1, 1, 1, 1],
        [1, 1, 1, 1, 1],
@@ -132,7 +132,7 @@ array([[1, 1, 1, 1, 1],
        [1, 1, 1, 1, 1]], dtype=uint8)
 
 # Elliptical Kernel
-cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+>>> cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
 array([[0, 0, 1, 0, 0],
        [1, 1, 1, 1, 1],
        [1, 1, 1, 1, 1],
@@ -140,7 +140,7 @@ array([[0, 0, 1, 0, 0],
        [0, 0, 1, 0, 0]], dtype=uint8)
 
 # Cross-shaped Kernel
-cv2.getStructuringElement(cv2.MORPH_CROSS,(5,5))
+>>> cv2.getStructuringElement(cv2.MORPH_CROSS,(5,5))
 array([[0, 0, 1, 0, 0],
        [0, 0, 1, 0, 0],
        [1, 1, 1, 1, 1],

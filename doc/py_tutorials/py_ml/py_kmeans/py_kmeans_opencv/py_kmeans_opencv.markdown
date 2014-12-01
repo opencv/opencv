@@ -13,39 +13,32 @@ Understanding Parameters
 
 -#  **samples** : It should be of **np.float32** data type, and each feature should be put in a
     single column.
-2.  **nclusters(K)** : Number of clusters required at end
-3.  
-
-    **criteria** : It is the iteration termination criteria. When this criteria is satisfied, algorithm iteration stops. Actually, it should be a tuple of 3 parameters. They are \`( type, max_iter, epsilon )\`:
-   -   
-
-            3.a - type of termination criteria : It has 3 flags as below:
-   **cv2.TERM_CRITERIA_EPS** - stop the algorithm iteration if specified accuracy,
-                *epsilon*, is reached. **cv2.TERM_CRITERIA_MAX_ITER** - stop the algorithm
-                after the specified number of iterations, *max_iter*. **cv2.TERM_CRITERIA_EPS +
-                cv2.TERM_CRITERIA_MAX_ITER** - stop the iteration when any of the above
-                condition is met.
-
-        -   3.b - max_iter - An integer specifying maximum number of iterations.
-        -   3.c - epsilon - Required accuracy
+-#  **nclusters(K)** : Number of clusters required at end
+-#  **criteria** : It is the iteration termination criteria. When this criteria is satisfied, algorithm iteration stops. Actually, it should be a tuple of 3 parameters. They are \`( type, max_iter, epsilon )\`:
+        -#  type of termination criteria. It has 3 flags as below:
+            - **cv2.TERM_CRITERIA_EPS** - stop the algorithm iteration if specified accuracy, *epsilon*, is reached.
+            - **cv2.TERM_CRITERIA_MAX_ITER** - stop the algorithm after the specified number of iterations, *max_iter*.
+            - **cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER** - stop the iteration when any of the above condition is met.
+        -#  max_iter - An integer specifying maximum number of iterations.
+        -#  epsilon - Required accuracy
 
 -#  **attempts** : Flag to specify the number of times the algorithm is executed using different
     initial labellings. The algorithm returns the labels that yield the best compactness. This
     compactness is returned as output.
-5.  **flags** : This flag is used to specify how initial centers are taken. Normally two flags are
+-#  **flags** : This flag is used to specify how initial centers are taken. Normally two flags are
     used for this : **cv2.KMEANS_PP_CENTERS** and **cv2.KMEANS_RANDOM_CENTERS**.
 
 ### Output parameters
 
 -#  **compactness** : It is the sum of squared distance from each point to their corresponding
     centers.
-2.  **labels** : This is the label array (same as 'code' in previous article) where each element
+-#  **labels** : This is the label array (same as 'code' in previous article) where each element
     marked '0', '1'.....
-3.  **centers** : This is array of centers of clusters.
+-#  **centers** : This is array of centers of clusters.
 
 Now we will see how to apply K-Means algorithm with three examples.
 
--# Data with Only One Feature
+1. Data with Only One Feature
 -----------------------------
 
 Consider, you have a set of data with only one feature, ie one-dimensional. For eg, we can take our
@@ -104,7 +97,7 @@ Below is the output we got:
 
 ![image](images/oc_1d_clustered.png)
 
--# Data with Multiple Features
+2. Data with Multiple Features
 ------------------------------
 
 In previous example, we took only height for t-shirt problem. Here, we will take both height and
@@ -153,7 +146,7 @@ Below is the output we get:
 
 ![image](images/oc_2d_clustered.jpg)
 
--# Color Quantization
+3. Color Quantization
 ---------------------
 
 Color Quantization is the process of reducing number of colors in an image. One reason to do so is

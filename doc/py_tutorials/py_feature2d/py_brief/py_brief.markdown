@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter
-   -   We will see the basics of BRIEF algorithm
+    -   We will see the basics of BRIEF algorithm
 
 Theory
 ------

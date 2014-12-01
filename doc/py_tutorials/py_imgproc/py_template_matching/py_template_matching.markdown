@@ -5,7 +5,7 @@ Goals
 -----
 
 In this chapter, you will learn
-   -   To find objects in an image using Template Matching
+    -   To find objects in an image using Template Matching
     -   You will see these functions : **cv2.matchTemplate()**, **cv2.minMaxLoc()**
 
 Theory
@@ -24,7 +24,9 @@ is the maximum/minimum value. Take it as the top-left corner of rectangle and ta
 and height of the rectangle. That rectangle is your region of template.
 
 @note If you are using cv2.TM_SQDIFF as comparison method, minimum value gives the best match.
-Template Matching in OpenCV ============================
+
+Template Matching in OpenCV
+---------------------------
 
 Here, as an example, we will search for Messi's face in his photo. So I created a template as below:
 

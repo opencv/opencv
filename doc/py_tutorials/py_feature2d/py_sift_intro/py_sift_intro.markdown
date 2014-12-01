@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will learn about the concepts of SIFT algorithm
+    -   We will learn about the concepts of SIFT algorithm
     -   We will learn to find SIFT Keypoints and Descriptors.
 
 Theory
@@ -155,7 +155,7 @@ sift = cv2.SIFT()
 kp, des = sift.detectAndCompute(gray,None)
 @endcode
 Here kp will be a list of keypoints and des is a numpy array of shape
-\f$Number_of_Keypoints \times 128\f$.
+\f$Number\_of\_Keypoints \times 128\f$.
 
 So we got keypoints, descriptors etc. Now we want to see how to match keypoints in different images.
 That we will learn in coming chapters.

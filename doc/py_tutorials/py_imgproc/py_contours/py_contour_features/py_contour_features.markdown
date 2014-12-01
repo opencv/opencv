@@ -9,7 +9,7 @@ In this article, we will learn
 -   To find the different features of contours, like area, perimeter, centroid, bounding box etc
 -   You will see plenty of functions related to contours.
 
--# Moments
+1. Moments
 ----------
 
 Image moments help you to calculate some features like center of mass of the object, area of the
@@ -36,6 +36,7 @@ follows:
 cx = int(M['m10']/M['m00'])
 cy = int(M['m01']/M['m00'])
 @endcode
+
 2. Contour Area
 ---------------
 
@@ -43,6 +44,7 @@ Contour area is given by the function **cv2.contourArea()** or from moments, **M
 @code{.py}
 area = cv2.contourArea(cnt)
 @endcode
+
 3. Contour Perimeter
 --------------------
 
@@ -51,6 +53,7 @@ argument specify whether shape is a closed contour (if passed True), or just a c
 @code{.py}
 perimeter = cv2.arcLength(cnt,True)
 @endcode
+
 4. Contour Approximation
 ------------------------
 
@@ -74,7 +77,7 @@ curve is closed or not.
 
 ![image](images/approx.jpg)
 
--# Convex Hull
+5. Convex Hull
 --------------
 
 Convex Hull will look similar to contour approximation, but it is not (Both may provide same results
@@ -113,7 +116,7 @@ cnt[129] = [[234, 202]] which is same as first result (and so on for others).
 
 You will see it again when we discuss about convexity defects.
 
--# Checking Convexity
+6. Checking Convexity
 ---------------------
 
 There is a function to check if a curve is convex or not, **cv2.isContourConvex()**. It just return
@@ -121,6 +124,7 @@ whether True or False. Not a big deal.
 @code{.py}
 k = cv2.isContourConvex(cnt)
 @endcode
+
 7. Bounding Rectangle
 ---------------------
 
@@ -136,6 +140,7 @@ Let (x,y) be the top-left coordinate of the rectangle and (w,h) be its width and
 x,y,w,h = cv2.boundingRect(cnt)
 cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
 @endcode
+
 ### 7.b. Rotated Rectangle
 
 Here, bounding rectangle is drawn with minimum area, so it considers the rotation also. The function
@@ -153,7 +158,7 @@ rectangle is the rotated rect.
 
 ![image](images/boundingrect.png)
 
--# Minimum Enclosing Circle
+8. Minimum Enclosing Circle
 ---------------------------
 
 Next we find the circumcircle of an object using the function **cv2.minEnclosingCircle()**. It is a
@@ -166,7 +171,7 @@ cv2.circle(img,center,radius,(0,255,0),2)
 @endcode
 ![image](images/circumcircle.png)
 
--# Fitting an Ellipse
+9. Fitting an Ellipse
 ---------------------
 
 Next one is to fit an ellipse to an object. It returns the rotated rectangle in which the ellipse is
@@ -177,7 +182,7 @@ cv2.ellipse(img,ellipse,(0,255,0),2)
 @endcode
 ![image](images/fitellipse.png)
 
--# Fitting a Line
+10. Fitting a Line
 ------------------
 
 Similarly we can fit a line to a set of points. Below image contains a set of white points. We can

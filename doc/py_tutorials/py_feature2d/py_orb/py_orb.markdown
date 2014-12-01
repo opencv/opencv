@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will see the basics of ORB
+    -   We will see the basics of ORB
 
 Theory
 ------

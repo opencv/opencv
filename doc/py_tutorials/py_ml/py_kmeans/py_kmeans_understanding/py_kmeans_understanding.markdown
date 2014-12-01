@@ -62,9 +62,9 @@ Now **Step - 2** and **Step - 3** are iterated until both centroids are converge
 *(Or it may be stopped depending on the criteria we provide, like maximum number of iterations, or a
 specific accuracy is reached etc.)* **These points are such that sum of distances between test data
 and their corresponding centroids are minimum**. Or simply, sum of distances between
-\f$C1 \leftrightarrow Red_Points\f$ and \f$C2 \leftrightarrow Blue_Points\f$ is minimum.
+\f$C1 \leftrightarrow Red\_Points\f$ and \f$C2 \leftrightarrow Blue\_Points\f$ is minimum.
 
-\f[minimize \;\bigg[J = \sum_{All\: Red_Points}distance(C1,Red_Point) + \sum_{All\: Blue_Points}distance(C2,Blue_Point)\bigg]\f]
+\f[minimize \;\bigg[J = \sum_{All\: Red\_Points}distance(C1,Red\_Point) + \sum_{All\: Blue\_Points}distance(C2,Blue\_Point)\bigg]\f]
 
 Final result almost looks like below :
 

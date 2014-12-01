@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter
-   -   We will see GrabCut algorithm to extract foreground in images
+    -   We will see GrabCut algorithm to extract foreground in images
     -   We will create an interactive application for this.
 
 Theory
@@ -59,7 +59,7 @@ So what happens in background ?
 
 It is illustrated in below image (Image Courtesy: <http://www.cs.ru.ac.za/research/g02m1682/>)
 
-![image](images/grabcut.jpg)
+![image](images/grabcut_scheme.jpg)
 
 Demo
 ----
@@ -152,6 +152,5 @@ Exercises
 
 -#  OpenCV samples contain a sample grabcut.py which is an interactive tool using grabcut. Check it.
     Also watch this [youtube video](http://www.youtube.com/watch?v=kAwxLTDDAwU) on how to use it.
-2.  Here, you can make this into a interactive sample with drawing rectangle and strokes with mouse,
+-#  Here, you can make this into a interactive sample with drawing rectangle and strokes with mouse,
     create trackbar to adjust stroke width etc.
-

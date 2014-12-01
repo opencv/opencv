@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will understand the concept of Hough Tranform.
+    -   We will understand the concept of Hough Tranform.
     -   We will see how to use it detect lines in an image.
     -   We will see following functions: **cv2.HoughLines()**, **cv2.HoughLinesP()**
 
@@ -49,19 +49,15 @@ each point, the cell (50,90) will be incremented or voted up, while other cells 
 voted up. This way, at the end, the cell (50,90) will have maximum votes. So if you search the
 accumulator for maximum votes, you get the value (50,90) which says, there is a line in this image
 at distance 50 from origin and at angle 90 degrees. It is well shown in below animation (Image
-Courtesy: Amos Storkey _ )
+Courtesy: [Amos Storkey](http://homepages.inf.ed.ac.uk/amos/hough.html) )
 
-    .. image:: images/houghlinesdemo.gif
+![](images/houghlinesdemo.gif)
 
+This is how hough transform for lines works. It is simple, and may be you can implement it using
+Numpy on your own. Below is an image which shows the accumulator. Bright spots at some locations
+denotes they are the parameters of possible lines in the image. (Image courtesy: [Wikipedia](http://en.wikipedia.org/wiki/Hough_transform))
 
-
-
-This is how hough transform for lines works. It is simple, and may be you can implement it using Numpy on your own. Below is an image which shows the accumulator. Bright spots at some locations denotes they are the parameters of possible lines in the image. (Image courtesy: Wikipedia
-\<<http://en.wikipedia.org/wiki/Hough_transform>\>_ )
-
-    .. image:: images/houghlines2.jpg
-
-
+![](images/houghlines2.jpg)
 
 Hough Tranform in OpenCV
 =========================
@@ -112,9 +108,11 @@ Bettinger's home page](http://phdfb1.free.fr/robot/mscthesis/node14.html)
 
 ![image](images/houghlines4.png)
 
-OpenCV implementation is based on Robust Detection of Lines Using the Progressive Probabilistic Hough Transform by Matas, J. and Galambos, C. and Kittler, J.V.. The function used is **cv2.HoughLinesP()**. It has two new arguments.
-   -   **minLineLength** - Minimum length of line. Line segments shorter than this are rejected.
-    -   **maxLineGap** - Maximum allowed gap between line segments to treat them as single line.
+OpenCV implementation is based on Robust Detection of Lines Using the Progressive Probabilistic
+Hough Transform by Matas, J. and Galambos, C. and Kittler, J.V.. The function used is
+**cv2.HoughLinesP()**. It has two new arguments.
+-   **minLineLength** - Minimum length of line. Line segments shorter than this are rejected.
+-   **maxLineGap** - Maximum allowed gap between line segments to treat them as single line.
 
 Best thing is that, it directly returns the two endpoints of lines. In previous case, you got only
 the parameters of lines, and you had to find all the points. Here, everything is direct and simple.

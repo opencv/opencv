@@ -82,6 +82,7 @@ idea what color is there on a first look, unless you know the Hue values of diff
 I prefer this method. It is simple and better.
 
 @note While using this function, remember, interpolation flag should be nearest for better results.
+
 Consider code:
 @code{.py}
 import cv2

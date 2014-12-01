@@ -70,20 +70,18 @@ pts = np.array([[10,5],[20,30],[70,20],[50,10]], np.int32)
 pts = pts.reshape((-1,1,2))
 cv2.polylines(img,[pts],True,(0,255,255))
 @endcode
-**note**
 
-If third argument is False, you will get a polylines joining all the points, not a closed shape.
+@note If third argument is False, you will get a polylines joining all the points, not a closed
+shape.
 
-**note**
-
-cv2.polylines() can be used to draw multiple lines. Just create a list of all the lines you want
-to draw and pass it to the function. All lines will be drawn individually. It is a much better and
-faster way to draw a group of lines than calling cv2.line() for each line.
+@note cv2.polylines() can be used to draw multiple lines. Just create a list of all the lines you
+want to draw and pass it to the function. All lines will be drawn individually. It is a much better
+and faster way to draw a group of lines than calling cv2.line() for each line.
 
 ### Adding Text to Images:
 
 To put texts in images, you need specify following things.
-   -   Text data that you want to write
+    -   Text data that you want to write
     -   Position coordinates of where you want put it (i.e. bottom-left corner where data starts).
     -   Font type (Check **cv2.putText()** docs for supported fonts)
     -   Font Scale (specifies the size of font)
@@ -95,12 +93,13 @@ We will write **OpenCV** on our image in white color.
 font = cv2.FONT_HERSHEY_SIMPLEX
 cv2.putText(img,'OpenCV',(10,500), font, 4,(255,255,255),2,cv2.LINE_AA)
 @endcode
+
 ### Result
 
 So it is time to see the final result of our drawing. As you studied in previous articles, display
 the image to see it.
 
-![image](images/drawing.jpg)
+![image](images/drawing_result.jpg)
 
 Additional Resources
 --------------------
@@ -112,4 +111,3 @@ Exercises
 ---------
 
 -#  Try to create the logo of OpenCV using drawing functions available in OpenCV.
-

@@ -5,7 +5,7 @@ Goals
 -----
 
 In this tutorial
-   -   We will learn to setup OpenCV-Python in your Fedora system. Below steps are tested for
+    -   We will learn to setup OpenCV-Python in your Fedora system. Below steps are tested for
         Fedora 18 (64-bit) and Fedora 19 (32-bit).
 
 Introduction
@@ -24,13 +24,13 @@ Installing OpenCV-Python from Pre-built Binaries
 ------------------------------------------------
 
 Install all packages with following command in terminal as root.
-@code{.bash}
-\f$ yum install numpy opencv*
+@code{.sh}
+$ yum install numpy opencv*
 @endcode
 Open Python IDLE (or IPython) and type following codes in Python terminal.
-@code{.python}
-import cv2
-print cv2.__version__
+@code{.py}
+>>> import cv2
+>>> print cv2.__version__
 @endcode
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
@@ -57,14 +57,14 @@ dependencies, you can leave if you don't want.
 
 We need **CMake** to configure the installation, **GCC** for compilation, **Python-devel** and
 **Numpy** for creating Python extensions etc.
-@code{.bash}
+@code{.sh}
 yum install cmake
 yum install python-devel numpy
 yum install gcc gcc-c++
 @endcode
 Next we need **GTK** support for GUI features, Camera support (libdc1394, libv4l), Media Support
 (ffmpeg, gstreamer) etc.
-@code{.bash}
+@code{.sh}
 yum install gtk2-devel
 yum install libdc1394-devel
 yum install libv4l-devel
@@ -80,7 +80,7 @@ below. You can either leave it or install it, your call :)
 OpenCV comes with supporting files for image formats like PNG, JPEG, JPEG2000, TIFF, WebP etc. But
 it may be a little old. If you want to get latest libraries, you can install development files for
 these formats.
-@code{.bash}
+@code{.sh}
 yum install libpng-devel
 yum install libjpeg-turbo-devel
 yum install jasper-devel
@@ -91,13 +91,13 @@ yum install libwebp-devel
 Several OpenCV functions are parallelized with **Intel's Threading Building Blocks** (TBB). But if
 you want to enable it, you need to install TBB first. ( Also while configuring installation with
 CMake, don't forget to pass -D WITH_TBB=ON. More details below.)
-@code{.bash}
+@code{.sh}
 yum install tbb-devel
 @endcode
 OpenCV uses another library **Eigen** for optimized mathematical operations. So if you have Eigen
 installed in your system, you can exploit it. ( Also while configuring installation with CMake,
 don't forget to pass -D WITH_EIGEN=ON. More details below.)
-@code{.bash}
+@code{.sh}
 yum install eigen3-devel
 @endcode
 If you want to build **documentation** ( *Yes, you can create offline version of OpenCV's complete
@@ -106,7 +106,7 @@ internet always if any question, and it is quite FAST!!!* ), you need to install
 documentation generation tool) and **pdflatex** (if you want to create a PDF version of it). ( Also
 while configuring installation with CMake, don't forget to pass -D BUILD_DOCS=ON. More details
 below.)
-@code{.bash}
+@code{.sh}
 yum install python-sphinx
 yum install texlive
 @endcode
@@ -117,7 +117,7 @@ site](http://sourceforge.net/projects/opencvlibrary/). Then extract the folder.
 
 Or you can download latest source from OpenCV's github repo. (If you want to contribute to OpenCV,
 choose this. It always keeps your OpenCV up-to-date). For that, you need to install **Git** first.
-@code{.bash}
+@code{.sh}
 yum install git
 git clone https://github.com/Itseez/opencv.git
 @endcode
@@ -126,7 +126,7 @@ take some time depending upon your internet connection.
 
 Now open a terminal window and navigate to the downloaded OpenCV folder. Create a new build folder
 and navigate to it.
-@code{.bash}
+@code{.sh}
 mkdir build
 cd build
 @endcode
@@ -136,12 +136,12 @@ Now we have installed all the required dependencies, let's install OpenCV. Insta
 configured with CMake. It specifies which modules are to be installed, installation path, which
 additional libraries to be used, whether documentation and examples to be compiled etc. Below
 command is normally used for configuration (executed from build folder).
-@code{.bash}
+@code{.sh}
 cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
 @endcode
 It specifies that build type is "Release Mode" and installation path is /usr/local. Observe the -D
 before each option and .. at the end. In short, this is the format:
-@code{.bash}
+@code{.sh}
 cmake [-D <flag>] [-D <flag>] ..
 @endcode
 You can specify as many flags you want, but each flag should be preceded by -D.
@@ -154,26 +154,26 @@ modules (since we use OpenCV-Python, we don't need GPU related modules. It saves
 understanding.)*
 
 -   Enable TBB and Eigen support:
-    @code{.bash}
+    @code{.sh}
     cmake -D WITH_TBB=ON -D WITH_EIGEN=ON ..
     @endcode
 -   Enable documentation and disable tests and samples
-    @code{.bash}
+    @code{.sh}
     cmake -D BUILD_DOCS=ON -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMPLES=OFF ..
     @endcode
 -   Disable all GPU related modules.
-    @code{.bash}
+    @code{.sh}
     cmake -D WITH_OPENCL=OFF -D WITH_CUDA=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_gpuarithm=OFF -D BUILD_opencv_gpubgsegm=OFF -D BUILD_opencv_gpucodec=OFF -D BUILD_opencv_gpufeatures2d=OFF -D BUILD_opencv_gpufilters=OFF -D BUILD_opencv_gpuimgproc=OFF -D BUILD_opencv_gpulegacy=OFF -D BUILD_opencv_gpuoptflow=OFF -D BUILD_opencv_gpustereo=OFF -D BUILD_opencv_gpuwarping=OFF ..
     @endcode
 -   Set installation path and build type
-    @code{.bash}
+    @code{.sh}
     cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
     @endcode
 Each time you enter cmake statement, it prints out the resulting configuration setup. In the final
 setup you got, make sure that following fields are filled (below is the some important parts of
 configuration I got). These fields should be filled appropriately in your system also. Otherwise
 some problem has happened. So check if you have correctly performed above steps.
-@code{.bash}
+@code{.sh}
 --   GUI:
 --     GTK+ 2.x:                    YES (ver 2.24.19)
 --     GThread :                    YES (ver 2.36.3)
@@ -219,7 +219,7 @@ Many other flags and settings are there. It is left for you for further explorat
 
 Now you build the files using make command and install it using make install command. make install
 should be executed as root.
-@code{.bash}
+@code{.sh}
 make
 su
 make install
@@ -230,20 +230,20 @@ should be able to find OpenCV module. You have two options for that.
 -#  **Move the module to any folder in Python Path** : Python path can be found out by entering
     import sys;print sys.path in Python terminal. It will print out many locations. Move
     /usr/local/lib/python2.7/site-packages/cv2.so to any of this folder. For example,
-    @code{.bash}
+    @code{.sh}
     su mv /usr/local/lib/python2.7/site-packages/cv2.so /usr/lib/python2.7/site-packages
     @endcode
 But you will have to do this every time you install OpenCV.
 
 -#  **Add /usr/local/lib/python2.7/site-packages to the PYTHON_PATH**: It is to be done only once.
     Just open \~/.bashrc and add following line to it, then log out and come back.
-    @code{.bash}
-    export PYTHONPATH=\f$PYTHONPATH:/usr/local/lib/python2.7/site-packages
+    @code{.sh}
+    export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages
     @endcode
 Thus OpenCV installation is finished. Open a terminal and try import cv2.
 
 To build the documentation, just enter following commands:
-@code{.bash}
+@code{.sh}
 make docs
 make html_docs
 @endcode
@@ -256,4 +256,3 @@ Exercises
 ---------
 
 -#  Compile OpenCV from source in your Fedora machine.
-

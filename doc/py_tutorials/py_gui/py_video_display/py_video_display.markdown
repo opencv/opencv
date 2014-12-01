@@ -60,9 +60,7 @@ For example, I can check the frame width and height by cap.get(3) and cap.get(4)
 640x480 by default. But I want to modify it to 320x240. Just use ret = cap.set(3,320) and
 ret = cap.set(4,240).
 
-**note**
-
-If you are getting error, make sure camera is working fine using any other camera application
+@note If you are getting error, make sure camera is working fine using any other camera application
 (like Cheese in Linux).
 
 Playing Video from file
@@ -90,10 +88,9 @@ while(cap.isOpened()):
 cap.release()
 cv2.destroyAllWindows()
 @endcode
-**note**
 
-Make sure proper versions of ffmpeg or gstreamer is installed. Sometimes, it is a headache to work
-with Video Capture mostly due to wrong installation of ffmpeg/gstreamer.
+@note Make sure proper versions of ffmpeg or gstreamer is installed. Sometimes, it is a headache to
+work with Video Capture mostly due to wrong installation of ffmpeg/gstreamer.
 
 Saving a Video
 --------------
@@ -148,6 +145,7 @@ cap.release()
 out.release()
 cv2.destroyAllWindows()
 @endcode
+
 Additional Resources
 --------------------
 

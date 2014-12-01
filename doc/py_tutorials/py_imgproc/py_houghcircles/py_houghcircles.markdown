@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will learn to use Hough Transform to find circles in an image.
+    -   We will learn to use Hough Transform to find circles in an image.
     -   We will see these functions: **cv2.HoughCircles()**
 
 Theory

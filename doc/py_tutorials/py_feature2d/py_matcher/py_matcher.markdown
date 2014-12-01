@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter
-   -   We will see how to match features in one image with others.
+    -   We will see how to match features in one image with others.
     -   We will use the Brute-Force matcher and FLANN Matcher in OpenCV
 
 Basics of Brute-Force Matcher

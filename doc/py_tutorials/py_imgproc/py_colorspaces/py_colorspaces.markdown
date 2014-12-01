@@ -22,13 +22,16 @@ For BGR \f$\rightarrow\f$ Gray conversion we use the flags cv2.COLOR_BGR2GRAY. S
 \f$\rightarrow\f$ HSV, we use the flag cv2.COLOR_BGR2HSV. To get other flags, just run following
 commands in your Python terminal :
 @code{.py}
-import cv2
-flags = [i for i in dir(cv2) if i.startswith('COLOR_')]
-print flags
+>>> import cv2
+>>> flags = [i for i in dir(cv2) if i.startswith('COLOR_')]
+>>> print flags
 @endcode
 @note For HSV, Hue range is [0,179], Saturation range is [0,255] and Value range is [0,255].
 Different softwares use different scales. So if you are comparing OpenCV values with them, you need
-to normalize these ranges. Object Tracking ==================
+to normalize these ranges.
+
+Object Tracking
+---------------
 
 Now we know how to convert BGR image to HSV, we can use this to extract a colored object. In HSV, it
 is more easier to represent a color than RGB color-space. In our application, we will try to extract
@@ -81,15 +84,19 @@ Below image shows tracking of the blue object:
 
 @note This is the simplest method in object tracking. Once you learn functions of contours, you can
 do plenty of things like find centroid of this object and use it to track the object, draw diagrams
-just by moving your hand in front of camera and many other funny stuffs. How to find HSV values to
-track? -----------------------------------This is a common question found in
-[stackoverflow.com](www.stackoverflow.com). It is very simple and you can use the same function,
-cv2.cvtColor(). Instead of passing an image, you just pass the BGR values you want. For example, to
-find the HSV value of Green, try following commands in Python terminal:
+just by moving your hand in front of camera and many other funny stuffs.
+
+How to find HSV values to track?
+--------------------------------
+
+This is a common question found in [stackoverflow.com](www.stackoverflow.com). It is very simple and
+you can use the same function, cv2.cvtColor(). Instead of passing an image, you just pass the BGR
+values you want. For example, to find the HSV value of Green, try following commands in Python
+terminal:
 @code{.py}
-green = np.uint8([[[0,255,0 ]]])
-hsv_green = cv2.cvtColor(green,cv2.COLOR_BGR2HSV)
-print hsv_green
+>>> green = np.uint8([[[0,255,0 ]]])
+>>> hsv_green = cv2.cvtColor(green,cv2.COLOR_BGR2HSV)
+>>> print hsv_green
 [[[ 60 255 255]]]
 @endcode
 Now you take [H-10, 100,100] and [H+10, 255, 255] as lower bound and upper bound respectively. Apart
@@ -104,4 +111,3 @@ Exercises
 
 -#  Try to find a way to extract more than one colored objects, for eg, extract red, blue, green
     objects simultaneously.
-

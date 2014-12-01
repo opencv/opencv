@@ -5,7 +5,7 @@ Goal
 ----
 
 In this chapter,
-   -   We will see the basics of SURF
+    -   We will see the basics of SURF
     -   We will see SURF functionalities in OpenCV
 
 Theory
@@ -76,40 +76,40 @@ and descriptors.
 First we will see a simple demo on how to find SURF keypoints and descriptors and draw it. All
 examples are shown in Python terminal since it is just same as SIFT only.
 @code{.py}
-img = cv2.imread('fly.png',0)
+>>> img = cv2.imread('fly.png',0)
 
 # Create SURF object. You can specify params here or later.
 # Here I set Hessian Threshold to 400
-surf = cv2.SURF(400)
+>>> surf = cv2.SURF(400)
 
 # Find keypoints and descriptors directly
-kp, des = surf.detectAndCompute(img,None)
+>>> kp, des = surf.detectAndCompute(img,None)
 
-len(kp)
+>>> len(kp)
  699
 @endcode
 1199 keypoints is too much to show in a picture. We reduce it to some 50 to draw it on an image.
 While matching, we may need all those features, but not now. So we increase the Hessian Threshold.
 @code{.py}
 # Check present Hessian threshold
-print surf.hessianThreshold
+>>> print surf.hessianThreshold
 400.0
 
 # We set it to some 50000. Remember, it is just for representing in picture.
 # In actual cases, it is better to have a value 300-500
-surf.hessianThreshold = 50000
+>>> surf.hessianThreshold = 50000
 
 # Again compute keypoints and check its number.
-kp, des = surf.detectAndCompute(img,None)
+>>> kp, des = surf.detectAndCompute(img,None)
 
-print len(kp)
+>>> print len(kp)
 47
 @endcode
 It is less than 50. Let's draw it on the image.
 @code{.py}
-img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
+>>> img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
 
-plt.imshow(img2),plt.show()
+>>> plt.imshow(img2),plt.show()
 @endcode
 See the result below. You can see that SURF is more like a blob detector. It detects the white blobs
 on wings of butterfly. You can test it with other images.
@@ -119,16 +119,16 @@ on wings of butterfly. You can test it with other images.
 Now I want to apply U-SURF, so that it won't find the orientation.
 @code{.py}
 # Check upright flag, if it False, set it to True
-print surf.upright
+>>> print surf.upright
 False
 
-surf.upright = True
+>>> surf.upright = True
 
 # Recompute the feature points and draw it
-kp = surf.detect(img,None)
-img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
+>>> kp = surf.detect(img,None)
+>>> img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)
 
-plt.imshow(img2),plt.show()
+>>> plt.imshow(img2),plt.show()
 @endcode
 See the results below. All the orientations are shown in same direction. It is more faster than
 previous. If you are working on cases where orientation is not a problem (like panorama stitching)
@@ -139,19 +139,19 @@ etc, this is better.
 Finally we check the descriptor size and change it to 128 if it is only 64-dim.
 @code{.py}
 # Find size of descriptor
-print surf.descriptorSize()
+>>> print surf.descriptorSize()
 64
 
 # That means flag, "extended" is False.
-surf.extended
+>>> surf.extended
  False
 
 # So we make it to True to get 128-dim descriptors.
-surf.extended = True
-kp, des = surf.detectAndCompute(img,None)
-print surf.descriptorSize()
+>>> surf.extended = True
+>>> kp, des = surf.detectAndCompute(img,None)
+>>> print surf.descriptorSize()
 128
-print des.shape
+>>> print des.shape
 (47, 128)
 @endcode
 Remaining part is matching which we will do in another chapter.
