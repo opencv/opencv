@@ -42,7 +42,7 @@
 
 #include "cu_safe_call.h"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
 namespace
 {

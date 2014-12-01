@@ -2048,7 +2048,7 @@ GPU_TEST_P(CvtColor, Luv2LRGBA)
     EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-4);
 }
 
-#if defined (CUDA_VERSION) && (CUDA_VERSION >= 5000)
+#if defined (CUDART_VERSION) && (CUDART_VERSION >= 5000)
 
 GPU_TEST_P(CvtColor, RGBA2mRGBA)
 {
@@ -2066,7 +2066,7 @@ GPU_TEST_P(CvtColor, RGBA2mRGBA)
     EXPECT_MAT_NEAR(dst_gold, dst, 1);
 }
 
-#endif // defined (CUDA_VERSION) && (CUDA_VERSION >= 5000)
+#endif // defined (CUDART_VERSION) && (CUDART_VERSION >= 5000)
 
 GPU_TEST_P(CvtColor, BayerBG2BGR)
 {

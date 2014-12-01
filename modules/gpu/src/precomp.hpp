@@ -82,8 +82,6 @@
 #define OPENCV_GPU_UNUSED(x) (void)x
 
 #ifdef HAVE_CUDA
-
-    #include <cuda.h>
     #include <cuda_runtime.h>
     #include <npp.h>
 
@@ -96,6 +94,7 @@
     #endif
 
     #ifdef HAVE_NVCUVID
+        #include <cuda.h>
         #include <nvcuvid.h>
 
         #ifdef WIN32
