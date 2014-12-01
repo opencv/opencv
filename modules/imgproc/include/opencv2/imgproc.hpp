@@ -1327,6 +1327,9 @@ CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
 
+//! calculates an affine transformation normalizing given image
+CV_EXPORTS Matx23d PeiLinNormalization ( InputArray I );
+
 /** @} */
 
 } // cv
