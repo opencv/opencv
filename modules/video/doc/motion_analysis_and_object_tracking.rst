@@ -911,11 +911,11 @@ Calculates an optical flow.
 
 .. ocv:function:: void DenseOpticalFlow::calc(InputArray I0, InputArray I1, InputOutputArray flow)
 
-    :param prev: first 8-bit single-channel input image.
+    :param I0: first 8-bit single-channel input image.
 
-    :param next: second input image of the same size and the same type as ``prev`` .
+    :param I1: second input image of the same size and the same type as ``I0`` .
 
-    :param flow: computed flow image that has the same size as ``prev`` and type ``CV_32FC2`` .
+    :param flow: computed flow image that has the same size as ``I0`` and type ``CV_32FC2`` .
 
 
 
