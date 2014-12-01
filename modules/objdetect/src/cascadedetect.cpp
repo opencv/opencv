@@ -471,6 +471,10 @@ bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _s
     bool recalcOptFeatures = updateScaleData(imgsz, _scales);
 
     size_t i, nscales = scaleData->size();
+    if (nscales == 0)
+    {
+        return false;
+    }
     Size sz0 = scaleData->at(0).szi;
     sz0 = Size(std::max(rbuf.cols, (int)alignSize(sz0.width, 16)), std::max(rbuf.rows, sz0.height));
 
