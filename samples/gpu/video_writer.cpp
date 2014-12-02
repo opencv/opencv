@@ -11,6 +11,8 @@
 #include "opencv2/cudacodec.hpp"
 #include "opencv2/highgui.hpp"
 
+#include "tick_meter.hpp"
+
 int main(int argc, const char* argv[])
 {
     if (argc != 2)
@@ -39,7 +41,7 @@ int main(int argc, const char* argv[])
 
     std::vector<double> cpu_times;
     std::vector<double> gpu_times;
-    cv::TickMeter tm;
+    TickMeter tm;
 
     for (int i = 1;; ++i)
     {
