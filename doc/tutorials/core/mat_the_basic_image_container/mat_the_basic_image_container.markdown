@@ -180,12 +180,6 @@ object in multiple ways:
     dimension, then pass a pointer containing the size for each dimension and the rest remains the
     same.
 
--   Create a header for an already existing IplImage pointer:
-    @code{.cpp}
-    IplImage* img = cvLoadImage("greatwave.png", 1);
-    Mat mtx(img); // convert IplImage* -> Mat
-    @endcode
-
 -   @ref cv::Mat::create function:
     @code
     M.create(4,4, CV_8UC(2));

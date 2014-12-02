@@ -634,18 +634,12 @@ sub-matrices.
         Mat M = Mat(3, 3, CV_64F, m).inv();
     @endcode
     .
-Partial yet very common cases of this *user-allocated data* case are conversions from CvMat and
-IplImage to Mat. For this purpose, there are special constructors taking pointers to CvMat or
-IplImage and the optional flag indicating whether to copy the data or not. Backward conversion from
-Mat to CvMat or IplImage is provided via cast operators Mat::operator CvMat() const and
-Mat::operator IplImage(). The operators do NOT copy the data.
-@code
-    IplImage* img = cvLoadImage("greatwave.jpg", 1);
-    Mat mtx(img); // convert IplImage* -> Mat
-    CvMat oldmat = mtx; // convert Mat -> CvMat
-    CV_Assert(oldmat.cols == img->width && oldmat.rows == img->height &&
-        oldmat.data.ptr == (uchar*)img->imageData && oldmat.step == img->widthStep);
-@endcode
+    Partial yet very common cases of this *user-allocated data* case are conversions from CvMat and
+    IplImage to Mat. For this purpose, there is function cv::cvarrToMat taking pointers to CvMat or
+    IplImage and the optional flag indicating whether to copy the data or not.
+    @dontinclude samples/cpp/image.cpp
+    @skip Ptr<IplImage> iplimg
+    @until is converted, while the data is shared
 
 - Use MATLAB-style array initializers, zeros(), ones(), eye(), for example:
 @code
