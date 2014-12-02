@@ -827,6 +827,22 @@ public:
         return model->isTrained() ? model : Ptr<_Tp>();
     }
 
+    /** @brief Loads model from an XML String
+
+    This is static template method of StatModel. It's usage is following (in the case of SVM): :
+
+        Ptr<SVM> svm = StatModel::loadFromString<SVM>(myXMLStringModel);
+
+    @param strModel The string variable containing the model (in an XML format) you want to load.
+     */
+    template<typename _Tp> static Ptr<_Tp> loadFromString(const String& strModel)
+	{
+		FileStorage fs(strModel, FileStorage::READ + FileStorage::MEMORY + FileStorage::FORMAT_XML);
+		Ptr<_Tp> model = _Tp::create();
+		model->read(fs.getFirstTopLevelNode());
+		return model->isTrained() ? model : Ptr<_Tp>();
+	}
+    
     template<typename _Tp> static Ptr<_Tp> train(const Ptr<TrainData>& data, const typename _Tp::Params& p, int flags=0)
     {
         Ptr<_Tp> model = _Tp::create(p);
@@ -1511,6 +1527,7 @@ public:
     };
 
     /** @brief The class represents a decision tree node. It has public members:
+
     -   member double value
     Value at the node: a class label in case of classification or estimated function value in case
     of regression.
