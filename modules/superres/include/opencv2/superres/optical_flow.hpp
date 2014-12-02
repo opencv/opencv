@@ -49,6 +49,10 @@ namespace cv
 {
     namespace superres
     {
+
+//! @addtogroup superres
+//! @{
+
         class CV_EXPORTS DenseOpticalFlowExt : public cv::Algorithm
         {
         public:
@@ -70,6 +74,9 @@ namespace cv
 
         CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_PyrLK_CUDA();
         CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_PyrLK_OCL();
+
+//! @}
+
     }
 }
 

@@ -55,6 +55,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class Brd, class SrcPtr, typename DstType>
 __host__ void gridPyrDown_(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
 {
@@ -82,6 +85,8 @@ __host__ void gridPyrUp(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream
 
     pyramids_detail::pyrUp(shrinkPtr(src), shrinkPtr(dst), rows, cols, dst.rows, dst.cols, StreamAccessor::getStream(stream));
 }
+
+//! @}
 
 }}
 

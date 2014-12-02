@@ -969,7 +969,7 @@ An example using the LineSegmentDetector
 
 /** @brief Line segment detector class
 
-following the algorithm described at @cite Rafael12.
+following the algorithm described at @cite Rafael12 .
 */
 class CV_EXPORTS_W LineSegmentDetector : public Algorithm
 {
@@ -1361,7 +1361,7 @@ call
 
 is equivalent to
 
-\f[\texttt{Sobel(src, dst, ddepth, dx, dy, CV_SCHARR, scale, delta, borderType)} .\f]
+\f[\texttt{Sobel(src, dst, ddepth, dx, dy, CV\_SCHARR, scale, delta, borderType)} .\f]
 
 @param src input image.
 @param dst output image of the same size and the same number of channels as src.
@@ -1418,7 +1418,7 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
   An example on using the canny edge detector
 */
 
-/** @brief Finds edges in an image using the Canny algorithm @cite Canny86.
+/** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
 
 The function finds edges in the input image image and marks them in the output map edges using the
 Canny algorithm. The smallest value between threshold1 and threshold2 is used for edge linking. The
@@ -2940,7 +2940,7 @@ An example using the watershed algorithm
 /** @brief Performs a marker-based image segmentation using the watershed algorithm.
 
 The function implements one of the variants of watershed, non-parametric marker-based segmentation
-algorithm, described in @cite Meyer92.
+algorithm, described in @cite Meyer92 .
 
 Before passing the image to the function, you have to roughly outline the desired regions in the
 image markers with positive (\>0) indices. So, every region is represented as one or more connected
@@ -3050,7 +3050,7 @@ The functions distanceTransform calculate the approximate or precise distance fr
 image pixel to the nearest zero pixel. For zero image pixels, the distance will obviously be zero.
 
 When maskSize == DIST_MASK_PRECISE and distanceType == DIST_L2 , the function runs the
-algorithm described in @cite Felzenszwalb04. This algorithm is parallelized with the TBB library.
+algorithm described in @cite Felzenszwalb04 . This algorithm is parallelized with the TBB library.
 
 In other cases, the algorithm @cite Borgefors86 is used. This means that for a pixel the function
 finds the shortest path to the nearest zero pixel consisting of basic shifts: horizontal, vertical,
@@ -3371,7 +3371,7 @@ CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labe
 
 /** @brief Finds contours in a binary image.
 
-The function retrieves contours from the binary image using the algorithm @cite Suzuki85. The contours
+The function retrieves contours from the binary image using the algorithm @cite Suzuki85 . The contours
 are a useful tool for shape analysis and object detection and recognition. See squares.c in the
 OpenCV sample directory.
 

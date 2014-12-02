@@ -54,6 +54,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class SrcPtr, class TablePtr> struct LutPtr
 {
     typedef typename PtrTraits<TablePtr>::value_type value_type;
@@ -94,6 +97,8 @@ __host__ LutPtrSz<typename PtrTraits<SrcPtr>::ptr_type, typename PtrTraits<Table
 template <class SrcPtr, class TablePtr> struct PtrTraits< LutPtrSz<SrcPtr, TablePtr> > : PtrTraitsBase<LutPtrSz<SrcPtr, TablePtr>, LutPtr<SrcPtr, TablePtr> >
 {
 };
+
+//! @}
 
 }}
 

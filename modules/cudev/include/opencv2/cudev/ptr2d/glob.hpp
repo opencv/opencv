@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <typename T> struct GlobPtr
 {
     typedef T   value_type;
@@ -105,6 +108,8 @@ __host__ GlobPtrSz<T> globPtr(const GpuMat& mat)
 template <typename T> struct PtrTraits< GlobPtrSz<T> > : PtrTraitsBase<GlobPtrSz<T>, GlobPtr<T> >
 {
 };
+
+//! @}
 
 }}
 

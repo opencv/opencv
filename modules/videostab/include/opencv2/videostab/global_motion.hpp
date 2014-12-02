@@ -61,23 +61,62 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab_motion
+//! @{
+
+/** @brief Estimates best global motion between two 2D point clouds in the least-squares sense.
+
+@note Works in-place and changes input point arrays.
+
+@param points0 Source set of 2D points (32F).
+@param points1 Destination set of 2D points (32F).
+@param model Motion model (up to MM_AFFINE).
+@param rmse Final root-mean-square error.
+@return 3x3 2D transformation matrix (32F).
+ */
 CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
         InputOutputArray points0, InputOutputArray points1, int model = MM_AFFINE,
         float *rmse = 0);
 
+/** @brief Estimates best global motion between two 2D point clouds robustly (using RANSAC method).
+
+@param points0 Source set of 2D points (32F).
+@param points1 Destination set of 2D points (32F).
+@param model Motion model. See cv::videostab::MotionModel.
+@param params RANSAC method parameters. See videostab::RansacParams.
+@param rmse Final root-mean-square error.
+@param ninliers Final number of inliers.
+ */
 CV_EXPORTS Mat estimateGlobalMotionRansac(
         InputArray points0, InputArray points1, int model = MM_AFFINE,
         const RansacParams &params = RansacParams::default2dMotion(MM_AFFINE),
         float *rmse = 0, int *ninliers = 0);
 
+/** @brief Base class for all global motion estimation methods.
+ */
 class CV_EXPORTS MotionEstimatorBase
 {
 public:
     virtual ~MotionEstimatorBase() {}
 
+    /** @brief Sets motion model.
+
+    @param val Motion model. See cv::videostab::MotionModel.
+     */
     virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
+
+    /**
+    @return Motion model. See cv::videostab::MotionModel.
+    */
     virtual MotionModel motionModel() const { return motionModel_; }
 
+    /** @brief Estimates global motion between two 2D point clouds.
+
+    @param points0 Source set of 2D points (32F).
+    @param points1 Destination set of 2D points (32F).
+    @param ok Indicates whether motion was estimated successfully.
+    @return 3x3 2D transformation matrix (32F).
+     */
     virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0) = 0;
 
 protected:
@@ -87,6 +126,8 @@ private:
     MotionModel motionModel_;
 };
 
+/** @brief Describes a robust RANSAC-based global 2D motion estimation method which minimizes L2 error.
+ */
 class CV_EXPORTS MotionEstimatorRansacL2 : public MotionEstimatorBase
 {
 public:
@@ -105,6 +146,10 @@ private:
     float minInlierRatio_;
 };
 
+/** @brief Describes a global 2D motion estimation method which minimizes L1 error.
+
+@note To be able to use this method you must build OpenCV with CLP library support. :
+ */
 class CV_EXPORTS MotionEstimatorL1 : public MotionEstimatorBase
 {
 public:
@@ -125,6 +170,8 @@ private:
     }
 };
 
+/** @brief Base class for global 2D motion estimation methods which take frames as input.
+ */
 class CV_EXPORTS ImageMotionEstimatorBase
 {
 public:
@@ -168,6 +215,9 @@ private:
     Ptr<ImageMotionEstimatorBase> motionEstimator_;
 };
 
+/** @brief Describes a global 2D motion estimation method which uses keypoints detection and optical flow for
+matching.
+ */
 class CV_EXPORTS KeypointBasedMotionEstimator : public ImageMotionEstimatorBase
 {
 public:
@@ -232,7 +282,16 @@ private:
 
 #endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
 
+/** @brief Computes motion between two frames assuming that all the intermediate motions are known.
+
+@param from Source frame index.
+@param to Destination frame index.
+@param motions Pair-wise motions. motions[i] denotes motion from the frame i to the frame i+1
+@return Motion from the frame from to the frame to.
+ */
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

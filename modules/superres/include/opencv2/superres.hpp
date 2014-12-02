@@ -45,10 +45,23 @@
 
 #include "opencv2/core.hpp"
 
+/**
+  @defgroup superres Super Resolution
+
+The Super Resolution module contains a set of functions and classes that can be used to solve the
+problem of resolution enhancement. There are a few methods implemented, most of them are descibed in
+the papers @cite Farsiu03 and @cite Mitzel09 .
+
+ */
+
 namespace cv
 {
     namespace superres
     {
+
+//! @addtogroup superres
+//! @{
+
         CV_EXPORTS bool initModule_superres();
 
         class CV_EXPORTS FrameSource
@@ -67,14 +80,29 @@ namespace cv
 
         CV_EXPORTS Ptr<FrameSource> createFrameSource_Camera(int deviceId = 0);
 
+        /** @brief Base class for Super Resolution algorithms.
+
+        The class is only used to define the common interface for the whole family of Super Resolution
+        algorithms.
+         */
         class CV_EXPORTS SuperResolution : public cv::Algorithm, public FrameSource
         {
         public:
+            /** @brief Set input frame source for Super Resolution algorithm.
+
+            @param frameSource Input frame source
+             */
             void setInput(const Ptr<FrameSource>& frameSource);
 
+            /** @brief Process next frame from input and return output result.
+
+            @param frame Output result
+             */
             void nextFrame(OutputArray frame);
             void reset();
 
+            /** @brief Clear all inner buffers.
+            */
             virtual void collectGarbage();
 
         protected:
@@ -90,11 +118,31 @@ namespace cv
             bool firstCall_;
         };
 
-        // S. Farsiu , D. Robinson, M. Elad, P. Milanfar. Fast and robust multiframe super resolution.
-        // Dennis Mitzel, Thomas Pock, Thomas Schoenemann, Daniel Cremers. Video Super Resolution using Duality Based TV-L1 Optical Flow.
+        /** @brief Create Bilateral TV-L1 Super Resolution.
+
+        This class implements Super Resolution algorithm described in the papers @cite Farsiu03 and
+        @cite Mitzel09 .
+
+        Here are important members of the class that control the algorithm, which you can set after
+        constructing the class instance:
+
+        -   **int scale** Scale factor.
+        -   **int iterations** Iteration count.
+        -   **double tau** Asymptotic value of steepest descent method.
+        -   **double lambda** Weight parameter to balance data term and smoothness term.
+        -   **double alpha** Parameter of spacial distribution in Bilateral-TV.
+        -   **int btvKernelSize** Kernel size of Bilateral-TV filter.
+        -   **int blurKernelSize** Gaussian blur kernel size.
+        -   **double blurSigma** Gaussian blur sigma.
+        -   **int temporalAreaRadius** Radius of the temporal search area.
+        -   **Ptr\<DenseOpticalFlowExt\> opticalFlow** Dense optical flow algorithm.
+         */
         CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1();
         CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1_CUDA();
         CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1_OCL();
+
+//! @} superres
+
     }
 }
 

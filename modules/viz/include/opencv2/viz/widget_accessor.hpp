@@ -54,15 +54,35 @@ namespace cv
 {
     namespace viz
     {
+
+//! @addtogroup viz_widget
+//! @{
+
         class Widget;
 
-        //The class is only that depends on VTK in its interface.
-        //It is indended for those users who want to develop own widgets system using VTK library API.
+        /** @brief This class is for users who want to develop their own widgets using VTK library API. :
+        */
         struct CV_EXPORTS WidgetAccessor
         {
+            /** @brief Returns vtkProp of a given widget.
+
+            @param widget Widget whose vtkProp is to be returned.
+
+            @note vtkProp has to be down cast appropriately to be modified.
+                @code
+                vtkActor * actor = vtkActor::SafeDownCast(viz::WidgetAccessor::getProp(widget));
+                @endcode
+             */
             static vtkSmartPointer<vtkProp> getProp(const Widget &widget);
+            /** @brief Sets vtkProp of a given widget.
+
+            @param widget Widget whose vtkProp is to be set. @param prop A vtkProp.
+             */
             static void setProp(Widget &widget, vtkSmartPointer<vtkProp> prop);
         };
+
+//! @}
+
     }
 }
 
