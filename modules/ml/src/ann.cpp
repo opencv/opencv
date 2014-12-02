@@ -42,33 +42,9 @@
 
 namespace cv { namespace ml {
 
-ANN::Params::Params()
-{
-    // BP parameters
-    bpDWScale = 0.1; bpMomentScale = 0.95;
-
-    // RPROP parameters
-    rpDW0 = 0.1; rpDWPlus = 1.2; rpDWMinus = 0.5; rpDWMin = 1E-6; rpDWMax = 50.0;
-}
-
-ANN::Params::Params(const Mat& _layerSizes, int _activateFunc, float _fparam1, float _fparam2,
-                        TermCriteria _termCrit, int _trainMethod, float _bpDWScale, float _bpMomentScale, 
-                        float _rpDW0, float _rpDWPlus, float _rpDWMinus, float _rpDWMin, float _rpDWMax)
-{
-    // general parameters
-    layerSizes = _layerSizes;
-    activateFunc = _activateFunc;
-    fparam1 = _fparam1;
-    fparam2 = _fparam2;
-    termCrit = _termCrit;
-    trainMethod = _trainMethod;
-
-    // BP parameters
-    bpDWScale = _bpDWScale; bpMomentScale = _bpMomentScale;
-
-    // RPROP parameters
-    rpDW0 = _rpDW0; rpDWPlus = _rpDWPlus; rpDWMinus = _rpDWMinus; rpDWMin = _rpDWMin; rpDWMax = _rpDWMax;
-}
+#ifndef ANN
+    #define ANN ANN_MLP
+#endif
 
 class ANNImpl : public ANN
 {
@@ -1058,12 +1034,6 @@ private:
     char *StringLayerSizesImproper;
     char *StringSampleWeightsSizeImproper;
 };
-
-Ptr<ANN> ANN::create(const Params &params)
-{
-    Ptr<ANNImpl> ann = makePtr<ANNImpl>(params);
-    return ann;
-}
 
 }}
 

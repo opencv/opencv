@@ -43,6 +43,10 @@
 
 using namespace cv;
 using namespace cv::ml;
+	
+#ifndef ANN
+    #define ANN ANN_MLP
+#endif
 
 class NN : public ANN
 {
