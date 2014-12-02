@@ -55,6 +55,10 @@
 namespace cv {
 namespace detail {
 
+//! @addtogroup stitching_match
+//! @{
+
+/** @brief Structure containing image keypoints and descriptors. */
 struct CV_EXPORTS ImageFeatures
 {
     int img_idx;
@@ -63,20 +67,40 @@ struct CV_EXPORTS ImageFeatures
     UMat descriptors;
 };
 
-
+/** @brief Feature finders base class */
 class CV_EXPORTS FeaturesFinder
 {
 public:
     virtual ~FeaturesFinder() {}
+    /** @overload */
     void operator ()(InputArray image, ImageFeatures &features);
+    /** @brief Finds features in the given image.
+
+    @param image Source image
+    @param features Found features
+    @param rois Regions of interest
+
+    @sa detail::ImageFeatures, Rect_
+    */
     void operator ()(InputArray image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
+    /** @brief Frees unused memory allocated before if there is any. */
     virtual void collectGarbage() {}
 
 protected:
+    /** @brief This method must implement features finding logic in order to make the wrappers
+    detail::FeaturesFinder::operator()_ work.
+
+    @param image Source image
+    @param features Found features
+
+    @sa detail::ImageFeatures */
     virtual void find(InputArray image, ImageFeatures &features) = 0;
 };
 
+/** @brief SURF features finder.
 
+@sa detail::FeaturesFinder, SURF
+*/
 class CV_EXPORTS SurfFeaturesFinder : public FeaturesFinder
 {
 public:
@@ -91,6 +115,10 @@ private:
     Ptr<Feature2D> surf;
 };
 
+/** @brief ORB features finder. :
+
+@sa detail::FeaturesFinder, ORB
+*/
 class CV_EXPORTS OrbFeaturesFinder : public FeaturesFinder
 {
 public:
@@ -126,50 +154,92 @@ private:
 };
 #endif
 
+/** @brief Structure containing information about matches between two images.
 
+It's assumed that there is a homography between those images.
+*/
 struct CV_EXPORTS MatchesInfo
 {
     MatchesInfo();
     MatchesInfo(const MatchesInfo &other);
     const MatchesInfo& operator =(const MatchesInfo &other);
 
-    int src_img_idx, dst_img_idx;       // Images indices (optional)
+    int src_img_idx, dst_img_idx;       //!< Images indices (optional)
     std::vector<DMatch> matches;
-    std::vector<uchar> inliers_mask;    // Geometrically consistent matches mask
-    int num_inliers;                    // Number of geometrically consistent matches
-    Mat H;                              // Estimated homography
-    double confidence;                  // Confidence two images are from the same panorama
+    std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
+    int num_inliers;                    //!< Number of geometrically consistent matches
+    Mat H;                              //!< Estimated homography
+    double confidence;                  //!< Confidence two images are from the same panorama
 };
 
-
+/** @brief Feature matchers base class. */
 class CV_EXPORTS FeaturesMatcher
 {
 public:
     virtual ~FeaturesMatcher() {}
 
+    /** @overload
+    @param features1 First image features
+    @param features2 Second image features
+    @param matches_info Found matches
+    */
     void operator ()(const ImageFeatures &features1, const ImageFeatures &features2,
                      MatchesInfo& matches_info) { match(features1, features2, matches_info); }
 
+    /** @brief Performs images matching.
+
+    @param features Features of the source images
+    @param pairwise_matches Found pairwise matches
+    @param mask Mask indicating which image pairs must be matched
+
+    The function is parallelized with the TBB library.
+
+    @sa detail::MatchesInfo
+    */
     void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
                      const cv::UMat &mask = cv::UMat());
 
+    /** @return True, if it's possible to use the same matcher instance in parallel, false otherwise
+    */
     bool isThreadSafe() const { return is_thread_safe_; }
 
+    /** @brief Frees unused memory allocated before if there is any.
+    */
     virtual void collectGarbage() {}
 
 protected:
     FeaturesMatcher(bool is_thread_safe = false) : is_thread_safe_(is_thread_safe) {}
 
+    /** @brief This method must implement matching logic in order to make the wrappers
+    detail::FeaturesMatcher::operator()_ work.
+
+    @param features1 first image features
+    @param features2 second image features
+    @param matches_info found matches
+     */
     virtual void match(const ImageFeatures &features1, const ImageFeatures &features2,
                        MatchesInfo& matches_info) = 0;
 
     bool is_thread_safe_;
 };
 
+/** @brief Features matcher which finds two best matches for each feature and leaves the best one only if the
+ratio between descriptor distances is greater than the threshold match_conf
 
+@sa detail::FeaturesMatcher
+ */
 class CV_EXPORTS BestOf2NearestMatcher : public FeaturesMatcher
 {
 public:
+    /** @brief Constructs a "best of 2 nearest" matcher.
+
+    @param try_use_gpu Should try to use GPU or not
+    @param match_conf Match distances ration threshold
+    @param num_matches_thresh1 Minimum number of matches required for the 2D projective transform
+    estimation used in the inliers classification step
+    @param num_matches_thresh2 Minimum number of matches required for the 2D projective transform
+    re-estimation on inliers
+     */
     BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
                           int num_matches_thresh2 = 6);
 
@@ -196,6 +266,8 @@ public:
 protected:
     int range_width_;
 };
+
+//! @} stitching_match
 
 } // namespace detail
 } // namespace cv

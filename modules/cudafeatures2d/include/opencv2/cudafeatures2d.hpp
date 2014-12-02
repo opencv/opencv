@@ -50,150 +50,175 @@
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/cudafilters.hpp"
 
+/**
+  @addtogroup cuda
+  @{
+    @defgroup cudafeatures2d Feature Detection and Description
+  @}
+ */
+
 namespace cv { namespace cuda {
 
+//! @addtogroup cudafeatures2d
+//! @{
+
+/** @brief Brute-force descriptor matcher.
+
+For each descriptor in the first set, this matcher finds the closest descriptor in the second set
+by trying each one. This descriptor matcher supports masking permissible matches between descriptor
+sets.
+
+The class BFMatcher_CUDA has an interface similar to the class DescriptorMatcher. It has two groups
+of match methods: for matching descriptors of one image with another image or with an image set.
+Also, all functions have an alternative to save results either to the GPU memory or to the CPU
+memory.
+
+@sa DescriptorMatcher, BFMatcher
+ */
 class CV_EXPORTS BFMatcher_CUDA
 {
 public:
     explicit BFMatcher_CUDA(int norm = cv::NORM_L2);
 
-    // Add descriptors to train descriptor collection
+    //! Add descriptors to train descriptor collection
     void add(const std::vector<GpuMat>& descCollection);
 
-    // Get train descriptors collection
+    //! Get train descriptors collection
     const std::vector<GpuMat>& getTrainDescriptors() const;
 
-    // Clear train descriptors collection
+    //! Clear train descriptors collection
     void clear();
 
-    // Return true if there are not train descriptors in collection
+    //! Return true if there are not train descriptors in collection
     bool empty() const;
 
-    // Return true if the matcher supports mask in match methods
+    //! Return true if the matcher supports mask in match methods
     bool isMaskSupported() const;
 
-    // Find one best match for each query descriptor
+    //! Find one best match for each query descriptor
     void matchSingle(const GpuMat& query, const GpuMat& train,
         GpuMat& trainIdx, GpuMat& distance,
         const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
-    // Download trainIdx and distance and convert it to CPU vector with DMatch
+    //! Download trainIdx and distance and convert it to CPU vector with DMatch
     static void matchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector<DMatch>& matches);
-    // Convert trainIdx and distance to vector with DMatch
+    //! Convert trainIdx and distance to vector with DMatch
     static void matchConvert(const Mat& trainIdx, const Mat& distance, std::vector<DMatch>& matches);
 
-    // Find one best match for each query descriptor
+    //! Find one best match for each query descriptor
     void match(const GpuMat& query, const GpuMat& train, std::vector<DMatch>& matches, const GpuMat& mask = GpuMat());
 
-    // Make gpu collection of trains and masks in suitable format for matchCollection function
+    //! Make gpu collection of trains and masks in suitable format for matchCollection function
     void makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, const std::vector<GpuMat>& masks = std::vector<GpuMat>());
 
-    // Find one best match from train collection for each query descriptor
+    //! Find one best match from train collection for each query descriptor
     void matchCollection(const GpuMat& query, const GpuMat& trainCollection,
         GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
         const GpuMat& masks = GpuMat(), Stream& stream = Stream::Null());
 
-    // Download trainIdx, imgIdx and distance and convert it to vector with DMatch
+    //! Download trainIdx, imgIdx and distance and convert it to vector with DMatch
     static void matchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, std::vector<DMatch>& matches);
-    // Convert trainIdx, imgIdx and distance to vector with DMatch
+    //! Convert trainIdx, imgIdx and distance to vector with DMatch
     static void matchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, std::vector<DMatch>& matches);
 
-    // Find one best match from train collection for each query descriptor.
+    //! Find one best match from train collection for each query descriptor.
     void match(const GpuMat& query, std::vector<DMatch>& matches, const std::vector<GpuMat>& masks = std::vector<GpuMat>());
 
-    // Find k best matches for each query descriptor (in increasing order of distances)
+    //! Find k best matches for each query descriptor (in increasing order of distances)
     void knnMatchSingle(const GpuMat& query, const GpuMat& train,
         GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k,
         const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
-    // Download trainIdx and distance and convert it to vector with DMatch
-    // compactResult is used when mask is not empty. If compactResult is false matches
-    // vector will have the same size as queryDescriptors rows. If compactResult is true
-    // matches vector will not contain matches for fully masked out query descriptors.
+    //! Download trainIdx and distance and convert it to vector with DMatch
+    //! compactResult is used when mask is not empty. If compactResult is false matches
+    //! vector will have the same size as queryDescriptors rows. If compactResult is true
+    //! matches vector will not contain matches for fully masked out query descriptors.
     static void knnMatchDownload(const GpuMat& trainIdx, const GpuMat& distance,
         std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
-    // Convert trainIdx and distance to vector with DMatch
+    //! Convert trainIdx and distance to vector with DMatch
     static void knnMatchConvert(const Mat& trainIdx, const Mat& distance,
         std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
-    // Find k best matches for each query descriptor (in increasing order of distances).
-    // compactResult is used when mask is not empty. If compactResult is false matches
-    // vector will have the same size as queryDescriptors rows. If compactResult is true
-    // matches vector will not contain matches for fully masked out query descriptors.
+    //! Find k best matches for each query descriptor (in increasing order of distances).
+    //! compactResult is used when mask is not empty. If compactResult is false matches
+    //! vector will have the same size as queryDescriptors rows. If compactResult is true
+    //! matches vector will not contain matches for fully masked out query descriptors.
     void knnMatch(const GpuMat& query, const GpuMat& train,
         std::vector< std::vector<DMatch> >& matches, int k, const GpuMat& mask = GpuMat(),
         bool compactResult = false);
 
-    // Find k best matches from train collection for each query descriptor (in increasing order of distances)
+    //! Find k best matches from train collection for each query descriptor (in increasing order of distances)
     void knnMatch2Collection(const GpuMat& query, const GpuMat& trainCollection,
         GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
         const GpuMat& maskCollection = GpuMat(), Stream& stream = Stream::Null());
 
-    // Download trainIdx and distance and convert it to vector with DMatch
-    // compactResult is used when mask is not empty. If compactResult is false matches
-    // vector will have the same size as queryDescriptors rows. If compactResult is true
-    // matches vector will not contain matches for fully masked out query descriptors.
+    //! Download trainIdx and distance and convert it to vector with DMatch
+    //! compactResult is used when mask is not empty. If compactResult is false matches
+    //! vector will have the same size as queryDescriptors rows. If compactResult is true
+    //! matches vector will not contain matches for fully masked out query descriptors.
+    //! @see BFMatcher_CUDA::knnMatchDownload
     static void knnMatch2Download(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance,
         std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
-    // Convert trainIdx and distance to vector with DMatch
+    //! Convert trainIdx and distance to vector with DMatch
+    //! @see BFMatcher_CUDA::knnMatchConvert
     static void knnMatch2Convert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance,
         std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
-    // Find k best matches  for each query descriptor (in increasing order of distances).
-    // compactResult is used when mask is not empty. If compactResult is false matches
-    // vector will have the same size as queryDescriptors rows. If compactResult is true
-    // matches vector will not contain matches for fully masked out query descriptors.
+    //! Find k best matches  for each query descriptor (in increasing order of distances).
+    //! compactResult is used when mask is not empty. If compactResult is false matches
+    //! vector will have the same size as queryDescriptors rows. If compactResult is true
+    //! matches vector will not contain matches for fully masked out query descriptors.
     void knnMatch(const GpuMat& query, std::vector< std::vector<DMatch> >& matches, int k,
         const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
 
-    // Find best matches for each query descriptor which have distance less than maxDistance.
-    // nMatches.at<int>(0, queryIdx) will contain matches count for queryIdx.
-    // carefully nMatches can be greater than trainIdx.cols - it means that matcher didn't find all matches,
-    // because it didn't have enough memory.
-    // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nTrain / 100), 10),
-    // otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
-    // Matches doesn't sorted.
+    //! Find best matches for each query descriptor which have distance less than maxDistance.
+    //! nMatches.at<int>(0, queryIdx) will contain matches count for queryIdx.
+    //! carefully nMatches can be greater than trainIdx.cols - it means that matcher didn't find all matches,
+    //! because it didn't have enough memory.
+    //! If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nTrain / 100), 10),
+    //! otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
+    //! Matches doesn't sorted.
     void radiusMatchSingle(const GpuMat& query, const GpuMat& train,
         GpuMat& trainIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance,
         const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
-    // Download trainIdx, nMatches and distance and convert it to vector with DMatch.
-    // matches will be sorted in increasing order of distances.
-    // compactResult is used when mask is not empty. If compactResult is false matches
-    // vector will have the same size as queryDescriptors rows. If compactResult is true
-    // matches vector will not contain matches for fully masked out query descriptors.
+    //! Download trainIdx, nMatches and distance and convert it to vector with DMatch.
+    //! matches will be sorted in increasing order of distances.
+    //! compactResult is used when mask is not empty. If compactResult is false matches
+    //! vector will have the same size as queryDescriptors rows. If compactResult is true
+    //! matches vector will not contain matches for fully masked out query descriptors.
     static void radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, const GpuMat& nMatches,
         std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
-    // Convert trainIdx, nMatches and distance to vector with DMatch.
+    //! Convert trainIdx, nMatches and distance to vector with DMatch.
     static void radiusMatchConvert(const Mat& trainIdx, const Mat& distance, const Mat& nMatches,
         std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
-    // Find best matches for each query descriptor which have distance less than maxDistance
-    // in increasing order of distances).
+    //! Find best matches for each query descriptor which have distance less than maxDistance
+    //! in increasing order of distances).
     void radiusMatch(const GpuMat& query, const GpuMat& train,
         std::vector< std::vector<DMatch> >& matches, float maxDistance,
         const GpuMat& mask = GpuMat(), bool compactResult = false);
 
-    // Find best matches for each query descriptor which have distance less than maxDistance.
-    // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nQuery / 100), 10),
-    // otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
-    // Matches doesn't sorted.
+    //! Find best matches for each query descriptor which have distance less than maxDistance.
+    //! If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nQuery / 100), 10),
+    //! otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
+    //! Matches doesn't sorted.
     void radiusMatchCollection(const GpuMat& query, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance,
         const std::vector<GpuMat>& masks = std::vector<GpuMat>(), Stream& stream = Stream::Null());
 
-    // Download trainIdx, imgIdx, nMatches and distance and convert it to vector with DMatch.
-    // matches will be sorted in increasing order of distances.
-    // compactResult is used when mask is not empty. If compactResult is false matches
-    // vector will have the same size as queryDescriptors rows. If compactResult is true
-    // matches vector will not contain matches for fully masked out query descriptors.
+    //! Download trainIdx, imgIdx, nMatches and distance and convert it to vector with DMatch.
+    //! matches will be sorted in increasing order of distances.
+    //! compactResult is used when mask is not empty. If compactResult is false matches
+    //! vector will have the same size as queryDescriptors rows. If compactResult is true
+    //! matches vector will not contain matches for fully masked out query descriptors.
     static void radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, const GpuMat& nMatches,
         std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
-    // Convert trainIdx, nMatches and distance to vector with DMatch.
+    //! Convert trainIdx, nMatches and distance to vector with DMatch.
     static void radiusMatchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, const Mat& nMatches,
         std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
-    // Find best matches from train collection for each query descriptor which have distance less than
-    // maxDistance (in increasing order of distances).
+    //! Find best matches from train collection for each query descriptor which have distance less than
+    //! maxDistance (in increasing order of distances).
     void radiusMatch(const GpuMat& query, std::vector< std::vector<DMatch> >& matches, float maxDistance,
         const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
 
@@ -203,6 +228,8 @@ private:
     std::vector<GpuMat> trainDescCollection;
 };
 
+/** @brief Class used for corner detection using the FAST algorithm. :
+ */
 class CV_EXPORTS FAST_CUDA
 {
 public:
@@ -213,23 +240,45 @@ public:
         ROWS_COUNT
     };
 
-    // all features have same size
+    //! all features have same size
     static const int FEATURE_SIZE = 7;
 
+    /** @brief Constructor.
+
+    @param threshold Threshold on difference between intensity of the central pixel and pixels on a
+    circle around this pixel.
+    @param nonmaxSuppression If it is true, non-maximum suppression is applied to detected corners
+    (keypoints).
+    @param keypointsRatio Inner buffer size for keypoints store is determined as (keypointsRatio \*
+    image_width \* image_height).
+     */
     explicit FAST_CUDA(int threshold, bool nonmaxSuppression = true, double keypointsRatio = 0.05);
 
-    //! finds the keypoints using FAST detector
-    //! supports only CV_8UC1 images
+    /** @brief Finds the keypoints using FAST detector.
+
+    @param image Image where keypoints (corners) are detected. Only 8-bit grayscale images are
+    supported.
+    @param mask Optional input mask that marks the regions where we should detect features.
+    @param keypoints The output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU
+    memory:
+    -   keypoints.ptr\<Vec2s\>(LOCATION_ROW)[i] will contain location of i'th point
+    -   keypoints.ptr\<float\>(RESPONSE_ROW)[i] will contain response of i'th point (if non-maximum
+    suppression is applied)
+     */
     void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
+    /** @overload */
     void operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
 
-    //! download keypoints from device to host memory
+    /** @brief Download keypoints from GPU to CPU memory.
+    */
     static void downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
 
-    //! convert keypoints to KeyPoint vector
+    /** @brief Converts keypoints from CUDA representation to vector of KeyPoint.
+    */
     static void convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints);
 
-    //! release temporary buffer's memory
+    /** @brief Releases inner buffer memory.
+    */
     void release();
 
     bool nonmaxSuppression;
@@ -239,13 +288,22 @@ public:
     //! max keypoints = keypointsRatio * img.size().area()
     double keypointsRatio;
 
-    //! find keypoints and compute it's response if nonmaxSuppression is true
-    //! return count of detected keypoints
+    /** @brief Find keypoints and compute it's response if nonmaxSuppression is true.
+
+    @param image Image where keypoints (corners) are detected. Only 8-bit grayscale images are
+    supported.
+    @param mask Optional input mask that marks the regions where we should detect features.
+
+    The function returns count of detected keypoints.
+     */
     int calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask);
 
-    //! get final array of keypoints
-    //! performs nonmax suppression if needed
-    //! return final count of keypoints
+    /** @brief Gets final array of keypoints.
+
+    @param keypoints The output vector of keypoints.
+
+    The function performs non-max suppression if needed and returns final count of keypoints.
+     */
     int getKeyPoints(GpuMat& keypoints);
 
 private:
@@ -257,6 +315,8 @@ private:
     GpuMat d_keypoints_;
 };
 
+/** @brief Class for extracting ORB features and descriptors from an image. :
+ */
 class CV_EXPORTS ORB_CUDA
 {
 public:
@@ -276,28 +336,51 @@ public:
         DEFAULT_FAST_THRESHOLD = 20
     };
 
-    //! Constructor
+    /** @brief Constructor.
+
+    @param nFeatures The number of desired features.
+    @param scaleFactor Coefficient by which we divide the dimensions from one scale pyramid level to
+    the next.
+    @param nLevels The number of levels in the scale pyramid.
+    @param edgeThreshold How far from the boundary the points should be.
+    @param firstLevel The level at which the image is given. If 1, that means we will also look at the
+    image scaleFactor times bigger.
+    @param WTA_K
+    @param scoreType
+    @param patchSize
+     */
     explicit ORB_CUDA(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31,
                      int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31);
 
-    //! Compute the ORB features on an image
-    //! image - the image to compute the features (supports only CV_8UC1 images)
-    //! mask - the mask to apply
-    //! keypoints - the resulting keypoints
+    /** @overload */
     void operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
+    /** @overload */
     void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
 
-    //! Compute the ORB features and descriptors on an image
-    //! image - the image to compute the features (supports only CV_8UC1 images)
-    //! mask - the mask to apply
-    //! keypoints - the resulting keypoints
-    //! descriptors - descriptors array
+    /** @brief Detects keypoints and computes descriptors for them.
+
+    @param image Input 8-bit grayscale image.
+    @param mask Optional input mask that marks the regions where we should detect features.
+    @param keypoints The input/output vector of keypoints. Can be stored both in CPU and GPU memory.
+    For GPU memory:
+    -   keypoints.ptr\<float\>(X_ROW)[i] contains x coordinate of the i'th feature.
+    -   keypoints.ptr\<float\>(Y_ROW)[i] contains y coordinate of the i'th feature.
+    -   keypoints.ptr\<float\>(RESPONSE_ROW)[i] contains the response of the i'th feature.
+    -   keypoints.ptr\<float\>(ANGLE_ROW)[i] contains orientation of the i'th feature.
+    -   keypoints.ptr\<float\>(OCTAVE_ROW)[i] contains the octave of the i'th feature.
+    -   keypoints.ptr\<float\>(SIZE_ROW)[i] contains the size of the i'th feature.
+    @param descriptors Computed descriptors. if blurForDescriptor is true, image will be blurred
+    before descriptors calculation.
+     */
     void operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors);
+    /** @overload */
     void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors);
 
-    //! download keypoints from device to host memory
+    /** @brief Download keypoints from GPU to CPU memory.
+    */
     static void downloadKeyPoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
-    //! convert keypoints to KeyPoint vector
+    /** @brief Converts keypoints from CUDA representation to vector of KeyPoint.
+    */
     static void convertKeyPoints(const Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
 
     //! returns the descriptor size in bytes
@@ -309,7 +392,8 @@ public:
         fastDetector_.nonmaxSuppression = nonmaxSuppression;
     }
 
-    //! release temporary buffer's memory
+    /** @brief Releases inner buffer memory.
+    */
     void release();
 
     //! if true, image will be blurred before descriptors calculation
@@ -335,10 +419,10 @@ private:
     int scoreType_;
     int patchSize_;
 
-    // The number of desired features per scale
+    //! The number of desired features per scale
     std::vector<size_t> n_features_per_level_;
 
-    // Points to compute BRIEF descriptors from
+    //! Points to compute BRIEF descriptors from
     GpuMat pattern_;
 
     std::vector<GpuMat> imagePyr_;
@@ -355,6 +439,8 @@ private:
 
     GpuMat d_keypoints_;
 };
+
+//! @}
 
 }} // namespace cv { namespace cuda {
 

@@ -51,6 +51,10 @@
 
 namespace cv
 {
+
+//! @addtogroup objdetect
+//! @{
+
 class CV_EXPORTS DetectionBasedTracker
 {
     public:
@@ -211,6 +215,9 @@ class CV_EXPORTS DetectionBasedTracker
         cv::Rect calcTrackedObjectPositionToShow(int i, ObjectStatus& status) const;
         void detectInRegion(const cv::Mat& img, const cv::Rect& r, std::vector<cv::Rect>& detectedObjectsInRegions);
 };
+
+//! @} objdetect
+
 } //end of cv namespace
 #endif
 

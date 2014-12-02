@@ -51,6 +51,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/** @addtogroup highgui_c
+  @{
+  */
+
 /****************************************************************************************\
 *                                  Basic GUI functions                                   *
 \****************************************************************************************/
@@ -236,6 +240,8 @@ CVAPI(void) cvSetPostprocessFuncWin32_(const void* callback);
 #define cvSetPostprocessFuncWin32(callback) cvSetPostprocessFuncWin32_((const void*)(callback))
 
 #endif
+
+/** @} highgui_c */
 
 #ifdef __cplusplus
 }

@@ -56,6 +56,8 @@
 
 #include "opencv2/cudalegacy.hpp"
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda
 {
     class NppStStreamHandler
@@ -88,5 +90,7 @@ namespace cv { namespace cuda
 }}
 
 #define ncvSafeCall(expr)  cv::cuda::checkNcvError(expr, __FILE__, __LINE__, CV_Func)
+
+//! @endcond
 
 #endif // __OPENCV_CORE_CUDALEGACY_PRIVATE_HPP__

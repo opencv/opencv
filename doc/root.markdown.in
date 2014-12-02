@@ -3,9 +3,14 @@ OpenCV modules {#mainpage}
 
 @subpage intro
 
-Module name   | Folder
-------------- | -------------
-@ref core     | core
-@ref imgproc  | imgproc
+### Main modules
 
-<!-- @CMAKE_DOXYGEN_MODULES_REFERENCE@ -->
+ Module name   | Folder
+-------------- | -------------
+@CMAKE_DOXYGEN_MAIN_REFERENCE@
+
+### Extra modules
+
+ Module name   | Folder
+-------------- | -------------
+@CMAKE_DOXYGEN_EXTRA_REFERENCE@
