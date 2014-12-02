@@ -94,9 +94,9 @@ Ptr<SVM> svm_train_auto( Ptr<TrainData> _data, SVM::Params _params,
 int str_to_ann_train_method( String& str )
 {
     if( !str.compare("BACKPROP") )
-        return ANN_MLP::Params::BACKPROP;
+        return ANN::Params::BACKPROP;
     if( !str.compare("RPROP") )
-        return ANN_MLP::Params::RPROP;
+        return ANN::Params::RPROP;
     CV_Error( CV_StsBadArg, "incorrect ann train method string" );
     return -1;
 }
@@ -371,9 +371,10 @@ int CV_MLBaseTest::train( int testCaseIdx )
                                  data->getVarIdx(), data->getTrainSampleIdx());
         int layer_sz[] = { data->getNAllVars(), 100, 100, (int)cls_map.size() };
         Mat layer_sizes( 1, (int)(sizeof(layer_sz)/sizeof(layer_sz[0])), CV_32S, layer_sz );
-        model = ANN_MLP::create(ANN_MLP::Params(layer_sizes, ANN_MLP::SIGMOID_SYM, 0, 0,
+        model = ANN::create(ANN::Params(layer_sizes, ANN::SIGMOID_SYM, 0, 0,
                                                 TermCriteria(TermCriteria::COUNT,300,0.01),
-                                                str_to_ann_train_method(train_method_str), param1, param2));
+                                                str_to_ann_train_method(train_method_str),
+                                                0.1, 0.95, 0.1, 0.12, 0.5, 1E-6, 50.0));
     }
     else if( modelName == CV_DTREE )
     {
@@ -463,7 +464,7 @@ void CV_MLBaseTest::load( const char* filename )
     else if( modelName == CV_SVM )
         model = StatModel::load<SVM>( filename );
     else if( modelName == CV_ANN )
-        model = StatModel::load<ANN_MLP>( filename );
+        model = StatModel::load<ANN>( filename );
     else if( modelName == CV_DTREE )
         model = StatModel::load<DTrees>( filename );
     else if( modelName == CV_BOOST )

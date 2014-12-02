@@ -34,7 +34,7 @@ using cv::ml::NormalBayesClassifier;
 using cv::ml::SVM;
 using cv::ml::KNearest;
 using cv::ml::ParamGrid;
-using cv::ml::ANN_MLP;
+using cv::ml::ANN;
 using cv::ml::DTrees;
 using cv::ml::Boost;
 using cv::ml::RTrees;

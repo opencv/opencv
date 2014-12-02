@@ -373,15 +373,15 @@ computed as:
 
 Different activation functions may be used. ML implements three standard functions:
 
--   Identity function ( ANN_MLP::IDENTITY ): \f$f(x)=x\f$
+-   Identity function ( ANN::IDENTITY ): \f$f(x)=x\f$
 
--   Symmetrical sigmoid ( ANN_MLP::SIGMOID_SYM ): \f$f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}\f$
+-   Symmetrical sigmoid ( ANN::SIGMOID_SYM ): \f$f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}\f$
     ), which is the default choice for MLP. The standard sigmoid with \f$\beta =1, \alpha =1\f$ is shown
     below:
 
     ![image](pics/sigmoid_bipolar.png)
 
--   Gaussian function ( ANN_MLP::GAUSSIAN ): \f$f(x)=\beta e^{-\alpha x*x}\f$ , which is not completely
+-   Gaussian function ( ANN::GAUSSIAN ): \f$f(x)=\beta e^{-\alpha x*x}\f$ , which is not completely
     supported at the moment.
 
 In ML, all the neurons have the same activation functions, with the same free parameters (
@@ -770,7 +770,7 @@ public:
     @param trainData training data that can be loaded from file using TrainData::loadFromCSV or
     created with TrainData::create.
     @param flags optional flags, depending on the model. Some of the models can be updated with the
-    new training samples, not completely overwritten (such as NormalBayesClassifier or ANN_MLP).
+    new training samples, not completely overwritten (such as NormalBayesClassifier or ANN).
 
     There are 2 instance methods and 2 static (class) template methods. The first two train the already
     created model (the very first method must be overwritten in the derived classes). And the latter two
@@ -1835,8 +1835,6 @@ public:
 *                              Artificial Neural Networks (ANN)                          *
 \****************************************************************************************/
 
-/////////////////////////////////// Multi-Layer Perceptrons //////////////////////////////
-
 //! @addtogroup ml_neural
 //! @{
 
@@ -1844,11 +1842,11 @@ public:
 
 Unlike many other models in ML that are constructed and trained at once, in the MLP model these
 steps are separated. First, a network with the specified topology is created using the non-default
-constructor or the method ANN_MLP::create. All the weights are set to zeros. Then, the network is
+constructor or the method ANN::create. All the weights are set to zeros. Then, the network is
 trained using a set of input and output vectors. The training procedure can be repeated more than
 once, that is, the weights can be adjusted based on the new training data.
  */
-class CV_EXPORTS_W ANN_MLP : public StatModel
+class CV_EXPORTS_W ANN : public StatModel
 {
 public:
     /** @brief Parameters of the MLP and of the training algorithm.
@@ -1861,13 +1859,13 @@ public:
     of elements in the input layer. The last element - number of elements in the output layer.
     -   member int activateFunc
     The activation function. Currently the only fully supported activation function is
-    ANN_MLP::SIGMOID_SYM.
+    ANN::SIGMOID_SYM.
     -   member double fparam1
     The first parameter of activation function, 0 by default.
     -   member double fparam2
     The second parameter of the activation function, 0 by default.
     @note
-       If you are using the default ANN_MLP::SIGMOID_SYM activation function with the default
+       If you are using the default ANN::SIGMOID_SYM activation function with the default
         parameter values fparam1=0 and fparam2=0 then the function used is y = 1.7159\*tanh(2/3 \* x),
         so the output will range from [-1.7159, 1.7159], instead of [0,1].
 
@@ -1899,7 +1897,7 @@ public:
         @param layerSizes Integer vector specifying the number of neurons in each layer including the
         input and output layers.
         @param activateFunc Parameter specifying the activation function for each neuron: one of
-        ANN_MLP::IDENTITY, ANN_MLP::SIGMOID_SYM, and ANN_MLP::GAUSSIAN.
+        ANN::IDENTITY, ANN::SIGMOID_SYM, and ANN::GAUSSIAN.
         @param fparam1 The first parameter of the activation function, \f$\alpha\f$. See the formulas in the
         introduction section.
         @param fparam2 The second parameter of the activation function, \f$\beta\f$. See the formulas in the
@@ -1908,46 +1906,47 @@ public:
         of iterations (maxCount) and/or how much the error could change between the iterations to make the
         algorithm continue (epsilon).
         @param trainMethod Training method of the MLP. Possible values are:
-        -   **ANN_MLP_TrainParams::BACKPROP** The back-propagation algorithm.
-        -   **ANN_MLP_TrainParams::RPROP** The RPROP algorithm.
+        -   **ANN_TrainParams::BACKPROP** The back-propagation algorithm.
+        -   **ANN_TrainParams::RPROP** The RPROP algorithm.
         @param param1 Parameter of the training method. It is rp_dw0 for RPROP and bp_dw_scale for
         BACKPROP.
         @param param2 Parameter of the training method. It is rp_dw_min for RPROP and bp_moment_scale
         for BACKPROP.
 
-        By default the RPROP algorithm is used:
+        By default the BACKPROP algorithm is used:
         @code
-            ANN_MLP_TrainParams::ANN_MLP_TrainParams()
+            ANN_TrainParams::ANN_TrainParams()
             {
                 layerSizes = Mat();
                 activateFun = SIGMOID_SYM;
                 fparam1 = fparam2 = 0;
                 term_crit = TermCriteria( TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, 0.01 );
-                train_method = RPROP;
+                train_method = BACKPROP;
                 bpDWScale = bpMomentScale = 0.1;
                 rpDW0 = 0.1; rpDWPlus = 1.2; rpDWMinus = 0.5;
                 rpDWMin = FLT_EPSILON; rpDWMax = 50.;
             }
         @endcode
          */
-        Params( const Mat& layerSizes, int activateFunc, double fparam1, double fparam2,
-                TermCriteria termCrit, int trainMethod, double param1, double param2=0 );
+        Params(const Mat& layerSizes, int activateFunc, float fparam1, float fparam2,
+               TermCriteria termCrit, int trainMethod, float bpDWScale, float bpMomentScale, 
+               float rpDW0, float rpDWPlus, float rpDWMinus, float rpDWMin, float rpDWMax);
 
         enum { BACKPROP=0, RPROP=1 };
 
         CV_PROP_RW Mat layerSizes;
         CV_PROP_RW int activateFunc;
-        CV_PROP_RW double fparam1;
-        CV_PROP_RW double fparam2;
+        CV_PROP_RW float fparam1;
+        CV_PROP_RW float fparam2;
 
         CV_PROP_RW TermCriteria termCrit;
         CV_PROP_RW int trainMethod;
 
         // backpropagation parameters
-        CV_PROP_RW double bpDWScale, bpMomentScale;
+        CV_PROP_RW float bpDWScale, bpMomentScale;
 
         // rprop parameters
-        CV_PROP_RW double rpDW0, rpDWPlus, rpDWMinus, rpDWMin, rpDWMax;
+        CV_PROP_RW float rpDW0, rpDWPlus, rpDWMinus, rpDWMin, rpDWMax;
     };
 
     // possible activation functions
@@ -1973,9 +1972,9 @@ public:
 
     /** @brief Creates empty model
 
-    Use StatModel::train to train the model, StatModel::train\<ANN_MLP\>(traindata, params) to create
-    and train the model, StatModel::load\<ANN_MLP\>(filename) to load the pre-trained model. Note that
-    the train method has optional flags, and the following flags are handled by \`ANN_MLP\`:
+    Use StatModel::train to train the model, StatModel::train\<ANN\>(traindata, params) to create
+    and train the model, StatModel::load\<ANN\>(filename) to load the pre-trained model. Note that
+    the train method has optional flags, and the following flags are handled by \`ANN\`:
 
     -   **UPDATE_WEIGHTS** Algorithm updates the network weights, rather than computes them from
     scratch. In the latter case the weights are initialized using the Nguyen-Widrow algorithm.
@@ -1988,7 +1987,7 @@ public:
     the training algorithm normalizes each output feature independently, by transforming it to the
     certain range depending on the used activation function.
      */
-    static Ptr<ANN_MLP> create(const Params& params=Params());
+    static Ptr<ANN> create(const Params& params=Params());
 };
 
 //! @} ml_neural
