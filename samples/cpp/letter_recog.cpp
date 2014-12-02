@@ -12,7 +12,7 @@ using namespace cv::ml;
 static void help()
 {
     printf("\nThe sample demonstrates how to train Random Trees classifier\n"
-    "(or Boosting classifier, or MLP, or Knearest, or Nbayes, or Support Vector Machines - see main()) using the provided dataset.\n"
+    "(or Boosting classifier, or Artificial Neural Networks, or Knearest, or Nbayes, or Support Vector Machines - see main()) using the provided dataset.\n"
     "\n"
     "We use the sample database letter-recognition.data\n"
     "from UCI Repository, here is the link:\n"
@@ -31,7 +31,7 @@ static void help()
             "The usage: letter_recog [-data <path to letter-recognition.data>] \\\n"
             "  [-save <output XML file for the classifier>] \\\n"
             "  [-load <XML file with the pre-trained classifier>] \\\n"
-            "  [-boost|-mlp|-knearest|-nbayes|-svm] # to use boost/mlp/knearest/SVM classifier instead of default Random Trees\n" );
+            "  [-boost|-ann|-knearest|-nbayes|-svm] # to use boost/ANN/knearest/SVM classifier instead of default Random Trees\n" );
 }
 
 // This function reads data and responses from the file <filename>
@@ -320,7 +320,7 @@ build_boost_classifier( const string& data_filename,
 
 
 static bool
-build_mlp_classifier( const string& data_filename,
+build_ANN_classifier( const string& data_filename,
                       const string& filename_to_save,
                       const string& filename_to_load )
 {
@@ -332,15 +332,15 @@ build_mlp_classifier( const string& data_filename,
     if( !ok )
         return ok;
 
-    Ptr<ANN_MLP> model;
+    Ptr<ANN> model;
 
     int nsamples_all = data.rows;
     int ntrain_samples = (int)(nsamples_all*0.8);
 
-    // Create or load MLP classifier
+    // Create or load ANN classifier
     if( !filename_to_load.empty() )
     {
-        model = load_classifier<ANN_MLP>(filename_to_load);
+        model = load_classifier<ANN>(filename_to_load);
         if( model.empty() )
             return false;
         ntrain_samples = 0;
@@ -349,10 +349,10 @@ build_mlp_classifier( const string& data_filename,
     {
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         //
-        // MLP does not support categorical variables by explicitly.
+        // ANN does not support categorical variables by explicitly.
         // So, instead of the output class label, we will use
         // a binary vector of <class_count> components for training and,
-        // therefore, MLP will give us a vector of "probabilities" at the
+        // therefore, ANN will give us a vector of "probabilities" at the
         // prediction stage
         //
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -374,11 +374,11 @@ build_mlp_classifier( const string& data_filename,
         Mat layer_sizes( 1, nlayers, CV_32S, layer_sz );
 
 #if 1
-        int method = ANN_MLP::Params::BACKPROP;
+        int method = ANN::Params::BACKPROP;
         double method_param = 0.001;
         int max_iter = 300;
 #else
-        int method = ANN_MLP::Params::RPROP;
+        int method = ANN::Params::RPROP;
         double method_param = 0.1;
         int max_iter = 1000;
 #endif
@@ -386,7 +386,7 @@ build_mlp_classifier( const string& data_filename,
         Ptr<TrainData> tdata = TrainData::create(train_data, ROW_SAMPLE, train_responses);
 
         cout << "Training the classifier (may take a few minutes)...\n";
-        model = StatModel::train<ANN_MLP>(tdata, ANN_MLP::Params(layer_sizes, ANN_MLP::SIGMOID_SYM, 0, 0, TC(max_iter,0), method, method_param));
+        model = StatModel::train<ANN>(tdata, ANN::Params(layer_sizes, ANN::SIGMOID_SYM, 0, 0, TC(max_iter,0), method, method_param));
         cout << endl;
     }
 
@@ -514,7 +514,7 @@ int main( int argc, char *argv[] )
         {
             method = 1;
         }
-        else if( strcmp(argv[i],"-mlp") == 0 )
+        else if( strcmp(argv[i],"-ann") == 0 )
         {
             method = 2;
         }
@@ -540,7 +540,7 @@ int main( int argc, char *argv[] )
         method == 1 ?
         build_boost_classifier( data_filename, filename_to_save, filename_to_load ) :
         method == 2 ?
-        build_mlp_classifier( data_filename, filename_to_save, filename_to_load ) :
+        build_ann_classifier( data_filename, filename_to_save, filename_to_load ) :
         method == 3 ?
         build_knearest_classifier( data_filename, 10 ) :
         method == 4 ?
