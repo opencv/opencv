@@ -280,7 +280,7 @@ The function can be used to initialize a point-based tracker of an object.
 
 HoughCircles
 ------------
-Finds circles in a grayscale image using the Hough transform.
+Finds circles in a grayscale image using a modification of the Hough transform.
 
 .. ocv:function:: void HoughCircles( InputArray image, OutputArray circles, int method, double dp, double minDist, double param1=100, double param2=100, int minRadius=0, int maxRadius=0 )
 
@@ -307,8 +307,6 @@ Finds circles in a grayscale image using the Hough transform.
     :param minRadius: Minimum circle radius.
 
     :param maxRadius: Maximum circle radius.
-
-The function finds circles in a grayscale image using a modification of the Hough transform.
 
 Example: ::
 
@@ -342,6 +340,8 @@ Example: ::
         imshow( "circles", img );
         return 0;
     }
+
+.. note:: The elements of the output vector of found circles ("circles" in the above example) are sorted in descending order of accumulator values. This way, the centres with the most supporting pixels appear first.
 
 .. note:: Usually the function detects the centers of circles well. However, it may fail to find correct radii. You can assist to the function by specifying the radius range ( ``minRadius`` and ``maxRadius`` ) if you know it. Or, you may ignore the returned radius, use only the center, and find the correct radius using an additional procedure.
 
