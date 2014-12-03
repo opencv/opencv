@@ -159,7 +159,7 @@ OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF
 OCV_OPTION(WITH_WIN32UI        "Build with Win32 UI Backend support"         ON   IF WIN32 )
 OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O insted of QTKit" OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS) )
-OCV_OPTION(WITH_OPENMP         "Include OpenMP support"                      OFF)
+OCV_OPTION(WITH_OPENMP         "Include OpenMP support"                      ON)
 OCV_OPTION(WITH_CSTRIPES       "Include C= support"                          OFF  IF WIN32 )
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_UNICAP         "Include Unicap support (GPL)"                OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
