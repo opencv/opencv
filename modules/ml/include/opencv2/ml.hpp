@@ -828,7 +828,6 @@ public:
     }
 
     /** @brief Loads model from an XML String
-    
     @param strModel The string variable containing the model (in an XML format) you want to load.
 
     This is static template method of StatModel. It's usage is following (in the case of SVM):
@@ -841,7 +840,7 @@ public:
         model->read(fs.getFirstTopLevelNode());
         return model->isTrained() ? model : Ptr<_Tp>();
     }
-    
+
     template<typename _Tp> static Ptr<_Tp> train(const Ptr<TrainData>& data, const typename _Tp::Params& p, int flags=0)
     {
         Ptr<_Tp> model = _Tp::create(p);
