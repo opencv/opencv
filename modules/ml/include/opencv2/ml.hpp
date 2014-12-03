@@ -836,12 +836,12 @@ public:
     @param strModel The string variable containing the model (in an XML format) you want to load.
      */
     template<typename _Tp> static Ptr<_Tp> loadFromString(const String& strModel)
-	{
-		FileStorage fs(strModel, FileStorage::READ + FileStorage::MEMORY + FileStorage::FORMAT_XML);
-		Ptr<_Tp> model = _Tp::create();
-		model->read(fs.getFirstTopLevelNode());
-		return model->isTrained() ? model : Ptr<_Tp>();
-	}
+    {
+        FileStorage fs(strModel, FileStorage::READ + FileStorage::MEMORY + FileStorage::FORMAT_XML);
+        Ptr<_Tp> model = _Tp::create();
+        model->read(fs.getFirstTopLevelNode());
+        return model->isTrained() ? model : Ptr<_Tp>();
+    }
     
     template<typename _Tp> static Ptr<_Tp> train(const Ptr<TrainData>& data, const typename _Tp::Params& p, int flags=0)
     {
