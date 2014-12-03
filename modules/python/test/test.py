@@ -13,12 +13,22 @@ import os
 import getopt
 import operator
 import functools
+import argparse
 
 import cv2.cv as cv
 
 from test2 import *
 
 class OpenCVTests(unittest.TestCase):
+
+    # path to local repository folder containing 'samples' folder
+    repoPath = None
+    # github repository url
+    repoUrl = 'https://raw.github.com/Itseez/opencv/2.4'
+    # path to local folder containing 'camera_calibration.tar.gz'
+    dataPath = None
+    # data url
+    dataUrl = 'http://docs.opencv.org/data'
 
     depths = [ cv.IPL_DEPTH_8U, cv.IPL_DEPTH_8S, cv.IPL_DEPTH_16U, cv.IPL_DEPTH_16S, cv.IPL_DEPTH_32S, cv.IPL_DEPTH_32F, cv.IPL_DEPTH_64F ]
 
@@ -73,11 +83,27 @@ class OpenCVTests(unittest.TestCase):
 
     def get_sample(self, filename, iscolor = cv.CV_LOAD_IMAGE_COLOR):
         if not filename in self.image_cache:
-            filedata = urllib.urlopen("https://raw.github.com/Itseez/opencv/2.4/" + filename).read()
+            filedata = None
+            if OpenCVTests.repoPath is not None:
+                candidate = OpenCVTests.repoPath + '/' + filename
+                if os.path.isfile(candidate):
+                    with open(candidate, 'rb') as f:
+                        filedata = f.read()
+            if filedata is None:
+                filedata = urllib.urlopen(OpenCVTests.repoUrl + '/' + filename).read()
             imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
             cv.SetData(imagefiledata, filedata, len(filedata))
             self.image_cache[filename] = cv.DecodeImageM(imagefiledata, iscolor)
         return self.image_cache[filename]
+
+    def get_data(self, filename, urlbase):
+        if (not os.path.isfile(filename)):
+            if OpenCVTests.dataPath is not None:
+                candidate = OpenCVTests.dataPath + '/' + filename
+                if os.path.isfile(candidate):
+                    return candidate
+            urllib.urlretrieve(urlbase + '/' + filename, filename)
+        return filename
 
     def setUp(self):
         self.image_cache = {}
@@ -1646,9 +1672,8 @@ class AreaTests(OpenCVTests):
             cv.SetData(imagefiledata, filedata, len(filedata))
             return cv.DecodeImageM(imagefiledata)
 
-        if (not os.path.isfile("camera_calibration.tar.gz")):
-            urllib.urlretrieve("http://docs.opencv.org/data/camera_calibration.tar.gz", "camera_calibration.tar.gz")
-        tf = tarfile.open("camera_calibration.tar.gz")
+        filename = self.get_data("camera_calibration.tar.gz", OpenCVTests.dataUrl)
+        tf = tarfile.open(filename)
 
         num_x_ints = 8
         num_y_ints = 6
@@ -2204,9 +2229,20 @@ class DocumentFragmentTests(OpenCVTests):
         self.assertNotEqual(self.hashimg(h1), self.hashimg(h2))
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='run OpenCV python tests')
+    parser.add_argument('--repo', help='use sample image files from local git repository (path to folder), '
+                                       'if not set, samples will be downloaded from github.com')
+    parser.add_argument('--data', help='use data files from local folder (path to folder), '
+                                        'if not set, data files will be downloaded from docs.opencv.org')
+    args, other = parser.parse_known_args()
     print "testing", cv.__version__
+    print "Local repo path:", args.repo
+    print "Local data path:", args.data
+    OpenCVTests.repoPath = args.repo
+    OpenCVTests.dataPath = args.data
     random.seed(0)
-    unittest.main()
+    unit_argv = [sys.argv[0]] + other;
+    unittest.main(argv=unit_argv)
 #    optlist, args = getopt.getopt(sys.argv[1:], 'l:rd')
 #    loops = 1
 #    shuffle = 0
