@@ -91,8 +91,8 @@ public:
     }
 
     /**
-    *  @brief      Neural networks' creation procedure.
-    *  @param    Neurons  Quantity of neurons on each layer. It structurally defines a feed-forward 
+    *  @brief    Neural networks' creation procedure.
+    *  @param    Neurons  Quantity of neurons on each layer. It structurally defines a feed-forward
     *                     neural network.
     */
     int create(const Mat &layerSizes, int activateFunc = SIGMOID_SYM, \
@@ -468,7 +468,7 @@ private:
     {
         for(uint i = 0; i < L; i++)
         {
-            // i + 1 is t layer，i is s layer. 
+            // i + 1 is t layer，i is s layer.
             // s layer has one more threshold neuron coANNects to t layer
             Mat WSpace = Mat(C[i + 1] + 1, C[i] + 1, CV_32F, 0.f);
             W.push_back(WSpace);
@@ -635,7 +635,7 @@ private:
             M.at<float>(r, i) = v[i];
         return 0;
     }
-    
+
     /**
     *  @brief      Returns a vector, its entries are continuous integers, but its order is randomized
     *  @param    start   start of integer
@@ -829,9 +829,9 @@ public:
     // set parameters
 
     /**
-    *  @brief      Sets initial weight matrics (optional).
-    *  @param    Weights  The initial weight matrics. If is empty then the randomized 
-                         weight matrics are autoly generated 
+    *  @brief    Sets initial weight matrics (optional).
+    *  @param    Weights  The initial weight matrics. If is empty then the randomized
+                          weight matrics are autoly generated
     *  @sample
     *    float w10[2][2] = {{0.5, 0.5}, {0.5, 0.5}}; // weight matrix between layer 1 and 0
     *    float w21[1][2] = {{0.5, 0.5}}; // between layer 2 and 1
@@ -849,9 +849,9 @@ public:
     }
 
     /**
-    *  @brief      Sets parameters of BP learning algorithm
-    *  @param    bpDWScale       learning speed (learning rate), belongs to [0, 1]
-    *           bpMomentScale  learning momentum, belongs to [0, 1]
+    *  @brief    Sets parameters of BP learning algorithm
+    *  @param    bpDWScale      learning speed (learning rate), belongs to [0, 1]
+    *            bpMomentScale  learning momentum, belongs to [0, 1]
     */
     int setBPParameters(float bpDWScale, float bpMomentScale)
     {
@@ -904,8 +904,8 @@ public:
     }
 
     /**
-    *  @brief      Sets epoches of training.
-    *  @param    _epoches  epoches of training, an epoch is defined as a cycle that 
+    *  @brief   Sets epoches of training.
+    *  @param   _epoches  epoches of training, an epoch is defined as a cycle that
                 all samples are used to train the network once.
     */
     int setEpoches(uint _epoches)
@@ -985,19 +985,19 @@ public:
 
 private:
     // structural parameters
-    uint L;                 // quantity of hidden layers           L
-    std::vector<uint> C;    // quantity of neurons on each layer   {C0, C1 ... CL}
-    
+    uint L;                // quantity of hidden layers           L
+    std::vector<uint> C;   // quantity of neurons on each layer   {C0, C1 ... CL}
+
     // memory parameters (BP)
-    std::vector<Mat> W;     // weight matrics, the memory of ANN   {W10, W21... WLL-1}
-    std::vector<Mat> IW;    // initial weight matrics (optional)
-    std::vector<Mat> _uW;    // update of weight matrics of previous epoch
+    std::vector<Mat> W;    // weight matrics, the memory of ANN   {W10, W21... WLL-1}
+    std::vector<Mat> IW;   // initial weight matrics (optional)
+    std::vector<Mat> _uW;  // update of weight matrics of previous epoch
 
     // high-level memory parameters (RPROP)
-    std::vector<Mat> dW;    // update of weight matrics
-    std::vector<Mat> _dW;   // update of weight matrics of previous epoch
-    std::vector<Mat> _dW1;    // update of first-order weight matrics of previous epoch
-    std::vector<Mat> _U;    // update-value matrics of previous epoch
+    std::vector<Mat> dW;   // update of weight matrics
+    std::vector<Mat> _dW;  // update of weight matrics of previous epoch
+    std::vector<Mat> _dW1; // update of first-order weight matrics of previous epoch
+    std::vector<Mat> _U;   // update-value matrics of previous epoch
 
     // data parameters
     std::vector<float> I;  // current input vector     length of C0 + 1, the 1 is for threshold
@@ -1008,17 +1008,17 @@ private:
     float a;               // activation function parameter
     float b;               // activation function parameter
     float R;               // learning speed, belongs to [0, 1]
-    float m;                // learning momentum, belongs to [0, 1]
-    uint actfun;            // the activation function
-    uint algorithm;         // the learning algorithm
-    uint epoches;            // epoches of training
+    float m;               // learning momentum, belongs to [0, 1]
+    uint actfun;           // the activation function
+    uint algorithm;        // the learning algorithm
+    uint epoches;          // epoches of training
 
     // high-level learning parameters (RPROP)
-    float U0;                // initial update-values
-    float Ru;                // update-value increasing parameter R+
-    float Rl;                // update-value decreasing parameter R-
-    float Umn;                // update-value minimum
-    float Umx;                // update-value maximum
+    float U0;              // initial update-values
+    float Ru;              // update-value increasing parameter R+
+    float Rl;              // update-value decreasing parameter R-
+    float Umn;             // update-value minimum
+    float Umx;             // update-value maximum
 
     // intermediate parameters
     float E;                             // accumulation error of this epoch
@@ -1036,4 +1036,3 @@ private:
 };
 
 }}
-

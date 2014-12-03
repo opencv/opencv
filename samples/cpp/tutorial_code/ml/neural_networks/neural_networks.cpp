@@ -12,7 +12,7 @@ int main(int argc, char** argv )
     printf("|--Setting--|----Training----|--------------------Randering--------------------|");
     // setting up network
     NN nn;
-    int neuronsmat[1][5] = {{2, 150, 150, 150, 1}};// initiate network with 3 hidden layers, 
+    int neuronsmat[1][5] = {{2, 150, 150, 150, 1}};// initiate network with 3 hidden layers,
     Mat neurons = Mat(1, 5, CV_32S, neuronsmat);   // 150 neurons for each layer
     nn.create(neurons, ANN::SIGMOID_SYM);
 
@@ -68,7 +68,7 @@ int main(int argc, char** argv )
     int radius = 5;
     for(int i = 0; i < n; i++)
     {
-        Point p = Point((inputs.at<float>(i, 1) + 1) * height / 2, 
+        Point p = Point((inputs.at<float>(i, 1) + 1) * height / 2,
                         (inputs.at<float>(i, 0) + 1) *  width / 2);// invert for image portray
         Scalar s = outputs.at<float>(i, 0) < 0 ? Scalar(0, 0, 0) : Scalar(255, 255, 255);
         circle(image, p, radius, s);
