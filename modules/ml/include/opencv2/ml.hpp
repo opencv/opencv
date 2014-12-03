@@ -828,12 +828,11 @@ public:
     }
 
     /** @brief Loads model from an XML String
-
-    This is static template method of StatModel. It's usage is following (in the case of SVM): :
-
-        Ptr<SVM> svm = StatModel::loadFromString<SVM>(myXMLStringModel);
-
+    
     @param strModel The string variable containing the model (in an XML format) you want to load.
+
+    This is static template method of StatModel. It's usage is following (in the case of SVM):
+        Ptr<SVM> svm = StatModel::loadFromString<SVM>(myXMLStringModel);
      */
     template<typename _Tp> static Ptr<_Tp> loadFromString(const String& strModel)
     {
