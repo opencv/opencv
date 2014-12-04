@@ -60,7 +60,7 @@ class ANNImpl : public ANN
 
 public:
     /**
-    *  @brief      Neural networks' constructor procedure.
+    *  @brief    Neural networks' constructor procedure.
     */
     ANNImpl()
     {
@@ -78,7 +78,7 @@ public:
     }
 
     /**
-    *  @brief      Neural networks' destructor procedure.
+    *  @brief    Neural networks' destructor procedure.
     */
     ~ANNImpl()
     {
@@ -146,7 +146,7 @@ public:
     }
 
     /**
-    *  @brief      Neural networks' training procedure
+    *  @brief    Neural networks' training procedure
     *  @param    inputs   the sample input vectors
     *            outputs  the expected output vectors
     *            input    one sample input vector
@@ -248,10 +248,10 @@ public:
     }
 
     /**
-    *  @brief      Neural networks' evaluation procedure
+    *  @brief    Neural networks' evaluation procedure
     *  @param    inputs   the sample input vectors
     *            outputs  the predicted output vectors
-    *           input    one sample input vector
+    *            input    one sample input vector
     *            output   one predicted output vector
     */
     Mat predict(const Mat &inputs)
@@ -306,7 +306,7 @@ public:
 
 private:
     /**
-    *  @brief      Activates one epoch of BP algorithm
+    *  @brief    Activates one epoch of BP algorithm
     */
     void ActivateBPAlgorithm()
     {
@@ -316,7 +316,7 @@ private:
     }
 
     /**
-    *  @brief      Activates one epoch of RPROP algorithm
+    *  @brief    Activates one epoch of RPROP algorithm
     */
     void ActivateRPROPAlgorithm()
     {
@@ -327,7 +327,7 @@ private:
     }
 
     /**
-    *  @brief      BP-Core: Activates forward procedure
+    *  @brief    BP-Core: Activates forward procedure
     */
     void ForwardCalculation()
     {
@@ -355,7 +355,7 @@ private:
     }
 
     /**
-    *  @brief      BP-Core: Activates backward procedure
+    *  @brief    BP-Core: Activates backward procedure
     */
     void BackwardCalculation()
     {
@@ -385,7 +385,7 @@ private:
     }
 
     /**
-    *  @brief      BP-Core: Updates weight matrics
+    *  @brief    BP-Core: Updates weight matrics
     */
     void WeightMatricsUpdate()
     {
@@ -412,7 +412,7 @@ private:
     }
 
     /**
-    *  @brief      RPROP-Core: Updates first-order weight matrics
+    *  @brief    RPROP-Core: Updates first-order weight matrics
     */
     void FirstOrderWeightMatricsUpdate()
     {
@@ -449,7 +449,7 @@ private:
     }
 
     /**
-    *  @brief      Initialize memory of neural networks for BP algorithm
+    *  @brief    Initialize memory of neural networks for BP algorithm
     */
     void InitializeBPMemory()
     {
@@ -461,7 +461,7 @@ private:
     }
 
     /**
-    *  @brief      Precreates weight matrics, allocates the memory of neural networks
+    *  @brief    Precreates weight matrics, allocates the memory of neural networks
     *  this is a sub function of InitializeBPMemory()
     */
     void PreCreateWeightMatrics()
@@ -478,7 +478,7 @@ private:
     }
 
     /**
-    *  @brief      Sets weight matrics to user defined initial weight matrics values
+    *  @brief    Sets weight matrics to user defined initial weight matrics values
     *  @param    Weights   weight matrics
     *  @param    Initials  Initial weight matrics
     *  this is also a sub function of InitializeBPMemory()
@@ -505,7 +505,7 @@ private:
     }
 
     /**
-    *  @brief      Creates weight matrics using autoly generated randomized weight matrics
+    *  @brief    Creates weight matrics using autoly generated randomized weight matrics
     *  @param    Weights   weight matrics
     *  this is as well a sub function of InitializeBPMemory()
     */
@@ -528,7 +528,7 @@ private:
     }
 
     /**
-    *  @brief      Creates a random value
+    *  @brief    Creates a random value
     *  @param    F    distribution parameter
     *  the pdf (probabilistic density function) is f(x) = 1 / 6 * sqrt(F), where x belongs
     *  to [-3 / sqrt(F), 3 / sqrt(F)], and F is quantity of neurons in that layer
@@ -541,7 +541,7 @@ private:
     }
 
     /**
-    *  @brief      Initialize high-level memory of neural networks for RPROP algorithm
+    *  @brief    Initialize high-level memory of neural networks for RPROP algorithm
     */
     void InitializeRPROPMemory()
     {
@@ -549,7 +549,7 @@ private:
     }
 
     /**
-    *  @brief      Creates update-value matrics, allocates the high-level memory of neural networks
+    *  @brief    Creates update-value matrics, allocates the high-level memory of neural networks
     *  this is a sub funtion of InitializeRPROPMemory()
     */
     void CreateUpdateValueMatrics()
@@ -572,9 +572,9 @@ private:
     }
 
     /**
-    *  @brief      Calculate the square distance between two vectors
+    *  @brief    Calculate the square distance between two vectors
     *  @param    v1  the vector 1
-    *           v2  the vector 2
+    *            v2  the vector 2
     */
     float sqdist(std::vector<float> v1, std::vector<float> v2)
     {
@@ -588,7 +588,7 @@ private:
     }
 
     /**
-    *  @brief      Convert a vector of length l to a matrix of size (1, l)
+    *  @brief    Convert a vector of length l to a matrix of size (1, l)
     *  @param    v  the vector to convert
     */
     Mat v2m(std::vector<float> v)
@@ -600,7 +600,7 @@ private:
     }
 
     /**
-    *  @brief      Convert a matrix of size (1, l) to a vector of length l
+    *  @brief    Convert a matrix of size (1, l) to a vector of length l
     *  @param    M  the matrix to convert
     */
     std::vector<float> m2v(Mat M)
@@ -609,7 +609,7 @@ private:
     }
 
     /**
-    *  @brief      Get r row of a matrix of size (n, l) to a vector of length l
+    *  @brief    Get r row of a matrix of size (n, l) to a vector of length l
     *  @param    M  the original matrix
     *            r  the row required
     */
@@ -623,7 +623,7 @@ private:
     }
 
     /**
-    *  @brief      Set r row of a matrix of size (n, l) to a vector of length l
+    *  @brief    Set r row of a matrix of size (n, l) to a vector of length l
     *  @param    M  the original matrix
     *            r  the row required
     *            v  the vector that the row sets to
@@ -637,10 +637,10 @@ private:
     }
 
     /**
-    *  @brief      Returns a vector, its entries are continuous integers, but its order is randomized
+    *  @brief    Returns a vector, its entries are continuous integers, but its order is randomized
     *  @param    start   start of integer
-    *               end     end of integer
-    *               degree  how random are these integers
+    *            end     end of integer
+    *            degree  how random are these integers
     */
     std::vector<uint> randvec(uint start, uint end, uint degree)
     {
@@ -655,10 +655,10 @@ private:
     }
 
     /**
-    *  @brief      Swap two entries in a vector
+    *  @brief    Swap two entries in a vector
     *  @param    vec  the vector
     *            _a   entry 1
-    *               _b   entry 2
+    *            _b   entry 2
     */
     int swap(std::vector<uint> &vec, int _a, int _b)
     {
@@ -671,9 +671,9 @@ private:
     }
 
     /**
-    *  @brief      Returns random integer
+    *  @brief    Returns random integer
     *  @param    _a  lower limit
-    *               _b  upper limit
+    *            _b  upper limit
     */
     uint randint(int _a, int _b)
     {
@@ -683,9 +683,9 @@ private:
     }
 
     /**
-    *  @brief      Returns a random number
+    *  @brief    Returns a random number
     *  @param    _a  lower limit
-    *               _b  upper limit
+    *            _b  upper limit
     */
     float avgrand(float _a, float _b)
     {
@@ -694,7 +694,7 @@ private:
     }
 
     /**
-    *  @brief      Returns a bounded matrix
+    *  @brief    Returns a bounded matrix
     *  @param    M     the matrix to calculate
     *            llim  lower limit
     *            ulim  upper limit
@@ -718,7 +718,7 @@ private:
     }
 
     /**
-    *  @brief      Returns a sign matrix
+    *  @brief    Returns a sign matrix
     *  @param    M  the matrix to calculate
     */
     Mat sign(Mat M)
@@ -740,8 +740,8 @@ private:
     }
 
     /**
-    *  @brief      entry operation. in each of the corresponding entries of matrics,
-                if SIG > 0 returns A, if SIG < 0 returns B, if SIG = 0 returns C
+    *  @brief    entry operation. in each of the corresponding entries of matrics,
+                 if SIG > 0 returns A, if SIG < 0 returns B, if SIG = 0 returns C
     *  @param    _A    value matrix A
     *            _B    value matrix B
     *            _C    value matrix C
@@ -764,7 +764,7 @@ private:
     }
 
     /**
-    *  @brief      apply function computation to each entry of the matrix
+    *  @brief    apply function computation to each entry of the matrix
     *  @param    M  the source matrix
     *  @optional
     *                    2a
@@ -861,12 +861,12 @@ public:
     }
 
     /**
-    *  @brief      Sets parameters of RPROP learning algorithm
+    *  @brief    Sets parameters of RPROP learning algorithm
     *  @param    rpDW0       initial update-values
-    *           rpDWPlus   update-value increasing parameter R+
-    *           rpDWMinus  update-value decreasing parameter R-
-    *           rpDWMin    update-value minimum
-    *           rpDWMax    update-value maximum
+    *            rpDWPlus   update-value increasing parameter R+
+    *            rpDWMinus  update-value decreasing parameter R-
+    *            rpDWMin    update-value minimum
+    *            rpDWMax    update-value maximum
     */
     int setRPROPParameters(float rpDW0, float rpDWPlus, float rpDWMinus, \
         float rpDWMin, float rpDWMax)
@@ -880,10 +880,10 @@ public:
     }
 
     /**
-    *  @brief      Sets activation function parameters
+    *  @brief    Sets activation function parameters
     *  @param    _actfun  activation function
     *            _a    activation function parameter 1
-    *              _b    activation function parameter 2
+    *            _b    activation function parameter 2
     */
     int setActivation(uint _actfun, float _a, float _b)
     {
@@ -894,7 +894,7 @@ public:
     }
 
     /**
-    *  @brief      Sets learning algorithm.
+    *  @brief    Sets learning algorithm.
     *  @param    _algorithm  learning algorithm
     */
     int setAlgorithm(uint _algorithm)
