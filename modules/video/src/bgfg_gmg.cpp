@@ -280,7 +280,7 @@ namespace
                         }
                     }
                 }
-                else if (updateBackgroundModel_)
+                else
                 {
                     // training-mode update
 
