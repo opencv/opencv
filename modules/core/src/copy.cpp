@@ -846,7 +846,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
             rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1,
-            kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);
+            kercn = ocl::predictOptimalVectorWidth(_src, _dst);
 
     ocl::Kernel k("repeat", ocl::core::repeat_oclsrc,
                   format("-D T=%s -D nx=%d -D ny=%d -D rowsPerWI=%d -D cn=%d",
