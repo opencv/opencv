@@ -7,7 +7,7 @@
 using namespace cv;
 using namespace cv::ml;
 
-int main(int argc, char** argv )
+int main(int, char **)
 {
     printf("|--Setting--|----Training----|--------------------Randering--------------------|");
     // setting up network

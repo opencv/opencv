@@ -70,7 +70,7 @@ public:
         regstr(StringSampleSizeMissMatch, "inputs / outputs size should equal, with one vector per row. that is, inputs.rows == outputs.rows.");
         regstr(StringInputVectorSizeImproper, "size of input vector should equal to quantity of neurons in input layer. that is, inputs.cols == neurons[0].");
         regstr(StringOutputVectorSizeImproper, "size of output vector should equal to quantity of neurons in output layer. that is, outputs.cols == neurons[neurons.size() - 1].");
-        regstr(StringLayerSizesImproper, "size of layerSizes in create() should be either a uint matrix of size (1, n) or a uint vector of length n, where n > 0. the n is quantity of layers.");
+        regstr(StringLayerSizesImproper, "size of layerSizes in create() should be either a int matrix of size (1, n) or a int vector of length n, where n > 0. the n is quantity of layers.");
         regstr(StringSampleWeightsSizeImproper, "sample weights matrix should be either empty or size of (1, n), where n is sample size. empty is allowed where the average weights is autoly assigned.");
     }
     NN(const Params &_Params)
@@ -100,17 +100,17 @@ public:
     int create(const Mat &layerSizes, int activateFunc = SIGMOID_SYM, \
         float fparam1 = 0.667, float fparam2 = 1.716)
     {
-        uint r = layerSizes.rows, c = layerSizes.cols;
+        int r = layerSizes.rows, c = layerSizes.cols;
         if(r != 1 || c <= 0)
             CV_Error(CV_StsBadArg, StringLayerSizesImproper);
-        std::vector<uint> v(c);
-        for(uint i = 0; i < c; i++)
-            v[i] = (uint)layerSizes.at<int>(0, i);
+        std::vector<int> v(c);
+        for(int i = 0; i < c; i++)
+            v[i] = (int)layerSizes.at<int>(0, i);
         create(v);
         setActivation(activateFunc, fparam2, fparam1);
         return 0;
     }
-    int create(const std::vector<uint> &neurons)
+    int create(const std::vector<int> &neurons)
     {
         L = neurons.size() - 1;
         C = neurons;
@@ -123,7 +123,7 @@ public:
         V.assign(L + 1, Space);
         Y.assign(L + 1, Space);
         S.assign(L + 1, Space);
-        for(uint i = 0; i < L + 1; i++)
+        for(int i = 0; i < L + 1; i++)
         {
             V[i].assign(C[i] + 1, 0);
             Y[i].assign(C[i] + 1, 0);
@@ -169,16 +169,16 @@ public:
         // initialize _E
         _E = -1.0;
 
-        uint n = inputs.rows;
-        for(uint i = 0; i < epoches; i++)
+        int n = inputs.rows;
+        for(int i = 0; i < epoches; i++)
         {
             // initialize E = 0
             E = 0.0;
 
             // randomize order (otherwise ANN will even try to fit the time sequence)
-            std::vector<uint> order = randvec(0, n - 1, 1);
+            std::vector<int> order = randvec(0, n - 1, 1);
 
-            for(uint j = 0; j < n; j++)
+            for(int j = 0; j < n; j++)
             {
                 std::vector<float> input = getrow(inputs, order[j]);
                 std::vector<float> output = getrow(outputs, order[j]);
@@ -212,12 +212,12 @@ public:
     {
         // load sample input
         I[0] = -1.0;
-        for(uint i = 0; i < input.size(); i++)
+        for(int i = 0; i < (int)input.size(); i++)
             I[i + 1] = input[i];
 
         // load expected output
         D[0] = -1.0;
-        for(uint i = 0; i < output.size(); i++)
+        for(int i = 0; i < (int)output.size(); i++)
             D[i + 1] = output[i];
 
         // training
@@ -238,11 +238,11 @@ public:
         switch(algorithm)
         {
             case BP:
-                for(uint l = 1; l < L + 1; l++)
+                for(int l = 1; l < L + 1; l++)
                     W[l - 1] = W[l - 1] - dW[l - 1] + sampleweight * dW[l - 1];
                 break;
             case RPROP:
-                for(uint l = 1; l < L + 1; l++)
+                for(int l = 1; l < L + 1; l++)
                     W[l - 1] = W[l - 1] - _dW1[l - 1] + sampleweight * _dW1[l - 1];
                 break;
         }
@@ -272,8 +272,8 @@ public:
             CV_Error(CV_StsOutOfRange, StringInputVectorSizeImproper);
         if(outputs.cols != (int)C[L])
             CV_Error(CV_StsOutOfRange, StringOutputVectorSizeImproper);
-        uint n = inputs.rows;
-        for(uint i = 0; i < n; i++)
+        int n = inputs.rows;
+        for(int i = 0; i < n; i++)
         {
             std::vector<float> input = getrow(inputs, i);
             std::vector<float> output(C[L]);
@@ -286,7 +286,7 @@ public:
     {
         // load sample input
         I[0] = -1.0;
-        for(uint i = 0; i < input.size(); i++)
+        for(int i = 0; i < (int)input.size(); i++)
             I[i + 1] = input[i];
 
         // predicting
@@ -301,7 +301,7 @@ public:
         }
 
         // return actual output
-        for(uint i = 0; i < output.size(); i++)
+        for(int i = 0; i < (int)output.size(); i++)
             output[i] = O[i + 1];
         return 0;
     }
@@ -337,7 +337,7 @@ private:
         Y[0] = I;
 
         // l = 1, 2 ... L
-        for(uint l = 1; l < L + 1; l++)
+        for(int l = 1; l < L + 1; l++)
         {
             // linear combination cofficients Vl = Wl,l-1 * Yl-1
             Mat _YM = v2m(Y[l - 1]);
@@ -371,7 +371,7 @@ private:
         S[L] = m2v(_AM2);
 
         // l = L-1 ... 2, 1
-        for(uint l = L - 1; l > 0; l--)
+        for(int l = L - 1; l > 0; l--)
         {
             // layer l local gradients Sl = f'(Vl) .* (Wl+1,l(T) * Sl+1)
             Mat _VM2 = v2m(V[l]);
@@ -392,11 +392,11 @@ private:
     void WeightMatricsUpdate()
     {
         // l = 1, 2 ... L
-        for(uint l = 1; l < L + 1; l++)
+        for(int l = 1; l < L + 1; l++)
         {
             // dWts = R * St * Ys(T)
-            uint s = l - 1;
-            uint t = l;
+            int s = l - 1;
+            int t = l;
             Mat _SM = v2m(S[t]);
             Mat _ST = _SM.t();
             Mat _YM = v2m(Y[s]);
@@ -419,7 +419,7 @@ private:
     void FirstOrderWeightMatricsUpdate()
     {
         // l = 1, 2 ... L
-        for(uint l = 1; l < L + 1; l++)
+        for(int l = 1; l < L + 1; l++)
         {
             // rolling back BP and perform RPROP
             W[l - 1] = W[l - 1] - dW[l - 1];
@@ -428,21 +428,21 @@ private:
             Mat SIG = _dW[l - 1].mul(dW[l - 1]);
 
             // branch A (SIG > 0)
-            Mat UA = bound(Ru * _U[l - 1], Umn, Umx);
+            Mat UA = bound(Ru * U[l - 1], Umn, Umx);
             Mat dW1A = - sign(dW[l - 1]).mul(UA);
 
             // branch B (SIG < 0)
-            Mat UB = bound(Rl * _U[l - 1], Umn, Umx);
+            Mat UB = bound(Rl * U[l - 1], Umn, Umx);
             Mat dW1B = - _dW1[l - 1];
 
             // branch C (SIG == 0)
-            Mat UC = bound(_U[l - 1], Umn, Umx);
+            Mat UC = bound(U[l - 1], Umn, Umx);
             Mat dW1C = - sign(dW[l - 1]).mul(UC);
 
             // update update-value matrics (entry operation)
             Mat Zero = Mat::zeros(dW[l - 1].rows, dW[l - 1].cols, CV_32F);
             _dW[l - 1] = enop(dW[l - 1], Zero, dW[l - 1], SIG);
-            _U[l - 1] = enop(UA, UB, UC, SIG);
+            U[l - 1] = enop(UA, UB, UC, SIG);
             _dW1[l - 1] = enop(dW1A, dW1B, dW1C, SIG);
 
             // Wts = Wts + dW1ts
@@ -468,7 +468,7 @@ private:
     */
     void PreCreateWeightMatrics()
     {
-        for(uint i = 0; i < L; i++)
+        for(int i = 0; i < L; i++)
         {
             // i + 1 is t layer，i is s layer.
             // s layer has one more threshold neuron coANNects to t layer
@@ -487,11 +487,11 @@ private:
     */
     void CreatePartialCopyWeightMatrics(std::vector<Mat> &Weights, std::vector<Mat> Initials)
     {
-        for(uint i = 0; i < L; i++)
+        for(int i = 0; i < L; i++)
         {
-            for(uint j = 0; j < C[i + 1] + 1; j++)
+            for(int j = 0; j < C[i + 1] + 1; j++)
             {
-                for(uint k = 0; k < C[i] + 1; k++)
+                for(int k = 0; k < C[i] + 1; k++)
                 {
                     // threshold of next layer
                     if (j == 0)
@@ -513,11 +513,11 @@ private:
     */
     void CreateRandomizedWeightMatrics(std::vector<Mat> &Weights)
     {
-        for(uint i = 0; i < L; i++)
+        for(int i = 0; i < L; i++)
         {
-            for(uint j = 0; j < C[i + 1] + 1; j++)
+            for(int j = 0; j < C[i + 1] + 1; j++)
             {
-                for(uint k = 0; k < C[i] + 1; k++)
+                for(int k = 0; k < C[i] + 1; k++)
                 {
                     // threshold of next layer
                     if (j == 0)
@@ -556,7 +556,7 @@ private:
     */
     void CreateUpdateValueMatrics()
     {
-        for(uint i = 0; i < L; i++)
+        for(int i = 0; i < L; i++)
         {
             // update of weight matrics
             Mat dWSpace = Mat(C[i + 1] + 1, C[i] + 1, CV_32F, 0.f);
@@ -569,7 +569,7 @@ private:
             _dW1.push_back(_dW1Space);
             // update-value matrics of previous epoch
             Mat _USpace = Mat(C[i + 1] + 1, C[i] + 1, CV_32F, U0);
-            _U.push_back(_USpace);
+            U.push_back(_USpace);
         }
     }
 
@@ -581,7 +581,7 @@ private:
     float sqdist(std::vector<float> v1, std::vector<float> v2)
     {
         float dval = 0.f;
-        for(uint i = 0; i < v1.size(); i++)
+        for(int i = 0; i < (int)v1.size(); i++)
         {
             float dist = abs(v1[i] - v2[i]);
             dval += (dist * dist);
@@ -595,7 +595,7 @@ private:
     */
     Mat v2m(std::vector<float> v)
     {
-        uint l = v.size();
+        int l = v.size();
         Mat M = Mat(1, l, CV_32F);
         setrow(M, 0, v);
         return M;
@@ -615,11 +615,11 @@ private:
     *  @param    M  the original matrix
     *            r  the row required
     */
-    std::vector<float> getrow(Mat M, uint r)
+    std::vector<float> getrow(Mat M, int r)
     {
-        uint l = M.cols;
+        int l = M.cols;
         std::vector<float> v(l);
-        for(uint i = 0; i < l; i++)
+        for(int i = 0; i < l; i++)
             v[i] = M.at<float>(r, i);
         return v;
     }
@@ -630,10 +630,10 @@ private:
     *            r  the row required
     *            v  the vector that the row sets to
     */
-    int setrow(Mat M, uint r, std::vector<float> v)
+    int setrow(Mat M, int r, std::vector<float> v)
     {
-        uint l = v.size();
-        for(uint i = 0; i < l; i++)
+        int l = v.size();
+        for(int i = 0; i < l; i++)
             M.at<float>(r, i) = v[i];
         return 0;
     }
@@ -644,14 +644,14 @@ private:
     *            end     end of integer
     *            degree  how random are these integers
     */
-    std::vector<uint> randvec(uint start, uint end, uint degree)
+    std::vector<int> randvec(int start, int end, int degree)
     {
-        uint len = end - start + 1;
-        std::vector<uint> vec(len);
-        for(uint i = start; i <= end; i++)
+        int len = end - start + 1;
+        std::vector<int> vec(len);
+        for(int i = start; i <= end; i++)
             vec[i] = i;
-        uint time = degree * len;
-        for(uint j = 0; j < time; j++)
+        int time = degree * len;
+        for(int j = 0; j < time; j++)
             swap(vec, randint(start, end), randint(start, end));
         return vec;
     }
@@ -662,7 +662,7 @@ private:
     *            _a   entry 1
     *            _b   entry 2
     */
-    int swap(std::vector<uint> &vec, int _a, int _b)
+    int swap(std::vector<int> &vec, int _a, int _b)
     {
         if(_a == _b)
             return 0;
@@ -677,10 +677,10 @@ private:
     *  @param    _a  lower limit
     *            _b  upper limit
     */
-    uint randint(int _a, int _b)
+    int randint(int _a, int _b)
     {
         float dval = avgrand(_a, _b + 1);
-        uint ival = dval >= _b + 1 ? _b : floor(dval);
+        int ival = dval >= _b + 1 ? _b : floor(dval);
         return ival;
     }
 
@@ -725,7 +725,7 @@ private:
     */
     Mat sign(Mat M)
     {
-        Mat _S = Mat(M.rows, M.cols, CV_32F, 0.f);
+        Mat MatS = Mat(M.rows, M.cols, CV_32F, 0.f);
         for(int i = 0; i < M.rows; i++)
         {
             for(int j = 0; j < M.cols; j++)
@@ -735,21 +735,21 @@ private:
                 if(mval > 0) sval = 1.f;
                 else if(mval < 0) sval = -1.f;
                 else sval = 0.f;
-                _S.at<float>(i, j) = sval;
+                MatS.at<float>(i, j) = sval;
             }
         }
-        return _S;
+        return MatS;
     }
 
     /**
     *  @brief    entry operation. in each of the corresponding entries of matrics,
                  if SIG > 0 returns A, if SIG < 0 returns B, if SIG = 0 returns C
-    *  @param    _A    value matrix A
-    *            _B    value matrix B
-    *            _C    value matrix C
-    *            _SIG  sign matrix SIG
+    *  @param    _MatA  value matrix A
+    *            _MatB  value matrix B
+    *            _MatC  value matrix C
+    *            _SIG   sign matrix SIG
     */
-    Mat enop(Mat _A, Mat _B, Mat _C, Mat _SIG)
+    Mat enop(Mat _MatA, Mat _MatB, Mat _MatC, Mat _SIG)
     {
         Mat M = Mat(_SIG.rows, _SIG.cols, CV_32F, 0.f);
         for(int i = 0; i < _SIG.rows; i++)
@@ -757,9 +757,9 @@ private:
             for(int j = 0; j < _SIG.cols; j++)
             {
                 float sig = _SIG.at<float>(i, j);
-                if(sig > 0) M.at<float>(i, j) = _A.at<float>(i, j);
-                else if(sig < 0) M.at<float>(i, j) = _B.at<float>(i, j);
-                else M.at<float>(i, j) = _C.at<float>(i, j);
+                if(sig > 0) M.at<float>(i, j) = _MatA.at<float>(i, j);
+                else if(sig < 0) M.at<float>(i, j) = _MatB.at<float>(i, j);
+                else M.at<float>(i, j) = _MatC.at<float>(i, j);
             }
         }
         return M;
@@ -789,7 +789,7 @@ private:
         return (_b / (2.0 * _a)) * (_a + sigmoid(_x, _a, _b)) * (_a - sigmoid(_x, _a, _b));
     }
     //    activation function collection
-    Mat fm(Mat M, uint _actfun, float _a, float _b)
+    Mat fm(Mat M, int _actfun, float _a, float _b)
     {
         switch(_actfun)
         {
@@ -808,7 +808,7 @@ private:
         return M;
     }
     //    derivative activation function collection
-    Mat dfm(Mat M, uint _actfun, float _a, float _b)
+    Mat dfm(Mat M, int _actfun, float _a, float _b)
     {
         switch(_actfun)
         {
@@ -831,9 +831,9 @@ public:
     // set parameters
 
     /**
-    *  @brief   Sets initial weight matrics (optional).
-    *  @param   Weights  The initial weight matrics. If is empty then the randomized
-                         weight matrics are autoly generated
+    *  @brief    Sets initial weight matrics (optional).
+    *  @param    Weights  The initial weight matrics. If is empty then the randomized
+                          weight matrics are autoly generated
     *  @sample
     *    float w10[2][2] = {{0.5, 0.5}, {0.5, 0.5}}; // weight matrix between layer 1 and 0
     *    float w21[1][2] = {{0.5, 0.5}}; // between layer 2 and 1
@@ -851,9 +851,9 @@ public:
     }
 
     /**
-    *  @brief   Sets parameters of BP learning algorithm
-    *  @param   bpDWScale      learning speed (learning rate), belongs to [0, 1]
-    *           bpMomentScale  learning momentum, belongs to [0, 1]
+    *  @brief    Sets parameters of BP learning algorithm
+    *  @param    bpDWScale      learning speed (learning rate), belongs to [0, 1]
+    *            bpMomentScale  learning momentum, belongs to [0, 1]
     */
     int setBPParameters(float bpDWScale, float bpMomentScale)
     {
@@ -863,12 +863,12 @@ public:
     }
 
     /**
-    *  @brief   Sets parameters of RPROP learning algorithm
-    *  @param   rpDW0       initial update-values
-    *           rpDWPlus   update-value increasing parameter R+
-    *           rpDWMinus  update-value decreasing parameter R-
-    *           rpDWMin    update-value minimum
-    *           rpDWMax    update-value maximum
+    *  @brief    Sets parameters of RPROP learning algorithm
+    *  @param    rpDW0       initial update-values
+    *            rpDWPlus   update-value increasing parameter R+
+    *            rpDWMinus  update-value decreasing parameter R-
+    *            rpDWMin    update-value minimum
+    *            rpDWMax    update-value maximum
     */
     int setRPROPParameters(float rpDW0, float rpDWPlus, float rpDWMinus, \
         float rpDWMin, float rpDWMax)
@@ -882,12 +882,12 @@ public:
     }
 
     /**
-    *  @brief   Sets activation function parameters
-    *  @param   _actfun  activation function
-    *           _a    activation function parameter 1
-    *           _b    activation function parameter 2
+    *  @brief    Sets activation function parameters
+    *  @param    _actfun  activation function
+    *            _a    activation function parameter 1
+    *            _b    activation function parameter 2
     */
-    int setActivation(uint _actfun, float _a, float _b)
+    int setActivation(int _actfun, float _a, float _b)
     {
         actfun = _actfun;
         a = _a;
@@ -899,7 +899,7 @@ public:
     *  @brief    Sets learning algorithm.
     *  @param    _algorithm  learning algorithm
     */
-    int setAlgorithm(uint _algorithm)
+    int setAlgorithm(int _algorithm)
     {
         algorithm = _algorithm;
         return 0;
@@ -910,7 +910,7 @@ public:
     *  @param   _epoches  epoches of training, an epoch is defined as a cycle that
                 all samples are used to train the network once.
     */
-    int setEpoches(uint _epoches)
+    int setEpoches(int _epoches)
     {
         epoches = _epoches;
         return 0;
@@ -922,7 +922,7 @@ public:
     {
         return L + 1;
     }
-    std::vector<uint> getLayerSizes()
+    std::vector<int> getLayerSizes()
     {
         return C;
     }
@@ -969,7 +969,7 @@ public:
     {
         Params _Params;
         _Params.layerSizes = Mat::zeros(1, C.size(), CV_32S);
-        for(uint i = 0; i < C.size(); i++)
+        for(int i = 0; i < (int)C.size(); i++)
             _Params.layerSizes.at<int>(0, i) = (int)C[i];
         _Params.activateFunc = actfun;
         _Params.fparam1 = b;
@@ -987,8 +987,8 @@ public:
 
 private:
     // structural parameters
-    uint L;                // quantity of hidden layers           L
-    std::vector<uint> C;   // quantity of neurons on each layer   {C0, C1 ... CL}
+    int L;                // quantity of hidden layers           L
+    std::vector<int> C;   // quantity of neurons on each layer   {C0, C1 ... CL}
 
     // memory parameters (BP)
     std::vector<Mat> W;    // weight matrics, the memory of ANN   {W10, W21... WLL-1}
@@ -999,7 +999,7 @@ private:
     std::vector<Mat> dW;   // update of weight matrics
     std::vector<Mat> _dW;  // update of weight matrics of previous epoch
     std::vector<Mat> _dW1; // update of first-order weight matrics of previous epoch
-    std::vector<Mat> _U;   // update-value matrics of previous epoch
+    std::vector<Mat> U;    // update-value matrics of previous epoch
 
     // data parameters
     std::vector<float> I;  // current input vector     length of C0 + 1, the 1 is for threshold
@@ -1011,9 +1011,9 @@ private:
     float b;               // activation function parameter
     float R;               // learning speed, belongs to [0, 1]
     float m;               // learning momentum, belongs to [0, 1]
-    uint actfun;           // the activation function
-    uint algorithm;        // the learning algorithm
-    uint epoches;          // epoches of training
+    int actfun;           // the activation function
+    int algorithm;        // the learning algorithm
+    int epoches;          // epoches of training
 
     // high-level learning parameters (RPROP)
     float U0;              // initial update-values
