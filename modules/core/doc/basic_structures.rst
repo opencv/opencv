@@ -96,9 +96,11 @@ operation for each of the coordinates. Besides the class members listed in the d
         pt1 = pt2 - pt3;
         pt1 = pt2 * a;
         pt1 = a * pt2;
+        pt1 = pt2 / a;
         pt1 += pt2;
         pt1 -= pt2;
         pt1 *= a;
+        pt1 /= a;
         double value = norm(pt); // L2 norm
         pt1 == pt2;
         pt1 != pt2;
@@ -532,7 +534,7 @@ Template class for a 4-element vector derived from Vec.
         template<typename T2> operator Scalar_<T2>() const;
 
         //! per-element product
-        Scalar_<_Tp> mul(const Scalar_<_Tp>& t, double scale=1 ) const;
+        Scalar_<_Tp> mul(const Scalar_<_Tp>& a, double scale=1 ) const;
 
         // returns (v0, -v1, -v2, -v3)
         Scalar_<_Tp> conj() const;

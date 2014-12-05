@@ -106,6 +106,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_extra_compiler_option(-march=i686)
   endif()
 
+  if(APPLE)
+    add_extra_compiler_option(-Wno-semicolon-before-method-body)
+  endif()
+
   # Other optimizations
   if(ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fomit-frame-pointer)
@@ -165,10 +169,6 @@ if(CMAKE_COMPILER_IS_GNUCXX)
         add_extra_compiler_option(-mfpmath=387)
       endif()
     endif()
-  endif()
-
-  if(ENABLE_NEON)
-    add_extra_compiler_option(-mfpu=neon)
   endif()
 
   # Profiling?

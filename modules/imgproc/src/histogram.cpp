@@ -1200,6 +1200,7 @@ public:
             *ok = false;
             return;
         }
+        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
 
         for (int i = 0; i < histSize; ++i)
             CV_XADD((int *)(hist->data + i * hist->step), *(int *)(phist.data + i * phist.step));
@@ -1233,29 +1234,33 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
 
 #ifdef HAVE_IPP
-    if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
-            channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
-            !accumulate && uniform)
+    CV_IPP_CHECK()
     {
-        ihist.setTo(Scalar::all(0));
-        AutoBuffer<Ipp32s> levels(histSize[0] + 1);
-
-        bool ok = true;
-        const Mat & src = images[0];
-        int nstripes = std::min<int>(8, static_cast<int>(src.total() / (1 << 16)));
-#ifdef HAVE_CONCURRENCY
-        nstripes = 1;
-#endif
-        IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, (Ipp32s)ranges[0][0], (Ipp32s)ranges[0][1], &ok);
-        Range range(0, src.rows);
-        parallel_for_(range, invoker, nstripes);
-
-        if (ok)
+        if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
+                channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
+                !accumulate && uniform)
         {
-            ihist.convertTo(hist, CV_32F);
-            return;
+            ihist.setTo(Scalar::all(0));
+            AutoBuffer<Ipp32s> levels(histSize[0] + 1);
+
+            bool ok = true;
+            const Mat & src = images[0];
+            int nstripes = std::min<int>(8, static_cast<int>(src.total() / (1 << 16)));
+#ifdef HAVE_CONCURRENCY
+            nstripes = 1;
+#endif
+            IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, (Ipp32s)ranges[0][0], (Ipp32s)ranges[0][1], &ok);
+            Range range(0, src.rows);
+            parallel_for_(range, invoker, nstripes);
+
+            if (ok)
+            {
+                ihist.convertTo(hist, CV_32F);
+                CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+                return;
+            }
+            setIppErrorStatus();
         }
-        setIppErrorStatus();
     }
 #endif
 
@@ -2311,7 +2316,16 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         }
         else if( method == CV_COMP_INTERSECT )
         {
-            for( j = 0; j < len; j++ )
+            j = 0;
+            #if CV_NEON
+            float32x4_t v_result = vdupq_n_f32(0.0f);
+            for( ; j <= len - 4; j += 4 )
+                v_result = vaddq_f32(v_result, vminq_f32(vld1q_f32(h1 + j), vld1q_f32(h2 + j)));
+            float CV_DECL_ALIGNED(16) ar[4];
+            vst1q_f32(ar, v_result);
+            result += ar[0] + ar[1] + ar[2] + ar[3];
+            #endif
+            for( ; j < len; j++ )
                 result += std::min(h1[j], h2[j]);
         }
         else if( method == CV_COMP_BHATTACHARYYA )

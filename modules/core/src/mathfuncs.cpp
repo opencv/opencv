@@ -168,6 +168,31 @@ static void FastAtan2_32f(const float *Y, const float *X, float *angle, int len,
             _mm_storeu_ps(angle + i, a);
         }
     }
+#elif CV_NEON
+    float32x4_t eps = vdupq_n_f32((float)DBL_EPSILON);
+    float32x4_t _90 = vdupq_n_f32(90.f), _180 = vdupq_n_f32(180.f), _360 = vdupq_n_f32(360.f);
+    float32x4_t z = vdupq_n_f32(0.0f), scale4 = vdupq_n_f32(scale);
+    float32x4_t p1 = vdupq_n_f32(atan2_p1), p3 = vdupq_n_f32(atan2_p3);
+    float32x4_t p5 = vdupq_n_f32(atan2_p5), p7 = vdupq_n_f32(atan2_p7);
+
+    for( ; i <= len - 4; i += 4 )
+    {
+        float32x4_t x = vld1q_f32(X + i), y = vld1q_f32(Y + i);
+        float32x4_t ax = vabsq_f32(x), ay = vabsq_f32(y);
+        float32x4_t tmin = vminq_f32(ax, ay), tmax = vmaxq_f32(ax, ay);
+        float32x4_t c = vmulq_f32(tmin, cv_vrecpq_f32(vaddq_f32(tmax, eps)));
+        float32x4_t c2 = vmulq_f32(c, c);
+        float32x4_t a = vmulq_f32(c2, p7);
+        a = vmulq_f32(vaddq_f32(a, p5), c2);
+        a = vmulq_f32(vaddq_f32(a, p3), c2);
+        a = vmulq_f32(vaddq_f32(a, p1), c);
+
+        a = vbslq_f32(vcgeq_f32(ax, ay), a, vsubq_f32(_90, a));
+        a = vbslq_f32(vcltq_f32(x, z), vsubq_f32(_180, a), a);
+        a = vbslq_f32(vcltq_f32(y, z), vsubq_f32(_360, a), a);
+
+        vst1q_f32(angle + i, vmulq_f32(a, scale4));
+    }
 #endif
 
     for( ; i < len; i++ )
@@ -240,10 +265,16 @@ float  cubeRoot( float value )
 static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 {
 #if defined HAVE_IPP && 0
-    IppStatus status = ippsMagnitude_32f(x, y, mag, len);
-    if (status >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        IppStatus status = ippsMagnitude_32f(x, y, mag, len);
+        if (status >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
 
     int i = 0;
@@ -261,6 +292,17 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
             _mm_storeu_ps(mag + i, x0); _mm_storeu_ps(mag + i + 4, x1);
         }
     }
+#elif CV_NEON
+    for( ; i <= len - 4; i += 4 )
+    {
+        float32x4_t v_x = vld1q_f32(x + i), v_y = vld1q_f32(y + i);
+        vst1q_f32(mag + i, cv_vsqrtq_f32(vmlaq_f32(vmulq_f32(v_x, v_x), v_y, v_y)));
+    }
+    for( ; i <= len - 2; i += 2 )
+    {
+        float32x2_t v_x = vld1_f32(x + i), v_y = vld1_f32(y + i);
+        vst1_f32(mag + i, cv_vsqrt_f32(vmla_f32(vmul_f32(v_x, v_x), v_y, v_y)));
+    }
 #endif
 
     for( ; i < len; i++ )
@@ -273,10 +315,16 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 static void Magnitude_64f(const double* x, const double* y, double* mag, int len)
 {
 #if defined(HAVE_IPP)
-    IppStatus status = ippsMagnitude_64f(x, y, mag, len);
-    if (status >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        IppStatus status = ippsMagnitude_64f(x, y, mag, len);
+        if (status >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
 
     int i = 0;
@@ -307,9 +355,15 @@ static void Magnitude_64f(const double* x, const double* y, double* mag, int len
 static void InvSqrt_32f(const float* src, float* dst, int len)
 {
 #if defined(HAVE_IPP)
-    if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
 
     int i = 0;
@@ -339,6 +393,12 @@ static void InvSqrt_32f(const float* src, float* dst, int len)
                 _mm_storeu_ps(dst + i, t0); _mm_storeu_ps(dst + i + 4, t1);
             }
     }
+#elif CV_NEON
+    for ( ; i <= len - 8; i += 8)
+    {
+        vst1q_f32(dst + i, cv_vrsqrtq_f32(vld1q_f32(src + i)));
+        vst1q_f32(dst + i + 4, cv_vrsqrtq_f32(vld1q_f32(src + i + 4)));
+    }
 #endif
 
     for( ; i < len; i++ )
@@ -367,9 +427,15 @@ static void InvSqrt_64f(const double* src, double* dst, int len)
 static void Sqrt_32f(const float* src, float* dst, int len)
 {
 #if defined(HAVE_IPP)
-    if (ippsSqrt_32f_A21(src, dst, len) >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (ippsSqrt_32f_A21(src, dst, len) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
     int i = 0;
 
@@ -391,6 +457,12 @@ static void Sqrt_32f(const float* src, float* dst, int len)
                 _mm_storeu_ps(dst + i, t0); _mm_storeu_ps(dst + i + 4, t1);
             }
     }
+#elif CV_NEON
+    for ( ; i <= len - 8; i += 8)
+    {
+        vst1q_f32(dst + i, cv_vsqrtq_f32(vld1q_f32(src + i)));
+        vst1q_f32(dst + i + 4, cv_vsqrtq_f32(vld1q_f32(src + i + 4)));
+    }
 #endif
 
     for( ; i < len; i++ )
@@ -401,9 +473,15 @@ static void Sqrt_32f(const float* src, float* dst, int len)
 static void Sqrt_64f(const double* src, double* dst, int len)
 {
 #if defined(HAVE_IPP)
-    if (ippsSqrt_64f_A50(src, dst, len) >= 0)
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (ippsSqrt_64f_A50(src, dst, len) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
 #endif
 
     int i = 0;
@@ -777,19 +855,25 @@ void polarToCart( InputArray src1, InputArray src2,
     Mat X = dst1.getMat(), Y = dst2.getMat();
 
 #if defined(HAVE_IPP)
-    if (Mag.isContinuous() && Angle.isContinuous() && X.isContinuous() && Y.isContinuous() && !angleInDegrees)
+    CV_IPP_CHECK()
     {
-        typedef IppStatus (CV_STDCALL * ippsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
-                                                         void * pDstRe, void * pDstIm, int len);
-        ippsPolarToCart ippFunc =
-        depth == CV_32F ? (ippsPolarToCart)ippsPolarToCart_32f :
-        depth == CV_64F ? (ippsPolarToCart)ippsPolarToCart_64f : 0;
-        CV_Assert(ippFunc != 0);
+        if (Mag.isContinuous() && Angle.isContinuous() && X.isContinuous() && Y.isContinuous() && !angleInDegrees)
+        {
+            typedef IppStatus (CV_STDCALL * ippsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
+                                                             void * pDstRe, void * pDstIm, int len);
+            ippsPolarToCart ippFunc =
+            depth == CV_32F ? (ippsPolarToCart)ippsPolarToCart_32f :
+            depth == CV_64F ? (ippsPolarToCart)ippsPolarToCart_64f : 0;
+            CV_Assert(ippFunc != 0);
 
-        IppStatus status = ippFunc(Mag.ptr(), Angle.ptr(), X.ptr(), Y.ptr(), static_cast<int>(cn * X.total()));
-        if (status >= 0)
-            return;
-        setIppErrorStatus();
+            IppStatus status = ippFunc(Mag.ptr(), Angle.ptr(), X.ptr(), Y.ptr(), static_cast<int>(cn * X.total()));
+            if (status >= 0)
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
     }
 #endif
 
@@ -820,11 +904,24 @@ void polarToCart( InputArray src1, InputArray src2,
 
                 SinCos_32f( angle, y, x, len, angleInDegrees );
                 if( mag )
-                    for( k = 0; k < len; k++ )
+                {
+                    k = 0;
+
+                    #if CV_NEON
+                    for( ; k <= len - 4; k += 4 )
+                    {
+                        float32x4_t v_m = vld1q_f32(mag + k);
+                        vst1q_f32(x + k, vmulq_f32(vld1q_f32(x + k), v_m));
+                        vst1q_f32(y + k, vmulq_f32(vld1q_f32(y + k), v_m));
+                    }
+                    #endif
+
+                    for( ; k < len; k++ )
                     {
                         float m = mag[k];
                         x[k] *= m; y[k] *= m;
                     }
+                }
             }
             else
             {
@@ -1340,17 +1437,29 @@ static void Exp_64f( const double *_x, double *y, int n )
 #ifdef HAVE_IPP
 static void Exp_32f_ipp(const float *x, float *y, int n)
 {
-    if (0 <= ippsExp_32f_A21(x, y, n))
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippsExp_32f_A21(x, y, n))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
     Exp_32f(x, y, n);
 }
 
 static void Exp_64f_ipp(const double *x, double *y, int n)
 {
-    if (0 <= ippsExp_64f_A50(x, y, n))
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippsExp_64f_A50(x, y, n))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
     Exp_64f(x, y, n);
 }
 
@@ -2000,17 +2109,29 @@ static void Log_64f( const double *x, double *y, int n )
 #ifdef HAVE_IPP
 static void Log_32f_ipp(const float *x, float *y, int n)
 {
-    if (0 <= ippsLn_32f_A21(x, y, n))
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippsLn_32f_A21(x, y, n))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
     Log_32f(x, y, n);
 }
 
 static void Log_64f_ipp(const double *x, double *y, int n)
 {
-    if (0 <= ippsLn_64f_A50(x, y, n))
-        return;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippsLn_64f_A50(x, y, n))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
     Log_64f(x, y, n);
 }
 
@@ -2048,12 +2169,230 @@ void log( InputArray _src, OutputArray _dst )
 *                                    P O W E R                                           *
 \****************************************************************************************/
 
+template <typename T, typename WT>
+struct iPow_SIMD
+{
+    int operator() ( const T *, T *, int, int)
+    {
+        return 0;
+    }
+};
+
+#if CV_NEON
+
+template <>
+struct iPow_SIMD<uchar, int>
+{
+    int operator() ( const uchar * src, uchar * dst, int len, int power)
+    {
+        int i = 0;
+        uint32x4_t v_1 = vdupq_n_u32(1u);
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            uint32x4_t v_a1 = v_1, v_a2 = v_1;
+            uint16x8_t v_src = vmovl_u8(vld1_u8(src + i));
+            uint32x4_t v_b1 = vmovl_u16(vget_low_u16(v_src)), v_b2 = vmovl_u16(vget_high_u16(v_src));
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                {
+                    v_a1 = vmulq_u32(v_a1, v_b1);
+                    v_a2 = vmulq_u32(v_a2, v_b2);
+                }
+                v_b1 = vmulq_u32(v_b1, v_b1);
+                v_b2 = vmulq_u32(v_b2, v_b2);
+                p >>= 1;
+            }
+
+            v_a1 = vmulq_u32(v_a1, v_b1);
+            v_a2 = vmulq_u32(v_a2, v_b2);
+            vst1_u8(dst + i, vqmovn_u16(vcombine_u16(vqmovn_u32(v_a1), vqmovn_u32(v_a2))));
+        }
+
+        return i;
+    }
+};
+
+template <>
+struct iPow_SIMD<schar, int>
+{
+    int operator() ( const schar * src, schar * dst, int len, int power)
+    {
+        int i = 0;
+        int32x4_t v_1 = vdupq_n_s32(1);
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            int32x4_t v_a1 = v_1, v_a2 = v_1;
+            int16x8_t v_src = vmovl_s8(vld1_s8(src + i));
+            int32x4_t v_b1 = vmovl_s16(vget_low_s16(v_src)), v_b2 = vmovl_s16(vget_high_s16(v_src));
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                {
+                    v_a1 = vmulq_s32(v_a1, v_b1);
+                    v_a2 = vmulq_s32(v_a2, v_b2);
+                }
+                v_b1 = vmulq_s32(v_b1, v_b1);
+                v_b2 = vmulq_s32(v_b2, v_b2);
+                p >>= 1;
+            }
+
+            v_a1 = vmulq_s32(v_a1, v_b1);
+            v_a2 = vmulq_s32(v_a2, v_b2);
+            vst1_s8(dst + i, vqmovn_s16(vcombine_s16(vqmovn_s32(v_a1), vqmovn_s32(v_a2))));
+        }
+
+        return i;
+    }
+};
+
+template <>
+struct iPow_SIMD<ushort, int>
+{
+    int operator() ( const ushort * src, ushort * dst, int len, int power)
+    {
+        int i = 0;
+        uint32x4_t v_1 = vdupq_n_u32(1u);
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            uint32x4_t v_a1 = v_1, v_a2 = v_1;
+            uint16x8_t v_src = vld1q_u16(src + i);
+            uint32x4_t v_b1 = vmovl_u16(vget_low_u16(v_src)), v_b2 = vmovl_u16(vget_high_u16(v_src));
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                {
+                    v_a1 = vmulq_u32(v_a1, v_b1);
+                    v_a2 = vmulq_u32(v_a2, v_b2);
+                }
+                v_b1 = vmulq_u32(v_b1, v_b1);
+                v_b2 = vmulq_u32(v_b2, v_b2);
+                p >>= 1;
+            }
+
+            v_a1 = vmulq_u32(v_a1, v_b1);
+            v_a2 = vmulq_u32(v_a2, v_b2);
+            vst1q_u16(dst + i, vcombine_u16(vqmovn_u32(v_a1), vqmovn_u32(v_a2)));
+        }
+
+        return i;
+    }
+};
+
+template <>
+struct iPow_SIMD<short, int>
+{
+    int operator() ( const short * src, short * dst, int len, int power)
+    {
+        int i = 0;
+        int32x4_t v_1 = vdupq_n_s32(1);
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            int32x4_t v_a1 = v_1, v_a2 = v_1;
+            int16x8_t v_src = vld1q_s16(src + i);
+            int32x4_t v_b1 = vmovl_s16(vget_low_s16(v_src)), v_b2 = vmovl_s16(vget_high_s16(v_src));
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                {
+                    v_a1 = vmulq_s32(v_a1, v_b1);
+                    v_a2 = vmulq_s32(v_a2, v_b2);
+                }
+                v_b1 = vmulq_s32(v_b1, v_b1);
+                v_b2 = vmulq_s32(v_b2, v_b2);
+                p >>= 1;
+            }
+
+            v_a1 = vmulq_s32(v_a1, v_b1);
+            v_a2 = vmulq_s32(v_a2, v_b2);
+            vst1q_s16(dst + i, vcombine_s16(vqmovn_s32(v_a1), vqmovn_s32(v_a2)));
+        }
+
+        return i;
+    }
+};
+
+
+template <>
+struct iPow_SIMD<int, int>
+{
+    int operator() ( const int * src, int * dst, int len, int power)
+    {
+        int i = 0;
+        int32x4_t v_1 = vdupq_n_s32(1);
+
+        for ( ; i <= len - 4; i += 4)
+        {
+            int32x4_t v_b = vld1q_s32(src + i), v_a = v_1;
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                    v_a = vmulq_s32(v_a, v_b);
+                v_b = vmulq_s32(v_b, v_b);
+                p >>= 1;
+            }
+
+            v_a = vmulq_s32(v_a, v_b);
+            vst1q_s32(dst + i, v_a);
+        }
+
+        return i;
+    }
+};
+
+template <>
+struct iPow_SIMD<float, float>
+{
+    int operator() ( const float * src, float * dst, int len, int power)
+    {
+        int i = 0;
+        float32x4_t v_1 = vdupq_n_f32(1.0f);
+
+        for ( ; i <= len - 4; i += 4)
+        {
+            float32x4_t v_b = vld1q_f32(src + i), v_a = v_1;
+            int p = power;
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                    v_a = vmulq_f32(v_a, v_b);
+                v_b = vmulq_f32(v_b, v_b);
+                p >>= 1;
+            }
+
+            v_a = vmulq_f32(v_a, v_b);
+            vst1q_f32(dst + i, v_a);
+        }
+
+        return i;
+    }
+};
+
+#endif
+
 template<typename T, typename WT>
 static void
 iPow_( const T* src, T* dst, int len, int power )
 {
-    int i;
-    for( i = 0; i < len; i++ )
+    iPow_SIMD<T, WT> vop;
+    int i = vop(src, dst, len, power);
+
+    for( ; i < len; i++ )
     {
         WT a = 1, b = src[i];
         int p = power;
@@ -2139,8 +2478,8 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON, nonnegative = power >= 0;
-    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? nonnegative ? "OP_POWN" : "OP_ROOTN" : nonnegative ? "OP_POWR" : "OP_POW";
+    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
+    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D dstT=%s -D depth=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
@@ -2203,28 +2542,34 @@ void pow( InputArray _src, double power, OutputArray _dst )
             return;
         case 2:
 #if defined(HAVE_IPP)
-            if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) ||
-                                              (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
+            CV_IPP_CHECK()
             {
-                Mat src = _src.getMat();
-                _dst.create( src.dims, src.size, type );
-                Mat dst = _dst.getMat();
-
-                Size size = src.size();
-                int srcstep = (int)src.step, dststep = (int)dst.step, esz = CV_ELEM_SIZE(type);
-                if (src.isContinuous() && dst.isContinuous())
+                if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) ||
+                                                  (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
                 {
-                    size.width = (int)src.total();
-                    size.height = 1;
-                    srcstep = dststep = (int)src.total() * esz;
+                    Mat src = _src.getMat();
+                    _dst.create( src.dims, src.size, type );
+                    Mat dst = _dst.getMat();
+
+                    Size size = src.size();
+                    int srcstep = (int)src.step, dststep = (int)dst.step, esz = CV_ELEM_SIZE(type);
+                    if (src.isContinuous() && dst.isContinuous())
+                    {
+                        size.width = (int)src.total();
+                        size.height = 1;
+                        srcstep = dststep = (int)src.total() * esz;
+                    }
+                    size.width *= cn;
+
+                    IppStatus status = ippiSqr_32f_C1R(src.ptr<Ipp32f>(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+
+                    if (status >= 0)
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP);
+                        return;
+                    }
+                    setIppErrorStatus();
                 }
-                size.width *= cn;
-
-                IppStatus status = ippiSqr_32f_C1R(src.ptr<Ipp32f>(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-
-                if (status >= 0)
-                    return;
-                setIppErrorStatus();
             }
 #endif
             if (same)
@@ -2275,15 +2620,21 @@ void pow( InputArray _src, double power, OutputArray _dst )
     else
     {
 #if defined(HAVE_IPP)
-        if (src.isContinuous() && dst.isContinuous())
+        CV_IPP_CHECK()
         {
-            IppStatus status = depth == CV_32F ?
-                        ippsPowx_32f_A21(src.ptr<Ipp32f>(), (Ipp32f)power, dst.ptr<Ipp32f>(), (Ipp32s)(src.total() * cn)) :
-                        ippsPowx_64f_A50(src.ptr<Ipp64f>(), power, dst.ptr<Ipp64f>(), (Ipp32s)(src.total() * cn));
+            if (src.isContinuous() && dst.isContinuous())
+            {
+                IppStatus status = depth == CV_32F ?
+                            ippsPowx_32f_A21(src.ptr<Ipp32f>(), (Ipp32f)power, dst.ptr<Ipp32f>(), (Ipp32s)(src.total() * cn)) :
+                            ippsPowx_64f_A50(src.ptr<Ipp64f>(), power, dst.ptr<Ipp64f>(), (Ipp32s)(src.total() * cn));
 
-            if (status >= 0)
-                return;
-            setIppErrorStatus();
+                if (status >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+            }
         }
 #endif
 
@@ -2554,12 +2905,14 @@ void patchNaNs( InputOutputArray _a, double _val )
     NAryMatIterator it(arrays, (uchar**)ptrs);
     size_t len = it.size*a.channels();
     Cv32suf val;
-    float fval = (float)_val;
-    val.f = fval;
+    val.f = (float)_val;
 
 #if CV_SSE2
     __m128i v_mask1 = _mm_set1_epi32(0x7fffffff), v_mask2 = _mm_set1_epi32(0x7f800000);
     __m128i v_val = _mm_set1_epi32(val.i);
+#elif CV_NEON
+    int32x4_t v_mask1 = vdupq_n_s32(0x7fffffff), v_mask2 = vdupq_n_s32(0x7f800000),
+        v_val = vdupq_n_s32(val.i);
 #endif
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -2570,13 +2923,21 @@ void patchNaNs( InputOutputArray _a, double _val )
 #if CV_SSE2
         if (USE_SSE2)
         {
-            for ( ; j < len; j += 4)
+            for ( ; j + 4 <= len; j += 4)
             {
                 __m128i v_src = _mm_loadu_si128((__m128i const *)(tptr + j));
                 __m128i v_cmp_mask = _mm_cmplt_epi32(v_mask2, _mm_and_si128(v_src, v_mask1));
                 __m128i v_res = _mm_or_si128(_mm_andnot_si128(v_cmp_mask, v_src), _mm_and_si128(v_cmp_mask, v_val));
                 _mm_storeu_si128((__m128i *)(tptr + j), v_res);
             }
+        }
+#elif CV_NEON
+        for ( ; j + 4 <= len; j += 4)
+        {
+            int32x4_t v_src = vld1q_s32(tptr + j);
+            uint32x4_t v_cmp_mask = vcltq_s32(v_mask2, vandq_s32(v_src, v_mask1));
+            int32x4_t v_dst = vbslq_s32(v_cmp_mask, v_val, v_src);
+            vst1q_s32(tptr + j, v_dst);
         }
 #endif
 

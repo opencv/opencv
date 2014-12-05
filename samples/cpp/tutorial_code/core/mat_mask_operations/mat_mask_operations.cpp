@@ -14,7 +14,7 @@ static void help(char* progName)
         <<  "This program shows how to filter images with mask: the write it yourself and the"
         << "filter2d way. " << endl
         <<  "Usage:"                                                                        << endl
-        << progName << " [image_name -- default lena.jpg] [G -- grayscale] "        << endl << endl;
+        << progName << " [image_name -- default ../data/lena.jpg] [G -- grayscale] "        << endl << endl;
 }
 
 
@@ -23,7 +23,7 @@ void Sharpen(const Mat& myImage,Mat& Result);
 int main( int argc, char* argv[])
 {
     help(argv[0]);
-    const char* filename = argc >=2 ? argv[1] : "lena.jpg";
+    const char* filename = argc >=2 ? argv[1] : "../data/lena.jpg";
 
     Mat I, J, K;
 

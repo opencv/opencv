@@ -49,6 +49,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup photo_c
+  @{
+  */
+
 /* Inpainting algorithms */
 enum
 {
@@ -61,6 +65,7 @@ enum
 CVAPI(void) cvInpaint( const CvArr* src, const CvArr* inpaint_mask,
                        CvArr* dst, double inpaintRange, int flags );
 
+/** @} */
 
 #ifdef __cplusplus
 } //extern "C"

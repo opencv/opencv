@@ -333,6 +333,7 @@ MAKE_ENUM(MediaEventType) MediaEventTypePairs[] = {
     MAKE_ENUM_PAIR(MediaEventType, MEAudioSessionDisconnected),
     MAKE_ENUM_PAIR(MediaEventType, MEAudioSessionExclusiveModeOverride),
     MAKE_ENUM_PAIR(MediaEventType, MESinkV1Anchor),
+#if (WINVER >= 0x0602) // Available since Win 8
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionVolumeChanged),
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionDeviceRemoved),
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionFormatChanged),
@@ -340,6 +341,7 @@ MAKE_ENUM(MediaEventType) MediaEventTypePairs[] = {
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionExclusiveModeOverride),
     MAKE_ENUM_PAIR(MediaEventType, MECaptureAudioSessionServerShutdown),
     MAKE_ENUM_PAIR(MediaEventType, MESinkV2Anchor),
+#endif
     MAKE_ENUM_PAIR(MediaEventType, METrustUnknown),
     MAKE_ENUM_PAIR(MediaEventType, MEPolicyChanged),
     MAKE_ENUM_PAIR(MediaEventType, MEContentProtectionMessage),
@@ -361,9 +363,11 @@ MAKE_ENUM(MediaEventType) MediaEventTypePairs[] = {
     MAKE_ENUM_PAIR(MediaEventType, METransformHaveOutput),
     MAKE_ENUM_PAIR(MediaEventType, METransformDrainComplete),
     MAKE_ENUM_PAIR(MediaEventType, METransformMarker),
+#if (WINVER >= 0x0602) // Available since Win 8
     MAKE_ENUM_PAIR(MediaEventType, MEByteStreamCharacteristicsChanged),
     MAKE_ENUM_PAIR(MediaEventType, MEVideoCaptureDeviceRemoved),
     MAKE_ENUM_PAIR(MediaEventType, MEVideoCaptureDevicePreempted),
+#endif
     MAKE_ENUM_PAIR(MediaEventType, MEReservedMax)
 };
 MAKE_MAP(MediaEventType) MediaEventTypeMap(MediaEventTypePairs, MediaEventTypePairs + sizeof(MediaEventTypePairs) / sizeof(MediaEventTypePairs[0]));
@@ -590,27 +594,65 @@ hr = orig.As(&obj);
 #define _ComPtr Microsoft::WRL::ComPtr
 #else
 
+#define _COM_SMARTPTR_DECLARE(T,var) T ## Ptr var
+
 template <class T>
-class ComPtr : public ATL::CComPtr<T>
+class ComPtr
 {
 public:
     ComPtr() throw()
     {
     }
-    ComPtr(int nNull) throw() :
-        CComPtr<T>((T*)nNull)
+    ComPtr(int nNull) throw()
+    {
+        assert(nNull == 0);
+        p = NULL;
+    }
+    ComPtr(T* lp) throw()
+    {
+        p = lp;
+    }
+    ComPtr(_In_ const ComPtr<T>& lp) throw()
+    {
+        p = lp.p;
+    }
+    virtual ~ComPtr()
     {
     }
-    ComPtr(T* lp) throw() :
-        CComPtr<T>(lp)
 
+    T** operator&() throw()
     {
+        assert(p == NULL);
+        return p.operator&();
     }
-    ComPtr(_In_ const CComPtr<T>& lp) throw() :
-        CComPtr<T>(lp.p)
+    T* operator->() const throw()
     {
+        assert(p != NULL);
+        return p.operator->();
     }
-    virtual ~ComPtr() {}
+    bool operator!() const throw()
+    {
+        return p.operator==(NULL);
+    }
+    bool operator==(_In_opt_ T* pT) const throw()
+    {
+        return p.operator==(pT);
+    }
+    // For comparison to NULL
+    bool operator==(int nNull) const
+    {
+        assert(nNull == 0);
+        return p.operator==(NULL);
+    }
+
+    bool operator!=(_In_opt_ T* pT) const throw()
+    {
+        return p.operator!=(pT);
+    }
+    operator bool()
+    {
+        return p.operator!=(NULL);
+    }
 
     T* const* GetAddressOf() const throw()
     {
@@ -624,7 +666,7 @@ public:
 
     T** ReleaseAndGetAddressOf() throw()
     {
-        InternalRelease();
+        p.Release();
         return &p;
     }
 
@@ -632,27 +674,38 @@ public:
     {
         return p;
     }
-    ComPtr& operator=(decltype(__nullptr)) throw()
+
+    // Attach to an existing interface (does not AddRef)
+    void Attach(_In_opt_ T* p2) throw()
     {
-        InternalRelease();
-        return *this;
+        p.Attach(p2);
     }
-    ComPtr& operator=(_In_ const int nNull) throw()
+    // Detach the interface (does not Release)
+    T* Detach() throw()
     {
-        ASSERT(nNull == 0);
-        (void)nNull;
-        InternalRelease();
-        return *this;
+        return p.Detach();
     }
-    unsigned long Reset()
+    _Check_return_ HRESULT CopyTo(_Deref_out_opt_ T** ppT) throw()
     {
-        return InternalRelease();
+        assert(ppT != NULL);
+        if (ppT == NULL)
+            return E_POINTER;
+        *ppT = p;
+        if (p != NULL)
+            p->AddRef();
+        return S_OK;
     }
+
+    void Reset()
+    {
+        p.Release();
+    }
+
     // query for U interface
     template<typename U>
     HRESULT As(_Inout_ U** lp) const throw()
     {
-        return p->QueryInterface(__uuidof(U), (void**)lp);
+        return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp));
     }
     // query for U interface
     template<typename U>
@@ -661,19 +714,8 @@ public:
         return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp->ReleaseAndGetAddressOf()));
     }
 private:
-    unsigned long InternalRelease() throw()
-    {
-        unsigned long ref = 0;
-        T* temp = p;
-
-        if (temp != nullptr)
-        {
-            p = nullptr;
-            ref = temp->Release();
-        }
-
-        return ref;
-    }
+    _COM_SMARTPTR_TYPEDEF(T, __uuidof(T));
+    _COM_SMARTPTR_DECLARE(T, p);
 };
 
 #define _ComPtr ComPtr
@@ -1044,7 +1086,11 @@ class StreamSink :
 {
 public:
     // IUnknown methods
+#if defined(_MSC_VER) && _MSC_VER >= 1700  // '_Outptr_result_nullonfailure_' SAL is avaialable since VS 2012
     STDMETHOD(QueryInterface)(REFIID riid, _Outptr_result_nullonfailure_ void **ppv)
+#else
+    STDMETHOD(QueryInterface)(REFIID riid, void **ppv)
+#endif
     {
         if (ppv == nullptr) {
             return E_POINTER;
@@ -2248,6 +2294,11 @@ public:
 // succeed but return a nullptr pointer. By default, the list does not allow nullptr
 // pointers.
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4127) // constant expression
+#endif
+
 template <class T, bool NULLABLE = FALSE>
 class ComPtrList : public List<T*>
 {
@@ -2338,6 +2389,10 @@ protected:
     }
 };
 
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 /* Be sure to declare webcam device capability in manifest
   For better media capture support, add the following snippet with correct module name to the project manifest
     (videoio needs DLL activation class factoryentry points):
@@ -2383,7 +2438,11 @@ public:
         }
         return cRef;
     }
+#if defined(_MSC_VER) && _MSC_VER >= 1700  // '_Outptr_result_nullonfailure_' SAL is avaialable since VS 2012
     STDMETHOD(QueryInterface)(REFIID riid, _Outptr_result_nullonfailure_ void **ppv)
+#else
+    STDMETHOD(QueryInterface)(REFIID riid, void **ppv)
+#endif
     {
         if (ppv == nullptr) {
             return E_POINTER;

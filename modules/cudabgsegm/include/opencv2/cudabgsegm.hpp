@@ -50,11 +50,33 @@
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/video/background_segm.hpp"
 
+/**
+  @addtogroup cuda
+  @{
+    @defgroup cudabgsegm Background Segmentation
+  @}
+ */
+
 namespace cv { namespace cuda {
+
+//! @addtogroup cudabgsegm
+//! @{
 
 ////////////////////////////////////////////////////
 // MOG
 
+/** @brief Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
+
+The class discriminates between foreground and background pixels by building and maintaining a model
+of the background. Any pixel which does not fit this model is then deemed to be foreground. The
+class implements algorithm described in @cite MOG2001 .
+
+@sa BackgroundSubtractorMOG
+
+@note
+   -   An example on gaussian mixture based background/foreground segmantation can be found at
+        opencv_source_code/samples/gpu/bgfg_segm.cpp
+ */
 class CV_EXPORTS BackgroundSubtractorMOG : public cv::BackgroundSubtractor
 {
 public:
@@ -78,6 +100,14 @@ public:
     virtual void setNoiseSigma(double noiseSigma) = 0;
 };
 
+/** @brief Creates mixture-of-gaussian background subtractor
+
+@param history Length of the history.
+@param nmixtures Number of Gaussian mixtures.
+@param backgroundRatio Background ratio.
+@param noiseSigma Noise strength (standard deviation of the brightness or each color channel). 0
+means some automatic value.
+ */
 CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG>
     createBackgroundSubtractorMOG(int history = 200, int nmixtures = 5,
                                   double backgroundRatio = 0.7, double noiseSigma = 0);
@@ -85,6 +115,14 @@ CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG>
 ////////////////////////////////////////////////////
 // MOG2
 
+/** @brief Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
+
+The class discriminates between foreground and background pixels by building and maintaining a model
+of the background. Any pixel which does not fit this model is then deemed to be foreground. The
+class implements algorithm described in @cite Zivkovic2004 .
+
+@sa BackgroundSubtractorMOG2
+ */
 class CV_EXPORTS BackgroundSubtractorMOG2 : public cv::BackgroundSubtractorMOG2
 {
 public:
@@ -96,6 +134,15 @@ public:
     virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
 };
 
+/** @brief Creates MOG2 Background Subtractor
+
+@param history Length of the history.
+@param varThreshold Threshold on the squared Mahalanobis distance between the pixel and the model
+to decide whether a pixel is well described by the background model. This parameter does not
+affect the background update.
+@param detectShadows If true, the algorithm will detect shadows and mark them. It decreases the
+speed a bit, so if you do not need this feature, set the parameter to false.
+ */
 CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG2>
     createBackgroundSubtractorMOG2(int history = 500, double varThreshold = 16,
                                    bool detectShadows = true);
@@ -103,6 +150,12 @@ CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG2>
 ////////////////////////////////////////////////////
 // GMG
 
+/** @brief Background/Foreground Segmentation Algorithm.
+
+The class discriminates between foreground and background pixels by building and maintaining a model
+of the background. Any pixel which does not fit this model is then deemed to be foreground. The
+class implements algorithm described in @cite Gold2012 .
+ */
 class CV_EXPORTS BackgroundSubtractorGMG : public cv::BackgroundSubtractor
 {
 public:
@@ -140,53 +193,70 @@ public:
     virtual void setMaxVal(double val) = 0;
 };
 
+/** @brief Creates GMG Background Subtractor
+
+@param initializationFrames Number of frames of video to use to initialize histograms.
+@param decisionThreshold Value above which pixel is determined to be FG.
+ */
 CV_EXPORTS Ptr<cuda::BackgroundSubtractorGMG>
     createBackgroundSubtractorGMG(int initializationFrames = 120, double decisionThreshold = 0.8);
 
 ////////////////////////////////////////////////////
 // FGD
 
-/**
- * Foreground Object Detection from Videos Containing Complex Background.
- * Liyuan Li, Weimin Huang, Irene Y.H. Gu, and Qi Tian.
- * ACM MM2003 9p
+/** @brief The class discriminates between foreground and background pixels by building and maintaining a model
+of the background.
+
+Any pixel which does not fit this model is then deemed to be foreground. The class implements
+algorithm described in @cite FGD2003 .
+@sa BackgroundSubtractor
  */
 class CV_EXPORTS BackgroundSubtractorFGD : public cv::BackgroundSubtractor
 {
 public:
+    /** @brief Returns the output foreground regions calculated by findContours.
+
+    @param foreground_regions Output array (CPU memory).
+     */
     virtual void getForegroundRegions(OutputArrayOfArrays foreground_regions) = 0;
 };
 
 struct CV_EXPORTS FGDParams
 {
-    int Lc;  // Quantized levels per 'color' component. Power of two, typically 32, 64 or 128.
-    int N1c; // Number of color vectors used to model normal background color variation at a given pixel.
-    int N2c; // Number of color vectors retained at given pixel.  Must be > N1c, typically ~ 5/3 of N1c.
-    // Used to allow the first N1c vectors to adapt over time to changing background.
+    int Lc;  //!< Quantized levels per 'color' component. Power of two, typically 32, 64 or 128.
+    int N1c; //!< Number of color vectors used to model normal background color variation at a given pixel.
+    int N2c; //!< Number of color vectors retained at given pixel.  Must be > N1c, typically ~ 5/3 of N1c.
+    //!< Used to allow the first N1c vectors to adapt over time to changing background.
 
-    int Lcc;  // Quantized levels per 'color co-occurrence' component.  Power of two, typically 16, 32 or 64.
-    int N1cc; // Number of color co-occurrence vectors used to model normal background color variation at a given pixel.
-    int N2cc; // Number of color co-occurrence vectors retained at given pixel.  Must be > N1cc, typically ~ 5/3 of N1cc.
-    // Used to allow the first N1cc vectors to adapt over time to changing background.
+    int Lcc;  //!< Quantized levels per 'color co-occurrence' component.  Power of two, typically 16, 32 or 64.
+    int N1cc; //!< Number of color co-occurrence vectors used to model normal background color variation at a given pixel.
+    int N2cc; //!< Number of color co-occurrence vectors retained at given pixel.  Must be > N1cc, typically ~ 5/3 of N1cc.
+    //!< Used to allow the first N1cc vectors to adapt over time to changing background.
 
-    bool is_obj_without_holes; // If TRUE we ignore holes within foreground blobs. Defaults to TRUE.
-    int perform_morphing;     // Number of erode-dilate-erode foreground-blob cleanup iterations.
-    // These erase one-pixel junk blobs and merge almost-touching blobs. Default value is 1.
+    bool is_obj_without_holes; //!< If TRUE we ignore holes within foreground blobs. Defaults to TRUE.
+    int perform_morphing;     //!< Number of erode-dilate-erode foreground-blob cleanup iterations.
+    //!< These erase one-pixel junk blobs and merge almost-touching blobs. Default value is 1.
 
-    float alpha1; // How quickly we forget old background pixel values seen. Typically set to 0.1.
-    float alpha2; // "Controls speed of feature learning". Depends on T. Typical value circa 0.005.
-    float alpha3; // Alternate to alpha2, used (e.g.) for quicker initial convergence. Typical value 0.1.
+    float alpha1; //!< How quickly we forget old background pixel values seen. Typically set to 0.1.
+    float alpha2; //!< "Controls speed of feature learning". Depends on T. Typical value circa 0.005.
+    float alpha3; //!< Alternate to alpha2, used (e.g.) for quicker initial convergence. Typical value 0.1.
 
-    float delta;   // Affects color and color co-occurrence quantization, typically set to 2.
-    float T;       // A percentage value which determines when new features can be recognized as new background. (Typically 0.9).
-    float minArea; // Discard foreground blobs whose bounding box is smaller than this threshold.
+    float delta;   //!< Affects color and color co-occurrence quantization, typically set to 2.
+    float T;       //!< A percentage value which determines when new features can be recognized as new background. (Typically 0.9).
+    float minArea; //!< Discard foreground blobs whose bounding box is smaller than this threshold.
 
-    // default Params
+    //! default Params
     FGDParams();
 };
 
+/** @brief Creates FGD Background Subtractor
+
+@param params Algorithm's parameters. See @cite FGD2003 for explanation.
+ */
 CV_EXPORTS Ptr<cuda::BackgroundSubtractorFGD>
     createBackgroundSubtractorFGD(const FGDParams& params = FGDParams());
+
+//! @}
 
 }} // namespace cv { namespace cuda {
 

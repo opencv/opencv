@@ -48,6 +48,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+  @addtogroup videoio_c
+  @{
+*/
 
 /****************************************************************************************\
 *                         Working with Video Files and Cameras                           *
@@ -416,6 +420,7 @@ CVAPI(void) cvReleaseVideoWriter( CvVideoWriter** writer );
 #define cvCreateAVIWriter cvCreateVideoWriter
 #define cvWriteToAVI cvWriteFrame
 
+/** @} videoio_c */
 
 #ifdef __cplusplus
 }

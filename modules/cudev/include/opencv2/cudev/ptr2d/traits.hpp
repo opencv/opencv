@@ -50,6 +50,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class Ptr2DSz, class Ptr2D> struct PtrTraitsBase
 {
     typedef Ptr2DSz ptr_sz_type;
@@ -95,6 +98,8 @@ __host__ int getCols(const Ptr2DSz& ptr)
 {
     return PtrTraits<Ptr2DSz>::getCols(ptr);
 }
+
+//! @}
 
 }}
 

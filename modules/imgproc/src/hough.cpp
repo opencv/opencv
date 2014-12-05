@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+﻿/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 namespace cv
 {
@@ -99,25 +100,29 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
 #if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
-    IppiSize srcSize = { width, height };
-    IppPointPolar delta = { rho, theta };
-    IppPointPolar dstRoi[2] = {{(Ipp32f) -(width + height), (Ipp32f) min_theta},{(Ipp32f) (width + height), (Ipp32f) max_theta}};
-    int bufferSize;
-    int nz = countNonZero(img);
-    int ipp_linesMax = std::min(linesMax, nz*numangle/threshold);
-    int linesCount = 0;
-    lines.resize(ipp_linesMax);
-    IppStatus ok = ippiHoughLineGetSize_8u_C1R(srcSize, delta, ipp_linesMax, &bufferSize);
-    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
-    if (ok >= 0) ok = ippiHoughLine_Region_8u32f_C1R(image, step, srcSize, (IppPointPolar*) &lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer);
-    ippsFree(buffer);
-    if (ok >= 0)
+    CV_IPP_CHECK()
     {
-        lines.resize(linesCount);
-        return;
+        IppiSize srcSize = { width, height };
+        IppPointPolar delta = { rho, theta };
+        IppPointPolar dstRoi[2] = {{(Ipp32f) -(width + height), (Ipp32f) min_theta},{(Ipp32f) (width + height), (Ipp32f) max_theta}};
+        int bufferSize;
+        int nz = countNonZero(img);
+        int ipp_linesMax = std::min(linesMax, nz*numangle/threshold);
+        int linesCount = 0;
+        lines.resize(ipp_linesMax);
+        IppStatus ok = ippiHoughLineGetSize_8u_C1R(srcSize, delta, ipp_linesMax, &bufferSize);
+        Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+        if (ok >= 0) ok = ippiHoughLine_Region_8u32f_C1R(image, step, srcSize, (IppPointPolar*) &lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer);
+        ippsFree(buffer);
+        if (ok >= 0)
+        {
+            lines.resize(linesCount);
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        lines.clear();
+        setIppErrorStatus();
     }
-    lines.clear();
-    setIppErrorStatus();
 #endif
 
     AutoBuffer<int> _accum((numangle+2) * (numrho+2));
@@ -220,7 +225,7 @@ HoughLinesSDiv( const Mat& img,
     std::vector<hough_index> lst;
 
     CV_Assert( img.type() == CV_8UC1 );
-    CV_Assert( linesMax > 0 && rho > 0 && theta > 0 );
+    CV_Assert( linesMax > 0 );
 
     threshold = MIN( threshold, 255 );
 
@@ -298,7 +303,7 @@ HoughLinesSDiv( const Mat& img,
                      ti1 < halftn; ti1++, phi += theta_it, phi1 += scale_factor )
                 {
                     rv = r0 * std::cos( phi );
-                    i = cvFloor( rv ) * tn;
+                    i = (int)rv * tn;
                     i += cvFloor( phi1 );
                     assert( i >= 0 );
                     assert( i < rn * tn );
@@ -428,28 +433,32 @@ HoughLinesProbabilistic( Mat& image,
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
 #if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
-    IppiSize srcSize = { width, height };
-    IppPointPolar delta = { rho, theta };
-    IppiHoughProbSpec* pSpec;
-    int bufferSize, specSize;
-    int ipp_linesMax = std::min(linesMax, numangle*numrho);
-    int linesCount = 0;
-    lines.resize(ipp_linesMax);
-    IppStatus ok = ippiHoughProbLineGetSize_8u_C1R(srcSize, delta, &specSize, &bufferSize);
-    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
-    pSpec = (IppiHoughProbSpec*) malloc(specSize);
-    if (ok >= 0) ok = ippiHoughProbLineInit_8u32f_C1R(srcSize, delta, ippAlgHintNone, pSpec);
-    if (ok >= 0) ok = ippiHoughProbLine_8u32f_C1R(image.data, image.step, srcSize, threshold, lineLength, lineGap, (IppiPoint*) &lines[0], ipp_linesMax, &linesCount, buffer, pSpec);
-
-    free(pSpec);
-    ippsFree(buffer);
-    if (ok >= 0)
+    CV_IPP_CHECK()
     {
-        lines.resize(linesCount);
-        return;
+        IppiSize srcSize = { width, height };
+        IppPointPolar delta = { rho, theta };
+        IppiHoughProbSpec* pSpec;
+        int bufferSize, specSize;
+        int ipp_linesMax = std::min(linesMax, numangle*numrho);
+        int linesCount = 0;
+        lines.resize(ipp_linesMax);
+        IppStatus ok = ippiHoughProbLineGetSize_8u_C1R(srcSize, delta, &specSize, &bufferSize);
+        Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+        pSpec = (IppiHoughProbSpec*) malloc(specSize);
+        if (ok >= 0) ok = ippiHoughProbLineInit_8u32f_C1R(srcSize, delta, ippAlgHintNone, pSpec);
+        if (ok >= 0) ok = ippiHoughProbLine_8u32f_C1R(image.data, image.step, srcSize, threshold, lineLength, lineGap, (IppiPoint*) &lines[0], ipp_linesMax, &linesCount, buffer, pSpec);
+
+        free(pSpec);
+        ippsFree(buffer);
+        if (ok >= 0)
+        {
+            lines.resize(linesCount);
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        lines.clear();
+        setIppErrorStatus();
     }
-    lines.clear();
-    setIppErrorStatus();
 #endif
 
     Mat accum = Mat::zeros( numangle, numrho, CV_32SC1 );
@@ -652,13 +661,201 @@ HoughLinesProbabilistic( Mat& image,
     }
 }
 
+#ifdef HAVE_OPENCL
+
+#define OCL_MAX_LINES 4096
+
+static bool ocl_makePointsList(InputArray _src, OutputArray _pointsList, InputOutputArray _counters)
+{
+    UMat src = _src.getUMat();
+    _pointsList.create(1, (int) src.total(), CV_32SC1);
+    UMat pointsList = _pointsList.getUMat();
+    UMat counters = _counters.getUMat();
+    ocl::Device dev = ocl::Device::getDefault();
+
+    const int pixPerWI = 16;
+    int workgroup_size = min((int) dev.maxWorkGroupSize(), (src.cols + pixPerWI - 1)/pixPerWI);
+    ocl::Kernel pointListKernel("make_point_list", ocl::imgproc::hough_lines_oclsrc,
+                                format("-D MAKE_POINTS_LIST -D GROUP_SIZE=%d -D LOCAL_SIZE=%d", workgroup_size, src.cols));
+    if (pointListKernel.empty())
+        return false;
+
+    pointListKernel.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(pointsList),
+                         ocl::KernelArg::PtrWriteOnly(counters));
+
+    size_t localThreads[2]  = { workgroup_size, 1 };
+    size_t globalThreads[2] = { workgroup_size, src.rows };
+
+    return pointListKernel.run(2, globalThreads, localThreads, false);
 }
 
+static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_points, double rho, double theta, int numrho, int numangle)
+{
+    UMat pointsList = _pointsList.getUMat();
+    _accum.create(numangle + 2, numrho + 2, CV_32SC1);
+    UMat accum = _accum.getUMat();
+    ocl::Device dev = ocl::Device::getDefault();
+
+    float irho = (float) (1 / rho);
+    int workgroup_size = min((int) dev.maxWorkGroupSize(), total_points);
+
+    ocl::Kernel fillAccumKernel;
+    size_t localThreads[2];
+    size_t globalThreads[2];
+
+    size_t local_memory_needed = (numrho + 2)*sizeof(int);
+    if (local_memory_needed > dev.localMemSize())
+    {
+        accum.setTo(Scalar::all(0));
+        fillAccumKernel.create("fill_accum_global", ocl::imgproc::hough_lines_oclsrc,
+                                format("-D FILL_ACCUM_GLOBAL"));
+        if (fillAccumKernel.empty())
+            return false;
+        globalThreads[0] = workgroup_size; globalThreads[1] = numangle;
+        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnlyNoSize(accum),
+                        total_points, irho, (float) theta, numrho, numangle);
+        return fillAccumKernel.run(2, globalThreads, NULL, false);
+    }
+    else
+    {
+        fillAccumKernel.create("fill_accum_local", ocl::imgproc::hough_lines_oclsrc,
+                                format("-D FILL_ACCUM_LOCAL -D LOCAL_SIZE=%d -D BUFFER_SIZE=%d", workgroup_size, numrho + 2));
+        if (fillAccumKernel.empty())
+            return false;
+        localThreads[0] = workgroup_size; localThreads[1] = 1;
+        globalThreads[0] = workgroup_size; globalThreads[1] = numangle+2;
+        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnlyNoSize(accum),
+                        total_points, irho, (float) theta, numrho, numangle);
+        return fillAccumKernel.run(2, globalThreads, localThreads, false);
+    }
+}
+
+static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, double theta, int threshold,
+                           double min_theta, double max_theta)
+{
+    CV_Assert(_src.type() == CV_8UC1);
+
+    if (max_theta < 0 || max_theta > CV_PI ) {
+        CV_Error( CV_StsBadArg, "max_theta must fall between 0 and pi" );
+    }
+    if (min_theta < 0 || min_theta > max_theta ) {
+        CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
+    }
+    if (!(rho > 0 && theta > 0)) {
+        CV_Error( CV_StsBadArg, "rho and theta must be greater 0" );
+    }
+
+    UMat src = _src.getUMat();
+    int numangle = cvRound((max_theta - min_theta) / theta);
+    int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
+
+    UMat pointsList;
+    UMat counters(1, 2, CV_32SC1, Scalar::all(0));
+
+    if (!ocl_makePointsList(src, pointsList, counters))
+        return false;
+
+    int total_points = counters.getMat(ACCESS_READ).at<int>(0, 0);
+    if (total_points <= 0)
+    {
+        _lines.assign(UMat(0,0,CV_32FC2));
+        return true;
+    }
+
+    UMat accum;
+    if (!ocl_fillAccum(pointsList, accum, total_points, rho, theta, numrho, numangle))
+        return false;
+
+    const int pixPerWI = 8;
+    ocl::Kernel getLinesKernel("get_lines", ocl::imgproc::hough_lines_oclsrc,
+                               format("-D GET_LINES"));
+    if (getLinesKernel.empty())
+        return false;
+
+    int linesMax = threshold > 0 ? min(total_points*numangle/threshold, OCL_MAX_LINES) : OCL_MAX_LINES;
+    UMat lines(linesMax, 1, CV_32FC2);
+
+    getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
+                        ocl::KernelArg::PtrWriteOnly(counters), linesMax, threshold, (float) rho, (float) theta);
+
+    size_t globalThreads[2] = { (numrho + pixPerWI - 1)/pixPerWI, numangle };
+    if (!getLinesKernel.run(2, globalThreads, NULL, false))
+        return false;
+
+    int total_lines = min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
+    if (total_lines > 0)
+        _lines.assign(lines.rowRange(Range(0, total_lines)));
+    else
+        _lines.assign(UMat(0,0,CV_32FC2));
+    return true;
+}
+
+static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, double theta, int threshold,
+                           double minLineLength, double maxGap)
+{
+    CV_Assert(_src.type() == CV_8UC1);
+
+    if (!(rho > 0 && theta > 0)) {
+        CV_Error( CV_StsBadArg, "rho and theta must be greater 0" );
+    }
+
+    UMat src = _src.getUMat();
+    int numangle = cvRound(CV_PI / theta);
+    int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
+
+    UMat pointsList;
+    UMat counters(1, 2, CV_32SC1, Scalar::all(0));
+
+    if (!ocl_makePointsList(src, pointsList, counters))
+        return false;
+
+    int total_points = counters.getMat(ACCESS_READ).at<int>(0, 0);
+    if (total_points <= 0)
+    {
+        _lines.assign(UMat(0,0,CV_32SC4));
+        return true;
+    }
+
+    UMat accum;
+    if (!ocl_fillAccum(pointsList, accum, total_points, rho, theta, numrho, numangle))
+        return false;
+
+    ocl::Kernel getLinesKernel("get_lines", ocl::imgproc::hough_lines_oclsrc,
+                               format("-D GET_LINES_PROBABOLISTIC"));
+    if (getLinesKernel.empty())
+        return false;
+
+    int linesMax = threshold > 0 ? min(total_points*numangle/threshold, OCL_MAX_LINES) : OCL_MAX_LINES;
+    UMat lines(linesMax, 1, CV_32SC4);
+
+    getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::ReadOnly(src),
+                        ocl::KernelArg::WriteOnlyNoSize(lines), ocl::KernelArg::PtrWriteOnly(counters),
+                        linesMax, threshold, (int) minLineLength, (int) maxGap, (float) rho, (float) theta);
+
+    size_t globalThreads[2] = { numrho, numangle };
+    if (!getLinesKernel.run(2, globalThreads, NULL, false))
+        return false;
+
+    int total_lines = min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
+    if (total_lines > 0)
+        _lines.assign(lines.rowRange(Range(0, total_lines)));
+    else
+        _lines.assign(UMat(0,0,CV_32SC4));
+
+    return true;
+}
+
+#endif /* HAVE_OPENCL */
+
+}
 
 void cv::HoughLines( InputArray _image, OutputArray _lines,
                     double rho, double theta, int threshold,
                     double srn, double stn, double min_theta, double max_theta )
 {
+    CV_OCL_RUN(srn == 0 && stn == 0 && _image.isUMat() && _lines.isUMat(),
+               ocl_HoughLines(_image, _lines, rho, theta, threshold, min_theta, max_theta));
+
     Mat image = _image.getMat();
     std::vector<Vec2f> lines;
 
@@ -675,6 +872,9 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double minLineLength, double maxGap )
 {
+    CV_OCL_RUN(_image.isUMat() && _lines.isUMat(),
+               ocl_HoughLinesP(_image, _lines, rho, theta, threshold, minLineLength, maxGap));
+
     Mat image = _image.getMat();
     std::vector<Vec4i> lines;
     HoughLinesProbabilistic(image, (float)rho, (float)theta, threshold, cvRound(minLineLength), cvRound(maxGap), lines, INT_MAX);
@@ -824,10 +1024,14 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     CvSeqReader reader;
 
     edges.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
+
+    // Use the Canny Edge Detector to detect all the edges in the image.
     cvCanny( img, edges, MAX(canny_threshold/2,1), canny_threshold, 3 );
 
     dx.reset(cvCreateMat( img->rows, img->cols, CV_16SC1 ));
     dy.reset(cvCreateMat( img->rows, img->cols, CV_16SC1 ));
+
+    /*Use the Sobel Derivative to compute the local gradient of all the non-zero pixels in the edge image.*/
     cvSobel( img, dx, 1, 0, 3 );
     cvSobel( img, dy, 0, 1, 3 );
 
@@ -838,6 +1042,8 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     cvZero(accum);
 
     storage.reset(cvCreateMemStorage());
+    /* Create sequences for the nonzero pixels in the edge image and the centers of circles
+    which could be detected.*/
     nz = cvCreateSeq( CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), storage );
     centers = cvCreateSeq( CV_32SC1, sizeof(CvSeq), sizeof(int), storage );
 
@@ -918,7 +1124,8 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
 
     sort_buf.resize( MAX(center_count,nz_count) );
     cvCvtSeqToArray( centers, &sort_buf[0] );
-
+    /*Sort candidate centers in descending order of their accumulator values, so that the centers
+    with the most supporting pixels appear first.*/
     std::sort(sort_buf.begin(), sort_buf.begin() + center_count, cv::hough_cmp_gt(adata));
     cvClearSeq( centers );
     cvSeqPushMulti( centers, &sort_buf[0], center_count );
@@ -973,6 +1180,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             continue;
         dist_buf->cols = nz_count1;
         cvPow( dist_buf, dist_buf, 0.5 );
+        // Sort non-zero pixels according to their distance from the center.
         std::sort(sort_buf.begin(), sort_buf.begin() + nz_count1, cv::hough_cmp_gt((int*)ddata));
 
         dist_sum = start_dist = ddata[sort_buf[nz_count1-1]];

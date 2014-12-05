@@ -49,7 +49,7 @@ if(NOT DEFINED OpenCV_MODULES_SUFFIX)
   endif()
 endif()
 
-if(@USE_IPPICV@) # value is defined by package builder
+if("@USE_IPPICV@" STREQUAL "TRUE") # value is defined by package builder (use STREQUAL to comply new CMake policy CMP0012)
   if(NOT TARGET ippicv)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/@INSTALL_PATH_RELATIVE_IPPICV@")
       add_library(ippicv STATIC IMPORTED)
@@ -122,8 +122,8 @@ set(OpenCV_INCLUDE_DIRS @OpenCV_INCLUDE_DIRS_CONFIGCMAKE@)
 # Provide the libs directories to the caller
 set(OpenCV_LIB_DIR_OPT @OpenCV_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where release OpenCV libraries are located")
 set(OpenCV_LIB_DIR_DBG @OpenCV_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where debug OpenCV libraries are located")
-set(OpenCV_3RDPARTY_LIB_DIR_OPT @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where release 3rdpaty OpenCV dependencies are located")
-set(OpenCV_3RDPARTY_LIB_DIR_DBG @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where debug 3rdpaty OpenCV dependencies are located")
+set(OpenCV_3RDPARTY_LIB_DIR_OPT @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where release 3rdparty OpenCV dependencies are located")
+set(OpenCV_3RDPARTY_LIB_DIR_DBG @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@ CACHE PATH "Path where debug 3rdparty OpenCV dependencies are located")
 mark_as_advanced(FORCE OpenCV_LIB_DIR_OPT OpenCV_LIB_DIR_DBG OpenCV_3RDPARTY_LIB_DIR_OPT OpenCV_3RDPARTY_LIB_DIR_DBG OpenCV_CONFIG_PATH)
 
 # ======================================================
@@ -292,7 +292,9 @@ foreach(__opttype OPT DBG)
     set(OpenCV_CUDA_LIBS_RELPATH "")
     foreach(l ${OpenCV_CUDA_LIBS_ABSPATH})
       get_filename_component(_tmp ${l} PATH)
-      list(APPEND OpenCV_CUDA_LIBS_RELPATH ${_tmp})
+      if(NOT ${_tmp} MATCHES "-Wl.*")
+          list(APPEND OpenCV_CUDA_LIBS_RELPATH ${_tmp})
+      endif()
     endforeach()
 
     list(REMOVE_DUPLICATES OpenCV_CUDA_LIBS_RELPATH)

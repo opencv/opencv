@@ -1,0 +1,16 @@
+OpenCV modules {#mainpage}
+==============
+
+@subpage intro
+
+### Main modules
+
+ Module name   | Folder
+-------------- | -------------
+@CMAKE_DOXYGEN_MAIN_REFERENCE@
+
+### Extra modules
+
+ Module name   | Folder
+-------------- | -------------
+@CMAKE_DOXYGEN_EXTRA_REFERENCE@

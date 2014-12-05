@@ -91,7 +91,8 @@ __kernel void maxEigenVal(__global const uchar * srcptr, int src_step, int src_o
         *(__global float *)(dstptr + (int)sizeof(float) * gid) = localmem_max[0];
 }
 
-__kernel void maxEigenValTask(__global float * dst, float qualityLevel)
+__kernel void maxEigenValTask(__global float * dst, float qualityLevel,
+                              __global int * cornersptr)
 {
     float maxval = -FLT_MAX;
 
@@ -100,6 +101,7 @@ __kernel void maxEigenValTask(__global float * dst, float qualityLevel)
         maxval = max(maxval, dst[x]);
 
     dst[0] = maxval * qualityLevel;
+    cornersptr[0] = 0;
 }
 
 #elif OP_FIND_CORNERS
@@ -110,11 +112,14 @@ __kernel void findCorners(__global const uchar * eigptr, int eig_step, int eig_o
 #ifdef HAVE_MASK
                           __global const uchar * mask, int mask_step, int mask_offset,
 #endif
-                          __global uchar * cornersptr, __global int * counter,
-                          int rows, int cols, __constant float * threshold, int max_corners)
+                          __global uchar * cornersptr, int rows, int cols,
+                          __constant float * threshold, int max_corners)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
+
+    __global int* counter = (__global int*) cornersptr;
+    __global float2 * corners = (__global float2 *)(cornersptr + (int)sizeof(float2));
 
     if (y < rows && x < cols
 #ifdef HAVE_MASK
@@ -144,11 +149,9 @@ __kernel void findCorners(__global const uchar * eigptr, int eig_step, int eig_o
                 int ind = atomic_inc(counter);
                 if (ind < max_corners)
                 {
-                    __global float2 * corners = (__global float2 *)(cornersptr + ind * (int)sizeof(float2));
-
                     // pack and store eigenvalue and its coordinates
-                    corners[0].x = val;
-                    corners[0].y = as_float(y | (x << 16));
+                    corners[ind].x = val;
+                    corners[ind].y = as_float(y | (x << 16));
                 }
             }
         }

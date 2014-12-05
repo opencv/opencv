@@ -40,7 +40,7 @@ int main( int argc, char** argv )
   int ndisparities = 16*5;   /**< Range of disparity */
   int SADWindowSize = 21; /**< Size of the block window. Must be odd */
 
-  Ptr<StereoBM> sbm = createStereoBM( ndisparities, SADWindowSize );
+  Ptr<StereoBM> sbm = StereoBM::create( ndisparities, SADWindowSize );
 
   //-- 3. Calculate the disparity image
   sbm->compute( imgLeft, imgRight, imgDisparity16S );

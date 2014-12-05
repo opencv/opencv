@@ -59,9 +59,18 @@ namespace cv
 {
     namespace cuda
     {
+
+//! @addtogroup cuda_struct
+//! @{
+
         class Stream;
         class Event;
 
+        /** @brief Class that enables getting cudaStream_t from cuda::Stream
+
+        because it is the only public header that depends on the CUDA Runtime API. Including it
+        brings a dependency to your code.
+         */
         struct StreamAccessor
         {
             CV_EXPORTS static cudaStream_t getStream(const Stream& stream);
@@ -71,6 +80,9 @@ namespace cv
         {
             CV_EXPORTS static cudaEvent_t getEvent(const Event& event);
         };
+
+//! @}
+
     }
 }
 

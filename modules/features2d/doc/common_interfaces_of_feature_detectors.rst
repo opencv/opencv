@@ -59,100 +59,60 @@ Detects keypoints in an image (first variant) or image set (second variant).
 
     :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]``.
 
-FeatureDetector::create
------------------------
-Creates a feature detector by its name.
-
-.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
-
-.. ocv:pyfunction:: cv2.FeatureDetector_create(detectorType) -> retval
-
-    :param detectorType: Feature detector type.
-
-The following detector types are supported:
-
-* ``"FAST"`` -- :ocv:class:`FastFeatureDetector`
-* ``"ORB"`` -- :ocv:class:`ORB`
-* ``"BRISK"`` -- :ocv:class:`BRISK`
-* ``"MSER"`` -- :ocv:class:`MSER`
-* ``"GFTT"`` -- :ocv:class:`GoodFeaturesToTrackDetector`
-* ``"HARRIS"`` -- :ocv:class:`GoodFeaturesToTrackDetector` with Harris detector enabled
-* ``"SimpleBlob"`` -- :ocv:class:`SimpleBlobDetector`
-
 FastFeatureDetector
 -------------------
-.. ocv:class:: FastFeatureDetector : public FeatureDetector
+.. ocv:class:: FastFeatureDetector : public Feature2D
 
 Wrapping class for feature detection using the
 :ocv:func:`FAST` method. ::
 
-    class FastFeatureDetector : public FeatureDetector
+    class FastFeatureDetector : public Feature2D
     {
     public:
-        FastFeatureDetector( int threshold=1, bool nonmaxSuppression=true, type=FastFeatureDetector::TYPE_9_16 );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
+        static Ptr<FastFeatureDetector> create( int threshold=1, bool nonmaxSuppression=true, type=FastFeatureDetector::TYPE_9_16 );
     };
 
-GoodFeaturesToTrackDetector
+GFTTDetector
 ---------------------------
-.. ocv:class:: GoodFeaturesToTrackDetector : public FeatureDetector
+.. ocv:class:: GFTTDetector : public FeatureDetector
 
 Wrapping class for feature detection using the
 :ocv:func:`goodFeaturesToTrack` function. ::
 
-    class GoodFeaturesToTrackDetector : public FeatureDetector
+    class GFTTDetector : public Feature2D
     {
     public:
-        class Params
-        {
-        public:
-            Params( int maxCorners=1000, double qualityLevel=0.01,
-                    double minDistance=1., int blockSize=3,
-                    bool useHarrisDetector=false, double k=0.04 );
-            void read( const FileNode& fn );
-            void write( FileStorage& fs ) const;
-
-            int maxCorners;
-            double qualityLevel;
-            double minDistance;
-            int blockSize;
-            bool useHarrisDetector;
-            double k;
-        };
-
-        GoodFeaturesToTrackDetector( const GoodFeaturesToTrackDetector::Params& params=
-                                                GoodFeaturesToTrackDetector::Params() );
-        GoodFeaturesToTrackDetector( int maxCorners, double qualityLevel,
-                                     double minDistance, int blockSize=3,
-                                     bool useHarrisDetector=false, double k=0.04 );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
+        enum { USE_HARRIS_DETECTOR=10000 };
+        static Ptr<GFTTDetector> create( int maxCorners=1000, double qualityLevel=0.01,
+                                         double minDistance=1, int blockSize=3,
+                                         bool useHarrisDetector=false, double k=0.04 );
     };
 
-MserFeatureDetector
+MSER
 -------------------
-.. ocv:class:: MserFeatureDetector : public FeatureDetector
+.. ocv:class:: MSER : public Feature2D
 
-Wrapping class for feature detection using the
-:ocv:class:`MSER` class. ::
+Maximally stable region detector ::
 
-    class MserFeatureDetector : public FeatureDetector
+    class MSER : public Feature2D
     {
     public:
-        MserFeatureDetector( CvMSERParams params=cvMSERParams() );
-        MserFeatureDetector( int delta, int minArea, int maxArea,
-                             double maxVariation, double minDiversity,
-                             int maxEvolution, double areaThreshold,
-                             double minMargin, int edgeBlurSize );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
+        enum
+        {
+            DELTA=10000, MIN_AREA=10001, MAX_AREA=10002, PASS2_ONLY=10003,
+            MAX_EVOLUTION=10004, AREA_THRESHOLD=10005,
+            MIN_MARGIN=10006, EDGE_BLUR_SIZE=10007
+        };
+
+        //! the full constructor
+        static Ptr<MSER> create( int _delta=5, int _min_area=60, int _max_area=14400,
+              double _max_variation=0.25, double _min_diversity=.2,
+              int _max_evolution=200, double _area_threshold=1.01,
+              double _min_margin=0.003, int _edge_blur_size=5 );
+
+        virtual void detectRegions( InputArray image,
+                                    std::vector<std::vector<Point> >& msers,
+                                    std::vector<Rect>& bboxes ) = 0;
     };
 
 SimpleBlobDetector
@@ -189,10 +149,8 @@ Class for extracting blobs from an image. ::
         float minConvexity, maxConvexity;
     };
 
-    SimpleBlobDetector(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
-
-    protected:
-        ...
+    static Ptr<SimpleBlobDetector> create(const SimpleBlobDetector::Params
+                    &parameters = SimpleBlobDetector::Params());
     };
 
 The class implements a simple algorithm for extracting blobs from an image:

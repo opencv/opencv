@@ -91,7 +91,7 @@ static void help()
 {
     printf("\nProgram to demonstrate the use of the distance transform function between edge images.\n"
             "Usage:\n"
-            "./distrans [image_name -- default image is stuff.jpg]\n"
+            "./distrans [image_name -- default image is ../data/stuff.jpg]\n"
             "\nHot keys: \n"
             "\tESC - quit the program\n"
             "\tC - use C/Inf metric\n"
@@ -107,7 +107,7 @@ static void help()
 
 const char* keys =
 {
-    "{@image |stuff.jpg|input image file}"
+    "{@image |../data/stuff.jpg|input image file}"
 };
 
 int main( int argc, const char** argv )

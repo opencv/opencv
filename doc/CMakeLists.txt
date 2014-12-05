@@ -1,25 +1,11 @@
-#
+#-----------------------
 #  CMake file for OpenCV docs
-#
+#-----------------------
 
-if(BUILD_DOCS AND HAVE_SPHINX)
+set(HAVE_DOC_GENERATOR BUILD_DOCS AND (HAVE_SPHINX OR HAVE_DOXYGEN))
 
+if(HAVE_DOC_GENERATOR)
   project(opencv_docs)
-
-  set(DOC_LIST
-      "${OpenCV_SOURCE_DIR}/doc/opencv-logo.png"
-      "${OpenCV_SOURCE_DIR}/doc/opencv-logo2.png"
-      "${OpenCV_SOURCE_DIR}/doc/opencv-logo-white.png"
-      "${OpenCV_SOURCE_DIR}/doc/opencv.ico"
-      "${OpenCV_SOURCE_DIR}/doc/pattern.png"
-      "${OpenCV_SOURCE_DIR}/doc/acircles_pattern.png")
-  if(NOT INSTALL_CREATE_DISTRIB)
-    list(APPEND DOC_LIST "${OpenCV_SOURCE_DIR}/doc/haartraining.htm")
-  endif()
-
-  set(OPTIONAL_DOC_LIST "")
-
-
   # build lists of modules to be documented
   set(BASE_MODULES "")
   set(EXTRA_MODULES "")
@@ -32,18 +18,29 @@ if(BUILD_DOCS AND HAVE_SPHINX)
       list(APPEND EXTRA_MODULES ${mod})
     endif()
   endforeach()
-
-  set(FIXED_ORDER_MODULES core imgproc imgcodecs videoio highgui video calib3d features2d objdetect ml flann photo stitching)
-
-  list(REMOVE_ITEM BASE_MODULES ${FIXED_ORDER_MODULES})
-
   ocv_list_sort(BASE_MODULES)
   ocv_list_sort(EXTRA_MODULES)
-
+  set(FIXED_ORDER_MODULES core imgproc imgcodecs videoio highgui video calib3d features2d objdetect ml flann photo stitching)
+  list(REMOVE_ITEM BASE_MODULES ${FIXED_ORDER_MODULES})
   set(BASE_MODULES ${FIXED_ORDER_MODULES} ${BASE_MODULES})
 
-  # build lists of documentation files and generate table of contents for reference manual
+  set(DOC_LIST
+      "${OpenCV_SOURCE_DIR}/doc/opencv-logo.png"
+      "${OpenCV_SOURCE_DIR}/doc/opencv-logo2.png"
+      "${OpenCV_SOURCE_DIR}/doc/opencv-logo-white.png"
+      "${OpenCV_SOURCE_DIR}/doc/opencv.ico"
+      "${OpenCV_SOURCE_DIR}/doc/pattern.png"
+      "${OpenCV_SOURCE_DIR}/doc/acircles_pattern.png")
+  set(OPTIONAL_DOC_LIST "")
+endif(HAVE_DOC_GENERATOR)
 
+# ========= Sphinx docs =========
+if(BUILD_DOCS AND HAVE_SPHINX)
+  if(NOT INSTALL_CREATE_DISTRIB)
+    list(APPEND DOC_LIST "${OpenCV_SOURCE_DIR}/doc/haartraining.htm")
+  endif()
+
+  # build lists of documentation files and generate table of contents for reference manual
   set(DOC_FAKE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/fake-root")
   set(DOC_FAKE_ROOT_FILES "")
 
@@ -103,7 +100,6 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   if(PDFLATEX_COMPILER)
     add_custom_target(docs
       COMMAND ${SPHINX_BUILD} ${BUILD_PLANTUML} -b latex -c "${CMAKE_CURRENT_SOURCE_DIR}" "${DOC_FAKE_ROOT}" .
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/doc/opencv1/pics
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
       COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
       COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2manager.tex
@@ -147,12 +143,87 @@ if(BUILD_DOCS AND HAVE_SPHINX)
     set_target_properties(html_docs PROPERTIES FOLDER "documentation")
   endif()
 
+endif()
+
+# ========= Doxygen docs =========
+
+macro(make_reference result modules_list black_list)
+    set(_res)
+    foreach(m ${${modules_list}})
+        list(FIND ${black_list} ${m} _pos)
+        if(${_pos} EQUAL -1)
+            set(_res "${_res} @ref ${m} | ${m} \n")
+        endif()
+    endforeach()
+    set(${result} ${_res})
+endmacro()
+
+if(BUILD_DOCS AND HAVE_DOXYGEN)
+  # not documented modules list
+  list(APPEND blacklist "ts" "java" "python2" "python3" "world")
+
+  # gathering headers
+  set(paths_include)
+  set(paths_doc)
+  set(paths_bib)
+  set(deps)
+  foreach(m ${BASE_MODULES} ${EXTRA_MODULES})
+    list(FIND blacklist ${m} _pos)
+    if(${_pos} EQUAL -1)
+      # include folder
+      set(header_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/include")
+      if(EXISTS "${header_dir}")
+        list(APPEND paths_include "${header_dir}")
+        list(APPEND deps ${header_dir})
+      endif()
+      # doc folder
+      set(docs_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/doc")
+      if(EXISTS "${docs_dir}")
+        list(APPEND paths_doc "${docs_dir}")
+        list(APPEND deps ${docs_dir})
+      endif()
+      # BiBTeX file
+      set(bib_file "${docs_dir}/${m}.bib")
+      if(EXISTS "${bib_file}")
+        set(paths_bib "${paths_bib} ${bib_file}")
+        list(APPEND deps ${bib_file})
+      endif()
+    endif()
+  endforeach()
+
+
+  # additional config
+  set(doxyfile "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile")
+  set(rootfile "${CMAKE_CURRENT_BINARY_DIR}/root.markdown")
+  set(bibfile "${CMAKE_CURRENT_SOURCE_DIR}/opencv.bib")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${paths_include} ; ${paths_doc}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${CMAKE_SOURCE_DIR}/samples/cpp ; ${paths_doc}")
+  set(CMAKE_DOXYGEN_LAYOUT "${CMAKE_CURRENT_SOURCE_DIR}/DoxygenLayout.xml")
+  set(CMAKE_DOXYGEN_OUTPUT_PATH "doxygen")
+  set(CMAKE_EXTRA_BIB_FILES "${bibfile} ${paths_bib}")
+
+  # generate references
+  make_reference(CMAKE_DOXYGEN_MAIN_REFERENCE BASE_MODULES blacklist)
+  make_reference(CMAKE_DOXYGEN_EXTRA_REFERENCE EXTRA_MODULES blacklist)
+
+  # writing file
+  configure_file(Doxyfile.in ${doxyfile} @ONLY)
+  configure_file(root.markdown.in ${rootfile} @ONLY)
+  configure_file(mymath.sty "${CMAKE_DOXYGEN_OUTPUT_PATH}/html/mymath.sty" @ONLY)
+  configure_file(mymath.sty "${CMAKE_DOXYGEN_OUTPUT_PATH}/latex/mymath.sty" @ONLY)
+
+  add_custom_target(doxygen
+    COMMAND ${DOXYGEN_BUILD} ${doxyfile}
+DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps})
+endif()
+
+if(HAVE_DOC_GENERATOR)
+  # installation
   foreach(f ${DOC_LIST})
     install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" COMPONENT docs)
   endforeach()
-
   foreach(f ${OPTIONAL_DOC_LIST})
     install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" OPTIONAL COMPONENT docs)
   endforeach()
-
-endif()
+endif(HAVE_DOC_GENERATOR)

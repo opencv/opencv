@@ -52,22 +52,15 @@ http://www.robesafe.com/personal/pablo.alcantarilla/papers/Alcantarilla13bmvc.pd
 #include "kaze/AKAZEFeatures.h"
 
 #include <iostream>
-using namespace std;
 
 namespace cv
 {
-    AKAZE::AKAZE()
-        : descriptor(DESCRIPTOR_MLDB)
-        , descriptor_channels(3)
-        , descriptor_size(0)
-        , threshold(0.001f)
-        , octaves(4)
-        , sublevels(4)
-        , diffusivity(DIFF_PM_G2)
-    {
-    }
+    using namespace std;
 
-    AKAZE::AKAZE(int _descriptor_type, int _descriptor_size, int _descriptor_channels,
+    class AKAZE_Impl : public AKAZE
+    {
+    public:
+        AKAZE_Impl(int _descriptor_type, int _descriptor_size, int _descriptor_channels,
                  float _threshold, int _octaves, int _sublevels, int _diffusivity)
         : descriptor(_descriptor_type)
         , descriptor_channels(_descriptor_channels)
@@ -76,181 +69,182 @@ namespace cv
         , octaves(_octaves)
         , sublevels(_sublevels)
         , diffusivity(_diffusivity)
-    {
-
-    }
-
-    AKAZE::~AKAZE()
-    {
-
-    }
-
-    // returns the descriptor size in bytes
-    int AKAZE::descriptorSize() const
-    {
-        switch (descriptor)
         {
-        case cv::DESCRIPTOR_KAZE:
-        case cv::DESCRIPTOR_KAZE_UPRIGHT:
-            return 64;
-
-        case cv::DESCRIPTOR_MLDB:
-        case cv::DESCRIPTOR_MLDB_UPRIGHT:
-            // We use the full length binary descriptor -> 486 bits
-            if (descriptor_size == 0)
-            {
-                int t = (6 + 36 + 120) * descriptor_channels;
-                return (int)ceil(t / 8.);
-            }
-            else
-            {
-                // We use the random bit selection length binary descriptor
-                return (int)ceil(descriptor_size / 8.);
-            }
-
-        default:
-            return -1;
         }
-    }
 
-    // returns the descriptor type
-    int AKAZE::descriptorType() const
-    {
-        switch (descriptor)
+        virtual ~AKAZE_Impl()
         {
-        case cv::DESCRIPTOR_KAZE:
-        case cv::DESCRIPTOR_KAZE_UPRIGHT:
-                return CV_32F;
 
-        case cv::DESCRIPTOR_MLDB:
-        case cv::DESCRIPTOR_MLDB_UPRIGHT:
-                return CV_8U;
+        }
+
+        void setDescriptorType(int dtype) { descriptor = dtype; }
+        int getDescriptorType() const { return descriptor; }
+
+        void setDescriptorSize(int dsize) { descriptor_size = dsize; }
+        int getDescriptorSize() const { return descriptor_size; }
+
+        void setDescriptorChannels(int dch) { descriptor_channels = dch; }
+        int getDescriptorChannels() const { return descriptor_channels; }
+
+        void setThreshold(double threshold_) { threshold = (float)threshold_; }
+        double getThreshold() const { return threshold; }
+
+        void setNOctaves(int octaves_) { octaves = octaves_; }
+        int getNOctaves() const { return octaves; }
+
+        void setNOctaveLayers(int octaveLayers_) { sublevels = octaveLayers_; }
+        int getNOctaveLayers() const { return sublevels; }
+
+        void setDiffusivity(int diff_) { diffusivity = diff_; }
+        int getDiffusivity() const { return diffusivity; }
+
+        // returns the descriptor size in bytes
+        int descriptorSize() const
+        {
+            switch (descriptor)
+            {
+            case DESCRIPTOR_KAZE:
+            case DESCRIPTOR_KAZE_UPRIGHT:
+                return 64;
+
+            case DESCRIPTOR_MLDB:
+            case DESCRIPTOR_MLDB_UPRIGHT:
+                // We use the full length binary descriptor -> 486 bits
+                if (descriptor_size == 0)
+                {
+                    int t = (6 + 36 + 120) * descriptor_channels;
+                    return (int)ceil(t / 8.);
+                }
+                else
+                {
+                    // We use the random bit selection length binary descriptor
+                    return (int)ceil(descriptor_size / 8.);
+                }
 
             default:
                 return -1;
+            }
         }
-    }
 
-    // returns the default norm type
-    int AKAZE::defaultNorm() const
-    {
-        switch (descriptor)
+        // returns the descriptor type
+        int descriptorType() const
         {
-        case cv::DESCRIPTOR_KAZE:
-        case cv::DESCRIPTOR_KAZE_UPRIGHT:
-            return cv::NORM_L2;
+            switch (descriptor)
+            {
+            case DESCRIPTOR_KAZE:
+            case DESCRIPTOR_KAZE_UPRIGHT:
+                    return CV_32F;
 
-        case cv::DESCRIPTOR_MLDB:
-        case cv::DESCRIPTOR_MLDB_UPRIGHT:
-            return cv::NORM_HAMMING;
+            case DESCRIPTOR_MLDB:
+            case DESCRIPTOR_MLDB_UPRIGHT:
+                    return CV_8U;
 
-        default:
-            return -1;
+                default:
+                    return -1;
+            }
         }
-    }
 
-
-    void AKAZE::operator()(InputArray image, InputArray mask,
-        std::vector<KeyPoint>& keypoints,
-        OutputArray descriptors,
-        bool useProvidedKeypoints) const
-    {
-        cv::Mat img = image.getMat();
-        if (img.type() != CV_8UC1)
-            cvtColor(image, img, COLOR_BGR2GRAY);
-
-        Mat img1_32;
-        img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
-
-        cv::Mat& desc = descriptors.getMatRef();
-
-        AKAZEOptions options;
-        options.descriptor = descriptor;
-        options.descriptor_channels = descriptor_channels;
-        options.descriptor_size = descriptor_size;
-        options.img_width = img.cols;
-        options.img_height = img.rows;
-        options.dthreshold = threshold;
-        options.omax = octaves;
-        options.nsublevels = sublevels;
-        options.diffusivity = diffusivity;
-
-        AKAZEFeatures impl(options);
-        impl.Create_Nonlinear_Scale_Space(img1_32);
-
-        if (!useProvidedKeypoints)
+        // returns the default norm type
+        int defaultNorm() const
         {
-            impl.Feature_Detection(keypoints);
+            switch (descriptor)
+            {
+            case DESCRIPTOR_KAZE:
+            case DESCRIPTOR_KAZE_UPRIGHT:
+                return NORM_L2;
+
+            case DESCRIPTOR_MLDB:
+            case DESCRIPTOR_MLDB_UPRIGHT:
+                return NORM_HAMMING;
+
+            default:
+                return -1;
+            }
         }
 
-        if (!mask.empty())
+        void detectAndCompute(InputArray image, InputArray mask,
+                              std::vector<KeyPoint>& keypoints,
+                              OutputArray descriptors,
+                              bool useProvidedKeypoints)
         {
-            cv::KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
+            Mat img = image.getMat();
+            if (img.type() != CV_8UC1)
+                cvtColor(image, img, COLOR_BGR2GRAY);
+
+            Mat img1_32;
+            img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
+
+            AKAZEOptions options;
+            options.descriptor = descriptor;
+            options.descriptor_channels = descriptor_channels;
+            options.descriptor_size = descriptor_size;
+            options.img_width = img.cols;
+            options.img_height = img.rows;
+            options.dthreshold = threshold;
+            options.omax = octaves;
+            options.nsublevels = sublevels;
+            options.diffusivity = diffusivity;
+
+            AKAZEFeatures impl(options);
+            impl.Create_Nonlinear_Scale_Space(img1_32);
+
+            if (!useProvidedKeypoints)
+            {
+                impl.Feature_Detection(keypoints);
+            }
+
+            if (!mask.empty())
+            {
+                KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
+            }
+
+            if( descriptors.needed() )
+            {
+                Mat& desc = descriptors.getMatRef();
+                impl.Compute_Descriptors(keypoints, desc);
+
+                CV_Assert((!desc.rows || desc.cols == descriptorSize()));
+                CV_Assert((!desc.rows || (desc.type() == descriptorType())));
+            }
         }
 
-        impl.Compute_Descriptors(keypoints, desc);
-
-        CV_Assert((!desc.rows || desc.cols == descriptorSize()));
-        CV_Assert((!desc.rows || (desc.type() == descriptorType())));
-    }
-
-    void AKAZE::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
-    {
-        cv::Mat img = image.getMat();
-        if (img.type() != CV_8UC1)
-            cvtColor(image, img, COLOR_BGR2GRAY);
-
-        Mat img1_32;
-        img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
-
-        AKAZEOptions options;
-        options.descriptor = descriptor;
-        options.descriptor_channels = descriptor_channels;
-        options.descriptor_size = descriptor_size;
-        options.img_width = img.cols;
-        options.img_height = img.rows;
-        options.dthreshold = threshold;
-        options.omax = octaves;
-        options.nsublevels = sublevels;
-        options.diffusivity = diffusivity;
-
-        AKAZEFeatures impl(options);
-        impl.Create_Nonlinear_Scale_Space(img1_32);
-        impl.Feature_Detection(keypoints);
-
-        if (!mask.empty())
+        void write(FileStorage& fs) const
         {
-            cv::KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
+            fs << "descriptor" << descriptor;
+            fs << "descriptor_channels" << descriptor_channels;
+            fs << "descriptor_size" << descriptor_size;
+            fs << "threshold" << threshold;
+            fs << "octaves" << octaves;
+            fs << "sublevels" << sublevels;
+            fs << "diffusivity" << diffusivity;
         }
-    }
 
-    void AKAZE::computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
+        void read(const FileNode& fn)
+        {
+            descriptor = (int)fn["descriptor"];
+            descriptor_channels = (int)fn["descriptor_channels"];
+            descriptor_size = (int)fn["descriptor_size"];
+            threshold = (float)fn["threshold"];
+            octaves = (int)fn["octaves"];
+            sublevels = (int)fn["sublevels"];
+            diffusivity = (int)fn["diffusivity"];
+        }
+
+        int descriptor;
+        int descriptor_channels;
+        int descriptor_size;
+        float threshold;
+        int octaves;
+        int sublevels;
+        int diffusivity;
+    };
+
+    Ptr<AKAZE> AKAZE::create(int descriptor_type,
+                             int descriptor_size, int descriptor_channels,
+                             float threshold, int octaves,
+                             int sublevels, int diffusivity)
     {
-        cv::Mat img = image.getMat();
-        if (img.type() != CV_8UC1)
-            cvtColor(image, img, COLOR_BGR2GRAY);
-
-        Mat img1_32;
-        img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
-
-        cv::Mat& desc = descriptors.getMatRef();
-
-        AKAZEOptions options;
-        options.descriptor = descriptor;
-        options.descriptor_channels = descriptor_channels;
-        options.descriptor_size = descriptor_size;
-        options.img_width = img.cols;
-        options.img_height = img.rows;
-        options.dthreshold = threshold;
-        options.omax = octaves;
-        options.nsublevels = sublevels;
-        options.diffusivity = diffusivity;
-
-        AKAZEFeatures impl(options);
-        impl.Create_Nonlinear_Scale_Space(img1_32);
-        impl.Compute_Descriptors(keypoints, desc);
-
-        CV_Assert((!desc.rows || desc.cols == descriptorSize()));
-        CV_Assert((!desc.rows || (desc.type() == descriptorType())));
+        return makePtr<AKAZE_Impl>(descriptor_type, descriptor_size, descriptor_channels,
+                                   threshold, octaves, sublevels, diffusivity);
     }
 }

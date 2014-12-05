@@ -45,6 +45,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     struct Warp
     {
         enum
@@ -126,6 +128,7 @@ namespace cv { namespace cuda { namespace device
                 *t = value;
         }
     };
+//! @}
 }}} // namespace cv { namespace cuda { namespace cudev
 
 #endif /* __OPENCV_CUDA_DEVICE_WARP_HPP__ */

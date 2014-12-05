@@ -106,8 +106,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
      { return -1; }
 
      /// Create windows
-     namedWindow( "Erosion Demo", CV_WINDOW_AUTOSIZE );
-     namedWindow( "Dilation Demo", CV_WINDOW_AUTOSIZE );
+     namedWindow( "Erosion Demo", WINDOW_AUTOSIZE );
+     namedWindow( "Dilation Demo", WINDOW_AUTOSIZE );
      cvMoveWindow( "Dilation Demo", src.cols, 0 );
 
      /// Create Erosion Trackbar

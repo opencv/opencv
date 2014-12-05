@@ -32,6 +32,9 @@
 #import <ImageIO/ImageIO.h>
 #include "opencv2/core.hpp"
 
+//! @addtogroup videoio_ios
+//! @{
+
 /////////////////////////////////////// CvAbstractCamera /////////////////////////////////////
 
 @class CvAbstractCamera;
@@ -167,3 +170,5 @@
 - (void)takePicture;
 
 @end
+
+//! @} videoio_ios

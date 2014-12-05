@@ -138,10 +138,10 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
         */
         char cvt[40];
         ocl::Kernel with_sobel("stage1_with_sobel", ocl::imgproc::canny_oclsrc,
-                               format("-D WITH_SOBEL -D cn=%d -D TYPE=%s -D convert_intN=%s -D intN=%s -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
+                               format("-D WITH_SOBEL -D cn=%d -D TYPE=%s -D convert_floatN=%s -D floatN=%s -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
                                       cn, ocl::memopTypeToStr(_src.depth()),
-                                      ocl::convertTypeStr(_src.type(), CV_32SC(cn), cn, cvt),
-                                      ocl::memopTypeToStr(CV_32SC(cn)),
+                                      ocl::convertTypeStr(_src.depth(), CV_32F, cn, cvt),
+                                      ocl::typeToStr(CV_MAKE_TYPE(CV_32F, cn)),
                                       lSizeX, lSizeY,
                                       L2gradient ? " -D L2GRAD" : ""));
         if (with_sobel.empty())
@@ -151,7 +151,7 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
         map.create(size, CV_32S);
         with_sobel.args(ocl::KernelArg::ReadOnly(src),
                         ocl::KernelArg::WriteOnlyNoSize(map),
-                        low, high);
+                        (float) low, (float) high);
 
         size_t globalsize[2] = { size.width, size.height },
                 localsize[2] = { lSizeX, lSizeY };
@@ -265,11 +265,17 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 #endif
 
 #ifdef USE_IPP_CANNY
-    if( aperture_size == 3 && !L2gradient && 1 == cn )
+    CV_IPP_CHECK()
     {
-        if (ippCanny(src, dst, (float)low_thresh, (float)high_thresh))
-            return;
-        setIppErrorStatus();
+        if( aperture_size == 3 && !L2gradient && 1 == cn )
+        {
+            if (ippCanny(src, dst, (float)low_thresh, (float)high_thresh))
+            {
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return;
+            }
+            setIppErrorStatus();
+        }
     }
 #endif
 
@@ -361,6 +367,15 @@ void cv::Canny( InputArray _src, OutputArray _dst,
                         _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
                     }
                 }
+#elif CV_NEON
+                for ( ; j <= width - 8; j += 8)
+                {
+                    int16x8_t v_dx = vld1q_s16(_dx + j), v_dy = vld1q_s16(_dy + j);
+                    vst1q_s32(_norm + j, vaddq_s32(vabsq_s32(vmovl_s16(vget_low_s16(v_dx))),
+                                                   vabsq_s32(vmovl_s16(vget_low_s16(v_dy)))));
+                    vst1q_s32(_norm + j + 4, vaddq_s32(vabsq_s32(vmovl_s16(vget_high_s16(v_dx))),
+                                                       vabsq_s32(vmovl_s16(vget_high_s16(v_dy)))));
+                }
 #endif
                 for ( ; j < width; ++j)
                     _norm[j] = std::abs(int(_dx[j])) + std::abs(int(_dy[j]));
@@ -385,6 +400,18 @@ void cv::Canny( InputArray _src, OutputArray _dst,
                         v_norm = _mm_add_epi32(_mm_unpackhi_epi16(v_dx_ml, v_dx_mh), _mm_unpackhi_epi16(v_dy_ml, v_dy_mh));
                         _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
                     }
+                }
+#elif CV_NEON
+                for ( ; j <= width - 8; j += 8)
+                {
+                    int16x8_t v_dx = vld1q_s16(_dx + j), v_dy = vld1q_s16(_dy + j);
+                    int16x4_t v_dxp = vget_low_s16(v_dx), v_dyp = vget_low_s16(v_dy);
+                    int32x4_t v_dst = vmlal_s16(vmull_s16(v_dxp, v_dxp), v_dyp, v_dyp);
+                    vst1q_s32(_norm + j, v_dst);
+
+                    v_dxp = vget_high_s16(v_dx), v_dyp = vget_high_s16(v_dy);
+                    v_dst = vmlal_s16(vmull_s16(v_dxp, v_dxp), v_dyp, v_dyp);
+                    vst1q_s32(_norm + j + 4, v_dst);
                 }
 #endif
                 for ( ; j < width; ++j)
@@ -426,7 +453,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         if ((stack_top - stack_bottom) + src.cols > maxsize)
         {
             int sz = (int)(stack_top - stack_bottom);
-            maxsize = maxsize * 3/2;
+            maxsize = std::max(maxsize * 3/2, sz + src.cols);
             stack.resize(maxsize);
             stack_bottom = &stack[0];
             stack_top = stack_bottom + sz;

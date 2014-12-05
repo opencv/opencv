@@ -47,6 +47,7 @@
 #include <iostream> // std::cerr
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
+#define CV_OPENCL_SHOW_RUN_ERRORS       0
 
 #include "opencv2/core/bufferpool.hpp"
 #ifndef LOG_BUFFER_POOL
@@ -1452,7 +1453,7 @@ bool useOpenCL()
     {
         try
         {
-            data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() != NULL;
+            data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available();
         }
         catch (...)
         {
@@ -2129,7 +2130,8 @@ const Device& Device::getDefault()
 {
     const Context& ctx = Context::getDefault();
     int idx = coreTlsData.get()->device;
-    return ctx.device(idx);
+    const Device& device = ctx.device(idx);
+    return device;
 }
 
 ////////////////////////////////////// Context ///////////////////////////////////////////////////
@@ -2209,7 +2211,10 @@ static cl_device_id selectOpenCLDevice()
     std::vector<std::string> deviceTypes;
 
     const char* configuration = getenv("OPENCV_OPENCL_DEVICE");
-    if (configuration && !parseOpenCLDeviceConfiguration(std::string(configuration), platform, deviceTypes, deviceName))
+    if (configuration &&
+            (strcmp(configuration, "disabled") == 0 ||
+             !parseOpenCLDeviceConfiguration(std::string(configuration), platform, deviceTypes, deviceName)
+            ))
         return NULL;
 
     bool isID = false;
@@ -2338,14 +2343,16 @@ static cl_device_id selectOpenCLDevice()
     }
 
 not_found:
-    std::cerr << "ERROR: Required OpenCL device not found, check configuration: " << (configuration == NULL ? "" : configuration) << std::endl
+    if (!configuration)
+        return NULL; // suppress messages on stderr
+
+    std::cerr << "ERROR: Requested OpenCL device not found, check configuration: " << (configuration == NULL ? "" : configuration) << std::endl
             << "    Platform: " << (platform.length() == 0 ? "any" : platform) << std::endl
             << "    Device types: ";
     for (size_t t = 0; t < deviceTypes.size(); t++)
         std::cerr << deviceTypes[t] << " ";
 
     std::cerr << std::endl << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName) << std::endl;
-    CV_Error(CL_INVALID_DEVICE, "Requested OpenCL device is not found");
     return NULL;
 }
 #endif
@@ -2892,6 +2899,9 @@ bool Kernel::create(const char* kname, const Program& prog)
         p->release();
         p = 0;
     }
+#ifdef CV_OPENCL_RUN_ASSERT // check kernel compilation fails
+    CV_Assert(p);
+#endif
     return p != 0;
 }
 
@@ -3037,6 +3047,13 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
                                            offset, globalsize, _localsize, 0, 0,
                                            sync ? 0 : &p->e);
+#if CV_OPENCL_SHOW_RUN_ERRORS
+    if (retval != CL_SUCCESS)
+    {
+        printf("OpenCL program returns error: %d\n", retval);
+        fflush(stdout);
+    }
+#endif
     if( sync || retval != CL_SUCCESS )
     {
         CV_OclDbgAssert(clFinish(qq) == CL_SUCCESS);
@@ -3098,7 +3115,7 @@ bool Kernel::compileWorkGroupSize(size_t wsz[]) const
     size_t retsz = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
     return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_COMPILE_WORK_GROUP_SIZE,
-                                    sizeof(wsz[0]*3), wsz, &retsz) == CL_SUCCESS;
+                                    sizeof(wsz[0])*3, wsz, &retsz) == CL_SUCCESS;
 }
 
 size_t Kernel::localMemSize() const
@@ -3515,6 +3532,10 @@ protected:
         entry.clBuffer_ = clCreateBuffer((cl_context)ctx.ptr(), CL_MEM_READ_WRITE, entry.capacity_, 0, &retval);
         CV_Assert(retval == CL_SUCCESS);
         CV_Assert(entry.clBuffer_ != NULL);
+        if(retval == CL_SUCCESS)
+        {
+            CV_IMPL_ADD(CV_IMPL_OCL);
+        }
         LOG_BUFFER_POOL("OpenCL allocate %lld (0x%llx) bytes: %p\n",
                 (long long)entry.capacity_, (long long)entry.capacity_, entry.clBuffer_);
     }
@@ -3739,6 +3760,7 @@ public:
                                           CL_MEM_READ_WRITE|createFlags, total, 0, &retval);
             if( !handle || retval != CL_SUCCESS )
                 return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
+            CV_IMPL_ADD(CV_IMPL_OCL)
         }
         UMatData* u = new UMatData(this);
         u->data = 0;
@@ -3963,6 +3985,11 @@ public:
             u->markDeviceMemMapped(false);
             CV_Assert( (retval = clEnqueueUnmapMemObject(q,
                                 (cl_mem)u->handle, u->data, 0, 0, 0)) == CL_SUCCESS );
+            if (Device::getDefault().isAMD())
+            {
+                // required for multithreaded applications (see stitching test)
+                CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
+            }
             u->data = 0;
         }
         else if( u->copyOnMap() && u->deviceCopyObsolete() )
@@ -4179,19 +4206,23 @@ public:
         CV_Assert(dst->refcount == 0);
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
+        cl_int retval;
         if( iscontinuous )
         {
-            CV_Assert( clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
-                                           srcrawofs, dstrawofs, total, 0, 0, 0) == CL_SUCCESS );
+            CV_Assert( (retval = clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
+                                           srcrawofs, dstrawofs, total, 0, 0, 0)) == CL_SUCCESS );
         }
         else
         {
-            cl_int retval;
             CV_Assert( (retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
                                                new_srcofs, new_dstofs, new_sz,
                                                new_srcstep[0], new_srcstep[1],
                                                new_dststep[0], new_dststep[1],
                                                0, 0, 0)) == CL_SUCCESS );
+        }
+        if(retval == CL_SUCCESS)
+        {
+            CV_IMPL_ADD(CV_IMPL_OCL)
         }
 
         dst->markHostCopyObsolete(true);
@@ -4493,7 +4524,6 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
                               OclVectorStrategy strat)
 {
     const ocl::Device & d = ocl::Device::getDefault();
-    int ref_type = src1.type();
 
     int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
@@ -4508,6 +4538,19 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
         vectorWidths[CV_16U] = vectorWidths[CV_16S] = 2;
         vectorWidths[CV_32S] = vectorWidths[CV_32F] = vectorWidths[CV_64F] = 1;
     }
+
+    return checkOptimalVectorWidth(vectorWidths, src1, src2, src3, src4, src5, src6, src7, src8, src9, strat);
+}
+
+int checkOptimalVectorWidth(const int *vectorWidths,
+                            InputArray src1, InputArray src2, InputArray src3,
+                            InputArray src4, InputArray src5, InputArray src6,
+                            InputArray src7, InputArray src8, InputArray src9,
+                            OclVectorStrategy strat)
+{
+    CV_Assert(vectorWidths);
+
+    int ref_type = src1.type();
 
     std::vector<size_t> offsets, steps, cols;
     std::vector<int> dividers, kercns;
@@ -4594,6 +4637,9 @@ struct Image2D::Impl
 
     static bool isFormatSupported(cl_image_format format)
     {
+        if (!haveOpenCL())
+            CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
+
         cl_context context = (cl_context)Context::getDefault().ptr();
         // Figure out how many formats are supported by this context.
         cl_uint numFormats = 0;
@@ -4617,6 +4663,10 @@ struct Image2D::Impl
 
     void init(const UMat &src, bool norm, bool alias)
     {
+        if (!haveOpenCL())
+            CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
+
+        CV_Assert(!src.empty());
         CV_Assert(ocl::Device::getDefault().imageSupport());
 
         int err, depth = src.depth(), cn = src.channels();
@@ -4625,6 +4675,9 @@ struct Image2D::Impl
 
         if (!isFormatSupported(format))
             CV_Error(Error::OpenCLApiCallError, "Image format is not supported");
+
+        if (alias && !src.handle(ACCESS_RW))
+            CV_Error(Error::OpenCLApiCallError, "Incorrect UMat, handle is null");
 
         cl_context context = (cl_context)Context::getDefault().ptr();
         cl_command_queue queue = (cl_command_queue)Queue::getDefault().ptr();
@@ -4710,7 +4763,7 @@ bool Image2D::canCreateAlias(const UMat &m)
 {
     bool ret = false;
     const Device & d = ocl::Device::getDefault();
-    if (d.imageFromBufferSupport())
+    if (d.imageFromBufferSupport() && !m.empty())
     {
         // This is the required pitch alignment in pixels
         uint pitchAlign = d.imagePitchAlignment();

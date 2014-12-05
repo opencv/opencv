@@ -48,6 +48,10 @@
 #include "opencv2/shape/hist_cost.hpp"
 #include "opencv2/shape/shape_distance.hpp"
 
+/**
+  @defgroup shape Shape Distance and Matching
+ */
+
 namespace cv
 {
 CV_EXPORTS bool initModule_shape();

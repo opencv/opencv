@@ -45,6 +45,13 @@
 
 #include "opencv2/core.hpp"
 
+/**
+  @defgroup videoio Media I/O
+  @{
+    @defgroup videoio_c C API
+    @defgroup videoio_ios iOS glue
+  @}
+*/
 
 ////////////////////////////////// video io /////////////////////////////////
 
@@ -53,6 +60,9 @@ typedef struct CvVideoWriter CvVideoWriter;
 
 namespace cv
 {
+
+//! @addtogroup videoio
+//! @{
 
 // Camera API
 enum { CAP_ANY          = 0,     // autodetect
@@ -345,26 +355,209 @@ enum { CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integ
 
 
 class IVideoCapture;
+
+/** @brief Class for video capturing from video files, image sequences or cameras. The class provides C++ API
+for capturing video from cameras or for reading video files and image sequences. Here is how the
+class can be used: :
+@code
+    #include "opencv2/opencv.hpp"
+
+    using namespace cv;
+
+    int main(int, char**)
+    {
+        VideoCapture cap(0); // open the default camera
+        if(!cap.isOpened())  // check if we succeeded
+            return -1;
+
+        Mat edges;
+        namedWindow("edges",1);
+        for(;;)
+        {
+            Mat frame;
+            cap >> frame; // get a new frame from camera
+            cvtColor(frame, edges, COLOR_BGR2GRAY);
+            GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
+            Canny(edges, edges, 0, 30, 3);
+            imshow("edges", edges);
+            if(waitKey(30) >= 0) break;
+        }
+        // the camera will be deinitialized automatically in VideoCapture destructor
+        return 0;
+    }
+@endcode
+@note In C API the black-box structure CvCapture is used instead of VideoCapture.
+
+@note
+-   A basic sample on using the VideoCapture interface can be found at
+    opencv_source_code/samples/cpp/starter_video.cpp
+-   Another basic video processing sample can be found at
+    opencv_source_code/samples/cpp/video_dmtx.cpp
+-   (Python) A basic sample on using the VideoCapture interface can be found at
+    opencv_source_code/samples/python2/video.py
+-   (Python) Another basic video processing sample can be found at
+    opencv_source_code/samples/python2/video_dmtx.py
+-   (Python) A multi threaded video processing sample can be found at
+    opencv_source_code/samples/python2/video_threaded.py
+ */
 class CV_EXPORTS_W VideoCapture
 {
 public:
+    /** @brief
+    @note In C API, when you finished working with video, release CvCapture structure with
+    cvReleaseCapture(), or use Ptr\<CvCapture\> that calls cvReleaseCapture() automatically in the
+    destructor.
+     */
     CV_WRAP VideoCapture();
+
+    /** @overload
+    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
+    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+    */
     CV_WRAP VideoCapture(const String& filename);
+
+    /** @overload
+    @param device id of the opened video capturing device (i.e. a camera index). If there is a single
+    camera connected, just pass 0.
+    */
     CV_WRAP VideoCapture(int device);
 
     virtual ~VideoCapture();
+
+    /** @brief Open video file or a capturing device for video capturing
+
+    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
+    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+
+    The methods first call VideoCapture::release to close the already opened file or camera.
+     */
     CV_WRAP virtual bool open(const String& filename);
+
+    /** @overload
+    @param device id of the opened video capturing device (i.e. a camera index).
+    */
     CV_WRAP virtual bool open(int device);
+
+    /** @brief Returns true if video capturing has been initialized already.
+
+    If the previous call to VideoCapture constructor or VideoCapture::open succeeded, the method returns
+    true.
+     */
     CV_WRAP virtual bool isOpened() const;
+
+    /** @brief Closes video file or capturing device.
+
+    The methods are automatically called by subsequent VideoCapture::open and by VideoCapture
+    destructor.
+
+    The C function also deallocates memory and clears \*capture pointer.
+     */
     CV_WRAP virtual void release();
 
+    /** @brief Grabs the next frame from video file or capturing device.
+
+    The methods/functions grab the next frame from video file or camera and return true (non-zero) in
+    the case of success.
+
+    The primary use of the function is in multi-camera environments, especially when the cameras do not
+    have hardware synchronization. That is, you call VideoCapture::grab() for each camera and after that
+    call the slower method VideoCapture::retrieve() to decode and get frame from each camera. This way
+    the overhead on demosaicing or motion jpeg decompression etc. is eliminated and the retrieved frames
+    from different cameras will be closer in time.
+
+    Also, when a connected camera is multi-head (for example, a stereo camera or a Kinect device), the
+    correct way of retrieving data from it is to call VideoCapture::grab first and then call
+    VideoCapture::retrieve one or more times with different values of the channel parameter. See
+    <https://github.com/Itseez/opencv/tree/master/samples/cpp/openni_capture.cpp>
+     */
     CV_WRAP virtual bool grab();
+
+    /** @brief Decodes and returns the grabbed video frame.
+
+    The methods/functions decode and return the just grabbed frame. If no frames has been grabbed
+    (camera has been disconnected, or there are no more frames in video file), the methods return false
+    and the functions return NULL pointer.
+
+    @note OpenCV 1.x functions cvRetrieveFrame and cv.RetrieveFrame return image stored inside the video
+    capturing structure. It is not allowed to modify or release the image! You can copy the frame using
+    :ocvcvCloneImage and then do whatever you want with the copy.
+     */
     CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
     virtual VideoCapture& operator >> (CV_OUT Mat& image);
     virtual VideoCapture& operator >> (CV_OUT UMat& image);
+
+    /** @brief Grabs, decodes and returns the next video frame.
+
+    The methods/functions combine VideoCapture::grab and VideoCapture::retrieve in one call. This is the
+    most convenient method for reading video files or capturing data from decode and return the just
+    grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more
+    frames in video file), the methods return false and the functions return NULL pointer.
+
+    @note OpenCV 1.x functions cvRetrieveFrame and cv.RetrieveFrame return image stored inside the video
+    capturing structure. It is not allowed to modify or release the image! You can copy the frame using
+    :ocvcvCloneImage and then do whatever you want with the copy.
+     */
     CV_WRAP virtual bool read(OutputArray image);
 
+    /** @brief Sets a property in the VideoCapture.
+
+    @param propId Property identifier. It can be one of the following:
+     -   **CV_CAP_PROP_POS_MSEC** Current position of the video file in milliseconds.
+     -   **CV_CAP_PROP_POS_FRAMES** 0-based index of the frame to be decoded/captured next.
+     -   **CV_CAP_PROP_POS_AVI_RATIO** Relative position of the video file: 0 - start of the
+         film, 1 - end of the film.
+     -   **CV_CAP_PROP_FRAME_WIDTH** Width of the frames in the video stream.
+     -   **CV_CAP_PROP_FRAME_HEIGHT** Height of the frames in the video stream.
+     -   **CV_CAP_PROP_FPS** Frame rate.
+     -   **CV_CAP_PROP_FOURCC** 4-character code of codec.
+     -   **CV_CAP_PROP_FRAME_COUNT** Number of frames in the video file.
+     -   **CV_CAP_PROP_FORMAT** Format of the Mat objects returned by retrieve() .
+     -   **CV_CAP_PROP_MODE** Backend-specific value indicating the current capture mode.
+     -   **CV_CAP_PROP_BRIGHTNESS** Brightness of the image (only for cameras).
+     -   **CV_CAP_PROP_CONTRAST** Contrast of the image (only for cameras).
+     -   **CV_CAP_PROP_SATURATION** Saturation of the image (only for cameras).
+     -   **CV_CAP_PROP_HUE** Hue of the image (only for cameras).
+     -   **CV_CAP_PROP_GAIN** Gain of the image (only for cameras).
+     -   **CV_CAP_PROP_EXPOSURE** Exposure (only for cameras).
+     -   **CV_CAP_PROP_CONVERT_RGB** Boolean flags indicating whether images should be converted
+         to RGB.
+     -   **CV_CAP_PROP_WHITE_BALANCE** Currently unsupported
+     -   **CV_CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported
+         by DC1394 v 2.x backend currently)
+    @param value Value of the property.
+     */
     CV_WRAP virtual bool set(int propId, double value);
+
+    /** @brief Returns the specified VideoCapture property
+
+    @param propId Property identifier. It can be one of the following:
+     -   **CV_CAP_PROP_POS_MSEC** Current position of the video file in milliseconds or video
+         capture timestamp.
+     -   **CV_CAP_PROP_POS_FRAMES** 0-based index of the frame to be decoded/captured next.
+     -   **CV_CAP_PROP_POS_AVI_RATIO** Relative position of the video file: 0 - start of the
+         film, 1 - end of the film.
+     -   **CV_CAP_PROP_FRAME_WIDTH** Width of the frames in the video stream.
+     -   **CV_CAP_PROP_FRAME_HEIGHT** Height of the frames in the video stream.
+     -   **CV_CAP_PROP_FPS** Frame rate.
+     -   **CV_CAP_PROP_FOURCC** 4-character code of codec.
+     -   **CV_CAP_PROP_FRAME_COUNT** Number of frames in the video file.
+     -   **CV_CAP_PROP_FORMAT** Format of the Mat objects returned by retrieve() .
+     -   **CV_CAP_PROP_MODE** Backend-specific value indicating the current capture mode.
+     -   **CV_CAP_PROP_BRIGHTNESS** Brightness of the image (only for cameras).
+     -   **CV_CAP_PROP_CONTRAST** Contrast of the image (only for cameras).
+     -   **CV_CAP_PROP_SATURATION** Saturation of the image (only for cameras).
+     -   **CV_CAP_PROP_HUE** Hue of the image (only for cameras).
+     -   **CV_CAP_PROP_GAIN** Gain of the image (only for cameras).
+     -   **CV_CAP_PROP_EXPOSURE** Exposure (only for cameras).
+     -   **CV_CAP_PROP_CONVERT_RGB** Boolean flags indicating whether images should be converted
+         to RGB.
+     -   **CV_CAP_PROP_WHITE_BALANCE** Currently not supported
+     -   **CV_CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported
+         by DC1394 v 2.x backend currently)
+
+    **Note**: When querying a property that is not supported by the backend used by the VideoCapture
+    class, value 0 is returned.
+     */
     CV_WRAP virtual double get(int propId);
 
 protected:
@@ -374,21 +567,63 @@ private:
     static Ptr<IVideoCapture> createCameraCapture(int index);
 };
 
+/** @brief Video writer class.
+ */
 class CV_EXPORTS_W VideoWriter
 {
 public:
+    /** @brief VideoWriter constructors
+
+    The constructors/functions initialize video writers. On Linux FFMPEG is used to write videos; on
+    Windows FFMPEG or VFW is used; on MacOSX QTKit is used.
+     */
     CV_WRAP VideoWriter();
+
+    /** @overload
+    @param filename Name of the output video file.
+    @param fourcc 4-character code of codec used to compress the frames. For example,
+    VideoWriter::fourcc('P','I','M','1') is a MPEG-1 codec, VideoWriter::fourcc('M','J','P','G') is a
+    motion-jpeg codec etc. List of codes can be obtained at [Video Codecs by
+    FOURCC](http://www.fourcc.org/codecs.php) page.
+    @param fps Framerate of the created video stream.
+    @param frameSize Size of the video frames.
+    @param isColor If it is not zero, the encoder will expect and encode color frames, otherwise it
+    will work with grayscale frames (the flag is currently supported on Windows only).
+    */
     CV_WRAP VideoWriter(const String& filename, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
 
     virtual ~VideoWriter();
+
+    /** @brief Initializes or reinitializes video writer.
+
+    The method opens video writer. Parameters are the same as in the constructor
+    VideoWriter::VideoWriter.
+
+     */
     CV_WRAP virtual bool open(const String& filename, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
+
+    /** @brief Returns true if video writer has been successfully initialized.
+    */
     CV_WRAP virtual bool isOpened() const;
     CV_WRAP virtual void release();
     virtual VideoWriter& operator << (const Mat& image);
+
+    /** @brief Writes the next video frame
+
+    @param image The written frame
+
+    The functions/methods write the specified image to video file. It must have the same size as has
+    been specified when opening the video writer.
+     */
     CV_WRAP virtual void write(const Mat& image);
 
+    /** @brief Concatenates 4 chars to a fourcc code
+
+    This static method constructs the fourcc code of the codec to be used in the constructor
+    VideoWriter::VideoWriter or VideoWriter::open.
+     */
     CV_WRAP static int fourcc(char c1, char c2, char c3, char c4);
 
 protected:
@@ -397,6 +632,8 @@ protected:
 
 template<> CV_EXPORTS void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const;
 template<> CV_EXPORTS void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const;
+
+//! @} videoio
 
 } // cv
 

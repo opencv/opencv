@@ -42,9 +42,7 @@
  the IEEE International Conference on Computer Vision (ICCV2011).
  */
 
-#include <opencv2/features2d.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
+#include "precomp.hpp"
 #include <fstream>
 #include <stdlib.h>
 
@@ -52,6 +50,97 @@
 
 namespace cv
 {
+
+class BRISK_Impl : public BRISK
+{
+public:
+    explicit BRISK_Impl(int thresh=30, int octaves=3, float patternScale=1.0f);
+    // custom setup
+    explicit BRISK_Impl(const std::vector<float> &radiusList, const std::vector<int> &numberList,
+        float dMax=5.85f, float dMin=8.2f, const std::vector<int> indexChange=std::vector<int>());
+
+    virtual ~BRISK_Impl();
+
+    int descriptorSize() const
+    {
+        return strings_;
+    }
+
+    int descriptorType() const
+    {
+        return CV_8U;
+    }
+
+    int defaultNorm() const
+    {
+        return NORM_HAMMING;
+    }
+
+    // call this to generate the kernel:
+    // circle of radius r (pixels), with n points;
+    // short pairings with dMax, long pairings with dMin
+    void generateKernel(const std::vector<float> &radiusList,
+        const std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f,
+        const std::vector<int> &indexChange=std::vector<int>());
+
+    void detectAndCompute( InputArray image, InputArray mask,
+                     CV_OUT std::vector<KeyPoint>& keypoints,
+                     OutputArray descriptors,
+                     bool useProvidedKeypoints );
+
+protected:
+
+    void computeKeypointsNoOrientation(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
+    void computeDescriptorsAndOrOrientation(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+                                       OutputArray descriptors, bool doDescriptors, bool doOrientation,
+                                       bool useProvidedKeypoints) const;
+
+    // Feature parameters
+    CV_PROP_RW int threshold;
+    CV_PROP_RW int octaves;
+
+    // some helper structures for the Brisk pattern representation
+    struct BriskPatternPoint{
+        float x;         // x coordinate relative to center
+        float y;         // x coordinate relative to center
+        float sigma;     // Gaussian smoothing sigma
+    };
+    struct BriskShortPair{
+        unsigned int i;  // index of the first pattern point
+        unsigned int j;  // index of other pattern point
+    };
+    struct BriskLongPair{
+        unsigned int i;  // index of the first pattern point
+        unsigned int j;  // index of other pattern point
+        int weighted_dx; // 1024.0/dx
+        int weighted_dy; // 1024.0/dy
+    };
+    inline int smoothedIntensity(const cv::Mat& image,
+                const cv::Mat& integral,const float key_x,
+                const float key_y, const unsigned int scale,
+                const unsigned int rot, const unsigned int point) const;
+    // pattern properties
+    BriskPatternPoint* patternPoints_;     //[i][rotation][scale]
+    unsigned int points_;                 // total number of collocation points
+    float* scaleList_;                     // lists the scaling per scale index [scale]
+    unsigned int* sizeList_;             // lists the total pattern size per scale index [scale]
+    static const unsigned int scales_;    // scales discretization
+    static const float scalerange_;     // span of sizes 40->4 Octaves - else, this needs to be adjusted...
+    static const unsigned int n_rot_;    // discretization of the rotation look-up
+
+    // pairs
+    int strings_;                        // number of uchars the descriptor consists of
+    float dMax_;                         // short pair maximum distance
+    float dMin_;                         // long pair maximum distance
+    BriskShortPair* shortPairs_;         // d<_dMax
+    BriskLongPair* longPairs_;             // d>_dMin
+    unsigned int noShortPairs_;         // number of shortParis
+    unsigned int noLongPairs_;             // number of longParis
+
+    // general
+    static const float basicSize_;
+};
+
 
 // a layer in the Brisk detector pyramid
 class CV_EXPORTS BriskLayer
@@ -183,16 +272,16 @@ protected:
   static const float basicSize_;
 };
 
-const float BRISK::basicSize_ = 12.0f;
-const unsigned int BRISK::scales_ = 64;
-const float BRISK::scalerange_ = 30.f; // 40->4 Octaves - else, this needs to be adjusted...
-const unsigned int BRISK::n_rot_ = 1024; // discretization of the rotation look-up
+const float BRISK_Impl::basicSize_ = 12.0f;
+const unsigned int BRISK_Impl::scales_ = 64;
+const float BRISK_Impl::scalerange_ = 30.f; // 40->4 Octaves - else, this needs to be adjusted...
+const unsigned int BRISK_Impl::n_rot_ = 1024; // discretization of the rotation look-up
 
 const float BriskScaleSpace::safetyFactor_ = 1.0f;
 const float BriskScaleSpace::basicSize_ = 12.0f;
 
 // constructors
-BRISK::BRISK(int thresh, int octaves_in, float patternScale)
+BRISK_Impl::BRISK_Impl(int thresh, int octaves_in, float patternScale)
 {
   threshold = thresh;
   octaves = octaves_in;
@@ -218,10 +307,12 @@ BRISK::BRISK(int thresh, int octaves_in, float patternScale)
   nList[4] = 20;
 
   generateKernel(rList, nList, (float)(5.85 * patternScale), (float)(8.2 * patternScale));
-
 }
-BRISK::BRISK(std::vector<float> &radiusList, std::vector<int> &numberList, float dMax, float dMin,
-                                                   std::vector<int> indexChange)
+
+BRISK_Impl::BRISK_Impl(const std::vector<float> &radiusList,
+                       const std::vector<int> &numberList,
+                       float dMax, float dMin,
+                       const std::vector<int> indexChange)
 {
   generateKernel(radiusList, numberList, dMax, dMin, indexChange);
   threshold = 20;
@@ -229,10 +320,12 @@ BRISK::BRISK(std::vector<float> &radiusList, std::vector<int> &numberList, float
 }
 
 void
-BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberList, float dMax,
-                                         float dMin, std::vector<int> indexChange)
+BRISK_Impl::generateKernel(const std::vector<float> &radiusList,
+                           const std::vector<int> &numberList,
+                           float dMax, float dMin,
+                           const std::vector<int>& _indexChange)
 {
-
+  std::vector<int> indexChange = _indexChange;
   dMax_ = dMax;
   dMin_ = dMin;
 
@@ -354,7 +447,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
 
 // simple alternative:
 inline int
-BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const float key_x,
+BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const float key_x,
                                             const float key_y, const unsigned int scale, const unsigned int rot,
                                             const unsigned int point) const
 {
@@ -521,8 +614,8 @@ RoiPredicate(const float minX, const float minY, const float maxX, const float m
 
 // computes the descriptor
 void
-BRISK::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
-                   OutputArray _descriptors, bool useProvidedKeypoints) const
+BRISK_Impl::detectAndCompute( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
+                              OutputArray _descriptors, bool useProvidedKeypoints)
 {
   bool doOrientation=true;
   if (useProvidedKeypoints)
@@ -536,7 +629,7 @@ BRISK::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& k
 }
 
 void
-BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
+BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
                                      OutputArray _descriptors, bool doDescriptors, bool doOrientation,
                                      bool useProvidedKeypoints) const
 {
@@ -702,25 +795,8 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
   delete[] _values;
 }
 
-int
-BRISK::descriptorSize() const
-{
-  return strings_;
-}
 
-int
-BRISK::descriptorType() const
-{
-  return CV_8U;
-}
-
-int
-BRISK::defaultNorm() const
-{
-  return NORM_HAMMING;
-}
-
-BRISK::~BRISK()
+BRISK_Impl::~BRISK_Impl()
 {
   delete[] patternPoints_;
   delete[] shortPairs_;
@@ -730,14 +806,7 @@ BRISK::~BRISK()
 }
 
 void
-BRISK::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const
-{
-  computeKeypointsNoOrientation(image, mask, keypoints);
-  computeDescriptorsAndOrOrientation(image, mask, keypoints, cv::noArray(), false, true, true);
-}
-
-void
-BRISK::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints) const
+BRISK_Impl::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints) const
 {
   Mat image = _image.getMat(), mask = _mask.getMat();
   if( image.type() != CV_8UC1 )
@@ -748,20 +817,7 @@ BRISK::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, std::v
   briskScaleSpace.getKeypoints(threshold, keypoints);
 
   // remove invalid points
-  removeInvalidPoints(mask, keypoints);
-}
-
-
-void
-BRISK::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
-{
-    (*this)(image.getMat(), mask.getMat(), keypoints);
-}
-
-void
-    BRISK::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
-{
-    (*this)(image, Mat(), keypoints, descriptors, true);
+  KeyPointsFilter::runByPixelsMask(keypoints, mask);
 }
 
 // construct telling the octaves number:
@@ -2011,7 +2067,7 @@ BriskLayer::BriskLayer(const cv::Mat& img_in, float scale_in, float offset_in)
   scale_ = scale_in;
   offset_ = offset_in;
   // create an agast detector
-  fast_9_16_ = makePtr<FastFeatureDetector>(1, true, FastFeatureDetector::TYPE_9_16);
+  fast_9_16_ = FastFeatureDetector::create(1, true, FastFeatureDetector::TYPE_9_16);
   makeOffsets(pixel_5_8_, (int)img_.step, 8);
   makeOffsets(pixel_9_16_, (int)img_.step, 16);
 }
@@ -2033,7 +2089,7 @@ BriskLayer::BriskLayer(const BriskLayer& layer, int mode)
     offset_ = 0.5f * scale_ - 0.5f;
   }
   scores_ = cv::Mat::zeros(img_.rows, img_.cols, CV_8U);
-  fast_9_16_ = makePtr<FastFeatureDetector>(1, false, FastFeatureDetector::TYPE_9_16);
+  fast_9_16_ = FastFeatureDetector::create(1, false, FastFeatureDetector::TYPE_9_16);
   makeOffsets(pixel_5_8_, (int)img_.step, 8);
   makeOffsets(pixel_9_16_, (int)img_.step, 16);
 }
@@ -2043,7 +2099,7 @@ BriskLayer::BriskLayer(const BriskLayer& layer, int mode)
 void
 BriskLayer::getAgastPoints(int threshold, std::vector<KeyPoint>& keypoints)
 {
-  fast_9_16_->set("threshold", threshold);
+  fast_9_16_->setThreshold(threshold);
   fast_9_16_->detect(img_, keypoints);
 
   // also write scores
@@ -2243,6 +2299,18 @@ BriskLayer::twothirdsample(const cv::Mat& srcimg, cv::Mat& dstimg)
   CV_Assert((srcimg.rows / 3) * 2 == dstimg.rows);
 
   resize(srcimg, dstimg, dstimg.size(), 0, 0, INTER_AREA);
+}
+
+Ptr<BRISK> BRISK::create(int thresh, int octaves, float patternScale)
+{
+    return makePtr<BRISK_Impl>(thresh, octaves, patternScale);
+}
+
+// custom setup
+Ptr<BRISK> BRISK::create(const std::vector<float> &radiusList, const std::vector<int> &numberList,
+                         float dMax, float dMin, const std::vector<int>& indexChange)
+{
+    return makePtr<BRISK_Impl>(radiusList, numberList, dMax, dMin, indexChange);
 }
 
 }

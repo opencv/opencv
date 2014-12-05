@@ -62,8 +62,8 @@ To create a video file you just need to create an instance of the :hgvideo:`Vide
 
    .. code-block:: cpp
 
-      VideoCapture inputVideo(source);                                   // Open input
-      int ex = static_cast<int>(inputVideo.get(CV_CAP_PROP_FOURCC));     // Get Codec Type- Int form
+      VideoCapture inputVideo(source);                                // Open input
+      int ex = static_cast<int>(inputVideo.get(CAP_PROP_FOURCC));     // Get Codec Type- Int form
 
    OpenCV internally works with this integer type and expect this as its second parameter. Now to convert from the integer form to string we may use two methods: a bitwise operator and a union method. The first one extracting from an int the characters looks like (an "and" operation, some shifting and adding a 0 at the end to close the string):
 
@@ -100,9 +100,9 @@ Here it is, how I use it in the sample:
     .. code-block:: cpp
 
        VideoWriter outputVideo;
-       Size S = Size((int) inputVideo.get(CV_CAP_PROP_FRAME_WIDTH),    //Acquire input size
-                     (int) inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT));
-       outputVideo.open(NAME , ex, inputVideo.get(CV_CAP_PROP_FPS),S, true);
+       Size S = Size((int) inputVideo.get(CAP_PROP_FRAME_WIDTH),    //Acquire input size
+                     (int) inputVideo.get(CAP_PROP_FRAME_HEIGHT));
+       outputVideo.open(NAME , ex, inputVideo.get(CAP_PROP_FPS),S, true);
 
 Afterwards, you use the :hgvideo:`isOpened() <videowriter-isopened>` function to find out if the open operation succeeded or not. The video file automatically closes when the *VideoWriter* object is destroyed. After you open the object with success you can send the frames of the video in a sequential order by using the :hgvideo:`write<videowriter-write>` function of the class. Alternatively, you can use its overloaded operator << :
 

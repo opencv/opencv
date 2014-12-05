@@ -61,6 +61,8 @@
 
 #include "opencv2/cudalegacy/NCV.hpp"
 
+//! @addtogroup cudalegacy
+//! @{
 
 //==============================================================================
 //
@@ -456,6 +458,6 @@ CV_EXPORTS NCVStatus ncvHaarStoreNVBIN_host(const cv::String &filename,
                                              NCVVector<HaarClassifierNode128> &h_HaarNodes,
                                              NCVVector<HaarFeature64> &h_HaarFeatures);
 
-
+//! @}
 
 #endif // _ncvhaarobjectdetection_hpp_

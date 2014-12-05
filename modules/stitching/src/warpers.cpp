@@ -87,6 +87,11 @@ Point2f PlaneWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R, In
     return uv;
 }
 
+Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
+{
+    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32FC1), xmap, ymap);
+}
+
 Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray _xmap, OutputArray _ymap)
 {
     projector_.setCameraParams(K, R, T);
@@ -110,11 +115,14 @@ Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArra
 
             k.args(ocl::KernelArg::WriteOnlyNoSize(uxmap), ocl::KernelArg::WriteOnly(uymap),
                    ocl::KernelArg::PtrReadOnly(uk_rinv), ocl::KernelArg::PtrReadOnly(ut),
-                   dst_tl.x, dst_tl.y, projector_.scale, rowsPerWI);
+                   dst_tl.x, dst_tl.y, 1/projector_.scale, rowsPerWI);
 
             size_t globalsize[2] = { dsize.width, (dsize.height + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, true))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
+            }
         }
     }
 
@@ -385,11 +393,14 @@ Rect SphericalWarper::buildMaps(Size src_size, InputArray K, InputArray R, Outpu
             UMat uxmap = xmap.getUMat(), uymap = ymap.getUMat(), uk_rinv = k_rinv.getUMat(ACCESS_READ);
 
             k.args(ocl::KernelArg::WriteOnlyNoSize(uxmap), ocl::KernelArg::WriteOnly(uymap),
-                   ocl::KernelArg::PtrReadOnly(uk_rinv), dst_tl.x, dst_tl.y, projector_.scale, rowsPerWI);
+                   ocl::KernelArg::PtrReadOnly(uk_rinv), dst_tl.x, dst_tl.y, 1/projector_.scale, rowsPerWI);
 
             size_t globalsize[2] = { dsize.width, (dsize.height + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, true))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
+            }
         }
     }
 
@@ -430,12 +441,15 @@ Rect CylindricalWarper::buildMaps(Size src_size, InputArray K, InputArray R, Out
             UMat uxmap = xmap.getUMat(), uymap = ymap.getUMat(), uk_rinv = k_rinv.getUMat(ACCESS_READ);
 
             k.args(ocl::KernelArg::WriteOnlyNoSize(uxmap), ocl::KernelArg::WriteOnly(uymap),
-                   ocl::KernelArg::PtrReadOnly(uk_rinv), dst_tl.x, dst_tl.y, projector_.scale,
+                   ocl::KernelArg::PtrReadOnly(uk_rinv), dst_tl.x, dst_tl.y, 1/projector_.scale,
                    rowsPerWI);
 
             size_t globalsize[2] = { dsize.width, (dsize.height + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, true))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
+            }
         }
     }
 

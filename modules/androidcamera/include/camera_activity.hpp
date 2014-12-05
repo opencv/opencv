@@ -3,6 +3,12 @@
 
 #include <camera_properties.h>
 
+/** @defgroup androidcamera Android Camera Support
+*/
+
+//! @addtogroup androidcamera
+//! @{
+
 class CameraActivity
 {
 public:
@@ -43,5 +49,7 @@ private:
     int frameWidth;
     int frameHeight;
 };
+
+//! @}
 
 #endif

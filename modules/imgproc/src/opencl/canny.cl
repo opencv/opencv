@@ -49,9 +49,9 @@
 #ifdef WITH_SOBEL
 
 #if cn == 1
-#define loadpix(addr) convert_intN(*(__global const TYPE *)(addr))
+#define loadpix(addr) convert_floatN(*(__global const TYPE *)(addr))
 #else
-#define loadpix(addr) convert_intN(vload3(0, (__global const TYPE *)(addr)))
+#define loadpix(addr) convert_floatN(vload3(0, (__global const TYPE *)(addr)))
 #endif
 #define storepix(value, addr) *(__global int *)(addr) = (int)(value)
 
@@ -77,23 +77,21 @@ __constant int next[4][2] = {
     { 1, 1 }
 };
 
-inline int3 sobel(int idx, __local const intN *smem)
+inline float3 sobel(int idx, __local const floatN *smem)
 {
     // result: x, y, mag
-    int3 res;
+    float3 res;
 
-    intN dx = smem[idx + 2] - smem[idx]
-        + 2 * (smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4])
-        + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8];
+    floatN dx = fma(2, smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4],
+        smem[idx + 2] - smem[idx] + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8]);
 
-    intN dy = smem[idx] - smem[idx + 2 * GRP_SIZEX + 8]
-        + 2 * (smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9])
-        + smem[idx + 2] - smem[idx + 2 * GRP_SIZEX + 10];
+    floatN dy = fma(2, smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9],
+        smem[idx + 2] - smem[idx + 2 * GRP_SIZEX + 10] + smem[idx] - smem[idx + 2 * GRP_SIZEX + 8]);
 
 #ifdef L2GRAD
-    intN magN = dx * dx + dy * dy;
+    floatN magN = fma(dx, dx, dy * dy);
 #else
-    intN magN = convert_intN(abs(dx) + abs(dy));
+    floatN magN = fabs(dx) + fabs(dy);
 #endif
 #if cn == 1
     res.z = magN;
@@ -120,9 +118,9 @@ inline int3 sobel(int idx, __local const intN *smem)
 
 __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src_offset, int rows, int cols,
                                 __global uchar *map, int map_step, int map_offset,
-                                int low_thr, int high_thr)
+                                float low_thr, float high_thr)
 {
-    __local intN smem[(GRP_SIZEX + 4) * (GRP_SIZEY + 4)];
+    __local floatN smem[(GRP_SIZEX + 4) * (GRP_SIZEY + 4)];
 
     int lidx = get_local_id(0);
     int lidy = get_local_id(1);
@@ -143,7 +141,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     //// Sobel, Magnitude
     //
 
-    __local int mag[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
+    __local float mag[(GRP_SIZEX + 2) * (GRP_SIZEY + 2)];
 
     lidx++;
     lidy++;
@@ -164,12 +162,12 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     int idx = lidx + lidy * (GRP_SIZEX + 4);
     i = lidx + lidy * (GRP_SIZEX + 2);
 
-    int3 res = sobel(idx, smem);
+    float3 res = sobel(idx, smem);
     mag[i] = res.z;
-    int x = res.x;
-    int y = res.y;
-
     barrier(CLK_LOCAL_MEM_FENCE);
+
+    int x = (int) res.x;
+    int y = (int) res.y;
 
     //// Threshold + Non maxima suppression
     //
@@ -218,7 +216,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
     if (gidx >= cols || gidy >= rows)
         return;
 
-    int mag0 = mag[i];
+    float mag0 = mag[i];
 
     int value = 1;
     if (mag0 > low_thr)
@@ -235,8 +233,8 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
 
         int dir3 = (a * b) & (((x ^ y) & 0x80000000) >> 31); // if a = 1, b = 1, dy ^ dx < 0
         int dir = a * b + 2 * dir3;
-        int prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]];
-        int next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
+        float prev_mag = mag[(lidy + prev[dir][0]) * (GRP_SIZEX + 2) + lidx + prev[dir][1]];
+        float next_mag = mag[(lidy + next[dir][0]) * (GRP_SIZEX + 2) + lidx + next[dir][1]] + (dir & 1);
 
         if (mag0 > prev_mag && mag0 >= next_mag)
         {
@@ -384,12 +382,12 @@ __constant short move_dir[2][8] = {
     { -1, 0, 1, -1, 1, -1, 0, 1 }
 };
 
-__kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offset, int rows, int cols)
+__kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_offset, int rows, int cols)
 {
-    map += map_offset;
+    map_ptr += map_offset;
 
     int x = get_global_id(0);
-    int y0 = get_global_id(1) * PIX_PER_WI;
+    int y = get_global_id(1) * PIX_PER_WI;
 
     int lid = get_local_id(0) + get_local_id(1) * LOCAL_X;
 
@@ -400,15 +398,23 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
         l_counter = 0;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    #pragma unroll
-    for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
+    if (x < cols)
     {
-        if (x < cols)
+        __global uchar* map = map_ptr + mad24(y, map_step, x * (int)sizeof(int));
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI; ++cy)
         {
-            int type = loadpix(map + mad24(y, map_step, x * (int)sizeof(int)));
-            if (type == 2)
+            if (y < rows)
             {
-                l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
+                int type = loadpix(map);
+                if (type == 2)
+                {
+                    l_stack[atomic_inc(&l_counter)] = (ushort2)(x, y);
+                }
+
+                y++;
+                map += map_step;
             }
         }
     }
@@ -422,7 +428,6 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
         int mod = l_counter % LOCAL_TOTAL;
         int pix_per_thr = l_counter / LOCAL_TOTAL + ((lid < mod) ? 1 : 0);
 
-        #pragma unroll
         for (int i = 0; i < pix_per_thr; ++i)
         {
             ushort2 pos = l_stack[ atomic_dec(&l_counter) - 1 ];
@@ -434,7 +439,7 @@ __kernel void stage2_hysteresis(__global uchar *map, int map_step, int map_offse
                 ushort posy = pos.y + move_dir[1][j];
                 if (posx < 0 || posy < 0 || posx >= cols || posy >= rows)
                     continue;
-                __global uchar *addr = map + mad24(posy, map_step, posx * (int)sizeof(int));
+                __global uchar *addr = map_ptr + mad24(posy, map_step, posx * (int)sizeof(int));
                 int type = loadpix(addr);
                 if (type == 0)
                 {
@@ -463,16 +468,26 @@ __kernel void getEdges(__global const uchar *mapptr, int map_step, int map_offse
                        __global uchar *dst, int dst_step, int dst_offset)
 {
     int x = get_global_id(0);
-    int y0 = get_global_id(1) * PIX_PER_WI;
+    int y = get_global_id(1) * PIX_PER_WI;
 
-    #pragma unroll
-    for (int y = y0; y < min(y0 + PIX_PER_WI, rows); ++y)
+    if (x < cols)
     {
         int map_index = mad24(map_step, y, mad24(x, (int)sizeof(int), map_offset));
-        int dst_index = mad24(dst_step, y, x) + dst_offset;
+        int dst_index = mad24(dst_step, y, x + dst_offset);
 
-        __global const int * map = (__global const int *)(mapptr + map_index);
-        dst[dst_index] = (uchar)(-(map[0] >> 1));
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI; ++cy)
+        {
+            if (y < rows)
+            {
+                __global const int * map = (__global const int *)(mapptr + map_index);
+                dst[dst_index] = (uchar)(-(map[0] >> 1));
+
+                y++;
+                map_index += map_step;
+                dst_index += dst_step;
+            }
+        }
     }
 }
 

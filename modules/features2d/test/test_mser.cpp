@@ -43,6 +43,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
+#if 0
+
 #include <vector>
 #include <string>
 using namespace std;
@@ -205,3 +207,5 @@ void CV_MserTest::run(int)
 }
 
 TEST(Features2d_MSER, DISABLED_regression) { CV_MserTest test; test.safe_run(); }
+
+#endif

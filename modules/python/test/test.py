@@ -91,8 +91,8 @@ class Hackathon244Tests(NewOpenCVTests):
         self.assertEqual(cv2.countNonZero(inliers), pattern_size[0]*pattern_size[1])
 
     def test_fast(self):
-        fd = cv2.FastFeatureDetector(30, True)
-        img = self.get_sample("samples/cpp/right02.jpg", 0)
+        fd = cv2.FastFeatureDetector_create(30, True)
+        img = self.get_sample("samples/data/right02.jpg", 0)
         img = cv2.medianBlur(img, 3)
         imgc = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         keypoints = fd.detect(img)

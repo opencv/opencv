@@ -368,7 +368,8 @@ public:
             uint16x8_t g0 = vaddq_u16(vshrq_n_u16(r0, 8), vshrq_n_u16(r2, 8));
             uint16x8_t g1 = vandq_u16(r1, masklo);
             g0 = vaddq_u16(g0, vaddq_u16(g1, vextq_u16(g1, g1, 1)));
-            g1 = vshlq_n_u16(vextq_u16(g1, g1, 1), 2);
+            uint16x8_t rot = vextq_u16(g1, g1, 1);
+            g1 = vshlq_n_u16(rot, 2);
             // g0 = b0 b2 b4 ...
             // g1 = b1 b3 b5 ...
 

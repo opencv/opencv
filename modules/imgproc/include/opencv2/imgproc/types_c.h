@@ -49,41 +49,55 @@
 extern "C" {
 #endif
 
-/* Connected component structure */
+/** @addtogroup imgproc_c
+  @{
+*/
+
+/** Connected component structure */
 typedef struct CvConnectedComp
 {
-    double area;    /* area of the connected component  */
-    CvScalar value; /* average color of the connected component */
-    CvRect rect;    /* ROI of the component  */
-    CvSeq* contour; /* optional component boundary
+    double area;    /**<area of the connected component  */
+    CvScalar value; /**<average color of the connected component */
+    CvRect rect;    /**<ROI of the component  */
+    CvSeq* contour; /**<optional component boundary
                       (the contour might have child contours corresponding to the holes)*/
 }
 CvConnectedComp;
 
-/* Image smooth methods */
-enum
+/** Image smooth methods */
+enum SmoothMethod_c
 {
+    /** linear convolution with \f$\texttt{size1}\times\texttt{size2}\f$ box kernel (all 1's). If
+    you want to smooth different pixels with different-size box kernels, you can use the integral
+    image that is computed using integral */
     CV_BLUR_NO_SCALE =0,
+    /** linear convolution with \f$\texttt{size1}\times\texttt{size2}\f$ box kernel (all
+    1's) with subsequent scaling by \f$1/(\texttt{size1}\cdot\texttt{size2})\f$ */
     CV_BLUR  =1,
+    /** linear convolution with a \f$\texttt{size1}\times\texttt{size2}\f$ Gaussian kernel */
     CV_GAUSSIAN  =2,
+    /** median filter with a \f$\texttt{size1}\times\texttt{size1}\f$ square aperture */
     CV_MEDIAN =3,
+    /** bilateral filter with a \f$\texttt{size1}\times\texttt{size1}\f$ square aperture, color
+    sigma= sigma1 and spatial sigma= sigma2. If size1=0, the aperture square side is set to
+    cvRound(sigma2\*1.5)\*2+1. See cv::bilateralFilter */
     CV_BILATERAL =4
 };
 
-/* Filters used in pyramid decomposition */
+/** Filters used in pyramid decomposition */
 enum
 {
     CV_GAUSSIAN_5x5 = 7
 };
 
-/* Special filters */
+/** Special filters */
 enum
 {
     CV_SCHARR =-1,
     CV_MAX_SOBEL_KSIZE =7
 };
 
-/* Constants for color conversion */
+/** Constants for color conversion */
 enum
 {
     CV_BGR2BGRA    =0,
@@ -339,7 +353,7 @@ enum
 };
 
 
-/* Sub-pixel interpolation methods */
+/** Sub-pixel interpolation methods */
 enum
 {
     CV_INTER_NN        =0,
@@ -349,23 +363,25 @@ enum
     CV_INTER_LANCZOS4  =4
 };
 
-/* ... and other image warping flags */
+/** ... and other image warping flags */
 enum
 {
     CV_WARP_FILL_OUTLIERS =8,
     CV_WARP_INVERSE_MAP  =16
 };
 
-/* Shapes of a structuring element for morphological operations */
-enum
+/** Shapes of a structuring element for morphological operations
+@see cv::MorphShapes, cv::getStructuringElement
+*/
+enum MorphShapes_c
 {
     CV_SHAPE_RECT      =0,
     CV_SHAPE_CROSS     =1,
     CV_SHAPE_ELLIPSE   =2,
-    CV_SHAPE_CUSTOM    =100
+    CV_SHAPE_CUSTOM    =100 //!< custom structuring element
 };
 
-/* Morphological operations */
+/** Morphological operations */
 enum
 {
     CV_MOP_ERODE        =0,
@@ -377,12 +393,12 @@ enum
     CV_MOP_BLACKHAT     =6
 };
 
-/* Spatial and central moments */
+/** Spatial and central moments */
 typedef struct CvMoments
 {
-    double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03; /* spatial moments */
-    double  mu20, mu11, mu02, mu30, mu21, mu12, mu03; /* central moments */
-    double  inv_sqrt_m00; /* m00 != 0 ? 1/sqrt(m00) : 0 */
+    double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03; /**< spatial moments */
+    double  mu20, mu11, mu02, mu30, mu21, mu12, mu03; /**< central moments */
+    double  inv_sqrt_m00; /**< m00 != 0 ? 1/sqrt(m00) : 0 */
 
 #ifdef __cplusplus
     CvMoments(){}
@@ -404,14 +420,14 @@ typedef struct CvMoments
 }
 CvMoments;
 
-/* Hu invariants */
+/** Hu invariants */
 typedef struct CvHuMoments
 {
-    double hu1, hu2, hu3, hu4, hu5, hu6, hu7; /* Hu invariants */
+    double hu1, hu2, hu3, hu4, hu5, hu6, hu7; /**< Hu invariants */
 }
 CvHuMoments;
 
-/* Template matching methods */
+/** Template matching methods */
 enum
 {
     CV_TM_SQDIFF        =0,
@@ -424,7 +440,7 @@ enum
 
 typedef float (CV_CDECL * CvDistanceFunction)( const float* a, const float* b, void* user_param );
 
-/* Contour retrieval modes */
+/** Contour retrieval modes */
 enum
 {
     CV_RETR_EXTERNAL=0,
@@ -434,7 +450,7 @@ enum
     CV_RETR_FLOODFILL=4
 };
 
-/* Contour approximation methods */
+/** Contour approximation methods */
 enum
 {
     CV_CHAIN_CODE=0,
@@ -451,7 +467,7 @@ It supports both hierarchical and plane variants of Suzuki algorithm.
 */
 typedef struct _CvContourScanner* CvContourScanner;
 
-/* Freeman chain reader state */
+/** Freeman chain reader state */
 typedef struct CvChainPtReader
 {
     CV_SEQ_READER_FIELDS()
@@ -461,7 +477,7 @@ typedef struct CvChainPtReader
 }
 CvChainPtReader;
 
-/* initializes 8-element array for fast access to 3x3 neighborhood of a pixel */
+/** initializes 8-element array for fast access to 3x3 neighborhood of a pixel */
 #define  CV_INIT_3X3_DELTAS( deltas, step, nch )            \
     ((deltas)[0] =  (nch),  (deltas)[1] = -(step) + (nch),  \
      (deltas)[2] = -(step), (deltas)[3] = -(step) - (nch),  \
@@ -469,21 +485,28 @@ CvChainPtReader;
      (deltas)[6] =  (step), (deltas)[7] =  (step) + (nch))
 
 
-/* Contour approximation algorithms */
+/** Contour approximation algorithms */
 enum
 {
     CV_POLY_APPROX_DP = 0
 };
 
-/* Shape matching methods */
-enum
+/** @brief Shape matching methods
+
+\f$A\f$ denotes object1,\f$B\f$ denotes object2
+
+\f$\begin{array}{l} m^A_i =  \mathrm{sign} (h^A_i)  \cdot \log{h^A_i} \\ m^B_i =  \mathrm{sign} (h^B_i)  \cdot \log{h^B_i} \end{array}\f$
+
+and \f$h^A_i, h^B_i\f$ are the Hu moments of \f$A\f$ and \f$B\f$ , respectively.
+*/
+enum ShapeMatchModes
 {
-    CV_CONTOURS_MATCH_I1  =1,
-    CV_CONTOURS_MATCH_I2  =2,
-    CV_CONTOURS_MATCH_I3  =3
+    CV_CONTOURS_MATCH_I1  =1, //!< \f[I_1(A,B) =  \sum _{i=1...7}  \left |  \frac{1}{m^A_i} -  \frac{1}{m^B_i} \right |\f]
+    CV_CONTOURS_MATCH_I2  =2, //!< \f[I_2(A,B) =  \sum _{i=1...7}  \left | m^A_i - m^B_i  \right |\f]
+    CV_CONTOURS_MATCH_I3  =3  //!< \f[I_3(A,B) =  \max _{i=1...7}  \frac{ \left| m^A_i - m^B_i \right| }{ \left| m^A_i \right| }\f]
 };
 
-/* Shape orientation */
+/** Shape orientation */
 enum
 {
     CV_CLOCKWISE         =1,
@@ -491,17 +514,17 @@ enum
 };
 
 
-/* Convexity defect */
+/** Convexity defect */
 typedef struct CvConvexityDefect
 {
-    CvPoint* start; /* point of the contour where the defect begins */
-    CvPoint* end; /* point of the contour where the defect ends */
-    CvPoint* depth_point; /* the farthest from the convex hull point within the defect */
-    float depth; /* distance between the farthest point and the convex hull */
+    CvPoint* start; /**< point of the contour where the defect begins */
+    CvPoint* end; /**< point of the contour where the defect ends */
+    CvPoint* depth_point; /**< the farthest from the convex hull point within the defect */
+    float depth; /**< distance between the farthest point and the convex hull */
 } CvConvexityDefect;
 
 
-/* Histogram comparison methods */
+/** Histogram comparison methods */
 enum
 {
     CV_COMP_CORREL        =0,
@@ -513,7 +536,7 @@ enum
     CV_COMP_KL_DIV        =5
 };
 
-/* Mask size for distance transform */
+/** Mask size for distance transform */
 enum
 {
     CV_DIST_MASK_3   =3,
@@ -521,48 +544,51 @@ enum
     CV_DIST_MASK_PRECISE =0
 };
 
-/* Content of output label array: connected components or pixels */
+/** Content of output label array: connected components or pixels */
 enum
 {
   CV_DIST_LABEL_CCOMP = 0,
   CV_DIST_LABEL_PIXEL = 1
 };
 
-/* Distance types for Distance Transform and M-estimators */
+/** Distance types for Distance Transform and M-estimators */
 enum
 {
-    CV_DIST_USER    =-1,  /* User defined distance */
-    CV_DIST_L1      =1,   /* distance = |x1-x2| + |y1-y2| */
-    CV_DIST_L2      =2,   /* the simple euclidean distance */
-    CV_DIST_C       =3,   /* distance = max(|x1-x2|,|y1-y2|) */
-    CV_DIST_L12     =4,   /* L1-L2 metric: distance = 2(sqrt(1+x*x/2) - 1)) */
-    CV_DIST_FAIR    =5,   /* distance = c^2(|x|/c-log(1+|x|/c)), c = 1.3998 */
-    CV_DIST_WELSCH  =6,   /* distance = c^2/2(1-exp(-(x/c)^2)), c = 2.9846 */
-    CV_DIST_HUBER   =7    /* distance = |x|<c ? x^2/2 : c(|x|-c/2), c=1.345 */
+    CV_DIST_USER    =-1,  /**< User defined distance */
+    CV_DIST_L1      =1,   /**< distance = |x1-x2| + |y1-y2| */
+    CV_DIST_L2      =2,   /**< the simple euclidean distance */
+    CV_DIST_C       =3,   /**< distance = max(|x1-x2|,|y1-y2|) */
+    CV_DIST_L12     =4,   /**< L1-L2 metric: distance = 2(sqrt(1+x*x/2) - 1)) */
+    CV_DIST_FAIR    =5,   /**< distance = c^2(|x|/c-log(1+|x|/c)), c = 1.3998 */
+    CV_DIST_WELSCH  =6,   /**< distance = c^2/2(1-exp(-(x/c)^2)), c = 2.9846 */
+    CV_DIST_HUBER   =7    /**< distance = |x|<c ? x^2/2 : c(|x|-c/2), c=1.345 */
 };
 
 
-/* Threshold types */
+/** Threshold types */
 enum
 {
-    CV_THRESH_BINARY      =0,  /* value = value > threshold ? max_value : 0       */
-    CV_THRESH_BINARY_INV  =1,  /* value = value > threshold ? 0 : max_value       */
-    CV_THRESH_TRUNC       =2,  /* value = value > threshold ? threshold : value   */
-    CV_THRESH_TOZERO      =3,  /* value = value > threshold ? value : 0           */
-    CV_THRESH_TOZERO_INV  =4,  /* value = value > threshold ? 0 : value           */
+    CV_THRESH_BINARY      =0,  /**< value = value > threshold ? max_value : 0       */
+    CV_THRESH_BINARY_INV  =1,  /**< value = value > threshold ? 0 : max_value       */
+    CV_THRESH_TRUNC       =2,  /**< value = value > threshold ? threshold : value   */
+    CV_THRESH_TOZERO      =3,  /**< value = value > threshold ? value : 0           */
+    CV_THRESH_TOZERO_INV  =4,  /**< value = value > threshold ? 0 : value           */
     CV_THRESH_MASK        =7,
-    CV_THRESH_OTSU        =8  /* use Otsu algorithm to choose the optimal threshold value;
+    CV_THRESH_OTSU        =8, /**< use Otsu algorithm to choose the optimal threshold value;
                                  combine the flag with one of the above CV_THRESH_* values */
+    CV_THRESH_TRIANGLE    =16  /**< use Triangle algorithm to choose the optimal threshold value;
+                                 combine the flag with one of the above CV_THRESH_* values, but not
+                                 with CV_THRESH_OTSU */
 };
 
-/* Adaptive threshold methods */
+/** Adaptive threshold methods */
 enum
 {
     CV_ADAPTIVE_THRESH_MEAN_C  =0,
     CV_ADAPTIVE_THRESH_GAUSSIAN_C  =1
 };
 
-/* FloodFill flags */
+/** FloodFill flags */
 enum
 {
     CV_FLOODFILL_FIXED_RANGE =(1 << 16),
@@ -570,13 +596,13 @@ enum
 };
 
 
-/* Canny edge detector flags */
+/** Canny edge detector flags */
 enum
 {
     CV_CANNY_L2_GRADIENT  =(1 << 31)
 };
 
-/* Variants of a Hough transform */
+/** Variants of a Hough transform */
 enum
 {
     CV_HOUGH_STANDARD =0,
@@ -590,6 +616,8 @@ enum
 struct CvFeatureTree;
 struct CvLSH;
 struct CvLSHOperations;
+
+/** @} */
 
 #ifdef __cplusplus
 }

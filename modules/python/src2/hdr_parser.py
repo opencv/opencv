@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import os, sys, re, string
+import os, sys, re, string, io
 
 # the list only for debugging. The real list, used in the real OpenCV build, is specified in CMakeLists.txt
 opencv_hdr_list = [
@@ -734,7 +734,7 @@ class CppHeaderParser(object):
         """
         self.hname = hname
         decls = []
-        f = open(hname, "rt")
+        f = io.open(hname, 'rt', encoding='utf-8')
         linelist = list(f.readlines())
         f.close()
 

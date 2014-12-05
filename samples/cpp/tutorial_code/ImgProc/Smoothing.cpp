@@ -35,7 +35,7 @@ int main( void )
   namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Load the source image
-  src = imread( "../images/lena.png", 1 );
+  src = imread( "../data/lena.jpg", 1 );
 
   if( display_caption( "Original Image" ) != 0 ) { return 0; }
 

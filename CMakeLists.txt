@@ -38,6 +38,11 @@ if(POLICY CMP0022)
   cmake_policy(SET CMP0022 OLD)
 endif()
 
+if(POLICY CMP0026)
+  # silence cmake 3.0+ warnings about reading LOCATION attribute
+  cmake_policy(SET CMP0026 OLD)
+endif()
+
 # must go before the project command
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE)
@@ -215,13 +220,18 @@ OCV_OPTION(ENABLE_SSSE3               "Enable SSSE3 instructions"               
 OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"                               OFF  IF ((CV_ICC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"                               OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_AVX                 "Enable AVX instructions"                                  OFF  IF ((MSVC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
-OCV_OPTION(ENABLE_NEON                "Enable NEON instructions"                                 OFF  IF CMAKE_COMPILER_IS_GNUCXX AND ARM )
-OCV_OPTION(ENABLE_VFPV3               "Enable VFPv3-D32 instructions"                            OFF  IF CMAKE_COMPILER_IS_GNUCXX AND ARM )
+OCV_OPTION(ENABLE_NEON                "Enable NEON instructions"                                 OFF  IF CMAKE_COMPILER_IS_GNUCXX AND (ARM OR IOS) )
+OCV_OPTION(ENABLE_VFPV3               "Enable VFPv3-D32 instructions"                            OFF  IF CMAKE_COMPILER_IS_GNUCXX AND (ARM OR IOS) )
 OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too noisy"             OFF )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 OCV_OPTION(ENABLE_WINRT_MODE          "Build with Windows Runtime support"                       OFF  IF WIN32 )
 OCV_OPTION(ENABLE_WINRT_MODE_NATIVE   "Build with Windows Runtime native C++ support"            OFF  IF WIN32 )
 OCV_OPTION(ANDROID_EXAMPLES_WITH_LIBS "Build binaries of Android examples with native libraries" OFF  IF ANDROID )
+OCV_OPTION(ENABLE_IMPL_COLLECTION     "Collect implementation data on function call"             OFF )
+
+if(ENABLE_IMPL_COLLECTION)
+  add_definitions(-DCV_COLLECT_IMPL_DATA)
+endif()
 
 
 # ----------------------------------------------------------------------------
@@ -254,7 +264,7 @@ else()
   set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
 endif()
 
-if(WIN32)
+if(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
   if(DEFINED OpenCV_RUNTIME AND DEFINED OpenCV_ARCH)
     set(OpenCV_INSTALL_BINARIES_PREFIX "${OpenCV_ARCH}/${OpenCV_RUNTIME}/")
   else()
@@ -294,7 +304,7 @@ if(ANDROID)
 else()
   set(LIBRARY_OUTPUT_PATH         "${OpenCV_BINARY_DIR}/lib")
   set(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
-  if(WIN32)
+  if(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
     if(OpenCV_STATIC)
       set(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
     else()
@@ -453,8 +463,13 @@ include(cmake/OpenCVFindLibsPerf.cmake)
 # ----------------------------------------------------------------------------
 
 # --- LATEX for pdf documentation ---
+unset(HAVE_DOXYGEN CACHE)
 if(BUILD_DOCS)
   include(cmake/OpenCVFindLATEX.cmake)
+  find_host_program(DOXYGEN_BUILD doxygen)
+  if (DOXYGEN_BUILD)
+    set(HAVE_DOXYGEN 1)
+  endif (DOXYGEN_BUILD)
 endif(BUILD_DOCS)
 
 # --- Python Support ---
@@ -1066,6 +1081,7 @@ if(BUILD_DOCS)
   status("    Sphinx:"              HAVE_SPHINX              THEN "${SPHINX_BUILD} (ver ${SPHINX_VERSION})" ELSE NO)
   status("    PdfLaTeX compiler:"   PDFLATEX_COMPILER        THEN "${PDFLATEX_COMPILER}" ELSE NO)
   status("    PlantUML:"            PLANTUML                 THEN "${PLANTUML}" ELSE NO)
+  status("    Doxygen:"             HAVE_DOXYGEN             THEN "YES (${DOXYGEN_BUILD})" ELSE NO)
 endif()
 
 # ========================== samples and tests ==========================

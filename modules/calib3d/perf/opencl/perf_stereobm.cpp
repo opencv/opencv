@@ -63,7 +63,7 @@ OCL_PERF_TEST_P(StereoBMFixture, StereoBM, ::testing::Combine(OCL_PERF_ENUM(32, 
 
     declare.in(left, right);
 
-    Ptr<StereoBM> bm = createStereoBM( n_disp, winSize );
+    Ptr<StereoBM> bm = StereoBM::create( n_disp, winSize );
     bm->setPreFilterType(bm->PREFILTER_XSOBEL);
     bm->setTextureThreshold(0);
 

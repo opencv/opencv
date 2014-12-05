@@ -75,7 +75,7 @@
 
 #include "common.hpp"
 
-/*
+/** @file
   This header file contains inline functions that implement intra-word SIMD
   operations, that are hardware accelerated on sm_3x (Kepler) GPUs. Efficient
   emulation code paths are provided for earlier architectures (sm_1x, sm_2x)
@@ -125,6 +125,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
+//! @addtogroup cuda
+//! @{
     // 2
 
     static __device__ __forceinline__ unsigned int vadd2(unsigned int a, unsigned int b)
@@ -904,6 +906,7 @@ namespace cv { namespace cuda { namespace device
 
         return r;
     }
+//! @}
 }}}
 
 #endif // __OPENCV_CUDA_SIMD_FUNCTIONS_HPP__

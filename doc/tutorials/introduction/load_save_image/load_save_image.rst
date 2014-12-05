@@ -68,7 +68,7 @@ Explanation
 
    .. code-block:: cpp
 
-      cvtColor( image, gray_image, CV_BGR2GRAY );
+      cvtColor( image, gray_image, COLOR_BGR2GRAY );
 
    As you can see, :miscellaneous_transformations:`cvtColor <cvtcolor>` takes as arguments:
 
@@ -76,7 +76,7 @@ Explanation
 
       * a source image (*image*)
       * a destination image (*gray_image*), in which we will save the converted image.
-      * an additional parameter that indicates what kind of transformation will be performed. In this case we use **CV_BGR2GRAY** (because of :readwriteimage:`imread <imread>` has BGR default channel order in case of color images).
+      * an additional parameter that indicates what kind of transformation will be performed. In this case we use **COLOR_BGR2GRAY** (because of :readwriteimage:`imread <imread>` has BGR default channel order in case of color images).
 
 #. So now we have our new *gray_image* and want to save it on disk (otherwise it will get lost after the program ends). To save it, we will use a function analagous to :readwriteimage:`imread <imread>`: :readwriteimage:`imwrite <imwrite>`
 
@@ -90,8 +90,8 @@ Explanation
 
    .. code-block:: cpp
 
-      namedWindow( imageName, CV_WINDOW_AUTOSIZE );
-      namedWindow( "Gray image", CV_WINDOW_AUTOSIZE );
+      namedWindow( imageName, WINDOW_AUTOSIZE );
+      namedWindow( "Gray image", WINDOW_AUTOSIZE );
 
       imshow( imageName, image );
       imshow( "Gray image", gray_image );

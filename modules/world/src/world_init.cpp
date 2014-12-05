@@ -44,15 +44,5 @@
 
 bool cv::initAll()
 {
-    return true
-#ifdef HAVE_OPENCV_VIDEO
-    && initModule_video()
-#endif
-#ifdef HAVE_OPENCV_FEATURES2D
-    && initModule_features2d()
-#endif
-#ifdef HAVE_OPENCV_XFEATURES2D
-    && xfeatures2d::initModule_xfeatures2d()
-#endif
-    ;
+    return true;
 }

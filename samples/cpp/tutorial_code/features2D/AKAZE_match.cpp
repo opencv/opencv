@@ -12,19 +12,19 @@ const float nn_match_ratio = 0.8f;   // Nearest neighbor matching ratio
 
 int main(void)
 {
-    Mat img1 = imread("graf1.png", IMREAD_GRAYSCALE);
-    Mat img2 = imread("graf3.png", IMREAD_GRAYSCALE);
+    Mat img1 = imread("../data/graf1.png", IMREAD_GRAYSCALE);
+    Mat img2 = imread("../data/graf3.png", IMREAD_GRAYSCALE);
 
     Mat homography;
-    FileStorage fs("H1to3p.xml", FileStorage::READ);
+    FileStorage fs("../data/H1to3p.xml", FileStorage::READ);
     fs.getFirstTopLevelNode() >> homography;
 
     vector<KeyPoint> kpts1, kpts2;
     Mat desc1, desc2;
 
-    AKAZE akaze;
-    akaze(img1, noArray(), kpts1, desc1);
-    akaze(img2, noArray(), kpts2, desc2);
+    Ptr<AKAZE> akaze = AKAZE::create();
+    akaze->detectAndCompute(img1, noArray(), kpts1, desc1);
+    akaze->detectAndCompute(img2, noArray(), kpts2, desc2);
 
     BFMatcher matcher(NORM_HAMMING);
     vector< vector<DMatch> > nn_matches;

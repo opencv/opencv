@@ -233,6 +233,31 @@ namespace
         CLAHE_Interpolation_Body(const cv::Mat& src, const cv::Mat& dst, const cv::Mat& lut, const cv::Size& tileSize, const int& tilesX, const int& tilesY) :
             src_(src), dst_(dst), lut_(lut), tileSize_(tileSize), tilesX_(tilesX), tilesY_(tilesY)
         {
+            buf.allocate(src.cols << 2);
+            ind1_p = (int *)buf;
+            ind2_p = ind1_p + src.cols;
+            xa_p = (float *)(ind2_p + src.cols);
+            xa1_p = xa_p + src.cols;
+
+            int lut_step = static_cast<int>(lut_.step / sizeof(T));
+            float inv_tw = 1.0f / tileSize_.width;
+
+            for (int x = 0; x < src.cols; ++x)
+            {
+                float txf = x * inv_tw - 0.5f;
+
+                int tx1 = cvFloor(txf);
+                int tx2 = tx1 + 1;
+
+                xa_p[x] = txf - tx1;
+                xa1_p[x] = 1.0f - xa_p[x];
+
+                tx1 = std::max(tx1, 0);
+                tx2 = std::min(tx2, tilesX_ - 1);
+
+                ind1_p[x] = tx1 * lut_step;
+                ind2_p[x] = tx2 * lut_step;
+            }
         }
 
         void operator ()(const cv::Range& range) const;
@@ -245,24 +270,28 @@ namespace
         cv::Size tileSize_;
         int tilesX_;
         int tilesY_;
+
+        cv::AutoBuffer<int> buf;
+        int * ind1_p, * ind2_p;
+        float * xa_p, * xa1_p;
     };
 
     template <class T>
     void CLAHE_Interpolation_Body<T>::operator ()(const cv::Range& range) const
     {
-        const size_t lut_step = lut_.step / sizeof(T);
+        float inv_th = 1.0f / tileSize_.height;
 
         for (int y = range.start; y < range.end; ++y)
         {
             const T* srcRow = src_.ptr<T>(y);
             T* dstRow = dst_.ptr<T>(y);
 
-            const float tyf = (static_cast<float>(y) / tileSize_.height) - 0.5f;
+            float tyf = y * inv_th - 0.5f;
 
             int ty1 = cvFloor(tyf);
             int ty2 = ty1 + 1;
 
-            const float ya = tyf - ty1;
+            float ya = tyf - ty1, ya1 = 1.0f - ya;
 
             ty1 = std::max(ty1, 0);
             ty2 = std::min(ty2, tilesY_ - 1);
@@ -272,27 +301,13 @@ namespace
 
             for (int x = 0; x < src_.cols; ++x)
             {
-                const float txf = (static_cast<float>(x) / tileSize_.width) - 0.5f;
+                int srcVal = srcRow[x];
 
-                int tx1 = cvFloor(txf);
-                int tx2 = tx1 + 1;
+                int ind1 = ind1_p[x] + srcVal;
+                int ind2 = ind2_p[x] + srcVal;
 
-                const float xa = txf - tx1;
-
-                tx1 = std::max(tx1, 0);
-                tx2 = std::min(tx2, tilesX_ - 1);
-
-                const int srcVal = srcRow[x];
-
-                const size_t ind1 = tx1 * lut_step + srcVal;
-                const size_t ind2 = tx2 * lut_step + srcVal;
-
-                float res = 0;
-
-                res += lutPlane1[ind1] * ((1.0f - xa) * (1.0f - ya));
-                res += lutPlane1[ind2] * ((xa) * (1.0f - ya));
-                res += lutPlane2[ind1] * ((1.0f - xa) * (ya));
-                res += lutPlane2[ind2] * ((xa) * (ya));
+                float res = (lutPlane1[ind1] * xa1_p[x] + lutPlane1[ind2] * xa_p[x]) * ya1 +
+                            (lutPlane2[ind1] * xa1_p[x] + lutPlane2[ind2] * xa_p[x]) * ya;
 
                 dstRow[x] = cv::saturate_cast<T>(res);
             }
@@ -389,7 +404,10 @@ namespace
 #ifdef HAVE_OPENCL
         if (useOpenCL && clahe::calcLut(_srcForLut, ulut_, tilesX_, tilesY_, tileSize, clipLimit, lutScale) )
             if( clahe::transform(_src, _dst, ulut_, tilesX_, tilesY_, tileSize) )
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
 #endif
 
         cv::Mat src = _src.getMat();
@@ -403,7 +421,9 @@ namespace
             calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 256, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         else if (_src.type() == CV_16UC1)
             calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 4096, 4> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
-        CV_Assert(!calcLutBody.empty());
+        else
+            CV_Error( CV_StsBadArg, "Unsupported type" );
+
         cv::parallel_for_(cv::Range(0, tilesX_ * tilesY_), *calcLutBody);
 
         cv::Ptr<cv::ParallelLoopBody> interpolationBody;
@@ -411,7 +431,7 @@ namespace
             interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
         else if (_src.type() == CV_16UC1)
             interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
-        CV_Assert(!interpolationBody.empty());
+
         cv::parallel_for_(cv::Range(0, src.rows), *interpolationBody);
     }
 

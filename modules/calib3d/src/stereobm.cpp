@@ -88,7 +88,7 @@ struct StereoBMParams
 
 static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsize, int prefilterCap)
 {
-    ocl::Kernel k("prefilter_norm", ocl::calib3d::stereobm_oclsrc);
+    ocl::Kernel k("prefilter_norm", ocl::calib3d::stereobm_oclsrc, cv::format("-D WSZ=%d", winsize));
     if(k.empty())
         return false;
 
@@ -102,7 +102,7 @@ static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsi
     size_t globalThreads[3] = { input.cols, input.rows, 1 };
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols,
-        prefilterCap, winsize, scale_g, scale_s);
+        prefilterCap, scale_g, scale_s);
 
     return k.run(2, globalThreads, NULL, false);
 }
@@ -743,9 +743,16 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
     int wsz = state->SADWindowSize;
     int wsz2 = wsz/2;
 
-    int sizeX = std::max(11, 27 - ocl::Device::getDefault().maxComputeUnits() ), sizeY = sizeX-1, N = ndisp*2;
+    ocl::Device devDef = ocl::Device::getDefault();
+    int sizeX = devDef.isIntel() ? 32 : std::max(11, 27 - devDef.maxComputeUnits()),
+        sizeY = sizeX - 1,
+        N = ndisp * 2;
 
-    ocl::Kernel k("stereoBM", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D wsz=%d", (2*sizeY)*ndisp, wsz) );
+    cv::String opt = cv::format("-D DEFINE_KERNEL_STEREOBM -D MIN_DISP=%d -D NUM_DISP=%d"
+                                " -D BLOCK_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D WSZ=%d",
+                                mindisp, ndisp,
+                                sizeX, sizeY, wsz);
+    ocl::Kernel k("stereoBM", ocl::calib3d::stereobm_oclsrc, opt);
     if(k.empty())
         return false;
 
@@ -753,15 +760,14 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
     int cols = left.cols, rows = left.rows;
 
     _disp.create(_left.size(), CV_16S);
-    _disp.setTo((mindisp - 1)<<4);
+    _disp.setTo((mindisp - 1) << 4);
     Rect roi = Rect(Point(wsz2 + mindisp + ndisp - 1, wsz2), Point(cols-wsz2-mindisp, rows-wsz2) );
     UMat disp = (_disp.getUMat())(roi);
 
-    int globalX = disp.cols/sizeX, globalY = disp.rows/sizeY;
-    globalX += (disp.cols%sizeX) > 0 ? 1 : 0;
-    globalY += (disp.rows%sizeY) > 0 ? 1 : 0;
-    size_t globalThreads[3] = { globalX, globalY, N};
-    size_t localThreads[3] = {1, 1, N};
+    int globalX = (disp.cols + sizeX - 1) / sizeX,
+        globalY = (disp.rows + sizeY - 1) / sizeY;
+    size_t globalThreads[3] = {N, globalX, globalY};
+    size_t localThreads[3]  = {N, 1, 1};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
@@ -769,15 +775,8 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
     idx = k.set(idx, ocl::KernelArg::WriteOnlyNoSize(disp));
     idx = k.set(idx, rows);
     idx = k.set(idx, cols);
-    idx = k.set(idx, mindisp);
-    idx = k.set(idx, ndisp);
-    idx = k.set(idx, state->preFilterCap);
     idx = k.set(idx, state->textureThreshold);
     idx = k.set(idx, state->uniquenessRatio);
-    idx = k.set(idx, sizeX);
-    idx = k.set(idx, sizeY);
-    idx = k.set(idx, wsz);
-
     return k.run(3, globalThreads, localThreads, false);
 }
 
@@ -925,6 +924,7 @@ public:
                         filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
                     if (dtype == CV_32F)
                         disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << DISPARITY_SHIFT), 0);
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
                 }
             }
@@ -1097,11 +1097,11 @@ public:
 
 const char* StereoBMImpl::name_ = "StereoMatcher.BM";
 
-}
-
-cv::Ptr<cv::StereoBM> cv::createStereoBM(int _numDisparities, int _SADWindowSize)
+Ptr<StereoBM> StereoBM::create(int _numDisparities, int _SADWindowSize)
 {
     return makePtr<StereoBMImpl>(_numDisparities, _SADWindowSize);
+}
+
 }
 
 /* End of file. */

@@ -242,6 +242,24 @@ macro(ocv_warnings_disable)
   endif(NOT ENABLE_NOISY_WARNINGS)
 endmacro()
 
+macro(add_apple_compiler_options the_module)
+  ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
+  if(HAVE_OBJC_EXCEPTIONS)
+    foreach(source ${OPENCV_MODULE_${the_module}_SOURCES})
+      if("${source}" MATCHES "\\.mm$")
+        get_source_file_property(flags "${source}" COMPILE_FLAGS)
+        if(flags)
+          set(flags "${_flags} -fobjc-exceptions")
+        else()
+          set(flags "-fobjc-exceptions")
+        endif()
+
+        set_source_files_properties("${source}" PROPERTIES COMPILE_FLAGS "${flags}")
+      endif()
+    endforeach()
+  endif()
+endmacro()
+
 # Provides an option that the user can optionally select.
 # Can accept condition to control when option is available for user.
 # Usage:

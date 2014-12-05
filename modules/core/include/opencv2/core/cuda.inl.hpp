@@ -46,6 +46,8 @@
 
 #include "opencv2/core/cuda.hpp"
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda {
 
 //////////////////////////////// GpuMat ///////////////////////////////
@@ -587,6 +589,7 @@ bool DeviceInfo::supports(FeatureSet feature_set) const
     return version >= feature_set;
 }
 
+
 }} // namespace cv { namespace cuda {
 
 //////////////////////////////// Mat ////////////////////////////////
@@ -601,5 +604,7 @@ Mat::Mat(const cuda::GpuMat& m)
 }
 
 }
+
+//! @endcond
 
 #endif // __OPENCV_CORE_CUDAINL_HPP__

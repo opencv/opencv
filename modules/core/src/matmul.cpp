@@ -693,7 +693,7 @@ static void GEMMStore_64fc( const Complexd* c_data, size_t c_step,
 
 #ifdef HAVE_CLAMDBLAS
 
-static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
+static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
                       InputArray matC, double beta, OutputArray matD, int flags )
 {
     int type = matA.type(), esz = CV_ELEM_SIZE(type);
@@ -775,6 +775,84 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 
 #endif
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
+                      InputArray matC, double beta, OutputArray matD, int flags )
+{
+    int depth = matA.depth(), cn = matA.channels();
+    int type = CV_MAKETYPE(depth, cn);
+
+    CV_Assert( type == matB.type() && (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
+
+    const ocl::Device & dev = ocl::Device::getDefault();
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+
+    if (!doubleSupport && depth == CV_64F)
+        return false;
+
+    bool haveC = matC.kind() != cv::_InputArray::NONE;
+    Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
+    bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
+
+    if (atrans)
+        sizeA = Size(sizeA.height, sizeA.width);
+    if (btrans)
+        sizeB = Size(sizeB.height, sizeB.width);
+    if (haveC && ctrans)
+        sizeC = Size(sizeC.height, sizeC.width);
+
+    Size sizeD(sizeB.width, sizeA.height);
+
+    CV_Assert( !haveC || matC.type() == type );
+    CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
+
+    int max_wg_size = (int)dev.maxWorkGroupSize();
+    int block_size = (max_wg_size / (32*cn) < 32) ? (max_wg_size / (16*cn) < 16) ? (max_wg_size / (8*cn) < 8) ? 1 : 8 : 16 : 32;
+
+    matD.create(sizeD, type);
+
+    UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
+
+    if (atrans)
+        A = A.t();
+
+    if (btrans)
+        B = B.t();
+
+    if (haveC)
+        ctrans ? transpose(matC, D) : matC.copyTo(D);
+
+    int vectorWidths[] = { 4, 4, 2, 2, 1, 4, cn, -1 };
+    int kercn = ocl::checkOptimalVectorWidth(vectorWidths, B, D);
+
+    String opts = format("-D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d %s %s %s",
+                          ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)),
+                          cn, kercn, block_size,
+                          (sizeA.width % block_size !=0) ? "-D NO_MULT" : "",
+                          haveC ? "-D HAVE_C" : "",
+                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+
+    ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);
+    if (k.empty())
+        return false;
+
+    if (depth == CV_64F)
+        k.args(ocl::KernelArg::ReadOnlyNoSize(A),
+               ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
+               ocl::KernelArg::ReadWrite(D, cn, kercn),
+               sizeA.width, alpha, beta);
+    else
+        k.args(ocl::KernelArg::ReadOnlyNoSize(A),
+               ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
+               ocl::KernelArg::ReadWrite(D, cn, kercn),
+               sizeA.width, (float)alpha, (float)beta);
+
+    size_t globalsize[2] = { sizeD.width * cn / kercn, sizeD.height};
+    size_t localsize[2] = { block_size, block_size};
+    return k.run(2, globalsize, block_size!=1 ? localsize : NULL, false);
+}
+#endif
 }
 
 void cv::gemm( InputArray matA, InputArray matB, double alpha,
@@ -783,7 +861,12 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 #ifdef HAVE_CLAMDBLAS
     CV_OCL_RUN(ocl::haveAmdBlas() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat() &&
         matA.cols() > 20 && matA.rows() > 20 && matB.cols() > 20, // since it works incorrect for small sizes
-        ocl_gemm(matA, matB, alpha, matC, beta, _matD, flags))
+        ocl_gemm_amdblas(matA, matB, alpha, matC, beta, _matD, flags))
+#endif
+
+#ifdef HAVE_OPENCL
+    CV_OCL_RUN(_matD.isUMat() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2,
+               ocl_gemm(matA, matB, alpha, matC, beta, _matD, flags))
 #endif
 
     const int block_lin_size = 128;
@@ -2102,6 +2185,16 @@ static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
             }
     }
     else
+#elif CV_NEON
+    if (true)
+    {
+        for ( ; i <= len - 4; i += 4)
+        {
+            float32x4_t v_src1 = vld1q_f32(src1 + i), v_src2 = vld1q_f32(src2 + i);
+            vst1q_f32(dst + i, vaddq_f32(vmulq_n_f32(v_src1, alpha), v_src2));
+        }
+    }
+    else
 #endif
     //vz why do we need unroll here?
     for( ; i <= len - 4; i += 4 )
@@ -2163,13 +2256,17 @@ typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, i
 static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
 {
     const ocl::Device & d = ocl::Device::getDefault();
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F),
-            kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst), rowsPerWI = d.isIntel() ? 4 : 1;
+
     bool doubleSupport = d.doubleFPConfig() > 0;
     Size size = _src1.size();
-
+    int depth = CV_MAT_DEPTH(type);
     if ( (!doubleSupport && depth == CV_64F) || size != _src2.size() )
         return false;
+
+    _dst.create(size, type);
+    int cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F);
+    int kercn = ocl::predictOptimalVectorWidthMax(_src1, _src2, _dst),
+        rowsPerWI = d.isIntel() ? 4 : 1;
 
     char cvt[2][50];
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
@@ -2185,9 +2282,7 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
     if (k.empty())
         return false;
 
-    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
-    _dst.create(size, type);
-    UMat dst = _dst.getUMat();
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat(), dst = _dst.getUMat();
 
     ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
             src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
@@ -2794,7 +2889,8 @@ dotProd_(const T* src1, const T* src2, int len)
 {
     int i = 0;
     double result = 0;
-     #if CV_ENABLE_UNROLLED
+
+    #if CV_ENABLE_UNROLLED
     for( ; i <= len - 4; i += 4 )
         result += (double)src1[i]*src2[i] + (double)src1[i+1]*src2[i+1] +
             (double)src1[i+2]*src2[i+2] + (double)src1[i+3]*src2[i+3];
@@ -2810,11 +2906,17 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 {
     double r = 0;
 #if ARITHM_USE_IPP && 0
-    if (0 <= ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
-                                   src2, (int)(len*sizeof(src2[0])),
-                                   ippiSize(len, 1), &r))
-        return r;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
+                                       src2, (int)(len*sizeof(src2[0])),
+                                       ippiSize(len, 1), &r))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return r;
+        }
+        setIppErrorStatus();
+    }
 #endif
     int i = 0;
 
@@ -2823,10 +2925,12 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
     {
         int j, len0 = len & -4, blockSize0 = (1 << 13), blockSize;
         __m128i z = _mm_setzero_si128();
+        CV_DECL_ALIGNED(16) int buf[4];
+
         while( i < len0 )
         {
             blockSize = std::min(len0 - i, blockSize0);
-            __m128i s = _mm_setzero_si128();
+            __m128i s = z;
             j = 0;
             for( ; j <= blockSize - 16; j += 16 )
             {
@@ -2850,7 +2954,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
                 s0 = _mm_madd_epi16(s0, s1);
                 s = _mm_add_epi32(s, s0);
             }
-            CV_DECL_ALIGNED(16) int buf[4];
+
             _mm_store_si128((__m128i*)buf, s);
             r += buf[0] + buf[1] + buf[2] + buf[3];
 
@@ -2859,6 +2963,45 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
             i += blockSize;
         }
     }
+#elif CV_NEON
+    int len0 = len & -8, blockSize0 = (1 << 15), blockSize;
+    uint32x4_t v_zero = vdupq_n_u32(0u);
+    CV_DECL_ALIGNED(16) uint buf[4];
+
+    while( i < len0 )
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        uint32x4_t v_sum = v_zero;
+
+        int j = 0;
+        for( ; j <= blockSize - 16; j += 16 )
+        {
+            uint8x16_t v_src1 = vld1q_u8(src1 + j), v_src2 = vld1q_u8(src2 + j);
+
+            uint16x8_t v_src10 = vmovl_u8(vget_low_u8(v_src1)), v_src20 = vmovl_u8(vget_low_u8(v_src2));
+            v_sum = vmlal_u16(v_sum, vget_low_u16(v_src10), vget_low_u16(v_src20));
+            v_sum = vmlal_u16(v_sum, vget_high_u16(v_src10), vget_high_u16(v_src20));
+
+            v_src10 = vmovl_u8(vget_high_u8(v_src1));
+            v_src20 = vmovl_u8(vget_high_u8(v_src2));
+            v_sum = vmlal_u16(v_sum, vget_low_u16(v_src10), vget_low_u16(v_src20));
+            v_sum = vmlal_u16(v_sum, vget_high_u16(v_src10), vget_high_u16(v_src20));
+        }
+
+        for( ; j <= blockSize - 8; j += 8 )
+        {
+            uint16x8_t v_src1 = vmovl_u8(vld1_u8(src1 + j)), v_src2 = vmovl_u8(vld1_u8(src2 + j));
+            v_sum = vmlal_u16(v_sum, vget_low_u16(v_src1), vget_low_u16(v_src2));
+            v_sum = vmlal_u16(v_sum, vget_high_u16(v_src1), vget_high_u16(v_src2));
+        }
+
+        vst1q_u32(buf, v_sum);
+        r += buf[0] + buf[1] + buf[2] + buf[3];
+
+        src1 += blockSize;
+        src2 += blockSize;
+        i += blockSize;
+    }
 #endif
     return r + dotProd_(src1, src2, len - i);
 }
@@ -2866,16 +3009,66 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 
 static double dotProd_8s(const schar* src1, const schar* src2, int len)
 {
-    return dotProd_(src1, src2, len);
+    int i = 0;
+    double r = 0.0;
+
+#if CV_NEON
+    int len0 = len & -8, blockSize0 = (1 << 14), blockSize;
+    int32x4_t v_zero = vdupq_n_s32(0);
+    CV_DECL_ALIGNED(16) int buf[4];
+
+    while( i < len0 )
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        int32x4_t v_sum = v_zero;
+
+        int j = 0;
+        for( ; j <= blockSize - 16; j += 16 )
+        {
+            int8x16_t v_src1 = vld1q_s8(src1 + j), v_src2 = vld1q_s8(src2 + j);
+
+            int16x8_t v_src10 = vmovl_s8(vget_low_s8(v_src1)), v_src20 = vmovl_s8(vget_low_s8(v_src2));
+            v_sum = vmlal_s16(v_sum, vget_low_s16(v_src10), vget_low_s16(v_src20));
+            v_sum = vmlal_s16(v_sum, vget_high_s16(v_src10), vget_high_s16(v_src20));
+
+            v_src10 = vmovl_s8(vget_high_s8(v_src1));
+            v_src20 = vmovl_s8(vget_high_s8(v_src2));
+            v_sum = vmlal_s16(v_sum, vget_low_s16(v_src10), vget_low_s16(v_src20));
+            v_sum = vmlal_s16(v_sum, vget_high_s16(v_src10), vget_high_s16(v_src20));
+        }
+
+        for( ; j <= blockSize - 8; j += 8 )
+        {
+            int16x8_t v_src1 = vmovl_s8(vld1_s8(src1 + j)), v_src2 = vmovl_s8(vld1_s8(src2 + j));
+            v_sum = vmlal_s16(v_sum, vget_low_s16(v_src1), vget_low_s16(v_src2));
+            v_sum = vmlal_s16(v_sum, vget_high_s16(v_src1), vget_high_s16(v_src2));
+        }
+
+        vst1q_s32(buf, v_sum);
+        r += buf[0] + buf[1] + buf[2] + buf[3];
+
+        src1 += blockSize;
+        src2 += blockSize;
+        i += blockSize;
+    }
+#endif
+
+    return r + dotProd_(src1, src2, len - i);
 }
 
 static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
 {
 #if (ARITHM_USE_IPP == 1)
-    double r = 0;
-    if (0 <= ippiDotProd_16u64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
-        return r;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        double r = 0;
+        if (0 <= ippiDotProd_16u64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return r;
+        }
+        setIppErrorStatus();
+    }
 #endif
     return dotProd_(src1, src2, len);
 }
@@ -2883,10 +3076,16 @@ static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
 static double dotProd_16s(const short* src1, const short* src2, int len)
 {
 #if (ARITHM_USE_IPP == 1)
-    double r = 0;
-    if (0 <= ippiDotProd_16s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
-        return r;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        double r = 0;
+        if (0 <= ippiDotProd_16s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return r;
+        }
+        setIppErrorStatus();
+    }
 #endif
     return dotProd_(src1, src2, len);
 }
@@ -2894,32 +3093,73 @@ static double dotProd_16s(const short* src1, const short* src2, int len)
 static double dotProd_32s(const int* src1, const int* src2, int len)
 {
 #if (ARITHM_USE_IPP == 1)
-    double r = 0;
-    if (0 <= ippiDotProd_32s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
-        return r;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        double r = 0;
+        if (0 <= ippiDotProd_32s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return r;
+        }
+        setIppErrorStatus();
+    }
 #endif
     return dotProd_(src1, src2, len);
 }
 
 static double dotProd_32f(const float* src1, const float* src2, int len)
 {
+    double r = 0.0;
+    int i = 0;
+
 #if (ARITHM_USE_IPP == 1)
-    double r = 0;
-    if (0 <= ippsDotProd_32f64f(src1, src2, len, &r))
-        return r;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        if (0 <= ippsDotProd_32f64f(src1, src2, len, &r))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return r;
+        }
+        setIppErrorStatus();
+    }
+#elif CV_NEON
+    int len0 = len & -4, blockSize0 = (1 << 13), blockSize;
+    float32x4_t v_zero = vdupq_n_f32(0.0f);
+    CV_DECL_ALIGNED(16) float buf[4];
+
+    while( i < len0 )
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        float32x4_t v_sum = v_zero;
+
+        int j = 0;
+        for( ; j <= blockSize - 4; j += 4 )
+            v_sum = vmlaq_f32(v_sum, vld1q_f32(src1 + j), vld1q_f32(src2 + j));
+
+        vst1q_f32(buf, v_sum);
+        r += buf[0] + buf[1] + buf[2] + buf[3];
+
+        src1 += blockSize;
+        src2 += blockSize;
+        i += blockSize;
+    }
 #endif
-    return dotProd_(src1, src2, len);
+    return r + dotProd_(src1, src2, len - i);
 }
 
 static double dotProd_64f(const double* src1, const double* src2, int len)
 {
 #if (ARITHM_USE_IPP == 1)
-    double r = 0;
-    if (0 <= ippsDotProd_64f(src1, src2, len, &r))
-        return r;
-    setIppErrorStatus();
+    CV_IPP_CHECK()
+    {
+        double r = 0;
+        if (0 <= ippsDotProd_64f(src1, src2, len, &r))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return r;
+        }
+        setIppErrorStatus();
+    }
 #endif
     return dotProd_(src1, src2, len);
 }

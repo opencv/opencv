@@ -90,67 +90,72 @@ public:
     //not supported: SimpleBlob, Dense
     CV_WRAP static javaFeatureDetector* create( int detectorType )
     {
-        String name;
+        //String name;
         if (detectorType > DYNAMICDETECTOR)
         {
-            name = "Dynamic";
+            //name = "Dynamic";
             detectorType -= DYNAMICDETECTOR;
         }
         if (detectorType > PYRAMIDDETECTOR)
         {
-            name = "Pyramid";
+            //name = "Pyramid";
             detectorType -= PYRAMIDDETECTOR;
         }
         if (detectorType > GRIDDETECTOR)
         {
-            name = "Grid";
+            //name = "Grid";
             detectorType -= GRIDDETECTOR;
         }
 
+        Ptr<FeatureDetector> fd;
         switch(detectorType)
         {
         case FAST:
-            name = name + "FAST";
+            fd = FastFeatureDetector::create();
             break;
-        case STAR:
-            name = name + "STAR";
-            break;
-        case SIFT:
-            name = name + "SIFT";
-            break;
-        case SURF:
-            name = name + "SURF";
-            break;
+        //case STAR:
+        //    fd = xfeatures2d::StarDetector::create();
+        //    break;
+        //case SIFT:
+        //    name = name + "SIFT";
+        //    break;
+        //case SURF:
+        //    name = name + "SURF";
+        //    break;
         case ORB:
-            name = name + "ORB";
+            fd = ORB::create();
             break;
         case MSER:
-            name = name + "MSER";
+            fd = MSER::create();
             break;
         case GFTT:
-            name = name + "GFTT";
+            fd = GFTTDetector::create();
             break;
         case HARRIS:
-            name = name + "HARRIS";
+            {
+            Ptr<GFTTDetector> gftt = GFTTDetector::create();
+            gftt->setHarrisDetector(true);
+            fd = gftt;
+            }
             break;
         case SIMPLEBLOB:
-            name = name + "SimpleBlob";
+            fd = SimpleBlobDetector::create();
             break;
-        case DENSE:
-            name = name + "Dense";
-            break;
+        //case DENSE:
+        //    name = name + "Dense";
+        //    break;
         case BRISK:
-            name = name + "BRISK";
+            fd = BRISK::create();
             break;
         case AKAZE:
-            name = name + "AKAZE";
+            fd = AKAZE::create();
             break;
         default:
             CV_Error( Error::StsBadArg, "Specified feature detector type is not supported." );
             break;
         }
 
-        return new javaFeatureDetector(FeatureDetector::create(name));
+        return new javaFeatureDetector(fd);
     }
 
     CV_WRAP void write( const String& fileName ) const
@@ -332,43 +337,44 @@ public:
     //not supported: Calonder
     CV_WRAP static javaDescriptorExtractor* create( int extractorType )
     {
-        String name;
+        //String name;
 
         if (extractorType > OPPONENTEXTRACTOR)
         {
-            name = "Opponent";
+            //name = "Opponent";
             extractorType -= OPPONENTEXTRACTOR;
         }
 
+        Ptr<DescriptorExtractor> de;
         switch(extractorType)
         {
-        case SIFT:
-            name = name + "SIFT";
-            break;
-        case SURF:
-            name = name + "SURF";
-            break;
+        //case SIFT:
+        //    name = name + "SIFT";
+        //    break;
+        //case SURF:
+        //    name = name + "SURF";
+        //    break;
         case ORB:
-            name = name + "ORB";
+            de = ORB::create();
             break;
-        case BRIEF:
-            name = name + "BRIEF";
-            break;
+        //case BRIEF:
+        //    name = name + "BRIEF";
+        //    break;
         case BRISK:
-            name = name + "BRISK";
+            de = BRISK::create();
             break;
-        case FREAK:
-            name = name + "FREAK";
-            break;
+        //case FREAK:
+        //    name = name + "FREAK";
+        //    break;
         case AKAZE:
-            name = name + "AKAZE";
+            de = AKAZE::create();
             break;
         default:
             CV_Error( Error::StsBadArg, "Specified descriptor extractor type is not supported." );
             break;
         }
 
-        return new javaDescriptorExtractor(DescriptorExtractor::create(name));
+        return new javaDescriptorExtractor(de);
     }
 
     CV_WRAP void write( const String& fileName ) const

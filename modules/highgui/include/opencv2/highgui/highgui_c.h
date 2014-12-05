@@ -51,6 +51,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/** @addtogroup highgui_c
+  @{
+  */
+
 /****************************************************************************************\
 *                                  Basic GUI functions                                   *
 \****************************************************************************************/
@@ -70,7 +74,7 @@ enum {  CV_STYLE_NORMAL         = 0,//QFont::StyleNormal,
 };
 /* ---------*/
 
-//for color cvScalar(blue_component, green_component, red\_component[, alpha_component])
+//for color cvScalar(blue_component, green_component, red_component[, alpha_component])
 //and alpha= 0 <-> 0xFF (not transparent <-> transparent)
 CVAPI(CvFont) cvFontQt(const char* nameFont, int pointSize CV_DEFAULT(-1), CvScalar color CV_DEFAULT(cvScalarAll(0)), int weight CV_DEFAULT(CV_FONT_NORMAL),  int style CV_DEFAULT(CV_STYLE_NORMAL), int spacing CV_DEFAULT(0));
 
@@ -236,6 +240,8 @@ CVAPI(void) cvSetPostprocessFuncWin32_(const void* callback);
 #define cvSetPostprocessFuncWin32(callback) cvSetPostprocessFuncWin32_((const void*)(callback))
 
 #endif
+
+/** @} highgui_c */
 
 #ifdef __cplusplus
 }

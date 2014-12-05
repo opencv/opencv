@@ -62,6 +62,9 @@
 
 #include "opencv2/cudalegacy/NCV.hpp"
 
+//! @addtogroup cudalegacy
+//! @{
+
 /// \brief Model and solver parameters
 struct NCVBroxOpticalFlowDescriptor
 {
@@ -89,6 +92,7 @@ struct NCVBroxOpticalFlowDescriptor
 /// \param [in]  frame1            frame to track
 /// \param [out] u                 flow horizontal component (along \b x axis)
 /// \param [out] v                 flow vertical component (along \b y axis)
+/// \param       stream
 /// \return                        computation status
 /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -100,5 +104,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                              NCVMatrix<Ncv32f> &u,
                              NCVMatrix<Ncv32f> &v,
                              cudaStream_t stream);
+
+//! @}
 
 #endif

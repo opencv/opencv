@@ -18,13 +18,11 @@ endif()
 
 set(videoio_hdrs
     ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp
     )
 
 set(videoio_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/cap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp
     )
 
 file(GLOB videoio_ext_hdrs
@@ -42,6 +40,7 @@ if (WIN32 AND HAVE_DSHOW)
 endif()
 
 if (WIN32 AND HAVE_MSMF)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.hpp)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.cpp)
 endif()
 
@@ -110,6 +109,8 @@ if(HAVE_XIMEA)
 endif(HAVE_XIMEA)
 
 if(HAVE_FFMPEG)
+  list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp)
   if(UNIX AND BZIP2_LIBRARIES)
     list(APPEND VIDEOIO_LIBRARIES ${BZIP2_LIBRARIES})
   endif()
@@ -188,21 +189,7 @@ ocv_create_module(${VIDEOIO_LIBRARIES})
 
 macro(ocv_videoio_configure_target)
 if(APPLE)
-  ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
-  if(HAVE_OBJC_EXCEPTIONS)
-    foreach(source ${OPENCV_MODULE_${the_module}_SOURCES})
-      if("${source}" MATCHES "\\.mm$")
-        get_source_file_property(flags "${source}" COMPILE_FLAGS)
-        if(flags)
-          set(flags "${_flags} -fobjc-exceptions")
-        else()
-          set(flags "-fobjc-exceptions")
-        endif()
-
-        set_source_files_properties("${source}" PROPERTIES COMPILE_FLAGS "${flags}")
-      endif()
-    endforeach()
-  endif()
+  add_apple_compiler_options(the_module)
 endif()
 
 if(BUILD_SHARED_LIBS)

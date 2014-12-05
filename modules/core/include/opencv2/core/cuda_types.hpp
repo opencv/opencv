@@ -57,6 +57,10 @@ namespace cv
 {
     namespace cuda
     {
+
+//! @addtogroup cuda_struct
+//! @{
+
         // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
@@ -85,6 +89,11 @@ namespace cv
             size_t size;
         };
 
+        /** @brief Structure similar to cuda::PtrStepSz but containing only a pointer and row step.
+
+        Width and height fields are excluded due to performance reasons. The structure is intended
+        for internal use or for users who write device code.
+         */
         template <typename T> struct PtrStep : public DevPtr<T>
         {
             __CV_CUDA_HOST_DEVICE__ PtrStep() : step(0) {}
@@ -100,6 +109,12 @@ namespace cv
             __CV_CUDA_HOST_DEVICE__ const T& operator ()(int y, int x) const { return ptr(y)[x]; }
         };
 
+        /** @brief Lightweight class encapsulating pitched memory on a GPU and passed to nvcc-compiled code (CUDA
+        kernels).
+
+        Typically, it is used internally by OpenCV and by users who write device code. You can call
+        its members from both host and device code.
+         */
         template <typename T> struct PtrStepSz : public PtrStep<T>
         {
             __CV_CUDA_HOST_DEVICE__ PtrStepSz() : cols(0), rows(0) {}
@@ -120,6 +135,9 @@ namespace cv
         typedef PtrStep<unsigned char> PtrStepb;
         typedef PtrStep<float> PtrStepf;
         typedef PtrStep<int> PtrStepi;
+
+//! @}
+
     }
 }
 

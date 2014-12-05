@@ -41,6 +41,7 @@
  //M*/
 
 #include "precomp.hpp"
+#include "upnp.h"
 #include "dls.h"
 #include "epnp.h"
 #include "p3p.h"
@@ -107,6 +108,19 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
             cv::Rodrigues(R, rvec);
         return result;
     }
+    else if (flags == SOLVEPNP_UPNP)
+    {
+        upnp PnP(cameraMatrix, opoints, ipoints);
+
+        cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        double f = PnP.compute_pose(R, tvec);
+        cv::Rodrigues(R, rvec);
+        if(cameraMatrix.type() == CV_32F)
+            cameraMatrix.at<float>(0,0) = cameraMatrix.at<float>(1,1) = (float)f;
+        else
+            cameraMatrix.at<double>(0,0) = cameraMatrix.at<double>(1,1) = f;
+        return true;
+    }
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
     return false;
@@ -146,7 +160,7 @@ public:
 
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat(), model = _model.getMat();
 
-        int i, count = opoints.cols;
+        int i, count = opoints.checkVector(3);
         Mat _rvec = model.col(0);
         Mat _tvec = model.col(1);
 
@@ -205,6 +219,7 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     int model_points = 4;                             // minimum of number of model points
     if( flags == cv::SOLVEPNP_ITERATIVE ) model_points = 6;
+    else if( flags == cv::SOLVEPNP_UPNP ) model_points = 6;
     else if( flags == cv::SOLVEPNP_EPNP ) model_points = 5;
 
     double param1 = reprojectionError;                // reprojection error
@@ -236,14 +251,10 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     if(_inliers.needed())
     {
         Mat _local_inliers;
-        int count = 0;
-        for (int i = 0; i < _mask_local_inliers.rows; ++i)
+        for (int i = 0; i < npoints; ++i)
         {
-            if((int)_mask_local_inliers.at<uchar>(i) == 1) // inliers mask
-            {
-                _local_inliers.push_back(count);    // output inliers vector
-                count++;
-            }
+            if((int)_mask_local_inliers.at<uchar>(i) != 0) // inliers mask
+                _local_inliers.push_back(i);    // output inliers vector
         }
         _local_inliers.copyTo(_inliers);
     }

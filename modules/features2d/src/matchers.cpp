@@ -60,113 +60,58 @@ static void ensureSizeIsEnough(int rows, int cols, int type, UMat &m)
         m.create(rows, cols, type);
 }
 
-
-template < int BLOCK_SIZE, int MAX_DESC_LEN >
-static bool ocl_matchUnrolledCached(InputArray _query, InputArray _train,
-                     const UMat &trainIdx, const UMat &distance, int distType)
-{
-    int depth = _query.depth();
-    cv::String opts;
-    opts = cv::format("-D T=%s %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
-        ocl::typeToStr(depth), depth == CV_32F ? "-D T_FLOAT" : "", distType, (int)BLOCK_SIZE, (int)MAX_DESC_LEN );
-    ocl::Kernel k("BruteForceMatch_UnrollMatch", ocl::features2d::brute_force_match_oclsrc, opts);
-    if(k.empty())
-        return false;
-
-    size_t globalSize[] = {(_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
-    size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
-    const size_t smemSize = (BLOCK_SIZE * (MAX_DESC_LEN >= BLOCK_SIZE ? MAX_DESC_LEN : BLOCK_SIZE) + BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
-
-    if(globalSize[0] != 0)
-    {
-        UMat query = _query.getUMat(), train = _train.getUMat();
-
-        int idx = 0;
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(query));
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(train));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(trainIdx));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(distance));
-        idx = k.set(idx, (void *)NULL, smemSize);
-        idx = k.set(idx, query.rows);
-        idx = k.set(idx, query.cols);
-        idx = k.set(idx, train.rows);
-        idx = k.set(idx, train.cols);
-        idx = k.set(idx, (int)query.step);
-
-        return k.run(2, globalSize, localSize, false);
-    }
-    return true;
-}
-
-template < int BLOCK_SIZE >
-static bool ocl_match(InputArray _query, InputArray _train,
-                     const UMat &trainIdx, const UMat &distance, int distType)
-{
-    int depth = _query.depth();
-    cv::String opts;
-    opts = cv::format("-D T=%s %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d",
-        ocl::typeToStr(depth), depth == CV_32F ? "-D T_FLOAT" : "", distType, (int)BLOCK_SIZE);
-    ocl::Kernel k("BruteForceMatch_Match", ocl::features2d::brute_force_match_oclsrc, opts);
-    if(k.empty())
-        return false;
-
-    size_t globalSize[] = {(_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
-    size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
-    const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
-
-    if(globalSize[0] != 0)
-    {
-        UMat query = _query.getUMat(), train = _train.getUMat();
-
-        int idx = 0;
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(query));
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(train));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(trainIdx));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(distance));
-        idx = k.set(idx, (void *)NULL, smemSize);
-        idx = k.set(idx, query.rows);
-        idx = k.set(idx, query.cols);
-        idx = k.set(idx, train.rows);
-        idx = k.set(idx, train.cols);
-        idx = k.set(idx, (int)query.step);
-
-        return k.run(2, globalSize, localSize, false);
-    }
-    return true;
-}
-
-static bool ocl_matchDispatcher(InputArray query, InputArray train,
-                     const UMat &trainIdx, const UMat &distance, int distType)
-{
-    int query_cols = query.size().width;
-    bool is_cpu = ocl::Device::getDefault().type() == ocl::Device::TYPE_CPU;
-    if (query_cols <= 64)
-    {
-        if(!ocl_matchUnrolledCached<16, 64>(query, train, trainIdx, distance, distType)) return false;
-    }
-    else if (query_cols <= 128 && !is_cpu)
-    {
-        if(!ocl_matchUnrolledCached<16, 128>(query, train, trainIdx,  distance, distType)) return false;
-    }
-    else
-    {
-        if(!ocl_match<16>(query, train, trainIdx, distance, distType)) return false;
-    }
-    return true;
-}
-
 static bool ocl_matchSingle(InputArray query, InputArray train,
-        UMat &trainIdx, UMat &distance, int dstType)
+        UMat &trainIdx, UMat &distance, int distType)
 {
     if (query.empty() || train.empty())
         return false;
 
-    int query_rows = query.size().height;
+    const int query_rows = query.rows();
+    const int query_cols = query.cols();
 
     ensureSizeIsEnough(1, query_rows, CV_32S, trainIdx);
     ensureSizeIsEnough(1, query_rows, CV_32F, distance);
 
-    return ocl_matchDispatcher(query, train, trainIdx, distance, dstType);
+    ocl::Device devDef = ocl::Device::getDefault();
+
+    UMat uquery = query.getUMat(), utrain = train.getUMat();
+    int kercn = 1;
+    if (devDef.isIntel() &&
+        (0 == (uquery.step % 4)) && (0 == (uquery.cols % 4)) && (0 == (uquery.offset % 4)) &&
+        (0 == (utrain.step % 4)) && (0 == (utrain.cols % 4)) && (0 == (utrain.offset % 4)))
+        kercn = 4;
+
+    int block_size = 16;
+    int max_desc_len = 0;
+    bool is_cpu = devDef.type() == ocl::Device::TYPE_CPU;
+    if (query_cols <= 64)
+        max_desc_len = 64 / kercn;
+    else if (query_cols <= 128 && !is_cpu)
+        max_desc_len = 128 / kercn;
+
+    int depth = query.depth();
+    cv::String opts;
+    opts = cv::format("-D T=%s -D TN=%s -D kercn=%d %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
+        ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)), kercn, depth == CV_32F ? "-D T_FLOAT" : "", distType, block_size, max_desc_len);
+    ocl::Kernel k("BruteForceMatch_Match", ocl::features2d::brute_force_match_oclsrc, opts);
+    if(k.empty())
+        return false;
+
+    size_t globalSize[] = {(query.size().height + block_size - 1) / block_size * block_size, block_size};
+    size_t localSize[] = {block_size, block_size};
+
+    int idx = 0;
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(uquery));
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(utrain));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(trainIdx));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(distance));
+    idx = k.set(idx, uquery.rows);
+    idx = k.set(idx, uquery.cols);
+    idx = k.set(idx, utrain.rows);
+    idx = k.set(idx, utrain.cols);
+    idx = k.set(idx, (int)(uquery.step / sizeof(float)));
+
+    return k.run(2, globalSize, localSize, false);
 }
 
 static bool ocl_matchConvert(const Mat &trainIdx, const Mat &distance, std::vector< std::vector<DMatch> > &matches)
@@ -213,121 +158,60 @@ static bool ocl_matchDownload(const UMat &trainIdx, const UMat &distance, std::v
     return ocl_matchConvert(trainIdxCPU, distanceCPU, matches);
 }
 
-template < int BLOCK_SIZE, int MAX_DESC_LEN >
-static bool ocl_knn_matchUnrolledCached(InputArray _query, InputArray _train,
-                             const UMat &trainIdx, const UMat &distance, int distType)
-{
-    int depth = _query.depth();
-    cv::String opts;
-    opts = cv::format("-D T=%s %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
-        ocl::typeToStr(depth), depth == CV_32F ? "-D T_FLOAT" : "", distType, (int)BLOCK_SIZE, (int)MAX_DESC_LEN );
-    ocl::Kernel k("BruteForceMatch_knnUnrollMatch", ocl::features2d::brute_force_match_oclsrc, opts);
-    if(k.empty())
-        return false;
-
-    size_t globalSize[] = {(_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
-    size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
-    const size_t smemSize = (BLOCK_SIZE * (MAX_DESC_LEN >= BLOCK_SIZE ? MAX_DESC_LEN : BLOCK_SIZE) + BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
-
-    if(globalSize[0] != 0)
-    {
-        UMat query = _query.getUMat(), train = _train.getUMat();
-
-        int idx = 0;
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(query));
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(train));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(trainIdx));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(distance));
-        idx = k.set(idx, (void *)NULL, smemSize);
-        idx = k.set(idx, query.rows);
-        idx = k.set(idx, query.cols);
-        idx = k.set(idx, train.rows);
-        idx = k.set(idx, train.cols);
-        idx = k.set(idx, (int)query.step);
-
-        return k.run(2, globalSize, localSize, false);
-    }
-    return true;
-}
-
-template < int BLOCK_SIZE >
-static bool ocl_knn_match(InputArray _query, InputArray _train,
-               const UMat &trainIdx, const UMat &distance, int distType)
-{
-    int depth = _query.depth();
-    cv::String opts;
-    opts = format("-D T=%s %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d",
-        ocl::typeToStr(depth), depth == CV_32F ? "-D T_FLOAT" : "", distType, (int)BLOCK_SIZE);
-    ocl::Kernel k("BruteForceMatch_knnMatch", ocl::features2d::brute_force_match_oclsrc, opts);
-    if(k.empty())
-        return false;
-
-    size_t globalSize[] = {(_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
-    size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
-    const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
-
-    if(globalSize[0] != 0)
-    {
-        UMat query = _query.getUMat(), train = _train.getUMat();
-
-        int idx = 0;
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(query));
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(train));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(trainIdx));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(distance));
-        idx = k.set(idx, (void*)NULL, smemSize);
-        idx = k.set(idx, query.rows);
-        idx = k.set(idx, query.cols);
-        idx = k.set(idx, train.rows);
-        idx = k.set(idx, train.cols);
-        idx = k.set(idx, (int)query.step);
-
-        return k.run(2, globalSize, localSize, false);
-    }
-    return true;
-}
-
-static bool ocl_match2Dispatcher(InputArray query, InputArray train, const UMat &trainIdx, const UMat &distance, int distType)
-{
-    bool is_cpu = ocl::Device::getDefault().type() == ocl::Device::TYPE_CPU;
-    if (query.size().width <= 64)
-    {
-        if(!ocl_knn_matchUnrolledCached<16, 64>(query, train, trainIdx, distance, distType))
-            return false;
-    }
-    else if (query.size().width <= 128 && !is_cpu)
-    {
-        if(!ocl_knn_matchUnrolledCached<16, 128>(query, train, trainIdx, distance, distType))
-            return false;
-    }
-    else
-    {
-        if(!ocl_knn_match<16>(query, train, trainIdx, distance, distType))
-            return false;
-    }
-    return true;
-}
-
-static bool ocl_kmatchDispatcher(InputArray query, InputArray train, const UMat &trainIdx,
-                                 const UMat &distance, int distType)
-{
-    return ocl_match2Dispatcher(query, train, trainIdx, distance, distType);
-}
-
 static bool ocl_knnMatchSingle(InputArray query, InputArray train, UMat &trainIdx,
-                               UMat &distance, int dstType)
+                               UMat &distance, int distType)
 {
     if (query.empty() || train.empty())
         return false;
 
-    const int nQuery = query.size().height;
+    const int query_rows = query.rows();
+    const int query_cols = query.cols();
 
-    ensureSizeIsEnough(1, nQuery, CV_32SC2, trainIdx);
-    ensureSizeIsEnough(1, nQuery, CV_32FC2, distance);
+    ensureSizeIsEnough(1, query_rows, CV_32SC2, trainIdx);
+    ensureSizeIsEnough(1, query_rows, CV_32FC2, distance);
 
     trainIdx.setTo(Scalar::all(-1));
 
-    return ocl_kmatchDispatcher(query, train, trainIdx, distance, dstType);
+    ocl::Device devDef = ocl::Device::getDefault();
+
+    UMat uquery = query.getUMat(), utrain = train.getUMat();
+    int kercn = 1;
+    if (devDef.isIntel() &&
+        (0 == (uquery.step % 4)) && (0 == (uquery.cols % 4)) && (0 == (uquery.offset % 4)) &&
+        (0 == (utrain.step % 4)) && (0 == (utrain.cols % 4)) && (0 == (utrain.offset % 4)))
+        kercn = 4;
+
+    int block_size = 16;
+    int max_desc_len = 0;
+    bool is_cpu = devDef.type() == ocl::Device::TYPE_CPU;
+    if (query_cols <= 64)
+        max_desc_len = 64 / kercn;
+    else if (query_cols <= 128 && !is_cpu)
+        max_desc_len = 128 / kercn;
+
+    int depth = query.depth();
+    cv::String opts;
+    opts = cv::format("-D T=%s -D TN=%s -D kercn=%d %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
+        ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)), kercn, depth == CV_32F ? "-D T_FLOAT" : "", distType, block_size, max_desc_len);
+    ocl::Kernel k("BruteForceMatch_knnMatch", ocl::features2d::brute_force_match_oclsrc, opts);
+    if(k.empty())
+        return false;
+
+    size_t globalSize[] = {(query_rows + block_size - 1) / block_size * block_size, block_size};
+    size_t localSize[] = {block_size, block_size};
+
+    int idx = 0;
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(uquery));
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(utrain));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(trainIdx));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(distance));
+    idx = k.set(idx, uquery.rows);
+    idx = k.set(idx, uquery.cols);
+    idx = k.set(idx, utrain.rows);
+    idx = k.set(idx, utrain.cols);
+    idx = k.set(idx, (int)(uquery.step / sizeof(float)));
+
+    return k.run(2, globalSize, localSize, false);
 }
 
 static bool ocl_knnMatchConvert(const Mat &trainIdx, const Mat &distance, std::vector< std::vector<DMatch> > &matches, bool compactResult)
@@ -383,113 +267,8 @@ static bool ocl_knnMatchDownload(const UMat &trainIdx, const UMat &distance, std
     Mat trainIdxCPU = trainIdx.getMat(ACCESS_READ);
     Mat distanceCPU = distance.getMat(ACCESS_READ);
 
-    if (ocl_knnMatchConvert(trainIdxCPU, distanceCPU, matches, compactResult) )
-        return true;
-    return false;
+    return ocl_knnMatchConvert(trainIdxCPU, distanceCPU, matches, compactResult);
 }
-
-template < int BLOCK_SIZE, int MAX_DESC_LEN >
-static bool ocl_matchUnrolledCached(InputArray _query, InputArray _train, float maxDistance,
-                  const UMat &trainIdx, const UMat &distance, const UMat &nMatches, int distType)
-{
-    int depth = _query.depth();
-    cv::String opts;
-    opts = format("-D T=%s %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
-        ocl::typeToStr(depth), depth == CV_32F ? "-D T_FLOAT" : "", distType, (int)BLOCK_SIZE, (int)MAX_DESC_LEN);
-    ocl::Kernel k("BruteForceMatch_RadiusUnrollMatch", ocl::features2d::brute_force_match_oclsrc, opts);
-    if(k.empty())
-        return false;
-
-    size_t globalSize[] = {(_train.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, (_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, 1};
-    size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
-    const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
-
-    if(globalSize[0] != 0)
-    {
-        UMat query = _query.getUMat(), train = _train.getUMat();
-
-        int idx = 0;
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(query));
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(train));
-        idx = k.set(idx, maxDistance);
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(trainIdx));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(distance));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(nMatches));
-        idx = k.set(idx, (void*)NULL, smemSize);
-        idx = k.set(idx, query.rows);
-        idx = k.set(idx, query.cols);
-        idx = k.set(idx, train.rows);
-        idx = k.set(idx, train.cols);
-        idx = k.set(idx, trainIdx.cols);
-        idx = k.set(idx, (int)query.step);
-        idx = k.set(idx, (int)trainIdx.step);
-
-        return k.run(2, globalSize, localSize, false);
-    }
-    return true;
-}
-
-//radius_match
-template < int BLOCK_SIZE >
-static bool ocl_radius_match(InputArray _query, InputArray _train, float maxDistance,
-                  const UMat &trainIdx, const UMat &distance, const UMat &nMatches, int distType)
-{
-    int depth = _query.depth();
-    cv::String opts;
-    opts = format("-D T=%s %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d", ocl::typeToStr(depth), depth == CV_32F ? "-D T_FLOAT" : "", distType, (int)BLOCK_SIZE);
-    ocl::Kernel k("BruteForceMatch_RadiusMatch", ocl::features2d::brute_force_match_oclsrc, opts);
-    if(k.empty())
-        return false;
-
-    size_t globalSize[] = {(_train.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, (_query.size().height + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, 1};
-    size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
-    const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
-
-    if(globalSize[0] != 0)
-    {
-        UMat query = _query.getUMat(), train = _train.getUMat();
-
-        int idx = 0;
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(query));
-        idx = k.set(idx, ocl::KernelArg::PtrReadOnly(train));
-        idx = k.set(idx, maxDistance);
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(trainIdx));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(distance));
-        idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(nMatches));
-        idx = k.set(idx, (void*)NULL, smemSize);
-        idx = k.set(idx, query.rows);
-        idx = k.set(idx, query.cols);
-        idx = k.set(idx, train.rows);
-        idx = k.set(idx, train.cols);
-        idx = k.set(idx, trainIdx.cols);
-        idx = k.set(idx, (int)query.step);
-        idx = k.set(idx, (int)trainIdx.step);
-
-        return k.run(2, globalSize, localSize, false);
-    }
-    return true;
-}
-
-static bool ocl_rmatchDispatcher(InputArray query, InputArray train,
-        UMat &trainIdx,   UMat &distance, UMat &nMatches, float maxDistance, int distType)
-{
-    bool is_cpu = ocl::Device::getDefault().type() == ocl::Device::TYPE_CPU;
-    int query_cols = query.size().width;
-    if (query_cols <= 64)
-    {
-        if(!ocl_matchUnrolledCached<16, 64>(query, train, maxDistance, trainIdx, distance, nMatches, distType)) return false;
-    }
-    else if (query_cols <= 128 && !is_cpu)
-    {
-        if(!ocl_matchUnrolledCached<16, 128>(query, train, maxDistance, trainIdx, distance, nMatches, distType)) return false;
-    }
-    else
-    {
-        if(!ocl_radius_match<16>(query, train, maxDistance, trainIdx, distance, nMatches, distType)) return false;
-    }
-    return true;
-}
-
 
 static bool ocl_radiusMatchSingle(InputArray query, InputArray train,
         UMat &trainIdx,   UMat &distance, UMat &nMatches, float maxDistance, int distType)
@@ -497,20 +276,55 @@ static bool ocl_radiusMatchSingle(InputArray query, InputArray train,
     if (query.empty() || train.empty())
         return false;
 
-    const int nQuery = query.size().height;
-    const int nTrain = train.size().height;
+    const int query_rows = query.rows();
+    const int train_rows = train.rows();
 
-    ensureSizeIsEnough(1, nQuery, CV_32SC1, nMatches);
+    ensureSizeIsEnough(1, query_rows, CV_32SC1, nMatches);
 
     if (trainIdx.empty())
     {
-        ensureSizeIsEnough(nQuery, std::max((nTrain / 100), 10), CV_32SC1, trainIdx);
-        ensureSizeIsEnough(nQuery, std::max((nTrain / 100), 10), CV_32FC1, distance);
+        ensureSizeIsEnough(query_rows, std::max((train_rows / 100), 10), CV_32SC1, trainIdx);
+        ensureSizeIsEnough(query_rows, std::max((train_rows / 100), 10), CV_32FC1, distance);
     }
 
     nMatches.setTo(Scalar::all(0));
 
-    return ocl_rmatchDispatcher(query, train, trainIdx, distance, nMatches, maxDistance, distType);
+    ocl::Device devDef = ocl::Device::getDefault();
+    UMat uquery = query.getUMat(), utrain = train.getUMat();
+    int kercn = 1;
+    if (devDef.isIntel() &&
+        (0 == (uquery.step % 4)) && (0 == (uquery.cols % 4)) && (0 == (uquery.offset % 4)) &&
+        (0 == (utrain.step % 4)) && (0 == (utrain.cols % 4)) && (0 == (utrain.offset % 4)))
+        kercn = 4;
+
+    int block_size = 16;
+    int depth = query.depth();
+    cv::String opts;
+    opts = cv::format("-D T=%s -D TN=%s -D kercn=%d %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d",
+        ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)), kercn, depth == CV_32F ? "-D T_FLOAT" : "", distType, block_size);
+    ocl::Kernel k("BruteForceMatch_RadiusMatch", ocl::features2d::brute_force_match_oclsrc, opts);
+    if (k.empty())
+        return false;
+
+    size_t globalSize[] = {(train_rows + block_size - 1) / block_size * block_size, (query_rows + block_size - 1) / block_size * block_size, 1};
+    size_t localSize[] = {block_size, block_size, 1};
+
+    int idx = 0;
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(uquery));
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(utrain));
+    idx = k.set(idx, maxDistance);
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(trainIdx));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(distance));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(nMatches));
+    idx = k.set(idx, uquery.rows);
+    idx = k.set(idx, uquery.cols);
+    idx = k.set(idx, utrain.rows);
+    idx = k.set(idx, utrain.cols);
+    idx = k.set(idx, trainIdx.cols);
+    idx = k.set(idx, (int)(uquery.step / sizeof(float)));
+    idx = k.set(idx, (int)(trainIdx.step / sizeof(int)));
+
+    return k.run(2, globalSize, localSize, false);
 }
 
 static bool ocl_radiusMatchConvert(const Mat &trainIdx, const Mat &distance, const Mat &_nMatches,
@@ -943,12 +757,18 @@ void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vec
             if(trainDescCollection.empty())
             {
                 if(ocl_match(_queryDescriptors, utrainDescCollection[0], matches, normType))
+                {
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
+                }
             }
             else
             {
                 if(ocl_match(_queryDescriptors, trainDescCollection[0], matches, normType))
+                {
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
+                }
             }
         }
         else
@@ -956,12 +776,18 @@ void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vec
             if(trainDescCollection.empty())
             {
                 if(ocl_knnMatch(_queryDescriptors, utrainDescCollection[0], matches, knn, normType, compactResult) )
+                {
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
+                }
             }
             else
             {
                 if(ocl_knnMatch(_queryDescriptors, trainDescCollection[0], matches, knn, normType, compactResult) )
+                {
+                    CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
+                }
             }
         }
     }
@@ -1073,12 +899,18 @@ void BFMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vector<std::
         if (trainDescCollection.empty())
         {
             if(ocl_radiusMatch(_queryDescriptors, utrainDescCollection[0], matches, maxDistance, normType, compactResult) )
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
         }
         else
         {
             if (ocl_radiusMatch(_queryDescriptors, trainDescCollection[0], matches, maxDistance, normType, compactResult) )
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
         }
     }
 

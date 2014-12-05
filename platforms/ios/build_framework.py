@@ -15,7 +15,7 @@ Script will create <outputdir>, if it's missing, and a few its subdirectories:
         build/
             iPhoneOS-*/
                [cmake-generated build tree for an iOS device target]
-            iPhoneSimulator/
+            iPhoneSimulator-*/
                [cmake-generated build tree for iOS simulator]
         opencv2.framework/
             [the framework content]
@@ -25,7 +25,18 @@ The script should handle minor OpenCV updates efficiently
 However, opencv2.framework directory is erased and recreated on each run.
 """
 
-import glob, re, os, os.path, shutil, string, sys
+import glob, re, os, os.path, shutil, string, sys, exceptions, subprocess
+
+def execute(cmd):
+    try:
+        print >>sys.stderr, "Executing:", cmd
+        retcode = subprocess.call(cmd, shell=True)
+        if retcode < 0:
+            raise Exception("Child was terminated by signal:", -retcode)
+        elif retcode > 0:
+            raise Exception("Child returned:", retcode)
+    except OSError as e:
+        raise Exception("Execution failed:", e)
 
 def build_opencv(srcroot, buildroot, target, arch):
     "builds OpenCV for device or simulator"
@@ -42,19 +53,23 @@ def build_opencv(srcroot, buildroot, target, arch):
                 "-DBUILD_opencv_world=ON " +
                 "-DCMAKE_C_FLAGS=\"-Wno-implicit-function-declaration\" " +
                 "-DCMAKE_INSTALL_PREFIX=install") % (srcroot, target)
-    # if cmake cache exists, just rerun cmake to update OpenCV.xproj if necessary
+
+    if arch.startswith("armv"):
+        cmakeargs += " -DENABLE_NEON=ON"
+
+    # if cmake cache exists, just rerun cmake to update OpenCV.xcodeproj if necessary
     if os.path.isfile(os.path.join(builddir, "CMakeCache.txt")):
-        os.system("cmake %s ." % (cmakeargs,))
+        execute("cmake %s ." % (cmakeargs,))
     else:
-        os.system("cmake %s %s" % (cmakeargs, srcroot))
+        execute("cmake %s %s" % (cmakeargs, srcroot))
 
     for wlib in [builddir + "/modules/world/UninstalledProducts/libopencv_world.a",
                  builddir + "/lib/Release/libopencv_world.a"]:
         if os.path.isfile(wlib):
             os.remove(wlib)
 
-    os.system("xcodebuild IPHONEOS_DEPLOYMENT_TARGET=6.0 -parallelizeTargets ARCHS=%s -jobs 8 -sdk %s -configuration Release -target ALL_BUILD" % (arch, target.lower()))
-    os.system("xcodebuild IPHONEOS_DEPLOYMENT_TARGET=6.0 ARCHS=%s -sdk %s -configuration Release -target install install" % (arch, target.lower()))
+    execute("xcodebuild IPHONEOS_DEPLOYMENT_TARGET=6.0 -parallelizeTargets ARCHS=%s -jobs 8 -sdk %s -configuration Release -target ALL_BUILD" % (arch, target.lower()))
+    execute("xcodebuild IPHONEOS_DEPLOYMENT_TARGET=6.0 ARCHS=%s -sdk %s -configuration Release -target install install" % (arch, target.lower()))
     os.chdir(currdir)
 
 def put_framework_together(srcroot, dstroot):
@@ -82,7 +97,7 @@ def put_framework_together(srcroot, dstroot):
 
     # make universal static lib
     wlist = " ".join(["../build/" + t + "/lib/Release/libopencv_world.a" for t in targetlist])
-    os.system("lipo -create " + wlist + " -o " + dstdir + "/opencv2")
+    execute("lipo -create " + wlist + " -o " + dstdir + "/opencv2")
 
     # copy Info.plist
     shutil.copyfile(tdir0 + "/ios/Info.plist", dstdir + "/Resources/Info.plist")
@@ -97,10 +112,13 @@ def put_framework_together(srcroot, dstroot):
 def build_framework(srcroot, dstroot):
     "main function to do all the work"
 
-    targets = ["iPhoneOS", "iPhoneOS", "iPhoneOS", "iPhoneSimulator", "iPhoneSimulator"]
-    archs = ["armv7", "armv7s", "arm64", "i386", "x86_64"]
-    for i in range(len(targets)):
-        build_opencv(srcroot, os.path.join(dstroot, "build"), targets[i], archs[i])
+    targets = [("armv7", "iPhoneOS"),
+               ("armv7s", "iPhoneOS"),
+               ("arm64", "iPhoneOS"),
+               ("i386", "iPhoneSimulator"),
+               ("x86_64", "iPhoneSimulator")]
+    for t in targets:
+        build_opencv(srcroot, os.path.join(dstroot, "build"), t[1], t[0])
 
     put_framework_together(srcroot, dstroot)
 
@@ -110,4 +128,8 @@ if __name__ == "__main__":
         print "Usage:\n\t./build_framework.py <outputdir>\n\n"
         sys.exit(0)
 
-    build_framework(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../..")), os.path.abspath(sys.argv[1]))
+    try:
+        build_framework(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../..")), os.path.abspath(sys.argv[1]))
+    except Exception as e:
+        print >>sys.stderr, e
+        sys.exit(1)

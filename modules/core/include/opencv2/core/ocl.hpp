@@ -46,6 +46,9 @@
 
 namespace cv { namespace ocl {
 
+//! @addtogroup core_opencl
+//! @{
+
 CV_EXPORTS_W bool haveOpenCL();
 CV_EXPORTS_W bool useOpenCL();
 CV_EXPORTS_W bool haveAmdBlas();
@@ -618,6 +621,12 @@ CV_EXPORTS int predictOptimalVectorWidth(InputArray src1, InputArray src2 = noAr
                                          InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray(),
                                          OclVectorStrategy strat = OCL_VECTOR_DEFAULT);
 
+CV_EXPORTS int checkOptimalVectorWidth(const int *vectorWidths,
+                                       InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                       InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                       InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray(),
+                                       OclVectorStrategy strat = OCL_VECTOR_DEFAULT);
+
 // with OCL_VECTOR_MAX strategy
 CV_EXPORTS int predictOptimalVectorWidthMax(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
                                             InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
@@ -659,6 +668,8 @@ CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
 CV_EXPORTS_W bool isPerformanceCheckBypassed();
 #define OCL_PERFORMANCE_CHECK(condition) (cv::ocl::isPerformanceCheckBypassed() || (condition))
+
+//! @}
 
 }}
 

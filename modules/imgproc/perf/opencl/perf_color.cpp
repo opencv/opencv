@@ -58,8 +58,9 @@ using std::tr1::make_tuple;
 
 CV_ENUM(ConversionTypes, COLOR_RGB2GRAY, COLOR_RGB2BGR, COLOR_RGB2YUV, COLOR_YUV2RGB, COLOR_RGB2YCrCb,
         COLOR_YCrCb2RGB, COLOR_RGB2XYZ, COLOR_XYZ2RGB, COLOR_RGB2HSV, COLOR_HSV2RGB, COLOR_RGB2HLS,
-        COLOR_HLS2RGB, COLOR_BGR5652BGR, COLOR_BGR2BGR565, COLOR_RGBA2mRGBA, COLOR_mRGBA2RGBA, COLOR_YUV2RGB_NV12,
-        COLOR_RGB2Lab, COLOR_Lab2BGR, COLOR_RGB2Luv, COLOR_Luv2LBGR)
+        COLOR_HLS2RGB, COLOR_BGR5652BGR, COLOR_BGR2BGR565, COLOR_RGBA2mRGBA, COLOR_mRGBA2RGBA,
+        COLOR_RGB2Lab, COLOR_Lab2BGR, COLOR_RGB2Luv, COLOR_Luv2LBGR, COLOR_YUV2RGB_NV12, COLOR_YUV2RGB_IYUV,
+        COLOR_YUV2GRAY_420, COLOR_RGB2YUV_IYUV, COLOR_YUV2RGB_YUY2, COLOR_YUV2GRAY_YUY2)
 
 typedef tuple<Size, tuple<ConversionTypes, int, int> > CvtColorParams;
 typedef TestBaseWithParam<CvtColorParams> CvtColorFixture;
@@ -83,11 +84,16 @@ OCL_PERF_TEST_P(CvtColorFixture, CvtColor, testing::Combine(
                     make_tuple(ConversionTypes(COLOR_BGR2BGR565), 3, 2),
                     make_tuple(ConversionTypes(COLOR_RGBA2mRGBA), 4, 4),
                     make_tuple(ConversionTypes(COLOR_mRGBA2RGBA), 4, 4),
-                    make_tuple(ConversionTypes(COLOR_YUV2RGB_NV12), 1, 3),
                     make_tuple(ConversionTypes(COLOR_RGB2Lab), 3, 3),
                     make_tuple(ConversionTypes(COLOR_Lab2BGR), 3, 4),
                     make_tuple(ConversionTypes(COLOR_RGB2Luv), 3, 3),
-                    make_tuple(ConversionTypes(COLOR_Luv2LBGR), 3, 4)
+                    make_tuple(ConversionTypes(COLOR_Luv2LBGR), 3, 4),
+                    make_tuple(ConversionTypes(COLOR_YUV2RGB_NV12), 1, 3),
+                    make_tuple(ConversionTypes(COLOR_YUV2RGB_IYUV), 1, 3),
+                    make_tuple(ConversionTypes(COLOR_YUV2GRAY_420), 1, 1),
+                    make_tuple(ConversionTypes(COLOR_RGB2YUV_IYUV), 3, 1),
+                    make_tuple(ConversionTypes(COLOR_YUV2RGB_YUY2), 2, 3),
+                    make_tuple(ConversionTypes(COLOR_YUV2GRAY_YUY2), 2, 1)
                     )))
 {
     CvtColorParams params = GetParam();

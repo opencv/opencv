@@ -185,11 +185,11 @@ CUDA_TEST_P(ORB, Accuracy)
         cv::cuda::GpuMat descriptors;
         orb(loadMat(image), loadMat(mask), keypoints, descriptors);
 
-        cv::ORB orb_gold(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
+        cv::Ptr<cv::ORB> orb_gold = cv::ORB::create(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
 
         std::vector<cv::KeyPoint> keypoints_gold;
         cv::Mat descriptors_gold;
-        orb_gold(image, mask, keypoints_gold, descriptors_gold);
+        orb_gold->detectAndCompute(image, mask, keypoints_gold, descriptors_gold);
 
         cv::BFMatcher matcher(cv::NORM_HAMMING);
         std::vector<cv::DMatch> matches;
