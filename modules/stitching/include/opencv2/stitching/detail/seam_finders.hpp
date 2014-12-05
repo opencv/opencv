@@ -50,22 +50,35 @@
 namespace cv {
 namespace detail {
 
+//! @addtogroup stitching_seam
+//! @{
+
+/** @brief Base class for a seam estimator.
+ */
 class CV_EXPORTS SeamFinder
 {
 public:
     virtual ~SeamFinder() {}
+    /** @brief Estimates seams.
+
+    @param src Source images
+    @param corners Source image top-left corners
+    @param masks Source image masks to update
+     */
     virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
                       std::vector<UMat> &masks) = 0;
 };
 
-
+/** @brief Stub seam estimator which does nothing.
+ */
 class CV_EXPORTS NoSeamFinder : public SeamFinder
 {
 public:
     void find(const std::vector<UMat>&, const std::vector<Point>&, std::vector<UMat>&) {}
 };
 
-
+/** @brief Base class for all pairwise seam estimators.
+ */
 class CV_EXPORTS PairwiseSeamFinder : public SeamFinder
 {
 public:
@@ -74,6 +87,12 @@ public:
 
 protected:
     void run();
+    /** @brief Resolves masks intersection of two specified images in the given ROI.
+
+    @param first First image index
+    @param second Second image index
+    @param roi Region of interest
+     */
     virtual void findInPair(size_t first, size_t second, Rect roi) = 0;
 
     std::vector<UMat> images_;
@@ -82,7 +101,8 @@ protected:
     std::vector<UMat> masks_;
 };
 
-
+/** @brief Voronoi diagram-based seam estimator.
+ */
 class CV_EXPORTS VoronoiSeamFinder : public PairwiseSeamFinder
 {
 public:
@@ -201,14 +221,16 @@ private:
     std::set<std::pair<int, int> > edges_;
 };
 
-
+/** @brief Base class for all minimum graph-cut-based seam estimators.
+ */
 class CV_EXPORTS GraphCutSeamFinderBase
 {
 public:
     enum CostType { COST_COLOR, COST_COLOR_GRAD };
 };
 
-
+/** @brief Minimum graph cut-based seam estimator. See details in @cite V03 .
+ */
 class CV_EXPORTS GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
 {
 public:
@@ -252,6 +274,8 @@ private:
     float bad_region_penalty_;
 };
 #endif
+
+//! @}
 
 } // namespace detail
 } // namespace cv

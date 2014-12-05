@@ -54,6 +54,9 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab
+//! @{
+
 class CV_EXPORTS WobbleSuppressorBase
 {
 public:
@@ -128,6 +131,8 @@ private:
     cuda::GpuMat mapx_, mapy_;
 };
 #endif
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

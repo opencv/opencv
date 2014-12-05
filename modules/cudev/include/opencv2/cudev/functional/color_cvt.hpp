@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // Various 3/4-channel to 3/4-channel RGB transformations
 
 #define CV_CUDEV_RGB2RGB_INST(name, scn, dcn, bidx) \
@@ -468,6 +471,8 @@ CV_CUDEV_RGB5x52GRAY_INST(BGR555_to_GRAY, 5)
 CV_CUDEV_RGB5x52GRAY_INST(BGR565_to_GRAY, 6)
 
 #undef CV_CUDEV_RGB5x52GRAY_INST
+
+//! @}
 
 }}
 

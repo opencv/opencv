@@ -59,6 +59,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <typename T> struct Sum : plus<T>
 {
     typedef T work_type;
@@ -224,6 +227,8 @@ __host__ void gridReduceToColumn(const SrcPtr& src, GpuMat_<ResType>& dst, Strea
 {
     gridReduceToColumn_<Reductor, DefaultReduceToVecPolicy>(src, dst, stream);
 }
+
+//! @}
 
 }}
 

@@ -54,6 +54,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class SrcPtr, class MapPtr> struct RemapPtr1
 {
     typedef typename PtrTraits<SrcPtr>::value_type value_type;
@@ -148,6 +151,8 @@ template <class SrcPtr, class MapPtr> struct PtrTraits< RemapPtr1Sz<SrcPtr, MapP
 template <class SrcPtr, class MapXPtr, class MapYPtr> struct PtrTraits< RemapPtr2Sz<SrcPtr, MapXPtr, MapYPtr> > : PtrTraitsBase<RemapPtr2Sz<SrcPtr, MapXPtr, MapYPtr>, RemapPtr2<SrcPtr, MapXPtr, MapYPtr> >
 {
 };
+
+//! @}
 
 }}
 

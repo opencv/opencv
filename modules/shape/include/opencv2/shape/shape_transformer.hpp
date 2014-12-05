@@ -50,20 +50,38 @@
 namespace cv
 {
 
-/*!
- * The base class for ShapeTransformer.
- * This is just to define the common interface for
- * shape transformation techniques.
+//! @addtogroup shape
+//! @{
+
+/** @brief Abstract base class for shape transformation algorithms.
  */
 class CV_EXPORTS_W ShapeTransformer : public Algorithm
 {
 public:
-    /* Estimate, Apply Transformation and return Transforming cost*/
+    /** @brief Estimate the transformation parameters of the current transformer algorithm, based on point matches.
+
+    @param transformingShape Contour defining first shape.
+    @param targetShape Contour defining second shape (Target).
+    @param matches Standard vector of Matches between points.
+     */
     CV_WRAP virtual void estimateTransformation(InputArray transformingShape, InputArray targetShape,
                                                  std::vector<DMatch>& matches) = 0;
 
+    /** @brief Apply a transformation, given a pre-estimated transformation parameters.
+
+    @param input Contour (set of points) to apply the transformation.
+    @param output Output contour.
+     */
     CV_WRAP virtual float applyTransformation(InputArray input, OutputArray output=noArray()) = 0;
 
+    /** @brief Apply a transformation, given a pre-estimated transformation parameters, to an Image.
+
+    @param transformingImage Input image.
+    @param output Output image.
+    @param flags Image interpolation method.
+    @param borderMode border style.
+    @param borderValue border value.
+     */
     CV_WRAP virtual void warpImage(InputArray transformingImage, OutputArray output,
                                    int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT,
                                    const Scalar& borderValue=Scalar()) const = 0;
@@ -71,30 +89,33 @@ public:
 
 /***********************************************************************************/
 /***********************************************************************************/
-/*!
- * Thin Plate Spline Transformation
- * Implementation of the TPS transformation
- * according to "Principal Warps: Thin-Plate Splines and the
- * Decomposition of Deformations" by Juan Manuel Perez for the GSOC 2013
- */
 
+/** @brief Definition of the transformation
+
+ocupied in the paper "Principal Warps: Thin-Plate Splines and Decomposition of Deformations", by
+F.L. Bookstein (PAMI 1989). :
+ */
 class CV_EXPORTS_W ThinPlateSplineShapeTransformer : public ShapeTransformer
 {
 public:
+    /** @brief Set the regularization parameter for relaxing the exact interpolation requirements of the TPS
+    algorithm.
+
+    @param beta value of the regularization parameter.
+     */
     CV_WRAP virtual void setRegularizationParameter(double beta) = 0;
     CV_WRAP virtual double getRegularizationParameter() const = 0;
 };
 
-/* Complete constructor */
+/** Complete constructor */
 CV_EXPORTS_W Ptr<ThinPlateSplineShapeTransformer>
     createThinPlateSplineShapeTransformer(double regularizationParameter=0);
 
 /***********************************************************************************/
 /***********************************************************************************/
-/*!
- * Affine Transformation as a derivated from ShapeTransformer
- */
 
+/** @brief Wrapper class for the OpenCV Affine Transformation algorithm. :
+ */
 class CV_EXPORTS_W AffineTransformer : public ShapeTransformer
 {
 public:
@@ -102,8 +123,10 @@ public:
     CV_WRAP virtual bool getFullAffine() const = 0;
 };
 
-/* Complete constructor */
+/** Complete constructor */
 CV_EXPORTS_W Ptr<AffineTransformer> createAffineTransformer(bool fullAffine);
+
+//! @}
 
 } // cv
 #endif

@@ -284,14 +284,14 @@ TEST(SURF)
     Mat src = imread(abspath("../data/aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open ../data/aloeL.jpg");
 
-    xfeatures2d::SURF surf;
+    Ptr<Feature2D> surf = xfeatures2d::SURF::create();
     vector<KeyPoint> keypoints;
     Mat descriptors;
 
-    surf(src, Mat(), keypoints, descriptors);
+    surf->detectAndCompute(src, Mat(), keypoints, descriptors);
 
     CPU_ON;
-    surf(src, Mat(), keypoints, descriptors);
+    surf->detectAndCompute(src, Mat(), keypoints, descriptors);
     CPU_OFF;
 
     cuda::SURF_CUDA d_surf;

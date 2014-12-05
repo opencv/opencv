@@ -50,6 +50,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 enum
 {
     LOG_WARP_SIZE = 5,
@@ -116,6 +119,8 @@ __device__ __forceinline__ void warpYota(OutIt beg, OutIt end, T value)
     for(OutIt t = beg + lane; t < end; t += WARP_SIZE, value += WARP_SIZE)
         *t = value;
 }
+
+//! @}
 
 }}
 

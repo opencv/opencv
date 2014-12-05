@@ -49,4 +49,11 @@
 #include "opencv2/cudalegacy/NCVHaarObjectDetection.hpp"
 #include "opencv2/cudalegacy/NCVBroxOpticalFlow.hpp"
 
+/**
+  @addtogroup cuda
+  @{
+    @defgroup cudalegacy Legacy support
+  @}
+*/
+
 #endif /* __OPENCV_CUDALEGACY_HPP__ */

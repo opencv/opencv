@@ -47,6 +47,15 @@
 #include "opencv2/flann/miniflann.hpp"
 #include "opencv2/flann/flann_base.hpp"
 
+/**
+@defgroup flann Clustering and Search in Multi-Dimensional Spaces
+
+This section documents OpenCV's interface to the FLANN library. FLANN (Fast Library for Approximate
+Nearest Neighbors) is a library that contains a collection of algorithms optimized for fast nearest
+neighbor search in large datasets and for high dimensional features. More information about FLANN
+can be found in @cite Muja2009 .
+*/
+
 namespace cvflann
 {
     CV_EXPORTS flann_distance_t flann_distance_type();
@@ -58,6 +67,10 @@ namespace cv
 {
 namespace flann
 {
+
+
+//! @addtogroup flann
+//! @{
 
 template <typename T> struct CvType {};
 template <> struct CvType<unsigned char> { static int type() { return CV_8U; } };
@@ -88,7 +101,9 @@ using ::cvflann::ChiSquareDistance;
 using ::cvflann::KL_Divergence;
 
 
-
+/** @brief The FLANN nearest neighbor index class. This class is templated with the type of elements for which
+the index is built.
+ */
 template <typename Distance>
 class GenericIndex
 {
@@ -96,10 +111,108 @@ public:
         typedef typename Distance::ElementType ElementType;
         typedef typename Distance::ResultType DistanceType;
 
+        /** @brief Constructs a nearest neighbor search index for a given dataset.
+
+        @param features Matrix of containing the features(points) to index. The size of the matrix is
+        num_features x feature_dimensionality and the data type of the elements in the matrix must
+        coincide with the type of the index.
+        @param params Structure containing the index parameters. The type of index that will be
+        constructed depends on the type of this parameter. See the description.
+        @param distance
+
+        The method constructs a fast search structure from a set of features using the specified algorithm
+        with specified parameters, as defined by params. params is a reference to one of the following class
+        IndexParams descendants:
+
+        - **LinearIndexParams** When passing an object of this type, the index will perform a linear,
+        brute-force search. :
+        @code
+        struct LinearIndexParams : public IndexParams
+        {
+        };
+        @endcode
+        - **KDTreeIndexParams** When passing an object of this type the index constructed will consist of
+        a set of randomized kd-trees which will be searched in parallel. :
+        @code
+        struct KDTreeIndexParams : public IndexParams
+        {
+            KDTreeIndexParams( int trees = 4 );
+        };
+        @endcode
+        - **KMeansIndexParams** When passing an object of this type the index constructed will be a
+        hierarchical k-means tree. :
+        @code
+        struct KMeansIndexParams : public IndexParams
+        {
+            KMeansIndexParams(
+                int branching = 32,
+                int iterations = 11,
+                flann_centers_init_t centers_init = CENTERS_RANDOM,
+                float cb_index = 0.2 );
+        };
+        @endcode
+        - **CompositeIndexParams** When using a parameters object of this type the index created
+        combines the randomized kd-trees and the hierarchical k-means tree. :
+        @code
+        struct CompositeIndexParams : public IndexParams
+        {
+            CompositeIndexParams(
+                int trees = 4,
+                int branching = 32,
+                int iterations = 11,
+                flann_centers_init_t centers_init = CENTERS_RANDOM,
+                float cb_index = 0.2 );
+        };
+        @endcode
+        - **LshIndexParams** When using a parameters object of this type the index created uses
+        multi-probe LSH (by Multi-Probe LSH: Efficient Indexing for High-Dimensional Similarity Search
+        by Qin Lv, William Josephson, Zhe Wang, Moses Charikar, Kai Li., Proceedings of the 33rd
+        International Conference on Very Large Data Bases (VLDB). Vienna, Austria. September 2007) :
+        @code
+        struct LshIndexParams : public IndexParams
+        {
+            LshIndexParams(
+                unsigned int table_number,
+                unsigned int key_size,
+                unsigned int multi_probe_level );
+        };
+        @endcode
+        - **AutotunedIndexParams** When passing an object of this type the index created is
+        automatically tuned to offer the best performance, by choosing the optimal index type
+        (randomized kd-trees, hierarchical kmeans, linear) and parameters for the dataset provided. :
+        @code
+        struct AutotunedIndexParams : public IndexParams
+        {
+            AutotunedIndexParams(
+                float target_precision = 0.9,
+                float build_weight = 0.01,
+                float memory_weight = 0,
+                float sample_fraction = 0.1 );
+        };
+        @endcode
+        - **SavedIndexParams** This object type is used for loading a previously saved index from the
+        disk. :
+        @code
+        struct SavedIndexParams : public IndexParams
+        {
+            SavedIndexParams( String filename );
+        };
+        @endcode
+         */
         GenericIndex(const Mat& features, const ::cvflann::IndexParams& params, Distance distance = Distance());
 
         ~GenericIndex();
 
+        /** @brief Performs a K-nearest neighbor search for a given query point using the index.
+
+        @param query The query point
+        @param indices Vector that will contain the indices of the K-nearest neighbors found. It must have
+        at least knn size.
+        @param dists Vector that will contain the distances to the K-nearest neighbors found. It must have
+        at least knn size.
+        @param knn Number of nearest neighbors to search for.
+        @param params SearchParams
+         */
         void knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices,
                        std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params);
         void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& params);
@@ -123,6 +236,7 @@ private:
         ::cvflann::Index<Distance>* nnIndex;
 };
 
+//! @cond IGNORED
 
 #define FLANN_DISTANCE_CHECK \
     if ( ::cvflann::flann_distance_type() != cvflann::FLANN_DIST_L2) { \
@@ -218,6 +332,8 @@ int GenericIndex<Distance>::radiusSearch(const Mat& query, Mat& indices, Mat& di
     return nnIndex->radiusSearch(m_query,m_indices,m_dists,radius,searchParams);
 }
 
+//! @endcond
+
 /**
  * @deprecated Use GenericIndex class instead
  */
@@ -282,6 +398,8 @@ private:
 template <typename T>
 class FLANN_DEPRECATED Index_;
 #endif
+
+//! @cond IGNORED
 
 template <typename T>
 Index_<T>::Index_(const Mat& dataset, const ::cvflann::IndexParams& params)
@@ -377,7 +495,25 @@ int Index_<T>::radiusSearch(const Mat& query, Mat& indices, Mat& dists, Distance
     if (nnIndex_L2) return nnIndex_L2->radiusSearch(m_query,m_indices,m_dists,radius,searchParams);
 }
 
+//! @endcond
 
+/** @brief Clusters features using hierarchical k-means algorithm.
+
+@param features The points to be clustered. The matrix must have elements of type
+Distance::ElementType.
+@param centers The centers of the clusters obtained. The matrix must have type
+Distance::ResultType. The number of rows in this matrix represents the number of clusters desired,
+however, because of the way the cut in the hierarchical tree is chosen, the number of clusters
+computed will be the highest number of the form (branching-1)\*k+1 that's lower than the number of
+clusters desired, where branching is the tree's branching factor (see description of the
+KMeansIndexParams).
+@param params Parameters used in the construction of the hierarchical k-means tree.
+@param d Distance to be used for clustering.
+
+The method clusters the given feature vectors by constructing a hierarchical k-means tree and
+choosing a cut in the tree that minimizes the cluster's variance. It returns the number of clusters
+found.
+ */
 template <typename Distance>
 int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::KMeansIndexParams& params,
                            Distance d = Distance())
@@ -396,7 +532,8 @@ int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::K
     return ::cvflann::hierarchicalClustering<Distance>(m_features, m_centers, params, d);
 }
 
-
+/** @deprecated
+*/
 template <typename ELEM_TYPE, typename DIST_TYPE>
 FLANN_DEPRECATED int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::KMeansIndexParams& params)
 {
@@ -416,6 +553,8 @@ FLANN_DEPRECATED int hierarchicalClustering(const Mat& features, Mat& centers, c
         CV_Assert(0);
     }
 }
+
+//! @} flann
 
 } } // namespace cv::flann
 

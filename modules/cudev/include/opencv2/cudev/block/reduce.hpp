@@ -54,6 +54,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // blockReduce
 
 template <int N, typename T, class Op>
@@ -122,6 +125,8 @@ __device__ __forceinline__ void blockReduceKeyVal(const tuple<KP0, KP1, KP2, KP3
             const tuple<Cmp0, Cmp1, Cmp2, Cmp3, Cmp4, Cmp5, Cmp6, Cmp7, Cmp8, Cmp9>&
             >(skeys, key, svals, val, tid, cmp);
 }
+
+//! @}
 
 }}
 

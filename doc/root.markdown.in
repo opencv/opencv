@@ -1,7 +1,16 @@
 OpenCV modules {#mainpage}
 ==============
 
-- @subpage intro
-- @subpage core
+@subpage intro
 
-<!-- @CMAKE_DOXYGEN_MODULES_REFERENCE@ -->
+### Main modules
+
+ Module name   | Folder
+-------------- | -------------
+@CMAKE_DOXYGEN_MAIN_REFERENCE@
+
+### Extra modules
+
+ Module name   | Folder
+-------------- | -------------
+@CMAKE_DOXYGEN_EXTRA_REFERENCE@

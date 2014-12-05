@@ -49,8 +49,21 @@
 
 #include "opencv2/core/cuda.hpp"
 
+/**
+  @addtogroup cuda
+  @{
+    @defgroup cudaoptflow Optical Flow
+  @}
+ */
+
 namespace cv { namespace cuda {
 
+//! @addtogroup cudaoptflow
+//! @{
+
+/** @brief Class computing the optical flow for two images using Brox et al Optical Flow algorithm
+(@cite Brox2004). :
+ */
 class CV_EXPORTS BroxOpticalFlow
 {
 public:
@@ -88,16 +101,58 @@ public:
     GpuMat buf;
 };
 
+/** @brief Class used for calculating an optical flow.
+
+The class can calculate an optical flow for a sparse feature set or dense optical flow using the
+iterative Lucas-Kanade method with pyramids.
+
+@sa calcOpticalFlowPyrLK
+
+@note
+   -   An example of the Lucas Kanade optical flow algorithm can be found at
+        opencv_source_code/samples/gpu/pyrlk_optical_flow.cpp
+ */
 class CV_EXPORTS PyrLKOpticalFlow
 {
 public:
     PyrLKOpticalFlow();
 
+    /** @brief Calculate an optical flow for a sparse feature set.
+
+    @param prevImg First 8-bit input image (supports both grayscale and color images).
+    @param nextImg Second input image of the same size and the same type as prevImg .
+    @param prevPts Vector of 2D points for which the flow needs to be found. It must be one row matrix
+    with CV_32FC2 type.
+    @param nextPts Output vector of 2D points (with single-precision floating-point coordinates)
+    containing the calculated new positions of input features in the second image. When useInitialFlow
+    is true, the vector must have the same size as in the input.
+    @param status Output status vector (CV_8UC1 type). Each element of the vector is set to 1 if the
+    flow for the corresponding features has been found. Otherwise, it is set to 0.
+    @param err Output vector (CV_32FC1 type) that contains the difference between patches around the
+    original and moved points or min eigen value if getMinEigenVals is checked. It can be NULL, if not
+    needed.
+
+    @sa calcOpticalFlowPyrLK
+     */
     void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
         GpuMat& status, GpuMat* err = 0);
 
+    /** @brief Calculate dense optical flow.
+
+    @param prevImg First 8-bit grayscale input image.
+    @param nextImg Second input image of the same size and the same type as prevImg .
+    @param u Horizontal component of the optical flow of the same size as input images, 32-bit
+    floating-point, single-channel
+    @param v Vertical component of the optical flow of the same size as input images, 32-bit
+    floating-point, single-channel
+    @param err Output vector (CV_32FC1 type) that contains the difference between patches around the
+    original and moved points or min eigen value if getMinEigenVals is checked. It can be NULL, if not
+    needed.
+     */
     void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0);
 
+    /** @brief Releases inner buffers memory.
+    */
     void releaseMemory();
 
     Size winSize;
@@ -115,6 +170,8 @@ private:
     GpuMat vPyr_[2];
 };
 
+/** @brief Class computing a dense optical flow using the Gunnar Farneback’s algorithm. :
+ */
 class CV_EXPORTS FarnebackOpticalFlow
 {
 public:
@@ -139,8 +196,20 @@ public:
     double polySigma;
     int flags;
 
+    /** @brief Computes a dense optical flow using the Gunnar Farneback’s algorithm.
+
+    @param frame0 First 8-bit gray-scale input image
+    @param frame1 Second 8-bit gray-scale input image
+    @param flowx Flow horizontal component
+    @param flowy Flow vertical component
+    @param s Stream
+
+    @sa calcOpticalFlowFarneback
+     */
     void operator ()(const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s = Stream::Null());
 
+    /** @brief Releases unused auxiliary memory buffers.
+     */
     void releaseMemory()
     {
         frames_[0].release();
@@ -295,20 +364,22 @@ private:
     GpuMat extended_I1;
 };
 
-//! Interpolate frames (images) using provided optical flow (displacement field).
-//! frame0   - frame 0 (32-bit floating point images, single channel)
-//! frame1   - frame 1 (the same type and size)
-//! fu       - forward horizontal displacement
-//! fv       - forward vertical displacement
-//! bu       - backward horizontal displacement
-//! bv       - backward vertical displacement
-//! pos      - new frame position
-//! newFrame - new frame
-//! buf      - temporary buffer, will have width x 6*height size, CV_32FC1 type and contain 6 GpuMat;
-//!            occlusion masks            0, occlusion masks            1,
-//!            interpolated forward flow  0, interpolated forward flow  1,
-//!            interpolated backward flow 0, interpolated backward flow 1
-//!
+/** @brief Interpolates frames (images) using provided optical flow (displacement field).
+
+@param frame0 First frame (32-bit floating point images, single channel).
+@param frame1 Second frame. Must have the same type and size as frame0 .
+@param fu Forward horizontal displacement.
+@param fv Forward vertical displacement.
+@param bu Backward horizontal displacement.
+@param bv Backward vertical displacement.
+@param pos New frame position.
+@param newFrame Output image.
+@param buf Temporary buffer, will have width x 6\*height size, CV_32FC1 type and contain 6
+GpuMat: occlusion masks for first frame, occlusion masks for second, interpolated forward
+horizontal flow, interpolated forward vertical flow, interpolated backward horizontal flow,
+interpolated backward vertical flow.
+@param stream Stream for the asynchronous version.
+ */
 CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
                                   const GpuMat& fu, const GpuMat& fv,
                                   const GpuMat& bu, const GpuMat& bv,
@@ -316,6 +387,8 @@ CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
                                   Stream& stream = Stream::Null());
 
 CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors);
+
+//! @}
 
 }} // namespace cv { namespace cuda {
 

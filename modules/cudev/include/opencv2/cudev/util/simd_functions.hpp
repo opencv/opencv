@@ -128,6 +128,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // 2
 
 __device__ __forceinline__ uint vadd2(uint a, uint b)
@@ -907,6 +910,8 @@ __device__ __forceinline__ uint vmin4(uint a, uint b)
 
     return r;
 }
+
+//! @}
 
 }}
 
