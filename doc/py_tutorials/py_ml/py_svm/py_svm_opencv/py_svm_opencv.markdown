@@ -135,4 +135,3 @@ Exercises
 
 -#  OpenCV samples contain digits.py which applies a slight improvement of the above method to get
     improved result. It also contains the reference. Check it and understand it.
-

@@ -223,4 +223,3 @@ Exercises
 
 -#  Check the code in samples/python2/lk_track.py. Try to understand the code.
 2.  Check the code in samples/python2/opt_flow.py. Try to understand the code.
-

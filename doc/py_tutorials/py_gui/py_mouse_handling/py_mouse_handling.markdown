@@ -109,4 +109,3 @@ Exercises
 
 -#  In our last example, we drew filled rectangle. You modify the code to draw an unfilled
     rectangle.
-

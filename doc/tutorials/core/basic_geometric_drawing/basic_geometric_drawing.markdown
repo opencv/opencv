@@ -241,4 +241,3 @@ Result
 Compiling and running your program should give you a result like this:
 
 ![](images/Drawing_1_Tutorial_Result_0.png)
-

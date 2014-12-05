@@ -144,4 +144,3 @@ proper macros in their appropriate positions. Rest is done by generator scripts.
 may be an exceptional cases where generator scripts cannot create the wrappers. Such functions need
 to be handled manually. But most of the time, a code written according to OpenCV coding guidelines
 will be automatically wrapped by generator scripts.
-

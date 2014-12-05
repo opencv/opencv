@@ -137,5 +137,3 @@ Result
 -#  And here is the result for the detected object (highlighted in green)
 
     ![](images/Feature_Homography_Result.jpg)
-
-

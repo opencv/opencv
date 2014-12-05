@@ -65,4 +65,3 @@ Exercises
 
 -#  OpenCV samples contain an example of generating disparity map and its 3D reconstruction. Check
     stereo_match.py in OpenCV-Python samples.
-

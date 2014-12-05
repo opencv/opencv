@@ -84,4 +84,3 @@ Additional Resources
 3.  [Numpy Examples List](http://wiki.scipy.org/Numpy_Example_List)
 4.  [OpenCV Documentation](http://docs.opencv.org/)
 5.  [OpenCV Forum](http://answers.opencv.org/questions/)
-

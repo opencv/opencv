@@ -112,4 +112,3 @@ Result
 ------
 
 ![](images/Feature_Detection_Result_a.jpg)
-
