@@ -11,7 +11,7 @@ libraries. The following modules are available:
 
 -   @ref core - a compact module defining basic data structures, including the dense
     multi-dimensional array Mat and basic functions used by all other modules.
--   **imgproc** - an image processing module that includes linear and non-linear image filtering,
+-   @ref imgproc - an image processing module that includes linear and non-linear image filtering,
     geometrical image transformations (resize, affine and perspective warping, generic table-based
     remapping), color space conversion, histograms, and so on.
 -   **video** - a video analysis module that includes motion estimation, background subtraction,

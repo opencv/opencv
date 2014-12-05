@@ -54,6 +54,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 #define CV_CUDEV_EXPR_UNARY_FUNC(name) \
     template <class SrcPtr> \
     __host__ Expr<UnaryTransformPtrSz<typename PtrTraits<SrcPtr>::ptr_type, name ## _func<typename PtrTraits<SrcPtr>::value_type> > > \
@@ -92,6 +95,8 @@ pow_(const SrcPtr& src, float power)
 {
     return makeExpr(transformPtr(src, bind2nd(pow_func<typename PtrTraits<SrcPtr>::value_type>(), power)));
 }
+
+//! @}
 
 }}
 

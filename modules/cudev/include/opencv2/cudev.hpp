@@ -109,4 +109,11 @@
 #include "cudev/expr/unary_op.hpp"
 #include "cudev/expr/warping.hpp"
 
+/**
+  @addtogroup cuda
+  @{
+    @defgroup cudev Device layer
+  @}
+*/
+
 #endif

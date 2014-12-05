@@ -210,6 +210,8 @@ __kernel void BruteForceMatch_Match(
     }
 #else
     __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE_ODD * BLOCK_SIZE;
+    const int s_query_i = mad24(BLOCK_SIZE_ODD, lidy, lidx);
+    const int s_train_i = mad24(BLOCK_SIZE_ODD, lidx, lidy);
 #endif
 
     float myBestDistance = MAX_FLOAT;
@@ -242,13 +244,15 @@ __kernel void BruteForceMatch_Match(
         {
             const int loadx = mad24(i, BLOCK_SIZE, lidx);
             //load query and train into local memory
-            s_query[mad24(BLOCK_SIZE_ODD, lidy, lidx)] = 0;
-            s_train[mad24(BLOCK_SIZE_ODD, lidx, lidy)] = 0;
-
             if (loadx < query_cols)
             {
-                s_query[mad24(BLOCK_SIZE_ODD, lidy, lidx)] = query_vec[loadx];
-                s_train[mad24(BLOCK_SIZE_ODD, lidx, lidy)] = train_vec[loadx];
+                s_query[s_query_i] = query_vec[loadx];
+                s_train[s_train_i] = train_vec[loadx];
+            }
+            else
+            {
+                s_query[s_query_i] = 0;
+                s_train[s_train_i] = 0;
             }
 
             barrier(CLK_LOCAL_MEM_FENCE);
@@ -337,18 +341,22 @@ __kernel void BruteForceMatch_RadiusMatch(
     __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE_ODD * BLOCK_SIZE;
 
     result_type result = 0;
+    const int s_query_i = mad24(BLOCK_SIZE_ODD, lidy, lidx);
+    const int s_train_i = mad24(BLOCK_SIZE_ODD, lidx, lidy);
     for (int i = 0 ; i < (query_cols + BLOCK_SIZE - 1) / BLOCK_SIZE ; ++i)
     {
         //load a BLOCK_SIZE * BLOCK_SIZE block into local train.
         const int loadx = mad24(BLOCK_SIZE, i, lidx);
 
-        s_query[mad24(BLOCK_SIZE_ODD, lidy, lidx)] = 0;
-        s_train[mad24(BLOCK_SIZE_ODD, lidx, lidy)] = 0;
-
         if (loadx < query_cols)
         {
-            s_query[mad24(BLOCK_SIZE_ODD, lidy, lidx)] = query_vec[loadx];
-            s_train[mad24(BLOCK_SIZE_ODD, lidx, lidy)] = train_vec[loadx];
+            s_query[s_query_i] = query_vec[loadx];
+            s_train[s_train_i] = train_vec[loadx];
+        }
+        else
+        {
+            s_query[s_query_i] = 0;
+            s_train[s_train_i] = 0;
         }
 
         //synchronize to make sure each elem for reduceIteration in share memory is written already.
@@ -405,6 +413,8 @@ __kernel void BruteForceMatch_knnMatch(
     }
 #else
     __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE_ODD * BLOCK_SIZE;
+    const int s_query_i = mad24(BLOCK_SIZE_ODD, lidy, lidx);
+    const int s_train_i = mad24(BLOCK_SIZE_ODD, lidx, lidy);
 #endif
 
     float myBestDistance1 = MAX_FLOAT;
@@ -438,13 +448,15 @@ __kernel void BruteForceMatch_knnMatch(
         {
             const int loadx = mad24(BLOCK_SIZE, i, lidx);
             //load query and train into local memory
-            s_query[mad24(BLOCK_SIZE_ODD, lidy, lidx)] = 0;
-            s_train[mad24(BLOCK_SIZE_ODD, lidx, lidy)] = 0;
-
             if (loadx < query_cols)
             {
-                s_query[mad24(BLOCK_SIZE_ODD, lidy, lidx)] = query_vec[loadx];
-                s_train[mad24(BLOCK_SIZE_ODD, lidx, lidy)] = train_vec[loadx];
+                s_query[s_query_i] = query_vec[loadx];
+                s_train[s_train_i] = train_vec[loadx];
+            }
+            else
+            {
+                s_query[s_query_i] = 0;
+                s_train[s_train_i] = 0;
             }
 
             barrier(CLK_LOCAL_MEM_FENCE);

@@ -50,6 +50,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup calib3d_c
+  @{
+  */
+
 /****************************************************************************************\
 *                      Camera Calibration, Pose Estimation and Stereo                    *
 \****************************************************************************************/
@@ -370,6 +374,8 @@ CVAPI(void) cvValidateDisparity( CvArr* disparity, const CvArr* cost,
 CVAPI(void)  cvReprojectImageTo3D( const CvArr* disparityImage,
                                    CvArr* _3dImage, const CvMat* Q,
                                    int handleMissingValues CV_DEFAULT(0) );
+
+/** @} calib3d_c */
 
 #ifdef __cplusplus
 } // extern "C"

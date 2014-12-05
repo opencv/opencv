@@ -99,6 +99,9 @@
 namespace cv {
 namespace detail {
 
+//! @addtogroup stitching
+//! @{
+
 class CV_EXPORTS DisjointSets
 {
 public:
@@ -157,6 +160,8 @@ CV_EXPORTS Point resultTl(const std::vector<Point> &corners);
 CV_EXPORTS void selectRandomSubset(int count, int size, std::vector<int> &subset);
 
 CV_EXPORTS int& stitchingLogLevel();
+
+//! @}
 
 } // namespace detail
 } // namespace cv

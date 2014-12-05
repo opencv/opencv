@@ -55,6 +55,9 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab
+//! @{
+
 class CV_EXPORTS ISparseOptFlowEstimator
 {
 public:
@@ -138,6 +141,8 @@ private:
 };
 
 #endif
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

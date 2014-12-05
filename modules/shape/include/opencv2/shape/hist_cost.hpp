@@ -49,8 +49,10 @@
 namespace cv
 {
 
-/*!
- * The base class for HistogramCostExtractor.
+//! @addtogroup shape
+//! @{
+
+/** @brief Abstract base class for histogram cost algorithms.
  */
 class CV_EXPORTS_W HistogramCostExtractor : public Algorithm
 {
@@ -64,7 +66,8 @@ public:
     CV_WRAP virtual float getDefaultCost() const = 0;
 };
 
-/*!  */
+/** @brief A norm based cost extraction. :
+ */
 class CV_EXPORTS_W NormHistogramCostExtractor : public HistogramCostExtractor
 {
 public:
@@ -75,7 +78,8 @@ public:
 CV_EXPORTS_W Ptr<HistogramCostExtractor>
     createNormHistogramCostExtractor(int flag=DIST_L2, int nDummies=25, float defaultCost=0.2f);
 
-/*!  */
+/** @brief An EMD based cost extraction. :
+ */
 class CV_EXPORTS_W EMDHistogramCostExtractor : public HistogramCostExtractor
 {
 public:
@@ -86,18 +90,22 @@ public:
 CV_EXPORTS_W Ptr<HistogramCostExtractor>
     createEMDHistogramCostExtractor(int flag=DIST_L2, int nDummies=25, float defaultCost=0.2f);
 
-/*!  */
+/** @brief An Chi based cost extraction. :
+ */
 class CV_EXPORTS_W ChiHistogramCostExtractor : public HistogramCostExtractor
 {};
 
 CV_EXPORTS_W Ptr<HistogramCostExtractor> createChiHistogramCostExtractor(int nDummies=25, float defaultCost=0.2f);
 
-/*!  */
+/** @brief An EMD-L1 based cost extraction. :
+ */
 class CV_EXPORTS_W EMDL1HistogramCostExtractor : public HistogramCostExtractor
 {};
 
 CV_EXPORTS_W Ptr<HistogramCostExtractor>
     createEMDL1HistogramCostExtractor(int nDummies=25, float defaultCost=0.2f);
+
+//! @}
 
 } // cv
 #endif

@@ -50,6 +50,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // atomicAdd
 
 __device__ __forceinline__ int atomicAdd(int* address, int val)
@@ -191,6 +194,8 @@ __device__ static double atomicMax(double* address, double val)
     return 0.0;
 #endif
 }
+
+//! @}
 
 }}
 

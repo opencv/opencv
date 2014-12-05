@@ -51,6 +51,9 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab
+//! @{
+
 CV_EXPORTS float calcBlurriness(const Mat &frame);
 
 class CV_EXPORTS DeblurerBase
@@ -104,6 +107,8 @@ private:
     float sensitivity_;
     Mat_<float> bSum_, gSum_, rSum_, wSum_;
 };
+
+//! @}
 
 } // namespace videostab
 } // namespace cv
