@@ -172,4 +172,3 @@ Exercises
 2.  Fundamental Matrix estimation is sensitive to quality of matches, outliers etc. It becomes worse
     when all selected matches lie on the same plane. [Check this
     discussion](http://answers.opencv.org/question/18125/epilines-not-correct/).
-

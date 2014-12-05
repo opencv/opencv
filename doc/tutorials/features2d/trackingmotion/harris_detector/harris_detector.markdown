@@ -206,4 +206,3 @@ The original image:
 The detected corners are surrounded by a small black circle
 
 ![](images/Harris_Detector_Result.jpg)
-

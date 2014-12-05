@@ -183,4 +183,3 @@ Exercises
 
 -#  OpenCV comes with a Python sample on interactive demo of camshift. Use it, hack it, understand
     it.
-

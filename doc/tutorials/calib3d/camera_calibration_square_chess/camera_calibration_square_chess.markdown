@@ -52,4 +52,3 @@ image.
     opencv/samples/cpp/calibration.cpp, function computeReprojectionErrors).
 
 Question: how to calculate the distance from the camera origin to any of the corners?
-

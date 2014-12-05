@@ -87,4 +87,3 @@ Exercises
     Adobe Photoshop. On further search, I was able to find that same technique is already there in
     GIMP with different name, "Resynthesizer" (You need to install separate plugin). I am sure you
     will enjoy the technique.
-

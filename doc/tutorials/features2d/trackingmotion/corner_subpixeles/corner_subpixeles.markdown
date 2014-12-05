@@ -127,4 +127,3 @@ Result
 Here is the result:
 
 ![](images/Corner_Subpixeles_Result.jpg)
-

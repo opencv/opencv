@@ -50,5 +50,3 @@ known planar objects in scenes.
     Mat points1Projected; perspectiveTransform(Mat(points1), points1Projected, H);
 
 -   Use drawMatches for drawing inliers.
-
-

@@ -1,8 +1,5 @@
-HighGUI {#tutorial_ug_highgui}
-=======
-
-Using Kinect and other OpenNI compatible depth sensors
-------------------------------------------------------
+Using Kinect and other OpenNI compatible depth sensors {#tutorial_ug_highgui}
+======================================================
 
 Depth sensors compatible with OpenNI (Kinect, XtionPRO, ...) are supported through VideoCapture
 class. Depth map, RGB image and some other formats of output can be retrieved by using familiar

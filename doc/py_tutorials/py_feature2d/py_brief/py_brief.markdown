@@ -80,4 +80,3 @@ Additional Resources
     Independent Elementary Features", 11th European Conference on Computer Vision (ECCV), Heraklion,
     Crete. LNCS Springer, September 2010.
 2.  LSH (Locality Sensitive Hasing) at wikipedia.
-

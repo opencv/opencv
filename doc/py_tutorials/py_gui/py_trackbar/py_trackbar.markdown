@@ -72,4 +72,3 @@ Exercises
 
 -#  Create a Paint application with adjustable colors and brush radius using trackbars. For drawing,
     refer previous tutorial on mouse handling.
-
