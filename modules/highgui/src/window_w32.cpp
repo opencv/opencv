@@ -1840,7 +1840,6 @@ cvDestroyAllWindows(void)
 
 static void showSaveDialog(CvWindow* window)
 {
-#ifndef HAVE_OPENGL
     if (!window || !window->image)
         return;
 
@@ -1884,9 +1883,6 @@ static void showSaveDialog(CvWindow* window)
         cv::Mat tmp; cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data), tmp, 0);
         cv::imwrite(szFileName, tmp);
     }
-#else
-    (void)window;
-#endif // HAVE_OPENGL
 }
 
 CV_IMPL int
