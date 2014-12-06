@@ -356,7 +356,7 @@ In addition to the class members, the following operations on rectangles are imp
     certain amount)
 -   rect += point, rect -= point, rect += size, rect -= size (augmenting operations)
 -   rect = rect1 & rect2 (rectangle intersection)
--   rect = rect1 | rect2 (minimum area rectangle containing rect2 and rect3 )
+-   rect = rect1 | rect2 (minimum area rectangle containing rect1 and rect2 )
 -   rect &= rect1, rect |= rect1 (and the corresponding augmenting operations)
 -   rect == rect1, rect != rect1 (rectangle comparison)
 
