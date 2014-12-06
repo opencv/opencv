@@ -1182,10 +1182,10 @@ struct SymmColumnSmallVec_32s16s
                 {
                     __m128 s0 = df4, s1 = df4;
                     __m128i x0, x1;
-                    x0 = _mm_sub_epi32(_mm_load_si128((__m128i*)(S0 + i)),
-                                       _mm_load_si128((__m128i*)(S2 + i)));
-                    x1 = _mm_sub_epi32(_mm_load_si128((__m128i*)(S0 + i + 4)),
-                                       _mm_load_si128((__m128i*)(S2 + i + 4)));
+                    x0 = _mm_sub_epi32(_mm_load_si128((__m128i*)(S2 + i)),
+                                       _mm_load_si128((__m128i*)(S0 + i)));
+                    x1 = _mm_sub_epi32(_mm_load_si128((__m128i*)(S2 + i + 4)),
+                                       _mm_load_si128((__m128i*)(S0 + i + 4)));
                     s0 = _mm_add_ps(s0, _mm_mul_ps(_mm_cvtepi32_ps(x0),k1));
                     s1 = _mm_add_ps(s1, _mm_mul_ps(_mm_cvtepi32_ps(x1),k1));
                     x0 = _mm_packs_epi32(_mm_cvtps_epi32(s0), _mm_cvtps_epi32(s1));
