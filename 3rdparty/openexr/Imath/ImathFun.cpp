@@ -108,73 +108,48 @@ predf (float f)
 }
 
 
+
+double doubleNeighbour(double d, bool succ, bool pred) {
+	union {
+		double d;
+		Int64 i;
+	} u;
+	u.d = d;
+	if (succ)
+		if ((u.i & 0x7ff0000000000000LL) == 0x7ff0000000000000LL) {
+		} else if (u.i == 0x0000000000000000LL || u.i == 0x8000000000000000LL) {
+			u.i = 0x0000000000000001LL;
+		} else if (u.i > 0) {
+			++u.i;
+		} else {
+			--u.i;
+		}
+
+	if (pred)
+		if ((u.i & 0x7ff0000000000000LL) == 0x7ff0000000000000LL) {
+		} else if (u.i == 0x0000000000000000LL || u.i == 0x8000000000000000LL) {
+			u.i = 0x8000000000000001LL;
+		} else if (u.i > 0) {
+			--u.i;
+		} else {
+			++u.i;
+		}
+
+	return u.d;
+}
+
 double
 succd (double d)
-{
-    union {double d; Int64 i;} u;
-    u.d = d;
-
-    if ((u.i & 0x7ff0000000000000LL) == 0x7ff0000000000000LL)
-    {
-        // Nan or infinity; don't change value.
-    }
-    else if (u.i == 0x0000000000000000LL || u.i == 0x8000000000000000LL)
-    {
-        // Plus or minus zero.
-
-        u.i = 0x0000000000000001LL;
-    }
-    else if (u.i > 0)
-    {
-        // Positive double, normalized or denormalized.
-        // Incrementing the largest positive double
-        // produces +infinity.
-
-        ++u.i;
-    }
-    else
-    {
-        // Negative normalized or denormalized double.
-
-        --u.i;
-    }
-
-    return u.d;
+ {
+	doubleNeighbour(d, true, false);
 }
+
 
 
 double
 predd (double d)
-{
-    union {double d; Int64 i;} u;
-    u.d = d;
-
-    if ((u.i & 0x7ff0000000000000LL) == 0x7ff0000000000000LL)
-    {
-        // Nan or infinity; don't change value.
-    }
-    else if (u.i == 0x0000000000000000LL || u.i == 0x8000000000000000LL)
-    {
-        // Plus or minus zero.
-
-        u.i = 0x8000000000000001LL;
-    }
-    else if (u.i > 0)
-    {
-        // Positive double, normalized or denormalized.
-
-        --u.i;
-    }
-    else
-    {
-        // Negative normalized or denormalized double.
-        // Decrementing the largest negative double
-        // produces -infinity.
-
-        ++u.i;
-    }
-
-    return u.d;
+ {
+	doubleNeighbour(d, false, true);
 }
 
 
