@@ -235,7 +235,7 @@ modp (int x, int y)
 
 float succf (float f);
 float predf (float f);
-
+double doubleNeighbour(double d, bool succ, bool pred);
 double succd (double d);
 double predd (double d);
 
