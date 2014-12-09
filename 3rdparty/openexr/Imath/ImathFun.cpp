@@ -141,7 +141,7 @@ double doubleNeighbour(double d, bool succ, bool pred) {
 double
 succd (double d)
  {
-	doubleNeighbour(d, true, false);
+	return doubleNeighbour(d, true, false);
 }
 
 
@@ -149,7 +149,7 @@ succd (double d)
 double
 predd (double d)
  {
-	doubleNeighbour(d, false, true);
+	return doubleNeighbour(d, false, true);
 }
 
 
