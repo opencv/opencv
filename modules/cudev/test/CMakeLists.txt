@@ -32,6 +32,10 @@ if(OCV_DEPENDENCIES_FOUND)
   ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES})
   add_dependencies(opencv_tests ${the_target})
 
+  set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL}")
+  set_source_files_properties(${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch}
+    PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};AccuracyTest")
+
   # Additional target properties
   set_target_properties(${the_target} PROPERTIES
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
