@@ -2724,7 +2724,10 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             (dot_pos[3] == '\0' || (cv_isdigit(dot_pos[3]) && dot_pos[4] == '\0')) )
         {
             if( append )
+            {
+                cvReleaseFileStorage( &fs );
                 CV_Error(CV_StsNotImplemented, "Appending data to compressed file is not implemented" );
+            }
             isGZ = true;
             compression = dot_pos[3];
             if( compression )
@@ -2745,6 +2748,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             if( !fs->gzfile )
                 goto _exit_;
             #else
+            cvReleaseFileStorage( &fs );
             CV_Error(CV_StsNotImplemented, "There is no compressed file storage support in this configuration");
             #endif
         }
@@ -2797,7 +2801,10 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                     if( strcmp( encoding, "UTF-16" ) == 0 ||
                         strcmp( encoding, "utf-16" ) == 0 ||
                         strcmp( encoding, "Utf-16" ) == 0 )
+                    {
+                        cvReleaseFileStorage( &fs );
                         CV_Error( CV_StsBadArg, "UTF-16 XML encoding is not supported! Use 8-bit encoding\n");
+                    }
 
                     CV_Assert( strlen(encoding) < 1000 );
                     char buf[1100];
@@ -2834,7 +2841,10 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                     }
                 }
                 if( last_occurence < 0 )
+                {
+                    cvReleaseFileStorage( &fs );
                     CV_Error( CV_StsError, "Could not find </opencv_storage> in the end of file.\n" );
+                }
                 icvCloseFile( fs );
                 fs->file = fopen( fs->filename, "r+t" );
                 fseek( fs->file, last_occurence, SEEK_SET );
@@ -2908,10 +2918,18 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
 
         //mode = cvGetErrMode();
         //cvSetErrMode( CV_ErrModeSilent );
-        if( fs->fmt == CV_STORAGE_FORMAT_XML )
-            icvXMLParse( fs );
-        else
-            icvYMLParse( fs );
+        try
+        {
+            if( fs->fmt == CV_STORAGE_FORMAT_XML )
+                icvXMLParse( fs );
+            else
+                icvYMLParse( fs );
+        }
+        catch (...)
+        {
+            cvReleaseFileStorage( &fs );
+            throw;
+        }
         //cvSetErrMode( mode );
 
         // release resources that we do not need anymore
