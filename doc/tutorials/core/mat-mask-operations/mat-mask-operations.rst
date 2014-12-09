@@ -133,5 +133,5 @@ Check out an instance of running the program on our `YouTube channel <http://www
 .. raw:: html
 
   <div align="center">
- <iframe width="560" height="349" src="https://www.youtube.com/embed/7PF1tAU9se4?hd=1" frameborder="0" allowfullscreen></iframe>
+  <iframe width="560" height="349" src="https://www.youtube.com/embed/7PF1tAU9se4?hd=1" frameborder="0" allowfullscreen></iframe>
   </div>

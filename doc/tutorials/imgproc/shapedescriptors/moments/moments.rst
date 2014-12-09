@@ -42,7 +42,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
    /// Function header
    void thresh_callback(int, void* );
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
      /// Load source image and convert it to gray
@@ -64,7 +64,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      return(0);
    }
 
-   /** @function thresh_callback */
+   /* @function thresh_callback */
    void thresh_callback(int, void* )
    {
      Mat canny_output;

@@ -134,10 +134,10 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
    char* window_name = "Morphology Transformations Demo";
 
-   /** Function Headers */
+   /* Function Headers */
    void Morphology_Operations( int, void* );
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
      /// Load an image
@@ -169,7 +169,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
     return 0;
     }
 
-    /**
+    /*
      * @function Morphology_Operations
      */
    void Morphology_Operations( int, void* )
@@ -227,7 +227,7 @@ Explanation
 
      .. code-block:: cpp
 
-        /**
+        /*
          * @function Morphology_Operations
          */
        void Morphology_Operations( int, void* )
@@ -276,6 +276,6 @@ Results
 
 * And here are two snapshots of the display window. The first picture shows the output after using the operator **Opening** with a cross kernel. The second picture (right side, shows the result of using a **Blackhat** operator with an ellipse kernel.
 
-  .. image:: images/Morphology_2_Tutorial_Cover.jpg
+  .. image:: images/Morphology_2_Tutorial_Result.jpg
      :alt: Morphology 2: Result sample
      :align: center

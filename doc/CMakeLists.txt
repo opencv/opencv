@@ -147,17 +147,6 @@ endif()
 
 # ========= Doxygen docs =========
 
-macro(make_reference result modules_list black_list)
-    set(_res)
-    foreach(m ${${modules_list}})
-        list(FIND ${black_list} ${m} _pos)
-        if(${_pos} EQUAL -1)
-            set(_res "${_res} @ref ${m} | ${m} \n")
-        endif()
-    endforeach()
-    set(${result} ${_res})
-endmacro()
-
 if(BUILD_DOCS AND HAVE_DOXYGEN)
   # not documented modules list
   list(APPEND blacklist "ts" "java" "python2" "python3" "world")
@@ -166,6 +155,10 @@ if(BUILD_DOCS AND HAVE_DOXYGEN)
   set(paths_include)
   set(paths_doc)
   set(paths_bib)
+  set(paths_sample)
+  set(paths_tutorial)
+  set(refs_main)
+  set(refs_extra)
   set(deps)
   foreach(m ${BASE_MODULES} ${EXTRA_MODULES})
     list(FIND blacklist ${m} _pos)
@@ -182,30 +175,71 @@ if(BUILD_DOCS AND HAVE_DOXYGEN)
         list(APPEND paths_doc "${docs_dir}")
         list(APPEND deps ${docs_dir})
       endif()
+      # sample folder
+      set(sample_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/samples")
+      if(EXISTS "${sample_dir}")
+        list(APPEND paths_sample "${sample_dir}")
+        list(APPEND deps ${sample_dir})
+      endif()
+      # tutorial folder
+      set(tutorial_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/tutorials")
+      if(EXISTS "${tutorial_dir}")
+        list(APPEND paths_tutorial "${tutorial_dir}")
+        list(APPEND deps ${tutorial_dir})
+      endif()
       # BiBTeX file
       set(bib_file "${docs_dir}/${m}.bib")
       if(EXISTS "${bib_file}")
         set(paths_bib "${paths_bib} ${bib_file}")
         list(APPEND deps ${bib_file})
       endif()
+      # Reference entry
+    #   set(one_ref "@ref ${m} | ${m}\n")
+      set(one_ref "\t- ${m}. @ref ${m}\n")
+      list(FIND EXTRA_MODULES ${m} _pos)
+      if(${_pos} EQUAL -1)
+        set(refs_main "${refs_main}${one_ref}")
+      else()
+        set(refs_extra "${refs_extra}${one_ref}")
+      endif()
     endif()
   endforeach()
 
+  # fix references
+  # set(ref_header "Module name | Folder\n----------- | ------")
+  # if(refs_main)
+  #    set(refs_main "### Main modules\n${ref_header}\n${refs_main}")
+  # endif()
+  # if(refs_extra)
+  #   set(refs_extra "### Extra modules\n${ref_header}\n${refs_extra}")
+  # endif()
+  if(refs_main)
+    set(refs_main "- Main modules:\n${refs_main}")
+  endif()
+  if(refs_extra)
+    set(refs_extra "- Extra modules:\n${refs_extra}")
+  endif()
 
   # additional config
   set(doxyfile "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile")
   set(rootfile "${CMAKE_CURRENT_BINARY_DIR}/root.markdown")
   set(bibfile "${CMAKE_CURRENT_SOURCE_DIR}/opencv.bib")
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${paths_include} ; ${paths_doc}")
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc}")
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${CMAKE_SOURCE_DIR}/samples/cpp ; ${paths_doc}")
+  set(faqfile "${CMAKE_CURRENT_SOURCE_DIR}/faq.markdown")
+  set(tutorial_path "${CMAKE_CURRENT_SOURCE_DIR}/tutorials")
+  set(tutorial_py_path "${CMAKE_CURRENT_SOURCE_DIR}/py_tutorials")
+  set(user_guide_path "${CMAKE_CURRENT_SOURCE_DIR}/user_guide")
+  set(example_path "${CMAKE_SOURCE_DIR}/samples")
+
+  # set export variables
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${user_guide_path} ; ${paths_tutorial}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${user_guide_path} ; ${paths_tutorial}")
+  # TODO: remove paths_doc from EXAMPLE_PATH after face module tutorials/samples moved to separate folders
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${example_path} ; ${paths_doc} ; ${paths_sample}")
   set(CMAKE_DOXYGEN_LAYOUT "${CMAKE_CURRENT_SOURCE_DIR}/DoxygenLayout.xml")
   set(CMAKE_DOXYGEN_OUTPUT_PATH "doxygen")
+  set(CMAKE_DOXYGEN_MAIN_REFERENCE "${refs_main}")
+  set(CMAKE_DOXYGEN_EXTRA_REFERENCE "${refs_extra}")
   set(CMAKE_EXTRA_BIB_FILES "${bibfile} ${paths_bib}")
-
-  # generate references
-  make_reference(CMAKE_DOXYGEN_MAIN_REFERENCE BASE_MODULES blacklist)
-  make_reference(CMAKE_DOXYGEN_EXTRA_REFERENCE EXTRA_MODULES blacklist)
 
   # writing file
   configure_file(Doxyfile.in ${doxyfile} @ONLY)
@@ -213,9 +247,14 @@ if(BUILD_DOCS AND HAVE_DOXYGEN)
   configure_file(mymath.sty "${CMAKE_DOXYGEN_OUTPUT_PATH}/html/mymath.sty" @ONLY)
   configure_file(mymath.sty "${CMAKE_DOXYGEN_OUTPUT_PATH}/latex/mymath.sty" @ONLY)
 
+  # TODO: do not store downloadable samples, but give github link instead
   add_custom_target(doxygen
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/samples" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html/samples"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/pattern.png" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/acircles_pattern.png" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html"
     COMMAND ${DOXYGEN_BUILD} ${doxyfile}
-DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps})
+    DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps}
+  )
 endif()
 
 if(HAVE_DOC_GENERATOR)

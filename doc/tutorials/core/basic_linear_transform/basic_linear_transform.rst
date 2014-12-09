@@ -77,8 +77,8 @@ Code
 
    using namespace cv;
 
-   double alpha; /**< Simple contrast control */
-   int beta;  /**< Simple brightness control */
+   double alpha; /*< Simple contrast control */
+   int beta;  /*< Simple brightness control */
 
    int main( int argc, char** argv )
    {
@@ -204,6 +204,6 @@ Result
 
 * We get this:
 
-  .. image:: images/Basic_Linear_Transform_Tutorial_Result_0.jpg
+  .. image:: images/Basic_Linear_Transform_Tutorial_Result_big.jpg
      :alt: Basic Linear Transform - Final Result
      :align: center

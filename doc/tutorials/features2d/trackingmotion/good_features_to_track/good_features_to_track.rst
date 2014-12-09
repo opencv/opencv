@@ -43,7 +43,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
    /// Function header
    void goodFeaturesToTrack_Demo( int, void* );
 
-   /**
+   /*
     * @function main
     */
    int main( int argc, char** argv )
@@ -66,7 +66,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      return(0);
    }
 
-   /**
+   /*
     * @function goodFeaturesToTrack_Demo.cpp
     * @brief Apply Shi-Tomasi corner detector
     */

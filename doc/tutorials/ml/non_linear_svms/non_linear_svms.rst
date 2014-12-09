@@ -218,7 +218,7 @@ Results
 
    * Finally the support vectors are shown using gray rings around the training examples.
 
-.. image:: images/result.png
+.. image:: images/svm_non_linear_result.png
   :alt: Training data and decision regions given by the SVM
   :width: 300pt
   :align: center
