@@ -96,7 +96,7 @@ Code
     using namespace std;
     using namespace cv;
 
-    /**
+    /*
      * @function main
      */
     int main( int argc, char** argv )

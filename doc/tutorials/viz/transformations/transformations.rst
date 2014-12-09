@@ -28,7 +28,7 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
     using namespace cv;
     using namespace std;
 
-    /**
+    /*
      * @function cvcloud_load
      * @brief load bunny.ply
      */
@@ -50,7 +50,7 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
         return cloud;
     }
 
-    /**
+    /*
      * @function main
      */
     int main(int argn, char **argv)

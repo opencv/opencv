@@ -204,7 +204,7 @@ Explanation
           {
               int lineType = 8;
 
-              /** Create some points */
+              /* Create some points */
               Point rook_points[1][20];
               rook_points[0][0] = Point( w/4.0, 7*w/8.0 );
               rook_points[0][1] = Point( 3*w/4.0, 7*w/8.0 );

@@ -92,11 +92,11 @@ This tutorial code's is shown lines below. You can also download it from `here <
    int const max_elem = 2;
    int const max_kernel_size = 21;
 
-   /** Function Headers */
+   /* Function Headers */
    void Erosion( int, void* );
    void Dilation( int, void* );
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
      /// Load an image
@@ -136,7 +136,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      return 0;
    }
 
-   /**  @function Erosion  */
+   /*  @function Erosion  */
    void Erosion( int, void* )
    {
      int erosion_type;
@@ -153,7 +153,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      imshow( "Erosion Demo", erosion_dst );
    }
 
-   /** @function Dilation */
+   /* @function Dilation */
    void Dilation( int, void* )
    {
      int dilation_type;
@@ -192,7 +192,7 @@ Explanation
 
    .. code-block:: cpp
 
-      /**  @function Erosion  */
+      /*  @function Erosion  */
       void Erosion( int, void* )
       {
         int erosion_type;
@@ -242,7 +242,7 @@ The code is below. As you can see, it is completely similar to the snippet of co
 
 .. code-block:: cpp
 
-   /** @function Dilation */
+   /* @function Dilation */
    void Dilation( int, void* )
    {
      int dilation_type;
@@ -271,6 +271,6 @@ Results
 
   We get the results below. Varying the indices in the Trackbars give different output images, naturally. Try them out! You can even try to add a third Trackbar to control the number of iterations.
 
-  .. image:: images/Morphology_1_Tutorial_Cover.jpg
+  .. image:: images/Morphology_1_Result.jpg
      :alt: Dilation and Erosion application
      :align: center

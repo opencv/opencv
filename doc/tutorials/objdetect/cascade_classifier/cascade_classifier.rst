@@ -36,17 +36,17 @@ This tutorial code's is shown lines below. You can also download it from `here <
     using namespace std;
     using namespace cv;
 
-    /** Function Headers */
+    /* Function Headers */
     void detectAndDisplay( Mat frame );
 
-    /** Global variables */
+    /* Global variables */
     String face_cascade_name = "haarcascade_frontalface_alt.xml";
     String eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
     CascadeClassifier face_cascade;
     CascadeClassifier eyes_cascade;
     String window_name = "Capture - Face detection";
 
-    /** @function main */
+    /* @function main */
     int main( void )
     {
         VideoCapture capture;
@@ -77,7 +77,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
         return 0;
     }
 
-    /** @function detectAndDisplay */
+    /* @function detectAndDisplay */
     void detectAndDisplay( Mat frame )
     {
         std::vector<Rect> faces;

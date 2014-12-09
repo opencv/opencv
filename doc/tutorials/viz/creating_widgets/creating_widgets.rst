@@ -36,7 +36,7 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
     using namespace cv;
     using namespace std;
 
-    /**
+    /*
      * @class WTriangle
      * @brief Defining our own 3D Triangle widget
      */
@@ -46,7 +46,7 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
             WTriangle(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color = viz::Color::white());
     };
 
-    /**
+    /*
      * @function WTriangle::WTriangle
      */
     WTriangle::WTriangle(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color)
@@ -90,7 +90,7 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
         setColor(color);
     }
 
-    /**
+    /*
      * @function main
      */
     int main()
