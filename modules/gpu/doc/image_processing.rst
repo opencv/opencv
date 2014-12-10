@@ -167,7 +167,7 @@ Performs a per-element multiplication of two Fourier spectrums.
 
     :param c: Destination spectrum.
 
-    :param flags: Mock parameter used for CPU/GPU interfaces similarity.
+    :param flags: Mock parameter used for CPU/GPU interfaces similarity, simply add a `0` value.
 
     :param conjB: Optional flag to specify if the second spectrum needs to be conjugated before the multiplication.
 
