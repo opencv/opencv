@@ -93,6 +93,11 @@ CV_IMPL double cvGetCaptureProperty( CvCapture* capture, int id )
     return capture ? capture->getProperty(id) : 0;
 }
 
+CV_IMPL double _cvGetCaptureProperty( const CvCapture* capture, int id )
+{
+    return capture ? capture->getProperty(id) : 0;
+}
+
 CV_IMPL int cvSetCaptureProperty( CvCapture* capture, int id, double value )
 {
     return capture ? capture->setProperty(id, value) : 0;
@@ -581,9 +586,9 @@ bool VideoCapture::set(int propId, double value)
     return cvSetCaptureProperty(cap, propId, value) != 0;
 }
 
-double VideoCapture::get(int propId)
+double VideoCapture::get(int propId) const
 {
-    return cvGetCaptureProperty(cap, propId);
+    return _cvGetCaptureProperty(cap, propId);
 }
 
 VideoWriter::VideoWriter()

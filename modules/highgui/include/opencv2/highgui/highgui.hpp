@@ -220,7 +220,7 @@ public:
     CV_WRAP virtual bool read(CV_OUT Mat& image);
 
     CV_WRAP virtual bool set(int propId, double value);
-    CV_WRAP virtual double get(int propId);
+    CV_WRAP virtual double get(int propId) const;
 
 protected:
     Ptr<CvCapture> cap;
