@@ -597,7 +597,7 @@ bool VideoCapture::set(int propId, double value)
     return cvSetCaptureProperty(cap, propId, value) != 0;
 }
 
-double VideoCapture::get(int propId)
+double VideoCapture::get(int propId) const
 {
     if (!icap.empty())
         return icap->getProperty(propId);
