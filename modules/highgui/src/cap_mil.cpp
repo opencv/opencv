@@ -69,7 +69,7 @@ public:
     virtual bool open( int index );
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double) { return false; }
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -189,7 +189,7 @@ IplImage* CvCaptureCAM_MIL::retrieveFrame(int)
     return rgb_frame;
 }
 
-double CvCaptureCAM_MIL::getProperty( int property_id )
+double CvCaptureCAM_MIL::getProperty( int property_id ) const
 {
     switch( property_id )
     {

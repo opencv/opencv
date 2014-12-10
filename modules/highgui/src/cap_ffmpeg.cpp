@@ -167,7 +167,7 @@ public:
     CvCapture_FFMPEG_proxy() { ffmpegCapture = 0; }
     virtual ~CvCapture_FFMPEG_proxy() { close(); }
 
-    virtual double getProperty(int propId)
+    virtual double getProperty(int propId) const
     {
         return ffmpegCapture ? icvGetCaptureProperty_FFMPEG_p(ffmpegCapture, propId) : 0;
     }

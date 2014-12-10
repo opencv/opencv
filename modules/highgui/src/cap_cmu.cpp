@@ -68,7 +68,7 @@ public:
 
     virtual bool open(int cameraId);
     virtual void close();
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -422,7 +422,7 @@ IplImage* CvCaptureCAM_CMU::retrieveFrame(int)
 }
 
 
-double CvCaptureCAM_CMU::getProperty( int property_id )
+double CvCaptureCAM_CMU::getProperty( int property_id ) const
 {
     C1394Camera* cmucam = camera();
     if( !cmucam )

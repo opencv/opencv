@@ -217,7 +217,7 @@ struct CvCapture_FFMPEG
     bool open( const char* filename );
     void close();
 
-    double getProperty(int);
+    double getProperty(int) const;
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
@@ -765,7 +765,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 }
 
 
-double CvCapture_FFMPEG::getProperty( int property_id )
+double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
     if( !video_st ) return 0;
 

@@ -99,7 +99,7 @@ public:
     virtual bool open( const char* filename );
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -238,7 +238,7 @@ IplImage* CvCaptureAVI_VFW::retrieveFrame(int)
     return 0;
 }
 
-double CvCaptureAVI_VFW::getProperty( int property_id )
+double CvCaptureAVI_VFW::getProperty( int property_id ) const
 {
     switch( property_id )
     {
@@ -317,7 +317,7 @@ public:
 
     virtual bool open( int index );
     virtual void close();
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -541,7 +541,7 @@ IplImage* CvCaptureCAM_VFW::retrieveFrame(int)
 }
 
 
-double CvCaptureCAM_VFW::getProperty( int property_id )
+double CvCaptureCAM_VFW::getProperty( int property_id ) const
 {
     switch( property_id )
     {
