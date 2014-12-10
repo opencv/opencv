@@ -684,11 +684,11 @@ public:
     // Getting numbers of existence videodevices with listing in consol
     unsigned int listDevices(bool silent = false);
     // Getting numbers of formats, which are supported by videodevice with deviceID
-    unsigned int getCountFormats(int deviceID);
+    unsigned int getCountFormats(int deviceID) const;
     // Getting width of image, which is getting from videodevice with deviceID
-    unsigned int getWidth(int deviceID);
+    unsigned int getWidth(int deviceID) const;
     // Getting height of image, which is getting from videodevice with deviceID
-    unsigned int getHeight(int deviceID);
+    unsigned int getHeight(int deviceID) const;
     // Getting frame rate, which is getting from videodevice with deviceID
     unsigned int getFrameRate(int deviceID) const;
     // Getting name of videodevice with deviceID
@@ -3226,7 +3226,7 @@ void videoInput::waitForDevice(int deviceID)
 }
 #endif
 
-unsigned int videoInput::getCountFormats(int deviceID)
+unsigned int videoInput::getCountFormats(int deviceID) const
 {
     if (deviceID < 0)
     {
@@ -3316,7 +3316,7 @@ void videoInput::closeDevice(int deviceID)
     }
 }
 
-unsigned int videoInput::getWidth(int deviceID)
+unsigned int videoInput::getWidth(int deviceID) const
 {
     if (deviceID < 0)
     {
@@ -3337,7 +3337,7 @@ unsigned int videoInput::getWidth(int deviceID)
     return 0;
 }
 
-unsigned int videoInput::getHeight(int deviceID)
+unsigned int videoInput::getHeight(int deviceID) const
 {
     if (deviceID < 0)
     {
@@ -3585,7 +3585,7 @@ public:
     virtual ~CvCaptureCAM_MSMF();
     virtual bool open( int index );
     virtual void close();
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -3711,7 +3711,7 @@ IplImage* CvCaptureCAM_MSMF::retrieveFrame(int)
     return frame;
 }
 
-double CvCaptureCAM_MSMF::getProperty( int property_id )
+double CvCaptureCAM_MSMF::getProperty( int property_id ) const
 {
     // image format proprrties
     switch( property_id )
@@ -3778,7 +3778,7 @@ public:
     virtual bool open( const char* filename );
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -3792,7 +3792,7 @@ protected:
     bool isOpened;
 
     HRESULT enumerateCaptureFormats(IMFMediaSource *pSource);
-    HRESULT getSourceDuration(IMFMediaSource *pSource, MFTIME *pDuration);
+    HRESULT getSourceDuration(IMFMediaSource *pSource, MFTIME *pDuration) const;
 };
 
 CvCaptureFile_MSMF::CvCaptureFile_MSMF():
@@ -3897,7 +3897,7 @@ bool CvCaptureFile_MSMF::setProperty(int property_id, double value)
     return false;
 }
 
-double CvCaptureFile_MSMF::getProperty(int property_id)
+double CvCaptureFile_MSMF::getProperty(int property_id) const
 {
     // image format proprrties
     switch( property_id )
@@ -4009,7 +4009,7 @@ done:
     return hr;
 }
 
-HRESULT CvCaptureFile_MSMF::getSourceDuration(IMFMediaSource *pSource, MFTIME *pDuration)
+HRESULT CvCaptureFile_MSMF::getSourceDuration(IMFMediaSource *pSource, MFTIME *pDuration) const
 {
     *pDuration = 0;
 
