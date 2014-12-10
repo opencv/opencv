@@ -93,7 +93,7 @@ class CvCaptureCAM : public CvCapture {
         virtual bool grabFrame();
         virtual IplImage* retrieveFrame(int);
         virtual IplImage* queryFrame();
-        virtual double getProperty(int property_id);
+        virtual double getProperty(int property_id) const;
         virtual bool setProperty(int property_id, double value);
         virtual int didStart();
 
@@ -136,7 +136,7 @@ class CvCaptureFile : public CvCapture {
         virtual bool grabFrame();
         virtual IplImage* retrieveFrame(int);
         virtual IplImage* queryFrame();
-        virtual double getProperty(int property_id);
+        virtual double getProperty(int property_id) const;
         virtual bool setProperty(int property_id, double value);
         virtual int didStart();
 
@@ -480,7 +480,7 @@ enum {
 typedef NSInteger AVCaptureWhiteBalanceMode;
 */
 
-double CvCaptureCAM::getProperty(int property_id){
+double CvCaptureCAM::getProperty(int property_id) const{
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
     /*
@@ -1013,7 +1013,7 @@ double CvCaptureFile::getFPS() {
     return 30.0; //TODO: Debugging
 }
 
-double CvCaptureFile::getProperty(int property_id){
+double CvCaptureFile::getProperty(int property_id) const{
     (void)property_id;
     /*
          if (mCaptureSession == nil) return 0;

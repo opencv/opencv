@@ -111,7 +111,7 @@ public:
     ~CvCaptureCAM();
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-    virtual double getProperty(int property_id);
+    virtual double getProperty(int property_id) const;
     virtual bool setProperty(int property_id, double value);
     virtual int didStart();
 
@@ -153,7 +153,7 @@ public:
     ~CvCaptureFile();
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-    virtual double getProperty(int property_id);
+    virtual double getProperty(int property_id) const;
     virtual bool setProperty(int property_id, double value);
     virtual int didStart();
 
@@ -442,7 +442,7 @@ void CvCaptureCAM::setWidthHeight() {
 }
 
 
-double CvCaptureCAM::getProperty(int property_id){
+double CvCaptureCAM::getProperty(int property_id) const{
     int retval;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
@@ -835,7 +835,7 @@ double CvCaptureFile::getFPS() {
     return retval;
 }
 
-double CvCaptureFile::getProperty(int property_id){
+double CvCaptureFile::getProperty(int property_id) const{
     if (mCaptureSession == nil) return 0;
 
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
