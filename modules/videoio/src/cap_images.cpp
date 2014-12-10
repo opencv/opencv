@@ -80,7 +80,7 @@ public:
 
     virtual bool open(const char* _filename);
     virtual void close();
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -126,7 +126,7 @@ IplImage* CvCapture_Images::retrieveFrame(int)
     return frame;
 }
 
-double CvCapture_Images::getProperty(int id)
+double CvCapture_Images::getProperty(int id) const
 {
     switch(id)
     {

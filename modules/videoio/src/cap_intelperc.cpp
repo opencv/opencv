@@ -46,7 +46,7 @@ int IntelPerCStreamBase::getProfileIDX() const
 {
     return m_profileIdx;
 }
-double IntelPerCStreamBase::getProperty(int propIdx)
+double IntelPerCStreamBase::getProperty(int propIdx) const
 {
     double ret = 0.0;
     switch (propIdx)
@@ -210,7 +210,7 @@ bool IntelPerCStreamImage::initStream(PXCSession *session)
     enumProfiles();
     return true;
 }
-double IntelPerCStreamImage::getProperty(int propIdx)
+double IntelPerCStreamImage::getProperty(int propIdx) const
 {
     switch (propIdx)
     {
@@ -418,7 +418,7 @@ bool IntelPerCStreamDepth::initStream(PXCSession *session)
     enumProfiles();
     return true;
 }
-double IntelPerCStreamDepth::getProperty(int propIdx)
+double IntelPerCStreamDepth::getProperty(int propIdx) const
 {
     switch (propIdx)
     {
@@ -554,7 +554,7 @@ VideoCapture_IntelPerC::VideoCapture_IntelPerC()
 }
 VideoCapture_IntelPerC::~VideoCapture_IntelPerC(){}
 
-double VideoCapture_IntelPerC::getProperty(int propIdx)
+double VideoCapture_IntelPerC::getProperty(int propIdx) const
 {
     double propValue = 0;
     int purePropIdx = propIdx & ~CV_CAP_INTELPERC_GENERATORS_MASK;

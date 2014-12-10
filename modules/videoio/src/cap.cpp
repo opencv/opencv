@@ -61,6 +61,11 @@ template<> void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) c
 
 /************************* Reading AVIs & Camera data **************************/
 
+static inline double icvGetCaptureProperty( const CvCapture* capture, int id )
+{
+    return capture ? capture->getProperty(id) : 0;
+}
+
 CV_IMPL void cvReleaseCapture( CvCapture** pcapture )
 {
     if( pcapture && *pcapture )
@@ -92,7 +97,7 @@ CV_IMPL IplImage* cvRetrieveFrame( CvCapture* capture, int idx )
 
 CV_IMPL double cvGetCaptureProperty( CvCapture* capture, int id )
 {
-    return capture ? capture->getProperty(id) : 0;
+    return icvGetCaptureProperty(capture, id);
 }
 
 CV_IMPL int cvSetCaptureProperty( CvCapture* capture, int id, double value )
@@ -597,11 +602,11 @@ bool VideoCapture::set(int propId, double value)
     return cvSetCaptureProperty(cap, propId, value) != 0;
 }
 
-double VideoCapture::get(int propId)
+double VideoCapture::get(int propId) const
 {
     if (!icap.empty())
         return icap->getProperty(propId);
-    return cvGetCaptureProperty(cap, propId);
+    return icvGetCaptureProperty(cap, propId);
 }
 
 Ptr<IVideoCapture> VideoCapture::createCameraCapture(int index)
