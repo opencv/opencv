@@ -90,7 +90,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
     // Labels for pixels
     const int IN_QUEUE = -2; // Pixel visited
     const int WSHED = -1; // Pixel belongs to watershed
-    
+
     // possible bit values = 2^8
     const int NQ = 256;
 
@@ -163,7 +163,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
     const uchar* img = src.ptr();
     // Step size to next row in input image
     int istep = int(src.step/sizeof(img[0]));
-    
+
     // Current pixel in mask image
     int* mask = dst.ptr<int>();
     // Step size to next row in mask image
@@ -211,7 +211,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
                     c_diff( ptr, ptr + istep, t );
                     idx = ws_min( idx, t );
                 }
-                
+
                 // Add to according queue
                 assert( 0 <= idx && idx <= 255 );
                 ws_push( idx, i*mstep + j, i*istep + j*3 );
@@ -259,7 +259,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
         // Calculate pointer to current pixel in input and marker image
         m = mask + mofs;
         ptr = img + iofs;
-        
+
         // Check surrounding pixels for labels
         // to determine label for current pixel
         t = m[-1]; // Left
@@ -282,11 +282,11 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
             if( lab == 0 ) lab = t;
             else if( t != lab ) lab = WSHED;
         }
-        
+
         // Set label to current pixel in marker image
         assert( lab != 0 );
         m[0] = lab;
-        
+
         if( lab == WSHED )
             continue;
 
