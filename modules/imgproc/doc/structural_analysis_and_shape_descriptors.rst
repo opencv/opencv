@@ -157,9 +157,9 @@ Finds contours in a binary image.
 
 .. ocv:pyfunction:: cv2.findContours(image, mode, method[, contours[, hierarchy[, offset]]]) -> image, contours, hierarchy
 
-.. ocv:cfunction:: int cvFindContours( CvArr* image, CvMemStorage* storage, CvSeq** first_contour, int header_size=sizeof(CvContour), int mode=CV_RETR_LIST, int method=CV_CHAIN_APPROX_SIMPLE, CvPoint offset=cvPoint(0,0) )
+.. ocv:cfunction:: int cvFindContours( CvArr* image, CvMemStorage* storage, CvSeq** first_contour, int header_size=sizeof(CvContour), int mode=RETR_LIST, int method=CHAIN_APPROX_SIMPLE, CvPoint offset=cvPoint(0,0) )
 
-    :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :ocv:func:`compare` ,  :ocv:func:`inRange` ,  :ocv:func:`threshold` ,  :ocv:func:`adaptiveThreshold` ,  :ocv:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours. If mode equals to ``CV_RETR_CCOMP`` or ``CV_RETR_FLOODFILL``, the input can also be a 32-bit integer image of labels (``CV_32SC1``).
+    :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :ocv:func:`compare` ,  :ocv:func:`inRange` ,  :ocv:func:`threshold` ,  :ocv:func:`adaptiveThreshold` ,  :ocv:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours. If mode equals to ``RETR_CCOMP`` or ``RETR_FLOODFILL``, the input can also be a 32-bit integer image of labels (``CV_32SC1``).
 
     :param contours: Detected contours. Each contour is stored as a vector of points.
 
@@ -167,21 +167,21 @@ Finds contours in a binary image.
 
     :param mode: Contour retrieval mode (if you use Python see also a note below).
 
-            * **CV_RETR_EXTERNAL** retrieves only the extreme outer contours. It sets  ``hierarchy[i][2]=hierarchy[i][3]=-1``  for all the contours.
+            * **RETR_EXTERNAL** retrieves only the extreme outer contours. It sets  ``hierarchy[i][2]=hierarchy[i][3]=-1``  for all the contours.
 
-            * **CV_RETR_LIST** retrieves all of the contours without establishing any hierarchical relationships.
+            * **RETR_LIST** retrieves all of the contours without establishing any hierarchical relationships.
 
-            * **CV_RETR_CCOMP** retrieves all of the contours and organizes them into a two-level hierarchy. At the top level, there are external boundaries of the components. At the second level, there are boundaries of the holes. If there is another contour inside a hole of a connected component, it is still put at the top level.
+            * **RETR_CCOMP** retrieves all of the contours and organizes them into a two-level hierarchy. At the top level, there are external boundaries of the components. At the second level, there are boundaries of the holes. If there is another contour inside a hole of a connected component, it is still put at the top level.
 
-            * **CV_RETR_TREE** retrieves all of the contours and reconstructs a full hierarchy of nested contours. This full hierarchy is built and shown in the OpenCV  ``contours.c``  demo.
+            * **RETR_TREE** retrieves all of the contours and reconstructs a full hierarchy of nested contours. This full hierarchy is built and shown in the OpenCV  ``contours.c``  demo.
 
     :param method: Contour approximation method (if you use Python see also a note below).
 
-            * **CV_CHAIN_APPROX_NONE** stores absolutely all the contour points. That is, any 2 subsequent points ``(x1,y1)`` and ``(x2,y2)`` of the contour will be either horizontal, vertical or diagonal neighbors, that is, ``max(abs(x1-x2),abs(y2-y1))==1``.
+            * **CHAIN_APPROX_NONE** stores absolutely all the contour points. That is, any 2 subsequent points ``(x1,y1)`` and ``(x2,y2)`` of the contour will be either horizontal, vertical or diagonal neighbors, that is, ``max(abs(x1-x2),abs(y2-y1))==1``.
 
-            * **CV_CHAIN_APPROX_SIMPLE** compresses horizontal, vertical, and diagonal segments and leaves only their end points. For example, an up-right rectangular contour is encoded with 4 points.
+            * **CHAIN_APPROX_SIMPLE** compresses horizontal, vertical, and diagonal segments and leaves only their end points. For example, an up-right rectangular contour is encoded with 4 points.
 
-            * **CV_CHAIN_APPROX_TC89_L1,CV_CHAIN_APPROX_TC89_KCOS** applies one of the flavors of the Teh-Chin chain approximation algorithm. See  [TehChin89]_ for details.
+            * **CHAIN_APPROX_TC89_L1,CV_CHAIN_APPROX_TC89_KCOS** applies one of the flavors of the Teh-Chin chain approximation algorithm. See  [TehChin89]_ for details.
 
     :param offset: Optional offset by which every contour point is shifted. This is useful if the contours are extracted from the image ROI and then they should be analyzed in the whole image context.
 
