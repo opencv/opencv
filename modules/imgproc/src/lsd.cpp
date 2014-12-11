@@ -191,8 +191,8 @@ public:
  *                  If only a roi needs to be selected, use
  *                  lsd_ptr->detect(image(roi), ..., lines);
  *                  lines += Scalar(roi.x, roi.y, roi.x, roi.y);
- * @param _lines    Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
- *                          Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
+ * @param _lines    Return: A vector of Vec4f elements specifying the beginning and ending point of a line.
+ *                          Where Vec4f is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                          Returned lines are strictly oriented depending on the gradient.
  * @param width     Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param prec      Return: Vector of precisions with which the lines are found.
@@ -286,8 +286,8 @@ private:
 /**
  * Detect lines in the whole input image.
  *
- * @param lines         Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
- *                              Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
+ * @param lines         Return: A vector of Vec4f elements specifying the beginning and ending point of a line.
+ *                              Where Vec4f is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                              Returned lines are strictly oriented depending on the gradient.
  * @param widths        Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param precisions    Return: Vector of precisions with which the lines are found.
@@ -297,7 +297,7 @@ private:
  *                                  * 0 corresponds to 1 mean false alarm
  *                                  * 1 corresponds to 0.1 mean false alarms
  */
-    void flsd(std::vector<Vec4i>& lines,
+    void flsd(std::vector<Vec4f>& lines,
               std::vector<double>& widths, std::vector<double>& precisions,
               std::vector<double>& nfas);
 
@@ -418,7 +418,7 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     // Convert image to double
     img.convertTo(image, CV_64FC1);
 
-    std::vector<Vec4i> lines;
+    std::vector<Vec4f> lines;
     std::vector<double> w, p, n;
     w_needed = _width.needed();
     p_needed = _prec.needed();
@@ -435,7 +435,7 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     if(n_needed) Mat(n).copyTo(_nfa);
 }
 
-void LineSegmentDetectorImpl::flsd(std::vector<Vec4i>& lines,
+void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
     std::vector<double>& widths, std::vector<double>& precisions,
     std::vector<double>& nfas)
 {
@@ -518,7 +518,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4i>& lines,
             }
 
             //Store the relevant data
-            lines.push_back(Vec4i(int(rec.x1), int(rec.y1), int(rec.x2), int(rec.y2)));
+            lines.push_back(Vec4f(float(rec.x1), float(rec.y1), float(rec.x2), float(rec.y2)));
             if(w_needed) widths.push_back(rec.width);
             if(p_needed) precisions.push_back(rec.p);
             if(n_needed && doRefine >= LSD_REFINE_ADV) nfas.push_back(log_nfa);
@@ -1181,9 +1181,9 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
     // Draw segments
     for(int i = 0; i < N; ++i)
     {
-        const Vec4i& v = _lines.at<Vec4i>(i);
-        Point b(v[0], v[1]);
-        Point e(v[2], v[3]);
+        const Vec4f& v = _lines.at<Vec4f>(i);
+        Point2f b(v[0], v[1]);
+        Point2f e(v[2], v[3]);
         line(_image.getMatRef(), b, e, Scalar(0, 0, 255), 1);
     }
 }
@@ -1208,14 +1208,14 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
     // Draw segments
     for(int i = 0; i < N1; ++i)
     {
-        Point b(_lines1.at<Vec4i>(i)[0], _lines1.at<Vec4i>(i)[1]);
-        Point e(_lines1.at<Vec4i>(i)[2], _lines1.at<Vec4i>(i)[3]);
+        Point2f b(_lines1.at<Vec4f>(i)[0], _lines1.at<Vec4f>(i)[1]);
+        Point2f e(_lines1.at<Vec4f>(i)[2], _lines1.at<Vec4f>(i)[3]);
         line(I1, b, e, Scalar::all(255), 1);
     }
     for(int i = 0; i < N2; ++i)
     {
-        Point b(_lines2.at<Vec4i>(i)[0], _lines2.at<Vec4i>(i)[1]);
-        Point e(_lines2.at<Vec4i>(i)[2], _lines2.at<Vec4i>(i)[3]);
+        Point2f b(_lines2.at<Vec4f>(i)[0], _lines2.at<Vec4f>(i)[1]);
+        Point2f e(_lines2.at<Vec4f>(i)[2], _lines2.at<Vec4f>(i)[3]);
         line(I2, b, e, Scalar::all(255), 1);
     }
 
