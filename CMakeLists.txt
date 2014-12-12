@@ -85,6 +85,8 @@ if(DEFINED CMAKE_BUILD_TYPE)
   set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES} )
 endif()
 
+enable_testing()
+
 project(OpenCV CXX C)
 
 if(MSVC)
