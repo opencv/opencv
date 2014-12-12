@@ -2951,6 +2951,9 @@ MatComparator::operator()(const char* expr1, const char* expr2,
 
 void printVersionInfo(bool useStdOut)
 {
+    // Tell CTest not to discard any output
+    if(useStdOut) std::cout << "CTEST_FULL_OUTPUT" << std::endl;
+
     ::testing::Test::RecordProperty("cv_version", CV_VERSION);
     if(useStdOut) std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
