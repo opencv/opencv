@@ -46,7 +46,5 @@ if(OCV_DEPENDENCIES_FOUND)
     set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
   endif()
 
-  enable_testing()
-  get_target_property(LOC ${the_target} LOCATION)
-  add_test(${the_target} "${LOC}")
+  ocv_add_test_from_target("${the_target}" "Accuracy" "${the_target}")
 endif()

@@ -862,6 +862,12 @@ function(ocv_add_perf_tests)
       if(NOT BUILD_opencv_world)
         _ocv_add_precompiled_headers(${the_target})
       endif()
+
+      ocv_add_test_from_target("${the_target}" "Performance" "${the_target}")
+      ocv_add_test_from_target("opencv_sanity_${name}" "Sanity" "${the_target}"
+                               "--perf_min_samples=1"
+                               "--perf_force_samples=1"
+                               "--perf_verify_sanity")
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
@@ -918,13 +924,11 @@ function(ocv_add_accuracy_tests)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
       endif()
 
-      enable_testing()
-      get_target_property(LOC ${the_target} LOCATION)
-      add_test(${the_target} "${LOC}")
-
       if(NOT BUILD_opencv_world)
         _ocv_add_precompiled_headers(${the_target})
       endif()
+
+      ocv_add_test_from_target("${the_target}" "Accuracy" "${the_target}")
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
