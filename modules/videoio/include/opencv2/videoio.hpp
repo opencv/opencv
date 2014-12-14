@@ -76,7 +76,8 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_GIGANETIX    = 1300,  // Smartek Giganetix GigEVisionSDK
        CAP_MSMF         = 1400,  // Microsoft Media Foundation (via videoInput)
        CAP_INTELPERC    = 1500,   // Intel Perceptual Computing SDK
-       CAP_OPENNI2      = 1600   // OpenNI2 (for Kinect)
+       CAP_OPENNI2      = 1600,   // OpenNI2 (for Kinect)
+       CAP_OPENNI2_ASUS = 1610   // OpenNI2 (for Asus Xtion and Occipital Structure sensors)
      };
 
 // generic properties (based on DC1394 properties)
