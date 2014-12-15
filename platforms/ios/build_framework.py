@@ -25,7 +25,9 @@ The script should handle minor OpenCV updates efficiently
 However, opencv2.framework directory is erased and recreated on each run.
 """
 
-import glob, re, os, os.path, shutil, string, sys, exceptions, subprocess
+import glob, re, os, os.path, shutil, string, sys, exceptions, subprocess, argparse
+
+opencv_contrib_path = None
 
 def execute(cmd):
     try:
@@ -57,6 +59,9 @@ def build_opencv(srcroot, buildroot, target, arch):
     if arch.startswith("armv"):
         cmakeargs += " -DENABLE_NEON=ON"
 
+    if opencv_contrib_path is not None:
+        cmakeargs += " -DOPENCV_EXTRA_MODULES_PATH=%s -DOPENCV_EXTRA_WORLD=ON" % opencv_contrib_path
+
     # if cmake cache exists, just rerun cmake to update OpenCV.xcodeproj if necessary
     if os.path.isfile(os.path.join(builddir, "CMakeCache.txt")):
         execute("cmake %s ." % (cmakeargs,))
@@ -75,13 +80,15 @@ def build_opencv(srcroot, buildroot, target, arch):
 def put_framework_together(srcroot, dstroot):
     "constructs the framework directory after all the targets are built"
 
+    name = "opencv2" if opencv_contrib_path is None else "opencv2_contrib"
+
     # find the list of targets (basically, ["iPhoneOS", "iPhoneSimulator"])
     targetlist = glob.glob(os.path.join(dstroot, "build", "*"))
     targetlist = [os.path.basename(t) for t in targetlist]
 
     # set the current dir to the dst root
     currdir = os.getcwd()
-    framework_dir = dstroot + "/opencv2.framework"
+    framework_dir = dstroot + "/%s.framework" % name
     if os.path.isdir(framework_dir):
         shutil.rmtree(framework_dir)
     os.makedirs(framework_dir)
@@ -97,7 +104,7 @@ def put_framework_together(srcroot, dstroot):
 
     # make universal static lib
     wlist = " ".join(["../build/" + t + "/lib/Release/libopencv_world.a" for t in targetlist])
-    execute("lipo -create " + wlist + " -o " + dstdir + "/opencv2")
+    execute("lipo -create " + wlist + " -o " + dstdir + "/%s" % name)
 
     # copy Info.plist
     shutil.copyfile(tdir0 + "/ios/Info.plist", dstdir + "/Resources/Info.plist")
@@ -106,7 +113,7 @@ def put_framework_together(srcroot, dstroot):
     os.symlink("A", "Versions/Current")
     os.symlink("Versions/Current/Headers", "Headers")
     os.symlink("Versions/Current/Resources", "Resources")
-    os.symlink("Versions/Current/opencv2", "opencv2")
+    os.symlink("Versions/Current/%s" % name, name)
 
 
 def build_framework(srcroot, dstroot):
@@ -124,12 +131,29 @@ def build_framework(srcroot, dstroot):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print "Usage:\n\t./build_framework.py <outputdir>\n\n"
-        sys.exit(0)
+    parser = argparse.ArgumentParser(description='The script builds OpenCV.framework for iOS.')
+    parser.add_argument('outputdir', nargs=1, help='folder to put built framework')
+    parser.add_argument('--contrib', help="folder with opencv_contrib repository")
+    args = parser.parse_args()
+
+    # path to OpenCV main repository - hardcoded ../..
+    opencv_path = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
+    print "OpenCV:", opencv_path
+
+    # path to OpenCV_contrib repository, can be empty - global variable
+    if hasattr(args, "contrib") and args.contrib is not None:
+        if os.path.isdir(args.contrib + "/modules"):
+            opencv_contrib_path = os.path.abspath(args.contrib + "/modules")
+            print "Contrib:", opencv_contrib_path
+        else:
+            print "Note: contrib repository is bad: modules subfolder not found"
+
+    # result path - folder where framework will be located
+    output_path = os.path.abspath(args.outputdir[0])
+    print "Output:", output_path
 
     try:
-        build_framework(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../..")), os.path.abspath(sys.argv[1]))
+        build_framework(opencv_path, output_path)
     except Exception as e:
         print >>sys.stderr, e
         sys.exit(1)

@@ -159,8 +159,13 @@ macro(ocv_add_module _name)
     endif()
 
     # add self to the world dependencies
+    # add to world only extra modules (ON) or only main modules (OFF)
+    set(__expected_extra 0)
+    if (OPENCV_EXTRA_WORLD)
+        set(__expected_extra 1)
+    endif()
     if((NOT DEFINED OPENCV_MODULE_IS_PART_OF_WORLD AND NOT OPENCV_MODULE_${the_module}_CLASS STREQUAL "BINDINGS"
-        AND NOT OPENCV_PROCESSING_EXTRA_MODULES)
+        AND __expected_extra EQUAL OPENCV_PROCESSING_EXTRA_MODULES)
         OR OPENCV_MODULE_IS_PART_OF_WORLD
         )
       set(OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD ON CACHE INTERNAL "")
