@@ -243,7 +243,7 @@ CvCapture_OpenNI2::CvCapture_OpenNI2( int index )
     {
         if (depth.isValid())
         {
-            CV_DbgAssert(depth.setVideoMode(defaultDepthOutputMode()) == openni::STATUS_OK); // xn::DepthGenerator supports VGA only! (Jan 2011)
+            CV_Assert(depth.setVideoMode(defaultDepthOutputMode()) == openni::STATUS_OK); // xn::DepthGenerator supports VGA only! (Jan 2011)
         }
 
         status = depth.start();
@@ -266,7 +266,7 @@ CvCapture_OpenNI2::CvCapture_OpenNI2( int index )
         // Set map output mode.
         if (color.isValid())
         {
-            CV_DbgAssert(color.setVideoMode(defaultColorOutputMode()) == openni::STATUS_OK);
+            CV_Assert(color.setVideoMode(defaultColorOutputMode()) == openni::STATUS_OK);
         }
         status = color.start();
         if (status != openni::STATUS_OK)
