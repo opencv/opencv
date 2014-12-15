@@ -15,6 +15,7 @@ import operator
 import functools
 import numpy as np
 import cv2
+import argparse
 
 # Python 3 moved urlopen to urllib.requests
 try:
@@ -24,9 +25,21 @@ except ImportError:
 
 class NewOpenCVTests(unittest.TestCase):
 
+    # path to local repository folder containing 'samples' folder
+    repoPath = None
+    # github repository url
+    repoUrl = 'https://raw.github.com/Itseez/opencv/master'
+
     def get_sample(self, filename, iscolor = cv2.IMREAD_COLOR):
         if not filename in self.image_cache:
-            filedata = urlopen("https://raw.github.com/Itseez/opencv/master/" + filename).read()
+            filedata = None
+            if NewOpenCVTests.repoPath is not None:
+                candidate = NewOpenCVTests.repoPath + '/' + filename
+                if os.path.isfile(candidate):
+                    with open(candidate, 'rb') as f:
+                        filedata = f.read()
+            if filedata is None:
+                filedata = urlopen(NewOpenCVTests.repoUrl + '/' + filename).read()
             self.image_cache[filename] = cv2.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
         return self.image_cache[filename]
 
@@ -133,6 +146,15 @@ class Hackathon244Tests(NewOpenCVTests):
         self.assertLessEqual(abs(mr - mr0), 5)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='run OpenCV python tests')
+    parser.add_argument('--repo', help='use sample image files from local git repository (path to folder), '
+                                       'if not set, samples will be downloaded from github.com')
+    parser.add_argument('--data', help='<not used> use data files from local folder (path to folder), '
+                                        'if not set, data files will be downloaded from docs.opencv.org')
+    args, other = parser.parse_known_args()
     print("Testing OpenCV", cv2.__version__)
+    print("Local repo path:", args.repo)
+    NewOpenCVTests.repoPath = args.repo
     random.seed(0)
-    unittest.main()
+    unit_argv = [sys.argv[0]] + other;
+    unittest.main(argv=unit_argv)

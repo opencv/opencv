@@ -110,7 +110,7 @@ Code
    char* warp_window = "Warp";
    char* warp_rotate_window = "Warp + Rotate";
 
-   /** @function main */
+   /* @function main */
     int main( int argc, char** argv )
     {
       Point2f srcTri[3];
@@ -141,7 +141,7 @@ Code
       /// Apply the Affine Transform just found to the src image
       warpAffine( src, warp_dst, warp_mat, warp_dst.size() );
 
-      /** Rotating the image after Warp */
+      /* Rotating the image after Warp */
 
       /// Compute a rotation matrix with respect to the center of the image
       Point center = Point( warp_dst.cols/2, warp_dst.rows/2 );

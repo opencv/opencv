@@ -122,7 +122,7 @@ Code
    /// Function Headers
    void Hist_and_Backproj(int, void* );
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
      /// Read the image
@@ -150,7 +150,7 @@ Code
    }
 
 
-   /**
+   /*
     * @function Hist_and_Backproj
     * @brief Callback to Trackbar
     */

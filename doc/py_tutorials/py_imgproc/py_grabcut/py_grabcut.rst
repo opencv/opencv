@@ -36,7 +36,7 @@ So what happens in background ?
 
 It is illustrated in below image (Image Courtesy: http://www.cs.ru.ac.za/research/g02m1682/)
 
-    .. image:: images/grabcut.jpg
+    .. image:: images/grabcut_scheme.jpg
         :alt: Simplified Diagram of GrabCut Algorithm
         :align: center
 

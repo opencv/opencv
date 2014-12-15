@@ -132,7 +132,7 @@ Code
 
    using namespace cv;
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
 

@@ -90,7 +90,7 @@ Result
 ----------
 So it is time to see the final result of our drawing. As you studied in previous articles, display the image to see it.
 
-         .. image:: images/drawing.jpg
+         .. image:: images/drawing_result.jpg
               :alt: Drawing Functions in OpenCV
               :align: center
 

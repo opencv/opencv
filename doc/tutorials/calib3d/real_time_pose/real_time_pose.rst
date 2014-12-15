@@ -126,7 +126,7 @@ Here is explained in detail the code for the real time application:
 
    .. code-block:: cpp
 
-    /** Load a YAML file using OpenCV **/
+    /* Load a YAML file using OpenCV */
     void Model::load(const std::string path)
     {
         cv::Mat points3d_mat;
@@ -152,7 +152,7 @@ Here is explained in detail the code for the real time application:
 
    .. code-block:: cpp
 
-    /** Load a CSV with *.ply format **/
+    /* Load a CSV with *.ply format */
     void Mesh::load(const std::string path)
     {
 
@@ -535,7 +535,7 @@ Here is explained in detail the code for the real time application:
       cv::setIdentity(KF.errorCovPost, cv::Scalar::all(1));             // error covariance
 
 
-                     /** DYNAMIC MODEL **/
+                     /* DYNAMIC MODEL */
 
       //  [1 0 0 dt  0  0 dt2   0   0 0 0 0  0  0  0   0   0   0]
       //  [0 1 0  0 dt  0   0 dt2   0 0 0 0  0  0  0   0   0   0]
@@ -579,7 +579,7 @@ Here is explained in detail the code for the real time application:
       KF.transitionMatrix.at<double>(11,17) = 0.5*pow(dt,2);
 
 
-           /** MEASUREMENT MODEL **/
+           /* MEASUREMENT MODEL */
 
       //  [1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
       //  [0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
@@ -744,7 +744,6 @@ You can watch the real time pose estimation on the `YouTube here <http://www.you
    <div align="center">
    <iframe title="Pose estimation of textured object using OpenCV" width="560" height="349" src="http://www.youtube.com/embed/XNATklaJlSQ?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>
-   </br></br>
    <div align="center">
    <iframe title="Pose estimation of textured object using OpenCV in cluttered background" width="560" height="349" src="http://www.youtube.com/embed/YLS9bWek78k?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
    </div>

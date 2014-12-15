@@ -182,6 +182,6 @@ Results
 
    * Finally the support vectors are shown using gray rings around the training examples.
 
-.. image:: images/result.png
+.. image:: images/svm_intro_result.png
   :alt: The seperated planes
   :align: center

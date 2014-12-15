@@ -125,5 +125,5 @@ Check out an instance of running code with more Image Effects on `YouTube <http:
 .. raw:: html
 
   <div align="center">
- <iframe width="560" height="350" src="http://www.youtube.com/embed/Ko3K_xdhJ1I" frameborder="0" allowfullscreen></iframe>
+  <iframe width="560" height="350" src="http://www.youtube.com/embed/Ko3K_xdhJ1I" frameborder="0" allowfullscreen></iframe>
   </div>
