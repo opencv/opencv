@@ -109,7 +109,7 @@ Code
    int kernel_size = 3;
    char* window_name = "Edge Map";
 
-   /**
+   /*
     * @function CannyThreshold
     * @brief Trackbar callback - Canny thresholds input with a ratio 1:3
     */
@@ -129,7 +129,7 @@ Code
     }
 
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
      /// Load an image

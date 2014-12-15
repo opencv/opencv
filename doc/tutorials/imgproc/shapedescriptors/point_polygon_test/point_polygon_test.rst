@@ -32,7 +32,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
    using namespace cv;
    using namespace std;
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
      /// Create an image

@@ -106,8 +106,8 @@ Results
 
 Below is the output of the program.  Use the first image as the input.  For the DEM model, download the SRTM file located at the USGS here. `http://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip <http://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip>`_
 
-.. image:: images/output.jpg
+.. image:: images/gdal_output.jpg
 
-.. image:: images/heat-map.jpg
+.. image:: images/gdal_heat-map.jpg
 
-.. image:: images/flood-zone.jpg
+.. image:: images/gdal_flood-zone.jpg

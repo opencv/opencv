@@ -150,7 +150,7 @@ Code
    /// Function Headers
    void MatchingMethod( int, void* );
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
      /// Load image and template
@@ -171,7 +171,7 @@ Code
      return 0;
    }
 
-   /**
+   /*
     * @function MatchingMethod
     * @brief Trackbar callback
     */

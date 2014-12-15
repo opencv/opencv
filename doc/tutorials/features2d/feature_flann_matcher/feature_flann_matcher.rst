@@ -23,7 +23,7 @@ This tutorial code's is shown lines below.
 
 .. code-block:: cpp
 
-    /**
+    /*
      * @file SURF_FlannMatcher
      * @brief SURF detector + descriptor + FLANN Matcher
      * @author A. Huaman
@@ -45,7 +45,7 @@ This tutorial code's is shown lines below.
 
     void readme();
 
-    /**
+    /*
      * @function main
      * @brief Main function
      */
@@ -123,7 +123,7 @@ This tutorial code's is shown lines below.
       return 0;
     }
 
-    /**
+    /*
      * @function readme
      */
     void readme()

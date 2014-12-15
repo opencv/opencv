@@ -37,7 +37,7 @@ This tutorial code's is shown lines below.
 
    void readme();
 
-   /** @function main */
+   /* @function main */
    int main( int argc, char** argv )
    {
      if( argc != 3 )
@@ -131,7 +131,7 @@ This tutorial code's is shown lines below.
      return 0;
      }
 
-     /** @function readme */
+     /* @function readme */
      void readme()
      { std::cout << " Usage: ./SURF_descriptor <img1> <img2>" << std::endl; }
 

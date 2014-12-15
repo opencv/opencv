@@ -118,7 +118,6 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
     int count = 0, converged = 0;
     float inorm, jnorm, invInorm, invJnorm, invScale, scale = 0, inv_Z = 0;
     float diff = (float)criteria.epsilon;
-    float inv_focalLength = 1 / focalLength;
 
     /* Check bad arguments */
     if( imagePoints == NULL )
@@ -139,6 +138,7 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         return CV_BADFACTOR_ERR;
 
     /* init variables */
+    float inv_focalLength = 1 / focalLength;
     int N = pObject->N;
     float *objectVectors = pObject->obj_vecs;
     float *invMatrix = pObject->inv_matr;

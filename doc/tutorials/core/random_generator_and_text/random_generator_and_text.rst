@@ -262,6 +262,6 @@ As you just saw in the Code section, the program will sequentially execute diver
 
 #. And the big end (which by the way expresses a big truth too):
 
-   .. image:: images/Drawing_2_Tutorial_Result_7.jpg
+   .. image:: images/Drawing_2_Tutorial_Result_big.jpg
       :alt: Drawing Tutorial 2 - Final Result 7
       :align: center

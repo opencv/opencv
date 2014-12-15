@@ -158,7 +158,7 @@ The tutorial code's is shown lines below. You can also download it from `here <h
    /// Function headers
    void Threshold_Demo( int, void* );
 
-   /**
+   /*
     * @function main
     */
    int main( int argc, char** argv )
@@ -196,7 +196,7 @@ The tutorial code's is shown lines below. You can also download it from `here <h
    }
 
 
-   /**
+   /*
     * @function Threshold_Demo
     */
    void Threshold_Demo( int, void* )
@@ -258,7 +258,7 @@ Explanation
 
      .. code-block:: cpp
 
-        /**
+        /*
          * @function Threshold_Demo
          */
         void Threshold_Demo( int, void* )
