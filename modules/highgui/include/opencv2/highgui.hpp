@@ -463,6 +463,21 @@ panel.
  */
 CV_EXPORTS_W void setTrackbarPos(const String& trackbarname, const String& winname, int pos);
 
+/** @brief Sets the trackbar maximum position.
+
+@param trackbarname Name of the trackbar.
+@param winname Name of the window that is the parent of trackbar.
+@param maxval New maximum position.
+
+The function sets the maximum position of the specified trackbar in the specified window.
+
+@note
+
+**[Qt Backend Only]** winname can be empty (or NULL) if the trackbar is attached to the control
+panel.
+ */
+CV_EXPORTS_W void setTrackbarMax(const String& trackbarname, const String& winname, int maxval);
+
 //! @addtogroup highgui_opengl OpenGL support
 //! @{
 
