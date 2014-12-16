@@ -115,6 +115,7 @@ void StatModel::save(const String& filename) const
 {
     FileStorage fs(filename, FileStorage::WRITE);
     fs << getDefaultModelName() << "{";
+    fs << "format" << (int)3;
     write(fs);
     fs << "}";
 }
