@@ -1241,7 +1241,7 @@ public:
         clear();
 
         vector<int> _layer_sizes;
-        fn["layer_sizes"] >> _layer_sizes;
+        readVectorOrMat(fn["layer_sizes"], _layer_sizes);
         create( _layer_sizes );
 
         int i, l_count = layer_count();
