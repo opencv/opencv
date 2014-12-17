@@ -479,6 +479,7 @@ private:
 
     friend struct StreamAccessor;
     friend class BufferPool;
+    friend class DefaultDeviceInitializer;
 };
 
 class CV_EXPORTS Event
