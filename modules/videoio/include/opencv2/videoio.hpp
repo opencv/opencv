@@ -110,6 +110,7 @@ enum { CAP_PROP_POS_MSEC       =0,
        CAP_PROP_WHITE_BALANCE_BLUE_U =17,
        CAP_PROP_RECTIFICATION =18,
        CAP_PROP_MONOCROME     =19,
+       CAP_PROP_MONOCHROME    =CAP_PROP_MONOCROME,
        CAP_PROP_SHARPNESS     =20,
        CAP_PROP_AUTO_EXPOSURE =21, // DC1394: exposure control done by camera, user can adjust refernce level using this feature
        CAP_PROP_GAMMA         =22,
@@ -127,6 +128,14 @@ enum { CAP_PROP_POS_MSEC       =0,
        CAP_PROP_ROLL          =35,
        CAP_PROP_IRIS          =36,
        CAP_PROP_SETTINGS      =37
+     };
+
+
+// Generic camera output modes.
+// Currently, these are supported through the libv4l interface only.
+enum { CAP_MODE_BGR  = 0, // BGR24 (default)
+       CAP_MODE_RGB  = 1, // RGB24
+       CAP_MODE_GRAY = 2  // Y8
      };
 
 
@@ -268,6 +277,7 @@ enum { CAP_PROP_ANDROID_AUTOGRAB               = 1024,
 enum { CAP_ANDROID_COLOR_FRAME_BGR  = 0, //BGR
        CAP_ANDROID_COLOR_FRAME      = CAP_ANDROID_COLOR_FRAME_BGR,
        CAP_ANDROID_GREY_FRAME       = 1,  //Y
+       CAP_ANDROID_GRAY_FRAME       = CAP_ANDROID_GREY_FRAME,
        CAP_ANDROID_COLOR_FRAME_RGB  = 2,
        CAP_ANDROID_COLOR_FRAME_BGRA = 3,
        CAP_ANDROID_COLOR_FRAME_RGBA = 4
