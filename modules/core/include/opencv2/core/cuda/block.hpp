@@ -43,11 +43,14 @@
 #ifndef __OPENCV_CUDA_DEVICE_BLOCK_HPP__
 #define __OPENCV_CUDA_DEVICE_BLOCK_HPP__
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
-//! @addtogroup cuda
-//! @{
     struct Block
     {
         static __device__ __forceinline__ unsigned int id()
@@ -201,7 +204,8 @@ namespace cv { namespace cuda { namespace device
             }
         }
     };
-//!@}
 }}}
+
+//! @endcond
 
 #endif /* __OPENCV_CUDA_DEVICE_BLOCK_HPP__ */

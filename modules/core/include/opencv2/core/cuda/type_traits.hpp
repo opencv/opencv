@@ -45,10 +45,14 @@
 
 #include "detail/type_traits_detail.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
-//! @addtogroup cuda
-//! @{
     template <typename T> struct IsSimpleParameter
     {
         enum {value = type_traits_detail::IsIntegral<T>::value || type_traits_detail::IsFloat<T>::value ||
@@ -79,7 +83,8 @@ namespace cv { namespace cuda { namespace device
         typedef typename type_traits_detail::Select<IsSimpleParameter<UnqualifiedType>::value,
             T, typename type_traits_detail::AddParameterType<T>::type>::type ParameterType;
     };
-//! @}
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_TYPE_TRAITS_HPP__
