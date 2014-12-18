@@ -342,14 +342,6 @@ void cv::cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
     }
 }
 
-GpuMat cv::cuda::allocMatFromBuf(int rows, int cols, int type, GpuMat& mat)
-{
-    if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
-        return mat(Rect(0, 0, cols, rows));
-
-    return mat = GpuMat(rows, cols, type);
-}
-
 #ifndef HAVE_CUDA
 
 GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
