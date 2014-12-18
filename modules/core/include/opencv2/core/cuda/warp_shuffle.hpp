@@ -43,10 +43,14 @@
 #ifndef __OPENCV_CUDA_WARP_SHUFFLE_HPP__
 #define __OPENCV_CUDA_WARP_SHUFFLE_HPP__
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
-//! @addtogroup cuda
-//! @{
     template <typename T>
     __device__ __forceinline__ T shfl(T val, int srcLane, int width = warpSize)
     {
@@ -142,7 +146,8 @@ namespace cv { namespace cuda { namespace device
         return 0.0;
     #endif
     }
-//! @}
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_WARP_SHUFFLE_HPP__

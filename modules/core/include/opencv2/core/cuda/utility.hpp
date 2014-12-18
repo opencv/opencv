@@ -46,10 +46,14 @@
 #include "saturate_cast.hpp"
 #include "datamov_utils.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
-//! @addtogroup cuda
-//! @{
     #define OPENCV_CUDA_LOG_WARP_SIZE        (5)
     #define OPENCV_CUDA_WARP_SIZE            (1 << OPENCV_CUDA_LOG_WARP_SIZE)
     #define OPENCV_CUDA_LOG_MEM_BANKS        ((__CUDA_ARCH__ >= 200) ? 5 : 4) // 32 banks on fermi, 16 on tesla
@@ -210,7 +214,8 @@ namespace cv { namespace cuda { namespace device
 
         return false;
     }
-//! @}
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_UTILITY_HPP__
