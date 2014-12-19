@@ -129,6 +129,25 @@ CUDA_TEST_P(Async, Convert)
     stream.waitForCompletion();
 }
 
+CUDA_TEST_P(Async, HostMemAllocator)
+{
+    cv::cuda::Stream stream;
+
+    cv::Mat h_dst;
+    h_dst.allocator = cv::cuda::HostMem::getAllocator();
+
+    d_src.upload(src, stream);
+    d_src.convertTo(d_dst, CV_32S, stream);
+    d_dst.download(h_dst, stream);
+
+    stream.waitForCompletion();
+
+    cv::Mat dst_gold;
+    src.createMatHeader().convertTo(dst_gold, CV_32S);
+
+    ASSERT_MAT_NEAR(dst_gold, h_dst, 0);
+}
+
 INSTANTIATE_TEST_CASE_P(CUDA_Stream, Async, ALL_DEVICES);
 
 #endif // HAVE_CUDA
