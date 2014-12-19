@@ -2745,7 +2745,28 @@ struct SymmColumnSmallVec_32s16s
             }
             else
             {
-                return 0;
+                float32x2_t k32 = vdup_n_f32(0);
+                k32 = vld1_lane_f32(ky + 1, k32, 1);
+
+                for( ; i <= width - 4; i += 4 )
+                {
+                    int32x4_t x0, x1, x2, x3;
+                    x0 = vld1q_s32((int32_t const *)(S0 + i));
+                    x1 = vld1q_s32((int32_t const *)(S2 + i));
+
+                    x2 = vsubq_s32(x1, x0);
+
+                    float32x4_t s0, s1;
+                    s0 = vcvtq_f32_s32(x2);
+                    s1 = vmlaq_lane_f32(df4, s0, k32, 1);
+
+                    x3 = vcvtq_s32_f32(s1);
+
+                    int16x4_t x4;
+                    x4 = vqmovn_s32(x3);
+
+                    vst1_s16((int16_t *)(dst + i), x4);
+                }
             }
         }
 
