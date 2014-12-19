@@ -2355,7 +2355,21 @@ struct SymmRowSmallVec_8u32s
             {
                 if( kx[0] == 0 && kx[1] == 1 )
                 {
-                    return 0;
+                    uint8x8_t z = vdup_n_u8(0);
+
+                    for( ; i <= width - 8; i += 8, src += 8 )
+                    {
+                        uint8x8_t x0, x1;
+                        x0 = vld1_u8( (uint8_t *) (src - cn) );
+                        x1 = vld1_u8( (uint8_t *) (src + cn) );
+
+                        int16x8_t y0;
+                        y0 = vsubq_s16(vreinterpretq_s16_u16(vaddl_u8(x1, z)),
+                                vreinterpretq_s16_u16(vaddl_u8(x0, z)));
+
+                        vst1q_s32((int32_t *)(dst + i), vmovl_s16(vget_low_s16(y0)));
+                        vst1q_s32((int32_t *)(dst + i + 4), vmovl_s16(vget_high_s16(y0)));
+                    }
                 else
                 {
                     return 0;
