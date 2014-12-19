@@ -341,7 +341,7 @@ namespace cv {
 
 template<typename _Tp>
 __host__ _InputArray::_InputArray(const cudev::GpuMat_<_Tp>& m)
-    : flags(FIXED_TYPE + GPU_MAT + DataType<_Tp>::type), obj((void*)&m)
+    : flags(FIXED_TYPE + CUDA_GPU_MAT + DataType<_Tp>::type), obj((void*)&m)
 {}
 
 template<typename _Tp>
