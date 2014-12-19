@@ -2400,7 +2400,40 @@ struct SymmRowSmallVec_8u32s
             }
             else if( _ksize == 5 )
             {
-                return 0;
+                int32x4_t k32 = vdupq_n_s32(0);
+                k32 = vld1q_lane_s32(kx + 1, k32, 1);
+                k32 = vld1q_lane_s32(kx + 2, k32, 2);
+
+                int16x4_t k = vqmovn_s32(k32);
+
+                uint8x8_t z = vdup_n_u8(0);
+
+                for( ; i <= width - 8; i += 8, src += 8 )
+                {
+                    uint8x8_t x0, x1;
+                    x0 = vld1_u8( (uint8_t *) (src - cn) );
+                    x1 = vld1_u8( (uint8_t *) (src + cn) );
+
+                    int32x4_t accl, acch;
+                    int16x8_t y0;
+                    y0 = vsubq_s16(vreinterpretq_s16_u16(vaddl_u8(x1, z)),
+                        vreinterpretq_s16_u16(vaddl_u8(x0, z)));
+                    accl = vmull_lane_s16(vget_low_s16(y0), k, 1);
+                    acch = vmull_lane_s16(vget_high_s16(y0), k, 1);
+
+                    uint8x8_t x2, x3;
+                    x2 = vld1_u8( (uint8_t *) (src - cn*2) );
+                    x3 = vld1_u8( (uint8_t *) (src + cn*2) );
+
+                    int16x8_t y1;
+                    y1 = vsubq_s16(vreinterpretq_s16_u16(vaddl_u8(x3, z)),
+                        vreinterpretq_s16_u16(vaddl_u8(x2, z)));
+                    accl = vmlal_lane_s16(accl, vget_low_s16(y1), k, 2);
+                    acch = vmlal_lane_s16(acch, vget_high_s16(y1), k, 2);
+
+                    vst1q_s32((int32_t *)(dst + i), accl);
+                    vst1q_s32((int32_t *)(dst + i + 4), acch);
+                }
             }
         }
 
@@ -2413,9 +2446,9 @@ struct SymmRowSmallVec_8u32s
 };
 
 
+typedef RowNoVec RowVec_8u32s;
 typedef RowNoVec RowVec_16s32f;
 typedef RowNoVec RowVec_32f;
-typedef SymmRowSmallNoVec SymmRowSmallVec_8u32s;
 typedef SymmRowSmallNoVec SymmRowSmallVec_32f;
 typedef ColumnNoVec SymmColumnVec_32s8u;
 typedef ColumnNoVec SymmColumnVec_32f16s;
