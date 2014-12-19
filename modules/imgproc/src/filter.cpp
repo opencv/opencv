@@ -2276,7 +2276,33 @@ struct SymmRowSmallVec_8u32s
                     return 0;
                 else
                 {
-                    return 0;
+                    int32x4_t k32 = vdupq_n_s32(0);
+                    k32 = vld1q_lane_s32(kx, k32, 0);
+                    k32 = vld1q_lane_s32(kx + 1, k32, 1);
+
+                    int16x4_t k = vqmovn_s32(k32);
+
+                    uint8x8_t z = vdup_n_u8(0);
+
+                    for( ; i <= width - 8; i += 8, src += 8 )
+                    {
+                        uint8x8_t x0, x1, x2;
+                        x0 = vld1_u8( (uint8_t *) (src - cn) );
+                        x1 = vld1_u8( (uint8_t *) (src) );
+                        x2 = vld1_u8( (uint8_t *) (src + cn) );
+
+                        int16x8_t y0, y1;
+                        int32x4_t y2, y3;
+                        y0 = vreinterpretq_s16_u16(vaddl_u8(x1, z));
+                        y1 = vreinterpretq_s16_u16(vaddl_u8(x0, x2));
+                        y2 = vmull_lane_s16(vget_low_s16(y0), k, 0);
+                        y2 = vmlal_lane_s16(y2, vget_low_s16(y1), k, 1);
+                        y3 = vmull_lane_s16(vget_high_s16(y0), k, 0);
+                        y3 = vmlal_lane_s16(y3, vget_high_s16(y1), k, 1);
+
+                        vst1q_s32((int32_t *)(dst + i), y2);
+                        vst1q_s32((int32_t *)(dst + i + 4), y3);
+                    }
                 }
             }
             else if( _ksize == 5 )
