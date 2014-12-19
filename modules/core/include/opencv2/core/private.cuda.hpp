@@ -92,26 +92,6 @@ static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The
 
 namespace cv { namespace cuda
 {
-    class MemoryStack;
-
-    class CV_EXPORTS StackAllocator : public GpuMat::Allocator
-    {
-    public:
-        explicit StackAllocator(cudaStream_t stream);
-        ~StackAllocator();
-
-        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize);
-        void free(GpuMat* mat);
-
-    private:
-        StackAllocator(const StackAllocator&);
-        StackAllocator& operator =(const StackAllocator&);
-
-        cudaStream_t stream_;
-        MemoryStack* memStack_;
-        size_t alignment_;
-    };
-
     class CV_EXPORTS BufferPool
     {
     public:
@@ -119,6 +99,8 @@ namespace cv { namespace cuda
 
         GpuMat getBuffer(int rows, int cols, int type);
         GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+
+        GpuMat::Allocator* getAllocator() const { return allocator_; }
 
     private:
         GpuMat::Allocator* allocator_;
