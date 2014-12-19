@@ -2599,13 +2599,96 @@ struct SymmColumnVec_32s8u
 };
 
 
+struct SymmColumnSmallVec_32s16s
+{
+    SymmColumnSmallVec_32s16s() { symmetryType=0; }
+    SymmColumnSmallVec_32s16s(const Mat& _kernel, int _symmetryType, int _bits, double _delta)
+    {
+        symmetryType = _symmetryType;
+        _kernel.convertTo(kernel, CV_32F, 1./(1 << _bits), 0);
+        delta = (float)(_delta/(1 << _bits));
+        CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
+    }
+
+    int operator()(const uchar** _src, uchar* _dst, int width) const
+    {
+        //Uncomment the two following lines when runtime support for neon is implemented.
+        // if( !checkHardwareSupport(CV_CPU_NEON) )
+        //     return 0;
+
+        int ksize2 = (kernel.rows + kernel.cols - 1)/2;
+        const float* ky = kernel.ptr<float>() + ksize2;
+        int i = 0;
+        bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
+        const int** src = (const int**)_src;
+        const int *S0 = src[-1], *S1 = src[0], *S2 = src[1];
+        short* dst = (short*)_dst;
+        float32x4_t df4 = vdupq_n_f32(delta);
+        int32x4_t d4 = vcvtq_s32_f32(df4);
+
+        if( symmetrical )
+        {
+            if( ky[0] == 2 && ky[1] == 1 )
+            {
+                for( ; i <= width - 4; i += 4 )
+                {
+                    int32x4_t x0, x1, x2;
+                    x0 = vld1q_s32((int32_t const *)(S0 + i));
+                    x1 = vld1q_s32((int32_t const *)(S1 + i));
+                    x2 = vld1q_s32((int32_t const *)(S2 + i));
+
+                    int32x4_t y0, y1, y2, y3;
+                    y0 = vaddq_s32(x0, x2);
+                    y1 = vqshlq_n_s32(x1, 1);
+                    y2 = vaddq_s32(y0, y1);
+                    y3 = vaddq_s32(y2, d4);
+
+                    int16x4_t t;
+                    t = vqmovn_s32(y3);
+
+                    vst1_s16((int16_t *)(dst + i), t);
+                }
+            }
+            else if( ky[0] == -2 && ky[1] == 1 )
+            {
+                return 0;
+            }
+            else if( ky[0] == 10 && ky[1] == 3 )
+            {
+                return 0;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            if( fabs(ky[1]) == 1 && ky[1] == -ky[-1] )
+            {
+                return 0;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+
+        return i;
+    }
+
+    int symmetryType;
+    float delta;
+    Mat kernel;
+};
+
+
 typedef RowNoVec RowVec_8u32s;
 typedef RowNoVec RowVec_16s32f;
 typedef RowNoVec RowVec_32f;
 typedef SymmRowSmallNoVec SymmRowSmallVec_32f;
 typedef ColumnNoVec SymmColumnVec_32f16s;
 typedef ColumnNoVec SymmColumnVec_32f;
-typedef SymmColumnSmallNoVec SymmColumnSmallVec_32s16s;
 typedef SymmColumnSmallNoVec SymmColumnSmallVec_32f;
 typedef FilterNoVec FilterVec_8u;
 typedef FilterNoVec FilterVec_8u16s;
