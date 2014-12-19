@@ -344,6 +344,8 @@ class CV_EXPORTS HostMem
 public:
     enum AllocType { PAGE_LOCKED = 1, SHARED = 2, WRITE_COMBINED = 4 };
 
+    static MatAllocator* getAllocator(AllocType alloc_type = PAGE_LOCKED);
+
     explicit HostMem(AllocType alloc_type = PAGE_LOCKED);
 
     HostMem(const HostMem& m);
