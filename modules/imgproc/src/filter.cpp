@@ -2207,6 +2207,129 @@ struct FilterVec_32f
 };
 
 
+#elif CV_NEON
+
+struct SymmRowSmallVec_8u32s
+{
+    SymmRowSmallVec_8u32s() { smallValues = false; }
+    SymmRowSmallVec_8u32s( const Mat& _kernel, int _symmetryType )
+    {
+        kernel = _kernel;
+        symmetryType = _symmetryType;
+        smallValues = true;
+        int k, ksize = kernel.rows + kernel.cols - 1;
+        for( k = 0; k < ksize; k++ )
+        {
+            int v = kernel.ptr<int>()[k];
+            if( v < SHRT_MIN || v > SHRT_MAX )
+            {
+                smallValues = false;
+                break;
+            }
+        }
+    }
+
+    int operator()(const uchar* src, uchar* _dst, int width, int cn) const
+    {
+        //Uncomment the two following lines when runtime support for neon is implemented.
+        // if( !checkHardwareSupport(CV_CPU_NEON) )
+        //     return 0;
+
+        int i = 0, _ksize = kernel.rows + kernel.cols - 1;
+        int* dst = (int*)_dst;
+        bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
+        const int* kx = kernel.ptr<int>() + _ksize/2;
+        if( !smallValues )
+            return 0;
+
+        src += (_ksize/2)*cn;
+        width *= cn;
+
+        if( symmetrical )
+        {
+            if( _ksize == 1 )
+                return 0;
+            if( _ksize == 3 )
+            {
+                if( kx[0] == 2 && kx[1] == 1 )
+                {
+                    uint16x8_t zq = vdupq_n_u16(0);
+
+                    for( ; i <= width - 8; i += 8, src += 8 )
+                    {
+                        uint8x8_t x0, x1, x2;
+                        x0 = vld1_u8( (uint8_t *) (src - cn) );
+                        x1 = vld1_u8( (uint8_t *) (src) );
+                        x2 = vld1_u8( (uint8_t *) (src + cn) );
+
+                        uint16x8_t y0, y1, y2;
+                        y0 = vaddl_u8(x0, x2);
+                        y1 = vshll_n_u8(x1, 1);
+                        y2 = vaddq_u16(y0, y1);
+
+                        uint16x8x2_t str;
+                        str.val[0] = y2; str.val[1] = zq;
+                        vst2q_u16( (uint16_t *) (dst + i), str );
+                    }
+                }
+                else if( kx[0] == -2 && kx[1] == 1 )
+                    return 0;
+                else
+                {
+                    return 0;
+                }
+            }
+            else if( _ksize == 5 )
+            {
+                if( kx[0] == -2 && kx[1] == 0 && kx[2] == 1 )
+                    return 0;
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+        else
+        {
+            if( _ksize == 3 )
+            {
+                if( kx[0] == 0 && kx[1] == 1 )
+                {
+                    return 0;
+                else
+                {
+                    return 0;
+                }
+            }
+            else if( _ksize == 5 )
+            {
+                return 0;
+            }
+        }
+
+        return i;
+    }
+
+    Mat kernel;
+    int symmetryType;
+    bool smallValues;
+};
+
+
+typedef RowNoVec RowVec_16s32f;
+typedef RowNoVec RowVec_32f;
+typedef SymmRowSmallNoVec SymmRowSmallVec_8u32s;
+typedef SymmRowSmallNoVec SymmRowSmallVec_32f;
+typedef ColumnNoVec SymmColumnVec_32s8u;
+typedef ColumnNoVec SymmColumnVec_32f16s;
+typedef ColumnNoVec SymmColumnVec_32f;
+typedef SymmColumnSmallNoVec SymmColumnSmallVec_32s16s;
+typedef SymmColumnSmallNoVec SymmColumnSmallVec_32f;
+typedef FilterNoVec FilterVec_8u;
+typedef FilterNoVec FilterVec_8u16s;
+typedef FilterNoVec FilterVec_32f;
+
+
 #else
 
 typedef RowNoVec RowVec_8u32s;
