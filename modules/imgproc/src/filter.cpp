@@ -3013,7 +3013,25 @@ struct SymmRowSmallVec_32f
             }
             else if( _ksize == 5 )
             {
-                return 0;
+                float32x2_t k;
+                k = vdup_n_f32(0);
+                k = vld1_lane_f32(kx + 1, k, 0);
+                k = vld1_lane_f32(kx + 2, k, 1);
+
+                for( ; i <= width - 4; i += 4, src += 4 )
+                {
+                    float32x4_t x0, x1, x2, x3;
+                    x0 = vld1q_f32(src - cn);
+                    x1 = vld1q_f32(src + cn);
+                    x2 = vld1q_f32(src - cn*2);
+                    x3 = vld1q_f32(src + cn*2);
+
+                    float32x4_t y0;
+                    y0 = vmulq_lane_f32(vsubq_f32(x1, x0), k, 0);
+                    y0 = vmlaq_lane_f32(y0, vsubq_f32(x3, x2), k, 1);
+
+                    vst1q_f32(dst + i, y0);
+                }
             }
         }
 
