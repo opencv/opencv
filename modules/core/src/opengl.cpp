@@ -509,7 +509,7 @@ cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_
     switch (kind)
     {
     case _InputArray::OPENGL_BUFFER:
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         copyFrom(arr, target, autoRelease);
         break;
 
@@ -594,7 +594,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
             break;
         }
 
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         {
             #ifndef HAVE_CUDA
                 throw_no_cuda();
@@ -657,7 +657,7 @@ void cv::ogl::Buffer::copyTo(OutputArray arr) const
             break;
         }
 
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         {
             #ifndef HAVE_CUDA
                 throw_no_cuda();
@@ -1018,7 +1018,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
             break;
         }
 
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         {
             #ifndef HAVE_CUDA
                 throw_no_cuda();
@@ -1132,7 +1132,7 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
             break;
         }
 
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         {
             #ifndef HAVE_CUDA
                 throw_no_cuda();
@@ -1184,7 +1184,7 @@ void cv::ogl::Texture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) c
             break;
         }
 
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         {
             #ifndef HAVE_CUDA
                 throw_no_cuda();

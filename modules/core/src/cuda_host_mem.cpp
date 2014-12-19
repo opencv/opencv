@@ -59,7 +59,7 @@ namespace
 }
 #endif
 
-void cv::cuda::CudaMem::create(int rows_, int cols_, int type_)
+void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
 {
 #ifndef HAVE_CUDA
     (void) rows_;
@@ -123,9 +123,9 @@ void cv::cuda::CudaMem::create(int rows_, int cols_, int type_)
 #endif
 }
 
-CudaMem cv::cuda::CudaMem::reshape(int new_cn, int new_rows) const
+HostMem cv::cuda::HostMem::reshape(int new_cn, int new_rows) const
 {
-    CudaMem hdr = *this;
+    HostMem hdr = *this;
 
     int cn = channels();
     if (new_cn == 0)
@@ -166,7 +166,7 @@ CudaMem cv::cuda::CudaMem::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
-void cv::cuda::CudaMem::release()
+void cv::cuda::HostMem::release()
 {
 #ifdef HAVE_CUDA
     if (refcount && CV_XADD(refcount, -1) == 1)
@@ -181,7 +181,7 @@ void cv::cuda::CudaMem::release()
 #endif
 }
 
-GpuMat cv::cuda::CudaMem::createGpuMatHeader() const
+GpuMat cv::cuda::HostMem::createGpuMatHeader() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();

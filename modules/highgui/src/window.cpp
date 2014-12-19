@@ -297,7 +297,7 @@ void cv::imshow( const String& winname, InputArray _img )
 
         cv::ogl::Texture2D& tex = ownWndTexs[winname];
 
-        if (_img.kind() == _InputArray::GPU_MAT)
+        if (_img.kind() == _InputArray::CUDA_GPU_MAT)
         {
             cv::ogl::Buffer& buf = ownWndBufs[winname];
             buf.copyFrom(_img);

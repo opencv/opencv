@@ -52,10 +52,10 @@ using namespace cvtest;
 
 struct Async : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::cuda::CudaMem src;
+    cv::cuda::HostMem src;
     cv::cuda::GpuMat d_src;
 
-    cv::cuda::CudaMem dst;
+    cv::cuda::HostMem dst;
     cv::cuda::GpuMat d_dst;
 
     virtual void SetUp()
@@ -63,7 +63,7 @@ struct Async : testing::TestWithParam<cv::cuda::DeviceInfo>
         cv::cuda::DeviceInfo devInfo = GetParam();
         cv::cuda::setDevice(devInfo.deviceID());
 
-        src = cv::cuda::CudaMem(cv::cuda::CudaMem::PAGE_LOCKED);
+        src = cv::cuda::HostMem(cv::cuda::HostMem::PAGE_LOCKED);
 
         cv::Mat m = randomMat(cv::Size(128, 128), CV_8UC1);
         m.copyTo(src);
@@ -76,8 +76,8 @@ void checkMemSet(int status, void* userData)
 
     Async* test = reinterpret_cast<Async*>(userData);
 
-    cv::cuda::CudaMem src = test->src;
-    cv::cuda::CudaMem dst = test->dst;
+    cv::cuda::HostMem src = test->src;
+    cv::cuda::HostMem dst = test->dst;
 
     cv::Mat dst_gold = cv::Mat::zeros(src.size(), src.type());
 
@@ -105,8 +105,8 @@ void checkConvert(int status, void* userData)
 
     Async* test = reinterpret_cast<Async*>(userData);
 
-    cv::cuda::CudaMem src = test->src;
-    cv::cuda::CudaMem dst = test->dst;
+    cv::cuda::HostMem src = test->src;
+    cv::cuda::HostMem dst = test->dst;
 
     cv::Mat dst_gold;
     src.createMatHeader().convertTo(dst_gold, CV_32S);

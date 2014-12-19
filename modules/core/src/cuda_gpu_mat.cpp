@@ -275,12 +275,12 @@ void cv::cuda::createContinuous(int rows, int cols, int type, OutputArray arr)
         ::createContinuousImpl(rows, cols, type, arr.getMatRef());
         break;
 
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         ::createContinuousImpl(rows, cols, type, arr.getGpuMatRef());
         break;
 
-    case _InputArray::CUDA_MEM:
-        ::createContinuousImpl(rows, cols, type, arr.getCudaMemRef());
+    case _InputArray::CUDA_HOST_MEM:
+        ::createContinuousImpl(rows, cols, type, arr.getHostMemRef());
         break;
 
     default:
@@ -329,12 +329,12 @@ void cv::cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
         ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getMatRef());
         break;
 
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getGpuMatRef());
         break;
 
-    case _InputArray::CUDA_MEM:
-        ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getCudaMemRef());
+    case _InputArray::CUDA_HOST_MEM:
+        ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getHostMemRef());
         break;
 
     default:

@@ -278,7 +278,7 @@ namespace cvtest
 
     Mat getMat(InputArray arr)
     {
-        if (arr.kind() == _InputArray::GPU_MAT)
+        if (arr.kind() == _InputArray::CUDA_GPU_MAT)
         {
             Mat m;
             arr.getGpuMat().download(m);
