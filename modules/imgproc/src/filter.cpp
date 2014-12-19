@@ -2651,7 +2651,24 @@ struct SymmColumnSmallVec_32s16s
             }
             else if( ky[0] == -2 && ky[1] == 1 )
             {
-                return 0;
+                for( ; i <= width - 4; i += 4 )
+                {
+                    int32x4_t x0, x1, x2;
+                    x0 = vld1q_s32((int32_t const *)(S0 + i));
+                    x1 = vld1q_s32((int32_t const *)(S1 + i));
+                    x2 = vld1q_s32((int32_t const *)(S2 + i));
+
+                    int32x4_t y0, y1, y2, y3;
+                    y0 = vaddq_s32(x0, x2);
+                    y1 = vqshlq_n_s32(x1, 1);
+                    y2 = vsubq_s32(y0, y1);
+                    y3 = vaddq_s32(y2, d4);
+
+                    int16x4_t t;
+                    t = vqmovn_s32(y3);
+
+                    vst1_s16((int16_t *)(dst + i), t);
+                }
             }
             else if( ky[0] == 10 && ky[1] == 3 )
             {
