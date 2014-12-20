@@ -183,7 +183,7 @@ PERF_TEST_P(Size_MatType_BorderType, gaussianBlur5x5,
 
     TEST_CYCLE() GaussianBlur(src, dst, Size(5,5), 0, 0, btype);
 
-    SANITY_CHECK(dst, 1e-3);
+    SANITY_CHECK(dst, 1);
 }
 
 PERF_TEST_P(Size_MatType_BorderType, blur5x5,
