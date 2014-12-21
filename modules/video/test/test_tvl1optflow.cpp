@@ -54,6 +54,7 @@ namespace
     const float FLO_TAG_FLOAT = 202021.25f;  // check for this when READING the file
     const char FLO_TAG_STRING[] = "PIEH";    // use this when WRITING the file
 
+#ifdef DUMP
     // binary file format for flow data specified here:
     // http://vision.middlebury.edu/flow/data/
     void writeOpticalFlowToFile(const Mat_<Point2f>& flow, const string& fileName)
@@ -76,6 +77,7 @@ namespace
             }
         }
     }
+#endif
 
     // binary file format for flow data specified here:
     // http://vision.middlebury.edu/flow/data/

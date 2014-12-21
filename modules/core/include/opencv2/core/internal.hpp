@@ -153,7 +153,7 @@ CV_INLINE IppiSize ippiSize(const cv::Size & _size)
 # include "arm_neon.h"
 # define CV_NEON 1
 # define CPU_HAS_NEON_FEATURE (true)
-#elif defined(__ARM_NEON__)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #  define CPU_HAS_NEON_FEATURE (true)

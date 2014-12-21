@@ -46,7 +46,7 @@ SIMD_DETECTION_PROGRAM="""
 #if __MMX__
 # error MMX
 #endif
-#if __ARM_NEON__
+#if __ARM_NEON__ || __ARM_NEON
 # error NEON
 #endif
 #error NOSIMD

@@ -41,16 +41,15 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
     STRING(TOUPPER "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}" _flags_var_name)
     SET(${_out_compile_flags} ${${_flags_var_name}} )
 
-    IF(CMAKE_COMPILER_IS_GNUCXX)
-
-        GET_TARGET_PROPERTY(_targetType ${_PCH_current_target} TYPE)
-        IF(${_targetType} STREQUAL SHARED_LIBRARY AND NOT WIN32)
-            LIST(APPEND ${_out_compile_flags} "-fPIC")
-        ENDIF()
-
-    ELSE()
-        ## TODO ... ? or does it work out of the box
-    ENDIF()
+    GET_TARGET_PROPERTY(_targetPIC ${_PCH_current_target} POSITION_INDEPENDENT_CODE)
+    if (_targetPIC AND CMAKE_CXX_COMPILE_OPTIONS_PIC)
+      LIST(APPEND ${_out_compile_flags} "${CMAKE_CXX_COMPILE_OPTIONS_PIC}")
+    elseif(CMAKE_COMPILER_IS_GNUCXX)
+      GET_TARGET_PROPERTY(_targetType ${_PCH_current_target} TYPE)
+      IF(${_targetType} STREQUAL SHARED_LIBRARY AND NOT WIN32)
+        LIST(APPEND ${_out_compile_flags} "-fPIC")
+      ENDIF()
+    endif()
 
     GET_DIRECTORY_PROPERTY(DIRINC INCLUDE_DIRECTORIES )
     FOREACH(item ${DIRINC})
