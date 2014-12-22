@@ -75,6 +75,8 @@ Now we call the :imread:`imread <>` function which loads the image name specifie
    :tab-width: 4
    :lines: 17
 
+If the second argument is not specified, it is implied ``CV_LOAD_IMAGE_COLOR``
+
 .. note::
 
    OpenCV offers support for the image formats Windows bitmap (bmp), portable image formats (pbm, pgm, ppm) and Sun raster (sr, ras). With help of plugins (you need to specify to use them if you build yourself the library, nevertheless in the packages we ship present by default) you may also load image formats like JPEG (jpeg, jpg, jpe), JPEG 2000 (jp2 - codenamed in the CMake as Jasper), TIFF files (tiff, tif) and portable network graphics (png). Furthermore, OpenEXR is also a possibility.
@@ -90,6 +92,8 @@ After checking that the image data was loaded correctly, we want to display our 
    :language: cpp
    :lines: 25
    :tab-width: 4
+
+If the second argument is not specified by the user, it is implied to be ``WINDOW_AUTOSIZE``, which means you can't change the size of the image.
 
 Finally, to update the content of the OpenCV window with a new image use the :imshow:`imshow <>` function. Specify the OpenCV window name to update and the image to use during this operation:
 
