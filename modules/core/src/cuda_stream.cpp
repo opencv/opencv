@@ -330,14 +330,11 @@ namespace cv { namespace cuda
         void initStreams();
         void initPools();
 
-        Mutex streams_mtx_;
-        volatile bool streams_initialized_;
-
-        Mutex pools_mtx_;
-        volatile bool pools_initialized_;
-
         std::vector<Ptr<Stream> > streams_;
+        Mutex streams_mtx_;
+
         std::vector<MemoryPool> pools_;
+        Mutex pools_mtx_;
     };
 
     DefaultDeviceInitializer::DefaultDeviceInitializer()
@@ -359,59 +356,43 @@ namespace cv { namespace cuda
 
     Stream& DefaultDeviceInitializer::getNullStream(int deviceId)
     {
-        initStreams();
+        AutoLock lock(streams_mtx_);
+
+        if (streams_.empty())
+        {
+            int deviceCount = getCudaEnabledDeviceCount();
+
+            if (deviceCount > 0)
+                streams_.resize(deviceCount);
+        }
 
         CV_DbgAssert( deviceId >= 0 && deviceId < static_cast<int>(streams_.size()) );
+
+        if (streams_[deviceId].empty())
+        {
+            cudaStream_t stream = NULL;
+            Ptr<Stream::Impl> impl = makePtr<Stream::Impl>(stream);
+            streams_[deviceId] = Ptr<Stream>(new Stream(impl));
+        }
 
         return *streams_[deviceId];
     }
 
     MemoryPool* DefaultDeviceInitializer::getMemoryPool(int deviceId)
     {
-        initPools();
-
-        CV_DbgAssert( deviceId >= 0 && deviceId < static_cast<int>(pools_.size()) );
-
-        return &pools_[deviceId];
-    }
-
-    void DefaultDeviceInitializer::initStreams()
-    {
-        AutoLock lock(streams_mtx_);
-
-        if (!streams_initialized_)
-        {
-            int deviceCount = getCudaEnabledDeviceCount();
-
-            if (deviceCount > 0)
-            {
-                streams_.resize(deviceCount);
-
-                for (int i = 0; i < deviceCount; ++i)
-                {
-                    cudaStream_t stream = NULL;
-                    Ptr<Stream::Impl> impl = makePtr<Stream::Impl>(stream);
-                    streams_[i] = Ptr<Stream>(new Stream(impl));
-                }
-            }
-
-            streams_initialized_ = true;
-        }
-    }
-
-    void DefaultDeviceInitializer::initPools()
-    {
         AutoLock lock(pools_mtx_);
 
-        if (!pools_initialized_)
+        if (pools_.empty())
         {
             int deviceCount = getCudaEnabledDeviceCount();
 
             if (deviceCount > 0)
                 pools_.resize(deviceCount);
-
-            pools_initialized_ = true;
         }
+
+        CV_DbgAssert( deviceId >= 0 && deviceId < static_cast<int>(pools_.size()) );
+
+        return &pools_[deviceId];
     }
 
     DefaultDeviceInitializer initializer;
