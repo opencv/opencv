@@ -70,14 +70,12 @@ void runHaarClassifier(
     __global const int* sum,
     int _sumstep, int sumoffset,
     __global const OptHaarFeature* optfeatures,
-
-    int splitstage, int nstages,
     __global const Stage* stages,
     __global const Node* nodes,
     __global const float* leaves0,
 
     volatile __global int* facepos,
-    int4 normrect, int sqofs, int2 windowsize, int maxFaces)
+    int4 normrect, int sqofs, int2 windowsize)
 {
     int lx = get_local_id(0);
     int ly = get_local_id(1);
@@ -165,7 +163,7 @@ void runHaarClassifier(
                 float nf = (float)normarea * sqrt(max(sqval - sval * sval, 0.f));
                 nf = nf > 0 ? nf : 1.f;
 
-                for( stageIdx = 0; stageIdx < splitstage; stageIdx++ )
+                for( stageIdx = 0; stageIdx < SPLIT_STAGE; stageIdx++ )
                 {
                     int ntrees = stages[stageIdx].ntrees;
                     float s = 0.f;
@@ -221,7 +219,7 @@ void runHaarClassifier(
                         break;
                 }
 
-                if( stageIdx == splitstage && (ystep == 1 || ((ix | iy) & 1) == 0) )
+                if( stageIdx == SPLIT_STAGE && (ystep == 1 || ((ix | iy) & 1) == 0) )
                 {
                     int count = atomic_inc(lcount);
                     lbuf[count] = (int)(ix | (iy << 8));
@@ -229,7 +227,7 @@ void runHaarClassifier(
                 }
             }
 
-            for( stageIdx = splitstage; stageIdx < nstages; stageIdx++ )
+            for( stageIdx = SPLIT_STAGE; stageIdx < N_STAGES; stageIdx++ )
             {
                 int nrects = lcount[0];
 
@@ -335,13 +333,13 @@ void runHaarClassifier(
             }
 
             barrier(CLK_LOCAL_MEM_FENCE);
-            if( stageIdx == nstages )
+            if( stageIdx == N_STAGES )
             {
                 int nrects = lcount[0];
                 if( lidx < nrects )
                 {
                     int nfaces = atomic_inc(facepos);
-                    if( nfaces < maxFaces )
+                    if( nfaces < MAX_FACES )
                     {
                         volatile __global int* face = facepos + 1 + nfaces*3;
                         int val = lbuf[lidx];
@@ -364,15 +362,13 @@ __kernel void runLBPClassifierStumpSimple(
     __global const int* sum,
     int _sumstep, int sumoffset,
     __global const OptLBPFeature* optfeatures,
-
-    int splitstage, int nstages,
     __global const Stage* stages,
     __global const Stump* stumps,
     __global const int* bitsets,
     int bitsetSize,
 
     volatile __global int* facepos,
-    int2 windowsize, int maxFaces)
+    int2 windowsize)
 {
     int lx = get_local_id(0);
     int ly = get_local_id(1);
@@ -381,7 +377,6 @@ __kernel void runLBPClassifierStumpSimple(
     int groupIdx = get_group_id(1)*get_num_groups(0) + get_group_id(0);
     int ngroups = get_num_groups(0)*get_num_groups(1);
     int scaleIdx, tileIdx, stageIdx;
-    int startStage = 0, endStage = nstages;
     int sumstep = (int)(_sumstep/sizeof(int));
 
     for( scaleIdx = nscales-1; scaleIdx >= 0; scaleIdx-- )
@@ -404,7 +399,7 @@ __kernel void runLBPClassifierStumpSimple(
                 __global const Stump* stump = stumps;
                 __global const int* bitset = bitsets;
 
-                for( stageIdx = 0; stageIdx < endStage; stageIdx++ )
+                for( stageIdx = 0; stageIdx < N_STAGES; stageIdx++ )
                 {
                     int i, ntrees = stages[stageIdx].ntrees;
                     float s = 0.f;
@@ -433,10 +428,10 @@ __kernel void runLBPClassifierStumpSimple(
                         break;
                 }
 
-                if( stageIdx == nstages )
+                if( stageIdx == N_STAGES )
                 {
                     int nfaces = atomic_inc(facepos);
-                    if( nfaces < maxFaces )
+                    if( nfaces < MAX_FACES )
                     {
                         volatile __global int* face = facepos + 1 + nfaces*3;
                         face[0] = scaleIdx;
@@ -455,15 +450,13 @@ void runLBPClassifierStump(
     __global const int* sum,
     int _sumstep, int sumoffset,
     __global const OptLBPFeature* optfeatures,
-
-    int splitstage, int nstages,
     __global const Stage* stages,
     __global const Stump* stumps,
     __global const int* bitsets,
     int bitsetSize,
 
     volatile __global int* facepos,
-    int2 windowsize, int maxFaces)
+    int2 windowsize)
 {
     int lx = get_local_id(0);
     int ly = get_local_id(1);
@@ -525,7 +518,7 @@ void runLBPClassifierStump(
                 __global const int* p = psum0 + mad24(iy, sumstep, ix);
                 #endif
 
-                for( stageIdx = 0; stageIdx < splitstage; stageIdx++ )
+                for( stageIdx = 0; stageIdx < SPLIT_STAGE; stageIdx++ )
                 {
                     int ntrees = stages[stageIdx].ntrees;
                     float s = 0.f;
@@ -554,14 +547,14 @@ void runLBPClassifierStump(
                         break;
                 }
 
-                if( stageIdx == splitstage && (ystep == 1 || ((ix | iy) & 1) == 0) )
+                if( stageIdx == SPLIT_STAGE && (ystep == 1 || ((ix | iy) & 1) == 0) )
                 {
                     int count = atomic_inc(lcount);
                     lbuf[count] = (int)(ix | (iy << 8));
                 }
             }
 
-            for( stageIdx = splitstage; stageIdx < nstages; stageIdx++ )
+            for( stageIdx = SPLIT_STAGE; stageIdx < N_STAGES; stageIdx++ )
             {
                 int nrects = lcount[0];
 
@@ -639,13 +632,13 @@ void runLBPClassifierStump(
             }
 
             barrier(CLK_LOCAL_MEM_FENCE);
-            if( stageIdx == nstages )
+            if( stageIdx == N_STAGES )
             {
                 int nrects = lcount[0];
                 if( lidx < nrects )
                 {
                     int nfaces = atomic_inc(facepos);
-                    if( nfaces < maxFaces )
+                    if( nfaces < MAX_FACES )
                     {
                         volatile __global int* face = facepos + 1 + nfaces*3;
                         int val = lbuf[lidx];
