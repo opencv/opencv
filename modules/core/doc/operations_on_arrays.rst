@@ -1902,7 +1902,7 @@ Performs the per-element multiplication of two Fourier spectrums.
 
     :param dst: output array of the same size and type as ``src1`` .
 
-    :param flags: operation flags; currently, the only supported flag is ``DFT_ROWS``, which indicates that each row of ``src1`` and ``src2`` is an independent 1D Fourier spectrum.
+    :param flags: operation flags; currently, the only supported flag is ``DFT_ROWS``, which indicates that each row of ``src1`` and ``src2`` is an independent 1D Fourier spectrum. If you do not want to use this flag, then simply add a `0` as value.
 
     :param conjB: optional flag that conjugates the second input array before the multiplication (true) or not (false).
 
