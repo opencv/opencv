@@ -2697,6 +2697,72 @@ template<typename _Tp> template<typename _Tp2> inline const Ptr<_Tp2> Ptr<_Tp>::
     return p;
 }
 
+template<typename T>
+Ptr<T> makePtr()
+{
+    return Ptr<T>(new T());
+}
+
+template<typename T, typename A1>
+Ptr<T> makePtr(const A1& a1)
+{
+    return Ptr<T>(new T(a1));
+}
+
+template<typename T, typename A1, typename A2>
+Ptr<T> makePtr(const A1& a1, const A2& a2)
+{
+    return Ptr<T>(new T(a1, a2));
+}
+
+template<typename T, typename A1, typename A2, typename A3>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3)
+{
+    return Ptr<T>(new T(a1, a2, a3));
+}
+
+template<typename T, typename A1, typename A2, typename A3, typename A4>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4)
+{
+    return Ptr<T>(new T(a1, a2, a3, a4));
+}
+
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5)
+{
+    return Ptr<T>(new T(a1, a2, a3, a4, a5));
+}
+
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6)
+{
+    return Ptr<T>(new T(a1, a2, a3, a4, a5, a6));
+}
+
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7)
+{
+    return Ptr<T>(new T(a1, a2, a3, a4, a5, a6, a7));
+}
+
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7, const A8& a8)
+{
+    return Ptr<T>(new T(a1, a2, a3, a4, a5, a6, a7, a8));
+}
+
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7, const A8& a8, const A9& a9)
+{
+    return Ptr<T>(new T(a1, a2, a3, a4, a5, a6, a7, a8, a9));
+}
+
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7, const A8& a8, const A9& a9, const A10& a10)
+{
+    return Ptr<T>(new T(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10));
+}
+
 //// specializied implementations of Ptr::delete_obj() for classic OpenCV types
 
 template<> CV_EXPORTS void Ptr<CvMat>::delete_obj();
