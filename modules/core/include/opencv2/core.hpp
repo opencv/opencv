@@ -1952,7 +1952,7 @@ arrays are real, they are assumed to be CCS-packed (see dft for details).
 @param b second input array of the same size and type as src1 .
 @param c output array of the same size and type as src1 .
 @param flags operation flags; currently, the only supported flag is cv::DFT_ROWS, which indicates that
-each row of src1 and src2 is an independent 1D Fourier spectrum.
+each row of src1 and src2 is an independent 1D Fourier spectrum. If you do not want to use this flag, then simply add a `0` as value.
 @param conjB optional flag that conjugates the second input array before the multiplication (true)
 or not (false).
 */

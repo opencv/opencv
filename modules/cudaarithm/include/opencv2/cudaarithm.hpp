@@ -892,7 +892,7 @@ CV_EXPORTS void mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, 
 @param src1 First spectrum.
 @param src2 Second spectrum with the same size and type as a .
 @param dst Destination spectrum.
-@param flags Mock parameter used for CPU/CUDA interfaces similarity.
+@param flags Mock parameter used for CPU/CUDA interfaces similarity, simply add a `0` value.
 @param scale Scale constant.
 @param conjB Optional flag to specify if the second spectrum needs to be conjugated before the
 multiplication.
