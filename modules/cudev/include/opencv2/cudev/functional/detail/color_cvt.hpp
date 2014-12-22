@@ -797,8 +797,7 @@ namespace color_cvt_detail
 
             if (diff > numeric_limits<float>::epsilon())
             {
-                s = (l < 0.5f) * diff / (vmax + vmin);
-                s += (l >= 0.5f) * diff / (2.0f - vmax - vmin);
+                s = l < 0.5f ? diff / (vmax + vmin) : diff / (2 - vmax - vmin);
 
                 diff = 60.f / diff;
 
@@ -1190,7 +1189,7 @@ namespace color_cvt_detail
 
             dst.x = saturate_cast<uchar>(buf.x * 2.55f);
             dst.y = saturate_cast<uchar>(buf.y * 0.72033898305084743f + 96.525423728813564f);
-            dst.z = saturate_cast<uchar>(buf.z * 0.99609375f + 139.453125f);
+            dst.z = saturate_cast<uchar>(buf.z * 0.9732824427480916f + 136.259541984732824f);
 
             return dst;
         }
@@ -1255,7 +1254,7 @@ namespace color_cvt_detail
 
             buf.x = src.x * (100.f / 255.f);
             buf.y = src.y * 1.388235294117647f - 134.f;
-            buf.z = src.z * 1.003921568627451f - 140.f;
+            buf.z = src.z * 1.027450980392157f - 140.f;
 
             Luv2RGB<float, 3, 3, srgb, blueIdx> cvtf;
             buf = cvtf(buf);
