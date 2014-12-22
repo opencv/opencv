@@ -2683,7 +2683,6 @@ CV_IMPL CvFileStorage*
 cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, const char* encoding )
 {
     CvFileStorage* fs = 0;
-    char* xml_buf = 0;
     int default_block_size = 1 << 18;
     bool append = (flags & 3) == CV_STORAGE_APPEND;
     bool mem = (flags & CV_STORAGE_MEMORY) != 0;
@@ -2815,7 +2814,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                 int last_occurence = -1;
                 xml_buf_size = MIN(xml_buf_size, int(file_size));
                 fseek( fs->file, -xml_buf_size, SEEK_END );
-                xml_buf = (char*)cvAlloc( xml_buf_size+2 );
+                char* xml_buf = (char*)cvAlloc( xml_buf_size+2 );
                 // find the last occurence of </opencv_storage>
                 for(;;)
                 {
@@ -2833,6 +2832,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                         ptr += strlen(substr);
                     }
                 }
+                cvFree( &xml_buf );
                 if( last_occurence < 0 )
                     CV_Error( CV_StsError, "Could not find </opencv_storage> in the end of file.\n" );
                 icvCloseFile( fs );
@@ -2936,7 +2936,6 @@ _exit_:
         }
     }
 
-    cvFree( &xml_buf );
     return  fs;
 }
 
