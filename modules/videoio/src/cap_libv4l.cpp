@@ -180,6 +180,16 @@ make & enjoy!
 
 15th patch: May 12, 2010, Filipe Almeida filipe.almeida@ist.utl.pt
 - Broken compile of library (include "_videoio.h")
+
+16th patch: Dec 16, 2014, Joseph Howse josephhowse@nummist.com
+- Allow getting/setting CV_CAP_PROP_MODE. These values are supported:
+    - CV_CAP_MODE_BGR  : BGR24 (default)
+    - CV_CAP_MODE_RGB  : RGB24
+    - CV_CAP_MODE_GRAY : Y8, extracted from YUV420
+- Tested successfully on these cameras:
+    - PlayStation 3 Eye
+    - Logitech C920
+    - Odroid USB-CAM 720P
 */
 
 /*M///////////////////////////////////////////////////////////////////////////////////////
@@ -300,6 +310,7 @@ typedef struct CvCaptureCAM_V4L
     int FirstCapture;
 
     int width; int height;
+    int mode;
 
     struct video_capability capability;
     struct video_window     captureWindow;
@@ -630,6 +641,16 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture) {
   }
 }
 
+static inline int channels_for_mode(int mode)
+{
+    switch(mode) {
+    case CV_CAP_MODE_GRAY:
+        return 1;
+    default:
+        return 3;
+    }
+}
+
 static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
 {
    int detect_v4l2 = 0;
@@ -689,20 +710,41 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
        return -1;
    }
 
-  /* libv4l will convert from any format to V4L2_PIX_FMT_BGR24 */
+  /* libv4l will convert from any format to V4L2_PIX_FMT_BGR24,
+     V4L2_PIX_FMT_RGV24, or V4L2_PIX_FMT_YUV420 */
+  unsigned int requestedPixelFormat;
+  int width;
+  int height;
+  switch (capture->mode) {
+  case CV_CAP_MODE_RGB:
+    requestedPixelFormat = V4L2_PIX_FMT_RGB24;
+    width = capture->width;
+    height = capture->height;
+    break;
+  case CV_CAP_MODE_GRAY:
+    requestedPixelFormat = V4L2_PIX_FMT_YUV420;
+    width = capture->width;
+    height = capture->height;
+    break;
+  default:
+    requestedPixelFormat = V4L2_PIX_FMT_BGR24;
+    width = capture->width;
+    height = capture->height;
+    break;
+  }
   CLEAR (capture->form);
   capture->form.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  capture->form.fmt.pix.pixelformat = V4L2_PIX_FMT_BGR24;
+  capture->form.fmt.pix.pixelformat = requestedPixelFormat;
   capture->form.fmt.pix.field       = V4L2_FIELD_ANY;
-  capture->form.fmt.pix.width = capture->width;
-  capture->form.fmt.pix.height = capture->height;
+  capture->form.fmt.pix.width       = width;
+  capture->form.fmt.pix.height      = height;
 
   if (-1 == xioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form)) {
       fprintf(stderr, "VIDEOIO ERROR: libv4l unable to ioctl S_FMT\n");
       return -1;
   }
 
-  if (V4L2_PIX_FMT_BGR24 != capture->form.fmt.pix.pixelformat) {
+  if (requestedPixelFormat != capture->form.fmt.pix.pixelformat) {
       fprintf( stderr, "VIDEOIO ERROR: libv4l unable convert to requested pixfmt\n");
       return -1;
   }
@@ -813,7 +855,8 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
    cvInitImageHeader( &capture->frame,
                       cvSize( capture->captureWindow.width,
                               capture->captureWindow.height ),
-                      IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
+                      IPL_DEPTH_8U, channels_for_mode(capture->mode),
+                      IPL_ORIGIN_TL, 4 );
    /* Allocate space for RGBA data */
    capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
 
@@ -899,21 +942,33 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
          return -1;
       }
 
-      capture->imageProperties.palette = VIDEO_PALETTE_RGB24;
-      capture->imageProperties.depth = 24;
+      int requestedVideoPalette;
+      int depth;
+      switch (capture->mode) {
+      case CV_CAP_MODE_GRAY:
+        requestedVideoPalette = VIDEO_PALETTE_YUV420;
+        depth = 8;
+        break;
+      default:
+        requestedVideoPalette = VIDEO_PALETTE_RGB24;
+        depth = 24;
+        break;
+      }
+      capture->imageProperties.depth = depth;
+      capture->imageProperties.palette = requestedVideoPalette;
       if (v4l1_ioctl(capture->deviceHandle, VIDIOCSPICT, &capture->imageProperties) < 0) {
         fprintf( stderr, "VIDEOIO ERROR: libv4l unable to ioctl VIDIOCSPICT\n\n");
-         icvCloseCAM_V4L(capture);
+        icvCloseCAM_V4L(capture);
         return -1;
       }
       if (v4l1_ioctl(capture->deviceHandle, VIDIOCGPICT, &capture->imageProperties) < 0) {
         fprintf( stderr, "VIDEOIO ERROR: libv4l unable to ioctl VIDIOCGPICT\n\n");
-         icvCloseCAM_V4L(capture);
+        icvCloseCAM_V4L(capture);
         return -1;
       }
-      if (capture->imageProperties.palette != VIDEO_PALETTE_RGB24) {
+      if (capture->imageProperties.palette != requestedVideoPalette) {
         fprintf( stderr, "VIDEOIO ERROR: libv4l unable convert to requested pixfmt\n\n");
-         icvCloseCAM_V4L(capture);
+        icvCloseCAM_V4L(capture);
         return -1;
       }
 
@@ -950,7 +1005,8 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
    cvInitImageHeader( &capture->frame,
                       cvSize( capture->captureWindow.width,
                               capture->captureWindow.height ),
-                      IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
+                      IPL_DEPTH_8U, channels_for_mode(capture->mode),
+                      IPL_ORIGIN_TL, 4 );
    /* Allocate space for RGBA data */
    capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
 
@@ -1224,9 +1280,10 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
        || ((unsigned long)capture->frame.height != capture->form.fmt.pix.height)) {
         cvFree(&capture->frame.imageData);
         cvInitImageHeader( &capture->frame,
-              cvSize( capture->form.fmt.pix.width,
-                  capture->form.fmt.pix.height ),
-              IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
+                           cvSize( capture->form.fmt.pix.width,
+                                   capture->form.fmt.pix.height ),
+                           IPL_DEPTH_8U, channels_for_mode(capture->mode),
+                           IPL_ORIGIN_TL, 4 );
        capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
     }
 
@@ -1237,9 +1294,10 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
       || (capture->frame.height != capture->mmaps[capture->bufferIndex].height)) {
        cvFree(&capture->frame.imageData);
        cvInitImageHeader( &capture->frame,
-              cvSize( capture->captureWindow.width,
-                  capture->captureWindow.height ),
-              IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
+                          cvSize( capture->captureWindow.width,
+                                  capture->captureWindow.height ),
+                          IPL_DEPTH_8U, channels_for_mode(capture->mode),
+                          IPL_ORIGIN_TL, 4 );
        capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
     }
 
@@ -1260,14 +1318,16 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
     switch(capture->imageProperties.palette) {
       case VIDEO_PALETTE_RGB24:
+      case VIDEO_PALETTE_YUV420:
         memcpy((char *)capture->frame.imageData,
            (char *)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
            capture->frame.imageSize);
         break;
       default:
         fprintf( stderr,
-                 "VIDEOIO ERROR: V4L: Cannot convert from palette %d to RGB\n",
-                 capture->imageProperties.palette);
+                 "VIDEOIO ERROR: V4L: Cannot convert from palette %d to mode %d\n",
+                 capture->imageProperties.palette,
+                 capture->mode);
         return 0;
     }
 
@@ -1300,6 +1360,9 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
         }
       }
       return (property_id == CV_CAP_PROP_FRAME_WIDTH)?capture->form.fmt.pix.width:capture->form.fmt.pix.height;
+    case CV_CAP_PROP_MODE:
+      return capture->mode;
+      break;
     case CV_CAP_PROP_BRIGHTNESS:
       sprintf(name, "Brightness");
       capture->control.id = V4L2_CID_BRIGHTNESS;
@@ -1394,12 +1457,24 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
     icvCloseCAM_V4L(capture);
     _capture_V4L2(capture, deviceName);
 
+    int cropHeight;
+    int cropWidth;
+    switch (capture->mode) {
+    case CV_CAP_MODE_GRAY:
+      cropHeight = h*8;
+      cropWidth = w*8;
+      break;
+    default:
+      cropHeight = h*24;
+      cropWidth = w*24;
+      break;
+    }
     CLEAR (capture->crop);
     capture->crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     capture->crop.c.left       = 0;
     capture->crop.c.top        = 0;
-    capture->crop.c.height     = h*24;
-    capture->crop.c.width      = w*24;
+    capture->crop.c.height     = cropHeight;
+    capture->crop.c.width      = cropWidth;
 
     /* set the crop area, but don't exit if the device don't support croping */
     xioctl (capture->deviceHandle, VIDIOC_S_CROP, &capture->crop);
@@ -1634,6 +1709,26 @@ static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L* capture, int property_id, dou
         if(width !=0 && height != 0) {
             retval = icvSetVideoSize( capture, width, height);
             width = height = 0;
+        }
+        break;
+    case CV_CAP_PROP_MODE:
+        int mode;
+        mode = cvRound(value);
+        if (capture->mode != mode) {
+            switch (mode) {
+            case CV_CAP_MODE_BGR:
+            case CV_CAP_MODE_RGB:
+            case CV_CAP_MODE_GRAY:
+                capture->mode = mode;
+                /* recreate the capture buffer for the same output resolution
+                   but a different pixel format */
+                retval = icvSetVideoSize(capture, capture->width, capture->height);
+                break;
+            default:
+                fprintf(stderr, "VIDEOIO ERROR: V4L/V4L2: Unsupported mode: %d\n", mode);
+                retval=0;
+                break;
+            }
         }
         break;
     case CV_CAP_PROP_FPS:
