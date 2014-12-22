@@ -34,9 +34,6 @@ unset(IPP_VERSION_MAJOR)
 unset(IPP_VERSION_MINOR)
 unset(IPP_VERSION_BUILD)
 
-set(IPP_LIB_PREFIX ${CMAKE_STATIC_LIBRARY_PREFIX})
-set(IPP_LIB_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
-
 set(IPP_X64 0)
 if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
     set(IPP_X64 1)
@@ -125,19 +122,34 @@ macro(ipp_detect_version)
   endif()
 
   macro(_ipp_add_library name)
+    # dynamic linking is only supported for standalone version of IPP
+    if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
+      set(IPP_LIB_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX})
+      set(IPP_LIB_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
+    else ()
+      set(IPP_LIB_PREFIX ${CMAKE_STATIC_LIBRARY_PREFIX})
+      set(IPP_LIB_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
+    endif ()
     if (EXISTS ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
-      add_library(ipp${name} STATIC IMPORTED)
-      set_target_properties(ipp${name} PROPERTIES
+      if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
+        add_library(${IPP_PREFIX}${name} STATIC IMPORTED)
+      else ()
+        add_library(${IPP_PREFIX}${name} SHARED IMPORTED)
+      endif ()
+      set_target_properties(${IPP_PREFIX}${name} PROPERTIES
         IMPORTED_LINK_INTERFACE_LIBRARIES ""
         IMPORTED_LOCATION ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
       )
-      list(APPEND IPP_LIBRARIES ipp${name})
-      # CMake doesn't support "install(TARGETS ipp${name} " command with imported targets
-      install(FILES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
-              DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
-      string(TOUPPER ${name} uname)
-      set(IPP${uname}_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_3P_LIB_INSTALL_PATH}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}" CACHE INTERNAL "" FORCE)
-      set(IPP${uname}_LOCATION_PATH "${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}" CACHE INTERNAL "" FORCE)
+      list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
+      # CMake doesn't support "install(TARGETS ${IPP_PREFIX}${name} " command with imported targets
+      # When using dynamic libraries from standalone IPP it is your responsibility to install those on the target system
+      if (NOT BUILD_WITH_DYNAMIC_IPP)
+        install(FILES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
+                DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
+        string(TOUPPER ${name} uname)
+        set(IPP${uname}_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_3P_LIB_INSTALL_PATH}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}" CACHE INTERNAL "" FORCE)
+        set(IPP${uname}_LOCATION_PATH "${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}" CACHE INTERNAL "" FORCE)
+      endif ()
     else()
       message(STATUS "Can't find IPP library: ${name} at ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}")
     endif()
@@ -145,10 +157,18 @@ macro(ipp_detect_version)
 
   set(IPP_PREFIX "ipp")
   if(${IPP_VERSION_STR} VERSION_LESS "8.0")
-    set(IPP_SUFFIX "_l")      # static not threaded libs suffix IPP 7.x
-  else()
+    if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
+      set(IPP_SUFFIX "")      # dynamic not threaded libs suffix IPP 7.x
+    else ()
+      set(IPP_SUFFIX "_l")    # static not threaded libs suffix IPP 7.x
+    endif ()
+  else ()
     if(WIN32)
-      set(IPP_SUFFIX "mt")    # static not threaded libs suffix IPP 8.x for Windows
+      if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
+        set(IPP_SUFFIX "")    # dynamic not threaded libs suffix IPP 8.x for Windows
+      else ()
+        set(IPP_SUFFIX "mt")  # static not threaded libs suffix IPP 8.x for Windows
+      endif ()
     else()
       set(IPP_SUFFIX "")      # static not threaded libs suffix IPP 8.x for Linux/OS X
     endif()
@@ -191,7 +211,7 @@ macro(ipp_detect_version)
         if (EXISTS ${INTEL_COMPILER_LIBRARY_DIR}/${IPP_LIB_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX})
           list(APPEND IPP_LIBRARIES ${INTEL_COMPILER_LIBRARY_DIR}/${IPP_LIB_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX})
         else()
-          message(STATUS "Can't find compiler library: ${name}")
+          message(STATUS "Can't find compiler library: ${name} at ${INTEL_COMPILER_LIBRARY_DIR}/${IPP_LIB_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
         endif()
       endmacro()
 
