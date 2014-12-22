@@ -161,6 +161,7 @@ enum
     CV_CAP_PROP_WHITE_BALANCE_BLUE_U =17,
     CV_CAP_PROP_RECTIFICATION =18,
     CV_CAP_PROP_MONOCROME     =19,
+    CV_CAP_PROP_MONOCHROME    =19,
     CV_CAP_PROP_SHARPNESS     =20,
     CV_CAP_PROP_AUTO_EXPOSURE =21, // exposure control done by camera,
                                    // user can adjust refernce level
@@ -292,6 +293,15 @@ enum
     CV_CAP_INTELPERC_GENERATORS_MASK = CV_CAP_INTELPERC_DEPTH_GENERATOR + CV_CAP_INTELPERC_IMAGE_GENERATOR
 };
 
+// Generic camera output modes.
+// Currently, these are supported through the libv4l interface only.
+enum
+{
+    CV_CAP_MODE_BGR  = 0, // BGR24 (default)
+    CV_CAP_MODE_RGB  = 1, // RGB24
+    CV_CAP_MODE_GRAY = 2  // Y8
+};
+
 enum
 {
     // Data given from depth generator.
@@ -322,6 +332,7 @@ enum
     CV_CAP_ANDROID_COLOR_FRAME_BGR = 0, //BGR
     CV_CAP_ANDROID_COLOR_FRAME = CV_CAP_ANDROID_COLOR_FRAME_BGR,
     CV_CAP_ANDROID_GREY_FRAME  = 1,  //Y
+    CV_CAP_ANDROID_GRAY_FRAME  = CV_CAP_ANDROID_GREY_FRAME,
     CV_CAP_ANDROID_COLOR_FRAME_RGB = 2,
     CV_CAP_ANDROID_COLOR_FRAME_BGRA = 3,
     CV_CAP_ANDROID_COLOR_FRAME_RGBA = 4
