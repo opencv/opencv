@@ -441,7 +441,7 @@ _snippet_ command, since this method is less affected by the changes in processe
 
 ### Grouping commands {#tutorial_documentation_commands_group}
 
-All code entities should be put into named groups representing OpenCV modules and thier internal
+All code entities should be put into named groups representing OpenCV modules and their internal
 structure, thus each module should be associated with a group with the same name. Good place to
 define groups and subgroups is the main header file for this module:
 <em>"<module>/include/opencv2/<module>.hpp"</em>.
@@ -540,7 +540,7 @@ Write the tutorial {#tutorial_documentation_steps_tutorial}
     representing performance or even a video.
 
     Save it in appropriate format for later use in the tutorial:
-    - To save simple graph-like images use loseless ".png" format.
+    - To save simple graph-like images use lossless ".png" format.
     - For photo-like images - lossy ".jpg" format.
     - Numbers will be inserted as plain text, possibly formatted as table.
     - Video should be uploaded on YouTube.
@@ -587,7 +587,7 @@ Write the tutorial {#tutorial_documentation_steps_tutorial}
     authors list and short description. Also note the list item indent, empty lines between
     paragraphs and special _italic_ markers.
 
-7.  Generate doxygen doumentation and verify results.
+7.  Generate doxygen documentation and verify results.
 
 References {#tutorial_documentation_refs}
 ==========
@@ -596,7 +596,7 @@ References {#tutorial_documentation_refs}
 - [Markdown support] - supported syntax and extensions
 - [Formulas support] - how to include formulas
 - [Supported formula commands] - HTML formulas use MathJax script for rendering
-- [Command reference] - supported commands and thier parameters
+- [Command reference] - supported commands and their parameters
 
 <!-- invisible references list -->
 [Doxygen]: http://www.stack.nl/~dimitri/doxygen/index.html)
