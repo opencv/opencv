@@ -147,6 +147,7 @@ void GpuMat::swap(GpuMat& b)
     std::swap(datastart, b.datastart);
     std::swap(dataend, b.dataend);
     std::swap(refcount, b.refcount);
+    std::swap(allocator, b.allocator);
 }
 
 inline
