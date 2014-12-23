@@ -25,7 +25,7 @@ The first thing you need to know about *Mat* is that you no longer need to manua
 
 *Mat* is basically a class with two data parts: the matrix header (containing information such as the size of the matrix, the method used for storing, at which address is the matrix stored, and so on) and a pointer to the matrix containing the pixel values (taking any dimensionality depending on the method chosen for storing) . The matrix header size is constant, however the size of the matrix itself may vary from image to image and usually is larger by orders of magnitude.
 
-OpenCV is an image processing library. It contains a large collection of image processing functions. To solve a computational challenge, most of the time you will end up using multiple functions of the library. Because of this, passing images to functions is a common practice. We should not forget that we are talking about image processing algorithms, which tend to be quite computational heavy. The last thing we want to do is  further decrease the speed of your program by making unnecessary copies of potentially *large* images.
+OpenCV is an image processing library. It contains a large collection of image processing functions. To solve a computational challenge, most of the time you will end up using multiple functions of the library. Because of this, passing images to functions is a common practice. We should not forget that we are talking about image processing algorithms, which tend to be quite computationally heavy. The last thing we want to do is  further decrease the speed of your program by making unnecessary copies of potentially *large* images.
 
 To tackle this issue OpenCV uses a reference counting system. The idea is that each *Mat* object has its own header, however the matrix may be shared between two instance of them by having their matrix pointers point to the same address. Moreover, the copy operators **will only copy the headers** and the pointer to the large matrix, not the data itself.
 
@@ -77,11 +77,11 @@ There are, however, many other color systems each with their own advantages:
 .. container:: enumeratevisibleitemswithsquare
 
    * RGB is the most common as our eyes use something similar, our display systems also compose colors using these.
-   * The HSV and HLS decompose colors into their hue, saturation and value/luminance components, which is a more natural way for us to describe colors.  You might, for example, dismiss the last component, making your algorithm less sensible to the light conditions of the input image.
+   * The HSV and HLS decompose colors into their hue, saturation and value/luminance components, which is a more natural way for us to describe colors.  You might, for example, dismiss the value component, making your algorithm less sensitive to the light conditions of the input image.
    * YCrCb is used by the popular JPEG image format.
    * CIE L*a*b* is a perceptually uniform color space, which comes handy if you need to measure the *distance* of a given color to another color.
 
-Each of the building components has their own valid domains. This leads to the data type used. How we store a component defines the control we have over its domain. The smallest data type possible is *char*, which means one byte or 8 bits. This may be unsigned (so can store values from 0 to 255) or signed (values from -127 to +127). Although in case of three components this already gives 16 million possible colors to represent (like in case of RGB) we may acquire an even finer control by using the float (4 byte = 32 bit) or double (8 byte = 64 bit) data types for each component. Nevertheless, remember that increasing the size of a component also increases the size of the whole picture in the memory.
+Each of the color components has its own valid domains. This brings us to the data type used: how we store a component defines the control we have over its domain. The smallest data type possible is *char*, which means one byte or 8 bits. This may be unsigned (so can store values from 0 to 255) or signed (values from -127 to +127). Although in the case of three components (such as RGB) this already gives 16 million representable colors. We may acquire an even finer control by using the float (4 byte = 32 bit) or double (8 byte = 64 bit) data types for each component. Nevertheless, remember that increasing the size of a component also increases the size of the whole picture in the memory.
 
 Creating a *Mat* object explicitly
 ==================================
@@ -111,7 +111,7 @@ Although *Mat* works really well as an image container, it is also a general mat
 
        CV_[The number of bits per item][Signed or Unsigned][Type Prefix]C[The channel number]
 
-    For instance, *CV_8UC3* means we use unsigned char types that are 8 bit long and each pixel has three of these to form the three channels. This are predefined for up to four channel numbers. The :basicstructures:`Scalar <scalar>` is four element short vector. Specify this and you can initialize all matrix points with a custom value. If you need more you can create the type with the upper macro, setting the channel number in parenthesis as you can see below.
+    For instance, *CV_8UC3* means we use unsigned char types that are 8 bit long and each pixel has three of these to form the three channels. These are predefined for up to four channel numbers. The :basicstructures:`Scalar <scalar>` is a four element short vector. Specify this and you can initialize all matrix points with a custom value. If you need more, you can create the type with the upper macro, setting the channel number in parentheses as shown below.
 
    + Use C/C++ arrays and initialize via constructor
 
@@ -120,7 +120,7 @@ Although *Mat* works really well as an image container, it is also a general mat
         :tab-width: 4
         :lines:  35-36
 
-     The upper example shows how to create a matrix with more than two dimensions. Specify its dimension, then pass a pointer containing the size for each dimension and the rest remains the same.
+     The above example shows how to create a matrix with more than two dimensions. Specify the number of dimensions, then pass a pointer containing the size for each dimension, and the rest remains the same.
 
 
    + Create a header for an already existing IplImage pointer:
@@ -143,7 +143,7 @@ Although *Mat* works really well as an image container, it is also a general mat
 
     You cannot initialize the matrix values with this construction. It will only reallocate its matrix data memory if the new size will not fit into the old one.
 
-   + MATLAB style initializer: :basicstructures:`zeros() <mat-zeros>`, :basicstructures:`ones() <mat-ones>`, :basicstructures:`eye() <mat-eye>`. Specify size and data type to use:
+   + MATLAB style initializers: :basicstructures:`zeros() <mat-zeros>`, :basicstructures:`ones() <mat-ones>`, :basicstructures:`eye() <mat-eye>`. Specify the size and data type to use:
 
      .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
         :language: cpp
@@ -189,7 +189,7 @@ Although *Mat* works really well as an image container, it is also a general mat
 Output formatting
 =================
 
-In the above examples you could see the default formatting option. OpenCV, however, allows you to format your matrix output:
+In the previous examples you saw the default formatting option. OpenCV, however, allows you to format your matrix output:
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -251,7 +251,7 @@ In the above examples you could see the default formatting option. OpenCV, howev
 Output of other common items
 ============================
 
-OpenCV offers support for output of other common OpenCV data structures too via the << operator:
+Other common OpenCV data structures can also be output via the << operator:
 
 .. container:: enumeratevisibleitemswithsquare
 
