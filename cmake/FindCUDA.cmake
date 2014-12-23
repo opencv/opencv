@@ -530,13 +530,15 @@ endmacro()
 # Check to see if the CUDA_TOOLKIT_ROOT_DIR and CUDA_SDK_ROOT_DIR have changed,
 # if they have then clear the cache variables, so that will be detected again.
 if(NOT "${CUDA_TOOLKIT_ROOT_DIR}" STREQUAL "${CUDA_TOOLKIT_ROOT_DIR_INTERNAL}")
+  unset(CUDA_TARGET_TRIPLET CACHE)
   unset(CUDA_TOOLKIT_TARGET_DIR CACHE)
   unset(CUDA_NVCC_EXECUTABLE CACHE)
   unset(CUDA_VERSION CACHE)
   cuda_unset_include_and_libraries()
 endif()
 
-if(NOT "${CUDA_TOOLKIT_TARGET_DIR}" STREQUAL "${CUDA_TOOLKIT_TARGET_DIR_INTERNAL}")
+if(NOT "${CUDA_TARGET_TRIPLET}" STREQUAL "${CUDA_TARGET_TRIPLET_INTERNAL}" OR
+   NOT "${CUDA_TOOLKIT_TARGET_DIR}" STREQUAL "${CUDA_TOOLKIT_TARGET_DIR_INTERNAL}")
   cuda_unset_include_and_libraries()
 endif()
 
@@ -612,22 +614,45 @@ endif()
 # Always set this convenience variable
 set(CUDA_VERSION_STRING "${CUDA_VERSION}")
 
-# Support for arm cross compilation with CUDA 5.5
-if(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm" AND EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf")
-  set(CUDA_TOOLKIT_TARGET_DIR "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf" CACHE PATH "Toolkit target location.")
-else()
-  set(CUDA_TOOLKIT_TARGET_DIR "${CUDA_TOOLKIT_ROOT_DIR}" CACHE PATH "Toolkit target location.")
-endif()
-mark_as_advanced(CUDA_TOOLKIT_TARGET_DIR)
-
 # Target CPU architecture
-if(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+if(DEFINED CUDA_TARGET_CPU_ARCH)
+  set(_cuda_target_cpu_arch_initial "${CUDA_TARGET_CPU_ARCH}")
+elseif(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|ARM)")
   set(_cuda_target_cpu_arch_initial "ARM")
 else()
   set(_cuda_target_cpu_arch_initial "")
 endif()
-set(CUDA_TARGET_CPU_ARCH ${_cuda_target_cpu_arch_initial} CACHE STRING "Specify the name of the class of CPU architecture for which the input files must be compiled.")
+set(CUDA_TARGET_CPU_ARCH "${_cuda_target_cpu_arch_initial}" CACHE STRING "Specify the name of the class of CPU architecture for which the input files must be compiled.")
 mark_as_advanced(CUDA_TARGET_CPU_ARCH)
+
+# Target OS variant
+if(DEFINED CUDA_TARGET_OS_VARIANT)
+  set(_cuda_target_os_variant_initial "${CUDA_TARGET_OS_VARIANT}")
+else()
+  set(_cuda_target_os_variant_initial "")
+endif()
+set(CUDA_TARGET_OS_VARIANT "${_cuda_target_os_variant_initial}" CACHE STRING "Specify the name of the class of OS for which the input files must be compiled.")
+mark_as_advanced(CUDA_TARGET_OS_VARIANT)
+
+# Target triplet
+if(DEFINED CUDA_TARGET_TRIPLET)
+  set(_cuda_target_triplet_initial "${CUDA_TARGET_TRIPLET}")
+elseif(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND "${CUDA_TARGET_CPU_ARCH}" STREQUAL "ARM")
+  if("${CUDA_TARGET_OS_VARIANT}" STREQUAL "Android" AND EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-androideabi")
+    set(_cuda_target_triplet_initial "armv7-linux-androideabi")
+  elseif(EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf")
+    set(_cuda_target_triplet_initial "armv7-linux-gnueabihf")
+  endif()
+endif()
+set(CUDA_TARGET_TRIPLET "${_cuda_target_triplet_initial}" CACHE STRING "Specify the target triplet for which the input files must be compiled.")
+file(GLOB __cuda_available_target_tiplets RELATIVE "${CUDA_TOOLKIT_ROOT_DIR}/targets" "${CUDA_TOOLKIT_ROOT_DIR}/targets/*" )
+set_property(CACHE CUDA_TARGET_TRIPLET PROPERTY STRINGS ${__cuda_available_target_tiplets})
+mark_as_advanced(CUDA_TARGET_TRIPLET)
+
+# Target directory
+if(NOT DEFINED CUDA_TOOLKIT_TARGET_DIR AND CUDA_TARGET_TRIPLET AND EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/${CUDA_TARGET_TRIPLET}")
+  set(CUDA_TOOLKIT_TARGET_DIR "${CUDA_TOOLKIT_ROOT_DIR}/targets/${CUDA_TARGET_TRIPLET}")
+endif()
 
 # CUDA_TOOLKIT_INCLUDE
 find_path(CUDA_TOOLKIT_INCLUDE
@@ -652,10 +677,16 @@ macro(cuda_find_library_local_first_with_path_ext _var _names _doc _path_ext )
     # and old paths.
     set(_cuda_64bit_lib_dir "${_path_ext}lib/x64" "${_path_ext}lib64" "${_path_ext}libx64" )
   endif()
+  if(CUDA_VERSION VERSION_GREATER "6.0")
+    set(_cuda_static_lib_names "")
+    foreach(name ${_names})
+      list(APPEND _cuda_static_lib_names "${name}_static")
+    endforeach()
+  endif()
   # CUDA 3.2+ on Windows moved the library directories, so we need to new
   # (lib/Win32) and the old path (lib).
   find_library(${_var}
-    NAMES ${_names}
+    NAMES ${_names} ${_cuda_static_lib_names}
     PATHS "${CUDA_TOOLKIT_TARGET_DIR}" "${CUDA_TOOLKIT_ROOT_DIR}"
     ENV CUDA_PATH
     ENV CUDA_LIB_PATH
@@ -665,7 +696,7 @@ macro(cuda_find_library_local_first_with_path_ext _var _names _doc _path_ext )
     )
   # Search default search paths, after we search our own set of paths.
   find_library(${_var}
-    NAMES ${_names}
+    NAMES ${_names} ${_cuda_static_lib_names}
     PATHS "/usr/lib/nvidia-current"
     DOC ${_doc}
     )
@@ -835,6 +866,8 @@ set(CUDA_FOUND TRUE)
 
 set(CUDA_TOOLKIT_ROOT_DIR_INTERNAL "${CUDA_TOOLKIT_ROOT_DIR}" CACHE INTERNAL
   "This is the value of the last time CUDA_TOOLKIT_ROOT_DIR was set successfully." FORCE)
+set(CUDA_TARGET_TRIPLET_INTERNAL "${CUDA_TARGET_TRIPLET}" CACHE INTERNAL
+  "This is the value of the last time CUDA_TARGET_TRIPLET was set successfully." FORCE)
 set(CUDA_TOOLKIT_TARGET_DIR_INTERNAL "${CUDA_TOOLKIT_TARGET_DIR}" CACHE INTERNAL
   "This is the value of the last time CUDA_TOOLKIT_TARGET_DIR was set successfully." FORCE)
 set(CUDA_SDK_ROOT_DIR_INTERNAL "${CUDA_SDK_ROOT_DIR}" CACHE INTERNAL
@@ -1063,6 +1096,10 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
 
   if(CUDA_TARGET_CPU_ARCH)
     set(nvcc_flags ${nvcc_flags} "--target-cpu-architecture=${CUDA_TARGET_CPU_ARCH}")
+  endif()
+
+  if(CUDA_TARGET_OS_VARIANT)
+    set(nvcc_flags ${nvcc_flags} "-target-os-variant=${CUDA_TARGET_OS_VARIANT}")
   endif()
 
   # This needs to be passed in at this stage, because VS needs to fill out the
