@@ -293,26 +293,6 @@ world of the OpenCV.
                      :height: 90pt
                      :width:  90pt
 
-* **Want to contribute, and see your own work between the OpenCV tutorials?**
-
-  .. tabularcolumns:: m{100pt} m{300pt}
-  .. cssclass:: toctableopencv
-
-  =============== ======================================================
-   |HowToWriteT|  **Title:** :ref:`howToWriteTutorial`
-
-                  *Compatibility:* > OpenCV 1.0
-
-                  *Author:* |Author_BernatG|
-
-                  If you already have a good grasp on using OpenCV and have made some projects that would be perfect presenting an OpenCV feature not yet part of these tutorials, here it is what you need to know.
-
-  =============== ======================================================
-
-  .. |HowToWriteT| image:: images/how_to_write_a_tutorial.png
-                   :height: 90pt
-                   :width:  90pt
-
 .. raw:: latex
 
    \pagebreak
@@ -337,4 +317,3 @@ world of the OpenCV.
    ../crosscompilation/arm_crosscompile_with_cmake
    ../display_image/display_image
    ../load_save_image/load_save_image
-   ../how_to_write_a_tutorial/how_to_write_a_tutorial
