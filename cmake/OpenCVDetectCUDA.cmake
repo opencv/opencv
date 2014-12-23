@@ -10,19 +10,10 @@ endif()
 
 set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-foreach(var INCLUDE LIBRARY PROGRAM)
-  set(__old_frpm_${var} "${CMAKE_FIND_ROOT_PATH_MODE_${var}}")
-endforeach()
-
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
-
-find_package(CUDA "${MIN_VER_CUDA}" QUIET)
-
-foreach(var INCLUDE LIBRARY PROGRAM)
-  set(CMAKE_FIND_ROOT_PATH_MODE_${var} "${__old_frpm_${var}}")
-endforeach()
+if(ANDROID)
+  set(CUDA_TARGET_OS_VARIANT "Android")
+endif()
+find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
 
 list(REMOVE_AT CMAKE_MODULE_PATH 0)
 
@@ -152,7 +143,6 @@ if(CUDA_FOUND)
 
   if(ANDROID)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xptxas;-dlcm=ca")
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-target-os-variant=Android")
   endif()
 
   message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
