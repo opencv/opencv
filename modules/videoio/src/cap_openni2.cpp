@@ -821,10 +821,10 @@ IplImage* CvCapture_OpenNI2::retrieveValidDepthMask()
     if (!depthFrame.isValid())
         return 0;
 
-    cv::Mat depth;
-    getDepthMapFromMetaData(depthFrame, depth, noSampleValue, shadowValue);
+    cv::Mat d;
+    getDepthMapFromMetaData(depthFrame, d, noSampleValue, shadowValue);
 
-    outputMaps[CV_CAP_OPENNI_VALID_DEPTH_MASK].mat = depth != CvCapture_OpenNI2::INVALID_PIXEL_VAL;
+    outputMaps[CV_CAP_OPENNI_VALID_DEPTH_MASK].mat = d != CvCapture_OpenNI2::INVALID_PIXEL_VAL;
 
     return outputMaps[CV_CAP_OPENNI_VALID_DEPTH_MASK].getIplImagePtr();
 }
