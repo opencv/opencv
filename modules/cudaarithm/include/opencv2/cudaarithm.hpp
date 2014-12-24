@@ -130,12 +130,6 @@ This function, in contrast to divide, uses a round-down rounding mode.
  */
 CV_EXPORTS void divide(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
 
-//! computes element-wise weighted reciprocal of an array (dst = scale/src2)
-static inline void divide(double src1, InputArray src2, OutputArray dst, int dtype = -1, Stream& stream = Stream::Null())
-{
-    divide(src1, src2, dst, 1.0, dtype, stream);
-}
-
 /** @brief Computes per-element absolute difference of two matrices (or of a matrix and scalar).
 
 @param src1 First source matrix or scalar.
