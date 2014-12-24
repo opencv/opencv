@@ -315,13 +315,20 @@ void cv::cuda::dft(InputArray _src, OutputArray _dst, Size dft_size, int flags, 
     // We don't support real-to-real transform
     CV_Assert( is_complex_input || is_complex_output );
 
-    GpuMat src_cont = src;
-
     // Make sure here we work with the continuous input,
     // as CUFFT can't handle gaps
-    createContinuous(src.rows, src.cols, src.type(), src_cont);
-    if (src_cont.data != src.data)
+    GpuMat src_cont;
+    if (src.isContinuous())
+    {
+        src_cont = src;
+    }
+    else
+    {
+        BufferPool pool(stream);
+        src_cont.allocator = pool.getAllocator();
+        createContinuous(src.rows, src.cols, src.type(), src_cont);
         src.copyTo(src_cont, stream);
+    }
 
     Size dft_size_opt = dft_size;
     if (is_1d_input && !is_row_dft)
