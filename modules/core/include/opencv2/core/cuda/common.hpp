@@ -48,6 +48,11 @@
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/base.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 #ifndef CV_PI_F
     #ifndef CV_PI
@@ -58,14 +63,11 @@
 #endif
 
 namespace cv { namespace cuda {
-//! @addtogroup cuda
-//! @{
     static inline void checkCudaError(cudaError_t err, const char* file, const int line, const char* func)
     {
         if (cudaSuccess != err)
             cv::error(cv::Error::GpuApiCallError, cudaGetErrorString(err), func, file, line);
     }
-//! @}
 }}
 
 #ifndef cudaSafeCall
@@ -74,8 +76,6 @@ namespace cv { namespace cuda {
 
 namespace cv { namespace cuda
 {
-//! @addtogroup cuda
-//! @{
     template <typename T> static inline bool isAligned(const T* ptr, size_t size)
     {
         return reinterpret_cast<size_t>(ptr) % size == 0;
@@ -85,15 +85,12 @@ namespace cv { namespace cuda
     {
         return step % size == 0;
     }
-//! @}
 }}
 
 namespace cv { namespace cuda
 {
     namespace device
     {
-//! @addtogroup cuda
-//! @{
         __host__ __device__ __forceinline__ int divUp(int total, int grain)
         {
             return (total + grain - 1) / grain;
@@ -104,8 +101,9 @@ namespace cv { namespace cuda
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
             cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
         }
-//! @}
     }
 }}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_COMMON_HPP__
