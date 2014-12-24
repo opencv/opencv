@@ -524,116 +524,53 @@ CV_EXPORTS void copyMakeBorder(InputArray src, OutputArray dst, int top, int bot
 @param src1 Source matrix. Any matrices except 64F are supported.
 @param normType Norm type. NORM_L1 , NORM_L2 , and NORM_INF are supported for now.
 @param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
-@param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 @sa norm
  */
-CV_EXPORTS double norm(InputArray src1, int normType, InputArray mask, GpuMat& buf);
-/** @overload
-uses new buffer, no mask
-*/
-static inline double norm(InputArray src, int normType)
-{
-    GpuMat buf;
-    return norm(src, normType, GpuMat(), buf);
-}
-/** @overload
-no mask
-*/
-static inline double norm(InputArray src, int normType, GpuMat& buf)
-{
-    return norm(src, normType, GpuMat(), buf);
-}
+CV_EXPORTS double norm(InputArray src1, int normType, InputArray mask = noArray());
+/** @overload */
+CV_EXPORTS void calcNorm(InputArray src, OutputArray dst, int normType, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Returns the difference of two matrices.
 
 @param src1 Source matrix. Any matrices except 64F are supported.
 @param src2 Second source matrix (if any) with the same size and type as src1.
 @param normType Norm type. NORM_L1 , NORM_L2 , and NORM_INF are supported for now.
-@param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 @sa norm
  */
-CV_EXPORTS double norm(InputArray src1, InputArray src2, GpuMat& buf, int normType=NORM_L2);
-/** @overload
-uses new buffer
-*/
-static inline double norm(InputArray src1, InputArray src2, int normType=NORM_L2)
-{
-    GpuMat buf;
-    return norm(src1, src2, buf, normType);
-}
+CV_EXPORTS double norm(InputArray src1, InputArray src2, int normType=NORM_L2);
+/** @overload */
+CV_EXPORTS void calcNormDiff(InputArray src1, InputArray src2, OutputArray dst, int normType=NORM_L2, Stream& stream = Stream::Null());
 
 /** @brief Returns the sum of matrix elements.
 
 @param src Source image of any depth except for CV_64F .
 @param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
-@param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 @sa sum
  */
-CV_EXPORTS Scalar sum(InputArray src, InputArray mask, GpuMat& buf);
-/** @overload
-uses new buffer, no mask
-*/
-static inline Scalar sum(InputArray src)
-{
-    GpuMat buf;
-    return sum(src, GpuMat(), buf);
-}
-/** @overload
-no mask
-*/
-static inline Scalar sum(InputArray src, GpuMat& buf)
-{
-    return sum(src, GpuMat(), buf);
-}
+CV_EXPORTS Scalar sum(InputArray src, InputArray mask = noArray());
+/** @overload */
+CV_EXPORTS void calcSum(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Returns the sum of absolute values for matrix elements.
 
 @param src Source image of any depth except for CV_64F .
 @param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
-@param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
  */
-CV_EXPORTS Scalar absSum(InputArray src, InputArray mask, GpuMat& buf);
-/** @overload
-uses new buffer, no mask
-*/
-static inline Scalar absSum(InputArray src)
-{
-    GpuMat buf;
-    return absSum(src, GpuMat(), buf);
-}
-/** @overload
-no mask
-*/
-static inline Scalar absSum(InputArray src, GpuMat& buf)
-{
-    return absSum(src, GpuMat(), buf);
-}
+CV_EXPORTS Scalar absSum(InputArray src, InputArray mask = noArray());
+/** @overload */
+CV_EXPORTS void calcAbsSum(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Returns the squared sum of matrix elements.
 
 @param src Source image of any depth except for CV_64F .
 @param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
-@param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
  */
-CV_EXPORTS Scalar sqrSum(InputArray src, InputArray mask, GpuMat& buf);
-/** @overload
-uses new buffer, no mask
-*/
-static inline Scalar sqrSum(InputArray src)
-{
-    GpuMat buf;
-    return sqrSum(src, GpuMat(), buf);
-}
-/** @overload
-no mask
-*/
-static inline Scalar sqrSum(InputArray src, GpuMat& buf)
-{
-    return sqrSum(src, GpuMat(), buf);
-}
+CV_EXPORTS Scalar sqrSum(InputArray src, InputArray mask = noArray());
+/** @overload */
+CV_EXPORTS void calcSqrSum(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Finds global minimum and maximum matrix elements and returns their values.
 
@@ -641,21 +578,14 @@ static inline Scalar sqrSum(InputArray src, GpuMat& buf)
 @param minVal Pointer to the returned minimum value. Use NULL if not required.
 @param maxVal Pointer to the returned maximum value. Use NULL if not required.
 @param mask Optional mask to select a sub-matrix.
-@param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 The function does not work with CV_64F images on GPUs with the compute capability \< 1.3.
 
 @sa minMaxLoc
  */
-CV_EXPORTS void minMax(InputArray src, double* minVal, double* maxVal, InputArray mask, GpuMat& buf);
-/** @overload
-uses new buffer
-*/
-static inline void minMax(InputArray src, double* minVal, double* maxVal=0, InputArray mask=noArray())
-{
-    GpuMat buf;
-    minMax(src, minVal, maxVal, mask, buf);
-}
+CV_EXPORTS void minMax(InputArray src, double* minVal, double* maxVal, InputArray mask = noArray());
+/** @overload */
+CV_EXPORTS void findMinMax(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Finds global minimum and maximum matrix elements and returns their values with locations.
 
@@ -665,44 +595,28 @@ static inline void minMax(InputArray src, double* minVal, double* maxVal=0, Inpu
 @param minLoc Pointer to the returned minimum location. Use NULL if not required.
 @param maxLoc Pointer to the returned maximum location. Use NULL if not required.
 @param mask Optional mask to select a sub-matrix.
-@param valbuf Optional values buffer to avoid extra memory allocations. It is resized
-automatically.
-@param locbuf Optional locations buffer to avoid extra memory allocations. It is resized
-automatically.
+
 The function does not work with CV_64F images on GPU with the compute capability \< 1.3.
 
 @sa minMaxLoc
  */
 CV_EXPORTS void minMaxLoc(InputArray src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
-                          InputArray mask, GpuMat& valbuf, GpuMat& locbuf);
-/** @overload
-uses new buffer
-*/
-static inline void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
-                             InputArray mask=noArray())
-{
-    GpuMat valBuf, locBuf;
-    minMaxLoc(src, minVal, maxVal, minLoc, maxLoc, mask, valBuf, locBuf);
-}
+                          InputArray mask = noArray());
+/** @overload */
+CV_EXPORTS void findMinMaxLoc(InputArray src, OutputArray minMaxVals, OutputArray loc,
+                              InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Counts non-zero matrix elements.
 
 @param src Single-channel source image.
-@param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 The function does not work with CV_64F images on GPUs with the compute capability \< 1.3.
 
 @sa countNonZero
  */
-CV_EXPORTS int countNonZero(InputArray src, GpuMat& buf);
-/** @overload
-uses new buffer
-*/
-static inline int countNonZero(const GpuMat& src)
-{
-    GpuMat buf;
-    return countNonZero(src, buf);
-}
+CV_EXPORTS int countNonZero(InputArray src);
+/** @overload */
+CV_EXPORTS void countNonZero(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Reduces a matrix to a vector.
 
@@ -737,19 +651,12 @@ CV_EXPORTS void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, i
 @param mtx Source matrix. CV_8UC1 matrices are supported for now.
 @param mean Mean value.
 @param stddev Standard deviation value.
-@param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 @sa meanStdDev
  */
-CV_EXPORTS void meanStdDev(InputArray mtx, Scalar& mean, Scalar& stddev, GpuMat& buf);
-/** @overload
-uses new buffer
-*/
-static inline void meanStdDev(InputArray src, Scalar& mean, Scalar& stddev)
-{
-    GpuMat buf;
-    meanStdDev(src, mean, stddev, buf);
-}
+CV_EXPORTS void meanStdDev(InputArray mtx, Scalar& mean, Scalar& stddev);
+/** @overload */
+CV_EXPORTS void meanStdDev(InputArray mtx, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes a standard deviation of integral images.
 
@@ -773,64 +680,32 @@ normalization.
 @param dtype When negative, the output array has the same type as src; otherwise, it has the same
 number of channels as src and the depth =CV_MAT_DEPTH(dtype).
 @param mask Optional operation mask.
-@param norm_buf Optional buffer to avoid extra memory allocations. It is resized automatically.
-@param cvt_buf Optional buffer to avoid extra memory allocations. It is resized automatically.
+@param stream Stream for the asynchronous version.
 
 @sa normalize
  */
 CV_EXPORTS void normalize(InputArray src, OutputArray dst, double alpha, double beta,
-                          int norm_type, int dtype, InputArray mask, GpuMat& norm_buf, GpuMat& cvt_buf);
-/** @overload
-uses new buffers
-*/
-static inline void normalize(InputArray src, OutputArray dst, double alpha = 1, double beta = 0,
-                             int norm_type = NORM_L2, int dtype = -1, InputArray mask = noArray())
-{
-    GpuMat norm_buf;
-    GpuMat cvt_buf;
-    normalize(src, dst, alpha, beta, norm_type, dtype, mask, norm_buf, cvt_buf);
-}
+                          int norm_type, int dtype, InputArray mask = noArray(),
+                          Stream& stream = Stream::Null());
 
 /** @brief Computes an integral image.
 
 @param src Source image. Only CV_8UC1 images are supported for now.
 @param sum Integral image containing 32-bit unsigned integer values packed into CV_32SC1 .
-@param buffer Optional buffer to avoid extra memory allocations. It is resized automatically.
 @param stream Stream for the asynchronous version.
 
 @sa integral
  */
-CV_EXPORTS void integral(InputArray src, OutputArray sum, GpuMat& buffer, Stream& stream = Stream::Null());
-static inline void integralBuffered(InputArray src, OutputArray sum, GpuMat& buffer, Stream& stream = Stream::Null())
-{
-    integral(src, sum, buffer, stream);
-}
-/** @overload
-uses new buffer
-*/
-static inline void integral(InputArray src, OutputArray sum, Stream& stream = Stream::Null())
-{
-    GpuMat buffer;
-    integral(src, sum, buffer, stream);
-}
+CV_EXPORTS void integral(InputArray src, OutputArray sum, Stream& stream = Stream::Null());
 
 /** @brief Computes a squared integral image.
 
 @param src Source image. Only CV_8UC1 images are supported for now.
 @param sqsum Squared integral image containing 64-bit unsigned integer values packed into
 CV_64FC1 .
-@param buf Optional buffer to avoid extra memory allocations. It is resized automatically.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void sqrIntegral(InputArray src, OutputArray sqsum, GpuMat& buf, Stream& stream = Stream::Null());
-/** @overload
-uses new buffer
-*/
-static inline void sqrIntegral(InputArray src, OutputArray sqsum, Stream& stream = Stream::Null())
-{
-    GpuMat buffer;
-    sqrIntegral(src, sqsum, buffer, stream);
-}
+CV_EXPORTS void sqrIntegral(InputArray src, OutputArray sqsum, Stream& stream = Stream::Null());
 
 //! @} cudaarithm_reduce
 

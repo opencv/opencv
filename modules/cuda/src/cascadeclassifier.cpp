@@ -454,11 +454,10 @@ public:
                 // create sutable matrix headers
                 GpuMat src  = resuzeBuffer(cv::Rect(0, 0, level.sFrame.width, level.sFrame.height));
                 GpuMat sint = integral(cv::Rect(prev, 0, level.sFrame.width + 1, level.sFrame.height + 1));
-                GpuMat buff = integralBuffer;
 
                 // generate integral for scale
                 cuda::resize(image, src, level.sFrame, 0, 0, cv::INTER_LINEAR);
-                cuda::integral(src, sint, buff);
+                cuda::integral(src, sint);
 
                 // calculate job
                 int totalWidth = level.workArea.width / step;

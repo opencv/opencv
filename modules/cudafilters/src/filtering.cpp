@@ -542,7 +542,7 @@ namespace
             anchor_ = Point(iters_, iters_);
             iters_ = 1;
         }
-        else if (iters_ > 1 && countNonZero(kernel) == (int) kernel.total())
+        else if (iters_ > 1 && cv::countNonZero(kernel) == (int) kernel.total())
         {
             anchor_ = Point(anchor_.x * iters_, anchor_.y * iters_);
             kernel = getStructuringElement(MORPH_RECT,
