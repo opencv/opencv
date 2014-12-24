@@ -1602,366 +1602,6 @@
       <x>494</x>
       <y>83</y>
       <val>5191872.</val></rng2></gpu_dst></Sz_Integral--Integral--1920x1080>
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        253.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        116539862.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.4031297617112967e+05</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        65535.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        109838742.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.6307556235679619e+07</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2147479470.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -2064412972.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.1897821448991267e+12</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.0949919433593750e+03</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1885841792.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.2687753119449187e+06</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        253.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        165732365.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.6731496448614512e+05</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        65535.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2794835600000000e+09</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.3311141762602195e+07</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2147479470.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -1673509691.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.4188517746511970e+12</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.0949919433593750e+03</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.6824102400000000e+09</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.7055842882054248e+06</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        253.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        262233697.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.1049385308127172e+05</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        65535.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.4740641180000000e+09</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.4455819441961132e+07</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2147482367.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -1679712559.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.7847542800636602e+12</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_L2->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_INF->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.0949975585937500e+03</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_INF->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_L1->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2442598400000000e+09</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_L1->
-<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_L2->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.4033175450010896e+06</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_L2->
 <Sz_Norm_NormDiff--NormDiff---1280x720--NORM_INF->
   <gpu_dst>
     <kind>131072</kind>
@@ -2052,559 +1692,6 @@
       <dt>d</dt>
       <data>
         1.5052559604598815e+05</data></val></gpu_dst></Sz_Norm_NormDiff--NormDiff---1920x1080--NORM_L2->
-<Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        117409808. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--Gray->
-<Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        117442015. 117362033. 117486009. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--BGR->
-<Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        117421386. 117397638. 117532033. 117448534.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--BGRA->
-<Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        109838742. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--Gray->
-<Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        120271623. 100060867. 135771837. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--BGR->
-<Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        135358927. 144405381. 110798404. 119955409.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--BGRA->
-<Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.7151187500000000e+04 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--Gray->
-<Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.1256742500000000e+06 -675390. -1422921. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--BGR->
-<Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        30750. -2.3927837500000000e+06 786783. 1.2314348750000000e+06</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--BGRA->
-<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        167003850. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--Gray->
-<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        167068934. 166901031. 167088555. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--BGR->
-<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        167010829. 167027054. 167135444. 167012391.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--BGRA->
-<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2794835600000000e+09 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--Gray->
-<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2786099330000000e+09 4.2822561620000000e+09 10835463. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--BGR->
-<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2941559330000000e+09 20789191. 4.2432963140000000e+09
-        4.2733847410000000e+09</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--BGRA->
-<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -4.1415846875000000e+05 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--Gray->
-<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.9801225000000000e+05 -2.5101757500000000e+06
-        1.4797712500000000e+06 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--BGR->
-<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -4673617. -2.7865287500000000e+05 3.3157005000000000e+06
-        5.0424368750000000e+05</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--BGRA->
-<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        264150490. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--Gray->
-<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        264390286. 264218844. 264468011. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--BGR->
-<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        264296559. 264295279. 264372654. 264383470.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--BGRA->
-<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.4740641180000000e+09 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--Gray->
-<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.4925833000000000e+09 3.4735998750000000e+09
-        3.5166944630000000e+09 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--BGR->
-<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.5135204090000000e+09 3.5414027270000000e+09
-        3.4396037360000000e+09 3.4981448210000000e+09</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--BGRA->
-<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -1.4270992500000000e+06 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--Gray->
-<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.9217845000000000e+06 -5542531. 7.9969887500000000e+05 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--BGR->
-<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -5.1772687500000000e+04 -5.9148187500000000e+05
-        4.7317705000000000e+06 2.1402972500000000e+06</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--BGRA->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        117409808. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--Gray->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        117442015. 117362033. 117486009. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--BGR->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        117421386. 117397638. 117532033. 117448534.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--BGRA->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        109838742. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--Gray->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        120271623. 100060867. 135771837. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--BGR->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        135358927. 144405381. 110798404. 119955409.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--BGRA->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1885841792. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--Gray->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1886072960. 1886150784. 1886688896. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--BGR->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1888184832. 1886130048. 1883922560. 1886769536.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--BGRA->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        167003850. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--Gray->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        167068934. 166901031. 167088555. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--BGR->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        167010829. 167027054. 167135444. 167012391.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--BGRA->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2794835600000000e+09 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--Gray->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2786099330000000e+09 4.2822561620000000e+09 10835463. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--BGR->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2941559330000000e+09 20789191. 4.2432963140000000e+09
-        4.2733847410000000e+09</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--BGRA->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.6824102400000000e+09 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--Gray->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.6825510400000000e+09 2.6823073280000000e+09
-        2.6838704640000000e+09 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--BGR->
-<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.6841766400000000e+09 2.6829667840000000e+09
-        2.6826263040000000e+09 2.6835681280000000e+09</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--BGRA->
-<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        264150490. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--Gray->
-<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        264390286. 264218844. 264468011. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--BGR->
-<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        264296559. 264295279. 264372654. 264383470.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--BGRA->
-<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.4740641180000000e+09 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--Gray->
-<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.4925833000000000e+09 3.4735998750000000e+09
-        3.5166944630000000e+09 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--BGR->
-<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.5135204090000000e+09 3.5414027270000000e+09
-        3.4396037360000000e+09 3.4981448210000000e+09</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--BGRA->
-<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--Gray->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2442598400000000e+09 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--Gray->
-<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--BGR->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2447644160000000e+09 4.2444111360000000e+09
-        4.2468976640000000e+09 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--BGR->
-<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--BGRA->
-  <gpu_dst>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.2449159680000000e+09 4.2463203840000000e+09
-        4.2456143360000000e+09 4.2458608640000000e+09</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--BGRA->
 <Sz_Depth_Cn_SumSqr--SumSqr---1280x720--CV_8U--Gray->
   <gpu_dst>
     <kind>131072</kind>
@@ -33698,4 +32785,930 @@
       <y>60</y>
       <cn>1</cn>
       <val>39.</val></rng2></gpu_dst></Sz_Type_LutMultiChannel--LutMultiChannel---1920x1080--8UC3->
+ <!-- resumed -->
+
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        253.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        116539862.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4031297617112967e+05</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        65535.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.0174609814000000e+10</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.6307556235679619e+07</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_16U--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2147479470.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.8896569509858000e+14</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.1897821448991267e+12</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32S--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.0949919433593750e+03</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.8858418434068799e+09</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.2687753119449201e+06</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x720--CV_32F--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        253.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        165732365.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6731496448614512e+05</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_8U--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        65535.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2934189224000000e+10</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.3311141762602195e+07</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_16U--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2147479470.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4066989001781170e+15</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4188517746511968e+12</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32S--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.0949919433593750e+03</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.6824101788146086e+09</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.7055842882054271e+06</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1280x1024--CV_32F--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        253.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        262233697.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.1049385308127172e+05</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_8U--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        65535.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.7898573558000000e+10</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.4455819441961132e+07</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_16U--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2147482367.</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.2257577472570410e+15</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.7847542800636614e+12</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32S--NORM_L2->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_INF->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.0949975585937500e+03</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_INF->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_L1->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2442595469681168e+09</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_L1->
+<Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_L2->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.4033175450010924e+06</data></val></gpu_dst></Sz_Depth_Norm_Norm--Norm---1920x1080--CV_32F--NORM_L2->
+<Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        117409808. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--Gray->
+<Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        117442015. 117362033. 117486009. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--BGR->
+<Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        117421386. 117397638. 117532033. 117448534.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_8U--BGRA->
+<Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.0174609814000000e+10 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--Gray->
+<Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.0185042695000000e+10 3.0164831939000000e+10
+        3.0200542909000000e+10 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--BGR->
+<Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.0200129999000000e+10 3.0209176453000000e+10
+        3.0175569476000000e+10 3.0184726481000000e+10</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_16U--BGRA->
+<Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.7151694497398566e+04 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--Gray->
+<Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.1256748712771125e+06 -6.7538871001079865e+05
+        -1.4229213160522422e+06 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--BGR->
+<Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.0749739691727795e+04 -2.3927845141418590e+06
+        7.8678251561408956e+05 1.2314346964513222e+06</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x720--CV_32F--BGRA->
+<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        167003850. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--Gray->
+<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        167068934. 166901031. 167088555. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--BGR->
+<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        167010829. 167027054. 167135444. 167012391.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_8U--BGRA->
+<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2934189224000000e+10 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--Gray->
+<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2933315597000000e+10 4.2936961826000000e+10
+        4.2960508423000000e+10 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--BGR->
+<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2948861597000000e+10 4.2970462151000000e+10
+        4.2898001978000000e+10 4.2928090405000000e+10</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_16U--BGRA->
+<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -4.1415755742110917e+05 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--Gray->
+<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9801301687175827e+05 -2.5101748361256775e+06
+        1.4797711698827697e+06 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--BGR->
+<Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -4.6736171833479628e+06 -2.7865340299610002e+05
+        3.3157003341066339e+06 5.0424233338008169e+05</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1280x1024--CV_32F--BGRA->
+<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        264150490. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--Gray->
+<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        264390286. 264218844. 264468011. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--BGR->
+<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        264296559. 264295279. 264372654. 264383470.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_8U--BGRA->
+<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.7898573558000000e+10 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--Gray->
+<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.7917092740000000e+10 6.7898109315000000e+10
+        6.7941203903000000e+10 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--BGR->
+<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.7938029849000000e+10 6.7965912167000000e+10
+        6.7864113176000000e+10 6.7922654261000000e+10</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_16U--BGRA->
+<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.4270991630230523e+06 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--Gray->
+<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.9217830967199397e+06 -5.5425307073553540e+06
+        7.9969974405662809e+05 0.</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--BGR->
+<Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -5.1772112359011546e+04 -5.9148157526209531e+05
+        4.7317706394521315e+06 2.1402986360571496e+06</data></val></gpu_dst></Sz_Depth_Cn_Sum--Sum---1920x1080--CV_32F--BGRA->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        117409808. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--Gray->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        117442015. 117362033. 117486009. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--BGR->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        117421386. 117397638. 117532033. 117448534.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_8U--BGRA->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.0174609814000000e+10 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--Gray->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.0185042695000000e+10 3.0164831939000000e+10
+        3.0200542909000000e+10 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--BGR->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.0200129999000000e+10 3.0209176453000000e+10
+        3.0175569476000000e+10 3.0184726481000000e+10</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_16U--BGRA->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.8858418434068792e+09 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--Gray->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.8860729570947967e+09 1.8861508231791618e+09
+        1.8866889120581949e+09 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--BGR->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.8881848300793114e+09 1.8861302217086453e+09
+        1.8839226191758382e+09 1.8867694021908069e+09</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x720--CV_32F--BGRA->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        167003850. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--Gray->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        167068934. 166901031. 167088555. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--BGR->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        167010829. 167027054. 167135444. 167012391.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_8U--BGRA->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2934189224000000e+10 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--Gray->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2933315597000000e+10 4.2936961826000000e+10
+        4.2960508423000000e+10 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--BGR->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2948861597000000e+10 4.2970462151000000e+10
+        4.2898001978000000e+10 4.2928090405000000e+10</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_16U--BGRA->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.6824101788146095e+09 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--Gray->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.6825507889380283e+09 2.6823072584348445e+09
+        2.6838703604416685e+09 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--BGR->
+<Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.6841767885801330e+09 2.6829668908460159e+09
+        2.6826259890006351e+09 2.6835683035667377e+09</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1280x1024--CV_32F--BGRA->
+<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        264150490. 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--Gray->
+<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        264390286. 264218844. 264468011. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--BGR->
+<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        264296559. 264295279. 264372654. 264383470.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_8U--BGRA->
+<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.7898573558000000e+10 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--Gray->
+<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.7917092740000000e+10 6.7898109315000000e+10
+        6.7941203903000000e+10 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--BGR->
+<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.7938029849000000e+10 6.7965912167000000e+10
+        6.7864113176000000e+10 6.7922654261000000e+10</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_16U--BGRA->
+<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--Gray->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2442595469681153e+09 0. 0. 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--Gray->
+<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--BGR->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2447644218200569e+09 4.2444110604969888e+09
+        4.2468977444589453e+09 0.</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--BGR->
+<Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--BGRA->
+  <gpu_dst>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.2449163316402893e+09 4.2463198712666512e+09
+        4.2456141854110312e+09 4.2458610421634188e+09</data></val></gpu_dst></Sz_Depth_Cn_SumAbs--SumAbs---1920x1080--CV_32F--BGRA->
 </opencv_storage>
