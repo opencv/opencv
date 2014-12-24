@@ -342,6 +342,53 @@ void cv::cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
     }
 }
 
+GpuMat cv::cuda::getInputMat(InputArray _src, Stream& stream)
+{
+    GpuMat src;
+
+    if (_src.kind() == _InputArray::CUDA_GPU_MAT)
+    {
+        src = _src.getGpuMat();
+    }
+    else if (!_src.empty())
+    {
+        BufferPool pool(stream);
+        src = pool.getBuffer(_src.size(), _src.type());
+        src.upload(_src, stream);
+    }
+
+    return src;
+}
+
+GpuMat cv::cuda::getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream)
+{
+    GpuMat dst;
+
+    if (_dst.kind() == _InputArray::CUDA_GPU_MAT)
+    {
+        _dst.create(rows, cols, type);
+        dst = _dst.getGpuMat();
+    }
+    else
+    {
+        BufferPool pool(stream);
+        dst = pool.getBuffer(rows, cols, type);
+    }
+
+    return dst;
+}
+
+void cv::cuda::syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream)
+{
+    if (_dst.kind() != _InputArray::CUDA_GPU_MAT)
+    {
+        if (stream)
+            dst.download(_dst, stream);
+        else
+            dst.download(_dst);
+    }
+}
+
 #ifndef HAVE_CUDA
 
 GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
