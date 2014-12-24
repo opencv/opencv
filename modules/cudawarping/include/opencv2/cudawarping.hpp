@@ -224,14 +224,6 @@ src .
  */
 CV_EXPORTS void pyrUp(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
-class CV_EXPORTS ImagePyramid : public Algorithm
-{
-public:
-    virtual void getLayer(OutputArray outImg, Size outRoi, Stream& stream = Stream::Null()) const = 0;
-};
-
-CV_EXPORTS Ptr<ImagePyramid> createImagePyramid(InputArray img, int nLayers = -1, Stream& stream = Stream::Null());
-
 //! @}
 
 }} // namespace cv { namespace cuda {
