@@ -171,21 +171,6 @@ CV_EXPORTS void warpPerspective(InputArray src, OutputArray dst, InputArray M, S
  */
 CV_EXPORTS void buildWarpPerspectiveMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null());
 
-/** @brief Builds plane warping maps.
- */
-CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, InputArray T, float scale,
-                                   OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null());
-
-/** @brief Builds cylindrical warping maps.
- */
-CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale,
-                                         OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null());
-
-/** @brief Builds spherical warping maps.
- */
-CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale,
-                                       OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null());
-
 /** @brief Rotates an image around the origin (0,0) and then shifts it.
 
 @param src Source image. Supports 1, 3 or 4 channels images with CV_8U , CV_16U or CV_32F
