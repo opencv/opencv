@@ -80,6 +80,16 @@
 namespace cv { namespace cuda {
     CV_EXPORTS cv::String getNppErrorMessage(int code);
     CV_EXPORTS cv::String getCudaDriverApiErrorMessage(int code);
+
+    CV_EXPORTS GpuMat getInputMat(InputArray _src, Stream& stream);
+
+    CV_EXPORTS GpuMat getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream);
+    static inline GpuMat getOutputMat(OutputArray _dst, Size size, int type, Stream& stream)
+    {
+        return getOutputMat(_dst, size.height, size.width, type, stream);
+    }
+
+    CV_EXPORTS void syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream);
 }}
 
 #ifndef HAVE_CUDA
@@ -105,16 +115,6 @@ namespace cv { namespace cuda
     private:
         GpuMat::Allocator* allocator_;
     };
-
-    CV_EXPORTS GpuMat getInputMat(InputArray _src, Stream& stream);
-
-    CV_EXPORTS GpuMat getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream);
-    static inline GpuMat getOutputMat(OutputArray _dst, Size size, int type, Stream& stream)
-    {
-        return getOutputMat(_dst, size.height, size.width, type, stream);
-    }
-
-    CV_EXPORTS void syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream);
 
     static inline void checkNppError(int code, const char* file, const int line, const char* func)
     {
