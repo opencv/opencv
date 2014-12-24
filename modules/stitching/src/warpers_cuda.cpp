@@ -46,12 +46,6 @@
 using namespace cv;
 using namespace cv::cuda;
 
-Rect cv::detail::PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R,
-                                           cuda::GpuMat & xmap, cuda::GpuMat & ymap)
-{
-    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);
-}
-
 #ifdef HAVE_CUDA
 
 namespace cv { namespace cuda { namespace device
@@ -61,6 +55,14 @@ namespace cv { namespace cuda { namespace device
         void buildWarpPlaneMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
                                 const float k_rinv[9], const float r_kinv[9], const float t[3], float scale,
                                 cudaStream_t stream);
+
+        void buildWarpSphericalMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
+                                    const float k_rinv[9], const float r_kinv[9], float scale,
+                                    cudaStream_t stream);
+
+        void buildWarpCylindricalMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
+                                      const float k_rinv[9], const float r_kinv[9], float scale,
+                                      cudaStream_t stream);
     }
 }}}
 
@@ -92,7 +94,63 @@ static void buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray _K, Input
                        T.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
+static void buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
+                                   OutputArray _map_x, OutputArray _map_y, Stream& stream = Stream::Null())
+{
+    (void) src_size;
+
+    Mat K = _K.getMat();
+    Mat R = _R.getMat();
+
+    CV_Assert( K.size() == Size(3,3) && K.type() == CV_32FC1 );
+    CV_Assert( R.size() == Size(3,3) && R.type() == CV_32FC1 );
+
+    Mat K_Rinv = K * R.t();
+    Mat R_Kinv = R * K.inv();
+    CV_Assert( K_Rinv.isContinuous() );
+    CV_Assert( R_Kinv.isContinuous() );
+
+    _map_x.create(dst_roi.size(), CV_32FC1);
+    _map_y.create(dst_roi.size(), CV_32FC1);
+
+    GpuMat map_x = _map_x.getGpuMat();
+    GpuMat map_y = _map_y.getGpuMat();
+
+    device::imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
+}
+
+static void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
+                                     OutputArray _map_x, OutputArray _map_y, Stream& stream = Stream::Null())
+{
+    (void) src_size;
+
+    Mat K = _K.getMat();
+    Mat R = _R.getMat();
+
+    CV_Assert( K.size() == Size(3,3) && K.type() == CV_32FC1 );
+    CV_Assert( R.size() == Size(3,3) && R.type() == CV_32FC1 );
+
+    Mat K_Rinv = K * R.t();
+    Mat R_Kinv = R * K.inv();
+    CV_Assert( K_Rinv.isContinuous() );
+    CV_Assert( R_Kinv.isContinuous() );
+
+    _map_x.create(dst_roi.size(), CV_32FC1);
+    _map_y.create(dst_roi.size(), CV_32FC1);
+
+    GpuMat map_x = _map_x.getGpuMat();
+    GpuMat map_y = _map_y.getGpuMat();
+
+    device::imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
+}
+
 #endif
+
+Rect cv::detail::PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R,
+                                           cuda::GpuMat & xmap, cuda::GpuMat & ymap)
+{
+    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);
+}
 
 Rect cv::detail::PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T,
                                            cuda::GpuMat & xmap, cuda::GpuMat & ymap)
@@ -131,50 +189,23 @@ Point cv::detail::PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, I
                                        int interp_mode, int border_mode,
                                        cuda::GpuMat & dst)
 {
+#ifndef HAVE_OPENCV_CUDAWARPING
+    (void)src;
+    (void)K;
+    (void)R;
+    (void)T;
+    (void)interp_mode;
+    (void)border_mode;
+    (void)dst;
+    throw_no_cuda();
+    return Point();
+#else
     Rect dst_roi = buildMaps(src.size(), K, R, T, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
     cuda::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
     return dst_roi.tl();
-}
-
-#ifdef HAVE_CUDA
-
-namespace cv { namespace cuda { namespace device
-{
-    namespace imgproc
-    {
-        void buildWarpSphericalMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
-                                    const float k_rinv[9], const float r_kinv[9], float scale,
-                                    cudaStream_t stream);
-    }
-}}}
-
-static void buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
-                                   OutputArray _map_x, OutputArray _map_y, Stream& stream = Stream::Null())
-{
-    (void) src_size;
-
-    Mat K = _K.getMat();
-    Mat R = _R.getMat();
-
-    CV_Assert( K.size() == Size(3,3) && K.type() == CV_32FC1 );
-    CV_Assert( R.size() == Size(3,3) && R.type() == CV_32FC1 );
-
-    Mat K_Rinv = K * R.t();
-    Mat R_Kinv = R * K.inv();
-    CV_Assert( K_Rinv.isContinuous() );
-    CV_Assert( R_Kinv.isContinuous() );
-
-    _map_x.create(dst_roi.size(), CV_32FC1);
-    _map_y.create(dst_roi.size(), CV_32FC1);
-
-    GpuMat map_x = _map_x.getGpuMat();
-    GpuMat map_y = _map_y.getGpuMat();
-
-    device::imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
-}
-
 #endif
+}
 
 Rect cv::detail::SphericalWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
@@ -203,50 +234,23 @@ Point cv::detail::SphericalWarperGpu::warp(const cuda::GpuMat & src, InputArray 
                                            int interp_mode, int border_mode,
                                            cuda::GpuMat & dst)
 {
+#ifndef HAVE_OPENCV_CUDAWARPING
+    (void)src;
+    (void)K;
+    (void)R;
+    (void)interp_mode;
+    (void)border_mode;
+    (void)dst;
+    throw_no_cuda();
+    return Point();
+#else
     Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
     cuda::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
     return dst_roi.tl();
-}
-
-#ifdef HAVE_CUDA
-
-namespace cv { namespace cuda { namespace device
-{
-    namespace imgproc
-    {
-        void buildWarpCylindricalMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
-                                      const float k_rinv[9], const float r_kinv[9], float scale,
-                                      cudaStream_t stream);
-    }
-}}}
-
-static void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
-                                     OutputArray _map_x, OutputArray _map_y, Stream& stream = Stream::Null())
-{
-    (void) src_size;
-
-    Mat K = _K.getMat();
-    Mat R = _R.getMat();
-
-    CV_Assert( K.size() == Size(3,3) && K.type() == CV_32FC1 );
-    CV_Assert( R.size() == Size(3,3) && R.type() == CV_32FC1 );
-
-    Mat K_Rinv = K * R.t();
-    Mat R_Kinv = R * K.inv();
-    CV_Assert( K_Rinv.isContinuous() );
-    CV_Assert( R_Kinv.isContinuous() );
-
-    _map_x.create(dst_roi.size(), CV_32FC1);
-    _map_y.create(dst_roi.size(), CV_32FC1);
-
-    GpuMat map_x = _map_x.getGpuMat();
-    GpuMat map_y = _map_y.getGpuMat();
-
-    device::imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
-}
-
 #endif
+}
+
 
 Rect cv::detail::CylindricalWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R,
                                                  cuda::GpuMat & xmap, cuda::GpuMat & ymap)
@@ -276,8 +280,19 @@ Point cv::detail::CylindricalWarperGpu::warp(const cuda::GpuMat & src, InputArra
                                              int interp_mode, int border_mode,
                                              cuda::GpuMat & dst)
 {
+#ifndef HAVE_OPENCV_CUDAWARPING
+    (void)src;
+    (void)K;
+    (void)R;
+    (void)interp_mode;
+    (void)border_mode;
+    (void)dst;
+    throw_no_cuda();
+    return Point();
+#else
     Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
     cuda::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
     return dst_roi.tl();
+#endif
 }
