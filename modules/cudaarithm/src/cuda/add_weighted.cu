@@ -50,7 +50,10 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 namespace
@@ -63,7 +66,7 @@ namespace
 
         __device__ __forceinline__ D operator ()(T1 a, T2 b) const
         {
-            return saturate_cast<D>(a * alpha + b * beta + gamma);
+            return cudev::saturate_cast<D>(a * alpha + b * beta + gamma);
         }
     };
 
@@ -555,8 +558,8 @@ void cv::cuda::addWeighted(InputArray _src1, double alpha, InputArray _src2, dou
         }
     };
 
-    GpuMat src1 = _src1.getGpuMat();
-    GpuMat src2 = _src2.getGpuMat();
+    GpuMat src1 = getInputMat(_src1, stream);
+    GpuMat src2 = getInputMat(_src2, stream);
 
     int sdepth1 = src1.depth();
     int sdepth2 = src2.depth();
@@ -564,19 +567,18 @@ void cv::cuda::addWeighted(InputArray _src1, double alpha, InputArray _src2, dou
     ddepth = ddepth >= 0 ? CV_MAT_DEPTH(ddepth) : std::max(sdepth1, sdepth2);
     const int cn = src1.channels();
 
-    CV_DbgAssert( src2.size() == src1.size() && src2.channels() == cn );
-    CV_DbgAssert( sdepth1 <= CV_64F && sdepth2 <= CV_64F && ddepth <= CV_64F );
+    CV_Assert( src2.size() == src1.size() && src2.channels() == cn );
+    CV_Assert( sdepth1 <= CV_64F && sdepth2 <= CV_64F && ddepth <= CV_64F );
 
-    _dst.create(src1.size(), CV_MAKE_TYPE(ddepth, cn));
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src1.size(), CV_MAKE_TYPE(ddepth, cn), stream);
 
-    GpuMat src1_ = src1.reshape(1);
-    GpuMat src2_ = src2.reshape(1);
-    GpuMat dst_ = dst.reshape(1);
+    GpuMat src1_single = src1.reshape(1);
+    GpuMat src2_single = src2.reshape(1);
+    GpuMat dst_single = dst.reshape(1);
 
     if (sdepth1 > sdepth2)
     {
-        src1_.swap(src2_);
+        src1_single.swap(src2_single);
         std::swap(alpha, beta);
         std::swap(sdepth1, sdepth2);
     }
@@ -586,7 +588,9 @@ void cv::cuda::addWeighted(InputArray _src1, double alpha, InputArray _src2, dou
     if (!func)
         CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
 
-    func(src1_, alpha, src2_, beta, gamma, dst_, stream);
+    func(src1_single, alpha, src2_single, beta, gamma, dst_single, stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
 #endif
