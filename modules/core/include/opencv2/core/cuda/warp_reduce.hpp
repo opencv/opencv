@@ -43,10 +43,14 @@
 #ifndef OPENCV_CUDA_WARP_REDUCE_HPP__
 #define OPENCV_CUDA_WARP_REDUCE_HPP__
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
-//! @addtogroup cuda
-//! @{
     template <class T>
     __device__ __forceinline__ T warp_reduce(volatile T *ptr , const unsigned int tid = threadIdx.x)
     {
@@ -65,7 +69,8 @@ namespace cv { namespace cuda { namespace device
 
         return ptr[tid - lane];
     }
-//! @}
 }}} // namespace cv { namespace cuda { namespace cudev {
+
+//! @endcond
 
 #endif /* OPENCV_CUDA_WARP_REDUCE_HPP__ */

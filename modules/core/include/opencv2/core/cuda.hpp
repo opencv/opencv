@@ -51,9 +51,20 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda_types.hpp"
 
+/**
+  @defgroup cuda CUDA-accelerated Computer Vision
+  @{
+    @defgroup cudacore Core part
+    @{
+      @defgroup cudacore_init Initalization and Information
+      @defgroup cudacore_struct Data Structures
+    @}
+  @}
+ */
+
 namespace cv { namespace cuda {
 
-//! @addtogroup cuda_struct
+//! @addtogroup cudacore_struct
 //! @{
 
 //////////////////////////////// GpuMat ///////////////////////////////
@@ -514,11 +525,11 @@ private:
     friend struct EventAccessor;
 };
 
-//! @} cuda_struct
+//! @} cudacore_struct
 
 //////////////////////////////// Initialization & Info ////////////////////////
 
-//! @addtogroup cuda_init
+//! @addtogroup cudacore_init
 //! @{
 
 /** @brief Returns the number of installed CUDA-enabled devices.
@@ -813,7 +824,7 @@ private:
 CV_EXPORTS void printCudaDeviceInfo(int device);
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
-//! @} cuda_init
+//! @} cudacore_init
 
 }} // namespace cv { namespace cuda {
 
