@@ -156,7 +156,7 @@ namespace color_cvt_detail
             const int g = src.y;
             const int r = bidx == 0 ? src.z : src.x;
             const int a = src.w;
-            return (ushort) ((b >> 3) | ((g & ~7) << 2) | ((r & ~7) << 7) | (a * 0x8000));
+            return (ushort) ((b >> 3) | ((g & ~7) << 2) | ((r & ~7) << 7) | (a ? 0x8000 : 0));
         }
     };
 
@@ -263,7 +263,8 @@ namespace color_cvt_detail
     {
         __device__ ushort operator ()(uchar src) const
         {
-            return (ushort) (src | (src << 5) | (src << 10));
+            const int t = src >> 3;
+            return (ushort)(t | (t << 5) | (t << 10));
         }
     };
 
@@ -272,7 +273,8 @@ namespace color_cvt_detail
     {
         __device__ ushort operator ()(uchar src) const
         {
-            return (ushort) ((src >> 3) | ((src & ~3) << 3) | ((src & ~7) << 8));
+            const int t = src;
+            return (ushort)((t >> 3) | ((t & ~3) << 3) | ((t & ~7) << 8));
         }
     };
 
@@ -1226,6 +1228,10 @@ namespace color_cvt_detail
             float B = 0.055648f * X - 0.204043f * Y + 1.057311f * Z;
             float G = -0.969256f * X + 1.875991f * Y + 0.041556f * Z;
             float R = 3.240479f * X - 1.537150f * Y - 0.498535f * Z;
+
+            R = ::fminf(::fmaxf(R, 0.f), 1.f);
+            G = ::fminf(::fmaxf(G, 0.f), 1.f);
+            B = ::fminf(::fmaxf(B, 0.f), 1.f);
 
             if (srgb)
             {
