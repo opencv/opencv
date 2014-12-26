@@ -1527,13 +1527,15 @@ Size _InputArray::size(int i) const
         return d_mat->size();
     }
 
-    CV_Assert( k == CUDA_HOST_MEM );
-    //if( k == CUDA_HOST_MEM )
+    if( k == CUDA_HOST_MEM )
     {
         CV_Assert( i < 0 );
         const cuda::HostMem* cuda_mem = (const cuda::HostMem*)obj;
         return cuda_mem->size();
     }
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    return Size();
 }
 
 int _InputArray::sizend(int* arrsz, int i) const
@@ -1706,12 +1708,14 @@ int _InputArray::dims(int i) const
         return 2;
     }
 
-    CV_Assert( k == CUDA_HOST_MEM );
-    //if( k == CUDA_HOST_MEM )
+    if( k == CUDA_HOST_MEM )
     {
         CV_Assert( i < 0 );
         return 2;
     }
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    return 0;
 }
 
 size_t _InputArray::total(int i) const
@@ -1802,9 +1806,11 @@ int _InputArray::type(int i) const
     if( k == CUDA_GPU_MAT )
         return ((const cuda::GpuMat*)obj)->type();
 
-    CV_Assert( k == CUDA_HOST_MEM );
-    //if( k == CUDA_HOST_MEM )
+    if( k == CUDA_HOST_MEM )
         return ((const cuda::HostMem*)obj)->type();
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    return 0;
 }
 
 int _InputArray::depth(int i) const
@@ -1866,9 +1872,11 @@ bool _InputArray::empty() const
     if( k == CUDA_GPU_MAT )
         return ((const cuda::GpuMat*)obj)->empty();
 
-    CV_Assert( k == CUDA_HOST_MEM );
-    //if( k == CUDA_HOST_MEM )
+    if( k == CUDA_HOST_MEM )
         return ((const cuda::HostMem*)obj)->empty();
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    return true;
 }
 
 bool _InputArray::isContinuous(int i) const
