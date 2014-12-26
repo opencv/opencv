@@ -275,7 +275,7 @@ PERF_TEST_P(Sz, GeneralizedHoughBallard, CUDA_TYPICAL_MAT_SIZES)
     }
 }
 
-PERF_TEST_P(Sz, GeneralizedHoughGuil, CUDA_TYPICAL_MAT_SIZES)
+PERF_TEST_P(Sz, DISABLED_GeneralizedHoughGuil, CUDA_TYPICAL_MAT_SIZES)
 {
     declare.time(10);
 
