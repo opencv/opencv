@@ -80,7 +80,7 @@ public:
 
     virtual bool open( int index );
     virtual void close();
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -242,7 +242,7 @@ IplImage* CvCaptureCAM_PvAPI::retrieveFrame(int)
     else return NULL;
 }
 
-double CvCaptureCAM_PvAPI::getProperty( int property_id )
+double CvCaptureCAM_PvAPI::getProperty( int property_id ) const
 {
     tPvUint32 nTemp;
 

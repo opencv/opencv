@@ -569,7 +569,7 @@ public:
     **Note**: When querying a property that is not supported by the backend used by the VideoCapture
     class, value 0 is returned.
      */
-    CV_WRAP virtual double get(int propId);
+    CV_WRAP virtual double get(int propId) const;
 
 protected:
     Ptr<CvCapture> cap;

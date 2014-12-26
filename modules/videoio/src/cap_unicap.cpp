@@ -62,7 +62,7 @@ struct CvCapture_Unicap : public CvCapture
   virtual bool open( int index );
   virtual void close();
 
-  virtual double getProperty(int);
+  virtual double getProperty(int) const;
   virtual bool setProperty(int, double);
   virtual bool grabFrame();
   virtual IplImage* retrieveFrame(int);
@@ -241,7 +241,8 @@ IplImage * CvCapture_Unicap::retrieveFrame(int) {
   return raw_frame;
 }
 
-double CvCapture_Unicap::getProperty(int id) {
+double CvCapture_Unicap::getProperty(int id) const
+{
   switch (id) {
   case CV_CAP_PROP_POS_MSEC: break;
   case CV_CAP_PROP_POS_FRAMES: break;
