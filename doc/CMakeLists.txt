@@ -143,7 +143,6 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
 
   # TODO: do not store downloadable samples, but give github link instead
   add_custom_target(doxygen
-    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/samples" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html/samples"
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/pattern.png" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html"
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/acircles_pattern.png" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html"
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}

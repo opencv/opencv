@@ -85,7 +85,7 @@ L = Mat(pI);
 A case study
 ------------
 
-Now that you have the basics done [here's](samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
+Now that you have the basics done [here's](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
 an example that mixes the usage of the C interface with the C++ one. You will also find it in the
 sample directory of the OpenCV source code library at the
 `samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp` .
@@ -93,18 +93,13 @@ To further help on seeing the difference the programs supports two modes: one mi
 one pure C++. If you define the *DEMO_MIXED_API_USE* you'll end up using the first. The program
 separates the color planes, does some modifications on them and in the end merge them back together.
 
-@dontinclude cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp
-@until namespace cv
-@skip ifdef
-@until endif
-@skip main
-@until endif
+@snippet interoperability_with_OpenCV_1.cpp head
+@snippet interoperability_with_OpenCV_1.cpp start
 
 Here you can observe that with the new structure we have no pointer problems, although it is
 possible to use the old functions and in the end just transform the result to a *Mat* object.
 
-@skip convert image
-@until split
+@snippet interoperability_with_OpenCV_1.cpp new
 
 Because, we want to mess around with the images luma component we first convert from the default RGB
 to the YUV color space and then split the result up into separate planes. Here the program splits:
@@ -114,8 +109,7 @@ image some Gaussian noise and then mix together the channels according to some f
 
 The scanning version looks like:
 
-@skip #if 1
-@until #else
+@snippet interoperability_with_OpenCV_1.cpp scanning
 
 Here you can observe that we may go through all the pixels of an image in three fashions: an
 iterator, a C pointer and an individual element access style. You can read a more in-depth
@@ -123,14 +117,12 @@ description of these in the @ref tutorial_how_to_scan_images tutorial. Convertin
 names is easy. Just remove the cv prefix and use the new *Mat* data structure. Here's an example of
 this by using the weighted addition function:
 
-@until planes[0]
-@until endif
+@snippet interoperability_with_OpenCV_1.cpp noisy
 
 As you may observe the *planes* variable is of type *Mat*. However, converting from *Mat* to
 *IplImage* is easy and made automatically with a simple assignment operator.
 
-@skip merge(planes
-@until #endif
+@snippet interoperability_with_OpenCV_1.cpp end
 
 The new *imshow* highgui function accepts both the *Mat* and *IplImage* data structures. Compile and
 run the program and if the first image below is your input you may get either the first or second as
@@ -140,7 +132,7 @@ output:
 
 You may observe a runtime instance of this on the [YouTube
 here](https://www.youtube.com/watch?v=qckm-zvo31w) and you can [download the source code from here
-](samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
+](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
 or find it in the
 `samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp`
 of the OpenCV source code library.
