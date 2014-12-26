@@ -40,81 +40,114 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 
 #ifdef HAVE_CUDA
 
-#include "opencv2/cudaarithm.hpp"
-#include "opencv2/cudawarping.hpp"
-#include "opencv2/core/private.cuda.hpp"
+#include <cuda_runtime.h>
 
-using namespace testing;
-using namespace cv;
-using namespace cv::cuda;
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 
-struct BufferPoolTest : TestWithParam<DeviceInfo>
+using namespace cvtest;
+
+struct Async : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
+    cv::cuda::HostMem src;
+    cv::cuda::GpuMat d_src;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::GpuMat d_dst;
+
+    virtual void SetUp()
+    {
+        cv::cuda::DeviceInfo devInfo = GetParam();
+        cv::cuda::setDevice(devInfo.deviceID());
+
+        src = cv::cuda::HostMem(cv::cuda::HostMem::PAGE_LOCKED);
+
+        cv::Mat m = randomMat(cv::Size(128, 128), CV_8UC1);
+        m.copyTo(src);
+    }
 };
 
-namespace
+void checkMemSet(int status, void* userData)
 {
-    void func1(const GpuMat& src, GpuMat& dst, Stream& stream)
-    {
-        BufferPool pool(stream);
+    ASSERT_EQ(cudaSuccess, status);
 
-        GpuMat buf = pool.getBuffer(src.size(), CV_32FC(src.channels()));
+    Async* test = reinterpret_cast<Async*>(userData);
 
-        src.convertTo(buf, CV_32F, 1.0 / 255.0, stream);
+    cv::cuda::HostMem src = test->src;
+    cv::cuda::HostMem dst = test->dst;
 
-        cuda::exp(buf, dst, stream);
-    }
-
-    void func2(const GpuMat& src, GpuMat& dst, Stream& stream)
-    {
-        BufferPool pool(stream);
-
-        GpuMat buf1 = pool.getBuffer(saturate_cast<int>(src.rows * 0.5), saturate_cast<int>(src.cols * 0.5), src.type());
-
-        cuda::resize(src, buf1, Size(), 0.5, 0.5, cv::INTER_NEAREST, stream);
-
-        GpuMat buf2 = pool.getBuffer(buf1.size(), CV_32FC(buf1.channels()));
-
-        func1(buf1, buf2, stream);
-
-        GpuMat buf3 = pool.getBuffer(src.size(), buf2.type());
-
-        cuda::resize(buf2, buf3, src.size(), 0, 0, cv::INTER_NEAREST, stream);
-
-        buf3.convertTo(dst, CV_8U, stream);
-    }
-}
-
-CUDA_TEST_P(BufferPoolTest, SimpleUsage)
-{
-    DeviceInfo devInfo = GetParam();
-    setDevice(devInfo.deviceID());
-
-    GpuMat src(200, 200, CV_8UC1);
-    GpuMat dst;
-
-    Stream stream;
-
-    func2(src, dst, stream);
-
-    stream.waitForCompletion();
-
-    GpuMat buf, buf1, buf2, buf3;
-    GpuMat dst_gold;
-
-    cuda::resize(src, buf1, Size(), 0.5, 0.5, cv::INTER_NEAREST);
-    buf1.convertTo(buf, CV_32F, 1.0 / 255.0);
-    cuda::exp(buf, buf2);
-    cuda::resize(buf2, buf3, src.size(), 0, 0, cv::INTER_NEAREST);
-    buf3.convertTo(dst_gold, CV_8U);
+    cv::Mat dst_gold = cv::Mat::zeros(src.size(), src.type());
 
     ASSERT_MAT_NEAR(dst_gold, dst, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(CUDA_Stream, BufferPoolTest, ALL_DEVICES);
+CUDA_TEST_P(Async, MemSet)
+{
+    cv::cuda::Stream stream;
+
+    d_dst.upload(src);
+
+    d_dst.setTo(cv::Scalar::all(0), stream);
+    d_dst.download(dst, stream);
+
+    Async* test = this;
+    stream.enqueueHostCallback(checkMemSet, test);
+
+    stream.waitForCompletion();
+}
+
+void checkConvert(int status, void* userData)
+{
+    ASSERT_EQ(cudaSuccess, status);
+
+    Async* test = reinterpret_cast<Async*>(userData);
+
+    cv::cuda::HostMem src = test->src;
+    cv::cuda::HostMem dst = test->dst;
+
+    cv::Mat dst_gold;
+    src.createMatHeader().convertTo(dst_gold, CV_32S);
+
+    ASSERT_MAT_NEAR(dst_gold, dst, 0);
+}
+
+CUDA_TEST_P(Async, Convert)
+{
+    cv::cuda::Stream stream;
+
+    d_src.upload(src, stream);
+    d_src.convertTo(d_dst, CV_32S, stream);
+    d_dst.download(dst, stream);
+
+    Async* test = this;
+    stream.enqueueHostCallback(checkConvert, test);
+
+    stream.waitForCompletion();
+}
+
+CUDA_TEST_P(Async, HostMemAllocator)
+{
+    cv::cuda::Stream stream;
+
+    cv::Mat h_dst;
+    h_dst.allocator = cv::cuda::HostMem::getAllocator();
+
+    d_src.upload(src, stream);
+    d_src.convertTo(d_dst, CV_32S, stream);
+    d_dst.download(h_dst, stream);
+
+    stream.waitForCompletion();
+
+    cv::Mat dst_gold;
+    src.createMatHeader().convertTo(dst_gold, CV_32S);
+
+    ASSERT_MAT_NEAR(dst_gold, h_dst, 0);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_Stream, Async, ALL_DEVICES);
 
 #endif // HAVE_CUDA

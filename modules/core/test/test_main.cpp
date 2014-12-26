@@ -7,4 +7,14 @@
 
 #include "test_precomp.hpp"
 
+#ifndef HAVE_CUDA
+
 CV_TEST_MAIN("cv")
+
+#else
+
+#include "opencv2/ts/cuda_test.hpp"
+
+CV_CUDA_TEST_MAIN("cv")
+
+#endif

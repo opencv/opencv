@@ -458,7 +458,7 @@ namespace
         GpuMat input0 = convertToType(frame0, work_type_, buf_[2], buf_[3]);
         GpuMat input1 = convertToType(frame1, work_type_, buf_[4], buf_[5]);
 
-        if (_flow2.needed() && _flow1.kind() == _InputArray::GPU_MAT && _flow2.kind() == _InputArray::GPU_MAT)
+        if (_flow2.needed() && _flow1.kind() == _InputArray::CUDA_GPU_MAT && _flow2.kind() == _InputArray::CUDA_GPU_MAT)
         {
             impl(input0, input1, _flow1.getGpuMatRef(), _flow2.getGpuMatRef());
             return;

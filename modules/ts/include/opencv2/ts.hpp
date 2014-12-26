@@ -569,10 +569,10 @@ void parseCustomOptions(int argc, char **argv);
 #define CV_TEST_MAIN(resourcesubdir, ...) \
 int main(int argc, char **argv) \
 { \
+    __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     cvtest::TS::ptr()->init(resourcesubdir); \
     ::testing::InitGoogleTest(&argc, argv); \
     cvtest::printVersionInfo(); \
-    __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     TEST_DUMP_OCL_INFO \
     parseCustomOptions(argc, argv); \
     return RUN_ALL_TESTS(); \

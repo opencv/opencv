@@ -95,6 +95,16 @@ namespace cv { namespace cuda { namespace device { namespace optflow_farneback
 
 }}}} // namespace cv { namespace cuda { namespace cudev { namespace optflow_farneback
 
+namespace
+{
+    GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat& mat)
+    {
+        if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
+            return mat(Rect(0, 0, cols, rows));
+
+        return mat = GpuMat(rows, cols, type);
+    }
+}
 
 void cv::cuda::FarnebackOpticalFlow::prepareGaussian(
         int n, double sigma, float *g, float *xg, float *xxg,
