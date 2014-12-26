@@ -204,7 +204,7 @@ endif()
 
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
 
-if (ARM AND NOT WIN32)
+if ((ARM OR AARCH64) AND NOT WIN32)
   if (NOT ANDROID)
     set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/arm_linux_stub.cpp")
   endif()
