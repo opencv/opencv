@@ -50,6 +50,9 @@
 #include "precomp.hpp"
 #include "grfmt_tiff.hpp"
 
+#define int64 int64_tiff
+#define uint64 uint64_tiff
+
 #ifdef HAVE_TIFF
 # include "tiff.h"
 # include "tiffio.h"
