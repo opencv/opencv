@@ -40,7 +40,12 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
+
+#ifdef HAVE_CUDA
+
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/ts/cuda_perf.hpp"
 
 using namespace std;
 using namespace testing;
@@ -49,7 +54,7 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // SetTo
 
-PERF_TEST_P(Sz_Depth_Cn, MatOp_SetTo,
+PERF_TEST_P(Sz_Depth_Cn, CUDA_GpuMat_SetTo,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F, CV_64F),
                     CUDA_CHANNELS_1_3_4))
@@ -67,23 +72,21 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetTo,
         cv::cuda::GpuMat dst(size, type);
 
         TEST_CYCLE() dst.setTo(val);
-
-        CUDA_SANITY_CHECK(dst);
     }
     else
     {
         cv::Mat dst(size, type);
 
         TEST_CYCLE() dst.setTo(val);
-
-        CPU_SANITY_CHECK(dst);
     }
+
+    SANITY_CHECK_NOTHING();
 }
 
 //////////////////////////////////////////////////////////////////////
 // SetToMasked
 
-PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked,
+PERF_TEST_P(Sz_Depth_Cn, CUDA_GpuMat_SetToMasked,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F, CV_64F),
                     CUDA_CHANNELS_1_3_4))
@@ -106,23 +109,21 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked,
         const cv::cuda::GpuMat d_mask(mask);
 
         TEST_CYCLE() dst.setTo(val, d_mask);
-
-        CUDA_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
         cv::Mat dst = src;
 
         TEST_CYCLE() dst.setTo(val, mask);
-
-        CPU_SANITY_CHECK(dst);
     }
+
+    SANITY_CHECK_NOTHING();
 }
 
 //////////////////////////////////////////////////////////////////////
 // CopyToMasked
 
-PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked,
+PERF_TEST_P(Sz_Depth_Cn, CUDA_GpuMat_CopyToMasked,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F, CV_64F),
                     CUDA_CHANNELS_1_3_4))
@@ -144,17 +145,15 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked,
         cv::cuda::GpuMat dst(d_src.size(), d_src.type(), cv::Scalar::all(0));
 
         TEST_CYCLE() d_src.copyTo(dst, d_mask);
-
-        CUDA_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
         cv::Mat dst(src.size(), src.type(), cv::Scalar::all(0));
 
         TEST_CYCLE() src.copyTo(dst, mask);
-
-        CPU_SANITY_CHECK(dst);
     }
+
+    SANITY_CHECK_NOTHING();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -162,7 +161,7 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked,
 
 DEF_PARAM_TEST(Sz_2Depth, cv::Size, MatDepth, MatDepth);
 
-PERF_TEST_P(Sz_2Depth, MatOp_ConvertTo,
+PERF_TEST_P(Sz_2Depth, CUDA_GpuMat_ConvertTo,
             Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F, CV_64F),
                     Values(CV_8U, CV_16U, CV_32F, CV_64F)))
@@ -183,15 +182,15 @@ PERF_TEST_P(Sz_2Depth, MatOp_ConvertTo,
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() d_src.convertTo(dst, depth2, a, b);
-
-        CUDA_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
         cv::Mat dst;
 
         TEST_CYCLE() src.convertTo(dst, depth2, a, b);
-
-        CPU_SANITY_CHECK(dst);
     }
+
+    SANITY_CHECK_NOTHING();
 }
+
+#endif

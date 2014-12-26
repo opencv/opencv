@@ -40,9 +40,13 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 
 #if defined(HAVE_CUDA) && defined(HAVE_OPENGL)
+
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/core/opengl.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 
 using namespace cvtest;
 

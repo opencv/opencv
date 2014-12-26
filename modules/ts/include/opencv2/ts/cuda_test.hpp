@@ -340,6 +340,7 @@ namespace cvtest
     CV_EXPORTS void dumpImage(const std::string& fileName, const cv::Mat& image);
     CV_EXPORTS void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
 
+    CV_EXPORTS void parseCudaDeviceOptions(int argc, char **argv);
     CV_EXPORTS void printCudaInfo();
 }
 
@@ -351,53 +352,7 @@ namespace cv { namespace cuda
 #ifdef HAVE_CUDA
 
 #define CV_CUDA_TEST_MAIN(resourcesubdir) \
-    int main(int argc, char* argv[]) \
-    { \
-        try \
-        { \
-            cv::CommandLineParser cmd(argc, argv, \
-                "{ h help ?            |      | Print help}" \
-                "{ i info              |      | Print information about system and exit }" \
-                "{ device              | -1   | Device on which tests will be executed (-1 means all devices) }" \
-            ); \
-            if (cmd.has("help")) \
-            { \
-                cmd.printMessage(); \
-                return 0; \
-            } \
-            cvtest::printCudaInfo(); \
-            if (cmd.has("info")) \
-            { \
-                return 0; \
-            } \
-            int device = cmd.get<int>("device"); \
-            if (device < 0) \
-            { \
-                cvtest::DeviceManager::instance().loadAll(); \
-                std::cout << "Run tests on all supported devices \n" << std::endl; \
-            } \
-            else \
-            { \
-                cvtest::DeviceManager::instance().load(device); \
-                cv::cuda::DeviceInfo info(device); \
-                std::cout << "Run tests on device " << device << " [" << info.name() << "] \n" << std::endl; \
-            } \
-            cvtest::TS::ptr()->init( resourcesubdir ); \
-            testing::InitGoogleTest(&argc, argv); \
-            return RUN_ALL_TESTS(); \
-        } \
-        catch (const std::exception& e) \
-        { \
-            std::cerr << e.what() << std::endl; \
-            return -1; \
-        } \
-        catch (...) \
-        { \
-            std::cerr << "Unknown error" << std::endl; \
-            return -1; \
-        } \
-        return 0; \
-    }
+    CV_TEST_MAIN(resourcesubdir, cvtest::parseCudaDeviceOptions(argc, argv), cvtest::printCudaInfo())
 
 #else // HAVE_CUDA
 

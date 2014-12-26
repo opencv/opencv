@@ -40,75 +40,80 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../test_precomp.hpp"
 
 #ifdef HAVE_CUDA
 
-#include "opencv2/cudaarithm.hpp"
+#include "opencv2/core/cuda.hpp"
 #include "opencv2/core/private.cuda.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 
 using namespace testing;
-using namespace perf;
 using namespace cv;
 using namespace cv::cuda;
 
-namespace
+struct BufferPoolTest : TestWithParam<DeviceInfo>
 {
-    void func1(const GpuMat& src, GpuMat& dst, Stream& stream)
+    void RunSimpleTest(Stream& stream, HostMem& dst_1, HostMem& dst_2)
     {
         BufferPool pool(stream);
 
-        GpuMat buf = pool.getBuffer(src.size(), CV_32FC(src.channels()));
+        {
+            GpuMat buf0 = pool.getBuffer(Size(640, 480), CV_8UC1);
+            EXPECT_FALSE( buf0.empty() );
 
-        src.convertTo(buf, CV_32F, 1.0 / 255.0, stream);
+            buf0.setTo(Scalar::all(0), stream);
 
-        cuda::exp(buf, dst, stream);
+            GpuMat buf1 = pool.getBuffer(Size(640, 480), CV_8UC1);
+            EXPECT_FALSE( buf1.empty() );
+
+            buf0.convertTo(buf1, buf1.type(), 1.0, 1.0, stream);
+
+            buf1.download(dst_1, stream);
+        }
+
+        {
+            GpuMat buf2 = pool.getBuffer(Size(1280, 1024), CV_32SC1);
+            EXPECT_FALSE( buf2.empty() );
+
+            buf2.setTo(Scalar::all(2), stream);
+
+            buf2.download(dst_2, stream);
+        }
     }
 
-    void func2(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    void CheckSimpleTest(HostMem& dst_1, HostMem& dst_2)
     {
-        BufferPool pool(stream);
-
-        GpuMat buf1 = pool.getBuffer(src1.size(), CV_32FC(src1.channels()));
-
-        func1(src1, buf1, stream);
-
-        GpuMat buf2 = pool.getBuffer(src2.size(), CV_32FC(src2.channels()));
-
-        func1(src2, buf2, stream);
-
-        cuda::add(buf1, buf2, dst, noArray(), -1, stream);
+        EXPECT_MAT_NEAR(Mat(Size(640, 480), CV_8UC1, Scalar::all(1)), dst_1, 0.0);
+        EXPECT_MAT_NEAR(Mat(Size(1280, 1024), CV_32SC1, Scalar::all(2)), dst_2, 0.0);
     }
-}
+};
 
-PERF_TEST_P(Sz, BufferPool, CUDA_TYPICAL_MAT_SIZES)
+CUDA_TEST_P(BufferPoolTest, FromNullStream)
 {
-    static bool first = true;
+    HostMem dst_1, dst_2;
 
-    const Size size = GetParam();
+    RunSimpleTest(Stream::Null(), dst_1, dst_2);
 
-    const bool useBufferPool = PERF_RUN_CUDA();
-
-    Mat host_src(size, CV_8UC1);
-    declare.in(host_src, WARMUP_RNG);
-
-    GpuMat src1(host_src), src2(host_src);
-    GpuMat dst;
-
-    setBufferPoolUsage(useBufferPool);
-    if (useBufferPool && first)
-    {
-        setBufferPoolConfig(-1, 25 * 1024 * 1024, 2);
-        first = false;
-    }
-
-    TEST_CYCLE()
-    {
-        func2(src1, src2, dst, Stream::Null());
-    }
-
-    Mat h_dst(dst);
-    SANITY_CHECK(h_dst);
+    CheckSimpleTest(dst_1, dst_2);
 }
 
-#endif
+CUDA_TEST_P(BufferPoolTest, From2Streams)
+{
+    HostMem dst1_1, dst1_2;
+    HostMem dst2_1, dst2_2;
+
+    Stream stream1, stream2;
+    RunSimpleTest(stream1, dst1_1, dst1_2);
+    RunSimpleTest(stream2, dst2_1, dst2_2);
+
+    stream1.waitForCompletion();
+    stream2.waitForCompletion();
+
+    CheckSimpleTest(dst1_1, dst1_2);
+    CheckSimpleTest(dst2_1, dst2_2);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_Stream, BufferPoolTest, ALL_DEVICES);
+
+#endif // HAVE_CUDA

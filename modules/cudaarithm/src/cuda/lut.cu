@@ -74,7 +74,7 @@ namespace
 
     LookUpTableImpl::LookUpTableImpl(InputArray _lut)
     {
-        if (_lut.kind() == _InputArray::GPU_MAT)
+        if (_lut.kind() == _InputArray::CUDA_GPU_MAT)
         {
             d_lut = _lut.getGpuMat();
         }

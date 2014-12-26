@@ -514,7 +514,7 @@ namespace
         ++outPos_;
         const GpuMat& curOutput = at(outPos_, outputs_);
 
-        if (_output.kind() == _InputArray::GPU_MAT)
+        if (_output.kind() == _InputArray::CUDA_GPU_MAT)
             curOutput.convertTo(_output.getGpuMatRef(), CV_8U);
         else
         {
