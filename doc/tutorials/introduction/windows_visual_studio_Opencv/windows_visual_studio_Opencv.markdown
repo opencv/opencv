@@ -189,12 +189,11 @@ Test it!
 --------
 
 Now to try this out download our little test [source code
-](samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp)
+](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp)
 or get it from the sample code folder of the OpenCV sources. Add this to your project and build it.
 Here's its content:
 
-@includelineno
-cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp
+@includelineno cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp
 
 You can start a Visual Studio build from two places. Either inside from the *IDE* (keyboard
 combination: Control-F5) or by navigating to your build directory and start the application with a
@@ -206,7 +205,7 @@ the *IDE* the console window will not close once finished. It will wait for a ke
 This is important to remember when you code inside the code open and save commands. You're resources
 will be saved ( and queried for at opening!!!) relatively to your working directory. This is unless
 you give a full, explicit path as parameter for the I/O functions. In the code above we open [this
-OpenCV logo](samples/data/opencv-logo.png). Before starting up the application make sure you place
+OpenCV logo](https://github.com/Itseez/opencv/tree/master/samples/data/opencv-logo.png). Before starting up the application make sure you place
 the image file in your current working directory. Modify the image file name inside the code to try
 it out on other images too. Run it and voil á:
 

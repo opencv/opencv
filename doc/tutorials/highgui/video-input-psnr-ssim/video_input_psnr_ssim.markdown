@@ -20,19 +20,12 @@ As a test case where to show off these using OpenCV I've created a small program
 video files and performs a similarity check between them. This is something you could use to check
 just how well a new video compressing algorithms works. Let there be a reference (original) video
 like [this small Megamind clip
-](samples/cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video/Megamind.avi) and [a compressed
-version of it ](samples/cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video/Megamind_bugy.avi).
+](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video/Megamind.avi) and [a compressed
+version of it ](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video/Megamind_bugy.avi).
 You may also find the source code and these video file in the
 `samples/cpp/tutorial_code/HighGUI/video-input-psnr-ssim/` folder of the OpenCV source library.
 
-@dontinclude cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video-input-psnr-ssim.cpp
-
-@until Scalar getMSSIM
-@skip main
-@until {
-@skip if
-@until return mssim;
-@until }
+@includelineno cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video-input-psnr-ssim.cpp
 
 How to read a video stream (online-camera or offline-file)?
 -----------------------------------------------------------

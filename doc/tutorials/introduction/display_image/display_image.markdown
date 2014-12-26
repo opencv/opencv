@@ -21,8 +21,6 @@ Download the source code from
 Explanation
 -----------
 
-@dontinclude cpp/tutorial_code/introduction/display_image/display_image.cpp
-
 In OpenCV 2 we have multiple modules. Each one takes care of a different area or approach towards
 image processing. You could already observe this in the structure of the user guide of these
 tutorials itself. Before you use any of them you first need to include the header files where the
@@ -33,25 +31,24 @@ You'll almost always end up using the:
 -   *core* section, as here are defined the basic building blocks of the library
 -   *highgui* module, as this contains the functions for input and output operations
 
-@until <string>
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp includes
 
 We also include the *iostream* to facilitate console line output and input. To avoid data structure
 and function name conflicts with other libraries, OpenCV has its own namespace: *cv*. To avoid the
 need appending prior each of these the *cv::* keyword you can import the namespace in the whole file
 by using the lines:
 
-@line using namespace cv
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp namespace
 
 This is true for the STL library too (used for console I/O). Now, let's analyze the *main* function.
 We start up assuring that we acquire a valid image name argument from the command line. Otherwise
 take a picture by default: "HappyFish.jpg".
 
-@skip string
-@until }
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp load
 
 Then create a *Mat* object that will store the data of the loaded image.
 
-@skipline Mat
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp mat
 
 Now we call the @ref cv::imread function which loads the image name specified by the first argument
 (*argv[1]*). The second argument specifies the format in what we want the image. This may be:
@@ -60,7 +57,7 @@ Now we call the @ref cv::imread function which loads the image name specified by
 -   IMREAD_GRAYSCALE ( 0) loads the image as an intensity one
 -   IMREAD_COLOR (\>0) loads the image in the RGB format
 
-@skipline image = imread
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp imread
 
 @note
    OpenCV offers support for the image formats Windows bitmap (bmp), portable image formats (pbm,
@@ -82,18 +79,18 @@ the image it contains from a size point of view. It may be:
     would like the image to keep its aspect ratio (*WINDOW_KEEPRATIO*) or not
     (*WINDOW_FREERATIO*).
 
-@skipline namedWindow
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp window
 
 Finally, to update the content of the OpenCV window with a new image use the @ref cv::imshow
 function. Specify the OpenCV window name to update and the image to use during this operation:
 
-@skipline imshow
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp imshow
 
 Because we want our window to be displayed until the user presses a key (otherwise the program would
 end far too quickly), we use the @ref cv::waitKey function whose only parameter is just how long
 should it wait for a user input (measured in milliseconds). Zero means to wait forever.
 
-@skipline waitKey
+@snippet cpp/tutorial_code/introduction/display_image/display_image.cpp wait
 
 Result
 ------
@@ -101,7 +98,7 @@ Result
 -   Compile your code and then run the executable giving an image path as argument. If you're on
     Windows the executable will of course contain an *exe* extension too. Of course assure the image
     file is near your program file.
-    @code{.bash}
+    @code{.sh}
     ./DisplayImage HappyFish.jpg
     @endcode
 -   You should get a nice window as the one shown below:

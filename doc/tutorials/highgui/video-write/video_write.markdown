@@ -31,7 +31,7 @@ The source code
 
 You may also find the source code and these video file in the
 `samples/cpp/tutorial_code/highgui/video-write/` folder of the OpenCV source library or [download it
-from here ](samples/cpp/tutorial_code/HighGUI/video-write/video-write.cpp).
+from here ](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/HighGUI/video-write/video-write.cpp).
 
 @includelineno cpp/tutorial_code/HighGUI/video-write/video-write.cpp
 
