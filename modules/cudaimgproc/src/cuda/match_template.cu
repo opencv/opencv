@@ -218,7 +218,7 @@ namespace cv { namespace cuda { namespace device
         // Prepared_SQDIFF
 
         template <int cn>
-        __global__ void matchTemplatePreparedKernel_SQDIFF_8U(int w, int h, const PtrStep<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result)
+        __global__ void matchTemplatePreparedKernel_SQDIFF_8U(int w, int h, const PtrStep<double> image_sqsum, double templ_sqsum, PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -234,7 +234,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template <int cn>
-        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result, cudaStream_t stream)
+        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const PtrStepSz<double> image_sqsum, double templ_sqsum, PtrStepSzf result, cudaStream_t stream)
         {
             const dim3 threads(32, 8);
             const dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
@@ -246,10 +246,10 @@ namespace cv { namespace cuda { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result, int cn,
+        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const PtrStepSz<double> image_sqsum, double templ_sqsum, PtrStepSzf result, int cn,
                                              cudaStream_t stream)
         {
-            typedef void (*caller_t)(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result, cudaStream_t stream);
+            typedef void (*caller_t)(int w, int h, const PtrStepSz<double> image_sqsum, double templ_sqsum, PtrStepSzf result, cudaStream_t stream);
 
             static const caller_t callers[] =
             {
@@ -287,8 +287,8 @@ namespace cv { namespace cuda { namespace device
 
         template <int cn>
         __global__ void matchTemplatePreparedKernel_SQDIFF_NORMED_8U(
-                int w, int h, const PtrStep<unsigned long long> image_sqsum,
-                unsigned long long templ_sqsum, PtrStepSzf result)
+                int w, int h, const PtrStep<double> image_sqsum,
+                double templ_sqsum, PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -305,7 +305,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template <int cn>
-        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum,
+        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const PtrStepSz<double> image_sqsum, double templ_sqsum,
                                                     PtrStepSzf result, cudaStream_t stream)
         {
             const dim3 threads(32, 8);
@@ -319,10 +319,10 @@ namespace cv { namespace cuda { namespace device
         }
 
 
-        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum,
+        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const PtrStepSz<double> image_sqsum, double templ_sqsum,
                                                     PtrStepSzf result, int cn, cudaStream_t stream)
         {
-            typedef void (*caller_t)(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result, cudaStream_t stream);
+            typedef void (*caller_t)(int w, int h, const PtrStepSz<double> image_sqsum, double templ_sqsum, PtrStepSzf result, cudaStream_t stream);
             static const caller_t callers[] =
             {
                 0, matchTemplatePrepared_SQDIFF_NORMED_8U<1>, matchTemplatePrepared_SQDIFF_NORMED_8U<2>, matchTemplatePrepared_SQDIFF_NORMED_8U<3>, matchTemplatePrepared_SQDIFF_NORMED_8U<4>
@@ -334,7 +334,7 @@ namespace cv { namespace cuda { namespace device
         //////////////////////////////////////////////////////////////////////
         // Prepared_CCOFF
 
-        __global__ void matchTemplatePreparedKernel_CCOFF_8U(int w, int h, float templ_sum_scale, const PtrStep<unsigned int> image_sum, PtrStepSzf result)
+        __global__ void matchTemplatePreparedKernel_CCOFF_8U(int w, int h, float templ_sum_scale, const PtrStep<int> image_sum, PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -349,7 +349,7 @@ namespace cv { namespace cuda { namespace device
             }
         }
 
-        void matchTemplatePrepared_CCOFF_8U(int w, int h, const PtrStepSz<unsigned int> image_sum, unsigned int templ_sum, PtrStepSzf result, cudaStream_t stream)
+        void matchTemplatePrepared_CCOFF_8U(int w, int h, const PtrStepSz<int> image_sum, int templ_sum, PtrStepSzf result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
             dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
@@ -365,8 +365,8 @@ namespace cv { namespace cuda { namespace device
 
         __global__ void matchTemplatePreparedKernel_CCOFF_8UC2(
                 int w, int h, float templ_sum_scale_r, float templ_sum_scale_g,
-                const PtrStep<unsigned int> image_sum_r,
-                const PtrStep<unsigned int> image_sum_g,
+                const PtrStep<int> image_sum_r,
+                const PtrStep<int> image_sum_g,
                 PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -388,9 +388,9 @@ namespace cv { namespace cuda { namespace device
 
         void matchTemplatePrepared_CCOFF_8UC2(
                 int w, int h,
-                const PtrStepSz<unsigned int> image_sum_r,
-                const PtrStepSz<unsigned int> image_sum_g,
-                unsigned int templ_sum_r, unsigned int templ_sum_g,
+                const PtrStepSz<int> image_sum_r,
+                const PtrStepSz<int> image_sum_g,
+                int templ_sum_r, int templ_sum_g,
                 PtrStepSzf result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -412,9 +412,9 @@ namespace cv { namespace cuda { namespace device
                 float templ_sum_scale_r,
                 float templ_sum_scale_g,
                 float templ_sum_scale_b,
-                const PtrStep<unsigned int> image_sum_r,
-                const PtrStep<unsigned int> image_sum_g,
-                const PtrStep<unsigned int> image_sum_b,
+                const PtrStep<int> image_sum_r,
+                const PtrStep<int> image_sum_g,
+                const PtrStep<int> image_sum_b,
                 PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -440,12 +440,12 @@ namespace cv { namespace cuda { namespace device
 
         void matchTemplatePrepared_CCOFF_8UC3(
                 int w, int h,
-                const PtrStepSz<unsigned int> image_sum_r,
-                const PtrStepSz<unsigned int> image_sum_g,
-                const PtrStepSz<unsigned int> image_sum_b,
-                unsigned int templ_sum_r,
-                unsigned int templ_sum_g,
-                unsigned int templ_sum_b,
+                const PtrStepSz<int> image_sum_r,
+                const PtrStepSz<int> image_sum_g,
+                const PtrStepSz<int> image_sum_b,
+                int templ_sum_r,
+                int templ_sum_g,
+                int templ_sum_b,
                 PtrStepSzf result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -471,10 +471,10 @@ namespace cv { namespace cuda { namespace device
                 float templ_sum_scale_g,
                 float templ_sum_scale_b,
                 float templ_sum_scale_a,
-                const PtrStep<unsigned int> image_sum_r,
-                const PtrStep<unsigned int> image_sum_g,
-                const PtrStep<unsigned int> image_sum_b,
-                const PtrStep<unsigned int> image_sum_a,
+                const PtrStep<int> image_sum_r,
+                const PtrStep<int> image_sum_g,
+                const PtrStep<int> image_sum_b,
+                const PtrStep<int> image_sum_a,
                 PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -504,14 +504,14 @@ namespace cv { namespace cuda { namespace device
 
         void matchTemplatePrepared_CCOFF_8UC4(
                 int w, int h,
-                const PtrStepSz<unsigned int> image_sum_r,
-                const PtrStepSz<unsigned int> image_sum_g,
-                const PtrStepSz<unsigned int> image_sum_b,
-                const PtrStepSz<unsigned int> image_sum_a,
-                unsigned int templ_sum_r,
-                unsigned int templ_sum_g,
-                unsigned int templ_sum_b,
-                unsigned int templ_sum_a,
+                const PtrStepSz<int> image_sum_r,
+                const PtrStepSz<int> image_sum_g,
+                const PtrStepSz<int> image_sum_b,
+                const PtrStepSz<int> image_sum_a,
+                int templ_sum_r,
+                int templ_sum_g,
+                int templ_sum_b,
+                int templ_sum_a,
                 PtrStepSzf result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -537,8 +537,8 @@ namespace cv { namespace cuda { namespace device
         __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8U(
                 int w, int h, float weight,
                 float templ_sum_scale, float templ_sqsum_scale,
-                const PtrStep<unsigned int> image_sum,
-                const PtrStep<unsigned long long> image_sqsum,
+                const PtrStep<int> image_sum,
+                const PtrStep<double> image_sqsum,
                 PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -559,9 +559,9 @@ namespace cv { namespace cuda { namespace device
         }
 
         void matchTemplatePrepared_CCOFF_NORMED_8U(
-                    int w, int h, const PtrStepSz<unsigned int> image_sum,
-                    const PtrStepSz<unsigned long long> image_sqsum,
-                    unsigned int templ_sum, unsigned long long templ_sqsum,
+                    int w, int h, const PtrStepSz<int> image_sum,
+                    const PtrStepSz<double> image_sqsum,
+                    int templ_sum, double templ_sqsum,
                     PtrStepSzf result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -586,8 +586,8 @@ namespace cv { namespace cuda { namespace device
                 int w, int h, float weight,
                 float templ_sum_scale_r, float templ_sum_scale_g,
                 float templ_sqsum_scale,
-                const PtrStep<unsigned int> image_sum_r, const PtrStep<unsigned long long> image_sqsum_r,
-                const PtrStep<unsigned int> image_sum_g, const PtrStep<unsigned long long> image_sqsum_g,
+                const PtrStep<int> image_sum_r, const PtrStep<double> image_sqsum_r,
+                const PtrStep<int> image_sum_g, const PtrStep<double> image_sqsum_g,
                 PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -618,10 +618,10 @@ namespace cv { namespace cuda { namespace device
 
         void matchTemplatePrepared_CCOFF_NORMED_8UC2(
                     int w, int h,
-                    const PtrStepSz<unsigned int> image_sum_r, const PtrStepSz<unsigned long long> image_sqsum_r,
-                    const PtrStepSz<unsigned int> image_sum_g, const PtrStepSz<unsigned long long> image_sqsum_g,
-                    unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
-                    unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
+                    const PtrStepSz<int> image_sum_r, const PtrStepSz<double> image_sqsum_r,
+                    const PtrStepSz<int> image_sum_g, const PtrStepSz<double> image_sqsum_g,
+                    int templ_sum_r, double templ_sqsum_r,
+                    int templ_sum_g, double templ_sqsum_g,
                     PtrStepSzf result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -652,9 +652,9 @@ namespace cv { namespace cuda { namespace device
                 int w, int h, float weight,
                 float templ_sum_scale_r, float templ_sum_scale_g, float templ_sum_scale_b,
                 float templ_sqsum_scale,
-                const PtrStep<unsigned int> image_sum_r, const PtrStep<unsigned long long> image_sqsum_r,
-                const PtrStep<unsigned int> image_sum_g, const PtrStep<unsigned long long> image_sqsum_g,
-                const PtrStep<unsigned int> image_sum_b, const PtrStep<unsigned long long> image_sqsum_b,
+                const PtrStep<int> image_sum_r, const PtrStep<double> image_sqsum_r,
+                const PtrStep<int> image_sum_g, const PtrStep<double> image_sqsum_g,
+                const PtrStep<int> image_sum_b, const PtrStep<double> image_sqsum_b,
                 PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -693,12 +693,12 @@ namespace cv { namespace cuda { namespace device
 
         void matchTemplatePrepared_CCOFF_NORMED_8UC3(
                     int w, int h,
-                    const PtrStepSz<unsigned int> image_sum_r, const PtrStepSz<unsigned long long> image_sqsum_r,
-                    const PtrStepSz<unsigned int> image_sum_g, const PtrStepSz<unsigned long long> image_sqsum_g,
-                    const PtrStepSz<unsigned int> image_sum_b, const PtrStepSz<unsigned long long> image_sqsum_b,
-                    unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
-                    unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
-                    unsigned int templ_sum_b, unsigned long long templ_sqsum_b,
+                    const PtrStepSz<int> image_sum_r, const PtrStepSz<double> image_sqsum_r,
+                    const PtrStepSz<int> image_sum_g, const PtrStepSz<double> image_sqsum_g,
+                    const PtrStepSz<int> image_sum_b, const PtrStepSz<double> image_sqsum_b,
+                    int templ_sum_r, double templ_sqsum_r,
+                    int templ_sum_g, double templ_sqsum_g,
+                    int templ_sum_b, double templ_sqsum_b,
                     PtrStepSzf result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -732,10 +732,10 @@ namespace cv { namespace cuda { namespace device
                 int w, int h, float weight,
                 float templ_sum_scale_r, float templ_sum_scale_g, float templ_sum_scale_b,
                 float templ_sum_scale_a, float templ_sqsum_scale,
-                const PtrStep<unsigned int> image_sum_r, const PtrStep<unsigned long long> image_sqsum_r,
-                const PtrStep<unsigned int> image_sum_g, const PtrStep<unsigned long long> image_sqsum_g,
-                const PtrStep<unsigned int> image_sum_b, const PtrStep<unsigned long long> image_sqsum_b,
-                const PtrStep<unsigned int> image_sum_a, const PtrStep<unsigned long long> image_sqsum_a,
+                const PtrStep<int> image_sum_r, const PtrStep<double> image_sqsum_r,
+                const PtrStep<int> image_sum_g, const PtrStep<double> image_sqsum_g,
+                const PtrStep<int> image_sum_b, const PtrStep<double> image_sqsum_b,
+                const PtrStep<int> image_sum_a, const PtrStep<double> image_sqsum_a,
                 PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -780,14 +780,14 @@ namespace cv { namespace cuda { namespace device
 
         void matchTemplatePrepared_CCOFF_NORMED_8UC4(
                     int w, int h,
-                    const PtrStepSz<unsigned int> image_sum_r, const PtrStepSz<unsigned long long> image_sqsum_r,
-                    const PtrStepSz<unsigned int> image_sum_g, const PtrStepSz<unsigned long long> image_sqsum_g,
-                    const PtrStepSz<unsigned int> image_sum_b, const PtrStepSz<unsigned long long> image_sqsum_b,
-                    const PtrStepSz<unsigned int> image_sum_a, const PtrStepSz<unsigned long long> image_sqsum_a,
-                    unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
-                    unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
-                    unsigned int templ_sum_b, unsigned long long templ_sqsum_b,
-                    unsigned int templ_sum_a, unsigned long long templ_sqsum_a,
+                    const PtrStepSz<int> image_sum_r, const PtrStepSz<double> image_sqsum_r,
+                    const PtrStepSz<int> image_sum_g, const PtrStepSz<double> image_sqsum_g,
+                    const PtrStepSz<int> image_sum_b, const PtrStepSz<double> image_sqsum_b,
+                    const PtrStepSz<int> image_sum_a, const PtrStepSz<double> image_sqsum_a,
+                    int templ_sum_r, double templ_sqsum_r,
+                    int templ_sum_g, double templ_sqsum_g,
+                    int templ_sum_b, double templ_sqsum_b,
+                    int templ_sum_a, double templ_sqsum_a,
                     PtrStepSzf result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -823,8 +823,8 @@ namespace cv { namespace cuda { namespace device
 
         template <int cn>
         __global__ void normalizeKernel_8U(
-                int w, int h, const PtrStep<unsigned long long> image_sqsum,
-                unsigned long long templ_sqsum, PtrStepSzf result)
+                int w, int h, const PtrStep<double> image_sqsum,
+                double templ_sqsum, PtrStepSzf result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -838,8 +838,8 @@ namespace cv { namespace cuda { namespace device
             }
         }
 
-        void normalize_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum,
-                          unsigned long long templ_sqsum, PtrStepSzf result, int cn, cudaStream_t stream)
+        void normalize_8U(int w, int h, const PtrStepSz<double> image_sqsum,
+                          double templ_sqsum, PtrStepSzf result, int cn, cudaStream_t stream)
         {
             dim3 threads(32, 8);
             dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
