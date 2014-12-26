@@ -7,6 +7,7 @@ using namespace std;
 using namespace cv;
 
 namespace {
+#if 0
 void helpParser()
 {
     printf("\nThe CommandLineParser class is designed for command line arguments parsing\n"
@@ -50,6 +51,7 @@ void helpParser()
            "                          It also works with 'unsigned int', 'double', and 'float' types \n"
            );
 }
+#endif
 
 vector<string> split_string(const string& str, const string& delimiters)
 {
