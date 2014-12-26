@@ -129,6 +129,11 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(CMAKE_DOXYGEN_MAIN_REFERENCE "${refs_main}")
   set(CMAKE_DOXYGEN_EXTRA_REFERENCE "${refs_extra}")
   set(CMAKE_EXTRA_BIB_FILES "${bibfile} ${paths_bib}")
+  if(PLANTUML_JAR)
+    set(CMAKE_DOXYGEN_PLANTUML_SUPPORT "PLANTUML_JAR_PATH      = ${PLANTUML_JAR}\n")
+  else()
+    set(CMAKE_DOXYGEN_PLANTUML_SUPPORT "ALIASES               += startuml{1}=\"@warning __No plantuml!__ \\n \\n @if DUMMY_PLANTUML_CODE\" enduml=\"@endif\"\n")
+  endif()
 
   # writing file
   configure_file(Doxyfile.in ${doxyfile} @ONLY)
