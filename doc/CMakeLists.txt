@@ -129,6 +129,14 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(CMAKE_DOXYGEN_MAIN_REFERENCE "${refs_main}")
   set(CMAKE_DOXYGEN_EXTRA_REFERENCE "${refs_extra}")
   set(CMAKE_EXTRA_BIB_FILES "${bibfile} ${paths_bib}")
+
+  list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/opencv.ico")
+  list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/pattern.png")
+  list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/acircles_pattern.png")
+  list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/bodybg.png")
+  list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
+
   if(PLANTUML_JAR)
     set(CMAKE_DOXYGEN_PLANTUML_SUPPORT "PLANTUML_JAR_PATH      = ${PLANTUML_JAR}\n")
   else()
@@ -138,13 +146,8 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   # writing file
   configure_file(Doxyfile.in ${doxyfile} @ONLY)
   configure_file(root.markdown.in ${rootfile} @ONLY)
-  configure_file(mymath.sty "${CMAKE_DOXYGEN_OUTPUT_PATH}/html/mymath.sty" @ONLY)
-  configure_file(mymath.sty "${CMAKE_DOXYGEN_OUTPUT_PATH}/latex/mymath.sty" @ONLY)
 
-  # TODO: do not store downloadable samples, but give github link instead
   add_custom_target(doxygen
-    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/pattern.png" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html"
-    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/acircles_pattern.png" "${CMAKE_DOXYGEN_OUTPUT_PATH}/html"
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
     DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps}
   )
