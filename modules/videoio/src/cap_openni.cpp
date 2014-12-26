@@ -446,7 +446,7 @@ public:
     CvCapture_OpenNI(const char * filename);
     virtual ~CvCapture_OpenNI();
 
-    virtual double getProperty(int propIdx);
+    virtual double getProperty(int propIdx) const;
     virtual bool setProperty(int probIdx, double propVal);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int outputType);
@@ -771,7 +771,7 @@ bool CvCapture_OpenNI::readCamerasParams()
     return true;
 }
 
-double CvCapture_OpenNI::getProperty( int propIdx )
+double CvCapture_OpenNI::getProperty( int propIdx ) const
 {
     double propValue = 0;
 

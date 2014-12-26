@@ -225,7 +225,7 @@ struct CvCapture_FFMPEG
     bool open( const char* filename );
     void close();
 
-    double getProperty(int);
+    double getProperty(int) const;
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
@@ -236,12 +236,12 @@ struct CvCapture_FFMPEG
     void    seek(double sec);
     bool    slowSeek( int framenumber );
 
-    int64_t get_total_frames();
-    double  get_duration_sec();
-    double  get_fps();
-    int     get_bitrate();
+    int64_t get_total_frames() const;
+    double  get_duration_sec() const;
+    double  get_fps() const;
+    int     get_bitrate() const;
 
-    double  r2d(AVRational r);
+    double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
     double  dts_to_sec(int64_t dts);
 
@@ -759,7 +759,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 }
 
 
-double CvCapture_FFMPEG::getProperty( int property_id )
+double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
     if( !video_st ) return 0;
 
@@ -797,12 +797,12 @@ double CvCapture_FFMPEG::getProperty( int property_id )
     return 0;
 }
 
-double CvCapture_FFMPEG::r2d(AVRational r)
+double CvCapture_FFMPEG::r2d(AVRational r) const
 {
     return r.num == 0 || r.den == 0 ? 0. : (double)r.num / (double)r.den;
 }
 
-double CvCapture_FFMPEG::get_duration_sec()
+double CvCapture_FFMPEG::get_duration_sec() const
 {
     double sec = (double)ic->duration / (double)AV_TIME_BASE;
 
@@ -819,12 +819,12 @@ double CvCapture_FFMPEG::get_duration_sec()
     return sec;
 }
 
-int CvCapture_FFMPEG::get_bitrate()
+int CvCapture_FFMPEG::get_bitrate() const
 {
     return ic->bit_rate;
 }
 
-double CvCapture_FFMPEG::get_fps()
+double CvCapture_FFMPEG::get_fps() const
 {
     double fps = r2d(ic->streams[video_stream]->r_frame_rate);
 
@@ -843,7 +843,7 @@ double CvCapture_FFMPEG::get_fps()
     return fps;
 }
 
-int64_t CvCapture_FFMPEG::get_total_frames()
+int64_t CvCapture_FFMPEG::get_total_frames() const
 {
     int64_t nbf = ic->streams[video_stream]->nb_frames;
 
