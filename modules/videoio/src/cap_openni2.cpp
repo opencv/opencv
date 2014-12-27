@@ -466,7 +466,7 @@ double CvCapture_OpenNI2::getCommonProperty( int propIdx ) const
         propValue = getDepthGeneratorProperty( propIdx );
         break;
     case CV_CAP_PROP_OPENNI2_SYNC :
-        propValue = device.getDepthColorSyncEnabled();
+        propValue = const_cast<CvCapture_OpenNI2 *>(this)->device.getDepthColorSyncEnabled();
     case CV_CAP_PROP_OPENNI2_MIRROR:
     {
         bool isMirroring = color.getMirroringEnabled() && depth.getMirroringEnabled();
