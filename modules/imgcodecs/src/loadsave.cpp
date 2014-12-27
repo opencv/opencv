@@ -192,7 +192,7 @@ static ImageEncoder findEncoder( const String& _ext )
     if( !ext )
         return ImageEncoder();
     int len = 0;
-    for( ext++; isalnum(ext[len]) && len < 128; len++ )
+    for( ext++; len < 128 && isalnum(ext[len]); len++ )
         ;
 
     for( size_t i = 0; i < codecs.encoders.size(); i++ )
@@ -206,7 +206,7 @@ static ImageEncoder findEncoder( const String& _ext )
             if( !descr )
                 break;
             int j = 0;
-            for( descr++; isalnum(descr[j]) && j < len; j++ )
+            for( descr++; j < len && isalnum(descr[j]) ; j++ )
             {
                 int c1 = tolower(ext[j]);
                 int c2 = tolower(descr[j]);

@@ -79,7 +79,7 @@ static bool findCircle( Point2f pt0, Point2f pt1, Point2f pt2,
     }
 
     center->x = center->y = 0.f;
-    radius = 0;
+    *radius = 0;
     return false;
 }
 
