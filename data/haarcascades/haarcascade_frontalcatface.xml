@@ -2,12 +2,12 @@
 <!----------------------------------------------------------------------------
  A frontal cat face detector using the basic set of Haar features, i.e.
  horizontal and vertical features but not diagonal features.
- 
+
  Contributed by Joseph Howse (josephhowse@nummist.com).
- 
+
  More information can be found in the following publications and
  presentations:
- 
+
  Joseph Howse. OpenCV for Secret Agents (book). Packt Publishing, January
    2015.
  Joseph Howse. "Training Detectors and Recognizers in Python and OpenCV"
@@ -16,21 +16,21 @@
  Joseph Howse. "Training Intelligent Camera Systems with Python and OpenCV"
    (webcast). O’Reilly Media. June 17, 2014.
    http://www.oreilly.com/pub/e/3077
- 
+
  Build scripts and demo applications can be found in the following repository:
  https://bitbucket.org/Joe_Howse/angora-blue
- 
+
  KNOWN LIMITATIONS:
- 
+
  Sometimes, the detector mistakenly thinks that a human face is a cat face. In
  situations where either a human or a cat might be encountered, use both a
  human face detector and a cat face detector. Then, if a detected human face
  and a detected cat face intersect, reject the cat face.
- 
+
  An upright subject is assumed. In situations where the cat's face might be
  sideways or upside down (e.g. the cat is rolling over), try various rotations
  of the input image.
- 
+
  //////////////////////////////////////////////////////////////////////////
  | Contributors License Agreement
  | IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
