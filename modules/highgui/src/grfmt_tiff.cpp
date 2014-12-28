@@ -50,8 +50,9 @@
 #include "precomp.hpp"
 #include "grfmt_tiff.hpp"
 
-#define int64 int64_tiff
-#define uint64 uint64_tiff
+#if !defined _MSC_VER && !defined __BORLANDC__
+#  include <stdint.h>
+#endif
 
 #ifdef HAVE_TIFF
 # include "tiff.h"
