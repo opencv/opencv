@@ -3012,7 +3012,52 @@ static double dotProd_8s(const schar* src1, const schar* src2, int len)
     int i = 0;
     double r = 0.0;
 
-#if CV_NEON
+#if CV_SSE2
+    if( USE_SSE2 )
+    {
+        int j, len0 = len & -4, blockSize0 = (1 << 13), blockSize;
+        __m128i z = _mm_setzero_si128();
+        CV_DECL_ALIGNED(16) int buf[4];
+
+        while( i < len0 )
+        {
+            blockSize = std::min(len0 - i, blockSize0);
+            __m128i s = z;
+            j = 0;
+            for( ; j <= blockSize - 16; j += 16 )
+            {
+                __m128i b0 = _mm_loadu_si128((const __m128i*)(src1 + j));
+                __m128i b1 = _mm_loadu_si128((const __m128i*)(src2 + j));
+                __m128i s0, s1, s2, s3;
+                s0 = _mm_srai_epi16(_mm_unpacklo_epi8(b0, b0), 8);
+                s2 = _mm_srai_epi16(_mm_unpackhi_epi8(b0, b0), 8);
+                s1 = _mm_srai_epi16(_mm_unpacklo_epi8(b1, b1), 8);
+                s3 = _mm_srai_epi16(_mm_unpackhi_epi8(b1, b1), 8);
+                s0 = _mm_madd_epi16(s0, s1);
+                s2 = _mm_madd_epi16(s2, s3);
+                s = _mm_add_epi32(s, s0);
+                s = _mm_add_epi32(s, s2);
+            }
+
+            for( ; j < blockSize; j += 4 )
+            {
+                __m128i s0 = _mm_cvtsi32_si128(*(const int*)(src1 + j));
+                __m128i s1 = _mm_cvtsi32_si128(*(const int*)(src2 + j));
+                s0 = _mm_srai_epi16(_mm_unpacklo_epi8(s0, s0), 8);
+                s1 = _mm_srai_epi16(_mm_unpacklo_epi8(s1, s1), 8);
+                s0 = _mm_madd_epi16(s0, s1);
+                s = _mm_add_epi32(s, s0);
+            }
+
+            _mm_store_si128((__m128i*)buf, s);
+            r += buf[0] + buf[1] + buf[2] + buf[3];
+
+            src1 += blockSize;
+            src2 += blockSize;
+            i += blockSize;
+        }
+    }
+#elif CV_NEON
     int len0 = len & -8, blockSize0 = (1 << 14), blockSize;
     int32x4_t v_zero = vdupq_n_s32(0);
     CV_DECL_ALIGNED(16) int buf[4];
