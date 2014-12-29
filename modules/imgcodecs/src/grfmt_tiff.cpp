@@ -189,7 +189,7 @@ bool TiffDecoder::nextPage()
 {
     // Prepare the next page, if any.
     return m_tif &&
-           TIFFReadDirectory(static_cast<TIFF*>(m_tif)) && 
+           TIFFReadDirectory(static_cast<TIFF*>(m_tif)) &&
            readHeader();
 }
 
