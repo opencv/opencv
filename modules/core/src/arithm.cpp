@@ -2772,7 +2772,98 @@ struct AddWeighted_SIMD
     }
 };
 
-#if CV_NEON
+#if CV_SSE2
+
+template <>
+struct AddWeighted_SIMD<schar, float>
+{
+    AddWeighted_SIMD()
+    {
+        haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+    }
+
+    int operator() (const schar * src1, const schar * src2, schar * dst, int width, float alpha, float beta, float gamma) const
+    {
+        int x = 0;
+
+        if (!haveSSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_alpha = _mm_set1_ps(alpha), v_beta = _mm_set1_ps(beta),
+               v_gamma = _mm_set1_ps(gamma);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            __m128i v_src1 = _mm_loadl_epi64((const __m128i *)(src1 + x));
+            __m128i v_src2 = _mm_loadl_epi64((const __m128i *)(src2 + x));
+
+            __m128i v_src1_p = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, v_src1), 8);
+            __m128i v_src2_p = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, v_src2), 8);
+
+            __m128 v_dstf0 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src1_p), 16)), v_alpha);
+            v_dstf0 = _mm_add_ps(_mm_add_ps(v_dstf0, v_gamma),
+                                 _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src2_p), 16)), v_beta));
+
+            __m128 v_dstf1 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src1_p), 16)), v_alpha);
+            v_dstf1 = _mm_add_ps(_mm_add_ps(v_dstf1, v_gamma),
+                                 _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src2_p), 16)), v_beta));
+
+            __m128i v_dst16 = _mm_packs_epi32(_mm_cvtps_epi32(v_dstf0),
+                                              _mm_cvtps_epi32(v_dstf1));
+
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packs_epi16(v_dst16, v_zero));
+        }
+
+        return x;
+    }
+
+    bool haveSSE2;
+};
+
+template <>
+struct AddWeighted_SIMD<short, float>
+{
+    AddWeighted_SIMD()
+    {
+        haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+    }
+
+    int operator() (const short * src1, const short * src2, short * dst, int width, float alpha, float beta, float gamma) const
+    {
+        int x = 0;
+
+        if (!haveSSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_alpha = _mm_set1_ps(alpha), v_beta = _mm_set1_ps(beta),
+               v_gamma = _mm_set1_ps(gamma);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            __m128i v_src1 = _mm_loadu_si128((const __m128i *)(src1 + x));
+            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+
+            __m128 v_dstf0 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src1), 16)), v_alpha);
+            v_dstf0 = _mm_add_ps(_mm_add_ps(v_dstf0, v_gamma),
+                                 _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src2), 16)), v_beta));
+
+            __m128 v_dstf1 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src1), 16)), v_alpha);
+            v_dstf1 = _mm_add_ps(_mm_add_ps(v_dstf1, v_gamma),
+                                 _mm_mul_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src2), 16)), v_beta));
+
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_packs_epi32(_mm_cvtps_epi32(v_dstf0),
+                                                                   _mm_cvtps_epi32(v_dstf1)));
+        }
+
+        return x;
+    }
+
+    bool haveSSE2;
+};
+
+#elif CV_NEON
 
 template <>
 struct AddWeighted_SIMD<schar, float>
