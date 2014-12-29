@@ -100,6 +100,7 @@ public:
     bool  readHeader();
     bool  readData( Mat& img );
     void  close();
+    bool  nextPage();
 
     size_t signatureLength() const;
     bool checkSignature( const String& signature ) const;
