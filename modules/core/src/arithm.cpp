@@ -2863,6 +2863,52 @@ struct AddWeighted_SIMD<short, float>
     bool haveSSE2;
 };
 
+#if CV_SSE4_1
+
+template <>
+struct AddWeighted_SIMD<ushort, float>
+{
+    AddWeighted_SIMD()
+    {
+        haveSSE4_1 = checkHardwareSupport(CV_CPU_SSE4_1);
+    }
+
+    int operator() (const ushort * src1, const ushort * src2, ushort * dst, int width, float alpha, float beta, float gamma) const
+    {
+        int x = 0;
+
+        if (!haveSSE4_1)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_alpha = _mm_set1_ps(alpha), v_beta = _mm_set1_ps(beta),
+               v_gamma = _mm_set1_ps(gamma);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            __m128i v_src1 = _mm_loadu_si128((const __m128i *)(src1 + x));
+            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+
+            __m128 v_dstf0 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src1, v_zero)), v_alpha);
+            v_dstf0 = _mm_add_ps(_mm_add_ps(v_dstf0, v_gamma),
+                                 _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src2, v_zero)), v_beta));
+
+            __m128 v_dstf1 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src1, v_zero)), v_alpha);
+            v_dstf1 = _mm_add_ps(_mm_add_ps(v_dstf1, v_gamma),
+                                 _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src2, v_zero)), v_beta));
+
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_packus_epi32(_mm_cvtps_epi32(v_dstf0),
+                                                                    _mm_cvtps_epi32(v_dstf1)));
+        }
+
+        return x;
+    }
+
+    bool haveSSE4_1;
+};
+
+#endif
+
 #elif CV_NEON
 
 template <>
