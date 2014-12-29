@@ -465,7 +465,7 @@ void Mat::forEach_impl(const Functor& operation) {
     };
 
     parallel_for_(cv::Range(0, LINES), PixelOperationWrapper(reinterpret_cast<Mat_<_Tp>*>(this), operation));
-};
+}
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
