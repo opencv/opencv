@@ -205,19 +205,11 @@ CV_EXPORTS void calcHist(InputArray src, OutputArray hist, Stream& stream = Stre
 
 @param src Source image with CV_8UC1 type.
 @param dst Destination image.
-@param buf Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 @param stream Stream for the asynchronous version.
 
 @sa equalizeHist
  */
-CV_EXPORTS void equalizeHist(InputArray src, OutputArray dst, InputOutputArray buf, Stream& stream = Stream::Null());
-
-/** @overload */
-static inline void equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
-{
-    GpuMat buf;
-    cuda::equalizeHist(src, dst, buf, stream);
-}
+CV_EXPORTS void equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Base class for Contrast Limited Adaptive Histogram Equalization. :
  */
@@ -259,27 +251,11 @@ a four-channel image, all channels are processed separately.
 @param histSize Size of the histogram.
 @param lowerLevel Lower boundary of lowest-level bin.
 @param upperLevel Upper boundary of highest-level bin.
-@param buf Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void histEven(InputArray src, OutputArray hist, InputOutputArray buf, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
-
+CV_EXPORTS void histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
 /** @overload */
-static inline void histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
-{
-    GpuMat buf;
-    cuda::histEven(src, hist, buf, histSize, lowerLevel, upperLevel, stream);
-}
-
-/** @overload */
-CV_EXPORTS void histEven(InputArray src, GpuMat hist[4], InputOutputArray buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
-
-/** @overload */
-static inline void histEven(InputArray src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null())
-{
-    GpuMat buf;
-    cuda::histEven(src, hist, buf, histSize, lowerLevel, upperLevel, stream);
-}
+CV_EXPORTS void histEven(InputArray src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
 
 /** @brief Calculates a histogram with bins determined by the levels array.
 
@@ -287,27 +263,11 @@ static inline void histEven(InputArray src, GpuMat hist[4], int histSize[4], int
 For a four-channel image, all channels are processed separately.
 @param hist Destination histogram with one row, (levels.cols-1) columns, and the CV_32SC1 type.
 @param levels Number of levels in the histogram.
-@param buf Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void histRange(InputArray src, OutputArray hist, InputArray levels, InputOutputArray buf, Stream& stream = Stream::Null());
-
+CV_EXPORTS void histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null());
 /** @overload */
-static inline void histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null())
-{
-    GpuMat buf;
-    cuda::histRange(src, hist, levels, buf, stream);
-}
-
-/** @overload */
-CV_EXPORTS void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], InputOutputArray buf, Stream& stream = Stream::Null());
-
-/** @overload */
-static inline void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null())
-{
-    GpuMat buf;
-    cuda::histRange(src, hist, levels, buf, stream);
-}
+CV_EXPORTS void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null());
 
 //! @} cudaimgproc_hist
 
