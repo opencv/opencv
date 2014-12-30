@@ -71,11 +71,11 @@ Loads an image from a file.
 
     :param flags: Flags specifying the color type of a loaded image:
 
-        * CV_LOAD_IMAGE_ANYDEPTH - If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
+        * IMREAD_ANYDEPTH - If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
 
-        * CV_LOAD_IMAGE_COLOR - If set, always convert image to the color one
+        * IMREAD_COLOR - If set, always convert image to the color one
 
-        * CV_LOAD_IMAGE_GRAYSCALE - If set, always convert image to the grayscale one
+        * IMREAD_GRAYSCALE - If set, always convert image to the grayscale one
 
         * **>0**  Return a 3-channel color image.
             .. note:: In the current implementation the alpha channel, if any, is stripped from the output image. Use negative value if you need the alpha channel.
@@ -128,14 +128,14 @@ Saves an image to a specified file.
 
     :param params: Format-specific save parameters encoded as pairs  ``paramId_1, paramValue_1, paramId_2, paramValue_2, ...`` . The following parameters are currently supported:
 
-        *  For JPEG, it can be a quality ( ``CV_IMWRITE_JPEG_QUALITY`` ) from 0 to 100 (the higher is the better). Default value is 95.
+        *  For JPEG, it can be a quality ( ``IMWRITE_JPEG_QUALITY`` ) from 0 to 100 (the higher is the better). Default value is 95.
 
-        *  For WEBP, it can be a quality ( CV_IMWRITE_WEBP_QUALITY ) from 1 to 100 (the higher is the better).
+        *  For WEBP, it can be a quality ( ``IMWRITE_WEBP_QUALITY`` ) from 1 to 100 (the higher is the better).
            By default (without any parameter) and for quality above 100 the lossless compression is used.
 
-        *  For PNG, it can be the compression level ( ``CV_IMWRITE_PNG_COMPRESSION`` ) from 0 to 9. A higher value means a smaller size and longer compression time. Default value is 3.
+        *  For PNG, it can be the compression level ( ``IMWRITE_PNG_COMPRESSION`` ) from 0 to 9. A higher value means a smaller size and longer compression time. Default value is 3.
 
-        *  For PPM, PGM, or PBM, it can be a binary format flag ( ``CV_IMWRITE_PXM_BINARY`` ), 0 or 1. Default value is 1.
+        *  For PPM, PGM, or PBM, it can be a binary format flag ( ``IMWRITE_PXM_BINARY`` ), 0 or 1. Default value is 1.
 
 The function ``imwrite`` saves the image to the specified file. The image format is chosen based on the ``filename`` extension (see
 :ocv:func:`imread` for the list of extensions). Only 8-bit (or 16-bit unsigned (``CV_16U``) in case of PNG, JPEG 2000, and TIFF) single-channel or 3-channel (with 'BGR' channel order) images can be saved using this function. If the format, depth or channel order is different, use
@@ -171,7 +171,7 @@ It is possible to store PNG images with an alpha channel using this function. To
         createAlphaMat(mat);
 
         vector<int> compression_params;
-        compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+        compression_params.push_back(IMWRITE_PNG_COMPRESSION);
         compression_params.push_back(9);
 
         try {
