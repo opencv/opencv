@@ -14,7 +14,7 @@ ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" ${ZLIB_INCLUDE_DIR})
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
-if(NEON AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+if(ARM AND NEON)
   list(APPEND lib_srcs arm/filter_neon.S)
   add_definitions(-DPNG_ARM_NEON)
 endif()
