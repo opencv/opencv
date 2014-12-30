@@ -3020,7 +3020,7 @@ void printVersionInfo(bool useStdOut)
     if (checkHardwareSupport(CV_CPU_AVX)) cpu_features += " avx";
 #endif
 #if CV_NEON
-    cpu_features += " neon"; // NEON is currently not checked at runtime
+    if (checkHardwareSupport(CV_CPU_NEON)) cpu_features += " neon";
 #endif
 
     cpu_features.erase(0, 1); // erase initial space
