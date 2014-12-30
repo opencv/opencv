@@ -50,7 +50,9 @@
 
 namespace cv { namespace cuda {
 
-//////////////////////////////// GpuMat ///////////////////////////////
+//===================================================================================
+// GpuMat
+//===================================================================================
 
 inline
 GpuMat::GpuMat(Allocator* allocator_)
@@ -145,6 +147,7 @@ void GpuMat::swap(GpuMat& b)
     std::swap(datastart, b.datastart);
     std::swap(dataend, b.dataend);
     std::swap(refcount, b.refcount);
+    std::swap(allocator, b.allocator);
 }
 
 inline
@@ -374,16 +377,18 @@ void swap(GpuMat& a, GpuMat& b)
     a.swap(b);
 }
 
-//////////////////////////////// CudaMem ////////////////////////////////
+//===================================================================================
+// HostMem
+//===================================================================================
 
 inline
-CudaMem::CudaMem(AllocType alloc_type_)
+HostMem::HostMem(AllocType alloc_type_)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
 {
 }
 
 inline
-CudaMem::CudaMem(const CudaMem& m)
+HostMem::HostMem(const HostMem& m)
     : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), alloc_type(m.alloc_type)
 {
     if( refcount )
@@ -391,7 +396,7 @@ CudaMem::CudaMem(const CudaMem& m)
 }
 
 inline
-CudaMem::CudaMem(int rows_, int cols_, int type_, AllocType alloc_type_)
+HostMem::HostMem(int rows_, int cols_, int type_, AllocType alloc_type_)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
 {
     if (rows_ > 0 && cols_ > 0)
@@ -399,7 +404,7 @@ CudaMem::CudaMem(int rows_, int cols_, int type_, AllocType alloc_type_)
 }
 
 inline
-CudaMem::CudaMem(Size size_, int type_, AllocType alloc_type_)
+HostMem::HostMem(Size size_, int type_, AllocType alloc_type_)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
 {
     if (size_.height > 0 && size_.width > 0)
@@ -407,24 +412,24 @@ CudaMem::CudaMem(Size size_, int type_, AllocType alloc_type_)
 }
 
 inline
-CudaMem::CudaMem(InputArray arr, AllocType alloc_type_)
+HostMem::HostMem(InputArray arr, AllocType alloc_type_)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
 {
     arr.getMat().copyTo(*this);
 }
 
 inline
-CudaMem::~CudaMem()
+HostMem::~HostMem()
 {
     release();
 }
 
 inline
-CudaMem& CudaMem::operator =(const CudaMem& m)
+HostMem& HostMem::operator =(const HostMem& m)
 {
     if (this != &m)
     {
-        CudaMem temp(m);
+        HostMem temp(m);
         swap(temp);
     }
 
@@ -432,7 +437,7 @@ CudaMem& CudaMem::operator =(const CudaMem& m)
 }
 
 inline
-void CudaMem::swap(CudaMem& b)
+void HostMem::swap(HostMem& b)
 {
     std::swap(flags, b.flags);
     std::swap(rows, b.rows);
@@ -446,86 +451,88 @@ void CudaMem::swap(CudaMem& b)
 }
 
 inline
-CudaMem CudaMem::clone() const
+HostMem HostMem::clone() const
 {
-    CudaMem m(size(), type(), alloc_type);
+    HostMem m(size(), type(), alloc_type);
     createMatHeader().copyTo(m);
     return m;
 }
 
 inline
-void CudaMem::create(Size size_, int type_)
+void HostMem::create(Size size_, int type_)
 {
     create(size_.height, size_.width, type_);
 }
 
 inline
-Mat CudaMem::createMatHeader() const
+Mat HostMem::createMatHeader() const
 {
     return Mat(size(), type(), data, step);
 }
 
 inline
-bool CudaMem::isContinuous() const
+bool HostMem::isContinuous() const
 {
     return (flags & Mat::CONTINUOUS_FLAG) != 0;
 }
 
 inline
-size_t CudaMem::elemSize() const
+size_t HostMem::elemSize() const
 {
     return CV_ELEM_SIZE(flags);
 }
 
 inline
-size_t CudaMem::elemSize1() const
+size_t HostMem::elemSize1() const
 {
     return CV_ELEM_SIZE1(flags);
 }
 
 inline
-int CudaMem::type() const
+int HostMem::type() const
 {
     return CV_MAT_TYPE(flags);
 }
 
 inline
-int CudaMem::depth() const
+int HostMem::depth() const
 {
     return CV_MAT_DEPTH(flags);
 }
 
 inline
-int CudaMem::channels() const
+int HostMem::channels() const
 {
     return CV_MAT_CN(flags);
 }
 
 inline
-size_t CudaMem::step1() const
+size_t HostMem::step1() const
 {
     return step / elemSize1();
 }
 
 inline
-Size CudaMem::size() const
+Size HostMem::size() const
 {
     return Size(cols, rows);
 }
 
 inline
-bool CudaMem::empty() const
+bool HostMem::empty() const
 {
     return data == 0;
 }
 
 static inline
-void swap(CudaMem& a, CudaMem& b)
+void swap(HostMem& a, HostMem& b)
 {
     a.swap(b);
 }
 
-//////////////////////////////// Stream ///////////////////////////////
+//===================================================================================
+// Stream
+//===================================================================================
 
 inline
 Stream::Stream(const Ptr<Impl>& impl)
@@ -533,7 +540,9 @@ Stream::Stream(const Ptr<Impl>& impl)
 {
 }
 
-//////////////////////////////// Initialization & Info ////////////////////////
+//===================================================================================
+// Initialization & Info
+//===================================================================================
 
 inline
 bool TargetArchs::has(int major, int minor)
@@ -592,7 +601,9 @@ bool DeviceInfo::supports(FeatureSet feature_set) const
 
 }} // namespace cv { namespace cuda {
 
-//////////////////////////////// Mat ////////////////////////////////
+//===================================================================================
+// Mat
+//===================================================================================
 
 namespace cv {
 

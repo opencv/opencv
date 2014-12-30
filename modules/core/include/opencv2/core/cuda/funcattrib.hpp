@@ -45,10 +45,14 @@
 
 #include <cstdio>
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
-//! @addtogroup cuda
-//! @{
     template<class Func>
     void printFuncAttrib(Func& func)
     {
@@ -68,7 +72,8 @@ namespace cv { namespace cuda { namespace device
         printf("\n");
         fflush(stdout);
     }
-//! @}
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif  /* __OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_ */

@@ -1585,6 +1585,43 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
 }
 
 
+CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval)
+{
+    CV_FUNCNAME("cvSetTrackbarMax");
+
+    __BEGIN__;
+
+    if (maxval >= 0)
+    {
+        CvWindow* window = 0;
+        CvTrackbar* trackbar = 0;
+
+        if (trackbar_name == 0 || window_name == 0)
+        {
+            CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name");
+        }
+
+        window = icvFindWindowByName( window_name );
+        if (window)
+        {
+            trackbar = icvFindTrackbarByName(window, trackbar_name);
+            if (trackbar)
+            {
+                trackbar->maxval = maxval;
+
+                CV_LOCK_MUTEX();
+
+                gtk_range_set_range(GTK_RANGE(trackbar->widget), 0, trackbar->maxval);
+
+                CV_UNLOCK_MUTEX();
+            }
+        }
+    }
+
+    __END__;
+}
+
+
 CV_IMPL void* cvGetWindowHandle( const char* window_name )
 {
     void* widget = 0;

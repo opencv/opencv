@@ -26,7 +26,7 @@ public:
     VideoCapture_DShow(int index);
     virtual ~VideoCapture_DShow();
 
-    virtual double getProperty(int propIdx);
+    virtual double getProperty(int propIdx) const;
     virtual bool setProperty(int propIdx, double propVal);
 
     virtual bool grabFrame();

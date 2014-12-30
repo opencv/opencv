@@ -746,4 +746,8 @@ template<> inline std::string CommandLineParser::get<std::string>(const String& 
 
 } //namespace cv
 
+#ifndef DISABLE_OPENCV_24_COMPATIBILITY
+#include "opencv2/core/core_c.h"
+#endif
+
 #endif //__OPENCV_CORE_UTILITY_H__

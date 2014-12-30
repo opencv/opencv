@@ -43,10 +43,14 @@
 #ifndef __OPENCV_CUDA_DEVICE_WARP_HPP__
 #define __OPENCV_CUDA_DEVICE_WARP_HPP__
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
-//! @addtogroup cuda
-//! @{
     struct Warp
     {
         enum
@@ -128,7 +132,8 @@ namespace cv { namespace cuda { namespace device
                 *t = value;
         }
     };
-//! @}
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif /* __OPENCV_CUDA_DEVICE_WARP_HPP__ */

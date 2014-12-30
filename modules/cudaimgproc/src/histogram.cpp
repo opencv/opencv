@@ -467,14 +467,14 @@ void cv::cuda::evenLevels(OutputArray _levels, int nLevels, int lowerLevel, int 
     _levels.create(1, nLevels, CV_32SC1);
 
     Mat host_levels;
-    if (kind == _InputArray::GPU_MAT)
+    if (kind == _InputArray::CUDA_GPU_MAT)
         host_levels.create(1, nLevels, CV_32SC1);
     else
         host_levels = _levels.getMat();
 
     nppSafeCall( nppiEvenLevelsHost_32s(host_levels.ptr<Npp32s>(), nLevels, lowerLevel, upperLevel) );
 
-    if (kind == _InputArray::GPU_MAT)
+    if (kind == _InputArray::CUDA_GPU_MAT)
         _levels.getGpuMatRef().upload(host_levels);
 }
 
