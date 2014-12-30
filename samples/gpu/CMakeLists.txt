@@ -80,7 +80,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   include("performance/CMakeLists.txt")
 endif()
 
-if (INSTALL_C_EXAMPLES AND NOT WIN32)
+if (OCV_DEPENDENCIES_FOUND AND INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${install_list}
           DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu
