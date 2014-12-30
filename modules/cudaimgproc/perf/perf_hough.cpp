@@ -275,7 +275,7 @@ PERF_TEST_P(Sz, GeneralizedHoughBallard, CUDA_TYPICAL_MAT_SIZES)
     }
 }
 
-PERF_TEST_P(Sz, GeneralizedHoughGuil, CUDA_TYPICAL_MAT_SIZES)
+PERF_TEST_P(Sz, DISABLED_GeneralizedHoughGuil, CUDA_TYPICAL_MAT_SIZES)
 {
     declare.time(10);
 
@@ -329,8 +329,6 @@ PERF_TEST_P(Sz, GeneralizedHoughGuil, CUDA_TYPICAL_MAT_SIZES)
         alg->setTemplate(cv::cuda::GpuMat(templ));
 
         TEST_CYCLE() alg->detect(d_edges, d_dx, d_dy, positions);
-
-        CUDA_SANITY_CHECK(positions);
     }
     else
     {
@@ -343,7 +341,8 @@ PERF_TEST_P(Sz, GeneralizedHoughGuil, CUDA_TYPICAL_MAT_SIZES)
         alg->setTemplate(templ);
 
         TEST_CYCLE() alg->detect(edges, dx, dy, positions);
-
-        CPU_SANITY_CHECK(positions);
     }
+
+    // The algorithm is not stable yet.
+    SANITY_CHECK_NOTHING();
 }

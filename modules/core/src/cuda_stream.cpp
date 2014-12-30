@@ -45,8 +45,217 @@
 using namespace cv;
 using namespace cv::cuda;
 
+/////////////////////////////////////////////////////////////
+/// MemoryStack
+
+#ifdef HAVE_CUDA
+
+namespace
+{
+    class MemoryPool;
+
+    class MemoryStack
+    {
+    public:
+        uchar* requestMemory(size_t size);
+        void returnMemory(uchar* ptr);
+
+        uchar* datastart;
+        uchar* dataend;
+        uchar* tip;
+
+        bool isFree;
+        MemoryPool* pool;
+
+    #if !defined(NDEBUG)
+        std::vector<size_t> allocations;
+    #endif
+    };
+
+    uchar* MemoryStack::requestMemory(size_t size)
+    {
+        const size_t freeMem = dataend - tip;
+
+        if (size > freeMem)
+            return 0;
+
+        uchar* ptr = tip;
+
+        tip += size;
+
+    #if !defined(NDEBUG)
+        allocations.push_back(size);
+    #endif
+
+        return ptr;
+    }
+
+    void MemoryStack::returnMemory(uchar* ptr)
+    {
+        CV_DbgAssert( ptr >= datastart && ptr < dataend );
+
+    #if !defined(NDEBUG)
+        const size_t allocSize = tip - ptr;
+        CV_Assert( allocSize == allocations.back() );
+        allocations.pop_back();
+    #endif
+
+        tip = ptr;
+    }
+}
+
+#endif
+
+/////////////////////////////////////////////////////////////
+/// MemoryPool
+
+#ifdef HAVE_CUDA
+
+namespace
+{
+    class MemoryPool
+    {
+    public:
+        MemoryPool();
+
+        void initialize(size_t stackSize, int stackCount);
+        void release();
+
+        MemoryStack* getFreeMemStack();
+        void returnMemStack(MemoryStack* memStack);
+
+    private:
+        void initilizeImpl();
+
+        Mutex mtx_;
+
+        bool initialized_;
+        size_t stackSize_;
+        int stackCount_;
+
+        uchar* mem_;
+
+        std::vector<MemoryStack> stacks_;
+    };
+
+    MemoryPool::MemoryPool() : initialized_(false), mem_(0)
+    {
+        // default : 10 Mb, 5 stacks
+        stackSize_ = 10 * 1024 * 1024;
+        stackCount_ = 5;
+    }
+
+    void MemoryPool::initialize(size_t stackSize, int stackCount)
+    {
+        AutoLock lock(mtx_);
+
+        release();
+
+        stackSize_ = stackSize;
+        stackCount_ = stackCount;
+
+        initilizeImpl();
+    }
+
+    void MemoryPool::initilizeImpl()
+    {
+        const size_t totalSize = stackSize_ * stackCount_;
+
+        if (totalSize > 0)
+        {
+            cudaError_t err = cudaMalloc(&mem_, totalSize);
+            if (err != cudaSuccess)
+                return;
+
+            stacks_.resize(stackCount_);
+
+            uchar* ptr = mem_;
+
+            for (int i = 0; i < stackCount_; ++i)
+            {
+                stacks_[i].datastart = ptr;
+                stacks_[i].dataend = ptr + stackSize_;
+                stacks_[i].tip = ptr;
+                stacks_[i].isFree = true;
+                stacks_[i].pool = this;
+
+                ptr += stackSize_;
+            }
+
+            initialized_ = true;
+        }
+    }
+
+    void MemoryPool::release()
+    {
+        if (mem_)
+        {
+#if !defined(NDEBUG)
+            for (int i = 0; i < stackCount_; ++i)
+            {
+                CV_DbgAssert( stacks_[i].isFree );
+                CV_DbgAssert( stacks_[i].tip == stacks_[i].datastart );
+            }
+#endif
+
+            cudaFree(mem_);
+
+            mem_ = 0;
+            initialized_ = false;
+        }
+    }
+
+    MemoryStack* MemoryPool::getFreeMemStack()
+    {
+        AutoLock lock(mtx_);
+
+        if (!initialized_)
+            initilizeImpl();
+
+        if (!mem_)
+            return 0;
+
+        for (int i = 0; i < stackCount_; ++i)
+        {
+            if (stacks_[i].isFree)
+            {
+                stacks_[i].isFree = false;
+                return &stacks_[i];
+            }
+        }
+
+        return 0;
+    }
+
+    void MemoryPool::returnMemStack(MemoryStack* memStack)
+    {
+        AutoLock lock(mtx_);
+
+        CV_DbgAssert( !memStack->isFree );
+
+#if !defined(NDEBUG)
+        bool found = false;
+        for (int i = 0; i < stackCount_; ++i)
+        {
+            if (memStack == &stacks_[i])
+            {
+                found = true;
+                break;
+            }
+        }
+        CV_DbgAssert( found );
+#endif
+
+        CV_DbgAssert( memStack->tip == memStack->datastart );
+
+        memStack->isFree = true;
+    }
+}
+
+#endif
+
 ////////////////////////////////////////////////////////////////
-// Stream
+/// Stream::Impl
 
 #ifndef HAVE_CUDA
 
@@ -62,6 +271,11 @@ public:
 
 #else
 
+namespace
+{
+    class StackAllocator;
+}
+
 class cv::cuda::Stream::Impl
 {
 public:
@@ -73,10 +287,6 @@ public:
 
     ~Impl();
 };
-
-cv::cuda::BufferPool::BufferPool(Stream& stream) : allocator_(stream.impl_->stackAllocator_.get())
-{
-}
 
 cv::cuda::Stream::Impl::Impl() : stream(0)
 {
@@ -98,12 +308,100 @@ cv::cuda::Stream::Impl::~Impl()
         cudaStreamDestroy(stream);
 }
 
-cudaStream_t cv::cuda::StreamAccessor::getStream(const Stream& stream)
+#endif
+
+/////////////////////////////////////////////////////////////
+/// DefaultDeviceInitializer
+
+#ifdef HAVE_CUDA
+
+namespace cv { namespace cuda
 {
-    return stream.impl_->stream;
-}
+    class DefaultDeviceInitializer
+    {
+    public:
+        DefaultDeviceInitializer();
+        ~DefaultDeviceInitializer();
+
+        Stream& getNullStream(int deviceId);
+        MemoryPool* getMemoryPool(int deviceId);
+
+    private:
+        void initStreams();
+        void initPools();
+
+        std::vector<Ptr<Stream> > streams_;
+        Mutex streams_mtx_;
+
+        std::vector<MemoryPool> pools_;
+        Mutex pools_mtx_;
+    };
+
+    DefaultDeviceInitializer::DefaultDeviceInitializer()
+    {
+    }
+
+    DefaultDeviceInitializer::~DefaultDeviceInitializer()
+    {
+        streams_.clear();
+
+        for (size_t i = 0; i < pools_.size(); ++i)
+        {
+            cudaSetDevice(static_cast<int>(i));
+            pools_[i].release();
+        }
+
+        pools_.clear();
+    }
+
+    Stream& DefaultDeviceInitializer::getNullStream(int deviceId)
+    {
+        AutoLock lock(streams_mtx_);
+
+        if (streams_.empty())
+        {
+            int deviceCount = getCudaEnabledDeviceCount();
+
+            if (deviceCount > 0)
+                streams_.resize(deviceCount);
+        }
+
+        CV_DbgAssert( deviceId >= 0 && deviceId < static_cast<int>(streams_.size()) );
+
+        if (streams_[deviceId].empty())
+        {
+            cudaStream_t stream = NULL;
+            Ptr<Stream::Impl> impl = makePtr<Stream::Impl>(stream);
+            streams_[deviceId] = Ptr<Stream>(new Stream(impl));
+        }
+
+        return *streams_[deviceId];
+    }
+
+    MemoryPool* DefaultDeviceInitializer::getMemoryPool(int deviceId)
+    {
+        AutoLock lock(pools_mtx_);
+
+        if (pools_.empty())
+        {
+            int deviceCount = getCudaEnabledDeviceCount();
+
+            if (deviceCount > 0)
+                pools_.resize(deviceCount);
+        }
+
+        CV_DbgAssert( deviceId >= 0 && deviceId < static_cast<int>(pools_.size()) );
+
+        return &pools_[deviceId];
+    }
+
+    DefaultDeviceInitializer initializer;
+}}
 
 #endif
+
+/////////////////////////////////////////////////////////////
+/// Stream
 
 cv::cuda::Stream::Stream()
 {
@@ -181,7 +479,7 @@ void cv::cuda::Stream::enqueueHostCallback(StreamCallback callback, void* userDa
     #if CUDART_VERSION < 5000
         (void) callback;
         (void) userData;
-        CV_Error(cv::Error::StsNotImplemented, "This function requires CUDA 5.0");
+        CV_Error(cv::Error::StsNotImplemented, "This function requires CUDA >= 5.0");
     #else
         CallbackData* data = new CallbackData(callback, userData);
 
@@ -190,22 +488,16 @@ void cv::cuda::Stream::enqueueHostCallback(StreamCallback callback, void* userDa
 #endif
 }
 
-namespace
-{
-    bool default_stream_is_initialized;
-    Mutex mtx;
-    Ptr<Stream> default_stream;
-}
-
 Stream& cv::cuda::Stream::Null()
 {
-    AutoLock lock(mtx);
-    if (!default_stream_is_initialized)
-    {
-        default_stream = Ptr<Stream>(new Stream(Ptr<Impl>(new Impl(0))));
-        default_stream_is_initialized = true;
-    }
-    return *default_stream;
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    static Stream stream;
+    return stream;
+#else
+    const int deviceId = getDevice();
+    return initializer.getNullStream(deviceId);
+#endif
 }
 
 cv::cuda::Stream::operator bool_type() const
@@ -217,6 +509,169 @@ cv::cuda::Stream::operator bool_type() const
 #endif
 }
 
+#ifdef HAVE_CUDA
+
+cudaStream_t cv::cuda::StreamAccessor::getStream(const Stream& stream)
+{
+    return stream.impl_->stream;
+}
+
+#endif
+
+/////////////////////////////////////////////////////////////
+/// StackAllocator
+
+#ifdef HAVE_CUDA
+
+namespace
+{
+    bool enableMemoryPool = true;
+
+    class StackAllocator : public GpuMat::Allocator
+    {
+    public:
+        explicit StackAllocator(cudaStream_t stream);
+        ~StackAllocator();
+
+        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize);
+        void free(GpuMat* mat);
+
+    private:
+        StackAllocator(const StackAllocator&);
+        StackAllocator& operator =(const StackAllocator&);
+
+        cudaStream_t stream_;
+        MemoryStack* memStack_;
+        size_t alignment_;
+    };
+
+    StackAllocator::StackAllocator(cudaStream_t stream) : stream_(stream), memStack_(0)
+    {
+        if (enableMemoryPool)
+        {
+            const int deviceId = getDevice();
+            memStack_ = initializer.getMemoryPool(deviceId)->getFreeMemStack();
+            DeviceInfo devInfo(deviceId);
+            alignment_ = devInfo.textureAlignment();
+        }
+    }
+
+    StackAllocator::~StackAllocator()
+    {
+        cudaStreamSynchronize(stream_);
+
+        if (memStack_ != 0)
+            memStack_->pool->returnMemStack(memStack_);
+    }
+
+    size_t alignUp(size_t what, size_t alignment)
+    {
+        size_t alignMask = alignment-1;
+        size_t inverseAlignMask = ~alignMask;
+        size_t res = (what + alignMask) & inverseAlignMask;
+        return res;
+    }
+
+    bool StackAllocator::allocate(GpuMat* mat, int rows, int cols, size_t elemSize)
+    {
+        if (memStack_ == 0)
+            return false;
+
+        size_t pitch, memSize;
+
+        if (rows > 1 && cols > 1)
+        {
+            pitch = alignUp(cols * elemSize, alignment_);
+            memSize = pitch * rows;
+        }
+        else
+        {
+            // Single row or single column must be continuous
+            pitch = elemSize * cols;
+            memSize = alignUp(elemSize * cols * rows, 64);
+        }
+
+        uchar* ptr = memStack_->requestMemory(memSize);
+
+        if (ptr == 0)
+            return false;
+
+        mat->data = ptr;
+        mat->step = pitch;
+        mat->refcount = (int*) fastMalloc(sizeof(int));
+
+        return true;
+    }
+
+    void StackAllocator::free(GpuMat* mat)
+    {
+        if (memStack_ == 0)
+            return;
+
+        memStack_->returnMemory(mat->datastart);
+        fastFree(mat->refcount);
+    }
+}
+
+#endif
+
+/////////////////////////////////////////////////////////////
+/// BufferPool
+
+void cv::cuda::setBufferPoolUsage(bool on)
+{
+#ifndef HAVE_CUDA
+    (void)on;
+    throw_no_cuda();
+#else
+    enableMemoryPool = on;
+#endif
+}
+
+void cv::cuda::setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount)
+{
+#ifndef HAVE_CUDA
+    (void)deviceId;
+    (void)stackSize;
+    (void)stackCount;
+    throw_no_cuda();
+#else
+    const int currentDevice = getDevice();
+
+    if (deviceId >= 0)
+    {
+        setDevice(deviceId);
+        initializer.getMemoryPool(deviceId)->initialize(stackSize, stackCount);
+    }
+    else
+    {
+        const int deviceCount = getCudaEnabledDeviceCount();
+
+        for (deviceId = 0; deviceId < deviceCount; ++deviceId)
+        {
+            setDevice(deviceId);
+            initializer.getMemoryPool(deviceId)->initialize(stackSize, stackCount);
+        }
+    }
+
+    setDevice(currentDevice);
+#endif
+}
+
+#ifdef HAVE_CUDA
+
+cv::cuda::BufferPool::BufferPool(Stream& stream) : allocator_(stream.impl_->stackAllocator_.get())
+{
+}
+
+GpuMat cv::cuda::BufferPool::getBuffer(int rows, int cols, int type)
+{
+    GpuMat buf(allocator_);
+    buf.create(rows, cols, type);
+    return buf;
+}
+
+#endif
 
 ////////////////////////////////////////////////////////////////
 // Event

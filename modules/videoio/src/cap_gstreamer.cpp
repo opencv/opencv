@@ -123,7 +123,7 @@ public:
     virtual bool open( int type, const char* filename );
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -838,7 +838,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
  * For frame-based properties, we use the caps of the lasst receivef sample. This means that some properties
  * are not available until a first frame was received
  */
-double CvCapture_GStreamer::getProperty( int propId )
+double CvCapture_GStreamer::getProperty( int propId ) const
 {
     GstFormat format;
     gint64 value;

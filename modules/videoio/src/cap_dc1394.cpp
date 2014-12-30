@@ -1049,7 +1049,7 @@ public:
     virtual bool open( int index );
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -1085,9 +1085,13 @@ IplImage* CvCaptureCAM_DC1394_CPP::retrieveFrame(int)
     return captureDC1394 ? (IplImage*)icvRetrieveFrameCAM_DC1394( captureDC1394, 0 ) : 0;
 }
 
-double CvCaptureCAM_DC1394_CPP::getProperty( int propId )
+double CvCaptureCAM_DC1394_CPP::getProperty( int propId ) const
 {
-    return captureDC1394 ? icvGetPropertyCAM_DC1394( captureDC1394, propId ) : 0;
+    // Simulate mutable (C++11-like) member variable
+    // (some members are used to cache property settings).
+    CvCaptureCAM_DC1394* cap = const_cast<CvCaptureCAM_DC1394*>(captureDC1394);
+
+    return cap ? icvGetPropertyCAM_DC1394( cap, propId ) : 0;
 }
 
 bool CvCaptureCAM_DC1394_CPP::setProperty( int propId, double value )

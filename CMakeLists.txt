@@ -181,6 +181,7 @@ OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                   
 OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT IOS) )
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSCV only)" ON )
 OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for staticaly linked OpenCV" ON IF MSVC )
+OCV_OPTION(BUILD_WITH_DYNAMIC_IPP   "Enables dynamic linking of IPP (only for standalone IPP)" OFF )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
 OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID AND ANDROID_SOURCE_TREE )
 OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )
@@ -291,6 +292,16 @@ endif()
 
 if(NOT OPENCV_TEST_INSTALL_PATH)
   set(OPENCV_TEST_INSTALL_PATH "${OPENCV_BIN_INSTALL_PATH}")
+endif()
+
+if(OPENCV_TEST_DATA_PATH AND NOT OPENCV_TEST_DATA_INSTALL_PATH)
+  if(ANDROID)
+    set(OPENCV_TEST_DATA_INSTALL_PATH "sdk/etc/testdata")
+  elseif(WIN32)
+    set(OPENCV_TEST_DATA_INSTALL_PATH "testdata")
+  else()
+    set(OPENCV_TEST_DATA_INSTALL_PATH "share/OpenCV/testdata")
+  endif()
 endif()
 
 if(ANDROID)
@@ -598,10 +609,6 @@ if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH AND UNIX)
     install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
             DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT tests)
   else()
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_testing.sh.in"
-                   "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" @ONLY)
-    install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh"
-            DESTINATION /etc/profile.d/ COMPONENT tests)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests_unix.sh.in"
                    "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh" @ONLY)
     install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
@@ -960,6 +967,9 @@ status("  Other third-party libraries:")
 if(WITH_IPP AND HAVE_IPP)
   status("    Use IPP:" "${IPP_VERSION_STR} [${IPP_VERSION_MAJOR}.${IPP_VERSION_MINOR}.${IPP_VERSION_BUILD}]")
   status("         at:" "${IPP_ROOT_DIR}")
+  if(NOT HAVE_IPP_ICV_ONLY)
+    status("     linked:" BUILD_WITH_DYNAMIC_IPP THEN "dynamic" ELSE "static")
+  endif()
 else()
   status("    Use IPP:"   WITH_IPP AND NOT HAVE_IPP THEN "IPP not found" ELSE NO)
 endif()

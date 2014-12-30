@@ -83,7 +83,7 @@ inline void calcFirstElementInRow(__global const uchar * src, int src_step, int 
     int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2;
     int col_dists_current_private[TEMPLATE_SIZE];
 
-    for (int i = id, size = SEARCH_SIZE_SQ; i < size; i += CTA_SIZE)
+    for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
         int dist = 0, value;
 
@@ -128,7 +128,7 @@ inline void calcElementInFirstRow(__global const uchar * src, int src_step, int 
     y -= TEMPLATE_SIZE2;
     int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2;
 
-    for (int i = id, size = SEARCH_SIZE_SQ; i < size; i += CTA_SIZE)
+    for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
         __global const uchar_t * src_current = (__global const uchar_t *)(src + mad24(y, src_step, mad24(cn, x, src_offset)));
         __global const uchar_t * src_template = (__global const uchar_t *)(src +
@@ -167,7 +167,7 @@ inline void calcElement(__global const uchar * src, int src_step, int src_offset
     sy_up -= SEARCH_SIZE2;
     sy_down -= SEARCH_SIZE2;
 
-    for (int i = id, size = SEARCH_SIZE_SQ; i < size; i += CTA_SIZE)
+    for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
         int wx = i % SEARCH_SIZE, wy = i / SEARCH_SIZE;
 
@@ -194,7 +194,7 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
     int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2, weights = 0;
     int_t weighted_sum = (int_t)(0);
 
-    for (int i = id, size = SEARCH_SIZE_SQ; i < size; i += CTA_SIZE)
+    for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
         int src_index = mad24(sy + i / SEARCH_SIZE, src_step, mad24(i % SEARCH_SIZE + sx, cn, src_offset));
         int_t src_value = convert_int_t(*(__global const uchar_t *)(src + src_index));

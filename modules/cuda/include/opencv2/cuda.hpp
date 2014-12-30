@@ -50,15 +50,11 @@
 #include "opencv2/core/cuda.hpp"
 
 /**
-@defgroup cuda CUDA-accelerated Computer Vision
-    @ref cuda_intro "Introduction page"
+    @addtogroup cuda
     @{
-        @defgroup cuda_init Initalization and Information
-        @defgroup cuda_struct Data Structures
         @defgroup cuda_calib3d Camera Calibration and 3D Reconstruction
         @defgroup cuda_objdetect Object Detection
     @}
-
  */
 
 namespace cv { namespace cuda {

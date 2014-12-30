@@ -1187,18 +1187,18 @@ Mat _InputArray::getMat(int i) const
         return Mat();
     }
 
-    if( k == GPU_MAT )
+    if( k == CUDA_GPU_MAT )
     {
         CV_Assert( i < 0 );
         CV_Error(cv::Error::StsNotImplemented, "You should explicitly call download method for cuda::GpuMat object");
         return Mat();
     }
 
-    if( k == CUDA_MEM )
+    if( k == CUDA_HOST_MEM )
     {
         CV_Assert( i < 0 );
 
-        const cuda::CudaMem* cuda_mem = (const cuda::CudaMem*)obj;
+        const cuda::HostMem* cuda_mem = (const cuda::HostMem*)obj;
 
         return cuda_mem->createMatHeader();
     }
@@ -1391,15 +1391,15 @@ cuda::GpuMat _InputArray::getGpuMat() const
 {
     int k = kind();
 
-    if (k == GPU_MAT)
+    if (k == CUDA_GPU_MAT)
     {
         const cuda::GpuMat* d_mat = (const cuda::GpuMat*)obj;
         return *d_mat;
     }
 
-    if (k == CUDA_MEM)
+    if (k == CUDA_HOST_MEM)
     {
-        const cuda::CudaMem* cuda_mem = (const cuda::CudaMem*)obj;
+        const cuda::HostMem* cuda_mem = (const cuda::HostMem*)obj;
         return cuda_mem->createGpuMatHeader();
     }
 
@@ -1412,7 +1412,7 @@ cuda::GpuMat _InputArray::getGpuMat() const
     if (k == NONE)
         return cuda::GpuMat();
 
-    CV_Error(cv::Error::StsNotImplemented, "getGpuMat is available only for cuda::GpuMat and cuda::CudaMem");
+    CV_Error(cv::Error::StsNotImplemented, "getGpuMat is available only for cuda::GpuMat and cuda::HostMem");
     return cuda::GpuMat();
 }
 
@@ -1520,20 +1520,22 @@ Size _InputArray::size(int i) const
         return buf->size();
     }
 
-    if( k == GPU_MAT )
+    if( k == CUDA_GPU_MAT )
     {
         CV_Assert( i < 0 );
         const cuda::GpuMat* d_mat = (const cuda::GpuMat*)obj;
         return d_mat->size();
     }
 
-    CV_Assert( k == CUDA_MEM );
-    //if( k == CUDA_MEM )
+    if( k == CUDA_HOST_MEM )
     {
         CV_Assert( i < 0 );
-        const cuda::CudaMem* cuda_mem = (const cuda::CudaMem*)obj;
+        const cuda::HostMem* cuda_mem = (const cuda::HostMem*)obj;
         return cuda_mem->size();
     }
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    return Size();
 }
 
 int _InputArray::sizend(int* arrsz, int i) const
@@ -1700,18 +1702,20 @@ int _InputArray::dims(int i) const
         return 2;
     }
 
-    if( k == GPU_MAT )
+    if( k == CUDA_GPU_MAT )
     {
         CV_Assert( i < 0 );
         return 2;
     }
 
-    CV_Assert( k == CUDA_MEM );
-    //if( k == CUDA_MEM )
+    if( k == CUDA_HOST_MEM )
     {
         CV_Assert( i < 0 );
         return 2;
     }
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    return 0;
 }
 
 size_t _InputArray::total(int i) const
@@ -1799,12 +1803,14 @@ int _InputArray::type(int i) const
     if( k == OPENGL_BUFFER )
         return ((const ogl::Buffer*)obj)->type();
 
-    if( k == GPU_MAT )
+    if( k == CUDA_GPU_MAT )
         return ((const cuda::GpuMat*)obj)->type();
 
-    CV_Assert( k == CUDA_MEM );
-    //if( k == CUDA_MEM )
-        return ((const cuda::CudaMem*)obj)->type();
+    if( k == CUDA_HOST_MEM )
+        return ((const cuda::HostMem*)obj)->type();
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    return 0;
 }
 
 int _InputArray::depth(int i) const
@@ -1863,12 +1869,14 @@ bool _InputArray::empty() const
     if( k == OPENGL_BUFFER )
         return ((const ogl::Buffer*)obj)->empty();
 
-    if( k == GPU_MAT )
+    if( k == CUDA_GPU_MAT )
         return ((const cuda::GpuMat*)obj)->empty();
 
-    CV_Assert( k == CUDA_MEM );
-    //if( k == CUDA_MEM )
-        return ((const cuda::CudaMem*)obj)->empty();
+    if( k == CUDA_HOST_MEM )
+        return ((const cuda::HostMem*)obj)->empty();
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    return true;
 }
 
 bool _InputArray::isContinuous(int i) const
@@ -1970,7 +1978,7 @@ size_t _InputArray::offset(int i) const
         return vv[i].offset;
     }
 
-    if( k == GPU_MAT )
+    if( k == CUDA_GPU_MAT )
     {
         CV_Assert( i < 0 );
         const cuda::GpuMat * const m = ((const cuda::GpuMat*)obj);
@@ -2016,7 +2024,7 @@ size_t _InputArray::step(int i) const
         return vv[i].step;
     }
 
-    if( k == GPU_MAT )
+    if( k == CUDA_GPU_MAT )
     {
         CV_Assert( i < 0 );
         return ((const cuda::GpuMat*)obj)->step;
@@ -2095,7 +2103,7 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
         ((UMat*)obj)->create(_sz, mtype);
         return;
     }
-    if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    if( k == CUDA_GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
         CV_Assert(!fixedSize() || ((cuda::GpuMat*)obj)->size() == _sz);
         CV_Assert(!fixedType() || ((cuda::GpuMat*)obj)->type() == mtype);
@@ -2109,11 +2117,11 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
         ((ogl::Buffer*)obj)->create(_sz, mtype);
         return;
     }
-    if( k == CUDA_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    if( k == CUDA_HOST_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((cuda::CudaMem*)obj)->size() == _sz);
-        CV_Assert(!fixedType() || ((cuda::CudaMem*)obj)->type() == mtype);
-        ((cuda::CudaMem*)obj)->create(_sz, mtype);
+        CV_Assert(!fixedSize() || ((cuda::HostMem*)obj)->size() == _sz);
+        CV_Assert(!fixedType() || ((cuda::HostMem*)obj)->type() == mtype);
+        ((cuda::HostMem*)obj)->create(_sz, mtype);
         return;
     }
     int sizes[] = {_sz.height, _sz.width};
@@ -2137,7 +2145,7 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
         ((UMat*)obj)->create(_rows, _cols, mtype);
         return;
     }
-    if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    if( k == CUDA_GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
         CV_Assert(!fixedSize() || ((cuda::GpuMat*)obj)->size() == Size(_cols, _rows));
         CV_Assert(!fixedType() || ((cuda::GpuMat*)obj)->type() == mtype);
@@ -2151,11 +2159,11 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
         ((ogl::Buffer*)obj)->create(_rows, _cols, mtype);
         return;
     }
-    if( k == CUDA_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    if( k == CUDA_HOST_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((cuda::CudaMem*)obj)->size() == Size(_cols, _rows));
-        CV_Assert(!fixedType() || ((cuda::CudaMem*)obj)->type() == mtype);
-        ((cuda::CudaMem*)obj)->create(_rows, _cols, mtype);
+        CV_Assert(!fixedSize() || ((cuda::HostMem*)obj)->size() == Size(_cols, _rows));
+        CV_Assert(!fixedType() || ((cuda::HostMem*)obj)->type() == mtype);
+        ((cuda::HostMem*)obj)->create(_rows, _cols, mtype);
         return;
     }
     int sizes[] = {_rows, _cols};
@@ -2479,15 +2487,15 @@ void _OutputArray::release() const
         return;
     }
 
-    if( k == GPU_MAT )
+    if( k == CUDA_GPU_MAT )
     {
         ((cuda::GpuMat*)obj)->release();
         return;
     }
 
-    if( k == CUDA_MEM )
+    if( k == CUDA_HOST_MEM )
     {
-        ((cuda::CudaMem*)obj)->release();
+        ((cuda::HostMem*)obj)->release();
         return;
     }
 
@@ -2583,7 +2591,7 @@ UMat& _OutputArray::getUMatRef(int i) const
 cuda::GpuMat& _OutputArray::getGpuMatRef() const
 {
     int k = kind();
-    CV_Assert( k == GPU_MAT );
+    CV_Assert( k == CUDA_GPU_MAT );
     return *(cuda::GpuMat*)obj;
 }
 
@@ -2594,11 +2602,11 @@ ogl::Buffer& _OutputArray::getOGlBufferRef() const
     return *(ogl::Buffer*)obj;
 }
 
-cuda::CudaMem& _OutputArray::getCudaMemRef() const
+cuda::HostMem& _OutputArray::getHostMemRef() const
 {
     int k = kind();
-    CV_Assert( k == CUDA_MEM );
-    return *(cuda::CudaMem*)obj;
+    CV_Assert( k == CUDA_HOST_MEM );
+    return *(cuda::HostMem*)obj;
 }
 
 void _OutputArray::setTo(const _InputArray& arr, const _InputArray & mask) const
@@ -2614,10 +2622,10 @@ void _OutputArray::setTo(const _InputArray& arr, const _InputArray & mask) const
     }
     else if( k == UMAT )
         ((UMat*)obj)->setTo(arr, mask);
-    else if( k == GPU_MAT )
+    else if( k == CUDA_GPU_MAT )
     {
         Mat value = arr.getMat();
-        CV_Assert( checkScalar(value, type(), arr.kind(), _InputArray::GPU_MAT) );
+        CV_Assert( checkScalar(value, type(), arr.kind(), _InputArray::CUDA_GPU_MAT) );
         ((cuda::GpuMat*)obj)->setTo(Scalar(Vec<double, 4>(value.ptr<double>())), mask);
     }
     else
