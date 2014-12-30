@@ -25,6 +25,10 @@ if(INSTALL_C_EXAMPLES)
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()
 
+if(INSTALL_PYTHON_EXAMPLES)
+  add_subdirectory(python2)
+endif()
+
 #
 # END OF BUILD CASE 1: Build samples with library sources
 #
