@@ -53,7 +53,7 @@ void cv::cuda::equalizeHist(InputArray, OutputArray, Stream&) { throw_no_cuda();
 
 cv::Ptr<cv::cuda::CLAHE> cv::cuda::createCLAHE(double, cv::Size) { throw_no_cuda(); return cv::Ptr<cv::cuda::CLAHE>(); }
 
-void cv::cuda::evenLevels(OutputArray, int, int, int) { throw_no_cuda(); }
+void cv::cuda::evenLevels(OutputArray, int, int, int, Stream&) { throw_no_cuda(); }
 
 void cv::cuda::histEven(InputArray, OutputArray, InputOutputArray, int, int, int, Stream&) { throw_no_cuda(); }
 void cv::cuda::histEven(InputArray, GpuMat*, InputOutputArray, int*, int*, int*, Stream&) { throw_no_cuda(); }
@@ -460,7 +460,7 @@ namespace
     };
 }
 
-void cv::cuda::evenLevels(OutputArray _levels, int nLevels, int lowerLevel, int upperLevel)
+void cv::cuda::evenLevels(OutputArray _levels, int nLevels, int lowerLevel, int upperLevel, Stream& stream)
 {
     const int kind = _levels.kind();
 
@@ -475,7 +475,7 @@ void cv::cuda::evenLevels(OutputArray _levels, int nLevels, int lowerLevel, int 
     nppSafeCall( nppiEvenLevelsHost_32s(host_levels.ptr<Npp32s>(), nLevels, lowerLevel, upperLevel) );
 
     if (kind == _InputArray::CUDA_GPU_MAT)
-        _levels.getGpuMatRef().upload(host_levels);
+        _levels.getGpuMatRef().upload(host_levels, stream);
 }
 
 namespace hist
