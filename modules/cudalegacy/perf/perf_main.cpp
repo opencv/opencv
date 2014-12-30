@@ -40,35 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "perf_precomp.hpp"
 
-#include <limits>
-#include <iostream>
-#include <algorithm>
+using namespace perf;
 
-#include "opencv2/cudalegacy.hpp"
-#include "opencv2/core/utility.hpp"
-
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_OBJDETECT
-#  include "opencv2/objdetect.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDAARITHM
-#  include "opencv2/cudaarithm.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDAFILTERS
-#  include "opencv2/cudafilters.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDAIMGPROC
-#  include "opencv2/cudaimgproc.hpp"
-#endif
-
-#include "opencv2/core/private.cuda.hpp"
-#include "opencv2/cudalegacy/private.hpp"
-
-#endif /* __OPENCV_PRECOMP_H__ */
+CV_PERF_TEST_CUDA_MAIN(cudalegacy)
