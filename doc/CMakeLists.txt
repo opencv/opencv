@@ -166,4 +166,8 @@ if(HAVE_DOC_GENERATOR)
   foreach(f ${OPTIONAL_DOC_LIST})
     install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" OPTIONAL COMPONENT docs)
   endforeach()
+
+  # dummy targets
+  add_custom_target(docs)
+  add_custom_target(html_docs)
 endif(HAVE_DOC_GENERATOR)
