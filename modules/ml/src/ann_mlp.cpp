@@ -103,6 +103,7 @@ public:
 
     ANN_MLPImpl( const Params& p )
     {
+        clear();
         setParams(p);
     }
 
@@ -126,6 +127,7 @@ public:
         rng = RNG((uint64)-1);
         weights.clear();
         trained = false;
+        max_buf_sz = 1 << 12;
     }
 
     int layer_count() const { return (int)layer_sizes.size(); }
