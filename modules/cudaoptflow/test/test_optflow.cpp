@@ -71,12 +71,18 @@ CUDA_TEST_P(BroxOpticalFlow, Regression)
     cv::Mat frame1 = readImageType("opticalflow/frame1.png", CV_32FC1);
     ASSERT_FALSE(frame1.empty());
 
-    cv::cuda::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                  10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+    cv::Ptr<cv::cuda::BroxOpticalFlow> brox =
+            cv::cuda::BroxOpticalFlow::create(0.197 /*alpha*/, 50.0 /*gamma*/, 0.8 /*scale_factor*/,
+                                              10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-    cv::cuda::GpuMat u;
-    cv::cuda::GpuMat v;
-    brox(loadMat(frame0), loadMat(frame1), u, v);
+    cv::cuda::GpuMat flow;
+    brox->calc(loadMat(frame0), loadMat(frame1), flow);
+
+    cv::cuda::GpuMat flows[2];
+    cv::cuda::split(flow, flows);
+
+    cv::cuda::GpuMat u = flows[0];
+    cv::cuda::GpuMat v = flows[1];
 
     std::string fname(cvtest::TS::ptr()->get_data_path());
     if (devInfo.majorVersion() >= 2)
@@ -133,12 +139,18 @@ CUDA_TEST_P(BroxOpticalFlow, OpticalFlowNan)
     cv::resize(frame0, r_frame0, cv::Size(1380,1000));
     cv::resize(frame1, r_frame1, cv::Size(1380,1000));
 
-    cv::cuda::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                  5 /*inner_iterations*/, 150 /*outer_iterations*/, 10 /*solver_iterations*/);
+    cv::Ptr<cv::cuda::BroxOpticalFlow> brox =
+            cv::cuda::BroxOpticalFlow::create(0.197 /*alpha*/, 50.0 /*gamma*/, 0.8 /*scale_factor*/,
+                                              10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-    cv::cuda::GpuMat u;
-    cv::cuda::GpuMat v;
-    brox(loadMat(r_frame0), loadMat(r_frame1), u, v);
+    cv::cuda::GpuMat flow;
+    brox->calc(loadMat(frame0), loadMat(frame1), flow);
+
+    cv::cuda::GpuMat flows[2];
+    cv::cuda::split(flow, flows);
+
+    cv::cuda::GpuMat u = flows[0];
+    cv::cuda::GpuMat v = flows[1];
 
     cv::Mat h_u, h_v;
     u.download(h_u);
@@ -193,11 +205,12 @@ CUDA_TEST_P(PyrLKOpticalFlow, Sparse)
     cv::Mat pts_mat(1, (int) pts.size(), CV_32FC2, (void*) &pts[0]);
     d_pts.upload(pts_mat);
 
-    cv::cuda::PyrLKOpticalFlow pyrLK;
+    cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> pyrLK =
+            cv::cuda::SparsePyrLKOpticalFlow::create();
 
     cv::cuda::GpuMat d_nextPts;
     cv::cuda::GpuMat d_status;
-    pyrLK.sparse(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status);
+    pyrLK->calc(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status);
 
     std::vector<cv::Point2f> nextPts(d_nextPts.cols);
     cv::Mat nextPts_mat(1, d_nextPts.cols, CV_32FC2, (void*) &nextPts[0]);
@@ -285,34 +298,30 @@ CUDA_TEST_P(FarnebackOpticalFlow, Accuracy)
 
     double polySigma = polyN <= 5 ? 1.1 : 1.5;
 
-    cv::cuda::FarnebackOpticalFlow farn;
-    farn.pyrScale = pyrScale;
-    farn.polyN = polyN;
-    farn.polySigma = polySigma;
-    farn.flags = flags;
+    cv::Ptr<cv::cuda::FarnebackOpticalFlow> farn =
+            cv::cuda::FarnebackOpticalFlow::create();
+    farn->setPyrScale(pyrScale);
+    farn->setPolyN(polyN);
+    farn->setPolySigma(polySigma);
+    farn->setFlags(flags);
 
-    cv::cuda::GpuMat d_flowx, d_flowy;
-    farn(loadMat(frame0), loadMat(frame1), d_flowx, d_flowy);
+    cv::cuda::GpuMat d_flow;
+    farn->calc(loadMat(frame0), loadMat(frame1), d_flow);
 
     cv::Mat flow;
     if (useInitFlow)
     {
-        cv::Mat flowxy[] = {cv::Mat(d_flowx), cv::Mat(d_flowy)};
-        cv::merge(flowxy, 2, flow);
+        d_flow.download(flow);
 
-        farn.flags |= cv::OPTFLOW_USE_INITIAL_FLOW;
-        farn(loadMat(frame0), loadMat(frame1), d_flowx, d_flowy);
+        farn->setFlags(farn->getFlags() | cv::OPTFLOW_USE_INITIAL_FLOW);
+        farn->calc(loadMat(frame0), loadMat(frame1), d_flow);
     }
 
     cv::calcOpticalFlowFarneback(
-        frame0, frame1, flow, farn.pyrScale, farn.numLevels, farn.winSize,
-        farn.numIters, farn.polyN, farn.polySigma, farn.flags);
+        frame0, frame1, flow, farn->getPyrScale(), farn->getNumLevels(), farn->getWinSize(),
+        farn->getNumIters(), farn->getPolyN(), farn->getPolySigma(), farn->getFlags());
 
-    std::vector<cv::Mat> flowxy;
-    cv::split(flow, flowxy);
-
-    EXPECT_MAT_SIMILAR(flowxy[0], d_flowx, 0.1);
-    EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
+    EXPECT_MAT_SIMILAR(flow, d_flow, 0.1);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, FarnebackOpticalFlow, testing::Combine(
@@ -352,26 +361,24 @@ CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
-    cv::cuda::OpticalFlowDual_TVL1_CUDA d_alg;
-    d_alg.iterations = 10;
-    d_alg.gamma = gamma;
+    cv::Ptr<cv::cuda::OpticalFlowDual_TVL1> d_alg =
+            cv::cuda::OpticalFlowDual_TVL1::create();
+    d_alg->setNumIterations(10);
+    d_alg->setGamma(gamma);
 
-    cv::cuda::GpuMat d_flowx, d_flowy;
-    d_alg(loadMat(frame0), loadMat(frame1), d_flowx, d_flowy);
+    cv::cuda::GpuMat d_flow;
+    d_alg->calc(loadMat(frame0), loadMat(frame1), d_flow);
 
     cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
     alg->set("medianFiltering", 1);
     alg->set("innerIterations", 1);
-    alg->set("outerIterations", d_alg.iterations);
+    alg->set("outerIterations", d_alg->getNumIterations());
     alg->set("gamma", gamma);
 
     cv::Mat flow;
     alg->calc(frame0, frame1, flow);
-    cv::Mat gold[2];
-    cv::split(flow, gold);
 
-    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
-    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
+    EXPECT_MAT_SIMILAR(flow, d_flow, 4e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
