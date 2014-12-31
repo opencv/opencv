@@ -71,13 +71,19 @@ PERF_TEST_P(ImagePair, BroxOpticalFlow,
     {
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u;
-        cv::cuda::GpuMat v;
+        cv::cuda::GpuMat flow;
 
-        cv::cuda::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+        cv::Ptr<cv::cuda::BroxOpticalFlow> d_alg =
+                cv::cuda::BroxOpticalFlow::create(0.197 /*alpha*/, 50.0 /*gamma*/, 0.8 /*scale_factor*/,
+                                                  10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-        TEST_CYCLE() d_flow(d_frame0, d_frame1, u, v);
+        TEST_CYCLE() d_alg->calc(d_frame0, d_frame1, flow);
+
+        cv::cuda::GpuMat flows[2];
+        cv::cuda::split(flow, flows);
+
+        cv::cuda::GpuMat u = flows[0];
+        cv::cuda::GpuMat v = flows[1];
 
         CUDA_SANITY_CHECK(u, 1e-1);
         CUDA_SANITY_CHECK(v, 1e-1);
@@ -129,17 +135,17 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, PyrLKOpticalFlowSparse,
     {
         const cv::cuda::GpuMat d_pts(pts.reshape(2, 1));
 
-        cv::cuda::PyrLKOpticalFlow d_pyrLK;
-        d_pyrLK.winSize = cv::Size(winSize, winSize);
-        d_pyrLK.maxLevel = levels - 1;
-        d_pyrLK.iters = iters;
+        cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> d_pyrLK =
+                cv::cuda::SparsePyrLKOpticalFlow::create(cv::Size(winSize, winSize),
+                                                         levels - 1,
+                                                         iters);
 
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
         cv::cuda::GpuMat nextPts;
         cv::cuda::GpuMat status;
 
-        TEST_CYCLE() d_pyrLK.sparse(d_frame0, d_frame1, d_pts, nextPts, status);
+        TEST_CYCLE() d_pyrLK->calc(d_frame0, d_frame1, d_pts, nextPts, status);
 
         CUDA_SANITY_CHECK(nextPts);
         CUDA_SANITY_CHECK(status);
@@ -189,15 +195,20 @@ PERF_TEST_P(ImagePair_WinSz_Levels_Iters, PyrLKOpticalFlowDense,
     {
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u;
-        cv::cuda::GpuMat v;
+        cv::cuda::GpuMat flow;
 
-        cv::cuda::PyrLKOpticalFlow d_pyrLK;
-        d_pyrLK.winSize = cv::Size(winSize, winSize);
-        d_pyrLK.maxLevel = levels - 1;
-        d_pyrLK.iters = iters;
+        cv::Ptr<cv::cuda::DensePyrLKOpticalFlow> d_pyrLK =
+                cv::cuda::DensePyrLKOpticalFlow::create(cv::Size(winSize, winSize),
+                                                        levels - 1,
+                                                        iters);
 
-        TEST_CYCLE() d_pyrLK.dense(d_frame0, d_frame1, u, v);
+        TEST_CYCLE() d_pyrLK->calc(d_frame0, d_frame1, flow);
+
+        cv::cuda::GpuMat flows[2];
+        cv::cuda::split(flow, flows);
+
+        cv::cuda::GpuMat u = flows[0];
+        cv::cuda::GpuMat v = flows[1];
 
         CUDA_SANITY_CHECK(u);
         CUDA_SANITY_CHECK(v);
@@ -234,19 +245,19 @@ PERF_TEST_P(ImagePair, FarnebackOpticalFlow,
     {
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u;
-        cv::cuda::GpuMat v;
+        cv::cuda::GpuMat flow;
 
-        cv::cuda::FarnebackOpticalFlow d_farneback;
-        d_farneback.numLevels = numLevels;
-        d_farneback.pyrScale = pyrScale;
-        d_farneback.winSize = winSize;
-        d_farneback.numIters = numIters;
-        d_farneback.polyN = polyN;
-        d_farneback.polySigma = polySigma;
-        d_farneback.flags = flags;
+        cv::Ptr<cv::cuda::FarnebackOpticalFlow> d_farneback =
+                cv::cuda::FarnebackOpticalFlow::create(numLevels, pyrScale, false, winSize,
+                                                       numIters, polyN, polySigma, flags);
 
-        TEST_CYCLE() d_farneback(d_frame0, d_frame1, u, v);
+        TEST_CYCLE() d_farneback->calc(d_frame0, d_frame1, flow);
+
+        cv::cuda::GpuMat flows[2];
+        cv::cuda::split(flow, flows);
+
+        cv::cuda::GpuMat u = flows[0];
+        cv::cuda::GpuMat v = flows[1];
 
         CUDA_SANITY_CHECK(u, 1e-4);
         CUDA_SANITY_CHECK(v, 1e-4);
@@ -279,12 +290,18 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
     {
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u;
-        cv::cuda::GpuMat v;
+        cv::cuda::GpuMat flow;
 
-        cv::cuda::OpticalFlowDual_TVL1_CUDA d_alg;
+        cv::Ptr<cv::cuda::OpticalFlowDual_TVL1> d_alg =
+                cv::cuda::OpticalFlowDual_TVL1::create();
 
-        TEST_CYCLE() d_alg(d_frame0, d_frame1, u, v);
+        TEST_CYCLE() d_alg->calc(d_frame0, d_frame1, flow);
+
+        cv::cuda::GpuMat flows[2];
+        cv::cuda::split(flow, flows);
+
+        cv::cuda::GpuMat u = flows[0];
+        cv::cuda::GpuMat v = flows[1];
 
         CUDA_SANITY_CHECK(u, 1e-1);
         CUDA_SANITY_CHECK(v, 1e-1);
