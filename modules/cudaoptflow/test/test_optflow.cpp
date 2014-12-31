@@ -325,15 +325,20 @@ INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, FarnebackOpticalFlow, testing::Combine(
 //////////////////////////////////////////////////////
 // OpticalFlowDual_TVL1
 
-PARAM_TEST_CASE(OpticalFlowDual_TVL1, cv::cuda::DeviceInfo, UseRoi)
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(Gamma, double)
+}
+
+PARAM_TEST_CASE(OpticalFlowDual_TVL1, cv::cuda::DeviceInfo, Gamma)
 {
     cv::cuda::DeviceInfo devInfo;
-    bool useRoi;
+    double gamma;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        useRoi = GET_PARAM(1);
+        gamma = GET_PARAM(1);
 
         cv::cuda::setDevice(devInfo.deviceID());
     }
@@ -348,30 +353,22 @@ CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     ASSERT_FALSE(frame1.empty());
 
     cv::cuda::OpticalFlowDual_TVL1_CUDA d_alg;
-    cv::cuda::GpuMat d_flowx = createMat(frame0.size(), CV_32FC1, useRoi);
-    cv::cuda::GpuMat d_flowy = createMat(frame0.size(), CV_32FC1, useRoi);
-    d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
+    d_alg.iterations = 10;
+    d_alg.gamma = gamma;
+
+    cv::cuda::GpuMat d_flowx, d_flowy;
+    d_alg(loadMat(frame0), loadMat(frame1), d_flowx, d_flowy);
 
     cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
     alg->set("medianFiltering", 1);
     alg->set("innerIterations", 1);
     alg->set("outerIterations", d_alg.iterations);
+    alg->set("gamma", gamma);
+
     cv::Mat flow;
     alg->calc(frame0, frame1, flow);
     cv::Mat gold[2];
     cv::split(flow, gold);
-    cv::Mat mx(d_flowx);
-    cv::Mat my(d_flowx);
-
-    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
-    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
-    d_alg.gamma = 1;
-    alg->set("gamma", 1);
-    d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
-    alg->calc(frame0, frame1, flow);
-    cv::split(flow, gold);
-    mx = cv::Mat(d_flowx);
-    my = cv::Mat(d_flowx);
 
     EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
     EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
@@ -379,7 +376,7 @@ CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
     ALL_DEVICES,
-    WHOLE_SUBMAT));
+    testing::Values(Gamma(0.0), Gamma(1.0))));
 
 //////////////////////////////////////////////////////
 // FastOpticalFlowBM
