@@ -37,7 +37,7 @@ public:
     virtual double getProperty(int propIdx) const;
     virtual bool setProperty(int propIdx, double propVal);
 protected:
-    PXCSmartPtr<PXCCapture::Device> m_device;
+    mutable PXCSmartPtr<PXCCapture::Device> m_device;
     bool initDevice(PXCSession *session);
 
     PXCSmartPtr<PXCCapture::VideoStream> m_stream;
