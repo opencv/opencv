@@ -3019,6 +3019,9 @@ void printVersionInfo(bool useStdOut)
 #if CV_AVX
     if (checkHardwareSupport(CV_CPU_AVX)) cpu_features += " avx";
 #endif
+#if CV_AVX2
+    if (checkHardwareSupport(CV_CPU_AVX2)) cpu_features += " avx2";
+#endif
 #if CV_NEON
     cpu_features += " neon"; // NEON is currently not checked at runtime
 #endif

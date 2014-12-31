@@ -114,7 +114,8 @@
 #define CV_CPU_SSE4_2  7
 #define CV_CPU_POPCNT  8
 #define CV_CPU_AVX    10
-#define CV_CPU_NEON   11
+#define CV_CPU_AVX2   11
+#define CV_CPU_NEON   12
 // when adding to this list remember to update the enum in core/utility.cpp
 #define CV_HARDWARE_MAX_FEATURE 255
 
@@ -141,7 +142,7 @@
 #    include <nmmintrin.h>
 #    define CV_SSE4_2 1
 #  endif
-#  if defined __AVX__ || (defined _MSC_FULL_VER && _MSC_FULL_VER >= 160040219)
+#  if defined __AVX__ || defined __AVX2__ || (defined _MSC_FULL_VER && _MSC_FULL_VER >= 160040219)
 // MS Visual Studio 2010 (2012?) has no macro pre-defined to identify the use of /arch:AVX
 // See: http://connect.microsoft.com/VisualStudio/feedback/details/605858/arch-avx-should-define-a-predefined-macro-in-x64-and-set-a-unique-value-for-m-ix86-fp-in-win32
 #    include <immintrin.h>
@@ -150,6 +151,9 @@
 #      define __xgetbv() _xgetbv(_XCR_XFEATURE_ENABLED_MASK)
 #    else
 #      define __xgetbv() 0
+#    ifdef __AVX2__
+#      define CV_AVX2 1
+#    endif
 #    endif
 #  endif
 #endif
@@ -186,6 +190,9 @@
 #endif
 #ifndef CV_AVX
 #  define CV_AVX 0
+#endif
+#ifndef CV_AVX2
+#  define CV_AVX2 0
 #endif
 #ifndef CV_NEON
 #  define CV_NEON 0
