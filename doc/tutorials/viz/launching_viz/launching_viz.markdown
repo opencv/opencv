@@ -14,7 +14,7 @@ In this tutorial you will learn how to
 Code
 ----
 
-You can download the code from [here ](samples/cpp/tutorial_code/viz/launching_viz.cpp).
+You can download the code from [here ](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/viz/launching_viz.cpp).
 @includelineno samples/cpp/tutorial_code/viz/launching_viz.cpp
 
 Explanation
