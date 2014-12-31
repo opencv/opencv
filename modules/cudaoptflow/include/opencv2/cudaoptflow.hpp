@@ -347,47 +347,6 @@ private:
     GpuMat norm_buf;
 };
 
-//! Calculates optical flow for 2 images using block matching algorithm */
-CV_EXPORTS void calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr,
-                                  Size block_size, Size shift_size, Size max_range, bool use_previous,
-                                  GpuMat& velx, GpuMat& vely, GpuMat& buf,
-                                  Stream& stream = Stream::Null());
-
-class CV_EXPORTS FastOpticalFlowBM
-{
-public:
-    void operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy, int search_window = 21, int block_window = 7, Stream& s = Stream::Null());
-
-private:
-    GpuMat buffer;
-    GpuMat extended_I0;
-    GpuMat extended_I1;
-};
-
-/** @brief Interpolates frames (images) using provided optical flow (displacement field).
-
-@param frame0 First frame (32-bit floating point images, single channel).
-@param frame1 Second frame. Must have the same type and size as frame0 .
-@param fu Forward horizontal displacement.
-@param fv Forward vertical displacement.
-@param bu Backward horizontal displacement.
-@param bv Backward vertical displacement.
-@param pos New frame position.
-@param newFrame Output image.
-@param buf Temporary buffer, will have width x 6\*height size, CV_32FC1 type and contain 6
-GpuMat: occlusion masks for first frame, occlusion masks for second, interpolated forward
-horizontal flow, interpolated forward vertical flow, interpolated backward horizontal flow,
-interpolated backward vertical flow.
-@param stream Stream for the asynchronous version.
- */
-CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
-                                  const GpuMat& fu, const GpuMat& fv,
-                                  const GpuMat& bu, const GpuMat& bv,
-                                  float pos, GpuMat& newFrame, GpuMat& buf,
-                                  Stream& stream = Stream::Null());
-
-CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors);
-
 //! @}
 
 }} // namespace cv { namespace cuda {
