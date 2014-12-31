@@ -92,7 +92,7 @@ void CvMLData::free_train_test_idx()
 {
     cvReleaseMat( &train_sample_idx );
     cvReleaseMat( &test_sample_idx );
-    sample_idx = 0;
+    cvFree(&sample_idx);
 }
 
 void CvMLData::clear()
