@@ -4071,6 +4071,10 @@ public:
                         uint16x8_t v_scale = vdupq_n_u16(INTER_TAB_SIZE2-1);
                         for ( ; x1 <= bcols - 8; x1 += 8)
                             vst1q_u16(A + x1, vandq_u16(vld1q_u16(sA + x1), v_scale));
+                    #elif CV_SSE2
+                        __m128i v_scale = _mm_set1_epi16(INTER_TAB_SIZE2-1);
+                        for ( ; x1 <= bcols - 8; x1 += 8)
+                            _mm_storeu_si128((__m128i *)(A + x1), _mm_and_si128(_mm_loadu_si128((const __m128i *)(sA + x1)), v_scale));
                     #endif
 
                         for( ; x1 < bcols; x1++ )
