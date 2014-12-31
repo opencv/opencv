@@ -666,7 +666,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                 int thresh = minsad + (minsad * uniquenessRatio/100);
                 for( d = 0; d < ndisp; d++ )
                 {
-                    if( sad[d] <= thresh && (d < mind-1 || d > mind+1))
+                    if( (d < mind-1 || d > mind+1) && sad[d] <= thresh)
                         break;
                 }
                 if( d < ndisp )
