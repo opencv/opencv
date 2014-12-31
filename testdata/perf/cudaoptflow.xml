@@ -1,23 +1,5 @@
 <?xml version="1.0"?>
 <opencv_storage>
-<ImagePair_InterpolateFrames--InterpolateFrames----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-  <gpu_newFrame>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>9.8192412406206131e-03</min>
-    <max>9.3716305494308472e-01</max>
-    <last>
-      <x>583</x>
-      <y>387</y>
-      <val>7.6359534263610840e-01</val></last>
-    <rng1>
-      <x>98</x>
-      <y>44</y>
-      <val>7.4720436334609985e-01</val></rng1>
-    <rng2>
-      <x>102</x>
-      <y>163</y>
-      <val>1.0018382966518402e-01</val></rng2></gpu_newFrame></ImagePair_InterpolateFrames--InterpolateFrames----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
 <ImagePair_BroxOpticalFlow--BroxOpticalFlow----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
   <gpu_u>
     <kind>65536</kind>
@@ -1354,76 +1336,6 @@
       <x>22</x>
       <y>68</y>
       <val>9.9158827215433121e-03</val></rng2></gpu_v></ImagePair_FarnebackOpticalFlow--FarnebackOpticalFlow----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-<ImagePair_OpticalFlowBM--OpticalFlowBM----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-  <gpu_u>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-6.</min>
-    <max>7.</max>
-    <last>
-      <x>568</x>
-      <y>372</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>18</x>
-      <y>198</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>343</x>
-      <y>344</y>
-      <val>1.</val></rng2></gpu_u>
-  <gpu_v>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-16.</min>
-    <max>16.</max>
-    <last>
-      <x>568</x>
-      <y>372</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>434</x>
-      <y>231</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>91</x>
-      <y>355</y>
-      <val>0.</val></rng2></gpu_v></ImagePair_OpticalFlowBM--OpticalFlowBM----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-<ImagePair_FastOpticalFlowBM--FastOpticalFlowBM----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-  <gpu_u>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-8.</min>
-    <max>7.</max>
-    <last>
-      <x>583</x>
-      <y>387</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>63</x>
-      <y>289</y>
-      <val>1.</val></rng1>
-    <rng2>
-      <x>237</x>
-      <y>166</y>
-      <val>0.</val></rng2></gpu_u>
-  <gpu_v>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-8.</min>
-    <max>7.</max>
-    <last>
-      <x>583</x>
-      <y>387</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>451</x>
-      <y>82</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>91</x>
-      <y>229</y>
-      <val>0.</val></rng2></gpu_v></ImagePair_FastOpticalFlowBM--FastOpticalFlowBM----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
  <!-- resumed -->
 
 <ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
@@ -1461,43 +1373,4 @@
       <x>540</x>
       <y>194</y>
       <val>-1.2317572720348835e-02</val></rng2></gpu_v></ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
- <!-- resumed -->
-
-<ImagePair_CreateOpticalFlowNeedleMap--CreateOpticalFlowNeedleMap----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-  <gpu_vertex>
-    <kind>65536</kind>
-    <type>21</type>
-    <min>9.4802547246217728e-03</min>
-    <max>1.</max>
-    <last>
-      <x>5183</x>
-      <y>0</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>3733</x>
-      <y>0</y>
-      <cn>2</cn>
-      <val>6.9999998807907104e-01</val></rng1>
-    <rng2>
-      <x>716</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>1.4520321786403656e-01</val></rng2></gpu_vertex>
-  <gpu_colors>
-    <kind>65536</kind>
-    <type>21</type>
-    <min>0.</min>
-    <max>1.</max>
-    <last>
-      <x>5183</x>
-      <y>0</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>252</x>
-      <y>0</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>3101</x>
-      <y>0</y>
-      <val>0.</val></rng2></gpu_colors></ImagePair_CreateOpticalFlowNeedleMap--CreateOpticalFlowNeedleMap----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
 </opencv_storage>
