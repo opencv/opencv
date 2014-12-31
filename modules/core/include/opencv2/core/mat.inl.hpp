@@ -1005,13 +1005,13 @@ MatIterator_<_Tp> Mat::end()
 template<typename _Tp, typename Functor> inline
 void Mat::forEach(const Functor& operation) {
     this->forEach_impl<_Tp>(operation);
-};
+}
 
 template<typename _Tp, typename Functor> inline
 void Mat::forEach(const Functor& operation) const {
     // call as not const
     (const_cast<Mat*>(this))->forEach<const _Tp>(operation);
-};
+}
 
 template<typename _Tp> inline
 Mat::operator std::vector<_Tp>() const
