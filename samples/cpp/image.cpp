@@ -30,6 +30,7 @@ int main( int argc, char** argv )
     help();
     const char* imagename = argc > 1 ? argv[1] : "../data/lena.jpg";
 #if DEMO_MIXED_API_USE
+    //! [iplimage]
     Ptr<IplImage> iplimg(cvLoadImage(imagename)); // Ptr<T> is safe ref-counting pointer class
     if(!iplimg)
     {
@@ -39,6 +40,7 @@ int main( int argc, char** argv )
     Mat img = cv::cvarrToMat(iplimg); // cv::Mat replaces the CvMat and IplImage, but it's easy to convert
     // between the old and the new data structures (by default, only the header
     // is converted, while the data is shared)
+    //! [iplimage]
 #else
     Mat img = imread(imagename); // the newer cvLoadImage alternative, MATLAB-style function
     if(img.empty())

@@ -16,18 +16,13 @@ Source code
 -----------
 
 You can [download this from here
-](samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
+](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
 `samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp` of the OpenCV source code
 library.
 
 Here's a sample code of how to achieve all the stuff enumerated at the goal list.
 
-@dontinclude cpp/tutorial_code/core/file_input_output/file_input_output.cpp
-
-@until std;
-@skip class MyData
-@until return 0;
-@until }
+@includelineno cpp/tutorial_code/core/file_input_output/file_input_output.cpp
 
 Explanation
 -----------

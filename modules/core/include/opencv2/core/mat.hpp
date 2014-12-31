@@ -637,9 +637,7 @@ sub-matrices.
     Partial yet very common cases of this *user-allocated data* case are conversions from CvMat and
     IplImage to Mat. For this purpose, there is function cv::cvarrToMat taking pointers to CvMat or
     IplImage and the optional flag indicating whether to copy the data or not.
-    @dontinclude samples/cpp/image.cpp
-    @skip Ptr<IplImage> iplimg
-    @until is converted, while the data is shared
+    @snippet samples/cpp/image.cpp iplimage
 
 - Use MATLAB-style array initializers, zeros(), ones(), eye(), for example:
 @code
