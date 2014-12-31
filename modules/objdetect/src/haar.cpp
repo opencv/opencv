@@ -547,14 +547,14 @@ cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* _cascade,
                 kx = r[0].width / base_w;
                 ky = r[0].height / base_h;
 
-                if( kx <= 0 )
+                if( kx < 0 )
                 {
                     flagx = 1;
                     new_base_w = cvRound( r[0].width * scale ) / kx;
                     x0 = cvRound( r[0].x * scale );
                 }
 
-                if( ky <= 0 )
+                if( ky < 0 )
                 {
                     flagy = 1;
                     new_base_h = cvRound( r[0].height * scale ) / ky;
