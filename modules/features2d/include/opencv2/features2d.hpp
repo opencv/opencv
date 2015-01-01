@@ -1271,6 +1271,28 @@ protected:
     Ptr<DescriptorMatcher> dmatcher;
 };
 
+
+/** @brief Constructs descriptors using LUCID algorithm
+
+@param _src Image from which descriptors should be constructed
+@param keypoints Vector of keypoints that were found in _src via a feature detector such as FAST
+@param descriptors Empty vector that is used as descriptor storage. One descriptor equates one
+vector of integers, hence a vector of vectors of ints.
+@param lucid_kernel Kernel size to consider when constructing descriptors, where 1 equates a 3x3
+matrix, 2 = 5x5, 3 = 7x7, and so on
+@param blur_kernel Blur kernel size where 1 equates a 3x3 matrix, and so on as before. Blur is
+applied to a temporary buffer before constructing descriptors.
+*/
+CV_EXPORTS void LUCID(const InputArray _src, const std::vector<KeyPoint> &keypoints, CV_OUT std::vector<std::vector<std::size_t> > &descriptors, const std::ptrdiff_t lucid_kernel, const std::ptrdiff_t blur_kernel);
+
+/** @brief Separable box filter blur, needed by LUCID, also exposed for the user
+
+@param _src Image on which blur should be applied
+@param _dst Image resulting from _src having blur applied, the output image
+@param kernel Blur kernel size where 1 equates a 3x3 matrix, 2 = 5x5, 3 = 7x7, and so on
+*/
+CV_EXPORTS void separable_blur(const InputArray _src, CV_OUT OutputArray _dst, const std::ptrdiff_t kernel);
+
 //! @} features2d_category
 
 //! @} features2d
