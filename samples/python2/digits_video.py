@@ -86,7 +86,7 @@ def main():
 
         cv2.imshow('frame', frame)
         cv2.imshow('bin', bin)
-        ch = cv2.waitKey(1)
+        ch = cv2.waitKey(1) & 0xFF
         if ch == 27:
             break
 
