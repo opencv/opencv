@@ -1283,7 +1283,7 @@ matrix, 2 = 5x5, 3 = 7x7, and so on
 @param blur_kernel Blur kernel size where 1 equates a 3x3 matrix, and so on as before. Blur is
 applied to a temporary buffer before constructing descriptors.
 */
-CV_EXPORTS void LUCID(const InputArray _src, const std::vector<KeyPoint> &keypoints, CV_OUT std::vector<std::vector<std::size_t> > &descriptors, const std::ptrdiff_t lucid_kernel, const std::ptrdiff_t blur_kernel);
+CV_EXPORTS void LUCID(const InputArray _src, const std::vector<KeyPoint> &keypoints, CV_OUT std::vector<std::vector<std::size_t> > &descriptors, const int lucid_kernel, const int blur_kernel);
 
 /** @brief Separable box filter blur, needed by LUCID, also exposed for the user
 
@@ -1291,7 +1291,7 @@ CV_EXPORTS void LUCID(const InputArray _src, const std::vector<KeyPoint> &keypoi
 @param _dst Image resulting from _src having blur applied, the output image
 @param kernel Blur kernel size where 1 equates a 3x3 matrix, 2 = 5x5, 3 = 7x7, and so on
 */
-CV_EXPORTS void separable_blur(const InputArray _src, CV_OUT OutputArray _dst, const std::ptrdiff_t kernel);
+CV_EXPORTS void separable_blur(const InputArray _src, CV_OUT OutputArray _dst, const int kernel);
 
 //! @} features2d_category
 

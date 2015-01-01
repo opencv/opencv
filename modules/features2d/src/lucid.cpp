@@ -51,7 +51,7 @@ namespace cv {
     static void radix_sort(std::vector<std::size_t> *x, const std::size_t k) {
         std::vector<std::size_t> p(k);
 
-        std::ptrdiff_t l;
+        int l;
 
         std::size_t i, e = 1, h = (*x)[0];
 
@@ -61,7 +61,7 @@ namespace cv {
         }
 
         while (h/e > 0) {
-            std::ptrdiff_t b[10] = {0};
+            int b[10] = {0};
 
             for (i = 0; i < k; ++i)
                 ++b[(*x)[i]/e%10];
@@ -76,8 +76,8 @@ namespace cv {
         }
     }
 
-    void separable_blur(const InputArray _src, OutputArray _dst, const std::ptrdiff_t kernel) {
-        std::ptrdiff_t z, p, r, g, b, m = kernel*2+1, width, height;
+    void separable_blur(const InputArray _src, OutputArray _dst, const int kernel) {
+        int z, p, r = 0, g = 0, b = 0, m = kernel*2+1, width, height;
 
         Point3_<uchar> *pnt;
 
@@ -87,8 +87,8 @@ namespace cv {
 
         width = dst.cols, height = dst.rows;
 
-        for (std::ptrdiff_t y = 0; y < height; ++y) {
-            for (std::ptrdiff_t x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
                 z = kernel*-1;
 
                 if (!x) {
@@ -118,14 +118,14 @@ namespace cv {
                 }
 
                 pnt = dst.ptr<Point3_<uchar> >(y, x);
-                pnt->z = r/m;
-                pnt->y = g/m;
-                pnt->x = b/m;
+                pnt->z = static_cast<uchar>(r/m);
+                pnt->y = static_cast<uchar>(g/m);
+                pnt->x = static_cast<uchar>(b/m);
             }
         }
 
-        for (std::ptrdiff_t x = 0, rl = 0, gl = 0, bl = 0, rn = 0, gn = 0, bn = 0; x < width; ++x) {
-            for (std::ptrdiff_t y = 0; y < height; ++y) {
+        for (int x = 0, rl = 0, gl = 0, bl = 0, rn = 0, gn = 0, bn = 0; x < width; ++x) {
+            for (int y = 0; y < height; ++y) {
                 z = kernel*-1;
 
                 if (!y) {
@@ -161,21 +161,21 @@ namespace cv {
                 rn = r/m;
                 gn = g/m;
                 bn = b/m;
-                pnt->z = rn;
-                pnt->y = gn;
-                pnt->x = bn;
+                pnt->z = static_cast<uchar>(rn);
+                pnt->y = static_cast<uchar>(gn);
+                pnt->x = static_cast<uchar>(bn);
             }
         }
     }
 
-    void LUCID(const InputArray _src, const std::vector<KeyPoint> &keypoints, std::vector<std::vector<std::size_t> > &descriptors, const std::ptrdiff_t lucid_kernel, const std::ptrdiff_t blur_kernel) {
+    void LUCID(const InputArray _src, const std::vector<KeyPoint> &keypoints, std::vector<std::vector<std::size_t> > &descriptors, const int lucid_kernel, const int blur_kernel) {
         Mat src;
 
         separable_blur(_src.getMat(), src, blur_kernel);
 
         Point3_<uchar> *pnt;
 
-        std::ptrdiff_t x, y, j, d, p, m = static_cast<std::ptrdiff_t>(std::pow(lucid_kernel*2+1, 2)*3), width = src.cols, height = src.rows;
+        int x, y, j, d, p, m = static_cast<int>(std::pow(lucid_kernel*2+1, 2)*3), width = src.cols, height = src.rows;
 
         std::vector<Point2i> corners;
 
