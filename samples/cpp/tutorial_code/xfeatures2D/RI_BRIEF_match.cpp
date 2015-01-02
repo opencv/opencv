@@ -13,15 +13,15 @@ const float nn_match_ratio = 0.8f;   // Nearest neighbor matching ratio
 
 int main(void)
 {
-    Mat img1 = imread("D:/OpenCV3.0GitHub/opencv/samples/data/graf1.png", IMREAD_GRAYSCALE);
-    Mat img2 = imread("D:/OpenCV3.0GitHub/opencv/samples/data/graf3.png", IMREAD_GRAYSCALE);
+	Mat img1 = imread("D:/OpenCV3.0GitHub/opencv/samples/data/graf1.png", IMREAD_GRAYSCALE);
+	Mat img2 = imread("D:/OpenCV3.0GitHub/opencv/samples/data/graf3.png", IMREAD_GRAYSCALE);
 
-    Mat homography;
-    FileStorage fs("D:/OpenCV3.0GitHub/opencv/samples/data/H1to3p.xml", FileStorage::READ);
-    fs.getFirstTopLevelNode() >> homography;
+	Mat homography;
+	FileStorage fs("D:/OpenCV3.0GitHub/opencv/samples/data/H1to3p.xml", FileStorage::READ);
+	fs.getFirstTopLevelNode() >> homography;
 
-    vector<KeyPoint> kpts1, kpts2;
-    Mat desc1, desc2;
+	vector<KeyPoint> kpts1, kpts2;
+	Mat desc1, desc2;
 
 	Ptr<xfeatures2d::SiftFeatureDetector> sift_detector = xfeatures2d::SiftFeatureDetector::create();
 	Ptr<xfeatures2d::BriefDescriptorExtractor> brief = xfeatures2d::BriefDescriptorExtractor::create();
@@ -33,57 +33,57 @@ int main(void)
 	sift_detector->detect(img2, kpts2);
 	brief->compute(img2, kpts2, desc2);
 
-    BFMatcher matcher(NORM_HAMMING);
-    vector< vector<DMatch> > nn_matches;
-    matcher.knnMatch(desc1, desc2, nn_matches, 2);
+	BFMatcher matcher(NORM_HAMMING);
+	vector< vector<DMatch> > nn_matches;
+	matcher.knnMatch(desc1, desc2, nn_matches, 2);
 
-    vector<KeyPoint> matched1, matched2, inliers1, inliers2;
-    vector<DMatch> good_matches;
-    for(size_t i = 0; i < nn_matches.size(); i++) {
-        DMatch first = nn_matches[i][0];
-        float dist1 = nn_matches[i][0].distance;
-        float dist2 = nn_matches[i][1].distance;
+	vector<KeyPoint> matched1, matched2, inliers1, inliers2;
+	vector<DMatch> good_matches;
+	for (size_t i = 0; i < nn_matches.size(); i++) {
+		DMatch first = nn_matches[i][0];
+		float dist1 = nn_matches[i][0].distance;
+		float dist2 = nn_matches[i][1].distance;
 
-        if(dist1 < nn_match_ratio * dist2) {
-            matched1.push_back(kpts1[first.queryIdx]);
-            matched2.push_back(kpts2[first.trainIdx]);
-        }
-    }
+		if (dist1 < nn_match_ratio * dist2) {
+			matched1.push_back(kpts1[first.queryIdx]);
+			matched2.push_back(kpts2[first.trainIdx]);
+		}
+	}
 
-    for(unsigned i = 0; i < matched1.size(); i++) {
-        Mat col = Mat::ones(3, 1, CV_64F);
-        col.at<double>(0) = matched1[i].pt.x;
-        col.at<double>(1) = matched1[i].pt.y;
+	for (unsigned i = 0; i < matched1.size(); i++) {
+		Mat col = Mat::ones(3, 1, CV_64F);
+		col.at<double>(0) = matched1[i].pt.x;
+		col.at<double>(1) = matched1[i].pt.y;
 
-        col = homography * col;
-        col /= col.at<double>(2);
-        double dist = sqrt( pow(col.at<double>(0) - matched2[i].pt.x, 2) +
-                            pow(col.at<double>(1) - matched2[i].pt.y, 2));
+		col = homography * col;
+		col /= col.at<double>(2);
+		double dist = sqrt(pow(col.at<double>(0) - matched2[i].pt.x, 2) +
+			pow(col.at<double>(1) - matched2[i].pt.y, 2));
 
-        if(dist < inlier_threshold) {
-            int new_i = static_cast<int>(inliers1.size());
-            inliers1.push_back(matched1[i]);
-            inliers2.push_back(matched2[i]);
-            good_matches.push_back(DMatch(new_i, new_i, 0));
-        }
-    }
+		if (dist < inlier_threshold) {
+			int new_i = static_cast<int>(inliers1.size());
+			inliers1.push_back(matched1[i]);
+			inliers2.push_back(matched2[i]);
+			good_matches.push_back(DMatch(new_i, new_i, 0));
+		}
+	}
 
-    Mat res;
-    drawMatches(img1, inliers1, img2, inliers2, good_matches, res);
-    imwrite("D:/OpenCV3.0GitHub/opencv/samples/data/brief_res.png", res);
+	Mat res;
+	drawMatches(img1, inliers1, img2, inliers2, good_matches, res);
+	imwrite("D:/OpenCV3.0GitHub/opencv/samples/data/brief_res.png", res);
 
-    double inlier_ratio = inliers1.size() * 1.0 / matched1.size();
-    cout << "BRIEF Matching Results" << endl;
-    cout << "*******************************" << endl;
-    cout << "# Keypoints 1:                        \t" << kpts1.size() << endl;
-    cout << "# Keypoints 2:                        \t" << kpts2.size() << endl;
-    cout << "# Matches:                            \t" << matched1.size() << endl;
-    cout << "# Inliers:                            \t" << inliers1.size() << endl;
-    cout << "# Inliers Ratio:                      \t" << inlier_ratio << endl;
-    cout << endl;
+	double inlier_ratio = inliers1.size() * 1.0 / matched1.size();
+	cout << "BRIEF Matching Results" << endl;
+	cout << "*******************************" << endl;
+	cout << "# Keypoints 1:                        \t" << kpts1.size() << endl;
+	cout << "# Keypoints 2:                        \t" << kpts2.size() << endl;
+	cout << "# Matches:                            \t" << matched1.size() << endl;
+	cout << "# Inliers:                            \t" << inliers1.size() << endl;
+	cout << "# Inliers Ratio:                      \t" << inlier_ratio << endl;
+	cout << endl;
 
-    
-	
+
+
 	Ptr<xfeatures2d::RIBriefDescriptorExtractor> ri_brief = xfeatures2d::RIBriefDescriptorExtractor::create();
 
 	kpts1.clear();
@@ -91,7 +91,7 @@ int main(void)
 
 	Mat ri_desc1, ri_desc2;
 
-	
+
 	sift_detector->detect(img1, kpts1);
 	ri_brief->compute(img1, kpts1, ri_desc1);
 
