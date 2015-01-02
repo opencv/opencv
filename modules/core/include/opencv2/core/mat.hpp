@@ -415,7 +415,7 @@ public:
                       const size_t dstofs[], const size_t dststep[], bool sync) const;
 
     // default implementation returns DummyBufferPoolController
-    virtual BufferPoolController* getBufferPoolController() const;
+    virtual BufferPoolController* getBufferPoolController(const char* id = NULL) const;
 };
 
 
@@ -481,7 +481,7 @@ struct CV_EXPORTS UMatData
     int refcount;
     uchar* data;
     uchar* origdata;
-    size_t size, capacity;
+    size_t size;
 
     int flags;
     void* handle;
