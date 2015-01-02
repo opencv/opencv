@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     cvtColor(image, buf, CV_BGR2GRAY);
 
     std::vector<KeyPoint> kpt;
-    std::vector<std::vector<std::size_t> > dsc;
+    std::vector<std::vector<int> > dsc;
 
     FAST(buf, kpt, 9, 1);
     KeyPointsFilter::retainBest(kpt, 100);

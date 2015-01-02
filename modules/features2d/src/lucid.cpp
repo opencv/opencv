@@ -48,12 +48,10 @@ the use of this software, even if advised of the possibility of such damage.
 #include "precomp.hpp"
 
 namespace cv {
-    static void radix_sort(std::vector<std::size_t> *x, const std::size_t k) {
-        std::vector<std::size_t> p(k);
+    static void radix_sort(std::vector<int> *x, const int k) {
+        std::vector<int> p(k);
 
-        int l;
-
-        std::size_t i, e = 1, h = (*x)[0];
+        int l, i, e = 1, h = (*x)[0];
 
         for (i = 0; i < k; ++i) {
             if ((*x)[i] > h)
@@ -168,7 +166,7 @@ namespace cv {
         }
     }
 
-    void LUCID(const InputArray _src, const std::vector<KeyPoint> &keypoints, std::vector<std::vector<std::size_t> > &descriptors, const int lucid_kernel, const int blur_kernel) {
+    void LUCID(const InputArray _src, const std::vector<KeyPoint> &keypoints, std::vector<std::vector<int> > &descriptors, const int lucid_kernel, const int blur_kernel) {
         Mat src;
 
         separable_blur(_src.getMat(), src, blur_kernel);
@@ -189,7 +187,7 @@ namespace cv {
         for (std::size_t i = 0; i < corners.size(); ++i) {
             x = corners[i].x-lucid_kernel, y = corners[i].y-lucid_kernel, d = x+2*lucid_kernel, p = y+2*lucid_kernel, j = x;
 
-            std::vector<std::size_t> buf;
+            std::vector<int> buf;
             buf.reserve(m);
 
             while (x <= d) {

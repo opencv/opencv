@@ -65,9 +65,12 @@ void CV_LUCIDTest::run(int) {
     cvtColor(image, buf, COLOR_BGR2GRAY);
 
     std::vector<KeyPoint> kpt;
-    std::vector<std::vector<std::size_t> > dsc;
+    std::vector<std::vector<int> > dsc;
 
     FAST(buf, kpt, 9, 1);
+    if (kpt.empty()) {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+    }
     KeyPointsFilter::retainBest(kpt, 100);
 
     LUCID(image, kpt, dsc, 1, 2);
@@ -78,6 +81,14 @@ void CV_LUCIDTest::run(int) {
                 ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
 
                 return;
+            }
+
+            for (std::size_t x = 0; x < 27; ++x) {
+                if (x > 0 && dsc[i][x] < dsc[i][x-1]) {
+                    ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+
+                    return;
+                }
             }
         }
     }
