@@ -449,6 +449,12 @@ bool FeatureEvaluator::updateScaleData( Size imgsz, const std::vector<float>& _s
         s.ystep = sc >= 2 ? 1 : 2;
         s.scale = sc;
         s.szi = Size(sz.width+1, sz.height+1);
+
+        if( i == 0 )
+        {
+            layer_dy = s.szi.height;
+        }
+
         if( layer_ofs.x + s.szi.width > sbufSize.width )
         {
             layer_ofs = Point(0, layer_ofs.y + layer_dy);
