@@ -196,18 +196,16 @@ namespace cv
                 }
             }
 
+            resultsMutex.lock();
             if (localInliers.size() > inliers.size())
             {
-                resultsMutex.lock();
-
                 inliers.clear();
                 inliers.resize(localInliers.size());
                 memcpy(&inliers[0], &localInliers[0], sizeof(int) * localInliers.size());
                 localRvec.copyTo(rvec);
                 localTvec.copyTo(tvec);
-
-                resultsMutex.unlock();
             }
+            resultsMutex.unlock();
         }
 
         static void pnpTask(const vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
