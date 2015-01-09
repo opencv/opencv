@@ -303,7 +303,7 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         InputArray _cameraMatrix, InputArray _distCoeffs,
                         OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
                         int iterationsCount, float reprojectionError, int minInliersCount,
-                        OutputArray _inliers, int flags, uint64 _rng_seed)
+                        OutputArray _inliers, int flags, int _rng_seed)
 {
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
@@ -375,4 +375,15 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
             _inliers.release();
     }
     return;
+}
+
+void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
+                        InputArray _cameraMatrix, InputArray _distCoeffs,
+                        OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
+                        int iterationsCount, float reprojectionError, int minInliersCount,
+                        OutputArray _inliers, int flags)
+{
+	solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
+                        _rvec, _tvec, useExtrinsicGuess, iterationsCount,
+                        reprojectionError, minInliersCount,  _inliers, flags, 0);
 }
