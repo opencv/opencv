@@ -1651,7 +1651,7 @@ namespace fisheye
         InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray());
 
     /** @overload */
-    CV_EXPORTS void projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec,
+    CV_EXPORTS_W void projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec,
         InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray());
 
     /** @brief Distorts 2D points using fisheye model.
@@ -1663,7 +1663,7 @@ namespace fisheye
     @param alpha The skew coefficient.
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
      */
-    CV_EXPORTS void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
+    CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
 
     /** @brief Undistorts 2D points using fisheye model
 
@@ -1676,7 +1676,7 @@ namespace fisheye
     @param P New camera matrix (3x3) or new projection matrix (3x4)
     @param undistorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
      */
-    CV_EXPORTS void undistortPoints(InputArray distorted, OutputArray undistorted,
+    CV_EXPORTS_W void undistortPoints(InputArray distorted, OutputArray undistorted,
         InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray());
 
     /** @brief Computes undistortion and rectification maps for image transform by cv::remap(). If D is empty zero
@@ -1693,7 +1693,7 @@ namespace fisheye
     @param map1 The first output map.
     @param map2 The second output map.
      */
-    CV_EXPORTS void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
+    CV_EXPORTS_W void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
         const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
 
     /** @brief Transforms an image to compensate for fisheye lens distortion.
@@ -1724,7 +1724,7 @@ namespace fisheye
 
     ![image](pics/fisheye_undistorted.jpg)
      */
-    CV_EXPORTS void undistortImage(InputArray distorted, OutputArray undistorted,
+    CV_EXPORTS_W void undistortImage(InputArray distorted, OutputArray undistorted,
         InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
     /** @brief Estimates new camera matrix for undistortion or rectification.
@@ -1740,7 +1740,7 @@ namespace fisheye
     @param new_size
     @param fov_scale Divisor for new focal length.
      */
-    CV_EXPORTS void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
+    CV_EXPORTS_W void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
         OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
 
     /** @brief Performs camera calibaration
@@ -1774,7 +1774,7 @@ namespace fisheye
     zero.
     @param criteria Termination criteria for the iterative optimization algorithm.
      */
-    CV_EXPORTS double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
+    CV_EXPORTS_W double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
         InputOutputArray K, InputOutputArray D, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = 0,
             TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
@@ -1808,7 +1808,7 @@ namespace fisheye
     length. Balance is in range of [0, 1].
     @param fov_scale Divisor for new focal length.
      */
-    CV_EXPORTS void stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec,
+    CV_EXPORTS_W void stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec,
         OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags, const Size &newImageSize = Size(),
         double balance = 0.0, double fov_scale = 1.0);
 
@@ -1844,9 +1844,9 @@ namespace fisheye
     zero.
     @param criteria Termination criteria for the iterative optimization algorithm.
      */
-    CV_EXPORTS double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+    CV_EXPORTS_W double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                   InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
-                                  OutputArray R, OutputArray T, int flags = CALIB_FIX_INTRINSIC,
+                                  OutputArray R, OutputArray T, int flags = fisheye::CALIB_FIX_INTRINSIC,
                                   TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
 //! @} calib3d_fisheye
