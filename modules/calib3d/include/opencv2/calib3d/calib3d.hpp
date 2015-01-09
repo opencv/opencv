@@ -488,7 +488,8 @@ CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints,
                                   float reprojectionError = 8.0,
                                   int minInliersCount = 100,
                                   OutputArray inliers = noArray(),
-                                  int flags = ITERATIVE);
+                                  int flags = ITERATIVE,
+                                  uint64 rng_seed = 0);
 
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
