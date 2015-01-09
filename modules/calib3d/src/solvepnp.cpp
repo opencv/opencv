@@ -383,7 +383,7 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         int iterationsCount, float reprojectionError, int minInliersCount,
                         OutputArray _inliers, int flags)
 {
-	solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
-                        _rvec, _tvec, useExtrinsicGuess, iterationsCount,
-                        reprojectionError, minInliersCount,  _inliers, flags, 0);
+    solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
+                   _rvec, _tvec, useExtrinsicGuess, iterationsCount,
+                   reprojectionError, minInliersCount,  _inliers, flags, 0);
 }
