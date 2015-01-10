@@ -193,7 +193,9 @@ cvStartFindContours( void* _img, CvMemStorage* storage,
 
     if( !((CV_IS_MASK_ARR( mat ) && mode < CV_RETR_FLOODFILL) ||
           (CV_MAT_TYPE(mat->type) == CV_32SC1 && mode == CV_RETR_FLOODFILL)) )
-        CV_Error( CV_StsUnsupportedFormat, "[Start]FindContours support only 8uC1 and 32sC1 images" );
+        CV_Error( CV_StsUnsupportedFormat,
+                  "[Start]FindContours supports only CV_8UC1 images when mode != CV_RETR_FLOODFILL "
+                  "otherwise supports CV_32SC1 images only" );
 
     CvSize size = cvSize( mat->width, mat->height );
     int step = mat->step;
