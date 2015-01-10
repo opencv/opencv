@@ -2972,7 +2972,13 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
     for( i = 0; i < nimages; i++ )
     {
         ni = objectPoints.getMat(i).checkVector(3, CV_32F);
-        CV_Assert( ni >= 0 );
+        if( ni <= 0 )
+            CV_Error(CV_StsUnsupportedFormat, "objectPoints should contain vector of vectors of points of type Point3f");
+        int ni1 = imagePoints1.getMat(i).checkVector(2, CV_32F);
+        if( ni1 <= 0 )
+            CV_Error(CV_StsUnsupportedFormat, "imagePoints1 should contain vector of vectors of points of type Point2f");
+        CV_Assert( ni == ni1 );
+
         total += ni;
     }
 
@@ -2995,8 +3001,6 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         Mat objpt = objectPoints.getMat(i);
         Mat imgpt1 = imagePoints1.getMat(i);
         ni = objpt.checkVector(3, CV_32F);
-        int ni1 = imgpt1.checkVector(2, CV_32F);
-        CV_Assert( ni > 0 && ni == ni1 );
         npoints.at<int>(i) = ni;
         memcpy( objPtData + j, objpt.ptr(), ni*sizeof(objPtData[0]) );
         memcpy( imgPtData1 + j, imgpt1.ptr(), ni*sizeof(imgPtData1[0]) );
