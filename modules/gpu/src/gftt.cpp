@@ -61,7 +61,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask)
+void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask, Stream &s)
 {
     using namespace cv::gpu::device::gfft;
 
@@ -71,7 +71,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
     ensureSizeIsEnough(image.size(), CV_32F, eig_);
 
     if (useHarrisDetector)
-        cornerHarris(image, eig_, Dx_, Dy_, buf_, blockSize, 3, harrisK);
+        cornerHarris(image, eig_, Dx_, Dy_, buf_, blockSize, 3, harrisK, s);
     else
         cornerMinEigenVal(image, eig_, Dx_, Dy_, buf_, blockSize, 3);
 

@@ -1769,7 +1769,7 @@ public:
         int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04);
 
     //! return 1 rows matrix with CV_32FC2 type
-    void operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat());
+    void operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat(), Stream &s = Stream::Null());
 
     int maxCorners;
     double qualityLevel;
