@@ -542,7 +542,7 @@ Mat LogisticRegressionImpl::remap_labels(const Mat& _labels_i, const map<int, in
 
     Mat new_labels = Mat::zeros(labels.rows, labels.cols, labels.type());
 
-    CV_Assert( lmap.size() > 0 );
+    CV_Assert( !lmap.empty() );
 
     for(int i =0;i<labels.rows;i++)
     {

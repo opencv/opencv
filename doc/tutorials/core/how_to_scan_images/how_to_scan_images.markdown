@@ -51,7 +51,7 @@ three major ways of going through an image pixel by pixel. To make things a litt
 will make the scanning for each image using all of these methods, and print out how long it took.
 
 You can download the full source code [here
-](samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp) or look it up in
+](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp) or look it up in
 the samples directory of OpenCV at the cpp tutorial code for the core section. Its basic usage is:
 @code{.bash}
 how_to_scan_images imageName.jpg intValueToReduce [G]
@@ -59,10 +59,7 @@ how_to_scan_images imageName.jpg intValueToReduce [G]
 The final argument is optional. If given the image will be loaded in gray scale format, otherwise
 the RGB color way is used. The first thing is to calculate the lookup table.
 
-@dontinclude cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
-
-@skip int divideWith
-@until table[i]
+@snippet how_to_scan_images.cpp dividewith
 
 Here we first use the C++ *stringstream* class to convert the third command line argument from text
 to an integer format. Then we use a simple look and the upper formula to calculate the lookup table.
@@ -107,9 +104,7 @@ The efficient way
 When it comes to performance you cannot beat the classic C style operator[] (pointer) access.
 Therefore, the most efficient method we can recommend for making the assignment is:
 
-@skip Mat& ScanImageAndReduceC
-@until return
-@until }
+@snippet how_to_scan_images.cpp scan-c
 
 Here we basically just acquire a pointer to the start of each row and go through it until it ends.
 In the special case that the matrix is stored in a continues manner we only need to request the
@@ -141,9 +136,7 @@ considered a safer way as it takes over these tasks from the user. All you need 
 begin and the end of the image matrix and then just increase the begin iterator until you reach the
 end. To acquire the value *pointed* by the iterator use the \* operator (add it before it).
 
-@skip ScanImageAndReduceIterator
-@until return
-@until }
+@snippet how_to_scan_images.cpp scan-iterator
 
 In case of color images we have three uchar items per column. This may be considered a short vector
 of uchar items, that has been baptized in OpenCV with the *Vec3b* name. To access the n-th sub
@@ -161,9 +154,7 @@ what type we are looking at the image. It's no different here as you need manual
 type to use at the automatic lookup. You can observe this in case of the gray scale images for the
 following source code (the usage of the + @ref cv::at() function):
 
-@skip ScanImageAndReduceRandomAccess
-@until return
-@until }
+@snippet how_to_scan_images.cpp scan-random
 
 The functions takes your input type and coordinates and calculates on the fly the address of the
 queried item. Then returns a reference to that. This may be a constant when you *get* the value and
@@ -192,14 +183,11 @@ OpenCV has a function that makes the modification without the need from you to w
 the image. We use the @ref cv::LUT() function of the core module. First we build a Mat type of the
 lookup table:
 
-@dontinclude cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
-
-@skip Mat lookUpTable
-@until p[i] = table[i]
+@snippet how_to_scan_images.cpp table-init
 
 Finally call the function (I is our input image and J the output one):
 
-@skipline LUT
+@snippet how_to_scan_images.cpp table-use
 
 Performance Difference
 ----------------------

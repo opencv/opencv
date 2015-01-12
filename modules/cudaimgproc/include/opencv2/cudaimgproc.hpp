@@ -89,7 +89,7 @@ performance.
  */
 CV_EXPORTS void cvtColor(InputArray src, OutputArray dst, int code, int dcn = 0, Stream& stream = Stream::Null());
 
-enum
+enum DemosaicTypes
 {
     //! Bayer Demosaicing (Malvar, He, and Cutler)
     COLOR_BayerBG2BGR_MHT = 256,
@@ -156,7 +156,7 @@ CV_EXPORTS void swapChannels(InputOutputArray image, const int dstOrder[4], Stre
  */
 CV_EXPORTS void gammaCorrection(InputArray src, OutputArray dst, bool forward = true, Stream& stream = Stream::Null());
 
-enum { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_PLUS, ALPHA_OVER_PREMUL, ALPHA_IN_PREMUL, ALPHA_OUT_PREMUL,
+enum AlphaCompTypes { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_PLUS, ALPHA_OVER_PREMUL, ALPHA_IN_PREMUL, ALPHA_OUT_PREMUL,
        ALPHA_ATOP_PREMUL, ALPHA_XOR_PREMUL, ALPHA_PLUS_PREMUL, ALPHA_PREMUL};
 
 /** @brief Composites two images using alpha opacity values contained in each image.

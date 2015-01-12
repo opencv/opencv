@@ -17,7 +17,7 @@ in case of ~50% of outliers.
 
 Keys
 ----
-SPACE - generaty random points
+SPACE - generate random points
 f     - change distance function
 ESC   - exit
 '''
