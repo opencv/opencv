@@ -2035,6 +2035,910 @@ struct cvtScale_SIMD<schar, double, float>
     }
 };
 
+// from ushort
+
+template <>
+struct cvtScale_SIMD<ushort, uchar, float>
+{
+    int operator () (const ushort * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_dst, v_zero));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<ushort, schar, float>
+{
+    int operator () (const ushort * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packs_epi16(v_dst, v_zero));
+        }
+
+        return x;
+    }
+};
+
+#if CV_SSE4_1
+
+template <>
+struct cvtScale_SIMD<ushort, ushort, float>
+{
+    cvtScale_SIMD()
+    {
+        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+    }
+
+    int operator () (const ushort * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!haveSSE)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
+                                             _mm_cvtps_epi32(v_dst_1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+
+    bool haveSSE;
+};
+
+#endif
+
+template <>
+struct cvtScale_SIMD<ushort, short, float>
+{
+    int operator () (const ushort * src, short * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<ushort, int, float>
+{
+    int operator () (const ushort * src, int * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_cvtps_epi32(v_dst_0));
+            _mm_storeu_si128((__m128i *)(dst + x + 4), _mm_cvtps_epi32(v_dst_1));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<ushort, float, float>
+{
+    int operator () (const ushort * src, float * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            _mm_storeu_ps(dst + x, v_dst_0);
+            _mm_storeu_ps(dst + x + 4, v_dst_1);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<ushort, double, float>
+{
+    int operator () (const ushort * src, double * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            _mm_storeu_pd(dst + x, _mm_cvtps_pd(v_dst_0));
+            _mm_storeu_pd(dst + x + 4, _mm_cvtps_pd(_mm_castsi128_ps(
+                _mm_srli_si128(_mm_castps_si128(v_dst_0), 16))));
+
+            _mm_storeu_pd(dst + x + 8, _mm_cvtps_pd(v_dst_1));
+            _mm_storeu_pd(dst + x + 12, _mm_cvtps_pd(_mm_castsi128_ps(
+                _mm_srli_si128(_mm_castps_si128(v_dst_1), 16))));
+        }
+
+        return x;
+    }
+};
+
+// from short
+
+template <>
+struct cvtScale_SIMD<short, uchar, float>
+{
+    int operator () (const short * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_dst, v_zero));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<short, schar, float>
+{
+    int operator () (const short * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packs_epi16(v_dst, v_zero));
+        }
+
+        return x;
+    }
+};
+
+#if CV_SSE4_1
+
+template <>
+struct cvtScale_SIMD<short, ushort, float>
+{
+    cvtScale_SIMD()
+    {
+        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+    }
+
+    int operator () (const short * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!haveSSE)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
+                                             _mm_cvtps_epi32(v_dst_1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+
+    bool haveSSE;
+};
+
+#endif
+
+template <>
+struct cvtScale_SIMD<short, short, float>
+{
+    int operator () (const short * src, short * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<short, int, float>
+{
+    int operator () (const short * src, int * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_cvtps_epi32(v_dst_0));
+            _mm_storeu_si128((__m128i *)(dst + x + 4), _mm_cvtps_epi32(v_dst_1));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<short, float, float>
+{
+    int operator () (const short * src, float * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            _mm_storeu_ps(dst + x, v_dst_0);
+            _mm_storeu_ps(dst + x + 4, v_dst_1);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<short, double, float>
+{
+    int operator () (const short * src, double * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
+
+            _mm_storeu_pd(dst + x, _mm_cvtps_pd(v_dst_0));
+            _mm_storeu_pd(dst + x + 4, _mm_cvtps_pd(_mm_castsi128_ps(
+                _mm_srli_si128(_mm_castps_si128(v_dst_0), 16))));
+
+            _mm_storeu_pd(dst + x + 8, _mm_cvtps_pd(v_dst_1));
+            _mm_storeu_pd(dst + x + 12, _mm_cvtps_pd(_mm_castsi128_ps(
+                _mm_srli_si128(_mm_castps_si128(v_dst_1), 16))));
+        }
+
+        return x;
+    }
+};
+
+// from int
+
+template <>
+struct cvtScale_SIMD<int, uchar, float>
+{
+    int operator () (const int * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            v_src = _mm_loadu_si128((__m128i const *)(src + x + 4));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_dst, v_zero));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<int, schar, float>
+{
+    int operator () (const int * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            v_src = _mm_loadu_si128((__m128i const *)(src + x + 4));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packs_epi16(v_dst, v_zero));
+        }
+
+        return x;
+    }
+};
+
+#if CV_SSE4_1
+
+template <>
+struct cvtScale_SIMD<int, ushort, float>
+{
+    cvtScale_SIMD()
+    {
+        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+    }
+
+    int operator () (const int * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!haveSSE)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            v_src = _mm_loadu_si128((__m128i const *)(src + x + 4));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
+                                             _mm_cvtps_epi32(v_dst_1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+
+    bool haveSSE;
+};
+
+#endif
+
+template <>
+struct cvtScale_SIMD<int, short, float>
+{
+    int operator () (const int * src, short * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            v_src = _mm_loadu_si128((__m128i const *)(src + x + 4));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<int, int, float>
+{
+    int operator () (const int * src, int * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            v_src = _mm_loadu_si128((__m128i const *)(src + x + 4));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_cvtps_epi32(v_dst_0));
+            _mm_storeu_si128((__m128i *)(dst + x + 4), _mm_cvtps_epi32(v_dst_1));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<int, float, float>
+{
+    int operator () (const int * src, float * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            v_src = _mm_loadu_si128((__m128i const *)(src + x + 4));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            _mm_storeu_ps(dst + x, v_dst_0);
+            _mm_storeu_ps(dst + x + 4, v_dst_1);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<int, double, float>
+{
+    int operator () (const int * src, double * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            v_src = _mm_loadu_si128((__m128i const *)(src + x + 4));
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
+
+            _mm_storeu_pd(dst + x, _mm_cvtps_pd(v_dst_0));
+            _mm_storeu_pd(dst + x + 4, _mm_cvtps_pd(_mm_castsi128_ps(
+                _mm_srli_si128(_mm_castps_si128(v_dst_0), 16))));
+
+            _mm_storeu_pd(dst + x + 8, _mm_cvtps_pd(v_dst_1));
+            _mm_storeu_pd(dst + x + 12, _mm_cvtps_pd(_mm_castsi128_ps(
+                _mm_srli_si128(_mm_castps_si128(v_dst_1), 16))));
+        }
+
+        return x;
+    }
+};
+
+// from float
+
+template <>
+struct cvtScale_SIMD<float, uchar, float>
+{
+    int operator () (const float * src, uchar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src = _mm_loadu_ps(src + x);
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            v_src = _mm_loadu_ps(src + x + 4);
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_dst, v_zero));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<float, schar, float>
+{
+    int operator () (const float * src, schar * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128i v_zero = _mm_setzero_si128();
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src = _mm_loadu_ps(src + x);
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            v_src = _mm_loadu_ps(src + x + 4);
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packs_epi16(v_dst, v_zero));
+        }
+
+        return x;
+    }
+};
+
+#if CV_SSE4_1
+
+template <>
+struct cvtScale_SIMD<float, ushort, float>
+{
+    cvtScale_SIMD()
+    {
+        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+    }
+
+    int operator () (const float * src, ushort * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!haveSSE)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src = _mm_loadu_ps(src + x);
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            v_src = _mm_loadu_ps(src + x + 4);
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
+                                             _mm_cvtps_epi32(v_dst_1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+
+    bool haveSSE;
+};
+
+#endif
+
+template <>
+struct cvtScale_SIMD<float, short, float>
+{
+    int operator () (const float * src, short * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src = _mm_loadu_ps(src + x);
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            v_src = _mm_loadu_ps(src + x + 4);
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_dst_0),
+                                            _mm_cvtps_epi32(v_dst_1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<float, int, float>
+{
+    int operator () (const float * src, int * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src = _mm_loadu_ps(src + x);
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            v_src = _mm_loadu_ps(src + x + 4);
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_cvtps_epi32(v_dst_0));
+            _mm_storeu_si128((__m128i *)(dst + x + 4), _mm_cvtps_epi32(v_dst_1));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<float, float, float>
+{
+    int operator () (const float * src, float * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src = _mm_loadu_ps(src + x);
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            v_src = _mm_loadu_ps(src + x + 4);
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            _mm_storeu_ps(dst + x, v_dst_0);
+            _mm_storeu_ps(dst + x + 4, v_dst_1);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct cvtScale_SIMD<float, double, float>
+{
+    int operator () (const float * src, double * dst, int width, float scale, float shift) const
+    {
+        int x = 0;
+
+        if (!USE_SSE2)
+            return x;
+
+        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src = _mm_loadu_ps(src + x);
+            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            v_src = _mm_loadu_ps(src + x + 4);
+            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
+
+            _mm_storeu_pd(dst + x, _mm_cvtps_pd(v_dst_0));
+            _mm_storeu_pd(dst + x + 4, _mm_cvtps_pd(_mm_castsi128_ps(
+                _mm_srli_si128(_mm_castps_si128(v_dst_0), 16))));
+
+            _mm_storeu_pd(dst + x + 8, _mm_cvtps_pd(v_dst_1));
+            _mm_storeu_pd(dst + x + 12, _mm_cvtps_pd(_mm_castsi128_ps(
+                _mm_srli_si128(_mm_castps_si128(v_dst_1), 16))));
+        }
+
+        return x;
+    }
+};
+
 #elif CV_NEON
 
 // from uchar
