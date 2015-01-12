@@ -5096,6 +5096,28 @@ public:
 
                             vst2q_s16(xy + (x1 << 1), v_dst);
                         }
+                        #elif CV_SSE2
+                        __m128i v_X0 = _mm_set1_epi32(X0);
+                        __m128i v_Y0 = _mm_set1_epi32(Y0);
+                        for ( ; x1 <= bw - 16; x1 += 16)
+                        {
+                            __m128i v_x0 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x + x1))), AB_BITS),
+                                                           _mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x + x1 + 4))), AB_BITS));
+                            __m128i v_x1 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x + x1 + 8))), AB_BITS),
+                                                           _mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x + x1 + 12))), AB_BITS));
+
+                            __m128i v_y0 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x + x1))), AB_BITS),
+                                                           _mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x + x1 + 4))), AB_BITS));
+                            __m128i v_y1 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x + x1 + 8))), AB_BITS),
+                                                           _mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x + x1 + 12))), AB_BITS));
+
+                            _mm_interleave_epi16(v_x0, v_x1, v_y0, v_y1);
+
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2), v_x0);
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 8), v_x1);
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 16), v_y0);
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 24), v_y1);
+                        }
                         #endif
                         for( ; x1 < bw; x1++ )
                         {
