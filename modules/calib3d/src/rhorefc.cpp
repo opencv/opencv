@@ -1722,61 +1722,61 @@ static inline void   sacCalcJacobianErrors(const float* restrict H,
 
             /* Update Jte:          X             Y   */
             if(Jte){
-                Jte[0]    += eX   *dxh11 + eY   *dyh11;
-                Jte[1]    += eX   *dxh12 + eY   *dyh12;
-                Jte[2]    += eX   *dxh13 + eY   *dyh13;
-                Jte[3]    += eX   *dxh21 + eY   *dyh21;
-                Jte[4]    += eX   *dxh22 + eY   *dyh22;
-                Jte[5]    += eX   *dxh23 + eY   *dyh23;
-                Jte[6]    += eX   *dxh31 + eY   *dyh31;
-                Jte[7]    += eX   *dxh32 + eY   *dyh32;
+                Jte[0]    += eX   *dxh11              ;/*  +0 */
+                Jte[1]    += eX   *dxh12              ;/*  +0 */
+                Jte[2]    += eX   *dxh13              ;/*  +0 */
+                Jte[3]    +=               eY   *dyh21;/* 0+  */
+                Jte[4]    +=               eY   *dyh22;/* 0+  */
+                Jte[5]    +=               eY   *dyh23;/* 0+  */
+                Jte[6]    += eX   *dxh31 + eY   *dyh31;/*  +  */
+                Jte[7]    += eX   *dxh32 + eY   *dyh32;/*  +  */
             }
 
             /* Update JtJ:          X             Y    */
             if(JtJ){
-                JtJ[0][0] += dxh11*dxh11 + dyh11*dyh11;
+                JtJ[0][0] += dxh11*dxh11              ;/*  +0 */
 
-                JtJ[1][0] += dxh11*dxh12 + dyh11*dyh12;
-                JtJ[1][1] += dxh12*dxh12 + dyh12*dyh12;
+                JtJ[1][0] += dxh11*dxh12              ;/*  +0 */
+                JtJ[1][1] += dxh12*dxh12              ;/*  +0 */
 
-                JtJ[2][0] += dxh11*dxh13 + dyh11*dyh13;
-                JtJ[2][1] += dxh12*dxh13 + dyh12*dyh13;
-                JtJ[2][2] += dxh13*dxh13 + dyh13*dyh13;
+                JtJ[2][0] += dxh11*dxh13              ;/*  +0 */
+                JtJ[2][1] += dxh12*dxh13              ;/*  +0 */
+                JtJ[2][2] += dxh13*dxh13              ;/*  +0 */
 
-                JtJ[3][0] += dxh11*dxh21 + dyh11*dyh21;
-                JtJ[3][1] += dxh12*dxh21 + dyh12*dyh21;
-                JtJ[3][2] += dxh13*dxh21 + dyh13*dyh21;
-                JtJ[3][3] += dxh21*dxh21 + dyh21*dyh21;
+              /*JtJ[3][0] +=                          ;/* 0+0 */
+              /*JtJ[3][1] +=                          ;/* 0+0 */
+              /*JtJ[3][2] +=                          ;/* 0+0 */
+                JtJ[3][3] +=               dyh21*dyh21;/* 0+  */
 
-                JtJ[4][0] += dxh11*dxh22 + dyh11*dyh22;
-                JtJ[4][1] += dxh12*dxh22 + dyh12*dyh22;
-                JtJ[4][2] += dxh13*dxh22 + dyh13*dyh22;
-                JtJ[4][3] += dxh21*dxh22 + dyh21*dyh22;
-                JtJ[4][4] += dxh22*dxh22 + dyh22*dyh22;
+              /*JtJ[4][0] +=                          ;/* 0+0 */
+              /*JtJ[4][1] +=                          ;/* 0+0 */
+              /*JtJ[4][2] +=                          ;/* 0+0 */
+                JtJ[4][3] +=               dyh21*dyh22;/* 0+  */
+                JtJ[4][4] +=               dyh22*dyh22;/* 0+  */
 
-                JtJ[5][0] += dxh11*dxh23 + dyh11*dyh23;
-                JtJ[5][1] += dxh12*dxh23 + dyh12*dyh23;
-                JtJ[5][2] += dxh13*dxh23 + dyh13*dyh23;
-                JtJ[5][3] += dxh21*dxh23 + dyh21*dyh23;
-                JtJ[5][4] += dxh22*dxh23 + dyh22*dyh23;
-                JtJ[5][5] += dxh23*dxh23 + dyh23*dyh23;
+              /*JtJ[5][0] +=                          ;/* 0+0 */
+              /*JtJ[5][1] +=                          ;/* 0+0 */
+              /*JtJ[5][2] +=                          ;/* 0+0 */
+                JtJ[5][3] +=               dyh21*dyh23;/* 0+  */
+                JtJ[5][4] +=               dyh22*dyh23;/* 0+  */
+                JtJ[5][5] +=               dyh23*dyh23;/* 0+  */
 
-                JtJ[6][0] += dxh11*dxh31 + dyh11*dyh31;
-                JtJ[6][1] += dxh12*dxh31 + dyh12*dyh31;
-                JtJ[6][2] += dxh13*dxh31 + dyh13*dyh31;
-                JtJ[6][3] += dxh21*dxh31 + dyh21*dyh31;
-                JtJ[6][4] += dxh22*dxh31 + dyh22*dyh31;
-                JtJ[6][5] += dxh23*dxh31 + dyh23*dyh31;
-                JtJ[6][6] += dxh31*dxh31 + dyh31*dyh31;
+                JtJ[6][0] += dxh11*dxh31              ;/*  +0 */
+                JtJ[6][1] += dxh12*dxh31              ;/*  +0 */
+                JtJ[6][2] += dxh13*dxh31              ;/*  +0 */
+                JtJ[6][3] +=               dyh21*dyh31;/* 0+  */
+                JtJ[6][4] +=               dyh22*dyh31;/* 0+  */
+                JtJ[6][5] +=               dyh23*dyh31;/* 0+  */
+                JtJ[6][6] += dxh31*dxh31 + dyh31*dyh31;/*  +  */
 
-                JtJ[7][0] += dxh11*dxh32 + dyh11*dyh32;
-                JtJ[7][1] += dxh12*dxh32 + dyh12*dyh32;
-                JtJ[7][2] += dxh13*dxh32 + dyh13*dyh32;
-                JtJ[7][3] += dxh21*dxh32 + dyh21*dyh32;
-                JtJ[7][4] += dxh22*dxh32 + dyh22*dyh32;
-                JtJ[7][5] += dxh23*dxh32 + dyh23*dyh32;
-                JtJ[7][6] += dxh31*dxh32 + dyh31*dyh32;
-                JtJ[7][7] += dxh32*dxh32 + dyh32*dyh32;
+                JtJ[7][0] += dxh11*dxh32              ;/*  +0 */
+                JtJ[7][1] += dxh12*dxh32              ;/*  +0 */
+                JtJ[7][2] += dxh13*dxh32              ;/*  +0 */
+                JtJ[7][3] +=               dyh21*dyh32;/* 0+  */
+                JtJ[7][4] +=               dyh22*dyh32;/* 0+  */
+                JtJ[7][5] +=               dyh23*dyh32;/* 0+  */
+                JtJ[7][6] += dxh31*dxh32 + dyh31*dyh32;/*  +  */
+                JtJ[7][7] += dxh32*dxh32 + dyh32*dyh32;/*  +  */
             }
         }
     }
