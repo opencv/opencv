@@ -204,7 +204,7 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
             )
 {
     Size sz = GetParam();
-    int mode = COLOR_RGB2HLS;
+    int mode = COLOR_HLS2RGB;
     ChPair ch = getConversionInfo(mode);
     mode %= COLOR_COLORCVT_MAX;
 
