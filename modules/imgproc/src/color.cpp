@@ -1460,9 +1460,9 @@ struct RGB2Gray<ushort>
         if( blueIdx == 0 )
             std::swap(coeffs[0], coeffs[2]);
 
-        v_cb = _mm_set1_epi16(coeffs[0]);
-        v_cg = _mm_set1_epi16(coeffs[1]);
-        v_cr = _mm_set1_epi16(coeffs[2]);
+        v_cb = _mm_set1_epi16((short)coeffs[0]);
+        v_cg = _mm_set1_epi16((short)coeffs[1]);
+        v_cr = _mm_set1_epi16((short)coeffs[2]);
         v_delta = _mm_set1_epi32(1 << (yuv_shift - 1));
     }
 

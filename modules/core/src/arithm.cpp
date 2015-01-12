@@ -3476,7 +3476,7 @@ struct Cmp_SIMD<schar>
 
         haveSSE = checkHardwareSupport(CV_CPU_SSE2);
 
-        v_mask = _mm_set1_epi8(0xff);
+        v_mask = _mm_set1_epi8(-1);
     }
 
     int operator () (const schar * src1, const schar * src2, uchar * dst, int width) const
