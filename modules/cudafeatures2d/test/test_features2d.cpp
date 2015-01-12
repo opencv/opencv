@@ -76,15 +76,14 @@ CUDA_TEST_P(FAST, Accuracy)
     cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
-    cv::cuda::FAST_CUDA fast(threshold);
-    fast.nonmaxSuppression = nonmaxSuppression;
+    cv::Ptr<cv::cuda::FastFeatureDetector> fast = cv::cuda::FastFeatureDetector::create(threshold, nonmaxSuppression);
 
     if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
     {
         try
         {
             std::vector<cv::KeyPoint> keypoints;
-            fast(loadMat(image), cv::cuda::GpuMat(), keypoints);
+            fast->detect(loadMat(image), keypoints);
         }
         catch (const cv::Exception& e)
         {
@@ -94,7 +93,7 @@ CUDA_TEST_P(FAST, Accuracy)
     else
     {
         std::vector<cv::KeyPoint> keypoints;
-        fast(loadMat(image), cv::cuda::GpuMat(), keypoints);
+        fast->detect(loadMat(image), keypoints);
 
         std::vector<cv::KeyPoint> keypoints_gold;
         cv::FAST(image, keypoints_gold, threshold, nonmaxSuppression);
