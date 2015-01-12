@@ -617,15 +617,18 @@ struct VMerge4<data_type>                                                       
 }
 
 MERGE2_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_deinterleave_epi8, si128);
-MERGE2_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_deinterleave_epi16, si128);
-MERGE2_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_deinterleave_ps, ps);
-
 MERGE3_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128);
-MERGE3_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128);
-MERGE3_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps);
-
 MERGE4_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128);
+
+MERGE2_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_deinterleave_epi16, si128);
+
+#if CV_SSE4_1
+MERGE3_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128);
 MERGE4_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128);
+#endif
+
+MERGE2_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_deinterleave_ps, ps);
+MERGE3_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps);
 MERGE4_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps);
 
 #endif
@@ -4328,7 +4331,7 @@ cvtScale_<short, int, float>( const short* src, size_t sstep,
         {
             __m256 scale256 = _mm256_set1_ps(scale);
             __m256 shift256 = _mm256_set1_ps(shift);
-            int shuffle = 0xD8;
+            const int shuffle = 0xD8;
 
             for ( ; x <= size.width - 16; x += 16)
             {

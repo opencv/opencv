@@ -236,7 +236,11 @@ struct PyrDownVec_32s16u
     bool haveSSE;
 };
 
-#endif
+#else
+
+typedef PyrDownNoVec<int, ushort> PyrDownVec_32s16u;
+
+#endif // CV_SSE4_1
 
 struct PyrDownVec_32s16s
 {
@@ -287,7 +291,6 @@ struct PyrDownVec_32s16s
 
     bool haveSSE;
 };
-
 
 struct PyrUpVec_32s8u
 {
@@ -471,7 +474,11 @@ struct PyrUpVec_32s16u
     }
 };
 
-#endif
+#else
+
+typedef PyrUpNoVec<int, ushort> PyrUpVec_32s16u;
+
+#endif // CV_SSE4_1
 
 struct PyrUpVec_32f
 {
