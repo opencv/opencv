@@ -12,7 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Copyright (C) 2014, Itseez Inc., all rights reserved.
+// Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -271,6 +271,8 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
         return;
+#elif CV_SSE2
+    bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
 #endif
 
     int depth = src.depth();
@@ -318,6 +320,33 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
             v_dst.val[2] = vmulq_f32(v_dy, v_dy);
 
             vst3q_f32(cov_data + j * 3, v_dst);
+        }
+        #elif CV_SSE2
+        if (haveSSE2)
+        {
+            for( ; j <= size.width - 8; j += 8 )
+            {
+                __m128 v_dx_0 = _mm_loadu_ps(dxdata + j);
+                __m128 v_dx_1 = _mm_loadu_ps(dxdata + j + 4);
+                __m128 v_dy_0 = _mm_loadu_ps(dydata + j);
+                __m128 v_dy_1 = _mm_loadu_ps(dydata + j + 4);
+
+                __m128 v_dx2_0 = _mm_mul_ps(v_dx_0, v_dx_0);
+                __m128 v_dxy_0 = _mm_mul_ps(v_dx_0, v_dy_0);
+                __m128 v_dy2_0 = _mm_mul_ps(v_dy_0, v_dy_0);
+                __m128 v_dx2_1 = _mm_mul_ps(v_dx_1, v_dx_1);
+                __m128 v_dxy_1 = _mm_mul_ps(v_dx_1, v_dy_1);
+                __m128 v_dy2_1 = _mm_mul_ps(v_dy_1, v_dy_1);
+
+                _mm_interleave_ps(v_dx2_0, v_dx2_1, v_dxy_0, v_dxy_1, v_dy2_0, v_dy2_1);
+
+                _mm_storeu_ps(cov_data + j * 3, v_dx2_0);
+                _mm_storeu_ps(cov_data + j * 3 + 4, v_dx2_1);
+                _mm_storeu_ps(cov_data + j * 3 + 8, v_dxy_0);
+                _mm_storeu_ps(cov_data + j * 3 + 12, v_dxy_1);
+                _mm_storeu_ps(cov_data + j * 3 + 16, v_dy2_0);
+                _mm_storeu_ps(cov_data + j * 3 + 20, v_dy2_1);
+            }
         }
         #endif
 
