@@ -4847,6 +4847,26 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
 
                     vst2q_s16(dst1 + (x << 1), v_dst);
                 }
+                #elif CV_SSE4_1
+                for( ; x <= size.width - 16; x += 16 )
+                {
+                    __m128i v_dst0 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src1f + x)),
+                                                     _mm_cvtps_epi32(_mm_loadu_ps(src1f + x + 4)));
+                    __m128i v_dst1 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src1f + x + 8)),
+                                                     _mm_cvtps_epi32(_mm_loadu_ps(src1f + x + 12)));
+
+                    __m128i v_dst2 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src2f + x)),
+                                                     _mm_cvtps_epi32(_mm_loadu_ps(src2f + x + 4)));
+                    __m128i v_dst3 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src2f + x + 8)),
+                                                     _mm_cvtps_epi32(_mm_loadu_ps(src2f + x + 12)));
+
+                    _mm_interleave_epi16(v_dst0, v_dst1, v_dst2, v_dst3);
+
+                    _mm_storeu_si128((__m128i *)(dst1 + x * 2), v_dst0);
+                    _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 8), v_dst1);
+                    _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 16), v_dst2);
+                    _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 24), v_dst3);
+                }
                 #endif
                 for( ; x < size.width; x++ )
                 {
@@ -4881,6 +4901,49 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                                                               vandq_s32(v_ix1, v_mask)));
                     vst1q_u16(dst2 + x, vcombine_u16(v_dst0, v_dst1));
                 }
+                #elif CV_SSE4_1
+                __m128 v_its = _mm_set1_ps(INTER_TAB_SIZE);
+                __m128i v_its1 = _mm_set1_epi32(INTER_TAB_SIZE-1);
+
+                for( ; x <= size.width - 16; x += 16 )
+                {
+                    __m128i v_ix0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x), v_its));
+                    __m128i v_ix1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x + 4), v_its));
+                    __m128i v_iy0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src2f + x), v_its));
+                    __m128i v_iy1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src2f + x + 4), v_its));
+
+                    __m128i v_dst10 = _mm_packs_epi32(_mm_srai_epi32(v_ix0, INTER_BITS),
+                                                      _mm_srai_epi32(v_ix1, INTER_BITS));
+                    __m128i v_dst12 = _mm_packs_epi32(_mm_srai_epi32(v_iy0, INTER_BITS),
+                                                      _mm_srai_epi32(v_iy1, INTER_BITS));
+                    __m128i v_dst20 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_iy0, v_its1), INTER_BITS),
+                                                    _mm_and_si128(v_ix0, v_its1));
+                    __m128i v_dst21 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_iy1, v_its1), INTER_BITS),
+                                                    _mm_and_si128(v_ix1, v_its1));
+                    _mm_storeu_si128((__m128i *)(dst2 + x), _mm_packus_epi32(v_dst20, v_dst21));
+
+                    v_ix0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x + 8), v_its));
+                    v_ix1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x + 12), v_its));
+                    v_iy0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src2f + x + 8), v_its));
+                    v_iy1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src2f + x + 12), v_its));
+
+                    __m128i v_dst11 = _mm_packs_epi32(_mm_srai_epi32(v_ix0, INTER_BITS),
+                                                      _mm_srai_epi32(v_ix1, INTER_BITS));
+                    __m128i v_dst13 = _mm_packs_epi32(_mm_srai_epi32(v_iy0, INTER_BITS),
+                                                      _mm_srai_epi32(v_iy1, INTER_BITS));
+                    v_dst20 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_iy0, v_its1), INTER_BITS),
+                                            _mm_and_si128(v_ix0, v_its1));
+                    v_dst21 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_iy1, v_its1), INTER_BITS),
+                                            _mm_and_si128(v_ix1, v_its1));
+                    _mm_storeu_si128((__m128i *)(dst2 + x + 8), _mm_packus_epi32(v_dst20, v_dst21));
+
+                    _mm_interleave_epi16(v_dst10, v_dst11, v_dst12, v_dst13);
+
+                    _mm_storeu_si128((__m128i *)(dst1 + x * 2), v_dst10);
+                    _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 8), v_dst11);
+                    _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 16), v_dst12);
+                    _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 24), v_dst13);
+                }
                 #endif
                 for( ; x < size.width; x++ )
                 {
@@ -4900,6 +4963,12 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 for( ; x <= (size.width << 1) - 8; x += 8 )
                     vst1q_s16(dst1 + x, vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x))),
                                                      vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x + 4)))));
+                #elif CV_SSE2
+                for( ; x <= (size.width << 1) - 8; x += 8 )
+                {
+                    _mm_storeu_si128((__m128i *)(dst1 + x), _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src1f + x)),
+                                                                            _mm_cvtps_epi32(_mm_loadu_ps(src1f + x + 4))));
+                }
                 #endif
                 for( ; x < size.width; x++ )
                 {
@@ -4934,6 +5003,27 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                     uint16x4_t v_dst1 = vqmovun_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_iy1, v_mask), INTER_BITS),
                                                               vandq_s32(v_ix1, v_mask)));
                     vst1q_u16(dst2 + x, vcombine_u16(v_dst0, v_dst1));
+                }
+                #elif CV_SSE2
+                __m128 v_its = _mm_set1_ps(INTER_TAB_SIZE);
+                __m128i v_its1 = _mm_set1_epi32(INTER_TAB_SIZE-1);
+                __m128i v_y_mask = _mm_set1_epi32((INTER_TAB_SIZE-1) << 16);
+
+                for( ; x <= size.width - 4; x += 4 )
+                {
+                    __m128i v_src0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x * 2), v_its));
+                    __m128i v_src1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x * 2 + 4), v_its));
+
+                    __m128i v_dst1 = _mm_packs_epi32(_mm_srai_epi32(v_src0, INTER_BITS),
+                                                     _mm_srai_epi32(v_src1, INTER_BITS));
+                    _mm_storeu_si128((__m128i *)(dst1 + x * 2), v_dst1);
+
+                    // x0 y0 x1 y1 . . .
+                    v_src0 = _mm_packs_epi32(_mm_and_si128(v_src0, v_its1),
+                                             _mm_and_si128(v_src1, v_its1));
+                    __m128i v_dst2 = _mm_or_si128(_mm_srli_epi32(_mm_and_si128(v_src0, v_y_mask), 16 - INTER_BITS), // y0 0 y1 0 . . .
+                                                  _mm_and_si128(v_src0, v_its1)); // 0 x0 0 x1 . . .
+                    _mm_storel_epi64((__m128i *)(dst2 + x), _mm_packus_epi32(v_dst2, v_dst2));
                 }
                 #endif
                 for( ; x < size.width; x++ )
@@ -4980,6 +5070,44 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 vst1q_f32(dst1f + x + 4, v_dst1);
                 vst1q_f32(dst2f + x + 4, v_dst2);
             }
+            #elif CV_SSE2
+            __m128i v_mask2 = _mm_set1_epi16(INTER_TAB_SIZE2-1);
+            __m128i v_zero = _mm_setzero_si128(), v_mask = _mm_set1_epi32(INTER_TAB_SIZE-1);
+            __m128 v_scale = _mm_set1_ps(scale);
+
+            for( ; x <= size.width - 16; x += 16)
+            {
+                __m128i v_src10 = _mm_loadu_si128((__m128i const *)(src1 + x * 2));
+                __m128i v_src11 = _mm_loadu_si128((__m128i const *)(src1 + x * 2 + 8));
+                __m128i v_src20 = _mm_loadu_si128((__m128i const *)(src1 + x * 2 + 16));
+                __m128i v_src21 = _mm_loadu_si128((__m128i const *)(src1 + x * 2 + 24));
+
+                _mm_deinterleave_epi16(v_src10, v_src11, v_src20, v_src21);
+
+                __m128i v_fxy = src2 ? _mm_and_si128(_mm_loadu_si128((__m128i const *)(src2 + x)), v_mask2) : v_zero;
+                __m128i v_fxy_p = _mm_unpacklo_epi16(v_fxy, v_zero);
+                _mm_storeu_ps(dst1f + x, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src10), 16)),
+                                                    _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_and_si128(v_fxy_p, v_mask)))));
+                _mm_storeu_ps(dst2f + x, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src20), 16)),
+                                                    _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_srli_epi32(v_fxy_p, INTER_BITS)))));
+                v_fxy_p = _mm_unpackhi_epi16(v_fxy, v_zero);
+                _mm_storeu_ps(dst1f + x + 4, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src10), 16)),
+                                                        _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_and_si128(v_fxy_p, v_mask)))));
+                _mm_storeu_ps(dst2f + x + 4, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src20), 16)),
+                                                        _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_srli_epi32(v_fxy_p, INTER_BITS)))));
+
+                v_fxy = src2 ? _mm_and_si128(_mm_loadu_si128((__m128i const *)(src2 + x + 8)), v_mask2) : v_zero;
+                v_fxy_p = _mm_unpackhi_epi16(v_fxy, v_zero);
+                _mm_storeu_ps(dst1f + x + 8, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src11), 16)),
+                                                        _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_and_si128(v_fxy_p, v_mask)))));
+                _mm_storeu_ps(dst2f + x + 8, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src21), 16)),
+                                                        _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_srli_epi32(v_fxy_p, INTER_BITS)))));
+                v_fxy_p = _mm_unpackhi_epi16(v_fxy, v_zero);
+                _mm_storeu_ps(dst1f + x + 12, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src11), 16)),
+                                                         _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_and_si128(v_fxy_p, v_mask)))));
+                _mm_storeu_ps(dst2f + x + 12, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src21), 16)),
+                                                         _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_srli_epi32(v_fxy_p, INTER_BITS)))));
+            }
             #endif
             for( ; x < size.width; x++ )
             {
@@ -5020,6 +5148,24 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 v_dst.val[1] = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src.val[1]))),
                                          v_scale, vcvtq_f32_s32(vshrq_n_s32(v_fxy2, INTER_BITS)));
                 vst2q_f32(dst1f + (x << 1) + 8, v_dst);
+            }
+            #elif CV_SSE2
+            __m128i v_mask2 = _mm_set1_epi16(INTER_TAB_SIZE2-1);
+            __m128i v_zero = _mm_set1_epi32(0), v_mask = _mm_set1_epi32(INTER_TAB_SIZE-1);
+            __m128 v_scale = _mm_set1_ps(scale);
+
+            for ( ; x <= size.width - 8; x += 8)
+            {
+                __m128i v_src = _mm_loadu_si128((__m128i const *)(src1 + x * 2));
+                __m128i v_fxy = src2 ? _mm_and_si128(_mm_loadu_si128((__m128i const *)(src2 + x)), v_mask2) : v_zero;
+                __m128i v_fxy1 = _mm_and_si128(v_fxy, v_mask);
+                __m128i v_fxy2 = _mm_srli_epi16(v_fxy, INTER_BITS);
+
+                __m128 v_add = _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_fxy1, v_fxy2)), v_scale);
+                _mm_storeu_ps(dst1f + x * 2, _mm_add_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero)), v_add));
+
+                v_add = _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_fxy1, v_fxy2)), v_scale);
+                _mm_storeu_ps(dst1f + x * 2, _mm_add_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero)), v_add));
             }
             #endif
             for( ; x < size.width; x++ )
@@ -5096,7 +5242,7 @@ public:
 
                             vst2q_s16(xy + (x1 << 1), v_dst);
                         }
-                        #elif CV_SSE2
+                        #elif CV_SSE4_1
                         __m128i v_X0 = _mm_set1_epi32(X0);
                         __m128i v_Y0 = _mm_set1_epi32(Y0);
                         for ( ; x1 <= bw - 16; x1 += 16)
@@ -5525,7 +5671,7 @@ public:
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, width);
         bh0 = std::min(BLOCK_SZ*BLOCK_SZ/bw0, height);
 
-        #if CV_SSE2
+        #if CV_SSE4_1
         __m128d v_M0 = _mm_set1_pd(M[0]);
         __m128d v_M3 = _mm_set1_pd(M[3]);
         __m128d v_M6 = _mm_set1_pd(M[6]);
@@ -5559,7 +5705,7 @@ public:
                     {
                         x1 = 0;
 
-                        #if CV_SSE2
+                        #if CV_SSE4_1
                         __m128d v_X0d = _mm_set1_pd(X0);
                         __m128d v_Y0d = _mm_set1_pd(Y0);
                         __m128d v_W0 = _mm_set1_pd(W0);
@@ -5684,7 +5830,7 @@ public:
                         short* alpha = A + y1*bw;
                         x1 = 0;
 
-                        #if CV_SSE2
+                        #if CV_SSE4_1
                         __m128d v_X0d = _mm_set1_pd(X0);
                         __m128d v_Y0d = _mm_set1_pd(Y0);
                         __m128d v_W0 = _mm_set1_pd(W0);
