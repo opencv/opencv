@@ -1504,7 +1504,7 @@ struct RGB2Gray<ushort>
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + 32));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + 40));
 
-                _mm_deinterliv_epi16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_epi16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128i v_gray0;
                 process(v_r0, v_g0, v_b0,
@@ -1531,7 +1531,7 @@ struct RGB2Gray<ushort>
                 __m128i v_a0 = _mm_loadu_si128((__m128i const *)(src + 48));
                 __m128i v_a1 = _mm_loadu_si128((__m128i const *)(src + 56));
 
-                _mm_deinterliv_epi16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
+                _mm_deinterleave_epi16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
 
                 __m128i v_gray0;
                 process(v_r0, v_g0, v_b0,
@@ -1596,7 +1596,7 @@ struct RGB2Gray<float>
                 __m128 v_b0 = _mm_loadu_ps(src + 16);
                 __m128 v_b1 = _mm_loadu_ps(src + 20);
 
-                _mm_deinterliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128 v_gray0;
                 process(v_r0, v_g0, v_b0,
@@ -1623,7 +1623,7 @@ struct RGB2Gray<float>
                 __m128 v_a0 = _mm_loadu_ps(src + 24);
                 __m128 v_a1 = _mm_loadu_ps(src + 28);
 
-                _mm_deinterliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
+                _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
 
                 __m128 v_gray0;
                 process(v_r0, v_g0, v_b0,
@@ -1821,7 +1821,7 @@ struct RGB2YCrCb_f<float>
                 __m128 v_b0 = _mm_loadu_ps(src + 16);
                 __m128 v_b1 = _mm_loadu_ps(src + 20);
 
-                _mm_deinterliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128 v_y0, v_cr0, v_cb0;
                 process(v_r0, v_g0, v_b0,
@@ -1831,7 +1831,7 @@ struct RGB2YCrCb_f<float>
                 process(v_r1, v_g1, v_b1,
                         v_y1, v_cr1, v_cb1);
 
-                _mm_interliv_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                _mm_interleave_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
 
                 _mm_storeu_ps(dst + i, v_y0);
                 _mm_storeu_ps(dst + i + 4, v_y1);
@@ -2186,7 +2186,7 @@ struct RGB2YCrCb_i<uchar>
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + 80));
 
-                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128i v_y0 = v_zero, v_cr0 = v_zero, v_cb0 = v_zero;
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
@@ -2218,7 +2218,7 @@ struct RGB2YCrCb_i<uchar>
                 __m128i v_cr_1 = _mm_packus_epi16(v_cr0, v_cr1);
                 __m128i v_cb_1 = _mm_packus_epi16(v_cb0, v_cb1);
 
-                _mm_interlive_epi8(v_y_0, v_y_1, v_cr_0, v_cr_1, v_cb_0, v_cb_1);
+                _mm_interleavee_epi8(v_y_0, v_y_1, v_cr_0, v_cr_1, v_cb_0, v_cb_1);
 
                 _mm_storeu_si128((__m128i *)(dst + i), v_y_0);
                 _mm_storeu_si128((__m128i *)(dst + i + 16), v_y_1);
@@ -2328,7 +2328,7 @@ struct RGB2YCrCb_i<ushort>
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + 32));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + 40));
 
-                _mm_deinterliv_epi16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_epi16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128i v_y0 = v_zero, v_cr0 = v_zero, v_cb0 = v_zero;
                 process(v_r0, v_g0, v_b0,
@@ -2338,7 +2338,7 @@ struct RGB2YCrCb_i<ushort>
                 process(v_r1, v_g1, v_b1,
                         v_y1, v_cr1, v_cb1);
 
-                _mm_interliv_epi16(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                _mm_interleave_epi16(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
 
                 _mm_storeu_si128((__m128i *)(dst + i), v_y0);
                 _mm_storeu_si128((__m128i *)(dst + i + 8), v_y1);
@@ -2536,7 +2536,7 @@ struct YCrCb2RGB_f<float>
                 __m128 v_cb0 = _mm_loadu_ps(src + i + 16);
                 __m128 v_cb1 = _mm_loadu_ps(src + i + 20);
 
-                _mm_deinterliv_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                _mm_deinterleave_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
 
                 __m128 v_r0, v_g0, v_b0;
                 process(v_y0, v_cr0, v_cb0,
@@ -2546,7 +2546,7 @@ struct YCrCb2RGB_f<float>
                 process(v_y1, v_cr1, v_cb1,
                         v_r1, v_g1, v_b1);
 
-                _mm_interliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_interleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 _mm_storeu_ps(dst, v_r0);
                 _mm_storeu_ps(dst + 4, v_r1);
@@ -2949,7 +2949,7 @@ struct YCrCb2RGB_i<uchar>
                 __m128i v_cb0 = _mm_loadu_si128((__m128i const *)(src + i + 64));
                 __m128i v_cb1 = _mm_loadu_si128((__m128i const *)(src + i + 80));
 
-                _mm_deinterliv_epi8(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                _mm_deinterleave_epi8(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
 
                 __m128i v_r_0 = v_zero, v_g_0 = v_zero, v_b_0 = v_zero;
                 process(_mm_unpacklo_epi8(v_y0, v_zero),
@@ -2987,7 +2987,7 @@ struct YCrCb2RGB_i<uchar>
                     std::swap(v_r1, v_b1);
                 }
 
-                _mm_interlive_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_interleavee_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 _mm_storeu_si128((__m128i *)(dst), v_r0);
                 _mm_storeu_si128((__m128i *)(dst + 16), v_r1);
@@ -3210,7 +3210,7 @@ struct RGB2XYZ_f<float>
                 __m128 v_b0 = _mm_loadu_ps(src + 16);
                 __m128 v_b1 = _mm_loadu_ps(src + 20);
 
-                _mm_deinterliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128 v_x0, v_y0, v_z0;
                 process(v_r0, v_g0, v_b0,
@@ -3220,7 +3220,7 @@ struct RGB2XYZ_f<float>
                 process(v_r1, v_g1, v_b1,
                         v_x1, v_y1, v_z1);
 
-                _mm_interliv_ps(v_x0, v_x1, v_y0, v_y1, v_z0, v_z1);
+                _mm_interleave_ps(v_x0, v_x1, v_y0, v_y1, v_z0, v_z1);
 
                 _mm_storeu_ps(dst + i, v_x0);
                 _mm_storeu_ps(dst + i + 4, v_x1);
@@ -3636,7 +3636,7 @@ struct XYZ2RGB_f<float>
                 __m128 v_z0 = _mm_loadu_ps(src + i + 16);
                 __m128 v_z1 = _mm_loadu_ps(src + i + 20);
 
-                _mm_deinterliv_ps(v_x0, v_x1, v_y0, v_y1, v_z0, v_z1);
+                _mm_deinterleave_ps(v_x0, v_x1, v_y0, v_y1, v_z0, v_z1);
 
                 __m128 v_r0, v_g0, v_b0;
                 process(v_x0, v_y0, v_z0,
@@ -3646,7 +3646,7 @@ struct XYZ2RGB_f<float>
                 process(v_x1, v_y1, v_z1,
                         v_r1, v_g1, v_b1);
 
-                _mm_interliv_ps(v_b0, v_b1, v_g0, v_g1, v_r0, v_r1);
+                _mm_interleave_ps(v_b0, v_b1, v_g0, v_g1, v_r0, v_r1);
 
                 _mm_storeu_ps(dst, v_b0);
                 _mm_storeu_ps(dst + 4, v_b1);
@@ -4216,7 +4216,7 @@ struct HSV2RGB_b
         v_g1 = _mm_mul_ps(v_g1, v_scale_inv);
         v_b1 = _mm_mul_ps(v_b1, v_scale_inv);
 
-        _mm_interliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+        _mm_interleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
         _mm_store_ps(buf, v_r0);
         _mm_store_ps(buf + 4, v_r1);
@@ -4267,7 +4267,7 @@ struct HSV2RGB_b
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + j + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + j + 80));
 
-                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
                         _mm_unpacklo_epi8(v_g0, v_zero),
@@ -4461,7 +4461,7 @@ struct RGB2HLS_b
         __m128 v_s0f = _mm_load_ps(buf + 16);
         __m128 v_s1f = _mm_load_ps(buf + 20);
 
-        _mm_deinterliv_ps(v_h0f, v_h1f, v_l0f, v_l1f, v_s0f, v_s1f);
+        _mm_deinterleave_ps(v_h0f, v_h1f, v_l0f, v_l1f, v_s0f, v_s1f);
 
         v_l0f = _mm_mul_ps(v_l0f, v_scale);
         v_l1f = _mm_mul_ps(v_l1f, v_scale);
@@ -4584,7 +4584,7 @@ struct RGB2HLS_b
                 __m128i v_l1 = _mm_packus_epi16(v_l_0, v_l_1);
                 __m128i v_s1 = _mm_packus_epi16(v_s_0, v_s_1);
 
-                _mm_interlive_epi8(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
+                _mm_interleavee_epi8(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
 
                 _mm_storeu_si128((__m128i *)(dst + j), v_h0);
                 _mm_storeu_si128((__m128i *)(dst + j + 16), v_h1);
@@ -4716,7 +4716,7 @@ struct HLS2RGB_b
         v_g1 = _mm_mul_ps(v_g1, v_scale_inv);
         v_b1 = _mm_mul_ps(v_b1, v_scale_inv);
 
-        _mm_interliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+        _mm_interleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
         _mm_store_ps(buf, v_r0);
         _mm_store_ps(buf + 4, v_r1);
@@ -4767,7 +4767,7 @@ struct HLS2RGB_b
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + j + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + j + 80));
 
-                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
                         _mm_unpacklo_epi8(v_g0, v_zero),
@@ -5215,7 +5215,7 @@ struct Lab2RGB_b
         v_b0 = _mm_sub_ps(v_b0, v_128);
         v_b1 = _mm_sub_ps(v_b1, v_128);
         
-        _mm_interliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+        _mm_interleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
         _mm_store_ps(buf, v_r0);
         _mm_store_ps(buf + 4, v_r1);
@@ -5266,7 +5266,7 @@ struct Lab2RGB_b
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + j + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + j + 80));
 
-                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
                         _mm_unpacklo_epi8(v_g0, v_zero),
@@ -5568,7 +5568,7 @@ struct RGB2Luv_b
         __m128 v_v0f = _mm_load_ps(buf + 16);
         __m128 v_v1f = _mm_load_ps(buf + 20);
 
-        _mm_deinterliv_ps(v_l0f, v_l1f, v_u0f, v_u1f, v_v0f, v_v1f);
+        _mm_deinterleave_ps(v_l0f, v_l1f, v_u0f, v_u1f, v_v0f, v_v1f);
 
         v_l0f = _mm_mul_ps(v_l0f, v_scale);
         v_l1f = _mm_mul_ps(v_l1f, v_scale);
@@ -5694,7 +5694,7 @@ struct RGB2Luv_b
                 __m128i v_u1 = _mm_packus_epi16(v_u_0, v_u_1);
                 __m128i v_v1 = _mm_packus_epi16(v_v_0, v_v_1);
 
-                _mm_interlive_epi8(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+                _mm_interleavee_epi8(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
 
                 _mm_storeu_si128((__m128i *)(dst + j), v_l0);
                 _mm_storeu_si128((__m128i *)(dst + j + 16), v_l1);
@@ -5775,7 +5775,7 @@ struct Luv2RGB_b
         v_v0 = _mm_sub_ps(_mm_mul_ps(v_v0, v_coeff2), v_140);
         v_v1 = _mm_sub_ps(_mm_mul_ps(v_v1, v_coeff2), v_140);
         
-        _mm_interliv_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+        _mm_interleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
 
         _mm_store_ps(buf, v_l0);
         _mm_store_ps(buf + 4, v_l1);
@@ -5826,7 +5826,7 @@ struct Luv2RGB_b
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + j + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + j + 80));
 
-                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_deinterleave_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
                         _mm_unpacklo_epi8(v_g0, v_zero),

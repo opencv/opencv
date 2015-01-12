@@ -138,7 +138,7 @@
 
 #if defined __SSE2__ || defined _M_X64  || (defined _M_IX86_FP && _M_IX86_FP >= 2)
 #  include <emmintrin.h>
-#  define CV_MMX
+#  define CV_MMX 1
 #  define CV_SSE 1
 #  define CV_SSE2 1
 #  if defined __SSE3__ || (defined _MSC_VER && _MSC_VER >= 1500)
