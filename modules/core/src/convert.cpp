@@ -158,7 +158,7 @@ struct VSplit2<data_type>                                                       
                                                                                            \
     VSplit2()                                                                              \
     {                                                                                      \
-        support = true;                                                                    \
+        support = checkHardwareSupport(CV_CPU_SSE2);                                       \
     }                                                                                      \
                                                                                            \
     void operator()(const data_type * src,                                                 \
@@ -191,7 +191,7 @@ struct VSplit3<data_type>                                                       
                                                                                            \
     VSplit3()                                                                              \
     {                                                                                      \
-        support = true;                                                                    \
+        support = checkHardwareSupport(CV_CPU_SSE2);                                       \
     }                                                                                      \
                                                                                            \
     void operator()(const data_type * src,                                                 \
@@ -229,7 +229,7 @@ struct VSplit4<data_type>                                                       
                                                                                            \
     VSplit4()                                                                              \
     {                                                                                      \
-        support = true;                                                                    \
+        support = checkHardwareSupport(CV_CPU_SSE2);                                       \
     }                                                                                      \
                                                                                            \
     void operator()(const data_type * src, data_type * dst0, data_type * dst1,             \
@@ -502,7 +502,7 @@ struct VMerge4
     bool support;
 };
 
-#define MERGE2_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor)     \
+#define MERGE2_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor, se) \
 template <>                                                                                \
 struct VMerge2<data_type>                                                                  \
 {                                                                                          \
@@ -513,7 +513,7 @@ struct VMerge2<data_type>                                                       
                                                                                            \
     VMerge2()                                                                              \
     {                                                                                      \
-        support = true;                                                                    \
+        support = checkHardwareSupport(se);                                                \
     }                                                                                      \
                                                                                            \
     void operator()(const data_type * src0, const data_type * src1,                        \
@@ -535,7 +535,7 @@ struct VMerge2<data_type>                                                       
     bool support;                                                                          \
 }
 
-#define MERGE3_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor)     \
+#define MERGE3_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor, se) \
 template <>                                                                                \
 struct VMerge3<data_type>                                                                  \
 {                                                                                          \
@@ -546,7 +546,7 @@ struct VMerge3<data_type>                                                       
                                                                                            \
     VMerge3()                                                                              \
     {                                                                                      \
-        support = true;                                                                    \
+        support = checkHardwareSupport(se);                                                \
     }                                                                                      \
                                                                                            \
     void operator()(const data_type * src0, const data_type * src1, const data_type * src2,\
@@ -573,7 +573,7 @@ struct VMerge3<data_type>                                                       
     bool support;                                                                          \
 }
 
-#define MERGE4_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor)     \
+#define MERGE4_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor, se) \
 template <>                                                                                \
 struct VMerge4<data_type>                                                                  \
 {                                                                                          \
@@ -584,7 +584,7 @@ struct VMerge4<data_type>                                                       
                                                                                            \
     VMerge4()                                                                              \
     {                                                                                      \
-        support = true;                                                                    \
+        support = checkHardwareSupport(se);                                                \
     }                                                                                      \
                                                                                            \
     void operator()(const data_type * src0, const data_type * src1,                        \
@@ -616,19 +616,19 @@ struct VMerge4<data_type>                                                       
     bool support;                                                                          \
 }
 
-MERGE2_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128);
-MERGE3_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128);
-MERGE4_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128);
+MERGE2_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128, CV_CPU_SSE2);
+MERGE3_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128, CV_CPU_SSE2);
+MERGE4_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128, CV_CPU_SSE2);
 
 #if CV_SSE4_1
-MERGE2_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128);
-MERGE3_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128);
-MERGE4_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128);
+MERGE2_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128, CV_CPU_SSE4_1);
+MERGE3_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128, CV_CPU_SSE4_1);
+MERGE4_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128, CV_CPU_SSE4_1);
 #endif
 
-MERGE2_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps);
-MERGE3_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps);
-MERGE4_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps);
+MERGE2_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps, CV_CPU_SSE2);
+MERGE3_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps, CV_CPU_SSE2);
+MERGE4_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps, CV_CPU_SSE2);
 
 #endif
 
@@ -4404,6 +4404,9 @@ struct Cvt_SIMD<double, uchar>
     {
         int x = 0;
 
+        if (!USE_SSE2)
+            return x;
+
         for ( ; x <= width - 8; x += 8)
         {
             __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
@@ -4430,6 +4433,9 @@ struct Cvt_SIMD<double, schar>
     {
         int x = 0;
 
+        if (!USE_SSE2)
+            return x;
+
         for ( ; x <= width - 8; x += 8)
         {
             __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
@@ -4454,9 +4460,15 @@ struct Cvt_SIMD<double, schar>
 template <>
 struct Cvt_SIMD<double, ushort>
 {
+    bool haveSIMD;
+    Cvt_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE4_1); }
+
     int operator() (const double * src, ushort * dst, int width) const
     {
         int x = 0;
+
+        if (!haveSIMD)
+            return x;
 
         for ( ; x <= width - 8; x += 8)
         {
@@ -4486,6 +4498,9 @@ struct Cvt_SIMD<double, short>
     {
         int x = 0;
 
+        if (!USE_SSE2)
+            return x;
+
         for ( ; x <= width - 8; x += 8)
         {
             __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
@@ -4512,6 +4527,9 @@ struct Cvt_SIMD<double, int>
     {
         int x = 0;
 
+        if (!USE_SSE2)
+            return x;
+
         for ( ; x <= width - 4; x += 4)
         {
             __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
@@ -4531,6 +4549,9 @@ struct Cvt_SIMD<double, float>
     int operator() (const double * src, float * dst, int width) const
     {
         int x = 0;
+
+        if (!USE_SSE2)
+            return x;
 
         for ( ; x <= width - 4; x += 4)
         {
@@ -5114,8 +5135,9 @@ cvt_<float, short>( const float* src, size_t sstep,
     {
         int x = 0;
         #if   CV_SSE2
-        if(USE_SSE2){
-              for( ; x <= size.width - 8; x += 8 )
+        if(USE_SSE2)
+        {
+            for( ; x <= size.width - 8; x += 8 )
             {
                 __m128 src128 = _mm_loadu_ps (src + x);
                 __m128i src_int128 = _mm_cvtps_epi32 (src128);
