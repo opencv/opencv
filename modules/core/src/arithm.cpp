@@ -3268,6 +3268,130 @@ struct Cmp_SIMD<float>
     uint8x8_t v_mask;
 };
 
+#elif CV_SSE2
+
+template <>
+struct Cmp_SIMD<schar>
+{
+    explicit Cmp_SIMD(int code_) :
+        code(code_)
+    {
+        CV_Assert(code == CMP_GT || code == CMP_LE ||
+                  code == CMP_EQ || code == CMP_NE);
+
+        haveSSE = checkHardwareSupport(CV_CPU_SSE2);
+
+        v_mask = _mm_set1_epi8(0xff);
+    }
+
+    int operator () (const schar * src1, const schar * src2, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        if (!haveSSE)
+            return x;
+
+        if (code == CMP_GT)
+            for ( ; x <= width - 16; x += 16)
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_cmpgt_epi8(_mm_loadu_si128((const __m128i *)(src1 + x)),
+                                                                      _mm_loadu_si128((const __m128i *)(src2 + x))));
+        else if (code == CMP_LE)
+            for ( ; x <= width - 16; x += 16)
+            {
+                __m128i v_gt = _mm_cmpgt_epi8(_mm_loadu_si128((const __m128i *)(src1 + x)),
+                                              _mm_loadu_si128((const __m128i *)(src2 + x)));
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_xor_si128(v_mask, v_gt));
+            }
+        else if (code == CMP_EQ)
+            for ( ; x <= width - 16; x += 16)
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_cmpeq_epi8(_mm_loadu_si128((const __m128i *)(src1 + x)),
+                                                                      _mm_loadu_si128((const __m128i *)(src2 + x))));
+        else if (code == CMP_NE)
+            for ( ; x <= width - 16; x += 16)
+            {
+                __m128i v_eq = _mm_cmpeq_epi8(_mm_loadu_si128((const __m128i *)(src1 + x)),
+                                              _mm_loadu_si128((const __m128i *)(src2 + x)));
+                _mm_storeu_si128((__m128i *)(dst + x), _mm_xor_si128(v_mask, v_eq));
+            }
+
+        return x;
+    }
+
+    int code;
+    __m128i v_mask;
+    bool haveSSE;
+};
+
+template <>
+struct Cmp_SIMD<int>
+{
+    explicit Cmp_SIMD(int code_) :
+        code(code_)
+    {
+        CV_Assert(code == CMP_GT || code == CMP_LE ||
+                  code == CMP_EQ || code == CMP_NE);
+
+        haveSSE = checkHardwareSupport(CV_CPU_SSE2);
+
+        v_mask = _mm_set1_epi32(0xffffffff);
+    }
+
+    int operator () (const int * src1, const int * src2, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        if (!haveSSE)
+            return x;
+
+        if (code == CMP_GT)
+            for ( ; x <= width - 8; x += 8)
+            {
+                __m128i v_dst0 = _mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src1 + x)),
+                                                 _mm_loadu_si128((const __m128i *)(src2 + x)));
+                __m128i v_dst1 = _mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src1 + x + 4)),
+                                                 _mm_loadu_si128((const __m128i *)(src2 + x + 4)));
+
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packs_epi16(_mm_packs_epi32(v_dst0, v_dst1), v_mask));
+            }
+        else if (code == CMP_LE)
+            for ( ; x <= width - 8; x += 8)
+            {
+                __m128i v_dst0 = _mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src1 + x)),
+                                                 _mm_loadu_si128((const __m128i *)(src2 + x)));
+                __m128i v_dst1 = _mm_cmpgt_epi32(_mm_loadu_si128((const __m128i *)(src1 + x + 4)),
+                                                 _mm_loadu_si128((const __m128i *)(src2 + x + 4)));
+
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_xor_si128(_mm_packs_epi16(_mm_packs_epi32(v_dst0, v_dst1), v_mask), v_mask));
+            }
+        else if (code == CMP_EQ)
+            for ( ; x <= width - 8; x += 8)
+            {
+                __m128i v_dst0 = _mm_cmpeq_epi32(_mm_loadu_si128((const __m128i *)(src1 + x)),
+                                                 _mm_loadu_si128((const __m128i *)(src2 + x)));
+                __m128i v_dst1 = _mm_cmpeq_epi32(_mm_loadu_si128((const __m128i *)(src1 + x + 4)),
+                                                 _mm_loadu_si128((const __m128i *)(src2 + x + 4)));
+
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_packs_epi16(_mm_packs_epi32(v_dst0, v_dst1), v_mask));
+            }
+        else if (code == CMP_NE)
+            for ( ; x <= width - 8; x += 8)
+            {
+                __m128i v_dst0 = _mm_cmpeq_epi32(_mm_loadu_si128((const __m128i *)(src1 + x)),
+                                                 _mm_loadu_si128((const __m128i *)(src2 + x)));
+                __m128i v_dst1 = _mm_cmpeq_epi32(_mm_loadu_si128((const __m128i *)(src1 + x + 4)),
+                                                 _mm_loadu_si128((const __m128i *)(src2 + x + 4)));
+
+                _mm_storel_epi64((__m128i *)(dst + x), _mm_xor_si128(v_mask, _mm_packs_epi16(_mm_packs_epi32(v_dst0, v_dst1), v_mask)));
+            }
+
+        return x;
+    }
+
+    int code;
+    __m128i v_mask;
+    bool haveSSE;
+};
+
 #endif
 
 template<typename T> static void
