@@ -842,7 +842,7 @@ struct ColumnSum<int, int> :
                 {
                     int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
 
-                    vst1q_s32(D + i, v_s01);
+                    vst1q_s32(D + i, v_s0);
                     vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
                 }
                 #endif

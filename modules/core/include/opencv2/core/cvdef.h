@@ -166,7 +166,7 @@
 #    endif
 #    define CV_POPCNT 1
 #  endif
-#  if defined __AVX__ || (defined _MSC_VER && _MSC_VER >= 1600)
+#  if defined __AVX__ || (defined _MSC_VER && _MSC_VER >= 1600 && 0)
 // MS Visual Studio 2010 (2012?) has no macro pre-defined to identify the use of /arch:AVX
 // See: http://connect.microsoft.com/VisualStudio/feedback/details/605858/arch-avx-should-define-a-predefined-macro-in-x64-and-set-a-unique-value-for-m-ix86-fp-in-win32
 #    include <immintrin.h>
@@ -177,7 +177,7 @@
 #      define __xgetbv() 0
 #    endif
 #  endif
-#  if defined __AVX2__ || (defined _MSC_VER && _MSC_VER >= 1800)
+#  if defined __AVX2__ || (defined _MSC_VER && _MSC_VER >= 1800 && 0)
 #    include <immintrin.h>
 #    define CV_AVX2 1
 #    if defined __FMA__
