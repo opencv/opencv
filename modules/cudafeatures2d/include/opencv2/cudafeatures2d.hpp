@@ -233,26 +233,36 @@ private:
 // Feature2DAsync
 //
 
-/** @brief Abstract base class for 2D image feature detectors and descriptor extractors.
- */
 class CV_EXPORTS Feature2DAsync
 {
 public:
-    virtual ~Feature2DAsync() {}
+    virtual ~Feature2DAsync();
 
-    virtual void detectAsync(InputArray image, OutputArray keypoints,
+    virtual void detectAsync(InputArray image,
+                             OutputArray keypoints,
                              InputArray mask = noArray(),
-                             Stream& stream = Stream::Null()) = 0;
+                             Stream& stream = Stream::Null());
 
-    virtual void convert(InputArray gpu_keypoints, std::vector<KeyPoint>& keypoints) = 0;
+    virtual void computeAsync(InputArray image,
+                              OutputArray keypoints,
+                              OutputArray descriptors,
+                              Stream& stream = Stream::Null());
+
+    virtual void detectAndComputeAsync(InputArray image,
+                                       InputArray mask,
+                                       OutputArray keypoints,
+                                       OutputArray descriptors,
+                                       bool useProvidedKeypoints=false,
+                                       Stream& stream = Stream::Null());
+
+    virtual void convert(InputArray gpu_keypoints,
+                         std::vector<KeyPoint>& keypoints) = 0;
 };
 
 //
 // FastFeatureDetector
 //
 
-/** @brief Wrapping class for feature detection using the FAST method.
- */
 class CV_EXPORTS FastFeatureDetector : public cv::FastFeatureDetector, public Feature2DAsync
 {
 public:
