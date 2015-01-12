@@ -2475,6 +2475,103 @@ struct YCrCb2RGB_f<float>
     float32x4_t v_c0, v_c1, v_c2, v_c3, v_alpha, v_delta;
 };
 
+#elif CV_SSE2
+
+template <>
+struct YCrCb2RGB_f<float>
+{
+    typedef float channel_type;
+
+    YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
+        : dstcn(_dstcn), blueIdx(_blueIdx)
+    {
+        static const float coeffs0[] = {1.403f, -0.714f, -0.344f, 1.773f};
+        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+
+        v_c0 = _mm_set1_ps(coeffs[0]);
+        v_c1 = _mm_set1_ps(coeffs[1]);
+        v_c2 = _mm_set1_ps(coeffs[2]);
+        v_c3 = _mm_set1_ps(coeffs[3]);
+        v_delta = _mm_set1_ps(ColorChannel<float>::half());
+        v_alpha = _mm_set1_ps(ColorChannel<float>::max());
+    }
+
+    void process(__m128 v_y, __m128 v_cr, __m128 v_cb,
+                 __m128 & v_r, __m128 & v_g, __m128 & v_b) const
+    {
+        v_cb = _mm_sub_ps(v_cb, v_delta);
+        v_cr = _mm_sub_ps(v_cr, v_delta);
+
+        v_b = _mm_mul_ps(v_cb, v_c3);
+        v_g = _mm_add_ps(_mm_mul_ps(v_cb, v_c2), _mm_mul_ps(v_cr, v_c1));
+        v_r = _mm_mul_ps(v_cr, v_c0);
+
+        v_b = _mm_add_ps(v_b, v_y);
+        v_g = _mm_add_ps(v_g, v_y);
+        v_r = _mm_add_ps(v_r, v_y);
+
+        if (blueIdx == 0)
+            std::swap(v_b, v_r);
+    }
+
+    void operator()(const float* src, float* dst, int n) const
+    {
+        int dcn = dstcn, bidx = blueIdx, i = 0;
+        const float delta = ColorChannel<float>::half(), alpha = ColorChannel<float>::max();
+        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
+        n *= 3;
+
+        if (dcn == 3)
+        {
+            for ( ; i <= n - 24; i += 24, dst += 24)
+            {
+                __m128 v_y0 = _mm_loadu_ps(src + i);
+                __m128 v_y1 = _mm_loadu_ps(src + i + 4);
+                __m128 v_cr0 = _mm_loadu_ps(src + i + 8);
+                __m128 v_cr1 = _mm_loadu_ps(src + i + 12);
+                __m128 v_cb0 = _mm_loadu_ps(src + i + 16);
+                __m128 v_cb1 = _mm_loadu_ps(src + i + 20);
+
+                _MM_DEINTERLIV_PS(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1)
+
+                __m128 v_r0, v_g0, v_b0;
+                process(v_y0, v_cr0, v_cb0,
+                        v_r0, v_g0, v_b0);
+
+                __m128 v_r1, v_g1, v_b1;
+                process(v_y1, v_cr1, v_cb1,
+                        v_r1, v_g1, v_b1);
+
+                _MM_INTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+
+                _mm_storeu_ps(dst, v_r0);
+                _mm_storeu_ps(dst + 4, v_r1);
+                _mm_storeu_ps(dst + 8, v_g0);
+                _mm_storeu_ps(dst + 12, v_g1);
+                _mm_storeu_ps(dst + 16, v_b0);
+                _mm_storeu_ps(dst + 20, v_b1);
+            }
+        }
+
+        for ( ; i < n; i += 3, dst += dcn)
+        {
+            float Y = src[i], Cr = src[i+1], Cb = src[i+2];
+
+            float b = Y + (Cb - delta)*C3;
+            float g = Y + (Cb - delta)*C2 + (Cr - delta)*C1;
+            float r = Y + (Cr - delta)*C0;
+
+            dst[bidx] = b; dst[1] = g; dst[bidx^2] = r;
+            if( dcn == 4 )
+                dst[3] = alpha;
+        }
+    }
+    int dstcn, blueIdx;
+    float coeffs[4];
+    
+    __m128 v_c0, v_c1, v_c2, v_c3, v_alpha, v_delta;
+};
+
 #endif
 
 template<typename _Tp> struct YCrCb2RGB_i
