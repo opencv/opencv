@@ -145,6 +145,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
     if(ENABLE_AVX2)
       add_extra_compiler_option(-mavx2)
+
+      if(ENABLE_FMA3)
+        add_extra_compiler_option(-mfma)
+      endif()
     endif()
 
     # GCC depresses SSEx instructions when -mavx is used. Instead, it generates new AVX instructions or AVX equivalence for all SSEx instructions when needed.
@@ -164,10 +168,6 @@ if(CMAKE_COMPILER_IS_GNUCXX)
       if(ENABLE_SSE42)
         add_extra_compiler_option(-msse4.2)
       endif()
-    endif()
-
-    if(ENABLE_FMA3)
-      add_extra_compiler_option(-mfma)
     endif()
   endif(NOT MINGW)
 

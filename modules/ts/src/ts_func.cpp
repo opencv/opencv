@@ -2998,11 +2998,11 @@ void printVersionInfo(bool useStdOut)
 
     std::string cpu_features;
 
-#if CV_MMX
-    if (checkHardwareSupport(CV_CPU_MMX)) cpu_features += " mmx";
-#endif
 #if CV_POPCNT
     if (checkHardwareSupport(CV_CPU_POPCNT)) cpu_features += " popcnt";
+#endif
+#if CV_MMX
+    if (checkHardwareSupport(CV_CPU_MMX)) cpu_features += " mmx";
 #endif
 #if CV_SSE
     if (checkHardwareSupport(CV_CPU_SSE)) cpu_features += " sse";

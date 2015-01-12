@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -404,13 +405,20 @@ static const uchar * initPopcountTable()
     {
         // we compute inverse popcount table,
         // since we pass (img[x] == 0) mask as index in the table.
-        for( int j = 0; j < 256; j++ )
+        unsigned int j = 0u;
+#if CV_POPCNT
+        if (checkHardwareSupport(CV_CPU_POPCNT))
+            for( ; j < 256u; j++ )
+                tab[j] = (uchar)(8 - _mm_popcnt_u32(j));
+#else
+        for( ; j < 256u; j++ )
         {
             int val = 0;
             for( int mask = 1; mask < 256; mask += mask )
                 val += (j & mask) == 0;
             tab[j] = (uchar)val;
         }
+#endif
         initialized = true;
     }
 

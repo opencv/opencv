@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -157,15 +158,11 @@
 #    include <nmmintrin.h>
 #    define CV_SSE4_2 1
 #  endif
-#  if defined __FMA__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <immintrin.h>
-#    define CV_FMA3 1
-#  endif
 #  if defined __POPCNT__ || (defined _MSC_VER && _MSC_VER >= 1500)
 #    include <popcntintrin.h>
 #    define CV_POPCNT 1
 #  endif
-#  if defined __AVX__ || defined __AVX2__ || (defined _MSC_FULL_VER && _MSC_FULL_VER >= 160040219)
+#  if defined __AVX__ || (defined _MSC_FULL_VER && _MSC_FULL_VER >= 160040219)
 // MS Visual Studio 2010 (2012?) has no macro pre-defined to identify the use of /arch:AVX
 // See: http://connect.microsoft.com/VisualStudio/feedback/details/605858/arch-avx-should-define-a-predefined-macro-in-x64-and-set-a-unique-value-for-m-ix86-fp-in-win32
 #    include <immintrin.h>
@@ -179,6 +176,9 @@
 #  if defined __AVX2__ || (defined _MSC_FULL_VER && _MSC_FULL_VER >= 160040219)
 #    include <immintrin.h>
 #    define CV_AVX2 1
+#    if defined __FMA__
+#      define CV_FMA3 1
+#    endif
 #  endif
 #endif
 
@@ -194,6 +194,9 @@
 
 #endif // __CUDACC__
 
+#ifndef CV_POPCNT
+#define CV_POPCNT 0
+#endif
 #ifndef CV_MMX
 #  define CV_MMX 0
 #endif
@@ -220,9 +223,6 @@
 #endif
 #ifndef CV_AVX2
 #  define CV_AVX2 0
-#endif
-#ifndef CV_POPCNT
-#define CV_POPCNT 0
 #endif
 #ifndef CV_FMA3
 #  define CV_FMA3 0
