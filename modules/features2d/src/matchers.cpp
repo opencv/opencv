@@ -306,8 +306,8 @@ static bool ocl_radiusMatchSingle(InputArray query, InputArray train,
     if (k.empty())
         return false;
 
-    size_t globalSize[] = {(train_rows + block_size - 1) / block_size * block_size, (query_rows + block_size - 1) / block_size * block_size, 1};
-    size_t localSize[] = {block_size, block_size, 1};
+    size_t globalSize[] = {(train_rows + block_size - 1) / block_size * block_size, (query_rows + block_size - 1) / block_size * block_size};
+    size_t localSize[] = {block_size, block_size};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(uquery));
