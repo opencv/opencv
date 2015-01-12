@@ -263,6 +263,7 @@ struct HWFeatures
             f.have[CV_CPU_SSE2]   = (cpuid_data[3] & (1<<26)) != 0;
             f.have[CV_CPU_SSE3]   = (cpuid_data[2] & (1<<0)) != 0;
             f.have[CV_CPU_SSSE3]  = (cpuid_data[2] & (1<<9)) != 0;
+            f.have[CV_CPU_FMA3]  = (cpuid_data[2] & (1<<12)) != 0;
             f.have[CV_CPU_SSE4_1] = (cpuid_data[2] & (1<<19)) != 0;
             f.have[CV_CPU_SSE4_2] = (cpuid_data[2] & (1<<20)) != 0;
             f.have[CV_CPU_POPCNT] = (cpuid_data[2] & (1<<23)) != 0;
@@ -301,6 +302,15 @@ struct HWFeatures
         #endif
             f.have[CV_CPU_AVX2]   = (cpuid_data[1] & (1<<5)) != 0;
 
+            f.have[CV_CPU_AVX_512F]       = (cpuid_data[1] & (1<<16)) != 0;
+            f.have[CV_CPU_AVX_512DQ]      = (cpuid_data[1] & (1<<17)) != 0;
+            f.have[CV_CPU_AVX_512IFMA512] = (cpuid_data[1] & (1<<21)) != 0;
+            f.have[CV_CPU_AVX_512PF]      = (cpuid_data[1] & (1<<26)) != 0;
+            f.have[CV_CPU_AVX_512ER]      = (cpuid_data[1] & (1<<27)) != 0;
+            f.have[CV_CPU_AVX_512CD]      = (cpuid_data[1] & (1<<28)) != 0;
+            f.have[CV_CPU_AVX_512BW]      = (cpuid_data[1] & (1<<30)) != 0;
+            f.have[CV_CPU_AVX_512VL]      = (cpuid_data[1] & (1<<31)) != 0;
+            f.have[CV_CPU_AVX_512VBMI]    = (cpuid_data[2] &  (1<<1)) != 0;
         }
 
         return f;
