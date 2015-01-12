@@ -132,24 +132,25 @@ static inline unsigned sacCalcIterBound(double   confidence,
 static inline void   hFuncRefC(float* packedPoints, float* H);
 static inline int    sacCanRefine(RHO_HEST_REFC* p);
 static inline void   sacRefine(RHO_HEST_REFC* p);
-static inline void   sacCalcJtMats(float     (* restrict JtJ)[8],
-                                   float*       restrict Jte,
-                                   float*       restrict Sp,
-                                   const float* restrict H,
-                                   const float* restrict src,
-                                   const float* restrict dst,
-                                   const char*  restrict inl,
-                                   unsigned              N);
-static inline void   sacChol8x8 (const float (*A)[8],
-                                 float       (*L)[8]);
+static inline void   sacCalcJacobianErrors(const float* restrict H,
+                                           const float* restrict src,
+                                           const float* restrict dst,
+                                           const char*  restrict inl,
+                                           unsigned              N,
+                                           float     (* restrict JtJ)[8],
+                                           float*       restrict Jte,
+                                           float*       restrict Sp);
+static inline float  sacDs(const float (*JtJ)[8],
+                           const float*  dH,
+                           const float*  Jte);
+static inline int    sacChol8x8Damped (const float (*A)[8],
+                                       float         lambda,
+                                       float       (*L)[8]);
 static inline void   sacTRInv8x8(const float (*L)[8],
                                  float       (*M)[8]);
 static inline void   sacTRISolve8x8(const float (*L)[8],
                                     const float*  Jte,
                                     float*        dH);
-static inline void   sacScaleDiag8x8(const float (*A)[8],
-                                     float         lambda,
-                                     float       (*B)[8]);
 static inline void   sacSub8x1(float* Hout, const float* H, const float* dH);
 
 
@@ -188,6 +189,11 @@ int  rhoRefCInit(RHO_HEST_REFC* p){
     p->nr.tbl      = NULL;/* By default this table is not computed. */
     p->nr.size     = 0;
     p->nr.beta     = 0.0;
+
+    p->lm.ws       = NULL;
+    p->lm.JtJ      = NULL;
+    p->lm.tmp1     = NULL;
+    p->lm.Jte      = NULL;
 
 
     int areAllAllocsSuccessful = p->ctrl.smpl   &&
@@ -503,9 +509,29 @@ static inline int    sacInitRun(RHO_HEST_REFC* p){
     }
 
     /**
+     * LevMarq workspace alloc.
+     *
+     * Runs third, consists only in a few conditional mallocs. If malloc fails
+     * we wish to quit before doing any serious work.
+     */
+
+    if(sacIsRefineEnabled(p) || sacIsFinalRefineEnabled(p)){
+        p->lm.ws   = (float*)almalloc(2*8*8*sizeof(float) + 1*8*sizeof(float));
+        if(!p->lm.ws){
+            return 0;
+        }
+
+        p->lm.JtJ  = (float(*)[8])(p->lm.ws + 0*8*8);
+        p->lm.tmp1 = (float(*)[8])(p->lm.ws + 1*8*8);
+        p->lm.Jte  = (float*)     (p->lm.ws + 2*8*8);
+    }else{
+        p->lm.ws = NULL;
+    }
+
+    /**
      * Reset scalar per-run state.
      *
-     * Runs third because there's no point in resetting/calculating a large
+     * Runs fourth because there's no point in resetting/calculating a large
      * number of fields if something in the above junk failed.
      */
 
@@ -570,6 +596,13 @@ static inline void   sacFiniRun(RHO_HEST_REFC* p){
 
     p->best.inl = NULL;
     p->curr.inl = NULL;
+
+    /**
+     * ₣ree the Levenberg-Marquardt workspace.
+     */
+
+    alfree(p->lm.ws);
+    p->lm.ws = NULL;
 }
 
 /**
@@ -912,6 +945,11 @@ static inline void   sacEvaluateModelSPRT(RHO_HEST_REFC* p){
  *
  * If a "good" model that is also the best was encountered, update epsilon,
  * since
+ *
+ * Reads:  eval.good, eval.delta, eval.epsilon, eval.t_M, eval.m_S,
+ *         curr.numInl, best.numInl
+ * Writes: eval.epsilon, eval.delta, eval.A, eval.lambdaAccept,
+ *         eval.lambdaReject
  */
 
 static inline void   sacUpdateSPRT(RHO_HEST_REFC* p){
@@ -1032,9 +1070,11 @@ static inline void   sacSaveBestModel(RHO_HEST_REFC* p){
     float*   H      = p->curr.H;
     char*    inl    = p->curr.inl;
     unsigned numInl = p->curr.numInl;
+
     p->curr.H       = p->best.H;
     p->curr.inl     = p->best.inl;
     p->curr.numInl  = p->best.numInl;
+
     p->best.H       = H;
     p->best.inl     = inl;
     p->best.numInl  = numInl;
@@ -1538,18 +1578,47 @@ static inline int    sacCanRefine(RHO_HEST_REFC* p){
  */
 
 static inline void   sacRefine(RHO_HEST_REFC* p){
-    int         i, j;
-    float       S;    /* Sum of squared errors */
-    float       L = 1;/* Lambda of LevMarq */
+    int         i = 0;
+    float       S = 0, newS = 0, dS = 0;/* Sum of squared errors */
+    float       R = 0;          /* R - Parameter */
+    float       L  = 1.0f;  /* Lambda of LevMarq */
+    float dH[8], newH[8];
 
+    /**
+     * Iteratively refine the homography.
+     */
+
+    /* Find initial conditions */
+    sacCalcJacobianErrors(p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
+                          p->lm.JtJ, p->lm.Jte,  &S);
+
+    /* Levenberg-Marquardt Loop */
     for(i=0;i<MAXLEVMARQITERS;i++){
-        float dH[8];
-        sacCalcJtMats(p->lm.JtJ, p->lm.Jte, &S, p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N);
-        sacScaleDiag8x8(p->lm.JtJ, L, p->lm.JtJ);
-        sacChol8x8(p->lm.JtJ, p->lm.JtJ);
-        sacTRInv8x8(p->lm.JtJ, p->lm.JtJ);
-        sacTRISolve8x8(p->lm.JtJ, p->lm.Jte, dH);
-        sacSub8x1(p->best.H, p->best.H, dH);
+        /* The code below becomes an infinite loop when L reeaches infinity.
+        while(sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1)){
+            L *= 2.0f;
+        }*/
+        sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1);
+        sacTRInv8x8   (p->lm.tmp1, p->lm.tmp1);
+        sacTRISolve8x8(p->lm.tmp1, p->lm.Jte,  dH);
+        sacSub8x1     (newH,       p->best.H,  dH);
+        sacCalcJacobianErrors(newH, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
+                              NULL, NULL, &newS);
+        dS = sacDs    (p->lm.JtJ,  dH,         p->lm.Jte);
+        R  = (S - newS)/(fabs(dS) > DBL_EPSILON ? dS : 1);/* Don't understand */
+
+        if(R > 0.75f){
+            L *= 0.5f;
+        }else if(R < 0.25f){
+            L *= 2.0f;
+        }
+
+        if(newS < S){
+            S = newS;
+            memcpy(p->best.H, newH, sizeof(newH));
+            sacCalcJacobianErrors(p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
+                                  p->lm.JtJ, p->lm.Jte,  &S);
+        }
     }
 }
 
@@ -1564,31 +1633,22 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
  *
  * What this allows is a constant-space implementation of Lev-Marq that can
  * nevertheless be vectorized if need be.
- *
- * @param JtJ
- * @param Jte
- * @param Sp
- * @param H
- * @param src
- * @param dst
- * @param inl
- * @param N
  */
 
-static inline void   sacCalcJtMats(float     (* restrict JtJ)[8],
-                                   float*       restrict Jte,
-                                   float*       restrict Sp,
-                                   const float* restrict H,
-                                   const float* restrict src,
-                                   const float* restrict dst,
-                                   const char*  restrict inl,
-                                   unsigned              N){
+static inline void   sacCalcJacobianErrors(const float* restrict H,
+                                           const float* restrict src,
+                                           const float* restrict dst,
+                                           const char*  restrict inl,
+                                           unsigned              N,
+                                           float     (* restrict JtJ)[8],
+                                           float*       restrict Jte,
+                                           float*       restrict Sp){
     unsigned i;
     float    S;
 
     /* Zero out JtJ, Jte and S */
-    memset(JtJ, 0, 8*8*sizeof(*JtJ));
-    memset(Jte, 0, 8*1*sizeof(*Jte));
+    if(JtJ){memset(JtJ, 0, 8*8*sizeof(float));}
+    if(Jte){memset(Jte, 0, 8*1*sizeof(float));}
     S = 0.0f;
 
     /* Additively compute JtJ and Jte */
@@ -1633,81 +1693,119 @@ static inline void   sacCalcJtMats(float     (* restrict JtJ)[8],
         S            += e;
 
         /* Compute Jacobian */
-        float dxh11 = x          * iW;
-        float dxh12 = y          * iW;
-        float dxh13 =              iW;
-        float dxh21 = 0.0f;
-        float dxh22 = 0.0f;
-        float dxh23 = 0.0f;
-        float dxh31 = -reprojX*x * iW;
-        float dxh32 = -reprojX*y * iW;
+        if(JtJ || Jte){
+            float dxh11 = x          * iW;
+            float dxh12 = y          * iW;
+            float dxh13 =              iW;
+            float dxh21 = 0.0f;
+            float dxh22 = 0.0f;
+            float dxh23 = 0.0f;
+            float dxh31 = -reprojX*x * iW;
+            float dxh32 = -reprojX*y * iW;
 
-        float dyh11 = 0.0f;
-        float dyh12 = 0.0f;
-        float dyh13 = 0.0f;
-        float dyh21 = x          * iW;
-        float dyh22 = y          * iW;
-        float dyh23 =              iW;
-        float dyh31 = -reprojY*x * iW;
-        float dyh32 = -reprojY*y * iW;
+            float dyh11 = 0.0f;
+            float dyh12 = 0.0f;
+            float dyh13 = 0.0f;
+            float dyh21 = x          * iW;
+            float dyh22 = y          * iW;
+            float dyh23 =              iW;
+            float dyh31 = -reprojY*x * iW;
+            float dyh32 = -reprojY*y * iW;
 
-        /* Update Jte:          X             Y   */
-        Jte[0]    += eX   *dxh11 + eY   *dyh11;
-        Jte[1]    += eX   *dxh12 + eY   *dyh12;
-        Jte[2]    += eX   *dxh13 + eY   *dyh13;
-        Jte[3]    += eX   *dxh21 + eY   *dyh21;
-        Jte[4]    += eX   *dxh22 + eY   *dyh22;
-        Jte[5]    += eX   *dxh23 + eY   *dyh23;
-        Jte[6]    += eX   *dxh31 + eY   *dyh31;
-        Jte[7]    += eX   *dxh32 + eY   *dyh32;
+            /* Update Jte:          X             Y   */
+            if(Jte){
+                Jte[0]    += eX   *dxh11 + eY   *dyh11;
+                Jte[1]    += eX   *dxh12 + eY   *dyh12;
+                Jte[2]    += eX   *dxh13 + eY   *dyh13;
+                Jte[3]    += eX   *dxh21 + eY   *dyh21;
+                Jte[4]    += eX   *dxh22 + eY   *dyh22;
+                Jte[5]    += eX   *dxh23 + eY   *dyh23;
+                Jte[6]    += eX   *dxh31 + eY   *dyh31;
+                Jte[7]    += eX   *dxh32 + eY   *dyh32;
+            }
 
-        /* Update JtJ:          X             Y    */
-        JtJ[0][0] += dxh11*dxh11 + dyh11*dyh11;
+            /* Update JtJ:          X             Y    */
+            if(JtJ){
+                JtJ[0][0] += dxh11*dxh11 + dyh11*dyh11;
 
-        JtJ[1][0] += dxh11*dxh12 + dyh11*dyh12;
-        JtJ[1][1] += dxh12*dxh12 + dyh12*dyh12;
+                JtJ[1][0] += dxh11*dxh12 + dyh11*dyh12;
+                JtJ[1][1] += dxh12*dxh12 + dyh12*dyh12;
 
-        JtJ[2][0] += dxh11*dxh13 + dyh11*dyh13;
-        JtJ[2][1] += dxh12*dxh13 + dyh12*dyh13;
-        JtJ[2][2] += dxh13*dxh13 + dyh13*dyh13;
+                JtJ[2][0] += dxh11*dxh13 + dyh11*dyh13;
+                JtJ[2][1] += dxh12*dxh13 + dyh12*dyh13;
+                JtJ[2][2] += dxh13*dxh13 + dyh13*dyh13;
 
-        JtJ[3][0] += dxh11*dxh21 + dyh11*dyh21;
-        JtJ[3][1] += dxh12*dxh21 + dyh12*dyh21;
-        JtJ[3][2] += dxh13*dxh21 + dyh13*dyh21;
-        JtJ[3][3] += dxh21*dxh21 + dyh21*dyh21;
+                JtJ[3][0] += dxh11*dxh21 + dyh11*dyh21;
+                JtJ[3][1] += dxh12*dxh21 + dyh12*dyh21;
+                JtJ[3][2] += dxh13*dxh21 + dyh13*dyh21;
+                JtJ[3][3] += dxh21*dxh21 + dyh21*dyh21;
 
-        JtJ[4][0] += dxh11*dxh22 + dyh11*dyh22;
-        JtJ[4][1] += dxh12*dxh22 + dyh12*dyh22;
-        JtJ[4][2] += dxh13*dxh22 + dyh13*dyh22;
-        JtJ[4][3] += dxh21*dxh22 + dyh21*dyh22;
-        JtJ[4][4] += dxh22*dxh22 + dyh22*dyh22;
+                JtJ[4][0] += dxh11*dxh22 + dyh11*dyh22;
+                JtJ[4][1] += dxh12*dxh22 + dyh12*dyh22;
+                JtJ[4][2] += dxh13*dxh22 + dyh13*dyh22;
+                JtJ[4][3] += dxh21*dxh22 + dyh21*dyh22;
+                JtJ[4][4] += dxh22*dxh22 + dyh22*dyh22;
 
-        JtJ[5][0] += dxh11*dxh23 + dyh11*dyh23;
-        JtJ[5][1] += dxh12*dxh23 + dyh12*dyh23;
-        JtJ[5][2] += dxh13*dxh23 + dyh13*dyh23;
-        JtJ[5][3] += dxh21*dxh23 + dyh21*dyh23;
-        JtJ[5][4] += dxh22*dxh23 + dyh22*dyh23;
-        JtJ[5][5] += dxh23*dxh23 + dyh23*dyh23;
+                JtJ[5][0] += dxh11*dxh23 + dyh11*dyh23;
+                JtJ[5][1] += dxh12*dxh23 + dyh12*dyh23;
+                JtJ[5][2] += dxh13*dxh23 + dyh13*dyh23;
+                JtJ[5][3] += dxh21*dxh23 + dyh21*dyh23;
+                JtJ[5][4] += dxh22*dxh23 + dyh22*dyh23;
+                JtJ[5][5] += dxh23*dxh23 + dyh23*dyh23;
 
-        JtJ[6][0] += dxh11*dxh31 + dyh11*dyh31;
-        JtJ[6][1] += dxh12*dxh31 + dyh12*dyh31;
-        JtJ[6][2] += dxh13*dxh31 + dyh13*dyh31;
-        JtJ[6][3] += dxh21*dxh31 + dyh21*dyh31;
-        JtJ[6][4] += dxh22*dxh31 + dyh22*dyh31;
-        JtJ[6][5] += dxh23*dxh31 + dyh23*dyh31;
-        JtJ[6][6] += dxh31*dxh31 + dyh31*dyh31;
+                JtJ[6][0] += dxh11*dxh31 + dyh11*dyh31;
+                JtJ[6][1] += dxh12*dxh31 + dyh12*dyh31;
+                JtJ[6][2] += dxh13*dxh31 + dyh13*dyh31;
+                JtJ[6][3] += dxh21*dxh31 + dyh21*dyh31;
+                JtJ[6][4] += dxh22*dxh31 + dyh22*dyh31;
+                JtJ[6][5] += dxh23*dxh31 + dyh23*dyh31;
+                JtJ[6][6] += dxh31*dxh31 + dyh31*dyh31;
 
-        JtJ[7][0] += dxh11*dxh32 + dyh11*dyh32;
-        JtJ[7][1] += dxh12*dxh32 + dyh12*dyh32;
-        JtJ[7][2] += dxh13*dxh32 + dyh13*dyh32;
-        JtJ[7][3] += dxh21*dxh32 + dyh21*dyh32;
-        JtJ[7][4] += dxh22*dxh32 + dyh22*dyh32;
-        JtJ[7][5] += dxh23*dxh32 + dyh23*dyh32;
-        JtJ[7][6] += dxh31*dxh32 + dyh31*dyh32;
-        JtJ[7][7] += dxh32*dxh32 + dyh32*dyh32;
+                JtJ[7][0] += dxh11*dxh32 + dyh11*dyh32;
+                JtJ[7][1] += dxh12*dxh32 + dyh12*dyh32;
+                JtJ[7][2] += dxh13*dxh32 + dyh13*dyh32;
+                JtJ[7][3] += dxh21*dxh32 + dyh21*dyh32;
+                JtJ[7][4] += dxh22*dxh32 + dyh22*dyh32;
+                JtJ[7][5] += dxh23*dxh32 + dyh23*dyh32;
+                JtJ[7][6] += dxh31*dxh32 + dyh31*dyh32;
+                JtJ[7][7] += dxh32*dxh32 + dyh32*dyh32;
+            }
+        }
     }
 
-    *Sp = S;
+    if(Sp){*Sp = S;}
+}
+
+/**
+ * Compute the derivative of the rate of change of the SSE.
+ *
+ * Inspired entirely by OpenCV's levmarq.cpp. To be reviewed.
+ */
+
+static inline float  sacDs(const float (*JtJ)[8],
+                           const float*  dH,
+                           const float*  Jte){
+    float tdH[8];
+    int   i, j;
+    float dS = 0;
+
+    /* Perform tdH = -JtJ*dH + 2*Jte. */
+    for(i=0;i<8;i++){
+        tdH[i] = 0;
+
+        for(j=0;j<8;j++){
+            tdH[i] -= JtJ[i][j] * dH[j];
+        }
+
+        tdH[i] += 2*Jte[i];
+    }
+
+    /* Perform dS = dH.dot(tdH).  */
+    for(i=0;i<8;i++){
+        dS += dH[i]*tdH[i];
+    }
+
+    return dS;
 }
 
 /**
@@ -1718,14 +1816,20 @@ static inline void   sacCalcJtMats(float     (* restrict JtJ)[8],
  * A and L can overlap fully (in-place) or not at all, but may not partially
  * overlap.
  *
+ * For damping, the diagonal elements are scaled by 1.0 + lambda.
+ *
+ * Returns 0 if decomposition successful, and non-zero otherwise.
+ *
  * Source: http://en.wikipedia.org/wiki/Cholesky_decomposition#
  * The_Cholesky.E2.80.93Banachiewicz_and_Cholesky.E2.80.93Crout_algorithms
  */
 
-static inline void   sacChol8x8(const float (*A)[8],
-                                float       (*L)[8]){
+static inline int    sacChol8x8Damped(const float (*A)[8],
+                                      float         lambda,
+                                      float       (*L)[8]){
     const register int N = 8;
     int i, j, k;
+    float  lambdap1 = lambda + 1.0f;
     double x;
 
     for(i=0;i<N;i++){/* Row */
@@ -1740,13 +1844,18 @@ static inline void   sacChol8x8(const float (*A)[8],
 
         /* Diagonal element */
         {j = i;
-            x = A[j][j];                       /* Ajj */
+            x = A[j][j] * lambdap1;            /* Ajj */
             for(k=0;k<j;k++){
                 x -= (double)L[j][k] * L[j][k];/* - Sum_{k=0..j-1} Ljk^2 */
+            }
+            if(x<0){
+                return 1;
             }
             L[j][j] = sqrt(x);                 /* Ljj = sqrt( ... ) */
         }
     }
+
+    return 0;
 }
 
 /**
@@ -1996,28 +2105,6 @@ static inline void   sacTRISolve8x8(const float (*L)[8],
     dH[5] =                                                                  L[5][5]*t[5]+L[6][5]*t[6]+L[7][5]*t[7];
     dH[6] =                                                                               L[6][6]*t[6]+L[7][6]*t[7];
     dH[7] =                                                                                            L[7][7]*t[7];
-}
-
-/**
- * Multiply the diagonal elements of the 8x8 matrix A by 1+lambda and store to
- * B.
- *
- * A and B may overlap exactly or not at all; Partial overlap is forbidden.
- */
-
-static inline void   sacScaleDiag8x8(const float (*A)[8],
-                                     float         lambda,
-                                     float       (*B)[8]){
-    float lambdap1 = lambda + 1.0f;
-    int   i;
-
-    if(A != B){
-        memcpy((void*)B, (void*)A, 8*8*sizeof(float));
-    }
-
-    for(i=0;i<8;i++){
-        B[i][i] *= lambdap1;
-    }
 }
 
 /**

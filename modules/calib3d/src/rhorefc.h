@@ -173,7 +173,6 @@ typedef struct{
         float*             ws;              /* Levenberg-Marqhard Workspace */
         float  (* restrict JtJ)[8];         /* JtJ matrix */
         float  (* restrict tmp1)[8];        /* Temporary 1 */
-        float  (* restrict tmp2)[8];        /* Temporary 2 */
         float*    restrict Jte;             /* Jte vector */
     } lm;
 } RHO_HEST_REFC;
