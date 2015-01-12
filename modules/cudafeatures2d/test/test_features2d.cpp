@@ -208,7 +208,7 @@ INSTANTIATE_TEST_CASE_P(CUDA_Features2D, ORB,  testing::Combine(
     testing::Values(ORB_ScaleFactor(1.2f)),
     testing::Values(ORB_LevelsCount(4), ORB_LevelsCount(8)),
     testing::Values(ORB_EdgeThreshold(31)),
-    testing::Values(ORB_firstLevel(0), ORB_firstLevel(2)),
+    testing::Values(ORB_firstLevel(0)),
     testing::Values(ORB_WTA_K(2), ORB_WTA_K(3), ORB_WTA_K(4)),
     testing::Values(ORB_ScoreType(cv::ORB::HARRIS_SCORE)),
     testing::Values(ORB_PatchSize(31), ORB_PatchSize(29)),
