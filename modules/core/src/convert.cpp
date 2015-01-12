@@ -4394,7 +4394,159 @@ struct Cvt_SIMD
     }
 };
 
-#if CV_NEON
+#if CV_SSE2
+
+// from double
+
+template <>
+struct Cvt_SIMD<double, uchar>
+{
+    int operator() (const double * src, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
+            __m128 v_src1 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 2));
+            __m128 v_src2 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 4));
+            __m128 v_src3 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 6));
+
+            v_src0 = _mm_movelh_ps(v_src0, v_src1);
+            v_src1 = _mm_movelh_ps(v_src2, v_src3);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_src0),
+                                            _mm_cvtps_epi32(v_src1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packus_epi16(v_dst, v_dst));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<double, schar>
+{
+    int operator() (const double * src, schar * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
+            __m128 v_src1 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 2));
+            __m128 v_src2 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 4));
+            __m128 v_src3 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 6));
+
+            v_src0 = _mm_movelh_ps(v_src0, v_src1);
+            v_src1 = _mm_movelh_ps(v_src2, v_src3);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_src0),
+                                            _mm_cvtps_epi32(v_src1));
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_packs_epi16(v_dst, v_dst));
+        }
+
+        return x;
+    }
+};
+
+#if CV_SSE4_1
+
+template <>
+struct Cvt_SIMD<double, ushort>
+{
+    int operator() (const double * src, ushort * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
+            __m128 v_src1 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 2));
+            __m128 v_src2 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 4));
+            __m128 v_src3 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 6));
+
+            v_src0 = _mm_movelh_ps(v_src0, v_src1);
+            v_src1 = _mm_movelh_ps(v_src2, v_src3);
+
+            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_src0),
+                                             _mm_cvtps_epi32(v_src1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+};
+
+#endif // CV_SSE4_1
+
+template <>
+struct Cvt_SIMD<double, short>
+{
+    int operator() (const double * src, short * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
+            __m128 v_src1 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 2));
+            __m128 v_src2 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 4));
+            __m128 v_src3 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 6));
+
+            v_src0 = _mm_movelh_ps(v_src0, v_src1);
+            v_src1 = _mm_movelh_ps(v_src2, v_src3);
+
+            __m128i v_dst = _mm_packs_epi32(_mm_cvtps_epi32(v_src0),
+                                            _mm_cvtps_epi32(v_src1));
+            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<double, int>
+{
+    int operator() (const double * src, int * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 4; x += 4)
+        {
+            __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
+            __m128 v_src1 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 2));
+            v_src0 = _mm_movelh_ps(v_src0, v_src1);
+
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_cvtps_epi32(v_src0));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Cvt_SIMD<double, float>
+{
+    int operator() (const double * src, float * dst, int width) const
+    {
+        int x = 0;
+
+        for ( ; x <= width - 4; x += 4)
+        {
+            __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
+            __m128 v_src1 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 2));
+
+            _mm_storeu_ps(dst + x, _mm_movelh_ps(v_src0, v_src1));
+        }
+
+        return x;
+    }
+};
+
+
+#elif CV_NEON
 
 // from uchar
 
