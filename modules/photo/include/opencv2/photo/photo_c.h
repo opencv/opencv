@@ -54,7 +54,7 @@ extern "C" {
   */
 
 /* Inpainting algorithms */
-enum
+enum InpaintingModes
 {
     CV_INPAINT_NS      =0,
     CV_INPAINT_TELEA   =1

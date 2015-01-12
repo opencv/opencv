@@ -144,16 +144,13 @@ file by using the @ref cv::imwrite() function. However, for debugging purposes i
 convenient to see the actual values. You can do this using the \<\< operator of *Mat*. Be aware that
 this only works for two dimensional matrices.
 
-@dontinclude cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
-
 Although *Mat* works really well as an image container, it is also a general matrix class.
 Therefore, it is possible to create and manipulate multidimensional matrices. You can create a Mat
 object in multiple ways:
 
 -   @ref cv::Mat::Mat Constructor
 
-    @skip Mat M(2
-    @until cout
+    @snippet mat_the_basic_image_container.cpp constructor
 
     ![](images/MatBasicContainerOut1.png)
 
@@ -162,7 +159,7 @@ object in multiple ways:
     Then we need to specify the data type to use for storing the elements and the number of channels
     per matrix point. To do this we have multiple definitions constructed according to the following
     convention:
-    @code{.cpp}
+    @code
     CV_[The number of bits per item][Signed or Unsigned][Type Prefix]C[The channel number]
     @endcode
     For instance, *CV_8UC3* means we use unsigned char types that are 8 bit long and each pixel has
@@ -173,18 +170,15 @@ object in multiple ways:
 
 -   Use C/C++ arrays and initialize via constructor
 
-    @skip int sz
-    @until Mat L
+    @snippet mat_the_basic_image_container.cpp init
 
     The upper example shows how to create a matrix with more than two dimensions. Specify its
     dimension, then pass a pointer containing the size for each dimension and the rest remains the
     same.
 
 -   @ref cv::Mat::create function:
-    @code
-    M.create(4,4, CV_8UC(2));
-    cout << "M = "<< endl << " "  << M << endl << endl;
-    @endcode
+
+    @snippet mat_the_basic_image_container.cpp create
 
     ![](images/MatBasicContainerOut2.png)
 
@@ -194,30 +188,26 @@ object in multiple ways:
 -   MATLAB style initializer: @ref cv::Mat::zeros , @ref cv::Mat::ones , @ref cv::Mat::eye . Specify size and
     data type to use:
 
-    @skip Mat E
-    @until cout
+    @snippet mat_the_basic_image_container.cpp matlab
 
     ![](images/MatBasicContainerOut3.png)
 
 -   For small matrices you may use comma separated initializers:
 
-    @skip Mat C
-    @until cout
+    @snippet mat_the_basic_image_container.cpp comma
 
     ![](images/MatBasicContainerOut6.png)
 
 -   Create a new header for an existing *Mat* object and @ref cv::Mat::clone or @ref cv::Mat::copyTo it.
 
-    @skip Mat RowClone
-    @until cout
+    @snippet mat_the_basic_image_container.cpp clone
 
     ![](images/MatBasicContainerOut7.png)
 
     @note
     You can fill out a matrix with random values using the @ref cv::randu() function. You need to
     give the lower and upper value for the random values:
-    @skip Mat R
-    @until randu
+    @snippet mat_the_basic_image_container.cpp random
 
 
 Output formatting
@@ -227,25 +217,23 @@ In the above examples you could see the default formatting option. OpenCV, howev
 format your matrix output:
 
 -   Default
-    @skipline (default)
+    @snippet mat_the_basic_image_container.cpp out-default
     ![](images/MatBasicContainerOut8.png)
 
 -   Python
-    @skipline (python)
+    @snippet mat_the_basic_image_container.cpp out-python
     ![](images/MatBasicContainerOut16.png)
 
 -   Comma separated values (CSV)
-    @skipline (csv)
+    @snippet mat_the_basic_image_container.cpp out-csv
     ![](images/MatBasicContainerOut10.png)
 
 -   Numpy
-    @code
-    cout << "R (numpy)   = " << endl << format(R, Formatter::FMT_NUMPY ) << endl << endl;
-    @endcode
+    @snippet mat_the_basic_image_container.cpp out-numpy
     ![](images/MatBasicContainerOut9.png)
 
 -   C
-    @skipline (c)
+    @snippet mat_the_basic_image_container.cpp out-c
     ![](images/MatBasicContainerOut11.png)
 
 Output of other common items
@@ -254,27 +242,23 @@ Output of other common items
 OpenCV offers support for output of other common OpenCV data structures too via the \<\< operator:
 
 -   2D Point
-    @skip Point2f P
-    @until cout
+    @snippet mat_the_basic_image_container.cpp out-point2
     ![](images/MatBasicContainerOut12.png)
 
 -   3D Point
-    @skip Point3f P3f
-    @until cout
+    @snippet mat_the_basic_image_container.cpp out-point3
     ![](images/MatBasicContainerOut13.png)
 
 -   std::vector via cv::Mat
-    @skip vector<float> v
-    @until cout
+    @snippet mat_the_basic_image_container.cpp out-vector
     ![](images/MatBasicContainerOut14.png)
 
 -   std::vector of points
-    @skip vector<Point2f> vPoints
-    @until cout
+    @snippet mat_the_basic_image_container.cpp out-vector-points
     ![](images/MatBasicContainerOut15.png)
 
 Most of the samples here have been included in a small console application. You can download it from
-[here](samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp)
+[here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp)
 or in the core section of the cpp samples.
 
 You can also find a quick video demonstration of this on

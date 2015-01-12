@@ -271,7 +271,8 @@ enum InterpolationFlags{
     WARP_INVERSE_MAP     = 16
 };
 
-enum { INTER_BITS      = 5,
+enum InterpolationMasks {
+       INTER_BITS      = 5,
        INTER_BITS2     = INTER_BITS * 2,
        INTER_TAB_SIZE  = 1 << INTER_BITS,
        INTER_TAB_SIZE2 = INTER_TAB_SIZE * INTER_TAB_SIZE
@@ -329,7 +330,8 @@ enum AdaptiveThresholdTypes {
 };
 
 //! cv::undistort mode
-enum { PROJ_SPHERICAL_ORTHO  = 0,
+enum UndistortTypes {
+       PROJ_SPHERICAL_ORTHO  = 0,
        PROJ_SPHERICAL_EQRECT = 1
      };
 

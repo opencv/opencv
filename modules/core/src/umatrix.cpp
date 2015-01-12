@@ -771,25 +771,29 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
     bool haveMask = !_mask.empty();
 #ifdef HAVE_OPENCL
-    int tp = type(), cn = CV_MAT_CN(tp);
+    int tp = type(), cn = CV_MAT_CN(tp), d = CV_MAT_DEPTH(tp);
 
     if( dims <= 2 && cn <= 4 && CV_MAT_DEPTH(tp) < CV_64F && ocl::useOpenCL() )
     {
         Mat value = _value.getMat();
         CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
-        double buf[4] = { 0, 0, 0, 0 };
-        convertAndUnrollScalar(value, tp, (uchar *)buf, 1);
+        int kercn = haveMask || cn == 3 ? cn : std::max(cn, ocl::predictOptimalVectorWidth(*this)),
+                kertp = CV_MAKE_TYPE(d, kercn);
 
-        int scalarcn = cn == 3 ? 4 : cn, rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+        double buf[16] = { 0, 0, 0, 0, 0, 0, 0, 0,
+                           0, 0, 0, 0, 0, 0, 0, 0 };
+        convertAndUnrollScalar(value, tp, (uchar *)buf, kercn / cn);
+
+        int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
         String opts = format("-D dstT=%s -D rowsPerWI=%d -D dstST=%s -D dstT1=%s -D cn=%d",
-                             ocl::memopTypeToStr(tp), rowsPerWI,
-                             ocl::memopTypeToStr(CV_MAKETYPE(tp, scalarcn)),
-                             ocl::memopTypeToStr(CV_MAT_DEPTH(tp)), cn);
+                             ocl::memopTypeToStr(kertp), rowsPerWI,
+                             ocl::memopTypeToStr(CV_MAKETYPE(d, scalarcn)),
+                             ocl::memopTypeToStr(d), kercn);
 
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
         {
-            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE1(tp) * scalarcn);
+            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE(d) * scalarcn);
             UMat mask;
 
             if( haveMask )
@@ -802,11 +806,11 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
             }
             else
             {
-                ocl::KernelArg dstarg = ocl::KernelArg::WriteOnly(*this);
+                ocl::KernelArg dstarg = ocl::KernelArg::WriteOnly(*this, cn, kercn);
                 setK.args(dstarg, scalararg);
             }
 
-            size_t globalsize[] = { cols, (rows + rowsPerWI - 1) / rowsPerWI };
+            size_t globalsize[] = { cols * cn / kercn, (rows + rowsPerWI - 1) / rowsPerWI };
             if( setK.run(2, globalsize, NULL, false) )
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);

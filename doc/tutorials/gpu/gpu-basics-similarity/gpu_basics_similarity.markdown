@@ -24,7 +24,7 @@ The source code
 
 You may also find the source code and these video file in the
 `samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity` folder of the OpenCV
-source library or download it from [here](samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp).
+source library or download it from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp).
 The full source code is quite long (due to the controlling of the application via the command line
 arguments and performance measurement). Therefore, to avoid cluttering up these sections with those
 you'll find here only the functions itself.
@@ -32,37 +32,19 @@ you'll find here only the functions itself.
 The PSNR returns a float number, that if the two inputs are similar between 30 and 50 (higher is
 better).
 
-@dontinclude samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
-
-@skip struct BufferPSNR
-@until };
-
-@skip double getPSNR(
-@until return psnr;
-@until }
-@until }
-
-@skip double getPSNR_CUDA(
-@until return psnr;
-@until }
-@until }
+@snippet samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp getpsnr
+@snippet samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp getpsnrcuda
+@snippet samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp psnr
+@snippet samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp getpsnropt
 
 The SSIM returns the MSSIM of the images. This is too a float number between zero and one (higher is
 better), however we have one for each channel. Therefore, we return a *Scalar* OpenCV data
 structure:
 
-@dontinclude samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp
-
-@skip struct BufferMSSIM
-@until };
-
-@skip Scalar getMSSIM(
-@until return mssim;
-@until }
-
-@skip Scalar getMSSIM_CUDA_optimized(
-@until return mssim;
-@until }
+@snippet samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp getssim
+@snippet samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp getssimcuda
+@snippet samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp ssim
+@snippet samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp getssimopt
 
 How to do it? - The GPU
 -----------------------
