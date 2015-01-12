@@ -1598,10 +1598,10 @@ struct RGB2Gray<float>
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
     }
 
-    void process(__m128 v_r, __m128 v_g, __m128 v_b,
+    void process(__m128 v_b, __m128 v_g, __m128 v_r,
                  __m128 & v_gray) const
     {
-        v_gray = _mm_mul_ps(v_r, v_cb);
+        v_gray = _mm_mul_ps(v_r, v_cr);
         v_gray = _mm_add_ps(v_gray, _mm_mul_ps(v_g, v_cg));
         v_gray = _mm_add_ps(v_gray, _mm_mul_ps(v_b, v_cb));
     }

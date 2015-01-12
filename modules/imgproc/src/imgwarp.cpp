@@ -5016,8 +5016,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                                                               vandq_s32(v_ix1, v_mask)));
                     vst1q_u16(dst2 + x, vcombine_u16(v_dst0, v_dst1));
                 }
-                #elif CV_SSE2
-                if (useSSE2)
+                #elif CV_SSE4_1
+                if (useSSE4_1)
                 {
                     __m128 v_its = _mm_set1_ps(INTER_TAB_SIZE);
                     __m128i v_its1 = _mm_set1_epi32(INTER_TAB_SIZE-1);
