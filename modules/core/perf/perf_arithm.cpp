@@ -256,3 +256,17 @@ PERF_TEST_P(Size_MatType, divide, TYPICAL_MATS_CORE_ARITHM)
 
     SANITY_CHECK_NOTHING();
 }
+
+PERF_TEST_P(Size_MatType, reciprocal, TYPICAL_MATS_CORE_ARITHM)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat b(sz, type), c(sz, type);
+    double scale = 0.5;
+
+    declare.in(b, WARMUP_RNG).out(c);
+
+    TEST_CYCLE() divide(scale, b, c);
+
+    SANITY_CHECK_NOTHING();
+}

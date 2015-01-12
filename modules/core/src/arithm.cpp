@@ -2886,6 +2886,202 @@ div_( const T* src1, size_t step1, const T* src2, size_t step2,
     }
 }
 
+template <typename T>
+struct Recip_SIMD
+{
+    int operator() (const T *, T *, int, double) const
+    {
+        return 0;
+    }
+};
+
+#if CV_SSE2
+
+#if CV_SSE4_1
+
+template <>
+struct Recip_SIMD<uchar>
+{
+    int operator() (const uchar * src2, uchar * dst, int width, double scale) const
+    {
+        int x = 0;
+
+        __m128d v_scale = _mm_set1_pd(scale);
+        __m128i v_zero = _mm_setzero_si128();
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i _v_src2 = _mm_loadl_epi64((const __m128i *)(src2 + x));
+            __m128i v_src2 = _mm_unpacklo_epi8(_v_src2, v_zero);
+
+            __m128i v_src2i = _mm_unpacklo_epi16(v_src2, v_zero);
+            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
+            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
+            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+
+            v_src2i = _mm_unpackhi_epi16(v_src2, v_zero);
+            v_src2d = _mm_cvtepi32_pd(v_src2i);
+            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
+            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+
+            __m128i v_mask = _mm_cmpeq_epi8(_v_src2, v_zero);
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packus_epi16(_mm_packs_epi32(v_dst_0, v_dst_1), v_zero)));
+        }
+
+        return x;
+    }
+};
+
+#endif // CV_SSE4_1
+
+template <>
+struct Recip_SIMD<schar>
+{
+    int operator() (const schar * src2, schar * dst, int width, double scale) const
+    {
+        int x = 0;
+
+        __m128d v_scale = _mm_set1_pd(scale);
+        __m128i v_zero = _mm_setzero_si128();
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i _v_src2 = _mm_loadl_epi64((const __m128i *)(src2 + x));
+            __m128i v_src2 = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _v_src2), 8);
+
+            __m128i v_src2i = _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src2), 16);
+            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
+            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
+            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+
+            v_src2i = _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src2), 16);
+            v_src2d = _mm_cvtepi32_pd(v_src2i);
+            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
+            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+
+            __m128i v_mask = _mm_cmpeq_epi8(_v_src2, v_zero);
+            _mm_storel_epi64((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packs_epi16(_mm_packs_epi32(v_dst_0, v_dst_1), v_zero)));
+        }
+
+        return x;
+    }
+};
+
+#if CV_SSE4_1
+
+template <>
+struct Recip_SIMD<ushort>
+{
+    int operator() (const ushort * src2, ushort * dst, int width, double scale) const
+    {
+        int x = 0;
+
+        __m128d v_scale = _mm_set1_pd(scale);
+        __m128i v_zero = _mm_setzero_si128();
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+
+            __m128i v_src2i = _mm_unpacklo_epi16(v_src2, v_zero);
+            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
+            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
+            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+
+            v_src2i = _mm_unpackhi_epi16(v_src2, v_zero);
+            v_src2d = _mm_cvtepi32_pd(v_src2i);
+            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
+            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+
+            __m128i v_mask = _mm_cmpeq_epi16(v_src2, v_zero);
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packus_epi32(v_dst_0, v_dst_1)));
+        }
+
+        return x;
+    }
+};
+
+#endif // CV_SSE4_1
+
+template <>
+struct Recip_SIMD<short>
+{
+    int operator() (const short * src2, short * dst, int width, double scale) const
+    {
+        int x = 0;
+
+        __m128d v_scale = _mm_set1_pd(scale);
+        __m128i v_zero = _mm_setzero_si128();
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+
+            __m128i v_src2i = _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src2), 16);
+            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
+            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
+            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+
+            v_src2i = _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src2), 16);
+            v_src2d = _mm_cvtepi32_pd(v_src2i);
+            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
+            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+
+            __m128i v_mask = _mm_cmpeq_epi16(v_src2, v_zero);
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packs_epi32(v_dst_0, v_dst_1)));
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Recip_SIMD<int>
+{
+    int operator() (const int * src2, int * dst, int width, double scale) const
+    {
+        int x = 0;
+
+        __m128d v_scale = _mm_set1_pd(scale);
+        __m128i v_zero = _mm_setzero_si128();
+
+        for ( ; x <= width - 4; x += 4)
+        {
+            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+
+            __m128d v_src2d = _mm_cvtepi32_pd(v_src2);
+            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+
+            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2, 8));
+            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+
+            __m128i v_dst = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            __m128i v_mask = _mm_cmpeq_epi32(v_src2, v_zero);
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(v_mask, v_dst));
+        }
+
+        return x;
+    }
+};
+
+#endif
+
 template<typename T> static void
 recip_( const T*, size_t, const T* src2, size_t step2,
         T* dst, size_t step, Size size, double scale )
@@ -2893,9 +3089,11 @@ recip_( const T*, size_t, const T* src2, size_t step2,
     step2 /= sizeof(src2[0]);
     step /= sizeof(dst[0]);
 
+    Recip_SIMD<T> vop;
+
     for( ; size.height--; src2 += step2, dst += step )
     {
-        int i = 0;
+        int i = vop(src2, dst, size.width, scale);
         #if CV_ENABLE_UNROLLED
         for( ; i <= size.width - 4; i += 4 )
         {
