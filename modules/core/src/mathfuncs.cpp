@@ -824,14 +824,78 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
     /*static const double cos_a2 =  1;*/
 
     double k1;
-    int i;
+    int i = 0;
 
     if( !angle_in_degrees )
         k1 = N/(2*CV_PI);
     else
         k1 = N/360.;
 
-    for( i = 0; i < len; i++ )
+#if CV_AVX2
+    __m128d v_i = _mm_set_pd(1, 0);
+    __m128d v_k1 = _mm_set1_pd(k1);
+    __m128d v_1 = _mm_set1_pd(1);
+    __m128i v_N1 = _mm_set1_epi32(N - 1);
+    __m128i v_N4 = _mm_set1_epi32(N >> 2);
+    __m128d v_sin_a0 = _mm_set1_pd(sin_a0);
+    __m128d v_sin_a2 = _mm_set1_pd(sin_a2);
+    __m128d v_cos_a0 = _mm_set1_pd(cos_a0);
+
+    if (USE_AVX2)
+    {
+        for ( ; i <= len - 4; i += 4)
+        {
+            __m128 v_angle = _mm_loadu_ps(angle + i);
+
+            // 0-1
+            __m128d v_t = _mm_mul_pd(_mm_cvtps_pd(v_angle), v_k1);
+            __m128i v_it = _mm_cvtpd_epi32(v_t);
+            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
+
+            __m128i v_sin_idx = _mm_and_si128(v_it, v_N1);
+            __m128i v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
+
+            __m128d v_t2 = _mm_mul_pd(v_t, v_t);
+            __m128d v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
+            __m128d v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
+
+            __m128d v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 1);
+            __m128d v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 1);
+
+            __m128d v_sin_val_0 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
+                                             _mm_mul_pd(v_cos_a, v_sin_b));
+            __m128d v_cos_val_0 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
+                                             _mm_mul_pd(v_sin_a, v_sin_b));
+
+            // 2-3
+            v_t = _mm_mul_pd(_mm_cvtps_pd(_mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(v_angle), 8))), v_k1);
+            v_it = _mm_cvtpd_epi32(v_t);
+            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
+
+            v_sin_idx = _mm_and_si128(v_it, v_N1);
+            v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
+
+            v_t2 = _mm_mul_pd(v_t, v_t);
+            v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
+            v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
+
+            v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 1);
+            v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 1);
+
+            __m128d v_sin_val_1 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
+                                             _mm_mul_pd(v_cos_a, v_sin_b));
+            __m128d v_cos_val_1 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
+                                             _mm_mul_pd(v_sin_a, v_sin_b));
+
+            _mm_storeu_ps(sinval + i, _mm_movelh_ps(_mm_cvtpd_ps(v_sin_val_0),
+                                                    _mm_cvtpd_ps(v_sin_val_1)));
+            _mm_storeu_ps(cosval + i, _mm_movelh_ps(_mm_cvtpd_ps(v_cos_val_0),
+                                                    _mm_cvtpd_ps(v_cos_val_1)));
+        }
+    }
+#endif
+
+    for( ; i < len; i++ )
     {
         double t = angle[i]*k1;
         int it = cvRound(t);
