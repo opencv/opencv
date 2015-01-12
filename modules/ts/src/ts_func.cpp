@@ -2998,6 +2998,12 @@ void printVersionInfo(bool useStdOut)
 
     std::string cpu_features;
 
+#if CV_MMX
+    if (checkHardwareSupport(CV_CPU_MMX)) cpu_features += " mmx";
+#endif
+#if CV_POPCNT
+    if (checkHardwareSupport(CV_CPU_POPCNT)) cpu_features += " popcnt";
+#endif
 #if CV_SSE
     if (checkHardwareSupport(CV_CPU_SSE)) cpu_features += " sse";
 #endif
@@ -3021,6 +3027,36 @@ void printVersionInfo(bool useStdOut)
 #endif
 #if CV_AVX2
     if (checkHardwareSupport(CV_CPU_AVX2)) cpu_features += " avx2";
+#endif
+#if CV_FMA3
+    if (checkHardwareSupport(CV_CPU_FMA3)) cpu_features += " fma3";
+#endif
+#if CV_AVX_512F
+    if (checkHardwareSupport(CV_CPU_AVX_512F) cpu_features += " avx-512f";
+#endif
+#if CV_AVX_512BW
+    if (checkHardwareSupport(CV_CPU_AVX_512BW) cpu_features += " avx-512bw";
+#endif
+#if CV_AVX_512CD
+    if (checkHardwareSupport(CV_CPU_AVX_512CD) cpu_features += " avx-512cd";
+#endif
+#if CV_AVX_512DQ
+    if (checkHardwareSupport(CV_CPU_AVX_512DQ) cpu_features += " avx-512dq";
+#endif
+#if CV_AVX_512ER
+    if (checkHardwareSupport(CV_CPU_AVX_512ER) cpu_features += " avx-512er";
+#endif
+#if CV_AVX_512IFMA512
+    if (checkHardwareSupport(CV_CPU_AVX_512IFMA512) cpu_features += " avx-512ifma512";
+#endif
+#if CV_AVX_512PF
+    if (checkHardwareSupport(CV_CPU_AVX_512PF) cpu_features += " avx-512pf";
+#endif
+#if CV_AVX_512VBMI
+    if (checkHardwareSupport(CV_CPU_AVX_512VBMI) cpu_features += " avx-512vbmi";
+#endif
+#if CV_AVX_512VL
+    if (checkHardwareSupport(CV_CPU_AVX_512VL) cpu_features += " avx-512vl";
 #endif
 #if CV_NEON
     cpu_features += " neon"; // NEON is currently not checked at runtime
