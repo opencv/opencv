@@ -66,7 +66,7 @@
 #define CHI_SQ                  1.645
 #define RLO                     0.25
 #define RHI                     0.75
-#define MAXLEVMARQITERS         10
+#define MAXLEVMARQITERS         50
 #define m                       4       /* 4 points required per model */
 #define SPRT_T_M                25      /* Guessing 25 match evlauations / 1 model generation */
 #define SPRT_M_S                1       /* 1 model per sample */
@@ -1592,13 +1592,21 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
     sacCalcJacobianErrors(p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
                           p->lm.JtJ, p->lm.Jte,  &S);
 
+    /*{
+        for(int j=0;j<8;j++){
+            for(int k=0;k<8;k++){
+                printf("%12.6g%s", p->lm.JtJ[j][k], k==7 ? "\n" : ", ");
+            }
+        }
+    }*/
+
     /* Levenberg-Marquardt Loop */
     for(i=0;i<MAXLEVMARQITERS;i++){
-        /* The code below becomes an infinite loop when L reeaches infinity.
+        /* The code below becomes an infinite loop when L reeaches infinity. */
         while(sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1)){
             L *= 2.0f;
-        }*/
-        sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1);
+        }
+        //sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1);
         sacTRInv8x8   (p->lm.tmp1, p->lm.tmp1);
         sacTRISolve8x8(p->lm.tmp1, p->lm.Jte,  dH);
         sacSub8x1     (newH,       p->best.H,  dH);
@@ -1682,7 +1690,7 @@ static inline void   sacCalcJacobianErrors(const float* restrict H,
         float X       = dst[2*i+0];
         float Y       = dst[2*i+1];
         float W       = (H[6]*x + H[7]*y + 1.0f);
-        float iW      = W<FLT_EPSILON ? 1.0f/W : 0;
+        float iW      = fabs(W) > FLT_EPSILON ? 1.0f/W : 0;
 
         float reprojX = (H[0]*x + H[1]*y + H[2]) * iW;
         float reprojY = (H[3]*x + H[4]*y + H[5]) * iW;
