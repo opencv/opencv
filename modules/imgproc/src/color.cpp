@@ -2219,7 +2219,7 @@ struct RGB2YCrCb_i<uchar>
                 __m128i v_cr_1 = _mm_packus_epi16(v_cr0, v_cr1);
                 __m128i v_cb_1 = _mm_packus_epi16(v_cb0, v_cb1);
 
-                _mm_interleavee_epi8(v_y_0, v_y_1, v_cr_0, v_cr_1, v_cb_0, v_cb_1);
+                _mm_interleave_epi8(v_y_0, v_y_1, v_cr_0, v_cr_1, v_cb_0, v_cb_1);
 
                 _mm_storeu_si128((__m128i *)(dst + i), v_y_0);
                 _mm_storeu_si128((__m128i *)(dst + i + 16), v_y_1);
@@ -2988,7 +2988,7 @@ struct YCrCb2RGB_i<uchar>
                     std::swap(v_r1, v_b1);
                 }
 
-                _mm_interleavee_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                _mm_interleave_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 _mm_storeu_si128((__m128i *)(dst), v_r0);
                 _mm_storeu_si128((__m128i *)(dst + 16), v_r1);
@@ -4585,7 +4585,7 @@ struct RGB2HLS_b
                 __m128i v_l1 = _mm_packus_epi16(v_l_0, v_l_1);
                 __m128i v_s1 = _mm_packus_epi16(v_s_0, v_s_1);
 
-                _mm_interleavee_epi8(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
+                _mm_interleave_epi8(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
 
                 _mm_storeu_si128((__m128i *)(dst + j), v_h0);
                 _mm_storeu_si128((__m128i *)(dst + j + 16), v_h1);
@@ -5695,7 +5695,7 @@ struct RGB2Luv_b
                 __m128i v_u1 = _mm_packus_epi16(v_u_0, v_u_1);
                 __m128i v_v1 = _mm_packus_epi16(v_v_0, v_v_1);
 
-                _mm_interleavee_epi8(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+                _mm_interleave_epi8(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
 
                 _mm_storeu_si128((__m128i *)(dst + j), v_l0);
                 _mm_storeu_si128((__m128i *)(dst + j + 16), v_l1);

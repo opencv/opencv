@@ -472,6 +472,162 @@ MERGE4_KERNEL_TEMPLATE(VMerge4, uchar ,  uint8x16x4_t, vld1q_u8 , vst4q_u8 );
 MERGE4_KERNEL_TEMPLATE(VMerge4, ushort,  uint16x8x4_t, vld1q_u16, vst4q_u16);
 MERGE4_KERNEL_TEMPLATE(VMerge4, int   ,   int32x4x4_t, vld1q_s32, vst4q_s32);
 MERGE4_KERNEL_TEMPLATE(VMerge4, int64 ,   int64x1x4_t, vld1_s64 , vst4_s64 );
+
+#elif CV_SSE2
+
+template <typename T>
+struct VMerge2
+{
+    VMerge2() : support(false) { }
+    void operator()(const T *, const T *, T *) const { }
+
+    bool support;
+};
+
+template <typename T>
+struct VMerge3
+{
+    VMerge3() : support(false) { }
+    void operator()(const T *, const T *, const T *, T *) const { }
+
+    bool support;
+};
+
+template <typename T>
+struct VMerge4
+{
+    VMerge4() : support(false) { }
+    void operator()(const T *, const T *, const T *, const T *, T *) const { }
+
+    bool support;
+};
+
+#define MERGE2_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor)     \
+template <>                                                                                \
+struct VMerge2<data_type>                                                                  \
+{                                                                                          \
+    enum                                                                                   \
+    {                                                                                      \
+        ELEMS_IN_VEC = 16 / sizeof(data_type)                                              \
+    };                                                                                     \
+                                                                                           \
+    VMerge2()                                                                              \
+    {                                                                                      \
+        support = true;                                                                    \
+    }                                                                                      \
+                                                                                           \
+    void operator()(const data_type * src0, const data_type * src1,                        \
+                    data_type * dst) const                                                 \
+    {                                                                                      \
+        reg_type v_src0 = _mm_loadu_##flavor((const cast_type *)(src0));                   \
+        reg_type v_src1 = _mm_loadu_##flavor((const cast_type *)(src0 + ELEMS_IN_VEC));    \
+        reg_type v_src2 = _mm_loadu_##flavor((const cast_type *)(src1));                   \
+        reg_type v_src3 = _mm_loadu_##flavor((const cast_type *)(src1 + ELEMS_IN_VEC));    \
+                                                                                           \
+        _mm_interleave(v_src0, v_src1, v_src2, v_src3);                                    \
+                                                                                           \
+        _mm_storeu_##flavor((cast_type *)(dst), v_src0);                                   \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC), v_src1);                    \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 2), v_src2);                \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 3), v_src3);                \
+    }                                                                                      \
+                                                                                           \
+    bool support;                                                                          \
+}
+
+#define MERGE3_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor)     \
+template <>                                                                                \
+struct VMerge3<data_type>                                                                  \
+{                                                                                          \
+    enum                                                                                   \
+    {                                                                                      \
+        ELEMS_IN_VEC = 16 / sizeof(data_type)                                              \
+    };                                                                                     \
+                                                                                           \
+    VMerge3()                                                                              \
+    {                                                                                      \
+        support = true;                                                                    \
+    }                                                                                      \
+                                                                                           \
+    void operator()(const data_type * src0, const data_type * src1, const data_type * src2,\
+                    data_type * dst) const                                                 \
+    {                                                                                      \
+        reg_type v_src0 = _mm_loadu_##flavor((const cast_type *)(src0));                   \
+        reg_type v_src1 = _mm_loadu_##flavor((const cast_type *)(src0 + ELEMS_IN_VEC));    \
+        reg_type v_src2 = _mm_loadu_##flavor((const cast_type *)(src1));                   \
+        reg_type v_src3 = _mm_loadu_##flavor((const cast_type *)(src1 + ELEMS_IN_VEC));    \
+        reg_type v_src4 = _mm_loadu_##flavor((const cast_type *)(src2));                   \
+        reg_type v_src5 = _mm_loadu_##flavor((const cast_type *)(src2 + ELEMS_IN_VEC));    \
+                                                                                           \
+        _mm_interleave(v_src0, v_src1, v_src2,                                             \
+                       v_src3, v_src4, v_src5);                                            \
+                                                                                           \
+        _mm_storeu_##flavor((cast_type *)(dst), v_src0);                                   \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC), v_src1);                    \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 2), v_src2);                \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 3), v_src3);                \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 4), v_src4);                \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 5), v_src5);                \
+    }                                                                                      \
+                                                                                           \
+    bool support;                                                                          \
+}
+
+#define MERGE4_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor)     \
+template <>                                                                                \
+struct VMerge4<data_type>                                                                  \
+{                                                                                          \
+    enum                                                                                   \
+    {                                                                                      \
+        ELEMS_IN_VEC = 16 / sizeof(data_type)                                              \
+    };                                                                                     \
+                                                                                           \
+    VMerge4()                                                                              \
+    {                                                                                      \
+        support = true;                                                                    \
+    }                                                                                      \
+                                                                                           \
+    void operator()(const data_type * src0, const data_type * src1,                        \
+                    const data_type * src2, const data_type * src3,                        \
+                    data_type * dst) const                                                 \
+    {                                                                                      \
+        reg_type v_src0 = _mm_loadu_##flavor((const cast_type *)(src0));                   \
+        reg_type v_src1 = _mm_loadu_##flavor((const cast_type *)(src0 + ELEMS_IN_VEC));    \
+        reg_type v_src2 = _mm_loadu_##flavor((const cast_type *)(src1));                   \
+        reg_type v_src3 = _mm_loadu_##flavor((const cast_type *)(src1 + ELEMS_IN_VEC));    \
+        reg_type v_src4 = _mm_loadu_##flavor((const cast_type *)(src2));                   \
+        reg_type v_src5 = _mm_loadu_##flavor((const cast_type *)(src2 + ELEMS_IN_VEC));    \
+        reg_type v_src6 = _mm_loadu_##flavor((const cast_type *)(src3));                   \
+        reg_type v_src7 = _mm_loadu_##flavor((const cast_type *)(src3 + ELEMS_IN_VEC));    \
+                                                                                           \
+        _mm_interleave(v_src0, v_src1, v_src2, v_src3,                                     \
+                       v_src4, v_src5, v_src6, v_src7);                                    \
+                                                                                           \
+        _mm_storeu_##flavor((cast_type *)(dst), v_src0);                                   \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC), v_src1);                    \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 2), v_src2);                \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 3), v_src3);                \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 4), v_src4);                \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 5), v_src5);                \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 6), v_src6);                \
+        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 7), v_src7);                \
+    }                                                                                      \
+                                                                                           \
+    bool support;                                                                          \
+}
+
+MERGE2_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_deinterleave_epi8, si128);
+MERGE2_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_deinterleave_epi16, si128);
+MERGE2_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_deinterleave_ps, ps);
+
+MERGE3_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128);
+MERGE3_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128);
+MERGE3_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps);
+
+MERGE4_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128);
+MERGE4_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128);
+MERGE4_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps);
+
 #endif
 
 template<typename T> static void
@@ -499,6 +655,17 @@ merge_( const T** src, T* dst, int len, int cn )
             for( ; i < len - inc_i; i += inc_i, j += inc_j)
                 vmerge(src0 + i, src1 + i, dst + j);
         }
+#elif CV_SSE2
+        if(cn == 2)
+        {
+            int inc_i = 32/sizeof(T);
+            int inc_j = 2 * inc_i;
+
+            VMerge2<T> vmerge;
+            if (vmerge.support)
+                for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                    vmerge(src0 + i, src1 + i, dst + j);
+        }
 #endif
         for( ; i < len; i++, j += cn )
         {
@@ -519,6 +686,17 @@ merge_( const T** src, T* dst, int len, int cn )
             VMerge3<T> vmerge;
             for( ; i < len - inc_i; i += inc_i, j += inc_j)
                 vmerge(src0 + i, src1 + i, src2 + i, dst + j);
+        }
+#elif CV_SSE2
+        if(cn == 3)
+        {
+            int inc_i = 32/sizeof(T);
+            int inc_j = 3 * inc_i;
+
+            VMerge3<T> vmerge;
+            if (vmerge.support)
+                for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                    vmerge(src0 + i, src1 + i, src2 + i, dst + j);
         }
 #endif
         for( ; i < len; i++, j += cn )
@@ -541,6 +719,17 @@ merge_( const T** src, T* dst, int len, int cn )
             VMerge4<T> vmerge;
             for( ; i < len - inc_i; i += inc_i, j += inc_j)
                 vmerge(src0 + i, src1 + i, src2 + i, src3 + i, dst + j);
+        }
+#elif CV_SSE2
+        if(cn == 4)
+        {
+            int inc_i = 32/sizeof(T);
+            int inc_j = 4 * inc_i;
+
+            VMerge4<T> vmerge;
+            if (vmerge.support)
+                for( ; i < len - inc_i; i += inc_i, j += inc_j)
+                    vmerge(src0 + i, src1 + i, src2 + i, src3 + i, dst + j);
         }
 #endif
         for( ; i < len; i++, j += cn )
