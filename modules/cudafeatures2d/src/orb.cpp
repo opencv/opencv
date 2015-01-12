@@ -398,7 +398,7 @@ namespace
 cv::cuda::ORB_CUDA::ORB_CUDA(int nFeatures, float scaleFactor, int nLevels, int edgeThreshold, int firstLevel, int WTA_K, int scoreType, int patchSize) :
     nFeatures_(nFeatures), scaleFactor_(scaleFactor), nLevels_(nLevels), edgeThreshold_(edgeThreshold), firstLevel_(firstLevel), WTA_K_(WTA_K),
     scoreType_(scoreType), patchSize_(patchSize),
-    fastDetector_(DEFAULT_FAST_THRESHOLD)
+    fastDetector_(cuda::FastFeatureDetector::create(DEFAULT_FAST_THRESHOLD))
 {
     CV_Assert(patchSize_ >= 2);
 
@@ -554,7 +554,7 @@ namespace
                 return;
             }
 
-            count = cull_gpu(keypoints.ptr<int>(FAST_CUDA::LOCATION_ROW), keypoints.ptr<float>(FAST_CUDA::RESPONSE_ROW), count, n_points);
+            count = cull_gpu(keypoints.ptr<int>(cuda::FastFeatureDetector::LOCATION_ROW), keypoints.ptr<float>(cuda::FastFeatureDetector::RESPONSE_ROW), count, n_points);
         }
     }
 }
@@ -570,20 +570,20 @@ void cv::cuda::ORB_CUDA::computeKeyPointsPyramid()
 
     for (int level = 0; level < nLevels_; ++level)
     {
-        keyPointsCount_[level] = fastDetector_.calcKeyPointsLocation(imagePyr_[level], maskPyr_[level]);
+        fastDetector_->setMaxNumPoints(0.05 * imagePyr_[level].size().area());
+
+        GpuMat fastKpRange;
+        fastDetector_->detectAsync(imagePyr_[level], fastKpRange, maskPyr_[level], Stream::Null());
+
+        keyPointsCount_[level] = fastKpRange.cols;
 
         if (keyPointsCount_[level] == 0)
             continue;
 
-        ensureSizeIsEnough(3, keyPointsCount_[level], CV_32FC1, keyPointsPyr_[level]);
+        ensureSizeIsEnough(3, keyPointsCount_[level], fastKpRange.type(), keyPointsPyr_[level]);
+        fastKpRange.copyTo(keyPointsPyr_[level].rowRange(0, 2));
 
-        GpuMat fastKpRange = keyPointsPyr_[level].rowRange(0, 2);
-        keyPointsCount_[level] = fastDetector_.getKeyPoints(fastKpRange);
-
-        if (keyPointsCount_[level] == 0)
-            continue;
-
-        int n_features = static_cast<int>(n_features_per_level_[level]);
+        const int n_features = static_cast<int>(n_features_per_level_[level]);
 
         if (scoreType_ == ORB::HARRIS_SCORE)
         {
@@ -766,8 +766,6 @@ void cv::cuda::ORB_CUDA::release()
     buf_.release();
 
     keyPointsPyr_.clear();
-
-    fastDetector_.release();
 
     d_keypoints_.release();
 }

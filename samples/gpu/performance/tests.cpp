@@ -322,14 +322,14 @@ TEST(FAST)
     FAST(src, keypoints, 20);
     CPU_OFF;
 
-    cuda::FAST_CUDA d_FAST(20);
+    cv::Ptr<cv::cuda::FastFeatureDetector> d_FAST = cv::cuda::FastFeatureDetector::create(20);
     cuda::GpuMat d_src(src);
     cuda::GpuMat d_keypoints;
 
-    d_FAST(d_src, cuda::GpuMat(), d_keypoints);
+    d_FAST->detectAsync(d_src, d_keypoints);
 
     CUDA_ON;
-    d_FAST(d_src, cuda::GpuMat(), d_keypoints);
+    d_FAST->detectAsync(d_src, d_keypoints);
     CUDA_OFF;
 }
 

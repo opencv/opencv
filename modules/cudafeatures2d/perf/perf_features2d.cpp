@@ -64,15 +64,18 @@ PERF_TEST_P(Image_Threshold_NonMaxSuppression, FAST,
 
     if (PERF_RUN_CUDA())
     {
-        cv::cuda::FAST_CUDA d_fast(threshold, nonMaxSuppersion, 0.5);
+        cv::Ptr<cv::cuda::FastFeatureDetector> d_fast =
+                cv::cuda::FastFeatureDetector::create(threshold, nonMaxSuppersion,
+                                                      cv::FastFeatureDetector::TYPE_9_16,
+                                                      0.5 * img.size().area());
 
         const cv::cuda::GpuMat d_img(img);
         cv::cuda::GpuMat d_keypoints;
 
-        TEST_CYCLE() d_fast(d_img, cv::cuda::GpuMat(), d_keypoints);
+        TEST_CYCLE() d_fast->detectAsync(d_img, d_keypoints);
 
         std::vector<cv::KeyPoint> gpu_keypoints;
-        d_fast.downloadKeypoints(d_keypoints, gpu_keypoints);
+        d_fast->convert(d_keypoints, gpu_keypoints);
 
         sortKeyPoints(gpu_keypoints);
 

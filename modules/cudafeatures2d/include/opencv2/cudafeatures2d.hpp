@@ -48,6 +48,7 @@
 #endif
 
 #include "opencv2/core/cuda.hpp"
+#include "opencv2/features2d.hpp"
 #include "opencv2/cudafilters.hpp"
 
 /**
@@ -228,91 +229,49 @@ private:
     std::vector<GpuMat> trainDescCollection;
 };
 
-/** @brief Class used for corner detection using the FAST algorithm. :
+//
+// Feature2DAsync
+//
+
+/** @brief Abstract base class for 2D image feature detectors and descriptor extractors.
  */
-class CV_EXPORTS FAST_CUDA
+class CV_EXPORTS Feature2DAsync
+{
+public:
+    virtual ~Feature2DAsync() {}
+
+    virtual void detectAsync(InputArray image, OutputArray keypoints,
+                             InputArray mask = noArray(),
+                             Stream& stream = Stream::Null()) = 0;
+
+    virtual void convert(InputArray gpu_keypoints, std::vector<KeyPoint>& keypoints) = 0;
+};
+
+//
+// FastFeatureDetector
+//
+
+/** @brief Wrapping class for feature detection using the FAST method.
+ */
+class CV_EXPORTS FastFeatureDetector : public cv::FastFeatureDetector, public Feature2DAsync
 {
 public:
     enum
     {
         LOCATION_ROW = 0,
         RESPONSE_ROW,
-        ROWS_COUNT
+        ROWS_COUNT,
+
+        FEATURE_SIZE = 7
     };
 
-    //! all features have same size
-    static const int FEATURE_SIZE = 7;
+    static Ptr<FastFeatureDetector> create(int threshold=10,
+                                           bool nonmaxSuppression=true,
+                                           int type=FastFeatureDetector::TYPE_9_16,
+                                           int max_npoints = 5000);
 
-    /** @brief Constructor.
-
-    @param threshold Threshold on difference between intensity of the central pixel and pixels on a
-    circle around this pixel.
-    @param nonmaxSuppression If it is true, non-maximum suppression is applied to detected corners
-    (keypoints).
-    @param keypointsRatio Inner buffer size for keypoints store is determined as (keypointsRatio \*
-    image_width \* image_height).
-     */
-    explicit FAST_CUDA(int threshold, bool nonmaxSuppression = true, double keypointsRatio = 0.05);
-
-    /** @brief Finds the keypoints using FAST detector.
-
-    @param image Image where keypoints (corners) are detected. Only 8-bit grayscale images are
-    supported.
-    @param mask Optional input mask that marks the regions where we should detect features.
-    @param keypoints The output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU
-    memory:
-    -   keypoints.ptr\<Vec2s\>(LOCATION_ROW)[i] will contain location of i'th point
-    -   keypoints.ptr\<float\>(RESPONSE_ROW)[i] will contain response of i'th point (if non-maximum
-    suppression is applied)
-     */
-    void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
-    /** @overload */
-    void operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
-
-    /** @brief Download keypoints from GPU to CPU memory.
-    */
-    static void downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
-
-    /** @brief Converts keypoints from CUDA representation to vector of KeyPoint.
-    */
-    static void convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints);
-
-    /** @brief Releases inner buffer memory.
-    */
-    void release();
-
-    bool nonmaxSuppression;
-
-    int threshold;
-
-    //! max keypoints = keypointsRatio * img.size().area()
-    double keypointsRatio;
-
-    /** @brief Find keypoints and compute it's response if nonmaxSuppression is true.
-
-    @param image Image where keypoints (corners) are detected. Only 8-bit grayscale images are
-    supported.
-    @param mask Optional input mask that marks the regions where we should detect features.
-
-    The function returns count of detected keypoints.
-     */
-    int calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask);
-
-    /** @brief Gets final array of keypoints.
-
-    @param keypoints The output vector of keypoints.
-
-    The function performs non-max suppression if needed and returns final count of keypoints.
-     */
-    int getKeyPoints(GpuMat& keypoints);
-
-private:
-    GpuMat kpLoc_;
-    int count_;
-
-    GpuMat score_;
-
-    GpuMat d_keypoints_;
+    virtual void setMaxNumPoints(int max_npoints) = 0;
+    virtual int getMaxNumPoints() const = 0;
 };
 
 /** @brief Class for extracting ORB features and descriptors from an image. :
@@ -388,8 +347,8 @@ public:
 
     inline void setFastParams(int threshold, bool nonmaxSuppression = true)
     {
-        fastDetector_.threshold = threshold;
-        fastDetector_.nonmaxSuppression = nonmaxSuppression;
+        fastDetector_->setThreshold(threshold);
+        fastDetector_->setNonmaxSuppression(nonmaxSuppression);
     }
 
     /** @brief Releases inner buffer memory.
@@ -433,7 +392,7 @@ private:
     std::vector<GpuMat> keyPointsPyr_;
     std::vector<int> keyPointsCount_;
 
-    FAST_CUDA fastDetector_;
+    Ptr<cv::cuda::FastFeatureDetector> fastDetector_;
 
     Ptr<cuda::Filter> blurFilter;
 
