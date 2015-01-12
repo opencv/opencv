@@ -966,6 +966,13 @@ void polarToCart( InputArray src1, InputArray src2,
                         vst1q_f32(x + k, vmulq_f32(vld1q_f32(x + k), v_m));
                         vst1q_f32(y + k, vmulq_f32(vld1q_f32(y + k), v_m));
                     }
+                    #elif CV_SSE2
+                    for( ; k <= len - 4; k += 4 )
+                    {
+                        __m128 v_m = _mm_loadu_ps(mag + k);
+                        _mm_storeu_ps(x + k, _mm_mul_ps(_mm_loadu_ps(x + k), v_m));
+                        _mm_storeu_ps(y + k, _mm_mul_ps(_mm_loadu_ps(y + k), v_m));
+                    }
                     #endif
 
                     for( ; k < len; k++ )
