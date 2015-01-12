@@ -56,50 +56,10 @@ enum
 };
 
 CV_ENUM(CvtMode,
-    COLOR_BGR2BGR555, COLOR_BGR2BGR565, COLOR_BGR2BGRA, COLOR_BGR2GRAY,
-    COLOR_BGR2HLS, COLOR_BGR2HLS_FULL, COLOR_BGR2HSV, COLOR_BGR2HSV_FULL,
-    COLOR_BGR2Lab, COLOR_BGR2Luv, COLOR_BGR2RGB, COLOR_BGR2RGBA, COLOR_BGR2XYZ,
-    COLOR_BGR2YCrCb, COLOR_BGR2YUV, COLOR_BGR5552BGR, COLOR_BGR5552BGRA,
-
-    COLOR_BGR5552GRAY, COLOR_BGR5552RGB, COLOR_BGR5552RGBA, COLOR_BGR5652BGR,
-    COLOR_BGR5652BGRA, COLOR_BGR5652GRAY, COLOR_BGR5652RGB, COLOR_BGR5652RGBA,
-
-    COLOR_BGRA2BGR, COLOR_BGRA2BGR555, COLOR_BGRA2BGR565, COLOR_BGRA2GRAY, COLOR_BGRA2RGBA,
-    CX_BGRA2HLS, CX_BGRA2HLS_FULL, CX_BGRA2HSV, CX_BGRA2HSV_FULL,
     CX_BGRA2Lab, CX_BGRA2Luv, CX_BGRA2XYZ,
     CX_BGRA2YCrCb, CX_BGRA2YUV,
-
-    COLOR_GRAY2BGR, COLOR_GRAY2BGR555, COLOR_GRAY2BGR565, COLOR_GRAY2BGRA,
-
-    COLOR_HLS2BGR, COLOR_HLS2BGR_FULL, COLOR_HLS2RGB, COLOR_HLS2RGB_FULL,
-    CX_HLS2BGRA, CX_HLS2BGRA_FULL, CX_HLS2RGBA, CX_HLS2RGBA_FULL,
-
-    COLOR_HSV2BGR, COLOR_HSV2BGR_FULL, COLOR_HSV2RGB, COLOR_HSV2RGB_FULL,
-    CX_HSV2BGRA, CX_HSV2BGRA_FULL, CX_HSV2RGBA,    CX_HSV2RGBA_FULL,
-
-    COLOR_Lab2BGR, COLOR_Lab2LBGR, COLOR_Lab2LRGB, COLOR_Lab2RGB,
-    CX_Lab2BGRA, CX_Lab2LBGRA, CX_Lab2LRGBA, CX_Lab2RGBA,
-
-    COLOR_LBGR2Lab, COLOR_LBGR2Luv, COLOR_LRGB2Lab, COLOR_LRGB2Luv,
-    CX_LBGRA2Lab, CX_LBGRA2Luv, CX_LRGBA2Lab, CX_LRGBA2Luv,
-
-    COLOR_Luv2BGR, COLOR_Luv2LBGR, COLOR_Luv2LRGB, COLOR_Luv2RGB,
-    CX_Luv2BGRA, CX_Luv2LBGRA, CX_Luv2LRGBA, CX_Luv2RGBA,
-
-    COLOR_RGB2BGR555, COLOR_RGB2BGR565, COLOR_RGB2GRAY,
-    COLOR_RGB2HLS, COLOR_RGB2HLS_FULL, COLOR_RGB2HSV, COLOR_RGB2HSV_FULL,
     COLOR_RGB2Lab, COLOR_RGB2Luv, COLOR_RGB2XYZ, COLOR_RGB2YCrCb, COLOR_RGB2YUV,
-
-    COLOR_RGBA2BGR, COLOR_RGBA2BGR555, COLOR_RGBA2BGR565, COLOR_RGBA2GRAY,
-    CX_RGBA2HLS, CX_RGBA2HLS_FULL, CX_RGBA2HSV, CX_RGBA2HSV_FULL,
-    CX_RGBA2Lab, CX_RGBA2Luv, CX_RGBA2XYZ,
-    CX_RGBA2YCrCb, CX_RGBA2YUV,
-
-    COLOR_XYZ2BGR, COLOR_XYZ2RGB, CX_XYZ2BGRA, CX_XYZ2RGBA,
-
-    COLOR_YCrCb2BGR, COLOR_YCrCb2RGB, CX_YCrCb2BGRA, CX_YCrCb2RGBA,
-    COLOR_YUV2BGR, COLOR_YUV2RGB, CX_YUV2BGRA, CX_YUV2RGBA
-    )
+    CX_RGBA2YCrCb, CX_RGBA2YUV)
 
 
 CV_ENUM(CvtModeBayer,
@@ -237,135 +197,25 @@ ChPair getConversionInfo(int cvtMode)
     return ChPair(0,0);
 }
 
-typedef std::tr1::tuple<Size, CvtMode> Size_CvtMode_t;
-typedef perf::TestBaseWithParam<Size_CvtMode_t> Size_CvtMode;
+typedef perf::TestBaseWithParam<Size> Size_CvtMode;
 
 PERF_TEST_P(Size_CvtMode, cvtColor8u,
-            testing::Combine(
-                testing::Values(::perf::szODD, ::perf::szVGA, ::perf::sz1080p),
-                CvtMode::all()
-                )
+                testing::Values(::perf::szODD, ::perf::szVGA, ::perf::sz1080p)
             )
 {
-    Size sz = get<0>(GetParam());
-    int _mode = get<1>(GetParam()), mode = _mode;
+    Size sz = GetParam();
+    int mode = COLOR_RGB2YCrCb;
     ChPair ch = getConversionInfo(mode);
     mode %= COLOR_COLORCVT_MAX;
 
-    Mat src(sz, CV_8UC(ch.scn));
-    Mat dst(sz, CV_8UC(ch.dcn));
+    Mat src(sz, CV_8UC(3));
+    Mat dst(sz, CV_8UC(3));
 
     declare.time(100);
     declare.in(src, WARMUP_RNG).out(dst);
 
     int runs = sz.width <= 320 ? 100 : 5;
-    TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
+    TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, 3);
 
-#if defined(__APPLE__) && defined(HAVE_IPP)
-    SANITY_CHECK(dst, _mode == CX_BGRA2HLS_FULL ? 2 : 1);
-#else
-    SANITY_CHECK(dst, 1);
-#endif
-}
-
-typedef std::tr1::tuple<Size, CvtModeBayer> Size_CvtMode_Bayer_t;
-typedef perf::TestBaseWithParam<Size_CvtMode_Bayer_t> Size_CvtMode_Bayer;
-
-PERF_TEST_P(Size_CvtMode_Bayer, cvtColorBayer8u,
-            testing::Combine(
-                testing::Values(::perf::szODD, ::perf::szVGA),
-                CvtModeBayer::all()
-                )
-            )
-{
-    Size sz = get<0>(GetParam());
-    int mode = get<1>(GetParam());
-    ChPair ch = getConversionInfo(mode);
-    mode %= COLOR_COLORCVT_MAX;
-
-    Mat src(sz, CV_8UC(ch.scn));
-    Mat dst(sz, CV_8UC(ch.dcn));
-
-    declare.time(100);
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    TEST_CYCLE() cvtColor(src, dst, mode, ch.dcn);
-
-    SANITY_CHECK(dst, 1);
-}
-
-typedef std::tr1::tuple<Size, CvtMode2> Size_CvtMode2_t;
-typedef perf::TestBaseWithParam<Size_CvtMode2_t> Size_CvtMode2;
-
-PERF_TEST_P(Size_CvtMode2, cvtColorYUV420,
-            testing::Combine(
-                testing::Values(szVGA, sz1080p, Size(130, 60)),
-                CvtMode2::all()
-                )
-            )
-{
-    Size sz = get<0>(GetParam());
-    int mode = get<1>(GetParam());
-    ChPair ch = getConversionInfo(mode);
-
-    Mat src(sz.height + sz.height / 2, sz.width, CV_8UC(ch.scn));
-    Mat dst(sz, CV_8UC(ch.dcn));
-
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    int runs = (sz.width <= 640) ? 8 : 1;
-    TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
-
-    SANITY_CHECK(dst, 1);
-}
-
-typedef std::tr1::tuple<Size, CvtMode3> Size_CvtMode3_t;
-typedef perf::TestBaseWithParam<Size_CvtMode3_t> Size_CvtMode3;
-
-PERF_TEST_P(Size_CvtMode3, cvtColorRGB2YUV420p,
-            testing::Combine(
-                testing::Values(szVGA, sz720p, sz1080p, Size(130, 60)),
-                CvtMode3::all()
-                )
-            )
-{
-    Size sz = get<0>(GetParam());
-    int mode = get<1>(GetParam());
-    ChPair ch = getConversionInfo(mode);
-
-    Mat src(sz, CV_8UC(ch.scn));
-    Mat dst(sz.height + sz.height / 2, sz.width, CV_8UC(ch.dcn));
-
-    declare.time(100);
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    int runs = (sz.width <= 640) ? 10 : 1;
-    TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
-
-    SANITY_CHECK(dst, 1);
-}
-
-CV_ENUM(EdgeAwareBayerMode, COLOR_BayerBG2BGR_EA, COLOR_BayerGB2BGR_EA, COLOR_BayerRG2BGR_EA, COLOR_BayerGR2BGR_EA)
-
-typedef std::tr1::tuple<Size, EdgeAwareBayerMode> EdgeAwareParams;
-typedef perf::TestBaseWithParam<EdgeAwareParams> EdgeAwareDemosaicingTest;
-
-PERF_TEST_P(EdgeAwareDemosaicingTest, demosaicingEA,
-            testing::Combine(
-                testing::Values(szVGA, sz720p, sz1080p, Size(130, 60)),
-                EdgeAwareBayerMode::all()
-                )
-            )
-{
-    Size sz = get<0>(GetParam());
-    int mode = get<1>(GetParam());
-
-    Mat src(sz, CV_8UC1);
-    Mat dst(sz, CV_8UC3);
-
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    TEST_CYCLE() cvtColor(src, dst, mode, 3);
-
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK_NOTHING();
 }
