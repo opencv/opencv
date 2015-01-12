@@ -134,6 +134,16 @@ returns an empty matrix ( Mat::data==NULL ). Currently, the following file forma
  */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
+/** @brief Loads a multi-page image from a file. (see imread for details.)
+
+@param filename Name of file to be loaded.
+@param flags Flags specifying the color type of a loaded image (see imread).
+            Defaults to IMREAD_ANYCOLOR, as each page may be different.
+@param mats A vector of Mat objects holding each page, if more than one.
+
+*/
+CV_EXPORTS_W bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
+
 /** @brief Saves an image to a specified file.
 
 @param filename Name of the file.

@@ -118,10 +118,13 @@ bool TiffDecoder::readHeader()
 {
     bool result = false;
 
-    close();
-    // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
-    // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
-    TIFF* tif = TIFFOpen( m_filename.c_str(), "r" );
+    TIFF* tif = static_cast<TIFF*>(m_tif);
+    if (!m_tif)
+    {
+        // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
+        // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+        tif = TIFFOpen(m_filename.c_str(), "r");
+    }
 
     if( tif )
     {
@@ -182,6 +185,13 @@ bool TiffDecoder::readHeader()
     return result;
 }
 
+bool TiffDecoder::nextPage()
+{
+    // Prepare the next page, if any.
+    return m_tif &&
+           TIFFReadDirectory(static_cast<TIFF*>(m_tif)) &&
+           readHeader();
+}
 
 bool  TiffDecoder::readData( Mat& img )
 {
@@ -413,7 +423,6 @@ bool  TiffDecoder::readData( Mat& img )
         }
     }
 
-    close();
     return result;
 }
 

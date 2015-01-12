@@ -70,6 +70,9 @@ public:
     virtual bool readHeader() = 0;
     virtual bool readData( Mat& img ) = 0;
 
+    /// Called after readData to advance to the next page, if any.
+    virtual bool nextPage() { return false; }
+
     virtual size_t signatureLength() const;
     virtual bool checkSignature( const String& signature ) const;
     virtual ImageDecoder newDecoder() const;
