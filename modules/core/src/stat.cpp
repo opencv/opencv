@@ -73,7 +73,114 @@ struct Sum_SIMD
     }
 };
 
-#if CV_NEON
+#if CV_SSE2
+
+template <>
+struct Sum_SIMD<schar, int>
+{
+    int operator () (const schar * src0, const uchar * mask, int * dst, int len, int cn) const
+    {
+        if (mask || (cn != 1 && cn != 2 && cn != 4) || !USE_SSE2)
+            return 0;
+
+        int x = 0;
+        __m128i v_zero = _mm_setzero_si128(), v_sum = v_zero;
+
+        for ( ; x <= len - 16; x += 16)
+        {
+            __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
+            __m128i v_half = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, v_src), 8);
+
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_half), 16));
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_half), 16));
+
+            v_half = _mm_srai_epi16(_mm_unpackhi_epi8(v_zero, v_src), 8);
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_half), 16));
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_half), 16));
+        }
+
+        for ( ; x <= len - 8; x += 8)
+        {
+            __m128i v_src = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _mm_loadl_epi64((__m128i const *)(src0 + x))), 8);
+
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
+        }
+
+        int CV_DECL_ALIGNED(16) ar[4];
+        _mm_store_si128((__m128i*)ar, v_sum);
+
+        for (int i = 0; i < 4; i += cn)
+            for (int j = 0; j < cn; ++j)
+                dst[j] += ar[j + i];
+
+        return x / cn;
+    }
+};
+
+template <>
+struct Sum_SIMD<int, double>
+{
+    int operator () (const int * src0, const uchar * mask, double * dst, int len, int cn) const
+    {
+        if (mask || (cn != 1 && cn != 2 && cn != 4) || !USE_SSE2)
+            return 0;
+
+        int x = 0;
+        __m128d v_zero = _mm_setzero_pd(), v_sum0 = v_zero, v_sum1 = v_zero;
+
+        for ( ; x <= len - 4; x += 4)
+        {
+            __m128i v_src = _mm_loadu_si128((__m128i const *)(src0 + x));
+            v_sum0 = _mm_add_pd(v_sum0, _mm_cvtepi32_pd(v_src));
+            v_sum1 = _mm_add_pd(v_sum1, _mm_cvtepi32_pd(_mm_srli_si128(v_src, 8)));
+        }
+
+        double CV_DECL_ALIGNED(16) ar[4];
+        _mm_store_pd(ar, v_sum0);
+        _mm_store_pd(ar + 2, v_sum1);
+
+        for (int i = 0; i < 4; i += cn)
+            for (int j = 0; j < cn; ++j)
+                dst[j] += ar[j + i];
+
+        return x / cn;
+    }
+};
+
+template <>
+struct Sum_SIMD<float, double>
+{
+    int operator () (const float * src0, const uchar * mask, double * dst, int len, int cn) const
+    {
+        if (mask || (cn != 1 && cn != 2 && cn != 4) || !USE_SSE2)
+            return 0;
+
+        int x = 0;
+        __m128d v_zero = _mm_setzero_pd(), v_sum0 = v_zero, v_sum1 = v_zero;
+
+        for ( ; x <= len - 4; x += 4)
+        {
+            __m128 v_src = _mm_loadu_ps(src0 + x);
+            v_sum0 = _mm_add_pd(v_sum0, _mm_cvtps_pd(v_src));
+            v_src = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8));
+            v_sum1 = _mm_add_pd(v_sum1, _mm_cvtps_pd(v_src));
+        }
+
+        double CV_DECL_ALIGNED(16) ar[4];
+        _mm_store_pd(ar, v_sum0);
+        _mm_store_pd(ar + 2, v_sum1);
+
+        for (int i = 0; i < 4; i += cn)
+            for (int j = 0; j < cn; ++j)
+                dst[j] += ar[j + i];
+
+        return x / cn;
+    }
+};
+
+
+#elif CV_NEON
 
 template <>
 struct Sum_SIMD<uchar, int>
@@ -1023,7 +1130,6 @@ cv::Scalar cv::sum( InputArray _src )
         }
     }
 #endif
-
     SumFunc func = getSumFunc(depth);
 
     CV_Assert( cn <= 4 && func != 0 );
