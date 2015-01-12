@@ -2879,6 +2879,8 @@ struct YCrCb2RGB_i<uchar>
         v_delta = _mm_set1_epi16(ColorChannel<uchar>::half());
         v_delta2 = _mm_set1_epi32(1 << (yuv_shift - 1));
         v_zero = _mm_setzero_si128();
+
+        useSSE = coeffs[0] <= std::numeric_limits<short>::max();
     }
 
     // 16s x 8
@@ -2934,7 +2936,7 @@ struct YCrCb2RGB_i<uchar>
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
 
-        if (dcn == 3)
+        if (dcn == 3 && useSSE)
         {
             for ( ; i <= n - 96; i += 96, dst += dcn * 32)
             {
@@ -3014,6 +3016,7 @@ struct YCrCb2RGB_i<uchar>
     }
     int dstcn, blueIdx;
     int coeffs[4];
+    bool useSSE;
 
     __m128i v_c0, v_c1, v_c2, v_c3, v_delta2;
     __m128i v_delta, v_alpha, v_zero;

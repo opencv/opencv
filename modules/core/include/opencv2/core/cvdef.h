@@ -159,7 +159,9 @@
 #    define CV_SSE4_2 1
 #  endif
 #  if defined __POPCNT__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <popcntintrin.h>
+#    ifndef _MSC_VER
+#      include <popcntintrin.h>
+#    endif
 #    define CV_POPCNT 1
 #  endif
 #  if defined __AVX__ || (defined _MSC_FULL_VER && _MSC_FULL_VER >= 160040219)
