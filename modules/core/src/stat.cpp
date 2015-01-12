@@ -396,6 +396,27 @@ static int countNonZero_(const T* src, int len )
     return nz;
 }
 
+static const uchar * initPopcountTable()
+{
+    static uchar tab[256];
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        // we compute inverse popcount table,
+        // since we pass (img[x] == 0) mask as index in the table.
+        for( int j = 0; j < 256; j++ )
+        {
+            int val = 0;
+            for( int mask = 1; mask < 256; mask += mask )
+                val += (j & mask) == 0;
+            tab[j] = (uchar)val;
+        }
+        initialized = true;
+    }
+
+    return tab;
+}
+
 static int countNonZero8u( const uchar* src, int len )
 {
     int i=0, nz = 0;
@@ -403,21 +424,7 @@ static int countNonZero8u( const uchar* src, int len )
     if(USE_SSE2)//5x-6x
     {
         __m128i pattern = _mm_setzero_si128 ();
-        static uchar tab[256];
-        static volatile bool initialized = false;
-        if( !initialized )
-        {
-            // we compute inverse popcount table,
-            // since we pass (img[x] == 0) mask as index in the table.
-            for( int j = 0; j < 256; j++ )
-            {
-                int val = 0;
-                for( int mask = 1; mask < 256; mask += mask )
-                    val += (j & mask) == 0;
-                tab[j] = (uchar)val;
-            }
-            initialized = true;
-        }
+        static const uchar * tab = initPopcountTable();
 
         for (; i<=len-16; i+=16)
         {
@@ -467,7 +474,22 @@ static int countNonZero8u( const uchar* src, int len )
 static int countNonZero16u( const ushort* src, int len )
 {
     int i = 0, nz = 0;
-#if CV_NEON
+#if CV_SSE2
+    if (USE_SSE2)
+    {
+        __m128i v_zero = _mm_setzero_si128 ();
+        static const uchar * tab = initPopcountTable();
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((const __m128i*)(src + i));
+            int val = _mm_movemask_epi8(_mm_packs_epi16(_mm_cmpeq_epi16(v_src, v_zero), v_zero));
+            nz += tab[val];
+        }
+
+        src += i;
+    }
+#elif CV_NEON
     int len0 = len & -8, blockSize1 = (1 << 15), blockSize0 = blockSize1 << 6;
     uint32x4_t v_nz = vdupq_n_u32(0u);
     uint16x8_t v_zero = vdupq_n_u16(0), v_1 = vdupq_n_u16(1);
@@ -503,7 +525,27 @@ static int countNonZero16u( const ushort* src, int len )
 static int countNonZero32s( const int* src, int len )
 {
     int i = 0, nz = 0;
-#if CV_NEON
+#if CV_SSE2
+    if (USE_SSE2)
+    {
+        __m128i v_zero = _mm_setzero_si128 ();
+        static const uchar * tab = initPopcountTable();
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            __m128i v_src = _mm_loadu_si128((const __m128i*)(src + i));
+            __m128i v_dst0 = _mm_cmpeq_epi32(v_src, v_zero);
+
+            v_src = _mm_loadu_si128((const __m128i*)(src + i + 4));
+            __m128i v_dst1 = _mm_cmpeq_epi32(v_src, v_zero);
+
+            int val = _mm_movemask_epi8(_mm_packs_epi16(_mm_packs_epi32(v_dst0, v_dst1), v_zero));
+            nz += tab[val];
+        }
+
+        src += i;
+    }
+#elif CV_NEON
     int len0 = len & -8, blockSize1 = (1 << 15), blockSize0 = blockSize1 << 6;
     uint32x4_t v_nz = vdupq_n_u32(0u);
     int32x4_t v_zero = vdupq_n_s32(0.0f);
@@ -541,7 +583,25 @@ static int countNonZero32s( const int* src, int len )
 static int countNonZero32f( const float* src, int len )
 {
     int i = 0, nz = 0;
-#if CV_NEON
+#if CV_SSE2
+    if (USE_SSE2)
+    {
+        __m128i v_zero_i = _mm_setzero_si128();
+        __m128 v_zero_f = _mm_setzero_ps();
+        static const uchar * tab = initPopcountTable();
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            __m128i v_dst0 = _mm_castps_si128(_mm_cmpeq_ps(_mm_loadu_ps(src + i), v_zero_f));
+            __m128i v_dst1 = _mm_castps_si128(_mm_cmpeq_ps(_mm_loadu_ps(src + i + 4), v_zero_f));
+
+            int val = _mm_movemask_epi8(_mm_packs_epi16(_mm_packs_epi32(v_dst0, v_dst1), v_zero_i));
+            nz += tab[val];
+        }
+
+        src += i;
+    }
+#elif CV_NEON
     int len0 = len & -8, blockSize1 = (1 << 15), blockSize0 = blockSize1 << 6;
     uint32x4_t v_nz = vdupq_n_u32(0u);
     float32x4_t v_zero = vdupq_n_f32(0.0f);
@@ -577,7 +637,34 @@ static int countNonZero32f( const float* src, int len )
 }
 
 static int countNonZero64f( const double* src, int len )
-{ return countNonZero_(src, len); }
+{ 
+    int i = 0, nz = 0;
+#if CV_SSE2
+    if (USE_SSE2)
+    {
+        __m128i v_zero_i = _mm_setzero_si128();
+        __m128d v_zero_d = _mm_setzero_pd();
+        static const uchar * tab = initPopcountTable();
+
+        for ( ; i <= len - 8; i += 8)
+        {
+            __m128i v_dst0 = _mm_castpd_si128(_mm_cmpeq_pd(_mm_loadu_pd(src + i), v_zero_d));
+            __m128i v_dst1 = _mm_castpd_si128(_mm_cmpeq_pd(_mm_loadu_pd(src + i + 2), v_zero_d));
+            __m128i v_dst2 = _mm_castpd_si128(_mm_cmpeq_pd(_mm_loadu_pd(src + i + 4), v_zero_d));
+            __m128i v_dst3 = _mm_castpd_si128(_mm_cmpeq_pd(_mm_loadu_pd(src + i + 6), v_zero_d));
+
+            v_dst0 = _mm_packs_epi32(v_dst0, v_dst1);
+            v_dst1 = _mm_packs_epi32(v_dst2, v_dst3);
+
+            int val = _mm_movemask_epi8(_mm_packs_epi16(_mm_packs_epi32(v_dst0, v_dst1), v_zero_i));
+            nz += tab[val];
+        }
+
+        src += i;
+    }
+#endif
+    return nz + countNonZero_(src, len - i);
+}
 
 typedef int (*CountNonZeroFunc)(const uchar*, int);
 
