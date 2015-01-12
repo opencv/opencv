@@ -2377,18 +2377,20 @@ cvtScale_<short, int, float>( const short* src, size_t sstep,
         #if CV_AVX2
         if (USE_AVX2)
         {
-            __m256 scale256 = _mm256_set1_ps (scale);
-            __m256 shift256 = _mm256_set1_ps (shift);
-            __m256i zero = _mm256_setzero_si256();
+            __m256 scale256 = _mm256_set1_ps(scale);
+            __m256 shift256 = _mm256_set1_ps(shift);
+            int shuffle = 0xD8;
+
             for ( ; x <= size.width - 16; x += 16)
             {
-                __m256i v_src = _mm256_loadu_si256((__m256i const *)(src + x));
-                __m256i v_src_lo = _mm256_unpacklo_epi16(v_src, zero);
-                __m256i v_src_hi = _mm256_unpackhi_epi16(v_src, zero);
-                __m256 v_dst0 = _mm256_add_ps( _mm256_mul_ps(_mm256_cvtepi32_ps (v_src_lo), scale256), shift256);
-                __m256 v_dst1 = _mm256_add_ps( _mm256_mul_ps(_mm256_cvtepi32_ps (v_src_hi), scale256), shift256);
-                _mm256_storeu_si256 ((__m256i *)(dst + x), _mm256_cvtps_epi32(v_dst0));
-                _mm256_storeu_si256 ((__m256i *)(dst + x + 8), _mm256_cvtps_epi32(v_dst1));
+                __m256i v_src = _mm256_loadu_si256((const __m256i *)(src + x));
+                v_src = _mm256_permute4x64_epi64(v_src, shuffle);
+                __m256i v_src_lo = _mm256_srai_epi32(_mm256_unpacklo_epi16(v_src, v_src), 16);
+                __m256i v_src_hi = _mm256_srai_epi32(_mm256_unpackhi_epi16(v_src, v_src), 16);
+                __m256 v_dst0 = _mm256_add_ps(_mm256_mul_ps(_mm256_cvtepi32_ps(v_src_lo), scale256), shift256);
+                __m256 v_dst1 = _mm256_add_ps(_mm256_mul_ps(_mm256_cvtepi32_ps(v_src_hi), scale256), shift256);
+                _mm256_storeu_si256((__m256i *)(dst + x), _mm256_cvtps_epi32(v_dst0));
+                _mm256_storeu_si256((__m256i *)(dst + x + 8), _mm256_cvtps_epi32(v_dst1));
             }
         }
         #endif
@@ -2399,17 +2401,15 @@ cvtScale_<short, int, float>( const short* src, size_t sstep,
             __m128 shift128 = _mm_set1_ps (shift);
             for(; x <= size.width - 8; x += 8 )
             {
-                __m128i r0 = _mm_loadl_epi64((const __m128i*)(src + x));
-                __m128i r1 = _mm_loadl_epi64((const __m128i*)(src + x + 4));
+                __m128i r0 = _mm_loadu_si128((const __m128i*)(src + x));
+
                 __m128 rf0 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(r0, r0), 16));
-                __m128 rf1 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(r1, r1), 16));
+                __m128 rf1 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(r0, r0), 16));
                 rf0 = _mm_add_ps(_mm_mul_ps(rf0, scale128), shift128);
                 rf1 = _mm_add_ps(_mm_mul_ps(rf1, scale128), shift128);
-                r0 = _mm_cvtps_epi32(rf0);
-                r1 = _mm_cvtps_epi32(rf1);
 
-                _mm_storeu_si128((__m128i*)(dst + x), r0);
-                _mm_storeu_si128((__m128i*)(dst + x + 4), r1);
+                _mm_storeu_si128((__m128i*)(dst + x), _mm_cvtps_epi32(rf0));
+                _mm_storeu_si128((__m128i*)(dst + x + 4), _mm_cvtps_epi32(rf1));
             }
         }
         #elif CV_NEON
