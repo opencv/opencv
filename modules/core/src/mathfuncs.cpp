@@ -622,7 +622,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
                 {
                     __m128 v_src = _mm_loadu_ps(buf[0] + k);
                     _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
-                    _mm_storeu_pd(angle + k, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
+                    _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
                 }
 #endif
 
@@ -753,7 +753,7 @@ void cartToPolar( InputArray src1, InputArray src2,
                 {
                     __m128 v_src = _mm_loadu_ps(buf[0] + k);
                     _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
-                    _mm_storeu_pd(angle + k, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
+                    _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
                 }
 #endif
 
