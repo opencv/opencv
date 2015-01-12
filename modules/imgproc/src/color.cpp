@@ -1643,6 +1643,155 @@ struct RGB2Gray<float>
     float32x4_t v_cb, v_cg, v_cr;
 };
 
+#elif CV_SSE2
+
+template <>
+struct RGB2Gray<ushort>
+{
+    typedef ushort channel_type;
+
+    RGB2Gray(int _srccn, int blueIdx, const int* _coeffs) :
+        srccn(_srccn)
+    {
+        static const int coeffs0[] = { R2Y, G2Y, B2Y };
+        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]));
+        if( blueIdx == 0 )
+            std::swap(coeffs[0], coeffs[2]);
+
+        v_cb = _mm_set1_epi16(coeffs[0]);
+        v_cg = _mm_set1_epi16(coeffs[1]);
+        v_cr = _mm_set1_epi16(coeffs[2]);
+        v_delta = _mm_set1_epi32(1 << (yuv_shift - 1));
+    }
+
+    // 16s x 8
+    void process(__m128i v_b, __m128i v_g, __m128i v_r,
+                 __m128i & v_gray) const
+    {
+        __m128i v_mullo_r = _mm_mullo_epi16(v_r, v_cr);
+        __m128i v_mullo_g = _mm_mullo_epi16(v_g, v_cg);
+        __m128i v_mullo_b = _mm_mullo_epi16(v_b, v_cb);
+        __m128i v_mulhi_r = _mm_mulhi_epu16(v_r, v_cr);
+        __m128i v_mulhi_g = _mm_mulhi_epu16(v_g, v_cg);
+        __m128i v_mulhi_b = _mm_mulhi_epu16(v_b, v_cb);
+
+        __m128i v_gray0 = _mm_add_epi32(_mm_unpacklo_epi16(v_mullo_r, v_mulhi_r),
+                                        _mm_unpacklo_epi16(v_mullo_g, v_mulhi_g));
+        v_gray0 = _mm_add_epi32(_mm_unpacklo_epi16(v_mullo_b, v_mulhi_b), v_gray0);
+        v_gray0 = _mm_srli_epi32(_mm_add_epi32(v_gray0, v_delta), yuv_shift);
+
+        __m128i v_gray1 = _mm_add_epi32(_mm_unpackhi_epi16(v_mullo_r, v_mulhi_r),
+                                        _mm_unpackhi_epi16(v_mullo_g, v_mulhi_g));
+        v_gray1 = _mm_add_epi32(_mm_unpackhi_epi16(v_mullo_b, v_mulhi_b), v_gray1);
+        v_gray1 = _mm_srli_epi32(_mm_add_epi32(v_gray1, v_delta), yuv_shift);
+
+        v_gray = _mm_packus_epi32(v_gray0, v_gray1);
+    }
+
+    void operator()(const ushort* src, ushort* dst, int n) const
+    {
+        int scn = srccn, cb = coeffs[0], cg = coeffs[1], cr = coeffs[2], i = 0;
+
+        if (scn == 3)
+        {
+            for ( ; i <= n - 16; i += 16, src += scn * 16)
+            {
+                __m128i v_r0 = _mm_loadu_si128((__m128i const *)(src));
+                __m128i v_r1 = _mm_loadu_si128((__m128i const *)(src + 8));
+                __m128i v_g0 = _mm_loadu_si128((__m128i const *)(src + 16));
+                __m128i v_g1 = _mm_loadu_si128((__m128i const *)(src + 24));
+                __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + 32));
+                __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + 40));
+
+                _MM_DEINTERLIV_EPI16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+
+                __m128i v_gray0;
+                process(v_r0, v_g0, v_b0,
+                        v_gray0);
+
+                __m128i v_gray1;
+                process(v_r1, v_g1, v_b1,
+                        v_gray1);
+
+                _mm_storeu_si128((__m128i *)(dst + i), v_gray0);
+                _mm_storeu_si128((__m128i *)(dst + i + 8), v_gray1);
+            }
+        }
+
+        for( ; i < n; i++, src += scn)
+            dst[i] = (ushort)CV_DESCALE((unsigned)(src[0]*cb + src[1]*cg + src[2]*cr), yuv_shift);
+    }
+
+    int srccn, coeffs[3];
+    __m128i v_cb, v_cg, v_cr;
+    __m128i v_delta;
+};
+
+template <>
+struct RGB2Gray<float>
+{
+    typedef float channel_type;
+
+    RGB2Gray(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
+    {
+        static const float coeffs0[] = { 0.299f, 0.587f, 0.114f };
+        memcpy( coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]) );
+        if(blueIdx == 0)
+            std::swap(coeffs[0], coeffs[2]);
+
+        v_cb = _mm_set1_ps(coeffs[0]);
+        v_cg = _mm_set1_ps(coeffs[1]);
+        v_cr = _mm_set1_ps(coeffs[2]);
+    }
+
+    void process(__m128 v_r, __m128 v_g, __m128 v_b,
+                 __m128 & v_gray) const
+    {
+        v_gray = _mm_mul_ps(v_r, v_cb);
+        v_gray = _mm_add_ps(v_gray, _mm_mul_ps(v_g, v_cg));
+        v_gray = _mm_add_ps(v_gray, _mm_mul_ps(v_b, v_cb));
+    }
+
+    void operator()(const float * src, float * dst, int n) const
+    {
+        int scn = srccn, i = 0;
+        float cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
+
+        if (scn == 3)
+        {
+            for ( ; i <= n - 8; i += 8, src += scn * 8)
+            {
+                __m128 v_r0 = _mm_loadu_ps(src);
+                __m128 v_r1 = _mm_loadu_ps(src + 4);
+                __m128 v_g0 = _mm_loadu_ps(src + 8);
+                __m128 v_g1 = _mm_loadu_ps(src + 12);
+                __m128 v_b0 = _mm_loadu_ps(src + 16);
+                __m128 v_b1 = _mm_loadu_ps(src + 20);
+
+                _MM_DEINTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+
+                __m128 v_gray0;
+                process(v_r0, v_g0, v_b0,
+                        v_gray0);
+
+                __m128 v_gray1;
+                process(v_r1, v_g1, v_b1,
+                        v_gray1);
+
+                _mm_storeu_ps(dst + i, v_gray0);
+                _mm_storeu_ps(dst + i + 4, v_gray1);
+            }
+        }
+
+        for ( ; i < n; i++, src += scn)
+            dst[i] = src[0]*cb + src[1]*cg + src[2]*cr;
+    }
+
+    int srccn;
+    float coeffs[3];
+    __m128 v_cb, v_cg, v_cr;
+};
+
 #else
 
 template<> struct RGB2Gray<ushort>
@@ -3019,7 +3168,7 @@ struct YCrCb2RGB_i<uchar>
     __m128i v_delta, v_alpha, v_zero;
 };
 
-#endif
+#endif // CV_SSE2
 
 ////////////////////////////////////// RGB <-> XYZ ///////////////////////////////////////
 
