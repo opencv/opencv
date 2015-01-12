@@ -273,6 +273,32 @@ static IppStatus sts = ippInit();
         layer0_chunk5 = _mm_unpackhi_ps(layer2_chunk2, layer2_chunk5);        \
     }
 
+#define _MM_INTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)                             \
+    {                                                                                   \
+        const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1); \                                                     \
+                                                                                        \
+        __m128 layer2_chunk0 = _mm_shuffle_ps(v_r0, v_r1, mask_lo);                     \
+        __m128 layer2_chunk3 = _mm_shuffle_ps(v_r0, v_r1, mask_hi);                     \
+        __m128 layer2_chunk1 = _mm_shuffle_ps(v_g0, v_g1, mask_lo);                     \
+        __m128 layer2_chunk4 = _mm_shuffle_ps(v_g0, v_g1, mask_hi);                     \
+        __m128 layer2_chunk2 = _mm_shuffle_ps(v_b0, v_b1, mask_lo);                     \
+        __m128 layer2_chunk5 = _mm_shuffle_ps(v_b0, v_b1, mask_hi);                     \
+                                                                                        \
+        __m128 layer1_chunk0 = _mm_shuffle_ps(layer2_chunk0, layer2_chunk1, mask_lo);   \
+        __m128 layer1_chunk3 = _mm_shuffle_ps(layer2_chunk0, layer2_chunk1, mask_hi);   \
+        __m128 layer1_chunk1 = _mm_shuffle_ps(layer2_chunk2, layer2_chunk3, mask_lo);   \
+        __m128 layer1_chunk4 = _mm_shuffle_ps(layer2_chunk2, layer2_chunk3, mask_hi);   \
+        __m128 layer1_chunk2 = _mm_shuffle_ps(layer2_chunk4, layer2_chunk5, mask_lo);   \
+        __m128 layer1_chunk5 = _mm_shuffle_ps(layer2_chunk4, layer2_chunk5, mask_hi);   \
+                                                                                        \
+        v_r0 = _mm_shuffle_ps(layer1_chunk0, layer1_chunk1, mask_lo);                   \
+        v_g1 = _mm_shuffle_ps(layer1_chunk0, layer1_chunk1, mask_hi);                   \
+        v_r1 = _mm_shuffle_ps(layer1_chunk2, layer1_chunk3, mask_lo);                   \
+        v_b0 = _mm_shuffle_ps(layer1_chunk2, layer1_chunk3, mask_hi);                   \
+        v_g0 = _mm_shuffle_ps(layer1_chunk4, layer1_chunk5, mask_lo);                   \
+        v_b1 = _mm_shuffle_ps(layer1_chunk4, layer1_chunk5, mask_hi);                   \
+    }
+
 #endif
 
 namespace cv
@@ -2059,7 +2085,7 @@ struct RGB2YCrCb_i<uchar>
         int delta = ColorChannel<uchar>::half()*(1 << yuv_shift);
         n *= 3;
 
-        if (scn == 3 && false)
+        if (scn == 3)
         {
             for ( ; i <= n - 96; i += 96, src += scn * 32)
             {
@@ -2129,6 +2155,128 @@ struct RGB2YCrCb_i<uchar>
     __m128i v_c3, v_c4, v_delta, v_delta2;
     __m128i v_zero;
 };
+
+#if CV_SSE4_1
+
+template <>
+struct RGB2YCrCb_i<ushort>
+{
+    typedef ushort channel_type;
+
+    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
+        : srccn(_srccn), blueIdx(_blueIdx)
+    {
+        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
+        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        if (blueIdx==0)
+            std::swap(coeffs[0], coeffs[2]);
+
+        v_c0 = _mm_set1_epi32(coeffs[0]);
+        v_c1 = _mm_set1_epi32(coeffs[1]);
+        v_c2 = _mm_set1_epi32(coeffs[2]);
+        v_c3 = _mm_set1_epi32(coeffs[3]);
+        v_c4 = _mm_set1_epi32(coeffs[4]);
+        v_delta2 = _mm_set1_epi32(1 << (yuv_shift - 1));
+        v_delta = _mm_set1_epi32(ColorChannel<ushort>::half()*(1 << yuv_shift));
+        v_delta = _mm_add_epi32(v_delta, v_delta2);
+        v_zero = _mm_setzero_si128();
+    }
+
+    // 16u x 8
+    void process(__m128i v_r, __m128i v_g, __m128i v_b,
+                 __m128i & v_y, __m128i & v_cr, __m128i & v_cb) const
+    {
+        __m128i v_r_p = _mm_unpacklo_epi16(v_r, v_zero);
+        __m128i v_g_p = _mm_unpacklo_epi16(v_g, v_zero);
+        __m128i v_b_p = _mm_unpacklo_epi16(v_b, v_zero);
+
+        __m128i v_y0 = _mm_add_epi32(_mm_mullo_epi32(v_r_p, v_c0),
+                       _mm_add_epi32(_mm_mullo_epi32(v_g_p, v_c1), 
+                                     _mm_mullo_epi32(v_b_p, v_c2)));
+        v_y0 = _mm_srli_epi32(_mm_add_epi32(v_delta2, v_y0), yuv_shift);
+
+        __m128i v_cr0 = _mm_mullo_epi32(_mm_sub_epi32(blueIdx == 2 ? v_r_p : v_b_p, v_y0), v_c3);
+        __m128i v_cb0 = _mm_mullo_epi32(_mm_sub_epi32(blueIdx == 0 ? v_r_p : v_b_p, v_y0), v_c4);
+        v_cr0 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cr0), yuv_shift);
+        v_cb0 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cb0), yuv_shift);
+
+        v_r_p = _mm_unpackhi_epi16(v_r, v_zero);
+        v_g_p = _mm_unpackhi_epi16(v_g, v_zero);
+        v_b_p = _mm_unpackhi_epi16(v_b, v_zero);
+
+        __m128i v_y1 = _mm_add_epi32(_mm_mullo_epi32(v_r_p, v_c0),
+                       _mm_add_epi32(_mm_mullo_epi32(v_g_p, v_c1),
+                                     _mm_mullo_epi32(v_b_p, v_c2)));
+        v_y1 = _mm_srli_epi32(_mm_add_epi32(v_delta2, v_y1), yuv_shift);
+
+        __m128i v_cr1 = _mm_mullo_epi32(_mm_sub_epi32(blueIdx == 2 ? v_r_p : v_b_p, v_y1), v_c3);
+        __m128i v_cb1 = _mm_mullo_epi32(_mm_sub_epi32(blueIdx == 0 ? v_r_p : v_b_p, v_y1), v_c4);
+        v_cr1 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cr1), yuv_shift);
+        v_cb1 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cb1), yuv_shift);
+
+        v_y = _mm_packus_epi32(v_y0, v_y1);
+        v_cr = _mm_packus_epi32(v_cr0, v_cr1);
+        v_cb = _mm_packus_epi32(v_cb0, v_cb1);
+    }
+
+    void operator()(const ushort * src, ushort * dst, int n) const
+    {
+        int scn = srccn, bidx = blueIdx, i = 0;
+        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
+        int delta = ColorChannel<ushort>::half()*(1 << yuv_shift);
+        n *= 3;
+
+
+        if (scn == 3)
+        {
+            for ( ; i <= n - 48; i += 48, src += scn * 16)
+            {
+                __m128i v_r0 = _mm_loadu_si128((__m128i const *)(src));
+                __m128i v_r1 = _mm_loadu_si128((__m128i const *)(src + 8));
+                __m128i v_g0 = _mm_loadu_si128((__m128i const *)(src + 16));
+                __m128i v_g1 = _mm_loadu_si128((__m128i const *)(src + 24));
+                __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + 32));
+                __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + 40));
+
+                _MM_DEINTERLIV_EPI16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+
+                __m128i v_y0 = v_zero, v_cr0 = v_zero, v_cb0 = v_zero;
+                process(v_r0, v_g0, v_b0,
+                        v_y0, v_cr0, v_cb0);
+
+                __m128i v_y1 = v_zero, v_cr1 = v_zero, v_cb1 = v_zero;
+                process(v_r1, v_g1, v_b1,
+                        v_y1, v_cr1, v_cb1);
+
+                _MM_INTERLIV_EPI16(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1)
+
+                _mm_storeu_si128((__m128i *)(dst + i), v_y0);
+                _mm_storeu_si128((__m128i *)(dst + i + 8), v_y1);
+                _mm_storeu_si128((__m128i *)(dst + i + 16), v_cr0);
+                _mm_storeu_si128((__m128i *)(dst + i + 24), v_cr1);
+                _mm_storeu_si128((__m128i *)(dst + i + 32), v_cb0);
+                _mm_storeu_si128((__m128i *)(dst + i + 40), v_cb1);
+            }
+        }
+
+        for ( ; i < n; i += 3, src += scn)
+        {
+            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, yuv_shift);
+            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
+            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
+            dst[i] = saturate_cast<ushort>(Y);
+            dst[i+1] = saturate_cast<ushort>(Cr);
+            dst[i+2] = saturate_cast<ushort>(Cb);
+        }
+    }
+
+    int srccn, blueIdx, coeffs[5];
+    __m128i v_c0, v_c1, v_c2;
+    __m128i v_c3, v_c4, v_delta, v_delta2;
+    __m128i v_zero;
+};
+
+#endif // CV_SSE4_1
 
 
 #endif
