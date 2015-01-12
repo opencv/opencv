@@ -275,7 +275,7 @@ static IppStatus sts = ippInit();
 
 #define _MM_INTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)                             \
     {                                                                                   \
-        const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1); \                                                     \
+        const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1); \
                                                                                         \
         __m128 layer2_chunk0 = _mm_shuffle_ps(v_r0, v_r1, mask_lo);                     \
         __m128 layer2_chunk3 = _mm_shuffle_ps(v_r0, v_r1, mask_hi);                     \
@@ -1763,6 +1763,92 @@ struct RGB2YCrCb_f<float>
     int srccn, blueIdx;
     float coeffs[5];
     float32x4_t v_c0, v_c1, v_c2, v_c3, v_c4, v_delta;
+};
+
+#elif CV_SSE2
+
+template <>
+struct RGB2YCrCb_f<float>
+{
+    typedef float channel_type;
+
+    RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) :
+        srccn(_srccn), blueIdx(_blueIdx)
+    {
+        static const float coeffs0[] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
+        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        if (blueIdx==0)
+            std::swap(coeffs[0], coeffs[2]);
+
+        v_c0 = _mm_set1_ps(coeffs[0]);
+        v_c1 = _mm_set1_ps(coeffs[1]);
+        v_c2 = _mm_set1_ps(coeffs[2]);
+        v_c3 = _mm_set1_ps(coeffs[3]);
+        v_c4 = _mm_set1_ps(coeffs[4]);
+        v_delta = _mm_set1_ps(ColorChannel<float>::half());
+    }
+
+    void process(__m128 v_r, __m128 v_g, __m128 v_b,
+                 __m128 & v_y, __m128 & v_cr, __m128 & v_cb) const
+    {
+        v_y = _mm_mul_ps(v_r, v_c0);
+        v_y = _mm_add_ps(v_y, _mm_mul_ps(v_g, v_c1));
+        v_y = _mm_add_ps(v_y, _mm_mul_ps(v_b, v_c2));
+
+        v_cr = _mm_add_ps(_mm_mul_ps(_mm_sub_ps(blueIdx == 0 ? v_b : v_r, v_y), v_c3), v_delta);
+        v_cb = _mm_add_ps(_mm_mul_ps(_mm_sub_ps(blueIdx == 2 ? v_b : v_r, v_y), v_c4), v_delta);
+    }
+
+    void operator()(const float * src, float * dst, int n) const
+    {
+        int scn = srccn, bidx = blueIdx, i = 0;
+        const float delta = ColorChannel<float>::half();
+        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
+        n *= 3;
+
+        if (scn == 3)
+        {
+            for ( ; i <= n - 24; i += 24, src += 24)
+            {
+                __m128 v_r0 = _mm_loadu_ps(src);
+                __m128 v_r1 = _mm_loadu_ps(src + 4);
+                __m128 v_g0 = _mm_loadu_ps(src + 8);
+                __m128 v_g1 = _mm_loadu_ps(src + 12);
+                __m128 v_b0 = _mm_loadu_ps(src + 16);
+                __m128 v_b1 = _mm_loadu_ps(src + 20);
+
+                _MM_DEINTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+
+                __m128 v_y0, v_cr0, v_cb0;
+                process(v_r0, v_g0, v_b0,
+                        v_y0, v_cr0, v_cb0);
+
+                __m128 v_y1, v_cr1, v_cb1;
+                process(v_r1, v_g1, v_b1,
+                        v_y1, v_cr1, v_cb1);
+
+                _MM_INTERLIV_PS(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1)
+
+                _mm_storeu_ps(dst + i, v_y0);
+                _mm_storeu_ps(dst + i + 4, v_y1);
+                _mm_storeu_ps(dst + i + 8, v_cr0);
+                _mm_storeu_ps(dst + i + 12, v_cr1);
+                _mm_storeu_ps(dst + i + 16, v_cb0);
+                _mm_storeu_ps(dst + i + 20, v_cb1);
+            }
+        }
+
+        for ( ; i < n; i += 3, src += scn)
+        {
+            float Y = src[0]*C0 + src[1]*C1 + src[2]*C2;
+            float Cr = (src[bidx^2] - Y)*C3 + delta;
+            float Cb = (src[bidx] - Y)*C4 + delta;
+            dst[i] = Y; dst[i+1] = Cr; dst[i+2] = Cb;
+        }
+    }
+    int srccn, blueIdx;
+    float coeffs[5];
+    __m128 v_c0, v_c1, v_c2, v_c3, v_c4, v_delta;
 };
 
 #endif
