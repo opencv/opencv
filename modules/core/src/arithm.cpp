@@ -64,6 +64,10 @@ FUNCTOR_TEMPLATE(VLoadStore128);
 #if CV_SSE2
 FUNCTOR_TEMPLATE(VLoadStore64);
 FUNCTOR_TEMPLATE(VLoadStore128Aligned);
+#if CV_AVX
+FUNCTOR_TEMPLATE(VLoadStore256);
+FUNCTOR_TEMPLATE(VLoadStore256Aligned);
+#endif
 #endif
 
 #endif
@@ -76,17 +80,28 @@ void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, si
 #endif
     Op op;
 
-    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
-                        src2 += step2/sizeof(src2[0]),
-                        dst += step/sizeof(dst[0]) )
+    for( ; sz.height--; src1 = (const T *)((const uchar *)src1 + step1),
+                        src2 = (const T *)((const uchar *)src2 + step2),
+                        dst = (T *)((uchar *)dst + step) )
     {
         int x = 0;
 
 #if CV_NEON || CV_SSE2
+#if CV_AVX2
+        if( USE_AVX2 )
+        {
+            for( ; x <= sz.width - 32/(int)sizeof(T); x += 32/sizeof(T) )
+            {
+                typename VLoadStore256<T>::reg_type r0 = VLoadStore256<T>::load(src1 + x);
+                r0 = vop(r0, VLoadStore256<T>::load(src2 + x));
+                VLoadStore256<T>::store(dst + x, r0);
+            }
+        }
+#else
 #if CV_SSE2
         if( USE_SSE2 )
         {
-#endif
+#endif // CV_SSE2
             for( ; x <= sz.width - 32/(int)sizeof(T); x += 32/sizeof(T) )
             {
                 typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x               );
@@ -98,9 +113,13 @@ void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, si
             }
 #if CV_SSE2
         }
-#endif
-#endif
-#if CV_SSE2
+#endif // CV_SSE2
+#endif // CV_AVX2
+#endif // CV_NEON || CV_SSE2
+
+#if CV_AVX2
+        // nothing
+#elif CV_SSE2
         if( USE_SSE2 )
         {
             for( ; x <= sz.width - 8/(int)sizeof(T); x += 8/sizeof(T) )
@@ -111,6 +130,7 @@ void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, si
             }
         }
 #endif
+
 #if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
         {
@@ -137,13 +157,26 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
 #endif
     Op op;
 
-    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
-        src2 += step2/sizeof(src2[0]),
-        dst += step/sizeof(dst[0]) )
+    for( ; sz.height--; src1 = (const T *)((const uchar *)src1 + step1),
+                        src2 = (const T *)((const uchar *)src2 + step2),
+                        dst = (T *)((uchar *)dst + step) )
     {
         int x = 0;
 
-#if CV_SSE2
+#if CV_AVX2
+        if( USE_AVX2 )
+        {
+            if( (((size_t)src1|(size_t)src2|(size_t)dst)&31) == 0 )
+            {
+                for( ; x <= sz.width - 8; x += 8 )
+                {
+                    typename VLoadStore256Aligned<T>::reg_type r0 = VLoadStore256Aligned<T>::load(src1 + x);
+                    r0 = op32(r0, VLoadStore256Aligned<T>::load(src2 + x));
+                    VLoadStore256Aligned<T>::store(dst + x, r0);
+                }
+            }
+        }
+#elif CV_SSE2
         if( USE_SSE2 )
         {
             if( (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
@@ -159,12 +192,24 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
                 }
             }
         }
-#endif
+#endif // CV_AVX2
+
 #if CV_NEON || CV_SSE2
+#if CV_AVX2
+        if( USE_AVX2 )
+        {
+            for( ; x <= sz.width - 8; x += 8 )
+            {
+                typename VLoadStore256<T>::reg_type r0 = VLoadStore256<T>::load(src1 + x);
+                r0 = op32(r0, VLoadStore256<T>::load(src2 + x));
+                VLoadStore256<T>::store(dst + x, r0);
+            }
+        }
+#else
 #if CV_SSE2
         if( USE_SSE2 )
         {
-#endif
+#endif // CV_SSE2
             for( ; x <= sz.width - 8; x += 8 )
             {
                 typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x    );
@@ -176,8 +221,10 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
             }
 #if CV_SSE2
         }
-#endif
-#endif
+#endif // CV_SSE2
+#endif // CV_AVX2
+#endif // CV_NEON || CV_SSE2
+
 #if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
         {
@@ -205,13 +252,26 @@ void vBinOp64(const T* src1, size_t step1, const T* src2, size_t step2,
 #endif
     Op op;
 
-    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
-        src2 += step2/sizeof(src2[0]),
-        dst += step/sizeof(dst[0]) )
+    for( ; sz.height--; src1 = (const T *)((const uchar *)src1 + step1),
+                        src2 = (const T *)((const uchar *)src2 + step2),
+                        dst = (T *)((uchar *)dst + step) )
     {
         int x = 0;
 
-#if CV_SSE2
+#if CV_AVX2
+        if( USE_AVX2 )
+        {
+            if( (((size_t)src1|(size_t)src2|(size_t)dst)&31) == 0 )
+            {
+                for( ; x <= sz.width - 4; x += 4 )
+                {
+                    typename VLoadStore256Aligned<T>::reg_type r0 = VLoadStore256Aligned<T>::load(src1 + x);
+                    r0 = op64(r0, VLoadStore256Aligned<T>::load(src2 + x));
+                    VLoadStore256Aligned<T>::store(dst + x, r0);
+                }
+            }
+        }
+#elif CV_SSE2
         if( USE_SSE2 )
         {
             if( (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
@@ -244,7 +304,141 @@ void vBinOp64(const T* src1, size_t step1, const T* src2, size_t step2,
     }
 }
 
-#if CV_SSE2
+#if CV_AVX2
+
+#define FUNCTOR_LOADSTORE_CAST(name, template_arg, register_type, load_body, store_body)         \
+    template <>                                                                                  \
+    struct name<template_arg>{                                                                   \
+        typedef register_type reg_type;                                                          \
+        static reg_type load(const template_arg * p) { return load_body ((const reg_type *)p); } \
+        static void store(template_arg * p, reg_type v) { store_body ((reg_type *)p, v); }       \
+    }
+
+#define FUNCTOR_LOADSTORE(name, template_arg, register_type, load_body, store_body) \
+    template <>                                                                     \
+    struct name<template_arg>{                                                      \
+        typedef register_type reg_type;                                             \
+        static reg_type load(const template_arg * p) { return load_body (p); }      \
+        static void store(template_arg * p, reg_type v) { store_body (p, v); }      \
+    }
+
+#define FUNCTOR_CLOSURE_2arg(name, template_arg, body)                         \
+    template<>                                                                 \
+    struct name<template_arg>                                                  \
+    {                                                                          \
+        VLoadStore256<template_arg>::reg_type operator()(                      \
+                        const VLoadStore256<template_arg>::reg_type & a,       \
+                        const VLoadStore256<template_arg>::reg_type & b) const \
+        {                                                                      \
+            body;                                                              \
+        }                                                                      \
+    }
+
+#define FUNCTOR_CLOSURE_1arg(name, template_arg, body)                         \
+    template<>                                                                 \
+    struct name<template_arg>                                                  \
+    {                                                                          \
+        VLoadStore256<template_arg>::reg_type operator()(                      \
+                        const VLoadStore256<template_arg>::reg_type & a,       \
+                        const VLoadStore256<template_arg>::reg_type &  ) const \
+        {                                                                      \
+            body;                                                              \
+        }                                                                      \
+    }
+
+FUNCTOR_LOADSTORE_CAST(VLoadStore256,  uchar, __m256i, _mm256_loadu_si256, _mm256_storeu_si256);
+FUNCTOR_LOADSTORE_CAST(VLoadStore256,  schar, __m256i, _mm256_loadu_si256, _mm256_storeu_si256);
+FUNCTOR_LOADSTORE_CAST(VLoadStore256, ushort, __m256i, _mm256_loadu_si256, _mm256_storeu_si256);
+FUNCTOR_LOADSTORE_CAST(VLoadStore256,  short, __m256i, _mm256_loadu_si256, _mm256_storeu_si256);
+FUNCTOR_LOADSTORE_CAST(VLoadStore256,    int, __m256i, _mm256_loadu_si256, _mm256_storeu_si256);
+FUNCTOR_LOADSTORE(     VLoadStore256,  float, __m256 , _mm256_loadu_ps   , _mm256_storeu_ps   );
+FUNCTOR_LOADSTORE(     VLoadStore256, double, __m256d, _mm256_loadu_pd   , _mm256_storeu_pd   );
+
+FUNCTOR_LOADSTORE_CAST(VLoadStore256Aligned,    int, __m256i, _mm256_load_si256, _mm256_store_si256);
+FUNCTOR_LOADSTORE(     VLoadStore256Aligned,  float, __m256 , _mm256_load_ps   , _mm256_store_ps   );
+FUNCTOR_LOADSTORE(     VLoadStore256Aligned, double, __m256d, _mm256_load_pd   , _mm256_store_pd   );
+
+FUNCTOR_TEMPLATE(VAdd);
+FUNCTOR_CLOSURE_2arg(VAdd,  uchar, return _mm256_adds_epu8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  schar, return _mm256_adds_epi8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd, ushort, return _mm256_adds_epu16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  short, return _mm256_adds_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,    int, return _mm256_add_epi32 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  float, return _mm256_add_ps    (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd, double, return _mm256_add_pd    (a, b));
+
+FUNCTOR_TEMPLATE(VSub);
+FUNCTOR_CLOSURE_2arg(VSub,  uchar, return _mm256_subs_epu8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  schar, return _mm256_subs_epi8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub, ushort, return _mm256_subs_epu16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  short, return _mm256_subs_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,    int, return _mm256_sub_epi32 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  float, return _mm256_sub_ps    (a, b));
+FUNCTOR_CLOSURE_2arg(VSub, double, return _mm256_sub_pd    (a, b));
+
+FUNCTOR_TEMPLATE(VMin);
+FUNCTOR_CLOSURE_2arg(VMin,  uchar, return _mm256_min_epu8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  schar, return _mm256_min_epi8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMin, ushort, return _mm256_min_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  short, return _mm256_min_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,    int, return _mm256_min_epi32(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,  float, return _mm256_min_ps   (a, b));
+FUNCTOR_CLOSURE_2arg(VMin, double, return _mm256_min_pd   (a, b));
+
+FUNCTOR_TEMPLATE(VMax);
+FUNCTOR_CLOSURE_2arg(VMax,  uchar, return _mm256_max_epu8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  schar, return _mm256_max_epi8 (a, b));
+FUNCTOR_CLOSURE_2arg(VMax, ushort, return _mm256_max_epu16(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  short, return _mm256_max_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,    int, return _mm256_max_epi32(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,  float, return _mm256_max_ps   (a, b));
+FUNCTOR_CLOSURE_2arg(VMax, double, return _mm256_max_pd   (a, b));
+
+
+static unsigned int CV_DECL_ALIGNED(32) v32f_absmask[] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff,
+                                                           0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff };
+static unsigned int CV_DECL_ALIGNED(32) v64f_absmask[] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff,
+                                                           0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff };
+
+FUNCTOR_TEMPLATE(VAbsDiff);
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  uchar,
+        return _mm256_add_epi8(_mm256_subs_epu8(a, b), _mm256_subs_epu8(b, a));
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  schar,
+        __m256i d = _mm256_subs_epi8(a, b);
+        __m256i m = _mm256_cmpgt_epi8(b, a);
+        return _mm256_subs_epi8(_mm256_xor_si256(d, m), m);
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff, ushort,
+        return _mm256_add_epi16(_mm256_subs_epu16(a, b), _mm256_subs_epu16(b, a));
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  short,
+        __m256i M = _mm256_max_epi16(a, b);
+        __m256i m = _mm256_min_epi16(a, b);
+        return _mm256_subs_epi16(M, m);
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff,    int,
+        __m256i d = _mm256_sub_epi32(a, b);
+        __m256i m = _mm256_cmpgt_epi32(b, a);
+        return _mm256_sub_epi32(_mm256_xor_si256(d, m), m);
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  float,
+        return _mm256_and_ps(_mm256_sub_ps(a, b), *(const __m256*)v32f_absmask);
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff, double,
+        return _mm256_and_pd(_mm256_sub_pd(a, b), *(const __m256d*)v64f_absmask);
+    );
+
+FUNCTOR_TEMPLATE(VAnd);
+FUNCTOR_CLOSURE_2arg(VAnd, uchar, return _mm256_and_si256(a, b));
+FUNCTOR_TEMPLATE(VOr);
+FUNCTOR_CLOSURE_2arg(VOr , uchar, return _mm256_or_si256 (a, b));
+FUNCTOR_TEMPLATE(VXor);
+FUNCTOR_CLOSURE_2arg(VXor, uchar, return _mm256_xor_si256(a, b));
+FUNCTOR_TEMPLATE(VNot);
+FUNCTOR_CLOSURE_1arg(VNot, uchar, return _mm256_xor_si256(_mm256_set1_epi32(-1), a));
+
+#elif CV_SSE2
 
 #define FUNCTOR_LOADSTORE_CAST(name, template_arg, register_type, load_body, store_body)\
     template <>                                                                                  \
