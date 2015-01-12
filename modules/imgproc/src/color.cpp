@@ -1445,7 +1445,7 @@ struct RGB2Gray<float>
     float32x4_t v_cb, v_cg, v_cr;
 };
 
-#elif CV_SSE2
+#elif CV_SSE4_1
 
 template <>
 struct RGB2Gray<ushort>
@@ -2106,7 +2106,7 @@ struct RGB2YCrCb_i<ushort>
     int32x4_t v_c0, v_c1, v_c2, v_c3, v_c4, v_delta, v_delta2;
 };
 
-#elif CV_SSE2
+#elif CV_SSE4_1
 
 template <>
 struct RGB2YCrCb_i<uchar>
@@ -2247,8 +2247,6 @@ struct RGB2YCrCb_i<uchar>
     __m128i v_zero;
 };
 
-#if CV_SSE4_1
-
 template <>
 struct RGB2YCrCb_i<ushort>
 {
@@ -2368,9 +2366,6 @@ struct RGB2YCrCb_i<ushort>
 };
 
 #endif // CV_SSE4_1
-
-
-#endif
 
 template<typename _Tp> struct YCrCb2RGB_f
 {

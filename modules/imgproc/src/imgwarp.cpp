@@ -2306,7 +2306,7 @@ struct ResizeAreaFastVec_SIMD_32f
 
         if (cn == 1)
         {
-            int shuffle_lo = _MM_SHUFFLE(2, 0, 2, 0), shuffle_hi = _MM_SHUFFLE(3, 1, 3, 1);
+            const int shuffle_lo = _MM_SHUFFLE(2, 0, 2, 0), shuffle_hi = _MM_SHUFFLE(3, 1, 3, 1);
             for ( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
             {
                 __m128 v_row00 = _mm_loadu_ps(S0), v_row01 = _mm_loadu_ps(S0 + 4),
