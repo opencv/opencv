@@ -1048,6 +1048,10 @@ struct Gray2RGB5x5
         #if CV_NEON
         v_n7 = vdup_n_u8(~7);
         v_n3 = vdup_n_u8(~3);
+        #elif CV_SSE2
+        v_n7 = _mm_set1_epi16(~7);
+        v_n3 = _mm_set1_epi16(~3);
+        v_zero = _mm_setzero_si128();
         #endif
     }
 
@@ -1065,6 +1069,23 @@ struct Gray2RGB5x5
                 v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src, v_n7)), 8));
                 vst1q_u16((ushort *)dst + i, v_dst);
             }
+            #elif CV_SSE2
+            for ( ; i <= n - 16; i += 16 )
+            {
+                __m128i v_src = _mm_loadu_si128((__m128i const *)(src + i));
+
+                __m128i v_src_p = _mm_unpacklo_epi8(v_src, v_zero);
+                __m128i v_dst = _mm_or_si128(_mm_srli_epi16(v_src_p, 3),
+                                _mm_or_si128(_mm_slli_epi16(_mm_and_si128(v_src_p, v_n3), 3),
+                                             _mm_slli_epi16(_mm_and_si128(v_src_p, v_n7), 8)));
+                _mm_storeu_si128((__m128i *)((ushort *)dst + i), v_dst);
+
+                v_src_p = _mm_unpackhi_epi8(v_src, v_zero);
+                v_dst = _mm_or_si128(_mm_srli_epi16(v_src_p, 3),
+                        _mm_or_si128(_mm_slli_epi16(_mm_and_si128(v_src_p, v_n3), 3),
+                                     _mm_slli_epi16(_mm_and_si128(v_src_p, v_n7), 8)));
+                _mm_storeu_si128((__m128i *)((ushort *)dst + i + 8), v_dst);
+            }
             #endif
             for ( ; i < n; i++ )
             {
@@ -1081,6 +1102,23 @@ struct Gray2RGB5x5
                 uint16x8_t v_dst = vorrq_u16(vorrq_u16(v_src, vshlq_n_u16(v_src, 5)), vshlq_n_u16(v_src, 10));
                 vst1q_u16((ushort *)dst + i, v_dst);
             }
+            #elif CV_SSE2
+            for ( ; i <= n - 16; i += 8 )
+            {
+                __m128i v_src = _mm_loadu_si128((__m128i const *)(src + i));
+
+                __m128i v_src_p = _mm_srli_epi16(_mm_unpacklo_epi8(v_src, v_zero), 3);
+                __m128i v_dst = _mm_or_si128(v_src_p,
+                                _mm_or_si128(_mm_slli_epi32(v_src_p, 5),
+                                             _mm_slli_epi16(v_src_p, 10)));
+                _mm_storeu_si128((__m128i *)((ushort *)dst + i), v_dst);
+
+                v_src_p = _mm_srli_epi16(_mm_unpackhi_epi8(v_src, v_zero), 3);
+                v_dst = _mm_or_si128(v_src_p,
+                        _mm_or_si128(_mm_slli_epi16(v_src_p, 5),
+                                     _mm_slli_epi16(v_src_p, 10)));
+                _mm_storeu_si128((__m128i *)((ushort *)dst + i + 8), v_dst);
+            }
             #endif
             for( ; i < n; i++ )
             {
@@ -1093,6 +1131,8 @@ struct Gray2RGB5x5
 
     #if CV_NEON
     uint8x8_t v_n7, v_n3;
+    #elif CV_SSE2
+    __m128i v_n7, v_n3, v_zero;
     #endif
 };
 
