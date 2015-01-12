@@ -102,205 +102,6 @@
 static IppStatus sts = ippInit();
 #endif
 
-#if CV_SSE2
-
-#define _MM_DEINTERLIV_EPI8(layer0_chunk0, layer0_chunk1, layer0_chunk2,         \
-                            layer0_chunk3, layer0_chunk4, layer0_chunk5)         \
-    {                                                                            \
-        __m128i layer1_chunk0 = _mm_unpacklo_epi8(layer0_chunk0, layer0_chunk3); \
-        __m128i layer1_chunk1 = _mm_unpackhi_epi8(layer0_chunk0, layer0_chunk3); \
-        __m128i layer1_chunk2 = _mm_unpacklo_epi8(layer0_chunk1, layer0_chunk4); \
-        __m128i layer1_chunk3 = _mm_unpackhi_epi8(layer0_chunk1, layer0_chunk4); \
-        __m128i layer1_chunk4 = _mm_unpacklo_epi8(layer0_chunk2, layer0_chunk5); \
-        __m128i layer1_chunk5 = _mm_unpackhi_epi8(layer0_chunk2, layer0_chunk5); \
-                                                                                 \
-        __m128i layer2_chunk0 = _mm_unpacklo_epi8(layer1_chunk0, layer1_chunk3); \
-        __m128i layer2_chunk1 = _mm_unpackhi_epi8(layer1_chunk0, layer1_chunk3); \
-        __m128i layer2_chunk2 = _mm_unpacklo_epi8(layer1_chunk1, layer1_chunk4); \
-        __m128i layer2_chunk3 = _mm_unpackhi_epi8(layer1_chunk1, layer1_chunk4); \
-        __m128i layer2_chunk4 = _mm_unpacklo_epi8(layer1_chunk2, layer1_chunk5); \
-        __m128i layer2_chunk5 = _mm_unpackhi_epi8(layer1_chunk2, layer1_chunk5); \
-                                                                                 \
-        __m128i layer3_chunk0 = _mm_unpacklo_epi8(layer2_chunk0, layer2_chunk3); \
-        __m128i layer3_chunk1 = _mm_unpackhi_epi8(layer2_chunk0, layer2_chunk3); \
-        __m128i layer3_chunk2 = _mm_unpacklo_epi8(layer2_chunk1, layer2_chunk4); \
-        __m128i layer3_chunk3 = _mm_unpackhi_epi8(layer2_chunk1, layer2_chunk4); \
-        __m128i layer3_chunk4 = _mm_unpacklo_epi8(layer2_chunk2, layer2_chunk5); \
-        __m128i layer3_chunk5 = _mm_unpackhi_epi8(layer2_chunk2, layer2_chunk5); \
-                                                                                 \
-        __m128i layer4_chunk0 = _mm_unpacklo_epi8(layer3_chunk0, layer3_chunk3); \
-        __m128i layer4_chunk1 = _mm_unpackhi_epi8(layer3_chunk0, layer3_chunk3); \
-        __m128i layer4_chunk2 = _mm_unpacklo_epi8(layer3_chunk1, layer3_chunk4); \
-        __m128i layer4_chunk3 = _mm_unpackhi_epi8(layer3_chunk1, layer3_chunk4); \
-        __m128i layer4_chunk4 = _mm_unpacklo_epi8(layer3_chunk2, layer3_chunk5); \
-        __m128i layer4_chunk5 = _mm_unpackhi_epi8(layer3_chunk2, layer3_chunk5); \
-                                                                                 \
-        layer0_chunk0 = _mm_unpacklo_epi8(layer4_chunk0, layer4_chunk3);         \
-        layer0_chunk1 = _mm_unpackhi_epi8(layer4_chunk0, layer4_chunk3);         \
-        layer0_chunk2 = _mm_unpacklo_epi8(layer4_chunk1, layer4_chunk4);         \
-        layer0_chunk3 = _mm_unpackhi_epi8(layer4_chunk1, layer4_chunk4);         \
-        layer0_chunk4 = _mm_unpacklo_epi8(layer4_chunk2, layer4_chunk5);         \
-        layer0_chunk5 = _mm_unpackhi_epi8(layer4_chunk2, layer4_chunk5);         \
-    }
-
-#define _MM_INTERLIV_EPI8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)                                                                 \
-    {                                                                                                                         \
-        __m128i v_mask = _mm_set1_epi16(0x00ff);                                                                              \
-                                                                                                                              \
-        __m128i layer4_chunk0 = _mm_packus_epi16(_mm_and_si128(v_r0, v_mask), _mm_and_si128(v_r1, v_mask));                   \
-        __m128i layer4_chunk3 = _mm_packus_epi16(_mm_srli_epi16(v_r0, 8), _mm_srli_epi16(v_r1, 8));                           \
-        __m128i layer4_chunk1 = _mm_packus_epi16(_mm_and_si128(v_g0, v_mask), _mm_and_si128(v_g1, v_mask));                   \
-        __m128i layer4_chunk4 = _mm_packus_epi16(_mm_srli_epi16(v_g0, 8), _mm_srli_epi16(v_g1, 8));                           \
-        __m128i layer4_chunk2 = _mm_packus_epi16(_mm_and_si128(v_b0, v_mask), _mm_and_si128(v_b1, v_mask));                   \
-        __m128i layer4_chunk5 = _mm_packus_epi16(_mm_srli_epi16(v_b0, 8), _mm_srli_epi16(v_b1, 8));                           \
-                                                                                                                              \
-        __m128i layer3_chunk0 = _mm_packus_epi16(_mm_and_si128(layer4_chunk0, v_mask), _mm_and_si128(layer4_chunk1, v_mask)); \
-        __m128i layer3_chunk3 = _mm_packus_epi16(_mm_srli_epi16(layer4_chunk0, 8), _mm_srli_epi16(layer4_chunk1, 8));         \
-        __m128i layer3_chunk1 = _mm_packus_epi16(_mm_and_si128(layer4_chunk2, v_mask), _mm_and_si128(layer4_chunk3, v_mask)); \
-        __m128i layer3_chunk4 = _mm_packus_epi16(_mm_srli_epi16(layer4_chunk2, 8), _mm_srli_epi16(layer4_chunk3, 8));         \
-        __m128i layer3_chunk2 = _mm_packus_epi16(_mm_and_si128(layer4_chunk4, v_mask), _mm_and_si128(layer4_chunk5, v_mask)); \
-        __m128i layer3_chunk5 = _mm_packus_epi16(_mm_srli_epi16(layer4_chunk4, 8), _mm_srli_epi16(layer4_chunk5, 8));         \
-                                                                                                                              \
-        __m128i layer2_chunk0 = _mm_packus_epi16(_mm_and_si128(layer3_chunk0, v_mask), _mm_and_si128(layer3_chunk1, v_mask)); \
-        __m128i layer2_chunk3 = _mm_packus_epi16(_mm_srli_epi16(layer3_chunk0, 8), _mm_srli_epi16(layer3_chunk1, 8));         \
-        __m128i layer2_chunk1 = _mm_packus_epi16(_mm_and_si128(layer3_chunk2, v_mask), _mm_and_si128(layer3_chunk3, v_mask)); \
-        __m128i layer2_chunk4 = _mm_packus_epi16(_mm_srli_epi16(layer3_chunk2, 8), _mm_srli_epi16(layer3_chunk3, 8));         \
-        __m128i layer2_chunk2 = _mm_packus_epi16(_mm_and_si128(layer3_chunk4, v_mask), _mm_and_si128(layer3_chunk5, v_mask)); \
-        __m128i layer2_chunk5 = _mm_packus_epi16(_mm_srli_epi16(layer3_chunk4, 8), _mm_srli_epi16(layer3_chunk5, 8));         \
-                                                                                                                              \
-        __m128i layer1_chunk0 = _mm_packus_epi16(_mm_and_si128(layer2_chunk0, v_mask), _mm_and_si128(layer2_chunk1, v_mask)); \
-        __m128i layer1_chunk3 = _mm_packus_epi16(_mm_srli_epi16(layer2_chunk0, 8), _mm_srli_epi16(layer2_chunk1, 8));         \
-        __m128i layer1_chunk1 = _mm_packus_epi16(_mm_and_si128(layer2_chunk2, v_mask), _mm_and_si128(layer2_chunk3, v_mask)); \
-        __m128i layer1_chunk4 = _mm_packus_epi16(_mm_srli_epi16(layer2_chunk2, 8), _mm_srli_epi16(layer2_chunk3, 8));         \
-        __m128i layer1_chunk2 = _mm_packus_epi16(_mm_and_si128(layer2_chunk4, v_mask), _mm_and_si128(layer2_chunk5, v_mask)); \
-        __m128i layer1_chunk5 = _mm_packus_epi16(_mm_srli_epi16(layer2_chunk4, 8), _mm_srli_epi16(layer2_chunk5, 8));         \
-                                                                                                                              \
-        v_r0 = _mm_packus_epi16(_mm_and_si128(layer1_chunk0, v_mask), _mm_and_si128(layer1_chunk1, v_mask));                  \
-        v_g1 = _mm_packus_epi16(_mm_srli_epi16(layer1_chunk0, 8), _mm_srli_epi16(layer1_chunk1, 8));                          \
-        v_r1 = _mm_packus_epi16(_mm_and_si128(layer1_chunk2, v_mask), _mm_and_si128(layer1_chunk3, v_mask));                  \
-        v_b0 = _mm_packus_epi16(_mm_srli_epi16(layer1_chunk2, 8), _mm_srli_epi16(layer1_chunk3, 8));                          \
-        v_g0 = _mm_packus_epi16(_mm_and_si128(layer1_chunk4, v_mask), _mm_and_si128(layer1_chunk5, v_mask));                  \
-        v_b1 = _mm_packus_epi16(_mm_srli_epi16(layer1_chunk4, 8), _mm_srli_epi16(layer1_chunk5, 8));                          \
-    }
-
-#define _MM_DEINTERLIV_EPI16(layer0_chunk0, layer0_chunk1, layer0_chunk2,         \
-                             layer0_chunk3, layer0_chunk4, layer0_chunk5)         \
-    {                                                                             \
-        __m128i layer1_chunk0 = _mm_unpacklo_epi16(layer0_chunk0, layer0_chunk3); \
-        __m128i layer1_chunk1 = _mm_unpackhi_epi16(layer0_chunk0, layer0_chunk3); \
-        __m128i layer1_chunk2 = _mm_unpacklo_epi16(layer0_chunk1, layer0_chunk4); \
-        __m128i layer1_chunk3 = _mm_unpackhi_epi16(layer0_chunk1, layer0_chunk4); \
-        __m128i layer1_chunk4 = _mm_unpacklo_epi16(layer0_chunk2, layer0_chunk5); \
-        __m128i layer1_chunk5 = _mm_unpackhi_epi16(layer0_chunk2, layer0_chunk5); \
-                                                                                  \
-        __m128i layer2_chunk0 = _mm_unpacklo_epi16(layer1_chunk0, layer1_chunk3); \
-        __m128i layer2_chunk1 = _mm_unpackhi_epi16(layer1_chunk0, layer1_chunk3); \
-        __m128i layer2_chunk2 = _mm_unpacklo_epi16(layer1_chunk1, layer1_chunk4); \
-        __m128i layer2_chunk3 = _mm_unpackhi_epi16(layer1_chunk1, layer1_chunk4); \
-        __m128i layer2_chunk4 = _mm_unpacklo_epi16(layer1_chunk2, layer1_chunk5); \
-        __m128i layer2_chunk5 = _mm_unpackhi_epi16(layer1_chunk2, layer1_chunk5); \
-                                                                                  \
-        __m128i layer3_chunk0 = _mm_unpacklo_epi16(layer2_chunk0, layer2_chunk3); \
-        __m128i layer3_chunk1 = _mm_unpackhi_epi16(layer2_chunk0, layer2_chunk3); \
-        __m128i layer3_chunk2 = _mm_unpacklo_epi16(layer2_chunk1, layer2_chunk4); \
-        __m128i layer3_chunk3 = _mm_unpackhi_epi16(layer2_chunk1, layer2_chunk4); \
-        __m128i layer3_chunk4 = _mm_unpacklo_epi16(layer2_chunk2, layer2_chunk5); \
-        __m128i layer3_chunk5 = _mm_unpackhi_epi16(layer2_chunk2, layer2_chunk5); \
-                                                                                  \
-        layer0_chunk0 = _mm_unpacklo_epi16(layer3_chunk0, layer3_chunk3);         \
-        layer0_chunk1 = _mm_unpackhi_epi16(layer3_chunk0, layer3_chunk3);         \
-        layer0_chunk2 = _mm_unpacklo_epi16(layer3_chunk1, layer3_chunk4);         \
-        layer0_chunk3 = _mm_unpackhi_epi16(layer3_chunk1, layer3_chunk4);         \
-        layer0_chunk4 = _mm_unpacklo_epi16(layer3_chunk2, layer3_chunk5);         \
-        layer0_chunk5 = _mm_unpackhi_epi16(layer3_chunk2, layer3_chunk5);         \
-    }
-
-#define _MM_INTERLIV_EPI16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)                                                                \
-    {                                                                                                                         \
-        __m128i v_mask = _mm_set1_epi32(0x0000ffff);                                                                          \
-                                                                                                                              \
-        __m128i layer3_chunk0 = _mm_packus_epi32(_mm_and_si128(v_r0, v_mask), _mm_and_si128(v_r1, v_mask));                   \
-        __m128i layer3_chunk3 = _mm_packus_epi32(_mm_srli_epi32(v_r0, 16), _mm_srli_epi32(v_r1, 16));                         \
-        __m128i layer3_chunk1 = _mm_packus_epi32(_mm_and_si128(v_g0, v_mask), _mm_and_si128(v_g1, v_mask));                   \
-        __m128i layer3_chunk4 = _mm_packus_epi32(_mm_srli_epi32(v_g0, 16), _mm_srli_epi32(v_g1, 16));                         \
-        __m128i layer3_chunk2 = _mm_packus_epi32(_mm_and_si128(v_b0, v_mask), _mm_and_si128(v_b1, v_mask));                   \
-        __m128i layer3_chunk5 = _mm_packus_epi32(_mm_srli_epi32(v_b0, 16), _mm_srli_epi32(v_b1, 16));                         \
-                                                                                                                              \
-        __m128i layer2_chunk0 = _mm_packus_epi32(_mm_and_si128(layer3_chunk0, v_mask), _mm_and_si128(layer3_chunk1, v_mask)); \
-        __m128i layer2_chunk3 = _mm_packus_epi32(_mm_srli_epi32(layer3_chunk0, 16), _mm_srli_epi32(layer3_chunk1, 16));       \
-        __m128i layer2_chunk1 = _mm_packus_epi32(_mm_and_si128(layer3_chunk2, v_mask), _mm_and_si128(layer3_chunk3, v_mask)); \
-        __m128i layer2_chunk4 = _mm_packus_epi32(_mm_srli_epi32(layer3_chunk2, 16), _mm_srli_epi32(layer3_chunk3, 16));       \
-        __m128i layer2_chunk2 = _mm_packus_epi32(_mm_and_si128(layer3_chunk4, v_mask), _mm_and_si128(layer3_chunk5, v_mask)); \
-        __m128i layer2_chunk5 = _mm_packus_epi32(_mm_srli_epi32(layer3_chunk4, 16), _mm_srli_epi32(layer3_chunk5, 16));       \
-                                                                                                                              \
-        __m128i layer1_chunk0 = _mm_packus_epi32(_mm_and_si128(layer2_chunk0, v_mask), _mm_and_si128(layer2_chunk1, v_mask)); \
-        __m128i layer1_chunk3 = _mm_packus_epi32(_mm_srli_epi32(layer2_chunk0, 16), _mm_srli_epi32(layer2_chunk1, 16));       \
-        __m128i layer1_chunk1 = _mm_packus_epi32(_mm_and_si128(layer2_chunk2, v_mask), _mm_and_si128(layer2_chunk3, v_mask)); \
-        __m128i layer1_chunk4 = _mm_packus_epi32(_mm_srli_epi32(layer2_chunk2, 16), _mm_srli_epi32(layer2_chunk3, 16));       \
-        __m128i layer1_chunk2 = _mm_packus_epi32(_mm_and_si128(layer2_chunk4, v_mask), _mm_and_si128(layer2_chunk5, v_mask)); \
-        __m128i layer1_chunk5 = _mm_packus_epi32(_mm_srli_epi32(layer2_chunk4, 16), _mm_srli_epi32(layer2_chunk5, 16));       \
-                                                                                                                              \
-        v_r0 = _mm_packus_epi32(_mm_and_si128(layer1_chunk0, v_mask), _mm_and_si128(layer1_chunk1, v_mask));                  \
-        v_g1 = _mm_packus_epi32(_mm_srli_epi32(layer1_chunk0, 16), _mm_srli_epi32(layer1_chunk1, 16));                        \
-        v_r1 = _mm_packus_epi32(_mm_and_si128(layer1_chunk2, v_mask), _mm_and_si128(layer1_chunk3, v_mask));                  \
-        v_b0 = _mm_packus_epi32(_mm_srli_epi32(layer1_chunk2, 16), _mm_srli_epi32(layer1_chunk3, 16));                        \
-        v_g0 = _mm_packus_epi32(_mm_and_si128(layer1_chunk4, v_mask), _mm_and_si128(layer1_chunk5, v_mask));                  \
-        v_b1 = _mm_packus_epi32(_mm_srli_epi32(layer1_chunk4, 16), _mm_srli_epi32(layer1_chunk5, 16));                        \
-    }
-
-#define _MM_DEINTERLIV_PS(layer0_chunk0, layer0_chunk1, layer0_chunk2,        \
-                          layer0_chunk3, layer0_chunk4, layer0_chunk5)        \
-    {                                                                         \
-        __m128 layer1_chunk0 = _mm_unpacklo_ps(layer0_chunk0, layer0_chunk3); \
-        __m128 layer1_chunk1 = _mm_unpackhi_ps(layer0_chunk0, layer0_chunk3); \
-        __m128 layer1_chunk2 = _mm_unpacklo_ps(layer0_chunk1, layer0_chunk4); \
-        __m128 layer1_chunk3 = _mm_unpackhi_ps(layer0_chunk1, layer0_chunk4); \
-        __m128 layer1_chunk4 = _mm_unpacklo_ps(layer0_chunk2, layer0_chunk5); \
-        __m128 layer1_chunk5 = _mm_unpackhi_ps(layer0_chunk2, layer0_chunk5); \
-                                                                              \
-        __m128 layer2_chunk0 = _mm_unpacklo_ps(layer1_chunk0, layer1_chunk3); \
-        __m128 layer2_chunk1 = _mm_unpackhi_ps(layer1_chunk0, layer1_chunk3); \
-        __m128 layer2_chunk2 = _mm_unpacklo_ps(layer1_chunk1, layer1_chunk4); \
-        __m128 layer2_chunk3 = _mm_unpackhi_ps(layer1_chunk1, layer1_chunk4); \
-        __m128 layer2_chunk4 = _mm_unpacklo_ps(layer1_chunk2, layer1_chunk5); \
-        __m128 layer2_chunk5 = _mm_unpackhi_ps(layer1_chunk2, layer1_chunk5); \
-                                                                              \
-        layer0_chunk0 = _mm_unpacklo_ps(layer2_chunk0, layer2_chunk3);        \
-        layer0_chunk1 = _mm_unpackhi_ps(layer2_chunk0, layer2_chunk3);        \
-        layer0_chunk2 = _mm_unpacklo_ps(layer2_chunk1, layer2_chunk4);        \
-        layer0_chunk3 = _mm_unpackhi_ps(layer2_chunk1, layer2_chunk4);        \
-        layer0_chunk4 = _mm_unpacklo_ps(layer2_chunk2, layer2_chunk5);        \
-        layer0_chunk5 = _mm_unpackhi_ps(layer2_chunk2, layer2_chunk5);        \
-    }
-
-#define _MM_INTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)                             \
-    {                                                                                   \
-        const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1); \
-                                                                                        \
-        __m128 layer2_chunk0 = _mm_shuffle_ps(v_r0, v_r1, mask_lo);                     \
-        __m128 layer2_chunk3 = _mm_shuffle_ps(v_r0, v_r1, mask_hi);                     \
-        __m128 layer2_chunk1 = _mm_shuffle_ps(v_g0, v_g1, mask_lo);                     \
-        __m128 layer2_chunk4 = _mm_shuffle_ps(v_g0, v_g1, mask_hi);                     \
-        __m128 layer2_chunk2 = _mm_shuffle_ps(v_b0, v_b1, mask_lo);                     \
-        __m128 layer2_chunk5 = _mm_shuffle_ps(v_b0, v_b1, mask_hi);                     \
-                                                                                        \
-        __m128 layer1_chunk0 = _mm_shuffle_ps(layer2_chunk0, layer2_chunk1, mask_lo);   \
-        __m128 layer1_chunk3 = _mm_shuffle_ps(layer2_chunk0, layer2_chunk1, mask_hi);   \
-        __m128 layer1_chunk1 = _mm_shuffle_ps(layer2_chunk2, layer2_chunk3, mask_lo);   \
-        __m128 layer1_chunk4 = _mm_shuffle_ps(layer2_chunk2, layer2_chunk3, mask_hi);   \
-        __m128 layer1_chunk2 = _mm_shuffle_ps(layer2_chunk4, layer2_chunk5, mask_lo);   \
-        __m128 layer1_chunk5 = _mm_shuffle_ps(layer2_chunk4, layer2_chunk5, mask_hi);   \
-                                                                                        \
-        v_r0 = _mm_shuffle_ps(layer1_chunk0, layer1_chunk1, mask_lo);                   \
-        v_g1 = _mm_shuffle_ps(layer1_chunk0, layer1_chunk1, mask_hi);                   \
-        v_r1 = _mm_shuffle_ps(layer1_chunk2, layer1_chunk3, mask_lo);                   \
-        v_b0 = _mm_shuffle_ps(layer1_chunk2, layer1_chunk3, mask_hi);                   \
-        v_g0 = _mm_shuffle_ps(layer1_chunk4, layer1_chunk5, mask_lo);                   \
-        v_b1 = _mm_shuffle_ps(layer1_chunk4, layer1_chunk5, mask_hi);                   \
-    }
-
-#endif
-
 namespace cv
 {
 
@@ -1703,7 +1504,34 @@ struct RGB2Gray<ushort>
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + 32));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + 40));
 
-                _MM_DEINTERLIV_EPI16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_epi16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+
+                __m128i v_gray0;
+                process(v_r0, v_g0, v_b0,
+                        v_gray0);
+
+                __m128i v_gray1;
+                process(v_r1, v_g1, v_b1,
+                        v_gray1);
+
+                _mm_storeu_si128((__m128i *)(dst + i), v_gray0);
+                _mm_storeu_si128((__m128i *)(dst + i + 8), v_gray1);
+            }
+        }
+        else if (scn == 4)
+        {
+            for ( ; i <= n - 16; i += 16, src += scn * 16)
+            {
+                __m128i v_r0 = _mm_loadu_si128((__m128i const *)(src));
+                __m128i v_r1 = _mm_loadu_si128((__m128i const *)(src + 8));
+                __m128i v_g0 = _mm_loadu_si128((__m128i const *)(src + 16));
+                __m128i v_g1 = _mm_loadu_si128((__m128i const *)(src + 24));
+                __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + 32));
+                __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + 40));
+                __m128i v_a0 = _mm_loadu_si128((__m128i const *)(src + 48));
+                __m128i v_a1 = _mm_loadu_si128((__m128i const *)(src + 56));
+
+                _mm_deinterliv_epi16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
 
                 __m128i v_gray0;
                 process(v_r0, v_g0, v_b0,
@@ -1768,7 +1596,34 @@ struct RGB2Gray<float>
                 __m128 v_b0 = _mm_loadu_ps(src + 16);
                 __m128 v_b1 = _mm_loadu_ps(src + 20);
 
-                _MM_DEINTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+
+                __m128 v_gray0;
+                process(v_r0, v_g0, v_b0,
+                        v_gray0);
+
+                __m128 v_gray1;
+                process(v_r1, v_g1, v_b1,
+                        v_gray1);
+
+                _mm_storeu_ps(dst + i, v_gray0);
+                _mm_storeu_ps(dst + i + 4, v_gray1);
+            }
+        }
+        else if (scn == 4)
+        {
+            for ( ; i <= n - 8; i += 8, src += scn * 8)
+            {
+                __m128 v_r0 = _mm_loadu_ps(src);
+                __m128 v_r1 = _mm_loadu_ps(src + 4);
+                __m128 v_g0 = _mm_loadu_ps(src + 8);
+                __m128 v_g1 = _mm_loadu_ps(src + 12);
+                __m128 v_b0 = _mm_loadu_ps(src + 16);
+                __m128 v_b1 = _mm_loadu_ps(src + 20);
+                __m128 v_a0 = _mm_loadu_ps(src + 24);
+                __m128 v_a1 = _mm_loadu_ps(src + 28);
+
+                _mm_deinterliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
 
                 __m128 v_gray0;
                 process(v_r0, v_g0, v_b0,
@@ -1966,7 +1821,7 @@ struct RGB2YCrCb_f<float>
                 __m128 v_b0 = _mm_loadu_ps(src + 16);
                 __m128 v_b1 = _mm_loadu_ps(src + 20);
 
-                _MM_DEINTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128 v_y0, v_cr0, v_cb0;
                 process(v_r0, v_g0, v_b0,
@@ -1976,7 +1831,7 @@ struct RGB2YCrCb_f<float>
                 process(v_r1, v_g1, v_b1,
                         v_y1, v_cr1, v_cb1);
 
-                _MM_INTERLIV_PS(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1)
+                _mm_interliv_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
 
                 _mm_storeu_ps(dst + i, v_y0);
                 _mm_storeu_ps(dst + i + 4, v_y1);
@@ -2331,7 +2186,7 @@ struct RGB2YCrCb_i<uchar>
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + 80));
 
-                _MM_DEINTERLIV_EPI8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128i v_y0 = v_zero, v_cr0 = v_zero, v_cb0 = v_zero;
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
@@ -2363,7 +2218,7 @@ struct RGB2YCrCb_i<uchar>
                 __m128i v_cr_1 = _mm_packus_epi16(v_cr0, v_cr1);
                 __m128i v_cb_1 = _mm_packus_epi16(v_cb0, v_cb1);
 
-                _MM_INTERLIV_EPI8(v_y_0, v_y_1, v_cr_0, v_cr_1, v_cb_0, v_cb_1)
+                _mm_interlive_epi8(v_y_0, v_y_1, v_cr_0, v_cr_1, v_cb_0, v_cb_1);
 
                 _mm_storeu_si128((__m128i *)(dst + i), v_y_0);
                 _mm_storeu_si128((__m128i *)(dst + i + 16), v_y_1);
@@ -2473,7 +2328,7 @@ struct RGB2YCrCb_i<ushort>
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + 32));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + 40));
 
-                _MM_DEINTERLIV_EPI16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_epi16(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128i v_y0 = v_zero, v_cr0 = v_zero, v_cb0 = v_zero;
                 process(v_r0, v_g0, v_b0,
@@ -2483,7 +2338,7 @@ struct RGB2YCrCb_i<ushort>
                 process(v_r1, v_g1, v_b1,
                         v_y1, v_cr1, v_cb1);
 
-                _MM_INTERLIV_EPI16(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1)
+                _mm_interliv_epi16(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
 
                 _mm_storeu_si128((__m128i *)(dst + i), v_y0);
                 _mm_storeu_si128((__m128i *)(dst + i + 8), v_y1);
@@ -2681,7 +2536,7 @@ struct YCrCb2RGB_f<float>
                 __m128 v_cb0 = _mm_loadu_ps(src + i + 16);
                 __m128 v_cb1 = _mm_loadu_ps(src + i + 20);
 
-                _MM_DEINTERLIV_PS(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1)
+                _mm_deinterliv_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
 
                 __m128 v_r0, v_g0, v_b0;
                 process(v_y0, v_cr0, v_cb0,
@@ -2691,7 +2546,7 @@ struct YCrCb2RGB_f<float>
                 process(v_y1, v_cr1, v_cb1,
                         v_r1, v_g1, v_b1);
 
-                _MM_INTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_interliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 _mm_storeu_ps(dst, v_r0);
                 _mm_storeu_ps(dst + 4, v_r1);
@@ -3094,7 +2949,7 @@ struct YCrCb2RGB_i<uchar>
                 __m128i v_cb0 = _mm_loadu_si128((__m128i const *)(src + i + 64));
                 __m128i v_cb1 = _mm_loadu_si128((__m128i const *)(src + i + 80));
 
-                _MM_DEINTERLIV_EPI8(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1)
+                _mm_deinterliv_epi8(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
 
                 __m128i v_r_0 = v_zero, v_g_0 = v_zero, v_b_0 = v_zero;
                 process(_mm_unpacklo_epi8(v_y0, v_zero),
@@ -3132,7 +2987,7 @@ struct YCrCb2RGB_i<uchar>
                     std::swap(v_r1, v_b1);
                 }
 
-                _MM_INTERLIV_EPI8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_interlive_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 _mm_storeu_si128((__m128i *)(dst), v_r0);
                 _mm_storeu_si128((__m128i *)(dst + 16), v_r1);
@@ -3355,7 +3210,7 @@ struct RGB2XYZ_f<float>
                 __m128 v_b0 = _mm_loadu_ps(src + 16);
                 __m128 v_b1 = _mm_loadu_ps(src + 20);
 
-                _MM_DEINTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 __m128 v_x0, v_y0, v_z0;
                 process(v_r0, v_g0, v_b0,
@@ -3365,7 +3220,7 @@ struct RGB2XYZ_f<float>
                 process(v_r1, v_g1, v_b1,
                         v_x1, v_y1, v_z1);
 
-                _MM_INTERLIV_PS(v_x0, v_x1, v_y0, v_y1, v_z0, v_z1)
+                _mm_interliv_ps(v_x0, v_x1, v_y0, v_y1, v_z0, v_z1);
 
                 _mm_storeu_ps(dst + i, v_x0);
                 _mm_storeu_ps(dst + i + 4, v_x1);
@@ -3781,7 +3636,7 @@ struct XYZ2RGB_f<float>
                 __m128 v_z0 = _mm_loadu_ps(src + i + 16);
                 __m128 v_z1 = _mm_loadu_ps(src + i + 20);
 
-                _MM_DEINTERLIV_PS(v_x0, v_x1, v_y0, v_y1, v_z0, v_z1)
+                _mm_deinterliv_ps(v_x0, v_x1, v_y0, v_y1, v_z0, v_z1);
 
                 __m128 v_r0, v_g0, v_b0;
                 process(v_x0, v_y0, v_z0,
@@ -3791,7 +3646,7 @@ struct XYZ2RGB_f<float>
                 process(v_x1, v_y1, v_z1,
                         v_r1, v_g1, v_b1);
 
-                _MM_INTERLIV_PS(v_b0, v_b1, v_g0, v_g1, v_r0, v_r1)
+                _mm_interliv_ps(v_b0, v_b1, v_g0, v_g1, v_r0, v_r1);
 
                 _mm_storeu_ps(dst, v_b0);
                 _mm_storeu_ps(dst + 4, v_b1);
@@ -4361,7 +4216,7 @@ struct HSV2RGB_b
         v_g1 = _mm_mul_ps(v_g1, v_scale_inv);
         v_b1 = _mm_mul_ps(v_b1, v_scale_inv);
 
-        _MM_INTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+        _mm_interliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
         _mm_store_ps(buf, v_r0);
         _mm_store_ps(buf + 4, v_r1);
@@ -4412,7 +4267,7 @@ struct HSV2RGB_b
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + j + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + j + 80));
 
-                _MM_DEINTERLIV_EPI8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
                         _mm_unpacklo_epi8(v_g0, v_zero),
@@ -4606,7 +4461,7 @@ struct RGB2HLS_b
         __m128 v_s0f = _mm_load_ps(buf + 16);
         __m128 v_s1f = _mm_load_ps(buf + 20);
 
-        _MM_DEINTERLIV_PS(v_h0f, v_h1f, v_l0f, v_l1f, v_s0f, v_s1f)
+        _mm_deinterliv_ps(v_h0f, v_h1f, v_l0f, v_l1f, v_s0f, v_s1f);
 
         v_l0f = _mm_mul_ps(v_l0f, v_scale);
         v_l1f = _mm_mul_ps(v_l1f, v_scale);
@@ -4729,7 +4584,7 @@ struct RGB2HLS_b
                 __m128i v_l1 = _mm_packus_epi16(v_l_0, v_l_1);
                 __m128i v_s1 = _mm_packus_epi16(v_s_0, v_s_1);
 
-                _MM_INTERLIV_EPI8(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1)
+                _mm_interlive_epi8(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
 
                 _mm_storeu_si128((__m128i *)(dst + j), v_h0);
                 _mm_storeu_si128((__m128i *)(dst + j + 16), v_h1);
@@ -4861,7 +4716,7 @@ struct HLS2RGB_b
         v_g1 = _mm_mul_ps(v_g1, v_scale_inv);
         v_b1 = _mm_mul_ps(v_b1, v_scale_inv);
 
-        _MM_INTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+        _mm_interliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
         _mm_store_ps(buf, v_r0);
         _mm_store_ps(buf + 4, v_r1);
@@ -4912,7 +4767,7 @@ struct HLS2RGB_b
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + j + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + j + 80));
 
-                _MM_DEINTERLIV_EPI8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
                         _mm_unpacklo_epi8(v_g0, v_zero),
@@ -5360,7 +5215,7 @@ struct Lab2RGB_b
         v_b0 = _mm_sub_ps(v_b0, v_128);
         v_b1 = _mm_sub_ps(v_b1, v_128);
         
-        _MM_INTERLIV_PS(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+        _mm_interliv_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
         _mm_store_ps(buf, v_r0);
         _mm_store_ps(buf + 4, v_r1);
@@ -5411,7 +5266,7 @@ struct Lab2RGB_b
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + j + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + j + 80));
 
-                _MM_DEINTERLIV_EPI8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
                         _mm_unpacklo_epi8(v_g0, v_zero),
@@ -5713,7 +5568,7 @@ struct RGB2Luv_b
         __m128 v_v0f = _mm_load_ps(buf + 16);
         __m128 v_v1f = _mm_load_ps(buf + 20);
 
-        _MM_DEINTERLIV_PS(v_l0f, v_l1f, v_u0f, v_u1f, v_v0f, v_v1f)
+        _mm_deinterliv_ps(v_l0f, v_l1f, v_u0f, v_u1f, v_v0f, v_v1f);
 
         v_l0f = _mm_mul_ps(v_l0f, v_scale);
         v_l1f = _mm_mul_ps(v_l1f, v_scale);
@@ -5839,7 +5694,7 @@ struct RGB2Luv_b
                 __m128i v_u1 = _mm_packus_epi16(v_u_0, v_u_1);
                 __m128i v_v1 = _mm_packus_epi16(v_v_0, v_v_1);
 
-                _MM_INTERLIV_EPI8(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1)
+                _mm_interlive_epi8(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
 
                 _mm_storeu_si128((__m128i *)(dst + j), v_l0);
                 _mm_storeu_si128((__m128i *)(dst + j + 16), v_l1);
@@ -5920,7 +5775,7 @@ struct Luv2RGB_b
         v_v0 = _mm_sub_ps(_mm_mul_ps(v_v0, v_coeff2), v_140);
         v_v1 = _mm_sub_ps(_mm_mul_ps(v_v1, v_coeff2), v_140);
         
-        _MM_INTERLIV_PS(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1)
+        _mm_interliv_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
 
         _mm_store_ps(buf, v_l0);
         _mm_store_ps(buf + 4, v_l1);
@@ -5971,7 +5826,7 @@ struct Luv2RGB_b
                 __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + j + 64));
                 __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + j + 80));
 
-                _MM_DEINTERLIV_EPI8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1)
+                _mm_deinterliv_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
 
                 process(_mm_unpacklo_epi8(v_r0, v_zero),
                         _mm_unpacklo_epi8(v_g0, v_zero),
