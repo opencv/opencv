@@ -736,8 +736,6 @@ struct ColumnSum<int, int> :
         bool haveScale = scale != 1;
         double _scale = scale;
 
-        printf("bgfbffbbfg\n");
-
         #if CV_SSE2
             bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
         #endif
