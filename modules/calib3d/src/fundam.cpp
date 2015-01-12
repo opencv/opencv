@@ -327,7 +327,8 @@ static bool createAndRunRHORegistrator(double confidence, int maxIters, double r
                           confidence,
                           4,
                           beta,
-                          RHO_FLAG_ENABLE_NR,
+                          /*RHO_FLAG_ENABLE_NR,*/
+                          RHO_FLAG_ENABLE_NR | RHO_FLAG_ENABLE_FINAL_REFINEMENT,
                           NULL,
                           (float*)tmpH.data);
         rhoRefCFini(&p);
