@@ -10,7 +10,7 @@
 //                          License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2015, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -47,6 +47,34 @@
 #endif
 
 #if CV_SSE2
+
+inline void _mm_deinterleave_epi8(__m128i & v_r0, __m128i & v_r1, __m128i & v_g0, __m128i & v_g1)
+{
+    __m128i layer1_chunk0 = _mm_unpacklo_epi8(v_r0, v_g0);
+    __m128i layer1_chunk1 = _mm_unpackhi_epi8(v_r0, v_g0);
+    __m128i layer1_chunk2 = _mm_unpacklo_epi8(v_r1, v_g1);
+    __m128i layer1_chunk3 = _mm_unpackhi_epi8(v_r1, v_g1);
+
+    __m128i layer2_chunk0 = _mm_unpacklo_epi8(layer1_chunk0, layer1_chunk2);
+    __m128i layer2_chunk1 = _mm_unpackhi_epi8(layer1_chunk0, layer1_chunk2);
+    __m128i layer2_chunk2 = _mm_unpacklo_epi8(layer1_chunk1, layer1_chunk3);
+    __m128i layer2_chunk3 = _mm_unpackhi_epi8(layer1_chunk1, layer1_chunk3);
+
+    __m128i layer3_chunk0 = _mm_unpacklo_epi8(layer2_chunk0, layer2_chunk2);
+    __m128i layer3_chunk1 = _mm_unpackhi_epi8(layer2_chunk0, layer2_chunk2);
+    __m128i layer3_chunk2 = _mm_unpacklo_epi8(layer2_chunk1, layer2_chunk3);
+    __m128i layer3_chunk3 = _mm_unpackhi_epi8(layer2_chunk1, layer2_chunk3);
+
+    __m128i layer4_chunk0 = _mm_unpacklo_epi8(layer3_chunk0, layer3_chunk2);
+    __m128i layer4_chunk1 = _mm_unpackhi_epi8(layer3_chunk0, layer3_chunk2);
+    __m128i layer4_chunk2 = _mm_unpacklo_epi8(layer3_chunk1, layer3_chunk3);
+    __m128i layer4_chunk3 = _mm_unpackhi_epi8(layer3_chunk1, layer3_chunk3);
+
+    v_r0 = _mm_unpacklo_epi8(layer4_chunk0, layer4_chunk2);
+    v_r1 = _mm_unpackhi_epi8(layer4_chunk0, layer4_chunk2);
+    v_g0 = _mm_unpacklo_epi8(layer4_chunk1, layer4_chunk3);
+    v_g1 = _mm_unpackhi_epi8(layer4_chunk1, layer4_chunk3);
+}
 
 inline void _mm_deinterleave_epi8(__m128i & v_r0, __m128i & v_r1, __m128i & v_g0,
                                   __m128i & v_g1, __m128i & v_b0, __m128i & v_b1)
@@ -228,6 +256,29 @@ inline void _mm_interleavee_epi8(__m128i & v_r0, __m128i & v_r1, __m128i & v_g0,
     v_a1 = _mm_packus_epi16(_mm_srli_epi16(layer1_chunk6, 8), _mm_srli_epi16(layer1_chunk7, 8));
 }
 
+inline void _mm_deinterleave_epi16(__m128i & v_r0, __m128i & v_r1, __m128i & v_g0, __m128i & v_g1) 
+{                                                                                      
+    __m128i layer1_chunk0 = _mm_unpacklo_epi16(v_r0, v_g0);
+    __m128i layer1_chunk1 = _mm_unpackhi_epi16(v_r0, v_g0);
+    __m128i layer1_chunk2 = _mm_unpacklo_epi16(v_r1, v_g1);
+    __m128i layer1_chunk3 = _mm_unpackhi_epi16(v_r1, v_g1);
+
+    __m128i layer2_chunk0 = _mm_unpacklo_epi16(layer1_chunk0, layer1_chunk2);
+    __m128i layer2_chunk1 = _mm_unpackhi_epi16(layer1_chunk0, layer1_chunk2);
+    __m128i layer2_chunk2 = _mm_unpacklo_epi16(layer1_chunk1, layer1_chunk3);
+    __m128i layer2_chunk3 = _mm_unpackhi_epi16(layer1_chunk1, layer1_chunk3);
+
+    __m128i layer3_chunk0 = _mm_unpacklo_epi16(layer2_chunk0, layer2_chunk2);
+    __m128i layer3_chunk1 = _mm_unpackhi_epi16(layer2_chunk0, layer2_chunk2);
+    __m128i layer3_chunk2 = _mm_unpacklo_epi16(layer2_chunk1, layer2_chunk3);
+    __m128i layer3_chunk3 = _mm_unpackhi_epi16(layer2_chunk1, layer2_chunk3);
+
+    v_r0 = _mm_unpacklo_epi16(layer3_chunk0, layer3_chunk2);
+    v_r1 = _mm_unpackhi_epi16(layer3_chunk0, layer3_chunk2);
+    v_g0 = _mm_unpacklo_epi16(layer3_chunk1, layer3_chunk3);
+    v_g1 = _mm_unpackhi_epi16(layer3_chunk1, layer3_chunk3);
+}
+
 inline void _mm_deinterleave_epi16(__m128i & v_r0, __m128i & v_r1, __m128i & v_g0,
                                    __m128i & v_g1, __m128i & v_b0, __m128i & v_b1) 
 {                                                                                      
@@ -299,6 +350,8 @@ inline void _mm_deinterleave_epi16(__m128i & v_r0, __m128i & v_r1, __m128i & v_g
     v_a0 = _mm_unpacklo_epi16(layer3_chunk3, layer3_chunk7);
     v_a1 = _mm_unpackhi_epi16(layer3_chunk3, layer3_chunk7);
 }
+
+#if CV_SSE4_1
 
 inline void _mm_interleave_epi16(__m128i & v_r0, __m128i & v_r1, __m128i & v_g0,
                                  __m128i & v_g1, __m128i & v_b0, __m128i & v_b1)
@@ -374,6 +427,26 @@ inline void _mm_interleave_epi16(__m128i & v_r0, __m128i & v_r1, __m128i & v_g0,
     v_a0 = _mm_packus_epi32(_mm_srli_epi32(layer1_chunk4, 16), _mm_srli_epi32(layer1_chunk5, 16));
     v_g1 = _mm_packus_epi32(_mm_and_si128(layer1_chunk6, v_mask), _mm_and_si128(layer1_chunk7, v_mask));
     v_a1 = _mm_packus_epi32(_mm_srli_epi32(layer1_chunk6, 16), _mm_srli_epi32(layer1_chunk7, 16));
+}
+
+#endif // CV_SSE4_1
+
+inline void _mm_deinterleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0, __m128 & v_g1)
+{                                                                      
+    __m128 layer1_chunk0 = _mm_unpacklo_ps(v_r0, v_g0);
+    __m128 layer1_chunk1 = _mm_unpackhi_ps(v_r0, v_g0);
+    __m128 layer1_chunk2 = _mm_unpacklo_ps(v_r1, v_g1);
+    __m128 layer1_chunk3 = _mm_unpackhi_ps(v_r1, v_g1);
+                                                                          
+    __m128 layer2_chunk0 = _mm_unpacklo_ps(layer1_chunk0, layer1_chunk2);
+    __m128 layer2_chunk1 = _mm_unpackhi_ps(layer1_chunk0, layer1_chunk2);
+    __m128 layer2_chunk2 = _mm_unpacklo_ps(layer1_chunk1, layer1_chunk3);
+    __m128 layer2_chunk3 = _mm_unpackhi_ps(layer1_chunk1, layer1_chunk3);
+
+    v_r0 = _mm_unpacklo_ps(layer2_chunk0, layer2_chunk2);
+    v_r1 = _mm_unpackhi_ps(layer2_chunk0, layer2_chunk2);
+    v_g0 = _mm_unpacklo_ps(layer2_chunk1, layer2_chunk3);
+    v_g1 = _mm_unpackhi_ps(layer2_chunk1, layer2_chunk3);
 }
 
 inline void _mm_deinterleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0,
@@ -492,6 +565,6 @@ inline void _mm_interleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0, __m12
     v_a1 = _mm_shuffle_ps(layer1_chunk6, layer1_chunk7, mask_hi);
 }
 
-#endif
+#endif // CV_SSE2
 
 #endif //__OPENCV_CORE_SSE_UTILS_HPP__
