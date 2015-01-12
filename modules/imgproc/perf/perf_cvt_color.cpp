@@ -204,12 +204,12 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
             )
 {
     Size sz = GetParam();
-    int mode = COLOR_YCrCb2RGB;
+    int mode = COLOR_XYZ2RGB;
     ChPair ch = getConversionInfo(mode);
     mode %= COLOR_COLORCVT_MAX;
 
-    Mat src(sz, CV_8UC(3));
-    Mat dst(sz, CV_8UC(3));
+    Mat src(sz, CV_32FC(3));
+    Mat dst(sz, CV_32FC(3));
 
     declare.time(100);
     declare.in(src, WARMUP_RNG).out(dst);
