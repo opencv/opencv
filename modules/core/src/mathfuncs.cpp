@@ -597,15 +597,18 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
                 k = 0;
 
 #if CV_SSE2
-                for ( ; k <= len - 4; k += 4)
+                if (USE_SSE2)
                 {
-                    __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
-                                                  _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
-                    __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
-                                                  _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
+                    for ( ; k <= len - 4; k += 4)
+                    {
+                        __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
+                                                      _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
+                        __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
+                                                      _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
 
-                    _mm_storeu_ps(buf[0] + k, v_dst0);
-                    _mm_storeu_ps(buf[1] + k, v_dst1);
+                        _mm_storeu_ps(buf[0] + k, v_dst0);
+                        _mm_storeu_ps(buf[1] + k, v_dst1);
+                    }
                 }
 #endif
 
@@ -619,11 +622,14 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
                 k = 0;
 
 #if CV_SSE2
-                for ( ; k <= len - 4; k += 4)
+                if (USE_SSE2)
                 {
-                    __m128 v_src = _mm_loadu_ps(buf[0] + k);
-                    _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
-                    _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
+                    for ( ; k <= len - 4; k += 4)
+                    {
+                        __m128 v_src = _mm_loadu_ps(buf[0] + k);
+                        _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
+                        _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
+                    }
                 }
 #endif
 
@@ -728,15 +734,18 @@ void cartToPolar( InputArray src1, InputArray src2,
                 k = 0;
 
 #if CV_SSE2
-                for ( ; k <= len - 4; k += 4)
+                if (USE_SSE2)
                 {
-                    __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
-                                                  _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
-                    __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
-                                                  _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
+                    for ( ; k <= len - 4; k += 4)
+                    {
+                        __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
+                                                      _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
+                        __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
+                                                      _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
 
-                    _mm_storeu_ps(buf[0] + k, v_dst0);
-                    _mm_storeu_ps(buf[1] + k, v_dst1);
+                        _mm_storeu_ps(buf[0] + k, v_dst0);
+                        _mm_storeu_ps(buf[1] + k, v_dst1);
+                    }
                 }
 #endif
 
@@ -750,11 +759,14 @@ void cartToPolar( InputArray src1, InputArray src2,
                 k = 0;
 
 #if CV_SSE2
-                for ( ; k <= len - 4; k += 4)
+                if (USE_SSE2)
                 {
-                    __m128 v_src = _mm_loadu_ps(buf[0] + k);
-                    _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
-                    _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
+                    for ( ; k <= len - 4; k += 4)
+                    {
+                        __m128 v_src = _mm_loadu_ps(buf[0] + k);
+                        _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
+                        _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
+                    }
                 }
 #endif
 
@@ -832,17 +844,16 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
         k1 = N/360.;
 
 #if CV_AVX2
-    __m128d v_i = _mm_set_pd(1, 0);
-    __m128d v_k1 = _mm_set1_pd(k1);
-    __m128d v_1 = _mm_set1_pd(1);
-    __m128i v_N1 = _mm_set1_epi32(N - 1);
-    __m128i v_N4 = _mm_set1_epi32(N >> 2);
-    __m128d v_sin_a0 = _mm_set1_pd(sin_a0);
-    __m128d v_sin_a2 = _mm_set1_pd(sin_a2);
-    __m128d v_cos_a0 = _mm_set1_pd(cos_a0);
-
     if (USE_AVX2)
     {
+        __m128d v_k1 = _mm_set1_pd(k1);
+        __m128d v_1 = _mm_set1_pd(1);
+        __m128i v_N1 = _mm_set1_epi32(N - 1);
+        __m128i v_N4 = _mm_set1_epi32(N >> 2);
+        __m128d v_sin_a0 = _mm_set1_pd(sin_a0);
+        __m128d v_sin_a2 = _mm_set1_pd(sin_a2);
+        __m128d v_cos_a0 = _mm_set1_pd(cos_a0);
+
         for ( ; i <= len - 4; i += 4)
         {
             __m128 v_angle = _mm_loadu_ps(angle + i);
@@ -859,8 +870,8 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
             __m128d v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
             __m128d v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
 
-            __m128d v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 1);
-            __m128d v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 1);
+            __m128d v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
+            __m128d v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
 
             __m128d v_sin_val_0 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
                                              _mm_mul_pd(v_cos_a, v_sin_b));
@@ -868,7 +879,7 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
                                              _mm_mul_pd(v_sin_a, v_sin_b));
 
             // 2-3
-            v_t = _mm_mul_pd(_mm_cvtps_pd(_mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(v_angle), 8))), v_k1);
+            v_t = _mm_mul_pd(_mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_angle), 8))), v_k1);
             v_it = _mm_cvtpd_epi32(v_t);
             v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
 
@@ -879,8 +890,8 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
             v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
             v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
 
-            v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 1);
-            v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 1);
+            v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
+            v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
 
             __m128d v_sin_val_1 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
                                              _mm_mul_pd(v_cos_a, v_sin_b));
@@ -1032,11 +1043,14 @@ void polarToCart( InputArray src1, InputArray src2,
                         vst1q_f32(y + k, vmulq_f32(vld1q_f32(y + k), v_m));
                     }
                     #elif CV_SSE2
-                    for( ; k <= len - 4; k += 4 )
+                    if (USE_SSE2)
                     {
-                        __m128 v_m = _mm_loadu_ps(mag + k);
-                        _mm_storeu_ps(x + k, _mm_mul_ps(_mm_loadu_ps(x + k), v_m));
-                        _mm_storeu_ps(y + k, _mm_mul_ps(_mm_loadu_ps(y + k), v_m));
+                        for( ; k <= len - 4; k += 4 )
+                        {
+                            __m128 v_m = _mm_loadu_ps(mag + k);
+                            _mm_storeu_ps(x + k, _mm_mul_ps(_mm_loadu_ps(x + k), v_m));
+                            _mm_storeu_ps(y + k, _mm_mul_ps(_mm_loadu_ps(y + k), v_m));
+                        }
                     }
                     #endif
 
@@ -1063,10 +1077,10 @@ void polarToCart( InputArray src1, InputArray src2,
                         x[k] = buf[0][k]*m; y[k] = buf[1][k]*m;
                     }
                 else
-                    for( k = 0; k < len; k++ )
-                    {
-                        x[k] = buf[0][k]; y[k] = buf[1][k];
-                    }
+                {
+                    std::memcpy(x, buf[0], sizeof(float) * len);
+                    std::memcpy(y, buf[1], sizeof(float) * len);
+                }
             }
 
             if( ptrs[0] )

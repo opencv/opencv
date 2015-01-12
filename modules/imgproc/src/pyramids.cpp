@@ -386,10 +386,10 @@ struct PyrUpVec_32s16s
             __m128i v_dst01 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
             __m128i v_dst11 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
 
-            _mm_storeu_si128((__m128i *)(dst0 + x), 
+            _mm_storeu_si128((__m128i *)(dst0 + x),
                 _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst00, v_delta), 6),
                                 _mm_srai_epi32(_mm_add_epi32(v_dst01, v_delta), 6)));
-            _mm_storeu_si128((__m128i *)(dst1 + x), 
+            _mm_storeu_si128((__m128i *)(dst1 + x),
                 _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst10, v_delta), 6),
                                 _mm_srai_epi32(_mm_add_epi32(v_dst11, v_delta), 6)));
         }
@@ -446,10 +446,10 @@ struct PyrUpVec_32s16u
             __m128i v_dst01 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
             __m128i v_dst11 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
 
-            _mm_storeu_si128((__m128i *)(dst0 + x), 
+            _mm_storeu_si128((__m128i *)(dst0 + x),
                 _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst00, v_delta), 6),
                                  _mm_srli_epi32(_mm_add_epi32(v_dst01, v_delta), 6)));
-            _mm_storeu_si128((__m128i *)(dst1 + x), 
+            _mm_storeu_si128((__m128i *)(dst1 + x),
                 _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst10, v_delta), 6),
                                  _mm_srli_epi32(_mm_add_epi32(v_dst11, v_delta), 6)));
         }
@@ -491,7 +491,7 @@ struct PyrUpVec_32f
 
         const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
         float *dst0 = dst[0], *dst1 = dst[1];
-        __m128 v_6 = _mm_set1_ps(6.0f), v_scale = _mm_set1_ps(1.f/64.0f), 
+        __m128 v_6 = _mm_set1_ps(6.0f), v_scale = _mm_set1_ps(1.f/64.0f),
                v_scale4 = _mm_mul_ps(v_scale, _mm_set1_ps(4.0f));
 
         for( ; x <= width - 8; x += 8 )
