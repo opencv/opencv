@@ -5503,6 +5503,19 @@ public:
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, width);
         bh0 = std::min(BLOCK_SZ*BLOCK_SZ/bw0, height);
 
+        #if CV_SSE2
+        __m128d v_M0 = _mm_set1_pd(M[0]);
+        __m128d v_M3 = _mm_set1_pd(M[3]);
+        __m128d v_M6 = _mm_set1_pd(M[6]);
+        __m128d v_intmax = _mm_set1_pd((double)INT_MAX);
+        __m128d v_intmin = _mm_set1_pd((double)INT_MIN);
+        __m128d v_2 = _mm_set1_pd(2),
+                v_zero = _mm_setzero_pd(),
+                v_1 = _mm_set1_pd(1),
+                v_its = _mm_set1_pd(INTER_TAB_SIZE);
+        __m128i v_itsi1 = _mm_set1_epi32(INTER_TAB_SIZE - 1);
+        #endif
+
         for( y = range.start; y < range.end; y += bh0 )
         {
             for( x = 0; x < width; x += bw0 )
@@ -5521,7 +5534,117 @@ public:
                     double W0 = M[6]*x + M[7]*(y + y1) + M[8];
 
                     if( interpolation == INTER_NEAREST )
-                        for( x1 = 0; x1 < bw; x1++ )
+                    {
+                        x1 = 0;
+
+                        #if CV_SSE2
+                        __m128d v_X0d = _mm_set1_pd(X0);
+                        __m128d v_Y0d = _mm_set1_pd(Y0);
+                        __m128d v_W0 = _mm_set1_pd(W0);
+                        __m128d v_x1 = _mm_set_pd(1, 0);
+
+                        for( ; x1 <= bw - 16; x1 += 16 )
+                        {
+                            // 0-3
+                            __m128i v_X0, v_Y0;
+                            {
+                                __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
+                                __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
+                                __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_X0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
+                                v_Y0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
+                            }
+
+                            // 4-8
+                            __m128i v_X1, v_Y1;
+                            {
+                                __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
+                                __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
+                                __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_X1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
+                                v_Y1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
+                            }
+
+                            // 8-11
+                            __m128i v_X2, v_Y2;
+                            {
+                                __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
+                                __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
+                                __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_X2 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
+                                v_Y2 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
+                            }
+
+                            // 12-15
+                            __m128i v_X3, v_Y3;
+                            {
+                                __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
+                                __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
+                                __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_X3 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
+                                v_Y3 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
+                            }
+
+                            // convert to 16s
+                            v_X0 = _mm_packs_epi32(v_X0, v_X1);
+                            v_X1 = _mm_packs_epi32(v_X2, v_X3);
+                            v_Y0 = _mm_packs_epi32(v_Y0, v_Y1);
+                            v_Y1 = _mm_packs_epi32(v_Y2, v_Y3);
+
+                            _mm_interleave_epi16(v_X0, v_X1, v_Y0, v_Y1);
+
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2), v_X0);
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 8), v_X1);
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 16), v_Y0);
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 24), v_Y1);
+                        }
+                        #endif
+
+                        for( ; x1 < bw; x1++ )
                         {
                             double W = W0 + M[6]*x1;
                             W = W ? 1./W : 0;
@@ -5533,10 +5656,133 @@ public:
                             xy[x1*2] = saturate_cast<short>(X);
                             xy[x1*2+1] = saturate_cast<short>(Y);
                         }
+                    }
                     else
                     {
                         short* alpha = A + y1*bw;
-                        for( x1 = 0; x1 < bw; x1++ )
+                        x1 = 0;
+
+                        #if CV_SSE2
+                        __m128d v_X0d = _mm_set1_pd(X0);
+                        __m128d v_Y0d = _mm_set1_pd(Y0);
+                        __m128d v_W0 = _mm_set1_pd(W0);
+                        __m128d v_x1 = _mm_set_pd(1, 0);
+
+                        for( ; x1 <= bw - 16; x1 += 16 )
+                        {
+                            // 0-3
+                            __m128i v_X0, v_Y0;
+                            {
+                                __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
+                                __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
+                                __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_X0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
+                                v_Y0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
+                            }
+
+                            // 4-8
+                            __m128i v_X1, v_Y1;
+                            {
+                                __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
+                                __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
+                                __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_X1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
+                                v_Y1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
+                            }
+
+                            // 8-11
+                            __m128i v_X2, v_Y2;
+                            {
+                                __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
+                                __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
+                                __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_X2 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
+                                v_Y2 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
+                            }
+
+                            // 12-15
+                            __m128i v_X3, v_Y3;
+                            {
+                                __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
+                                __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
+                                v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
+                                __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
+                                __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
+                                v_x1 = _mm_add_pd(v_x1, v_2);
+
+                                v_X3 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
+                                v_Y3 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
+                                                                      _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
+                            }
+
+                            // store alpha
+                            __m128i v_alpha0 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_Y0, v_itsi1), INTER_BITS),
+                                                             _mm_and_si128(v_X0, v_itsi1));
+                            __m128i v_alpha1 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_Y1, v_itsi1), INTER_BITS),
+                                                             _mm_and_si128(v_X1, v_itsi1));
+                            _mm_storeu_si128((__m128i *)(alpha + x1), _mm_packs_epi32(v_alpha0, v_alpha1));
+
+                            v_alpha0 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_Y2, v_itsi1), INTER_BITS),
+                                                     _mm_and_si128(v_X2, v_itsi1));
+                            v_alpha1 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_Y3, v_itsi1), INTER_BITS),
+                                                     _mm_and_si128(v_X3, v_itsi1));
+                            _mm_storeu_si128((__m128i *)(alpha + x1 + 8), _mm_packs_epi32(v_alpha0, v_alpha1));
+
+                            // convert to 16s
+                            v_X0 = _mm_packs_epi32(_mm_srai_epi32(v_X0, INTER_BITS), _mm_srai_epi32(v_X1, INTER_BITS));
+                            v_X1 = _mm_packs_epi32(_mm_srai_epi32(v_X2, INTER_BITS), _mm_srai_epi32(v_X3, INTER_BITS));
+                            v_Y0 = _mm_packs_epi32(_mm_srai_epi32(v_Y0, INTER_BITS), _mm_srai_epi32(v_Y1, INTER_BITS));
+                            v_Y1 = _mm_packs_epi32(_mm_srai_epi32(v_Y2, INTER_BITS), _mm_srai_epi32(v_Y3, INTER_BITS));
+
+                            _mm_interleave_epi16(v_X0, v_X1, v_Y0, v_Y1);
+
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2), v_X0);
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 8), v_X1);
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 16), v_Y0);
+                            _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 24), v_Y1);
+                        }
+                        #endif
+
+                        for( ; x1 < bw; x1++ )
                         {
                             double W = W0 + M[6]*x1;
                             W = W ? INTER_TAB_SIZE/W : 0;
