@@ -139,7 +139,9 @@ extern "C" {
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
+#if defined __APPLE__
     #include <sys/sysctl.h>
+#endif
 #endif
 
 #ifndef MIN
