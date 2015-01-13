@@ -41,8 +41,8 @@ struct Worker: public ParallelLoopBody
     Worker(int num_devices)
     {
         count = num_devices;
-        contexts = new contexts CUcontext[num_devices];
-        for (int device_id = 0; i < num_devices; device_id++)
+        contexts = new CUcontext[num_devices];
+        for (int device_id = 0; device_id < num_devices; device_id++)
         {
             CUdevice device;
             safeCall(cuDeviceGet(&device, device_id));
@@ -90,7 +90,7 @@ struct Worker: public ParallelLoopBody
     {
         if ((contexts != NULL) && count != 0)
         {
-            for (int device_id = 0; i < num_devices; device_id++)
+            for (int device_id = 0; device_id < count; device_id++)
             {
                 safeCall(cuCtxDestroy(contexts[device_id]));
             }
@@ -130,7 +130,7 @@ int main()
     safeCall(cuInit(0));
 
     // Execute calculation
-    parallel_for_(cv::Range(0, num_devices, Worker(num_devices));
+    parallel_for_(cv::Range(0, num_devices), Worker(num_devices));
 
     return 0;
 }

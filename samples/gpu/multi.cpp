@@ -72,7 +72,7 @@ int main()
     }
 
     // Execute calculation in several threads, 1 GPU per thread
-    parallel_for_(cv::Range(0, num_devices, Worker());
+    parallel_for_(cv::Range(0, num_devices), Worker());
 
     return 0;
 }

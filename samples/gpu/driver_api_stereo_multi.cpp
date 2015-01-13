@@ -8,7 +8,6 @@
 #endif
 
 #include <iostream>
-#include "cvconfig.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"
@@ -169,7 +168,7 @@ int main(int argc, char** argv)
     contextOff();
 
     // Execute calculation in two threads using two GPUs
-    parallel_for_(cv::Range(0, 2, Worker());
+    parallel_for_(cv::Range(0, 2), Worker());
 
     // Release the first GPU resources
     contextOn(0);
