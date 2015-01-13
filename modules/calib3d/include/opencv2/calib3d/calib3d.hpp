@@ -488,22 +488,8 @@ CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints,
                                   float reprojectionError = 8.0,
                                   int minInliersCount = 100,
                                   OutputArray inliers = noArray(),
-                                  int flags = ITERATIVE);
-
-//! computes the camera pose from a few 3D points and the corresponding projections. The outliers are possible.
-CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints,
-                                  InputArray imagePoints,
-                                  InputArray cameraMatrix,
-                                  InputArray distCoeffs,
-                                  OutputArray rvec,
-                                  OutputArray tvec,
-                                  bool useExtrinsicGuess,
-                                  int iterationsCount,
-                                  float reprojectionError,
-                                  int minInliersCount,
-                                  OutputArray inliers,
-                                  int flags,
-                                  int rng_seed);
+                                  int flags = ITERATIVE,
+                                  int rng_seed = 0);
 
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
