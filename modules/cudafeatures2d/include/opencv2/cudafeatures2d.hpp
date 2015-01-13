@@ -89,7 +89,7 @@ public:
     preferable choices for SIFT and SURF descriptors, NORM_HAMMING should be used with ORB, BRISK and
     BRIEF).
      */
-    static Ptr<DescriptorMatcher> createBFMatcher(int norm = cv::NORM_L2);
+    static Ptr<DescriptorMatcher> createBFMatcher(int normType = cv::NORM_L2);
 
     //
     // Utility
@@ -248,9 +248,6 @@ public:
     less than k possible matches in total.
     @param mask Mask specifying permissible matches between an input query and train matrices of
     descriptors.
-    @param compactResult Parameter used when the mask (or masks) is not empty. If compactResult is
-    false, the matches vector has the same size as queryDescriptors rows. If compactResult is true,
-    the matches vector does not contain matches for fully masked-out query descriptors.
     @param stream CUDA stream.
 
     These extended variants of DescriptorMatcher::matchAsync methods find several best matches for each query
@@ -335,9 +332,6 @@ public:
     in Pixels)!
     @param mask Mask specifying permissible matches between an input query and train matrices of
     descriptors.
-    @param compactResult Parameter used when the mask (or masks) is not empty. If compactResult is
-    false, the matches vector has the same size as queryDescriptors rows. If compactResult is true,
-    the matches vector does not contain matches for fully masked-out query descriptors.
     @param stream CUDA stream.
 
     For each query descriptor, the methods find such training descriptors that the distance between the
