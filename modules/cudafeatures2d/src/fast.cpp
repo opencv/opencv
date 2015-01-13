@@ -47,7 +47,7 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-Ptr<FastFeatureDetector> cv::cuda::FastFeatureDetector::create(int, bool, int, int) { throw_no_cuda(); return Ptr<FastFeatureDetector>(); }
+Ptr<cv::cuda::FastFeatureDetector> cv::cuda::FastFeatureDetector::create(int, bool, int, int) { throw_no_cuda(); return Ptr<cv::cuda::FastFeatureDetector>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
