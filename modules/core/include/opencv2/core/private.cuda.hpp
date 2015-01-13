@@ -130,6 +130,12 @@ namespace cv { namespace cuda
     class NppStreamHandler
     {
     public:
+        inline explicit NppStreamHandler(Stream& newStream)
+        {
+            oldStream = nppGetStream();
+            nppSetStream(StreamAccessor::getStream(newStream));
+        }
+
         inline explicit NppStreamHandler(cudaStream_t newStream)
         {
             oldStream = nppGetStream();

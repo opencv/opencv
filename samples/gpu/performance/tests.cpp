@@ -1053,12 +1053,11 @@ TEST(equalizeHist)
 
         cuda::GpuMat d_src(src);
         cuda::GpuMat d_dst;
-        cuda::GpuMat d_buf;
 
-        cuda::equalizeHist(d_src, d_dst, d_buf);
+        cuda::equalizeHist(d_src, d_dst);
 
         CUDA_ON;
-        cuda::equalizeHist(d_src, d_dst, d_buf);
+        cuda::equalizeHist(d_src, d_dst);
         CUDA_OFF;
     }
 }
