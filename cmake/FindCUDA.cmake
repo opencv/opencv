@@ -1098,7 +1098,7 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
     set(nvcc_flags ${nvcc_flags} "--target-cpu-architecture=${CUDA_TARGET_CPU_ARCH}")
   endif()
 
-  if(CUDA_TARGET_OS_VARIANT)
+  if(CUDA_TARGET_OS_VARIANT AND CUDA_VERSION VERSION_LESS "7.0")
     set(nvcc_flags ${nvcc_flags} "-target-os-variant=${CUDA_TARGET_OS_VARIANT}")
   endif()
 
