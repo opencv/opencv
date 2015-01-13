@@ -167,16 +167,16 @@ PERF_TEST_P(DescSize_Norm, BFMatch,
 
     if (PERF_RUN_CUDA())
     {
-        cv::cuda::BFMatcher_CUDA d_matcher(normType);
+        cv::Ptr<cv::cuda::DescriptorMatcher> d_matcher = cv::cuda::DescriptorMatcher::createBFMatcher(normType);
 
         const cv::cuda::GpuMat d_query(query);
         const cv::cuda::GpuMat d_train(train);
-        cv::cuda::GpuMat d_trainIdx, d_distance;
+        cv::cuda::GpuMat d_matches;
 
-        TEST_CYCLE() d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
+        TEST_CYCLE() d_matcher->matchAsync(d_query, d_train, d_matches);
 
         std::vector<cv::DMatch> gpu_matches;
-        d_matcher.matchDownload(d_trainIdx, d_distance, gpu_matches);
+        d_matcher->matchConvert(d_matches, gpu_matches);
 
         SANITY_CHECK_MATCHES(gpu_matches);
     }
@@ -226,16 +226,16 @@ PERF_TEST_P(DescSize_K_Norm, BFKnnMatch,
 
     if (PERF_RUN_CUDA())
     {
-        cv::cuda::BFMatcher_CUDA d_matcher(normType);
+        cv::Ptr<cv::cuda::DescriptorMatcher> d_matcher = cv::cuda::DescriptorMatcher::createBFMatcher(normType);
 
         const cv::cuda::GpuMat d_query(query);
         const cv::cuda::GpuMat d_train(train);
-        cv::cuda::GpuMat d_trainIdx, d_distance, d_allDist;
+        cv::cuda::GpuMat d_matches;
 
-        TEST_CYCLE() d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, k);
+        TEST_CYCLE() d_matcher->knnMatchAsync(d_query, d_train, d_matches, k);
 
         std::vector< std::vector<cv::DMatch> > matchesTbl;
-        d_matcher.knnMatchDownload(d_trainIdx, d_distance, matchesTbl);
+        d_matcher->knnMatchConvert(d_matches, matchesTbl);
 
         std::vector<cv::DMatch> gpu_matches;
         toOneRowMatches(matchesTbl, gpu_matches);
@@ -280,16 +280,16 @@ PERF_TEST_P(DescSize_Norm, BFRadiusMatch,
 
     if (PERF_RUN_CUDA())
     {
-        cv::cuda::BFMatcher_CUDA d_matcher(normType);
+        cv::Ptr<cv::cuda::DescriptorMatcher> d_matcher = cv::cuda::DescriptorMatcher::createBFMatcher(normType);
 
         const cv::cuda::GpuMat d_query(query);
         const cv::cuda::GpuMat d_train(train);
-        cv::cuda::GpuMat d_trainIdx, d_nMatches, d_distance;
+        cv::cuda::GpuMat d_matches;
 
-        TEST_CYCLE() d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, maxDistance);
+        TEST_CYCLE() d_matcher->radiusMatchAsync(d_query, d_train, d_matches, maxDistance);
 
         std::vector< std::vector<cv::DMatch> > matchesTbl;
-        d_matcher.radiusMatchDownload(d_trainIdx, d_distance, d_nMatches, matchesTbl);
+        d_matcher->radiusMatchConvert(d_matches, matchesTbl);
 
         std::vector<cv::DMatch> gpu_matches;
         toOneRowMatches(matchesTbl, gpu_matches);
