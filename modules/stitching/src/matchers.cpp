@@ -154,7 +154,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     matches_info.matches.clear();
 
-    Ptr<DescriptorMatcher> matcher;
+    Ptr<cv::DescriptorMatcher> matcher;
 #if 0 // TODO check this
     if (ocl::useOpenCL())
     {
@@ -220,13 +220,13 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     descriptors1_.upload(features1.descriptors);
     descriptors2_.upload(features2.descriptors);
 
-    BFMatcher_CUDA matcher(NORM_L2);
+    Ptr<cuda::DescriptorMatcher> matcher = cuda::DescriptorMatcher::createBFMatcher(NORM_L2);
+
     MatchesSet matches;
 
     // Find 1->2 matches
     pair_matches.clear();
-    matcher.knnMatchSingle(descriptors1_, descriptors2_, train_idx_, distance_, all_dist_, 2);
-    matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
+    matcher->knnMatch(descriptors1_, descriptors2_, pair_matches, 2);
     for (size_t i = 0; i < pair_matches.size(); ++i)
     {
         if (pair_matches[i].size() < 2)
@@ -242,8 +242,7 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     // Find 2->1 matches
     pair_matches.clear();
-    matcher.knnMatchSingle(descriptors2_, descriptors1_, train_idx_, distance_, all_dist_, 2);
-    matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
+    matcher->knnMatch(descriptors2_, descriptors1_, pair_matches, 2);
     for (size_t i = 0; i < pair_matches.size(); ++i)
     {
         if (pair_matches[i].size() < 2)

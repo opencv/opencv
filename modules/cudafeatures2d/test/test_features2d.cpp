@@ -285,7 +285,8 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::cuda::DeviceInfo, NormCode, DescriptorSiz
 
 CUDA_TEST_P(BruteForceMatcher, Match_Single)
 {
-    cv::cuda::BFMatcher_CUDA matcher(normCode);
+    cv::Ptr<cv::cuda::DescriptorMatcher> matcher =
+            cv::cuda::DescriptorMatcher::createBFMatcher(normCode);
 
     cv::cuda::GpuMat mask;
     if (useMask)
@@ -295,7 +296,7 @@ CUDA_TEST_P(BruteForceMatcher, Match_Single)
     }
 
     std::vector<cv::DMatch> matches;
-    matcher.match(loadMat(query), loadMat(train), matches, mask);
+    matcher->match(loadMat(query), loadMat(train), matches, mask);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -312,13 +313,14 @@ CUDA_TEST_P(BruteForceMatcher, Match_Single)
 
 CUDA_TEST_P(BruteForceMatcher, Match_Collection)
 {
-    cv::cuda::BFMatcher_CUDA matcher(normCode);
+    cv::Ptr<cv::cuda::DescriptorMatcher> matcher =
+            cv::cuda::DescriptorMatcher::createBFMatcher(normCode);
 
     cv::cuda::GpuMat d_train(train);
 
     // make add() twice to test such case
-    matcher.add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
-    matcher.add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
+    matcher->add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
+    matcher->add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
 
     // prepare masks (make first nearest match illegal)
     std::vector<cv::cuda::GpuMat> masks(2);
@@ -331,9 +333,9 @@ CUDA_TEST_P(BruteForceMatcher, Match_Collection)
 
     std::vector<cv::DMatch> matches;
     if (useMask)
-        matcher.match(cv::cuda::GpuMat(query), matches, masks);
+        matcher->match(cv::cuda::GpuMat(query), matches, masks);
     else
-        matcher.match(cv::cuda::GpuMat(query), matches);
+        matcher->match(cv::cuda::GpuMat(query), matches);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -366,7 +368,8 @@ CUDA_TEST_P(BruteForceMatcher, Match_Collection)
 
 CUDA_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
 {
-    cv::cuda::BFMatcher_CUDA matcher(normCode);
+    cv::Ptr<cv::cuda::DescriptorMatcher> matcher =
+            cv::cuda::DescriptorMatcher::createBFMatcher(normCode);
 
     const int knn = 2;
 
@@ -378,7 +381,7 @@ CUDA_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
     }
 
     std::vector< std::vector<cv::DMatch> > matches;
-    matcher.knnMatch(loadMat(query), loadMat(train), matches, knn, mask);
+    matcher->knnMatch(loadMat(query), loadMat(train), matches, knn, mask);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -405,7 +408,8 @@ CUDA_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
 
 CUDA_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
 {
-    cv::cuda::BFMatcher_CUDA matcher(normCode);
+    cv::Ptr<cv::cuda::DescriptorMatcher> matcher =
+            cv::cuda::DescriptorMatcher::createBFMatcher(normCode);
 
     const int knn = 3;
 
@@ -417,7 +421,7 @@ CUDA_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
     }
 
     std::vector< std::vector<cv::DMatch> > matches;
-    matcher.knnMatch(loadMat(query), loadMat(train), matches, knn, mask);
+    matcher->knnMatch(loadMat(query), loadMat(train), matches, knn, mask);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -444,15 +448,16 @@ CUDA_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
 
 CUDA_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
 {
-    cv::cuda::BFMatcher_CUDA matcher(normCode);
+    cv::Ptr<cv::cuda::DescriptorMatcher> matcher =
+            cv::cuda::DescriptorMatcher::createBFMatcher(normCode);
 
     const int knn = 2;
 
     cv::cuda::GpuMat d_train(train);
 
     // make add() twice to test such case
-    matcher.add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
-    matcher.add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
+    matcher->add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
+    matcher->add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
 
     // prepare masks (make first nearest match illegal)
     std::vector<cv::cuda::GpuMat> masks(2);
@@ -466,9 +471,9 @@ CUDA_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
     std::vector< std::vector<cv::DMatch> > matches;
 
     if (useMask)
-        matcher.knnMatch(cv::cuda::GpuMat(query), matches, knn, masks);
+        matcher->knnMatch(cv::cuda::GpuMat(query), matches, knn, masks);
     else
-        matcher.knnMatch(cv::cuda::GpuMat(query), matches, knn);
+        matcher->knnMatch(cv::cuda::GpuMat(query), matches, knn);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -506,15 +511,16 @@ CUDA_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
 
 CUDA_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
 {
-    cv::cuda::BFMatcher_CUDA matcher(normCode);
+    cv::Ptr<cv::cuda::DescriptorMatcher> matcher =
+            cv::cuda::DescriptorMatcher::createBFMatcher(normCode);
 
     const int knn = 3;
 
     cv::cuda::GpuMat d_train(train);
 
     // make add() twice to test such case
-    matcher.add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
-    matcher.add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
+    matcher->add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
+    matcher->add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
 
     // prepare masks (make first nearest match illegal)
     std::vector<cv::cuda::GpuMat> masks(2);
@@ -528,9 +534,9 @@ CUDA_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
     std::vector< std::vector<cv::DMatch> > matches;
 
     if (useMask)
-        matcher.knnMatch(cv::cuda::GpuMat(query), matches, knn, masks);
+        matcher->knnMatch(cv::cuda::GpuMat(query), matches, knn, masks);
     else
-        matcher.knnMatch(cv::cuda::GpuMat(query), matches, knn);
+        matcher->knnMatch(cv::cuda::GpuMat(query), matches, knn);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -568,7 +574,8 @@ CUDA_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
 
 CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Single)
 {
-    cv::cuda::BFMatcher_CUDA matcher(normCode);
+    cv::Ptr<cv::cuda::DescriptorMatcher> matcher =
+            cv::cuda::DescriptorMatcher::createBFMatcher(normCode);
 
     const float radius = 1.f / countFactor;
 
@@ -577,7 +584,7 @@ CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Single)
         try
         {
             std::vector< std::vector<cv::DMatch> > matches;
-            matcher.radiusMatch(loadMat(query), loadMat(train), matches, radius);
+            matcher->radiusMatch(loadMat(query), loadMat(train), matches, radius);
         }
         catch (const cv::Exception& e)
         {
@@ -594,7 +601,7 @@ CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Single)
         }
 
         std::vector< std::vector<cv::DMatch> > matches;
-        matcher.radiusMatch(loadMat(query), loadMat(train), matches, radius, mask);
+        matcher->radiusMatch(loadMat(query), loadMat(train), matches, radius, mask);
 
         ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -617,7 +624,8 @@ CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Single)
 
 CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
 {
-    cv::cuda::BFMatcher_CUDA matcher(normCode);
+    cv::Ptr<cv::cuda::DescriptorMatcher> matcher =
+            cv::cuda::DescriptorMatcher::createBFMatcher(normCode);
 
     const int n = 3;
     const float radius = 1.f / countFactor * n;
@@ -625,8 +633,8 @@ CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
     cv::cuda::GpuMat d_train(train);
 
     // make add() twice to test such case
-    matcher.add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
-    matcher.add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
+    matcher->add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
+    matcher->add(std::vector<cv::cuda::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
 
     // prepare masks (make first nearest match illegal)
     std::vector<cv::cuda::GpuMat> masks(2);
@@ -642,7 +650,7 @@ CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
         try
         {
             std::vector< std::vector<cv::DMatch> > matches;
-            matcher.radiusMatch(cv::cuda::GpuMat(query), matches, radius, masks);
+            matcher->radiusMatch(cv::cuda::GpuMat(query), matches, radius, masks);
         }
         catch (const cv::Exception& e)
         {
@@ -654,9 +662,9 @@ CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
         std::vector< std::vector<cv::DMatch> > matches;
 
         if (useMask)
-            matcher.radiusMatch(cv::cuda::GpuMat(query), matches, radius, masks);
+            matcher->radiusMatch(cv::cuda::GpuMat(query), matches, radius, masks);
         else
-            matcher.radiusMatch(cv::cuda::GpuMat(query), matches, radius);
+            matcher->radiusMatch(cv::cuda::GpuMat(query), matches, radius);
 
         ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
