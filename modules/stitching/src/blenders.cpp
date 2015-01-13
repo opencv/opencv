@@ -476,9 +476,9 @@ static bool ocl_normalizeUsingWeightMap(InputArray _weight, InputOutputArray _ma
 
 void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    Mat weight = _weight.getMat();
     Mat src = _src.getMat();
+    Mat weight = _weight.getMat();
+#ifdef HAVE_TEGRA_OPTIMIZATION
     if(tegra::normalizeUsingWeightMap(weight, src))
         return;
 #endif
