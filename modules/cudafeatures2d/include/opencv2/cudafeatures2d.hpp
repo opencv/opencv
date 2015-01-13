@@ -284,9 +284,11 @@ public:
     virtual int getMaxNumPoints() const = 0;
 };
 
-/** @brief Class for extracting ORB features and descriptors from an image. :
- */
-class CV_EXPORTS ORB_CUDA
+//
+// ORB
+//
+
+class CV_EXPORTS ORB : public cv::ORB, public Feature2DAsync
 {
 public:
     enum
@@ -300,113 +302,20 @@ public:
         ROWS_COUNT
     };
 
-    enum
-    {
-        DEFAULT_FAST_THRESHOLD = 20
-    };
-
-    /** @brief Constructor.
-
-    @param nFeatures The number of desired features.
-    @param scaleFactor Coefficient by which we divide the dimensions from one scale pyramid level to
-    the next.
-    @param nLevels The number of levels in the scale pyramid.
-    @param edgeThreshold How far from the boundary the points should be.
-    @param firstLevel The level at which the image is given. If 1, that means we will also look at the
-    image scaleFactor times bigger.
-    @param WTA_K
-    @param scoreType
-    @param patchSize
-     */
-    explicit ORB_CUDA(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31,
-                     int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31);
-
-    /** @overload */
-    void operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
-    /** @overload */
-    void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
-
-    /** @brief Detects keypoints and computes descriptors for them.
-
-    @param image Input 8-bit grayscale image.
-    @param mask Optional input mask that marks the regions where we should detect features.
-    @param keypoints The input/output vector of keypoints. Can be stored both in CPU and GPU memory.
-    For GPU memory:
-    -   keypoints.ptr\<float\>(X_ROW)[i] contains x coordinate of the i'th feature.
-    -   keypoints.ptr\<float\>(Y_ROW)[i] contains y coordinate of the i'th feature.
-    -   keypoints.ptr\<float\>(RESPONSE_ROW)[i] contains the response of the i'th feature.
-    -   keypoints.ptr\<float\>(ANGLE_ROW)[i] contains orientation of the i'th feature.
-    -   keypoints.ptr\<float\>(OCTAVE_ROW)[i] contains the octave of the i'th feature.
-    -   keypoints.ptr\<float\>(SIZE_ROW)[i] contains the size of the i'th feature.
-    @param descriptors Computed descriptors. if blurForDescriptor is true, image will be blurred
-    before descriptors calculation.
-     */
-    void operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors);
-    /** @overload */
-    void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors);
-
-    /** @brief Download keypoints from GPU to CPU memory.
-    */
-    static void downloadKeyPoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
-    /** @brief Converts keypoints from CUDA representation to vector of KeyPoint.
-    */
-    static void convertKeyPoints(const Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
-
-    //! returns the descriptor size in bytes
-    inline int descriptorSize() const { return kBytes; }
-
-    inline void setFastParams(int threshold, bool nonmaxSuppression = true)
-    {
-        fastDetector_->setThreshold(threshold);
-        fastDetector_->setNonmaxSuppression(nonmaxSuppression);
-    }
-
-    /** @brief Releases inner buffer memory.
-    */
-    void release();
+    static Ptr<ORB> create(int nfeatures=500,
+                           float scaleFactor=1.2f,
+                           int nlevels=8,
+                           int edgeThreshold=31,
+                           int firstLevel=0,
+                           int WTA_K=2,
+                           int scoreType=ORB::HARRIS_SCORE,
+                           int patchSize=31,
+                           int fastThreshold=20,
+                           bool blurForDescriptor=false);
 
     //! if true, image will be blurred before descriptors calculation
-    bool blurForDescriptor;
-
-private:
-    enum { kBytes = 32 };
-
-    void buildScalePyramids(const GpuMat& image, const GpuMat& mask);
-
-    void computeKeyPointsPyramid();
-
-    void computeDescriptors(GpuMat& descriptors);
-
-    void mergeKeyPoints(GpuMat& keypoints);
-
-    int nFeatures_;
-    float scaleFactor_;
-    int nLevels_;
-    int edgeThreshold_;
-    int firstLevel_;
-    int WTA_K_;
-    int scoreType_;
-    int patchSize_;
-
-    //! The number of desired features per scale
-    std::vector<size_t> n_features_per_level_;
-
-    //! Points to compute BRIEF descriptors from
-    GpuMat pattern_;
-
-    std::vector<GpuMat> imagePyr_;
-    std::vector<GpuMat> maskPyr_;
-
-    GpuMat buf_;
-
-    std::vector<GpuMat> keyPointsPyr_;
-    std::vector<int> keyPointsCount_;
-
-    Ptr<cv::cuda::FastFeatureDetector> fastDetector_;
-
-    Ptr<cuda::Filter> blurFilter;
-
-    GpuMat d_keypoints_;
+    virtual void setBlurForDescriptor(bool blurForDescriptor) = 0;
+    virtual bool getBlurForDescriptor() const = 0;
 };
 
 //! @}

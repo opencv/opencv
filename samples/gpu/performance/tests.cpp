@@ -350,15 +350,15 @@ TEST(ORB)
     orb->detectAndCompute(src, Mat(), keypoints, descriptors);
     CPU_OFF;
 
-    cuda::ORB_CUDA d_orb;
+    Ptr<cuda::ORB> d_orb = cuda::ORB::create();
     cuda::GpuMat d_src(src);
     cuda::GpuMat d_keypoints;
     cuda::GpuMat d_descriptors;
 
-    d_orb(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
+    d_orb->detectAndComputeAsync(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
 
     CUDA_ON;
-    d_orb(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
+    d_orb->detectAndComputeAsync(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
     CUDA_OFF;
 }
 

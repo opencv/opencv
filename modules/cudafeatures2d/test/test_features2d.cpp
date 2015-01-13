@@ -122,7 +122,7 @@ namespace
     IMPLEMENT_PARAM_CLASS(ORB_BlurForDescriptor, bool)
 }
 
-CV_ENUM(ORB_ScoreType, ORB::HARRIS_SCORE, ORB::FAST_SCORE)
+CV_ENUM(ORB_ScoreType, cv::ORB::HARRIS_SCORE, cv::ORB::FAST_SCORE)
 
 PARAM_TEST_CASE(ORB, cv::cuda::DeviceInfo, ORB_FeaturesCount, ORB_ScaleFactor, ORB_LevelsCount, ORB_EdgeThreshold, ORB_firstLevel, ORB_WTA_K, ORB_ScoreType, ORB_PatchSize, ORB_BlurForDescriptor)
 {
@@ -162,8 +162,9 @@ CUDA_TEST_P(ORB, Accuracy)
     cv::Mat mask(image.size(), CV_8UC1, cv::Scalar::all(1));
     mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
 
-    cv::cuda::ORB_CUDA orb(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
-    orb.blurForDescriptor = blurForDescriptor;
+    cv::Ptr<cv::cuda::ORB> orb =
+            cv::cuda::ORB::create(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel,
+                                  WTA_K, scoreType, patchSize, 20, blurForDescriptor);
 
     if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
     {
@@ -171,7 +172,7 @@ CUDA_TEST_P(ORB, Accuracy)
         {
             std::vector<cv::KeyPoint> keypoints;
             cv::cuda::GpuMat descriptors;
-            orb(loadMat(image), loadMat(mask), keypoints, descriptors);
+            orb->detectAndComputeAsync(loadMat(image), loadMat(mask), keypoints, descriptors);
         }
         catch (const cv::Exception& e)
         {
@@ -182,7 +183,7 @@ CUDA_TEST_P(ORB, Accuracy)
     {
         std::vector<cv::KeyPoint> keypoints;
         cv::cuda::GpuMat descriptors;
-        orb(loadMat(image), loadMat(mask), keypoints, descriptors);
+        orb->detectAndCompute(loadMat(image), loadMat(mask), keypoints, descriptors);
 
         cv::Ptr<cv::ORB> orb_gold = cv::ORB::create(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
 

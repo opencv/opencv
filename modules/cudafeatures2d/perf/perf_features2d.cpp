@@ -109,15 +109,15 @@ PERF_TEST_P(Image_NFeatures, ORB,
 
     if (PERF_RUN_CUDA())
     {
-        cv::cuda::ORB_CUDA d_orb(nFeatures);
+        cv::Ptr<cv::cuda::ORB> d_orb = cv::cuda::ORB::create(nFeatures);
 
         const cv::cuda::GpuMat d_img(img);
         cv::cuda::GpuMat d_keypoints, d_descriptors;
 
-        TEST_CYCLE() d_orb(d_img, cv::cuda::GpuMat(), d_keypoints, d_descriptors);
+        TEST_CYCLE() d_orb->detectAndComputeAsync(d_img, cv::noArray(), d_keypoints, d_descriptors);
 
         std::vector<cv::KeyPoint> gpu_keypoints;
-        d_orb.downloadKeyPoints(d_keypoints, gpu_keypoints);
+        d_orb->convert(d_keypoints, gpu_keypoints);
 
         cv::Mat gpu_descriptors(d_descriptors);
 
