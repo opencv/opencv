@@ -2038,7 +2038,8 @@ public:
     {
         Params _params;
 
-        String svm_type_str = (String)fn["svmType"];
+        // check for old naming
+        String svm_type_str = (String)(fn["svm_type"].empty() ? fn["svmType"] : fn["svm_type"]);
         int svmType =
             svm_type_str == "C_SVC" ? C_SVC :
             svm_type_str == "NU_SVC" ? NU_SVC :

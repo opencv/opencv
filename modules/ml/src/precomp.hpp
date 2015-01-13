@@ -263,10 +263,26 @@ namespace ml
         vector<int> subsets;
         vector<int> classLabels;
         vector<float> missingSubst;
+        vector<int> varMapping;
         bool _isClassifier;
 
         Ptr<WorkData> w;
     };
+
+    template <typename T>
+    static inline void readVectorOrMat(const FileNode & node, std::vector<T> & v)
+    {
+        if (node.type() == FileNode::MAP)
+        {
+            Mat m;
+            node >> m;
+            m.copyTo(v);
+        }
+        else if (node.type() == FileNode::SEQ)
+        {
+            node >> v;
+        }
+    }
 
 }}
 
