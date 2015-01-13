@@ -2,38 +2,23 @@
 #pragma warning( disable : 4201 4408 4127 4100)
 #endif
 
-#include "cvconfig.h"
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
-
-#ifdef HAVE_CUDA
 #include "NCVHaarObjectDetection.hpp"
-#endif
 
 using namespace std;
 using namespace cv;
 
-
-#if !defined(HAVE_CUDA) || defined(__arm__)
-
-int main( int, const char** )
-{
-#if !defined(HAVE_CUDA)
-    std::cout << "CUDA support is required (CMake key 'WITH_CUDA' must be true)." << std::endl;
-#endif
-
 #if defined(__arm__)
+int main()
+{
     std::cout << "Unsupported for ARM CUDA library." << std::endl;
-#endif
-
     return 0;
 }
-
 #else
-
 
 const Size2i preferredVideoFrameSize(640, 480);
 const string wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
@@ -386,4 +371,4 @@ int main(int argc, const char** argv)
     return 0;
 }
 
-#endif //!defined(HAVE_CUDA)
+#endif
