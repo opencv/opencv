@@ -233,28 +233,47 @@ private:
 // Feature2DAsync
 //
 
+/** @brief Abstract base class for CUDA asynchronous 2D image feature detectors and descriptor extractors.
+ */
 class CV_EXPORTS Feature2DAsync
 {
 public:
     virtual ~Feature2DAsync();
 
+    /** @brief Detects keypoints in an image.
+
+    @param image Image.
+    @param keypoints The detected keypoints.
+    @param mask Mask specifying where to look for keypoints (optional). It must be a 8-bit integer
+    matrix with non-zero values in the region of interest.
+    @param stream CUDA stream.
+     */
     virtual void detectAsync(InputArray image,
                              OutputArray keypoints,
                              InputArray mask = noArray(),
                              Stream& stream = Stream::Null());
 
+    /** @brief Computes the descriptors for a set of keypoints detected in an image.
+
+    @param image Image.
+    @param keypoints Input collection of keypoints.
+    @param descriptors Computed descriptors. Row j is the descriptor for j-th keypoint.
+    @param stream CUDA stream.
+     */
     virtual void computeAsync(InputArray image,
                               OutputArray keypoints,
                               OutputArray descriptors,
                               Stream& stream = Stream::Null());
 
+    /** Detects keypoints and computes the descriptors. */
     virtual void detectAndComputeAsync(InputArray image,
                                        InputArray mask,
                                        OutputArray keypoints,
                                        OutputArray descriptors,
-                                       bool useProvidedKeypoints=false,
+                                       bool useProvidedKeypoints = false,
                                        Stream& stream = Stream::Null());
 
+    /** Converts keypoints array from internal representation to standard vector. */
     virtual void convert(InputArray gpu_keypoints,
                          std::vector<KeyPoint>& keypoints) = 0;
 };
@@ -263,6 +282,8 @@ public:
 // FastFeatureDetector
 //
 
+/** @brief Wrapping class for feature detection using the FAST method.
+ */
 class CV_EXPORTS FastFeatureDetector : public cv::FastFeatureDetector, public Feature2DAsync
 {
 public:
@@ -288,6 +309,10 @@ public:
 // ORB
 //
 
+/** @brief Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor
+ *
+ * @sa cv::ORB
+ */
 class CV_EXPORTS ORB : public cv::ORB, public Feature2DAsync
 {
 public:
