@@ -346,7 +346,7 @@ public:
         oobError = (double)fn["oob_error"];
         int ntrees = (int)fn["ntrees"];
 
-        fn["var_importance"] >> varImportance;
+        readVectorOrMat(fn["var_importance"], varImportance);
 
         readParams(fn);
 
