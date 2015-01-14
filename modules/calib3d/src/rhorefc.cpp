@@ -66,7 +66,7 @@
 #define CHI_SQ                  1.645
 #define RLO                     0.25
 #define RHI                     0.75
-#define MAXLEVMARQITERS         50
+#define MAXLEVMARQITERS         100
 #define m                       4       /* 4 points required per model */
 #define SPRT_T_M                25      /* Guessing 25 match evlauations / 1 model generation */
 #define SPRT_M_S                1       /* 1 model per sample */
@@ -1571,10 +1571,20 @@ static inline int    sacCanRefine(RHO_HEST_REFC* p){
     return p->best.numInl > m;
 }
 
+
+
+static inline void dumpMat8x8(float (*M)[8]){
+    for(int i=0;i<8;i++){
+        printf("\t");
+        for(int j=0;j<=i;j++){
+            printf("%14.6e%s", M[i][j], j==i?"\n":", ");
+        }
+    }
+    printf("\n");
+}
+
 /**
- * Refines the best-so-far homography.
- *
- * BUG: Totally broken for now. DO NOT ENABLE.
+ * Refines the best-so-far homography (p->best.H).
  */
 
 static inline void   sacRefine(RHO_HEST_REFC* p){
@@ -1591,41 +1601,62 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
     /* Find initial conditions */
     sacCalcJacobianErrors(p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
                           p->lm.JtJ, p->lm.Jte,  &S);
+    /*printf("Initial Error: %12.6f\n", S);*/
 
-    /*{
-        for(int j=0;j<8;j++){
-            for(int k=0;k<8;k++){
-                printf("%12.6g%s", p->lm.JtJ[j][k], k==7 ? "\n" : ", ");
-            }
-        }
-    }*/
-
-    /* Levenberg-Marquardt Loop */
+    /*Levenberg-Marquardt Loop.*/
     for(i=0;i<MAXLEVMARQITERS;i++){
-        /* The code below becomes an infinite loop when L reeaches infinity. */
-        while(sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1)){
-            L *= 2.0f;
+        /**
+         * Attempt a step given current state
+         *   - Jacobian-x-Jacobian   (JtJ)
+         *   - Jacobian-x-error      (Jte)
+         *   - Sum of squared errors (S)
+         * and current parameter
+         *   - Lambda (L)
+         * .
+         *
+         * This is done by solving the system of equations
+         *     Ax = b
+         * where A (JtJ) and b (Jte) are sourced from our current state, and
+         * the solution x becomes a step (dH) that is applied to best.H in
+         * order to compute a candidate homography (newH).
+         *
+         * The system above is solved by Cholesky decomposition of a
+         * sufficently-damped JtJ into a lower-triangular matrix (and its
+         * transpose), whose inverse is then computed. This inverse (and its
+         * transpose) then multiply JtJ in order to find dH.
+         */
+
+        /*printf("Lambda: %f\n", L);*/
+        while(!sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1)){
+            L *= 2.0f;/*printf("CholFail! Lambda: %f\n", L);*/
         }
-        //sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1);
         sacTRInv8x8   (p->lm.tmp1, p->lm.tmp1);
         sacTRISolve8x8(p->lm.tmp1, p->lm.Jte,  dH);
         sacSub8x1     (newH,       p->best.H,  dH);
         sacCalcJacobianErrors(newH, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
                               NULL, NULL, &newS);
-        dS = sacDs    (p->lm.JtJ,  dH,         p->lm.Jte);
-        R  = (S - newS)/(fabs(dS) > DBL_EPSILON ? dS : 1);/* Don't understand */
 
-        if(R > 0.75f){
-            L *= 0.5f;
-        }else if(R < 0.25f){
-            L *= 2.0f;
-        }
+        /**
+         * If the new Sum of Square Errors (newS) corresponding to newH is
+         * lower than the previous one, save the current state and undamp
+         * sligthly (decrease L). Else damp more (increase L).
+         */
 
         if(newS < S){
             S = newS;
             memcpy(p->best.H, newH, sizeof(newH));
             sacCalcJacobianErrors(p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
                                   p->lm.JtJ, p->lm.Jte,  &S);
+            /*printf("Error: %12.6f\n", S);*/
+            L *= 0.5;
+            if(L<FLT_EPSILON){
+                L = 1;
+            }
+        }else{
+            L *= 2.0;
+            if(L>1.0f/FLT_EPSILON){
+                break;
+            }
         }
     }
 }
@@ -1705,15 +1736,15 @@ static inline void   sacCalcJacobianErrors(const float* restrict H,
             float dxh11 = x          * iW;
             float dxh12 = y          * iW;
             float dxh13 =              iW;
-            float dxh21 = 0.0f;
-            float dxh22 = 0.0f;
-            float dxh23 = 0.0f;
+          /*float dxh21 = 0.0f;*/
+          /*float dxh22 = 0.0f;*/
+          /*float dxh23 = 0.0f;*/
             float dxh31 = -reprojX*x * iW;
             float dxh32 = -reprojX*y * iW;
 
-            float dyh11 = 0.0f;
-            float dyh12 = 0.0f;
-            float dyh13 = 0.0f;
+          /*float dyh11 = 0.0f;*/
+          /*float dyh12 = 0.0f;*/
+          /*float dyh13 = 0.0f;*/
             float dyh21 = x          * iW;
             float dyh22 = y          * iW;
             float dyh23 =              iW;
@@ -1743,20 +1774,20 @@ static inline void   sacCalcJacobianErrors(const float* restrict H,
                 JtJ[2][1] += dxh12*dxh13              ;/*  +0 */
                 JtJ[2][2] += dxh13*dxh13              ;/*  +0 */
 
-              /*JtJ[3][0] +=                          ;/* 0+0 */
-              /*JtJ[3][1] +=                          ;/* 0+0 */
-              /*JtJ[3][2] +=                          ;/* 0+0 */
+              /*JtJ[3][0] +=                          ;   0+0 */
+              /*JtJ[3][1] +=                          ;   0+0 */
+              /*JtJ[3][2] +=                          ;   0+0 */
                 JtJ[3][3] +=               dyh21*dyh21;/* 0+  */
 
-              /*JtJ[4][0] +=                          ;/* 0+0 */
-              /*JtJ[4][1] +=                          ;/* 0+0 */
-              /*JtJ[4][2] +=                          ;/* 0+0 */
+              /*JtJ[4][0] +=                          ;   0+0 */
+              /*JtJ[4][1] +=                          ;   0+0 */
+              /*JtJ[4][2] +=                          ;   0+0 */
                 JtJ[4][3] +=               dyh21*dyh22;/* 0+  */
                 JtJ[4][4] +=               dyh22*dyh22;/* 0+  */
 
-              /*JtJ[5][0] +=                          ;/* 0+0 */
-              /*JtJ[5][1] +=                          ;/* 0+0 */
-              /*JtJ[5][2] +=                          ;/* 0+0 */
+              /*JtJ[5][0] +=                          ;   0+0 */
+              /*JtJ[5][1] +=                          ;   0+0 */
+              /*JtJ[5][2] +=                          ;   0+0 */
                 JtJ[5][3] +=               dyh21*dyh23;/* 0+  */
                 JtJ[5][4] +=               dyh22*dyh23;/* 0+  */
                 JtJ[5][5] +=               dyh23*dyh23;/* 0+  */
@@ -1826,7 +1857,7 @@ static inline float  sacDs(const float (*JtJ)[8],
  *
  * For damping, the diagonal elements are scaled by 1.0 + lambda.
  *
- * Returns 0 if decomposition successful, and non-zero otherwise.
+ * Returns zero if decomposition unsuccessful, and non-zero otherwise.
  *
  * Source: http://en.wikipedia.org/wiki/Cholesky_decomposition#
  * The_Cholesky.E2.80.93Banachiewicz_and_Cholesky.E2.80.93Crout_algorithms
@@ -1857,13 +1888,13 @@ static inline int    sacChol8x8Damped(const float (*A)[8],
                 x -= (double)L[j][k] * L[j][k];/* - Sum_{k=0..j-1} Ljk^2 */
             }
             if(x<0){
-                return 1;
+                return 0;
             }
             L[j][j] = sqrt(x);                 /* Ljj = sqrt( ... ) */
         }
     }
 
-    return 0;
+    return 1;
 }
 
 /**
