@@ -48,9 +48,10 @@ using namespace cvtest;
 
 //#define DUMP
 
-struct HOG : testing::TestWithParam<cv::cuda::DeviceInfo>, cv::cuda::HOGDescriptor
+struct HOG : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
     cv::cuda::DeviceInfo devInfo;
+    cv::Ptr<cv::cuda::HOG> hog;
 
 #ifdef DUMP
     std::ofstream f;
@@ -69,23 +70,13 @@ struct HOG : testing::TestWithParam<cv::cuda::DeviceInfo>, cv::cuda::HOGDescript
         devInfo = GetParam();
 
         cv::cuda::setDevice(devInfo.deviceID());
+
+        hog = cv::cuda::HOG::create();
     }
 
 #ifdef DUMP
-    void dump(const cv::Mat& blockHists, const std::vector<cv::Point>& locations)
+    void dump(const std::vector<cv::Point>& locations)
     {
-        f.write((char*)&blockHists.rows, sizeof(blockHists.rows));
-        f.write((char*)&blockHists.cols, sizeof(blockHists.cols));
-
-        for (int i = 0; i < blockHists.rows; ++i)
-        {
-            for (int j = 0; j < blockHists.cols; ++j)
-            {
-                float val = blockHists.at<float>(i, j);
-                f.write((char*)&val, sizeof(val));
-            }
-        }
-
         int nlocations = locations.size();
         f.write((char*)&nlocations, sizeof(nlocations));
 
@@ -93,21 +84,18 @@ struct HOG : testing::TestWithParam<cv::cuda::DeviceInfo>, cv::cuda::HOGDescript
             f.write((char*)&locations[i], sizeof(locations[i]));
     }
 #else
-    void compare(const cv::Mat& blockHists, const std::vector<cv::Point>& locations)
+    void compare(const std::vector<cv::Point>& locations)
     {
+        // skip block_hists check
         int rows, cols;
         f.read((char*)&rows, sizeof(rows));
         f.read((char*)&cols, sizeof(cols));
-        ASSERT_EQ(rows, blockHists.rows);
-        ASSERT_EQ(cols, blockHists.cols);
-
-        for (int i = 0; i < blockHists.rows; ++i)
+        for (int i = 0; i < rows; ++i)
         {
-            for (int j = 0; j < blockHists.cols; ++j)
+            for (int j = 0; j < cols; ++j)
             {
                 float val;
                 f.read((char*)&val, sizeof(val));
-                ASSERT_NEAR(val, blockHists.at<float>(i, j), 1e-3);
             }
         }
 
@@ -126,53 +114,40 @@ struct HOG : testing::TestWithParam<cv::cuda::DeviceInfo>, cv::cuda::HOGDescript
 
     void testDetect(const cv::Mat& img)
     {
-        gamma_correction = false;
-        setSVMDetector(cv::cuda::HOGDescriptor::getDefaultPeopleDetector());
+        hog->setGammaCorrection(false);
+        hog->setSVMDetector(hog->getDefaultPeopleDetector());
 
         std::vector<cv::Point> locations;
 
         // Test detect
-        detect(loadMat(img), locations, 0);
+        hog->detect(loadMat(img), locations);
 
 #ifdef DUMP
-        dump(cv::Mat(block_hists), locations);
+        dump(locations);
 #else
-        compare(cv::Mat(block_hists), locations);
+        compare(locations);
 #endif
 
         // Test detect on smaller image
         cv::Mat img2;
         cv::resize(img, img2, cv::Size(img.cols / 2, img.rows / 2));
-        detect(loadMat(img2), locations, 0);
+        hog->detect(loadMat(img2), locations);
 
 #ifdef DUMP
-        dump(cv::Mat(block_hists), locations);
+        dump(locations);
 #else
-        compare(cv::Mat(block_hists), locations);
+        compare(locations);
 #endif
 
         // Test detect on greater image
         cv::resize(img, img2, cv::Size(img.cols * 2, img.rows * 2));
-        detect(loadMat(img2), locations, 0);
+        hog->detect(loadMat(img2), locations);
 
 #ifdef DUMP
-        dump(cv::Mat(block_hists), locations);
+        dump(locations);
 #else
-        compare(cv::Mat(block_hists), locations);
+        compare(locations);
 #endif
-    }
-
-    // Does not compare border value, as interpolation leads to delta
-    void compare_inner_parts(cv::Mat d1, cv::Mat d2)
-    {
-        for (int i = 1; i < blocks_per_win_y - 1; ++i)
-            for (int j = 1; j < blocks_per_win_x - 1; ++j)
-                for (int k = 0; k < block_hist_size; ++k)
-                {
-                    float a = d1.at<float>(0, (i * blocks_per_win_x + j) * block_hist_size);
-                    float b = d2.at<float>(0, (i * blocks_per_win_x + j) * block_hist_size);
-                    ASSERT_FLOAT_EQ(a, b);
-                }
     }
 };
 
@@ -182,13 +157,8 @@ CUDA_TEST_P(HOG, DISABLED_Detect)
     cv::Mat img_rgb = readImage("hog/road.png");
     ASSERT_FALSE(img_rgb.empty());
 
-#ifdef DUMP
     f.open((std::string(cvtest::TS::ptr()->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
     ASSERT_TRUE(f.is_open());
-#else
-    f.open((std::string(cvtest::TS::ptr()->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
-    ASSERT_TRUE(f.is_open());
-#endif
 
     // Test on color image
     cv::Mat img;
@@ -198,8 +168,6 @@ CUDA_TEST_P(HOG, DISABLED_Detect)
     // Test on gray image
     cv::cvtColor(img_rgb, img, cv::COLOR_BGR2GRAY);
     testDetect(img);
-
-    f.close();
 }
 
 CUDA_TEST_P(HOG, GetDescriptors)
@@ -216,8 +184,14 @@ CUDA_TEST_P(HOG, GetDescriptors)
 
     // Convert train images into feature vectors (train table)
     cv::cuda::GpuMat descriptors, descriptors_by_cols;
-    getDescriptors(d_img, win_size, descriptors, DESCR_FORMAT_ROW_BY_ROW);
-    getDescriptors(d_img, win_size, descriptors_by_cols, DESCR_FORMAT_COL_BY_COL);
+
+    hog->setWinStride(Size(64, 128));
+
+    hog->setDescriptorFormat(cv::cuda::HOG::DESCR_FORMAT_ROW_BY_ROW);
+    hog->compute(d_img, descriptors);
+
+    hog->setDescriptorFormat(cv::cuda::HOG::DESCR_FORMAT_COL_BY_COL);
+    hog->compute(d_img, descriptors_by_cols);
 
     // Check size of the result train table
     wins_per_img_x = 3;
@@ -242,48 +216,6 @@ CUDA_TEST_P(HOG, GetDescriptors)
                     ASSERT_EQ(l[(y * blocks_per_win_x + x) * block_hist_size + k],
                               r[(x * blocks_per_win_y + y) * block_hist_size + k]);
     }
-
-    /* Now we want to extract the same feature vectors, but from single images. NOTE: results will
-    be defferent, due to border values interpolation. Using of many small images is slower, however we
-    wont't call getDescriptors and will use computeBlockHistograms instead of. computeBlockHistograms
-    works good, it can be checked in the gpu_hog sample */
-
-    img_rgb = readImage("hog/positive1.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::cuda::GpuMat(img));
-    // Everything is fine with interpolation for left top subimage
-    ASSERT_EQ(0.0, cv::norm((cv::Mat)block_hists, (cv::Mat)descriptors.rowRange(0, 1)));
-
-    img_rgb = readImage("hog/positive2.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::cuda::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(1, 2)));
-
-    img_rgb = readImage("hog/negative1.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::cuda::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(2, 3)));
-
-    img_rgb = readImage("hog/negative2.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::cuda::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(3, 4)));
-
-    img_rgb = readImage("hog/positive3.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::cuda::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(4, 5)));
-
-    img_rgb = readImage("hog/negative3.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::cuda::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(5, 6)));
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, HOG, ALL_DEVICES);
@@ -310,12 +242,12 @@ CUDA_TEST_P(CalTech, HOG)
     cv::cuda::GpuMat d_img(img);
     cv::Mat markedImage(img.clone());
 
-    cv::cuda::HOGDescriptor d_hog;
-    d_hog.setSVMDetector(cv::cuda::HOGDescriptor::getDefaultPeopleDetector());
-    d_hog.nlevels = d_hog.nlevels + 32;
+    cv::Ptr<cv::cuda::HOG> d_hog = cv::cuda::HOG::create();
+    d_hog->setSVMDetector(d_hog->getDefaultPeopleDetector());
+    d_hog->setNumLevels(d_hog->getNumLevels() + 32);
 
     std::vector<cv::Rect> found_locations;
-    d_hog.detectMultiScale(d_img, found_locations);
+    d_hog->detectMultiScale(d_img, found_locations);
 
 #if defined (LOG_CASCADE_STATISTIC)
     for (int i = 0; i < (int)found_locations.size(); i++)
@@ -326,7 +258,8 @@ CUDA_TEST_P(CalTech, HOG)
         cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
     }
 
-    cv::imshow("Res", markedImage); cv::waitKey();
+    cv::imshow("Res", markedImage);
+    cv::waitKey();
 #endif
 }
 

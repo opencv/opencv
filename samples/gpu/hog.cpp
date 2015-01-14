@@ -244,19 +244,13 @@ void App::run()
     Size win_size(args.win_width, args.win_width * 2); //(64, 128) or (48, 96)
     Size win_stride(args.win_stride_width, args.win_stride_height);
 
-    // Create HOG descriptors and detectors here
-    vector<float> detector;
-    if (win_size == Size(64, 128))
-        detector = cv::cuda::HOGDescriptor::getPeopleDetector64x128();
-    else
-        detector = cv::cuda::HOGDescriptor::getPeopleDetector48x96();
+    cv::Ptr<cv::cuda::HOG> gpu_hog = cv::cuda::HOG::create(win_size);
+    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9);
 
-    cv::cuda::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
-                                   cv::cuda::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
-                                   cv::cuda::HOGDescriptor::DEFAULT_NLEVELS);
-    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1,
-                              HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
-    gpu_hog.setSVMDetector(detector);
+    // Create HOG descriptors and detectors here
+    Mat detector = gpu_hog->getDefaultPeopleDetector();
+
+    gpu_hog->setSVMDetector(detector);
     cpu_hog.setSVMDetector(detector);
 
     while (running)
@@ -307,9 +301,6 @@ void App::run()
             else img = img_aux;
             img_to_show = img;
 
-            gpu_hog.nlevels = nlevels;
-            cpu_hog.nlevels = nlevels;
-
             vector<Rect> found;
 
             // Perform HOG classification
@@ -317,11 +308,19 @@ void App::run()
             if (use_gpu)
             {
                 gpu_img.upload(img);
-                gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, win_stride,
-                                         Size(0, 0), scale, gr_threshold);
+                gpu_hog->setNumLevels(nlevels);
+                gpu_hog->setHitThreshold(hit_threshold);
+                gpu_hog->setWinStride(win_stride);
+                gpu_hog->setScaleFactor(scale);
+                gpu_hog->setGroupThreshold(gr_threshold);
+                gpu_hog->detectMultiScale(gpu_img, found);
             }
-            else cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride,
+            else
+            {
+                cpu_hog.nlevels = nlevels;
+                cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride,
                                           Size(0, 0), scale, gr_threshold);
+            }
             hogWorkEnd();
 
             // Draw positive classified windows

@@ -71,10 +71,10 @@ PERF_TEST_P(Image, ObjDetect_HOG,
         const cv::cuda::GpuMat d_img(img);
         std::vector<cv::Rect> gpu_found_locations;
 
-        cv::cuda::HOGDescriptor d_hog;
-        d_hog.setSVMDetector(cv::cuda::HOGDescriptor::getDefaultPeopleDetector());
+        cv::Ptr<cv::cuda::HOG> d_hog = cv::cuda::HOG::create();
+        d_hog->setSVMDetector(d_hog->getDefaultPeopleDetector());
 
-        TEST_CYCLE() d_hog.detectMultiScale(d_img, gpu_found_locations);
+        TEST_CYCLE() d_hog->detectMultiScale(d_img, gpu_found_locations);
 
         SANITY_CHECK(gpu_found_locations);
     }
@@ -82,8 +82,10 @@ PERF_TEST_P(Image, ObjDetect_HOG,
     {
         std::vector<cv::Rect> cpu_found_locations;
 
+        cv::Ptr<cv::cuda::HOG> d_hog = cv::cuda::HOG::create();
+
         cv::HOGDescriptor hog;
-        hog.setSVMDetector(cv::cuda::HOGDescriptor::getDefaultPeopleDetector());
+        hog.setSVMDetector(d_hog->getDefaultPeopleDetector());
 
         TEST_CYCLE() hog.detectMultiScale(img, cpu_found_locations);
 
