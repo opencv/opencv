@@ -287,9 +287,15 @@ PARAM_TEST_CASE(LBP_Read_classifier, cv::cuda::DeviceInfo, int)
 
 CUDA_TEST_P(LBP_Read_classifier, Accuracy)
 {
-    cv::cuda::CascadeClassifier_CUDA classifier;
     std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
-    ASSERT_TRUE(classifier.load(classifierXmlPath));
+
+    cv::Ptr<cv::cuda::CascadeClassifier> d_cascade;
+
+    ASSERT_NO_THROW(
+        d_cascade = cv::cuda::CascadeClassifier::create(classifierXmlPath);
+    );
+
+    ASSERT_FALSE(d_cascade.empty());
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, LBP_Read_classifier,
@@ -329,29 +335,28 @@ CUDA_TEST_P(LBP_classify, Accuracy)
     for (; it != rects.end(); ++it)
         cv::rectangle(markedImage, *it, cv::Scalar(255, 0, 0));
 
-    cv::cuda::CascadeClassifier_CUDA gpuClassifier;
-    ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
+    cv::Ptr<cv::cuda::CascadeClassifier> gpuClassifier =
+            cv::cuda::CascadeClassifier::create(classifierXmlPath);
 
-    cv::cuda::GpuMat gpu_rects;
     cv::cuda::GpuMat tested(grey);
-    int count = gpuClassifier.detectMultiScale(tested, gpu_rects);
+    cv::cuda::GpuMat gpu_rects_buf;
+    gpuClassifier->detectMultiScale(tested, gpu_rects_buf);
+
+    std::vector<cv::Rect> gpu_rects;
+    gpuClassifier->convert(gpu_rects_buf, gpu_rects);
 
 #if defined (LOG_CASCADE_STATISTIC)
-    cv::Mat downloaded(gpu_rects);
-    const cv::Rect* faces = downloaded.ptr<cv::Rect>();
-    for (int i = 0; i < count; i++)
+    for (size_t i = 0; i < gpu_rects.size(); i++)
     {
-        cv::Rect r = faces[i];
+        cv::Rect r = gpu_rects[i];
 
         std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
         cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
     }
-#endif
 
-#if defined (LOG_CASCADE_STATISTIC)
-    cv::imshow("Res", markedImage); cv::waitKey();
+    cv::imshow("Res", markedImage);
+    cv::waitKey();
 #endif
-    (void)count;
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, LBP_classify,
