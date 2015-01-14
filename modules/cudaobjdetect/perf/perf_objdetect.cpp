@@ -107,18 +107,17 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_HaarClassifier,
 
     if (PERF_RUN_CUDA())
     {
-        cv::cuda::CascadeClassifier_CUDA d_cascade;
-        ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
+        cv::Ptr<cv::cuda::CascadeClassifier> d_cascade =
+                cv::cuda::CascadeClassifier::create(perf::TestBase::getDataPath(GetParam().second));
 
         const cv::cuda::GpuMat d_img(img);
         cv::cuda::GpuMat objects_buffer;
-        int detections_num = 0;
 
-        TEST_CYCLE() detections_num = d_cascade.detectMultiScale(d_img, objects_buffer);
+        TEST_CYCLE() d_cascade->detectMultiScale(d_img, objects_buffer);
 
-        std::vector<cv::Rect> gpu_rects(detections_num);
-        cv::Mat gpu_rects_mat(1, detections_num, cv::DataType<cv::Rect>::type, &gpu_rects[0]);
-        objects_buffer.colRange(0, detections_num).download(gpu_rects_mat);
+        std::vector<cv::Rect> gpu_rects;
+        d_cascade->convert(objects_buffer, gpu_rects);
+
         cv::groupRectangles(gpu_rects, 3, 0.2);
         SANITY_CHECK(gpu_rects);
     }
@@ -146,18 +145,17 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
 
     if (PERF_RUN_CUDA())
     {
-        cv::cuda::CascadeClassifier_CUDA d_cascade;
-        ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
+        cv::Ptr<cv::cuda::CascadeClassifier> d_cascade =
+                cv::cuda::CascadeClassifier::create(perf::TestBase::getDataPath(GetParam().second));
 
         const cv::cuda::GpuMat d_img(img);
         cv::cuda::GpuMat objects_buffer;
-        int detections_num = 0;
 
-        TEST_CYCLE() detections_num = d_cascade.detectMultiScale(d_img, objects_buffer);
+        TEST_CYCLE() d_cascade->detectMultiScale(d_img, objects_buffer);
 
-        std::vector<cv::Rect> gpu_rects(detections_num);
-        cv::Mat gpu_rects_mat(1, detections_num, cv::DataType<cv::Rect>::type, &gpu_rects[0]);
-        objects_buffer.colRange(0, detections_num).download(gpu_rects_mat);
+        std::vector<cv::Rect> gpu_rects;
+        d_cascade->convert(objects_buffer, gpu_rects);
+
         cv::groupRectangles(gpu_rects, 3, 0.2);
         SANITY_CHECK(gpu_rects);
     }

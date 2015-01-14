@@ -75,7 +75,7 @@ namespace cv { namespace cuda {
     -   (Python) An example applying the HOG descriptor for people detection can be found at
         opencv_source_code/samples/python2/peopledetect.py
  */
-class CV_EXPORTS HOG : public cv::Algorithm
+class CV_EXPORTS HOG : public Algorithm
 {
 public:
     enum
@@ -204,87 +204,84 @@ public:
     -   A Nvidea API specific cascade classifier example can be found at
         opencv_source_code/samples/gpu/cascadeclassifier_nvidia_api.cpp
  */
-class CV_EXPORTS CascadeClassifier_CUDA
+class CV_EXPORTS CascadeClassifier : public Algorithm
 {
 public:
-    CascadeClassifier_CUDA();
     /** @brief Loads the classifier from a file. Cascade type is detected automatically by constructor parameter.
 
     @param filename Name of the file from which the classifier is loaded. Only the old haar classifier
     (trained by the haar training application) and NVIDIA's nvbin are supported for HAAR and only new
     type of OpenCV XML cascade supported for LBP.
      */
-    CascadeClassifier_CUDA(const String& filename);
-    ~CascadeClassifier_CUDA();
-
-    /** @brief Checks whether the classifier is loaded or not.
-    */
-    bool empty() const;
-    /** @brief Loads the classifier from a file. The previous content is destroyed.
-
-    @param filename Name of the file from which the classifier is loaded. Only the old haar classifier
-    (trained by the haar training application) and NVIDIA's nvbin are supported for HAAR and only new
-    type of OpenCV XML cascade supported for LBP.
+    static Ptr<CascadeClassifier> create(const String& filename);
+    /** @overload
      */
-    bool load(const String& filename);
-    /** @brief Destroys the loaded classifier.
-    */
-    void release();
+    static Ptr<CascadeClassifier> create(const FileStorage& file);
 
-    /** @overload */
-    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.2, int minNeighbors = 4, Size minSize = Size());
+    //! Maximum possible object size. Objects larger than that are ignored. Used for
+    //! second signature and supported only for LBP cascades.
+    virtual void setMaxObjectSize(Size maxObjectSize) = 0;
+    virtual Size getMaxObjectSize() const = 0;
+
+    //! Minimum possible object size. Objects smaller than that are ignored.
+    virtual void setMinObjectSize(Size minSize) = 0;
+    virtual Size getMinObjectSize() const = 0;
+
+    //! Parameter specifying how much the image size is reduced at each image scale.
+    virtual void setScaleFactor(double scaleFactor) = 0;
+    virtual double getScaleFactor() const = 0;
+
+    //! Parameter specifying how many neighbors each candidate rectangle should have
+    //! to retain it.
+    virtual void setMinNeighbors(int minNeighbors) = 0;
+    virtual int getMinNeighbors() const = 0;
+
+    virtual void setFindLargestObject(bool findLargestObject) = 0;
+    virtual bool getFindLargestObject() = 0;
+
+    virtual void setMaxNumObjects(int maxNumObjects) = 0;
+    virtual int getMaxNumObjects() const = 0;
+
+    virtual Size getClassifierSize() const = 0;
+
     /** @brief Detects objects of different sizes in the input image.
 
     @param image Matrix of type CV_8U containing an image where objects should be detected.
-    @param objectsBuf Buffer to store detected objects (rectangles). If it is empty, it is allocated
-    with the default size. If not empty, the function searches not more than N objects, where
-    N = sizeof(objectsBufer's data)/sizeof(cv::Rect).
-    @param maxObjectSize Maximum possible object size. Objects larger than that are ignored. Used for
-    second signature and supported only for LBP cascades.
-    @param scaleFactor Parameter specifying how much the image size is reduced at each image scale.
-    @param minNeighbors Parameter specifying how many neighbors each candidate rectangle should have
-    to retain it.
-    @param minSize Minimum possible object size. Objects smaller than that are ignored.
+    @param objects Buffer to store detected objects (rectangles).
 
-    The detected objects are returned as a list of rectangles.
+    To get final array of detected objects use CascadeClassifier::convert method.
 
-    The function returns the number of detected objects, so you can retrieve them as in the following
-    example:
     @code
-        cuda::CascadeClassifier_CUDA cascade_gpu(...);
+        Ptr<cuda::CascadeClassifier> cascade_gpu = cuda::CascadeClassifier::create(...);
 
         Mat image_cpu = imread(...)
         GpuMat image_gpu(image_cpu);
 
         GpuMat objbuf;
-        int detections_number = cascade_gpu.detectMultiScale( image_gpu,
-                  objbuf, 1.2, minNeighbors);
+        cascade_gpu->detectMultiScale(image_gpu, objbuf);
 
-        Mat obj_host;
-        // download only detected number of rectangles
-        objbuf.colRange(0, detections_number).download(obj_host);
+        std::vector<Rect> faces;
+        cascade_gpu->convert(objbuf, faces);
 
-        Rect* faces = obj_host.ptr<Rect>();
         for(int i = 0; i < detections_num; ++i)
            cv::rectangle(image_cpu, faces[i], Scalar(255));
 
         imshow("Faces", image_cpu);
     @endcode
+
     @sa CascadeClassifier::detectMultiScale
      */
-    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize = Size(), double scaleFactor = 1.1, int minNeighbors = 4);
+    virtual void detectMultiScale(InputArray image,
+                                  OutputArray objects,
+                                  Stream& stream = Stream::Null()) = 0;
 
-    bool findLargestObject;
-    bool visualizeInPlace;
+    /** @brief Converts objects array from internal representation to standard vector.
 
-    Size getClassifierSize() const;
-
-private:
-    struct CascadeClassifierImpl;
-    CascadeClassifierImpl* impl;
-    struct HaarCascade;
-    struct LbpCascade;
-    friend class CascadeClassifier_CUDA_LBP;
+    @param gpu_objects Objects array in internal representation.
+    @param objects Resulting array.
+     */
+    virtual void convert(OutputArray gpu_objects,
+                         std::vector<Rect>& objects) = 0;
 };
 
 //! @}
