@@ -65,32 +65,24 @@ namespace cv { namespace cuda {
 // HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector
 //
 
-struct CV_EXPORTS HOGConfidence
-{
-   double scale;
-   std::vector<Point> locations;
-   std::vector<double> confidences;
-   std::vector<double> part_scores[4];
-};
-
 /** @brief The class implements Histogram of Oriented Gradients (@cite Dalal2005) object detector.
 
-Interfaces of all methods are kept similar to the CPU HOG descriptor and detector analogues as much
-as possible.
-
 @note
-   -   An example applying the HOG descriptor for people detection can be found at
+    -   An example applying the HOG descriptor for people detection can be found at
         opencv_source_code/samples/cpp/peopledetect.cpp
     -   A CUDA example applying the HOG descriptor for people detection can be found at
         opencv_source_code/samples/gpu/hog.cpp
     -   (Python) An example applying the HOG descriptor for people detection can be found at
         opencv_source_code/samples/python2/peopledetect.py
  */
-struct CV_EXPORTS HOGDescriptor
+class CV_EXPORTS HOG : public cv::Algorithm
 {
-    enum { DEFAULT_WIN_SIGMA = -1 };
-    enum { DEFAULT_NLEVELS = 64 };
-    enum { DESCR_FORMAT_ROW_BY_ROW, DESCR_FORMAT_COL_BY_COL };
+public:
+    enum
+    {
+        DESCR_FORMAT_ROW_BY_ROW,
+        DESCR_FORMAT_COL_BY_COL
+    };
 
     /** @brief Creates the HOG descriptor and detector.
 
@@ -99,132 +91,105 @@ struct CV_EXPORTS HOGDescriptor
     @param block_stride Block stride. It must be a multiple of cell size.
     @param cell_size Cell size. Only (8, 8) is supported for now.
     @param nbins Number of bins. Only 9 bins per cell are supported for now.
-    @param win_sigma Gaussian smoothing window parameter.
-    @param threshold_L2hys L2-Hys normalization method shrinkage.
-    @param gamma_correction Flag to specify whether the gamma correction preprocessing is required or
-    not.
-    @param nlevels Maximum number of detection window increases.
      */
-    HOGDescriptor(Size win_size=Size(64, 128), Size block_size=Size(16, 16),
-                  Size block_stride=Size(8, 8), Size cell_size=Size(8, 8),
-                  int nbins=9, double win_sigma=DEFAULT_WIN_SIGMA,
-                  double threshold_L2hys=0.2, bool gamma_correction=true,
-                  int nlevels=DEFAULT_NLEVELS);
+    static Ptr<HOG> create(Size win_size = Size(64, 128),
+                           Size block_size = Size(16, 16),
+                           Size block_stride = Size(8, 8),
+                           Size cell_size = Size(8, 8),
+                           int nbins = 9);
+
+    //! Gaussian smoothing window parameter.
+    virtual void setWinSigma(double win_sigma) = 0;
+    virtual double getWinSigma() const = 0;
+
+    //! L2-Hys normalization method shrinkage.
+    virtual void setL2HysThreshold(double threshold_L2hys) = 0;
+    virtual double getL2HysThreshold() const = 0;
+
+    //! Flag to specify whether the gamma correction preprocessing is required or not.
+    virtual void setGammaCorrection(bool gamma_correction) = 0;
+    virtual bool getGammaCorrection() const = 0;
+
+    //! Maximum number of detection window increases.
+    virtual void setNumLevels(int nlevels) = 0;
+    virtual int getNumLevels() const = 0;
+
+    //! Threshold for the distance between features and SVM classifying plane.
+    //! Usually it is 0 and should be specfied in the detector coefficients (as the last free
+    //! coefficient). But if the free coefficient is omitted (which is allowed), you can specify it
+    //! manually here.
+    virtual void setHitThreshold(double hit_threshold) = 0;
+    virtual double getHitThreshold() const = 0;
+
+    //! Window stride. It must be a multiple of block stride.
+    virtual void setWinStride(Size win_stride) = 0;
+    virtual Size getWinStride() const = 0;
+
+    //! Coefficient of the detection window increase.
+    virtual void setScaleFactor(double scale0) = 0;
+    virtual double getScaleFactor() const = 0;
+
+    //! Coefficient to regulate the similarity threshold. When detected, some
+    //! objects can be covered by many rectangles. 0 means not to perform grouping.
+    //! See groupRectangles.
+    virtual void setGroupThreshold(int group_threshold) = 0;
+    virtual int getGroupThreshold() const = 0;
+
+    //! Descriptor storage format:
+    //!   - **DESCR_FORMAT_ROW_BY_ROW** - Row-major order.
+    //!   - **DESCR_FORMAT_COL_BY_COL** - Column-major order.
+    virtual void setDescriptorFormat(int descr_format) = 0;
+    virtual int getDescriptorFormat() const = 0;
 
     /** @brief Returns the number of coefficients required for the classification.
      */
-    size_t getDescriptorSize() const;
+    virtual size_t getDescriptorSize() const = 0;
+
     /** @brief Returns the block histogram size.
-    */
-    size_t getBlockHistogramSize() const;
+     */
+    virtual size_t getBlockHistogramSize() const = 0;
 
     /** @brief Sets coefficients for the linear SVM classifier.
-    */
-    void setSVMDetector(const std::vector<float>& detector);
+     */
+    virtual void setSVMDetector(InputArray detector) = 0;
 
-    /** @brief Returns coefficients of the classifier trained for people detection (for default window size).
-    */
-    static std::vector<float> getDefaultPeopleDetector();
-    /** @brief Returns coefficients of the classifier trained for people detection (for 48x96 windows).
-    */
-    static std::vector<float> getPeopleDetector48x96();
-    /** @brief Returns coefficients of the classifier trained for people detection (for 64x128 windows).
-    */
-    static std::vector<float> getPeopleDetector64x128();
+    /** @brief Returns coefficients of the classifier trained for people detection.
+     */
+    virtual Mat getDefaultPeopleDetector() const = 0;
 
     /** @brief Performs object detection without a multi-scale window.
 
     @param img Source image. CV_8UC1 and CV_8UC4 types are supported for now.
     @param found_locations Left-top corner points of detected objects boundaries.
-    @param hit_threshold Threshold for the distance between features and SVM classifying plane.
-    Usually it is 0 and should be specfied in the detector coefficients (as the last free
-    coefficient). But if the free coefficient is omitted (which is allowed), you can specify it
-    manually here.
-    @param win_stride Window stride. It must be a multiple of block stride.
-    @param padding Mock parameter to keep the CPU interface compatibility. It must be (0,0).
+    @param confidences Optional output array for confidences.
      */
-    void detect(const GpuMat& img, std::vector<Point>& found_locations,
-                double hit_threshold=0, Size win_stride=Size(),
-                Size padding=Size());
+    virtual void detect(InputArray img,
+                        std::vector<Point>& found_locations,
+                        std::vector<double>* confidences = NULL) = 0;
 
     /** @brief Performs object detection with a multi-scale window.
 
     @param img Source image. See cuda::HOGDescriptor::detect for type limitations.
     @param found_locations Detected objects boundaries.
+    @param confidences Optional output array for confidences.
     @param hit_threshold Threshold for the distance between features and SVM classifying plane. See
     cuda::HOGDescriptor::detect for details.
     @param win_stride Window stride. It must be a multiple of block stride.
     @param padding Mock parameter to keep the CPU interface compatibility. It must be (0,0).
-    @param scale0 Coefficient of the detection window increase.
-    @param group_threshold Coefficient to regulate the similarity threshold. When detected, some
-    objects can be covered by many rectangles. 0 means not to perform grouping. See groupRectangles .
      */
-    void detectMultiScale(const GpuMat& img, std::vector<Rect>& found_locations,
-                          double hit_threshold=0, Size win_stride=Size(),
-                          Size padding=Size(), double scale0=1.05,
-                          int group_threshold=2);
-
-    void computeConfidence(const GpuMat& img, std::vector<Point>& hits, double hit_threshold,
-                                                Size win_stride, Size padding, std::vector<Point>& locations, std::vector<double>& confidences);
-
-    void computeConfidenceMultiScale(const GpuMat& img, std::vector<Rect>& found_locations,
-                                                                    double hit_threshold, Size win_stride, Size padding,
-                                                                    std::vector<HOGConfidence> &conf_out, int group_threshold);
+    virtual void detectMultiScale(InputArray img,
+                                  std::vector<Rect>& found_locations,
+                                  std::vector<double>* confidences = NULL) = 0;
 
     /** @brief Returns block descriptors computed for the whole image.
 
     @param img Source image. See cuda::HOGDescriptor::detect for type limitations.
-    @param win_stride Window stride. It must be a multiple of block stride.
     @param descriptors 2D array of descriptors.
-    @param descr_format Descriptor storage format:
-    -   **DESCR_FORMAT_ROW_BY_ROW** - Row-major order.
-    -   **DESCR_FORMAT_COL_BY_COL** - Column-major order.
-
-    The function is mainly used to learn the classifier.
+    @param stream CUDA stream.
      */
-    void getDescriptors(const GpuMat& img, Size win_stride,
-                        GpuMat& descriptors,
-                        int descr_format=DESCR_FORMAT_COL_BY_COL);
-
-    Size win_size;
-    Size block_size;
-    Size block_stride;
-    Size cell_size;
-    int nbins;
-    double win_sigma;
-    double threshold_L2hys;
-    bool gamma_correction;
-    int nlevels;
-
-protected:
-    void computeBlockHistograms(const GpuMat& img);
-    void computeGradient(const GpuMat& img, GpuMat& grad, GpuMat& qangle);
-
-    double getWinSigma() const;
-    bool checkDetectorSize() const;
-
-    static int numPartsWithin(int size, int part_size, int stride);
-    static Size numPartsWithin(Size size, Size part_size, Size stride);
-
-    // Coefficients of the separating plane
-    float free_coef;
-    GpuMat detector;
-
-    // Results of the last classification step
-    GpuMat labels, labels_buf;
-    Mat labels_host;
-
-    // Results of the last histogram evaluation step
-    GpuMat block_hists, block_hists_buf;
-
-    // Gradients conputation results
-    GpuMat grad, qangle, grad_buf, qangle_buf;
-
-    // returns subbuffer with required size, reallocates buffer if nessesary.
-    static GpuMat getBuffer(const Size& sz, int type, GpuMat& buf);
-    static GpuMat getBuffer(int rows, int cols, int type, GpuMat& buf);
-
-    std::vector<GpuMat> image_scales;
+    virtual void compute(InputArray img,
+                         OutputArray descriptors,
+                         Stream& stream = Stream::Null()) = 0;
 };
 
 //
