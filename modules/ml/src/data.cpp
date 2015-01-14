@@ -898,7 +898,7 @@ public:
 
         CV_Assert( m > 0 ); // if m==0, vi is an ordered variable
         const int* cmap = &catMap.at<int>(ofs[0]);
-        bool fastMap = (m == cmap[m] - cmap[0]);
+        bool fastMap = (m == cmap[m - 1] - cmap[0] + 1);
 
         if( fastMap )
         {

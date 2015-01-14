@@ -434,13 +434,17 @@ public:
         bparams.priors = params0.priors;
 
         FileNode tparams_node = fn["training_params"];
-        String bts = (String)tparams_node["boosting_type"];
+        // check for old layout
+        String bts = (String)(fn["boosting_type"].empty() ?
+                         tparams_node["boosting_type"] : fn["boosting_type"]);
         bparams.boostType = (bts == "DiscreteAdaboost" ? Boost::DISCRETE :
                              bts == "RealAdaboost" ? Boost::REAL :
                              bts == "LogitBoost" ? Boost::LOGIT :
                              bts == "GentleAdaboost" ? Boost::GENTLE : -1);
         _isClassifier = bparams.boostType == Boost::DISCRETE;
-        bparams.weightTrimRate = (double)tparams_node["weight_trimming_rate"];
+        // check for old layout
+        bparams.weightTrimRate = (double)(fn["weight_trimming_rate"].empty() ?
+                                    tparams_node["weight_trimming_rate"] : fn["weight_trimming_rate"]);
     }
 
     void read( const FileNode& fn )
