@@ -135,6 +135,8 @@ double CvCapture_Images::getProperty(int id) const
         return 0;
     case CV_CAP_PROP_POS_FRAMES:
         return currentframe;
+    case CV_CAP_PROP_FRAME_COUNT:
+        return length;
     case CV_CAP_PROP_POS_AVI_RATIO:
         return (double)currentframe / (double)(length - 1);
     case CV_CAP_PROP_FRAME_WIDTH:
