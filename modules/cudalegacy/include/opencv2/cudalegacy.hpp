@@ -63,6 +63,10 @@ namespace cv { namespace cuda {
 //! @addtogroup cudalegacy
 //! @{
 
+//
+// ImagePyramid
+//
+
 class CV_EXPORTS ImagePyramid : public Algorithm
 {
 public:
@@ -226,6 +230,26 @@ CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
                                   Stream& stream = Stream::Null());
 
 CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors);
+
+//
+// Labeling
+//
+
+//!performs labeling via graph cuts of a 2D regular 4-connected graph.
+CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels,
+                         GpuMat& buf, Stream& stream = Stream::Null());
+
+//!performs labeling via graph cuts of a 2D regular 8-connected graph.
+CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight,
+                         GpuMat& bottom, GpuMat& bottomLeft, GpuMat& bottomRight,
+                         GpuMat& labels,
+                         GpuMat& buf, Stream& stream = Stream::Null());
+
+//! compute mask for Generalized Flood fill componetns labeling.
+CV_EXPORTS void connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& stream = Stream::Null());
+
+//! performs connected componnents labeling.
+CV_EXPORTS void labelComponents(const GpuMat& mask, GpuMat& components, int flags = 0, Stream& stream = Stream::Null());
 
 //! @}
 
