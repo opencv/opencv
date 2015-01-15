@@ -56,6 +56,10 @@
 #  include "opencv2/objdetect.hpp"
 #endif
 
+#ifdef HAVE_OPENCV_CALIB3D
+#  include "opencv2/calib3d.hpp"
+#endif
+
 #ifdef HAVE_OPENCV_CUDAARITHM
 #  include "opencv2/cudaarithm.hpp"
 #endif
