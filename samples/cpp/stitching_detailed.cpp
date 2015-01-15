@@ -673,7 +673,7 @@ int main(int argc, char* argv[])
         seam_finder = makePtr<detail::VoronoiSeamFinder>();
     else if (seam_find_type == "gc_color")
     {
-#ifdef HAVE_OPENCV_CUDA
+#ifdef HAVE_OPENCV_CUDALEGACY
         if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR);
         else
@@ -682,7 +682,7 @@ int main(int argc, char* argv[])
     }
     else if (seam_find_type == "gc_colorgrad")
     {
-#ifdef HAVE_OPENCV_CUDA
+#ifdef HAVE_OPENCV_CUDALEGACY
         if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR_GRAD);
         else

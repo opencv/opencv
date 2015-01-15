@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <string>
 #include "performance.h"
+#include "opencv2/core/cuda.hpp"
 
 using namespace std;
 using namespace cv;
