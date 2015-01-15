@@ -119,7 +119,7 @@ if __name__ == '__main__':
     update(None)
 
     while True:
-        ch = cv2.waitKey()
+        ch = cv2.waitKey() & 0xFF
         if ch == 27:
             break
         if ch == ord(' '):
