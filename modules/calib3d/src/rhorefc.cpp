@@ -72,6 +72,8 @@
 #define SPRT_M_S                1       /* 1 model per sample */
 #define SPRT_EPSILON            0.1     /* No explanation */
 #define SPRT_DELTA              0.01    /* No explanation */
+#define LM_GAIN_LO              0.25    /* See sacLMGain(). */
+#define LM_GAIN_HI              0.75    /* See sacLMGain(). */
 
 
 
@@ -140,9 +142,11 @@ static inline void   sacCalcJacobianErrors(const float* restrict H,
                                            float     (* restrict JtJ)[8],
                                            float*       restrict Jte,
                                            float*       restrict Sp);
-static inline float  sacDs(const float (*JtJ)[8],
-                           const float*  dH,
-                           const float*  Jte);
+static inline float  sacLMGain(const float*  dH,
+                               const float*  Jte,
+                               const float   S,
+                               const float   newS,
+                               const float   lambda);
 static inline int    sacChol8x8Damped (const float (*A)[8],
                                        float         lambda,
                                        float       (*L)[8]);
@@ -1571,27 +1575,15 @@ static inline int    sacCanRefine(RHO_HEST_REFC* p){
     return p->best.numInl > m;
 }
 
-
-
-static inline void dumpMat8x8(float (*M)[8]){
-    for(int i=0;i<8;i++){
-        printf("\t");
-        for(int j=0;j<=i;j++){
-            printf("%14.6e%s", M[i][j], j==i?"\n":", ");
-        }
-    }
-    printf("\n");
-}
-
 /**
  * Refines the best-so-far homography (p->best.H).
  */
 
 static inline void   sacRefine(RHO_HEST_REFC* p){
-    int         i = 0;
-    float       S = 0, newS = 0, dS = 0;/* Sum of squared errors */
-    float       R = 0;          /* R - Parameter */
-    float       L  = 1.0f;  /* Lambda of LevMarq */
+    int         i;
+    float       S, newS;  /* Sum of squared errors */
+    float       gain;     /* Gain-parameter. */
+    float       L  = 0.01f;/* Lambda of LevMarq */
     float dH[8], newH[8];
 
     /**
@@ -1601,7 +1593,6 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
     /* Find initial conditions */
     sacCalcJacobianErrors(p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
                           p->lm.JtJ, p->lm.Jte,  &S);
-    /*printf("Initial Error: %12.6f\n", S);*/
 
     /*Levenberg-Marquardt Loop.*/
     for(i=0;i<MAXLEVMARQITERS;i++){
@@ -1626,37 +1617,42 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
          * transpose) then multiply JtJ in order to find dH.
          */
 
-        /*printf("Lambda: %f\n", L);*/
         while(!sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1)){
-            L *= 2.0f;/*printf("CholFail! Lambda: %f\n", L);*/
+            L *= 2.0f;
         }
         sacTRInv8x8   (p->lm.tmp1, p->lm.tmp1);
         sacTRISolve8x8(p->lm.tmp1, p->lm.Jte,  dH);
         sacSub8x1     (newH,       p->best.H,  dH);
         sacCalcJacobianErrors(newH, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
                               NULL, NULL, &newS);
+        gain = sacLMGain(dH, p->lm.Jte, S, newS, L);
+        /*printf("Lambda: %12.6f  S: %12.6f  newS: %12.6f  Gain: %12.6f\n",
+                 L, S, newS, gain);*/
 
         /**
-         * If the new Sum of Square Errors (newS) corresponding to newH is
-         * lower than the previous one, save the current state and undamp
-         * sligthly (decrease L). Else damp more (increase L).
+         * If the gain is positive (i.e., the new Sum of Square Errors (newS)
+         * corresponding to newH is lower than the previous one (S) ), save
+         * the current state and accept the new step dH.
+         *
+         * If the gain is below LM_GAIN_LO, damp more (increase L), even if the
+         * gain was positive. If the gain is above LM_GAIN_HI, damp less
+         * (decrease L). Otherwise the gain is left unchanged.
          */
 
-        if(newS < S){
+        if(gain < LM_GAIN_LO){
+            L *= 8;
+            if(L>1000.0f/FLT_EPSILON){
+                break;/* FIXME: Most naive termination criterion imaginable. */
+            }
+        }else if(gain > LM_GAIN_HI){
+            L *= 0.5;
+        }
+
+        if(gain > 0){
             S = newS;
             memcpy(p->best.H, newH, sizeof(newH));
             sacCalcJacobianErrors(p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
                                   p->lm.JtJ, p->lm.Jte,  &S);
-            /*printf("Error: %12.6f\n", S);*/
-            L *= 0.5;
-            if(L<FLT_EPSILON){
-                L = 1;
-            }
-        }else{
-            L *= 2.0;
-            if(L>1.0f/FLT_EPSILON){
-                break;
-            }
         }
     }
 }
@@ -1816,35 +1812,36 @@ static inline void   sacCalcJacobianErrors(const float* restrict H,
 }
 
 /**
- * Compute the derivative of the rate of change of the SSE.
+ * Compute the Levenberg-Marquardt "gain" obtained by the given step dH.
  *
- * Inspired entirely by OpenCV's levmarq.cpp. To be reviewed.
+ * Drawn from http://www2.imm.dtu.dk/documents/ftp/tr99/tr05_99.pdf.
  */
 
-static inline float  sacDs(const float (*JtJ)[8],
-                           const float*  dH,
-                           const float*  Jte){
-    float tdH[8];
-    int   i, j;
-    float dS = 0;
+static inline float  sacLMGain(const float*  dH,
+                               const float*  Jte,
+                               const float   S,
+                               const float   newS,
+                               const float   lambda){
+    float dS = S-newS;
+    float dL = 0;
+    int i;
 
-    /* Perform tdH = -JtJ*dH + 2*Jte. */
+    /* Compute h^t h... */
     for(i=0;i<8;i++){
-        tdH[i] = 0;
-
-        for(j=0;j<8;j++){
-            tdH[i] -= JtJ[i][j] * dH[j];
-        }
-
-        tdH[i] += 2*Jte[i];
+        dL += dH[i]*dH[i];
     }
-
-    /* Perform dS = dH.dot(tdH).  */
+    /* Compute mu * h^t h... */
+    dL *= lambda;
+    /* Subtract h^t F'... */
     for(i=0;i<8;i++){
-        dS += dH[i]*tdH[i];
+        dL += dH[i]*Jte[i];/* += as opposed to -=, since dH we compute is
+                              opposite sign. */
     }
+    /* Multiply by 1/2... */
+    dL *= 0.5;
 
-    return dS;
+    /* Return gain as S-newS / L0 - LH. */
+    return fabs(dL) < FLT_EPSILON ? dS : dS / dL;
 }
 
 /**

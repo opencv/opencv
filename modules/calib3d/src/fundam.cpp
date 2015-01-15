@@ -287,7 +287,9 @@ static bool createAndRunRHORegistrator(double confidence, int maxIters, double r
 
     /* Run RHO. Needs cleanup or separate function to invoke. */
     Mat tmpH = Mat(3, 3, CV_32FC1);
-    tempMask = Mat(npoints, 1, CV_8U);
+    if(!tempMask.data){
+        tempMask = Mat(npoints, 1, CV_8U);
+    }
     double beta = 0.35;/* 0.35 is a value that often works. */
 
 #if CV_SSE2 && 0
@@ -339,6 +341,7 @@ static bool createAndRunRHORegistrator(double confidence, int maxIters, double r
     for(int k=0;k<npoints;k++){
         tempMask.data[k] = !!tempMask.data[k];
     }
+    tempMask.copyTo(_tempMask);
 
     return result;
 }
