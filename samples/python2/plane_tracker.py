@@ -61,7 +61,7 @@ TrackedTarget = namedtuple('TrackedTarget', 'target, p0, p1, H, quad')
 
 class PlaneTracker:
     def __init__(self):
-        self.detector = cv2.ORB( nfeatures = 1000 )
+        self.detector = cv2.ORB_create( nfeatures = 1000 )
         self.matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
         self.targets = []
 
@@ -160,7 +160,7 @@ class App:
 
             self.rect_sel.draw(vis)
             cv2.imshow('plane', vis)
-            ch = cv2.waitKey(1)
+            ch = cv2.waitKey(1) & 0xFF
             if ch == ord(' '):
                 self.paused = not self.paused
             if ch == ord('c'):

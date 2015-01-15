@@ -62,5 +62,5 @@ if __name__ == '__main__':
 
         cv2.imshow('laplacian pyramid filter', res)
 
-        if cv2.waitKey(1) == 27:
+        if cv2.waitKey(1) & 0xFF == 27:
             break

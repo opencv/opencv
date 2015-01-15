@@ -3,6 +3,8 @@
 '''
 Feature-based image matching sample.
 
+Note, that you will need the https://github.com/Itseez/opencv_contrib repo for SIFT and SURF
+
 USAGE
   find_obj.py [--feature=<sift|surf|orb|akaze|brisk>[-flann]] [ <image1> <image2> ]
 
@@ -23,19 +25,19 @@ FLANN_INDEX_LSH    = 6
 def init_feature(name):
     chunks = name.split('-')
     if chunks[0] == 'sift':
-        detector = cv2.xfeatures2d.SIFT()
+        detector = cv2.xfeatures2d.SIFT_create()
         norm = cv2.NORM_L2
     elif chunks[0] == 'surf':
-        detector = cv2.xfeatures2d.SURF(800)
+        detector = cv2.xfeatures2d.SURF_create(800)
         norm = cv2.NORM_L2
     elif chunks[0] == 'orb':
-        detector = cv2.ORB(400)
+        detector = cv2.ORB_create(400)
         norm = cv2.NORM_HAMMING
     elif chunks[0] == 'akaze':
-        detector = cv2.AKAZE()
+        detector = cv2.AKAZE_create()
         norm = cv2.NORM_HAMMING
     elif chunks[0] == 'brisk':
-        detector = cv2.BRISK()
+        detector = cv2.BRISK_create()
         norm = cv2.NORM_HAMMING
     else:
         return None, None
