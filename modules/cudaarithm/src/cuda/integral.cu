@@ -50,51 +50,58 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 ////////////////////////////////////////////////////////////////////////
 // integral
 
-void cv::cuda::integral(InputArray _src, OutputArray _dst, GpuMat& buffer, Stream& stream)
+void cv::cuda::integral(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     CV_Assert( src.type() == CV_8UC1 );
 
-    GpuMat_<int>& res = (GpuMat_<int>&) buffer;
+    BufferPool pool(stream);
+    GpuMat_<int> res(src.size(), pool.getAllocator());
 
     gridIntegral(globPtr<uchar>(src), res, stream);
 
-    _dst.create(src.rows + 1, src.cols + 1, CV_32SC1);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.rows + 1, src.cols + 1, CV_32SC1, stream);
 
     dst.setTo(Scalar::all(0), stream);
 
     GpuMat inner = dst(Rect(1, 1, src.cols, src.rows));
     res.copyTo(inner, stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // sqrIntegral
 
-void cv::cuda::sqrIntegral(InputArray _src, OutputArray _dst, GpuMat& buf, Stream& stream)
+void cv::cuda::sqrIntegral(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     CV_Assert( src.type() == CV_8UC1 );
 
-    GpuMat_<double>& res = (GpuMat_<double>&) buf;
+    BufferPool pool(Stream::Null());
+    GpuMat_<double> res(pool.getBuffer(src.size(), CV_64FC1));
 
     gridIntegral(sqr_(cvt_<int>(globPtr<uchar>(src))), res, stream);
 
-    _dst.create(src.rows + 1, src.cols + 1, CV_64FC1);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.rows + 1, src.cols + 1, CV_64FC1, stream);
 
     dst.setTo(Scalar::all(0), stream);
 
     GpuMat inner = dst(Rect(1, 1, src.cols, src.rows));
     res.copyTo(inner, stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
 #endif

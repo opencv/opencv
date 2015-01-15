@@ -193,7 +193,7 @@ TEST(cornerHarris)
 TEST(integral)
 {
     Mat src, sum;
-    cuda::GpuMat d_src, d_sum, d_buf;
+    cuda::GpuMat d_src, d_sum;
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
@@ -209,10 +209,10 @@ TEST(integral)
 
         d_src.upload(src);
 
-        cuda::integralBuffered(d_src, d_sum, d_buf);
+        cuda::integral(d_src, d_sum);
 
         CUDA_ON;
-        cuda::integralBuffered(d_src, d_sum, d_buf);
+        cuda::integral(d_src, d_sum);
         CUDA_OFF;
     }
 }

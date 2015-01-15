@@ -81,7 +81,6 @@ namespace
         GpuMat Dy_;
         GpuMat buf_;
         GpuMat eig_;
-        GpuMat minMaxbuf_;
         GpuMat tmpCorners_;
     };
 
@@ -112,7 +111,7 @@ namespace
         cornerCriteria_->compute(image, eig_);
 
         double maxVal = 0;
-        cuda::minMax(eig_, 0, &maxVal, noArray(), minMaxbuf_);
+        cuda::minMax(eig_, 0, &maxVal);
 
         ensureSizeIsEnough(1, std::max(1000, static_cast<int>(image.size().area() * 0.05)), CV_32FC2, tmpCorners_);
 
