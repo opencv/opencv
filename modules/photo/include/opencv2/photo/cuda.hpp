@@ -59,7 +59,7 @@ namespace cv { namespace cuda {
 @param block_size Size of block used for computing weights.
 @param borderMode Border type. See borderInterpolate for details. BORDER_REFLECT101 ,
 BORDER_REPLICATE , BORDER_CONSTANT , BORDER_REFLECT and BORDER_WRAP are supported for now.
-@param s Stream for the asynchronous version.
+@param stream Stream for the asynchronous version.
 
 @sa
    fastNlMeansDenoising
@@ -84,7 +84,7 @@ given pixel. Should be odd. Affect performance linearly: greater search_window -
 denoising time. Recommended value 21 pixels
 @param block_size Size in pixels of the template patch that is used to compute weights. Should be
 odd. Recommended value 7 pixels
-@param s Stream for the asynchronous invocations.
+@param stream Stream for the asynchronous invocations.
 
 This function expected to be applied to grayscale images. For colored images look at
 FastNonLocalMeansDenoising::labMethod.
@@ -111,7 +111,7 @@ given pixel. Should be odd. Affect performance linearly: greater search_window -
 denoising time. Recommended value 21 pixels
 @param block_size Size in pixels of the template patch that is used to compute weights. Should be
 odd. Recommended value 7 pixels
-@param s Stream for the asynchronous invocations.
+@param stream Stream for the asynchronous invocations.
 
 The function converts image to CIELAB colorspace and then separately denoise L and AB components
 with given h parameters using FastNonLocalMeansDenoising::simpleMethod function.
