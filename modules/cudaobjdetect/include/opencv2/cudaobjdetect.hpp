@@ -52,13 +52,13 @@
 /**
   @addtogroup cuda
   @{
-      @defgroup cuda_objdetect Object Detection
+      @defgroup cudaobjdetect Object Detection
   @}
  */
 
 namespace cv { namespace cuda {
 
-//! @addtogroup cuda_objdetect
+//! @addtogroup cudaobjdetect
 //! @{
 
 //
@@ -172,10 +172,6 @@ public:
     @param img Source image. See cuda::HOGDescriptor::detect for type limitations.
     @param found_locations Detected objects boundaries.
     @param confidences Optional output array for confidences.
-    @param hit_threshold Threshold for the distance between features and SVM classifying plane. See
-    cuda::HOGDescriptor::detect for details.
-    @param win_stride Window stride. It must be a multiple of block stride.
-    @param padding Mock parameter to keep the CPU interface compatibility. It must be (0,0).
      */
     virtual void detectMultiScale(InputArray img,
                                   std::vector<Rect>& found_locations,
@@ -248,6 +244,7 @@ public:
 
     @param image Matrix of type CV_8U containing an image where objects should be detected.
     @param objects Buffer to store detected objects (rectangles).
+    @param stream CUDA stream.
 
     To get final array of detected objects use CascadeClassifier::convert method.
 
