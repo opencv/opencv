@@ -50,126 +50,153 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 namespace
 {
     template <typename T, typename R, int cn>
-    cv::Scalar sumImpl(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf)
+    void sumImpl(const GpuMat& _src, GpuMat& _dst, const GpuMat& mask, Stream& stream)
     {
         typedef typename MakeVec<T, cn>::type src_type;
         typedef typename MakeVec<R, cn>::type res_type;
 
         const GpuMat_<src_type>& src = (const GpuMat_<src_type>&) _src;
-        GpuMat_<res_type>& buf = (GpuMat_<res_type>&) _buf;
+        GpuMat_<res_type>& dst = (GpuMat_<res_type>&) _dst;
 
         if (mask.empty())
-            gridCalcSum(src, buf);
+            gridCalcSum(src, dst, stream);
         else
-            gridCalcSum(src, buf, globPtr<uchar>(mask));
-
-        cv::Scalar_<R> res;
-        cv::Mat res_mat(buf.size(), buf.type(), res.val);
-        buf.download(res_mat);
-
-        return res;
+            gridCalcSum(src, dst, globPtr<uchar>(mask), stream);
     }
 
     template <typename T, typename R, int cn>
-    cv::Scalar sumAbsImpl(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf)
+    void sumAbsImpl(const GpuMat& _src, GpuMat& _dst, const GpuMat& mask, Stream& stream)
     {
         typedef typename MakeVec<T, cn>::type src_type;
         typedef typename MakeVec<R, cn>::type res_type;
 
         const GpuMat_<src_type>& src = (const GpuMat_<src_type>&) _src;
-        GpuMat_<res_type>& buf = (GpuMat_<res_type>&) _buf;
+        GpuMat_<res_type>& dst = (GpuMat_<res_type>&) _dst;
 
         if (mask.empty())
-            gridCalcSum(abs_(cvt_<res_type>(src)), buf);
+            gridCalcSum(abs_(cvt_<res_type>(src)), dst, stream);
         else
-            gridCalcSum(abs_(cvt_<res_type>(src)), buf, globPtr<uchar>(mask));
-
-        cv::Scalar_<R> res;
-        cv::Mat res_mat(buf.size(), buf.type(), res.val);
-        buf.download(res_mat);
-
-        return res;
+            gridCalcSum(abs_(cvt_<res_type>(src)), dst, globPtr<uchar>(mask), stream);
     }
 
     template <typename T, typename R, int cn>
-    cv::Scalar sumSqrImpl(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf)
+    void sumSqrImpl(const GpuMat& _src, GpuMat& _dst, const GpuMat& mask, Stream& stream)
     {
         typedef typename MakeVec<T, cn>::type src_type;
         typedef typename MakeVec<R, cn>::type res_type;
 
         const GpuMat_<src_type>& src = (const GpuMat_<src_type>&) _src;
-        GpuMat_<res_type>& buf = (GpuMat_<res_type>&) _buf;
+        GpuMat_<res_type>& dst = (GpuMat_<res_type>&) _dst;
 
         if (mask.empty())
-            gridCalcSum(sqr_(cvt_<res_type>(src)), buf);
+            gridCalcSum(sqr_(cvt_<res_type>(src)), dst, stream);
         else
-            gridCalcSum(sqr_(cvt_<res_type>(src)), buf, globPtr<uchar>(mask));
-
-        cv::Scalar_<R> res;
-        cv::Mat res_mat(buf.size(), buf.type(), res.val);
-        buf.download(res_mat);
-
-        return res;
+            gridCalcSum(sqr_(cvt_<res_type>(src)), dst, globPtr<uchar>(mask), stream);
     }
 }
 
-cv::Scalar cv::cuda::sum(InputArray _src, InputArray _mask, GpuMat& buf)
+void cv::cuda::calcSum(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
 {
-    typedef cv::Scalar (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf);
+    typedef void (*func_t)(const GpuMat& _src, GpuMat& _dst, const GpuMat& mask, Stream& stream);
     static const func_t funcs[7][4] =
     {
-        {sumImpl<uchar , uint  , 1>, sumImpl<uchar , uint  , 2>, sumImpl<uchar , uint  , 3>, sumImpl<uchar , uint  , 4>},
-        {sumImpl<schar , int   , 1>, sumImpl<schar , int   , 2>, sumImpl<schar , int   , 3>, sumImpl<schar , int   , 4>},
-        {sumImpl<ushort, uint  , 1>, sumImpl<ushort, uint  , 2>, sumImpl<ushort, uint  , 3>, sumImpl<ushort, uint  , 4>},
-        {sumImpl<short , int   , 1>, sumImpl<short , int   , 2>, sumImpl<short , int   , 3>, sumImpl<short , int   , 4>},
-        {sumImpl<int   , int   , 1>, sumImpl<int   , int   , 2>, sumImpl<int   , int   , 3>, sumImpl<int   , int   , 4>},
-        {sumImpl<float , float , 1>, sumImpl<float , float , 2>, sumImpl<float , float , 3>, sumImpl<float , float , 4>},
+        {sumImpl<uchar , double, 1>, sumImpl<uchar , double, 2>, sumImpl<uchar , double, 3>, sumImpl<uchar , double, 4>},
+        {sumImpl<schar , double, 1>, sumImpl<schar , double, 2>, sumImpl<schar , double, 3>, sumImpl<schar , double, 4>},
+        {sumImpl<ushort, double, 1>, sumImpl<ushort, double, 2>, sumImpl<ushort, double, 3>, sumImpl<ushort, double, 4>},
+        {sumImpl<short , double, 1>, sumImpl<short , double, 2>, sumImpl<short , double, 3>, sumImpl<short , double, 4>},
+        {sumImpl<int   , double, 1>, sumImpl<int   , double, 2>, sumImpl<int   , double, 3>, sumImpl<int   , double, 4>},
+        {sumImpl<float , double, 1>, sumImpl<float , double, 2>, sumImpl<float , double, 3>, sumImpl<float , double, 4>},
         {sumImpl<double, double, 1>, sumImpl<double, double, 2>, sumImpl<double, double, 3>, sumImpl<double, double, 4>}
     };
 
-    GpuMat src = _src.getGpuMat();
-    GpuMat mask = _mask.getGpuMat();
+    const GpuMat src = getInputMat(_src, stream);
+    const GpuMat mask = getInputMat(_mask, stream);
 
-    CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
 
-    const func_t func = funcs[src.depth()][src.channels() - 1];
+    const int src_depth = src.depth();
+    const int channels = src.channels();
 
-    return func(src, mask, buf);
+    GpuMat dst = getOutputMat(_dst, 1, 1, CV_64FC(channels), stream);
+
+    const func_t func = funcs[src_depth][channels - 1];
+    func(src, dst, mask, stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
-cv::Scalar cv::cuda::absSum(InputArray _src, InputArray _mask, GpuMat& buf)
+cv::Scalar cv::cuda::sum(InputArray _src, InputArray _mask)
 {
-    typedef cv::Scalar (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf);
+    Stream& stream = Stream::Null();
+
+    HostMem dst;
+    calcSum(_src, dst, _mask, stream);
+
+    stream.waitForCompletion();
+
+    cv::Scalar val;
+    dst.createMatHeader().convertTo(cv::Mat(dst.size(), CV_64FC(dst.channels()), val.val), CV_64F);
+
+    return val;
+}
+
+void cv::cuda::calcAbsSum(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
+{
+    typedef void (*func_t)(const GpuMat& _src, GpuMat& _dst, const GpuMat& mask, Stream& stream);
     static const func_t funcs[7][4] =
     {
-        {sumAbsImpl<uchar , uint  , 1>, sumAbsImpl<uchar , uint  , 2>, sumAbsImpl<uchar , uint  , 3>, sumAbsImpl<uchar , uint  , 4>},
-        {sumAbsImpl<schar , int   , 1>, sumAbsImpl<schar , int   , 2>, sumAbsImpl<schar , int   , 3>, sumAbsImpl<schar , int   , 4>},
-        {sumAbsImpl<ushort, uint  , 1>, sumAbsImpl<ushort, uint  , 2>, sumAbsImpl<ushort, uint  , 3>, sumAbsImpl<ushort, uint  , 4>},
-        {sumAbsImpl<short , int   , 1>, sumAbsImpl<short , int   , 2>, sumAbsImpl<short , int   , 3>, sumAbsImpl<short , int   , 4>},
-        {sumAbsImpl<int   , int   , 1>, sumAbsImpl<int   , int   , 2>, sumAbsImpl<int   , int   , 3>, sumAbsImpl<int   , int   , 4>},
-        {sumAbsImpl<float , float , 1>, sumAbsImpl<float , float , 2>, sumAbsImpl<float , float , 3>, sumAbsImpl<float , float , 4>},
+        {sumAbsImpl<uchar , double, 1>, sumAbsImpl<uchar , double, 2>, sumAbsImpl<uchar , double, 3>, sumAbsImpl<uchar , double, 4>},
+        {sumAbsImpl<schar , double, 1>, sumAbsImpl<schar , double, 2>, sumAbsImpl<schar , double, 3>, sumAbsImpl<schar , double, 4>},
+        {sumAbsImpl<ushort, double, 1>, sumAbsImpl<ushort, double, 2>, sumAbsImpl<ushort, double, 3>, sumAbsImpl<ushort, double, 4>},
+        {sumAbsImpl<short , double, 1>, sumAbsImpl<short , double, 2>, sumAbsImpl<short , double, 3>, sumAbsImpl<short , double, 4>},
+        {sumAbsImpl<int   , double, 1>, sumAbsImpl<int   , double, 2>, sumAbsImpl<int   , double, 3>, sumAbsImpl<int   , double, 4>},
+        {sumAbsImpl<float , double, 1>, sumAbsImpl<float , double, 2>, sumAbsImpl<float , double, 3>, sumAbsImpl<float , double, 4>},
         {sumAbsImpl<double, double, 1>, sumAbsImpl<double, double, 2>, sumAbsImpl<double, double, 3>, sumAbsImpl<double, double, 4>}
     };
 
-    GpuMat src = _src.getGpuMat();
-    GpuMat mask = _mask.getGpuMat();
+    const GpuMat src = getInputMat(_src, stream);
+    const GpuMat mask = getInputMat(_mask, stream);
 
-    CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
 
-    const func_t func = funcs[src.depth()][src.channels() - 1];
+    const int src_depth = src.depth();
+    const int channels = src.channels();
 
-    return func(src, mask, buf);
+    GpuMat dst = getOutputMat(_dst, 1, 1, CV_64FC(channels), stream);
+
+    const func_t func = funcs[src_depth][channels - 1];
+    func(src, dst, mask, stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
-cv::Scalar cv::cuda::sqrSum(InputArray _src, InputArray _mask, GpuMat& buf)
+cv::Scalar cv::cuda::absSum(InputArray _src, InputArray _mask)
 {
-    typedef cv::Scalar (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf);
+    Stream& stream = Stream::Null();
+
+    HostMem dst;
+    calcAbsSum(_src, dst, _mask, stream);
+
+    stream.waitForCompletion();
+
+    cv::Scalar val;
+    dst.createMatHeader().convertTo(cv::Mat(dst.size(), CV_64FC(dst.channels()), val.val), CV_64F);
+
+    return val;
+}
+
+void cv::cuda::calcSqrSum(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
+{
+    typedef void (*func_t)(const GpuMat& _src, GpuMat& _dst, const GpuMat& mask, Stream& stream);
     static const func_t funcs[7][4] =
     {
         {sumSqrImpl<uchar , double, 1>, sumSqrImpl<uchar , double, 2>, sumSqrImpl<uchar , double, 3>, sumSqrImpl<uchar , double, 4>},
@@ -181,14 +208,35 @@ cv::Scalar cv::cuda::sqrSum(InputArray _src, InputArray _mask, GpuMat& buf)
         {sumSqrImpl<double, double, 1>, sumSqrImpl<double, double, 2>, sumSqrImpl<double, double, 3>, sumSqrImpl<double, double, 4>}
     };
 
-    GpuMat src = _src.getGpuMat();
-    GpuMat mask = _mask.getGpuMat();
+    const GpuMat src = getInputMat(_src, stream);
+    const GpuMat mask = getInputMat(_mask, stream);
 
-    CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
 
-    const func_t func = funcs[src.depth()][src.channels() - 1];
+    const int src_depth = src.depth();
+    const int channels = src.channels();
 
-    return func(src, mask, buf);
+    GpuMat dst = getOutputMat(_dst, 1, 1, CV_64FC(channels), stream);
+
+    const func_t func = funcs[src_depth][channels - 1];
+    func(src, dst, mask, stream);
+
+    syncOutput(dst, _dst, stream);
+}
+
+cv::Scalar cv::cuda::sqrSum(InputArray _src, InputArray _mask)
+{
+    Stream& stream = Stream::Null();
+
+    HostMem dst;
+    calcSqrSum(_src, dst, _mask, stream);
+
+    stream.waitForCompletion();
+
+    cv::Scalar val;
+    dst.createMatHeader().convertTo(cv::Mat(dst.size(), CV_64FC(dst.channels()), val.val), CV_64F);
+
+    return val;
 }
 
 #endif
