@@ -42,6 +42,10 @@
 
 #include "perf_precomp.hpp"
 
+#ifdef HAVE_OPENCV_CALIB3D
+
+#include "opencv2/calib3d.hpp"
+
 using namespace std;
 using namespace testing;
 using namespace perf;
@@ -133,3 +137,5 @@ PERF_TEST_P(Count, Calib3D_SolvePnPRansac,
         CPU_SANITY_CHECK(tvec, 1e-6);
     }
 }
+
+#endif
