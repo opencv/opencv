@@ -646,6 +646,8 @@ static inline int channels_for_mode(int mode)
     switch(mode) {
     case CV_CAP_MODE_GRAY:
         return 1;
+    case CV_CAP_MODE_YUYV:
+        return 2;
     default:
         return 3;
     }
@@ -713,31 +715,26 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
   /* libv4l will convert from any format to V4L2_PIX_FMT_BGR24,
      V4L2_PIX_FMT_RGV24, or V4L2_PIX_FMT_YUV420 */
   unsigned int requestedPixelFormat;
-  int width;
-  int height;
   switch (capture->mode) {
   case CV_CAP_MODE_RGB:
     requestedPixelFormat = V4L2_PIX_FMT_RGB24;
-    width = capture->width;
-    height = capture->height;
     break;
   case CV_CAP_MODE_GRAY:
     requestedPixelFormat = V4L2_PIX_FMT_YUV420;
-    width = capture->width;
-    height = capture->height;
+    break;
+  case CV_CAP_MODE_YUYV:
+    requestedPixelFormat = V4L2_PIX_FMT_YUYV;
     break;
   default:
     requestedPixelFormat = V4L2_PIX_FMT_BGR24;
-    width = capture->width;
-    height = capture->height;
     break;
   }
   CLEAR (capture->form);
   capture->form.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   capture->form.fmt.pix.pixelformat = requestedPixelFormat;
   capture->form.fmt.pix.field       = V4L2_FIELD_ANY;
-  capture->form.fmt.pix.width       = width;
-  capture->form.fmt.pix.height      = height;
+  capture->form.fmt.pix.width       = capture->width;
+  capture->form.fmt.pix.height      = capture->height;
 
   if (-1 == xioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form)) {
       fprintf(stderr, "VIDEOIO ERROR: libv4l unable to ioctl S_FMT\n");
@@ -948,6 +945,10 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
       case CV_CAP_MODE_GRAY:
         requestedVideoPalette = VIDEO_PALETTE_YUV420;
         depth = 8;
+        break;
+      case CV_CAP_MODE_YUYV:
+        requestedVideoPalette = VIDEO_PALETTE_YUYV;
+        depth = 16;
         break;
       default:
         requestedVideoPalette = VIDEO_PALETTE_RGB24;
@@ -1319,6 +1320,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     switch(capture->imageProperties.palette) {
       case VIDEO_PALETTE_RGB24:
       case VIDEO_PALETTE_YUV420:
+      case VIDEO_PALETTE_YUYV:
         memcpy((char *)capture->frame.imageData,
            (char *)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
            capture->frame.imageSize);
@@ -1463,6 +1465,10 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
     case CV_CAP_MODE_GRAY:
       cropHeight = h*8;
       cropWidth = w*8;
+      break;
+    case CV_CAP_MODE_YUYV:
+      cropHeight = h*16;
+      cropWidth = w*16;
       break;
     default:
       cropHeight = h*24;
@@ -1719,6 +1725,7 @@ static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L* capture, int property_id, dou
             case CV_CAP_MODE_BGR:
             case CV_CAP_MODE_RGB:
             case CV_CAP_MODE_GRAY:
+            case CV_CAP_MODE_YUYV:
                 capture->mode = mode;
                 /* recreate the capture buffer for the same output resolution
                    but a different pixel format */
