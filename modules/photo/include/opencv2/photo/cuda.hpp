@@ -64,64 +64,66 @@ BORDER_REPLICATE , BORDER_CONSTANT , BORDER_REFLECT and BORDER_WRAP are supporte
 @sa
    fastNlMeansDenoising
  */
-CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
+CV_EXPORTS void nonLocalMeans(InputArray src, OutputArray dst,
+                              float h,
+                              int search_window = 21,
+                              int block_size = 7,
+                              int borderMode = BORDER_DEFAULT,
+                              Stream& stream = Stream::Null());
 
-/** @brief The class implements fast approximate Non Local Means Denoising algorithm.
+/** @brief Perform image denoising using Non-local Means Denoising algorithm
+<http://www.ipol.im/pub/algo/bcm_non_local_means_denoising> with several computational
+optimizations. Noise expected to be a gaussian white noise
+
+@param src Input 8-bit 1-channel, 2-channel or 3-channel image.
+@param dst Output image with the same size and type as src .
+@param h Parameter regulating filter strength. Big h value perfectly removes noise but also
+removes image details, smaller h value preserves details but also preserves some noise
+@param search_window Size in pixels of the window that is used to compute weighted average for
+given pixel. Should be odd. Affect performance linearly: greater search_window - greater
+denoising time. Recommended value 21 pixels
+@param block_size Size in pixels of the template patch that is used to compute weights. Should be
+odd. Recommended value 7 pixels
+@param s Stream for the asynchronous invocations.
+
+This function expected to be applied to grayscale images. For colored images look at
+FastNonLocalMeansDenoising::labMethod.
+
+@sa
+   fastNlMeansDenoising
  */
-class CV_EXPORTS FastNonLocalMeansDenoising
-{
-public:
-    /** @brief Perform image denoising using Non-local Means Denoising algorithm
-    <http://www.ipol.im/pub/algo/bcm_non_local_means_denoising> with several computational
-    optimizations. Noise expected to be a gaussian white noise
+CV_EXPORTS void fastNlMeansDenoising(InputArray src, OutputArray dst,
+                                     float h,
+                                     int search_window = 21,
+                                     int block_size = 7,
+                                     Stream& stream = Stream::Null());
 
-    @param src Input 8-bit 1-channel, 2-channel or 3-channel image.
-    @param dst Output image with the same size and type as src .
-    @param h Parameter regulating filter strength. Big h value perfectly removes noise but also
-    removes image details, smaller h value preserves details but also preserves some noise
-    @param search_window Size in pixels of the window that is used to compute weighted average for
-    given pixel. Should be odd. Affect performance linearly: greater search_window - greater
-    denoising time. Recommended value 21 pixels
-    @param block_size Size in pixels of the template patch that is used to compute weights. Should be
-    odd. Recommended value 7 pixels
-    @param s Stream for the asynchronous invocations.
+/** @brief Modification of fastNlMeansDenoising function for colored images
 
-    This function expected to be applied to grayscale images. For colored images look at
-    FastNonLocalMeansDenoising::labMethod.
+@param src Input 8-bit 3-channel image.
+@param dst Output image with the same size and type as src .
+@param h_luminance Parameter regulating filter strength. Big h value perfectly removes noise but
+also removes image details, smaller h value preserves details but also preserves some noise
+@param photo_render float The same as h but for color components. For most images value equals 10 will be
+enought to remove colored noise and do not distort colors
+@param search_window Size in pixels of the window that is used to compute weighted average for
+given pixel. Should be odd. Affect performance linearly: greater search_window - greater
+denoising time. Recommended value 21 pixels
+@param block_size Size in pixels of the template patch that is used to compute weights. Should be
+odd. Recommended value 7 pixels
+@param s Stream for the asynchronous invocations.
 
-    @sa
-       fastNlMeansDenoising
-     */
-    void simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
+The function converts image to CIELAB colorspace and then separately denoise L and AB components
+with given h parameters using FastNonLocalMeansDenoising::simpleMethod function.
 
-    /** @brief Modification of FastNonLocalMeansDenoising::simpleMethod for color images
-
-    @param src Input 8-bit 3-channel image.
-    @param dst Output image with the same size and type as src .
-    @param h_luminance Parameter regulating filter strength. Big h value perfectly removes noise but
-    also removes image details, smaller h value preserves details but also preserves some noise
-    @param photo_render float The same as h but for color components. For most images value equals 10 will be
-    enought to remove colored noise and do not distort colors
-    @param search_window Size in pixels of the window that is used to compute weighted average for
-    given pixel. Should be odd. Affect performance linearly: greater search_window - greater
-    denoising time. Recommended value 21 pixels
-    @param block_size Size in pixels of the template patch that is used to compute weights. Should be
-    odd. Recommended value 7 pixels
-    @param s Stream for the asynchronous invocations.
-
-    The function converts image to CIELAB colorspace and then separately denoise L and AB components
-    with given h parameters using FastNonLocalMeansDenoising::simpleMethod function.
-
-    @sa
-       fastNlMeansDenoisingColored
-     */
-    void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float photo_render, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
-
-private:
-
-    GpuMat buffer, extended_src_buffer;
-    GpuMat lab, l, ab;
-};
+@sa
+   fastNlMeansDenoisingColored
+ */
+CV_EXPORTS void fastNlMeansDenoisingColored(InputArray src, OutputArray dst,
+                                            float h_luminance, float photo_render,
+                                            int search_window = 21,
+                                            int block_size = 7,
+                                            Stream& stream = Stream::Null());
 
 //! @} photo
 
