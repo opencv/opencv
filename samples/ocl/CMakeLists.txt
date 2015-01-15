@@ -52,7 +52,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 endif()
 
 if (OCV_DEPENDENCIES_FOUND AND INSTALL_C_EXAMPLES AND NOT WIN32)
-  file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
+  file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd *.txt)
   install(FILES ${install_list}
           DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/ocl
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
