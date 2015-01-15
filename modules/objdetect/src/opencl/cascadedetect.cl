@@ -12,19 +12,22 @@
 //    Erping Pang, erping@multicorewareinc.com
 //
 
-
+#ifdef HAAR
 typedef struct __attribute__((aligned(4))) OptHaarFeature
 {
     int4 ofs[3] __attribute__((aligned (4)));
     float4 weight __attribute__((aligned (4)));
 }
 OptHaarFeature;
+#endif
 
+#ifdef LBP
 typedef struct __attribute__((aligned(4))) OptLBPFeature
 {
     int16 ofs __attribute__((aligned (4)));
 }
 OptLBPFeature;
+#endif
 
 typedef struct __attribute__((aligned(4))) Stump
 {
@@ -64,6 +67,7 @@ ScaleData;
 #define NODE_COUNT 1
 #endif
 
+#ifdef HAAR
 __kernel __attribute__((reqd_work_group_size(LOCAL_SIZE_X,LOCAL_SIZE_Y,1)))
 void runHaarClassifier(
     int nscales, __global const ScaleData* scaleData,
@@ -352,7 +356,9 @@ void runHaarClassifier(
         }
     }
 }
+#endif
 
+#ifdef LBP
 #undef CALC_SUM_OFS_
 #define CALC_SUM_OFS_(p0, p1, p2, p3, ptr) \
     ((ptr)[p0] - (ptr)[p1] - (ptr)[p2] + (ptr)[p3])
@@ -651,3 +657,4 @@ void runLBPClassifierStump(
         }
     }
 }
+#endif
