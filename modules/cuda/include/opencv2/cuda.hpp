@@ -93,20 +93,6 @@ CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& c
 
 //! @}
 
-//////////////////////////// VStab ////////////////////////////
-
-//! @addtogroup cuda
-//! @{
-
-//! removes points (CV_32FC2, single row matrix) with zero mask value
-CV_EXPORTS void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask);
-
-CV_EXPORTS void calcWobbleSuppressionMaps(
-        int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
-        GpuMat &mapx, GpuMat &mapy);
-
-//! @}
-
 }} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_CUDA_HPP__ */
