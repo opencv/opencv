@@ -122,13 +122,6 @@ PERF_TEST_P(Video, FGDStatModel,
 
             d_fgd->apply(d_frame, foreground);
         }
-
-#ifdef HAVE_OPENCV_CUDAIMGPROC
-        cv::cuda::GpuMat background3, background;
-        d_fgd->getBackgroundImage(background3);
-        cv::cuda::cvtColor(background3, background, cv::COLOR_BGR2BGRA);
-        CUDA_SANITY_CHECK(background, 1e-2, ERROR_RELATIVE);
-#endif
     }
     else
     {
