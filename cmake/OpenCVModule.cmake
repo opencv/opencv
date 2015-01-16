@@ -113,7 +113,6 @@ endmacro()
 macro(ocv_add_module _name)
   ocv_debug_message("ocv_add_module(" ${_name} ${ARGN} ")")
   string(TOLOWER "${_name}" name)
-  string(REGEX REPLACE "^opencv_" "" ${name} "${name}")
   set(the_module opencv_${name})
 
   # the first pass - collect modules info, the second pass - create targets
