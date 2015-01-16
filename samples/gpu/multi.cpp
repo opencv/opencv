@@ -7,34 +7,47 @@
 #endif
 
 #include <iostream>
-#include "cvconfig.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/gpu/gpu.hpp"
-
-#if !defined(HAVE_CUDA) || !defined(HAVE_TBB)
-
-int main()
-{
-#if !defined(HAVE_CUDA)
-    std::cout << "CUDA support is required (CMake key 'WITH_CUDA' must be true).\n";
-#endif
-
-#if !defined(HAVE_TBB)
-    std::cout << "TBB support is required (CMake key 'WITH_TBB' must be true).\n";
-#endif
-
-    return 0;
-}
-
-#else
-
-#include "opencv2/core/internal.hpp" // For TBB wrappers
 
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-struct Worker { void operator()(int device_id) const; };
+struct Worker: public ParallelLoopBody
+{
+    virtual void operator() (const Range& range) const
+    {
+        for (int device_id = range.start; device_id != range.end; ++device_id)
+        {
+            setDevice(device_id);
+
+            Mat src(1000, 1000, CV_32F);
+            Mat dst;
+
+            RNG rng(0);
+            rng.fill(src, RNG::UNIFORM, 0, 1);
+
+            // CPU works
+            transpose(src, dst);
+
+            // GPU works
+            GpuMat d_src(src);
+            GpuMat d_dst;
+            transpose(d_src, d_dst);
+
+            // Check results
+            bool passed = norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
+            std::cout << "GPU #" << device_id << " (" << DeviceInfo().name() << "): "
+            << (passed ? "passed" : "FAILED") << endl;
+
+            // Deallocate data here, otherwise deallocation will be performed
+            // after context is extracted from the stack
+            d_src.release();
+            d_dst.release();
+        }
+    }
+};
 
 int main()
 {
@@ -58,41 +71,8 @@ int main()
         }
     }
 
-    // Execute calculation in two threads using two GPUs
-    int devices[] = {0, 1};
-    parallel_do(devices, devices + 2, Worker());
+    // Execute calculation in several threads, 1 GPU per thread
+    parallel_for_(cv::Range(0, num_devices), Worker());
 
     return 0;
 }
-
-
-void Worker::operator()(int device_id) const
-{
-    setDevice(device_id);
-
-    Mat src(1000, 1000, CV_32F);
-    Mat dst;
-
-    RNG rng(0);
-    rng.fill(src, RNG::UNIFORM, 0, 1);
-
-    // CPU works
-    transpose(src, dst);
-
-    // GPU works
-    GpuMat d_src(src);
-    GpuMat d_dst;
-    transpose(d_src, d_dst);
-
-    // Check results
-    bool passed = norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
-    std::cout << "GPU #" << device_id << " (" << DeviceInfo().name() << "): "
-        << (passed ? "passed" : "FAILED") << endl;
-
-    // Deallocate data here, otherwise deallocation will be performed
-    // after context is extracted from the stack
-    d_src.release();
-    d_dst.release();
-}
-
-#endif

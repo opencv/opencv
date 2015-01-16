@@ -64,7 +64,7 @@ set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://opencv.org")
 
 #depencencies
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS TRUE)
-set(CPACK_COMPONENT_samples_DEPENDS libs)
+set(CPACK_COMPONENT_samples_DEPENDS libs dev)
 set(CPACK_COMPONENT_dev_DEPENDS libs)
 set(CPACK_COMPONENT_docs_DEPENDS libs)
 set(CPACK_COMPONENT_java_DEPENDS libs)
