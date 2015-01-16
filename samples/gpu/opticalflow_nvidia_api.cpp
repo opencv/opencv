@@ -9,26 +9,14 @@
 #include <ctime>
 #include <ctype.h>
 
-#include "cvconfig.h"
 #include <iostream>
 #include <iomanip>
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-#ifdef HAVE_CUDA
 #include "NPP_staging/NPP_staging.hpp"
 #include "NCVBroxOpticalFlow.hpp"
-#endif
 
-#if !defined(HAVE_CUDA)
-int main( int, const char** )
-{
-    std::cout << "Please compile the library with CUDA support" << std::endl;
-    return -1;
-}
-#else
-
-//using std::tr1::shared_ptr;
 using cv::Ptr;
 
 #define PARAM_LEFT  "--left"
@@ -649,5 +637,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-#endif

@@ -8,30 +8,16 @@
 #endif
 
 #include <iostream>
-#include "cvconfig.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"
 
-#if !defined(HAVE_CUDA) || !defined(HAVE_TBB) || defined(__arm__)
-
+#if defined(__arm__)
 int main()
 {
-#if !defined(HAVE_CUDA)
-    std::cout << "CUDA support is required (CMake key 'WITH_CUDA' must be true).\n";
-#endif
-
-#if !defined(HAVE_TBB)
-    std::cout << "TBB support is required (CMake key 'WITH_TBB' must be true).\n";
-#endif
-
-#if defined(__arm__)
     std::cout << "Unsupported for ARM CUDA library." << std::endl;
-#endif
-
     return 0;
 }
-
 #else
 
 #include <cuda.h>
@@ -42,7 +28,6 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-struct Worker { void operator()(int device_id) const; };
 void destroyContexts();
 
 #define safeCall(expr) safeCall_(expr, #expr, __FILE__, __LINE__)
@@ -76,6 +61,27 @@ GpuMat d_left[2];
 GpuMat d_right[2];
 StereoBM_GPU* bm[2];
 GpuMat d_result[2];
+
+
+struct Worker: public ParallelLoopBody
+{
+    virtual void operator() (const Range& range) const
+    {
+        for (int device_id = range.start; device_id != range.end; ++device_id)
+        {
+            contextOn(device_id);
+
+            bm[device_id]->operator()(d_left[device_id], d_right[device_id],
+                                      d_result[device_id]);
+
+            std::cout << "GPU #" << device_id << " (" << DeviceInfo().name()
+            << "): finished\n";
+
+            contextOff();
+
+        }
+    }
+};
 
 static void printHelp()
 {
@@ -162,8 +168,7 @@ int main(int argc, char** argv)
     contextOff();
 
     // Execute calculation in two threads using two GPUs
-    int devices[] = {0, 1};
-    parallel_do(devices, devices + 2, Worker());
+    parallel_for_(cv::Range(0, 2), Worker());
 
     // Release the first GPU resources
     contextOn(0);
@@ -187,21 +192,6 @@ int main(int argc, char** argv)
     destroyContexts();
     return 0;
 }
-
-
-void Worker::operator()(int device_id) const
-{
-    contextOn(device_id);
-
-    bm[device_id]->operator()(d_left[device_id], d_right[device_id],
-                              d_result[device_id]);
-
-    std::cout << "GPU #" << device_id << " (" << DeviceInfo().name()
-        << "): finished\n";
-
-    contextOff();
-}
-
 
 void destroyContexts()
 {
