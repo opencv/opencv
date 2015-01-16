@@ -47,6 +47,8 @@
 #include "opencv2/opencv_modules.hpp"
 #include "clp.hpp"
 
+#include "opencv2/core/private.cuda.hpp"
+
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 namespace cv { namespace cuda {
