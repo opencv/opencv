@@ -19,9 +19,11 @@ if(ANDROID AND BUILD_ANDROID_EXAMPLES)
   add_subdirectory(android)
 endif()
 
-install(FILES "CMakeLists.txt"
-        DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}
-        PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
+if(INSTALL_C_EXAMPLES)
+  install(FILES "CMakeLists.txt"
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}
+          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
+endif()
 
 #
 # END OF BUILD CASE 1: Build samples with library sources
