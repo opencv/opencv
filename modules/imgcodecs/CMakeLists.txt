@@ -51,6 +51,7 @@ if(HAVE_OPENEXR)
 endif()
 
 if(HAVE_GDAL)
+  add_definitions(-DHAVE_GDAL)
   include_directories(SYSTEM ${GDAL_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${GDAL_LIBRARY})
 endif()
