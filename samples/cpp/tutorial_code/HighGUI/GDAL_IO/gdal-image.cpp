@@ -1,13 +1,13 @@
-/**
+/*
  * gdal_image.cpp -- Load GIS data into OpenCV Containers using the Geospatial Data Abstraction Library
 */
 
-/// OpenCV Headers
+// OpenCV Headers
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-/// C++ Standard Libraries
+// C++ Standard Libraries
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
@@ -15,22 +15,22 @@
 
 using namespace std;
 
-/// define the corner points
-///    Note that GDAL can natively determine this
+// define the corner points
+//    Note that GDAL library can natively determine this
 cv::Point2d tl( -122.441017, 37.815664 );
 cv::Point2d tr( -122.370919, 37.815311 );
 cv::Point2d bl( -122.441533, 37.747167 );
 cv::Point2d br( -122.3715,   37.746814 );
 
-/// determine dem corners
+// determine dem corners
 cv::Point2d dem_bl( -122.0, 38);
 cv::Point2d dem_tr( -123.0, 37);
 
-/// range of the heat map colors
+// range of the heat map colors
 std::vector<std::pair<cv::Vec3b,double> > color_range;
 
 
-/// List of all function prototypes
+// List of all function prototypes
 cv::Point2d lerp( const cv::Point2d&, const cv::Point2d&, const double& );
 
 cv::Vec3b get_dem_color( const double& );
@@ -43,7 +43,7 @@ void add_color( cv::Vec3b& pix, const uchar& b, const uchar& g, const uchar& r )
 
 
 
-/**
+/*
  * Linear Interpolation
  * p1 - Point 1
  * p2 - Point 2
@@ -54,7 +54,7 @@ cv::Point2d lerp( cv::Point2d const& p1, cv::Point2d const& p2, const double& t 
                         ((1-t)*p1.y) + (t*p2.y));
 }
 
-/**
+/*
  * Interpolate Colors
 */
 template <typename DATATYPE, int N>
@@ -69,7 +69,7 @@ cv::Vec<DATATYPE,N> lerp( cv::Vec<DATATYPE,N> const& minColor,
     return output;
 }
 
-/**
+/*
  * Compute the dem color
 */
 cv::Vec3b get_dem_color( const double& elevation ){
@@ -103,7 +103,7 @@ cv::Vec3b get_dem_color( const double& elevation ){
     return lerp( color_range[idx].first, color_range[idx+1].first, t);
 }
 
-/**
+/*
  * Given a pixel coordinate and the size of the input image, compute the pixel location
  * on the DEM image.
 */
@@ -122,7 +122,7 @@ cv::Point2d world2dem( cv::Point2d const& coordinate, const cv::Size& dem_size  
     return output;
 }
 
-/**
+/*
  * Convert a pixel coordinate to world coordinates
 */
 cv::Point2d pixel2world( const int& x, const int& y, const cv::Size& size ){
@@ -139,7 +139,7 @@ cv::Point2d pixel2world( const int& x, const int& y, const cv::Size& size ){
     return lerp( leftSide, rightSide, rx );
 }
 
-/**
+/*
  * Add color to a specific pixel color value
 */
 void add_color( cv::Vec3b& pix, const uchar& b, const uchar& g, const uchar& r ){
@@ -150,12 +150,12 @@ void add_color( cv::Vec3b& pix, const uchar& b, const uchar& g, const uchar& r )
 }
 
 
-/**
+/*
  * Main Function
 */
 int main( int argc, char* argv[] ){
 
-    /**
+    /*
      * Check input arguments
     */
     if( argc < 3 ){
@@ -163,22 +163,22 @@ int main( int argc, char* argv[] ){
         return 1;
     }
 
-    /// load the image (note that we don't have the projection information.  You will
-    /// need to load that yourself or use the full GDAL driver.  The values are pre-defined
-    /// at the top of this file
+    // load the image (note that we don't have the projection information.  You will
+    // need to load that yourself or use the full GDAL driver.  The values are pre-defined
+    // at the top of this file
     cv::Mat image = cv::imread(argv[1], cv::IMREAD_LOAD_GDAL | cv::IMREAD_COLOR );
 
-    /// load the dem model
+    // load the dem model
     cv::Mat dem = cv::imread(argv[2], cv::IMREAD_LOAD_GDAL | cv::IMREAD_ANYDEPTH );
 
-    /// create our output products
+    // create our output products
     cv::Mat output_dem(   image.size(), CV_8UC3 );
     cv::Mat output_dem_flood(   image.size(), CV_8UC3 );
 
-    /// for sanity sake, make sure GDAL Loads it as a signed short
+    // for sanity sake, make sure GDAL Loads it as a signed short
     if( dem.type() != CV_16SC1 ){ throw std::runtime_error("DEM image type must be CV_16SC1"); }
 
-    /// define the color range to create our output DEM heat map
+    // define the color range to create our output DEM heat map
     //  Pair format ( Color, elevation );  Push from low to high
     //  Note:  This would be perfect for a configuration file, but is here for a working demo.
     color_range.push_back( std::pair<cv::Vec3b,double>(cv::Vec3b( 188, 154,  46),   -1));
