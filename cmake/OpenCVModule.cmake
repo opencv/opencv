@@ -787,7 +787,7 @@ macro(__ocv_parse_test_sources tests_type)
       set(__file_group_sources "")
     elseif(arg STREQUAL "DEPENDS_ON")
       set(__currentvar "OPENCV_${tests_type}_${the_module}_DEPS")
-    elseif("${__currentvar}" STREQUAL "__file_group_sources" AND NOT __file_group_name)
+    elseif(" ${__currentvar}" STREQUAL " __file_group_sources" AND NOT __file_group_name) # spaces to avoid CMP0054
       set(__file_group_name "${arg}")
     else()
       list(APPEND ${__currentvar} "${arg}")
