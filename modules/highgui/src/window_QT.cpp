@@ -117,7 +117,7 @@ CV_IMPL void cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont* 
         "putText",
         autoBlockingConnection(),
         Q_ARG(void*, (void*) img),
-        Q_ARG(QString,QString(text)),
+        Q_ARG(QString,QString::fromUtf8(text)),
         Q_ARG(QPoint, QPoint(org.x,org.y)),
         Q_ARG(void*,(void*) font));
 }
