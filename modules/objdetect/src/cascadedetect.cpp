@@ -587,7 +587,7 @@ bool HaarEvaluator::read(const FileNode& node, Size _origWinSize)
     localSize = lbufSize = Size(0, 0);
     if (ocl::haveOpenCL())
     {
-        if (ocl::Device::getDefault().isAMD())
+        if (ocl::Device::getDefault().isAMD() || ocl::Device::getDefault().isIntel())
         {
             localSize = Size(8, 8);
             lbufSize = Size(origWinSize.width + localSize.width,
