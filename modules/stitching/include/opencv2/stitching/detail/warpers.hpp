@@ -398,7 +398,6 @@ public:
 };
 
 
-#ifdef HAVE_OPENCV_CUDAWARPING
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
 public:
@@ -515,7 +514,6 @@ public:
 private:
     cuda::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
 };
-#endif
 
 
 struct SphericalPortraitProjector : ProjectorBase
