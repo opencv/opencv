@@ -664,7 +664,7 @@ private:
         vector<Mat> pages;
         bool res = imreadmulti(folder + "multipage.tif", pages, flags);
         ASSERT_TRUE(res == true);
-        ASSERT_TRUE(pages.size() == page_count);
+        ASSERT_EQ(static_cast<size_t>(page_count), pages.size());
 
         for (int i = 0; i < page_count; i++)
         {
