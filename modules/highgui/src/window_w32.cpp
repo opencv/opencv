@@ -48,6 +48,11 @@
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
 #endif
 
+#if (_WIN32_IE < 0x0500)
+#pragma message("WARNING: Win32 UI needs to be compiled with _WIN32_IE >= 0x0500 (_WIN32_IE_IE50)")
+#define _WIN32_IE 0x0500
+#endif
+
 #include <commctrl.h>
 #include <stdlib.h>
 #include <string.h>
