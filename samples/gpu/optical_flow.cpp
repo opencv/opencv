@@ -135,23 +135,30 @@ static void showFlow(const char* name, const GpuMat& d_flowx, const GpuMat& d_fl
 
 int main(int argc, const char* argv[])
 {
+    string filename1, filename2;
     if (argc < 3)
     {
-        cerr << "Usage : " << argv[0] << "<frame0> <frame1>" << endl;
-        return -1;
+        cerr << "Usage : " << argv[0] << " <frame0> <frame1>" << endl;
+        filename1 = "../data/basketball1.png";
+        filename2 = "../data/basketball2.png";
+    }
+    else
+    {
+        filename1 = argv[1];
+        filename2 = argv[2];
     }
 
-    Mat frame0 = imread(argv[1], IMREAD_GRAYSCALE);
-    Mat frame1 = imread(argv[2], IMREAD_GRAYSCALE);
+    Mat frame0 = imread(filename1, IMREAD_GRAYSCALE);
+    Mat frame1 = imread(filename2, IMREAD_GRAYSCALE);
 
     if (frame0.empty())
     {
-        cerr << "Can't open image ["  << argv[1] << "]" << endl;
+        cerr << "Can't open image ["  << filename1 << "]" << endl;
         return -1;
     }
     if (frame1.empty())
     {
-        cerr << "Can't open image ["  << argv[2] << "]" << endl;
+        cerr << "Can't open image ["  << filename2 << "]" << endl;
         return -1;
     }
 

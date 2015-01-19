@@ -119,8 +119,8 @@ int main(int argc, const char* argv[])
 {
     const char* keys =
         "{ h             help   |       | print help message }"
-        "{ l             left   |       | specify left image }"
-        "{ r             right  |       | specify right image }"
+        "{ l             left   | ../data/pic1.png       | specify left image }"
+        "{ r             right  | ../data/pic2.png       | specify right image }"
         "{ gray                 |       | use grayscale sources [PyrLK Sparse] }"
         "{ win_size             | 21    | specify windows size [PyrLK] }"
         "{ max_level            | 3     | specify max level [PyrLK] }"
