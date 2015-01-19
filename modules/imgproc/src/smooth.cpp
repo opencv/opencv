@@ -1497,7 +1497,9 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(sigma1 == 0 && sigma2 == 0 && tegra::gaussian(_src.getMat(), _dst.getMat(), ksize, borderType))
+    Mat src = _src.getMat();
+    Mat dst = _dst.getMat();
+    if(sigma1 == 0 && sigma2 == 0 && tegra::gaussian(src, dst, ksize, borderType))
         return;
 #endif
 

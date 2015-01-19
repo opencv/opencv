@@ -476,7 +476,11 @@ static bool ocl_normalizeUsingWeightMap(InputArray _weight, InputOutputArray _ma
 
 void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 {
+    Mat src;
+    Mat weight;
 #ifdef HAVE_TEGRA_OPTIMIZATION
+    src = _src.getMat();
+    weight = _weight.getMat();
     if(tegra::normalizeUsingWeightMap(weight, src))
         return;
 #endif
@@ -486,12 +490,12 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
             !ocl_normalizeUsingWeightMap(_weight, _src) )
 #endif
     {
-        Mat weight = _weight.getMat();
-        Mat src = _src.getMat();
+        src = _src.getMat();
+        weight = _weight.getMat();
 
         CV_Assert(src.type() == CV_16SC3);
 
-        if(weight.type() == CV_32FC1)
+        if (weight.type() == CV_32FC1)
         {
             for (int y = 0; y < src.rows; ++y)
             {
@@ -547,7 +551,8 @@ void createWeightMap(InputArray mask, float sharpness, InputOutputArray weight)
 void createLaplacePyr(InputArray img, int num_levels, std::vector<UMat> &pyr)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::createLaplacePyr(img, num_levels, pyr))
+    cv::Mat imgMat = img.getMat();
+    if(tegra::createLaplacePyr(imgMat, num_levels, pyr))
         return;
 #endif
 
