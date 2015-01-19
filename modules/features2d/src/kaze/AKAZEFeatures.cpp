@@ -818,7 +818,7 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
     ang2 = (ang1 + (float)(CV_PI / 3.0) >(float)(2.0*CV_PI) ? ang1 - (float)(5.0*CV_PI / 3.0) : ang1 + (float)(CV_PI / 3.0));
     sumX = sumY = 0.f;
 
-    for (size_t k = 0; k < ang_size; ++k) {
+    for (int k = 0; k < ang_size; ++k) {
       // Get angle from the x-axis of the sample point
       const float & ang = Ang[k];
 
