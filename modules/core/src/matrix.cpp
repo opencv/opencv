@@ -2644,6 +2644,10 @@ void _OutputArray::assign(const UMat& u) const
     {
         u.copyTo(*(Mat*)obj); // TODO check u.getMat()
     }
+    else if (k == MATX)
+    {
+        u.copyTo(getMat()); // TODO check u.getMat()
+    }
     else
     {
         CV_Error(Error::StsNotImplemented, "");
@@ -2661,6 +2665,10 @@ void _OutputArray::assign(const Mat& m) const
     else if (k == MAT)
     {
         *(Mat*)obj = m;
+    }
+    else if (k == MATX)
+    {
+        getMat() = m;
     }
     else
     {
