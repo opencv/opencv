@@ -115,11 +115,19 @@ int main(int argc, char** argv)
 {
     try
     {
+        Args args;
         if (argc < 2)
+        {
             printHelp();
-        Args args = Args::read(argc, argv);
-        if (help_showed)
-            return -1;
+            args.camera_id = 0;
+            args.src_is_camera = true;
+        }
+        else
+        {
+            args = Args::read(argc, argv);
+            if (help_showed)
+                return -1;
+        }
         App app(args);
         app.run();
     }
