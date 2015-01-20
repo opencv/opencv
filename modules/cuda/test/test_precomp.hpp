@@ -60,7 +60,6 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/calib3d.hpp"
-#include "opencv2/objdetect.hpp"
 
 #include "cvconfig.h"
 

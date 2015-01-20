@@ -43,10 +43,12 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#include "opencv2/cuda.hpp"
+#include <limits>
+
+#include "opencv2/cudaobjdetect.hpp"
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudawarping.hpp"
-#include "opencv2/calib3d.hpp"
+#include "opencv2/objdetect.hpp"
 
 #include "opencv2/core/private.cuda.hpp"
 #include "opencv2/core/utility.hpp"
