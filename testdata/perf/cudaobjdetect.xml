@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-hog-road-png->
+  <gpu_found_locations>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>2</cols>
+      <dt>"4i"</dt>
+      <data>
+        232 190 73 145 620 153 100 200</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-hog-road-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000009_0-png->
+  <gpu_found_locations>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>3</cols>
+      <dt>"4i"</dt>
+      <data>
+        363 162 89 177 401 138 125 250 468 127 144 287</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000009_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000032_0-png->
+  <gpu_found_locations>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>0</cols>
+      <dt>u</dt>
+      <data></data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000032_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000165_0-png->
+  <gpu_found_locations>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>2</cols>
+      <dt>"4i"</dt>
+      <data>
+        38 183 70 140 560 176 68 137</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000165_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000261_0-png->
+  <gpu_found_locations>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>3</cols>
+      <dt>"4i"</dt>
+      <data>
+        238 149 127 254 309 102 147 293 0 131 126 251</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000261_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000469_0-png->
+  <gpu_found_locations>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>2</cols>
+      <dt>"4i"</dt>
+      <data>
+        343 178 76 152 373 139 122 244</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000469_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000527_0-png->
+  <gpu_found_locations>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>"4i"</dt>
+      <data>
+        293 167 71 142</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000527_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000574_0-png->
+  <gpu_found_locations>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>2</cols>
+      <dt>"4i"</dt>
+      <data>
+        42 137 129 257 343 131 97 195</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000574_0-png->
+<ImageAndCascade_ObjDetect_HaarClassifier--ObjDetect_HaarClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-perf-haarcascade_frontalface_alt-xml-->
+  <gpu_rects>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>0</cols>
+      <dt>u</dt>
+      <data></data></val></gpu_rects></ImageAndCascade_ObjDetect_HaarClassifier--ObjDetect_HaarClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-perf-haarcascade_frontalface_alt-xml-->
+<ImageAndCascade_ObjDetect_LBPClassifier--ObjDetect_LBPClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-lbpcascade-lbpcascade_frontalface-xml-->
+  <gpu_rects>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>0</cols>
+      <dt>u</dt>
+      <data></data></val></gpu_rects></ImageAndCascade_ObjDetect_LBPClassifier--ObjDetect_LBPClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-lbpcascade-lbpcascade_frontalface-xml-->
+</opencv_storage>
