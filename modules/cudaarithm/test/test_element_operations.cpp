@@ -1329,7 +1329,7 @@ CUDA_TEST_P(Divide_Scalar_First, Accuracy)
         try
         {
             cv::cuda::GpuMat dst;
-            cv::cuda::divide(scale, loadMat(mat), dst, depth.second);
+            cv::cuda::divide(scale, loadMat(mat), dst, 1.0, depth.second);
         }
         catch (const cv::Exception& e)
         {
@@ -1339,7 +1339,7 @@ CUDA_TEST_P(Divide_Scalar_First, Accuracy)
     else
     {
         cv::cuda::GpuMat dst = createMat(size, depth.second, useRoi);
-        cv::cuda::divide(scale, loadMat(mat, useRoi), dst, depth.second);
+        cv::cuda::divide(scale, loadMat(mat, useRoi), dst, 1.0, depth.second);
 
         cv::Mat dst_gold;
         cv::divide(scale, mat, dst_gold, depth.second);

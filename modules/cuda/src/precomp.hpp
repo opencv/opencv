@@ -47,7 +47,6 @@
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudawarping.hpp"
 #include "opencv2/calib3d.hpp"
-#include "opencv2/objdetect.hpp"
 
 #include "opencv2/core/private.cuda.hpp"
 #include "opencv2/core/utility.hpp"

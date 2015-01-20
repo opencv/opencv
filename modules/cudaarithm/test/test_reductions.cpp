@@ -74,8 +74,27 @@ CUDA_TEST_P(Norm, Accuracy)
     cv::Mat src = randomMat(size, depth);
     cv::Mat mask = randomMat(size, CV_8UC1, 0, 2);
 
-    cv::cuda::GpuMat d_buf;
-    double val = cv::cuda::norm(loadMat(src, useRoi), normCode, loadMat(mask, useRoi), d_buf);
+    double val = cv::cuda::norm(loadMat(src, useRoi), normCode, loadMat(mask, useRoi));
+
+    double val_gold = cv::norm(src, normCode, mask);
+
+    EXPECT_NEAR(val_gold, val, depth < CV_32F ? 0.0 : 1.0);
+}
+
+CUDA_TEST_P(Norm, Async)
+{
+    cv::Mat src = randomMat(size, depth);
+    cv::Mat mask = randomMat(size, CV_8UC1, 0, 2);
+
+    cv::cuda::Stream stream;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::calcNorm(loadMat(src, useRoi), dst, normCode, loadMat(mask, useRoi), stream);
+
+    stream.waitForCompletion();
+
+    double val;
+    dst.createMatHeader().convertTo(cv::Mat(1, 1, CV_64FC1, &val), CV_64F);
 
     double val_gold = cv::norm(src, normCode, mask);
 
@@ -121,6 +140,27 @@ CUDA_TEST_P(NormDiff, Accuracy)
     cv::Mat src2 = randomMat(size, CV_8UC1);
 
     double val = cv::cuda::norm(loadMat(src1, useRoi), loadMat(src2, useRoi), normCode);
+
+    double val_gold = cv::norm(src1, src2, normCode);
+
+    EXPECT_NEAR(val_gold, val, 0.0);
+}
+
+CUDA_TEST_P(NormDiff, Async)
+{
+    cv::Mat src1 = randomMat(size, CV_8UC1);
+    cv::Mat src2 = randomMat(size, CV_8UC1);
+
+    cv::cuda::Stream stream;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::calcNormDiff(loadMat(src1, useRoi), loadMat(src2, useRoi), dst, normCode, stream);
+
+    stream.waitForCompletion();
+
+    double val;
+    const cv::Mat val_mat(1, 1, CV_64FC1, &val);
+    dst.createMatHeader().convertTo(val_mat, CV_64F);
 
     double val_gold = cv::norm(src1, src2, normCode);
 
@@ -247,6 +287,24 @@ CUDA_TEST_P(Sum, Simple)
     EXPECT_SCALAR_NEAR(val_gold, val, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.5);
 }
 
+CUDA_TEST_P(Sum, Simple_Async)
+{
+    cv::cuda::Stream stream;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::calcSum(loadMat(src, useRoi), dst, cv::noArray(), stream);
+
+    stream.waitForCompletion();
+
+    cv::Scalar val;
+    cv::Mat val_mat(dst.size(), CV_64FC(dst.channels()), val.val);
+    dst.createMatHeader().convertTo(val_mat, CV_64F);
+
+    cv::Scalar val_gold = cv::sum(src);
+
+    EXPECT_SCALAR_NEAR(val_gold, val, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.5);
+}
+
 CUDA_TEST_P(Sum, Abs)
 {
     cv::Scalar val = cv::cuda::absSum(loadMat(src, useRoi));
@@ -256,9 +314,45 @@ CUDA_TEST_P(Sum, Abs)
     EXPECT_SCALAR_NEAR(val_gold, val, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.5);
 }
 
+CUDA_TEST_P(Sum, Abs_Async)
+{
+    cv::cuda::Stream stream;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::calcAbsSum(loadMat(src, useRoi), dst, cv::noArray(), stream);
+
+    stream.waitForCompletion();
+
+    cv::Scalar val;
+    cv::Mat val_mat(dst.size(), CV_64FC(dst.channels()), val.val);
+    dst.createMatHeader().convertTo(val_mat, CV_64F);
+
+    cv::Scalar val_gold = absSumGold(src);
+
+    EXPECT_SCALAR_NEAR(val_gold, val, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.5);
+}
+
 CUDA_TEST_P(Sum, Sqr)
 {
     cv::Scalar val = cv::cuda::sqrSum(loadMat(src, useRoi));
+
+    cv::Scalar val_gold = sqrSumGold(src);
+
+    EXPECT_SCALAR_NEAR(val_gold, val, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.5);
+}
+
+CUDA_TEST_P(Sum, Sqr_Async)
+{
+    cv::cuda::Stream stream;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::calcSqrSum(loadMat(src, useRoi), dst, cv::noArray(), stream);
+
+    stream.waitForCompletion();
+
+    cv::Scalar val;
+    cv::Mat val_mat(dst.size(), CV_64FC(dst.channels()), val.val);
+    dst.createMatHeader().convertTo(val_mat, CV_64F);
 
     cv::Scalar val_gold = sqrSumGold(src);
 
@@ -319,6 +413,28 @@ CUDA_TEST_P(MinMax, WithoutMask)
         EXPECT_DOUBLE_EQ(minVal_gold, minVal);
         EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
     }
+}
+
+CUDA_TEST_P(MinMax, Async)
+{
+    cv::Mat src = randomMat(size, depth);
+
+    cv::cuda::Stream stream;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::findMinMax(loadMat(src, useRoi), dst, cv::noArray(), stream);
+
+    stream.waitForCompletion();
+
+    double vals[2];
+    const cv::Mat vals_mat(1, 2, CV_64FC1, &vals[0]);
+    dst.createMatHeader().convertTo(vals_mat, CV_64F);
+
+    double minVal_gold, maxVal_gold;
+    minMaxLocGold(src, &minVal_gold, &maxVal_gold);
+
+    EXPECT_DOUBLE_EQ(minVal_gold, vals[0]);
+    EXPECT_DOUBLE_EQ(maxVal_gold, vals[1]);
 }
 
 CUDA_TEST_P(MinMax, WithMask)
@@ -471,6 +587,41 @@ CUDA_TEST_P(MinMaxLoc, WithoutMask)
     }
 }
 
+CUDA_TEST_P(MinMaxLoc, Async)
+{
+    cv::Mat src = randomMat(size, depth);
+
+    cv::cuda::Stream stream;
+
+    cv::cuda::HostMem minMaxVals, locVals;
+    cv::cuda::findMinMaxLoc(loadMat(src, useRoi), minMaxVals, locVals, cv::noArray(), stream);
+
+    stream.waitForCompletion();
+
+    double vals[2];
+    const cv::Mat vals_mat(2, 1, CV_64FC1, &vals[0]);
+    minMaxVals.createMatHeader().convertTo(vals_mat, CV_64F);
+
+    int locs[2];
+    const cv::Mat locs_mat(2, 1, CV_32SC1, &locs[0]);
+    locVals.createMatHeader().copyTo(locs_mat);
+
+    cv::Point locs2D[] = {
+        cv::Point(locs[0] % src.cols, locs[0] / src.cols),
+        cv::Point(locs[1] % src.cols, locs[1] / src.cols),
+    };
+
+    double minVal_gold, maxVal_gold;
+    cv::Point minLoc_gold, maxLoc_gold;
+    minMaxLocGold(src, &minVal_gold, &maxVal_gold, &minLoc_gold, &maxLoc_gold);
+
+    EXPECT_DOUBLE_EQ(minVal_gold, vals[0]);
+    EXPECT_DOUBLE_EQ(maxVal_gold, vals[1]);
+
+    expectEqual(src, minLoc_gold, locs2D[0]);
+    expectEqual(src, maxLoc_gold, locs2D[1]);
+}
+
 CUDA_TEST_P(MinMaxLoc, WithMask)
 {
     cv::Mat src = randomMat(size, depth);
@@ -564,6 +715,7 @@ PARAM_TEST_CASE(CountNonZero, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     int depth;
     bool useRoi;
 
+    cv::Mat src;
 
     virtual void SetUp()
     {
@@ -573,15 +725,14 @@ PARAM_TEST_CASE(CountNonZero, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
         useRoi = GET_PARAM(3);
 
         cv::cuda::setDevice(devInfo.deviceID());
+
+        cv::Mat srcBase = randomMat(size, CV_8U, 0.0, 1.5);
+        srcBase.convertTo(src, depth);
     }
 };
 
 CUDA_TEST_P(CountNonZero, Accuracy)
 {
-    cv::Mat srcBase = randomMat(size, CV_8U, 0.0, 1.5);
-    cv::Mat src;
-    srcBase.convertTo(src, depth);
-
     if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
@@ -601,6 +752,24 @@ CUDA_TEST_P(CountNonZero, Accuracy)
 
         ASSERT_EQ(val_gold, val);
     }
+}
+
+CUDA_TEST_P(CountNonZero, Async)
+{
+    cv::cuda::Stream stream;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::countNonZero(loadMat(src, useRoi), dst, stream);
+
+    stream.waitForCompletion();
+
+    int val;
+    const cv::Mat val_mat(1, 1, CV_32SC1, &val);
+    dst.createMatHeader().copyTo(val_mat);
+
+    int val_gold = cv::countNonZero(src);
+
+    ASSERT_EQ(val_gold, val);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, CountNonZero, testing::Combine(
@@ -750,7 +919,7 @@ CUDA_TEST_P(Normalize, WithMask)
     dst_gold.setTo(cv::Scalar::all(0));
     cv::normalize(src, dst_gold, alpha, beta, norm_type, type, mask);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1e-6);
+    EXPECT_MAT_NEAR(dst_gold, dst, type < CV_32F ? 1.0 : 1e-4);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Normalize, testing::Combine(
@@ -809,6 +978,28 @@ CUDA_TEST_P(MeanStdDev, Accuracy)
         EXPECT_SCALAR_NEAR(mean_gold, mean, 1e-5);
         EXPECT_SCALAR_NEAR(stddev_gold, stddev, 1e-5);
     }
+}
+
+CUDA_TEST_P(MeanStdDev, Async)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+
+    cv::cuda::Stream stream;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::meanStdDev(loadMat(src, useRoi), dst, stream);
+
+    stream.waitForCompletion();
+
+    double vals[2];
+    dst.createMatHeader().copyTo(cv::Mat(1, 2, CV_64FC1, &vals[0]));
+
+    cv::Scalar mean_gold;
+    cv::Scalar stddev_gold;
+    cv::meanStdDev(src, mean_gold, stddev_gold);
+
+    EXPECT_SCALAR_NEAR(mean_gold, cv::Scalar(vals[0]), 1e-5);
+    EXPECT_SCALAR_NEAR(stddev_gold, cv::Scalar(vals[1]), 1e-5);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, MeanStdDev, testing::Combine(

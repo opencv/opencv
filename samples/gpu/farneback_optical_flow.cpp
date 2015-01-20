@@ -44,8 +44,8 @@ static void colorizeFlow(const Mat &u, const Mat &v, Mat &dst)
 int main(int argc, char **argv)
 {
     CommandLineParser cmd(argc, argv,
-            "{ l left  | | specify left image }"
-            "{ r right | | specify right image }"
+            "{ l left  | ../data/basketball1.png | specify left image }"
+            "{ r right | ../data/basketball2.png | specify right image }"
             "{ h help  | | print help message }");
 
     cmd.about("Farneback's optical flow sample.");

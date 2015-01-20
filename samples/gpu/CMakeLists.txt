@@ -3,7 +3,7 @@ SET(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc op
                                      opencv_calib3d opencv_cuda opencv_superres
                                      opencv_cudaarithm opencv_cudafilters opencv_cudawarping opencv_cudaimgproc
                                      opencv_cudafeatures2d opencv_cudaoptflow opencv_cudabgsegm
-                                     opencv_cudastereo opencv_cudalegacy)
+                                     opencv_cudastereo opencv_cudalegacy opencv_cudaobjdetect)
 
 ocv_check_dependencies(${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
 

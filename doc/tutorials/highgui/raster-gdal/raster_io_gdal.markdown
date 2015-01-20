@@ -3,7 +3,7 @@ Reading Geospatial Raster files with GDAL {#tutorial_raster_io_gdal}
 
 Geospatial raster data is a heavily used product in Geographic Information Systems and
 Photogrammetry. Raster data typically can represent imagery and Digital Elevation Models (DEM). The
-standard library for loading GIS imagery is the Geographic Data Abstraction Library (GDAL). In this
+standard library for loading GIS imagery is the Geographic Data Abstraction Library [(GDAL)](http://www.gdal.org). In this
 example, we will show techniques for loading GIS raster formats using native OpenCV functions. In
 addition, we will show some an example of how OpenCV can use this data for novel and interesting
 purposes.
@@ -13,8 +13,8 @@ Goals
 
 The primary objectives for this tutorial:
 
--   How to use OpenCV imread to load satellite imagery.
--   How to use OpenCV imread to load SRTM Digital Elevation Models
+-   How to use OpenCV [imread](@ref imread) to load satellite imagery.
+-   How to use OpenCV [imread](@ref imread) to load SRTM Digital Elevation Models
 -   Given the corner coordinates of both the image and DEM, correllate the elevation data to the
     image to find elevations for each pixel.
 -   Show a basic, easy-to-implement example of a terrain heat map.
@@ -54,9 +54,9 @@ signed shorts.
 Notes
 -----
 
-### Lat/Lon (Geodetic) Coordinates should normally be avoided
+### Lat/Lon (Geographic) Coordinates should normally be avoided
 
-The Geodetic Coordinate System is a spherical coordinate system, meaning that using them with
+The Geographic Coordinate System is a spherical coordinate system, meaning that using them with
 Cartesian mathematics is technically incorrect. This demo uses them to increase the readability and
 is accurate enough to make the point. A better coordinate system would be Universal Transverse
 Mercator.
@@ -94,8 +94,8 @@ Below is the output of the program. Use the first image as the input. For the DE
 the SRTM file located at the USGS here.
 [<http://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip>](http://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip)
 
-![](images/gdal_output.jpg)
+![Input Image](images/gdal_output.jpg)
 
-![](images/gdal_heat-map.jpg)
+![Heat Map](images/gdal_heat-map.jpg)
 
-![](images/gdal_flood-zone.jpg)
+![Heat Map Overlay](images/gdal_flood-zone.jpg)
