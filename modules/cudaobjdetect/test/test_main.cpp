@@ -40,21 +40,6 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "test_precomp.hpp"
 
-#include "opencv2/cuda.hpp"
-#include "opencv2/cudaarithm.hpp"
-#include "opencv2/cudawarping.hpp"
-#include "opencv2/calib3d.hpp"
-
-#include "opencv2/core/private.cuda.hpp"
-#include "opencv2/core/utility.hpp"
-
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_CUDALEGACY
-#  include "opencv2/cudalegacy/private.hpp"
-#endif
-
-#endif /* __OPENCV_PRECOMP_H__ */
+CV_CUDA_TEST_MAIN("gpu")

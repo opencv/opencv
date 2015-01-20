@@ -48,160 +48,185 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA()               { throw_no_cuda(); }
-cv::cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA(const String&)  { throw_no_cuda(); }
-cv::cuda::CascadeClassifier_CUDA::~CascadeClassifier_CUDA()              { throw_no_cuda(); }
-bool cv::cuda::CascadeClassifier_CUDA::empty() const                    { throw_no_cuda(); return true; }
-bool cv::cuda::CascadeClassifier_CUDA::load(const String&)              { throw_no_cuda(); return true; }
-Size cv::cuda::CascadeClassifier_CUDA::getClassifierSize() const        { throw_no_cuda(); return Size();}
-void cv::cuda::CascadeClassifier_CUDA::release()                        { throw_no_cuda(); }
-int cv::cuda::CascadeClassifier_CUDA::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_no_cuda(); return -1;}
-int cv::cuda::CascadeClassifier_CUDA::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_no_cuda(); return -1;}
+Ptr<cuda::CascadeClassifier> cv::cuda::CascadeClassifier::create(const String&) { throw_no_cuda(); return Ptr<cuda::CascadeClassifier>(); }
+Ptr<cuda::CascadeClassifier> cv::cuda::CascadeClassifier::create(const FileStorage&) { throw_no_cuda(); return Ptr<cuda::CascadeClassifier>(); }
 
 #else
 
-struct cv::cuda::CascadeClassifier_CUDA::CascadeClassifierImpl
+//
+// CascadeClassifierBase
+//
+
+namespace
 {
-public:
-    CascadeClassifierImpl(){}
-    virtual ~CascadeClassifierImpl(){}
+    class CascadeClassifierBase : public cuda::CascadeClassifier
+    {
+    public:
+        CascadeClassifierBase();
 
-    virtual unsigned int process(const GpuMat& src, GpuMat& objects, float scaleStep, int minNeighbors,
-                      bool findLargestObject, bool visualizeInPlace, cv::Size ncvMinSize, cv::Size maxObjectSize) = 0;
+        virtual void setMaxObjectSize(Size maxObjectSize) { maxObjectSize_ = maxObjectSize; }
+        virtual Size getMaxObjectSize() const { return maxObjectSize_; }
 
-    virtual cv::Size getClassifierCvSize() const = 0;
-    virtual bool read(const String& classifierAsXml) = 0;
-};
+        virtual void setMinObjectSize(Size minSize) { minObjectSize_ = minSize; }
+        virtual Size getMinObjectSize() const { return minObjectSize_; }
 
-#ifndef HAVE_OPENCV_CUDALEGACY
+        virtual void setScaleFactor(double scaleFactor) { scaleFactor_ = scaleFactor; }
+        virtual double getScaleFactor() const { return scaleFactor_; }
 
-struct cv::cuda::CascadeClassifier_CUDA::HaarCascade : cv::cuda::CascadeClassifier_CUDA::CascadeClassifierImpl
+        virtual void setMinNeighbors(int minNeighbors) { minNeighbors_ = minNeighbors; }
+        virtual int getMinNeighbors() const { return minNeighbors_; }
+
+        virtual void setFindLargestObject(bool findLargestObject) { findLargestObject_ = findLargestObject; }
+        virtual bool getFindLargestObject() { return findLargestObject_; }
+
+        virtual void setMaxNumObjects(int maxNumObjects) { maxNumObjects_ = maxNumObjects; }
+        virtual int getMaxNumObjects() const { return maxNumObjects_; }
+
+    protected:
+        Size maxObjectSize_;
+        Size minObjectSize_;
+        double scaleFactor_;
+        int minNeighbors_;
+        bool findLargestObject_;
+        int maxNumObjects_;
+    };
+
+    CascadeClassifierBase::CascadeClassifierBase() :
+        maxObjectSize_(),
+        minObjectSize_(),
+        scaleFactor_(1.2),
+        minNeighbors_(4),
+        findLargestObject_(false),
+        maxNumObjects_(100)
+    {
+    }
+}
+
+//
+// HaarCascade
+//
+
+#ifdef HAVE_OPENCV_CUDALEGACY
+
+namespace
 {
-public:
-    HaarCascade()
+    class HaarCascade_Impl : public CascadeClassifierBase
     {
-        throw_no_cuda();
+    public:
+        explicit HaarCascade_Impl(const String& filename);
+
+        virtual Size getClassifierSize() const;
+
+        virtual void detectMultiScale(InputArray image,
+                                      OutputArray objects,
+                                      Stream& stream);
+
+        virtual void convert(OutputArray gpu_objects,
+                             std::vector<Rect>& objects);
+
+    private:
+        NCVStatus load(const String& classifierFile);
+        NCVStatus calculateMemReqsAndAllocate(const Size& frameSize);
+        NCVStatus process(const GpuMat& src, GpuMat& objects, cv::Size ncvMinSize, /*out*/ unsigned int& numDetections);
+
+        Size lastAllocatedFrameSize;
+
+        Ptr<NCVMemStackAllocator> gpuAllocator;
+        Ptr<NCVMemStackAllocator> cpuAllocator;
+
+        cudaDeviceProp devProp;
+        NCVStatus ncvStat;
+
+        Ptr<NCVMemNativeAllocator> gpuCascadeAllocator;
+        Ptr<NCVMemNativeAllocator> cpuCascadeAllocator;
+
+        Ptr<NCVVectorAlloc<HaarStage64> >           h_haarStages;
+        Ptr<NCVVectorAlloc<HaarClassifierNode128> > h_haarNodes;
+        Ptr<NCVVectorAlloc<HaarFeature64> >         h_haarFeatures;
+
+        HaarClassifierCascadeDescriptor haar;
+
+        Ptr<NCVVectorAlloc<HaarStage64> >           d_haarStages;
+        Ptr<NCVVectorAlloc<HaarClassifierNode128> > d_haarNodes;
+        Ptr<NCVVectorAlloc<HaarFeature64> >         d_haarFeatures;
+    };
+
+    static void NCVDebugOutputHandler(const String &msg)
+    {
+        CV_Error(Error::GpuApiCallError, msg.c_str());
     }
 
-    unsigned int process(const GpuMat&, GpuMat&, float, int, bool, bool, cv::Size, cv::Size)
-    {
-        throw_no_cuda();
-        return 0;
-    }
-
-    cv::Size getClassifierCvSize() const
-    {
-        throw_no_cuda();
-        return cv::Size();
-    }
-
-    bool read(const String&)
-    {
-        throw_no_cuda();
-        return false;
-    }
-};
-
-#else
-
-struct cv::cuda::CascadeClassifier_CUDA::HaarCascade : cv::cuda::CascadeClassifier_CUDA::CascadeClassifierImpl
-{
-public:
-    HaarCascade() : lastAllocatedFrameSize(-1, -1)
+    HaarCascade_Impl::HaarCascade_Impl(const String& filename) :
+        lastAllocatedFrameSize(-1, -1)
     {
         ncvSetDebugOutputHandler(NCVDebugOutputHandler);
-    }
-
-    bool read(const String& filename)
-    {
         ncvSafeCall( load(filename) );
-        return true;
     }
 
-    NCVStatus process(const GpuMat& src, GpuMat& objects, float scaleStep, int minNeighbors,
-                      bool findLargestObject, bool visualizeInPlace, cv::Size ncvMinSize,
-                      /*out*/unsigned int& numDetections)
+    Size HaarCascade_Impl::getClassifierSize() const
     {
-        calculateMemReqsAndAllocate(src.size());
-
-        NCVMemPtr src_beg;
-        src_beg.ptr = (void*)src.ptr<Ncv8u>();
-        src_beg.memtype = NCVMemoryTypeDevice;
-
-        NCVMemSegment src_seg;
-        src_seg.begin = src_beg;
-        src_seg.size  = src.step * src.rows;
-
-        NCVMatrixReuse<Ncv8u> d_src(src_seg, static_cast<int>(devProp.textureAlignment), src.cols, src.rows, static_cast<int>(src.step), true);
-        ncvAssertReturn(d_src.isMemReused(), NCV_ALLOCATOR_BAD_REUSE);
-
-        CV_Assert(objects.rows == 1);
-
-        NCVMemPtr objects_beg;
-        objects_beg.ptr = (void*)objects.ptr<NcvRect32u>();
-        objects_beg.memtype = NCVMemoryTypeDevice;
-
-        NCVMemSegment objects_seg;
-        objects_seg.begin = objects_beg;
-        objects_seg.size = objects.step * objects.rows;
-        NCVVectorReuse<NcvRect32u> d_rects(objects_seg, objects.cols);
-        ncvAssertReturn(d_rects.isMemReused(), NCV_ALLOCATOR_BAD_REUSE);
-
-        NcvSize32u roi;
-        roi.width = d_src.width();
-        roi.height = d_src.height();
-
-        NcvSize32u winMinSize(ncvMinSize.width, ncvMinSize.height);
-
-        Ncv32u flags = 0;
-        flags |= findLargestObject? NCVPipeObjDet_FindLargestObject : 0;
-        flags |= visualizeInPlace ? NCVPipeObjDet_VisualizeInPlace  : 0;
-
-        ncvStat = ncvDetectObjectsMultiScale_device(
-            d_src, roi, d_rects, numDetections, haar, *h_haarStages,
-            *d_haarStages, *d_haarNodes, *d_haarFeatures,
-            winMinSize,
-            minNeighbors,
-            scaleStep, 1,
-            flags,
-            *gpuAllocator, *cpuAllocator, devProp, 0);
-        ncvAssertReturnNcvStat(ncvStat);
-        ncvAssertCUDAReturn(cudaStreamSynchronize(0), NCV_CUDA_ERROR);
-
-        return NCV_SUCCESS;
+        return Size(haar.ClassifierSize.width, haar.ClassifierSize.height);
     }
 
-    unsigned int process(const GpuMat& image, GpuMat& objectsBuf, float scaleFactor, int minNeighbors,
-                      bool findLargestObject, bool visualizeInPlace, cv::Size minSize, cv::Size /*maxObjectSize*/)
+    void HaarCascade_Impl::detectMultiScale(InputArray _image,
+                                            OutputArray _objects,
+                                            Stream& stream)
     {
-        CV_Assert( scaleFactor > 1 && image.depth() == CV_8U);
+        const GpuMat image = _image.getGpuMat();
 
-        const int defaultObjSearchNum = 100;
-        if (objectsBuf.empty())
+        CV_Assert( image.depth() == CV_8U);
+        CV_Assert( scaleFactor_ > 1 );
+        CV_Assert( !stream );
+
+        Size ncvMinSize = getClassifierSize();
+        if (ncvMinSize.width < minObjectSize_.width && ncvMinSize.height < minObjectSize_.height)
         {
-            objectsBuf.create(1, defaultObjSearchNum, DataType<Rect>::type);
+            ncvMinSize.width = minObjectSize_.width;
+            ncvMinSize.height = minObjectSize_.height;
         }
 
-        cv::Size ncvMinSize = this->getClassifierCvSize();
-
-        if (ncvMinSize.width < minSize.width && ncvMinSize.height < minSize.height)
-        {
-            ncvMinSize.width = minSize.width;
-            ncvMinSize.height = minSize.height;
-        }
+        BufferPool pool(stream);
+        GpuMat objectsBuf = pool.getBuffer(1, maxNumObjects_, DataType<Rect>::type);
 
         unsigned int numDetections;
-        ncvSafeCall(this->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, ncvMinSize, numDetections));
+        ncvSafeCall( process(image, objectsBuf, ncvMinSize, numDetections) );
 
-        return numDetections;
+        if (numDetections > 0)
+        {
+            objectsBuf.colRange(0, numDetections).copyTo(_objects);
+        }
+        else
+        {
+            _objects.release();
+        }
     }
 
-    cv::Size getClassifierCvSize() const { return cv::Size(haar.ClassifierSize.width, haar.ClassifierSize.height); }
+    void HaarCascade_Impl::convert(OutputArray _gpu_objects, std::vector<Rect>& objects)
+    {
+        if (_gpu_objects.empty())
+        {
+            objects.clear();
+            return;
+        }
 
-private:
-    static void NCVDebugOutputHandler(const String &msg) { CV_Error(cv::Error::GpuApiCallError, msg.c_str()); }
+        Mat gpu_objects;
+        if (_gpu_objects.kind() == _InputArray::CUDA_GPU_MAT)
+        {
+            _gpu_objects.getGpuMat().download(gpu_objects);
+        }
+        else
+        {
+            gpu_objects = _gpu_objects.getMat();
+        }
 
-    NCVStatus load(const String& classifierFile)
+        CV_Assert( gpu_objects.rows == 1 );
+        CV_Assert( gpu_objects.type() == DataType<Rect>::type );
+
+        Rect* ptr = gpu_objects.ptr<Rect>();
+        objects.assign(ptr, ptr + gpu_objects.cols);
+    }
+
+    NCVStatus HaarCascade_Impl::load(const String& classifierFile)
     {
         int devId = cv::cuda::getDevice();
         ncvAssertCUDAReturn(cudaGetDeviceProperties(&devProp, devId), NCV_CUDA_ERROR);
@@ -246,7 +271,7 @@ private:
         return NCV_SUCCESS;
     }
 
-    NCVStatus calculateMemReqsAndAllocate(const Size& frameSize)
+    NCVStatus HaarCascade_Impl::calculateMemReqsAndAllocate(const Size& frameSize)
     {
         if (lastAllocatedFrameSize == frameSize)
         {
@@ -289,88 +314,62 @@ private:
         return NCV_SUCCESS;
     }
 
-    cudaDeviceProp devProp;
-    NCVStatus ncvStat;
+    NCVStatus HaarCascade_Impl::process(const GpuMat& src, GpuMat& objects, cv::Size ncvMinSize, /*out*/ unsigned int& numDetections)
+    {
+        calculateMemReqsAndAllocate(src.size());
 
-    Ptr<NCVMemNativeAllocator> gpuCascadeAllocator;
-    Ptr<NCVMemNativeAllocator> cpuCascadeAllocator;
+        NCVMemPtr src_beg;
+        src_beg.ptr = (void*)src.ptr<Ncv8u>();
+        src_beg.memtype = NCVMemoryTypeDevice;
 
-    Ptr<NCVVectorAlloc<HaarStage64> >           h_haarStages;
-    Ptr<NCVVectorAlloc<HaarClassifierNode128> > h_haarNodes;
-    Ptr<NCVVectorAlloc<HaarFeature64> >         h_haarFeatures;
+        NCVMemSegment src_seg;
+        src_seg.begin = src_beg;
+        src_seg.size  = src.step * src.rows;
 
-    HaarClassifierCascadeDescriptor haar;
+        NCVMatrixReuse<Ncv8u> d_src(src_seg, static_cast<int>(devProp.textureAlignment), src.cols, src.rows, static_cast<int>(src.step), true);
+        ncvAssertReturn(d_src.isMemReused(), NCV_ALLOCATOR_BAD_REUSE);
 
-    Ptr<NCVVectorAlloc<HaarStage64> >           d_haarStages;
-    Ptr<NCVVectorAlloc<HaarClassifierNode128> > d_haarNodes;
-    Ptr<NCVVectorAlloc<HaarFeature64> >         d_haarFeatures;
+        CV_Assert(objects.rows == 1);
 
-    Size lastAllocatedFrameSize;
+        NCVMemPtr objects_beg;
+        objects_beg.ptr = (void*)objects.ptr<NcvRect32u>();
+        objects_beg.memtype = NCVMemoryTypeDevice;
 
-    Ptr<NCVMemStackAllocator> gpuAllocator;
-    Ptr<NCVMemStackAllocator> cpuAllocator;
+        NCVMemSegment objects_seg;
+        objects_seg.begin = objects_beg;
+        objects_seg.size = objects.step * objects.rows;
+        NCVVectorReuse<NcvRect32u> d_rects(objects_seg, objects.cols);
+        ncvAssertReturn(d_rects.isMemReused(), NCV_ALLOCATOR_BAD_REUSE);
 
-    virtual ~HaarCascade(){}
-};
+        NcvSize32u roi;
+        roi.width = d_src.width();
+        roi.height = d_src.height();
+
+        NcvSize32u winMinSize(ncvMinSize.width, ncvMinSize.height);
+
+        Ncv32u flags = 0;
+        flags |= findLargestObject_ ? NCVPipeObjDet_FindLargestObject : 0;
+
+        ncvStat = ncvDetectObjectsMultiScale_device(
+            d_src, roi, d_rects, numDetections, haar, *h_haarStages,
+            *d_haarStages, *d_haarNodes, *d_haarFeatures,
+            winMinSize,
+            minNeighbors_,
+            scaleFactor_, 1,
+            flags,
+            *gpuAllocator, *cpuAllocator, devProp, 0);
+        ncvAssertReturnNcvStat(ncvStat);
+        ncvAssertCUDAReturn(cudaStreamSynchronize(0), NCV_CUDA_ERROR);
+
+        return NCV_SUCCESS;
+    }
+}
 
 #endif
 
-cv::Size operator -(const cv::Size& a, const cv::Size& b)
-{
-    return cv::Size(a.width - b.width, a.height - b.height);
-}
-
-cv::Size operator +(const cv::Size& a, const int& i)
-{
-    return cv::Size(a.width + i, a.height + i);
-}
-
-cv::Size operator *(const cv::Size& a, const float& f)
-{
-    return cv::Size(cvRound(a.width * f), cvRound(a.height * f));
-}
-
-cv::Size operator /(const cv::Size& a, const float& f)
-{
-    return cv::Size(cvRound(a.width / f), cvRound(a.height / f));
-}
-
-bool operator <=(const cv::Size& a, const cv::Size& b)
-{
-    return a.width <= b.width && a.height <= b.width;
-}
-
-struct PyrLavel
-{
-    PyrLavel(int _order, float _scale, cv::Size frame, cv::Size window, cv::Size minObjectSize)
-    {
-        do
-        {
-            order = _order;
-            scale = pow(_scale, order);
-            sFrame = frame / scale;
-            workArea = sFrame - window + 1;
-            sWindow = window * scale;
-            _order++;
-        } while (sWindow <= minObjectSize);
-    }
-
-    bool isFeasible(cv::Size maxObj)
-    {
-        return workArea.width > 0 && workArea.height > 0 && sWindow <= maxObj;
-    }
-
-    PyrLavel next(float factor, cv::Size frame, cv::Size window, cv::Size minObjectSize)
-    {
-        return PyrLavel(order + 1, factor, frame, window, minObjectSize);
-    }
-
-    int order;
-    float scale;
-    cv::Size sFrame;
-    cv::Size workArea;
-    cv::Size sWindow;
-};
+//
+// LbpCascade
+//
 
 namespace cv { namespace cuda { namespace device
 {
@@ -394,42 +393,154 @@ namespace cv { namespace cuda { namespace device
                              unsigned int* classified,
                              PtrStepSzi integral);
 
-        void connectedConmonents(PtrStepSz<int4>  candidates, int ncandidates, PtrStepSz<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
+        void connectedConmonents(PtrStepSz<int4> candidates,
+                                 int ncandidates,
+                                 PtrStepSz<int4> objects,
+                                 int groupThreshold,
+                                 float grouping_eps,
+                                 unsigned int* nclasses);
     }
 }}}
 
-struct cv::cuda::CascadeClassifier_CUDA::LbpCascade : cv::cuda::CascadeClassifier_CUDA::CascadeClassifierImpl
+namespace
 {
-public:
-    struct Stage
+    cv::Size operator -(const cv::Size& a, const cv::Size& b)
     {
-        int    first;
-        int    ntrees;
-        float  threshold;
+        return cv::Size(a.width - b.width, a.height - b.height);
+    }
+
+    cv::Size operator +(const cv::Size& a, const int& i)
+    {
+        return cv::Size(a.width + i, a.height + i);
+    }
+
+    cv::Size operator *(const cv::Size& a, const float& f)
+    {
+        return cv::Size(cvRound(a.width * f), cvRound(a.height * f));
+    }
+
+    cv::Size operator /(const cv::Size& a, const float& f)
+    {
+        return cv::Size(cvRound(a.width / f), cvRound(a.height / f));
+    }
+
+    bool operator <=(const cv::Size& a, const cv::Size& b)
+    {
+        return a.width <= b.width && a.height <= b.width;
+    }
+
+    struct PyrLavel
+    {
+        PyrLavel(int _order, float _scale, cv::Size frame, cv::Size window, cv::Size minObjectSize)
+        {
+            do
+            {
+                order = _order;
+                scale = pow(_scale, order);
+                sFrame = frame / scale;
+                workArea = sFrame - window + 1;
+                sWindow = window * scale;
+                _order++;
+            } while (sWindow <= minObjectSize);
+        }
+
+        bool isFeasible(cv::Size maxObj)
+        {
+            return workArea.width > 0 && workArea.height > 0 && sWindow <= maxObj;
+        }
+
+        PyrLavel next(float factor, cv::Size frame, cv::Size window, cv::Size minObjectSize)
+        {
+            return PyrLavel(order + 1, factor, frame, window, minObjectSize);
+        }
+
+        int order;
+        float scale;
+        cv::Size sFrame;
+        cv::Size workArea;
+        cv::Size sWindow;
     };
 
-    LbpCascade(){}
-    virtual ~LbpCascade(){}
-
-    virtual unsigned int process(const GpuMat& image, GpuMat& objects, float scaleFactor, int groupThreshold, bool /*findLargestObject*/,
-        bool /*visualizeInPlace*/, cv::Size minObjectSize, cv::Size maxObjectSize)
+    class LbpCascade_Impl : public CascadeClassifierBase
     {
-        CV_Assert(scaleFactor > 1 && image.depth() == CV_8U);
+    public:
+        explicit LbpCascade_Impl(const FileStorage& file);
 
-        // const int defaultObjSearchNum = 100;
+        virtual Size getClassifierSize() const { return NxM; }
+
+        virtual void detectMultiScale(InputArray image,
+                                      OutputArray objects,
+                                      Stream& stream);
+
+        virtual void convert(OutputArray gpu_objects,
+                             std::vector<Rect>& objects);
+
+    private:
+        bool load(const FileNode &root);
+        void allocateBuffers(cv::Size frame);
+
+    private:
+        struct Stage
+        {
+            int    first;
+            int    ntrees;
+            float  threshold;
+        };
+
+        enum stage { BOOST = 0 };
+        enum feature { LBP = 1, HAAR = 2 };
+
+        static const stage stageType = BOOST;
+        static const feature featureType = LBP;
+
+        cv::Size NxM;
+        bool isStumps;
+        int ncategories;
+        int subsetSize;
+        int nodeStep;
+
+        // gpu representation of classifier
+        GpuMat stage_mat;
+        GpuMat trees_mat;
+        GpuMat nodes_mat;
+        GpuMat leaves_mat;
+        GpuMat subsets_mat;
+        GpuMat features_mat;
+
+        GpuMat integral;
+        GpuMat integralBuffer;
+        GpuMat resuzeBuffer;
+
+        GpuMat candidates;
+        static const int integralFactor = 4;
+    };
+
+    LbpCascade_Impl::LbpCascade_Impl(const FileStorage& file)
+    {
+        load(file.getFirstTopLevelNode());
+    }
+
+    void LbpCascade_Impl::detectMultiScale(InputArray _image,
+                                           OutputArray _objects,
+                                           Stream& stream)
+    {
+        const GpuMat image = _image.getGpuMat();
+
+        CV_Assert( image.depth() == CV_8U);
+        CV_Assert( scaleFactor_ > 1 );
+        CV_Assert( !stream );
+
         const float grouping_eps = 0.2f;
 
-        if( !objects.empty() && objects.depth() == CV_32S)
-            objects.reshape(4, 1);
-        else
-            objects.create(1 , image.cols >> 4, CV_32SC4);
+        BufferPool pool(stream);
+        GpuMat objects = pool.getBuffer(1, maxNumObjects_, DataType<Rect>::type);
 
         // used for debug
         // candidates.setTo(cv::Scalar::all(0));
         // objects.setTo(cv::Scalar::all(0));
 
-        if (maxObjectSize == cv::Size())
-            maxObjectSize = image.size();
+        if (maxObjectSize_ == cv::Size())
+            maxObjectSize_ = image.size();
 
         allocateBuffers(image.size());
 
@@ -437,9 +548,9 @@ public:
         GpuMat dclassified(1, 1, CV_32S);
         cudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
 
-        PyrLavel level(0, scaleFactor, image.size(), NxM, minObjectSize);
+        PyrLavel level(0, scaleFactor_, image.size(), NxM, minObjectSize_);
 
-        while (level.isFeasible(maxObjectSize))
+        while (level.isFeasible(maxObjectSize_))
         {
             int acc = level.sFrame.width + 1;
             float iniScale = level.scale;
@@ -449,7 +560,7 @@ public:
 
             int total = 0, prev  = 0;
 
-            while (acc <= integralFactor * (image.cols + 1) && level.isFeasible(maxObjectSize))
+            while (acc <= integralFactor * (image.cols + 1) && level.isFeasible(maxObjectSize_))
             {
                 // create sutable matrix headers
                 GpuMat src  = resuzeBuffer(cv::Rect(0, 0, level.sFrame.width, level.sFrame.height));
@@ -464,7 +575,7 @@ public:
                 total += totalWidth * (level.workArea.height / step);
 
                 // go to next pyramide level
-                level = level.next(scaleFactor, image.size(), NxM, minObjectSize);
+                level = level.next(scaleFactor_, image.size(), NxM, minObjectSize_);
                 area = level.workArea;
 
                 step = (1 + (level.scale <= 2.f));
@@ -472,60 +583,55 @@ public:
                 acc += level.sFrame.width + 1;
             }
 
-            device::lbp::classifyPyramid(image.cols, image.rows, NxM.width - 1, NxM.height - 1, iniScale, scaleFactor, total, stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat,
+            device::lbp::classifyPyramid(image.cols, image.rows, NxM.width - 1, NxM.height - 1, iniScale, scaleFactor_, total, stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat,
                 leaves_mat, subsets_mat, features_mat, subsetSize, candidates, dclassified.ptr<unsigned int>(), integral);
         }
 
-        if (groupThreshold <= 0  || objects.empty())
-            return 0;
+        if (minNeighbors_ <= 0  || objects.empty())
+            return;
 
         cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
-        device::lbp::connectedConmonents(candidates, classified, objects, groupThreshold, grouping_eps, dclassified.ptr<unsigned int>());
+        device::lbp::connectedConmonents(candidates, classified, objects, minNeighbors_, grouping_eps, dclassified.ptr<unsigned int>());
 
         cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
         cudaSafeCall( cudaDeviceSynchronize() );
-        return classified;
-    }
 
-    virtual cv::Size getClassifierCvSize() const { return NxM; }
-
-    bool read(const String& classifierAsXml)
-    {
-        FileStorage fs(classifierAsXml, FileStorage::READ);
-        return fs.isOpened() ? read(fs.getFirstTopLevelNode()) : false;
-    }
-
-private:
-
-    void allocateBuffers(cv::Size frame)
-    {
-        if (frame == cv::Size())
-            return;
-
-        if (resuzeBuffer.empty() || frame.width > resuzeBuffer.cols || frame.height > resuzeBuffer.rows)
+        if (classified > 0)
         {
-            resuzeBuffer.create(frame, CV_8UC1);
-
-            integral.create(frame.height + 1, integralFactor * (frame.width + 1), CV_32SC1);
-
-#ifdef HAVE_OPENCV_CUDALEGACY
-            NcvSize32u roiSize;
-            roiSize.width = frame.width;
-            roiSize.height = frame.height;
-
-            cudaDeviceProp prop;
-            cudaSafeCall( cudaGetDeviceProperties(&prop, cv::cuda::getDevice()) );
-
-            Ncv32u bufSize;
-            ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
-            integralBuffer.create(1, bufSize, CV_8UC1);
-#endif
-
-            candidates.create(1 , frame.width >> 1, CV_32SC4);
+            objects.colRange(0, classified).copyTo(_objects);
+        }
+        else
+        {
+            _objects.release();
         }
     }
 
-    bool read(const FileNode &root)
+    void LbpCascade_Impl::convert(OutputArray _gpu_objects, std::vector<Rect>& objects)
+    {
+        if (_gpu_objects.empty())
+        {
+            objects.clear();
+            return;
+        }
+
+        Mat gpu_objects;
+        if (_gpu_objects.kind() == _InputArray::CUDA_GPU_MAT)
+        {
+            _gpu_objects.getGpuMat().download(gpu_objects);
+        }
+        else
+        {
+            gpu_objects = _gpu_objects.getMat();
+        }
+
+        CV_Assert( gpu_objects.rows == 1 );
+        CV_Assert( gpu_objects.type() == DataType<Rect>::type );
+
+        Rect* ptr = gpu_objects.ptr<Rect>();
+        objects.assign(ptr, ptr + gpu_objects.cols);
+    }
+
+    bool LbpCascade_Impl::load(const FileNode &root)
     {
         const char *CUDA_CC_STAGE_TYPE       = "stageType";
         const char *CUDA_CC_FEATURE_TYPE     = "featureType";
@@ -666,92 +772,90 @@ private:
         return true;
     }
 
-    enum stage { BOOST = 0 };
-    enum feature { LBP = 1, HAAR = 2 };
-    static const stage stageType = BOOST;
-    static const feature featureType = LBP;
+    void LbpCascade_Impl::allocateBuffers(cv::Size frame)
+    {
+        if (frame == cv::Size())
+            return;
 
-    cv::Size NxM;
-    bool isStumps;
-    int ncategories;
-    int subsetSize;
-    int nodeStep;
+        if (resuzeBuffer.empty() || frame.width > resuzeBuffer.cols || frame.height > resuzeBuffer.rows)
+        {
+            resuzeBuffer.create(frame, CV_8UC1);
 
-    // gpu representation of classifier
-    GpuMat stage_mat;
-    GpuMat trees_mat;
-    GpuMat nodes_mat;
-    GpuMat leaves_mat;
-    GpuMat subsets_mat;
-    GpuMat features_mat;
+            integral.create(frame.height + 1, integralFactor * (frame.width + 1), CV_32SC1);
 
-    GpuMat integral;
-    GpuMat integralBuffer;
-    GpuMat resuzeBuffer;
+        #ifdef HAVE_OPENCV_CUDALEGACY
+            NcvSize32u roiSize;
+            roiSize.width = frame.width;
+            roiSize.height = frame.height;
 
-    GpuMat candidates;
-    static const int integralFactor = 4;
-};
+            cudaDeviceProp prop;
+            cudaSafeCall( cudaGetDeviceProperties(&prop, cv::cuda::getDevice()) );
 
-cv::cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA()
-: findLargestObject(false), visualizeInPlace(false), impl(0) {}
+            Ncv32u bufSize;
+            ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
+            integralBuffer.create(1, bufSize, CV_8UC1);
+        #endif
 
-cv::cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA(const String& filename)
-: findLargestObject(false), visualizeInPlace(false), impl(0) { load(filename); }
+            candidates.create(1 , frame.width >> 1, CV_32SC4);
+        }
+    }
 
-cv::cuda::CascadeClassifier_CUDA::~CascadeClassifier_CUDA() { release(); }
-
-void cv::cuda::CascadeClassifier_CUDA::release() { if (impl) { delete impl; impl = 0; } }
-
-bool cv::cuda::CascadeClassifier_CUDA::empty() const { return impl == 0; }
-
-Size cv::cuda::CascadeClassifier_CUDA::getClassifierSize() const
-{
-    return this->empty() ? Size() : impl->getClassifierCvSize();
 }
 
-int cv::cuda::CascadeClassifier_CUDA::detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor, int minNeighbors, Size minSize)
-{
-    CV_Assert( !this->empty());
-    return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, cv::Size());
-}
+//
+// create
+//
 
-int cv::cuda::CascadeClassifier_CUDA::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize, double scaleFactor, int minNeighbors)
+Ptr<cuda::CascadeClassifier> cv::cuda::CascadeClassifier::create(const String& filename)
 {
-    CV_Assert( !this->empty());
-    return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, maxObjectSize);
-}
-
-bool cv::cuda::CascadeClassifier_CUDA::load(const String& filename)
-{
-    release();
-
     String fext = filename.substr(filename.find_last_of(".") + 1);
     fext = fext.toLowerCase();
 
     if (fext == "nvbin")
     {
-        impl = new HaarCascade();
-        return impl->read(filename);
+    #ifndef HAVE_OPENCV_CUDALEGACY
+        CV_Error(Error::StsUnsupportedFormat, "OpenCV CUDA objdetect was built without HaarCascade");
+        return Ptr<cuda::CascadeClassifier>();
+    #else
+        return makePtr<HaarCascade_Impl>(filename);
+    #endif
     }
 
     FileStorage fs(filename, FileStorage::READ);
 
     if (!fs.isOpened())
     {
-        impl = new HaarCascade();
-        return impl->read(filename);
+    #ifndef HAVE_OPENCV_CUDALEGACY
+        CV_Error(Error::StsUnsupportedFormat, "OpenCV CUDA objdetect was built without HaarCascade");
+        return Ptr<cuda::CascadeClassifier>();
+    #else
+        return makePtr<HaarCascade_Impl>(filename);
+    #endif
     }
 
     const char *CUDA_CC_LBP = "LBP";
     String featureTypeStr = (String)fs.getFirstTopLevelNode()["featureType"];
     if (featureTypeStr == CUDA_CC_LBP)
-        impl = new LbpCascade();
+    {
+        return makePtr<LbpCascade_Impl>(fs);
+    }
     else
-        impl = new HaarCascade();
+    {
+    #ifndef HAVE_OPENCV_CUDALEGACY
+        CV_Error(Error::StsUnsupportedFormat, "OpenCV CUDA objdetect was built without HaarCascade");
+        return Ptr<cuda::CascadeClassifier>();
+    #else
+        return makePtr<HaarCascade_Impl>(filename);
+    #endif
+    }
 
-    impl->read(filename);
-    return !this->empty();
+    CV_Error(Error::StsUnsupportedFormat, "Unsupported format for CUDA CascadeClassifier");
+    return Ptr<cuda::CascadeClassifier>();
+}
+
+Ptr<cuda::CascadeClassifier> cv::cuda::CascadeClassifier::create(const FileStorage& file)
+{
+    return makePtr<LbpCascade_Impl>(file);
 }
 
 #endif
