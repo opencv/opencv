@@ -87,10 +87,10 @@ class PlaneTracker:
 
     def track(self, frame):
         '''Returns a list of detected TrackedTarget objects'''
-        self.frame_points, self.frame_descrs = self.detect_features(frame)
-        if len(self.frame_points) < MIN_MATCH_COUNT:
+        frame_points, frame_descrs = self.detect_features(frame)
+        if len(frame_points) < MIN_MATCH_COUNT:
             return []
-        matches = self.matcher.knnMatch(self.frame_descrs, k = 2)
+        matches = self.matcher.knnMatch(frame_descrs, k = 2)
         matches = [m[0] for m in matches if len(m) == 2 and m[0].distance < m[1].distance * 0.75]
         if len(matches) < MIN_MATCH_COUNT:
             return []
@@ -103,7 +103,7 @@ class PlaneTracker:
                 continue
             target = self.targets[imgIdx]
             p0 = [target.keypoints[m.trainIdx].pt for m in matches]
-            p1 = [self.frame_points[m.queryIdx].pt for m in matches]
+            p1 = [frame_points[m.queryIdx].pt for m in matches]
             p0, p1 = np.float32((p0, p1))
             H, status = cv2.findHomography(p0, p1, cv2.RANSAC, 3.0)
             status = status.ravel() != 0
