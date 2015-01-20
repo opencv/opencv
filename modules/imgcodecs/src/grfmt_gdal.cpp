@@ -38,9 +38,16 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "grfmt_gdal.hpp"
+#include "precomp.hpp"
+
+// GDAL Macros
+#include "cvconfig.h"
 
 #ifdef HAVE_GDAL
+
+// Our Header
+#include "grfmt_gdal.hpp"
+
 
 /// C++ Standard Libraries
 #include <iostream>
@@ -195,7 +202,10 @@ GdalDecoder::~GdalDecoder(){
 /**
  * Convert data range
 */
-double range_cast( const GDALDataType& gdalType, const int& cvDepth, const double& value ){
+double range_cast( const GDALDataType& gdalType,
+                   const int& cvDepth,
+                   const double& value )
+{
 
     // uint8 -> uint8
     if( gdalType == GDT_Byte && cvDepth == CV_8U ){

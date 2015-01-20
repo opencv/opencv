@@ -337,7 +337,7 @@ public:
           double _min_margin=0.003, int _edge_blur_size=5 );
 
     CV_WRAP virtual void detectRegions( InputArray image,
-                                        std::vector<std::vector<Point> >& msers,
+                                        CV_OUT std::vector<std::vector<Point> >& msers,
                                         std::vector<Rect>& bboxes ) = 0;
 
     CV_WRAP virtual void setDelta(int delta) = 0;

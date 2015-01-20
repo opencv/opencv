@@ -3332,9 +3332,11 @@ data type.
 @param result Map of comparison results. It must be single-channel 32-bit floating-point. If image
 is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \times (H-h+1)\f$ .
 @param method Parameter specifying the comparison method, see cv::TemplateMatchModes
+@param mask Mask of searched template. It must have the same datatype and size with templ. It is
+not set by default.
  */
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
-                                 OutputArray result, int method );
+                                 OutputArray result, int method, InputArray mask = noArray() );
 
 //! @}
 

@@ -113,7 +113,6 @@ endmacro()
 macro(ocv_add_module _name)
   ocv_debug_message("ocv_add_module(" ${_name} ${ARGN} ")")
   string(TOLOWER "${_name}" name)
-  string(REGEX REPLACE "^opencv_" "" ${name} "${name}")
   set(the_module opencv_${name})
 
   # the first pass - collect modules info, the second pass - create targets
@@ -787,7 +786,7 @@ macro(__ocv_parse_test_sources tests_type)
       set(__file_group_sources "")
     elseif(arg STREQUAL "DEPENDS_ON")
       set(__currentvar "OPENCV_${tests_type}_${the_module}_DEPS")
-    elseif("${__currentvar}" STREQUAL "__file_group_sources" AND NOT __file_group_name)
+    elseif(" ${__currentvar}" STREQUAL " __file_group_sources" AND NOT __file_group_name) # spaces to avoid CMP0054
       set(__file_group_name "${arg}")
     else()
       list(APPEND ${__currentvar} "${arg}")
@@ -808,7 +807,7 @@ function(ocv_add_perf_tests)
     __ocv_parse_test_sources(PERF ${ARGN})
 
     # opencv_imgcodecs is required for imread/imwrite
-    set(perf_deps ${the_module} opencv_ts opencv_imgcodecs ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
+    set(perf_deps opencv_ts ${the_module} opencv_imgcodecs ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
     ocv_check_dependencies(${perf_deps})
 
     if(OCV_DEPENDENCIES_FOUND)
@@ -829,7 +828,7 @@ function(ocv_add_perf_tests)
 
       ocv_add_executable(${the_target} ${OPENCV_PERF_${the_module}_SOURCES} ${${the_target}_pch})
       ocv_target_include_modules(${the_target} ${perf_deps} "${perf_path}")
-      ocv_target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${perf_deps} ${OPENCV_LINKER_LIBS})
+      ocv_target_link_libraries(${the_target} ${perf_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_perf_tests ${the_target})
 
       # Additional target properties
@@ -864,7 +863,7 @@ function(ocv_add_accuracy_tests)
     __ocv_parse_test_sources(TEST ${ARGN})
 
     # opencv_imgcodecs is required for imread/imwrite
-    set(test_deps ${the_module} opencv_ts opencv_imgcodecs opencv_videoio ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
+    set(test_deps opencv_ts ${the_module} opencv_imgcodecs opencv_videoio ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
     ocv_check_dependencies(${test_deps})
     if(OCV_DEPENDENCIES_FOUND)
       set(the_target "opencv_test_${name}")
@@ -884,7 +883,7 @@ function(ocv_add_accuracy_tests)
 
       ocv_add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch})
       ocv_target_include_modules(${the_target} ${test_deps} "${test_path}")
-      ocv_target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${test_deps} ${OPENCV_LINKER_LIBS})
+      ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
 
       # Additional target properties

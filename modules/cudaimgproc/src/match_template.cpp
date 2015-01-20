@@ -271,7 +271,6 @@ namespace
     private:
         Match_CCORR_8U match_CCORR_;
         GpuMat image_sqsums_;
-        GpuMat intBuffer_;
     };
 
     void Match_CCORR_NORMED_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
@@ -288,7 +287,7 @@ namespace
         match_CCORR_.match(image, templ, _result, stream);
         GpuMat result = _result.getGpuMat();
 
-        cuda::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
+        cuda::sqrIntegral(image.reshape(1), image_sqsums_, stream);
 
         double templ_sqsum = cuda::sqrSum(templ.reshape(1))[0];
 
@@ -335,7 +334,6 @@ namespace
 
     private:
         GpuMat image_sqsums_;
-        GpuMat intBuffer_;
         Match_CCORR_8U match_CCORR_;
     };
 
@@ -359,7 +357,7 @@ namespace
             return;
         }
 
-        cuda::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
+        cuda::sqrIntegral(image.reshape(1), image_sqsums_, stream);
 
         double templ_sqsum = cuda::sqrSum(templ.reshape(1))[0];
 
@@ -383,7 +381,6 @@ namespace
 
     private:
         GpuMat image_sqsums_;
-        GpuMat intBuffer_;
         Match_CCORR_8U match_CCORR_;
     };
 
@@ -398,7 +395,7 @@ namespace
         CV_Assert( image.type() == templ.type() );
         CV_Assert( image.cols >= templ.cols && image.rows >= templ.rows );
 
-        cuda::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
+        cuda::sqrIntegral(image.reshape(1), image_sqsums_, stream);
 
         double templ_sqsum = cuda::sqrSum(templ.reshape(1))[0];
 
@@ -421,7 +418,6 @@ namespace
         void match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null());
 
     private:
-        GpuMat intBuffer_;
         std::vector<GpuMat> images_;
         std::vector<GpuMat> image_sums_;
         Match_CCORR_8U match_CCORR_;
@@ -444,7 +440,7 @@ namespace
         if (image.channels() == 1)
         {
             image_sums_.resize(1);
-            cuda::integral(image, image_sums_[0], intBuffer_, stream);
+            cuda::integral(image, image_sums_[0], stream);
 
             int templ_sum = (int) cuda::sum(templ)[0];
 
@@ -456,7 +452,7 @@ namespace
 
             image_sums_.resize(images_.size());
             for (int i = 0; i < image.channels(); ++i)
-                cuda::integral(images_[i], image_sums_[i], intBuffer_, stream);
+                cuda::integral(images_[i], image_sums_[i], stream);
 
             Scalar templ_sum = cuda::sum(templ);
 
@@ -501,7 +497,6 @@ namespace
     private:
         GpuMat imagef_, templf_;
         Match_CCORR_32F match_CCORR_32F_;
-        GpuMat intBuffer_;
         std::vector<GpuMat> images_;
         std::vector<GpuMat> image_sums_;
         std::vector<GpuMat> image_sqsums_;
@@ -527,10 +522,10 @@ namespace
         if (image.channels() == 1)
         {
             image_sums_.resize(1);
-            cuda::integral(image, image_sums_[0], intBuffer_, stream);
+            cuda::integral(image, image_sums_[0], stream);
 
             image_sqsums_.resize(1);
-            cuda::sqrIntegral(image, image_sqsums_[0], intBuffer_, stream);
+            cuda::sqrIntegral(image, image_sqsums_[0], stream);
 
             int templ_sum = (int) cuda::sum(templ)[0];
             double templ_sqsum = cuda::sqrSum(templ)[0];
@@ -547,8 +542,8 @@ namespace
             image_sqsums_.resize(images_.size());
             for (int i = 0; i < image.channels(); ++i)
             {
-                cuda::integral(images_[i], image_sums_[i], intBuffer_, stream);
-                cuda::sqrIntegral(images_[i], image_sqsums_[i], intBuffer_, stream);
+                cuda::integral(images_[i], image_sums_[i], stream);
+                cuda::sqrIntegral(images_[i], image_sqsums_[i], stream);
             }
 
             Scalar templ_sum = cuda::sum(templ);

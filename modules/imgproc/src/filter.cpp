@@ -2231,9 +2231,8 @@ struct SymmRowSmallVec_8u32s
 
     int operator()(const uchar* src, uchar* _dst, int width, int cn) const
     {
-        //Uncomment the two following lines when runtime support for neon is implemented.
-        // if( !checkHardwareSupport(CV_CPU_NEON) )
-        //     return 0;
+         if( !checkHardwareSupport(CV_CPU_NEON) )
+             return 0;
 
         int i = 0, _ksize = kernel.rows + kernel.cols - 1;
         int* dst = (int*)_dst;
@@ -2459,9 +2458,8 @@ struct SymmColumnVec_32s8u
 
     int operator()(const uchar** _src, uchar* dst, int width) const
     {
-        //Uncomment the two following lines when runtime support for neon is implemented.
-        // if( !checkHardwareSupport(CV_CPU_NEON) )
-        //     return 0;
+         if( !checkHardwareSupport(CV_CPU_NEON) )
+             return 0;
 
         int _ksize = kernel.rows + kernel.cols - 1;
         int ksize2 = _ksize / 2;
@@ -2612,9 +2610,8 @@ struct SymmColumnSmallVec_32s16s
 
     int operator()(const uchar** _src, uchar* _dst, int width) const
     {
-        //Uncomment the two following lines when runtime support for neon is implemented.
-        // if( !checkHardwareSupport(CV_CPU_NEON) )
-        //     return 0;
+         if( !checkHardwareSupport(CV_CPU_NEON) )
+             return 0;
 
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
         const float* ky = kernel.ptr<float>() + ksize2;
@@ -2788,15 +2785,13 @@ struct SymmColumnVec_32f16s
         kernel = _kernel;
         delta = (float)_delta;
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
-        //Uncomment the following line when runtime support for neon is implemented.
-        // neon_supported = checkHardwareSupport(CV_CPU_NEON);
+         neon_supported = checkHardwareSupport(CV_CPU_NEON);
     }
 
     int operator()(const uchar** _src, uchar* _dst, int width) const
     {
-        //Uncomment the two following lines when runtime support for neon is implemented.
-        // if( !neon_supported )
-        //     return 0;
+         if( !neon_supported )
+             return 0;
 
         int _ksize = kernel.rows + kernel.cols - 1;
         int ksize2 = _ksize / 2;
@@ -2943,9 +2938,8 @@ struct SymmRowSmallVec_32f
 
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
-        //Uncomment the two following lines when runtime support for neon is implemented.
-        // if( !checkHardwareSupport(CV_CPU_NEON) )
-        //     return 0;
+         if( !checkHardwareSupport(CV_CPU_NEON) )
+             return 0;
 
         int i = 0, _ksize = kernel.rows + kernel.cols - 1;
         float* dst = (float*)_dst;

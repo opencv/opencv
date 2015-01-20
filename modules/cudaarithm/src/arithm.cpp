@@ -169,9 +169,9 @@ void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray
 #else
     // CUBLAS works with column-major matrices
 
-    GpuMat src1 = _src1.getGpuMat();
-    GpuMat src2 = _src2.getGpuMat();
-    GpuMat src3 = _src3.getGpuMat();
+    GpuMat src1 = getInputMat(_src1, stream);
+    GpuMat src2 = getInputMat(_src2, stream);
+    GpuMat src3 = getInputMat(_src3, stream);
 
     CV_Assert( src1.type() == CV_32FC1 || src1.type() == CV_32FC2 || src1.type() == CV_64FC1 || src1.type() == CV_64FC2 );
     CV_Assert( src2.type() == src1.type() && (src3.empty() || src3.type() == src1.type()) );
@@ -200,8 +200,7 @@ void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray
     CV_Assert( src1Size.width == src2Size.height );
     CV_Assert( src3.empty() || src3Size == dstSize );
 
-    _dst.create(dstSize, src1.type());
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, dstSize, src1.type(), stream);
 
     if (beta != 0)
     {
@@ -281,6 +280,8 @@ void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray
     }
 
     cublasSafeCall( cublasDestroy_v2(handle) );
+
+    syncOutput(dst, _dst, stream);
 #endif
 }
 
@@ -297,7 +298,7 @@ void cv::cuda::dft(InputArray _src, OutputArray _dst, Size dft_size, int flags, 
     (void) stream;
     throw_no_cuda();
 #else
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     CV_Assert( src.type() == CV_32FC1 || src.type() == CV_32FC2 );
 
@@ -314,13 +315,20 @@ void cv::cuda::dft(InputArray _src, OutputArray _dst, Size dft_size, int flags, 
     // We don't support real-to-real transform
     CV_Assert( is_complex_input || is_complex_output );
 
-    GpuMat src_cont = src;
-
     // Make sure here we work with the continuous input,
     // as CUFFT can't handle gaps
-    createContinuous(src.rows, src.cols, src.type(), src_cont);
-    if (src_cont.data != src.data)
+    GpuMat src_cont;
+    if (src.isContinuous())
+    {
+        src_cont = src;
+    }
+    else
+    {
+        BufferPool pool(stream);
+        src_cont.allocator = pool.getAllocator();
+        createContinuous(src.rows, src.cols, src.type(), src_cont);
         src.copyTo(src_cont, stream);
+    }
 
     Size dft_size_opt = dft_size;
     if (is_1d_input && !is_row_dft)
@@ -462,16 +470,15 @@ namespace
 
     void ConvolutionImpl::convolve(InputArray _image, InputArray _templ, OutputArray _result, bool ccorr, Stream& _stream)
     {
-        GpuMat image = _image.getGpuMat();
-        GpuMat templ = _templ.getGpuMat();
+        GpuMat image = getInputMat(_image, _stream);
+        GpuMat templ = getInputMat(_templ, _stream);
 
         CV_Assert( image.type() == CV_32FC1 );
         CV_Assert( templ.type() == CV_32FC1 );
 
         create(image.size(), templ.size());
 
-        _result.create(result_size, CV_32FC1);
-        GpuMat result = _result.getGpuMat();
+        GpuMat result = getOutputMat(_result, result_size, CV_32FC1, _stream);
 
         cudaStream_t stream = StreamAccessor::getStream(_stream);
 
@@ -520,6 +527,8 @@ namespace
 
         cufftSafeCall( cufftDestroy(planR2C) );
         cufftSafeCall( cufftDestroy(planC2R) );
+
+        syncOutput(result, _result, _stream);
     }
 }
 

@@ -193,7 +193,7 @@ TEST(cornerHarris)
 TEST(integral)
 {
     Mat src, sum;
-    cuda::GpuMat d_src, d_sum, d_buf;
+    cuda::GpuMat d_src, d_sum;
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
@@ -209,10 +209,10 @@ TEST(integral)
 
         d_src.upload(src);
 
-        cuda::integralBuffered(d_src, d_sum, d_buf);
+        cuda::integral(d_src, d_sum);
 
         CUDA_ON;
-        cuda::integralBuffered(d_src, d_sum, d_buf);
+        cuda::integral(d_src, d_sum);
         CUDA_OFF;
     }
 }
@@ -322,14 +322,14 @@ TEST(FAST)
     FAST(src, keypoints, 20);
     CPU_OFF;
 
-    cuda::FAST_CUDA d_FAST(20);
+    cv::Ptr<cv::cuda::FastFeatureDetector> d_FAST = cv::cuda::FastFeatureDetector::create(20);
     cuda::GpuMat d_src(src);
     cuda::GpuMat d_keypoints;
 
-    d_FAST(d_src, cuda::GpuMat(), d_keypoints);
+    d_FAST->detectAsync(d_src, d_keypoints);
 
     CUDA_ON;
-    d_FAST(d_src, cuda::GpuMat(), d_keypoints);
+    d_FAST->detectAsync(d_src, d_keypoints);
     CUDA_OFF;
 }
 
@@ -350,15 +350,15 @@ TEST(ORB)
     orb->detectAndCompute(src, Mat(), keypoints, descriptors);
     CPU_OFF;
 
-    cuda::ORB_CUDA d_orb;
+    Ptr<cuda::ORB> d_orb = cuda::ORB::create();
     cuda::GpuMat d_src(src);
     cuda::GpuMat d_keypoints;
     cuda::GpuMat d_descriptors;
 
-    d_orb(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
+    d_orb->detectAndComputeAsync(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
 
     CUDA_ON;
-    d_orb(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
+    d_orb->detectAndComputeAsync(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
     CUDA_OFF;
 }
 
@@ -379,14 +379,14 @@ TEST(BruteForceMatcher)
 
     // Init CUDA matcher
 
-    cuda::BFMatcher_CUDA d_matcher(NORM_L2);
+    Ptr<cuda::DescriptorMatcher> d_matcher = cuda::DescriptorMatcher::createBFMatcher(NORM_L2);
 
     cuda::GpuMat d_query(query);
     cuda::GpuMat d_train(train);
 
     // Output
     vector< vector<DMatch> > matches(2);
-    cuda::GpuMat d_trainIdx, d_distance, d_allDist, d_nMatches;
+    cuda::GpuMat d_matches;
 
     SUBTEST << "match";
 
@@ -396,10 +396,10 @@ TEST(BruteForceMatcher)
     matcher.match(query, train, matches[0]);
     CPU_OFF;
 
-    d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
+    d_matcher->matchAsync(d_query, d_train, d_matches);
 
     CUDA_ON;
-    d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
+    d_matcher->matchAsync(d_query, d_train, d_matches);
     CUDA_OFF;
 
     SUBTEST << "knnMatch";
@@ -410,10 +410,10 @@ TEST(BruteForceMatcher)
     matcher.knnMatch(query, train, matches, 2);
     CPU_OFF;
 
-    d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
+    d_matcher->knnMatchAsync(d_query, d_train, d_matches, 2);
 
     CUDA_ON;
-    d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
+    d_matcher->knnMatchAsync(d_query, d_train, d_matches, 2);
     CUDA_OFF;
 
     SUBTEST << "radiusMatch";
@@ -426,12 +426,10 @@ TEST(BruteForceMatcher)
     matcher.radiusMatch(query, train, matches, max_distance);
     CPU_OFF;
 
-    d_trainIdx.release();
-
-    d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
+    d_matcher->radiusMatchAsync(d_query, d_train, d_matches, max_distance);
 
     CUDA_ON;
-    d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
+    d_matcher->radiusMatchAsync(d_query, d_train, d_matches, max_distance);
     CUDA_OFF;
 }
 

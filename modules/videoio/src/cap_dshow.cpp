@@ -134,8 +134,6 @@ public:
 
     virtual HRESULT STDMETHODCALLTYPE Clone(
         /* [out] */ IEnumPIDMap **ppIEnumPIDMap) = 0;
-
-    virtual ~IEnumPIDMap() {}
 };
 
 interface IMPEG2PIDMap : public IUnknown
@@ -151,8 +149,6 @@ interface IMPEG2PIDMap : public IUnknown
 
     virtual HRESULT STDMETHODCALLTYPE EnumPIDMap(
         /* [out] */ IEnumPIDMap **pIEnumPIDMap) = 0;
-
-    virtual ~IMPEG2PIDMap() {}
 };
 
 #endif
@@ -238,8 +234,6 @@ interface ISampleGrabberCB : public IUnknown
         double SampleTime,
         BYTE *pBuffer,
         LONG BufferLen) = 0;
-
-    virtual ~ISampleGrabberCB() {}
 };
 
 interface ISampleGrabber : public IUnknown
@@ -266,8 +260,6 @@ interface ISampleGrabber : public IUnknown
     virtual HRESULT STDMETHODCALLTYPE SetCallback(
         ISampleGrabberCB *pCallback,
         LONG WhichMethodToCallback) = 0;
-
-    virtual ~ISampleGrabber() {}
 };
 
 #ifndef HEADER

@@ -22,6 +22,10 @@ if(ANDROID AND BUILD_ANDROID_EXAMPLES)
   add_subdirectory(android)
 endif()
 
+if(INSTALL_PYTHON_EXAMPLES)
+  add_subdirectory(python2)
+endif()
+
 #
 # END OF BUILD CASE 1: Build samples with library sources
 #

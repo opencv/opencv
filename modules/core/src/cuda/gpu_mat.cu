@@ -390,6 +390,11 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar value, InputArray _mask, Stream& stream)
 
     GpuMat mask = _mask.getGpuMat();
 
+    if (mask.empty())
+    {
+        return setTo(value, stream);
+    }
+
     CV_DbgAssert( size() == mask.size() && mask.type() == CV_8UC1 );
 
     typedef void (*func_t)(const GpuMat& mat, const GpuMat& mask, Scalar scalar, Stream& stream);

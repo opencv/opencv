@@ -266,7 +266,7 @@ namespace
 {
     int bgfgClassification(const GpuMat& prevFrame, const GpuMat& curFrame,
                            const GpuMat& Ftd, const GpuMat& Fbd,
-                           GpuMat& foreground, GpuMat& countBuf,
+                           GpuMat& foreground,
                            const FGDParams& params, int out_cn)
     {
         typedef void (*func_t)(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground,
@@ -298,7 +298,7 @@ namespace
                                                                              deltaC, deltaCC, params.alpha2,
                                                                              params.N1c, params.N1cc, 0);
 
-        int count = cuda::countNonZero(foreground, countBuf);
+        int count = cuda::countNonZero(foreground);
 
         cuda::multiply(foreground, Scalar::all(255), foreground);
 
@@ -605,8 +605,6 @@ namespace
         GpuMat hist_;
         GpuMat histBuf_;
 
-        GpuMat countBuf_;
-
         GpuMat buf_;
         GpuMat filterBrd_;
 
@@ -649,7 +647,7 @@ namespace
         changeDetection(prevFrame_, curFrame, Ftd_, hist_, histBuf_);
         changeDetection(background_, curFrame, Fbd_, hist_, histBuf_);
 
-        int FG_pixels_count = bgfgClassification(prevFrame_, curFrame, Ftd_, Fbd_, foreground_, countBuf_, params_, 4);
+        int FG_pixels_count = bgfgClassification(prevFrame_, curFrame, Ftd_, Fbd_, foreground_, params_, 4);
 
 #ifdef HAVE_OPENCV_CUDAFILTERS
         if (params_.perform_morphing > 0)

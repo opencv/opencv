@@ -90,6 +90,8 @@ enum { IMWRITE_PNG_STRATEGY_DEFAULT      = 0,
 
 /** @brief Loads an image from a file.
 
+@anchor imread
+
 @param filename Name of file to be loaded.
 @param flags Flags specifying the color type of a loaded image:
 -   CV_LOAD_IMAGE_ANYDEPTH - If set, return 16-bit/32-bit image when the input has the
