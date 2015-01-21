@@ -794,8 +794,20 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
     if (K.needed()) cv::Mat(_K).convertTo(K, K.empty() ? CV_64FC1 : K.type());
     if (D.needed()) cv::Mat(finalParam.k).convertTo(D, D.empty() ? CV_64FC1 : D.type());
-    if (rvecs.needed()) cv::Mat(omc).convertTo(rvecs, rvecs.empty() ? CV_64FC3 : rvecs.type());
-    if (tvecs.needed()) cv::Mat(Tc).convertTo(tvecs, tvecs.empty() ? CV_64FC3 : tvecs.type());
+    if (rvecs.kind()==_InputArray::STD_VECTOR_MAT)
+    {
+        int i;
+        for( i = 0; i < (int)objectPoints.total(); i++ )
+        {
+            rvecs.getMat(i)=omc[i];
+            tvecs.getMat(i)=Tc[i];
+        }
+    }
+    else
+    {
+        if (rvecs.needed()) cv::Mat(omc).convertTo(rvecs, rvecs.empty() ? CV_64FC3 : rvecs.type());
+        if (tvecs.needed()) cv::Mat(Tc).convertTo(tvecs, tvecs.empty() ? CV_64FC3 : tvecs.type());
+    }
 
     return rms;
 }
