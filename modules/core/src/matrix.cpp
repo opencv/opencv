@@ -2668,7 +2668,7 @@ void _OutputArray::assign(const Mat& m) const
     }
     else if (k == MATX)
     {
-        getMat() = m;
+        m.copyTo(getMat());
     }
     else
     {
