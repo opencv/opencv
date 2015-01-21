@@ -202,3 +202,11 @@ In this section you will learn about the image processing (manipulation) functio
     *Author:* Ana Huamán
 
     Where we learn how to calculate distances from the image to contours
+
+-   @subpage tutorial_distance_transform
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Theodore Tsesmelis
+
+    Where we learn to segment objects using Laplacian filtering, the Distance Transformation and the Watershed algorithm.
