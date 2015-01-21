@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -593,14 +594,46 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
             {
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
                 double *angle = (double*)ptrs[2];
-                for( k = 0; k < len; k++ )
+                k = 0;
+
+#if CV_SSE2
+                if (USE_SSE2)
+                {
+                    for ( ; k <= len - 4; k += 4)
+                    {
+                        __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
+                                                      _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
+                        __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
+                                                      _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
+
+                        _mm_storeu_ps(buf[0] + k, v_dst0);
+                        _mm_storeu_ps(buf[1] + k, v_dst1);
+                    }
+                }
+#endif
+
+                for( ; k < len; k++ )
                 {
                     buf[0][k] = (float)x[k];
                     buf[1][k] = (float)y[k];
                 }
 
                 FastAtan2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
-                for( k = 0; k < len; k++ )
+                k = 0;
+
+#if CV_SSE2
+                if (USE_SSE2)
+                {
+                    for ( ; k <= len - 4; k += 4)
+                    {
+                        __m128 v_src = _mm_loadu_ps(buf[0] + k);
+                        _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
+                        _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
+                    }
+                }
+#endif
+
+                for( ; k < len; k++ )
                     angle[k] = buf[0][k];
             }
             ptrs[0] += len*esz1;
@@ -698,14 +731,46 @@ void cartToPolar( InputArray src1, InputArray src2,
                 double *angle = (double*)ptrs[3];
 
                 Magnitude_64f(x, y, (double*)ptrs[2], len);
-                for( k = 0; k < len; k++ )
+                k = 0;
+
+#if CV_SSE2
+                if (USE_SSE2)
+                {
+                    for ( ; k <= len - 4; k += 4)
+                    {
+                        __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
+                                                      _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
+                        __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
+                                                      _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
+
+                        _mm_storeu_ps(buf[0] + k, v_dst0);
+                        _mm_storeu_ps(buf[1] + k, v_dst1);
+                    }
+                }
+#endif
+
+                for( ; k < len; k++ )
                 {
                     buf[0][k] = (float)x[k];
                     buf[1][k] = (float)y[k];
                 }
 
                 FastAtan2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
-                for( k = 0; k < len; k++ )
+                k = 0;
+
+#if CV_SSE2
+                if (USE_SSE2)
+                {
+                    for ( ; k <= len - 4; k += 4)
+                    {
+                        __m128 v_src = _mm_loadu_ps(buf[0] + k);
+                        _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
+                        _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
+                    }
+                }
+#endif
+
+                for( ; k < len; k++ )
                     angle[k] = buf[0][k];
             }
             ptrs[0] += len*esz1;
@@ -771,14 +836,77 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
     /*static const double cos_a2 =  1;*/
 
     double k1;
-    int i;
+    int i = 0;
 
     if( !angle_in_degrees )
         k1 = N/(2*CV_PI);
     else
         k1 = N/360.;
 
-    for( i = 0; i < len; i++ )
+#if CV_AVX2
+    if (USE_AVX2)
+    {
+        __m128d v_k1 = _mm_set1_pd(k1);
+        __m128d v_1 = _mm_set1_pd(1);
+        __m128i v_N1 = _mm_set1_epi32(N - 1);
+        __m128i v_N4 = _mm_set1_epi32(N >> 2);
+        __m128d v_sin_a0 = _mm_set1_pd(sin_a0);
+        __m128d v_sin_a2 = _mm_set1_pd(sin_a2);
+        __m128d v_cos_a0 = _mm_set1_pd(cos_a0);
+
+        for ( ; i <= len - 4; i += 4)
+        {
+            __m128 v_angle = _mm_loadu_ps(angle + i);
+
+            // 0-1
+            __m128d v_t = _mm_mul_pd(_mm_cvtps_pd(v_angle), v_k1);
+            __m128i v_it = _mm_cvtpd_epi32(v_t);
+            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
+
+            __m128i v_sin_idx = _mm_and_si128(v_it, v_N1);
+            __m128i v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
+
+            __m128d v_t2 = _mm_mul_pd(v_t, v_t);
+            __m128d v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
+            __m128d v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
+
+            __m128d v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
+            __m128d v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
+
+            __m128d v_sin_val_0 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
+                                             _mm_mul_pd(v_cos_a, v_sin_b));
+            __m128d v_cos_val_0 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
+                                             _mm_mul_pd(v_sin_a, v_sin_b));
+
+            // 2-3
+            v_t = _mm_mul_pd(_mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_angle), 8))), v_k1);
+            v_it = _mm_cvtpd_epi32(v_t);
+            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
+
+            v_sin_idx = _mm_and_si128(v_it, v_N1);
+            v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
+
+            v_t2 = _mm_mul_pd(v_t, v_t);
+            v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
+            v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
+
+            v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
+            v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
+
+            __m128d v_sin_val_1 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
+                                             _mm_mul_pd(v_cos_a, v_sin_b));
+            __m128d v_cos_val_1 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
+                                             _mm_mul_pd(v_sin_a, v_sin_b));
+
+            _mm_storeu_ps(sinval + i, _mm_movelh_ps(_mm_cvtpd_ps(v_sin_val_0),
+                                                    _mm_cvtpd_ps(v_sin_val_1)));
+            _mm_storeu_ps(cosval + i, _mm_movelh_ps(_mm_cvtpd_ps(v_cos_val_0),
+                                                    _mm_cvtpd_ps(v_cos_val_1)));
+        }
+    }
+#endif
+
+    for( ; i < len; i++ )
     {
         double t = angle[i]*k1;
         int it = cvRound(t);
@@ -914,6 +1042,16 @@ void polarToCart( InputArray src1, InputArray src2,
                         vst1q_f32(x + k, vmulq_f32(vld1q_f32(x + k), v_m));
                         vst1q_f32(y + k, vmulq_f32(vld1q_f32(y + k), v_m));
                     }
+                    #elif CV_SSE2
+                    if (USE_SSE2)
+                    {
+                        for( ; k <= len - 4; k += 4 )
+                        {
+                            __m128 v_m = _mm_loadu_ps(mag + k);
+                            _mm_storeu_ps(x + k, _mm_mul_ps(_mm_loadu_ps(x + k), v_m));
+                            _mm_storeu_ps(y + k, _mm_mul_ps(_mm_loadu_ps(y + k), v_m));
+                        }
+                    }
                     #endif
 
                     for( ; k < len; k++ )
@@ -939,10 +1077,10 @@ void polarToCart( InputArray src1, InputArray src2,
                         x[k] = buf[0][k]*m; y[k] = buf[1][k]*m;
                     }
                 else
-                    for( k = 0; k < len; k++ )
-                    {
-                        x[k] = buf[0][k]; y[k] = buf[1][k];
-                    }
+                {
+                    std::memcpy(x, buf[0], sizeof(float) * len);
+                    std::memcpy(y, buf[1], sizeof(float) * len);
+                }
             }
 
             if( ptrs[0] )
