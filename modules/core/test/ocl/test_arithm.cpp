@@ -1577,7 +1577,7 @@ PARAM_TEST_CASE(ConvertScaleAbs, MatDepth, Channels, bool)
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, roiSize, srcBorder, stype, 2, 11); // FIXIT: Test with minV, maxV
+        randomSubMat(src, src_roi, roiSize, srcBorder, stype, -11, 11); // FIXIT: Test with minV, maxV
 
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, dtype, 5, 16);

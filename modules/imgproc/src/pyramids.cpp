@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -183,13 +184,336 @@ struct PyrDownVec_32f
     }
 };
 
-typedef PyrDownNoVec<int, ushort> PyrDownVec_32s16u;
-typedef PyrDownNoVec<int, short> PyrDownVec_32s16s;
+#if CV_SSE4_1
 
-typedef PyrUpNoVec<int, uchar> PyrUpVec_32s8u;
-typedef PyrUpNoVec<int, short> PyrUpVec_32s16s;
+struct PyrDownVec_32s16u
+{
+    PyrDownVec_32s16u()
+    {
+        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+    }
+
+    int operator()(int** src, ushort* dst, int, int width) const
+    {
+        int x = 0;
+
+        if (!haveSSE)
+            return x;
+
+        const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
+        __m128i v_delta = _mm_set1_epi32(128);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            __m128i v_r00 = _mm_loadu_si128((__m128i const *)(row0 + x)),
+                    v_r01 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
+            __m128i v_r10 = _mm_loadu_si128((__m128i const *)(row1 + x)),
+                    v_r11 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
+            __m128i v_r20 = _mm_loadu_si128((__m128i const *)(row2 + x)),
+                    v_r21 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
+            __m128i v_r30 = _mm_loadu_si128((__m128i const *)(row3 + x)),
+                    v_r31 = _mm_loadu_si128((__m128i const *)(row3 + x + 4));
+            __m128i v_r40 = _mm_loadu_si128((__m128i const *)(row4 + x)),
+                    v_r41 = _mm_loadu_si128((__m128i const *)(row4 + x + 4));
+
+            v_r00 = _mm_add_epi32(_mm_add_epi32(v_r00, v_r40), _mm_add_epi32(v_r20, v_r20));
+            v_r10 = _mm_add_epi32(_mm_add_epi32(v_r10, v_r20), v_r30);
+
+            v_r10 = _mm_slli_epi32(v_r10, 2);
+            __m128i v_dst0 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(v_r00, v_r10), v_delta), 8);
+
+            v_r01 = _mm_add_epi32(_mm_add_epi32(v_r01, v_r41), _mm_add_epi32(v_r21, v_r21));
+            v_r11 = _mm_add_epi32(_mm_add_epi32(v_r11, v_r21), v_r31);
+            v_r11 = _mm_slli_epi32(v_r11, 2);
+            __m128i v_dst1 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(v_r01, v_r11), v_delta), 8);
+
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_packus_epi32(v_dst0, v_dst1));
+        }
+
+        return x;
+    }
+
+    bool haveSSE;
+};
+
+#else
+
+typedef PyrDownNoVec<int, ushort> PyrDownVec_32s16u;
+
+#endif // CV_SSE4_1
+
+struct PyrDownVec_32s16s
+{
+    PyrDownVec_32s16s()
+    {
+        haveSSE = checkHardwareSupport(CV_CPU_SSE2);
+    }
+
+    int operator()(int** src, short* dst, int, int width) const
+    {
+        int x = 0;
+
+        if (!haveSSE)
+            return x;
+
+        const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
+        __m128i v_delta = _mm_set1_epi32(128);
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            __m128i v_r00 = _mm_loadu_si128((__m128i const *)(row0 + x)),
+                    v_r01 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
+            __m128i v_r10 = _mm_loadu_si128((__m128i const *)(row1 + x)),
+                    v_r11 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
+            __m128i v_r20 = _mm_loadu_si128((__m128i const *)(row2 + x)),
+                    v_r21 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
+            __m128i v_r30 = _mm_loadu_si128((__m128i const *)(row3 + x)),
+                    v_r31 = _mm_loadu_si128((__m128i const *)(row3 + x + 4));
+            __m128i v_r40 = _mm_loadu_si128((__m128i const *)(row4 + x)),
+                    v_r41 = _mm_loadu_si128((__m128i const *)(row4 + x + 4));
+
+            v_r00 = _mm_add_epi32(_mm_add_epi32(v_r00, v_r40), _mm_add_epi32(v_r20, v_r20));
+            v_r10 = _mm_add_epi32(_mm_add_epi32(v_r10, v_r20), v_r30);
+
+            v_r10 = _mm_slli_epi32(v_r10, 2);
+            __m128i v_dst0 = _mm_srai_epi32(_mm_add_epi32(_mm_add_epi32(v_r00, v_r10), v_delta), 8);
+
+            v_r01 = _mm_add_epi32(_mm_add_epi32(v_r01, v_r41), _mm_add_epi32(v_r21, v_r21));
+            v_r11 = _mm_add_epi32(_mm_add_epi32(v_r11, v_r21), v_r31);
+            v_r11 = _mm_slli_epi32(v_r11, 2);
+            __m128i v_dst1 = _mm_srai_epi32(_mm_add_epi32(_mm_add_epi32(v_r01, v_r11), v_delta), 8);
+
+            _mm_storeu_si128((__m128i *)(dst + x), _mm_packs_epi32(v_dst0, v_dst1));
+        }
+
+        return x;
+    }
+
+    bool haveSSE;
+};
+
+struct PyrUpVec_32s8u
+{
+    int operator()(int** src, uchar** dst, int, int width) const
+    {
+        int x = 0;
+
+        if (!checkHardwareSupport(CV_CPU_SSE2))
+            return x;
+
+        uchar *dst0 = dst[0], *dst1 = dst[1];
+        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
+        __m128i v_delta = _mm_set1_epi16(32), v_zero = _mm_setzero_si128();
+
+        for( ; x <= width - 16; x += 16 )
+        {
+            __m128i v_r0 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row0 + x)),
+                                           _mm_loadu_si128((__m128i const *)(row0 + x + 4)));
+            __m128i v_r1 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row1 + x)),
+                                           _mm_loadu_si128((__m128i const *)(row1 + x + 4)));
+            __m128i v_r2 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row2 + x)),
+                                           _mm_loadu_si128((__m128i const *)(row2 + x + 4)));
+
+            __m128i v_2r1 = _mm_adds_epu16(v_r1, v_r1), v_4r1 = _mm_adds_epu16(v_2r1, v_2r1);
+            __m128i v_dst00 = _mm_adds_epu16(_mm_adds_epu16(v_r0, v_r2), _mm_adds_epu16(v_2r1, v_4r1));
+            __m128i v_dst10 = _mm_slli_epi16(_mm_adds_epu16(v_r1, v_r2), 2);
+
+            v_r0 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row0 + x + 8)),
+                                   _mm_loadu_si128((__m128i const *)(row0 + x + 12)));
+            v_r1 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row1 + x + 8)),
+                                   _mm_loadu_si128((__m128i const *)(row1 + x + 12)));
+            v_r2 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row2 + x + 8)),
+                                   _mm_loadu_si128((__m128i const *)(row2 + x + 12)));
+
+            v_2r1 = _mm_adds_epu16(v_r1, v_r1), v_4r1 = _mm_adds_epu16(v_2r1, v_2r1);
+            __m128i v_dst01 = _mm_adds_epu16(_mm_adds_epu16(v_r0, v_r2), _mm_adds_epu16(v_2r1, v_4r1));
+            __m128i v_dst11 = _mm_slli_epi16(_mm_adds_epu16(v_r1, v_r2), 2);
+
+            _mm_storeu_si128((__m128i *)(dst0 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst00, v_delta), 6),
+                                                                     _mm_srli_epi16(_mm_adds_epu16(v_dst01, v_delta), 6)));
+            _mm_storeu_si128((__m128i *)(dst1 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst10, v_delta), 6),
+                                                                     _mm_srli_epi16(_mm_adds_epu16(v_dst11, v_delta), 6)));
+        }
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            __m128i v_r0 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row0 + x)),
+                                           _mm_loadu_si128((__m128i const *)(row0 + x + 4)));
+            __m128i v_r1 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row1 + x)),
+                                           _mm_loadu_si128((__m128i const *)(row1 + x + 4)));
+            __m128i v_r2 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row2 + x)),
+                                           _mm_loadu_si128((__m128i const *)(row2 + x + 4)));
+
+            __m128i v_2r1 = _mm_adds_epu16(v_r1, v_r1), v_4r1 = _mm_adds_epu16(v_2r1, v_2r1);
+            __m128i v_dst0 = _mm_adds_epu16(_mm_adds_epu16(v_r0, v_r2), _mm_adds_epu16(v_2r1, v_4r1));
+            __m128i v_dst1 = _mm_slli_epi16(_mm_adds_epu16(v_r1, v_r2), 2);
+
+            _mm_storel_epi64((__m128i *)(dst0 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst0, v_delta), 6), v_zero));
+            _mm_storel_epi64((__m128i *)(dst1 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst1, v_delta), 6), v_zero));
+        }
+
+        return x;
+    }
+};
+
+struct PyrUpVec_32s16s
+{
+    int operator()(int** src, short** dst, int, int width) const
+    {
+        int x = 0;
+
+        if (!checkHardwareSupport(CV_CPU_SSE2))
+            return x;
+
+        short *dst0 = dst[0], *dst1 = dst[1];
+        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
+        __m128i v_delta = _mm_set1_epi32(32), v_zero = _mm_setzero_si128();
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
+                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
+                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
+            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
+            __m128i v_dst00 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
+            __m128i v_dst10 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
+
+            v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
+            v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
+            v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
+            v_2r1 = _mm_slli_epi32(v_r1, 1);
+            v_4r1 = _mm_slli_epi32(v_r1, 2);
+            __m128i v_dst01 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
+            __m128i v_dst11 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
+
+            _mm_storeu_si128((__m128i *)(dst0 + x),
+                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst00, v_delta), 6),
+                                _mm_srai_epi32(_mm_add_epi32(v_dst01, v_delta), 6)));
+            _mm_storeu_si128((__m128i *)(dst1 + x),
+                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst10, v_delta), 6),
+                                _mm_srai_epi32(_mm_add_epi32(v_dst11, v_delta), 6)));
+        }
+
+        for( ; x <= width - 4; x += 4 )
+        {
+            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
+                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
+                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
+            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
+
+            __m128i v_dst0 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
+            __m128i v_dst1 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
+
+            _mm_storel_epi64((__m128i *)(dst0 + x),
+                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst0, v_delta), 6), v_zero));
+            _mm_storel_epi64((__m128i *)(dst1 + x),
+                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst1, v_delta), 6), v_zero));
+        }
+
+        return x;
+    }
+};
+
+#if CV_SSE4_1
+
+struct PyrUpVec_32s16u
+{
+    int operator()(int** src, ushort** dst, int, int width) const
+    {
+        int x = 0;
+
+        if (!checkHardwareSupport(CV_CPU_SSE4_1))
+            return x;
+
+        ushort *dst0 = dst[0], *dst1 = dst[1];
+        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
+        __m128i v_delta = _mm_set1_epi32(32), v_zero = _mm_setzero_si128();
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
+                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
+                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
+            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
+            __m128i v_dst00 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
+            __m128i v_dst10 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
+
+            v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
+            v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
+            v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
+            v_2r1 = _mm_slli_epi32(v_r1, 1);
+            v_4r1 = _mm_slli_epi32(v_r1, 2);
+            __m128i v_dst01 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
+            __m128i v_dst11 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
+
+            _mm_storeu_si128((__m128i *)(dst0 + x),
+                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst00, v_delta), 6),
+                                 _mm_srli_epi32(_mm_add_epi32(v_dst01, v_delta), 6)));
+            _mm_storeu_si128((__m128i *)(dst1 + x),
+                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst10, v_delta), 6),
+                                 _mm_srli_epi32(_mm_add_epi32(v_dst11, v_delta), 6)));
+        }
+
+        for( ; x <= width - 4; x += 4 )
+        {
+            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
+                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
+                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
+            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
+
+            __m128i v_dst0 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
+            __m128i v_dst1 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
+
+            _mm_storel_epi64((__m128i *)(dst0 + x),
+                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst0, v_delta), 6), v_zero));
+            _mm_storel_epi64((__m128i *)(dst1 + x),
+                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst1, v_delta), 6), v_zero));
+        }
+
+        return x;
+    }
+};
+
+#else
+
 typedef PyrUpNoVec<int, ushort> PyrUpVec_32s16u;
-typedef PyrUpNoVec<float, float> PyrUpVec_32f;
+
+#endif // CV_SSE4_1
+
+struct PyrUpVec_32f
+{
+    int operator()(float** src, float** dst, int, int width) const
+    {
+        int x = 0;
+
+        if (!checkHardwareSupport(CV_CPU_SSE2))
+            return x;
+
+        const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
+        float *dst0 = dst[0], *dst1 = dst[1];
+        __m128 v_6 = _mm_set1_ps(6.0f), v_scale = _mm_set1_ps(1.f/64.0f),
+               v_scale4 = _mm_mul_ps(v_scale, _mm_set1_ps(4.0f));
+
+        for( ; x <= width - 8; x += 8 )
+        {
+            __m128 v_r0 = _mm_loadu_ps(row0 + x);
+            __m128 v_r1 = _mm_loadu_ps(row1 + x);
+            __m128 v_r2 = _mm_loadu_ps(row2 + x);
+
+            _mm_storeu_ps(dst1 + x, _mm_mul_ps(v_scale4, _mm_add_ps(v_r1, v_r2)));
+            _mm_storeu_ps(dst0 + x, _mm_mul_ps(v_scale, _mm_add_ps(_mm_add_ps(v_r0, _mm_mul_ps(v_6, v_r1)), v_r2)));
+
+            v_r0 = _mm_loadu_ps(row0 + x + 4);
+            v_r1 = _mm_loadu_ps(row1 + x + 4);
+            v_r2 = _mm_loadu_ps(row2 + x + 4);
+
+            _mm_storeu_ps(dst1 + x + 4, _mm_mul_ps(v_scale4, _mm_add_ps(v_r1, v_r2)));
+            _mm_storeu_ps(dst0 + x + 4, _mm_mul_ps(v_scale, _mm_add_ps(_mm_add_ps(v_r0, _mm_mul_ps(v_6, v_r1)), v_r2)));
+        }
+
+        return x;
+    }
+};
 
 #elif CV_NEON
 
