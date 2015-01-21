@@ -41,7 +41,7 @@ TEST(Core_OutputArrayAssign, _Matxd_Matd)
 {
     Mat expected = (Mat_<double>(2,3) << 1, 2, 3, .1, .2, .3);
     Matx23d actualx;
-    
+
     {
         OutputArray oa(actualx);
         oa.assign(expected);
@@ -129,4 +129,3 @@ TEST(Core_OutputArrayAssign, _Matxf_UMatd)
 
     EXPECT_LE(maxAbsDiff(expected, actual), FLT_EPSILON);
 }
-
