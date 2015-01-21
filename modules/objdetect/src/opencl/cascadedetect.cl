@@ -233,11 +233,12 @@ void runHaarClassifier(
 
             for( stageIdx = SPLIT_STAGE; stageIdx < N_STAGES; stageIdx++ )
             {
+                barrier(CLK_LOCAL_MEM_FENCE);
                 int nrects = lcount[0];
 
-                barrier(CLK_LOCAL_MEM_FENCE);
                 if( nrects == 0 )
                     break;
+                barrier(CLK_LOCAL_MEM_FENCE);
                 if( lidx == 0 )
                     lcount[0] = 0;
 
