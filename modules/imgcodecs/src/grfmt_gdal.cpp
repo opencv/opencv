@@ -140,35 +140,6 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
     return -1;
 }
 
-
-std::string GetOpenCVTypeName( const int& type ){
-
-    switch(type){
-        case CV_8UC1:
-            return "CV_8UC1";
-        case CV_8UC3:
-            return "CV_8UC3";
-        case CV_8UC4:
-            return "CV_8UC4";
-        case CV_16UC1:
-            return "CV_16UC1";
-        case CV_16UC3:
-            return "CV_16UC3";
-        case CV_16UC4:
-            return "CV_16UC4";
-        case CV_16SC1:
-            return "CV_16SC1";
-        case CV_16SC3:
-            return "CV_16SC3";
-        case CV_16SC4:
-            return "CV_16SC4";
-        default:
-            return "Unknown";
-    }
-    return "Unknown";
-}
-
-
 /**
  * GDAL Decoder Constructor
 */
