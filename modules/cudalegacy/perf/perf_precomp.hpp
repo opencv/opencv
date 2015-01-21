@@ -40,35 +40,27 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
 
-#include <limits>
-#include <iostream>
-#include <algorithm>
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
+
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/cuda_perf.hpp"
 
 #include "opencv2/cudalegacy.hpp"
-#include "opencv2/core/utility.hpp"
+#include "opencv2/video.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_OBJDETECT
-#  include "opencv2/objdetect.hpp"
+#ifdef GTEST_CREATE_SHARED_LIBRARY
+#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
 #endif
 
-#ifdef HAVE_OPENCV_CUDAARITHM
-#  include "opencv2/cudaarithm.hpp"
 #endif
-
-#ifdef HAVE_OPENCV_CUDAFILTERS
-#  include "opencv2/cudafilters.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDAIMGPROC
-#  include "opencv2/cudaimgproc.hpp"
-#endif
-
-#include "opencv2/core/private.cuda.hpp"
-#include "opencv2/cudalegacy/private.hpp"
-
-#endif /* __OPENCV_PRECOMP_H__ */
