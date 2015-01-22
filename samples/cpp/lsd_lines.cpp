@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 #endif
 
     double start = double(getTickCount());
-    vector<Vec4i> lines_std;
+    vector<Vec4f> lines_std;
 
     // Detect the lines
     ls->detect(image, lines_std);
