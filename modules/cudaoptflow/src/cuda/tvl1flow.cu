@@ -66,15 +66,16 @@ namespace tvl1flow
         dy(y, x) = 0.5f * (src(::min(y + 1, src.rows - 1), x) - src(::max(y - 1, 0), x));
     }
 
-    void centeredGradient(PtrStepSzf src, PtrStepSzf dx, PtrStepSzf dy)
+    void centeredGradient(PtrStepSzf src, PtrStepSzf dx, PtrStepSzf dy, cudaStream_t stream)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
-        centeredGradientKernel<<<grid, block>>>(src, dx, dy);
+        centeredGradientKernel<<<grid, block, 0, stream>>>(src, dx, dy);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (!stream)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -164,7 +165,10 @@ namespace tvl1flow
         rho(y, x) = I1wVal - I1wxVal * u1Val - I1wyVal * u2Val - I0Val;
     }
 
-    void warpBackward(PtrStepSzf I0, PtrStepSzf I1, PtrStepSzf I1x, PtrStepSzf I1y, PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf I1w, PtrStepSzf I1wx, PtrStepSzf I1wy, PtrStepSzf grad, PtrStepSzf rho)
+    void warpBackward(PtrStepSzf I0, PtrStepSzf I1, PtrStepSzf I1x, PtrStepSzf I1y,
+                      PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf I1w, PtrStepSzf I1wx,
+                      PtrStepSzf I1wy, PtrStepSzf grad, PtrStepSzf rho,
+                      cudaStream_t stream)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(I0.cols, block.x), divUp(I0.rows, block.y));
@@ -173,10 +177,11 @@ namespace tvl1flow
         bindTexture(&tex_I1x, I1x);
         bindTexture(&tex_I1y, I1y);
 
-        warpBackwardKernel<<<grid, block>>>(I0, u1, u2, I1w, I1wx, I1wy, grad, rho);
+        warpBackwardKernel<<<grid, block, 0, stream>>>(I0, u1, u2, I1w, I1wx, I1wy, grad, rho);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (!stream)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -292,15 +297,17 @@ namespace tvl1flow
                    PtrStepSzf grad, PtrStepSzf rho_c,
                    PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32,
                    PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf error,
-                   float l_t, float theta, float gamma, bool calcError)
+                   float l_t, float theta, float gamma, bool calcError,
+                   cudaStream_t stream)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(I1wx.cols, block.x), divUp(I1wx.rows, block.y));
 
-        estimateUKernel<<<grid, block>>>(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, p31, p32, u1, u2, u3, error, l_t, theta, gamma, calcError);
+        estimateUKernel<<<grid, block, 0, stream>>>(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, p31, p32, u1, u2, u3, error, l_t, theta, gamma, calcError);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (!stream)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -346,15 +353,19 @@ namespace tvl1flow
         }
     }
 
-    void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32, float taut, float gamma)
+    void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3,
+                               PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32,
+                               float taut, float gamma,
+                               cudaStream_t stream)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(u1.cols, block.x), divUp(u1.rows, block.y));
 
-        estimateDualVariablesKernel<<<grid, block>>>(u1, u2, u3, p11, p12, p21, p22, p31, p32, taut, gamma);
+        estimateDualVariablesKernel<<<grid, block, 0, stream>>>(u1, u2, u3, p11, p12, p21, p22, p31, p32, taut, gamma);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (!stream)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
