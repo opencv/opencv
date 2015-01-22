@@ -50,37 +50,34 @@
 #  include "opencv2/cudawarping.hpp"
 #endif
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+#if defined(HAVE_OPENCV_CUDAWARPING)
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+        namespace cv { namespace cuda {
+            static void calcWobbleSuppressionMaps(int, int, int, Size, const Mat&, const Mat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+        }}
+    #else
+        namespace cv { namespace cuda { namespace device { namespace globmotion {
+            void calcWobbleSuppressionMaps(
+                    int left, int idx, int right, int width, int height,
+                    const float *ml, const float *mr, PtrStepSzf mapx, PtrStepSzf mapy);
+        }}}}
+        namespace cv { namespace cuda {
+            static void calcWobbleSuppressionMaps(
+                    int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
+                    GpuMat &mapx, GpuMat &mapy)
+            {
+                CV_Assert(ml.size() == Size(3, 3) && ml.type() == CV_32F && ml.isContinuous());
+                CV_Assert(mr.size() == Size(3, 3) && mr.type() == CV_32F && mr.isContinuous());
 
-namespace cv { namespace cuda {
-    static void calcWobbleSuppressionMaps(int, int, int, Size, const Mat&, const Mat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
-}}
+                mapx.create(size, CV_32F);
+                mapy.create(size, CV_32F);
 
-#else
-
-namespace cv { namespace cuda { namespace device { namespace globmotion {
-    void calcWobbleSuppressionMaps(
-            int left, int idx, int right, int width, int height,
-            const float *ml, const float *mr, PtrStepSzf mapx, PtrStepSzf mapy);
-}}}}
-
-namespace cv { namespace cuda {
-    static void calcWobbleSuppressionMaps(
-            int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
-            GpuMat &mapx, GpuMat &mapy)
-    {
-        CV_Assert(ml.size() == Size(3, 3) && ml.type() == CV_32F && ml.isContinuous());
-        CV_Assert(mr.size() == Size(3, 3) && mr.type() == CV_32F && mr.isContinuous());
-
-        mapx.create(size, CV_32F);
-        mapy.create(size, CV_32F);
-
-        cv::cuda::device::globmotion::calcWobbleSuppressionMaps(
-                    left, idx, right, size.width, size.height,
-                    ml.ptr<float>(), mr.ptr<float>(), mapx, mapy);
-    }
-}}
-
+                cv::cuda::device::globmotion::calcWobbleSuppressionMaps(
+                            left, idx, right, size.width, size.height,
+                            ml.ptr<float>(), mr.ptr<float>(), mapx, mapy);
+            }
+        }}
+    #endif
 #endif
 
 namespace cv
