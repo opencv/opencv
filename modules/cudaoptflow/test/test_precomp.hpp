@@ -57,6 +57,7 @@
 #include "opencv2/ts/cuda_test.hpp"
 
 #include "opencv2/cudaoptflow.hpp"
+#include "opencv2/cudaarithm.hpp"
 #include "opencv2/video.hpp"
 
 #include "cvconfig.h"
