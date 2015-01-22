@@ -1,61 +1,5 @@
 <?xml version="1.0"?>
 <opencv_storage>
-<ImagePair_InterpolateFrames--InterpolateFrames----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-  <gpu_newFrame>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>9.8192412406206131e-03</min>
-    <max>9.3716305494308472e-01</max>
-    <last>
-      <x>583</x>
-      <y>387</y>
-      <val>7.6359534263610840e-01</val></last>
-    <rng1>
-      <x>98</x>
-      <y>44</y>
-      <val>7.4720436334609985e-01</val></rng1>
-    <rng2>
-      <x>102</x>
-      <y>163</y>
-      <val>1.0018382966518402e-01</val></rng2></gpu_newFrame></ImagePair_InterpolateFrames--InterpolateFrames----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-<ImagePair_CreateOpticalFlowNeedleMap--CreateOpticalFlowNeedleMap----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-  <gpu_vertex>
-    <kind>65536</kind>
-    <type>21</type>
-    <min>9.4810836017131805e-03</min>
-    <max>1.</max>
-    <last>
-      <x>5183</x>
-      <y>0</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>2193</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>4.3718701601028442e-01</val></rng1>
-    <rng2>
-      <x>3559</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>6.8684089183807373e-01</val></rng2></gpu_vertex>
-  <gpu_colors>
-    <kind>65536</kind>
-    <type>21</type>
-    <min>0.</min>
-    <max>1.</max>
-    <last>
-      <x>5183</x>
-      <y>0</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>3039</x>
-      <y>0</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>3358</x>
-      <y>0</y>
-      <cn>2</cn>
-      <val>8.2089900970458984e-02</val></rng2></gpu_colors></ImagePair_CreateOpticalFlowNeedleMap--CreateOpticalFlowNeedleMap----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
 <ImagePair_BroxOpticalFlow--BroxOpticalFlow----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
   <gpu_u>
     <kind>65536</kind>
@@ -1392,109 +1336,41 @@
       <x>22</x>
       <y>68</y>
       <val>9.9158827215433121e-03</val></rng2></gpu_v></ImagePair_FarnebackOpticalFlow--FarnebackOpticalFlow----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
+ <!-- resumed -->
+
 <ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
   <gpu_u>
     <kind>65536</kind>
     <type>5</type>
-    <min>-3.2687530517578125e+00</min>
-    <max>2.3248901367187500e+00</max>
+    <min>-3.2729327678680420e+00</min>
+    <max>2.3326830863952637e+00</max>
     <last>
       <x>583</x>
       <y>387</y>
-      <val>9.8556733131408691e-01</val></last>
+      <val>9.7795557975769043e-01</val></last>
     <rng1>
-      <x>516</x>
-      <y>82</y>
-      <val>-1.0372428894042969e+00</val></rng1>
+      <x>223</x>
+      <y>276</y>
+      <val>-1.5120871067047119e+00</val></rng1>
     <rng2>
-      <x>396</x>
-      <y>232</y>
-      <val>-6.4879775047302246e-01</val></rng2></gpu_u>
+      <x>491</x>
+      <y>381</y>
+      <val>9.7245830297470093e-01</val></rng2></gpu_u>
   <gpu_v>
     <kind>65536</kind>
     <type>5</type>
-    <min>-1.3280031681060791e+00</min>
-    <max>1.4445461273193359e+01</max>
+    <min>-1.2916454076766968e+00</min>
+    <max>1.4262058258056641e+01</max>
     <last>
       <x>583</x>
       <y>387</y>
-      <val>1.4967128634452820e-02</val></last>
+      <val>1.0987382382154465e-02</val></last>
     <rng1>
-      <x>102</x>
-      <y>225</y>
-      <val>3.5028788447380066e-01</val></rng1>
+      <x>64</x>
+      <y>7</y>
+      <val>-4.6418264508247375e-02</val></rng1>
     <rng2>
-      <x>210</x>
-      <y>199</y>
-      <val>1.8887954950332642e-01</val></rng2></gpu_v></ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-<ImagePair_OpticalFlowBM--OpticalFlowBM----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-  <gpu_u>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-6.</min>
-    <max>7.</max>
-    <last>
-      <x>568</x>
-      <y>372</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>18</x>
-      <y>198</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>343</x>
-      <y>344</y>
-      <val>1.</val></rng2></gpu_u>
-  <gpu_v>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-16.</min>
-    <max>16.</max>
-    <last>
-      <x>568</x>
-      <y>372</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>434</x>
-      <y>231</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>91</x>
-      <y>355</y>
-      <val>0.</val></rng2></gpu_v></ImagePair_OpticalFlowBM--OpticalFlowBM----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-<ImagePair_FastOpticalFlowBM--FastOpticalFlowBM----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
-  <gpu_u>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-8.</min>
-    <max>7.</max>
-    <last>
-      <x>583</x>
-      <y>387</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>63</x>
-      <y>289</y>
-      <val>1.</val></rng1>
-    <rng2>
-      <x>237</x>
-      <y>166</y>
-      <val>0.</val></rng2></gpu_u>
-  <gpu_v>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-8.</min>
-    <max>7.</max>
-    <last>
-      <x>583</x>
-      <y>387</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>451</x>
-      <y>82</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>91</x>
-      <y>229</y>
-      <val>0.</val></rng2></gpu_v></ImagePair_FastOpticalFlowBM--FastOpticalFlowBM----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
+      <x>540</x>
+      <y>194</y>
+      <val>-1.2317572720348835e-02</val></rng2></gpu_v></ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----gpu-opticalflow-frame0-png----gpu-opticalflow-frame1-png-->
 </opencv_storage>
