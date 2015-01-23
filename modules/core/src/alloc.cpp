@@ -72,7 +72,7 @@ public:
     {
         LockType guard(mAllocMutex);
 
-		AllocationTable::iterator block = mAllocatedMemory.find(ptr);
+        AllocationTable::iterator block = mAllocatedMemory.find(ptr);
         CV_Assert(block != mAllocatedMemory.end());
     
         mCurrentMemoryUsage -= block->second;
@@ -80,11 +80,9 @@ public:
         mAllocatedMemory.erase(block);
     }
 
-   
-
     static MemoryManager& Instance()
     {
-		std::call_once(mInitFlag, createMemoryManager);
+        std::call_once(mInitFlag, createMemoryManager);
 
         return *mInstance;
     }
@@ -107,13 +105,13 @@ public:
     }
 private:
 
-	static void createMemoryManager()
-	{
-		if (mInstance == nullptr)
-		{
-			mInstance = new MemoryManager();
-		}
-	}
+    static void createMemoryManager()
+    {
+        if (mInstance == nullptr)
+        {
+            mInstance = new MemoryManager();
+        }
+    }
 
     MemoryManager()
         : mCurrentMemoryUsage(0)
