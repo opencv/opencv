@@ -72,19 +72,17 @@ public:
     {
         LockType guard(mAllocMutex);
 
-		AllocationTable::iterator block = mAllocatedMemory.find(ptr);
+        AllocationTable::iterator block = mAllocatedMemory.find(ptr);
         CV_Assert(block != mAllocatedMemory.end());
-    
+
         mCurrentMemoryUsage -= block->second;
         mDeallocationsCount++;
         mAllocatedMemory.erase(block);
     }
 
-   
-
     static MemoryManager& Instance()
     {
-		std::call_once(mInitFlag, createMemoryManager);
+        std::call_once(mInitFlag, createMemoryManager);
 
         return *mInstance;
     }
@@ -92,7 +90,7 @@ public:
     MemorySnapshot makeSnapshot()
     {
         LockType guard(mAllocMutex);
-        
+
         MemorySnapshot snapshot;
         snapshot.peakMemoryUsage = mPeakMemoryUsage;
         snapshot.peakMemoryUsageSinceLastSnapshot = mPeakMemoryUsageSinceLastSnapshot;
@@ -100,20 +98,20 @@ public:
         snapshot.allocationsCount = mAllocationsCount;
         snapshot.deallocationsCount = mDeallocationsCount;
         snapshot.liveObjects = mAllocationsCount - mDeallocationsCount;
-        
+
         mPeakMemoryUsageSinceLastSnapshot = 0;
 
         return std::move(snapshot);
     }
 private:
 
-	static void createMemoryManager()
-	{
-		if (mInstance == nullptr)
-		{
-			mInstance = new MemoryManager();
-		}
-	}
+    static void createMemoryManager()
+    {
+        if (mInstance == nullptr)
+        {
+            mInstance = new MemoryManager();
+        }
+    }
 
     MemoryManager()
         : mCurrentMemoryUsage(0)
