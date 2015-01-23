@@ -232,11 +232,15 @@ OCV_OPTION(ENABLE_WINRT_MODE          "Build with Windows Runtime support"      
 OCV_OPTION(ENABLE_WINRT_MODE_NATIVE   "Build with Windows Runtime native C++ support"            OFF  IF WIN32 )
 OCV_OPTION(ANDROID_EXAMPLES_WITH_LIBS "Build binaries of Android examples with native libraries" OFF  IF ANDROID )
 OCV_OPTION(ENABLE_IMPL_COLLECTION     "Collect implementation data on function call"             OFF )
+OCV_OPTION(ENABLE_MEMORY_SNAPSHOTS    "Collect memory allocation data"                           OFF  IF (NOT ANDROID AND NOT IOS) )
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
 endif()
 
+if(ENABLE_MEMORY_SNAPSHOTS)
+  add_definitions(-DCV_COLLECT_ALLOC_DATA)
+endif()
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources

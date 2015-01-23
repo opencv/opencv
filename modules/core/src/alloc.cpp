@@ -143,6 +143,10 @@ std::once_flag  MemoryManager::mInitFlag;
 
 MemorySnapshot memorySnapshot()
 {
+#ifndef CV_COLLECT_ALLOC_DATA
+    CV_Error_(CV_StsNoMem, ("Failed to create memory snapshot. Please build OpenCV using ENABLE_MEMORY_SNAPSHOTS=YES."));	
+#endif
+
     return std::move(MemoryManager::Instance().makeSnapshot());
 }
 
@@ -164,7 +168,10 @@ void* fastMalloc( size_t size )
     if(!udata)
         return OutOfMemoryError(size);
 
+#ifdef CV_COLLECT_ALLOC_DATA
     MemoryManager::Instance().recordAlloc(udata, size);
+#endif
+
     uchar** adata = alignPtr((uchar**)udata + 1, CV_MALLOC_ALIGN);
     adata[-1] = udata;
     return adata;
@@ -178,7 +185,10 @@ void fastFree(void* ptr)
         CV_DbgAssert(udata < (uchar*)ptr &&
                ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*)+CV_MALLOC_ALIGN));
 
+#ifdef CV_COLLECT_ALLOC_DATA
         MemoryManager::Instance().recordFree(udata);
+#endif
+
         free(udata);
     }
 }
