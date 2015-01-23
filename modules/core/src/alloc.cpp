@@ -45,7 +45,6 @@
 #include <map>
 #include <memory>
 #include <thread>
-#include <atomic>
 
 #define CV_USE_SYSTEM_MALLOC 1
 
@@ -147,7 +146,7 @@ std::once_flag  MemoryManager::mInitFlag;
 MemorySnapshot memorySnapshot()
 {
 #ifndef CV_COLLECT_ALLOC_DATA
-    CV_Error_(CV_StsNoMem, ("Failed to create memory snapshot. Please build OpenCV using ENABLE_MEMORY_SNAPSHOTS=YES."));	
+    CV_Error_(CV_StsNoMem, ("Failed to create memory snapshot. Please build OpenCV using ENABLE_MEMORY_SNAPSHOTS=YES."));
 #endif
 
     return std::move(MemoryManager::Instance().makeSnapshot());
