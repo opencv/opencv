@@ -136,7 +136,7 @@ CV_EXPORTS void error( const Exception& exc );
 
 A memory snapshot contains brief information of number of allocated
 objects, their size, peak memory usage, number of live objects and allocations
-count. By comparing two snapshots user can identify places in code, that 
+count. By comparing two snapshots user can identify places in code, that
 potentially can lead to memory-related problems like extreme memory usage or large
 number of temporary objects.
  */
