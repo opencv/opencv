@@ -41,10 +41,8 @@
 //M*/
 
 #include "precomp.hpp"
-#include <mutex>
 #include <map>
 #include <memory>
-#include <thread>
 
 #define CV_USE_SYSTEM_MALLOC 1
 
@@ -55,7 +53,7 @@ class MemoryManager
 {
 public:
     typedef std::map<void*, size_t>     AllocationTable;
-    typedef std::lock_guard<std::mutex> LockType;
+    typedef cv::AutoLock                LockType;
 
     void recordAlloc(void* ptr, size_t size)
     {
@@ -82,9 +80,10 @@ public:
 
     static MemoryManager& Instance()
     {
-        std::call_once(mInitFlag, createMemoryManager);
+        createMemoryManager();
 
-        return *mInstance;
+        MemoryManager& mgr = const_cast<MemoryManager&>(*mInstance);
+        return mgr;
     }
 
     MemorySnapshot makeSnapshot()
@@ -107,7 +106,7 @@ private:
 
     static void createMemoryManager()
     {
-        if (mInstance == nullptr)
+        if (mInstance == NULL)
         {
             mInstance = new MemoryManager();
         }
@@ -123,7 +122,7 @@ private:
     }
 
 private:
-    std::mutex      mAllocMutex;
+    cv::Mutex       mAllocMutex;
     AllocationTable mAllocatedMemory;
 
     size_t          mCurrentMemoryUsage;
@@ -133,13 +132,10 @@ private:
     size_t          mAllocationsCount;
     size_t          mDeallocationsCount;
 
-    static std::once_flag  mInitFlag;
-    static MemoryManager * mInstance;
+    static volatile MemoryManager  * mInstance;
 };
 
-
-MemoryManager * MemoryManager::mInstance = nullptr;
-std::once_flag  MemoryManager::mInitFlag;
+volatile MemoryManager * MemoryManager::mInstance = NULL;
 
 MemorySnapshot memorySnapshot()
 {
@@ -147,7 +143,7 @@ MemorySnapshot memorySnapshot()
     CV_Error_(CV_StsNoMem, ("Failed to create memory snapshot. Please build OpenCV using ENABLE_MEMORY_SNAPSHOTS=YES."));
 #endif
 
-    return std::move(MemoryManager::Instance().makeSnapshot());
+    return MemoryManager::Instance().makeSnapshot();
 }
 
 static void* OutOfMemoryError(size_t size)
