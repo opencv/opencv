@@ -41,11 +41,110 @@
 //M*/
 
 #include "precomp.hpp"
+#include <mutex>
+#include <map>
+#include <memory>
+#include <thread>
+#include <atomic>
 
 #define CV_USE_SYSTEM_MALLOC 1
 
 namespace cv
 {
+
+class MemoryManager
+{
+public:
+    typedef std::map<void*, size_t>     AllocationTable;
+    typedef std::lock_guard<std::mutex> LockType;
+
+    void recordAlloc(void* ptr, size_t size)
+    {
+        LockType guard(mAllocMutex);
+        mAllocatedMemory.insert(std::make_pair(ptr, size));
+
+        mCurrentMemoryUsage += size;
+        mPeakMemoryUsage = std::max(mPeakMemoryUsage, mCurrentMemoryUsage);
+        mPeakMemoryUsageSinceLastSnapshot = std::max(mPeakMemoryUsageSinceLastSnapshot, mCurrentMemoryUsage);
+        mAllocationsCount++;
+    }
+
+    void recordFree(void* ptr)
+    {
+        LockType guard(mAllocMutex);
+
+        auto block = mAllocatedMemory.find(ptr);
+        CV_Assert(block != mAllocatedMemory.end());
+    
+        mCurrentMemoryUsage -= block->second;
+        mDeallocationsCount++;
+        mAllocatedMemory.erase(block);
+    }
+
+   
+
+    static MemoryManager& Instance()
+    {
+        std::call_once(mInitFlag, []() {
+            if (mInstance == nullptr)
+            {
+                mInstance = new MemoryManager();
+            }
+        });
+
+        return *mInstance;
+    }
+
+    MemorySnapshot makeSnapshot()
+    {
+        LockType guard(mAllocMutex);
+        
+        MemorySnapshot snapshot;
+        snapshot.peakMemoryUsage = mPeakMemoryUsage;
+        snapshot.peakMemoryUsageSinceLastSnapshot = mPeakMemoryUsageSinceLastSnapshot;
+        snapshot.allocatedMemory = mCurrentMemoryUsage;
+        snapshot.allocationsCount = mAllocationsCount;
+        snapshot.deallocationsCount = mDeallocationsCount;
+        snapshot.liveObjects = mAllocationsCount - mDeallocationsCount;
+        
+        mPeakMemoryUsageSinceLastSnapshot = 0;
+
+        return std::move(snapshot);
+    }
+private:
+
+    MemoryManager()
+        : mCurrentMemoryUsage(0)
+        , mPeakMemoryUsage(0)
+        , mPeakMemoryUsageSinceLastSnapshot(0)
+        , mAllocationsCount(0)
+        , mDeallocationsCount(0)
+    {
+    }
+
+private:
+    std::mutex      mAllocMutex;
+    AllocationTable mAllocatedMemory;
+
+    size_t          mCurrentMemoryUsage;
+    size_t          mPeakMemoryUsage;
+    size_t          mPeakMemoryUsageSinceLastSnapshot;
+
+    size_t          mAllocationsCount;
+    size_t          mDeallocationsCount;
+
+    static std::once_flag  mInitFlag;
+    static MemoryManager * mInstance;
+};
+
+
+MemoryManager * MemoryManager::mInstance = nullptr;
+std::once_flag  MemoryManager::mInitFlag;
+
+MemorySnapshot memorySnapshot()
+{
+    return std::move(MemoryManager::Instance().makeSnapshot());
+}
 
 static void* OutOfMemoryError(size_t size)
 {
@@ -64,6 +163,8 @@ void* fastMalloc( size_t size )
     uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
     if(!udata)
         return OutOfMemoryError(size);
+
+    MemoryManager::Instance().recordAlloc(udata, size);
     uchar** adata = alignPtr((uchar**)udata + 1, CV_MALLOC_ALIGN);
     adata[-1] = udata;
     return adata;
@@ -76,6 +177,8 @@ void fastFree(void* ptr)
         uchar* udata = ((uchar**)ptr)[-1];
         CV_DbgAssert(udata < (uchar*)ptr &&
                ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*)+CV_MALLOC_ALIGN));
+
+        MemoryManager::Instance().recordFree(udata);
         free(udata);
     }
 }
