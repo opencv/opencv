@@ -77,7 +77,7 @@ else()
   endforeach(flag_var)
 endif()
 
-if(NOT ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} LESS 2.8 AND NOT ${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} LESS 8.6)
+if(CMAKE_VERSION VERSION_GREATER "2.8.6")
   include(ProcessorCount)
   ProcessorCount(N)
   if(NOT N EQUAL 0)
