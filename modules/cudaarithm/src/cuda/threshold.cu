@@ -103,7 +103,7 @@ double cv::cuda::threshold(InputArray _src, OutputArray _dst, double thresh, dou
 
     CV_Assert( depth <= CV_64F );
     CV_Assert( type <= 4 /*THRESH_TOZERO_INV*/ );
-    src = src.reshape(src.channels(), src.rows);
+    src = src.reshape(1);
 
     GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
