@@ -101,8 +101,9 @@ double cv::cuda::threshold(InputArray _src, OutputArray _dst, double thresh, dou
 
     const int depth = src.depth();
 
-    CV_Assert( src.channels() == 1 && depth <= CV_64F );
+    CV_Assert( depth <= CV_64F );
     CV_Assert( type <= 4 /*THRESH_TOZERO_INV*/ );
+    src = src.reshape(src.channels(), src.rows);
 
     GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
