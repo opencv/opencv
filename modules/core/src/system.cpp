@@ -293,14 +293,13 @@ struct HWFeatures
             #else
             asm volatile
             (
-             "pushl %%eax\n\t"
-             "pushl %%edx\n\t"
+             "pushl %%ebx\n\t"
              "movl $7,%%eax\n\t"
              "movl $0,%%ecx\n\t"
              "cpuid\n\t"
-             "popl %%edx\n\t"
-             "popl %%eax\n\t"
-             : "=b"(cpuid_data[1]), "=c"(cpuid_data[2])
+             "movl %%ebx, %0\n\t"
+             "popl %%ebx\n\t"
+             : "=r"(cpuid_data[1]), "=c"(cpuid_data[2])
              :
              : "cc"
             );
