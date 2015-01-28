@@ -121,7 +121,7 @@ protected:
         for (vector<string>::const_iterator a = filenames.begin(); a != filenames.end(); ++a)
         {
             // read current image
-            int aIndex = a - filenames.begin();
+            int aIndex = (int)(a - filenames.begin());
             Mat currentQuery = imread(*a, IMREAD_GRAYSCALE);
             Mat flippedHQuery, flippedVQuery;
             flip(currentQuery, flippedHQuery, 0);
@@ -133,7 +133,7 @@ protected:
             // compare with all the rest of the images: testing
             for (vector<string>::const_iterator b = filenames.begin(); b != filenames.end(); ++b)
             {
-                int bIndex = b - filenames.begin();
+                int bIndex = (int)(b - filenames.begin());
                 float distance = 0;
                 // skip self-comparisson
                 if (a != b)
