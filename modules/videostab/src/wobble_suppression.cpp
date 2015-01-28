@@ -44,14 +44,41 @@
 #include "opencv2/videostab/wobble_suppression.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
 
+#include "opencv2/core/private.cuda.hpp"
+
 #ifdef HAVE_OPENCV_CUDAWARPING
 #  include "opencv2/cudawarping.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_CUDA
-#  include "opencv2/cuda.hpp"
-#endif
+#if defined(HAVE_OPENCV_CUDAWARPING)
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+        namespace cv { namespace cuda {
+            static void calcWobbleSuppressionMaps(int, int, int, Size, const Mat&, const Mat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+        }}
+    #else
+        namespace cv { namespace cuda { namespace device { namespace globmotion {
+            void calcWobbleSuppressionMaps(
+                    int left, int idx, int right, int width, int height,
+                    const float *ml, const float *mr, PtrStepSzf mapx, PtrStepSzf mapy);
+        }}}}
+        namespace cv { namespace cuda {
+            static void calcWobbleSuppressionMaps(
+                    int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
+                    GpuMat &mapx, GpuMat &mapy)
+            {
+                CV_Assert(ml.size() == Size(3, 3) && ml.type() == CV_32F && ml.isContinuous());
+                CV_Assert(mr.size() == Size(3, 3) && mr.type() == CV_32F && mr.isContinuous());
 
+                mapx.create(size, CV_32F);
+                mapy.create(size, CV_32F);
+
+                cv::cuda::device::globmotion::calcWobbleSuppressionMaps(
+                            left, idx, right, size.width, size.height,
+                            ml.ptr<float>(), mr.ptr<float>(), mapx, mapy);
+            }
+        }}
+    #endif
+#endif
 
 namespace cv
 {
@@ -121,8 +148,7 @@ void MoreAccurateMotionWobbleSuppressor::suppress(int idx, const Mat &frame, Mat
     remap(frame, result, mapx_, mapy_, INTER_LINEAR, BORDER_REPLICATE);
 }
 
-
-#if defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAWARPING)
+#if defined(HAVE_OPENCV_CUDAWARPING)
 void MoreAccurateMotionWobbleSuppressorGpu::suppress(int idx, const cuda::GpuMat &frame, cuda::GpuMat &result)
 {
     CV_Assert(motions_ && stabilizationMotions_);
