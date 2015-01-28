@@ -16,6 +16,4 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/shape.hpp"
 
-#include "opencv2/opencv_modules.hpp"
-
 #endif
