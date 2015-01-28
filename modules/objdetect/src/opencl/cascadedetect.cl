@@ -397,8 +397,8 @@ __kernel void runLBPClassifierStumpSimple(
 
         for( tileIdx = groupIdx; tileIdx < totalTiles; tileIdx += ngroups )
         {
-            int iy = ((tileIdx / ntiles.x)*local_size_y + ly)*ystep;
-            int ix = ((tileIdx % ntiles.x)*local_size_x + lx)*ystep;
+            int iy = mad24((tileIdx / ntiles.x), local_size_y, ly) * ystep;
+            int ix = mad24((tileIdx % ntiles.x), local_size_x, lx) * ystep;
 
             if( ix < worksize.x && iy < worksize.y )
             {
