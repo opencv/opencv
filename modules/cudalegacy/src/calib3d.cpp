@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+#if !defined HAVE_CUDA || !defined HAVE_OPENCV_CALIB3D || defined(CUDA_DISABLER)
 
 void cv::cuda::transformPoints(const GpuMat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
 

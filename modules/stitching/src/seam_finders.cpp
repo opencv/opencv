@@ -1321,7 +1321,7 @@ void GraphCutSeamFinder::find(const std::vector<UMat> &src, const std::vector<Po
 }
 
 
-#ifdef HAVE_OPENCV_CUDA
+#ifdef HAVE_OPENCV_CUDALEGACY
 void GraphCutSeamFinderGpu::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
                                  std::vector<UMat> &masks)
 {
