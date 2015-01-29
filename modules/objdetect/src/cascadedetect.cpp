@@ -589,7 +589,7 @@ bool HaarEvaluator::read(const FileNode& node, Size _origWinSize)
     {
         if (ocl::Device::getDefault().isAMD() || ocl::Device::getDefault().isIntel())
         {
-            localSize = Size(8, 8);
+            localSize = ocl::Device::getDefault().isIntel() ? Size(4, 4) : Size(8, 8);
             lbufSize = Size(origWinSize.width + localSize.width,
                             origWinSize.height + localSize.height);
             if (lbufSize.area() > 1024)
@@ -1039,7 +1039,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
         return false;
     Size lbufSize = featureEvaluator->getLocalBufSize();
     size_t localsize[] = { localsz.width, localsz.height };
-    const int grp_per_CU = 12;
+    const int grp_per_CU = ocl::Device::getDefault().isIntel() ? 64 : 12;
     size_t globalsize[] = { grp_per_CU*ocl::Device::getDefault().maxComputeUnits()*localsize[0], localsize[1] };
     bool ok = false;
 
