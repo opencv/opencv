@@ -70,7 +70,8 @@ static void* AppleCLGetProcAddress(const char* name)
             handle = dlopen(oclpath, RTLD_LAZY | RTLD_GLOBAL);
             if (handle == NULL)
             {
-                fprintf(stderr, ERROR_MSG_CANT_LOAD);
+                if (envPath)
+                    fprintf(stderr, ERROR_MSG_CANT_LOAD);
             }
             else if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
             {
@@ -108,7 +109,8 @@ static void* WinGetProcAddress(const char* name)
                 handle = LoadLibraryA(path);
                 if (!handle)
                 {
-                    fprintf(stderr, ERROR_MSG_CANT_LOAD);
+                    if (envPath)
+                        fprintf(stderr, ERROR_MSG_CANT_LOAD);
                 }
                 else if (GetProcAddress(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
                 {
@@ -145,7 +147,8 @@ static void* GetProcAddress(const char* name)
             handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
             if (handle == NULL)
             {
-                fprintf(stderr, ERROR_MSG_CANT_LOAD);
+                if (envPath)
+                    fprintf(stderr, ERROR_MSG_CANT_LOAD);
             }
             else if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
             {
