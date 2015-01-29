@@ -721,6 +721,16 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
         return false;
 
     UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
+    if (!ocl::internal::isCLBuffer(A) || !ocl::internal::isCLBuffer(B) || !ocl::internal::isCLBuffer(D))
+    {
+        return false;
+    }
+    if (haveC)
+    {
+        UMat C = matC.getUMat();
+        if (!ocl::internal::isCLBuffer(C))
+            return false;
+    }
     if (haveC)
         ctrans ? transpose(matC, D) : matC.copyTo(D);
     else

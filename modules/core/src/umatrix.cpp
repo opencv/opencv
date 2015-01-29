@@ -55,7 +55,7 @@ UMatData::UMatData(const MatAllocator* allocator)
     prevAllocator = currAllocator = allocator;
     urefcount = refcount = 0;
     data = origdata = 0;
-    size = 0; capacity = 0;
+    size = 0;
     flags = 0;
     handle = 0;
     userdata = 0;
@@ -67,7 +67,7 @@ UMatData::~UMatData()
     prevAllocator = currAllocator = 0;
     urefcount = refcount = 0;
     data = origdata = 0;
-    size = 0; capacity = 0;
+    size = 0;
     flags = 0;
     handle = 0;
     userdata = 0;
@@ -221,7 +221,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
         temp_u->refcount = 1;
     }
-    UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags);
+    UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags); // TODO result is not checked
     hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);
     finalizeHdr(hdr);
@@ -575,7 +575,7 @@ Mat UMat::getMat(int accessFlags) const
 {
     if(!u)
         return Mat();
-    u->currAllocator->map(u, accessFlags | ACCESS_READ);
+    u->currAllocator->map(u, accessFlags | ACCESS_READ); // TODO Support ACCESS_WRITE without unnecessary data transfers
     CV_Assert(u->data != 0);
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
     hdr.flags = flags;
