@@ -376,9 +376,10 @@ enum UMatUsageFlags
 {
     USAGE_DEFAULT = 0,
 
-    // default allocation policy is platform and usage specific
+    // buffer allocation policy is platform and usage specific
     USAGE_ALLOCATE_HOST_MEMORY = 1 << 0,
     USAGE_ALLOCATE_DEVICE_MEMORY = 1 << 1,
+    USAGE_ALLOCATE_SHARED_MEMORY = 1 << 2, // It is not equal to: USAGE_ALLOCATE_HOST_MEMORY | USAGE_ALLOCATE_DEVICE_MEMORY
 
     __UMAT_USAGE_FLAGS_32BIT = 0x7fffffff // Binary compatibility hint
 };
@@ -414,7 +415,7 @@ public:
                       const size_t dstofs[], const size_t dststep[], bool sync) const;
 
     // default implementation returns DummyBufferPoolController
-    virtual BufferPoolController* getBufferPoolController() const;
+    virtual BufferPoolController* getBufferPoolController(const char* id = NULL) const;
 };
 
 
@@ -480,7 +481,7 @@ struct CV_EXPORTS UMatData
     int refcount;
     uchar* data;
     uchar* origdata;
-    size_t size, capacity;
+    size_t size;
 
     int flags;
     void* handle;
