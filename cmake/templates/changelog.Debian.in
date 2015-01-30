@@ -1,0 +1,4 @@
+@CHANGELOG_PACKAGE_NAME@ (@CPACK_PACKAGE_VERSION@) unstable; urgency=low
+  * Debian changelog stub. See upstream changelog or release notes in user
+     documentation for more details.
+ -- @CPACK_PACKAGE_CONTACT@  @CHANGELOG_PACKAGE_DATE@
