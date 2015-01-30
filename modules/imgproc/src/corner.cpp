@@ -271,7 +271,8 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
         return;
-#elif CV_SSE2
+#endif
+#if CV_SSE2
     bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
 #endif
 
