@@ -14,7 +14,7 @@ machine perception in the commercial products. Being a BSD-licensed product,
 OpenCV makes it easy for businesses to utilize and modify the code.")
   set(CPACK_PACKAGE_VENDOR "OpenCV Foundation")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-  set(CPACK_PACKAGE_CONTACT "admin@opencv.org")
+  set(CPACK_PACKAGE_CONTACT "OpenCV Developers <admin@opencv.org>")
   set(CPACK_PACKAGE_VERSION_MAJOR "${OPENCV_VERSION_MAJOR}")
   set(CPACK_PACKAGE_VERSION_MINOR "${OPENCV_VERSION_MINOR}")
   set(CPACK_PACKAGE_VERSION_PATCH "${OPENCV_VERSION_PATCH}")
@@ -134,6 +134,36 @@ if(NOT OPENCV_CUSTOM_PACKAGE_LAYOUT)
   set(CPACK_java_COMPONENT_INSTALL TRUE)
   set(CPACK_samples_COMPONENT_INSTALL TRUE)
 endif(NOT OPENCV_CUSTOM_PACKAGE_LAYOUT)
+
+if(CPACK_GENERATOR STREQUAL "DEB")
+  find_program(GZIP_TOOL NAMES "gzip" PATHS "/bin" "/usr/bin" "/usr/local/bin")
+  if(NOT GZIP_TOOL)
+    message(FATAL_ERROR "Unable to find 'gzip' program")
+  endif()
+
+  execute_process(COMMAND "date" "-R"
+                  OUTPUT_VARIABLE CHANGELOG_PACKAGE_DATE
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  set(CHANGELOG_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}")
+  set(ALL_COMPONENTS "libs" "dev" "docs" "python" "java" "samples")
+  foreach (comp ${ALL_COMPONENTS})
+    if(CPACK_${comp}_COMPONENT_INSTALL)
+      set(DEBIAN_CHANGELOG_OUT_FILE    "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian")
+      set(DEBIAN_CHANGELOG_OUT_FILE_GZ "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian.gz")
+      set(CHANGELOG_PACKAGE_NAME "${CPACK_COMPONENT_${comp}_DISPLAY_NAME}")
+      configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/changelog.Debian.in" "${DEBIAN_CHANGELOG_OUT_FILE}" @ONLY)
+
+      execute_process(COMMAND "${GZIP_TOOL}" "-cf9" "${DEBIAN_CHANGELOG_OUT_FILE}"
+                      OUTPUT_FILE "${DEBIAN_CHANGELOG_OUT_FILE_GZ}"
+                      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+      install(FILES "${DEBIAN_CHANGELOG_OUT_FILE_GZ}"
+              DESTINATION "share/doc/${CPACK_COMPONENT_${comp}_DISPLAY_NAME}"
+              COMPONENT "${comp}")
+    endif()
+  endforeach()
+endif()
 
 include(CPack)
 
