@@ -893,7 +893,7 @@ function(ocv_add_samples)
     file(GLOB sample_files "${samples_path}/*")
     install(FILES ${sample_files}
             DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/${module_id}
-            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
+            PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
   endif()
 endfunction()
 
