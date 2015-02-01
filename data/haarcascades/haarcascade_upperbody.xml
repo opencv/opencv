@@ -139,8 +139,8 @@ Thanks to Martin Spengler, ETH Zurich, for providing the demo movie.
 <opencv_storage>
 <cascade type_id="opencv-cascade-classifier"><stageType>BOOST</stageType>
   <featureType>HAAR</featureType>
-  <height>22</height>
-  <width>18</width>
+  <height>18</height>
+  <width>22</width>
   <stageParams>
     <maxWeakCount>152</maxWeakCount></stageParams>
   <featureParams>
