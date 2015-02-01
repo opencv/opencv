@@ -229,28 +229,27 @@ if(WITH_FFMPEG)
     if(FFMPEG_INCLUDE_DIR)
       set(HAVE_GENTOO_FFMPEG TRUE)
       set(FFMPEG_LIB_DIR "${FFMPEG_INCLUDE_DIR}/../lib" CACHE PATH "Full path of FFMPEG library directory")
-      if(EXISTS "${FFMPEG_LIB_DIR}/libavcodec.a")
-        set(HAVE_FFMPEG_CODEC 1)
-        set(ALIASOF_libavcodec_VERSION "Unknown")
-        if(EXISTS "${FFMPEG_LIB_DIR}/libavformat.a")
-          set(HAVE_FFMPEG_FORMAT 1)
-          set(ALIASOF_libavformat_VERSION "Unknown")
-          if(EXISTS "${FFMPEG_LIB_DIR}/libavutil.a")
-            set(HAVE_FFMPEG_UTIL 1)
-            set(ALIASOF_libavutil_VERSION "Unknown")
-            if(EXISTS "${FFMPEG_LIB_DIR}/libswscale.a")
-              set(HAVE_FFMPEG_SWSCALE 1)
-              set(ALIASOF_libswscale_VERSION "Unknown")
-              set(HAVE_FFMPEG 1)
-            endif()
-          endif()
-        endif()
+      find_library(FFMPEG_CODEC_LIB
+                   NAMES "libavcodec.a" "libavcodec.dylib"
+                   PATHS "${FFMPEG_LIB_DIR}")
+      find_library(FFMPEG_FORMAT_LIB
+                   NAMES "libavformat.a" "libavformat.dylib"
+                   PATHS "${FFMPEG_LIB_DIR}")
+      find_library(FFMPEG_UTIL_LIB
+                   NAMES "libavutil.a" "libavutil.dylib"
+                   PATHS "${FFMPEG_LIB_DIR}")
+      find_library(FFMPEG_SWSCALE_LIB
+                   NAMES "libswscale.a" "libswscale.dylib"
+                   PATHS "${FFMPEG_LIB_DIR}")
+      if(FFMPEG_CODEC_LIB AND FFMPEG_FORMAT_LIB AND
+         FFMPEG_UTIL_LIB AND FFMPEG_SWSCALE_LIB)
+        set(HAVE_FFMPEG 1)
       endif()
     endif(FFMPEG_INCLUDE_DIR)
     if(HAVE_FFMPEG)
-      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} "${FFMPEG_LIB_DIR}/libavcodec.a"
-          "${FFMPEG_LIB_DIR}/libavformat.a" "${FFMPEG_LIB_DIR}/libavutil.a"
-          "${FFMPEG_LIB_DIR}/libswscale.a")
+      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES}
+          ${FFMPEG_CODEC_LIB} ${FFMPEG_FORMAT_LIB}
+          ${FFMPEG_UTIL_LIB} ${FFMPEG_SWSCALE_LIB})
       ocv_include_directories(${FFMPEG_INCLUDE_DIR})
     endif()
   endif(APPLE)
