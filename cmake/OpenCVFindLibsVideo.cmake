@@ -229,18 +229,10 @@ if(WITH_FFMPEG)
     if(FFMPEG_INCLUDE_DIR)
       set(HAVE_GENTOO_FFMPEG TRUE)
       set(FFMPEG_LIB_DIR "${FFMPEG_INCLUDE_DIR}/../lib" CACHE PATH "Full path of FFMPEG library directory")
-      find_library(FFMPEG_CODEC_LIB
-                   NAMES "libavcodec.a" "libavcodec.dylib"
-                   PATHS "${FFMPEG_LIB_DIR}")
-      find_library(FFMPEG_FORMAT_LIB
-                   NAMES "libavformat.a" "libavformat.dylib"
-                   PATHS "${FFMPEG_LIB_DIR}")
-      find_library(FFMPEG_UTIL_LIB
-                   NAMES "libavutil.a" "libavutil.dylib"
-                   PATHS "${FFMPEG_LIB_DIR}")
-      find_library(FFMPEG_SWSCALE_LIB
-                   NAMES "libswscale.a" "libswscale.dylib"
-                   PATHS "${FFMPEG_LIB_DIR}")
+      find_library(FFMPEG_CODEC_LIB "avcodec" HINTS "${FFMPEG_LIB_DIR}")
+      find_library(FFMPEG_FORMAT_LIB "avformat" HINTS "${FFMPEG_LIB_DIR}")
+      find_library(FFMPEG_UTIL_LIB "avutil" HINTS "${FFMPEG_LIB_DIR}")
+      find_library(FFMPEG_SWSCALE_LIB "swscale" HINTS "${FFMPEG_LIB_DIR}")
       if(FFMPEG_CODEC_LIB AND FFMPEG_FORMAT_LIB AND
          FFMPEG_UTIL_LIB AND FFMPEG_SWSCALE_LIB)
         set(HAVE_FFMPEG 1)
