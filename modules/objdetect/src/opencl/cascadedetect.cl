@@ -140,7 +140,6 @@ void runHaarClassifier(
                 int dy = i/SUM_BUF_STEP, dx = i - dy*SUM_BUF_STEP;
                 vstore4(vload4(0, psum0 + mad24(dy, sumstep, dx)), 0, ibuf+i);
             }
-            barrier(CLK_LOCAL_MEM_FENCE);
             #endif
 
             if( lidx == 0 )
