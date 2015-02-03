@@ -903,7 +903,7 @@ struct FeatureValAndIdxPrecalc : ParallelLoopBody
                     *(idst + fi*sample_count + si) = si;
             }
             if ( is_buf_16u )
-                std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, unsigned short>(valCache->ptr<float>(fi)) );
+                std::sort(udst + fi*sample_count, udst + (fi + 1)*sample_count, LessThanIdx<float, unsigned short>(valCache->ptr<float>(fi)) );
             else
                 std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, int>(valCache->ptr<float>(fi)) );
         }
