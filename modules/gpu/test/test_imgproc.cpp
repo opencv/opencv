@@ -681,7 +681,7 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::gpu::DeviceInfo, cv::Size, TemplateSize, Ch
     }
 };
 
-GPU_TEST_P(MatchTemplate8U, Accuracy)
+GPU_TEST_P(MatchTemplate8U, DISABLED_Accuracy)
 {
     cv::Mat image = randomMat(size, CV_MAKETYPE(CV_8U, cn));
     cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_8U, cn));
@@ -738,7 +738,7 @@ PARAM_TEST_CASE(MatchTemplate32F, cv::gpu::DeviceInfo, cv::Size, TemplateSize, C
     }
 };
 
-GPU_TEST_P(MatchTemplate32F, Regression)
+GPU_TEST_P(MatchTemplate32F, DISABLED_Regression)
 {
     cv::Mat image = randomMat(size, CV_MAKETYPE(CV_32F, cn));
     cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_32F, cn));
@@ -787,7 +787,7 @@ PARAM_TEST_CASE(MatchTemplateBlackSource, cv::gpu::DeviceInfo, TemplateMethod)
     }
 };
 
-GPU_TEST_P(MatchTemplateBlackSource, Accuracy)
+GPU_TEST_P(MatchTemplateBlackSource, DISABLED_Accuracy)
 {
     cv::Mat image = readImage("matchtemplate/black.png");
     ASSERT_FALSE(image.empty());
@@ -832,7 +832,7 @@ PARAM_TEST_CASE(MatchTemplate_CCOEF_NORMED, cv::gpu::DeviceInfo, std::pair<std::
     }
 };
 
-GPU_TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
+GPU_TEST_P(MatchTemplate_CCOEF_NORMED, DISABLED_Accuracy)
 {
     cv::Mat image = readImage(imageName);
     ASSERT_FALSE(image.empty());
@@ -881,7 +881,7 @@ struct MatchTemplate_CanFindBigTemplate : testing::TestWithParam<cv::gpu::Device
     }
 };
 
-GPU_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
+GPU_TEST_P(MatchTemplate_CanFindBigTemplate, DISABLED_SQDIFF_NORMED)
 {
     cv::Mat scene = readImage("matchtemplate/scene.png");
     ASSERT_FALSE(scene.empty());
@@ -904,7 +904,7 @@ GPU_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
     ASSERT_EQ(0, minLoc.y);
 }
 
-GPU_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF)
+GPU_TEST_P(MatchTemplate_CanFindBigTemplate, DISABLED_SQDIFF)
 {
     cv::Mat scene = readImage("matchtemplate/scene.png");
     ASSERT_FALSE(scene.empty());
