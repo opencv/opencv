@@ -1583,7 +1583,7 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
     int         i;
     float       S, newS;  /* Sum of squared errors */
     float       gain;     /* Gain-parameter. */
-    float       L  = 0.01f;/* Lambda of LevMarq */
+    float       L  = 100.0f;/* Lambda of LevMarq */
     float dH[8], newH[8];
 
     /**
@@ -1614,7 +1614,7 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
          * The system above is solved by Cholesky decomposition of a
          * sufficently-damped JtJ into a lower-triangular matrix (and its
          * transpose), whose inverse is then computed. This inverse (and its
-         * transpose) then multiply JtJ in order to find dH.
+         * transpose) then multiply Jte in order to find dH.
          */
 
         while(!sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1)){
