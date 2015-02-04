@@ -219,28 +219,28 @@ if(WITH_FFMPEG)
         FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
       endif()
     else()
-    find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h"
-              PATHS /usr/local /usr /opt
-              PATH_SUFFIXES include
-              DOC "The path to FFMPEG headers")
-    if(FFMPEG_INCLUDE_DIR)
-      set(HAVE_GENTOO_FFMPEG TRUE)
-      set(FFMPEG_LIB_DIR "${FFMPEG_INCLUDE_DIR}/../lib" CACHE PATH "Full path of FFMPEG library directory")
-      find_library(FFMPEG_CODEC_LIB "avcodec" HINTS "${FFMPEG_LIB_DIR}")
-      find_library(FFMPEG_FORMAT_LIB "avformat" HINTS "${FFMPEG_LIB_DIR}")
-      find_library(FFMPEG_UTIL_LIB "avutil" HINTS "${FFMPEG_LIB_DIR}")
-      find_library(FFMPEG_SWSCALE_LIB "swscale" HINTS "${FFMPEG_LIB_DIR}")
-      if(FFMPEG_CODEC_LIB AND FFMPEG_FORMAT_LIB AND
-         FFMPEG_UTIL_LIB AND FFMPEG_SWSCALE_LIB)
-        set(HAVE_FFMPEG 1)
-      endif()
-    endif(FFMPEG_INCLUDE_DIR)
-    if(HAVE_FFMPEG)
-      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES}
-          ${FFMPEG_CODEC_LIB} ${FFMPEG_FORMAT_LIB}
-          ${FFMPEG_UTIL_LIB} ${FFMPEG_SWSCALE_LIB})
-      ocv_include_directories(${FFMPEG_INCLUDE_DIR})
-    endif()
+      find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h"
+                PATHS /usr/local /usr /opt
+                PATH_SUFFIXES include
+                DOC "The path to FFMPEG headers")
+      if(FFMPEG_INCLUDE_DIR)
+        set(HAVE_GENTOO_FFMPEG TRUE)
+        set(FFMPEG_LIB_DIR "${FFMPEG_INCLUDE_DIR}/../lib" CACHE PATH "Full path of FFMPEG library directory")
+        find_library(FFMPEG_CODEC_LIB "avcodec" HINTS "${FFMPEG_LIB_DIR}")
+        find_library(FFMPEG_FORMAT_LIB "avformat" HINTS "${FFMPEG_LIB_DIR}")
+        find_library(FFMPEG_UTIL_LIB "avutil" HINTS "${FFMPEG_LIB_DIR}")
+        find_library(FFMPEG_SWSCALE_LIB "swscale" HINTS "${FFMPEG_LIB_DIR}")
+        if(FFMPEG_CODEC_LIB AND FFMPEG_FORMAT_LIB AND
+           FFMPEG_UTIL_LIB AND FFMPEG_SWSCALE_LIB)
+          set(HAVE_FFMPEG 1)
+        endif()
+      endif(FFMPEG_INCLUDE_DIR)
+      if(HAVE_FFMPEG)
+        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES}
+            ${FFMPEG_CODEC_LIB} ${FFMPEG_FORMAT_LIB}
+            ${FFMPEG_UTIL_LIB} ${FFMPEG_SWSCALE_LIB})
+        ocv_include_directories(${FFMPEG_INCLUDE_DIR})
+      endif(HAVE_FFMPEG)
     endif()
   endif()
 endif(WITH_FFMPEG)
