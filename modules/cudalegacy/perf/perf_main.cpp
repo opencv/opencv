@@ -40,6 +40,8 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "perf_precomp.hpp"
 
-CV_CUDA_TEST_MAIN("gpu")
+using namespace perf;
+
+CV_PERF_TEST_CUDA_MAIN(cudalegacy)

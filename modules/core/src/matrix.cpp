@@ -159,8 +159,9 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
         memcpy(ptrs[1], ptrs[0], planesz);
 }
 
-BufferPoolController* MatAllocator::getBufferPoolController() const
+BufferPoolController* MatAllocator::getBufferPoolController(const char* id) const
 {
+    (void)id;
     static DummyBufferPoolController dummy;
     return &dummy;
 }
@@ -2644,6 +2645,10 @@ void _OutputArray::assign(const UMat& u) const
     {
         u.copyTo(*(Mat*)obj); // TODO check u.getMat()
     }
+    else if (k == MATX)
+    {
+        u.copyTo(getMat()); // TODO check u.getMat()
+    }
     else
     {
         CV_Error(Error::StsNotImplemented, "");
@@ -2661,6 +2666,10 @@ void _OutputArray::assign(const Mat& m) const
     else if (k == MAT)
     {
         *(Mat*)obj = m;
+    }
+    else if (k == MATX)
+    {
+        m.copyTo(getMat());
     }
     else
     {

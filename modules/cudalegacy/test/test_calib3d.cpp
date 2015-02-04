@@ -42,7 +42,9 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_CUDA
+#if defined HAVE_CUDA && defined HAVE_OPENCV_CALIB3D
+
+#include "opencv2/calib3d.hpp"
 
 using namespace cvtest;
 

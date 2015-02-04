@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -87,6 +88,22 @@
             mov [edi + 12], edx
             pop edi
             pop ebx
+        }
+    }
+    static void __cpuidex(int* cpuid_data, int, int)
+    {
+        __asm
+        {
+            push edi
+            mov edi, cpuid_data
+            mov eax, 7
+            mov ecx, 0
+            cpuid
+            mov [edi], eax
+            mov [edi + 4], ebx
+            mov [edi + 8], ecx
+            mov [edi + 12], edx
+            pop edi
         }
     }
   #endif
@@ -208,7 +225,7 @@ struct HWFeatures
     enum { MAX_FEATURE = CV_HARDWARE_MAX_FEATURE };
 
     HWFeatures(void)
-     {
+    {
         memset( have, 0, sizeof(have) );
         x86_family = 0;
     }
@@ -252,10 +269,53 @@ struct HWFeatures
             f.have[CV_CPU_SSE2]   = (cpuid_data[3] & (1<<26)) != 0;
             f.have[CV_CPU_SSE3]   = (cpuid_data[2] & (1<<0)) != 0;
             f.have[CV_CPU_SSSE3]  = (cpuid_data[2] & (1<<9)) != 0;
+            f.have[CV_CPU_FMA3]  = (cpuid_data[2] & (1<<12)) != 0;
             f.have[CV_CPU_SSE4_1] = (cpuid_data[2] & (1<<19)) != 0;
             f.have[CV_CPU_SSE4_2] = (cpuid_data[2] & (1<<20)) != 0;
             f.have[CV_CPU_POPCNT] = (cpuid_data[2] & (1<<23)) != 0;
             f.have[CV_CPU_AVX]    = (((cpuid_data[2] & (1<<28)) != 0)&&((cpuid_data[2] & (1<<27)) != 0));//OS uses XSAVE_XRSTORE and CPU support AVX
+
+            // make the second call to the cpuid command in order to get
+            // information about extended features like AVX2
+        #if defined _MSC_VER && (defined _M_IX86 || defined _M_X64)
+            __cpuidex(cpuid_data, 7, 0);
+        #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
+            #ifdef __x86_64__
+            asm __volatile__
+            (
+             "movl $7, %%eax\n\t"
+             "movl $0, %%ecx\n\t"
+             "cpuid\n\t"
+             :[eax]"=a"(cpuid_data[0]),[ebx]"=b"(cpuid_data[1]),[ecx]"=c"(cpuid_data[2]),[edx]"=d"(cpuid_data[3])
+             :
+             : "cc"
+            );
+            #else
+            asm volatile
+            (
+             "pushl %%ebx\n\t"
+             "movl $7,%%eax\n\t"
+             "movl $0,%%ecx\n\t"
+             "cpuid\n\t"
+             "movl %%ebx, %0\n\t"
+             "popl %%ebx\n\t"
+             : "=r"(cpuid_data[1]), "=c"(cpuid_data[2])
+             :
+             : "cc"
+            );
+            #endif
+        #endif
+            f.have[CV_CPU_AVX2]   = (cpuid_data[1] & (1<<5)) != 0;
+
+            f.have[CV_CPU_AVX_512F]       = (cpuid_data[1] & (1<<16)) != 0;
+            f.have[CV_CPU_AVX_512DQ]      = (cpuid_data[1] & (1<<17)) != 0;
+            f.have[CV_CPU_AVX_512IFMA512] = (cpuid_data[1] & (1<<21)) != 0;
+            f.have[CV_CPU_AVX_512PF]      = (cpuid_data[1] & (1<<26)) != 0;
+            f.have[CV_CPU_AVX_512ER]      = (cpuid_data[1] & (1<<27)) != 0;
+            f.have[CV_CPU_AVX_512CD]      = (cpuid_data[1] & (1<<28)) != 0;
+            f.have[CV_CPU_AVX_512BW]      = (cpuid_data[1] & (1<<30)) != 0;
+            f.have[CV_CPU_AVX_512VL]      = (cpuid_data[1] & (1<<31)) != 0;
+            f.have[CV_CPU_AVX_512VBMI]    = (cpuid_data[2] &  (1<<1)) != 0;
         }
 
     #if defined ANDROID || defined __linux__
@@ -318,6 +378,7 @@ IPPInitializer ippInitializer;
 volatile bool USE_SSE2 = featuresEnabled.have[CV_CPU_SSE2];
 volatile bool USE_SSE4_2 = featuresEnabled.have[CV_CPU_SSE4_2];
 volatile bool USE_AVX = featuresEnabled.have[CV_CPU_AVX];
+volatile bool USE_AVX2 = featuresEnabled.have[CV_CPU_AVX2];
 
 void setUseOptimized( bool flag )
 {

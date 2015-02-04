@@ -71,12 +71,18 @@ CUDA_TEST_P(BroxOpticalFlow, Regression)
     cv::Mat frame1 = readImageType("opticalflow/frame1.png", CV_32FC1);
     ASSERT_FALSE(frame1.empty());
 
-    cv::cuda::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                  10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+    cv::Ptr<cv::cuda::BroxOpticalFlow> brox =
+            cv::cuda::BroxOpticalFlow::create(0.197 /*alpha*/, 50.0 /*gamma*/, 0.8 /*scale_factor*/,
+                                              10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-    cv::cuda::GpuMat u;
-    cv::cuda::GpuMat v;
-    brox(loadMat(frame0), loadMat(frame1), u, v);
+    cv::cuda::GpuMat flow;
+    brox->calc(loadMat(frame0), loadMat(frame1), flow);
+
+    cv::cuda::GpuMat flows[2];
+    cv::cuda::split(flow, flows);
+
+    cv::cuda::GpuMat u = flows[0];
+    cv::cuda::GpuMat v = flows[1];
 
     std::string fname(cvtest::TS::ptr()->get_data_path());
     if (devInfo.majorVersion() >= 2)
@@ -133,12 +139,18 @@ CUDA_TEST_P(BroxOpticalFlow, OpticalFlowNan)
     cv::resize(frame0, r_frame0, cv::Size(1380,1000));
     cv::resize(frame1, r_frame1, cv::Size(1380,1000));
 
-    cv::cuda::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                  5 /*inner_iterations*/, 150 /*outer_iterations*/, 10 /*solver_iterations*/);
+    cv::Ptr<cv::cuda::BroxOpticalFlow> brox =
+            cv::cuda::BroxOpticalFlow::create(0.197 /*alpha*/, 50.0 /*gamma*/, 0.8 /*scale_factor*/,
+                                              10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-    cv::cuda::GpuMat u;
-    cv::cuda::GpuMat v;
-    brox(loadMat(r_frame0), loadMat(r_frame1), u, v);
+    cv::cuda::GpuMat flow;
+    brox->calc(loadMat(frame0), loadMat(frame1), flow);
+
+    cv::cuda::GpuMat flows[2];
+    cv::cuda::split(flow, flows);
+
+    cv::cuda::GpuMat u = flows[0];
+    cv::cuda::GpuMat v = flows[1];
 
     cv::Mat h_u, h_v;
     u.download(h_u);
@@ -193,11 +205,12 @@ CUDA_TEST_P(PyrLKOpticalFlow, Sparse)
     cv::Mat pts_mat(1, (int) pts.size(), CV_32FC2, (void*) &pts[0]);
     d_pts.upload(pts_mat);
 
-    cv::cuda::PyrLKOpticalFlow pyrLK;
+    cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> pyrLK =
+            cv::cuda::SparsePyrLKOpticalFlow::create();
 
     cv::cuda::GpuMat d_nextPts;
     cv::cuda::GpuMat d_status;
-    pyrLK.sparse(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status);
+    pyrLK->calc(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status);
 
     std::vector<cv::Point2f> nextPts(d_nextPts.cols);
     cv::Mat nextPts_mat(1, d_nextPts.cols, CV_32FC2, (void*) &nextPts[0]);
@@ -285,34 +298,30 @@ CUDA_TEST_P(FarnebackOpticalFlow, Accuracy)
 
     double polySigma = polyN <= 5 ? 1.1 : 1.5;
 
-    cv::cuda::FarnebackOpticalFlow farn;
-    farn.pyrScale = pyrScale;
-    farn.polyN = polyN;
-    farn.polySigma = polySigma;
-    farn.flags = flags;
+    cv::Ptr<cv::cuda::FarnebackOpticalFlow> farn =
+            cv::cuda::FarnebackOpticalFlow::create();
+    farn->setPyrScale(pyrScale);
+    farn->setPolyN(polyN);
+    farn->setPolySigma(polySigma);
+    farn->setFlags(flags);
 
-    cv::cuda::GpuMat d_flowx, d_flowy;
-    farn(loadMat(frame0), loadMat(frame1), d_flowx, d_flowy);
+    cv::cuda::GpuMat d_flow;
+    farn->calc(loadMat(frame0), loadMat(frame1), d_flow);
 
     cv::Mat flow;
     if (useInitFlow)
     {
-        cv::Mat flowxy[] = {cv::Mat(d_flowx), cv::Mat(d_flowy)};
-        cv::merge(flowxy, 2, flow);
+        d_flow.download(flow);
 
-        farn.flags |= cv::OPTFLOW_USE_INITIAL_FLOW;
-        farn(loadMat(frame0), loadMat(frame1), d_flowx, d_flowy);
+        farn->setFlags(farn->getFlags() | cv::OPTFLOW_USE_INITIAL_FLOW);
+        farn->calc(loadMat(frame0), loadMat(frame1), d_flow);
     }
 
     cv::calcOpticalFlowFarneback(
-        frame0, frame1, flow, farn.pyrScale, farn.numLevels, farn.winSize,
-        farn.numIters, farn.polyN, farn.polySigma, farn.flags);
+        frame0, frame1, flow, farn->getPyrScale(), farn->getNumLevels(), farn->getWinSize(),
+        farn->getNumIters(), farn->getPolyN(), farn->getPolySigma(), farn->getFlags());
 
-    std::vector<cv::Mat> flowxy;
-    cv::split(flow, flowxy);
-
-    EXPECT_MAT_SIMILAR(flowxy[0], d_flowx, 0.1);
-    EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
+    EXPECT_MAT_SIMILAR(flow, d_flow, 0.1);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, FarnebackOpticalFlow, testing::Combine(
@@ -325,15 +334,20 @@ INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, FarnebackOpticalFlow, testing::Combine(
 //////////////////////////////////////////////////////
 // OpticalFlowDual_TVL1
 
-PARAM_TEST_CASE(OpticalFlowDual_TVL1, cv::cuda::DeviceInfo, UseRoi)
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(Gamma, double)
+}
+
+PARAM_TEST_CASE(OpticalFlowDual_TVL1, cv::cuda::DeviceInfo, Gamma)
 {
     cv::cuda::DeviceInfo devInfo;
-    bool useRoi;
+    double gamma;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        useRoi = GET_PARAM(1);
+        gamma = GET_PARAM(1);
 
         cv::cuda::setDevice(devInfo.deviceID());
     }
@@ -347,156 +361,28 @@ CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
-    cv::cuda::OpticalFlowDual_TVL1_CUDA d_alg;
-    cv::cuda::GpuMat d_flowx = createMat(frame0.size(), CV_32FC1, useRoi);
-    cv::cuda::GpuMat d_flowy = createMat(frame0.size(), CV_32FC1, useRoi);
-    d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
+    cv::Ptr<cv::cuda::OpticalFlowDual_TVL1> d_alg =
+            cv::cuda::OpticalFlowDual_TVL1::create();
+    d_alg->setNumIterations(10);
+    d_alg->setGamma(gamma);
+
+    cv::cuda::GpuMat d_flow;
+    d_alg->calc(loadMat(frame0), loadMat(frame1), d_flow);
 
     cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
     alg->set("medianFiltering", 1);
     alg->set("innerIterations", 1);
-    alg->set("outerIterations", d_alg.iterations);
+    alg->set("outerIterations", d_alg->getNumIterations());
+    alg->set("gamma", gamma);
+
     cv::Mat flow;
     alg->calc(frame0, frame1, flow);
-    cv::Mat gold[2];
-    cv::split(flow, gold);
-    cv::Mat mx(d_flowx);
-    cv::Mat my(d_flowx);
 
-    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
-    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
-    d_alg.gamma = 1;
-    alg->set("gamma", 1);
-    d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
-    alg->calc(frame0, frame1, flow);
-    cv::split(flow, gold);
-    mx = cv::Mat(d_flowx);
-    my = cv::Mat(d_flowx);
-
-    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
-    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
+    EXPECT_MAT_SIMILAR(flow, d_flow, 4e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
     ALL_DEVICES,
-    WHOLE_SUBMAT));
-
-//////////////////////////////////////////////////////
-// FastOpticalFlowBM
-
-namespace
-{
-    void FastOpticalFlowBM_gold(const cv::Mat_<uchar>& I0, const cv::Mat_<uchar>& I1, cv::Mat_<float>& velx, cv::Mat_<float>& vely, int search_window, int block_window)
-    {
-        velx.create(I0.size());
-        vely.create(I0.size());
-
-        int search_radius = search_window / 2;
-        int block_radius = block_window / 2;
-
-        for (int y = 0; y < I0.rows; ++y)
-        {
-            for (int x = 0; x < I0.cols; ++x)
-            {
-                int bestDist = std::numeric_limits<int>::max();
-                int bestDx = 0;
-                int bestDy = 0;
-
-                for (int dy = -search_radius; dy <= search_radius; ++dy)
-                {
-                    for (int dx = -search_radius; dx <= search_radius; ++dx)
-                    {
-                        int dist = 0;
-
-                        for (int by = -block_radius; by <= block_radius; ++by)
-                        {
-                            for (int bx = -block_radius; bx <= block_radius; ++bx)
-                            {
-                                int I0_val = I0(cv::borderInterpolate(y + by, I0.rows, cv::BORDER_DEFAULT), cv::borderInterpolate(x + bx, I0.cols, cv::BORDER_DEFAULT));
-                                int I1_val = I1(cv::borderInterpolate(y + dy + by, I0.rows, cv::BORDER_DEFAULT), cv::borderInterpolate(x + dx + bx, I0.cols, cv::BORDER_DEFAULT));
-
-                                dist += std::abs(I0_val - I1_val);
-                            }
-                        }
-
-                        if (dist < bestDist)
-                        {
-                            bestDist = dist;
-                            bestDx = dx;
-                            bestDy = dy;
-                        }
-                    }
-                }
-
-                velx(y, x) = (float) bestDx;
-                vely(y, x) = (float) bestDy;
-            }
-        }
-    }
-
-    double calc_rmse(const cv::Mat_<float>& flow1, const cv::Mat_<float>& flow2)
-    {
-        double sum = 0.0;
-
-        for (int y = 0; y < flow1.rows; ++y)
-        {
-            for (int x = 0; x < flow1.cols; ++x)
-            {
-                double diff = flow1(y, x) - flow2(y, x);
-                sum += diff * diff;
-            }
-        }
-
-        return std::sqrt(sum / flow1.size().area());
-    }
-}
-
-struct FastOpticalFlowBM : testing::TestWithParam<cv::cuda::DeviceInfo>
-{
-};
-
-CUDA_TEST_P(FastOpticalFlowBM, Accuracy)
-{
-    const double MAX_RMSE = 0.6;
-
-    int search_window = 15;
-    int block_window = 5;
-
-    cv::cuda::DeviceInfo devInfo = GetParam();
-    cv::cuda::setDevice(devInfo.deviceID());
-
-    cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame0.empty());
-
-    cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame1.empty());
-
-    cv::Size smallSize(320, 240);
-    cv::Mat frame0_small;
-    cv::Mat frame1_small;
-
-    cv::resize(frame0, frame0_small, smallSize);
-    cv::resize(frame1, frame1_small, smallSize);
-
-    cv::cuda::GpuMat d_flowx;
-    cv::cuda::GpuMat d_flowy;
-    cv::cuda::FastOpticalFlowBM fastBM;
-
-    fastBM(loadMat(frame0_small), loadMat(frame1_small), d_flowx, d_flowy, search_window, block_window);
-
-    cv::Mat_<float> flowx;
-    cv::Mat_<float> flowy;
-    FastOpticalFlowBM_gold(frame0_small, frame1_small, flowx, flowy, search_window, block_window);
-
-    double err;
-
-    err = calc_rmse(flowx, cv::Mat(d_flowx));
-    EXPECT_LE(err, MAX_RMSE);
-
-    err = calc_rmse(flowy, cv::Mat(d_flowy));
-    EXPECT_LE(err, MAX_RMSE);
-}
-
-INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, FastOpticalFlowBM, ALL_DEVICES);
+    testing::Values(Gamma(0.0), Gamma(1.0))));
 
 #endif // HAVE_CUDA

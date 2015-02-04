@@ -1595,7 +1595,10 @@ void resizeArea(const cv::Mat & src, cv::Mat & dst)
 TEST(Resize, Area_half)
 {
     const int size = 1000;
-    int types[] = { CV_8UC1, CV_8UC4, CV_16UC1, CV_16UC4, CV_16SC1, CV_16SC4, CV_32FC1, CV_32FC4 };
+    int types[] = { CV_8UC1, CV_8UC4,
+                    CV_16UC1, CV_16UC4,
+                    CV_16SC1, CV_16SC3, CV_16SC4,
+                    CV_32FC1, CV_32FC4 };
 
     cv::RNG rng(17);
 

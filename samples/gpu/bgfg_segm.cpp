@@ -4,6 +4,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/cudabgsegm.hpp"
+#include "opencv2/cudalegacy.hpp"
 #include "opencv2/video.hpp"
 #include "opencv2/highgui.hpp"
 
