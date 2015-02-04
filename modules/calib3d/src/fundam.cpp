@@ -42,9 +42,6 @@
 
 #include "precomp.hpp"
 #include "rhorefc.h"
-#if CV_SSE2
-#include "rhosse2.h"
-#endif
 #include <iostream>
 
 namespace cv
@@ -279,65 +276,83 @@ public:
 
 
 namespace cv{
-static bool createAndRunRHORegistrator(double confidence, int maxIters, double ransacReprojThreshold, int npoints, InputArray _src, InputArray _dst, OutputArray _H, OutputArray _tempMask){
-    Mat src = _src.getMat();
-    Mat dst = _dst.getMat();
-    Mat tempMask = _tempMask.getMat();
-    bool result;
+static bool createAndRunRHORegistrator(double confidence,
+                                       int    maxIters,
+                                       double ransacReprojThreshold,
+                                       int    npoints,
+                                       InputArray  _src,
+                                       InputArray  _dst,
+                                       OutputArray _H,
+                                       OutputArray _tempMask){
+    Mat    src = _src.getMat();
+    Mat    dst = _dst.getMat();
+    Mat    tempMask = _tempMask.getMat();
+    bool   result;
+    double beta = 0.35;/* 0.35 is a value that often works. */
 
-    /* Run RHO. Needs cleanup or separate function to invoke. */
+    /* Create temporary output matrix (RHO outputs a single-precision H only). */
     Mat tmpH = Mat(3, 3, CV_32FC1);
+
+    /* Create output mask. */
     if(!tempMask.data){
         tempMask = Mat(npoints, 1, CV_8U);
     }
-    double beta = 0.35;/* 0.35 is a value that often works. */
 
-#if CV_SSE2 && 0
-    if(useOptimized()){
-        RHO_HEST_SSE2 p;
-        rhoSSE2Init(&p);
-        rhoSSE2EnsureCapacity(&p, npoints, beta);
-        result = !!rhoSSE2(&p,
-                          (const float*)src.data,
-                          (const float*)dst.data,
-                          (char*)       tempMask.data,
-                          npoints,
-                          ransacReprojThreshold,
-                          maxIters,
-                          maxIters,
-                          confidence,
-                          4,
-                          beta,
-                          RHO_FLAG_ENABLE_NR,
-                          NULL,
-                          (float*)tmpH.data);
-        rhoSSE2Fini(&p);
-    }else
-#endif
-    {
-        RHO_HEST_REFC p;
-        rhoRefCInit(&p);
-        rhoRefCEnsureCapacity(&p, npoints, beta);
-        result = !!rhoRefC(&p,
-                          (const float*)src.data,
-                          (const float*)dst.data,
-                          (char*)       tempMask.data,
-                          npoints,
-                          ransacReprojThreshold,
-                          maxIters,
-                          maxIters,
-                          confidence,
-                          4,
-                          beta,
-                          /*RHO_FLAG_ENABLE_NR,*/
-                          RHO_FLAG_ENABLE_NR | RHO_FLAG_ENABLE_FINAL_REFINEMENT,
-                          NULL,
-                          (float*)tmpH.data);
-        rhoRefCFini(&p);
-    }
+
+    /**
+     * Make use of the RHO estimator API.
+     *
+     * This is where the math happens. A homography estimation context is
+     * initialized, used, then finalized.
+     */
+
+    RHO_HEST_REFC p;
+    rhoRefCInit(&p);
+
+    /**
+     * Optional. Ideally, the context would survive across calls to
+     * findHomography(), but no clean way appears to exit to do so. The price
+     * to pay is marginally more computational work than strictly needed.
+     */
+
+    rhoRefCEnsureCapacity(&p, npoints, beta);
+
+    /**
+     * The critical call. All parameters are heavily documented in rhorefc.h.
+     *
+     * Currently, NR (Non-Randomness criterion) and Final Refinement (with
+     * internal, optimized Levenberg-Marquardt method) are enabled. However,
+     * while refinement seems to correctly smooth jitter most of the time, when
+     * refinement fails it tends to make the estimate visually very much worse.
+     * It may be necessary to remove the refinement flags in a future commit if
+     * this behaviour is too problematic.
+     */
+
+    result = !!rhoRefC(&p,
+                      (const float*)src.data,
+                      (const float*)dst.data,
+                      (char*)       tempMask.data,
+                      npoints,
+                      ransacReprojThreshold,
+                      maxIters,
+                      maxIters,
+                      confidence,
+                      4,
+                      beta,
+                      RHO_FLAG_ENABLE_NR | RHO_FLAG_ENABLE_FINAL_REFINEMENT,
+                      NULL,
+                      (float*)tmpH.data);
+
+    /**
+     * Cleanup.
+     */
+
+    rhoRefCFini(&p);
+
+    /* Convert float homography to double precision. */
     tmpH.convertTo(_H, CV_64FC1);
 
-    /* Maps non-zero maks elems to 1, for the sake of the testcase. */
+    /* Maps non-zero mask elems to 1, for the sake of the testcase. */
     for(int k=0;k<npoints;k++){
         tempMask.data[k] = !!tempMask.data[k];
     }
