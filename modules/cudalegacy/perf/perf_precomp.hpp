@@ -40,57 +40,27 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
 
-using namespace cv;
-using namespace cv::cuda;
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/cuda_perf.hpp"
 
-void cv::cuda::compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_no_cuda(); }
-void cv::cuda::calcWobbleSuppressionMaps(
-        int, int, int, Size, const Mat&, const Mat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+#include "opencv2/cudalegacy.hpp"
+#include "opencv2/video.hpp"
 
-#else
+#include "opencv2/opencv_modules.hpp"
 
-namespace cv { namespace cuda { namespace device { namespace globmotion {
-
-    int compactPoints(int N, float *points0, float *points1, const uchar *mask);
-
-    void calcWobbleSuppressionMaps(
-            int left, int idx, int right, int width, int height,
-            const float *ml, const float *mr, PtrStepSzf mapx, PtrStepSzf mapy);
-
-}}}}
-
-void cv::cuda::compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask)
-{
-    CV_Assert(points0.rows == 1 && points1.rows == 1 && mask.rows == 1);
-    CV_Assert(points0.type() == CV_32FC2 && points1.type() == CV_32FC2 && mask.type() == CV_8U);
-    CV_Assert(points0.cols == mask.cols && points1.cols == mask.cols);
-
-    int npoints = points0.cols;
-    int remaining = cv::cuda::device::globmotion::compactPoints(
-            npoints, (float*)points0.data, (float*)points1.data, mask.data);
-
-    points0 = points0.colRange(0, remaining);
-    points1 = points1.colRange(0, remaining);
-}
-
-
-void cv::cuda::calcWobbleSuppressionMaps(
-        int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
-        GpuMat &mapx, GpuMat &mapy)
-{
-    CV_Assert(ml.size() == Size(3, 3) && ml.type() == CV_32F && ml.isContinuous());
-    CV_Assert(mr.size() == Size(3, 3) && mr.type() == CV_32F && mr.isContinuous());
-
-    mapx.create(size, CV_32F);
-    mapy.create(size, CV_32F);
-
-    cv::cuda::device::globmotion::calcWobbleSuppressionMaps(
-                left, idx, right, size.width, size.height,
-                ml.ptr<float>(), mr.ptr<float>(), mapx, mapy);
-}
+#ifdef GTEST_CREATE_SHARED_LIBRARY
+#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
+#endif
 
 #endif

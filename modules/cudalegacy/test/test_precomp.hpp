@@ -74,6 +74,8 @@
 
 #include "opencv2/core/private.cuda.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+
 #include "cvconfig.h"
 
 #include "NCVTest.hpp"

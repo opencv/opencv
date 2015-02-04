@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2014, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -812,5 +813,7 @@ inline float32x2_t cv_vsqrt_f32(float32x2_t val)
 //! @} core_utils_neon
 
 } // cv
+
+#include "sse_utils.hpp"
 
 #endif //__OPENCV_CORE_BASE_HPP__

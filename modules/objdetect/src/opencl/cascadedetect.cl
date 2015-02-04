@@ -233,11 +233,12 @@ void runHaarClassifier(
 
             for( stageIdx = SPLIT_STAGE; stageIdx < N_STAGES; stageIdx++ )
             {
+                barrier(CLK_LOCAL_MEM_FENCE);
                 int nrects = lcount[0];
 
-                barrier(CLK_LOCAL_MEM_FENCE);
                 if( nrects == 0 )
                     break;
+                barrier(CLK_LOCAL_MEM_FENCE);
                 if( lidx == 0 )
                     lcount[0] = 0;
 
@@ -396,8 +397,8 @@ __kernel void runLBPClassifierStumpSimple(
 
         for( tileIdx = groupIdx; tileIdx < totalTiles; tileIdx += ngroups )
         {
-            int iy = ((tileIdx / ntiles.x)*local_size_y + ly)*ystep;
-            int ix = ((tileIdx % ntiles.x)*local_size_x + lx)*ystep;
+            int iy = mad24((tileIdx / ntiles.x), local_size_y, ly) * ystep;
+            int ix = mad24((tileIdx % ntiles.x), local_size_x, lx) * ystep;
 
             if( ix < worksize.x && iy < worksize.y )
             {

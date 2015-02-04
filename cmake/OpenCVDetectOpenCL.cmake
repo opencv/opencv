@@ -26,6 +26,10 @@ if(OPENCL_FOUND)
 
   set(HAVE_OPENCL 1)
 
+  if(WITH_OPENCL_SVM)
+    set(HAVE_OPENCL_SVM 1)
+  endif()
+
   if(HAVE_OPENCL_STATIC)
     set(OPENCL_LIBRARIES "${OPENCL_LIBRARY}")
   else()

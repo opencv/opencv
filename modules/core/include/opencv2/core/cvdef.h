@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -104,17 +105,32 @@
 #endif
 
 /* CPU features and intrinsics support */
-#define CV_CPU_NONE    0
-#define CV_CPU_MMX     1
-#define CV_CPU_SSE     2
-#define CV_CPU_SSE2    3
-#define CV_CPU_SSE3    4
-#define CV_CPU_SSSE3   5
-#define CV_CPU_SSE4_1  6
-#define CV_CPU_SSE4_2  7
-#define CV_CPU_POPCNT  8
-#define CV_CPU_AVX    10
-#define CV_CPU_NEON   11
+#define CV_CPU_NONE             0
+#define CV_CPU_MMX              1
+#define CV_CPU_SSE              2
+#define CV_CPU_SSE2             3
+#define CV_CPU_SSE3             4
+#define CV_CPU_SSSE3            5
+#define CV_CPU_SSE4_1           6
+#define CV_CPU_SSE4_2           7
+#define CV_CPU_POPCNT           8
+
+#define CV_CPU_AVX              10
+#define CV_CPU_AVX2             11
+#define CV_CPU_FMA3             12
+
+#define CV_CPU_AVX_512F         13
+#define CV_CPU_AVX_512BW        14
+#define CV_CPU_AVX_512CD        15
+#define CV_CPU_AVX_512DQ        16
+#define CV_CPU_AVX_512ER        17
+#define CV_CPU_AVX_512IFMA512   18
+#define CV_CPU_AVX_512PF        19
+#define CV_CPU_AVX_512VBMI      20
+#define CV_CPU_AVX_512VL        21
+
+#define CV_CPU_NEON   100
+
 // when adding to this list remember to update the enum in core/utility.cpp
 #define CV_HARDWARE_MAX_FEATURE 255
 
@@ -123,6 +139,7 @@
 
 #if defined __SSE2__ || defined _M_X64  || (defined _M_IX86_FP && _M_IX86_FP >= 2)
 #  include <emmintrin.h>
+#  define CV_MMX 1
 #  define CV_SSE 1
 #  define CV_SSE2 1
 #  if defined __SSE3__ || (defined _MSC_VER && _MSC_VER >= 1500)
@@ -141,7 +158,15 @@
 #    include <nmmintrin.h>
 #    define CV_SSE4_2 1
 #  endif
-#  if defined __AVX__ || (defined _MSC_FULL_VER && _MSC_FULL_VER >= 160040219)
+#  if defined __POPCNT__ || (defined _MSC_VER && _MSC_VER >= 1500)
+#    ifdef _MSC_VER
+#      include <nmmintrin.h>
+#    else
+#      include <popcntintrin.h>
+#    endif
+#    define CV_POPCNT 1
+#  endif
+#  if defined __AVX__ || (defined _MSC_VER && _MSC_VER >= 1600 && 0)
 // MS Visual Studio 2010 (2012?) has no macro pre-defined to identify the use of /arch:AVX
 // See: http://connect.microsoft.com/VisualStudio/feedback/details/605858/arch-avx-should-define-a-predefined-macro-in-x64-and-set-a-unique-value-for-m-ix86-fp-in-win32
 #    include <immintrin.h>
@@ -150,6 +175,13 @@
 #      define __xgetbv() _xgetbv(_XCR_XFEATURE_ENABLED_MASK)
 #    else
 #      define __xgetbv() 0
+#    endif
+#  endif
+#  if defined __AVX2__ || (defined _MSC_VER && _MSC_VER >= 1800 && 0)
+#    include <immintrin.h>
+#    define CV_AVX2 1
+#    if defined __FMA__
+#      define CV_FMA3 1
 #    endif
 #  endif
 #endif
@@ -166,6 +198,12 @@
 
 #endif // __CUDACC__
 
+#ifndef CV_POPCNT
+#define CV_POPCNT 0
+#endif
+#ifndef CV_MMX
+#  define CV_MMX 0
+#endif
 #ifndef CV_SSE
 #  define CV_SSE 0
 #endif
@@ -187,6 +225,40 @@
 #ifndef CV_AVX
 #  define CV_AVX 0
 #endif
+#ifndef CV_AVX2
+#  define CV_AVX2 0
+#endif
+#ifndef CV_FMA3
+#  define CV_FMA3 0
+#endif
+#ifndef CV_AVX_512F
+#  define CV_AVX_512F 0
+#endif
+#ifndef CV_AVX_512BW
+#  define CV_AVX_512BW 0
+#endif
+#ifndef CV_AVX_512CD
+#  define CV_AVX_512CD 0
+#endif
+#ifndef CV_AVX_512DQ
+#  define CV_AVX_512DQ 0
+#endif
+#ifndef CV_AVX_512ER
+#  define CV_AVX_512ER 0
+#endif
+#ifndef CV_AVX_512IFMA512
+#  define CV_AVX_512IFMA512 0
+#endif
+#ifndef CV_AVX_512PF
+#  define CV_AVX_512PF 0
+#endif
+#ifndef CV_AVX_512VBMI
+#  define CV_AVX_512VBMI 0
+#endif
+#ifndef CV_AVX_512VL
+#  define CV_AVX_512VL 0
+#endif
+
 #ifndef CV_NEON
 #  define CV_NEON 0
 #endif
