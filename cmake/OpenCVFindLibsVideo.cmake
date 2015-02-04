@@ -218,10 +218,7 @@ if(WITH_FFMPEG)
         # Do an other trial
         FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
       endif()
-    endif(HAVE_FFMPEG)
-  endif()
-
-  if(APPLE)
+    else()
     find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h"
               PATHS /usr/local /usr /opt
               PATH_SUFFIXES include
@@ -244,7 +241,8 @@ if(WITH_FFMPEG)
           ${FFMPEG_UTIL_LIB} ${FFMPEG_SWSCALE_LIB})
       ocv_include_directories(${FFMPEG_INCLUDE_DIR})
     endif()
-  endif(APPLE)
+    endif()
+  endif()
 endif(WITH_FFMPEG)
 
 # --- VideoInput/DirectShow ---
