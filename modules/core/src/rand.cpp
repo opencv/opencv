@@ -731,7 +731,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 
 cv::RNG& cv::theRNG()
 {
-    return coreTlsData.get()->rng;
+    return getCoreTlsData().get()->rng;
 }
 
 void cv::randu(InputOutputArray dst, InputArray low, InputArray high)
