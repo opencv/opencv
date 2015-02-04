@@ -412,7 +412,7 @@ static inline void*  almalloc(size_t nBytes){
         if(ptr){
             unsigned char* adj = (unsigned char*)(((intptr_t)(ptr+MEM_ALIGN))&((intptr_t)(-MEM_ALIGN)));
             ptrdiff_t diff = adj - ptr;
-            adj[-1] = diff - 1;
+            adj[-1] = (unsigned char)(diff - 1);
             return adj;
         }
     }
@@ -735,7 +735,7 @@ static inline void   sacPROSACGoToNextPhase(RHO_HEST_REFC* p){
 
     p->ctrl.phNum++;
     next        = (p->ctrl.phEndFpI * p->ctrl.phNum)/(p->ctrl.phNum - m);
-    p->ctrl.phEndI  += ceil(next - p->ctrl.phEndFpI);
+    p->ctrl.phEndI  += (unsigned)ceil(next - p->ctrl.phEndFpI);
     p->ctrl.phEndFpI = next;
 }
 
@@ -913,7 +913,7 @@ static inline void   sacEvaluateModelSPRT(RHO_HEST_REFC* p){
 
         float reprojX=H[0]*x+H[1]*y+H[2]; /*  ( X_1 )     ( H_11 H_12    H_13  ) (x_1)       */
         float reprojY=H[3]*x+H[4]*y+H[5]; /*  ( X_2 )  =  ( H_21 H_22    H_23  ) (x_2)       */
-        float reprojZ=H[6]*x+H[7]*y+1.0;  /*  ( X_3 )     ( H_31 H_32 H_33=1.0 ) (x_3 = 1.0) */
+        float reprojZ=H[6]*x+H[7]*y+1.0f; /*  ( X_3 )     ( H_31 H_32 H_33=1.0 ) (x_3 = 1.0) */
 
         /* reproj is in homogeneous coordinates. To bring back to "regular" coordinates, divide by Z. */
         reprojX/=reprojZ;
@@ -929,7 +929,7 @@ static inline void   sacEvaluateModelSPRT(RHO_HEST_REFC* p){
         /* ... */
         isInlier   = reprojDist <= distSq;
         p->curr.numInl += isInlier;
-        *inl++     = isInlier;
+        *inl++     = (char)isInlier;
 
 
         /* SPRT */
@@ -1098,7 +1098,7 @@ static inline void   sacInitNonRand(double    beta,
     for(; n < N; n++){
         double   mu      = n * beta;
         double   sigma   = sqrt(n)* beta_beta1_sq_chi;
-        unsigned i_min   = ceil(m + mu + sigma);
+        unsigned i_min   = (unsigned)ceil(m + mu + sigma);
 
         nonRandMinInl[n] = i_min;
     }
@@ -1234,7 +1234,7 @@ static inline void sacRndSmpl(unsigned  sampleSize,
             int inList;
 
             do{
-                currentSample[i]=dataSetSize*sacRandom();
+                currentSample[i] = (unsigned)(dataSetSize*sacRandom());
 
                 inList=0;
                 for(j=0;j<i;j++){
@@ -1309,7 +1309,7 @@ static inline unsigned sacCalcIterBound(double   confidence,
          * numIterations (the return value) into
          */
 
-        retVal = ceil(log(1.-confidence)/log(atLeastOneOutlierProbability));
+        retVal = (unsigned)ceil(log(1.-confidence)/log(atLeastOneOutlierProbability));
     }
 
     /**
@@ -1875,7 +1875,7 @@ static inline int    sacChol8x8Damped(const float (*A)[8],
             for(k=0;k<j;k++){
                 x -= (double)L[i][k] * L[j][k];/* - Sum_{k=0..j-1} Lik*Ljk */
             }
-            L[i][j] = x / L[j][j];             /* Lij = ... / Ljj */
+            L[i][j] = (float)(x / L[j][j]);    /* Lij = ... / Ljj */
         }
 
         /* Diagonal element */
@@ -1887,7 +1887,7 @@ static inline int    sacChol8x8Damped(const float (*A)[8],
             if(x<0){
                 return 0;
             }
-            L[j][j] = sqrt(x);                 /* Ljj = sqrt( ... ) */
+            L[j][j] = (float)sqrt(x);          /* Ljj = sqrt( ... ) */
         }
     }
 
