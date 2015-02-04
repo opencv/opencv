@@ -146,7 +146,7 @@ if(CPACK_GENERATOR STREQUAL "DEB")
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   set(CHANGELOG_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}")
-  set(ALL_COMPONENTS "libs" "dev" "docs" "python" "java" "samples")
+  set(ALL_COMPONENTS "libs" "dev" "docs" "python" "java" "samples" "tests")
   foreach (comp ${ALL_COMPONENTS})
     set(DEBIAN_CHANGELOG_OUT_FILE    "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian")
     set(DEBIAN_CHANGELOG_OUT_FILE_GZ "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian.gz")
