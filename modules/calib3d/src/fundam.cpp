@@ -286,7 +286,7 @@ static bool createAndRunRHORegistrator(double confidence,
                                        OutputArray _tempMask){
     Mat    src = _src.getMat();
     Mat    dst = _dst.getMat();
-    Mat    tempMask = _tempMask.getMat();
+    Mat    tempMask;
     bool   result;
     double beta = 0.35;/* 0.35 is a value that often works. */
 
@@ -294,10 +294,7 @@ static bool createAndRunRHORegistrator(double confidence,
     Mat tmpH = Mat(3, 3, CV_32FC1);
 
     /* Create output mask. */
-    if(!tempMask.data){
-        tempMask = Mat(npoints, 1, CV_8U);
-    }
-
+    tempMask = Mat(npoints, 1, CV_8U);
 
     /**
      * Make use of the RHO estimator API.
