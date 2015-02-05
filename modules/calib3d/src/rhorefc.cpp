@@ -512,6 +512,9 @@ static inline int    sacInitRun(RHO_HEST_REFC* p){
         return 0;
     }
 
+    memset(p->best.inl, 0, p->arg.N);
+    memset(p->curr.inl, 0, p->arg.N);
+
     /**
      * LevMarq workspace alloc.
      *
@@ -1155,6 +1158,9 @@ static inline void   sacUpdateBounds(RHO_HEST_REFC* p){
 static inline void   sacOutputModel(RHO_HEST_REFC* p){
     if(sacIsBestModelGoodEnough(p)){
         memcpy(p->arg.finalH, p->best.H, HSIZE);
+        if(p->arg.inl != p->best.inl){
+            memcpy(p->arg.inl, p->best.inl, p->arg.N);
+        }
     }else{
         sacOutputZeroH(p);
     }
