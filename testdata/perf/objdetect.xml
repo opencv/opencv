@@ -84,10 +84,10 @@
     <type>28</type>
     <val type_id="opencv-matrix">
       <rows>1</rows>
-      <cols>1</cols>
+      <cols>2</cols>
       <dt>"4i"</dt>
       <data>
-        51 12 74 74</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt-xml----cv-cascadeandhog-images-bttf301-png---64->
+        55 15 73 73 317 33 69 69</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt-xml----cv-cascadeandhog-images-bttf301-png---64->
 <OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt-xml----cv-cascadeandhog-images-bttf301-png---90->
   <faces>
     <kind>196608</kind>
@@ -101,10 +101,10 @@
   <faces>
     <kind>196608</kind>
     <type>28</type>
-    <min>32.</min>
+    <min>39.</min>
     <max>1161.</max>
     <last>
-      <x>58</x>
+      <x>56</x>
       <y>0</y>
       <val>48.</val></last>
     <rng1>
@@ -123,10 +123,10 @@
     <type>28</type>
     <val type_id="opencv-matrix">
       <rows>1</rows>
-      <cols>1</cols>
+      <cols>5</cols>
       <dt>"4i"</dt>
       <data>
-        458 466 84 84</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt-xml----cv-cascadeandhog-images-class57-png---64->
+         461 470 79 79 656 481 72 72 797 490 71 71 954 478 69 69 1116 498 72 72</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt-xml----cv-cascadeandhog-images-class57-png---64->
 <OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt-xml----cv-cascadeandhog-images-class57-png---90->
   <faces>
     <kind>196608</kind>
@@ -183,10 +183,10 @@
     <type>28</type>
     <val type_id="opencv-matrix">
       <rows>1</rows>
-      <cols>1</cols>
+      <cols>2</cols>
       <dt>"4i"</dt>
       <data>
-        52 12 72 72</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt2-xml----cv-cascadeandhog-images-bttf301-png---64->
+        56 16 72 72 318 33 69 69</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt2-xml----cv-cascadeandhog-images-bttf301-png---64->
 <OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt2-xml----cv-cascadeandhog-images-bttf301-png---90->
   <faces>
     <kind>196608</kind>
@@ -200,10 +200,10 @@
   <faces>
     <kind>196608</kind>
     <type>28</type>
-    <min>32.</min>
+    <min>39.</min>
     <max>1160.</max>
     <last>
-      <x>64</x>
+      <x>58</x>
       <y>0</y>
       <val>47.</val></last>
     <rng1>
@@ -221,10 +221,10 @@
     <type>28</type>
     <val type_id="opencv-matrix">
       <rows>1</rows>
-      <cols>1</cols>
+      <cols>4</cols>
       <dt>"4i"</dt>
       <data>
-        652 480 78 78</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt2-xml----cv-cascadeandhog-images-class57-png---64->
+        463 472 73 73 653 480 75 75 799 491 69 69 1118 499 69 69</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt2-xml----cv-cascadeandhog-images-class57-png---64->
 <OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-haarcascade_frontalface_alt2-xml----cv-cascadeandhog-images-class57-png---90->
   <faces>
     <kind>196608</kind>
@@ -480,10 +480,11 @@
     <kind>196608</kind>
     <type>28</type>
     <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>0</cols>
-      <dt>u</dt>
-      <data></data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-lbpcascade_frontalface-xml----cv-cascadeandhog-images-bttf301-png---64->
+      <rows>1</rows>
+      <cols>3</cols>
+      <dt>"4i"</dt>
+      <data>
+        55 18 69 69 125 84 68 68 317 33 70 70</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-lbpcascade_frontalface-xml----cv-cascadeandhog-images-bttf301-png---64->
 <OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-lbpcascade_frontalface-xml----cv-cascadeandhog-images-bttf301-png---90->
   <faces>
     <kind>196608</kind>
@@ -500,11 +501,11 @@
     <min>32.</min>
     <max>1161.</max>
     <last>
-      <x>65</x>
+      <x>57</x>
       <y>0</y>
       <val>50.</val></last>
     <rng1>
-      <x>61</x>
+      <x>57</x>
       <y>0</y>
       <cn>3</cn>
       <val>44.</val></rng1>
@@ -519,10 +520,10 @@
     <type>28</type>
     <val type_id="opencv-matrix">
       <rows>1</rows>
-      <cols>1</cols>
+      <cols>3</cols>
       <dt>"4i"</dt>
       <data>
-        461 468 80 80</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-lbpcascade_frontalface-xml----cv-cascadeandhog-images-class57-png---64->
+        274 476 72 72 464 470 75 75 952 476 72 72</data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-lbpcascade_frontalface-xml----cv-cascadeandhog-images-class57-png---64->
 <OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-lbpcascade_frontalface-xml----cv-cascadeandhog-images-class57-png---90->
   <faces>
     <kind>196608</kind>
