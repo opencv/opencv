@@ -183,6 +183,9 @@ protected:
                         method, totalTestsCount - successfulTestsCount, totalTestsCount, maxError, mode);
                     ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 }
+                cout << "mode: " << mode << ", method: " << method << " -> "
+                     << ((double)successfulTestsCount / totalTestsCount) * 100 << "%"
+                     << " (err < " << maxError << ")" << endl;
             }
         }
     }
