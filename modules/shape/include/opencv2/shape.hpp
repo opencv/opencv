@@ -52,11 +52,6 @@
   @defgroup shape Shape Distance and Matching
  */
 
-namespace cv
-{
-CV_EXPORTS bool initModule_shape();
-}
-
 #endif
 
 /* End of file. */

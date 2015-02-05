@@ -222,11 +222,11 @@ void SuperResolution::RunTest(cv::Ptr<cv::superres::SuperResolution> superRes)
 
     ASSERT_FALSE( superRes.empty() );
 
-    const int btvKernelSize = superRes->getInt("btvKernelSize");
+    const int btvKernelSize = superRes->getKernelSize();
 
-    superRes->set("scale", scale);
-    superRes->set("iterations", iterations);
-    superRes->set("temporalAreaRadius", temporalAreaRadius);
+    superRes->setScale(scale);
+    superRes->setIterations(iterations);
+    superRes->setTemporalAreaRadius(temporalAreaRadius);
 
     cv::Ptr<cv::superres::FrameSource> goldSource(new AllignedFrameSource(cv::superres::createFrameSource_Video(inputVideoName), scale));
     cv::Ptr<cv::superres::FrameSource> lowResSource(new DegradeFrameSource(

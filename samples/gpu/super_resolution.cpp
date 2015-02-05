@@ -26,32 +26,32 @@ using namespace cv::superres;
         cout << tm.getTimeSec() << " sec" << endl; \
     }
 
-static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
+static Ptr<cv::superres::DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
 {
     if (name == "farneback")
     {
         if (useGpu)
-            return createOptFlow_Farneback_CUDA();
+            return cv::superres::createOptFlow_Farneback_CUDA();
         else
-            return createOptFlow_Farneback();
+            return cv::superres::createOptFlow_Farneback();
     }
     /*else if (name == "simple")
         return createOptFlow_Simple();*/
     else if (name == "tvl1")
     {
         if (useGpu)
-            return createOptFlow_DualTVL1_CUDA();
+            return cv::superres::createOptFlow_DualTVL1_CUDA();
         else
-            return createOptFlow_DualTVL1();
+            return cv::superres::createOptFlow_DualTVL1();
     }
     else if (name == "brox")
-        return createOptFlow_Brox_CUDA();
+        return cv::superres::createOptFlow_Brox_CUDA();
     else if (name == "pyrlk")
-        return createOptFlow_PyrLK_CUDA();
+        return cv::superres::createOptFlow_PyrLK_CUDA();
     else
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
 
-    return Ptr<DenseOpticalFlowExt>();
+    return Ptr<cv::superres::DenseOpticalFlowExt>();
 }
 
 int main(int argc, const char* argv[])
@@ -92,15 +92,15 @@ int main(int argc, const char* argv[])
     else
         superRes = createSuperResolution_BTVL1();
 
-    Ptr<DenseOpticalFlowExt> of = createOptFlow(optFlow, useCuda);
+    Ptr<cv::superres::DenseOpticalFlowExt> of = createOptFlow(optFlow, useCuda);
 
     if (of.empty())
         return EXIT_FAILURE;
-    superRes->set("opticalFlow", of);
+    superRes->setOpticalFlow(of);
 
-    superRes->set("scale", scale);
-    superRes->set("iterations", iterations);
-    superRes->set("temporalAreaRadius", temporalAreaRadius);
+    superRes->setScale(scale);
+    superRes->setIterations(iterations);
+    superRes->setTemporalAreaRadius(temporalAreaRadius);
 
     Ptr<FrameSource> frameSource;
     if (useCuda)

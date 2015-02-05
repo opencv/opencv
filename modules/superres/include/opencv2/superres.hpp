@@ -44,6 +44,7 @@
 #define __OPENCV_SUPERRES_HPP__
 
 #include "opencv2/core.hpp"
+#include "opencv2/superres/optical_flow.hpp"
 
 /**
   @defgroup superres Super Resolution
@@ -61,8 +62,6 @@ namespace cv
 
 //! @addtogroup superres
 //! @{
-
-        CV_EXPORTS bool initModule_superres();
 
         class CV_EXPORTS FrameSource
         {
@@ -105,6 +104,36 @@ namespace cv
             */
             virtual void collectGarbage();
 
+            //! @name Scale factor
+            CV_PURE_PROPERTY(int, Scale)
+
+            //! @name Iterations count
+            CV_PURE_PROPERTY(int, Iterations)
+
+            //! @name Asymptotic value of steepest descent method
+            CV_PURE_PROPERTY(double, Tau)
+
+            //! @name Weight parameter to balance data term and smoothness term
+            CV_PURE_PROPERTY(double, Labmda)
+
+            //! @name Parameter of spacial distribution in Bilateral-TV
+            CV_PURE_PROPERTY(double, Alpha)
+
+            //! @name Kernel size of Bilateral-TV filter
+            CV_PURE_PROPERTY(int, KernelSize)
+
+            //! @name Gaussian blur kernel size
+            CV_PURE_PROPERTY(int, BlurKernelSize)
+
+            //! @name Gaussian blur sigma
+            CV_PURE_PROPERTY(double, BlurSigma)
+
+            //! @name Radius of the temporal search area
+            CV_PURE_PROPERTY(int, TemporalAreaRadius)
+
+            //! @name Dense optical flow algorithm
+            CV_PURE_PROPERTY_S(Ptr<cv::superres::DenseOpticalFlowExt>, OpticalFlow)
+
         protected:
             SuperResolution();
 
@@ -139,7 +168,6 @@ namespace cv
          */
         CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1();
         CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1_CUDA();
-        CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1_OCL();
 
 //! @} superres
 

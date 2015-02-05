@@ -100,7 +100,7 @@ RECURSIVE              = YES
 EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp
-EXCLUDE_SYMBOLS        = cv::DataType<*> int
+EXCLUDE_SYMBOLS        = cv::DataType<*> int void
 EXAMPLE_PATH           = @CMAKE_DOXYGEN_EXAMPLE_PATH@
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = YES
@@ -243,7 +243,8 @@ PREDEFINED             = __cplusplus=1 \
                          CV_NORETURN= \
                          CV_DEFAULT(x)=" = x" \
                          CV_NEON=1 \
-                         FLANN_DEPRECATED=
+                         FLANN_DEPRECATED= \
+                         "CV_PURE_PROPERTY(type, name)= /**\@{*/ virtual type get##name() const = 0; virtual void set##name(type _##name) = 0; /**\@}*/"
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES
 TAGFILES               =
