@@ -200,8 +200,6 @@ public:
 
     void setCallback(const Ptr<LMSolver::Callback>& _cb) { cb = _cb; }
 
-    AlgorithmInfo* info() const;
-
     Ptr<LMSolver::Callback> cb;
 
     double epsx;
@@ -211,15 +209,8 @@ public:
 };
 
 
-CV_INIT_ALGORITHM(LMSolverImpl, "LMSolver",
-                  obj.info()->addParam(obj, "epsx", obj.epsx);
-                  obj.info()->addParam(obj, "epsf", obj.epsf);
-                  obj.info()->addParam(obj, "maxIters", obj.maxIters);
-                  obj.info()->addParam(obj, "printInterval", obj.printInterval))
-
 Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
-    CV_Assert( !LMSolverImpl_info_auto.name().empty() );
     return makePtr<LMSolverImpl>(cb, maxIters);
 }
 
