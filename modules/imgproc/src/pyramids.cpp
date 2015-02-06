@@ -435,7 +435,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_Assert(borderType == BORDER_DEFAULT);
+    CV_Assert(borderType != BORDER_CONSTANT);
 
     Mat src = _src.getMat();
     Size dsz = _dsz == Size() ? Size(src.cols*2, src.rows*2) : _dsz;
