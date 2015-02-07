@@ -1192,7 +1192,7 @@ inline void   RHO_HEST_REFC::updateSPRT(void){
  * m_S:      The number of models that are verified per sample.
  */
 
-static inline double designSPRTTest(double delta, double epsilon, double t_M, double m_S){
+static inline double sacDesignSPRTTest(double delta, double epsilon, double t_M, double m_S){
     double An, C, K, prevAn;
     unsigned i;
 
@@ -1248,7 +1248,7 @@ static inline double designSPRTTest(double delta, double epsilon, double t_M, do
  */
 
 inline void   RHO_HEST_REFC::designSPRTTest(void){
-    eval.A = designSPRTTest(eval.delta, eval.epsilon, eval.t_M, eval.m_S);
+    eval.A = sacDesignSPRTTest(eval.delta, eval.epsilon, eval.t_M, eval.m_S);
     eval.lambdaReject = ((1.0 - eval.delta) / (1.0 - eval.epsilon));
     eval.lambdaAccept = ((   eval.delta   ) / (    eval.epsilon  ));
 }
