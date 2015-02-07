@@ -44,6 +44,7 @@
  */
 
 /* Includes */
+#include <precomp.hpp>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -52,88 +53,203 @@
 #include <limits.h>
 #include <float.h>
 #include <math.h>
+#include <vector>
 #include "rhorefc.h"
 
 
 
 /* Defines */
-#define MEM_ALIGN               32
-#define HSIZE                   (3*3*sizeof(float))
-#define MIN_DELTA_CHNG          0.1
-#define REL_CHNG(a, b)          (fabs((a) - (b))/(a))
-#define CHNG_SIGNIFICANT(a, b)  (REL_CHNG(a, b) > MIN_DELTA_CHNG)
-#define CHI_STAT                2.706
-#define CHI_SQ                  1.645
-#define RLO                     0.25
-#define RHI                     0.75
-#define MAXLEVMARQITERS         100
-#define m                       4       /* 4 points required per model */
-#define SPRT_T_M                25      /* Guessing 25 match evlauations / 1 model generation */
-#define SPRT_M_S                1       /* 1 model per sample */
-#define SPRT_EPSILON            0.1     /* No explanation */
-#define SPRT_DELTA              0.01    /* No explanation */
-#define LM_GAIN_LO              0.25    /* See sacLMGain(). */
-#define LM_GAIN_HI              0.75    /* See sacLMGain(). */
+const int    MEM_ALIGN              = 32;
+const size_t HSIZE                  = (3*3*sizeof(float));
+const double MIN_DELTA_CHNG         = 0.1;
+const double CHI_STAT               = 2.706;
+const double CHI_SQ                 = 1.645;
+const double RLO                    = 0.25;
+const double RHI                    = 0.75;
+const int    MAXLEVMARQITERS        = 100;
+const int    SMPL_SIZE              = 4;      /* 4 points required per model */
+const int    SPRT_T_M               = 25;     /* Guessing 25 match evlauations / 1 model generation */
+const int    SPRT_M_S               = 1;      /* 1 model per sample */
+const double SPRT_EPSILON           = 0.1;    /* No explanation */
+const double SPRT_DELTA             = 0.01;   /* No explanation */
+const double LM_GAIN_LO             = 0.25;   /* See sacLMGain(). */
+const double LM_GAIN_HI             = 0.75;   /* See sacLMGain(). */
+
+
 
 
 
 /* For the sake of cv:: namespace ONLY: */
-#ifdef __cplusplus
 namespace cv{/* For C support, replace with extern "C" { */
-#endif
-
 
 /* Data Structures */
+struct RHO_HEST_REFC{
+    /**
+     * Virtual Arguments.
+     *
+     * Exactly the same as at function call, except:
+     * - minInl is enforced to be >= 4.
+     */
+
+    struct{
+        const float* src;
+        const float* dst;
+        char*        inl;
+        unsigned     N;
+        float        maxD;
+        unsigned     maxI;
+        unsigned     rConvg;
+        double       cfd;
+        unsigned     minInl;
+        double       beta;
+        unsigned     flags;
+        const float* guessH;
+        float*       finalH;
+    } arg;
+
+    /* PROSAC Control */
+    struct{
+        unsigned  i;               /* Iteration Number */
+        unsigned  phNum;           /* Phase Number */
+        unsigned  phEndI;          /* Phase End Iteration */
+        double    phEndFpI;        /* Phase floating-point End Iteration */
+        unsigned  phMax;           /* Termination phase number */
+        unsigned  phNumInl;        /* Number of inliers for termination phase */
+        unsigned  numModels;       /* Number of models tested */
+        unsigned* smpl;            /* Sample of match indexes */
+    } ctrl;
+
+    /* Current model being tested */
+    struct{
+        float*    pkdPts;          /* Packed points */
+        float*    H;               /* Homography */
+        char*     inl;             /* Mask of inliers */
+        unsigned  numInl;          /* Number of inliers */
+    } curr;
+
+    /* Best model (so far) */
+    struct{
+        float*    H;               /* Homography */
+        char*     inl;             /* Mask of inliers */
+        unsigned  numInl;          /* Number of inliers */
+    } best;
+
+    /* Non-randomness criterion */
+    struct{
+        std::vector<unsigned> tbl; /* Non-Randomness: Table */
+        unsigned  size;            /* Non-Randomness: Size */
+        double    beta;            /* Non-Randomness: Beta */
+    } nr;
+
+    /* SPRT Evaluator */
+    struct{
+        double    t_M;             /* t_M */
+        double    m_S;             /* m_S */
+        double    epsilon;         /* Epsilon */
+        double    delta;           /* delta */
+        double    A;               /* SPRT Threshold */
+        unsigned  Ntested;         /* Number of points tested */
+        unsigned  Ntestedtotal;    /* Number of points tested in total */
+        int       good;            /* Good/bad flag */
+        double    lambdaAccept;    /* Accept multiplier */
+        double    lambdaReject;    /* Reject multiplier */
+    } eval;
+
+    /* Levenberg-Marquardt Refinement */
+    struct{
+        float*    ws;              /* Levenberg-Marqhard Workspace */
+        float  (* JtJ)[8];         /* JtJ matrix */
+        float  (* tmp1)[8];        /* Temporary 1 */
+        float*    Jte;             /* Jte vector */
+    } lm;
+
+    /* Initialized? */
+    int init;
+
+
+    /* Empty constructors and destructors */
+    public:
+    RHO_HEST_REFC();
+    private: /* Forbid copying. */
+    RHO_HEST_REFC(const RHO_HEST_REFC&);
+    public:
+    ~RHO_HEST_REFC();
+
+    /* Methods to implement external interface */
+    inline int    initialize(void);
+    inline int    sacEnsureCapacity(unsigned N, double beta);
+    inline void   finalize(void);
+    unsigned      rhoRefC(const float*   src,     /* Source points */
+                          const float*   dst,     /* Destination points */
+                          char*          inl,     /* Inlier mask */
+                          unsigned       N,       /*  = src.length = dst.length = inl.length */
+                          float          maxD,    /* Works:     3.0 */
+                          unsigned       maxI,    /* Works:    2000 */
+                          unsigned       rConvg,  /* Works:    2000 */
+                          double         cfd,     /* Works:   0.995 */
+                          unsigned       minInl,  /* Minimum:     4 */
+                          double         beta,    /* Works:    0.35 */
+                          unsigned       flags,   /* Works:       0 */
+                          const float*   guessH,  /* Extrinsic guess, NULL if none provided */
+                          float*         finalH); /* Final result. */
 
 
 
-/* Prototypes */
+    /* Methods to implement internals */
+    inline int    initRun(void);
+    inline void   finiRun(void);
+    inline int    haveExtrinsicGuess(void);
+    inline int    hypothesize(void);
+    inline int    verify(void);
+    inline int    isNREnabled(void);
+    inline int    isRefineEnabled(void);
+    inline int    isFinalRefineEnabled(void);
+    inline int    PROSACPhaseEndReached(void);
+    inline void   PROSACGoToNextPhase(void);
+    inline void   getPROSACSample(void);
+    inline int    isSampleDegenerate(void);
+    inline void   generateModel(void);
+    inline int    isModelDegenerate(void);
+    inline void   evaluateModelSPRT(void);
+    inline void   updateSPRT(void);
+    inline void   designSPRTTest(void);
+    inline int    isBestModel(void);
+    inline int    isBestModelGoodEnough(void);
+    inline void   saveBestModel(void);
+    inline void   nStarOptimize(void);
+    inline void   updateBounds(void);
+    inline void   outputModel(void);
+    inline void   outputZeroH(void);
+    inline int    canRefine(void);
+    inline void   refine(void);
+};
+
+
+
+
+/**
+ * Prototypes for purely-computational code.
+ */
+
 static inline void*  almalloc(size_t nBytes);
-static inline void   alfree(void* ptr);
+static inline void   alfree  (void* ptr);
 
-static inline int    sacInitRun(RHO_HEST_REFC* p);
-static inline void   sacFiniRun(RHO_HEST_REFC* p);
-static inline int    sacHaveExtrinsicGuess(RHO_HEST_REFC* p);
-static inline int    sacHypothesize(RHO_HEST_REFC* p);
-static inline int    sacVerify(RHO_HEST_REFC* p);
-static inline int    sacIsNREnabled(RHO_HEST_REFC* p);
-static inline int    sacIsRefineEnabled(RHO_HEST_REFC* p);
-static inline int    sacIsFinalRefineEnabled(RHO_HEST_REFC* p);
-static inline int    sacPROSACPhaseEndReached(RHO_HEST_REFC* p);
-static inline void   sacPROSACGoToNextPhase(RHO_HEST_REFC* p);
-static inline void   sacGetPROSACSample(RHO_HEST_REFC* p);
-static inline int    sacIsSampleDegenerate(RHO_HEST_REFC* p);
-static inline void   sacGenerateModel(RHO_HEST_REFC* p);
-static inline int    sacIsModelDegenerate(RHO_HEST_REFC* p);
-static inline void   sacEvaluateModelSPRT(RHO_HEST_REFC* p);
-static inline void   sacUpdateSPRT(RHO_HEST_REFC* p);
-static inline void   sacDesignSPRTTest(RHO_HEST_REFC* p);
-static inline int    sacIsBestModel(RHO_HEST_REFC* p);
-static inline int    sacIsBestModelGoodEnough(RHO_HEST_REFC* p);
-static inline void   sacSaveBestModel(RHO_HEST_REFC* p);
-static inline void   sacInitNonRand(double    beta,
-                                    unsigned  start,
-                                    unsigned  N,
-                                    unsigned* nonRandMinInl);
-static inline void   sacNStarOptimize(RHO_HEST_REFC* p);
-static inline void   sacUpdateBounds(RHO_HEST_REFC* p);
-static inline void   sacOutputModel(RHO_HEST_REFC* p);
-static inline void   sacOutputZeroH(RHO_HEST_REFC* p);
-
-static inline double sacInitPEndFpI(const unsigned ransacConvg,
-                                    const unsigned n,
-                                    const unsigned s);
-static inline void   sacRndSmpl(unsigned  sampleSize,
-                                unsigned* currentSample,
-                                unsigned  dataSetSize);
-static inline double sacRandom(void);
-static inline unsigned sacCalcIterBound(double   confidence,
-                                        double   inlierRate,
-                                        unsigned sampleSize,
-                                        unsigned maxIterBound);
-static inline void   hFuncRefC(float* packedPoints, float* H);
-static inline int    sacCanRefine(RHO_HEST_REFC* p);
-static inline void   sacRefine(RHO_HEST_REFC* p);
+static inline void   sacInitNonRand       (double    beta,
+                                           unsigned  start,
+                                           unsigned  N,
+                                           unsigned* nonRandMinInl);
+static inline double sacInitPEndFpI       (const unsigned ransacConvg,
+                                           const unsigned n,
+                                           const unsigned s);
+static inline void   sacRndSmpl           (unsigned  sampleSize,
+                                           unsigned* currentSample,
+                                           unsigned  dataSetSize);
+static inline double sacRandom            (void);
+static inline unsigned sacCalcIterBound   (double   confidence,
+                                           double   inlierRate,
+                                           unsigned sampleSize,
+                                           unsigned maxIterBound);
+static inline void   hFuncRefC            (float* packedPoints, float* H);
 static inline void   sacCalcJacobianErrors(const float* restrict H,
                                            const float* restrict src,
                                            const float* restrict dst,
@@ -142,164 +258,62 @@ static inline void   sacCalcJacobianErrors(const float* restrict H,
                                            float     (* restrict JtJ)[8],
                                            float*       restrict Jte,
                                            float*       restrict Sp);
-static inline float  sacLMGain(const float*  dH,
-                               const float*  Jte,
-                               const float   S,
-                               const float   newS,
-                               const float   lambda);
-static inline int    sacChol8x8Damped (const float (*A)[8],
-                                       float         lambda,
-                                       float       (*L)[8]);
-static inline void   sacTRInv8x8(const float (*L)[8],
-                                 float       (*M)[8]);
-static inline void   sacTRISolve8x8(const float (*L)[8],
-                                    const float*  Jte,
-                                    float*        dH);
-static inline void   sacSub8x1(float* Hout, const float* H, const float* dH);
+static inline float  sacLMGain            (const float*  dH,
+                                           const float*  Jte,
+                                           const float   S,
+                                           const float   newS,
+                                           const float   lambda);
+static inline int    sacChol8x8Damped     (const float (*A)[8],
+                                           float         lambda,
+                                           float       (*L)[8]);
+static inline void   sacTRInv8x8          (const float (*L)[8],
+                                           float       (*M)[8]);
+static inline void   sacTRISolve8x8       (const float (*L)[8],
+                                           const float*  Jte,
+                                           float*        dH);
+static inline void   sacSub8x1            (float*       Hout,
+                                           const float* H,
+                                           const float* dH);
 
 
 
 /* Functions */
 
 /**
- * Initialize the estimator context, by allocating the aligned buffers
- * internally needed.
+ * External access to context constructor.
  *
- * Currently there are 5 per-estimator buffers:
- * - The buffer of m indexes representing a sample
- * - The buffer of 16 floats representing m matches (x,y) -> (X,Y).
- * - The buffer for the current homography
- * - The buffer for the best-so-far homography
- * - Optionally, the non-randomness criterion table
- *
- * @param [in/out] p  The uninitialized estimator context to initialize.
- * @return 0 if successful; non-zero if an error occured.
+ * @return A pointer to the context if successful; NULL if an error occured.
  */
 
-int  rhoRefCInit(RHO_HEST_REFC* p){
-    memset(p, 0, sizeof(*p));
+RHO_HEST_REFC* rhoRefCInit(void){
+    RHO_HEST_REFC* p = new RHO_HEST_REFC;
 
-    p->ctrl.smpl   = (unsigned*)almalloc(m*sizeof(*p->ctrl.smpl));
-
-    p->curr.pkdPts = (float*)   almalloc(m*2*2*sizeof(*p->curr.pkdPts));
-    p->curr.H      = (float*)   almalloc(HSIZE);
-    p->curr.inl    = NULL;
-    p->curr.numInl = 0;
-
-    p->best.H      = (float*)   almalloc(HSIZE);
-    p->best.inl    = NULL;
-    p->best.numInl = 0;
-
-    p->nr.tbl      = NULL;/* By default this table is not computed. */
-    p->nr.size     = 0;
-    p->nr.beta     = 0.0;
-
-    p->lm.ws       = NULL;
-    p->lm.JtJ      = NULL;
-    p->lm.tmp1     = NULL;
-    p->lm.Jte      = NULL;
-
-
-    int areAllAllocsSuccessful = p->ctrl.smpl   &&
-                                 p->curr.H      &&
-                                 p->best.H      &&
-                                 p->curr.pkdPts;
-
-    if(!areAllAllocsSuccessful){
-        rhoRefCFini(p);
+    if(!p->initialize()){
+        delete p;
+        p = NULL;
     }
 
-    return areAllAllocsSuccessful;
+    return p;
 }
 
 
 /**
- * Ensure that the estimator context's internal table for non-randomness
- * criterion is at least of the given size, and uses the given beta. The table
- * should be larger than the maximum number of matches fed into the estimator.
- *
- * A value of N of 0 requests deallocation of the table.
- *
- * @param [in] p     The initialized estimator context
- * @param [in] N     If 0, deallocate internal table. If > 0, ensure that the
- *                   internal table is of at least this size, reallocating if
- *                   necessary.
- * @param [in] beta  The beta-factor to use within the table.
- * @return 1 if successful; 0 if an error occured.
- *
- * Reads:  nr.*
- * Writes: nr.*
+ * External access to non-randomness table resize.
  */
 
 int  rhoRefCEnsureCapacity(RHO_HEST_REFC* p, unsigned N, double beta){
-    unsigned* tmp;
-
-
-    if(N == 0){
-        /* Deallocate table */
-        alfree(p->nr.tbl);
-        p->nr.tbl  = NULL;
-        p->nr.size = 0;
-    }else{
-        /* Ensure table at least as big as N and made for correct beta. */
-        if(p->nr.tbl && p->nr.beta == beta && p->nr.size >= N){
-            /* Table already correctly set up */
-        }else{
-            if(p->nr.size < N){
-                /* Reallocate table because it is too small. */
-                tmp = (unsigned*)almalloc(N*sizeof(unsigned));
-                if(!tmp){
-                    return 0;
-                }
-
-                /* Must recalculate in whole or part. */
-                if(p->nr.beta != beta){
-                    /* Beta changed; recalculate in whole. */
-                    sacInitNonRand(beta, 0, N, tmp);
-                    alfree(p->nr.tbl);
-                }else{
-                    /* Beta did not change; Copy over any work already done. */
-                    memcpy(tmp, p->nr.tbl, p->nr.size*sizeof(unsigned));
-                    sacInitNonRand(beta, p->nr.size, N, tmp);
-                    alfree(p->nr.tbl);
-                }
-
-                p->nr.tbl  = tmp;
-                p->nr.size = N;
-                p->nr.beta = beta;
-            }else{
-                /* Might recalculate in whole, or not at all. */
-                if(p->nr.beta != beta){
-                    /* Beta changed; recalculate in whole. */
-                    sacInitNonRand(beta, 0, p->nr.size, p->nr.tbl);
-                    p->nr.beta = beta;
-                }else{
-                    /* Beta did not change; Table was already big enough. Do nothing. */
-                    /* Besides, this is unreachable. */
-                }
-            }
-        }
-    }
-
-    return 1;
+    return p->sacEnsureCapacity(N, beta);
 }
 
 
 /**
- * Finalize the estimator context, by freeing the aligned buffers used
- * internally.
+ * External access to context destructor.
  *
  * @param [in] p  The initialized estimator context to finalize.
  */
 
 void rhoRefCFini(RHO_HEST_REFC* p){
-    alfree(p->ctrl.smpl);
-    alfree(p->curr.H);
-    alfree(p->best.H);
-    alfree(p->curr.pkdPts);
-    alfree(p->nr.tbl);
-
-    memset(p, 0, sizeof(*p));
+    delete p;
 }
 
 
@@ -332,74 +346,24 @@ void rhoRefCFini(RHO_HEST_REFC* p){
  *                         inliers for acceptance was reached; 0 otherwise.
  */
 
-unsigned rhoRefC(RHO_HEST_REFC* restrict p,       /* Homography estimation context. */
-                 const float*   restrict src,     /* Source points */
-                 const float*   restrict dst,     /* Destination points */
-                 char*          restrict inl,     /* Inlier mask */
-                 unsigned                N,       /*  = src.length = dst.length = inl.length */
-                 float                   maxD,    /* Works:     3.0 */
-                 unsigned                maxI,    /* Works:    2000 */
-                 unsigned                rConvg,  /* Works:    2000 */
-                 double                  cfd,     /* Works:   0.995 */
-                 unsigned                minInl,  /* Minimum:     4 */
-                 double                  beta,    /* Works:    0.35 */
-                 unsigned                flags,   /* Works:       0 */
-                 const float*            guessH,  /* Extrinsic guess, NULL if none provided */
-                 float*                  finalH){ /* Final result. */
-
-    /**
-     * Setup
-     */
-
-    p->arg.src     = src;
-    p->arg.dst     = dst;
-    p->arg.inl     = inl;
-    p->arg.N       = N;
-    p->arg.maxD    = maxD;
-    p->arg.maxI    = maxI;
-    p->arg.rConvg  = rConvg;
-    p->arg.cfd     = cfd;
-    p->arg.minInl  = minInl;
-    p->arg.beta    = beta;
-    p->arg.flags   = flags;
-    p->arg.guessH  = guessH;
-    p->arg.finalH  = finalH;
-    if(!sacInitRun(p)){
-        sacOutputZeroH(p);
-        sacFiniRun(p);
-        return 0;
-    }
-
-    /**
-     * Extrinsic Guess
-     */
-
-    if(sacHaveExtrinsicGuess(p)){
-        sacVerify(p);
-    }
-
-
-    /**
-     * PROSAC Loop
-     */
-
-    for(p->ctrl.i=0; p->ctrl.i < p->arg.maxI; p->ctrl.i++){
-        sacHypothesize(p) && sacVerify(p);
-    }
-
-
-    /**
-     * Teardown
-     */
-
-    if(sacIsFinalRefineEnabled(p) && sacCanRefine(p)){
-        sacRefine(p);
-    }
-
-    sacOutputModel(p);
-    sacFiniRun(p);
-    return sacIsBestModelGoodEnough(p) ? p->best.numInl : 0;
+unsigned rhoRefC(RHO_HEST_REFC* p,       /* Homography estimation context. */
+                 const float*   src,     /* Source points */
+                 const float*   dst,     /* Destination points */
+                 char*          inl,     /* Inlier mask */
+                 unsigned       N,       /*  = src.length = dst.length = inl.length */
+                 float          maxD,    /* Works:     3.0 */
+                 unsigned       maxI,    /* Works:    2000 */
+                 unsigned       rConvg,  /* Works:    2000 */
+                 double         cfd,     /* Works:   0.995 */
+                 unsigned       minInl,  /* Minimum:     4 */
+                 double         beta,    /* Works:    0.35 */
+                 unsigned       flags,   /* Works:       0 */
+                 const float*   guessH,  /* Extrinsic guess, NULL if none provided */
+                 float*         finalH){ /* Final result. */
+    return p->rhoRefC(src, dst, inl, N, maxD, maxI, rConvg, cfd, minInl, beta,
+                      flags, guessH, finalH);
 }
+
 
 
 /**
@@ -433,6 +397,241 @@ static inline void   alfree(void* ptr){
     }
 }
 
+/**
+ * Constructor for RHO_HEST_REFC.
+ *
+ * Does nothing. True initialization is done by initialize().
+ */
+
+RHO_HEST_REFC::RHO_HEST_REFC() : init(0){
+
+}
+
+/**
+ * Private copy constructor for RHO_HEST_REFC. Disabled.
+ */
+
+RHO_HEST_REFC::RHO_HEST_REFC(const RHO_HEST_REFC&) : init(0){
+
+}
+
+/**
+ * Destructor for RHO_HEST_REFC.
+ */
+
+RHO_HEST_REFC::~RHO_HEST_REFC(){
+    if(init){
+        finalize();
+    }
+}
+
+
+
+/**
+ * Initialize the estimator context, by allocating the aligned buffers
+ * internally needed.
+ *
+ * Currently there are 5 per-estimator buffers:
+ * - The buffer of m indexes representing a sample
+ * - The buffer of 16 floats representing m matches (x,y) -> (X,Y).
+ * - The buffer for the current homography
+ * - The buffer for the best-so-far homography
+ * - Optionally, the non-randomness criterion table
+ *
+ * Returns 0 if unsuccessful and non-0 otherwise.
+ */
+
+inline int    RHO_HEST_REFC::initialize(void){
+    ctrl.smpl   = (unsigned*)almalloc(SMPL_SIZE*sizeof(*ctrl.smpl));
+
+    curr.pkdPts = (float*)   almalloc(SMPL_SIZE*2*2*sizeof(*curr.pkdPts));
+    curr.H      = (float*)   almalloc(HSIZE);
+    curr.inl    = NULL;
+    curr.numInl = 0;
+
+    best.H      = (float*)   almalloc(HSIZE);
+    best.inl    = NULL;
+    best.numInl = 0;
+
+    nr.size     = 0;
+    nr.beta     = 0.0;
+
+    lm.ws       = NULL;
+    lm.JtJ      = NULL;
+    lm.tmp1     = NULL;
+    lm.Jte      = NULL;
+
+
+    int areAllAllocsSuccessful = ctrl.smpl   &&
+                                 curr.H      &&
+                                 best.H      &&
+                                 curr.pkdPts;
+
+    if(!areAllAllocsSuccessful){
+        finalize();
+    }else{
+        init = 1;
+    }
+
+    return areAllAllocsSuccessful;
+}
+
+/**
+ * Finalize.
+ *
+ * Finalize the estimator context, by freeing the aligned buffers used
+ * internally.
+ */
+
+inline void   RHO_HEST_REFC::finalize(void){
+    if(init){
+        alfree(ctrl.smpl);
+        alfree(curr.H);
+        alfree(best.H);
+        alfree(curr.pkdPts);
+
+        memset(this, 0, sizeof(*this));
+
+        init = 0;
+    }
+}
+
+/**
+ * Ensure that the estimator context's internal table for non-randomness
+ * criterion is at least of the given size, and uses the given beta. The table
+ * should be larger than the maximum number of matches fed into the estimator.
+ *
+ * A value of N of 0 requests deallocation of the table.
+ *
+ * @param [in] N     If 0, deallocate internal table. If > 0, ensure that the
+ *                   internal table is of at least this size, reallocating if
+ *                   necessary.
+ * @param [in] beta  The beta-factor to use within the table.
+ * @return 1 if successful; 0 if an error occured.
+ *
+ * Reads:  nr.*
+ * Writes: nr.*
+ */
+
+inline int    RHO_HEST_REFC::sacEnsureCapacity(unsigned N, double beta){
+    if(N == 0){
+        /* Clear. */
+        nr.tbl.clear();
+        nr.size = 0;
+    }else if(nr.beta != beta){
+        /* Beta changed. Redo all the work. */
+        nr.tbl.resize(N);
+        nr.beta = beta;
+        sacInitNonRand(nr.beta, 0, N, &nr.tbl[0]);
+        nr.size = N;
+    }else if(N > nr.size){
+        /* Work is partially done. Do rest of it. */
+        nr.tbl.resize(N);
+        sacInitNonRand(nr.beta, nr.size, N, &nr.tbl[nr.size]);
+        nr.size = N;
+    }else{
+        /* Work is already done. Do nothing. */
+    }
+
+    return 1;
+}
+
+
+/**
+ * Estimates the homography using the given context, matches and parameters to
+ * PROSAC.
+ *
+ * @param [in]     src     The pointer to the source points of the matches.
+ *                             Must be aligned to 4 bytes. Cannot be NULL.
+ * @param [in]     dst     The pointer to the destination points of the matches.
+ *                             Must be aligned to 16 bytes. Cannot be NULL.
+ * @param [out]    inl     The pointer to the output mask of inlier matches.
+ *                             Must be aligned to 16 bytes. May be NULL.
+ * @param [in]     N       The number of matches.
+ * @param [in]     maxD    The maximum distance.
+ * @param [in]     maxI    The maximum number of PROSAC iterations.
+ * @param [in]     rConvg  The RANSAC convergence parameter.
+ * @param [in]     cfd     The required confidence in the solution.
+ * @param [in]     minInl  The minimum required number of inliers.
+ * @param [in]     beta    The beta-parameter for the non-randomness criterion.
+ * @param [in]     flags   A union of flags to control the estimation.
+ * @param [in]     guessH  An extrinsic guess at the solution H, or NULL if
+ *                         none provided.
+ * @param [out]    finalH  The final estimation of H, or the zero matrix if
+ *                         the minimum number of inliers was not met.
+ *                         Cannot be NULL.
+ * @return                 The number of inliers if the minimum number of
+ *                         inliers for acceptance was reached; 0 otherwise.
+ */
+
+unsigned RHO_HEST_REFC::rhoRefC(const float*   src,     /* Source points */
+                                const float*   dst,     /* Destination points */
+                                char*          inl,     /* Inlier mask */
+                                unsigned       N,       /*  = src.length = dst.length = inl.length */
+                                float          maxD,    /* Works:     3.0 */
+                                unsigned       maxI,    /* Works:    2000 */
+                                unsigned       rConvg,  /* Works:    2000 */
+                                double         cfd,     /* Works:   0.995 */
+                                unsigned       minInl,  /* Minimum:     4 */
+                                double         beta,    /* Works:    0.35 */
+                                unsigned       flags,   /* Works:       0 */
+                                const float*   guessH,  /* Extrinsic guess, NULL if none provided */
+                                float*         finalH){ /* Final result. */
+
+    /**
+     * Setup
+     */
+
+    arg.src     = src;
+    arg.dst     = dst;
+    arg.inl     = inl;
+    arg.N       = N;
+    arg.maxD    = maxD;
+    arg.maxI    = maxI;
+    arg.rConvg  = rConvg;
+    arg.cfd     = cfd;
+    arg.minInl  = minInl;
+    arg.beta    = beta;
+    arg.flags   = flags;
+    arg.guessH  = guessH;
+    arg.finalH  = finalH;
+    if(!initRun()){
+        outputZeroH();
+        finiRun();
+        return 0;
+    }
+
+    /**
+     * Extrinsic Guess
+     */
+
+    if(haveExtrinsicGuess()){
+        verify();
+    }
+
+
+    /**
+     * PROSAC Loop
+     */
+
+    for(ctrl.i=0; ctrl.i < arg.maxI; ctrl.i++){
+        hypothesize() && verify();
+    }
+
+
+    /**
+     * Teardown
+     */
+
+    if(isFinalRefineEnabled() && canRefine()){
+        refine();
+    }
+
+    outputModel();
+    finiRun();
+    return isBestModelGoodEnough() ? best.numInl : 0;
+}
+
 
 /**
  * Initialize SAC for a run given its arguments.
@@ -446,7 +645,7 @@ static inline void   alfree(void* ptr){
  * Writes: curr.*, best.*, ctrl.*, eval.*
  */
 
-static inline int    sacInitRun(RHO_HEST_REFC* p){
+inline int    RHO_HEST_REFC::initRun(void){
     /**
      * Sanitize arguments.
      *
@@ -454,29 +653,29 @@ static inline int    sacInitRun(RHO_HEST_REFC* p){
      * mean something or other.
      */
 
-    if(!p->arg.src || !p->arg.dst){
+    if(!arg.src || !arg.dst){
         /* Arguments src or dst are insane, must be != NULL */
         return 0;
     }
-    if(p->arg.N < m){
+    if(arg.N < SMPL_SIZE){
         /* Argument N is insane, must be >= 4. */
         return 0;
     }
-    if(p->arg.maxD < 0){
+    if(arg.maxD < 0){
         /* Argument maxD is insane, must be >= 0. */
         return 0;
     }
-    if(p->arg.cfd < 0 || p->arg.cfd > 1){
+    if(arg.cfd < 0 || arg.cfd > 1){
         /* Argument cfd is insane, must be in [0, 1]. */
         return 0;
     }
     /* Clamp minInl to 4 or higher. */
-    p->arg.minInl = p->arg.minInl < m ? m : p->arg.minInl;
-    if(sacIsNREnabled(p) && (p->arg.beta <= 0 || p->arg.beta >= 1)){
+    arg.minInl = arg.minInl < SMPL_SIZE ? SMPL_SIZE : arg.minInl;
+    if(isNREnabled() && (arg.beta <= 0 || arg.beta >= 1)){
         /* Argument beta is insane, must be in (0, 1). */
         return 0;
     }
-    if(!p->arg.finalH){
+    if(!arg.finalH){
         /* Argument finalH is insane, must be != NULL */
         return 0;
     }
@@ -491,7 +690,7 @@ static inline int    sacInitRun(RHO_HEST_REFC* p){
      *     substruct and the sanity-checked N and beta arguments from above.
      */
 
-    if(sacIsNREnabled(p) && !rhoRefCEnsureCapacity(p, p->arg.N, p->arg.beta)){
+    if(isNREnabled() && !sacEnsureCapacity(arg.N, arg.beta)){
         return 0;
     }
 
@@ -505,15 +704,15 @@ static inline int    sacInitRun(RHO_HEST_REFC* p){
      * not, allocate one anyways internally.
      */
 
-    p->best.inl = p->arg.inl ? p->arg.inl : (char*)almalloc(p->arg.N);
-    p->curr.inl = (char*)almalloc(p->arg.N);
+    best.inl = arg.inl ? arg.inl : (char*)almalloc(arg.N);
+    curr.inl = (char*)almalloc(arg.N);
 
-    if(!p->curr.inl || !p->best.inl){
+    if(!curr.inl || !best.inl){
         return 0;
     }
 
-    memset(p->best.inl, 0, p->arg.N);
-    memset(p->curr.inl, 0, p->arg.N);
+    memset(best.inl, 0, arg.N);
+    memset(curr.inl, 0, arg.N);
 
     /**
      * LevMarq workspace alloc.
@@ -522,17 +721,17 @@ static inline int    sacInitRun(RHO_HEST_REFC* p){
      * we wish to quit before doing any serious work.
      */
 
-    if(sacIsRefineEnabled(p) || sacIsFinalRefineEnabled(p)){
-        p->lm.ws   = (float*)almalloc(2*8*8*sizeof(float) + 1*8*sizeof(float));
-        if(!p->lm.ws){
+    if(isRefineEnabled() || isFinalRefineEnabled()){
+        lm.ws   = (float*)almalloc(2*8*8*sizeof(float) + 1*8*sizeof(float));
+        if(!lm.ws){
             return 0;
         }
 
-        p->lm.JtJ  = (float(*)[8])(p->lm.ws + 0*8*8);
-        p->lm.tmp1 = (float(*)[8])(p->lm.ws + 1*8*8);
-        p->lm.Jte  = (float*)     (p->lm.ws + 2*8*8);
+        lm.JtJ  = (float(*)[8])(lm.ws + 0*8*8);
+        lm.tmp1 = (float(*)[8])(lm.ws + 1*8*8);
+        lm.Jte  = (float*)     (lm.ws + 2*8*8);
     }else{
-        p->lm.ws = NULL;
+        lm.ws = NULL;
     }
 
     /**
@@ -542,32 +741,32 @@ static inline int    sacInitRun(RHO_HEST_REFC* p){
      * number of fields if something in the above junk failed.
      */
 
-    p->ctrl.i            = 0;
-    p->ctrl.phNum        = m;
-    p->ctrl.phEndI       = 1;
-    p->ctrl.phEndFpI     = sacInitPEndFpI(p->arg.rConvg, p->arg.N, m);
-    p->ctrl.phMax        = p->arg.N;
-    p->ctrl.phNumInl     = 0;
-    p->ctrl.numModels    = 0;
+    ctrl.i            = 0;
+    ctrl.phNum        = SMPL_SIZE;
+    ctrl.phEndI       = 1;
+    ctrl.phEndFpI     = sacInitPEndFpI(arg.rConvg, arg.N, SMPL_SIZE);
+    ctrl.phMax        = arg.N;
+    ctrl.phNumInl     = 0;
+    ctrl.numModels    = 0;
 
-    if(sacHaveExtrinsicGuess(p)){
-        memcpy(p->curr.H, p->arg.guessH, HSIZE);
+    if(haveExtrinsicGuess()){
+        memcpy(curr.H, arg.guessH, HSIZE);
     }else{
-        memset(p->curr.H, 0, HSIZE);
+        memset(curr.H, 0, HSIZE);
     }
-    p->curr.numInl       = 0;
+    curr.numInl       = 0;
 
-    memset(p->best.H, 0, HSIZE);
-    p->best.numInl       = 0;
+    memset(best.H, 0, HSIZE);
+    best.numInl       = 0;
 
-    p->eval.Ntested      = 0;
-    p->eval.Ntestedtotal = 0;
-    p->eval.good         = 1;
-    p->eval.t_M          = SPRT_T_M;
-    p->eval.m_S          = SPRT_M_S;
-    p->eval.epsilon      = SPRT_EPSILON;
-    p->eval.delta        = SPRT_DELTA;
-    sacDesignSPRTTest(p);
+    eval.Ntested      = 0;
+    eval.Ntestedtotal = 0;
+    eval.good         = 1;
+    eval.t_M          = SPRT_T_M;
+    eval.m_S          = SPRT_M_S;
+    eval.epsilon      = SPRT_EPSILON;
+    eval.delta        = SPRT_DELTA;
+    designSPRTTest();
 
     return 1;
 }
@@ -583,33 +782,33 @@ static inline int    sacInitRun(RHO_HEST_REFC* p){
  * Writes: curr.inl, best.inl
  */
 
-static inline void   sacFiniRun(RHO_HEST_REFC* p){
+inline void   RHO_HEST_REFC::finiRun(void){
     /**
      * If no output inlier mask was required, free both (internal) masks.
      * Else if an (external) mask was provided as argument, find the other
      * (the internal one) and free it.
      */
 
-    if(p->arg.inl){
-        if(p->arg.inl == p->best.inl){
-            alfree(p->curr.inl);
+    if(arg.inl){
+        if(arg.inl == best.inl){
+            alfree(curr.inl);
         }else{
-            alfree(p->best.inl);
+            alfree(best.inl);
         }
     }else{
-        alfree(p->best.inl);
-        alfree(p->curr.inl);
+        alfree(best.inl);
+        alfree(curr.inl);
     }
 
-    p->best.inl = NULL;
-    p->curr.inl = NULL;
+    best.inl = NULL;
+    curr.inl = NULL;
 
     /**
      * ₣ree the Levenberg-Marquardt workspace.
      */
 
-    alfree(p->lm.ws);
-    p->lm.ws = NULL;
+    alfree(lm.ws);
+    lm.ws = NULL;
 }
 
 /**
@@ -622,18 +821,18 @@ static inline void   sacFiniRun(RHO_HEST_REFC* p){
  * non-zero otherwise.
  */
 
-static inline int    sacHypothesize(RHO_HEST_REFC* p){
-    if(sacPROSACPhaseEndReached(p)){
-        sacPROSACGoToNextPhase(p);
+inline int    RHO_HEST_REFC::hypothesize(void){
+    if(PROSACPhaseEndReached()){
+        PROSACGoToNextPhase();
     }
 
-    sacGetPROSACSample(p);
-    if(sacIsSampleDegenerate(p)){
+    getPROSACSample();
+    if(isSampleDegenerate()){
         return 0;
     }
 
-    sacGenerateModel(p);
-    if(sacIsModelDegenerate(p)){
+    generateModel();
+    if(isModelDegenerate()){
         return 0;
     }
 
@@ -649,21 +848,21 @@ static inline int    sacHypothesize(RHO_HEST_REFC* p){
  * Returns 1.
  */
 
-static inline int    sacVerify(RHO_HEST_REFC* p){
-    sacEvaluateModelSPRT(p);
-    sacUpdateSPRT(p);
+inline int    RHO_HEST_REFC::verify(void){
+    evaluateModelSPRT();
+    updateSPRT();
 
-    if(sacIsBestModel(p)){
-        sacSaveBestModel(p);
+    if(isBestModel()){
+        saveBestModel();
 
-        if(sacIsRefineEnabled(p) && sacCanRefine(p)){
-            sacRefine(p);
+        if(isRefineEnabled() && canRefine()){
+            refine();
         }
 
-        sacUpdateBounds(p);
+        updateBounds();
 
-        if(sacIsNREnabled(p)){
-            sacNStarOptimize(p);
+        if(isNREnabled()){
+            nStarOptimize();
         }
     }
 
@@ -676,8 +875,8 @@ static inline int    sacVerify(RHO_HEST_REFC* p){
  * @return Zero if no extrinsic guess was provided; non-zero otherwiseEE.
  */
 
-static inline int    sacHaveExtrinsicGuess(RHO_HEST_REFC* p){
-    return !!p->arg.guessH;
+inline int    RHO_HEST_REFC::haveExtrinsicGuess(void){
+    return !!arg.guessH;
 }
 
 /**
@@ -686,8 +885,8 @@ static inline int    sacHaveExtrinsicGuess(RHO_HEST_REFC* p){
  * @return Zero if non-randomness criterion disabled; non-zero if not.
  */
 
-static inline int    sacIsNREnabled(RHO_HEST_REFC* p){
-    return p->arg.flags & RHO_FLAG_ENABLE_NR;
+inline int    RHO_HEST_REFC::isNREnabled(void){
+    return arg.flags & RHO_FLAG_ENABLE_NR;
 }
 
 /**
@@ -696,8 +895,8 @@ static inline int    sacIsNREnabled(RHO_HEST_REFC* p){
  * @return Zero if best-model-so-far refinement disabled; non-zero if not.
  */
 
-static inline int    sacIsRefineEnabled(RHO_HEST_REFC* p){
-    return p->arg.flags & RHO_FLAG_ENABLE_REFINEMENT;
+inline int    RHO_HEST_REFC::isRefineEnabled(void){
+    return arg.flags & RHO_FLAG_ENABLE_REFINEMENT;
 }
 
 /**
@@ -706,8 +905,8 @@ static inline int    sacIsRefineEnabled(RHO_HEST_REFC* p){
  * @return Zero if final-model refinement disabled; non-zero if not.
  */
 
-static inline int    sacIsFinalRefineEnabled(RHO_HEST_REFC* p){
-    return p->arg.flags & RHO_FLAG_ENABLE_FINAL_REFINEMENT;
+inline int    RHO_HEST_REFC::isFinalRefineEnabled(void){
+    return arg.flags & RHO_FLAG_ENABLE_FINAL_REFINEMENT;
 }
 
 /**
@@ -718,8 +917,8 @@ static inline int    sacIsFinalRefineEnabled(RHO_HEST_REFC* p){
  * Read: i, phEndI, phNum, phMax.
  */
 
-static inline int    sacPROSACPhaseEndReached(RHO_HEST_REFC* p){
-    return p->ctrl.i >= p->ctrl.phEndI && p->ctrl.phNum < p->ctrl.phMax;
+inline int    RHO_HEST_REFC::PROSACPhaseEndReached(void){
+    return ctrl.i >= ctrl.phEndI && ctrl.phNum < ctrl.phMax;
 }
 
 /**
@@ -733,13 +932,13 @@ static inline int    sacPROSACPhaseEndReached(RHO_HEST_REFC* p){
  * Write: phNum, phEndFpI, phEndI
  */
 
-static inline void   sacPROSACGoToNextPhase(RHO_HEST_REFC* p){
+inline void   RHO_HEST_REFC::PROSACGoToNextPhase(void){
     double next;
 
-    p->ctrl.phNum++;
-    next        = (p->ctrl.phEndFpI * p->ctrl.phNum)/(p->ctrl.phNum - m);
-    p->ctrl.phEndI  += (unsigned)ceil(next - p->ctrl.phEndFpI);
-    p->ctrl.phEndFpI = next;
+    ctrl.phNum++;
+    next = (ctrl.phEndFpI * ctrl.phNum)/(ctrl.phNum - SMPL_SIZE);
+    ctrl.phEndI  += (unsigned)ceil(next - ctrl.phEndFpI);
+    ctrl.phEndFpI = next;
 }
 
 /**
@@ -750,12 +949,13 @@ static inline void   sacPROSACGoToNextPhase(RHO_HEST_REFC* p){
  *   the first phNum-1 matches.
  */
 
-static inline void   sacGetPROSACSample(RHO_HEST_REFC* p){
-    if(p->ctrl.i > p->ctrl.phEndI){
-        sacRndSmpl(4, p->ctrl.smpl, p->ctrl.phNum);/* Used to be phMax */
+inline void   RHO_HEST_REFC::getPROSACSample(void){
+    if(ctrl.i > ctrl.phEndI){
+        /* FIXME: Dubious. Review. */
+        sacRndSmpl(4, ctrl.smpl, ctrl.phNum);/* Used to be phMax */
     }else{
-        sacRndSmpl(3, p->ctrl.smpl, p->ctrl.phNum-1);
-        p->ctrl.smpl[3] = p->ctrl.phNum-1;
+        sacRndSmpl(3, ctrl.smpl, ctrl.phNum-1);
+        ctrl.smpl[3] = ctrl.phNum-1;
     }
 }
 
@@ -767,10 +967,10 @@ static inline void   sacGetPROSACSample(RHO_HEST_REFC* p){
  *   bad samples.
  */
 
-static inline int    sacIsSampleDegenerate(RHO_HEST_REFC* p){
-    unsigned i0 = p->ctrl.smpl[0], i1 = p->ctrl.smpl[1], i2 = p->ctrl.smpl[2], i3 = p->ctrl.smpl[3];
+inline int    RHO_HEST_REFC::isSampleDegenerate(void){
+    unsigned i0 = ctrl.smpl[0], i1 = ctrl.smpl[1], i2 = ctrl.smpl[2], i3 = ctrl.smpl[3];
     typedef struct{float x,y;} MyPt2f;
-    MyPt2f* pkdPts = (MyPt2f*)p->curr.pkdPts, *src = (MyPt2f*)p->arg.src, *dst = (MyPt2f*)p->arg.dst;
+    MyPt2f* pkdPts = (MyPt2f*)curr.pkdPts, *src = (MyPt2f*)arg.src, *dst = (MyPt2f*)arg.dst;
 
     /**
      * Pack the matches selected by the SAC algorithm.
@@ -860,8 +1060,8 @@ static inline int    sacIsSampleDegenerate(RHO_HEST_REFC* p){
  * current homography.
  */
 
-static inline void   sacGenerateModel(RHO_HEST_REFC* p){
-    hFuncRefC(p->curr.pkdPts, p->curr.H);
+inline void   RHO_HEST_REFC::generateModel(void){
+    hFuncRefC(curr.pkdPts, curr.H);
 }
 
 /**
@@ -870,9 +1070,9 @@ static inline void   sacGenerateModel(RHO_HEST_REFC* p){
  *   NaN the homography is rejected.
  */
 
-static inline int    sacIsModelDegenerate(RHO_HEST_REFC* p){
+inline int    RHO_HEST_REFC::isModelDegenerate(void){
     int degenerate;
-    float* H = p->curr.H;
+    float* H = curr.H;
     float f=H[0]+H[1]+H[2]+H[3]+H[4]+H[5]+H[6]+H[7];
 
     /* degenerate = isnan(f); */
@@ -890,26 +1090,26 @@ static inline int    sacIsModelDegenerate(RHO_HEST_REFC* p){
  * Writes: eval.*, curr.inl, curr.numInl
  */
 
-static inline void   sacEvaluateModelSPRT(RHO_HEST_REFC* p){
+inline void   RHO_HEST_REFC::evaluateModelSPRT(void){
     unsigned i;
     unsigned isInlier;
     double   lambda  = 1.0;
-    float    distSq  = p->arg.maxD*p->arg.maxD;
-    const float* src = p->arg.src;
-    const float* dst = p->arg.dst;
-    char*    inl     = p->curr.inl;
-    const float*   H = p->curr.H;
+    float    distSq  = arg.maxD*arg.maxD;
+    const float* src = arg.src;
+    const float* dst = arg.dst;
+    char*    inl     = curr.inl;
+    const float*   H = curr.H;
 
 
-    p->ctrl.numModels++;
+    ctrl.numModels++;
 
-    p->curr.numInl   = 0;
-    p->eval.Ntested  = 0;
-    p->eval.good     = 1;
+    curr.numInl   = 0;
+    eval.Ntested  = 0;
+    eval.good     = 1;
 
 
     /* SCALAR */
-    for(i=0;i<p->arg.N && p->eval.good;i++){
+    for(i=0;i<arg.N && eval.good;i++){
         /* Backproject */
         float x=src[i*2],y=src[i*2+1];
         float X=dst[i*2],Y=dst[i*2+1];
@@ -931,19 +1131,19 @@ static inline void   sacEvaluateModelSPRT(RHO_HEST_REFC* p){
 
         /* ... */
         isInlier   = reprojDist <= distSq;
-        p->curr.numInl += isInlier;
+        curr.numInl += isInlier;
         *inl++     = (char)isInlier;
 
 
         /* SPRT */
-        lambda *= isInlier ? p->eval.lambdaAccept : p->eval.lambdaReject;
-        p->eval.good = lambda <= p->eval.A;
-        /* If !p->good, the threshold A was exceeded, so we're rejecting */
+        lambda *= isInlier ? eval.lambdaAccept : eval.lambdaReject;
+        eval.good = lambda <= eval.A;
+        /* If !good, the threshold A was exceeded, so we're rejecting */
     }
 
 
-    p->eval.Ntested       = i;
-    p->eval.Ntestedtotal += i;
+    eval.Ntested       = i;
+    eval.Ntestedtotal += i;
 }
 
 /**
@@ -959,18 +1159,21 @@ static inline void   sacEvaluateModelSPRT(RHO_HEST_REFC* p){
  *         eval.lambdaReject
  */
 
-static inline void   sacUpdateSPRT(RHO_HEST_REFC* p){
-    if(p->eval.good){
-        if(sacIsBestModel(p)){
-            p->eval.epsilon = (double)p->curr.numInl/p->arg.N;
-            sacDesignSPRTTest(p);
+inline void   RHO_HEST_REFC::updateSPRT(void){
+    if(eval.good){
+        if(isBestModel()){
+            eval.epsilon = (double)curr.numInl/arg.N;
+            designSPRTTest();
         }
     }else{
-        double newDelta = (double)p->curr.numInl/p->eval.Ntested;
+        double newDelta = (double)curr.numInl/eval.Ntested;
 
-        if(newDelta > 0 && CHNG_SIGNIFICANT(p->eval.delta, newDelta)){
-            p->eval.delta = newDelta;
-            sacDesignSPRTTest(p);
+        if(newDelta > 0){
+            double relChange = fabs(eval.delta - newDelta)/ eval.delta;
+            if(relChange > MIN_DELTA_CHNG){
+                eval.delta = newDelta;
+                designSPRTTest();
+            }
         }
     }
 }
@@ -1044,18 +1247,18 @@ static inline double designSPRTTest(double delta, double epsilon, double t_M, do
  * Writes: eval.A, eval.lambdaAccept, eval.lambdaReject
  */
 
-static inline void   sacDesignSPRTTest(RHO_HEST_REFC* p){
-    p->eval.A = designSPRTTest(p->eval.delta, p->eval.epsilon, p->eval.t_M, p->eval.m_S);
-    p->eval.lambdaReject = ((1.0 - p->eval.delta) / (1.0 - p->eval.epsilon));
-    p->eval.lambdaAccept = ((   p->eval.delta   ) / (    p->eval.epsilon  ));
+inline void   RHO_HEST_REFC::designSPRTTest(void){
+    eval.A = designSPRTTest(eval.delta, eval.epsilon, eval.t_M, eval.m_S);
+    eval.lambdaReject = ((1.0 - eval.delta) / (1.0 - eval.epsilon));
+    eval.lambdaAccept = ((   eval.delta   ) / (    eval.epsilon  ));
 }
 
 /**
  * Return whether the current model is the best model so far.
  */
 
-static inline int    sacIsBestModel(RHO_HEST_REFC* p){
-    return p->curr.numInl > p->best.numInl;
+inline int    RHO_HEST_REFC::isBestModel(void){
+    return curr.numInl > best.numInl;
 }
 
 /**
@@ -1064,8 +1267,8 @@ static inline int    sacIsBestModel(RHO_HEST_REFC* p){
  * number of inliers.
  */
 
-static inline int    sacIsBestModelGoodEnough(RHO_HEST_REFC* p){
-    return p->best.numInl >= p->arg.minInl;
+inline int    RHO_HEST_REFC::isBestModelGoodEnough(void){
+    return best.numInl >= arg.minInl;
 }
 
 /**
@@ -1073,18 +1276,18 @@ static inline int    sacIsBestModelGoodEnough(RHO_HEST_REFC* p){
  * and count of inliers between the current and best models.
  */
 
-static inline void   sacSaveBestModel(RHO_HEST_REFC* p){
-    float*   H      = p->curr.H;
-    char*    inl    = p->curr.inl;
-    unsigned numInl = p->curr.numInl;
+inline void   RHO_HEST_REFC::saveBestModel(void){
+    float*   H      = curr.H;
+    char*    inl    = curr.inl;
+    unsigned numInl = curr.numInl;
 
-    p->curr.H       = p->best.H;
-    p->curr.inl     = p->best.inl;
-    p->curr.numInl  = p->best.numInl;
+    curr.H       = best.H;
+    curr.inl     = best.inl;
+    curr.numInl  = best.numInl;
 
-    p->best.H       = H;
-    p->best.inl     = inl;
-    p->best.numInl  = numInl;
+    best.H       = H;
+    best.inl     = inl;
+    best.numInl  = numInl;
 }
 
 /**
@@ -1095,13 +1298,13 @@ static inline void   sacInitNonRand(double    beta,
                                     unsigned  start,
                                     unsigned  N,
                                     unsigned* nonRandMinInl){
-    unsigned n = m+1 > start ? m+1 : start;
+    unsigned n = SMPL_SIZE+1 > start ? SMPL_SIZE+1 : start;
     double   beta_beta1_sq_chi = sqrt(beta*(1.0-beta)) * CHI_SQ;
 
     for(; n < N; n++){
         double   mu      = n * beta;
         double   sigma   = sqrt(n)* beta_beta1_sq_chi;
-        unsigned i_min   = (unsigned)ceil(m + mu + sigma);
+        unsigned i_min   = (unsigned)ceil(SMPL_SIZE + mu + sigma);
 
         nonRandMinInl[n] = i_min;
     }
@@ -1112,31 +1315,31 @@ static inline void   sacInitNonRand(double    beta,
  * of PROSAC.
  */
 
-static inline void   sacNStarOptimize(RHO_HEST_REFC* p){
-    unsigned min_sample_length = 10*2; /*(p->N * INLIERS_RATIO) */
-    unsigned best_n       = p->arg.N;
+inline void   RHO_HEST_REFC::nStarOptimize(void){
+    unsigned min_sample_length = 10*2; /*(N * INLIERS_RATIO) */
+    unsigned best_n       = arg.N;
     unsigned test_n       = best_n;
-    unsigned bestNumInl   = p->best.numInl;
+    unsigned bestNumInl   = best.numInl;
     unsigned testNumInl   = bestNumInl;
 
     for(;test_n > min_sample_length && testNumInl;test_n--){
         if(testNumInl*best_n > bestNumInl*test_n){
-            if(testNumInl < p->nr.tbl[test_n]){
+            if(testNumInl < nr.tbl[test_n]){
                 break;
             }
             best_n      = test_n;
             bestNumInl  = testNumInl;
         }
-        testNumInl -= !!p->arg.inl[test_n-1];
+        testNumInl -= !!arg.inl[test_n-1];
     }
 
-    if(bestNumInl*p->ctrl.phMax > p->ctrl.phNumInl*best_n){
-        p->ctrl.phMax    = best_n;
-        p->ctrl.phNumInl = bestNumInl;
-        p->arg.maxI      = sacCalcIterBound(p->arg.cfd,
-                                            (double)p->ctrl.phNumInl/p->ctrl.phMax,
-                                            m,
-                                            p->arg.maxI);
+    if(bestNumInl*ctrl.phMax > ctrl.phNumInl*best_n){
+        ctrl.phMax    = best_n;
+        ctrl.phNumInl = bestNumInl;
+        arg.maxI      = sacCalcIterBound(arg.cfd,
+                                            (double)ctrl.phNumInl/ctrl.phMax,
+                                            SMPL_SIZE,
+                                            arg.maxI);
     }
 }
 
@@ -1144,25 +1347,25 @@ static inline void   sacNStarOptimize(RHO_HEST_REFC* p){
  * Classic RANSAC iteration bound based on largest # of inliers.
  */
 
-static inline void   sacUpdateBounds(RHO_HEST_REFC* p){
-    p->arg.maxI = sacCalcIterBound(p->arg.cfd,
-                                   (double)p->best.numInl/p->arg.N,
-                                   m,
-                                   p->arg.maxI);
+inline void   RHO_HEST_REFC::updateBounds(void){
+    arg.maxI = sacCalcIterBound(arg.cfd,
+                                (double)best.numInl/arg.N,
+                                SMPL_SIZE,
+                                arg.maxI);
 }
 
 /**
  * Ouput the best model so far to the output argument.
  */
 
-static inline void   sacOutputModel(RHO_HEST_REFC* p){
-    if(sacIsBestModelGoodEnough(p)){
-        memcpy(p->arg.finalH, p->best.H, HSIZE);
-        if(p->arg.inl != p->best.inl){
-            memcpy(p->arg.inl, p->best.inl, p->arg.N);
+inline void   RHO_HEST_REFC::outputModel(void){
+    if(isBestModelGoodEnough()){
+        memcpy(arg.finalH, best.H, HSIZE);
+        if(arg.inl != best.inl){
+            memcpy(arg.inl, best.inl, arg.N);
         }
     }else{
-        sacOutputZeroH(p);
+        outputZeroH();
     }
 }
 
@@ -1170,8 +1373,9 @@ static inline void   sacOutputModel(RHO_HEST_REFC* p){
  * Ouput a zeroed H to the output argument.
  */
 
-static inline void   sacOutputZeroH(RHO_HEST_REFC* p){
-    memset(p->arg.finalH, 0, HSIZE);
+inline void   RHO_HEST_REFC::outputZeroH(void){
+    memset(arg.finalH, 0, HSIZE);
+    memset(arg.inl,    0, arg.N);
 }
 
 /**
@@ -1572,20 +1776,20 @@ static void hFuncRefC(float* packedPoints,/* Source (four x,y float coordinates)
  * NB This is separate from whether it is *enabled*.
  */
 
-static inline int    sacCanRefine(RHO_HEST_REFC* p){
+inline int    RHO_HEST_REFC::canRefine(void){
     /**
      * If we only have 4 matches, GE's result is already optimal and cannot
      * be refined any further.
      */
 
-    return p->best.numInl > m;
+    return best.numInl > SMPL_SIZE;
 }
 
 /**
  * Refines the best-so-far homography (p->best.H).
  */
 
-static inline void   sacRefine(RHO_HEST_REFC* p){
+inline void   RHO_HEST_REFC::refine(void){
     int         i;
     float       S, newS;  /* Sum of squared errors */
     float       gain;     /* Gain-parameter. */
@@ -1597,8 +1801,8 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
      */
 
     /* Find initial conditions */
-    sacCalcJacobianErrors(p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
-                          p->lm.JtJ, p->lm.Jte,  &S);
+    sacCalcJacobianErrors(best.H, arg.src, arg.dst, arg.inl, arg.N,
+                          lm.JtJ, lm.Jte,  &S);
 
     /*Levenberg-Marquardt Loop.*/
     for(i=0;i<MAXLEVMARQITERS;i++){
@@ -1623,15 +1827,15 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
          * transpose) then multiply Jte in order to find dH.
          */
 
-        while(!sacChol8x8Damped(p->lm.JtJ, L, p->lm.tmp1)){
+        while(!sacChol8x8Damped(lm.JtJ, L, lm.tmp1)){
             L *= 2.0f;
         }
-        sacTRInv8x8   (p->lm.tmp1, p->lm.tmp1);
-        sacTRISolve8x8(p->lm.tmp1, p->lm.Jte,  dH);
-        sacSub8x1     (newH,       p->best.H,  dH);
-        sacCalcJacobianErrors(newH, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
+        sacTRInv8x8   (lm.tmp1, lm.tmp1);
+        sacTRISolve8x8(lm.tmp1, lm.Jte,  dH);
+        sacSub8x1     (newH,       best.H,  dH);
+        sacCalcJacobianErrors(newH, arg.src, arg.dst, arg.inl, arg.N,
                               NULL, NULL, &newS);
-        gain = sacLMGain(dH, p->lm.Jte, S, newS, L);
+        gain = sacLMGain(dH, lm.Jte, S, newS, L);
         /*printf("Lambda: %12.6f  S: %12.6f  newS: %12.6f  Gain: %12.6f\n",
                  L, S, newS, gain);*/
 
@@ -1656,9 +1860,9 @@ static inline void   sacRefine(RHO_HEST_REFC* p){
 
         if(gain > 0){
             S = newS;
-            memcpy(p->best.H, newH, sizeof(newH));
-            sacCalcJacobianErrors(p->best.H, p->arg.src, p->arg.dst, p->arg.inl, p->arg.N,
-                                  p->lm.JtJ, p->lm.Jte,  &S);
+            memcpy(best.H, newH, sizeof(newH));
+            sacCalcJacobianErrors(best.H, arg.src, arg.dst, arg.inl, arg.N,
+                                  lm.JtJ, lm.Jte,  &S);
         }
     }
 }
@@ -2165,7 +2369,5 @@ static inline void   sacSub8x1(float* Hout, const float* H, const float* dH){
 }
 
 
-
-#ifdef __cplusplus
+/* End namespace cv */
 }
-#endif

@@ -303,8 +303,7 @@ static bool createAndRunRHORegistrator(double confidence,
      * initialized, used, then finalized.
      */
 
-    RHO_HEST_REFC p;
-    rhoRefCInit(&p);
+    RHO_HEST_REFC* p = rhoRefCInit();
 
     /**
      * Optional. Ideally, the context would survive across calls to
@@ -312,7 +311,7 @@ static bool createAndRunRHORegistrator(double confidence,
      * to pay is marginally more computational work than strictly needed.
      */
 
-    rhoRefCEnsureCapacity(&p, npoints, beta);
+    rhoRefCEnsureCapacity(p, npoints, beta);
 
     /**
      * The critical call. All parameters are heavily documented in rhorefc.h.
@@ -325,7 +324,7 @@ static bool createAndRunRHORegistrator(double confidence,
      * this behaviour is too problematic.
      */
 
-    result = !!rhoRefC(&p,
+    result = !!rhoRefC(p,
                       (const float*)src.data,
                       (const float*)dst.data,
                       (char*)       tempMask.data,
@@ -344,7 +343,7 @@ static bool createAndRunRHORegistrator(double confidence,
      * Cleanup.
      */
 
-    rhoRefCFini(&p);
+    rhoRefCFini(p);
 
     /* Convert float homography to double precision. */
     tmpH.convertTo(_H, CV_64FC1);
