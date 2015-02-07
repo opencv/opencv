@@ -731,7 +731,7 @@ public:
         for( i = 0; i < l_count; i++ )
         {
             int n = layer_sizes[i];
-            x[i].resize(n);
+            x[i].resize(n+1);
             df[i].resize(n);
             dw[i].create(weights[i].size(), CV_64F);
         }
