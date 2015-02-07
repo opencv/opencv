@@ -301,8 +301,10 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     for( y = 0; y < gradsize.height; y++ )
     {
         const uchar* imgPtr  = img.ptr(ymap[y]);
-        const uchar* prevPtr = img.ptr(ymap[y-1]);
-        const uchar* nextPtr = img.ptr(ymap[y+1]);
+        //In case subimage is used ptr() generates an assert for next and prev rows
+        //(see http://code.opencv.org/issues/4149)
+        const uchar* prevPtr = img.data + img.step*ymap[y-1];
+        const uchar* nextPtr = img.data + img.step*ymap[y+1];
 
         float* gradPtr = grad.ptr<float>(y);
         uchar* qanglePtr = qangle.ptr(y);

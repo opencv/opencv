@@ -1146,12 +1146,20 @@ TLSStorage::~TLSStorage()
     tlsData_.clear();
 }
 
-TLSData<CoreTLSData> coreTlsData;
+
+
+TLSData<CoreTLSData>& getCoreTlsData()
+{
+    static TLSData<CoreTLSData> *value = new TLSData<CoreTLSData>();
+    return *value;
+}
+
+
 
 #ifdef CV_COLLECT_IMPL_DATA
 void setImpl(int flags)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     data->implFlags = flags;
     data->implCode.clear();
     data->implFun.clear();
@@ -1159,7 +1167,7 @@ void setImpl(int flags)
 
 void addImpl(int flag, const char* func)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     data->implFlags |= flag;
     if(func) // use lazy collection if name was not specified
     {
@@ -1174,7 +1182,7 @@ void addImpl(int flag, const char* func)
 
 int getImpl(std::vector<int> &impl, std::vector<String> &funName)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     impl = data->implCode;
     funName = data->implFun;
     return data->implFlags; // return actual flags for lazy collection
@@ -1182,13 +1190,13 @@ int getImpl(std::vector<int> &impl, std::vector<String> &funName)
 
 bool useCollection()
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     return data->useCollection;
 }
 
 void setUseCollection(bool flag)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     data->useCollection = flag;
 }
 #endif
@@ -1221,7 +1229,7 @@ String getIppErrorLocation()
 bool useIPP()
 {
 #ifdef HAVE_IPP
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     if(data->useIPP < 0)
     {
         const char* pIppEnv = getenv("OPENCV_IPP");
@@ -1238,7 +1246,7 @@ bool useIPP()
 
 void setUseIPP(bool flag)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
 #ifdef HAVE_IPP
     data->useIPP = flag;
 #else
