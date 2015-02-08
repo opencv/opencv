@@ -293,17 +293,60 @@ CV_EXPORTS Ptr<cuda::DisparityBilateralFilter>
 /////////////////////////////////////////
 // DepthMapDenoiseWeightedHuber
 
-//! OpenDTAM Variant of Chambolle & Pock denoising
-//!
-//! The complicated half of the DTAM algorithm's mapping core,
-//! but can be used independently to refine depthmaps.
-//!
-//! Contributed by Paul Foster for GSoC 2014 OpenDTAM project.
-//! High level algorithm described by Richard Newcombe, Steven J. Lovegrove, and Andrew J. Davison. 
-//! "DTAM: Dense tracking and mapping in real-time."
-//! Which was in turn based on Chambolle & Pock's
-//! "A first-order primal-dual algorithm for convex problems with applications to imaging."
+/** @brief Class refining a depth map. It is part of DTAM
 
+The class implements the complicated half of the DTAM (@cite Newcombe11)
+algorithm's mapping core, but can be used independently to refine depthmaps.
+The high level algorithm in @cite Newcombe11 is based on @cite Chambolle11
+
+Code contributed by Paul Foster for GSoC 2014 OpenDTAM project.
+
+In 3D reconstruction, a common way to find the location of points in space is to intersect the rays of one image with another, and considering points where rays of the same color intersect to be more likely. This gives a cost as a function of the depth chosen at each pixel:
+
+\f[C(d)\f]
+
+(This is implicitly summed over the whole image.)  
+The problem is that many different depths will produce reasonable colors when pixels are considered individually so we add a term to the cost penalizing the difference between pixels and add a weighting factor:
+
+\f[f\mathbf{(\nabla\mathbf{d}) + \lambda C(d)}\f]
+
+where \f$\mathbf{\nabla d}\f$ is the difference between neighbouring pixels.
+
+@note
+   This is a slight abuse of notation since there are actually four neighbors for each pixel, so we evaluate the left term over each pair of neighbors and sum. 
+
+One common choice for \f$f\f$ is the *Huber norm*, which is:
+
+\f[\left\| \nabla \mathbf{d} \right\|_e= \left\{\begin{matrix} \frac{(\nabla \mathbf{d})^2}{2\epsilon} & \mathrm{if} \left | \nabla \mathbf{d} \right | < \epsilon \\ \left |\nabla \mathbf{d} \right | - \frac{\epsilon}{2} &\mathrm{else} \end{matrix}\right\}\f]
+
+This is the same as a metal wire: it starts out acting like a spring, but when stretched too much it deforms plastically.
+
+This gives:
+
+\f[\left\| \nabla \mathbf{d} \right\|_e  + \lambda \mathbf{C(\mathbf{d})}\f]
+
+This problem is intractable to solve so we do a *relaxation*: we repeatedly solve the left and right sides independently, but enforce that the two solutions must be increasingly similar as we go along. We do this by creating a spring force between the two solutions. Remember from physics that a spring's energy is expressed as \f$\frac{1}{2} k(x_1-x_2)^2\f$, so we write:
+
+\f[\left\| \nabla \mathbf{d} \right\|_e + \frac{1}{2\theta} (\mathbf{d-a})^2  + \lambda \mathbf{C(\mathbf{a})}\f]
+
+
+\f$\frac{1}{\theta}\f$ is the spring constant, \f$\mathbf{d}\f$ is one solution, and \f$\mathbf{a}\f$ is the other. We refer to \f$\theta\f$ as the *stiffness*.
+
+We can also give a hint to the left hand side that certain places are likely to have discontinuities by varying the thickness of the wires:
+
+\f[\mathbf{g}\left\| \nabla \mathbf{d} \right\|_e + \frac{1}{2\theta} (\mathbf{d-a})^2  + \lambda \mathbf{C(\mathbf{a})}\f]
+
+The function \f$\mathbf{g}\f$ is the weight function.
+
+The right half is a literal search through all possible values of \f$\mathbf{C(\mathbf{a})}\f$ for each pixel.
+
+It turns out that solving the left half:
+
+\f[\mathbf{g}\left\| \nabla \mathbf{d} \right\|_e + \frac{1}{2\theta} (\mathbf{d-a}_{fixed})^2\f]
+
+is quite hard.
+
+*/
 class CV_EXPORTS DepthmapDenoiseWeightedHuber : public cv::Algorithm
 {
 public:
@@ -313,7 +356,13 @@ public:
                                         float theta) = 0;
 
     //! In case you want to do these explicitly
+
+
+    //* \f$gx(x,y)\f$ is the weight between pixels \f$(x,y)\f$ and \f$(x+1,y)\f$ (right neighbor)
+    //* \f$gy(x,y)\f$ is the weight between pixels \f$(x,y)\f$ and \f$(x,y+1)\f$ (down neighbor)
+    /** Use to preallocate memory for the functor or replace the internal \f$g\f$ function buffers with custom ones. */
     virtual void allocate(int rows, int cols, InputArray gx = GpuMat(),InputArray gy = GpuMat()) = 0;
+    /** Used to precache the \f$g\f$ values or add a visibleLightImage after object creation. */
     virtual void cacheGValues(InputArray visibleLightImage = GpuMat()) = 0;
     
     // Following reserved for later use, not implemented
@@ -328,6 +377,7 @@ public:
 };
 
 //! The visibleLightImage is a CV_32FC1 grayscale image of the scene, which can be used as a hint for edge placement.
+/** Generates a denoising functor to handle the algorithm state on the GPU. */
 CV_EXPORTS Ptr<DepthmapDenoiseWeightedHuber>
     createDepthmapDenoiseWeightedHuber(InputArray visibleLightImage=GpuMat(), Stream cvStream=Stream::Null());
 
