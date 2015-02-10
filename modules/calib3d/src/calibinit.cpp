@@ -1651,22 +1651,18 @@ static int
 icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
                   CvMemStorage *storage, CvMat *image, int flags )
 {
+    CV_Assert( out_corners && out_quads );
+    *out_quads = 0;
+    *out_corners = 0;
+
     int quad_count = 0;
     cv::Ptr<CvMemStorage> temp_storage;
-
-    if( out_quads )
-        *out_quads = 0;
-
-    if( out_corners )
-        *out_corners = 0;
 
     CvSeq *src_contour = 0;
     CvSeq *root;
     CvContourEx* board = 0;
     CvContourScanner scanner;
     int i, idx, min_size;
-
-    CV_Assert( out_corners && out_quads );
 
     // empiric bound for minimal allowed perimeter for squares
     min_size = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
