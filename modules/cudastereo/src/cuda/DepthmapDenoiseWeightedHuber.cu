@@ -46,7 +46,7 @@
 //! but can be used independently to refine depthmaps.
 //!
 //! Written by Paul Foster for GSoC 2014 OpenDTAM project.
-//! High level algorithm described by Richard Newcombe, Steven J. Lovegrove, and Andrew J. Davison. 
+//! High level algorithm described by Richard Newcombe, Steven J. Lovegrove, and Andrew J. Davison.
 //! "DTAM: Dense tracking and mapping in real-time."
 //! Which was in turn based on Chambolle & Pock's
 //! "A first-order primal-dual algorithm for convex problems with applications to imaging."
@@ -106,7 +106,7 @@ void computeGCaller  (float* pp, float* g1p, float* gxp, float* gyp, int cols){
    cudaDeviceSynchronize();
    computeG2<<<dimGrid, dimBlock,0,localStream>>>(pp, g1p, gxp, gyp, cols);
    cudaDeviceSynchronize();
-   
+
    cudaSafeCall( cudaGetLastError() );
 };
 
@@ -511,7 +511,7 @@ void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
 //                 float *gxpt, float *gypt, float sigma_q, float sigma_d, float epsilon,
 //                 float theta) {
 //     //TODO: make compatible with cuda 2.0 and lower (remove shuffles). Probably through texture fetch
-// 
+//
 //     //Original pseudocode for this function:
 // //void updateQD(){
 // //    //shifts are shuffles!
@@ -570,8 +570,8 @@ void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
 //     bool btop=threadIdx.y==0;
 //     bool bbtm=threadIdx.y==blockDim.y-1;
 //     int pt, bpt,bdnoff ,dnoff, bupoff, upoff;
-// 
-// 
+//
+//
 //     float tmp,gqsave;
 //     gqsave=0;
 //     bpt = threadIdx.x+threadIdx.y*blockDim.x;
@@ -579,35 +579,35 @@ void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
 //     dnoff=(!btm)*cols;
 //     bupoff=-blockDim.x;
 //     upoff=-(!top)*cols;
-// 
+//
 //     pt=x+y*cols;
-// 
+//
 //     float dh,dn;
 //     dn=dpt[pt];
-// 
+//
 //     for(;x<cols;x+=32){
 //         float qx,gx,gqx,qy,gy,gqy;
 //         pt=x+y*cols;
-// 
-// 
+//
+//
 //         //qx update
 //         {
 //             float dr;
 //             //load(dh,dn,gxh,gqx);//load here, next(the block to the right), local constant, old x force(with cached multiply)
-// 
+//
 //             //load
 //             {
 //                 dh=dn;
 //                 if(x<cols-32){
 //                     dn=dpt[pt+32];
-// 
+//
 //                 }
 //                 gqx=gqxpt[pt];
 //                 gx=gxpt[pt];
 // //                gx=1.0f;
-// 
+//
 //             }
-// 
+//
 //             dr=__shfl_down(dh,1);
 //             tmp=__shfl_up(dn,31);
 //             if (rt && x<cols-32)
@@ -659,7 +659,7 @@ void updateQDCaller(float* gqxpt, float* gqypt, float *dpt, float * apt,
 //                 a=apt[pt];
 //             }
 //             float gqu,gqd;
-// 
+//
 //             gqd=gqy;
 //             s[bpt]=gqy;
 //             __syncthreads();
@@ -746,7 +746,7 @@ GENERATE_CUDA_FUNC2DROWS(updateQ,
 
     bool bbtm=threadIdx.y==blockDim.y-1;
     int pt, bpt,bdnoff ,dnoff;
-    
+
     float tmp;
     bpt = threadIdx.x+threadIdx.y*blockDim.x;
     bdnoff=blockDim.x;

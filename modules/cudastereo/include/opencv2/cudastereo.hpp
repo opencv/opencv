@@ -305,7 +305,7 @@ In 3D reconstruction, a common way to find the location of points in space is to
 
 \f[C(d)\f]
 
-(This is implicitly summed over the whole image.)  
+(This is implicitly summed over the whole image.)
 The problem is that many different depths will produce reasonable colors when pixels are considered individually so we add a term to the cost penalizing the difference between pixels and add a weighting factor:
 
 \f[f\mathbf{(\nabla\mathbf{d}) + \lambda C(d)}\f]
@@ -313,7 +313,7 @@ The problem is that many different depths will produce reasonable colors when pi
 where \f$\mathbf{\nabla d}\f$ is the difference between neighbouring pixels.
 
 @note
-   This is a slight abuse of notation since there are actually four neighbors for each pixel, so we evaluate the left term over each pair of neighbors and sum. 
+   This is a slight abuse of notation since there are actually four neighbors for each pixel, so we evaluate the left term over each pair of neighbors and sum.
 
 One common choice for \f$f\f$ is the *Huber norm*, which is:
 
@@ -364,14 +364,14 @@ public:
     virtual void allocate(int rows, int cols, InputArray gx = GpuMat(),InputArray gy = GpuMat()) = 0;
     /** Used to precache the \f$g\f$ values or add a visibleLightImage after object creation. */
     virtual void cacheGValues(InputArray visibleLightImage = GpuMat()) = 0;
-    
+
     // Following reserved for later use, not implemented
     virtual void setStream(Stream) = 0;//not implemented, may be unsafe to implement
     virtual Stream getStream() = 0;//not implemented
-    
+
     virtual void setAlpha(float alpha) = 0;//not implemented
     virtual float getAlpha() = 0;//not implemented
-    
+
     virtual void setBeta(float beta) = 0;//not implemented
     virtual float getBeta() = 0;//not implemented
 };

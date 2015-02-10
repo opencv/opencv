@@ -46,7 +46,7 @@
 //! but can be used independently to refine depthmaps.
 //!
 //! Written by Paul Foster for GSoC 2014 OpenDTAM project.
-//! High level algorithm described by Richard Newcombe, Steven J. Lovegrove, and Andrew J. Davison. 
+//! High level algorithm described by Richard Newcombe, Steven J. Lovegrove, and Andrew J. Davison.
 //! "DTAM: Dense tracking and mapping in real-time."
 //! Which was in turn based on Chambolle & Pock's
 //! "A first-order primal-dual algorithm for convex problems with applications to imaging."

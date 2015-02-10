@@ -46,7 +46,7 @@
 //! but can be used independently to refine depthmaps.
 //!
 //! Written by Paul Foster for GSoC 2014 OpenDTAM project.
-//! High level algorithm described by Richard Newcombe, Steven J. Lovegrove, and Andrew J. Davison. 
+//! High level algorithm described by Richard Newcombe, Steven J. Lovegrove, and Andrew J. Davison.
 //! "DTAM: Dense tracking and mapping in real-time."
 //! Which was in turn based on Chambolle & Pock's
 //! "A first-order primal-dual algorithm for convex problems with applications to imaging."
@@ -66,7 +66,7 @@ namespace cv{
         {
         public:
             //CostVolume cv;//The cost volume we are attached to
-            
+
             DepthmapDenoiseWeightedHuberImpl(const GpuMat& visibleLightImage=GpuMat(),Stream cvStream=Stream::Null());
             GpuMat operator()(InputArray ain, float epsilon, float theta);
 
@@ -93,19 +93,19 @@ namespace cv{
             bool cachedG;
             int alloced;
             int dInited;
-            
+
             void setStream(Stream /*s*/){CV_Assert(!"Not Implemented");};
             Stream getStream(){CV_Assert(!"Not Implemented"); return cvStream;};
-            
+
             void setAlpha(float /*alpha*/){CV_Assert(!"Not Implemented");};
             float getAlpha(){CV_Assert(!"Not Implemented");return 0;};
-            
+
             void setBeta(float /*beta*/){CV_Assert(!"Not Implemented");};
             float getBeta(){CV_Assert(!"Not Implemented");return 0;};
 
         public:
             Stream cvStream;
-        }; 
+        };
     }
 }
 
@@ -118,14 +118,14 @@ using namespace std;
 using namespace cv::cuda;
 
 DepthmapDenoiseWeightedHuberImpl::DepthmapDenoiseWeightedHuberImpl(const GpuMat& _visibleLightImage,
-                                                        Stream _cvStream) : 
-                                                        visibleLightImage(_visibleLightImage), 
+                                                        Stream _cvStream) :
+                                                        visibleLightImage(_visibleLightImage),
                                                         rows(_visibleLightImage.rows),
                                                         cols(_visibleLightImage.cols),
                                                         cvStream(_cvStream)
 {
     alloced=0;
-    cachedG=0; 
+    cachedG=0;
     dInited=0;
 }
 
@@ -143,13 +143,13 @@ static void memZero(GpuMat& in,Stream& cvStream){
 void DepthmapDenoiseWeightedHuberImpl::allocate(int _rows,int _cols,InputArray _gxin,InputArray _gyin){
     const GpuMat& gxin=_gxin.getGpuMat();
     const GpuMat& gyin=_gyin.getGpuMat();
-    
+
     rows=_rows;
     cols=_cols;
     if(!(rows % 32 == 0 && cols % 32 == 0 && cols >= 64)){
         CV_Assert(!"For performance reasons, DepthmapDenoiseWeightedHuber currenty only supports multiple of 32 image sizes with cols >= 64. Pad the image to achieve this.");
     }
-    
+
 
     if(!_a.data){
         _a.create(1,rows*cols, CV_32FC1);
@@ -171,7 +171,7 @@ void DepthmapDenoiseWeightedHuberImpl::allocate(int _rows,int _cols,InputArray _
             _gy=gyin;
         }
     }else{
-        
+
         if(!gxin.isContinuous()){
             FLATALLOC(_gx,_d);
             gxin.copyTo(_gx,cvStream);
@@ -197,57 +197,57 @@ void DepthmapDenoiseWeightedHuberImpl::computeSigmas(float epsilon,float theta){
     //"Gradient ascent/descent time-steps sigma_q , sigma_d are set optimally
     //for the update scheme provided as detailed in [3]."
     // Where [3] is :
-    //A. Chambolle and T. Pock. A first-order primal-dual 
+    //A. Chambolle and T. Pock. A first-order primal-dual
     //algorithm for convex problems with applications to imaging.
     //Journal of Mathematical Imaging and Vision, 40(1):120–
     //145, 2011. 3, 4, 6
     //
-    // I converted these mechanically to the best of my ability, but no 
-    // explaination is given in [3] as to how they came up with these, just 
+    // I converted these mechanically to the best of my ability, but no
+    // explaination is given in [3] as to how they came up with these, just
     // some proofs beyond my ability.
     //
     // Explainations below are speculation, but I think good ones:
     //
-    // L appears to be a bound on the largest vector length that can be 
-    // produced by the linear operator from a unit vector. In this case the 
-    // linear operator is the differentiation matrix with G weighting 
-    // (written AG in the DTAM paper,(but I use GA because we want to weight 
-    // the springs rather than the pixels)). Since G has each row sum < 1 and 
+    // L appears to be a bound on the largest vector length that can be
+    // produced by the linear operator from a unit vector. In this case the
+    // linear operator is the differentiation matrix with G weighting
+    // (written AG in the DTAM paper,(but I use GA because we want to weight
+    // the springs rather than the pixels)). Since G has each row sum < 1 and
     // A is a forward difference matrix (which has each input affecting at most
     // 2 outputs via pairs of +-1 weights) the value is bounded by 4.0.
     //
     // So in a sense, L is an upper bound on the magnification of our step size.
-    // 
-    // Lambda and alpha are called convexity parameters. They come from the 
-    // Huber norm and the (d-a)^2 terms. The convexity parameter of a function 
-    // is defined as follows: 
-    //  Choose a point on the function and construct a parabola of convexity 
-    //    c tangent at that point. Call the point c-convex if the parabola is 
-    //    above the function at all other points. 
-    //  The smallest c such that the function is c-convex everywhere is the 
+    //
+    // Lambda and alpha are called convexity parameters. They come from the
+    // Huber norm and the (d-a)^2 terms. The convexity parameter of a function
+    // is defined as follows:
+    //  Choose a point on the function and construct a parabola of convexity
+    //    c tangent at that point. Call the point c-convex if the parabola is
+    //    above the function at all other points.
+    //  The smallest c such that the function is c-convex everywhere is the
     //      convexity parameter.
-    //  We can think of this as a measure of the bluntest tip that can trace the 
+    //  We can think of this as a measure of the bluntest tip that can trace the
     //     entire function.
-    // This is important because any gradient descent step that would not 
-    // cause divergence on the tangent parabola is guaranteed not to diverge 
+    // This is important because any gradient descent step that would not
+    // cause divergence on the tangent parabola is guaranteed not to diverge
     // on the base function (since the parabola is always higher(i.e. worse)).
     */
-    
-        
+
+
     float lambda, alpha,gamma,delta,mu,rho,sigma;
     float L=4;//lower is better(longer steps), but in theory only >=4 is guaranteed to converge. For the adventurous, set to 2 or 1.44
-    
+
     lambda=1.0/theta;
     alpha=epsilon;
-    
+
     gamma=lambda;
     delta=alpha;
-    
+
     mu=2.0*sqrt(gamma*delta)/L;
 
     rho= mu/(2.0*gamma);
     sigma=mu/(2.0*delta);
-    
+
     sigma_d = rho;
     sigma_q = sigma;
 }
@@ -264,9 +264,9 @@ void DepthmapDenoiseWeightedHuberImpl::cacheGValues(InputArray _visibleLightImag
     if(!alloced)
         allocate(rows,cols);
 
-    
+
     // Call the gpu function for caching g's
-    
+
     loadConstants(rows, cols, 0, 0, 0, 0, 0, 0,
             0, 0);
     CV_Assert(_g1.isContinuous());
@@ -280,13 +280,13 @@ void DepthmapDenoiseWeightedHuberImpl::cacheGValues(InputArray _visibleLightImag
 
 GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsilon,float theta){
     const GpuMat& ain=_ain.getGpuMat();
-    
+
     using namespace cv::cuda::device::dtam_denoise;
     localStream = cv::cuda::StreamAccessor::getStream(cvStream);
-    
+
     rows=ain.rows;
     cols=ain.cols;
-    
+
     CV_Assert(ain.cols>0);
     if(!(ain.rows % 32 == 0 && ain.cols % 32 == 0 && ain.cols >= 64)){
         CV_Assert(!"For performance reasons, DepthmapDenoiseWeightedHuber currenty only supports multiple of 32 image sizes with cols >= 64. Pad the image to achieve this.");
@@ -300,13 +300,13 @@ GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsil
     }else{
         _a=ain;
     }
-    
 
-    
+
+
     if(!alloced){
         allocate(rows,cols);
-    } 
-    
+    }
+
     if(!visibleLightImage.empty())
         cacheGValues();
     if(!cachedG){
@@ -317,9 +317,9 @@ GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsil
         _a.copyTo(_d,cvStream);
         dInited=1;
     }
-    
+
     computeSigmas(epsilon,theta);
-    
+
     float* d = (float*) _d.data;
     float* a = (float*) _a.data;
     float* gxpt = (float*)_gx.data;
@@ -334,5 +334,5 @@ GpuMat DepthmapDenoiseWeightedHuberImpl::operator()(InputArray _ain, float epsil
     cudaSafeCall(cudaGetLastError());
     return _d;
 }
-}  
+}
 }
