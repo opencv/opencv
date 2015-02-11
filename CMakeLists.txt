@@ -460,7 +460,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL iOS)
   # http://public.kitware.com/Bug/view.php?id=12288
   set(WORDS_BIGENDIAN 0)
 elseif(MINGW)
-  # test_big_endian seems not available with Mingw 
+  # test_big_endian seems not available with Mingw
   set(WORDS_BIGENDIAN 0)
 else()
   include(TestBigEndian)
