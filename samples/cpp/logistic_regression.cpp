@@ -132,20 +132,16 @@ int main()
     showImage(data_train, 28, "train data");
     showImage(data_test, 28, "test data");
 
-
     // simple case with batch gradient
-    LogisticRegression::Params params = LogisticRegression::Params(
-        0.001, 10, LogisticRegression::BATCH, LogisticRegression::REG_L2, 1, 1);
-    // simple case with  mini-batch gradient
-    // LogisticRegression::Params params = LogisticRegression::Params(
-    //     0.001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
-
-    // mini-batch gradient with higher accuracy
-    // LogisticRegression::Params params = LogisticRegression::Params(
-    //     0.000001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
-
     cout << "training...";
-    Ptr<StatModel> lr1 = LogisticRegression::create(params);
+    //! [init]
+    Ptr<LogisticRegression> lr1 = LogisticRegression::create();
+    lr1->setLearningRate(0.001);
+    lr1->setIterations(10);
+    lr1->setRegularization(LogisticRegression::REG_L2);
+    lr1->setTrainMethod(LogisticRegression::BATCH);
+    lr1->setMiniBatchSize(1);
+    //! [init]
     lr1->train(data_train, ROW_SAMPLE, labels_train);
     cout << "done!" << endl;
 

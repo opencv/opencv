@@ -328,18 +328,6 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Simple()
 
 namespace
 {
-    #define CV_WRAP_PROPERTY(type, name, internal_name, internal_obj) \
-    type get##name() const \
-    { \
-        return internal_obj->get##internal_name(); \
-    } \
-    void set##name(type _name) \
-    { \
-        internal_obj->set##internal_name(_name); \
-    }
-
-    #define CV_WRAP_SAME_PROPERTY(type, name, internal_obj) CV_WRAP_PROPERTY(type, name, name, internal_obj)
-
     class DualTVL1 : public CpuOpticalFlow, public virtual cv::superres::DualTVL1OpticalFlow
     {
     public:
@@ -347,14 +335,14 @@ namespace
         void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
         void collectGarbage();
 
-        CV_WRAP_SAME_PROPERTY(double, Tau, alg_)
-        CV_WRAP_SAME_PROPERTY(double, Lambda, alg_)
-        CV_WRAP_SAME_PROPERTY(double, Theta, alg_)
-        CV_WRAP_SAME_PROPERTY(int, ScalesNumber, alg_)
-        CV_WRAP_SAME_PROPERTY(int, WarpingsNumber, alg_)
-        CV_WRAP_SAME_PROPERTY(double, Epsilon, alg_)
-        CV_WRAP_PROPERTY(int, Iterations, OuterIterations, alg_)
-        CV_WRAP_SAME_PROPERTY(bool, UseInitialFlow, alg_)
+        CV_WRAP_SAME_PROPERTY(double, Tau, (*alg_))
+        CV_WRAP_SAME_PROPERTY(double, Lambda, (*alg_))
+        CV_WRAP_SAME_PROPERTY(double, Theta, (*alg_))
+        CV_WRAP_SAME_PROPERTY(int, ScalesNumber, (*alg_))
+        CV_WRAP_SAME_PROPERTY(int, WarpingsNumber, (*alg_))
+        CV_WRAP_SAME_PROPERTY(double, Epsilon, (*alg_))
+        CV_WRAP_PROPERTY(int, Iterations, OuterIterations, (*alg_))
+        CV_WRAP_SAME_PROPERTY(bool, UseInitialFlow, (*alg_))
 
     protected:
         void impl(InputArray input0, InputArray input1, OutputArray dst);

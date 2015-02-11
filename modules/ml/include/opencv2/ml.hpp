@@ -381,43 +381,22 @@ public:
         return model->isTrained() ? model : Ptr<_Tp>();
     }
 
+    /** @brief Create and train model with default parameters
 
-    /** @brief Creates new statistical model and trains it
-
-    @param data training data that can be loaded from file using TrainData::loadFromCSV or
-        created with TrainData::create.
-    @param p model parameters
-    @param flags optional flags, depending on the model. Some of the models can be updated with the
-        new training samples, not completely overwritten (such as NormalBayesClassifier or ANN_MLP).
-     */
-    template<typename _Tp> static Ptr<_Tp> train(const Ptr<TrainData>& data, const typename _Tp::Params& p, int flags=0)
+    The class must implement static `create()` method with no parameters or with all default parameter values
+    */
+    template<typename _Tp> static Ptr<_Tp> train(const Ptr<TrainData>& data, int flags=0)
     {
-        Ptr<_Tp> model = _Tp::create(p);
+        Ptr<_Tp> model = _Tp::create();
         return !model.empty() && model->train(data, flags) ? model : Ptr<_Tp>();
     }
 
-    /** @brief Creates new statistical model and trains it
-
-    @param samples training samples
-    @param layout See ml::SampleTypes.
-    @param responses vector of responses associated with the training samples.
-    @param p model parameters
-    @param flags optional flags, depending on the model. Some of the models can be updated with the
-        new training samples, not completely overwritten (such as NormalBayesClassifier or ANN_MLP).
-    */
-    template<typename _Tp> static Ptr<_Tp> train(InputArray samples, int layout, InputArray responses,
-                                                 const typename _Tp::Params& p, int flags=0)
-    {
-        Ptr<_Tp> model = _Tp::create(p);
-        return !model.empty() && model->train(TrainData::create(samples, layout, responses), flags) ? model : Ptr<_Tp>();
-    }
-
-    /** @brief Saves the model to a file.
-
-    In order to make this method work, the derived class must overwrite
-    Algorithm::write(FileStorage& fs).
-     */
+    /** Saves the model to a file.
+    In order to make this method work, the derived class must implement Algorithm::write(FileStorage& fs). */
     virtual void save(const String& filename) const;
+
+    /** Returns model string identifier.
+    This string is used as top level xml/yml node tag when model is saved to a file or string. */
     virtual String getDefaultModelName() const = 0;
 };
 
@@ -432,11 +411,6 @@ public:
 class CV_EXPORTS_W NormalBayesClassifier : public StatModel
 {
 public:
-    class CV_EXPORTS_W Params
-    {
-    public:
-        Params();
-    };
     /** @brief Predicts the response for sample(s).
 
     The method estimates the most probable classes for input vectors. Input vectors (one or more)
@@ -447,21 +421,10 @@ public:
      */
     virtual float predictProb( InputArray inputs, OutputArray outputs,
                                OutputArray outputProbs, int flags=0 ) const = 0;
-    virtual void setParams(const Params& params) = 0;
-    virtual Params getParams() const = 0;
 
-    /** @brief Creates empty model
-
-    @param params The model parameters. There is none so far, the structure is used as a placeholder
-        for possible extensions.
-
-    Use StatModel::train to train the model:
-    @code
-    StatModel::train<NormalBayesClassifier>(traindata, params); // to create and train the model
-    StatModel::load<NormalBayesClassifier>(filename); // load the pre-trained model
-    @endcode
-     */
-    static Ptr<NormalBayesClassifier> create(const Params& params=Params());
+    /** Creates empty model
+    Use StatModel::train to train the model after creation. */
+    static Ptr<NormalBayesClassifier> create();
 };
 
 /****************************************************************************************\
@@ -475,19 +438,18 @@ public:
 class CV_EXPORTS_W KNearest : public StatModel
 {
 public:
-    class CV_EXPORTS_W_MAP Params
-    {
-    public:
-        /** @brief Constructor with parameters */
-        Params(int defaultK=10, bool isclassifier_=true, int Emax_=INT_MAX, int algorithmType_=BRUTE_FORCE);
 
-        CV_PROP_RW int defaultK; //!< default number of neighbors to use in predict method
-        CV_PROP_RW bool isclassifier; //!< whether classification or regression model should be trained
-        CV_PROP_RW int Emax; //!< for implementation with KDTree
-        CV_PROP_RW int algorithmType; //!< See KNearest::Types
-    };
-    virtual void setParams(const Params& p) = 0;
-    virtual Params getParams() const = 0;
+    /** Default number of neighbors to use in predict method. */
+    CV_PURE_PROPERTY(int, DefaultK)
+
+    /** Whether classification or regression model should be trained. */
+    CV_PURE_PROPERTY(bool, IsClassifier)
+
+    /** Parameter for KDTree implementation. */
+    CV_PURE_PROPERTY(int, Emax)
+
+    /** %Algorithm type, one of KNearest::Types. */
+    CV_PURE_PROPERTY(int, AlgorithmType)
 
     /** @brief Finds the neighbors and predicts responses for input vectors.
 
@@ -520,17 +482,19 @@ public:
                                OutputArray neighborResponses=noArray(),
                                OutputArray dist=noArray() ) const = 0;
 
-    enum Types { BRUTE_FORCE=1, KDTREE=2 };
+    /** @brief Implementations of KNearest algorithm
+       */
+    enum Types
+    {
+        BRUTE_FORCE=1,
+        KDTREE=2
+    };
 
     /** @brief Creates the empty model
 
-    @param params The model parameters
-
-    The static method creates empty %KNearest classifier. It should be then trained using train
-    method (see StatModel::train). Alternatively, you can load boost model from file using:
-    `StatModel::load<KNearest>(filename)`
+    The static method creates empty %KNearest classifier. It should be then trained using StatModel::train method.
      */
-    static Ptr<KNearest> create(const Params& params=Params());
+    static Ptr<KNearest> create();
 };
 
 /****************************************************************************************\
@@ -544,54 +508,6 @@ public:
 class CV_EXPORTS_W SVM : public StatModel
 {
 public:
-    /** @brief %SVM training parameters.
-
-    The structure must be initialized and passed to the training method of %SVM.
-     */
-    class CV_EXPORTS_W_MAP Params
-    {
-    public:
-        /** @brief Default constructor */
-        Params();
-        /** @brief Constructor with parameters */
-        Params( int svm_type, int kernel_type,
-                double degree, double gamma, double coef0,
-                double Cvalue, double nu, double p,
-                const Mat& classWeights, TermCriteria termCrit );
-
-        /** Type of a %SVM formulation. See SVM::Types. Default value is SVM::C_SVC. */
-        CV_PROP_RW int         svmType;
-        /** Type of a %SVM kernel. See SVM::KernelTypes. Default value is SVM::RBF. */
-        CV_PROP_RW int         kernelType;
-        /** Parameter \f$\gamma\f$ of a kernel function (SVM::POLY / SVM::RBF / SVM::SIGMOID /
-        SVM::CHI2). Default value is 1. */
-        CV_PROP_RW double      gamma;
-        /** Parameter coef0 of a kernel function (SVM::POLY / SVM::SIGMOID). Default value is 0. */
-        CV_PROP_RW double      coef0;
-        /** Parameter degree of a kernel function (SVM::POLY). Default value is 0. */
-        CV_PROP_RW double      degree;
-
-        /** Parameter C of a %SVM optimization problem (SVM::C_SVC / SVM::EPS_SVR / SVM::NU_SVR).
-        Default value is 0. */
-        CV_PROP_RW double      C;
-        /** Parameter \f$\nu\f$ of a %SVM optimization problem (SVM::NU_SVC / SVM::ONE_CLASS /
-        SVM::NU_SVR). Default value is 0. */
-        CV_PROP_RW double      nu;
-        /** Parameter \f$\epsilon\f$ of a %SVM optimization problem (SVM::EPS_SVR). Default value is 0. */
-        CV_PROP_RW double      p;
-
-        /** Optional weights in the SVM::C_SVC problem , assigned to particular classes. They are
-        multiplied by C so the parameter C of class \#i becomes classWeights(i) \* C. Thus these
-        weights affect the misclassification penalty for different classes. The larger weight, the
-        larger penalty on misclassification of data from the corresponding class. Default value is
-        empty Mat.*/
-        CV_PROP_RW Mat         classWeights;
-        /** Termination criteria of the iterative %SVM training procedure which solves a partial
-        case of constrained quadratic optimization problem. You can specify tolerance and/or the
-        maximum number of iterations. Default value is TermCriteria(
-        TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, FLT_EPSILON );*/
-        CV_PROP_RW TermCriteria termCrit;
-    };
 
     class CV_EXPORTS Kernel : public Algorithm
     {
@@ -599,6 +515,59 @@ public:
         virtual int getType() const = 0;
         virtual void calc( int vcount, int n, const float* vecs, const float* another, float* results ) = 0;
     };
+
+    /** Type of a %SVM formulation.
+    See SVM::Types. Default value is SVM::C_SVC. */
+    CV_PURE_PROPERTY(int, Type)
+
+    /** Parameter \f$\gamma\f$ of a kernel function.
+    For SVM::POLY, SVM::RBF, SVM::SIGMOID or SVM::CHI2. Default value is 1. */
+    CV_PURE_PROPERTY(double, Gamma)
+
+    /** Parameter _coef0_ of a kernel function.
+    For SVM::POLY or SVM::SIGMOID. Default value is 0.*/
+    CV_PURE_PROPERTY(double, Coef0)
+
+    /** Parameter _degree_ of a kernel function.
+    For SVM::POLY. Default value is 0. */
+    CV_PURE_PROPERTY(double, Degree)
+
+    /** Parameter _C_ of a %SVM optimization problem.
+    For SVM::C_SVC, SVM::EPS_SVR or SVM::NU_SVR. Default value is 0. */
+    CV_PURE_PROPERTY(double, C)
+
+    /** Parameter \f$\nu\f$ of a %SVM optimization problem.
+    For SVM::NU_SVC, SVM::ONE_CLASS or SVM::NU_SVR. Default value is 0. */
+    CV_PURE_PROPERTY(double, Nu)
+
+    /** Parameter \f$\epsilon\f$ of a %SVM optimization problem.
+    For SVM::EPS_SVR. Default value is 0. */
+    CV_PURE_PROPERTY(double, P)
+
+    /** Optional weights in the SVM::C_SVC problem, assigned to particular classes.
+    They are multiplied by _C_ so the parameter _C_ of class _i_ becomes `classWeights(i) * C`. Thus
+    these weights affect the misclassification penalty for different classes. The larger weight,
+    the larger penalty on misclassification of data from the corresponding class. Default value is
+    empty Mat. */
+    CV_PURE_PROPERTY_S(cv::Mat, ClassWeights)
+
+    /** Termination criteria of the iterative %SVM training procedure which solves a partial
+    case of constrained quadratic optimization problem.
+    You can specify tolerance and/or the maximum number of iterations. Default value is
+    `TermCriteria( TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, FLT_EPSILON )`; */
+    CV_PURE_PROPERTY_S(cv::TermCriteria, TermCriteria)
+
+    /** Type of a %SVM kernel.
+    See SVM::KernelTypes. Default value is SVM::RBF. */
+    virtual int getKernelType() const = 0;
+
+    /** Initialize with one of predefined kernels.
+    See SVM::KernelTypes. */
+    virtual void setKernel(int kernelType) = 0;
+
+    /** Initialize with custom kernel.
+    See SVM::Kernel class for implementation details */
+    virtual void setCustomKernel(const Ptr<Kernel> &_kernel) = 0;
 
     //! %SVM type
     enum Types {
@@ -631,6 +600,7 @@ public:
     ![image](pics/SVM_Comparison.png)
     */
     enum KernelTypes {
+        /** Returned by SVM::getKernelType in case when custom kernel has been set */
         CUSTOM=-1,
         /** Linear kernel. No mapping is done, linear discrimination (or regression) is
         done in the original feature space. It is the fastest option. \f$K(x_i, x_j) = x_i^T x_j\f$. */
@@ -678,13 +648,13 @@ public:
         to such proportion in the whole train dataset.
 
     The method trains the %SVM model automatically by choosing the optimal parameters C, gamma, p,
-    nu, coef0, degree from SVM::Params. Parameters are considered optimal when the cross-validation
+    nu, coef0, degree. Parameters are considered optimal when the cross-validation
     estimate of the test set error is minimal.
 
     If there is no need to optimize a parameter, the corresponding grid step should be set to any
     value less than or equal to 1. For example, to avoid optimization in gamma, set `gammaGrid.step
     = 0`, `gammaGrid.minVal`, `gamma_grid.maxVal` as arbitrary numbers. In this case, the value
-    `params.gamma` is taken for gamma.
+    `Gamma` is taken for gamma.
 
     And, finally, if the optimization in a parameter is required but the corresponding grid is
     unknown, you may call the function SVM::getDefaultGrid. To generate a grid, for example, for
@@ -710,16 +680,6 @@ public:
      */
     CV_WRAP virtual Mat getSupportVectors() const = 0;
 
-    virtual void setParams(const Params& p, const Ptr<Kernel>& customKernel=Ptr<Kernel>()) = 0;
-
-    /** @brief Returns the current %SVM parameters.
-
-    This function may be used to get the optimal parameters obtained while automatically training
-    SVM::trainAuto.
-     */
-    virtual Params getParams() const = 0;
-    virtual Ptr<Kernel> getKernel() const = 0;
-
     /** @brief Retrieves the decision function
 
     @param i the index of the decision function. If the problem solved is regression, 1-class or
@@ -740,28 +700,17 @@ public:
     /** @brief Generates a grid for %SVM parameters.
 
     @param param_id %SVM parameters IDs that must be one of the SVM::ParamTypes. The grid is
-        generated for the parameter with this ID.
+    generated for the parameter with this ID.
 
     The function generates a grid for the specified parameter of the %SVM algorithm. The grid may be
     passed to the function SVM::trainAuto.
      */
     static ParamGrid getDefaultGrid( int param_id );
 
-    /** @brief Creates empty model
-
-    @param p %SVM parameters
-    @param customKernel the optional custom kernel to use. It must implement SVM::Kernel interface.
-
-    Use StatModel::train to train the model:
-    @code
-        StatModel::train<SVM>(traindata, params); // to create and train the model
-        // or
-        StatModel::load<SVM>(filename); // to load the pre-trained model.
-    @endcode
-    Since %SVM has several parameters, you may want to find the best parameters for your problem. It
-    can be done with SVM::trainAuto.
-     */
-    static Ptr<SVM> create(const Params& p=Params(), const Ptr<Kernel>& customKernel=Ptr<Kernel>());
+    /** Creates empty model.
+    Use StatModel::train to train the model. Since %SVM has several parameters, you may want to
+    find the best parameters for your problem, it can be done with SVM::trainAuto. */
+    static Ptr<SVM> create();
 };
 
 /****************************************************************************************\
@@ -802,34 +751,22 @@ public:
     //! The initial step
     enum {START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0};
 
-    /** @brief The class describes %EM training parameters.
-    */
-    class CV_EXPORTS_W_MAP Params
-    {
-    public:
-        /** @brief The constructor
+    /** The number of mixture components in the Gaussian mixture model.
+    Default value of the parameter is EM::DEFAULT_NCLUSTERS=5. Some of %EM implementation could
+    determine the optimal number of mixtures within a specified value range, but that is not the
+    case in ML yet. */
+    CV_PURE_PROPERTY(int, ClustersNumber)
 
-        @param nclusters The number of mixture components in the Gaussian mixture model. Default
-            value of the parameter is EM::DEFAULT_NCLUSTERS=5. Some of %EM implementation could
-            determine the optimal number of mixtures within a specified value range, but that is not
-            the case in ML yet.
-        @param covMatType Constraint on covariance matrices which defines type of matrices. See
-            EM::Types.
-        @param termCrit The termination criteria of the %EM algorithm. The %EM algorithm can be
-            terminated by the number of iterations termCrit.maxCount (number of M-steps) or when
-            relative change of likelihood logarithm is less than termCrit.epsilon. Default maximum
-            number of iterations is EM::DEFAULT_MAX_ITERS=100.
-         */
-        explicit Params(int nclusters=DEFAULT_NCLUSTERS, int covMatType=EM::COV_MAT_DIAGONAL,
-                        const TermCriteria& termCrit=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS,
-                                                                  EM::DEFAULT_MAX_ITERS, 1e-6));
-        CV_PROP_RW int nclusters;
-        CV_PROP_RW int covMatType;
-        CV_PROP_RW TermCriteria termCrit;
-    };
+    /** Constraint on covariance matrices which defines type of matrices.
+    See EM::Types. */
+    CV_PURE_PROPERTY(int, CovarianceMatrixType)
 
-    virtual void setParams(const Params& p) = 0;
-    virtual Params getParams() const = 0;
+    /** The termination criteria of the %EM algorithm.
+    The %EM algorithm can be terminated by the number of iterations termCrit.maxCount (number of
+    M-steps) or when relative change of likelihood logarithm is less than termCrit.epsilon. Default
+    maximum number of iterations is EM::DEFAULT_MAX_ITERS=100. */
+    CV_PURE_PROPERTY_S(TermCriteria, TermCriteria)
+
     /** @brief Returns weights of the mixtures
 
     Returns vector with the number of elements equal to the number of mixtures.
@@ -862,9 +799,7 @@ public:
      */
     CV_WRAP virtual Vec2d predict2(InputArray sample, OutputArray probs) const = 0;
 
-    virtual bool train( const Ptr<TrainData>& trainData, int flags=0 ) = 0;
-
-    /** @brief Static method that estimate the Gaussian mixture parameters from a samples set
+    /** @brief Estimate the Gaussian mixture parameters from a samples set.
 
     This variation starts with Expectation step. Initial values of the model parameters will be
     estimated by the k-means algorithm.
@@ -891,15 +826,13 @@ public:
     @param probs The optional output matrix that contains posterior probabilities of each Gaussian
         mixture component given the each sample. It has \f$nsamples \times nclusters\f$ size and
         CV_64FC1 type.
-    @param params The Gaussian mixture params, see EM::Params description
      */
-    static Ptr<EM> train(InputArray samples,
-                          OutputArray logLikelihoods=noArray(),
-                          OutputArray labels=noArray(),
-                          OutputArray probs=noArray(),
-                          const Params& params=Params());
+    virtual bool trainEM(InputArray samples,
+                         OutputArray logLikelihoods=noArray(),
+                         OutputArray labels=noArray(),
+                         OutputArray probs=noArray()) = 0;
 
-    /** @brief Static method that estimate the Gaussian mixture parameters from a samples set
+    /** @brief Estimate the Gaussian mixture parameters from a samples set.
 
     This variation starts with Expectation step. You need to provide initial means \f$a_k\f$ of
     mixture components. Optionally you can pass initial weights \f$\pi_k\f$ and covariance matrices
@@ -925,17 +858,15 @@ public:
     @param probs The optional output matrix that contains posterior probabilities of each Gaussian
         mixture component given the each sample. It has \f$nsamples \times nclusters\f$ size and
         CV_64FC1 type.
-    @param params The Gaussian mixture params, see EM::Params description
     */
-    static Ptr<EM> train_startWithE(InputArray samples, InputArray means0,
-                                     InputArray covs0=noArray(),
-                                     InputArray weights0=noArray(),
-                                     OutputArray logLikelihoods=noArray(),
-                                     OutputArray labels=noArray(),
-                                     OutputArray probs=noArray(),
-                                     const Params& params=Params());
+    virtual bool trainE(InputArray samples, InputArray means0,
+                        InputArray covs0=noArray(),
+                        InputArray weights0=noArray(),
+                        OutputArray logLikelihoods=noArray(),
+                        OutputArray labels=noArray(),
+                        OutputArray probs=noArray()) = 0;
 
-    /** @brief Static method that estimate the Gaussian mixture parameters from a samples set
+    /** @brief Estimate the Gaussian mixture parameters from a samples set.
 
     This variation starts with Maximization step. You need to provide initial probabilities
     \f$p_{i,k}\f$ to use this option.
@@ -952,22 +883,17 @@ public:
     @param probs The optional output matrix that contains posterior probabilities of each Gaussian
         mixture component given the each sample. It has \f$nsamples \times nclusters\f$ size and
         CV_64FC1 type.
-    @param params The Gaussian mixture params, see EM::Params description
     */
-    static Ptr<EM> train_startWithM(InputArray samples, InputArray probs0,
-                                     OutputArray logLikelihoods=noArray(),
-                                     OutputArray labels=noArray(),
-                                     OutputArray probs=noArray(),
-                                     const Params& params=Params());
+    virtual bool trainM(InputArray samples, InputArray probs0,
+                        OutputArray logLikelihoods=noArray(),
+                        OutputArray labels=noArray(),
+                        OutputArray probs=noArray()) = 0;
 
-    /** @brief Creates empty %EM model
-
-    @param params %EM parameters
-
+    /** Creates empty %EM model.
     The model should be trained then using StatModel::train(traindata, flags) method. Alternatively, you
     can use one of the EM::train\* methods or load it from file using StatModel::load\<EM\>(filename).
      */
-    static Ptr<EM> create(const Params& params=Params());
+    static Ptr<EM> create();
 };
 
 /****************************************************************************************\
@@ -989,85 +915,74 @@ public:
     /** Predict options */
     enum Flags { PREDICT_AUTO=0, PREDICT_SUM=(1<<8), PREDICT_MAX_VOTE=(2<<8), PREDICT_MASK=(3<<8) };
 
-    /** @brief The structure contains all the decision tree training parameters.
+    /** Cluster possible values of a categorical variable into K\<=maxCategories clusters to
+    find a suboptimal split.
+    If a discrete variable, on which the training procedure tries to make a split, takes more than
+    maxCategories values, the precise best subset estimation may take a very long time because the
+    algorithm is exponential. Instead, many decision trees engines (including our implementation)
+    try to find sub-optimal split in this case by clustering all the samples into maxCategories
+    clusters that is some categories are merged together. The clustering is applied only in n \>
+    2-class classification problems for categorical variables with N \> max_categories possible
+    values. In case of regression and 2-class classification the optimal split can be found
+    efficiently without employing clustering, thus the parameter is not used in these cases.
+    Default value is 10.*/
+    CV_PURE_PROPERTY(int, MaxCategories)
 
-    You can initialize it by default constructor and then override any parameters directly before
-    training, or the structure may be fully initialized using the advanced variant of the
-    constructor.
-     */
-    class CV_EXPORTS_W_MAP Params
-    {
-    public:
-        /** @brief Default constructor. */
-        Params();
-        /** @brief Constructor with parameters */
-        Params( int maxDepth, int minSampleCount,
-               double regressionAccuracy, bool useSurrogates,
-               int maxCategories, int CVFolds,
-               bool use1SERule, bool truncatePrunedTree,
-               const Mat& priors );
+    /** The maximum possible depth of the tree.
+    That is the training algorithms attempts to split a node while its depth is less than maxDepth.
+    The root node has zero depth. The actual depth may be smaller if the other termination criteria
+    are met (see the outline of the training procedure @ref ml_intro_trees "here"), and/or if the
+    tree is pruned. Default value is INT_MAX.*/
+    CV_PURE_PROPERTY(int, MaxDepth)
 
-        /** @brief Cluster possible values of a categorical variable into K\<=maxCategories clusters
-            to find a suboptimal split.
+    /** If the number of samples in a node is less than this parameter then the node will not be split.
 
-        If a discrete variable, on which the training procedure tries to make a split, takes more
-        than maxCategories values, the precise best subset estimation may take a very long time
-        because the algorithm is exponential. Instead, many decision trees engines (including our
-        implementation) try to find sub-optimal split in this case by clustering all the samples
-        into maxCategories clusters that is some categories are merged together. The clustering is
-        applied only in n \> 2-class classification problems for categorical variables with N \>
-        max_categories possible values. In case of regression and 2-class classification the optimal
-        split can be found efficiently without employing clustering, thus the parameter is not used
-        in these cases. Default value is 10.*/
-        CV_PROP_RW int   maxCategories;
-        /** @brief The maximum possible depth of the tree.
+    Default value is 10.*/
+    CV_PURE_PROPERTY(int, MinSampleCount)
 
-        That is the training algorithms attempts to split a node while its depth is less than
-        maxDepth. The root node has zero depth. The actual depth may be smaller if the other
-        termination criteria are met (see the outline of the training procedure @ref ml_intro_trees
-        "here"), and/or if the tree is pruned. Default value is INT_MAX.*/
-        CV_PROP_RW int   maxDepth;
-        /** If the number of samples in a node is less than this parameter then the node will not be
-        split. Default value is 10.*/
-        CV_PROP_RW int   minSampleCount;
-        /** If CVFolds \> 1 then algorithms prunes the built decision tree using K-fold
-        cross-validation procedure where K is equal to CVFolds. Default value is 10.*/
-        CV_PROP_RW int   CVFolds;
-        /** @brief If true then surrogate splits will be built.
+    /** If CVFolds \> 1 then algorithms prunes the built decision tree using K-fold
+    cross-validation procedure where K is equal to CVFolds.
+    Default value is 10.*/
+    CV_PURE_PROPERTY(int, CVFolds)
 
-        These splits allow to work with missing data and compute variable importance correctly.
-        @note currently it's not implemented. Default value is false.*/
-        CV_PROP_RW bool  useSurrogates;
-        /** If true then a pruning will be harsher. This will make a tree more compact and more
-        resistant to the training data noise but a bit less accurate. Default value is true.*/
-        CV_PROP_RW bool  use1SERule;
-        /** If true then pruned branches are physically removed from the tree. Otherwise they are
-        retained and it is possible to get results from the original unpruned (or pruned less
-        aggressively) tree. Default value is true.*/
-        CV_PROP_RW bool  truncatePrunedTree;
-        /** @brief Termination criteria for regression trees.
+    /** If true then surrogate splits will be built.
+    These splits allow to work with missing data and compute variable importance correctly.
+    Default value is false.
+    @note currently it's not implemented.*/
+    CV_PURE_PROPERTY(bool, UseSurrogates)
 
-        If all absolute differences between an estimated value in a node and values of train samples
-        in this node are less than this parameter then the node will not be split further. Default
-        value is 0.01f*/
-        CV_PROP_RW float regressionAccuracy;
-        /** @brief The array of a priori class probabilities, sorted by the class label value.
+    /** If true then a pruning will be harsher.
+    This will make a tree more compact and more resistant to the training data noise but a bit less
+    accurate. Default value is true.*/
+    CV_PURE_PROPERTY(bool, Use1SERule)
 
-        The parameter can be used to tune the decision tree preferences toward a certain class. For
-        example, if you want to detect some rare anomaly occurrence, the training base will likely
-        contain much more normal cases than anomalies, so a very good classification performance
-        will be achieved just by considering every case as normal. To avoid this, the priors can be
-        specified, where the anomaly probability is artificially increased (up to 0.5 or even
-        greater), so the weight of the misclassified anomalies becomes much bigger, and the tree is
-        adjusted properly.
+    /** If true then pruned branches are physically removed from the tree.
+    Otherwise they are retained and it is possible to get results from the original unpruned (or
+    pruned less aggressively) tree. Default value is true.*/
+    CV_PURE_PROPERTY(bool, TruncatePrunedTree)
 
-        You can also think about this parameter as weights of prediction categories which determine
-        relative weights that you give to misclassification. That is, if the weight of the first
-        category is 1 and the weight of the second category is 10, then each mistake in predicting
-        the second category is equivalent to making 10 mistakes in predicting the first category.
-        Default value is empty Mat.*/
-        CV_PROP_RW Mat priors;
-    };
+    /** Termination criteria for regression trees.
+    If all absolute differences between an estimated value in a node and values of train samples
+    in this node are less than this parameter then the node will not be split further. Default
+    value is 0.01f*/
+    CV_PURE_PROPERTY(float, RegressionAccuracy)
+
+    /** @brief The array of a priori class probabilities, sorted by the class label value.
+
+    The parameter can be used to tune the decision tree preferences toward a certain class. For
+    example, if you want to detect some rare anomaly occurrence, the training base will likely
+    contain much more normal cases than anomalies, so a very good classification performance
+    will be achieved just by considering every case as normal. To avoid this, the priors can be
+    specified, where the anomaly probability is artificially increased (up to 0.5 or even
+    greater), so the weight of the misclassified anomalies becomes much bigger, and the tree is
+    adjusted properly.
+
+    You can also think about this parameter as weights of prediction categories which determine
+    relative weights that you give to misclassification. That is, if the weight of the first
+    category is 1 and the weight of the second category is 10, then each mistake in predicting
+    the second category is equivalent to making 10 mistakes in predicting the first category.
+    Default value is empty Mat.*/
+    CV_PURE_PROPERTY_S(cv::Mat, Priors)
 
     /** @brief The class represents a decision tree node.
      */
@@ -1114,13 +1029,6 @@ public:
                             @endcode */
     };
 
-    /** @brief Sets the training parameters
-     */
-    virtual void setDParams(const Params& p);
-    /** @brief Returns the training parameters
-     */
-    virtual Params getDParams() const;
-
     /** @brief Returns indices of root nodes
     */
     virtual const std::vector<int>& getRoots() const = 0;
@@ -1146,7 +1054,7 @@ public:
     trained using train method (see StatModel::train). Alternatively, you can load the model from
     file using StatModel::load\<DTrees\>(filename).
      */
-    static Ptr<DTrees> create(const Params& params=Params());
+    static Ptr<DTrees> create();
 };
 
 /****************************************************************************************\
@@ -1160,58 +1068,38 @@ public:
 class CV_EXPORTS_W RTrees : public DTrees
 {
 public:
-    /** @brief The set of training parameters for the forest is a superset of the training
-    parameters for a single tree.
 
-    However, random trees do not need all the functionality/features of decision trees. Most
-    noticeably, the trees are not pruned, so the cross-validation parameters are not used.
-     */
-    class CV_EXPORTS_W_MAP Params : public DTrees::Params
-    {
-    public:
-        /** @brief Default constructor. */
-        Params();
-        /** @brief Constructor with parameters. */
-        Params( int maxDepth, int minSampleCount,
-                double regressionAccuracy, bool useSurrogates,
-                int maxCategories, const Mat& priors,
-                bool calcVarImportance, int nactiveVars,
-                TermCriteria termCrit );
+    /** If true then variable importance will be calculated and then it can be retrieved by RTrees::getVarImportance.
+    Default value is false.*/
+    CV_PURE_PROPERTY(bool, CalculateVarImportance)
 
-        /** If true then variable importance will be calculated and then it can be retrieved by
-        RTrees::getVarImportance. Default value is false.*/
-        CV_PROP_RW bool calcVarImportance;
-        /** The size of the randomly selected subset of features at each tree node and that are used
-        to find the best split(s). If you set it to 0 then the size will be set to the square root
-        of the total number of features. Default value is 0.*/
-        CV_PROP_RW int nactiveVars;
-        /** The termination criteria that specifies when the training algorithm stops - either when
-        the specified number of trees is trained and added to the ensemble or when sufficient
-        accuracy (measured as OOB error) is achieved. Typically the more trees you have the better
-        the accuracy. However, the improvement in accuracy generally diminishes and asymptotes pass
-        a certain number of trees. Also to keep in mind, the number of tree increases the prediction
-        time linearly. Default value is TermCriteria(TermCriteria::MAX_ITERS + TermCriteria::EPS,
-        50, 0.1)*/
-        CV_PROP_RW TermCriteria termCrit;
-    };
+    /** The size of the randomly selected subset of features at each tree node and that are used
+    to find the best split(s).
+    If you set it to 0 then the size will be set to the square root of the total number of
+    features. Default value is 0.*/
+    CV_PURE_PROPERTY(int, ActiveVarCount)
 
-    virtual void setRParams(const Params& p) = 0;
-    virtual Params getRParams() const = 0;
+    /** The termination criteria that specifies when the training algorithm stops.
+    Either when the specified number of trees is trained and added to the ensemble or when
+    sufficient accuracy (measured as OOB error) is achieved. Typically the more trees you have the
+    better the accuracy. However, the improvement in accuracy generally diminishes and asymptotes
+    pass a certain number of trees. Also to keep in mind, the number of tree increases the
+    prediction time linearly. Default value is TermCriteria(TermCriteria::MAX_ITERS +
+    TermCriteria::EPS, 50, 0.1)*/
+    CV_PURE_PROPERTY_S(TermCriteria, TermCriteria)
 
-    /** @brief Returns the variable importance array.
-
+    /** Returns the variable importance array.
     The method returns the variable importance vector, computed at the training stage when
-    Params::calcVarImportance is set to true. If this flag was set to false, the empty matrix is
+    CalculateVarImportance is set to true. If this flag was set to false, the empty matrix is
     returned.
      */
     virtual Mat getVarImportance() const = 0;
 
-    /** @brief Creates the empty model
-
+    /** Creates the empty model.
     Use StatModel::train to train the model, StatModel::train to create and train the model,
     StatModel::load to load the pre-trained model.
      */
-    static Ptr<RTrees> create(const Params& params=Params());
+    static Ptr<RTrees> create();
 };
 
 /****************************************************************************************\
@@ -1225,36 +1113,21 @@ public:
 class CV_EXPORTS_W Boost : public DTrees
 {
 public:
-    /** @brief Parameters of Boost trees.
+    /** Type of the boosting algorithm.
+    See Boost::Types. Default value is Boost::REAL. */
+    CV_PURE_PROPERTY(int, BoostType)
 
-    The structure is derived from DTrees::Params but not all of the decision tree parameters are
-    supported. In particular, cross-validation is not supported.
+    /** The number of weak classifiers.
+    Default value is 100. */
+    CV_PURE_PROPERTY(int, WeakCount)
 
-    All parameters are public. You can initialize them by a constructor and then override some of
-    them directly if you want.
-     */
-    class CV_EXPORTS_W_MAP Params : public DTrees::Params
-    {
-    public:
-        CV_PROP_RW int boostType; //!< Type of the boosting algorithm. See Boost::Types.
-                                  //!< Default value is Boost::REAL.
-        CV_PROP_RW int weakCount; //!< The number of weak classifiers. Default value is 100.
-        /** A threshold between 0 and 1 used to save computational time. Samples with summary weight
-        \f$\leq 1 - weight_trim_rate\f$ do not participate in the *next* iteration of training. Set
-        this parameter to 0 to turn off this functionality. Default value is 0.95.*/
-        CV_PROP_RW double weightTrimRate;
+    /** A threshold between 0 and 1 used to save computational time.
+    Samples with summary weight \f$\leq 1 - weight_trim_rate\f$ do not participate in the *next*
+    iteration of training. Set this parameter to 0 to turn off this functionality. Default value is 0.95.*/
+    CV_PURE_PROPERTY(double, WeightTrimRate)
 
-        /** @brief Default constructor */
-        Params();
-        /** @brief Constructor with parameters */
-        Params( int boostType, int weakCount, double weightTrimRate,
-                int maxDepth, bool useSurrogates, const Mat& priors );
-    };
-
-    /** @brief Boosting type
-
-    Gentle AdaBoost and Real AdaBoost are often the preferable choices.
-    */
+    /** Boosting type.
+    Gentle AdaBoost and Real AdaBoost are often the preferable choices. */
     enum Types {
         DISCRETE=0, //!< Discrete AdaBoost.
         REAL=1, //!< Real AdaBoost. It is a technique that utilizes confidence-rated predictions
@@ -1264,17 +1137,9 @@ public:
                  //!<reason is often good with regression data.
     };
 
-    /** @brief Returns the boosting parameters */
-    virtual Params getBParams() const = 0;
-    /** @brief Sets the boosting parameters */
-    virtual void setBParams(const Params& p) = 0;
-
-    /** @brief Creates the empty model
-
-    Use StatModel::train to train the model, StatModel::train\<Boost\>(traindata, params) to create
-    and train the model, StatModel::load\<Boost\>(filename) to load the pre-trained model.
-     */
-    static Ptr<Boost> create(const Params& params=Params());
+    /** Creates the empty model.
+    Use StatModel::train to train the model, StatModel::load\<Boost\>(filename) to load the pre-trained model. */
+    static Ptr<Boost> create();
 };
 
 /****************************************************************************************\
@@ -1327,67 +1192,77 @@ Additional flags for StatModel::train are available: ANN_MLP::TrainFlags.
 class CV_EXPORTS_W ANN_MLP : public StatModel
 {
 public:
-    /** @brief Parameters of the MLP and of the training algorithm.
-    */
-    struct CV_EXPORTS_W_MAP Params
-    {
-        /** @brief Default constructor */
-        Params();
-        /** @brief Constructor with parameters
-        @note param1 sets Params::rp_dw0 for RPROP and Paramss::bp_dw_scale for BACKPROP.
-        @note param2 sets Params::rp_dw_min for RPROP and Params::bp_moment_scale for BACKPROP.
-         */
-        Params( const Mat& layerSizes, int activateFunc, double fparam1, double fparam2,
-                TermCriteria termCrit, int trainMethod, double param1, double param2=0 );
-
-        /** Available training methods */
-        enum TrainingMethods {
-            BACKPROP=0, //!< The back-propagation algorithm.
-            RPROP=1 //!< The RPROP algorithm. See @cite RPROP93 for details.
-        };
-
-        /**  Integer vector specifying the number of neurons in each layer including the input and
-        output layers. The very first element specifies the number of elements in the input layer.
-        The last element - number of elements in the output layer. Default value is empty Mat.*/
-        CV_PROP_RW Mat layerSizes;
-        /** The activation function for each neuron. Currently the default and the only fully
-        supported activation function is ANN_MLP::SIGMOID_SYM. See ANN_MLP::ActivationFunctions.*/
-        CV_PROP_RW int activateFunc;
-        /** The first parameter of the activation function, \f$\alpha\f$. Default value is 0. */
-        CV_PROP_RW double fparam1;
-        /** The second parameter of the activation function, \f$\beta\f$. Default value is 0. */
-        CV_PROP_RW double fparam2;
-
-        /** Termination criteria of the training algorithm. You can specify the maximum number of
-        iterations (maxCount) and/or how much the error could change between the iterations to make
-        the algorithm continue (epsilon). Default value is TermCriteria(TermCriteria::MAX_ITER +
-        TermCriteria::EPS, 1000, 0.01).*/
-        CV_PROP_RW TermCriteria termCrit;
-        /** Training method. Default value is Params::RPROP. See ANN_MLP::Params::TrainingMethods.*/
-        CV_PROP_RW int trainMethod;
-
-        // backpropagation parameters
-        /** BPROP: Strength of the weight gradient term. The recommended value is about 0.1. Default
-        value is 0.1.*/
-        CV_PROP_RW double bpDWScale;
-        /** BPROP: Strength of the momentum term (the difference between weights on the 2 previous
-        iterations). This parameter provides some inertia to smooth the random fluctuations of the
-        weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so
-        is good enough. Default value is 0.1.*/
-        CV_PROP_RW double bpMomentScale;
-
-        // rprop parameters
-        /** RPROP: Initial value \f$\Delta_0\f$ of update-values \f$\Delta_{ij}\f$. Default value is 0.1.*/
-        CV_PROP_RW double rpDW0;
-        /** RPROP: Increase factor \f$\eta^+\f$. It must be \>1. Default value is 1.2.*/
-        CV_PROP_RW double rpDWPlus;
-        /** RPROP: Decrease factor \f$\eta^-\f$. It must be \<1. Default value is 0.5.*/
-        CV_PROP_RW double rpDWMinus;
-        /** RPROP: Update-values lower limit \f$\Delta_{min}\f$. It must be positive. Default value is FLT_EPSILON.*/
-        CV_PROP_RW double rpDWMin;
-        /** RPROP: Update-values upper limit \f$\Delta_{max}\f$. It must be \>1. Default value is 50.*/
-        CV_PROP_RW double rpDWMax;
+    /** Available training methods */
+    enum TrainingMethods {
+        BACKPROP=0, //!< The back-propagation algorithm.
+        RPROP=1 //!< The RPROP algorithm. See @cite RPROP93 for details.
     };
+
+    /** Sets training method and common parameters.
+    @param method Default value is ANN_MLP::RPROP. See ANN_MLP::TrainingMethods.
+    @param param1 passed to setRpropDW0 for ANN_MLP::RPROP and to setBackpropWeightScale for ANN_MLP::BACKPROP
+    @param param2 passed to setRpropDWMin for ANN_MLP::RPROP and to setBackpropMomentumScale for ANN_MLP::BACKPROP.
+    */
+    virtual void setTrainMethod(int method, double param1 = 0, double param2 = 0) = 0;
+
+    /** Returns current training method */
+    virtual int getTrainMethod() const = 0;
+
+    /** Initialize the activation function for each neuron.
+    Currently the default and the only fully supported activation function is ANN_MLP::SIGMOID_SYM.
+    @param type The type of activation function. See ANN_MLP::ActivationFunctions.
+    @param param1 The first parameter of the activation function, \f$\alpha\f$. Default value is 0.
+    @param param2 The second parameter of the activation function, \f$\beta\f$. Default value is 0.
+    */
+    virtual void setActivationFunction(int type, double param1 = 0, double param2 = 0) = 0;
+
+    /**  Integer vector specifying the number of neurons in each layer including the input and output layers.
+    The very first element specifies the number of elements in the input layer.
+    The last element - number of elements in the output layer. Default value is empty Mat.
+    @sa getLayerSizes */
+    virtual void setLayerSizes(InputArray _layer_sizes) = 0;
+
+    /**  Integer vector specifying the number of neurons in each layer including the input and output layers.
+    The very first element specifies the number of elements in the input layer.
+    The last element - number of elements in the output layer.
+    @sa setLayerSizes */
+    virtual cv::Mat getLayerSizes() const = 0;
+
+    /** Termination criteria of the training algorithm.
+    You can specify the maximum number of iterations (maxCount) and/or how much the error could
+    change between the iterations to make the algorithm continue (epsilon). Default value is
+    TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, 0.01).*/
+    CV_PURE_PROPERTY(TermCriteria, TermCriteria)
+
+    /** BPROP: Strength of the weight gradient term.
+    The recommended value is about 0.1. Default value is 0.1.*/
+    CV_PURE_PROPERTY(double, BackpropWeightScale)
+
+    /** BPROP: Strength of the momentum term (the difference between weights on the 2 previous iterations).
+    This parameter provides some inertia to smooth the random fluctuations of the weights. It can
+    vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough.
+    Default value is 0.1.*/
+    CV_PURE_PROPERTY(double, BackpropMomentumScale)
+
+    /** RPROP: Initial value \f$\Delta_0\f$ of update-values \f$\Delta_{ij}\f$.
+    Default value is 0.1.*/
+    CV_PURE_PROPERTY(double, RpropDW0)
+
+    /** RPROP: Increase factor \f$\eta^+\f$.
+    It must be \>1. Default value is 1.2.*/
+    CV_PURE_PROPERTY(double, RpropDWPlus)
+
+    /** RPROP: Decrease factor \f$\eta^-\f$.
+    It must be \<1. Default value is 0.5.*/
+    CV_PURE_PROPERTY(double, RpropDWMinus)
+
+    /** RPROP: Update-values lower limit \f$\Delta_{min}\f$.
+    It must be positive. Default value is FLT_EPSILON.*/
+    CV_PURE_PROPERTY(double, RpropDWMin)
+
+    /** RPROP: Update-values upper limit \f$\Delta_{max}\f$.
+    It must be \>1. Default value is 50.*/
+    CV_PURE_PROPERTY(double, RpropDWMax)
 
     /** possible activation functions */
     enum ActivationFunctions {
@@ -1422,19 +1297,12 @@ public:
 
     virtual Mat getWeights(int layerIdx) const = 0;
 
-    /** @brief Sets the new network parameters */
-    virtual void setParams(const Params& p) = 0;
-
-    /** @brief Retrieves the current network parameters */
-    virtual Params getParams() const = 0;
-
     /** @brief Creates empty model
 
-    Use StatModel::train to train the model, StatModel::train\<ANN_MLP\>(traindata, params) to
-    create and train the model, StatModel::load\<ANN_MLP\>(filename) to load the pre-trained model.
+    Use StatModel::train to train the model, StatModel::load\<ANN_MLP\>(filename) to load the pre-trained model.
     Note that the train method has optional flags: ANN_MLP::TrainFlags.
      */
-    static Ptr<ANN_MLP> create(const Params& params=Params());
+    static Ptr<ANN_MLP> create();
 };
 
 /****************************************************************************************\
@@ -1448,43 +1316,38 @@ public:
 class CV_EXPORTS LogisticRegression : public StatModel
 {
 public:
-    class CV_EXPORTS Params
-    {
-    public:
-        /** @brief Constructor */
-        Params(double learning_rate = 0.001,
-               int iters = 1000,
-               int method = LogisticRegression::BATCH,
-               int normalization = LogisticRegression::REG_L2,
-               int reg = 1,
-               int batch_size = 1);
-        double alpha; //!< learning rate.
-        int num_iters; //!< number of iterations.
-        /** Kind of regularization to be applied. See LogisticRegression::RegKinds. */
-        int norm;
-        /** Enable or disable regularization. Set to positive integer (greater than zero) to enable
-        and to 0 to disable. */
-        int regularized;
-        /** Kind of training method used. See LogisticRegression::Methods. */
-        int train_method;
-        /** Specifies the number of training samples taken in each step of Mini-Batch Gradient
-        Descent. Will only be used if using LogisticRegression::MINI_BATCH training algorithm. It
-        has to take values less than the total number of training samples. */
-        int mini_batch_size;
-        /** Termination criteria of the algorithm */
-        TermCriteria term_crit;
-    };
+
+    /** Learning rate. */
+    CV_PURE_PROPERTY(double, LearningRate)
+
+    /** Number of iterations. */
+    CV_PURE_PROPERTY(int, Iterations)
+
+    /** Kind of regularization to be applied. See LogisticRegression::RegKinds. */
+    CV_PURE_PROPERTY(int, Regularization)
+
+    /** Kind of training method used. See LogisticRegression::Methods. */
+    CV_PURE_PROPERTY(int, TrainMethod)
+
+    /** Specifies the number of training samples taken in each step of Mini-Batch Gradient
+    Descent. Will only be used if using LogisticRegression::MINI_BATCH training algorithm. It
+    has to take values less than the total number of training samples. */
+    CV_PURE_PROPERTY(int, MiniBatchSize)
+
+    /** Termination criteria of the algorithm. */
+    CV_PURE_PROPERTY(TermCriteria, TermCriteria)
 
     //! Regularization kinds
     enum RegKinds {
+        REG_NONE = -1, //!< Regularization disabled
         REG_L1 = 0, //!< %L1 norm
-        REG_L2 = 1 //!< %L2 norm. Set Params::regularized \> 0 when using this kind
+        REG_L2 = 1 //!< %L2 norm
     };
 
     //! Training methods
     enum Methods {
         BATCH = 0,
-        MINI_BATCH = 1 //!< Set Params::mini_batch_size to a positive integer when using this method.
+        MINI_BATCH = 1 //!< Set MiniBatchSize to a positive integer when using this method.
     };
 
     /** @brief Predicts responses for input samples and returns a float type.
@@ -1505,11 +1368,9 @@ public:
 
     /** @brief Creates empty model.
 
-    @param params The training parameters for the classifier of type LogisticRegression::Params.
-
     Creates Logistic Regression model with parameters given.
      */
-    static Ptr<LogisticRegression> create( const Params& params = Params() );
+    static Ptr<LogisticRegression> create();
 };
 
 /****************************************************************************************\

@@ -42,56 +42,35 @@
 
 namespace cv { namespace ml {
 
-ANN_MLP::Params::Params()
+struct AnnParams
 {
-    layerSizes = Mat();
-    activateFunc = SIGMOID_SYM;
-    fparam1 = fparam2 = 0;
-    termCrit = TermCriteria( TermCriteria::COUNT + TermCriteria::EPS, 1000, 0.01 );
-    trainMethod = RPROP;
-    bpDWScale = bpMomentScale = 0.1;
-    rpDW0 = 0.1; rpDWPlus = 1.2; rpDWMinus = 0.5;
-    rpDWMin = FLT_EPSILON; rpDWMax = 50.;
-}
+    AnnParams()
+    {
+        termCrit = TermCriteria( TermCriteria::COUNT + TermCriteria::EPS, 1000, 0.01 );
+        trainMethod = ANN_MLP::RPROP;
+        bpDWScale = bpMomentScale = 0.1;
+        rpDW0 = 0.1; rpDWPlus = 1.2; rpDWMinus = 0.5;
+        rpDWMin = FLT_EPSILON; rpDWMax = 50.;
+    }
 
+    TermCriteria termCrit;
+    int trainMethod;
 
-ANN_MLP::Params::Params( const Mat& _layerSizes, int _activateFunc, double _fparam1, double _fparam2,
-                         TermCriteria _termCrit, int _trainMethod, double _param1, double _param2 )
+    double bpDWScale;
+    double bpMomentScale;
+
+    double rpDW0;
+    double rpDWPlus;
+    double rpDWMinus;
+    double rpDWMin;
+    double rpDWMax;
+};
+
+template <typename T>
+inline T inBounds(T val, T min_val, T max_val)
 {
-    layerSizes = _layerSizes;
-    activateFunc = _activateFunc;
-    fparam1 = _fparam1;
-    fparam2 = _fparam2;
-    termCrit = _termCrit;
-    trainMethod = _trainMethod;
-    bpDWScale = bpMomentScale = 0.1;
-    rpDW0 = 1.; rpDWPlus = 1.2; rpDWMinus = 0.5;
-    rpDWMin = FLT_EPSILON; rpDWMax = 50.;
-
-    if( trainMethod == RPROP )
-    {
-        rpDW0 = _param1;
-        if( rpDW0 < FLT_EPSILON )
-            rpDW0 = 1.;
-        rpDWMin = _param2;
-        rpDWMin = std::max( rpDWMin, 0. );
-    }
-    else if( trainMethod == BACKPROP )
-    {
-        bpDWScale = _param1;
-        if( bpDWScale <= 0 )
-            bpDWScale = 0.1;
-        bpDWScale = std::max( bpDWScale, 1e-3 );
-        bpDWScale = std::min( bpDWScale, 1. );
-        bpMomentScale = _param2;
-        if( bpMomentScale < 0 )
-            bpMomentScale = 0.1;
-        bpMomentScale = std::min( bpMomentScale, 1. );
-    }
-    else
-        trainMethod = RPROP;
+    return std::min(std::max(val, min_val), max_val);
 }
-
 
 class ANN_MLPImpl : public ANN_MLP
 {
@@ -99,27 +78,21 @@ public:
     ANN_MLPImpl()
     {
         clear();
-    }
-
-    ANN_MLPImpl( const Params& p )
-    {
-        clear();
-        setParams(p);
+        setActivationFunction( SIGMOID_SYM, 0, 0 );
+        setLayerSizes(Mat());
+        setTrainMethod(ANN_MLP::RPROP, 0.1, FLT_EPSILON);
     }
 
     virtual ~ANN_MLPImpl() {}
 
-    void setParams(const Params& p)
-    {
-        params = p;
-        create( params.layerSizes );
-        set_activ_func( params.activateFunc, params.fparam1, params.fparam2 );
-    }
-
-    Params getParams() const
-    {
-        return params;
-    }
+    CV_IMPL_PROPERTY(TermCriteria, TermCriteria, params.termCrit)
+    CV_IMPL_PROPERTY(double, BackpropWeightScale, params.bpDWScale)
+    CV_IMPL_PROPERTY(double, BackpropMomentumScale, params.bpMomentScale)
+    CV_IMPL_PROPERTY(double, RpropDW0, params.rpDW0)
+    CV_IMPL_PROPERTY(double, RpropDWPlus, params.rpDWPlus)
+    CV_IMPL_PROPERTY(double, RpropDWMinus, params.rpDWMinus)
+    CV_IMPL_PROPERTY(double, RpropDWMin, params.rpDWMin)
+    CV_IMPL_PROPERTY(double, RpropDWMax, params.rpDWMax)
 
     void clear()
     {
@@ -132,7 +105,35 @@ public:
 
     int layer_count() const { return (int)layer_sizes.size(); }
 
-    void set_activ_func( int _activ_func, double _f_param1, double _f_param2 )
+    void setTrainMethod(int method, double param1, double param2)
+    {
+        if (method != ANN_MLP::RPROP && method != ANN_MLP::BACKPROP)
+            method = ANN_MLP::RPROP;
+        params.trainMethod = method;
+        if(method == ANN_MLP::RPROP )
+        {
+            if( param1 < FLT_EPSILON )
+                param1 = 1.;
+            params.rpDW0 = param1;
+            params.rpDWMin = std::max( param2, 0. );
+        }
+        else if(method == ANN_MLP::BACKPROP )
+        {
+            if( param1 <= 0 )
+                param1 = 0.1;
+            params.bpDWScale = inBounds<double>(param1, 1e-3, 1.);
+            if( param2 < 0 )
+                param2 = 0.1;
+            params.bpMomentScale = std::min( param2, 1. );
+        }
+    }
+
+    int getTrainMethod() const
+    {
+        return params.trainMethod;
+    }
+
+    void setActivationFunction(int _activ_func, double _f_param1, double _f_param2 )
     {
         if( _activ_func < 0 || _activ_func > GAUSSIAN )
             CV_Error( CV_StsOutOfRange, "Unknown activation function" );
@@ -201,7 +202,12 @@ public:
         }
     }
 
-    void create( InputArray _layer_sizes )
+    Mat getLayerSizes() const
+    {
+        return Mat_<int>(layer_sizes, true);
+    }
+
+    void setLayerSizes( InputArray _layer_sizes )
     {
         clear();
 
@@ -700,7 +706,7 @@ public:
         termcrit.maxCount = std::max((params.termCrit.type & CV_TERMCRIT_ITER ? params.termCrit.maxCount : MAX_ITER), 1);
         termcrit.epsilon = std::max((params.termCrit.type & CV_TERMCRIT_EPS ? params.termCrit.epsilon : DEFAULT_EPSILON), DBL_EPSILON);
 
-        int iter = params.trainMethod == Params::BACKPROP ?
+        int iter = params.trainMethod == ANN_MLP::BACKPROP ?
             train_backprop( inputs, outputs, sw, termcrit ) :
             train_rprop( inputs, outputs, sw, termcrit );
 
@@ -1113,13 +1119,13 @@ public:
         fs << "min_val" << min_val << "max_val" << max_val << "min_val1" << min_val1 << "max_val1" << max_val1;
 
         fs << "training_params" << "{";
-        if( params.trainMethod == Params::BACKPROP )
+        if( params.trainMethod == ANN_MLP::BACKPROP )
         {
             fs << "train_method" << "BACKPROP";
             fs << "dw_scale" << params.bpDWScale;
             fs << "moment_scale" << params.bpMomentScale;
         }
-        else if( params.trainMethod == Params::RPROP )
+        else if( params.trainMethod == ANN_MLP::RPROP )
         {
             fs << "train_method" << "RPROP";
             fs << "dw0" << params.rpDW0;
@@ -1186,7 +1192,7 @@ public:
         f_param1 = (double)fn["f_param1"];
         f_param2 = (double)fn["f_param2"];
 
-        set_activ_func( activ_func, f_param1, f_param2 );
+        setActivationFunction( activ_func, f_param1, f_param2 );
 
         min_val = (double)fn["min_val"];
         max_val = (double)fn["max_val"];
@@ -1194,7 +1200,7 @@ public:
         max_val1 = (double)fn["max_val1"];
 
         FileNode tpn = fn["training_params"];
-        params = Params();
+        params = AnnParams();
 
         if( !tpn.empty() )
         {
@@ -1202,13 +1208,13 @@ public:
 
             if( tmethod_name == "BACKPROP" )
             {
-                params.trainMethod = Params::BACKPROP;
+                params.trainMethod = ANN_MLP::BACKPROP;
                 params.bpDWScale = (double)tpn["dw_scale"];
                 params.bpMomentScale = (double)tpn["moment_scale"];
             }
             else if( tmethod_name == "RPROP" )
             {
-                params.trainMethod = Params::RPROP;
+                params.trainMethod = ANN_MLP::RPROP;
                 params.rpDW0 = (double)tpn["dw0"];
                 params.rpDWPlus = (double)tpn["dw_plus"];
                 params.rpDWMinus = (double)tpn["dw_minus"];
@@ -1244,7 +1250,7 @@ public:
 
         vector<int> _layer_sizes;
         readVectorOrMat(fn["layer_sizes"], _layer_sizes);
-        create( _layer_sizes );
+        setLayerSizes( _layer_sizes );
 
         int i, l_count = layer_count();
         read_params(fn);
@@ -1265,11 +1271,6 @@ public:
         for( i = 1; i < l_count; i++, ++w_it )
             (*w_it).readRaw("d", weights[i].ptr(), weights[i].total()*esz);
         trained = true;
-    }
-
-    Mat getLayerSizes() const
-    {
-        return Mat_<int>(layer_sizes, true);
     }
 
     Mat getWeights(int layerIdx) const
@@ -1304,17 +1305,16 @@ public:
     double min_val, max_val, min_val1, max_val1;
     int activ_func;
     int max_lsize, max_buf_sz;
-    Params params;
+    AnnParams params;
     RNG rng;
     Mutex mtx;
     bool trained;
 };
 
 
-Ptr<ANN_MLP> ANN_MLP::create(const ANN_MLP::Params& params)
+Ptr<ANN_MLP> ANN_MLP::create()
 {
-    Ptr<ANN_MLPImpl> ann = makePtr<ANN_MLPImpl>(params);
-    return ann;
+    return makePtr<ANN_MLPImpl>();
 }
 
 }}

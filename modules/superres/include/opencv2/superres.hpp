@@ -104,34 +104,34 @@ namespace cv
             */
             virtual void collectGarbage();
 
-            //! @name Scale factor
+            //! @brief Scale factor
             CV_PURE_PROPERTY(int, Scale)
 
-            //! @name Iterations count
+            //! @brief Iterations count
             CV_PURE_PROPERTY(int, Iterations)
 
-            //! @name Asymptotic value of steepest descent method
+            //! @brief Asymptotic value of steepest descent method
             CV_PURE_PROPERTY(double, Tau)
 
-            //! @name Weight parameter to balance data term and smoothness term
+            //! @brief Weight parameter to balance data term and smoothness term
             CV_PURE_PROPERTY(double, Labmda)
 
-            //! @name Parameter of spacial distribution in Bilateral-TV
+            //! @brief Parameter of spacial distribution in Bilateral-TV
             CV_PURE_PROPERTY(double, Alpha)
 
-            //! @name Kernel size of Bilateral-TV filter
+            //! @brief Kernel size of Bilateral-TV filter
             CV_PURE_PROPERTY(int, KernelSize)
 
-            //! @name Gaussian blur kernel size
+            //! @brief Gaussian blur kernel size
             CV_PURE_PROPERTY(int, BlurKernelSize)
 
-            //! @name Gaussian blur sigma
+            //! @brief Gaussian blur sigma
             CV_PURE_PROPERTY(double, BlurSigma)
 
-            //! @name Radius of the temporal search area
+            //! @brief Radius of the temporal search area
             CV_PURE_PROPERTY(int, TemporalAreaRadius)
 
-            //! @name Dense optical flow algorithm
+            //! @brief Dense optical flow algorithm
             CV_PURE_PROPERTY_S(Ptr<cv::superres::DenseOpticalFlowExt>, OpticalFlow)
 
         protected:
