@@ -149,9 +149,8 @@ int CV_SLMLTest::validate_test_results( int testCaseIdx )
 }
 
 TEST(ML_NaiveBayes, save_load) { CV_SLMLTest test( CV_NBAYES ); test.safe_run(); }
-//CV_SLMLTest lsmlknearest( CV_KNEAREST, "slknearest" ); // does not support save!
+TEST(ML_KNearest, save_load) { CV_SLMLTest test( CV_KNEAREST ); test.safe_run(); }
 TEST(ML_SVM, save_load) { CV_SLMLTest test( CV_SVM ); test.safe_run(); }
-//CV_SLMLTest lsmlem( CV_EM, "slem" ); // does not support save!
 TEST(ML_ANN, save_load) { CV_SLMLTest test( CV_ANN ); test.safe_run(); }
 TEST(ML_DTree, save_load) { CV_SLMLTest test( CV_DTREE ); test.safe_run(); }
 TEST(ML_Boost, save_load) { CV_SLMLTest test( CV_BOOST ); test.safe_run(); }

@@ -98,17 +98,17 @@ namespace cv
         class CV_EXPORTS BroxOpticalFlow : public virtual DenseOpticalFlowExt
         {
         public:
-            //! @name Flow smoothness
+            //! @brief Flow smoothness
             CV_PURE_PROPERTY(double, Alpha)
-            //! @name Gradient constancy importance
+            //! @brief Gradient constancy importance
             CV_PURE_PROPERTY(double, Gamma)
-            //! @name Pyramid scale factor
+            //! @brief Pyramid scale factor
             CV_PURE_PROPERTY(double, ScaleFactor)
-            //! @name Number of lagged non-linearity iterations (inner loop)
+            //! @brief Number of lagged non-linearity iterations (inner loop)
             CV_PURE_PROPERTY(int, InnerIterations)
-            //! @name Number of warping iterations (number of pyramid levels)
+            //! @brief Number of warping iterations (number of pyramid levels)
             CV_PURE_PROPERTY(int, OuterIterations)
-            //! @name Number of linear system solver iterations
+            //! @brief Number of linear system solver iterations
             CV_PURE_PROPERTY(int, SolverIterations)
         };
         CV_EXPORTS Ptr<BroxOpticalFlow> createOptFlow_Brox_CUDA();

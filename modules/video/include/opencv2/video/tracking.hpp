@@ -440,29 +440,29 @@ Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flo
 class CV_EXPORTS_W DualTVL1OpticalFlow : public DenseOpticalFlow
 {
 public:
-    //! @name Time step of the numerical scheme
+    //! @brief Time step of the numerical scheme
     CV_PURE_PROPERTY(double, Tau)
-    //! @name Weight parameter for the data term, attachment parameter
+    //! @brief Weight parameter for the data term, attachment parameter
     CV_PURE_PROPERTY(double, Lambda)
-    //! @name Weight parameter for (u - v)^2, tightness parameter
+    //! @brief Weight parameter for (u - v)^2, tightness parameter
     CV_PURE_PROPERTY(double, Theta)
-    //! @name coefficient for additional illumination variation term
+    //! @brief coefficient for additional illumination variation term
     CV_PURE_PROPERTY(double, Gamma)
-    //! @name Number of scales used to create the pyramid of images
+    //! @brief Number of scales used to create the pyramid of images
     CV_PURE_PROPERTY(int, ScalesNumber)
-    //! @name Number of warpings per scale
+    //! @brief Number of warpings per scale
     CV_PURE_PROPERTY(int, WarpingsNumber)
-    //! @name Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time
+    //! @brief Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time
     CV_PURE_PROPERTY(double, Epsilon)
-    //! @name Inner iterations (between outlier filtering) used in the numerical scheme
+    //! @brief Inner iterations (between outlier filtering) used in the numerical scheme
     CV_PURE_PROPERTY(int, InnerIterations)
-    //! @name Outer iterations (number of inner loops) used in the numerical scheme
+    //! @brief Outer iterations (number of inner loops) used in the numerical scheme
     CV_PURE_PROPERTY(int, OuterIterations)
-    //! @name Use initial flow
+    //! @brief Use initial flow
     CV_PURE_PROPERTY(bool, UseInitialFlow)
-    //! @name Step between scales (<1)
+    //! @brief Step between scales (<1)
     CV_PURE_PROPERTY(double, ScaleStep)
-    //! @name Median filter kernel size (1 = no filter) (3 or 5)
+    //! @brief Median filter kernel size (1 = no filter) (3 or 5)
     CV_PURE_PROPERTY(int, MedianFiltering)
 };
 

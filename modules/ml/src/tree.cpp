@@ -48,18 +48,7 @@ namespace ml {
 
 using std::vector;
 
-void DTrees::setDParams(const DTrees::Params&)
-{
-    CV_Error(CV_StsNotImplemented, "");
-}
-
-DTrees::Params DTrees::getDParams() const
-{
-    CV_Error(CV_StsNotImplemented, "");
-    return DTrees::Params();
-}
-
-DTrees::Params::Params()
+TreeParams::TreeParams()
 {
     maxDepth = INT_MAX;
     minSampleCount = 10;
@@ -72,11 +61,11 @@ DTrees::Params::Params()
     priors = Mat();
 }
 
-DTrees::Params::Params( int _maxDepth, int _minSampleCount,
-                        double _regressionAccuracy, bool _useSurrogates,
-                        int _maxCategories, int _CVFolds,
-                        bool _use1SERule, bool _truncatePrunedTree,
-                        const Mat& _priors )
+TreeParams::TreeParams(int _maxDepth, int _minSampleCount,
+                       double _regressionAccuracy, bool _useSurrogates,
+                       int _maxCategories, int _CVFolds,
+                       bool _use1SERule, bool _truncatePrunedTree,
+                       const Mat& _priors)
 {
     maxDepth = _maxDepth;
     minSampleCount = _minSampleCount;
@@ -248,7 +237,7 @@ const vector<int>& DTreesImpl::getActiveVars()
 
 int DTreesImpl::addTree(const vector<int>& sidx )
 {
-    size_t n = (params.maxDepth > 0 ? (1 << params.maxDepth) : 1024) + w->wnodes.size();
+    size_t n = (params.getMaxDepth() > 0 ? (1 << params.getMaxDepth()) : 1024) + w->wnodes.size();
 
     w->wnodes.reserve(n);
     w->wsplits.reserve(n);
@@ -257,7 +246,7 @@ int DTreesImpl::addTree(const vector<int>& sidx )
     w->wsplits.clear();
     w->wsubsets.clear();
 
-    int cv_n = params.CVFolds;
+    int cv_n = params.getCVFolds();
 
     if( cv_n > 0 )
     {
@@ -347,34 +336,9 @@ int DTreesImpl::addTree(const vector<int>& sidx )
     return root;
 }
 
-DTrees::Params DTreesImpl::getDParams() const
+void DTreesImpl::setDParams(const TreeParams& _params)
 {
-    return params0;
-}
-
-void DTreesImpl::setDParams(const Params& _params)
-{
-    params0 = params = _params;
-    if( params.maxCategories < 2 )
-        CV_Error( CV_StsOutOfRange, "params.max_categories should be >= 2" );
-    params.maxCategories = std::min( params.maxCategories, 15 );
-
-    if( params.maxDepth < 0 )
-        CV_Error( CV_StsOutOfRange, "params.max_depth should be >= 0" );
-    params.maxDepth = std::min( params.maxDepth, 25 );
-
-    params.minSampleCount = std::max(params.minSampleCount, 1);
-
-    if( params.CVFolds < 0 )
-        CV_Error( CV_StsOutOfRange,
-                 "params.CVFolds should be =0 (the tree is not pruned) "
-                 "or n>0 (tree is pruned using n-fold cross-validation)" );
-
-    if( params.CVFolds == 1 )
-        params.CVFolds = 0;
-
-    if( params.regressionAccuracy < 0 )
-        CV_Error( CV_StsOutOfRange, "params.regression_accuracy should be >= 0" );
+    params = _params;
 }
 
 int DTreesImpl::addNodeAndTrySplit( int parent, const vector<int>& sidx )
@@ -385,7 +349,7 @@ int DTreesImpl::addNodeAndTrySplit( int parent, const vector<int>& sidx )
 
     node.parent = parent;
     node.depth = parent >= 0 ? w->wnodes[parent].depth + 1 : 0;
-    int nfolds = params.CVFolds;
+    int nfolds = params.getCVFolds();
 
     if( nfolds > 0 )
     {
@@ -400,7 +364,7 @@ int DTreesImpl::addNodeAndTrySplit( int parent, const vector<int>& sidx )
 
     calcValue( nidx, sidx );
 
-    if( n <= params.minSampleCount || node.depth >= params.maxDepth )
+    if( n <= params.getMinSampleCount() || node.depth >= params.getMaxDepth() )
         can_split = false;
     else if( _isClassifier )
     {
@@ -415,7 +379,7 @@ int DTreesImpl::addNodeAndTrySplit( int parent, const vector<int>& sidx )
     }
     else
     {
-        if( sqrt(node.node_risk) < params.regressionAccuracy )
+        if( sqrt(node.node_risk) < params.getRegressionAccuracy() )
             can_split = false;
     }
 
@@ -493,7 +457,7 @@ int DTreesImpl::findBestSplit( const vector<int>& _sidx )
 void DTreesImpl::calcValue( int nidx, const vector<int>& _sidx )
 {
     WNode* node = &w->wnodes[nidx];
-    int i, j, k, n = (int)_sidx.size(), cv_n = params.CVFolds;
+    int i, j, k, n = (int)_sidx.size(), cv_n = params.getCVFolds();
     int m = (int)classLabels.size();
 
     cv::AutoBuffer<double> buf(std::max(m, 3)*(cv_n+1));
@@ -841,8 +805,8 @@ DTreesImpl::WSplit DTreesImpl::findSplitCatClass( int vi, const vector<int>& _si
     int m = (int)classLabels.size();
 
     int base_size = m*(3 + mi) + mi + 1;
-    if( m > 2 && mi > params.maxCategories )
-        base_size += m*std::min(params.maxCategories, n) + mi;
+    if( m > 2 && mi > params.getMaxCategories() )
+        base_size += m*std::min(params.getMaxCategories(), n) + mi;
     else
         base_size += mi;
     AutoBuffer<double> buf(base_size + n);
@@ -880,9 +844,9 @@ DTreesImpl::WSplit DTreesImpl::findSplitCatClass( int vi, const vector<int>& _si
 
     if( m > 2 )
     {
-        if( mi > params.maxCategories )
+        if( mi > params.getMaxCategories() )
         {
-            mi = std::min(params.maxCategories, n);
+            mi = std::min(params.getMaxCategories(), n);
             cjk = c_weights + _mi;
             cluster_labels = (int*)(cjk + m*mi);
             clusterCategories( _cjk, _mi, m, cjk, mi, cluster_labels );
@@ -1228,7 +1192,7 @@ int DTreesImpl::pruneCV( int root )
     // 2. choose the best tree index (if need, apply 1SE rule).
     // 3. store the best index and cut the branches.
 
-    int ti, tree_count = 0, j, cv_n = params.CVFolds, n = w->wnodes[root].sample_count;
+    int ti, tree_count = 0, j, cv_n = params.getCVFolds(), n = w->wnodes[root].sample_count;
     // currently, 1SE for regression is not implemented
     bool use_1se = params.use1SERule != 0 && _isClassifier;
     double min_err = 0, min_err_se = 0;
@@ -1294,7 +1258,7 @@ int DTreesImpl::pruneCV( int root )
 
 double DTreesImpl::updateTreeRNC( int root, double T, int fold )
 {
-    int nidx = root, pidx = -1, cv_n = params.CVFolds;
+    int nidx = root, pidx = -1, cv_n = params.getCVFolds();
     double min_alpha = DBL_MAX;
 
     for(;;)
@@ -1350,7 +1314,7 @@ double DTreesImpl::updateTreeRNC( int root, double T, int fold )
 
 bool DTreesImpl::cutTree( int root, double T, int fold, double min_alpha )
 {
-    int cv_n = params.CVFolds, nidx = root, pidx = -1;
+    int cv_n = params.getCVFolds(), nidx = root, pidx = -1;
     WNode* node = &w->wnodes[root];
     if( node->left < 0 )
         return true;
@@ -1560,19 +1524,19 @@ float DTreesImpl::predict( InputArray _samples, OutputArray _results, int flags 
 
 void DTreesImpl::writeTrainingParams(FileStorage& fs) const
 {
-    fs << "use_surrogates" << (params0.useSurrogates ? 1 : 0);
-    fs << "max_categories" << params0.maxCategories;
-    fs << "regression_accuracy" << params0.regressionAccuracy;
+    fs << "use_surrogates" << (params.useSurrogates ? 1 : 0);
+    fs << "max_categories" << params.getMaxCategories();
+    fs << "regression_accuracy" << params.getRegressionAccuracy();
 
-    fs << "max_depth" << params0.maxDepth;
-    fs << "min_sample_count" << params0.minSampleCount;
-    fs << "cross_validation_folds" << params0.CVFolds;
+    fs << "max_depth" << params.getMaxDepth();
+    fs << "min_sample_count" << params.getMinSampleCount();
+    fs << "cross_validation_folds" << params.getCVFolds();
 
-    if( params0.CVFolds > 1 )
-        fs << "use_1se_rule" << (params0.use1SERule ? 1 : 0);
+    if( params.getCVFolds() > 1 )
+        fs << "use_1se_rule" << (params.use1SERule ? 1 : 0);
 
-    if( !params0.priors.empty() )
-        fs << "priors" << params0.priors;
+    if( !params.priors.empty() )
+        fs << "priors" << params.priors;
 }
 
 void DTreesImpl::writeParams(FileStorage& fs) const
@@ -1724,18 +1688,18 @@ void DTreesImpl::readParams( const FileNode& fn )
 
     FileNode tparams_node = fn["training_params"];
 
-    params0 = Params();
+    TreeParams params0 = TreeParams();
 
     if( !tparams_node.empty() ) // training parameters are not necessary
     {
         params0.useSurrogates = (int)tparams_node["use_surrogates"] != 0;
-        params0.maxCategories = (int)(tparams_node["max_categories"].empty() ? 16 : tparams_node["max_categories"]);
-        params0.regressionAccuracy = (float)tparams_node["regression_accuracy"];
-        params0.maxDepth = (int)tparams_node["max_depth"];
-        params0.minSampleCount = (int)tparams_node["min_sample_count"];
-        params0.CVFolds = (int)tparams_node["cross_validation_folds"];
+        params0.setMaxCategories((int)(tparams_node["max_categories"].empty() ? 16 : tparams_node["max_categories"]));
+        params0.setRegressionAccuracy((float)tparams_node["regression_accuracy"]);
+        params0.setMaxDepth((int)tparams_node["max_depth"]);
+        params0.setMinSampleCount((int)tparams_node["min_sample_count"]);
+        params0.setCVFolds((int)tparams_node["cross_validation_folds"]);
 
-        if( params0.CVFolds > 1 )
+        if( params0.getCVFolds() > 1 )
         {
             params.use1SERule = (int)tparams_node["use_1se_rule"] != 0;
         }
@@ -1964,11 +1928,9 @@ void DTreesImpl::read( const FileNode& fn )
     readTree(fnodes);
 }
 
-Ptr<DTrees> DTrees::create(const DTrees::Params& params)
+Ptr<DTrees> DTrees::create()
 {
-    Ptr<DTreesImpl> p = makePtr<DTreesImpl>();
-    p->setDParams(params);
-    return p;
+    return makePtr<DTreesImpl>();
 }
 
 }
