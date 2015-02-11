@@ -45,6 +45,7 @@
 #ifdef HAVE_JASPER
 
 #include "grfmt_jpeg2000.hpp"
+#include "opencv2/imgproc.hpp"
 
 #ifdef WIN32
 #define JAS_WIN_MSVC_BUILD 1
@@ -159,6 +160,21 @@ bool  Jpeg2KDecoder::readData( Mat& img )
     jas_stream_t* stream = (jas_stream_t*)m_stream;
     jas_image_t* image = (jas_image_t*)m_image;
 
+#ifndef WIN32
+    // At least on some Linux instances the
+    // system libjasper segfaults when
+    // converting color to grey.
+    // We do this conversion manually at the end.
+    Mat clr;
+    if (CV_MAT_CN(img.type()) < CV_MAT_CN(this->type()))
+    {
+        clr.create(img.size().height, img.size().width, this->type());
+        color = true;
+        data = clr.ptr();
+        step = (int)clr.step;
+    }
+#endif
+
     if( stream && image )
     {
         bool convert;
@@ -171,7 +187,7 @@ bool  Jpeg2KDecoder::readData( Mat& img )
         else
         {
             convert = (jas_clrspc_fam( jas_image_clrspc( image ) ) != JAS_CLRSPC_FAM_GRAY);
-            colorspace = JAS_CLRSPC_SGRAY; // TODO GENGRAY or SGRAY?
+            colorspace = JAS_CLRSPC_SGRAY; // TODO GENGRAY or SGRAY? (GENGRAY fails on Win.)
         }
 
         // convert to the desired colorspace
@@ -255,6 +271,13 @@ bool  Jpeg2KDecoder::readData( Mat& img )
     }
 
     close();
+
+#ifndef WIN32
+    if (!clr.empty())
+    {
+        cv::cvtColor(clr, img, COLOR_BGR2GRAY);
+    }
+#endif
 
     return result;
 }
