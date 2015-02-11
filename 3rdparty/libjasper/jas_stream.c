@@ -365,10 +365,14 @@ jas_stream_t *jas_stream_tmpfile()
 
 #ifdef _WIN32
     /* Choose a file name. */
-    tmpnam(obj->pathname);
+    char lpTempPathBuffer[MAX_PATH];
+    const DWORD dwRetVal = GetTempPath(MAX_PATH, lpTempPathBuffer);
 
     /* Open the underlying file. */
-    if ((obj->fd = open(obj->pathname, O_CREAT | O_EXCL | O_RDWR | O_TRUNC | O_BINARY,
+    if (dwRetVal >= MAX_PATH || dwRetVal == 0 ||
+        sprintf_s(obj->pathname, MAX_PATH, "%s\\tmp.XXXXXXXXXX", lpTempPathBuffer) <= 0 ||
+        _mktemp_s(obj->pathname, MAX_PATH) ||
+        (obj->fd = open(obj->pathname, O_CREAT | O_EXCL | O_RDWR | O_TRUNC | O_BINARY | O_TEMPORARY | _O_SHORT_LIVED,
       JAS_STREAM_PERMS)) < 0) {
         jas_stream_destroy(stream);
         return 0;
