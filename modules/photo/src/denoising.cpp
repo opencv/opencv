@@ -65,17 +65,17 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
     switch (src.type()) {
         case CV_8U:
             parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<uchar>(
+                FastNlMeansDenoisingInvoker<uchar, int, unsigned int>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC2:
             parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<cv::Vec2b>(
+                FastNlMeansDenoisingInvoker<cv::Vec2b, int, unsigned int>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC3:
             parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<cv::Vec3b>(
+                FastNlMeansDenoisingInvoker<cv::Vec3b, int, unsigned int>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         default:
@@ -175,19 +175,19 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
     {
         case CV_8U:
             parallel_for_(cv::Range(0, srcImgs[0].rows),
-                FastNlMeansMultiDenoisingInvoker<uchar>(
+                FastNlMeansMultiDenoisingInvoker<uchar, int, unsigned int>(
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC2:
             parallel_for_(cv::Range(0, srcImgs[0].rows),
-                FastNlMeansMultiDenoisingInvoker<cv::Vec2b>(
+                FastNlMeansMultiDenoisingInvoker<cv::Vec2b, int, unsigned int>(
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC3:
             parallel_for_(cv::Range(0, srcImgs[0].rows),
-                FastNlMeansMultiDenoisingInvoker<cv::Vec3b>(
+                FastNlMeansMultiDenoisingInvoker<cv::Vec3b, int, unsigned int>(
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
