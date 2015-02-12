@@ -44,118 +44,152 @@
 
 using namespace cv;
 
-template <typename T> static inline int calcDist(const T a, const T b);
-
-template <> inline int calcDist(const uchar a, const uchar b)
+template <typename T, typename IT> struct calcDist_
 {
-    return (a-b) * (a-b);
+    static inline IT f(const T a, const T b);
+};
+
+template <typename IT> struct calcDist_<uchar, IT>
+{
+    static inline IT f(uchar a, uchar b)
+    {
+        return (IT)(a-b) * (IT)(a-b);
+    }
+};
+
+template <typename IT> struct calcDist_<Vec2b, IT>
+{
+    static inline IT f(const Vec2b a, const Vec2b b)
+    {
+        return (IT)(a[0]-b[0])*(IT)(a[0]-b[0]) + (IT)(a[1]-b[1])*(IT)(a[1]-b[1]);
+    }
+};
+
+template <typename IT> struct calcDist_<Vec3b, IT>
+{
+    static inline IT f(const Vec3b a, const Vec3b b)
+    {
+        return
+            (IT)(a[0]-b[0])*(IT)(a[0]-b[0]) +
+            (IT)(a[1]-b[1])*(IT)(a[1]-b[1]) +
+            (IT)(a[2]-b[2])*(IT)(a[2]-b[2]);
+    }
+};
+
+template <typename T, typename IT> static inline IT calcDist(const T a, const T b)
+{
+    return calcDist_<T, IT>::f(a, b);
 }
 
-template <> inline int calcDist(const Vec2b a, const Vec2b b)
-{
-    return (a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]);
-}
-
-template <> inline int calcDist(const Vec3b a, const Vec3b b)
-{
-    return (a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]) + (a[2]-b[2])*(a[2]-b[2]);
-}
-
-template <typename T> static inline int calcDist(const Mat& m, int i1, int j1, int i2, int j2)
+template <typename T, typename IT>
+static inline IT calcDist(const Mat& m, int i1, int j1, int i2, int j2)
 {
     const T a = m.at<T>(i1, j1);
     const T b = m.at<T>(i2, j2);
-    return calcDist<T>(a,b);
+    return calcDist<T, IT>(a,b);
 }
 
-template <typename T> static inline int calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
+template <typename T, typename IT> struct calcUpDownDist_
 {
-    return calcDist(a_down, b_down) - calcDist(a_up, b_up);
+    static inline IT f(T a_up, T a_down, T b_up, T b_down)
+    {
+        return calcDist<T, IT>(a_down, b_down) - calcDist<T, IT>(a_up, b_up);
+    }
+};
+
+template <typename IT> struct calcUpDownDist_<uchar, IT>
+{
+    static inline IT f(uchar a_up, uchar a_down, uchar b_up, uchar b_down)
+    {
+        IT A = a_down - b_down;
+        IT B = a_up - b_up;
+        return (A-B)*(A+B);
+    }
+};
+
+template <typename T, typename IT>
+static inline IT calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
+{
+    return calcUpDownDist_<T, IT>::f(a_up, a_down, b_up, b_down);
+};
+
+template <typename T, typename IT> struct incWithWeight_
+{
+    static inline void f(IT* estimation, IT weight, T p);
+};
+
+template <typename IT> struct incWithWeight_<uchar, IT>
+{
+    static inline void f(IT* estimation, IT weight, uchar p)
+    {
+        estimation[0] += weight * p;
+    }
+};
+
+template <typename IT> struct incWithWeight_<Vec2b, IT>
+{
+    static inline void f(IT* estimation, IT weight, Vec2b p)
+    {
+        estimation[0] += weight * p[0];
+        estimation[1] += weight * p[1];
+    }
+};
+
+template <typename IT> struct incWithWeight_<Vec3b, IT>
+{
+    static inline void f(IT* estimation, IT weight, Vec3b p)
+    {
+        estimation[0] += weight * p[0];
+        estimation[1] += weight * p[1];
+        estimation[2] += weight * p[2];
+    }
+};
+
+template <typename T, typename IT>
+static inline void incWithWeight(IT* estimation, IT weight, T p)
+{
+    return incWithWeight_<T, IT>::f(estimation, weight, p);
 }
 
-template <> inline int calcUpDownDist(uchar a_up, uchar a_down, uchar  b_up, uchar b_down)
+template <typename T, typename IT> struct saturateCastFromArray_
 {
-    int A = a_down - b_down;
-    int B = a_up - b_up;
-    return (A-B)*(A+B);
-}
+    static inline T f(IT* estimation);
+};
 
-template <typename T> static inline void incWithWeight(int* estimation, int weight, T p);
-
-template <> inline void incWithWeight(int* estimation, int weight, uchar p)
+template <typename IT> struct saturateCastFromArray_<uchar, IT>
 {
-    estimation[0] += weight * p;
-}
+    static inline uchar f(IT* estimation)
+    {
+        return saturate_cast<uchar>(estimation[0]);
+    }
+};
 
-template <> inline void incWithWeight(int* estimation, int weight, Vec2b p)
+template <typename IT> struct saturateCastFromArray_<Vec2b, IT>
 {
-    estimation[0] += weight * p[0];
-    estimation[1] += weight * p[1];
-}
+    static inline Vec2b f(IT* estimation)
+    {
+        Vec2b res;
+        res[0] = saturate_cast<uchar>(estimation[0]);
+        res[1] = saturate_cast<uchar>(estimation[1]);
+        return res;
+    }
+};
 
-template <> inline void incWithWeight(int* estimation, int weight, Vec3b p)
+template <typename IT> struct saturateCastFromArray_<Vec3b, IT>
 {
-    estimation[0] += weight * p[0];
-    estimation[1] += weight * p[1];
-    estimation[2] += weight * p[2];
-}
+    static inline Vec3b f(IT* estimation)
+    {
+        Vec3b res;
+        res[0] = saturate_cast<uchar>(estimation[0]);
+        res[1] = saturate_cast<uchar>(estimation[1]);
+        res[2] = saturate_cast<uchar>(estimation[2]);
+        return res;
+    }
+};
 
-template <> inline void incWithWeight(int* estimation, int weight, int p)
+template <typename T, typename IT> static inline T saturateCastFromArray(IT* estimation)
 {
-    estimation[0] += weight * p;
-}
-
-template <> inline void incWithWeight(int* estimation, int weight, Vec2i p)
-{
-    estimation[0] += weight * p[0];
-    estimation[1] += weight * p[1];
-}
-
-template <> inline void incWithWeight(int* estimation, int weight, Vec3i p)
-{
-    estimation[0] += weight * p[0];
-    estimation[1] += weight * p[1];
-    estimation[2] += weight * p[2];
-}
-
-template <typename T> static inline T saturateCastFromArray(int* estimation);
-
-template <> inline uchar saturateCastFromArray(int* estimation)
-{
-    return saturate_cast<uchar>(estimation[0]);
-}
-
-template <> inline Vec2b saturateCastFromArray(int* estimation)
-{
-    Vec2b res;
-    res[0] = saturate_cast<uchar>(estimation[0]);
-    res[1] = saturate_cast<uchar>(estimation[1]);
-    return res;
-}
-
-template <> inline Vec3b saturateCastFromArray(int* estimation)
-{
-    Vec3b res;
-    res[0] = saturate_cast<uchar>(estimation[0]);
-    res[1] = saturate_cast<uchar>(estimation[1]);
-    res[2] = saturate_cast<uchar>(estimation[2]);
-    return res;
-}
-
-template <> inline int saturateCastFromArray(int* estimation)
-{
-    return estimation[0];
-}
-
-template <> inline Vec2i saturateCastFromArray(int* estimation)
-{
-    estimation[1] = 0;
-    return Vec2i(estimation);
-}
-
-template <> inline Vec3i saturateCastFromArray(int* estimation)
-{
-    return Vec3i(estimation);
+    return saturateCastFromArray_<T, IT>::f(estimation);
 }
 
 #endif
