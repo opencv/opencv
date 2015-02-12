@@ -107,7 +107,7 @@ FastNlMeansDenoisingInvoker<T, IT, UIT>::FastNlMeansDenoisingInvoker(
     const float h) :
     src_(src), dst_(dst)
 {
-    CV_Assert(src.channels() == sizeof(T)); //T is Vec1b or Vec2b or Vec3b
+    CV_Assert(src.channels() == pixelInfo<T>::channels);
 
     template_window_half_size_ = template_window_size / 2;
     search_window_half_size_   = search_window_size   / 2;
@@ -117,17 +117,21 @@ FastNlMeansDenoisingInvoker<T, IT, UIT>::FastNlMeansDenoisingInvoker(
     border_size_ = search_window_half_size_ + template_window_half_size_;
     copyMakeBorder(src_, extended_src_, border_size_, border_size_, border_size_, border_size_, BORDER_DEFAULT);
 
-    const IT max_estimate_sum_value = (IT)search_window_size_ * (IT)search_window_size_ * 255;
+    const IT max_estimate_sum_value =
+        (IT)search_window_size_ * (IT)search_window_size_ * (IT)pixelInfo<T>::sampleMax();
     fixed_point_mult_ = std::numeric_limits<IT>::max() / max_estimate_sum_value;
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
+    // squared distances are truncated to 16 bits to get a reasonable table size
     CV_Assert(template_window_size_ <= 46340); // sqrt(INT_MAX)
     int template_window_size_sq = template_window_size_ * template_window_size_;
-    almost_template_window_size_sq_bin_shift_ = getNearestPowerOf2(template_window_size_sq);
+    almost_template_window_size_sq_bin_shift_ =
+        getNearestPowerOf2(template_window_size_sq) + 2*pixelInfo<T>::sampleBits() - 16;
     double almost_dist2actual_dist_multiplier = ((double)(1 << almost_template_window_size_sq_bin_shift_)) / template_window_size_sq;
 
-    IT max_dist = 255 * 255 * sizeof(T);
+    IT max_dist =
+        (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
     int almost_max_dist = (int)(max_dist / almost_dist2actual_dist_multiplier + 1);
     almost_dist2weight_.resize(almost_max_dist);
 
