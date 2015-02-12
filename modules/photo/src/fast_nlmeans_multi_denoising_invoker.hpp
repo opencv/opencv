@@ -106,7 +106,7 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
         dst_(dst), extended_srcs_(srcImgs.size())
 {
     CV_Assert(srcImgs.size() > 0);
-    CV_Assert(srcImgs[0].channels() == sizeof(T));
+    CV_Assert(srcImgs[0].channels() == pixelInfo<T>::channels);
 
     rows_ = srcImgs[0].rows;
     cols_ = srcImgs[0].cols;
@@ -126,20 +126,23 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
 
     main_extended_src_ = extended_srcs_[temporal_window_half_size_];
     const IT max_estimate_sum_value =
-        (IT)temporal_window_size_ * (IT)search_window_size_ * (IT)search_window_size_ * 255;
+        (IT)temporal_window_size_ * (IT)search_window_size_ * (IT)search_window_size_ * (IT)pixelInfo<T>::sampleMax();
     fixed_point_mult_ = std::numeric_limits<IT>::max() / max_estimate_sum_value;
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
+    // squared distances are truncated to 16 bits to get a reasonable table size
     int template_window_size_sq = template_window_size_ * template_window_size_;
     almost_template_window_size_sq_bin_shift = 0;
     while (1 << almost_template_window_size_sq_bin_shift < template_window_size_sq)
         almost_template_window_size_sq_bin_shift++;
+    almost_template_window_size_sq_bin_shift += 2*pixelInfo<T>::sampleBits() - 16;
 
     int almost_template_window_size_sq = 1 << almost_template_window_size_sq_bin_shift;
     double almost_dist2actual_dist_multiplier = (double) almost_template_window_size_sq / template_window_size_sq;
 
-    IT max_dist = 255 * 255 * sizeof(T);
+    IT max_dist =
+        (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
     int almost_max_dist = (int) (max_dist / almost_dist2actual_dist_multiplier + 1);
     almost_dist2weight.resize(almost_max_dist);
 
