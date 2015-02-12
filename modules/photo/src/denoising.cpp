@@ -65,17 +65,32 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
     switch (src.type()) {
         case CV_8U:
             parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<uchar, int, unsigned int>(
+                FastNlMeansDenoisingInvoker<uchar, int, unsigned>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC2:
             parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<cv::Vec2b, int, unsigned int>(
+                FastNlMeansDenoisingInvoker<cv::Vec2b, int, unsigned>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC3:
             parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<cv::Vec3b, int, unsigned int>(
+                FastNlMeansDenoisingInvoker<cv::Vec3b, int, unsigned>(
+                    src, dst, templateWindowSize, searchWindowSize, h));
+            break;
+        case CV_16U:
+            parallel_for_(cv::Range(0, src.rows),
+                FastNlMeansDenoisingInvoker<unsigned short, int64, uint64>(
+                    src, dst, templateWindowSize, searchWindowSize, h));
+            break;
+        case CV_16UC2:
+            parallel_for_(cv::Range(0, src.rows),
+                FastNlMeansDenoisingInvoker<cv::Vec<ushort, 2>, int64, uint64>(
+                    src, dst, templateWindowSize, searchWindowSize, h));
+            break;
+        case CV_16UC3:
+            parallel_for_(cv::Range(0, src.rows),
+                FastNlMeansDenoisingInvoker<cv::Vec<ushort, 3>, int64, uint64>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         default:
@@ -181,13 +196,31 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
             break;
         case CV_8UC2:
             parallel_for_(cv::Range(0, srcImgs[0].rows),
-                FastNlMeansMultiDenoisingInvoker<cv::Vec2b, int, unsigned int>(
+                FastNlMeansMultiDenoisingInvoker<cv::Vec2b, int, unsigned>(
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC3:
             parallel_for_(cv::Range(0, srcImgs[0].rows),
-                FastNlMeansMultiDenoisingInvoker<cv::Vec3b, int, unsigned int>(
+                FastNlMeansMultiDenoisingInvoker<cv::Vec3b, int, unsigned>(
+                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                    dst, templateWindowSize, searchWindowSize, h));
+            break;
+        case CV_16U:
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
+                FastNlMeansMultiDenoisingInvoker<ushort, int64, uint64>(
+                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                    dst, templateWindowSize, searchWindowSize, h));
+            break;
+        case CV_16UC2:
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
+                FastNlMeansMultiDenoisingInvoker<cv::Vec<ushort, 2>, int64, uint64>(
+                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                    dst, templateWindowSize, searchWindowSize, h));
+            break;
+        case CV_16UC3:
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
+                FastNlMeansMultiDenoisingInvoker<cv::Vec<ushort, 3>, int64, uint64>(
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
