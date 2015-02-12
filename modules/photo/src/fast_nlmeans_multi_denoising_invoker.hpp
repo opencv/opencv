@@ -131,12 +131,15 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
-    // squared distances are truncated to 16 bits to get a reasonable table size
+    // squared distances are truncated to 24 bits to avoid unreasonable table sizes
+    // TODO: uses lots of memory and loses precision wtih 16-bit images ????
+    const size_t TABLE_MAX_BITS = 24;
     int template_window_size_sq = template_window_size_ * template_window_size_;
     almost_template_window_size_sq_bin_shift = 0;
     while (1 << almost_template_window_size_sq_bin_shift < template_window_size_sq)
         almost_template_window_size_sq_bin_shift++;
-    almost_template_window_size_sq_bin_shift += 2*pixelInfo<T>::sampleBits() - 16;
+    almost_template_window_size_sq_bin_shift +=
+        std::max(2*pixelInfo<T>::sampleBits(), TABLE_MAX_BITS) - TABLE_MAX_BITS;
 
     int almost_template_window_size_sq = 1 << almost_template_window_size_sq_bin_shift;
     double almost_dist2actual_dist_multiplier = (double) almost_template_window_size_sq / template_window_size_sq;
@@ -150,7 +153,7 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
     for (int almost_dist = 0; almost_dist < almost_max_dist; almost_dist++)
     {
         double dist = almost_dist * almost_dist2actual_dist_multiplier;
-        IT weight = (IT)round(fixed_point_mult_ * std::exp(-dist / (h * h * sizeof(T))));
+        IT weight = (IT)round(fixed_point_mult_ * std::exp(-dist / (h * h * pixelInfo<T>::channels)));
 
         if (weight < WEIGHT_THRESHOLD * fixed_point_mult_)
             weight = 0;
@@ -254,7 +257,7 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::operator() (const Range& rang
             IT weights_sum = 0;
 
             IT estimation[3];
-            for (size_t channel_num = 0; channel_num < sizeof(T); channel_num++)
+            for (size_t channel_num = 0; channel_num < pixelInfo<T>::channels; channel_num++)
                 estimation[channel_num] = 0;
 
             for (int d = 0; d < temporal_window_size_; d++)
@@ -279,8 +282,8 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::operator() (const Range& rang
                 }
             }
 
-            for (size_t channel_num = 0; channel_num < sizeof(T); channel_num++)
-                estimation[channel_num] = (static_cast<UIT>(estimation[channel_num]) + weights_sum / 2) / weights_sum; // ????
+            for (size_t channel_num = 0; channel_num < pixelInfo<T>::channels; channel_num++)
+                estimation[channel_num] = (static_cast<UIT>(estimation[channel_num]) + weights_sum / 2) / weights_sum;
 
             dst_.at<T>(i,j) = saturateCastFromArray<T, IT>(estimation);
 
