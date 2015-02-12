@@ -87,6 +87,9 @@ TEST(Imgcodecs_imread, regression)
 {
     const char* const filenames[] =
     {
+#ifdef HAVE_JASPER
+        "Rome.jp2",
+#endif
         "color_palette_alpha.png",
         "multipage.tif",
         "rle.hdr",
@@ -108,6 +111,16 @@ TEST(Imgcodecs_imread, regression)
             ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_LOAD_GDAL));
     }
 }
+
+#ifdef HAVE_JASPER
+TEST(Imgcodecs_jasper, regression)
+{
+    const string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
+
+    ASSERT_TRUE(imread_compare(folder + "Bretagne2.jp2", IMREAD_UNCHANGED));
+    ASSERT_TRUE(imread_compare(folder + "Bretagne2.jp2", IMREAD_GRAYSCALE));
+}
+#endif
 
 class CV_GrfmtWriteBigImageTest : public cvtest::BaseTest
 {
