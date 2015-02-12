@@ -2,7 +2,11 @@
 #  CMake file for OpenCV docs
 #-----------------------
 
-set(HAVE_DOC_GENERATOR BUILD_DOCS AND (HAVE_SPHINX OR HAVE_DOXYGEN))
+if(BUILD_DOCS AND (HAVE_SPHINX OR HAVE_DOXYGEN))
+  set(HAVE_DOC_GENERATOR TRUE)
+else()
+  set(HAVE_DOC_GENERATOR FALSE)
+endif()
 
 if(HAVE_DOC_GENERATOR)
   project(opencv_docs)
