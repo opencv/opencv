@@ -123,31 +123,28 @@ FastNlMeansDenoisingInvoker<T, IT, UIT>::FastNlMeansDenoisingInvoker(
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
-    // squared distances are truncated to 24 bits to avoid unreasonable table sizes
-    // TODO: uses lots of memory and loses precision wtih 16-bit images ????
-    const size_t TABLE_MAX_BITS = 24;
     CV_Assert(template_window_size_ <= 46340); // sqrt(INT_MAX)
     int template_window_size_sq = template_window_size_ * template_window_size_;
-    almost_template_window_size_sq_bin_shift_ = getNearestPowerOf2(template_window_size_sq) +
-        std::max(2*pixelInfo<T>::sampleBits(), TABLE_MAX_BITS) - TABLE_MAX_BITS;
+    almost_template_window_size_sq_bin_shift_ = getNearestPowerOf2(template_window_size_sq);
     double almost_dist2actual_dist_multiplier = ((double)(1 << almost_template_window_size_sq_bin_shift_)) / template_window_size_sq;
 
+    const double WEIGHT_THRESHOLD = 0.001;
+    const size_t ALLOC_CHUNK = 65536;
     IT max_dist =
         (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
-    int almost_max_dist = (int)(max_dist / almost_dist2actual_dist_multiplier + 1);
-    almost_dist2weight_.resize(almost_max_dist);
-
-    const double WEIGHT_THRESHOLD = 0.001;
-    for (int almost_dist = 0; almost_dist < almost_max_dist; almost_dist++)
+    int almost_max_dist = 0;
+    while (true)
     {
-        double dist = almost_dist * almost_dist2actual_dist_multiplier;
+        double dist = almost_max_dist * almost_dist2actual_dist_multiplier;
         IT weight = (IT)round(fixed_point_mult_ * std::exp(-dist / (h * h * pixelInfo<T>::channels)));
+        if (weight < WEIGHT_THRESHOLD * fixed_point_mult_ || dist > max_dist) break;
 
-        if (weight < WEIGHT_THRESHOLD * fixed_point_mult_)
-            weight = 0;
+        if (almost_max_dist >= almost_dist2weight_.size())
+            almost_dist2weight_.resize(almost_max_dist + ALLOC_CHUNK);
 
-        almost_dist2weight_[almost_dist] = weight;
+        almost_dist2weight_[almost_max_dist++] = weight;
     }
+    almost_dist2weight_.resize(almost_max_dist);
     CV_Assert(almost_dist2weight_[0] == fixed_point_mult_);
 
     // additional optimization init end
@@ -160,6 +157,8 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT>::operator() (const Range& range) co
 {
     int row_from = range.start;
     int row_to = range.end - 1;
+
+    int almost_max_dist = almost_dist2weight_.size();
 
     // sums of cols anf rows for current pixel p
     Array2d<IT> dist_sums(search_window_size_, search_window_size_);
@@ -244,7 +243,8 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT>::operator() (const Range& range) co
                 for (int x = 0; x < search_window_size_; x++)
                 {
                     int almostAvgDist = (int)(dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_);
-                    IT weight = almost_dist2weight_[almostAvgDist];
+                    IT weight =
+                        almostAvgDist < almost_max_dist ? almost_dist2weight_[almostAvgDist] : 0;
                     weights_sum += weight;
 
                     T p = cur_row_ptr[border_size_ + search_window_x + x];
