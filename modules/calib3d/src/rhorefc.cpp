@@ -56,7 +56,6 @@
 #include <vector>
 #include "rhorefc.h"
 
-
 /* Defines */
 const int    MEM_ALIGN              = 32;
 const size_t HSIZE                  = (3*3*sizeof(float));
@@ -613,15 +612,10 @@ unsigned RHO_HEST_REFC::rhoRefC(const float*   src,     /* Source points */
      * PROSAC Loop
      */
 
-<<<<<<< HEAD
-    for(p->ctrl.i=0; p->ctrl.i < p->arg.maxI || p->ctrl.i<100; p->ctrl.i++){
-        sacHypothesize(p) && sacVerify(p);
-=======
-    for(ctrl.i=0; ctrl.i < arg.maxI; ctrl.i++){
+    for(ctrl.i=0; ctrl.i < arg.maxI || ctrl.i < 100; ctrl.i++){
         hypothesize() && verify();
->>>>>>> ff2509af56bb694c07edd80eb102e5e1edff41c3
-    }
 
+    }
 
     /**
      * Teardown
@@ -631,9 +625,10 @@ unsigned RHO_HEST_REFC::rhoRefC(const float*   src,     /* Source points */
         refine();
     }
 
-    outputModel();
-    finiRun();
+    outputModel();    
+    finiRun();   
     return isBestModelGoodEnough() ? best.numInl : 0;
+
 }
 
 
@@ -661,7 +656,7 @@ inline int    RHO_HEST_REFC::initRun(void){
         /* Arguments src or dst are insane, must be != NULL */
         return 0;
     }
-    if(arg.N < SMPL_SIZE){
+    if(arg.N < (unsigned)SMPL_SIZE){
         /* Argument N is insane, must be >= 4. */
         return 0;
     }
@@ -674,7 +669,7 @@ inline int    RHO_HEST_REFC::initRun(void){
         return 0;
     }
     /* Clamp minInl to 4 or higher. */
-    arg.minInl = arg.minInl < SMPL_SIZE ? SMPL_SIZE : arg.minInl;
+    arg.minInl = arg.minInl < (unsigned)SMPL_SIZE ? SMPL_SIZE : arg.minInl;
     if(isNREnabled() && (arg.beta <= 0 || arg.beta >= 1)){
         /* Argument beta is insane, must be in (0, 1). */
         return 0;
@@ -868,6 +863,7 @@ inline int    RHO_HEST_REFC::verify(void){
         if(isNREnabled()){
             nStarOptimize();
         }
+
     }
 
     return 1;
@@ -1064,34 +1060,8 @@ inline int    RHO_HEST_REFC::isSampleDegenerate(void){
  * current homography.
  */
 
-<<<<<<< HEAD
-static inline void   sacGenerateModel(RHO_HEST_REFC* p){
-#if 1
-    hFuncRefC(p->curr.pkdPts, p->curr.H);
-#else
-    int mm = 4;
-    cv::Mat _H(3,3,CV_32FC1);
-    std::vector<cv::Point2f> _srcPoints(mm,cv::Point2f());
-    std::vector<cv::Point2f> _dstPoints(mm,cv::Point2f());
-    for (int i=0 ; i< mm ; i++){
-        cv::Point2f tempPoint2f(p->curr.pkdPts[2*i], p->curr.pkdPts[2*i+1]);
-        _srcPoints[i] = tempPoint2f;
-        tempPoint2f=cv::Point2f((float)p->curr.pkdPts[2*i+8],(float) p->curr.pkdPts[2*i+9]);
-        _dstPoints[i] = tempPoint2f;
-    }
-
-    _H = cv::findHomography(_srcPoints, _dstPoints,0,3);
-    double* data = (double*) _H.data;
-
-    p->curr.H[0]=data[0];   p->curr.H[1]=data[1];   p->curr.H[2]=data[2];
-    p->curr.H[3]=data[3];   p->curr.H[4]=data[4];   p->curr.H[5]=data[5];
-    p->curr.H[6]=data[6];   p->curr.H[7]=data[7];   p->curr.H[8]=1.0;
-
-#endif
-=======
 inline void   RHO_HEST_REFC::generateModel(void){
     hFuncRefC(curr.pkdPts, curr.H);
->>>>>>> ff2509af56bb694c07edd80eb102e5e1edff41c3
 }
 
 /**
@@ -1306,25 +1276,6 @@ inline int    RHO_HEST_REFC::isBestModelGoodEnough(void){
  * and count of inliers between the current and best models.
  */
 
-<<<<<<< HEAD
-static inline void   sacSaveBestModel(RHO_HEST_REFC* p){
-
-    memcpy(p->best.H, p->curr.H, HSIZE);
-    memcpy(p->best.inl, p->curr.inl, p->arg.N);
-    p->best.numInl = p->curr.numInl;
-
-//    float*   H      = p->curr.H;
-//    char*    inl    = p->curr.inl;
-//    unsigned numInl = p->curr.numInl;
-
-//    p->curr.H       = p->best.H;
-//    p->curr.inl     = p->best.inl;
-//    p->curr.numInl  = p->best.numInl;
-
-//    p->best.H       = H;
-//    p->best.inl     = inl;
-//    p->best.numInl  = numInl;
-=======
 inline void   RHO_HEST_REFC::saveBestModel(void){
     float*   H      = curr.H;
     char*    inl    = curr.inl;
@@ -1337,7 +1288,6 @@ inline void   RHO_HEST_REFC::saveBestModel(void){
     best.H       = H;
     best.inl     = inl;
     best.numInl  = numInl;
->>>>>>> ff2509af56bb694c07edd80eb102e5e1edff41c3
 }
 
 /**
@@ -1398,7 +1348,7 @@ inline void   RHO_HEST_REFC::nStarOptimize(void){
  */
 
 inline void   RHO_HEST_REFC::updateBounds(void){
-    arg.maxI = sacCalcIterBound(arg.cfd,
+    arg.maxI = sacCalcIterBound(arg.cfd,                                
                                 (double)best.numInl/arg.N,
                                 SMPL_SIZE,
                                 arg.maxI);
@@ -1411,7 +1361,7 @@ inline void   RHO_HEST_REFC::updateBounds(void){
 inline void   RHO_HEST_REFC::outputModel(void){
     if(isBestModelGoodEnough()){
         memcpy(arg.finalH, best.H, HSIZE);
-        if(arg.inl != best.inl){
+        if(arg.inl && arg.inl != best.inl){
             memcpy(arg.inl, best.inl, arg.N);
         }
     }else{
@@ -1832,7 +1782,7 @@ inline int    RHO_HEST_REFC::canRefine(void){
      * be refined any further.
      */
 
-    return best.numInl > SMPL_SIZE;
+    return best.numInl > (unsigned)SMPL_SIZE;
 }
 
 /**
@@ -1851,7 +1801,7 @@ inline void   RHO_HEST_REFC::refine(void){
      */
 
     /* Find initial conditions */
-    sacCalcJacobianErrors(best.H, arg.src, arg.dst, arg.inl, arg.N,
+    sacCalcJacobianErrors(best.H, arg.src, arg.dst, best.inl, arg.N,
                           lm.JtJ, lm.Jte,  &S);
 
     /*Levenberg-Marquardt Loop.*/
@@ -1883,7 +1833,7 @@ inline void   RHO_HEST_REFC::refine(void){
         sacTRInv8x8   (lm.tmp1, lm.tmp1);
         sacTRISolve8x8(lm.tmp1, lm.Jte,  dH);
         sacSub8x1     (newH,       best.H,  dH);
-        sacCalcJacobianErrors(newH, arg.src, arg.dst, arg.inl, arg.N,
+        sacCalcJacobianErrors(newH, arg.src, arg.dst, best.inl, arg.N,
                               NULL, NULL, &newS);
         gain = sacLMGain(dH, lm.Jte, S, newS, L);
         /*printf("Lambda: %12.6f  S: %12.6f  newS: %12.6f  Gain: %12.6f\n",
@@ -1911,7 +1861,7 @@ inline void   RHO_HEST_REFC::refine(void){
         if(gain > 0){
             S = newS;
             memcpy(best.H, newH, sizeof(newH));
-            sacCalcJacobianErrors(best.H, arg.src, arg.dst, arg.inl, arg.N,
+            sacCalcJacobianErrors(best.H, arg.src, arg.dst, best.inl, arg.N,
                                   lm.JtJ, lm.Jte,  &S);
         }
     }
