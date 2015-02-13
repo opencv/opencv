@@ -398,7 +398,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
     {
         tempMask = Mat::ones(npoints, 1, CV_8U);
         result = cb->runKernel(src, dst, H) > 0;
-    }   
+    }
     else if( method == RANSAC)
         result = createRANSACPointSetRegistrator(cb, 4, ransacReprojThreshold, confidence, maxIters)->run(src, dst, H, tempMask);
     else if( method == LMEDS )
