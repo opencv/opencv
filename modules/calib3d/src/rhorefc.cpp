@@ -1799,7 +1799,6 @@ inline void   RHO_HEST_REFC::refine(void){
     /**
      * Iteratively refine the homography.
      */
-
     /* Find initial conditions */
     sacCalcJacobianErrors(best.H, arg.src, arg.dst, best.inl, arg.N,
                           lm.JtJ, lm.Jte,  &S);
