@@ -253,7 +253,7 @@ void cv::Affine3<T>::rotation(const Vec3& _rvec)
         double c = std::cos(theta);
         double s = std::sin(theta);
         double c1 = 1. - c;
-        double itheta = theta ? 1./theta : 0.;
+        double itheta = (theta != 0) ? 1./theta : 0.;
 
         rx *= itheta; ry *= itheta; rz *= itheta;
 
