@@ -624,11 +624,9 @@ unsigned RHO_HEST_REFC::rhoRefC(const float*   src,     /* Source points */
     if(isFinalRefineEnabled() && canRefine()){
         refine();
     }
-
     outputModel();    
     finiRun();   
     return isBestModelGoodEnough() ? best.numInl : 0;
-
 }
 
 
