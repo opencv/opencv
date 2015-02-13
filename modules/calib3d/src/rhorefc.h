@@ -56,22 +56,12 @@
 
 
 /* Defines */
-#ifdef __cplusplus
 
 /* C++ does not have the restrict keyword. */
 #ifdef restrict
 #undef restrict
 #endif
 #define restrict
-
-#else
-
-/* C99 and over has the restrict keyword. */
-#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
-#define restrict
-#endif
-
-#endif
 
 
 /* Flags */
@@ -90,101 +80,17 @@
 
 
 
+/* Namespace cv */
+namespace cv{
+
 /* Data structures */
 
 /**
  * Homography Estimation context.
  */
 
-typedef struct{
-    /**
-     * Virtual Arguments.
-     *
-     * Exactly the same as at function call, except:
-     * - minInl is enforced to be >= 4.
-     */
-
-    struct{
-        const float* restrict src;
-        const float* restrict dst;
-        char*        restrict inl;
-        unsigned              N;
-        float                 maxD;
-        unsigned              maxI;
-        unsigned              rConvg;
-        double                cfd;
-        unsigned              minInl;
-        double                beta;
-        unsigned              flags;
-        const float*          guessH;
-        float*                finalH;
-    } arg;
-
-    /* PROSAC Control */
-    struct{
-        unsigned           i;               /* Iteration Number */
-        unsigned           phNum;           /* Phase Number */
-        unsigned           phEndI;          /* Phase End Iteration */
-        double             phEndFpI;        /* Phase floating-point End Iteration */
-        unsigned           phMax;           /* Termination phase number */
-        unsigned           phNumInl;        /* Number of inliers for termination phase */
-        unsigned           numModels;       /* Number of models tested */
-        unsigned* restrict smpl;            /* Sample of match indexes */
-    } ctrl;
-
-    /* Current model being tested */
-    struct{
-        float*    restrict pkdPts;          /* Packed points */
-        float*    restrict H;               /* Homography */
-        char*     restrict inl;             /* Mask of inliers */
-        unsigned           numInl;          /* Number of inliers */
-    } curr;
-
-    /* Best model (so far) */
-    struct{
-        float*    restrict H;               /* Homography */
-        char*     restrict inl;             /* Mask of inliers */
-        unsigned           numInl;          /* Number of inliers */
-    } best;
-
-    /* Non-randomness criterion */
-    struct{
-        unsigned* restrict tbl;             /* Non-Randomness: Table */
-        unsigned           size;            /* Non-Randomness: Size */
-        double             beta;            /* Non-Randomness: Beta */
-    } nr;
-
-    /* SPRT Evaluator */
-    struct{
-        double             t_M;             /* t_M */
-        double             m_S;             /* m_S */
-        double             epsilon;         /* Epsilon */
-        double             delta;           /* delta */
-        double             A;               /* SPRT Threshold */
-        unsigned           Ntested;         /* Number of points tested */
-        unsigned           Ntestedtotal;    /* Number of points tested in total */
-        int                good;            /* Good/bad flag */
-        double             lambdaAccept;    /* Accept multiplier */
-        double             lambdaReject;    /* Reject multiplier */
-    } eval;
-
-    /* Levenberg-Marquardt Refinement */
-    struct{
-        float*             ws;              /* Levenberg-Marqhard Workspace */
-        float  (* restrict JtJ)[8];         /* JtJ matrix */
-        float  (* restrict tmp1)[8];        /* Temporary 1 */
-        float*    restrict Jte;             /* Jte vector */
-    } lm;
-} RHO_HEST_REFC;
-
-
-
-/* Extern C */
-#ifdef __cplusplus
-namespace cv{
-/* extern "C" { */
-#endif
-
+struct RHO_HEST_REFC;
+typedef struct RHO_HEST_REFC RHO_HEST_REFC;
 
 
 /* Functions */
@@ -193,11 +99,10 @@ namespace cv{
  * Initialize the estimator context, by allocating the aligned buffers
  * internally needed.
  *
- * @param [in/out] p  The uninitialized estimator context to initialize.
- * @return 0 if successful; non-zero if an error occured.
+ * @return A pointer to the context if successful; NULL if an error occured.
  */
 
-int  rhoRefCInit(RHO_HEST_REFC* p);
+RHO_HEST_REFC* rhoRefCInit(void);
 
 
 /**
@@ -355,11 +260,8 @@ unsigned rhoRefC(RHO_HEST_REFC* restrict p,       /* Homography estimation conte
 
 
 
-/* Extern C */
-#ifdef __cplusplus
-/* } *//* End extern "C" */
+/* End Namespace cv */
 }
-#endif
 
 
 
