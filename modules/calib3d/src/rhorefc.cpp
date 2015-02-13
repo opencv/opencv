@@ -1346,7 +1346,7 @@ inline void   RHO_HEST_REFC::nStarOptimize(void){
  */
 
 inline void   RHO_HEST_REFC::updateBounds(void){
-    arg.maxI = sacCalcIterBound(arg.cfd,                    
+    arg.maxI = sacCalcIterBound(arg.cfd,
                                 (double)best.numInl/arg.N,
                                 SMPL_SIZE,
                                 arg.maxI);
