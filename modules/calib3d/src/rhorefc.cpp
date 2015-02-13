@@ -55,7 +55,6 @@
 #include "rhorefc.h"
 
 
-
 /* Defines */
 #define MEM_ALIGN               32
 #define HSIZE                   (3*3*sizeof(float))
@@ -383,7 +382,7 @@ unsigned rhoRefC(RHO_HEST_REFC* restrict p,       /* Homography estimation conte
      * PROSAC Loop
      */
 
-    for(p->ctrl.i=0; p->ctrl.i < p->arg.maxI; p->ctrl.i++){
+    for(p->ctrl.i=0; p->ctrl.i < p->arg.maxI || p->ctrl.i<100; p->ctrl.i++){
         sacHypothesize(p) && sacVerify(p);
     }
 
@@ -861,7 +860,28 @@ static inline int    sacIsSampleDegenerate(RHO_HEST_REFC* p){
  */
 
 static inline void   sacGenerateModel(RHO_HEST_REFC* p){
+#if 1
     hFuncRefC(p->curr.pkdPts, p->curr.H);
+#else
+    int mm = 4;
+    cv::Mat _H(3,3,CV_32FC1);
+    std::vector<cv::Point2f> _srcPoints(mm,cv::Point2f());
+    std::vector<cv::Point2f> _dstPoints(mm,cv::Point2f());
+    for (int i=0 ; i< mm ; i++){
+        cv::Point2f tempPoint2f(p->curr.pkdPts[2*i], p->curr.pkdPts[2*i+1]);
+        _srcPoints[i] = tempPoint2f;
+        tempPoint2f=cv::Point2f((float)p->curr.pkdPts[2*i+8],(float) p->curr.pkdPts[2*i+9]);
+        _dstPoints[i] = tempPoint2f;
+    }
+
+    _H = cv::findHomography(_srcPoints, _dstPoints,0,3);
+    double* data = (double*) _H.data;
+
+    p->curr.H[0]=data[0];   p->curr.H[1]=data[1];   p->curr.H[2]=data[2];
+    p->curr.H[3]=data[3];   p->curr.H[4]=data[4];   p->curr.H[5]=data[5];
+    p->curr.H[6]=data[6];   p->curr.H[7]=data[7];   p->curr.H[8]=1.0;
+
+#endif
 }
 
 /**
@@ -1074,17 +1094,22 @@ static inline int    sacIsBestModelGoodEnough(RHO_HEST_REFC* p){
  */
 
 static inline void   sacSaveBestModel(RHO_HEST_REFC* p){
-    float*   H      = p->curr.H;
-    char*    inl    = p->curr.inl;
-    unsigned numInl = p->curr.numInl;
 
-    p->curr.H       = p->best.H;
-    p->curr.inl     = p->best.inl;
-    p->curr.numInl  = p->best.numInl;
+    memcpy(p->best.H, p->curr.H, HSIZE);
+    memcpy(p->best.inl, p->curr.inl, p->arg.N);
+    p->best.numInl = p->curr.numInl;
 
-    p->best.H       = H;
-    p->best.inl     = inl;
-    p->best.numInl  = numInl;
+//    float*   H      = p->curr.H;
+//    char*    inl    = p->curr.inl;
+//    unsigned numInl = p->curr.numInl;
+
+//    p->curr.H       = p->best.H;
+//    p->curr.inl     = p->best.inl;
+//    p->curr.numInl  = p->best.numInl;
+
+//    p->best.H       = H;
+//    p->best.inl     = inl;
+//    p->best.numInl  = numInl;
 }
 
 /**
