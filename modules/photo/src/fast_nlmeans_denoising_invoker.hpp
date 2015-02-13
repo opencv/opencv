@@ -132,7 +132,7 @@ FastNlMeansDenoisingInvoker<T, IT, UIT>::FastNlMeansDenoisingInvoker(
     const size_t ALLOC_CHUNK = 65536;
     IT max_dist =
         (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
-    int almost_max_dist = 0;
+    size_t almost_max_dist = 0;
     while (true)
     {
         double dist = almost_max_dist * almost_dist2actual_dist_multiplier;
@@ -158,7 +158,7 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT>::operator() (const Range& range) co
     int row_from = range.start;
     int row_to = range.end - 1;
 
-    int almost_max_dist = almost_dist2weight_.size();
+    size_t almost_max_dist = almost_dist2weight_.size();
 
     // sums of cols anf rows for current pixel p
     Array2d<IT> dist_sums(search_window_size_, search_window_size_);
@@ -242,7 +242,7 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT>::operator() (const Range& range) co
                 IT* dist_sums_row = dist_sums.row_ptr(y);
                 for (int x = 0; x < search_window_size_; x++)
                 {
-                    int almostAvgDist = (int)(dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_);
+                    size_t almostAvgDist = (size_t)(dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_);
                     IT weight =
                         almostAvgDist < almost_max_dist ? almost_dist2weight_[almostAvgDist] : 0;
                     weights_sum += weight;
