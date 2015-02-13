@@ -302,7 +302,15 @@ void CvCapture_FFMPEG::close()
     }
 
     if( picture )
+    {
+        // FFmpeg and Libav added avcodec_free_frame in different versions.
+#if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
+    ? CALC_FFMPEG_VERSION(54, 59, 100) : CALC_FFMPEG_VERSION(54, 28, 0))
+        avcodec_free_frame(&picture);
+#else
         av_free(picture);
+#endif
+    }
 
     if( video_st )
     {
