@@ -1,0 +1,87 @@
+# Ignore thumbnails created by windows
+Thumbs.db
+
+#ignore winrt copies of opencv files
+opencl_kernels.cpp
+opencl_kernels.hpp
+
+# Ignore files build by Visual Studio
+*.obj
+*.exe
+*.pdb
+*.aps
+*.vcproj.*.user
+*.vcxproj.user
+*.vspscc
+*_i.c
+*.i
+*.icf
+*_p.c
+*.ncb
+*.suo
+*.tlb
+*.tlh
+*.bak
+*.cache
+*.ilk
+*.log
+*.winmd
+[Bb]in
+[Dd]ebug*/
+*.sbr
+*.sdf
+obj/
+[Rr]elease*/
+_ReSharper*/
+[Tt]est[Rr]esult*
+ipch/
+*.opensdf
+Generated Files
+AppPackages
+SubmissionInfo
+*.hps
+
+# Ignore files build by ndk and eclipse
+libs/
+bin/
+obj/
+gen/
+local.properties
+
+# Ignore python compiled files
+*.pyc
+
+# Ignore files build by airplay and marmalade
+build_*_xcode/
+build_*_vc10/
+
+# Ignore files built by xcode
+*.mode*v*
+*.pbxuser
+*.xcbkptlist
+*.xcscheme
+*.xcworkspacedata
+*.xcuserstate
+xcschememanagement.plist
+build/
+.DS_Store
+._.*
+xcuserdata/
+DerivedData/
+*.xccheckout
+
+# Ignore files built by bada
+.Simulator-Debug/
+.Target-Debug/
+.Target-Release/
+
+# Ignore files built by blackberry
+Simulator/
+Device-Debug/
+Device-Release/
+
+# Ignore vim swaps
+*.swp
+
+# CTags
+tags
