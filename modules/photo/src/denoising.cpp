@@ -80,7 +80,7 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
             break;
         case CV_16U:
             parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<unsigned short, int64, uint64>(
+                FastNlMeansDenoisingInvoker<ushort, int64, uint64>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_16UC2:
@@ -95,7 +95,7 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
             break;
         default:
             CV_Error(Error::StsBadArg,
-                "Unsupported image format! Only CV_8UC1, CV_8UC2 and CV_8UC3 are supported");
+                "Unsupported image format! Only CV_8U, CV_8UC2, CV_8UC3, CV_16U, CV_16UC2, and CV_16UC3 are supported");
     }
 }
 
@@ -105,9 +105,9 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Size src_size = _src.size();
-    if (type != CV_8UC3 && type != CV_8UC4)
+    if (type != CV_8UC3 && type != CV_16UC3 && type != CV_8UC4 && type != CV_16UC4)
     {
-        CV_Error(Error::StsBadArg, "Type of input image should be CV_8UC3!");
+        CV_Error(Error::StsBadArg, "Type of input image should be CV_8UC3, CV_16UC3, CV_8UC4, or CV_16UC4");
         return;
     }
 
@@ -123,8 +123,8 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     Mat src_lab;
     cvtColor(src, src_lab, COLOR_LBGR2Lab);
 
-    Mat l(src_size, CV_8U);
-    Mat ab(src_size, CV_8UC2);
+    Mat l(src_size, CV_MAKE_TYPE(depth, 1));
+    Mat ab(src_size, CV_MAKE_TYPE(depth, 2));
     Mat l_ab[] = { l, ab };
     int from_to[] = { 0,0, 1,1, 2,2 };
     mixChannels(&src_lab, 1, l_ab, 2, from_to, 3);
@@ -190,7 +190,7 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
     {
         case CV_8U:
             parallel_for_(cv::Range(0, srcImgs[0].rows),
-                FastNlMeansMultiDenoisingInvoker<uchar, int, unsigned int>(
+                FastNlMeansMultiDenoisingInvoker<uchar, int, unsigned>(
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
@@ -226,7 +226,7 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
             break;
         default:
             CV_Error(Error::StsBadArg,
-                "Unsupported matrix format! Only uchar, Vec2b, Vec3b are supported");
+                "Unsupported image format! Only CV_8U, CV_8UC2, CV_8UC3, CV_16U, CV_16UC2, and CV_16UC3 are supported");
     }
 }
 
@@ -245,11 +245,12 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
     _dst.create(srcImgs[0].size(), srcImgs[0].type());
     Mat dst = _dst.getMat();
 
+    int type = srcImgs[0].type(), depth = CV_MAT_DEPTH(type);
     int src_imgs_size = static_cast<int>(srcImgs.size());
 
-    if (srcImgs[0].type() != CV_8UC3)
+    if (type != CV_8UC3 && type != CV_16UC3)
     {
-        CV_Error(Error::StsBadArg, "Type of input images should be CV_8UC3!");
+        CV_Error(Error::StsBadArg, "Type of input images should be CV_8UC3 or CV_16UC3!");
         return;
     }
 
@@ -261,9 +262,9 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
     std::vector<Mat> ab(src_imgs_size);
     for (int i = 0; i < src_imgs_size; i++)
     {
-        src_lab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC3);
-        l[i] = Mat::zeros(srcImgs[0].size(), CV_8UC1);
-        ab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC2);
+        src_lab[i] = Mat::zeros(srcImgs[0].size(), type);
+        l[i] = Mat::zeros(srcImgs[0].size(), CV_MAKE_TYPE(depth, 1));
+        ab[i] = Mat::zeros(srcImgs[0].size(), CV_MAKE_TYPE(depth, 2));
         cvtColor(srcImgs[i], src_lab[i], COLOR_LBGR2Lab);
 
         Mat l_ab[] = { l[i], ab[i] };
