@@ -614,8 +614,8 @@ unsigned RHO_HEST_REFC::rhoRefC(const float*   src,     /* Source points */
 
     for(ctrl.i=0; ctrl.i < arg.maxI || ctrl.i < 100; ctrl.i++){
         hypothesize() && verify();
-
     }
+
 
     /**
      * Teardown
@@ -624,8 +624,9 @@ unsigned RHO_HEST_REFC::rhoRefC(const float*   src,     /* Source points */
     if(isFinalRefineEnabled() && canRefine()){
         refine();
     }
-    outputModel();    
-    finiRun();   
+
+    outputModel();
+    finiRun();
     return isBestModelGoodEnough() ? best.numInl : 0;
 }
 
@@ -861,7 +862,6 @@ inline int    RHO_HEST_REFC::verify(void){
         if(isNREnabled()){
             nStarOptimize();
         }
-
     }
 
     return 1;
@@ -1346,7 +1346,7 @@ inline void   RHO_HEST_REFC::nStarOptimize(void){
  */
 
 inline void   RHO_HEST_REFC::updateBounds(void){
-    arg.maxI = sacCalcIterBound(arg.cfd,                                
+    arg.maxI = sacCalcIterBound(arg.cfd,
                                 (double)best.numInl/arg.N,
                                 SMPL_SIZE,
                                 arg.maxI);

@@ -398,8 +398,8 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
     {
         tempMask = Mat::ones(npoints, 1, CV_8U);
         result = cb->runKernel(src, dst, H) > 0;
-    }   
-    else if( method == RANSAC)
+    }
+    else if( method == RANSAC )
         result = createRANSACPointSetRegistrator(cb, 4, ransacReprojThreshold, confidence, maxIters)->run(src, dst, H, tempMask);
     else if( method == LMEDS )
         result = createLMeDSPointSetRegistrator(cb, 4, confidence, maxIters)->run(src, dst, H, tempMask);
@@ -407,7 +407,6 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
         result = createAndRunRHORegistrator(confidence, maxIters, ransacReprojThreshold, npoints, src, dst, H, tempMask);
     else
         CV_Error(Error::StsBadArg, "Unknown estimation method");
-
 
     if( result && npoints > 4 && method != RHO)
     {
@@ -419,9 +418,8 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             Mat dst1 = dst.rowRange(0, npoints);
             src = src1;
             dst = dst1;
-            if( method == RANSAC || method == LMEDS)
+            if( method == RANSAC || method == LMEDS )
                 cb->runKernel( src, dst, H );
-
             Mat H8(8, 1, CV_64F, H.ptr<double>());
             createLMSolver(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
         }
