@@ -94,12 +94,12 @@ private:
 
     void print_information_1(int j, int N, int method, const Mat& H);
     void print_information_2(int j, int N, int method, const Mat& H, const Mat& H_res, int k, double diff);
-    void print_information_3(int j, int N, const Mat& mask);
+    void print_information_3(int method, int j, int N, const Mat& mask);
     void print_information_4(int method, int j, int N, int k, int l, double diff);
     void print_information_5(int method, int j, int N, int l, double diff);
-    void print_information_6(int j, int N, int k, double diff, bool value);
-    void print_information_7(int j, int N, int k, double diff, bool original_value, bool found_value);
-    void print_information_8(int j, int N, int k, int l, double diff);
+    void print_information_6(int method, int j, int N, int k, double diff, bool value);
+    void print_information_7(int method, int j, int N, int k, double diff, bool original_value, bool found_value);
+    void print_information_8(int method, int j, int N, int k, int l, double diff);
 };
 
 CV_HomographyTest::CV_HomographyTest() : max_diff(1e-2f), max_2diff(2e-2f)
@@ -166,13 +166,13 @@ void CV_HomographyTest::print_information_2(int j, int N, int _method, const Mat
     cout << "Maximum allowed difference: " << max_diff << endl; cout << endl;
 }
 
-void CV_HomographyTest::print_information_3(int j, int N, const Mat& mask)
+void CV_HomographyTest::print_information_3(int _method, int j, int N, const Mat& mask)
 {
     cout << endl; cout << "Checking for inliers/outliers mask..." << endl; cout << endl;
     cout << "Type of srcPoints: "; if ((j>-1) && (j<2)) cout << "Mat of CV_32FC2"; else  cout << "vector <Point2f>";
     cout << "   Type of dstPoints: "; if (j % 2 == 0) cout << "Mat of CV_32FC2"; else cout << "vector <Point2f>"; cout << endl;
     cout << "Count of points: " << N << endl; cout << endl;
-    cout << "Method: RANSAC" << endl;
+    cout << "Method: "; if (_method == RANSAC) cout << "RANSAC" << endl; else if (_method == cv::RHO) cout << "RHO" << endl; else cout << _method << endl;
     cout << "Found mask:" << endl; cout << endl;
     cout << mask << endl; cout << endl;
     cout << "Number of rows: " << mask.rows << "   Number of cols: " << mask.cols << endl; cout << endl;
@@ -205,10 +205,10 @@ void CV_HomographyTest::print_information_5(int _method, int j, int N, int l, do
     cout << "Maxumum allowed difference: " << max_diff << endl; cout << endl;
 }
 
-void CV_HomographyTest::print_information_6(int j, int N, int k, double diff, bool value)
+void CV_HomographyTest::print_information_6(int _method, int j, int N, int k, double diff, bool value)
 {
     cout << endl; cout << "Checking for inliers/outliers mask..." << endl; cout << endl;
-    cout << "Method: RANSAC" << endl;
+    cout << "Method: "; if (_method == RANSAC) cout << "RANSAC" << endl; else if (_method == cv::RHO) cout << "RHO" << endl; else cout << _method << endl;
     cout << "Type of srcPoints: "; if ((j>-1) && (j<2)) cout << "Mat of CV_32FC2"; else  cout << "vector <Point2f>";
     cout << "   Type of dstPoints: "; if (j % 2 == 0) cout << "Mat of CV_32FC2"; else cout << "vector <Point2f>"; cout << endl;
     cout << "Count of points: " << N << "   " << endl;
@@ -218,10 +218,10 @@ void CV_HomographyTest::print_information_6(int j, int N, int k, double diff, bo
     cout << "Value of found mask: "<< value << endl; cout << endl;
 }
 
-void CV_HomographyTest::print_information_7(int j, int N, int k, double diff, bool original_value, bool found_value)
+void CV_HomographyTest::print_information_7(int _method, int j, int N, int k, double diff, bool original_value, bool found_value)
 {
     cout << endl; cout << "Checking for inliers/outliers mask..." << endl; cout << endl;
-    cout << "Method: RANSAC" << endl;
+    cout << "Method: "; if (_method == RANSAC) cout << "RANSAC" << endl; else if (_method == cv::RHO) cout << "RHO" << endl; else cout << _method << endl;
     cout << "Type of srcPoints: "; if ((j>-1) && (j<2)) cout << "Mat of CV_32FC2"; else  cout << "vector <Point2f>";
     cout << "   Type of dstPoints: "; if (j % 2 == 0) cout << "Mat of CV_32FC2"; else cout << "vector <Point2f>"; cout << endl;
     cout << "Count of points: " << N << "   " << endl;
@@ -231,10 +231,10 @@ void CV_HomographyTest::print_information_7(int j, int N, int k, double diff, bo
     cout << "Value of original mask: "<< original_value << "   Value of found mask: " << found_value << endl; cout << endl;
 }
 
-void CV_HomographyTest::print_information_8(int j, int N, int k, int l, double diff)
+void CV_HomographyTest::print_information_8(int _method, int j, int N, int k, int l, double diff)
 {
     cout << endl; cout << "Checking for reprojection error of inlier..." << endl; cout << endl;
-    cout << "Method: RANSAC" << endl;
+    cout << "Method: "; if (_method == RANSAC) cout << "RANSAC" << endl; else if (_method == cv::RHO) cout << "RHO" << endl; else cout << _method << endl;
     cout << "Sigma of normal noise: " << sigma << endl;
     cout << "Type of srcPoints: "; if ((j>-1) && (j<2)) cout << "Mat of CV_32FC2"; else  cout << "vector <Point2f>";
     cout << "   Type of dstPoints: "; if (j % 2 == 0) cout << "Mat of CV_32FC2"; else cout << "vector <Point2f>"; cout << endl;
@@ -371,7 +371,7 @@ void CV_HomographyTest::run(int)
 
                         if (code)
                         {
-                            print_information_3(j, N, mask[j]);
+                            print_information_3(method, j, N, mask[j]);
 
                             switch (code)
                             {
@@ -490,7 +490,7 @@ void CV_HomographyTest::run(int)
 
                         if (code)
                         {
-                            print_information_3(j, N, mask_res[j]);
+                            print_information_3(method, j, N, mask_res[j]);
 
                             switch (code)
                             {
@@ -522,14 +522,14 @@ void CV_HomographyTest::run(int)
 
                             if (mask_res[j].at<bool>(k, 0) != (diff <= reproj_threshold))
                             {
-                                print_information_6(j, N, k, diff, mask_res[j].at<bool>(k, 0));
+                                print_information_6(method, j, N, k, diff, mask_res[j].at<bool>(k, 0));
                                 CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK, MESSAGE_RANSAC_MASK_4);
                                 return;
                             }
 
                             if (mask.at<bool>(k, 0) && !mask_res[j].at<bool>(k, 0))
                             {
-                                print_information_7(j, N, k, diff, mask.at<bool>(k, 0), mask_res[j].at<bool>(k, 0));
+                                print_information_7(method, j, N, k, diff, mask.at<bool>(k, 0), mask_res[j].at<bool>(k, 0));
                                 CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK, MESSAGE_RANSAC_MASK_5);
                                 return;
                             }
@@ -549,7 +549,7 @@ void CV_HomographyTest::run(int)
 
                                     if (diff - cv::norm(noise_2d, NORM_TYPE[l]) > max_2diff)
                                     {
-                                        print_information_8(j, N, k, l, diff - cv::norm(noise_2d, NORM_TYPE[l]));
+                                        print_information_8(method, j, N, k, l, diff - cv::norm(noise_2d, NORM_TYPE[l]));
                                         CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_DIFF, MESSAGE_RANSAC_DIFF);
                                         return;
                                     }
