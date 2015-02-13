@@ -143,7 +143,7 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
     const size_t ALLOC_CHUNK = 65536;
     IT max_dist =
         (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
-    int almost_max_dist = 0;
+    size_t almost_max_dist = 0;
     while (true)
     {
         double dist = almost_max_dist * almost_dist2actual_dist_multiplier;
@@ -169,7 +169,7 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::operator() (const Range& rang
     int row_from = range.start;
     int row_to = range.end - 1;
 
-    int almost_max_dist = almost_dist2weight.size();
+    size_t almost_max_dist = almost_dist2weight.size();
 
     Array3d<IT> dist_sums(temporal_window_size_, search_window_size_, search_window_size_);
 
@@ -269,7 +269,7 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::operator() (const Range& rang
 
                     for (int x = 0; x < search_window_size_; x++)
                     {
-                        int almostAvgDist = (int)(dist_sums_row[x] >> almost_template_window_size_sq_bin_shift);
+                        size_t almostAvgDist = (size_t)(dist_sums_row[x] >> almost_template_window_size_sq_bin_shift);
 
                         IT weight =
                             almostAvgDist < almost_max_dist ? almost_dist2weight[almostAvgDist] : 0;
