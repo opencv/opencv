@@ -20,6 +20,7 @@ ocv_list_filterout(candidate_deps "^opencv_adas$")
 ocv_list_filterout(candidate_deps "^opencv_tracking$")
 ocv_list_filterout(candidate_deps "^opencv_bioinspired$")
 ocv_list_filterout(candidate_deps "^opencv_java$")
+ocv_list_filterout(candidate_deps "^opencv_contrib_world$")
 
 ocv_add_module(${MODULE_NAME} BINDINGS OPTIONAL ${candidate_deps})
 
@@ -113,7 +114,7 @@ else()
 endif()
 
 if(NOT INSTALL_CREATE_DISTRIB)
-  install(TARGETS ${the_module}
+  install(TARGETS ${the_module} OPTIONAL
           ${PYTHON_INSTALL_CONFIGURATIONS}
           RUNTIME DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python
           LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python

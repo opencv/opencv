@@ -38,7 +38,7 @@ endif(HAVE_DOC_GENERATOR)
 
 if(BUILD_DOCS AND DOXYGEN_FOUND)
   # not documented modules list
-  list(APPEND blacklist "ts" "java" "python2" "python3" "world")
+  list(APPEND blacklist "ts" "java" "python2" "python3" "world" "contrib_world")
 
   # gathering headers
   set(paths_include)
