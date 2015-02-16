@@ -5548,7 +5548,7 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
 
 void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints)
 {
-    internal::WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
+    cv::internal::WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
 
     int i, npoints = (int)keypoints.size();
     for( i = 0; i < npoints; i++ )
