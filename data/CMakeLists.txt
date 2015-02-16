@@ -4,7 +4,7 @@ file(GLOB LBP_CASCADES lbpcascades/*.xml)
 if(ANDROID)
   install(FILES ${HAAR_CASCADES} DESTINATION sdk/etc/haarcascades COMPONENT libs)
   install(FILES ${LBP_CASCADES}  DESTINATION sdk/etc/lbpcascades  COMPONENT libs)
-elseif(NOT WIN32)
+else()
   install(FILES ${HAAR_CASCADES} DESTINATION share/OpenCV/haarcascades COMPONENT libs)
   install(FILES ${LBP_CASCADES}  DESTINATION share/OpenCV/lbpcascades  COMPONENT libs)
 endif()
@@ -12,7 +12,7 @@ endif()
 if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH)
   if(ANDROID)
     install(DIRECTORY ${OPENCV_TEST_DATA_PATH} DESTINATION sdk/etc/testdata COMPONENT tests)
-  elseif(NOT WIN32)
+  else()
     # CPack does not set correct permissions by default, so we do it explicitly.
     install(DIRECTORY ${OPENCV_TEST_DATA_PATH}
             DIRECTORY_PERMISSIONS OWNER_WRITE OWNER_READ OWNER_EXECUTE
