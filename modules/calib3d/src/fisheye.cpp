@@ -872,8 +872,8 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
 
     if ((flags & CALIB_FIX_INTRINSIC))
     {
-        internal::CalibrateExtrinsics(objectPoints,  imagePoints1, intrinsicLeft, check_cond, thresh_cond, rvecs1, tvecs1);
-        internal::CalibrateExtrinsics(objectPoints,  imagePoints2, intrinsicRight, check_cond, thresh_cond, rvecs2, tvecs2);
+        cv::internal::CalibrateExtrinsics(objectPoints,  imagePoints1, intrinsicLeft, check_cond, thresh_cond, rvecs1, tvecs1);
+        cv::internal::CalibrateExtrinsics(objectPoints,  imagePoints2, intrinsicRight, check_cond, thresh_cond, rvecs2, tvecs2);
     }
 
     intrinsicLeft.isEstimate[0] = flags & CALIB_FIX_INTRINSIC ? 0 : 1;
@@ -918,8 +918,8 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
         om_ref.reshape(3, 1).copyTo(om_list.col(image_idx));
         T_ref.reshape(3, 1).copyTo(T_list.col(image_idx));
     }
-    cv::Vec3d omcur = internal::median3d(om_list);
-    cv::Vec3d Tcur  = internal::median3d(T_list);
+    cv::Vec3d omcur = cv::internal::median3d(om_list);
+    cv::Vec3d Tcur  = cv::internal::median3d(T_list);
 
     cv::Mat J = cv::Mat::zeros(4 * n_points * n_images, 18 + 6 * (n_images + 1), CV_64FC1),
             e = cv::Mat::zeros(4 * n_points * n_images, 1, CV_64FC1), Jkk, ekk;
@@ -961,7 +961,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
             jacobians.col(14).copyTo(Jkk.col(4).rowRange(0, 2 * n_points));
 
             //right camera jacobian
-            internal::compose_motion(rvec, tvec, omcur, Tcur, omr, Tr, domrdomckk, domrdTckk, domrdom, domrdT, dTrdomckk, dTrdTckk, dTrdom, dTrdT);
+            cv::internal::compose_motion(rvec, tvec, omcur, Tcur, omr, Tr, domrdomckk, domrdTckk, domrdom, domrdT, dTrdomckk, dTrdTckk, dTrdom, dTrdT);
             rvec = cv::Mat(rvecs2[image_idx]);
             tvec  = cv::Mat(tvecs2[image_idx]);
 

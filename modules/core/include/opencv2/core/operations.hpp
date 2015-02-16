@@ -193,7 +193,7 @@ Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
     Matx<_Tp, n, m> b;
     bool ok;
     if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
-        ok = internal::Matx_FastInvOp<_Tp, m>()(*this, b, method);
+        ok = cv::internal::Matx_FastInvOp<_Tp, m>()(*this, b, method);
     else
     {
         Mat A(*this, false), B(b, false);
@@ -209,7 +209,7 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
     Matx<_Tp, n, l> x;
     bool ok;
     if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
-        ok = internal::Matx_FastSolveOp<_Tp, m, l>()(*this, rhs, x, method);
+        ok = cv::internal::Matx_FastSolveOp<_Tp, m, l>()(*this, rhs, x, method);
     else
     {
         Mat A(*this, false), B(rhs, false), X(x, false);
