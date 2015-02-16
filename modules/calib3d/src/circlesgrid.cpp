@@ -66,7 +66,7 @@ void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 
 }
 #endif
 
-void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> points, const Size &patternSz, std::vector<Point2f> &patternPoints)
+void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> &points, const Size &patternSz, std::vector<Point2f> &patternPoints)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(tegra::hierarchicalClustering(points, patternSz, patternPoints))
@@ -135,7 +135,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f>
     }
 }
 
-void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, cv::Size _patternSize, std::vector<Point2f>& centers)
+void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> &points, cv::Size _patternSize, std::vector<Point2f>& centers)
 {
   patternSize = _patternSize;
   centers.clear();
