@@ -242,7 +242,7 @@ else(ANDROID)
   else(WIN32)
     set(JAR_INSTALL_DIR share/OpenCV/java)
   endif(WIN32)
-  install(FILES ${JAR_FILE} DESTINATION ${JAR_INSTALL_DIR} COMPONENT java)
+  install(FILES ${JAR_FILE} OPTIONAL DESTINATION ${JAR_INSTALL_DIR} COMPONENT java)
 endif(ANDROID)
 
 # step 5: build native part
@@ -312,16 +312,16 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(ANDROID)
-  ocv_install_target(${the_module} EXPORT OpenCVModules
+  ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
           LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java
           ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java)
 else()
   if(NOT INSTALL_CREATE_DISTRIB)
-    ocv_install_target(${the_module} EXPORT OpenCVModules
+    ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
             RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT java
             LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT java)
   else()
-    ocv_install_target(${the_module} EXPORT OpenCVModules
+    ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
             RUNTIME DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT java
             LIBRARY DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT java)
   endif()
