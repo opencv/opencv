@@ -106,11 +106,11 @@ void cv::cuda::calcNorm(InputArray _src, OutputArray dst, int normType, InputArr
     }
     else if (normType == NORM_L2)
     {
-        internal::normL2(src_single_channel, dst, mask, stream);
+        cv::cuda::internal::normL2(src_single_channel, dst, mask, stream);
     }
     else // NORM_INF
     {
-        internal::findMaxAbs(src_single_channel, dst, mask, stream);
+        cv::cuda::internal::findMaxAbs(src_single_channel, dst, mask, stream);
     }
 }
 
