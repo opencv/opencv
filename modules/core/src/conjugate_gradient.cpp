@@ -136,7 +136,6 @@ namespace cv
         dprintf(("d first time\n"));print_matrix(d);
         dprintf(("r\n"));print_matrix(r);
 
-        double beta=0;
         for(int count=0;count<_termcrit.maxCount;count++){
             minimizeOnTheLine(_Function,proxy_x,d,minimizeOnTheLine_buf1,minimizeOnTheLine_buf2);
             r.copyTo(r_old);
@@ -147,7 +146,7 @@ namespace cv
                 break;
             }
             r_norm_sq=r_norm_sq*r_norm_sq;
-            beta=MAX(0.0,(r_norm_sq-r.dot(r_old))/r_norm_sq);
+            double beta=MAX(0.0,(r_norm_sq-r.dot(r_old))/r_norm_sq);
             d=r+beta*d;
         }
 
