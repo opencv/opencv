@@ -139,22 +139,20 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
     int almost_template_window_size_sq = 1 << almost_template_window_size_sq_bin_shift;
     double almost_dist2actual_dist_multiplier = (double) almost_template_window_size_sq / template_window_size_sq;
 
-    const double WEIGHT_THRESHOLD = 0.001;
-    const size_t ALLOC_CHUNK = 65536;
     IT max_dist = (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
-    size_t almost_max_dist = 0;
-    while (true)
-    {
-        double dist = almost_max_dist * almost_dist2actual_dist_multiplier;
-        IT weight = (IT)round(fixed_point_mult_ * std::exp(-dist*dist / (h * h * pixelInfo<T>::channels)));
-        if (weight < WEIGHT_THRESHOLD * fixed_point_mult_ || dist > max_dist) break;
-
-        if (almost_max_dist >= almost_dist2weight.size())
-            almost_dist2weight.resize(almost_max_dist + ALLOC_CHUNK);
-
-        almost_dist2weight[almost_max_dist++] = weight;
-    }
+    int almost_max_dist = (int) (max_dist / almost_dist2actual_dist_multiplier + 1);
     almost_dist2weight.resize(almost_max_dist);
+
+    const double WEIGHT_THRESHOLD = 0.001;
+    for (int almost_dist = 0; almost_dist < almost_max_dist; almost_dist++)
+    {
+        double dist = almost_dist * almost_dist2actual_dist_multiplier;
+        IT weight = (IT)round(fixed_point_mult_ * std::exp(-dist*dist / (h * h * pixelInfo<T>::channels)));
+        if (weight < WEIGHT_THRESHOLD * fixed_point_mult_)
+            weight = 0;
+
+        almost_dist2weight[almost_dist] = weight;
+    }
     CV_Assert(almost_dist2weight[0] == fixed_point_mult_);
 
     // additional optimization init end
@@ -167,8 +165,6 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::operator() (const Range& rang
 {
     int row_from = range.start;
     int row_to = range.end - 1;
-
-    size_t almost_max_dist = almost_dist2weight.size();
 
     Array3d<IT> dist_sums(temporal_window_size_, search_window_size_, search_window_size_);
 
@@ -270,8 +266,7 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::operator() (const Range& rang
                     {
                         size_t almostAvgDist = (size_t)(dist_sums_row[x] >> almost_template_window_size_sq_bin_shift);
 
-                        IT weight =
-                            almostAvgDist < almost_max_dist ? almost_dist2weight[almostAvgDist] : 0;
+                        IT weight =  almost_dist2weight[almostAvgDist];
                         weights_sum += weight;
 
                         T p = cur_row_ptr[border_size_ + search_window_x + x];
