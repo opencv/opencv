@@ -19,6 +19,11 @@ if(ANDROID AND BUILD_ANDROID_EXAMPLES)
   add_subdirectory(android)
 endif()
 
+if(INSTALL_C_EXAMPLES)
+  install(FILES "CMakeLists.txt"
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}
+          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
+endif()
 
 #
 # END OF BUILD CASE 1: Build samples with library sources
@@ -60,7 +65,7 @@ endif()
 add_subdirectory(c)
 add_subdirectory(cpp)
 add_subdirectory(ocl)
-# FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
+add_subdirectory(gpu)
 
 #
 # END OF BUILD CASE 2: Build samples with library binaries
