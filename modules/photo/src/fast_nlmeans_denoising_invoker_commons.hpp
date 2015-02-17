@@ -85,7 +85,7 @@ template <typename T, typename IT> struct calcDist_
 {
     static inline IT f(const T a, const T b)
     {
-        return (IT)(a-b) * (IT)(a-b);
+        return std::abs((IT)(a-b));
     }
 };
 
@@ -93,7 +93,7 @@ template <typename ET, typename IT> struct calcDist_<Vec<ET, 2>, IT>
 {
     static inline IT f(const Vec<ET, 2> a, const Vec<ET, 2> b)
     {
-        return (IT)(a[0]-b[0])*(IT)(a[0]-b[0]) + (IT)(a[1]-b[1])*(IT)(a[1]-b[1]);
+        return std::abs((IT)(a[0]-b[0])) + std::abs((IT)(a[1]-b[1]));
     }
 };
 
@@ -101,10 +101,7 @@ template <typename ET, typename IT> struct calcDist_<Vec<ET, 3>, IT>
 {
     static inline IT f(const Vec<ET, 3> a, const Vec<ET, 3> b)
     {
-        return
-            (IT)(a[0]-b[0])*(IT)(a[0]-b[0]) +
-            (IT)(a[1]-b[1])*(IT)(a[1]-b[1]) +
-            (IT)(a[2]-b[2])*(IT)(a[2]-b[2]);
+        return std::abs((IT)(a[0]-b[0])) + std::abs((IT)(a[1]-b[1])) + std::abs((IT)(a[2]-b[2]));
     }
 };
 
@@ -121,31 +118,10 @@ static inline IT calcDist(const Mat& m, int i1, int j1, int i2, int j2)
     return calcDist<T, IT>(a,b);
 }
 
-template <typename T, typename IT> struct calcUpDownDist_
-{
-    static inline IT f(T a_up, T a_down, T b_up, T b_down)
-    {
-        IT A = a_down - b_down;
-        IT B = a_up - b_up;
-        return (A-B)*(A+B);
-    }
-};
-
-template <typename ET, int n, typename IT> struct calcUpDownDist_<Vec<ET, n>, IT>
-{
-private:
-    typedef Vec<ET, n> T;
-public:
-    static inline IT f(T a_up, T a_down, T b_up, T b_down)
-    {
-        return calcDist<T, IT>(a_down, b_down) - calcDist<T, IT>(a_up, b_up);
-    }
-};
-
 template <typename T, typename IT>
 static inline IT calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
 {
-    return calcUpDownDist_<T, IT>::f(a_up, a_down, b_up, b_down);
+    return calcDist<T, IT>(a_down, b_down) - calcDist<T, IT>(a_up, b_up);
 };
 
 template <typename T, typename IT> struct incWithWeight_

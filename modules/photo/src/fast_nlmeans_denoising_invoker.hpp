@@ -130,13 +130,12 @@ FastNlMeansDenoisingInvoker<T, IT, UIT>::FastNlMeansDenoisingInvoker(
 
     const double WEIGHT_THRESHOLD = 0.001;
     const size_t ALLOC_CHUNK = 65536;
-    IT max_dist =
-        (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
+    IT max_dist = (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
     size_t almost_max_dist = 0;
     while (true)
     {
         double dist = almost_max_dist * almost_dist2actual_dist_multiplier;
-        IT weight = (IT)round(fixed_point_mult_ * std::exp(-dist / (h * h * pixelInfo<T>::channels)));
+        IT weight = (IT)round(fixed_point_mult_ * std::exp(-dist*dist / (h * h * pixelInfo<T>::channels)));
         if (weight < WEIGHT_THRESHOLD * fixed_point_mult_ || dist > max_dist) break;
 
         if (almost_max_dist >= almost_dist2weight_.size())
