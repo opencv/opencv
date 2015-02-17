@@ -169,6 +169,13 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
         featureEvaluator = CvFeatureEvaluator::create(cascadeParams.featureType);
         featureEvaluator->init( (CvFeatureParams*)featureParams, numPos + numNeg, cascadeParams.winSize );
         stageClassifiers.reserve( numStages );
+    }else{
+        // Make sure that if model parameters are preloaded, that people are aware of this,
+        // even when passing other parameters to the training command
+        cout << "---------------------------------------------------------------------------------" << endl;
+        cout << "Training parameters are pre-loaded from the parameter file in data folder!" << endl;
+        cout << "Please empty this folder if you want to use a NEW set of training parameters." << endl;
+        cout << "---------------------------------------------------------------------------------" << endl;
     }
     cout << "PARAMETERS:" << endl;
     cout << "cascadeDirName: " << _cascadeDirName << endl;
@@ -509,8 +516,6 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
 
 bool CvCascadeClassifier::load( const string cascadeDirName )
 {
-    cout << "Training parameters are loaded from the parameter file in data folder!" << endl;
-    cout << "Please empty the data folder if you want to use your own set of parameters." << endl;
     FileStorage fs( cascadeDirName + CC_PARAMS_FILENAME, FileStorage::READ );
     if ( !fs.isOpened() )
         return false;
