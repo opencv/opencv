@@ -908,7 +908,7 @@ CV_ENUM(TemplateMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, 
 
 DEF_PARAM_TEST(Sz_TemplateSz_Cn_Method, cv::Size, cv::Size, MatCn, TemplateMethod);
 
-PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U,
+PERF_TEST_P(Sz_TemplateSz_Cn_Method, DISABLED_ImgProc_MatchTemplate8U,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
                     GPU_CHANNELS_1_3_4,
@@ -948,7 +948,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U,
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate32F
 
-PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F,
+PERF_TEST_P(Sz_TemplateSz_Cn_Method, DISABLED_ImgProc_MatchTemplate32F,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
                     GPU_CHANNELS_1_3_4,
