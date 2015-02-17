@@ -146,6 +146,12 @@ TEST(CpuID, CheckMips)
     EXPECT_TRUE(cpu_id & ARCH_MIPS);
 }
 #endif
+#elif defined(__aarch64__)
+TEST(CpuID, CheckAarch64)
+{
+    int cpu_id = GetCpuID();
+    EXPECT_TRUE(cpu_id & ARCH_AARCH64);
+}
 #else
 TEST(TegraDetector, Detect)
 {
