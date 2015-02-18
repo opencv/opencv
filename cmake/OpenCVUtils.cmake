@@ -795,8 +795,15 @@ function(ocv_add_library target)
     )
     set(sources ${ARGN})
     ocv_list_filterout(sources "\\\\.(cl|inc)$")
-    add_library(${target}_object OBJECT EXCLUDE_FROM_ALL ${sources})
-    set_target_properties(${target}_object PROPERTIES POSITION_INDEPENDENT_CODE True)
+    add_library(${target}_object OBJECT ${sources})
+    set_target_properties(${target}_object PROPERTIES
+      EXCLUDE_FROM_ALL True
+      EXCLUDE_FROM_DEFAULT_BUILD True
+      POSITION_INDEPENDENT_CODE True
+      )
+    if (ENABLE_SOLUTION_FOLDERS)
+      set_target_properties(${target}_object PROPERTIES FOLDER "object_libraries")
+    endif()
     unset(sources)
   endif()
 
