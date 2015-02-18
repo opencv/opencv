@@ -614,6 +614,16 @@ public:
     CV_WRAP virtual int getDiffusivity() const = 0;
 };
 
+/** MSD_DETECTOR
+*/
+class CV_EXPORTS_W MSDDetector : public Feature2D
+{
+public:
+  CV_WRAP static Ptr<MSDDetector> create( int m_patch_radius = 3, int m_search_area_radius = 5,
+  int m_nms_radius = 5, int m_nms_scale_radius = 0, float m_th_saliency = 250.0f, int m_kNN = 4,
+  float	m_scale_factor = 1.25f, int m_n_scales = -1, bool m_compute_orientation = false );
+};
+
 //! @} features2d_main
 
 /****************************************************************************************\
