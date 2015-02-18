@@ -58,7 +58,6 @@ add_custom_command(
    DEPENDS ${opencv_hdrs})
 
 ocv_add_library(${the_module} SHARED ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
-set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
   ocv_target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
