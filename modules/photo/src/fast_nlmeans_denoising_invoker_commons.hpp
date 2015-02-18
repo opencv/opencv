@@ -81,47 +81,150 @@ template <typename T> struct pixelInfo: public pixelInfo_<T>
     }
 };
 
-template <typename T, typename IT> struct calcDist_
+class DistAbs
 {
-    static inline IT f(const T a, const T b)
+    template <typename T, typename IT> struct calcDist_
     {
-        return std::abs((IT)(a-b));
+        static inline IT f(const T a, const T b)
+        {
+            return std::abs((IT)(a-b));
+        }
+    };
+
+    template <typename ET, typename IT> struct calcDist_<Vec<ET, 2>, IT>
+    {
+        static inline IT f(const Vec<ET, 2> a, const Vec<ET, 2> b)
+        {
+            return std::abs((IT)(a[0]-b[0])) + std::abs((IT)(a[1]-b[1]));
+        }
+    };
+
+    template <typename ET, typename IT> struct calcDist_<Vec<ET, 3>, IT>
+    {
+        static inline IT f(const Vec<ET, 3> a, const Vec<ET, 3> b)
+        {
+            return
+                std::abs((IT)(a[0]-b[0])) +
+                std::abs((IT)(a[1]-b[1])) +
+                std::abs((IT)(a[2]-b[2]));
+        }
+    };
+
+public:
+    template <typename T, typename IT> static inline IT calcDist(const T a, const T b)
+    {
+        return calcDist_<T, IT>::f(a, b);
+    }
+
+    template <typename T, typename IT>
+    static inline IT calcDist(const Mat& m, int i1, int j1, int i2, int j2)
+    {
+        const T a = m.at<T>(i1, j1);
+        const T b = m.at<T>(i2, j2);
+        return calcDist<T, IT>(a,b);
+    }
+
+    template <typename T, typename IT>
+    static inline IT calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
+    {
+        return calcDist<T, IT>(a_down, b_down) - calcDist<T, IT>(a_up, b_up);
+    };
+
+    template <typename T>
+    static double calcWeight(double dist, double h)
+    {
+        return std::exp(-dist*dist / (h * h * pixelInfo<T>::channels));
+    }
+
+    template <typename T, typename IT>
+    static double maxDist()
+    {
+        return (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
     }
 };
 
-template <typename ET, typename IT> struct calcDist_<Vec<ET, 2>, IT>
+class DistSquared
 {
-    static inline IT f(const Vec<ET, 2> a, const Vec<ET, 2> b)
+    template <typename T, typename IT> struct calcDist_
     {
-        return std::abs((IT)(a[0]-b[0])) + std::abs((IT)(a[1]-b[1]));
-    }
-};
+        static inline IT f(const T a, const T b)
+        {
+            return (IT)(a-b) * (IT)(a-b);
+        }
+    };
 
-template <typename ET, typename IT> struct calcDist_<Vec<ET, 3>, IT>
-{
-    static inline IT f(const Vec<ET, 3> a, const Vec<ET, 3> b)
+    template <typename ET, typename IT> struct calcDist_<Vec<ET, 2>, IT>
     {
-        return std::abs((IT)(a[0]-b[0])) + std::abs((IT)(a[1]-b[1])) + std::abs((IT)(a[2]-b[2]));
+        static inline IT f(const Vec<ET, 2> a, const Vec<ET, 2> b)
+        {
+            return (IT)(a[0]-b[0])*(IT)(a[0]-b[0]) + (IT)(a[1]-b[1])*(IT)(a[1]-b[1]);
+        }
+    };
+
+    template <typename ET, typename IT> struct calcDist_<Vec<ET, 3>, IT>
+    {
+        static inline IT f(const Vec<ET, 3> a, const Vec<ET, 3> b)
+        {
+            return
+                (IT)(a[0]-b[0])*(IT)(a[0]-b[0]) +
+                (IT)(a[1]-b[1])*(IT)(a[1]-b[1]) +
+                (IT)(a[2]-b[2])*(IT)(a[2]-b[2]);
+        }
+    };
+
+    template <typename T, typename IT> struct calcUpDownDist_
+    {
+        static inline IT f(T a_up, T a_down, T b_up, T b_down)
+        {
+            IT A = a_down - b_down;
+            IT B = a_up - b_up;
+            return (A-B)*(A+B);
+        }
+    };
+
+    template <typename ET, int n, typename IT> struct calcUpDownDist_<Vec<ET, n>, IT>
+    {
+    private:
+        typedef Vec<ET, n> T;
+    public:
+        static inline IT f(T a_up, T a_down, T b_up, T b_down)
+        {
+            return calcDist<T, IT>(a_down, b_down) - calcDist<T, IT>(a_up, b_up);
+        }
+    };
+
+public:
+    template <typename T, typename IT> static inline IT calcDist(const T a, const T b)
+    {
+        return calcDist_<T, IT>::f(a, b);
     }
-};
 
-template <typename T, typename IT> static inline IT calcDist(const T a, const T b)
-{
-    return calcDist_<T, IT>::f(a, b);
-}
+    template <typename T, typename IT>
+    static inline IT calcDist(const Mat& m, int i1, int j1, int i2, int j2)
+    {
+        const T a = m.at<T>(i1, j1);
+        const T b = m.at<T>(i2, j2);
+        return calcDist<T, IT>(a,b);
+    }
 
-template <typename T, typename IT>
-static inline IT calcDist(const Mat& m, int i1, int j1, int i2, int j2)
-{
-    const T a = m.at<T>(i1, j1);
-    const T b = m.at<T>(i2, j2);
-    return calcDist<T, IT>(a,b);
-}
+    template <typename T, typename IT>
+    static inline IT calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
+    {
+        return calcUpDownDist_<T, IT>::f(a_up, a_down, b_up, b_down);
+    };
 
-template <typename T, typename IT>
-static inline IT calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
-{
-    return calcDist<T, IT>(a_down, b_down) - calcDist<T, IT>(a_up, b_up);
+    template <typename T>
+    static double calcWeight(double dist, double h)
+    {
+        return std::exp(-dist / (h * h * pixelInfo<T>::channels));
+    }
+
+    template <typename T, typename IT>
+    static double maxDist()
+    {
+        return (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::sampleMax() *
+            (IT)pixelInfo<T>::channels;
+    }
 };
 
 template <typename T, typename IT> struct incWithWeight_

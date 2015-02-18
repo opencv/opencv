@@ -50,7 +50,7 @@
 
 using namespace cv;
 
-template <typename T, typename IT, typename UIT>
+template <typename T, typename IT, typename UIT, typename D>
 struct FastNlMeansMultiDenoisingInvoker :
         ParallelLoopBody
 {
@@ -94,8 +94,8 @@ private:
                                           Array4d<IT>& up_col_dist_sums) const;
 };
 
-template <class T, typename IT, typename UIT>
-FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
+template <typename T, typename IT, typename UIT, typename D>
+FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D>::FastNlMeansMultiDenoisingInvoker(
     const std::vector<Mat>& srcImgs,
     int imgToDenoiseIndex,
     int temporalWindowSize,
@@ -139,7 +139,7 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
     int almost_template_window_size_sq = 1 << almost_template_window_size_sq_bin_shift;
     double almost_dist2actual_dist_multiplier = (double) almost_template_window_size_sq / template_window_size_sq;
 
-    IT max_dist = (IT)pixelInfo<T>::sampleMax() * (IT)pixelInfo<T>::channels;
+    IT max_dist = D::template maxDist<T,IT>();
     int almost_max_dist = (int) (max_dist / almost_dist2actual_dist_multiplier + 1);
     almost_dist2weight.resize(almost_max_dist);
 
@@ -147,7 +147,7 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
     for (int almost_dist = 0; almost_dist < almost_max_dist; almost_dist++)
     {
         double dist = almost_dist * almost_dist2actual_dist_multiplier;
-        IT weight = (IT)round(fixed_point_mult_ * std::exp(-dist*dist / (h * h * pixelInfo<T>::channels)));
+        IT weight = (IT)round(fixed_point_mult_ * D::template calcWeight<T>(dist, h));
         if (weight < WEIGHT_THRESHOLD * fixed_point_mult_)
             weight = 0;
 
@@ -160,8 +160,8 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::FastNlMeansMultiDenoisingInvoker(
         dst_ = Mat::zeros(srcImgs[0].size(), srcImgs[0].type());
 }
 
-template <class T, typename IT, typename UIT>
-void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::operator() (const Range& range) const
+template <typename T, typename IT, typename UIT, typename D>
+void FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D>::operator() (const Range& range) const
 {
     int row_from = range.start;
     int row_to = range.end - 1;
@@ -234,7 +234,7 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::operator() (const Range& rang
                                 dist_sums_row[x] -= col_dist_sums_row[x];
 
                                 col_dist_sums_row[x] = up_col_dist_sums_row[x] +
-                                    calcUpDownDist<T, IT>(a_up, a_down, b_up_ptr[start_bx + x], b_down_ptr[start_bx + x]);
+                                    D::template calcUpDownDist<T, IT>(a_up, a_down, b_up_ptr[start_bx + x], b_down_ptr[start_bx + x]);
 
                                 dist_sums_row[x] += col_dist_sums_row[x];
                                 up_col_dist_sums_row[x] = col_dist_sums_row[x];
@@ -284,8 +284,8 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::operator() (const Range& rang
     }
 }
 
-template <class T, typename IT, typename UIT>
-inline void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::calcDistSumsForFirstElementInRow(
+template <typename T, typename IT, typename UIT, typename D>
+inline void FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D>::calcDistSumsForFirstElementInRow(
         int i, Array3d<IT>& dist_sums, Array4d<IT>& col_dist_sums, Array4d<IT>& up_col_dist_sums) const
 {
     int j = 0;
@@ -310,7 +310,7 @@ inline void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::calcDistSumsForFirstEl
                 {
                     for (int ty = -template_window_half_size_; ty <= template_window_half_size_; ty++)
                     {
-                        IT dist = calcDist<T, IT>(
+                        IT dist = D::template calcDist<T, IT>(
                                     main_extended_src_.at<T>(border_size_ + i + ty, border_size_ + j + tx),
                                     cur_extended_src.at<T>(border_size_ + start_y + ty, border_size_ + start_x + tx));
 
@@ -325,8 +325,8 @@ inline void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::calcDistSumsForFirstEl
     }
 }
 
-template <class T, typename IT, typename UIT>
-inline void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::calcDistSumsForElementInFirstRow(
+template <typename T, typename IT, typename UIT, typename D>
+inline void FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D>::calcDistSumsForElementInFirstRow(
     int i, int j, int first_col_num, Array3d<IT>& dist_sums,
     Array4d<IT>& col_dist_sums, Array4d<IT>& up_col_dist_sums) const
 {
@@ -353,7 +353,7 @@ inline void FastNlMeansMultiDenoisingInvoker<T, IT, UIT>::calcDistSumsForElement
                 IT* col_dist_sums_ptr = &col_dist_sums[new_last_col_num][d][y][x];
                 for (int ty = -template_window_half_size_; ty <= template_window_half_size_; ty++)
                 {
-                    *col_dist_sums_ptr += calcDist<T, IT>(
+                    *col_dist_sums_ptr += D::template calcDist<T, IT>(
                                 main_extended_src_.at<T>(ay + ty, ax),
                                 cur_extended_src.at<T>(by + ty, bx));
                 }
