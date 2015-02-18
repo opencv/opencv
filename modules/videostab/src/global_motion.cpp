@@ -544,6 +544,9 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
 
     CV_Assert(motionModel() <= MM_AFFINE && motionModel() != MM_RIGID);
 
+    if(npoints <= 0)
+        return Mat::eye(3, 3, CV_32F);
+
     // prepare LP problem
 
     const Point2f *points0_ = points0.getMat().ptr<Point2f>();
