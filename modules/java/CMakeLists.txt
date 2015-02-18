@@ -253,7 +253,6 @@ string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 ocv_add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
-set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
