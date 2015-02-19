@@ -15,7 +15,7 @@ static void help()
 
 int main(int argc, char** argv)
 {
-    const char* filename = argc >= 2 ? argv[1] : "board.jpg";
+    const char* filename = argc >= 2 ? argv[1] : "pic1.png";
 
     Mat img = imread(filename, 0);
     if(img.empty())
