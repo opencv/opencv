@@ -756,6 +756,9 @@ endfunction()
 function(_ocv_append_target_includes target)
   if(DEFINED OCV_TARGET_INCLUDE_DIRS_${target})
     target_include_directories(${target} PRIVATE ${OCV_TARGET_INCLUDE_DIRS_${target}})
+    if (TARGET ${target}_object)
+      target_include_directories(${target}_object PRIVATE ${OCV_TARGET_INCLUDE_DIRS_${target}})
+    endif()
     unset(OCV_TARGET_INCLUDE_DIRS_${target} CACHE)
   endif()
 endfunction()
@@ -780,8 +783,29 @@ function(ocv_add_library target)
       ocv_include_directories(${CUDA_INCLUDE_DIRS})
       ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
     endif()
+    set(OPENCV_MODULE_${target}_CUDA_OBJECTS ${cuda_objs} CACHE INTERNAL "Compiled CUDA object files")
   endif()
 
   add_library(${target} ${ARGN} ${cuda_objs})
+
+  # Add OBJECT library to use in compound modules
+  if (NOT OPENCV_MODULE_${target}_CHILDREN
+      AND NOT OPENCV_MODULE_${target}_CLASS STREQUAL "BINDINGS"
+      AND NOT ${target} STREQUAL "opencv_ts"
+    )
+    set(sources ${ARGN})
+    ocv_list_filterout(sources "\\\\.(cl|inc)$")
+    add_library(${target}_object OBJECT ${sources})
+    set_target_properties(${target}_object PROPERTIES
+      EXCLUDE_FROM_ALL True
+      EXCLUDE_FROM_DEFAULT_BUILD True
+      POSITION_INDEPENDENT_CODE True
+      )
+    if (ENABLE_SOLUTION_FOLDERS)
+      set_target_properties(${target}_object PROPERTIES FOLDER "object_libraries")
+    endif()
+    unset(sources)
+  endif()
+
   _ocv_append_target_includes(${target})
 endfunction()
