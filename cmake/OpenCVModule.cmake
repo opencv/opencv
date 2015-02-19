@@ -21,7 +21,24 @@
 # OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD
 # OPENCV_MODULE_${the_module}_CUDA_OBJECTS - compiled CUDA objects list
 # OPENCV_MODULE_${the_module}_CHILDREN - list of submodules for compound modules (cmake >= 2.8.8)
+# OPENCV_MODULE_${the_module}_WRAPPERS - list of wrappers supporting this module
 # HAVE_${the_module} - for fast check of module availability
+
+# Module layout:
+# <module>
+# ├── doc               - docs
+# ├── include
+# │   └── opencv2
+# │       └── <module>  - sub headers
+# ├── misc
+# │   ├── java          - additional files for java wrapper
+# │   └── python        - additional files for python wrapper
+# ├── perf              - perfomance tests
+# ├── samples           - sample code
+# ├── src               - sources
+# ├── test              - accuracy tests
+# └── tutorials         - tutorials
+
 
 # To control the setup of the module you could also set:
 # the_description - text to be used as current module description
@@ -72,7 +89,7 @@ unset(OPENCV_WORLD_MODULES CACHE)
 
 # adds dependencies to OpenCV module
 # Usage:
-#   add_dependencies(opencv_<name> [REQUIRED] [<list of dependencies>] [OPTIONAL <list of modules>])
+#   add_dependencies(opencv_<name> [REQUIRED] [<list of dependencies>] [OPTIONAL <list of modules>] [WRAP <list of wrappers>])
 # Notes:
 # * <list of dependencies> - can include full names of modules or full pathes to shared/static libraries or cmake targets
 macro(ocv_add_dependencies full_modname)
@@ -87,6 +104,8 @@ macro(ocv_add_dependencies full_modname)
       set(__depsvar OPENCV_MODULE_${full_modname}_PRIVATE_REQ_DEPS)
     elseif(d STREQUAL "PRIVATE_OPTIONAL")
       set(__depsvar OPENCV_MODULE_${full_modname}_PRIVATE_OPT_DEPS)
+    elseif(d STREQUAL "WRAP")
+      set(__depsvar OPENCV_MODULE_${full_modname}_WRAPPERS)
     else()
       list(APPEND ${__depsvar} "${d}")
     endif()
@@ -97,6 +116,7 @@ macro(ocv_add_dependencies full_modname)
   ocv_list_unique(OPENCV_MODULE_${full_modname}_OPT_DEPS)
   ocv_list_unique(OPENCV_MODULE_${full_modname}_PRIVATE_REQ_DEPS)
   ocv_list_unique(OPENCV_MODULE_${full_modname}_PRIVATE_OPT_DEPS)
+  ocv_list_unique(OPENCV_MODULE_${full_modname}_WRAPPERS)
 
   set(OPENCV_MODULE_${full_modname}_REQ_DEPS ${OPENCV_MODULE_${full_modname}_REQ_DEPS}
     CACHE INTERNAL "Required dependencies of ${full_modname} module")
@@ -106,11 +126,13 @@ macro(ocv_add_dependencies full_modname)
     CACHE INTERNAL "Required private dependencies of ${full_modname} module")
   set(OPENCV_MODULE_${full_modname}_PRIVATE_OPT_DEPS ${OPENCV_MODULE_${full_modname}_PRIVATE_OPT_DEPS}
     CACHE INTERNAL "Optional private dependencies of ${full_modname} module")
+  set(OPENCV_MODULE_${full_modname}_WRAPPERS ${OPENCV_MODULE_${full_modname}_WRAPPERS}
+    CACHE INTERNAL "List of wrappers supporting module ${full_modname}")
 endmacro()
 
 # declare new OpenCV module in current folder
 # Usage:
-#   ocv_add_module(<name> [INTERNAL|BINDINGS] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
+#   ocv_add_module(<name> [INTERNAL|BINDINGS] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>] [WRAP <list of wrappers>])
 # Example:
 #   ocv_add_module(yaom INTERNAL opencv_core opencv_highgui opencv_flann OPTIONAL opencv_cudev)
 macro(ocv_add_module _name)
@@ -180,6 +202,11 @@ macro(ocv_add_module _name)
 
     # add submodules if any
     set(OPENCV_MODULE_${the_module}_CHILDREN "${OPENCV_MODULE_CHILDREN}" CACHE INTERNAL "List of ${the_module} submodules")
+
+    # add reverse wrapper dependencies
+    foreach (wrapper ${OPENCV_MODULE_${the_module}_WRAPPERS})
+      ocv_add_dependencies(opencv_${wrapper} OPTIONAL ${the_module})
+    endforeach()
 
     # stop processing of current file
     return()
@@ -796,7 +823,7 @@ endmacro()
 # short command for adding simple OpenCV module
 # see ocv_add_module for argument details
 # Usage:
-# ocv_define_module(module_name  [INTERNAL] [EXCLUDE_CUDA] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
+# ocv_define_module(module_name  [INTERNAL] [EXCLUDE_CUDA] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>] [WRAP <list of wrappers>])
 macro(ocv_define_module module_name)
   ocv_debug_message("ocv_define_module(" ${module_name} ${ARGN} ")")
   set(_argn ${ARGN})

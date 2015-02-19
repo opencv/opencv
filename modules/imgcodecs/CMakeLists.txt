@@ -1,5 +1,5 @@
 set(the_description "Image codecs")
-ocv_add_module(imgcodecs opencv_imgproc)
+ocv_add_module(imgcodecs opencv_imgproc WRAP java)
 
 # ----------------------------------------------------------------------------
 #  CMake file for imgcodecs. See root CMakeLists.txt
