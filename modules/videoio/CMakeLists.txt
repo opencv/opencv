@@ -1,5 +1,5 @@
 set(the_description "Media I/O")
-ocv_add_module(videoio opencv_imgproc opencv_imgcodecs OPTIONAL opencv_androidcamera)
+ocv_add_module(videoio opencv_imgproc opencv_imgcodecs OPTIONAL opencv_androidcamera WRAP java)
 
 # ----------------------------------------------------------------------------
 #  CMake file for videoio. See root CMakeLists.txt

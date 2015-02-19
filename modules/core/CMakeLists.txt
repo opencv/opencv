@@ -1,5 +1,7 @@
 set(the_description "The Core Functionality")
-ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES} "${OPENCL_LIBRARIES}" OPTIONAL opencv_cudev)
+ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES} "${OPENCL_LIBRARIES}"
+               OPTIONAL opencv_cudev
+               WRAP java)
 
 if(HAVE_WINRT_CX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
