@@ -77,6 +77,13 @@ if("@USE_IPPICV@" STREQUAL "TRUE") # value is defined by package builder (use ST
 endif()
 
 if(NOT TARGET opencv_core)
+  # Extract directory name from full path of the file currently being processed.
+  # Note that CMake 2.8.3 introduced CMAKE_CURRENT_LIST_DIR. We reimplement it
+  # for older versions of CMake to support these as well.
+  if(CMAKE_VERSION VERSION_LESS "2.8.3")
+    get_filename_component(CMAKE_CURRENT_LIST_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+  endif()
+
   include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${OpenCV_MODULES_SUFFIX}.cmake)
 endif()
 
