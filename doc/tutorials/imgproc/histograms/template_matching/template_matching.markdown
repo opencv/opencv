@@ -146,7 +146,7 @@ Explanation
     int result_cols =  img.cols - templ.cols + 1;
     int result_rows = img.rows - templ.rows + 1;
 
-    result.create( result_cols, result_rows, CV_32FC1 );
+    result.create( result_rows, result_cols, CV_32FC1 );
     @endcode
 -#  Perform the template matching operation:
     @code{.cpp}
