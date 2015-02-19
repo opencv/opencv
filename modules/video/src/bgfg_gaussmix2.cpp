@@ -230,8 +230,6 @@ public:
         }
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     virtual int getHistory() const { return history; }
     virtual void setHistory(int _nframes) { history = _nframes; }
 

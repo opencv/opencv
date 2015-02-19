@@ -36,9 +36,11 @@ int main( int /*argc*/, char** /*argv*/ )
     samples = samples.reshape(1, 0);
 
     // cluster the data
-    Ptr<EM> em_model = EM::train( samples, noArray(), labels, noArray(),
-            EM::Params(N, EM::COV_MAT_SPHERICAL,
-                       TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 300, 0.1)));
+    Ptr<EM> em_model = EM::create();
+    em_model->setClustersNumber(N);
+    em_model->setCovarianceMatrixType(EM::COV_MAT_SPHERICAL);
+    em_model->setTermCriteria(TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 300, 0.1));
+    em_model->trainEM( samples, noArray(), labels, noArray() );
 
     // classify every image pixel
     for( i = 0; i < img.rows; i++ )

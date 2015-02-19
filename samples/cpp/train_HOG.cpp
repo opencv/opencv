@@ -141,7 +141,7 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 
     int cellSize        = 8;
     int gradientBinSize = 9;
-    float radRangeForOneBin = (float)(CV_PI/(float)gradientBinSize); // dividing 180° into 9 bins, how large (in rad) is one bin?
+    float radRangeForOneBin = (float)(CV_PI/(float)gradientBinSize); // dividing 180 into 9 bins, how large (in rad) is one bin?
 
     // prepare data structure: 9 orientation / gradient strenghts for each cell
     int cells_in_x_dir = DIMX / cellSize;
@@ -313,23 +313,23 @@ void compute_hog( const vector< Mat > & img_lst, vector< Mat > & gradient_lst, c
 
 void train_svm( const vector< Mat > & gradient_lst, const vector< int > & labels )
 {
-    /* Default values to train SVM */
-    SVM::Params params;
-    params.coef0 = 0.0;
-    params.degree = 3;
-    params.termCrit.epsilon = 1e-3;
-    params.gamma = 0;
-    params.kernelType = SVM::LINEAR;
-    params.nu = 0.5;
-    params.p = 0.1; // for EPSILON_SVR, epsilon in loss function?
-    params.C = 0.01; // From paper, soft classifier
-    params.svmType = SVM::EPS_SVR; // C_SVC; // EPSILON_SVR; // may be also NU_SVR; // do regression task
 
     Mat train_data;
     convert_to_ml( gradient_lst, train_data );
 
     clog << "Start training...";
-    Ptr<SVM> svm = StatModel::train<SVM>(train_data, ROW_SAMPLE, Mat(labels), params);
+    Ptr<SVM> svm = SVM::create();
+    /* Default values to train SVM */
+    svm->setCoef0(0.0);
+    svm->setDegree(3);
+    svm->setTermCriteria(TermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 1000, 1e-3 ));
+    svm->setGamma(0);
+    svm->setKernel(SVM::LINEAR);
+    svm->setNu(0.5);
+    svm->setP(0.1); // for EPSILON_SVR, epsilon in loss function?
+    svm->setC(0.01); // From paper, soft classifier
+    svm->setType(SVM::EPS_SVR); // C_SVC; // EPSILON_SVR; // may be also NU_SVR; // do regression task
+    svm->train(train_data, ROW_SAMPLE, Mat(labels));
     clog << "...[done]" << endl;
 
     svm->save( "my_people_detector.yml" );
