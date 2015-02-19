@@ -545,8 +545,29 @@ The function returns the number of non-zero elements in src :
 */
 CV_EXPORTS_W int countNonZero( InputArray src );
 
-/** @brief returns the list of locations of non-zero pixels
-@todo document
+/** @brief Returns the list of locations of non-zero pixels
+
+The function returns the coordinates of the location of non-zero pixels in src.
+The result array can be both type of Mat or vector<Point>. For example:
+@code{.cpp}
+    cv::Mat binaryImage; // input, binary image
+    cv::Mat locations;   // output, locations of non-zero pixels
+    cv::findNonZero(binaryImage, locations);
+
+    // access pixel coordinates
+    Point pnt = locations.at<Point>(i);
+@endcode
+or
+@code{.cpp}
+    cv::Mat binaryImage; // input, binary image
+    vector<Point> locations;   // output, locations of non-zero pixels
+    cv::findNonZero(binaryImage, locations);
+
+    // access pixel coordinates
+    Point pnt = locations[i];
+@endcode
+@param src single-channel array
+@param idx output array with the non-zero pixel points
 */
 CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
 
