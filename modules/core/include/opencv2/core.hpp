@@ -132,6 +132,39 @@ It is possible to alternate error processing by using cv::redirectError().
  */
 CV_EXPORTS void error( const Exception& exc );
 
+/*! @brief Holds information about memory usage by OpenCV objects.
+
+A memory snapshot contains brief information of number of allocated
+objects, their size, peak memory usage, number of live objects and allocations
+count. By comparing two snapshots user can identify places in code, that
+potentially can lead to memory-related problems like extreme memory usage or large
+number of temporary objects.
+ */
+struct CV_EXPORTS MemorySnapshot
+{
+    //! @brief Total amount of allocated memory.
+    size_t allocatedMemory;
+
+    //! @brief  Maximum amount of allocated memory for the whole time.
+    size_t peakMemoryUsage;
+
+    //! @brief  Maximum amount of allocated memory since last snapshot.
+    size_t peakMemoryUsageSinceLastSnapshot;
+
+    //! @brief  Number of memory allocations count for the whole program running time.
+    size_t allocationsCount;
+
+    //! @brief  Number of memory deallocations for the whole program running time.
+    size_t deallocationsCount;
+
+    //! @brief  Number of allocated objects that are still live (e.g not deallocated).
+    size_t liveObjects;
+};
+
+/*! @brief Creates memory snapshot for a given moment.
+*/
+CV_EXPORTS MemorySnapshot memorySnapshot();
+
 enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independently
                  SORT_EVERY_COLUMN = 1, //!< each matrix column is sorted
                                         //!< independently; this flag and the previous one are

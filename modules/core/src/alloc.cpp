@@ -41,11 +41,110 @@
 //M*/
 
 #include "precomp.hpp"
+#include <map>
+#include <memory>
 
 #define CV_USE_SYSTEM_MALLOC 1
 
 namespace cv
 {
+
+class MemoryManager
+{
+public:
+    typedef std::map<void*, size_t>     AllocationTable;
+    typedef cv::AutoLock                LockType;
+
+    void recordAlloc(void* ptr, size_t size)
+    {
+        LockType guard(mAllocMutex);
+        mAllocatedMemory.insert(std::make_pair(ptr, size));
+
+        mCurrentMemoryUsage += size;
+        mPeakMemoryUsage = std::max(mPeakMemoryUsage, mCurrentMemoryUsage);
+        mPeakMemoryUsageSinceLastSnapshot = std::max(mPeakMemoryUsageSinceLastSnapshot, mCurrentMemoryUsage);
+        mAllocationsCount++;
+    }
+
+    void recordFree(void* ptr)
+    {
+        LockType guard(mAllocMutex);
+
+        AllocationTable::iterator block = mAllocatedMemory.find(ptr);
+        CV_Assert(block != mAllocatedMemory.end());
+
+        mCurrentMemoryUsage -= block->second;
+        mDeallocationsCount++;
+        mAllocatedMemory.erase(block);
+    }
+
+    static MemoryManager& Instance()
+    {
+        createMemoryManager();
+
+        MemoryManager& mgr = const_cast<MemoryManager&>(*mInstance);
+        return mgr;
+    }
+
+    MemorySnapshot makeSnapshot()
+    {
+        LockType guard(mAllocMutex);
+
+        MemorySnapshot snapshot;
+        snapshot.peakMemoryUsage = mPeakMemoryUsage;
+        snapshot.peakMemoryUsageSinceLastSnapshot = mPeakMemoryUsageSinceLastSnapshot;
+        snapshot.allocatedMemory = mCurrentMemoryUsage;
+        snapshot.allocationsCount = mAllocationsCount;
+        snapshot.deallocationsCount = mDeallocationsCount;
+        snapshot.liveObjects = mAllocationsCount - mDeallocationsCount;
+
+        mPeakMemoryUsageSinceLastSnapshot = 0;
+
+        return std::move(snapshot);
+    }
+private:
+
+    static void createMemoryManager()
+    {
+        if (mInstance == NULL)
+        {
+            mInstance = new MemoryManager();
+        }
+    }
+
+    MemoryManager()
+        : mCurrentMemoryUsage(0)
+        , mPeakMemoryUsage(0)
+        , mPeakMemoryUsageSinceLastSnapshot(0)
+        , mAllocationsCount(0)
+        , mDeallocationsCount(0)
+    {
+    }
+
+private:
+    cv::Mutex       mAllocMutex;
+    AllocationTable mAllocatedMemory;
+
+    size_t          mCurrentMemoryUsage;
+    size_t          mPeakMemoryUsage;
+    size_t          mPeakMemoryUsageSinceLastSnapshot;
+
+    size_t          mAllocationsCount;
+    size_t          mDeallocationsCount;
+
+    static volatile MemoryManager  * mInstance;
+};
+
+volatile MemoryManager * MemoryManager::mInstance = NULL;
+
+MemorySnapshot memorySnapshot()
+{
+#ifndef CV_COLLECT_ALLOC_DATA
+    CV_Error_(CV_StsNoMem, ("Failed to create memory snapshot. Please build OpenCV using ENABLE_MEMORY_SNAPSHOTS=YES."));
+#endif
+
+    return MemoryManager::Instance().makeSnapshot();
+}
 
 static void* OutOfMemoryError(size_t size)
 {
@@ -64,6 +163,11 @@ void* fastMalloc( size_t size )
     uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
     if(!udata)
         return OutOfMemoryError(size);
+
+#ifdef CV_COLLECT_ALLOC_DATA
+    MemoryManager::Instance().recordAlloc(udata, size);
+#endif
+
     uchar** adata = alignPtr((uchar**)udata + 1, CV_MALLOC_ALIGN);
     adata[-1] = udata;
     return adata;
@@ -76,6 +180,11 @@ void fastFree(void* ptr)
         uchar* udata = ((uchar**)ptr)[-1];
         CV_DbgAssert(udata < (uchar*)ptr &&
                ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*)+CV_MALLOC_ALIGN));
+
+#ifdef CV_COLLECT_ALLOC_DATA
+        MemoryManager::Instance().recordFree(udata);
+#endif
+
         free(udata);
     }
 }
