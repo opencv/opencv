@@ -88,7 +88,7 @@ namespace PhoneXamlDirect3DApp1
         {
             try
             {
-                // These are TextBlock controls that are created in the page’s XAML file.  
+                // These are TextBlock controls that are created in the page’s XAML file.
                 float value = DeviceStatus.ApplicationCurrentMemoryUsage / (1024.0f * 1024.0f) ;
                 MemoryTextBlock.Text = value.ToString();
                 value = DeviceStatus.ApplicationPeakMemoryUsage / (1024.0f * 1024.0f);
@@ -99,5 +99,5 @@ namespace PhoneXamlDirect3DApp1
                 MemoryTextBlock.Text = ex.Message;
             }
         }
-    }       
+    }
 }

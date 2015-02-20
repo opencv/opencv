@@ -1,8 +1,8 @@
 cbuffer ModelViewProjectionConstantBuffer : register(b0)
 {
-	matrix model;
-	matrix view;
-	matrix projection;
+    matrix model;
+    matrix view;
+    matrix projection;
 };
 
 struct VertexInputType
@@ -34,6 +34,6 @@ PixelInputType main(VertexInputType input)
     output.position = mul(output.position, projection);
     // Store the texture coordinates for the pixel shader.
     output.tex = input.tex;
-    
+
     return output;
 }

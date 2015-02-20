@@ -1,10 +1,10 @@
 <#
 Copyright © Microsoft Open Technologies, Inc.
-All Rights Reserved        
+All Rights Reserved
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 
-You may obtain a copy of the License at 
+You may obtain a copy of the License at
 http://www.apache.org/licenses/LICENSE-2.0
 
 THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -110,11 +110,11 @@ function Call-MSBuild($path, $config)
     L "Executing: $($command)"
     msbuild $path /p:Configuration="$config" /m
 
-    if(-Not $?) { 
+    if(-Not $?) {
         Throw "Failure executing command: $($command)"
-    } 
+    }
 
-    return $true 
+    return $true
 }
 
 Function Execute() {
@@ -122,10 +122,10 @@ Function Execute() {
         ShowHelp
     }
 
-    # Validating arguments. 
+    # Validating arguments.
     # This type of validation (rather than using ValidateSet()) is required to make .bat wrapper work
 
-    D "Input Platforms: $PLATFORMS_IN" 
+    D "Input Platforms: $PLATFORMS_IN"
     $platforms = New-Object System.Collections.ArrayList
     $PLATFORMS_IN.Split("," ,[System.StringSplitOptions]::RemoveEmptyEntries) | ForEach {
         $_ = $_.Trim()
@@ -133,7 +133,7 @@ Function Execute() {
             [void]$platforms.Add($_)
             D "$_ is valid"
         } else {
-            Throw "$($_) is not valid! Please use WP, WS" 
+            Throw "$($_) is not valid! Please use WP, WS"
         }
     }
     D "Processed Platforms: $platforms"
@@ -144,9 +144,9 @@ Function Execute() {
         $_ = $_.Trim()
         if ("8.0","8.1" -Contains $_) {
             [void]$versions.Add($_)
-            D "$_ is valid" 
+            D "$_ is valid"
         } else {
-            Throw "$($_) is not valid! Please use 8.0, 8.1" 
+            Throw "$($_) is not valid! Please use 8.0, 8.1"
         }
     }
     D "Processed Versions: $versions"
@@ -159,7 +159,7 @@ Function Execute() {
             $architectures.Add($_) > $null
             D "$_ is valid"
         } else {
-            Throw "$($_) is not valid! Please use x86, x64, ARM" 
+            Throw "$($_) is not valid! Please use x86, x64, ARM"
         }
     }
     D "Processed Architectures: $architectures"
@@ -231,7 +231,7 @@ Function Execute() {
                 Push-Location -Path $path
 
                 L "Generating project:"
-                L "cmake -G $genName -DCMAKE_SYSTEM_NAME:String=$platName -DCMAKE_SYSTEM_VERSION:String=$vers -DCMAKE_VS_EFFECTIVE_PLATFORMS:String=$arch -DCMAKE_INSTALL_PREFIX:PATH=$installPath $SRC" 
+                L "cmake -G $genName -DCMAKE_SYSTEM_NAME:String=$platName -DCMAKE_SYSTEM_VERSION:String=$vers -DCMAKE_VS_EFFECTIVE_PLATFORMS:String=$arch -DCMAKE_INSTALL_PREFIX:PATH=$installPath $SRC"
                 cmake -G $genName -DCMAKE_SYSTEM_NAME:String=$platName -DCMAKE_SYSTEM_VERSION:String=$vers -DCMAKE_VS_EFFECTIVE_PLATFORMS:String=$arch -DCMAKE_INSTALL_PREFIX:PATH=$installPath $SRC
                 L "-----------------------------------------------"
 
@@ -273,8 +273,8 @@ Function Execute() {
 Function ShowHelp() {
     Write-Host "Configures OpenCV and generates projects for specified verion of Visual Studio/platforms/architectures."
     Write-Host "Must be executed from the sources folder containing main CMakeLists configuration."
-    Write-Host "Parameter keys can be shortened down to a signle symbol (e.g. '-a') and are not case sensitive."
-    Write-Host "Proper parameter sequensing is required when omitting keys." 
+    Write-Host "Parameter keys can be shortened down to a single symbol (e.g. '-a') and are not case sensitive."
+    Write-Host "Proper parameter sequencing is required when omitting keys."
     Write-Host "Generates the following folder structure, depending on the supplied parameters: "
     Write-Host "     bin/ "
     Write-Host "      | "
@@ -286,7 +286,7 @@ Function ShowHelp() {
     Write-Host "      |  |  |-x86 "
     Write-Host "      |  |  |-x64 "
     Write-Host "      |  |  |-ARM "
-    Write-Host " "     		
+    Write-Host " "
     Write-Host " USAGE: "
     Write-Host "   Calling:"
     Write-Host "     PS> setup_winrt.ps1 [params]"
@@ -310,7 +310,7 @@ Function ShowHelp() {
     Write-Host "     version - Array of platform versions. "
     Write-Host "                 Default: 8.1 "
     Write-Host "                 Example: '8.0,8.1' "
-    Write-Host "                 Options: 8.0, 8.1. Available options may be limited depending on your local setup (e.g. SDK availability). " 
+    Write-Host "                 Options: 8.0, 8.1. Available options may be limited depending on your local setup (e.g. SDK availability). "
     Write-Host "                 Note that you'll need to use quotes to specify more than one version. "
     Write-Host "     architecture - Array of target architectures to build for. "
     Write-Host "                 Default: x86 "

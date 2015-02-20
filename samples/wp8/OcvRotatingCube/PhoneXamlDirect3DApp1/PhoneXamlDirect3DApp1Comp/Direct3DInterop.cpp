@@ -16,33 +16,33 @@ using namespace Windows::Phone::Input::Interop;
 
 namespace PhoneXamlDirect3DApp1Comp
 {
-	void Direct3DInterop::ApplyGrayFilter(const cv::Mat& image)
-	{
-		cv::Mat intermediateMat;
-		cv::cvtColor(image, intermediateMat, CV_RGBA2GRAY);
-		cv::cvtColor(intermediateMat, image, CV_GRAY2BGRA);
-	}
+    void Direct3DInterop::ApplyGrayFilter(const cv::Mat& image)
+    {
+        cv::Mat intermediateMat;
+        cv::cvtColor(image, intermediateMat, CV_RGBA2GRAY);
+        cv::cvtColor(intermediateMat, image, CV_GRAY2BGRA);
+    }
 
-	void Direct3DInterop::ApplyCannyFilter(const cv::Mat& image)
-	{
-		cv::Mat intermediateMat;
-		cv::Canny(image, intermediateMat, 80, 90);
-		cv::cvtColor(intermediateMat, image, CV_GRAY2BGRA);
-	}
+    void Direct3DInterop::ApplyCannyFilter(const cv::Mat& image)
+    {
+        cv::Mat intermediateMat;
+        cv::Canny(image, intermediateMat, 80, 90);
+        cv::cvtColor(intermediateMat, image, CV_GRAY2BGRA);
+    }
 
-	void Direct3DInterop::ApplySepiaFilter(const cv::Mat& image)
-	{
-		const float SepiaKernelData[16] =
-		{
-			/* B */0.131f, 0.534f, 0.272f, 0.f,
-			/* G */0.168f, 0.686f, 0.349f, 0.f,
-			/* R */0.189f, 0.769f, 0.393f, 0.f,
-			/* A */0.000f, 0.000f, 0.000f, 1.f
-		};
+    void Direct3DInterop::ApplySepiaFilter(const cv::Mat& image)
+    {
+        const float SepiaKernelData[16] =
+        {
+            /* B */0.131f, 0.534f, 0.272f, 0.f,
+            /* G */0.168f, 0.686f, 0.349f, 0.f,
+            /* R */0.189f, 0.769f, 0.393f, 0.f,
+            /* A */0.000f, 0.000f, 0.000f, 1.f
+        };
 
-		const cv::Mat SepiaKernel(4, 4, CV_32FC1, (void*)SepiaKernelData);
-		cv::transform(image, image, SepiaKernel);
-	}
+        const cv::Mat SepiaKernel(4, 4, CV_32FC1, (void*)SepiaKernelData);
+        cv::transform(image, image, SepiaKernel);
+    }
 
     Direct3DInterop::Direct3DInterop() :
         m_timer(ref new BasicTimer())
@@ -144,31 +144,31 @@ namespace PhoneXamlDirect3DApp1Comp
 
     void Direct3DInterop::CreateTexture(const Platform::Array<int>^  buffer,int width,int height, OCVFilterType filter)
     {
-		if (m_renderer)
-		{	
-			cv::Mat Lena = cv::Mat(height, width, CV_8UC4);
-			memcpy(Lena.data, buffer->Data, 4 * height*width);
+        if (m_renderer)
+        {
+            cv::Mat Lena = cv::Mat(height, width, CV_8UC4);
+            memcpy(Lena.data, buffer->Data, 4 * height*width);
 
-			switch (filter)
-			{
-				case OCVFilterType::ePreview: 
-					break;
+            switch (filter)
+            {
+                case OCVFilterType::ePreview:
+                    break;
 
-				case OCVFilterType::eGray:
-					ApplyGrayFilter(Lena);
-					break;
+                case OCVFilterType::eGray:
+                    ApplyGrayFilter(Lena);
+                    break;
 
-				case OCVFilterType::eCanny:
-					ApplyCannyFilter(Lena);
-					break;
+                case OCVFilterType::eCanny:
+                    ApplyCannyFilter(Lena);
+                    break;
 
-				case OCVFilterType::eSepia:
-					ApplySepiaFilter(Lena);
-					break;
-			}
+                case OCVFilterType::eSepia:
+                    ApplySepiaFilter(Lena);
+                    break;
+            }
 
-			m_renderer->CreateTextureFromByte(Lena.data, width, height);
-		}
+            m_renderer->CreateTextureFromByte(Lena.data, width, height);
+        }
     }
 
     byte* GetPointerToPixelData( Windows::Storage::Streams::IBuffer ^ pixelBuffer)

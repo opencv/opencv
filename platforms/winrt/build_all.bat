@@ -7,7 +7,7 @@ if defined VS120COMNTOOLS (
     set VSTOOLS="%VS120COMNTOOLS%"
     set VC_VER=120
     set FOUND_VC=1
-) 
+)
 
 set VSTOOLS=%VSTOOLS:"=%
 set "VSTOOLS=%VSTOOLS:\=/%"
@@ -29,45 +29,45 @@ echo.
 call %VSVARS%
 
 if %FOUND_VC%==1 (
-	call:DoMSBuild ..\..\bin\WP\8.1\x86\OpenCV.sln Debug
-	call:DoMSBuild ..\..\bin\WP\8.1\x86\INSTALL.vcxproj Debug
-	call:DoMSBuild ..\..\bin\WP\8.1\x86\OpenCV.sln Release
-	call:DoMSBuild ..\..\bin\WP\8.1\x86\INSTALL.vcxproj Release
+    call:DoMSBuild ..\..\bin\WP\8.1\x86\OpenCV.sln Debug
+    call:DoMSBuild ..\..\bin\WP\8.1\x86\INSTALL.vcxproj Debug
+    call:DoMSBuild ..\..\bin\WP\8.1\x86\OpenCV.sln Release
+    call:DoMSBuild ..\..\bin\WP\8.1\x86\INSTALL.vcxproj Release
 
-	call:DoMSBuild ..\..\bin\WP\8.1\ARM\OpenCV.sln Debug
-	call:DoMSBuild ..\..\bin\WP\8.1\ARM\INSTALL.vcxproj Debug
-	call:DoMSBuild ..\..\bin\WP\8.1\ARM\OpenCV.sln Release
-	call:DoMSBuild ..\..\bin\WP\8.1\ARM\INSTALL.vcxproj Release
+    call:DoMSBuild ..\..\bin\WP\8.1\ARM\OpenCV.sln Debug
+    call:DoMSBuild ..\..\bin\WP\8.1\ARM\INSTALL.vcxproj Debug
+    call:DoMSBuild ..\..\bin\WP\8.1\ARM\OpenCV.sln Release
+    call:DoMSBuild ..\..\bin\WP\8.1\ARM\INSTALL.vcxproj Release
 
-	call:DoMSBuild ..\..\bin\WS\8.1\x86\OpenCV.sln Debug
-	call:DoMSBuild ..\..\bin\WS\8.1\x86\INSTALL.vcxproj Debug
-	call:DoMSBuild ..\..\bin\WS\8.1\x86\OpenCV.sln Release
-	call:DoMSBuild ..\..\bin\WS\8.1\x86\INSTALL.vcxproj Release
+    call:DoMSBuild ..\..\bin\WS\8.1\x86\OpenCV.sln Debug
+    call:DoMSBuild ..\..\bin\WS\8.1\x86\INSTALL.vcxproj Debug
+    call:DoMSBuild ..\..\bin\WS\8.1\x86\OpenCV.sln Release
+    call:DoMSBuild ..\..\bin\WS\8.1\x86\INSTALL.vcxproj Release
 
-	call:DoMSBuild ..\..\bin\WS\8.1\ARM\OpenCV.sln Debug
-	call:DoMSBuild ..\..\bin\WS\8.1\ARM\INSTALL.vcxproj Debug
-	call:DoMSBuild ..\..\bin\WS\8.1\ARM\OpenCV.sln Release
-	call:DoMSBuild ..\..\bin\WS\8.1\ARM\INSTALL.vcxproj Release
+    call:DoMSBuild ..\..\bin\WS\8.1\ARM\OpenCV.sln Debug
+    call:DoMSBuild ..\..\bin\WS\8.1\ARM\INSTALL.vcxproj Debug
+    call:DoMSBuild ..\..\bin\WS\8.1\ARM\OpenCV.sln Release
+    call:DoMSBuild ..\..\bin\WS\8.1\ARM\INSTALL.vcxproj Release
 
-	call:DoMSBuild ..\..\bin\WP\8.0\x86\OpenCV.sln Debug
-	call:DoMSBuild ..\..\bin\WP\8.0\x86\INSTALL.vcxproj Debug
-	call:DoMSBuild ..\..\bin\WP\8.0\x86\OpenCV.sln Release
-	call:DoMSBuild ..\..\bin\WP\8.0\x86\INSTALL.vcxproj Release
+    call:DoMSBuild ..\..\bin\WP\8.0\x86\OpenCV.sln Debug
+    call:DoMSBuild ..\..\bin\WP\8.0\x86\INSTALL.vcxproj Debug
+    call:DoMSBuild ..\..\bin\WP\8.0\x86\OpenCV.sln Release
+    call:DoMSBuild ..\..\bin\WP\8.0\x86\INSTALL.vcxproj Release
 
-	call:DoMSBuild ..\..\bin\WP\8.0\ARM\OpenCV.sln Debug
-	call:DoMSBuild ..\..\bin\WP\8.0\ARM\INSTALL.vcxproj Debug
-	call:DoMSBuild ..\..\bin\WP\8.0\ARM\OpenCV.sln Release
-	call:DoMSBuild ..\..\bin\WP\8.0\ARM\INSTALL.vcxproj Release
+    call:DoMSBuild ..\..\bin\WP\8.0\ARM\OpenCV.sln Debug
+    call:DoMSBuild ..\..\bin\WP\8.0\ARM\INSTALL.vcxproj Debug
+    call:DoMSBuild ..\..\bin\WP\8.0\ARM\OpenCV.sln Release
+    call:DoMSBuild ..\..\bin\WP\8.0\ARM\INSTALL.vcxproj Release
 
-	call:DoMSBuild ..\..\bin\WS\8.0\x86\OpenCV.sln Debug
-	call:DoMSBuild ..\..\bin\WS\8.0\x86\INSTALL.vcxproj Debug
-	call:DoMSBuild ..\..\bin\WS\8.0\x86\OpenCV.sln Release
-	call:DoMSBuild ..\..\bin\WS\8.0\x86\INSTALL.vcxproj Release
+    call:DoMSBuild ..\..\bin\WS\8.0\x86\OpenCV.sln Debug
+    call:DoMSBuild ..\..\bin\WS\8.0\x86\INSTALL.vcxproj Debug
+    call:DoMSBuild ..\..\bin\WS\8.0\x86\OpenCV.sln Release
+    call:DoMSBuild ..\..\bin\WS\8.0\x86\INSTALL.vcxproj Release
 
-	call:DoMSBuild ..\..\bin\WS\8.0\ARM\OpenCV.sln Debug
-	call:DoMSBuild ..\..\bin\WS\8.0\ARM\INSTALL.vcxproj Debug
-	call:DoMSBuild ..\..\bin\WS\8.0\ARM\OpenCV.sln Release
-	call:DoMSBuild ..\..\bin\WS\8.0\ARM\INSTALL.vcxproj Release
+    call:DoMSBuild ..\..\bin\WS\8.0\ARM\OpenCV.sln Debug
+    call:DoMSBuild ..\..\bin\WS\8.0\ARM\INSTALL.vcxproj Debug
+    call:DoMSBuild ..\..\bin\WS\8.0\ARM\OpenCV.sln Release
+    call:DoMSBuild ..\..\bin\WS\8.0\ARM\INSTALL.vcxproj Release
 )
 
 echo.&goto:EOF

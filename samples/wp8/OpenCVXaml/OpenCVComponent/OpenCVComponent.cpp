@@ -65,5 +65,3 @@ void CopyMatrixToVector(const cv::Mat& mat, std::vector<int>& vector, int size)
     }
 
 }
-
-

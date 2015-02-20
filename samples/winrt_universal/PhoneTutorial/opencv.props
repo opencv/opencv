@@ -26,6 +26,6 @@
       <!--Add required OpenCV libs here-->
       <AdditionalDependencies>opencv_core300$(DebugSuffix).lib;opencv_imgproc300$(DebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OpenCV_Lib);%(AdditionalLibraryDirectories);</AdditionalLibraryDirectories>
-    </Link>    
+    </Link>
   </ItemDefinitionGroup>
 </Project>

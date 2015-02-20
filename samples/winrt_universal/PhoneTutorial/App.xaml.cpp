@@ -31,8 +31,8 @@ using namespace Windows::UI::Xaml::Navigation;
 /// </summary>
 App::App()
 {
-	InitializeComponent();
-	Suspending += ref new SuspendingEventHandler(this, &App::OnSuspending);
+    InitializeComponent();
+    Suspending += ref new SuspendingEventHandler(this, &App::OnSuspending);
 }
 
 /// <summary>
@@ -44,61 +44,61 @@ App::App()
 void App::OnLaunched(LaunchActivatedEventArgs^ e)
 {
 #if _DEBUG
-	if (IsDebuggerPresent())
-	{
-		DebugSettings->EnableFrameRateCounter = true;
-	}
+    if (IsDebuggerPresent())
+    {
+        DebugSettings->EnableFrameRateCounter = true;
+    }
 #endif
 
-	auto rootFrame = dynamic_cast<Frame^>(Window::Current->Content);
+    auto rootFrame = dynamic_cast<Frame^>(Window::Current->Content);
 
-	// Do not repeat app initialization when the Window already has content,
-	// just ensure that the window is active.
-	if (rootFrame == nullptr)
-	{
-		// Create a Frame to act as the navigation context and associate it with
-		// a SuspensionManager key
-		rootFrame = ref new Frame();
+    // Do not repeat app initialization when the Window already has content,
+    // just ensure that the window is active.
+    if (rootFrame == nullptr)
+    {
+        // Create a Frame to act as the navigation context and associate it with
+        // a SuspensionManager key
+        rootFrame = ref new Frame();
 
-		// TODO: Change this value to a cache size that is appropriate for your application.
-		rootFrame->CacheSize = 1;
+        // TODO: Change this value to a cache size that is appropriate for your application.
+        rootFrame->CacheSize = 1;
 
-		if (e->PreviousExecutionState == ApplicationExecutionState::Terminated)
-		{
-			// TODO: Restore the saved session state only when appropriate, scheduling the
-			// final launch steps after the restore is complete.
-		}
+        if (e->PreviousExecutionState == ApplicationExecutionState::Terminated)
+        {
+            // TODO: Restore the saved session state only when appropriate, scheduling the
+            // final launch steps after the restore is complete.
+        }
 
-		// Place the frame in the current Window
-		Window::Current->Content = rootFrame;
-	}
+        // Place the frame in the current Window
+        Window::Current->Content = rootFrame;
+    }
 
-	if (rootFrame->Content == nullptr)
-	{
-		// Removes the turnstile navigation for startup.
-		if (rootFrame->ContentTransitions != nullptr)
-		{
-			_transitions = ref new TransitionCollection();
-			for (auto transition : rootFrame->ContentTransitions)
-			{
-				_transitions->Append(transition);
-			}
-		}
+    if (rootFrame->Content == nullptr)
+    {
+        // Removes the turnstile navigation for startup.
+        if (rootFrame->ContentTransitions != nullptr)
+        {
+            _transitions = ref new TransitionCollection();
+            for (auto transition : rootFrame->ContentTransitions)
+            {
+                _transitions->Append(transition);
+            }
+        }
 
-		rootFrame->ContentTransitions = nullptr;
-		_firstNavigatedToken = rootFrame->Navigated += ref new NavigatedEventHandler(this, &App::RootFrame_FirstNavigated);
+        rootFrame->ContentTransitions = nullptr;
+        _firstNavigatedToken = rootFrame->Navigated += ref new NavigatedEventHandler(this, &App::RootFrame_FirstNavigated);
 
-		// When the navigation stack isn't restored navigate to the first page,
-		// configuring the new page by passing required information as a navigation
-		// parameter.
-		if (!rootFrame->Navigate(MainPage::typeid, e->Arguments))
-		{
-			throw ref new FailureException("Failed to create initial page");
-		}
-	}
+        // When the navigation stack isn't restored navigate to the first page,
+        // configuring the new page by passing required information as a navigation
+        // parameter.
+        if (!rootFrame->Navigate(MainPage::typeid, e->Arguments))
+        {
+            throw ref new FailureException("Failed to create initial page");
+        }
+    }
 
-	// Ensure the current window is active
-	Window::Current->Activate();
+    // Ensure the current window is active
+    Window::Current->Activate();
 }
 
 /// <summary>
@@ -106,21 +106,21 @@ void App::OnLaunched(LaunchActivatedEventArgs^ e)
 /// </summary>
 void App::RootFrame_FirstNavigated(Object^ sender, NavigationEventArgs^ e)
 {
-	auto rootFrame = safe_cast<Frame^>(sender);
+    auto rootFrame = safe_cast<Frame^>(sender);
 
-	TransitionCollection^ newTransitions;
-	if (_transitions == nullptr)
-	{
-		newTransitions = ref new TransitionCollection();
-		newTransitions->Append(ref new NavigationThemeTransition());
-	}
-	else
-	{
-		newTransitions = _transitions;
-	}
+    TransitionCollection^ newTransitions;
+    if (_transitions == nullptr)
+    {
+        newTransitions = ref new TransitionCollection();
+        newTransitions->Append(ref new NavigationThemeTransition());
+    }
+    else
+    {
+        newTransitions = _transitions;
+    }
 
-	rootFrame->ContentTransitions = newTransitions;
-	rootFrame->Navigated -= _firstNavigatedToken;
+    rootFrame->ContentTransitions = newTransitions;
+    rootFrame->Navigated -= _firstNavigatedToken;
 }
 
 /// <summary>
@@ -130,8 +130,8 @@ void App::RootFrame_FirstNavigated(Object^ sender, NavigationEventArgs^ e)
 /// </summary>
 void App::OnSuspending(Object^ sender, SuspendingEventArgs^ e)
 {
-	(void) sender;	// Unused parameter
-	(void) e;		// Unused parameter
+    (void) sender;	// Unused parameter
+    (void) e;		// Unused parameter
 
-	// TODO: Save application state and stop any background activity
+    // TODO: Save application state and stop any background activity
 }
