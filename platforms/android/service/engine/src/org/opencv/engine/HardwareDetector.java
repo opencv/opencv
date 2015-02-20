@@ -10,7 +10,7 @@ public class HardwareDetector
     public static final int ARCH_ARMv5    = 0x04000000;
     public static final int ARCH_ARMv6    = 0x08000000;
     public static final int ARCH_ARMv7    = 0x10000000;
-    public static final int ARCH_ARMv8    = 0x20000000;
+    public static final int ARCH_AARCH64  = 0x20000000;
 
     public static final int ARCH_MIPS     = 0x40000000;
     // Platform specific features

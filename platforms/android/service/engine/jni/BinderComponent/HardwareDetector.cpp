@@ -39,6 +39,12 @@ int GetCpuID()
 #else
     result = ARCH_UNKNOWN;
 #endif
+#elif defined(__aarch64__)
+#ifdef __SUPPORT_AARCH64
+    result |= ARCH_AARCH64;
+#else
+    result = ARCH_UNKNOWN;
+#endif
 #elif defined(__arm__)
     LOGD("Using ARM HW detector");
     it = cpu_info.find("Processor");
