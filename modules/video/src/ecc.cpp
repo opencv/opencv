@@ -297,7 +297,12 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
         mapPtr[5] += updatePtr[7];
     }
     if (motionType == MOTION_EUCLIDEAN) {
-        double new_theta = acos(mapPtr[0]) + updatePtr[0];
+        double new_theta = updatePtr[0];
+        if (mapPtr[3]>0)
+            new_theta += acos(mapPtr[0]);
+
+        if (mapPtr[3]<0)
+            new_theta -= acos(mapPtr[0]);
 
         mapPtr[2] += updatePtr[1];
         mapPtr[5] += updatePtr[2];

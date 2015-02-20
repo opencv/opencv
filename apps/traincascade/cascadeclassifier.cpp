@@ -137,6 +137,9 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
                                 const CvCascadeBoostParams& _stageParams,
                                 bool baseFormatSave )
 {
+    // Start recording clock ticks for training time output
+    const clock_t begin_time = clock();
+
     if( _cascadeDirName.empty() || _posFilename.empty() || _negFilename.empty() )
         CV_Error( CV_StsBadArg, "_cascadeDirName or _bgfileName or _vecFileName is NULL" );
 
@@ -247,6 +250,14 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
         fs << FileStorage::getDefaultObjectName(stageFilename) << "{";
         tempStage->write( fs, Mat() );
         fs << "}";
+
+        // Output training time up till now
+        float seconds = float( clock () - begin_time ) / CLOCKS_PER_SEC;
+        int days = int(seconds) / 60 / 60 / 24;
+        int hours = (int(seconds) / 60 / 60) % 24;
+        int minutes = (int(seconds) / 60) % 60;
+        int seconds_left = int(seconds) % 60;
+        cout << "Training until now has taken " << days << " days " << hours << " hours " << minutes << " minutes " << seconds_left <<" seconds." << endl;
     }
 
     if(stageClassifiers.size() == 0)
@@ -310,6 +321,7 @@ int CvCascadeClassifier::fillPassedSamples( int first, int count, bool isPositiv
             if( predict( i ) == 1.0F )
             {
                 getcount++;
+                printf("%s current samples: %d\r", isPositive ? "POS":"NEG", getcount);
                 break;
             }
         }

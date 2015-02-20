@@ -74,7 +74,7 @@ namespace
     public:
         HoughCirclesDetectorImpl(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles);
 
-        void detect(InputArray src, OutputArray circles);
+        void detect(InputArray src, OutputArray circles, Stream& stream);
 
         void setDp(float dp) { dp_ = dp; }
         float getDp() const { return dp_; }
@@ -133,12 +133,15 @@ namespace
         GpuMat dx_, dy_;
         GpuMat edges_;
         GpuMat accum_;
+        Mat tt; //CPU copy of accum_
         GpuMat list_;
         GpuMat result_;
         Ptr<cuda::Filter> filterDx_;
         Ptr<cuda::Filter> filterDy_;
         Ptr<cuda::CannyEdgeDetector> canny_;
     };
+
+    bool centersCompare(Vec3f a, Vec3f b) {return (a[2] > b[2]);}
 
     HoughCirclesDetectorImpl::HoughCirclesDetectorImpl(float dp, float minDist, int cannyThreshold, int votesThreshold,
                                                        int minRadius, int maxRadius, int maxCircles) :
@@ -151,8 +154,11 @@ namespace
         filterDy_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
     }
 
-    void HoughCirclesDetectorImpl::detect(InputArray _src, OutputArray circles)
+    void HoughCirclesDetectorImpl::detect(InputArray _src, OutputArray circles, Stream& stream)
     {
+        // TODO : implement async version
+        (void) stream;
+
         using namespace cv::cuda::device::hough;
         using namespace cv::cuda::device::hough_circles;
 
@@ -193,6 +199,8 @@ namespace
 
         circlesAccumCenters_gpu(srcPoints, pointsCount, dx_, dy_, accum_, minRadius_, maxRadius_, idp);
 
+        accum_.download(tt);
+
         int centersCount = buildCentersList_gpu(accum_, centers, votesThreshold_);
         if (centersCount == 0)
         {
@@ -219,9 +227,21 @@ namespace
 
             const float minDist2 = minDist_ * minDist_;
 
+            std::vector<Vec3f> sortBuf;
+            for(int i=0; i<centersCount; i++){
+                Vec3f temp;
+                temp[0] = oldBuf[i].x;
+                temp[1] = oldBuf[i].y;
+                temp[2] = tt.at<int>(temp[1]+1, temp[0]+1);
+                sortBuf.push_back(temp);
+            }
+            std::sort(sortBuf.begin(), sortBuf.end(), centersCompare);
+
             for (int i = 0; i < centersCount; ++i)
             {
-                ushort2 p = oldBuf[i];
+                ushort2 p;
+                p.x = sortBuf[i][0];
+                p.y = sortBuf[i][1];
 
                 bool good = true;
 

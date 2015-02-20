@@ -40,6 +40,7 @@
  //
  //M*/
 
+#include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include <limits>
 //#define DEBUG_CIRCLES
@@ -65,7 +66,7 @@ void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 
 }
 #endif
 
-void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> points, const Size &patternSz, std::vector<Point2f> &patternPoints)
+void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> &points, const Size &patternSz, std::vector<Point2f> &patternPoints)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(tegra::hierarchicalClustering(points, patternSz, patternPoints))
@@ -134,7 +135,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f>
     }
 }
 
-void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, cv::Size _patternSize, std::vector<Point2f>& centers)
+void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> &points, cv::Size _patternSize, std::vector<Point2f>& centers)
 {
   patternSize = _patternSize;
   centers.clear();
@@ -218,6 +219,7 @@ void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2
 
 void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f> &corners, std::vector<cv::Point2f> &outsideCorners)
 {
+  CV_Assert(!corners.empty());
   outsideCorners.clear();
   //find two pairs of the most nearest corners
   int i, j, n = (int)corners.size();

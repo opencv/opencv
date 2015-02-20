@@ -10,7 +10,8 @@
 #include "opencv2/core.hpp"
 #include "opencv2/cudacodec.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/contrib.hpp"
+
+#include "tick_meter.hpp"
 
 int main(int argc, const char* argv[])
 {
@@ -40,7 +41,7 @@ int main(int argc, const char* argv[])
 
     std::vector<double> cpu_times;
     std::vector<double> gpu_times;
-    cv::TickMeter tm;
+    TickMeter tm;
 
     for (int i = 1;; ++i)
     {

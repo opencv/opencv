@@ -26,7 +26,7 @@ if __name__ == '__main__':
     try:
         img_mask = img_mask[0]
     except:
-        img_mask = '../cpp/left*.jpg'
+        img_mask = '../data/left*.jpg'
 
     img_names = glob(img_mask)
     debug_dir = args.get('--debug')

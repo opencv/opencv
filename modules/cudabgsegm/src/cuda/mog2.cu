@@ -163,7 +163,7 @@ namespace cv { namespace cuda { namespace device
             {
                 //need only weight if fit is found
                 float weight = alpha1 * gmm_weight(mode * frame.rows + y, x) + prune;
-
+                int swap_count = 0;
                 //fit not found yet
                 if (!fitsPDF)
                 {
@@ -214,6 +214,7 @@ namespace cv { namespace cuda { namespace device
                             if (weight < gmm_weight((i - 1) * frame.rows + y, x))
                                 break;
 
+                            swap_count++;
                             //swap one up
                             swap(gmm_weight, x, y, i - 1, frame.rows);
                             swap(gmm_variance, x, y, i - 1, frame.rows);
@@ -231,7 +232,7 @@ namespace cv { namespace cuda { namespace device
                     nmodes--;
                 }
 
-                gmm_weight(mode * frame.rows + y, x) = weight; //update weight by the calculated value
+                gmm_weight((mode - swap_count) * frame.rows + y, x) = weight; //update weight by the calculated value
                 totalWeight += weight;
             }
 

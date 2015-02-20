@@ -99,18 +99,22 @@ public:
      */
     virtual void buildIndex()
     {
+        std::ostringstream stream;
         bestParams_ = estimateBuildParams();
+        print_params(bestParams_, stream);
         Logger::info("----------------------------------------------------\n");
         Logger::info("Autotuned parameters:\n");
-        print_params(bestParams_);
+        Logger::info("%s", stream.str().c_str());
         Logger::info("----------------------------------------------------\n");
 
         bestIndex_ = create_index_by_type(dataset_, bestParams_, distance_);
         bestIndex_->buildIndex();
         speedup_ = estimateSearchParams(bestSearchParams_);
+        stream.str(std::string());
+        print_params(bestSearchParams_, stream);
         Logger::info("----------------------------------------------------\n");
         Logger::info("Search parameters:\n");
-        print_params(bestSearchParams_);
+        Logger::info("%s", stream.str().c_str());
         Logger::info("----------------------------------------------------\n");
     }
 
@@ -270,7 +274,7 @@ private:
     //    struct KMeansSimpleDownhillFunctor {
     //
     //        Autotune& autotuner;
-    //        KMeansSimpleDownhillFunctor(Autotune& autotuner_) : autotuner(autotuner_) {};
+    //        KMeansSimpleDownhillFunctor(Autotune& autotuner_) : autotuner(autotuner_) {}
     //
     //        float operator()(int* params) {
     //
@@ -295,7 +299,7 @@ private:
     //    struct KDTreeSimpleDownhillFunctor {
     //
     //        Autotune& autotuner;
-    //        KDTreeSimpleDownhillFunctor(Autotune& autotuner_) : autotuner(autotuner_) {};
+    //        KDTreeSimpleDownhillFunctor(Autotune& autotuner_) : autotuner(autotuner_) {}
     //
     //        float operator()(int* params) {
     //            float maxFloat = numeric_limits<float>::max();

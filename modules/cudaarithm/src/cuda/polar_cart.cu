@@ -50,55 +50,59 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 void cv::cuda::magnitude(InputArray _x, InputArray _y, OutputArray _dst, Stream& stream)
 {
-    GpuMat x = _x.getGpuMat();
-    GpuMat y = _y.getGpuMat();
+    GpuMat x = getInputMat(_x, stream);
+    GpuMat y = getInputMat(_y, stream);
 
-    CV_DbgAssert( x.depth() == CV_32F );
-    CV_DbgAssert( y.type() == x.type() && y.size() == x.size() );
+    CV_Assert( x.depth() == CV_32F );
+    CV_Assert( y.type() == x.type() && y.size() == x.size() );
 
-    _dst.create(x.size(), CV_32FC1);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, x.size(), CV_32FC1, stream);
 
     GpuMat_<float> xc(x.reshape(1));
     GpuMat_<float> yc(y.reshape(1));
     GpuMat_<float> magc(dst.reshape(1));
 
     gridTransformBinary(xc, yc, magc, magnitude_func<float>(), stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
 void cv::cuda::magnitudeSqr(InputArray _x, InputArray _y, OutputArray _dst, Stream& stream)
 {
-    GpuMat x = _x.getGpuMat();
-    GpuMat y = _y.getGpuMat();
+    GpuMat x = getInputMat(_x, stream);
+    GpuMat y = getInputMat(_y, stream);
 
-    CV_DbgAssert( x.depth() == CV_32F );
-    CV_DbgAssert( y.type() == x.type() && y.size() == x.size() );
+    CV_Assert( x.depth() == CV_32F );
+    CV_Assert( y.type() == x.type() && y.size() == x.size() );
 
-    _dst.create(x.size(), CV_32FC1);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, x.size(), CV_32FC1, stream);
 
     GpuMat_<float> xc(x.reshape(1));
     GpuMat_<float> yc(y.reshape(1));
     GpuMat_<float> magc(dst.reshape(1));
 
     gridTransformBinary(xc, yc, magc, magnitude_sqr_func<float>(), stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
 void cv::cuda::phase(InputArray _x, InputArray _y, OutputArray _dst, bool angleInDegrees, Stream& stream)
 {
-    GpuMat x = _x.getGpuMat();
-    GpuMat y = _y.getGpuMat();
+    GpuMat x = getInputMat(_x, stream);
+    GpuMat y = getInputMat(_y, stream);
 
-    CV_DbgAssert( x.depth() == CV_32F );
-    CV_DbgAssert( y.type() == x.type() && y.size() == x.size() );
+    CV_Assert( x.depth() == CV_32F );
+    CV_Assert( y.type() == x.type() && y.size() == x.size() );
 
-    _dst.create(x.size(), CV_32FC1);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, x.size(), CV_32FC1, stream);
 
     GpuMat_<float> xc(x.reshape(1));
     GpuMat_<float> yc(y.reshape(1));
@@ -108,21 +112,20 @@ void cv::cuda::phase(InputArray _x, InputArray _y, OutputArray _dst, bool angleI
         gridTransformBinary(xc, yc, anglec, direction_func<float, true>(), stream);
     else
         gridTransformBinary(xc, yc, anglec, direction_func<float, false>(), stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
 void cv::cuda::cartToPolar(InputArray _x, InputArray _y, OutputArray _mag, OutputArray _angle, bool angleInDegrees, Stream& stream)
 {
-    GpuMat x = _x.getGpuMat();
-    GpuMat y = _y.getGpuMat();
+    GpuMat x = getInputMat(_x, stream);
+    GpuMat y = getInputMat(_y, stream);
 
-    CV_DbgAssert( x.depth() == CV_32F );
-    CV_DbgAssert( y.type() == x.type() && y.size() == x.size() );
+    CV_Assert( x.depth() == CV_32F );
+    CV_Assert( y.type() == x.type() && y.size() == x.size() );
 
-    _mag.create(x.size(), CV_32FC1);
-    GpuMat mag = _mag.getGpuMat();
-
-    _angle.create(x.size(), CV_32FC1);
-    GpuMat angle = _angle.getGpuMat();
+    GpuMat mag = getOutputMat(_mag, x.size(), CV_32FC1, stream);
+    GpuMat angle = getOutputMat(_angle, x.size(), CV_32FC1, stream);
 
     GpuMat_<float> xc(x.reshape(1));
     GpuMat_<float> yc(y.reshape(1));
@@ -147,6 +150,9 @@ void cv::cuda::cartToPolar(InputArray _x, InputArray _y, OutputArray _mag, Outpu
                                binaryTupleAdapter<0, 1>(direction_func<float, false>())),
                            stream);
     }
+
+    syncOutput(mag, _mag, stream);
+    syncOutput(angle, _angle, stream);
 }
 
 namespace
@@ -173,17 +179,14 @@ namespace
 
 void cv::cuda::polarToCart(InputArray _mag, InputArray _angle, OutputArray _x, OutputArray _y, bool angleInDegrees, Stream& _stream)
 {
-    GpuMat mag = _mag.getGpuMat();
-    GpuMat angle = _angle.getGpuMat();
+    GpuMat mag = getInputMat(_mag, _stream);
+    GpuMat angle = getInputMat(_angle, _stream);
 
-    CV_DbgAssert( angle.depth() == CV_32F );
-    CV_DbgAssert( mag.empty() || (mag.type() == angle.type() && mag.size() == angle.size()) );
+    CV_Assert( angle.depth() == CV_32F );
+    CV_Assert( mag.empty() || (mag.type() == angle.type() && mag.size() == angle.size()) );
 
-    _x.create(angle.size(), CV_32FC1);
-    GpuMat x = _x.getGpuMat();
-
-    _y.create(angle.size(), CV_32FC1);
-    GpuMat y = _y.getGpuMat();
+    GpuMat x = getOutputMat(_x, angle.size(), CV_32FC1, _stream);
+    GpuMat y = getOutputMat(_y, angle.size(), CV_32FC1, _stream);
 
     GpuMat_<float> xc(x.reshape(1));
     GpuMat_<float> yc(y.reshape(1));
@@ -203,6 +206,9 @@ void cv::cuda::polarToCart(InputArray _mag, InputArray _angle, OutputArray _x, O
         polarToCartImpl<true><<<grid, block, 0, stream>>>(shrinkPtr(magc), shrinkPtr(anglec), shrinkPtr(xc), shrinkPtr(yc), scale, anglec.rows, anglec.cols);
 
     CV_CUDEV_SAFE_CALL( cudaGetLastError() );
+
+    syncOutput(x, _x, _stream);
+    syncOutput(y, _y, _stream);
 
     if (stream == 0)
         CV_CUDEV_SAFE_CALL( cudaDeviceSynchronize() );

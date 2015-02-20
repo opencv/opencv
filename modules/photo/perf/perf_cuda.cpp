@@ -126,12 +126,10 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, CUDA_FastNonLocalMeans,
 
     if (PERF_RUN_CUDA())
     {
-        cv::cuda::FastNonLocalMeansDenoising fnlmd;
-
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() fnlmd.simpleMethod(d_src, dst, h, search_widow_size, block_size);
+        TEST_CYCLE() cv::cuda::fastNlMeansDenoising(d_src, dst, h, search_widow_size, block_size);
 
         CUDA_SANITY_CHECK(dst);
     }
@@ -171,12 +169,10 @@ PERF_TEST_P(Sz_Depth_WinSz_BlockSz, CUDA_FastNonLocalMeansColored,
 
     if (PERF_RUN_CUDA())
     {
-        cv::cuda::FastNonLocalMeansDenoising fnlmd;
-
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() fnlmd.labMethod(d_src, dst, h, h, search_widow_size, block_size);
+        TEST_CYCLE() cv::cuda::fastNlMeansDenoisingColored(d_src, dst, h, h, search_widow_size, block_size);
 
         CUDA_SANITY_CHECK(dst);
     }

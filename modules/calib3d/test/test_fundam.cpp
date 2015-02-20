@@ -738,7 +738,7 @@ void CV_RodriguesTest::prepare_to_validation( int /*test_case_idx*/ )
     if( calc_jacobians )
     {
         //cvInvert( v2m_jac, m2v_jac, CV_SVD );
-        double nrm = norm(test_mat[REF_OUTPUT][3],CV_C);
+        double nrm = cvtest::norm(test_mat[REF_OUTPUT][3], CV_C);
         if( FLT_EPSILON < nrm && nrm < 1000 )
         {
             gemm( test_mat[OUTPUT][1], test_mat[OUTPUT][3],
@@ -808,6 +808,7 @@ CV_FundamentalMatTest::CV_FundamentalMatTest()
     method = 0;
     img_size = 10;
     cube_size = 10;
+    dims = 0;
     min_f = 1;
     max_f = 3;
     sigma = 0;//0.1;
@@ -1020,12 +1021,12 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
     cv::gemm( T, invA2, 1, Mat(), 0, F0 );
     F0 *= 1./f0[8];
 
-    uchar* status = test_mat[TEMP][1].data;
+    uchar* status = test_mat[TEMP][1].ptr();
     double err_level = method <= CV_FM_8POINT ? 1 : get_success_error_level( test_case_idx, OUTPUT, 1 );
-    uchar* mtfm1 = test_mat[REF_OUTPUT][1].data;
-    uchar* mtfm2 = test_mat[OUTPUT][1].data;
-    double* f_prop1 = (double*)test_mat[REF_OUTPUT][0].data;
-    double* f_prop2 = (double*)test_mat[OUTPUT][0].data;
+    uchar* mtfm1 = test_mat[REF_OUTPUT][1].ptr();
+    uchar* mtfm2 = test_mat[OUTPUT][1].ptr();
+    double* f_prop1 = test_mat[REF_OUTPUT][0].ptr<double>();
+    double* f_prop2 = test_mat[OUTPUT][0].ptr<double>();
 
     int i, pt_count = test_mat[INPUT][2].cols;
     Mat p1( 1, pt_count, CV_64FC2 );
@@ -1086,7 +1087,6 @@ protected:
     int img_size;
     int cube_size;
     int dims;
-    int e_result;
     double min_f, max_f;
     double sigma;
 };
@@ -1124,9 +1124,10 @@ CV_EssentialMatTest::CV_EssentialMatTest()
     method = 0;
     img_size = 10;
     cube_size = 10;
+    dims = 0;
     min_f = 1;
     max_f = 3;
-
+    sigma = 0;
 }
 
 
@@ -1356,12 +1357,12 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     cv::gemm( T1, T2, 1, Mat(), 0, F0 );
     F0 *= 1./f0[8];
 
-    uchar* status = test_mat[TEMP][1].data;
+    uchar* status = test_mat[TEMP][1].ptr();
     double err_level = get_success_error_level( test_case_idx, OUTPUT, 1 );
-    uchar* mtfm1 = test_mat[REF_OUTPUT][1].data;
-    uchar* mtfm2 = test_mat[OUTPUT][1].data;
-    double* e_prop1 = (double*)test_mat[REF_OUTPUT][0].data;
-    double* e_prop2 = (double*)test_mat[OUTPUT][0].data;
+    uchar* mtfm1 = test_mat[REF_OUTPUT][1].ptr();
+    uchar* mtfm2 = test_mat[OUTPUT][1].ptr();
+    double* e_prop1 = test_mat[REF_OUTPUT][0].ptr<double>();
+    double* e_prop2 = test_mat[OUTPUT][0].ptr<double>();
     Mat E_prop2 = Mat(3, 1, CV_64F, e_prop2);
 
     int i, pt_count = test_mat[INPUT][2].cols;
@@ -1406,10 +1407,10 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
 
 
 
-    double* pose_prop1 = (double*)test_mat[REF_OUTPUT][2].data;
-    double* pose_prop2 = (double*)test_mat[OUTPUT][2].data;
-    double terr1 = norm(Rt0.col(3) / norm(Rt0.col(3)) + test_mat[TEMP][3]);
-    double terr2 = norm(Rt0.col(3) / norm(Rt0.col(3)) - test_mat[TEMP][3]);
+    double* pose_prop1 = test_mat[REF_OUTPUT][2].ptr<double>();
+    double* pose_prop2 = test_mat[OUTPUT][2].ptr<double>();
+    double terr1 = cvtest::norm(Rt0.col(3) / norm(Rt0.col(3)) + test_mat[TEMP][3], NORM_L2);
+    double terr2 = cvtest::norm(Rt0.col(3) / norm(Rt0.col(3)) - test_mat[TEMP][3], NORM_L2);
     Mat rvec;
     Rodrigues(Rt0.colRange(0, 3), rvec);
     pose_prop1[0] = 0;

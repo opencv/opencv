@@ -7,6 +7,7 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/video.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/videostab.hpp"
 #include "opencv2/opencv_modules.hpp"
@@ -216,7 +217,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
         if (gpu)
         {
             Ptr<KeypointBasedMotionEstimatorGpu> kbest = makePtr<KeypointBasedMotionEstimatorGpu>(est);
@@ -226,7 +227,7 @@ public:
 #endif
 
         Ptr<KeypointBasedMotionEstimator> kbest = makePtr<KeypointBasedMotionEstimator>(est);
-        kbest->setDetector(makePtr<GoodFeaturesToTrackDetector>(argi(prefix + "nkps")));
+        kbest->setDetector(GFTTDetector::create(argi(prefix + "nkps")));
         kbest->setOutlierRejector(outlierRejector);
         return kbest;
     }
@@ -257,7 +258,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
         if (gpu)
         {
             Ptr<KeypointBasedMotionEstimatorGpu> kbest = makePtr<KeypointBasedMotionEstimatorGpu>(est);
@@ -267,7 +268,7 @@ public:
 #endif
 
         Ptr<KeypointBasedMotionEstimator> kbest = makePtr<KeypointBasedMotionEstimator>(est);
-        kbest->setDetector(makePtr<GoodFeaturesToTrackDetector>(argi(prefix + "nkps")));
+        kbest->setDetector(GFTTDetector::create(argi(prefix + "nkps")));
         kbest->setOutlierRejector(outlierRejector);
         return kbest;
     }
@@ -342,7 +343,6 @@ int main(int argc, const char **argv)
             return 0;
         }
 
-#ifdef HAVE_OPENCV_CUDA
         if (arg("gpu") == "yes")
         {
             cout << "initializing GPU..."; cout.flush();
@@ -351,7 +351,6 @@ int main(int argc, const char **argv)
             deviceTmp.upload(hostTmp);
             cout << endl;
         }
-#endif
 
         StabilizerBase *stabilizer = 0;
 
@@ -420,7 +419,7 @@ int main(int argc, const char **argv)
             {
                 Ptr<MoreAccurateMotionWobbleSuppressorBase> ws = makePtr<MoreAccurateMotionWobbleSuppressor>();
                 if (arg("gpu") == "yes")
-#ifdef HAVE_OPENCV_CUDA
+#ifdef HAVE_OPENCV_CUDAWARPING
                     ws = makePtr<MoreAccurateMotionWobbleSuppressorGpu>();
 #else
                     throw runtime_error("OpenCV is built without CUDA support");

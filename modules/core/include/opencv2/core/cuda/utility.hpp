@@ -46,6 +46,12 @@
 #include "saturate_cast.hpp"
 #include "datamov_utils.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     #define OPENCV_CUDA_LOG_WARP_SIZE        (5)
@@ -209,5 +215,7 @@ namespace cv { namespace cuda { namespace device
         return false;
     }
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_UTILITY_HPP__

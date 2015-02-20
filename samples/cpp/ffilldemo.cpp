@@ -1,4 +1,6 @@
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #include <iostream>
@@ -10,7 +12,7 @@ static void help()
 {
     cout << "\nThis program demonstrated the floodFill() function\n"
             "Call:\n"
-            "./ffilldemo [image_name -- Default: fruits.jpg]\n" << endl;
+            "./ffilldemo [image_name -- Default: ../data/fruits.jpg]\n" << endl;
 
     cout << "Hot keys: \n"
             "\tESC - quit the program\n"
@@ -71,7 +73,7 @@ static void onMouse( int event, int x, int y, int, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"fruits.jpg";
+    char* filename = argc >= 2 ? argv[1] : (char*)"../data/fruits.jpg";
     image0 = imread(filename, 1);
 
     if( image0.empty() )

@@ -46,7 +46,9 @@
 #include <list>
 #include "opencv2/core.hpp"
 
+#ifndef ENABLE_LOG
 #define ENABLE_LOG 0
+#endif
 
 // TODO remove LOG macros, add logging class
 #if ENABLE_LOG
@@ -71,6 +73,7 @@
 #define LOG_(_level, _msg)                     \
     for(;;)                                    \
     {                                          \
+        using namespace std;                   \
         if ((_level) >= ::cv::detail::stitchingLogLevel()) \
         {                                      \
             LOG_STITCHING_MSG(_msg);           \
@@ -95,6 +98,9 @@
 
 namespace cv {
 namespace detail {
+
+//! @addtogroup stitching
+//! @{
 
 class CV_EXPORTS DisjointSets
 {
@@ -145,14 +151,17 @@ private:
 // Auxiliary functions
 
 CV_EXPORTS bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi);
-CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images);
+CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<UMat> &images);
 CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+CV_EXPORTS Rect resultRoiIntersection(const std::vector<Point> &corners, const std::vector<Size> &sizes);
 CV_EXPORTS Point resultTl(const std::vector<Point> &corners);
 
 // Returns random 'count' element subset of the {0,1,...,size-1} set
 CV_EXPORTS void selectRandomSubset(int count, int size, std::vector<int> &subset);
 
 CV_EXPORTS int& stitchingLogLevel();
+
+//! @}
 
 } // namespace detail
 } // namespace cv

@@ -107,6 +107,7 @@ enum flann_centers_init_t
     FLANN_CENTERS_RANDOM = 0,
     FLANN_CENTERS_GONZALES = 1,
     FLANN_CENTERS_KMEANSPP = 2,
+    FLANN_CENTERS_GROUPWISE = 3,
 
     // deprecated constants, should use the FLANN_CENTERS_* ones instead
     CENTERS_RANDOM = 0,

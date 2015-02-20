@@ -46,638 +46,552 @@
 namespace cv
 {
 
-const int TABLE_SIZE = 400;
+using std::vector;
 
-static double chitab3[]={0,  0.0150057,  0.0239478,  0.0315227,
-                  0.0383427,  0.0446605,  0.0506115,  0.0562786,
-                  0.0617174,  0.0669672,  0.0720573,  0.0770099,
-                  0.081843,  0.0865705,  0.0912043,  0.0957541,
-                  0.100228,  0.104633,  0.108976,  0.113261,
-                  0.117493,  0.121676,  0.125814,  0.12991,
-                  0.133967,  0.137987,  0.141974,  0.145929,
-                  0.149853,  0.15375,  0.15762,  0.161466,
-                  0.165287,  0.169087,  0.172866,  0.176625,
-                  0.180365,  0.184088,  0.187794,  0.191483,
-                  0.195158,  0.198819,  0.202466,  0.2061,
-                  0.209722,  0.213332,  0.216932,  0.220521,
-                  0.2241,  0.22767,  0.231231,  0.234783,
-                  0.238328,  0.241865,  0.245395,  0.248918,
-                  0.252435,  0.255947,  0.259452,  0.262952,
-                  0.266448,  0.269939,  0.273425,  0.276908,
-                  0.280386,  0.283862,  0.287334,  0.290803,
-                  0.29427,  0.297734,  0.301197,  0.304657,
-                  0.308115,  0.311573,  0.315028,  0.318483,
-                  0.321937,  0.32539,  0.328843,  0.332296,
-                  0.335749,  0.339201,  0.342654,  0.346108,
-                  0.349562,  0.353017,  0.356473,  0.35993,
-                  0.363389,  0.366849,  0.37031,  0.373774,
-                  0.377239,  0.380706,  0.384176,  0.387648,
-                  0.391123,  0.3946,  0.39808,  0.401563,
-                  0.405049,  0.408539,  0.412032,  0.415528,
-                  0.419028,  0.422531,  0.426039,  0.429551,
-                  0.433066,  0.436586,  0.440111,  0.44364,
-                  0.447173,  0.450712,  0.454255,  0.457803,
-                  0.461356,  0.464915,  0.468479,  0.472049,
-                  0.475624,  0.479205,  0.482792,  0.486384,
-                  0.489983,  0.493588,  0.4972,  0.500818,
-                  0.504442,  0.508073,  0.511711,  0.515356,
-                  0.519008,  0.522667,  0.526334,  0.530008,
-                  0.533689,  0.537378,  0.541075,  0.54478,
-                  0.548492,  0.552213,  0.555942,  0.55968,
-                  0.563425,  0.56718,  0.570943,  0.574715,
-                  0.578497,  0.582287,  0.586086,  0.589895,
-                  0.593713,  0.597541,  0.601379,  0.605227,
-                  0.609084,  0.612952,  0.61683,  0.620718,
-                  0.624617,  0.628526,  0.632447,  0.636378,
-                  0.64032,  0.644274,  0.648239,  0.652215,
-                  0.656203,  0.660203,  0.664215,  0.668238,
-                  0.672274,  0.676323,  0.680384,  0.684457,
-                  0.688543,  0.692643,  0.696755,  0.700881,
-                  0.70502,  0.709172,  0.713339,  0.717519,
-                  0.721714,  0.725922,  0.730145,  0.734383,
-                  0.738636,  0.742903,  0.747185,  0.751483,
-                  0.755796,  0.760125,  0.76447,  0.768831,
-                  0.773208,  0.777601,  0.782011,  0.786438,
-                  0.790882,  0.795343,  0.799821,  0.804318,
-                  0.808831,  0.813363,  0.817913,  0.822482,
-                  0.827069,  0.831676,  0.836301,  0.840946,
-                  0.84561,  0.850295,  0.854999,  0.859724,
-                  0.864469,  0.869235,  0.874022,  0.878831,
-                  0.883661,  0.888513,  0.893387,  0.898284,
-                  0.903204,  0.908146,  0.913112,  0.918101,
-                  0.923114,  0.928152,  0.933214,  0.938301,
-                  0.943413,  0.94855,  0.953713,  0.958903,
-                  0.964119,  0.969361,  0.974631,  0.979929,
-                  0.985254,  0.990608,  0.99599,  1.0014,
-                  1.00684,  1.01231,  1.01781,  1.02335,
-                  1.02891,  1.0345,  1.04013,  1.04579,
-                  1.05148,  1.05721,  1.06296,  1.06876,
-                  1.07459,  1.08045,  1.08635,  1.09228,
-                  1.09826,  1.10427,  1.11032,  1.1164,
-                  1.12253,  1.1287,  1.1349,  1.14115,
-                  1.14744,  1.15377,  1.16015,  1.16656,
-                  1.17303,  1.17954,  1.18609,  1.19269,
-                  1.19934,  1.20603,  1.21278,  1.21958,
-                  1.22642,  1.23332,  1.24027,  1.24727,
-                  1.25433,  1.26144,  1.26861,  1.27584,
-                  1.28312,  1.29047,  1.29787,  1.30534,
-                  1.31287,  1.32046,  1.32812,  1.33585,
-                  1.34364,  1.3515,  1.35943,  1.36744,
-                  1.37551,  1.38367,  1.39189,  1.4002,
-                  1.40859,  1.41705,  1.42561,  1.43424,
-                  1.44296,  1.45177,  1.46068,  1.46967,
-                  1.47876,  1.48795,  1.49723,  1.50662,
-                  1.51611,  1.52571,  1.53541,  1.54523,
-                  1.55517,  1.56522,  1.57539,  1.58568,
-                  1.59611,  1.60666,  1.61735,  1.62817,
-                  1.63914,  1.65025,  1.66152,  1.67293,
-                  1.68451,  1.69625,  1.70815,  1.72023,
-                  1.73249,  1.74494,  1.75757,  1.77041,
-                  1.78344,  1.79669,  1.81016,  1.82385,
-                  1.83777,  1.85194,  1.86635,  1.88103,
-                  1.89598,  1.91121,  1.92674,  1.94257,
-                  1.95871,  1.97519,  1.99201,  2.0092,
-                  2.02676,  2.04471,  2.06309,  2.08189,
-                  2.10115,  2.12089,  2.14114,  2.16192,
-                  2.18326,  2.2052,  2.22777,  2.25101,
-                  2.27496,  2.29966,  2.32518,  2.35156,
-                  2.37886,  2.40717,  2.43655,  2.46709,
-                  2.49889,  2.53206,  2.56673,  2.60305,
-                  2.64117,  2.6813,  2.72367,  2.76854,
-                  2.81623,  2.86714,  2.92173,  2.98059,
-                  3.04446,  3.1143,  3.19135,  3.27731,
-                  3.37455,  3.48653,  3.61862,  3.77982,
-                  3.98692,  4.2776,  4.77167,  133.333 };
-
-typedef struct LinkedPoint
+class MSER_Impl : public MSER
 {
-    struct LinkedPoint* prev;
-    struct LinkedPoint* next;
-    Point pt;
-}
-LinkedPoint;
-
-// the history of region grown
-typedef struct MSERGrowHistory
-{
-    struct MSERGrowHistory* shortcut;
-    struct MSERGrowHistory* child;
-    int stable; // when it ever stabled before, record the size
-    int val;
-    int size;
-}
-MSERGrowHistory;
-
-typedef struct MSERConnectedComp
-{
-    LinkedPoint* head;
-    LinkedPoint* tail;
-    MSERGrowHistory* history;
-    unsigned long grey_level;
-    int size;
-    int dvar; // the derivative of last var
-    float var; // the current variation (most time is the variation of one-step back)
-}
-MSERConnectedComp;
-
-// Linear Time MSER claims by using bsf can get performance gain, here is the implementation
-// however it seems that will not do any good in real world test
-inline void _bitset(unsigned long * a, unsigned long b)
-{
-    *a |= 1<<b;
-}
-inline void _bitreset(unsigned long * a, unsigned long b)
-{
-    *a &= ~(1<<b);
-}
-
-struct MSERParams
-{
-    MSERParams( int _delta, int _minArea, int _maxArea, double _maxVariation,
-                double _minDiversity, int _maxEvolution, double _areaThreshold,
-                double _minMargin, int _edgeBlurSize )
-        : delta(_delta), minArea(_minArea), maxArea(_maxArea), maxVariation(_maxVariation),
-        minDiversity(_minDiversity), maxEvolution(_maxEvolution), areaThreshold(_areaThreshold),
-        minMargin(_minMargin), edgeBlurSize(_edgeBlurSize)
-    {}
-    int delta;
-    int minArea;
-    int maxArea;
-    double maxVariation;
-    double minDiversity;
-    int maxEvolution;
-    double areaThreshold;
-    double minMargin;
-    int edgeBlurSize;
-};
-
-// clear the connected component in stack
-static void
-initMSERComp( MSERConnectedComp* comp )
-{
-    comp->size = 0;
-    comp->var = 0;
-    comp->dvar = 1;
-    comp->history = NULL;
-}
-
-// add history of size to a connected component
-static void
-MSERNewHistory( MSERConnectedComp* comp, MSERGrowHistory* history )
-{
-    history->child = history;
-    if ( NULL == comp->history )
+public:
+    struct Params
     {
-        history->shortcut = history;
-        history->stable = 0;
-    } else {
-        comp->history->child = history;
-        history->shortcut = comp->history->shortcut;
-        history->stable = comp->history->stable;
-    }
-    history->val = comp->grey_level;
-    history->size = comp->size;
-    comp->history = history;
-}
-
-// merging two connected component
-static void
-MSERMergeComp( MSERConnectedComp* comp1,
-          MSERConnectedComp* comp2,
-          MSERConnectedComp* comp,
-          MSERGrowHistory* history )
-{
-    LinkedPoint* head;
-    LinkedPoint* tail;
-    comp->grey_level = comp2->grey_level;
-    history->child = history;
-    // select the winner by size
-    if ( comp1->size >= comp2->size )
-    {
-        if ( NULL == comp1->history )
+        Params( int _delta=5, int _min_area=60, int _max_area=14400,
+                   double _max_variation=0.25, double _min_diversity=.2,
+                   int _max_evolution=200, double _area_threshold=1.01,
+                   double _min_margin=0.003, int _edge_blur_size=5 )
         {
-            history->shortcut = history;
-            history->stable = 0;
-        } else {
-            comp1->history->child = history;
-            history->shortcut = comp1->history->shortcut;
-            history->stable = comp1->history->stable;
+            delta = _delta;
+            minArea = _min_area;
+            maxArea = _max_area;
+            maxVariation = _max_variation;
+            minDiversity = _min_diversity;
+            maxEvolution = _max_evolution;
+            areaThreshold = _area_threshold;
+            minMargin = _min_margin;
+            edgeBlurSize = _edge_blur_size;
+            pass2Only = false;
         }
-        if ( NULL != comp2->history && comp2->history->stable > history->stable )
-            history->stable = comp2->history->stable;
-        history->val = comp1->grey_level;
-        history->size = comp1->size;
-        // put comp1 to history
-        comp->var = comp1->var;
-        comp->dvar = comp1->dvar;
-        if ( comp1->size > 0 && comp2->size > 0 )
+
+        int delta;
+        int minArea;
+        int maxArea;
+        double maxVariation;
+        double minDiversity;
+        bool pass2Only;
+
+        int maxEvolution;
+        double areaThreshold;
+        double minMargin;
+        int edgeBlurSize;
+    };
+
+    explicit MSER_Impl(const Params& _params) : params(_params) {}
+
+    virtual ~MSER_Impl() {}
+
+    void setDelta(int delta) { params.delta = delta; }
+    int getDelta() const { return params.delta; }
+
+    void setMinArea(int minArea) { params.minArea = minArea; }
+    int getMinArea() const { return params.minArea; }
+
+    void setMaxArea(int maxArea) { params.maxArea = maxArea; }
+    int getMaxArea() const { return params.maxArea; }
+
+    void setPass2Only(bool f) { params.pass2Only = f; }
+    bool getPass2Only() const { return params.pass2Only; }
+
+    enum { DIR_SHIFT = 29, NEXT_MASK = ((1<<DIR_SHIFT)-1)  };
+
+    struct Pixel
+    {
+        Pixel() : val(0) {}
+        Pixel(int _val) : val(_val) {}
+
+        int getGray(const Pixel* ptr0, const uchar* imgptr0, int mask) const
         {
-            comp1->tail->next = comp2->head;
-            comp2->head->prev = comp1->tail;
+            return imgptr0[this - ptr0] ^ mask;
         }
-        head = ( comp1->size > 0 ) ? comp1->head : comp2->head;
-        tail = ( comp2->size > 0 ) ? comp2->tail : comp1->tail;
-        // always made the newly added in the last of the pixel list (comp1 ... comp2)
-    } else {
-        if ( NULL == comp2->history )
+        int getNext() const { return (val & NEXT_MASK); }
+        void setNext(int next) { val = (val & ~NEXT_MASK) | next; }
+
+        int getDir() const { return (int)((unsigned)val >> DIR_SHIFT); }
+        void setDir(int dir) { val = (val & NEXT_MASK) | (dir << DIR_SHIFT); }
+        bool isVisited() const { return (val & ~NEXT_MASK) != 0; }
+
+        int val;
+    };
+    typedef int PPixel;
+
+    // the history of region grown
+    struct CompHistory
+    {
+        CompHistory() { shortcut = child = 0; stable = val = size = 0; }
+        CompHistory* shortcut;
+        CompHistory* child;
+        int stable; // when it ever stabled before, record the size
+        int val;
+        int size;
+    };
+
+    struct ConnectedComp
+    {
+        ConnectedComp()
         {
-            history->shortcut = history;
-            history->stable = 0;
-        } else {
-            comp2->history->child = history;
-            history->shortcut = comp2->history->shortcut;
-            history->stable = comp2->history->stable;
+            init(0);
         }
-        if ( NULL != comp1->history && comp1->history->stable > history->stable )
-            history->stable = comp1->history->stable;
-        history->val = comp2->grey_level;
-        history->size = comp2->size;
-        // put comp2 to history
-        comp->var = comp2->var;
-        comp->dvar = comp2->dvar;
-        if ( comp1->size > 0 && comp2->size > 0 )
+
+        void init(int gray)
         {
-            comp2->tail->next = comp1->head;
-            comp1->head->prev = comp2->tail;
+            head = tail = 0;
+            history = 0;
+            size = 0;
+            grey_level = gray;
+            dvar = false;
+            var = 0;
         }
-        head = ( comp2->size > 0 ) ? comp2->head : comp1->head;
-        tail = ( comp1->size > 0 ) ? comp1->tail : comp2->tail;
-        // always made the newly added in the last of the pixel list (comp2 ... comp1)
-    }
-    comp->head = head;
-    comp->tail = tail;
-    comp->history = history;
-    comp->size = comp1->size + comp2->size;
-}
 
-static float
-MSERVariationCalc( MSERConnectedComp* comp, int delta )
-{
-    MSERGrowHistory* history = comp->history;
-    int val = comp->grey_level;
-    if ( NULL != history )
-    {
-        MSERGrowHistory* shortcut = history->shortcut;
-        while ( shortcut != shortcut->shortcut && shortcut->val + delta > val )
-            shortcut = shortcut->shortcut;
-        MSERGrowHistory* child = shortcut->child;
-        while ( child != child->child && child->val + delta <= val )
+        // add history chunk to a connected component
+        void growHistory( CompHistory* h )
         {
-            shortcut = child;
-            child = child->child;
-        }
-        // get the position of history where the shortcut->val <= delta+val and shortcut->child->val >= delta+val
-        history->shortcut = shortcut;
-        return (float)(comp->size-shortcut->size)/(float)shortcut->size;
-        // here is a small modification of MSER where cal ||R_{i}-R_{i-delta}||/||R_{i-delta}||
-        // in standard MSER, cal ||R_{i+delta}-R_{i-delta}||/||R_{i}||
-        // my calculation is simpler and much easier to implement
-    }
-    return 1.;
-}
-
-static bool MSERStableCheck( MSERConnectedComp* comp, MSERParams params )
-{
-    // tricky part: it actually check the stablity of one-step back
-    if ( comp->history == NULL || comp->history->size <= params.minArea || comp->history->size >= params.maxArea )
-        return 0;
-    float div = (float)(comp->history->size-comp->history->stable)/(float)comp->history->size;
-    float var = MSERVariationCalc( comp, params.delta );
-    int dvar = ( comp->var < var || (unsigned long)(comp->history->val + 1) < comp->grey_level );
-    int stable = ( dvar && !comp->dvar && comp->var < params.maxVariation && div > params.minDiversity );
-    comp->var = var;
-    comp->dvar = dvar;
-    if ( stable )
-        comp->history->stable = comp->history->size;
-    return stable != 0;
-}
-
-// add a pixel to the pixel list
-static void accumulateMSERComp( MSERConnectedComp* comp, LinkedPoint* point )
-{
-    if ( comp->size > 0 )
-    {
-        point->prev = comp->tail;
-        comp->tail->next = point;
-        point->next = NULL;
-    } else {
-        point->prev = NULL;
-        point->next = NULL;
-        comp->head = point;
-    }
-    comp->tail = point;
-    comp->size++;
-}
-
-// convert the point set to CvSeq
-static CvContour* MSERToContour( MSERConnectedComp* comp, CvMemStorage* storage )
-{
-    CvSeq* _contour = cvCreateSeq( CV_SEQ_KIND_GENERIC|CV_32SC2, sizeof(CvContour), sizeof(CvPoint), storage );
-    CvContour* contour = (CvContour*)_contour;
-    cvSeqPushMulti( _contour, 0, comp->history->size );
-    LinkedPoint* lpt = comp->head;
-    for ( int i = 0; i < comp->history->size; i++ )
-    {
-        CvPoint* pt = CV_GET_SEQ_ELEM( CvPoint, _contour, i );
-        pt->x = lpt->pt.x;
-        pt->y = lpt->pt.y;
-        lpt = lpt->next;
-    }
-    cvBoundingRect( contour );
-    return contour;
-}
-
-// to preprocess src image to following format
-// 32-bit image
-// > 0 is available, < 0 is visited
-// 17~19 bits is the direction
-// 8~11 bits is the bucket it falls to (for BitScanForward)
-// 0~8 bits is the color
-static int* preprocessMSER_8UC1( CvMat* img,
-            int*** heap_cur,
-            CvMat* src,
-            CvMat* mask )
-{
-    int srccpt = src->step-src->cols;
-    int cpt_1 = img->cols-src->cols-1;
-    int* imgptr = img->data.i;
-    int* startptr;
-
-    int level_size[256];
-    for ( int i = 0; i < 256; i++ )
-        level_size[i] = 0;
-
-    for ( int i = 0; i < src->cols+2; i++ )
-    {
-        *imgptr = -1;
-        imgptr++;
-    }
-    imgptr += cpt_1-1;
-    uchar* srcptr = src->data.ptr;
-    if ( mask )
-    {
-        startptr = 0;
-        uchar* maskptr = mask->data.ptr;
-        for ( int i = 0; i < src->rows; i++ )
-        {
-            *imgptr = -1;
-            imgptr++;
-            for ( int j = 0; j < src->cols; j++ )
+            h->child = h;
+            if( !history )
             {
-                if ( *maskptr )
+                h->shortcut = h;
+                h->stable = 0;
+            }
+            else
+            {
+                history->child = h;
+                h->shortcut = history->shortcut;
+                h->stable = history->stable;
+            }
+            h->val = grey_level;
+            h->size = size;
+            history = h;
+        }
+
+        // merging two connected components
+        static void
+        merge( const ConnectedComp* comp1,
+              const ConnectedComp* comp2,
+              ConnectedComp* comp,
+              CompHistory* h,
+              Pixel* pix0 )
+        {
+            comp->grey_level = comp2->grey_level;
+            h->child = h;
+            // select the winner by size
+            if ( comp1->size < comp2->size )
+                std::swap(comp1, comp2);
+
+            if( !comp1->history )
+            {
+                h->shortcut = h;
+                h->stable = 0;
+            }
+            else
+            {
+                comp1->history->child = h;
+                h->shortcut = comp1->history->shortcut;
+                h->stable = comp1->history->stable;
+            }
+            if( comp2->history && comp2->history->stable > h->stable )
+                h->stable = comp2->history->stable;
+            h->val = comp1->grey_level;
+            h->size = comp1->size;
+            // put comp1 to history
+            comp->var = comp1->var;
+            comp->dvar = comp1->dvar;
+            if( comp1->size > 0 && comp2->size > 0 )
+                pix0[comp1->tail].setNext(comp2->head);
+            PPixel head = comp1->size > 0 ? comp1->head : comp2->head;
+            PPixel tail = comp2->size > 0 ? comp2->tail : comp1->tail;
+            // always made the newly added in the last of the pixel list (comp1 ... comp2)
+            comp->head = head;
+            comp->tail = tail;
+            comp->history = h;
+            comp->size = comp1->size + comp2->size;
+        }
+
+        float calcVariation( int delta ) const
+        {
+            if( !history )
+                return 1.f;
+            int val = grey_level;
+            CompHistory* shortcut = history->shortcut;
+            while( shortcut != shortcut->shortcut && shortcut->val + delta > val )
+                shortcut = shortcut->shortcut;
+            CompHistory* child = shortcut->child;
+            while( child != child->child && child->val + delta <= val )
+            {
+                shortcut = child;
+                child = child->child;
+            }
+            // get the position of history where the shortcut->val <= delta+val and shortcut->child->val >= delta+val
+            history->shortcut = shortcut;
+            return (float)(size - shortcut->size)/(float)shortcut->size;
+            // here is a small modification of MSER where cal ||R_{i}-R_{i-delta}||/||R_{i-delta}||
+            // in standard MSER, cal ||R_{i+delta}-R_{i-delta}||/||R_{i}||
+            // my calculation is simpler and much easier to implement
+        }
+
+        bool isStable(const Params& p)
+        {
+            // tricky part: it actually check the stablity of one-step back
+            if( !history || history->size <= p.minArea || history->size >= p.maxArea )
+                return false;
+            float div = (float)(history->size - history->stable)/(float)history->size;
+            float _var = calcVariation( p.delta );
+            bool _dvar = (var < _var) || (history->val + 1 < grey_level);
+            bool stable = _dvar && !dvar && _var < p.maxVariation && div > p.minDiversity;
+            var = _var;
+            dvar = _dvar;
+            if( stable )
+                history->stable = history->size;
+            return stable;
+        }
+
+        // convert the point set to CvSeq
+        Rect capture( const Pixel* pix0, int step, vector<Point>& region ) const
+        {
+            int xmin = INT_MAX, ymin = INT_MAX, xmax = INT_MIN, ymax = INT_MIN;
+            region.clear();
+
+            for( PPixel pix = head; pix != 0; pix = pix0[pix].getNext() )
+            {
+                int y = pix/step;
+                int x = pix - y*step;
+
+                xmin = std::min(xmin, x);
+                xmax = std::max(xmax, x);
+                ymin = std::min(ymin, y);
+                ymax = std::max(ymax, y);
+
+                region.push_back(Point(x, y));
+            }
+
+            return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+        }
+
+        PPixel head;
+        PPixel tail;
+        CompHistory* history;
+        int grey_level;
+        int size;
+        float var; // the current variation (most time is the variation of one-step back)
+        bool dvar; // the derivative of last var
+    };
+
+    void detectRegions( InputArray image,
+                        std::vector<std::vector<Point> >& msers,
+                        std::vector<Rect>& bboxes );
+    void detect( InputArray _src, vector<KeyPoint>& keypoints, InputArray _mask );
+
+    void preprocess1( const Mat& img, int* level_size )
+    {
+        memset(level_size, 0, 256*sizeof(level_size[0]));
+
+        int i, j, cols = img.cols, rows = img.rows;
+        int step = cols;
+        pixbuf.resize(step*rows);
+        heapbuf.resize(cols*rows + 256);
+        histbuf.resize(cols*rows);
+        Pixel borderpix;
+        borderpix.setDir(4);
+
+        for( j = 0; j < step; j++ )
+        {
+            pixbuf[j] = pixbuf[j + (rows-1)*step] = borderpix;
+        }
+
+        for( i = 1; i < rows-1; i++ )
+        {
+            const uchar* imgptr = img.ptr(i);
+            Pixel* pptr = &pixbuf[i*step];
+            pptr[0] = pptr[cols-1] = borderpix;
+            for( j = 1; j < cols-1; j++ )
+            {
+                int val = imgptr[j];
+                level_size[val]++;
+                pptr[j].val = 0;
+            }
+        }
+    }
+
+    void preprocess2( const Mat& img, int* level_size )
+    {
+        int i;
+
+        for( i = 0; i < 128; i++ )
+            std::swap(level_size[i], level_size[255-i]);
+
+        if( !params.pass2Only )
+        {
+            int j, cols = img.cols, rows = img.rows;
+            int step = cols;
+            for( i = 1; i < rows-1; i++ )
+            {
+                Pixel* pptr = &pixbuf[i*step + 1];
+                for( j = 1; j < cols-1; j++ )
                 {
-                    if ( !startptr )
-                        startptr = imgptr;
-                    *srcptr = 0xff-*srcptr;
-                    level_size[*srcptr]++;
-                    *imgptr = ((*srcptr>>5)<<8)|(*srcptr);
-                } else {
-                    *imgptr = -1;
+                    pptr[j].val = 0;
                 }
-                imgptr++;
-                srcptr++;
-                maskptr++;
             }
-            *imgptr = -1;
-            imgptr += cpt_1;
-            srcptr += srccpt;
-            maskptr += srccpt;
-        }
-    } else {
-        startptr = imgptr+img->cols+1;
-        for ( int i = 0; i < src->rows; i++ )
-        {
-            *imgptr = -1;
-            imgptr++;
-            for ( int j = 0; j < src->cols; j++ )
-            {
-                *srcptr = 0xff-*srcptr;
-                level_size[*srcptr]++;
-                *imgptr = ((*srcptr>>5)<<8)|(*srcptr);
-                imgptr++;
-                srcptr++;
-            }
-            *imgptr = -1;
-            imgptr += cpt_1;
-            srcptr += srccpt;
         }
     }
-    for ( int i = 0; i < src->cols+2; i++ )
-    {
-        *imgptr = -1;
-        imgptr++;
-    }
 
-    heap_cur[0][0] = 0;
-    for ( int i = 1; i < 256; i++ )
+    void pass( const Mat& img, vector<vector<Point> >& msers, vector<Rect>& bboxvec,
+              Size size, const int* level_size, int mask )
     {
-        heap_cur[i] = heap_cur[i-1]+level_size[i-1]+1;
-        heap_cur[i][0] = 0;
-    }
-    return startptr;
-}
+        CompHistory* histptr = &histbuf[0];
+        int step = size.width;
+        Pixel *ptr0 = &pixbuf[0], *ptr = &ptr0[step+1];
+        const uchar* imgptr0 = img.ptr();
+        Pixel** heap[256];
+        ConnectedComp comp[257];
+        ConnectedComp* comptr = &comp[0];
 
-static void extractMSER_8UC1_Pass( int* ioptr,
-              int* imgptr,
-              int*** heap_cur,
-              LinkedPoint* ptsptr,
-              MSERGrowHistory* histptr,
-              MSERConnectedComp* comptr,
-              int step,
-              int stepmask,
-              int stepgap,
-              MSERParams params,
-              int color,
-              CvSeq* contours,
-              CvMemStorage* storage )
-{
-    comptr->grey_level = 256;
-    comptr++;
-    comptr->grey_level = (*imgptr)&0xff;
-    initMSERComp( comptr );
-    *imgptr |= 0x80000000;
-    heap_cur += (*imgptr)&0xff;
-    int dir[] = { 1, step, -1, -step };
-#ifdef __INTRIN_ENABLED__
-    unsigned long heapbit[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    unsigned long* bit_cur = heapbit+(((*imgptr)&0x700)>>8);
-#endif
-    for ( ; ; )
-    {
-        // take tour of all the 4 directions
-        while ( ((*imgptr)&0x70000) < 0x40000 )
+        heap[0] = &heapbuf[0];
+        heap[0][0] = 0;
+
+        for( int i = 1; i < 256; i++ )
         {
-            // get the neighbor
-            int* imgptr_nbr = imgptr+dir[((*imgptr)&0x70000)>>16];
-            if ( *imgptr_nbr >= 0 ) // if the neighbor is not visited yet
+            heap[i] = heap[i-1] + level_size[i-1] + 1;
+            heap[i][0] = 0;
+        }
+
+        comptr->grey_level = 256;
+        comptr++;
+        comptr->grey_level = ptr->getGray(ptr0, imgptr0, mask);
+        ptr->setDir(1);
+        int dir[] = { 0, 1, step, -1, -step };
+        for( ;; )
+        {
+            int curr_gray = ptr->getGray(ptr0, imgptr0, mask);
+            int nbr_idx = ptr->getDir();
+            // take tour of all the 4 directions
+            for( ; nbr_idx <= 4; nbr_idx++ )
             {
-                *imgptr_nbr |= 0x80000000; // mark it as visited
-                if ( ((*imgptr_nbr)&0xff) < ((*imgptr)&0xff) )
+                // get the neighbor
+                Pixel* ptr_nbr = ptr + dir[nbr_idx];
+                if( !ptr_nbr->isVisited() )
                 {
-                    // when the value of neighbor smaller than current
-                    // push current to boundary heap and make the neighbor to be the current one
-                    // create an empty comp
-                    (*heap_cur)++;
-                    **heap_cur = imgptr;
-                    *imgptr += 0x10000;
-                    heap_cur += ((*imgptr_nbr)&0xff)-((*imgptr)&0xff);
-#ifdef __INTRIN_ENABLED__
-                    _bitset( bit_cur, (*imgptr)&0x1f );
-                    bit_cur += (((*imgptr_nbr)&0x700)-((*imgptr)&0x700))>>8;
-#endif
-                    imgptr = imgptr_nbr;
-                    comptr++;
-                    initMSERComp( comptr );
-                    comptr->grey_level = (*imgptr)&0xff;
-                    continue;
-                } else {
+                    // set dir=1, next=0
+                    ptr_nbr->val = 1 << DIR_SHIFT;
+                    int nbr_gray = ptr_nbr->getGray(ptr0, imgptr0, mask);
+                    if( nbr_gray < curr_gray )
+                    {
+                        // when the value of neighbor smaller than current
+                        // push current to boundary heap and make the neighbor to be the current one
+                        // create an empty comp
+                        *(++heap[curr_gray]) = ptr;
+                        ptr->val = (nbr_idx+1) << DIR_SHIFT;
+                        ptr = ptr_nbr;
+                        comptr++;
+                        comptr->init(nbr_gray);
+                        curr_gray = nbr_gray;
+                        nbr_idx = 0;
+                        continue;
+                    }
                     // otherwise, push the neighbor to boundary heap
-                    heap_cur[((*imgptr_nbr)&0xff)-((*imgptr)&0xff)]++;
-                    *heap_cur[((*imgptr_nbr)&0xff)-((*imgptr)&0xff)] = imgptr_nbr;
-#ifdef __INTRIN_ENABLED__
-                    _bitset( bit_cur+((((*imgptr_nbr)&0x700)-((*imgptr)&0x700))>>8), (*imgptr_nbr)&0x1f );
-#endif
+                    *(++heap[nbr_gray]) = ptr_nbr;
                 }
             }
-            *imgptr += 0x10000;
-        }
-        int imsk = (int)(imgptr-ioptr);
-        ptsptr->pt = cvPoint( imsk&stepmask, imsk>>stepgap );
-        // get the current location
-        accumulateMSERComp( comptr, ptsptr );
-        ptsptr++;
-        // get the next pixel from boundary heap
-        if ( **heap_cur )
-        {
-            imgptr = **heap_cur;
-            (*heap_cur)--;
-#ifdef __INTRIN_ENABLED__
-            if ( !**heap_cur )
-                _bitreset( bit_cur, (*imgptr)&0x1f );
-#endif
-        } else {
-#ifdef __INTRIN_ENABLED__
-            bool found_pixel = 0;
-            unsigned long pixel_val;
-            for ( int i = ((*imgptr)&0x700)>>8; i < 8; i++ )
+
+            // set dir = nbr_idx, next = 0
+            ptr->val = nbr_idx << DIR_SHIFT;
+            int ptrofs = (int)(ptr - ptr0);
+            CV_Assert(ptrofs != 0);
+
+            // add a pixel to the pixel list
+            if( comptr->tail )
+                ptr0[comptr->tail].setNext(ptrofs);
+            else
+                comptr->head = ptrofs;
+            comptr->tail = ptrofs;
+            comptr->size++;
+            // get the next pixel from boundary heap
+            if( *heap[curr_gray] )
             {
-                if ( _BitScanForward( &pixel_val, *bit_cur ) )
+                ptr = *heap[curr_gray];
+                heap[curr_gray]--;
+            }
+            else
+            {
+                for( curr_gray++; curr_gray < 256; curr_gray++ )
                 {
-                    found_pixel = 1;
-                    pixel_val += i<<5;
-                    heap_cur += pixel_val-((*imgptr)&0xff);
-                    break;
+                    if( *heap[curr_gray] )
+                        break;
                 }
-                bit_cur++;
-            }
-            if ( found_pixel )
-#else
-            heap_cur++;
-            unsigned long pixel_val = 0;
-            for ( unsigned long i = ((*imgptr)&0xff)+1; i < 256; i++ )
-            {
-                if ( **heap_cur )
-                {
-                    pixel_val = i;
+                if( curr_gray >= 256 )
                     break;
-                }
-                heap_cur++;
-            }
-            if ( pixel_val )
-#endif
-            {
-                imgptr = **heap_cur;
-                (*heap_cur)--;
-#ifdef __INTRIN_ENABLED__
-                if ( !**heap_cur )
-                    _bitreset( bit_cur, pixel_val&0x1f );
-#endif
-                if ( pixel_val < comptr[-1].grey_level )
+
+                ptr = *heap[curr_gray];
+                heap[curr_gray]--;
+                if( curr_gray < comptr[-1].grey_level )
                 {
                     // check the stablity and push a new history, increase the grey level
-                    if ( MSERStableCheck( comptr, params ) )
+                    if( comptr->isStable(params) )
                     {
-                        CvContour* contour = MSERToContour( comptr, storage );
-                        contour->color = color;
-                        cvSeqPush( contours, &contour );
+                        msers.push_back(vector<Point>());
+                        vector<Point>& mser = msers.back();
+
+                        Rect box = comptr->capture( ptr0, step, mser );
+                        bboxvec.push_back(box);
                     }
-                    MSERNewHistory( comptr, histptr );
-                    comptr[0].grey_level = pixel_val;
-                    histptr++;
-                } else {
+                    comptr->growHistory( histptr++ );
+                    comptr[0].grey_level = curr_gray;
+                }
+                else
+                {
                     // keep merging top two comp in stack until the grey level >= pixel_val
-                    for ( ; ; )
+                    for(;;)
                     {
                         comptr--;
-                        MSERMergeComp( comptr+1, comptr, comptr, histptr );
-                        histptr++;
-                        if ( pixel_val <= comptr[0].grey_level )
+                        ConnectedComp::merge(comptr+1, comptr, comptr, histptr++, ptr0);
+                        if( curr_gray <= comptr[0].grey_level )
                             break;
-                        if ( pixel_val < comptr[-1].grey_level )
+                        if( curr_gray < comptr[-1].grey_level )
                         {
                             // check the stablity here otherwise it wouldn't be an ER
-                            if ( MSERStableCheck( comptr, params ) )
+                            if( comptr->isStable(params) )
                             {
-                                CvContour* contour = MSERToContour( comptr, storage );
-                                contour->color = color;
-                                cvSeqPush( contours, &contour );
+                                msers.push_back(vector<Point>());
+                                vector<Point>& mser = msers.back();
+
+                                Rect box = comptr->capture( ptr0, step, mser );
+                                bboxvec.push_back(box);
                             }
-                            MSERNewHistory( comptr, histptr );
-                            comptr[0].grey_level = pixel_val;
-                            histptr++;
+                            comptr->growHistory( histptr++ );
+                            comptr[0].grey_level = curr_gray;
                             break;
                         }
                     }
                 }
-            } else
-                break;
+            }
         }
     }
-}
 
-static void extractMSER_8UC1( CvMat* src,
-             CvMat* mask,
-             CvSeq* contours,
-             CvMemStorage* storage,
-             MSERParams params )
+    Mat tempsrc;
+    vector<Pixel> pixbuf;
+    vector<Pixel*> heapbuf;
+    vector<CompHistory> histbuf;
+
+    Params params;
+};
+
+/*
+
+TODO:
+the color MSER has not been completely refactored yet. We leave it mostly as-is,
+with just enough changes to convert C structures to C++ ones and
+add support for color images into MSER_Impl::detectAndLabel.
+*/
+
+const int TABLE_SIZE = 400;
+
+static const float chitab3[]=
 {
-    int step = 8;
-    int stepgap = 3;
-    while ( step < src->step+2 )
-    {
-        step <<= 1;
-        stepgap++;
-    }
-    int stepmask = step-1;
-
-    // to speedup the process, make the width to be 2^N
-    CvMat* img = cvCreateMat( src->rows+2, step, CV_32SC1 );
-    int* ioptr = img->data.i+step+1;
-    int* imgptr;
-
-    // pre-allocate boundary heap
-    int** heap = (int**)cvAlloc( (src->rows*src->cols+256)*sizeof(heap[0]) );
-    int** heap_start[256];
-    heap_start[0] = heap;
-
-    // pre-allocate linked point and grow history
-    LinkedPoint* pts = (LinkedPoint*)cvAlloc( src->rows*src->cols*sizeof(pts[0]) );
-    MSERGrowHistory* history = (MSERGrowHistory*)cvAlloc( src->rows*src->cols*sizeof(history[0]) );
-    MSERConnectedComp comp[257];
-
-    // darker to brighter (MSER-)
-    imgptr = preprocessMSER_8UC1( img, heap_start, src, mask );
-    extractMSER_8UC1_Pass( ioptr, imgptr, heap_start, pts, history, comp, step, stepmask, stepgap, params, -1, contours, storage );
-    // brighter to darker (MSER+)
-    imgptr = preprocessMSER_8UC1( img, heap_start, src, mask );
-    extractMSER_8UC1_Pass( ioptr, imgptr, heap_start, pts, history, comp, step, stepmask, stepgap, params, 1, contours, storage );
-
-    // clean up
-    cvFree( &history );
-    cvFree( &heap );
-    cvFree( &pts );
-    cvReleaseMat( &img );
-}
+    0.f,  0.0150057f,  0.0239478f,  0.0315227f,
+    0.0383427f,  0.0446605f,  0.0506115f,  0.0562786f,
+    0.0617174f,  0.0669672f,  0.0720573f,  0.0770099f,
+    0.081843f,  0.0865705f,  0.0912043f,  0.0957541f,
+    0.100228f,  0.104633f,  0.108976f,  0.113261f,
+    0.117493f,  0.121676f,  0.125814f,  0.12991f,
+    0.133967f,  0.137987f,  0.141974f,  0.145929f,
+    0.149853f,  0.15375f,  0.15762f,  0.161466f,
+    0.165287f,  0.169087f,  0.172866f,  0.176625f,
+    0.180365f,  0.184088f,  0.187794f,  0.191483f,
+    0.195158f,  0.198819f,  0.202466f,  0.2061f,
+    0.209722f,  0.213332f,  0.216932f,  0.220521f,
+    0.2241f,  0.22767f,  0.231231f,  0.234783f,
+    0.238328f,  0.241865f,  0.245395f,  0.248918f,
+    0.252435f,  0.255947f,  0.259452f,  0.262952f,
+    0.266448f,  0.269939f,  0.273425f,  0.276908f,
+    0.280386f,  0.283862f,  0.287334f,  0.290803f,
+    0.29427f,  0.297734f,  0.301197f,  0.304657f,
+    0.308115f,  0.311573f,  0.315028f,  0.318483f,
+    0.321937f,  0.32539f,  0.328843f,  0.332296f,
+    0.335749f,  0.339201f,  0.342654f,  0.346108f,
+    0.349562f,  0.353017f,  0.356473f,  0.35993f,
+    0.363389f,  0.366849f,  0.37031f,  0.373774f,
+    0.377239f,  0.380706f,  0.384176f,  0.387648f,
+    0.391123f,  0.3946f,  0.39808f,  0.401563f,
+    0.405049f,  0.408539f,  0.412032f,  0.415528f,
+    0.419028f,  0.422531f,  0.426039f,  0.429551f,
+    0.433066f,  0.436586f,  0.440111f,  0.44364f,
+    0.447173f,  0.450712f,  0.454255f,  0.457803f,
+    0.461356f,  0.464915f,  0.468479f,  0.472049f,
+    0.475624f,  0.479205f,  0.482792f,  0.486384f,
+    0.489983f,  0.493588f,  0.4972f,  0.500818f,
+    0.504442f,  0.508073f,  0.511711f,  0.515356f,
+    0.519008f,  0.522667f,  0.526334f,  0.530008f,
+    0.533689f,  0.537378f,  0.541075f,  0.54478f,
+    0.548492f,  0.552213f,  0.555942f,  0.55968f,
+    0.563425f,  0.56718f,  0.570943f,  0.574715f,
+    0.578497f,  0.582287f,  0.586086f,  0.589895f,
+    0.593713f,  0.597541f,  0.601379f,  0.605227f,
+    0.609084f,  0.612952f,  0.61683f,  0.620718f,
+    0.624617f,  0.628526f,  0.632447f,  0.636378f,
+    0.64032f,  0.644274f,  0.648239f,  0.652215f,
+    0.656203f,  0.660203f,  0.664215f,  0.668238f,
+    0.672274f,  0.676323f,  0.680384f,  0.684457f,
+    0.688543f,  0.692643f,  0.696755f,  0.700881f,
+    0.70502f,  0.709172f,  0.713339f,  0.717519f,
+    0.721714f,  0.725922f,  0.730145f,  0.734383f,
+    0.738636f,  0.742903f,  0.747185f,  0.751483f,
+    0.755796f,  0.760125f,  0.76447f,  0.768831f,
+    0.773208f,  0.777601f,  0.782011f,  0.786438f,
+    0.790882f,  0.795343f,  0.799821f,  0.804318f,
+    0.808831f,  0.813363f,  0.817913f,  0.822482f,
+    0.827069f,  0.831676f,  0.836301f,  0.840946f,
+    0.84561f,  0.850295f,  0.854999f,  0.859724f,
+    0.864469f,  0.869235f,  0.874022f,  0.878831f,
+    0.883661f,  0.888513f,  0.893387f,  0.898284f,
+    0.903204f,  0.908146f,  0.913112f,  0.918101f,
+    0.923114f,  0.928152f,  0.933214f,  0.938301f,
+    0.943413f,  0.94855f,  0.953713f,  0.958903f,
+    0.964119f,  0.969361f,  0.974631f,  0.979929f,
+    0.985254f,  0.990608f,  0.99599f,  1.0014f,
+    1.00684f,  1.01231f,  1.01781f,  1.02335f,
+    1.02891f,  1.0345f,  1.04013f,  1.04579f,
+    1.05148f,  1.05721f,  1.06296f,  1.06876f,
+    1.07459f,  1.08045f,  1.08635f,  1.09228f,
+    1.09826f,  1.10427f,  1.11032f,  1.1164f,
+    1.12253f,  1.1287f,  1.1349f,  1.14115f,
+    1.14744f,  1.15377f,  1.16015f,  1.16656f,
+    1.17303f,  1.17954f,  1.18609f,  1.19269f,
+    1.19934f,  1.20603f,  1.21278f,  1.21958f,
+    1.22642f,  1.23332f,  1.24027f,  1.24727f,
+    1.25433f,  1.26144f,  1.26861f,  1.27584f,
+    1.28312f,  1.29047f,  1.29787f,  1.30534f,
+    1.31287f,  1.32046f,  1.32812f,  1.33585f,
+    1.34364f,  1.3515f,  1.35943f,  1.36744f,
+    1.37551f,  1.38367f,  1.39189f,  1.4002f,
+    1.40859f,  1.41705f,  1.42561f,  1.43424f,
+    1.44296f,  1.45177f,  1.46068f,  1.46967f,
+    1.47876f,  1.48795f,  1.49723f,  1.50662f,
+    1.51611f,  1.52571f,  1.53541f,  1.54523f,
+    1.55517f,  1.56522f,  1.57539f,  1.58568f,
+    1.59611f,  1.60666f,  1.61735f,  1.62817f,
+    1.63914f,  1.65025f,  1.66152f,  1.67293f,
+    1.68451f,  1.69625f,  1.70815f,  1.72023f,
+    1.73249f,  1.74494f,  1.75757f,  1.77041f,
+    1.78344f,  1.79669f,  1.81016f,  1.82385f,
+    1.83777f,  1.85194f,  1.86635f,  1.88103f,
+    1.89598f,  1.91121f,  1.92674f,  1.94257f,
+    1.95871f,  1.97519f,  1.99201f,  2.0092f,
+    2.02676f,  2.04471f,  2.06309f,  2.08189f,
+    2.10115f,  2.12089f,  2.14114f,  2.16192f,
+    2.18326f,  2.2052f,  2.22777f,  2.25101f,
+    2.27496f,  2.29966f,  2.32518f,  2.35156f,
+    2.37886f,  2.40717f,  2.43655f,  2.46709f,
+    2.49889f,  2.53206f,  2.56673f,  2.60305f,
+    2.64117f,  2.6813f,  2.72367f,  2.76854f,
+    2.81623f,  2.86714f,  2.92173f,  2.98059f,
+    3.04446f,  3.1143f,  3.19135f,  3.27731f,
+    3.37455f,  3.48653f,  3.61862f,  3.77982f,
+    3.98692f,  4.2776f,  4.77167f,  133.333f
+};
 
 struct MSCRNode;
 
@@ -716,11 +630,11 @@ struct MSCREdge
     MSCRNode* right;
 };
 
-static double ChiSquaredDistance( uchar* x, uchar* y )
+static double ChiSquaredDistance( const uchar* x, const uchar* y )
 {
     return (double)((x[0]-y[0])*(x[0]-y[0]))/(double)(x[0]+y[0]+1e-10)+
-           (double)((x[1]-y[1])*(x[1]-y[1]))/(double)(x[1]+y[1]+1e-10)+
-           (double)((x[2]-y[2])*(x[2]-y[2]))/(double)(x[2]+y[2]+1e-10);
+    (double)((x[1]-y[1])*(x[1]-y[1]))/(double)(x[1]+y[1]+1e-10)+
+    (double)((x[2]-y[2])*(x[2]-y[2]))/(double)(x[2]+y[2]+1e-10);
 }
 
 static void initMSCRNode( MSCRNode* node )
@@ -733,23 +647,22 @@ static void initMSCRNode( MSCRNode* node )
 }
 
 // the preprocess to get the edge list with proper gaussian blur
-static int preprocessMSER_8UC3( MSCRNode* node,
-            MSCREdge* edge,
-            double* total,
-            CvMat* src,
-            CvMat* mask,
-            CvMat* dx,
-            CvMat* dy,
-            int Ne,
-            int edgeBlurSize )
+static int preprocessMSER_8uC3( MSCRNode* node,
+                               MSCREdge* edge,
+                               double* total,
+                               const Mat& src,
+                               Mat& dx,
+                               Mat& dy,
+                               int Ne,
+                               int edgeBlurSize )
 {
-    int srccpt = src->step-src->cols*3;
-    uchar* srcptr = src->data.ptr;
-    uchar* lastptr = src->data.ptr+3;
-    double* dxptr = dx->data.db;
-    for ( int i = 0; i < src->rows; i++ )
+    int srccpt = (int)(src.step-src.cols*3);
+    const uchar* srcptr = src.ptr();
+    const uchar* lastptr = srcptr+3;
+    double* dxptr = dx.ptr<double>();
+    for ( int i = 0; i < src.rows; i++ )
     {
-        for ( int j = 0; j < src->cols-1; j++ )
+        for ( int j = 0; j < src.cols-1; j++ )
         {
             *dxptr = ChiSquaredDistance( srcptr, lastptr );
             dxptr++;
@@ -759,12 +672,12 @@ static int preprocessMSER_8UC3( MSCRNode* node,
         srcptr += srccpt+3;
         lastptr += srccpt+3;
     }
-    srcptr = src->data.ptr;
-    lastptr = src->data.ptr+src->step;
-    double* dyptr = dy->data.db;
-    for ( int i = 0; i < src->rows-1; i++ )
+    srcptr = src.ptr();
+    lastptr = srcptr+src.step;
+    double* dyptr = dy.ptr<double>();
+    for ( int i = 0; i < src.rows-1; i++ )
     {
-        for ( int j = 0; j < src->cols; j++ )
+        for ( int j = 0; j < src.cols; j++ )
         {
             *dyptr = ChiSquaredDistance( srcptr, lastptr );
             dyptr++;
@@ -777,282 +690,111 @@ static int preprocessMSER_8UC3( MSCRNode* node,
     // get dx and dy and blur it
     if ( edgeBlurSize >= 1 )
     {
-        cvSmooth( dx, dx, CV_GAUSSIAN, edgeBlurSize, edgeBlurSize );
-        cvSmooth( dy, dy, CV_GAUSSIAN, edgeBlurSize, edgeBlurSize );
+        GaussianBlur( dx, dx, Size(edgeBlurSize, edgeBlurSize), 0 );
+        GaussianBlur( dy, dy, Size(edgeBlurSize, edgeBlurSize), 0 );
     }
-    dxptr = dx->data.db;
-    dyptr = dy->data.db;
+    dxptr = dx.ptr<double>();
+    dyptr = dy.ptr<double>();
     // assian dx, dy to proper edge list and initialize mscr node
     // the nasty code here intended to avoid extra loops
-    if ( mask )
+    MSCRNode* nodeptr = node;
+    initMSCRNode( nodeptr );
+    nodeptr->index = 0;
+    *total += edge->chi = *dxptr;
+    dxptr++;
+    edge->left = nodeptr;
+    edge->right = nodeptr+1;
+    edge++;
+    nodeptr++;
+    for ( int i = 1; i < src.cols-1; i++ )
     {
-        Ne = 0;
-        int maskcpt = mask->step-mask->cols+1;
-        uchar* maskptr = mask->data.ptr;
-        MSCRNode* nodeptr = node;
         initMSCRNode( nodeptr );
-        nodeptr->index = 0;
-        *total += edge->chi = *dxptr;
-        if ( maskptr[0] && maskptr[1] )
-        {
-            edge->left = nodeptr;
-            edge->right = nodeptr+1;
-            edge++;
-            Ne++;
-        }
-        dxptr++;
-        nodeptr++;
-        maskptr++;
-        for ( int i = 1; i < src->cols-1; i++ )
-        {
-            initMSCRNode( nodeptr );
-            nodeptr->index = i;
-            if ( maskptr[0] && maskptr[1] )
-            {
-                *total += edge->chi = *dxptr;
-                edge->left = nodeptr;
-                edge->right = nodeptr+1;
-                edge++;
-                Ne++;
-            }
-            dxptr++;
-            nodeptr++;
-            maskptr++;
-        }
-        initMSCRNode( nodeptr );
-        nodeptr->index = src->cols-1;
-        nodeptr++;
-        maskptr += maskcpt;
-        for ( int i = 1; i < src->rows-1; i++ )
-        {
-            initMSCRNode( nodeptr );
-            nodeptr->index = i<<16;
-            if ( maskptr[0] )
-            {
-                if ( maskptr[-mask->step] )
-                {
-                    *total += edge->chi = *dyptr;
-                    edge->left = nodeptr-src->cols;
-                    edge->right = nodeptr;
-                    edge++;
-                    Ne++;
-                }
-                if ( maskptr[1] )
-                {
-                    *total += edge->chi = *dxptr;
-                    edge->left = nodeptr;
-                    edge->right = nodeptr+1;
-                    edge++;
-                    Ne++;
-                }
-            }
-            dyptr++;
-            dxptr++;
-            nodeptr++;
-            maskptr++;
-            for ( int j = 1; j < src->cols-1; j++ )
-            {
-                initMSCRNode( nodeptr );
-                nodeptr->index = (i<<16)|j;
-                if ( maskptr[0] )
-                {
-                    if ( maskptr[-mask->step] )
-                    {
-                        *total += edge->chi = *dyptr;
-                        edge->left = nodeptr-src->cols;
-                        edge->right = nodeptr;
-                        edge++;
-                        Ne++;
-                    }
-                    if ( maskptr[1] )
-                    {
-                        *total += edge->chi = *dxptr;
-                        edge->left = nodeptr;
-                        edge->right = nodeptr+1;
-                        edge++;
-                        Ne++;
-                    }
-                }
-                dyptr++;
-                dxptr++;
-                nodeptr++;
-                maskptr++;
-            }
-            initMSCRNode( nodeptr );
-            nodeptr->index = (i<<16)|(src->cols-1);
-            if ( maskptr[0] && maskptr[-mask->step] )
-            {
-                *total += edge->chi = *dyptr;
-                edge->left = nodeptr-src->cols;
-                edge->right = nodeptr;
-                edge++;
-                Ne++;
-            }
-            dyptr++;
-            nodeptr++;
-            maskptr += maskcpt;
-        }
-        initMSCRNode( nodeptr );
-        nodeptr->index = (src->rows-1)<<16;
-        if ( maskptr[0] )
-        {
-            if ( maskptr[1] )
-            {
-                *total += edge->chi = *dxptr;
-                edge->left = nodeptr;
-                edge->right = nodeptr+1;
-                edge++;
-                Ne++;
-            }
-            if ( maskptr[-mask->step] )
-            {
-                *total += edge->chi = *dyptr;
-                edge->left = nodeptr-src->cols;
-                edge->right = nodeptr;
-                edge++;
-                Ne++;
-            }
-        }
-        dxptr++;
-        dyptr++;
-        nodeptr++;
-        maskptr++;
-        for ( int i = 1; i < src->cols-1; i++ )
-        {
-            initMSCRNode( nodeptr );
-            nodeptr->index = ((src->rows-1)<<16)|i;
-            if ( maskptr[0] )
-            {
-                if ( maskptr[1] )
-                {
-                    *total += edge->chi = *dxptr;
-                    edge->left = nodeptr;
-                    edge->right = nodeptr+1;
-                    edge++;
-                    Ne++;
-                }
-                if ( maskptr[-mask->step] )
-                {
-                    *total += edge->chi = *dyptr;
-                    edge->left = nodeptr-src->cols;
-                    edge->right = nodeptr;
-                    edge++;
-                    Ne++;
-                }
-            }
-            dxptr++;
-            dyptr++;
-            nodeptr++;
-            maskptr++;
-        }
-        initMSCRNode( nodeptr );
-        nodeptr->index = ((src->rows-1)<<16)|(src->cols-1);
-        if ( maskptr[0] && maskptr[-mask->step] )
-        {
-            *total += edge->chi = *dyptr;
-            edge->left = nodeptr-src->cols;
-            edge->right = nodeptr;
-            Ne++;
-        }
-    } else {
-        MSCRNode* nodeptr = node;
-        initMSCRNode( nodeptr );
-        nodeptr->index = 0;
+        nodeptr->index = i;
         *total += edge->chi = *dxptr;
         dxptr++;
         edge->left = nodeptr;
         edge->right = nodeptr+1;
         edge++;
         nodeptr++;
-        for ( int i = 1; i < src->cols-1; i++ )
-        {
-            initMSCRNode( nodeptr );
-            nodeptr->index = i;
-            *total += edge->chi = *dxptr;
-            dxptr++;
-            edge->left = nodeptr;
-            edge->right = nodeptr+1;
-            edge++;
-            nodeptr++;
-        }
-        initMSCRNode( nodeptr );
-        nodeptr->index = src->cols-1;
-        nodeptr++;
-        for ( int i = 1; i < src->rows-1; i++ )
-        {
-            initMSCRNode( nodeptr );
-            nodeptr->index = i<<16;
-            *total += edge->chi = *dyptr;
-            dyptr++;
-            edge->left = nodeptr-src->cols;
-            edge->right = nodeptr;
-            edge++;
-            *total += edge->chi = *dxptr;
-            dxptr++;
-            edge->left = nodeptr;
-            edge->right = nodeptr+1;
-            edge++;
-            nodeptr++;
-            for ( int j = 1; j < src->cols-1; j++ )
-            {
-                initMSCRNode( nodeptr );
-                nodeptr->index = (i<<16)|j;
-                *total += edge->chi = *dyptr;
-                dyptr++;
-                edge->left = nodeptr-src->cols;
-                edge->right = nodeptr;
-                edge++;
-                *total += edge->chi = *dxptr;
-                dxptr++;
-                edge->left = nodeptr;
-                edge->right = nodeptr+1;
-                edge++;
-                nodeptr++;
-            }
-            initMSCRNode( nodeptr );
-            nodeptr->index = (i<<16)|(src->cols-1);
-            *total += edge->chi = *dyptr;
-            dyptr++;
-            edge->left = nodeptr-src->cols;
-            edge->right = nodeptr;
-            edge++;
-            nodeptr++;
-        }
-        initMSCRNode( nodeptr );
-        nodeptr->index = (src->rows-1)<<16;
-        *total += edge->chi = *dxptr;
-        dxptr++;
-        edge->left = nodeptr;
-        edge->right = nodeptr+1;
-        edge++;
-        *total += edge->chi = *dyptr;
-        dyptr++;
-        edge->left = nodeptr-src->cols;
-        edge->right = nodeptr;
-        edge++;
-        nodeptr++;
-        for ( int i = 1; i < src->cols-1; i++ )
-        {
-            initMSCRNode( nodeptr );
-            nodeptr->index = ((src->rows-1)<<16)|i;
-            *total += edge->chi = *dxptr;
-            dxptr++;
-            edge->left = nodeptr;
-            edge->right = nodeptr+1;
-            edge++;
-            *total += edge->chi = *dyptr;
-            dyptr++;
-            edge->left = nodeptr-src->cols;
-            edge->right = nodeptr;
-            edge++;
-            nodeptr++;
-        }
-        initMSCRNode( nodeptr );
-        nodeptr->index = ((src->rows-1)<<16)|(src->cols-1);
-        *total += edge->chi = *dyptr;
-        edge->left = nodeptr-src->cols;
-        edge->right = nodeptr;
     }
+    initMSCRNode( nodeptr );
+    nodeptr->index = src.cols-1;
+    nodeptr++;
+    for ( int i = 1; i < src.rows-1; i++ )
+    {
+        initMSCRNode( nodeptr );
+        nodeptr->index = i<<16;
+        *total += edge->chi = *dyptr;
+        dyptr++;
+        edge->left = nodeptr-src.cols;
+        edge->right = nodeptr;
+        edge++;
+        *total += edge->chi = *dxptr;
+        dxptr++;
+        edge->left = nodeptr;
+        edge->right = nodeptr+1;
+        edge++;
+        nodeptr++;
+        for ( int j = 1; j < src.cols-1; j++ )
+        {
+            initMSCRNode( nodeptr );
+            nodeptr->index = (i<<16)|j;
+            *total += edge->chi = *dyptr;
+            dyptr++;
+            edge->left = nodeptr-src.cols;
+            edge->right = nodeptr;
+            edge++;
+            *total += edge->chi = *dxptr;
+            dxptr++;
+            edge->left = nodeptr;
+            edge->right = nodeptr+1;
+            edge++;
+            nodeptr++;
+        }
+        initMSCRNode( nodeptr );
+        nodeptr->index = (i<<16)|(src.cols-1);
+        *total += edge->chi = *dyptr;
+        dyptr++;
+        edge->left = nodeptr-src.cols;
+        edge->right = nodeptr;
+        edge++;
+        nodeptr++;
+    }
+    initMSCRNode( nodeptr );
+    nodeptr->index = (src.rows-1)<<16;
+    *total += edge->chi = *dxptr;
+    dxptr++;
+    edge->left = nodeptr;
+    edge->right = nodeptr+1;
+    edge++;
+    *total += edge->chi = *dyptr;
+    dyptr++;
+    edge->left = nodeptr-src.cols;
+    edge->right = nodeptr;
+    edge++;
+    nodeptr++;
+    for ( int i = 1; i < src.cols-1; i++ )
+    {
+        initMSCRNode( nodeptr );
+        nodeptr->index = ((src.rows-1)<<16)|i;
+        *total += edge->chi = *dxptr;
+        dxptr++;
+        edge->left = nodeptr;
+        edge->right = nodeptr+1;
+        edge++;
+        *total += edge->chi = *dyptr;
+        dyptr++;
+        edge->left = nodeptr-src.cols;
+        edge->right = nodeptr;
+        edge++;
+        nodeptr++;
+    }
+    initMSCRNode( nodeptr );
+    nodeptr->index = ((src.rows-1)<<16)|(src.cols-1);
+    *total += edge->chi = *dyptr;
+    edge->left = nodeptr-src.cols;
+    edge->right = nodeptr;
+
     return Ne;
 }
 
@@ -1089,31 +831,31 @@ static MSCRNode* findMSCR( MSCRNode* x )
 // the stable mscr should be:
 // bigger than minArea and smaller than maxArea
 // differ from its ancestor more than minDiversity
-static bool MSCRStableCheck( MSCRNode* x, MSERParams params )
+static bool MSCRStableCheck( MSCRNode* x, const MSER_Impl::Params& params )
 {
     if ( x->size <= params.minArea || x->size >= params.maxArea )
-        return 0;
+        return false;
     if ( x->gmsr == NULL )
-        return 1;
+        return true;
     double div = (double)(x->size-x->gmsr->size)/(double)x->size;
     return div > params.minDiversity;
 }
 
 static void
-extractMSER_8UC3( CvMat* src,
-             CvMat* mask,
-             CvSeq* contours,
-             CvMemStorage* storage,
-             MSERParams params )
+extractMSER_8uC3( const Mat& src,
+                  vector<vector<Point> >& msers,
+                  vector<Rect>& bboxvec,
+                  const MSER_Impl::Params& params )
 {
-    MSCRNode* map = (MSCRNode*)cvAlloc( src->cols*src->rows*sizeof(map[0]) );
-    int Ne = src->cols*src->rows*2-src->cols-src->rows;
+    bboxvec.clear();
+    MSCRNode* map = (MSCRNode*)cvAlloc( src.cols*src.rows*sizeof(map[0]) );
+    int Ne = src.cols*src.rows*2-src.cols-src.rows;
     MSCREdge* edge = (MSCREdge*)cvAlloc( Ne*sizeof(edge[0]) );
-    TempMSCR* mscr = (TempMSCR*)cvAlloc( src->cols*src->rows*sizeof(mscr[0]) );
+    TempMSCR* mscr = (TempMSCR*)cvAlloc( src.cols*src.rows*sizeof(mscr[0]) );
     double emean = 0;
-    CvMat* dx = cvCreateMat( src->rows, src->cols-1, CV_64FC1 );
-    CvMat* dy = cvCreateMat( src->rows-1, src->cols, CV_64FC1 );
-    Ne = preprocessMSER_8UC3( map, edge, &emean, src, mask, dx, dy, Ne, params.edgeBlurSize );
+    Mat dx( src.rows, src.cols-1, CV_64FC1 );
+    Mat dy( src.rows-1, src.cols, CV_64FC1 );
+    Ne = preprocessMSER_8uC3( map, edge, &emean, src, dx, dy, Ne, params.edgeBlurSize );
     emean = emean / (double)Ne;
     std::sort(edge, edge + Ne, LessThanEdge());
     MSCREdge* edge_ub = edge+Ne;
@@ -1200,108 +942,101 @@ extractMSER_8UC3( CvMat* src,
         // to prune area with margin less than minMargin
         if ( ptr->m > params.minMargin )
         {
-            CvSeq* _contour = cvCreateSeq( CV_SEQ_KIND_GENERIC|CV_32SC2, sizeof(CvContour), sizeof(CvPoint), storage );
-            cvSeqPushMulti( _contour, 0, ptr->size );
             MSCRNode* lpt = ptr->head;
+            int xmin = INT_MAX, ymin = INT_MAX, xmax = INT_MIN, ymax = INT_MIN;
+            msers.push_back(vector<Point>());
+            vector<Point>& mser = msers.back();
+
             for ( int i = 0; i < ptr->size; i++ )
             {
-                CvPoint* pt = CV_GET_SEQ_ELEM( CvPoint, _contour, i );
-                pt->x = (lpt->index)&0xffff;
-                pt->y = (lpt->index)>>16;
+                Point pt;
+                pt.x = (lpt->index)&0xffff;
+                pt.y = (lpt->index)>>16;
+                xmin = std::min(xmin, pt.x);
+                xmax = std::max(xmax, pt.x);
+                ymin = std::min(ymin, pt.y);
+                ymax = std::max(ymax, pt.y);
+
                 lpt = lpt->next;
+                mser.push_back(pt);
             }
-            CvContour* contour = (CvContour*)_contour;
-            cvBoundingRect( contour );
-            contour->color = 0;
-            cvSeqPush( contours, &contour );
+            bboxvec.push_back(Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1));
         }
-    cvReleaseMat( &dx );
-    cvReleaseMat( &dy );
     cvFree( &mscr );
     cvFree( &edge );
     cvFree( &map );
 }
 
-static void
-extractMSER( CvArr* _img,
-           CvArr* _mask,
-           CvSeq** _contours,
-           CvMemStorage* storage,
-           MSERParams params )
+void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, vector<Rect>& bboxes )
 {
-    CvMat srchdr, *src = cvGetMat( _img, &srchdr );
-    CvMat maskhdr, *mask = _mask ? cvGetMat( _mask, &maskhdr ) : 0;
-    CvSeq* contours = 0;
+    Mat src = _src.getMat();
+    size_t npix = src.total();
 
-    CV_Assert(src != 0);
-    CV_Assert(CV_MAT_TYPE(src->type) == CV_8UC1 || CV_MAT_TYPE(src->type) == CV_8UC3);
-    CV_Assert(mask == 0 || (CV_ARE_SIZES_EQ(src, mask) && CV_MAT_TYPE(mask->type) == CV_8UC1));
-    CV_Assert(storage != 0);
+    msers.clear();
+    bboxes.clear();
 
-    contours = *_contours = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvSeq*), storage );
+    if( npix == 0 )
+        return;
 
-    // choose different method for different image type
-    // for grey image, it is: Linear Time Maximally Stable Extremal Regions
-    // for color image, it is: Maximally Stable Colour Regions for Recognition and Matching
-    switch ( CV_MAT_TYPE(src->type) )
+    Size size = src.size();
+
+    if( src.type() == CV_8U )
     {
-        case CV_8UC1:
-            extractMSER_8UC1( src, mask, contours, storage, params );
-            break;
-        case CV_8UC3:
-            extractMSER_8UC3( src, mask, contours, storage, params );
-            break;
+        int level_size[256];
+        if( !src.isContinuous() )
+        {
+            src.copyTo(tempsrc);
+            src = tempsrc;
+        }
+
+        // darker to brighter (MSER+)
+        preprocess1( src, level_size );
+        if( !params.pass2Only )
+            pass( src, msers, bboxes, size, level_size, 0 );
+        // brighter to darker (MSER-)
+        preprocess2( src, level_size );
+        pass( src, msers, bboxes, size, level_size, 255 );
+    }
+    else
+    {
+        CV_Assert( src.type() == CV_8UC3 || src.type() == CV_8UC4 );
+        extractMSER_8uC3( src, msers, bboxes, params );
     }
 }
 
+void MSER_Impl::detect( InputArray _image, vector<KeyPoint>& keypoints, InputArray _mask )
+{
+    vector<Rect> bboxes;
+    vector<vector<Point> > msers;
+    Mat mask = _mask.getMat();
 
-MSER::MSER( int _delta, int _min_area, int _max_area,
+    detectRegions(_image, msers, bboxes);
+    int i, ncomps = (int)msers.size();
+
+    keypoints.clear();
+    for( i = 0; i < ncomps; i++ )
+    {
+        Rect r = bboxes[i];
+        // TODO check transformation from MSER region to KeyPoint
+        RotatedRect rect = fitEllipse(Mat(msers[i]));
+        float diam = std::sqrt(rect.size.height*rect.size.width);
+
+        if( diam > std::numeric_limits<float>::epsilon() && r.contains(rect.center) &&
+            (mask.empty() || mask.at<uchar>(cvRound(rect.center.y), cvRound(rect.center.x)) != 0) )
+            keypoints.push_back( KeyPoint(rect.center, diam) );
+    }
+}
+
+Ptr<MSER> MSER::create( int _delta, int _min_area, int _max_area,
       double _max_variation, double _min_diversity,
       int _max_evolution, double _area_threshold,
       double _min_margin, int _edge_blur_size )
-    : delta(_delta), minArea(_min_area), maxArea(_max_area),
-    maxVariation(_max_variation), minDiversity(_min_diversity),
-    maxEvolution(_max_evolution), areaThreshold(_area_threshold),
-    minMargin(_min_margin), edgeBlurSize(_edge_blur_size)
 {
-}
-
-void MSER::operator()( const Mat& image, std::vector<std::vector<Point> >& dstcontours, const Mat& mask ) const
-{
-    CvMat _image = image, _mask, *pmask = 0;
-    if( mask.data )
-        pmask = &(_mask = mask);
-    MemStorage storage(cvCreateMemStorage(0));
-    Seq<CvSeq*> contours;
-    extractMSER( &_image, pmask, &contours.seq, storage,
-                 MSERParams(delta, minArea, maxArea, maxVariation, minDiversity,
-                            maxEvolution, areaThreshold, minMargin, edgeBlurSize));
-    SeqIterator<CvSeq*> it = contours.begin();
-    size_t i, ncontours = contours.size();
-    dstcontours.resize(ncontours);
-    for( i = 0; i < ncontours; i++, ++it )
-        Seq<Point>(*it).copyTo(dstcontours[i]);
-}
-
-
-void MserFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
-{
-    std::vector<std::vector<Point> > msers;
-
-    (*this)(image, msers, mask);
-
-    std::vector<std::vector<Point> >::const_iterator contour_it = msers.begin();
-    Rect r(0, 0, image.cols, image.rows);
-    for( ; contour_it != msers.end(); ++contour_it )
-    {
-        // TODO check transformation from MSER region to KeyPoint
-        RotatedRect rect = fitEllipse(Mat(*contour_it));
-        float diam = std::sqrt(rect.size.height*rect.size.width);
-
-        if( diam > std::numeric_limits<float>::epsilon() && r.contains(rect.center) )
-            keypoints.push_back( KeyPoint(rect.center, diam) );
-    }
-
+    return makePtr<MSER_Impl>(
+        MSER_Impl::Params(_delta, _min_area, _max_area,
+                          _max_variation, _min_diversity,
+                          _max_evolution, _area_threshold,
+                          _min_margin, _edge_blur_size));
 }
 
 }

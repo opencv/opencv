@@ -48,6 +48,12 @@
 #include "vec_math.hpp"
 #include "type_traits.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     template <typename Ptr2D> struct PointFilter
@@ -274,5 +280,7 @@ namespace cv { namespace cuda { namespace device
         int width, haight;
     };
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_FILTERS_HPP__

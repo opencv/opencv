@@ -160,7 +160,7 @@ void cv::cuda::GpuMat::release()
     if (refcount && CV_XADD(refcount, -1) == 1)
         allocator->free(this);
 
-    data = datastart = dataend = 0;
+    dataend = data = datastart = 0;
     step = rows = cols = 0;
     refcount = 0;
 }
@@ -272,8 +272,14 @@ void cv::cuda::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& stream
     GpuMat mask = _mask.getGpuMat();
     CV_DbgAssert( size() == mask.size() && mask.depth() == CV_8U && (mask.channels() == 1 || mask.channels() == channels()) );
 
+    uchar* data0 = _dst.getGpuMat().data;
+
     _dst.create(size(), type());
     GpuMat dst = _dst.getGpuMat();
+
+    // do not leave dst uninitialized
+    if (dst.data != data0)
+        dst.setTo(Scalar::all(0), stream);
 
     typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, const GpuMat& mask, Stream& stream);
     static const func_t funcs[9][4] =
@@ -383,6 +389,11 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar value, InputArray _mask, Stream& stream)
     CV_DbgAssert( depth() <= CV_64F && channels() <= 4 );
 
     GpuMat mask = _mask.getGpuMat();
+
+    if (mask.empty())
+    {
+        return setTo(value, stream);
+    }
 
     CV_DbgAssert( size() == mask.size() && mask.type() == CV_8UC1 );
 

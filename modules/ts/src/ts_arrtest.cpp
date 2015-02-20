@@ -123,7 +123,7 @@ void ArrayTest::get_test_array_types_and_sizes( int /*test_case_idx*/, vector<ve
 }
 
 
-static const int icvTsTypeToDepth[] =
+static const unsigned int icvTsTypeToDepth[] =
 {
     IPL_DEPTH_8U, IPL_DEPTH_8S, IPL_DEPTH_16U, IPL_DEPTH_16S,
     IPL_DEPTH_32S, IPL_DEPTH_32F, IPL_DEPTH_64F

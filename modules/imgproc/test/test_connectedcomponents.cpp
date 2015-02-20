@@ -91,12 +91,12 @@ void CV_ConnectedComponentsTest::run( int /* start_from */)
         exp = labelImage;
     }
 
-    if (0 != norm(labelImage > 0, exp > 0, NORM_INF))
+    if (0 != cvtest::norm(labelImage > 0, exp > 0, NORM_INF))
     {
         ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
         return;
     }
-    if (nLabels != norm(labelImage, NORM_INF)+1)
+    if (nLabels != cvtest::norm(labelImage, NORM_INF)+1)
     {
         ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
         return;

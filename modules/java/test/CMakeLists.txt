@@ -1,4 +1,10 @@
-ocv_check_dependencies(opencv_java ${OPENCV_MODULE_opencv_java_OPT_DEPS} ${OPENCV_MODULE_opencv_java_REQ_DEPS})
+# list of modules covered with tests
+set(tested_modules opencv_calib3d opencv_core opencv_features2d opencv_highgui opencv_imgproc opencv_objdetect opencv_photo opencv_video)
+
+# opencv_ml is broken
+#list(APPEND tested_modules opencv_ml)
+
+ocv_check_dependencies(opencv_java ${tested_modules})
 
 if(NOT OCV_DEPENDENCIES_FOUND)
   return()
@@ -19,6 +25,8 @@ file(GLOB_RECURSE opencv_test_java_files RELATIVE "${android_source_dir}" "${and
 ocv_list_filterout(opencv_test_java_files "OpenCVTest(Case|Runner).java")
 # These files aren't for desktop Java.
 ocv_list_filterout(opencv_test_java_files "/android/")
+# opencv_ml is broken
+ocv_list_filterout(opencv_test_java_files "/ml/")
 
 # These are files updated for pure Java.
 file(GLOB_RECURSE modified_files RELATIVE "${java_source_dir}" "${java_source_dir}/src/*")

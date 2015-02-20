@@ -75,9 +75,21 @@
 #  endif
 #endif
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda {
     CV_EXPORTS cv::String getNppErrorMessage(int code);
     CV_EXPORTS cv::String getCudaDriverApiErrorMessage(int code);
+
+    CV_EXPORTS GpuMat getInputMat(InputArray _src, Stream& stream);
+
+    CV_EXPORTS GpuMat getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream);
+    static inline GpuMat getOutputMat(OutputArray _dst, Size size, int type, Stream& stream)
+    {
+        return getOutputMat(_dst, size.height, size.width, type, stream);
+    }
+
+    CV_EXPORTS void syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream);
 }}
 
 #ifndef HAVE_CUDA
@@ -90,26 +102,6 @@ static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The
 
 namespace cv { namespace cuda
 {
-    class MemoryStack;
-
-    class CV_EXPORTS StackAllocator : public GpuMat::Allocator
-    {
-    public:
-        explicit StackAllocator(cudaStream_t stream);
-        ~StackAllocator();
-
-        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize);
-        void free(GpuMat* mat);
-
-    private:
-        StackAllocator(const StackAllocator&);
-        StackAllocator& operator =(const StackAllocator&);
-
-        cudaStream_t stream_;
-        MemoryStack* memStack_;
-        size_t alignment_;
-    };
-
     class CV_EXPORTS BufferPool
     {
     public:
@@ -117,6 +109,8 @@ namespace cv { namespace cuda
 
         GpuMat getBuffer(int rows, int cols, int type);
         GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+
+        GpuMat::Allocator* getAllocator() const { return allocator_; }
 
     private:
         GpuMat::Allocator* allocator_;
@@ -146,6 +140,12 @@ namespace cv { namespace cuda
     class NppStreamHandler
     {
     public:
+        inline explicit NppStreamHandler(Stream& newStream)
+        {
+            oldStream = nppGetStream();
+            nppSetStream(StreamAccessor::getStream(newStream));
+        }
+
         inline explicit NppStreamHandler(cudaStream_t newStream)
         {
             oldStream = nppGetStream();
@@ -166,5 +166,7 @@ namespace cv { namespace cuda
 #define cuSafeCall(expr)  cv::cuda::checkCudaDriverApiError(expr, __FILE__, __LINE__, CV_Func)
 
 #endif // HAVE_CUDA
+
+//! @endcond
 
 #endif // __OPENCV_CORE_CUDA_PRIVATE_HPP__

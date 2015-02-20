@@ -8,7 +8,7 @@
     :copyright: (c) 2010 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
-from _compat import text_type
+from ._compat import text_type
 
 
 def escape(s):

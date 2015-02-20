@@ -1,5 +1,6 @@
-﻿#include <opencv2/core.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
+#include "opencv2/imgcodecs.hpp"
 #include <opencv2/highgui.hpp>
 #include <iostream>
 #include <sstream>
@@ -40,12 +41,13 @@ int main( int argc, char* argv[])
     else
         I = imread(argv[1], IMREAD_COLOR);
 
-    if (!I.data)
+    if (I.empty())
     {
         cout << "The image" << argv[1] << " could not be loaded." << endl;
         return -1;
     }
 
+    //! [dividewith]
     int divideWith = 0; // convert our input string to number - C++ style
     stringstream s;
     s << argv[2];
@@ -59,6 +61,7 @@ int main( int argc, char* argv[])
     uchar table[256];
     for (int i = 0; i < 256; ++i)
        table[i] = (uchar)(divideWith * (i/divideWith));
+    //! [dividewith]
 
     const int times = 100;
     double t;
@@ -105,15 +108,19 @@ int main( int argc, char* argv[])
     cout << "Time of reducing with the on-the-fly address generation - at function (averaged for "
         << times << " runs): " << t << " milliseconds."<< endl;
 
+    //! [table-init]
     Mat lookUpTable(1, 256, CV_8U);
-    uchar* p = lookUpTable.data;
+    uchar* p = lookUpTable.ptr();
     for( int i = 0; i < 256; ++i)
         p[i] = table[i];
+    //! [table-init]
 
     t = (double)getTickCount();
 
     for (int i = 0; i < times; ++i)
+        //! [table-use]
         LUT(I, lookUpTable, J);
+        //! [table-use]
 
     t = 1000*((double)getTickCount() - t)/getTickFrequency();
     t /= times;
@@ -123,6 +130,7 @@ int main( int argc, char* argv[])
     return 0;
 }
 
+//! [scan-c]
 Mat& ScanImageAndReduceC(Mat& I, const uchar* const table)
 {
     // accept only char type matrices
@@ -151,7 +159,9 @@ Mat& ScanImageAndReduceC(Mat& I, const uchar* const table)
     }
     return I;
 }
+//! [scan-c]
 
+//! [scan-iterator]
 Mat& ScanImageAndReduceIterator(Mat& I, const uchar* const table)
 {
     // accept only char type matrices
@@ -181,7 +191,9 @@ Mat& ScanImageAndReduceIterator(Mat& I, const uchar* const table)
 
     return I;
 }
+//! [scan-iterator]
 
+//! [scan-random]
 Mat& ScanImageAndReduceRandomAccess(Mat& I, const uchar* const table)
 {
     // accept only char type matrices
@@ -215,3 +227,4 @@ Mat& ScanImageAndReduceRandomAccess(Mat& I, const uchar* const table)
 
     return I;
 }
+//! [scan-random]

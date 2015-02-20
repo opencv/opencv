@@ -470,8 +470,8 @@ void runKnnSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
     CV_Assert(query.isContinuous() && indices.isContinuous() && dists.isContinuous());
 
     ::cvflann::Matrix<ElementType> _query((ElementType*)query.data, query.rows, query.cols);
-    ::cvflann::Matrix<int> _indices((int*)indices.data, indices.rows, indices.cols);
-    ::cvflann::Matrix<DistanceType> _dists((DistanceType*)dists.data, dists.rows, dists.cols);
+    ::cvflann::Matrix<int> _indices(indices.ptr<int>(), indices.rows, indices.cols);
+    ::cvflann::Matrix<DistanceType> _dists(dists.ptr<DistanceType>(), dists.rows, dists.cols);
 
     ((IndexType*)index)->knnSearch(_query, _indices, _dists, knn,
                                    (const ::cvflann::SearchParams&)get_params(params));
@@ -496,8 +496,8 @@ int runRadiusSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
     CV_Assert(query.isContinuous() && indices.isContinuous() && dists.isContinuous());
 
     ::cvflann::Matrix<ElementType> _query((ElementType*)query.data, query.rows, query.cols);
-    ::cvflann::Matrix<int> _indices((int*)indices.data, indices.rows, indices.cols);
-    ::cvflann::Matrix<DistanceType> _dists((DistanceType*)dists.data, dists.rows, dists.cols);
+    ::cvflann::Matrix<int> _indices(indices.ptr<int>(), indices.rows, indices.cols);
+    ::cvflann::Matrix<DistanceType> _dists(dists.ptr<DistanceType>(), dists.rows, dists.cols);
 
     return ((IndexType*)index)->radiusSearch(_query, _indices, _dists,
                                             saturate_cast<float>(radius),

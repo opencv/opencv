@@ -155,14 +155,14 @@ ChPair getConversionInfo(int cvtMode)
     case COLOR_BGR5552BGR: case COLOR_BGR5552RGB:
     case COLOR_BGR5652BGR: case COLOR_BGR5652RGB:
     case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY:
-    case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
     case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2:
     case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
-    case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2:
-    case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
         return ChPair(2,3);
     case COLOR_BGR5552BGRA: case COLOR_BGR5552RGBA:
     case COLOR_BGR5652BGRA: case COLOR_BGR5652RGBA:
+    case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
+    case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2:
+    case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
         return ChPair(2,4);
     case COLOR_BGR2GRAY: case COLOR_RGB2GRAY:
     case COLOR_RGB2YUV_IYUV: case COLOR_RGB2YUV_YV12:
@@ -248,7 +248,7 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
             )
 {
     Size sz = get<0>(GetParam());
-    int mode = get<1>(GetParam());
+    int _mode = get<1>(GetParam()), mode = _mode;
     ChPair ch = getConversionInfo(mode);
     mode %= COLOR_COLORCVT_MAX;
 
@@ -261,7 +261,11 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
     int runs = sz.width <= 320 ? 100 : 5;
     TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
 
+#if defined(__APPLE__) && defined(HAVE_IPP)
+    SANITY_CHECK(dst, _mode == CX_BGRA2HLS_FULL ? 2 : 1);
+#else
     SANITY_CHECK(dst, 1);
+#endif
 }
 
 typedef std::tr1::tuple<Size, CvtModeBayer> Size_CvtMode_Bayer_t;

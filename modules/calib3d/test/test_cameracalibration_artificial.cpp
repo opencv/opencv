@@ -85,7 +85,8 @@ Mat calcRvec(const vector<Point3f>& points, const Size& cornerSize)
 class CV_CalibrateCameraArtificialTest : public cvtest::BaseTest
 {
 public:
-    CV_CalibrateCameraArtificialTest()
+    CV_CalibrateCameraArtificialTest() :
+        r(0)
     {
     }
     ~CV_CalibrateCameraArtificialTest() {}
@@ -203,7 +204,7 @@ protected:
             Rodrigues(rvecs[i], rmat);
             Rodrigues(rvecs_est[i], rmat_est);
 
-            if (norm(rmat_est, rmat) > eps* (norm(rmat) + dlt))
+            if (cvtest::norm(rmat_est, rmat, NORM_L2) > eps* (cvtest::norm(rmat, NORM_L2) + dlt))
             {
                 if (err_count++ < errMsgNum)
                 {
@@ -212,7 +213,8 @@ protected:
                     else
                     {
                         ts->printf( cvtest::TS::LOG, "%d) Bad accuracy in returned rvecs (rotation matrs). Index = %d\n", r, i);
-                        ts->printf( cvtest::TS::LOG, "%d) norm(rot_mat_est - rot_mat_exp) = %f, norm(rot_mat_exp) = %f \n", r, norm(rmat_est, rmat), norm(rmat));
+                        ts->printf( cvtest::TS::LOG, "%d) norm(rot_mat_est - rot_mat_exp) = %f, norm(rot_mat_exp) = %f \n", r,
+                                   cvtest::norm(rmat_est, rmat, NORM_L2), cvtest::norm(rmat, NORM_L2));
 
                     }
                 }

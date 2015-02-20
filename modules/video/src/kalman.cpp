@@ -84,7 +84,7 @@ const Mat& KalmanFilter::predict(const Mat& control)
     // update the state: x'(k) = A*x(k)
     statePre = transitionMatrix*statePost;
 
-    if( control.data )
+    if( !control.empty() )
         // x'(k) = x'(k) + B*u(k)
         statePre += controlMatrix*control;
 
@@ -127,4 +127,4 @@ const Mat& KalmanFilter::correct(const Mat& measurement)
     return statePost;
 }
 
-};
+}

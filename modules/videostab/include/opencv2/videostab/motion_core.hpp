@@ -51,6 +51,11 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab_motion
+//! @{
+
+/** @brief Describes motion model between two point clouds.
+ */
 enum MotionModel
 {
     MM_TRANSLATION = 0,
@@ -63,22 +68,37 @@ enum MotionModel
     MM_UNKNOWN = 7
 };
 
+/** @brief Describes RANSAC method parameters.
+ */
 struct CV_EXPORTS RansacParams
 {
-    int size; // subset size
-    float thresh; // max error to classify as inlier
-    float eps; // max outliers ratio
-    float prob; // probability of success
+    int size; //!< subset size
+    float thresh; //!< max error to classify as inlier
+    float eps; //!< max outliers ratio
+    float prob; //!< probability of success
 
     RansacParams() : size(0), thresh(0), eps(0), prob(0) {}
+    /** @brief Constructor
+    @param size Subset size.
+    @param thresh Maximum re-projection error value to classify as inlier.
+    @param eps Maximum ratio of incorrect correspondences.
+    @param prob Required success probability.
+     */
     RansacParams(int size, float thresh, float eps, float prob);
 
+    /**
+    @return Number of iterations that'll be performed by RANSAC method.
+    */
     int niters() const
     {
         return static_cast<int>(
                 std::ceil(std::log(1 - prob) / std::log(1 - std::pow(1 - eps, size))));
     }
 
+    /**
+    @param model Motion model. See cv::videostab::MotionModel.
+    @return Default RANSAC method parameters for the given motion model.
+    */
     static RansacParams default2dMotion(MotionModel model)
     {
         CV_Assert(model < MM_UNKNOWN);
@@ -101,6 +121,7 @@ struct CV_EXPORTS RansacParams
 inline RansacParams::RansacParams(int _size, float _thresh, float _eps, float _prob)
     : size(_size), thresh(_thresh), eps(_eps), prob(_prob) {}
 
+//! @}
 
 } // namespace videostab
 } // namespace cv

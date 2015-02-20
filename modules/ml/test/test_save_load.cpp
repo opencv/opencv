@@ -59,20 +59,20 @@ int CV_SLMLTest::run_test_case( int testCaseIdx )
 
     if( code == cvtest::TS::OK )
     {
-            data.mix_train_and_test_idx();
-            code = train( testCaseIdx );
-            if( code == cvtest::TS::OK )
-            {
-                get_error( testCaseIdx, CV_TEST_ERROR, &test_resps1 );
-                fname1 = tempfile(".yml.gz");
-                save( fname1.c_str() );
-                load( fname1.c_str() );
-                get_error( testCaseIdx, CV_TEST_ERROR, &test_resps2 );
-                fname2 = tempfile(".yml.gz");
-                save( fname2.c_str() );
-            }
-            else
-                ts->printf( cvtest::TS::LOG, "model can not be trained" );
+        data->setTrainTestSplit(data->getNTrainSamples(), true);
+        code = train( testCaseIdx );
+        if( code == cvtest::TS::OK )
+        {
+            get_test_error( testCaseIdx, &test_resps1 );
+            fname1 = tempfile(".yml.gz");
+            save( fname1.c_str() );
+            load( fname1.c_str() );
+            get_test_error( testCaseIdx, &test_resps2 );
+            fname2 = tempfile(".yml.gz");
+            save( fname2.c_str() );
+        }
+        else
+            ts->printf( cvtest::TS::LOG, "model can not be trained" );
     }
     return code;
 }
@@ -130,50 +130,165 @@ int CV_SLMLTest::validate_test_results( int testCaseIdx )
         remove( fname2.c_str() );
     }
 
-    // 2. compare responses
-    CV_Assert( test_resps1.size() == test_resps2.size() );
-    vector<float>::const_iterator it1 = test_resps1.begin(), it2 = test_resps2.begin();
-    for( ; it1 != test_resps1.end(); ++it1, ++it2 )
+    if( code >= 0 )
     {
-        if( fabs(*it1 - *it2) > FLT_EPSILON )
+        // 2. compare responses
+        CV_Assert( test_resps1.size() == test_resps2.size() );
+        vector<float>::const_iterator it1 = test_resps1.begin(), it2 = test_resps2.begin();
+        for( ; it1 != test_resps1.end(); ++it1, ++it2 )
         {
-            ts->printf( cvtest::TS::LOG, "in test case %d responses predicted before saving and after loading is different", testCaseIdx );
-            code = cvtest::TS::FAIL_INVALID_OUTPUT;
+            if( fabs(*it1 - *it2) > FLT_EPSILON )
+            {
+                ts->printf( cvtest::TS::LOG, "in test case %d responses predicted before saving and after loading is different", testCaseIdx );
+                code = cvtest::TS::FAIL_INVALID_OUTPUT;
+                break;
+            }
         }
     }
     return code;
 }
 
 TEST(ML_NaiveBayes, save_load) { CV_SLMLTest test( CV_NBAYES ); test.safe_run(); }
-//CV_SLMLTest lsmlknearest( CV_KNEAREST, "slknearest" ); // does not support save!
+TEST(ML_KNearest, save_load) { CV_SLMLTest test( CV_KNEAREST ); test.safe_run(); }
 TEST(ML_SVM, save_load) { CV_SLMLTest test( CV_SVM ); test.safe_run(); }
-//CV_SLMLTest lsmlem( CV_EM, "slem" ); // does not support save!
 TEST(ML_ANN, save_load) { CV_SLMLTest test( CV_ANN ); test.safe_run(); }
 TEST(ML_DTree, save_load) { CV_SLMLTest test( CV_DTREE ); test.safe_run(); }
 TEST(ML_Boost, save_load) { CV_SLMLTest test( CV_BOOST ); test.safe_run(); }
 TEST(ML_RTrees, save_load) { CV_SLMLTest test( CV_RTREES ); test.safe_run(); }
-TEST(ML_ERTrees, save_load) { CV_SLMLTest test( CV_ERTREES ); test.safe_run(); }
+TEST(DISABLED_ML_ERTrees, save_load) { CV_SLMLTest test( CV_ERTREES ); test.safe_run(); }
 
+class CV_LegacyTest : public cvtest::BaseTest
+{
+public:
+    CV_LegacyTest(const std::string &_modelName, const std::string &_suffixes = std::string())
+        : cvtest::BaseTest(), modelName(_modelName), suffixes(_suffixes)
+    {
+    }
+    virtual ~CV_LegacyTest() {}
+protected:
+    void run(int)
+    {
+        unsigned int idx = 0;
+        for (;;)
+        {
+            if (idx >= suffixes.size())
+                break;
+            int found = (int)suffixes.find(';', idx);
+            string piece = suffixes.substr(idx, found - idx);
+            if (piece.empty())
+                break;
+            oneTest(piece);
+            idx += (unsigned int)piece.size() + 1;
+        }
+    }
+    void oneTest(const string & suffix)
+    {
+        using namespace cv::ml;
+
+        int code = cvtest::TS::OK;
+        string filename = ts->get_data_path() + "legacy/" + modelName + suffix;
+        bool isTree = modelName == CV_BOOST || modelName == CV_DTREE || modelName == CV_RTREES;
+        Ptr<StatModel> model;
+        if (modelName == CV_BOOST)
+            model = StatModel::load<Boost>(filename);
+        else if (modelName == CV_ANN)
+            model = StatModel::load<ANN_MLP>(filename);
+        else if (modelName == CV_DTREE)
+            model = StatModel::load<DTrees>(filename);
+        else if (modelName == CV_NBAYES)
+            model = StatModel::load<NormalBayesClassifier>(filename);
+        else if (modelName == CV_SVM)
+            model = StatModel::load<SVM>(filename);
+        else if (modelName == CV_RTREES)
+            model = StatModel::load<RTrees>(filename);
+        if (!model)
+        {
+            code = cvtest::TS::FAIL_INVALID_TEST_DATA;
+        }
+        else
+        {
+            Mat input = Mat(isTree ? 10 : 1, model->getVarCount(), CV_32F);
+            ts->get_rng().fill(input, RNG::UNIFORM, 0, 40);
+
+            if (isTree)
+                randomFillCategories(filename, input);
+
+            Mat output;
+            model->predict(input, output, StatModel::RAW_OUTPUT | (isTree ? DTrees::PREDICT_SUM : 0));
+            // just check if no internal assertions or errors thrown
+        }
+        ts->set_failed_test_info(code);
+    }
+    void randomFillCategories(const string & filename, Mat & input)
+    {
+        Mat catMap;
+        Mat catCount;
+        std::vector<uchar> varTypes;
+
+        FileStorage fs(filename, FileStorage::READ);
+        FileNode root = fs.getFirstTopLevelNode();
+        root["cat_map"] >> catMap;
+        root["cat_count"] >> catCount;
+        root["var_type"] >> varTypes;
+
+        int offset = 0;
+        int countOffset = 0;
+        uint var = 0, varCount = (uint)varTypes.size();
+        for (; var < varCount; ++var)
+        {
+            if (varTypes[var] == ml::VAR_CATEGORICAL)
+            {
+                int size = catCount.at<int>(0, countOffset);
+                for (int row = 0; row < input.rows; ++row)
+                {
+                    int randomChosenIndex = offset + ((uint)ts->get_rng()) % size;
+                    int value = catMap.at<int>(0, randomChosenIndex);
+                    input.at<float>(row, var) = (float)value;
+                }
+                offset += size;
+                ++countOffset;
+            }
+        }
+    }
+    string modelName;
+    string suffixes;
+};
+
+TEST(ML_ANN, legacy_load) { CV_LegacyTest test(CV_ANN, "_waveform.xml"); test.safe_run(); }
+TEST(ML_Boost, legacy_load) { CV_LegacyTest test(CV_BOOST, "_adult.xml;_1.xml;_2.xml;_3.xml"); test.safe_run(); }
+TEST(ML_DTree, legacy_load) { CV_LegacyTest test(CV_DTREE, "_abalone.xml;_mushroom.xml"); test.safe_run(); }
+TEST(ML_NBayes, legacy_load) { CV_LegacyTest test(CV_NBAYES, "_waveform.xml"); test.safe_run(); }
+TEST(ML_SVM, legacy_load) { CV_LegacyTest test(CV_SVM, "_poletelecomm.xml;_waveform.xml"); test.safe_run(); }
+TEST(ML_RTrees, legacy_load) { CV_LegacyTest test(CV_RTREES, "_waveform.xml"); test.safe_run(); }
+
+/*TEST(ML_SVM, throw_exception_when_save_untrained_model)
+{
+    Ptr<cv::ml::SVM> svm;
+    string filename = tempfile("svm.xml");
+    ASSERT_THROW(svm.save(filename.c_str()), Exception);
+    remove(filename.c_str());
+}*/
 
 TEST(DISABLED_ML_SVM, linear_save_load)
 {
-    CvSVM svm1, svm2, svm3;
-    svm1.load("SVM45_X_38-1.xml");
-    svm2.load("SVM45_X_38-2.xml");
+    Ptr<cv::ml::SVM> svm1, svm2, svm3;
+
+    svm1 = StatModel::load<SVM>("SVM45_X_38-1.xml");
+    svm2 = StatModel::load<SVM>("SVM45_X_38-2.xml");
     string tname = tempfile("a.xml");
-    svm2.save(tname.c_str());
-    svm3.load(tname.c_str());
+    svm2->save(tname);
+    svm3 = StatModel::load<SVM>(tname);
 
-    ASSERT_EQ(svm1.get_var_count(), svm2.get_var_count());
-    ASSERT_EQ(svm1.get_var_count(), svm3.get_var_count());
+    ASSERT_EQ(svm1->getVarCount(), svm2->getVarCount());
+    ASSERT_EQ(svm1->getVarCount(), svm3->getVarCount());
 
-    int m = 10000, n = svm1.get_var_count();
+    int m = 10000, n = svm1->getVarCount();
     Mat samples(m, n, CV_32F), r1, r2, r3;
     randu(samples, 0., 1.);
 
-    svm1.predict(samples, r1);
-    svm2.predict(samples, r2);
-    svm3.predict(samples, r3);
+    svm1->predict(samples, r1);
+    svm2->predict(samples, r2);
+    svm3->predict(samples, r3);
 
     double eps = 1e-4;
     EXPECT_LE(norm(r1, r2, NORM_INF), eps);

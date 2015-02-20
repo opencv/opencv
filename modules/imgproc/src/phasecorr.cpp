@@ -66,8 +66,8 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 
     if( depth == CV_32F )
     {
-        const float* dataSrc = (const float*)src.data;
-        float* dataDst = (float*)dst.data;
+        const float* dataSrc = src.ptr<float>();
+        float* dataDst = dst.ptr<float>();
 
         size_t stepSrc = src.step/sizeof(dataSrc[0]);
         size_t stepDst = dst.step/sizeof(dataDst[0]);
@@ -110,8 +110,8 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
     }
     else
     {
-        const double* dataSrc = (const double*)src.data;
-        double* dataDst = (double*)dst.data;
+        const double* dataSrc = src.ptr<double>();
+        double* dataDst = dst.ptr<double>();
 
         size_t stepSrc = src.step/sizeof(dataSrc[0]);
         size_t stepDst = dst.step/sizeof(dataDst[0]);
@@ -179,9 +179,9 @@ static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, 
 
     if( depth == CV_32F )
     {
-        const float* dataA = (const float*)srcA.data;
-        const float* dataB = (const float*)srcB.data;
-        float* dataC = (float*)dst.data;
+        const float* dataA = srcA.ptr<float>();
+        const float* dataB = srcB.ptr<float>();
+        float* dataC = dst.ptr<float>();
         float eps = FLT_EPSILON; // prevent div0 problems
 
         size_t stepA = srcA.step/sizeof(dataA[0]);
@@ -264,9 +264,9 @@ static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, 
     }
     else
     {
-        const double* dataA = (const double*)srcA.data;
-        const double* dataB = (const double*)srcB.data;
-        double* dataC = (double*)dst.data;
+        const double* dataA = srcA.ptr<double>();
+        const double* dataB = srcB.ptr<double>();
+        double* dataC = dst.ptr<double>();
         double eps = DBL_EPSILON; // prevent div0 problems
 
         size_t stepA = srcA.step/sizeof(dataA[0]);
@@ -444,7 +444,7 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
 
     if(type == CV_32FC1)
     {
-        const float* dataIn = (const float*)src.data;
+        const float* dataIn = src.ptr<float>();
         dataIn += minr*src.cols;
         for(int y = minr; y <= maxr; y++)
         {
@@ -460,7 +460,7 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
     }
     else
     {
-        const double* dataIn = (const double*)src.data;
+        const double* dataIn = src.ptr<double>();
         dataIn += minr*src.cols;
         for(int y = minr; y <= maxr; y++)
         {
@@ -576,20 +576,23 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
     _dst.create(winSize, type);
     Mat dst = _dst.getMat();
 
-    int rows = dst.rows;
-    int cols = dst.cols;
+    int rows = dst.rows, cols = dst.cols;
+
+    AutoBuffer<double> _wc(cols);
+    double * const wc = (double *)_wc;
+
+    double coeff0 = 2.0 * CV_PI / (double)(cols - 1), coeff1 = 2.0f * CV_PI / (double)(rows - 1);
+    for(int j = 0; j < cols; j++)
+        wc[j] = 0.5 * (1.0 - cos(coeff0 * j));
 
     if(dst.depth() == CV_32F)
     {
         for(int i = 0; i < rows; i++)
         {
             float* dstData = dst.ptr<float>(i);
-            double wr = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)i / (double)(rows - 1)));
+            double wr = 0.5 * (1.0 - cos(coeff1 * i));
             for(int j = 0; j < cols; j++)
-            {
-                double wc = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)j / (double)(cols - 1)));
-                dstData[j] = (float)(wr * wc);
-            }
+                dstData[j] = (float)(wr * wc[j]);
         }
     }
     else
@@ -597,12 +600,9 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
         for(int i = 0; i < rows; i++)
         {
             double* dstData = dst.ptr<double>(i);
-            double wr = 0.5 * (1.0 - cos(2.0 * CV_PI * (double)i / (double)(rows - 1)));
+            double wr = 0.5 * (1.0 - cos(coeff1 * i));
             for(int j = 0; j < cols; j++)
-            {
-                double wc = 0.5 * (1.0 - cos(2.0 * CV_PI * (double)j / (double)(cols - 1)));
-                dstData[j] = wr * wc;
-            }
+                dstData[j] = wr * wc[j];
         }
     }
 

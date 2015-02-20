@@ -2,6 +2,8 @@
 #include "precomp.hpp"
 #include <time.h>
 
+#if 0
+
 #define pCvSeq CvSeq*
 #define pCvDTreeNode CvDTreeNode*
 
@@ -266,6 +268,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
                 sample_idx = cvCreateMat( 1, sample_idx_len, CV_32S );
                 for (int i=0; i<sample_idx_len; ++i)
                     sample_idx->data.i[i] = _sample_idx->data.i[i];
+                std::sort(sample_idx->data.i, sample_idx->data.i + sample_idx_len);
             } break;
             case CV_8S:
             case CV_8U:
@@ -282,7 +285,6 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
             } break;
             default: CV_Error(CV_StsUnmatchedFormats, "_sample_idx should be a 32sC1, 8sC1 or 8uC1 vector.");
         }
-        std::sort(sample_idx->data.fl, sample_idx->data.fl + sample_idx_len);
     }
     else
     {
@@ -1359,3 +1361,5 @@ float CvGBTrees::predict( const cv::Mat& sample, const cv::Mat& _missing,
     return predict(&_sample, _missing.empty() ? 0 : &miss, 0,
                    slice==cv::Range::all() ? CV_WHOLE_SEQ : cvSlice(slice.start, slice.end), k);
 }
+
+#endif

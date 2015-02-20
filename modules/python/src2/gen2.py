@@ -286,7 +286,7 @@ class ClassInfo(object):
         code = "static bool pyopencv_to(PyObject* src, %s& dst, const char* name)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
         if self.bases:
-            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.bases[0]].cname
+            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.bases[0].replace("::", "_")].cname
         else:
             code += "\n    return true;\n}\n"
         return code
@@ -341,19 +341,15 @@ class ClassInfo(object):
         return code
 
 
-class ConstInfo(object):
-    def __init__(self, name, val):
-        self.cname = name.replace(".", "::")
-        self.name = re.sub(r"^cv\.", "", name).replace(".", "_")
-        if self.name.startswith("Cv"):
-            self.name = self.name[2:]
-        self.name = re.sub(r"([a-z])([A-Z])", r"\1_\2", self.name)
-        self.name = self.name.upper()
-        self.value = val
+def handle_ptr(tp):
+    if tp.startswith('Ptr_'):
+        tp = 'Ptr<' + "::".join(tp.split('_')[1:]) + '>'
+    return tp
+
 
 class ArgInfo(object):
     def __init__(self, arg_tuple):
-        self.tp = arg_tuple[0]
+        self.tp = handle_ptr(arg_tuple[0])
         self.name = arg_tuple[1]
         self.defval = arg_tuple[2]
         self.isarray = False
@@ -392,13 +388,8 @@ class FuncVariant(object):
         self.classname = classname
         self.name = self.wname = name
         self.isconstructor = isconstructor
-        if self.isconstructor:
-            if self.wname.startswith("Cv"):
-                self.wname = self.wname[2:]
-            else:
-                self.wname = self.classname
 
-        self.rettype = decl[1]
+        self.rettype = handle_ptr(decl[1])
         if self.rettype == "void":
             self.rettype = ""
         self.args = []
@@ -499,11 +490,12 @@ class FuncVariant(object):
 
 
 class FuncInfo(object):
-    def __init__(self, classname, name, cname, isconstructor):
+    def __init__(self, classname, name, cname, isconstructor, namespace):
         self.classname = classname
         self.name = name
         self.cname = cname
         self.isconstructor = isconstructor
+        self.namespace = namespace
         self.variants = []
 
     def add_variant(self, decl):
@@ -517,7 +509,7 @@ class FuncInfo(object):
                 name = "getelem"
         else:
             classname = ""
-        return "pyopencv_" + classname + name
+        return "pyopencv_" + self.namespace.replace('.','_') + '_' + classname + name
 
     def get_wrapper_prototype(self):
         full_fname = self.get_wrapper_name()
@@ -554,6 +546,7 @@ class FuncInfo(object):
     def gen_code(self, all_classes):
         proto = self.get_wrapper_prototype()
         code = "%s\n{\n" % (proto,)
+        code += "    using namespace %s;\n\n" % self.namespace.replace('.', '::')
 
         selfinfo = ClassInfo("")
         ismethod = self.classname != "" and not self.isconstructor
@@ -728,19 +721,25 @@ class FuncInfo(object):
         return code
 
 
+class Namespace(object):
+    def __init__(self):
+        self.funcs = {}
+        self.consts = {}
+
+
 class PythonWrapperGenerator(object):
     def __init__(self):
         self.clear()
 
     def clear(self):
         self.classes = {}
-        self.funcs = {}
+        self.namespaces = {}
         self.consts = {}
+        self.code_include = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
-        self.code_func_tab = StringIO()
         self.code_type_reg = StringIO()
-        self.code_const_reg = StringIO()
+        self.code_ns_reg = StringIO()
         self.class_idx = 0
 
     def add_class(self, stype, name, decl):
@@ -753,64 +752,100 @@ class PythonWrapperGenerator(object):
                 % (classinfo.name, classinfo.cname))
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
-        if classinfo.bases and not classinfo.isalgorithm:
-            classinfo.isalgorithm = self.classes[classinfo.bases[0]].isalgorithm
+
+        if classinfo.bases:
+            chunks = classinfo.bases[0].split('::')
+            base = '_'.join(chunks)
+            while base not in self.classes and len(chunks)>1:
+                del chunks[-2]
+                base = '_'.join(chunks)
+            if base not in self.classes:
+                print("Generator error: unable to resolve base %s for %s"
+                    % (classinfo.bases[0], classinfo.name))
+                sys.exit(-1)
+            classinfo.bases[0] = "::".join(chunks)
+            classinfo.isalgorithm |= self.classes[base].isalgorithm
+
+    def split_decl_name(self, name):
+        chunks = name.split('.')
+        namespace = chunks[:-1]
+        classes = []
+        while namespace and '.'.join(namespace) not in self.parser.namespaces:
+            classes.insert(0, namespace.pop())
+        return namespace, classes, chunks[-1]
+
 
     def add_const(self, name, decl):
-        constinfo = ConstInfo(name, decl[1])
-
-        if constinfo.name in self.consts:
+        cname = name.replace('.','::')
+        namespace, classes, name = self.split_decl_name(name)
+        namespace = '.'.join(namespace)
+        name = '_'.join(classes+[name])
+        ns = self.namespaces.setdefault(namespace, Namespace())
+        if name in ns.consts:
             print("Generator error: constant %s (cname=%s) already exists" \
-                % (constinfo.name, constinfo.cname))
+                % (name, cname))
             sys.exit(-1)
-        self.consts[constinfo.name] = constinfo
+        ns.consts[name] = cname
 
     def add_func(self, decl):
-        classname = bareclassname = ""
-        name = decl[0]
-        dpos = name.rfind(".")
-        if dpos >= 0 and name[:dpos] != "cv":
-            classname = bareclassname = re.sub(r"^cv\.", "", name[:dpos])
-            name = name[dpos+1:]
-            dpos = classname.rfind(".")
-            if dpos >= 0:
-                bareclassname = classname[dpos+1:]
-                classname = classname.replace(".", "_")
-        cname = name
-        name = re.sub(r"^cv\.", "", name)
-        isconstructor = cname == bareclassname
-        cname = cname.replace(".", "::")
+        namespace, classes, barename = self.split_decl_name(decl[0])
+        cname = "::".join(namespace+classes+[barename])
+        name = barename
+        classname = ''
+        bareclassname = ''
+        if classes:
+            classname = normalize_class_name('.'.join(namespace+classes))
+            bareclassname = classes[-1]
+        namespace = '.'.join(namespace)
+
+        isconstructor = name == bareclassname
         isclassmethod = False
-        customname = False
         for m in decl[2]:
             if m == "/S":
                 isclassmethod = True
             elif m.startswith("="):
                 name = m[1:]
-                customname = True
-        func_map = self.funcs
+        if isclassmethod:
+            name = "_".join(classes+[name])
+            classname = ''
+        elif isconstructor:
+            name = "_".join(classes[:-1]+[name])
 
-        if not classname or isconstructor:
-            pass
-        elif isclassmethod:
-            if not customname:
-                name = classname + "_" + name
-            cname = classname + "::" + cname
-            classname = ""
+        if classname and not isconstructor:
+            cname = barename
+            func_map = self.classes[classname].methods
         else:
-            classinfo = self.classes.get(classname, ClassInfo(""))
-            if not classinfo.name:
-                print("Generator error: the class for method %s is missing" % (name,))
-                sys.exit(-1)
-            func_map = classinfo.methods
+            func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
 
-        func = func_map.get(name, FuncInfo(classname, name, cname, isconstructor))
+        func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace))
         func.add_variant(decl)
-        if len(func.variants) == 1:
-            func_map[name] = func
 
-    def gen_const_reg(self, constinfo):
-        self.code_const_reg.write("PUBLISH2(%s,%s);\n" % (constinfo.name, constinfo.cname))
+
+    def gen_namespace(self, ns_name):
+        ns = self.namespaces[ns_name]
+        wname = normalize_class_name(ns_name)
+
+        self.code_ns_reg.write('static PyMethodDef methods_%s[] = {\n'%wname)
+        for name, func in sorted(ns.funcs.items()):
+            self.code_ns_reg.write(func.get_tab_entry())
+        self.code_ns_reg.write('    {NULL, NULL}\n};\n\n')
+
+        self.code_ns_reg.write('static ConstDef consts_%s[] = {\n'%wname)
+        for name, cname in sorted(ns.consts.items()):
+            self.code_ns_reg.write('    {"%s", %s},\n'%(name, cname))
+            compat_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", name).upper()
+            if name != compat_name:
+                self.code_ns_reg.write('    {"%s", %s},\n'%(compat_name, cname))
+        self.code_ns_reg.write('    {NULL, 0}\n};\n\n')
+
+    def gen_namespaces_reg(self):
+        self.code_ns_reg.write('static void init_submodules(PyObject * root) \n{\n')
+        for ns_name in sorted(self.namespaces):
+            if ns_name.split('.')[0] == 'cv':
+                wname = normalize_class_name(ns_name)
+                self.code_ns_reg.write('  init_submodule(root, MODULESTR"%s", methods_%s, consts_%s);\n' % (ns_name[2:], wname, wname))
+        self.code_ns_reg.write('};\n')
+
 
     def save(self, path, name, buf):
         f = open(path + "/" + name, "wt")
@@ -819,11 +854,14 @@ class PythonWrapperGenerator(object):
 
     def gen(self, srcfiles, output_path):
         self.clear()
-        parser = hdr_parser.CppHeaderParser()
+        self.parser = hdr_parser.CppHeaderParser()
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
-            decls = parser.parse(hdr)
+            decls = self.parser.parse(hdr)
+            if len(decls) == 0:
+                continue
+            self.code_include.write( '#include "{0}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
@@ -865,12 +903,14 @@ class PythonWrapperGenerator(object):
                 self.code_type_reg.write("MKTYPE2(%s);\n" % (classinfo.name,) )
 
         # step 3: generate the code for all the global functions
-        funclist = list(self.funcs.items())
-        funclist.sort()
-        for name, func in funclist:
-            code = func.gen_code(self.classes)
-            self.code_funcs.write(code)
-            self.code_func_tab.write(func.get_tab_entry())
+        for ns_name, ns in sorted(self.namespaces.items()):
+            if ns_name.split('.')[0] != 'cv':
+                continue
+            for name, func in sorted(ns.funcs.items()):
+                code = func.gen_code(self.classes)
+                self.code_funcs.write(code)
+            self.gen_namespace(ns_name)
+        self.gen_namespaces_reg()
 
         # step 4: generate the code for constants
         constlist = list(self.consts.items())
@@ -879,11 +919,11 @@ class PythonWrapperGenerator(object):
             self.gen_const_reg(constinfo)
 
         # That's it. Now save all the files
+        self.save(output_path, "pyopencv_generated_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
-        self.save(output_path, "pyopencv_generated_func_tab.h", self.code_func_tab)
-        self.save(output_path, "pyopencv_generated_const_reg.h", self.code_const_reg)
         self.save(output_path, "pyopencv_generated_types.h", self.code_types)
         self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
+        self.save(output_path, "pyopencv_generated_ns_reg.h", self.code_ns_reg)
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
@@ -891,6 +931,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         dstdir = sys.argv[1]
     if len(sys.argv) > 2:
-        srcfiles = sys.argv[2:]
+        srcfiles = open(sys.argv[2], 'r').read().split(';')
     generator = PythonWrapperGenerator()
     generator.gen(srcfiles, dstdir)

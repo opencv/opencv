@@ -21,10 +21,12 @@
 #define FEATURES_HAS_SSSE3_NAME "ssse3"
 #define FEATURES_HAS_GPU_NAME "gpu"
 
+// TODO: Do not forget to update PackageInfo::InitPlatformNameMap() after constant changes
 #define PLATFORM_TEGRA_NAME "tegra"
 #define PLATFORM_TEGRA2_NAME "tegra2"
 #define PLATFORM_TEGRA3_NAME "tegra3"
 #define PLATFORM_TEGRA4_NAME "tegra4"
+#define PLATFORM_TEGRA5_NAME "tegra5"
 
 class PackageInfo
 {

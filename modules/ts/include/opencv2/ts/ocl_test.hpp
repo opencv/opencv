@@ -42,13 +42,12 @@
 #ifndef __OPENCV_TS_OCL_TEST_HPP__
 #define __OPENCV_TS_OCL_TEST_HPP__
 
-#ifdef HAVE_OPENCL
-
-#include "cvconfig.h"
 #include "opencv2/opencv_modules.hpp"
 
 #include "opencv2/ts.hpp"
 
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/types_c.h"
@@ -60,45 +59,140 @@ namespace ocl {
 using namespace cv;
 using namespace testing;
 
+inline std::vector<UMat> ToUMat(const std::vector<Mat>& src)
+{
+    std::vector<UMat> dst;
+    dst.resize(src.size());
+    for (size_t i = 0; i < src.size(); ++i)
+    {
+        src[i].copyTo(dst[i]);
+    }
+    return dst;
+}
+
+inline UMat ToUMat(const Mat& src)
+{
+    UMat dst;
+    src.copyTo(dst);
+    return dst;
+}
+
+inline UMat ToUMat(InputArray src)
+{
+    UMat dst;
+    src.getMat().copyTo(dst);
+    return dst;
+}
+
 extern int test_loop_times;
 
 #define MAX_VALUE 357
 
 #define EXPECT_MAT_NORM(mat, eps) \
+do \
 { \
-    EXPECT_LE(checkNorm(mat), eps) \
-}
+    EXPECT_LE(TestUtils::checkNorm1(mat), eps) \
+} while ((void)0, 0)
 
 #define EXPECT_MAT_NEAR(mat1, mat2, eps) \
-{ \
-   ASSERT_EQ(mat1.type(), mat2.type()); \
-   ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(checkNorm(mat1, mat2), eps) \
-       << cv::format("Size: %d x %d", mat1.size().width, mat1.size().height) << std::endl; \
-}
-
-#define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
-{ \
-   ASSERT_EQ(mat1.type(), mat2.type()); \
-   ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(checkNormRelative(mat1, mat2), eps) \
-       << cv::format("Size: %d x %d", mat1.size().width, mat1.size().height) << std::endl; \
-}
-
-#define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
+do \
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(checkSimilarity(mat1, mat2), eps); \
-        << cv::format("Size: %d x %d", mat1.size().width, mat1.size().height) << std::endl; \
-}
+    EXPECT_LE(TestUtils::checkNorm2(mat1, mat2), eps) \
+        << "Size: " << mat1.size() << std::endl; \
+} while ((void)0, 0)
+
+#define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
+do \
+{ \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    EXPECT_LE(TestUtils::checkNormRelative(mat1, mat2), eps) \
+        << "Size: " << mat1.size() << std::endl; \
+} while ((void)0, 0)
+
+#define EXPECT_MAT_N_DIFF(mat1, mat2, num) \
+do \
+{ \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    Mat diff; \
+    absdiff(mat1, mat2, diff); \
+    EXPECT_LE(countNonZero(diff.reshape(1)), num) \
+    << "Size: " << mat1.size() << std::endl; \
+} while ((void)0, 0)
+
+#define OCL_EXPECT_MATS_NEAR(name, eps) \
+do \
+{ \
+    ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
+    ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
+    EXPECT_LE(TestUtils::checkNorm2(name ## _roi, u ## name ## _roi), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+    Point _offset; \
+    Size _wholeSize; \
+    u ## name ## _roi.locateROI(_wholeSize, _offset); \
+    Mat _mask(name.size(), CV_8UC1, Scalar::all(255)); \
+    _mask(Rect(_offset, name ## _roi.size())).setTo(Scalar::all(0)); \
+    ASSERT_EQ(name.type(), u ## name.type()); \
+    ASSERT_EQ(name.size(), u ## name.size()); \
+    EXPECT_LE(TestUtils::checkNorm2(name, u ## name, _mask), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+} while ((void)0, 0)
+
+#define OCL_EXPECT_MATS_NEAR_RELATIVE(name, eps) \
+do \
+{ \
+    ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
+    ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
+    EXPECT_LE(TestUtils::checkNormRelative(name ## _roi, u ## name ## _roi), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+    Point _offset; \
+    Size _wholeSize; \
+    name ## _roi.locateROI(_wholeSize, _offset); \
+    Mat _mask(name.size(), CV_8UC1, Scalar::all(255)); \
+    _mask(Rect(_offset, name ## _roi.size())).setTo(Scalar::all(0)); \
+    ASSERT_EQ(name.type(), u ## name.type()); \
+    ASSERT_EQ(name.size(), u ## name.size()); \
+    EXPECT_LE(TestUtils::checkNormRelative(name, u ## name, _mask), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+} while ((void)0, 0)
+
+//for sparse matrix
+#define OCL_EXPECT_MATS_NEAR_RELATIVE_SPARSE(name, eps) \
+do \
+{ \
+    ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
+    ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
+    EXPECT_LE(TestUtils::checkNormRelativeSparse(name ## _roi, u ## name ## _roi), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+    Point _offset; \
+    Size _wholeSize; \
+    name ## _roi.locateROI(_wholeSize, _offset); \
+    Mat _mask(name.size(), CV_8UC1, Scalar::all(255)); \
+    _mask(Rect(_offset, name ## _roi.size())).setTo(Scalar::all(0)); \
+    ASSERT_EQ(name.type(), u ## name.type()); \
+    ASSERT_EQ(name.size(), u ## name.size()); \
+    EXPECT_LE(TestUtils::checkNormRelativeSparse(name, u ## name, _mask), eps) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+} while ((void)0, 0)
+
+#define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
+do \
+{ \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    EXPECT_LE(checkSimilarity(mat1, mat2), eps) \
+        << "Size: " << mat1.size() << std::endl; \
+} while ((void)0, 0)
 
 using perf::MatDepth;
 using perf::MatType;
 
 #define OCL_RNG_SEED 123456
 
-struct TestUtils
+struct CV_EXPORTS TestUtils
 {
     cv::RNG rng;
 
@@ -182,70 +276,50 @@ struct TestUtils
     // If the two vectors are not equal, it will return the difference in vector size
     // Else it will return (total diff of each 1 and 2 rects covered pixels)/(total 1 rects covered pixels)
     // The smaller, the better matched
-    static double checkRectSimilarity(cv::Size sz, std::vector<cv::Rect>& ob1, std::vector<cv::Rect>& ob2);
+    static double checkRectSimilarity(const cv::Size & sz, std::vector<cv::Rect>& ob1, std::vector<cv::Rect>& ob2);
 
     //! read image from testdata folder.
-
     static cv::Mat readImage(const String &fileName, int flags = cv::IMREAD_COLOR);
     static cv::Mat readImageType(const String &fname, int type);
 
-    static double checkNorm(const cv::Mat &m);
-    static double checkNorm(const cv::Mat &m1, const cv::Mat &m2);
-    static double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
-    static inline double checkNormRelative(const Mat &m1, const Mat &m2)
+    static double checkNorm1(InputArray m, InputArray mask = noArray());
+    static double checkNorm2(InputArray m1, InputArray m2, InputArray mask = noArray());
+    static double checkSimilarity(InputArray m1, InputArray m2);
+    static void showDiff(InputArray _src, InputArray _gold, InputArray _actual, double eps, bool alwaysShow);
+
+    static inline double checkNormRelative(InputArray m1, InputArray m2, InputArray mask = noArray())
     {
-        return cv::norm(m1, m2, cv::NORM_INF) /
+        return cvtest::norm(m1.getMat(), m2.getMat(), cv::NORM_INF, mask) /
                 std::max((double)std::numeric_limits<float>::epsilon(),
-                         (double)std::max(cv::norm(m1, cv::NORM_INF), norm(m2, cv::NORM_INF)));
-    }
-    static void showDiff(const Mat& src, const Mat& gold, const Mat& actual, double eps, bool alwaysShow = false);
-
-    template <typename T1>
-    static double checkNorm(const T1& m)
-    {
-        return checkNorm(cv::getMatForRead(m));
-    }
-    template <typename T1, typename T2>
-    static double checkNorm(const T1& m1, const T2& m2)
-    {
-        return checkNorm(cv::getMatForRead(m1), cv::getMatForRead(m2));
-    }
-    template <typename T1, typename T2>
-    static double checkSimilarity(const T1& m1, const T2& m2)
-    {
-        return checkSimilarity(cv::getMatForRead(m1), cv::getMatForRead(m2));
-    }
-    template <typename T1, typename T2>
-    static inline double checkNormRelative(const T1& m1, const T2& m2)
-    {
-        const Mat _m1 = cv::getMatForRead(m1);
-        const Mat _m2 = cv::getMatForRead(m2);
-        return checkNormRelative(_m1, _m2);
+                         (double)std::max(cvtest::norm(m1.getMat(), cv::NORM_INF), cvtest::norm(m2.getMat(), cv::NORM_INF)));
     }
 
-    template <typename T1, typename T2, typename T3>
-    static void showDiff(const T1& src, const T2& gold, const T3& actual, double eps, bool alwaysShow = false)
+    static inline double checkNormRelativeSparse(InputArray m1, InputArray m2, InputArray mask = noArray())
     {
-        const Mat _src = cv::getMatForRead(src);
-        const Mat _gold = cv::getMatForRead(gold);
-        const Mat _actual = cv::getMatForRead(actual);
-        showDiff(_src, _gold, _actual, eps, alwaysShow);
+        double norm_inf = cvtest::norm(m1.getMat(), m2.getMat(), cv::NORM_INF, mask);
+        double norm_rel = norm_inf /
+                std::max((double)std::numeric_limits<float>::epsilon(),
+                         (double)std::max(cvtest::norm(m1.getMat(), cv::NORM_INF), cvtest::norm(m2.getMat(), cv::NORM_INF)));
+        return std::min(norm_inf, norm_rel);
     }
+
 };
 
-#define TEST_DECLARE_INPUT_PARATEMER(name) Mat name, name ## _roi; UMat u ## name, u ## name ## _roi;
-#define TEST_DECLARE_OUTPUT_PARATEMER(name) TEST_DECLARE_INPUT_PARATEMER(name)
+#define TEST_DECLARE_INPUT_PARAMETER(name) Mat name, name ## _roi; UMat u ## name, u ## name ## _roi
+#define TEST_DECLARE_OUTPUT_PARAMETER(name) TEST_DECLARE_INPUT_PARAMETER(name)
 
 #define UMAT_UPLOAD_INPUT_PARAMETER(name) \
+do \
 { \
     name.copyTo(u ## name); \
-    Size wholeSize; Point ofs; name ## _roi.locateROI(wholeSize, ofs); \
+    Size _wholeSize; Point ofs; name ## _roi.locateROI(_wholeSize, ofs); \
     u ## name ## _roi = u ## name(Rect(ofs.x, ofs.y, name ## _roi.size().width, name ## _roi.size().height)); \
-}
+} while ((void)0, 0)
+
 #define UMAT_UPLOAD_OUTPUT_PARAMETER(name) UMAT_UPLOAD_INPUT_PARAMETER(name)
 
 template <typename T>
-struct TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
+struct CV_EXPORTS TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
 {
 
 };
@@ -273,6 +347,8 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #endif // IMPLEMENT_PARAM_CLASS
 
 #define OCL_TEST_P TEST_P
+#define OCL_TEST_F(name, ...) typedef name OCL_##name; TEST_F(OCL_##name, __VA_ARGS__)
+#define OCL_TEST(name, ...) TEST(OCL_##name, __VA_ARGS__)
 
 #define OCL_OFF(fn) cv::ocl::setUseOpenCL(false); fn
 #define OCL_ON(fn) cv::ocl::setUseOpenCL(true); fn
@@ -280,11 +356,13 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #define OCL_ALL_DEPTHS Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)
 #define OCL_ALL_CHANNELS Values(1, 2, 3, 4)
 
+CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)
+CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
+CV_ENUM(BorderType, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101)
+
 #define OCL_INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator) \
     INSTANTIATE_TEST_CASE_P(OCL_ ## prefix, test_case_name, generator)
 
-}} // namespace cvtest::ocl
-
-#endif // HAVE_OPENCL
+} } // namespace cvtest::ocl
 
 #endif // __OPENCV_TS_OCL_TEST_HPP__

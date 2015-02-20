@@ -40,7 +40,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -63,7 +62,7 @@ static void writeMatInBin( const Mat& mat, const string& filename )
         fwrite( (void*)&type, sizeof(int), 1, f );
         int dataSize = (int)(mat.step * mat.rows * mat.channels());
         fwrite( (void*)&dataSize, sizeof(int), 1, f );
-        fwrite( (void*)mat.data, 1, dataSize, f );
+        fwrite( (void*)mat.ptr(), 1, dataSize, f );
         fclose(f);
     }
 }
@@ -102,8 +101,12 @@ public:
     typedef typename Distance::ResultType DistanceType;
 
     CV_DescriptorExtractorTest( const string _name, DistanceType _maxDist, const Ptr<DescriptorExtractor>& _dextractor,
-                                Distance d = Distance() ):
-            name(_name), maxDist(_maxDist), dextractor(_dextractor), distance(d) {}
+                                Distance d = Distance(), Ptr<FeatureDetector> _detector = Ptr<FeatureDetector>()):
+        name(_name), maxDist(_maxDist), dextractor(_dextractor), distance(d) , detector(_detector) {}
+
+    ~CV_DescriptorExtractorTest()
+    {
+    }
 protected:
     virtual void createDescriptorExtractor() {}
 
@@ -129,7 +132,7 @@ protected:
 
         stringstream ss;
         ss << "Max distance between valid and computed descriptors " << curMaxDist;
-        if( curMaxDist < maxDist )
+        if( curMaxDist <= maxDist )
             ss << "." << endl;
         else
         {
@@ -190,7 +193,6 @@ protected:
 
         // Read the test image.
         string imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
-
         Mat img = imread( imgFilename );
         if( img.empty() )
         {
@@ -198,13 +200,15 @@ protected:
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
             return;
         }
-
         vector<KeyPoint> keypoints;
         FileStorage fs( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::READ );
-        if( fs.isOpened() )
-        {
+        if(!detector.empty()) {
+            detector->detect(img, keypoints);
+        } else {
             read( fs.getFirstTopLevelNode(), keypoints );
-
+        }
+        if(!keypoints.empty())
+        {
             Mat calcDescriptors;
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
@@ -245,14 +249,14 @@ protected:
                 }
             }
         }
-        else
+        if(!fs.isOpened())
         {
             ts->printf( cvtest::TS::LOG, "Compute and write keypoints.\n" );
             fs.open( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::WRITE );
             if( fs.isOpened() )
             {
-                ORB fd;
-                fd.detect(img, keypoints);
+                Ptr<ORB> fd = ORB::create();
+                fd->detect(img, keypoints);
                 write( fs, "keypoints", keypoints );
             }
             else
@@ -296,6 +300,7 @@ protected:
     const DistanceType maxDist;
     Ptr<DescriptorExtractor> dextractor;
     Distance distance;
+    Ptr<FeatureDetector> detector;
 
 private:
     CV_DescriptorExtractorTest& operator=(const CV_DescriptorExtractorTest&) { return *this; }
@@ -307,37 +312,38 @@ private:
 
 TEST( Features2d_DescriptorExtractor_BRISK, regression )
 {
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-brisk",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)2.f,
-                                                 DescriptorExtractor::create("BRISK") );
+    CV_DescriptorExtractorTest<Hamming> test( "descriptor-brisk",
+                                             (CV_DescriptorExtractorTest<Hamming>::DistanceType)2.f,
+                                            BRISK::create() );
     test.safe_run();
 }
 
 TEST( Features2d_DescriptorExtractor_ORB, regression )
 {
     // TODO adjust the parameters below
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-orb",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
-                                                 DescriptorExtractor::create("ORB") );
+    CV_DescriptorExtractorTest<Hamming> test( "descriptor-orb",
+#if CV_NEON
+                                              (CV_DescriptorExtractorTest<Hamming>::DistanceType)25.f,
+#else
+                                              (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
+#endif
+                                             ORB::create() );
     test.safe_run();
 }
 
-TEST( Features2d_DescriptorExtractor_FREAK, regression )
+TEST( Features2d_DescriptorExtractor_KAZE, regression )
 {
-    // TODO adjust the parameters below
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-freak",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
-                                                 DescriptorExtractor::create("FREAK") );
+    CV_DescriptorExtractorTest< L2<float> > test( "descriptor-kaze",  0.03f,
+                                                 KAZE::create(),
+                                                 L2<float>(), KAZE::create() );
     test.safe_run();
 }
 
-TEST( Features2d_DescriptorExtractor_BRIEF, regression )
+TEST( Features2d_DescriptorExtractor_AKAZE, regression )
 {
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-brief",  1,
-                                               DescriptorExtractor::create("BRIEF") );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_OpponentBRIEF, regression )
-{
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-opponent-brief",  1,
-                                               DescriptorExtractor::create("OpponentBRIEF") );
+    CV_DescriptorExtractorTest<Hamming> test( "descriptor-akaze",
+                                              (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
+                                              AKAZE::create(),
+                                              Hamming(), AKAZE::create());
     test.safe_run();
 }

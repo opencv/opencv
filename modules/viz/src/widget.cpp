@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #include "precomp.hpp"
@@ -55,7 +52,6 @@ class cv::viz::Widget::Impl
 {
 public:
     vtkSmartPointer<vtkProp> prop;
-
     Impl() : prop(0) {}
 };
 
@@ -63,13 +59,17 @@ cv::viz::Widget::Widget() : impl_( new Impl() ) { }
 
 cv::viz::Widget::Widget(const Widget& other) : impl_( new Impl() )
 {
-    if (other.impl_ && other.impl_->prop) impl_->prop = other.impl_->prop;
+    if (other.impl_ && other.impl_->prop)
+        impl_->prop = other.impl_->prop;
 }
 
 cv::viz::Widget& cv::viz::Widget::operator=(const Widget& other)
 {
-    if (!impl_) impl_ = new Impl();
-    if (other.impl_) impl_->prop = other.impl_->prop;
+    if (!impl_)
+        impl_ = new Impl();
+
+    if (other.impl_)
+        impl_->prop = other.impl_->prop;
     return *this;
 }
 
@@ -84,45 +84,22 @@ cv::viz::Widget::~Widget()
 
 cv::viz::Widget cv::viz::Widget::fromPlyFile(const String &file_name)
 {
+    CV_Assert(vtkPLYReader::CanReadFile(file_name.c_str()));
+
     vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
     reader->SetFileName(file_name.c_str());
 
-    vtkSmartPointer<vtkDataSet> data = reader->GetOutput();
-    CV_Assert("File does not exist or file format is not supported." && data);
-
-    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
-
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
-#if VTK_MAJOR_VERSION <= 5
-    mapper->SetInput(data);
-#else
-    mapper->SetInputData(data);
-#endif
-
-    vtkSmartPointer<vtkDataArray> scalars = data->GetPointData()->GetScalars();
-    if (scalars)
-    {
-        cv::Vec3d minmax(scalars->GetRange());
-        mapper->SetScalarRange(minmax.val);
-        mapper->SetScalarModeToUsePointData();
-
-        // interpolation OFF, if data is a vtkPolyData that contains only vertices, ON for anything else.
-        vtkPolyData* polyData = vtkPolyData::SafeDownCast(data);
-        bool interpolation = (polyData && polyData->GetNumberOfCells() != polyData->GetNumberOfVerts());
-
-        mapper->SetInterpolateScalarsBeforeMapping(interpolation);
-        mapper->ScalarVisibilityOn();
-    }
+    mapper->SetInputConnection( reader->GetOutputPort() );
     mapper->ImmediateModeRenderingOff();
 
-    actor->SetNumberOfCloudPoints(int(std::max<vtkIdType>(1, data->GetNumberOfPoints() / 10)));
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->GetProperty()->SetInterpolationToFlat();
     actor->GetProperty()->BackfaceCullingOn();
-
     actor->SetMapper(mapper);
 
     Widget widget;
-    widget.impl_->prop = actor;
+    WidgetAccessor::setProp(widget, actor);
     return widget;
 }
 
@@ -133,37 +110,15 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
 
     switch (property)
     {
-        case POINT_SIZE:
-        {
-            actor->GetProperty()->SetPointSize(float(value));
-            actor->Modified();
-            break;
-        }
-        case OPACITY:
-        {
-            actor->GetProperty()->SetOpacity(value);
-            actor->Modified();
-            break;
-        }
-        case IMMEDIATE_RENDERING:
-        {
-            actor->GetMapper()->SetImmediateModeRendering(int(value));
-            actor->Modified();
-            break;
-        }
-        case LINE_WIDTH:
-        {
-            actor->GetProperty()->SetLineWidth(float(value));
-            actor->Modified();
-            break;
-        }
+        case POINT_SIZE:          actor->GetProperty()->SetPointSize(float(value)); break;
+        case OPACITY:             actor->GetProperty()->SetOpacity(value);          break;
+        case LINE_WIDTH:          actor->GetProperty()->SetLineWidth(float(value)); break;
+        case IMMEDIATE_RENDERING: actor->GetMapper()->SetImmediateModeRendering(int(value)); break;
         case FONT_SIZE:
         {
             vtkTextActor* text_actor = vtkTextActor::SafeDownCast(actor);
             CV_Assert("Widget does not have text content." && text_actor);
-            vtkSmartPointer<vtkTextProperty> tprop = text_actor->GetTextProperty();
-            tprop->SetFontSize(int(value));
-            text_actor->Modified();
+            text_actor->GetTextProperty()->SetFontSize(int(value));
             break;
         }
         case REPRESENTATION:
@@ -174,7 +129,6 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
                 case REPRESENTATION_WIREFRAME: actor->GetProperty()->SetRepresentationToWireframe(); break;
                 case REPRESENTATION_SURFACE:   actor->GetProperty()->SetRepresentationToSurface();  break;
             }
-            actor->Modified();
             break;
         }
         case SHADING:
@@ -186,14 +140,11 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
                 {
                     if (!actor->GetMapper()->GetInput()->GetPointData()->GetNormals())
                     {
-                        vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
-#if VTK_MAJOR_VERSION <= 5
-                        normals->SetInput(actor->GetMapper()->GetInput());
-#else
-                        normals->SetInputData(actor->GetMapper()->GetInput());
-#endif
-                        normals->Update();
-                        vtkDataSetMapper::SafeDownCast(actor->GetMapper())->SetInputConnection(normals->GetOutputPort());
+                        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+                        CV_Assert("Can't set shading property for such type of widget" && mapper);
+
+                        vtkSmartPointer<vtkPolyData> with_normals = VtkUtils::ComputeNormals(mapper->GetInput());
+                        VtkUtils::SetInputData(mapper, with_normals);
                     }
                     actor->GetProperty()->SetInterpolationToGouraud();
                     break;
@@ -202,27 +153,22 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
                 {
                     if (!actor->GetMapper()->GetInput()->GetPointData()->GetNormals())
                     {
-                        vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
-#if VTK_MAJOR_VERSION <= 5
-                        normals->SetInput(actor->GetMapper()->GetInput());
-#else
-                        normals->SetInputData(actor->GetMapper()->GetInput());
-#endif
-                        normals->Update();
-                        vtkDataSetMapper::SafeDownCast(actor->GetMapper())->SetInputConnection(normals->GetOutputPort());
+                        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+                        CV_Assert("Can't set shading property for such type of widget" && mapper);
+
+                        vtkSmartPointer<vtkPolyData> with_normals = VtkUtils::ComputeNormals(mapper->GetInput());
+                        VtkUtils::SetInputData(mapper, with_normals);
                     }
                     actor->GetProperty()->SetInterpolationToPhong();
                     break;
                 }
             }
-            actor->Modified();
             break;
         }
-
-
         default:
             CV_Assert("setPointCloudRenderingProperties: Unknown property");
     }
+    actor->Modified();
 }
 
 double cv::viz::Widget::getRenderingProperty(int property) const
@@ -233,32 +179,16 @@ double cv::viz::Widget::getRenderingProperty(int property) const
     double value = 0.0;
     switch (property)
     {
-        case POINT_SIZE:
-        {
-            value = actor->GetProperty()->GetPointSize();
-            break;
-        }
-        case OPACITY:
-        {
-            value = actor->GetProperty()->GetOpacity();
-            break;
-        }
-        case IMMEDIATE_RENDERING:
-        {
-            value = actor->GetMapper()->GetImmediateModeRendering();
-            break;
-        }
-        case LINE_WIDTH:
-        {
-            value = actor->GetProperty()->GetLineWidth();
-            break;
-        }
+        case POINT_SIZE: value = actor->GetProperty()->GetPointSize(); break;
+        case OPACITY:    value = actor->GetProperty()->GetOpacity();   break;
+        case LINE_WIDTH: value = actor->GetProperty()->GetLineWidth(); break;
+        case IMMEDIATE_RENDERING:  value = actor->GetMapper()->GetImmediateModeRendering();  break;
+
         case FONT_SIZE:
         {
             vtkTextActor* text_actor = vtkTextActor::SafeDownCast(actor);
             CV_Assert("Widget does not have text content." && text_actor);
-            vtkSmartPointer<vtkTextProperty> tprop = text_actor->GetTextProperty();
-            value = tprop->GetFontSize();
+            value = text_actor->GetTextProperty()->GetFontSize();;
             break;
         }
         case REPRESENTATION:
@@ -303,38 +233,17 @@ void cv::viz::WidgetAccessor::setProp(Widget& widget, vtkSmartPointer<vtkProp> p
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget3D implementation
 
-struct cv::viz::Widget3D::MatrixConverter
-{
-    static Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
-    {
-        Matx44f m;
-        for (int i = 0; i < 4; i++)
-            for (int k = 0; k < 4; k++)
-                m(i, k) = vtk_matrix->GetElement(i, k);
-        return m;
-    }
-
-    static vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix(const Matx44f& m)
-    {
-        vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
-        for (int i = 0; i < 4; i++)
-            for (int k = 0; k < 4; k++)
-                vtk_matrix->SetElement(i, k, m(i, k));
-        return vtk_matrix;
-    }
-};
-
-void cv::viz::Widget3D::setPose(const Affine3f &pose)
+void cv::viz::Widget3D::setPose(const Affine3d &pose)
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget is not 3D." && actor);
 
-    vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+    vtkSmartPointer<vtkMatrix4x4> matrix = vtkmatrix(pose.matrix);
     actor->SetUserMatrix(matrix);
     actor->Modified();
 }
 
-void cv::viz::Widget3D::updatePose(const Affine3f &pose)
+void cv::viz::Widget3D::updatePose(const Affine3d &pose)
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget is not 3D." && actor);
@@ -343,25 +252,33 @@ void cv::viz::Widget3D::updatePose(const Affine3f &pose)
     if (!matrix)
     {
         setPose(pose);
-        return ;
+        return;
     }
-    Matx44f matrix_cv = MatrixConverter::convertToMatx(matrix);
 
-    Affine3f updated_pose = pose * Affine3f(matrix_cv);
-    matrix = MatrixConverter::convertToVtkMatrix(updated_pose.matrix);
+    Affine3d updated_pose = pose * Affine3d(*matrix->Element);
+    matrix = vtkmatrix(updated_pose.matrix);
 
     actor->SetUserMatrix(matrix);
     actor->Modified();
 }
 
-cv::Affine3f cv::viz::Widget3D::getPose() const
+cv::Affine3d cv::viz::Widget3D::getPose() const
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget is not 3D." && actor);
+    return Affine3d(*actor->GetUserMatrix()->Element);
+}
 
-    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-    Matx44f matrix_cv = MatrixConverter::convertToMatx(matrix);
-    return Affine3f(matrix_cv);
+void cv::viz::Widget3D::applyTransform(const Affine3d &transform)
+{
+    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert("Widget is not 3D actor." && actor);
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+    CV_Assert("Widget doesn't have a polydata mapper" && mapper);
+    mapper->Update();
+
+    VtkUtils::SetInputData(mapper, VtkUtils::TransformPolydata(mapper->GetInput(), transform));
 }
 
 void cv::viz::Widget3D::setColor(const Color &color)

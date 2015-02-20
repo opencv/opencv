@@ -40,31 +40,20 @@
 //M*/
 
 #include "precomp.hpp"
+#include <windowsx.h> // required for GET_X_LPARAM() and GET_Y_LPARAM() macros
 
 #if defined WIN32 || defined _WIN32
-
-#define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
-#ifndef _MULTIMON_USE_SECURE_CRT
-#  define _MULTIMON_USE_SECURE_CRT 0 // some MinGW platforms have no strncpy_s
-#endif
-
-#if defined SM_CMONITORS && !defined MONITOR_DEFAULTTONEAREST
-#  define MONITOR_DEFAULTTONULL       0x00000000
-#  define MONITOR_DEFAULTTOPRIMARY    0x00000001
-#  define MONITOR_DEFAULTTONEAREST    0x00000002
-#  define MONITORINFOF_PRIMARY        0x00000001
-#endif
-#ifndef __inout
-#  define __inout
-#endif
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
 #endif
-#include <MultiMon.h>
+
+#if (_WIN32_IE < 0x0500)
+#pragma message("WARNING: Win32 UI needs to be compiled with _WIN32_IE >= 0x0500 (_WIN32_IE_IE50)")
+#define _WIN32_IE 0x0500
+#endif
 
 #include <commctrl.h>
-#include <winuser.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -104,6 +93,10 @@ static const char* trackbar_text =
 #define CV_HCURSOR GCL_HCURSOR
 #define CV_HBRBACKGROUND GCL_HBRBACKGROUND
 
+#endif
+
+#ifndef WM_MOUSEHWHEEL
+    #define WM_MOUSEHWHEEL 0x020E
 #endif
 
 static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
@@ -493,6 +486,23 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
     }
 
     __END__;
+}
+
+void cv::setWindowTitle(const String& winname, const String& title)
+{
+    CvWindow* window = icvFindWindowByName(winname.c_str());
+
+    if (!window)
+    {
+        namedWindow(winname);
+        window = icvFindWindowByName(winname.c_str());
+    }
+
+    if (!window)
+        CV_Error(Error::StsNullPtr, "NULL window");
+
+    if (!SetWindowText(window->frame, title.c_str()))
+        CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", winname.c_str(), title.c_str()));
 }
 
 double cvGetPropWindowAutoSize_W32(const char* name)
@@ -1141,7 +1151,7 @@ cvShowImage( const char* name, const CvArr* arr )
         icvUpdateWindowPos(window);
     InvalidateRect(window->hwnd, 0, 0);
     // philipg: this is not needed and just slows things down
-//    UpdateWindow(window->hwnd);
+    //    UpdateWindow(window->hwnd);
 
     __END__;
 }
@@ -1298,6 +1308,10 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
     switch(uMsg)
     {
+    case WM_COPY:
+        ::SendMessage(window->hwnd, uMsg, wParam, lParam);
+        break;
+
     case WM_DESTROY:
 
         icvRemoveWindow(window);
@@ -1378,6 +1392,39 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
             SetFocus(window->hwnd);
         break;
 
+    case WM_MOUSEWHEEL:
+    case WM_MOUSEHWHEEL:
+       if( window->on_mouse )
+       {
+          int flags = (wParam & MK_LBUTTON      ? CV_EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_RBUTTON      ? CV_EVENT_FLAG_RBUTTON  : 0)|
+                      (wParam & MK_MBUTTON      ? CV_EVENT_FLAG_MBUTTON  : 0)|
+                      (wParam & MK_CONTROL      ? CV_EVENT_FLAG_CTRLKEY  : 0)|
+                      (wParam & MK_SHIFT        ? CV_EVENT_FLAG_SHIFTKEY : 0)|
+                      (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY   : 0);
+          int event = (uMsg == WM_MOUSEWHEEL    ? CV_EVENT_MOUSEWHEEL    : CV_EVENT_MOUSEHWHEEL);
+
+          // Set the wheel delta of mouse wheel to be in the upper word of 'event'
+          int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+          flags |= (delta << 16);
+
+          POINT pt;
+          pt.x = GET_X_LPARAM( lParam );
+          pt.y = GET_Y_LPARAM( lParam );
+          ::ScreenToClient(hwnd, &pt); // Convert screen coordinates to client coordinates.
+
+          RECT rect;
+          GetClientRect( window->hwnd, &rect );
+
+          SIZE size = {0,0};
+          icvGetBitmapData( window, &size, 0, 0 );
+
+          window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
+                                   pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
+                                   window->on_mouse_param );
+       }
+       break;
+
     case WM_ERASEBKGND:
         {
             RECT cr, tr, wrc;
@@ -1427,6 +1474,81 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     // Process the message
     switch(uMsg)
     {
+    case WM_COPY:
+        {
+            if (!::OpenClipboard(hwnd) )
+                break;
+
+            HDC hDC       = 0;
+            HDC memDC     = 0;
+            HBITMAP memBM = 0;
+
+            // We'll use a do-while(0){} scope as a single-run breakable scope
+            // Upon any error we can jump out of the single-time while scope to clean up the resources.
+            do
+            {
+                if (!::EmptyClipboard())
+                    break;
+
+                if(!window->image)
+                    break;
+
+                // Get window device context
+                if (0 == (hDC = ::GetDC(hwnd)))
+                    break;
+
+                // Create another DC compatible with hDC
+                if (0 == (memDC = ::CreateCompatibleDC( hDC )))
+                    break;
+
+                // Determine the bitmap's dimensions
+                int nchannels = 3;
+                SIZE size = {0,0};
+                icvGetBitmapData( window, &size, &nchannels, 0 );
+
+                // Create bitmap to draw on and it in the new DC
+                if (0 == (memBM = ::CreateCompatibleBitmap ( hDC, size.cx, size.cy)))
+                    break;
+
+                if (!::SelectObject( memDC, memBM ))
+                    break;
+
+                // Begin drawing to DC
+                if (!::SetStretchBltMode(memDC, COLORONCOLOR))
+                    break;
+
+                RGBQUAD table[256];
+                if( 1 == nchannels )
+                {
+                    for(int i = 0; i < 256; ++i)
+                    {
+                        table[i].rgbBlue = (unsigned char)i;
+                        table[i].rgbGreen = (unsigned char)i;
+                        table[i].rgbRed = (unsigned char)i;
+                    }
+                    if (!::SetDIBColorTable(window->dc, 0, 255, table))
+                        break;
+                }
+
+                // The image copied to the clipboard will be in its original size, regardless if the window itself was resized.
+
+                // Render the image to the dc/bitmap (at original size).
+                if (!::BitBlt( memDC, 0, 0, size.cx, size.cy, window->dc, 0, 0, SRCCOPY ))
+                    break;
+
+                // Finally, set bitmap to clipboard
+                ::SetClipboardData(CF_BITMAP, memBM);
+            } while (0,0); // (0,0) instead of (0) to avoid MSVC compiler warning C4127: "conditional expression is constant"
+
+            //////////////////////////////////////////////////////////////////////////
+            // if handle is allocated (i.e. != 0) then clean-up.
+            if (memBM) ::DeleteObject(memBM);
+            if (memDC) ::DeleteDC(memDC);
+            if (hDC)   ::ReleaseDC(hwnd, hDC);
+            ::CloseClipboard();
+            break;
+        }
+
     case WM_WINDOWPOSCHANGING:
         {
             LPWINDOWPOS pos = (LPWINDOWPOS)lParam;
@@ -1451,8 +1573,6 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         if( window->on_mouse )
         {
             POINT pt;
-            RECT rect;
-            SIZE size = {0,0};
 
             int flags = (wParam & MK_LBUTTON ? CV_EVENT_FLAG_LBUTTON : 0)|
                         (wParam & MK_RBUTTON ? CV_EVENT_FLAG_RBUTTON : 0)|
@@ -1475,15 +1595,26 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             if( uMsg == WM_LBUTTONUP || uMsg == WM_RBUTTONUP || uMsg == WM_MBUTTONUP )
                 ReleaseCapture();
 
-            pt.x = LOWORD( lParam );
-            pt.y = HIWORD( lParam );
+            pt.x = GET_X_LPARAM( lParam );
+            pt.y = GET_Y_LPARAM( lParam );
 
-            GetClientRect( window->hwnd, &rect );
-            icvGetBitmapData( window, &size, 0, 0 );
+            if (window->flags & CV_WINDOW_AUTOSIZE)
+            {
+                // As user can't change window size, do not scale window coordinates. Underlying windowing system
+                // may prevent full window from being displayed and in this case coordinates should not be scaled.
+                window->on_mouse( event, pt.x, pt.y, flags, window->on_mouse_param );
+            } else {
+                // Full window is displayed using different size. Scale coordinates to match underlying positions.
+                RECT rect;
+                SIZE size = {0, 0};
 
-            window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
-                                     pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
-                                     window->on_mouse_param );
+                GetClientRect( window->hwnd, &rect );
+                icvGetBitmapData( window, &size, 0, 0 );
+
+                window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
+                                         pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
+                                         window->on_mouse_param );
+            }
         }
         break;
 
@@ -1712,6 +1843,52 @@ cvDestroyAllWindows(void)
     }
 }
 
+static void showSaveDialog(CvWindow* window)
+{
+    if (!window || !window->image)
+        return;
+
+    SIZE sz;
+    int channels;
+    void* data;
+    if (icvGetBitmapData(window, &sz, &channels, &data))
+        return; // nothing to save
+
+    char szFileName[MAX_PATH] = "";
+    // try to use window title as file name
+    GetWindowText(window->frame, szFileName, MAX_PATH);
+
+    OPENFILENAME ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+#ifdef OPENFILENAME_SIZE_VERSION_400
+    // we are not going to use new fields any way
+    ofn.lStructSize = OPENFILENAME_SIZE_VERSION_400;
+#else
+    ofn.lStructSize = sizeof(ofn);
+#endif
+    ofn.hwndOwner = window->hwnd;
+    ofn.lpstrFilter = "Portable Network Graphics files (*.png)\0*.png\0"
+                      "JPEG files (*.jpeg;*.jpg;*.jpe)\0*.jpeg;*.jpg;*.jpe\0"
+                      "Windows bitmap (*.bmp;*.dib)\0*.bmp;*.dib\0"
+                      "TIFF Files (*.tiff;*.tif)\0*.tiff;*.tif\0"
+                      "JPEG-2000 files (*.jp2)\0*.jp2\0"
+                      "WebP files (*.webp)\0*.webp\0"
+                      "Portable image format (*.pbm;*.pgm;*.ppm;*.pxm;*.pnm)\0*.pbm;*.pgm;*.ppm;*.pxm;*.pnm\0"
+                      "OpenEXR Image files (*.exr)\0*.exr\0"
+                      "Radiance HDR (*.hdr;*.pic)\0*.hdr;*.pic\0"
+                      "Sun raster files (*.sr;*.ras)\0*.sr;*.ras\0"
+                      "All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = szFileName;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN | OFN_NOCHANGEDIR;
+    ofn.lpstrDefExt = "png";
+
+    if (GetSaveFileName(&ofn))
+    {
+        cv::Mat tmp; cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data), tmp, 0);
+        cv::imwrite(szFileName, tmp);
+    }
+}
 
 CV_IMPL int
 cvWaitKey( int delay )
@@ -1757,17 +1934,26 @@ cvWaitKey( int delay )
 
                 case WM_KEYDOWN:
                     TranslateMessage(&message);
-                    if( (message.wParam >= VK_F1 && message.wParam <= VK_F24) ||
-                        message.wParam == VK_HOME || message.wParam == VK_END ||
-                        message.wParam == VK_UP || message.wParam == VK_DOWN ||
-                        message.wParam == VK_LEFT || message.wParam == VK_RIGHT ||
-                        message.wParam == VK_INSERT || message.wParam == VK_DELETE ||
-                        message.wParam == VK_PRIOR || message.wParam == VK_NEXT )
+                    if( (message.wParam >= VK_F1 && message.wParam <= VK_F24)       ||
+                        message.wParam == VK_HOME   || message.wParam == VK_END     ||
+                        message.wParam == VK_UP     || message.wParam == VK_DOWN    ||
+                        message.wParam == VK_LEFT   || message.wParam == VK_RIGHT   ||
+                        message.wParam == VK_INSERT || message.wParam == VK_DELETE  ||
+                        message.wParam == VK_PRIOR  || message.wParam == VK_NEXT )
                     {
                         DispatchMessage(&message);
                         is_processed = 1;
                         return (int)(message.wParam << 16);
                     }
+
+                    // Intercept Ctrl+C for copy to clipboard
+                    if ('C' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
+                        ::SendMessage(message.hwnd, WM_COPY, 0, 0);
+
+                    // Intercept Ctrl+S for "save as" dialog
+                    if ('S' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
+                        showSaveDialog(window);
+
                 default:
                     DispatchMessage(&message);
                     is_processed = 1;
@@ -1797,22 +1983,6 @@ icvFindTrackbarByName( const CvWindow* window, const char* name )
 }
 
 
-typedef struct
-{
-    UINT cbSize;
-    DWORD dwMask;
-    int idCommand;
-    int iImage;
-    BYTE fsState;
-    BYTE fsStyle;
-    WORD cx;
-    DWORD lParam;
-    LPSTR pszText;
-    int cchText;
-}
-ButtonInfo;
-
-
 static int
 icvCreateTrackbar( const char* trackbar_name, const char* window_name,
                    int* val, int count, CvTrackbarCallback on_notify,
@@ -1832,7 +2002,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     if( !window_name || !trackbar_name )
         CV_ERROR( CV_StsNullPtr, "NULL window or trackbar name" );
 
-    if( count <= 0 )
+    if( count < 0 )
         CV_ERROR( CV_StsOutOfRange, "Bad trackbar maximal value" );
 
     window = icvFindWindowByName(window_name);
@@ -1842,8 +2012,8 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     trackbar = icvFindTrackbarByName(window,trackbar_name);
     if( !trackbar )
     {
-        TBBUTTON tbs;
-        ButtonInfo tbis;
+        TBBUTTON tbs = {0};
+        TBBUTTONINFO tbis = {0};
         RECT rect;
         int bcount;
         int len = (int)strlen( trackbar_name );
@@ -1853,9 +2023,14 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         {
             const int default_height = 30;
 
-            window->toolbar.toolbar = CreateToolbarEx(
-                    window->frame, WS_CHILD | CCS_TOP | TBSTYLE_WRAPABLE,
-                    1, 0, 0, 0, 0, 0, 16, 20, 16, 16, sizeof(TBBUTTON));
+            // CreateToolbarEx is deprecated and forces linking against Comctl32.lib.
+            window->toolbar.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+                                        WS_CHILD | CCS_TOP | TBSTYLE_WRAPABLE | BTNS_AUTOSIZE | BTNS_BUTTON,
+                                        0, 0, 0, 0,
+                                        window->frame, NULL, GetModuleHandle(NULL), NULL);
+            // CreateToolbarEx automatically sends this but CreateWindowEx doesn't.
+            SendMessage(window->toolbar.toolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+
             GetClientRect(window->frame, &rect);
             MoveWindow( window->toolbar.toolbar, 0, 0,
                         rect.right - rect.left, default_height, TRUE);
@@ -2097,6 +2272,38 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
 
         SendMessage( trackbar->hwnd, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)pos );
         icvUpdateTrackbar( trackbar, pos );
+    }
+
+    __END__;
+}
+
+
+CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval)
+{
+    CV_FUNCNAME( "cvSetTrackbarMax" );
+
+    __BEGIN__;
+
+    if (maxval >= 0)
+    {
+        CvWindow* window = 0;
+        CvTrackbar* trackbar = 0;
+        if (trackbar_name == 0 || window_name == 0)
+        {
+            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+        }
+
+        window = icvFindWindowByName(window_name);
+        if (window)
+        {
+            trackbar = icvFindTrackbarByName(window, trackbar_name);
+            if (trackbar)
+            {
+                // The position will be min(pos, maxval).
+                trackbar->maxval = maxval;
+                SendMessage(trackbar->hwnd, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)maxval);
+            }
+        }
     }
 
     __END__;

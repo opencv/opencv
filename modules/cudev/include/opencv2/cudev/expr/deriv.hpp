@@ -53,6 +53,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // derivX
 
 template <class SrcPtr>
@@ -115,6 +118,8 @@ laplacian_(const SrcPtr& src)
 {
     return makeExpr(laplacianPtr<ksize>(src));
 }
+
+//! @}
 
 }}
 

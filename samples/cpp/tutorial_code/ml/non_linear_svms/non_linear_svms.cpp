@@ -1,12 +1,15 @@
 #include <iostream>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/ml/ml.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include "opencv2/imgcodecs.hpp"
+#include <opencv2/highgui.hpp>
+#include <opencv2/ml.hpp>
 
 #define	NTRAINING_SAMPLES	100			// Number of training samples per class
 #define FRAC_LINEAR_SEP		0.9f	    // Fraction of samples which compose the linear separable part
 
 using namespace cv;
+using namespace cv::ml;
 using namespace std;
 
 static void help()
@@ -29,13 +32,14 @@ int main()
 
     //--------------------- 1. Set up training data randomly ---------------------------------------
     Mat trainData(2*NTRAINING_SAMPLES, 2, CV_32FC1);
-    Mat labels   (2*NTRAINING_SAMPLES, 1, CV_32FC1);
+    Mat labels   (2*NTRAINING_SAMPLES, 1, CV_32SC1);
 
     RNG rng(100); // Random value generation class
 
     // Set up the linearly separable part of the training data
     int nLinearSamples = (int) (FRAC_LINEAR_SEP * NTRAINING_SAMPLES);
 
+    //! [setup1]
     // Generate random points for the class 1
     Mat trainClass = trainData.rowRange(0, nLinearSamples);
     // The x coordinate of the points is in [0, 0.4)
@@ -53,9 +57,10 @@ int main()
     // The y coordinate of the points is in [0, 1)
     c = trainClass.colRange(1,2);
     rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
+    //! [setup1]
 
     //------------------ Set up the non-linearly separable part of the training data ---------------
-
+    //! [setup2]
     // Generate random points for the classes 1 and 2
     trainClass = trainData.rowRange(  nLinearSamples, 2*NTRAINING_SAMPLES-nLinearSamples);
     // The x coordinate of the points is in [0.4, 0.6)
@@ -64,37 +69,42 @@ int main()
     // The y coordinate of the points is in [0, 1)
     c = trainClass.colRange(1,2);
     rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
-
+    //! [setup2]
     //------------------------- Set up the labels for the classes ---------------------------------
     labels.rowRange(                0,   NTRAINING_SAMPLES).setTo(1);  // Class 1
     labels.rowRange(NTRAINING_SAMPLES, 2*NTRAINING_SAMPLES).setTo(2);  // Class 2
 
     //------------------------ 2. Set up the support vector machines parameters --------------------
-    CvSVMParams params;
-    params.svm_type    = SVM::C_SVC;
-    params.C 		   = 0.1;
-    params.kernel_type = SVM::LINEAR;
-    params.term_crit   = TermCriteria(CV_TERMCRIT_ITER, (int)1e7, 1e-6);
-
     //------------------------ 3. Train the svm ----------------------------------------------------
     cout << "Starting training process" << endl;
-    CvSVM svm;
-    svm.train(trainData, labels, Mat(), Mat(), params);
+    //! [init]
+    Ptr<SVM> svm = SVM::create();
+    svm->setType(SVM::C_SVC);
+    svm->setC(0.1);
+    svm->setKernel(SVM::LINEAR);
+    svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, (int)1e7, 1e-6));
+    //! [init]
+    //! [train]
+    svm->train(trainData, ROW_SAMPLE, labels);
+    //! [train]
     cout << "Finished training process" << endl;
 
     //------------------------ 4. Show the decision regions ----------------------------------------
+    //! [show]
     Vec3b green(0,100,0), blue (100,0,0);
     for (int i = 0; i < I.rows; ++i)
         for (int j = 0; j < I.cols; ++j)
         {
             Mat sampleMat = (Mat_<float>(1,2) << i, j);
-            float response = svm.predict(sampleMat);
+            float response = svm->predict(sampleMat);
 
             if      (response == 1)    I.at<Vec3b>(j, i)  = green;
             else if (response == 2)    I.at<Vec3b>(j, i)  = blue;
         }
+    //! [show]
 
     //----------------------- 5. Show the training data --------------------------------------------
+    //! [show_data]
     int thick = -1;
     int lineType = 8;
     float px, py;
@@ -112,17 +122,20 @@ int main()
         py = trainData.at<float>(i,1);
         circle(I, Point( (int) px, (int) py ), 3, Scalar(255, 0, 0), thick, lineType);
     }
+    //! [show_data]
 
     //------------------------- 6. Show support vectors --------------------------------------------
+    //! [show_vectors]
     thick = 2;
     lineType  = 8;
-    int x     = svm.get_support_vector_count();
+    Mat sv = svm->getSupportVectors();
 
-    for (int i = 0; i < x; ++i)
+    for (int i = 0; i < sv.rows; ++i)
     {
-        const float* v = svm.get_support_vector(i);
+        const float* v = sv.ptr<float>(i);
         circle(	I,  Point( (int) v[0], (int) v[1]), 6, Scalar(128, 128, 128), thick, lineType);
     }
+    //! [show_vectors]
 
     imwrite("result.png", I);	                   // save the Image
     imshow("SVM for Non-Linear Training Data", I); // show it to the user

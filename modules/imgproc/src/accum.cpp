@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 /
 // Redistribution and use in source and binary forms, with or without modification,
@@ -41,14 +42,438 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels_imgproc.hpp"
 
 namespace cv
 {
 
+template <typename T, typename AT>
+struct Acc_SIMD
+{
+    int operator() (const T *, AT *, const uchar *, int, int) const
+    {
+        return 0;
+    }
+};
+
+template <typename T, typename AT>
+struct AccSqr_SIMD
+{
+    int operator() (const T *, AT *, const uchar *, int, int) const
+    {
+        return 0;
+    }
+};
+
+template <typename T, typename AT>
+struct AccProd_SIMD
+{
+    int operator() (const T *, const T *, AT *, const uchar *, int, int) const
+    {
+        return 0;
+    }
+};
+
+template <typename T, typename AT>
+struct AccW_SIMD
+{
+    int operator() (const T *, AT *, const uchar *, int, int, AT) const
+    {
+        return 0;
+    }
+};
+
+#if CV_NEON
+
+template <>
+struct Acc_SIMD<uchar, float>
+{
+    int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 16; x += 16)
+            {
+                uint8x16_t v_src = vld1q_u8(src + x);
+                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
+                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
+                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+            }
+        }
+        else if (cn == 1)
+        {
+            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
+
+            for ( ; x <= len - 16; x += 16)
+            {
+                uint8x16_t v_src = vandq_u8(vld1q_u8(src + x), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
+                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
+                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
+                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Acc_SIMD<ushort, float>
+{
+    int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                uint16x8_t v_src = vld1q_u16(src + x);
+                uint32x4_t v_src0 = vmovl_u16(vget_low_u16(v_src)), v_src1 = vmovl_u16(vget_high_u16(v_src));
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Acc_SIMD<float, float>
+{
+    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vld1q_f32(src + x)));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vld1q_f32(src + x + 4)));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccSqr_SIMD<uchar, float>
+{
+    int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 16; x += 16)
+            {
+                uint8x16_t v_src = vld1q_u8(src + x);
+                uint8x8_t v_src_0 = vget_low_u8(v_src), v_src_1 = vget_high_u8(v_src);
+                uint16x8_t v_src0 = vmull_u8(v_src_0, v_src_0), v_src1 = vmull_u8(v_src_1, v_src_1);
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
+                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
+                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+            }
+        }
+        else if (cn == 1)
+        {
+            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
+
+            for ( ; x <= len - 16; x += 16)
+            {
+                uint8x16_t v_src = vandq_u8(vld1q_u8(src + x), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
+                uint8x8_t v_src_0 = vget_low_u8(v_src), v_src_1 = vget_high_u8(v_src);
+                uint16x8_t v_src0 = vmull_u8(v_src_0, v_src_0), v_src1 = vmull_u8(v_src_1, v_src_1);
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
+                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
+                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccSqr_SIMD<ushort, float>
+{
+    int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                uint16x8_t v_src = vld1q_u16(src + x);
+                uint16x4_t v_src_0 = vget_low_u16(v_src), v_src_1 = vget_high_u16(v_src);
+                uint32x4_t v_src0 = vmull_u16(v_src_0, v_src_0), v_src1 = vmull_u16(v_src_1, v_src_1);
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
+            }
+        }
+        else if (cn == 1)
+        {
+            uint8x8_t v_255 = vdup_n_u8(255), v_0 = vdup_n_u8(0);
+
+            for ( ; x <= len - 8; x += 8)
+            {
+                uint8x8_t v_mask_src = veor_u8(v_255, vceq_u8(vld1_u8(mask + x), v_0));
+                uint8x8x2_t v_mask_zp = vzip_u8(v_mask_src, v_mask_src);
+                uint16x8_t v_mask = vreinterpretq_u16_u8(vcombine_u8(v_mask_zp.val[0], v_mask_zp.val[1])),
+                           v_src = vandq_u16(vld1q_u16(src + x), v_mask);
+
+                uint16x4_t v_src_0 = vget_low_u16(v_src), v_src_1 = vget_high_u16(v_src);
+                uint32x4_t v_src0 = vmull_u16(v_src_0, v_src_0), v_src1 = vmull_u16(v_src_1, v_src_1);
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccSqr_SIMD<float, float>
+{
+    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                float32x4_t v_src = vld1q_f32(src + x);
+                vst1q_f32(dst + x, vmlaq_f32(vld1q_f32(dst + x), v_src, v_src));
+
+                v_src = vld1q_f32(src + x + 4);
+                vst1q_f32(dst + x + 4, vmlaq_f32(vld1q_f32(dst + x + 4), v_src, v_src));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccProd_SIMD<uchar, float>
+{
+    int operator() (const uchar * src1, const uchar * src2, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 16; x += 16)
+            {
+                uint8x16_t v_1src = vld1q_u8(src1 + x), v_2src = vld1q_u8(src2 + x);
+                uint16x8_t v_src0 = vmull_u8(vget_low_u8(v_1src), vget_low_u8(v_2src)),
+                           v_src1 = vmull_u8(vget_high_u8(v_1src), vget_high_u8(v_2src));
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
+                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
+                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+            }
+        }
+        else if (cn == 1)
+        {
+            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
+
+            for ( ; x <= len - 16; x += 16)
+            {
+                uint8x16_t v_mask = veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0));
+                uint8x16_t v_1src = vandq_u8(vld1q_u8(src1 + x), v_mask), v_2src = vandq_u8(vld1q_u8(src2 + x), v_mask);
+                uint16x8_t v_src0 = vmull_u8(vget_low_u8(v_1src), vget_low_u8(v_2src)),
+                           v_src1 = vmull_u8(vget_high_u8(v_1src), vget_high_u8(v_2src));
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
+                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
+                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccProd_SIMD<ushort, float>
+{
+    int operator() (const ushort * src1, const ushort * src2, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                uint16x8_t v_1src = vld1q_u16(src1 + x), v_2src = vld1q_u16(src2 + x);
+                uint32x4_t v_src0 = vmull_u16(vget_low_u16(v_1src), vget_low_u16(v_2src)),
+                           v_src1 = vmull_u16(vget_high_u16(v_1src), vget_high_u16(v_2src));
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
+            }
+        }
+        else if (cn == 1)
+        {
+            uint8x8_t v_255 = vdup_n_u8(255), v_0 = vdup_n_u8(0);
+
+            for ( ; x <= len - 8; x += 8)
+            {
+                uint8x8_t v_mask_src = veor_u8(v_255, vceq_u8(vld1_u8(mask + x), v_0));
+                uint8x8x2_t v_mask_zp = vzip_u8(v_mask_src, v_mask_src);
+                uint16x8_t v_mask = vreinterpretq_u16_u8(vcombine_u8(v_mask_zp.val[0], v_mask_zp.val[1])),
+                           v_1src = vandq_u16(vld1q_u16(src1 + x), v_mask),
+                           v_2src = vandq_u16(vld1q_u16(src2 + x), v_mask);
+
+                uint32x4_t v_src0 = vmull_u16(vget_low_u16(v_1src), vget_low_u16(v_2src)),
+                           v_src1 = vmull_u16(vget_high_u16(v_1src), vget_high_u16(v_2src));
+
+                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
+                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccProd_SIMD<float, float>
+{
+    int operator() (const float * src1, const float * src2, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                vst1q_f32(dst + x, vmlaq_f32(vld1q_f32(dst + x), vld1q_f32(src1 + x), vld1q_f32(src2 + x)));
+                vst1q_f32(dst + x + 4, vmlaq_f32(vld1q_f32(dst + x + 4), vld1q_f32(src1 + x + 4), vld1q_f32(src2 + x + 4)));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccW_SIMD<uchar, float>
+{
+    int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
+    {
+        int x = 0;
+        float32x4_t v_alpha = vdupq_n_f32(alpha), v_beta = vdupq_n_f32(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 16; x += 16)
+            {
+                uint8x16_t v_src = vld1q_u8(src + x);
+                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
+
+                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta),
+                                             vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0))), v_alpha));
+                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta),
+                                             vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0))), v_alpha));
+                vst1q_f32(dst + x + 8, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 8), v_beta),
+                                                 vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))), v_alpha));
+                vst1q_f32(dst + x + 12, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 12), v_beta),
+                                                  vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))), v_alpha));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccW_SIMD<ushort, float>
+{
+    int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
+    {
+        int x = 0;
+        float32x4_t v_alpha = vdupq_n_f32(alpha), v_beta = vdupq_n_f32(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                uint16x8_t v_src = vld1q_u16(src + x);
+                uint32x4_t v_src0 = vmovl_u16(vget_low_u16(v_src)), v_src1 = vmovl_u16(vget_high_u16(v_src));
+
+                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta), vcvtq_f32_u32(v_src0), v_alpha));
+                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta), vcvtq_f32_u32(v_src1), v_alpha));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccW_SIMD<float, float>
+{
+    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
+    {
+        int x = 0;
+        float32x4_t v_alpha = vdupq_n_f32(alpha), v_beta = vdupq_n_f32(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta), vld1q_f32(src + x), v_alpha));
+                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta), vld1q_f32(src + x + 4), v_alpha));
+            }
+        }
+
+        return x;
+    }
+};
+
+#endif
+
 template<typename T, typename AT> void
 acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 {
-    int i = 0;
+    int i = Acc_SIMD<T, AT>()(src, dst, mask, len, cn);
 
     if( !mask )
     {
@@ -106,7 +531,7 @@ acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 template<typename T, typename AT> void
 accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 {
-    int i = 0;
+    int i = AccSqr_SIMD<T, AT>()(src, dst, mask, len, cn);
 
     if( !mask )
     {
@@ -164,7 +589,7 @@ accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 template<typename T, typename AT> void
 accProd_( const T* src1, const T* src2, AT* dst, const uchar* mask, int len, int cn )
 {
-    int i = 0;
+    int i = AccProd_SIMD<T, AT>()(src1, src2, dst, mask, len, cn);
 
     if( !mask )
     {
@@ -223,7 +648,7 @@ template<typename T, typename AT> void
 accW_( const T* src, AT* dst, const uchar* mask, int len, int cn, double alpha )
 {
     AT a = (AT)alpha, b = 1 - a;
-    int i = 0;
+    int i = AccW_SIMD<T, AT>()(src, dst, mask, len, cn, a);
 
     if( !mask )
     {
@@ -352,15 +777,143 @@ inline int getAccTabIdx(int sdepth, int ddepth)
            sdepth == CV_64F && ddepth == CV_64F ? 6 : -1;
 }
 
+#ifdef HAVE_OPENCL
+
+enum
+{
+    ACCUMULATE = 0,
+    ACCUMULATE_SQUARE = 1,
+    ACCUMULATE_PRODUCT = 2,
+    ACCUMULATE_WEIGHTED = 3
+};
+
+static bool ocl_accumulate( InputArray _src, InputArray _src2, InputOutputArray _dst, double alpha,
+                            InputArray _mask, int op_type )
+{
+    CV_Assert(op_type == ACCUMULATE || op_type == ACCUMULATE_SQUARE ||
+              op_type == ACCUMULATE_PRODUCT || op_type == ACCUMULATE_WEIGHTED);
+
+    const ocl::Device & dev = ocl::Device::getDefault();
+    bool haveMask = !_mask.empty(), doubleSupport = dev.doubleFPConfig() > 0;
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype), ddepth = _dst.depth();
+    int kercn = haveMask ? cn : ocl::predictOptimalVectorWidthMax(_src, _src2, _dst), rowsPerWI = dev.isIntel() ? 4 : 1;
+
+    if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        return false;
+
+    const char * const opMap[4] = { "ACCUMULATE", "ACCUMULATE_SQUARE", "ACCUMULATE_PRODUCT",
+                                   "ACCUMULATE_WEIGHTED" };
+
+    char cvt[40];
+    ocl::Kernel k("accumulate", ocl::imgproc::accumulate_oclsrc,
+                  format("-D %s%s -D srcT1=%s -D cn=%d -D dstT1=%s%s -D rowsPerWI=%d -D convertToDT=%s",
+                         opMap[op_type], haveMask ? " -D HAVE_MASK" : "",
+                         ocl::typeToStr(sdepth), kercn, ocl::typeToStr(ddepth),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "", rowsPerWI,
+                         ocl::convertTypeStr(sdepth, ddepth, 1, cvt)));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), src2 = _src2.getUMat(), dst = _dst.getUMat(), mask = _mask.getUMat();
+
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
+            dstarg = ocl::KernelArg::ReadWrite(dst, cn, kercn),
+            maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
+
+    int argidx = k.set(0, srcarg);
+    if (op_type == ACCUMULATE_PRODUCT)
+        argidx = k.set(argidx, src2arg);
+    argidx = k.set(argidx, dstarg);
+    if (op_type == ACCUMULATE_WEIGHTED)
+    {
+        if (ddepth == CV_32F)
+            argidx = k.set(argidx, (float)alpha);
+        else
+            argidx = k.set(argidx, alpha);
+    }
+    if (haveMask)
+        k.set(argidx, maskarg);
+
+    size_t globalsize[2] = { src.cols * cn / kercn, (src.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 }
 
 void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
-    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-    int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
-    CV_Assert( dst.size == src.size && dst.channels() == cn );
-    CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
+    CV_Assert( _src.sameSize(_dst) && dcn == scn );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE))
+
+    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+
+#if defined HAVE_IPP
+    CV_IPP_CHECK()
+    {
+        if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
+        {
+            typedef IppStatus (CV_STDCALL * ippiAdd)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
+            typedef IppStatus (CV_STDCALL * ippiAddMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
+                                                        int srcDstStep, IppiSize roiSize);
+            ippiAdd ippFunc = 0;
+            ippiAddMask ippFuncMask = 0;
+
+            if (mask.empty())
+            {
+                CV_SUPPRESS_DEPRECATED_START
+                ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAdd)ippiAdd_8u32f_C1IR :
+                    sdepth == CV_16U && ddepth == CV_32F ? (ippiAdd)ippiAdd_16u32f_C1IR :
+                    sdepth == CV_32F && ddepth == CV_32F ? (ippiAdd)ippiAdd_32f_C1IR : 0;
+                CV_SUPPRESS_DEPRECATED_END
+            }
+            else if (scn == 1)
+            {
+                ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddMask)ippiAdd_8u32f_C1IMR :
+                    sdepth == CV_16U && ddepth == CV_32F ? (ippiAddMask)ippiAdd_16u32f_C1IMR :
+                    sdepth == CV_32F && ddepth == CV_32F ? (ippiAddMask)ippiAdd_32f_C1IMR : 0;
+            }
+
+            if (ippFunc || ippFuncMask)
+            {
+                IppStatus status = ippStsNoErr;
+
+                Size size = src.size();
+                int srcstep = (int)src.step, dststep = (int)dst.step, maskstep = (int)mask.step;
+                if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
+                {
+                    srcstep = static_cast<int>(src.total() * src.elemSize());
+                    dststep = static_cast<int>(dst.total() * dst.elemSize());
+                    maskstep = static_cast<int>(mask.total() * mask.elemSize());
+                    size.width = static_cast<int>(src.total());
+                    size.height = 1;
+                }
+                size.width *= scn;
+
+                if (mask.empty())
+                    status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+                else
+                    status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                                         dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+
+                if (status >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+            }
+        }
+    }
+#endif
 
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccFunc func = fidx >= 0 ? accTab[fidx] : 0;
@@ -372,17 +925,78 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], ptrs[1], ptrs[2], len, cn);
+        func(ptrs[0], ptrs[1], ptrs[2], len, scn);
 }
-
 
 void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
-    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-    int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
-    CV_Assert( dst.size == src.size && dst.channels() == cn );
-    CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
+    CV_Assert( _src.sameSize(_dst) && dcn == scn );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE_SQUARE))
+
+    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+
+#if defined(HAVE_IPP)
+    CV_IPP_CHECK()
+    {
+        if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
+        {
+            typedef IppStatus (CV_STDCALL * ippiAddSquare)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
+            typedef IppStatus (CV_STDCALL * ippiAddSquareMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
+                                                               int srcDstStep, IppiSize roiSize);
+            ippiAddSquare ippFunc = 0;
+            ippiAddSquareMask ippFuncMask = 0;
+
+            if (mask.empty())
+            {
+                ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_8u32f_C1IR :
+                    sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_16u32f_C1IR :
+                    sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_32f_C1IR : 0;
+            }
+            else if (scn == 1)
+            {
+                ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_8u32f_C1IMR :
+                    sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_16u32f_C1IMR :
+                    sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_32f_C1IMR : 0;
+            }
+
+            if (ippFunc || ippFuncMask)
+            {
+                IppStatus status = ippStsNoErr;
+
+                Size size = src.size();
+                int srcstep = (int)src.step, dststep = (int)dst.step, maskstep = (int)mask.step;
+                if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
+                {
+                    srcstep = static_cast<int>(src.total() * src.elemSize());
+                    dststep = static_cast<int>(dst.total() * dst.elemSize());
+                    maskstep = static_cast<int>(mask.total() * mask.elemSize());
+                    size.width = static_cast<int>(src.total());
+                    size.height = 1;
+                }
+                size.width *= scn;
+
+                if (mask.empty())
+                    status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+                else
+                    status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                                         dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+
+                if (status >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+            }
+        }
+    }
+#endif
 
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccFunc func = fidx >= 0 ? accSqrTab[fidx] : 0;
@@ -394,18 +1008,83 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], ptrs[1], ptrs[2], len, cn);
+        func(ptrs[0], ptrs[1], ptrs[2], len, scn);
 }
 
 void cv::accumulateProduct( InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask )
 {
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-    int sdepth = src1.depth(), ddepth = dst.depth(), cn = src1.channels();
+    int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
-    CV_Assert( src2.size && src1.size && src2.type() == src1.type() );
-    CV_Assert( dst.size == src1.size && dst.channels() == cn );
-    CV_Assert( mask.empty() || (mask.size == src1.size && mask.type() == CV_8U) );
+    CV_Assert( _src1.sameSize(_src2) && stype == _src2.type() );
+    CV_Assert( _src1.sameSize(_dst) && dcn == scn );
+    CV_Assert( _mask.empty() || (_src1.sameSize(_mask) && _mask.type() == CV_8U) );
+
+    CV_OCL_RUN(_src1.dims() <= 2 && _dst.isUMat(),
+               ocl_accumulate(_src1, _src2, _dst, 0.0, _mask, ACCUMULATE_PRODUCT))
+
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+
+#if defined(HAVE_IPP)
+    CV_IPP_CHECK()
+    {
+        if (src1.dims <= 2 || (src1.isContinuous() && src2.isContinuous() && dst.isContinuous()))
+        {
+            typedef IppStatus (CV_STDCALL * ippiAddProduct)(const void * pSrc1, int src1Step, const void * pSrc2,
+                                                            int src2Step, Ipp32f * pSrcDst, int srcDstStep, IppiSize roiSize);
+            typedef IppStatus (CV_STDCALL * ippiAddProductMask)(const void * pSrc1, int src1Step, const void * pSrc2, int src2Step,
+                                                                const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst, int srcDstStep, IppiSize roiSize);
+            ippiAddProduct ippFunc = 0;
+            ippiAddProductMask ippFuncMask = 0;
+
+            if (mask.empty())
+            {
+                ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_8u32f_C1IR :
+                    sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_16u32f_C1IR :
+                    sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_32f_C1IR : 0;
+            }
+            else if (scn == 1)
+            {
+                ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_8u32f_C1IMR :
+                    sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_16u32f_C1IMR :
+                    sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_32f_C1IMR : 0;
+            }
+
+            if (ippFunc || ippFuncMask)
+            {
+                IppStatus status = ippStsNoErr;
+
+                Size size = src1.size();
+                int src1step = (int)src1.step, src2step = (int)src2.step, dststep = (int)dst.step, maskstep = (int)mask.step;
+                if (src1.isContinuous() && src2.isContinuous() && dst.isContinuous() && mask.isContinuous())
+                {
+                    src1step = static_cast<int>(src1.total() * src1.elemSize());
+                    src2step = static_cast<int>(src2.total() * src2.elemSize());
+                    dststep = static_cast<int>(dst.total() * dst.elemSize());
+                    maskstep = static_cast<int>(mask.total() * mask.elemSize());
+                    size.width = static_cast<int>(src1.total());
+                    size.height = 1;
+                }
+                size.width *= scn;
+
+                if (mask.empty())
+                    status = ippFunc(src1.ptr(), src1step, src2.ptr(), src2step, dst.ptr<Ipp32f>(),
+                                     dststep, ippiSize(size.width, size.height));
+                else
+                    status = ippFuncMask(src1.ptr(), src1step, src2.ptr(), src2step, mask.ptr<Ipp8u>(), maskstep,
+                                         dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+
+                if (status >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+            }
+        }
+    }
+#endif
 
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccProdFunc func = fidx >= 0 ? accProdTab[fidx] : 0;
@@ -417,18 +1096,81 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], ptrs[1], ptrs[2], ptrs[3], len, cn);
+        func(ptrs[0], ptrs[1], ptrs[2], ptrs[3], len, scn);
 }
-
 
 void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
-    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-    int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
-    CV_Assert( dst.size == src.size && dst.channels() == cn );
-    CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
+    CV_Assert( _src.sameSize(_dst) && dcn == scn );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_accumulate(_src, noArray(), _dst, alpha, _mask, ACCUMULATE_WEIGHTED))
+
+    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+
+#if defined(HAVE_IPP)
+    CV_IPP_CHECK()
+    {
+        if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && mask.isContinuous()))
+        {
+            typedef IppStatus (CV_STDCALL * ippiAddWeighted)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep,
+                                                             IppiSize roiSize, Ipp32f alpha);
+            typedef IppStatus (CV_STDCALL * ippiAddWeightedMask)(const void * pSrc, int srcStep, const Ipp8u * pMask,
+                                                                 int maskStep, Ipp32f * pSrcDst,
+                                                                 int srcDstStep, IppiSize roiSize, Ipp32f alpha);
+            ippiAddWeighted ippFunc = 0;
+            ippiAddWeightedMask ippFuncMask = 0;
+
+            if (mask.empty())
+            {
+                ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_8u32f_C1IR :
+                    sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_16u32f_C1IR :
+                    sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_32f_C1IR : 0;
+            }
+            else if (scn == 1)
+            {
+                ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_8u32f_C1IMR :
+                    sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_16u32f_C1IMR :
+                    sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_32f_C1IMR : 0;
+            }
+
+            if (ippFunc || ippFuncMask)
+            {
+                IppStatus status = ippStsNoErr;
+
+                Size size = src.size();
+                int srcstep = (int)src.step, dststep = (int)dst.step, maskstep = (int)mask.step;
+                if (src.isContinuous() && dst.isContinuous() && mask.isContinuous())
+                {
+                    srcstep = static_cast<int>(src.total() * src.elemSize());
+                    dststep = static_cast<int>(dst.total() * dst.elemSize());
+                    maskstep = static_cast<int>(mask.total() * mask.elemSize());
+                    size.width = static_cast<int>((int)src.total());
+                    size.height = 1;
+                }
+                size.width *= scn;
+
+                if (mask.empty())
+                    status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
+                else
+                    status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                                         dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
+
+                if (status >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+            }
+        }
+    }
+#endif
 
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccWFunc func = fidx >= 0 ? accWTab[fidx] : 0;
@@ -440,7 +1182,7 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], ptrs[1], ptrs[2], len, cn, alpha);
+        func(ptrs[0], ptrs[1], ptrs[2], len, scn, alpha);
 }
 
 

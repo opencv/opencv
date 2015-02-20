@@ -15,8 +15,9 @@
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/contrib.hpp"
 #include "opencv2/cudastereo.hpp"
+
+#include "tick_meter.hpp"
 
 using namespace std;
 using namespace cv;
@@ -277,7 +278,7 @@ public:
     StereoMultiGpuStream();
     ~StereoMultiGpuStream();
 
-    void compute(const CudaMem& leftFrame, const CudaMem& rightFrame, CudaMem& disparity);
+    void compute(const HostMem& leftFrame, const HostMem& rightFrame, HostMem& disparity);
 
 private:
     GpuMat d_leftFrames[2];
@@ -315,7 +316,7 @@ StereoMultiGpuStream::~StereoMultiGpuStream()
     streams[1].release();
 }
 
-void StereoMultiGpuStream::compute(const CudaMem& leftFrame, const CudaMem& rightFrame, CudaMem& disparity)
+void StereoMultiGpuStream::compute(const HostMem& leftFrame, const HostMem& rightFrame, HostMem& disparity)
 {
     disparity.create(leftFrame.size(), CV_8UC1);
 
@@ -402,7 +403,7 @@ int main(int argc, char** argv)
     cout << endl;
 
     Mat leftFrame, rightFrame;
-    CudaMem leftGrayFrame, rightGrayFrame;
+    HostMem leftGrayFrame, rightGrayFrame;
 
     StereoSingleGpu gpu0Alg(0);
     StereoSingleGpu gpu1Alg(1);
@@ -412,7 +413,7 @@ int main(int argc, char** argv)
     Mat disparityGpu0;
     Mat disparityGpu1;
     Mat disparityMultiThread;
-    CudaMem disparityMultiStream;
+    HostMem disparityMultiStream;
 
     Mat disparityGpu0Show;
     Mat disparityGpu1Show;

@@ -180,8 +180,8 @@ namespace cvtest
 
         for( i = 0; i < size.height; i++ )
         {
-            const float* sptr = (const float*)(temp.data + (i+radius)*temp.step) + radius*cn;
-            float* dptr = (float*)(dst.data + i*dst.step);
+            const float* sptr = temp.ptr<float>(i+radius) + radius*cn;
+            float* dptr = dst.ptr<float>(i);
 
             if( cn == 1 )
             {
@@ -264,7 +264,7 @@ namespace cvtest
             reference_dst.convertTo(reference_dst, type);
         }
 
-        double e = norm(reference_dst, _parallel_dst);
+        double e = cvtest::norm(reference_dst, _parallel_dst, NORM_L2);
         if (e > eps)
         {
             ts->printf(cvtest::TS::CONSOLE, "actual error: %g, expected: %g", e, eps);

@@ -5,6 +5,7 @@
  */
 
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,7 +15,7 @@ using namespace cv;
 /// Global variables
 
 int threshold_value = 0;
-int threshold_type = 3;;
+int threshold_type = 3;
 int const max_value = 255;
 int const max_type = 4;
 int const max_BINARY_value = 255;

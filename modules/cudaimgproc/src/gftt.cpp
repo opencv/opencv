@@ -68,7 +68,7 @@ namespace
         GoodFeaturesToTrackDetector(int srcType, int maxCorners, double qualityLevel, double minDistance,
                                     int blockSize, bool useHarrisDetector, double harrisK);
 
-        void detect(InputArray image, OutputArray corners, InputArray mask = noArray());
+        void detect(InputArray image, OutputArray corners, InputArray mask, Stream& stream);
 
     private:
         int maxCorners_;
@@ -81,7 +81,6 @@ namespace
         GpuMat Dy_;
         GpuMat buf_;
         GpuMat eig_;
-        GpuMat minMaxbuf_;
         GpuMat tmpCorners_;
     };
 
@@ -96,8 +95,11 @@ namespace
                     cuda::createMinEigenValCorner(srcType, blockSize, 3);
     }
 
-    void GoodFeaturesToTrackDetector::detect(InputArray _image, OutputArray _corners, InputArray _mask)
+    void GoodFeaturesToTrackDetector::detect(InputArray _image, OutputArray _corners, InputArray _mask, Stream& stream)
     {
+        // TODO : implement async version
+        (void) stream;
+
         using namespace cv::cuda::device::gfft;
 
         GpuMat image = _image.getGpuMat();
@@ -109,7 +111,7 @@ namespace
         cornerCriteria_->compute(image, eig_);
 
         double maxVal = 0;
-        cuda::minMax(eig_, 0, &maxVal, noArray(), minMaxbuf_);
+        cuda::minMax(eig_, 0, &maxVal);
 
         ensureSizeIsEnough(1, std::max(1000, static_cast<int>(image.size().area() * 0.05)), CV_32FC2, tmpCorners_);
 

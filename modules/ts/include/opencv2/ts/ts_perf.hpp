@@ -3,6 +3,9 @@
 
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
+#include "ts_ext.hpp"
+
+#include <functional>
 
 #if !(defined(LOGD) || defined(LOGI) || defined(LOGW) || defined(LOGE))
 # if defined(ANDROID) && defined(USE_ANDROID_LOGGING)
@@ -164,6 +167,7 @@ class CV_EXPORTS Regression
 {
 public:
     static Regression& add(TestBase* test, const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
+    static Regression& addMoments(TestBase* test, const std::string& name, const cv::Moments & array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
     static Regression& addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
     static Regression& addMatches(TestBase* test, const std::string& name, const std::vector<cv::DMatch>& array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
     static void Init(const std::string& testSuitName, const std::string& ext = ".xml");
@@ -201,9 +205,10 @@ private:
 };
 
 #define SANITY_CHECK(array, ...) ::perf::Regression::add(this, #array, array , ## __VA_ARGS__)
+#define SANITY_CHECK_MOMENTS(array, ...) ::perf::Regression::addMoments(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_KEYPOINTS(array, ...) ::perf::Regression::addKeypoints(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
-#define SANITY_CHECK_NOTHING() this->setVerified();
+#define SANITY_CHECK_NOTHING() this->setVerified()
 
 class CV_EXPORTS GpuPerf
 {
@@ -251,14 +256,104 @@ typedef struct CV_EXPORTS performance_metrics
 \*****************************************************************************************/
 enum PERF_STRATEGY
 {
+    PERF_STRATEGY_DEFAULT = -1,
     PERF_STRATEGY_BASE = 0,
-    PERF_STRATEGY_SIMPLE = 1,
+    PERF_STRATEGY_SIMPLE = 1
 };
 
 
 /*****************************************************************************************\
 *                           Base fixture for performance tests                            *
 \*****************************************************************************************/
+#ifdef CV_COLLECT_IMPL_DATA
+// Implementation collection processing class.
+// Accumulates and shapes implementation data.
+typedef struct ImplData
+{
+    bool ipp;
+    bool icv;
+    bool ipp_mt;
+    bool ocl;
+    bool plain;
+    std::vector<int> implCode;
+    std::vector<cv::String> funName;
+
+    ImplData()
+    {
+        Reset();
+    }
+
+    void Reset()
+    {
+        cv::setImpl(0);
+        ipp = icv = ocl = ipp_mt = false;
+        implCode.clear();
+        funName.clear();
+    }
+
+    void GetImpl()
+    {
+        flagsToVars(cv::getImpl(implCode, funName));
+    }
+
+    std::vector<cv::String> GetCallsForImpl(int impl)
+    {
+        std::vector<cv::String> out;
+
+        for(int i = 0; i < implCode.size(); i++)
+        {
+            if(impl == implCode[i])
+                out.push_back(funName[i]);
+        }
+        return out;
+    }
+
+    // Remove duplicate entries
+    void ShapeUp()
+    {
+        std::vector<int> savedCode;
+        std::vector<cv::String> savedName;
+
+        for(int i = 0; i < implCode.size(); i++)
+        {
+            bool match = false;
+            for(int j = 0; j < savedCode.size(); j++)
+            {
+                if(implCode[i] == savedCode[j] && !funName[i].compare(savedName[j]))
+                {
+                    match = true;
+                    break;
+                }
+            }
+            if(!match)
+            {
+                savedCode.push_back(implCode[i]);
+                savedName.push_back(funName[i]);
+            }
+        }
+
+        implCode = savedCode;
+        funName = savedName;
+    }
+
+    // convert flags register to more handy variables
+    void flagsToVars(int flags)
+    {
+#if defined(HAVE_IPP_ICV_ONLY)
+        ipp    = 0;
+        icv    = ((flags&CV_IMPL_IPP) > 0);
+#else
+        ipp    = ((flags&CV_IMPL_IPP) > 0);
+        icv    = 0;
+#endif
+        ipp_mt = ((flags&CV_IMPL_MT) > 0);
+        ocl    = ((flags&CV_IMPL_OCL) > 0);
+        plain  = (flags == 0);
+    }
+
+} ImplData;
+#endif
+
 class CV_EXPORTS TestBase: public ::testing::Test
 {
 public:
@@ -271,8 +366,8 @@ public:
     static std::string getDataPath(const std::string& relativePath);
     static std::string getSelectedImpl();
 
-    static enum PERF_STRATEGY getPerformanceStrategy();
-    static enum PERF_STRATEGY setPerformanceStrategy(enum PERF_STRATEGY strategy);
+    static enum PERF_STRATEGY getCurrentModulePerformanceStrategy();
+    static enum PERF_STRATEGY setModulePerformanceStrategy(enum PERF_STRATEGY strategy);
 
     class PerfSkipTestException: public cv::Exception {};
 
@@ -286,9 +381,9 @@ protected:
     void stopTimer();
     bool next();
 
-    //_declareHelper declare;
+    PERF_STRATEGY getCurrentPerformanceStrategy() const;
 
-    enum
+    enum WarmUpType
     {
         WARMUP_READ,
         WARMUP_WRITE,
@@ -297,10 +392,15 @@ protected:
     };
 
     void reportMetrics(bool toJUnitXML = false);
-    static void warmup(cv::InputOutputArray a, int wtype = WARMUP_READ);
+    static void warmup(cv::InputOutputArray a, WarmUpType wtype = WARMUP_READ);
 
     performance_metrics& calcMetrics();
+
     void RunPerfTestBody();
+
+#ifdef CV_COLLECT_IMPL_DATA
+    ImplData implConf;
+#endif
 private:
     typedef std::vector<std::pair<int, cv::Size> > SizeVector;
     typedef std::vector<int64> TimeVector;
@@ -310,6 +410,8 @@ private:
     unsigned int getTotalInputSize() const;
     unsigned int getTotalOutputSize() const;
 
+    enum PERF_STRATEGY testStrategy;
+
     TimeVector times;
     int64 lastTime;
     int64 totalTime;
@@ -317,9 +419,11 @@ private:
     static int64 timeLimitDefault;
     static unsigned int iterationsLimitDefault;
 
+    unsigned int minIters;
     unsigned int nIters;
     unsigned int currentIter;
     unsigned int runsPerIteration;
+    unsigned int perfValidationStage;
 
     performance_metrics metrics;
     void validateMetrics();
@@ -327,28 +431,30 @@ private:
     static int64 _timeadjustment;
     static int64 _calibrate();
 
-    static void warmup_impl(cv::Mat m, int wtype);
+    static void warmup_impl(cv::Mat m, WarmUpType wtype);
     static int getSizeInBytes(cv::InputArray a);
     static cv::Size getSize(cv::InputArray a);
-    static void declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype = 0);
+    static void declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpType wtype);
 
     class CV_EXPORTS _declareHelper
     {
     public:
-        _declareHelper& in(cv::InputOutputArray a1, int wtype = WARMUP_READ);
-        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype = WARMUP_READ);
-        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype = WARMUP_READ);
-        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, WarmUpType wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype = WARMUP_READ);
 
-        _declareHelper& out(cv::InputOutputArray a1, int wtype = WARMUP_WRITE);
-        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype = WARMUP_WRITE);
-        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype = WARMUP_WRITE);
-        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, WarmUpType wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype = WARMUP_WRITE);
 
         _declareHelper& iterations(unsigned int n);
         _declareHelper& time(double timeLimitSecs);
         _declareHelper& tbb_threads(int n = -1);
         _declareHelper& runs(unsigned int runsNumber);
+
+        _declareHelper& strategy(enum PERF_STRATEGY s);
     private:
         TestBase* test;
         _declareHelper(TestBase* t);
@@ -371,6 +477,9 @@ template<typename T> class TestBaseWithParam: public TestBase, public ::testing:
 typedef std::tr1::tuple<cv::Size, MatType> Size_MatType_t;
 typedef TestBaseWithParam<Size_MatType_t> Size_MatType;
 
+typedef std::tr1::tuple<cv::Size, MatDepth> Size_MatDepth_t;
+typedef TestBaseWithParam<Size_MatDepth_t> Size_MatDepth;
+
 /*****************************************************************************************\
 *                              Print functions for googletest                             *
 \*****************************************************************************************/
@@ -381,6 +490,7 @@ CV_EXPORTS void PrintTo(const MatType& t, std::ostream* os);
 namespace cv
 {
 
+CV_EXPORTS void PrintTo(const String& str, ::std::ostream* os);
 CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 
 } //namespace cv
@@ -498,6 +608,15 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 #endif
 #endif
 
+#ifdef HAVE_OPENCL
+namespace cvtest { namespace ocl {
+void dumpOpenCLDevice();
+}}
+#define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
+#else
+#define TEST_DUMP_OCL_INFO
+#endif
+
 #define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
     ::perf::Regression::Init(#modulename); \
     ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls), \
@@ -507,6 +626,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     ::testing::Test::RecordProperty("cv_module_name", #modulename); \
     ::perf::TestBase::RecordRunParameters(); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
+    TEST_DUMP_OCL_INFO \
     return RUN_ALL_TESTS();
 
 // impls must be an array, not a pointer; "plain" should always be one of the implementations
@@ -533,31 +653,33 @@ namespace comparators
 {
 
 template<typename T>
-struct CV_EXPORTS RectLess_
+struct CV_EXPORTS RectLess_ :
+        public std::binary_function<cv::Rect_<T>, cv::Rect_<T>, bool>
 {
   bool operator()(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2) const
   {
-    return r1.x < r2.x
-      || (r1.x == r2.x && r1.y < r2.y)
-      || (r1.x == r2.x && r1.y == r2.y && r1.width < r2.width)
-      || (r1.x == r2.x && r1.y == r2.y && r1.width == r2.width && r1.height < r2.height);
+    return r1.x < r2.x ||
+            (r1.x == r2.x && r1.y < r2.y) ||
+            (r1.x == r2.x && r1.y == r2.y && r1.width < r2.width) ||
+            (r1.x == r2.x && r1.y == r2.y && r1.width == r2.width && r1.height < r2.height);
   }
 };
 
 typedef RectLess_<int> RectLess;
 
-struct CV_EXPORTS KeypointGreater
+struct CV_EXPORTS KeypointGreater :
+        public std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
 {
     bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
     {
-        if(kp1.response > kp2.response) return true;
-        if(kp1.response < kp2.response) return false;
-        if(kp1.size > kp2.size) return true;
-        if(kp1.size < kp2.size) return false;
-        if(kp1.octave > kp2.octave) return true;
-        if(kp1.octave < kp2.octave) return false;
-        if(kp1.pt.y < kp2.pt.y) return false;
-        if(kp1.pt.y > kp2.pt.y) return true;
+        if (kp1.response > kp2.response) return true;
+        if (kp1.response < kp2.response) return false;
+        if (kp1.size > kp2.size) return true;
+        if (kp1.size < kp2.size) return false;
+        if (kp1.octave > kp2.octave) return true;
+        if (kp1.octave < kp2.octave) return false;
+        if (kp1.pt.y < kp2.pt.y) return false;
+        if (kp1.pt.y > kp2.pt.y) return true;
         return kp1.pt.x < kp2.pt.x;
     }
 };

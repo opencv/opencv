@@ -85,7 +85,7 @@ void CV_WatershedTest::run( int /* start_from */)
 
         //expected image was added with 1 in order to save to png
         //so now we substract 1 to get real color
-        if(exp.data)
+        if(!exp.empty())
             colors.push_back(exp.ptr(p->y)[p->x] - 1);
     }
     fs.release();
@@ -107,7 +107,7 @@ void CV_WatershedTest::run( int /* start_from */)
                 continue; // bad result, doing nothing and going to get error latter;
 
             // repaint in saved color to compare with expected;
-            if(exp.data)
+            if(!exp.empty())
                 pixel = colors[pixel];
         }
     }

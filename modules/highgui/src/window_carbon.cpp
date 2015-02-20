@@ -569,7 +569,7 @@ static int icvCreateTrackbar (const char* trackbar_name,
 
         //pad size maxvalue in pixel
         Point	qdSize;
-        char valueinchar[strlen(trackbar_name)+1 +1 +1+nbDigit+1];//lenght+\n +space +(+nbDigit+)
+        char valueinchar[strlen(trackbar_name)+1 +1 +1+nbDigit+1];//length+\n +space +(+nbDigit+)
         sprintf(valueinchar, "%s (%d)",trackbar_name, trackbar->maxval);
         SInt16	baseline;
         CFStringRef text = CFStringCreateWithCString(NULL,valueinchar,kCFStringEncodingASCII);
@@ -831,6 +831,23 @@ void cvSetModeWindow_CARBON( const char* name, double prop_value)//Yannick Verdi
     }
 
     __END__;
+}
+
+void cv::setWindowTitle(const String& winname, const String& title)
+{
+    CvWindow* window = icvFindWindowByName(winname.c_str());
+
+    if (!window)
+    {
+        namedWindow(winname);
+        window = icvFindWindowByName(winname.c_str());
+    }
+
+    if (!window)
+        CV_Error(Error::StsNullPtr, "NULL window");
+
+    if (noErr != SetWindowTitleWithCFString(window->window, CFStringCreateWithCString(NULL, title.c_str(), kCFStringEncodingASCII)))
+        CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", winname.c_str(), title.c_str()));
 }
 
 CV_IMPL int cvNamedWindow( const char* name, int flags )

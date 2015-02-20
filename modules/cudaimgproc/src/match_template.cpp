@@ -61,77 +61,77 @@ namespace cv { namespace cuda { namespace device
         void matchTemplateNaive_SQDIFF_8U(const PtrStepSzb image, const PtrStepSzb templ, PtrStepSzf result, int cn, cudaStream_t stream);
         void matchTemplateNaive_SQDIFF_32F(const PtrStepSzb image, const PtrStepSzb templ, PtrStepSzf result, int cn, cudaStream_t stream);
 
-        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result,
+        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const PtrStepSz<double> image_sqsum, double templ_sqsum, PtrStepSzf result,
             int cn, cudaStream_t stream);
 
-        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result,
+        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const PtrStepSz<double> image_sqsum, double templ_sqsum, PtrStepSzf result,
             int cn, cudaStream_t stream);
 
-        void matchTemplatePrepared_CCOFF_8U(int w, int h, const PtrStepSz<unsigned int> image_sum, unsigned int templ_sum, PtrStepSzf result, cudaStream_t stream);
+        void matchTemplatePrepared_CCOFF_8U(int w, int h, const PtrStepSz<int> image_sum, int templ_sum, PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_8UC2(
             int w, int h,
-            const PtrStepSz<unsigned int> image_sum_r,
-            const PtrStepSz<unsigned int> image_sum_g,
-            unsigned int templ_sum_r,
-            unsigned int templ_sum_g,
+            const PtrStepSz<int> image_sum_r,
+            const PtrStepSz<int> image_sum_g,
+            int templ_sum_r,
+            int templ_sum_g,
             PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_8UC3(
                 int w, int h,
-                const PtrStepSz<unsigned int> image_sum_r,
-                const PtrStepSz<unsigned int> image_sum_g,
-                const PtrStepSz<unsigned int> image_sum_b,
-                unsigned int templ_sum_r,
-                unsigned int templ_sum_g,
-                unsigned int templ_sum_b,
+                const PtrStepSz<int> image_sum_r,
+                const PtrStepSz<int> image_sum_g,
+                const PtrStepSz<int> image_sum_b,
+                int templ_sum_r,
+                int templ_sum_g,
+                int templ_sum_b,
                 PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_8UC4(
                 int w, int h,
-                const PtrStepSz<unsigned int> image_sum_r,
-                const PtrStepSz<unsigned int> image_sum_g,
-                const PtrStepSz<unsigned int> image_sum_b,
-                const PtrStepSz<unsigned int> image_sum_a,
-                unsigned int templ_sum_r,
-                unsigned int templ_sum_g,
-                unsigned int templ_sum_b,
-                unsigned int templ_sum_a,
+                const PtrStepSz<int> image_sum_r,
+                const PtrStepSz<int> image_sum_g,
+                const PtrStepSz<int> image_sum_b,
+                const PtrStepSz<int> image_sum_a,
+                int templ_sum_r,
+                int templ_sum_g,
+                int templ_sum_b,
+                int templ_sum_a,
                 PtrStepSzf result, cudaStream_t stream);
 
 
         void matchTemplatePrepared_CCOFF_NORMED_8U(
-                int w, int h, const PtrStepSz<unsigned int> image_sum,
-                const PtrStepSz<unsigned long long> image_sqsum,
-                unsigned int templ_sum, unsigned long long templ_sqsum,
+                int w, int h, const PtrStepSz<int> image_sum,
+                const PtrStepSz<double> image_sqsum,
+                int templ_sum, double templ_sqsum,
                 PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_NORMED_8UC2(
                 int w, int h,
-                const PtrStepSz<unsigned int> image_sum_r, const PtrStepSz<unsigned long long> image_sqsum_r,
-                const PtrStepSz<unsigned int> image_sum_g, const PtrStepSz<unsigned long long> image_sqsum_g,
-                unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
-                unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
+                const PtrStepSz<int> image_sum_r, const PtrStepSz<double> image_sqsum_r,
+                const PtrStepSz<int> image_sum_g, const PtrStepSz<double> image_sqsum_g,
+                int templ_sum_r, double templ_sqsum_r,
+                int templ_sum_g, double templ_sqsum_g,
                 PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_NORMED_8UC3(
                 int w, int h,
-                const PtrStepSz<unsigned int> image_sum_r, const PtrStepSz<unsigned long long> image_sqsum_r,
-                const PtrStepSz<unsigned int> image_sum_g, const PtrStepSz<unsigned long long> image_sqsum_g,
-                const PtrStepSz<unsigned int> image_sum_b, const PtrStepSz<unsigned long long> image_sqsum_b,
-                unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
-                unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
-                unsigned int templ_sum_b, unsigned long long templ_sqsum_b,
+                const PtrStepSz<int> image_sum_r, const PtrStepSz<double> image_sqsum_r,
+                const PtrStepSz<int> image_sum_g, const PtrStepSz<double> image_sqsum_g,
+                const PtrStepSz<int> image_sum_b, const PtrStepSz<double> image_sqsum_b,
+                int templ_sum_r, double templ_sqsum_r,
+                int templ_sum_g, double templ_sqsum_g,
+                int templ_sum_b, double templ_sqsum_b,
                 PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_NORMED_8UC4(
                 int w, int h,
-                const PtrStepSz<unsigned int> image_sum_r, const PtrStepSz<unsigned long long> image_sqsum_r,
-                const PtrStepSz<unsigned int> image_sum_g, const PtrStepSz<unsigned long long> image_sqsum_g,
-                const PtrStepSz<unsigned int> image_sum_b, const PtrStepSz<unsigned long long> image_sqsum_b,
-                const PtrStepSz<unsigned int> image_sum_a, const PtrStepSz<unsigned long long> image_sqsum_a,
-                unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
-                unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
-                unsigned int templ_sum_b, unsigned long long templ_sqsum_b,
-                unsigned int templ_sum_a, unsigned long long templ_sqsum_a,
+                const PtrStepSz<int> image_sum_r, const PtrStepSz<double> image_sqsum_r,
+                const PtrStepSz<int> image_sum_g, const PtrStepSz<double> image_sqsum_g,
+                const PtrStepSz<int> image_sum_b, const PtrStepSz<double> image_sqsum_b,
+                const PtrStepSz<int> image_sum_a, const PtrStepSz<double> image_sqsum_a,
+                int templ_sum_r, double templ_sqsum_r,
+                int templ_sum_g, double templ_sqsum_g,
+                int templ_sum_b, double templ_sqsum_b,
+                int templ_sum_a, double templ_sqsum_a,
                 PtrStepSzf result, cudaStream_t stream);
 
-        void normalize_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum,
-                          unsigned long long templ_sqsum, PtrStepSzf result, int cn, cudaStream_t stream);
+        void normalize_8U(int w, int h, const PtrStepSz<double> image_sqsum,
+                          double templ_sqsum, PtrStepSzf result, int cn, cudaStream_t stream);
 
         void extractFirstChannel_32F(const PtrStepSzb image, PtrStepSzf result, int cn, cudaStream_t stream);
     }
@@ -271,7 +271,6 @@ namespace
     private:
         Match_CCORR_8U match_CCORR_;
         GpuMat image_sqsums_;
-        GpuMat intBuffer_;
     };
 
     void Match_CCORR_NORMED_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
@@ -288,9 +287,9 @@ namespace
         match_CCORR_.match(image, templ, _result, stream);
         GpuMat result = _result.getGpuMat();
 
-        cuda::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
+        cuda::sqrIntegral(image.reshape(1), image_sqsums_, stream);
 
-        unsigned long long templ_sqsum = (unsigned long long) cuda::sqrSum(templ.reshape(1))[0];
+        double templ_sqsum = cuda::sqrSum(templ.reshape(1))[0];
 
         normalize_8U(templ.cols, templ.rows, image_sqsums_, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
     }
@@ -335,7 +334,6 @@ namespace
 
     private:
         GpuMat image_sqsums_;
-        GpuMat intBuffer_;
         Match_CCORR_8U match_CCORR_;
     };
 
@@ -359,9 +357,9 @@ namespace
             return;
         }
 
-        cuda::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
+        cuda::sqrIntegral(image.reshape(1), image_sqsums_, stream);
 
-        unsigned long long templ_sqsum = (unsigned long long) cuda::sqrSum(templ.reshape(1))[0];
+        double templ_sqsum = cuda::sqrSum(templ.reshape(1))[0];
 
         match_CCORR_.match(image, templ, _result, stream);
         GpuMat result = _result.getGpuMat();
@@ -383,7 +381,6 @@ namespace
 
     private:
         GpuMat image_sqsums_;
-        GpuMat intBuffer_;
         Match_CCORR_8U match_CCORR_;
     };
 
@@ -398,9 +395,9 @@ namespace
         CV_Assert( image.type() == templ.type() );
         CV_Assert( image.cols >= templ.cols && image.rows >= templ.rows );
 
-        cuda::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
+        cuda::sqrIntegral(image.reshape(1), image_sqsums_, stream);
 
-        unsigned long long templ_sqsum = (unsigned long long) cuda::sqrSum(templ.reshape(1))[0];
+        double templ_sqsum = cuda::sqrSum(templ.reshape(1))[0];
 
         match_CCORR_.match(image, templ, _result, stream);
         GpuMat result = _result.getGpuMat();
@@ -421,7 +418,6 @@ namespace
         void match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null());
 
     private:
-        GpuMat intBuffer_;
         std::vector<GpuMat> images_;
         std::vector<GpuMat> image_sums_;
         Match_CCORR_8U match_CCORR_;
@@ -444,9 +440,9 @@ namespace
         if (image.channels() == 1)
         {
             image_sums_.resize(1);
-            cuda::integral(image, image_sums_[0], intBuffer_, stream);
+            cuda::integral(image, image_sums_[0], stream);
 
-            unsigned int templ_sum = (unsigned int) cuda::sum(templ)[0];
+            int templ_sum = (int) cuda::sum(templ)[0];
 
             matchTemplatePrepared_CCOFF_8U(templ.cols, templ.rows, image_sums_[0], templ_sum, result, StreamAccessor::getStream(stream));
         }
@@ -456,7 +452,7 @@ namespace
 
             image_sums_.resize(images_.size());
             for (int i = 0; i < image.channels(); ++i)
-                cuda::integral(images_[i], image_sums_[i], intBuffer_, stream);
+                cuda::integral(images_[i], image_sums_[i], stream);
 
             Scalar templ_sum = cuda::sum(templ);
 
@@ -465,19 +461,19 @@ namespace
             case 2:
                 matchTemplatePrepared_CCOFF_8UC2(
                         templ.cols, templ.rows, image_sums_[0], image_sums_[1],
-                        (unsigned int) templ_sum[0], (unsigned int) templ_sum[1],
+                        (int) templ_sum[0], (int) templ_sum[1],
                         result, StreamAccessor::getStream(stream));
                 break;
             case 3:
                 matchTemplatePrepared_CCOFF_8UC3(
                         templ.cols, templ.rows, image_sums_[0], image_sums_[1], image_sums_[2],
-                        (unsigned int) templ_sum[0], (unsigned int) templ_sum[1], (unsigned int) templ_sum[2],
+                        (int) templ_sum[0], (int) templ_sum[1], (int) templ_sum[2],
                         result, StreamAccessor::getStream(stream));
                 break;
             case 4:
                 matchTemplatePrepared_CCOFF_8UC4(
                         templ.cols, templ.rows, image_sums_[0], image_sums_[1], image_sums_[2], image_sums_[3],
-                        (unsigned int) templ_sum[0], (unsigned int) templ_sum[1], (unsigned int) templ_sum[2], (unsigned int) templ_sum[3],
+                        (int) templ_sum[0], (int) templ_sum[1], (int) templ_sum[2], (int) templ_sum[3],
                         result, StreamAccessor::getStream(stream));
                 break;
             default:
@@ -501,7 +497,6 @@ namespace
     private:
         GpuMat imagef_, templf_;
         Match_CCORR_32F match_CCORR_32F_;
-        GpuMat intBuffer_;
         std::vector<GpuMat> images_;
         std::vector<GpuMat> image_sums_;
         std::vector<GpuMat> image_sqsums_;
@@ -527,13 +522,13 @@ namespace
         if (image.channels() == 1)
         {
             image_sums_.resize(1);
-            cuda::integral(image, image_sums_[0], intBuffer_, stream);
+            cuda::integral(image, image_sums_[0], stream);
 
             image_sqsums_.resize(1);
-            cuda::sqrIntegral(image, image_sqsums_[0], intBuffer_, stream);
+            cuda::sqrIntegral(image, image_sqsums_[0], stream);
 
-            unsigned int templ_sum = (unsigned int) cuda::sum(templ)[0];
-            unsigned long long templ_sqsum = (unsigned long long) cuda::sqrSum(templ)[0];
+            int templ_sum = (int) cuda::sum(templ)[0];
+            double templ_sqsum = cuda::sqrSum(templ)[0];
 
             matchTemplatePrepared_CCOFF_NORMED_8U(
                     templ.cols, templ.rows, image_sums_[0], image_sqsums_[0],
@@ -547,8 +542,8 @@ namespace
             image_sqsums_.resize(images_.size());
             for (int i = 0; i < image.channels(); ++i)
             {
-                cuda::integral(images_[i], image_sums_[i], intBuffer_, stream);
-                cuda::sqrIntegral(images_[i], image_sqsums_[i], intBuffer_, stream);
+                cuda::integral(images_[i], image_sums_[i], stream);
+                cuda::sqrIntegral(images_[i], image_sqsums_[i], stream);
             }
 
             Scalar templ_sum = cuda::sum(templ);
@@ -561,8 +556,8 @@ namespace
                         templ.cols, templ.rows,
                         image_sums_[0], image_sqsums_[0],
                         image_sums_[1], image_sqsums_[1],
-                        (unsigned int)templ_sum[0], (unsigned long long)templ_sqsum[0],
-                        (unsigned int)templ_sum[1], (unsigned long long)templ_sqsum[1],
+                        (int)templ_sum[0], templ_sqsum[0],
+                        (int)templ_sum[1], templ_sqsum[1],
                         result, StreamAccessor::getStream(stream));
                 break;
             case 3:
@@ -571,9 +566,9 @@ namespace
                         image_sums_[0], image_sqsums_[0],
                         image_sums_[1], image_sqsums_[1],
                         image_sums_[2], image_sqsums_[2],
-                        (unsigned int)templ_sum[0], (unsigned long long)templ_sqsum[0],
-                        (unsigned int)templ_sum[1], (unsigned long long)templ_sqsum[1],
-                        (unsigned int)templ_sum[2], (unsigned long long)templ_sqsum[2],
+                        (int)templ_sum[0], templ_sqsum[0],
+                        (int)templ_sum[1], templ_sqsum[1],
+                        (int)templ_sum[2], templ_sqsum[2],
                         result, StreamAccessor::getStream(stream));
                 break;
             case 4:
@@ -583,10 +578,10 @@ namespace
                         image_sums_[1], image_sqsums_[1],
                         image_sums_[2], image_sqsums_[2],
                         image_sums_[3], image_sqsums_[3],
-                        (unsigned int)templ_sum[0], (unsigned long long)templ_sqsum[0],
-                        (unsigned int)templ_sum[1], (unsigned long long)templ_sqsum[1],
-                        (unsigned int)templ_sum[2], (unsigned long long)templ_sqsum[2],
-                        (unsigned int)templ_sum[3], (unsigned long long)templ_sqsum[3],
+                        (int)templ_sum[0], templ_sqsum[0],
+                        (int)templ_sum[1], templ_sqsum[1],
+                        (int)templ_sum[2], templ_sqsum[2],
+                        (int)templ_sum[3], templ_sqsum[3],
                         result, StreamAccessor::getStream(stream));
                 break;
             default:

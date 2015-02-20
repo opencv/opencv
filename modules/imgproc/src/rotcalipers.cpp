@@ -356,7 +356,7 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     }
 
     int n = hull.checkVector(2);
-    const Point2f* hpoints = (const Point2f*)hull.data;
+    const Point2f* hpoints = hull.ptr<Point2f>();
 
     if( n > 2 )
     {
@@ -402,5 +402,5 @@ void cv::boxPoints(cv::RotatedRect box, OutputArray _pts)
 {
     _pts.create(4, 2, CV_32F);
     Mat pts = _pts.getMat();
-    box.points((Point2f*)pts.data);
+    box.points(pts.ptr<Point2f>());
 }

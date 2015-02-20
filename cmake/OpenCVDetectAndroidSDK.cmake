@@ -280,9 +280,6 @@ macro(add_android_project target path)
       string(REGEX REPLACE "LOCAL_MODULE[ ]*:=[ ]*([a-zA-Z_][a-zA-Z_0-9]*)[ ]*" "\\1" JNI_LIB_NAME "${JNI_LIB_NAME}")
 
       if(JNI_LIB_NAME)
-        ocv_include_modules_recurse(${android_proj_NATIVE_DEPS})
-        ocv_include_directories("${path}/jni")
-
         if(NATIVE_APP_GLUE)
           include_directories(${ANDROID_NDK}/sources/android/native_app_glue)
           list(APPEND android_proj_jni_files ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
@@ -291,7 +288,9 @@ macro(add_android_project target path)
         endif()
 
         add_library(${JNI_LIB_NAME} MODULE ${android_proj_jni_files})
-        target_link_libraries(${JNI_LIB_NAME} ${OPENCV_LINKER_LIBS} ${android_proj_NATIVE_DEPS})
+        ocv_target_include_modules_recurse(${JNI_LIB_NAME} ${android_proj_NATIVE_DEPS})
+        ocv_target_include_directories(${JNI_LIB_NAME} "${path}/jni")
+        ocv_target_link_libraries(${JNI_LIB_NAME} ${OPENCV_LINKER_LIBS} ${android_proj_NATIVE_DEPS})
 
         set_target_properties(${JNI_LIB_NAME} PROPERTIES
             OUTPUT_NAME "${JNI_LIB_NAME}"
@@ -335,6 +334,16 @@ macro(add_android_project target path)
       add_dependencies(${target} ${android_proj_native_deps})
     endif()
 
+    if(ANDROID_EXAMPLES_WITH_LIBS)
+      add_custom_target(
+        ${target}_copy_libs
+        COMMAND ${CMAKE_COMMAND} -DSRC_DIR=${OpenCV_BINARY_DIR}/lib -DDST_DIR=${android_proj_bin_dir}/libs -P ${OpenCV_SOURCE_DIR}/cmake/copyAndroidLibs.cmake
+        WORKING_DIRECTORY ${OpenCV_BINARY_DIR}/lib
+        DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java
+      )
+      add_dependencies(${target} ${target}_copy_libs)
+    endif()
+
     if(__android_project_chain)
       add_dependencies(${target} ${__android_project_chain})
     endif()
@@ -344,20 +353,20 @@ macro(add_android_project target path)
     add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${android_proj_bin_dir}/bin/${target}-debug.apk" "${OpenCV_BINARY_DIR}/bin/${target}.apk")
     if(INSTALL_ANDROID_EXAMPLES AND "${target}" MATCHES "^example-")
       #apk
-      install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "samples" COMPONENT main)
+      install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "samples" COMPONENT samples)
       get_filename_component(sample_dir "${path}" NAME)
       #java part
       list(REMOVE_ITEM android_proj_files ${ANDROID_MANIFEST_FILE})
       foreach(f ${android_proj_files} ${ANDROID_MANIFEST_FILE})
         get_filename_component(install_subdir "${f}" PATH)
-        install(FILES "${android_proj_bin_dir}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT main)
+        install(FILES "${android_proj_bin_dir}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT samples)
       endforeach()
       #jni part + eclipse files
       file(GLOB_RECURSE jni_files RELATIVE "${path}" "${path}/jni/*" "${path}/.cproject")
       ocv_list_filterout(jni_files "\\\\.svn")
       foreach(f ${jni_files} ".classpath" ".project" ".settings/org.eclipse.jdt.core.prefs")
         get_filename_component(install_subdir "${f}" PATH)
-        install(FILES "${path}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT main)
+        install(FILES "${path}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT samples)
       endforeach()
       #update proj
       if(android_proj_lib_deps_commands)
@@ -365,9 +374,9 @@ macro(add_android_project target path)
       endif()
       install(CODE "EXECUTE_PROCESS(COMMAND ${ANDROID_EXECUTABLE} --silent update project --path . --target \"${android_proj_sdk_target}\" --name \"${target}\" ${inst_lib_opt}
                                     WORKING_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}\"
-                                   )"  COMPONENT main)
+                                   )"  COMPONENT samples)
       #empty 'gen'
-      install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}/gen\")" COMPONENT main)
+      install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}/gen\")" COMPONENT samples)
     endif()
   endif()
 endmacro()

@@ -1,2 +1,2 @@
-set path=c:\dev\msys32\bin;%path% & gcc -Wall -shared -o opencv_ffmpeg.dll -O2 -x c++ -I../include -I../include/ffmpeg_ -I../../modules/highgui/src ffopencv.c -L../lib -lavformat -lavcodec -lavdevice -lswscale -lavutil -liconv -lws2_32
+set path=c:\dev\msys32\bin;%path% & gcc -Wall -shared -o opencv_ffmpeg.dll -O2 -x c++ -I../include -I../include/ffmpeg_ -I../../modules/highgui/src ffopencv.c -L../lib -lavformat -lavcodec -lavdevice -lswscale -lavutil -lws2_32
 set path=c:\dev\msys64\bin;%path% & gcc -m64 -Wall -shared -o opencv_ffmpeg_64.dll -O2 -x c++ -I../include -I../include/ffmpeg_ -I../../modules/highgui/src ffopencv.c -L../lib -lavformat64 -lavcodec64 -lavdevice64 -lswscale64 -lavutil64 -lws2_32

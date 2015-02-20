@@ -57,6 +57,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 #define CV_CUDEV_EXPR_UNOP_INST(op, functor) \
     template <typename T> \
     __host__ Expr<UnaryTransformPtrSz<typename PtrTraits<GpuMat_<T> >::ptr_type, functor<T> > > \
@@ -88,6 +91,8 @@ CV_CUDEV_EXPR_UNOP_INST(!, logical_not)
 CV_CUDEV_EXPR_UNOP_INST(~, bit_not)
 
 #undef CV_CUDEV_EXPR_UNOP_INST
+
+//! @}
 
 }}
 

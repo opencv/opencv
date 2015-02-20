@@ -17,7 +17,7 @@ in case of ~50% of outliers.
 
 Keys
 ----
-SPACE - generaty random points
+SPACE - generate random points
 f     - change distance function
 ESC   - exit
 '''
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     cv2.createTrackbar('outlier %', 'fit line', 30, 100, update)
     while True:
         update()
-        ch = cv2.waitKey(0)
+        ch = cv2.waitKey(0) & 0xFF
         if ch == ord('f'):
             cur_func_name = dist_func_names.next()
         if ch == 27:

@@ -12,6 +12,7 @@ import org.opencv.features2d.FeatureDetector;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+import org.opencv.imgproc.Imgproc;
 
 public class STARFeatureDetectorTest extends OpenCVTestCase {
 
@@ -33,11 +34,11 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
         int offset = 40;
 
         Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.circle(img, new Point(center - offset, center), radius, color, -1);
-        Core.circle(img, new Point(center + offset, center), radius, color, -1);
-        Core.circle(img, new Point(center, center - offset), radius, color, -1);
-        Core.circle(img, new Point(center, center + offset), radius, color, -1);
-        Core.circle(img, new Point(center, center), radius, color, -1);
+        Imgproc.circle(img, new Point(center - offset, center), radius, color, -1);
+        Imgproc.circle(img, new Point(center + offset, center), radius, color, -1);
+        Imgproc.circle(img, new Point(center, center - offset), radius, color, -1);
+        Imgproc.circle(img, new Point(center, center + offset), radius, color, -1);
+        Imgproc.circle(img, new Point(center, center), radius, color, -1);
         return img;
     }
 

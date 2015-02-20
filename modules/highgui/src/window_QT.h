@@ -132,6 +132,7 @@ public slots:
     double isFullScreen(QString name);
     double getPropWindow(QString name);
     void setPropWindow(QString name, double flags );
+    void setWindowTitle(QString name, QString title);
     double getRatioWindow(QString name);
     void setRatioWindow(QString name, double arg2 );
     void saveWindowParameters(QString name);

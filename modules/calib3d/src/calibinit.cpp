@@ -256,7 +256,6 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         *out_corner_count = 0;
 
     IplImage _img;
-    int check_chessboard_result;
     int quad_count = 0, group_idx = 0, dilations = 0;
 
     img = cvGetMat( img, &stub );
@@ -302,7 +301,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     if( flags & CV_CALIB_CB_FAST_CHECK)
     {
         cvGetImage(img, &_img);
-        check_chessboard_result = cvCheckChessboard(&_img, pattern_size);
+        int check_chessboard_result = cvCheckChessboard(&_img, pattern_size);
         if(check_chessboard_result <= 0)
         {
             return 0;
@@ -1144,7 +1143,6 @@ icvCleanFoundConnectedQuads( int quad_count, CvCBQuad **quad_group, CvSize patte
     {
         double min_box_area = DBL_MAX;
         int skip, min_box_area_index = -1;
-        CvCBQuad *q0, *q;
 
         // For each point, calculate box area without that point
         for( skip = 0; skip < quad_count; skip++ )
@@ -1166,12 +1164,12 @@ icvCleanFoundConnectedQuads( int quad_count, CvCBQuad **quad_group, CvSize patte
             cvClearMemStorage( temp_storage );
         }
 
-        q0 = quad_group[min_box_area_index];
+        CvCBQuad *q0 = quad_group[min_box_area_index];
 
         // remove any references to this quad as a neighbor
         for( i = 0; i < quad_count; i++ )
         {
-            q = quad_group[i];
+            CvCBQuad *q = quad_group[i];
             for( j = 0; j < 4; j++ )
             {
                 if( q->neighbors[j] == q0 )
@@ -1939,7 +1937,7 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
     Mat image = _image.getMat(); CvMat c_image = _image.getMat();
     int nelems = corners.checkVector(2, CV_32F, true);
     CV_Assert(nelems >= 0);
-    cvDrawChessboardCorners( &c_image, patternSize, (CvPoint2D32f*)corners.data,
+    cvDrawChessboardCorners( &c_image, patternSize, corners.ptr<CvPoint2D32f>(),
                              nelems, patternWasFound );
 }
 
@@ -1998,7 +1996,7 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
       {
         isFound = boxFinder.findHoles();
       }
-      catch (cv::Exception)
+      catch (const cv::Exception &)
       {
 
       }

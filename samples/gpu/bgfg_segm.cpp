@@ -4,6 +4,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/cudabgsegm.hpp"
+#include "opencv2/cudalegacy.hpp"
 #include "opencv2/video.hpp"
 #include "opencv2/highgui.hpp"
 
@@ -23,7 +24,7 @@ int main(int argc, const char** argv)
 {
     cv::CommandLineParser cmd(argc, argv,
         "{ c camera |             | use camera }"
-        "{ f file   | 768x576.avi | input video file }"
+        "{ f file   | ../data/768x576.avi | input video file }"
         "{ m method | mog         | method (mog, mog2, gmg, fgd) }"
         "{ h help   |             | print help message }");
 
