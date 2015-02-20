@@ -29,27 +29,27 @@ namespace PhoneXamlDirect3DApp1Comp
 {
     // Called each time a preview frame is available
     void CameraCapturePreviewSink::OnFrameAvailable(
-	    DXGI_FORMAT format,
-	    UINT width,
-	    UINT height,
-	    BYTE* pixels
-	    )
+        DXGI_FORMAT format,
+        UINT width,
+        UINT height,
+        BYTE* pixels
+        )
     {
-        m_Direct3dInterop->UpdateFrame(pixels, width, height);  
+        m_Direct3dInterop->UpdateFrame(pixels, width, height);
     }
 
-    // Called each time a captured frame is available	
+    // Called each time a captured frame is available
     void CameraCaptureSampleSink::OnSampleAvailable(
-	    ULONGLONG hnsPresentationTime,
-	    ULONGLONG hnsSampleDuration,
-	    DWORD cbSample,
-	    BYTE* pSample)
+        ULONGLONG hnsPresentationTime,
+        ULONGLONG hnsSampleDuration,
+        DWORD cbSample,
+        BYTE* pSample)
     {
 
 
     }
 
-    Direct3DInterop::Direct3DInterop() 
+    Direct3DInterop::Direct3DInterop()
         : m_algorithm(OCVFilterType::ePreview)
         , m_contentDirty(false)
         , m_backFrame(nullptr)
@@ -84,80 +84,80 @@ namespace PhoneXamlDirect3DApp1Comp
 
     void Direct3DInterop::ProcessFrame()
     {
-		if (SwapFrames())
-		{
-			if (m_renderer)
-			{
-				cv::Mat* mat = m_frontFrame.get();
-				
-				switch (m_algorithm)
-				{
-					case OCVFilterType::ePreview:
-					{
-						break;
-					}
+        if (SwapFrames())
+        {
+            if (m_renderer)
+            {
+                cv::Mat* mat = m_frontFrame.get();
 
-					case OCVFilterType::eGray:
-					{
-						ApplyGrayFilter(mat);
-						break;
-					}
+                switch (m_algorithm)
+                {
+                    case OCVFilterType::ePreview:
+                    {
+                        break;
+                    }
 
-					case OCVFilterType::eCanny:
-					{
-						ApplyCannyFilter(mat);
-						break;
-					}
+                    case OCVFilterType::eGray:
+                    {
+                        ApplyGrayFilter(mat);
+                        break;
+                    }
 
-					case OCVFilterType::eBlur:
-					{
-						ApplyBlurFilter(mat);
-						break;
-					}
+                    case OCVFilterType::eCanny:
+                    {
+                        ApplyCannyFilter(mat);
+                        break;
+                    }
 
-					case OCVFilterType::eFindFeatures:
-					{
-						ApplyFindFeaturesFilter(mat);
-						break;
-					}
+                    case OCVFilterType::eBlur:
+                    {
+                        ApplyBlurFilter(mat);
+                        break;
+                    }
 
-					case OCVFilterType::eSepia:
-					{
-						ApplySepiaFilter(mat);
-						break;
-					}
-				}
+                    case OCVFilterType::eFindFeatures:
+                    {
+                        ApplyFindFeaturesFilter(mat);
+                        break;
+                    }
 
-				m_renderer->CreateTextureFromByte(mat->data, mat->cols, mat->rows);
-			}
-		}
+                    case OCVFilterType::eSepia:
+                    {
+                        ApplySepiaFilter(mat);
+                        break;
+                    }
+                }
+
+                m_renderer->CreateTextureFromByte(mat->data, mat->cols, mat->rows);
+            }
+        }
     }
 
-	void Direct3DInterop::ApplyGrayFilter(cv::Mat* mat)
-	{
-		cv::Mat intermediateMat;
-		cv::cvtColor(*mat, intermediateMat, CV_RGBA2GRAY);
-		cv::cvtColor(intermediateMat, *mat, CV_GRAY2BGRA);
-	}
-
-	void Direct3DInterop::ApplyCannyFilter(cv::Mat* mat)
-	{
-		cv::Mat intermediateMat;
-		cv::Canny(*mat, intermediateMat, 80, 90);
-		cv::cvtColor(intermediateMat, *mat, CV_GRAY2BGRA);
-	}
-
-	void Direct3DInterop::ApplyBlurFilter(cv::Mat* mat)
-	{
-		cv::Mat intermediateMat;
-		//	cv::Blur(image, intermediateMat, 80, 90);
-		cv::cvtColor(intermediateMat, *mat, CV_GRAY2BGRA);
-	}
-
-	void Direct3DInterop::ApplyFindFeaturesFilter(cv::Mat* mat)
-	{
+    void Direct3DInterop::ApplyGrayFilter(cv::Mat* mat)
+    {
         cv::Mat intermediateMat;
-		cv::Ptr<cv::FastFeatureDetector> detector = cv::FastFeatureDetector::create(50);
+        cv::cvtColor(*mat, intermediateMat, CV_RGBA2GRAY);
+        cv::cvtColor(intermediateMat, *mat, CV_GRAY2BGRA);
+    }
+
+    void Direct3DInterop::ApplyCannyFilter(cv::Mat* mat)
+    {
+        cv::Mat intermediateMat;
+        cv::Canny(*mat, intermediateMat, 80, 90);
+        cv::cvtColor(intermediateMat, *mat, CV_GRAY2BGRA);
+    }
+
+    void Direct3DInterop::ApplyBlurFilter(cv::Mat* mat)
+    {
+        cv::Mat intermediateMat;
+        //	cv::Blur(image, intermediateMat, 80, 90);
+        cv::cvtColor(intermediateMat, *mat, CV_GRAY2BGRA);
+    }
+
+    void Direct3DInterop::ApplyFindFeaturesFilter(cv::Mat* mat)
+    {
+        cv::Mat intermediateMat;
+        cv::Ptr<cv::FastFeatureDetector> detector = cv::FastFeatureDetector::create(50);
         std::vector<cv::KeyPoint> features;
 
         cv::cvtColor(*mat, intermediateMat, CV_RGBA2GRAY);
@@ -168,21 +168,21 @@ namespace PhoneXamlDirect3DApp1Comp
             const cv::KeyPoint& kp = features[i];
             cv::circle(*mat, cv::Point((int)kp.pt.x, (int)kp.pt.y), 10, cv::Scalar(255,0,0,255));
         }
-	}
+    }
 
-	void Direct3DInterop::ApplySepiaFilter(cv::Mat* mat)
-	{
-		const float SepiaKernelData[16] =
-		{
-			/* B */0.131f, 0.534f, 0.272f, 0.f,
-			/* G */0.168f, 0.686f, 0.349f, 0.f,
-			/* R */0.189f, 0.769f, 0.393f, 0.f,
-			/* A */0.000f, 0.000f, 0.000f, 1.f
-		};
+    void Direct3DInterop::ApplySepiaFilter(cv::Mat* mat)
+    {
+        const float SepiaKernelData[16] =
+        {
+            /* B */0.131f, 0.534f, 0.272f, 0.f,
+            /* G */0.168f, 0.686f, 0.349f, 0.f,
+            /* R */0.189f, 0.769f, 0.393f, 0.f,
+            /* A */0.000f, 0.000f, 0.000f, 1.f
+        };
 
-		const cv::Mat SepiaKernel(4, 4, CV_32FC1, (void*)SepiaKernelData);
-		cv::transform(*mat, *mat, SepiaKernel);
-	}
+        const cv::Mat SepiaKernel(4, 4, CV_32FC1, (void*)SepiaKernelData);
+        cv::transform(*mat, *mat, SepiaKernel);
+    }
 
     IDrawingSurfaceContentProvider^ Direct3DInterop::CreateContentProvider()
     {
@@ -238,75 +238,75 @@ namespace PhoneXamlDirect3DApp1Comp
     void Direct3DInterop::StartCamera()
     {
         // Set the capture dimensions
-	    Size captureDimensions;
-	    captureDimensions.Width = 640;
-	    captureDimensions.Height = 480;		
+        Size captureDimensions;
+        captureDimensions.Width = 640;
+        captureDimensions.Height = 480;
 
-	    // Open the AudioVideoCaptureDevice for video only
-	    IAsyncOperation<AudioVideoCaptureDevice^> ^openOperation = AudioVideoCaptureDevice::OpenForVideoOnlyAsync(CameraSensorLocation::Back, captureDimensions);
+        // Open the AudioVideoCaptureDevice for video only
+        IAsyncOperation<AudioVideoCaptureDevice^> ^openOperation = AudioVideoCaptureDevice::OpenForVideoOnlyAsync(CameraSensorLocation::Back, captureDimensions);
 
-	    openOperation->Completed = ref new AsyncOperationCompletedHandler<AudioVideoCaptureDevice^>(
-		    [this] (IAsyncOperation<AudioVideoCaptureDevice^> ^operation, Windows::Foundation::AsyncStatus status)
-		    {
-			    if (status == Windows::Foundation::AsyncStatus::Completed)
-			    {
-				    auto captureDevice = operation->GetResults();
+        openOperation->Completed = ref new AsyncOperationCompletedHandler<AudioVideoCaptureDevice^>(
+            [this] (IAsyncOperation<AudioVideoCaptureDevice^> ^operation, Windows::Foundation::AsyncStatus status)
+            {
+                if (status == Windows::Foundation::AsyncStatus::Completed)
+                {
+                    auto captureDevice = operation->GetResults();
 
-				    // Save the reference to the opened video capture device
-				    pAudioVideoCaptureDevice = captureDevice;
+                    // Save the reference to the opened video capture device
+                    pAudioVideoCaptureDevice = captureDevice;
 
-				    // Retrieve the native ICameraCaptureDeviceNative interface from the managed video capture device
-				    ICameraCaptureDeviceNative *iCameraCaptureDeviceNative = NULL; 
-				    HRESULT hr = reinterpret_cast<IUnknown*>(captureDevice)->QueryInterface(__uuidof(ICameraCaptureDeviceNative), (void**) &iCameraCaptureDeviceNative);
+                    // Retrieve the native ICameraCaptureDeviceNative interface from the managed video capture device
+                    ICameraCaptureDeviceNative *iCameraCaptureDeviceNative = NULL;
+                    HRESULT hr = reinterpret_cast<IUnknown*>(captureDevice)->QueryInterface(__uuidof(ICameraCaptureDeviceNative), (void**) &iCameraCaptureDeviceNative);
 
-				    // Save the pointer to the native interface
-				    pCameraCaptureDeviceNative = iCameraCaptureDeviceNative;
+                    // Save the pointer to the native interface
+                    pCameraCaptureDeviceNative = iCameraCaptureDeviceNative;
 
-				    // Initialize the preview dimensions (see the accompanying article at )
-				    // The aspect ratio of the capture and preview resolution must be equal,
-				    // 4:3 for capture => 4:3 for preview, and 16:9 for capture => 16:9 for preview.
-				    Size previewDimensions;
-				    previewDimensions.Width = 640;
-				    previewDimensions.Height = 480;					
+                    // Initialize the preview dimensions (see the accompanying article at )
+                    // The aspect ratio of the capture and preview resolution must be equal,
+                    // 4:3 for capture => 4:3 for preview, and 16:9 for capture => 16:9 for preview.
+                    Size previewDimensions;
+                    previewDimensions.Width = 640;
+                    previewDimensions.Height = 480;
 
-				    IAsyncAction^ setPreviewResolutionAction = pAudioVideoCaptureDevice->SetPreviewResolutionAsync(previewDimensions);
-				    setPreviewResolutionAction->Completed = ref new AsyncActionCompletedHandler(
-					    [this](IAsyncAction^ action, Windows::Foundation::AsyncStatus status)
-					    {
-						    HResult hr = action->ErrorCode;
+                    IAsyncAction^ setPreviewResolutionAction = pAudioVideoCaptureDevice->SetPreviewResolutionAsync(previewDimensions);
+                    setPreviewResolutionAction->Completed = ref new AsyncActionCompletedHandler(
+                        [this](IAsyncAction^ action, Windows::Foundation::AsyncStatus status)
+                        {
+                            HResult hr = action->ErrorCode;
 
-						    if (status == Windows::Foundation::AsyncStatus::Completed)
-						    {
-							    // Create the sink
-							    MakeAndInitialize<CameraCapturePreviewSink>(&pCameraCapturePreviewSink);
+                            if (status == Windows::Foundation::AsyncStatus::Completed)
+                            {
+                                // Create the sink
+                                MakeAndInitialize<CameraCapturePreviewSink>(&pCameraCapturePreviewSink);
                                 pCameraCapturePreviewSink->SetDelegate(this);
-							    pCameraCaptureDeviceNative->SetPreviewSink(pCameraCapturePreviewSink);
+                                pCameraCaptureDeviceNative->SetPreviewSink(pCameraCapturePreviewSink);
 
-							    // Set the preview format
-							    pCameraCaptureDeviceNative->SetPreviewFormat(DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM);						
-						    }
-					    }
-				    );
+                                // Set the preview format
+                                pCameraCaptureDeviceNative->SetPreviewFormat(DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM);
+                            }
+                        }
+                    );
 
-				    // Retrieve IAudioVideoCaptureDeviceNative native interface from managed projection.
-				    IAudioVideoCaptureDeviceNative *iAudioVideoCaptureDeviceNative = NULL;
-				    hr = reinterpret_cast<IUnknown*>(captureDevice)->QueryInterface(__uuidof(IAudioVideoCaptureDeviceNative), (void**) &iAudioVideoCaptureDeviceNative);
+                    // Retrieve IAudioVideoCaptureDeviceNative native interface from managed projection.
+                    IAudioVideoCaptureDeviceNative *iAudioVideoCaptureDeviceNative = NULL;
+                    hr = reinterpret_cast<IUnknown*>(captureDevice)->QueryInterface(__uuidof(IAudioVideoCaptureDeviceNative), (void**) &iAudioVideoCaptureDeviceNative);
 
-				    // Save the pointer to the IAudioVideoCaptureDeviceNative native interface
-				    pAudioVideoCaptureDeviceNative = iAudioVideoCaptureDeviceNative;
+                    // Save the pointer to the IAudioVideoCaptureDeviceNative native interface
+                    pAudioVideoCaptureDeviceNative = iAudioVideoCaptureDeviceNative;
 
-				    // Set sample encoding format to ARGB. See the documentation for further values.
-				    pAudioVideoCaptureDevice->VideoEncodingFormat = CameraCaptureVideoFormat::Argb;
+                    // Set sample encoding format to ARGB. See the documentation for further values.
+                    pAudioVideoCaptureDevice->VideoEncodingFormat = CameraCaptureVideoFormat::Argb;
 
-				    // Initialize and set the CameraCaptureSampleSink class as sink for captures samples
-				    MakeAndInitialize<CameraCaptureSampleSink>(&pCameraCaptureSampleSink);
-				    pAudioVideoCaptureDeviceNative->SetVideoSampleSink(pCameraCaptureSampleSink);
+                    // Initialize and set the CameraCaptureSampleSink class as sink for captures samples
+                    MakeAndInitialize<CameraCaptureSampleSink>(&pCameraCaptureSampleSink);
+                    pAudioVideoCaptureDeviceNative->SetVideoSampleSink(pCameraCaptureSampleSink);
 
-				    // Start recording (only way to receive samples using the ICameraCaptureSampleSink interface
-				    pAudioVideoCaptureDevice->StartRecordingToSinkAsync();
-			    }
-		    }
-	    );
+                    // Start recording (only way to receive samples using the ICameraCaptureSampleSink interface
+                    pAudioVideoCaptureDevice->StartRecordingToSinkAsync();
+                }
+            }
+        );
 
     }
     // Interface With Direct3DContentProvider
@@ -339,7 +339,7 @@ namespace PhoneXamlDirect3DApp1Comp
 
     HRESULT Direct3DInterop::GetTexture(_In_ const DrawingSurfaceSizeF* size, _Out_ IDrawingSurfaceSynchronizedTextureNative** synchronizedTexture, _Out_ DrawingSurfaceRectF* textureSubRectangle)
     {
- 		m_renderer->Update();
+        m_renderer->Update();
         m_renderer->Render();
         return S_OK;
     }

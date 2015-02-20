@@ -91,5 +91,5 @@ namespace PhoneXamlDirect3DApp1
                     break;
             }
         }
-    }       
+    }
 }

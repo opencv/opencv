@@ -131,7 +131,7 @@ cv::Mat OcvImageProcessing::MainPage::ApplyFindFeaturesFilter(const cv::Mat& ima
 {
     cv::Mat result;
     cv::Mat intermediateMat;
-	cv::Ptr<cv::FastFeatureDetector> detector = cv::FastFeatureDetector::create(50);
+    cv::Ptr<cv::FastFeatureDetector> detector = cv::FastFeatureDetector::create(50);
     std::vector<cv::KeyPoint> features;
 
     image.copyTo(result);

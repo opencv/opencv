@@ -31,7 +31,7 @@ namespace OpenCVXaml
             if (Preview.Source != null)
             {
                 ProcessButton.IsEnabled = false;
-                
+
                 // Get WriteableBitmap. ImageToModify is defined in MainPage.xaml
                 WriteableBitmap bitmap = new WriteableBitmap(Preview.Source as BitmapSource);
 
