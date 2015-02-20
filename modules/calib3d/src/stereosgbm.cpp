@@ -865,8 +865,6 @@ public:
                            StereoMatcher::DISP_SCALE*params.speckleRange, buffer);
     }
 
-    AlgorithmInfo* info() const { return 0; }
-
     int getMinDisparity() const { return params.minDisparity; }
     void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
 

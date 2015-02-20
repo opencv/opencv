@@ -62,19 +62,17 @@ int main(int argc, char* argv[])
     cout << "FOUND " << keypoints2GPU.cols << " keypoints on second image" << endl;
 
     // matching descriptors
-    BFMatcher_CUDA matcher(surf.defaultNorm());
-    GpuMat trainIdx, distance;
-    matcher.matchSingle(descriptors1GPU, descriptors2GPU, trainIdx, distance);
+    Ptr<cv::cuda::DescriptorMatcher> matcher = cv::cuda::DescriptorMatcher::createBFMatcher(surf.defaultNorm());
+    vector<DMatch> matches;
+    matcher->match(descriptors1GPU, descriptors2GPU, matches);
 
     // downloading results
     vector<KeyPoint> keypoints1, keypoints2;
     vector<float> descriptors1, descriptors2;
-    vector<DMatch> matches;
     surf.downloadKeypoints(keypoints1GPU, keypoints1);
     surf.downloadKeypoints(keypoints2GPU, keypoints2);
     surf.downloadDescriptors(descriptors1GPU, descriptors1);
     surf.downloadDescriptors(descriptors2GPU, descriptors2);
-    BFMatcher_CUDA::matchDownload(trainIdx, distance, matches);
 
     // drawing the results
     Mat img_matches;

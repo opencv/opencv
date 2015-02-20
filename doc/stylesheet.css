@@ -31,3 +31,7 @@ div.contents {
 span.arrow {
     height: 13px;
 }
+
+div.image img{
+    max-width: 900px;
+}
