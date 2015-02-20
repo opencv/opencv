@@ -17,7 +17,7 @@ check_include_file(string.h HAVE_STRING_H)
 check_include_file(sys/types.h HAVE_SYS_TYPES_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
 
-if(WIN32 AND NOT HAVE_WINRT)
+if(WIN32)
   set(USE_WIN32_FILEIO 1)
 endif()
 
@@ -79,7 +79,7 @@ set(lib_srcs
     "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
     )
 
-if(WIN32 AND NOT HAVE_WINRT)
+if(WIN32)
   list(APPEND lib_srcs tif_win32.c)
 else()
   list(APPEND lib_srcs tif_unix.c)

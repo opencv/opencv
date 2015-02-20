@@ -109,7 +109,7 @@
   #endif
 #endif
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #include <wrl/client.h>
 #ifndef __cplusplus_winrt
 #include <windows.storage.h>
@@ -159,7 +159,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
              UINT(g.Data4[2]), UINT(g.Data4[3]), UINT(g.Data4[4]),
              UINT(g.Data4[5]), UINT(g.Data4[6]), UINT(g.Data4[7]));
 
-    return prefix + std::wstring(guidStr);
+    return prefix.append(std::wstring(guidStr));
 }
 
 #endif
@@ -542,12 +542,12 @@ String format( const char* fmt, ... )
 String tempfile( const char* suffix )
 {
     String fname;
-#ifndef HAVE_WINRT
+#ifndef WINRT
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
 #if defined WIN32 || defined _WIN32
-#ifdef HAVE_WINRT
+#ifdef WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
     std::wstring temp_dir = L"";
     const wchar_t* opencv_temp_dir = GetTempPathWinRT().c_str();
@@ -559,7 +559,7 @@ String tempfile( const char* suffix )
     if (temp_file.empty())
         return String();
 
-    temp_file = temp_dir + std::wstring(L"\\") + temp_file;
+    temp_file = temp_dir.append(std::wstring(L"\\")).append(temp_file);
     DeleteFileW(temp_file.c_str());
 
     char aname[MAX_PATH];
@@ -955,7 +955,7 @@ public:
 #pragma warning(disable:4505) // unreferenced local function has been removed
 #endif
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
     // using C++11 thread attribute for local thread data
     static __declspec( thread ) TLSStorage* g_tlsdata = NULL;
 
@@ -1006,10 +1006,10 @@ public:
         }
         return d;
     }
-#endif //HAVE_WINRT
+#endif //WINRT
 
 #if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
-#ifdef HAVE_WINRT
+#ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
 
