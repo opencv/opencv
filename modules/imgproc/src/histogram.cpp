@@ -1999,9 +1999,9 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             for( j = 0; j < len; j++ )
             {
                 double a = h1[j] - h2[j];
-                double b = h1[j];
+                double b = h1[j] + h2[j];
                 if( fabs(b) > DBL_EPSILON )
-                    result += a*a/b;
+                    result += 0.5*a*a/b;
             }
         }
         else if( method == CV_COMP_CORREL )
