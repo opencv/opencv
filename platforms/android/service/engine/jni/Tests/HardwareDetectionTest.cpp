@@ -153,10 +153,12 @@ TEST(CpuID, CheckAarch64)
     EXPECT_TRUE(cpu_id & ARCH_AARCH64);
 }
 #else
+# if defined(__arm__) && defined(USE_TEGRA_HW_DETECTOR)
 TEST(TegraDetector, Detect)
 {
     EXPECT_TRUE(DetectTegra() != 0);
 }
+# endif
 
 TEST(CpuID, CheckArmV7)
 {
