@@ -2302,7 +2302,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                 double a = h1[j] - h2[j];
                 double b = (method == CV_COMP_CHISQR) ? h1[j] : h1[j] + h2[j];
                 if( fabs(b) > DBL_EPSILON )
-                    result += a*a/b;
+                    result += 0.5*a*a/b;
             }
         }
         else if( method == CV_COMP_CORREL )
