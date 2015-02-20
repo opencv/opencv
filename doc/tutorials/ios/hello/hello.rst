@@ -73,3 +73,13 @@ Now we will learn how to write a simple Hello World Application in Xcode using O
 .. image:: images/output.png
      :alt: output
      :align: center
+
+*Changes for XCode5+ and iOS8+*
+===============================
+
+With the newer XCode and iOS versions you need to watch out for some specific details
+
+.. container:: enumerateattentionpoints
+
+   * The ``*.m`` file in your project should be renamed to ``*.mm``.
+   * You have to manually include AssetsLibrary.framework into your project, which is not done anymore by default.
