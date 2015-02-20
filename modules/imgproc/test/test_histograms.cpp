@@ -1071,7 +1071,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
         }
     }
 
-    result0[CV_COMP_CHISQR_ALT] *= 2;
+    result0[CV_COMP_CHISQR_ALT] *= 1;
 
     t = (sq0 - s0*s0/total_size)*(sq1 - s1*s1/total_size);
     result0[CV_COMP_CORREL] = fabs(t) > DBL_EPSILON ?
