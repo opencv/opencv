@@ -7,6 +7,7 @@ import java.util.StringTokenizer;
 import org.opencv.engine.HardwareDetector;
 import org.opencv.engine.MarketConnector;
 import org.opencv.engine.OpenCVEngineInterface;
+import org.opencv.engine.OpenCVEngineService;
 import org.opencv.engine.OpenCVLibraryInfo;
 import org.opencv.engine.R;
 import android.annotation.TargetApi;
@@ -140,11 +141,11 @@ public class ManagerActivity extends Activity
             }
             else if ((CpuId & HardwareDetector.ARCH_ARMv7) == HardwareDetector.ARCH_ARMv7)
             {
-                HardwarePlatformView.setText("ARM v7 " + JoinArmFeatures(CpuId));
+                HardwarePlatformView.setText("ARM v7a " + JoinArmFeatures(CpuId));
             }
-            else if ((CpuId & HardwareDetector.ARCH_ARMv8) == HardwareDetector.ARCH_ARMv8)
+            else if ((CpuId & HardwareDetector.ARCH_AARCH64) == HardwareDetector.ARCH_AARCH64)
             {
-                HardwarePlatformView.setText("ARM v8 " + JoinArmFeatures(CpuId));
+                HardwarePlatformView.setText("AARCH64 (ARM64 v8a) " + JoinArmFeatures(CpuId));
             }
             else if ((CpuId & HardwareDetector.ARCH_MIPS) == HardwareDetector.ARCH_MIPS)
             {
@@ -220,7 +221,8 @@ public class ManagerActivity extends Activity
             public void onReceive(Context context, Intent intent) {
                 Log.d("OpenCVManager/Receiver", "Broadcast message " + intent.getAction() + " receiver");
                 Log.d("OpenCVManager/Receiver", "Filling package list on broadcast message");
-                if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
+                if (!bindService(new Intent("org.opencv.engine.BIND"),
+                     new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
                 {
                     TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
                     EngineVersionView.setText("not avaliable");
@@ -251,7 +253,7 @@ public class ManagerActivity extends Activity
         if (HardwareDetector.mIsReady) {
             Log.d(TAG, "Filling package list on resume");
             OpenCVEngineServiceConnection connection = new OpenCVEngineServiceConnection();
-            if (!bindService(new Intent("org.opencv.engine.BIND"), connection, Context.BIND_AUTO_CREATE)) {
+            if (!bindService(new Intent(this, OpenCVEngineService.class), connection, Context.BIND_AUTO_CREATE)) {
                 Log.e(TAG, "Cannot bind to OpenCV Manager service!");
                 TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
                 if (EngineVersionView != null)
