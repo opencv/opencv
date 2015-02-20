@@ -62,8 +62,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual void buildCostMatrix(InputArray descriptors1, InputArray descriptors2, OutputArray costMatrix);
 
@@ -188,8 +186,6 @@ public:
     ~EMDHistogramCostExtractorImpl()
     {
     }
-
-    virtual AlgorithmInfo* info() const { return 0; }
 
     //! the main operator
     virtual void buildCostMatrix(InputArray descriptors1, InputArray descriptors2, OutputArray costMatrix);
@@ -327,8 +323,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual void buildCostMatrix(InputArray descriptors1, InputArray descriptors2, OutputArray costMatrix);
 
@@ -444,8 +438,6 @@ public:
     ~EMDL1HistogramCostExtractorImpl()
     {
     }
-
-    virtual AlgorithmInfo* info() const { return 0; }
 
     //! the main operator
     virtual void buildCostMatrix(InputArray descriptors1, InputArray descriptors2, OutputArray costMatrix);

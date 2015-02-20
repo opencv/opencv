@@ -73,18 +73,42 @@ int main(int argc, char** argv)
     data->setTrainTestSplitRatio(train_test_split_ratio);
 
     printf("======DTREE=====\n");
-    Ptr<DTrees> dtree = DTrees::create(DTrees::Params( 10, 2, 0, false, 16, 0, false, false, Mat() ));
+    Ptr<DTrees> dtree = DTrees::create();
+    dtree->setMaxDepth(10);
+    dtree->setMinSampleCount(2);
+    dtree->setRegressionAccuracy(0);
+    dtree->setUseSurrogates(false);
+    dtree->setMaxCategories(16);
+    dtree->setCVFolds(0);
+    dtree->setUse1SERule(false);
+    dtree->setTruncatePrunedTree(false);
+    dtree->setPriors(Mat());
     train_and_print_errs(dtree, data);
 
     if( (int)data->getClassLabels().total() <= 2 ) // regression or 2-class classification problem
     {
         printf("======BOOST=====\n");
-        Ptr<Boost> boost = Boost::create(Boost::Params(Boost::GENTLE, 100, 0.95, 2, false, Mat()));
+        Ptr<Boost> boost = Boost::create();
+        boost->setBoostType(Boost::GENTLE);
+        boost->setWeakCount(100);
+        boost->setWeightTrimRate(0.95);
+        boost->setMaxDepth(2);
+        boost->setUseSurrogates(false);
+        boost->setPriors(Mat());
         train_and_print_errs(boost, data);
     }
 
     printf("======RTREES=====\n");
-    Ptr<RTrees> rtrees = RTrees::create(RTrees::Params(10, 2, 0, false, 16, Mat(), false, 0, TermCriteria(TermCriteria::MAX_ITER, 100, 0)));
+    Ptr<RTrees> rtrees = RTrees::create();
+    rtrees->setMaxDepth(10);
+    rtrees->setMinSampleCount(2);
+    rtrees->setRegressionAccuracy(0);
+    rtrees->setUseSurrogates(false);
+    rtrees->setMaxCategories(16);
+    rtrees->setPriors(Mat());
+    rtrees->setCalculateVarImportance(false);
+    rtrees->setActiveVarCount(0);
+    rtrees->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 0));
     train_and_print_errs(rtrees, data);
 
     return 0;

@@ -138,10 +138,10 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1,
     {
         Ptr<SuperResolution> superRes = createSuperResolution_BTVL1_CUDA();
 
-        superRes->set("scale", scale);
-        superRes->set("iterations", iterations);
-        superRes->set("temporalAreaRadius", temporalAreaRadius);
-        superRes->set("opticalFlow", opticalFlow);
+        superRes->setScale(scale);
+        superRes->setIterations(iterations);
+        superRes->setTemporalAreaRadius(temporalAreaRadius);
+        superRes->setOpticalFlow(opticalFlow);
 
         superRes->setInput(makePtr<OneFrameSource_CUDA>(GpuMat(frame)));
 
@@ -156,10 +156,10 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1,
     {
         Ptr<SuperResolution> superRes = createSuperResolution_BTVL1();
 
-        superRes->set("scale", scale);
-        superRes->set("iterations", iterations);
-        superRes->set("temporalAreaRadius", temporalAreaRadius);
-        superRes->set("opticalFlow", opticalFlow);
+        superRes->setScale(scale);
+        superRes->setIterations(iterations);
+        superRes->setTemporalAreaRadius(temporalAreaRadius);
+        superRes->setOpticalFlow(opticalFlow);
 
         superRes->setInput(makePtr<OneFrameSource_CPU>(frame));
 
@@ -198,10 +198,10 @@ OCL_PERF_TEST_P(SuperResolution_BTVL1 ,BTVL1,
     Ptr<DenseOpticalFlowExt> opticalFlow(new ZeroOpticalFlow);
     Ptr<SuperResolution> superRes = createSuperResolution_BTVL1();
 
-    superRes->set("scale", scale);
-    superRes->set("iterations", iterations);
-    superRes->set("temporalAreaRadius", temporalAreaRadius);
-    superRes->set("opticalFlow", opticalFlow);
+    superRes->setScale(scale);
+    superRes->setIterations(iterations);
+    superRes->setTemporalAreaRadius(temporalAreaRadius);
+    superRes->setOpticalFlow(opticalFlow);
 
     superRes->setInput(makePtr<OneFrameSource_CPU>(frame));
 
