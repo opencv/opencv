@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014, Itseez Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -157,93 +158,6 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
 }
 
 //--------------------------------------------------------------------------------
-class CV_KDTreeTest_CPP : public NearestNeighborTest
-{
-public:
-    CV_KDTreeTest_CPP() {}
-protected:
-    virtual void createModel( const Mat& data );
-    virtual int checkGetPoins( const Mat& data );
-    virtual int findNeighbors( Mat& points, Mat& neighbors );
-    virtual int checkFindBoxed();
-    virtual void releaseModel();
-    KDTree* tr;
-};
-
-
-void CV_KDTreeTest_CPP::createModel( const Mat& data )
-{
-    tr = new KDTree( data, false );
-}
-
-int CV_KDTreeTest_CPP::checkGetPoins( const Mat& data )
-{
-    Mat res1( data.size(), data.type() ),
-        res3( data.size(), data.type() );
-    Mat idxs( 1, data.rows, CV_32SC1 );
-    for( int pi = 0; pi < data.rows; pi++ )
-    {
-        idxs.at<int>(0, pi) = pi;
-        // 1st way
-        const float* point = tr->getPoint(pi);
-        for( int di = 0; di < data.cols; di++ )
-            res1.at<float>(pi, di) = point[di];
-    }
-
-    // 3d way
-    tr->getPoints( idxs, res3 );
-
-    if( norm( res1, data, NORM_L1) != 0 ||
-        norm( res3, data, NORM_L1) != 0)
-        return cvtest::TS::FAIL_BAD_ACCURACY;
-    return cvtest::TS::OK;
-}
-
-int CV_KDTreeTest_CPP::checkFindBoxed()
-{
-    vector<float> min( dims, static_cast<float>(minValue)), max(dims, static_cast<float>(maxValue));
-    vector<int> indices;
-    tr->findOrthoRange( min, max, indices );
-    // TODO check indices
-    if( (int)indices.size() != featuresCount)
-        return cvtest::TS::FAIL_BAD_ACCURACY;
-    return cvtest::TS::OK;
-}
-
-int CV_KDTreeTest_CPP::findNeighbors( Mat& points, Mat& neighbors )
-{
-    const int emax = 20;
-    Mat neighbors2( neighbors.size(), CV_32SC1 );
-    int j;
-    vector<float> min(points.cols, static_cast<float>(minValue));
-    vector<float> max(points.cols, static_cast<float>(maxValue));
-    for( int pi = 0; pi < points.rows; pi++ )
-    {
-        // 1st way
-        Mat nrow = neighbors.row(pi);
-        tr->findNearest( points.row(pi), neighbors.cols, emax, nrow );
-
-        // 2nd way
-        vector<int> neighborsIdx2( neighbors2.cols, 0 );
-        tr->findNearest( points.row(pi), neighbors2.cols, emax, neighborsIdx2 );
-        vector<int>::const_iterator it2 = neighborsIdx2.begin();
-        for( j = 0; it2 != neighborsIdx2.end(); ++it2, j++ )
-            neighbors2.at<int>(pi,j) = *it2;
-    }
-
-    // compare results
-    if( norm( neighbors, neighbors2, NORM_L1 ) != 0 )
-        return cvtest::TS::FAIL_BAD_ACCURACY;
-
-    return cvtest::TS::OK;
-}
-
-void CV_KDTreeTest_CPP::releaseModel()
-{
-    delete tr;
-}
-
-//--------------------------------------------------------------------------------
 class CV_FlannTest : public NearestNeighborTest
 {
 public:
@@ -284,7 +198,7 @@ int CV_FlannTest::knnSearch( Mat& points, Mat& neighbors )
     }
 
     // compare results
-    if( norm( neighbors, neighbors1, NORM_L1 ) != 0 )
+    if( cvtest::norm( neighbors, neighbors1, NORM_L1 ) != 0 )
         return cvtest::TS::FAIL_BAD_ACCURACY;
 
     return cvtest::TS::OK;
@@ -316,7 +230,7 @@ int CV_FlannTest::radiusSearch( Mat& points, Mat& neighbors )
             neighbors1.at<int>(i,j) = *it;
     }
     // compare results
-    if( norm( neighbors, neighbors1, NORM_L1 ) != 0 )
+    if( cvtest::norm( neighbors, neighbors1, NORM_L1 ) != 0 )
         return cvtest::TS::FAIL_BAD_ACCURACY;
 
     return cvtest::TS::OK;
@@ -404,7 +318,6 @@ void CV_FlannSavedIndexTest::createModel(const cv::Mat &data)
     remove( filename.c_str() );
 }
 
-TEST(Features2d_KDTree_CPP, regression) { CV_KDTreeTest_CPP test; test.safe_run(); }
 TEST(Features2d_FLANN_Linear, regression) { CV_FlannLinearIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_KMeans, regression) { CV_FlannKMeansIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_KDTree, regression) { CV_FlannKDTreeIndexTest test; test.safe_run(); }

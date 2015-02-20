@@ -13,6 +13,6 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
 
 #endif

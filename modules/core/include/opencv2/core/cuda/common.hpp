@@ -48,6 +48,12 @@
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/base.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 #ifndef CV_PI_F
     #ifndef CV_PI
         #define CV_PI_F 3.14159265f
@@ -98,6 +104,6 @@ namespace cv { namespace cuda
     }
 }}
 
-
+//! @endcond
 
 #endif // __OPENCV_CUDA_COMMON_HPP__

@@ -97,6 +97,9 @@ re_data_type = re.compile(r'^ (?: 8 | 16 | 32 | 64 ) [USF] C [1234] $', re.VERBO
 
 time_style = xlwt.easyxf(num_format_str='#0.00')
 no_time_style = xlwt.easyxf('pattern: pattern solid, fore_color gray25')
+failed_style = xlwt.easyxf('pattern: pattern solid, fore_color red')
+noimpl_style = xlwt.easyxf('pattern: pattern solid, fore_color orange')
+style_dict = {"failed": failed_style, "noimpl":noimpl_style}
 
 speedup_style = time_style
 good_speedup_style = xlwt.easyxf('font: color green', num_format_str='#0.00')
@@ -328,7 +331,7 @@ def main():
 
                 for c in config_names:
                     if c in configs:
-                        sheet.write(row, col, configs[c], time_style)
+                        sheet.write(row, col, configs[c], style_dict.get(configs[c], time_style))
                     else:
                         sheet.write(row, col, None, no_time_style)
                     col += 1

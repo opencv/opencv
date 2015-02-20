@@ -1,5 +1,6 @@
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/core.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
 
 using namespace cv;
@@ -36,7 +37,7 @@ int main( int /*argc*/, char** /*argv*/ )
         Mat points(sampleCount, 1, CV_32FC2), labels;
 
         clusterCount = MIN(clusterCount, sampleCount);
-        Mat centers(clusterCount, 1, points.type());
+        Mat centers;
 
         /* generate random sample from multigaussian distribution */
         for( k = 0; k < clusterCount; k++ )

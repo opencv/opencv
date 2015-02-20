@@ -10,6 +10,7 @@ import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+import org.opencv.imgproc.Imgproc;
 
 public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
@@ -20,8 +21,8 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
     private Mat getTestImg() {
         Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(cross, new Point(20, matSize / 2), new Point(matSize - 21, matSize / 2), new Scalar(100), 2);
-        Core.line(cross, new Point(matSize / 2, 20), new Point(matSize / 2, matSize - 21), new Scalar(100), 2);
+        Imgproc.line(cross, new Point(20, matSize / 2), new Point(matSize - 21, matSize / 2), new Scalar(100), 2);
+        Imgproc.line(cross, new Point(matSize / 2, 20), new Point(matSize / 2, matSize - 21), new Scalar(100), 2);
 
         return cross;
     }

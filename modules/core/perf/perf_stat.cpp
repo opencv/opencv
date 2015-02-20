@@ -65,8 +65,8 @@ PERF_TEST_P(Size_MatType, meanStdDev, TYPICAL_MATS)
 
     TEST_CYCLE() meanStdDev(src, mean, dev);
 
-    SANITY_CHECK(mean, 1e-6);
-    SANITY_CHECK(dev, 1e-6);
+    SANITY_CHECK(mean, 1e-5, ERROR_RELATIVE);
+    SANITY_CHECK(dev, 1e-5, ERROR_RELATIVE);
 }
 
 PERF_TEST_P(Size_MatType, meanStdDev_mask, TYPICAL_MATS)

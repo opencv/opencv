@@ -1,4 +1,4 @@
-import org.opencv.highgui.Highgui
+import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.features2d.DescriptorExtractor
 import org.opencv.features2d.Features2d
 import org.opencv.core.MatOfKeyPoint
@@ -45,8 +45,8 @@ object ScalaCorrespondenceMatchingDemo {
     }
 
     // Load the images from the |resources| directory.
-    val leftImage = Highgui.imread(getClass.getResource("/img1.png").getPath)
-    val rightImage = Highgui.imread(getClass.getResource("/img2.png").getPath)
+    val leftImage = Imgcodecs.imread(getClass.getResource("/img1.png").getPath)
+    val rightImage = Imgcodecs.imread(getClass.getResource("/img2.png").getPath)
 
     // Detect KeyPoints and extract descriptors.
     val (leftKeyPoints, leftDescriptors) = detectAndExtract(leftImage)
@@ -64,6 +64,6 @@ object ScalaCorrespondenceMatchingDemo {
     Features2d.drawMatches(leftImage, leftKeyPoints, rightImage, rightKeyPoints, dmatches, correspondenceImage)
     val filename = "scalaCorrespondences.png"
     println(s"Writing ${filename}")
-    assert(Highgui.imwrite(filename, correspondenceImage))
+    assert(Imgcodecs.imwrite(filename, correspondenceImage))
   }
 }

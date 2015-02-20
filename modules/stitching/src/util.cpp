@@ -113,7 +113,7 @@ bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi)
 }
 
 
-Rect resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images)
+Rect resultRoi(const std::vector<Point> &corners, const std::vector<UMat> &images)
 {
     std::vector<Size> sizes(images.size());
     for (size_t i = 0; i < images.size(); ++i)
@@ -133,6 +133,21 @@ Rect resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes
         tl.y = std::min(tl.y, corners[i].y);
         br.x = std::max(br.x, corners[i].x + sizes[i].width);
         br.y = std::max(br.y, corners[i].y + sizes[i].height);
+    }
+    return Rect(tl, br);
+}
+
+Rect resultRoiIntersection(const std::vector<Point> &corners, const std::vector<Size> &sizes)
+{
+    CV_Assert(sizes.size() == corners.size());
+    Point tl(std::numeric_limits<int>::min(), std::numeric_limits<int>::min());
+    Point br(std::numeric_limits<int>::max(), std::numeric_limits<int>::max());
+    for (size_t i = 0; i < corners.size(); ++i)
+    {
+        tl.x = std::max(tl.x, corners[i].x);
+        tl.y = std::max(tl.y, corners[i].y);
+        br.x = std::min(br.x, corners[i].x + sizes[i].width);
+        br.y = std::min(br.y, corners[i].y + sizes[i].height);
     }
     return Rect(tl, br);
 }

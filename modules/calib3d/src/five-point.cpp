@@ -61,7 +61,7 @@ public:
         Mat EE = Mat(Vt.t()).colRange(5, 9) * 1.0;
         Mat A(10, 20, CV_64F);
         EE = EE.t();
-        getCoeffMat((double*)EE.data, (double*)A.data);
+        getCoeffMat(EE.ptr<double>(), A.ptr<double>());
         EE = EE.t();
 
         A = A.colRange(0, 10).inv() * A.colRange(10, 20);
@@ -137,7 +137,7 @@ public:
             cv::Mat Evec = EE.col(0) * xs.back() + EE.col(1) * ys.back() + EE.col(2) * zs.back() + EE.col(3);
             Evec /= norm(Evec);
 
-            memcpy(e + count * 9, Evec.data, 9 * sizeof(double));
+            memcpy(e + count * 9, Evec.ptr(), 9 * sizeof(double));
             count++;
         }
 

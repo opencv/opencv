@@ -7,10 +7,20 @@ import android.util.Log;
 
 class StaticHelper {
 
-    public static boolean initOpenCV()
+    public static boolean initOpenCV(boolean InitCuda)
     {
         boolean result;
         String libs = "";
+
+        if(InitCuda)
+        {
+            loadLibrary("cudart");
+            loadLibrary("nppc");
+            loadLibrary("nppi");
+            loadLibrary("npps");
+            loadLibrary("cufft");
+            loadLibrary("cublas");
+        }
 
         Log.d(TAG, "Trying to get library list");
 
@@ -52,7 +62,7 @@ class StaticHelper {
         try
         {
             System.loadLibrary(Name);
-            Log.d(TAG, "OpenCV libs init was ok!");
+            Log.d(TAG, "Library " + Name + " loaded");
         }
         catch(UnsatisfiedLinkError e)
         {

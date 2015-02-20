@@ -37,6 +37,7 @@ ocv_list_reverse(OpenCV_EXTRA_COMPONENTS)
 #build the list of components
 set(OpenCV_LIB_COMPONENTS_ "")
 foreach(CVLib ${OpenCV_LIB_COMPONENTS})
+  if (TARGET ${CVLib})
   get_target_property(libpath ${CVLib} LOCATION_${CMAKE_BUILD_TYPE})
   get_filename_component(libname "${libpath}" NAME)
 
@@ -52,6 +53,7 @@ foreach(CVLib ${OpenCV_LIB_COMPONENTS})
   endif()
 
   set(OpenCV_LIB_COMPONENTS_ "${OpenCV_LIB_COMPONENTS_} \${exec_prefix}/${installDir}/${libname}")
+  endif()
 endforeach()
 
 # add extra dependencies required for OpenCV
@@ -78,8 +80,8 @@ else()
 endif()
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/opencv-XXX.pc.in"
                "${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME}"
-               @ONLY IMMEDIATE)
+               @ONLY)
 
 if(UNIX AND NOT ANDROID)
-  install(FILES ${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME} DESTINATION ${OPENCV_LIB_INSTALL_PATH}/pkgconfig)
+  install(FILES ${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME} DESTINATION ${OPENCV_LIB_INSTALL_PATH}/pkgconfig COMPONENT dev)
 endif()

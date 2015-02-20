@@ -1,5 +1,6 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #include <iostream>
@@ -13,14 +14,14 @@ static void help(char* progName)
         <<  "This program demonstrated the use of the discrete Fourier transform (DFT). " << endl
         <<  "The dft of an image is taken and it's power spectrum is displayed."          << endl
         <<  "Usage:"                                                                      << endl
-        << progName << " [image_name -- default lena.jpg] "                       << endl << endl;
+        << progName << " [image_name -- default ../data/lena.jpg] "               << endl << endl;
 }
 
 int main(int argc, char ** argv)
 {
     help(argv[0]);
 
-    const char* filename = argc >=2 ? argv[1] : "lena.jpg";
+    const char* filename = argc >=2 ? argv[1] : "../data/lena.jpg";
 
     Mat I = imread(filename, IMREAD_GRAYSCALE);
     if( I.empty())

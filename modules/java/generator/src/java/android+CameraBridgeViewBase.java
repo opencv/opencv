@@ -6,7 +6,7 @@ import org.opencv.R;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
-import org.opencv.highgui.Highgui;
+import org.opencv.videoio.Videoio;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -46,7 +46,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     protected int mMaxHeight;
     protected int mMaxWidth;
     protected float mScale = 0;
-    protected int mPreviewFormat = Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
+    protected int mPreviewFormat = Videoio.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
     protected int mCameraIndex = CAMERA_ID_ANY;
     protected boolean mEnabled;
     protected FpsMeter mFpsMeter = null;
@@ -151,10 +151,10 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
              Mat result = null;
              switch (mPreviewFormat) {
-                case Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA:
+                case Videoio.CV_CAP_ANDROID_COLOR_FRAME_RGBA:
                     result = mOldStyleListener.onCameraFrame(inputFrame.rgba());
                     break;
-                case Highgui.CV_CAP_ANDROID_GREY_FRAME:
+                case Videoio.CV_CAP_ANDROID_GREY_FRAME:
                     result = mOldStyleListener.onCameraFrame(inputFrame.gray());
                     break;
                 default:
@@ -168,7 +168,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             mPreviewFormat = format;
         }
 
-        private int mPreviewFormat = Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
+        private int mPreviewFormat = Videoio.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
         private CvCameraViewListener mOldStyleListener;
     };
 

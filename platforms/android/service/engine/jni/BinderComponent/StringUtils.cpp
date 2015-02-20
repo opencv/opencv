@@ -34,13 +34,13 @@ bool ParseString(const string& src, string& key, string& value)
     if (src.empty())
         return false;
 
-    // find seporator ":"
-    size_t seporator_pos = src.find(":");
-    if (string::npos != seporator_pos)
+    // find separator ":"
+    size_t separator_pos = src.find(":");
+    if (string::npos != separator_pos)
     {
-        key = src.substr(0, seporator_pos);
+        key = src.substr(0, separator_pos);
         StripString(key);
-        value = src.substr(seporator_pos+1);
+        value = src.substr(separator_pos+1);
         StripString(value);
         return true;
     }
@@ -50,42 +50,42 @@ bool ParseString(const string& src, string& key, string& value)
     }
 }
 
-set<string> SplitString(const string& src, const char seporator)
+set<string> SplitString(const string& src, const char separator)
 {
     set<string> result;
 
     if (!src.empty())
     {
-        size_t seporator_pos;
+        size_t separator_pos;
         size_t prev_pos = 0;
         do
         {
-            seporator_pos = src.find(seporator, prev_pos);
-            result.insert(src.substr(prev_pos, seporator_pos - prev_pos));
-            prev_pos = seporator_pos + 1;
+            separator_pos = src.find(separator, prev_pos);
+            result.insert(src.substr(prev_pos, separator_pos - prev_pos));
+            prev_pos = separator_pos + 1;
         }
-        while (string::npos != seporator_pos);
+        while (string::npos != separator_pos);
     }
 
     return result;
 }
 
-vector<string> SplitStringVector(const string& src, const char seporator)
+vector<string> SplitStringVector(const string& src, const char separator)
 {
     vector<string> result;
 
     if (!src.empty())
     {
-        size_t seporator_pos;
+        size_t separator_pos;
         size_t prev_pos = 0;
         do
         {
-            seporator_pos = src.find(seporator, prev_pos);
-            string tmp = src.substr(prev_pos, seporator_pos - prev_pos);
+            separator_pos = src.find(separator, prev_pos);
+            string tmp = src.substr(prev_pos, separator_pos - prev_pos);
             result.push_back(tmp);
-            prev_pos = seporator_pos + 1;
+            prev_pos = separator_pos + 1;
         }
-        while (string::npos != seporator_pos);
+        while (string::npos != separator_pos);
     }
 
     return result;

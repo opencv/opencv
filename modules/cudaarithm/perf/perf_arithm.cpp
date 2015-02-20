@@ -49,6 +49,8 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // GEMM
 
+#ifdef HAVE_CUBLAS
+
 CV_FLAGS(GemmFlags, 0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T)
 #define ALL_GEMM_FLAGS Values(GemmFlags(0), GemmFlags(cv::GEMM_1_T), GemmFlags(cv::GEMM_2_T), GemmFlags(cv::GEMM_3_T), \
                               GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T | cv::GEMM_3_T))
@@ -97,6 +99,8 @@ PERF_TEST_P(Sz_Type_Flags, GEMM,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // MulSpectrums

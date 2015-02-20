@@ -50,8 +50,10 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 namespace
@@ -74,7 +76,7 @@ namespace
 
     LookUpTableImpl::LookUpTableImpl(InputArray _lut)
     {
-        if (_lut.kind() == _InputArray::GPU_MAT)
+        if (_lut.kind() == _InputArray::CUDA_GPU_MAT)
         {
             d_lut = _lut.getGpuMat();
         }
@@ -165,7 +167,7 @@ namespace
 
     void LookUpTableImpl::transform(InputArray _src, OutputArray _dst, Stream& stream)
     {
-        GpuMat src = _src.getGpuMat();
+        GpuMat src = getInputMat(_src, stream);
 
         const int cn = src.channels();
         const int lut_cn = d_lut.channels();
@@ -173,8 +175,7 @@ namespace
         CV_Assert( src.type() == CV_8UC1 || src.type() == CV_8UC3 );
         CV_Assert( lut_cn == 1 || lut_cn == cn );
 
-        _dst.create(src.size(), src.type());
-        GpuMat dst = _dst.getGpuMat();
+        GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
         if (lut_cn == 1)
         {
@@ -196,6 +197,8 @@ namespace
 
             dst3.assign(lut_(src3, tbl), stream);
         }
+
+        syncOutput(dst, _dst, stream);
     }
 }
 

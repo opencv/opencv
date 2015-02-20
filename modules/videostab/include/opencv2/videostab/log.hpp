@@ -50,6 +50,9 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab
+//! @{
+
 class CV_EXPORTS ILog
 {
 public:
@@ -68,6 +71,8 @@ class CV_EXPORTS LogToStdout : public ILog
 public:
     virtual void print(const char *format, ...);
 };
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

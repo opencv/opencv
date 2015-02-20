@@ -80,9 +80,9 @@ struct WrapAff
     WrapAff(const Mat& aff) : F(aff.ptr<double>()) {}
     Point3f operator()(const Point3f& p)
     {
-        return Point3d( p.x * F[0] + p.y * F[1] + p.z *  F[2] +  F[3],
-                        p.x * F[4] + p.y * F[5] + p.z *  F[6] +  F[7],
-                        p.x * F[8] + p.y * F[9] + p.z * F[10] + F[11]  );
+        return Point3f( (float)(p.x * F[0] + p.y * F[1] + p.z *  F[2] +  F[3]),
+                        (float)(p.x * F[4] + p.y * F[5] + p.z *  F[6] +  F[7]),
+                        (float)(p.x * F[8] + p.y * F[9] + p.z * F[10] + F[11])  );
     }
 };
 
@@ -108,9 +108,9 @@ bool CV_Affine3D_EstTest::test4Points()
     estimateAffine3D(fpts, tpts, aff_est, outliers);
 
     const double thres = 1e-3;
-    if (norm(aff_est, aff, NORM_INF) > thres)
+    if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
     {
-        //cout << norm(aff_est, aff, NORM_INF) << endl;
+        //cout << cvtest::norm(aff_est, aff, NORM_INF) << endl;
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return false;
     }
@@ -161,7 +161,7 @@ bool CV_Affine3D_EstTest::testNPoints()
     }
 
     const double thres = 1e-4;
-    if (norm(aff_est, aff, NORM_INF) > thres)
+    if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
     {
         cout << "aff est: " << aff_est << endl;
         cout << "aff ref: " << aff << endl;

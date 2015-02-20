@@ -14,6 +14,19 @@ using cv::FileNodeIterator;
 using cv::ParallelLoopBody;
 
 
+using cv::Size;
+using cv::Mat;
+using cv::Point;
+using cv::FileStorage;
+using cv::Rect;
+using cv::Ptr;
+using cv::FileNode;
+using cv::Mat_;
+using cv::Range;
+using cv::FileNodeIterator;
+using cv::ParallelLoopBody;
+
+
 #include "boost.h"
 #include "cascadeclassifier.h"
 #include <queue>
@@ -890,7 +903,7 @@ struct FeatureValAndIdxPrecalc : ParallelLoopBody
                     *(idst + fi*sample_count + si) = si;
             }
             if ( is_buf_16u )
-                std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, unsigned short>(valCache->ptr<float>(fi)) );
+                std::sort(udst + fi*sample_count, udst + (fi + 1)*sample_count, LessThanIdx<float, unsigned short>(valCache->ptr<float>(fi)) );
             else
                 std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, int>(valCache->ptr<float>(fi)) );
         }

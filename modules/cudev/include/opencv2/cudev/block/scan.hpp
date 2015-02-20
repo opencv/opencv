@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <int THREADS_NUM, typename T>
 __device__ T blockScanInclusive(T data, volatile T* smem, uint tid)
 {
@@ -95,6 +98,8 @@ __device__ __forceinline__ T blockScanExclusive(T data, volatile T* smem, uint t
 {
     return blockScanInclusive<THREADS_NUM>(data, smem, tid) - data;
 }
+
+//! @}
 
 }}
 

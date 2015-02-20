@@ -47,6 +47,12 @@
 #include "detail/reduce.hpp"
 #include "detail/reduce_key_val.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     template <int N, typename T, class Op>
@@ -193,5 +199,7 @@ namespace cv { namespace cuda { namespace device
         return thrust::make_tuple((volatile T0*) t0, (volatile T1*) t1, (volatile T2*) t2, (volatile T3*) t3, (volatile T4*) t4, (volatile T5*) t5, (volatile T6*) t6, (volatile T7*) t7, (volatile T8*) t8, (volatile T9*) t9);
     }
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_UTILITY_HPP__

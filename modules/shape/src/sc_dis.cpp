@@ -79,8 +79,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual float computeDistance(InputArray contour1, InputArray contour2);
 
@@ -199,7 +197,7 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
     if (set2.type() != CV_32F)
         sset2.convertTo(set2, CV_32F);
     else
-        sset1.copyTo(set2);
+        sset2.copyTo(set2);
 
     CV_Assert((set1.channels()==2) && (set1.cols>0));
     CV_Assert((set2.channels()==2) && (set2.cols>0));

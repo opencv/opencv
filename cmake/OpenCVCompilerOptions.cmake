@@ -106,6 +106,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_extra_compiler_option(-march=i686)
   endif()
 
+  if(APPLE)
+    add_extra_compiler_option(-Wno-semicolon-before-method-body)
+  endif()
+
   # Other optimizations
   if(ENABLE_OMIT_FRAME_POINTER)
     add_extra_compiler_option(-fomit-frame-pointer)
@@ -124,11 +128,24 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   if(ENABLE_SSE2)
     add_extra_compiler_option(-msse2)
   endif()
+  if(ENABLE_NEON)
+    add_extra_compiler_option("-mfpu=neon")
+  endif()
+  if(ENABLE_VFPV3 AND NOT ENABLE_NEON)
+    add_extra_compiler_option("-mfpu=vfpv3")
+  endif()
 
   # SSE3 and further should be disabled under MingW because it generates compiler errors
   if(NOT MINGW)
     if(ENABLE_AVX)
       add_extra_compiler_option(-mavx)
+    endif()
+    if(ENABLE_AVX2)
+      add_extra_compiler_option(-mavx2)
+
+      if(ENABLE_FMA3)
+        add_extra_compiler_option(-mfma)
+      endif()
     endif()
 
     # GCC depresses SSEx instructions when -mavx is used. Instead, it generates new AVX instructions or AVX equivalence for all SSEx instructions when needed.
@@ -148,6 +165,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
       if(ENABLE_SSE42)
         add_extra_compiler_option(-msse4.2)
       endif()
+
+      if(ENABLE_POPCNT)
+        add_extra_compiler_option(-mpopcnt)
+      endif()
     endif()
   endif(NOT MINGW)
 
@@ -159,10 +180,6 @@ if(CMAKE_COMPILER_IS_GNUCXX)
         add_extra_compiler_option(-mfpmath=387)
       endif()
     endif()
-  endif()
-
-  if(ENABLE_NEON)
-    add_extra_compiler_option(-mfpu=neon)
   endif()
 
   # Profiling?
@@ -179,11 +196,13 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_extra_compiler_option(-ffunction-sections)
   endif()
 
+  if(ENABLE_COVERAGE)
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} --coverage")
+    set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} --coverage")
+  endif()
+
   set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} -DNDEBUG")
   set(OPENCV_EXTRA_FLAGS_DEBUG "${OPENCV_EXTRA_FLAGS_DEBUG} -O0 -DDEBUG -D_DEBUG")
-  if(BUILD_WITH_DEBUG_INFO)
-    set(OPENCV_EXTRA_FLAGS_DEBUG "${OPENCV_EXTRA_FLAGS_DEBUG} -ggdb3")
-  endif()
 endif()
 
 if(MSVC)
@@ -206,7 +225,10 @@ if(MSVC)
     set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} /Zi")
   endif()
 
-  if(ENABLE_AVX AND NOT MSVC_VERSION LESS 1600)
+  if(ENABLE_AVX2 AND NOT MSVC_VERSION LESS 1800)
+    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /arch:AVX2")
+  endif()
+  if(ENABLE_AVX AND NOT MSVC_VERSION LESS 1600 AND NOT OPENCV_EXTRA_FLAGS MATCHES "/arch:")
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /arch:AVX")
   endif()
 
@@ -228,7 +250,7 @@ if(MSVC)
     endif()
   endif()
 
-  if(ENABLE_SSE OR ENABLE_SSE2 OR ENABLE_SSE3 OR ENABLE_SSE4_1 OR ENABLE_AVX)
+  if(ENABLE_SSE OR ENABLE_SSE2 OR ENABLE_SSE3 OR ENABLE_SSE4_1 OR ENABLE_AVX OR ENABLE_AVX2)
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /Oi")
   endif()
 
@@ -300,6 +322,7 @@ if(MSVC)
   endforeach()
 
   if(NOT ENABLE_NOISY_WARNINGS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251") #class 'std::XXX' needs to have dll-interface to be used by clients of YYY
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4251) # class 'std::XXX' needs to have dll-interface to be used by clients of YYY
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4324) # 'struct_name' : structure was padded due to __declspec(align())
   endif()
 endif()

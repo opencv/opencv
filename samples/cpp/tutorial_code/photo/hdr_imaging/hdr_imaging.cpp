@@ -1,4 +1,5 @@
 #include <opencv2/photo.hpp>
+#include "opencv2/imgcodecs.hpp"
 #include <opencv2/highgui.hpp>
 #include <vector>
 #include <iostream>

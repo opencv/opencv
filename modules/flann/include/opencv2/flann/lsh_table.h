@@ -153,8 +153,10 @@ public:
      * @param feature_size is the size of the feature (considered as a ElementType[])
      * @param key_size is the number of bits that are turned on in the feature
      */
-    LshTable(unsigned int /*feature_size*/, unsigned int /*key_size*/)
+    LshTable(unsigned int feature_size, unsigned int key_size)
     {
+        (void)feature_size;
+        (void)key_size;
         std::cerr << "LSH is not implemented for that type" << std::endl;
         assert(0);
     }

@@ -206,6 +206,11 @@ void cv::setTrackbarPos( const String& trackbarName, const String& winName, int 
     cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
 }
 
+void cv::setTrackbarMax(const String& trackbarName, const String& winName, int maxval)
+{
+    cvSetTrackbarMax(trackbarName.c_str(), winName.c_str(), maxval);
+}
+
 int cv::getTrackbarPos( const String& trackbarName, const String& winName )
 {
     return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
@@ -214,6 +219,11 @@ int cv::getTrackbarPos( const String& trackbarName, const String& winName )
 void cv::setMouseCallback( const String& windowName, MouseCallback onMouse, void* param)
 {
     cvSetMouseCallback(windowName.c_str(), onMouse, param);
+}
+
+int cv::getMouseWheelDelta( int flags )
+{
+    return CV_GET_WHEEL_DELTA(flags);
 }
 
 int cv::startWindowThread()
@@ -287,7 +297,7 @@ void cv::imshow( const String& winname, InputArray _img )
 
         cv::ogl::Texture2D& tex = ownWndTexs[winname];
 
-        if (_img.kind() == _InputArray::GPU_MAT)
+        if (_img.kind() == _InputArray::CUDA_GPU_MAT)
         {
             cv::ogl::Buffer& buf = ownWndBufs[winname];
             buf.copyFrom(_img);
@@ -374,7 +384,8 @@ CV_IMPL void cvUpdateWindow(const char*)
 cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
 {
     CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
-    return *(cv::QtFont*)(&f);
+    void* pf = &f; // to suppress strict-aliasing
+    return *(cv::QtFont*)pf;
 }
 
 void cv::addText( const Mat& img, const String& text, Point org, const QtFont& font)
@@ -485,6 +496,12 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 // version with a more capable one without a need to recompile dependent
 // applications or libraries.
 
+void cv::setWindowTitle(const String&, const String&)
+{
+    CV_Error(Error::StsNotImplemented, "The function is not implemented. "
+        "Rebuild the library with Windows, GTK+ 2.x or Carbon support. "
+        "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script");
+}
 
 #define CV_NO_GUI_ERROR(funcname) \
     cvError( CV_StsError, funcname, \
@@ -559,6 +576,11 @@ CV_IMPL int cvGetTrackbarPos( const char*, const char* )
 CV_IMPL void cvSetTrackbarPos( const char*, const char*, int )
 {
     CV_NO_GUI_ERROR( "cvSetTrackbarPos" );
+}
+
+CV_IMPL void cvSetTrackbarMax(const char*, const char*, int)
+{
+    CV_NO_GUI_ERROR( "cvSetTrackbarMax" );
 }
 
 CV_IMPL void* cvGetWindowHandle( const char* )

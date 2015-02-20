@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -73,6 +74,10 @@
 #  define CV_ENABLE_UNROLLED 1
 #endif
 
+#ifdef __OPENCV_BUILD
+#  define DISABLE_OPENCV_24_COMPATIBILITY
+#endif
+
 #if (defined WIN32 || defined _WIN32 || defined WINCE || defined __CYGWIN__) && defined CVAPI_EXPORTS
 #  define CV_EXPORTS __declspec(dllexport)
 #elif defined __GNUC__ && __GNUC__ >= 4
@@ -100,17 +105,32 @@
 #endif
 
 /* CPU features and intrinsics support */
-#define CV_CPU_NONE    0
-#define CV_CPU_MMX     1
-#define CV_CPU_SSE     2
-#define CV_CPU_SSE2    3
-#define CV_CPU_SSE3    4
-#define CV_CPU_SSSE3   5
-#define CV_CPU_SSE4_1  6
-#define CV_CPU_SSE4_2  7
-#define CV_CPU_POPCNT  8
-#define CV_CPU_AVX    10
-#define CV_CPU_NEON   11
+#define CV_CPU_NONE             0
+#define CV_CPU_MMX              1
+#define CV_CPU_SSE              2
+#define CV_CPU_SSE2             3
+#define CV_CPU_SSE3             4
+#define CV_CPU_SSSE3            5
+#define CV_CPU_SSE4_1           6
+#define CV_CPU_SSE4_2           7
+#define CV_CPU_POPCNT           8
+
+#define CV_CPU_AVX              10
+#define CV_CPU_AVX2             11
+#define CV_CPU_FMA3             12
+
+#define CV_CPU_AVX_512F         13
+#define CV_CPU_AVX_512BW        14
+#define CV_CPU_AVX_512CD        15
+#define CV_CPU_AVX_512DQ        16
+#define CV_CPU_AVX_512ER        17
+#define CV_CPU_AVX_512IFMA512   18
+#define CV_CPU_AVX_512PF        19
+#define CV_CPU_AVX_512VBMI      20
+#define CV_CPU_AVX_512VL        21
+
+#define CV_CPU_NEON   100
+
 // when adding to this list remember to update the enum in core/utility.cpp
 #define CV_HARDWARE_MAX_FEATURE 255
 
@@ -119,6 +139,7 @@
 
 #if defined __SSE2__ || defined _M_X64  || (defined _M_IX86_FP && _M_IX86_FP >= 2)
 #  include <emmintrin.h>
+#  define CV_MMX 1
 #  define CV_SSE 1
 #  define CV_SSE2 1
 #  if defined __SSE3__ || (defined _MSC_VER && _MSC_VER >= 1500)
@@ -137,7 +158,15 @@
 #    include <nmmintrin.h>
 #    define CV_SSE4_2 1
 #  endif
-#  if defined __AVX__ || (defined _MSC_FULL_VER && _MSC_FULL_VER >= 160040219)
+#  if defined __POPCNT__ || (defined _MSC_VER && _MSC_VER >= 1500)
+#    ifdef _MSC_VER
+#      include <nmmintrin.h>
+#    else
+#      include <popcntintrin.h>
+#    endif
+#    define CV_POPCNT 1
+#  endif
+#  if defined __AVX__ || (defined _MSC_VER && _MSC_VER >= 1600 && 0)
 // MS Visual Studio 2010 (2012?) has no macro pre-defined to identify the use of /arch:AVX
 // See: http://connect.microsoft.com/VisualStudio/feedback/details/605858/arch-avx-should-define-a-predefined-macro-in-x64-and-set-a-unique-value-for-m-ix86-fp-in-win32
 #    include <immintrin.h>
@@ -146,6 +175,13 @@
 #      define __xgetbv() _xgetbv(_XCR_XFEATURE_ENABLED_MASK)
 #    else
 #      define __xgetbv() 0
+#    endif
+#  endif
+#  if defined __AVX2__ || (defined _MSC_VER && _MSC_VER >= 1800 && 0)
+#    include <immintrin.h>
+#    define CV_AVX2 1
+#    if defined __FMA__
+#      define CV_FMA3 1
 #    endif
 #  endif
 #endif
@@ -162,6 +198,12 @@
 
 #endif // __CUDACC__
 
+#ifndef CV_POPCNT
+#define CV_POPCNT 0
+#endif
+#ifndef CV_MMX
+#  define CV_MMX 0
+#endif
 #ifndef CV_SSE
 #  define CV_SSE 0
 #endif
@@ -183,6 +225,40 @@
 #ifndef CV_AVX
 #  define CV_AVX 0
 #endif
+#ifndef CV_AVX2
+#  define CV_AVX2 0
+#endif
+#ifndef CV_FMA3
+#  define CV_FMA3 0
+#endif
+#ifndef CV_AVX_512F
+#  define CV_AVX_512F 0
+#endif
+#ifndef CV_AVX_512BW
+#  define CV_AVX_512BW 0
+#endif
+#ifndef CV_AVX_512CD
+#  define CV_AVX_512CD 0
+#endif
+#ifndef CV_AVX_512DQ
+#  define CV_AVX_512DQ 0
+#endif
+#ifndef CV_AVX_512ER
+#  define CV_AVX_512ER 0
+#endif
+#ifndef CV_AVX_512IFMA512
+#  define CV_AVX_512IFMA512 0
+#endif
+#ifndef CV_AVX_512PF
+#  define CV_AVX_512PF 0
+#endif
+#ifndef CV_AVX_512VBMI
+#  define CV_AVX_512VBMI 0
+#endif
+#ifndef CV_AVX_512VL
+#  define CV_AVX_512VL 0
+#endif
+
 #ifndef CV_NEON
 #  define CV_NEON 0
 #endif
@@ -244,6 +320,7 @@ typedef signed char schar;
 
 /* fundamental constants */
 #define CV_PI   3.1415926535897932384626433832795
+#define CV_2PI 6.283185307179586476925286766559
 #define CV_LOG2 0.69314718055994530941723212145818
 
 /****************************************************************************************\
@@ -357,6 +434,14 @@ typedef signed char schar;
 #  include "tegra_round.hpp"
 #endif
 
+//! @addtogroup core_utils
+//! @{
+
+/** @brief Rounds floating-point number to the nearest integer
+
+@param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
+result is not defined.
+ */
 CV_INLINE int cvRound( double value )
 {
 #if ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__ && !defined __APPLE__)) && !defined(__CUDACC__)
@@ -388,6 +473,13 @@ CV_INLINE int cvRound( double value )
 #endif
 }
 
+/** @brief Rounds floating-point number to the nearest integer not larger than the original.
+
+The function computes an integer i such that:
+\f[i \le \texttt{value} < i+1\f]
+@param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
+result is not defined.
+ */
 CV_INLINE int cvFloor( double value )
 {
 #if (defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__ && !defined __APPLE__)) && !defined(__CUDACC__)
@@ -404,6 +496,13 @@ CV_INLINE int cvFloor( double value )
 #endif
 }
 
+/** @brief Rounds floating-point number to the nearest integer not larger than the original.
+
+The function computes an integer i such that:
+\f[i \le \texttt{value} < i+1\f]
+@param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
+result is not defined.
+*/
 CV_INLINE int cvCeil( double value )
 {
 #if (defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__&& !defined __APPLE__)) && !defined(__CUDACC__)
@@ -420,6 +519,12 @@ CV_INLINE int cvCeil( double value )
 #endif
 }
 
+/** @brief Determines if the argument is Not A Number.
+
+@param value The input floating-point value
+
+The function returns 1 if the argument is Not A Number (as defined by IEEE754 standard), 0
+otherwise. */
 CV_INLINE int cvIsNaN( double value )
 {
     union { uint64 u; double f; } ieee754;
@@ -428,6 +533,12 @@ CV_INLINE int cvIsNaN( double value )
            ((unsigned)ieee754.u != 0) > 0x7ff00000;
 }
 
+/** @brief Determines if the argument is Infinity.
+
+@param value The input floating-point value
+
+The function returns 1 if the argument is a plus or minus infinity (as defined by IEEE754 standard)
+and 0 otherwise. */
 CV_INLINE int cvIsInf( double value )
 {
     union { uint64 u; double f; } ieee754;
@@ -435,6 +546,8 @@ CV_INLINE int cvIsInf( double value )
     return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) == 0x7ff00000 &&
            (unsigned)ieee754.u == 0;
 }
+
+//! @} core_utils
 
 /****************************************************************************************\
 *          exchange-add operation for atomic operations on reference counters            *
@@ -444,7 +557,7 @@ CV_INLINE int cvIsInf( double value )
    // atomic increment on the linux version of the Intel(tm) compiler
 #  define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd(const_cast<void*>(reinterpret_cast<volatile void*>(addr)), delta)
 #elif defined __GNUC__
-#  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__
+#  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__ && !defined(__CUDACC__)
 #    ifdef __ATOMIC_ACQ_REL
 #      define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), delta, __ATOMIC_ACQ_REL)
 #    else
@@ -458,17 +571,26 @@ CV_INLINE int cvIsInf( double value )
 #      define CV_XADD(addr, delta) (int)__sync_fetch_and_add((unsigned*)(addr), (unsigned)(delta))
 #    endif
 #  endif
-#elif (defined WIN32 || defined _WIN32 || defined WINCE) && (!defined RC_INVOKED)
-#  if !defined(_M_AMD64) && !defined(_M_IA64) && !defined(_M_ARM)
-     CV_EXTERN_C __declspec(dllimport) long __stdcall InterlockedExchangeAdd(long volatile *Addend, long Value);
-#    define CV_XADD(addr, delta) (int)InterlockedExchangeAdd((long volatile*)addr, delta)
-#  else
-     CV_EXTERN_C long _InterlockedExchangeAdd (long volatile *Addend, long Value);
-#    pragma intrinsic(_InterlockedExchangeAdd)
-#    define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
-#  endif
+#elif defined _MSC_VER && !defined RC_INVOKED
+#  include <intrin.h>
+#  define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
 #else
    CV_INLINE CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
+#endif
+
+
+/****************************************************************************************\
+*                                  CV_NORETURN attribute                                 *
+\****************************************************************************************/
+
+#ifndef CV_NORETURN
+#  if defined(__GNUC__)
+#    define CV_NORETURN __attribute__((__noreturn__))
+#  elif defined(_MSC_VER) && (_MSC_VER >= 1300)
+#    define CV_NORETURN __declspec(noreturn)
+#  else
+#    define CV_NORETURN /* nothing by default */
+#  endif
 #endif
 
 #endif // __OPENCV_CORE_CVDEF_H__

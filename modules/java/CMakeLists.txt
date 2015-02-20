@@ -1,12 +1,14 @@
 # ----------------------------------------------------------------------------
 #  CMake file for java support
 # ----------------------------------------------------------------------------
-if(IOS OR NOT PYTHON_EXECUTABLE OR NOT ANT_EXECUTABLE OR NOT (JNI_FOUND OR (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7)))
+if(IOS OR NOT PYTHON_DEFAULT_AVAILABLE OR NOT ANT_EXECUTABLE OR NOT (JNI_FOUND OR (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7))
+    OR BUILD_opencv_world
+    )
   ocv_module_disable(java)
 endif()
 
 set(the_description "The java bindings")
-ocv_add_module(java BINDINGS opencv_core opencv_imgproc OPTIONAL opencv_objdetect opencv_features2d opencv_video opencv_highgui opencv_ml opencv_calib3d opencv_photo opencv_nonfree opencv_contrib)
+ocv_add_module(java BINDINGS opencv_core opencv_imgproc OPTIONAL opencv_objdetect opencv_features2d opencv_video opencv_imgcodecs opencv_videoio opencv_calib3d opencv_photo opencv_bioinspired)
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp")
 
 if(NOT ANDROID)
@@ -30,8 +32,6 @@ endforeach()
 # scripts
 set(scripts_gen_java "${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_java.py")
 set(scripts_hdr_parser "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
-set(scripts_gen_javadoc "${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_javadoc.py")
-set(scripts_rst_parser "${CMAKE_CURRENT_SOURCE_DIR}/generator/rst_parser.py")
 
 # handwritten C/C++ and Java sources
 file(GLOB handwrittren_h_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.hpp")
@@ -73,13 +73,6 @@ foreach(module ${OPENCV_JAVA_MODULES})
   endif()
 endforeach()
 
-# rst documentation used for javadoc generation
-set(javadoc_rst_sources "")
-foreach(module ${OPENCV_JAVA_MODULES})
-  file(GLOB_RECURSE refman_rst_headers "${OPENCV_MODULE_opencv_${module}_LOCATION}/*.rst")
-  list(APPEND javadoc_rst_sources ${refman_rst_headers})
-endforeach()
-
 # generated cpp files
 set(generated_cpp_sources "")
 foreach(module ${OPENCV_JAVA_MODULES})
@@ -100,7 +93,7 @@ foreach(module ${OPENCV_JAVA_MODULES})
   # first run of gen_java.py (to get list of generated files)
   file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/")
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
+  execute_process(COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
                   OUTPUT_QUIET ERROR_QUIET)
   unset(generated_java_sources_${module})
@@ -110,13 +103,6 @@ foreach(module ${OPENCV_JAVA_MODULES})
   list(APPEND generated_java_sources ${generated_java_sources_${module}})
 endforeach()
 
-# generated java files with javadoc
-set(documented_java_files "")
-foreach(java_file ${generated_java_sources} ${handwrittren_java_sources})
-  get_filename_component(java_file_name "${java_file}" NAME_WE)
-  list(APPEND documented_java_files "${CMAKE_CURRENT_BINARY_DIR}/${java_file_name}-jdoc.java")
-endforeach()
-
 ######################################################################################################################################
 
 # step 1: generate .cpp/.java from OpenCV headers
@@ -124,24 +110,14 @@ set(step1_depends "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_
 foreach(module ${OPENCV_JAVA_MODULES})
   # second run of gen_java.py (at build time)
   add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
-                     COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
+                     COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                      DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}}
                     )
 endforeach()
 
-# step 2: generate javadoc comments
-set(step2_depends ${step1_depends} ${scripts_gen_javadoc} ${scripts_rst_parser} ${javadoc_rst_sources} ${generated_java_sources} ${handwrittren_java_sources})
-string(REPLACE ";" "," OPENCV_JAVA_MODULES_STR "${OPENCV_JAVA_MODULES}")
-add_custom_command(OUTPUT ${documented_java_files}
-                   COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java" "${CMAKE_CURRENT_BINARY_DIR}" 2> "${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                   DEPENDS ${step2_depends}
-                   VERBATIM
-                  )
-
 # step 3: copy files to destination
-set(step3_input_files ${documented_java_files} ${handwrittren_aidl_sources})
+set(step3_input_files ${generated_java_sources} ${handwrittren_java_sources} ${handwrittren_aidl_sources})
 set(copied_files "")
 foreach(java_file ${step3_input_files})
   get_filename_component(java_file_name "${java_file}" NAME)
@@ -152,14 +128,14 @@ foreach(java_file ${step3_input_files})
   add_custom_command(OUTPUT "${output_name}"
                      COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${output_name}"
                      MAIN_DEPENDENCY "${java_file}"
-                     DEPENDS ${step2_depends}
+                     DEPENDS ${step1_depends} ${generated_java_sources} ${handwrittren_java_sources}
                      COMMENT "Generating src/org/opencv/${java_file_name}"
                     )
   list(APPEND copied_files "${output_name}")
 
   if(ANDROID)
     get_filename_component(install_subdir "${java_file_name}" PATH)
-    install(FILES "${output_name}" DESTINATION "${JAVA_INSTALL_ROOT}/src/org/opencv/${install_subdir}" COMPONENT main)
+    install(FILES "${output_name}" DESTINATION "${JAVA_INSTALL_ROOT}/src/org/opencv/${install_subdir}" COMPONENT java)
   endif()
 endforeach()
 
@@ -173,7 +149,7 @@ if(ANDROID)
 
     if(NOT file MATCHES "jni/.+")
       get_filename_component(install_subdir "${file}" PATH)
-      install(FILES "${OpenCV_BINARY_DIR}/${file}" DESTINATION "${JAVA_INSTALL_ROOT}/${install_subdir}" COMPONENT main)
+      install(FILES "${OpenCV_BINARY_DIR}/${file}" DESTINATION "${JAVA_INSTALL_ROOT}/${install_subdir}" COMPONENT java)
     endif()
   endforeach()
 
@@ -209,11 +185,11 @@ if(ANDROID AND ANDROID_EXECUTABLE)
   list(APPEND copied_files ${lib_target_files} "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}")
   list(APPEND step3_input_files "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}")
 
-  install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT main)
-  install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT main)
+  install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT java)
+  install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT java)
   # creating empty 'gen' and 'res' folders
-  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/gen\")" COMPONENT main)
-  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/res\")" COMPONENT main)
+  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/gen\")" COMPONENT java)
+  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/res\")" COMPONENT java)
 endif(ANDROID AND ANDROID_EXECUTABLE)
 
 set(step3_depends ${step2_depends} ${step3_input_files} ${copied_files})
@@ -250,7 +226,7 @@ if(ANDROID)
 else(ANDROID)
   set(JAR_NAME opencv-${LIB_NAME_SUFIX}.jar)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/${JAR_NAME}")
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OpenCV_BINARY_DIR}/build.xml" IMMEDIATE @ONLY)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OpenCV_BINARY_DIR}/build.xml" @ONLY)
   list(APPEND step3_depends "${OpenCV_BINARY_DIR}/build.xml")
 
   add_custom_command(OUTPUT "${JAR_FILE}" "${JAR_FILE}.dephelper"
@@ -266,7 +242,7 @@ else(ANDROID)
   else(WIN32)
     set(JAR_INSTALL_DIR share/OpenCV/java)
   endif(WIN32)
-  install(FILES ${JAR_FILE} DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+  install(FILES ${JAR_FILE} OPTIONAL DESTINATION ${JAR_INSTALL_DIR} COMPONENT java)
 endif(ANDROID)
 
 # step 5: build native part
@@ -274,10 +250,9 @@ endif(ANDROID)
 # workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
 string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources}
+ocv_add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
-set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
@@ -295,18 +270,18 @@ if(BUILD_FAT_JAVA_LIB)
   endif()
   if(APPLE)
     foreach(_dep ${__deps})
-      target_link_libraries(${the_module} -Wl,-force_load "${_dep}")
+      ocv_target_link_libraries(${the_module} -Wl,-force_load "${_dep}")
     endforeach()
   else()
-    target_link_libraries(${the_module} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
+    ocv_target_link_libraries(${the_module} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
   endif()
-  target_link_libraries(${the_module} ${__extradeps} ${OPENCV_LINKER_LIBS})
+  ocv_target_link_libraries(${the_module} ${__extradeps} ${OPENCV_LINKER_LIBS})
 else()
-  target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+  ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
 endif()
 
 if(ANDROID)
-  target_link_libraries(${the_module} jnigraphics) # for Mat <=> Bitmap converters
+  ocv_target_link_libraries(${the_module} jnigraphics) # for Mat <=> Bitmap converters
 
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install
@@ -336,18 +311,18 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(ANDROID)
-  ocv_install_target(${the_module} EXPORT OpenCVModules
-          LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
-          ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+  ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
+          LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java
+          ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT java)
 else()
   if(NOT INSTALL_CREATE_DISTRIB)
-    ocv_install_target(${the_module} EXPORT OpenCVModules
-            RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT main
-            LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+    ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
+            RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT java
+            LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT java)
   else()
-    ocv_install_target(${the_module} EXPORT OpenCVModules
-            RUNTIME DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main
-            LIBRARY DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main)
+    ocv_install_target(${the_module} OPTIONAL EXPORT OpenCVModules
+            RUNTIME DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT java
+            LIBRARY DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT java)
   endif()
 endif()
 

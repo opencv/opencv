@@ -43,6 +43,12 @@
 #ifndef __OPENCV_CUDA_WARP_SHUFFLE_HPP__
 #define __OPENCV_CUDA_WARP_SHUFFLE_HPP__
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     template <typename T>
@@ -141,5 +147,7 @@ namespace cv { namespace cuda { namespace device
     #endif
     }
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_WARP_SHUFFLE_HPP__

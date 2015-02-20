@@ -48,6 +48,8 @@
 #include "opencv2/cudalegacy/NCV.hpp"
 #include "opencv2/core/cuda/common.hpp"
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     namespace pyramid
@@ -105,5 +107,7 @@ private:
 };
 
 #endif //_WIN32
+
+//! @endcond
 
 #endif //_ncvpyramid_hpp_

@@ -49,152 +49,224 @@
 
 #include "opencv2/core/cuda.hpp"
 
+/**
+  @addtogroup cuda
+  @{
+    @defgroup cudaoptflow Optical Flow
+  @}
+ */
+
 namespace cv { namespace cuda {
 
-class CV_EXPORTS BroxOpticalFlow
+//! @addtogroup cudaoptflow
+//! @{
+
+//
+// Interface
+//
+
+/** @brief Base interface for dense optical flow algorithms.
+ */
+class CV_EXPORTS DenseOpticalFlow : public Algorithm
 {
 public:
-    BroxOpticalFlow(float alpha_, float gamma_, float scale_factor_, int inner_iterations_, int outer_iterations_, int solver_iterations_) :
-        alpha(alpha_), gamma(gamma_), scale_factor(scale_factor_),
-        inner_iterations(inner_iterations_), outer_iterations(outer_iterations_), solver_iterations(solver_iterations_)
-    {
-    }
+    /** @brief Calculates a dense optical flow.
 
-    //! Compute optical flow
-    //! frame0 - source frame (supports only CV_32FC1 type)
-    //! frame1 - frame to track (with the same size and type as frame0)
-    //! u      - flow horizontal component (along x axis)
-    //! v      - flow vertical component (along y axis)
-    void operator ()(const GpuMat& frame0, const GpuMat& frame1, GpuMat& u, GpuMat& v, Stream& stream = Stream::Null());
+    @param I0 first input image.
+    @param I1 second input image of the same size and the same type as I0.
+    @param flow computed flow image that has the same size as I0 and type CV_32FC2.
+    @param stream Stream for the asynchronous version.
+     */
+    virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow, Stream& stream = Stream::Null()) = 0;
+};
 
-    //! flow smoothness
-    float alpha;
+/** @brief Base interface for sparse optical flow algorithms.
+ */
+class CV_EXPORTS SparseOpticalFlow : public Algorithm
+{
+public:
+    /** @brief Calculates a sparse optical flow.
 
-    //! gradient constancy importance
-    float gamma;
+    @param prevImg First input image.
+    @param nextImg Second input image of the same size and the same type as prevImg.
+    @param prevPts Vector of 2D points for which the flow needs to be found.
+    @param nextPts Output vector of 2D points containing the calculated new positions of input features in the second image.
+    @param status Output status vector. Each element of the vector is set to 1 if the
+                  flow for the corresponding features has been found. Otherwise, it is set to 0.
+    @param err Optional output vector that contains error response for each point (inverse confidence).
+    @param stream Stream for the asynchronous version.
+     */
+    virtual void calc(InputArray prevImg, InputArray nextImg,
+                      InputArray prevPts, InputOutputArray nextPts,
+                      OutputArray status,
+                      OutputArray err = cv::noArray(),
+                      Stream& stream = Stream::Null()) = 0;
+};
 
-    //! pyramid scale factor
-    float scale_factor;
+//
+// BroxOpticalFlow
+//
+
+/** @brief Class computing the optical flow for two images using Brox et al Optical Flow algorithm (@cite Brox2004).
+ */
+class CV_EXPORTS BroxOpticalFlow : public DenseOpticalFlow
+{
+public:
+    virtual double getFlowSmoothness() const = 0;
+    virtual void setFlowSmoothness(double alpha) = 0;
+
+    virtual double getGradientConstancyImportance() const = 0;
+    virtual void setGradientConstancyImportance(double gamma) = 0;
+
+    virtual double getPyramidScaleFactor() const = 0;
+    virtual void setPyramidScaleFactor(double scale_factor) = 0;
 
     //! number of lagged non-linearity iterations (inner loop)
-    int inner_iterations;
+    virtual int getInnerIterations() const = 0;
+    virtual void setInnerIterations(int inner_iterations) = 0;
 
     //! number of warping iterations (number of pyramid levels)
-    int outer_iterations;
+    virtual int getOuterIterations() const = 0;
+    virtual void setOuterIterations(int outer_iterations) = 0;
 
     //! number of linear system solver iterations
-    int solver_iterations;
+    virtual int getSolverIterations() const = 0;
+    virtual void setSolverIterations(int solver_iterations) = 0;
 
-    GpuMat buf;
+    static Ptr<BroxOpticalFlow> create(
+            double alpha = 0.197,
+            double gamma = 50.0,
+            double scale_factor = 0.8,
+            int inner_iterations = 5,
+            int outer_iterations = 150,
+            int solver_iterations = 10);
 };
 
-class CV_EXPORTS PyrLKOpticalFlow
-{
-public:
-    PyrLKOpticalFlow();
-
-    void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
-        GpuMat& status, GpuMat* err = 0);
-
-    void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0);
-
-    void releaseMemory();
-
-    Size winSize;
-    int maxLevel;
-    int iters;
-    bool useInitialFlow;
-
-private:
-    std::vector<GpuMat> prevPyr_;
-    std::vector<GpuMat> nextPyr_;
-
-    GpuMat buf_;
-
-    GpuMat uPyr_[2];
-    GpuMat vPyr_[2];
-};
-
-class CV_EXPORTS FarnebackOpticalFlow
-{
-public:
-    FarnebackOpticalFlow()
-    {
-        numLevels = 5;
-        pyrScale = 0.5;
-        fastPyramids = false;
-        winSize = 13;
-        numIters = 10;
-        polyN = 5;
-        polySigma = 1.1;
-        flags = 0;
-    }
-
-    int numLevels;
-    double pyrScale;
-    bool fastPyramids;
-    int winSize;
-    int numIters;
-    int polyN;
-    double polySigma;
-    int flags;
-
-    void operator ()(const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s = Stream::Null());
-
-    void releaseMemory()
-    {
-        frames_[0].release();
-        frames_[1].release();
-        pyrLevel_[0].release();
-        pyrLevel_[1].release();
-        M_.release();
-        bufM_.release();
-        R_[0].release();
-        R_[1].release();
-        blurredFrame_[0].release();
-        blurredFrame_[1].release();
-        pyramid0_.clear();
-        pyramid1_.clear();
-    }
-
-private:
-    void prepareGaussian(
-            int n, double sigma, float *g, float *xg, float *xxg,
-            double &ig11, double &ig03, double &ig33, double &ig55);
-
-    void setPolynomialExpansionConsts(int n, double sigma);
-
-    void updateFlow_boxFilter(
-            const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat &flowy,
-            GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[]);
-
-    void updateFlow_gaussianBlur(
-            const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat& flowy,
-            GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[]);
-
-    GpuMat frames_[2];
-    GpuMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
-    std::vector<GpuMat> pyramid0_, pyramid1_;
-};
-
-// Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method
 //
-// see reference:
-//   [1] C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
-//   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
-class CV_EXPORTS OpticalFlowDual_TVL1_CUDA
+// PyrLKOpticalFlow
+//
+
+/** @brief Class used for calculating a sparse optical flow.
+
+The class can calculate an optical flow for a sparse feature set using the
+iterative Lucas-Kanade method with pyramids.
+
+@sa calcOpticalFlowPyrLK
+
+@note
+   -   An example of the Lucas Kanade optical flow algorithm can be found at
+        opencv_source_code/samples/gpu/pyrlk_optical_flow.cpp
+ */
+class CV_EXPORTS SparsePyrLKOpticalFlow : public SparseOpticalFlow
 {
 public:
-    OpticalFlowDual_TVL1_CUDA();
+    virtual Size getWinSize() const = 0;
+    virtual void setWinSize(Size winSize) = 0;
 
-    void operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy);
+    virtual int getMaxLevel() const = 0;
+    virtual void setMaxLevel(int maxLevel) = 0;
 
-    void collectGarbage();
+    virtual int getNumIters() const = 0;
+    virtual void setNumIters(int iters) = 0;
 
+    virtual bool getUseInitialFlow() const = 0;
+    virtual void setUseInitialFlow(bool useInitialFlow) = 0;
+
+    static Ptr<SparsePyrLKOpticalFlow> create(
+            Size winSize = Size(21, 21),
+            int maxLevel = 3,
+            int iters = 30,
+            bool useInitialFlow = false);
+};
+
+/** @brief Class used for calculating a dense optical flow.
+
+The class can calculate an optical flow for a dense optical flow using the
+iterative Lucas-Kanade method with pyramids.
+ */
+class CV_EXPORTS DensePyrLKOpticalFlow : public DenseOpticalFlow
+{
+public:
+    virtual Size getWinSize() const = 0;
+    virtual void setWinSize(Size winSize) = 0;
+
+    virtual int getMaxLevel() const = 0;
+    virtual void setMaxLevel(int maxLevel) = 0;
+
+    virtual int getNumIters() const = 0;
+    virtual void setNumIters(int iters) = 0;
+
+    virtual bool getUseInitialFlow() const = 0;
+    virtual void setUseInitialFlow(bool useInitialFlow) = 0;
+
+    static Ptr<DensePyrLKOpticalFlow> create(
+            Size winSize = Size(13, 13),
+            int maxLevel = 3,
+            int iters = 30,
+            bool useInitialFlow = false);
+};
+
+//
+// FarnebackOpticalFlow
+//
+
+/** @brief Class computing a dense optical flow using the Gunnar Farneback’s algorithm.
+ */
+class CV_EXPORTS FarnebackOpticalFlow : public DenseOpticalFlow
+{
+public:
+    virtual int getNumLevels() const = 0;
+    virtual void setNumLevels(int numLevels) = 0;
+
+    virtual double getPyrScale() const = 0;
+    virtual void setPyrScale(double pyrScale) = 0;
+
+    virtual bool getFastPyramids() const = 0;
+    virtual void setFastPyramids(bool fastPyramids) = 0;
+
+    virtual int getWinSize() const = 0;
+    virtual void setWinSize(int winSize) = 0;
+
+    virtual int getNumIters() const = 0;
+    virtual void setNumIters(int numIters) = 0;
+
+    virtual int getPolyN() const = 0;
+    virtual void setPolyN(int polyN) = 0;
+
+    virtual double getPolySigma() const = 0;
+    virtual void setPolySigma(double polySigma) = 0;
+
+    virtual int getFlags() const = 0;
+    virtual void setFlags(int flags) = 0;
+
+    static Ptr<FarnebackOpticalFlow> create(
+            int numLevels = 5,
+            double pyrScale = 0.5,
+            bool fastPyramids = false,
+            int winSize = 13,
+            int numIters = 10,
+            int polyN = 5,
+            double polySigma = 1.1,
+            int flags = 0);
+};
+
+//
+// OpticalFlowDual_TVL1
+//
+
+/** @brief Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method.
+ *
+ * @sa C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
+ * @sa Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
+ */
+class CV_EXPORTS OpticalFlowDual_TVL1 : public DenseOpticalFlow
+{
+public:
     /**
      * Time step of the numerical scheme.
      */
-    double tau;
+    virtual double getTau() const = 0;
+    virtual void setTau(double tau) = 0;
 
     /**
      * Weight parameter for the data term, attachment parameter.
@@ -202,7 +274,8 @@ public:
      * The smaller this parameter is, the smoother the solutions we obtain.
      * It depends on the range of motions of the images, so its value should be adapted to each image sequence.
      */
-    double lambda;
+    virtual double getLambda() const = 0;
+    virtual void setLambda(double lambda) = 0;
 
     /**
      * Weight parameter for (u - v)^2, tightness parameter.
@@ -210,12 +283,23 @@ public:
      * In theory, it should have a small value in order to maintain both parts in correspondence.
      * The method is stable for a large range of values of this parameter.
      */
-    double theta;
+    virtual double getGamma() const = 0;
+    virtual void setGamma(double gamma) = 0;
+
+    /**
+     * parameter used for motion estimation. It adds a variable allowing for illumination variations
+     * Set this parameter to 1. if you have varying illumination.
+     * See: Chambolle et al, A First-Order Primal-Dual Algorithm for Convex Problems with Applications to Imaging
+     * Journal of Mathematical imaging and vision, may 2011 Vol 40 issue 1, pp 120-145
+     */
+    virtual double getTheta() const = 0;
+    virtual void setTheta(double theta) = 0;
 
     /**
      * Number of scales used to create the pyramid of images.
      */
-    int nscales;
+    virtual int getNumScales() const = 0;
+    virtual void setNumScales(int nscales) = 0;
 
     /**
      * Number of warpings per scale.
@@ -223,88 +307,42 @@ public:
      * This is a parameter that assures the stability of the method.
      * It also affects the running time, so it is a compromise between speed and accuracy.
      */
-    int warps;
+    virtual int getNumWarps() const = 0;
+    virtual void setNumWarps(int warps) = 0;
 
     /**
      * Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time.
      * A small value will yield more accurate solutions at the expense of a slower convergence.
      */
-    double epsilon;
+    virtual double getEpsilon() const = 0;
+    virtual void setEpsilon(double epsilon) = 0;
 
     /**
      * Stopping criterion iterations number used in the numerical scheme.
      */
-    int iterations;
+    virtual int getNumIterations() const = 0;
+    virtual void setNumIterations(int iterations) = 0;
 
-    double scaleStep;
+    virtual double getScaleStep() const = 0;
+    virtual void setScaleStep(double scaleStep) = 0;
 
-    bool useInitialFlow;
+    virtual bool getUseInitialFlow() const = 0;
+    virtual void setUseInitialFlow(bool useInitialFlow) = 0;
 
-private:
-    void procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2);
-
-    std::vector<GpuMat> I0s;
-    std::vector<GpuMat> I1s;
-    std::vector<GpuMat> u1s;
-    std::vector<GpuMat> u2s;
-
-    GpuMat I1x_buf;
-    GpuMat I1y_buf;
-
-    GpuMat I1w_buf;
-    GpuMat I1wx_buf;
-    GpuMat I1wy_buf;
-
-    GpuMat grad_buf;
-    GpuMat rho_c_buf;
-
-    GpuMat p11_buf;
-    GpuMat p12_buf;
-    GpuMat p21_buf;
-    GpuMat p22_buf;
-
-    GpuMat diff_buf;
-    GpuMat norm_buf;
+    static Ptr<OpticalFlowDual_TVL1> create(
+            double tau = 0.25,
+            double lambda = 0.15,
+            double theta = 0.3,
+            int nscales = 5,
+            int warps = 5,
+            double epsilon = 0.01,
+            int iterations = 300,
+            double scaleStep = 0.8,
+            double gamma = 0.0,
+            bool useInitialFlow = false);
 };
 
-//! Calculates optical flow for 2 images using block matching algorithm */
-CV_EXPORTS void calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr,
-                                  Size block_size, Size shift_size, Size max_range, bool use_previous,
-                                  GpuMat& velx, GpuMat& vely, GpuMat& buf,
-                                  Stream& stream = Stream::Null());
-
-class CV_EXPORTS FastOpticalFlowBM
-{
-public:
-    void operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy, int search_window = 21, int block_window = 7, Stream& s = Stream::Null());
-
-private:
-    GpuMat buffer;
-    GpuMat extended_I0;
-    GpuMat extended_I1;
-};
-
-//! Interpolate frames (images) using provided optical flow (displacement field).
-//! frame0   - frame 0 (32-bit floating point images, single channel)
-//! frame1   - frame 1 (the same type and size)
-//! fu       - forward horizontal displacement
-//! fv       - forward vertical displacement
-//! bu       - backward horizontal displacement
-//! bv       - backward vertical displacement
-//! pos      - new frame position
-//! newFrame - new frame
-//! buf      - temporary buffer, will have width x 6*height size, CV_32FC1 type and contain 6 GpuMat;
-//!            occlusion masks            0, occlusion masks            1,
-//!            interpolated forward flow  0, interpolated forward flow  1,
-//!            interpolated backward flow 0, interpolated backward flow 1
-//!
-CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
-                                  const GpuMat& fu, const GpuMat& fv,
-                                  const GpuMat& bu, const GpuMat& bv,
-                                  float pos, GpuMat& newFrame, GpuMat& buf,
-                                  Stream& stream = Stream::Null());
-
-CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors);
+//! @}
 
 }} // namespace cv { namespace cuda {
 

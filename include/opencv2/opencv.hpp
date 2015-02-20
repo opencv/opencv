@@ -50,9 +50,9 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/contrib.hpp"
-#include "opencv2/bioinspired.hpp"
 #include "opencv2/ml.hpp"
 
 #endif

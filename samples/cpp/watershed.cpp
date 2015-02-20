@@ -1,5 +1,6 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <cstdio>
@@ -12,7 +13,7 @@ static void help()
 {
     cout << "\nThis program demonstrates the famous watershed segmentation algorithm in OpenCV: watershed()\n"
             "Usage:\n"
-            "./watershed [image_name -- default is fruits.jpg]\n" << endl;
+            "./watershed [image_name -- default is ../data/fruits.jpg]\n" << endl;
 
 
     cout << "Hot keys: \n"
@@ -47,7 +48,7 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"fruits.jpg";
+    char* filename = argc >= 2 ? argv[1] : (char*)"../data/fruits.jpg";
     Mat img0 = imread(filename, 1), imgGray;
 
     if( img0.empty() )

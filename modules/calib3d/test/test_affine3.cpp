@@ -54,8 +54,8 @@ TEST(Calib3d_Affine3f, accuracy)
     cv::Rodrigues(rvec, expected);
 
 
-    ASSERT_EQ(0, norm(cv::Mat(affine.matrix, false).colRange(0, 3).rowRange(0, 3) != expected));
-    ASSERT_EQ(0, norm(cv::Mat(affine.linear()) != expected));
+    ASSERT_EQ(0, cvtest::norm(cv::Mat(affine.matrix, false).colRange(0, 3).rowRange(0, 3) != expected, cv::NORM_L2));
+    ASSERT_EQ(0, cvtest::norm(cv::Mat(affine.linear()) != expected, cv::NORM_L2));
 
 
     cv::Matx33d R = cv::Matx33d::eye();
@@ -77,5 +77,32 @@ TEST(Calib3d_Affine3f, accuracy)
     cv::Mat diff;
     cv::absdiff(expected, result.matrix, diff);
 
-    ASSERT_LT(cv::norm(diff, cv::NORM_INF), 1e-15);
+    ASSERT_LT(cvtest::norm(diff, cv::NORM_INF), 1e-15);
+}
+
+TEST(Calib3d_Affine3f, accuracy_rvec)
+{
+    cv::RNG rng;
+    typedef float T;
+
+    cv::Affine3<T>::Vec3 w;
+    cv::Affine3<T>::Mat3 u, vt, R;
+
+    for(int i = 0; i < 100; ++i)
+    {
+        rng.fill(R, cv::RNG::UNIFORM, -10, 10, true);
+        cv::SVD::compute(R, w, u, vt, cv::SVD::FULL_UV + cv::SVD::MODIFY_A);
+        R = u * vt;
+
+        //double s = (double)cv::getTickCount();
+        cv::Affine3<T>::Vec3 va = cv::Affine3<T>(R).rvec();
+        //std::cout << "M:" <<(cv::getTickCount() - s)*1000/cv::getTickFrequency() << std::endl;
+
+        cv::Affine3<T>::Vec3 vo;
+        //s = (double)cv::getTickCount();
+        cv::Rodrigues(R, vo);
+        //std::cout << "O:" <<(cv::getTickCount() - s)*1000/cv::getTickFrequency() << std::endl;
+
+        ASSERT_LT(cvtest::norm(va, vo, cv::NORM_L2), 1e-9);
+    }
 }

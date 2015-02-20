@@ -50,7 +50,7 @@ namespace cv
 /*
  * Functions to draw keypoints and matches.
  */
-static inline void _drawKeypoint( Mat& img, const KeyPoint& p, const Scalar& color, int flags )
+static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const Scalar& color, int flags )
 {
     CV_Assert( !img.empty() );
     Point center( cvRound(p.pt.x * draw_multiplier), cvRound(p.pt.y * draw_multiplier) );
@@ -88,7 +88,7 @@ static inline void _drawKeypoint( Mat& img, const KeyPoint& p, const Scalar& col
     }
 }
 
-void drawKeypoints( const Mat& image, const std::vector<KeyPoint>& keypoints, Mat& outImage,
+void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
                     const Scalar& _color, int flags )
 {
     if( !(flags & DrawMatchesFlags::DRAW_OVER_OUTIMG) )
@@ -120,25 +120,29 @@ void drawKeypoints( const Mat& image, const std::vector<KeyPoint>& keypoints, Ma
     }
 }
 
-static void _prepareImgAndDrawKeypoints( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
-                                         const Mat& img2, const std::vector<KeyPoint>& keypoints2,
-                                         Mat& outImg, Mat& outImg1, Mat& outImg2,
+static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyPoint>& keypoints1,
+                                         InputArray img2, const std::vector<KeyPoint>& keypoints2,
+                                         InputOutputArray _outImg, Mat& outImg1, Mat& outImg2,
                                          const Scalar& singlePointColor, int flags )
 {
-    Size size( img1.cols + img2.cols, MAX(img1.rows, img2.rows) );
+    Mat outImg;
+    Size img1size = img1.size(), img2size = img2.size();
+    Size size( img1size.width + img2size.width, MAX(img1size.height, img2size.height) );
     if( flags & DrawMatchesFlags::DRAW_OVER_OUTIMG )
     {
+        outImg = _outImg.getMat();
         if( size.width > outImg.cols || size.height > outImg.rows )
             CV_Error( Error::StsBadSize, "outImg has size less than need to draw img1 and img2 together" );
-        outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
-        outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
+        outImg1 = outImg( Rect(0, 0, img1size.width, img1size.height) );
+        outImg2 = outImg( Rect(img1size.width, 0, img2size.width, img2size.height) );
     }
     else
     {
-        outImg.create( size, CV_MAKETYPE(img1.depth(), 3) );
+        _outImg.create( size, CV_MAKETYPE(img1.depth(), 3) );
+        outImg = _outImg.getMat();
         outImg = Scalar::all(0);
-        outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
-        outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
+        outImg1 = outImg( Rect(0, 0, img1size.width, img1size.height) );
+        outImg2 = outImg( Rect(img1size.width, 0, img2size.width, img2size.height) );
 
         if( img1.type() == CV_8U )
             cvtColor( img1, outImg1, COLOR_GRAY2BGR );
@@ -154,15 +158,15 @@ static void _prepareImgAndDrawKeypoints( const Mat& img1, const std::vector<KeyP
     // draw keypoints
     if( !(flags & DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS) )
     {
-        Mat _outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
+        Mat _outImg1 = outImg( Rect(0, 0, img1size.width, img1size.height) );
         drawKeypoints( _outImg1, keypoints1, _outImg1, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
 
-        Mat _outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
+        Mat _outImg2 = outImg( Rect(img1size.width, 0, img2size.width, img2size.height) );
         drawKeypoints( _outImg2, keypoints2, _outImg2, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
     }
 }
 
-static inline void _drawMatch( Mat& outImg, Mat& outImg1, Mat& outImg2 ,
+static inline void _drawMatch( InputOutputArray outImg, InputOutputArray outImg1, InputOutputArray outImg2 ,
                           const KeyPoint& kp1, const KeyPoint& kp2, const Scalar& matchColor, int flags )
 {
     RNG& rng = theRNG();
@@ -174,7 +178,7 @@ static inline void _drawMatch( Mat& outImg, Mat& outImg1, Mat& outImg2 ,
 
     Point2f pt1 = kp1.pt,
             pt2 = kp2.pt,
-            dpt2 = Point2f( std::min(pt2.x+outImg1.cols, float(outImg.cols-1)), pt2.y );
+            dpt2 = Point2f( std::min(pt2.x+outImg1.size().width, float(outImg.size().width-1)), pt2.y );
 
     line( outImg,
           Point(cvRound(pt1.x*draw_multiplier), cvRound(pt1.y*draw_multiplier)),
@@ -182,9 +186,9 @@ static inline void _drawMatch( Mat& outImg, Mat& outImg1, Mat& outImg2 ,
           color, 1, LINE_AA, draw_shift_bits );
 }
 
-void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
-                  const Mat& img2, const std::vector<KeyPoint>& keypoints2,
-                  const std::vector<DMatch>& matches1to2, Mat& outImg,
+void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
+                  InputArray img2, const std::vector<KeyPoint>& keypoints2,
+                  const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
                   const std::vector<char>& matchesMask, int flags )
 {
@@ -211,9 +215,9 @@ void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
     }
 }
 
-void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
-                  const Mat& img2, const std::vector<KeyPoint>& keypoints2,
-                  const std::vector<std::vector<DMatch> >& matches1to2, Mat& outImg,
+void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
+                  InputArray img2, const std::vector<KeyPoint>& keypoints2,
+                  const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
                   const std::vector<std::vector<char> >& matchesMask, int flags )
 {

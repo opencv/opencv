@@ -54,6 +54,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 #define CV_CUDEV_EXPR_CVTCOLOR_INST(name) \
     template <class SrcPtr> \
     __host__ Expr<UnaryTransformPtrSz<typename PtrTraits<SrcPtr>::ptr_type, name ## _func<typename VecTraits<typename PtrTraits<SrcPtr>::value_type>::elem_type> > > \
@@ -276,6 +279,8 @@ CV_CUDEV_EXPR_CVTCOLOR_INST(Luv_to_LBGRA)
 CV_CUDEV_EXPR_CVTCOLOR_INST(Luv4_to_LBGRA)
 
 #undef CV_CUDEV_EXPR_CVTCOLOR_INST
+
+//! @}
 
 }}
 

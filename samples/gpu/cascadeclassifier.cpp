@@ -6,13 +6,14 @@
 
 #include <iostream>
 #include <iomanip>
-#include "opencv2/contrib/contrib.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/cuda.hpp"
+#include "opencv2/cudaobjdetect.hpp"
 #include "opencv2/cudaimgproc.hpp"
 #include "opencv2/cudawarping.hpp"
+
+#include "tick_meter.hpp"
 
 using namespace std;
 using namespace cv;
@@ -172,13 +173,9 @@ int main(int argc, const char *argv[])
         }
     }
 
-    CascadeClassifier_CUDA cascade_gpu;
-    if (!cascade_gpu.load(cascadeName))
-    {
-        return cerr << "ERROR: Could not load cascade classifier \"" << cascadeName << "\"" << endl, help(), -1;
-    }
+    Ptr<cuda::CascadeClassifier> cascade_gpu = cuda::CascadeClassifier::create(cascadeName);
 
-    CascadeClassifier cascade_cpu;
+    cv::CascadeClassifier cascade_cpu;
     if (!cascade_cpu.load(cascadeName))
     {
         return cerr << "ERROR: Could not load cascade classifier \"" << cascadeName << "\"" << endl, help(), -1;
@@ -205,8 +202,8 @@ int main(int argc, const char *argv[])
 
     namedWindow("result", 1);
 
-    Mat frame, frame_cpu, gray_cpu, resized_cpu, faces_downloaded, frameDisp;
-    vector<Rect> facesBuf_cpu;
+    Mat frame, frame_cpu, gray_cpu, resized_cpu, frameDisp;
+    vector<Rect> faces;
 
     GpuMat frame_gpu, gray_gpu, resized_gpu, facesBuf_gpu;
 
@@ -217,7 +214,6 @@ int main(int argc, const char *argv[])
     bool filterRects = true;
     bool helpScreen = false;
 
-    int detections_num;
     for (;;)
     {
         if (isInputCamera || isInputVideo)
@@ -240,40 +236,26 @@ int main(int argc, const char *argv[])
 
         if (useGPU)
         {
-            //cascade_gpu.visualizeInPlace = true;
-            cascade_gpu.findLargestObject = findLargestObject;
+            cascade_gpu->setFindLargestObject(findLargestObject);
+            cascade_gpu->setScaleFactor(1.2);
+            cascade_gpu->setMinNeighbors((filterRects || findLargestObject) ? 4 : 0);
 
-            detections_num = cascade_gpu.detectMultiScale(resized_gpu, facesBuf_gpu, 1.2,
-                                                          (filterRects || findLargestObject) ? 4 : 0);
-            facesBuf_gpu.colRange(0, detections_num).download(faces_downloaded);
+            cascade_gpu->detectMultiScale(resized_gpu, facesBuf_gpu);
+            cascade_gpu->convert(facesBuf_gpu, faces);
         }
         else
         {
-            Size minSize = cascade_gpu.getClassifierSize();
-            cascade_cpu.detectMultiScale(resized_cpu, facesBuf_cpu, 1.2,
+            Size minSize = cascade_gpu->getClassifierSize();
+            cascade_cpu.detectMultiScale(resized_cpu, faces, 1.2,
                                          (filterRects || findLargestObject) ? 4 : 0,
                                          (findLargestObject ? CASCADE_FIND_BIGGEST_OBJECT : 0)
                                             | CASCADE_SCALE_IMAGE,
                                          minSize);
-            detections_num = (int)facesBuf_cpu.size();
         }
 
-        if (!useGPU && detections_num)
+        for (size_t i = 0; i < faces.size(); ++i)
         {
-            for (int i = 0; i < detections_num; ++i)
-            {
-                rectangle(resized_cpu, facesBuf_cpu[i], Scalar(255));
-            }
-        }
-
-        if (useGPU)
-        {
-            resized_gpu.download(resized_cpu);
-
-             for (int i = 0; i < detections_num; ++i)
-             {
-                rectangle(resized_cpu, faces_downloaded.ptr<cv::Rect>()[i], Scalar(255));
-             }
+            rectangle(resized_cpu, faces[i], Scalar(255));
         }
 
         tm.stop();
@@ -282,16 +264,15 @@ int main(int argc, const char *argv[])
 
         //print detections to console
         cout << setfill(' ') << setprecision(2);
-        cout << setw(6) << fixed << fps << " FPS, " << detections_num << " det";
-        if ((filterRects || findLargestObject) && detections_num > 0)
+        cout << setw(6) << fixed << fps << " FPS, " << faces.size() << " det";
+        if ((filterRects || findLargestObject) && !faces.empty())
         {
-            Rect *faceRects = useGPU ? faces_downloaded.ptr<Rect>() : &facesBuf_cpu[0];
-            for (int i = 0; i < min(detections_num, 2); ++i)
+            for (size_t i = 0; i < faces.size(); ++i)
             {
-                cout << ", [" << setw(4) << faceRects[i].x
-                     << ", " << setw(4) << faceRects[i].y
-                     << ", " << setw(4) << faceRects[i].width
-                     << ", " << setw(4) << faceRects[i].height << "]";
+                cout << ", [" << setw(4) << faces[i].x
+                     << ", " << setw(4) << faces[i].y
+                     << ", " << setw(4) << faces[i].width
+                     << ", " << setw(4) << faces[i].height << "]";
             }
         }
         cout << endl;

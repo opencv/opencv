@@ -4,6 +4,7 @@
  * @author OpenCV team
  */
 
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
@@ -60,7 +61,7 @@ void MatchingMethod( int, void* )
   int result_cols =  img.cols - templ.cols + 1;
   int result_rows = img.rows - templ.rows + 1;
 
-  result.create( result_cols, result_rows, CV_32FC1 );
+  result.create( result_rows, result_cols, CV_32FC1 );
 
   /// Do the Matching and Normalize
   matchTemplate( img, templ, result, match_method );

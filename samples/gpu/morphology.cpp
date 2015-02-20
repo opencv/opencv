@@ -44,7 +44,7 @@ App::App(int argc, const char* argv[])
         exit(0);
     }
 
-    String filename = argc == 2 ? argv[1] : "baboon.jpg";
+    String filename = argc == 2 ? argv[1] : "../data/baboon.jpg";
 
     Mat img = imread(filename);
     if (img.empty())
@@ -113,7 +113,7 @@ void App::help()
     cout << "Show off image morphology: erosion, dialation, open and close \n";
     cout << "Call: \n";
     cout << "   gpu-example-morphology [image] \n";
-    cout << "This program also shows use of rect, elipse and cross kernels \n" << endl;
+    cout << "This program also shows use of rect, ellipse and cross kernels \n" << endl;
 
     cout << "Hot keys: \n";
     cout << "\tESC - quit the program \n";

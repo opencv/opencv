@@ -19,8 +19,9 @@ public class HardwareDetector
     // ARM specific features
     public static final int FEATURES_HAS_VFPv3d16 = 0x01;
     public static final int FEATURES_HAS_VFPv3    = 0x02;
-    public static final int FEATURES_HAS_NEON     = 0x04;
-    public static final int FEATURES_HAS_NEON2    = 0x08;
+    public static final int FEATURES_HAS_VFPv4    = 0x04;
+    public static final int FEATURES_HAS_NEON     = 0x08;
+    public static final int FEATURES_HAS_NEON2    = 0x16;
 
     // X86 specific features
     public static final int FEATURES_HAS_SSE  = 0x01;

@@ -46,6 +46,12 @@
 #include "common.hpp"
 #include "warp_reduce.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     struct Emulation
@@ -257,5 +263,7 @@ namespace cv { namespace cuda { namespace device
         };
     }; //struct Emulation
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif /* OPENCV_CUDA_EMULATION_HPP_ */

@@ -32,23 +32,22 @@ def write_ply(fn, verts, colors):
 
 if __name__ == '__main__':
     print 'loading images...'
-    imgL = cv2.pyrDown( cv2.imread('../gpu/aloeL.jpg') )  # downscale images for faster processing
-    imgR = cv2.pyrDown( cv2.imread('../gpu/aloeR.jpg') )
+    imgL = cv2.pyrDown( cv2.imread('../data/aloeL.jpg') )  # downscale images for faster processing
+    imgR = cv2.pyrDown( cv2.imread('../data/aloeR.jpg') )
 
     # disparity range is tuned for 'aloe' image pair
     window_size = 3
     min_disp = 16
     num_disp = 112-min_disp
-    stereo = cv2.StereoSGBM(minDisparity = min_disp,
+    stereo = cv2.StereoSGBM_create(minDisparity = min_disp,
         numDisparities = num_disp,
-        SADWindowSize = window_size,
-        uniquenessRatio = 10,
-        speckleWindowSize = 100,
-        speckleRange = 32,
-        disp12MaxDiff = 1,
+        blockSize = 16,
         P1 = 8*3*window_size**2,
         P2 = 32*3*window_size**2,
-        fullDP = False
+        disp12MaxDiff = 1,
+        uniquenessRatio = 10,
+        speckleWindowSize = 100,
+        speckleRange = 32
     )
 
     print 'computing disparity...'

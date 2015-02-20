@@ -15,6 +15,7 @@
 *
 ********************************************************************************/
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <iostream>
 using namespace cv;
@@ -26,7 +27,7 @@ using namespace std;
 //             "\nThis program is demonstration for ellipse fitting. The program finds\n"
 //             "contours and approximate it by ellipses.\n"
 //             "Call:\n"
-//             "./fitellipse [image_name -- Default stuff.jpg]\n" << endl;
+//             "./fitellipse [image_name -- Default ../data/stuff.jpg]\n" << endl;
 // }
 
 int sliderPos = 70;
@@ -37,7 +38,7 @@ void processImage(int, void*);
 
 int main( int argc, char** argv )
 {
-    const char* filename = argc == 2 ? argv[1] : (char*)"stuff.jpg";
+    const char* filename = argc == 2 ? argv[1] : (char*)"../data/stuff.jpg";
     image = imread(filename, 0);
     if( image.empty() )
     {

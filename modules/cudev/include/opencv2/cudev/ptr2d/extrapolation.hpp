@@ -52,6 +52,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // BrdConstant
 
 template <class SrcPtr> struct BrdConstant
@@ -213,6 +216,8 @@ __host__ BrdBase<BrdWrap, typename PtrTraits<SrcPtr>::ptr_type> brdWrap(const Sr
     b.cols = getCols(src);
     return b;
 }
+
+//! @}
 
 }}
 

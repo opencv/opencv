@@ -1,6 +1,7 @@
 #include "opencv2/core.hpp"
+#include "opencv2/core/core_c.h"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
 
 #include "imagestorage.h"
 #include <stdio.h>
@@ -70,7 +71,7 @@ bool CvCascadeImageReader::NegReader::nextImg()
         _offset.x = std::min( (int)round % winSize.width, src.cols - winSize.width );
         _offset.y = std::min( (int)round / winSize.width, src.rows - winSize.height );
         if( !src.empty() && src.type() == CV_8UC1
-                && offset.x >= 0 && offset.y >= 0 )
+                && _offset.x >= 0 && _offset.y >= 0 )
             break;
     }
 
@@ -97,7 +98,7 @@ bool CvCascadeImageReader::NegReader::get( Mat& _img )
             return false;
 
     Mat mat( winSize.height, winSize.width, CV_8UC1,
-        (void*)(img.data + point.y * img.step + point.x * img.elemSize()), img.step );
+        (void*)(img.ptr(point.y) + point.x * img.elemSize()), img.step );
     mat.copyTo(_img);
 
     if( (int)( point.x + (1.0F + stepFactor ) * winSize.width ) < img.cols )

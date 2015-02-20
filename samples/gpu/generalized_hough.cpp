@@ -7,7 +7,8 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/cudaimgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/contrib.hpp"
+
+#include "tick_meter.hpp"
 
 using namespace std;
 using namespace cv;
@@ -26,7 +27,7 @@ static Mat loadImage(const string& name)
 int main(int argc, const char* argv[])
 {
     CommandLineParser cmd(argc, argv,
-        "{ image i        | pic1.png  | input image }"
+        "{ image i        | ../data/pic1.png  | input image }"
         "{ template t     | templ.png | template image }"
         "{ full           |           | estimate scale and rotation }"
         "{ gpu            |           | use gpu version }"

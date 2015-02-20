@@ -75,7 +75,7 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     const int DIAG_DIST = CV_FLT_TO_FIX( metrics[1], DIST_SHIFT );
     const float scale = 1.f/(1 << DIST_SHIFT);
 
-    const uchar* src = _src.data;
+    const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
     float* dist = _dist.ptr<float>();
     int srcstep = (int)(_src.step/sizeof(src[0]));
@@ -149,7 +149,7 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     const int LONG_DIST = CV_FLT_TO_FIX( metrics[2], DIST_SHIFT );
     const float scale = 1.f/(1 << DIST_SHIFT);
 
-    const uchar* src = _src.data;
+    const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
     float* dist = _dist.ptr<float>();
     int srcstep = (int)(_src.step/sizeof(src[0]));
@@ -240,7 +240,7 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
     const int LONG_DIST = CV_FLT_TO_FIX( metrics[2], DIST_SHIFT );
     const float scale = 1.f/(1 << DIST_SHIFT);
 
-    const uchar* src = _src.data;
+    const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
     float* dist = _dist.ptr<float>();
     int* labels = _labels.ptr<int>();
@@ -488,7 +488,6 @@ struct DTColumnInvoker : ParallelLoopBody
     const float* sqr_tab;
 };
 
-
 struct DTRowInvoker : ParallelLoopBody
 {
     DTRowInvoker( Mat* _dst, const float* _sqr_tab, const float* _inv_tab )
@@ -578,7 +577,7 @@ trueDistTrans( const Mat& src, Mat& dst )
     for( ; i <= m*3; i++ )
         sat_tab[i] = i - shift;
 
-    cv::parallel_for_(cv::Range(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab));
+    cv::parallel_for_(cv::Range(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab), src.total()/(double)(1<<16));
 
     // stage 2: compute modified distance transform for each row
     float* inv_tab = sqr_tab + n;
@@ -610,8 +609,8 @@ distanceATS_L1_8u( const Mat& src, Mat& dst )
     uchar lut[256];
     int x, y;
 
-    const uchar *sbase = src.data;
-    uchar *dbase = dst.data;
+    const uchar *sbase = src.ptr();
+    uchar *dbase = dst.ptr();
     int srcstep = (int)src.step;
     int dststep = (int)dst.step;
 
@@ -669,7 +668,8 @@ distanceATS_L1_8u( const Mat& src, Mat& dst )
         {
             int b = dbase[x+dststep];
             a = lut[MIN(a, b)];
-            dbase[x] = (uchar)(MIN(a, dbase[x]));
+            a = MIN(a, dbase[x]);
+            dbase[x] = (uchar)(a);
         }
     }
 }
@@ -677,23 +677,46 @@ distanceATS_L1_8u( const Mat& src, Mat& dst )
 
 }
 
+namespace cv
+{
+static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
+{
+    Mat src = _src.getMat();
+
+    CV_Assert( src.type() == CV_8UC1);
+
+    _dst.create( src.size(), CV_8UC1);
+    Mat dst = _dst.getMat();
+
+#ifdef HAVE_IPP
+    CV_IPP_CHECK()
+    {
+        IppiSize roi = { src.cols, src.rows };
+        Ipp32s pMetrics[2] = { 1, 2 }; //L1, 3x3 mask
+        if (ippiDistanceTransform_3x3_8u_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<uchar>(), (int)dst.step, roi, pMetrics)>=0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
+#endif
+
+    distanceATS_L1_8u(src, dst);
+}
+}
 
 // Wrapper function for distance transform group
 void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labels,
                             int distType, int maskSize, int labelType )
 {
-    Mat src = _src.getMat(), dst = _dst.getMat(), labels;
+    Mat src = _src.getMat(), labels;
     bool need_labels = _labels.needed();
 
-    CV_Assert( src.type() == CV_8U );
-    if( dst.size == src.size && dst.type() == CV_8U && !need_labels && distType == CV_DIST_L1 )
-    {
-        distanceATS_L1_8u(src, dst);
-        return;
-    }
+    CV_Assert( src.type() == CV_8UC1);
 
-    _dst.create( src.size(), CV_32F );
-    dst = _dst.getMat();
+    _dst.create( src.size(), CV_32F);
+    Mat dst = _dst.getMat();
 
     if( need_labels )
     {
@@ -704,7 +727,6 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
         maskSize = CV_DIST_MASK_5;
     }
 
-    CV_Assert( src.type() == CV_8UC1 );
     float _mask[5] = {0};
 
     if( maskSize != CV_DIST_MASK_3 && maskSize != CV_DIST_MASK_5 && maskSize != CV_DIST_MASK_PRECISE )
@@ -717,6 +739,34 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 
     if( maskSize == CV_DIST_MASK_PRECISE )
     {
+
+#ifdef HAVE_IPP
+        CV_IPP_CHECK()
+        {
+            if ((currentParallelFramework()==NULL) || (src.total()<(int)(1<<14)))
+            {
+                IppStatus status;
+                IppiSize roi = { src.cols, src.rows };
+                Ipp8u *pBuffer;
+                int bufSize=0;
+
+                status = ippiTrueDistanceTransformGetBufferSize_8u32f_C1R(roi, &bufSize);
+                if (status>=0)
+                {
+                    pBuffer = (Ipp8u *)ippMalloc( bufSize );
+                    status = ippiTrueDistanceTransform_8u32f_C1R(src.ptr<uchar>(),(int)src.step, dst.ptr<float>(), (int)dst.step, roi, pBuffer);
+                    ippFree( pBuffer );
+                    if (status>=0)
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP);
+                        return;
+                    }
+                    setIppErrorStatus();
+                }
+            }
+        }
+#endif
+
         trueDistTrans( src, dst );
         return;
     }
@@ -734,9 +784,39 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     if( !need_labels )
     {
         if( maskSize == CV_DIST_MASK_3 )
+        {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+            CV_IPP_CHECK()
+            {
+                IppiSize roi = { src.cols, src.rows };
+                if (ippiDistanceTransform_3x3_8u32f_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask)>=0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+            }
+#endif
+
             distanceTransform_3x3(src, temp, dst, _mask);
+        }
         else
+        {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+            CV_IPP_CHECK()
+            {
+                IppiSize roi = { src.cols, src.rows };
+                if (ippiDistanceTransform_5x5_8u32f_C1R(src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask)>=0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+            }
+#endif
+
             distanceTransform_5x5(src, temp, dst, _mask);
+        }
     }
     else
     {
@@ -744,16 +824,6 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 
         if( labelType == CV_DIST_LABEL_CCOMP )
         {
-        #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-            if( maskSize == CV_DIST_MASK_5 )
-            {
-                IppiSize roi = { src.cols, src.rows };
-                if( ippiDistanceTransform_5x5_8u32f_C1R(
-                        src.ptr<uchar>(), (int)src.step,
-                        dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0 )
-                    return;
-            }
-        #endif
             Mat zpix = src == 0;
             connectedComponents(zpix, labels, 8, CV_32S);
         }
@@ -771,17 +841,19 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             }
         }
 
-        distanceTransformEx_5x5( src, temp, dst, labels, _mask );
+       distanceTransformEx_5x5( src, temp, dst, labels, _mask );
     }
 }
 
-
 void cv::distanceTransform( InputArray _src, OutputArray _dst,
-                            int distanceType, int maskSize )
+                            int distanceType, int maskSize, int dstType)
 {
-    distanceTransform(_src, _dst, noArray(), distanceType, maskSize, DIST_LABEL_PIXEL);
-}
+    if (distanceType == CV_DIST_L1 && dstType==CV_8U)
+        distanceTransform_L1_8U(_src, _dst);
+    else
+        distanceTransform(_src, _dst, noArray(), distanceType, maskSize, DIST_LABEL_PIXEL);
 
+}
 
 CV_IMPL void
 cvDistTransform( const void* srcarr, void* dstarr,

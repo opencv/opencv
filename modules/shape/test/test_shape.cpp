@@ -44,224 +44,258 @@
 using namespace cv;
 using namespace std;
 
-const int angularBins=12;
-const int radialBins=4;
-const float minRad=0.2f;
-const float maxRad=2;
-const int NSN=5;//10;//20; //number of shapes per class
-const int NP=120; //number of points sympliying the contour
-const float outlierWeight=0.1f;
-const int numOutliers=20;
-const float CURRENT_MAX_ACCUR=95; //99% and 100% reached in several tests, 95 is fixed as minimum boundary
-
-class CV_ShapeTest : public cvtest::BaseTest
+template <typename T, typename compute>
+class ShapeBaseTest : public cvtest::BaseTest
 {
 public:
-    CV_ShapeTest();
-    ~CV_ShapeTest();
-protected:
-    void run(int);
-
-private:
-    void mpegTest();
-    void listShapeNames(vector<string> &listHeaders);
-    vector<Point2f> convertContourType(const Mat &, int n=0 );
-    float computeShapeDistance(vector <Point2f>& queryNormal,
-                               vector <Point2f>& queryFlipped1,
-                               vector <Point2f>& queryFlipped2,
-                               vector<Point2f>& testq);
-    void displayMPEGResults();
-};
-
-CV_ShapeTest::CV_ShapeTest()
-{
-}
-CV_ShapeTest::~CV_ShapeTest()
-{
-}
-
-vector <Point2f> CV_ShapeTest::convertContourType(const Mat& currentQuery, int n)
-{
-    vector<vector<Point> > _contoursQuery;
-    vector <Point2f> contoursQuery;
-    findContours(currentQuery, _contoursQuery, RETR_LIST, CHAIN_APPROX_NONE);
-    for (size_t border=0; border<_contoursQuery.size(); border++)
+    typedef Point_<T> PointType;
+    ShapeBaseTest(int _NSN, int _NP, float _CURRENT_MAX_ACCUR)
+        : NSN(_NSN), NP(_NP), CURRENT_MAX_ACCUR(_CURRENT_MAX_ACCUR)
     {
-        for (size_t p=0; p<_contoursQuery[border].size(); p++)
+        // generate file list
+        vector<string> shapeNames;
+        shapeNames.push_back("apple"); //ok
+        shapeNames.push_back("children"); // ok
+        shapeNames.push_back("device7"); // ok
+        shapeNames.push_back("Heart"); // ok
+        shapeNames.push_back("teddy"); // ok
+        for (vector<string>::const_iterator i = shapeNames.begin(); i != shapeNames.end(); ++i)
         {
-            contoursQuery.push_back(Point2f((float)_contoursQuery[border][p].x,
-                                            (float)_contoursQuery[border][p].y));
+            for (int j = 0; j < NSN; ++j)
+            {
+                stringstream filename;
+                filename << cvtest::TS::ptr()->get_data_path()
+                         << "shape/mpeg_test/" << *i << "-" << j + 1 << ".png";
+                filenames.push_back(filename.str());
+            }
         }
+        // distance matrix
+        const int totalCount = (int)filenames.size();
+        distanceMat = Mat::zeros(totalCount, totalCount, CV_32F);
     }
 
-    // In case actual number of points is less than n
-    for (int add=(int)contoursQuery.size()-1; add<n; add++)
+protected:
+    void run(int)
     {
-        contoursQuery.push_back(contoursQuery[contoursQuery.size()-add+1]); //adding dummy values
+        mpegTest();
+        displayMPEGResults();
     }
 
-    // Uniformly sampling
-    random_shuffle(contoursQuery.begin(), contoursQuery.end());
-    int nStart=n;
-    vector<Point2f> cont;
-    for (int i=0; i<nStart; i++)
+    vector<PointType> convertContourType(const Mat& currentQuery) const
     {
-        cont.push_back(contoursQuery[i]);
-    }
-    return cont;
-}
+        vector<vector<Point> > _contoursQuery;
+        findContours(currentQuery, _contoursQuery, RETR_LIST, CHAIN_APPROX_NONE);
 
-void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
-{
-    listHeaders.push_back("apple"); //ok
-    listHeaders.push_back("children"); // ok
-    listHeaders.push_back("device7"); // ok
-    listHeaders.push_back("Heart"); // ok
-    listHeaders.push_back("teddy"); // ok
-}
-
-float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
-                                         vector <Point2f>& query3, vector <Point2f>& testq)
-{
-    //waitKey(0);
-    Ptr <ShapeContextDistanceExtractor> mysc = createShapeContextDistanceExtractor(angularBins, radialBins, minRad, maxRad);
-    //Ptr <HistogramCostExtractor> cost = createNormHistogramCostExtractor(cv::DIST_L1);
-    Ptr <HistogramCostExtractor> cost = createChiHistogramCostExtractor(30,0.15f);
-    //Ptr <HistogramCostExtractor> cost = createEMDHistogramCostExtractor();
-    //Ptr <HistogramCostExtractor> cost = createEMDL1HistogramCostExtractor();
-    mysc->setIterations(1);
-    mysc->setCostExtractor( cost );
-    //mysc->setTransformAlgorithm(createAffineTransformer(true));
-    mysc->setTransformAlgorithm( createThinPlateSplineShapeTransformer() );
-    //mysc->setImageAppearanceWeight(1.6);
-    //mysc->setImageAppearanceWeight(0.0);
-    //mysc->setImages(im1,imtest);
-    return ( std::min( mysc->computeDistance(query1, testq),
-                       std::min(mysc->computeDistance(query2, testq), mysc->computeDistance(query3, testq) )));
-}
-
-void CV_ShapeTest::mpegTest()
-{
-    string baseTestFolder="shape/mpeg_test/";
-    string path = cvtest::TS::ptr()->get_data_path() + baseTestFolder;
-    vector<string> namesHeaders;
-    listShapeNames(namesHeaders);
-
-    // distance matrix //
-    Mat distanceMat=Mat::zeros(NSN*(int)namesHeaders.size(), NSN*(int)namesHeaders.size(), CV_32F);
-
-    // query contours (normal v flipped, h flipped) and testing contour //
-    vector<Point2f> contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting;
-
-    // reading query and computing its properties //
-    int counter=0;
-    const int loops=NSN*(int)namesHeaders.size()*NSN*(int)namesHeaders.size();
-    for (size_t n=0; n<namesHeaders.size(); n++)
-    {
-        for (int i=1; i<=NSN; i++)
+        vector <PointType> contoursQuery;
+        for (size_t border=0; border<_contoursQuery.size(); border++)
         {
-            // read current image //
-            stringstream thepathandname;
-            thepathandname<<path+namesHeaders[n]<<"-"<<i<<".png";
-            Mat currentQuery, flippedHQuery, flippedVQuery;
-            currentQuery=imread(thepathandname.str(), IMREAD_GRAYSCALE);
-            Mat currentQueryBuf=currentQuery.clone();
+            for (size_t p=0; p<_contoursQuery[border].size(); p++)
+            {
+                contoursQuery.push_back(PointType((T)_contoursQuery[border][p].x,
+                                                  (T)_contoursQuery[border][p].y));
+            }
+        }
+
+        // In case actual number of points is less than n
+        for (int add=(int)contoursQuery.size()-1; add<NP; add++)
+        {
+            contoursQuery.push_back(contoursQuery[contoursQuery.size()-add+1]); //adding dummy values
+        }
+
+        // Uniformly sampling
+        random_shuffle(contoursQuery.begin(), contoursQuery.end());
+        int nStart=NP;
+        vector<PointType> cont;
+        for (int i=0; i<nStart; i++)
+        {
+            cont.push_back(contoursQuery[i]);
+        }
+        return cont;
+    }
+
+    void mpegTest()
+    {
+        // query contours (normal v flipped, h flipped) and testing contour
+        vector<PointType> contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting;
+        // reading query and computing its properties
+        for (vector<string>::const_iterator a = filenames.begin(); a != filenames.end(); ++a)
+        {
+            // read current image
+            int aIndex = (int)(a - filenames.begin());
+            Mat currentQuery = imread(*a, IMREAD_GRAYSCALE);
+            Mat flippedHQuery, flippedVQuery;
             flip(currentQuery, flippedHQuery, 0);
             flip(currentQuery, flippedVQuery, 1);
-            // compute border of the query and its flipped versions //
-            vector<Point2f> origContour;
-            contoursQuery1=convertContourType(currentQuery, NP);
-            origContour=contoursQuery1;
-            contoursQuery2=convertContourType(flippedHQuery, NP);
-            contoursQuery3=convertContourType(flippedVQuery, NP);
-
-            // compare with all the rest of the images: testing //
-            for (size_t nt=0; nt<namesHeaders.size(); nt++)
+            // compute border of the query and its flipped versions
+            contoursQuery1=convertContourType(currentQuery);
+            contoursQuery2=convertContourType(flippedHQuery);
+            contoursQuery3=convertContourType(flippedVQuery);
+            // compare with all the rest of the images: testing
+            for (vector<string>::const_iterator b = filenames.begin(); b != filenames.end(); ++b)
             {
-                for (int it=1; it<=NSN; it++)
+                int bIndex = (int)(b - filenames.begin());
+                float distance = 0;
+                // skip self-comparisson
+                if (a != b)
                 {
-                    // skip self-comparisson //
-                    counter++;
-                    if (nt==n && it==i)
-                    {
-                        distanceMat.at<float>(NSN*(int)n+i-1,
-                                              NSN*(int)nt+it-1)=0;
-                        continue;
-                    }
-                    // read testing image //
-                    stringstream thetestpathandname;
-                    thetestpathandname<<path+namesHeaders[nt]<<"-"<<it<<".png";
-                    Mat currentTest;
-                    currentTest=imread(thetestpathandname.str().c_str(), 0);
-                    // compute border of the testing //
-                    contoursTesting=convertContourType(currentTest, NP);
-
-                    // compute shape distance //
-                    std::cout<<std::endl<<"Progress: "<<counter<<"/"<<loops<<": "<<100*double(counter)/loops<<"% *******"<<std::endl;
-                    std::cout<<"Computing shape distance between "<<namesHeaders[n]<<i<<
-                               " and "<<namesHeaders[nt]<<it<<": ";
-                    distanceMat.at<float>(NSN*(int)n+i-1, NSN*(int)nt+it-1)=
-                            computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting);
-                    std::cout<<distanceMat.at<float>(NSN*(int)n+i-1, NSN*(int)nt+it-1)<<std::endl;
+                    // read testing image
+                    Mat currentTest = imread(*b, IMREAD_GRAYSCALE);
+                    // compute border of the testing
+                    contoursTesting=convertContourType(currentTest);
+                    // compute shape distance
+                    distance = cmp(contoursQuery1, contoursQuery2,
+                                   contoursQuery3, contoursTesting);
                 }
+                distanceMat.at<float>(aIndex, bIndex) = distance;
             }
         }
     }
-    // save distance matrix //
-    FileStorage fs(cvtest::TS::ptr()->get_data_path() + baseTestFolder + "distanceMatrixMPEGTest.yml", FileStorage::WRITE);
-    fs << "distanceMat" << distanceMat;
-}
 
-const int FIRST_MANY=2*NSN;
-void CV_ShapeTest::displayMPEGResults()
-{
-    string baseTestFolder="shape/mpeg_test/";
-    Mat distanceMat;
-    FileStorage fs(cvtest::TS::ptr()->get_data_path() + baseTestFolder + "distanceMatrixMPEGTest.yml", FileStorage::READ);
-    vector<string> namesHeaders;
-    listShapeNames(namesHeaders);
-
-    // Read generated MAT //
-    fs["distanceMat"]>>distanceMat;
-
-    int corrects=0;
-    int divi=0;
-    for (int row=0; row<distanceMat.rows; row++)
+    void displayMPEGResults()
     {
-        if (row%NSN==0) //another group
+        const int FIRST_MANY=2*NSN;
+
+        int corrects=0;
+        int divi=0;
+        for (int row=0; row<distanceMat.rows; row++)
         {
-            divi+=NSN;
-        }
-        for (int col=divi-NSN; col<divi; col++)
-        {
-            int nsmall=0;
-            for (int i=0; i<distanceMat.cols; i++)
+            if (row%NSN==0) //another group
             {
-                if (distanceMat.at<float>(row,col)>distanceMat.at<float>(row,i))
+                divi+=NSN;
+            }
+            for (int col=divi-NSN; col<divi; col++)
+            {
+                int nsmall=0;
+                for (int i=0; i<distanceMat.cols; i++)
                 {
-                    nsmall++;
+                    if (distanceMat.at<float>(row,col) > distanceMat.at<float>(row,i))
+                    {
+                        nsmall++;
+                    }
+                }
+                if (nsmall<=FIRST_MANY)
+                {
+                    corrects++;
                 }
             }
-            if (nsmall<=FIRST_MANY)
-            {
-                corrects++;
-            }
         }
+        float porc = 100*float(corrects)/(NSN*distanceMat.rows);
+        std::cout << "Test result: " << porc << "%" << std::endl;
+        if (porc >= CURRENT_MAX_ACCUR)
+            ts->set_failed_test_info(cvtest::TS::OK);
+        else
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
     }
-    float porc = 100*float(corrects)/(NSN*distanceMat.rows);
-    std::cout<<"%="<<porc<<std::endl;
-    if (porc >= CURRENT_MAX_ACCUR)
-        ts->set_failed_test_info(cvtest::TS::OK);
-    else
-        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-    //done
-}
 
-void CV_ShapeTest::run( int /*start_from*/ )
+protected:
+    int NSN;
+    int NP;
+    float CURRENT_MAX_ACCUR;
+    vector<string> filenames;
+    Mat distanceMat;
+    compute cmp;
+};
+
+//------------------------------------------------------------------------
+//                       Test Shape_SCD.regression
+//------------------------------------------------------------------------
+
+class computeShapeDistance_Chi
 {
-    mpegTest();
-    displayMPEGResults();
-    ts->set_failed_test_info(cvtest::TS::OK);
+    Ptr <ShapeContextDistanceExtractor> mysc;
+public:
+    computeShapeDistance_Chi()
+    {
+        const int angularBins=12;
+        const int radialBins=4;
+        const float minRad=0.2f;
+        const float maxRad=2;
+        mysc = createShapeContextDistanceExtractor(angularBins, radialBins, minRad, maxRad);
+        mysc->setIterations(1);
+        mysc->setCostExtractor(createChiHistogramCostExtractor(30,0.15f));
+        mysc->setTransformAlgorithm( createThinPlateSplineShapeTransformer() );
+    }
+    float operator()(vector <Point2f>& query1, vector <Point2f>& query2,
+                     vector <Point2f>& query3, vector <Point2f>& testq)
+    {
+        return std::min(mysc->computeDistance(query1, testq),
+                        std::min(mysc->computeDistance(query2, testq),
+                                 mysc->computeDistance(query3, testq)));
+    }
+};
+
+TEST(Shape_SCD, regression)
+{
+    const int NSN_val=5;//10;//20; //number of shapes per class
+    const int NP_val=120; //number of points simplifying the contour
+    const float CURRENT_MAX_ACCUR_val=95; //99% and 100% reached in several tests, 95 is fixed as minimum boundary
+    ShapeBaseTest<float, computeShapeDistance_Chi> test(NSN_val, NP_val, CURRENT_MAX_ACCUR_val);
+    test.safe_run();
 }
 
-TEST(Shape_SCD, regression) { CV_ShapeTest test; test.safe_run(); }
+//------------------------------------------------------------------------
+//                       Test ShapeEMD_SCD.regression
+//------------------------------------------------------------------------
+
+class computeShapeDistance_EMD
+{
+    Ptr <ShapeContextDistanceExtractor> mysc;
+public:
+    computeShapeDistance_EMD()
+    {
+        const int angularBins=12;
+        const int radialBins=4;
+        const float minRad=0.2f;
+        const float maxRad=2;
+        mysc = createShapeContextDistanceExtractor(angularBins, radialBins, minRad, maxRad);
+        mysc->setIterations(1);
+        mysc->setCostExtractor( createEMDL1HistogramCostExtractor() );
+        mysc->setTransformAlgorithm( createThinPlateSplineShapeTransformer() );
+    }
+    float operator()(vector <Point2f>& query1, vector <Point2f>& query2,
+                     vector <Point2f>& query3, vector <Point2f>& testq)
+    {
+        return std::min(mysc->computeDistance(query1, testq),
+                        std::min(mysc->computeDistance(query2, testq),
+                                 mysc->computeDistance(query3, testq)));
+    }
+};
+
+TEST(ShapeEMD_SCD, regression)
+{
+    const int NSN_val=5;//10;//20; //number of shapes per class
+    const int NP_val=100; //number of points simplifying the contour
+    const float CURRENT_MAX_ACCUR_val=95; //98% and 99% reached in several tests, 95 is fixed as minimum boundary
+    ShapeBaseTest<float, computeShapeDistance_EMD> test(NSN_val, NP_val, CURRENT_MAX_ACCUR_val);
+    test.safe_run();
+}
+
+//------------------------------------------------------------------------
+//                       Test Hauss.regression
+//------------------------------------------------------------------------
+
+class computeShapeDistance_Haussdorf
+{
+    Ptr <HausdorffDistanceExtractor> haus;
+public:
+    computeShapeDistance_Haussdorf()
+    {
+        haus = createHausdorffDistanceExtractor();
+    }
+    float operator()(vector<Point> &query1, vector<Point> &query2,
+                     vector<Point> &query3, vector<Point> &testq)
+    {
+        return std::min(haus->computeDistance(query1,testq),
+                        std::min(haus->computeDistance(query2,testq),
+                                 haus->computeDistance(query3,testq)));
+    }
+};
+
+TEST(Hauss, regression)
+{
+    const int NSN_val=5;//10;//20; //number of shapes per class
+    const int NP_val = 180; //number of points simplifying the contour
+    const float CURRENT_MAX_ACCUR_val=85; //90% and 91% reached in several tests, 85 is fixed as minimum boundary
+    ShapeBaseTest<int, computeShapeDistance_Haussdorf> test(NSN_val, NP_val, CURRENT_MAX_ACCUR_val);
+    test.safe_run();
+}

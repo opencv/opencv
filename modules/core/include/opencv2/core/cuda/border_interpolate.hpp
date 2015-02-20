@@ -47,6 +47,12 @@
 #include "vec_traits.hpp"
 #include "vec_math.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     //////////////////////////////////////////////////////////////
@@ -710,5 +716,7 @@ namespace cv { namespace cuda { namespace device
         D val;
     };
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_BORDER_INTERPOLATE_HPP__

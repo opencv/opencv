@@ -231,7 +231,7 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
                 // Found a dupe, remove it
                 std::swap(intersection[j], intersection.back());
                 intersection.pop_back();
-                i--; // restart check
+                j--; // restart check
             }
         }
     }

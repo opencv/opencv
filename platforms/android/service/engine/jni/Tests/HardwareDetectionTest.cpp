@@ -55,7 +55,7 @@ TEST(Parse, ParseEmptyString)
     EXPECT_FALSE(ParseString(a, key, value));
 }
 
-TEST(Parse, ParseStringWithoutSeporator)
+TEST(Parse, ParseStringWithoutSeparator)
 {
     string a = "qqqwww";
     string key;
@@ -170,7 +170,7 @@ TEST(CpuID, CheckVFPv3)
     EXPECT_TRUE(cpu_id & FEATURES_HAS_VFPv3);
 }
 
-TEST(PlatfromDetector, CheckTegra)
+TEST(PlatformDetector, CheckTegra)
 {
     EXPECT_NE(PLATFORM_UNKNOWN, DetectKnownPlatforms());
 }

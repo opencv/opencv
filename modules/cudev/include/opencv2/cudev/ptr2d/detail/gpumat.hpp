@@ -51,33 +51,33 @@
 namespace cv { namespace cudev {
 
 template <typename T>
-__host__ GpuMat_<T>::GpuMat_()
-    : GpuMat()
+__host__ GpuMat_<T>::GpuMat_(Allocator* allocator)
+    : GpuMat(allocator)
 {
     flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<T>::type;
 }
 
 template <typename T>
-__host__ GpuMat_<T>::GpuMat_(int arows, int acols)
-    : GpuMat(arows, acols, DataType<T>::type)
+__host__ GpuMat_<T>::GpuMat_(int arows, int acols, Allocator* allocator)
+    : GpuMat(arows, acols, DataType<T>::type, allocator)
 {
 }
 
 template <typename T>
-__host__ GpuMat_<T>::GpuMat_(Size asize)
-    : GpuMat(asize.height, asize.width, DataType<T>::type)
+__host__ GpuMat_<T>::GpuMat_(Size asize, Allocator* allocator)
+    : GpuMat(asize.height, asize.width, DataType<T>::type, allocator)
 {
 }
 
 template <typename T>
-__host__ GpuMat_<T>::GpuMat_(int arows, int acols, Scalar val)
-    : GpuMat(arows, acols, DataType<T>::type, val)
+__host__ GpuMat_<T>::GpuMat_(int arows, int acols, Scalar val, Allocator* allocator)
+    : GpuMat(arows, acols, DataType<T>::type, val, allocator)
 {
 }
 
 template <typename T>
-__host__ GpuMat_<T>::GpuMat_(Size asize, Scalar val)
-    : GpuMat(asize.height, asize.width, DataType<T>::type, val)
+__host__ GpuMat_<T>::GpuMat_(Size asize, Scalar val, Allocator* allocator)
+    : GpuMat(asize.height, asize.width, DataType<T>::type, val, allocator)
 {
 }
 
@@ -88,8 +88,8 @@ __host__ GpuMat_<T>::GpuMat_(const GpuMat_& m)
 }
 
 template <typename T>
-__host__ GpuMat_<T>::GpuMat_(const GpuMat& m)
-    : GpuMat()
+__host__ GpuMat_<T>::GpuMat_(const GpuMat& m, Allocator* allocator)
+    : GpuMat(allocator)
 {
     flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<T>::type;
 
@@ -134,8 +134,8 @@ __host__ GpuMat_<T>::GpuMat_(const GpuMat_& m, Rect roi)
 }
 
 template <typename T>
-__host__ GpuMat_<T>::GpuMat_(InputArray arr)
-    : GpuMat()
+__host__ GpuMat_<T>::GpuMat_(InputArray arr, Allocator* allocator)
+    : GpuMat(allocator)
 {
     flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<T>::type;
     upload(arr);
@@ -341,7 +341,7 @@ namespace cv {
 
 template<typename _Tp>
 __host__ _InputArray::_InputArray(const cudev::GpuMat_<_Tp>& m)
-    : flags(FIXED_TYPE + GPU_MAT + DataType<_Tp>::type), obj((void*)&m)
+    : flags(FIXED_TYPE + CUDA_GPU_MAT + DataType<_Tp>::type), obj((void*)&m)
 {}
 
 template<typename _Tp>

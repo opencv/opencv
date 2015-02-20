@@ -107,7 +107,7 @@ protected:
     bool testTranslation(int);
 };
 
-CV_ECC_Test_Translation::CV_ECC_Test_Translation(){};
+CV_ECC_Test_Translation::CV_ECC_Test_Translation(){}
 
 bool CV_ECC_Test_Translation::testTranslation(int from)
 {
@@ -256,7 +256,7 @@ protected:
     bool testAffine(int);
 };
 
-CV_ECC_Test_Affine::CV_ECC_Test_Affine(){};
+CV_ECC_Test_Affine::CV_ECC_Test_Affine(){}
 
 
 bool CV_ECC_Test_Affine::testAffine(int from)
@@ -332,7 +332,7 @@ protected:
     bool testHomography(int);
 };
 
-CV_ECC_Test_Homography::CV_ECC_Test_Homography(){};
+CV_ECC_Test_Homography::CV_ECC_Test_Homography(){}
 
 bool CV_ECC_Test_Homography::testHomography(int from)
 {

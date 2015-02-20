@@ -79,6 +79,6 @@ if __name__ == '__main__':
     try:
         fn = sys.argv[1]
     except:
-        fn = '../cpp/fruits.jpg'
+        fn = '../data/fruits.jpg'
     print __doc__
     App(fn).run()

@@ -91,8 +91,8 @@ void CV_InpaintTest::run( int )
     absdiff( orig, res1, diff1 );
     absdiff( orig, res2, diff2 );
 
-    double n1 = norm(diff1.reshape(1), NORM_INF, inv_mask.reshape(1));
-    double n2 = norm(diff2.reshape(1), NORM_INF, inv_mask.reshape(1));
+    double n1 = cvtest::norm(diff1.reshape(1), NORM_INF, inv_mask.reshape(1));
+    double n2 = cvtest::norm(diff2.reshape(1), NORM_INF, inv_mask.reshape(1));
 
     if (n1 != 0 || n2 != 0)
     {
@@ -103,8 +103,8 @@ void CV_InpaintTest::run( int )
     absdiff( exp1, res1, diff1 );
     absdiff( exp2, res2, diff2 );
 
-    n1 = norm(diff1.reshape(1), NORM_INF, mask.reshape(1));
-    n2 = norm(diff2.reshape(1), NORM_INF, mask.reshape(1));
+    n1 = cvtest::norm(diff1.reshape(1), NORM_INF, mask.reshape(1));
+    n2 = cvtest::norm(diff2.reshape(1), NORM_INF, mask.reshape(1));
 
     const int jpeg_thres = 3;
     if (n1 > jpeg_thres || n2 > jpeg_thres)

@@ -1,3 +1,4 @@
+#include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
@@ -191,7 +192,11 @@ int main( int argc, char* argv[] )
     if( isVideoReading )
         capture.open( filename );
     else
-        capture.open( CAP_OPENNI );
+    {
+        capture.open( CAP_OPENNI2 );
+        if( !capture.isOpened() )
+            capture.open( CAP_OPENNI );
+    }
 
     cout << "done." << endl;
 

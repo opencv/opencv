@@ -92,7 +92,7 @@ extern "C" {
             #define CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED __attribute__((deprecated))
             #define CL_EXT_PREFIX__VERSION_1_1_DEPRECATED    
         #endif
-    #elif _WIN32
+    #elif defined(_WIN32)
         #ifdef CL_USE_DEPRECATED_OPENCL_1_0_APIS
             #define CL_EXT_SUFFIX__VERSION_1_0_DEPRECATED    
             #define CL_EXT_PREFIX__VERSION_1_0_DEPRECATED    
@@ -332,13 +332,13 @@ typedef unsigned int cl_GLenum;
 /* Define basic vector types */
 #if defined( __VEC__ )
    #include <altivec.h>   /* may be omitted depending on compiler. AltiVec spec provides no way to detect whether the header is required. */
-   typedef vector unsigned char     __cl_uchar16;
-   typedef vector signed char       __cl_char16;
-   typedef vector unsigned short    __cl_ushort8;
-   typedef vector signed short      __cl_short8;
-   typedef vector unsigned int      __cl_uint4;
-   typedef vector signed int        __cl_int4;
-   typedef vector float             __cl_float4;
+   typedef __vector unsigned char     __cl_uchar16;
+   typedef __vector signed char       __cl_char16;
+   typedef __vector unsigned short    __cl_ushort8;
+   typedef __vector signed short      __cl_short8;
+   typedef __vector unsigned int      __cl_uint4;
+   typedef __vector signed int        __cl_int4;
+   typedef __vector float             __cl_float4;
    #define  __CL_UCHAR16__  1
    #define  __CL_CHAR16__   1
    #define  __CL_USHORT8__  1
@@ -454,7 +454,7 @@ typedef unsigned int cl_GLenum;
 /* Define alignment keys */
 #if defined( __GNUC__ )
     #define CL_ALIGNED(_x)          __attribute__ ((aligned(_x)))
-#elif defined( _WIN32) && (_MSC_VER)
+#elif defined( _WIN32) && defined(_MSC_VER)
     /* Alignment keys neutered on windows because MSVC can't swallow function arguments with alignment requirements     */
     /* http://msdn.microsoft.com/en-us/library/373ak2y1%28VS.71%29.aspx                                                 */
     /* #include <crtdefs.h>                                                                                             */

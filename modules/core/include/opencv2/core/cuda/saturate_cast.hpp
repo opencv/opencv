@@ -45,6 +45,12 @@
 
 #include "common.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(uchar v) { return _Tp(v); }
@@ -280,5 +286,7 @@ namespace cv { namespace cuda { namespace device
     #endif
     }
 }}}
+
+//! @endcond
 
 #endif /* __OPENCV_CUDA_SATURATE_CAST_HPP__ */

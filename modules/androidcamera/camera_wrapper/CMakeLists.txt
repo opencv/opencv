@@ -46,7 +46,7 @@ ADD_LIBRARY(${the_target} SHARED camera_wrapper.h camera_wrapper.cpp)
 string(REGEX REPLACE "[.]" "_" LIBRARY_DEF ${ANDROID_VERSION})
 add_definitions(-DANDROID_r${LIBRARY_DEF})
 
-target_link_libraries(${the_target} c m dl utils camera_client binder log)
+ocv_target_link_libraries(${the_target} c m dl utils camera_client binder log)
 
 if(NOT ANDROID_VERSION VERSION_LESS "3.0.0")
     target_link_libraries(${the_target} gui )
@@ -58,9 +58,9 @@ SET_TARGET_PROPERTIES(${the_target} PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
                       )
 
-if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
+if (NOT (CMAKE_BUILD_TYPE MATCHES "Debug"))
     ADD_CUSTOM_COMMAND( TARGET ${the_target} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${LIBRARY_OUTPUT_PATH}/lib${the_target}.so" )
 endif()
 
 
-install(TARGETS ${the_target} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+install(TARGETS ${the_target} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs)
