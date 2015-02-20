@@ -309,13 +309,13 @@ cv::String CameraWrapperConnector::getPathLibFolder()
 
         const char* libName=dl_info.dli_fname;
         while( ((*libName)=='/') || ((*libName)=='.') )
-        libName++;
+            libName++;
 
-        char lineBuf[2048];
         FILE* file = fopen("/proc/self/smaps", "rt");
 
         if(file)
         {
+            char lineBuf[2048];
             while (fgets(lineBuf, sizeof lineBuf, file) != NULL)
             {
                 //verify that line ends with library name
