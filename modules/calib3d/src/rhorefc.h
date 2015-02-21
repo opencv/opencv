@@ -124,6 +124,20 @@ int  rhoRefCEnsureCapacity(RHO_HEST_REFC* p, unsigned N, double beta);
 
 
 
+/**
+ * Seeds the internal PRNG with the given seed.
+ *
+ * Although it is not required to call this function, since context
+ * initialization seeds itself with entropy from rand(), this function allows
+ * reproducible results by using a specified seed.
+ *
+ * @param [in] p    The estimator context whose PRNG is to be seeded.
+ * @param [in] seed The 64-bit integer seed.
+ */
+
+void rhoRefCSeed(RHO_HEST_REFC* p, unsigned long long seed);
+
+
 
 /**
  * Finalize the estimator context, by freeing the aligned buffers used
