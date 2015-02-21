@@ -239,7 +239,7 @@ Line( Mat& img, Point pt1, Point pt2,
 {
     if( connectivity == 0 )
         connectivity = 8;
-    if( connectivity == 1 )
+    else if( connectivity == 1 )
         connectivity = 4;
 
     LineIterator iterator(img, pt1, pt2, connectivity, true);
@@ -288,14 +288,14 @@ LineAA( Mat& img, Point pt1, Point pt2, const void* color )
     int x_step, y_step;
     int i, j;
     int ep_table[9];
-    int cb = ((uchar*)color)[0], cg = ((uchar*)color)[1], cr = ((uchar*)color)[2];
-    int _cb, _cg, _cr;
+    int cb = ((uchar*)color)[0], cg = ((uchar*)color)[1], cr = ((uchar*)color)[2], ca = ((uchar*)color)[3];
+    int _cb, _cg, _cr, _ca;
     int nch = img.channels();
     uchar* ptr = img.ptr();
     size_t step = img.step;
     Size size = img.size();
 
-    if( !((nch == 1 || nch == 3) && img.depth() == CV_8U) )
+    if( !((nch == 1 || nch == 3 || nch == 4) && img.depth() == CV_8U) )
     {
         Line(img, pt1, pt2, color);
         return;
@@ -468,7 +468,7 @@ LineAA( Mat& img, Point pt1, Point pt2, const void* color )
         }
         #undef ICV_PUT_POINT
     }
-    else
+    else if(nch == 1)
     {
         #define  ICV_PUT_POINT()            \
         {                                   \
@@ -531,6 +531,89 @@ LineAA( Mat& img, Point pt1, Point pt2, const void* color )
                 ICV_PUT_POINT();
 
                 tptr++;
+                a = (ep_corr * FilterTable[63 - dist] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                pt1.x += x_step;
+                ptr += step;
+                scount++;
+                ecount--;
+            }
+        }
+        #undef ICV_PUT_POINT
+    }
+    else
+    {
+        #define  ICV_PUT_POINT()            \
+        {                                   \
+            _cb = tptr[0];                  \
+            _cb += ((cb - _cb)*a + 127)>> 8;\
+            _cg = tptr[1];                  \
+            _cg += ((cg - _cg)*a + 127)>> 8;\
+            _cr = tptr[2];                  \
+            _cr += ((cr - _cr)*a + 127)>> 8;\
+            _ca = tptr[3];                  \
+            _ca += ((ca - _ca)*a + 127)>> 8;\
+            tptr[0] = (uchar)_cb;           \
+            tptr[1] = (uchar)_cg;           \
+            tptr[2] = (uchar)_cr;           \
+            tptr[3] = (uchar)_ca;           \
+        }
+        if( ax > ay )
+        {
+            ptr += (pt1.x >> XY_SHIFT) * 4;
+
+            while( ecount >= 0 )
+            {
+                uchar *tptr = ptr + ((pt1.y >> XY_SHIFT) - 1) * step;
+
+                int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
+                                       (((ecount >= 2) + 1) & (ecount | 2))];
+                int a, dist = (pt1.y >> (XY_SHIFT - 5)) & 31;
+
+                a = (ep_corr * FilterTable[dist + 32] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                tptr += step;
+                a = (ep_corr * FilterTable[dist] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                tptr += step;
+                a = (ep_corr * FilterTable[63 - dist] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                pt1.y += y_step;
+                ptr += 4;
+                scount++;
+                ecount--;
+            }
+        }
+        else
+        {
+            ptr += (pt1.y >> XY_SHIFT) * step;
+
+            while( ecount >= 0 )
+            {
+                uchar *tptr = ptr + ((pt1.x >> XY_SHIFT) - 1) * 4;
+
+                int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
+                                       (((ecount >= 2) + 1) & (ecount | 2))];
+                int a, dist = (pt1.x >> (XY_SHIFT - 5)) & 31;
+
+                a = (ep_corr * FilterTable[dist + 32] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                tptr += step;
+                a = (ep_corr * FilterTable[dist] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                tptr += step;
                 a = (ep_corr * FilterTable[63 - dist] >> 8) & 0xff;
                 ICV_PUT_POINT();
                 ICV_PUT_POINT();
