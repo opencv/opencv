@@ -115,10 +115,10 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
              }
         }
         #elif CV_NEON
-        uint8x16_t v_zero = vdupq_n_u8(0);
+        uint8x16_t v_one = vdupq_n_u8(1);
         for( ; x <= size.width - 16; x += 16 )
         {
-            uint8x16_t v_mask = vcgtq_u8(vld1q_u8(mask + x), v_zero);
+            uint8x16_t v_mask = vcgeq_u8(vld1q_u8(mask + x), v_one);
             uint8x16_t v_dst = vld1q_u8(dst + x), v_src = vld1q_u8(src + x);
             vst1q_u8(dst + x, vbslq_u8(v_mask, v_src, v_dst));
         }
@@ -165,10 +165,10 @@ copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mst
              }
         }
         #elif CV_NEON
-        uint8x8_t v_zero = vdup_n_u8(0);
+        uint8x8_t v_one = vdup_n_u8(1);
         for( ; x <= size.width - 8; x += 8 )
         {
-            uint8x8_t v_mask = vcgt_u8(vld1_u8(mask + x), v_zero);
+            uint8x8_t v_mask = vcge_u8(vld1_u8(mask + x), v_one);
             uint8x8x2_t v_mask2 = vzip_u8(v_mask, v_mask);
             uint16x8_t v_mask_res = vreinterpretq_u16_u8(vcombine_u8(v_mask2.val[0], v_mask2.val[1]));
 
