@@ -161,6 +161,11 @@ struct RHO_HEST_REFC{
         float*    Jte;             /* Jte vector */
     } lm;
 
+    /* PRNG XORshift128+ */
+    struct{
+        uint64_t  s[2];            /* PRNG state */
+    } prng;
+
     /* Initialized? */
     int init;
 
@@ -205,6 +210,11 @@ struct RHO_HEST_REFC{
     inline int    PROSACPhaseEndReached(void);
     inline void   PROSACGoToNextPhase(void);
     inline void   getPROSACSample(void);
+    inline void   rndSmpl(unsigned  sampleSize,
+                          unsigned* currentSample,
+                          unsigned  dataSetSize);
+    inline double fastRandom(void);
+    inline void   fastSeed(uint64_t seed);
     inline int    isSampleDegenerate(void);
     inline void   generateModel(void);
     inline int    isModelDegenerate(void);
@@ -239,10 +249,6 @@ static inline void   sacInitNonRand       (double    beta,
 static inline double sacInitPEndFpI       (const unsigned ransacConvg,
                                            const unsigned n,
                                            const unsigned s);
-static inline void   sacRndSmpl           (unsigned  sampleSize,
-                                           unsigned* currentSample,
-                                           unsigned  dataSetSize);
-static inline double sacRandom            (void);
 static inline unsigned sacCalcIterBound   (double   confidence,
                                            double   inlierRate,
                                            unsigned sampleSize,
@@ -301,6 +307,15 @@ RHO_HEST_REFC* rhoRefCInit(void){
 
 int  rhoRefCEnsureCapacity(RHO_HEST_REFC* p, unsigned N, double beta){
     return p->sacEnsureCapacity(N, beta);
+}
+
+
+/**
+ * Seeds the internal PRNG with the given seed.
+ */
+
+void rhoRefCSeed(RHO_HEST_REFC* p, unsigned long long seed){
+    p->fastSeed((uint64_t)seed);
 }
 
 
@@ -458,6 +473,12 @@ inline int    RHO_HEST_REFC::initialize(void){
     lm.JtJ      = NULL;
     lm.tmp1     = NULL;
     lm.Jte      = NULL;
+
+#ifdef _WIN32
+    fastSeed(rand());
+#else
+    fastSeed(random());
+#endif
 
 
     int areAllAllocsSuccessful = ctrl.smpl   &&
@@ -950,10 +971,118 @@ inline void   RHO_HEST_REFC::PROSACGoToNextPhase(void){
 inline void   RHO_HEST_REFC::getPROSACSample(void){
     if(ctrl.i > ctrl.phEndI){
         /* FIXME: Dubious. Review. */
-        sacRndSmpl(4, ctrl.smpl, ctrl.phNum);/* Used to be phMax */
+        rndSmpl(4, ctrl.smpl, ctrl.phNum);/* Used to be phMax */
     }else{
-        sacRndSmpl(3, ctrl.smpl, ctrl.phNum-1);
+        rndSmpl(3, ctrl.smpl, ctrl.phNum-1);
         ctrl.smpl[3] = ctrl.phNum-1;
+    }
+}
+
+/**
+ * Choose, without repetition, sampleSize integers in the range [0, numDataPoints).
+ */
+
+inline void   RHO_HEST_REFC::rndSmpl(unsigned  sampleSize,
+                                     unsigned* currentSample,
+                                     unsigned  dataSetSize){
+    /**
+     * If sampleSize is very close to dataSetSize, we use selection sampling.
+     * Otherwise we use the naive sampling technique wherein we select random
+     * indexes until sampleSize of them are distinct.
+     */
+
+    if(sampleSize*2>dataSetSize){
+        /**
+         * Selection Sampling:
+         *
+         * Algorithm S (Selection sampling technique). To select n records at random from a set of N, where 0 < n ≤ N.
+         * S1. [Initialize.] Set t ← 0, m ← 0. (During this algorithm, m represents the number of records selected so far,
+         *                                      and t is the total number of input records that we have dealt with.)
+         * S2. [Generate U.] Generate a random number U, uniformly distributed between zero and one.
+         * S3. [Test.] If (N – t)U ≥ n – m, go to step S5.
+         * S4. [Select.] Select the next record for the sample, and increase m and t by 1. If m < n, go to step S2;
+         *               otherwise the sample is complete and the algorithm terminates.
+         * S5. [Skip.] Skip the next record (do not include it in the sample), increase t by 1, and go back to step S2.
+         *
+         * Replaced m with i and t with j in the below code.
+         */
+
+        unsigned i=0,j=0;
+
+        for(i=0;i<sampleSize;j++){
+            double U=fastRandom();
+            if((dataSetSize-j)*U < (sampleSize-i)){
+                currentSample[i++]=j;
+            }
+        }
+    }else{
+        /**
+         * Naive sampling technique. Generate indexes until sampleSize of them are distinct.
+         */
+
+        unsigned i, j;
+        for(i=0;i<sampleSize;i++){
+            int inList;
+
+            do{
+                currentSample[i] = (unsigned)(dataSetSize*fastRandom());
+
+                inList=0;
+                for(j=0;j<i;j++){
+                    if(currentSample[i] == currentSample[j]){
+                        inList=1;
+                        break;
+                    }
+                }
+            }while(inList);
+        }
+    }
+}
+
+/**
+ * Generates a random double uniformly distributed in the range [0, 1).
+ *
+ * Uses xorshift128+ algorithm from
+ * Sebastiano Vigna. Further scramblings of Marsaglia's xorshift generators.
+ * CoRR, abs/1402.6246, 2014.
+ * http://vigna.di.unimi.it/ftp/papers/xorshiftplus.pdf
+ *
+ * Source roughly as given in
+ * http://en.wikipedia.org/wiki/Xorshift#Xorshift.2B
+ */
+
+inline double RHO_HEST_REFC::fastRandom(void){
+    uint64_t x = prng.s[0];
+    uint64_t y = prng.s[1];
+    x ^= x << 23; // a
+    x ^= x >> 17; // b
+    x ^= y ^ (y >> 26); // c
+    prng.s[0] = y;
+    prng.s[1] = x;
+    uint64_t s = x + y;
+
+    return s * 5.421010862427522e-20;/* 2^-64 */
+}
+
+/**
+ * Seeds the PRNG.
+ *
+ * The seed should not be zero, since the state must be initialized to non-zero.
+ */
+
+inline void RHO_HEST_REFC::fastSeed(uint64_t seed){
+    int i;
+
+    prng.s[0] =  seed;
+    prng.s[1] = ~seed;/* Guarantees one of the elements will be non-zero. */
+
+    /**
+     * Escape from zero-land (see xorshift128+ paper). Approximately 20
+     * iterations required according to the graph.
+     */
+
+    for(i=0;i<20;i++){
+        fastRandom();
     }
 }
 
@@ -1393,79 +1522,6 @@ static inline double sacInitPEndFpI(const unsigned ransacConvg,
     }
 
     return ransacConvg*numer/denom;
-}
-
-/**
- * Choose, without repetition, sampleSize integers in the range [0, numDataPoints).
- */
-
-static inline void sacRndSmpl(unsigned  sampleSize,
-                              unsigned* currentSample,
-                              unsigned  dataSetSize){
-    /**
-     * If sampleSize is very close to dataSetSize, we use selection sampling.
-     * Otherwise we use the naive sampling technique wherein we select random
-     * indexes until sampleSize of them are distinct.
-     */
-
-    if(sampleSize*2>dataSetSize){
-        /**
-         * Selection Sampling:
-         *
-         * Algorithm S (Selection sampling technique). To select n records at random from a set of N, where 0 < n ≤ N.
-         * S1. [Initialize.] Set t ← 0, m ← 0. (During this algorithm, m represents the number of records selected so far,
-         *                                      and t is the total number of input records that we have dealt with.)
-         * S2. [Generate U.] Generate a random number U, uniformly distributed between zero and one.
-         * S3. [Test.] If (N – t)U ≥ n – m, go to step S5.
-         * S4. [Select.] Select the next record for the sample, and increase m and t by 1. If m < n, go to step S2;
-         *               otherwise the sample is complete and the algorithm terminates.
-         * S5. [Skip.] Skip the next record (do not include it in the sample), increase t by 1, and go back to step S2.
-         *
-         * Replaced m with i and t with j in the below code.
-         */
-
-        unsigned i=0,j=0;
-
-        for(i=0;i<sampleSize;j++){
-            double U=sacRandom();
-            if((dataSetSize-j)*U < (sampleSize-i)){
-                currentSample[i++]=j;
-            }
-        }
-    }else{
-        /**
-         * Naive sampling technique. Generate indexes until sampleSize of them are distinct.
-         */
-
-        unsigned i, j;
-        for(i=0;i<sampleSize;i++){
-            int inList;
-
-            do{
-                currentSample[i] = (unsigned)(dataSetSize*sacRandom());
-
-                inList=0;
-                for(j=0;j<i;j++){
-                    if(currentSample[i] == currentSample[j]){
-                        inList=1;
-                        break;
-                    }
-                }
-            }while(inList);
-        }
-    }
-}
-
-/**
- * Generates a random double uniformly distributed in the range [0, 1].
- */
-
-static inline double sacRandom(void){
-#ifdef _WIN32
-    return ((double)rand())/RAND_MAX;
-#else
-    return ((double)random())/INT_MAX;
-#endif
 }
 
 /**
