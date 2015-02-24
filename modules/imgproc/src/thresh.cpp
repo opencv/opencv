@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#include <math.h>
+
 namespace cv
 {
 
@@ -1272,6 +1274,55 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     return thresh;
 }
 
+void cv::niBlackThreshold( InputArray _src, OutputArray _dst, double maxValue,
+        int type, int blockSize, double delta )
+{
+    Mat src = _src.getMat();
+    CV_Assert( src.type() == CV_8UC1 );
+    CV_Assert( blockSize % 2 == 1 && blockSize > 1 );
+    Size size = src.size();
+
+    _dst.create( size, src.type() );
+    Mat dst = _dst.getMat();
+
+    if( maxValue < 0 )
+    {
+        dst = Scalar(0);
+        return;
+    }
+
+    // Calculate and store the mean and mean of squares in the neighborhood
+    // of each pixel and store them in Mat mean and sqmean.
+    Mat_<double> mean(size), sqmean(size);
+
+    if( src.data != dst.data )
+        mean = dst;
+
+    boxFilter( src, mean, CV_64F, Size(blockSize, blockSize),
+            Point(-1,-1), true, BORDER_REPLICATE );
+    sqrBoxFilter( src, sqmean, CV_64F, Size(blockSize, blockSize),
+            Point(-1,-1), true, BORDER_REPLICATE );
+
+    // Compute (k * standard deviation) in the neighborhood of each pixel
+    // and store in Mat stddev. Also threshold the values in the src matrix to compute dst matrix.
+    Mat_<double> stddev(size);
+    int i, j, threshold;
+    uchar imaxval = saturate_cast<uchar>(maxValue);
+    for(i = 0; i < size.height; ++i)
+    {
+        for(j = 0; j < size.width; ++j)
+        {
+            stddev.at<double>(i, j) = delta * cvRound( sqrt(sqmean.at<double>(i, j) -
+                        mean.at<double>(i, j)*mean.at<double>(i, j)) );
+            threshold = cvRound(mean.at<double>(i, j) - stddev.at<double>(i, j));
+            if(src.at<uchar>(i, j) > threshold)
+                dst.at<uchar>(i, j) = (type == CV_THRESH_BINARY) ? imaxval : 0;
+            else
+                dst.at<uchar>(i, j) = (type == CV_THRESH_BINARY) ? 0 : imaxval;
+        }
+    }
+
+}
 
 void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
                             int method, int type, int blockSize, double delta )
