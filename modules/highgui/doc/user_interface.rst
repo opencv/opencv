@@ -75,7 +75,7 @@ Displays an image in the specified window.
 
     :param image: Image to be shown.
 
-The function ``imshow`` displays an image in the specified window. If the window was created with the ``CV_WINDOW_AUTOSIZE`` flag, the image is shown with its original size. Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
+The function ``imshow`` displays an image in the specified window. If the window was created with the ``CV_WINDOW_AUTOSIZE`` flag, the image is shown with its original size, however it is still limited by the screen resolution. Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
 
     * If the image is 8-bit unsigned, it is displayed as is.
 
@@ -85,7 +85,15 @@ The function ``imshow`` displays an image in the specified window. If the window
 
 If the window was not created before this function, it is assumed creating a window with ``CV_WINDOW_AUTOSIZE``.
 
+If you need to show an image that is bigger than the screen resolution, you will need to call ``namedWindow("", WINDOW_NORMAL)`` before the ``imshow``.
+
 If window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`gpu::GpuMat` as input.
+
+.. note::
+
+   This function should be followed by ``waitKey`` function which displays the image for specified milliseconds. Otherwise, it won't display the image. For example, ``waitKey(0)`` will display the window  infinitely until any keypress (it is suitable for image display). ``waitKey(25)`` will display a frame for 25 ms, after which display will be automatically closed. (If you put it in a loop to read videos, it will display the video frame-by-frame)
+
+[Windows Backend Only] Pressing Ctrl+C will copy the image to the clipboard.
 
 namedWindow
 ---------------
