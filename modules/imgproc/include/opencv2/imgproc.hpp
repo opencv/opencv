@@ -3613,7 +3613,7 @@ CV_EXPORTS_W float intersectConvexConvex( InputArray _p1, InputArray _p2,
 /** @brief Fits an ellipse around a set of 2D points.
 
 The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of
-all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm @cite Fitzgibbon95
+all. It returns the rotated rectangle in which the ellipse is inscribed. The first algorithm described by @cite Fitzgibbon95
 is used. Developer should keep in mind that it is possible that the returned
 ellipse/rotatedRect data contains negative indices, due to the data points being close to the
 border of the containing Mat element.
