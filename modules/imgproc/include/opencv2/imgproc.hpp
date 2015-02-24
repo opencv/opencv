@@ -1051,7 +1051,7 @@ CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
 The function computes and returns the \f$\texttt{ksize} \times 1\f$ matrix of Gaussian filter
 coefficients:
 
-\f[G_i= \alpha *e^{-(i-( \texttt{ksize} -1)/2)^2/(2* \texttt{sigma} )^2},\f]
+\f[G_i= \alpha *e^{-(i-( \texttt{ksize} -1)/2)^2/(2* \texttt{sigma}^2)},\f]
 
 where \f$i=0..\texttt{ksize}-1\f$ and \f$\alpha\f$ is the scale factor chosen so that \f$\sum_i G_i=1\f$.
 
