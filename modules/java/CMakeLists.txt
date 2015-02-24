@@ -20,13 +20,13 @@ set(JAVA_INSTALL_ROOT "sdk/java")
 set(JNI_INSTALL_ROOT  "sdk/native")
 
 # get list of modules to wrap
-message(STATUS "Wrapped in java:")
+# message(STATUS "Wrapped in java:")
 set(OPENCV_JAVA_MODULES)
 foreach(m ${OPENCV_MODULES_BUILD})
   if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";java;" AND HAVE_${m})
     string(REPLACE "opencv_" "" m ${m})
     list(APPEND OPENCV_JAVA_MODULES ${m})
-    message(STATUS "\topencv_${m}")
+    # message(STATUS "\topencv_${m}")
   endif()
 endforeach()
 
