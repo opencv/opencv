@@ -24,22 +24,6 @@
 # OPENCV_MODULE_${the_module}_WRAPPERS - list of wrappers supporting this module
 # HAVE_${the_module} - for fast check of module availability
 
-# Module layout:
-# <module>
-# ├── doc               - docs
-# ├── include
-# │   └── opencv2
-# │       └── <module>  - sub headers
-# ├── misc
-# │   ├── java          - additional files for java wrapper
-# │   └── python        - additional files for python wrapper
-# ├── perf              - perfomance tests
-# ├── samples           - sample code
-# ├── src               - sources
-# ├── test              - accuracy tests
-# └── tutorials         - tutorials
-
-
 # To control the setup of the module you could also set:
 # the_description - text to be used as current module description
 # OPENCV_MODULE_TYPE - STATIC|SHARED - set to force override global settings for current module
@@ -77,6 +61,7 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
   unset(OPENCV_MODULE_${mod}_PRIVATE_REQ_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_PRIVATE_OPT_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_LINK_DEPS CACHE)
+  unset(OPENCV_MODULE_${mod}_WRAPPERS CACHE)
 endforeach()
 
 # clean modules info which needs to be recalculated
@@ -111,6 +96,15 @@ macro(ocv_add_dependencies full_modname)
     endif()
   endforeach()
   unset(__depsvar)
+
+  # hack for python
+  set(__python_idx)
+  list(FIND OPENCV_MODULE_${full_modname}_WRAPPERS "python" __python_idx)
+  if (NOT __python_idx EQUAL -1)
+    list(REMOVE_ITEM OPENCV_MODULE_${full_modname}_WRAPPERS "python")
+    list(APPEND OPENCV_MODULE_${full_modname}_WRAPPERS "python2" "python3")
+  endif()
+  unset(__python_idx)
 
   ocv_list_unique(OPENCV_MODULE_${full_modname}_REQ_DEPS)
   ocv_list_unique(OPENCV_MODULE_${full_modname}_OPT_DEPS)
