@@ -15,6 +15,11 @@ Created by: Puttemans Steven
 using namespace std;
 using namespace cv;
 
+// Function prototypes
+void on_mouse(int, int, int, int, void*);
+string int2string(int);
+void get_annotations(Mat, stringstream*);
+
 // Public parameters
 Mat image;
 int roi_x0 = 0, roi_y0 = 0, roi_x1 = 0, roi_y1 = 0, num_of_rec = 0;
@@ -26,7 +31,7 @@ const string window_name="OpenCV Based Annotation Tool";
 // FUNCTION : Mouse response for selecting objects in images
 // If left button is clicked, start drawing a rectangle as long as mouse moves
 // Stop drawing once a new left click is detected by the on_mouse function
-void on_mouse(int event, int x, int y, int flag, void* param)
+void on_mouse(int event, int x, int y, int , void * )
 {
     // Action when left button is clicked
     if(event == CV_EVENT_LBUTTONDOWN)
@@ -90,7 +95,7 @@ void get_annotations(Mat input_image, stringstream* output_stream)
         //      c = 99		    add rectangle to current image
         //	    n = 110		    save added rectangles and show next image
         //	    <ESC> = 27      exit program
-        key_pressed = waitKey(0);
+        key_pressed = 0xFF & waitKey(0);
         switch( key_pressed )
         {
         case 27:
@@ -173,7 +178,7 @@ int main( int argc, const char** argv )
     // Loop through each image stored in the images folder
     // Create and temporarily store the annotations
     // At the end write everything to the annotations file
-    for (int i = 0; i < filenames.size(); i++){
+    for (size_t i = 0; i < filenames.size(); i++){
         // Read in an image
         Mat current_image = imread(filenames[i]);
 
