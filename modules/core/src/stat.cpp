@@ -517,9 +517,11 @@ static const uchar * initPopcountTable()
         unsigned int j = 0u;
 #if CV_POPCNT
         if (checkHardwareSupport(CV_CPU_POPCNT))
+        {
             for( ; j < 256u; j++ )
                 tab[j] = (uchar)(8 - _mm_popcnt_u32(j));
-#else
+        }
+#endif
         for( ; j < 256u; j++ )
         {
             int val = 0;
@@ -527,7 +529,6 @@ static const uchar * initPopcountTable()
                 val += (j & mask) == 0;
             tab[j] = (uchar)val;
         }
-#endif
         initialized = true;
     }
 
