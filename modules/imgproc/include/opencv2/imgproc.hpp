@@ -1051,7 +1051,7 @@ CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
 The function computes and returns the \f$\texttt{ksize} \times 1\f$ matrix of Gaussian filter
 coefficients:
 
-\f[G_i= \alpha *e^{-(i-( \texttt{ksize} -1)/2)^2/(2* \texttt{sigma} )^2},\f]
+\f[G_i= \alpha *e^{-(i-( \texttt{ksize} -1)/2)^2/(2* \texttt{sigma}^2)},\f]
 
 where \f$i=0..\texttt{ksize}-1\f$ and \f$\alpha\f$ is the scale factor chosen so that \f$\sum_i G_i=1\f$.
 
@@ -3613,7 +3613,7 @@ CV_EXPORTS_W float intersectConvexConvex( InputArray _p1, InputArray _p2,
 /** @brief Fits an ellipse around a set of 2D points.
 
 The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of
-all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm @cite Fitzgibbon95
+all. It returns the rotated rectangle in which the ellipse is inscribed. The first algorithm described by @cite Fitzgibbon95
 is used. Developer should keep in mind that it is possible that the returned
 ellipse/rotatedRect data contains negative indices, due to the data points being close to the
 border of the containing Mat element.

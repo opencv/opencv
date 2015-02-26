@@ -275,8 +275,8 @@ CV_EXPORTS_W int waitKey(int delay = 0);
 @param mat Image to be shown.
 
 The function imshow displays an image in the specified window. If the window was created with the
-CV_WINDOW_AUTOSIZE flag, the image is shown with its original size. Otherwise, the image is scaled
-to fit the window. The function may scale the image, depending on its depth:
+CV_WINDOW_AUTOSIZE flag, the image is shown with its original size, however it is still limited by the screen resolution.
+Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
 
 -   If the image is 8-bit unsigned, it is displayed as is.
 -   If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the
@@ -286,6 +286,10 @@ to fit the window. The function may scale the image, depending on its depth:
 
 If window was created with OpenGL support, imshow also support ogl::Buffer , ogl::Texture2D and
 cuda::GpuMat as input.
+
+If the window was not created before this function, it is assumed creating a window with CV_WINDOW_AUTOSIZE.
+
+If you need to show an image that is bigger than the screen resolution, you will need to call namedWindow("", WINDOW_NORMAL) before the imshow.
 
 @note This function should be followed by waitKey function which displays the image for specified
 milliseconds. Otherwise, it won't display the image. For example, waitKey(0) will display the window
