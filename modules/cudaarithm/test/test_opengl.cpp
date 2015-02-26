@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "../test_precomp.hpp"
+#include "test_precomp.hpp"
 
 #if defined(HAVE_CUDA) && defined(HAVE_OPENGL)
 
