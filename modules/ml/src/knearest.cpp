@@ -240,21 +240,6 @@ public:
                 else
                 {
                     float* rp = rbuf + testidx*k;
-                    for( j = k-1; j > 0; j-- )
-                    {
-                        bool swap_fl = false;
-                        for( i = 0; i < j; i++ )
-                        {
-                            if( rp[i] > rp[i+1] )
-                            {
-                                std::swap(rp[i], rp[i+1]);
-                                swap_fl = true;
-                            }
-                        }
-                        if( !swap_fl )
-                            break;
-                    }
-
                     result = rp[0];
                     int prev_start = 0;
                     int best_count = 0;
