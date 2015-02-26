@@ -41,6 +41,21 @@
 #
 # ===================================================================================
 
+# Search packages for host system instead of packages for target system.
+# in case of cross compilation thess macro should be defined by toolchain file
+
+if(NOT COMMAND find_host_package)
+    macro(find_host_package)
+        find_package(${ARGN})
+    endmacro()
+endif()
+
+if(NOT COMMAND find_host_program)
+    macro(find_host_program)
+        find_program(${ARGN})
+    endmacro()
+endif()
+
 if(NOT DEFINED OpenCV_MODULES_SUFFIX)
   if(ANDROID)
     string(REPLACE - _ OpenCV_MODULES_SUFFIX "_${ANDROID_NDK_ABI_NAME}")
@@ -255,7 +270,7 @@ foreach(__opttype OPT DBG)
   # CUDA
   if(OpenCV_CUDA_VERSION)
     if(NOT CUDA_FOUND)
-      find_package(CUDA ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
+      find_host_package(CUDA ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
     else()
       if(NOT CUDA_VERSION_STRING VERSION_EQUAL OpenCV_CUDA_VERSION)
         message(FATAL_ERROR "OpenCV static library was compiled with CUDA ${OpenCV_CUDA_VERSION} support. Please, use the same version or rebuild OpenCV with CUDA ${CUDA_VERSION_STRING}")
