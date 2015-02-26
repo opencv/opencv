@@ -1287,6 +1287,15 @@ void setUseTegra(bool flag)
 
 #endif
 
+void setOptimizations(bool enabled)
+{
+    cv::ipp::setUseIPP(enabled);
+    cv::ocl::setUseOpenCL(enabled);
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    cv::tegra::setUseTegra(enabled);
+#endif
+}
+
 } // namespace cv
 
 /* End of file. */
