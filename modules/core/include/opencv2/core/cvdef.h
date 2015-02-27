@@ -196,6 +196,10 @@
 #  define CV_NEON 1
 #endif
 
+#if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__)
+#  define CV_VFP 1
+#endif
+
 #endif // __CUDACC__
 
 #ifndef CV_POPCNT
@@ -261,6 +265,10 @@
 
 #ifndef CV_NEON
 #  define CV_NEON 0
+#endif
+
+#ifndef CV_VFP
+#  define CV_VFP 0
 #endif
 
 /* primitive types */
@@ -437,6 +445,23 @@ typedef signed char schar;
 //! @addtogroup core_utils
 //! @{
 
+#if CV_VFP
+// 1. general scheme
+#define ARM_ROUND(_value, _asm_string) \
+    int res; \
+    float temp; \
+    asm(_asm_string : [res] "=r" (res), [temp] "=w" (temp) : [value] "w" (_value)); \
+    return res;
+// 2. version for double
+#ifdef __clang__
+#define ARM_ROUND_DBL(value) ARM_ROUND(value, "vcvtr.s32.f64 %[temp], %[value] \n vmov %[res], %[temp]")
+#else
+#define ARM_ROUND_DBL(value) ARM_ROUND(value, "vcvtr.s32.f64 %[temp], %P[value] \n vmov %[res], %[temp]")
+#endif
+// 3. version for float
+#define ARM_ROUND_FLT(value) ARM_ROUND(value, "vcvtr.s32.f32 %[temp], %[value]\n vmov %[res], %[temp]")
+#endif // CV_VFP
+
 /** @brief Rounds floating-point number to the nearest integer
 
 @param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
@@ -460,6 +485,8 @@ CV_INLINE int cvRound( double value )
 #elif defined CV_ICC || defined __GNUC__
 #  ifdef HAVE_TEGRA_OPTIMIZATION
     TEGRA_ROUND(value);
+#  elif CV_VFP
+    ARM_ROUND_DBL(value)
 #  else
     return (int)lrint(value);
 #  endif
@@ -472,6 +499,26 @@ CV_INLINE int cvRound( double value )
         return (int)intpart;
 #endif
 }
+
+#ifdef __cplusplus
+
+/** @overload */
+CV_INLINE int cvRound(float value)
+{
+#if CV_VFP && !defined HAVE_TEGRA_OPTIMIZATION
+    ARM_ROUND_FLT(value)
+#else
+    return cvRound((double)value);
+#endif
+}
+
+/** @overload */
+CV_INLINE int cvRound(int value)
+{
+    return value;
+}
+
+#endif // __cplusplus
 
 /** @brief Rounds floating-point number to the nearest integer not larger than the original.
 
