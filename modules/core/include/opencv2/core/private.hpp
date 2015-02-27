@@ -270,7 +270,7 @@ typedef enum CvStatus
 CvStatus;
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-namespace cv { namespace tegra {
+namespace tegra {
 
 CV_EXPORTS bool useTegra();
 CV_EXPORTS void setUseTegra(bool flag);

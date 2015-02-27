@@ -2256,7 +2256,7 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
                InputArray mask, int dtype )
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (cv::tegra::useTegra())
+    if (tegra::useTegra())
     {
         int kind1 = _src1.kind(), kind2 = _src2.kind();
         Mat src1 = _src1.getMat(), src2 = _src2.getMat();
