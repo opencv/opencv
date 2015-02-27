@@ -727,8 +727,6 @@ CV_EXPORTS void setUseIPP(bool flag);
 
 } // ipp
 
-CV_EXPORTS void setUseOptimizations(bool enabled);
-
 //! @endcond
 
 //! @} core_utils
