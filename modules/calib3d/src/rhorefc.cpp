@@ -2129,28 +2129,28 @@ static inline int    sacChol8x8Damped(const float (*A)[8],
     const register int N = 8;
     int i, j, k;
     float  lambdap1 = lambda + 1.0f;
-    double x;
+    float  x;
 
     for(i=0;i<N;i++){/* Row */
         /* Pre-diagonal elements */
         for(j=0;j<i;j++){
-            x = A[i][j];                       /* Aij */
+            x = A[i][j];               /* Aij */
             for(k=0;k<j;k++){
-                x -= (double)L[i][k] * L[j][k];/* - Sum_{k=0..j-1} Lik*Ljk */
+                x -= L[i][k] * L[j][k];/* - Sum_{k=0..j-1} Lik*Ljk */
             }
-            L[i][j] = (float)(x / L[j][j]);    /* Lij = ... / Ljj */
+            L[i][j] = x / L[j][j];     /* Lij = ... / Ljj */
         }
 
         /* Diagonal element */
         {j = i;
-            x = A[j][j] * lambdap1;            /* Ajj */
+            x = A[j][j] * lambdap1;    /* Ajj */
             for(k=0;k<j;k++){
-                x -= (double)L[j][k] * L[j][k];/* - Sum_{k=0..j-1} Ljk^2 */
+                x -= L[j][k] * L[j][k];/* - Sum_{k=0..j-1} Ljk^2 */
             }
             if(x<0){
                 return 0;
             }
-            L[j][j] = (float)sqrt(x);          /* Ljj = sqrt( ... ) */
+            L[j][j] = sqrtf(x);        /* Ljj = sqrt( ... ) */
         }
     }
 
