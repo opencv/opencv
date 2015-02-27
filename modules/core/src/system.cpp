@@ -385,6 +385,12 @@ void setUseOptimized( bool flag )
     useOptimizedFlag = flag;
     currentFeatures = flag ? &featuresEnabled : &featuresDisabled;
     USE_SSE2 = currentFeatures->have[CV_CPU_SSE2];
+
+    ipp::setUseIPP(flag);
+    ocl::setUseOpenCL(flag);
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    ::tegra::setUseTegra(flag);
+#endif
 }
 
 bool useOptimized(void)
@@ -1288,18 +1294,5 @@ void setUseTegra(bool flag)
 } // namespace tegra
 
 #endif
-
-namespace cv {
-
-void setUseOptimizations(bool enabled)
-{
-    ipp::setUseIPP(enabled);
-    ocl::setUseOpenCL(enabled);
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    ::tegra::setUseTegra(enabled);
-#endif
-}
-
-} // namespace cv
 
 /* End of file. */
