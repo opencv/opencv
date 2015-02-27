@@ -207,7 +207,7 @@ public:
 
     @param filename Name of the file from which the classifier is loaded. Only the old haar classifier
     (trained by the haar training application) and NVIDIA's nvbin are supported for HAAR and only new
-    type of OpenCV XML cascade supported for LBP.
+    type of OpenCV XML cascade supported for LBP. The working haar models can be found at opencv_folder/data/haarcascades_cuda/
      */
     static Ptr<CascadeClassifier> create(const String& filename);
     /** @overload
