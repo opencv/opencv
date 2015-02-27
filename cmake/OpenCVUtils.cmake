@@ -788,8 +788,9 @@ function(ocv_add_library target)
 
   add_library(${target} ${ARGN} ${cuda_objs})
 
-  # Add OBJECT library to use in compound modules
-  if (NOT OPENCV_MODULE_${target}_CHILDREN
+  # Add OBJECT library (added in cmake 2.8.8) to use in compound modules
+  if (NOT CMAKE_VERSION VERSION_LESS "2.8.8"
+      AND NOT OPENCV_MODULE_${target}_CHILDREN
       AND NOT OPENCV_MODULE_${target}_CLASS STREQUAL "BINDINGS"
       AND NOT ${target} STREQUAL "opencv_ts"
     )
