@@ -937,11 +937,10 @@ Ptr<CascadeClassifierImpl::MaskGenerator> CascadeClassifierImpl::getMaskGenerato
 Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator()
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (cv::tegra::useTegra())
+    if (tegra::useTegra())
         return tegra::getCascadeClassifierMaskGenerator();
-#else
-    return Ptr<BaseCascadeClassifier::MaskGenerator>();
 #endif
+    return Ptr<BaseCascadeClassifier::MaskGenerator>();
 }
 
 class CascadeClassifierInvoker : public ParallelLoopBody

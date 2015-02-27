@@ -1257,13 +1257,15 @@ void setUseIPP(bool flag)
 
 } // namespace ipp
 
+} // namespace cv
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
 
 namespace tegra {
 
 bool useTegra()
 {
-    CoreTLSData* data = getCoreTlsData().get();
+    cv::CoreTLSData* data = cv::getCoreTlsData().get();
 
     if (data->useTegra < 0)
     {
@@ -1279,7 +1281,7 @@ bool useTegra()
 
 void setUseTegra(bool flag)
 {
-    CoreTLSData* data = getCoreTlsData().get();
+    cv::CoreTLSData* data = cv::getCoreTlsData().get();
     data->useTegra = flag;
 }
 
@@ -1287,12 +1289,14 @@ void setUseTegra(bool flag)
 
 #endif
 
+namespace cv {
+
 void setOptimizations(bool enabled)
 {
-    cv::ipp::setUseIPP(enabled);
-    cv::ocl::setUseOpenCL(enabled);
+    ipp::setUseIPP(enabled);
+    ocl::setUseOpenCL(enabled);
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    cv::tegra::setUseTegra(enabled);
+    ::tegra::setUseTegra(enabled);
 #endif
 }
 
