@@ -1291,7 +1291,7 @@ void setUseTegra(bool flag)
 
 namespace cv {
 
-void setOptimizations(bool enabled)
+void setUseOptimizations(bool enabled)
 {
     ipp::setUseIPP(enabled);
     ocl::setUseOpenCL(enabled);
