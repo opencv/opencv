@@ -20,7 +20,7 @@
 # OPENCV_MODULE_${the_module}_PRIVATE_OPT_DEPS
 # OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD
 # OPENCV_MODULE_${the_module}_CUDA_OBJECTS - compiled CUDA objects list
-# OPENCV_MODULE_${the_module}_CHILDREN - list of submodules for compound modules
+# OPENCV_MODULE_${the_module}_CHILDREN - list of submodules for compound modules (cmake >= 2.8.8)
 # HAVE_${the_module} - for fast check of module availability
 
 # To control the setup of the module you could also set:
@@ -666,7 +666,7 @@ macro(_ocv_create_module)
   if (OPENCV_MODULE_${the_module}_CHILDREN)
     status("Complex module ${the_module}")
     foreach (m ${OPENCV_MODULE_${the_module}_CHILDREN})
-      if (BUILD_${m} AND TARGET ${m}_object) # ambigous?
+      if (BUILD_${m} AND TARGET ${m}_object)
         get_target_property(_sub_links ${m} LINK_LIBRARIES)
         list(APPEND sub_objs $<TARGET_OBJECTS:${m}_object>)
         list(APPEND sub_links ${_sub_links})
