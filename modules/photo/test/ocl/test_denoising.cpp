@@ -87,7 +87,7 @@ OCL_TEST_P(FastNlMeansDenoisingColored, Mat)
     }
 }
 
-OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising, Combine(Values(1, 2), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising, Combine(Values(1, 2, 3), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingColored, Combine(Values(3, 4), Bool()));
 
 } } // namespace cvtest::ocl
