@@ -70,11 +70,11 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
 static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
                                      int templateWindowSize, int searchWindowSize)
 {
-    int type = _src.type(), cn = CV_MAT_CN(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int ctaSize = ocl::Device::getDefault().isIntel() ? CTA_SIZE_INTEL : CTA_SIZE_DEFAULT;
     Size size = _src.size();
 
-    if ( type != CV_8UC1 && type != CV_8UC2 && type != CV_8UC4 )
+    if ( type != CV_8UC1 && type != CV_8UC2 && type != CV_8UC3 )
         return false;
 
     int templateWindowHalfWize = templateWindowSize / 2;
@@ -86,13 +86,15 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
 
     char cvt[2][40];
     String opts = format("-D OP_CALC_FASTNLMEANS -D TEMPLATE_SIZE=%d -D SEARCH_SIZE=%d"
-                         " -D uchar_t=%s -D int_t=%s -D BLOCK_COLS=%d -D BLOCK_ROWS=%d"
+                         " -D sample_t=%s -D pixel_t=%s -D int_t=%s"
+                         " -D BLOCK_COLS=%d -D BLOCK_ROWS=%d"
                          " -D CTA_SIZE=%d -D TEMPLATE_SIZE2=%d -D SEARCH_SIZE2=%d"
-                         " -D convert_int_t=%s -D cn=%d -D convert_uchar_t=%s",
-                         templateWindowSize, searchWindowSize, ocl::typeToStr(type),
-                         ocl::typeToStr(CV_32SC(cn)), BLOCK_COLS, BLOCK_ROWS, ctaSize,
-                         templateWindowHalfWize, searchWindowHalfSize,
-                         ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]), cn,
+                         " -D convert_int_t=%s -D cn=%d -D convert_pixel_t=%s",
+                         templateWindowSize, searchWindowSize,
+                         ocl::typeToStr(depth), ocl::typeToStr(type), ocl::typeToStr(CV_32SC(cn)),
+                         BLOCK_COLS, BLOCK_ROWS,
+                         ctaSize, templateWindowHalfWize, searchWindowHalfSize,
+                         ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]), type == CV_8UC3 ? 4 : cn,
                          ocl::convertTypeStr(CV_32S, CV_8U, cn, cvt[1]));
 
     ocl::Kernel k("fastNlMeansDenoising", ocl::photo::nlmeans_oclsrc, opts);
@@ -107,10 +109,22 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
 
     UMat srcex;
     int borderSize = searchWindowHalfSize + templateWindowHalfWize;
-    copyMakeBorder(_src, srcex, borderSize, borderSize, borderSize, borderSize, BORDER_DEFAULT);
+    if (type == CV_8UC3) {
+        Mat src_rgb = _src.getMat(), src_rgba(size, CV_8UC4);
+        int from_to[] = { 0,0, 1,1, 2,2 };
+        mixChannels(&src_rgb, 1, &src_rgba, 1, from_to, 3);
+        copyMakeBorder(src_rgba, srcex,
+                       borderSize, borderSize, borderSize, borderSize, BORDER_DEFAULT);
+    }
+    else
+        copyMakeBorder(_src, srcex, borderSize, borderSize, borderSize, borderSize, BORDER_DEFAULT);
 
     _dst.create(size, type);
-    UMat dst = _dst.getUMat();
+    UMat dst;
+    if (type == CV_8UC3)
+        dst.create(size, CV_8UC4);
+    else
+        dst = _dst.getUMat();
 
     int searchWindowSizeSq = searchWindowSize * searchWindowSize;
     Size upColSumSize(size.width, searchWindowSizeSq * nblocksy);
@@ -123,7 +137,15 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
            ocl::KernelArg::PtrReadOnly(buffer), almostTemplateWindowSizeSqBinShift);
 
     size_t globalsize[2] = { nblocksx * ctaSize, nblocksy }, localsize[2] = { ctaSize, 1 };
-    return k.run(2, globalsize, localsize, false);
+    if (!k.run(2, globalsize, localsize, false)) return false;
+
+    if (type == CV_8UC3) {
+        Mat dst_rgba = dst.getMat(ACCESS_READ), dst_rgb = _dst.getMat();
+        int from_to[] = { 0,0, 1,1, 2,2 };
+        mixChannels(&dst_rgba, 1, &dst_rgb, 1, from_to, 3);
+    }
+
+    return true;
 }
 
 static bool ocl_fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
