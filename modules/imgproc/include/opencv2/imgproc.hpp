@@ -2465,6 +2465,9 @@ CV_EXPORTS_W void adaptiveThreshold( InputArray src, OutputArray dst,
                                      double maxValue, int adaptiveMethod,
                                      int thresholdType, int blockSize, double C );
 
+CV_EXPORTS_W void niBlackThreshold( InputArray src, OutputArray dst,
+                                     double maxValue, int thresholdType,
+                                     int blockSize, double C );
 //! @} imgproc_misc
 
 //! @addtogroup imgproc_filter
