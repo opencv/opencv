@@ -144,11 +144,7 @@ if(MSVC)
 elseif(MINGW)
   set(OpenCV_RUNTIME mingw)
 
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
-                  OUTPUT_VARIABLE OPENCV_GCC_TARGET_MACHINE
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(CMAKE_OPENCV_GCC_TARGET_MACHINE MATCHES "64")
-    set(MINGW64 1)
+  if(MINGW64)
     set(OpenCV_ARCH x64)
   else()
     set(OpenCV_ARCH x86)
