@@ -52,7 +52,5 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="MediaCapture_TemporaryKey.pfx" />
-    <None Include="..\..\..\bin\WS\8.1\x86\bin\Debug\opencv_core300d.dll" />
-    <None Include="..\..\..\bin\WS\8.1\x86\bin\Debug\opencv_imgproc300d.dll" />
   </ItemGroup>
 </Project>

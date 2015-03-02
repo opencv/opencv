@@ -41,11 +41,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="OcvImageProcessing_TemporaryKey.pfx" />
-    <None Include="..\..\..\..\bin\WS\8.1\x86\bin\Debug\opencv_core300d.dll" />
-    <None Include="..\..\..\..\bin\WS\8.1\x86\bin\Debug\opencv_features2d300d.dll" />
-    <None Include="..\..\..\..\bin\WS\8.1\x86\bin\Debug\opencv_flann300d.dll" />
-    <None Include="..\..\..\..\bin\WS\8.1\x86\bin\Debug\opencv_imgproc300d.dll" />
-    <None Include="..\..\..\..\bin\WS\8.1\x86\bin\Debug\opencv_ml300d.dll" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainPage.xaml" />
