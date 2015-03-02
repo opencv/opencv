@@ -60,8 +60,10 @@ inline int calcDist(pixel_t a, pixel_t b)
     return retval;
 #elif cn == 2
     return retval.x + retval.y;
-#elif cn == 3 || cn == 4       /* A is ignored */
+#elif cn == 3
     return retval.x + retval.y + retval.z;
+#elif cn == 4
+    return retval.x + retval.y + retval.z + retval.w;
 #else
 #error "cn should be either 1, 2, 3 or 4"
 #endif
@@ -83,8 +85,10 @@ inline int calcDistUpDown(pixel_t down_value, pixel_t down_value_t, pixel_t up_v
     return retval;
 #elif cn == 2
     return retval.x + retval.y;
-#elif cn == 3 || cn == 4        /* A is ignored */
+#elif cn == 3
     return retval.x + retval.y + retval.z;
+#elif cn == 4
+    return retval.x + retval.y + retval.z + retval.w;
 #else
 #error "cn should be either 1, 2, 3 or 4"
 #endif
@@ -106,8 +110,8 @@ inline void calcFirstElementInRow(__global const sample_t * src, int src_step, i
         int dist = 0, value;
 
         __global const pixel_t * src_template = (__global const pixel_t *)(src +
-            mad24(sy + i / SEARCH_SIZE, src_step, mad24(cn, sx + i % SEARCH_SIZE, src_offset)));
-        __global const pixel_t * src_current = (__global const pixel_t *)(src + mad24(y, src_step, mad24(cn, x, src_offset)));
+            mad24(sy + i / SEARCH_SIZE, src_step, mad24(psz, sx + i % SEARCH_SIZE, src_offset)));
+        __global const pixel_t * src_current = (__global const pixel_t *)(src + mad24(y, src_step, mad24(psz, x, src_offset)));
         __global int * col_dists_current = col_dists + i * TEMPLATE_SIZE;
 
         #pragma unroll
@@ -148,9 +152,9 @@ inline void calcElementInFirstRow(__global const sample_t * src, int src_step, i
 
     for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
-        __global const pixel_t * src_current = (__global const pixel_t *)(src + mad24(y, src_step, mad24(cn, x, src_offset)));
+        __global const pixel_t * src_current = (__global const pixel_t *)(src + mad24(y, src_step, mad24(psz, x, src_offset)));
         __global const pixel_t * src_template = (__global const pixel_t *)(src +
-            mad24(sy + i / SEARCH_SIZE, src_step, mad24(cn, sx + i % SEARCH_SIZE, src_offset)));
+            mad24(sy + i / SEARCH_SIZE, src_step, mad24(psz, sx + i % SEARCH_SIZE, src_offset)));
         __global int * col_dists_current = col_dists + TEMPLATE_SIZE * i;
 
         int col_dist = 0;
@@ -178,8 +182,8 @@ inline void calcElement(__global const sample_t * src, int src_step, int src_off
     int sy_up = y - TEMPLATE_SIZE2 - 1;
     int sy_down = y + TEMPLATE_SIZE2;
 
-    pixel_t up_value = *(__global const pixel_t *)(src + mad24(sy_up, src_step, mad24(cn, sx, src_offset)));
-    pixel_t down_value = *(__global const pixel_t *)(src + mad24(sy_down, src_step, mad24(cn, sx, src_offset)));
+    pixel_t up_value = *(__global const pixel_t *)(src + mad24(sy_up, src_step, mad24(psz, sx, src_offset)));
+    pixel_t down_value = *(__global const pixel_t *)(src + mad24(sy_down, src_step, mad24(psz, sx, src_offset)));
 
     sx -= SEARCH_SIZE2;
     sy_up -= SEARCH_SIZE2;
@@ -189,8 +193,8 @@ inline void calcElement(__global const sample_t * src, int src_step, int src_off
     {
         int wx = i % SEARCH_SIZE, wy = i / SEARCH_SIZE;
 
-        pixel_t up_value_t = *(__global const pixel_t *)(src + mad24(sy_up + wy, src_step, mad24(cn, sx + wx, src_offset)));
-        pixel_t down_value_t = *(__global const pixel_t *)(src + mad24(sy_down + wy, src_step, mad24(cn, sx + wx, src_offset)));
+        pixel_t up_value_t = *(__global const pixel_t *)(src + mad24(sy_up + wy, src_step, mad24(psz, sx + wx, src_offset)));
+        pixel_t down_value_t = *(__global const pixel_t *)(src + mad24(sy_down + wy, src_step, mad24(psz, sx + wx, src_offset)));
 
         __global int * col_dists_current = col_dists + mad24(i, TEMPLATE_SIZE, first);
         __global int * up_col_dists_current = up_col_dists + mad24(x0, SEARCH_SIZE_SQ, i);
@@ -215,7 +219,7 @@ inline void convolveWindow(__global const sample_t * src, int src_step, int src_
 
     for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
-        int src_index = mad24(sy + i / SEARCH_SIZE, src_step, mad24(i % SEARCH_SIZE + sx, cn, src_offset));
+        int src_index = mad24(sy + i / SEARCH_SIZE, src_step, mad24(i % SEARCH_SIZE + sx, psz, src_offset));
         sum_t src_value = convert_sum_t(*(__global const pixel_t *)(src + src_index));
 
         int almostAvgDist = dists[i] >> almostTemplateWindowSizeSqBinShift;
@@ -242,7 +246,7 @@ inline void convolveWindow(__global const sample_t * src, int src_step, int src_
 
     if (id == 0)
     {
-        int dst_index = mad24(y, dst_step, mad24(cn, x, dst_offset));
+        int dst_index = mad24(y, dst_step, mad24(psz, x, dst_offset));
         sum_t weighted_sum_local_0 = weighted_sum_local[0] + weighted_sum_local[1] +
             weighted_sum_local[2] + weighted_sum_local[3];
         weight_t weights_local_0 = weights_local[0] + weights_local[1] + weights_local[2] + weights_local[3];
