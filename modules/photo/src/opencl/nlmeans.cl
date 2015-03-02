@@ -206,22 +206,23 @@ inline void calcElement(__global const sample_t * src, int src_step, int src_off
 inline void convolveWindow(__global const sample_t * src, int src_step, int src_offset,
                            __local int * dists, __global const int * almostDist2Weight,
                            __global sample_t * dst, int dst_step, int dst_offset,
-                           int y, int x, int id, __local int * weights_local,
-                           __local int_t * weighted_sum_local, int almostTemplateWindowSizeSqBinShift)
+                           int y, int x, int id, __local weight_t * weights_local,
+                           __local sum_t * weighted_sum_local, int almostTemplateWindowSizeSqBinShift)
 {
-    int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2, weights = 0;
-    int_t weighted_sum = (int_t)(0);
+    int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2;
+    weight_t weights = 0;
+    sum_t weighted_sum = (sum_t)(0);
 
     for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
         int src_index = mad24(sy + i / SEARCH_SIZE, src_step, mad24(i % SEARCH_SIZE + sx, cn, src_offset));
-        int_t src_value = convert_int_t(*(__global const pixel_t *)(src + src_index));
+        sum_t src_value = convert_sum_t(*(__global const pixel_t *)(src + src_index));
 
         int almostAvgDist = dists[i] >> almostTemplateWindowSizeSqBinShift;
         int weight = almostDist2Weight[almostAvgDist];
 
-        weights += weight;
-        weighted_sum += (int_t)(weight) * src_value;
+        weights += (weight_t)weight;
+        weighted_sum += (sum_t)(weight) * src_value;
     }
 
     weights_local[id] = weights;
@@ -242,11 +243,11 @@ inline void convolveWindow(__global const sample_t * src, int src_step, int src_
     if (id == 0)
     {
         int dst_index = mad24(y, dst_step, mad24(cn, x, dst_offset));
-        int_t weighted_sum_local_0 = weighted_sum_local[0] + weighted_sum_local[1] +
+        sum_t weighted_sum_local_0 = weighted_sum_local[0] + weighted_sum_local[1] +
             weighted_sum_local[2] + weighted_sum_local[3];
-        int weights_local_0 = weights_local[0] + weights_local[1] + weights_local[2] + weights_local[3];
+        weight_t weights_local_0 = weights_local[0] + weights_local[1] + weights_local[2] + weights_local[3];
 
-        *(__global pixel_t *)(dst + dst_index) = convert_pixel_t(weighted_sum_local_0 / (int_t)(weights_local_0));
+        *(__global pixel_t *)(dst + dst_index) = convert_pixel_t(weighted_sum_local_0 / (sum_t)(weights_local_0));
     }
 }
 
@@ -259,8 +260,9 @@ __kernel void fastNlMeansDenoising(__global const sample_t * src, int src_step, 
     int block_y = get_group_id(1);
     int id = get_local_id(0), first;
 
-    __local int dists[SEARCH_SIZE_SQ], weights[CTA_SIZE];
-    __local int_t weighted_sum[CTA_SIZE];
+    __local int dists[SEARCH_SIZE_SQ];
+    __local weight_t weights[CTA_SIZE];
+    __local sum_t weighted_sum[CTA_SIZE];
 
     int x0 = block_x * BLOCK_COLS, x1 = min(x0 + BLOCK_COLS, dst_cols);
     int y0 = block_y * BLOCK_ROWS, y1 = min(y0 + BLOCK_ROWS, dst_rows);
@@ -270,6 +272,11 @@ __kernel void fastNlMeansDenoising(__global const sample_t * src, int src_step, 
     int block_data_start = SEARCH_SIZE_SQ * (mad24(block_y, dst_cols, x0) + mad24(block_y, nblocks_x, block_x) * TEMPLATE_SIZE);
     __global int * col_dists = (__global int *)(buffer + block_data_start * sizeof(int));
     __global int * up_col_dists = col_dists + SEARCH_SIZE_SQ * TEMPLATE_SIZE;
+
+    src_step /= sizeof(sample_t);
+    src_offset /= sizeof(sample_t);
+    dst_step /= sizeof(sample_t);
+    dst_offset /= sizeof(sample_t);
 
     for (int y = y0; y < y1; ++y)
         for (int x = x0; x < x1; ++x)
