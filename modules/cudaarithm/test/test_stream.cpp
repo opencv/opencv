@@ -40,80 +40,114 @@
 //
 //M*/
 
-#include "../test_precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
 
+#include <cuda_runtime.h>
+
 #include "opencv2/core/cuda.hpp"
-#include "opencv2/core/private.cuda.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 
-using namespace testing;
-using namespace cv;
-using namespace cv::cuda;
+using namespace cvtest;
 
-struct BufferPoolTest : TestWithParam<DeviceInfo>
+struct Async : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    void RunSimpleTest(Stream& stream, HostMem& dst_1, HostMem& dst_2)
+    cv::cuda::HostMem src;
+    cv::cuda::GpuMat d_src;
+
+    cv::cuda::HostMem dst;
+    cv::cuda::GpuMat d_dst;
+
+    virtual void SetUp()
     {
-        BufferPool pool(stream);
+        cv::cuda::DeviceInfo devInfo = GetParam();
+        cv::cuda::setDevice(devInfo.deviceID());
 
-        {
-            GpuMat buf0 = pool.getBuffer(Size(640, 480), CV_8UC1);
-            EXPECT_FALSE( buf0.empty() );
+        src = cv::cuda::HostMem(cv::cuda::HostMem::PAGE_LOCKED);
 
-            buf0.setTo(Scalar::all(0), stream);
-
-            GpuMat buf1 = pool.getBuffer(Size(640, 480), CV_8UC1);
-            EXPECT_FALSE( buf1.empty() );
-
-            buf0.convertTo(buf1, buf1.type(), 1.0, 1.0, stream);
-
-            buf1.download(dst_1, stream);
-        }
-
-        {
-            GpuMat buf2 = pool.getBuffer(Size(1280, 1024), CV_32SC1);
-            EXPECT_FALSE( buf2.empty() );
-
-            buf2.setTo(Scalar::all(2), stream);
-
-            buf2.download(dst_2, stream);
-        }
-    }
-
-    void CheckSimpleTest(HostMem& dst_1, HostMem& dst_2)
-    {
-        EXPECT_MAT_NEAR(Mat(Size(640, 480), CV_8UC1, Scalar::all(1)), dst_1, 0.0);
-        EXPECT_MAT_NEAR(Mat(Size(1280, 1024), CV_32SC1, Scalar::all(2)), dst_2, 0.0);
+        cv::Mat m = randomMat(cv::Size(128, 128), CV_8UC1);
+        m.copyTo(src);
     }
 };
 
-CUDA_TEST_P(BufferPoolTest, FromNullStream)
+void checkMemSet(int status, void* userData)
 {
-    HostMem dst_1, dst_2;
+    ASSERT_EQ(cudaSuccess, status);
 
-    RunSimpleTest(Stream::Null(), dst_1, dst_2);
+    Async* test = reinterpret_cast<Async*>(userData);
 
-    CheckSimpleTest(dst_1, dst_2);
+    cv::cuda::HostMem src = test->src;
+    cv::cuda::HostMem dst = test->dst;
+
+    cv::Mat dst_gold = cv::Mat::zeros(src.size(), src.type());
+
+    ASSERT_MAT_NEAR(dst_gold, dst, 0);
 }
 
-CUDA_TEST_P(BufferPoolTest, From2Streams)
+CUDA_TEST_P(Async, MemSet)
 {
-    HostMem dst1_1, dst1_2;
-    HostMem dst2_1, dst2_2;
+    cv::cuda::Stream stream;
 
-    Stream stream1, stream2;
-    RunSimpleTest(stream1, dst1_1, dst1_2);
-    RunSimpleTest(stream2, dst2_1, dst2_2);
+    d_dst.upload(src);
 
-    stream1.waitForCompletion();
-    stream2.waitForCompletion();
+    d_dst.setTo(cv::Scalar::all(0), stream);
+    d_dst.download(dst, stream);
 
-    CheckSimpleTest(dst1_1, dst1_2);
-    CheckSimpleTest(dst2_1, dst2_2);
+    Async* test = this;
+    stream.enqueueHostCallback(checkMemSet, test);
+
+    stream.waitForCompletion();
 }
 
-INSTANTIATE_TEST_CASE_P(CUDA_Stream, BufferPoolTest, ALL_DEVICES);
+void checkConvert(int status, void* userData)
+{
+    ASSERT_EQ(cudaSuccess, status);
+
+    Async* test = reinterpret_cast<Async*>(userData);
+
+    cv::cuda::HostMem src = test->src;
+    cv::cuda::HostMem dst = test->dst;
+
+    cv::Mat dst_gold;
+    src.createMatHeader().convertTo(dst_gold, CV_32S);
+
+    ASSERT_MAT_NEAR(dst_gold, dst, 0);
+}
+
+CUDA_TEST_P(Async, Convert)
+{
+    cv::cuda::Stream stream;
+
+    d_src.upload(src, stream);
+    d_src.convertTo(d_dst, CV_32S, stream);
+    d_dst.download(dst, stream);
+
+    Async* test = this;
+    stream.enqueueHostCallback(checkConvert, test);
+
+    stream.waitForCompletion();
+}
+
+CUDA_TEST_P(Async, HostMemAllocator)
+{
+    cv::cuda::Stream stream;
+
+    cv::Mat h_dst;
+    h_dst.allocator = cv::cuda::HostMem::getAllocator();
+
+    d_src.upload(src, stream);
+    d_src.convertTo(d_dst, CV_32S, stream);
+    d_dst.download(h_dst, stream);
+
+    stream.waitForCompletion();
+
+    cv::Mat dst_gold;
+    src.createMatHeader().convertTo(dst_gold, CV_32S);
+
+    ASSERT_MAT_NEAR(dst_gold, h_dst, 0);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_Stream, Async, ALL_DEVICES);
 
 #endif // HAVE_CUDA

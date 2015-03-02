@@ -3068,7 +3068,7 @@ void printVersionInfo(bool useStdOut)
     if (useStdOut) std::cout << "CPU features: " << cpu_features << std::endl;
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    const char * tegra_optimization = tegra::isDeviceSupported() ? "enabled" : "disabled";
+    const char * tegra_optimization = tegra::useTegra() && tegra::isDeviceSupported() ? "enabled" : "disabled";
     ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
     if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
 #endif

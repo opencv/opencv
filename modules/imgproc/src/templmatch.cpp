@@ -933,7 +933,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     Mat result = _result.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::matchTemplate(img, templ, result, method))
+    if (tegra::useTegra() && tegra::matchTemplate(img, templ, result, method))
         return;
 #endif
 

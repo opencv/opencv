@@ -261,7 +261,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
+    if (tegra::useTegra() && tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
         return;
 #endif
 
