@@ -346,7 +346,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
       break;
     case FastFeatureDetector::TYPE_9_16:
 #ifdef HAVE_TEGRA_OPTIMIZATION
-      if(tegra::FAST(_img, keypoints, threshold, nonmax_suppression))
+      if(tegra::useTegra() && tegra::FAST(_img, keypoints, threshold, nonmax_suppression))
         break;
 #endif
       FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);

@@ -269,6 +269,15 @@ typedef enum CvStatus
 }
 CvStatus;
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+namespace tegra {
+
+CV_EXPORTS bool useTegra();
+CV_EXPORTS void setUseTegra(bool flag);
+
+}
+#endif
+
 //! @endcond
 
 #endif // __OPENCV_CORE_PRIVATE_HPP__

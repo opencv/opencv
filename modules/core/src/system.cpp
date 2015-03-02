@@ -319,6 +319,9 @@ struct HWFeatures
         }
 
     #if defined ANDROID || defined __linux__
+    #ifdef __aarch64__
+        f.have[CV_CPU_NEON] = true;
+    #else
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
@@ -337,7 +340,8 @@ struct HWFeatures
 
             close(cpufile);
         }
-    #elif (defined __clang__ || defined __APPLE__) && defined __ARM_NEON__
+    #endif
+    #elif (defined __clang__ || defined __APPLE__) && (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
         f.have[CV_CPU_NEON] = true;
     #endif
 
@@ -385,6 +389,12 @@ void setUseOptimized( bool flag )
     useOptimizedFlag = flag;
     currentFeatures = flag ? &featuresEnabled : &featuresDisabled;
     USE_SSE2 = currentFeatures->have[CV_CPU_SSE2];
+
+    ipp::setUseIPP(flag);
+    ocl::setUseOpenCL(flag);
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    ::tegra::setUseTegra(flag);
+#endif
 }
 
 bool useOptimized(void)
@@ -1258,5 +1268,35 @@ void setUseIPP(bool flag)
 } // namespace ipp
 
 } // namespace cv
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+
+namespace tegra {
+
+bool useTegra()
+{
+    cv::CoreTLSData* data = cv::getCoreTlsData().get();
+
+    if (data->useTegra < 0)
+    {
+        const char* pTegraEnv = getenv("OPENCV_TEGRA");
+        if (pTegraEnv && (cv::String(pTegraEnv) == "disabled"))
+            data->useTegra = false;
+        else
+            data->useTegra = true;
+    }
+
+    return (data->useTegra > 0);
+}
+
+void setUseTegra(bool flag)
+{
+    cv::CoreTLSData* data = cv::getCoreTlsData().get();
+    data->useTegra = flag;
+}
+
+} // namespace tegra
+
+#endif
 
 /* End of file. */

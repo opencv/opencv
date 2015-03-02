@@ -2256,51 +2256,54 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
                InputArray mask, int dtype )
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    int kind1 = _src1.kind(), kind2 = _src2.kind();
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
-    bool src1Scalar = checkScalar(src1, _src2.type(), kind1, kind2);
-    bool src2Scalar = checkScalar(src2, _src1.type(), kind2, kind1);
-
-    if (!src1Scalar && !src2Scalar &&
-        src1.depth() == CV_8U && src2.type() == src1.type() &&
-        src1.dims == 2 && src2.size() == src1.size() &&
-        mask.empty())
+    if (tegra::useTegra())
     {
-        if (dtype < 0)
+        int kind1 = _src1.kind(), kind2 = _src2.kind();
+        Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+        bool src1Scalar = checkScalar(src1, _src2.type(), kind1, kind2);
+        bool src2Scalar = checkScalar(src2, _src1.type(), kind2, kind1);
+
+        if (!src1Scalar && !src2Scalar &&
+            src1.depth() == CV_8U && src2.type() == src1.type() &&
+            src1.dims == 2 && src2.size() == src1.size() &&
+            mask.empty())
         {
-            if (_dst.fixedType())
+            if (dtype < 0)
             {
-                dtype = _dst.depth();
+                if (_dst.fixedType())
+                {
+                    dtype = _dst.depth();
+                }
+                else
+                {
+                    dtype = src1.depth();
+                }
             }
-            else
-            {
-                dtype = src1.depth();
-            }
-        }
 
-        dtype = CV_MAT_DEPTH(dtype);
+            dtype = CV_MAT_DEPTH(dtype);
 
-        if (!_dst.fixedType() || dtype == _dst.depth())
-        {
-            _dst.create(src1.size(), CV_MAKE_TYPE(dtype, src1.channels()));
+            if (!_dst.fixedType() || dtype == _dst.depth())
+            {
+                _dst.create(src1.size(), CV_MAKE_TYPE(dtype, src1.channels()));
 
-            if (dtype == CV_16S)
-            {
-                Mat dst = _dst.getMat();
-                if(tegra::subtract_8u8u16s(src1, src2, dst))
-                    return;
-            }
-            else if (dtype == CV_32F)
-            {
-                Mat dst = _dst.getMat();
-                if(tegra::subtract_8u8u32f(src1, src2, dst))
-                    return;
-            }
-            else if (dtype == CV_8S)
-            {
-                Mat dst = _dst.getMat();
-                if(tegra::subtract_8u8u8s(src1, src2, dst))
-                    return;
+                if (dtype == CV_16S)
+                {
+                    Mat dst = _dst.getMat();
+                    if(tegra::subtract_8u8u16s(src1, src2, dst))
+                        return;
+                }
+                else if (dtype == CV_32F)
+                {
+                    Mat dst = _dst.getMat();
+                    if(tegra::subtract_8u8u32f(src1, src2, dst))
+                        return;
+                }
+                else if (dtype == CV_8S)
+                {
+                    Mat dst = _dst.getMat();
+                    if(tegra::subtract_8u8u8s(src1, src2, dst))
+                        return;
+                }
             }
         }
     }

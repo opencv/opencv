@@ -5,4 +5,5 @@ if(HAVE_CUDA)
 endif()
 
 ocv_define_module(stitching opencv_imgproc opencv_features2d opencv_calib3d opencv_objdetect
-                  OPTIONAL opencv_cudaarithm opencv_cudafilters opencv_cudafeatures2d opencv_cudalegacy opencv_xfeatures2d)
+                  OPTIONAL opencv_cudaarithm opencv_cudafilters opencv_cudafeatures2d opencv_cudalegacy opencv_xfeatures2d
+                  WRAP python)

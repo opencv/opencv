@@ -69,7 +69,7 @@ void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 
 void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> &points, const Size &patternSz, std::vector<Point2f> &patternPoints)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::hierarchicalClustering(points, patternSz, patternPoints))
+    if(tegra::useTegra() && tegra::hierarchicalClustering(points, patternSz, patternPoints))
         return;
 #endif
     int j, n = (int)points.size();
