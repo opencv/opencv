@@ -191,7 +191,7 @@
 # include "arm_neon.h"
 # define CV_NEON 1
 # define CPU_HAS_NEON_FEATURE (true)
-#elif defined(__ARM_NEON__)
+#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #endif
