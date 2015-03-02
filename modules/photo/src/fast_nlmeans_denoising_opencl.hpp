@@ -129,10 +129,12 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
     UMat srcex;
     int borderSize = searchWindowHalfSize + templateWindowHalfWize;
     if (cn == 3) {
-        UMat tmp(size, CV_MAKE_TYPE(depth, 4));
+        srcex.create(size.height + 2*borderSize, size.width + 2*borderSize, CV_MAKE_TYPE(depth, 4));
+        UMat src(srcex, Rect(borderSize, borderSize, size.width, size.height));
         int from_to[] = { 0,0, 1,1, 2,2 };
-        mixChannels(std::vector<UMat>(1, _src.getUMat()), std::vector<UMat>(1, tmp), from_to, 3);
-        copyMakeBorder(tmp, srcex, borderSize, borderSize, borderSize, borderSize, BORDER_DEFAULT);
+        mixChannels(std::vector<UMat>(1, _src.getUMat()), std::vector<UMat>(1, src), from_to, 3);
+        copyMakeBorder(src, srcex, borderSize, borderSize, borderSize, borderSize,
+                       BORDER_DEFAULT|BORDER_ISOLATED); // create borders in place
     }
     else
         copyMakeBorder(_src, srcex, borderSize, borderSize, borderSize, borderSize, BORDER_DEFAULT);
