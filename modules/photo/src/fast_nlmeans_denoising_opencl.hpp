@@ -28,12 +28,14 @@ static int divUp(int a, int b)
     return (a + b - 1) / b;
 }
 
-template <typename FT>
+template <typename FT, typename ST, typename WT>
 static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindowSize, int templateWindowSize, FT h, int cn,
                                       int & almostTemplateWindowSizeSqBinShift, bool abs)
 {
-    const int maxEstimateSumValue = searchWindowSize * searchWindowSize * 255;
-    int fixedPointMult = std::numeric_limits<int>::max() / maxEstimateSumValue;
+    const WT maxEstimateSumValue = searchWindowSize * searchWindowSize *
+        std::numeric_limits<ST>::max();
+    int fixedPointMult = (int)std::min<WT>(std::numeric_limits<WT>::max() / maxEstimateSumValue,
+                                           std::numeric_limits<int>::max());
     int depth = DataType<FT>::depth;
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
@@ -48,7 +50,8 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
     FT almostDist2ActualDistMultiplier = (FT)(1 << almostTemplateWindowSizeSqBinShift) / templateWindowSizeSq;
 
     const FT WEIGHT_THRESHOLD = 1e-3f;
-    int maxDist = abs ? 255 * cn : 255 * 255 * cn;
+    int maxDist = abs ? std::numeric_limits<ST>::max() * cn :
+        std::numeric_limits<ST>::max() * std::numeric_limits<ST>::max() * cn;
     int almostMaxDist = (int)(maxDist / almostDist2ActualDistMultiplier + 1);
     FT den = 1.0f / (h * h * cn);
 
@@ -74,7 +77,7 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
     int ctaSize = ocl::Device::getDefault().isIntel() ? CTA_SIZE_INTEL : CTA_SIZE_DEFAULT;
     Size size = _src.size();
 
-    if ( type != CV_8UC1 && type != CV_8UC2 && type != CV_8UC3 )
+    if (cn != 1 && cn != 2 && cn != 3 && depth != CV_8U && (!abs || depth != CV_16U))
         return false;
 
     int templateWindowHalfWize = templateWindowSize / 2;
@@ -84,45 +87,60 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
     int nblocksx = divUp(size.width, BLOCK_COLS), nblocksy = divUp(size.height, BLOCK_ROWS);
     int almostTemplateWindowSizeSqBinShift = -1;
 
-    char cvt[2][40];
+    char buf[4][40];
     String opts = format("-D OP_CALC_FASTNLMEANS -D TEMPLATE_SIZE=%d -D SEARCH_SIZE=%d"
                          " -D sample_t=%s -D pixel_t=%s -D int_t=%s"
+                         " -D weight_t=%s -D sum_t=%s -D convert_sum_t=%s"
                          " -D BLOCK_COLS=%d -D BLOCK_ROWS=%d"
                          " -D CTA_SIZE=%d -D TEMPLATE_SIZE2=%d -D SEARCH_SIZE2=%d"
                          " -D convert_int_t=%s -D cn=%d -D convert_pixel_t=%s%s",
                          templateWindowSize, searchWindowSize,
                          ocl::typeToStr(depth), ocl::typeToStr(type), ocl::typeToStr(CV_32SC(cn)),
+                         depth == CV_8U ? ocl::typeToStr(CV_32S) : "long",
+                         depth == CV_8U ? ocl::typeToStr(CV_32SC(cn)) :
+                         (sprintf(buf[0], "long%d", cn), buf[0]),
+                         depth == CV_8U ? ocl::convertTypeStr(depth, CV_32S, cn, buf[1]) :
+                         (sprintf(buf[1], "convert_long%d", cn), buf[1]),
                          BLOCK_COLS, BLOCK_ROWS,
                          ctaSize, templateWindowHalfWize, searchWindowHalfSize,
-                         ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]), type == CV_8UC3 ? 4 : cn,
-                         ocl::convertTypeStr(CV_32S, CV_8U, cn, cvt[1]), abs ? " -D ABS" : "");
+                         ocl::convertTypeStr(depth, CV_32S, cn, buf[2]), cn == 3 ? 4 : cn,
+                         ocl::convertTypeStr(CV_32S, depth, cn, buf[3]), abs ? " -D ABS" : "");
 
     ocl::Kernel k("fastNlMeansDenoising", ocl::photo::nlmeans_oclsrc, opts);
     if (k.empty())
         return false;
 
     UMat almostDist2Weight;
-    if (!ocl_calcAlmostDist2Weight<float>(almostDist2Weight, searchWindowSize, templateWindowSize,
-                                          h, cn, almostTemplateWindowSizeSqBinShift, abs))
+    if ((depth == CV_8U &&
+         !ocl_calcAlmostDist2Weight<float, uchar, int>(almostDist2Weight,
+                                                       searchWindowSize, templateWindowSize,
+                                                       h, cn,
+                                                       almostTemplateWindowSizeSqBinShift,
+                                                       abs)) ||
+        (depth == CV_16U &&
+         !ocl_calcAlmostDist2Weight<float, ushort, int64>(almostDist2Weight,
+                                                          searchWindowSize, templateWindowSize,
+                                                          h, cn,
+                                                          almostTemplateWindowSizeSqBinShift,
+                                                          abs)))
         return false;
     CV_Assert(almostTemplateWindowSizeSqBinShift >= 0);
 
     UMat srcex;
     int borderSize = searchWindowHalfSize + templateWindowHalfWize;
-    if (type == CV_8UC3) {
-        Mat src_rgb = _src.getMat(), src_rgba(size, CV_8UC4);
+    if (cn == 3) {
+        UMat tmp(size, CV_MAKE_TYPE(depth, 4));
         int from_to[] = { 0,0, 1,1, 2,2 };
-        mixChannels(&src_rgb, 1, &src_rgba, 1, from_to, 3);
-        copyMakeBorder(src_rgba, srcex,
-                       borderSize, borderSize, borderSize, borderSize, BORDER_DEFAULT);
+        mixChannels(std::vector<UMat>(1, _src.getUMat()), std::vector<UMat>(1, tmp), from_to, 3);
+        copyMakeBorder(tmp, srcex, borderSize, borderSize, borderSize, borderSize, BORDER_DEFAULT);
     }
     else
         copyMakeBorder(_src, srcex, borderSize, borderSize, borderSize, borderSize, BORDER_DEFAULT);
 
     _dst.create(size, type);
     UMat dst;
-    if (type == CV_8UC3)
-        dst.create(size, CV_8UC4);
+    if (cn == 3)
+        dst.create(size, CV_MAKE_TYPE(depth, 4));
     else
         dst = _dst.getUMat();
 
@@ -139,10 +157,9 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
     size_t globalsize[2] = { nblocksx * ctaSize, nblocksy }, localsize[2] = { ctaSize, 1 };
     if (!k.run(2, globalsize, localsize, false)) return false;
 
-    if (type == CV_8UC3) {
-        Mat dst_rgba = dst.getMat(ACCESS_READ), dst_rgb = _dst.getMat();
+    if (cn == 3) {
         int from_to[] = { 0,0, 1,1, 2,2 };
-        mixChannels(&dst_rgba, 1, &dst_rgb, 1, from_to, 3);
+        mixChannels(std::vector<UMat>(1, dst), std::vector<UMat>(1, _dst.getUMat()), from_to, 3);
     }
 
     return true;
