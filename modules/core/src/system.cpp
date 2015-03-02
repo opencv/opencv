@@ -319,6 +319,9 @@ struct HWFeatures
         }
 
     #if defined ANDROID || defined __linux__
+    #ifdef __aarch64__
+        f.have[CV_CPU_NEON] = true;
+    #else
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
@@ -337,7 +340,8 @@ struct HWFeatures
 
             close(cpufile);
         }
-    #elif (defined __clang__ || defined __APPLE__) && defined __ARM_NEON__
+    #endif
+    #elif (defined __clang__ || defined __APPLE__) && (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
         f.have[CV_CPU_NEON] = true;
     #endif
 
