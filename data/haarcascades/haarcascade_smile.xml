@@ -47,7 +47,7 @@
 <opencv_storage>
 <cascade type_id="opencv-cascade-classifier"><stageType>BOOST</stageType>
   <featureType>HAAR</featureType>
-  <height>19</height>
+  <height>18</height>
   <width>36</width>
   <stageParams>
     <maxWeakCount>53</maxWeakCount></stageParams>
