@@ -574,8 +574,13 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
       || !TIFFSetField(pTiffHandle, TIFFTAG_SAMPLESPERPIXEL, channels)
       || !TIFFSetField(pTiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG)
       || !TIFFSetField(pTiffHandle, TIFFTAG_ROWSPERSTRIP, rowsPerStrip)
-      || !TIFFSetField(pTiffHandle, TIFFTAG_PREDICTOR, predictor)
        )
+    {
+        TIFFClose(pTiffHandle);
+        return false;
+    }
+
+    if (compression != COMPRESSION_NONE && !TIFFSetField(pTiffHandle, TIFFTAG_PREDICTOR, predictor) )
     {
         TIFFClose(pTiffHandle);
         return false;
