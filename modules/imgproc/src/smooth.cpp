@@ -1324,7 +1324,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
             ksize.width = 1;
     }
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if ( tegra::box(src, dst, ksize, anchor, normalize, borderType) )
+    if ( tegra::useTegra() && tegra::box(src, dst, ksize, anchor, normalize, borderType) )
         return;
 #endif
 
@@ -1650,7 +1650,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 #ifdef HAVE_TEGRA_OPTIMIZATION
     Mat src = _src.getMat();
     Mat dst = _dst.getMat();
-    if(sigma1 == 0 && sigma2 == 0 && tegra::gaussian(src, dst, ksize, borderType))
+    if(sigma1 == 0 && sigma2 == 0 && tegra::useTegra() && tegra::gaussian(src, dst, ksize, borderType))
         return;
 #endif
 
@@ -2698,7 +2698,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 #endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::medianBlur(src0, dst, ksize))
+    if (tegra::useTegra() && tegra::medianBlur(src0, dst, ksize))
         return;
 #endif
 
