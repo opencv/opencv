@@ -98,6 +98,13 @@ void dumpOpenCLDevice()
 
     try
     {
+        if (!useOpenCL())
+        {
+            DUMP_MESSAGE_STDOUT("OpenCL is disabled");
+            DUMP_PROPERTY_XML("cv_ocl", "disabled");
+            return;
+        }
+
         std::vector<PlatformInfo> platforms;
         cv::ocl::getPlatfomsInfo(platforms);
         if (platforms.size() > 0)

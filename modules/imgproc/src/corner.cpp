@@ -269,7 +269,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
                      int borderType=BORDER_DEFAULT )
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
+    if (tegra::useTegra() && tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
         return;
 #endif
 #if CV_SSE2

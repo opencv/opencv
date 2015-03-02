@@ -562,7 +562,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     _dst.create( _src.size(), dtype );
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (scale == 1.0 && delta == 0)
+    if (tegra::useTegra() && scale == 1.0 && delta == 0)
     {
         Mat src = _src.getMat(), dst = _dst.getMat();
         if (ksize == 3 && tegra::sobel3x3(src, dst, dx, dy, borderType))
@@ -620,7 +620,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     _dst.create( _src.size(), dtype );
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (scale == 1.0 && delta == 0)
+    if (tegra::useTegra() && scale == 1.0 && delta == 0)
     {
         Mat src = _src.getMat(), dst = _dst.getMat();
         if (tegra::scharr(src, dst, dx, dy, borderType))
@@ -873,7 +873,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
 #endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (scale == 1.0 && delta == 0)
+    if (tegra::useTegra() && scale == 1.0 && delta == 0)
     {
         Mat src = _src.getMat(), dst = _dst.getMat();
         if (ksize == 1 && tegra::laplace1(src, dst, borderType))
