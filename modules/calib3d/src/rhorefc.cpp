@@ -45,6 +45,7 @@
 
 /* Includes */
 #include <precomp.hpp>
+#include <opencv2/core.hpp>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -476,11 +477,7 @@ inline int    RHO_HEST_REFC::initialize(void){
     lm.tmp1     = NULL;
     lm.Jte      = NULL;
 
-#ifdef _WIN32
-    fastSeed(rand());
-#else
-    fastSeed(random());
-#endif
+    fastSeed((unsigned)cv::theRNG());
 
 
     int areAllAllocsSuccessful = ctrl.smpl   &&
