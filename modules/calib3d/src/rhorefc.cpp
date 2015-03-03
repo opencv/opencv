@@ -1756,21 +1756,21 @@ static void hFuncRefC(float* packedPoints,/* Source (four x,y float coordinates)
      * R(2)-= (x2*R(0) + y2*R(1))
      */
 
-    scalar1=minor[0][0];
-    major[0][0]/=scalar1;
-    major[1][0]/=scalar1;
-    major[2][0]/=scalar1;
-    major[0][4]/=scalar1;
-    major[1][4]/=scalar1;
-    major[2][4]/=scalar1;
+    scalar1=1.0f/minor[0][0];
+    major[0][0]*=scalar1;
+    major[1][0]*=scalar1;
+    major[2][0]*=scalar1;
+    major[0][4]*=scalar1;
+    major[1][4]*=scalar1;
+    major[2][4]*=scalar1;
 
-    scalar1=minor[1][1];
-    major[0][1]/=scalar1;
-    major[1][1]/=scalar1;
-    major[2][1]/=scalar1;
-    major[0][5]/=scalar1;
-    major[1][5]/=scalar1;
-    major[2][5]/=scalar1;
+    scalar1=1.0f/minor[1][1];
+    major[0][1]*=scalar1;
+    major[1][1]*=scalar1;
+    major[2][1]*=scalar1;
+    major[0][5]*=scalar1;
+    major[1][5]*=scalar1;
+    major[2][5]*=scalar1;
 
 
     scalar1=minor[0][2];scalar2=minor[1][2];
