@@ -977,6 +977,72 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_read)
     ASSERT_TRUE(exceptionDetected); // data race
 }
 
+#if defined HAVE_OPENCL && 0
+
+#include "opencv2/core/opencl/runtime/opencl_core.hpp"
+
+// pure reproducer of bug in clEnqueueReadBuffer on NVIDIA
+// fails on NVIDIA GPUs (particularly, GTX 650)
+TEST(UMat, BigRead)
+{
+    if (!cv::ocl::haveOpenCL())
+        return;
+
+    cl_int error;
+    cl_platform_id platform;
+    cl_device_id device;
+    cl_uint platforms, devices;
+
+    /* Fetch the Platforms, we only want one. */
+    error = clGetPlatformIDs(1, &platform, &platforms);
+    if (error != CL_SUCCESS)
+        printf("Error number %d", error);
+
+    /* Fetch the Devices for this platform */
+    error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, &devices);
+    if (error != CL_SUCCESS)
+        printf("Error number %d", error);
+
+    /* Create a memory context for the device we want to use  */
+    cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform, 0 };
+
+    /* Note that nVidia's OpenCL requires the platform property */
+    cl_context context = clCreateContext(properties, 1, &device, NULL, NULL, &error);
+    if (error != CL_SUCCESS)
+        printf("Error number %d", error);
+
+    /* Create a command queue to communicate with the device */
+    cl_command_queue cq = clCreateCommandQueue(context, device, 0, &error);
+    if (error != CL_SUCCESS)
+        printf("Error number %d", error);
+
+    // note that this value < max memory allocation size!
+    size_t worksize = 4000 * 4000 * 16;
+
+    cl_mem mem1 = clCreateBuffer(context, CL_MEM_READ_WRITE, worksize, NULL, &error);
+    if (error != CL_SUCCESS)
+        printf("Error number %d", error);
+
+    uchar * host_ptr = (uchar *)fastMalloc(worksize);
+    error = clEnqueueReadBuffer(cq, mem1, CL_TRUE, 0, worksize, host_ptr, 0, NULL, NULL);
+    if (error != CL_SUCCESS)
+    {
+        // fails there
+        ASSERT_EQ(CL_SUCCESS, error) << "\"clEnqueueReadBuffer\" fails to read " <<
+                                        worksize << " bytes from the device\n";
+    }
+
+    clFinish(cq);
+
+    clReleaseMemObject(mem1);
+    clReleaseCommandQueue(cq);
+    clReleaseContext(context);
+
+    fastFree(host_ptr);
+}
+
+#endif // HAVE_OPENCL
+
 TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
 {
     bool exceptionDetected = false;
