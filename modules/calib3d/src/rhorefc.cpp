@@ -56,7 +56,15 @@
 #include <vector>
 #include "rhorefc.h"
 
-/* Defines */
+
+
+
+
+/* For the sake of cv:: namespace ONLY: */
+namespace cv{/* For C support, replace with extern "C" { */
+
+
+/* Constants */
 const int    MEM_ALIGN              = 32;
 const size_t HSIZE                  = (3*3*sizeof(float));
 const double MIN_DELTA_CHNG         = 0.1;
@@ -73,12 +81,6 @@ const double SPRT_DELTA             = 0.01;   /* No explanation */
 const double LM_GAIN_LO             = 0.25;   /* See sacLMGain(). */
 const double LM_GAIN_HI             = 0.75;   /* See sacLMGain(). */
 
-
-
-
-
-/* For the sake of cv:: namespace ONLY: */
-namespace cv{/* For C support, replace with extern "C" { */
 
 /* Data Structures */
 struct RHO_HEST_REFC{
