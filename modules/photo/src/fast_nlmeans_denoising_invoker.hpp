@@ -227,7 +227,7 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT, D>::operator() (const Range& range)
             }
 
             // calc weights
-            IT estimation[3], weights_sum = 0;
+            IT estimation[pixelInfo<T>::channels], weights_sum = 0;
             for (size_t channel_num = 0; channel_num < pixelInfo<T>::channels; channel_num++)
                 estimation[channel_num] = 0;
 

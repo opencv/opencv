@@ -78,9 +78,14 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
                     FastNlMeansDenoisingInvoker<cv::Vec3b, int, unsigned, DistSquared>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
+        case CV_8UC4:
+            parallel_for_(cv::Range(0, src.rows),
+                    FastNlMeansDenoisingInvoker<cv::Vec4b, int, unsigned, DistSquared>(
+                    src, dst, templateWindowSize, searchWindowSize, h));
+            break;
         default:
             CV_Error(Error::StsBadArg,
-                "Unsupported image format! Only CV_8U, CV_8UC2, and CV_8UC3 are supported");
+                "Unsupported image format! Only CV_8U, CV_8UC2, CV_8UC3 and CV_8UC4 are supported");
     }
 }
 
@@ -112,6 +117,11 @@ void cv::fastNlMeansDenoisingAbs( InputArray _src, OutputArray _dst, float h,
                 FastNlMeansDenoisingInvoker<cv::Vec3b, int, unsigned, DistAbs>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
+        case CV_8UC4:
+            parallel_for_(cv::Range(0, src.rows),
+                FastNlMeansDenoisingInvoker<cv::Vec4b, int, unsigned, DistAbs>(
+                    src, dst, templateWindowSize, searchWindowSize, h));
+            break;
         case CV_16U:
             parallel_for_(cv::Range(0, src.rows),
                 FastNlMeansDenoisingInvoker<ushort, int64, uint64, DistAbs>(
@@ -127,9 +137,14 @@ void cv::fastNlMeansDenoisingAbs( InputArray _src, OutputArray _dst, float h,
                 FastNlMeansDenoisingInvoker<cv::Vec<ushort, 3>, int64, uint64, DistAbs>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
+        case CV_16UC4:
+            parallel_for_(cv::Range(0, src.rows),
+                FastNlMeansDenoisingInvoker<cv::Vec<ushort, 4>, int64, uint64, DistAbs>(
+                    src, dst, templateWindowSize, searchWindowSize, h));
+            break;
         default:
             CV_Error(Error::StsBadArg,
-                "Unsupported image format! Only CV_8U, CV_8UC2, CV_8UC3, CV_16U, CV_16UC2, and CV_16UC3 are supported");
+                "Unsupported image format! Only CV_8U, CV_8UC2, CV_8UC3, CV_8UC4, CV_16U, CV_16UC2, CV_16UC3 and CV_16UC4 are supported");
     }
 }
 
@@ -240,9 +255,15 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
+        case CV_8UC4:
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
+                FastNlMeansMultiDenoisingInvoker<cv::Vec4b, int, unsigned, DistSquared>(
+                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                    dst, templateWindowSize, searchWindowSize, h));
+            break;
         default:
             CV_Error(Error::StsBadArg,
-                "Unsupported image format! Only CV_8U, CV_8UC2, and CV_8UC3 are supported");
+                "Unsupported image format! Only CV_8U, CV_8UC2, CV_8UC3 and CV_8UC4 are supported");
     }
 }
 
@@ -280,6 +301,12 @@ void cv::fastNlMeansDenoisingMultiAbs( InputArrayOfArrays _srcImgs, OutputArray 
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
+        case CV_8UC4:
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
+                FastNlMeansMultiDenoisingInvoker<cv::Vec4b, int, unsigned, DistAbs>(
+                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                    dst, templateWindowSize, searchWindowSize, h));
+            break;
         case CV_16U:
             parallel_for_(cv::Range(0, srcImgs[0].rows),
                 FastNlMeansMultiDenoisingInvoker<ushort, int64, uint64, DistAbs>(
@@ -298,9 +325,15 @@ void cv::fastNlMeansDenoisingMultiAbs( InputArrayOfArrays _srcImgs, OutputArray 
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
+        case CV_16UC4:
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
+                FastNlMeansMultiDenoisingInvoker<cv::Vec<ushort, 4>, int64, uint64, DistAbs>(
+                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                    dst, templateWindowSize, searchWindowSize, h));
+            break;
         default:
             CV_Error(Error::StsBadArg,
-                "Unsupported image format! Only CV_8U, CV_8UC2, CV_8UC3, CV_16U, CV_16UC2, and CV_16UC3 are supported");
+                "Unsupported image format! Only CV_8U, CV_8UC2, CV_8UC3, CV_8UC4, CV_16U, CV_16UC2, CV_16UC3 and CV_16UC4 are supported");
     }
 }
 

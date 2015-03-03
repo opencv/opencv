@@ -110,6 +110,18 @@ class DistAbs
         }
     };
 
+    template <typename ET, typename IT> struct calcDist_<Vec<ET, 4>, IT>
+    {
+        static inline IT f(const Vec<ET, 4> a, const Vec<ET, 4> b)
+        {
+            return
+                std::abs((IT)(a[0]-b[0])) +
+                std::abs((IT)(a[1]-b[1])) +
+                std::abs((IT)(a[2]-b[2])) +
+                std::abs((IT)(a[3]-b[3]));
+        }
+    };
+
 public:
     template <typename T, typename IT> static inline IT calcDist(const T a, const T b)
     {
@@ -169,6 +181,18 @@ class DistSquared
                 (IT)(a[0]-b[0])*(IT)(a[0]-b[0]) +
                 (IT)(a[1]-b[1])*(IT)(a[1]-b[1]) +
                 (IT)(a[2]-b[2])*(IT)(a[2]-b[2]);
+        }
+    };
+
+    template <typename ET, typename IT> struct calcDist_<Vec<ET, 4>, IT>
+    {
+        static inline IT f(const Vec<ET, 4> a, const Vec<ET, 4> b)
+        {
+            return
+                (IT)(a[0]-b[0])*(IT)(a[0]-b[0]) +
+                (IT)(a[1]-b[1])*(IT)(a[1]-b[1]) +
+                (IT)(a[2]-b[2])*(IT)(a[2]-b[2]) +
+                (IT)(a[3]-b[3])*(IT)(a[3]-b[3]);
         }
     };
 
@@ -254,6 +278,17 @@ template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 3>, IT>
     }
 };
 
+template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 4>, IT>
+{
+    static inline void f(IT* estimation, IT weight, Vec<ET, 4> p)
+    {
+        estimation[0] += weight * p[0];
+        estimation[1] += weight * p[1];
+        estimation[2] += weight * p[2];
+        estimation[3] += weight * p[3];
+    }
+};
+
 template <typename T, typename IT>
 static inline void incWithWeight(IT* estimation, IT weight, T p)
 {
@@ -287,6 +322,19 @@ template <typename ET, typename IT> struct saturateCastFromArray_<Vec<ET, 3>, IT
         res[0] = saturate_cast<ET>(estimation[0]);
         res[1] = saturate_cast<ET>(estimation[1]);
         res[2] = saturate_cast<ET>(estimation[2]);
+        return res;
+    }
+};
+
+template <typename ET, typename IT> struct saturateCastFromArray_<Vec<ET, 4>, IT>
+{
+    static inline Vec<ET, 4> f(IT* estimation)
+    {
+        Vec<ET, 4> res;
+        res[0] = saturate_cast<ET>(estimation[0]);
+        res[1] = saturate_cast<ET>(estimation[1]);
+        res[2] = saturate_cast<ET>(estimation[2]);
+        res[3] = saturate_cast<ET>(estimation[3]);
         return res;
     }
 };
