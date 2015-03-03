@@ -57,12 +57,6 @@
 
 /* Defines */
 
-/* C++ does not have the restrict keyword. */
-#ifdef restrict
-#undef restrict
-#endif
-#define restrict
-
 
 /* Flags */
 #ifndef RHO_FLAG_NONE
@@ -256,20 +250,20 @@ void rhoRefCFini(RHO_HEST_REFC* p);
  *                         inliers for acceptance was reached; 0 otherwise.
  */
 
-unsigned rhoRefC(RHO_HEST_REFC* restrict p,       /* Homography estimation context. */
-                 const float* restrict   src,     /* Source points */
-                 const float* restrict   dst,     /* Destination points */
-                 char* restrict          inl,     /* Inlier mask */
-                 unsigned                N,       /*  = src.length = dst.length = inl.length */
-                 float                   maxD,    /*   3.0 */
-                 unsigned                maxI,    /*  2000 */
-                 unsigned                rConvg,  /*  2000 */
-                 double                  cfd,     /* 0.995 */
-                 unsigned                minInl,  /*     4 */
-                 double                  beta,    /*  0.35 */
-                 unsigned                flags,   /*     0 */
-                 const float*            guessH,  /* Extrinsic guess, NULL if none provided */
-                 float*                  finalH); /* Final result. */
+unsigned rhoRefC(RHO_HEST_REFC* p,       /* Homography estimation context. */
+                 const float*   src,     /* Source points */
+                 const float*   dst,     /* Destination points */
+                 char*          inl,     /* Inlier mask */
+                 unsigned       N,       /*  = src.length = dst.length = inl.length */
+                 float          maxD,    /*   3.0 */
+                 unsigned       maxI,    /*  2000 */
+                 unsigned       rConvg,  /*  2000 */
+                 double         cfd,     /* 0.995 */
+                 unsigned       minInl,  /*     4 */
+                 double         beta,    /*  0.35 */
+                 unsigned       flags,   /*     0 */
+                 const float*   guessH,  /* Extrinsic guess, NULL if none provided */
+                 float*         finalH); /* Final result. */
 
 
 
