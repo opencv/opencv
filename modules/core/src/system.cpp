@@ -327,9 +327,9 @@ struct HWFeatures
         if (cpufile >= 0)
         {
             Elf32_auxv_t auxv;
-            const size_t size_auxv_t = sizeof(Elf32_auxv_t);
+            const size_t size_auxv_t = sizeof(auxv);
 
-            while ((size_t)read(cpufile, &auxv, sizeof(Elf32_auxv_t)) == size_auxv_t)
+            while ((size_t)read(cpufile, &auxv, size_auxv_t) == size_auxv_t)
             {
                 if (auxv.a_type == AT_HWCAP)
                 {
