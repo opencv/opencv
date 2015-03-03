@@ -89,13 +89,13 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
 
     char buf[4][40];
     String opts = format("-D OP_CALC_FASTNLMEANS -D TEMPLATE_SIZE=%d -D SEARCH_SIZE=%d"
-                         " -D sample_t=%s -D pixel_t=%s -D int_t=%s"
+                         " -D pixel_t=%s -D int_t=%s"
                          " -D weight_t=%s -D sum_t=%s -D convert_sum_t=%s"
                          " -D BLOCK_COLS=%d -D BLOCK_ROWS=%d"
                          " -D CTA_SIZE=%d -D TEMPLATE_SIZE2=%d -D SEARCH_SIZE2=%d"
                          " -D convert_int_t=%s -D cn=%d -D psz=%d -D convert_pixel_t=%s%s",
                          templateWindowSize, searchWindowSize,
-                         ocl::typeToStr(depth), ocl::typeToStr(type), ocl::typeToStr(CV_32SC(cn)),
+                         ocl::typeToStr(type), ocl::typeToStr(CV_32SC(cn)),
                          depth == CV_8U ? ocl::typeToStr(CV_32S) : "long",
                          depth == CV_8U ? ocl::typeToStr(CV_32SC(cn)) :
                          (sprintf(buf[0], "long%d", cn), buf[0]),
@@ -103,7 +103,8 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
                          (sprintf(buf[1], "convert_long%d", cn), buf[1]),
                          BLOCK_COLS, BLOCK_ROWS,
                          ctaSize, templateWindowHalfWize, searchWindowHalfSize,
-                         ocl::convertTypeStr(depth, CV_32S, cn, buf[2]), cn, cn == 3 ? 4 : cn,
+                         ocl::convertTypeStr(depth, CV_32S, cn, buf[2]), cn,
+                         (depth == CV_8U ? sizeof(uchar) : sizeof(ushort)) * (cn == 3 ? 4 : cn),
                          ocl::convertTypeStr(CV_32S, depth, cn, buf[3]), abs ? " -D ABS" : "");
 
     ocl::Kernel k("fastNlMeansDenoising", ocl::photo::nlmeans_oclsrc, opts);
