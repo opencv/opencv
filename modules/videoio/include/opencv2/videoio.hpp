@@ -136,7 +136,8 @@ enum { CAP_PROP_POS_MSEC       =0,
 // Currently, these are supported through the libv4l interface only.
 enum { CAP_MODE_BGR  = 0, // BGR24 (default)
        CAP_MODE_RGB  = 1, // RGB24
-       CAP_MODE_GRAY = 2  // Y8
+       CAP_MODE_GRAY = 2, // Y8
+       CAP_MODE_YUYV = 3  // YUYV
      };
 
 
