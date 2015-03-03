@@ -1,6 +1,6 @@
 set(the_description "The ts module")
 
-if(IOS)
+if(IOS OR WINRT)
   ocv_module_disable(ts)
 endif()
 
