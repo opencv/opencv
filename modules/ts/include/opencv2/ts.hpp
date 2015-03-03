@@ -6,7 +6,7 @@
 
 #include "cvconfig.h"
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
 
