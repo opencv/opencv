@@ -256,14 +256,14 @@ static inline unsigned sacCalcIterBound   (double   confidence,
                                            unsigned sampleSize,
                                            unsigned maxIterBound);
 static inline void   hFuncRefC            (float* packedPoints, float* H);
-static inline void   sacCalcJacobianErrors(const float* restrict H,
-                                           const float* restrict src,
-                                           const float* restrict dst,
-                                           const char*  restrict inl,
-                                           unsigned              N,
-                                           float     (* restrict JtJ)[8],
-                                           float*       restrict Jte,
-                                           float*       restrict Sp);
+static inline void   sacCalcJacobianErrors(const float* H,
+                                           const float* src,
+                                           const float* dst,
+                                           const char*  inl,
+                                           unsigned     N,
+                                           float     (* JtJ)[8],
+                                           float*       Jte,
+                                           float*       Sp);
 static inline float  sacLMGain            (const float*  dH,
                                            const float*  Jte,
                                            const float   S,
@@ -1935,14 +1935,14 @@ inline void   RHO_HEST_REFC::refine(void){
  * nevertheless be vectorized if need be.
  */
 
-static inline void   sacCalcJacobianErrors(const float* restrict H,
-                                           const float* restrict src,
-                                           const float* restrict dst,
-                                           const char*  restrict inl,
-                                           unsigned              N,
-                                           float     (* restrict JtJ)[8],
-                                           float*       restrict Jte,
-                                           float*       restrict Sp){
+static inline void   sacCalcJacobianErrors(const float* H,
+                                           const float* src,
+                                           const float* dst,
+                                           const char*  inl,
+                                           unsigned     N,
+                                           float     (* JtJ)[8],
+                                           float*       Jte,
+                                           float*       Sp){
     unsigned i;
     float    S;
 
