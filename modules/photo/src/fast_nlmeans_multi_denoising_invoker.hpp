@@ -249,7 +249,7 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D>::operator() (const Range& r
             // calc weights
             IT weights_sum = 0;
 
-            IT estimation[3];
+            IT estimation[pixelInfo<T>::channels];
             for (size_t channel_num = 0; channel_num < pixelInfo<T>::channels; channel_num++)
                 estimation[channel_num] = 0;
 
