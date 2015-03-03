@@ -97,7 +97,7 @@ inline int calcDistUpDown(pixel_t down_value, pixel_t down_value_t, pixel_t up_v
 
 #define COND if (x == 0 && y == 0)
 
-inline void calcFirstElementInRow(__global const sample_t * src, int src_step, int src_offset,
+inline void calcFirstElementInRow(__global const uchar * src, int src_step, int src_offset,
                                   __local int * dists, int y, int x, int id,
                                   __global int * col_dists, __global int * up_col_dists)
 {
@@ -129,8 +129,8 @@ inline void calcFirstElementInRow(__global const sample_t * src, int src_step, i
                 dist += value;
             }
 
-            src_current = (__global const pixel_t *)((__global const sample_t *)src_current + src_step);
-            src_template = (__global const pixel_t *)((__global const sample_t *)src_template + src_step);
+            src_current = (__global const pixel_t *)((__global const uchar *)src_current + src_step);
+            src_template = (__global const pixel_t *)((__global const uchar *)src_template + src_step);
         }
 
         #pragma unroll
@@ -142,7 +142,7 @@ inline void calcFirstElementInRow(__global const sample_t * src, int src_step, i
     }
 }
 
-inline void calcElementInFirstRow(__global const sample_t * src, int src_step, int src_offset,
+inline void calcElementInFirstRow(__global const uchar * src, int src_step, int src_offset,
                                   __local int * dists, int y, int x0, int x, int id, int first,
                                   __global int * col_dists, __global int * up_col_dists)
 {
@@ -164,8 +164,8 @@ inline void calcElementInFirstRow(__global const sample_t * src, int src_step, i
         {
             col_dist += calcDist(src_current[0], src_template[0]);
 
-            src_current = (__global const pixel_t *)((__global const sample_t *)src_current + src_step);
-            src_template = (__global const pixel_t *)((__global const sample_t *)src_template + src_step);
+            src_current = (__global const pixel_t *)((__global const uchar *)src_current + src_step);
+            src_template = (__global const pixel_t *)((__global const uchar *)src_template + src_step);
         }
 
         dists[i] += col_dist - col_dists_current[first];
@@ -174,7 +174,7 @@ inline void calcElementInFirstRow(__global const sample_t * src, int src_step, i
     }
 }
 
-inline void calcElement(__global const sample_t * src, int src_step, int src_offset,
+inline void calcElement(__global const uchar * src, int src_step, int src_offset,
                         __local int * dists, int y, int x0, int x, int id, int first,
                         __global int * col_dists, __global int * up_col_dists)
 {
@@ -207,9 +207,9 @@ inline void calcElement(__global const sample_t * src, int src_step, int src_off
     }
 }
 
-inline void convolveWindow(__global const sample_t * src, int src_step, int src_offset,
+inline void convolveWindow(__global const uchar * src, int src_step, int src_offset,
                            __local int * dists, __global const int * almostDist2Weight,
-                           __global sample_t * dst, int dst_step, int dst_offset,
+                           __global uchar * dst, int dst_step, int dst_offset,
                            int y, int x, int id, __local weight_t * weights_local,
                            __local sum_t * weighted_sum_local, int almostTemplateWindowSizeSqBinShift)
 {
@@ -255,9 +255,9 @@ inline void convolveWindow(__global const sample_t * src, int src_step, int src_
     }
 }
 
-__kernel void fastNlMeansDenoising(__global const sample_t * src, int src_step, int src_offset,
-                                   __global sample_t * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                                   __global const int * almostDist2Weight, __global sample_t * buffer,
+__kernel void fastNlMeansDenoising(__global const uchar * src, int src_step, int src_offset,
+                                   __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                   __global const int * almostDist2Weight, __global uchar * buffer,
                                    int almostTemplateWindowSizeSqBinShift)
 {
     int block_x = get_group_id(0), nblocks_x = get_num_groups(0);
@@ -276,11 +276,6 @@ __kernel void fastNlMeansDenoising(__global const sample_t * src, int src_step, 
     int block_data_start = SEARCH_SIZE_SQ * (mad24(block_y, dst_cols, x0) + mad24(block_y, nblocks_x, block_x) * TEMPLATE_SIZE);
     __global int * col_dists = (__global int *)(buffer + block_data_start * sizeof(int));
     __global int * up_col_dists = col_dists + SEARCH_SIZE_SQ * TEMPLATE_SIZE;
-
-    src_step /= sizeof(sample_t);
-    src_offset /= sizeof(sample_t);
-    dst_step /= sizeof(sample_t);
-    dst_offset /= sizeof(sample_t);
 
     for (int y = y0; y < y1; ++y)
         for (int x = x0; x < x1; ++x)
