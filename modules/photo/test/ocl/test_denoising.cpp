@@ -48,11 +48,16 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool, bool)
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, 0, 255);
         if (use_image) {
-            ASSERT_TRUE(cn == 1 || cn == 2 || cn == 3);
+            ASSERT_TRUE(cn == 1 || cn == 2 || cn == 3 || cn == 4);
             if (cn == 2) {
                 int from_to[] = { 0,0, 1,1 };
                 src_roi.create(roiSize, type);
                 mixChannels(&image, 1, &src_roi, 1, from_to, 2);
+            }
+            else if (cn == 4) {
+                int from_to[] = { 0,0, 1,1, 2,2, 1,3};
+                src_roi.create(roiSize, type);
+                mixChannels(&image, 1, &src_roi, 1, from_to, 4);
             }
             else image.copyTo(src_roi);
         }
@@ -111,9 +116,9 @@ OCL_TEST_P(FastNlMeansDenoisingColored, Mat)
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising,
-                            Combine(Values(1, 2, 3), Bool(), Bool()));
+                            Combine(Values(1, 2, 3, 4), Bool(), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingAbs,
-                            Combine(Values(1, 2, 3), Bool(), Bool()));
+                            Combine(Values(1, 2, 3, 4), Bool(), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingColored,
                             Combine(Values(3, 4), Bool(), Values(false)));
 
