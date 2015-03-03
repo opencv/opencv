@@ -584,7 +584,7 @@ bool HaarEvaluator::read(const FileNode& node, Size _origWinSize)
     {
         if(!ff[i].read(*it))
             return false;
-        if( ff[i].tilted )
+        if( ff[i].tilted && !hasTiltedFeatures )
             hasTiltedFeatures = true;
     }
     nchannels = hasTiltedFeatures ? 3 : 2;
