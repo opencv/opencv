@@ -41,39 +41,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="OcvImageProcessing_TemporaryKey.pfx" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_calib3d247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_calib3d247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_contrib247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_contrib247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_core247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_core247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_features2d247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_features2d247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_flann247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_flann247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_gpu247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_highgui247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_highgui247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_imgproc247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_imgproc247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_legacy247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_legacy247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_ml247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_ml247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_nonfree247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_nonfree247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_objdetect247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_objdetect247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_photo247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_photo247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_stitching247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_stitching247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_superres247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_superres247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_video247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_video247d.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_videostab247.dll" />
-    <None Include="$(OPENCV_DIR)\bin\opencv_videostab247d.dll" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainPage.xaml" />

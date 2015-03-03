@@ -1,3 +1,7 @@
+if(WINRT)
+  ocv_module_disable(videoio)
+endif()
+
 set(the_description "Media I/O")
 ocv_add_module(videoio opencv_imgproc opencv_imgcodecs OPTIONAL opencv_androidcamera WRAP java python)
 
@@ -7,7 +11,7 @@ ocv_add_module(videoio opencv_imgproc opencv_imgcodecs OPTIONAL opencv_androidca
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-if(HAVE_WINRT_CX)
+if(HAVE_WINRT_CX AND NOT WINRT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 

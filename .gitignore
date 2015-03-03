@@ -8,3 +8,12 @@
 Thumbs.db
 tags
 tegra/
+bin/
+CMakeFiles/
+*.sdf
+*.opensdf
+*.obj
+*.stamp
+*.depend
+*.rule
+*.tmp
