@@ -1,4 +1,4 @@
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #define ICustomStreamSink StreamSink
 #ifndef __cplusplus_winrt
 
@@ -380,7 +380,7 @@ MAKE_ENUM(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypePairs[] = {
 };
 MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypePairs, StreamSinkMarkerTypePairs + sizeof(StreamSinkMarkerTypePairs) / sizeof(StreamSinkMarkerTypePairs[0]));
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 
 #ifdef __cplusplus_winrt
 #define _ContextCallback Concurrency::details::_ContextCallback
@@ -1070,7 +1070,7 @@ protected:
 };
 
 class StreamSink :
-#ifdef HAVE_WINRT
+#ifdef WINRT
     public Microsoft::WRL::RuntimeClass<
     Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::ClassicCom>,
     IMFStreamSink,
@@ -1100,7 +1100,7 @@ public:
         if (riid == IID_IMarshal) {
             return MarshalQI(riid, ppv);
         } else {
-#ifdef HAVE_WINRT
+#ifdef WINRT
             hr = RuntimeClassT::QueryInterface(riid, ppv);
 #else
             if (riid == IID_IUnknown || riid == IID_IMFStreamSink) {
@@ -1126,7 +1126,7 @@ public:
         return hr;
     }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
     STDMETHOD(RuntimeClassInitialize)() { return S_OK; }
 #else
     ULONG STDMETHODCALLTYPE AddRef()
@@ -1177,7 +1177,7 @@ public:
         m_StartTime(0), m_fGetStartTimeFromSample(false), m_fWaitingForFirstSample(false),
         m_state(State_TypeNotSet), m_pParent(nullptr),
         m_imageWidthInPixels(0), m_imageHeightInPixels(0) {
-#ifdef HAVE_WINRT
+#ifdef WINRT
         m_token.value = 0;
 #else
         m_bConnected = false;
@@ -1856,7 +1856,7 @@ public:
         return hr;
     }
 private:
-#ifdef HAVE_WINRT
+#ifdef WINRT
     EventRegistrationToken m_token;
 #else
     bool m_bConnected;
@@ -1864,7 +1864,7 @@ private:
 
     bool m_IsShutdown;                // Flag to indicate if Shutdown() method was called.
     CRITICAL_SECTION m_critSec;
-#ifndef HAVE_WINRT
+#ifndef WINRT
     long m_cRef;
 #endif
     IMFAttributes*        m_pParent;
@@ -2408,7 +2408,7 @@ protected:
 extern const __declspec(selectany) WCHAR RuntimeClass_CV_MediaSink[] = L"cv.MediaSink";
 
 class MediaSink :
-#ifdef HAVE_WINRT
+#ifdef WINRT
     public Microsoft::WRL::RuntimeClass<
     Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::WinRtClassicComMix >,
     Microsoft::WRL::Implements<ABI::Windows::Media::IMediaExtension>,
@@ -2420,7 +2420,7 @@ class MediaSink :
     public IMFMediaSink, public IMFClockStateSink, public CBaseAttributes<>
 #endif
 {
-#ifdef HAVE_WINRT
+#ifdef WINRT
     InspectableClass(RuntimeClass_CV_MediaSink, BaseTrust)
 public:
 #else
@@ -2488,7 +2488,7 @@ public:
             return S_OK;
         }
     }
-#ifdef HAVE_WINRT
+#ifdef WINRT
     STDMETHODIMP SetProperties(ABI::Windows::Foundation::Collections::IPropertySet *pConfiguration)
     {
         HRESULT hr = S_OK;
@@ -2828,7 +2828,7 @@ public:
 
         if (SUCCEEDED(hr))
         {
-#ifdef HAVE_WINRT
+#ifdef WINRT
             pStream = Microsoft::WRL::Make<StreamSink>();
             if (pStream == nullptr) {
                 hr = E_OUTOFMEMORY;
@@ -2940,7 +2940,7 @@ public:
         {
             hr = m_streams.Remove(pos, nullptr);
                     _ComPtr<ICustomStreamSink> spCustomSink;
-#ifdef HAVE_WINRT
+#ifdef WINRT
                     spCustomSink = static_cast<StreamSink*>(spStream.Get());
                     hr = S_OK;
 #else
@@ -3164,7 +3164,7 @@ public:
         {
                     _ComPtr<ICustomStreamSink> spCustomSink;
                     HRESULT hr;
-#ifdef HAVE_WINRT
+#ifdef WINRT
                     spCustomSink = static_cast<StreamSink*>(pStream);
 #else
                     hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
@@ -3187,7 +3187,7 @@ public:
         {
                     _ComPtr<ICustomStreamSink> spCustomSink;
                     HRESULT hr;
-#ifdef HAVE_WINRT
+#ifdef WINRT
                     spCustomSink = static_cast<StreamSink*>(pStream);
 #else
                     hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
@@ -3207,7 +3207,7 @@ public:
         {
                     _ComPtr<ICustomStreamSink> spCustomSink;
                     HRESULT hr;
-#ifdef HAVE_WINRT
+#ifdef WINRT
                     spCustomSink = static_cast<StreamSink*>(pStream);
 #else
                     hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
@@ -3317,7 +3317,7 @@ public:
         return hr;
     }
 private:
-#ifndef HAVE_WINRT
+#ifndef WINRT
     long m_cRef;
 #endif
     CRITICAL_SECTION            m_critSec;
@@ -3327,6 +3327,6 @@ private:
     LONGLONG                        m_llStartTime;
 };
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 ActivatableClass(MediaSink);
 #endif
