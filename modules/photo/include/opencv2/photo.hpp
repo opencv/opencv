@@ -119,7 +119,7 @@ CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
 <http://www.ipol.im/pub/algo/bcm_non_local_means_denoising/> with several computational
 optimizations. Noise expected to be a gaussian white noise
 
-@param src Input 8-bit 1-channel, 2-channel or 3-channel image.
+@param src Input 8-bit 1-channel, 2-channel, 3-channel or 4-channel image.
 @param dst Output image with the same size and type as src .
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
 Should be odd. Recommended value 7 pixels
@@ -144,7 +144,7 @@ with several computational optimizations. Noise expected to be a
 gaussian white noise. Uses squared sum of absolute value distances
 instead of sum of squared distances for weight calculation
 
-@param src Input 8-bit or 16-bit 1-channel, 2-channel or 3-channel image.
+@param src Input 8-bit or 16-bit 1-channel, 2-channel, 3-channel or 4-channel image.
 @param dst Output image with the same size and type as src .
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
 Should be odd. Recommended value 7 pixels
@@ -190,8 +190,9 @@ captured in small period of time. For example video. This version of the functio
 images or for manual manipulation with colorspaces. For more details see
 <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.131.6394>
 
-@param srcImgs Input 8-bit 1-channel, 2-channel or 3-channel images sequence. All images should
-have the same type and size.
+@param srcImgs Input 8-bit 1-channel, 2-channel, 3-channel or
+4-channel images sequence. All images should have the same type and
+size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
@@ -220,9 +221,9 @@ details see
 squared sum of absolute value distances instead of sum of squared
 distances for weight calculation
 
-@param srcImgs Input 8-bit or 16-bit 1-channel, 2-channel or 3-channel
-images sequence. All images should
-have the same type and size.
+@param srcImgs Input 8-bit or 16-bit 1-channel, 2-channel, 3-channel
+or 4-channel images sequence. All images should have the same type and
+size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
