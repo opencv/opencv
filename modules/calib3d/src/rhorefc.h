@@ -44,8 +44,8 @@
  */
 
 /* Include Guards */
-#ifndef __RHOREFC_H__
-#define __RHOREFC_H__
+#ifndef __OPENCV_RHOREFC_H__
+#define __OPENCV_RHOREFC_H__
 
 
 
