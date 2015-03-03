@@ -1202,7 +1202,8 @@ inline int    RHO_HEST_REFC::isModelDegenerate(void){
     float f=H[0]+H[1]+H[2]+H[3]+H[4]+H[5]+H[6]+H[7];
 
     /* degenerate = isnan(f); */
-    degenerate = f!=f;/* Only NaN is not equal to itself. */
+    /* degenerate = f!=f;// Only NaN is not equal to itself. */
+    degenerate = cvIsNaN(f);
     /* degenerate = 0; */
 
 
