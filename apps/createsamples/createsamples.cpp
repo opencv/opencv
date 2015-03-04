@@ -55,6 +55,20 @@ using namespace std;
 
 #include "utility.hpp"
 
+static int check_atoi(char *value, const char *field) {
+    if (value)
+        return atoi(value);
+    printf("You should specify value for %s\n", field);
+    exit(-1);
+}
+
+static double check_atof(char *value, const char *field) {
+    if (value)
+        return atof(value);
+    printf("You should specify value for %s\n", field);
+    exit(-1);
+}
+
 int main( int argc, char* argv[] )
 {
     int i = 0;
@@ -119,15 +133,15 @@ int main( int argc, char* argv[] )
         }
         else if( !strcmp( argv[i], "-num" ) )
         {
-            num = atoi( argv[++i] );
+            num = check_atoi( argv[++i], "number_of_samples" );
         }
         else if( !strcmp( argv[i], "-bgcolor" ) )
         {
-            bgcolor = atoi( argv[++i] );
+            bgcolor = check_atoi( argv[++i], "background_color" );
         }
         else if( !strcmp( argv[i], "-bgthresh" ) )
         {
-            bgthreshold = atoi( argv[++i] );
+            bgthreshold = check_atoi( argv[++i], "background_color_threshold" );
         }
         else if( !strcmp( argv[i], "-inv" ) )
         {
@@ -139,19 +153,19 @@ int main( int argc, char* argv[] )
         }
         else if( !strcmp( argv[i], "-maxidev" ) )
         {
-            maxintensitydev = atoi( argv[++i] );
+            maxintensitydev = check_atoi( argv[++i], "max_intensity_deviation" );
         }
         else if( !strcmp( argv[i], "-maxxangle" ) )
         {
-            maxxangle = atof( argv[++i] );
+            maxxangle = check_atof( argv[++i], "max_x_rotation_angle" );
         }
         else if( !strcmp( argv[i], "-maxyangle" ) )
         {
-            maxyangle = atof( argv[++i] );
+            maxyangle = check_atof( argv[++i], "max_y_rotation_angle" );
         }
         else if( !strcmp( argv[i], "-maxzangle" ) )
         {
-            maxzangle = atof( argv[++i] );
+            maxzangle = check_atof( argv[++i], "max_z_rotation_angle" );
         }
         else if( !strcmp( argv[i], "-show" ) )
         {
@@ -166,11 +180,11 @@ int main( int argc, char* argv[] )
         }
         else if( !strcmp( argv[i], "-w" ) )
         {
-            width = atoi( argv[++i] );
+            width = check_atoi( argv[++i], "sample_width" );
         }
         else if( !strcmp( argv[i], "-h" ) )
         {
-            height = atoi( argv[++i] );
+            height = check_atoi( argv[++i], "sample_height" );
         }
     }
 

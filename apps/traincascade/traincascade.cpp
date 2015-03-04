@@ -4,6 +4,13 @@
 using namespace std;
 using namespace cv;
 
+static int check_atoi(char *value, const char *field) {
+    if (value)
+        return atoi(value);
+    printf("You should specify value for %s\n", field);
+    exit(-1);
+}
+
 int main( int argc, char* argv[] )
 {
     CvCascadeClassifier classifier;
@@ -60,23 +67,23 @@ int main( int argc, char* argv[] )
         }
         else if( !strcmp( argv[i], "-numPos" ) )
         {
-            numPos = atoi( argv[++i] );
+            numPos = check_atoi( argv[++i], "number_of_positive_samples" );
         }
         else if( !strcmp( argv[i], "-numNeg" ) )
         {
-            numNeg = atoi( argv[++i] );
+            numNeg = check_atoi( argv[++i], "number_of_negative_samples" );
         }
         else if( !strcmp( argv[i], "-numStages" ) )
         {
-            numStages = atoi( argv[++i] );
+            numStages = check_atoi( argv[++i], "number_of_stages" );
         }
         else if( !strcmp( argv[i], "-precalcValBufSize" ) )
         {
-            precalcValBufSize = atoi( argv[++i] );
+            precalcValBufSize = check_atoi( argv[++i], "precalculated_vals_buffer_size_in_Mb" );
         }
         else if( !strcmp( argv[i], "-precalcIdxBufSize" ) )
         {
-            precalcIdxBufSize = atoi( argv[++i] );
+            precalcIdxBufSize = check_atoi( argv[++i], "precalculated_idxs_buffer_size_in_Mb" );
         }
         else if( !strcmp( argv[i], "-baseFormatSave" ) )
         {
@@ -84,7 +91,7 @@ int main( int argc, char* argv[] )
         }
         else if( !strcmp( argv[i], "-numThreads" ) )
         {
-          numThreads = atoi(argv[++i]);
+          numThreads = check_atoi(argv[++i], "max_number_of_threads");
         }
         else if ( cascadeParams.scanAttr( argv[i], argv[i+1] ) ) { i++; }
         else if ( stageParams.scanAttr( argv[i], argv[i+1] ) ) { i++; }
