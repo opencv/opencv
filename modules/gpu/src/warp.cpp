@@ -277,6 +277,17 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
             int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
 
+#ifdef OPENCV_TINY_GPU_MODULE
+        static const func_t funcs[6][4] =
+        {
+            {warpAffine_gpu<uchar>      , 0 /*warpAffine_gpu<uchar2>*/ , warpAffine_gpu<uchar3>     , warpAffine_gpu<uchar4>     },
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {warpAffine_gpu<float>      , 0 /*warpAffine_gpu<float2>*/ , warpAffine_gpu<float3>     , warpAffine_gpu<float4>     }
+        };
+#else
         static const func_t funcs[6][4] =
         {
             {warpAffine_gpu<uchar>      , 0 /*warpAffine_gpu<uchar2>*/ , warpAffine_gpu<uchar3>     , warpAffine_gpu<uchar4>     },
@@ -286,6 +297,7 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
             {0 /*warpAffine_gpu<int>*/  , 0 /*warpAffine_gpu<int2>*/   , 0 /*warpAffine_gpu<int3>*/ , 0 /*warpAffine_gpu<int4>*/ },
             {warpAffine_gpu<float>      , 0 /*warpAffine_gpu<float2>*/ , warpAffine_gpu<float3>     , warpAffine_gpu<float4>     }
         };
+#endif
 
         const func_t func = funcs[src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
@@ -415,6 +427,17 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
             int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
 
+#ifdef OPENCV_TINY_GPU_MODULE
+        static const func_t funcs[6][4] =
+        {
+            {warpPerspective_gpu<uchar>      , 0 /*warpPerspective_gpu<uchar2>*/ , warpPerspective_gpu<uchar3>     , warpPerspective_gpu<uchar4>     },
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {warpPerspective_gpu<float>      , 0 /*warpPerspective_gpu<float2>*/ , warpPerspective_gpu<float3>     , warpPerspective_gpu<float4>     }
+        };
+#else
         static const func_t funcs[6][4] =
         {
             {warpPerspective_gpu<uchar>      , 0 /*warpPerspective_gpu<uchar2>*/ , warpPerspective_gpu<uchar3>     , warpPerspective_gpu<uchar4>     },
@@ -424,6 +447,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
             {0 /*warpPerspective_gpu<int>*/  , 0 /*warpPerspective_gpu<int2>*/   , 0 /*warpPerspective_gpu<int3>*/ , 0 /*warpPerspective_gpu<int4>*/ },
             {warpPerspective_gpu<float>      , 0 /*warpPerspective_gpu<float2>*/ , warpPerspective_gpu<float3>     , warpPerspective_gpu<float4>     }
         };
+#endif
 
         const func_t func = funcs[src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
