@@ -789,12 +789,14 @@ Ptr<BaseFilter_GPU> cv::gpu::getLinearFilter_GPU(int srcType, int dstType, const
     case CV_8UC4:
         func = filter2D_gpu<uchar4, uchar4>;
         break;
+#ifndef OPENCV_TINY_GPU_MODULE
     case CV_16UC1:
         func = filter2D_gpu<ushort, ushort>;
         break;
     case CV_16UC4:
         func = filter2D_gpu<ushort4, ushort4>;
         break;
+#endif
     case CV_32FC1:
         func = filter2D_gpu<float, float>;
         break;
