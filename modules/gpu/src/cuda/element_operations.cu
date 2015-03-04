@@ -2397,6 +2397,7 @@ namespace arithm
     }
 
     template void addWeighted<uchar, uchar, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#ifndef OPENCV_TINY_GPU_MODULE
     template void addWeighted<uchar, uchar, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<uchar, uchar, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<uchar, uchar, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
@@ -2451,9 +2452,10 @@ namespace arithm
     template void addWeighted<uchar, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<uchar, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<uchar, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#endif
 
 
-
+#ifndef OPENCV_TINY_GPU_MODULE
     template void addWeighted<schar, schar, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<schar, schar, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<schar, schar, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
@@ -2501,9 +2503,10 @@ namespace arithm
     template void addWeighted<schar, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<schar, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<schar, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#endif
 
 
-
+#ifndef OPENCV_TINY_GPU_MODULE
     template void addWeighted<ushort, ushort, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<ushort, ushort, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<ushort, ushort, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
@@ -2543,9 +2546,10 @@ namespace arithm
     template void addWeighted<ushort, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<ushort, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<ushort, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#endif
 
 
-
+#ifndef OPENCV_TINY_GPU_MODULE
     template void addWeighted<short, short, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<short, short, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<short, short, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
@@ -2577,9 +2581,10 @@ namespace arithm
     template void addWeighted<short, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<short, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<short, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#endif
 
 
-
+#ifndef OPENCV_TINY_GPU_MODULE
     template void addWeighted<int, int, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<int, int, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<int, int, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
@@ -2603,15 +2608,18 @@ namespace arithm
     template void addWeighted<int, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<int, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<int, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#endif
 
 
-
+#ifndef OPENCV_TINY_GPU_MODULE
     template void addWeighted<float, float, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<float, float, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<float, float, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<float, float, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<float, float, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#endif
     template void addWeighted<float, float, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#ifndef OPENCV_TINY_GPU_MODULE
     template void addWeighted<float, float, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
 
     template void addWeighted<float, double, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
@@ -2621,9 +2629,11 @@ namespace arithm
     template void addWeighted<float, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<float, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<float, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#endif
 
 
 
+#ifndef OPENCV_TINY_GPU_MODULE
     template void addWeighted<double, double, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<double, double, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<double, double, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
@@ -2631,6 +2641,7 @@ namespace arithm
     template void addWeighted<double, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<double, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     template void addWeighted<double, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+#endif
 }
 
 #endif /* CUDA_DISABLER */
