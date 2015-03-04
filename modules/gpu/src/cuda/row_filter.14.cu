@@ -44,9 +44,13 @@
 
 #include "row_filter.h"
 
+#ifndef OPENCV_TINY_GPU_MODULE
+
 namespace filter
 {
     template void linearRow<int4, float4>(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
 }
+
+#endif
 
 #endif /* CUDA_DISABLER */
