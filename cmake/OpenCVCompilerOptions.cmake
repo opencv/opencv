@@ -63,6 +63,10 @@ if(OPENCV_CAN_BREAK_BINARY_COMPATIBILITY)
   add_definitions(-DOPENCV_CAN_BREAK_BINARY_COMPATIBILITY)
 endif()
 
+if(BUILD_TINY_GPU_MODULE)
+  add_definitions(-DOPENCV_TINY_GPU_MODULE)
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX)
   # High level of warnings.
   add_extra_compiler_option(-W)
