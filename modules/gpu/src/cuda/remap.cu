@@ -209,6 +209,7 @@ namespace cv { namespace gpu { namespace device
             typedef void (*caller_t)(PtrStepSz<T> src, PtrStepSz<T> srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap,
                 PtrStepSz<T> dst, const float* borderValue, cudaStream_t stream, bool cc20);
 
+#ifdef OPENCV_TINY_GPU_MODULE
             static const caller_t callers[3][5] =
             {
                 {
@@ -216,25 +217,55 @@ namespace cv { namespace gpu { namespace device
                     RemapDispatcher<PointFilter, BrdReplicate, T>::call,
                     RemapDispatcher<PointFilter, BrdConstant, T>::call,
                     RemapDispatcher<PointFilter, BrdReflect, T>::call,
-                    RemapDispatcher<PointFilter, BrdWrap, T>::call
+                    0/*RemapDispatcher<PointFilter, BrdWrap, T>::call*/,
                 },
                 {
                     RemapDispatcher<LinearFilter, BrdReflect101, T>::call,
                     RemapDispatcher<LinearFilter, BrdReplicate, T>::call,
                     RemapDispatcher<LinearFilter, BrdConstant, T>::call,
                     RemapDispatcher<LinearFilter, BrdReflect, T>::call,
-                    RemapDispatcher<LinearFilter, BrdWrap, T>::call
+                    0/*RemapDispatcher<LinearFilter, BrdWrap, T>::call*/,
+                },
+                {
+                    0/*RemapDispatcher<CubicFilter, BrdReflect101, T>::call*/,
+                    0/*RemapDispatcher<CubicFilter, BrdReplicate, T>::call*/,
+                    0/*RemapDispatcher<CubicFilter, BrdConstant, T>::call*/,
+                    0/*RemapDispatcher<CubicFilter, BrdReflect, T>::call*/,
+                    0/*RemapDispatcher<CubicFilter, BrdWrap, T>::call*/,
+                }
+            };
+#else
+            static const caller_t callers[3][5] =
+            {
+                {
+                    RemapDispatcher<PointFilter, BrdReflect101, T>::call,
+                    RemapDispatcher<PointFilter, BrdReplicate, T>::call,
+                    RemapDispatcher<PointFilter, BrdConstant, T>::call,
+                    RemapDispatcher<PointFilter, BrdReflect, T>::call,
+                    RemapDispatcher<PointFilter, BrdWrap, T>::call,
+                },
+                {
+                    RemapDispatcher<LinearFilter, BrdReflect101, T>::call,
+                    RemapDispatcher<LinearFilter, BrdReplicate, T>::call,
+                    RemapDispatcher<LinearFilter, BrdConstant, T>::call,
+                    RemapDispatcher<LinearFilter, BrdReflect, T>::call,
+                    RemapDispatcher<LinearFilter, BrdWrap, T>::call,
                 },
                 {
                     RemapDispatcher<CubicFilter, BrdReflect101, T>::call,
                     RemapDispatcher<CubicFilter, BrdReplicate, T>::call,
                     RemapDispatcher<CubicFilter, BrdConstant, T>::call,
                     RemapDispatcher<CubicFilter, BrdReflect, T>::call,
-                    RemapDispatcher<CubicFilter, BrdWrap, T>::call
+                    RemapDispatcher<CubicFilter, BrdWrap, T>::call,
                 }
             };
+#endif
 
-            callers[interpolation][borderMode](static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<T> >(srcWhole), xoff, yoff, xmap, ymap,
+            const caller_t caller = callers[interpolation][borderMode];
+            if (!caller)
+                cv::gpu::error("Unsupported input parameters for remap", __FILE__, __LINE__, "");
+
+            caller(static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<T> >(srcWhole), xoff, yoff, xmap, ymap,
                 static_cast< PtrStepSz<T> >(dst), borderValue, stream, cc20);
         }
 
@@ -243,6 +274,7 @@ namespace cv { namespace gpu { namespace device
         template void remap_gpu<uchar3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
         template void remap_gpu<uchar4>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
 
+#ifndef OPENCV_TINY_GPU_MODULE
         //template void remap_gpu<schar>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
         //template void remap_gpu<char2>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
         //template void remap_gpu<char3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
@@ -262,6 +294,7 @@ namespace cv { namespace gpu { namespace device
         //template void remap_gpu<int2>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
         //template void remap_gpu<int3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
         //template void remap_gpu<int4>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
+#endif
 
         template void remap_gpu<float >(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
         //template void remap_gpu<float2>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
