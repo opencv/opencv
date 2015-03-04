@@ -298,12 +298,13 @@ static inline void   sacSub8x1            (float*       Hout,
  * @return A pointer to the context if successful; NULL if an error occured.
  */
 
-RHO_HEST_REFC* rhoRefCInit(void){
-    RHO_HEST_REFC* p = new RHO_HEST_REFC;
+Ptr<RHO_HEST_REFC> rhoRefCInit(void){
+    Ptr<RHO_HEST_REFC> p = Ptr<RHO_HEST_REFC>(new RHO_HEST_REFC);
 
-    if(!p->initialize()){
-        delete p;
-        p = NULL;
+    if(p){
+        if(!p->initialize()){
+            p = Ptr<RHO_HEST_REFC>((RHO_HEST_REFC*)NULL);
+        }
     }
 
     return p;
@@ -314,7 +315,7 @@ RHO_HEST_REFC* rhoRefCInit(void){
  * External access to non-randomness table resize.
  */
 
-int  rhoRefCEnsureCapacity(RHO_HEST_REFC* p, unsigned N, double beta){
+int  rhoRefCEnsureCapacity(Ptr<RHO_HEST_REFC> p, unsigned N, double beta){
     return p->sacEnsureCapacity(N, beta);
 }
 
@@ -323,19 +324,8 @@ int  rhoRefCEnsureCapacity(RHO_HEST_REFC* p, unsigned N, double beta){
  * Seeds the internal PRNG with the given seed.
  */
 
-void rhoRefCSeed(RHO_HEST_REFC* p, unsigned long long seed){
+void rhoRefCSeed(Ptr<RHO_HEST_REFC> p, unsigned long long seed){
     p->fastSeed((uint64_t)seed);
-}
-
-
-/**
- * External access to context destructor.
- *
- * @param [in] p  The initialized estimator context to finalize.
- */
-
-void rhoRefCFini(RHO_HEST_REFC* p){
-    delete p;
 }
 
 
@@ -368,20 +358,20 @@ void rhoRefCFini(RHO_HEST_REFC* p){
  *                         inliers for acceptance was reached; 0 otherwise.
  */
 
-unsigned rhoRefC(RHO_HEST_REFC* p,       /* Homography estimation context. */
-                 const float*   src,     /* Source points */
-                 const float*   dst,     /* Destination points */
-                 char*          inl,     /* Inlier mask */
-                 unsigned       N,       /*  = src.length = dst.length = inl.length */
-                 float          maxD,    /* Works:     3.0 */
-                 unsigned       maxI,    /* Works:    2000 */
-                 unsigned       rConvg,  /* Works:    2000 */
-                 double         cfd,     /* Works:   0.995 */
-                 unsigned       minInl,  /* Minimum:     4 */
-                 double         beta,    /* Works:    0.35 */
-                 unsigned       flags,   /* Works:       0 */
-                 const float*   guessH,  /* Extrinsic guess, NULL if none provided */
-                 float*         finalH){ /* Final result. */
+unsigned rhoRefC(Ptr<RHO_HEST_REFC> p,       /* Homography estimation context. */
+                 const float*       src,     /* Source points */
+                 const float*       dst,     /* Destination points */
+                 char*              inl,     /* Inlier mask */
+                 unsigned           N,       /*  = src.length = dst.length = inl.length */
+                 float              maxD,    /* Works:     3.0 */
+                 unsigned           maxI,    /* Works:    2000 */
+                 unsigned           rConvg,  /* Works:    2000 */
+                 double             cfd,     /* Works:   0.995 */
+                 unsigned           minInl,  /* Minimum:     4 */
+                 double             beta,    /* Works:    0.35 */
+                 unsigned           flags,   /* Works:       0 */
+                 const float*       guessH,  /* Extrinsic guess, NULL if none provided */
+                 float*             finalH){ /* Final result. */
     return p->rhoRefC(src, dst, inl, N, maxD, maxI, rConvg, cfd, minInl, beta,
                       flags, guessH, finalH);
 }
