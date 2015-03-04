@@ -32,20 +32,12 @@ bool CvCascadeImageReader::NegReader::create( const string _filename, Size _winS
     if ( !file.is_open() )
         return false;
 
-    size_t pos = _filename.rfind('\\');
-    char dlmrt = '\\';
-    if (pos == string::npos)
-    {
-        pos = _filename.rfind('/');
-        dlmrt = '/';
-    }
-    dirname = pos == string::npos ? "" : _filename.substr(0, pos) + dlmrt;
     while( !file.eof() )
     {
         std::getline(file, str);
         if (str.empty()) break;
         if (str.at(0) == '#' ) continue; /* comment */
-        imgFilenames.push_back(dirname + str);
+        imgFilenames.push_back(str);
     }
     file.close();
 
