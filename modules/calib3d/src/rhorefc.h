@@ -50,6 +50,7 @@
 
 
 /* Includes */
+#include <opencv2/core.hpp>
 
 
 
@@ -96,7 +97,7 @@ typedef struct RHO_HEST_REFC RHO_HEST_REFC;
  * @return A pointer to the context if successful; NULL if an error occured.
  */
 
-RHO_HEST_REFC* rhoRefCInit(void);
+Ptr<RHO_HEST_REFC> rhoRefCInit(void);
 
 
 /**
@@ -114,7 +115,7 @@ RHO_HEST_REFC* rhoRefCInit(void);
  * @return 0 if successful; non-zero if an error occured.
  */
 
-int  rhoRefCEnsureCapacity(RHO_HEST_REFC* p, unsigned N, double beta);
+int  rhoRefCEnsureCapacity(Ptr<RHO_HEST_REFC> p, unsigned N, double beta);
 
 
 
@@ -129,18 +130,7 @@ int  rhoRefCEnsureCapacity(RHO_HEST_REFC* p, unsigned N, double beta);
  * @param [in] seed The 64-bit integer seed.
  */
 
-void rhoRefCSeed(RHO_HEST_REFC* p, unsigned long long seed);
-
-
-
-/**
- * Finalize the estimator context, by freeing the aligned buffers used
- * internally.
- *
- * @param [in] p  The initialized estimator context to finalize.
- */
-
-void rhoRefCFini(RHO_HEST_REFC* p);
+void rhoRefCSeed(Ptr<RHO_HEST_REFC> p, unsigned long long seed);
 
 
 /**
@@ -250,20 +240,20 @@ void rhoRefCFini(RHO_HEST_REFC* p);
  *                         inliers for acceptance was reached; 0 otherwise.
  */
 
-unsigned rhoRefC(RHO_HEST_REFC* p,       /* Homography estimation context. */
-                 const float*   src,     /* Source points */
-                 const float*   dst,     /* Destination points */
-                 char*          inl,     /* Inlier mask */
-                 unsigned       N,       /*  = src.length = dst.length = inl.length */
-                 float          maxD,    /*   3.0 */
-                 unsigned       maxI,    /*  2000 */
-                 unsigned       rConvg,  /*  2000 */
-                 double         cfd,     /* 0.995 */
-                 unsigned       minInl,  /*     4 */
-                 double         beta,    /*  0.35 */
-                 unsigned       flags,   /*     0 */
-                 const float*   guessH,  /* Extrinsic guess, NULL if none provided */
-                 float*         finalH); /* Final result. */
+unsigned rhoRefC(Ptr<RHO_HEST_REFC> p,       /* Homography estimation context. */
+                 const float*       src,     /* Source points */
+                 const float*       dst,     /* Destination points */
+                 char*              inl,     /* Inlier mask */
+                 unsigned           N,       /*  = src.length = dst.length = inl.length */
+                 float              maxD,    /*   3.0 */
+                 unsigned           maxI,    /*  2000 */
+                 unsigned           rConvg,  /*  2000 */
+                 double             cfd,     /* 0.995 */
+                 unsigned           minInl,  /*     4 */
+                 double             beta,    /*  0.35 */
+                 unsigned           flags,   /*     0 */
+                 const float*       guessH,  /* Extrinsic guess, NULL if none provided */
+                 float*             finalH); /* Final result. */
 
 
 

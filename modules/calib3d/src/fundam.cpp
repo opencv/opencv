@@ -303,7 +303,7 @@ static bool createAndRunRHORegistrator(double confidence,
      * initialized, used, then finalized.
      */
 
-    RHO_HEST_REFC* p = rhoRefCInit();
+    Ptr<RHO_HEST_REFC> p = rhoRefCInit();
 
     /**
      * Optional. Ideally, the context would survive across calls to
@@ -338,12 +338,6 @@ static bool createAndRunRHORegistrator(double confidence,
                       RHO_FLAG_ENABLE_NR | RHO_FLAG_ENABLE_FINAL_REFINEMENT,
                       NULL,
                       (float*)tmpH.data);
-
-    /**
-     * Cleanup.
-     */
-
-    rhoRefCFini(p);
 
     /* Convert float homography to double precision. */
     tmpH.convertTo(_H, CV_64FC1);
