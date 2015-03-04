@@ -44,13 +44,14 @@
  */
 
 /* Include Guards */
-#ifndef __OPENCV_RHOREFC_H__
-#define __OPENCV_RHOREFC_H__
+#ifndef __OPENCV_RHO_H__
+#define __OPENCV_RHO_H__
 
 
 
 /* Includes */
 #include <opencv2/core.hpp>
+#include <stdint.h>
 
 
 
@@ -84,8 +85,8 @@ namespace cv{
  * Homography Estimation context.
  */
 
-struct RHO_HEST_REFC;
-typedef struct RHO_HEST_REFC RHO_HEST_REFC;
+struct RHO_HEST;
+typedef struct RHO_HEST RHO_HEST;
 
 
 /* Functions */
@@ -97,7 +98,7 @@ typedef struct RHO_HEST_REFC RHO_HEST_REFC;
  * @return A pointer to the context if successful; NULL if an error occured.
  */
 
-Ptr<RHO_HEST_REFC> rhoRefCInit(void);
+Ptr<RHO_HEST> rhoInit(void);
 
 
 /**
@@ -112,10 +113,10 @@ Ptr<RHO_HEST_REFC> rhoRefCInit(void);
  *                   internal table is of at least this size, reallocating if
  *                   necessary.
  * @param [in] beta  The beta-factor to use within the table.
- * @return 0 if successful; non-zero if an error occured.
+ * @return 0 if unsuccessful; non-zero otherwise.
  */
 
-int  rhoRefCEnsureCapacity(Ptr<RHO_HEST_REFC> p, unsigned N, double beta);
+int  rhoEnsureCapacity(Ptr<RHO_HEST> p, unsigned N, double beta);
 
 
 
@@ -130,7 +131,7 @@ int  rhoRefCEnsureCapacity(Ptr<RHO_HEST_REFC> p, unsigned N, double beta);
  * @param [in] seed The 64-bit integer seed.
  */
 
-void rhoRefCSeed(Ptr<RHO_HEST_REFC> p, unsigned long long seed);
+void rhoSeed(Ptr<RHO_HEST> p, uint64_t seed);
 
 
 /**
@@ -240,20 +241,20 @@ void rhoRefCSeed(Ptr<RHO_HEST_REFC> p, unsigned long long seed);
  *                         inliers for acceptance was reached; 0 otherwise.
  */
 
-unsigned rhoRefC(Ptr<RHO_HEST_REFC> p,       /* Homography estimation context. */
-                 const float*       src,     /* Source points */
-                 const float*       dst,     /* Destination points */
-                 char*              inl,     /* Inlier mask */
-                 unsigned           N,       /*  = src.length = dst.length = inl.length */
-                 float              maxD,    /*   3.0 */
-                 unsigned           maxI,    /*  2000 */
-                 unsigned           rConvg,  /*  2000 */
-                 double             cfd,     /* 0.995 */
-                 unsigned           minInl,  /*     4 */
-                 double             beta,    /*  0.35 */
-                 unsigned           flags,   /*     0 */
-                 const float*       guessH,  /* Extrinsic guess, NULL if none provided */
-                 float*             finalH); /* Final result. */
+unsigned rhoHest(Ptr<RHO_HEST> p,       /* Homography estimation context. */
+                 const float*  src,     /* Source points */
+                 const float*  dst,     /* Destination points */
+                 char*         inl,     /* Inlier mask */
+                 unsigned      N,       /*  = src.length = dst.length = inl.length */
+                 float         maxD,    /*   3.0 */
+                 unsigned      maxI,    /*  2000 */
+                 unsigned      rConvg,  /*  2000 */
+                 double        cfd,     /* 0.995 */
+                 unsigned      minInl,  /*     4 */
+                 double        beta,    /*  0.35 */
+                 unsigned      flags,   /*     0 */
+                 const float*  guessH,  /* Extrinsic guess, NULL if none provided */
+                 float*        finalH); /* Final result. */
 
 
 

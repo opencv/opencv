@@ -55,7 +55,7 @@
 #include <float.h>
 #include <math.h>
 #include <vector>
-#include "rhorefc.h"
+#include "rho.h"
 
 
 
@@ -84,7 +84,162 @@ const double LM_GAIN_HI             = 0.75;   /* See sacLMGain(). */
 
 
 /* Data Structures */
-struct RHO_HEST_REFC{
+
+/**
+ * Base Struct for RHO algorithm.
+ *
+ * A RHO estimator has initialization, finalization, capacity, seeding and
+ * homography-estimation APIs that must be implemented.
+ */
+
+struct RHO_HEST{
+    /* This is a virtual base class; It should have a virtual destructor. */
+    virtual ~RHO_HEST(){}
+
+    /* External Interface Methods */
+
+    /**
+     * Initialization work.
+     *
+     * @return 0 if initialization is unsuccessful; non-zero otherwise.
+     */
+
+    virtual inline int    initialize(void){return 1;}
+
+
+    /**
+     * Finalization work.
+     */
+
+    virtual inline void   finalize(void){}
+
+    /**
+     * Ensure that the estimator context's internal table for the non-randomness
+     * criterion is at least of the given size, and uses the given beta. The table
+     * should be larger than the maximum number of matches fed into the estimator.
+     *
+     * A value of N of 0 requests deallocation of the table.
+     *
+     * @param [in] N     If 0, deallocate internal table. If > 0, ensure that the
+     *                   internal table is of at least this size, reallocating if
+     *                   necessary.
+     * @param [in] beta  The beta-factor to use within the table.
+     * @return 0 if unsuccessful; non-zero otherwise.
+     */
+
+    virtual inline int    ensureCapacity(unsigned N, double beta){
+        (void)N;
+        (void)beta;
+
+        return 1;
+    }
+
+
+    /**
+     * Generates a random double uniformly distributed in the range [0, 1).
+     *
+     * The default implementation uses the xorshift128+ algorithm from
+     * Sebastiano Vigna. Further scramblings of Marsaglia's xorshift generators.
+     * CoRR, abs/1402.6246, 2014.
+     * http://vigna.di.unimi.it/ftp/papers/xorshiftplus.pdf
+     *
+     * Source roughly as given in
+     * http://en.wikipedia.org/wiki/Xorshift#Xorshift.2B
+     */
+
+    virtual inline double fastRandom(void){
+        uint64_t x = prng.s[0];
+        uint64_t y = prng.s[1];
+        x ^= x << 23; // a
+        x ^= x >> 17; // b
+        x ^= y ^ (y >> 26); // c
+        prng.s[0] = y;
+        prng.s[1] = x;
+        uint64_t s = x + y;
+
+        return s * 5.421010862427522e-20;/* 2^-64 */
+    }
+
+
+    /**
+     * Seeds the context's PRNG.
+     *
+     * @param [in] seed  A 64-bit unsigned integer seed.
+     */
+
+    virtual inline void   fastSeed(uint64_t seed){
+        int i;
+
+        prng.s[0] =  seed;
+        prng.s[1] = ~seed;/* Guarantees one of the elements will be non-zero. */
+
+        /**
+         * Escape from zero-land (see xorshift128+ paper). Approximately 20
+         * iterations required according to the graph.
+         */
+
+        for(i=0;i<20;i++){
+            fastRandom();
+        }
+    }
+
+
+    /**
+     * Estimates the homography using the given context, matches and parameters to
+     * PROSAC.
+     *
+     * @param [in]     src     The pointer to the source points of the matches.
+     *                             Cannot be NULL.
+     * @param [in]     dst     The pointer to the destination points of the matches.
+     *                             Cannot be NULL.
+     * @param [out]    inl     The pointer to the output mask of inlier matches.
+     *                             May be NULL.
+     * @param [in]     N       The number of matches.
+     * @param [in]     maxD    The maximum distance.
+     * @param [in]     maxI    The maximum number of PROSAC iterations.
+     * @param [in]     rConvg  The RANSAC convergence parameter.
+     * @param [in]     cfd     The required confidence in the solution.
+     * @param [in]     minInl  The minimum required number of inliers.
+     * @param [in]     beta    The beta-parameter for the non-randomness criterion.
+     * @param [in]     flags   A union of flags to control the estimation.
+     * @param [in]     guessH  An extrinsic guess at the solution H, or NULL if
+     *                         none provided.
+     * @param [out]    finalH  The final estimation of H, or the zero matrix if
+     *                         the minimum number of inliers was not met.
+     *                         Cannot be NULL.
+     * @return                 The number of inliers if the minimum number of
+     *                         inliers for acceptance was reached; 0 otherwise.
+     */
+
+    virtual unsigned      rhoHest(const float*   src,     /* Source points */
+                                  const float*   dst,     /* Destination points */
+                                  char*          inl,     /* Inlier mask */
+                                  unsigned       N,       /*  = src.length = dst.length = inl.length */
+                                  float          maxD,    /* Works:     3.0 */
+                                  unsigned       maxI,    /* Works:    2000 */
+                                  unsigned       rConvg,  /* Works:    2000 */
+                                  double         cfd,     /* Works:   0.995 */
+                                  unsigned       minInl,  /* Minimum:     4 */
+                                  double         beta,    /* Works:    0.35 */
+                                  unsigned       flags,   /* Works:       0 */
+                                  const float*   guessH,  /* Extrinsic guess, NULL if none provided */
+                                  float*         finalH) = 0; /* Final result. */
+
+
+
+    /* PRNG XORshift128+ */
+    struct{
+        uint64_t  s[2];            /* PRNG state */
+    } prng;
+};
+
+
+
+/**
+ * Generic C implementation of RHO algorithm.
+ */
+
+struct RHO_HEST_REFC : RHO_HEST{
     /**
      * Virtual Arguments.
      *
@@ -163,11 +318,6 @@ struct RHO_HEST_REFC{
         float*    Jte;             /* Jte vector */
     } lm;
 
-    /* PRNG XORshift128+ */
-    struct{
-        uint64_t  s[2];            /* PRNG state */
-    } prng;
-
     /* Memory Management */
     struct{
         cv::Mat perObj;
@@ -188,9 +338,9 @@ struct RHO_HEST_REFC{
 
     /* Methods to implement external interface */
     inline int    initialize(void);
-    inline int    sacEnsureCapacity(unsigned N, double beta);
     inline void   finalize(void);
-    unsigned      rhoRefC(const float*   src,     /* Source points */
+    inline int    ensureCapacity(unsigned N, double beta);
+    unsigned      rhoHest(const float*   src,     /* Source points */
                           const float*   dst,     /* Destination points */
                           char*          inl,     /* Inlier mask */
                           unsigned       N,       /*  = src.length = dst.length = inl.length */
@@ -225,8 +375,6 @@ struct RHO_HEST_REFC{
     inline void   rndSmpl(unsigned  sampleSize,
                           unsigned* currentSample,
                           unsigned  dataSetSize);
-    inline double fastRandom(void);
-    inline void   fastSeed(uint64_t seed);
     inline int    isSampleDegenerate(void);
     inline void   generateModel(void);
     inline int    isModelDegenerate(void);
@@ -298,15 +446,27 @@ static inline void   sacSub8x1            (float*       Hout,
  * @return A pointer to the context if successful; NULL if an error occured.
  */
 
-Ptr<RHO_HEST_REFC> rhoRefCInit(void){
-    Ptr<RHO_HEST_REFC> p = Ptr<RHO_HEST_REFC>(new RHO_HEST_REFC);
+Ptr<RHO_HEST> rhoInit(void){
+    /* Select an optimized implementation of RHO here. */
 
+#if 1
+    /**
+     * For now, only the generic C implementation is available. In the future,
+     * SSE2/AVX/AVX2/FMA/NEON versions may be added, and they will be selected
+     * depending on cv::checkHardwareSupport()'s return values.
+     */
+
+    Ptr<RHO_HEST> p = Ptr<RHO_HEST>(new RHO_HEST_REFC);
+#endif
+
+    /* Initialize it. */
     if(p){
         if(!p->initialize()){
-            p = Ptr<RHO_HEST_REFC>((RHO_HEST_REFC*)NULL);
+            p = Ptr<RHO_HEST>((RHO_HEST*)NULL);
         }
     }
 
+    /* Return it. */
     return p;
 }
 
@@ -315,8 +475,8 @@ Ptr<RHO_HEST_REFC> rhoRefCInit(void){
  * External access to non-randomness table resize.
  */
 
-int  rhoRefCEnsureCapacity(Ptr<RHO_HEST_REFC> p, unsigned N, double beta){
-    return p->sacEnsureCapacity(N, beta);
+int  rhoEnsureCapacity(Ptr<RHO_HEST> p, unsigned N, double beta){
+    return p->ensureCapacity(N, beta);
 }
 
 
@@ -324,8 +484,8 @@ int  rhoRefCEnsureCapacity(Ptr<RHO_HEST_REFC> p, unsigned N, double beta){
  * Seeds the internal PRNG with the given seed.
  */
 
-void rhoRefCSeed(Ptr<RHO_HEST_REFC> p, unsigned long long seed){
-    p->fastSeed((uint64_t)seed);
+void rhoSeed(Ptr<RHO_HEST> p, uint64_t seed){
+    p->fastSeed(seed);
 }
 
 
@@ -358,26 +518,36 @@ void rhoRefCSeed(Ptr<RHO_HEST_REFC> p, unsigned long long seed){
  *                         inliers for acceptance was reached; 0 otherwise.
  */
 
-unsigned rhoRefC(Ptr<RHO_HEST_REFC> p,       /* Homography estimation context. */
-                 const float*       src,     /* Source points */
-                 const float*       dst,     /* Destination points */
-                 char*              inl,     /* Inlier mask */
-                 unsigned           N,       /*  = src.length = dst.length = inl.length */
-                 float              maxD,    /* Works:     3.0 */
-                 unsigned           maxI,    /* Works:    2000 */
-                 unsigned           rConvg,  /* Works:    2000 */
-                 double             cfd,     /* Works:   0.995 */
-                 unsigned           minInl,  /* Minimum:     4 */
-                 double             beta,    /* Works:    0.35 */
-                 unsigned           flags,   /* Works:       0 */
-                 const float*       guessH,  /* Extrinsic guess, NULL if none provided */
-                 float*             finalH){ /* Final result. */
-    return p->rhoRefC(src, dst, inl, N, maxD, maxI, rConvg, cfd, minInl, beta,
+unsigned rhoHest(Ptr<RHO_HEST> p,       /* Homography estimation context. */
+                 const float*  src,     /* Source points */
+                 const float*  dst,     /* Destination points */
+                 char*         inl,     /* Inlier mask */
+                 unsigned      N,       /*  = src.length = dst.length = inl.length */
+                 float         maxD,    /* Works:     3.0 */
+                 unsigned      maxI,    /* Works:    2000 */
+                 unsigned      rConvg,  /* Works:    2000 */
+                 double        cfd,     /* Works:   0.995 */
+                 unsigned      minInl,  /* Minimum:     4 */
+                 double        beta,    /* Works:    0.35 */
+                 unsigned      flags,   /* Works:       0 */
+                 const float*  guessH,  /* Extrinsic guess, NULL if none provided */
+                 float*        finalH){ /* Final result. */
+    return p->rhoHest(src, dst, inl, N, maxD, maxI, rConvg, cfd, minInl, beta,
                       flags, guessH, finalH);
 }
 
 
 
+
+
+
+
+
+
+
+
+
+/*********************** RHO_HEST_REFC implementation **********************/
 
 /**
  * Constructor for RHO_HEST_REFC.
@@ -479,13 +649,13 @@ inline void   RHO_HEST_REFC::finalize(void){
  *                   internal table is of at least this size, reallocating if
  *                   necessary.
  * @param [in] beta  The beta-factor to use within the table.
- * @return 1 if successful; 0 if an error occured.
+ * @return 0 if unsuccessful; non-zero otherwise.
  *
  * Reads:  nr.*
  * Writes: nr.*
  */
 
-inline int    RHO_HEST_REFC::sacEnsureCapacity(unsigned N, double beta){
+inline int    RHO_HEST_REFC::ensureCapacity(unsigned N, double beta){
     if(N == 0){
         /* Clear. */
         nr.tbl.clear();
@@ -516,9 +686,9 @@ inline int    RHO_HEST_REFC::sacEnsureCapacity(unsigned N, double beta){
  * @param [in]     src     The pointer to the source points of the matches.
  *                             Must be aligned to 4 bytes. Cannot be NULL.
  * @param [in]     dst     The pointer to the destination points of the matches.
- *                             Must be aligned to 16 bytes. Cannot be NULL.
+ *                             Must be aligned to 4 bytes. Cannot be NULL.
  * @param [out]    inl     The pointer to the output mask of inlier matches.
- *                             Must be aligned to 16 bytes. May be NULL.
+ *                             Must be aligned to 4 bytes. May be NULL.
  * @param [in]     N       The number of matches.
  * @param [in]     maxD    The maximum distance.
  * @param [in]     maxI    The maximum number of PROSAC iterations.
@@ -536,7 +706,7 @@ inline int    RHO_HEST_REFC::sacEnsureCapacity(unsigned N, double beta){
  *                         inliers for acceptance was reached; 0 otherwise.
  */
 
-unsigned RHO_HEST_REFC::rhoRefC(const float*   src,     /* Source points */
+unsigned RHO_HEST_REFC::rhoHest(const float*   src,     /* Source points */
                                 const float*   dst,     /* Destination points */
                                 char*          inl,     /* Inlier mask */
                                 unsigned       N,       /*  = src.length = dst.length = inl.length */
@@ -784,7 +954,7 @@ inline int    RHO_HEST_REFC::initRun(void){
      *     substruct and the sanity-checked N and beta arguments from above.
      */
 
-    if(isNREnabled() && !sacEnsureCapacity(arg.N, arg.beta)){
+    if(isNREnabled() && !ensureCapacity(arg.N, arg.beta)){
         return 0;
     }
 
@@ -1058,53 +1228,6 @@ inline void   RHO_HEST_REFC::rndSmpl(unsigned  sampleSize,
                 }
             }while(inList);
         }
-    }
-}
-
-/**
- * Generates a random double uniformly distributed in the range [0, 1).
- *
- * Uses xorshift128+ algorithm from
- * Sebastiano Vigna. Further scramblings of Marsaglia's xorshift generators.
- * CoRR, abs/1402.6246, 2014.
- * http://vigna.di.unimi.it/ftp/papers/xorshiftplus.pdf
- *
- * Source roughly as given in
- * http://en.wikipedia.org/wiki/Xorshift#Xorshift.2B
- */
-
-inline double RHO_HEST_REFC::fastRandom(void){
-    uint64_t x = prng.s[0];
-    uint64_t y = prng.s[1];
-    x ^= x << 23; // a
-    x ^= x >> 17; // b
-    x ^= y ^ (y >> 26); // c
-    prng.s[0] = y;
-    prng.s[1] = x;
-    uint64_t s = x + y;
-
-    return s * 5.421010862427522e-20;/* 2^-64 */
-}
-
-/**
- * Seeds the PRNG.
- *
- * The seed should not be zero, since the state must be initialized to non-zero.
- */
-
-inline void RHO_HEST_REFC::fastSeed(uint64_t seed){
-    int i;
-
-    prng.s[0] =  seed;
-    prng.s[1] = ~seed;/* Guarantees one of the elements will be non-zero. */
-
-    /**
-     * Escape from zero-land (see xorshift128+ paper). Approximately 20
-     * iterations required according to the graph.
-     */
-
-    for(i=0;i<20;i++){
-        fastRandom();
     }
 }
 

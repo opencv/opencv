@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "rhorefc.h"
+#include "rho.h"
 #include <iostream>
 
 namespace cv
@@ -303,7 +303,7 @@ static bool createAndRunRHORegistrator(double confidence,
      * initialized, used, then finalized.
      */
 
-    Ptr<RHO_HEST_REFC> p = rhoRefCInit();
+    Ptr<RHO_HEST> p = rhoInit();
 
     /**
      * Optional. Ideally, the context would survive across calls to
@@ -311,7 +311,7 @@ static bool createAndRunRHORegistrator(double confidence,
      * to pay is marginally more computational work than strictly needed.
      */
 
-    rhoRefCEnsureCapacity(p, npoints, beta);
+    rhoEnsureCapacity(p, npoints, beta);
 
     /**
      * The critical call. All parameters are heavily documented in rhorefc.h.
@@ -324,7 +324,7 @@ static bool createAndRunRHORegistrator(double confidence,
      * this behaviour is too problematic.
      */
 
-    result = !!rhoRefC(p,
+    result = !!rhoHest(p,
                       (const float*)src.data,
                       (const float*)dst.data,
                       (char*)       tempMask.data,
