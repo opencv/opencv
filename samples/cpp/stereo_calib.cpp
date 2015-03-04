@@ -111,7 +111,7 @@ Mat displayMode(Mat);
 bool findChessboardCornersAndDraw(Mat, Mat);
 void displayImages();
 void saveImages(Mat, Mat, int);
-void calibrateStereoCamera(Size, Size);
+void calibrateStereoCamera(Size);
 void calibrateInRealTime(int, int);
 void calibrateFromSavedImages(string, string, string, string);
 
@@ -176,7 +176,7 @@ void saveImages(Mat leftImage, Mat rightImage, int pairIndex) {
     }
 }
 
-void calibrateStereoCamera(Size boardSize, Size imageSize) {
+void calibrateStereoCamera(Size imageSize) {
     vector<vector<Point3f> > objectPoints;
     objectPoints.resize(noOfStereoPairs);
     for (int i=0; i<noOfStereoPairs; i++) {
@@ -322,7 +322,7 @@ void calibrateInRealTime(int cam1, int cam2) {
         }
         displayImages();
         if (mode == CALIBRATING) {
-            calibrateStereoCamera(boardSize, inputLeft.size());
+            calibrateStereoCamera(inputLeft.size());
             waitKey();
         }
         char keyBoardInput = (char)waitKey(50);
@@ -368,7 +368,7 @@ void calibrateFromSavedImages(string dr, string prel, string prer, string post) 
         displayImages();
     }
     if(stereoPairIndex > 2) {
-        calibrateStereoCamera(boardSize, imageSize);
+        calibrateStereoCamera(imageSize);
         waitKey();
     }
     else {
