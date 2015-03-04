@@ -1514,10 +1514,12 @@ static inline double sacDesignSPRTTest(double delta, double epsilon, double t_M,
  * Design the SPRT test. Shorthand for
  *     A = sprt(delta, epsilon, t_M, m_S);
  *
- * Idempotent, reentrant, thread-safe.
+ * Idempotent.
  *
- * Reads:  eval.delta, eval.epsilon, eval.t_M, eval.m_S
- * Writes: eval.A, eval.lambdaAccept, eval.lambdaReject
+ * Reads    (direct): eval.delta, eval.epsilon, eval.t_M, eval.m_S
+ * Reads   (callees): None.
+ * Writes   (direct): eval.A, eval.lambdaReject, eval.lambdaAccept.
+ * Writes  (callees): None.
  */
 
 inline void   RHO_HEST_REFC::designSPRTTest(void){
@@ -1528,6 +1530,14 @@ inline void   RHO_HEST_REFC::designSPRTTest(void){
 
 /**
  * Return whether the current model is the best model so far.
+ *
+ * @return Non-zero if this is the model with the most inliers seen so far;
+ *         0 otherwise.
+ *
+ * Reads    (direct): curr.numInl, best.numInl
+ * Reads   (callees): None.
+ * Writes   (direct): None.
+ * Writes  (callees): None.
  */
 
 inline int    RHO_HEST_REFC::isBestModel(void){
@@ -1538,6 +1548,14 @@ inline int    RHO_HEST_REFC::isBestModel(void){
  * Returns whether the current-best model is good enough to be an
  * acceptable best model, by checking whether it meets the minimum
  * number of inliers.
+ *
+ * @return Non-zero if the current model is "good enough" to save;
+ *         0 otherwise.
+ *
+ * Reads    (direct): best.numInl, arg.minInl
+ * Reads   (callees): None.
+ * Writes   (direct): None.
+ * Writes  (callees): None.
  */
 
 inline int    RHO_HEST_REFC::isBestModelGoodEnough(void){
@@ -1547,6 +1565,13 @@ inline int    RHO_HEST_REFC::isBestModelGoodEnough(void){
 /**
  * Make current model new best model by swapping the homography, inlier mask
  * and count of inliers between the current and best models.
+ *
+ * Reads    (direct): curr.H, curr.inl, curr.numInl,
+ *                    best.H, best.inl, best.numInl
+ * Reads   (callees): None.
+ * Writes   (direct): curr.H, curr.inl, curr.numInl,
+ *                    best.H, best.inl, best.numInl
+ * Writes  (callees): None.
  */
 
 inline void   RHO_HEST_REFC::saveBestModel(void){
@@ -1586,6 +1611,12 @@ static inline void   sacInitNonRand(double    beta,
 /**
  * Optimize the stopping criterion to account for the non-randomness criterion
  * of PROSAC.
+ *
+ * Reads    (direct): arg.N, best.numInl, nr.tbl, arg.inl, ctrl.phMax,
+ *                    ctrl.phNumInl, arg.cfd, arg.maxI
+ * Reads   (callees): None.
+ * Writes   (direct): arg.maxI, ctrl.phMax, ctrl.phNumInl
+ * Writes  (callees): None.
  */
 
 inline void   RHO_HEST_REFC::nStarOptimize(void){
@@ -1603,7 +1634,7 @@ inline void   RHO_HEST_REFC::nStarOptimize(void){
             best_n      = test_n;
             bestNumInl  = testNumInl;
         }
-        testNumInl -= !!arg.inl[test_n-1];
+        testNumInl -= !!arg.inl[test_n-1];/* FIXME: Probable bug! */
     }
 
     if(bestNumInl*ctrl.phMax > ctrl.phNumInl*best_n){
@@ -1618,6 +1649,11 @@ inline void   RHO_HEST_REFC::nStarOptimize(void){
 
 /**
  * Classic RANSAC iteration bound based on largest # of inliers.
+ *
+ * Reads    (direct): arg.maxI, arg.cfd, best.numInl, arg.N
+ * Reads   (callees): None.
+ * Writes   (direct): arg.maxI
+ * Writes  (callees): None.
  */
 
 inline void   RHO_HEST_REFC::updateBounds(void){
@@ -1629,6 +1665,11 @@ inline void   RHO_HEST_REFC::updateBounds(void){
 
 /**
  * Ouput the best model so far to the output argument.
+ *
+ * Reads    (direct): arg.finalH, best.H, arg.inl, best.inl, arg.N
+ * Reads   (callees): arg.finalH, arg.inl, arg.N
+ * Writes   (direct): arg.finalH, arg.inl
+ * Writes  (callees): arg.finalH, arg.inl
  */
 
 inline void   RHO_HEST_REFC::outputModel(void){
@@ -1644,6 +1685,11 @@ inline void   RHO_HEST_REFC::outputModel(void){
 
 /**
  * Ouput a zeroed H to the output argument.
+ *
+ * Reads    (direct): arg.finalH, arg.inl, arg.N
+ * Reads   (callees): None.
+ * Writes   (direct): arg.finalH, arg.inl
+ * Writes  (callees): None.
  */
 
 inline void   RHO_HEST_REFC::outputZeroH(void){
@@ -1974,10 +2020,18 @@ static void hFuncRefC(float* packedPoints,/* Source (four x,y float coordinates)
     H[8]=1.0;
 }
 
+
 /**
  * Returns whether refinement is possible.
  *
  * NB This is separate from whether it is *enabled*.
+ *
+ * @return 0 if refinement isn't possible, non-zero otherwise.
+ *
+ * Reads    (direct): best.numInl
+ * Reads   (callees): None.
+ * Writes   (direct): None.
+ * Writes  (callees): None.
  */
 
 inline int    RHO_HEST_REFC::canRefine(void){
@@ -1989,8 +2043,15 @@ inline int    RHO_HEST_REFC::canRefine(void){
     return best.numInl > (unsigned)SMPL_SIZE;
 }
 
+
 /**
  * Refines the best-so-far homography (p->best.H).
+ *
+ * Reads    (direct): best.H, arg.src, arg.dst, best.inl, arg.N, lm.JtJ,
+ *                    lm.Jte, lm.tmp1
+ * Reads   (callees): None.
+ * Writes   (direct): best.H, lm.JtJ, lm.Jte, lm.tmp1
+ * Writes  (callees): None.
  */
 
 inline void   RHO_HEST_REFC::refine(void){
@@ -2069,6 +2130,7 @@ inline void   RHO_HEST_REFC::refine(void){
         }
     }
 }
+
 
 /**
  * Compute directly the JtJ, Jte and sum-of-squared-error for a given
@@ -2224,6 +2286,7 @@ static inline void   sacCalcJacobianErrors(const float* H,
     if(Sp){*Sp = S;}
 }
 
+
 /**
  * Compute the Levenberg-Marquardt "gain" obtained by the given step dH.
  *
@@ -2256,6 +2319,7 @@ static inline float  sacLMGain(const float*  dH,
     /* Return gain as S-newS / L0 - LH. */
     return fabs(dL) < FLT_EPSILON ? dS : dS / dL;
 }
+
 
 /**
  * Cholesky decomposition on 8x8 real positive-definite matrix defined by its
@@ -2306,6 +2370,7 @@ static inline int    sacChol8x8Damped(const float (*A)[8],
 
     return 1;
 }
+
 
 /**
  * Invert lower-triangular 8x8 matrix L into lower-triangular matrix M.
@@ -2513,6 +2578,7 @@ static inline void   sacTRInv8x8(const float (*L)[8],
     */
 }
 
+
 /**
  * Solves dH = inv(JtJ) Jte. The argument lower-triangular matrix is the
  * inverse of L as produced by the Cholesky decomposition LL^T of the matrix
@@ -2555,6 +2621,7 @@ static inline void   sacTRISolve8x8(const float (*L)[8],
     dH[6] =                                                                               L[6][6]*t[6]+L[7][6]*t[7];
     dH[7] =                                                                                            L[7][7]*t[7];
 }
+
 
 /**
  * Subtract dH from H.
