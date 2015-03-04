@@ -158,7 +158,6 @@ struct RHO_HEST_REFC{
 
     /* Levenberg-Marquardt Refinement */
     struct{
-        float*    ws;              /* Levenberg-Marqhard Workspace */
         float  (* JtJ)[8];         /* JtJ matrix */
         float  (* tmp1)[8];        /* Temporary 1 */
         float*    Jte;             /* Jte vector */
@@ -169,8 +168,14 @@ struct RHO_HEST_REFC{
         uint64_t  s[2];            /* PRNG state */
     } prng;
 
+    /* Memory Management */
+    struct{
+        cv::Mat perObj;
+        cv::Mat perRun;
+    } mem;
+
     /* Initialized? */
-    int init;
+    int initialized;
 
 
     /* Empty constructors and destructors */
@@ -202,6 +207,10 @@ struct RHO_HEST_REFC{
 
 
     /* Methods to implement internals */
+    inline void   allocatePerObj(void);
+    inline void   allocatePerRun(void);
+    inline void   deallocatePerRun(void);
+    inline void   deallocatePerObj(void);
     inline int    initRun(void);
     inline void   finiRun(void);
     inline int    haveExtrinsicGuess(void);
@@ -241,9 +250,6 @@ struct RHO_HEST_REFC{
 /**
  * Prototypes for purely-computational code.
  */
-
-static inline void*  almalloc(size_t nBytes);
-static inline void   alfree  (void* ptr);
 
 static inline void   sacInitNonRand       (double    beta,
                                            unsigned  start,
@@ -382,36 +388,6 @@ unsigned rhoRefC(RHO_HEST_REFC* p,       /* Homography estimation context. */
 
 
 
-/**
- * Allocate memory aligned to a boundary of MEMALIGN.
- */
-
-static inline void*  almalloc(size_t nBytes){
-    if(nBytes){
-        unsigned char* ptr = (unsigned char*)malloc(MEM_ALIGN + nBytes);
-        if(ptr){
-            unsigned char* adj = (unsigned char*)(((intptr_t)(ptr+MEM_ALIGN))&((intptr_t)(-MEM_ALIGN)));
-            ptrdiff_t diff = adj - ptr;
-            adj[-1] = (unsigned char)(diff - 1);
-            return adj;
-        }
-    }
-
-    return NULL;
-}
-
-/**
- * Free aligned memory.
- *
- * If argument is NULL, do nothing in accordance with free() semantics.
- */
-
-static inline void   alfree(void* ptr){
-    if(ptr){
-        unsigned char* cptr = (unsigned char*)ptr;
-        free(cptr - (ptrdiff_t)cptr[-1] - 1);
-    }
-}
 
 /**
  * Constructor for RHO_HEST_REFC.
@@ -419,7 +395,7 @@ static inline void   alfree(void* ptr){
  * Does nothing. True initialization is done by initialize().
  */
 
-RHO_HEST_REFC::RHO_HEST_REFC() : init(0){
+RHO_HEST_REFC::RHO_HEST_REFC() : initialized(0){
 
 }
 
@@ -427,7 +403,7 @@ RHO_HEST_REFC::RHO_HEST_REFC() : init(0){
  * Private copy constructor for RHO_HEST_REFC. Disabled.
  */
 
-RHO_HEST_REFC::RHO_HEST_REFC(const RHO_HEST_REFC&) : init(0){
+RHO_HEST_REFC::RHO_HEST_REFC(const RHO_HEST_REFC&) : initialized(0){
 
 }
 
@@ -436,7 +412,7 @@ RHO_HEST_REFC::RHO_HEST_REFC(const RHO_HEST_REFC&) : init(0){
  */
 
 RHO_HEST_REFC::~RHO_HEST_REFC(){
-    if(init){
+    if(initialized){
         finalize();
     }
 }
@@ -458,37 +434,30 @@ RHO_HEST_REFC::~RHO_HEST_REFC(){
  */
 
 inline int    RHO_HEST_REFC::initialize(void){
-    ctrl.smpl   = (unsigned*)almalloc(SMPL_SIZE*sizeof(*ctrl.smpl));
+    initialized = 0;
 
-    curr.pkdPts = (float*)   almalloc(SMPL_SIZE*2*2*sizeof(*curr.pkdPts));
-    curr.H      = (float*)   almalloc(HSIZE);
+
+    allocatePerObj();
+
     curr.inl    = NULL;
     curr.numInl = 0;
 
-    best.H      = (float*)   almalloc(HSIZE);
     best.inl    = NULL;
     best.numInl = 0;
 
     nr.size     = 0;
     nr.beta     = 0.0;
 
-    lm.ws       = NULL;
-    lm.JtJ      = NULL;
-    lm.tmp1     = NULL;
-    lm.Jte      = NULL;
 
     fastSeed((unsigned)cv::theRNG());
 
 
-    int areAllAllocsSuccessful = ctrl.smpl   &&
-                                 curr.H      &&
-                                 best.H      &&
-                                 curr.pkdPts;
+    int areAllAllocsSuccessful = !mem.perObj.empty();
 
     if(!areAllAllocsSuccessful){
         finalize();
     }else{
-        init = 1;
+        initialized = 1;
     }
 
     return areAllAllocsSuccessful;
@@ -502,15 +471,10 @@ inline int    RHO_HEST_REFC::initialize(void){
  */
 
 inline void   RHO_HEST_REFC::finalize(void){
-    if(init){
-        alfree(ctrl.smpl);
-        alfree(curr.H);
-        alfree(best.H);
-        alfree(curr.pkdPts);
+    if(initialized){
+        deallocatePerObj();
 
-        memset(this, 0, sizeof(*this));
-
-        init = 0;
+        initialized = 0;
     }
 }
 
@@ -652,6 +616,128 @@ unsigned RHO_HEST_REFC::rhoRefC(const float*   src,     /* Source points */
 
 
 /**
+ * Allocate per-object dynamic storage.
+ *
+ * This includes aligned, fixed-size internal buffers, but excludes any buffers
+ * whose size cannot be determined ahead-of-time (before the number of matches
+ * is known).
+ *
+ * All buffer memory is allocated in one single shot, and all pointers are
+ * initialized.
+ */
+
+inline void   RHO_HEST_REFC::allocatePerObj(void){
+    /* We have known sizes */
+    size_t ctrl_smpl_sz   = SMPL_SIZE*sizeof(*ctrl.smpl);
+    size_t curr_pkdPts_sz = SMPL_SIZE*2*2*sizeof(*curr.pkdPts);
+    size_t curr_H_sz      = HSIZE;
+    size_t best_H_sz      = HSIZE;
+    size_t lm_JtJ_sz      = 8*8*sizeof(float);
+    size_t lm_tmp1_sz     = 8*8*sizeof(float);
+    size_t lm_Jte_sz      = 1*8*sizeof(float);
+
+    /* We compute offsets */
+    size_t total = 0;
+#define MK_OFFSET(v)                                     \
+    size_t v ## _of = total;                             \
+    total = alignSize(v ## _of  +  v ## _sz, MEM_ALIGN)
+
+    MK_OFFSET(ctrl_smpl);
+    MK_OFFSET(curr_pkdPts);
+    MK_OFFSET(curr_H);
+    MK_OFFSET(best_H);
+    MK_OFFSET(lm_JtJ);
+    MK_OFFSET(lm_tmp1);
+    MK_OFFSET(lm_Jte);
+
+#undef MK_OFFSET
+
+    /* Allocate dynamic memory managed by cv::Mat */
+    mem.perObj.create(1, total + MEM_ALIGN, CV_8UC1);
+
+    /* Extract aligned pointer */
+    unsigned char* ptr = alignPtr(mem.perObj.data, MEM_ALIGN);
+
+    /* Assign pointers */
+    ctrl.smpl   = (unsigned*)  (ptr + ctrl_smpl_of);
+    curr.pkdPts = (float*)     (ptr + curr_pkdPts_of);
+    curr.H      = (float*)     (ptr + curr_H_of);
+    best.H      = (float*)     (ptr + best_H_of);
+    lm.JtJ      = (float(*)[8])(ptr + lm_JtJ_of);
+    lm.tmp1     = (float(*)[8])(ptr + lm_tmp1_of);
+    lm.Jte      = (float*)     (ptr + lm_Jte_of);
+}
+
+
+/**
+ * Allocate per-run dynamic storage.
+ *
+ * This includes storage that is proportional to the number of points, such as
+ * the inlier mask.
+ */
+
+inline void   RHO_HEST_REFC::allocatePerRun(void){
+    /* We have known sizes */
+    size_t best_inl_sz = arg.N;
+    size_t curr_inl_sz = arg.N;
+
+    /* We compute offsets */
+    size_t total = 0;
+#define MK_OFFSET(v)                                     \
+    size_t v ## _of = total;                             \
+    total = alignSize(v ## _of  +  v ## _sz, MEM_ALIGN)
+
+    MK_OFFSET(best_inl);
+    MK_OFFSET(curr_inl);
+
+#undef MK_OFFSET
+
+    /* Allocate dynamic memory managed by cv::Mat */
+    mem.perRun.create(1, total + MEM_ALIGN, CV_8UC1);
+
+    /* Extract aligned pointer */
+    unsigned char* ptr = alignPtr(mem.perRun.data, MEM_ALIGN);
+
+    /* Assign pointers */
+    best.inl  = (char*)(ptr + best_inl_of);
+    curr.inl  = (char*)(ptr + curr_inl_of);
+}
+
+
+/**
+ * Deallocate per-run dynamic storage.
+ *
+ * Undoes the work by allocatePerRun().
+ */
+
+inline void   RHO_HEST_REFC::deallocatePerRun(void){
+    best.inl  = NULL;
+    curr.inl  = NULL;
+
+    mem.perRun.release();
+}
+
+
+/**
+ * Deallocate per-object dynamic storage.
+ *
+ * Undoes the work by allocatePerObj().
+ */
+
+inline void   RHO_HEST_REFC::deallocatePerObj(void){
+    ctrl.smpl   = NULL;
+    curr.pkdPts = NULL;
+    curr.H      = NULL;
+    best.H      = NULL;
+    lm.JtJ      = NULL;
+    lm.tmp1     = NULL;
+    lm.Jte      = NULL;
+
+    mem.perObj.release();
+}
+
+
+/**
  * Initialize SAC for a run given its arguments.
  *
  * Performs sanity-checks and memory allocations. Also initializes the state.
@@ -716,46 +802,18 @@ inline int    RHO_HEST_REFC::initRun(void){
      * Inlier mask alloc.
      *
      * Runs second because we want to quit as fast as possible if we can't even
-     * allocate the up tp two masks.
-     *
-     * If the calling software wants an output mask, use buffer provided. If
-     * not, allocate one anyways internally.
+     * allocate the two masks.
      */
 
-    best.inl = arg.inl ? arg.inl : (char*)almalloc(arg.N);
-    curr.inl = (char*)almalloc(arg.N);
-
-    if(!curr.inl || !best.inl){
-        return 0;
-    }
+    allocatePerRun();
 
     memset(best.inl, 0, arg.N);
     memset(curr.inl, 0, arg.N);
 
     /**
-     * LevMarq workspace alloc.
-     *
-     * Runs third, consists only in a few conditional mallocs. If malloc fails
-     * we wish to quit before doing any serious work.
-     */
-
-    if(isRefineEnabled() || isFinalRefineEnabled()){
-        lm.ws   = (float*)almalloc(2*8*8*sizeof(float) + 1*8*sizeof(float));
-        if(!lm.ws){
-            return 0;
-        }
-
-        lm.JtJ  = (float(*)[8])(lm.ws + 0*8*8);
-        lm.tmp1 = (float(*)[8])(lm.ws + 1*8*8);
-        lm.Jte  = (float*)     (lm.ws + 2*8*8);
-    }else{
-        lm.ws = NULL;
-    }
-
-    /**
      * Reset scalar per-run state.
      *
-     * Runs fourth because there's no point in resetting/calculating a large
+     * Runs third because there's no point in resetting/calculating a large
      * number of fields if something in the above junk failed.
      */
 
@@ -801,32 +859,7 @@ inline int    RHO_HEST_REFC::initRun(void){
  */
 
 inline void   RHO_HEST_REFC::finiRun(void){
-    /**
-     * If no output inlier mask was required, free both (internal) masks.
-     * Else if an (external) mask was provided as argument, find the other
-     * (the internal one) and free it.
-     */
-
-    if(arg.inl){
-        if(arg.inl == best.inl){
-            alfree(curr.inl);
-        }else{
-            alfree(best.inl);
-        }
-    }else{
-        alfree(best.inl);
-        alfree(curr.inl);
-    }
-
-    best.inl = NULL;
-    curr.inl = NULL;
-
-    /**
-     * ₣ree the Levenberg-Marquardt workspace.
-     */
-
-    alfree(lm.ws);
-    lm.ws = NULL;
+    deallocatePerRun();
 }
 
 /**
@@ -1464,9 +1497,9 @@ inline void   RHO_HEST_REFC::nStarOptimize(void){
         ctrl.phMax    = best_n;
         ctrl.phNumInl = bestNumInl;
         arg.maxI      = sacCalcIterBound(arg.cfd,
-                                            (double)ctrl.phNumInl/ctrl.phMax,
-                                            SMPL_SIZE,
-                                            arg.maxI);
+                                         (double)ctrl.phNumInl/ctrl.phMax,
+                                         SMPL_SIZE,
+                                         arg.maxI);
     }
 }
 
@@ -1488,7 +1521,7 @@ inline void   RHO_HEST_REFC::updateBounds(void){
 inline void   RHO_HEST_REFC::outputModel(void){
     if(isBestModelGoodEnough()){
         memcpy(arg.finalH, best.H, HSIZE);
-        if(arg.inl && arg.inl != best.inl){
+        if(arg.inl){
             memcpy(arg.inl, best.inl, arg.N);
         }
     }else{
@@ -1501,8 +1534,12 @@ inline void   RHO_HEST_REFC::outputModel(void){
  */
 
 inline void   RHO_HEST_REFC::outputZeroH(void){
-    memset(arg.finalH, 0, HSIZE);
-    memset(arg.inl,    0, arg.N);
+    if(arg.finalH){
+        memset(arg.finalH, 0, HSIZE);
+    }
+    if(arg.inl){
+        memset(arg.inl,    0, arg.N);
+    }
 }
 
 /**
