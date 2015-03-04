@@ -813,7 +813,7 @@ inline void   RHO_HEST_REFC::allocatePerObj(void){
 #undef MK_OFFSET
 
     /* Allocate dynamic memory managed by cv::Mat */
-    mem.perObj.create(1, total + MEM_ALIGN, CV_8UC1);
+    mem.perObj.create(1, (int)(total + MEM_ALIGN), CV_8UC1);
 
     /* Extract aligned pointer */
     unsigned char* ptr = alignPtr(mem.perObj.data, MEM_ALIGN);
@@ -853,7 +853,7 @@ inline void   RHO_HEST_REFC::allocatePerRun(void){
 #undef MK_OFFSET
 
     /* Allocate dynamic memory managed by cv::Mat */
-    mem.perRun.create(1, total + MEM_ALIGN, CV_8UC1);
+    mem.perRun.create(1, (int)(total + MEM_ALIGN), CV_8UC1);
 
     /* Extract aligned pointer */
     unsigned char* ptr = alignPtr(mem.perRun.data, MEM_ALIGN);
