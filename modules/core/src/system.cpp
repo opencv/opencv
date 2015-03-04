@@ -549,13 +549,9 @@ String tempfile( const char* suffix )
 #if defined WIN32 || defined _WIN32
 #ifdef WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
-    std::wstring temp_dir = L"";
-    const wchar_t* opencv_temp_dir = GetTempPathWinRT().c_str();
-    if (opencv_temp_dir)
-        temp_dir = std::wstring(opencv_temp_dir);
+    std::wstring temp_dir = GetTempPathWinRT();
 
-    std::wstring temp_file;
-    temp_file = GetTempFileNameWinRT(L"ocv");
+    std::wstring temp_file = GetTempFileNameWinRT(L"ocv");
     if (temp_file.empty())
         return String();
 
