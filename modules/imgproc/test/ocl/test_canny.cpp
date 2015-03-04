@@ -99,12 +99,17 @@ OCL_TEST_P(Canny, Accuracy)
     generateTestData();
 
     const double low_thresh = 50.0, high_thresh = 100.0;
+    double eps = 1e-2;
+#ifdef ANDROID
+    if (cv::ocl::Device::getDefault().isNVidia())
+        eps = 12e-3;
+#endif
 
     OCL_OFF(cv::Canny(src_roi, dst_roi, low_thresh, high_thresh, apperture_size, useL2gradient));
     OCL_ON(cv::Canny(usrc_roi, udst_roi, low_thresh, high_thresh, apperture_size, useL2gradient));
 
-    EXPECT_MAT_SIMILAR(dst_roi, udst_roi, 1e-2);
-    EXPECT_MAT_SIMILAR(dst, udst, 1e-2);
+    EXPECT_MAT_SIMILAR(dst_roi, udst_roi, eps);
+    EXPECT_MAT_SIMILAR(dst, udst, eps);
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
