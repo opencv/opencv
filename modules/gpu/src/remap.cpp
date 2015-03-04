@@ -65,6 +65,17 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation,
         int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
 
+#ifdef OPENCV_TINY_GPU_MODULE
+    static const func_t funcs[6][4] =
+    {
+        {remap_gpu<uchar>      , 0 /*remap_gpu<uchar2>*/ , remap_gpu<uchar3>     , remap_gpu<uchar4>     },
+        {0, 0, 0, 0},
+        {0, 0, 0, 0},
+        {0, 0, 0, 0},
+        {0, 0, 0, 0},
+        {remap_gpu<float>      , 0 /*remap_gpu<float2>*/ , remap_gpu<float3>     , remap_gpu<float4>     }
+    };
+#else
     static const func_t funcs[6][4] =
     {
         {remap_gpu<uchar>      , 0 /*remap_gpu<uchar2>*/ , remap_gpu<uchar3>     , remap_gpu<uchar4>     },
@@ -74,6 +85,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
         {0 /*remap_gpu<int>*/  , 0 /*remap_gpu<int2>*/   , 0 /*remap_gpu<int3>*/ , 0 /*remap_gpu<int4>*/ },
         {remap_gpu<float>      , 0 /*remap_gpu<float2>*/ , remap_gpu<float3>     , remap_gpu<float4>     }
     };
+#endif
 
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
     CV_Assert(xmap.type() == CV_32F && ymap.type() == CV_32F && xmap.size() == ymap.size());
