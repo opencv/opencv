@@ -8,9 +8,9 @@
  1. Default Mode: Detecting (Which detects chessboard corners in real time)
  2. 'c': Starts capturing stereo images (With 2 Sec gap, This can be changed by changing 'timeGap' macro)
  3. 'p': Process and Calibrate (Once all the images are clicked you can press 'p' to calibrate)
- 
+
  Usage: StereoCameraCallibration [params]
- 
+
  --cam1 (value:0)                           Camera 1 Index
  --cam2 (value:2)                           Camera 2 Index
  --dr, --folder (value:.)                   Directory of images
@@ -22,10 +22,10 @@
  --prefixright, --prer (value:image_right_) Right image name postfix. Ex: image_right_
  --realtime, --rt (value:1)                 Clicks stereo images before calibration. Use if you do not have stereo pair images saved
  -w, --width (value:7)                      Width of the board
- 
+
  Example:   ./stereo_calib                                              Clicks stereo images at run time.
  ./stereo_calib -rt=0 -prel=left_ -prer=right_ -post=jpg     RealTime id off ie images should be loaded from disk. With images named left_1.jpg, right_1.jpg etc.
- 
+
  Cheers
  Abhishek Upperwal
  ***********************************************************************/
@@ -45,17 +45,17 @@
 
 /* ************* Original reference:**************
  Oct. 3, 2008
- 
+
  BOOK:It would be nice if you cited it:
  Learning OpenCV: Computer Vision with the OpenCV Library
  by Gary Bradski and Adrian Kaehler
  Published by O'Reilly Media, October 3, 2008
- 
+
  AVAILABLE AT:
  http://www.amazon.com/Learning-OpenCV-Computer-Vision-Library/dp/0596516134
  Or: http://oreilly.com/catalog/9780596516130/
  ISBN-10: 0596516134 or: ISBN-13: 978-0596516130
- 
+
  OPENCV WEBSITES:
  Homepage:      http://opencv.org
  Online docs:   http://docs.opencv.org
