@@ -108,7 +108,7 @@ int calibType;
 
 Mat displayCapturedImageIndex(Mat);
 Mat displayMode(Mat);
-bool findChessboardCornersAndDraw(Mat, Mat, Size);
+bool findChessboardCornersAndDraw(Mat, Mat);
 void displayImages();
 void saveImages(Mat, Mat, int);
 void calibrateStereoCamera(Size, Size);
@@ -137,7 +137,7 @@ Mat displayMode(Mat img) {
     return img;
 }
 
-bool findChessboardCornersAndDraw(Mat inputLeft, Mat inputRight, Size boardSize) {
+bool findChessboardCornersAndDraw(Mat inputLeft, Mat inputRight) {
     _leftOri = inputLeft;
     _rightOri = inputRight;
     bool foundLeft = false, foundRight = false;
@@ -310,7 +310,7 @@ void calibrateInRealTime(int cam1, int cam2) {
         }
         inputLeft.copyTo(copyImageLeft);
         inputRight.copyTo(copyImageRight);
-        foundCornersInBothImage = findChessboardCornersAndDraw(inputLeft, inputRight, boardSize);
+        foundCornersInBothImage = findChessboardCornersAndDraw(inputLeft, inputRight);
         if (foundCornersInBothImage && mode == CAPTURING && stereoPairIndex<noOfStereoPairs) {
             int64 thisTick = getTickCount();
             int64 diff = thisTick - prevTickCount;
@@ -361,7 +361,7 @@ void calibrateFromSavedImages(string dr, string prel, string prer, string post) 
         }
         inputLeft.copyTo(copyImageLeft);
         inputRight.copyTo(copyImageRight);
-        foundCornersInBothImage = findChessboardCornersAndDraw(inputLeft, inputRight, boardSize);
+        foundCornersInBothImage = findChessboardCornersAndDraw(inputLeft, inputRight);
         if (foundCornersInBothImage && stereoPairIndex<noOfStereoPairs) {
             saveImages(copyImageLeft, copyImageRight, ++stereoPairIndex);
         }
