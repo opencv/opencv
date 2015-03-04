@@ -235,10 +235,16 @@ namespace cv { namespace gpu { namespace device
 #define OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(name) \
     OPENCV_GPU_IMPLEMENT_CVTCOLOR(name, name ## _traits)
 
-#define OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(name) \
-    OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _8u, name ## _traits<uchar>) \
-    OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _16u, name ## _traits<ushort>) \
-    OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _32f, name ## _traits<float>)
+#ifdef OPENCV_TINY_GPU_MODULE
+    #define OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(name) \
+        OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _8u, name ## _traits<uchar>) \
+        OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _32f, name ## _traits<float>)
+#else
+    #define OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(name) \
+        OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _8u, name ## _traits<uchar>) \
+        OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _16u, name ## _traits<ushort>) \
+        OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _32f, name ## _traits<float>)
+#endif
 
 #define OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(name) \
     OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _8u, name ## _traits<uchar>) \
