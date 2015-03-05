@@ -253,39 +253,39 @@ public:
 
 template <typename T, typename IT> struct incWithWeight_
 {
-    static inline void f(IT* estimation, IT weight, T p)
+    static inline void f(IT* estimation, int weight, T p)
     {
-        estimation[0] += weight * p;
+        estimation[0] += (IT)weight * p;
     }
 };
 
 template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 2>, IT>
 {
-    static inline void f(IT* estimation, IT weight, Vec<ET, 2> p)
+    static inline void f(IT* estimation, int weight, Vec<ET, 2> p)
     {
-        estimation[0] += weight * p[0];
-        estimation[1] += weight * p[1];
+        estimation[0] += (IT)weight * p[0];
+        estimation[1] += (IT)weight * p[1];
     }
 };
 
 template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 3>, IT>
 {
-    static inline void f(IT* estimation, IT weight, Vec<ET, 3> p)
+    static inline void f(IT* estimation, int weight, Vec<ET, 3> p)
     {
-        estimation[0] += weight * p[0];
-        estimation[1] += weight * p[1];
-        estimation[2] += weight * p[2];
+        estimation[0] += (IT)weight * p[0];
+        estimation[1] += (IT)weight * p[1];
+        estimation[2] += (IT)weight * p[2];
     }
 };
 
 template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 4>, IT>
 {
-    static inline void f(IT* estimation, IT weight, Vec<ET, 4> p)
+    static inline void f(IT* estimation, int weight, Vec<ET, 4> p)
     {
-        estimation[0] += weight * p[0];
-        estimation[1] += weight * p[1];
-        estimation[2] += weight * p[2];
-        estimation[3] += weight * p[3];
+        estimation[0] += (IT)weight * p[0];
+        estimation[1] += (IT)weight * p[1];
+        estimation[2] += (IT)weight * p[2];
+        estimation[3] += (IT)weight * p[3];
     }
 };
 

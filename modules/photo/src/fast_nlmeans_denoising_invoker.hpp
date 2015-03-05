@@ -75,9 +75,9 @@ private:
     int template_window_half_size_;
     int search_window_half_size_;
 
-    IT fixed_point_mult_;
+    int fixed_point_mult_;
     int almost_template_window_size_sq_bin_shift_;
-    std::vector<IT> almost_dist2weight_;
+    std::vector<int> almost_dist2weight_;
 
     void calcDistSumsForFirstElementInRow(
         int i, Array2d<int>& dist_sums,
@@ -119,7 +119,8 @@ FastNlMeansDenoisingInvoker<T, IT, UIT, D>::FastNlMeansDenoisingInvoker(
 
     const IT max_estimate_sum_value =
         (IT)search_window_size_ * (IT)search_window_size_ * (IT)pixelInfo<T>::sampleMax();
-    fixed_point_mult_ = std::numeric_limits<IT>::max() / max_estimate_sum_value;
+    fixed_point_mult_ = (int)std::min<IT>(std::numeric_limits<IT>::max() / max_estimate_sum_value,
+                                          std::numeric_limits<int>::max());
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
@@ -136,7 +137,7 @@ FastNlMeansDenoisingInvoker<T, IT, UIT, D>::FastNlMeansDenoisingInvoker(
     for (int almost_dist = 0; almost_dist < almost_max_dist; almost_dist++)
     {
         double dist = almost_dist * almost_dist2actual_dist_multiplier;
-        IT weight = (IT)round(fixed_point_mult_ * D::template calcWeight<T>(dist, h));
+        int weight = (int)round(fixed_point_mult_ * D::template calcWeight<T>(dist, h));
         if (weight < WEIGHT_THRESHOLD * fixed_point_mult_)
             weight = 0;
 
@@ -238,8 +239,8 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT, D>::operator() (const Range& range)
                 for (int x = 0; x < search_window_size_; x++)
                 {
                     int almostAvgDist = dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_;
-                    IT weight = almost_dist2weight_[almostAvgDist];
-                    weights_sum += weight;
+                    int weight = almost_dist2weight_[almostAvgDist];
+                    weights_sum += (IT)weight;
 
                     T p = cur_row_ptr[border_size_ + search_window_x + x];
                     incWithWeight<T, IT>(estimation, weight, p);
