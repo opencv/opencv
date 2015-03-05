@@ -42,25 +42,18 @@ int main( int argc, char** argv )
   if( !img_object.data || !img_scene.data )
   { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
-  //-- Step 1: Detect the keypoints using SURF Detector
+  //-- Step 1: Detect the keypoints and extract descriptors using SURF
   int minHessian = 400;
 
-  SurfFeatureDetector detector( minHessian );
+  Ptr<SURF> detector = SURF::create( minHessian );
 
   std::vector<KeyPoint> keypoints_object, keypoints_scene;
-
-  detector.detect( img_object, keypoints_object );
-  detector.detect( img_scene, keypoints_scene );
-
-  //-- Step 2: Calculate descriptors (feature vectors)
-  SurfDescriptorExtractor extractor;
-
   Mat descriptors_object, descriptors_scene;
 
-  extractor.compute( img_object, keypoints_object, descriptors_object );
-  extractor.compute( img_scene, keypoints_scene, descriptors_scene );
+  detector->detectAndCompute( img_object, keypoints_object, descriptors_object );
+  detector->detectAndCompute( img_scene, keypoints_scene, descriptors_scene );
 
-  //-- Step 3: Matching descriptor vectors using FLANN matcher
+  //-- Step 2: Matching descriptor vectors using FLANN matcher
   FlannBasedMatcher matcher;
   std::vector< DMatch > matches;
   matcher.match( descriptors_object, descriptors_scene, matches );
