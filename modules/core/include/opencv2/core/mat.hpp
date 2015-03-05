@@ -449,6 +449,29 @@ protected:
 
 /////////////////////////////////////// Mat ///////////////////////////////////////////
 
+// Event counter class
+// Signal event if internal counter is zero and unsignal event if counter is greater than zero
+// With this some thread can wait on query of concurrent tasks.
+class CV_EXPORTS EventCnt
+{
+public:
+    EventCnt(bool delayedInit = false);
+    ~EventCnt();
+    EventCnt(const EventCnt& m);
+    EventCnt& operator = (const EventCnt& m);
+
+    void initialize();
+    bool isInitialized();
+
+    int increment(); // increment event wait counter
+    int decriment(); // decriment event wait counter
+    void wait(); // wait for event
+
+    struct Impl;
+protected:
+    Impl* impl;
+};
+
 // note that umatdata might be allocated together
 // with the matrix data, not as a separate object.
 // therefore, it does not have constructor or destructor;
@@ -483,6 +506,7 @@ struct CV_EXPORTS UMatData
     uchar* origdata;
     size_t size;
 
+    cv::EventCnt cleanUpEvent;
     int flags;
     void* handle;
     void* userdata;

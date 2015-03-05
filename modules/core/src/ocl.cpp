@@ -1672,6 +1672,11 @@ void finish()
     Queue::getDefault().finish();
 }
 
+void flush()
+{
+    Queue::getDefault().flush();
+}
+
 #define IMPLEMENT_REFCOUNTABLE() \
     void addref() { CV_XADD(&refcount, 1); } \
     void release() { if( CV_XADD(&refcount, -1) == 1 && !cv::__termination) delete this; } \
@@ -3041,6 +3046,14 @@ void Queue::finish()
     }
 }
 
+void Queue::flush()
+{
+    if(p && p->handle)
+    {
+        CV_OclDbgAssert(clFlush(p->handle) == CL_SUCCESS);
+    }
+}
+
 void* Queue::ptr() const
 {
     return p ? p->handle : 0;
@@ -3097,15 +3110,38 @@ struct Kernel::Impl
         haveTempDstUMats = false;
     }
 
+    void incWaitCnt()
+    {
+        // Increment wait counters for temp matrices in kernel stack
+        for( int i = 0; i < MAX_ARRS; i++ )
+        {
+            if(u[i] && u[i]->tempUMat())
+            {
+                u[i]->cleanUpEvent.initialize();
+                u[i]->cleanUpEvent.increment();
+            }
+        }
+    }
+
     void cleanupUMats()
     {
+        bool bWaitApplicable;
         for( int i = 0; i < MAX_ARRS; i++ )
+        {
             if( u[i] )
             {
-                if( CV_XADD(&u[i]->urefcount, -1) == 1 )
+                bWaitApplicable = u[i]->cleanUpEvent.isInitialized();
+                if( CV_XADD(&u[i]->urefcount, -1) == 1)
+                {
+                    if(u[i]->refcount == 0) // UMatData will be fully deallocated and we cannot access it later
+                        bWaitApplicable = false;
                     u[i]->currAllocator->deallocate(u[i]);
+                }
+                if(bWaitApplicable) // Check if matrix is temp or was deleted
+                    u[i]->cleanUpEvent.decriment();
                 u[i] = 0;
             }
+        }
         nu = 0;
         haveTempDstUMats = false;
     }
@@ -3398,7 +3434,9 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     else
     {
         p->addref();
+        p->incWaitCnt(); // UMatData deallocation sync event. To pervent concurent counters increment/decriment (see Mat::GetUMat() function)
         CV_OclDbgAssert(clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
+        ocl::flush(); // flush commands for async waiting (lack of flushing sometimes leads to infinite wait on cleanup)
     }
     return retval == CL_SUCCESS;
 }
@@ -3418,7 +3456,9 @@ bool Kernel::runTask(bool sync, const Queue& q)
     else
     {
         p->addref();
+        p->incWaitCnt(); // UMatData deallocation sync event. To pervent concurent counters increment/decriment (see Mat::GetUMat() function)
         CV_OclDbgAssert(clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
+        ocl::flush(); // flush commands for async waiting (lack of flushing sometimes leads to infinite wait on cleanup)
     }
     return retval == CL_SUCCESS;
 }
@@ -4251,6 +4291,9 @@ public:
             return false;
 
         UMatDataAutoLock lock(u);
+
+        if(u->handle)
+            u->cleanUpEvent.wait(); // Wait for oclCleanupCallback
 
         if(u->handle == 0)
         {

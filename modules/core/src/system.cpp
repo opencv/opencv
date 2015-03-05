@@ -919,6 +919,185 @@ void Mutex::lock() { impl->lock(); }
 void Mutex::unlock() { impl->unlock(); }
 bool Mutex::trylock() { return impl->trylock(); }
 
+#if defined WIN32 || defined _WIN32 || defined WINCE
+
+struct EventCnt::Impl
+{
+    Impl()
+    {
+        lockcount = 0;
+        handle = 0;
+        handle = CreateEvent(NULL, TRUE, TRUE, NULL);
+
+        refcount = 1;
+    }
+    ~Impl()
+    {
+        if(!handle)
+            return;
+
+        // Signal event and close the object
+        SetEvent(handle);
+        WaitForSingleObject(handle, INFINITE);
+        CloseHandle(handle);
+        handle = NULL;
+        mutex.lock(); // Wait for internal mutexes to exit
+    }
+
+    int increment()
+    {
+        if(!handle)
+            return -1;
+
+        mutex.lock();
+        if(CV_XADD(&lockcount, 1) == 0)
+            ResetEvent(handle);
+        mutex.unlock();
+        return lockcount;
+    }
+    int decriment()
+    {
+        if(!handle)
+            return -1;
+
+        mutex.lock();
+        if(lockcount >= 1 && CV_XADD(&lockcount, -1) == 1)
+            SetEvent(handle);
+        mutex.unlock();
+        return lockcount;
+    }
+    void wait()
+    {
+        if(!handle)
+            return;
+
+        WaitForSingleObject(handle, INFINITE);
+    }
+
+    HANDLE handle;
+
+    int   lockcount;
+    Mutex mutex;
+
+    int refcount;
+};
+
+#else
+struct EventCnt::Impl
+{
+    Impl()
+    {
+        lockcount = 0;
+
+        evState = 1;
+        pthread_cond_init(&evCond, 0);
+        pthread_mutex_init(&evMutex, 0);
+
+        refcount = 1;
+    }
+    ~Impl()
+    {
+        if(evState < 0)
+            return;
+
+        // Signal event and close the object
+        pthread_cond_broadcast(&evCond);
+        pthread_cond_destroy(&evCond);
+        pthread_mutex_destroy(&evMutex);
+        evState= -1;
+        mutex.lock(); // Wait for internal mutexes to exit
+    }
+
+    int increment()
+    {
+        if(evState < 0)
+            return -1;
+
+        mutex.lock();
+        if(CV_XADD(&lockcount, 1) == 0)
+        {
+            pthread_mutex_lock(&evMutex);
+            evState = 0; // Set event to blocked
+            pthread_mutex_unlock(&evMutex);
+        }
+        mutex.unlock();
+        return lockcount;
+    }
+    int decriment()
+    {
+        if(evState < 0)
+            return -1;
+
+        mutex.lock();
+        if(lockcount >= 1 && CV_XADD(&lockcount, -1) == 1)
+        {
+            pthread_mutex_lock(&evMutex);
+            evState = 1;                     // Set event to unblocked
+            pthread_cond_broadcast(&evCond); // Signal threads to continue
+            pthread_mutex_unlock(&evMutex);
+        }
+        mutex.unlock();
+        return lockcount;
+    }
+    void wait()
+    {
+        if(evState < 0)
+            return;
+
+        pthread_mutex_lock(&evMutex);
+
+        if(evState == 0)
+            pthread_cond_wait(&evCond, &evMutex);
+
+        pthread_mutex_unlock(&evMutex);
+    }
+
+    pthread_cond_t  evCond;
+    pthread_mutex_t evMutex;
+    int             evState;
+
+    int   lockcount;
+    Mutex mutex;
+
+    int refcount;
+};
+#endif
+
+EventCnt::EventCnt(bool bDelayed)
+{
+    impl = 0;
+    if(!bDelayed)
+        initialize();
+}
+
+EventCnt::~EventCnt()
+{
+    if( impl && CV_XADD(&impl->refcount, -1) == 1 )
+        delete impl;
+    impl = 0;
+}
+
+EventCnt::EventCnt(const EventCnt& m)
+{
+    impl = m.impl;
+    CV_XADD(&impl->refcount, 1);
+}
+
+EventCnt& EventCnt::operator = (const EventCnt& m)
+{
+    CV_XADD(&m.impl->refcount, 1);
+    if( impl && CV_XADD(&impl->refcount, -1) == 1 )
+        delete impl;
+    impl = m.impl;
+    return *this;
+}
+
+void EventCnt::initialize() { impl?impl:(impl = new EventCnt::Impl); }
+bool EventCnt::isInitialized() { return impl?true:false; }
+
+int EventCnt::increment() { return (impl?impl->increment():0); }
+int EventCnt::decriment() { return (impl?impl->decriment():0); }
+void EventCnt::wait() { impl?impl->wait():impl; }
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
