@@ -81,9 +81,9 @@ private:
     int search_window_half_size_;
     int temporal_window_half_size_;
 
-    IT fixed_point_mult_;
+    int fixed_point_mult_;
     int almost_template_window_size_sq_bin_shift;
-    std::vector<IT> almost_dist2weight;
+    std::vector<int> almost_dist2weight;
 
     void calcDistSumsForFirstElementInRow(int i, Array3d<int>& dist_sums,
                                           Array4d<int>& col_dist_sums,
@@ -127,7 +127,8 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D>::FastNlMeansMultiDenoisingInvoke
     main_extended_src_ = extended_srcs_[temporal_window_half_size_];
     const IT max_estimate_sum_value =
         (IT)temporal_window_size_ * (IT)search_window_size_ * (IT)search_window_size_ * (IT)pixelInfo<T>::sampleMax();
-    fixed_point_mult_ = std::numeric_limits<IT>::max() / max_estimate_sum_value;
+    fixed_point_mult_ = (int)std::min<IT>(std::numeric_limits<IT>::max() / max_estimate_sum_value,
+                                          std::numeric_limits<int>::max());
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
@@ -147,7 +148,7 @@ FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D>::FastNlMeansMultiDenoisingInvoke
     for (int almost_dist = 0; almost_dist < almost_max_dist; almost_dist++)
     {
         double dist = almost_dist * almost_dist2actual_dist_multiplier;
-        IT weight = (IT)round(fixed_point_mult_ * D::template calcWeight<T>(dist, h));
+        int weight = (int)round(fixed_point_mult_ * D::template calcWeight<T>(dist, h));
         if (weight < WEIGHT_THRESHOLD * fixed_point_mult_)
             weight = 0;
 
@@ -266,8 +267,8 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D>::operator() (const Range& r
                     {
                         int almostAvgDist = dist_sums_row[x] >> almost_template_window_size_sq_bin_shift;
 
-                        IT weight =  almost_dist2weight[almostAvgDist];
-                        weights_sum += weight;
+                        int weight =  almost_dist2weight[almostAvgDist];
+                        weights_sum += (IT)weight;
 
                         T p = cur_row_ptr[border_size_ + search_window_x + x];
                         incWithWeight<T, IT>(estimation, weight, p);
