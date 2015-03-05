@@ -995,7 +995,7 @@ if(WITH_IPP AND HAVE_IPP)
     status("     linked:" BUILD_WITH_DYNAMIC_IPP THEN "dynamic" ELSE "static")
   endif()
 else()
-  status("    Use IPP:"   WITH_IPP AND NOT HAVE_IPP THEN "IPP not found" ELSE NO)
+  status("    Use IPP:"   WITH_IPP AND NOT HAVE_IPP THEN "IPP not found or implicitly disabled" ELSE NO)
 endif()
 
 if(DEFINED WITH_IPP_A)
