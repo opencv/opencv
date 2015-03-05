@@ -97,7 +97,11 @@ namespace cv { namespace gpu { namespace device
     #endif
             };
 
-            callers[borderMode](PtrStepSz<vec_type>(src), PtrStepSz<vec_type>(dst), top, left, borderValue, stream);
+            const caller_t caller = callers[borderMode];
+            if (!caller)
+                cv::gpu::error("Unsupported input parameters for copyMakeBorder", __FILE__, __LINE__, "");
+
+            caller(PtrStepSz<vec_type>(src), PtrStepSz<vec_type>(dst), top, left, borderValue, stream);
         }
 
         template void copyMakeBorder_gpu<uchar, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
