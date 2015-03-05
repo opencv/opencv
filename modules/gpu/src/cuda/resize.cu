@@ -485,7 +485,11 @@ namespace cv { namespace gpu { namespace device
         if (interpolation == 3 && (fx <= 1.f || fy <= 1.f))
             interpolation = 1;
 
-        funcs[interpolation](static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<T> >(srcWhole), yoff, xoff, static_cast< PtrStepSz<T> >(dst), fy, fx, stream);
+        const func_t func = funcs[interpolation];
+        if (!func)
+            cv::gpu::error("Unsupported input parameters for resize", __FILE__, __LINE__, "");
+
+        func(static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<T> >(srcWhole), yoff, xoff, static_cast< PtrStepSz<T> >(dst), fy, fx, stream);
     }
 
     template void resize<uchar >(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
