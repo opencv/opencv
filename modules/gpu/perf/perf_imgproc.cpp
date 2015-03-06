@@ -93,9 +93,17 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border_Mode, cv::Size, MatDepth, MatCn, Interpo
 
 PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap,
             Combine(GPU_TYPICAL_MAT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(CV_8U, CV_32F),
+#else
                     Values(CV_8U, CV_16U, CV_32F),
+#endif
                     GPU_CHANNELS_1_3_4,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR)),
+#else
                     Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
+#endif
                     ALL_BORDER_MODES,
                     RemapMode::all()))
 {
@@ -145,9 +153,17 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Scale, cv::Size, MatDepth, MatCn, Interpolation
 
 PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize,
             Combine(GPU_TYPICAL_MAT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(CV_8U, CV_32F),
+#else
                     Values(CV_8U, CV_16U, CV_32F),
+#endif
                     GPU_CHANNELS_1_3_4,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR)),
+#else
                     Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
+#endif
                     Values(0.5, 0.3, 2.0)))
 {
     declare.time(20.0);
@@ -189,7 +205,11 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Scale, cv::Size, MatDepth, MatCn, double);
 
 PERF_TEST_P(Sz_Depth_Cn_Scale, ImgProc_ResizeArea,
             Combine(GPU_TYPICAL_MAT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(CV_8U, CV_32F),
+#else
                     Values(CV_8U, CV_16U, CV_32F),
+#endif
                     GPU_CHANNELS_1_3_4,
                     Values(0.2, 0.1, 0.05)))
 {
@@ -232,9 +252,17 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border, cv::Size, MatDepth, MatCn, Interpolatio
 
 PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine,
             Combine(GPU_TYPICAL_MAT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(CV_8U, CV_32F),
+#else
                     Values(CV_8U, CV_16U, CV_32F),
+#endif
                     GPU_CHANNELS_1_3_4,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR)),
+#else
                     Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
+#endif
                     ALL_BORDER_MODES))
 {
     declare.time(20.0);
@@ -282,9 +310,17 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine,
 
 PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective,
             Combine(GPU_TYPICAL_MAT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(CV_8U, CV_32F),
+#else
                     Values(CV_8U, CV_16U, CV_32F),
+#endif
                     GPU_CHANNELS_1_3_4,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR)),
+#else
                     Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
+#endif
                     ALL_BORDER_MODES))
 {
     declare.time(20.0);
@@ -332,7 +368,11 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Border, cv::Size, MatDepth, MatCn, BorderMode);
 
 PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder,
             Combine(GPU_TYPICAL_MAT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(CV_8U, CV_32F),
+#else
                     Values(CV_8U, CV_16U, CV_32F),
+#endif
                     GPU_CHANNELS_1_3_4,
                     ALL_BORDER_MODES))
 {
@@ -374,7 +414,11 @@ DEF_PARAM_TEST(Sz_Depth_Op, cv::Size, MatDepth, ThreshOp);
 
 PERF_TEST_P(Sz_Depth_Op, ImgProc_Threshold,
             Combine(GPU_TYPICAL_MAT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+            Values(CV_8U, CV_32F),
+#else
             Values(CV_8U, CV_16U, CV_32F, CV_64F),
+#endif
             ThreshOp::all()))
 {
     const cv::Size size = GET_PARAM(0);
@@ -674,7 +718,11 @@ DEF_PARAM_TEST(Image_AppertureSz_L2gradient, string, int, bool);
 
 PERF_TEST_P(Image_AppertureSz_L2gradient, ImgProc_Canny,
             Combine(Values("perf/800x600.png", "perf/1280x1024.png", "perf/1680x1050.png"),
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(3),
+#else
                     Values(3, 5),
+#endif
                     Bool()))
 {
     const string fileName = GET_PARAM(0);
@@ -1302,7 +1350,11 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate,
 
 PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown,
             Combine(GPU_TYPICAL_MAT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(CV_8U, CV_32F),
+#else
                     Values(CV_8U, CV_16U, CV_32F),
+#endif
                     GPU_CHANNELS_1_3_4))
 {
     const cv::Size size = GET_PARAM(0);
@@ -1338,7 +1390,11 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown,
 
 PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrUp,
             Combine(GPU_TYPICAL_MAT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+                    Values(CV_8U, CV_32F),
+#else
                     Values(CV_8U, CV_16U, CV_32F),
+#endif
                     GPU_CHANNELS_1_3_4))
 {
     const cv::Size size = GET_PARAM(0);
