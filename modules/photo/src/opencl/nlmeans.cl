@@ -20,9 +20,9 @@
 
 #ifdef OP_CALC_WEIGHTS
 
-__kernel void calcAlmostDist2Weight(__global int * almostDist2Weight, int almostMaxDist,
+__kernel void calcAlmostDist2Weight(__global wlut_t * almostDist2Weight, int almostMaxDist,
                                     FT almostDist2ActualDistMultiplier, int fixedPointMult,
-                                    FT den, FT WEIGHT_THRESHOLD)
+                                    w_t den, FT WEIGHT_THRESHOLD)
 {
     int almostDist = get_global_id(0);
 
@@ -30,14 +30,13 @@ __kernel void calcAlmostDist2Weight(__global int * almostDist2Weight, int almost
     {
         FT dist = almostDist * almostDist2ActualDistMultiplier;
 #ifdef ABS
-        int weight = convert_int_sat_rte(fixedPointMult * exp(-dist*dist * den));
+        w_t w = exp((w_t)(-dist*dist) * den);
 #else
-        int weight = convert_int_sat_rte(fixedPointMult * exp(-dist * den));
+        w_t w = exp((w_t)(-dist) * den);
 #endif
-        if (weight < WEIGHT_THRESHOLD * fixedPointMult)
-            weight = 0;
-
-        almostDist2Weight[almostDist] = weight;
+        wlut_t weight = convert_wlut_t(fixedPointMult * (isnan(w) ? (w_t)1.0 : w));
+        almostDist2Weight[almostDist] =
+            weight < WEIGHT_THRESHOLD * fixedPointMult ? (wlut_t)0 : weight;
     }
 }
 
@@ -208,14 +207,14 @@ inline void calcElement(__global const uchar * src, int src_step, int src_offset
 }
 
 inline void convolveWindow(__global const uchar * src, int src_step, int src_offset,
-                           __local int * dists, __global const int * almostDist2Weight,
+                           __local int * dists, __global const wlut_t * almostDist2Weight,
                            __global uchar * dst, int dst_step, int dst_offset,
                            int y, int x, int id, __local weight_t * weights_local,
                            __local sum_t * weighted_sum_local, int almostTemplateWindowSizeSqBinShift)
 {
     int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2;
-    weight_t weights = 0;
-    sum_t weighted_sum = (sum_t)(0);
+    weight_t weights = (weight_t)0;
+    sum_t weighted_sum = (sum_t)0;
 
     for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
@@ -223,10 +222,10 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
         sum_t src_value = convert_sum_t(*(__global const pixel_t *)(src + src_index));
 
         int almostAvgDist = dists[i] >> almostTemplateWindowSizeSqBinShift;
-        int weight = almostDist2Weight[almostAvgDist];
+        weight_t weight = convert_weight_t(almostDist2Weight[almostAvgDist]);
 
-        weights += (weight_t)weight;
-        weighted_sum += (sum_t)(weight) * src_value;
+        weights += weight;
+        weighted_sum += (sum_t)weight * src_value;
     }
 
     weights_local[id] = weights;
@@ -251,13 +250,13 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
             weighted_sum_local[2] + weighted_sum_local[3];
         weight_t weights_local_0 = weights_local[0] + weights_local[1] + weights_local[2] + weights_local[3];
 
-        *(__global pixel_t *)(dst + dst_index) = convert_pixel_t(weighted_sum_local_0 / (sum_t)(weights_local_0));
+        *(__global pixel_t *)(dst + dst_index) = convert_pixel_t(weighted_sum_local_0 / (sum_t)weights_local_0);
     }
 }
 
 __kernel void fastNlMeansDenoising(__global const uchar * src, int src_step, int src_offset,
                                    __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                                   __global const int * almostDist2Weight, __global uchar * buffer,
+                                   __global const wlut_t * almostDist2Weight, __global uchar * buffer,
                                    int almostTemplateWindowSizeSqBinShift)
 {
     int block_x = get_group_id(0), nblocks_x = get_num_groups(0);

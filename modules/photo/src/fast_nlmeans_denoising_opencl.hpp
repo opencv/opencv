@@ -29,7 +29,7 @@ static int divUp(int a, int b)
 }
 
 template <typename FT, typename ST, typename WT>
-static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindowSize, int templateWindowSize, FT h, int cn,
+static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindowSize, int templateWindowSize, FT *h, int hn, int cn,
                                       int & almostTemplateWindowSizeSqBinShift, bool abs)
 {
     const WT maxEstimateSumValue = searchWindowSize * searchWindowSize *
@@ -53,24 +53,32 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
     int maxDist = abs ? std::numeric_limits<ST>::max() * cn :
         std::numeric_limits<ST>::max() * std::numeric_limits<ST>::max() * cn;
     int almostMaxDist = (int)(maxDist / almostDist2ActualDistMultiplier + 1);
-    FT den = 1.0f / (h * h * cn);
+    FT den[4];
+    CV_Assert(hn > 0 && hn <= 4);
+    for (int i=0; i<hn; i++)
+        den[i] = 1.0f / (h[i] * h[i] * cn);
 
-    almostDist2Weight.create(1, almostMaxDist, CV_32SC1);
+    almostDist2Weight.create(1, almostMaxDist, CV_32SC(hn == 3 ? 4 : hn));
 
+    char buf[40];
     ocl::Kernel k("calcAlmostDist2Weight", ocl::photo::nlmeans_oclsrc,
-                  format("-D OP_CALC_WEIGHTS -D FT=%s%s%s", ocl::typeToStr(depth),
+                  format("-D OP_CALC_WEIGHTS -D FT=%s -D w_t=%s"
+                         " -D wlut_t=%s -D convert_wlut_t=%s%s%s",
+                         ocl::typeToStr(depth), ocl::typeToStr(CV_MAKE_TYPE(depth, hn)),
+                         ocl::typeToStr(CV_32SC(hn)), ocl::convertTypeStr(depth, CV_32S, hn, buf),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "", abs ? " -D ABS" : ""));
     if (k.empty())
         return false;
 
     k.args(ocl::KernelArg::PtrWriteOnly(almostDist2Weight), almostMaxDist,
-           almostDist2ActualDistMultiplier, fixedPointMult, den, WEIGHT_THRESHOLD);
+           almostDist2ActualDistMultiplier, fixedPointMult,
+           ocl::KernelArg::Constant(den, (hn == 3 ? 4 : hn)*sizeof(FT)), WEIGHT_THRESHOLD);
 
     size_t globalsize[1] = { almostMaxDist };
     return k.run(1, globalsize, NULL, false);
 }
 
-static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
+static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float *h, int hn,
                                      int templateWindowSize, int searchWindowSize, bool abs)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -89,18 +97,22 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
 
     char buf[4][40];
     String opts = format("-D OP_CALC_FASTNLMEANS -D TEMPLATE_SIZE=%d -D SEARCH_SIZE=%d"
-                         " -D pixel_t=%s -D int_t=%s"
-                         " -D weight_t=%s -D sum_t=%s -D convert_sum_t=%s"
+                         " -D pixel_t=%s -D int_t=%s -D wlut_t=%s"
+                         " -D weight_t=%s -D convert_weight_t=%s -D sum_t=%s -D convert_sum_t=%s"
                          " -D BLOCK_COLS=%d -D BLOCK_ROWS=%d"
                          " -D CTA_SIZE=%d -D TEMPLATE_SIZE2=%d -D SEARCH_SIZE2=%d"
                          " -D convert_int_t=%s -D cn=%d -D psz=%d -D convert_pixel_t=%s%s",
                          templateWindowSize, searchWindowSize,
                          ocl::typeToStr(type), ocl::typeToStr(CV_32SC(cn)),
-                         depth == CV_8U ? ocl::typeToStr(CV_32S) : "long",
+                         ocl::typeToStr(CV_32SC(hn)),
+                         depth == CV_8U ? ocl::typeToStr(CV_32SC(hn)) :
+                         format("long%s", hn > 1 ? format("%d", hn).c_str() : "").c_str(),
+                         depth == CV_8U ? ocl::convertTypeStr(CV_32S, CV_32S, hn, buf[0]) :
+                         format("convert_long%s", hn > 1 ? format("%d", hn).c_str() : "").c_str(),
                          depth == CV_8U ? ocl::typeToStr(CV_32SC(cn)) :
-                         (sprintf(buf[0], "long%d", cn), buf[0]),
+                         format("long%s", cn > 1 ? format("%d", cn).c_str() : "").c_str(),
                          depth == CV_8U ? ocl::convertTypeStr(depth, CV_32S, cn, buf[1]) :
-                         (sprintf(buf[1], "convert_long%d", cn), buf[1]),
+                         format("convert_long%s", cn > 1 ? format("%d", cn).c_str() : "").c_str(),
                          BLOCK_COLS, BLOCK_ROWS,
                          ctaSize, templateWindowHalfWize, searchWindowHalfSize,
                          ocl::convertTypeStr(depth, CV_32S, cn, buf[2]), cn,
@@ -115,13 +127,13 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
     if ((depth == CV_8U &&
          !ocl_calcAlmostDist2Weight<float, uchar, int>(almostDist2Weight,
                                                        searchWindowSize, templateWindowSize,
-                                                       h, cn,
+                                                       h, hn, cn,
                                                        almostTemplateWindowSizeSqBinShift,
                                                        abs)) ||
         (depth == CV_16U &&
          !ocl_calcAlmostDist2Weight<float, ushort, int64>(almostDist2Weight,
                                                           searchWindowSize, templateWindowSize,
-                                                          h, cn,
+                                                          h, hn, cn,
                                                           almostTemplateWindowSizeSqBinShift,
                                                           abs)))
         return false;
