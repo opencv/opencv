@@ -90,6 +90,14 @@ GPU_TEST_P(CopyMakeBorder, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CopyMakeBorder, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatType(CV_8UC1),
+                    MatType(CV_8UC3),
+                    MatType(CV_8UC4),
+                    MatType(CV_32FC1),
+                    MatType(CV_32FC3),
+                    MatType(CV_32FC4)),
+#else
     testing::Values(MatType(CV_8UC1),
                     MatType(CV_8UC3),
                     MatType(CV_8UC4),
@@ -99,6 +107,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CopyMakeBorder, testing::Combine(
                     MatType(CV_32FC1),
                     MatType(CV_32FC3),
                     MatType(CV_32FC4)),
+#endif
     testing::Values(Border(1), Border(10), Border(50)),
     ALL_BORDER_TYPES,
     WHOLE_SUBMAT));

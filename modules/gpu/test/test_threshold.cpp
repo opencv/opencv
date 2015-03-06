@@ -86,7 +86,11 @@ GPU_TEST_P(Threshold, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Threshold, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatType(CV_8UC1), MatType(CV_32FC1)),
+#else
     testing::Values(MatType(CV_8UC1), MatType(CV_16SC1), MatType(CV_32FC1)),
+#endif
     ThreshOp::all(),
     WHOLE_SUBMAT));
 
