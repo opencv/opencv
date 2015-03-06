@@ -1092,12 +1092,12 @@ EventCnt& EventCnt::operator = (const EventCnt& m)
     return *this;
 }
 
-void EventCnt::initialize() { impl?impl:(impl = new EventCnt::Impl); }
+void EventCnt::initialize() { if(!impl){impl = new EventCnt::Impl;} }
 bool EventCnt::isInitialized() { return impl?true:false; }
 
 int EventCnt::increment() { return (impl?impl->increment():0); }
 int EventCnt::decriment() { return (impl?impl->decriment():0); }
-void EventCnt::wait() { impl?impl->wait():impl; }
+void EventCnt::wait() { if(impl){impl->wait();} }
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
