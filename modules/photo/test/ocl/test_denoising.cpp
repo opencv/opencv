@@ -16,7 +16,7 @@ namespace ocl {
 PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool, bool)
 {
     int cn, templateWindowSize, searchWindowSize;
-    float h;
+    float h[4];
     bool use_roi, use_image;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -30,7 +30,10 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool, bool)
 
         templateWindowSize = 7;
         searchWindowSize = 21;
-        h = 3.0f;
+
+        ASSERT_TRUE(cn > 0 && cn <= 4);
+        for (int i=0; i<cn; i++)
+            h[i] = 3.0f + 0.5f*i;
     }
 
     virtual void generateTestData()
@@ -48,7 +51,6 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool, bool)
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, 0, 255);
         if (use_image) {
-            ASSERT_TRUE(cn == 1 || cn == 2 || cn == 3 || cn == 4);
             if (cn == 2) {
                 int from_to[] = { 0,0, 1,1 };
                 src_roi.create(roiSize, type);
@@ -78,6 +80,21 @@ OCL_TEST_P(FastNlMeansDenoising, Mat)
     {
         generateTestData();
 
+        OCL_OFF(cv::fastNlMeansDenoising(src_roi, dst_roi, h[0], templateWindowSize, searchWindowSize));
+        OCL_ON(cv::fastNlMeansDenoising(usrc_roi, udst_roi, h[0], templateWindowSize, searchWindowSize));
+
+        OCL_EXPECT_MATS_NEAR(dst, 1);
+    }
+}
+
+typedef FastNlMeansDenoisingTestBase FastNlMeansDenoising_hsep;
+
+OCL_TEST_P(FastNlMeansDenoising_hsep, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
         OCL_OFF(cv::fastNlMeansDenoising(src_roi, dst_roi, h, templateWindowSize, searchWindowSize));
         OCL_ON(cv::fastNlMeansDenoising(usrc_roi, udst_roi, h, templateWindowSize, searchWindowSize));
 
@@ -88,6 +105,21 @@ OCL_TEST_P(FastNlMeansDenoising, Mat)
 typedef FastNlMeansDenoisingTestBase FastNlMeansDenoisingAbs;
 
 OCL_TEST_P(FastNlMeansDenoisingAbs, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::fastNlMeansDenoisingAbs(src_roi, dst_roi, h[0], templateWindowSize, searchWindowSize));
+        OCL_ON(cv::fastNlMeansDenoisingAbs(usrc_roi, udst_roi, h[0], templateWindowSize, searchWindowSize));
+
+        OCL_EXPECT_MATS_NEAR(dst, 1);
+    }
+}
+
+typedef FastNlMeansDenoisingTestBase FastNlMeansDenoisingAbs_hsep;
+
+OCL_TEST_P(FastNlMeansDenoisingAbs_hsep, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -108,17 +140,21 @@ OCL_TEST_P(FastNlMeansDenoisingColored, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::fastNlMeansDenoisingColored(src_roi, dst_roi, h, h, templateWindowSize, searchWindowSize));
-        OCL_ON(cv::fastNlMeansDenoisingColored(usrc_roi, udst_roi, h, h, templateWindowSize, searchWindowSize));
+        OCL_OFF(cv::fastNlMeansDenoisingColored(src_roi, dst_roi, h[0], h[0], templateWindowSize, searchWindowSize));
+        OCL_ON(cv::fastNlMeansDenoisingColored(usrc_roi, udst_roi, h[0], h[0], templateWindowSize, searchWindowSize));
 
         OCL_EXPECT_MATS_NEAR(dst, 1);
     }
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising,
-                            Combine(Values(1, 2, 3, 4), Bool(), Bool()));
+                            Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
+OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising_hsep,
+                            Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingAbs,
-                            Combine(Values(1, 2, 3, 4), Bool(), Bool()));
+                            Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
+OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingAbs_hsep,
+                            Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingColored,
                             Combine(Values(3, 4), Bool(), Values(false)));
 
