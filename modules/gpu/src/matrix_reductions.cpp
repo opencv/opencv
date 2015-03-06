@@ -523,7 +523,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
         0/*::minMaxLoc::run<schar>*/,
         0/*::minMaxLoc::run<ushort>*/,
         0/*::minMaxLoc::run<short>*/,
-        0/*::minMaxLoc::run<int>*/,
+        ::minMaxLoc::run<int>,
         ::minMaxLoc::run<float>,
         0/*::minMaxLoc::run<double>*/,
     };
