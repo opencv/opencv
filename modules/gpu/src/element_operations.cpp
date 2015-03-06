@@ -3717,7 +3717,7 @@ void cv::gpu::min(const GpuMat& src, double val, GpuMat& dst, Stream& stream)
         0/*minScalar<signed char>*/,
         0/*minScalar<unsigned short>*/,
         0/*minScalar<short>*/,
-        0/*minScalar<int>*/,
+        minScalar<int>,
         minScalar<float>,
         0/*minScalar<double>*/,
     };
@@ -3728,7 +3728,7 @@ void cv::gpu::min(const GpuMat& src, double val, GpuMat& dst, Stream& stream)
         0/*castScalar<signed char>*/,
         0/*castScalar<unsigned short>*/,
         0/*castScalar<short>*/,
-        0/*castScalar<int>*/,
+        castScalar<int>,
         castScalar<float>,
         0/*castScalar<double>*/,
     };

@@ -2193,15 +2193,17 @@ namespace arithm
         transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
     }
 
+#ifdef OPENCV_TINY_GPU_MODULE
     template void minScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-#ifndef OPENCV_TINY_GPU_MODULE
+    template void minScalar<int   >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
+    template void minScalar<float >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
+#else
+    template void minScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
     template void minScalar<schar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
     template void minScalar<ushort>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
     template void minScalar<short >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
     template void minScalar<int   >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-#endif
     template void minScalar<float >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-#ifndef OPENCV_TINY_GPU_MODULE
     template void minScalar<double>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
 #endif
 }

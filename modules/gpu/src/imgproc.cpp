@@ -339,12 +339,12 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 #ifdef OPENCV_TINY_GPU_MODULE
         static const caller_t callers[6][4] =
         {
-            {   copyMakeBorder_caller<uchar, 1>  ,  0/*copyMakeBorder_caller<uchar, 2>*/,    copyMakeBorder_caller<uchar, 3>  ,    copyMakeBorder_caller<uchar, 4>},
+            {   copyMakeBorder_caller<uchar, 1>  ,  copyMakeBorder_caller<uchar, 2>     ,    copyMakeBorder_caller<uchar, 3>  ,    copyMakeBorder_caller<uchar, 4>},
             {0, 0, 0, 0},
             {0, 0, 0, 0},
             {0, 0, 0, 0},
             {0, 0, 0, 0},
-            {   copyMakeBorder_caller<float, 1>  , 0/*copyMakeBorder_caller<float, 2>*/ ,    copyMakeBorder_caller<float, 3>  ,    copyMakeBorder_caller<float ,4>}
+            {   copyMakeBorder_caller<float, 1>  ,  0/*copyMakeBorder_caller<float, 2>*/,    copyMakeBorder_caller<float, 3>  ,    copyMakeBorder_caller<float ,4>}
         };
 #else
         static const caller_t callers[6][4] =
