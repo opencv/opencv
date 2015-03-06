@@ -462,7 +462,7 @@ Ptr<RHO_HEST> rhoInit(void){
     /* Initialize it. */
     if(p){
         if(!p->initialize()){
-            p = Ptr<RHO_HEST>((RHO_HEST*)NULL);
+            p.release();
         }
     }
 
