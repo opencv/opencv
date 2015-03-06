@@ -51,7 +51,8 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
     Size src_size = _src.size();
     CV_OCL_RUN(_src.dims() <= 2 && (_src.isUMat() || _dst.isUMat()) &&
                src_size.width > 5 && src_size.height > 5, // low accuracy on small sizes
-               ocl_fastNlMeansDenoising(_src, _dst, h, templateWindowSize, searchWindowSize, false))
+               ocl_fastNlMeansDenoising(_src, _dst, &h, 1,
+                                        templateWindowSize, searchWindowSize, false))
 
     Mat src = _src.getMat();
     _dst.create(src_size, src.type());
@@ -95,7 +96,8 @@ void cv::fastNlMeansDenoisingAbs( InputArray _src, OutputArray _dst, float h,
     Size src_size = _src.size();
     CV_OCL_RUN(_src.dims() <= 2 && (_src.isUMat() || _dst.isUMat()) &&
                src_size.width > 5 && src_size.height > 5, // low accuracy on small sizes
-               ocl_fastNlMeansDenoising(_src, _dst, h, templateWindowSize, searchWindowSize, true))
+               ocl_fastNlMeansDenoising(_src, _dst, &h, 1,
+                                        templateWindowSize, searchWindowSize, true))
 
     Mat src = _src.getMat();
     _dst.create(src_size, src.type());
