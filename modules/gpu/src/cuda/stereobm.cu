@@ -342,7 +342,7 @@ namespace cv { namespace gpu { namespace device
             0/*kernel_caller< 6>*/,
             0/*kernel_caller< 7>*/,
             0/*kernel_caller< 8>*/,
-            0/*kernel_caller< 9>*/,
+            kernel_caller< 9>,
             0/*kernel_caller<10>*/,
             0/*kernel_caller<11>*/,
             0/*kernel_caller<12>*/,
