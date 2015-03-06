@@ -387,7 +387,7 @@ template <typename ET, typename IT, typename EW> struct incWithWeight_<Vec<ET, 4
 };
 
 template <typename T, typename IT, typename WT>
-static inline void incWithWeight(IT* estimation, IT* weights_sum, IT weight, T p)
+static inline void incWithWeight(IT* estimation, IT* weights_sum, WT weight, T p)
 {
     return incWithWeight_<T, IT, WT>::f(estimation, weights_sum, weight, p);
 }
