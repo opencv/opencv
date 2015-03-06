@@ -359,7 +359,11 @@ GPU_TEST_P(Canny, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Canny, testing::Combine(
     ALL_DEVICES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(AppertureSize(3)),
+#else
     testing::Values(AppertureSize(3), AppertureSize(5)),
+#endif
     testing::Values(L2gradient(false), L2gradient(true)),
     WHOLE_SUBMAT));
 

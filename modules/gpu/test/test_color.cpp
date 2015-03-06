@@ -2288,7 +2288,11 @@ GPU_TEST_P(CvtColor, BayerGR2Gray)
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CvtColor, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_32F)),
+#else
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32F)),
+#endif
     WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

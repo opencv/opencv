@@ -1344,7 +1344,11 @@ GPU_TEST_P(Abs, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Abs, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_32F)),
+#else
     testing::Values(MatDepth(CV_16S), MatDepth(CV_32F)),
+#endif
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1384,10 +1388,14 @@ GPU_TEST_P(Sqr, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Sqr, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_32F)),
+#else
     testing::Values(MatDepth(CV_8U),
                     MatDepth(CV_16U),
                     MatDepth(CV_16S),
                     MatDepth(CV_32F)),
+#endif
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1454,10 +1462,14 @@ GPU_TEST_P(Sqrt, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Sqrt, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_32F)),
+#else
     testing::Values(MatDepth(CV_8U),
                     MatDepth(CV_16U),
                     MatDepth(CV_16S),
                     MatDepth(CV_32F)),
+#endif
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1524,10 +1536,14 @@ GPU_TEST_P(Log, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Log, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_32F)),
+#else
     testing::Values(MatDepth(CV_8U),
                     MatDepth(CV_16U),
                     MatDepth(CV_16S),
                     MatDepth(CV_32F)),
+#endif
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1604,10 +1620,14 @@ GPU_TEST_P(Exp, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Exp, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_32F)),
+#else
     testing::Values(MatDepth(CV_8U),
                     MatDepth(CV_16U),
                     MatDepth(CV_16S),
                     MatDepth(CV_32F)),
+#endif
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1778,7 +1798,11 @@ GPU_TEST_P(Compare_Scalar, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Compare_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+#else
     TYPES(CV_8U, CV_64F, 1, 4),
+#endif
     CmpCode::all(),
     WHOLE_SUBMAT));
 
@@ -1939,8 +1963,14 @@ GPU_TEST_P(Bitwise_Scalar, Xor)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Bitwise_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_8U)),
+    testing::Values(Channels(1))
+#else
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32S)),
-    IMAGE_CHANNELS));
+    IMAGE_CHANNELS
+#endif
+));
 
 //////////////////////////////////////////////////////////////////////////////
 // RShift
@@ -2320,7 +2350,11 @@ GPU_TEST_P(Pow, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Pow, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_32F)),
+#else
     ALL_DEPTH,
+#endif
     WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2380,6 +2414,23 @@ GPU_TEST_P(AddWeighted, Accuracy)
     }
 }
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_Core_1, AddWeighted, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatDepth(CV_8U)),
+    testing::Values(MatDepth(CV_8U)),
+    testing::Values(MatDepth(CV_8U)),
+    WHOLE_SUBMAT));
+
+INSTANTIATE_TEST_CASE_P(GPU_Core_2, AddWeighted, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatDepth(CV_32F)),
+    testing::Values(MatDepth(CV_32F)),
+    testing::Values(MatDepth(CV_32F)),
+    WHOLE_SUBMAT));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_Core, AddWeighted, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
@@ -2387,6 +2438,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, AddWeighted, testing::Combine(
     ALL_DEPTH,
     ALL_DEPTH,
     WHOLE_SUBMAT));
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // GEMM
@@ -2956,12 +3008,17 @@ GPU_TEST_P(Norm, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Norm, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_8U),
+                    MatDepth(CV_32F)),
+#else
     testing::Values(MatDepth(CV_8U),
                     MatDepth(CV_8S),
                     MatDepth(CV_16U),
                     MatDepth(CV_16S),
                     MatDepth(CV_32S),
                     MatDepth(CV_32F)),
+#endif
     testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2), NormCode(cv::NORM_INF)),
     WHOLE_SUBMAT));
 
@@ -3139,7 +3196,11 @@ GPU_TEST_P(Sum, Sqr)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Sum, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatType(CV_8UC1), MatType(CV_32FC1)),
+#else
     TYPES(CV_8U, CV_64F, 1, 4),
+#endif
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3513,11 +3574,19 @@ PARAM_TEST_CASE(Reduce, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, Reduc
         type = CV_MAKE_TYPE(depth, channels);
 
         if (reduceOp == CV_REDUCE_MAX || reduceOp == CV_REDUCE_MIN)
+        {
             dst_depth = depth;
+        }
+#ifndef OPENCV_TINY_GPU_MODULE
         else if (reduceOp == CV_REDUCE_SUM)
+        {
             dst_depth = depth == CV_8U ? CV_32S : depth < CV_64F ? CV_32F : depth;
+        }
+#endif
         else
+        {
             dst_depth = depth < CV_32F ? CV_32F : depth;
+        }
 
         dst_type = CV_MAKE_TYPE(dst_depth, channels);
     }
@@ -3556,11 +3625,16 @@ GPU_TEST_P(Reduce, Cols)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Reduce, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+#ifdef OPENCV_TINY_GPU_MODULE
+    testing::Values(MatDepth(CV_8U),
+                    MatDepth(CV_32F)),
+#else
     testing::Values(MatDepth(CV_8U),
                     MatDepth(CV_16U),
                     MatDepth(CV_16S),
                     MatDepth(CV_32F),
                     MatDepth(CV_64F)),
+#endif
     ALL_CHANNELS,
     ALL_REDUCE_CODES,
     WHOLE_SUBMAT));
