@@ -609,7 +609,7 @@ inline int    RHO_HEST_REFC::initialize(void){
     nr.beta     = 0.0;
 
 
-    fastSeed((unsigned)cv::theRNG());
+    fastSeed(~0);
 
 
     int areAllAllocsSuccessful = !mem.perObj.empty();
