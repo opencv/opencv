@@ -94,7 +94,8 @@ public:
                 const CvCascadeParams& _cascadeParams,
                 const CvFeatureParams& _featureParams,
                 const CvCascadeBoostParams& _stageParams,
-                bool baseFormatSave = false );
+                bool baseFormatSave = false,
+                double acceptanceRatioBreakValue = -1.0 );
 private:
     int predict( int sampleIdx );
     void save( const std::string cascadeDirName, bool baseFormat = false );
