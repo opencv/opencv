@@ -126,11 +126,13 @@ class DistAbs
     {
         static inline WT f(double dist, const float *h, WT fixed_point_mult)
         {
+            double w = std::exp(-dist*dist / (h[0]*h[0] * pixelInfo<T>::channels));
+            if (std::isnan(w)) w = 1.0; // Handle h = 0.0
+
             static const double WEIGHT_THRESHOLD = 0.001;
-            WT weight = (WT)round(fixed_point_mult *
-                                  std::exp(-dist*dist / (h[0]*h[0] * pixelInfo<T>::channels)));
-            if (weight < WEIGHT_THRESHOLD * fixed_point_mult)
-                weight = 0;
+            WT weight = (WT)round(fixed_point_mult * w);
+            if (weight < WEIGHT_THRESHOLD * fixed_point_mult) weight = 0;
+
             return weight;
         }
     };
@@ -167,7 +169,8 @@ public:
     };
 
     template <typename T, typename WT>
-    static inline WT calcWeight(double dist, const float *h, int fixed_point_mult)
+    static inline WT calcWeight(double dist, const float *h,
+                                typename pixelInfo<WT>::sampleType fixed_point_mult)
     {
         return calcWeight_<T, WT>::f(dist, h, fixed_point_mult);
     }
@@ -243,20 +246,22 @@ class DistSquared
 
     template <typename T, typename WT> struct calcWeight_
     {
-        static inline WT f(double dist, const float *h, int fixed_point_mult)
+        static inline WT f(double dist, const float *h, WT fixed_point_mult)
         {
+            double w = std::exp(-dist / (h[0]*h[0] * pixelInfo<T>::channels));
+            if (std::isnan(w)) w = 1.0; // Handle h = 0.0
+
             static const double WEIGHT_THRESHOLD = 0.001;
-            WT weight = (WT)round(fixed_point_mult *
-                                  std::exp(-dist / (h[0]*h[0] * pixelInfo<T>::channels)));
-            if (weight < WEIGHT_THRESHOLD * fixed_point_mult)
-                weight = 0;
+            WT weight = (WT)round(fixed_point_mult * w);
+            if (weight < WEIGHT_THRESHOLD * fixed_point_mult) weight = 0;
+
             return weight;
         }
     };
 
     template <typename T, typename ET, int n> struct calcWeight_<T, Vec<ET, n> >
     {
-        static inline Vec<ET, n> f(double dist, const float *h, int fixed_point_mult)
+        static inline Vec<ET, n> f(double dist, const float *h, ET fixed_point_mult)
         {
             Vec<ET, n> res;
             for (int i=0; i<n; i++)
@@ -286,7 +291,8 @@ public:
     };
 
     template <typename T, typename WT>
-    static inline WT calcWeight(double dist, const float *h, int fixed_point_mult)
+    static inline WT calcWeight(double dist, const float *h,
+                                typename pixelInfo<WT>::sampleType fixed_point_mult)
     {
         return calcWeight_<T, WT>::f(dist, h, fixed_point_mult);
     }
