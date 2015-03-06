@@ -35,7 +35,7 @@ unset(IPP_VERSION_MINOR)
 unset(IPP_VERSION_BUILD)
 
 if (X86 AND UNIX AND NOT APPLE AND NOT ANDROID AND BUILD_SHARED_LIBS)
-    message(STATUS "On 32-bit Linux IPP can not currently be used with dynamic libs. Set BUILD_SHARED_LIBS=OFF")
+    message(STATUS "On 32-bit Linux IPP can not currently be used with dynamic libs because of linker errors. Set BUILD_SHARED_LIBS=OFF")
     return()
 endif()
 
