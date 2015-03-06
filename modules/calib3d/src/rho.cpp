@@ -609,7 +609,7 @@ inline int    RHO_HEST_REFC::initialize(void){
     nr.beta     = 0.0;
 
 
-    fastSeed(~0);
+    fastSeed((uint64_t)~0);
 
 
     int areAllAllocsSuccessful = !mem.perObj.empty();
