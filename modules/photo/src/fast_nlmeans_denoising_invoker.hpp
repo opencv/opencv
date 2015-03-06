@@ -75,7 +75,7 @@ private:
     int template_window_half_size_;
     int search_window_half_size_;
 
-    int fixed_point_mult_;
+    typename pixelInfo<WT>::sampleType fixed_point_mult_;
     int almost_template_window_size_sq_bin_shift_;
     std::vector<WT> almost_dist2weight_;
 
@@ -120,7 +120,7 @@ FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::FastNlMeansDenoisingInvoker(
     const IT max_estimate_sum_value =
         (IT)search_window_size_ * (IT)search_window_size_ * (IT)pixelInfo<T>::sampleMax();
     fixed_point_mult_ = (int)std::min<IT>(std::numeric_limits<IT>::max() / max_estimate_sum_value,
-                                          std::numeric_limits<int>::max());
+                                          pixelInfo<WT>::sampleMax());
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
@@ -223,9 +223,11 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& ra
             }
 
             // calc weights
-            IT estimation[pixelInfo<T>::channels], weights_sum[pixelInfo<T>::channels];
+            IT estimation[pixelInfo<T>::channels], weights_sum[pixelInfo<WT>::channels];
             for (size_t channel_num = 0; channel_num < pixelInfo<T>::channels; channel_num++)
-                estimation[channel_num] = weights_sum[channel_num] = 0;
+                estimation[channel_num] = 0;
+            for (size_t channel_num = 0; channel_num < pixelInfo<WT>::channels; channel_num++)
+                weights_sum[channel_num] = 0;
 
             for (int y = 0; y < search_window_size_; y++)
             {
@@ -240,11 +242,8 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& ra
                 }
             }
 
-            for (size_t channel_num = 0; channel_num < pixelInfo<T>::channels; channel_num++)
-                estimation[channel_num] =
-                    (static_cast<UIT>(estimation[channel_num]) + weights_sum[channel_num]/2) /
-                    weights_sum[channel_num];
-
+            divByWeightsSum<IT, UIT, pixelInfo<T>::channels, pixelInfo<WT>::channels>(estimation,
+                                                                                      weights_sum);
             dst_.at<T>(i,j) = saturateCastFromArray<T, IT>(estimation);
         }
     }

@@ -122,11 +122,11 @@ class DistAbs
         }
     };
 
-    static const double WEIGHT_THRESHOLD = 0.001;
     template <typename T, typename WT> struct calcWeight_
     {
-        static inline WT f(double dist, const float *h, int fixed_point_mult)
+        static inline WT f(double dist, const float *h, WT fixed_point_mult)
         {
+            static const double WEIGHT_THRESHOLD = 0.001;
             WT weight = (WT)round(fixed_point_mult *
                                   std::exp(-dist*dist / (h[0]*h[0] * pixelInfo<T>::channels)));
             if (weight < WEIGHT_THRESHOLD * fixed_point_mult)
@@ -137,17 +137,11 @@ class DistAbs
 
     template <typename T, typename ET, int n> struct calcWeight_<T, Vec<ET, n> >
     {
-        static inline Vec<ET, n> f(double dist, const float *h, int fixed_point_mult)
+        static inline Vec<ET, n> f(double dist, const float *h, ET fixed_point_mult)
         {
             Vec<ET, n> res;
             for (int i=0; i<n; i++)
-            {
-                ET weight = (ET)round(fixed_point_mult *
-                                      std::exp(-dist*dist / (h[i]*h[i] * pixelInfo<T>::channels)));
-                if (weight < WEIGHT_THRESHOLD * fixed_point_mult)
-                    weight = 0;
-                res[i] = weight;
-            }
+                res[i] = calcWeight<T, ET>(dist, &h[i], fixed_point_mult);
             return res;
         }
     };
@@ -247,11 +241,11 @@ class DistSquared
         }
     };
 
-    static const double WEIGHT_THRESHOLD = 0.001;
     template <typename T, typename WT> struct calcWeight_
     {
         static inline WT f(double dist, const float *h, int fixed_point_mult)
         {
+            static const double WEIGHT_THRESHOLD = 0.001;
             WT weight = (WT)round(fixed_point_mult *
                                   std::exp(-dist / (h[0]*h[0] * pixelInfo<T>::channels)));
             if (weight < WEIGHT_THRESHOLD * fixed_point_mult)
@@ -266,13 +260,7 @@ class DistSquared
         {
             Vec<ET, n> res;
             for (int i=0; i<n; i++)
-            {
-                ET weight = (ET)round(fixed_point_mult *
-                                      std::exp(-dist / (h[i]*h[i] * pixelInfo<T>::channels)));
-                if (weight < WEIGHT_THRESHOLD * fixed_point_mult)
-                    weight = 0;
-                res[i] = weight;
-            }
+                res[i] = calcWeight<T, ET>(dist, &h[i], fixed_point_mult);
             return res;
         }
     };
@@ -320,48 +308,42 @@ template <typename T, typename IT, typename WT> struct incWithWeight_
     }
 };
 
-template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 2>, IT, int>
+template <typename ET, typename IT, typename WT> struct incWithWeight_<Vec<ET, 2>, IT, WT>
 {
-    static inline void f(IT* estimation, IT* weights_sum, int weight, Vec<ET, 2> p)
+    static inline void f(IT* estimation, IT* weights_sum, WT weight, Vec<ET, 2> p)
     {
         estimation[0] += (IT)weight * p[0];
         estimation[1] += (IT)weight * p[1];
         weights_sum[0] += (IT)weight;
-        weights_sum[1] += (IT)weight;
     }
 };
 
-template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 3>, IT, int>
+template <typename ET, typename IT, typename WT> struct incWithWeight_<Vec<ET, 3>, IT, WT>
 {
-    static inline void f(IT* estimation, IT* weights_sum, int weight, Vec<ET, 3> p)
+    static inline void f(IT* estimation, IT* weights_sum, WT weight, Vec<ET, 3> p)
     {
         estimation[0] += (IT)weight * p[0];
         estimation[1] += (IT)weight * p[1];
         estimation[2] += (IT)weight * p[2];
         weights_sum[0] += (IT)weight;
-        weights_sum[1] += (IT)weight;
-        weights_sum[2] += (IT)weight;
     }
 };
 
-template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 4>, IT, int>
+template <typename ET, typename IT, typename WT> struct incWithWeight_<Vec<ET, 4>, IT, WT>
 {
-    static inline void f(IT* estimation, IT* weights_sum, int weight, Vec<ET, 4> p)
+    static inline void f(IT* estimation, IT* weights_sum, WT weight, Vec<ET, 4> p)
     {
         estimation[0] += (IT)weight * p[0];
         estimation[1] += (IT)weight * p[1];
         estimation[2] += (IT)weight * p[2];
         estimation[3] += (IT)weight * p[3];
         weights_sum[0] += (IT)weight;
-        weights_sum[1] += (IT)weight;
-        weights_sum[2] += (IT)weight;
-        weights_sum[3] += (IT)weight;
     }
 };
 
-template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 2>, IT, Vec<int, 2> >
+template <typename ET, typename IT, typename EW> struct incWithWeight_<Vec<ET, 2>, IT, Vec<EW, 2> >
 {
-    static inline void f(IT* estimation, IT* weights_sum, Vec<int, 2> weight, Vec<ET, 2> p)
+    static inline void f(IT* estimation, IT* weights_sum, Vec<EW, 2> weight, Vec<ET, 2> p)
     {
         estimation[0] += (IT)weight[0] * p[0];
         estimation[1] += (IT)weight[1] * p[1];
@@ -370,9 +352,9 @@ template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 2>, IT, Vec<in
     }
 };
 
-template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 3>, IT, Vec<int, 3> >
+template <typename ET, typename IT, typename EW> struct incWithWeight_<Vec<ET, 3>, IT, Vec<EW, 3> >
 {
-    static inline void f(IT* estimation, IT* weights_sum, Vec<int, 3> weight, Vec<ET, 3> p)
+    static inline void f(IT* estimation, IT* weights_sum, Vec<EW, 3> weight, Vec<ET, 3> p)
     {
         estimation[0] += (IT)weight[0] * p[0];
         estimation[1] += (IT)weight[1] * p[1];
@@ -383,9 +365,9 @@ template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 3>, IT, Vec<in
     }
 };
 
-template <typename ET, typename IT> struct incWithWeight_<Vec<ET, 4>, IT, Vec<int, 4> >
+template <typename ET, typename IT, typename EW> struct incWithWeight_<Vec<ET, 4>, IT, Vec<EW, 4> >
 {
-    static inline void f(IT* estimation, IT* weights_sum, Vec<int, 4> weight, Vec<ET, 4> p)
+    static inline void f(IT* estimation, IT* weights_sum, Vec<EW, 4> weight, Vec<ET, 4> p)
     {
         estimation[0] += (IT)weight[0] * p[0];
         estimation[1] += (IT)weight[1] * p[1];
@@ -402,6 +384,43 @@ template <typename T, typename IT, typename WT>
 static inline void incWithWeight(IT* estimation, IT* weights_sum, IT weight, T p)
 {
     return incWithWeight_<T, IT, WT>::f(estimation, weights_sum, weight, p);
+}
+
+template <typename IT, typename UIT, int nc, int nw> struct divByWeightsSum_
+{
+    static inline void f(IT* estimation, IT* weights_sum);
+};
+
+template <typename IT, typename UIT> struct divByWeightsSum_<IT, UIT, 1, 1>
+{
+    static inline void f(IT* estimation, IT* weights_sum)
+    {
+        estimation[0] = (static_cast<UIT>(estimation[0]) + weights_sum[0]/2) / weights_sum[0];
+    }
+};
+
+template <typename IT, typename UIT, int n> struct divByWeightsSum_<IT, UIT, n, 1>
+{
+    static inline void f(IT* estimation, IT* weights_sum)
+    {
+        for (size_t i = 0; i < n; i++)
+            estimation[i] = (static_cast<UIT>(estimation[i]) + weights_sum[0]/2) / weights_sum[0];
+    }
+};
+
+template <typename IT, typename UIT, int n> struct divByWeightsSum_<IT, UIT, n, n>
+{
+    static inline void f(IT* estimation, IT* weights_sum)
+    {
+        for (size_t i = 0; i < n; i++)
+            estimation[i] = (static_cast<UIT>(estimation[i]) + weights_sum[i]/2) / weights_sum[i];
+    }
+};
+
+template <typename IT, typename UIT, int nc, int nw>
+static inline void divByWeightsSum(IT* estimation, IT* weights_sum)
+{
+    return divByWeightsSum_<IT, UIT, nc, nw>::f(estimation, weights_sum);
 }
 
 template <typename T, typename IT> struct saturateCastFromArray_
