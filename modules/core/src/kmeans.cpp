@@ -180,10 +180,9 @@ public:
         const int K = centers.rows;
         const int dims = centers.cols;
 
-        const float *sample;
         for( int i = begin; i<end; ++i)
         {
-            sample = data.ptr<float>(i);
+            const float *sample = data.ptr<float>(i);
             int k_best = 0;
             double min_dist = DBL_MAX;
 
