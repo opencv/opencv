@@ -156,6 +156,8 @@ CV_IMPL int cvInitSystem( int , char** )
     //[application finishLaunching];
     //atexit(icvCocoaCleanup);
 
+    setlocale(LC_NUMERIC,"C");
+
     return 0;
 }
 
