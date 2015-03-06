@@ -236,7 +236,7 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& ra
                 for (int x = 0; x < search_window_size_; x++)
                 {
                     int almostAvgDist = dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_;
-                    int weight = almost_dist2weight_[almostAvgDist];
+                    WT weight = almost_dist2weight_[almostAvgDist];
                     T p = cur_row_ptr[border_size_ + search_window_x + x];
                     incWithWeight<T, IT, WT>(estimation, weights_sum, weight, p);
                 }
