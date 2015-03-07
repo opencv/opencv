@@ -1221,7 +1221,22 @@ CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
                              bool normalize = true,
                              int borderType = BORDER_DEFAULT );
 
-/** @todo document
+/** @brief Calculates the normalized sum of squares of the pixel values overlapping the filter.
+
+For every pixel \f$ (x, y) \f$ in the source image, the function calculates the sum of squares of those neighboring
+pixel values which overlap the filter placed over the pixel \f$ (x, y) \f$.
+
+The unnormalized square box filter can be useful in computing local image statistics such as the the local
+variance and standard deviation around the neighborhood of a pixel.
+
+@param _src input image
+@param _dst output image of the same size and type as _src
+@param ddepth the output image depth (-1 to use src.depth())
+@param ksize kernel size
+@param anchor kernel anchor point. The default value of Point(-1, -1) denotes that the anchor is at the kernel
+center.
+@param normalize flag, specifying whether the kernel is to be normalized by it's area or not.
+@param borderType border mode used to extrapolate pixels outside of the image, see cv::BorderTypes
 @sa boxFilter
 */
 CV_EXPORTS_W void sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,

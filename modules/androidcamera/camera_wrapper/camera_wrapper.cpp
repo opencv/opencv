@@ -1047,14 +1047,14 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
         return;
     }
 
+    CameraHandler* handler=*ppcameraHandler;
     // delayed resolution setup to exclude errors during other parameres setup on the fly
     // without camera restart
-    if (((*ppcameraHandler)->width != 0) && ((*ppcameraHandler)->height != 0))
-        (*ppcameraHandler)->params->setPreviewSize((*ppcameraHandler)->width, (*ppcameraHandler)->height);
+    if ((handler->width != 0) && (handler->height != 0))
+        handler->params->setPreviewSize(handler->width, handler->height);
 
 #if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) \
  || defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
-    CameraHandler* handler=*ppcameraHandler;
 
     handler->camera->stopPreview();
     handler->camera->setPreviewCallbackFlags(CAMERA_FRAME_CALLBACK_FLAG_NOOP);
@@ -1066,7 +1066,7 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
         return;
     }
 
-    handler->camera->setParameters((*ppcameraHandler)->params->flatten());
+    handler->camera->setParameters(handler->params->flatten());
 
     status_t bufferStatus;
 # if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
@@ -1107,7 +1107,7 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
         LOGD("Preview started successfully");
     }
 #else
-    CameraHandler* previousCameraHandler=*ppcameraHandler;
+    CameraHandler* previousCameraHandler=handler;
     CameraCallback cameraCallback=previousCameraHandler->cameraCallback;
     void* userData=previousCameraHandler->userData;
     int cameraId=previousCameraHandler->cameraId;
@@ -1117,7 +1117,7 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
     LOGD("CameraHandler::applyProperties(): after previousCameraHandler->closeCameraConnect");
 
     LOGD("CameraHandler::applyProperties(): before initCameraConnect");
-    CameraHandler* handler=initCameraConnect(cameraCallback, cameraId, userData, (*ppcameraHandler)->params);
+    handler=initCameraConnect(cameraCallback, cameraId, userData, handler->params);
     LOGD("CameraHandler::applyProperties(): after initCameraConnect, handler=0x%x", (int)handler);
     if (handler == NULL) {
         LOGE("ERROR in applyProperties --- cannot reinit camera");

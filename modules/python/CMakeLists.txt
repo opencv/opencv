@@ -9,7 +9,7 @@ if((WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
   ocv_module_disable(python3)
 endif()
 
-if(ANDROID OR IOS)
+if(ANDROID OR IOS OR WINRT)
   ocv_module_disable(python2)
   ocv_module_disable(python3)
 endif()

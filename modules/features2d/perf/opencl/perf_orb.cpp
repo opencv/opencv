@@ -61,6 +61,12 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Full, ORB_IMAGES)
     string filename = getDataPath(GetParam());
     Mat mframe = imread(filename, IMREAD_GRAYSCALE);
 
+    double desc_eps = 1e-6;
+#ifdef ANDROID
+    if (cv::ocl::Device::getDefault().isNVidia())
+        desc_eps = 2;
+#endif
+
     if (mframe.empty())
         FAIL() << "Unable to load source image " << filename;
 
@@ -77,7 +83,7 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Full, ORB_IMAGES)
 
     ::perf::sort(points, descriptors);
     SANITY_CHECK_KEYPOINTS(points, 1e-5);
-    SANITY_CHECK(descriptors);
+    SANITY_CHECK(descriptors, desc_eps);
 }
 
 } // ocl

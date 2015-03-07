@@ -2966,6 +2966,11 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
                                    double sigma_color, double sigma_space,
                                    int borderType)
 {
+#ifdef ANDROID
+    if (ocl::Device::getDefault().isNVidia())
+        return false;
+#endif
+
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int i, j, maxk, radius;
 
