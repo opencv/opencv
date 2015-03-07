@@ -128,7 +128,7 @@ OCL_TEST_P(CvtColor, BGR2GRAY) { performTest(3, 1, CVTCODE(BGR2GRAY)); }
 OCL_TEST_P(CvtColor, GRAY2BGR) { performTest(1, 3, CVTCODE(GRAY2BGR)); }
 OCL_TEST_P(CvtColor, RGBA2GRAY) { performTest(4, 1, CVTCODE(RGBA2GRAY)); }
 OCL_TEST_P(CvtColor, GRAY2RGBA) { performTest(1, 4, CVTCODE(GRAY2RGBA)); }
-OCL_TEST_P(CvtColor, BGRA2GRAY) { performTest(4, 1, CVTCODE(BGRA2GRAY)); }
+OCL_TEST_P(CvtColor, BGRA2GRAY) { performTest(4, 1, CVTCODE(BGRA2GRAY), cv::ocl::Device::getDefault().isNVidia() ? 1 : 1e-3); }
 OCL_TEST_P(CvtColor, GRAY2BGRA) { performTest(1, 4, CVTCODE(GRAY2BGRA)); }
 
 // RGB <-> YUV

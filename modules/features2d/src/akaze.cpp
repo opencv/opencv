@@ -172,7 +172,14 @@ namespace cv
                 cvtColor(image, img, COLOR_BGR2GRAY);
 
             Mat img1_32;
-            img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
+            if ( img.depth() == CV_32F )
+                img1_32 = img;
+            else if ( img.depth() == CV_8U )
+                img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
+            else if ( img.depth() == CV_16U )
+                img.convertTo(img1_32, CV_32F, 1.0 / 65535.0, 0);
+
+            CV_Assert( ! img1_32.empty() );
 
             AKAZEOptions options;
             options.descriptor = descriptor;

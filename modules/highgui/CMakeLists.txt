@@ -1,3 +1,7 @@
+if (WINRT)
+  ocv_module_disable(highgui)
+endif()
+
 set(the_description "High-level GUI and Media I/O")
 ocv_add_module(highgui opencv_imgproc opencv_imgcodecs opencv_videoio OPTIONAL opencv_androidcamera WRAP python)
 
@@ -7,7 +11,8 @@ ocv_add_module(highgui opencv_imgproc opencv_imgcodecs opencv_videoio OPTIONAL o
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-if(HAVE_WINRT_CX)
+# Compilation with /ZW is not allowed for *.c files
+if(HAVE_WINRT_CX AND NOT WINRT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
