@@ -52,7 +52,7 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
                          templateWindowSize, searchWindowSize);
 }
 
-void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, std::vector<float> h,
+void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, const std::vector<float>& h,
                                int templateWindowSize, int searchWindowSize)
 {
     int hn = h.size();
@@ -123,7 +123,7 @@ void cv::fastNlMeansDenoisingAbs( InputArray _src, OutputArray _dst, float h,
                             templateWindowSize, searchWindowSize);
 }
 
-void cv::fastNlMeansDenoisingAbs( InputArray _src, OutputArray _dst, std::vector<float> h,
+void cv::fastNlMeansDenoisingAbs( InputArray _src, OutputArray _dst, const std::vector<float>& h,
                                   int  templateWindowSize, int searchWindowSize)
 {
     int hn = h.size();
@@ -299,7 +299,7 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
 
 void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _dst,
                                     int imgToDenoiseIndex, int temporalWindowSize,
-                                    std::vector<float> h,
+                                    const std::vector<float>& h,
                                     int templateWindowSize, int searchWindowSize)
 {
     std::vector<Mat> srcImgs;
@@ -375,7 +375,7 @@ void cv::fastNlMeansDenoisingMultiAbs( InputArrayOfArrays _srcImgs, OutputArray 
 
 void cv::fastNlMeansDenoisingMultiAbs( InputArrayOfArrays _srcImgs, OutputArray _dst,
                                        int imgToDenoiseIndex, int temporalWindowSize,
-                                       std::vector<float> h,
+                                       const std::vector<float>& h,
                                        int templateWindowSize, int searchWindowSize)
 {
     std::vector<Mat> srcImgs;

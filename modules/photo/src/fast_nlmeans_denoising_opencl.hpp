@@ -29,7 +29,7 @@ static int divUp(int a, int b)
 }
 
 template <typename FT, typename ST, typename WT>
-static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindowSize, int templateWindowSize, FT *h, int hn, int cn,
+static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindowSize, int templateWindowSize, const FT *h, int hn, int cn,
                                       int & almostTemplateWindowSizeSqBinShift, bool abs)
 {
     const WT maxEstimateSumValue = searchWindowSize * searchWindowSize *
@@ -78,7 +78,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
     return k.run(1, globalsize, NULL, false);
 }
 
-static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float *h, int hn,
+static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, const float *h, int hn,
                                      int templateWindowSize, int searchWindowSize, bool abs)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
