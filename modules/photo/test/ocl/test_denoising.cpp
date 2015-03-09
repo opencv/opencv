@@ -16,7 +16,7 @@ namespace ocl {
 PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool, bool)
 {
     int cn, templateWindowSize, searchWindowSize;
-    float h[4];
+    std::vector<float> h;
     bool use_roi, use_image;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -31,7 +31,7 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool, bool)
         templateWindowSize = 7;
         searchWindowSize = 21;
 
-        ASSERT_TRUE(cn > 0 && cn <= 4);
+        h.resize(cn);
         for (int i=0; i<cn; i++)
             h[i] = 3.0f + 0.5f*i;
     }
@@ -51,6 +51,7 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool, bool)
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, 0, 255);
         if (use_image) {
+            ASSERT_TRUE(cn > 0 && cn <= 4);
             if (cn == 2) {
                 int from_to[] = { 0,0, 1,1 };
                 src_roi.create(roiSize, type);
