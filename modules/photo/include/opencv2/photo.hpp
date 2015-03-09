@@ -149,10 +149,10 @@ Should be odd. Recommended value 7 pixels
 @param searchWindowSize Size in pixels of the window that is used to compute weighted average for
 given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater
 denoising time. Recommended value 21 pixels
-@param h Array of parameters regulating filter strength, one per
-channel. Big h value perfectly removes noise but also removes image
-details, smaller h value preserves details but also preserves some
-noise
+@param h Array of parameters regulating filter strength, either one
+parameter applied to all channels or one per channel in src. Big h value
+perfectly removes noise but also removes image details, smaller h
+value preserves details but also preserves some noise
 
 This function expected to be applied to grayscale images. For colored images look at
 fastNlMeansDenoisingColored. Advanced usage of this functions can be manual denoising of colored
@@ -160,7 +160,7 @@ image in different colorspaces. Such approach is used in fastNlMeansDenoisingCol
 image to CIELAB colorspace and then separately denoise L and AB components with different h
 parameter.
  */
-CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, float *h,
+CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, std::vector<float> h,
         int templateWindowSize = 7, int searchWindowSize = 21);
 
 /** @brief Perform image denoising using Non-local Means Denoising
@@ -201,10 +201,10 @@ Should be odd. Recommended value 7 pixels
 @param searchWindowSize Size in pixels of the window that is used to compute weighted average for
 given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater
 denoising time. Recommended value 21 pixels
-@param h Array of parameters regulating filter strength, one per
-channel. Big h value perfectly removes noise but also removes image
-details, smaller h value preserves details but also preserves some
-noise
+@param h Array of parameters regulating filter strength, either one
+parameter applied to all channels or one per channel in src. Big h value
+perfectly removes noise but also removes image details, smaller h
+value preserves details but also preserves some noise
 
 This function expected to be applied to grayscale images. For colored images look at
 fastNlMeansDenoisingColored. Advanced usage of this functions can be manual denoising of colored
@@ -212,7 +212,7 @@ image in different colorspaces. Such approach is used in fastNlMeansDenoisingCol
 image to CIELAB colorspace and then separately denoise L and AB components with different h
 parameter.
  */
-CV_EXPORTS_W void fastNlMeansDenoisingAbs( InputArray src, OutputArray dst, float *h,
+CV_EXPORTS_W void fastNlMeansDenoisingAbs( InputArray src, OutputArray dst, std::vector<float> h,
         int templateWindowSize = 7, int searchWindowSize = 21);
 
 /** @brief Modification of fastNlMeansDenoising function for colored images
@@ -283,14 +283,14 @@ Should be odd. Recommended value 7 pixels
 @param searchWindowSize Size in pixels of the window that is used to compute weighted average for
 given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater
 denoising time. Recommended value 21 pixels
-@param h Array of parameters regulating filter strength, one for each
-channel. Bigger h value perfectly removes noise but also removes image
-details, smaller h value preserves details but also preserves some
-noise
+@param h Array of parameters regulating filter strength, either one
+parameter applied to all channels or one per channel in src. Big h value
+perfectly removes noise but also removes image details, smaller h
+value preserves details but also preserves some noise
  */
 CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputArray dst,
         int imgToDenoiseIndex, int temporalWindowSize,
-        float *h , int templateWindowSize = 7, int searchWindowSize = 21);
+        std::vector<float> h , int templateWindowSize = 7, int searchWindowSize = 21);
 
 /** @brief Modification of fastNlMeansDenoising function for images
 sequence where consequtive images have been captured in small period
@@ -346,14 +346,14 @@ Should be odd. Recommended value 7 pixels
 @param searchWindowSize Size in pixels of the window that is used to compute weighted average for
 given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater
 denoising time. Recommended value 21 pixels
-@param h Array of parameters regulating filter strength, one for each
-channel. Bigger h value perfectly removes noise but also removes image
-details, smaller h value preserves details but also preserves some
-noise
+@param h Array of parameters regulating filter strength, either one
+parameter applied to all channels or one per channel in src. Big h value
+perfectly removes noise but also removes image details, smaller h
+value preserves details but also preserves some noise
  */
 CV_EXPORTS_W void fastNlMeansDenoisingMultiAbs( InputArrayOfArrays srcImgs, OutputArray dst,
         int imgToDenoiseIndex, int temporalWindowSize,
-        float *h, int templateWindowSize = 7, int searchWindowSize = 21);
+        std::vector<float> h, int templateWindowSize = 7, int searchWindowSize = 21);
 
 /** @brief Modification of fastNlMeansDenoisingMulti function for colored images sequences
 
