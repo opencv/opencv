@@ -1,5 +1,9 @@
+if(WINRT)
+  ocv_module_disable(imgcodecs)
+endif()
+
 set(the_description "Image codecs")
-ocv_add_module(imgcodecs opencv_imgproc)
+ocv_add_module(imgcodecs opencv_imgproc WRAP java python)
 
 # ----------------------------------------------------------------------------
 #  CMake file for imgcodecs. See root CMakeLists.txt
@@ -9,7 +13,7 @@ ocv_add_module(imgcodecs opencv_imgproc)
 
 ocv_clear_vars(GRFMT_LIBS)
 
-if(HAVE_WINRT_CX)
+if(HAVE_WINRT_CX AND NOT WINRT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 

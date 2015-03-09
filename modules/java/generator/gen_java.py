@@ -714,6 +714,8 @@ T_CPP_MODULE = """
 
 #include "opencv2/$m.hpp"
 
+$includes
+
 using namespace cv;
 
 /// throw java exception
@@ -1081,11 +1083,14 @@ class JavaWrapperGenerator(object):
         self.add_class( ['class ' + self.Module, '', [], []] ) # [ 'class/struct cname', ':bases', [modlist] [props] ]
 
         # scan the headers and build more descriptive maps of classes, consts, functions
+        includes = [];
         for hdr in srcfiles:
             decls = parser.parse(hdr)
             self.namespaces = parser.namespaces
             logging.info("\n\n===== Header: %s =====", hdr)
             logging.info("Namespaces: %s", parser.namespaces)
+            if decls:
+                includes.append('#include "' + hdr + '"')
             for decl in decls:
                 logging.info("\n--- Incoming ---\n%s", pformat(decl, 4))
                 name = decl[0]
@@ -1107,7 +1112,7 @@ class JavaWrapperGenerator(object):
             self.save("%s/%s+%s.java" % (output_path, module, ci.jname), classJavaCode)
             moduleCppCode.write(ci.generateCppCode())
             ci.cleanupCodeStreams()
-        self.save(output_path+"/"+module+".cpp", Template(T_CPP_MODULE).substitute(m = module, M = module.upper(), code = moduleCppCode.getvalue()))
+        self.save(output_path+"/"+module+".cpp", Template(T_CPP_MODULE).substitute(m = module, M = module.upper(), code = moduleCppCode.getvalue(), includes = "\n".join(includes)))
         self.save(output_path+"/"+module+".txt", self.makeReport())
 
     def makeReport(self):

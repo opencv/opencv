@@ -60,20 +60,68 @@ namespace cv
             virtual void collectGarbage() = 0;
         };
 
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_Farneback();
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_Farneback_CUDA();
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_Farneback_OCL();
 
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_Simple();
+        class CV_EXPORTS FarnebackOpticalFlow : public virtual DenseOpticalFlowExt
+        {
+        public:
+            CV_PURE_PROPERTY(double, PyrScale)
+            CV_PURE_PROPERTY(int, LevelsNumber)
+            CV_PURE_PROPERTY(int, WindowSize)
+            CV_PURE_PROPERTY(int, Iterations)
+            CV_PURE_PROPERTY(int, PolyN)
+            CV_PURE_PROPERTY(double, PolySigma)
+            CV_PURE_PROPERTY(int, Flags)
+        };
+        CV_EXPORTS Ptr<FarnebackOpticalFlow> createOptFlow_Farneback();
+        CV_EXPORTS Ptr<FarnebackOpticalFlow> createOptFlow_Farneback_CUDA();
 
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_DualTVL1();
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_DualTVL1_CUDA();
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_DualTVL1_OCL();
 
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_Brox_CUDA();
+//        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_Simple();
 
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_PyrLK_CUDA();
-        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_PyrLK_OCL();
+
+        class CV_EXPORTS DualTVL1OpticalFlow : public virtual DenseOpticalFlowExt
+        {
+        public:
+            CV_PURE_PROPERTY(double, Tau)
+            CV_PURE_PROPERTY(double, Lambda)
+            CV_PURE_PROPERTY(double, Theta)
+            CV_PURE_PROPERTY(int, ScalesNumber)
+            CV_PURE_PROPERTY(int, WarpingsNumber)
+            CV_PURE_PROPERTY(double, Epsilon)
+            CV_PURE_PROPERTY(int, Iterations)
+            CV_PURE_PROPERTY(bool, UseInitialFlow)
+        };
+        CV_EXPORTS Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1();
+        CV_EXPORTS Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1_CUDA();
+
+
+        class CV_EXPORTS BroxOpticalFlow : public virtual DenseOpticalFlowExt
+        {
+        public:
+            //! @brief Flow smoothness
+            CV_PURE_PROPERTY(double, Alpha)
+            //! @brief Gradient constancy importance
+            CV_PURE_PROPERTY(double, Gamma)
+            //! @brief Pyramid scale factor
+            CV_PURE_PROPERTY(double, ScaleFactor)
+            //! @brief Number of lagged non-linearity iterations (inner loop)
+            CV_PURE_PROPERTY(int, InnerIterations)
+            //! @brief Number of warping iterations (number of pyramid levels)
+            CV_PURE_PROPERTY(int, OuterIterations)
+            //! @brief Number of linear system solver iterations
+            CV_PURE_PROPERTY(int, SolverIterations)
+        };
+        CV_EXPORTS Ptr<BroxOpticalFlow> createOptFlow_Brox_CUDA();
+
+
+        class PyrLKOpticalFlow : public virtual DenseOpticalFlowExt
+        {
+        public:
+            CV_PURE_PROPERTY(int, WindowSize)
+            CV_PURE_PROPERTY(int, MaxLevel)
+            CV_PURE_PROPERTY(int, Iterations)
+        };
+        CV_EXPORTS Ptr<PyrLKOpticalFlow> createOptFlow_PyrLK_CUDA();
 
 //! @}
 

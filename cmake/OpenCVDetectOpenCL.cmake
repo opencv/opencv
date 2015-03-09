@@ -10,6 +10,11 @@ else(APPLE)
   set(OPENCL_INCLUDE_DIR "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/1.2")
 endif(APPLE)
 
+if(WINRT)
+  set(OPENCL_FOUND NO)
+  set(HAVE_OPENCL_STATIC OFF)
+endif(WINRT)
+
 if(OPENCL_FOUND)
   if(NOT HAVE_OPENCL_STATIC)
     try_compile(__VALID_OPENCL
@@ -24,7 +29,9 @@ if(OPENCL_FOUND)
     endif()
   endif()
 
-  set(HAVE_OPENCL 1)
+  if(NOT WINRT)
+    set(HAVE_OPENCL 1)
+  endif()
 
   if(WITH_OPENCL_SVM)
     set(HAVE_OPENCL_SVM 1)

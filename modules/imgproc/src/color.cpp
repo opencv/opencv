@@ -6128,7 +6128,7 @@ struct YUV420sp2RGB888Invoker : ParallelLoopBody
         const uchar* y1 = my1 + rangeBegin * stride, *uv = muv + rangeBegin * stride / 2;
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-        if(tegra::cvtYUV4202RGB(bIdx, uIdx, 3, y1, uv, stride, dst->ptr<uchar>(rangeBegin), dst->step, rangeEnd - rangeBegin, dst->cols))
+        if(tegra::useTegra() && tegra::cvtYUV4202RGB(bIdx, uIdx, 3, y1, uv, stride, dst->ptr<uchar>(rangeBegin), dst->step, rangeEnd - rangeBegin, dst->cols))
             return;
 #endif
 
@@ -6197,7 +6197,7 @@ struct YUV420sp2RGBA8888Invoker : ParallelLoopBody
         const uchar* y1 = my1 + rangeBegin * stride, *uv = muv + rangeBegin * stride / 2;
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-        if(tegra::cvtYUV4202RGB(bIdx, uIdx, 4, y1, uv, stride, dst->ptr<uchar>(rangeBegin), dst->step, rangeEnd - rangeBegin, dst->cols))
+        if(tegra::useTegra() && tegra::cvtYUV4202RGB(bIdx, uIdx, 4, y1, uv, stride, dst->ptr<uchar>(rangeBegin), dst->step, rangeEnd - rangeBegin, dst->cols))
             return;
 #endif
 
@@ -7418,9 +7418,10 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             if( depth == CV_8U )
             {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-                if(!tegra::cvtBGR2RGB(src, dst, bidx))
+                if(tegra::useTegra() && tegra::cvtBGR2RGB(src, dst, bidx))
+                    break;
 #endif
-                    CvtColorLoop(src, dst, RGB2RGB<uchar>(scn, dcn, bidx));
+                CvtColorLoop(src, dst, RGB2RGB<uchar>(scn, dcn, bidx));
             }
             else if( depth == CV_16U )
                 CvtColorLoop(src, dst, RGB2RGB<ushort>(scn, dcn, bidx));
@@ -7485,7 +7486,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
             if(code == CV_BGR2BGR565 || code == CV_BGRA2BGR565 || code == CV_RGB2BGR565  || code == CV_RGBA2BGR565)
-                if(tegra::cvtRGB2RGB565(src, dst, code == CV_RGB2BGR565 || code == CV_RGBA2BGR565 ? 0 : 2))
+                if(tegra::useTegra() && tegra::cvtRGB2RGB565(src, dst, code == CV_RGB2BGR565 || code == CV_RGBA2BGR565 ? 0 : 2))
                     break;
 #endif
 
@@ -7611,7 +7612,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             if( depth == CV_8U )
             {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-                if(!tegra::cvtRGB2Gray(src, dst, bidx))
+                if(tegra::useTegra() && tegra::cvtRGB2Gray(src, dst, bidx))
+                    break;
 #endif
                 CvtColorLoop(src, dst, RGB2Gray<uchar>(scn, bidx, 0));
             }
@@ -7663,7 +7665,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             if( depth == CV_8U )
             {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-                if(!tegra::cvtGray2RGB(src, dst))
+                if(tegra::useTegra() && tegra::cvtGray2RGB(src, dst))
+                    break;
 #endif
                 CvtColorLoop(src, dst, Gray2RGB<uchar>(dcn));
             }
@@ -7742,7 +7745,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             if( depth == CV_8U )
             {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-                if((code == CV_RGB2YCrCb || code == CV_BGR2YCrCb) && tegra::cvtRGB2YCrCb(src, dst, bidx))
+                if((code == CV_RGB2YCrCb || code == CV_BGR2YCrCb) && tegra::useTegra() && tegra::cvtRGB2YCrCb(src, dst, bidx))
                     break;
 #endif
                 CvtColorLoop(src, dst, RGB2YCrCb_i<uchar>(scn, bidx, coeffs_i));
@@ -8036,7 +8039,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 code == CV_BGR2HSV_FULL || code == CV_RGB2HSV_FULL )
             {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-                if(tegra::cvtRGB2HSV(src, dst, bidx, hrange))
+                if(tegra::useTegra() && tegra::cvtRGB2HSV(src, dst, bidx, hrange))
                     break;
 #endif
                 if( depth == CV_8U )

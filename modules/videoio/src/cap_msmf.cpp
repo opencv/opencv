@@ -86,7 +86,7 @@
 
 #include <mferror.h>
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
     // for ComPtr usage
 #include <wrl/client.h>
 #ifdef __cplusplus_winrt
@@ -266,7 +266,7 @@ public:
 #endif
 
 struct IMFMediaType;
-#ifndef HAVE_WINRT
+#ifndef WINRT
 struct IMFActivate;
 struct IMFMediaSource;
 #endif
@@ -406,7 +406,7 @@ private:
     ImageGrabberCallback& operator=(const ImageGrabberCallback&);   // Declared to fix compilation warning.
  };
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 extern const __declspec(selectany) WCHAR RuntimeClass_CV_ImageGrabberWinRT[] = L"cv.ImageGrabberWinRT";
 
 class ImageGrabberWinRT :
@@ -547,7 +547,7 @@ public:
     CamParametrs getParametrs();
     void setParametrs(CamParametrs parametrs);
     void setEmergencyStopEvent(void *userData, void(*func)(int, void *));
-#ifdef HAVE_WINRT
+#ifdef WINRT
     long readInfoOfDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice, unsigned int Num);
     void waitForDevice()
     {
@@ -593,7 +593,7 @@ private:
     std::map<UINT64, FrameRateMap> vd_CaptureFormats;
     std::vector<MediaType> vd_CurrentFormats;
     IMFMediaSource *vd_pSource;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     MAKE_WRL_AGILE_REF(_MediaCapture) vd_pMedCap;
     EventRegistrationToken vd_cookie;
     ImageGrabberWinRT *vd_pImGr;
@@ -608,7 +608,7 @@ private:
     long setDeviceFormat(IMFMediaSource *pSource, unsigned long dwFormatIndex);
     void buildLibraryofTypes();
     int findType(unsigned int size, unsigned int frameRate = 0);
-#ifdef HAVE_WINRT
+#ifdef WINRT
     HRESULT enumerateCaptureFormats(MAKE_WRL_REF(_MediaCapture) pSource);
     long setDeviceFormat(MAKE_WRL_REF(_MediaCapture) pSource, unsigned long dwFormatIndex, MAKE_WRL_REF(_AsyncAction)* pAction);
     long resetDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice);
@@ -627,7 +627,7 @@ class videoDevices
 {
 public:
     ~videoDevices(void);
-#ifdef HAVE_WINRT
+#ifdef WINRT
     long initDevices(_DeviceClass devClass);
     void waitInit() {
         if (vds_enumTask) {
@@ -646,7 +646,7 @@ public:
     void clearDevices();
 private:
     UINT32 count;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     MAKE_WRL_REF(_AsyncAction) vds_enumTask;
 #endif
     std::vector<videoDevice *> vds_Devices;
@@ -715,7 +715,7 @@ public:
     bool setupDevice(int deviceID, unsigned int w, unsigned int h, unsigned int idealFramerate = 30);
     // Checking of recivig of new frame from video device with deviceID
     bool isFrameNew(int deviceID);
-#ifdef HAVE_WINRT
+#ifdef WINRT
     void waitForDevice(int deviceID);
 #endif
     // Writing of Raw Data pixels from video device with deviceID with correction of RedAndBlue flipping flipRedAndBlue and vertical flipping flipImage
@@ -1237,7 +1237,7 @@ ImageGrabber::~ImageGrabber(void)
     DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroying instance of the ImageGrabber class\n", ig_DeviceID);
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 
 ImageGrabberWinRT::ImageGrabberWinRT(bool synchronous):
     ImageGrabberCallback(synchronous),
@@ -1899,7 +1899,7 @@ Media_Foundation::~Media_Foundation(void)
 bool Media_Foundation::buildListOfDevices()
 {
     HRESULT hr = S_OK;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     videoDevices *vDs = &videoDevices::getInstance();
     hr = vDs->initDevices(WRL_ENUM_GET(_DeviceClass, DeviceClass, VideoCapture));
 #else
@@ -1987,7 +1987,7 @@ unsigned char * RawImage::getpPixels()
 videoDevice::videoDevice(void): vd_IsSetuped(false), vd_LockOut(OpenLock), vd_pFriendlyName(NULL),
     vd_Width(0), vd_Height(0), vd_FrameRate(0), vd_pSource(NULL), vd_pImGrTh(NULL), vd_func(NULL), vd_userData(NULL)
 {
-#ifdef HAVE_WINRT
+#ifdef WINRT
     vd_pMedCap = nullptr;
     vd_cookie.value = 0;
     vd_pImGr = NULL;
@@ -2075,7 +2075,7 @@ CamParametrs videoDevice::getParametrs()
     return out;
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 long videoDevice::resetDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice)
 #else
 long videoDevice::resetDevice(IMFActivate *pActivate)
@@ -2086,7 +2086,7 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
     if(vd_pFriendlyName)
         CoTaskMemFree(vd_pFriendlyName);
     vd_pFriendlyName = NULL;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     if (pDevice)
     {
         ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCapture, _MediaCapture, pIMedCap, hr)
@@ -2157,7 +2157,7 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
     return hr;
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 long videoDevice::readInfoOfDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice, unsigned int Num)
 {
     HRESULT hr = -1;
@@ -2173,7 +2173,7 @@ long videoDevice::readInfoOfDevice(IMFActivate *pActivate, unsigned int Num)
 }
 #endif
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
 long videoDevice::checkDevice(_DeviceClass devClass, DEFINE_TASK<void>* pTask, MAKE_WRL_REF(_IDeviceInformation)* ppDevice)
 {
@@ -2273,7 +2273,7 @@ long videoDevice::initDevice()
 {
     HRESULT hr = S_OK;
     CoInitialize(NULL);
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     Concurrency::critical_section::scoped_lock _LockHolder(vd_lock);
     MAKE_WRL_REF(_AsyncAction) pOldAction = vd_pAction;
@@ -2381,7 +2381,7 @@ void videoDevice::closeDevice()
     {
         vd_IsSetuped = false;
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
         if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
             MAKE_WRL_REF(_AsyncAction) action;
@@ -2535,7 +2535,7 @@ void videoDevice::buildLibraryofTypes()
     }
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 long videoDevice::setDeviceFormat(MAKE_WRL_REF(_MediaCapture) pSource, unsigned long  dwFormatIndex, MAKE_WRL_REF(_AsyncAction)* pAction)
 {
     HRESULT hr;
@@ -2596,7 +2596,7 @@ bool videoDevice::isDeviceSetup()
 RawImage * videoDevice::getRawImageOut()
 {
     if(!vd_IsSetuped) return NULL;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     if(vd_pImGr) return vd_pImGr->getRawImage();
 #endif
     if(vd_pImGrTh)
@@ -2618,7 +2618,7 @@ bool videoDevice::isFrameNew()
             vd_LockOut = RawDataLock;
 
             //must already be closed
-#ifdef HAVE_WINRT
+#ifdef WINRT
             if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
                 MAKE_WRL_REF(_AsyncAction) action;
                 if (FAILED(ImageGrabberWinRT::CreateInstance(&vd_pImGr))) return false;
@@ -2649,7 +2649,7 @@ bool videoDevice::isFrameNew()
             vd_pImGrTh->start();
             return true;
         }
-#ifdef HAVE_WINRT
+#ifdef WINRT
         if(vd_pImGr)
             return vd_pImGr->getRawImage()->isNew();
 #endif
@@ -2678,7 +2678,7 @@ bool videoDevice::setupDevice(unsigned int id)
         HRESULT hr = initDevice();
         if(SUCCEEDED(hr))
         {
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
             Concurrency::critical_section::scoped_lock _LockHolder(vd_lock);
             MAKE_WRL_REF(_AsyncAction) pOldAction = vd_pAction;
@@ -2692,7 +2692,7 @@ bool videoDevice::setupDevice(unsigned int id)
             vd_Height = vd_CurrentFormats[id].height;
             vd_FrameRate = vd_CurrentFormats[id].MF_MT_FRAME_RATE_NUMERATOR /
                            vd_CurrentFormats[id].MF_MT_FRAME_RATE_DENOMINATOR;
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
             if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
                 DEFINE_TASK<void> _task;
@@ -2710,7 +2710,7 @@ bool videoDevice::setupDevice(unsigned int id)
             if(vd_IsSetuped)
                 DebugPrintOut(L"\n\nVIDEODEVICE %i: Device is setuped \n", vd_CurrentNumber);
             vd_PrevParametrs = getParametrs();
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
             END_CREATE_ASYNC(hr));
 #endif
@@ -2749,7 +2749,7 @@ wchar_t *videoDevice::getName()
 videoDevice::~videoDevice(void)
 {
     closeDevice();
-#ifdef HAVE_WINRT
+#ifdef WINRT
     RELEASE_WRL(vd_pMedCap)
 #endif
     SafeRelease(&vd_pSource);
@@ -2757,7 +2757,7 @@ videoDevice::~videoDevice(void)
         CoTaskMemFree(vd_pFriendlyName);
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 HRESULT videoDevice::enumerateCaptureFormats(MAKE_WRL_REF(_MediaCapture) pSource)
 {
     HRESULT hr;
@@ -2831,7 +2831,7 @@ done:
 
 videoDevices::videoDevices(void): count(0)
 {
-#ifdef HAVE_WINRT
+#ifdef WINRT
     vds_enumTask = nullptr;
 #endif
 }
@@ -2862,7 +2862,7 @@ videoDevice * videoDevices::getDevice(unsigned int i)
     return vds_Devices[i];
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 long videoDevices::initDevices(_DeviceClass devClass)
 {
     HRESULT hr = S_OK;
@@ -3196,7 +3196,7 @@ bool videoInput::isFrameNew(int deviceID)
     return false;
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 void videoInput::waitForDevice(int deviceID)
 {
     if (deviceID < 0)
@@ -3405,7 +3405,7 @@ unsigned int videoInput::listDevices(bool silent)
     if(accessToDevices)
     {
         videoDevices *VDS = &videoDevices::getInstance();
-#ifdef HAVE_WINRT
+#ifdef WINRT
         VDS->waitInit();
 #endif
         out = VDS->getCount();
@@ -3595,7 +3595,7 @@ protected:
     int index, width, height, fourcc;
     IplImage* frame;
     videoInput VI;
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     DEFINE_TASK<bool> openTask;
     Concurrency::critical_section lock;
@@ -3643,7 +3643,7 @@ void CvCaptureCAM_MSMF::close()
 // Initialize camera input
 bool CvCaptureCAM_MSMF::open( int _index )
 {
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     SAVE_CURRENT_CONTEXT(context);
     auto func = [_index, context, this](DEFINE_RET_VAL(bool)) -> DEFINE_RET_FORMAL(bool) {
@@ -3656,14 +3656,14 @@ bool CvCaptureCAM_MSMF::open( int _index )
     if (devices == 0)
         return false;
     try_index = try_index < 0 ? 0 : (try_index > devices-1 ? devices-1 : try_index);
-#ifdef HAVE_WINRT
+#ifdef WINRT
     HRESULT hr;
 #ifdef HAVE_CONCURRENCY
     BEGIN_CALL_IN_CONTEXT(hr, context, this, try_index)
 #endif
 #endif
     VI.setupDevice(try_index, 0, 0, 0); // With maximum frame size.
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     END_CALL_IN_CONTEXT_BASE
     VI.waitForDevice(try_index);
@@ -3672,13 +3672,13 @@ bool CvCaptureCAM_MSMF::open( int _index )
 #endif
 #endif
     if( !VI.isFrameNew(try_index) )
-#ifdef HAVE_WINRT
+#ifdef WINRT
         hr = E_FAIL;
 #else
         return false;
 #endif
     index = try_index;
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     END_CALL_IN_CONTEXT_BASE
     RET_VAL(true)
