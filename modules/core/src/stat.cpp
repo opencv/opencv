@@ -2320,7 +2320,10 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                     depth == CV_8U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
                     depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
                     depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
-                    depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R : 0;
+                #if !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
+                    depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
+                #endif
+                    0;
                 CV_SUPPRESS_DEPRECATED_END
 
                 if( ippFuncC1 )
