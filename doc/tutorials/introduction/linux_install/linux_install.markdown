@@ -32,7 +32,7 @@ cd ~
 wget http://ffmpeg.org/releases/ffmpeg-0.10.15.tar.gz
 tar -xvzf ffmpeg-0.10.15.tar.gz
 cd ffmpeg-0.10.15
-./configure 
+./configure
 make
 sudo make install
 @endcode
