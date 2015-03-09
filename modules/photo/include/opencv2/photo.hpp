@@ -150,7 +150,7 @@ Should be odd. Recommended value 7 pixels
 given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater
 denoising time. Recommended value 21 pixels
 @param h Array of parameters regulating filter strength, either one
-parameter applied to all channels or one per channel in src. Big h value
+parameter applied to all channels or one per channel in dst. Big h value
 perfectly removes noise but also removes image details, smaller h
 value preserves details but also preserves some noise
 
@@ -202,7 +202,7 @@ Should be odd. Recommended value 7 pixels
 given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater
 denoising time. Recommended value 21 pixels
 @param h Array of parameters regulating filter strength, either one
-parameter applied to all channels or one per channel in src. Big h value
+parameter applied to all channels or one per channel in dst. Big h value
 perfectly removes noise but also removes image details, smaller h
 value preserves details but also preserves some noise
 
@@ -284,7 +284,7 @@ Should be odd. Recommended value 7 pixels
 given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater
 denoising time. Recommended value 21 pixels
 @param h Array of parameters regulating filter strength, either one
-parameter applied to all channels or one per channel in src. Big h value
+parameter applied to all channels or one per channel in dst. Big h value
 perfectly removes noise but also removes image details, smaller h
 value preserves details but also preserves some noise
  */
@@ -347,7 +347,7 @@ Should be odd. Recommended value 7 pixels
 given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater
 denoising time. Recommended value 21 pixels
 @param h Array of parameters regulating filter strength, either one
-parameter applied to all channels or one per channel in src. Big h value
+parameter applied to all channels or one per channel in dst. Big h value
 perfectly removes noise but also removes image details, smaller h
 value preserves details but also preserves some noise
  */
