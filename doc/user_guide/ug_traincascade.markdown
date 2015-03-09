@@ -7,7 +7,7 @@ Introduction
 The work with a cascade classifier inlcudes two major stages: training and detection. Detection
 stage is described in a documentation of objdetect module of general OpenCV documentation.
 Documentation gives some basic information about cascade classifier. Current guide is describing how
-to train a cascade classifier: preparation of a training data and running the training application.
+to train a cascade classifier: preparation of the training data and running the training application.
 
 ### Important notes
 
