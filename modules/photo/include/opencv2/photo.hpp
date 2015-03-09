@@ -160,8 +160,9 @@ image in different colorspaces. Such approach is used in fastNlMeansDenoisingCol
 image to CIELAB colorspace and then separately denoise L and AB components with different h
 parameter.
  */
-CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, std::vector<float> h,
-        int templateWindowSize = 7, int searchWindowSize = 21);
+    CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst,
+                                        const std::vector<float>& h,
+                                        int templateWindowSize = 7, int searchWindowSize = 21);
 
 /** @brief Perform image denoising using Non-local Means Denoising
 algorithm <http://www.ipol.im/pub/algo/bcm_non_local_means_denoising/>
@@ -212,8 +213,9 @@ image in different colorspaces. Such approach is used in fastNlMeansDenoisingCol
 image to CIELAB colorspace and then separately denoise L and AB components with different h
 parameter.
  */
-CV_EXPORTS_W void fastNlMeansDenoisingAbs( InputArray src, OutputArray dst, std::vector<float> h,
-        int templateWindowSize = 7, int searchWindowSize = 21);
+CV_EXPORTS_W void fastNlMeansDenoisingAbs( InputArray src, OutputArray dst,
+                                           const std::vector<float>& h,
+                                           int templateWindowSize = 7, int searchWindowSize = 21);
 
 /** @brief Modification of fastNlMeansDenoising function for colored images
 
@@ -290,7 +292,7 @@ value preserves details but also preserves some noise
  */
 CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputArray dst,
         int imgToDenoiseIndex, int temporalWindowSize,
-        std::vector<float> h , int templateWindowSize = 7, int searchWindowSize = 21);
+        const std::vector<float>& h , int templateWindowSize = 7, int searchWindowSize = 21);
 
 /** @brief Modification of fastNlMeansDenoising function for images
 sequence where consequtive images have been captured in small period
@@ -353,7 +355,7 @@ value preserves details but also preserves some noise
  */
 CV_EXPORTS_W void fastNlMeansDenoisingMultiAbs( InputArrayOfArrays srcImgs, OutputArray dst,
         int imgToDenoiseIndex, int temporalWindowSize,
-        std::vector<float> h, int templateWindowSize = 7, int searchWindowSize = 21);
+        const std::vector<float>& h, int templateWindowSize = 7, int searchWindowSize = 21);
 
 /** @brief Modification of fastNlMeansDenoisingMulti function for colored images sequences
 
