@@ -36,7 +36,7 @@ cd ffmpeg-0.10.15
 make
 sudo make install
 @endcode
- 
+
 Getting OpenCV Source Code
 --------------------------
 
