@@ -5454,7 +5454,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     const ocl::Device & dev = ocl::Device::getDefault();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    double doubleSupport = dev.doubleFPConfig() > 0;
+    const bool doubleSupport = dev.doubleFPConfig() > 0;
 
     int interpolation = flags & INTER_MAX;
     if( interpolation == INTER_AREA )
