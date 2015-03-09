@@ -24,6 +24,19 @@ Manager:
 [required] sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
 [optional] sudo apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
 @endcode
+
+To install the ffmpeg package, you can find all versions of releases in [ffmpeg index](http://ffmpeg.org/releases/). Take the installation of 'ffmpeg-0.10.15.tar.gz' as an example:
+Manager:
+@code{.bash}
+cd ~
+wget http://ffmpeg.org/releases/ffmpeg-0.10.15.tar.gz
+tar -xvzf ffmpeg-0.10.15.tar.gz
+cd ffmpeg-0.10.15
+./configure 
+make
+sudo make install
+@endcode
+ 
 Getting OpenCV Source Code
 --------------------------
 
