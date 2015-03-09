@@ -67,6 +67,7 @@ public:
             areaThreshold = _area_threshold;
             minMargin = _min_margin;
             edgeBlurSize = _edge_blur_size;
+            pass2Only = false;
         }
 
         int delta;

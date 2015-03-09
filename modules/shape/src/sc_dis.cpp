@@ -79,8 +79,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual float computeDistance(InputArray contour1, InputArray contour2);
 

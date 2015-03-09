@@ -73,30 +73,14 @@ int str_to_svm_kernel_type( String& str )
     return -1;
 }
 
-Ptr<SVM> svm_train_auto( Ptr<TrainData> _data, SVM::Params _params,
-                    int k_fold, ParamGrid C_grid, ParamGrid gamma_grid,
-                    ParamGrid p_grid, ParamGrid nu_grid, ParamGrid coef_grid,
-                    ParamGrid degree_grid )
-{
-    Mat _train_data = _data->getSamples();
-    Mat _responses = _data->getResponses();
-    Mat _var_idx = _data->getVarIdx();
-    Mat _sample_idx = _data->getTrainSampleIdx();
-
-    Ptr<SVM> svm = SVM::create(_params);
-    if( svm->trainAuto( _data, k_fold, C_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid ) )
-        return svm;
-    return Ptr<SVM>();
-}
-
 // 4. em
 // 5. ann
 int str_to_ann_train_method( String& str )
 {
     if( !str.compare("BACKPROP") )
-        return ANN_MLP::Params::BACKPROP;
+        return ANN_MLP::BACKPROP;
     if( !str.compare("RPROP") )
-        return ANN_MLP::Params::RPROP;
+        return ANN_MLP::RPROP;
     CV_Error( CV_StsBadArg, "incorrect ann train method string" );
     return -1;
 }
@@ -343,16 +327,16 @@ int CV_MLBaseTest::train( int testCaseIdx )
         String svm_type_str, kernel_type_str;
         modelParamsNode["svm_type"] >> svm_type_str;
         modelParamsNode["kernel_type"] >> kernel_type_str;
-        SVM::Params params;
-        params.svmType = str_to_svm_type( svm_type_str );
-        params.kernelType = str_to_svm_kernel_type( kernel_type_str );
-        modelParamsNode["degree"] >> params.degree;
-        modelParamsNode["gamma"] >> params.gamma;
-        modelParamsNode["coef0"] >> params.coef0;
-        modelParamsNode["C"] >> params.C;
-        modelParamsNode["nu"] >> params.nu;
-        modelParamsNode["p"] >> params.p;
-        model = SVM::create(params);
+        Ptr<SVM> m = SVM::create();
+        m->setType(str_to_svm_type( svm_type_str ));
+        m->setKernel(str_to_svm_kernel_type( kernel_type_str ));
+        m->setDegree(modelParamsNode["degree"]);
+        m->setGamma(modelParamsNode["gamma"]);
+        m->setCoef0(modelParamsNode["coef0"]);
+        m->setC(modelParamsNode["C"]);
+        m->setNu(modelParamsNode["nu"]);
+        m->setP(modelParamsNode["p"]);
+        model = m;
     }
     else if( modelName == CV_EM )
     {
@@ -371,9 +355,13 @@ int CV_MLBaseTest::train( int testCaseIdx )
                                  data->getVarIdx(), data->getTrainSampleIdx());
         int layer_sz[] = { data->getNAllVars(), 100, 100, (int)cls_map.size() };
         Mat layer_sizes( 1, (int)(sizeof(layer_sz)/sizeof(layer_sz[0])), CV_32S, layer_sz );
-        model = ANN_MLP::create(ANN_MLP::Params(layer_sizes, ANN_MLP::SIGMOID_SYM, 0, 0,
-                                                TermCriteria(TermCriteria::COUNT,300,0.01),
-                                                str_to_ann_train_method(train_method_str), param1, param2));
+        Ptr<ANN_MLP> m = ANN_MLP::create();
+        m->setLayerSizes(layer_sizes);
+        m->setActivationFunction(ANN_MLP::SIGMOID_SYM, 0, 0);
+        m->setTermCriteria(TermCriteria(TermCriteria::COUNT,300,0.01));
+        m->setTrainMethod(str_to_ann_train_method(train_method_str), param1, param2);
+        model = m;
+
     }
     else if( modelName == CV_DTREE )
     {
@@ -386,8 +374,18 @@ int CV_MLBaseTest::train( int testCaseIdx )
         modelParamsNode["max_categories"] >> MAX_CATEGORIES;
         modelParamsNode["cv_folds"] >> CV_FOLDS;
         modelParamsNode["is_pruned"] >> IS_PRUNED;
-        model = DTrees::create(DTrees::Params(MAX_DEPTH, MIN_SAMPLE_COUNT, REG_ACCURACY, USE_SURROGATE,
-                                MAX_CATEGORIES, CV_FOLDS, false, IS_PRUNED, Mat() ));
+
+        Ptr<DTrees> m = DTrees::create();
+        m->setMaxDepth(MAX_DEPTH);
+        m->setMinSampleCount(MIN_SAMPLE_COUNT);
+        m->setRegressionAccuracy(REG_ACCURACY);
+        m->setUseSurrogates(USE_SURROGATE);
+        m->setMaxCategories(MAX_CATEGORIES);
+        m->setCVFolds(CV_FOLDS);
+        m->setUse1SERule(false);
+        m->setTruncatePrunedTree(IS_PRUNED);
+        m->setPriors(Mat());
+        model = m;
     }
     else if( modelName == CV_BOOST )
     {
@@ -401,7 +399,15 @@ int CV_MLBaseTest::train( int testCaseIdx )
         modelParamsNode["weight_trim_rate"] >> WEIGHT_TRIM_RATE;
         modelParamsNode["max_depth"] >> MAX_DEPTH;
         //modelParamsNode["use_surrogate"] >> USE_SURROGATE;
-        model = Boost::create( Boost::Params(BOOST_TYPE, WEAK_COUNT, WEIGHT_TRIM_RATE, MAX_DEPTH, USE_SURROGATE, Mat()) );
+
+        Ptr<Boost> m = Boost::create();
+        m->setBoostType(BOOST_TYPE);
+        m->setWeakCount(WEAK_COUNT);
+        m->setWeightTrimRate(WEIGHT_TRIM_RATE);
+        m->setMaxDepth(MAX_DEPTH);
+        m->setUseSurrogates(USE_SURROGATE);
+        m->setPriors(Mat());
+        model = m;
     }
     else if( modelName == CV_RTREES )
     {
@@ -416,9 +422,18 @@ int CV_MLBaseTest::train( int testCaseIdx )
         modelParamsNode["is_pruned"] >> IS_PRUNED;
         modelParamsNode["nactive_vars"] >> NACTIVE_VARS;
         modelParamsNode["max_trees_num"] >> MAX_TREES_NUM;
-        model = RTrees::create(RTrees::Params( MAX_DEPTH, MIN_SAMPLE_COUNT, REG_ACCURACY,
-            USE_SURROGATE, MAX_CATEGORIES, Mat(), true, // (calc_var_importance == true) <=> RF processes variable importance
-            NACTIVE_VARS, TermCriteria(TermCriteria::COUNT, MAX_TREES_NUM, OOB_EPS)));
+
+        Ptr<RTrees> m = RTrees::create();
+        m->setMaxDepth(MAX_DEPTH);
+        m->setMinSampleCount(MIN_SAMPLE_COUNT);
+        m->setRegressionAccuracy(REG_ACCURACY);
+        m->setUseSurrogates(USE_SURROGATE);
+        m->setMaxCategories(MAX_CATEGORIES);
+        m->setPriors(Mat());
+        m->setCalculateVarImportance(true);
+        m->setActiveVarCount(NACTIVE_VARS);
+        m->setTermCriteria(TermCriteria(TermCriteria::COUNT, MAX_TREES_NUM, OOB_EPS));
+        model = m;
     }
 
     if( !model.empty() )

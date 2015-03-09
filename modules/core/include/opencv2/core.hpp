@@ -545,8 +545,31 @@ The function returns the number of non-zero elements in src :
 */
 CV_EXPORTS_W int countNonZero( InputArray src );
 
-/** @brief returns the list of locations of non-zero pixels
-@todo document
+/** @brief Returns the list of locations of non-zero pixels
+
+Given a binary matrix (likely returned from an operation such
+as threshold(), compare(), >, ==, etc, return all of
+the non-zero indices as a cv::Mat or std::vector<cv::Point> (x,y)
+For example:
+@code{.cpp}
+    cv::Mat binaryImage; // input, binary image
+    cv::Mat locations;   // output, locations of non-zero pixels
+    cv::findNonZero(binaryImage, locations);
+
+    // access pixel coordinates
+    Point pnt = locations.at<Point>(i);
+@endcode
+or
+@code{.cpp}
+    cv::Mat binaryImage; // input, binary image
+    vector<Point> locations;   // output, locations of non-zero pixels
+    cv::findNonZero(binaryImage, locations);
+
+    // access pixel coordinates
+    Point pnt = locations[i];
+@endcode
+@param src single-channel array (type CV_8UC1)
+@param idx the output array, type of cv::Mat or std::vector<Point>, corresponding to non-zero indices in the input
 */
 CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
 
@@ -2745,8 +2768,6 @@ public:
 //////////////////////////////////////// Algorithm ////////////////////////////////////
 
 class CV_EXPORTS Algorithm;
-class CV_EXPORTS AlgorithmInfo;
-struct CV_EXPORTS AlgorithmInfoData;
 
 template<typename _Tp> struct ParamType {};
 
@@ -2759,32 +2780,13 @@ matching, graph-cut etc.), background subtraction (which can be done using mixtu
 models, codebook-based algorithm etc.), optical flow (block matching, Lucas-Kanade, Horn-Schunck
 etc.).
 
-The class provides the following features for all derived classes:
-
--   so called "virtual constructor". That is, each Algorithm derivative is registered at program
-    start and you can get the list of registered algorithms and create instance of a particular
-    algorithm by its name (see Algorithm::create). If you plan to add your own algorithms, it is
-    good practice to add a unique prefix to your algorithms to distinguish them from other
-    algorithms.
--   setting/retrieving algorithm parameters by name. If you used video capturing functionality
-    from OpenCV videoio module, you are probably familar with cvSetCaptureProperty(),
-    cvGetCaptureProperty(), VideoCapture::set() and VideoCapture::get(). Algorithm provides
-    similar method where instead of integer id's you specify the parameter names as text strings.
-    See Algorithm::set and Algorithm::get for details.
--   reading and writing parameters from/to XML or YAML files. Every Algorithm derivative can store
-    all its parameters and then read them back. There is no need to re-implement it each time.
-
 Here is example of SIFT use in your application via Algorithm interface:
 @code
     #include "opencv2/opencv.hpp"
     #include "opencv2/xfeatures2d.hpp"
-
     using namespace cv::xfeatures2d;
 
-    ...
-
     Ptr<Feature2D> sift = SIFT::create();
-
     FileStorage fs("sift_params.xml", FileStorage::READ);
     if( fs.isOpened() ) // if we have file with parameters, read them
     {
@@ -2794,322 +2796,72 @@ Here is example of SIFT use in your application via Algorithm interface:
     else // else modify the parameters and store them; user can later edit the file to use different parameters
     {
         sift->setContrastThreshold(0.01f); // lower the contrast threshold, compared to the default value
-
         {
-        WriteStructContext ws(fs, "sift_params", CV_NODE_MAP);
-        sift->write(fs);
+            WriteStructContext ws(fs, "sift_params", CV_NODE_MAP);
+            sift->write(fs);
         }
     }
-
     Mat image = imread("myimage.png", 0), descriptors;
     vector<KeyPoint> keypoints;
     sift->detectAndCompute(image, noArray(), keypoints, descriptors);
 @endcode
-
-Creating Own Algorithms
------------------------
-If you want to make your own algorithm, derived from Algorithm, you should basically follow a few
-conventions and add a little semi-standard piece of code to your class:
--   Make a class and specify Algorithm as its base class.
--   The algorithm parameters should be the class members. See Algorithm::get() for the list of
-    possible types of the parameters.
--   Add public virtual method `AlgorithmInfo* info() const;` to your class.
--   Add constructor function, AlgorithmInfo instance and implement the info() method. The simplest
-    way is to take <https://github.com/Itseez/opencv/tree/master/modules/ml/src/ml_init.cpp> as
-    the reference and modify it according to the list of your parameters.
--   Add some public function (e.g. `initModule_<mymodule>()`) that calls info() of your algorithm
-    and put it into the same source file as info() implementation. This is to force C++ linker to
-    include this object file into the target application. See Algorithm::create() for details.
  */
 class CV_EXPORTS_W Algorithm
-    {
-    public:
-    Algorithm();
-    virtual ~Algorithm();
-    /**Returns the algorithm name*/
-    String name() const;
-
-    /** @brief returns the algorithm parameter
-
-    The method returns value of the particular parameter. Since the compiler can not deduce the
-    type of the returned parameter, you should specify it explicitly in angle brackets. Here are
-    the allowed forms of get:
-
-    -   myalgo.get\<int\>("param_name")
-    -   myalgo.get\<double\>("param_name")
-    -   myalgo.get\<bool\>("param_name")
-    -   myalgo.get\<String\>("param_name")
-    -   myalgo.get\<Mat\>("param_name")
-    -   myalgo.get\<vector\<Mat\> \>("param_name")
-    -   myalgo.get\<Algorithm\>("param_name") (it returns Ptr\<Algorithm\>).
-
-    In some cases the actual type of the parameter can be cast to the specified type, e.g. integer
-    parameter can be cast to double, bool can be cast to int. But "dangerous" transformations
-    (string\<-\>number, double-\>int, 1x1 Mat\<-\>number, ...) are not performed and the method
-    will throw an exception. In the case of Mat or vector\<Mat\> parameters the method does not
-    clone the matrix data, so do not modify the matrices. Use Algorithm::set instead - slower, but
-    more safe.
-    @param name The parameter name.
-    */
-    template<typename _Tp> typename ParamType<_Tp>::member_type get(const String& name) const;
-    /** @overload */
-    template<typename _Tp> typename ParamType<_Tp>::member_type get(const char* name) const;
-
-    CV_WRAP int getInt(const String& name) const;
-    CV_WRAP double getDouble(const String& name) const;
-    CV_WRAP bool getBool(const String& name) const;
-    CV_WRAP String getString(const String& name) const;
-    CV_WRAP Mat getMat(const String& name) const;
-    CV_WRAP std::vector<Mat> getMatVector(const String& name) const;
-    CV_WRAP Ptr<Algorithm> getAlgorithm(const String& name) const;
-
-    /** @brief Sets the algorithm parameter
-
-    The method sets value of the particular parameter. Some of the algorithm
-    parameters may be declared as read-only. If you try to set such a
-    parameter, you will get exception with the corresponding error message.
-    @param name The parameter name.
-    @param value The parameter value.
-     */
-    void set(const String& name, int value);
-    void set(const String& name, double value);
-    void set(const String& name, bool value);
-    void set(const String& name, const String& value);
-    void set(const String& name, const Mat& value);
-    void set(const String& name, const std::vector<Mat>& value);
-    void set(const String& name, const Ptr<Algorithm>& value);
-    template<typename _Tp> void set(const String& name, const Ptr<_Tp>& value);
-
-    CV_WRAP void setInt(const String& name, int value);
-    CV_WRAP void setDouble(const String& name, double value);
-    CV_WRAP void setBool(const String& name, bool value);
-    CV_WRAP void setString(const String& name, const String& value);
-    CV_WRAP void setMat(const String& name, const Mat& value);
-    CV_WRAP void setMatVector(const String& name, const std::vector<Mat>& value);
-    CV_WRAP void setAlgorithm(const String& name, const Ptr<Algorithm>& value);
-    template<typename _Tp> void setAlgorithm(const String& name, const Ptr<_Tp>& value);
-
-    void set(const char* name, int value);
-    void set(const char* name, double value);
-    void set(const char* name, bool value);
-    void set(const char* name, const String& value);
-    void set(const char* name, const Mat& value);
-    void set(const char* name, const std::vector<Mat>& value);
-    void set(const char* name, const Ptr<Algorithm>& value);
-    template<typename _Tp> void set(const char* name, const Ptr<_Tp>& value);
-
-    void setInt(const char* name, int value);
-    void setDouble(const char* name, double value);
-    void setBool(const char* name, bool value);
-    void setString(const char* name, const String& value);
-    void setMat(const char* name, const Mat& value);
-    void setMatVector(const char* name, const std::vector<Mat>& value);
-    void setAlgorithm(const char* name, const Ptr<Algorithm>& value);
-    template<typename _Tp> void setAlgorithm(const char* name, const Ptr<_Tp>& value);
-
-    CV_WRAP String paramHelp(const String& name) const;
-    int paramType(const char* name) const;
-    CV_WRAP int paramType(const String& name) const;
-    CV_WRAP void getParams(CV_OUT std::vector<String>& names) const;
-
-    /** @brief Stores algorithm parameters in a file storage
-
-    The method stores all the algorithm parameters (in alphabetic order) to
-    the file storage. The method is virtual. If you define your own
-    Algorithm derivative, your can override the method and store some extra
-    information. However, it's rarely needed. Here are some examples:
-    -   SIFT feature detector (from xfeatures2d module). The class only
-        stores algorithm parameters and no keypoints or their descriptors.
-        Therefore, it's enough to store the algorithm parameters, which is
-        what Algorithm::write() does. Therefore, there is no dedicated
-        SIFT::write().
-    -   Background subtractor (from video module). It has the algorithm
-        parameters and also it has the current background model. However,
-        the background model is not stored. First, it's rather big. Then,
-        if you have stored the background model, it would likely become
-        irrelevant on the next run (because of shifted camera, changed
-        background, different lighting etc.). Therefore,
-        BackgroundSubtractorMOG and BackgroundSubtractorMOG2 also rely on
-        the standard Algorithm::write() to store just the algorithm
-        parameters.
-    -   Expectation Maximization (from ml module). The algorithm finds
-        mixture of gaussians that approximates user data best of all. In
-        this case the model may be re-used on the next run to test new
-        data against the trained statistical model. So EM needs to store
-        the model. However, since the model is described by a few
-        parameters that are available as read-only algorithm parameters
-        (i.e. they are available via EM::get()), EM also relies on
-        Algorithm::write() to store both EM parameters and the model
-        (represented by read-only algorithm parameters).
-    @param fs File storage.
-    */
-    virtual void write(FileStorage& fs) const;
-
-    /** @brief Reads algorithm parameters from a file storage
-
-    The method reads all the algorithm parameters from the specified node of
-    a file storage. Similarly to Algorithm::write(), if you implement an
-    algorithm that needs to read some extra data and/or re-compute some
-    internal data, you may override the method.
-    @param fn File node of the file storage.
-    */
-    virtual void read(const FileNode& fn);
-
-    typedef Algorithm* (*Constructor)(void);
-    typedef int (Algorithm::*Getter)() const;
-    typedef void (Algorithm::*Setter)(int);
-
-    /** @brief Returns the list of registered algorithms
-
-    This static method returns the list of registered algorithms in
-    alphabetical order. Here is how to use it :
-    @code{.cpp}
-    vector<String> algorithms;
-    Algorithm::getList(algorithms);
-    cout << "Algorithms: " << algorithms.size() << endl;
-    for (size_t i=0; i < algorithms.size(); i++)
-        cout << algorithms[i] << endl;
-    @endcode
-    @param algorithms The output vector of algorithm names.
-    */
-    CV_WRAP static void getList(CV_OUT std::vector<String>& algorithms);
-    CV_WRAP static Ptr<Algorithm> _create(const String& name);
-
-    /** @brief Creates algorithm instance by name
-
-    This static method creates a new instance of the specified algorithm. If
-    there is no such algorithm, the method will silently return a null
-    pointer. Also, you should specify the particular Algorithm subclass as
-    _Tp (or simply Algorithm if you do not know it at that point). :
-    @code{.cpp}
-    Ptr<BackgroundSubtractor> bgfg = Algorithm::create<BackgroundSubtractor>("BackgroundSubtractor.MOG2");
-    @endcode
-    @note This is important note about seemingly mysterious behavior of
-    Algorithm::create() when it returns NULL while it should not. The reason
-    is simple - Algorithm::create() resides in OpenCV's core module and the
-    algorithms are implemented in other modules. If you create algorithms
-    dynamically, C++ linker may decide to throw away the modules where the
-    actual algorithms are implemented, since you do not call any functions
-    from the modules. To avoid this problem, you need to call
-    initModule_\<modulename\>(); somewhere in the beginning of the program
-    before Algorithm::create(). For example, call initModule_xfeatures2d()
-    in order to use SURF/SIFT, call initModule_ml() to use expectation
-    maximization etc.
-    @param name The algorithm name, one of the names returned by Algorithm::getList().
-    */
-    template<typename _Tp> static Ptr<_Tp> create(const String& name);
-
-    virtual AlgorithmInfo* info() const /* TODO: make it = 0;*/ { return 0; }
-};
-
-/** @todo document */
-class CV_EXPORTS AlgorithmInfo
 {
 public:
-    friend class Algorithm;
-    AlgorithmInfo(const String& name, Algorithm::Constructor create);
-    ~AlgorithmInfo();
-    void get(const Algorithm* algo, const char* name, int argType, void* value) const;
-    void addParam_(Algorithm& algo, const char* name, int argType,
-                   void* value, bool readOnly,
-                   Algorithm::Getter getter, Algorithm::Setter setter,
-                   const String& help=String());
-    String paramHelp(const char* name) const;
-    int paramType(const char* name) const;
-    void getParams(std::vector<String>& names) const;
+    Algorithm();
+    virtual ~Algorithm();
 
-    void write(const Algorithm* algo, FileStorage& fs) const;
-    void read(Algorithm* algo, const FileNode& fn) const;
-    String name() const;
+    /** @brief Stores algorithm parameters in a file storage
+    */
+    virtual void write(FileStorage& fs) const { (void)fs; }
 
-    void addParam(Algorithm& algo, const char* name,
-                  int& value, bool readOnly=false,
-                  int (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(int)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  bool& value, bool readOnly=false,
-                  int (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(int)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  double& value, bool readOnly=false,
-                  double (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(double)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  String& value, bool readOnly=false,
-                  String (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(const String&)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  Mat& value, bool readOnly=false,
-                  Mat (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(const Mat&)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  std::vector<Mat>& value, bool readOnly=false,
-                  std::vector<Mat> (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(const std::vector<Mat>&)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  Ptr<Algorithm>& value, bool readOnly=false,
-                  Ptr<Algorithm> (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(const Ptr<Algorithm>&)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  float& value, bool readOnly=false,
-                  float (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(float)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  unsigned int& value, bool readOnly=false,
-                  unsigned int (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(unsigned int)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  uint64& value, bool readOnly=false,
-                  uint64 (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(uint64)=0,
-                  const String& help=String());
-    void addParam(Algorithm& algo, const char* name,
-                  uchar& value, bool readOnly=false,
-                  uchar (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(uchar)=0,
-                  const String& help=String());
-    template<typename _Tp, typename _Base> void addParam(Algorithm& algo, const char* name,
-                  Ptr<_Tp>& value, bool readOnly=false,
-                  Ptr<_Tp> (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(const Ptr<_Tp>&)=0,
-                  const String& help=String());
-    template<typename _Tp> void addParam(Algorithm& algo, const char* name,
-                  Ptr<_Tp>& value, bool readOnly=false,
-                  Ptr<_Tp> (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(const Ptr<_Tp>&)=0,
-                  const String& help=String());
-protected:
-    AlgorithmInfoData* data;
-    void set(Algorithm* algo, const char* name, int argType,
-              const void* value, bool force=false) const;
+    /** @brief Reads algorithm parameters from a file storage
+    */
+    virtual void read(const FileNode& fn) { (void)fn; }
 };
 
-/** @todo document */
-struct CV_EXPORTS Param
-{
-    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7, UNSIGNED_INT=8, UINT64=9, UCHAR=11 };
+// define properties
 
-    Param();
-    Param(int _type, bool _readonly, int _offset,
-          Algorithm::Getter _getter=0,
-          Algorithm::Setter _setter=0,
-          const String& _help=String());
-    int type;
-    int offset;
-    bool readonly;
-    Algorithm::Getter getter;
-    Algorithm::Setter setter;
-    String help;
+#define CV_PURE_PROPERTY(type, name) \
+    CV_WRAP virtual type get##name() const = 0; \
+    CV_WRAP virtual void set##name(type val) = 0;
+
+#define CV_PURE_PROPERTY_S(type, name) \
+    CV_WRAP virtual type get##name() const = 0; \
+    CV_WRAP virtual void set##name(const type & val) = 0;
+
+#define CV_PURE_PROPERTY_RO(type, name) \
+    CV_WRAP virtual type get##name() const = 0;
+
+// basic property implementation
+
+#define CV_IMPL_PROPERTY_RO(type, name, member) \
+    inline type get##name() const { return member; }
+
+#define CV_HELP_IMPL_PROPERTY(r_type, w_type, name, member) \
+    CV_IMPL_PROPERTY_RO(r_type, name, member) \
+    inline void set##name(w_type val) { member = val; }
+
+#define CV_HELP_WRAP_PROPERTY(r_type, w_type, name, internal_name, internal_obj) \
+    r_type get##name() const { return internal_obj.get##internal_name(); } \
+    void set##name(w_type val) { internal_obj.set##internal_name(val); }
+
+#define CV_IMPL_PROPERTY(type, name, member) CV_HELP_IMPL_PROPERTY(type, type, name, member)
+#define CV_IMPL_PROPERTY_S(type, name, member) CV_HELP_IMPL_PROPERTY(type, const type &, name, member)
+
+#define CV_WRAP_PROPERTY(type, name, internal_name, internal_obj)  CV_HELP_WRAP_PROPERTY(type, type, name, internal_name, internal_obj)
+#define CV_WRAP_PROPERTY_S(type, name, internal_name, internal_obj) CV_HELP_WRAP_PROPERTY(type, const type &, name, internal_name, internal_obj)
+
+#define CV_WRAP_SAME_PROPERTY(type, name, internal_obj) CV_WRAP_PROPERTY(type, name, name, internal_obj)
+#define CV_WRAP_SAME_PROPERTY_S(type, name, internal_obj) CV_WRAP_PROPERTY_S(type, name, name, internal_obj)
+
+struct Param {
+    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7,
+           UNSIGNED_INT=8, UINT64=9, UCHAR=11 };
 };
+
+
 
 template<> struct ParamType<bool>
 {

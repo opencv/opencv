@@ -49,7 +49,7 @@ pyopencv_generated_\*.h files). But there may be some basic OpenCV datatypes lik
 Size. They need to be extended manually. For example, a Mat type should be extended to Numpy array,
 Size should be extended to a tuple of two integers etc. Similarly, there may be some complex
 structs/classes/functions etc. which need to be extended manually. All such manual wrapper functions
-are placed in modules/python/src2/pycv2.hpp.
+are placed in modules/python/src2/cv2.cpp.
 
 So now only thing left is the compilation of these wrapper files which gives us **cv2** module. So
 when you call a function, say res = equalizeHist(img1,img2) in Python, you pass two numpy arrays and

@@ -9,6 +9,8 @@
 #include <wrl\client.h>
 #include <Robuffer.h>
 #include <vector>
+#include <opencv2\imgproc\types_c.h>
+
 using namespace OcvImageProcessing;
 
 using namespace Microsoft::WRL;
@@ -129,7 +131,7 @@ cv::Mat OcvImageProcessing::MainPage::ApplyFindFeaturesFilter(const cv::Mat& ima
 {
     cv::Mat result;
     cv::Mat intermediateMat;
-    cv::Ptr<cv::FeatureDetector> detector = cv::FastFeatureDetector::create(50);
+    cv::Ptr<cv::FastFeatureDetector> detector = cv::FastFeatureDetector::create(50);
     std::vector<cv::KeyPoint> features;
 
     image.copyTo(result);

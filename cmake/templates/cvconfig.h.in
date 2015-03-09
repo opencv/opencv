@@ -169,9 +169,6 @@
 /* Win32 UI */
 #cmakedefine HAVE_WIN32UI
 
-/* Windows Runtime support */
-#cmakedefine HAVE_WINRT
-
 /* XIMEA camera support */
 #cmakedefine HAVE_XIMEA
 

@@ -52,7 +52,6 @@ def build_opencv(srcroot, buildroot, target, arch):
     cmakeargs = ("-GXcode " +
                 "-DCMAKE_BUILD_TYPE=Release " +
                 "-DCMAKE_TOOLCHAIN_FILE=%s/platforms/ios/cmake/Toolchains/Toolchain-%s_Xcode.cmake " +
-                "-DBUILD_opencv_world=ON " +
                 "-DCMAKE_C_FLAGS=\"-Wno-implicit-function-declaration\" " +
                 "-DCMAKE_INSTALL_PREFIX=install") % (srcroot, target)
 
@@ -60,7 +59,13 @@ def build_opencv(srcroot, buildroot, target, arch):
         cmakeargs += " -DENABLE_NEON=ON"
 
     if opencv_contrib_path is not None:
-        cmakeargs += " -DOPENCV_EXTRA_MODULES_PATH=%s -DOPENCV_EXTRA_WORLD=ON" % opencv_contrib_path
+        cmakeargs += " -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON -DOPENCV_EXTRA_MODULES_PATH=%s -DBUILD_opencv_contrib_world=ON" % opencv_contrib_path
+        build_target = "opencv_contrib_world"
+        libname = "libopencv_contrib_world.a"
+    else:
+        cmakeargs += " -DBUILD_opencv_world=ON"
+        build_target = "ALL_BUILD"
+        libname = "libopencv_world.a"
 
     # if cmake cache exists, just rerun cmake to update OpenCV.xcodeproj if necessary
     if os.path.isfile(os.path.join(builddir, "CMakeCache.txt")):
@@ -68,12 +73,12 @@ def build_opencv(srcroot, buildroot, target, arch):
     else:
         execute("cmake %s %s" % (cmakeargs, srcroot))
 
-    for wlib in [builddir + "/modules/world/UninstalledProducts/libopencv_world.a",
-                 builddir + "/lib/Release/libopencv_world.a"]:
+    for wlib in [builddir + "/modules/world/UninstalledProducts/" + libname,
+                 builddir + "/lib/Release/" + libname]:
         if os.path.isfile(wlib):
             os.remove(wlib)
 
-    execute("xcodebuild IPHONEOS_DEPLOYMENT_TARGET=6.0 -parallelizeTargets ARCHS=%s -jobs 8 -sdk %s -configuration Release -target ALL_BUILD" % (arch, target.lower()))
+    execute("xcodebuild IPHONEOS_DEPLOYMENT_TARGET=6.0 -parallelizeTargets ARCHS=%s -jobs 8 -sdk %s -configuration Release -target %s" % (arch, target.lower(), build_target))
     execute("xcodebuild IPHONEOS_DEPLOYMENT_TARGET=6.0 ARCHS=%s -sdk %s -configuration Release -target install install" % (arch, target.lower()))
     os.chdir(currdir)
 
@@ -81,6 +86,7 @@ def put_framework_together(srcroot, dstroot):
     "constructs the framework directory after all the targets are built"
 
     name = "opencv2" if opencv_contrib_path is None else "opencv2_contrib"
+    libname = "libopencv_world.a" if opencv_contrib_path is None else "libopencv_contrib_world.a"
 
     # find the list of targets (basically, ["iPhoneOS", "iPhoneSimulator"])
     targetlist = glob.glob(os.path.join(dstroot, "build", "*"))
@@ -103,7 +109,7 @@ def put_framework_together(srcroot, dstroot):
     shutil.copytree(tdir0 + "/install/include/opencv2", dstdir + "/Headers")
 
     # make universal static lib
-    wlist = " ".join(["../build/" + t + "/lib/Release/libopencv_world.a" for t in targetlist])
+    wlist = " ".join(["../build/" + t + "/lib/Release/" + libname for t in targetlist])
     execute("lipo -create " + wlist + " -o " + dstdir + "/%s" % name)
 
     # copy Info.plist

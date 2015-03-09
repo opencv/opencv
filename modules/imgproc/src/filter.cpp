@@ -4659,7 +4659,7 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
 #endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if( tegra::filter2D(src, dst, kernel, anchor, delta, borderType) )
+    if( tegra::useTegra() && tegra::filter2D(src, dst, kernel, anchor, delta, borderType) )
         return;
 #endif
 

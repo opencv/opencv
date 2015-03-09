@@ -184,6 +184,7 @@ public:
     // After fix restore code in arithm.cpp: ocl_compare()
     inline bool isAMD() const { return vendorID() == VENDOR_AMD; }
     inline bool isIntel() const { return vendorID() == VENDOR_INTEL; }
+    inline bool isNVidia() const { return vendorID() == VENDOR_NVIDIA; }
 
     int maxClockFrequency() const;
     int maxComputeUnits() const;

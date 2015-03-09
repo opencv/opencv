@@ -380,6 +380,21 @@ public:
 };
 
 
+class CV_EXPORTS_W DenseOpticalFlow : public Algorithm
+{
+public:
+    /** @brief Calculates an optical flow.
+
+    @param I0 first 8-bit single-channel input image.
+    @param I1 second input image of the same size and the same type as prev.
+    @param flow computed flow image that has the same size as prev and type CV_32FC2.
+     */
+    CV_WRAP virtual void calc( InputArray I0, InputArray I1, InputOutputArray flow ) = 0;
+    /** @brief Releases all inner buffers.
+    */
+    CV_WRAP virtual void collectGarbage() = 0;
+};
+
 /** @brief "Dual TV L1" Optical Flow Algorithm.
 
 The class implements the "Dual TV L1" optical flow algorithm described in @cite Zach2007 and
@@ -422,24 +437,38 @@ constructing the class instance:
 C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
 Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
 */
-class CV_EXPORTS_W DenseOpticalFlow : public Algorithm
+class CV_EXPORTS_W DualTVL1OpticalFlow : public DenseOpticalFlow
 {
 public:
-    /** @brief Calculates an optical flow.
-
-    @param I0 first 8-bit single-channel input image.
-    @param I1 second input image of the same size and the same type as prev.
-    @param flow computed flow image that has the same size as prev and type CV_32FC2.
-     */
-    CV_WRAP virtual void calc( InputArray I0, InputArray I1, InputOutputArray flow ) = 0;
-    /** @brief Releases all inner buffers.
-    */
-    CV_WRAP virtual void collectGarbage() = 0;
+    //! @brief Time step of the numerical scheme
+    CV_PURE_PROPERTY(double, Tau)
+    //! @brief Weight parameter for the data term, attachment parameter
+    CV_PURE_PROPERTY(double, Lambda)
+    //! @brief Weight parameter for (u - v)^2, tightness parameter
+    CV_PURE_PROPERTY(double, Theta)
+    //! @brief coefficient for additional illumination variation term
+    CV_PURE_PROPERTY(double, Gamma)
+    //! @brief Number of scales used to create the pyramid of images
+    CV_PURE_PROPERTY(int, ScalesNumber)
+    //! @brief Number of warpings per scale
+    CV_PURE_PROPERTY(int, WarpingsNumber)
+    //! @brief Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time
+    CV_PURE_PROPERTY(double, Epsilon)
+    //! @brief Inner iterations (between outlier filtering) used in the numerical scheme
+    CV_PURE_PROPERTY(int, InnerIterations)
+    //! @brief Outer iterations (number of inner loops) used in the numerical scheme
+    CV_PURE_PROPERTY(int, OuterIterations)
+    //! @brief Use initial flow
+    CV_PURE_PROPERTY(bool, UseInitialFlow)
+    //! @brief Step between scales (<1)
+    CV_PURE_PROPERTY(double, ScaleStep)
+    //! @brief Median filter kernel size (1 = no filter) (3 or 5)
+    CV_PURE_PROPERTY(int, MedianFiltering)
 };
 
 /** @brief Creates instance of cv::DenseOpticalFlow
 */
-CV_EXPORTS_W Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
+CV_EXPORTS_W Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1();
 
 //! @} video_track
 

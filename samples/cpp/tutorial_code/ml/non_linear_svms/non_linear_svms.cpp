@@ -39,6 +39,7 @@ int main()
     // Set up the linearly separable part of the training data
     int nLinearSamples = (int) (FRAC_LINEAR_SEP * NTRAINING_SAMPLES);
 
+    //! [setup1]
     // Generate random points for the class 1
     Mat trainClass = trainData.rowRange(0, nLinearSamples);
     // The x coordinate of the points is in [0, 0.4)
@@ -56,9 +57,10 @@ int main()
     // The y coordinate of the points is in [0, 1)
     c = trainClass.colRange(1,2);
     rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
+    //! [setup1]
 
     //------------------ Set up the non-linearly separable part of the training data ---------------
-
+    //! [setup2]
     // Generate random points for the classes 1 and 2
     trainClass = trainData.rowRange(  nLinearSamples, 2*NTRAINING_SAMPLES-nLinearSamples);
     // The x coordinate of the points is in [0.4, 0.6)
@@ -67,24 +69,28 @@ int main()
     // The y coordinate of the points is in [0, 1)
     c = trainClass.colRange(1,2);
     rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
-
+    //! [setup2]
     //------------------------- Set up the labels for the classes ---------------------------------
     labels.rowRange(                0,   NTRAINING_SAMPLES).setTo(1);  // Class 1
     labels.rowRange(NTRAINING_SAMPLES, 2*NTRAINING_SAMPLES).setTo(2);  // Class 2
 
     //------------------------ 2. Set up the support vector machines parameters --------------------
-    SVM::Params params;
-    params.svmType    = SVM::C_SVC;
-    params.C 		   = 0.1;
-    params.kernelType = SVM::LINEAR;
-    params.termCrit   = TermCriteria(TermCriteria::MAX_ITER, (int)1e7, 1e-6);
-
     //------------------------ 3. Train the svm ----------------------------------------------------
     cout << "Starting training process" << endl;
-    Ptr<SVM> svm = StatModel::train<SVM>(trainData, ROW_SAMPLE, labels, params);
+    //! [init]
+    Ptr<SVM> svm = SVM::create();
+    svm->setType(SVM::C_SVC);
+    svm->setC(0.1);
+    svm->setKernel(SVM::LINEAR);
+    svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, (int)1e7, 1e-6));
+    //! [init]
+    //! [train]
+    svm->train(trainData, ROW_SAMPLE, labels);
+    //! [train]
     cout << "Finished training process" << endl;
 
     //------------------------ 4. Show the decision regions ----------------------------------------
+    //! [show]
     Vec3b green(0,100,0), blue (100,0,0);
     for (int i = 0; i < I.rows; ++i)
         for (int j = 0; j < I.cols; ++j)
@@ -95,8 +101,10 @@ int main()
             if      (response == 1)    I.at<Vec3b>(j, i)  = green;
             else if (response == 2)    I.at<Vec3b>(j, i)  = blue;
         }
+    //! [show]
 
     //----------------------- 5. Show the training data --------------------------------------------
+    //! [show_data]
     int thick = -1;
     int lineType = 8;
     float px, py;
@@ -114,8 +122,10 @@ int main()
         py = trainData.at<float>(i,1);
         circle(I, Point( (int) px, (int) py ), 3, Scalar(255, 0, 0), thick, lineType);
     }
+    //! [show_data]
 
     //------------------------- 6. Show support vectors --------------------------------------------
+    //! [show_vectors]
     thick = 2;
     lineType  = 8;
     Mat sv = svm->getSupportVectors();
@@ -125,6 +135,7 @@ int main()
         const float* v = sv.ptr<float>(i);
         circle(	I,  Point( (int) v[0], (int) v[1]), 6, Scalar(128, 128, 128), thick, lineType);
     }
+    //! [show_vectors]
 
     imwrite("result.png", I);	                   // save the Image
     imshow("SVM for Non-Linear Training Data", I); // show it to the user

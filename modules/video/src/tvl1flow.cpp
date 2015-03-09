@@ -86,7 +86,7 @@ using namespace cv;
 
 namespace {
 
-class OpticalFlowDual_TVL1 : public DenseOpticalFlow
+class OpticalFlowDual_TVL1 : public DualTVL1OpticalFlow
 {
 public:
     OpticalFlowDual_TVL1();
@@ -94,7 +94,18 @@ public:
     void calc(InputArray I0, InputArray I1, InputOutputArray flow);
     void collectGarbage();
 
-    AlgorithmInfo* info() const;
+    CV_IMPL_PROPERTY(double, Tau, tau)
+    CV_IMPL_PROPERTY(double, Lambda, lambda)
+    CV_IMPL_PROPERTY(double, Theta, theta)
+    CV_IMPL_PROPERTY(double, Gamma, gamma)
+    CV_IMPL_PROPERTY(int, ScalesNumber, nscales)
+    CV_IMPL_PROPERTY(int, WarpingsNumber, warps)
+    CV_IMPL_PROPERTY(double, Epsilon, epsilon)
+    CV_IMPL_PROPERTY(int, InnerIterations, innerIterations)
+    CV_IMPL_PROPERTY(int, OuterIterations, outerIterations)
+    CV_IMPL_PROPERTY(bool, UseInitialFlow, useInitialFlow)
+    CV_IMPL_PROPERTY(double, ScaleStep, scaleStep)
+    CV_IMPL_PROPERTY(int, MedianFiltering, medianFiltering)
 
 protected:
     double tau;
@@ -1416,35 +1427,9 @@ void OpticalFlowDual_TVL1::collectGarbage()
     dum.norm_buf.release();
 }
 
-
-CV_INIT_ALGORITHM(OpticalFlowDual_TVL1, "DenseOpticalFlow.DualTVL1",
-                  obj.info()->addParam(obj, "tau", obj.tau, false, 0, 0,
-                                       "Time step of the numerical scheme");
-                  obj.info()->addParam(obj, "lambda", obj.lambda, false, 0, 0,
-                                       "Weight parameter for the data term, attachment parameter");
-                  obj.info()->addParam(obj, "theta", obj.theta, false, 0, 0,
-                                       "Weight parameter for (u - v)^2, tightness parameter");
-                  obj.info()->addParam(obj, "nscales", obj.nscales, false, 0, 0,
-                                       "Number of scales used to create the pyramid of images");
-                  obj.info()->addParam(obj, "warps", obj.warps, false, 0, 0,
-                                       "Number of warpings per scale");
-                  obj.info()->addParam(obj, "medianFiltering", obj.medianFiltering, false, 0, 0,
-                                       "Median filter kernel size (1 = no filter) (3 or 5)");
-                  obj.info()->addParam(obj, "scaleStep", obj.scaleStep, false, 0, 0,
-                                       "Step between scales (<1)");
-                  obj.info()->addParam(obj, "epsilon", obj.epsilon, false, 0, 0,
-                                       "Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time");
-                  obj.info()->addParam(obj, "innerIterations", obj.innerIterations, false, 0, 0,
-                                       "inner iterations (between outlier filtering) used in the numerical scheme");
-                  obj.info()->addParam(obj, "outerIterations", obj.outerIterations, false, 0, 0,
-                                       "outer iterations (number of inner loops) used in the numerical scheme");
-                  obj.info()->addParam(obj, "gamma", obj.gamma, false, 0, 0,
-                                       "coefficient for additional illumination variation term");
-                  obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow))
-
 } // namespace
 
-Ptr<DenseOpticalFlow> cv::createOptFlow_DualTVL1()
+Ptr<DualTVL1OpticalFlow> cv::createOptFlow_DualTVL1()
 {
     return makePtr<OpticalFlowDual_TVL1>();
 }
