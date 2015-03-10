@@ -13,59 +13,6 @@
 namespace cvtest {
 namespace ocl {
 
-
-///////////// oclCleanupCallback threadsafe check ////////////////////////
-
-typedef Size_MatType CleanupCallbackFixture;
-
-// Case 1: reuse of old src Mat in OCL pipe. Hard to catch!
-OCL_PERF_TEST(CleanupCallbackFixture, CleanupCallback_1)
-{
-    const Size srcSize = szQVGA;
-    const int type = CV_8UC1;
-    const int dtype = CV_16UC1;
-
-    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
-
-    Mat src(srcSize, type);
-    UMat dst(srcSize, dtype);
-
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    OCL_TEST_CYCLE_MULTIRUN(1000)
-    {
-        UMat tmpUMat = src.getUMat(ACCESS_RW);
-        tmpUMat.convertTo(dst, dtype);
-        ::cv::ocl::finish();
-    }
-
-    SANITY_CHECK(src);
-}
-
-// Case 2: concurent deallocation of UMatData between UMat and Mat deallocators. Hard to catch!
-OCL_PERF_TEST(CleanupCallbackFixture, CleanupCallback_2)
-{
-    const Size srcSize = szQVGA;
-    const int type = CV_8UC1;
-    const int dtype = CV_16UC1;
-
-    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
-
-    UMat dst(srcSize, dtype);
-
-    OCL_TEST_CYCLE_MULTIRUN(1000)
-    {
-        Mat src(srcSize, type);
-        {
-            UMat tmpUMat = src.getUMat(ACCESS_RW);
-            tmpUMat.convertTo(dst, dtype);
-        }
-        ::cv::ocl::finish();
-    }
-
-    SANITY_CHECK_NOTHING();
-}
-
 ///////////// SetTo ////////////////////////
 
 typedef Size_MatType SetToFixture;

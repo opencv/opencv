@@ -52,6 +52,65 @@
 namespace cvtest {
 namespace ocl {
 
+///////////// oclCleanupCallback threadsafe check ////////////////////////
+
+// Case 1: reuse of old src Mat in OCL pipe. Hard to catch!
+OCL_TEST(ThreadSafe, CleanupCallback_1)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        const Size srcSize(320, 240);
+        const int type = CV_8UC1;
+        const int dtype = CV_16UC1;
+
+        Mat src(srcSize, type);
+        Mat dst_ref(srcSize, dtype);
+
+        // Generate referenca data as additional check
+        OCL_OFF(src.convertTo(dst_ref, dtype));
+
+        // This test is only relevant for OCL
+        cv::ocl::setUseOpenCL(true);
+        UMat dst(srcSize, dtype);
+
+        // Use multiple iterations to increase chance of data race catching
+        for(int k = 0; k < 10000; k++)
+        {
+            UMat tmpUMat = src.getUMat(ACCESS_RW);
+            tmpUMat.convertTo(dst, dtype);
+            ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
+        }
+
+        EXPECT_MAT_NEAR(dst_ref, dst, 1);
+    }
+}
+
+// Case 2: concurent deallocation of UMatData between UMat and Mat deallocators. Hard to catch!
+OCL_TEST(ThreadSafe, CleanupCallback_2)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        const Size srcSize(320, 240);
+        const int type = CV_8UC1;
+        const int dtype = CV_16UC1;
+
+        // This test is only relevant for OCL
+        cv::ocl::setUseOpenCL(true);
+        UMat dst(srcSize, dtype);
+
+        // Use multiple iterations to increase chance of data race catching
+        for(int k = 0; k < 10000; k++)
+        {
+            Mat src(srcSize, type); // Declare src inside loop now to catch its destruction on stack
+            {
+                UMat tmpUMat = src.getUMat(ACCESS_RW);
+                tmpUMat.convertTo(dst, dtype);
+            }
+            ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
+        }
+    }
+}
+
 ////////////////////////////////converto/////////////////////////////////////////////////
 
 PARAM_TEST_CASE(ConvertTo, MatDepth, MatDepth, Channels, bool)
