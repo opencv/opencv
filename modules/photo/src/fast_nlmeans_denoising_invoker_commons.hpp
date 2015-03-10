@@ -176,7 +176,7 @@ public:
     }
 
     template <typename T>
-    static inline double maxDist()
+    static inline int maxDist()
     {
         return (int)pixelInfo<T>::sampleMax() * pixelInfo<T>::channels;
     }
@@ -298,7 +298,7 @@ public:
     }
 
     template <typename T>
-    static inline double maxDist()
+    static inline int maxDist()
     {
         return (int)pixelInfo<T>::sampleMax() * (int)pixelInfo<T>::sampleMax() *
             pixelInfo<T>::channels;
