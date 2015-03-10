@@ -52,6 +52,13 @@ TEST(PackageInfo, FullNameArmv7VFPv3Neon)
 #endif
 }
 
+TEST(PackageInfo, FullNameAarch64)
+{
+    PackageInfo info(2041000, PLATFORM_UNKNOWN, ARCH_AARCH64);
+    string name = info.GetFullName();
+    EXPECT_STREQ("org.opencv.lib_v24_aarch64", name.c_str());
+}
+
 TEST(PackageInfo, FullNameArmv5)
 {
     PackageInfo info(2030000, PLATFORM_UNKNOWN, ARCH_ARMv5);
