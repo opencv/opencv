@@ -60,6 +60,11 @@ public:
     virtual void buildIndex() = 0;
 
     /**
+    *  \brief implementation for algorithms of a addable index.
+    */
+    virtual void addIndex(const Matrix<ElementType>& wholeData, const Matrix<ElementType>& addData) = 0;
+
+    /**
      * \brief Perform k-nearest neighbor search
      * \param[in] queries The query points for which to find the nearest neighbors
      * \param[out] indices The indices of the nearest neighbors found

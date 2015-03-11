@@ -105,6 +105,22 @@ public:
     LshIndex& operator=(const LshIndex&);
 
     /**
+    * Implementation for LSH addable index.
+    */
+    void addIndex(const Matrix<ElementType>& wholeData, const Matrix<ElementType>& added_data)
+    {
+        std::vector<size_t> indices(feature_size_ * CHAR_BIT);
+
+        tables_.resize(table_number_);
+        for (unsigned int i = 0; i < table_number_; ++i) {
+            lsh::LshTable<ElementType>& table = tables_[i];
+            // Add the features to the table
+            table.add(wholeData.rows-added_data.rows, added_data);
+        }
+        dataset_ = wholeData;
+    }
+
+    /**
      * Builds the index
      */
     void buildIndex()
@@ -127,7 +143,7 @@ public:
             table = lsh::LshTable<ElementType>(feature_size_, key_size_, indices);
 
             // Add the features to the table
-            table.add(dataset_);
+            table.add(0, dataset_);
         }
     }
 

@@ -125,6 +125,16 @@ public:
     }
 
     /**
+    * implementation for algorithms of addable index.
+    */
+    void addIndex(const Matrix<ElementType>& wholeData, const Matrix<ElementType>& addData)
+    {
+        if (!loaded_) {
+            nnIndex_->addIndex(wholeData, addData);
+        }
+    }
+
+    /**
      * Builds the index.
      */
     void buildIndex()

@@ -378,6 +378,14 @@ public:
         return pool.usedMemory+pool.wastedMemory+memoryCounter;
     }
 
+
+    /**
+     * Dummy implementation for other algorithms of a addable index.
+     */
+    void addIndex(const Matrix<ElementType>& wholeData, const Matrix<ElementType>& addData)
+    {
+    }
+
     /**
      * Builds the index
      */
