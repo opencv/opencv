@@ -39,7 +39,7 @@ bin
                 x86
             8.1
                 ARM
-                x86    
+                x86
     WP
         8.0
             ARM
