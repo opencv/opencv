@@ -3,6 +3,7 @@ Plot {#plot}
 
 This Plot class allows you to easily plot data from a Mat or an std::vector. You can plot 1D or 2D plots, change the window size and the axis limits. 
 The plot of data is simply done with:
+
 @code
     Plot(src, figureName);
 @endcode
