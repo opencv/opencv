@@ -403,7 +403,7 @@ void test_it( const Size & size )
 
 int main( int argc, char** argv )
 {
-    if( argc != 4 )
+    if( argc != 5 )
     {
         cout << "Wrong number of parameters." << endl
             << "Usage: " << argv[0] << " pos_dir pos.lst neg_dir neg.lst" << endl
