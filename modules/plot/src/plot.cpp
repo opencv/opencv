@@ -40,6 +40,8 @@
 //
 //M*/
 
+//implemented by Nuno Moutinho
+
 #include "precomp.hpp"
 
 using namespace cv;
