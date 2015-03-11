@@ -40,6 +40,11 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+//################################################################################
+//
+//                    Created by Nuno Moutinho
+//
+//################################################################################
 
 #ifdef __OPENCV_BUILD
 #error this is a compatibility header which should not be used inside the OpenCV library

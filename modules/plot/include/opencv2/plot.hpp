@@ -39,8 +39,11 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
-//implemented by Nuno Moutinho
+//################################################################################
+//
+//                    Created by Nuno Moutinho
+//
+//################################################################################
 
 #ifndef _OPENCV_PLOT_H_
 #define _OPENCV_PLOT_H_
@@ -57,29 +60,25 @@
 
 namespace cv
 {
-class CV_EXPORTS Plot{
+    class CV_EXPORTS Plot{
 
     public:
 
-        Plot(cv::Mat Data, const char * FigureName, int FigureWidth=600, int FigureHeight=400,
-            double XAxisMin=1e8, double XAxisMax=1e8, double YAxisMin=1e8, double YAxisMax=1e8);
-        Plot(std::vector<double> Data, const char * FigureName, int FigureWidth=600, int FigureHeight=400,
-            double XAxisMin=1e8, double XAxisMax=1e8, double YAxisMin=1e8, double YAxisMax=1e8);
-        Plot(cv::Mat Xdata, cv::Mat Ydata, const char * FigureName, int FigureWidth=600, int FigureHeight=400,
-            double XAxisMin=1e8, double XAxisMax=1e8, double YAxisMin=1e8, double YAxisMax=1e8);
-        Plot(std::vector<double> Xdata, std::vector<double> Ydata, const char * FigureName, int FigureWidth=600, int FigureHeight=400,
-            double XAxisMin=1e8, double XAxisMax=1e8, double YAxisMin=1e8, double YAxisMax=1e8);
+    Plot(cv::Mat Data, const char * FigureName, int FigureWidth=600, int FigureHeight=400, double XAxisMin=1e8, double XAxisMax=1e8, double YAxisMin=1e8, double YAxisMax=1e8);
+    Plot(std::vector<double> Data, const char * FigureName, int FigureWidth=600, int FigureHeight=400, double XAxisMin=1e8, double XAxisMax=1e8, double YAxisMin=1e8, double YAxisMax=1e8);
+    Plot(cv::Mat Xdata, cv::Mat Ydata, const char * FigureName, int FigureWidth=600, int FigureHeight=400, double XAxisMin=1e8, double XAxisMax=1e8, double YAxisMin=1e8, double YAxisMax=1e8);
+    Plot(std::vector<double> Xdata, std::vector<double> Ydata, const char * FigureName, int FigureWidth=600, int FigureHeight=400, double XAxisMin=1e8, double XAxisMax=1e8, double YAxisMin=1e8, double YAxisMax=1e8);
 
     private:
 
-        void constructorHelper(cv::Mat Xdata, cv::Mat Ydata, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax);
-        void constructorHelper(cv::Mat Data, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax);
+    void constructorHelper(cv::Mat Xdata, cv::Mat Ydata, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax);
+    void constructorHelper(cv::Mat Data, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax);
 
-        cv::Mat linearInterpolation(double Xa, double Xb, double Ya, double Yb, cv::Mat Xdata);
-        void drawAxis(double MinX, double MaxX, double MinY, double MaxY, double ImageXzero, double ImageYzero, double CurrentX, double CurrentY, int NumVecElements, int FigW, int FigH, cv::Mat &FigureRed, cv::Mat &FigureGreen, cv::Mat &FigureBlue);
-        void drawValuesAsText(double Value, int Xloc, int Yloc, int XMargin, int YMargin, cv::Mat &FigureRed, cv::Mat &FigureGreen, cv::Mat &FigureBlue);
-        void drawValuesAsText(const char * Text, double Value, int Xloc, int Yloc, int XMargin, int YMargin, cv::Mat &FigureRed, cv::Mat &FigureGreen, cv::Mat &FigureBlue);
-        void drawLine(int Xstart, int Xend, int Ystart, int Yend, cv::Mat &FigureRed, cv::Mat &FigureGreen, cv::Mat &FigureBlue, int LineWidth, cv::Point3d RGBLineColor);
+    cv::Mat linearInterpolation(double Xa, double Xb, double Ya, double Yb, cv::Mat Xdata);
+    void drawAxis(double MinX, double MaxX, double MinY, double MaxY, double ImageXzero, double ImageYzero, double CurrentX, double CurrentY, int NumVecElements, int FigW, int FigH, cv::Mat &FigureRed,    cv::Mat &FigureGreen, cv::Mat &FigureBlue);
+    void drawValuesAsText(double Value, int Xloc, int Yloc, int XMargin, int YMargin, cv::Mat &FigureRed, cv::Mat &FigureGreen, cv::Mat &FigureBlue);
+    void drawValuesAsText(const char * Text, double Value, int Xloc, int Yloc, int XMargin, int YMargin, cv::Mat &FigureRed, cv::Mat &FigureGreen, cv::Mat &FigureBlue);
+    void drawLine(int Xstart, int Xend, int Ystart, int Yend, cv::Mat &FigureRed, cv::Mat &FigureGreen, cv::Mat &FigureBlue, int LineWidth, cv::Point3d RGBLineColor);
 };
 }
 

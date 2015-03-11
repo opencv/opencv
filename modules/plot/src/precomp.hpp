@@ -39,6 +39,11 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+//################################################################################
+//
+//                    Created by Nuno Moutinho
+//
+//################################################################################
 
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__

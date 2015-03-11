@@ -39,6 +39,11 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+//################################################################################
+//
+//                    Created by Nuno Moutinho
+//
+//################################################################################
 
 #include "precomp.hpp"
 
