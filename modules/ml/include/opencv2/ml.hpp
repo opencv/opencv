@@ -1339,7 +1339,7 @@ public:
 
     //! Regularization kinds
     enum RegKinds {
-        REG_NONE = -1, //!< Regularization disabled
+        REG_DISABLE = -1, //!< Regularization disabled
         REG_L1 = 0, //!< %L1 norm
         REG_L2 = 1 //!< %L2 norm
     };
