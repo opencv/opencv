@@ -56,7 +56,7 @@
 #include <iostream>
 #include <stdio.h>
 
-/*This plot class allows you to easily plot data from a Mat or a vector. You can plot 1D or 2D plots, change the window size and the axis limits. It's simple yet very effective and usefull. //*/
+///This plot class allows you to easily plot data from a Mat or a vector. You can plot 1D or 2D plots, change the window size and the axis limits. It's simple yet very effective and usefull.
 
 namespace cv
 {
@@ -239,7 +239,7 @@ namespace cv
         }
 
         cv::Mat linearInterpolation(double Xa, double Xb, double Ya, double Yb, cv::Mat Xdata);
-        void drawAxis(double ImageXzero, double ImageYzero, double CurrentX, double CurrentY, cv::Scalar axisColor);
+        void drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, cv::Scalar axisColor);
         void drawValuesAsText(double Value, int Xloc, int Yloc, int XMargin, int YMargin);
         void drawValuesAsText(const char * Text, double Value, int Xloc, int Yloc, int XMargin, int YMargin);
         void drawLine(int Xstart, int Xend, int Ystart, int Yend, cv::Scalar lineColor);

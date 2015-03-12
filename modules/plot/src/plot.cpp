@@ -65,11 +65,11 @@ void Plot::render(cv::Mat &_plotResult){
     Mat InterpXdataFindZero = linearInterpolation(plotMinX_plusZero, plotMaxX_plusZero, 0, plotSizeWidth, plotDataX_plusZero);
     Mat InterpYdataFindZero = linearInterpolation(plotMinY_plusZero, plotMaxY_plusZero, 0, plotSizeHeight, plotDataY_plusZero);
 
-    double ImageXzero = InterpXdataFindZero.at<double>(NumVecElements,0);
-    double ImageYzero = InterpYdataFindZero.at<double>(NumVecElements,0);
+    int ImageXzero = (int)InterpXdataFindZero.at<double>(NumVecElements,0);
+    int ImageYzero = (int)InterpYdataFindZero.at<double>(NumVecElements,0);
 
-    double CurrentX = plotDataX.at<double>(NumVecElements-1,0);
-    double CurrentY = plotDataY.at<double>(NumVecElements-1,0);
+    int CurrentX = (int)plotDataX.at<double>(NumVecElements-1,0);
+    int CurrentY = (int)plotDataY.at<double>(NumVecElements-1,0);
 
     //Draw the plot by connecting lines between the points
     cv::Point p1;
@@ -108,7 +108,7 @@ void Plot::save(const char * _plotFileName)
     imwrite(_plotFileName, plotResult);
 }
 
-void Plot::drawAxis(double ImageXzero, double ImageYzero, double CurrentX, double CurrentY, Scalar axisColor){
+void Plot::drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, Scalar axisColor){
 
     drawValuesAsText(0, ImageXzero, ImageYzero, 10, 20);
     drawValuesAsText(0, ImageXzero, ImageYzero, -20, 20);
