@@ -57,7 +57,7 @@ How does it work?
 
    We consider only points such that :math:`r > 0` and :math:`0< \theta < 2 \pi`.
 
-#. We can do the same operation above for all the points in an image. If the curves of two different points intersect in the plane :math:`\theta` - :math:`r`, that means that both points belong to a same line. For instance, following with the example above and drawing the plot for two more points: :math:`x_{1} = 9`, :math:`y_{1} = 4` and :math:`x_{2} = 12`, :math:`y_{2} = 3`, we get:
+#. We can do the same operation above for all the points in an image. If the curves of two different points intersect in the plane :math:`\theta` - :math:`r`, that means that both points belong to a same line. For instance, following with the example above and drawing the plot for two more points: :math:`x_{1} = 4`, :math:`y_{1} = 9` and :math:`x_{2} = 12`, :math:`y_{2} = 3`, we get:
 
    .. image:: images/Hough_Lines_Tutorial_Theory_2.jpg
       :alt: Polar plot of the family of lines for three points
