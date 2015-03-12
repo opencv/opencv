@@ -50,183 +50,84 @@
 using namespace cv;
 using namespace std;
 
+///render the plotResult to a Mat
+void Plot::render(cv::Mat &_plotResult){
 
-Plot::Plot(cv::Mat Data, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax){
-    constructorHelper(Data, FigureName, FigureWidth, FigureHeight, XAxisMin, XAxisMax, YAxisMin, YAxisMax);
-}
+    ///create the plot result
+    plotResult = cv::Mat::zeros(plotSizeHeight, plotSizeWidth, CV_8UC3);
 
-Plot::Plot(std::vector<double> Data, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax){
+    int NumVecElements = plotDataX.rows;
 
-    Mat DataMat = Mat(Data).clone();
+    Mat InterpXdata = linearInterpolation(plotMinX, plotMaxX, 0, plotSizeWidth, plotDataX);
+    Mat InterpYdata = linearInterpolation(plotMinY, plotMaxY, 0, plotSizeHeight, plotDataY);
 
-    constructorHelper(DataMat, FigureName, FigureWidth, FigureHeight, XAxisMin, XAxisMax, YAxisMin, YAxisMax);
-}
-
-Plot::Plot(std::vector<double> Xdata, std::vector<double> Ydata, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax){
-
-    Mat XdataMat = Mat(Xdata).clone();
-    Mat YdataMat = Mat(Ydata).clone();
-
-    constructorHelper(XdataMat, YdataMat, FigureName, FigureWidth, FigureHeight, XAxisMin, XAxisMax, YAxisMin, YAxisMax);
-}
-
-Plot::Plot(cv::Mat Xdata, cv::Mat Ydata, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax){
-    constructorHelper(Xdata, Ydata, FigureName, FigureWidth, FigureHeight, XAxisMin, XAxisMax, YAxisMin, YAxisMax);
-}
-
-
-void Plot::constructorHelper(cv::Mat Data, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax)
-{
-    Mat Xdata = Data*0;
-    for (int i=0; i<Data.rows; i++){
-
-        Xdata.at<double>(i,0) = i;
-    }
-
-    constructorHelper(Xdata, Data, FigureName, FigureWidth, FigureHeight, XAxisMin, XAxisMax, YAxisMin, YAxisMax);
-}
-
-
-void Plot::constructorHelper(cv::Mat Xdata, cv::Mat Ydata, const char * FigureName, int FigureWidth, int FigureHeight, double XAxisMin, double XAxisMax, double YAxisMin, double YAxisMax){
-
-    ///Auxiliar variables used in the minMaxLoc function
-    cv::Point MinXLoc;
-    cv::Point MaxXLoc;
-    cv::Point MinYLoc;
-    cv::Point MaxYLoc;
-    cv::Point MinXLocFindZero;
-    cv::Point MaxXLocFindZero;
-    cv::Point MinYLocFindZero;
-    cv::Point MaxYLocFindZero;
-
-    double MinX;
-    double MaxX;
-    double MinY;
-    double MaxY;
-    double MinXFindZero;
-    double MaxXFindZero;
-    double MinYFindZero;
-    double MaxYFindZero;
-
-    int FigW = FigureWidth;
-    int FigH = FigureHeight;
-
-    int NumVecElements = Xdata.rows;
-
-    //Obtain the minimum and maximum values of Xdata
-    minMaxLoc(Xdata,&MinX,&MaxX,&MinXLoc,&MaxXLoc);
-
-    //Obtain the minimum and maximum values of Ydata
-    minMaxLoc(Ydata,&MinY,&MaxY,&MinYLoc,&MaxYLoc);
-
-    if(XAxisMin != 1e8 && XAxisMax != 1e8 && YAxisMin != 1e8 && YAxisMax != 1e8)
-    {
-        MinX = XAxisMin;
-        MaxX = XAxisMax;
-        MinY = YAxisMin;
-        MaxY = YAxisMax;
-    }
-
-    Mat InterpXdata = linearInterpolation(MinX, MaxX, 0, FigW, Xdata);
-    Mat InterpYdata = linearInterpolation(MaxY, MinY, 0, FigH, Ydata);
-
-    //Find the zeros in image coordinates
-    Mat XdataPlusZero = Mat::zeros(Xdata.rows+1,1,CV_64F);
-    Mat YdataPlusZero = Mat::zeros(Ydata.rows+1,1,CV_64F);
-
-    for(int i=0; i<Xdata.rows; i++){
-        XdataPlusZero.at<double>(i,0) = Xdata.at<double>(i,0);
-        YdataPlusZero.at<double>(i,0) = Ydata.at<double>(i,0);
-    }
-
-    minMaxLoc(XdataPlusZero,&MinXFindZero,&MaxXFindZero,&MinXLocFindZero,&MaxXLocFindZero);
-    minMaxLoc(YdataPlusZero,&MinYFindZero,&MaxYFindZero,&MinYLocFindZero,&MaxXLocFindZero);
-
-    if(XAxisMin != 1e8 && XAxisMax != 1e8 && YAxisMin != 1e8 && YAxisMax != 1e8)
-    {
-        MinXFindZero = XAxisMin;
-        MaxXFindZero = XAxisMax;
-        MinYFindZero = YAxisMin;
-        MaxYFindZero = YAxisMax;
-    }
-
-    Mat InterpXdataFindZero = linearInterpolation(MinXFindZero, MaxXFindZero, 0, FigW, XdataPlusZero);
-    Mat InterpYdataFindZero = linearInterpolation(MaxYFindZero, MinYFindZero, 0, FigH, YdataPlusZero);
+    ///Find the zeros in image coordinates
+    Mat InterpXdataFindZero = linearInterpolation(plotMinX_plusZero, plotMaxX_plusZero, 0, plotSizeWidth, plotDataX_plusZero);
+    Mat InterpYdataFindZero = linearInterpolation(plotMinY_plusZero, plotMaxY_plusZero, 0, plotSizeHeight, plotDataY_plusZero);
 
     double ImageXzero = InterpXdataFindZero.at<double>(NumVecElements,0);
     double ImageYzero = InterpYdataFindZero.at<double>(NumVecElements,0);
 
-    double CurrentX = Xdata.at<double>(NumVecElements-1,0);
-    double CurrentY = Ydata.at<double>(NumVecElements-1,0);
-
-    Mat FigureRed	= Mat::zeros(FigH, FigW, CV_64F);
-    Mat FigureGreen = Mat::zeros(FigH, FigW, CV_64F);
-    Mat FigureBlue	= Mat::zeros(FigH, FigW, CV_64F);
-    std::vector<cv::Mat> FigureVec;
-    Mat Figure		= Mat::zeros(FigH, FigW, CV_64F);
+    double CurrentX = plotDataX.at<double>(NumVecElements-1,0);
+    double CurrentY = plotDataY.at<double>(NumVecElements-1,0);
 
     //Draw the plot by connecting lines between the points
     cv::Point p1;
-    p1.x = InterpXdata.at<double>(0,0);
-    p1.y = InterpYdata.at<double>(0,0);
+    p1.x = (int)InterpXdata.at<double>(0,0);
+    p1.y = (int)InterpYdata.at<double>(0,0);
 
-    drawAxis(MinX, MaxX, MinY, MaxY, ImageXzero,ImageYzero, CurrentX, CurrentY, NumVecElements, FigW, FigH, FigureRed, FigureGreen, FigureBlue);
+    drawAxis(ImageXzero,ImageYzero, CurrentX, CurrentY, plotAxisColor);
 
     for (int r=1; r<InterpXdata.rows; r++){
 
         cv::Point p2;
-        p2.x = InterpXdata.at<double>(r,0);
-        p2.y = InterpYdata.at<double>(r,0);
+        p2.x = (int)InterpXdata.at<double>(r,0);
+        p2.y = (int)InterpYdata.at<double>(r,0);
 
-        line(FigureRed, p1, p2, 255, 2, 8, 0);
-        line(FigureGreen, p1, p2, 255, 2, 8, 0);
-        line(FigureBlue, p1, p2, 0, 2, 8, 0);
+        line(plotResult, p1, p2, plotLineColor, plotLineWidth, 8, 0);
 
         p1 = p2;
 
     }
 
-    FigureVec.push_back(FigureBlue);
-    FigureVec.push_back(FigureGreen);
-    FigureVec.push_back(FigureRed);
-
-    merge(FigureVec,Figure);
-
-    //Show the plot
-    namedWindow(FigureName);
-    imshow(FigureName, Figure);
-
-    waitKey(5);
+    _plotResult = plotResult.clone();
 
 }
 
-void Plot::drawAxis(double /*MinX*/, double /*MaxX*/, double /*MinY*/, double /*MaxY*/, double ImageXzero, double ImageYzero, double CurrentX, double CurrentY, int /*NumVecElements*/, int FigW, int FigH, cv::Mat &FigureRed, cv::Mat &FigureGreen, cv::Mat &FigureBlue){
+///show the plotResult from within the class
+void Plot::show(const char * _plotName)
+{
+    namedWindow(_plotName);
+    imshow(_plotName, plotResult);
+    waitKey(5);
+}
 
-    drawValuesAsText(0, ImageXzero, ImageYzero, 10, 20, FigureRed, FigureGreen, FigureBlue);
-    drawValuesAsText(0, ImageXzero, ImageYzero, -20, 20, FigureRed, FigureGreen, FigureBlue);
-    drawValuesAsText(0, ImageXzero, ImageYzero, 10, -10, FigureRed, FigureGreen, FigureBlue);
-    drawValuesAsText(0, ImageXzero, ImageYzero, -20, -10, FigureRed, FigureGreen, FigureBlue);
-    drawValuesAsText("X = %g",CurrentX, 0, 0, 40, 20, FigureRed, FigureGreen, FigureBlue);
-    drawValuesAsText("Y = %g",CurrentY, 0, 20, 40, 20, FigureRed, FigureGreen, FigureBlue);
+///save the plotResult as a .png image
+void Plot::save(const char * _plotFileName)
+{
+    imwrite(_plotFileName, plotResult);
+}
+
+void Plot::drawAxis(double ImageXzero, double ImageYzero, double CurrentX, double CurrentY, Scalar axisColor){
+
+    drawValuesAsText(0, ImageXzero, ImageYzero, 10, 20);
+    drawValuesAsText(0, ImageXzero, ImageYzero, -20, 20);
+    drawValuesAsText(0, ImageXzero, ImageYzero, 10, -10);
+    drawValuesAsText(0, ImageXzero, ImageYzero, -20, -10);
+    drawValuesAsText("X = %g",CurrentX, 0, 0, 40, 20);
+    drawValuesAsText("Y = %g",CurrentY, 0, 20, 40, 20);
 
     //Horizontal X axis and equispaced horizontal lines
     int LineSpace = 50;
     int TraceSize = 5;
-    cv::Point3d RGBLineColor;
-    RGBLineColor.x = 255;
-    RGBLineColor.y = 0;
-    RGBLineColor.z = 0;
-    drawLine(0, FigW, ImageYzero, ImageYzero, FigureRed, FigureGreen, FigureBlue, 1, RGBLineColor);
+    drawLine(0, plotSizeWidth, ImageYzero, ImageYzero, axisColor);
 
-    RGBLineColor.x = 255;
-    RGBLineColor.y = 255;
-    RGBLineColor.z = 255;
-    for(int i=-FigH; i<FigH; i=i+LineSpace){
+    for(int i=-plotSizeHeight; i<plotSizeHeight; i=i+LineSpace){
 
         if(i!=0){
             int Trace=0;
-            while(Trace<FigW){
-                drawLine(Trace, Trace+TraceSize, ImageYzero+i, ImageYzero+i, FigureRed, FigureGreen, FigureBlue, 1, RGBLineColor);
+            while(Trace<plotSizeWidth){
+                drawLine(Trace, Trace+TraceSize, ImageYzero+i, ImageYzero+i, axisColor);
                 Trace = Trace+2*TraceSize;
             }
         }
@@ -234,25 +135,18 @@ void Plot::drawAxis(double /*MinX*/, double /*MaxX*/, double /*MinY*/, double /*
 
 
     //Vertical Y axis
-    RGBLineColor.x = 255;
-    RGBLineColor.y = 0;
-    RGBLineColor.z = 0;
-    drawLine(ImageXzero, ImageXzero, 0, FigH, FigureRed, FigureGreen, FigureBlue, 1, RGBLineColor);
+    drawLine(ImageXzero, ImageXzero, 0, plotSizeHeight, axisColor);
 
-    RGBLineColor.x = 255;
-    RGBLineColor.y = 255;
-    RGBLineColor.z = 255;
-    for(int i=-FigW; i<FigW; i=i+LineSpace){
+    for(int i=-plotSizeWidth; i<plotSizeWidth; i=i+LineSpace){
 
         if(i!=0){
             int Trace=0;
-            while(Trace<FigH){
-                drawLine(ImageXzero+i, ImageXzero+i, Trace, Trace+TraceSize, FigureRed, FigureGreen, FigureBlue, 1, RGBLineColor);
+            while(Trace<plotSizeHeight){
+                drawLine(ImageXzero+i, ImageXzero+i, Trace, Trace+TraceSize, axisColor);
                 Trace = Trace+2*TraceSize;
             }
         }
     }
-
 }
 
 Mat Plot::linearInterpolation(double Xa, double Xb, double Ya, double Yb, cv::Mat Xdata){
@@ -273,22 +167,20 @@ Mat Plot::linearInterpolation(double Xa, double Xb, double Ya, double Yb, cv::Ma
 
 }
 
-void Plot::drawValuesAsText(double Value, int Xloc, int Yloc, int XMargin, int YMargin, Mat &FigureRed, Mat &FigureGreen, Mat &FigureBlue){
+void Plot::drawValuesAsText(double Value, int Xloc, int Yloc, int XMargin, int YMargin){
 
     char AxisX_Min_Text[20];
-    int TextSize = 1;
+    double TextSize = 1;
 
     sprintf(AxisX_Min_Text, "%g", Value);
     cv::Point AxisX_Min_Loc;
     AxisX_Min_Loc.x = Xloc+XMargin;
     AxisX_Min_Loc.y = Yloc+YMargin;
-    putText(FigureRed,AxisX_Min_Text, AxisX_Min_Loc, FONT_HERSHEY_COMPLEX_SMALL, TextSize, 255, 1, 8);
-    putText(FigureGreen,AxisX_Min_Text, AxisX_Min_Loc, FONT_HERSHEY_COMPLEX_SMALL, TextSize, 255, 1, 8);
-    putText(FigureBlue,AxisX_Min_Text, AxisX_Min_Loc, FONT_HERSHEY_COMPLEX_SMALL, TextSize, 255, 1, 8);
 
+    putText(plotResult,AxisX_Min_Text, AxisX_Min_Loc, FONT_HERSHEY_COMPLEX_SMALL, TextSize, plotTextColor, 1, 8);
 }
 
-void Plot::drawValuesAsText(const char *Text, double Value, int Xloc, int Yloc, int XMargin, int YMargin, Mat &FigureRed, Mat &FigureGreen, Mat &FigureBlue){
+void Plot::drawValuesAsText(const char *Text, double Value, int Xloc, int Yloc, int XMargin, int YMargin){
 
     char AxisX_Min_Text[20];
     int TextSize = 1;
@@ -297,14 +189,13 @@ void Plot::drawValuesAsText(const char *Text, double Value, int Xloc, int Yloc, 
     cv::Point AxisX_Min_Loc;
     AxisX_Min_Loc.x = Xloc+XMargin;
     AxisX_Min_Loc.y = Yloc+YMargin;
-    putText(FigureRed,AxisX_Min_Text, AxisX_Min_Loc, FONT_HERSHEY_COMPLEX_SMALL, TextSize, 255, 1, 8);
-    putText(FigureGreen,AxisX_Min_Text, AxisX_Min_Loc, FONT_HERSHEY_COMPLEX_SMALL, TextSize, 255, 1, 8);
-    putText(FigureBlue,AxisX_Min_Text, AxisX_Min_Loc, FONT_HERSHEY_COMPLEX_SMALL, TextSize, 255, 1, 8);
+
+    putText(plotResult,AxisX_Min_Text, AxisX_Min_Loc, FONT_HERSHEY_COMPLEX_SMALL, TextSize, plotTextColor, 1, 8);
 
 }
 
 
-void Plot::drawLine(int Xstart, int Xend, int Ystart, int Yend, Mat &FigureRed, Mat &FigureGreen, Mat &FigureBlue, int LineWidth, cv::Point3d RGBLineColor){
+void Plot::drawLine(int Xstart, int Xend, int Ystart, int Yend, Scalar lineColor){
 
     cv::Point Axis_start;
     cv::Point Axis_end;
@@ -313,12 +204,6 @@ void Plot::drawLine(int Xstart, int Xend, int Ystart, int Yend, Mat &FigureRed, 
     Axis_end.x = Xend;
     Axis_end.y = Yend;
 
-    int RedColor = RGBLineColor.x;
-    int GreenColor = RGBLineColor.y;
-    int BlueColor = RGBLineColor.z;
-
-    line(FigureRed, Axis_start, Axis_end, RedColor, LineWidth, 8, 0);
-    line(FigureGreen, Axis_start, Axis_end, GreenColor, LineWidth, 8, 0);
-    line(FigureBlue, Axis_start, Axis_end, BlueColor, LineWidth, 8, 0);
+    line(plotResult, Axis_start, Axis_end, lineColor, plotLineWidth, 8, 0);
 
 }
