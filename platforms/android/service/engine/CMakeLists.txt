@@ -48,7 +48,9 @@ endif()
 # -D__SUPPORT_ARMEABI_FEATURES key is also available
 add_definitions(-DPLATFORM_ANDROID -D__SUPPORT_ARMEABI_V7A_FEATURES -D__SUPPORT_TEGRA3 -D__SUPPORT_MIPS)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-allow-shlib-undefined")
+# set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-allow-shlib-undefined")
+string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REPLACE "-fvisibility-inlines-hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 include_directories("jni/BinderComponent" "jni/include")
 include_directories(SYSTEM "${ANDROID_SOURCE_TREE}/frameworks/base/include" "${ANDROID_SOURCE_TREE}/system/core/include")

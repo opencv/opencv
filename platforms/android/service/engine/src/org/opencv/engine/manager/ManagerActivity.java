@@ -306,6 +306,9 @@ public class ManagerActivity extends Activity
                 path = EngineService.getLibPathByVersion("2.5");
                 Log.d(TAG, "2.5 -> " + path);
                 mActivePackageMap.put("25", path);
+                path = EngineService.getLibPathByVersion("3.0");
+                Log.d(TAG, "3.0 -> " + path);
+                mActivePackageMap.put("30", path);
             } catch (RemoteException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
