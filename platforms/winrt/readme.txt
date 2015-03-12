@@ -17,14 +17,29 @@ Install Visual Studio Express 2012 for Windows Desktop
 
 
 
-To create all Windows Phone (8.0, 8.1) and Windows Store (8.0, 8.1) Visual Studio projects
+To create and build all Windows Phone (8.0, 8.1) and Windows Store (8.0, 8.1) Visual Studio projects
 ==========================================================================================
 cd opencv/platforms/winrt
-setup_winrt.bat "WP,WS" "8.0,8.1" "x86,ARM"
+setup_winrt.bat "WP,WS" "8.0,8.1" "x86,ARM" -b
 
 If everything's fine, a few minutes later you will get the following output in the opencv/bin directory:
 
 bin
+    install
+        WP
+            8.0
+                ARM
+                x86
+            8.1
+                ARM
+                x86
+        WS
+            8.0
+                ARM
+                x86
+            8.1
+                ARM
+                x86
     WP
         8.0
             ARM
@@ -40,7 +55,11 @@ bin
             ARM
             x86
 
-Build the OpenCV.sln for the particular platform you are targeting. Due to the current limitations of CMake, separate x86/x64/ARM projects must be generated for each platform.
+"-b" flag in the command above builds each generated solutions in both "Debug" and "Release" configurations. It also builds the predefined "INSTALL" project within generated solutions. Building it creates a separate install location that accumulates binaries and includes for specified platforms. Default location is "<ocv-src>\bin\install\".
+
+WinRT samples reference 'install' binaries and include files via "OPENCV_WINRT_INSTALL_DIR" environment variable. Please declare it and point to "<ocv-src>\bin\install\" directory (note slash at the end) to resolve references within sample applications.
+
+If you don't want to build all configurations automatically, you can omit "-b" flag and build OpenCV.sln for the particular platform you are targeting manually. Due to the current limitations of CMake, separate x86/x64/ARM projects must be generated for each platform.
 
 You can also target a single specific configuration
     setup_winrt.bat "WP" "8.1" "x86"
