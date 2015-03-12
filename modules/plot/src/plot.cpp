@@ -68,8 +68,8 @@ void Plot::render(cv::Mat &_plotResult){
     int ImageXzero = (int)InterpXdataFindZero.at<double>(NumVecElements,0);
     int ImageYzero = (int)InterpYdataFindZero.at<double>(NumVecElements,0);
 
-    int CurrentX = (int)plotDataX.at<double>(NumVecElements-1,0);
-    int CurrentY = (int)plotDataY.at<double>(NumVecElements-1,0);
+    double CurrentX = plotDataX.at<double>(NumVecElements-1,0);
+    double CurrentY = plotDataY.at<double>(NumVecElements-1,0);
 
     //Draw the plot by connecting lines between the points
     cv::Point p1;
@@ -108,7 +108,7 @@ void Plot::save(const char * _plotFileName)
     imwrite(_plotFileName, plotResult);
 }
 
-void Plot::drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, Scalar axisColor, Scalar gridColor){
+void Plot::drawAxis(int ImageXzero, int ImageYzero, double CurrentX, double CurrentY, Scalar axisColor, Scalar gridColor){
 
     drawValuesAsText(0, ImageXzero, ImageYzero, 10, 20);
     drawValuesAsText(0, ImageXzero, ImageYzero, -20, 20);

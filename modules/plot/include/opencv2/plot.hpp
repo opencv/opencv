@@ -245,7 +245,7 @@ namespace cv
         }
 
         cv::Mat linearInterpolation(double Xa, double Xb, double Ya, double Yb, cv::Mat Xdata);
-        void drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, cv::Scalar axisColor, cv::Scalar gridColor);
+        void drawAxis(int ImageXzero, int ImageYzero, double CurrentX, double CurrentY, cv::Scalar axisColor, cv::Scalar gridColor);
         void drawValuesAsText(double Value, int Xloc, int Yloc, int XMargin, int YMargin);
         void drawValuesAsText(const char * Text, double Value, int Xloc, int Yloc, int XMargin, int YMargin);
         void drawLine(int Xstart, int Xend, int Ystart, int Yend, cv::Scalar lineColor);
