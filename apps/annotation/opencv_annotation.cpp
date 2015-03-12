@@ -154,6 +154,15 @@ void get_annotations(Mat input_image, stringstream* output_stream)
 
 int main( int argc, const char** argv )
 {
+    // If no arguments are given, then supply some information on how this tool works
+    if( argc == 1 ){
+        cout << "Usage: " << argv[0] << endl;
+        cout << " -images <folder_location> [example - /data/testimages/]" << endl;
+        cout << " -annotations <ouput_file> [example - /data/annotations.txt]" << endl;
+
+        return -1;
+    }
+
     // Read in the input arguments
     string image_folder;
     string annotations;
