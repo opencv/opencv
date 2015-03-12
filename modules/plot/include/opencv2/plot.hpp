@@ -86,6 +86,7 @@ namespace cv
         cv::Scalar plotLineColor;
         cv::Scalar plotBackgroundColor;
         cv::Scalar plotAxisColor;
+        cv::Scalar plotGridColor;
         cv::Scalar plotTextColor;
 
         ///the final plot result
@@ -149,6 +150,10 @@ namespace cv
         void setPlotAxisColor(cv::Scalar _plotAxisColor)
         {
             plotAxisColor=_plotAxisColor;
+        }
+        void setPlotGridColor(cv::Scalar _plotGridColor)
+        {
+            plotGridColor=_plotGridColor;
         }
         void setPlotTextColor(cv::Scalar _plotTextColor)
         {
@@ -233,13 +238,14 @@ namespace cv
 
             ///setting default colors for the different elements of the plot
             setPlotAxisColor(cv::Scalar(0, 0, 255));
+            setPlotGridColor(cv::Scalar(255, 255, 255));
             setPlotBackgroundColor(cv::Scalar(0, 0, 0));
             setPlotLineColor(cv::Scalar(0, 255, 255));
             setPlotTextColor(cv::Scalar(255, 255, 255));
         }
 
         cv::Mat linearInterpolation(double Xa, double Xb, double Ya, double Yb, cv::Mat Xdata);
-        void drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, cv::Scalar axisColor);
+        void drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, cv::Scalar axisColor, cv::Scalar gridColor);
         void drawValuesAsText(double Value, int Xloc, int Yloc, int XMargin, int YMargin);
         void drawValuesAsText(const char * Text, double Value, int Xloc, int Yloc, int XMargin, int YMargin);
         void drawLine(int Xstart, int Xend, int Ystart, int Yend, cv::Scalar lineColor);

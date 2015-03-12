@@ -76,7 +76,7 @@ void Plot::render(cv::Mat &_plotResult){
     p1.x = (int)InterpXdata.at<double>(0,0);
     p1.y = (int)InterpYdata.at<double>(0,0);
 
-    drawAxis(ImageXzero,ImageYzero, CurrentX, CurrentY, plotAxisColor);
+    drawAxis(ImageXzero,ImageYzero, CurrentX, CurrentY, plotAxisColor, plotGridColor);
 
     for (int r=1; r<InterpXdata.rows; r++){
 
@@ -108,7 +108,7 @@ void Plot::save(const char * _plotFileName)
     imwrite(_plotFileName, plotResult);
 }
 
-void Plot::drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, Scalar axisColor){
+void Plot::drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, Scalar axisColor, Scalar gridColor){
 
     drawValuesAsText(0, ImageXzero, ImageYzero, 10, 20);
     drawValuesAsText(0, ImageXzero, ImageYzero, -20, 20);
@@ -127,7 +127,7 @@ void Plot::drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, 
         if(i!=0){
             int Trace=0;
             while(Trace<plotSizeWidth){
-                drawLine(Trace, Trace+TraceSize, ImageYzero+i, ImageYzero+i, axisColor);
+                drawLine(Trace, Trace+TraceSize, ImageYzero+i, ImageYzero+i, gridColor);
                 Trace = Trace+2*TraceSize;
             }
         }
@@ -142,7 +142,7 @@ void Plot::drawAxis(int ImageXzero, int ImageYzero, int CurrentX, int CurrentY, 
         if(i!=0){
             int Trace=0;
             while(Trace<plotSizeHeight){
-                drawLine(ImageXzero+i, ImageXzero+i, Trace, Trace+TraceSize, axisColor);
+                drawLine(ImageXzero+i, ImageXzero+i, Trace, Trace+TraceSize, gridColor);
                 Trace = Trace+2*TraceSize;
             }
         }
