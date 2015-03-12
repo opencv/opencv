@@ -61,7 +61,7 @@ CV_EXPORTS void addImpl(int flag, const char* func = 0); // add implementation a
 // Each implementation entry correspond to function name entry, so you can find which implementation was executed in which fucntion
 CV_EXPORTS int getImpl(std::vector<int> &impl, std::vector<String> &funName);
 
-CV_EXPORTS bool useCollection(); // return implementation colelction state
+CV_EXPORTS bool useCollection(); // return implementation collection state
 CV_EXPORTS void setUseCollection(bool flag); // set implementation collection state
 
 #define CV_IMPL_PLAIN  0x01 // native CPU OpenCV implementation
