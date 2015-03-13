@@ -19,7 +19,7 @@ typedef perf::TestBaseWithParam<int> PointsNum;
 
 PERF_TEST_P(PointsNum_Algo, solvePnP,
             testing::Combine(
-                testing::Values(4, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
+                testing::Values(5, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
                 testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP)
                 )
             )
@@ -92,7 +92,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
 
     //add noise
     Mat noise(1, (int)points2d.size(), CV_32FC2);
-    randu(noise, 0, 0.01);
+    randu(noise, 0, 0.005);
     add(points2d, noise, points2d);
 
     declare.in(points3d, points2d);
@@ -107,7 +107,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
     SANITY_CHECK(tvec, 1e-2);
 }
 
-PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(4, 3*9, 7*13))
+PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(5, 3*9, 7*13))
 {
     int count = GetParam();
 
