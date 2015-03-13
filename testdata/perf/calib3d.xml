@@ -350,6 +350,8 @@
  <!-- resumed -->
  <!-- resumed -->
  <!-- resumed -->
+ <!-- resumed -->
+ <!-- resumed -->
 <PointsNum_Algo_solvePnP--solvePnP---5--SOLVEPNP_ITERATIVE->
   <rvec>
     <kind>65536</kind>
@@ -485,8 +487,8 @@
       <cols>1</cols>
       <dt>d</dt>
       <data>
-        1.7552237872408241e+000 -1.9882793931488536e+000
-        8.1428333293814492e-001</data></val></rvec>
+        1.7552275590296815e+000 -1.9882933554647499e+000
+        8.1429346393494328e-001</data></val></rvec>
   <tvec>
     <kind>65536</kind>
     <type>6</type>
@@ -495,8 +497,8 @@
       <cols>1</cols>
       <dt>d</dt>
       <data>
-        2.6848964507008104e+003 -3.9480181058204421e+003
-        3.3993609310664042e+003</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_P3P->
+        2.6849212331771259e+003 -3.9480246570116205e+003
+        3.3993663060812405e+003</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_P3P->
 <PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_DLS->
   <rvec>
     <kind>65536</kind>
@@ -506,8 +508,8 @@
       <cols>1</cols>
       <dt>d</dt>
       <data>
-        1.7552218853961241e+000 -1.9882875891254665e+000
-        8.1429233278322188e-001</data></val></rvec>
+        1.7552270296731969e+000 -1.9882940375665914e+000
+        8.1429568035053412e-001</data></val></rvec>
   <tvec>
     <kind>65536</kind>
     <type>6</type>
@@ -516,8 +518,8 @@
       <cols>1</cols>
       <dt>d</dt>
       <data>
-        2.6849206851201934e+003 -3.9480172203309739e+003
-        3.3993744232992722e+003</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_DLS->
+        2.6849246104280128e+003 -3.9480258490046172e+003
+        3.3993692113094216e+003</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_DLS->
 <PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_UPNP->
   <rvec>
     <kind>65536</kind>
@@ -527,8 +529,8 @@
       <cols>1</cols>
       <dt>d</dt>
       <data>
-        9.0513754458850737e-001 -1.5811995111916424e+000
-        -1.5531956014178494e+000</data></val></rvec>
+        -1.6661733334261912e+000 2.0591261013136237e+000
+        1.0780889320468985e+000</data></val></rvec>
   <tvec>
     <kind>65536</kind>
     <type>6</type>
@@ -537,6 +539,6 @@
       <cols>1</cols>
       <dt>d</dt>
       <data>
-        6.5654127020842396e+004 -2.8161804799798956e+004
-        6.1634947101825674e+003</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_UPNP->
+        1.3811817438194765e+004 -5.4387565687548667e+003
+        8.9600168051956221e+005</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---4--SOLVEPNP_UPNP->
 </opencv_storage>
