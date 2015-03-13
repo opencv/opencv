@@ -134,7 +134,8 @@ public:
     CV_WRAP Index(InputArray features, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
     virtual ~Index();
 
-    CV_WRAP virtual void build(InputArray features, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
+    CV_WRAP virtual void build(InputArray wholefeatures, InputArray additionalfeatures, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
+
     CV_WRAP virtual void knnSearch(InputArray query, OutputArray indices,
                    OutputArray dists, int knn, const SearchParams& params=SearchParams());
 
