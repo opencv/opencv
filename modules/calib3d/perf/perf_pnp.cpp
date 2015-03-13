@@ -92,7 +92,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
 
     //add noise
     Mat noise(1, (int)points2d.size(), CV_32FC2);
-    randu(noise, 0, 0.005);
+    randu(noise, 0, 0.001);
     add(points2d, noise, points2d);
 
     declare.in(points3d, points2d);
