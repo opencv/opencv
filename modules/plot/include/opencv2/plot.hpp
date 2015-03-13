@@ -97,6 +97,26 @@ namespace cv
         ///constructor accepting only Y data to be plotted
         Plot(cv::Mat _plotData)
         {
+            //if the matrix is not Nx1 or 1xN
+            if(_plotData.cols > 1 && _plotData.rows > 1)
+            {
+                std::cout << "ERROR: Plot data must be a 1xN or Nx1 matrix." << std::endl;
+                exit(0);
+            }
+
+            //if the matrix type is not CV_64F
+            if(_plotData.type() != CV_64F)
+            {
+                std::cout << "ERROR: Plot data type must be double (CV_64F)." << std::endl;
+                exit(0);
+            }
+
+            //in case we have a row matrix than needs to be transposed
+            if(_plotData.cols > _plotData.rows)
+            {
+                _plotData = _plotData.t();
+            }
+
             plotDataY=_plotData;
             plotDataX = plotDataY*0;
             for (int i=0; i<plotDataY.rows; i++)
@@ -111,6 +131,30 @@ namespace cv
         ///constructor accepting X data and Y data to be plotted
         Plot(cv::Mat _plotDataX, cv::Mat _plotDataY)
         {
+            //f the matrix is not Nx1 or 1xN
+            if(_plotDataX.cols > 1 && _plotDataX.rows > 1 || _plotDataY.cols > 1 && _plotDataY.rows > 1)
+            {
+                std::cout << "ERROR: Plot data must be a 1xN or Nx1 matrix." << std::endl;
+                exit(0);
+            }
+
+            //if the matrix type is not CV_64F
+            if(_plotDataX.type() != CV_64F || _plotDataY.type() != CV_64F)
+            {
+                std::cout << "ERROR: Plot data type must be double (CV_64F)." << std::endl;
+                exit(0);
+            }
+
+            //in case we have a row matrix than needs to be transposed
+            if(_plotDataX.cols > _plotDataX.rows)
+            {
+                _plotDataX = _plotDataX.t();
+            }
+            if(_plotDataY.cols > _plotDataY.rows)
+            {
+                _plotDataY = _plotDataY.t();
+            }
+
             plotHelper(_plotDataX, _plotDataY);
         }
 
