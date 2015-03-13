@@ -464,6 +464,7 @@ static int icvInitSystem(int* c, char** v)
     if (!QApplication::instance())
     {
         new QApplication(*c, v);
+        setlocale(LC_NUMERIC,"C");
 
         qDebug() << "init done";
 
