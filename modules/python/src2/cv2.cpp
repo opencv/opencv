@@ -1235,7 +1235,9 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
         submod = PyImport_AddModule(full_name.c_str());
         PyDict_SetItemString(d, short_name.c_str(), submod);
     }
-    root = submod;
+
+    if (short_name != "")
+        root = submod;
   }
 
   // populate module's dict
