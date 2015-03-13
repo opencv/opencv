@@ -361,7 +361,7 @@ Index::Index(InputArray _data, const IndexParams& params, flann_distance_t _dist
     build(_data, _data, params, _distType);
 }
 
-void Index::build(InputArray &_wholedata, InputArray &_data, const IndexParams& params, flann_distance_t _distType)
+void Index::build(InputArray _wholedata, InputArray _data, const IndexParams& params, flann_distance_t _distType)
 {
     algo = getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR);
 
