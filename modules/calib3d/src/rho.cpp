@@ -1124,8 +1124,10 @@ inline int    RHO_HEST_REFC::isFinalRefineEnabled(void){
  * Computes whether the end of the current PROSAC phase has been reached. At
  * PROSAC phase phNum, only matches [0, phNum) are sampled from.
  *
- * Accesses:
- * Read: i, phEndI, phNum, phMax.
+ * Reads    (direct): ctrl.i, ctrl.phEndI, ctrl.phNum, ctrl.phMax
+ * Reads   (callees): None.
+ * Writes   (direct): None.
+ * Writes  (callees): None.
  */
 
 inline int    RHO_HEST_REFC::PROSACPhaseEndReached(void){
@@ -1138,9 +1140,10 @@ inline int    RHO_HEST_REFC::PROSACPhaseEndReached(void){
  *
  * Not idempotent.
  *
- * Accesses:
- * Read:  phNum, phEndFpI, phEndI
- * Write: phNum, phEndFpI, phEndI
+ * Reads    (direct): ctrl.phNum, ctrl.phEndFpI, ctrl.phEndI
+ * Reads   (callees): None.
+ * Writes   (direct): ctrl.phNum, ctrl.phEndFpI, ctrl.phEndI
+ * Writes  (callees): None.
  */
 
 inline void   RHO_HEST_REFC::PROSACGoToNextPhase(void){
@@ -1158,6 +1161,11 @@ inline void   RHO_HEST_REFC::PROSACGoToNextPhase(void){
  *   phNum matches.
  * - Otherwise, select match phNum-1 and select randomly the 3 others out of
  *   the first phNum-1 matches.
+ *
+ * Reads    (direct): ctrl.i, ctrl.phEndI, ctrl.phNum
+ * Reads   (callees): prng.s
+ * Writes   (direct): ctrl.smpl
+ * Writes  (callees): prng.s
  */
 
 inline void   RHO_HEST_REFC::getPROSACSample(void){
@@ -1172,6 +1180,11 @@ inline void   RHO_HEST_REFC::getPROSACSample(void){
 
 /**
  * Choose, without repetition, sampleSize integers in the range [0, numDataPoints).
+ *
+ * Reads    (direct): None.
+ * Reads   (callees): prng.s
+ * Writes   (direct): None.
+ * Writes  (callees): prng.s
  */
 
 inline void   RHO_HEST_REFC::rndSmpl(unsigned  sampleSize,
@@ -1237,6 +1250,11 @@ inline void   RHO_HEST_REFC::rndSmpl(unsigned  sampleSize,
  *   out bad samples to the optimized GE implementation.
  * - Second, the geometrical degeneracy test is run, which weeds out most other
  *   bad samples.
+ *
+ * Reads    (direct): ctrl.smpl, arg.src, arg.dst
+ * Reads   (callees): None.
+ * Writes   (direct): curr.pkdPts
+ * Writes  (callees): None.
  */
 
 inline int    RHO_HEST_REFC::isSampleDegenerate(void){
@@ -1330,6 +1348,11 @@ inline int    RHO_HEST_REFC::isSampleDegenerate(void){
 /**
  * Compute homography of matches in gathered, packed sample and output the
  * current homography.
+ *
+ * Reads    (direct): None.
+ * Reads   (callees): curr.pkdPts
+ * Writes   (direct): None.
+ * Writes  (callees): curr.H
  */
 
 inline void   RHO_HEST_REFC::generateModel(void){
@@ -1340,6 +1363,11 @@ inline void   RHO_HEST_REFC::generateModel(void){
  * Checks whether the model is itself degenerate.
  * - One test: All elements of the homography are added, and if the result is
  *   NaN the homography is rejected.
+ *
+ * Reads    (direct): curr.H
+ * Reads   (callees): None.
+ * Writes   (direct): None.
+ * Writes  (callees): None.
  */
 
 inline int    RHO_HEST_REFC::isModelDegenerate(void){
@@ -1359,8 +1387,13 @@ inline int    RHO_HEST_REFC::isModelDegenerate(void){
 /**
  * Evaluates the current model using SPRT for early exiting.
  *
- * Reads:  arg.maxD, arg.src, arg.dst, curr.H, eval.*
- * Writes: eval.*, curr.inl, curr.numInl
+ * Reads    (direct): arg.maxD, arg.src, arg.dst, arg.N, curr.inl, curr.H,
+ *                    ctrl.numModels, eval.Ntestedtotal, eval.lambdaAccept,
+ *                    eval.lambdaReject, eval.A
+ * Reads   (callees): None.
+ * Writes   (direct): ctrl.numModels, curr.numInl, eval.Ntested, eval.good,
+ *                    eval.Ntestedtotal
+ * Writes  (callees): None.
  */
 
 inline void   RHO_HEST_REFC::evaluateModelSPRT(void){
@@ -1423,13 +1456,10 @@ inline void   RHO_HEST_REFC::evaluateModelSPRT(void){
  * Update either the delta or epsilon SPRT parameters, depending on the events
  * that transpired in the previous evaluation.
  *
- * If a "good" model that is also the best was encountered, update epsilon,
- * since
- *
- * Reads:  eval.good, eval.delta, eval.epsilon, eval.t_M, eval.m_S,
- *         curr.numInl, best.numInl
- * Writes: eval.epsilon, eval.delta, eval.A, eval.lambdaAccept,
- *         eval.lambdaReject
+ * Reads    (direct): eval.good, curr.numInl, arg.N, eval.Ntested, eval.delta
+ * Reads   (callees): eval.delta, eval.epsilon, eval.t_M, eval.m_S
+ * Writes   (direct): eval.epsilon, eval.delta
+ * Writes  (callees): eval.A, eval.lambdaReject, eval.lambdaAccept
  */
 
 inline void   RHO_HEST_REFC::updateSPRT(void){
