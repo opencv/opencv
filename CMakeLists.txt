@@ -624,19 +624,23 @@ include(cmake/OpenCVGenConfig.cmake)
 include(cmake/OpenCVGenInfoPlist.cmake)
 
 # Generate environment setup file
-if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH AND UNIX)
+if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH)
   if(ANDROID)
     get_filename_component(TEST_PATH ${OPENCV_TEST_INSTALL_PATH} DIRECTORY)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests_android.sh.in"
                    "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh" @ONLY)
     install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
             DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT tests)
-  else()
+  elseif(WIN32)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests_windows.cmd.in"
+                   "${CMAKE_BINARY_DIR}/win-install/opencv_run_all_tests.cmd" @ONLY)
+    install(PROGRAMS "${CMAKE_BINARY_DIR}/win-install/opencv_run_all_tests.cmd"
+            DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+  elseif(UNIX)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests_unix.sh.in"
                    "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh" @ONLY)
     install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
             DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
-
   endif()
 endif()
 
@@ -995,7 +999,7 @@ if(WITH_IPP AND HAVE_IPP)
     status("     linked:" BUILD_WITH_DYNAMIC_IPP THEN "dynamic" ELSE "static")
   endif()
 else()
-  status("    Use IPP:"   WITH_IPP AND NOT HAVE_IPP THEN "IPP not found" ELSE NO)
+  status("    Use IPP:"   WITH_IPP AND NOT HAVE_IPP THEN "IPP not found or implicitly disabled" ELSE NO)
 endif()
 
 if(DEFINED WITH_IPP_A)

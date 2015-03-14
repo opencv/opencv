@@ -322,7 +322,7 @@ double LogisticRegressionImpl::compute_cost(const Mat& _data, const Mat& _labels
     theta_b = _init_theta(Range(1, n), Range::all());
     multiply(theta_b, theta_b, theta_c, 1);
 
-    if(params.norm != REG_NONE)
+    if (params.norm != REG_DISABLE)
     {
         llambda = 1;
     }
@@ -377,7 +377,7 @@ Mat LogisticRegressionImpl::compute_batch_gradient(const Mat& _data, const Mat& 
     m = _data.rows;
     n = _data.cols;
 
-    if(params.norm != REG_NONE)
+    if (params.norm != REG_DISABLE)
     {
         llambda = 1;
     }
@@ -449,7 +449,7 @@ Mat LogisticRegressionImpl::compute_mini_batch_gradient(const Mat& _data, const 
     Mat data_d;
     Mat labels_l;
 
-    if(params.norm != REG_NONE)
+    if (params.norm != REG_DISABLE)
     {
         lambda_l = 1;
     }

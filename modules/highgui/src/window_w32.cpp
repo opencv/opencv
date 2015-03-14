@@ -260,6 +260,8 @@ CV_IMPL int cvInitSystem( int, char** )
         wasInitialized = 1;
     }
 
+    setlocale(LC_NUMERIC,"C");
+
     return 0;
 }
 
