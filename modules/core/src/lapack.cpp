@@ -725,11 +725,11 @@ template<typename T1, typename T2, typename T3> static void
 MatrAXPY( int m, int n, const T1* x, int dx,
          const T2* a, int inca, T3* y, int dy )
 {
-    int i, j;
+    int i;
     for( i = 0; i < m; i++, x += dx, y += dy )
     {
         T2 s = a[i*inca];
-        j=0;
+        int j = 0;
          #if CV_ENABLE_UNROLLED
         for(; j <= n - 4; j += 4 )
         {
