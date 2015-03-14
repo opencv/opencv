@@ -23,7 +23,7 @@ void drawAxis(Mat& img, Point p, Point q, Scalar colour, const float scale = 0.2
     double angle;
     double hypotenuse;
     angle = atan2( (double) p.y - q.y, (double) p.x - q.x ); // angle in radians
-    hypotenuse = sqrt( (p.y - q.y) * (p.y - q.y) + (p.x - q.x) * (p.x - q.x));
+    hypotenuse = sqrt( (double) (p.y - q.y) * (p.y - q.y) + (p.x - q.x) * (p.x - q.x));
 //    double degrees = angle * 180 / CV_PI; // convert radians to degrees (0-180 range)
 //    cout << "Degrees: " << abs(degrees - 180) << endl; // angle in 0-360 degrees range
 

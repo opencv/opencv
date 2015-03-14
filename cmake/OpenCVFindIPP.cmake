@@ -34,6 +34,11 @@ unset(IPP_VERSION_MAJOR)
 unset(IPP_VERSION_MINOR)
 unset(IPP_VERSION_BUILD)
 
+if (X86 AND UNIX AND NOT APPLE AND NOT ANDROID AND BUILD_SHARED_LIBS)
+    message(STATUS "On 32-bit Linux IPP can not currently be used with dynamic libs because of linker errors. Set BUILD_SHARED_LIBS=OFF")
+    return()
+endif()
+
 set(IPP_X64 0)
 if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
     set(IPP_X64 1)

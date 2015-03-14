@@ -7,7 +7,7 @@ Introduction
 The work with a cascade classifier inlcudes two major stages: training and detection. Detection
 stage is described in a documentation of objdetect module of general OpenCV documentation.
 Documentation gives some basic information about cascade classifier. Current guide is describing how
-to train a cascade classifier: preparation of a training data and running the training application.
+to train a cascade classifier: preparation of the training data and running the training application.
 
 ### Important notes
 
@@ -58,9 +58,9 @@ Negative samples are taken from arbitrary images. These images must not contain 
 Negative samples are enumerated in a special file. It is a text file in which each line contains an
 image filename (relative to the directory of the description file) of negative sample image. This
 file must be created manually. Note that negative samples and sample images are also called
-background samples or background samples images, and are used interchangeably in this document.
+background samples or background images, and are used interchangeably in this document.
 Described images may be of different sizes. But each image should be (but not nessesarily) larger
-then a training window size, because these images are used to subsample negative image to the
+than a training window size, because these images are used to subsample negative image to the
 training size.
 
 An example of description file:

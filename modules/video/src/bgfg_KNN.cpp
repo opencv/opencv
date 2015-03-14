@@ -512,7 +512,7 @@ CV_INLINE void
     {
         for (long x = 0; x < _src.cols; x++)
         {
-            const uchar* data = _src.ptr(y, x);
+            const uchar* data = _src.ptr((int)y, (int)x);
 
             //update model+ background subtract
             uchar include=0;
@@ -539,15 +539,15 @@ CV_INLINE void
             {
                 case 0:
                     //foreground
-                    *_dst.ptr(y, x) = 255;
+                    *_dst.ptr((int)y, (int)x) = 255;
                     break;
                 case 1:
                     //background
-                    *_dst.ptr(y, x) = 0;
+                    *_dst.ptr((int)y, (int)x) = 0;
                     break;
                 case 2:
                     //shadow
-                    *_dst.ptr(y, x) = nShadowDetection;
+                    *_dst.ptr((int)y, (int)x) = nShadowDetection;
                     break;
             }
             i++;
