@@ -106,6 +106,8 @@ public:
 
     /**
     * Implementation for the LSH addable indexes after that.
+    * @param wholeData whole dataset with the input features
+    * @param additionalData additional dataset with the input features
     */
     void addIndex(const Matrix<ElementType>& wholeData, const Matrix<ElementType>& additionalData)
     {
@@ -113,7 +115,7 @@ public:
         for (unsigned int i = 0; i < table_number_; ++i) {
             lsh::LshTable<ElementType>& table = tables_[i];
             // Add the features to the table with indexed offset
-            table.add(wholeData.rows - additionalData.rows, additionalData);
+            table.add((int)(wholeData.rows - additionalData.rows), additionalData);
         }
         dataset_ = wholeData;
     }

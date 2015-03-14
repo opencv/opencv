@@ -192,6 +192,7 @@ public:
     }
 
     /** Add a set of features to the table
+     * @param indexed_ofst previous indexed offset
      * @param dataset the values to store
      */
     void add(int indexed_ofst, Matrix<ElementType> dataset)
