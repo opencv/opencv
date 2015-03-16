@@ -14,8 +14,8 @@ int main( int argc, char* argv[] )
     int numPos    = 2000;
     int numNeg    = 1000;
     int numStages = 20;
-    int precalcValBufSize = 256,
-        precalcIdxBufSize = 256;
+    int precalcValBufSize = 1024,
+        precalcIdxBufSize = 1024;
     bool baseFormatSave = false;
 
     CvCascadeParams cascadeParams;
