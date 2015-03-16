@@ -512,6 +512,16 @@ projections, as well as the camera matrix and the distortion coefficients.
 @note
    -   An example of how to use solvePnP for planar augmented reality can be found at
         opencv_source_code/samples/python2/plane_ar.py
+   -   If you are using Python:
+        - Numpy array slices won't work as input because solvePnP requires contiguous
+        arrays (enforced by the assertion using cv::Mat::checkVector() around line 55 of
+        modules/calib3d/src/solvepnp.cpp version 2.4.9)
+        - The P3P algorithm requires image points to be in an array of shape (N,1,2) due
+        to its calling of cv::undistortPoints (around line 75 of modules/calib3d/src/solvepnp.cpp version 2.4.9)
+        which requires 2-channel information.
+        - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
+        it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
+        np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
