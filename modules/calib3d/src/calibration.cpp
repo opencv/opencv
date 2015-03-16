@@ -1595,7 +1595,10 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
         my = imgHeight / apertureHeight;
     } else {
         mx = 1.0;
-        my = *pasp;
+        if(pasp)
+            my = *pasp;
+        else
+            my = 1.0;
     }
 
     /* Calculate fovx and fovy. */
