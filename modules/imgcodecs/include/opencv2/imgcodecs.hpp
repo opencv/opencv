@@ -136,7 +136,7 @@ returns an empty matrix ( Mat::data==NULL ). Currently, the following file forma
  */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
-/** @brief Loads a multi-page image from a file. (see imread for details.)
+/** @brief Loads a multi-page (or single-page) image from a file. (see imread for details.)
 
 @param filename Name of file to be loaded.
 @param flags Flags specifying the color type of a loaded image (see imread).
@@ -145,6 +145,85 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Callback used while reading images. (see imreadex for details.)
+
+@param mat The image read from file, potentially one of many pages.
+@param userdata A generic pointer to user data.
+@return False will terminate the loading and imreadex will return false to signal incomplete loading.
+*/
+typedef bool(*ImReadCallback)(Mat& mat, void* userdata);
+
+/** @brief Loads a single- or multi-page image from a file via a callback. (see imread for details.)
+    Useful for large multi-page images where loading all the images may neither be efficient nor necessary.
+    To load all pages use imreadmulti. To load a single-page, or the first of many, use imread.
+
+@param filename Name of file to be loaded.
+@param onImRead A callback called upon loading each page of the image.
+@param userdata A user-provided generic pointer passed to the callback.
+@param flags Flags specifying the color type of a loaded image (see imread).
+Defaults to IMREAD_ANYCOLOR, as each page may be different.
+@returns The return value of the callback. If false, it indicates that possibly not all pages were read.
+
+An example for using the callback with an advanced class.
+Here we load the first 'limit' pages.
+The class can of course be extended to support any arbitrary logic.
+@code
+    class ImageLoader
+    {
+    public:
+        // If limit == 0, load all pages.
+        ImageLoader(const std::string& filename, const size_t limit)
+          : _filename(filename),
+            _limit(limit)
+        {
+        }
+
+        // Can be called multiple times, but will load from the same file.
+        // To load from different files with different limits, pass filename and limit here.
+        bool read(std::vector<Mat>& mats)
+        {
+            _mats.clear();
+            imreadex(_filename, onImRead, this);
+            std::swap(mats, _mats);
+            return !mats.empty();
+        }
+
+    private:
+        static bool onImRead(Mat& mat, void* userdata)
+        {
+            if (userdata)
+            {
+                ImageLoader* self = reinterpret_cast<ImageLoader*>(userdata);
+                return self->onImRead(mat);
+            }
+
+            return false;
+        }
+
+        bool onImRead(Mat& mat)
+        {
+            _mats.push_back(mat);
+            // Return false when there is a limit and we exceed it.
+            return (_limit <= 0 || _mats.size() < _limit);
+        }
+
+        const std::string _filename;
+        const size_t _limit;
+        std::vector<Mat> _mats;
+    };
+
+    // Usage:
+    ImageLoader loader("filename.ext", 10);
+    vector<Mat> mats;
+    if (loader.read(mats)) {
+        // loaded
+    } else {
+        // failed
+    }
+@endcode
+*/
+CV_EXPORTS bool imreadex(const String& filename, ImReadCallback onImRead, void* userdata = NULL, int flags = IMREAD_ANYCOLOR);
 
 /** @brief Saves an image to a specified file.
 
