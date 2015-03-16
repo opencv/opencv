@@ -59,9 +59,9 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
     _rvec.create(3, 1, CV_64F);
     _tvec.create(3, 1, CV_64F);
-    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
+    Mat cameraMatrix = Mat_<double>(_cameraMatrix.getMat()), distCoeffs = Mat_<double>(_distCoeffs.getMat());
 
-    if (flags == SOLVEPNP_EPNP)
+    if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
     {
         cv::Mat undistortedPoints;
         cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
@@ -95,7 +95,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
         return true;
     }
-    else if (flags == SOLVEPNP_DLS)
+    /*else if (flags == SOLVEPNP_DLS)
     {
         cv::Mat undistortedPoints;
         cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
@@ -120,7 +120,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         else
             cameraMatrix.at<double>(0,0) = cameraMatrix.at<double>(1,1) = f;
         return true;
-    }
+    }*/
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
     return false;

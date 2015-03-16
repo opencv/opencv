@@ -64,7 +64,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
             testing::Combine(
-                testing::Values(4), //TODO: find why results on 4 points are too unstable
+                testing::Values(4),
                 testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
                 )
             )
@@ -92,7 +92,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
 
     //add noise
     Mat noise(1, (int)points2d.size(), CV_32FC2);
-    randu(noise, 0, 0.001);
+    randu(noise, -0.001, 0.001);
     add(points2d, noise, points2d);
 
     declare.in(points3d, points2d);
