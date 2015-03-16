@@ -4,6 +4,9 @@
 #include "precomp.hpp"
 #include "opencv2/core/core_c.h"
 
+namespace cv
+{
+
 class epnp {
  public:
   epnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& ipoints);
@@ -77,5 +80,7 @@ class epnp {
   int max_nr;
   double * A1, * A2;
 };
+
+}
 
 #endif

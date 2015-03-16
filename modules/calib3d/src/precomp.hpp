@@ -102,6 +102,19 @@ CV_EXPORTS Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<Po
 CV_EXPORTS Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& cb,
                                                                    int modelPoints, double confidence=0.99, int maxIters=1000 );
 
+template<typename T> inline int compressElems( T* ptr, const uchar* mask, int mstep, int count )
+{
+    int i, j;
+    for( i = j = 0; i < count; i++ )
+        if( mask[i*mstep] )
+        {
+            if( i > j )
+                ptr[j] = ptr[i];
+            j++;
+        }
+    return j;
+}
+
 }
 
 #endif

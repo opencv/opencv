@@ -20,7 +20,7 @@ typedef perf::TestBaseWithParam<int> PointsNum;
 PERF_TEST_P(PointsNum_Algo, solvePnP,
             testing::Combine(
                 testing::Values(5, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
-                testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP)
+                testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_UPNP, (int)SOLVEPNP_DLS)
                 )
             )
 {
@@ -64,13 +64,15 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
             testing::Combine(
-                testing::Values(4),
-                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
+                testing::Values(5),
+                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
                 )
             )
 {
     int pointsNum = get<0>(GetParam());
     pnpAlgo algo = get<1>(GetParam());
+    if( algo == SOLVEPNP_P3P )
+        pointsNum = 4;
 
     vector<Point2f> points2d(pointsNum);
     vector<Point3f> points3d(pointsNum);
