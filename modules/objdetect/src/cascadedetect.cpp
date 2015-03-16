@@ -1268,7 +1268,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         scales.push_back((float)factor);
     }
 
-    if( !featureEvaluator->setImage(gray, scales) )
+    if( scales.size() == 0 || !featureEvaluator->setImage(gray, scales) )
         return;
 
     // OpenCL code
