@@ -480,16 +480,14 @@ CV_INLINE int cvRound( double value )
         fistp t;
     }
     return t;
-#elif defined _MSC_VER && defined _M_ARM && defined HAVE_TEGRA_OPTIMIZATION
-    TEGRA_ROUND(value);
+#elif ((defined _MSC_VER && defined _M_ARM) || defined CV_ICC || defined __GNUC__) && defined HAVE_TEGRA_OPTIMIZATION
+    TEGRA_ROUND_DBL(value);
 #elif defined CV_ICC || defined __GNUC__
-#  ifdef HAVE_TEGRA_OPTIMIZATION
-    TEGRA_ROUND(value);
-#  elif CV_VFP
+# if CV_VFP
     ARM_ROUND_DBL(value)
-#  else
+# else
     return (int)lrint(value);
-#  endif
+# endif
 #else
     double intpart, fractpart;
     fractpart = modf(value, &intpart);
@@ -505,7 +503,9 @@ CV_INLINE int cvRound( double value )
 /** @overload */
 CV_INLINE int cvRound(float value)
 {
-#if CV_VFP && !defined HAVE_TEGRA_OPTIMIZATION
+#if defined ANDROID && (defined CV_ICC || defined __GNUC__) && defined HAVE_TEGRA_OPTIMIZATION
+    TEGRA_ROUND_FLT(value);
+#elif CV_VFP && !defined HAVE_TEGRA_OPTIMIZATION
     ARM_ROUND_FLT(value)
 #else
     return cvRound((double)value);
