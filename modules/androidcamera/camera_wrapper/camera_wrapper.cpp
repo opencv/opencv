@@ -314,7 +314,9 @@ public:
         cameraId(0),
         cameraCallback(callback),
         userData(_userData),
-        emptyCameraCallbackReported(0)
+        emptyCameraCallbackReported(0),
+        width(),
+        height()
     {
         LOGD("Instantiated new CameraHandler (%p, %p)", callback, _userData);
         void* params_buffer = operator new(sizeof(CameraParameters) + MAGIC_TAIL);
@@ -1122,7 +1124,7 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
     if (handler == NULL) {
         LOGE("ERROR in applyProperties --- cannot reinit camera");
         handler=initCameraConnect(cameraCallback, cameraId, userData, NULL);
-        LOGD("CameraHandler::applyProperties(): repeate initCameraConnect after ERROR, handler=0x%x", (int)handler);
+        LOGD("CameraHandler::applyProperties(): repeat initCameraConnect after ERROR, handler=0x%x", (int)handler);
         if (handler == NULL) {
             LOGE("ERROR in applyProperties --- cannot reinit camera AGAIN --- cannot do anything else");
         }
