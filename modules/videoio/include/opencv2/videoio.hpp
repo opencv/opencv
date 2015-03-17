@@ -110,8 +110,7 @@ enum { CAP_PROP_POS_MSEC       =0,
        CAP_PROP_CONVERT_RGB   =16,
        CAP_PROP_WHITE_BALANCE_BLUE_U =17,
        CAP_PROP_RECTIFICATION =18,
-       CAP_PROP_MONOCROME     =19,
-       CAP_PROP_MONOCHROME    =CAP_PROP_MONOCROME,
+       CAP_PROP_MONOCHROME    =19,
        CAP_PROP_SHARPNESS     =20,
        CAP_PROP_AUTO_EXPOSURE =21, // DC1394: exposure control done by camera, user can adjust refernce level using this feature
        CAP_PROP_GAMMA         =22,
@@ -217,7 +216,8 @@ enum { CAP_PROP_PVAPI_MULTICASTIP           = 300, // ip for anable multicast ma
        CAP_PROP_PVAPI_DECIMATIONHORIZONTAL  = 302, // Horizontal sub-sampling of the image
        CAP_PROP_PVAPI_DECIMATIONVERTICAL    = 303, // Vertical sub-sampling of the image
        CAP_PROP_PVAPI_BINNINGX              = 304, // Horizontal binning factor
-       CAP_PROP_PVAPI_BINNINGY              = 305  // Vertical binning factor
+       CAP_PROP_PVAPI_BINNINGY              = 305, // Vertical binning factor
+       CAP_PROP_PVAPI_PIXELFORMAT           = 306  // Pixel format
      };
 
 // PVAPI: FrameStartTriggerMode
@@ -233,6 +233,17 @@ enum { CAP_PVAPI_DECIMATION_OFF       = 1,    // Off
        CAP_PVAPI_DECIMATION_2OUTOF4   = 2,    // 2 out of 4 decimation
        CAP_PVAPI_DECIMATION_2OUTOF8   = 4,    // 2 out of 8 decimation
        CAP_PVAPI_DECIMATION_2OUTOF16  = 8     // 2 out of 16 decimation
+     };
+
+// PVAPI: PixelFormat
+enum { CAP_PVAPI_PIXELFORMAT_MONO8    = 1,    // Mono8
+       CAP_PVAPI_PIXELFORMAT_MONO16   = 2,    // Mono16
+       CAP_PVAPI_PIXELFORMAT_BAYER8   = 3,    // Bayer8
+       CAP_PVAPI_PIXELFORMAT_BAYER16  = 4,    // Bayer16
+       CAP_PVAPI_PIXELFORMAT_RGB24    = 5,    // Rgb24
+       CAP_PVAPI_PIXELFORMAT_BGR24    = 6,    // Bgr24
+       CAP_PVAPI_PIXELFORMAT_RGBA32   = 7,    // Rgba32
+       CAP_PVAPI_PIXELFORMAT_BGRA32   = 8,    // Bgra32
      };
 
 // Properties of cameras available through XIMEA SDK interface
