@@ -440,16 +440,28 @@ class CV_EXPORTS_W KNearest : public StatModel
 public:
 
     /** Default number of neighbors to use in predict method. */
-    CV_PURE_PROPERTY(int, DefaultK)
+    /** @see setDefaultK */
+    virtual int getDefaultK() const = 0;
+    /** @copybrief getDefaultK @see getDefaultK */
+    virtual void setDefaultK(int val) = 0;
 
     /** Whether classification or regression model should be trained. */
-    CV_PURE_PROPERTY(bool, IsClassifier)
+    /** @see setIsClassifier */
+    virtual bool getIsClassifier() const = 0;
+    /** @copybrief getIsClassifier @see getIsClassifier */
+    virtual void setIsClassifier(bool val) = 0;
 
     /** Parameter for KDTree implementation. */
-    CV_PURE_PROPERTY(int, Emax)
+    /** @see setEmax */
+    virtual int getEmax() const = 0;
+    /** @copybrief getEmax @see getEmax */
+    virtual void setEmax(int val) = 0;
 
     /** %Algorithm type, one of KNearest::Types. */
-    CV_PURE_PROPERTY(int, AlgorithmType)
+    /** @see setAlgorithmType */
+    virtual int getAlgorithmType() const = 0;
+    /** @copybrief getAlgorithmType @see getAlgorithmType */
+    virtual void setAlgorithmType(int val) = 0;
 
     /** @brief Finds the neighbors and predicts responses for input vectors.
 
@@ -518,44 +530,71 @@ public:
 
     /** Type of a %SVM formulation.
     See SVM::Types. Default value is SVM::C_SVC. */
-    CV_PURE_PROPERTY(int, Type)
+    /** @see setType */
+    virtual int getType() const = 0;
+    /** @copybrief getType @see getType */
+    virtual void setType(int val) = 0;
 
     /** Parameter \f$\gamma\f$ of a kernel function.
     For SVM::POLY, SVM::RBF, SVM::SIGMOID or SVM::CHI2. Default value is 1. */
-    CV_PURE_PROPERTY(double, Gamma)
+    /** @see setGamma */
+    virtual double getGamma() const = 0;
+    /** @copybrief getGamma @see getGamma */
+    virtual void setGamma(double val) = 0;
 
     /** Parameter _coef0_ of a kernel function.
     For SVM::POLY or SVM::SIGMOID. Default value is 0.*/
-    CV_PURE_PROPERTY(double, Coef0)
+    /** @see setCoef0 */
+    virtual double getCoef0() const = 0;
+    /** @copybrief getCoef0 @see getCoef0 */
+    virtual void setCoef0(double val) = 0;
 
     /** Parameter _degree_ of a kernel function.
     For SVM::POLY. Default value is 0. */
-    CV_PURE_PROPERTY(double, Degree)
+    /** @see setDegree */
+    virtual double getDegree() const = 0;
+    /** @copybrief getDegree @see getDegree */
+    virtual void setDegree(double val) = 0;
 
     /** Parameter _C_ of a %SVM optimization problem.
     For SVM::C_SVC, SVM::EPS_SVR or SVM::NU_SVR. Default value is 0. */
-    CV_PURE_PROPERTY(double, C)
+    /** @see setC */
+    virtual double getC() const = 0;
+    /** @copybrief getC @see getC */
+    virtual void setC(double val) = 0;
 
     /** Parameter \f$\nu\f$ of a %SVM optimization problem.
     For SVM::NU_SVC, SVM::ONE_CLASS or SVM::NU_SVR. Default value is 0. */
-    CV_PURE_PROPERTY(double, Nu)
+    /** @see setNu */
+    virtual double getNu() const = 0;
+    /** @copybrief getNu @see getNu */
+    virtual void setNu(double val) = 0;
 
     /** Parameter \f$\epsilon\f$ of a %SVM optimization problem.
     For SVM::EPS_SVR. Default value is 0. */
-    CV_PURE_PROPERTY(double, P)
+    /** @see setP */
+    virtual double getP() const = 0;
+    /** @copybrief getP @see getP */
+    virtual void setP(double val) = 0;
 
     /** Optional weights in the SVM::C_SVC problem, assigned to particular classes.
     They are multiplied by _C_ so the parameter _C_ of class _i_ becomes `classWeights(i) * C`. Thus
     these weights affect the misclassification penalty for different classes. The larger weight,
     the larger penalty on misclassification of data from the corresponding class. Default value is
     empty Mat. */
-    CV_PURE_PROPERTY_S(cv::Mat, ClassWeights)
+    /** @see setClassWeights */
+    virtual cv::Mat getClassWeights() const = 0;
+    /** @copybrief getClassWeights @see getClassWeights */
+    virtual void setClassWeights(const cv::Mat &val) = 0;
 
     /** Termination criteria of the iterative %SVM training procedure which solves a partial
     case of constrained quadratic optimization problem.
     You can specify tolerance and/or the maximum number of iterations. Default value is
     `TermCriteria( TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, FLT_EPSILON )`; */
-    CV_PURE_PROPERTY_S(cv::TermCriteria, TermCriteria)
+    /** @see setTermCriteria */
+    virtual cv::TermCriteria getTermCriteria() const = 0;
+    /** @copybrief getTermCriteria @see getTermCriteria */
+    virtual void setTermCriteria(const cv::TermCriteria &val) = 0;
 
     /** Type of a %SVM kernel.
     See SVM::KernelTypes. Default value is SVM::RBF. */
@@ -755,17 +794,26 @@ public:
     Default value of the parameter is EM::DEFAULT_NCLUSTERS=5. Some of %EM implementation could
     determine the optimal number of mixtures within a specified value range, but that is not the
     case in ML yet. */
-    CV_PURE_PROPERTY(int, ClustersNumber)
+    /** @see setClustersNumber */
+    virtual int getClustersNumber() const = 0;
+    /** @copybrief getClustersNumber @see getClustersNumber */
+    virtual void setClustersNumber(int val) = 0;
 
     /** Constraint on covariance matrices which defines type of matrices.
     See EM::Types. */
-    CV_PURE_PROPERTY(int, CovarianceMatrixType)
+    /** @see setCovarianceMatrixType */
+    virtual int getCovarianceMatrixType() const = 0;
+    /** @copybrief getCovarianceMatrixType @see getCovarianceMatrixType */
+    virtual void setCovarianceMatrixType(int val) = 0;
 
     /** The termination criteria of the %EM algorithm.
     The %EM algorithm can be terminated by the number of iterations termCrit.maxCount (number of
     M-steps) or when relative change of likelihood logarithm is less than termCrit.epsilon. Default
     maximum number of iterations is EM::DEFAULT_MAX_ITERS=100. */
-    CV_PURE_PROPERTY_S(TermCriteria, TermCriteria)
+    /** @see setTermCriteria */
+    virtual TermCriteria getTermCriteria() const = 0;
+    /** @copybrief getTermCriteria @see getTermCriteria */
+    virtual void setTermCriteria(const TermCriteria &val) = 0;
 
     /** @brief Returns weights of the mixtures
 
@@ -926,46 +974,70 @@ public:
     values. In case of regression and 2-class classification the optimal split can be found
     efficiently without employing clustering, thus the parameter is not used in these cases.
     Default value is 10.*/
-    CV_PURE_PROPERTY(int, MaxCategories)
+    /** @see setMaxCategories */
+    virtual int getMaxCategories() const = 0;
+    /** @copybrief getMaxCategories @see getMaxCategories */
+    virtual void setMaxCategories(int val) = 0;
 
     /** The maximum possible depth of the tree.
     That is the training algorithms attempts to split a node while its depth is less than maxDepth.
     The root node has zero depth. The actual depth may be smaller if the other termination criteria
     are met (see the outline of the training procedure @ref ml_intro_trees "here"), and/or if the
     tree is pruned. Default value is INT_MAX.*/
-    CV_PURE_PROPERTY(int, MaxDepth)
+    /** @see setMaxDepth */
+    virtual int getMaxDepth() const = 0;
+    /** @copybrief getMaxDepth @see getMaxDepth */
+    virtual void setMaxDepth(int val) = 0;
 
     /** If the number of samples in a node is less than this parameter then the node will not be split.
 
     Default value is 10.*/
-    CV_PURE_PROPERTY(int, MinSampleCount)
+    /** @see setMinSampleCount */
+    virtual int getMinSampleCount() const = 0;
+    /** @copybrief getMinSampleCount @see getMinSampleCount */
+    virtual void setMinSampleCount(int val) = 0;
 
     /** If CVFolds \> 1 then algorithms prunes the built decision tree using K-fold
     cross-validation procedure where K is equal to CVFolds.
     Default value is 10.*/
-    CV_PURE_PROPERTY(int, CVFolds)
+    /** @see setCVFolds */
+    virtual int getCVFolds() const = 0;
+    /** @copybrief getCVFolds @see getCVFolds */
+    virtual void setCVFolds(int val) = 0;
 
     /** If true then surrogate splits will be built.
     These splits allow to work with missing data and compute variable importance correctly.
     Default value is false.
     @note currently it's not implemented.*/
-    CV_PURE_PROPERTY(bool, UseSurrogates)
+    /** @see setUseSurrogates */
+    virtual bool getUseSurrogates() const = 0;
+    /** @copybrief getUseSurrogates @see getUseSurrogates */
+    virtual void setUseSurrogates(bool val) = 0;
 
     /** If true then a pruning will be harsher.
     This will make a tree more compact and more resistant to the training data noise but a bit less
     accurate. Default value is true.*/
-    CV_PURE_PROPERTY(bool, Use1SERule)
+    /** @see setUse1SERule */
+    virtual bool getUse1SERule() const = 0;
+    /** @copybrief getUse1SERule @see getUse1SERule */
+    virtual void setUse1SERule(bool val) = 0;
 
     /** If true then pruned branches are physically removed from the tree.
     Otherwise they are retained and it is possible to get results from the original unpruned (or
     pruned less aggressively) tree. Default value is true.*/
-    CV_PURE_PROPERTY(bool, TruncatePrunedTree)
+    /** @see setTruncatePrunedTree */
+    virtual bool getTruncatePrunedTree() const = 0;
+    /** @copybrief getTruncatePrunedTree @see getTruncatePrunedTree */
+    virtual void setTruncatePrunedTree(bool val) = 0;
 
     /** Termination criteria for regression trees.
     If all absolute differences between an estimated value in a node and values of train samples
     in this node are less than this parameter then the node will not be split further. Default
     value is 0.01f*/
-    CV_PURE_PROPERTY(float, RegressionAccuracy)
+    /** @see setRegressionAccuracy */
+    virtual float getRegressionAccuracy() const = 0;
+    /** @copybrief getRegressionAccuracy @see getRegressionAccuracy */
+    virtual void setRegressionAccuracy(float val) = 0;
 
     /** @brief The array of a priori class probabilities, sorted by the class label value.
 
@@ -982,7 +1054,10 @@ public:
     category is 1 and the weight of the second category is 10, then each mistake in predicting
     the second category is equivalent to making 10 mistakes in predicting the first category.
     Default value is empty Mat.*/
-    CV_PURE_PROPERTY_S(cv::Mat, Priors)
+    /** @see setPriors */
+    virtual cv::Mat getPriors() const = 0;
+    /** @copybrief getPriors @see getPriors */
+    virtual void setPriors(const cv::Mat &val) = 0;
 
     /** @brief The class represents a decision tree node.
      */
@@ -1071,13 +1146,19 @@ public:
 
     /** If true then variable importance will be calculated and then it can be retrieved by RTrees::getVarImportance.
     Default value is false.*/
-    CV_PURE_PROPERTY(bool, CalculateVarImportance)
+    /** @see setCalculateVarImportance */
+    virtual bool getCalculateVarImportance() const = 0;
+    /** @copybrief getCalculateVarImportance @see getCalculateVarImportance */
+    virtual void setCalculateVarImportance(bool val) = 0;
 
     /** The size of the randomly selected subset of features at each tree node and that are used
     to find the best split(s).
     If you set it to 0 then the size will be set to the square root of the total number of
     features. Default value is 0.*/
-    CV_PURE_PROPERTY(int, ActiveVarCount)
+    /** @see setActiveVarCount */
+    virtual int getActiveVarCount() const = 0;
+    /** @copybrief getActiveVarCount @see getActiveVarCount */
+    virtual void setActiveVarCount(int val) = 0;
 
     /** The termination criteria that specifies when the training algorithm stops.
     Either when the specified number of trees is trained and added to the ensemble or when
@@ -1086,7 +1167,10 @@ public:
     pass a certain number of trees. Also to keep in mind, the number of tree increases the
     prediction time linearly. Default value is TermCriteria(TermCriteria::MAX_ITERS +
     TermCriteria::EPS, 50, 0.1)*/
-    CV_PURE_PROPERTY_S(TermCriteria, TermCriteria)
+    /** @see setTermCriteria */
+    virtual TermCriteria getTermCriteria() const = 0;
+    /** @copybrief getTermCriteria @see getTermCriteria */
+    virtual void setTermCriteria(const TermCriteria &val) = 0;
 
     /** Returns the variable importance array.
     The method returns the variable importance vector, computed at the training stage when
@@ -1115,16 +1199,25 @@ class CV_EXPORTS_W Boost : public DTrees
 public:
     /** Type of the boosting algorithm.
     See Boost::Types. Default value is Boost::REAL. */
-    CV_PURE_PROPERTY(int, BoostType)
+    /** @see setBoostType */
+    virtual int getBoostType() const = 0;
+    /** @copybrief getBoostType @see getBoostType */
+    virtual void setBoostType(int val) = 0;
 
     /** The number of weak classifiers.
     Default value is 100. */
-    CV_PURE_PROPERTY(int, WeakCount)
+    /** @see setWeakCount */
+    virtual int getWeakCount() const = 0;
+    /** @copybrief getWeakCount @see getWeakCount */
+    virtual void setWeakCount(int val) = 0;
 
     /** A threshold between 0 and 1 used to save computational time.
     Samples with summary weight \f$\leq 1 - weight_trim_rate\f$ do not participate in the *next*
     iteration of training. Set this parameter to 0 to turn off this functionality. Default value is 0.95.*/
-    CV_PURE_PROPERTY(double, WeightTrimRate)
+    /** @see setWeightTrimRate */
+    virtual double getWeightTrimRate() const = 0;
+    /** @copybrief getWeightTrimRate @see getWeightTrimRate */
+    virtual void setWeightTrimRate(double val) = 0;
 
     /** Boosting type.
     Gentle AdaBoost and Real AdaBoost are often the preferable choices. */
@@ -1232,37 +1325,61 @@ public:
     You can specify the maximum number of iterations (maxCount) and/or how much the error could
     change between the iterations to make the algorithm continue (epsilon). Default value is
     TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, 0.01).*/
-    CV_PURE_PROPERTY(TermCriteria, TermCriteria)
+    /** @see setTermCriteria */
+    virtual TermCriteria getTermCriteria() const = 0;
+    /** @copybrief getTermCriteria @see getTermCriteria */
+    virtual void setTermCriteria(TermCriteria val) = 0;
 
     /** BPROP: Strength of the weight gradient term.
     The recommended value is about 0.1. Default value is 0.1.*/
-    CV_PURE_PROPERTY(double, BackpropWeightScale)
+    /** @see setBackpropWeightScale */
+    virtual double getBackpropWeightScale() const = 0;
+    /** @copybrief getBackpropWeightScale @see getBackpropWeightScale */
+    virtual void setBackpropWeightScale(double val) = 0;
 
     /** BPROP: Strength of the momentum term (the difference between weights on the 2 previous iterations).
     This parameter provides some inertia to smooth the random fluctuations of the weights. It can
     vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough.
     Default value is 0.1.*/
-    CV_PURE_PROPERTY(double, BackpropMomentumScale)
+    /** @see setBackpropMomentumScale */
+    virtual double getBackpropMomentumScale() const = 0;
+    /** @copybrief getBackpropMomentumScale @see getBackpropMomentumScale */
+    virtual void setBackpropMomentumScale(double val) = 0;
 
     /** RPROP: Initial value \f$\Delta_0\f$ of update-values \f$\Delta_{ij}\f$.
     Default value is 0.1.*/
-    CV_PURE_PROPERTY(double, RpropDW0)
+    /** @see setRpropDW0 */
+    virtual double getRpropDW0() const = 0;
+    /** @copybrief getRpropDW0 @see getRpropDW0 */
+    virtual void setRpropDW0(double val) = 0;
 
     /** RPROP: Increase factor \f$\eta^+\f$.
     It must be \>1. Default value is 1.2.*/
-    CV_PURE_PROPERTY(double, RpropDWPlus)
+    /** @see setRpropDWPlus */
+    virtual double getRpropDWPlus() const = 0;
+    /** @copybrief getRpropDWPlus @see getRpropDWPlus */
+    virtual void setRpropDWPlus(double val) = 0;
 
     /** RPROP: Decrease factor \f$\eta^-\f$.
     It must be \<1. Default value is 0.5.*/
-    CV_PURE_PROPERTY(double, RpropDWMinus)
+    /** @see setRpropDWMinus */
+    virtual double getRpropDWMinus() const = 0;
+    /** @copybrief getRpropDWMinus @see getRpropDWMinus */
+    virtual void setRpropDWMinus(double val) = 0;
 
     /** RPROP: Update-values lower limit \f$\Delta_{min}\f$.
     It must be positive. Default value is FLT_EPSILON.*/
-    CV_PURE_PROPERTY(double, RpropDWMin)
+    /** @see setRpropDWMin */
+    virtual double getRpropDWMin() const = 0;
+    /** @copybrief getRpropDWMin @see getRpropDWMin */
+    virtual void setRpropDWMin(double val) = 0;
 
     /** RPROP: Update-values upper limit \f$\Delta_{max}\f$.
     It must be \>1. Default value is 50.*/
-    CV_PURE_PROPERTY(double, RpropDWMax)
+    /** @see setRpropDWMax */
+    virtual double getRpropDWMax() const = 0;
+    /** @copybrief getRpropDWMax @see getRpropDWMax */
+    virtual void setRpropDWMax(double val) = 0;
 
     /** possible activation functions */
     enum ActivationFunctions {
@@ -1318,24 +1435,42 @@ class CV_EXPORTS LogisticRegression : public StatModel
 public:
 
     /** Learning rate. */
-    CV_PURE_PROPERTY(double, LearningRate)
+    /** @see setLearningRate */
+    virtual double getLearningRate() const = 0;
+    /** @copybrief getLearningRate @see getLearningRate */
+    virtual void setLearningRate(double val) = 0;
 
     /** Number of iterations. */
-    CV_PURE_PROPERTY(int, Iterations)
+    /** @see setIterations */
+    virtual int getIterations() const = 0;
+    /** @copybrief getIterations @see getIterations */
+    virtual void setIterations(int val) = 0;
 
     /** Kind of regularization to be applied. See LogisticRegression::RegKinds. */
-    CV_PURE_PROPERTY(int, Regularization)
+    /** @see setRegularization */
+    virtual int getRegularization() const = 0;
+    /** @copybrief getRegularization @see getRegularization */
+    virtual void setRegularization(int val) = 0;
 
     /** Kind of training method used. See LogisticRegression::Methods. */
-    CV_PURE_PROPERTY(int, TrainMethod)
+    /** @see setTrainMethod */
+    virtual int getTrainMethod() const = 0;
+    /** @copybrief getTrainMethod @see getTrainMethod */
+    virtual void setTrainMethod(int val) = 0;
 
     /** Specifies the number of training samples taken in each step of Mini-Batch Gradient
     Descent. Will only be used if using LogisticRegression::MINI_BATCH training algorithm. It
     has to take values less than the total number of training samples. */
-    CV_PURE_PROPERTY(int, MiniBatchSize)
+    /** @see setMiniBatchSize */
+    virtual int getMiniBatchSize() const = 0;
+    /** @copybrief getMiniBatchSize @see getMiniBatchSize */
+    virtual void setMiniBatchSize(int val) = 0;
 
     /** Termination criteria of the algorithm. */
-    CV_PURE_PROPERTY(TermCriteria, TermCriteria)
+    /** @see setTermCriteria */
+    virtual TermCriteria getTermCriteria() const = 0;
+    /** @copybrief getTermCriteria @see getTermCriteria */
+    virtual void setTermCriteria(TermCriteria val) = 0;
 
     //! Regularization kinds
     enum RegKinds {

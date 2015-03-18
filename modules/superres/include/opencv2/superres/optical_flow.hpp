@@ -64,13 +64,34 @@ namespace cv
         class CV_EXPORTS FarnebackOpticalFlow : public virtual DenseOpticalFlowExt
         {
         public:
-            CV_PURE_PROPERTY(double, PyrScale)
-            CV_PURE_PROPERTY(int, LevelsNumber)
-            CV_PURE_PROPERTY(int, WindowSize)
-            CV_PURE_PROPERTY(int, Iterations)
-            CV_PURE_PROPERTY(int, PolyN)
-            CV_PURE_PROPERTY(double, PolySigma)
-            CV_PURE_PROPERTY(int, Flags)
+            /** @see setPyrScale */
+            virtual double getPyrScale() const = 0;
+            /** @copybrief getPyrScale @see getPyrScale */
+            virtual void setPyrScale(double val) = 0;
+            /** @see setLevelsNumber */
+            virtual int getLevelsNumber() const = 0;
+            /** @copybrief getLevelsNumber @see getLevelsNumber */
+            virtual void setLevelsNumber(int val) = 0;
+            /** @see setWindowSize */
+            virtual int getWindowSize() const = 0;
+            /** @copybrief getWindowSize @see getWindowSize */
+            virtual void setWindowSize(int val) = 0;
+            /** @see setIterations */
+            virtual int getIterations() const = 0;
+            /** @copybrief getIterations @see getIterations */
+            virtual void setIterations(int val) = 0;
+            /** @see setPolyN */
+            virtual int getPolyN() const = 0;
+            /** @copybrief getPolyN @see getPolyN */
+            virtual void setPolyN(int val) = 0;
+            /** @see setPolySigma */
+            virtual double getPolySigma() const = 0;
+            /** @copybrief getPolySigma @see getPolySigma */
+            virtual void setPolySigma(double val) = 0;
+            /** @see setFlags */
+            virtual int getFlags() const = 0;
+            /** @copybrief getFlags @see getFlags */
+            virtual void setFlags(int val) = 0;
         };
         CV_EXPORTS Ptr<FarnebackOpticalFlow> createOptFlow_Farneback();
         CV_EXPORTS Ptr<FarnebackOpticalFlow> createOptFlow_Farneback_CUDA();
@@ -82,14 +103,38 @@ namespace cv
         class CV_EXPORTS DualTVL1OpticalFlow : public virtual DenseOpticalFlowExt
         {
         public:
-            CV_PURE_PROPERTY(double, Tau)
-            CV_PURE_PROPERTY(double, Lambda)
-            CV_PURE_PROPERTY(double, Theta)
-            CV_PURE_PROPERTY(int, ScalesNumber)
-            CV_PURE_PROPERTY(int, WarpingsNumber)
-            CV_PURE_PROPERTY(double, Epsilon)
-            CV_PURE_PROPERTY(int, Iterations)
-            CV_PURE_PROPERTY(bool, UseInitialFlow)
+            /** @see setTau */
+            virtual double getTau() const = 0;
+            /** @copybrief getTau @see getTau */
+            virtual void setTau(double val) = 0;
+            /** @see setLambda */
+            virtual double getLambda() const = 0;
+            /** @copybrief getLambda @see getLambda */
+            virtual void setLambda(double val) = 0;
+            /** @see setTheta */
+            virtual double getTheta() const = 0;
+            /** @copybrief getTheta @see getTheta */
+            virtual void setTheta(double val) = 0;
+            /** @see setScalesNumber */
+            virtual int getScalesNumber() const = 0;
+            /** @copybrief getScalesNumber @see getScalesNumber */
+            virtual void setScalesNumber(int val) = 0;
+            /** @see setWarpingsNumber */
+            virtual int getWarpingsNumber() const = 0;
+            /** @copybrief getWarpingsNumber @see getWarpingsNumber */
+            virtual void setWarpingsNumber(int val) = 0;
+            /** @see setEpsilon */
+            virtual double getEpsilon() const = 0;
+            /** @copybrief getEpsilon @see getEpsilon */
+            virtual void setEpsilon(double val) = 0;
+            /** @see setIterations */
+            virtual int getIterations() const = 0;
+            /** @copybrief getIterations @see getIterations */
+            virtual void setIterations(int val) = 0;
+            /** @see setUseInitialFlow */
+            virtual bool getUseInitialFlow() const = 0;
+            /** @copybrief getUseInitialFlow @see getUseInitialFlow */
+            virtual void setUseInitialFlow(bool val) = 0;
         };
         CV_EXPORTS Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1();
         CV_EXPORTS Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1_CUDA();
@@ -99,17 +144,35 @@ namespace cv
         {
         public:
             //! @brief Flow smoothness
-            CV_PURE_PROPERTY(double, Alpha)
+            /** @see setAlpha */
+            virtual double getAlpha() const = 0;
+            /** @copybrief getAlpha @see getAlpha */
+            virtual void setAlpha(double val) = 0;
             //! @brief Gradient constancy importance
-            CV_PURE_PROPERTY(double, Gamma)
+            /** @see setGamma */
+            virtual double getGamma() const = 0;
+            /** @copybrief getGamma @see getGamma */
+            virtual void setGamma(double val) = 0;
             //! @brief Pyramid scale factor
-            CV_PURE_PROPERTY(double, ScaleFactor)
+            /** @see setScaleFactor */
+            virtual double getScaleFactor() const = 0;
+            /** @copybrief getScaleFactor @see getScaleFactor */
+            virtual void setScaleFactor(double val) = 0;
             //! @brief Number of lagged non-linearity iterations (inner loop)
-            CV_PURE_PROPERTY(int, InnerIterations)
+            /** @see setInnerIterations */
+            virtual int getInnerIterations() const = 0;
+            /** @copybrief getInnerIterations @see getInnerIterations */
+            virtual void setInnerIterations(int val) = 0;
             //! @brief Number of warping iterations (number of pyramid levels)
-            CV_PURE_PROPERTY(int, OuterIterations)
+            /** @see setOuterIterations */
+            virtual int getOuterIterations() const = 0;
+            /** @copybrief getOuterIterations @see getOuterIterations */
+            virtual void setOuterIterations(int val) = 0;
             //! @brief Number of linear system solver iterations
-            CV_PURE_PROPERTY(int, SolverIterations)
+            /** @see setSolverIterations */
+            virtual int getSolverIterations() const = 0;
+            /** @copybrief getSolverIterations @see getSolverIterations */
+            virtual void setSolverIterations(int val) = 0;
         };
         CV_EXPORTS Ptr<BroxOpticalFlow> createOptFlow_Brox_CUDA();
 
@@ -117,9 +180,18 @@ namespace cv
         class PyrLKOpticalFlow : public virtual DenseOpticalFlowExt
         {
         public:
-            CV_PURE_PROPERTY(int, WindowSize)
-            CV_PURE_PROPERTY(int, MaxLevel)
-            CV_PURE_PROPERTY(int, Iterations)
+            /** @see setWindowSize */
+            virtual int getWindowSize() const = 0;
+            /** @copybrief getWindowSize @see getWindowSize */
+            virtual void setWindowSize(int val) = 0;
+            /** @see setMaxLevel */
+            virtual int getMaxLevel() const = 0;
+            /** @copybrief getMaxLevel @see getMaxLevel */
+            virtual void setMaxLevel(int val) = 0;
+            /** @see setIterations */
+            virtual int getIterations() const = 0;
+            /** @copybrief getIterations @see getIterations */
+            virtual void setIterations(int val) = 0;
         };
         CV_EXPORTS Ptr<PyrLKOpticalFlow> createOptFlow_PyrLK_CUDA();
 

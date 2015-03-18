@@ -243,11 +243,7 @@ PREDEFINED             = __cplusplus=1 \
                          CV_NORETURN= \
                          CV_DEFAULT(x)=" = x" \
                          CV_NEON=1 \
-                         FLANN_DEPRECATED= \
-                         "CV_PURE_PROPERTY(type, name)= /** \@see set##name */ virtual type get##name() const = 0; /** \@copybrief get##name \@see get##name */ virtual void set##name(type val) = 0;" \
-                         "CV_IMPL_PROPERTY(type, name, x)= /** \@see set##name */ virtual type get##name() const = 0; /** \@copybrief get##name \@see get##name */ virtual void set##name(type val) = 0;" \
-                         "CV_IMPL_PROPERTY_S(type, name, x)= /** \@see set##name */ virtual type get##name() const = 0; /** \@copybrief get##name \@see get##name */ virtual void set##name(const type & val);" \
-                         "CV_IMPL_PROPERTY_RO(type, name, x)= virtual type get##name() const;"
+                         FLANN_DEPRECATED=
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES
 TAGFILES               =

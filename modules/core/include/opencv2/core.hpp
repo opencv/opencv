@@ -2821,19 +2821,6 @@ public:
     virtual void read(const FileNode& fn) { (void)fn; }
 };
 
-// define properties
-
-#define CV_PURE_PROPERTY(type, name) \
-    CV_WRAP virtual type get##name() const = 0; \
-    CV_WRAP virtual void set##name(type val) = 0;
-
-#define CV_PURE_PROPERTY_S(type, name) \
-    CV_WRAP virtual type get##name() const = 0; \
-    CV_WRAP virtual void set##name(const type & val) = 0;
-
-#define CV_PURE_PROPERTY_RO(type, name) \
-    CV_WRAP virtual type get##name() const = 0;
-
 // basic property implementation
 
 #define CV_IMPL_PROPERTY_RO(type, name, member) \
