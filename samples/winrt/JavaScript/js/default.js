@@ -12,7 +12,7 @@
     var sampleTitle = "OpenCV Image Manipulations sample";
 
     var scenarios = [
-        { url: "/html/AdvancedCapture.html", title: "Enumerate cameras and add a video effect" },        
+        { url: "/html/AdvancedCapture.html", title: "Enumerate cameras and add a video effect" },
     ];
 
     function activated(eventObject) {

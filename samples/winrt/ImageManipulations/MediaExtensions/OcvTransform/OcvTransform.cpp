@@ -126,7 +126,7 @@ HRESULT OcvImageManipulations::SetProperties(ABI::Windows::Foundation::Collectio
         spSetting->Lookup(key, spInsp.ReleaseAndGetAddressOf());
 
         hr = spInsp.As(&spPropVal);
-        if (hr != S_OK) 
+        if (hr != S_OK)
         {
             return hr;
         }

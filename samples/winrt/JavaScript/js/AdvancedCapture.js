@@ -11,7 +11,7 @@
     var cameraList = null;
     var mediaCaptureMgr = null;
     var captureInitSettings = null;
-    
+
     var page = WinJS.UI.Pages.define("/html/AdvancedCapture.html", {
 
         ready: function (element, options) {
@@ -25,22 +25,22 @@
     });
 
     function scenarioInitialize() {
-    	// Initialize the UI elements
-    	id("btnStartDevice").disabled = false;
-    	id("btnStartDevice").addEventListener("click", startDevice, false);
-    	id("btnStartPreview").disabled = true;
-    	id("videoEffect").disabled = true;
-    	id("btnStartPreview").addEventListener("click", startPreview, false);
-    	id("cameraSelect").addEventListener("change", onDeviceChange, false);
+        // Initialize the UI elements
+        id("btnStartDevice").disabled = false;
+        id("btnStartDevice").addEventListener("click", startDevice, false);
+        id("btnStartPreview").disabled = true;
+        id("videoEffect").disabled = true;
+        id("btnStartPreview").addEventListener("click", startPreview, false);
+        id("cameraSelect").addEventListener("change", onDeviceChange, false);
 
-    	id("videoEffect").addEventListener('change', addEffectToImageStream, false);
+        id("videoEffect").addEventListener('change', addEffectToImageStream, false);
 
-    	enumerateCameras();
+        enumerateCameras();
     }
 
     function initCameraSettings() {
-    	captureInitSettings = new Windows.Media.Capture.MediaCaptureInitializationSettings();
-    	captureInitSettings.streamingCaptureMode = Windows.Media.Capture.StreamingCaptureMode.video
+        captureInitSettings = new Windows.Media.Capture.MediaCaptureInitializationSettings();
+        captureInitSettings.streamingCaptureMode = Windows.Media.Capture.StreamingCaptureMode.video
 
         // If the user chose another capture device, use it by default
         var selectedIndex = id("cameraSelect").selectedIndex;
@@ -50,10 +50,10 @@
 
     // this function takes care of releasing the resources associated with media capturing
     function releaseMediaCapture() {
-		if (mediaCaptureMgr) {
-			mediaCaptureMgr.close();
-			mediaCaptureMgr = null;
-		}
+        if (mediaCaptureMgr) {
+            mediaCaptureMgr.close();
+            mediaCaptureMgr = null;
+        }
     }
 
     //Initialize media capture with the current settings
@@ -64,10 +64,10 @@
 
         mediaCaptureMgr = new Windows.Media.Capture.MediaCapture();
         mediaCaptureMgr.initializeAsync(captureInitSettings).done(function (result) {
-        	// Update the UI
-        	id("btnStartPreview").disabled = false;
-        	id("btnStartDevice").disabled = true;
-        	displayStatus("Device started");
+            // Update the UI
+            id("btnStartPreview").disabled = false;
+            id("btnStartDevice").disabled = true;
+            displayStatus("Device started");
         });
     }
 
@@ -82,15 +82,15 @@
     }
 
     function addEffectToImageStream() {
-    	var effectId = id("videoEffect").selectedIndex;
-    	var props = new Windows.Foundation.Collections.PropertySet();
-    	props.insert("{698649BE-8EAE-4551-A4CB-3EC98FBD3D86}", effectId);
+        var effectId = id("videoEffect").selectedIndex;
+        var props = new Windows.Foundation.Collections.PropertySet();
+        props.insert("{698649BE-8EAE-4551-A4CB-3EC98FBD3D86}", effectId);
 
-    	mediaCaptureMgr.clearEffectsAsync(Windows.Media.Capture.MediaStreamType.videoPreview).then(function () {
-    		return mediaCaptureMgr.addEffectAsync(Windows.Media.Capture.MediaStreamType.videoPreview, 'OcvTransform.OcvImageManipulations', props);
-    	}).then(function () {
-    		displayStatus('Effect has been successfully added');
-    	}, errorHandler);
+        mediaCaptureMgr.clearEffectsAsync(Windows.Media.Capture.MediaStreamType.videoPreview).then(function () {
+            return mediaCaptureMgr.addEffectAsync(Windows.Media.Capture.MediaStreamType.videoPreview, 'OcvTransform.OcvImageManipulations', props);
+        }).then(function () {
+            displayStatus('Effect has been successfully added');
+        }, errorHandler);
     }
 
     function enumerateCameras() {
@@ -118,7 +118,7 @@
                     cameraSelect.add(new Option(camera.name));
                 });
             }
-        }, errorHandler);                      
+        }, errorHandler);
     }
 
     function onDeviceChange() {
@@ -144,18 +144,18 @@
     }
 
     function failedEventHandler(e) {
-    	displayError("Fatal error", e.message);
+        displayError("Fatal error", e.message);
     }
 
     function displayStatus(statusText) {
-    	SdkSample.displayStatus(statusText);
+        SdkSample.displayStatus(statusText);
     }
 
     function displayError(error) {
-    	SdkSample.displayError(error);
+        SdkSample.displayError(error);
     }
 
     function id(elementId) {
-    	return document.getElementById(elementId);
+        return document.getElementById(elementId);
     }
 })();
