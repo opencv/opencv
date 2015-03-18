@@ -70,20 +70,6 @@ static bool haveCollinearPoints( const Mat& m, int count )
 }
 
 
-template<typename T> int compressPoints( T* ptr, const uchar* mask, int mstep, int count )
-{
-    int i, j;
-    for( i = j = 0; i < count; i++ )
-        if( mask[i*mstep] )
-        {
-            if( i > j )
-                ptr[j] = ptr[i];
-            j++;
-        }
-    return j;
-}
-
-
 class HomographyEstimatorCallback : public PointSetRegistrator::Callback
 {
 public:
@@ -404,8 +390,8 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 
     if( result && npoints > 4 && method != RHO)
     {
-        compressPoints( src.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
-        npoints = compressPoints( dst.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
+        compressElems( src.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
+        npoints = compressElems( dst.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         if( npoints > 0 )
         {
             Mat src1 = src.rowRange(0, npoints);
