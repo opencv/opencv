@@ -160,7 +160,6 @@ enum
     CV_CAP_PROP_CONVERT_RGB   =16,
     CV_CAP_PROP_WHITE_BALANCE_BLUE_U =17,
     CV_CAP_PROP_RECTIFICATION =18,
-    CV_CAP_PROP_MONOCROME     =19,
     CV_CAP_PROP_MONOCHROME    =19,
     CV_CAP_PROP_SHARPNESS     =20,
     CV_CAP_PROP_AUTO_EXPOSURE =21, // exposure control done by camera,
@@ -227,6 +226,7 @@ enum
     CV_CAP_PROP_PVAPI_DECIMATIONVERTICAL    = 303, // Vertical sub-sampling of the image
     CV_CAP_PROP_PVAPI_BINNINGX              = 304, // Horizontal binning factor
     CV_CAP_PROP_PVAPI_BINNINGY              = 305, // Vertical binning factor
+    CV_CAP_PROP_PVAPI_PIXELFORMAT           = 306, // Pixel format
 
     // Properties of cameras available through XIMEA SDK interface
     CV_CAP_PROP_XI_DOWNSAMPLING  = 400,      // Change image resolution by binning or skipping.
