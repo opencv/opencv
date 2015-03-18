@@ -159,8 +159,9 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
         memcpy(ptrs[1], ptrs[0], planesz);
 }
 
-BufferPoolController* MatAllocator::getBufferPoolController() const
+BufferPoolController* MatAllocator::getBufferPoolController(const char* id) const
 {
+    (void)id;
     static DummyBufferPoolController dummy;
     return &dummy;
 }
@@ -204,9 +205,12 @@ public:
 
     void deallocate(UMatData* u) const
     {
+        if(!u)
+            return;
+
         CV_Assert(u->urefcount >= 0);
         CV_Assert(u->refcount >= 0);
-        if(u && u->refcount == 0)
+        if(u->refcount == 0)
         {
             if( !(u->flags & UMatData::USER_ALLOCATED) )
             {

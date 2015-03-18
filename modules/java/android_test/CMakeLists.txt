@@ -1,34 +1,30 @@
-# list of modules covered with tests
-set(tested_modules opencv_calib3d opencv_core opencv_features2d opencv_highgui opencv_imgproc opencv_objdetect opencv_photo opencv_video)
-
-# opencv_ml is broken
-#list(APPEND tested_modules opencv_ml)
-
-ocv_check_dependencies(opencv_java ${tested_modules})
-
-if(NOT OCV_DEPENDENCIES_FOUND OR NOT ANT_EXECUTABLE OR NOT ANDROID_EXECUTABLE OR NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
+if(NOT ANT_EXECUTABLE OR NOT ANDROID_EXECUTABLE OR NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
   return()
 endif()
 
 project(opencv_test_java)
 
 set(opencv_test_java_bin_dir "${CMAKE_CURRENT_BINARY_DIR}/.build")
+set(test_dir "${CMAKE_CURRENT_SOURCE_DIR}")
+set(test_common_dir "${CMAKE_CURRENT_SOURCE_DIR}/../common_test")
 
-# get project sources
-file(GLOB_RECURSE opencv_test_java_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/res/*" "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
-ocv_list_filterout(opencv_test_java_files ".svn")
-# opencv_ml is broken
-ocv_list_filterout(opencv_test_java_files "/ml/")
-
-# copy sources out from the build tree
 set(opencv_test_java_file_deps "")
-foreach(f ${opencv_test_java_files} ${ANDROID_MANIFEST_FILE} ".classpath" ".project")
+
+# 1. gather and copy common test files (resources, utils, etc.)
+copy_common_tests(test_common_dir opencv_test_java_bin_dir opencv_test_java_file_deps)
+
+# 2. gather and copy tests from each module
+copy_modules_tests(OPENCV_JAVA_MODULES opencv_test_java_bin_dir opencv_test_java_file_deps)
+
+# 3. gather and copy specific files for Android
+file(GLOB_RECURSE test_files RELATIVE "${test_dir}" "${test_dir}/res/*" "${test_dir}/src/*")
+foreach(f ${test_files} ${ANDROID_MANIFEST_FILE} ".classpath" ".project")
   add_custom_command(
       OUTPUT "${opencv_test_java_bin_dir}/${f}"
-      COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${f}" "${opencv_test_java_bin_dir}/${f}"
-      MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${f}"
+      COMMAND ${CMAKE_COMMAND} -E copy "${test_dir}/${f}" "${opencv_test_java_bin_dir}/${f}"
+      MAIN_DEPENDENCY "${test_dir}/${f}"
       COMMENT "Copying ${f}")
-  list(APPEND opencv_test_java_file_deps "${CMAKE_CURRENT_SOURCE_DIR}/${f}" "${opencv_test_java_bin_dir}/${f}")
+  list(APPEND opencv_test_java_file_deps "${test_dir}/${f}" "${opencv_test_java_bin_dir}/${f}")
 endforeach()
 
 # fix Android project

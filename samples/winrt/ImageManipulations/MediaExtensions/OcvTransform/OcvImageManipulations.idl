@@ -7,5 +7,6 @@ namespace OcvTransform
     [version(NTDDI_WIN8)]
     runtimeclass OcvImageManipulations
     {
+        interface Windows.Media.IMediaExtension;
     }
 }

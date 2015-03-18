@@ -1010,8 +1010,6 @@ public:
             disp.convertTo(disp0, disp0.type(), 1./(1 << DISPARITY_SHIFT), 0);
     }
 
-    AlgorithmInfo* info() const { return 0; }
-
     int getMinDisparity() const { return params.minDisparity; }
     void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
 

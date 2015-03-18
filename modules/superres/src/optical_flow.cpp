@@ -53,7 +53,7 @@ using namespace cv::superres::detail;
 
 namespace
 {
-    class CpuOpticalFlow : public DenseOpticalFlowExt
+    class CpuOpticalFlow : public virtual cv::superres::DenseOpticalFlowExt
     {
     public:
         explicit CpuOpticalFlow(int work_type);
@@ -173,12 +173,20 @@ namespace
 
 namespace
 {
-    class Farneback : public CpuOpticalFlow
+    class Farneback : public CpuOpticalFlow, public cv::superres::FarnebackOpticalFlow
     {
     public:
-        AlgorithmInfo* info() const;
-
         Farneback();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
+        void collectGarbage();
+
+        CV_IMPL_PROPERTY(double, PyrScale, pyrScale_)
+        CV_IMPL_PROPERTY(int, LevelsNumber, numLevels_)
+        CV_IMPL_PROPERTY(int, WindowSize, winSize_)
+        CV_IMPL_PROPERTY(int, Iterations, numIters_)
+        CV_IMPL_PROPERTY(int, PolyN, polyN_)
+        CV_IMPL_PROPERTY(double, PolySigma, polySigma_)
+        CV_IMPL_PROPERTY(int, Flags, flags_)
 
     protected:
         void impl(InputArray input0, InputArray input1, OutputArray dst);
@@ -193,15 +201,6 @@ namespace
         int flags_;
     };
 
-    CV_INIT_ALGORITHM(Farneback, "DenseOpticalFlowExt.Farneback",
-                      obj.info()->addParam(obj, "pyrScale", obj.pyrScale_);
-                      obj.info()->addParam(obj, "numLevels", obj.numLevels_);
-                      obj.info()->addParam(obj, "winSize", obj.winSize_);
-                      obj.info()->addParam(obj, "numIters", obj.numIters_);
-                      obj.info()->addParam(obj, "polyN", obj.polyN_);
-                      obj.info()->addParam(obj, "polySigma", obj.polySigma_);
-                      obj.info()->addParam(obj, "flags", obj.flags_))
-
     Farneback::Farneback() : CpuOpticalFlow(CV_8UC1)
     {
         pyrScale_ = 0.5;
@@ -213,6 +212,16 @@ namespace
         flags_ = 0;
     }
 
+    void Farneback::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
+    {
+        CpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
+    }
+
+    void Farneback::collectGarbage()
+    {
+        CpuOpticalFlow::collectGarbage();
+    }
+
     void Farneback::impl(InputArray input0, InputArray input1, OutputArray dst)
     {
         calcOpticalFlowFarneback(input0, input1, (InputOutputArray)dst, pyrScale_,
@@ -221,7 +230,7 @@ namespace
     }
 }
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback()
+Ptr<cv::superres::FarnebackOpticalFlow> cv::superres::createOptFlow_Farneback()
 {
     return makePtr<Farneback>();
 }
@@ -319,65 +328,41 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Simple()
 
 namespace
 {
-    class DualTVL1 : public CpuOpticalFlow
+    class DualTVL1 : public CpuOpticalFlow, public virtual cv::superres::DualTVL1OpticalFlow
     {
     public:
-        AlgorithmInfo* info() const;
-
         DualTVL1();
-
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
         void collectGarbage();
+
+        CV_WRAP_SAME_PROPERTY(double, Tau, (*alg_))
+        CV_WRAP_SAME_PROPERTY(double, Lambda, (*alg_))
+        CV_WRAP_SAME_PROPERTY(double, Theta, (*alg_))
+        CV_WRAP_SAME_PROPERTY(int, ScalesNumber, (*alg_))
+        CV_WRAP_SAME_PROPERTY(int, WarpingsNumber, (*alg_))
+        CV_WRAP_SAME_PROPERTY(double, Epsilon, (*alg_))
+        CV_WRAP_PROPERTY(int, Iterations, OuterIterations, (*alg_))
+        CV_WRAP_SAME_PROPERTY(bool, UseInitialFlow, (*alg_))
 
     protected:
         void impl(InputArray input0, InputArray input1, OutputArray dst);
 
     private:
-        double tau_;
-        double lambda_;
-        double theta_;
-        int nscales_;
-        int warps_;
-        double epsilon_;
-        int iterations_;
-        bool useInitialFlow_;
-
-        Ptr<cv::DenseOpticalFlow> alg_;
+        Ptr<cv::DualTVL1OpticalFlow> alg_;
     };
-
-    CV_INIT_ALGORITHM(DualTVL1, "DenseOpticalFlowExt.DualTVL1",
-                      obj.info()->addParam(obj, "tau", obj.tau_);
-                      obj.info()->addParam(obj, "lambda", obj.lambda_);
-                      obj.info()->addParam(obj, "theta", obj.theta_);
-                      obj.info()->addParam(obj, "nscales", obj.nscales_);
-                      obj.info()->addParam(obj, "warps", obj.warps_);
-                      obj.info()->addParam(obj, "epsilon", obj.epsilon_);
-                      obj.info()->addParam(obj, "iterations", obj.iterations_);
-                      obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow_))
 
     DualTVL1::DualTVL1() : CpuOpticalFlow(CV_8UC1)
     {
         alg_ = cv::createOptFlow_DualTVL1();
-        tau_ = alg_->getDouble("tau");
-        lambda_ = alg_->getDouble("lambda");
-        theta_ = alg_->getDouble("theta");
-        nscales_ = alg_->getInt("nscales");
-        warps_ = alg_->getInt("warps");
-        epsilon_ = alg_->getDouble("epsilon");
-        iterations_ = alg_->getInt("iterations");
-        useInitialFlow_ = alg_->getBool("useInitialFlow");
+    }
+
+    void DualTVL1::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
+    {
+        CpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
     }
 
     void DualTVL1::impl(InputArray input0, InputArray input1, OutputArray dst)
     {
-        alg_->set("tau", tau_);
-        alg_->set("lambda", lambda_);
-        alg_->set("theta", theta_);
-        alg_->set("nscales", nscales_);
-        alg_->set("warps", warps_);
-        alg_->set("epsilon", epsilon_);
-        alg_->set("iterations", iterations_);
-        alg_->set("useInitialFlow", useInitialFlow_);
-
         alg_->calc(input0, input1, (InputOutputArray)dst);
     }
 
@@ -388,7 +373,7 @@ namespace
     }
 }
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1()
+Ptr<cv::superres::DualTVL1OpticalFlow> cv::superres::createOptFlow_DualTVL1()
 {
     return makePtr<DualTVL1>();
 }
@@ -398,35 +383,35 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1()
 
 #ifndef HAVE_OPENCV_CUDAOPTFLOW
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_CUDA()
+Ptr<cv::superres::FarnebackOpticalFlow> cv::superres::createOptFlow_Farneback_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<DenseOpticalFlowExt>();
+    return Ptr<cv::superres::FarnebackOpticalFlow>();
 }
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_CUDA()
+Ptr<cv::superres::DualTVL1OpticalFlow> cv::superres::createOptFlow_DualTVL1_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<DenseOpticalFlowExt>();
+    return Ptr<cv::superres::DualTVL1OpticalFlow>();
 }
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Brox_CUDA()
+Ptr<cv::superres::BroxOpticalFlow> cv::superres::createOptFlow_Brox_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<DenseOpticalFlowExt>();
+    return Ptr<cv::superres::BroxOpticalFlow>();
 }
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_PyrLK_CUDA()
+Ptr<cv::superres::PyrLKOpticalFlow> cv::superres::createOptFlow_PyrLK_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<DenseOpticalFlowExt>();
+    return Ptr<cv::superres::PyrLKOpticalFlow>();
 }
 
 #else // HAVE_OPENCV_CUDAOPTFLOW
 
 namespace
 {
-    class GpuOpticalFlow : public DenseOpticalFlowExt
+    class GpuOpticalFlow : public virtual cv::superres::DenseOpticalFlowExt
     {
     public:
         explicit GpuOpticalFlow(int work_type);
@@ -494,14 +479,19 @@ namespace
 
 namespace
 {
-    class Brox_CUDA : public GpuOpticalFlow
+    class Brox_CUDA : public GpuOpticalFlow, public virtual cv::superres::BroxOpticalFlow
     {
     public:
-        AlgorithmInfo* info() const;
-
         Brox_CUDA();
-
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
         void collectGarbage();
+
+        CV_IMPL_PROPERTY(double, Alpha, alpha_)
+        CV_IMPL_PROPERTY(double, Gamma, gamma_)
+        CV_IMPL_PROPERTY(double, ScaleFactor, scaleFactor_)
+        CV_IMPL_PROPERTY(int, InnerIterations, innerIterations_)
+        CV_IMPL_PROPERTY(int, OuterIterations, outerIterations_)
+        CV_IMPL_PROPERTY(int, SolverIterations, solverIterations_)
 
     protected:
         void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
@@ -517,14 +507,6 @@ namespace
         Ptr<cuda::BroxOpticalFlow> alg_;
     };
 
-    CV_INIT_ALGORITHM(Brox_CUDA, "DenseOpticalFlowExt.Brox_CUDA",
-                      obj.info()->addParam(obj, "alpha", obj.alpha_, false, 0, 0, "Flow smoothness");
-                      obj.info()->addParam(obj, "gamma", obj.gamma_, false, 0, 0, "Gradient constancy importance");
-                      obj.info()->addParam(obj, "scaleFactor", obj.scaleFactor_, false, 0, 0, "Pyramid scale factor");
-                      obj.info()->addParam(obj, "innerIterations", obj.innerIterations_, false, 0, 0, "Number of lagged non-linearity iterations (inner loop)");
-                      obj.info()->addParam(obj, "outerIterations", obj.outerIterations_, false, 0, 0, "Number of warping iterations (number of pyramid levels)");
-                      obj.info()->addParam(obj, "solverIterations", obj.solverIterations_, false, 0, 0, "Number of linear system solver iterations"))
-
     Brox_CUDA::Brox_CUDA() : GpuOpticalFlow(CV_32FC1)
     {
         alg_ = cuda::BroxOpticalFlow::create(0.197f, 50.0f, 0.8f, 10, 77, 10);
@@ -535,6 +517,11 @@ namespace
         innerIterations_ = alg_->getInnerIterations();
         outerIterations_ = alg_->getOuterIterations();
         solverIterations_ = alg_->getSolverIterations();
+    }
+
+    void Brox_CUDA::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
+    {
+        GpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
     }
 
     void Brox_CUDA::impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2)
@@ -563,7 +550,7 @@ namespace
     }
 }
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Brox_CUDA()
+Ptr<cv::superres::BroxOpticalFlow> cv::superres::createOptFlow_Brox_CUDA()
 {
     return makePtr<Brox_CUDA>();
 }
@@ -573,14 +560,16 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Brox_CUDA()
 
 namespace
 {
-    class PyrLK_CUDA : public GpuOpticalFlow
+    class PyrLK_CUDA : public GpuOpticalFlow, public cv::superres::PyrLKOpticalFlow
     {
     public:
-        AlgorithmInfo* info() const;
-
         PyrLK_CUDA();
-
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
         void collectGarbage();
+
+        CV_IMPL_PROPERTY(int, WindowSize, winSize_)
+        CV_IMPL_PROPERTY(int, MaxLevel, maxLevel_)
+        CV_IMPL_PROPERTY(int, Iterations, iterations_)
 
     protected:
         void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
@@ -593,11 +582,6 @@ namespace
         Ptr<cuda::DensePyrLKOpticalFlow> alg_;
     };
 
-    CV_INIT_ALGORITHM(PyrLK_CUDA, "DenseOpticalFlowExt.PyrLK_CUDA",
-                      obj.info()->addParam(obj, "winSize", obj.winSize_);
-                      obj.info()->addParam(obj, "maxLevel", obj.maxLevel_);
-                      obj.info()->addParam(obj, "iterations", obj.iterations_))
-
     PyrLK_CUDA::PyrLK_CUDA() : GpuOpticalFlow(CV_8UC1)
     {
         alg_ = cuda::DensePyrLKOpticalFlow::create();
@@ -605,6 +589,11 @@ namespace
         winSize_ = alg_->getWinSize().width;
         maxLevel_ = alg_->getMaxLevel();
         iterations_ = alg_->getNumIters();
+    }
+
+    void PyrLK_CUDA::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
+    {
+        GpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
     }
 
     void PyrLK_CUDA::impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2)
@@ -630,7 +619,7 @@ namespace
     }
 }
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_PyrLK_CUDA()
+Ptr<cv::superres::PyrLKOpticalFlow> cv::superres::createOptFlow_PyrLK_CUDA()
 {
     return makePtr<PyrLK_CUDA>();
 }
@@ -640,14 +629,20 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_PyrLK_CUDA()
 
 namespace
 {
-    class Farneback_CUDA : public GpuOpticalFlow
+    class Farneback_CUDA : public GpuOpticalFlow, public cv::superres::FarnebackOpticalFlow
     {
     public:
-        AlgorithmInfo* info() const;
-
         Farneback_CUDA();
-
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
         void collectGarbage();
+
+        CV_IMPL_PROPERTY(double, PyrScale, pyrScale_)
+        CV_IMPL_PROPERTY(int, LevelsNumber, numLevels_)
+        CV_IMPL_PROPERTY(int, WindowSize, winSize_)
+        CV_IMPL_PROPERTY(int, Iterations, numIters_)
+        CV_IMPL_PROPERTY(int, PolyN, polyN_)
+        CV_IMPL_PROPERTY(double, PolySigma, polySigma_)
+        CV_IMPL_PROPERTY(int, Flags, flags_)
 
     protected:
         void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
@@ -664,15 +659,6 @@ namespace
         Ptr<cuda::FarnebackOpticalFlow> alg_;
     };
 
-    CV_INIT_ALGORITHM(Farneback_CUDA, "DenseOpticalFlowExt.Farneback_CUDA",
-                      obj.info()->addParam(obj, "pyrScale", obj.pyrScale_);
-                      obj.info()->addParam(obj, "numLevels", obj.numLevels_);
-                      obj.info()->addParam(obj, "winSize", obj.winSize_);
-                      obj.info()->addParam(obj, "numIters", obj.numIters_);
-                      obj.info()->addParam(obj, "polyN", obj.polyN_);
-                      obj.info()->addParam(obj, "polySigma", obj.polySigma_);
-                      obj.info()->addParam(obj, "flags", obj.flags_))
-
     Farneback_CUDA::Farneback_CUDA() : GpuOpticalFlow(CV_8UC1)
     {
         alg_ = cuda::FarnebackOpticalFlow::create();
@@ -684,6 +670,11 @@ namespace
         polyN_ = alg_->getPolyN();
         polySigma_ = alg_->getPolySigma();
         flags_ = alg_->getFlags();
+    }
+
+    void Farneback_CUDA::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
+    {
+        GpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
     }
 
     void Farneback_CUDA::impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2)
@@ -713,7 +704,7 @@ namespace
     }
 }
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_CUDA()
+Ptr<cv::superres::FarnebackOpticalFlow> cv::superres::createOptFlow_Farneback_CUDA()
 {
     return makePtr<Farneback_CUDA>();
 }
@@ -723,14 +714,21 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_CUDA()
 
 namespace
 {
-    class DualTVL1_CUDA : public GpuOpticalFlow
+    class DualTVL1_CUDA : public GpuOpticalFlow, public cv::superres::DualTVL1OpticalFlow
     {
     public:
-        AlgorithmInfo* info() const;
-
         DualTVL1_CUDA();
-
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
         void collectGarbage();
+
+        CV_IMPL_PROPERTY(double, Tau, tau_)
+        CV_IMPL_PROPERTY(double, Lambda, lambda_)
+        CV_IMPL_PROPERTY(double, Theta, theta_)
+        CV_IMPL_PROPERTY(int, ScalesNumber, nscales_)
+        CV_IMPL_PROPERTY(int, WarpingsNumber, warps_)
+        CV_IMPL_PROPERTY(double, Epsilon, epsilon_)
+        CV_IMPL_PROPERTY(int, Iterations, iterations_)
+        CV_IMPL_PROPERTY(bool, UseInitialFlow, useInitialFlow_)
 
     protected:
         void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
@@ -748,16 +746,6 @@ namespace
         Ptr<cuda::OpticalFlowDual_TVL1> alg_;
     };
 
-    CV_INIT_ALGORITHM(DualTVL1_CUDA, "DenseOpticalFlowExt.DualTVL1_CUDA",
-                      obj.info()->addParam(obj, "tau", obj.tau_);
-                      obj.info()->addParam(obj, "lambda", obj.lambda_);
-                      obj.info()->addParam(obj, "theta", obj.theta_);
-                      obj.info()->addParam(obj, "nscales", obj.nscales_);
-                      obj.info()->addParam(obj, "warps", obj.warps_);
-                      obj.info()->addParam(obj, "epsilon", obj.epsilon_);
-                      obj.info()->addParam(obj, "iterations", obj.iterations_);
-                      obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow_))
-
     DualTVL1_CUDA::DualTVL1_CUDA() : GpuOpticalFlow(CV_8UC1)
     {
         alg_ = cuda::OpticalFlowDual_TVL1::create();
@@ -770,6 +758,11 @@ namespace
         epsilon_ = alg_->getEpsilon();
         iterations_ = alg_->getNumIterations();
         useInitialFlow_ = alg_->getUseInitialFlow();
+    }
+
+    void DualTVL1_CUDA::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
+    {
+        GpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
     }
 
     void DualTVL1_CUDA::impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2)
@@ -800,7 +793,7 @@ namespace
     }
 }
 
-Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_CUDA()
+Ptr<cv::superres::DualTVL1OpticalFlow> cv::superres::createOptFlow_DualTVL1_CUDA()
 {
     return makePtr<DualTVL1_CUDA>();
 }

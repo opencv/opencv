@@ -63,6 +63,10 @@ namespace cv { namespace cuda {
 //! @addtogroup cudalegacy
 //! @{
 
+//
+// ImagePyramid
+//
+
 class CV_EXPORTS ImagePyramid : public Algorithm
 {
 public:
@@ -226,6 +230,58 @@ CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
                                   Stream& stream = Stream::Null());
 
 CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors);
+
+//
+// Labeling
+//
+
+//!performs labeling via graph cuts of a 2D regular 4-connected graph.
+CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels,
+                         GpuMat& buf, Stream& stream = Stream::Null());
+
+//!performs labeling via graph cuts of a 2D regular 8-connected graph.
+CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight,
+                         GpuMat& bottom, GpuMat& bottomLeft, GpuMat& bottomRight,
+                         GpuMat& labels,
+                         GpuMat& buf, Stream& stream = Stream::Null());
+
+//! compute mask for Generalized Flood fill componetns labeling.
+CV_EXPORTS void connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& stream = Stream::Null());
+
+//! performs connected componnents labeling.
+CV_EXPORTS void labelComponents(const GpuMat& mask, GpuMat& components, int flags = 0, Stream& stream = Stream::Null());
+
+//
+// Calib3d
+//
+
+CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                                GpuMat& dst, Stream& stream = Stream::Null());
+
+CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                              const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
+                              Stream& stream = Stream::Null());
+
+/** @brief Finds the object pose from 3D-2D point correspondences.
+
+@param object Single-row matrix of object points.
+@param image Single-row matrix of image points.
+@param camera_mat 3x3 matrix of intrinsic camera parameters.
+@param dist_coef Distortion coefficients. See undistortPoints for details.
+@param rvec Output 3D rotation vector.
+@param tvec Output 3D translation vector.
+@param use_extrinsic_guess Flag to indicate that the function must use rvec and tvec as an
+initial transformation guess. It is not supported for now.
+@param num_iters Maximum number of RANSAC iterations.
+@param max_dist Euclidean distance threshold to detect whether point is inlier or not.
+@param min_inlier_count Flag to indicate that the function must stop if greater or equal number
+of inliers is achieved. It is not supported for now.
+@param inliers Output vector of inlier indices.
+ */
+CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
+                               const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false,
+                               int num_iters=100, float max_dist=8.0, int min_inlier_count=100,
+                               std::vector<int>* inliers=NULL);
 
 //! @}
 

@@ -517,9 +517,11 @@ static const uchar * initPopcountTable()
         unsigned int j = 0u;
 #if CV_POPCNT
         if (checkHardwareSupport(CV_CPU_POPCNT))
+        {
             for( ; j < 256u; j++ )
                 tab[j] = (uchar)(8 - _mm_popcnt_u32(j));
-#else
+        }
+#endif
         for( ; j < 256u; j++ )
         {
             int val = 0;
@@ -527,7 +529,6 @@ static const uchar * initPopcountTable()
                 val += (j & mask) == 0;
             tab[j] = (uchar)val;
         }
-#endif
         initialized = true;
     }
 
@@ -2113,6 +2114,12 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
                            int ddepth = -1, bool absValues = false, InputArray _src2 = noArray(), double * maxVal2 = NULL)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
+
+#ifdef ANDROID
+    if (dev.isNVidia())
+        return false;
+#endif
+
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
@@ -2313,7 +2320,10 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                     depth == CV_8U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
                     depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
                     depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
-                    depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R : 0;
+                #if !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
+                    depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
+                #endif
+                    0;
                 CV_SUPPRESS_DEPRECATED_END
 
                 if( ippFuncC1 )
@@ -2884,6 +2894,12 @@ static NormDiffFunc getNormDiffFunc(int normType, int depth)
 static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & result )
 {
     const ocl::Device & d = ocl::Device::getDefault();
+
+#ifdef ANDROID
+    if (d.isNVidia())
+        return false;
+#endif
+
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     bool doubleSupport = d.doubleFPConfig() > 0,
             haveMask = _mask.kind() != _InputArray::NONE;
@@ -3249,6 +3265,11 @@ namespace cv {
 
 static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask, double & result )
 {
+#ifdef ANDROID
+    if (ocl::Device::getDefault().isNVidia())
+        return false;
+#endif
+
     Scalar sc1, sc2;
     int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     bool relative = (normType & NORM_RELATIVE) != 0;

@@ -193,7 +193,7 @@ Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
     Matx<_Tp, n, m> b;
     bool ok;
     if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
-        ok = internal::Matx_FastInvOp<_Tp, m>()(*this, b, method);
+        ok = cv::internal::Matx_FastInvOp<_Tp, m>()(*this, b, method);
     else
     {
         Mat A(*this, false), B(b, false);
@@ -209,7 +209,7 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
     Matx<_Tp, n, l> x;
     bool ok;
     if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
-        ok = internal::Matx_FastSolveOp<_Tp, m, l>()(*this, rhs, x, method);
+        ok = cv::internal::Matx_FastSolveOp<_Tp, m, l>()(*this, rhs, x, method);
     else
     {
         Mat A(*this, false), B(rhs, false), X(x, false);
@@ -410,84 +410,6 @@ template<typename _Tp, int m, int n> static inline
 int print(const Matx<_Tp, m, n>& matx, FILE* stream = stdout)
 {
     return print(Formatter::get()->format(cv::Mat(matx)), stream);
-}
-
-
-
-////////////////////////////////////////// Algorithm //////////////////////////////////////////
-
-template<typename _Tp> inline
-Ptr<_Tp> Algorithm::create(const String& name)
-{
-    return _create(name).dynamicCast<_Tp>();
-}
-
-template<typename _Tp> inline
-void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
-{
-    Ptr<Algorithm> algo_ptr = value. template dynamicCast<cv::Algorithm>();
-    if (!algo_ptr) {
-        CV_Error( Error::StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
-    }
-    info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
-}
-
-template<typename _Tp> inline
-void Algorithm::set(const String& _name, const Ptr<_Tp>& value)
-{
-    this->set<_Tp>(_name.c_str(), value);
-}
-
-template<typename _Tp> inline
-void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
-{
-    Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
-    if (!algo_ptr) {
-        CV_Error( Error::StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
-    }
-    info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
-}
-
-template<typename _Tp> inline
-void Algorithm::setAlgorithm(const String& _name, const Ptr<_Tp>& value)
-{
-    this->set<_Tp>(_name.c_str(), value);
-}
-
-template<typename _Tp> inline
-typename ParamType<_Tp>::member_type Algorithm::get(const String& _name) const
-{
-    typename ParamType<_Tp>::member_type value;
-    info()->get(this, _name.c_str(), ParamType<_Tp>::type, &value);
-    return value;
-}
-
-template<typename _Tp> inline
-typename ParamType<_Tp>::member_type Algorithm::get(const char* _name) const
-{
-    typename ParamType<_Tp>::member_type value;
-    info()->get(this, _name, ParamType<_Tp>::type, &value);
-    return value;
-}
-
-template<typename _Tp, typename _Base> inline
-void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter, Ptr<_Tp>& value, bool readOnly,
-                             Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                             const String& help)
-{
-    //TODO: static assert: _Tp inherits from _Base
-    addParam_(algo, parameter, ParamType<_Base>::type, &value, readOnly,
-              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
-}
-
-template<typename _Tp> inline
-void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter, Ptr<_Tp>& value, bool readOnly,
-                             Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                             const String& help)
-{
-    //TODO: static assert: _Tp inherits from Algorithm
-    addParam_(algo, parameter, ParamType<Algorithm>::type, &value, readOnly,
-              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 
 //! @endcond

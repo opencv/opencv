@@ -3227,7 +3227,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     Mat dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::resize(src, dst, (float)inv_scale_x, (float)inv_scale_y, interpolation))
+    if (tegra::useTegra() && tegra::resize(src, dst, (float)inv_scale_x, (float)inv_scale_y, interpolation))
         return;
 #endif
 
@@ -5454,7 +5454,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     const ocl::Device & dev = ocl::Device::getDefault();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    double doubleSupport = dev.doubleFPConfig() > 0;
+    const bool doubleSupport = dev.doubleFPConfig() > 0;
 
     int interpolation = flags & INTER_MAX;
     if( interpolation == INTER_AREA )
@@ -5572,7 +5572,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     M0.convertTo(matM, matM.type());
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if( tegra::warpAffine(src, dst, M, flags, borderType, borderValue) )
+    if( tegra::useTegra() && tegra::warpAffine(src, dst, M, flags, borderType, borderValue) )
         return;
 #endif
 
@@ -6098,7 +6098,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     M0.convertTo(matM, matM.type());
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if( tegra::warpPerspective(src, dst, M, flags, borderType, borderValue) )
+    if( tegra::useTegra() && tegra::warpPerspective(src, dst, M, flags, borderType, borderValue) )
         return;
 #endif
 

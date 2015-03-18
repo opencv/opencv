@@ -68,8 +68,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operators
     virtual void estimateTransformation(InputArray transformingShape, InputArray targetShape, std::vector<DMatch> &matches);
     virtual float applyTransformation(InputArray inPts, OutputArray output=noArray());

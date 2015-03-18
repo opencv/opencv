@@ -48,21 +48,16 @@ namespace ml {
 //////////////////////////////////////////////////////////////////////////////////////////
 //                                  Random trees                                        //
 //////////////////////////////////////////////////////////////////////////////////////////
-RTrees::Params::Params()
-    : DTrees::Params(5, 10, 0.f, false, 10, 0, false, false, Mat())
+RTreeParams::RTreeParams()
 {
     calcVarImportance = false;
     nactiveVars = 0;
     termCrit = TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 50, 0.1);
 }
 
-RTrees::Params::Params( int _maxDepth, int _minSampleCount,
-                        double _regressionAccuracy, bool _useSurrogates,
-                        int _maxCategories, const Mat& _priors,
-                        bool _calcVarImportance, int _nactiveVars,
-                        TermCriteria _termCrit )
-    : DTrees::Params(_maxDepth, _minSampleCount, _regressionAccuracy, _useSurrogates,
-                     _maxCategories, 0, false, false, _priors)
+RTreeParams::RTreeParams(bool _calcVarImportance,
+                         int _nactiveVars,
+                         TermCriteria _termCrit )
 {
     calcVarImportance = _calcVarImportance;
     nactiveVars = _nactiveVars;
@@ -73,18 +68,19 @@ RTrees::Params::Params( int _maxDepth, int _minSampleCount,
 class DTreesImplForRTrees : public DTreesImpl
 {
 public:
-    DTreesImplForRTrees() {}
+    DTreesImplForRTrees()
+    {
+        params.setMaxDepth(5);
+        params.setMinSampleCount(10);
+        params.setRegressionAccuracy(0.f);
+        params.useSurrogates = false;
+        params.setMaxCategories(10);
+        params.setCVFolds(0);
+        params.use1SERule = false;
+        params.truncatePrunedTree = false;
+        params.priors = Mat();
+    }
     virtual ~DTreesImplForRTrees() {}
-
-    void setRParams(const RTrees::Params& p)
-    {
-        rparams = p;
-    }
-
-    RTrees::Params getRParams() const
-    {
-        return rparams;
-    }
 
     void clear()
     {
@@ -129,10 +125,6 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags )
     {
-        Params dp(rparams.maxDepth, rparams.minSampleCount, rparams.regressionAccuracy,
-                  rparams.useSurrogates, rparams.maxCategories, rparams.CVFolds,
-                  rparams.use1SERule, rparams.truncatePrunedTree, rparams.priors);
-        setDParams(dp);
         startTraining(trainData, flags);
         int treeidx, ntrees = (rparams.termCrit.type & TermCriteria::COUNT) != 0 ?
             rparams.termCrit.maxCount : 10000;
@@ -326,12 +318,6 @@ public:
     void readParams( const FileNode& fn )
     {
         DTreesImpl::readParams(fn);
-        rparams.maxDepth = params0.maxDepth;
-        rparams.minSampleCount = params0.minSampleCount;
-        rparams.regressionAccuracy = params0.regressionAccuracy;
-        rparams.useSurrogates = params0.useSurrogates;
-        rparams.maxCategories = params0.maxCategories;
-        rparams.priors = params0.priors;
 
         FileNode tparams_node = fn["training_params"];
         rparams.nactiveVars = (int)tparams_node["nactive_vars"];
@@ -361,7 +347,7 @@ public:
         }
     }
 
-    RTrees::Params rparams;
+    RTreeParams rparams;
     double oobError;
     vector<float> varImportance;
     vector<int> allVars, activeVars;
@@ -372,6 +358,20 @@ public:
 class RTreesImpl : public RTrees
 {
 public:
+    CV_IMPL_PROPERTY(bool, CalculateVarImportance, impl.rparams.calcVarImportance)
+    CV_IMPL_PROPERTY(int, ActiveVarCount, impl.rparams.nactiveVars)
+    CV_IMPL_PROPERTY_S(TermCriteria, TermCriteria, impl.rparams.termCrit)
+
+    CV_WRAP_SAME_PROPERTY(int, MaxCategories, impl.params)
+    CV_WRAP_SAME_PROPERTY(int, MaxDepth, impl.params)
+    CV_WRAP_SAME_PROPERTY(int, MinSampleCount, impl.params)
+    CV_WRAP_SAME_PROPERTY(int, CVFolds, impl.params)
+    CV_WRAP_SAME_PROPERTY(bool, UseSurrogates, impl.params)
+    CV_WRAP_SAME_PROPERTY(bool, Use1SERule, impl.params)
+    CV_WRAP_SAME_PROPERTY(bool, TruncatePrunedTree, impl.params)
+    CV_WRAP_SAME_PROPERTY(float, RegressionAccuracy, impl.params)
+    CV_WRAP_SAME_PROPERTY_S(cv::Mat, Priors, impl.params)
+
     RTreesImpl() {}
     virtual ~RTreesImpl() {}
 
@@ -397,9 +397,6 @@ public:
         impl.read(fn);
     }
 
-    void setRParams(const Params& p) { impl.setRParams(p); }
-    Params getRParams() const { return impl.getRParams(); }
-
     Mat getVarImportance() const { return Mat_<float>(impl.varImportance, true); }
     int getVarCount() const { return impl.getVarCount(); }
 
@@ -415,11 +412,9 @@ public:
 };
 
 
-Ptr<RTrees> RTrees::create(const Params& params)
+Ptr<RTrees> RTrees::create()
 {
-    Ptr<RTreesImpl> p = makePtr<RTreesImpl>();
-    p->setRParams(params);
-    return p;
+    return makePtr<RTreesImpl>();
 }
 
 }}

@@ -109,7 +109,7 @@
   #endif
 #endif
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #include <wrl/client.h>
 #ifndef __cplusplus_winrt
 #include <windows.storage.h>
@@ -159,7 +159,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
              UINT(g.Data4[2]), UINT(g.Data4[3]), UINT(g.Data4[4]),
              UINT(g.Data4[5]), UINT(g.Data4[6]), UINT(g.Data4[7]));
 
-    return prefix + std::wstring(guidStr);
+    return prefix.append(std::wstring(guidStr));
 }
 
 #endif
@@ -293,14 +293,13 @@ struct HWFeatures
             #else
             asm volatile
             (
-             "pushl %%eax\n\t"
-             "pushl %%edx\n\t"
+             "pushl %%ebx\n\t"
              "movl $7,%%eax\n\t"
              "movl $0,%%ecx\n\t"
              "cpuid\n\t"
-             "popl %%edx\n\t"
-             "popl %%eax\n\t"
-             : "=b"(cpuid_data[1]), "=c"(cpuid_data[2])
+             "movl %%ebx, %0\n\t"
+             "popl %%ebx\n\t"
+             : "=r"(cpuid_data[1]), "=c"(cpuid_data[2])
              :
              : "cc"
             );
@@ -320,14 +319,17 @@ struct HWFeatures
         }
 
     #if defined ANDROID || defined __linux__
+    #ifdef __aarch64__
+        f.have[CV_CPU_NEON] = true;
+    #else
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
         {
             Elf32_auxv_t auxv;
-            const size_t size_auxv_t = sizeof(Elf32_auxv_t);
+            const size_t size_auxv_t = sizeof(auxv);
 
-            while (read(cpufile, &auxv, sizeof(Elf32_auxv_t)) == size_auxv_t)
+            while ((size_t)read(cpufile, &auxv, size_auxv_t) == size_auxv_t)
             {
                 if (auxv.a_type == AT_HWCAP)
                 {
@@ -338,7 +340,8 @@ struct HWFeatures
 
             close(cpufile);
         }
-    #elif (defined __clang__ || defined __APPLE__) && defined __ARM_NEON__
+    #endif
+    #elif (defined __clang__ || defined __APPLE__) && (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
         f.have[CV_CPU_NEON] = true;
     #endif
 
@@ -386,6 +389,12 @@ void setUseOptimized( bool flag )
     useOptimizedFlag = flag;
     currentFeatures = flag ? &featuresEnabled : &featuresDisabled;
     USE_SSE2 = currentFeatures->have[CV_CPU_SSE2];
+
+    ipp::setUseIPP(flag);
+    ocl::setUseOpenCL(flag);
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    ::tegra::setUseTegra(flag);
+#endif
 }
 
 bool useOptimized(void)
@@ -533,24 +542,20 @@ String format( const char* fmt, ... )
 String tempfile( const char* suffix )
 {
     String fname;
-#ifndef HAVE_WINRT
+#ifndef WINRT
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
 #if defined WIN32 || defined _WIN32
-#ifdef HAVE_WINRT
+#ifdef WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
-    std::wstring temp_dir = L"";
-    const wchar_t* opencv_temp_dir = GetTempPathWinRT().c_str();
-    if (opencv_temp_dir)
-        temp_dir = std::wstring(opencv_temp_dir);
+    std::wstring temp_dir = GetTempPathWinRT();
 
-    std::wstring temp_file;
-    temp_file = GetTempFileNameWinRT(L"ocv");
+    std::wstring temp_file = GetTempFileNameWinRT(L"ocv");
     if (temp_file.empty())
         return String();
 
-    temp_file = temp_dir + std::wstring(L"\\") + temp_file;
+    temp_file = temp_dir.append(std::wstring(L"\\")).append(temp_file);
     DeleteFileW(temp_file.c_str());
 
     char aname[MAX_PATH];
@@ -946,7 +951,7 @@ public:
 #pragma warning(disable:4505) // unreferenced local function has been removed
 #endif
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
     // using C++11 thread attribute for local thread data
     static __declspec( thread ) TLSStorage* g_tlsdata = NULL;
 
@@ -997,10 +1002,10 @@ public:
         }
         return d;
     }
-#endif //HAVE_WINRT
+#endif //WINRT
 
 #if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
-#ifdef HAVE_WINRT
+#ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
 
@@ -1147,12 +1152,20 @@ TLSStorage::~TLSStorage()
     tlsData_.clear();
 }
 
-TLSData<CoreTLSData> coreTlsData;
+
+
+TLSData<CoreTLSData>& getCoreTlsData()
+{
+    static TLSData<CoreTLSData> *value = new TLSData<CoreTLSData>();
+    return *value;
+}
+
+
 
 #ifdef CV_COLLECT_IMPL_DATA
 void setImpl(int flags)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     data->implFlags = flags;
     data->implCode.clear();
     data->implFun.clear();
@@ -1160,7 +1173,7 @@ void setImpl(int flags)
 
 void addImpl(int flag, const char* func)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     data->implFlags |= flag;
     if(func) // use lazy collection if name was not specified
     {
@@ -1175,7 +1188,7 @@ void addImpl(int flag, const char* func)
 
 int getImpl(std::vector<int> &impl, std::vector<String> &funName)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     impl = data->implCode;
     funName = data->implFun;
     return data->implFlags; // return actual flags for lazy collection
@@ -1183,13 +1196,13 @@ int getImpl(std::vector<int> &impl, std::vector<String> &funName)
 
 bool useCollection()
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     return data->useCollection;
 }
 
 void setUseCollection(bool flag)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     data->useCollection = flag;
 }
 #endif
@@ -1222,7 +1235,7 @@ String getIppErrorLocation()
 bool useIPP()
 {
 #ifdef HAVE_IPP
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
     if(data->useIPP < 0)
     {
         const char* pIppEnv = getenv("OPENCV_IPP");
@@ -1239,7 +1252,7 @@ bool useIPP()
 
 void setUseIPP(bool flag)
 {
-    CoreTLSData* data = coreTlsData.get();
+    CoreTLSData* data = getCoreTlsData().get();
 #ifdef HAVE_IPP
     data->useIPP = flag;
 #else
@@ -1251,5 +1264,35 @@ void setUseIPP(bool flag)
 } // namespace ipp
 
 } // namespace cv
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+
+namespace tegra {
+
+bool useTegra()
+{
+    cv::CoreTLSData* data = cv::getCoreTlsData().get();
+
+    if (data->useTegra < 0)
+    {
+        const char* pTegraEnv = getenv("OPENCV_TEGRA");
+        if (pTegraEnv && (cv::String(pTegraEnv) == "disabled"))
+            data->useTegra = false;
+        else
+            data->useTegra = true;
+    }
+
+    return (data->useTegra > 0);
+}
+
+void setUseTegra(bool flag)
+{
+    cv::CoreTLSData* data = cv::getCoreTlsData().get();
+    data->useTegra = flag;
+}
+
+} // namespace tegra
+
+#endif
 
 /* End of file. */

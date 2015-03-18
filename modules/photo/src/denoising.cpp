@@ -58,7 +58,7 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
     Mat dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::fastNlMeansDenoising(src, dst, h, templateWindowSize, searchWindowSize))
+    if(tegra::useTegra() && tegra::fastNlMeansDenoising(src, dst, h, templateWindowSize, searchWindowSize))
         return;
 #endif
 

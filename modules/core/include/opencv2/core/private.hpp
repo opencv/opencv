@@ -129,40 +129,6 @@ namespace cv
     CV_EXPORTS const char* currentParallelFramework();
 } //namespace cv
 
-#define CV_INIT_ALGORITHM(classname, algname, memberinit) \
-    static inline ::cv::Algorithm* create##classname##_hidden() \
-    { \
-        return new classname; \
-    } \
-    \
-    static inline ::cv::Ptr< ::cv::Algorithm> create##classname##_ptr_hidden() \
-    { \
-        return ::cv::makePtr<classname>(); \
-    } \
-    \
-    static inline ::cv::AlgorithmInfo& classname##_info() \
-    { \
-        static ::cv::AlgorithmInfo classname##_info_var(algname, create##classname##_hidden); \
-        return classname##_info_var; \
-    } \
-    \
-    static ::cv::AlgorithmInfo& classname##_info_auto = classname##_info(); \
-    \
-    ::cv::AlgorithmInfo* classname::info() const \
-    { \
-        static volatile bool initialized = false; \
-        \
-        if( !initialized ) \
-        { \
-            initialized = true; \
-            classname obj; \
-            memberinit; \
-        } \
-        return &classname##_info(); \
-    }
-
-
-
 /****************************************************************************************\
 *                                  Common declarations                                   *
 \****************************************************************************************/
@@ -302,6 +268,15 @@ typedef enum CvStatus
     CV_OK                       =   CV_NO_ERR
 }
 CvStatus;
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+namespace tegra {
+
+CV_EXPORTS bool useTegra();
+CV_EXPORTS void setUseTegra(bool flag);
+
+}
+#endif
 
 //! @endcond
 

@@ -236,6 +236,9 @@ struct CoreTLSData
 {
     CoreTLSData() : device(0), useOpenCL(-1), useIPP(-1), useCollection(false)
     {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+        useTegra = -1;
+#endif
 #ifdef CV_COLLECT_IMPL_DATA
         implFlags = 0;
 #endif
@@ -246,6 +249,9 @@ struct CoreTLSData
     ocl::Queue oclQueue;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
     int useIPP; // 1 - use, 0 - do not use, -1 - auto/not initialized
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
+#endif
     bool useCollection; // enable/disable impl data collection
 
 #ifdef CV_COLLECT_IMPL_DATA
@@ -255,7 +261,7 @@ struct CoreTLSData
 #endif
 };
 
-extern TLSData<CoreTLSData> coreTlsData;
+TLSData<CoreTLSData>& getCoreTlsData();
 
 #if defined(BUILD_SHARED_LIBS)
 #if defined WIN32 || defined _WIN32 || defined WINCE

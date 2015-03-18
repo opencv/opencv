@@ -2,7 +2,11 @@
 #  CMake file for OpenCV docs
 #-----------------------
 
-set(HAVE_DOC_GENERATOR BUILD_DOCS AND DOXYGEN_FOUND)
+if(BUILD_DOCS AND DOXYGEN_FOUND)
+  set(HAVE_DOC_GENERATOR TRUE)
+else()
+  set(HAVE_DOC_GENERATOR FALSE)
+endif()
 
 if(HAVE_DOC_GENERATOR)
   project(opencv_docs)
@@ -23,22 +27,13 @@ if(HAVE_DOC_GENERATOR)
   set(FIXED_ORDER_MODULES core imgproc imgcodecs videoio highgui video calib3d features2d objdetect ml flann photo stitching)
   list(REMOVE_ITEM BASE_MODULES ${FIXED_ORDER_MODULES})
   set(BASE_MODULES ${FIXED_ORDER_MODULES} ${BASE_MODULES})
-
-  set(DOC_LIST
-      "${OpenCV_SOURCE_DIR}/doc/opencv-logo.png"
-      "${OpenCV_SOURCE_DIR}/doc/opencv-logo2.png"
-      "${OpenCV_SOURCE_DIR}/doc/opencv-logo-white.png"
-      "${OpenCV_SOURCE_DIR}/doc/opencv.ico"
-      "${OpenCV_SOURCE_DIR}/doc/pattern.png"
-      "${OpenCV_SOURCE_DIR}/doc/acircles_pattern.png")
-  set(OPTIONAL_DOC_LIST "")
 endif(HAVE_DOC_GENERATOR)
 
 # ========= Doxygen docs =========
 
 if(BUILD_DOCS AND DOXYGEN_FOUND)
   # not documented modules list
-  list(APPEND blacklist "ts" "java" "python2" "python3" "world")
+  list(APPEND blacklist "ts" "java" "python2" "python3" "world" "contrib_world")
 
   # gathering headers
   set(paths_include)
@@ -156,18 +151,8 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
     DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps}
   )
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
+    DESTINATION "${OPENCV_DOC_INSTALL_PATH}"
+    COMPONENT "docs" OPTIONAL
+  )
 endif()
-
-if(HAVE_DOC_GENERATOR)
-  # installation
-  foreach(f ${DOC_LIST})
-    install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" COMPONENT docs)
-  endforeach()
-  foreach(f ${OPTIONAL_DOC_LIST})
-    install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" OPTIONAL COMPONENT docs)
-  endforeach()
-
-  # dummy targets
-  add_custom_target(docs)
-  add_custom_target(html_docs)
-endif(HAVE_DOC_GENERATOR)

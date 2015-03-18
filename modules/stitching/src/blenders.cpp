@@ -481,7 +481,7 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 #ifdef HAVE_TEGRA_OPTIMIZATION
     src = _src.getMat();
     weight = _weight.getMat();
-    if(tegra::normalizeUsingWeightMap(weight, src))
+    if(tegra::useTegra() && tegra::normalizeUsingWeightMap(weight, src))
         return;
 #endif
 
@@ -552,7 +552,7 @@ void createLaplacePyr(InputArray img, int num_levels, std::vector<UMat> &pyr)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     cv::Mat imgMat = img.getMat();
-    if(tegra::createLaplacePyr(imgMat, num_levels, pyr))
+    if(tegra::useTegra() && tegra::createLaplacePyr(imgMat, num_levels, pyr))
         return;
 #endif
 
