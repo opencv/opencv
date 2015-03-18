@@ -1875,7 +1875,7 @@ bool CvWindow::isOpenGl()
 
 void CvWindow::setViewportSize(QSize _size)
 {
-    myView->getWidget()->resize(_size);
+    resize(_size);
     myView->setSize(_size);
 }
 
