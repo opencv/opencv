@@ -191,7 +191,7 @@ html
     {
         padding-bottom:20px;
     }
-    
+
     #input
     {
         -ms-grid-columns: auto;
@@ -211,5 +211,3 @@ html
         -ms-grid-column: 1;
     }
 }
-
-
