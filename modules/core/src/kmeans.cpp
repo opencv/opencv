@@ -212,6 +212,68 @@ private:
     const Mat& centers;
 };
 
+
+class KMeansCentersUpdater : public ParallelLoopBody
+{
+public:
+    KMeansCentersUpdater(
+        const int* _labels,
+        const Mat& _data,
+        Mat& _centers)
+        : labels(_labels)
+        , data(_data)
+        , centers(_centers)
+    {
+    }
+
+    void operator()(const Range& range) const
+    {
+        const int begin = range.start;
+        const int end = range.end;
+        const int dims = centers.cols;
+
+        const float * sample;
+        int j, k;
+
+        for (int i = begin; i < end; ++i)
+        {
+            sample = data.ptr<float>(i);
+            k = labels[i];
+
+            float* center = centers.ptr<float>(k);
+            j = 0;
+
+#if CV_ENABLE_UNROLLED
+            for (; j <= dims - 4; j += 4)
+            {
+                float t0 = center[j] + sample[j];
+                float t1 = center[j + 1] + sample[j + 1];
+
+                center[j] = t0;
+                center[j + 1] = t1;
+
+                t0 = center[j + 2] + sample[j + 2];
+                t1 = center[j + 3] + sample[j + 3];
+
+                center[j + 2] = t0;
+                center[j + 3] = t1;
+            }
+#endif
+            for (; j < dims; j++)
+            {
+                center[j] += sample[j];
+            }
+        }
+    }
+
+private:
+    KMeansCentersUpdater& operator=(const KMeansCentersUpdater&); // to quiet MSVC
+
+    const int* labels;
+    const Mat& data;
+    Mat& centers;
+};
+
 }
 
 double cv::kmeans( InputArray _data, int K,
@@ -324,30 +386,12 @@ double cv::kmeans( InputArray _data, int K,
                 for( k = 0; k < K; k++ )
                     counters[k] = 0;
 
-                for( i = 0; i < N; i++ )
+                parallel_for_(Range(0, N),
+                    cv::KMeansCentersUpdater(labels, data, centers));
+                
+                for (i = 0; i < N; i++)
                 {
-                    sample = data.ptr<float>(i);
                     k = labels[i];
-                    float* center = centers.ptr<float>(k);
-                    j=0;
-                    #if CV_ENABLE_UNROLLED
-                    for(; j <= dims - 4; j += 4 )
-                    {
-                        float t0 = center[j] + sample[j];
-                        float t1 = center[j+1] + sample[j+1];
-
-                        center[j] = t0;
-                        center[j+1] = t1;
-
-                        t0 = center[j+2] + sample[j+2];
-                        t1 = center[j+3] + sample[j+3];
-
-                        center[j+2] = t0;
-                        center[j+3] = t1;
-                    }
-                    #endif
-                    for( ; j < dims; j++ )
-                        center[j] += sample[j];
                     counters[k]++;
                 }
 
