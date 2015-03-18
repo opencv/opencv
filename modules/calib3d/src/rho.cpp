@@ -1664,7 +1664,7 @@ inline void   RHO_HEST_REFC::nStarOptimize(void){
             best_n      = test_n;
             bestNumInl  = testNumInl;
         }
-        testNumInl -= !!arg.inl[test_n-1];/* FIXME: Probable bug! */
+        testNumInl -= !!best.inl[test_n-1];
     }
 
     if(bestNumInl*ctrl.phMax > ctrl.phNumInl*best_n){
