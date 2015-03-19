@@ -257,4 +257,3 @@ _cuda_ module has been split into several smaller pieces:
 Documentation format {#tutorial_transition_docs}
 --------------------
 Documentation has been converted to Doxygen format. You can find updated documentation writing guide in _Tutorials_ section of _OpenCV_ reference documentation (@ref tutorial_documentation).
-
