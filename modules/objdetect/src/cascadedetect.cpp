@@ -555,6 +555,7 @@ HaarEvaluator::HaarEvaluator()
     localSize = Size(4, 2);
     lbufSize = Size(0, 0);
     nchannels = 0;
+    tofs = 0;
 }
 
 HaarEvaluator::~HaarEvaluator()
