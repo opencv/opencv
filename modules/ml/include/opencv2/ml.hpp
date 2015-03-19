@@ -194,7 +194,7 @@ public:
     CV_WRAP virtual Mat getTrainSampleIdx() const = 0;
     CV_WRAP virtual Mat getTestSampleIdx() const = 0;
     CV_WRAP virtual void getValues(int vi, InputArray sidx, float* values) const = 0;
-    CV_WRAP virtual void getNormCatValues(int vi, InputArray sidx, int* values) const = 0;
+    virtual void getNormCatValues(int vi, InputArray sidx, int* values) const = 0;
     CV_WRAP virtual Mat getDefaultSubstValues() const = 0;
 
     CV_WRAP virtual int getCatCount(int vi) const = 0;
