@@ -257,7 +257,7 @@ Here is how to read the file created by the code sample above:
             cout << " " << (int)lbpval[i];
         cout << ")" << endl;
     }
-    fs.release();
+    fs2.release();
 @endcode
 
 Format specification    {#format_spec}
