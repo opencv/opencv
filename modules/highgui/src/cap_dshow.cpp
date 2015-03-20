@@ -2246,7 +2246,7 @@ int videoInput::getVideoPropertyFromCV(int cv_property){
         case CV_CAP_PROP_GAMMA:
             return VideoProcAmp_Gamma;
 
-        case CV_CAP_PROP_MONOCROME:
+        case CV_CAP_PROP_MONOCHROME:
             return VideoProcAmp_ColorEnable;
 
         case CV_CAP_PROP_WHITE_BALANCE_U:
@@ -3245,7 +3245,7 @@ double CvCaptureCAM_DShow::getProperty( int property_id )
     case CV_CAP_PROP_SATURATION:
     case CV_CAP_PROP_SHARPNESS:
     case CV_CAP_PROP_GAMMA:
-    case CV_CAP_PROP_MONOCROME:
+    case CV_CAP_PROP_MONOCHROME:
     case CV_CAP_PROP_WHITE_BALANCE_U:
     case CV_CAP_PROP_BACKLIGHT:
     case CV_CAP_PROP_GAIN:
@@ -3349,7 +3349,7 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
     case CV_CAP_PROP_SATURATION:
     case CV_CAP_PROP_SHARPNESS:
     case CV_CAP_PROP_GAMMA:
-    case CV_CAP_PROP_MONOCROME:
+    case CV_CAP_PROP_MONOCHROME:
     case CV_CAP_PROP_WHITE_BALANCE_U:
     case CV_CAP_PROP_BACKLIGHT:
     case CV_CAP_PROP_GAIN:
