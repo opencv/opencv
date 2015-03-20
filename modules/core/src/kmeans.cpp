@@ -132,7 +132,8 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
             int ci = i;
 
             parallel_for_(Range(0, N),
-                         KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci));
+                         KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci),
+                         N >> 10);
             for( i = 0; i < N; i++ )
             {
                 s += tdist2[i];
@@ -387,8 +388,9 @@ double cv::kmeans( InputArray _data, int K,
                     counters[k] = 0;
 
                 parallel_for_(Range(0, N),
-                    cv::KMeansCentersUpdater(labels, data, centers));
-                
+                              cv::KMeansCentersUpdater(labels, data, centers),
+                              N >> 10);
+
                 for (i = 0; i < N; i++)
                 {
                     k = labels[i];
@@ -479,7 +481,8 @@ double cv::kmeans( InputArray _data, int K,
             Mat dists(1, N, CV_64F);
             double* dist = dists.ptr<double>(0);
             parallel_for_(Range(0, N),
-                         KMeansDistanceComputer(dist, labels, data, centers));
+                          KMeansDistanceComputer(dist, labels, data, centers), 
+                          N >> 10);
             compactness = 0;
             for( i = 0; i < N; i++ )
             {
