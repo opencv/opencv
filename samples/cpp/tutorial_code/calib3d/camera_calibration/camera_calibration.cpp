@@ -34,7 +34,8 @@ public:
 
     void write(FileStorage& fs) const                        //Write serialization for this class
     {
-        fs << "{" << "BoardSize_Width"  << boardSize.width
+        fs << "Settings" << "{"
+                  << "BoardSize_Width"  << boardSize.width
                   << "BoardSize_Height" << boardSize.height
                   << "Square_Size"         << squareSize
                   << "Calibrate_Pattern" << patternToUse
@@ -71,9 +72,9 @@ public:
         node["Show_UndistortedImage"] >> showUndistorsed;
         node["Input"] >> input;
         node["Input_Delay"] >> delay;
-        interprate();
+        validate();
     }
-    void interprate()
+    void validate()
     {
         goodInput = true;
         if (boardSize.width <= 0 || boardSize.height <= 0)
@@ -121,7 +122,7 @@ public:
         }
         if (inputType == INVALID)
         {
-            cerr << " Inexistent input: " << input;
+            cerr << " Input does not exist: " << input;
             goodInput = false;
         }
 
@@ -137,7 +138,7 @@ public:
         if (!patternToUse.compare("ASYMMETRIC_CIRCLES_GRID")) calibrationPattern = ASYMMETRIC_CIRCLES_GRID;
         if (calibrationPattern == NOT_EXISTING)
             {
-                cerr << " Inexistent camera calibration mode: " << patternToUse << endl;
+                cerr << " Camera calibration mode does not exist: " << patternToUse << endl;
                 goodInput = false;
             }
         atImageList = 0;
@@ -230,6 +231,9 @@ int main(int argc, char* argv[])
     }
     fs["Settings"] >> s;
     fs.release();                                         // close Settings file
+
+    //FileStorage fout("settings.yml", FileStorage::WRITE); // write config as YAML
+    //s.write(fout);
 
     if (!s.goodInput)
     {
@@ -558,3 +562,4 @@ bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat&
                             imagePoints, totalAvgErr);
     return ok;
 }
+
