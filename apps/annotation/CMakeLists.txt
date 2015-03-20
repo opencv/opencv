@@ -1,5 +1,5 @@
-SET(deps opencv_core opencv_highgui opencv_imgproc)
-ocv_check_dependencies(${deps})
+SET(OPENCV_ANNOTATION_DEPS opencv_core opencv_highgui opencv_imgproc)
+ocv_check_dependencies(${OPENCV_ANNOTATION_DEPS})
 
 if(NOT OCV_DEPENDENCIES_FOUND)
    return()
@@ -8,12 +8,13 @@ endif()
 project(annotation)
 
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
-ocv_include_modules(${deps})
+ocv_include_modules(${OPENCV_ANNOTATION_DEPS})
 
+set(annotation_files opencv_annotation.cpp)
 set(the_target opencv_annotation)
 
-add_executable(${the_target} opencv_annotation.cpp)
-target_link_libraries(${the_target} ${deps})
+add_executable(${the_target} ${annotation_files})
+target_link_libraries(${the_target} ${OPENCV_ANNOTATION_DEPS})
 
 set_target_properties(${the_target} PROPERTIES
                       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
