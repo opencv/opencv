@@ -2449,7 +2449,6 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         (DFTFunc)CCSIDFT_64f
     };
     AutoBuffer<uchar> buf;
-    void *spec = 0;
     Mat src0 = _src0.getMat(), src = src0;
     int prev_len = 0, stage = 0;
     bool inv = (flags & DFT_INVERSE) != 0;
@@ -2570,7 +2569,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
             sz = 2*len*complex_elem_size;
         }
 
-        spec = 0;
+        void *spec = 0;
 #ifdef USE_IPP_DFT
         if( CV_IPP_CHECK_COND && (len*count >= 64) ) // use IPP DFT if available
         {
