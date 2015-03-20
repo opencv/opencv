@@ -481,18 +481,18 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
     char buf[1024];
     strftime( buf, sizeof(buf)-1, "%c", t2 );
 
-    fs << "calibration_Time" << buf;
+    fs << "calibration_time" << buf;
 
     if( !rvecs.empty() || !reprojErrs.empty() )
-        fs << "nrOfFrames" << (int)std::max(rvecs.size(), reprojErrs.size());
-    fs << "image_Width" << imageSize.width;
-    fs << "image_Height" << imageSize.height;
-    fs << "board_Width" << s.boardSize.width;
-    fs << "board_Height" << s.boardSize.height;
-    fs << "square_Size" << s.squareSize;
+        fs << "nr_of_frames" << (int)std::max(rvecs.size(), reprojErrs.size());
+    fs << "image_width" << imageSize.width;
+    fs << "image_height" << imageSize.height;
+    fs << "board_width" << s.boardSize.width;
+    fs << "board_height" << s.boardSize.height;
+    fs << "square_size" << s.squareSize;
 
     if( s.flag & CALIB_FIX_ASPECT_RATIO )
-        fs << "FixAspectRatio" << s.aspectRatio;
+        fs << "fix_aspect_ratio" << s.aspectRatio;
 
     if( s.flag )
     {
@@ -505,14 +505,14 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
 
     }
 
-    fs << "flagValue" << s.flag;
+    fs << "flags" << s.flag;
 
-    fs << "Camera_Matrix" << cameraMatrix;
-    fs << "Distortion_Coefficients" << distCoeffs;
+    fs << "camera_matrix" << cameraMatrix;
+    fs << "distortion_coefficients" << distCoeffs;
 
-    fs << "Avg_Reprojection_Error" << totalAvgErr;
+    fs << "avg_reprojection_error" << totalAvgErr;
     if( !reprojErrs.empty() )
-        fs << "Per_View_Reprojection_Errors" << Mat(reprojErrs);
+        fs << "per_view_reprojection_errors" << Mat(reprojErrs);
 
     if(s.bwriteExtrinsics && !rvecs.empty() && !tvecs.empty() )
     {
@@ -530,7 +530,7 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
             t = tvecs[i].t();
         }
         //cvWriteComment( *fs, "a set of 6-tuples (rotation vector + translation vector) for each view", 0 );
-        fs << "Extrinsic_Parameters" << bigmat;
+        fs << "extrinsic_parameters" << bigmat;
     }
 
     if(s.bwritePoints && !imagePoints.empty() )
@@ -542,7 +542,7 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
             Mat imgpti(imagePoints[i]);
             imgpti.copyTo(r);
         }
-        fs << "Image_points" << imagePtMat;
+        fs << "image_points" << imagePtMat;
     }
 }
 
