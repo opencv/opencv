@@ -34,7 +34,7 @@ public:
 
     void write(FileStorage& fs) const                        //Write serialization for this class
     {
-        fs << "Settings" << "{"
+        fs << "{"
                   << "BoardSize_Width"  << boardSize.width
                   << "BoardSize_Height" << boardSize.height
                   << "Square_Size"         << squareSize
@@ -213,6 +213,11 @@ static void read(const FileNode& node, Settings& x, const Settings& default_valu
         x.read(node);
 }
 
+static void write(FileStorage& fs, const String& name, const Settings& s )
+{
+    s.write(fs);
+}
+
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 
 bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat& distCoeffs,
@@ -233,7 +238,7 @@ int main(int argc, char* argv[])
     fs.release();                                         // close Settings file
 
     //FileStorage fout("settings.yml", FileStorage::WRITE); // write config as YAML
-    //s.write(fout);
+    //fout << "Settings" << s;
 
     if (!s.goodInput)
     {
