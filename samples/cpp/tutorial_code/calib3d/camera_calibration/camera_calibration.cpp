@@ -444,7 +444,7 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
 
     cameraMatrix = Mat::eye(3, 3, CV_64F);
     if( s.flag & CALIB_FIX_ASPECT_RATIO )
-        cameraMatrix.at<double>(0,0) = 1.0;
+        cameraMatrix.at<double>(0,0) = s.aspectRatio;
 
     distCoeffs = Mat::zeros(8, 1, CV_64F);
 
