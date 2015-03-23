@@ -105,34 +105,64 @@ namespace cv
             virtual void collectGarbage();
 
             //! @brief Scale factor
-            CV_PURE_PROPERTY(int, Scale)
+            /** @see setScale */
+            virtual int getScale() const = 0;
+            /** @copybrief getScale @see getScale */
+            virtual void setScale(int val) = 0;
 
             //! @brief Iterations count
-            CV_PURE_PROPERTY(int, Iterations)
+            /** @see setIterations */
+            virtual int getIterations() const = 0;
+            /** @copybrief getIterations @see getIterations */
+            virtual void setIterations(int val) = 0;
 
             //! @brief Asymptotic value of steepest descent method
-            CV_PURE_PROPERTY(double, Tau)
+            /** @see setTau */
+            virtual double getTau() const = 0;
+            /** @copybrief getTau @see getTau */
+            virtual void setTau(double val) = 0;
 
             //! @brief Weight parameter to balance data term and smoothness term
-            CV_PURE_PROPERTY(double, Labmda)
+            /** @see setLabmda */
+            virtual double getLabmda() const = 0;
+            /** @copybrief getLabmda @see getLabmda */
+            virtual void setLabmda(double val) = 0;
 
             //! @brief Parameter of spacial distribution in Bilateral-TV
-            CV_PURE_PROPERTY(double, Alpha)
+            /** @see setAlpha */
+            virtual double getAlpha() const = 0;
+            /** @copybrief getAlpha @see getAlpha */
+            virtual void setAlpha(double val) = 0;
 
             //! @brief Kernel size of Bilateral-TV filter
-            CV_PURE_PROPERTY(int, KernelSize)
+            /** @see setKernelSize */
+            virtual int getKernelSize() const = 0;
+            /** @copybrief getKernelSize @see getKernelSize */
+            virtual void setKernelSize(int val) = 0;
 
             //! @brief Gaussian blur kernel size
-            CV_PURE_PROPERTY(int, BlurKernelSize)
+            /** @see setBlurKernelSize */
+            virtual int getBlurKernelSize() const = 0;
+            /** @copybrief getBlurKernelSize @see getBlurKernelSize */
+            virtual void setBlurKernelSize(int val) = 0;
 
             //! @brief Gaussian blur sigma
-            CV_PURE_PROPERTY(double, BlurSigma)
+            /** @see setBlurSigma */
+            virtual double getBlurSigma() const = 0;
+            /** @copybrief getBlurSigma @see getBlurSigma */
+            virtual void setBlurSigma(double val) = 0;
 
             //! @brief Radius of the temporal search area
-            CV_PURE_PROPERTY(int, TemporalAreaRadius)
+            /** @see setTemporalAreaRadius */
+            virtual int getTemporalAreaRadius() const = 0;
+            /** @copybrief getTemporalAreaRadius @see getTemporalAreaRadius */
+            virtual void setTemporalAreaRadius(int val) = 0;
 
             //! @brief Dense optical flow algorithm
-            CV_PURE_PROPERTY_S(Ptr<cv::superres::DenseOpticalFlowExt>, OpticalFlow)
+            /** @see setOpticalFlow */
+            virtual Ptr<cv::superres::DenseOpticalFlowExt> getOpticalFlow() const = 0;
+            /** @copybrief getOpticalFlow @see getOpticalFlow */
+            virtual void setOpticalFlow(const Ptr<cv::superres::DenseOpticalFlowExt> &val) = 0;
 
         protected:
             SuperResolution();

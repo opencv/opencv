@@ -2821,41 +2821,6 @@ public:
     virtual void read(const FileNode& fn) { (void)fn; }
 };
 
-// define properties
-
-#define CV_PURE_PROPERTY(type, name) \
-    CV_WRAP virtual type get##name() const = 0; \
-    CV_WRAP virtual void set##name(type val) = 0;
-
-#define CV_PURE_PROPERTY_S(type, name) \
-    CV_WRAP virtual type get##name() const = 0; \
-    CV_WRAP virtual void set##name(const type & val) = 0;
-
-#define CV_PURE_PROPERTY_RO(type, name) \
-    CV_WRAP virtual type get##name() const = 0;
-
-// basic property implementation
-
-#define CV_IMPL_PROPERTY_RO(type, name, member) \
-    inline type get##name() const { return member; }
-
-#define CV_HELP_IMPL_PROPERTY(r_type, w_type, name, member) \
-    CV_IMPL_PROPERTY_RO(r_type, name, member) \
-    inline void set##name(w_type val) { member = val; }
-
-#define CV_HELP_WRAP_PROPERTY(r_type, w_type, name, internal_name, internal_obj) \
-    r_type get##name() const { return internal_obj.get##internal_name(); } \
-    void set##name(w_type val) { internal_obj.set##internal_name(val); }
-
-#define CV_IMPL_PROPERTY(type, name, member) CV_HELP_IMPL_PROPERTY(type, type, name, member)
-#define CV_IMPL_PROPERTY_S(type, name, member) CV_HELP_IMPL_PROPERTY(type, const type &, name, member)
-
-#define CV_WRAP_PROPERTY(type, name, internal_name, internal_obj)  CV_HELP_WRAP_PROPERTY(type, type, name, internal_name, internal_obj)
-#define CV_WRAP_PROPERTY_S(type, name, internal_name, internal_obj) CV_HELP_WRAP_PROPERTY(type, const type &, name, internal_name, internal_obj)
-
-#define CV_WRAP_SAME_PROPERTY(type, name, internal_obj) CV_WRAP_PROPERTY(type, name, name, internal_obj)
-#define CV_WRAP_SAME_PROPERTY_S(type, name, internal_obj) CV_WRAP_PROPERTY_S(type, name, name, internal_obj)
-
 struct Param {
     enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7,
            UNSIGNED_INT=8, UINT64=9, UCHAR=11 };
