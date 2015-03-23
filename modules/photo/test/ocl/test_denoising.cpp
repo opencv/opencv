@@ -103,36 +103,6 @@ OCL_TEST_P(FastNlMeansDenoising_hsep, Mat)
     }
 }
 
-typedef FastNlMeansDenoisingTestBase FastNlMeansDenoisingAbs;
-
-OCL_TEST_P(FastNlMeansDenoisingAbs, Mat)
-{
-    for (int j = 0; j < test_loop_times; j++)
-    {
-        generateTestData();
-
-        OCL_OFF(cv::fastNlMeansDenoisingAbs(src_roi, dst_roi, h[0], templateWindowSize, searchWindowSize));
-        OCL_ON(cv::fastNlMeansDenoisingAbs(usrc_roi, udst_roi, h[0], templateWindowSize, searchWindowSize));
-
-        OCL_EXPECT_MATS_NEAR(dst, 1);
-    }
-}
-
-typedef FastNlMeansDenoisingTestBase FastNlMeansDenoisingAbs_hsep;
-
-OCL_TEST_P(FastNlMeansDenoisingAbs_hsep, Mat)
-{
-    for (int j = 0; j < test_loop_times; j++)
-    {
-        generateTestData();
-
-        OCL_OFF(cv::fastNlMeansDenoisingAbs(src_roi, dst_roi, h, templateWindowSize, searchWindowSize));
-        OCL_ON(cv::fastNlMeansDenoisingAbs(usrc_roi, udst_roi, h, templateWindowSize, searchWindowSize));
-
-        OCL_EXPECT_MATS_NEAR(dst, 1);
-    }
-}
-
 typedef FastNlMeansDenoisingTestBase FastNlMeansDenoisingColored;
 
 OCL_TEST_P(FastNlMeansDenoisingColored, Mat)
@@ -151,10 +121,6 @@ OCL_TEST_P(FastNlMeansDenoisingColored, Mat)
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising,
                             Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising_hsep,
-                            Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
-OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingAbs,
-                            Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
-OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingAbs_hsep,
                             Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingColored,
                             Combine(Values(3, 4), Bool(), Values(false)));
