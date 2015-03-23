@@ -213,7 +213,7 @@ static void read(const FileNode& node, Settings& x, const Settings& default_valu
         x.read(node);
 }
 
-static void write(FileStorage& fs, const String& name, const Settings& s )
+void write(FileStorage& fs, const String&, const Settings& s )
 {
     s.write(fs);
 }
@@ -567,4 +567,3 @@ bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat&
                             imagePoints, totalAvgErr);
     return ok;
 }
-
