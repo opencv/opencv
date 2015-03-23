@@ -31,7 +31,12 @@
     opencv2/ts.hpp
     opencv2/ts/*
     opencv2/xobjdetect/private.hpp
+    @OPENCV_ABI_SKIP_HEADERS@
 </skip_headers>
+
+<skip_libs>
+    @OPENCV_ABI_SKIP_LIBRARIES@
+</skip_libs>
 
 <gcc_options>
  @OPENCV_ABI_GCC_OPTIONS@
