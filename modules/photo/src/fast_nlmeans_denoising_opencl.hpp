@@ -29,8 +29,10 @@ static int divUp(int a, int b)
 }
 
 template <typename FT, typename ST, typename WT>
-static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindowSize, int templateWindowSize, const FT *h, int hn, int cn,
-                                      int & almostTemplateWindowSizeSqBinShift, bool abs)
+static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight,
+                                      int searchWindowSize, int templateWindowSize,
+                                      const FT *h, int hn, int cn, int normType,
+                                      int & almostTemplateWindowSizeSqBinShift)
 {
     const WT maxEstimateSumValue = searchWindowSize * searchWindowSize *
         std::numeric_limits<ST>::max();
@@ -50,7 +52,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
     FT almostDist2ActualDistMultiplier = (FT)(1 << almostTemplateWindowSizeSqBinShift) / templateWindowSizeSq;
 
     const FT WEIGHT_THRESHOLD = 1e-3f;
-    int maxDist = abs ? std::numeric_limits<ST>::max() * cn :
+    int maxDist = normType == NORM_L1 ? std::numeric_limits<ST>::max() * cn :
         std::numeric_limits<ST>::max() * std::numeric_limits<ST>::max() * cn;
     int almostMaxDist = (int)(maxDist / almostDist2ActualDistMultiplier + 1);
     FT den[4];
@@ -66,7 +68,8 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
                          " -D wlut_t=%s -D convert_wlut_t=%s%s%s",
                          ocl::typeToStr(depth), ocl::typeToStr(CV_MAKE_TYPE(depth, hn)),
                          ocl::typeToStr(CV_32SC(hn)), ocl::convertTypeStr(depth, CV_32S, hn, buf),
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : "", abs ? " -D ABS" : ""));
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         normType == NORM_L1 ? " -D ABS" : ""));
     if (k.empty())
         return false;
 
@@ -79,13 +82,14 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
 }
 
 static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, const float *h, int hn,
-                                     int templateWindowSize, int searchWindowSize, bool abs)
+                                     int templateWindowSize, int searchWindowSize, int normType)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int ctaSize = ocl::Device::getDefault().isIntel() ? CTA_SIZE_INTEL : CTA_SIZE_DEFAULT;
     Size size = _src.size();
 
-    if (cn != 1 && cn != 2 && cn != 3 && cn != 4 && depth != CV_8U && (!abs || depth != CV_16U))
+    if (cn < 1 || cn > 4 || ((normType != NORM_L2 || depth != CV_8U) &&
+                             (normType != NORM_L1 || (depth != CV_8U && depth != CV_16U))))
         return false;
 
     int templateWindowHalfWize = templateWindowSize / 2;
@@ -117,7 +121,8 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, const fl
                          ctaSize, templateWindowHalfWize, searchWindowHalfSize,
                          ocl::convertTypeStr(depth, CV_32S, cn, buf[2]), cn,
                          (depth == CV_8U ? sizeof(uchar) : sizeof(ushort)) * (cn == 3 ? 4 : cn),
-                         ocl::convertTypeStr(CV_32S, depth, cn, buf[3]), abs ? " -D ABS" : "");
+                         ocl::convertTypeStr(CV_32S, depth, cn, buf[3]),
+                         normType == NORM_L1 ? " -D ABS" : "");
 
     ocl::Kernel k("fastNlMeansDenoising", ocl::photo::nlmeans_oclsrc, opts);
     if (k.empty())
@@ -127,15 +132,13 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, const fl
     if ((depth == CV_8U &&
          !ocl_calcAlmostDist2Weight<float, uchar, int>(almostDist2Weight,
                                                        searchWindowSize, templateWindowSize,
-                                                       h, hn, cn,
-                                                       almostTemplateWindowSizeSqBinShift,
-                                                       abs)) ||
+                                                       h, hn, cn, normType,
+                                                       almostTemplateWindowSizeSqBinShift)) ||
         (depth == CV_16U &&
          !ocl_calcAlmostDist2Weight<float, ushort, int64>(almostDist2Weight,
                                                           searchWindowSize, templateWindowSize,
-                                                          h, hn, cn,
-                                                          almostTemplateWindowSizeSqBinShift,
-                                                          abs)))
+                                                          h, hn, cn, normType,
+                                                          almostTemplateWindowSizeSqBinShift)))
         return false;
     CV_Assert(almostTemplateWindowSizeSqBinShift >= 0);
 

@@ -153,6 +153,7 @@ denoising time. Recommended value 21 pixels
 parameter applied to all channels or one per channel in dst. Big h value
 perfectly removes noise but also removes image details, smaller h
 value preserves details but also preserves some noise
+@param normType Type of norm used for weight calcluation. Can be either NORM_L2 or NORM_L1
 
 This function expected to be applied to grayscale images. For colored images look at
 fastNlMeansDenoisingColored. Advanced usage of this functions can be manual denoising of colored
@@ -162,7 +163,8 @@ parameter.
  */
 CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst,
                                         const std::vector<float>& h,
-                                        int templateWindowSize = 7, int searchWindowSize = 21);
+                                        int templateWindowSize = 7, int searchWindowSize = 21,
+                                        int normType = NORM_L2);
 
 /** @brief Modification of fastNlMeansDenoising function for colored images
 
