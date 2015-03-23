@@ -985,22 +985,131 @@ horizontal axis.
   */
 CV_EXPORTS Mat repeat(const Mat& src, int ny, int nx);
 
-/** @brief concatenate matrices horizontally
-@todo document
+/** @brief Applies horizontal concatenation to given matrices.
+
+The function horizontally concatenates two or more cv::Mat matrices (with the same number of rows).
+@code{.cpp}
+    cv::Mat matArray[] = { cv::Mat(4, 1, CV_8UC1, cv::Scalar(1)),
+                           cv::Mat(4, 1, CV_8UC1, cv::Scalar(2)),
+                           cv::Mat(4, 1, CV_8UC1, cv::Scalar(3)),};
+
+    cv::Mat out;
+    cv::hconcat( matArray, 3, out );
+    //out:
+    //[1, 2, 3;
+    // 1, 2, 3;
+    // 1, 2, 3;
+    // 1, 2, 3]
+@endcode
+@param src input array or vector of matrices. all of the matrices must have the same number of rows and the same depth.
+@param nsrc number of matrices in src.
+@param dst output array. It has the same number of rows and depth as the src, and the sum of cols of the src.
+@sa cv::vconcat(const Mat*, size_t, OutputArray), @sa cv::vconcat(InputArrayOfArrays, OutputArray) and @sa cv::vconcat(InputArray, InputArray, OutputArray)
 */
 CV_EXPORTS void hconcat(const Mat* src, size_t nsrc, OutputArray dst);
-/** @overload */
+/** @overload
+ @code{.cpp}
+    cv::Mat_<float> A = (cv::Mat_<float>(3, 2) << 1, 4,
+                                                  2, 5,
+                                                  3, 6);
+    cv::Mat_<float> B = (cv::Mat_<float>(3, 2) << 7, 10,
+                                                  8, 11,
+                                                  9, 12);
+
+    cv::Mat C;
+    cv::hconcat(A, B, C);
+    //C:
+    //[1, 4, 7, 10;
+    // 2, 5, 8, 11;
+    // 3, 6, 9, 12]
+ @endcode
+ @param src1 first input array to be considered for horizontal concatenation.
+ @param src2 second input array to be considered for horizontal concatenation.
+ @param dst output array. It has the same number of rows and depth as the src1 and src2, and the sum of cols of the src1 and src2.
+ */
 CV_EXPORTS void hconcat(InputArray src1, InputArray src2, OutputArray dst);
-/** @overload */
+/** @overload
+ @code{.cpp}
+    std::vector<cv::Mat> matrices = { cv::Mat(4, 1, CV_8UC1, cv::Scalar(1)),
+                                      cv::Mat(4, 1, CV_8UC1, cv::Scalar(2)),
+                                      cv::Mat(4, 1, CV_8UC1, cv::Scalar(3)),};
+
+    cv::Mat out;
+    cv::hconcat( matrices, out );
+    //out:
+    //[1, 2, 3;
+    // 1, 2, 3;
+    // 1, 2, 3;
+    // 1, 2, 3]
+ @endcode
+ @param src input array or vector of matrices. all of the matrices must have the same number of rows and the same depth.
+ @param dst output array. It has the same number of rows and depth as the src, and the sum of cols of the src.
+same depth.
+ */
 CV_EXPORTS_W void hconcat(InputArrayOfArrays src, OutputArray dst);
 
-/** @brief concatenate matrices vertically
-@todo document
+/** @brief Applies vertical concatenation to given matrices.
+
+The function vertically concatenates two or more cv::Mat matrices (with the same number of cols).
+@code{.cpp}
+    cv::Mat matArray[] = { cv::Mat(1, 4, CV_8UC1, cv::Scalar(1)),
+                           cv::Mat(1, 4, CV_8UC1, cv::Scalar(2)),
+                           cv::Mat(1, 4, CV_8UC1, cv::Scalar(3)),};
+
+    cv::Mat out;
+    cv::vconcat( matArray, 3, out );
+    //out:
+    //[1,   1,   1,   1;
+    // 2,   2,   2,   2;
+    // 3,   3,   3,   3]
+@endcode
+@param src input array or vector of matrices. all of the matrices must have the same number of cols and the same depth.
+@param nsrc number of matrices in src.
+@param dst output array. It has the same number of cols and depth as the src, and the sum of rows of the src.
+@sa cv::hconcat(const Mat*, size_t, OutputArray), @sa cv::hconcat(InputArrayOfArrays, OutputArray) and @sa cv::hconcat(InputArray, InputArray, OutputArray)
 */
 CV_EXPORTS void vconcat(const Mat* src, size_t nsrc, OutputArray dst);
-/** @overload */
+/** @overload
+ @code{.cpp}
+    cv::Mat_<float> A = (cv::Mat_<float>(3, 2) << 1, 7,
+                                                  2, 8,
+                                                  3, 9);
+    cv::Mat_<float> B = (cv::Mat_<float>(3, 2) << 4, 10,
+                                                  5, 11,
+                                                  6, 12);
+
+    cv::Mat C;
+    cv::vconcat(A, B, C);
+    //C:
+    //[1, 7;
+    // 2, 8;
+    // 3, 9;
+    // 4, 10;
+    // 5, 11;
+    // 6, 12]
+ @endcode
+ @param src1 first input array to be considered for vertical concatenation.
+ @param src2 second input array to be considered for vertical concatenation.
+ @param dst output array. It has the same number of cols and depth as the src1 and src2, and the sum of rows of the src1 and src2.
+ */
 CV_EXPORTS void vconcat(InputArray src1, InputArray src2, OutputArray dst);
-/** @overload */
+/** @overload
+ @code{.cpp}
+    std::vector<cv::Mat> matrices = { cv::Mat(1, 4, CV_8UC1, cv::Scalar(1)),
+                                      cv::Mat(1, 4, CV_8UC1, cv::Scalar(2)),
+                                      cv::Mat(1, 4, CV_8UC1, cv::Scalar(3)),};
+
+    cv::Mat out;
+    cv::vconcat( matrices, out );
+    //out:
+    //[1,   1,   1,   1;
+    // 2,   2,   2,   2;
+    // 3,   3,   3,   3]
+ @endcode
+ @param src input array or vector of matrices. all of the matrices must have the same number of cols and the same depth
+ @param dst output array. It has the same number of cols and depth as the src, and the sum of rows of the src.
+same depth.
+ */
 CV_EXPORTS_W void vconcat(InputArrayOfArrays src, OutputArray dst);
 
 /** @brief computes bitwise conjunction of the two arrays (dst = src1 & src2)
