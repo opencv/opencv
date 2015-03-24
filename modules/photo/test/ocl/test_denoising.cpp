@@ -13,9 +13,9 @@
 namespace cvtest {
 namespace ocl {
 
-PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool, bool)
+PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, int, bool, bool)
 {
-    int cn, templateWindowSize, searchWindowSize;
+    int cn, normType, templateWindowSize, searchWindowSize;
     std::vector<float> h;
     bool use_roi, use_image;
 
@@ -25,8 +25,9 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool, bool)
     virtual void SetUp()
     {
         cn = GET_PARAM(0);
-        use_roi = GET_PARAM(1);
-        use_image = GET_PARAM(2);
+        normType = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
+        use_image = GET_PARAM(3);
 
         templateWindowSize = 7;
         searchWindowSize = 21;
@@ -81,8 +82,8 @@ OCL_TEST_P(FastNlMeansDenoising, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::fastNlMeansDenoising(src_roi, dst_roi, h[0], templateWindowSize, searchWindowSize));
-        OCL_ON(cv::fastNlMeansDenoising(usrc_roi, udst_roi, h[0], templateWindowSize, searchWindowSize));
+        OCL_OFF(cv::fastNlMeansDenoising(src_roi, dst_roi, std::vector<float>(1, h[0]), templateWindowSize, searchWindowSize, normType));
+        OCL_ON(cv::fastNlMeansDenoising(usrc_roi, udst_roi, std::vector<float>(1, h[0]), templateWindowSize, searchWindowSize, normType));
 
         OCL_EXPECT_MATS_NEAR(dst, 1);
     }
@@ -96,8 +97,8 @@ OCL_TEST_P(FastNlMeansDenoising_hsep, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::fastNlMeansDenoising(src_roi, dst_roi, h, templateWindowSize, searchWindowSize));
-        OCL_ON(cv::fastNlMeansDenoising(usrc_roi, udst_roi, h, templateWindowSize, searchWindowSize));
+        OCL_OFF(cv::fastNlMeansDenoising(src_roi, dst_roi, h, templateWindowSize, searchWindowSize, normType));
+        OCL_ON(cv::fastNlMeansDenoising(usrc_roi, udst_roi, h, templateWindowSize, searchWindowSize, normType));
 
         OCL_EXPECT_MATS_NEAR(dst, 1);
     }
@@ -119,11 +120,13 @@ OCL_TEST_P(FastNlMeansDenoisingColored, Mat)
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising,
-                            Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
+                            Combine(Values(1, 2, 3, 4), Values((int)NORM_L2, (int)NORM_L1),
+                                    Bool(), Values(true)));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising_hsep,
-                            Combine(Values(1, 2, 3, 4), Bool(), Values(true)));
+                            Combine(Values(1, 2, 3, 4), Values((int)NORM_L2, (int)NORM_L1),
+                                    Bool(), Values(true)));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingColored,
-                            Combine(Values(3, 4), Bool(), Values(false)));
+                            Combine(Values(3, 4), Values((int)NORM_L2), Bool(), Values(false)));
 
 } } // namespace cvtest::ocl
 
