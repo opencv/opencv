@@ -149,3 +149,9 @@ Additionally you can find very basic sample source code to introduce you to the 
     _Author:_ Maksim Shabunin
 
     This tutorial describes new documenting process and some useful Doxygen features.
+
+-   @subpage tutorial_transition_guide
+
+    _Author:_ Maksim Shabunin
+
+    This document describes some aspects of 2.4 -> 3.0 transition process.
