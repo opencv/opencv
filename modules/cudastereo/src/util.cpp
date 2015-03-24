@@ -66,16 +66,16 @@ void cv::cuda::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray
     using namespace cv::cuda::device;
 
     typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
-    static const func_t funcs[2][4] =
+    static const func_t funcs[2][6] =
     {
-        {reprojectImageTo3D_gpu<uchar, float3>, 0, 0, reprojectImageTo3D_gpu<short, float3>},
-        {reprojectImageTo3D_gpu<uchar, float4>, 0, 0, reprojectImageTo3D_gpu<short, float4>}
+        {reprojectImageTo3D_gpu<uchar, float3>, 0, 0, reprojectImageTo3D_gpu<short, float3>, reprojectImageTo3D_gpu<int, float3>, reprojectImageTo3D_gpu<float, float3>},
+        {reprojectImageTo3D_gpu<uchar, float4>, 0, 0, reprojectImageTo3D_gpu<short, float4>, reprojectImageTo3D_gpu<int, float4>, reprojectImageTo3D_gpu<float, float4>}
     };
 
     GpuMat disp = _disp.getGpuMat();
     Mat Q = _Q.getMat();
 
-    CV_Assert( disp.type() == CV_8U || disp.type() == CV_16S );
+    CV_Assert( disp.type() == CV_8U || disp.type() == CV_16S || disp.type() == CV_32S || disp.type() == CV_32F );
     CV_Assert( Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4 && Q.isContinuous() );
     CV_Assert( dst_cn == 3 || dst_cn == 4 );
 
