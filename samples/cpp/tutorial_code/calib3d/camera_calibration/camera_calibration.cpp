@@ -226,6 +226,8 @@ bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat&
 int main(int argc, char* argv[])
 {
     help();
+
+    //! [file_read]
     Settings s;
     const string inputSettingsFile = argc > 1 ? argv[1] : "default.xml";
     FileStorage fs(inputSettingsFile, FileStorage::READ); // Read the settings
@@ -236,6 +238,7 @@ int main(int argc, char* argv[])
     }
     fs["Settings"] >> s;
     fs.release();                                         // close Settings file
+    //! [file_read]
 
     //FileStorage fout("settings.yml", FileStorage::WRITE); // write config as YAML
     //fout << "Settings" << s;
@@ -254,33 +257,35 @@ int main(int argc, char* argv[])
     const Scalar RED(0,0,255), GREEN(0,255,0);
     const char ESC_KEY = 27;
 
-    for(int i = 0;;++i)
+    //! [get_input]
+    while(true)
     {
-      Mat view;
-      bool blinkOutput = false;
+        Mat view;
+        bool blinkOutput = false;
 
-      view = s.nextImage();
+        view = s.nextImage();
 
-      //-----  If no more image, or got enough, then stop calibration and show result -------------
-      if( mode == CAPTURING && imagePoints.size() >= (unsigned)s.nrFrames )
-      {
+        //-----  If no more image, or got enough, then stop calibration and show result -------------
+        if( mode == CAPTURING && imagePoints.size() >= (size_t)s.nrFrames )
+        {
           if( runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints))
               mode = CALIBRATED;
           else
               mode = DETECTION;
-      }
-      if(view.empty())          // If no more images then stop the loop.
-      {
-            // if nrFrames was not reached yet, calibrate now
+        }
+        if(view.empty())          // If there are no more images stop the loop
+        {
+            // if calibration threshold was not reached yet, calibrate now
             if( mode != CALIBRATED && !imagePoints.empty() )
                 runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints);
             break;
-      }
-
+        }
+        //! [get_input]
 
         imageSize = view.size();  // Format input image.
         if( s.flipVertical )    flip( view, view, 0 );
 
+        //! [find_pattern]
         vector<Point2f> pointBuf;
 
         bool found;
@@ -300,7 +305,8 @@ int main(int argc, char* argv[])
             found = false;
             break;
         }
-
+        //! [find_pattern]
+        //! [pattern_found]
         if ( found)                // If done with success,
         {
               // improve the found corners' coordinate accuracy for chessboard
@@ -323,8 +329,9 @@ int main(int argc, char* argv[])
                 // Draw the corners.
                 drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
         }
-
+        //! [pattern_found]
         //----------------------------- Output Text ------------------------------------------------
+        //! [output_text]
         string msg = (mode == CAPTURING) ? "100/100" :
                       mode == CALIBRATED ? "Calibrated" : "Press 'g' to start";
         int baseLine = 0;
@@ -343,15 +350,17 @@ int main(int argc, char* argv[])
 
         if( blinkOutput )
             bitwise_not(view, view);
-
+        //! [output_text]
         //------------------------- Video capture  output  undistorted ------------------------------
+        //! [output_undistorted]
         if( mode == CALIBRATED && s.showUndistorsed )
         {
             Mat temp = view.clone();
             undistort(temp, view, cameraMatrix, distCoeffs);
         }
-
+        //! [output_undistorted]
         //------------------------------ Show image and check for input commands -------------------
+        //! [await_input]
         imshow("Image View", view);
         char key = (char)waitKey(s.inputCapture.isOpened() ? 50 : s.delay);
 
@@ -366,9 +375,11 @@ int main(int argc, char* argv[])
             mode = CAPTURING;
             imagePoints.clear();
         }
+        //! [await_input]
     }
 
     // -----------------------Show the undistorted image for the image list ------------------------
+    //! [show_results]
     if( s.inputType == Settings::IMAGE_LIST && s.showUndistorsed )
     {
         Mat view, rview, map1, map2;
@@ -388,11 +399,12 @@ int main(int argc, char* argv[])
                 break;
         }
     }
-
+    //! [show_results]
 
     return 0;
 }
 
+//! [compute_errors]
 static double computeReprojectionErrors( const vector<vector<Point3f> >& objectPoints,
                                          const vector<vector<Point2f> >& imagePoints,
                                          const vector<Mat>& rvecs, const vector<Mat>& tvecs,
@@ -418,7 +430,8 @@ static double computeReprojectionErrors( const vector<vector<Point3f> >& objectP
 
     return std::sqrt(totalErr/totalPoints);
 }
-
+//! [compute_errors]
+//! [board_corners]
 static void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>& corners,
                                      Settings::Pattern patternType /*= Settings::CHESSBOARD*/)
 {
@@ -430,28 +443,28 @@ static void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Po
     case Settings::CIRCLES_GRID:
         for( int i = 0; i < boardSize.height; ++i )
             for( int j = 0; j < boardSize.width; ++j )
-                corners.push_back(Point3f(float( j*squareSize ), float( i*squareSize ), 0));
+                corners.push_back(Point3f(j*squareSize, i*squareSize, 0));
         break;
 
     case Settings::ASYMMETRIC_CIRCLES_GRID:
         for( int i = 0; i < boardSize.height; i++ )
             for( int j = 0; j < boardSize.width; j++ )
-                corners.push_back(Point3f(float((2*j + i % 2)*squareSize), float(i*squareSize), 0));
+                corners.push_back(Point3f((2*j + i % 2)*squareSize, i*squareSize, 0));
         break;
     default:
         break;
     }
 }
-
+//! [board_corners]
 static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
                             vector<vector<Point2f> > imagePoints, vector<Mat>& rvecs, vector<Mat>& tvecs,
                             vector<float>& reprojErrs,  double& totalAvgErr)
 {
-
+    //! [fixed_aspect]
     cameraMatrix = Mat::eye(3, 3, CV_64F);
     if( s.flag & CALIB_FIX_ASPECT_RATIO )
         cameraMatrix.at<double>(0,0) = s.aspectRatio;
-
+    //! [fixed_aspect]
     distCoeffs = Mat::zeros(8, 1, CV_64F);
 
     vector<vector<Point3f> > objectPoints(1);
@@ -552,6 +565,7 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
     }
 }
 
+//! [run_and_save]
 bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat& distCoeffs,vector<vector<Point2f> > imagePoints )
 {
     vector<Mat> rvecs, tvecs;
@@ -568,3 +582,4 @@ bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat&
                             imagePoints, totalAvgErr);
     return ok;
 }
+//! [run_and_save]
