@@ -113,7 +113,7 @@ Explanation
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp get_input
     For some cameras we may need to flip the input image. Here we do this too.
 
--#  **Find the pattern in the current input** 
+-#  **Find the pattern in the current input**
 
     The formation of the equations I mentioned above aims
     to finding major patterns in the input: in case of the chessboard this are corners of the
@@ -137,13 +137,13 @@ Explanation
     cv::findChessboardCorners function.
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp pattern_found
 -#  **Show state and result to the user, plus command line control of the application**
-    
+
     This part shows text output on the image.
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp output_text
     If we ran calibration and got camera's matrix with the distortion coefficients we may want to
     correct the image using @ref cv::undistort function:
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp output_undistorted
-    Then we show the image and wait for an input key and if this is *u* we toggle the distortion removal, 
+    Then we show the image and wait for an input key and if this is *u* we toggle the distortion removal,
     if it is *g* we start again the detection process, and finally for the *ESC* key we quit the application:
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp await_input
 -#  **Show the distortion removal for the images too**
