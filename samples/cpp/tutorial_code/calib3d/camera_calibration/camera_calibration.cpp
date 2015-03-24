@@ -269,9 +269,10 @@ int main(int argc, char* argv[])
           else
               mode = DETECTION;
       }
-      if(view.empty())          // If no more images then run calibration, save and stop loop.
+      if(view.empty())          // If no more images then stop the loop.
       {
-            if( imagePoints.size() > 0 )
+            // if nrFrames was not reached yet, calibrate now
+            if( mode != CALIBRATED && !imagePoints.empty() )
                 runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints);
             break;
       }
@@ -405,9 +406,9 @@ static double computeReprojectionErrors( const vector<vector<Point3f> >& objectP
 
     for( i = 0; i < (int)objectPoints.size(); ++i )
     {
-        projectPoints( Mat(objectPoints[i]), rvecs[i], tvecs[i], cameraMatrix,
+        projectPoints(objectPoints[i], rvecs[i], tvecs[i], cameraMatrix,
                        distCoeffs, imagePoints2);
-        err = norm(Mat(imagePoints[i]), Mat(imagePoints2), NORM_L2);
+        err = norm(imagePoints[i], imagePoints2, NORM_L2);
 
         int n = (int)objectPoints[i].size();
         perViewErrors[i] = (float) std::sqrt(err*err/n);
