@@ -12,8 +12,8 @@ int main( int argc, char* argv[] )
     int numNeg    = 1000;
     int numStages = 20;
     int numThreads = getNumThreads();
-    int precalcValBufSize = 256,
-        precalcIdxBufSize = 256;
+    int precalcValBufSize = 1024,
+        precalcIdxBufSize = 1024;
     bool baseFormatSave = false;
 
     CvCascadeParams cascadeParams;
