@@ -205,7 +205,7 @@ private:
 
 };
 
-static void read(const FileNode& node, Settings& x, const Settings& default_value = Settings())
+static inline void read(const FileNode& node, Settings& x, const Settings& default_value = Settings())
 {
     if(node.empty())
         x = default_value;
@@ -213,7 +213,7 @@ static void read(const FileNode& node, Settings& x, const Settings& default_valu
         x.read(node);
 }
 
-void write(FileStorage& fs, const String&, const Settings& s )
+static inline void write(FileStorage& fs, const String&, const Settings& s )
 {
     s.write(fs);
 }
