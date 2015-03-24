@@ -138,7 +138,8 @@ public:
     @param data User-specified data cost, a matrix of msg_type type and
     Size(\<image columns\>\*ndisp, \<image rows\>) size.
     @param disparity Output disparity map. If disparity is empty, the output type is CV_16SC1 .
-    Otherwise, the type is retained.
+    Otherwise, the type is retained. In 16-bit signed format, the disparity values do not have
+    fractional bits.
     @param stream Stream for the asynchronous version.
      */
     virtual void compute(InputArray data, OutputArray disparity, Stream& stream = Stream::Null()) = 0;
