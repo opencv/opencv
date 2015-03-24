@@ -854,7 +854,7 @@ if __name__ == "__main__":
     test_args = [a for a in sys.argv if a.startswith("--perf_") or a.startswith("--gtest_")]
     argv =      [a for a in sys.argv if not(a.startswith("--perf_") or a.startswith("--gtest_"))]
 
-    parser = OptionParser()
+    parser = OptionParser(usage="run.py [options] build_path")
     parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
     parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
     parser.add_option("-a", "--accuracy", dest="accuracy", help="look for accuracy tests instead of performance tests", action="store_true", default=False)
@@ -879,7 +879,7 @@ if __name__ == "__main__":
     run_args = getRunArgs(args[1:] or ['.'])
 
     if len(run_args) == 0:
-        print >> sys.stderr, "Usage:", os.path.basename(sys.argv[0]), "[options] [build_path]"
+        print >> sys.stderr, "Usage:", os.path.basename(sys.argv[0]), "[options] build_path"
         exit(1)
 
     options.android_env = {}
