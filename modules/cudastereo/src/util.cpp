@@ -92,6 +92,8 @@ namespace cv { namespace cuda { namespace device
 {
     void drawColorDisp_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
     void drawColorDisp_gpu(const PtrStepSz<short>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
+    void drawColorDisp_gpu(const PtrStepSz<int>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
+    void drawColorDisp_gpu(const PtrStepSz<float>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
 }}}
 
 namespace
@@ -111,11 +113,11 @@ namespace
 void cv::cuda::drawColorDisp(InputArray _src, OutputArray dst, int ndisp, Stream& stream)
 {
     typedef void (*drawColorDisp_caller_t)(const GpuMat& src, OutputArray dst, int ndisp, const cudaStream_t& stream);
-    const drawColorDisp_caller_t drawColorDisp_callers[] = {drawColorDisp_caller<unsigned char>, 0, 0, drawColorDisp_caller<short>, 0, 0, 0, 0};
+    const drawColorDisp_caller_t drawColorDisp_callers[] = {drawColorDisp_caller<unsigned char>, 0, 0, drawColorDisp_caller<short>, drawColorDisp_caller<int>, drawColorDisp_caller<float>, 0, 0};
 
     GpuMat src = _src.getGpuMat();
 
-    CV_Assert( src.type() == CV_8U || src.type() == CV_16S );
+    CV_Assert( src.type() == CV_8U || src.type() == CV_16S || src.type() == CV_32S || src.type() == CV_32F );
 
     drawColorDisp_callers[src.type()](src, dst, ndisp, StreamAccessor::getStream(stream));
 }
