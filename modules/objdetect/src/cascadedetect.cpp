@@ -555,6 +555,7 @@ HaarEvaluator::HaarEvaluator()
     localSize = Size(4, 2);
     lbufSize = Size(0, 0);
     nchannels = 0;
+    tofs = 0;
 }
 
 HaarEvaluator::~HaarEvaluator()
@@ -676,6 +677,10 @@ void HaarEvaluator::computeOptFeatures()
     copyVectorToUMat(*optfeatures_lbuf, ufbuf);
 }
 
+bool HaarEvaluator::setImage(InputArray _image, const std::vector<float>& _scales){
+    tofs = 0;
+    return FeatureEvaluator::setImage(_image, _scales);
+}
 
 bool HaarEvaluator::setWindow( Point pt, int scaleIdx )
 {
