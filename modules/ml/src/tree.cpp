@@ -286,7 +286,14 @@ int DTreesImpl::addTree(const vector<int>& sidx )
                 int ssize = getSubsetSize(split.varIdx);
                 split.subsetOfs = (int)subsets.size();
                 subsets.resize(split.subsetOfs + ssize);
-                memcpy(&subsets[split.subsetOfs], &w->wsubsets[wsplit.subsetOfs], ssize*sizeof(int));
+                // This check verifies that subsets index is in the correct range
+                // as in case ssize == 0 no real resize performed.
+                // Thus memory kept safe.
+                // Also this skips useless memcpy call when size parameter is zero
+                if(ssize > 0)
+                {
+                    memcpy(&subsets[split.subsetOfs], &w->wsubsets[wsplit.subsetOfs], ssize*sizeof(int));
+                }
             }
             node.split = (int)splits.size();
             splits.push_back(split);
