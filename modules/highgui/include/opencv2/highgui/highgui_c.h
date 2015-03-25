@@ -365,7 +365,7 @@ enum
     CV_CAP_PROP_CONVERT_RGB   =16,
     CV_CAP_PROP_WHITE_BALANCE_U =17,
     CV_CAP_PROP_RECTIFICATION =18,
-    CV_CAP_PROP_MONOCHROME    =19,
+    CV_CAP_PROP_MONOCROME     =19,
     CV_CAP_PROP_SHARPNESS     =20,
     CV_CAP_PROP_AUTO_EXPOSURE =21, // exposure control done by camera,
                                    // user can adjust refernce level
