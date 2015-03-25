@@ -184,7 +184,8 @@ namespace cv
 
 //! type of the robust estimation algorithm
 enum { LMEDS  = 4, //!< least-median algorithm
-       RANSAC = 8  //!< RANSAC algorithm
+       RANSAC = 8, //!< RANSAC algorithm
+       RHO    = 16 //!< RHO algorithm
      };
 
 enum { SOLVEPNP_ITERATIVE = 0,
@@ -265,8 +266,9 @@ a vector\<Point2f\> .
 -   **0** - a regular method using all the points
 -   **RANSAC** - RANSAC-based robust method
 -   **LMEDS** - Least-Median robust method
+-   **RHO**    - PROSAC-based robust method
 @param ransacReprojThreshold Maximum allowed reprojection error to treat a point pair as an inlier
-(used in the RANSAC method only). That is, if
+(used in the RANSAC and RHO methods only). That is, if
 \f[\| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} * \texttt{srcPoints} _i) \|  >  \texttt{ransacReprojThreshold}\f]
 then the point \f$i\f$ is considered an outlier. If srcPoints and dstPoints are measured in pixels,
 it usually makes sense to set this parameter somewhere in the range of 1 to 10.
@@ -289,7 +291,7 @@ pairs to compute an initial homography estimate with a simple least-squares sche
 
 However, if not all of the point pairs ( \f$srcPoints_i\f$, \f$dstPoints_i\f$ ) fit the rigid perspective
 transformation (that is, there are some outliers), this initial estimate will be poor. In this case,
-you can use one of the two robust methods. Both methods, RANSAC and LMeDS , try many different
+you can use one of the three robust methods. The methods RANSAC, LMeDS and RHO try many different
 random subsets of the corresponding point pairs (of four pairs each), estimate the homography matrix
 using this subset and a simple least-square algorithm, and then compute the quality/goodness of the
 computed homography (which is the number of inliers for RANSAC or the median re-projection error for
@@ -300,7 +302,7 @@ Regardless of the method, robust or not, the computed homography matrix is refin
 inliers only in case of a robust method) with the Levenberg-Marquardt method to reduce the
 re-projection error even more.
 
-The method RANSAC can handle practically any ratio of outliers but it needs a threshold to
+The methods RANSAC and RHO can handle practically any ratio of outliers but need a threshold to
 distinguish inliers from outliers. The method LMeDS does not need any threshold but it works
 correctly only when there are more than 50% of inliers. Finally, if there are no outliers and the
 noise is rather small, use the default method (method=0).
