@@ -44,8 +44,8 @@ public:
                   << "Calibrate_AssumeZeroTangentialDistortion" << calibZeroTangentDist
                   << "Calibrate_FixPrincipalPointAtTheCenter" << calibFixPrincipalPoint
 
-                  << "Write_DetectedFeaturePoints" << bwritePoints
-                  << "Write_extrinsicParameters"   << bwriteExtrinsics
+                  << "Write_DetectedFeaturePoints" << writePoints
+                  << "Write_extrinsicParameters"   << writeExtrinsics
                   << "Write_outputFileName"  << outputFileName
 
                   << "Show_UndistortedImage" << showUndistorsed
@@ -63,8 +63,8 @@ public:
         node["Square_Size"]  >> squareSize;
         node["Calibrate_NrOfFrameToUse"] >> nrFrames;
         node["Calibrate_FixAspectRatio"] >> aspectRatio;
-        node["Write_DetectedFeaturePoints"] >> bwritePoints;
-        node["Write_extrinsicParameters"] >> bwriteExtrinsics;
+        node["Write_DetectedFeaturePoints"] >> writePoints;
+        node["Write_extrinsicParameters"] >> writeExtrinsics;
         node["Write_outputFileName"] >> outputFileName;
         node["Calibrate_AssumeZeroTangentialDistortion"] >> calibZeroTangentDist;
         node["Calibrate_FixPrincipalPointAtTheCenter"] >> calibFixPrincipalPoint;
@@ -180,8 +180,8 @@ public:
     int nrFrames;              // The number of frames to use from the input for calibration
     float aspectRatio;         // The aspect ratio
     int delay;                 // In case of a video input
-    bool bwritePoints;         //  Write detected feature points
-    bool bwriteExtrinsics;     // Write extrinsic parameters
+    bool writePoints;         //  Write detected feature points
+    bool writeExtrinsics;     // Write extrinsic parameters
     bool calibZeroTangentDist; // Assume zero tangential distortion
     bool calibFixPrincipalPoint;// Fix the principal point at the center
     bool flipVertical;          // Flip the captured images around the horizontal axis
@@ -258,7 +258,7 @@ int main(int argc, char* argv[])
     const char ESC_KEY = 27;
 
     //! [get_input]
-    while(true)
+    for(;;)
     {
         Mat view;
         bool blinkOutput = false;
@@ -533,7 +533,7 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
     if( !reprojErrs.empty() )
         fs << "per_view_reprojection_errors" << Mat(reprojErrs);
 
-    if(s.bwriteExtrinsics && !rvecs.empty() && !tvecs.empty() )
+    if(s.writeExtrinsics && !rvecs.empty() && !tvecs.empty() )
     {
         CV_Assert(rvecs[0].type() == tvecs[0].type());
         Mat bigmat((int)rvecs.size(), 6, rvecs[0].type());
@@ -552,7 +552,7 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
         fs << "extrinsic_parameters" << bigmat;
     }
 
-    if(s.bwritePoints && !imagePoints.empty() )
+    if(s.writePoints && !imagePoints.empty() )
     {
         Mat imagePtMat((int)imagePoints.size(), (int)imagePoints[0].size(), CV_32FC2);
         for( int i = 0; i < (int)imagePoints.size(); i++ )
