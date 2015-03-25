@@ -64,7 +64,11 @@ add_library(${the_module} SHARED src2/cv2.cpp ${CMAKE_CURRENT_BINARY_DIR}/genera
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
   target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
 else()
-  target_link_libraries(${the_module} ${PYTHON_LIBRARIES})
+  if(APPLE)
+    set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+  else()
+    target_link_libraries(${the_module} ${PYTHON_LIBRARIES})
+  endif()
 endif()
 target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
 
