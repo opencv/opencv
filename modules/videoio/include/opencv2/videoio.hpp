@@ -586,9 +586,9 @@ public:
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
-private:
-    static Ptr<IVideoCapture> createCameraCapture(int index);
 };
+
+class IVideoWriter;
 
 /** @brief Video writer class.
  */
@@ -651,6 +651,10 @@ public:
 
 protected:
     Ptr<CvVideoWriter> writer;
+    Ptr<IVideoWriter> iwriter;
+
+    static Ptr<IVideoWriter> create(const String& filename, int fourcc, double fps,
+                                    Size frameSize, bool isColor = true);
 };
 
 template<> CV_EXPORTS void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const;
