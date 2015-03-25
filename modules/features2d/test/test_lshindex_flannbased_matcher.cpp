@@ -283,9 +283,12 @@ class CV_FeatureDetectorMatcherBaseTest : public cvtest::BaseTest
 {
 private:
 
+    testparam *tp;
+    double target_accuracy_margin_from_bfmatcher;
+    Feature2D* fe;                  // feature detector extractor
+
     DescriptorMatcher* bfmatcher;   // brute force matcher for accuracy of reference
     DescriptorMatcher* flmatcher;   // flann matcher to test
-    Feature2D* fe;                  // feature detector extractor
     Mat imgQuery;                       // query image
     vector<Mat> imgOutliers;            // outlier image
     vector<KeyPoint> query_kp;          // query key points detect from imgQuery
@@ -295,8 +298,6 @@ private:
     int totalOutlierDescCnt;
 
     string flmatchername;
-    testparam *tp;
-    double target_accuracy_margin_from_bfmatcher;
 
 public:
 
@@ -305,10 +306,10 @@ public:
     //
     CV_FeatureDetectorMatcherBaseTest(testparam* _tp, double _accuracy_margin, Feature2D* _fe, DescriptorMatcher *_flmatcher, string _flmatchername, int norm_type_for_bfmatcher) :
         tp(_tp),
+        target_accuracy_margin_from_bfmatcher(_accuracy_margin),
         fe(_fe),
         flmatcher(_flmatcher),
-        flmatchername(_flmatchername),
-        target_accuracy_margin_from_bfmatcher(_accuracy_margin)
+        flmatchername(_flmatchername)
     {
 #if defined(INIT_RANDOM_SEED)
         // from test/test_eigen.cpp
