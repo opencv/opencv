@@ -30,7 +30,7 @@ y_{corrected} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]\f]
 So we have five distortion parameters which in OpenCV are presented as one row matrix with 5
 columns:
 
-\f[Distortion_{coefficients}=(k_1 \hspace{10pt} k_2 \hspace{10pt} p_1 \hspace{10pt} p_2 \hspace{10pt} k_3)\f]
+\f[distortion\_coefficients=(k_1 \hspace{10pt} k_2 \hspace{10pt} p_1 \hspace{10pt} p_2 \hspace{10pt} k_3)\f]
 
 Now for the unit conversion we use the following formula:
 
@@ -96,83 +96,30 @@ on how to do this you can find in the @ref tutorial_file_input_output_with_xml_y
 Explanation
 -----------
 
--#  **Read the settings.**
-    @code{.cpp}
-    Settings s;
-    const string inputSettingsFile = argc > 1 ? argv[1] : "default.xml";
-    FileStorage fs(inputSettingsFile, FileStorage::READ); // Read the settings
-    if (!fs.isOpened())
-    {
-          cout << "Could not open the configuration file: \"" << inputSettingsFile << "\"" << endl;
-          return -1;
-    }
-    fs["Settings"] >> s;
-    fs.release();                                         // close Settings file
+-#  **Read the settings**
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp file_read
 
-    if (!s.goodInput)
-    {
-          cout << "Invalid input detected. Application stopping. " << endl;
-          return -1;
-    }
-    @endcode
     For this I've used simple OpenCV class input operation. After reading the file I've an
     additional post-processing function that checks validity of the input. Only if all inputs are
     good then *goodInput* variable will be true.
 
--#  **Get next input, if it fails or we have enough of them - calibrate**. After this we have a big
+-#  **Get next input, if it fails or we have enough of them - calibrate**
+
+    After this we have a big
     loop where we do the following operations: get the next image from the image list, camera or
     video file. If this fails or we have enough images then we run the calibration process. In case
     of image we step out of the loop and otherwise the remaining frames will be undistorted (if the
     option is set) via changing from *DETECTION* mode to the *CALIBRATED* one.
-    @code{.cpp}
-    for(int i = 0;;++i)
-    {
-      Mat view;
-      bool blinkOutput = false;
-
-      view = s.nextImage();
-
-      //-----  If no more image, or got enough, then stop calibration and show result -------------
-      if( mode == CAPTURING && imagePoints.size() >= (unsigned)s.nrFrames )
-      {
-            if( runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints))
-                  mode = CALIBRATED;
-            else
-                  mode = DETECTION;
-      }
-      if(view.empty())          // If no more images then run calibration, save and stop loop.
-      {
-                if( imagePoints.size() > 0 )
-                      runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints);
-                break;
-      imageSize = view.size();  // Format input image.
-      if( s.flipVertical )    flip( view, view, 0 );
-      }
-    @endcode
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp get_input
     For some cameras we may need to flip the input image. Here we do this too.
 
--#  **Find the pattern in the current input**. The formation of the equations I mentioned above aims
+-#  **Find the pattern in the current input**
+
+    The formation of the equations I mentioned above aims
     to finding major patterns in the input: in case of the chessboard this are corners of the
     squares and for the circles, well, the circles themselves. The position of these will form the
     result which will be written into the *pointBuf* vector.
-    @code{.cpp}
-    vector<Point2f> pointBuf;
-
-    bool found;
-    switch( s.calibrationPattern ) // Find feature points on the input format
-    {
-    case Settings::CHESSBOARD:
-      found = findChessboardCorners( view, s.boardSize, pointBuf,
-      CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FAST_CHECK | CALIB_CB_NORMALIZE_IMAGE);
-      break;
-    case Settings::CIRCLES_GRID:
-      found = findCirclesGrid( view, s.boardSize, pointBuf );
-      break;
-    case Settings::ASYMMETRIC_CIRCLES_GRID:
-      found = findCirclesGrid( view, s.boardSize, pointBuf, CALIB_CB_ASYMMETRIC_GRID );
-      break;
-    }
-    @endcode
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp find_pattern
     Depending on the type of the input pattern you use either the @ref cv::findChessboardCorners or
     the @ref cv::findCirclesGrid function. For both of them you pass the current image and the size
     of the board and you'll get the positions of the patterns. Furthermore, they return a boolean
@@ -188,109 +135,27 @@ Explanation
     *imagePoints* vector to collect all of the equations into a single container. Finally, for
     visualization feedback purposes we will draw the found points on the input image using @ref
     cv::findChessboardCorners function.
-    @code{.cpp}
-    if ( found)                // If done with success,
-      {
-          // improve the found corners' coordinate accuracy for chessboard
-            if( s.calibrationPattern == Settings::CHESSBOARD)
-            {
-                Mat viewGray;
-                cvtColor(view, viewGray, COLOR_BGR2GRAY);
-                cornerSubPix( viewGray, pointBuf, Size(11,11),
-                  Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::MAX_ITER, 30, 0.1 ));
-            }
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp pattern_found
+-#  **Show state and result to the user, plus command line control of the application**
 
-            if( mode == CAPTURING &&  // For camera only take new samples after delay time
-                (!s.inputCapture.isOpened() || clock() - prevTimestamp > s.delay*1e-3*CLOCKS_PER_SEC) )
-            {
-                imagePoints.push_back(pointBuf);
-                prevTimestamp = clock();
-                blinkOutput = s.inputCapture.isOpened();
-            }
-
-            // Draw the corners.
-            drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
-      }
-    @endcode
--#  **Show state and result to the user, plus command line control of the application**. This part
-    shows text output on the image.
-    @code{.cpp}
-    //----------------------------- Output Text ------------------------------------------------
-    string msg = (mode == CAPTURING) ? "100/100" :
-              mode == CALIBRATED ? "Calibrated" : "Press 'g' to start";
-    int baseLine = 0;
-    Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
-    Point textOrigin(view.cols - 2*textSize.width - 10, view.rows - 2*baseLine - 10);
-
-    if( mode == CAPTURING )
-    {
-      if(s.showUndistorsed)
-        msg = format( "%d/%d Undist", (int)imagePoints.size(), s.nrFrames );
-      else
-        msg = format( "%d/%d", (int)imagePoints.size(), s.nrFrames );
-    }
-
-    putText( view, msg, textOrigin, 1, 1, mode == CALIBRATED ?  GREEN : RED);
-
-    if( blinkOutput )
-       bitwise_not(view, view);
-    @endcode
+    This part shows text output on the image.
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp output_text
     If we ran calibration and got camera's matrix with the distortion coefficients we may want to
     correct the image using @ref cv::undistort function:
-    @code{.cpp}
-    //------------------------- Video capture  output  undistorted ------------------------------
-    if( mode == CALIBRATED && s.showUndistorsed )
-    {
-      Mat temp = view.clone();
-      undistort(temp, view, cameraMatrix, distCoeffs);
-    }
-    //------------------------------ Show image and check for input commands -------------------
-    imshow("Image View", view);
-    @endcode
-    Then we wait for an input key and if this is *u* we toggle the distortion removal, if it is *g*
-    we start again the detection process, and finally for the *ESC* key we quit the application:
-    @code{.cpp}
-    char key =  waitKey(s.inputCapture.isOpened() ? 50 : s.delay);
-    if( key  == ESC_KEY )
-          break;
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp output_undistorted
+    Then we show the image and wait for an input key and if this is *u* we toggle the distortion removal,
+    if it is *g* we start again the detection process, and finally for the *ESC* key we quit the application:
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp await_input
+-#  **Show the distortion removal for the images too**
 
-    if( key == 'u' && mode == CALIBRATED )
-       s.showUndistorsed = !s.showUndistorsed;
-
-    if( s.inputCapture.isOpened() && key == 'g' )
-    {
-      mode = CAPTURING;
-      imagePoints.clear();
-    }
-    @endcode
--#  **Show the distortion removal for the images too**. When you work with an image list it is not
+    When you work with an image list it is not
     possible to remove the distortion inside the loop. Therefore, you must do this after the loop.
     Taking advantage of this now I'll expand the @ref cv::undistort function, which is in fact first
     calls @ref cv::initUndistortRectifyMap to find transformation matrices and then performs
     transformation using @ref cv::remap function. Because, after successful calibration map
     calculation needs to be done only once, by using this expanded form you may speed up your
     application:
-    @code{.cpp}
-    if( s.inputType == Settings::IMAGE_LIST && s.showUndistorsed )
-    {
-      Mat view, rview, map1, map2;
-      initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
-          getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
-          imageSize, CV_16SC2, map1, map2);
-
-      for(int i = 0; i < (int)s.imageList.size(); i++ )
-      {
-          view = imread(s.imageList[i], 1);
-          if(view.empty())
-              continue;
-          remap(view, rview, map1, map2, INTER_LINEAR);
-          imshow("Image View", rview);
-          char c = waitKey();
-          if( c  == ESC_KEY || c == 'q' || c == 'Q' )
-              break;
-      }
-    }
-    @endcode
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp show_results
 
 The calibration and save
 ------------------------
@@ -304,24 +169,7 @@ Therefore in the first function we just split up these two processes. Because we
 of the calibration variables we'll create these variables here and pass on both of them to the
 calibration and saving function. Again, I'll not show the saving part as that has little in common
 with the calibration. Explore the source file in order to find out how and what:
-@code{.cpp}
-bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat& distCoeffs,vector<vector<Point2f> > imagePoints )
-{
- vector<Mat> rvecs, tvecs;
- vector<float> reprojErrs;
- double totalAvgErr = 0;
-
- bool ok = runCalibration(s,imageSize, cameraMatrix, distCoeffs, imagePoints, rvecs, tvecs,
-                          reprojErrs, totalAvgErr);
- cout << (ok ? "Calibration succeeded" : "Calibration failed")
-     << ". avg re projection error = "  << totalAvgErr ;
-
- if( ok )   // save only if the calibration was done with success
-     saveCameraParams( s, imageSize, cameraMatrix, distCoeffs, rvecs ,tvecs, reprojErrs,
-                         imagePoints, totalAvgErr);
- return ok;
-}
-@endcode
+@snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp run_and_save
 We do the calibration with the help of the @ref cv::calibrateCamera function. It has the following
 parameters:
 
@@ -331,29 +179,7 @@ parameters:
     present. Because, we use a single pattern for all the input images we can calculate this just
     once and multiply it for all the other input views. We calculate the corner points with the
     *calcBoardCornerPositions* function as:
-    @code{.cpp}
-    void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>& corners,
-                      Settings::Pattern patternType /*= Settings::CHESSBOARD*/)
-    {
-    corners.clear();
-
-    switch(patternType)
-    {
-    case Settings::CHESSBOARD:
-    case Settings::CIRCLES_GRID:
-      for( int i = 0; i < boardSize.height; ++i )
-        for( int j = 0; j < boardSize.width; ++j )
-            corners.push_back(Point3f(float( j*squareSize ), float( i*squareSize ), 0));
-      break;
-
-    case Settings::ASYMMETRIC_CIRCLES_GRID:
-      for( int i = 0; i < boardSize.height; i++ )
-         for( int j = 0; j < boardSize.width; j++ )
-            corners.push_back(Point3f(float((2*j + i % 2)*squareSize), float(i*squareSize), 0));
-      break;
-    }
-    }
-    @endcode
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp board_corners
     And then multiply it as:
     @code{.cpp}
     vector<vector<Point3f> > objectPoints(1);
@@ -365,12 +191,8 @@ parameters:
     circle pattern). We have already collected this from @ref cv::findChessboardCorners or @ref
     cv::findCirclesGrid function. We just need to pass it on.
 -   The size of the image acquired from the camera, video file or the images.
--   The camera matrix. If we used the fixed aspect ratio option we need to set the \f$f_x\f$ to zero:
-    @code{.cpp}
-    cameraMatrix = Mat::eye(3, 3, CV_64F);
-    if( s.flag & CALIB_FIX_ASPECT_RATIO )
-         cameraMatrix.at<double>(0,0) = 1.0;
-    @endcode
+-   The camera matrix. If we used the fixed aspect ratio option we need to set \f$f_x\f$:
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp fixed_aspect
 -   The distortion coefficient matrix. Initialize with zero.
     @code{.cpp}
     distCoeffs = Mat::zeros(8, 1, CV_64F);
@@ -393,33 +215,7 @@ double rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
     calculate the absolute norm between what we got with our transformation and the corner/circle
     finding algorithm. To find the average error we calculate the arithmetical mean of the errors
     calculated for all the calibration images.
-    @code{.cpp}
-    double computeReprojectionErrors( const vector<vector<Point3f> >& objectPoints,
-                              const vector<vector<Point2f> >& imagePoints,
-                              const vector<Mat>& rvecs, const vector<Mat>& tvecs,
-                              const Mat& cameraMatrix , const Mat& distCoeffs,
-                              vector<float>& perViewErrors)
-    {
-    vector<Point2f> imagePoints2;
-    int i, totalPoints = 0;
-    double totalErr = 0, err;
-    perViewErrors.resize(objectPoints.size());
-
-    for( i = 0; i < (int)objectPoints.size(); ++i )
-    {
-      projectPoints( Mat(objectPoints[i]), rvecs[i], tvecs[i], cameraMatrix,  // project
-                                           distCoeffs, imagePoints2);
-      err = norm(Mat(imagePoints[i]), Mat(imagePoints2), NORM_L2);              // difference
-
-      int n = (int)objectPoints[i].size();
-      perViewErrors[i] = (float) std::sqrt(err*err/n);                        // save for this view
-      totalErr        += err*err;                                             // sum it up
-      totalPoints     += n;
-    }
-
-    return std::sqrt(totalErr/totalPoints);              // calculate the arithmetical mean
-    }
-    @endcode
+    @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp compute_errors
 
 Results
 -------
@@ -461,20 +257,20 @@ the input. Here's, how a detected pattern should look:
 In both cases in the specified output XML/YAML file you'll find the camera and distortion
 coefficients matrices:
 @code{.xml}
-<Camera_Matrix type_id="opencv-matrix">
+<camera_matrix type_id="opencv-matrix">
 <rows>3</rows>
 <cols>3</cols>
 <dt>d</dt>
 <data>
  6.5746697944293521e+002 0. 3.1950000000000000e+002 0.
- 6.5746697944293521e+002 2.3950000000000000e+002 0. 0. 1.</data></Camera_Matrix>
-<Distortion_Coefficients type_id="opencv-matrix">
+ 6.5746697944293521e+002 2.3950000000000000e+002 0. 0. 1.</data></camera_matrix>
+<distortion_coefficients type_id="opencv-matrix">
 <rows>5</rows>
 <cols>1</cols>
 <dt>d</dt>
 <data>
  -4.1802327176423804e-001 5.0715244063187526e-001 0. 0.
- -5.7843597214487474e-001</data></Distortion_Coefficients>
+ -5.7843597214487474e-001</data></distortion_coefficients>
 @endcode
 Add these values as constants to your program, call the @ref cv::initUndistortRectifyMap and the
 @ref cv::remap function to remove distortion and enjoy distortion free inputs for cheap and low
