@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "rho.h"
 #include <iostream>
 
 namespace cv
@@ -259,6 +260,85 @@ public:
 }
 
 
+
+namespace cv{
+static bool createAndRunRHORegistrator(double confidence,
+                                       int    maxIters,
+                                       double ransacReprojThreshold,
+                                       int    npoints,
+                                       InputArray  _src,
+                                       InputArray  _dst,
+                                       OutputArray _H,
+                                       OutputArray _tempMask){
+    Mat    src = _src.getMat();
+    Mat    dst = _dst.getMat();
+    Mat    tempMask;
+    bool   result;
+    double beta = 0.35;/* 0.35 is a value that often works. */
+
+    /* Create temporary output matrix (RHO outputs a single-precision H only). */
+    Mat tmpH = Mat(3, 3, CV_32FC1);
+
+    /* Create output mask. */
+    tempMask = Mat(npoints, 1, CV_8U);
+
+    /**
+     * Make use of the RHO estimator API.
+     *
+     * This is where the math happens. A homography estimation context is
+     * initialized, used, then finalized.
+     */
+
+    Ptr<RHO_HEST> p = rhoInit();
+
+    /**
+     * Optional. Ideally, the context would survive across calls to
+     * findHomography(), but no clean way appears to exit to do so. The price
+     * to pay is marginally more computational work than strictly needed.
+     */
+
+    rhoEnsureCapacity(p, npoints, beta);
+
+    /**
+     * The critical call. All parameters are heavily documented in rhorefc.h.
+     *
+     * Currently, NR (Non-Randomness criterion) and Final Refinement (with
+     * internal, optimized Levenberg-Marquardt method) are enabled. However,
+     * while refinement seems to correctly smooth jitter most of the time, when
+     * refinement fails it tends to make the estimate visually very much worse.
+     * It may be necessary to remove the refinement flags in a future commit if
+     * this behaviour is too problematic.
+     */
+
+    result = !!rhoHest(p,
+                      (const float*)src.data,
+                      (const float*)dst.data,
+                      (char*)       tempMask.data,
+                      (unsigned)    npoints,
+                      (float)       ransacReprojThreshold,
+                      (unsigned)    maxIters,
+                      (unsigned)    maxIters,
+                      confidence,
+                      4U,
+                      beta,
+                      RHO_FLAG_ENABLE_NR | RHO_FLAG_ENABLE_FINAL_REFINEMENT,
+                      NULL,
+                      (float*)tmpH.data);
+
+    /* Convert float homography to double precision. */
+    tmpH.convertTo(_H, CV_64FC1);
+
+    /* Maps non-zero mask elems to 1, for the sake of the testcase. */
+    for(int k=0;k<npoints;k++){
+        tempMask.data[k] = !!tempMask.data[k];
+    }
+    tempMask.copyTo(_tempMask);
+
+    return result;
+}
+}
+
+
 cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                             int method, double ransacReprojThreshold, OutputArray _mask,
                             const int maxIters, const double confidence)
@@ -303,10 +383,12 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
         result = createRANSACPointSetRegistrator(cb, 4, ransacReprojThreshold, confidence, maxIters)->run(src, dst, H, tempMask);
     else if( method == LMEDS )
         result = createLMeDSPointSetRegistrator(cb, 4, confidence, maxIters)->run(src, dst, H, tempMask);
+    else if( method == RHO )
+        result = createAndRunRHORegistrator(confidence, maxIters, ransacReprojThreshold, npoints, src, dst, H, tempMask);
     else
         CV_Error(Error::StsBadArg, "Unknown estimation method");
 
-    if( result && npoints > 4 )
+    if( result && npoints > 4 && method != RHO)
     {
         compressElems( src.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         npoints = compressElems( dst.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
