@@ -44,7 +44,7 @@
 namespace cv
 {
 
-Ptr<IVideoCapture> createMotionJpegCapture(const String& filename)
+Ptr<IVideoCapture> createMotionJpegCapture(const String&)
 {
     return Ptr<IVideoCapture>();
 }

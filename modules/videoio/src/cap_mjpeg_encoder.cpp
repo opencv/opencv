@@ -216,8 +216,8 @@ public:
         }
         else
         {
-            size_t fpos = ftell(m_f);
-            fseek(m_f, pos, SEEK_SET);
+            long fpos = ftell(m_f);
+            fseek(m_f, (long)pos, SEEK_SET);
             uchar buf[] = { (uchar)val, (uchar)(val >> 8), (uchar)(val >> 16), (uchar)(val >> 24) };
             fwrite(buf, 1, 4, m_f);
             fseek(m_f, fpos, SEEK_SET);
@@ -390,6 +390,7 @@ public:
             startWriteAVI();
             writeStreamHeader();
         }
+        //printf("motion jpeg stream %s has been successfully opened\n", filename.c_str());
         return true;
     }
 
@@ -966,7 +967,7 @@ vst1q_s16((addr), reg);
 static void aan_fdct8x8( const short *src, short *dst,
                         int step, const short *postscale )
 {
-    short  workspace[64], *work = workspace;
+    int workspace[64], *work = workspace;
     int  i;
 
     // Pass 1: process rows
@@ -1017,7 +1018,7 @@ static void aan_fdct8x8( const short *src, short *dst,
 
     work = workspace;
     // pass 2: process columns
-    for( i = 8; i > 0; i--, work++, postscale ++, dst += 8 )
+    for( i = 8; i > 0; i--, work++, postscale += 8, dst += 8 )
     {
         int  x0 = work[8*0], x1 = work[8*7];
         int  x2 = work[8*3], x3 = work[8*4];
@@ -1038,14 +1039,14 @@ static void aan_fdct8x8( const short *src, short *dst,
         x3 = x0 + x1; x0 -= x1;
         x1 = x2 + x3; x2 -= x3;
 
-        dst[0] = DCT_DESCALE(x1*postscale[0*8], postshift);
-        dst[4] = DCT_DESCALE(x2*postscale[4*8], postshift);
+        dst[0] = (short)DCT_DESCALE(x1*postscale[0], postshift);
+        dst[4] = (short)DCT_DESCALE(x2*postscale[4], postshift);
 
         x0 = DCT_DESCALE((x0 - x4)*C0_707, fixb);
         x1 = x4 + x0; x4 -= x0;
 
-        dst[2] = DCT_DESCALE(x4*postscale[2*8], postshift);
-        dst[6] = DCT_DESCALE(x1*postscale[6*8], postshift);
+        dst[2] = (short)DCT_DESCALE(x4*postscale[2], postshift);
+        dst[6] = (short)DCT_DESCALE(x1*postscale[6], postshift);
 
         x0 = work[8*0]; x1 = work[8*3];
         x2 = work[8*4]; x3 = work[8*7];
@@ -1061,10 +1062,10 @@ static void aan_fdct8x8( const short *src, short *dst,
         x1 = x0 + x3; x3 -= x0;
         x0 = x4 + x2; x4 -= x2;
 
-        dst[5] = DCT_DESCALE(x1*postscale[5*8], postshift);
-        dst[1] = DCT_DESCALE(x0*postscale[1*8], postshift);
-        dst[7] = DCT_DESCALE(x4*postscale[7*8], postshift);
-        dst[3] = DCT_DESCALE(x3*postscale[3*8], postshift);
+        dst[5] = (short)DCT_DESCALE(x1*postscale[5], postshift);
+        dst[1] = (short)DCT_DESCALE(x0*postscale[1], postshift);
+        dst[7] = (short)DCT_DESCALE(x4*postscale[7], postshift);
+        dst[3] = (short)DCT_DESCALE(x3*postscale[3], postshift);
     }
 }
 #endif
@@ -1079,8 +1080,9 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
     {
         for( int i = -CAT_TAB_SIZE; i <= CAT_TAB_SIZE; i++ )
         {
-            float a = (float)i;
-            cat_table[i+CAT_TAB_SIZE] = (((int&)a >> 23) & 255) - (126 & (i ? -1 : 0));
+            Cv32suf a;
+            a.f = (float)i;
+            cat_table[i+CAT_TAB_SIZE] = ((a.i >> 23) & 255) - (126 & (i ? -1 : 0));
         }
         init_cat_table = true;
     }
@@ -1142,8 +1144,8 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
                 qval = 1;
             if( qval > 255 )
                 qval = 255;
-            fdct_qtab[i][(idx/8) + (idx%8)*8] = (cvRound((1 << (postshift + 11)))/
-                                                 (qval*chroma_scale*idct_prescale[idx]));
+            fdct_qtab[i][idx] = (short)(cvRound((1 << (postshift + 11)))/
+                                (qval*chroma_scale*idct_prescale[idx]));
             strm.putByte( qval );
         }
     }
