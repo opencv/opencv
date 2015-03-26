@@ -503,8 +503,6 @@ CV_EXPORTS bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, 
 CV_EXPORTS bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);
 
 CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
-CV_EXPORTS int normHamming(const uchar* a, const uchar* b, int n);
-CV_EXPORTS int normHamming(const uchar* a, const uchar* b, int n, int cellSize);
 CV_EXPORTS float normL1_(const float* a, const float* b, int n);
 CV_EXPORTS float normL2Sqr_(const float* a, const float* b, int n);
 
@@ -531,6 +529,23 @@ in degrees and varies from 0 to 360 degrees. The accuracy is about 0.3 degrees.
 @param y y-coordinate of the vector.
  */
 CV_EXPORTS_W float fastAtan2(float y, float x);
+
+/*
+ * Hamming distance functor - counts the bit differences between two strings - useful for the Brief descriptor
+ * bit count of A exclusive XOR'ed with B
+ */
+struct CV_EXPORTS Hamming
+{
+    enum { normType = NORM_HAMMING };
+    typedef unsigned char ValueType;
+    typedef int ResultType;
+
+    /** this will count the bits in a ^ b
+     */
+    ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const;
+};
+
+typedef Hamming HammingLUT;
 
 /////////////////////////////////// inline norms ////////////////////////////////////
 

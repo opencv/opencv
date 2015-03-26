@@ -2550,140 +2550,6 @@ int normL1_(const uchar* a, const uchar* b, int n)
     return d;
 }
 
-static const uchar popCountTable[] =
-{
-    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
-};
-
-static const uchar popCountTable2[] =
-{
-    0, 1, 1, 1, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
-    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
-    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
-    2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
-    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
-    2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
-    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
-    2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4
-};
-
-static const uchar popCountTable4[] =
-{
-    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
-};
-
-static int normHamming(const uchar* a, int n)
-{
-    int i = 0, result = 0;
-#if CV_NEON
-    {
-        uint32x4_t bits = vmovq_n_u32(0);
-        for (; i <= n - 16; i += 16) {
-            uint8x16_t A_vec = vld1q_u8 (a + i);
-            uint8x16_t bitsSet = vcntq_u8 (A_vec);
-            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
-            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-            bits = vaddq_u32(bits, bitSet4);
-        }
-        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
-        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
-        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
-    }
-#endif
-        for( ; i <= n - 4; i += 4 )
-            result += popCountTable[a[i]] + popCountTable[a[i+1]] +
-            popCountTable[a[i+2]] + popCountTable[a[i+3]];
-    for( ; i < n; i++ )
-        result += popCountTable[a[i]];
-    return result;
-}
-
-int normHamming(const uchar* a, const uchar* b, int n)
-{
-    int i = 0, result = 0;
-#if CV_NEON
-    {
-        uint32x4_t bits = vmovq_n_u32(0);
-        for (; i <= n - 16; i += 16) {
-            uint8x16_t A_vec = vld1q_u8 (a + i);
-            uint8x16_t B_vec = vld1q_u8 (b + i);
-            uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
-            uint8x16_t bitsSet = vcntq_u8 (AxorB);
-            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
-            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-            bits = vaddq_u32(bits, bitSet4);
-        }
-        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
-        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
-        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
-    }
-#endif
-        for( ; i <= n - 4; i += 4 )
-            result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
-                    popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
-    for( ; i < n; i++ )
-        result += popCountTable[a[i] ^ b[i]];
-    return result;
-}
-
-static int normHamming(const uchar* a, int n, int cellSize)
-{
-    if( cellSize == 1 )
-        return normHamming(a, n);
-    const uchar* tab = 0;
-    if( cellSize == 2 )
-        tab = popCountTable2;
-    else if( cellSize == 4 )
-        tab = popCountTable4;
-    else
-        CV_Error( CV_StsBadSize, "bad cell size (not 1, 2 or 4) in normHamming" );
-    int i = 0, result = 0;
-#if CV_ENABLE_UNROLLED
-    for( ; i <= n - 4; i += 4 )
-        result += tab[a[i]] + tab[a[i+1]] + tab[a[i+2]] + tab[a[i+3]];
-#endif
-    for( ; i < n; i++ )
-        result += tab[a[i]];
-    return result;
-}
-
-int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
-{
-    if( cellSize == 1 )
-        return normHamming(a, b, n);
-    const uchar* tab = 0;
-    if( cellSize == 2 )
-        tab = popCountTable2;
-    else if( cellSize == 4 )
-        tab = popCountTable4;
-    else
-        CV_Error( CV_StsBadSize, "bad cell size (not 1, 2 or 4) in normHamming" );
-    int i = 0, result = 0;
-    #if CV_ENABLE_UNROLLED
-    for( ; i <= n - 4; i += 4 )
-        result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
-                tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
-    #endif
-    for( ; i < n; i++ )
-        result += tab[a[i] ^ b[i]];
-    return result;
-}
-
-
 template<typename T, typename ST> int
 normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
 {
@@ -2816,6 +2682,12 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     return 0;
 }
 
+Hamming::ResultType Hamming::operator()( const unsigned char* a, const unsigned char* b, int size ) const
+{
+    int result = 0;
+    cv::hal::normHamming(a, b, size, result);
+    return result;
+}
 
 #define CV_DEF_NORM_FUNC(L, suffix, type, ntype) \
     static int norm##L##_##suffix(const type* src, const uchar* mask, ntype* r, int len, int cn) \
@@ -3164,10 +3036,18 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                 const uchar* data = src.ptr<uchar>();
 
                 if( normType == NORM_HAMMING )
-                    return normHamming(data, (int)len);
+                {
+                    int result = 0;
+                    cv::hal::normHamming(data, (int)len, result);
+                    return result;
+                }
 
                 if( normType == NORM_HAMMING2 )
-                    return normHamming(data, (int)len, 2);
+                {
+                    int result = 0;
+                    hal::normHamming(data, (int)len, 2, result);
+                    return result;
+                }
             }
         }
     }
@@ -3191,7 +3071,11 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         int result = 0;
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
-            result += normHamming(ptrs[0], total, cellSize);
+        {
+            int one = 0;
+            cv::hal::normHamming(ptrs[0], total, cellSize, one);
+            result += one;
+        }
 
         return result;
     }
@@ -3673,7 +3557,11 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         int result = 0;
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
-            result += normHamming(ptrs[0], ptrs[1], total, cellSize);
+        {
+            int one = 0;
+            hal::normHamming(ptrs[0], ptrs[1], total, cellSize, one);
+            result += one;
+        }
 
         return result;
     }
@@ -3810,13 +3698,18 @@ static void batchDistHamming(const uchar* src1, const uchar* src2, size_t step2,
     if( !mask )
     {
         for( int i = 0; i < nvecs; i++ )
-            dist[i] = normHamming(src1, src2 + step2*i, len);
+             hal::normHamming(src1, src2 + step2*i, len, dist[i]);
     }
     else
     {
         int val0 = INT_MAX;
         for( int i = 0; i < nvecs; i++ )
-            dist[i] = mask[i] ? normHamming(src1, src2 + step2*i, len) : val0;
+        {
+            if (mask[i])
+                hal::normHamming(src1, src2 + step2*i, len, dist[i]);
+            else
+                dist[i] = val0;
+        }
     }
 }
 
@@ -3827,13 +3720,18 @@ static void batchDistHamming2(const uchar* src1, const uchar* src2, size_t step2
     if( !mask )
     {
         for( int i = 0; i < nvecs; i++ )
-            dist[i] = normHamming(src1, src2 + step2*i, len, 2);
+            hal::normHamming(src1, src2 + step2*i, len, 2, dist[i]);
     }
     else
     {
         int val0 = INT_MAX;
         for( int i = 0; i < nvecs; i++ )
-            dist[i] = mask[i] ? normHamming(src1, src2 + step2*i, len, 2) : val0;
+        {
+            if (mask[i])
+                hal::normHamming(src1, src2 + step2*i, len, 2, dist[i]);
+            else
+                dist[i] = val0;
+        }
     }
 }
 

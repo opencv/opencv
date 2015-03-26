@@ -679,38 +679,6 @@ struct CV_EXPORTS L1
     }
 };
 
-/*
- * Hamming distance functor - counts the bit differences between two strings - useful for the Brief descriptor
- * bit count of A exclusive XOR'ed with B
- */
-struct CV_EXPORTS Hamming
-{
-    enum { normType = NORM_HAMMING };
-    typedef unsigned char ValueType;
-    typedef int ResultType;
-
-    /** this will count the bits in a ^ b
-     */
-    ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const
-    {
-        return normHamming(a, b, size);
-    }
-};
-
-typedef Hamming HammingLUT;
-
-template<int cellsize> struct HammingMultilevel
-{
-    enum { normType = NORM_HAMMING + (cellsize>1) };
-    typedef unsigned char ValueType;
-    typedef int ResultType;
-
-    ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const
-    {
-        return normHamming(a, b, size, cellsize);
-    }
-};
-
 /****************************************************************************************\
 *                                  DescriptorMatcher                                     *
 \****************************************************************************************/
