@@ -145,6 +145,16 @@ class Hackathon244Tests(NewOpenCVTests):
         self.check_close_pairs(mc, mc0, 5)
         self.assertLessEqual(abs(mr - mr0), 5)
 
+    def test_inheritance(self):
+        bm = cv2.StereoBM_create()
+        bm.getPreFilterCap() # from StereoBM
+        bm.getBlockSize() # from SteroMatcher
+
+        boost = cv2.ml.Boost_create()
+        boost.getBoostType() # from ml::Boost
+        boost.getMaxDepth() # from ml::DTrees
+        boost.isClassifier() # from ml::StatModel
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='run OpenCV python tests')
     parser.add_argument('--repo', help='use sample image files from local git repository (path to folder), '
