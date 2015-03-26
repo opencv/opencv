@@ -1152,6 +1152,7 @@ float cv::EMD( InputArray _signature1, InputArray _signature2,
     {
         _flow.create(signature1.rows, signature2.rows, CV_32F);
         flow = _flow.getMat();
+        flow = Scalar::all(0);
         _cflow = flow;
     }
 
