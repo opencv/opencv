@@ -1314,7 +1314,7 @@ bool CvSVM::train1( int sample_count, int var_count, const float** samples,
 
 
 bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float** samples,
-                    const CvMat* responses, CvMemStorage* temp_storage, double* alpha )
+                    const CvMat* responses, CvMemStorage* temp_storage, double* alpha, bool optimize )
 {
     bool ok = false;
 
@@ -1518,8 +1518,8 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
             }
         }
     }
-
-    optimize_linear_svm();
+    if (optimize)
+        optimize_linear_svm();
     ok = true;
 
     __END__;
@@ -1584,7 +1584,7 @@ void CvSVM::optimize_linear_svm()
 
 
 bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
-    const CvMat* _var_idx, const CvMat* _sample_idx, CvSVMParams _params )
+    const CvMat* _var_idx, const CvMat* _sample_idx, CvSVMParams _params, bool optimize)
 {
     bool ok = false;
     CvMat* responses = 0;
@@ -1629,7 +1629,7 @@ bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     create_kernel();
     create_solver();
 
-    if( !do_train( svm_type, sample_count, var_count, samples, responses, temp_storage, alpha ))
+    if( !do_train( svm_type, sample_count, var_count, samples, responses, temp_storage, alpha, optimize))
         EXIT;
 
     ok = true; // model has been trained successfully
@@ -1668,7 +1668,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     const CvMat* _var_idx, const CvMat* _sample_idx, CvSVMParams _params, int k_fold,
     CvParamGrid C_grid, CvParamGrid gamma_grid, CvParamGrid p_grid,
     CvParamGrid nu_grid, CvParamGrid coef_grid, CvParamGrid degree_grid,
-    bool balanced)
+    bool balanced, bool optimize)
 {
     bool ok = false;
     CvMat* responses = 0;
@@ -1980,7 +1980,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
 
                     // Train SVM on <train_size> samples
                     if( !do_train( svm_type, train_size, var_count,
-                        (const float**)samples_local, responses_local, temp_storage, alpha ) )
+                        (const float**)samples_local, responses_local, temp_storage, alpha, optimize ) )
                         EXIT;
 
                     // Compute test set error on <test_size> samples
@@ -2030,7 +2030,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     params.degree = best_degree;
     params.coef0  = best_coef;
 
-    CV_CALL(ok = do_train( svm_type, sample_count, var_count, samples, responses, temp_storage, alpha ));
+    CV_CALL(ok = do_train( svm_type, sample_count, var_count, samples, responses, temp_storage, alpha, optimize ));
 
     __END__;
 
@@ -2206,22 +2206,22 @@ CvSVM::CvSVM( const Mat& _train_data, const Mat& _responses,
 }
 
 bool CvSVM::train( const Mat& _train_data, const Mat& _responses,
-                  const Mat& _var_idx, const Mat& _sample_idx, CvSVMParams _params )
+                  const Mat& _var_idx, const Mat& _sample_idx, CvSVMParams _params, bool optimize )
 {
     CvMat tdata = _train_data, responses = _responses, vidx = _var_idx, sidx = _sample_idx;
-    return train(&tdata, &responses, vidx.data.ptr ? &vidx : 0, sidx.data.ptr ? &sidx : 0, _params);
+    return train(&tdata, &responses, vidx.data.ptr ? &vidx : 0, sidx.data.ptr ? &sidx : 0, _params, optimize);
 }
 
 
 bool CvSVM::train_auto( const Mat& _train_data, const Mat& _responses,
                        const Mat& _var_idx, const Mat& _sample_idx, CvSVMParams _params, int k_fold,
                        CvParamGrid C_grid, CvParamGrid gamma_grid, CvParamGrid p_grid,
-                       CvParamGrid nu_grid, CvParamGrid coef_grid, CvParamGrid degree_grid, bool balanced )
+                       CvParamGrid nu_grid, CvParamGrid coef_grid, CvParamGrid degree_grid, bool balanced, bool optimize )
 {
     CvMat tdata = _train_data, responses = _responses, vidx = _var_idx, sidx = _sample_idx;
     return train_auto(&tdata, &responses, vidx.data.ptr ? &vidx : 0,
                       sidx.data.ptr ? &sidx : 0, _params, k_fold, C_grid, gamma_grid, p_grid,
-                      nu_grid, coef_grid, degree_grid, balanced);
+                      nu_grid, coef_grid, degree_grid, balanced, optimize);
 }
 
 float CvSVM::predict( const Mat& _sample, bool returnDFVal ) const
