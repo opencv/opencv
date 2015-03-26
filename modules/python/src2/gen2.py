@@ -255,20 +255,24 @@ class ClassInfo(object):
         self.methods = {}
         self.props = []
         self.consts = {}
+        self.base = None
         customname = False
 
         if decl:
-            self.bases = decl[1].split()[1:]
-            if len(self.bases) > 1:
+            bases = decl[1].split()[1:]
+            if len(bases) > 1:
                 print("Note: Class %s has more than 1 base class (not supported by Python C extensions)" % (self.name,))
-                print("      Bases: ", " ".join(self.bases))
+                print("      Bases: ", " ".join(bases))
                 print("      Only the first base class will be used")
-                self.bases = [self.bases[0].strip(",")]
                 #return sys.exit(-1)
-            if self.bases and self.bases[0].startswith("cv::"):
-                self.bases[0] = self.bases[0][4:]
-            if self.bases and self.bases[0] == "Algorithm":
-                self.isalgorithm = True
+            elif len(bases) == 1:
+                self.base = bases[0].strip(",")
+                if self.base.startswith("cv::"):
+                    self.base = self.base[4:]
+                if self.base == "Algorithm":
+                    self.isalgorithm = True
+                self.base = self.base.replace("::", "_")
+
             for m in decl[2]:
                 if m.startswith("="):
                     self.wname = m[1:]
@@ -285,8 +289,8 @@ class ClassInfo(object):
     def gen_map_code(self, all_classes):
         code = "static bool pyopencv_to(PyObject* src, %s& dst, const char* name)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
-        if self.bases:
-            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.bases[0].replace("::", "_")].cname
+        if self.base:
+            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.base].cname
         else:
             code += "\n    return true;\n}\n"
         return code
@@ -330,8 +334,8 @@ class ClassInfo(object):
             methods_inits.write(m.get_tab_entry())
 
         baseptr = "NULL"
-        if self.bases and self.bases[0] in all_classes:
-            baseptr = "&pyopencv_" + all_classes[self.bases[0]].name + "_Type"
+        if self.base and self.base in all_classes:
+            baseptr = "&pyopencv_" + all_classes[self.base].name + "_Type"
 
         code = gen_template_type_impl.substitute(name=self.name, wname=self.wname, cname=self.cname,
             getset_code=getset_code.getvalue(), getset_inits=getset_inits.getvalue(),
@@ -753,17 +757,17 @@ class PythonWrapperGenerator(object):
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
 
-        if classinfo.bases:
-            chunks = classinfo.bases[0].split('::')
+        if classinfo.base:
+            chunks = classinfo.base.split('_')
             base = '_'.join(chunks)
             while base not in self.classes and len(chunks)>1:
                 del chunks[-2]
                 base = '_'.join(chunks)
             if base not in self.classes:
                 print("Generator error: unable to resolve base %s for %s"
-                    % (classinfo.bases[0], classinfo.name))
+                    % (classinfo.base, classinfo.name))
                 sys.exit(-1)
-            classinfo.bases[0] = "::".join(chunks)
+            classinfo.base = base
             classinfo.isalgorithm |= self.classes[base].isalgorithm
 
     def split_decl_name(self, name):
