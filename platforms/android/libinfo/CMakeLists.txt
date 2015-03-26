@@ -23,6 +23,9 @@ if(NOT ANDROID_PACKAGE_PLATFORM)
   endif()
 endif()
 
+string(REPLACE "-fvisibility=hidden" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+string(REPLACE "-fvisibility-inlines-hidden" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+
 add_definitions(-DANDROID_PACKAGE_RELEASE=${ANDROID_PACKAGE_RELEASE} -DANDROID_PACKAGE_PLATFORM="${ANDROID_PACKAGE_PLATFORM}")
 
 include_directories(jni/BinderComponent jni/include "${OpenCV_SOURCE_DIR}/modules/core/include")
