@@ -74,7 +74,7 @@ available methods are 6:
 
 -#  **method=CV_TM_CCOEFF**
 
-    \f[R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I(x+x',y+y'))\f]
+    \f[R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I'(x+x',y+y'))\f]
 
     where
 
