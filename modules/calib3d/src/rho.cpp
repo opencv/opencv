@@ -69,10 +69,10 @@ namespace cv{/* For C support, replace with extern "C" { */
 const int    MEM_ALIGN              = 32;
 const size_t HSIZE                  = (3*3*sizeof(float));
 const double MIN_DELTA_CHNG         = 0.1;
-const double CHI_STAT               = 2.706;
+// const double CHI_STAT               = 2.706;
 const double CHI_SQ                 = 1.645;
-const double RLO                    = 0.25;
-const double RHI                    = 0.75;
+// const double RLO                    = 0.25;
+// const double RHI                    = 0.75;
 const int    MAXLEVMARQITERS        = 100;
 const int    SMPL_SIZE              = 4;      /* 4 points required per model */
 const int    SPRT_T_M               = 25;     /* Guessing 25 match evlauations / 1 model generation */
@@ -1631,7 +1631,7 @@ static inline void   sacInitNonRand(double    beta,
 
     for(; n < N; n++){
         double   mu      = n * beta;
-        double   sigma   = sqrt(n)* beta_beta1_sq_chi;
+        double   sigma   = sqrt((double)n)* beta_beta1_sq_chi;
         unsigned i_min   = (unsigned)ceil(SMPL_SIZE + mu + sigma);
 
         nonRandMinInl[n] = i_min;
