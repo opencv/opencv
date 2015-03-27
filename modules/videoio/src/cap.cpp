@@ -705,6 +705,21 @@ bool VideoWriter::isOpened() const
     return !iwriter.empty() || !writer.empty();
 }
 
+
+bool VideoWriter::set(int propId, double value)
+{
+    if (!iwriter.empty())
+        return iwriter->setProperty(propId, value);
+    return false;
+}
+
+double VideoWriter::get(int propId) const
+{
+    if (!iwriter.empty())
+        return iwriter->getProperty(propId);
+    return 0.;
+}
+
 void VideoWriter::write(const Mat& image)
 {
     if( iwriter )

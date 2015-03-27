@@ -166,7 +166,7 @@ namespace cv
     public:
         virtual ~IVideoCapture() {}
         virtual double getProperty(int) const { return 0; }
-        virtual bool setProperty(int, double) { return 0; }
+        virtual bool setProperty(int, double) { return false; }
         virtual bool grabFrame() = 0;
         virtual bool retrieveFrame(int, OutputArray) = 0;
         virtual bool isOpened() const = 0;
@@ -178,7 +178,7 @@ namespace cv
     public:
         virtual ~IVideoWriter() {}
         virtual double getProperty(int) const { return 0; }
-        virtual bool setProperty(int, double) { return 0; }
+        virtual bool setProperty(int, double) { return false; }
 
         virtual bool isOpened() const = 0;
         virtual void write(InputArray) = 0;
