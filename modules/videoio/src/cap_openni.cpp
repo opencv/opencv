@@ -643,11 +643,11 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     // Set map output mode.
     if( depthGenerator.IsValid() )
     {
-        CV_DbgAssert( depthGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
+        CV_Assert( depthGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
     }
     if( imageGenerator.IsValid() )
     {
-        CV_DbgAssert( imageGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK );
+        CV_Assert( imageGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK );
     }
 
     if( deviceType == DEVICE_ASUS_XTION )
