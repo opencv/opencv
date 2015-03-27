@@ -1631,7 +1631,7 @@ static inline void   sacInitNonRand(double    beta,
 
     for(; n < N; n++){
         double   mu      = n * beta;
-        double   sigma   = sqrt(n)* beta_beta1_sq_chi;
+        double   sigma   = sqrt((double)n)* beta_beta1_sq_chi;
         unsigned i_min   = (unsigned)ceil(SMPL_SIZE + mu + sigma);
 
         nonRandMinInl[n] = i_min;
