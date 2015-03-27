@@ -42,9 +42,8 @@
 #include "precomp.hpp"
 #include <vector>
 
-//#define WITH_NEON
-#ifdef WITH_NEON
-#include "arm_neon.h"
+#if CV_NEON
+#define WITH_NEON
 #endif
 
 namespace cv
@@ -381,7 +380,7 @@ public:
         outfps = cvRound(fps);
         width = size.width;
         height = size.height;
-        quality = 8;
+        quality = 75;
         rawstream = false;
         channels = iscolor ? 3 : 1;
 
@@ -592,12 +591,31 @@ public:
         }
     }
 
+    double getProperty(int propId) const
+    {
+        if( propId == VIDEOWRITER_PROP_QUALITY )
+            return quality;
+        if( propId == VIDEOWRITER_PROP_FRAMEBYTES )
+            return frameSize.empty() ? 0. : (double)frameSize.back();
+        return 0.;
+    }
+
+    bool setProperty(int propId, double value)
+    {
+        if( propId == VIDEOWRITER_PROP_QUALITY )
+        {
+            quality = value;
+            return true;
+        }
+        return false;
+    }
+
     void writeFrameData( const uchar* data, int step, int colorspace, int input_channels );
 
 protected:
     int outfps;
     int width, height, channels;
-    int quality;
+    double quality;
     size_t moviPointer;
     std::vector<size_t> frameOffset, frameSize, AVIChunkSizeIndex, frameNumIndexes;
     bool rawstream;
@@ -1116,11 +1134,12 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
     const int UV_step = 16;
     int u_plane_ofs = step*height;
     int v_plane_ofs = u_plane_ofs + step*height;
+    double _quality = quality*0.01*max_quality;
 
-    if( quality < 1 ) quality = 1;
-    if( quality > max_quality ) quality = max_quality;
+    if( _quality < 1. ) _quality = 1.;
+    if( _quality > max_quality ) _quality = max_quality;
 
-    double inv_quality = 1./quality;
+    double inv_quality = 1./_quality;
 
     // Encode header
     strm.putBytes( (const uchar*)jpegHeader, sizeof(jpegHeader) - 1 );
