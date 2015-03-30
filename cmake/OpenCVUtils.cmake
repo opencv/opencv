@@ -459,6 +459,19 @@ function(ocv_convert_to_lib_name var)
   set(${var} ${tmp} PARENT_SCOPE)
 endfunction()
 
+# create imported targets for a list of external libraries
+function(ocv_create_imported_targets var)
+  set(target_list "")
+
+  foreach(library ${ARGN})
+    ocv_convert_to_lib_name(libname "${library}")
+    add_library("opencv_dep_${libname}" UNKNOWN IMPORTED)
+    set_target_properties("opencv_dep_${libname}" PROPERTIES IMPORTED_LOCATION "${library}")
+    list(APPEND target_list "opencv_dep_${libname}")
+  endforeach()
+
+  set("${var}" "${target_list}" PARENT_SCOPE)
+endfunction()
 
 # add install command
 function(ocv_install_target)
