@@ -376,6 +376,9 @@ enum { CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integ
        CAP_INTELPERC_IMAGE                  = 3
      };
 
+enum { VIDEOWRITER_PROP_QUALITY = 1,    // Quality (0..100%) of the videostream encoded
+       VIDEOWRITER_PROP_FRAMEBYTES = 2, // (Read-only): Size of just encoded video frame
+     };
 
 class IVideoCapture;
 
@@ -586,9 +589,9 @@ public:
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
-private:
-    static Ptr<IVideoCapture> createCameraCapture(int index);
 };
+
+class IVideoWriter;
 
 /** @brief Video writer class.
  */
@@ -642,6 +645,25 @@ public:
      */
     CV_WRAP virtual void write(const Mat& image);
 
+    /** @brief Sets a property in the VideoWriter.
+
+     @param propId Property identifier. It can be one of the following:
+     -   **VIDEOWRITER_PROP_QUALITY** Quality (0..100%) of the videostream encoded. Can be adjusted dynamically in some codecs.
+     @param value Value of the property.
+     */
+    CV_WRAP virtual bool set(int propId, double value);
+
+    /** @brief Returns the specified VideoWriter property
+
+     @param propId Property identifier. It can be one of the following:
+     -   **VIDEOWRITER_PROP_QUALITY** Current quality of the encoded videostream.
+     -   **VIDEOWRITER_PROP_FRAMEBYTES** (Read-only) Size of just encoded video frame; note that the encoding order may be different from representation order.
+
+     **Note**: When querying a property that is not supported by the backend used by the VideoWriter
+     class, value 0 is returned.
+     */
+    CV_WRAP virtual double get(int propId) const;
+
     /** @brief Concatenates 4 chars to a fourcc code
 
     This static method constructs the fourcc code of the codec to be used in the constructor
@@ -651,6 +673,10 @@ public:
 
 protected:
     Ptr<CvVideoWriter> writer;
+    Ptr<IVideoWriter> iwriter;
+
+    static Ptr<IVideoWriter> create(const String& filename, int fourcc, double fps,
+                                    Size frameSize, bool isColor = true);
 };
 
 template<> CV_EXPORTS void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const;
