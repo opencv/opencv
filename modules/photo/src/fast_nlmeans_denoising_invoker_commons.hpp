@@ -66,7 +66,7 @@ template <typename ET, int n> struct pixelInfo_<Vec<ET, n> >
 
 template <typename T> struct pixelInfo: public pixelInfo_<T>
 {
-    using typename pixelInfo_<T>::sampleType;
+    typedef typename pixelInfo_<T>::sampleType sampleType;
 
     static inline sampleType sampleMax()
     {
