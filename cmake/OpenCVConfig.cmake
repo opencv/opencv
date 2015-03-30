@@ -47,7 +47,7 @@ endif()
 
 if(NOT DEFINED OpenCV_STATIC)
   # look for global setting
-  if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+  if(BUILD_SHARED_LIBS)
     set(OpenCV_STATIC OFF)
   else()
     set(OpenCV_STATIC ON)
