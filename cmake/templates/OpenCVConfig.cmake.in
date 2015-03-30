@@ -236,7 +236,7 @@ foreach(__opttype OPT DBG)
   SET(OpenCV_EXTRA_LIBS_${__opttype} "")
 endforeach()
 
-# CUDA
+# Configure CUDA targets
 if(OpenCV_CUDA_VERSION)
   if(NOT CUDA_FOUND)
     find_host_package(CUDA ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
@@ -273,16 +273,15 @@ if(OpenCV_CUDA_VERSION)
     list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_nvcuvenc_LIBRARIES})
   endif()
 
-  set(OpenCV_CUDA_LIBS_RELPATH "")
   foreach(l ${OpenCV_CUDA_LIBS_ABSPATH})
-    get_filename_component(_tmp ${l} PATH)
-    list(APPEND OpenCV_CUDA_LIBS_RELPATH ${_tmp})
+    get_filename_component(_tmp "${l}" NAME_WE)
+    string(REGEX REPLACE "^lib" "" _tmp "${_tmp}")
+    if(NOT TARGET "opencv_dep_${_tmp}") # protect against repeated inclusions
+      add_library("opencv_dep_${_tmp}" UNKNOWN IMPORTED)
+      set_target_properties("opencv_dep_${_tmp}" PROPERTIES IMPORTED_LOCATION "${l}")
+    endif()
   endforeach()
-
-  list(REMOVE_DUPLICATES OpenCV_CUDA_LIBS_RELPATH)
-  link_directories(${OpenCV_CUDA_LIBS_RELPATH})
 endif()
-
 
 # ==============================================================
 #  Android camera helper macro
