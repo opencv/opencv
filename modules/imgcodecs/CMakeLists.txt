@@ -1,7 +1,3 @@
-if(WINRT)
-  ocv_module_disable(imgcodecs)
-endif()
-
 set(the_description "Image codecs")
 ocv_add_module(imgcodecs opencv_imgproc WRAP java python)
 
