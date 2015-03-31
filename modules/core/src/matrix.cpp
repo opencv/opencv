@@ -2690,6 +2690,28 @@ InputOutputArray noArray() { return _none; }
                                         Matrix Operations
 \*************************************************************************************************/
 
+void meshgrid(InputArray _xgv, InputArray _ygv, OutputArray _X, OutputArray _Y)
+{
+    Mat xgv = _xgv.getMat();
+    Mat ygv = _ygv.getMat();
+
+    cv::repeat(xgv.reshape(1,1), ygv.total(), 1, _X);
+    cv::repeat(ygv.reshape(1,1).t(), 1, xgv.total(), _Y);
+}
+
+void meshgrid(const cv::Range &xgv, const cv::Range &ygv, OutputArray _X, OutputArray _Y)
+{
+    vector<double> t_x, t_y;
+    for (int i = xgv.start; i <= xgv.end; i++) t_x.push_back(i);
+    for (int i = ygv.start; i <= ygv.end; i++) t_y.push_back(i);
+
+    Mat __X, __Y;
+    meshgrid(cv::Mat(t_x), cv::Mat(t_y), __X, __Y);
+
+    Mat(__X).copyTo(_X);
+    Mat(__Y).copyTo(_Y);
+}
+
 void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
     if( nsrc == 0 || !src )

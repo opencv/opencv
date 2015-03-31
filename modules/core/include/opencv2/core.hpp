@@ -985,6 +985,68 @@ horizontal axis.
   */
 CV_EXPORTS Mat repeat(const Mat& src, int ny, int nx);
 
+/** @brief Create a rectangular grid from two grid vectors/arrays
+
+Replicates the grid vectors xgv and ygv to produce a full grid. This grid is represented by the output coordinate arrays X and Y. The output coordinate arrays X and Y contain copies of the grid vectors/arrays xgv and ygv respectively. The sizes of the output arrays are determined by the length of the grid vectors/arrays. For grid vectors xgv and ygv of length M and N respectively, X and Y will have N rows and M columns.
+@code{.cpp}
+    vector<float> x = {-3, -2, -1, 0, 1, 2, 3};
+    vector<float> y = {-3, -2, -1, 0, 1, 2};
+    //or
+    //Mat_<float> x = (Mat_<float>(1, 7) << -3, -2, -1, 0, 1, 2, 3);
+    //Mat_<float> y = (Mat_<float>(1, 6) << -3, -2, -1, 0, 1, 2);
+
+    cv::Mat1f X, Y;
+    meshgrid(x, y, X, Y);
+    //X:
+    //[-3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3]
+
+    //Y:
+    //[-3, -3, -3, -3, -3, -3, -3;
+    // -2, -2, -2, -2, -2, -2, -2;
+    // -1, -1, -1, -1, -1, -1, -1;
+    //  0,  0,  0,  0,  0,  0,  0;
+    //  1,  1,  1,  1,  1,  1,  1;
+    //  2,  2,  2,  2,  2,  2,  2]
+@endcode
+@param xgv grid vector/array specifying a series of grid point coordinates in the x direction.
+@param ygv grid vector/array specifying a series of grid point coordinates in the y direction.
+@param X output array that specify the full grid, regarding the xgv input vector/array.
+@param Y output array that specify the full grid, regarding the ygv input vector/array.
+*/
+CV_EXPORTS void meshgrid(InputArray xgv, InputArray ygv, OutputArray X, OutputArray Y);
+
+/** @overload
+@code{.cpp}
+    cv::Mat1f X, Y;
+    meshgrid(cv::Range(-3,3), cv::Range(-3, 2), X, Y);
+    //X:
+    //[-3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3;
+    // -3, -2, -1, 0, 1, 2, 3]
+
+    //Y:
+    //[-3, -3, -3, -3, -3, -3, -3;
+    // -2, -2, -2, -2, -2, -2, -2;
+    // -1, -1, -1, -1, -1, -1, -1;
+    //  0,  0,  0,  0,  0,  0,  0;
+    //  1,  1,  1,  1,  1,  1,  1;
+    //  2,  2,  2,  2,  2,  2,  2]
+@endcode
+@param xgv monotonically increasing grid vector/array specifying a series of grid point coordinates in the x direction.
+@param ygv monotonically increasing grid vector/array specifying a series of grid point coordinates in the y direction.
+@param X output array that specify the full grid, regarding the xgv input vector/array.
+@param Y output array that specify the full grid, regarding the ygv input vector/array.
+*/
+CV_EXPORTS void meshgrid(const Range &xgv, const Range &ygv, OutputArray X, OutputArray Y);
+
 /** @brief Applies horizontal concatenation to given matrices.
 
 The function horizontally concatenates two or more cv::Mat matrices (with the same number of rows).
