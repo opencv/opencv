@@ -983,8 +983,9 @@ if(DEFINED WITH_V4L)
   else()
     set(HAVE_CAMV4L2_STR "NO")
   endif()
-  status("    V4L/V4L2:"       HAVE_LIBV4L         THEN "Using libv4l (ver ${ALIASOF_libv4l1_VERSION})"
-                                                   ELSE "${HAVE_CAMV4L_STR}/${HAVE_CAMV4L2_STR}")
+  status("    V4L/V4L2:"       HAVE_LIBV4L
+             THEN "Using libv4l1 (ver ${ALIASOF_libv4l1_VERSION}) / libv4l2 (ver ${ALIASOF_libv4l2_VERSION})"
+             ELSE "${HAVE_CAMV4L_STR}/${HAVE_CAMV4L2_STR}")
 endif(DEFINED WITH_V4L)
 
 if(DEFINED WITH_DSHOW)
