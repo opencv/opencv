@@ -107,7 +107,7 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap2
                     cvtColor(src, tmp, COLOR_GRAY2RGBA);
                 } else if(src.type() == CV_8UC3){
                     LOGD("nMatToBitmap: CV_8UC3 -> RGBA_8888");
-                    cvtColor(src, tmp, COLOR_RGB2RGBA);
+                    cvtColor(src, tmp, COLOR_BGR2RGBA);
                 } else if(src.type() == CV_8UC4){
                     LOGD("nMatToBitmap: CV_8UC4 -> RGBA_8888");
                     if(needPremultiplyAlpha) cvtColor(src, tmp, COLOR_RGBA2mRGBA);
