@@ -65,35 +65,6 @@
 
 #include "XnCppWrapper.h"
 
-const cv::String XMLConfig =
-"<OpenNI>"
-        "<Licenses>"
-        "<License vendor=\"PrimeSense\" key=\"0KOIk2JeIBYClPWVnMoRKn5cdY4=\"/>"
-        "</Licenses>"
-        "<Log writeToConsole=\"false\" writeToFile=\"false\">"
-                "<LogLevel value=\"3\"/>"
-                "<Masks>"
-                        "<Mask name=\"ALL\" on=\"true\"/>"
-                "</Masks>"
-                "<Dumps>"
-                "</Dumps>"
-        "</Log>"
-        "<ProductionNodes>"
-                "<Node type=\"Image\" name=\"Image1\" stopOnError=\"false\">"
-                        "<Configuration>"
-                                "<MapOutputMode xRes=\"640\" yRes=\"480\" FPS=\"30\"/>"
-                                "<Mirror on=\"false\"/>"
-                        "</Configuration>"
-                "</Node> "
-                "<Node type=\"Depth\" name=\"Depth1\">"
-                        "<Configuration>"
-                                "<MapOutputMode xRes=\"640\" yRes=\"480\" FPS=\"30\"/>"
-                                "<Mirror on=\"false\"/>"
-                        "</Configuration>"
-                "</Node>"
-        "</ProductionNodes>"
-"</OpenNI>\n";
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class ApproximateSyncGrabber
 {
@@ -429,7 +400,7 @@ private:
 class CvCapture_OpenNI : public CvCapture
 {
 public:
-    enum { DEVICE_DEFAULT=0, DEVICE_MS_KINECT=0, DEVICE_ASUS_XTION=1, DEVICE_MAX=1 };
+    enum { DEVICE_DEFAULT=0, DEVICE_MS_KINECT=0, DEVICE_ASUS_XTION=1, DEVICE_MS_KINECT_IR=2, DEVICE_MAX=2 };
 
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
@@ -463,7 +434,7 @@ protected:
         IplImage iplHeader;
     };
 
-    static const int outputMapsTypesCount = 7;
+    static const int outputMapsTypesCount = 8;
 
     static XnMapOutputMode defaultMapOutputMode();
 
@@ -474,6 +445,7 @@ protected:
     IplImage* retrieveValidDepthMask();
     IplImage* retrieveBGRImage();
     IplImage* retrieveGrayImage();
+    IplImage* retrieveIRImage();
 
     bool readCamerasParams();
 
@@ -481,6 +453,8 @@ protected:
     bool setDepthGeneratorProperty(int propIdx, double propVal);
     double getImageGeneratorProperty(int propIdx) const;
     bool setImageGeneratorProperty(int propIdx, double propVal);
+    double getIRGeneratorProperty(int propIdx) const;
+    bool setIRGeneratorProperty(int propIdx, double propVal);
     double getCommonProperty(int propIdx) const;
     bool setCommonProperty(int propIdx, double propVal);
 
@@ -496,6 +470,9 @@ protected:
 
     xn::ImageGenerator imageGenerator;
     xn::ImageMetaData  imageMetaData;
+
+    xn::IRGenerator irGenerator;
+    xn::IRMetaData  irMetaData;
 
     int maxBufferSize, maxTimeDuration; // for approx sync
     bool isCircleBuffer;
@@ -592,28 +569,14 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         return;
     }
 
-    xn::ScriptNode scriptNode;
-    status = context.RunXmlScript( XMLConfig.c_str(), scriptNode );
+    XnLicense license={"PrimeSense","0KOIk2JeIBYClPWVnMoRKn5cdY4="};
+    status = context.AddLicense(license);
     if( status != XN_STATUS_OK )
     {
-        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to run xml script: %s\n", xnGetStatusString(status));
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to add license: %s\n", xnGetStatusString(status));
         return;
     }
 
-    // Associate generators with context.
-    // enumerate the nodes to find if depth generator is present
-    xn::NodeInfoList depthList;
-    status = context.EnumerateExistingNodes( depthList, XN_NODE_TYPE_DEPTH );
-    if( status != XN_STATUS_OK )
-    {
-        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate depth generators: %s\n", xnGetStatusString(status));
-        return;
-    }
-    if( depthList.IsEmpty() )
-    {
-        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : The device doesn't have depth generator. Such devices aren't supported now.\n");
-        return;
-    }
     status = depthGenerator.Create( context );
     if( status != XN_STATUS_OK )
     {
@@ -621,21 +584,20 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         return;
     }
 
-    // enumerate the nodes to find if image generator is present
-    xn::NodeInfoList imageList;
-    status = context.EnumerateExistingNodes( imageList, XN_NODE_TYPE_IMAGE );
-    if( status != XN_STATUS_OK )
-    {
-        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate image generators: %s\n", xnGetStatusString(status));
-        return;
-    }
-
-    if( !imageList.IsEmpty() )
+    if( deviceType != DEVICE_MS_KINECT_IR )
     {
         status = imageGenerator.Create( context );
         if( status != XN_STATUS_OK )
         {
             fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create image generator: %s\n", xnGetStatusString(status));
+        }
+    }
+    else
+    {
+        status = irGenerator.Create( context );
+        if( status != XN_STATUS_OK )
+        {
+            fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create ir generator: %s\n", xnGetStatusString(status));
             return;
         }
     }
@@ -649,6 +611,11 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     {
         CV_Assert( imageGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK );
     }
+    if( irGenerator.IsValid() )
+    {
+        CV_Assert( irGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK );
+    }
+
 
     if( deviceType == DEVICE_ASUS_XTION )
     {
@@ -706,6 +673,7 @@ CvCapture_OpenNI::CvCapture_OpenNI(const char * filename)
 
     context.FindExistingNode( XN_NODE_TYPE_DEPTH, depthGenerator );
     context.FindExistingNode( XN_NODE_TYPE_IMAGE, imageGenerator );
+    context.FindExistingNode( XN_NODE_TYPE_IR, irGenerator );
 
     if( !readCamerasParams() )
     {
@@ -783,6 +751,10 @@ double CvCapture_OpenNI::getProperty( int propIdx ) const
         {
             propValue = getImageGeneratorProperty( purePropIdx );
         }
+        else if( (propIdx & CV_CAP_OPENNI_GENERATORS_MASK) == CV_CAP_OPENNI_IR_GENERATOR )
+        {
+            propValue = getIRGeneratorProperty( purePropIdx );
+        }
         else if( (propIdx & CV_CAP_OPENNI_GENERATORS_MASK) == CV_CAP_OPENNI_DEPTH_GENERATOR )
         {
             propValue = getDepthGeneratorProperty( purePropIdx );
@@ -806,6 +778,10 @@ bool CvCapture_OpenNI::setProperty( int propIdx, double propValue )
         if( (propIdx & CV_CAP_OPENNI_GENERATORS_MASK) == CV_CAP_OPENNI_IMAGE_GENERATOR )
         {
             isSet = setImageGeneratorProperty( purePropIdx, propValue );
+        }
+        else if( (propIdx & CV_CAP_OPENNI_GENERATORS_MASK) == CV_CAP_OPENNI_IR_GENERATOR )
+        {
+            isSet = setIRGeneratorProperty( purePropIdx, propValue );
         }
         else if( (propIdx & CV_CAP_OPENNI_GENERATORS_MASK) == CV_CAP_OPENNI_DEPTH_GENERATOR )
         {
@@ -1113,6 +1089,101 @@ bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue 
     return isSet;
 }
 
+double CvCapture_OpenNI::getIRGeneratorProperty( int propIdx ) const
+{
+    double propValue = 0.;
+    if( !irGenerator.IsValid() )
+        return propValue;
+
+    XnMapOutputMode mode;
+    switch( propIdx )
+    {
+    case CV_CAP_PROP_OPENNI_GENERATOR_PRESENT :
+        CV_DbgAssert( irGenerator.IsValid() );
+        propValue = 1.;
+        break;
+    case CV_CAP_PROP_FRAME_WIDTH :
+        if( irGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
+            propValue = mode.nXRes;
+        break;
+    case CV_CAP_PROP_FRAME_HEIGHT :
+        if( irGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
+            propValue = mode.nYRes;
+        break;
+    case CV_CAP_PROP_FPS :
+        if( irGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
+            propValue = mode.nFPS;
+        break;
+    case CV_CAP_PROP_POS_MSEC :
+        propValue = (double)irGenerator.GetTimestamp();
+        break;
+    case CV_CAP_PROP_POS_FRAMES :
+        propValue = (double)irGenerator.GetFrameID();
+        break;
+    default :
+        CV_Error( CV_StsBadArg, cv::format("IR generator does not support such parameter (propIdx=%d) for getting.\n", propIdx) );
+    }
+
+    return propValue;
+}
+
+bool CvCapture_OpenNI::setIRGeneratorProperty( int propIdx, double propValue )
+{
+    bool isSet = false;
+    if( !irGenerator.IsValid() )
+        return isSet;
+
+    switch( propIdx )
+    {
+    case CV_CAP_PROP_OPENNI_OUTPUT_MODE :
+    {
+        XnMapOutputMode mode;
+
+        switch( cvRound(propValue) )
+        {
+        case CV_CAP_OPENNI_VGA_30HZ :
+            mode.nXRes = XN_VGA_X_RES;
+            mode.nYRes = XN_VGA_Y_RES;
+            mode.nFPS = 30;
+            break;
+        case CV_CAP_OPENNI_SXGA_15HZ :
+            mode.nXRes = XN_SXGA_X_RES;
+            mode.nYRes = XN_SXGA_Y_RES;
+            mode.nFPS = 15;
+            break;
+        case CV_CAP_OPENNI_SXGA_30HZ :
+            mode.nXRes = XN_SXGA_X_RES;
+            mode.nYRes = XN_SXGA_Y_RES;
+            mode.nFPS = 30;
+            break;
+        case CV_CAP_OPENNI_QVGA_30HZ :
+             mode.nXRes = XN_QVGA_X_RES;
+             mode.nYRes = XN_QVGA_Y_RES;
+             mode.nFPS = 30;
+             break;
+        case CV_CAP_OPENNI_QVGA_60HZ :
+             mode.nXRes = XN_QVGA_X_RES;
+             mode.nYRes = XN_QVGA_Y_RES;
+             mode.nFPS = 60;
+             break;
+        default :
+            CV_Error( CV_StsBadArg, "Unsupported IR generator output mode.\n");
+        }
+
+        XnStatus status = irGenerator.SetMapOutputMode( mode );
+        if( status != XN_STATUS_OK )
+            fprintf(stderr, "CvCapture_OpenNI::setIRGeneratorProperty : %s\n", xnGetStatusString(status));
+        else
+            isSet = true;
+        break;
+    }
+    default:
+        CV_Error( CV_StsBadArg, cv::format("IR generator does not support such parameter (propIdx=%d) for setting.\n", propIdx) );
+    }
+
+    return isSet;
+}
+
 bool CvCapture_OpenNI::grabFrame()
 {
     if( !isOpened() )
@@ -1133,6 +1204,8 @@ bool CvCapture_OpenNI::grabFrame()
             depthGenerator.GetMetaData( depthMetaData );
         if( imageGenerator.IsValid() )
             imageGenerator.GetMetaData( imageMetaData );
+        if( irGenerator.IsValid() )
+            irGenerator.GetMetaData( irMetaData );
         isGrabbed = true;
     }
 
@@ -1312,6 +1385,27 @@ IplImage* CvCapture_OpenNI::retrieveGrayImage()
     return outputMaps[CV_CAP_OPENNI_GRAY_IMAGE].getIplImagePtr();
 }
 
+inline void getIRImageFromMetaData( const xn::IRMetaData& imageMetaData, cv::Mat& irImage )
+{
+    if( imageMetaData.PixelFormat() != XN_PIXEL_FORMAT_GRAYSCALE_16_BIT )
+        CV_Error( CV_StsUnsupportedFormat, "Unsupported format of grabbed image\n" );
+
+    irImage.create(imageMetaData.YRes(), imageMetaData.XRes(), CV_16UC1);
+    const XnIRPixel* pIRImage = imageMetaData.Data();
+
+    memcpy( irImage.data, pIRImage, irImage.total()*sizeof(XnIRPixel) );
+}
+
+IplImage* CvCapture_OpenNI::retrieveIRImage()
+{
+    if( !irMetaData.Data() )
+        return 0;
+
+    getIRImageFromMetaData( irMetaData, outputMaps[CV_CAP_OPENNI_IR_IMAGE].mat );
+
+    return outputMaps[CV_CAP_OPENNI_IR_IMAGE].getIplImagePtr();
+}
+
 IplImage* CvCapture_OpenNI::retrieveFrame( int outputType )
 {
     IplImage* image = 0;
@@ -1344,6 +1438,10 @@ IplImage* CvCapture_OpenNI::retrieveFrame( int outputType )
     else if( outputType == CV_CAP_OPENNI_GRAY_IMAGE )
     {
         image = retrieveGrayImage();
+    }
+    else if( outputType == CV_CAP_OPENNI_IR_IMAGE )
+    {
+        image = retrieveIRImage();
     }
 
     return image;

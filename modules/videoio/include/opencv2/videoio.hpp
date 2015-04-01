@@ -80,6 +80,7 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_PVAPI        = 800,   // PvAPI, Prosilica GigE SDK
        CAP_OPENNI       = 900,   // OpenNI (for Kinect)
        CAP_OPENNI_ASUS  = 910,   // OpenNI (for Asus Xtion)
+       CAP_OPENNI_IR    = 920,   // OpenNI (for Kinect IR mode)
        CAP_ANDROID      = 1000,  // Android
        CAP_XIAPI        = 1100,  // XIMEA Camera API
        CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
@@ -154,7 +155,8 @@ enum { CAP_PROP_DC1394_OFF                = -4, //turn the feature off (not cont
 // OpenNI map generators
 enum { CAP_OPENNI_DEPTH_GENERATOR = 1 << 31,
        CAP_OPENNI_IMAGE_GENERATOR = 1 << 30,
-       CAP_OPENNI_GENERATORS_MASK = CAP_OPENNI_DEPTH_GENERATOR + CAP_OPENNI_IMAGE_GENERATOR
+       CAP_OPENNI_IR_GENERATOR    = 1 << 29,
+       CAP_OPENNI_GENERATORS_MASK = CAP_OPENNI_DEPTH_GENERATOR + CAP_OPENNI_IMAGE_GENERATOR + CAP_OPENNI_IR_GENERATOR
      };
 
 // Properties of cameras available through OpenNI interfaces
@@ -178,6 +180,8 @@ enum { CAP_PROP_OPENNI_OUTPUT_MODE       = 100,
 // OpenNI shortcats
 enum { CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_GENERATOR_PRESENT,
        CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE     = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_OUTPUT_MODE,
+       CAP_OPENNI_IR_GENERATOR_PRESENT            = CAP_OPENNI_IR_GENERATOR + CAP_PROP_OPENNI_GENERATOR_PRESENT,
+       CAP_OPENNI_IR_GENERATOR_OUTPUT_MODE        = CAP_OPENNI_IR_GENERATOR + CAP_PROP_OPENNI_OUTPUT_MODE,
        CAP_OPENNI_DEPTH_GENERATOR_BASELINE        = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_BASELINE,
        CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH    = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_FOCAL_LENGTH,
        CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION    = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_REGISTRATION,
@@ -193,7 +197,9 @@ enum { CAP_OPENNI_DEPTH_MAP         = 0, // Depth values in mm (CV_16UC1)
 
        // Data given from RGB image generator
        CAP_OPENNI_BGR_IMAGE         = 5,
-       CAP_OPENNI_GRAY_IMAGE        = 6
+       CAP_OPENNI_GRAY_IMAGE        = 6,
+       // Data given from IR image generator
+       CAP_OPENNI_IR_IMAGE          = 7
      };
 
 // Supported output modes of OpenNI image generator
