@@ -257,6 +257,11 @@ if(MSVC)
   endif()
 endif()
 
+if(MSVC12 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /FS")
+  set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /FS")
+endif()
+
 # Extra link libs if the user selects building static libs:
 if(NOT BUILD_SHARED_LIBS AND ((CMAKE_COMPILER_IS_GNUCXX AND NOT ANDROID) OR QNX))
   # Android does not need these settings because they are already set by toolchain file
