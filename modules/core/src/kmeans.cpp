@@ -235,7 +235,7 @@ double cv::kmeans( InputArray _data, int K,
     _bestLabels.create(N, 1, CV_32S, -1, true);
 
     Mat _labels, best_labels = _bestLabels.getMat();
-    if( flags & CV_KMEANS_USE_INITIAL_LABELS )
+    if( flags & KMEANS_USE_INITIAL_LABELS )
     {
         CV_Assert( (best_labels.cols == 1 || best_labels.rows == 1) &&
                   best_labels.cols*best_labels.rows == N &&
@@ -249,15 +249,16 @@ double cv::kmeans( InputArray _data, int K,
              best_labels.cols*best_labels.rows == N &&
             best_labels.type() == CV_32S &&
             best_labels.isContinuous()))
+        {
             best_labels.create(N, 1, CV_32S);
+        }
         _labels.create(best_labels.size(), best_labels.type());
     }
     int* labels = _labels.ptr<int>();
 
     Mat centers(K, dims, type), old_centers(K, dims, type), temp(1, dims, type);
     std::vector<int> counters(K);
-    std::vector<Vec2f> _box(dims);
-    Vec2f* box = &_box[0];
+    std::vector<Vec2f> box(dims);
     double best_compactness = DBL_MAX, compactness = 0;
     RNG& rng = theRNG();
     int a, iter, i, j, k;
@@ -294,6 +295,12 @@ double cv::kmeans( InputArray _data, int K,
         }
     }
 
+    if(flags & KMEANS_USE_INITIAL_LABELS)
+    {
+        for( i = 0; i < N; i++ )
+            CV_Assert( (unsigned)labels[i] < (unsigned)K );
+    }
+
     for( a = 0; a < attempts; a++ )
     {
         double max_center_shift = DBL_MAX;
@@ -308,17 +315,11 @@ double cv::kmeans( InputArray _data, int K,
                 else
                 {
                     for( k = 0; k < K; k++ )
-                        generateRandomCenter(_box, centers.ptr<float>(k), rng);
+                        generateRandomCenter(box, centers.ptr<float>(k), rng);
                 }
             }
             else
             {
-                if( iter == 0 && a == 0 && (flags & KMEANS_USE_INITIAL_LABELS) )
-                {
-                    for( i = 0; i < N; i++ )
-                        CV_Assert( (unsigned)labels[i] < (unsigned)K );
-                }
-
                 // compute centers
                 centers = Scalar(0);
                 for( k = 0; k < K; k++ )
@@ -329,24 +330,7 @@ double cv::kmeans( InputArray _data, int K,
                     sample = data.ptr<float>(i);
                     k = labels[i];
                     float* center = centers.ptr<float>(k);
-                    j=0;
-                    #if CV_ENABLE_UNROLLED
-                    for(; j <= dims - 4; j += 4 )
-                    {
-                        float t0 = center[j] + sample[j];
-                        float t1 = center[j+1] + sample[j+1];
-
-                        center[j] = t0;
-                        center[j+1] = t1;
-
-                        t0 = center[j+2] + sample[j+2];
-                        t1 = center[j+3] + sample[j+3];
-
-                        center[j+2] = t0;
-                        center[j+3] = t1;
-                    }
-                    #endif
-                    for( ; j < dims; j++ )
+                    for( j=0 ; j < dims; j++ )
                         center[j] += sample[j];
                     counters[k]++;
                 }
@@ -428,7 +412,7 @@ double cv::kmeans( InputArray _data, int K,
                 }
             }
 
-            if( ++iter == MAX(criteria.maxCount, 2) || max_center_shift <= criteria.epsilon )
+            if( ++iter == std::max(criteria.maxCount, 2) || max_center_shift <= criteria.epsilon )
                 break;
 
             // assign labels
