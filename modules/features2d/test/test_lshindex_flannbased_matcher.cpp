@@ -62,13 +62,12 @@
 #define SHOW_DEBUG_LOG true
 
 #if CV_MAJOR_VERSION==2
-#define OrbCreate new ORB(4000)
+#define OrbCreate new cv::ORB(4000)
 #elif CV_MAJOR_VERSION==3
-#define OrbCreate ORB::create(4000)
-#define AKazeCreate AKAZE::create()
+#define OrbCreate cv::ORB::create(4000)
+#define AKazeCreate cv::AKAZE::create()
 #endif
 
-using namespace cv;
 using namespace std;
 
 int testno_for_make_filename = 0;
@@ -80,9 +79,9 @@ class testparam
 {
 public:
     string transname;
-    void(*transfunc)(float, const Mat&, Mat&);
+    void(*transfunc)(float, const cv::Mat&, cv::Mat&);
     float from, to, step;
-    testparam(string _transname, void(*_transfunc)(float, const Mat&, Mat&), float _from, float _to, float _step) :
+    testparam(string _transname, void(*_transfunc)(float, const cv::Mat&, cv::Mat&), float _from, float _to, float _step) :
         transname(_transname),
         transfunc(_transfunc),
         from(_from),
@@ -94,7 +93,7 @@ public:
 // --------------------------------------------------------------------------------------
 // from matching_to_many_images.cpp
 // --------------------------------------------------------------------------------------
-int maskMatchesByTrainImgIdx(const vector<DMatch>& matches, int trainImgIdx, vector<char>& mask)
+int maskMatchesByTrainImgIdx(const vector<cv::DMatch>& matches, int trainImgIdx, vector<char>& mask)
 {
     int matchcnt = 0;
     mask.resize(matches.size());
@@ -110,7 +109,7 @@ int maskMatchesByTrainImgIdx(const vector<DMatch>& matches, int trainImgIdx, vec
     return matchcnt;
 }
 
-int calcHomographyAndInlierCount(const vector<KeyPoint>& query_kp, const vector<KeyPoint>& train_kp, const vector<DMatch>& match, vector<char> &mask, Mat &homography)
+int calcHomographyAndInlierCount(const vector<cv::KeyPoint>& query_kp, const vector<cv::KeyPoint>& train_kp, const vector<cv::DMatch>& match, vector<char> &mask, cv::Mat &homography)
 {
     // make query and current train image keypoint pairs
     std::vector<cv::Point2f> srcPoints, dstPoints;
@@ -124,7 +123,7 @@ int calcHomographyAndInlierCount(const vector<KeyPoint>& query_kp, const vector<
     }
     // calc homography
     vector<uchar> inlierMask;
-    homography = findHomography(srcPoints, dstPoints, RANSAC, 3.0, inlierMask);
+    homography = findHomography(srcPoints, dstPoints, cv::RANSAC, 3.0, inlierMask);
 
     // update outlier mask
     int j = 0;
@@ -152,19 +151,19 @@ int calcHomographyAndInlierCount(const vector<KeyPoint>& query_kp, const vector<
     return inlierCnt;
 }
 
-void drawDetectedRectangle(Mat& imgResult, const Mat& homography, const Mat& imgQuery)
+void drawDetectedRectangle(cv::Mat& imgResult, const cv::Mat& homography, const cv::Mat& imgQuery)
 {
-    std::vector<Point2f> query_corners(4);
-    query_corners[0] = Point(0, 0);
-    query_corners[1] = Point(imgQuery.cols, 0);
-    query_corners[2] = Point(imgQuery.cols, imgQuery.rows);
-    query_corners[3] = Point(0, imgQuery.rows);
-    std::vector<Point2f> train_corners(4);
+    std::vector<cv::Point2f> query_corners(4);
+    query_corners[0] = cv::Point(0, 0);
+    query_corners[1] = cv::Point(imgQuery.cols, 0);
+    query_corners[2] = cv::Point(imgQuery.cols, imgQuery.rows);
+    query_corners[3] = cv::Point(0, imgQuery.rows);
+    std::vector<cv::Point2f> train_corners(4);
     perspectiveTransform(query_corners, train_corners, homography);
-    line(imgResult, train_corners[0] + query_corners[1], train_corners[1] + query_corners[1], Scalar(0, 255, 0), 4);
-    line(imgResult, train_corners[1] + query_corners[1], train_corners[2] + query_corners[1], Scalar(0, 255, 0), 4);
-    line(imgResult, train_corners[2] + query_corners[1], train_corners[3] + query_corners[1], Scalar(0, 255, 0), 4);
-    line(imgResult, train_corners[3] + query_corners[1], train_corners[0] + query_corners[1], Scalar(0, 255, 0), 4);
+    line(imgResult, train_corners[0] + query_corners[1], train_corners[1] + query_corners[1], cv::Scalar(0, 255, 0), 4);
+    line(imgResult, train_corners[1] + query_corners[1], train_corners[2] + query_corners[1], cv::Scalar(0, 255, 0), 4);
+    line(imgResult, train_corners[2] + query_corners[1], train_corners[3] + query_corners[1], cv::Scalar(0, 255, 0), 4);
+    line(imgResult, train_corners[3] + query_corners[1], train_corners[0] + query_corners[1], cv::Scalar(0, 255, 0), 4);
 }
 
 // --------------------------------------------------------------------------------------
@@ -179,55 +178,55 @@ typedef struct tagTrainInfo
 }TrainInfo;
 
 TrainInfo transImgAndTrain(
-    Feature2D *fe,
-    DescriptorMatcher *matcher,
+    cv::Feature2D *fe,
+    cv::DescriptorMatcher *matcher,
     const string &matchername,
-    const Mat& imgQuery, const vector<KeyPoint>& query_kp, const Mat& query_desc,
-    const vector<Mat>& imgOutliers, const vector<vector<KeyPoint> >& outliers_kp, const vector<Mat>& outliers_desc, const int totalOutlierDescCnt,
+    const cv::Mat& imgQuery, const vector<cv::KeyPoint>& query_kp, const cv::Mat& query_desc,
+    const vector<cv::Mat>& imgOutliers, const vector<vector<cv::KeyPoint> >& outliers_kp, const vector<cv::Mat>& outliers_desc, const int totalOutlierDescCnt,
     const float t, const testparam *tp,
     const int testno, const bool bVerboseOutput, const bool bSaveDrawMatches)
 {
     TrainInfo ti;
 
     // transform query image
-    Mat imgTransform;
+    cv::Mat imgTransform;
     (tp->transfunc)(t, imgQuery, imgTransform);
 
     // extract kp and compute desc from transformed query image
-    vector<KeyPoint> trans_query_kp;
-    Mat trans_query_desc;
+    vector<cv::KeyPoint> trans_query_kp;
+    cv::Mat trans_query_desc;
 #if CV_MAJOR_VERSION==2
-    (*fe)(imgTransform, Mat(), trans_query_kp, trans_query_desc);
+    (*fe)(imgTransform, cv::Mat(), trans_query_kp, trans_query_desc);
 #elif CV_MAJOR_VERSION==3
     fe->detectAndCompute(imgTransform, Mat(), trans_query_kp, trans_query_desc);
 #endif
     // add&train transformed query desc and outlier desc
     matcher->clear();
-    matcher->add(vector<Mat>(1, trans_query_desc));
-    double s = (double)getTickCount();
+    matcher->add(vector<cv::Mat>(1, trans_query_desc));
+    double s = (double)cv::getTickCount();
     matcher->train();
-    ti.traintime = 1000.0*((double)getTickCount() - s) / getTickFrequency();
+    ti.traintime = 1000.0*((double)cv::getTickCount() - s) / cv::getTickFrequency();
     ti.traindesccnt = trans_query_desc.rows;
 #if defined(TRAIN_WITH_OUTLIER_IMAGES)
     // same as matcher->add(outliers_desc); matcher->train();
     for (unsigned int i = 0; i < outliers_desc.size(); ++i)
     {
-        matcher->add(vector<Mat>(1, outliers_desc[i]));
-        s = (double)getTickCount();
+        matcher->add(vector<cv::Mat>(1, outliers_desc[i]));
+        s = (double)cv::getTickCount();
         matcher->train();
-        ti.traintime += 1000.0*((double)getTickCount() - s) / getTickFrequency();
+        ti.traintime += 1000.0*((double)cv::getTickCount() - s) / cv::getTickFrequency();
     }
     ti.traindesccnt += totalOutlierDescCnt;
 #endif
     // matching
-    vector<DMatch> match;
-    s = (double)getTickCount();
+    vector<cv::DMatch> match;
+    s = (double)cv::getTickCount();
     matcher->match(query_desc, match);
-    ti.matchtime = 1000.0*((double)getTickCount() - s) / getTickFrequency();
+    ti.matchtime = 1000.0*((double)cv::getTickCount() - s) / cv::getTickFrequency();
 
     // prepare a directory and variables for save matching images
     vector<char> mask;
-    Mat imgResult;
+    cv::Mat imgResult;
     const char resultDir[] = "result";
     if (bSaveDrawMatches)
     {
@@ -241,10 +240,10 @@ TrainInfo transImgAndTrain(
     // save query vs transformed query matching image with detected rectangle
     matchcnt = maskMatchesByTrainImgIdx(match, (int)0, mask);
     // calc homography and inlier
-    Mat homography;
+    cv::Mat homography;
     int inlierCnt = calcHomographyAndInlierCount(query_kp, trans_query_kp, match, mask, homography);
     ti.accuracy = (double)inlierCnt / (double)mask.size()*100.0;
-    drawMatches(imgQuery, query_kp, imgTransform, trans_query_kp, match, imgResult, Scalar::all(-1), Scalar::all(128), mask, DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+    drawMatches(imgQuery, query_kp, imgTransform, trans_query_kp, match, imgResult, cv::Scalar::all(-1), cv::Scalar::all(128), mask, cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
     if (inlierCnt)
     {
         // draw detected rectangle
@@ -252,7 +251,7 @@ TrainInfo transImgAndTrain(
     }
     // draw status
     sprintf(buff, "%s accuracy:%-3.2f%% %d descriptors training time:%-3.2fms matching :%-3.2fms", matchername.c_str(), ti.accuracy, ti.traindesccnt, ti.traintime, ti.matchtime);
-    putText(imgResult, buff, Point(0, 12), FONT_HERSHEY_PLAIN, 0.8, Scalar(0., 0., 255.));
+    putText(imgResult, buff, cv::Point(0, 12), cv::FONT_HERSHEY_PLAIN, 0.8, cv::Scalar(0., 0., 255.));
     sprintf(buff, "%s/res%03d_%s_%s%.1f_inlier.png", resultDir, testno, matchername.c_str(), tp->transname.c_str(), t);
     if (bSaveDrawMatches && !imwrite(buff, imgResult)) cout << "Image " << buff << " can not be saved (may be because directory " << resultDir << " does not exist)." << endl;
 
@@ -261,9 +260,9 @@ TrainInfo transImgAndTrain(
     for (unsigned int i = 0; i <imgOutliers.size(); ++i)
     {
         matchcnt = maskMatchesByTrainImgIdx(match, (int)i + 1, mask);
-        drawMatches(imgQuery, query_kp, imgOutliers[i], outliers_kp[i], match, imgResult, Scalar::all(-1), Scalar::all(128), mask);//  , DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        drawMatches(imgQuery, query_kp, imgOutliers[i], outliers_kp[i], match, imgResult, cv::Scalar::all(-1), cv::Scalar::all(128), mask);//  , DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
         sprintf(buff, "query_num:%d train_num:%d matched:%d %d descriptors training time:%-3.2fms matching :%-3.2fms", (int)query_kp.size(), (int)outliers_kp[i].size(), matchcnt, ti.traindesccnt, ti.traintime, ti.matchtime);
-        putText(imgResult, buff, Point(0, 12), FONT_HERSHEY_PLAIN, 0.8, Scalar(0., 0., 255.));
+        putText(imgResult, buff, cv::Point(0, 12), cv::FONT_HERSHEY_PLAIN, 0.8, cv::Scalar(0., 0., 255.));
         sprintf(buff, "%s/res%03d_%s_%s%.1f_outlier%02d.png", resultDir, testno, matchername.c_str(), tp->transname.c_str(), t, i);
         if (bSaveDrawMatches && !imwrite(buff, imgResult)) cout << "Image " << buff << " can not be saved (may be because directory " << resultDir << " does not exist)." << endl;
     }
@@ -285,16 +284,16 @@ private:
 
     testparam *tp;
     double target_accuracy_margin_from_bfmatcher;
-    Feature2D* fe;                  // feature detector extractor
+    cv::Feature2D* fe;                  // feature detector extractor
 
-    DescriptorMatcher* bfmatcher;   // brute force matcher for accuracy of reference
-    DescriptorMatcher* flmatcher;   // flann matcher to test
-    Mat imgQuery;                       // query image
-    vector<Mat> imgOutliers;            // outlier image
-    vector<KeyPoint> query_kp;          // query key points detect from imgQuery
-    Mat query_desc;                     // query descriptors extract from imgQuery
-    vector<vector<KeyPoint> > outliers_kp;
-    vector<Mat> outliers_desc;
+    cv::DescriptorMatcher* bfmatcher;   // brute force matcher for accuracy of reference
+    cv::DescriptorMatcher* flmatcher;   // flann matcher to test
+    cv::Mat imgQuery;                       // query image
+    vector<cv::Mat> imgOutliers;            // outlier image
+    vector<cv::KeyPoint> query_kp;          // query key points detect from imgQuery
+    cv::Mat query_desc;                     // query descriptors extract from imgQuery
+    vector<vector<cv::KeyPoint> > outliers_kp;
+    vector<cv::Mat> outliers_desc;
     int totalOutlierDescCnt;
 
     string flmatchername;
@@ -304,7 +303,7 @@ public:
     //
     // constructor
     //
-    CV_FeatureDetectorMatcherBaseTest(testparam* _tp, double _accuracy_margin, Feature2D* _fe, DescriptorMatcher *_flmatcher, string _flmatchername, int norm_type_for_bfmatcher) :
+    CV_FeatureDetectorMatcherBaseTest(testparam* _tp, double _accuracy_margin, cv::Feature2D* _fe, cv::DescriptorMatcher *_flmatcher, string _flmatchername, int norm_type_for_bfmatcher) :
         tp(_tp),
         target_accuracy_margin_from_bfmatcher(_accuracy_margin),
         fe(_fe),
@@ -316,7 +315,7 @@ public:
         srand((unsigned int)time(0));
 #endif
         // create brute force matcher for accuracy of reference
-        bfmatcher = new BFMatcher(norm_type_for_bfmatcher);
+        bfmatcher = new cv::BFMatcher(norm_type_for_bfmatcher);
     }
 
     //
@@ -326,7 +325,7 @@ public:
     {
         // load query image
         string strQueryFile = string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png";
-        imgQuery = imread(strQueryFile, 0);
+        imgQuery = cv::imread(strQueryFile, 0);
         if (imgQuery.empty())
         {
             ts->printf(cvtest::TS::LOG, "Image %s can not be read.\n", strQueryFile.c_str());
@@ -339,7 +338,7 @@ public:
         for (unsigned int i = 0; i < sizeof(outliers) / sizeof(char*); i++)
         {
             string strOutlierFile = string(cvtest::TS::ptr()->get_data_path()) + "shared/" + outliers[i];
-            Mat imgOutlier = imread(strOutlierFile, 0);
+            cv::Mat imgOutlier = cv::imread(strOutlierFile, 0);
             if (imgQuery.empty())
             {
                 ts->printf(cvtest::TS::LOG, "Image %s can not be read.\n", strOutlierFile.c_str());
@@ -351,13 +350,13 @@ public:
 
         // extract and compute keypoints and descriptors from query image
 #if CV_MAJOR_VERSION==2
-        (*fe)(imgQuery, Mat(), query_kp, query_desc);
+        (*fe)(imgQuery, cv::Mat(), query_kp, query_desc);
 #elif CV_MAJOR_VERSION==3
         fe->detectAndCompute(imgQuery, Mat(), query_kp, query_desc);
 #endif
         // extract and compute keypoints and descriptors from outlier images
         fe->detect(imgOutliers, outliers_kp);
-        ((DescriptorExtractor*)fe)->compute(imgOutliers, outliers_kp, outliers_desc);
+        ((cv::DescriptorExtractor*)fe)->compute(imgOutliers, outliers_kp, outliers_desc);
         totalOutlierDescCnt = 0;
         for (unsigned int i = 0; i < outliers_desc.size(); ++i) totalOutlierDescCnt += outliers_desc[i].rows;
 
@@ -438,17 +437,17 @@ public:
 // --------------------------------------------------------------------------------------
 // Transform Functions
 // --------------------------------------------------------------------------------------
-static void rotate(float deg, const Mat& src, Mat& dst)
+static void rotate(float deg, const cv::Mat& src, cv::Mat& dst)
 {
-    warpAffine(src, dst, getRotationMatrix2D(Point2f(src.cols / 2.0f, src.rows / 2.0f), deg, 1), src.size(), INTER_CUBIC);
+    cv::warpAffine(src, dst, getRotationMatrix2D(cv::Point2f(src.cols / 2.0f, src.rows / 2.0f), deg, 1), src.size(), cv::INTER_CUBIC);
 }
-static void scale(float scale, const Mat& src, Mat& dst)
+static void scale(float scale, const cv::Mat& src, cv::Mat& dst)
 {
-    resize(src, dst, Size((int)(src.cols*scale), (int)(src.rows*scale)), INTER_AREA);
+    cv::resize(src, dst, cv::Size((int)(src.cols*scale), (int)(src.rows*scale)), cv::INTER_CUBIC);
 }
-static void blur(float k, const Mat& src, Mat& dst)
+static void blur(float k, const cv::Mat& src, cv::Mat& dst)
 {
-    GaussianBlur(src, dst, Size((int)k, (int)k), 0);
+    GaussianBlur(src, dst, cv::Size((int)k, (int)k), 0);
 }
 
 // --------------------------------------------------------------------------------------
@@ -460,75 +459,75 @@ static void blur(float k, const Mat& src, Mat& dst)
 
 TEST(BlurredQueryFlannBasedLshShortKeyMatcherAdditionalTrainTest, accuracy)
 {
-    Ptr<Feature2D> fe = OrbCreate;
-    Ptr<FlannBasedMatcher> fl = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(1, 16, 2));
+    cv::Ptr<cv::Feature2D> fe = OrbCreate;
+    cv::Ptr<cv::FlannBasedMatcher> fl = cv::makePtr<cv::FlannBasedMatcher>(cv::makePtr<cv::flann::LshIndexParams>(1, 16, 2));
     testparam tp("blurred", blur, 1.0f, 11.0f, 2.0f);
-    CV_FeatureDetectorMatcherBaseTest test(&tp, SHORT_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 16, 2)", NORM_HAMMING);
+    CV_FeatureDetectorMatcherBaseTest test(&tp, SHORT_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 16, 2)", cv::NORM_HAMMING);
     test.safe_run();
 }
 TEST(BlurredQueryFlannBasedLshMiddleKeyMatcherAdditionalTrainTest, accuracy)
 {
-    Ptr<Feature2D> fe = OrbCreate;
-    Ptr<FlannBasedMatcher> fl = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(1, 24, 2));
+    cv::Ptr<cv::Feature2D> fe = OrbCreate;
+    cv::Ptr<cv::FlannBasedMatcher> fl = cv::makePtr<cv::FlannBasedMatcher>(cv::makePtr<cv::flann::LshIndexParams>(1, 24, 2));
     testparam tp("blurred", blur, 1.0f, 11.0f, 2.0f);
-    CV_FeatureDetectorMatcherBaseTest test(&tp, MIDDLE_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 24, 2)", NORM_HAMMING);
+    CV_FeatureDetectorMatcherBaseTest test(&tp, MIDDLE_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 24, 2)", cv::NORM_HAMMING);
     test.safe_run();
 }
 TEST(BlurredQueryFlannBasedLshLongKeyMatcherAdditionalTrainTest, accuracy)
 {
-    Ptr<Feature2D> fe = OrbCreate;
-    Ptr<FlannBasedMatcher> fl = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(1, 31, 2));
+    cv::Ptr<cv::Feature2D> fe = OrbCreate;
+    cv::Ptr<cv::FlannBasedMatcher> fl = cv::makePtr<cv::FlannBasedMatcher>(cv::makePtr<cv::flann::LshIndexParams>(1, 31, 2));
     testparam tp("blurred", blur, 1.0f, 11.0f, 2.0f);
-    CV_FeatureDetectorMatcherBaseTest test(&tp, LONG_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 31, 2)", NORM_HAMMING);
+    CV_FeatureDetectorMatcherBaseTest test(&tp, LONG_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 31, 2)", cv::NORM_HAMMING);
     test.safe_run();
 }
 
 TEST(ScaledQueryFlannBasedLshShortKeyMatcherAdditionalTrainTest, accuracy)
 {
-    Ptr<Feature2D> fe = OrbCreate;
-    Ptr<FlannBasedMatcher> fl = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(1, 16, 2));
+    cv::Ptr<cv::Feature2D> fe = OrbCreate;
+    cv::Ptr<cv::FlannBasedMatcher> fl = cv::makePtr<cv::FlannBasedMatcher>(cv::makePtr<cv::flann::LshIndexParams>(1, 16, 2));
     testparam tp("scaled", scale, 0.5f, 1.5f, 0.1f);
-    CV_FeatureDetectorMatcherBaseTest test(&tp, SHORT_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 16, 2)", NORM_HAMMING);
+    CV_FeatureDetectorMatcherBaseTest test(&tp, SHORT_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 16, 2)", cv::NORM_HAMMING);
     test.safe_run();
 }
 TEST(ScaledQueryFlannBasedLshMiddleKeyMatcherAdditionalTrainTest, accuracy)
 {
-    Ptr<Feature2D> fe = OrbCreate;
-    Ptr<FlannBasedMatcher> fl = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(1, 24, 2));
+    cv::Ptr<cv::Feature2D> fe = OrbCreate;
+    cv::Ptr<cv::FlannBasedMatcher> fl = cv::makePtr<cv::FlannBasedMatcher>(cv::makePtr<cv::flann::LshIndexParams>(1, 24, 2));
     testparam tp("scaled", scale, 0.5f, 1.5f, 0.1f);
-    CV_FeatureDetectorMatcherBaseTest test(&tp, MIDDLE_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 24, 2)", NORM_HAMMING);
+    CV_FeatureDetectorMatcherBaseTest test(&tp, MIDDLE_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 24, 2)", cv::NORM_HAMMING);
     test.safe_run();
 }
 TEST(ScaledQueryFlannBasedLshLongKeyMatcherAdditionalTrainTest, accuracy)
 {
-    Ptr<Feature2D> fe = OrbCreate;
-    Ptr<FlannBasedMatcher> fl = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(1, 31, 2));
+    cv::Ptr<cv::Feature2D> fe = OrbCreate;
+    cv::Ptr<cv::FlannBasedMatcher> fl = cv::makePtr<cv::FlannBasedMatcher>(cv::makePtr<cv::flann::LshIndexParams>(1, 31, 2));
     testparam tp("scaled", scale, 0.5f, 1.5f, 0.1f);
-    CV_FeatureDetectorMatcherBaseTest test(&tp, LONG_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 31, 2)", NORM_HAMMING);
+    CV_FeatureDetectorMatcherBaseTest test(&tp, LONG_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 31, 2)", cv::NORM_HAMMING);
     test.safe_run();
 }
 
 TEST(RotatedQueryFlannBasedLshShortKeyMatcherAdditionalTrainTest, accuracy)
 {
-    Ptr<Feature2D> fe = OrbCreate;
-    Ptr<FlannBasedMatcher> fl = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(1, 16, 2));
+    cv::Ptr<cv::Feature2D> fe = OrbCreate;
+    cv::Ptr<cv::FlannBasedMatcher> fl = cv::makePtr<cv::FlannBasedMatcher>(cv::makePtr<cv::flann::LshIndexParams>(1, 16, 2));
     testparam tp("rotated", rotate, 0.0f, 359.0f, 30.0f);
-    CV_FeatureDetectorMatcherBaseTest test(&tp, SHORT_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 16, 2)", NORM_HAMMING);
+    CV_FeatureDetectorMatcherBaseTest test(&tp, SHORT_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 16, 2)", cv::NORM_HAMMING);
     test.safe_run();
 }
 TEST(RotatedQueryFlannBasedLshMiddleKeyMatcherAdditionalTrainTest, accuracy)
 {
-    Ptr<Feature2D> fe = OrbCreate;
-    Ptr<FlannBasedMatcher> fl = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(1, 24, 2));
+    cv::Ptr<cv::Feature2D> fe = OrbCreate;
+    cv::Ptr<cv::FlannBasedMatcher> fl = cv::makePtr<cv::FlannBasedMatcher>(cv::makePtr<cv::flann::LshIndexParams>(1, 24, 2));
     testparam tp("rotated", rotate, 0.0f, 359.0f, 30.0f);
-    CV_FeatureDetectorMatcherBaseTest test(&tp, MIDDLE_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 24, 2)", NORM_HAMMING);
+    CV_FeatureDetectorMatcherBaseTest test(&tp, MIDDLE_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 24, 2)", cv::NORM_HAMMING);
     test.safe_run();
 }
 TEST(RotatedQueryFlannBasedLshLongKeyMatcherAdditionalTrainTest, accuracy)
 {
-    Ptr<Feature2D> fe = OrbCreate;
-    Ptr<FlannBasedMatcher> fl = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(1, 31, 2));
+    cv::Ptr<cv::Feature2D> fe = OrbCreate;
+    cv::Ptr<cv::FlannBasedMatcher> fl = cv::makePtr<cv::FlannBasedMatcher>(cv::makePtr<cv::flann::LshIndexParams>(1, 31, 2));
     testparam tp("rotated", rotate, 0.0f, 359.0f, 30.0f);
-    CV_FeatureDetectorMatcherBaseTest test(&tp, LONG_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 31, 2)", NORM_HAMMING);
+    CV_FeatureDetectorMatcherBaseTest test(&tp, LONG_LSH_KEY_ACCURACY_MARGIN, fe, fl, "FlannLsh(1, 31, 2)", cv::NORM_HAMMING);
     test.safe_run();
 }
