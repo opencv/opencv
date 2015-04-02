@@ -540,9 +540,6 @@ if(HAVE_CUDA AND NOT ENABLE_DYNAMIC_CUDA)
   if(HAVE_CUFFT)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
   endif()
-  foreach(p ${CUDA_LIBS_PATH})
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} -L${p})
-  endforeach()
 endif()
 
 # ----------------------------------------------------------------------------
