@@ -91,9 +91,9 @@ elseif(CMAKE_COMPILER_IS_GNUCXX)
 
   if(WIN32)
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
-              OUTPUT_VARIABLE CMAKE_OPENCV_GCC_TARGET_MACHINE
+              OUTPUT_VARIABLE OPENCV_GCC_TARGET_MACHINE
               OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(CMAKE_OPENCV_GCC_TARGET_MACHINE MATCHES "amd64|x86_64|AMD64")
+    if(OPENCV_GCC_TARGET_MACHINE MATCHES "amd64|x86_64|AMD64")
       set(MINGW64 1)
     endif()
   endif()
@@ -147,11 +147,7 @@ if(MSVC)
 elseif(MINGW)
   set(OpenCV_RUNTIME mingw)
 
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
-                  OUTPUT_VARIABLE OPENCV_GCC_TARGET_MACHINE
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(CMAKE_OPENCV_GCC_TARGET_MACHINE MATCHES "64")
-    set(MINGW64 1)
+  if(MINGW64)
     set(OpenCV_ARCH x64)
   else()
     set(OpenCV_ARCH x86)

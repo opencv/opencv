@@ -47,7 +47,7 @@ endif()
 
 if(NOT DEFINED OpenCV_STATIC)
   # look for global setting
-  if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+  if(BUILD_SHARED_LIBS)
     set(OpenCV_STATIC OFF)
   else()
     set(OpenCV_STATIC ON)
@@ -89,7 +89,7 @@ elseif(MINGW)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
                   OUTPUT_VARIABLE OPENCV_GCC_TARGET_MACHINE
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(CMAKE_OPENCV_GCC_TARGET_MACHINE MATCHES "64")
+  if(OPENCV_GCC_TARGET_MACHINE MATCHES "amd64|x86_64|AMD64")
     set(MINGW64 1)
     set(OpenCV_ARCH x64)
   else()
