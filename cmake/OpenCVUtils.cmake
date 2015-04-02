@@ -449,18 +449,29 @@ endmacro()
 
 
 # convert list of paths to libraries names without lib prefix
-macro(ocv_convert_to_lib_name var)
-  set(__tmp "")
+function(ocv_convert_to_lib_name var)
+  set(tmp "")
   foreach(path ${ARGN})
-    get_filename_component(__tmp_name "${path}" NAME_WE)
-    string(REGEX REPLACE "^lib" "" __tmp_name ${__tmp_name})
-    list(APPEND __tmp "${__tmp_name}")
+    get_filename_component(tmp_name "${path}" NAME_WE)
+    string(REGEX REPLACE "^lib" "" tmp_name "${tmp_name}")
+    list(APPEND tmp "${tmp_name}")
   endforeach()
-  set(${var} ${__tmp})
-  unset(__tmp)
-  unset(__tmp_name)
-endmacro()
+  set(${var} ${tmp} PARENT_SCOPE)
+endfunction()
 
+# create imported targets for a list of external libraries
+function(ocv_create_imported_targets var)
+  set(target_list "")
+
+  foreach(library ${ARGN})
+    ocv_convert_to_lib_name(libname "${library}")
+    add_library("opencv_dep_${libname}" UNKNOWN IMPORTED)
+    set_target_properties("opencv_dep_${libname}" PROPERTIES IMPORTED_LOCATION "${library}")
+    list(APPEND target_list "opencv_dep_${libname}")
+  endforeach()
+
+  set("${var}" "${target_list}" PARENT_SCOPE)
+endfunction()
 
 # add install command
 function(ocv_install_target)
