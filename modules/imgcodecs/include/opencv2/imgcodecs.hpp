@@ -185,13 +185,14 @@ compression parameters :
 
     void createAlphaMat(Mat &mat)
     {
+        CV_Assert(mat.channels() == 4);
         for (int i = 0; i < mat.rows; ++i) {
             for (int j = 0; j < mat.cols; ++j) {
-                Vec4b& rgba = mat.at<Vec4b>(i, j);
-                rgba[0] = UCHAR_MAX;
-                rgba[1] = saturate_cast<uchar>((float (mat.cols - j)) / ((float)mat.cols) * UCHAR_MAX);
-                rgba[2] = saturate_cast<uchar>((float (mat.rows - i)) / ((float)mat.rows) * UCHAR_MAX);
-                rgba[3] = saturate_cast<uchar>(0.5 * (rgba[1] + rgba[2]));
+                Vec4b& bgra = mat.at<Vec4b>(i, j);
+                bgra[0] = UCHAR_MAX; // Blue
+                bgra[1] = saturate_cast<uchar>((float (mat.cols - j)) / ((float)mat.cols) * UCHAR_MAX); // Green
+                bgra[2] = saturate_cast<uchar>((float (mat.rows - i)) / ((float)mat.rows) * UCHAR_MAX); // Red
+                bgra[3] = saturate_cast<uchar>(0.5 * (bgra[1] + bgra[2])); // Alpha
             }
         }
     }
