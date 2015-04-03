@@ -657,13 +657,13 @@ bool CvCapture_FFMPEG::grabFrame()
         frame_number > ic->streams[video_stream]->nb_frames )
         return false;
 
-    av_free_packet (&packet);
-
     picture_pts = AV_NOPTS_VALUE_;
 
     // get the next frame
     while (!valid)
     {
+
+        av_free_packet (&packet);
         int ret = av_read_frame(ic, &packet);
         if (ret == AVERROR(EAGAIN)) continue;
 
@@ -706,8 +706,6 @@ bool CvCapture_FFMPEG::grabFrame()
             if (count_errs > max_number_of_attempts)
                 break;
         }
-
-        av_free_packet (&packet);
     }
 
     if( valid && first_frame_number < 0 )
