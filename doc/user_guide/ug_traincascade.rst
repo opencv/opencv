@@ -294,6 +294,10 @@ Command line arguments of ``opencv_traincascade`` application grouped by purpose
 
         This argument is actual in case of Haar-like features. If it is specified, the cascade will be saved in the old format.
 
+    * ``-acceptanceRatioBreakValue``
+
+        This argument is used to determine how precise your model should keep learning and when to stop. A good guideline is to train not further than 10e-5, to ensure the model does not overtrain on your training data. By default this value is set to -1 to disable this feature.
+
 #.
 
     Cascade parameters:
