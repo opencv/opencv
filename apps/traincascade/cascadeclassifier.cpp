@@ -218,7 +218,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
                     "Branch training terminated." << endl;
             break;
         }
-        if( (tempLeafFARate <= acceptanceRatioBreakValue) && (acceptanceRatioBreakValue < 0) ){
+        if( (tempLeafFARate <= acceptanceRatioBreakValue) && (acceptanceRatioBreakValue >= 0) ){
             cout << "The required acceptanceRatio for the model has been reached to avoid overfitting of trainingdata. "
                     "Branch training terminated." << endl;
             break;
