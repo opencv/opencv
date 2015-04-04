@@ -102,13 +102,17 @@ TEST(Imgcodecs_imread, regression)
 
     for (size_t i = 0; i < sizeof(filenames) / sizeof(filenames[0]); ++i)
     {
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_UNCHANGED));
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_GRAYSCALE));
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_COLOR));
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_ANYDEPTH));
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_ANYCOLOR));
-        if (i != 2) // GDAL does not support hdr
-            ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_LOAD_GDAL));
+        const string path = folder + string(filenames[i]);
+        ASSERT_TRUE(imread_compare(path, IMREAD_UNCHANGED));
+        ASSERT_TRUE(imread_compare(path, IMREAD_GRAYSCALE));
+        ASSERT_TRUE(imread_compare(path, IMREAD_COLOR));
+        ASSERT_TRUE(imread_compare(path, IMREAD_ANYDEPTH));
+        ASSERT_TRUE(imread_compare(path, IMREAD_ANYCOLOR));
+        if (path.substr(path.length() - 3) != "hdr")
+        {
+            // GDAL does not support hdr
+            ASSERT_TRUE(imread_compare(path, IMREAD_LOAD_GDAL));
+        }
     }
 }
 
@@ -117,8 +121,10 @@ TEST(Imgcodecs_jasper, regression)
 {
     const string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
 
-    ASSERT_TRUE(imread_compare(folder + "Bretagne2.jp2", IMREAD_UNCHANGED));
+    ASSERT_TRUE(imread_compare(folder + "Bretagne2.jp2", IMREAD_COLOR));
     ASSERT_TRUE(imread_compare(folder + "Bretagne2.jp2", IMREAD_GRAYSCALE));
+    ASSERT_TRUE(imread_compare(folder + "Grey.jp2", IMREAD_COLOR));
+    ASSERT_TRUE(imread_compare(folder + "Grey.jp2", IMREAD_GRAYSCALE));
 }
 #endif
 
