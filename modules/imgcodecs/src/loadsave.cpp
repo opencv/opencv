@@ -374,15 +374,8 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
                 type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
         }
 
-        // established the required input image size.
-        CvSize size;
-        size.width = decoder->width();
-        size.height = decoder->height();
-
-        Mat mat;
-        mat.create(size.height, size.width, type);
-
         // read the image data
+        Mat mat(decoder->height(), decoder->width(), type);
         if (!decoder->readData(mat))
         {
             break;
