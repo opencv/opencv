@@ -52,7 +52,15 @@ CvCapture* cvCreateCameraCapture_XIMEA( int index )
 // Enumerate connected devices
 void CvCaptureCAM_XIMEA::init()
 {
+#if defined WIN32 || defined _WIN32
     xiGetNumberDevices( &numDevices);
+#else
+    // try second re-enumeration if first one fails
+    if (xiGetNumberDevices( &numDevices) != XI_OK)
+    {
+        xiGetNumberDevices( &numDevices);
+    }
+#endif
     hmv = NULL;
     frame = NULL;
     timeout = 0;
@@ -73,8 +81,17 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
 
     if((mvret = xiOpenDevice( wIndex, &hmv)) != XI_OK)
     {
+#if defined WIN32 || defined _WIN32
         errMsg("Open XI_DEVICE failed", mvret);
         return false;
+#else
+        // try opening second time if first fails
+        if((mvret = xiOpenDevice( wIndex, &hmv))  != XI_OK)
+        {
+            errMsg("Open XI_DEVICE failed", mvret);
+            return false;
+        }
+#endif
     }
 
     int width   = 0;
@@ -260,7 +277,7 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
     case CV_CAP_PROP_XI_AUTO_WB       : xiGetParamInt( hmv, XI_PRM_AUTO_WB, &ival); return ival;
     case CV_CAP_PROP_XI_AEAG          : xiGetParamInt( hmv, XI_PRM_AEAG, &ival); return ival;
     case CV_CAP_PROP_XI_EXP_PRIORITY  : xiGetParamFloat( hmv, XI_PRM_EXP_PRIORITY, &fval); return fval;
-    case CV_CAP_PROP_XI_AE_MAX_LIMIT  : xiGetParamInt( hmv, XI_PRM_AE_MAX_LIMIT, &ival); return ival;
+    case CV_CAP_PROP_XI_AE_MAX_LIMIT  : xiGetParamInt( hmv, XI_PRM_EXP_PRIORITY, &ival); return ival;
     case CV_CAP_PROP_XI_AG_MAX_LIMIT  : xiGetParamFloat( hmv, XI_PRM_AG_MAX_LIMIT, &fval); return fval;
     case CV_CAP_PROP_XI_AEAG_LEVEL    : xiGetParamInt( hmv, XI_PRM_AEAG_LEVEL, &ival); return ival;
     case CV_CAP_PROP_XI_TIMEOUT       : return timeout;
@@ -293,7 +310,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_OFFSET_Y      : mvret = xiSetParamInt( hmv, XI_PRM_OFFSET_Y, ival); break;
     case CV_CAP_PROP_XI_TRG_SOURCE    : mvret = xiSetParamInt( hmv, XI_PRM_TRG_SOURCE, ival); break;
     case CV_CAP_PROP_XI_GPI_SELECTOR  : mvret = xiSetParamInt( hmv, XI_PRM_GPI_SELECTOR, ival); break;
-    case CV_CAP_PROP_XI_TRG_SOFTWARE  : mvret = xiSetParamInt( hmv, XI_PRM_TRG_SOFTWARE, 1); break;
+    case CV_CAP_PROP_XI_TRG_SOFTWARE  : mvret = xiSetParamInt( hmv, XI_PRM_TRG_SOURCE, 1); break;
     case CV_CAP_PROP_XI_GPI_MODE      : mvret = xiSetParamInt( hmv, XI_PRM_GPI_MODE, ival); break;
     case CV_CAP_PROP_XI_GPI_LEVEL     : mvret = xiSetParamInt( hmv, XI_PRM_GPI_LEVEL, ival); break;
     case CV_CAP_PROP_XI_GPO_SELECTOR  : mvret = xiSetParamInt( hmv, XI_PRM_GPO_SELECTOR, ival); break;
@@ -301,10 +318,10 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_LED_SELECTOR  : mvret = xiSetParamInt( hmv, XI_PRM_LED_SELECTOR, ival); break;
     case CV_CAP_PROP_XI_LED_MODE      : mvret = xiSetParamInt( hmv, XI_PRM_LED_MODE, ival); break;
     case CV_CAP_PROP_XI_AUTO_WB       : mvret = xiSetParamInt( hmv, XI_PRM_AUTO_WB, ival); break;
-    case CV_CAP_PROP_XI_MANUAL_WB     : mvret = xiSetParamInt( hmv, XI_PRM_MANUAL_WB, ival); break;
+    case CV_CAP_PROP_XI_MANUAL_WB     : mvret = xiSetParamInt( hmv, XI_PRM_LED_MODE, ival); break;
     case CV_CAP_PROP_XI_AEAG          : mvret = xiSetParamInt( hmv, XI_PRM_AEAG, ival); break;
     case CV_CAP_PROP_XI_EXP_PRIORITY  : mvret = xiSetParamFloat( hmv, XI_PRM_EXP_PRIORITY, fval); break;
-    case CV_CAP_PROP_XI_AE_MAX_LIMIT  : mvret = xiSetParamInt( hmv, XI_PRM_AE_MAX_LIMIT, ival); break;
+    case CV_CAP_PROP_XI_AE_MAX_LIMIT  : mvret = xiSetParamInt( hmv, XI_PRM_EXP_PRIORITY, ival); break;
     case CV_CAP_PROP_XI_AG_MAX_LIMIT  : mvret = xiSetParamFloat( hmv, XI_PRM_AG_MAX_LIMIT, fval); break;
     case CV_CAP_PROP_XI_AEAG_LEVEL    : mvret = xiSetParamInt( hmv, XI_PRM_AEAG_LEVEL, ival); break;
     case CV_CAP_PROP_XI_TIMEOUT       : timeout = ival; break;
