@@ -465,6 +465,7 @@ double cv::findTransformECC(InputArray templateImage,
         meanStdDev(templateFloat, tmpMean, tmpStd, imageMask);
 
         subtract(imageWarped,   imgMean, imageWarped, imageMask);//zero-mean input
+        templateZM = Mat::zeros(templateZM.rows, templateZM.cols, templateZM.type());
         subtract(templateFloat, tmpMean, templateZM,  imageMask);//zero-mean template
 
         const double tmpNorm = std::sqrt(countNonZero(imageMask)*(tmpStd.val[0])*(tmpStd.val[0]));

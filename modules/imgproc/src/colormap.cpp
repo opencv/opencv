@@ -83,7 +83,6 @@ Mat interp1_(const Mat& X_, const Mat& Y_, const Mat& XI)
     // interpolated values
     Mat yi = Mat::zeros(XI.size(), XI.type());
     for(int i = 0; i < n; i++) {
-        int c = 0;
         int low = 0;
         int high = X.rows - 1;
         // set bounds
@@ -93,7 +92,7 @@ Mat interp1_(const Mat& X_, const Mat& Y_, const Mat& XI)
             low = high - 1;
         // binary search
         while((high-low)>1) {
-            c = low + ((high - low) >> 1);
+            const int c = low + ((high - low) >> 1);
             if(XI.at<_Tp>(i,0) > X.at<_Tp>(c,0)) {
                 low = c;
             } else {

@@ -232,15 +232,30 @@ inline bool checkScalar(InputArray sc, int atype, int sckind, int akind)
 
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );
 
+#ifdef CV_COLLECT_IMPL_DATA
+struct ImplCollector
+{
+    ImplCollector()
+    {
+        useCollection   = false;
+        implFlags       = 0;
+    }
+    bool useCollection; // enable/disable impl data collection
+
+    int implFlags;
+    std::vector<int>    implCode;
+    std::vector<String> implFun;
+
+    cv::Mutex mutex;
+};
+#endif
+
 struct CoreTLSData
 {
-    CoreTLSData() : device(0), useOpenCL(-1), useIPP(-1), useCollection(false)
+    CoreTLSData() : device(0), useOpenCL(-1), useIPP(-1)
     {
 #ifdef HAVE_TEGRA_OPTIMIZATION
         useTegra = -1;
-#endif
-#ifdef CV_COLLECT_IMPL_DATA
-        implFlags = 0;
 #endif
     }
 
@@ -251,13 +266,6 @@ struct CoreTLSData
     int useIPP; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #ifdef HAVE_TEGRA_OPTIMIZATION
     int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
-#endif
-    bool useCollection; // enable/disable impl data collection
-
-#ifdef CV_COLLECT_IMPL_DATA
-    int implFlags;
-    std::vector<int> implCode;
-    std::vector<String> implFun;
 #endif
 };
 

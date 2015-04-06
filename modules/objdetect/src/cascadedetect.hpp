@@ -347,6 +347,7 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
 
+    virtual bool setImage(InputArray _image, const std::vector<float>& _scales);
     virtual bool setWindow(Point p, int scaleIdx);
     Rect getNormRect() const;
     int getSquaresOffset() const;
