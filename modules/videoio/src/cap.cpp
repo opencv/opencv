@@ -552,6 +552,20 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
 }
 
 
+static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
+{
+    Ptr<IVideoCapture> capture;
+
+    capture = createMotionJpegCapture(filename);
+    if (capture && capture->isOpened())
+    {
+        return capture;
+    }
+
+    // failed open a camera
+    return Ptr<IVideoCapture>();
+}
+
 static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
     Ptr<IVideoWriter> iwriter;
@@ -582,6 +596,10 @@ VideoCapture::~VideoCapture()
 bool VideoCapture::open(const String& filename)
 {
     if (isOpened()) release();
+    icap = IVideoCapture_create(filename);
+    if (!icap.empty())
+        return true;
+
     cap.reset(cvCreateFileCapture(filename.c_str()));
     return isOpened();
 }
