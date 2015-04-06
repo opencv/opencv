@@ -54,6 +54,16 @@ TEST(PackageManager, GetPackagePathForArmv7)
     EXPECT_STREQ("/data/data/org.opencv.lib_v23_armv7a/lib", path.c_str());
 }
 
+#ifdef __SUPPORT_AARCH64
+TEST(PackageManager, GetPackagePathForAarch64)
+{
+    PackageManagerStub pm;
+    EXPECT_TRUE(pm.InstallVersion(2041100, PLATFORM_UNKNOWN, ARCH_AARCH64));
+    string path = pm.GetPackagePathByVersion(2041100, PLATFORM_UNKNOWN, ARCH_AARCH64);
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_aarch64/lib", path.c_str());
+}
+#endif
+
 TEST(PackageManager, GetPackagePathForArmv7Neon)
 {
     PackageManagerStub pm;

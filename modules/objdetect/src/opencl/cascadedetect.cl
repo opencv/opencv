@@ -180,11 +180,11 @@ void runHaarClassifier(
                         int4 ofs = f->ofs[0];
                         sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
                         ofs = f->ofs[1];
-                        sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                        sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.y, sval);
                         if( weight.z > 0 )
                         {
                             ofs = f->ofs[2];
-                            sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                            sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.z, sval);
                         }
 
                         s += (sval < st.y*nf) ? st.z : st.w;
@@ -204,11 +204,11 @@ void runHaarClassifier(
 
                             sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
                             ofs = f->ofs[1];
-                            sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                            sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.y, sval);
                             if( weight.z > 0 )
                             {
                                 ofs = f->ofs[2];
-                                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                                sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.z, sval);
                             }
 
                             idx = (sval < as_float(n.y)*nf) ? n.z : n.w;
@@ -281,11 +281,12 @@ void runHaarClassifier(
                             int4 ofs = f->ofs[0];
                             float sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
                             ofs = f->ofs[1];
-                            sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                            sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.y, sval);
                             //if( weight.z > 0 )
+                            if( fabs(weight.z) > 0 )
                             {
                                 ofs = f->ofs[2];
-                                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                                sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.z, sval);
                             }
 
                             partsum += (sval < st.y*nf) ? st.z : st.w;
@@ -303,11 +304,11 @@ void runHaarClassifier(
 
                                 float sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
                                 ofs = f->ofs[1];
-                                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                                sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.y, sval);
                                 if( weight.z > 0 )
                                 {
                                     ofs = f->ofs[2];
-                                    sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                                    sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.z, sval);
                                 }
 
                                 idx = (sval < as_float(n.y)*nf) ? n.z : n.w;

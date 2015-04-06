@@ -441,29 +441,65 @@ class CV_EXPORTS_W DualTVL1OpticalFlow : public DenseOpticalFlow
 {
 public:
     //! @brief Time step of the numerical scheme
-    CV_PURE_PROPERTY(double, Tau)
+    /** @see setTau */
+    virtual double getTau() const = 0;
+    /** @copybrief getTau @see getTau */
+    virtual void setTau(double val) = 0;
     //! @brief Weight parameter for the data term, attachment parameter
-    CV_PURE_PROPERTY(double, Lambda)
+    /** @see setLambda */
+    virtual double getLambda() const = 0;
+    /** @copybrief getLambda @see getLambda */
+    virtual void setLambda(double val) = 0;
     //! @brief Weight parameter for (u - v)^2, tightness parameter
-    CV_PURE_PROPERTY(double, Theta)
+    /** @see setTheta */
+    virtual double getTheta() const = 0;
+    /** @copybrief getTheta @see getTheta */
+    virtual void setTheta(double val) = 0;
     //! @brief coefficient for additional illumination variation term
-    CV_PURE_PROPERTY(double, Gamma)
+    /** @see setGamma */
+    virtual double getGamma() const = 0;
+    /** @copybrief getGamma @see getGamma */
+    virtual void setGamma(double val) = 0;
     //! @brief Number of scales used to create the pyramid of images
-    CV_PURE_PROPERTY(int, ScalesNumber)
+    /** @see setScalesNumber */
+    virtual int getScalesNumber() const = 0;
+    /** @copybrief getScalesNumber @see getScalesNumber */
+    virtual void setScalesNumber(int val) = 0;
     //! @brief Number of warpings per scale
-    CV_PURE_PROPERTY(int, WarpingsNumber)
+    /** @see setWarpingsNumber */
+    virtual int getWarpingsNumber() const = 0;
+    /** @copybrief getWarpingsNumber @see getWarpingsNumber */
+    virtual void setWarpingsNumber(int val) = 0;
     //! @brief Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time
-    CV_PURE_PROPERTY(double, Epsilon)
+    /** @see setEpsilon */
+    virtual double getEpsilon() const = 0;
+    /** @copybrief getEpsilon @see getEpsilon */
+    virtual void setEpsilon(double val) = 0;
     //! @brief Inner iterations (between outlier filtering) used in the numerical scheme
-    CV_PURE_PROPERTY(int, InnerIterations)
+    /** @see setInnerIterations */
+    virtual int getInnerIterations() const = 0;
+    /** @copybrief getInnerIterations @see getInnerIterations */
+    virtual void setInnerIterations(int val) = 0;
     //! @brief Outer iterations (number of inner loops) used in the numerical scheme
-    CV_PURE_PROPERTY(int, OuterIterations)
+    /** @see setOuterIterations */
+    virtual int getOuterIterations() const = 0;
+    /** @copybrief getOuterIterations @see getOuterIterations */
+    virtual void setOuterIterations(int val) = 0;
     //! @brief Use initial flow
-    CV_PURE_PROPERTY(bool, UseInitialFlow)
+    /** @see setUseInitialFlow */
+    virtual bool getUseInitialFlow() const = 0;
+    /** @copybrief getUseInitialFlow @see getUseInitialFlow */
+    virtual void setUseInitialFlow(bool val) = 0;
     //! @brief Step between scales (<1)
-    CV_PURE_PROPERTY(double, ScaleStep)
+    /** @see setScaleStep */
+    virtual double getScaleStep() const = 0;
+    /** @copybrief getScaleStep @see getScaleStep */
+    virtual void setScaleStep(double val) = 0;
     //! @brief Median filter kernel size (1 = no filter) (3 or 5)
-    CV_PURE_PROPERTY(int, MedianFiltering)
+    /** @see setMedianFiltering */
+    virtual int getMedianFiltering() const = 0;
+    /** @copybrief getMedianFiltering @see getMedianFiltering */
+    virtual void setMedianFiltering(int val) = 0;
 };
 
 /** @brief Creates instance of cv::DenseOpticalFlow

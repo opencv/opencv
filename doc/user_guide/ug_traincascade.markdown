@@ -256,6 +256,12 @@ Command line arguments of opencv_traincascade application grouped by purposes:
         Maximum number of threads to use during training. Notice that the actual number of used
         threads may be lower, depending on your machine and compilation options.
 
+    -   -acceptanceRatioBreakValue \<break_value\>
+
+        This argument is used to determine how precise your model should keep learning and when to stop.
+        A good guideline is to train not further than 10e-5, to ensure the model does not overtrain on your training data.
+        By default this value is set to -1 to disable this feature.
+
 -#  Cascade parameters:
 
     -   -stageType \<BOOST(default)\>

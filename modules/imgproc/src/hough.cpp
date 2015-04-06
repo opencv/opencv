@@ -90,11 +90,8 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int width = img.cols;
     int height = img.rows;
 
-    if (max_theta < 0 || max_theta > CV_PI ) {
-        CV_Error( CV_StsBadArg, "max_theta must fall between 0 and pi" );
-    }
-    if (min_theta < 0 || min_theta > max_theta ) {
-        CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
+    if (max_theta < min_theta ) {
+        CV_Error( CV_StsBadArg, "max_theta must be greater than min_theta" );
     }
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
@@ -178,7 +175,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
         int n = cvFloor(idx*scale) - 1;
         int r = idx - (n+1)*(numrho+2) - 1;
         line.rho = (r - (numrho - 1)*0.5f) * rho;
-        line.angle = n * theta;
+        line.angle = static_cast<float>(min_theta) + n * theta;
         lines.push_back(Vec2f(line.rho, line.angle));
     }
 }

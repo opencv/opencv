@@ -1669,13 +1669,13 @@ public:
         Mat samples = data->getTrainSamples();
         Mat responses;
         bool is_classification = false;
-        Mat class_labels0 = class_labels;
         int class_count = (int)class_labels.total();
 
         if( svmType == C_SVC || svmType == NU_SVC )
         {
             responses = data->getTrainNormCatResponses();
             class_labels = data->getClassLabels();
+            class_count = (int)class_labels.total();
             is_classification = true;
 
             vector<int> temp_class_labels;
@@ -1755,8 +1755,9 @@ public:
         Mat temp_train_responses(train_sample_count, 1, rtype);
         Mat temp_test_responses;
 
+        // If grid.minVal == grid.maxVal, this will allow one and only one pass through the loop with params.var = grid.minVal.
         #define FOR_IN_GRID(var, grid) \
-            for( params.var = grid.minVal; params.var == grid.minVal || params.var < grid.maxVal; params.var *= grid.logStep )
+            for( params.var = grid.minVal; params.var == grid.minVal || params.var < grid.maxVal; params.var = (grid.minVal == grid.maxVal) ? grid.maxVal + 1 : params.var * grid.logStep )
 
         FOR_IN_GRID(C, C_grid)
         FOR_IN_GRID(gamma, gamma_grid)
@@ -1814,7 +1815,6 @@ public:
         }
 
         params = best_params;
-        class_labels = class_labels0;
         return do_train( samples, responses );
     }
 

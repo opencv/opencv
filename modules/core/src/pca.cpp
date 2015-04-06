@@ -66,7 +66,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
 {
     Mat data = _data.getMat(), _mean = __mean.getMat();
     int covar_flags = CV_COVAR_SCALE;
-    int i, len, in_count;
+    int len, in_count;
     Size mean_sz;
 
     CV_Assert( data.channels() == 1 );
@@ -131,6 +131,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
         eigenvectors = evects1;
 
         // normalize eigenvectors
+        int i;
         for( i = 0; i < out_count; i++ )
         {
             Mat vec = eigenvectors.row(i);
@@ -202,7 +203,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
 {
     Mat data = _data.getMat(), _mean = __mean.getMat();
     int covar_flags = CV_COVAR_SCALE;
-    int i, len, in_count;
+    int len, in_count;
     Size mean_sz;
 
     CV_Assert( data.channels() == 1 );
@@ -266,6 +267,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
         eigenvectors = evects1;
 
         // normalize all eigenvectors
+        int i;
         for( i = 0; i < eigenvectors.rows; i++ )
         {
             Mat vec = eigenvectors.row(i);

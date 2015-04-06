@@ -1163,47 +1163,56 @@ TLSData<CoreTLSData>& getCoreTlsData()
 
 
 #ifdef CV_COLLECT_IMPL_DATA
+ImplCollector& getImplData()
+{
+    static ImplCollector *value = new ImplCollector();
+    return *value;
+}
+
 void setImpl(int flags)
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    data->implFlags = flags;
-    data->implCode.clear();
-    data->implFun.clear();
+    cv::AutoLock lock(getImplData().mutex);
+
+    getImplData().implFlags = flags;
+    getImplData().implCode.clear();
+    getImplData().implFun.clear();
 }
 
 void addImpl(int flag, const char* func)
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    data->implFlags |= flag;
+    cv::AutoLock lock(getImplData().mutex);
+
+    getImplData().implFlags |= flag;
     if(func) // use lazy collection if name was not specified
     {
-        size_t index = data->implCode.size();
-        if(!index || (data->implCode[index-1] != flag || data->implFun[index-1].compare(func))) // avoid duplicates
+        size_t index = getImplData().implCode.size();
+        if(!index || (getImplData().implCode[index-1] != flag || getImplData().implFun[index-1].compare(func))) // avoid duplicates
         {
-            data->implCode.push_back(flag);
-            data->implFun.push_back(func);
+            getImplData().implCode.push_back(flag);
+            getImplData().implFun.push_back(func);
         }
     }
 }
 
 int getImpl(std::vector<int> &impl, std::vector<String> &funName)
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    impl = data->implCode;
-    funName = data->implFun;
-    return data->implFlags; // return actual flags for lazy collection
+    cv::AutoLock lock(getImplData().mutex);
+
+    impl    = getImplData().implCode;
+    funName = getImplData().implFun;
+    return getImplData().implFlags; // return actual flags for lazy collection
 }
 
 bool useCollection()
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    return data->useCollection;
+    return getImplData().useCollection;
 }
 
 void setUseCollection(bool flag)
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    data->useCollection = flag;
+    cv::AutoLock lock(getImplData().mutex);
+
+    getImplData().useCollection = flag;
 }
 #endif
 

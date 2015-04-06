@@ -3957,6 +3957,7 @@ public:
             derived()._releaseBufferEntry(entry);
         }
         reservedEntries_.clear();
+        currentReservedSize = 0;
     }
 };
 

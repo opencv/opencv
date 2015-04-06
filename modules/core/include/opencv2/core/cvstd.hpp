@@ -1040,9 +1040,11 @@ static inline bool operator>= (const String& lhs, const char*   rhs) { return lh
 
 #ifndef OPENCV_NOSTL_TRANSITIONAL
 namespace std
+{
+    static inline void swap(cv::String& a, cv::String& b) { a.swap(b); }
+}
 #else
 namespace cv
-#endif
 {
     template<> inline
     void swap<cv::String>(cv::String& a, cv::String& b)
@@ -1050,6 +1052,7 @@ namespace cv
         a.swap(b);
     }
 }
+#endif
 
 #include "opencv2/core/ptr.inl.hpp"
 
