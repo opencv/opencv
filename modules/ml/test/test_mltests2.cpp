@@ -472,19 +472,19 @@ void CV_MLBaseTest::save( const char* filename )
 void CV_MLBaseTest::load( const char* filename )
 {
     if( modelName == CV_NBAYES )
-        model = StatModel::load<NormalBayesClassifier>( filename );
+        model = Algorithm::load<NormalBayesClassifier>( filename );
     else if( modelName == CV_KNEAREST )
-        model = StatModel::load<KNearest>( filename );
+        model = Algorithm::load<KNearest>( filename );
     else if( modelName == CV_SVM )
-        model = StatModel::load<SVM>( filename );
+        model = Algorithm::load<SVM>( filename );
     else if( modelName == CV_ANN )
-        model = StatModel::load<ANN_MLP>( filename );
+        model = Algorithm::load<ANN_MLP>( filename );
     else if( modelName == CV_DTREE )
-        model = StatModel::load<DTrees>( filename );
+        model = Algorithm::load<DTrees>( filename );
     else if( modelName == CV_BOOST )
-        model = StatModel::load<Boost>( filename );
+        model = Algorithm::load<Boost>( filename );
     else if( modelName == CV_RTREES )
-        model = StatModel::load<RTrees>( filename );
+        model = Algorithm::load<RTrees>( filename );
     else
         CV_Error( CV_StsNotImplemented, "invalid stat model name");
 }

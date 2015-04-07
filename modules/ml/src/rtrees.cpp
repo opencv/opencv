@@ -375,7 +375,7 @@ public:
     RTreesImpl() {}
     virtual ~RTreesImpl() {}
 
-    String getDefaultModelName() const { return "opencv_ml_rtrees"; }
+    String getDefaultName() const { return "opencv_ml_rtrees"; }
 
     bool train( const Ptr<TrainData>& trainData, int flags )
     {

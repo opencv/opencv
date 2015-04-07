@@ -290,7 +290,7 @@ namespace ml
         virtual ~DTreesImpl();
         virtual void clear();
 
-        String getDefaultModelName() const { return "opencv_ml_dtree"; }
+        String getDefaultName() const { return "opencv_ml_dtree"; }
         bool isTrained() const { return !roots.empty(); }
         bool isClassifier() const { return _isClassifier; }
         int getVarCount() const { return varType.empty() ? 0 : (int)(varType.size() - 1); }

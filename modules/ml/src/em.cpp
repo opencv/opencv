@@ -227,7 +227,7 @@ public:
         return means.cols;
     }
 
-    String getDefaultModelName() const
+    String getDefaultName() const
     {
         return "opencv_ml_em";
     }
