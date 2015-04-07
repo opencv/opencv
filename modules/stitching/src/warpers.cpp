@@ -87,6 +87,13 @@ Point2f PlaneWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R, In
     return uv;
 }
 
+Point2f PlaneWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R)
+{
+    float tz[] = {0.f, 0.f, 0.f};
+    Mat_<float> T(3, 1, tz);
+    return warpPoint(pt, K, R, T);
+}
+
 Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
 {
     return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32FC1), xmap, ymap);
@@ -155,6 +162,13 @@ Point PlaneWarper::warp(InputArray src, InputArray K, InputArray R, InputArray T
     return dst_roi.tl();
 }
 
+Point PlaneWarper::warp(InputArray src, InputArray K, InputArray R,
+                        int interp_mode, int border_mode, OutputArray dst)
+{
+    float tz[] = {0.f, 0.f, 0.f};
+    Mat_<float> T(3, 1, tz);
+    return warp(src, K, R, T, interp_mode, border_mode, dst);
+}
 
 Rect PlaneWarper::warpRoi(Size src_size, InputArray K, InputArray R, InputArray T)
 {
@@ -164,6 +178,13 @@ Rect PlaneWarper::warpRoi(Size src_size, InputArray K, InputArray R, InputArray 
     detectResultRoi(src_size, dst_tl, dst_br);
 
     return Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1));
+}
+
+Rect PlaneWarper::warpRoi(Size src_size, InputArray K, InputArray R)
+{
+    float tz[] = {0.f, 0.f, 0.f};
+    Mat_<float> T(3, 1, tz);
+    return warpRoi(src_size, K, R, T);
 }
 
 

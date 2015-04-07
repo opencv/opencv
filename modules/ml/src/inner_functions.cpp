@@ -50,7 +50,7 @@ ParamGrid::ParamGrid(double _minVal, double _maxVal, double _logStep)
     logStep = std::max(_logStep, 1.);
 }
 
-void StatModel::clear() {}
+bool StatModel::empty() const { return !isTrained(); }
 
 int StatModel::getVarCount() const { return 0; }
 
@@ -109,15 +109,6 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
         resp.copyTo(_resp);
 
     return (float)(err / n * (isclassifier ? 100 : 1));
-}
-
-void StatModel::save(const String& filename) const
-{
-    FileStorage fs(filename, FileStorage::WRITE);
-    fs << getDefaultModelName() << "{";
-    fs << "format" << (int)3;
-    write(fs);
-    fs << "}";
 }
 
 /* Calculates upper triangular matrix S, where A is a symmetrical matrix A=S'*S */

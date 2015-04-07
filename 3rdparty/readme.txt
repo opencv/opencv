@@ -6,41 +6,34 @@ In order to use these versions of libraries instead of system ones on UNIX syste
 should use BUILD_<library_name> CMake flags (for example, BUILD_PNG for the libpng library).
 
 ------------------------------------------------------------------------------------
-libjpeg 8d (8.4)  -   The Independent JPEG Group's JPEG software.
+libjpeg               The Independent JPEG Group's JPEG software.
                       Copyright (C) 1991-2012, Thomas G. Lane, Guido Vollbeding.
                       See IGJ home page http://www.ijg.org
                       for details and links to the source code
 
-                      HAVE_JPEG preprocessor flag must be set to make imgcodecs use libjpeg.
-                      On UNIX systems configure script takes care of it.
+                      WITH_JPEG CMake option must be ON to add libjpeg support to imgcodecs.
 ------------------------------------------------------------------------------------
-libpng 1.5.12     -   Portable Network Graphics library.
+libpng                Portable Network Graphics library.
                       Copyright (c) 2004, 2006-2012 Glenn Randers-Pehrson.
                       See libpng home page http://www.libpng.org
                       for details and links to the source code
 
-                      HAVE_PNG preprocessor flag must be set to make imgcodecs use libpng.
-                      On UNIX systems configure script takes care of it.
+                      WITH_PNG CMake option must be ON to add libpng support to imgcodecs.
 ------------------------------------------------------------------------------------
-libtiff 4.0.2     -   Tag Image File Format (TIFF) Software
+libtiff               Tag Image File Format (TIFF) Software
                       Copyright (c) 1988-1997 Sam Leffler
                       Copyright (c) 1991-1997 Silicon Graphics, Inc.
                       See libtiff home page http://www.remotesensing.org/libtiff/
                       for details and links to the source code
 
-                      HAVE_TIFF preprocessor flag must be set to make imgcodecs use libtiff.
-                      On UNIX systems configure script takes care of it.
-                      In this build support for ZIP (LZ77 compression) is turned on.
+                      WITH_TIFF CMake option must be ON to add libtiff & zlib support to imgcodecs.
 ------------------------------------------------------------------------------------
-zlib 1.2.7        -   General purpose LZ77 compression library
+zlib                  General purpose LZ77 compression library
                       Copyright (C) 1995-2012 Jean-loup Gailly and Mark Adler.
                       See zlib home page http://www.zlib.net
                       for details and links to the source code
-
-                      No preprocessor definition is needed to make imgcodecs use this library -
-                      it is included automatically if either libpng or libtiff are used.
 ------------------------------------------------------------------------------------
-jasper-1.900.1    -   JasPer is a collection of software
+jasper                JasPer is a collection of software
                       (i.e., a library and application programs) for the coding
                       and manipulation of images.  This software can handle image data in a
                       variety of formats.  One such format supported by JasPer is the JPEG-2000
@@ -50,14 +43,9 @@ jasper-1.900.1    -   JasPer is a collection of software
                       Copyright (c) 1999-2000 The University of British Columbia
                       Copyright (c) 2001-2003 Michael David Adams
 
-                      The JasPer license can be found in src/libjasper.
-
-                      OpenCV on Windows uses pre-built libjasper library
-                      (lib/libjasper*). To get the latest source code,
-                      please, visit the project homepage:
-                      http://www.ece.uvic.ca/~mdadams/jasper/
+                      The JasPer license can be found in libjasper.
 ------------------------------------------------------------------------------------
-openexr-1.7.1     -   OpenEXR is a high dynamic-range (HDR) image file format developed
+openexr               OpenEXR is a high dynamic-range (HDR) image file format developed
                       by Industrial Light & Magic for use in computer imaging applications.
 
                       Copyright (c) 2006, Industrial Light & Magic, a division of Lucasfilm
@@ -66,11 +54,17 @@ openexr-1.7.1     -   OpenEXR is a high dynamic-range (HDR) image file format de
 
                       The project homepage: http://www.openexr.com
 ------------------------------------------------------------------------------------
-ffmpeg-0.8.0      -   FFmpeg is a complete, cross-platform solution to record,
+ffmpeg                FFmpeg is a complete, cross-platform solution to record,
                       convert and stream audio and video. It includes libavcodec -
                       the leading audio/video codec library, and also libavformat, libavutils and
-                      other helper libraries that are used by OpenCV (in highgui module) to
+                      other helper libraries that are used by OpenCV (in videoio module) to
                       read and write video files.
 
-                      The project homepage: http://ffmpeg.org/
+                      Copyright (c) 2001 Fabrice Bellard
+
+                      The project homepage: http://ffmpeg.org/.
+                      
+                      * On Linux/OSX we link user-installed ffmpeg (or ffmpeg fork libav).
+                      * On Windows we use pre-built ffmpeg binaries,
+                        see opencv/3rdparty/ffmpeg/readme.txt for details and licensing information
 ------------------------------------------------------------------------------------

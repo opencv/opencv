@@ -65,20 +65,20 @@ namespace cv{
     };
 
     struct CCStatsOp{
-        const _OutputArray* _mstatsv;
+        OutputArray _mstatsv;
         cv::Mat statsv;
-        const _OutputArray* _mcentroidsv;
+        OutputArray _mcentroidsv;
         cv::Mat centroidsv;
         std::vector<Point2ui64> integrals;
 
-        CCStatsOp(OutputArray _statsv, OutputArray _centroidsv): _mstatsv(&_statsv), _mcentroidsv(&_centroidsv){
+        CCStatsOp(OutputArray _statsv, OutputArray _centroidsv): _mstatsv(_statsv), _mcentroidsv(_centroidsv){
         }
         inline
         void init(int nlabels){
-            _mstatsv->create(cv::Size(CC_STAT_MAX, nlabels), cv::DataType<int>::type);
-            statsv = _mstatsv->getMat();
-            _mcentroidsv->create(cv::Size(2, nlabels), cv::DataType<double>::type);
-            centroidsv = _mcentroidsv->getMat();
+            _mstatsv.create(cv::Size(CC_STAT_MAX, nlabels), cv::DataType<int>::type);
+            statsv = _mstatsv.getMat();
+            _mcentroidsv.create(cv::Size(2, nlabels), cv::DataType<double>::type);
+            centroidsv = _mcentroidsv.getMat();
 
             for(int l = 0; l < (int) nlabels; ++l){
                 int *row = (int *) &statsv.at<int>(l, 0);
