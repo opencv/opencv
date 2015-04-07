@@ -8,7 +8,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   project("${project}_samples")
 
-  ocv_include_modules(${OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules_recurse(${OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS})
 
   # ---------------------------------------------
   #      Define executable targets
