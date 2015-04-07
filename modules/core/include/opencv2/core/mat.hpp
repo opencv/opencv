@@ -70,7 +70,7 @@ class CV_EXPORTS _OutputArray;
 
 It is defined as:
 @code
-    typedef const _InputArray& InputArray;
+    class InputArray; // = _InputArray
 @endcode
 where _InputArray is a class that can be constructed from `Mat`, `Mat_<T>`, `Matx<T, m, n>`,
 `std::vector<T>`, `std::vector<std::vector<T> >` or `std::vector<Mat>`. It can also be constructed
@@ -185,39 +185,42 @@ public:
     _InputArray(const UMat& um);
     _InputArray(const std::vector<UMat>& umv);
 
-    virtual Mat getMat(int idx=-1) const;
-    virtual UMat getUMat(int idx=-1) const;
-    virtual void getMatVector(std::vector<Mat>& mv) const;
-    virtual void getUMatVector(std::vector<UMat>& umv) const;
-    virtual cuda::GpuMat getGpuMat() const;
-    virtual ogl::Buffer getOGlBuffer() const;
-    void* getObj() const;
+    Mat getMat(int idx=-1) const;
+    UMat getUMat(int idx=-1) const;
+    void getMatVector(std::vector<Mat>& mv) const;
+    void getUMatVector(std::vector<UMat>& umv) const;
+    cuda::GpuMat getGpuMat() const;
+    ogl::Buffer getOGlBuffer() const;
 
-    virtual int kind() const;
-    virtual int dims(int i=-1) const;
-    virtual int cols(int i=-1) const;
-    virtual int rows(int i=-1) const;
-    virtual Size size(int i=-1) const;
-    virtual int sizend(int* sz, int i=-1) const;
-    virtual bool sameSize(const _InputArray& arr) const;
-    virtual size_t total(int i=-1) const;
-    virtual int type(int i=-1) const;
-    virtual int depth(int i=-1) const;
-    virtual int channels(int i=-1) const;
-    virtual bool isContinuous(int i=-1) const;
-    virtual bool isSubmatrix(int i=-1) const;
-    virtual bool empty() const;
-    virtual void copyTo(const _OutputArray& arr) const;
-    virtual void copyTo(const _OutputArray& arr, const _InputArray & mask) const;
-    virtual size_t offset(int i=-1) const;
-    virtual size_t step(int i=-1) const;
+    int getFlags() const;
+    void* getObj() const;
+    Size getSz() const;
+
+    int kind() const;
+    int dims(int i=-1) const;
+    int cols(int i=-1) const;
+    int rows(int i=-1) const;
+    Size size(int i=-1) const;
+    int sizend(int* sz, int i=-1) const;
+    bool sameSize(const _InputArray& arr) const;
+    size_t total(int i=-1) const;
+    int type(int i=-1) const;
+    int depth(int i=-1) const;
+    int channels(int i=-1) const;
+    bool isContinuous(int i=-1) const;
+    bool isSubmatrix(int i=-1) const;
+    bool empty() const;
+    void copyTo(const _OutputArray& arr) const;
+    void copyTo(const _OutputArray& arr, const _InputArray & mask) const;
+    size_t offset(int i=-1) const;
+    size_t step(int i=-1) const;
     bool isMat() const;
     bool isUMat() const;
     bool isMatVector() const;
     bool isUMatVector() const;
     bool isMatx() const;
 
-    virtual ~_InputArray();
+    ~_InputArray();
 
 protected:
     int flags;
@@ -303,21 +306,21 @@ public:
     _OutputArray(const UMat& m);
     _OutputArray(const std::vector<UMat>& vec);
 
-    virtual bool fixedSize() const;
-    virtual bool fixedType() const;
-    virtual bool needed() const;
-    virtual Mat& getMatRef(int i=-1) const;
-    virtual UMat& getUMatRef(int i=-1) const;
-    virtual cuda::GpuMat& getGpuMatRef() const;
-    virtual ogl::Buffer& getOGlBufferRef() const;
-    virtual cuda::HostMem& getHostMemRef() const;
-    virtual void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
-    virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
-    virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
-    virtual void createSameSize(const _InputArray& arr, int mtype) const;
-    virtual void release() const;
-    virtual void clear() const;
-    virtual void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+    bool fixedSize() const;
+    bool fixedType() const;
+    bool needed() const;
+    Mat& getMatRef(int i=-1) const;
+    UMat& getUMatRef(int i=-1) const;
+    cuda::GpuMat& getGpuMatRef() const;
+    ogl::Buffer& getOGlBufferRef() const;
+    cuda::HostMem& getHostMemRef() const;
+    void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
+    void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
+    void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
+    void createSameSize(const _InputArray& arr, int mtype) const;
+    void release() const;
+    void clear() const;
+    void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
@@ -358,13 +361,15 @@ public:
     template<typename _Tp, int m, int n> _InputOutputArray(const Matx<_Tp, m, n>& matx);
     _InputOutputArray(const UMat& m);
     _InputOutputArray(const std::vector<UMat>& vec);
+
+    explicit _InputOutputArray(const _OutputArray& o);
 };
 
-typedef const _InputArray& InputArray;
+typedef _InputArray InputArray;
 typedef InputArray InputArrayOfArrays;
-typedef const _OutputArray& OutputArray;
+typedef _OutputArray OutputArray;
 typedef OutputArray OutputArrayOfArrays;
-typedef const _InputOutputArray& InputOutputArray;
+typedef _InputOutputArray InputOutputArray;
 typedef InputOutputArray InputOutputArrayOfArrays;
 
 CV_EXPORTS InputOutputArray noArray();

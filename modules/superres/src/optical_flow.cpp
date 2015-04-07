@@ -224,7 +224,7 @@ namespace
 
     void Farneback::impl(InputArray input0, InputArray input1, OutputArray dst)
     {
-        calcOpticalFlowFarneback(input0, input1, (InputOutputArray)dst, pyrScale_,
+        calcOpticalFlowFarneback(input0, input1, InputOutputArray(dst), pyrScale_,
                                  numLevels_, winSize_, numIters_,
                                  polyN_, polySigma_, flags_);
     }

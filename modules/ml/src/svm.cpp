@@ -2008,7 +2008,7 @@ public:
         return var_count;
     }
 
-    String getDefaultModelName() const
+    String getDefaultName() const
     {
         return "opencv_ml_svm";
     }

@@ -186,14 +186,18 @@ public:
      */
     PlaneWarper(float scale = 1.f) { projector_.scale = scale; }
 
+    Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R);
     Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R, InputArray T);
 
     virtual Rect buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray xmap, OutputArray ymap);
     Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap);
 
+    Point warp(InputArray src, InputArray K, InputArray R,
+               int interp_mode, int border_mode, OutputArray dst);
     virtual Point warp(InputArray src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode,
                OutputArray dst);
 
+    Rect warpRoi(Size src_size, InputArray K, InputArray R);
     Rect warpRoi(Size src_size, InputArray K, InputArray R, InputArray T);
 
 protected:

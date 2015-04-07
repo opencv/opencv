@@ -104,7 +104,7 @@ public:
     virtual int getVarCount() const { return learnt_thetas.cols; }
     virtual bool isTrained() const { return !learnt_thetas.empty(); }
     virtual bool isClassifier() const { return true; }
-    virtual String getDefaultModelName() const { return "opencv_ml_lr"; }
+    virtual String getDefaultName() const { return "opencv_ml_lr"; }
 protected:
     Mat calc_sigmoid(const Mat& data) const;
     double compute_cost(const Mat& _data, const Mat& _labels, const Mat& _init_theta);
