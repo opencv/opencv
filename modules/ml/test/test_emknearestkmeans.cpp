@@ -576,7 +576,7 @@ protected:
         // Read in
         try
         {
-            em = StatModel::load<EM>(filename);
+            em = Algorithm::load<EM>(filename);
         }
         catch(...)
         {

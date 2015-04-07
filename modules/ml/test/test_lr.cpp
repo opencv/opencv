@@ -179,7 +179,7 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     // and load to another
     try
     {
-        Ptr<LogisticRegression> lr2 = StatModel::load<LogisticRegression>(filename);
+        Ptr<LogisticRegression> lr2 = Algorithm::load<LogisticRegression>(filename);
         lr2->predict(tdata->getSamples(), responses2);
         learnt_mat2 = lr2->get_learnt_thetas();
     }
