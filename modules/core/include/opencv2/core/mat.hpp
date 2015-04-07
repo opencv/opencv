@@ -70,7 +70,7 @@ class CV_EXPORTS _OutputArray;
 
 It is defined as:
 @code
-    class InputArray; // = _InputArray
+    typedef const _InputArray& InputArray;
 @endcode
 where _InputArray is a class that can be constructed from `Mat`, `Mat_<T>`, `Matx<T, m, n>`,
 `std::vector<T>`, `std::vector<std::vector<T> >` or `std::vector<Mat>`. It can also be constructed
@@ -186,6 +186,7 @@ public:
     _InputArray(const std::vector<UMat>& umv);
 
     Mat getMat(int idx=-1) const;
+    Mat getMat_(int idx=-1) const;
     UMat getUMat(int idx=-1) const;
     void getMatVector(std::vector<Mat>& mv) const;
     void getUMatVector(std::vector<UMat>& umv) const;
@@ -361,15 +362,13 @@ public:
     template<typename _Tp, int m, int n> _InputOutputArray(const Matx<_Tp, m, n>& matx);
     _InputOutputArray(const UMat& m);
     _InputOutputArray(const std::vector<UMat>& vec);
-
-    explicit _InputOutputArray(const _OutputArray& o);
 };
 
-typedef _InputArray InputArray;
+typedef const _InputArray& InputArray;
 typedef InputArray InputArrayOfArrays;
-typedef _OutputArray OutputArray;
+typedef const _OutputArray& OutputArray;
 typedef OutputArray OutputArrayOfArrays;
-typedef _InputOutputArray InputOutputArray;
+typedef const _InputOutputArray& InputOutputArray;
 typedef InputOutputArray InputOutputArrayOfArrays;
 
 CV_EXPORTS InputOutputArray noArray();

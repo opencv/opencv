@@ -114,6 +114,13 @@ inline _InputArray::_InputArray(const cuda::HostMem& cuda_mem)
 
 inline _InputArray::~_InputArray() {}
 
+inline Mat _InputArray::getMat(int i) const
+{
+    if( kind() == MAT && i < 0 )
+        return *(const Mat*)obj;
+    return getMat_(i);
+}
+
 inline bool _InputArray::isMat() const { return kind() == _InputArray::MAT; }
 inline bool _InputArray::isUMat() const  { return kind() == _InputArray::UMAT; }
 inline bool _InputArray::isMatVector() const { return kind() == _InputArray::STD_VECTOR_MAT; }
@@ -293,9 +300,6 @@ inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
 
 inline _InputOutputArray::_InputOutputArray(const cuda::HostMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_RW, &cuda_mem); }
-
-inline _InputOutputArray::_InputOutputArray(const _OutputArray& o)
-{ init(o.getFlags(), o.getObj(), o.getSz()); }
 
 //////////////////////////////////////////// Mat //////////////////////////////////////////
 
