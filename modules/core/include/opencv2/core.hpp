@@ -2958,6 +2958,9 @@ public:
 
     /** @brief Loads algorithm from the file
 
+     @param filename Name of the file to read.
+     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
+
      This is static template method of Algorithm. It's usage is following (in the case of SVM):
      @code
      Ptr<SVM> svm = Algorithm::load<SVM>("my_svm_model.xml");
@@ -2977,6 +2980,7 @@ public:
     /** @brief Loads algorithm from a String
 
      @param strModel The string variable containing the model you want to load.
+     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
 
      This is static template method of Algorithm. It's usage is following (in the case of SVM):
      @code
