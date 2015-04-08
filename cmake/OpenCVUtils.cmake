@@ -798,17 +798,17 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
     get_target_property(deps ${m} INTERFACE_LINK_LIBRARIES)
     list(INSERT ${_modules} 0 ${deps} ${m})
     foreach (dep ${deps} ${OPENCV_LINKER_LIBS})
-      if (TARGET ${dep})
-        list(INSERT ${_3rdparty} 0 ${dep})
-      else()
-        list(INSERT ${_extra} 0 ${dep})
+      if (NOT DEFINED OPENCV_MODULE_${dep}_LOCATION)
+        if (TARGET ${dep})
+          list(INSERT ${_3rdparty} 0 ${dep})
+        else()
+          list(INSERT ${_extra} 0 ${dep})
+        endif()
       endif()
     endforeach()
   endforeach()
 
   # split 3rdparty libs and modules
-  ocv_list_filterout(${_3rdparty} "^opencv_.+$")
-  ocv_list_filterout(${_extra} "^opencv_.+$")
   list(REMOVE_ITEM ${_modules} ${${_3rdparty}} ${${_extra}})
 
   # convert CMake lists to makefile literals
