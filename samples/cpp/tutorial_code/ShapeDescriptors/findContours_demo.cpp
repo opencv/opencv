@@ -25,10 +25,15 @@ void thresh_callback(int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
-  /// Load source image and convert it to gray
-  src = imread( argv[1], 1 );
+  /// Load source image
+  string imageName("../data/stuff.jpg"); // by default
+  if (argc >= 2)
+  {
+    imageName = argv[1];
+  }
+  src = imread(imageName, 1);
 
   /// Convert image to gray and blur it
   cvtColor( src, src_gray, COLOR_BGR2GRAY );
