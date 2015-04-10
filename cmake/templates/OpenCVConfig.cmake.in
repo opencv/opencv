@@ -388,6 +388,10 @@ macro(ocv_include_modules)
   include_directories(BEFORE "${OpenCV_INCLUDE_DIRS}")
 endmacro()
 
+macro(ocv_include_modules_recurse)
+  include_directories(BEFORE "${OpenCV_INCLUDE_DIRS}")
+endmacro()
+
 macro(ocv_target_link_libraries)
   target_link_libraries(${ARGN})
 endmacro()
