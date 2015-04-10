@@ -27,7 +27,7 @@ void thresh_callback(int, void* );
  */
 int main( int, char** argv )
 {
-  /// Load source image and convert it to gray
+  /// Load source image
   src = imread( argv[1], 1 );
 
   /// Convert image to gray and blur it
