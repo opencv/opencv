@@ -6,8 +6,8 @@ To run:
 -T type of pattern, circles, acircles, checkerboard
 -s --square_size size of squares in pattern
 -u --units mm, inches, px, m
--w  page width in units
--h  page height in units
+-W  page width in units
+-H  page height in units
 """
 
 from svgfig import *
@@ -71,7 +71,7 @@ def makePattern(cols,rows,output,p_type,units,square_size,page_width,page_height
 def main():
     # parse command line options, TODO use argparse for better doc
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ho:c:r:T:u:s:w:h:", ["help","output","columns","rows",
+        opts, args = getopt.getopt(sys.argv[1:], "ho:c:r:T:u:s:W:H:", ["help","output","columns","rows",
                                                                       "type","units","square_size","page_width",
                                                                       "page_height"])
     except getopt.error, msg:
@@ -103,9 +103,9 @@ def main():
             units = a
         elif o in ("-s", "--square_size"):
             square_size = float(a)
-        elif o in ("-w", "--page_width"):
+        elif o in ("-W", "--page_width"):
             page_width = float(a)
-        elif o in ("-h", "--page_height"):
+        elif o in ("-H", "--page_height"):
             page_height = float(a)
     pm = PatternMaker(columns,rows,output,units,square_size,page_width,page_height)
     #dict for easy lookup of pattern type
