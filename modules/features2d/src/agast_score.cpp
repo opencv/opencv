@@ -116,8 +116,8 @@ int agast_cornerScore<AgastFeatureDetector::OAST_9_16>(const uchar* ptr, const i
 
     while(true)
     {
-        register const int cb = *pixel + b_test;
-        register const int c_b = *pixel - b_test;
+        register const int cb = *ptr + b_test;
+        register const int c_b = *ptr - b_test;
         if(ptr[offset0] > cb)
           if(ptr[offset2] > cb)
             if(ptr[offset4] > cb)
@@ -2187,8 +2187,8 @@ int agast_cornerScore<AgastFeatureDetector::AGAST_7_12d>(const uchar* ptr, const
 
     while(true)
     {
-        register const int cb = *pixel + b_test;
-        register const int c_b = *pixel - b_test;
+        register const int cb = *ptr + b_test;
+        register const int c_b = *ptr - b_test;
         if(ptr[offset0] > cb)
           if(ptr[offset5] > cb)
             if(ptr[offset2] > cb)
@@ -3399,8 +3399,8 @@ int agast_cornerScore<AgastFeatureDetector::AGAST_7_12s>(const uchar* ptr, const
 
     while(true)
     {
-        register const int cb = *pixel + b_test;
-        register const int c_b = *pixel - b_test;
+        register const int cb = *ptr + b_test;
+        register const int c_b = *ptr - b_test;
         if(ptr[offset0] > cb)
           if(ptr[offset5] > cb)
             if(ptr[offset2] < c_b)
@@ -9029,8 +9029,8 @@ int agast_cornerScore<AgastFeatureDetector::AGAST_5_8>(const uchar* ptr, const i
 
     while(true)
     {
-        register const int cb = *pixel + b_test;
-        register const int c_b = *pixel - b_test;
+        register const int cb = *ptr + b_test;
+        register const int c_b = *ptr - b_test;
         if(ptr[offset0] > cb)
           if(ptr[offset2] > cb)
             if(ptr[offset3] > cb)
