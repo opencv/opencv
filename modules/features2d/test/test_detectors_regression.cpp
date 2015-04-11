@@ -259,6 +259,12 @@ TEST( Features2d_Detector_FAST, regression )
     test.safe_run();
 }
 
+TEST( Features2d_Detector_AGAST, regression )
+{
+    CV_FeatureDetectorTest test( "detector-agast", AgastFeatureDetector::create() );
+    test.safe_run();
+}
+
 TEST( Features2d_Detector_GFTT, regression )
 {
     CV_FeatureDetectorTest test( "detector-gftt", GFTTDetector::create() );

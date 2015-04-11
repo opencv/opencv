@@ -46,7 +46,7 @@
 #include <fstream>
 #include <stdlib.h>
 
-#include "fast_score.hpp"
+#include "agast_score.hpp"
 
 namespace cv
 {
@@ -157,7 +157,7 @@ public:
   // derive a layer
   BriskLayer(const BriskLayer& layer, int mode);
 
-  // Fast/Agast without non-max suppression
+  // Agast without non-max suppression
   void
   getAgastPoints(int threshold, std::vector<cv::KeyPoint>& keypoints);
 
@@ -204,13 +204,13 @@ private:
   value(const cv::Mat& mat, float xf, float yf, float scale) const;
   // the image
   cv::Mat img_;
-  // its Fast scores
+  // its Agast scores
   cv::Mat_<uchar> scores_;
   // coordinate transformation
   float scale_;
   float offset_;
   // agast
-  cv::Ptr<cv::FastFeatureDetector> fast_9_16_;
+  cv::Ptr<cv::AgastFeatureDetector> oast_9_16_;
   int pixel_5_8_[25];
   int pixel_9_16_[25];
 };
@@ -618,8 +618,6 @@ BRISK_Impl::detectAndCompute( InputArray _image, InputArray _mask, std::vector<K
                               OutputArray _descriptors, bool useProvidedKeypoints)
 {
   bool doOrientation=true;
-  if (useProvidedKeypoints)
-    doOrientation = false;
 
   // If the user specified cv::noArray(), this will yield false. Otherwise it will return true.
   bool doDescriptors = _descriptors.needed();
@@ -733,8 +731,12 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
           direction1 += tmp1;
         }
         kp.angle = (float)(atan2((float) direction1, (float) direction0) / CV_PI * 180.0);
-        if (kp.angle < 0)
-          kp.angle += 360.f;
+
+        if (!doDescriptors)
+        {
+          if (kp.angle < 0)
+            kp.angle += 360.f;
+        }
     }
 
     if (!doDescriptors)
@@ -754,6 +756,9 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
         if (theta >= int(n_rot_))
           theta -= n_rot_;
     }
+
+    if (kp.angle < 0)
+      kp.angle += 360.f;
 
     // now also extract the stuff for the actual direction:
     // let us compute the smoothed values
@@ -867,7 +872,7 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
   std::vector<std::vector<cv::KeyPoint> > agastPoints;
   agastPoints.resize(layers_);
 
-  // go through the octaves and intra layers and calculate fast corner scores:
+  // go through the octaves and intra layers and calculate agast corner scores:
   for (int i = 0; i < layers_; i++)
   {
     // call OAST16_9 without nms
@@ -2067,9 +2072,9 @@ BriskLayer::BriskLayer(const cv::Mat& img_in, float scale_in, float offset_in)
   scale_ = scale_in;
   offset_ = offset_in;
   // create an agast detector
-  fast_9_16_ = FastFeatureDetector::create(1, true, FastFeatureDetector::TYPE_9_16);
-  makeOffsets(pixel_5_8_, (int)img_.step, 8);
-  makeOffsets(pixel_9_16_, (int)img_.step, 16);
+  oast_9_16_ = AgastFeatureDetector::create(1, false, AgastFeatureDetector::OAST_9_16);
+  makeAgastOffsets(pixel_5_8_, (int)img_.step, AgastFeatureDetector::AGAST_5_8);
+  makeAgastOffsets(pixel_9_16_, (int)img_.step, AgastFeatureDetector::OAST_9_16);
 }
 // derive a layer
 BriskLayer::BriskLayer(const BriskLayer& layer, int mode)
@@ -2089,18 +2094,18 @@ BriskLayer::BriskLayer(const BriskLayer& layer, int mode)
     offset_ = 0.5f * scale_ - 0.5f;
   }
   scores_ = cv::Mat::zeros(img_.rows, img_.cols, CV_8U);
-  fast_9_16_ = FastFeatureDetector::create(1, false, FastFeatureDetector::TYPE_9_16);
-  makeOffsets(pixel_5_8_, (int)img_.step, 8);
-  makeOffsets(pixel_9_16_, (int)img_.step, 16);
+  oast_9_16_ = AgastFeatureDetector::create(1, false, AgastFeatureDetector::OAST_9_16);
+  makeAgastOffsets(pixel_5_8_, (int)img_.step, AgastFeatureDetector::AGAST_5_8);
+  makeAgastOffsets(pixel_9_16_, (int)img_.step, AgastFeatureDetector::OAST_9_16);
 }
 
-// Fast/Agast
+// Agast
 // wraps the agast class
 void
 BriskLayer::getAgastPoints(int threshold, std::vector<KeyPoint>& keypoints)
 {
-  fast_9_16_->setThreshold(threshold);
-  fast_9_16_->detect(img_, keypoints);
+  oast_9_16_->setThreshold(threshold);
+  oast_9_16_->detect(img_, keypoints);
 
   // also write scores
   const size_t num = keypoints.size();
@@ -2121,7 +2126,7 @@ BriskLayer::getAgastScore(int x, int y, int threshold) const
   {
     return score;
   }
-  score = (uchar)cornerScore<16>(&img_.at<uchar>(y, x), pixel_9_16_, threshold - 1);
+  score = (uchar)agast_cornerScore<AgastFeatureDetector::OAST_9_16>(&img_.at<uchar>(y, x), pixel_9_16_, threshold - 1);
   if (score < threshold)
     score = 0;
   return score;
@@ -2134,7 +2139,7 @@ BriskLayer::getAgastScore_5_8(int x, int y, int threshold) const
     return 0;
   if (x >= img_.cols - 2 || y >= img_.rows - 2)
     return 0;
-  int score = cornerScore<8>(&img_.at<uchar>(y, x), pixel_5_8_, threshold - 1);
+  int score = agast_cornerScore<AgastFeatureDetector::AGAST_5_8>(&img_.at<uchar>(y, x), pixel_5_8_, threshold - 1);
   if (score < threshold)
     score = 0;
   return score;
