@@ -46,9 +46,9 @@ class PatternMaker:
     r = spacing / 5.0
     for x in range(1,self.cols+1):
       for y in range(1,self.rows+1):
-        #TODO make a checkerboard pattern
-        dot = SVG("circle", cx=x * spacing, cy=y * spacing, r=r, fill="black")
-        self.g.append(dot)
+	if(x%2 == y%2):
+          dot = SVG("rect", x=x * spacing, y=y * spacing, width=spacing, height=spacing, fill="black", fill_opacity="1.", stroke_width="0.")
+          self.g.append(dot)
   def save(self):
     c = canvas(self.g,width="%d%s"%(self.width,self.units),height="%d%s"%(self.height,self.units),viewBox="0 0 %d %d"%(self.width,self.height))
     c.inkview(self.output)
