@@ -131,6 +131,12 @@ TEST(Features2d_Detector_Keypoints_FAST, validation)
     test.safe_run();
 }
 
+TEST(Features2d_Detector_Keypoints_AGAST, validation)
+{
+    CV_FeatureDetectorKeypointsTest test(AgastFeatureDetector::create());
+    test.safe_run();
+}
+
 TEST(Features2d_Detector_Keypoints_HARRIS, validation)
 {
 

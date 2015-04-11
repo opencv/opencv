@@ -222,7 +222,7 @@ class CV_EXPORTS_W BRISK : public Feature2D
 public:
     /** @brief The BRISK constructor
 
-    @param thresh FAST/AGAST detection threshold score.
+    @param thresh AGAST detection threshold score.
     @param octaves detection octaves. Use 0 to do single scale.
     @param patternScale apply this scale to the pattern used for sampling the neighbourhood of a
     keypoint.
@@ -397,6 +397,57 @@ public:
     CV_WRAP static Ptr<FastFeatureDetector> create( int threshold=10,
                                                     bool nonmaxSuppression=true,
                                                     int type=FastFeatureDetector::TYPE_9_16 );
+
+    CV_WRAP virtual void setThreshold(int threshold) = 0;
+    CV_WRAP virtual int getThreshold() const = 0;
+
+    CV_WRAP virtual void setNonmaxSuppression(bool f) = 0;
+    CV_WRAP virtual bool getNonmaxSuppression() const = 0;
+
+    CV_WRAP virtual void setType(int type) = 0;
+    CV_WRAP virtual int getType() const = 0;
+};
+
+/** @overload */
+CV_EXPORTS void AGAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
+                      int threshold, bool nonmaxSuppression=true );
+
+/** @brief Detects corners using the AGAST algorithm
+
+@param image grayscale image where keypoints (corners) are detected.
+@param keypoints keypoints detected on the image.
+@param threshold threshold on difference between intensity of the central pixel and pixels of a
+circle around this pixel.
+@param nonmaxSuppression if true, non-maximum suppression is applied to detected corners
+(keypoints).
+@param type one of the four neighborhoods as defined in the paper:
+AgastFeatureDetector::AGAST_5_8, AgastFeatureDetector::AGAST_7_12d,
+AgastFeatureDetector::AGAST_7_12s, AgastFeatureDetector::OAST_9_16
+
+Detects corners using the AGAST algorithm by @cite mair2010_agast .
+
+ */
+CV_EXPORTS void AGAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
+                      int threshold, bool nonmaxSuppression, int type );
+//! @} features2d_main
+
+//! @addtogroup features2d_main
+//! @{
+
+/** @brief Wrapping class for feature detection using the AGAST method. :
+ */
+class CV_EXPORTS_W AgastFeatureDetector : public Feature2D
+{
+public:
+    enum
+    {
+        AGAST_5_8 = 0, AGAST_7_12d = 1, AGAST_7_12s = 2, OAST_9_16 = 3,
+        THRESHOLD = 10000, NONMAX_SUPPRESSION = 10001,
+    };
+
+    CV_WRAP static Ptr<AgastFeatureDetector> create( int threshold=10,
+                                                     bool nonmaxSuppression=true,
+                                                     int type=AgastFeatureDetector::OAST_9_16 );
 
     CV_WRAP virtual void setThreshold(int threshold) = 0;
     CV_WRAP virtual int getThreshold() const = 0;
