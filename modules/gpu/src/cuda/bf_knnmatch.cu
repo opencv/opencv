@@ -374,6 +374,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void matchUnrolledCached(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, int2* bestTrainIdx, float2* bestDistance)
         {
             extern __shared__ int smem[];
@@ -424,6 +425,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void matchUnrolledCached(const PtrStepSz<T> query, const PtrStepSz<T>* trains, int n, const Mask mask, int2* bestTrainIdx, int2* bestImgIdx, float2* bestDistance)
         {
             extern __shared__ int smem[];
@@ -553,6 +555,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void matchUnrolled(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, int2* bestTrainIdx, float2* bestDistance)
         {
             extern __shared__ int smem[];
@@ -601,6 +604,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void matchUnrolled(const PtrStepSz<T> query, const PtrStepSz<T>* trains, int n, const Mask mask, int2* bestTrainIdx, int2* bestImgIdx, float2* bestDistance)
         {
             extern __shared__ int smem[];
@@ -727,6 +731,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void match(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, int2* bestTrainIdx, float2* bestDistance)
         {
             extern __shared__ int smem[];
@@ -775,6 +780,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void match(const PtrStepSz<T> query, const PtrStepSz<T>* trains, int n, const Mask mask, int2* bestTrainIdx, int2* bestImgIdx, float2* bestDistance)
         {
             extern __shared__ int smem[];
@@ -902,6 +908,7 @@ namespace cv { namespace gpu { namespace device
         // Calc distance kernel
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void calcDistanceUnrolled(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, PtrStepf allDist)
         {
             extern __shared__ int smem[];
@@ -966,6 +973,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void calcDistance(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, PtrStepf allDist)
         {
             extern __shared__ int smem[];
@@ -1066,6 +1074,7 @@ namespace cv { namespace gpu { namespace device
         // find knn match kernel
 
         template <int BLOCK_SIZE>
+        __launch_bounds__(BLOCK_SIZE)
         __global__ void findBestMatch(PtrStepSzf allDist, int i, PtrStepi trainIdx, PtrStepf distance)
         {
             const int SMEM_SIZE = BLOCK_SIZE > 64 ? BLOCK_SIZE : 64;
