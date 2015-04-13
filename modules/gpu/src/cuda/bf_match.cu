@@ -136,6 +136,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void matchUnrolledCached(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, int* bestTrainIdx, float* bestDistance)
         {
             extern __shared__ int smem[];
@@ -184,6 +185,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void matchUnrolledCached(const PtrStepSz<T> query, const PtrStepSz<T>* trains, int n, const Mask mask,
                                             int* bestTrainIdx, int* bestImgIdx, float* bestDistance)
         {
@@ -296,6 +298,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void matchUnrolled(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, int* bestTrainIdx, float* bestDistance)
         {
             extern __shared__ int smem[];
@@ -342,6 +345,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void matchUnrolled(const PtrStepSz<T> query, const PtrStepSz<T>* trains, int n, const Mask mask,
                                       int* bestTrainIdx, int* bestImgIdx, float* bestDistance)
         {
@@ -451,6 +455,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void match(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, int* bestTrainIdx, float* bestDistance)
         {
             extern __shared__ int smem[];
@@ -497,6 +502,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void match(const PtrStepSz<T> query, const PtrStepSz<T>* trains, int n, const Mask mask,
                               int* bestTrainIdx, int* bestImgIdx, float* bestDistance)
         {
