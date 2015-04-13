@@ -6,6 +6,7 @@ from subprocess import Popen, PIPE
 
 hostos = os.name # 'nt', 'posix'
 hostmachine = platform.machine() # 'x86', 'AMD64', 'x86_64'
+hostsystem = platform.system() # 'Windows', 'Darwin', 'Linux'
 
 errorCode = 0
 
@@ -850,16 +851,20 @@ def getRunArgs(args):
             path = npath
     return run_args
 
-if hostos == "nt":
+if hostsystem != 'Darwin':
     def moveTests(instance, destination):
-        src = os.path.dirname(instance.tests_dir)
+        src = instance
         # new binaries path
         newBinPath = os.path.join(destination, "bin")
+        if hostos == "posix":
+            newLibPath = os.path.join(destination, "lib")
 
         try:
             # copy binaries and CMakeCache.txt to the specified destination
-            shutil.copytree(src, newBinPath)
-            shutil.copy(os.path.join(instance.path, "CMakeCache.txt"), os.path.join(destination, "CMakeCache.txt"))
+            shutil.copytree(os.path.join(src, "bin"), newBinPath)
+            shutil.copy(os.path.join(instance, "CMakeCache.txt"), os.path.join(destination, "CMakeCache.txt"))
+            if hostos == "posix":
+                shutil.copytree(os.path.join(src, "lib"), newLibPath)
         except Exception, e:
             print "Copying error occurred:", str(e)
             exit(e.errno)
@@ -893,7 +898,8 @@ if __name__ == "__main__":
 
     parser = OptionParser(usage="run.py [options] [build_path]", description="Note: build_path is required if running not from CMake build directory")
     parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
-    if hostos == "nt":
+    # OSX in not supported for now as implementation has some technical difficulties related to the way OSX compilers work
+    if hostsystem != 'Darwin':
         parser.add_option("-m", "--move_tests", dest="move", help="location to move current tests build", metavar="PATH", default="")
     parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
     parser.add_option("-a", "--accuracy", dest="accuracy", help="look for accuracy tests instead of performance tests", action="store_true", default=False)
@@ -947,9 +953,9 @@ if __name__ == "__main__":
     for path in run_args:
         suite = TestSuite(options, path)
 
-        if hostos == "nt":
+        if hostsystem != 'Darwin':
             if(options.move):
-                moveTests(suite, options.move)
+                moveTests(path, options.move)
         #print vars(suite),"\n"
         if options.list:
             test_list.extend(suite.tests)
