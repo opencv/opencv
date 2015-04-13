@@ -56,6 +56,7 @@ namespace cv { namespace gpu { namespace device
         // Match Unrolled
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, bool SAVE_IMG_IDX, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void matchUnrolled(const PtrStepSz<T> query, int imgIdx, const PtrStepSz<T> train, float maxDistance, const Mask mask,
             PtrStepi bestTrainIdx, PtrStepi bestImgIdx, PtrStepf bestDistance, unsigned int* nMatches, int maxCount)
         {
@@ -164,6 +165,7 @@ namespace cv { namespace gpu { namespace device
         // Match
 
         template <int BLOCK_SIZE, bool SAVE_IMG_IDX, typename Dist, typename T, typename Mask>
+        __launch_bounds__(BLOCK_SIZE * BLOCK_SIZE)
         __global__ void match(const PtrStepSz<T> query, int imgIdx, const PtrStepSz<T> train, float maxDistance, const Mask mask,
             PtrStepi bestTrainIdx, PtrStepi bestImgIdx, PtrStepf bestDistance, unsigned int* nMatches, int maxCount)
         {
