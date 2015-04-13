@@ -114,7 +114,7 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64.*|AARCH64.*")
 endif()
 
 
-# Similar code is existed in OpenCVConfig.cmake
+# Similar code exists in OpenCVConfig.cmake
 if(NOT DEFINED OpenCV_STATIC)
   # look for global setting
   if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
