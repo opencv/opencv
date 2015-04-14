@@ -55,7 +55,7 @@ namespace cv { namespace hal {
 
 namespace Error {
 
-enum Code
+enum
 {
     Ok = 0,
     Unknown = -1
@@ -63,11 +63,46 @@ enum Code
 
 }
 
-Error::Code normHamming(const uchar* a, int n, int & result);
-Error::Code normHamming(const uchar* a, const uchar* b, int n, int & result);
+int normHamming(const uchar* a, int n);
+int normHamming(const uchar* a, const uchar* b, int n);
 
-Error::Code normHamming(const uchar* a, int n, int cellSize, int & result);
-Error::Code normHamming(const uchar* a, const uchar* b, int n, int cellSize, int & result);
+int normHamming(const uchar* a, int n, int cellSize);
+int normHamming(const uchar* a, const uchar* b, int n, int cellSize);
+
+//////////////////////////////// low-level functions ////////////////////////////////
+
+int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+
+int normL1_(const uchar* a, const uchar* b, int n);
+float normL1_(const float* a, const float* b, int n);
+float normL2Sqr_(const float* a, const float* b, int n);
+
+void exp(const float* src, float* dst, int n);
+void log(const float* src, float* dst, int n);
+
+void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
+void magnitude(const float* x, const float* y, float* dst, int n);
+
+/** @brief Computes the cube root of an argument.
+
+ The function cubeRoot computes \f$\sqrt[3]{\texttt{val}}\f$. Negative arguments are handled correctly.
+ NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for
+ single-precision data.
+ @param val A function argument.
+ */
+float cubeRoot(float val);
+
+/** @brief Calculates the angle of a 2D vector in degrees.
+
+ The function fastAtan2 calculates the full-range angle of an input 2D vector. The angle is measured
+ in degrees and varies from 0 to 360 degrees. The accuracy is about 0.3 degrees.
+ @param x x-coordinate of the vector.
+ @param y y-coordinate of the vector.
+ */
+float fastAtan2(float y, float x);
 
 }} //cv::hal
 

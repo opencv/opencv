@@ -136,14 +136,6 @@ namespace cv
 /* the alignment of all the allocated buffers */
 #define  CV_MALLOC_ALIGN    16
 
-#ifdef __GNUC__
-#  define CV_DECL_ALIGNED(x) __attribute__ ((aligned (x)))
-#elif defined _MSC_VER
-#  define CV_DECL_ALIGNED(x) __declspec(align(x))
-#else
-#  define CV_DECL_ALIGNED(x)
-#endif
-
 /* IEEE754 constants and macros */
 #define  CV_TOGGLE_FLT(x) ((x)^((int)(x) < 0 ? 0x7fffffff : 0))
 #define  CV_TOGGLE_DBL(x) ((x)^((int64)(x) < 0 ? CV_BIG_INT(0x7fffffffffffffff) : 0))
