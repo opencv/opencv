@@ -381,6 +381,34 @@ inline void _mm_deinterleave_epi16(__m128i & v_r0, __m128i & v_r1, __m128i & v_g
     v_a1 = _mm_unpackhi_epi16(layer3_chunk3, layer3_chunk7);
 }
 
+#if CV_AVX2
+
+inline void _mm256_interleave_epi16(__m256i & v_r0, __m256i & v_r1, __m256i & v_g0, __m256i & v_g1)
+{
+    __m256i v_mask = _mm256_set1_epi32(0x0000ffff);
+
+    __m256i layer3_chunk0 = _mm256_packus_epi32(_mm256_and_si256(v_r0, v_mask), _mm256_and_si256(v_r1, v_mask));
+    __m256i layer3_chunk2 = _mm256_packus_epi32(_mm256_srli_epi32(v_r0, 16), _mm256_srli_epi32(v_r1, 16));
+    __m256i layer3_chunk1 = _mm256_packus_epi32(_mm256_and_si256(v_g0, v_mask), _mm256_and_si256(v_g1, v_mask));
+    __m256i layer3_chunk3 = _mm256_packus_epi32(_mm256_srli_epi32(v_g0, 16), _mm256_srli_epi32(v_g1, 16));
+
+    __m256i layer2_chunk0 = _mm256_packus_epi32(_mm256_and_si256(layer3_chunk0, v_mask), _mm256_and_si256(layer3_chunk1, v_mask));
+    __m256i layer2_chunk2 = _mm256_packus_epi32(_mm256_srli_epi32(layer3_chunk0, 16), _mm256_srli_epi32(layer3_chunk1, 16));
+    __m256i layer2_chunk1 = _mm256_packus_epi32(_mm256_and_si256(layer3_chunk2, v_mask), _mm256_and_si256(layer3_chunk3, v_mask));
+    __m256i layer2_chunk3 = _mm256_packus_epi32(_mm256_srli_epi32(layer3_chunk2, 16), _mm256_srli_epi32(layer3_chunk3, 16));
+
+    __m256i layer1_chunk0 = _mm256_packus_epi32(_mm256_and_si256(layer2_chunk0, v_mask), _mm256_and_si256(layer2_chunk1, v_mask));
+    __m256i layer1_chunk2 = _mm256_packus_epi32(_mm256_srli_epi32(layer2_chunk0, 16), _mm256_srli_epi32(layer2_chunk1, 16));
+    __m256i layer1_chunk1 = _mm256_packus_epi32(_mm256_and_si256(layer2_chunk2, v_mask), _mm256_and_si256(layer2_chunk3, v_mask));
+    __m256i layer1_chunk3 = _mm256_packus_epi32(_mm256_srli_epi32(layer2_chunk2, 16), _mm256_srli_epi32(layer2_chunk3, 16));
+
+    v_r0 = _mm256_packus_epi32(_mm256_and_si256(layer1_chunk0, v_mask), _mm256_and_si256(layer1_chunk1, v_mask));
+    v_g0 = _mm256_packus_epi32(_mm256_srli_epi32(layer1_chunk0, 16), _mm256_srli_epi32(layer1_chunk1, 16));
+    v_r1 = _mm256_packus_epi32(_mm256_and_si256(layer1_chunk2, v_mask), _mm256_and_si256(layer1_chunk3, v_mask));
+    v_g1 = _mm256_packus_epi32(_mm256_srli_epi32(layer1_chunk2, 16), _mm256_srli_epi32(layer1_chunk3, 16));
+}
+#endif
+
 #if CV_SSE4_1
 
 inline void _mm_interleave_epi16(__m128i & v_r0, __m128i & v_r1, __m128i & v_g0, __m128i & v_g1)
