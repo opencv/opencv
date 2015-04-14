@@ -1200,7 +1200,7 @@ for the other points. The array is computed only in the RANSAC and LMedS methods
 This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
 @cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
 
-\f[[p_2; 1]^T K^T E K [p_1; 1] = 0 \\\f]\f[K =
+\f[[p_2; 1]^T K^{-T} E K^{-1} [p_1; 1] = 0 \\\f]\f[K =
 \begin{bmatrix}
 f & 0 & x_{pp}  \\
 0 & f & y_{pp}  \\
