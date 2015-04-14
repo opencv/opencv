@@ -40,5 +40,8 @@
 //
 //M*/
 
-#include "opencv2/hal.hpp"
-#include "opencv2/hal/intrin.hpp"
+#include "precomp.hpp"
+
+namespace cv { namespace hal {
+
+}}
