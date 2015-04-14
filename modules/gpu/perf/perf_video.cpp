@@ -340,8 +340,8 @@ PERF_TEST_P(ImagePair_WinSz_Levels_Iters, Video_PyrLKOpticalFlowDense,
 
         TEST_CYCLE() d_pyrLK.dense(d_frame0, d_frame1, u, v);
 
-        GPU_SANITY_CHECK(u);
-        GPU_SANITY_CHECK(v);
+        GPU_SANITY_CHECK(u, 0.5);
+        GPU_SANITY_CHECK(v, 0.5);
     }
     else
     {

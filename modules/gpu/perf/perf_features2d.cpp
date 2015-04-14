@@ -123,7 +123,7 @@ PERF_TEST_P(Image_NFeatures, Features2D_ORB,
 
         sortKeyPoints(gpu_keypoints, gpu_descriptors);
 
-        SANITY_CHECK_KEYPOINTS(gpu_keypoints);
+        SANITY_CHECK_KEYPOINTS(gpu_keypoints, 1e-10);
         SANITY_CHECK(gpu_descriptors);
     }
     else

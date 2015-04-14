@@ -1011,7 +1011,7 @@ PERF_TEST_P(Sz_Flags, ImgProc_MulSpectrums,
 
         TEST_CYCLE() cv::gpu::mulSpectrums(d_a, d_b, dst, flag);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 2);
     }
     else
     {
@@ -1045,7 +1045,7 @@ PERF_TEST_P(Sz, ImgProc_MulAndScaleSpectrums,
 
         TEST_CYCLE() cv::gpu::mulAndScaleSpectrums(d_src1, d_src2, dst, cv::DFT_ROWS, scale, false);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-5);
     }
     else
     {
