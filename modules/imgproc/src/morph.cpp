@@ -1823,19 +1823,13 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
                        InputArray _kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
+    Mat kernel = _kernel.getMat();
+    if (kernel.empty())
+    {
+        kernel = getStructuringElement(MORPH_RECT, Size(3,3), Point(1,1));
+    }
 #ifdef HAVE_OPENCL
-    Size ksize = _kernel.size();
-    Mat tempKernel;
-    if (ksize.height==0 || ksize.width==0)
-    {
-        tempKernel = getStructuringElement(MORPH_RECT, Size(3,3), Point(1,1));
-        ksize = tempKernel.size();
-    }
-    else
-    {
-        tempKernel = _kernel.getMat();
-    }
-    InputArray kernel = InputArray(tempKernel);
+    Size ksize = kernel.size();
     anchor = normalizeAnchor(anchor, ksize);
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && _src.channels() <= 4 &&
