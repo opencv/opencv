@@ -1820,11 +1820,22 @@ static bool ocl_morphologyEx(InputArray _src, OutputArray _dst, int op,
 #endif
 
 void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
-                       InputArray kernel, Point anchor, int iterations,
+                       InputArray _kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
 #ifdef HAVE_OPENCL
-    Size ksize = kernel.size();
+    Size ksize = _kernel.size();
+    Mat tempKernel;
+    if (ksize.height==0 || ksize.width==0)
+    {
+        tempKernel = getStructuringElement(MORPH_RECT, Size(3,3), Point(1,1));
+        ksize = tempKernel.size();
+    }
+    else
+    {
+        tempKernel = _kernel.getMat();
+    }
+    InputArray kernel = InputArray(tempKernel);
     anchor = normalizeAnchor(anchor, ksize);
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && _src.channels() <= 4 &&
