@@ -4240,7 +4240,9 @@ public:
         int brows0 = std::min(128, dst->rows), map_depth = m1->depth();
         int bcols0 = std::min(buf_size/brows0, dst->cols);
         brows0 = std::min(buf_size/bcols0, dst->rows);
-    #if CV_SSE2
+    #if CV_AVX2
+        bool useAVX2 = checkHardwareSupport(CV_CPU_AVX2);
+    #elif CV_SSE2
         bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
     #endif
 
@@ -4288,10 +4290,32 @@ public:
                             const float* sY = m2->ptr<float>(y+y1) + x;
                             x1 = 0;
 
-                        #if CV_SSE2
-                            if( useSIMD )
+                        #if CV_AVX2
+                            if (useAVX2)
                             {
-                                for( ; x1 <= bcols - 8; x1 += 8 )
+                                for (; x1 <= bcols - 16; x1 += 16)
+                                {
+                                    __m256 fx0 = _mm256_loadu_ps(sX + x1);
+                                    __m256 fx1 = _mm256_loadu_ps(sX + x1 + 8);
+                                    __m256 fy0 = _mm256_loadu_ps(sY + x1);
+                                    __m256 fy1 = _mm256_loadu_ps(sY + x1 + 8);
+                                    __m256i ix0 = _mm256_cvtps_epi32(fx0);
+                                    __m256i ix1 = _mm256_cvtps_epi32(fx1);
+                                    __m256i iy0 = _mm256_cvtps_epi32(fy0);
+                                    __m256i iy1 = _mm256_cvtps_epi32(fy1);
+                                    ix0 = _mm256_packs_epi32(ix0, ix1);
+                                    iy0 = _mm256_packs_epi32(iy0, iy1);
+                                    ix1 = _mm256_unpacklo_epi16(ix0, iy0);
+                                    iy1 = _mm256_unpackhi_epi16(ix0, iy0);
+                                    _mm256_storeu_si256((__m256i*)(XY + x1 * 2), ix1);
+                                    _mm256_storeu_si256((__m256i*)(XY + x1 * 2 + 16), iy1);
+                                }
+                                _mm256_zeroupper();
+                            }
+                        #elif CV_SSE2
+                            if (useSIMD)
+                            {
+                                for (; x1 <= bcols - 8; x1 += 8)
                                 {
                                     __m128 fx0 = _mm_loadu_ps(sX + x1);
                                     __m128 fx1 = _mm_loadu_ps(sX + x1 + 4);
@@ -4305,8 +4329,8 @@ public:
                                     iy0 = _mm_packs_epi32(iy0, iy1);
                                     ix1 = _mm_unpacklo_epi16(ix0, iy0);
                                     iy1 = _mm_unpackhi_epi16(ix0, iy0);
-                                    _mm_storeu_si128((__m128i*)(XY + x1*2), ix1);
-                                    _mm_storeu_si128((__m128i*)(XY + x1*2 + 8), iy1);
+                                    _mm_storeu_si128((__m128i*)(XY + x1 * 2), ix1);
+                                    _mm_storeu_si128((__m128i*)(XY + x1 * 2 + 8), iy1);
                                 }
                             }
                         #endif
@@ -4339,6 +4363,11 @@ public:
                         uint16x8_t v_scale = vdupq_n_u16(INTER_TAB_SIZE2-1);
                         for ( ; x1 <= bcols - 8; x1 += 8)
                             vst1q_u16(A + x1, vandq_u16(vld1q_u16(sA + x1), v_scale));
+                    #elif CV_AVX2
+                        __m256i v_scale = _mm256_set1_epi16(INTER_TAB_SIZE2 - 1);
+                        for (; x1 <= bcols - 16; x1 += 16)
+                            _mm256_storeu_si256((__m256i *)(A + x1), _mm256_and_si256(_mm256_loadu_si256((const __m256i *)(sA + x1)), v_scale));
+                        _mm256_zeroupper();
                     #elif CV_SSE2
                         __m128i v_scale = _mm_set1_epi16(INTER_TAB_SIZE2-1);
                         for ( ; x1 <= bcols - 8; x1 += 8)
@@ -4354,7 +4383,47 @@ public:
                         const float* sY = m2->ptr<float>(y+y1) + x;
 
                         x1 = 0;
-                    #if CV_SSE2
+                    #if CV_AVX2
+                        if (useAVX2)
+                        {
+                            __m256 scale = _mm256_set1_ps((float)INTER_TAB_SIZE);
+                            __m256i mask = _mm256_set1_epi32(INTER_TAB_SIZE-1);
+                            for( ; x1 <= bcols - 16; x1 += 16 )
+                            {
+                                __m256 fx0 = _mm256_loadu_ps(sX + x1);
+                                __m256 fx1 = _mm256_loadu_ps(sX + x1 + 8);
+                                __m256 fy0 = _mm256_loadu_ps(sY + x1);
+                                __m256 fy1 = _mm256_loadu_ps(sY + x1 + 8);
+                                __m256i ix0 = _mm256_cvtps_epi32(_mm256_mul_ps(fx0, scale));
+                                __m256i ix1 = _mm256_cvtps_epi32(_mm256_mul_ps(fx1, scale));
+                                __m256i iy0 = _mm256_cvtps_epi32(_mm256_mul_ps(fy0, scale));
+                                __m256i iy1 = _mm256_cvtps_epi32(_mm256_mul_ps(fy1, scale));
+                                __m256i mx0 = _mm256_and_si256(ix0, mask);
+                                __m256i mx1 = _mm256_and_si256(ix1, mask);
+                                __m256i my0 = _mm256_and_si256(iy0, mask);
+                                __m256i my1 = _mm256_and_si256(iy1, mask);
+                                mx0 = _mm256_packs_epi32(mx0, mx1);
+                                my0 = _mm256_packs_epi32(my0, my1);
+                                my0 = _mm256_slli_epi16(my0, INTER_BITS);
+                                mx0 = _mm256_or_si256(mx0, my0);
+                                mx0 = _mm256_permute4x64_epi64(mx0, _MM_SHUFFLE(3,1,2,0));
+
+                                _mm256_storeu_si256((__m256i*)(A + x1), mx0);
+
+                                ix0 = _mm256_srai_epi32(ix0, INTER_BITS);
+                                ix1 = _mm256_srai_epi32(ix1, INTER_BITS);
+                                iy0 = _mm256_srai_epi32(iy0, INTER_BITS);
+                                iy1 = _mm256_srai_epi32(iy1, INTER_BITS);
+                                ix0 = _mm256_packs_epi32(ix0, ix1);
+                                iy0 = _mm256_packs_epi32(iy0, iy1);
+                                ix1 = _mm256_unpacklo_epi16(ix0, iy0);
+                                iy1 = _mm256_unpackhi_epi16(ix0, iy0);
+                                _mm256_storeu_si256((__m256i*)(XY + x1 * 2), ix1);
+                                _mm256_storeu_si256((__m256i*)(XY + x1 * 2 + 16), iy1);
+                            }
+                            _mm256_zeroupper();
+                        }
+                    #elif CV_SSE2
                         if( useSIMD )
                         {
                             __m128 scale = _mm_set1_ps((float)INTER_TAB_SIZE);
@@ -4387,7 +4456,7 @@ public:
                                 ix1 = _mm_unpacklo_epi16(ix0, iy0);
                                 iy1 = _mm_unpackhi_epi16(ix0, iy0);
                                 _mm_storeu_si128((__m128i*)(XY + x1*2), ix1);
-                                _mm_storeu_si128((__m128i*)(XY + x1*2 + 8), iy1);
+                                _mm_storeu_si128((__m128i*)(XY + x1 * 2 + 8), iy1);
                             }
                         }
                     #elif CV_NEON
@@ -5221,13 +5290,16 @@ public:
         const int AB_BITS = MAX(10, (int)INTER_BITS);
         const int AB_SCALE = 1 << AB_BITS;
         int round_delta = interpolation == INTER_NEAREST ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2, x, y, x1, y1;
-    #if CV_SSE2
-        bool useSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-    #endif
+    
     #if CV_AVX2
         bool useAVX2 = checkHardwareSupport(CV_CPU_AVX2);
-    #elif CV_SSE4_1
-        bool useSSE4_1 = checkHardwareSupport(CV_CPU_SSE4_1);
+    #else
+        #if CV_SSE4_1
+            bool useSSE4_1 = checkHardwareSupport(CV_CPU_SSE4_1);
+        #endif
+        #if CV_SSE2
+            bool useSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
     #endif
 
         int bh0 = std::min(BLOCK_SZ/2, dst.rows);
@@ -5329,7 +5401,7 @@ public:
                     {
                         short* alpha = A + y1*bw;
                         x1 = 0;
-                    #if CV_AVX2 && 0
+                    #if CV_AVX2
                         if (useAVX2){
                             __m256i fxy_mask = _mm256_set1_epi32(INTER_TAB_SIZE - 1);
                             __m256i XX = _mm256_set1_epi32(X0), YY = _mm256_set1_epi32(Y0);
@@ -5355,6 +5427,7 @@ public:
                                 ty0 = _mm256_packs_epi32(_mm256_srai_epi32(ty0, INTER_BITS),
                                     _mm256_srai_epi32(ty1, INTER_BITS));
                                 fx_ = _mm256_adds_epi16(fx_, _mm256_slli_epi16(fy_, INTER_BITS));
+                                fx_ = _mm256_permute4x64_epi64(fx_, _MM_SHUFFLE(3, 1, 2, 0));
 
                                 _mm256_storeu_si256((__m256i*)(xy + x1 * 2), _mm256_unpacklo_epi16(tx0, ty0));
                                 _mm256_storeu_si256((__m256i*)(xy + x1 * 2 + 16), _mm256_unpackhi_epi16(tx0, ty0));
