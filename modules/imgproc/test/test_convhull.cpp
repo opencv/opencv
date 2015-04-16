@@ -1239,7 +1239,6 @@ void CV_FitEllipseTest::run_func()
         box = (CvBox2D)cv::fitEllipse(cv::cvarrToMat(points));
 }
 
-
 int CV_FitEllipseTest::validate_test_results( int test_case_idx )
 {
     int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
@@ -1354,6 +1353,64 @@ protected:
     }
 };
 
+
+// Regression test for incorrect fitEllipse result reported in Bug #3989
+// Check edge cases for rotation angles of ellipse ([-180, 90, 0, 90, 180] degrees)
+class CV_FitEllipseParallelTest : public CV_FitEllipseTest
+{
+public:
+    CV_FitEllipseParallelTest();
+    ~CV_FitEllipseParallelTest();
+protected:
+    void generate_point_set( void* points );
+    void run_func(void);
+    Mat pointsMat;
+};
+
+CV_FitEllipseParallelTest::CV_FitEllipseParallelTest()
+{
+    min_ellipse_size = 5;
+}
+
+void CV_FitEllipseParallelTest::generate_point_set( void* )
+{
+    RNG& rng = ts->get_rng();
+    int height = (int)(MAX(high.val[0] - low.val[0], min_ellipse_size));
+    int width = (int)(MAX(high.val[1] - low.val[1], min_ellipse_size));
+    const int angle = ( (cvtest::randInt(rng) % 5) - 2 ) * 90;
+    const int dim = max(height, width);
+    const Point center = Point(dim*2, dim*2);
+
+    if( width > height )
+    {
+        int t;
+        CV_SWAP( width, height, t );
+    }
+
+    Mat image = Mat::zeros(dim*4, dim*4, CV_8UC1);
+    ellipse(image, center, Size(height, width), angle,
+            0, 360, Scalar(255, 0, 0), 1, 8);
+
+    box0.center.x = (float)center.x;
+    box0.center.y = (float)center.y;
+    box0.size.width = (float)width*2;
+    box0.size.height = (float)height*2;
+    box0.angle = (float)angle;
+
+    vector<vector<Point> > contours;
+    findContours(image, contours,  RETR_EXTERNAL,  CHAIN_APPROX_NONE);
+    Mat(contours[0]).convertTo(pointsMat, CV_32F);
+}
+
+void CV_FitEllipseParallelTest::run_func()
+{
+    box = (CvBox2D)cv::fitEllipse(pointsMat);
+}
+
+CV_FitEllipseParallelTest::~CV_FitEllipseParallelTest(){
+    pointsMat.release();
+}
+
 /****************************************************************************************\
 *                                   FitLine Test                                         *
 \****************************************************************************************/
@@ -1377,7 +1434,7 @@ protected:
 
 CV_FitLineTest::CV_FitLineTest()
 {
-    min_log_size = 5; // for robust ellipse fitting a dozen of points is needed at least
+    min_log_size = 5; // for robust line fitting a dozen of points is needed at least
     max_log_size = 10;
     max_noise = 0.05;
 }
@@ -1866,6 +1923,7 @@ TEST(Imgproc_MinTriangle, accuracy) { CV_MinTriangleTest test; test.safe_run(); 
 TEST(Imgproc_MinCircle, accuracy) { CV_MinCircleTest test; test.safe_run(); }
 TEST(Imgproc_ContourPerimeter, accuracy) { CV_PerimeterTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, accuracy) { CV_FitEllipseTest test; test.safe_run(); }
+TEST(Imgproc_FitEllipse, parallel) { CV_FitEllipseParallelTest test; test.safe_run(); }
 TEST(Imgproc_FitLine, accuracy) { CV_FitLineTest test; test.safe_run(); }
 TEST(Imgproc_ContourMoments, accuracy) { CV_ContourMomentsTest test; test.safe_run(); }
 TEST(Imgproc_ContourPerimeterSlice, accuracy) { CV_PerimeterAreaSliceTest test; test.safe_run(); }
