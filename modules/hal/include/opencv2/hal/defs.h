@@ -380,7 +380,7 @@ cvRound( double value )
     TEGRA_ROUND_DBL(value);
 #elif defined CV_ICC || defined __GNUC__
 # if CV_VFP
-    ARM_ROUND_DBL(value)
+    ARM_ROUND_DBL(value);
 # else
     return (int)lrint(value);
 # endif
@@ -488,7 +488,7 @@ CV_INLINE int cvRound(float value)
     TEGRA_ROUND_FLT(value);
 #elif defined CV_ICC || defined __GNUC__
 # if CV_VFP
-    ARM_ROUND_FLT(value)
+    ARM_ROUND_FLT(value);
 # else
     return (int)lrintf(value);
 # endif

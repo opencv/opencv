@@ -381,7 +381,7 @@ TEST_F(fisheyeTest, EtimateUncertainties)
     EXPECT_MAT_NEAR(errors.c, cv::Vec2d(0.890439368129246, 0.816096854937896), 1e-10);
     EXPECT_MAT_NEAR(errors.k, cv::Vec4d(0.00516248605191506, 0.0168181467500934, 0.0213118690274604, 0.00916010877545648), 1e-10);
     EXPECT_MAT_NEAR(err_std, cv::Vec2d(0.187475975266883, 0.185678953263995), 1e-10);
-    CV_Assert(abs(rms - 0.263782587133546) < 1e-10);
+    CV_Assert(fabs(rms - 0.263782587133546) < 1e-10);
     CV_Assert(errors.alpha == 0);
 }
 

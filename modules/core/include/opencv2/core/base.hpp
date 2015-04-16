@@ -53,6 +53,7 @@
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
+#include "opencv2/hal.hpp"
 
 namespace cv
 {
@@ -419,6 +420,12 @@ typedef Hamming HammingLUT;
 
 /////////////////////////////////// inline norms ////////////////////////////////////
 
+template<typename _Tp> inline _Tp cv_abs(_Tp x) { return std::abs(x); }
+inline int cv_abs(uchar x) { return x; }
+inline int cv_abs(schar x) { return std::abs(x); }
+inline int cv_abs(ushort x) { return x; }
+inline int cv_abs(short x) { return std::abs(x); }
+
 template<typename _Tp, typename _AccTp> static inline
 _AccTp normL2Sqr(const _Tp* a, int n)
 {
@@ -447,12 +454,12 @@ _AccTp normL1(const _Tp* a, int n)
 #if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4 )
     {
-        s += (_AccTp)std::abs(a[i]) + (_AccTp)std::abs(a[i+1]) +
-            (_AccTp)std::abs(a[i+2]) + (_AccTp)std::abs(a[i+3]);
+        s += (_AccTp)cv_abs(a[i]) + (_AccTp)cv_abs(a[i+1]) +
+            (_AccTp)cv_abs(a[i+2]) + (_AccTp)cv_abs(a[i+3]);
     }
 #endif
     for( ; i < n; i++ )
-        s += std::abs(a[i]);
+        s += cv_abs(a[i]);
     return s;
 }
 
@@ -461,7 +468,7 @@ _AccTp normInf(const _Tp* a, int n)
 {
     _AccTp s = 0;
     for( int i = 0; i < n; i++ )
-        s = std::max(s, (_AccTp)std::abs(a[i]));
+        s = std::max(s, (_AccTp)cv_abs(a[i]));
     return s;
 }
 
@@ -485,11 +492,10 @@ _AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
     return s;
 }
 
-template<> inline
-float normL2Sqr(const float* a, const float* b, int n)
+inline float normL2Sqr(const float* a, const float* b, int n)
 {
     if( n >= 8 )
-        return normL2Sqr_(a, b, n);
+        return hal::normL2Sqr_(a, b, n);
     float s = 0;
     for( int i = 0; i < n; i++ )
     {
@@ -519,11 +525,10 @@ _AccTp normL1(const _Tp* a, const _Tp* b, int n)
     return s;
 }
 
-template<> inline
-float normL1(const float* a, const float* b, int n)
+inline float normL1(const float* a, const float* b, int n)
 {
     if( n >= 8 )
-        return normL1_(a, b, n);
+        return hal::normL1_(a, b, n);
     float s = 0;
     for( int i = 0; i < n; i++ )
     {
@@ -533,10 +538,9 @@ float normL1(const float* a, const float* b, int n)
     return s;
 }
 
-template<> inline
-int normL1(const uchar* a, const uchar* b, int n)
+inline int normL1(const uchar* a, const uchar* b, int n)
 {
-    return normL1_(a, b, n);
+    return hal::normL1_(a, b, n);
 }
 
 template<typename _Tp, typename _AccTp> static inline
@@ -551,6 +555,23 @@ _AccTp normInf(const _Tp* a, const _Tp* b, int n)
     return s;
 }
 
+/** @brief Computes the cube root of an argument.
+
+ The function cubeRoot computes \f$\sqrt[3]{\texttt{val}}\f$. Negative arguments are handled correctly.
+ NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for
+ single-precision data.
+ @param val A function argument.
+ */
+CV_EXPORTS_W float cubeRoot(float val);
+
+/** @brief Calculates the angle of a 2D vector in degrees.
+
+ The function fastAtan2 calculates the full-range angle of an input 2D vector. The angle is measured
+ in degrees and varies from 0 to 360 degrees. The accuracy is about 0.3 degrees.
+ @param x x-coordinate of the vector.
+ @param y y-coordinate of the vector.
+ */
+CV_EXPORTS_W float fastAtan2(float y, float x);
 
 ////////////////// forward declarations for important OpenCV types //////////////////
 
