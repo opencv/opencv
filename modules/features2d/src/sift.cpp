@@ -302,9 +302,9 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
     len = k;
 
     // compute gradient values, orientations and the weights over the pixel neighborhood
-    exp(W, W, len);
-    fastAtan2(Y, X, Ori, len, true);
-    magnitude(X, Y, Mag, len);
+    hal::exp(W, W, len);
+    hal::fastAtan2(Y, X, Ori, len, true);
+    hal::magnitude(X, Y, Mag, len);
 
     for( k = 0; k < len; k++ )
     {
@@ -585,9 +585,9 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
         }
 
     len = k;
-    fastAtan2(Y, X, Ori, len, true);
-    magnitude(X, Y, Mag, len);
-    exp(W, W, len);
+    hal::fastAtan2(Y, X, Ori, len, true);
+    hal::magnitude(X, Y, Mag, len);
+    hal::exp(W, W, len);
 
     for( k = 0; k < len; k++ )
     {
