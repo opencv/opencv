@@ -185,7 +185,7 @@ void magnitude(const double* x, const double* y, double* mag, int len)
 {
     int i = 0;
 
-#if defined CV_SIMD128_64F && CV_SIMD128_64F
+#if CV_SIMD128_64F
     for( ; i <= len - 4; i += 4 )
     {
         v_float64x2 x0 = v_load(x + i), x1 = v_load(x + i + 2);
@@ -262,7 +262,7 @@ void sqrt(const double* src, double* dst, int len)
 {
     int i = 0;
 
-#if defined CV_SIMD128_64F && CV_SIMD128_64F
+#if CV_SIMD128_64F
     for( ; i <= len - 4; i += 4 )
     {
         v_float64x2 t0 = v_load(src + i), t1 = v_load(src + i + 2);

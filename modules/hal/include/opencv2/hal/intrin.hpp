@@ -350,7 +350,6 @@ OPENCV_HAL_IMPL_BIT_OP(^)
 template<typename _Tp, int n> inline v_reg<_Tp, n> operator ~ (const v_reg<_Tp, n>& a)
 {
     v_reg<_Tp, n> c;
-    typedef typename TypeTraits<_Tp>::int_type itype;
     for( int i = 0; i < n; i++ )
         c.s[i] = TypeTraits<_Tp>::reinterpret_from_int(~TypeTraits<_Tp>::reinterpret_int(a.s[i]));
         return c;
@@ -1426,13 +1425,13 @@ OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_float64x2, v_max, _mm_max_pd)
 
 inline v_int8x16 v_min(const v_int8x16& a, const v_int8x16& b)
 {
-    __m128i delta = _mm_set1_epi8((char)0x80);
+    __m128i delta = _mm_set1_epi8((char)-128);
     return v_int8x16(_mm_xor_si128(delta, _mm_min_epu8(_mm_xor_si128(a.val, delta),
                                                        _mm_xor_si128(b.val, delta))));
 }
 inline v_int8x16 v_max(const v_int8x16& a, const v_int8x16& b)
 {
-    __m128i delta = _mm_set1_epi8((char)0x80);
+    __m128i delta = _mm_set1_epi8((char)-128);
     return v_int8x16(_mm_xor_si128(delta, _mm_max_epu8(_mm_xor_si128(a.val, delta),
                                                        _mm_xor_si128(b.val, delta))));
 }
@@ -1523,8 +1522,8 @@ inline _Tpsvec operator >= (const _Tpsvec& a, const _Tpsvec& b) \
     return _Tpsvec(_mm_xor_si128(_mm_cmpgt_##suffix(b.val, a.val), not_mask)); \
 }
 
-OPENCV_HAL_IMPL_SSE_INT_CMP_OP(v_uint8x16, v_int8x16, epi8, (char)0x80)
-OPENCV_HAL_IMPL_SSE_INT_CMP_OP(v_uint16x8, v_int16x8, epi16, (short)0x8000)
+OPENCV_HAL_IMPL_SSE_INT_CMP_OP(v_uint8x16, v_int8x16, epi8, (char)-128)
+OPENCV_HAL_IMPL_SSE_INT_CMP_OP(v_uint16x8, v_int16x8, epi16, (short)-32768)
 OPENCV_HAL_IMPL_SSE_INT_CMP_OP(v_uint32x4, v_int32x4, epi32, (int)0x80000000)
 
 #define OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(_Tpvec, suffix) \
@@ -1553,21 +1552,21 @@ OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_int8x16, v_sub_wrap, _mm_sub_epi8)
 OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_uint16x8, v_sub_wrap, _mm_sub_epi16)
 OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_int16x8, v_sub_wrap, _mm_sub_epi16)
 
-#define OPENCV_HAL_IMPL_SSE_ABSDIFF_8_16(_Tpuvec, _Tpsvec, bits, sbit) \
+#define OPENCV_HAL_IMPL_SSE_ABSDIFF_8_16(_Tpuvec, _Tpsvec, bits, smask32) \
 inline _Tpuvec v_absdiff(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     return _Tpuvec(_mm_add_epi##bits(_mm_subs_epu##bits(a.val, b.val), _mm_subs_epu##bits(b.val, a.val))); \
 } \
 inline _Tpuvec v_absdiff(const _Tpsvec& a, const _Tpsvec& b) \
 { \
-    __m128i smask = _mm_set1_epi8(sbit); \
+    __m128i smask = _mm_set1_epi32(smask32); \
     __m128i a1 = _mm_xor_si128(a.val, smask); \
     __m128i b1 = _mm_xor_si128(b.val, smask); \
     return _Tpuvec(_mm_add_epi##bits(_mm_subs_epu##bits(a1, b1), _mm_subs_epu##bits(b1, a1))); \
 }
 
-OPENCV_HAL_IMPL_SSE_ABSDIFF_8_16(v_uint8x16, v_int8x16, 8, (char)0x80)
-OPENCV_HAL_IMPL_SSE_ABSDIFF_8_16(v_uint16x8, v_int16x8, 16, (char)0x8000)
+OPENCV_HAL_IMPL_SSE_ABSDIFF_8_16(v_uint8x16, v_int8x16, 8, (int)0x80808080)
+OPENCV_HAL_IMPL_SSE_ABSDIFF_8_16(v_uint16x8, v_int16x8, 16, (int)0x80008000)
 
 #define OPENCV_HAL_IMPL_SSE_MISC_FLT_OP(_Tpvec, _Tp, _Tpreg, suffix, absmask_vec) \
 inline _Tpvec v_absdiff(const _Tpvec& a, const _Tpvec& b) \
@@ -1704,7 +1703,7 @@ OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, max, std::max)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, min, std::min)
 
 #define OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(_Tpvec, suffix, pack_op, and_op, signmask, allmask) \
-inline bool v_signmask(const _Tpvec& a) \
+inline int v_signmask(const _Tpvec& a) \
 { \
     return and_op(_mm_movemask_##suffix(pack_op(a.val)), signmask); \
 } \
@@ -2849,5 +2848,13 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
 #endif
 
 }}
+
+#ifndef CV_SIMD128
+#define CV_SIMD128 0
+#endif
+
+#ifndef CV_SIMD128_64F
+#define CV_SIMD128_64F 0
+#endif
 
 #endif
