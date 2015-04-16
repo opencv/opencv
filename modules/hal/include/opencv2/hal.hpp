@@ -81,28 +81,17 @@ float normL1_(const float* a, const float* b, int n);
 float normL2Sqr_(const float* a, const float* b, int n);
 
 void exp(const float* src, float* dst, int n);
+void exp(const double* src, double* dst, int n);
 void log(const float* src, float* dst, int n);
+void log(const double* src, double* dst, int n);
 
 void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
 void magnitude(const float* x, const float* y, float* dst, int n);
-
-/** @brief Computes the cube root of an argument.
-
- The function cubeRoot computes \f$\sqrt[3]{\texttt{val}}\f$. Negative arguments are handled correctly.
- NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for
- single-precision data.
- @param val A function argument.
- */
-float cubeRoot(float val);
-
-/** @brief Calculates the angle of a 2D vector in degrees.
-
- The function fastAtan2 calculates the full-range angle of an input 2D vector. The angle is measured
- in degrees and varies from 0 to 360 degrees. The accuracy is about 0.3 degrees.
- @param x x-coordinate of the vector.
- @param y y-coordinate of the vector.
- */
-float fastAtan2(float y, float x);
+void magnitude(const double* x, const double* y, double* dst, int n);
+void sqrt(const float* src, float* dst, int len);
+void sqrt(const double* src, double* dst, int len);
+void invSqrt(const float* src, float* dst, int len);
+void invSqrt(const double* src, double* dst, int len);
 
 }} //cv::hal
 
