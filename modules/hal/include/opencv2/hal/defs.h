@@ -666,10 +666,10 @@ template<> inline unsigned saturate_cast<unsigned>(double v) { return cvRound(v)
 
 //! @endcond
 
-//! @} core_utils
-
 }
 
 #endif // __cplusplus
+
+//! @} core_utils
 
 #endif //__OPENCV_HAL_H__

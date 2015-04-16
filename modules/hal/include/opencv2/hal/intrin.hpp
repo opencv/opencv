@@ -905,10 +905,6 @@ struct v_uint8x16
                             (char)v8, (char)v9, (char)v10, (char)v11,
                             (char)v12, (char)v13, (char)v14, (char)v15);
     }
-    uchar get(const int i) const
-    {
-        return (uchar)(_mm_extract_epi16(val, i/2) >> ((i&1)*8));
-    }
     uchar get0() const
     {
         return (uchar)_mm_cvtsi128_si32(val);
@@ -928,10 +924,6 @@ struct v_int8x16
                             (char)v8, (char)v9, (char)v10, (char)v11,
                             (char)v12, (char)v13, (char)v14, (char)v15);
     }
-    schar get(const int i) const
-    {
-        return (schar)(_mm_extract_epi16(val, i/2) >> ((i&1)*8));
-    }
     schar get0() const
     {
         return (schar)_mm_cvtsi128_si32(val);
@@ -947,10 +939,6 @@ struct v_uint16x8
     {
         val = _mm_setr_epi16((short)v0, (short)v1, (short)v2, (short)v3,
                              (short)v4, (short)v5, (short)v6, (short)v7);
-    }
-    ushort get(const int i) const
-    {
-        return (ushort)_mm_extract_epi16(val, i);
     }
     ushort get0() const
     {
@@ -968,10 +956,6 @@ struct v_int16x8
         val = _mm_setr_epi16((short)v0, (short)v1, (short)v2, (short)v3,
                              (short)v4, (short)v5, (short)v6, (short)v7);
     }
-    short get(const int i) const
-    {
-        return (short)_mm_extract_epi16(val, i);
-    }
     short get0() const
     {
         return (short)_mm_cvtsi128_si32(val);
@@ -985,12 +969,6 @@ struct v_uint32x4
     v_uint32x4(unsigned v0, unsigned v1, unsigned v2, unsigned v3)
     {
         val = _mm_setr_epi32((int)v0, (int)v1, (int)v2, (int)v3);
-    }
-    unsigned get(const int i) const
-    {
-        unsigned CV_DECL_ALIGNED(16) buf[4];
-        _mm_store_si128((__m128i*)buf, val);
-        return buf[i];
     }
     unsigned get0() const
     {
@@ -1006,12 +984,6 @@ struct v_int32x4
     {
         val = _mm_setr_epi32(v0, v1, v2, v3);
     }
-    int get(int i) const
-    {
-        int CV_DECL_ALIGNED(16) buf[4];
-        _mm_store_si128((__m128i*)buf, val);
-        return buf[i];
-    }
     int get0() const
     {
         return _mm_cvtsi128_si32(val);
@@ -1026,12 +998,6 @@ struct v_float32x4
     {
         val = _mm_setr_ps(v0, v1, v2, v3);
     }
-    float get(int i) const
-    {
-        float CV_DECL_ALIGNED(16) buf[4];
-        _mm_store_ps(buf, val);
-        return buf[i];
-    }
     float get0() const
     {
         return _mm_cvtss_f32(val);
@@ -1045,12 +1011,6 @@ struct v_float64x2
     v_float64x2(double v0, double v1)
     {
         val = _mm_setr_pd(v0, v1);
-    }
-    double get(int i) const
-    {
-        double CV_DECL_ALIGNED(16) buf[2];
-        _mm_store_pd(buf, val);
-        return buf[i];
     }
     double get0() const
     {
@@ -1376,10 +1336,10 @@ OPENCV_HAL_IMPL_SSE_LOGIC_OP(v_int32x4, si128, _mm_set1_epi32(-1))
 OPENCV_HAL_IMPL_SSE_LOGIC_OP(v_float32x4, ps, _mm_castsi128_ps(_mm_set1_epi32(-1)))
 OPENCV_HAL_IMPL_SSE_LOGIC_OP(v_float64x2, pd, _mm_castsi128_pd(_mm_set1_epi32(-1)))
 
-inline v_float32x4 v_sqrt(v_float32x4 x)
+inline v_float32x4 v_sqrt(const v_float32x4& x)
 { return v_float32x4(_mm_sqrt_ps(x.val)); }
 
-inline v_float32x4 v_invsqrt(v_float32x4 x)
+inline v_float32x4 v_invsqrt(const v_float32x4& x)
 {
     static const __m128 _0_5 = _mm_set1_ps(0.5f), _1_5 = _mm_set1_ps(1.5f);
     __m128 t = x.val;
@@ -1389,18 +1349,18 @@ inline v_float32x4 v_invsqrt(v_float32x4 x)
     return v_float32x4(t);
 }
 
-inline v_float64x2 v_sqrt(v_float64x2 x)
+inline v_float64x2 v_sqrt(const v_float64x2& x)
 { return v_float64x2(_mm_sqrt_pd(x.val)); }
 
-inline v_float64x2 v_invsqrt(v_float64x2 x)
+inline v_float64x2 v_invsqrt(const v_float64x2& x)
 {
     static const __m128d v_1 = _mm_set1_pd(1.);
     return v_float64x2(_mm_div_pd(v_1, _mm_sqrt_pd(x.val)));
 }
 
-inline v_float32x4 v_abs(v_float32x4 x)
+inline v_float32x4 v_abs(const v_float32x4& x)
 { return v_float32x4(_mm_and_ps(x.val, _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff)))); }
-inline v_float64x2 v_abs(v_float64x2 x)
+inline v_float64x2 v_abs(const v_float64x2& x)
 {
     return v_float64x2(_mm_and_pd(x.val,
         _mm_castsi128_pd(_mm_srli_epi64(_mm_set1_epi32(-1), 1))));
