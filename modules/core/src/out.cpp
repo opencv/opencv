@@ -309,7 +309,7 @@ namespace cv
 
         Ptr<Formatted> format(const Mat& mtx) const
         {
-            char braces[5] = {'[', ']', '\0', '[', ']'};
+            char braces[5] = {'[', ']', ',', '[', ']'};
             if (mtx.cols == 1)
                 braces[0] = braces[1] = '\0';
             return makePtr<FormattedImpl>("[", "]", mtx, &*braces,
@@ -327,11 +327,11 @@ namespace cv
             {
                 "uint8", "int8", "uint16", "int16", "int32", "float32", "float64", "uint64"
             };
-            char braces[5] = {'[', ']', '\0', '[', ']'};
+            char braces[5] = {'[', ']', ',', '[', ']'};
             if (mtx.cols == 1)
                 braces[0] = braces[1] = '\0';
             return makePtr<FormattedImpl>("array([",
-                cv::format("], type='%s')", numpyTypes[mtx.depth()]), mtx, &*braces,
+                cv::format("], dtype='%s')", numpyTypes[mtx.depth()]), mtx, &*braces,
                 mtx.rows == 1 || !multiline, false, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
