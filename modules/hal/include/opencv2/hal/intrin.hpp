@@ -2287,16 +2287,16 @@ inline v_float32x4 operator ~ (const v_float32x4& a)
 inline v_float32x4 v_sqrt(const v_float32x4& x)
 {
     float32x4_t e = vrsqrteq_f32(x.val);
-    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(e, e), x.val), e);
-    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(e, e), x.val), e);
-    return v_float32x4(vmulq_f32(e, x.val));
+    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x.val, e), e), e);
+    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x.val, e), e), e);
+    return v_float32x4(vmulq_f32(x.val, e));
 }
 
 inline v_float32x4 v_invsqrt(const v_float32x4& x)
 {
     float32x4_t e = vrsqrteq_f32(x.val);
-    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(e, e), x.val), e);
-    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(e, e), x.val), e);
+    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x.val, e), e), e);
+    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x.val, e), e), e);
     return v_float32x4(e);
 }
 
