@@ -2218,7 +2218,7 @@ inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b) \
 OPENCV_HAL_IMPL_NEON_BIN_OP(+, v_uint8x16, vqaddq_u8)
 OPENCV_HAL_IMPL_NEON_BIN_OP(-, v_uint8x16, vqsubq_u8)
 OPENCV_HAL_IMPL_NEON_BIN_OP(+, v_int8x16, vqaddq_s8)
-OPENCV_HAL_IMPL_NEON_BIN_OP(-, v_int8x16, vqsubq_u8)
+OPENCV_HAL_IMPL_NEON_BIN_OP(-, v_int8x16, vqsubq_s8)
 OPENCV_HAL_IMPL_NEON_BIN_OP(+, v_uint16x8, vqaddq_u16)
 OPENCV_HAL_IMPL_NEON_BIN_OP(-, v_uint16x8, vqsubq_u16)
 OPENCV_HAL_IMPL_NEON_BIN_OP(*, v_uint16x8, vmulq_u16)
@@ -2342,11 +2342,11 @@ inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(cast(vcgeq_##suffix(a.val, b.val))); }
 
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint8x16, OPENCV_HAL_NOP, u8, u8)
-OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int8x16, OPENCV_HAL_NOP, s8, u8)
+OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int8x16, vreinterpretq_s8_u8, s8, u8)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint16x8, OPENCV_HAL_NOP, u16, u16)
-OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int16x8, OPENCV_HAL_NOP, s16, u16)
+OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int16x8, vreinterpretq_s16_u16, s16, u16)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint32x4, OPENCV_HAL_NOP, u32, u32)
-OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int32x4, OPENCV_HAL_NOP, s32, u32)
+OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int32x4, vreinterpretq_s32_u32, s32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float32x4, vreinterpretq_f32_u32, f32, u32)
 
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint8x16, v_add_wrap, vaddq_u8)
@@ -2381,18 +2381,18 @@ inline v_float32x4 v_muladd(const v_float32x4& a, const v_float32x4& b, const v_
 }
 
 // trade efficiency for convenience
-#define OPENCV_HAL_IMPL_NEON_SHIFT_OP(_Tpvec, _Tp, suffix) \
+#define OPENCV_HAL_IMPL_NEON_SHIFT_OP(_Tpvec, suffix, _Tps, ssuffix) \
 inline _Tpvec operator << (const _Tpvec& a, int n) \
-{ return _Tpvec(vshlq_##suffix(a.val, vdupq_n_##suffix((_Tp)n))); } \
+{ return _Tpvec(vshlq_##suffix(a.val, vdupq_n_##ssuffix((_Tps)n))); } \
 inline _Tpvec operator >> (const _Tpvec& a, int n) \
-{ return _Tpvec(vshlq_##suffix(a.val, vdupq_n_##suffix((_Tp)-n))); }
+{ return _Tpvec(vshlq_##suffix(a.val, vdupq_n_##ssuffix((_Tps)-n))); }
 
-OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint8x16, uchar, u8)
-OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_int8x16, schar, s8)
-OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint16x8, ushort, u16)
-OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_int16x8, short, s16)
-OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint32x4, unsigned, u32)
-OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_int32x4, int, s32)
+OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint8x16, u8, schar, s8)
+OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_int8x16, s8, schar, s8)
+OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint16x8, u16, short, s16)
+OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_int16x8, s16, short, s16)
+OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint32x4, u32, int, s32)
+OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_int32x4, s32, int, s32)
 
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint16x8, v_mullo, vmulq_u16)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int16x8, v_mullo, vmulq_s16)
@@ -2444,8 +2444,8 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float, min, std::min)
 
 inline int v_signmask(const v_uint8x16& a)
 {
-    uint8x8_t m0 = vcreate_u8(CV_BIG_UINT(0x0706050403020100));
-    uint8x16_t v0 = vshlq_u8(vshrq_n_u8(a.val, 7), vcombine_u8(m0, m0));
+    int8x8_t m0 = vcreate_s8(CV_BIG_UINT(0x0706050403020100));
+    uint8x16_t v0 = vshlq_u8(vshrq_n_u8(a.val, 7), vcombine_s8(m0, m0));
     uint64x2_t v1 = vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(v0)));
     return (int)vgetq_lane_u64(v1, 0) + ((int)vgetq_lane_u64(v1, 1) << 8);
 }
@@ -2454,8 +2454,8 @@ inline int v_signmask(const v_int8x16& a)
 
 inline int v_signmask(const v_uint16x8& a)
 {
-    uint16x4_t m0 = vcreate_u16(CV_BIG_UINT(0x0003000200010000));
-    uint16x8_t v0 = vshlq_u16(vshrq_n_u16(a.val, 15), vcombine_u16(m0, m0));
+    int16x4_t m0 = vcreate_s16(CV_BIG_UINT(0x0003000200010000));
+    uint16x8_t v0 = vshlq_u16(vshrq_n_u16(a.val, 15), vcombine_s16(m0, m0));
     uint64x2_t v1 = vpaddlq_u32(vpaddlq_u16(v0));
     return (int)vgetq_lane_u64(v1, 0) + ((int)vgetq_lane_u64(v1, 1) << 4);
 }
@@ -2464,8 +2464,8 @@ inline int v_signmask(const v_int16x8& a)
 
 inline int v_signmask(const v_uint32x4& a)
 {
-    uint32x2_t m0 = vcreate_u32(CV_BIG_UINT(0x0000000100000000));
-    uint32x4_t v0 = vshlq_u32(vshrq_n_u32(a.val, 31), vcombine_u32(m0, m0));
+    int32x2_t m0 = vcreate_s32(CV_BIG_UINT(0x0000000100000000));
+    uint32x4_t v0 = vshlq_u32(vshrq_n_u32(a.val, 31), vcombine_s32(m0, m0));
     uint64x2_t v1 = vpaddlq_u32(v0);
     return (int)vgetq_lane_u64(v1, 0) + ((int)vgetq_lane_u64(v1, 1) << 2);
 }
