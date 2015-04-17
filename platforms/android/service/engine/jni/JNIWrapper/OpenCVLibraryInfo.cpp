@@ -3,7 +3,7 @@
 #include <utils/Log.h>
 #include <dlfcn.h>
 
-JNIEXPORT jlong JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_open
+JNIEXPORT jlong JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_open
   (JNIEnv * env, jobject, jstring str)
 {
     const char* infoLibPath = env->GetStringUTFChars(str, NULL);
@@ -21,7 +21,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_open
     return (jlong)handle;
 }
 
-JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getPackageName
+JNIEXPORT jstring JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_getPackageName
   (JNIEnv* env, jobject, jlong handle)
 {
     InfoFunctionType info_func;
@@ -41,7 +41,7 @@ JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getPackageNam
     return env->NewStringUTF(result);
 }
 
-JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getLibraryList
+JNIEXPORT jstring JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_getLibraryList
   (JNIEnv* env, jobject, jlong handle)
 {
     InfoFunctionType info_func;
@@ -61,7 +61,7 @@ JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getLibraryLis
     return env->NewStringUTF(result);
 }
 
-JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getVersionName
+JNIEXPORT jstring JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_getVersionName
   (JNIEnv* env, jobject, jlong handle)
 {
     InfoFunctionType info_func;
@@ -81,7 +81,7 @@ JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getVersionNam
     return env->NewStringUTF(result);
 }
 
-JNIEXPORT void JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_close
+JNIEXPORT void JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_close
   (JNIEnv*, jobject, jlong handle)
 {
     dlclose((void*)handle);

@@ -13,9 +13,9 @@
 #define LIB_OPENCV_INFO_NAME "libopencv_info.so"
 
 // OpenCV Manager package name
-#define OPENCV_ENGINE_PACKAGE "org.opencv.engine"
+#define OPENCV_ENGINE_PACKAGE "org.opencv.engine3"
 // Class name of OpenCV engine binder object. Is needned for connection to service
-#define OPECV_ENGINE_CLASSNAME "org.opencv.engine.OpenCVEngineInterface"
+#define OPECV_ENGINE_CLASSNAME "org.opencv.engine3.OpenCVEngineInterface"
 
 typedef const char* (*InfoFunctionType)();
 
