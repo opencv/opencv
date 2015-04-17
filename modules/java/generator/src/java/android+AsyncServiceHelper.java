@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.StringTokenizer;
 
 import org.opencv.core.Core;
-import org.opencv.engine.OpenCVEngineInterface;
+import org.opencv.engine3.OpenCVEngineInterface;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -21,8 +21,8 @@ class AsyncServiceHelper
             final LoaderCallbackInterface Callback)
     {
         AsyncServiceHelper helper = new AsyncServiceHelper(Version, AppContext, Callback);
-        Intent intent = new Intent("org.opencv.engine.BIND");
-        intent.setPackage("org.opencv.engine");
+        Intent intent = new Intent("org.opencv.engine3.BIND");
+        intent.setPackage("org.opencv.engine3");
         if (AppContext.bindService(intent, helper.mServiceConnection, Context.BIND_AUTO_CREATE))
         {
             return true;
@@ -151,7 +151,7 @@ class AsyncServiceHelper
     /**
      *  URL of OpenCV Manager page on Google Play Market.
      */
-    protected static final String OPEN_CV_SERVICE_URL = "market://details?id=org.opencv.engine";
+    protected static final String OPEN_CV_SERVICE_URL = "market://details?id=org.opencv.engine3";
 
     protected ServiceConnection mServiceConnection = new ServiceConnection()
     {

@@ -1,4 +1,4 @@
-package org.opencv.engine;
+package org.opencv.engine3;
 
 public class HardwareDetector
 {
