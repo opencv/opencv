@@ -47,6 +47,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <float.h>
 #include <stdlib.h>
 
 #define OPENCV_HAL_ADD(a, b) ((a) + (b))
@@ -2286,9 +2287,10 @@ inline v_float32x4 operator ~ (const v_float32x4& a)
 
 inline v_float32x4 v_sqrt(const v_float32x4& x)
 {
-    float32x4_t e = vrsqrteq_f32(x.val);
-    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x.val, e), e), e);
-    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x.val, e), e), e);
+    float32x4_t x1 = vmaxq_f32(x.val, vdupq_n_f32(FLT_MIN));
+    float32x4_t e = vrsqrteq_f32(x1);
+    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
+    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
     return v_float32x4(vmulq_f32(x.val, e));
 }
 
