@@ -2451,9 +2451,7 @@ matrix. The Singular Value Decomposition is used to solve least-square
 problems, under-determined linear systems, invert matrices, compute
 condition numbers, and so on.
 
-For a faster operation, you can pass flags=SVD::MODIFY_A|... to modify
-the decomposed matrix when it is not necessary to preserve it. If you
-want to compute a condition number of a matrix or an absolute value of
+If you want to compute a condition number of a matrix or an absolute value of
 its determinant, you do not need `u` and `vt`. You can pass
 flags=SVD::NO_UV|... . Another flag SVD::FULL_UV indicates that full-size u
 and vt must be computed, which is not necessary most of the time.
@@ -2464,8 +2462,8 @@ class CV_EXPORTS SVD
 {
 public:
     enum Flags {
-        /** use the algorithm to modify the decomposed matrix; it can save space and speed up
-            processing */
+        /** allow the algorithm to modify the decomposed matrix; it can save space and speed up
+            processing. currently ignored. */
         MODIFY_A = 1,
         /** indicates that only a vector of singular values `w` is to be processed, while u and vt
             will be set to empty matrices */
