@@ -4242,7 +4242,8 @@ public:
         brows0 = std::min(buf_size/bcols0, dst->rows);
     #if CV_AVX2
         bool useAVX2 = checkHardwareSupport(CV_CPU_AVX2);
-    #elif CV_SSE2
+    #endif
+    #if CV_SSE2
         bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
     #endif
 
@@ -4312,7 +4313,8 @@ public:
                                 }
                                 _mm256_zeroupper();
                             }
-                        #elif CV_SSE2
+                        #endif
+                        #if CV_SSE2
                             if (useSIMD)
                             {
                                 for (; x1 <= bcols - 8; x1 += 8)
@@ -4363,15 +4365,23 @@ public:
                         uint16x8_t v_scale = vdupq_n_u16(INTER_TAB_SIZE2-1);
                         for ( ; x1 <= bcols - 8; x1 += 8)
                             vst1q_u16(A + x1, vandq_u16(vld1q_u16(sA + x1), v_scale));
-                    #elif CV_AVX2
-                        __m256i v_scale = _mm256_set1_epi16(INTER_TAB_SIZE2 - 1);
-                        for (; x1 <= bcols - 16; x1 += 16)
-                            _mm256_storeu_si256((__m256i *)(A + x1), _mm256_and_si256(_mm256_loadu_si256((const __m256i *)(sA + x1)), v_scale));
-                        _mm256_zeroupper();
-                    #elif CV_SSE2
-                        __m128i v_scale = _mm_set1_epi16(INTER_TAB_SIZE2-1);
-                        for ( ; x1 <= bcols - 8; x1 += 8)
-                            _mm_storeu_si128((__m128i *)(A + x1), _mm_and_si128(_mm_loadu_si128((const __m128i *)(sA + x1)), v_scale));
+                    #endif
+                    #if CV_AVX2
+                        if (useAVX2)
+                        {
+                            __m256i v_scale = _mm256_set1_epi16(INTER_TAB_SIZE2 - 1);
+                            for (; x1 <= bcols - 16; x1 += 16)
+                                _mm256_storeu_si256((__m256i *)(A + x1), _mm256_and_si256(_mm256_loadu_si256((const __m256i *)(sA + x1)), v_scale));
+                            _mm256_zeroupper();
+                        }
+                    #endif
+                    #if CV_SSE2
+                        if (useSIMD)
+                        {
+                            __m128i v_scale128 = _mm_set1_epi16(INTER_TAB_SIZE2 - 1);
+                            for (; x1 <= bcols - 8; x1 += 8)
+                                _mm_storeu_si128((__m128i *)(A + x1), _mm_and_si128(_mm_loadu_si128((const __m128i *)(sA + x1)), v_scale128));
+                        }
                     #endif
 
                         for( ; x1 < bcols; x1++ )
@@ -4423,7 +4433,8 @@ public:
                             }
                             _mm256_zeroupper();
                         }
-                    #elif CV_SSE2
+                    #endif
+                    #if CV_SSE2
                         if( useSIMD )
                         {
                             __m128 scale = _mm_set1_ps((float)INTER_TAB_SIZE);
@@ -4459,7 +4470,8 @@ public:
                                 _mm_storeu_si128((__m128i*)(XY + x1 * 2 + 8), iy1);
                             }
                         }
-                    #elif CV_NEON
+                    #endif
+                    #if CV_NEON
                         float32x4_t v_scale = vdupq_n_f32((float)INTER_TAB_SIZE);
                         int32x4_t v_scale2 = vdupq_n_s32(INTER_TAB_SIZE - 1), v_scale3 = vdupq_n_s32(INTER_TAB_SIZE);
 
@@ -5290,16 +5302,14 @@ public:
         const int AB_BITS = MAX(10, (int)INTER_BITS);
         const int AB_SCALE = 1 << AB_BITS;
         int round_delta = interpolation == INTER_NEAREST ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2, x, y, x1, y1;
-    
     #if CV_AVX2
         bool useAVX2 = checkHardwareSupport(CV_CPU_AVX2);
-    #else
-        #if CV_SSE4_1
-            bool useSSE4_1 = checkHardwareSupport(CV_CPU_SSE4_1);
-        #endif
-        #if CV_SSE2
-            bool useSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-        #endif
+    #endif
+    #if CV_SSE4_1
+        bool useSSE4_1 = checkHardwareSupport(CV_CPU_SSE4_1);
+    #endif
+    #if CV_SSE2
+        bool useSSE2 = checkHardwareSupport(CV_CPU_SSE2);
     #endif
 
         int bh0 = std::min(BLOCK_SZ/2, dst.rows);
@@ -5337,7 +5347,8 @@ public:
 
                             vst2q_s16(xy + (x1 << 1), v_dst);
                         }
-                        #elif CV_AVX2
+                        #endif
+                        #if CV_AVX2
                         if (useAVX2)
                         {
                             __m256i v_X0 = _mm256_set1_epi32(X0);
@@ -5363,7 +5374,8 @@ public:
                             }
                             _mm256_zeroupper();
                         }
-                        #elif CV_SSE4_1
+                        #endif
+                        #if CV_SSE4_1
                         if (useSSE4_1)
                         {
                             __m128i v_X0 = _mm_set1_epi32(X0);
@@ -5435,7 +5447,8 @@ public:
                             }
                             _mm256_zeroupper();
                         }
-                    #elif CV_SSE2
+                    #endif
+                    #if CV_SSE2
                         if( useSSE2 )
                         {
                             __m128i fxy_mask = _mm_set1_epi32(INTER_TAB_SIZE - 1);
@@ -5468,7 +5481,8 @@ public:
                                 _mm_storeu_si128((__m128i*)(alpha + x1), fx_);
                             }
                         }
-                    #elif CV_NEON
+                    #endif
+                    #if CV_NEON
                         int32x4_t v__X0 = vdupq_n_s32(X0), v__Y0 = vdupq_n_s32(Y0), v_mask = vdupq_n_s32(INTER_TAB_SIZE - 1);
                         for( ; x1 <= bw - 8; x1 += 8 )
                         {
