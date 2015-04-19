@@ -675,10 +675,18 @@ public:
 
     /** @brief Retrieves all the support vectors
 
-    The method returns all the support vector as floating-point matrix, where support vectors are
+    The method returns all the support vectors as a floating-point matrix, where support vectors are
     stored as matrix rows.
      */
     CV_WRAP virtual Mat getSupportVectors() const = 0;
+
+    /** @brief Retrieves all the uncompressed support vectors of a linear %SVM
+
+    The method returns all the uncompressed support vectors of a linear %SVM that the compressed
+    support vector, used for prediction, was derived from. They are returned in a floating-point
+    matrix, where the support vectors are stored as matrix rows.
+     */
+    CV_WRAP Mat getUncompressedSupportVectors() const;
 
     /** @brief Retrieves the decision function
 
