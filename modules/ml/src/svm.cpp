@@ -1241,11 +1241,15 @@ public:
         df_alpha.clear();
         df_index.clear();
         sv.release();
+        uncompressed_sv.release();
     }
 
     Mat getSupportVectors() const
     {
-        return sv;
+        if( params.kernelType == LINEAR)
+            return uncompressed_sv;
+        else
+            return sv;
     }
 
     CV_IMPL_PROPERTY(int, Type, params.svmType)
@@ -1538,6 +1542,7 @@ public:
         }
 
         optimize_linear_svm();
+
         return true;
     }
 
@@ -1588,6 +1593,7 @@ public:
 
         setRangeVector(df_index, df_count);
         df_alpha.assign(df_count, 1.);
+        sv.copyTo(uncompressed_sv);
         std::swap(sv, new_sv);
         std::swap(decision_func, new_df);
     }
@@ -2096,7 +2102,7 @@ public:
             svm_type_str == "NU_SVR" ? NU_SVR : -1;
 
         if( svmType < 0 )
-            CV_Error( CV_StsParseError, "Missing of invalid SVM type" );
+            CV_Error( CV_StsParseError, "Missing or invalid SVM type" );
 
         FileNode kernel_node = fn["kernel"];
         if( kernel_node.empty() )
@@ -2207,7 +2213,7 @@ public:
     SvmParams params;
     Mat class_labels;
     int var_count;
-    Mat sv;
+    Mat sv, uncompressed_sv;
     vector<DecisionFunc> decision_func;
     vector<double> df_alpha;
     vector<int> df_index;
