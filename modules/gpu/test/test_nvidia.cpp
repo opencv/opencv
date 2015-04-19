@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
+OutputLevel nvidiaTestOutputLevel = OutputLevelFull;
 
 using namespace cvtest;
 using namespace testing;
