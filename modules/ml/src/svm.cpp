@@ -538,6 +538,8 @@ public:
                 {
                     kr.idx = cache_size;
                     cache_size++;
+                    if (!lru_last)
+                        lru_last = i1+1;
                 }
                 else
                 {
@@ -546,6 +548,8 @@ public:
                     last.idx = -1;
                     lru_cache[last.prev].next = 0;
                     lru_last = last.prev;
+                    last.prev = 0;
+                    last.next = 0;
                 }
                 kernel->calc( sample_count, var_count, samples.ptr<float>(),
                               samples.ptr<float>(i1), lru_cache_data.ptr<Qfloat>(kr.idx) );
@@ -561,6 +565,8 @@ public:
                 else
                     lru_first = kr.next;
             }
+            if (lru_first)
+                lru_cache[lru_first].prev = i1+1;
             kr.next = lru_first;
             kr.prev = 0;
             lru_first = i1+1;
