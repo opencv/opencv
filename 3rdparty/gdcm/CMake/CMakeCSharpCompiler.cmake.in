@@ -1,0 +1,56 @@
+set(CMAKE_CSharp_COMPILER "@CMAKE_CSharp_COMPILER@")
+set(CMAKE_CSharp_COMPILER_ARG1 "@CMAKE_CSharp_COMPILER_ARG1@")
+#set(CMAKE_Fortran_COMPILER_ID "@CMAKE_Fortran_COMPILER_ID@")
+#set(CMAKE_Fortran_PLATFORM_ID "@CMAKE_Fortran_PLATFORM_ID@")
+#set(CMAKE_AR "@CMAKE_AR@")
+#set(CMAKE_RANLIB "@CMAKE_RANLIB@")
+# Should none on Win32, and 'mono' on unix
+set(CMAKE_CSharp_RUNTIME  "@CMAKE_CSharp_RUNTIME@")
+set(CMAKE_CSharp_ARCHIVE  "@CMAKE_CSharp_ARCHIVE@") # gacutil ??
+
+set(CMAKE_CSharp_COMPILER_LOADED 1)
+
+set(CMAKE_CSharp_COMPILER_ENV_VAR "CSC")
+
+set(CMAKE_CSharp_SOURCE_FILE_EXTENSIONS cs;CS)
+set(CMAKE_CSharp_IGNORE_EXTENSIONS h;H;o;O;obj;OBJ;def;DEF;rc;RC)
+set(CMAKE_CSharp_LINKER_PREFERENCE 20)
+set(CMAKE_STATIC_LIBRARY_PREFIX_CSharp "")
+set(CMAKE_STATIC_LIBRARY_SUFFIX_CSharp ".dll")
+set(CMAKE_SHARED_LIBRARY_PREFIX_CSharp "")
+set(CMAKE_SHARED_LIBRARY_SUFFIX_CSharp ".dll")
+
+# FIXME ... where should it go
+#set(CMAKE_EXECUTABLE_SUFFIX ".exe")
+
+set(CMAKE_STATIC_LIBRARY_CREATE_CSharp_FLAGS "/target:library")
+set(CMAKE_STATIC_LIBRARY_CSharp_FLAGS "/target:library")
+#CMAKE_STATIC_LIBRARY_CSharp_FLAGS
+
+# partial library
+set(CMAKE_MODULE_LIBRARY_CREATE_CSharp_FLAGS "/target:module")
+set(CMAKE_MODULE_LIBRARY_CSharp_FLAGS "/target:module")
+
+# static
+set(CMAKE_SHARED_LIBRARY_CREATE_CSharp_FLAGS "/target:library")
+set(CMAKE_SHARED_LIBRARY_CSharp_FLAGS "/target:library")
+#set(CMAKE_SHARED_LIBRARY_LINK_CSharp_FLAGS "-r")
+#set(CMAKE_SHARED_LIBRARY_RUNTIME_CSharp_FLAG "-r")
+#set(CMAKE_SHARED_LIBRARY_LINK_CSharp_FLAGS "-r")
+
+# FIXME: CMAKE_LINK_LIBRARY_FILE_FLAG always add a space, so I cannot simply use "/r" because
+# I would need to remove the space, but instead use the -r that tolerate a space
+#set(CMAKE_LINK_LIBRARY_FILE_FLAG "")
+#set(CMAKE_LINK_LIBRARY_FLAG "-r")
+
+#set(CMAKE_CREATE_WIN32_EXE /target:winexe)
+#set(CMAKE_CREATE_CONSOLE_EXE /target:exe)
+
+#set(CMAKE_LINK_LIBRARY_FLAG "-l")
+
+#set(CMAKE_EXECUTABLE_RUNTIME_CSharp_FLAG "-foo")
+
+if(WIN32)
+else()
+  set(CMAKE_CSHARP_INTERPRETER ${MONO_EXECUTABLE})
+endif()

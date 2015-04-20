@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!--We need the DICOM Tag (group,element) but the Attribute is not necessary I don't see
+why we should repeat it. Type is compulsary and Description is not necessary either.-->
+<!-- Maybe we should double check that Attribute are consistent with the data dict -->
+<!-- Description would be awsome for help bubbles -->
+<!-- Sample XML file to test XML parser -->
+
+<Table Name="Template">
+<Entry Tag="0008,1080" Attribute="Admitting Diagnoses Description" Type="3" Description="Description of the admitting diagnosis (diagnoses)">
+
+</Entry>
+<!--Ex1:-->
+<Entry
+	Tag="(0028,0002)" Attribute="Samples per Pixel" Type="1" Description="Number of samples (planes) in this image. See C.7.6.3.1.1 for further explanation."/>
+<!--Should be:-->
+<Entry
+	Tag="(0028,0002)" Attribute="Samples per Pixel" Type="1" Description="Number of samples (planes) in this image.">
+  <Properties Ref="See C.7.6.3.1.1 for further explanation."/>
+</Entry>
+<!--Ex2:-->
+<Entry
+Tag="(0028,0103)" Attribute="Pixel Representation" Type="1" Description="Data representation of the pixel samples. Each sample shall have the same pixel representation. Enumerated Values: 0000H = unsigned integer. 0001H = 2's complement"/>
+<!--Should be:-->
+<Entry
+Tag="(0028,0103)" Attribute="Pixel Representation" Type="1" Description="Data representation of the pixel samples. Each sample shall have the same pixel representation.">
+<Properties EnumeratedValues="0000H,0001H" Comments="unsigned integer,2's complement">
+</Entry>
+<!--Ex3:-->
+<Entry Tag="(0028,1102)" Attribute="Green Palette Color Lookup Table Descriptor" Type="1C" Description="Specifies the format of the Green Palette Color Lookup Table Data (0028,1202) Required if Photometric Interpretation (0028,0004) has a value of PALETTE COLOR. See C.7.6.3.1.5 for further explanation."/>
+<!-- should be -->
+<Entry Tag="(0028,1102)" Attribute="Green Palette Color Lookup Table Descriptor" Type="1C" Description="Specifies the format of the Green Palette Color Lookup Table Data (0028,1202)">
+	<Required "if Photometric Interpretation (0028,0004) has a value of PALETTE COLOR. See C.7.6.3.1.5 for further explanation."/>
+</Entry>
+</Table>

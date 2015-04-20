@@ -1,0 +1,8 @@
+Simple codec compilation
+------------------------
+Once you've built the library, you might want to test it with a basic codec. To do this, go to the codec directory and either use the provided Makefile or use one of the following commands to build an encoder and decoder respectively:
+
+gcc index.c convert.c image_to_j2k.c -o image_to_j2k -lopenjpeg -I ../libopenjpeg/ -lm -ltiff
+gcc index.c convert.c j2k_to_image.c -o j2k_to_image -lopenjpeg -I ../libopenjpeg/ -lm -ltiff
+
+You should add '-L..' to those lines if you did not use the 'install' target when building the library.

@@ -1,0 +1,817 @@
+What's New for OpenJPEG
+
+* : fixed
+- : removed
+! : changed
++ : added
+
+January 2, 2011
+* [antonin] bug fixes to enable cmake compilation on WIN32 platform
+			- fixed getopt bug in jpwl/CMakeLists.txt
+			- added png, zlib and lcms win32 libraries to libs directory
+			- updated libs/libtiff library
+			- moved j2k_dump_{image,cp} to j2k_dump.c to remain consistent with API interface
+			- changed mj2 cmake compilation method: as long as mj2 binaries do not strictly use the API interface, libopenjpeg source files are directly included in mj2 executables compilation.
+! [antonin] small update to xcode project
+
+December 14, 2010
+! [szukw000] adapted Makefile.am/Makefile.nix to build
+             choice: shared xor static
+
+December 11, 2010
+* [antonin] fixed flags when building jp3d with MinGW
+
+December 10, 2010
+! [szukw000] changed build choice in configure.ac/Makefile.am/Makefile.nix:
+             shared xor static
+
+December 9, 2010
+! [antonin] removed LCMS dependency in jp3d/libjp3dvm/CMakeLists.txt
+! [antonin] updated xcode project
+! [antonin] renamed jp3d/libjp3dvm/openjpeg.h => jp3d/libjp3dvm/openjpeg3d.h
+- [antonin] removed "codec/compat/" directory
+* [szukw000] updated Makefile.in
+! [szukw000] removed LCMS dependencies from Makefile.am/Makefile.nix
+
+December 8, 2010 
+  (thanks to Winfried for his help)
+* [antonin] changed remaining "WIN32" to "_WIN32"
+! [antonin] libopenjpeg has no more dependency on LCMS lib. Everything concerning color (icc profile, conversion to rgb, etc) has been put outside libopenjpeg and is used in j2k_to_image.c and mj2_to_frames.c.
+- [antonin] removed 'opj_convert{.c,.h}'
++ [antonin] added a directory 'common/' that contains 'getopt{.c,.h}' (previously in 'codec/compat').
++ [antonin] added files 'color{.c,.h}' in 'common/' that define the code for icc profile management and sycc_to_rgb conversion
++ [antonin] added 'common/format_defs.h' that contains common definitions used in image_to_j2k, j2k_to_image, j2k_dump.
+
+December 5, 2010
+! [antonin] revert to previous behaviour for cmake: builds (and links) dynamically by default. Static build only if -DBUILD_SHARED_LIBS is set to OFF.
+* [antonin] added a definition in getopt.h and an initial value in convert.c
+
+December 3, 2010
+* [antonin] workaround for name clash when building static and dynamic on WIN32 (see http://www.vtk.org/Bug/view.php?id=10190 for description) 
+
+November 28, 2010
+* [antonin] fixed a bug in codec/convert.c that prevented to build executables with WIN32 compiler (thanks winfried)
+! [antonin] changed cmake behaviour: executables are now always statically linked. When -DBUIL_SHARED_LIBS option is ON (the default), the shared versions of the libraries are also built (but executables remain linked against the static libraries).
+
+November 25, 2010
+* [antonin] fix compilation and DLL creation of libopenjpeg with MSYS/MinGW (from vincent.torri, see issue 47 on googlecode)
+
+November 22, 2010
+! [antonin] xcode : changed to native architecture build by default
+* [antonin] reverted 'include "../opj_config.h"' to 'include "opj_config.h"'
+
+November 17, 2010
+! [antonin] install man pages by default. install CHANGES and LICENSE
+! [antonin] minor changes in cmake files (from winfried)
+
+November 16, 2010
+! [antonin] minor changes in cmake flags
+
+November 15, 2010
+! [antonin] xcode project rewrite.
+! [antonin] changed imagetopng() function to correctly deal with non-standard bit-depths. Add png support for win32. (from winfried)
+* [antonin] minor changes in header inclusions
+* [antonin] complete rewrite of opj_convert.c with correct values (from winfried)
+
+November 11, 2010
+- [antonin] removed call to dirent.h in jp3d;
+
+October 28, 2010
+* [ben.boeckel] Set the soname and soversion on the jpwl library with CMake
++ [ben.boeckel] Install jpwl binaries with CMake
+
+October 26, 2010
+* [ben.boeckel] Install symlinks to versioned directory headers when using CMake
++ [ben.boeckel] Set the library version on jp3d when using CMake
+
+October 25, 2010
+* [ben.boeckel] Fix jp3d version
+
+October 24, 2010
+* [antonin] Fixed doxygen data inside source code (from winfried)
+
+October 22, 2010
+* [ben.boeckel] Don't install jp3d and libopenjpeg headers to the same place
+
+October 22, 2010
+* [ben.boeckel] Install man pages when using CMake
+
+October 22, 2010
+! [ben.boeckel] Default to building shared libraries
+
+October 22, 2010
+* [antonin] Patch to support the MSVC Win 64 builds (from szekerest)
+
+October 22, 2010
+* [antonin] Currently the Visual Studio builds are broken in the SVN. Attached a patch to fix this issue (from szekerest)
+
+October 22, 2010
+* [szukw000] replaced 'cp -d' with 'cp -P' for MacOSX
+
+October 22, 2010
+* [szukw000] 'jpwl/Makefile.am': added CFLAGS for bin_PROGRAMS
+
+October 22, 2010
++ [szukw000] added 'libopenjpeg.pc.in'
+! [szukw000] changed 'configure.ac' to create 'libopenjpeg.pc'
+! [szukw000] changed 'Makefile.am' to [un]install 'libopenjpeg.pc'
+! [szukw000] changed 'doc/Makefile.am' : 'uninstall-hook' added
+
+October 20, 2010 
+* [antonin] fixed help display (patch from winfried)
+
+October 20, 2010 
+* [antonin] 
+    fixed paths to png and tiff in CMakeLists.txt (patch from winfried)
+    fixed link to lcms library (patch from winfried)
+
+October 18, 2010 
+* [antonin] fixed options and help display (patch from winfried) 
+
+October 18, 2010
+! [szukw000]
+	doc/Makefile.am 
+	doc/Makefile.nix
+	jp3d/Makefile.nix
+	jpwl/Makefile.nix
+	Makefile.nix
+	config.nix
+
+October 17, 2010
+! [szukw000]
+	configure.ac : 'enable_shared' YES by default
+	doc/Makefile.am :
+		'all-local' and 'install-data-hook' added
+		'with_doxygen' conditional added
+	Makefile.am : 'doc' directory no longer substituted in SUBDIRS
+
+	to link binaries statically: '-static' added to:
+		codec/Makefile.am
+		mj2/Makefile.am
+		jpwl/Makefile.am
+		jp3d/codec/Makefile.am
+
+	mj2/Makefile.am : 'with_libjpwl' removed
+	mj2/Makefile.nix : 'with_libjpwl' removed
+
+	config.nix : 'WITH_JPWL', 'WITH_JP3D' added
+	doc/Makefile.nix : 'clean', 'install', 'uninstall' added
+	Makefile.nix : 'WITH_JPWL', 'WITH_JP3D' added
+
+	INSTALL : topic 3) changed regarding the changes in 'config.nix'
+
+October 13, 2010
+! [szukw000] 
+	configure.ac
+	bootstrap.sh
+
+	'with_libjpwl' removed from:
+		libopenjpeg/Makefile.am
+		codec/Makefile.am
+		codec/Makefile.nix
+		Makefile.nix
+
+October 10, 2010
+* [antonin] Patch from winfried
+
+				1. The jp3d/libjp3dvm/Makefile.am has been changed:
+
+				Installing: /usr/local/TEST_CONFIG/include/openjpeg3d-1.3/
+				Installing: /usr/local/TEST_CONFIG/include/openjpeg3d-1.3/openjpeg3d.h
+
+				PREFIX/include:
+
+					 23  openjpeg.h -> openjpeg-1.4/openjpeg.h
+					 27  openjpeg3d.h -> openjpeg3d-1.3/openjpeg3d.h
+
+				28773  openjpeg-1.4/openjpeg.h
+				22158  openjpeg3d-1.3/openjpeg3d.h
+					
+				2. The jp3d/Makefile.nix has been changed respectivly.
+					
+				3. The mj2/Makefile.nix contained a wrong path to 'compat/'
+					
+				4. opj_config.h.in.user contained a comment within a comment.
+					
+				5. 'autoreconf' reported that AC_PROG_RANLIB is no longer
+					necessary in 'configure.ac'.
+
+October 08, 2010
+* [antonin] fixed a bug in mj2.c that prevented extract_j2k_from_mj2 to build properly. Patch from winfried.
+
+October 04, 2010
++ [antonin] Added files to let people build openjpeg with 'configure' tools
++ [antonin] Added makefiles to let people manually build openjpeg on *nix platforms
+- [antonin] Removed obsolete Makefiles
+! [antonin] Renamed dirent.h to windirent.h
+! [antonin] Made optional the PNG, TIFF, and LCMS support in CMake files
++ [antonin] Added opj_config* files to configure openjpeg before building it (opj_config.h generated by 'configure', cmake, or manually by the user) 
+! [antonin] Renamed this file from ChangeLog to CHANGES
+! [antonin] Renamed 'License.txt' to 'LICENSE'
+! [antonin] Updated README files
++ [antonin] Added INSTALL and LICENSE files
++ [antonin] Added man pages
+
+June 22, 2010
++ [MM] Apply patch from w. szukalski (sent to list)
++ [MM] Also dump the image info as well as cp info.
+
+June 21, 2010
++ [MM] Added a j2k_dump to simply dump the parameter of a J2K file
+
+May 26, 2010
++ [antonin] Added CTestConfig.cmake to the root directory to incorporate the testing dashboard.
++ [antonin] MACOSX : Added a "build all" target to the XCode project file.
+
+April 16, 2010
+* [antonin] MACOSX : Fixed the XCode project file to link with the PNG library. Library and header should be located in /usr/local/lib/ and /usr/local/include/, respectively. Check http://ethan.tira-thompson.org/Mac_OS_X_Ports.html if it is not the case on your mac.
+
+April 8, 2010
+* [FOD] Fixed issue 6 on google code. Variable "pi" not freed or pointed-to in function "pi_create_encode". Thanks to Kent Mein for reporting this.
+* [FOD] Fixed problem with Borland C++ Builder (Borland C do not have lrintf). Thanks Marek Mauder for this fix.
+* [FOD] Fixed pi.c bug (issue 15 on google code). Thanks to Anton Lionel for catching this.
+* [FOD] Fixed MJ2 codec bugs (issues 23-24 on google code). Thanks to Winfried for these patches
+* [FOD] Fixed JP3D codec file format analyzer. Thanks to Kristóf Ralovich for this patch.
+! [FOD] Significant optimizations of MCT, DWT, MQ and T1 modules by Peter Wimmer (thanks Peter)
+
+March 26, 2010
++ [FOD] Added support for "jpc" codestreams which are equivalent to "j2c" codestreams. Thanks to Winfried for this patch
+* [FOD] Added support for PNG image format [Not yet functional under WIN32]. Thanks to Winfried for this patch.	See details here http://code.google.com/p/openjpeg/issues/detail?id=16
+
+March 24, 2010
+* [FOD] Code improvements using 'g++-4.4.0' to trace the code. Thanks to Winfried for this patch.		
+
+March 7, 2010
+* [FOD] Fixed small compatibility issues with win32 in codec (moved include <strings.h>)
+
+March 5, 2010
+! [FOD] Updated makefiles for v1.4 and v2.0
++ [FOD] First import of OPJ_Validate tool
+
+February 18, 2010
+* [FOD] JP3D Module. Fixed issue when computing the number of elements in an array that leads to crash (thanks Kristof). Updated JP3D makefiles.
+
+January 20, 2010
+! [FOD] Created a new constant in openjpeg.h to differentiate the case when the colorspace is not supported by the library and when it is not specified in the codestream. Suggested by Matteo Italia.
+
+November 5, 2009
+* [antonin] fixed MCT check bug in t1_getwmsedec. See http://groups.google.com/group/openjpeg/browse_thread/thread/d9d96dd4ec3e7443 for info.
+
+November 5, 2009
+* [antonin] fixed "tiffio" header inclusion to use user version on Win32 system only (otherwise assume its existence in system headers).
+
+September 10, 2009
+* [antonin] fixed minor bugs which were triggering warnings at compilation (different signedness, wrong pointer type, etc)
+
+September 8, 2009
+* [antonin] openjpeg.c : fixed initialization of parameters->cp_disto_alloc/fixed_quality/fixed_alloc/tcp_numlayers because they were preventing to use the -q and -f options.
+
+August 31, 2009
+* [antonin] JavaOpenJpegDecoder.c : fixed a signed/unsigned behaviour when returning form C to JAVA
+
+August 21, 2008
+* [antonin] found a bug in tcd.c that was preventing to find the correct threshold in tcd_rateallocate.c for high-precision images. Applied a temporary patch but a better solution should be found.
+
+August 21, 2008
+* [antonin] fixed a bug in image_to_j2k.c that was preventing the 'r' option to work properly (everything was compressed lossless regardless of the specified rate).
+
+August 8, 2008
+! [FOD] Modified the way raw images with more that 8bpp are read and written
+
+July 9, 2008
++ [Parvatha] Added the default lossless parameter to opj_set_default_encoder_parameters in openjpeg.c.
+
+June 12, 2008
+* [antonin] fixed a bug in dirent.h that prevented codec on Linux Alpha Systems to compile correctly. Thanks to RobinC.
+
+May 22, 2008
+* [antonin] fixed a bug in j2k.c (j2k_write_sod) that allowed to get negative rates, thanks zhong1985624 for pointing this.
+
+May 22, 2008
+* [antonin] additional test to avoid crash due to invalid image size, patch by Christopher Layne
+
+May 20, 2008
+* [antonin] memory leak fixed in openjpeg.c (opj_destroy_cstr_info()), patch by Carsten Juttner
+
+March 12, 2008
++ [GB] help line for the -F option in j2k_to_image
+
+March 4, 2008
+! [FOD] Changed Java files copyright in JavaOpenJPEG module
+
+February 28, 2008
+* [FOD] Fixed openjpeg.c for proper initialization of codec context structures (dinfo in opj_create_compress() 
+		and opj_create_decompress(). Bug fix suggested by Andrey V. Kiselev
+* [FOD] Clean up of opj_aligned_malloc(), to just forgo the use of posix_memalign(), 
+		as apparently memalign() is what is working better for everyone. Patch by Callum.
+
+February 28, 2008
+- [FOD] Removed the J2KViewer module, which has been replaced by OPJViewer
+* [FOD] Fixed the error handling of j2k_decode in jp2.c, thanks to Robin Cornelius
+
+February 11, 2008
+* [GB] Minor style modifications to comply with c99 compiler flag; removed Microsoft-specific "union-in-struct" syntax; Re-enabled cstr_info struct creation when -W switch is specified
+! [GB] Changed a number of things in opjviewer (e.g., decoding thread does not execute GUI calls anymore), to have it running under linux --> it is better than before, but still crashes
+
+February 5, 2008
+! [Parvatha] In convert.c, corrected imagetobmp() conversion for grayscale. In tcd.c, corrected Rate modification in
+  tcd_init_encode(). Thanks to Jeremy Furtek and Jérôme Fimes.
+
+January 31, 2008
+! [GB] In opjviewer, unification of JPEG 2000 family handlers (*.jp2, *.mj2, *.j2k) in a single file
+
+January 22, 2008
+! [FOD] In image.c, changed the opj_image_create0() memory allocation from malloc() to calloc() in order
+		to avoid segfaults when freeing the memory allocated for the coding of bad images.
+		Thanks to Christopher Layne for this improvement. 
+
+January 17, 2008
++ [antonin] Initial commit of Xcode project directory (XCode 2.5 for macosx)
+			available targets : libopenjpeg (stat and dyn), image_to_j2k, j2k_to_image
+
+January 16, 2008
+* [antonin] fixed opj_malloc.h for macosx (bugfix provided by janpeder, thanks)
+
+January 11, 2008
++ [FOD] Added missing files to JavaOpenJPEG project (files from Patrick Piscaglia)
+
+January 4, 2008
+* [Parvatha] Patch by Callum Lerwick. Fixed bug during encoding using tile option in tcd.c
+
+----------------------
+December 21, 2007
+VERSION 1.3.0 RELEASED
+----------------------
+
+December 21, 2007
+* [FOD] Bug fixed by David Bruken. Fixed memory allocation issue in opj_malloc.h
+! [FOD] Possible errors in pi_create_encode handled
+
+December 19, 2007
+* [Antonin] changed variables names alpha, beta, gamma, delta in dwt.c to avoid re-declarations on Macosx
+! [Parvatha] In pi.c, removed the Recursive function pi_check_next_level() and modified the code.
+* [FOD] Fixed allocation problem in pi.c
+
+December 19, 2007
++ [FOD] In mqc.h, changed MQC_NUMCTXS from 32 to 19 as there are only 19 possible contexts
+
+December 10, 2007
++ [FOD] First import of JAVAOpenJPEG, a Java wrapper of OpenJPEG, developed by Patrick Piscaglia of Telemis (www.telemis.com). 
+		Thank you Patrick for this new module !
+
+November 29, 2007
+! [GB] Added index.h and index.c in VC6 projects; wrapped index.h in the C++ preprocessor; modified OPJViewer project and some files.
+
+November 14, 2007
++ [FOD] Created the file index.c in the codec directory. This file handles the creation of index files, 
+		at encoding and decoding. 
+* [FOD] Fixed bugs during the creation of the index (PCRL progression order)
+* [FOD] Fixed the maximum number of resolutions a user can discard while decoding.
+		Added an error state in J2K_STATE (j2k.c)
+
+November 14, 2007
+! [FOD] - First Patch by Callum Lerwick. Instead of reinventing realloc, j2k_read_sod now just uses opj_realloc in j2k.c
+		- Second Patch by Callum Lerwick. This patch rearranges the largest memory allocations so they're allocated as 
+		late as possible, and freed as soon as possible. This cuts memory usage by about half on two large test images.
+		- Third Patch by Callum Lerwick. The opj_tcd_cblk array is one of the largest allocations, because it
+		contains a bunch of static buffers. This also makes it a major source of cache thrashing. This patch allocates 
+		the buffers from the heap, and dynamically sizes them in the decoder. I have not yet managed to dynamically size 
+		them in the encoder, getting the decoder to do it was tricky enough... I also split opj_tcd_cblk_t into separate 
+		encode and decode versions. A lot of fields were not used by both, so this cuts its size even further.
+
+* [FOD] Avoided ABI breakage
+
+November 13, 2007
+! [FOD] Patch by Dzonatas and Callum Lerwick.
+        Fp/vectorization patch which basically converts most of the irreversible decode codepath to floating point,
+        eliminating a few rounds of int/fp conversion, resulting in a vast performance improvement,
+	and an increase in accuracy.
+
+November 8, 2007
+! [FOD] In t1.c, small change to avoid calling twice t1_getwmsedec()
+        Patches from Callum Lewick:
+		- Basic gcc optimization flags in cmake and makefile match.
+		- Fixed some spelling errors in dwt.c.
+
+November 5, 2007
+*+ [GB] Fixed a bug which prevented JPWL from working on multi-tiled images; added some more fields in the interface info structures 
+(keep a list of markers, save start packet number for each tile)
+
+October 23, 2007
+* [GB] Improved success for the linux build; OPJViewer shows all the COM contents
+ 
+October 18, 2007
+* [FOD] Changed the ROI parameter in the image_to_j2k codec to make it correspond to the documentation (i.e. -ROI c=0,U=25)
+* [FOD] Patch from Callum Lewick. Memset patch. 
+		The main idea of the patch is that currently opj_malloc clears all allocations, which unnecessarily
+		dirties up the cache and eats bandwidth. This patch makes it no longer do so, and I've painstakingly determined which allocations actually need
+		to be cleared and changed them to use opj_calloc() instead. I previously tried to just get rid of the opj_*alloc wrappers but that
+		idea was nixed, so this time I'm trying it with macros. I also put in a gcc pragma that helps enforce their use. Which got messy.  :)  It caught a
+		few places they weren't used but it also revealed that the mj2 tools are not very cleanly separated from the library. It includes all the
+		internal headers, but it wasn't using the malloc wrappers. I figured the binaries should be "external" and have minimal knowledge of the
+		internals of the library. I patched them to not include opj_includes.h, and include only the internal headers they actually need. However,
+		they're using the opj_clock() function, which is in with the malloc wrappers. So I decided to move the malloc wrappers to their own header. 
+		But mj2.c seems to want to be "internal", so I patched it to use the wrappers. Note that this patch changes the semantics of opj_malloc, it no longer
+		clears the memory it allocates. If you need it to be cleared, you must use opj_calloc instead, or memset it yourself. It is also somewhat
+		invasive, please test it extensively. I've been pounding on it all summer with my test suite, Second Life, and valgrind, and it checks out clean.
+
+October 12, 2007
+* [FOD] Changed the way the image structure is allocated when the decoding parameters include some resolutions to discard. 
+        This should have a significant impact for the decoding of huge images when some resolutions are discarder (-r parameter)
+        Warning: The output image size is now reduced when discarding resolutions !
+
+October 10, 2007
+* [FOD] Patch from Callum Lewick. Clean up of j2klib.h for the aligned malloc stuff. 
+        It makes it work right with mingw, as _mm_malloc() isn't a macro, attempts to pave the way to using cmake 
+        to check for this stuff and combines a patch from Dana Fagerstrom at Sun that makes it use memalign() on Solaris
+        convert.c: Changed some error comments for TIFF images
+
+September 27, 2007
+* [FOD] Patch from Callum Lewick. Fixed dwt.c where an alignment in buffer was problematic under x86_64.
+
+September 25, 2007
+* [Mathieu Malaterre] BUG: Fix previous patch from Callum Lerwick. I have no
+    clue what CMAKE_INSTALL_LIBDIR refers too. Bump up cmake 2.2 restriction to
+    cmake 2.4 because of previous patch (not backward compatible). Properly set the SOVERSION in a cross plateform way (yes WIN32 is a platform)
+
+September 19, 2007
+* [Parvatha] Fixed issues with generation of SOP marker. 
+
+September 18, 2007
+* [Parvatha] Fixed issues with Reading and Writing TIF images in convert.c to avoid segmentation fault. 
+* [Parvatha] Fixed issues relating to using user specified rates for CINEMA option for multiple images.
+
+September 17, 2007
+* [FOD] Fixed issues with cstr_info when codestream has components with different number of resolutions. 
+! [FOD] OpenJPEG library interface modified to retain compatibility with version 1.2 
+
+September 12, 2007
+* [FOD] Patch from Callum Lerwick.
+		Fixed the library linking so it links with the soversion properly set. 
+		Fixes up the install targets so that it interacts properly with RPM. 
+		Install target for MJ2. Sets some necessary and useful CFLAGS if gcc is in use.		
+* [FOD] Updated the MJ2 codec to be compatible with the recent changes in the OpenJPEG library
+
+September 11, 2007
+* [GB] JPWL encoding is finalized correctly into the JP2 file format; added an additional structure in opj_codestream_info, to keep a record of the written markers
+
+September 8, 2007
+* [GB] Adapted the JPWL and OPJViewer code to new interface; fixed a samll bug in JPWL which created large EPBs even when null protection was specified
+
+September 7, 2007
++ [FOD] Indexes can now be generated when decoding J2K codestreams.
+* [Mathieu Malaterre] Upon failure, properly return error code (!=0).
+* [Mathieu Malaterre] CMake: Add cmake code to do testing if user has properly setup a testimages directory
+
+September 6, 2007
++ [Mathieu Malaterre] CMake: start compiling mj2, jpwl and jp3d
++ [Mathieu Malaterre] CMake: output all executable/libs into one single directory
++ [Mathieu Malaterre] CMake: start compiling index_create
++ [Mathieu Malaterre] OpenJPEG.rc update copyright year
++ [Mathieu Malaterre] CMake: add Java j2kviewer but do not compile it using cmake since cmake has too poor support for Java. Should create a custom command running ant instead.
++ [Mathieu Malaterre] CMake: Add doxygen output
++ [GB] One more field in the codestream_info struct for recording the number of packets per tile part; JPWL now distributes the EPBs in all the tile part headers
++ [Mathieu Malaterre] CMake: Add very simple tests (simply run command line with no option)
+* [Mathieu Malaterre] Fix unitialized read in img_fol (we may need a smarter initialize than memset)
+
+September 4, 2007
++ [GB] Added some fields in the codestream_info structure: they are used to record the position of single tile parts. 
+		Changed also the write_index function in the codec, to reflect the presence of this new information.
+
+September 3, 2007
++ [GB] Added the knowledge of JPSEC SEC and INSEC markers (you have to compile the JPWL project). Management of these markers is limited to skipping them without crashing: 
+		no real security function at this stage. Deprecated USE_JPSEC will be removed next
+
+August 31, 2007
+* [GB] Fixed save capabilities in OPJViewer due to recent code upgrade
+
+August 30, 2007
+* [FOD] Changed the OpenJPEG library interface to enable users to access information regarding the codestream (also called codestream index).
+		This index is usefull for all applications requiring to have a scalable acces to the codestream (like JPIP applications, ...)
+        Currently, this information is only available when encoding an image.       
++ [FOD] Added the information regarding the end of packet position in the index        
+
+August 28, 2007
+* [FOD] Fixed wrong destructors called in openjpeg.c
+* [FOD] Fixed bug in j2k_decode_jpt_stream
+
+August 24, 2007
+* [Parvatha] The end of main header is calculated after TLM and POC marker for Dcinema.
+
+August 21, 2007
++ [FOD] Added support for Visual Studio 2005
+* [FOD] Robustified MJ2 codecs
+* [Parvatha] Solved problems with codec reading from image file directory when filename had more than one "." in name
+* [Callum Lerwick] Minor cleanup patch, that gets rid of a bunch of "old style declaration" warnings from Intel's compiler
+* [Callum Lerwick] Aligned malloc using Intel's _mm_malloc(). Cleanup on the t1 memory allocation, getting rid of some leftover debug code
+* [Callum Lerwick] Memory leaks fixed
+* [Callum Lerwick] Reworks of t1_updateflags to get rid of the shift operation
+* [Callum Lerwick] mqc_setcurctx moved to the header to allow it to be inlined into the t1.
+* [Callum Lerwick] Consolidated some calls to mqc_setcurctx.
+* [Callum Lerwick] Cleaned up t1_generate_luts to output the proper types.
+* [Callum Lerwick] Replaced the large ctxno_mag lookup table with a small bit of inline-able branchless code
+* [Callum Lerwick] Moved the orient flipping into the ctxno_zc table.
+
+August 20, 2007
++ [FOD] Added support for the TGA file format in the codec
+
+August 08, 2007
+* [Parvatha] Fixed the DCinema filesize allocation. It now includes the SOT marker size
+
+August 02, 2007
++ [GB] Added a basic saving capability to OPJViewer
+
+July 18, 2007
+! [FOD] Updated libtiff library version to 3.8.2 (for WIN32)
+* [FOD] Updated BMP and PxM truncation when decoding J2K files with more than 8 bits
+
+July 17, 2007
+* [FOD] Fixed raw option for images with more than three components
+
+July 17, 2007
++ [FOD] Added support for RAW images. This module has been developped by the University of Perugia team. Thanks to them ! [image_to_j2k.c j2k_to_image.c convert.c convert.h]
+
+July 13, 2007
+! [FOD] Modified the memory allocation for codestreams containing multiple tiles. The memory is now allocated for each tile indenpendently, 
+		leading to an important decrease of the virtual memory needed. [j2k.c tcd.h tcd.c]
+! [FOD] Modified old comments about the ability to decode mega-images and comments about the disk size necessary to do this. [image_to_j2k.c and frames_to_mj2.c]
+* [FOD] Added 2000 bytes for the memory allocation in cio.c for the minimum size of headers (useful in case of very small images) [cio.c]
+
+July 12, 2007
+* [GB] fixed a bug in JPWL module, which prevented to exploit the full error correction capability of RS codes (e.g. it gave up at 5 errors, 
+		even if 6 were correctable); defined a JPWL_MAXIMUM_EPB_ROOM for better customization of the maximum dimension of EPBs (the dimension 
+		is pre-calculated on an hypothesis, if it goes beyond 65535 there will be problems, thus we give a little less than the max, let's say 65450)
+
+July 8, 2007
+* [ANTONIN] fixed the size of the memory allocation in cio.c (confusion between bits and bytes)
+
+June 21, 2007
+* [FOD] Output image color space set when decoding a JP2 file in jp2.c
++ [GB] Previous, home, and next frame buttons for exploring MJ2 files in OPJViewer
+
+June 18, 2007
+* [GB] Reload image doesn't crash in OPJViewer; more settings saved to registry
+ 
+June 16, 2007
++ [GB] Possibility to disable parsing in OPJViewer; also, saves common settings to the registry
+
+June 15, 2007
+* [FOD] Fixed the generation of index files 
+
+
+----------------------
+MAY 4, 2007
+VERSION 1.2.0 RELEASED
+----------------------
+
+May 4, 2007
+* [FOD] Bugs corrected in decoding of command line (getopt.c), in the handling of 16 bit files (t1.c and tcd.c) and the calculation of elapsed time for multiple tiles parts (tcd.c and tdc.h).
+
+June 2, 2007
++ [GB] OPJViewer opens now BMP, PNG, GIF, PNM, TIFF (with wxWidgets internals); added an encoder settings tab, for future integration with "save file as..." in JPEG 2000 format
+
+May 31, 2007
+* [FOD] Fixed the handling of 16bit TIFF files for cinema compression. Modified "convert.c"
+* [FOD] Fixed the parameters used for cinema compression (9-7 transform used instead of 5-3). Modified "image_to_j2k.c"
+
+May 24, 2007
+* [FOD] Bug fixed by Sylvain Munaut. Change in the reading of the POC marker. Since COD/COC can be anywhere in the header, the decoder cannot always know while decoding the POC marker 
+		the value of numlayers and numresolution.
+
+May 23, 2007
+! [FOD] Patch suggested by Callum Lerwick <seg@haxxed.com>: "This makes the t1 data arrays dynamic, which greatly reduces cache thrashing. Also, some minor cleanup to prevent unnecessary casts"
+
+May 22, 2007
+! [FOD] Patch suggested by Callum Lerwick <seg@haxxed.com>: "Some formatting cleanups, 
+		so that the long function definitions and calls fit on screen. Use of prefix increment which is theoretically faster, in practice any sane compiler can optimize a postfix 
+		increment but its best not to count on such things. Consolidation of some redundant calculations in the inner loops, which becomes very useful in the future autovectorize patch."
+! [FOD] Patch suggested by Callum Lerwick <seg@haxxed.com>: "This changes the flag code in t1 to use a flag_t type, which can then be changed to reduce RAM usage. It is now typedef to a short."
+! [FOD] Patch suggested by Callum Lerwick <seg@haxxed.com>: "This patch makes the t1 LUTs static. I actually intend this as a prelude to possibly eliminating some or all of the LUTs entirely."
+
+May 11, 2007
+- [FOD]	JP3D library Binaries removed from SVN.
+! [FOD] MJ2 codec updated from LibOpenJPEG version 0.97 to LibOpenJPEG version 1. Hence, the MJ2 codec will now take advantage of all the improvements and optimizations done on the LibOpenJPEG library.
+! [FOD] Possibility to choose to apply MCT (multiple component transform) enabled, and new decoding_limit: DECODE_ALL_BUT_PACKETS (openjpeg.h)
+
+April 26, 2007
++ [gdcm] Add basic steps on how to use CMake for building examples (README.cmake)
+
+April 25, 2007
++ [FOD] Modification of the openjpeg.h file to avoid and ABI break with v1.1, removed the dangerous #IFDEF JPWL and added tcp_mct in cparameters.
+
+April 23, 2007
++ [GB] Enable/disable image decoding in OPJViewer
+
+April 12,2007
+* [Parvatha] Fixed Error in tiftoimage(). Modification in convert.c.
+
+April 10,2007
++ [Parvatha] Accepting "j2c"  as format for Encoding and Decoding. Modification in image_to_j2k.c.
+* [Parvatha] Modified imagetotif() to read images with signed data. Modification in convert.c.
+
+April 5, 2007
+! [FOD] fix.h optimized. Thanks a lot to Dzonatas <dzonatas at dzonux.net> !
+! [FOD] dwt.c optimized. Thanks a lot to Dzonatas <dzonatas at dzonux.net> !
+! [FOD] t1.c optimized. Thanks a lot to Callum Lerwick <seg at haxxed.com>  !
+
+April 4,2007
++ [Parvatha] Digital cinema compliance for 4K chosen by "-cinema4K" option. Modification in image_to_j2k.c.
++ [Parvatha] Bit rate limitation for each color component. Modification in image_to_j2k.c, t2.c.
+* [Parvatha] Modified and tested Progression order change "-POC" option. Modification in image_to_j2k.c, j2k.c, pi.c.
++ [Parvatha] Function j2k_check_poc_val() to check for possible loss of packets in case of wrong POC declaration. Modification in j2k.c.
++ [Parvatha] Structure T2_MODE. This tells if the t2_encode_packets() is called during Threshold calculation or in Final pass. Modification in j2k.h, tcd.c
+
+March 30, 2007
+* [GB] OPJViewer should now work under Linux, at least with not big j2k files. Tested under Suse 10.1 64 bit.
+
+March 29, 2007
+* [Parvatha] Enable accepting file names with `-´ symbol .Modification getopt.c
+* [Parvatha] Rsiz profile name generation to be STD_RSIZ for profiles which are not DCI compliant.Modification in image_to_j2k.c
+! [Parvatha] renamed convert_progression_order to j2k_convert_progression_order. Modification j2k.c
+* [Parvatha] Calculation of number of tile part in each tile in j2k_calculate_tp. Modification j2k.c
+! [Parvatha] j2k_setup_encoder to set bit rate limitation for digital cinema compliance with quality option. Modification in j2k.c
+* [Parvatha] Equation to check multiple tile precincts. Modification pi.c
+! [Parvatha] array size generation of pi->include in pi_initialise_encode().Modification in pi.c
+* [Parvatha] modification in pi_create_encode for tile part generation.Modification in pi.c
++ [Parvatha] In tcd_rateallocate a variable stable_threshold which holds the valid threshold value. 
+			 This is used to avoid error in case of a wrong threshold value in the last iteration. Modification in tcd.c.
+
+March 28, 2007
+* [FOD] Fixed an historical bug in t1.c that leaded to the inclusion of useless 0xFF in the codestream. Thanks to Sylvain, Pascal and Parvatha !
+
+March 27, 2007
++ [GB] Improved parsing in OPJViewer, as well some minor aesthetic modifications; support for image rendering with bit depths lower than 8 bits; 
+		can display an arbitrary frame of an MJ2 file (only in B/W, though); can reload a file; better resizing capabilities
+* [GB] Following to Hervé's suggestions, all the exit() calls, added by JPWL strict checking in t2.c and j2k.c, 
+		have been substituted with (object free'ing + opj_evt_message(EVT_ERROR) + return)
++ [GB] Added linking to TIFF library in the JPWL VC6 workspaces
+
+March 23, 2007
+* [antonin] Fixed Makefile.osx and changed Readme.osx accordingly
+
+March 21, 2007
+* [Parvatha] Fixed j2k_prog_order_list[]. Modifications in j2k.c.
+* [Parvatha] Fixed t1_decode_cblks. Modifications in t1.c.
+
+March 20, 2007
++ [Parvatha] Added feature for generation of tile parts. Modifications in image_to_j2k.c, openjpeg.c, j2k.c, pi.c
++ [Parvatha] Added function j2k_write_tlm(),to generate TLM marker for a Digital cinema compliant codestream. Modifications in j2k.c.
+
+March 14, 2007
+* [FOD] Fixed linux makefile, with help from David Fries and Guido
+
+March 7, 2007
++ [Parvatha] Added option for Digital cinema profile compliant codestream. This can be chosen by "-cinema2K" or "-cinema4K" for a 2K and 4K compliance respectively. The feature for tileparts has not been implemented in this version. Modification in image_to_j2k.c
++ [Parvatha] Added the Digital Cinema profiles (CINEMA2K and CINEMA4K) to the list of profiles recognized in the codestream SIZ marker segment. Modification in openjpeg.h,j2k.c
++ [Parvatha] Added feature for constant quality within bitrate defined in Digital cinema standards. Modification in tcd.c
+! [Parvatha] Modified the method of generation of buffer length. Modification in cio.c
+ 
+
+March 1, 2007
+* [FOD] Modified codec projects (*.dsp) and makefile to include the tiff library (modified codec/image_to_j2k.dsp codec/j2k_to_image.dsp and codec/makefile)
++ [GB] Zoom capability and decoder settings dialog in OPJViewer; modified JPWL library .dsp project in order to create a library with embedded JPWL functions
+
+February 28, 2007
++ [Parvatha] Enabled compression of TIF image format to j2k by tifftoimage() and decompression of codestream to TIF image format using imagetotif(). Modifications in image_to_j2k.c, j2k_to_image.c, convert.c, convert.h
+* [antonin] fixed a bug in context numerotation that prevented the RESET switch to work correctly : mqc_reset_enc in mqc.c
+* [Fod] Corrected codec Makefile by adding the compilation of "compat/getopt.c" 
+
+February 27, 2007
+* [Parvatha] Made get_file_format function more robust. Modifications in image_to_j2k.c, j2k_to_image.c, getopt.c, getopt.h
+
+February 26, 2007
++ [Parvatha] Option to read images from a Folder whose path is specified in the Input parameters by "-ImgDir" along with output decod format specified by "-OutFor" . Modifications in image_to_j2k.c, j2k_to_image.c, getopt.c, getopt.h
++ [Parvatha] Enabling use of multi character input parameters in the codec. Modifications in image_to_j2k.c, j2k_to_image.c, getopt.c, getopt.h
+
+----------------------
+February 23, 2007
+VERSION 1.1.1 RELEASED
+----------------------
+
+February 23, 2007
+* [GB] Fixed a copy-and-paste type assignment error (bool instead of int) in the JPWL section of decoder parameters structure in openjpeg.h; minor type-casting in jpwl_lib.c. 
+		As a result, now OPJViewer should run correctly when built against the most current SVN trunk of LibOpenJPEG.lib
++ [GB] Linux makefile for the JPWL module; newlines at end of JPWL files
+
+February 22, 2007
++ [FOD] Added the OPJViewer Module (/OPJViewer), developed by Giuseppe Baruffa of the university of Perugia
+
+February 21, 2007
++ [FOD] Algorithmic optimizations in t1.c, thanks to Guido J. !
+
+February 19, 2007
++ [FOD] Added OPJ_LIMIT_DECODING enabling us to limit the decoding to main header (modified openjpeg.c, openjpeg.h, j2k.c and j2k.h)
+
+February 13, 2007
+! [FOD] David Fries suggestions. In image_to_j2k and j2k_to_image, strncpy() functions: instead of specifying the path size macro, let the compiler read the length out of the array entry.
+! [FOD] David Fries suggestions. Makefile modified. -fPIC flag used for 64-bit compilation. Move operation (rather than copy) for the dist library creation, and -p flag added.
+
+January 31, 2007
+! [FOD] Extra tokens at the end of #endif directive corrected in openjpeg.c, j2k.c and image_to_j2k.c -> no more warnings in linux compilation
+! [FOD] Linux Makefile added for the codec
+
+January 30, 2007
+! [FOD] Use of OPJ_PATH_LEN (defined as 4096) to be the maximum allowed size for filenames instead of MAX_PATH which is not always defined. This caused some programs using OpenJPEG to crash. Modifications in openjpeg.h j2k_to_image.c and image_to_j2k.c
+! [FOD] Correction of the syntax usage in MJ2_codec/mj2_to_frames.c
+
+January 23, 2007
+! [FOD] Modification in the context numbers, to reflect what has been specified in standard, in libopenjpeg/t1.h
+
+December 07, 2006
++ [Giuseppe Baruffa] Antonin verified that the MacOS build suffered from a missing definition of the "min" macro; I've added this definition (properly #ifndef'ed) into both jpwl.h and rs.h
+
+December 05, 2006
+* [Giuseppe Baruffa] Better fix of the TPH EPBs bug in JPWL module
+* [GB] Fixed the UEP bug in JPWL module; now, during a UEP specification, RS protection or CRC check can be switched off for selected range of packets, and consequently reswitched on without confusing the decoder
++ [GB] Added some lines in the help of JPWL_image_to_j2k, specifying that when using error protection on data packets, this must be paired with header protection, i.e. there cannot be packet protection without header protection
+
+December 04, 2006
+
++ [Francois-Olivier Devaux] New tag: version1.0 (includes codec and libopenjpeg directories)
+Total update of JPWL module
+    - [FOD] removed directories jpwl/decoder, jpwl/encoder, jpwl/decoder_02, jpwl/encoder_02
+    + [FOD] added in JPWL directory crc.h, jpwl.h, rs.h, crc.c, jpwl.c, jpwl_lib.c, rs.c, JPWL_image_to_j2k.dsp, JPWL_j2k_to_image.dsp, LibOpenJPEG_JPWL.dsp, JPWL_image_to_j2k.dsw, JPWL_j2k_to_image.dsw
+    ! [FOD] Modifications of libopenjpeg to integrate JPWL module (in libopenjpeg directory): j2k.c, j2k.h, openjpeg.c, openjpeg.h, opj_includes.g, t2.c
+    ! [FOD] Modification of codec to integrate JPWL module (in codec directory): image_to_j2k.c, j2k_to_image.c
+* [FOD] Corrected incorrect fprintf() formatting in codec/convert.c
+* [FOD] Code optimization usinq vsprintf() command in libopenjpeg/event.c
+* [Giuseppe Baruffa] Fixed a bug in TPH EPBs parameters: now, "last in current header" information is correctly signaled
+
+October 31, 2006
+* [Antonin] fixed a bug in the computation of the mantissa (mu)
++ [Antonin] added the ability to specify the rate as "float" (before : integer)
+
+August 18, 2006
+* [Antonin] fixed a bug in j2k_to_image.c, that prevented the -l option to work correctly.
+
+August 4, 2006
+* [Antonin] fixed a bug in pi.c, line 473, that appeared when more than 100 precincts were generated in a resolution level.
+
+July 28, 2006
++ [Antonin Descampe] added a readme in /mj2 to warn people that it only works with opj0.97
+
+July 21, 2006
+* [Mathieu Malaterre] Install exe and lib and include correctly
+* [Mathieu Malaterre] Fixed mem leaks and greyscale bmp
+* [Mathieu Malaterre] Fix pgx name length + random memory access
+! [Mathieu Malaterre] API is now const
+
+March 19, 2006
+* [Antonin] fixed a bug in t1.c that prevented in some cases a true lossless compression (thanks to Don Mimlitch for reporting this bug)
+
+February 12, 2006
+- [Herve Drolon] removed unneeded working variables in opj_tcd_t
+
+February 04, 2006
+* [galt] fixed a bug in codec/convert.c::imagetobmp
+
+February 01, 2006
+! [Herve Drolon] changed function definitions of INT and FIX modules to 'inline'
++ [Herve Drolon] added a VERSION resource to the DLL version of OpenJPEG
+
+January 31, 2006
+* [Mathieu Malaterre] Fix compilation using default openjpeg.dsw
+* [Herve Drolon] fixed various minor warnings occuring under icc9 and bcc32
+- [Mathieu Malaterre] Remove all references to OPJ_EXPORT, no declspec in header file anymore
++ [Mathieu Malaterre] Add a def.in file which is a template for Module Definition
++ [Herve Drolon] added MSVC project and compiler directives to build a 'standard' WIN32 DLL
+! [Mathieu Malaterre] Update CMake to match the new shared lib system (no more def file)
+
+January 27, 2006
+* [Antonin Descampe] fixed a two initialization problems in t1.c and tcd.c
+
+January 26, 2006
+* [Herve Drolon] fixed various minor warnings occuring under gcc
+* [__david__] fixed a segfault in codec/image_to_j2k.c & codec/j2k_to_image.c
+* [__david__] fixed help option in codec/j2k_to_image & codec/image_to_j2k
+
+January 25, 2006
+! [Mathieu Malaterre] Sync with ITK repository, also add ref to doxygen
+! [Mathieu Malaterre] Add a lot of comments on the CMake build system
+! [Mathieu Malaterre] Fix MINGW32 and BORLAND compilation problems.
+
+January 25, 2006
+* [Antonin Descampe] fixed a problem in convert.c when multiple comments
++ [Antonin Descampe] added cmake files to the project
+! [Antonin Descampe] fix.c : replaced "WIN32" by "_MSC_VER" for int64
++ [Antonin Descampe] added "OPJ_EXPORT" in openjpeg.h to generate shared lib with win32
+! [Antonin Descampe] removed all CtrlM from files
+
+January 24, 2006
+! [Antonin Descampe] event.c : replaced "WIN32" by "_MSC_VER" for i2a
+
+January 20, 2006
+* [Antonin Descampe] fixed various minor warnings with gdcm patches
+
+January 19, 2006
+* [Herve Drolon] fixed a bug in jp2_read_ihdr (need to allocate jp2->comps)
+
+January 18, 2006
+* [Herve Drolon] changed the name of j2k_realloc to opj_realloc
+* [Herve Drolon] fixed a bug in opj_cio_open when saving 48-bit images (wrong buffer size calculation)
+
+December 8, 2005
+* [Antonin Descampe] fixed a bug when specifying a rate '-r' => no distortion info was available in the index
+* [Antonin Descampe] fixed a bug in t1_getwmsedec (stepsize was divided by 8192)
+
+December 5, 2005 - 1.1.0

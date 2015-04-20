@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="gdcm2html.xsl"?>
+<!--
+  Program: GDCM (Grassroots DICOM). A DICOM library
+
+  Copyright (c) 2006-2011 Mathieu Malaterre
+  All rights reserved.
+  See Copyright.txt or http://gdcm.sourceforge.net/Copyright.html for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+-->
+<dict edition="2007" ref="http://www.vitalimages.com/Resources/Documents/dicomconformance.pdf">
+  <entry group="5653" element="00xx" vr="LO" vm="1" owner="VITREA" name="Private Creator"/>
+  <entry group="5653" element="xx10" vr="OB" vm="1" owner="VITREA" name="Saved Workflow"/>
+  <entry group="5653" element="xx11" vr="LO" vm="1" owner="VITREA" name="Saved Workflow File Name"/>
+  <entry group="5653" element="xx12" vr="OB" vm="1" owner="VITREA" name="Saved Workflow File Data"/>
+  <entry group="5653" element="xx13" vr="SL" vm="1" owner="VITREA" name="Saved Workflow File Length"/>
+  <entry group="5653" element="xx14" vr="SQ" vm="1" owner="VITREA" name="Saved Workflow File Sequence"/>
+  <entry group="5653" element="xx15" vr="SQ" vm="1" owner="VITREA" name="Image Sequence"/>
+  <entry group="5653" element="xx16" vr="SL" vm="1" owner="VITREA" name="Volume Interpolated Slices"/>
+  <entry group="5653" element="xx17" vr="UI" vm="1" owner="VITREA" name="Volume SOP Instance UID"/>
+  <entry group="5653" element="xx18" vr="SH" vm="1" owner="VITREA" name="Saved Workflow Mark"/>
+</dict>

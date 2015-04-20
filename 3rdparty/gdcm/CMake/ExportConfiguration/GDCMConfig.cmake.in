@@ -1,0 +1,55 @@
+#-----------------------------------------------------------------------------
+#
+# GDCMConfig.cmake - CMake configuration file for external projects.
+#
+# This file is configured by GDCM and used by the UseGDCM.cmake
+# module to load GDCM's settings for an external project.
+@GDCM_CONFIG_INSTALL_ONLY@
+# The GDCM version number.
+set(GDCM_MAJOR_VERSION "@GDCM_MAJOR_VERSION@")
+set(GDCM_MINOR_VERSION "@GDCM_MINOR_VERSION@")
+set(GDCM_BUILD_VERSION "@GDCM_BUILD_VERSION@")
+
+# The libraries.
+set(GDCM_LIBRARIES "@GDCM_LIBRARIES@")
+
+# The CMake macros dir.
+set(GDCM_CMAKE_DIR "@GDCM_CMAKE_DIR_CONFIG@")
+
+# The configuration options.
+set(GDCM_BUILD_SHARED_LIBS "@GDCM_BUILD_SHARED_LIBS@")
+set(GDCM_USE_VTK "@GDCM_USE_VTK@")
+
+# The "use" file.
+set(GDCM_USE_FILE "@GDCM_USE_FILE_CONFIG@")
+
+# The VTK options.
+if(GDCM_USE_VTK)
+  set(GDCM_VTK_DIR "@GDCM_VTK_DIR_CONFIG@")
+endif()
+
+get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+if(EXISTS ${SELF_DIR}/GDCMTargets.cmake)
+  # This is an install tree
+  include(${SELF_DIR}/GDCMTargets.cmake)
+  get_filename_component(GDCM_INCLUDE_ROOT "${SELF_DIR}/../../@GDCM_INSTALL_INCLUDE_DIR@" ABSOLUTE)
+  set(GDCM_INCLUDE_DIRS ${GDCM_INCLUDE_ROOT})
+  get_filename_component(GDCM_LIB_ROOT "${SELF_DIR}/../../@GDCM_INSTALL_LIB_DIR@" ABSOLUTE)
+  set(GDCM_LIBRARY_DIRS ${GDCM_LIB_ROOT})
+else()
+  if(EXISTS ${SELF_DIR}/GDCMExports.cmake)
+    # This is a build tree
+    set( GDCM_INCLUDE_DIRS "@GDCM_INCLUDE_PATH@")
+    set(GDCM_LIBRARY_DIRS "@GDCM_LIBRARY_DIR@")
+
+    include(${SELF_DIR}/GDCMExports.cmake)
+
+  else()
+    message(FATAL_ERROR "ooops")
+  endif()
+endif()
+
+set(GDCM_USE_FILE ${SELF_DIR}/UseGDCM.cmake)
+
+# Backward compatible part:
+set(GDCM_FOUND       TRUE)

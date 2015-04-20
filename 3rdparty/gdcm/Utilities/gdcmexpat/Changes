@@ -1,0 +1,148 @@
+Release 2.0.0 Wed Jan 11 2006
+        - We no longer use the "check" library for C unit testing; we
+          always use the (partial) internal implementation of the API.
+        - Report XML_NS setting via XML_GetFeatureList().
+        - Fixed headers for use from C++.
+        - XML_GetCurrentLineNumber() and  XML_GetCurrentColumnNumber()
+          now return unsigned integers.
+        - Added XML_LARGE_SIZE switch to enable 64-bit integers for
+          byte indexes and line/column numbers.
+        - Updated to use libtool 1.5.22 (the most recent).
+        - Added support for AmigaOS.
+        - Some mostly minor bug fixes. SF issues include: 1006708,
+          1021776, 1023646, 1114960, 1156398, 1221160, 1271642.
+
+Release 1.95.8 Fri Jul 23 2004
+        - Major new feature: suspend/resume.  Handlers can now request
+          that a parse be suspended for later resumption or aborted
+          altogether.  See "Temporarily Stopping Parsing" in the
+          documentation for more details.
+        - Some mostly minor bug fixes, but compilation should no
+          longer generate warnings on most platforms.  SF issues
+          include: 827319, 840173, 846309, 888329, 896188, 923913,
+          928113, 961698, 985192.
+
+Release 1.95.7 Mon Oct 20 2003
+        - Fixed enum XML_Status issue (reported on SourceForge many
+          times), so compilers that are properly picky will be happy.
+        - Introduced an XMLCALL macro to control the calling
+          convention used by the Expat API; this macro should be used
+          to annotate prototypes and definitions of callback
+          implementations in code compiled with a calling convention
+          other than the default convention for the host platform.
+        - Improved ability to build without the configure-generated
+          expat_config.h header.  This is useful for applications
+          which embed Expat rather than linking in the library.
+        - Fixed a variety of bugs: see SF issues 458907, 609603,
+          676844, 679754, 692878, 692964, 695401, 699323, 699487,
+          820946.
+        - Improved hash table lookups.
+        - Added more regression tests and improved documentation.
+
+Release 1.95.6 Tue Jan 28 2003
+        - Added XML_FreeContentModel().
+        - Added XML_MemMalloc(), XML_MemRealloc(), XML_MemFree().
+        - Fixed a variety of bugs: see SF issues 615606, 616863,
+          618199, 653180, 673791.
+        - Enhanced the regression test suite.
+        - Man page improvements: includes SF issue 632146.
+
+Release 1.95.5 Fri Sep 6 2002
+        - Added XML_UseForeignDTD() for improved SAX2 support.
+        - Added XML_GetFeatureList().
+        - Defined XML_Bool type and the values XML_TRUE and XML_FALSE.
+        - Use an incomplete struct instead of a void* for the parser
+          (may not retain).
+        - Fixed UTF-8 decoding bug that caused legal UTF-8 to be rejected.
+        - Finally fixed bug where default handler would report DTD
+          events that were already handled by another handler.
+          Initial patch contributed by Darryl Miles.
+        - Removed unnecessary DllMain() function that caused static
+          linking into a DLL to be difficult.
+        - Added VC++ projects for building static libraries.
+        - Reduced line-length for all source code and headers to be
+          no longer than 80 characters, to help with AS/400 support.
+        - Reduced memory copying during parsing (SF patch #600964).
+        - Fixed a variety of bugs: see SF issues 580793, 434664,
+          483514, 580503, 581069, 584041, 584183, 584832, 585537,
+          596555, 596678, 598352, 598944, 599715, 600479, 600971.
+
+Release 1.95.4 Fri Jul 12 2002
+        - Added support for VMS, contributed by Craig Berry.  See
+          vms/README.vms for more information.
+        - Added Mac OS (classic) support, with a makefile for MPW,
+          contributed by Thomas Wegner and Daryle Walker.
+        - Added Borland C++ Builder 5 / BCC 5.5 support, contributed
+          by Patrick McConnell (SF patch #538032).
+        - Fixed a variety of bugs: see SF issues 441449, 563184,
+          564342, 566334, 566901, 569461, 570263, 575168, 579196.
+        - Made skippedEntityHandler conform to SAX2 (see source comment)
+        - Re-implemented WFC: Entity Declared from XML 1.0 spec and
+          added a new error "entity declared in parameter entity":
+          see SF bug report 569461 and SF patch 578161
+        - Re-implemented section 5.1 from XML 1.0 spec:
+          see SF bug report 570263 and SF patch 578161
+
+Release 1.95.3 Mon Jun 3 2002
+        - Added a project to the MSVC workspace to create a wchar_t
+          version of the library; the DLLs are named libexpatw.dll.
+        - Changed the name of the Windows DLLs from expat.dll to
+          libexpat.dll; this fixes SF bug #432456.
+        - Added the XML_ParserReset() API function.
+        - Fixed XML_SetReturnNSTriplet() to work for element names.
+        - Made the XML_UNICODE builds usable (thanks, Karl!).
+        - Allow xmlwf to read from standard input.
+        - Install a man page for xmlwf on Unix systems.
+        - Fixed many bugs; see SF bug reports 231864, 461380, 464837,
+          466885, 469226, 477667, 484419, 487840, 494749, 496505,
+          547350.  Other bugs which we can't test as easily may also
+          have been fixed, especially in the area of build support.
+
+Release 1.95.2 Fri Jul 27 2001
+        - More changes to make MSVC happy with the build; add a single
+          workspace to support both the library and xmlwf application.
+        - Added a Windows installer for Windows users; includes
+          xmlwf.exe.
+        - Added compile-time constants that can be used to determine the
+          Expat version
+        - Removed a lot of GNU-specific dependencies to aide portability
+          among the various Unix flavors.
+        - Fix the UTF-8 BOM bug.
+        - Cleaned up warning messages for several compilers.
+        - Added the -Wall, -Wstrict-prototypes options for GCC.
+
+Release 1.95.1 Sun Oct 22 15:11:36 EDT 2000
+        - Changes to get expat to build under Microsoft compiler
+        - Removed all aborts and instead return an UNEXPECTED_STATE error.
+        - Fixed a bug where a stray '%' in an entity value would cause an
+          abort.
+        - Defined XML_SetEndNamespaceDeclHandler. Thanks to Darryl Miles for
+          finding this oversight.
+        - Changed default patterns in lib/Makefile.in to fit non-GNU makes
+          Thanks to robin@unrated.net for reporting and providing an
+          account to test on.
+        - The reference had the wrong label for XML_SetStartNamespaceDecl.
+          Reported by an anonymous user.
+
+Release 1.95.0 Fri Sep 29 2000
+        - XML_ParserCreate_MM
+                Allows you to set a memory management suite to replace the
+                standard malloc,realloc, and free.
+        - XML_SetReturnNSTriplet
+                If you turn this feature on when namespace processing is in
+                effect, then qualified, prefixed element and attribute names
+                are returned as "uri|name|prefix" where '|' is whatever
+                separator character is used in namespace processing.
+        - Merged in features from perl-expat
+                o XML_SetElementDeclHandler
+                o XML_SetAttlistDeclHandler
+                o XML_SetXmlDeclHandler
+                o XML_SetEntityDeclHandler
+                o StartDoctypeDeclHandler takes 3 additional parameters:
+                        sysid, pubid, has_internal_subset
+                o Many paired handler setters (like XML_SetElementHandler)
+                  now have corresponding individual handler setters
+                o XML_GetInputContext for getting the input context of
+                  the current parse position.
+        - Added reference material
+        - Packaged into a distribution that builds a sharable library

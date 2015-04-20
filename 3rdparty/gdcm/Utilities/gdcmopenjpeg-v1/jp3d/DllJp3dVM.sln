@@ -1,0 +1,21 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DllOpenJPEG", "DllJp3dVM.vcproj", "{790A6CE5-CE92-4A59-ADF7-54A92760BD6C}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{790A6CE5-CE92-4A59-ADF7-54A92760BD6C}.Debug.ActiveCfg = Debug|Win32
+		{790A6CE5-CE92-4A59-ADF7-54A92760BD6C}.Debug.Build.0 = Debug|Win32
+		{790A6CE5-CE92-4A59-ADF7-54A92760BD6C}.Release.ActiveCfg = Release|Win32
+		{790A6CE5-CE92-4A59-ADF7-54A92760BD6C}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

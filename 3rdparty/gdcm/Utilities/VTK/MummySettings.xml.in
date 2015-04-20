@@ -1,0 +1,196 @@
+<MummySettings>
+
+  <!-- Individual classes to exclude from wrapped layers -->
+  <!-- (These VTK classes are not included in the list of wrapped classes
+       that comes out of VTK's CMake info...) -->
+
+  <Class name="vtkAbstractContextBufferId" wrappable="false"/>
+  <Class name="vtkAMRBox" wrappable="false"/>
+  <Class name="vtkArrayCoordinates" wrappable="false"/>
+  <Class name="vtkArrayExtents" wrappable="false"/>
+  <Class name="vtkArrayRange" wrappable="false"/>
+  <Class name="vtkBoundingBox" wrappable="false"/>
+  <Class name="vtkCallbackCommand" wrappable="false"/>
+  <Class name="vtkColor3ub" wrappable="false"/>
+  <Class name="vtkColor4ub" wrappable="false"/>
+  <Class name="vtkContextKeyEvent" wrappable="false"/>
+  <Class name="vtkContextMouseEvent" wrappable="false"/>
+  <Class name="vtkContourRepresentationNode" wrappable="false"/>
+  <Class name="vtkEdgeType" wrappable="false"/>
+  <Class name="vtkExodusIICacheKey" wrappable="false"/>
+  <Class name="vtkImageComplex" wrappable="false"/>
+  <Class name="vtkImageConnectorSeed" wrappable="false"/>
+  <Class name="vtkIndent" wrappable="false"/>
+  <Class name="vtkInEdgeType" wrappable="false"/>
+  <Class name="vtkInterpolationInfo" wrappable="false"/>
+  <Class name="vtkInterpolationWeights" wrappable="false"/>
+  <Class name="vtkMultiProcessStream" wrappable="false"/>
+  <Class name="vtkOBBNode" wrappable="false"/>
+  <Class name="vtkOutEdgeType" wrappable="false"/>
+  <Class name="vtkProcessingUnitResource" wrappable="false"/>
+  <Class name="vtkPolygonalSurfacePointPlacerNode" wrappable="false"/>
+  <Class name="vtkRectf" wrappable="false"/>
+  <Class name="vtkRenderState" wrappable="false"/>
+  <Class name="vtkShader2" wrappable="false"/>
+  <Class name="vtkShader2Collection" wrappable="false"/>
+  <Class name="vtkShaderProgram2" wrappable="false"/>
+  <Class name="vtkShadowMapBakerPassLightCameras" wrappable="false"/>
+  <Class name="vtkShadowMapBakerPassTextures" wrappable="false"/>
+  <Class name="vtkStdString" wrappable="false"/>
+  <Class name="vtkTDxMotionEventInfo" wrappable="false"/>
+  <Class name="vtkTextureUnitManager" wrappable="false"/>
+  <Class name="vtkTIFFReaderInternal" wrappable="false"/>
+  <Class name="vtkTimeStamp" wrappable="false"/>
+  <Class name="vtkUnicodeString" wrappable="false"/>
+  <Class name="vtkVariant" wrappable="false"/>
+  <Class name="vtkVector2f" wrappable="false"/>
+  <Class name="vtkVector2i" wrappable="false"/>
+  <Class name="vtkVector3d" wrappable="false"/>
+  <Class name="vtkVolumeRayCastDynamicInfo" wrappable="false"/>
+  <Class name="vtkVolumeRayCastStaticInfo" wrappable="false"/>
+@AVDN_EXTRA_EXCLUDE_CLASSES_XML@
+
+  <!-- Class patterns to exclude from wrapped layers -->
+
+  <ClassPattern pattern=".+&lt;.+&gt;" wrappable="false"/>
+  <ClassPattern pattern="vtk.*::" wrappable="false"/>
+
+
+  <!-- Individual classes to include in wrapped layers -->
+
+  <!-- vtkCommand: shadow="true" -->
+  <Class name="vtkCommand" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="true"
+    registerMethod="Register(null)"
+    unRegisterMethod="UnRegister(null)"
+    getRefCountMethod="GetReferenceCount()"
+    registerBaseClass="vtkObjectBase"
+    registerInclude="#include &quot;vtkObjectBase.h&quot;"
+    wrappedObjectBase="WrappedObject"
+    beginExcludeRegex="^[\t ]*//BTX.*$"
+    endExcludeRegex="^[\t ]*//ETX.*$"
+    countedMethodsRegex="^(CreateInstance|New|NewInstance)$"
+    emitDefaultFactoryMethod="true"
+    externalHints="@AVDN_VTK_SOURCE_DIR@/Wrapping/hints"
+    />
+
+  <!-- vtkImageData: extra hand-crafted code -->
+  <Class name="vtkImageData" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="false"
+    extraExportLayerCode="@CMAKE_CURRENT_SOURCE_DIR@/vtkImageDataEL_Extra.cxx"
+    extraCsharpCode="@CMAKE_CURRENT_SOURCE_DIR@/vtkImageData_Extra.cs"
+    registerMethod="Register(null)"
+    unRegisterMethod="UnRegister(null)"
+    getRefCountMethod="GetReferenceCount()"
+    registerBaseClass="vtkObjectBase"
+    registerInclude="#include &quot;vtkObjectBase.h&quot;"
+    wrappedObjectBase="WrappedObject"
+    beginExcludeRegex="^[\t ]*//BTX.*$"
+    endExcludeRegex="^[\t ]*//ETX.*$"
+    countedMethodsRegex="^(CreateInstance|New|NewInstance)$"
+    emitDefaultFactoryMethod="true"
+    externalHints="@AVDN_VTK_SOURCE_DIR@/Wrapping/hints"
+    />
+
+  <!-- vtkImplicitFunction: shadow="true" -->
+  <Class name="vtkImplicitFunction" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="true"
+    registerMethod="Register(null)"
+    unRegisterMethod="UnRegister(null)"
+    getRefCountMethod="GetReferenceCount()"
+    registerBaseClass="vtkObjectBase"
+    registerInclude="#include &quot;vtkObjectBase.h&quot;"
+    wrappedObjectBase="WrappedObject"
+    beginExcludeRegex="^[\t ]*//BTX.*$"
+    endExcludeRegex="^[\t ]*//ETX.*$"
+    countedMethodsRegex="^(CreateInstance|New|NewInstance)$"
+    emitDefaultFactoryMethod="true"
+    externalHints="@AVDN_VTK_SOURCE_DIR@/Wrapping/hints"
+    />
+
+  <!-- vtkObject: extra hand-crafted code -->
+  <Class name="vtkObject" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="false"
+    extraExportLayerCode="@CMAKE_CURRENT_BINARY_DIR@/export-layer/vtkObjectEL_Extra.cxx"
+    extraCsharpCode="@CMAKE_CURRENT_BINARY_DIR@/csharp/vtkObject_Extra.cs"
+    registerMethod="Register(null)"
+    unRegisterMethod="UnRegister(null)"
+    getRefCountMethod="GetReferenceCount()"
+    registerBaseClass="vtkObjectBase"
+    registerInclude="#include &quot;vtkObjectBase.h&quot;"
+    wrappedObjectBase="WrappedObject"
+    beginExcludeRegex="^[\t ]*//BTX.*$"
+    endExcludeRegex="^[\t ]*//ETX.*$"
+    countedMethodsRegex="^(CreateInstance|New|NewInstance)$"
+    emitDefaultFactoryMethod="true"
+    externalHints="@AVDN_VTK_SOURCE_DIR@/Wrapping/hints"
+    />
+
+  <!-- vtkProgrammableAttributeDataFilter: extra hand-crafted code -->
+  <Class name="vtkProgrammableAttributeDataFilter" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="false"
+    extraExportLayerCode="@CMAKE_CURRENT_SOURCE_DIR@/vtkProgrammableAttributeDataFilterEL_Extra.cxx"
+    extraCsharpCode="@CMAKE_CURRENT_SOURCE_DIR@/vtkProgrammableAttributeDataFilter_Extra.cs"
+    registerMethod="Register(null)"
+    unRegisterMethod="UnRegister(null)"
+    getRefCountMethod="GetReferenceCount()"
+    registerBaseClass="vtkObjectBase"
+    registerInclude="#include &quot;vtkObjectBase.h&quot;"
+    wrappedObjectBase="WrappedObject"
+    beginExcludeRegex="^[\t ]*//BTX.*$"
+    endExcludeRegex="^[\t ]*//ETX.*$"
+    countedMethodsRegex="^(CreateInstance|New|NewInstance)$"
+    emitDefaultFactoryMethod="true"
+    externalHints="@AVDN_VTK_SOURCE_DIR@/Wrapping/hints"
+    />
+
+  <!-- vtkStringArray: extra hand-crafted code -->
+  <Class name="vtkStringArray" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    shadow="false"
+    extraExportLayerCode="@CMAKE_CURRENT_SOURCE_DIR@/vtkStringArrayEL_Extra.cxx"
+    extraCsharpCode="@CMAKE_CURRENT_SOURCE_DIR@/vtkStringArray_Extra.cs"
+    registerMethod="Register(null)"
+    unRegisterMethod="UnRegister(null)"
+    getRefCountMethod="GetReferenceCount()"
+    registerBaseClass="vtkObjectBase"
+    registerInclude="#include &quot;vtkObjectBase.h&quot;"
+    wrappedObjectBase="WrappedObject"
+    beginExcludeRegex="^[\t ]*//BTX.*$"
+    endExcludeRegex="^[\t ]*//ETX.*$"
+    countedMethodsRegex="^(CreateInstance|New|NewInstance)$"
+    emitDefaultFactoryMethod="true"
+    externalHints="@AVDN_VTK_SOURCE_DIR@/Wrapping/hints"
+    />
+
+  <!-- Class patterns to include in wrapped layers -->
+  <ClassPattern pattern="^vtk" wrappable="true"
+    defaultFactoryMethod="New"
+    defaultDisposalMethod="Delete"
+    extraCsharpCode="@CMAKE_CURRENT_SOURCE_DIR@/dllexportconf.cs"
+    shadow="false"
+    registerMethod="Register(null)"
+    unRegisterMethod="UnRegister(null)"
+    getRefCountMethod="GetReferenceCount()"
+    registerBaseClass="vtkObjectBase"
+    registerInclude="#include &quot;vtkObjectBase.h&quot;"
+    wrappedObjectBase="WrappedObject"
+    beginExcludeRegex="^[\t ]*//BTX.*$"
+    endExcludeRegex="^[\t ]*//ETX.*$"
+    countedMethodsRegex="^(CreateImageReader2|CreateInstance|MakeTransform|New|NewInstance)$"
+    emitDefaultFactoryMethod="true"
+    externalHints="@VTK_WRAP_HINTS@"
+    />
+
+</MummySettings>

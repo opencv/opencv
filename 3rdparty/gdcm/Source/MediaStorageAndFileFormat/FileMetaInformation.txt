@@ -1,0 +1,92 @@
+PS 3.10-2006
+Page 21
+Attribute Name Tag Type Attribute Description
+File Preamble No Tag
+or Length
+Fields
+1 A fixed 128 byte field available for Application Profile or
+implementation specified use. If not used by an Application
+Profile or a specific implementation all bytes shall be set to
+00H.
+File-set Readers or Updaters shall not rely on the content of
+this Preamble to determine that this File is or is not a
+DICOM File.
+DICOM Prefix No Tag
+or Length
+Fields
+1 Four bytes containing the character string "DICM". This
+Prefix is intended to be used to recognize that this File is or
+not a DICOM File.
+Group Length (0002,0000) 1 Number of bytes following this File Meta Element (end of
+the Value field) up to and including the last File Meta
+Element of the Group 2 File Meta Information
+File Meta
+Information
+Version
+(0002,0001) 1 This is a two byte field where each bit identifies a version of
+this File Meta Information header. In version 1 the first byte
+value is 00H and the second value byte value is 01H.
+Implementations reading Files with Meta Information where
+this attribute has bit 0 (lsb) of the second byte set to 1 may
+interpret the File Meta Information as specified in this
+version of PS 3.10. All other bits shall not be checked.
+Note: A bit field where each bit identifies a version, allows
+explicit indication of the support of multiple previous
+versions. Future versions of the File Meta Information
+that can be read by verson 1 readers will have bit 0 of
+the second byte set to 1
+Media Storage
+SOP Class UID
+(0002,0002) 1 Uniquely identifies the SOP Class associated with the Data
+Set. SOP Class UIDs allowed for media storage are
+specified in PS 3.4 of the DICOM Standard - Media Storage
+Application Profiles.
+Media Storage
+SOP Instance UID
+(0002,0003) 1 Uniquely identifies the SOP Instance associated with the
+Data Set placed in the file and following the File Meta
+Information.
+Transfer Syntax
+UID
+(0002,0010) 1 Uniquely identifies the Transfer Syntax used to encode the
+following Data Set. This Transfer Syntax does not apply to
+the File Meta Information.
+Note: It is recommended to use one of the DICOM Transfer
+Syntaxes supporting explicit Value Representation
+encoding to facilitate interpretation of File Meta
+Element Values. JPIP Referenced Pixel Data Transfer
+Syntaxes are not used. (See PS 3.5 of the DICOM
+Standard).
+Implementation
+Class UID
+(0002,0012) 1 Uniquely identifies the implementation which wrote this file
+and its content. It provides an unambiguous identification
+of the type of implementation which last wrote the file in the
+event of interchange problems. It follows the same policies
+as defined by PS 3.7 of the DICOM Standard (association
+negotiation).
+Implementation
+Version Name
+(0002,0013) 3 Identifies a version for an Implementation Class UID
+(0002,0012) using up to 16 characters of the repertoire
+identified in Section 8.5. It follows the same policies as
+defined by PS 3.7 of the DICOM Standard (association
+PS 3.10-2006
+Page 22
+negotiation).
+Source Application
+Entity Title
+(0002,0016) 3 The DICOM Application Entity (AE) Title of the AE which
+wrote this file's content (or last updated it). If used, it allows
+the tracing of the source of errors in the event of media
+interchange problems. The policies associated with AE
+Titles are the same as those defined in PS 3.8 of the
+DICOM Standard.
+Private Information
+Creator UID
+(0002,0100) 3 The UID of the creator of the private information
+(0002,0102).
+Private Information (0002,0102) 1C Contains Private Information placed in the File Meta
+Information. The creator shall be identified in (0002,0100).
+Required if Private Information Creator UID (0002,0100) is
+present.

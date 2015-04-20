@@ -1,0 +1,105 @@
+
+How to build and install openjpeg binaries
+==========================================
+
+UNIX/LINUX similar systems
+--------------------------
+
+1) Using configure tools
+
+You can simply type
+  ./configure [--prefix=/path]
+  make
+
+If you are root:
+  make install
+  make clean
+  make distclean
+
+else:
+  sudo make install
+  make clean
+  make distclean
+
+Binaries are located in the 'bin' directory.
+
+If 'configure' does not work on your system please
+call './bootstrap.sh'.
+
+If 'configure' does not find a library or header file,
+or to see available configure options, please try 
+'./configure --help'.
+
+Note: if Doxygen is found on your system, a target 'docs'
+will automatically be created in 'doc/Makefile'. To build
+the documentation (it will create an 'html' directory):
+  cd doc
+	make docs
+
+2) Using cmake (see www.cmake.org)
+
+Type:
+  cmake .
+  make
+
+If you are root:
+  make install
+  make clean
+
+else:
+  sudo make install
+  make clean
+
+Binaries are located in the 'bin' directory.
+
+Main available cmake flags:
+* To specify the install path: '-DCMAKE_INSTALL_PREFIX=/path'
+* To build the shared libraries and links the executables against it: '-DBUILD_SHARED_LIBS:bool=on' (default: 'ON')
+  Note: when using this option, static libraries are not built and executables are dynamically linked.
+* To build the CODEC executables: '-DBUILD_CODEC:bool=on' (default: 'ON')
+* To build the MJ2 executables: '-DBUILD_MJ2:bool=on' (default: 'OFF')
+* To build the JPWL executables and JPWL library: '-DBUILD_JPWL:bool=on' (default: 'OFF')
+* To build the JP3D executables and JP3D library: '-DBUILD_JP3D:bool=on' (default: 'OFF')
+* [WIN32 ONLY] To build the INDEXER_JPIP executable: '-DBUILD_INDEXER_JPIP:bool=on' (default: 'OFF')
+* To build the doxygen documentation: '-DBUILD_DOC:bool=on' (default: 'OFF')
+* To enable testing (and automatic result upload to http://my.cdash.org/index.php?project=OPENJPEG):
+    cmake . -DBUILD_TESTING:BOOL=ON -DJPEG2000_CONFORMANCE_DATA_ROOT:PATH=/path/to/your/JPEG2000/test/files
+    make
+    make Experimental
+  Note : JPEG2000 test files are available here : http://www.crc.ricoh.com/~gormish/jpeg2000conformance/
+
+3) Manually using Makefile.nix:
+- Manually edit the config.nix file
+- Manually create an opj_config.h file from opj_config.h.in.user
+  and edit this opj_config.h
+- Then : (if 'WITH_JPWL' and/or 'WITH_JP3D' are defined in config.nix)
+    make -f Makefile.nix all
+    make -f Makefile.nix install
+    make -f Makefile.nix clean
+    make -f Makefile.nix uninstall
+- If neither 'WITH_JPWL' nor 'WITH_JP3D' is defined in config.nix
+  and you want to clean/compile/install/uninstall JPWL/JP3D:
+  call the respective target in the respective directory.
+
+MACOSX
+------
+
+The same building procedures as above will soon be available for MACOSX.
+The xcode project file has also to be updated.
+Right now, the CMake procedure is the only one working. Please refer to instructions above.
+If it does not work, try adding the following flag to the cmake command : 
+  '-DCMAKE_OSX_ARCHITECTURES:STRING=i386'
+
+WINDOWS
+-------
+
+If you're using cygwin, the same procedures as for Unix should work. Otherwise:
+
+1) Using cmake to generate project files
+
+Use the cmake procedure above with the '-G <generator-name>' flag to generate the project
+files for the IDE you are using. Type 'cmake --help' for available generators on your platform.
+
+2) Using the provided project files
+
+These files are obsolete and will be updated soon.

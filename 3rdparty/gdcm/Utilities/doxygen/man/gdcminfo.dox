@@ -1,0 +1,164 @@
+/*!
+
+\page gdcminfo Display meta info about the input DICOM file.
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcminfo [options] file-in
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcminfo command line program takes as input a DICOM file, or a
+directory and process it to extract meta- information about the DICOM file
+processed.
+
+\section parameters PARAMETERS
+
+\verbatim
+file-in   DICOM input filename
+\endverbatim
+
+\section options OPTIONS
+
+\subsection options options
+\verbatim
+  -r --recursive          recursive.
+  -d --check-deflated     check if file is proper deflated syntax.
+     --resources-path     Resources path.
+     --md5sum             Compute md5sum of Pixel Data attribute value.
+     --check-compression  check the encapsulated stream compression (lossless/lossy).
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\subsection environment_variable environment variable
+
+  GDCM_RESOURCES_PATH path pointing to resources files (Part3.xml, ...)
+
+\section simple_usage Simple usage
+
+\subsection gdcmdata gdcmData
+Using data from gdcmData:
+
+\verbatim
+$ gdcminfo gdcmData/012345.002.050.dcm
+\endverbatim
+
+\verbatim
+MediaStorage is 1.2.840.10008.5.1.4.1.1.4 [MR Image Storage]
+NumberOfDimensions: 2
+Dimensions: (256,256)
+Origin: (-85,21.6,108.7)
+Spacing: (0.664062,0.664062,1.5)
+DirectionCosines: (1,0,0,0,0,-1)
+Rescale Intercept/Slope: (0,1)
+SamplesPerPixel    :1
+BitsAllocated      :16
+BitsStored         :16
+HighBit            :15
+PixelRepresentation:1
+Orientation Label: CORONAL
+\endverbatim
+
+\subsection dclunie Davie Clunie datasets:
+
+Using data from David Clunie datasets:
+
+\verbatim
+$ gdcminfo BRTUM001.dcm
+\endverbatim
+
+\verbatim
+MediaStorage is 1.2.840.10008.5.1.4.1.1.4.1 [Enhanced MR Image Storage]
+NumberOfDimensions: 3
+Dimensions: (256,256,15)
+Origin: (40,-105,105)
+Spacing: (0.820312,0.820312,6)
+DirectionCosines: (0,1,0,0,0,-1)
+Rescale Intercept/Slope: (0,1)
+SamplesPerPixel    :1
+BitsAllocated      :16
+BitsStored         :16
+HighBit            :15
+PixelRepresentation:1
+Orientation Label: SAGITTAL
+\endverbatim
+
+\subsection md5sum Checking the md5sum of the Pixel Data
+
+After compressing a DICOM file (see gdcmconv) using a lossless compression
+algorithm, it is fairly easy to compare the two files for differences at DICOM
+attribute level.  However one operation is slightly easier to do: how to make
+sure the compression was actually lossless ? In this case one could use the
+--md5sum operation.
+
+Take an uncompressed DICOM image file:
+
+\verbatim
+$ gdcminfo --md5sum SIEMENS_ImageLocationUN.dcm
+\endverbatim
+
+The tool return: 0621954acd5815e0b4f7b65fcc6506b1
+
+Now compress this file:
+
+\verbatim
+$ gdcmconv --jpegls SIEMENS_ImageLocationUN.dcm lossless_compressed.dcm
+\endverbatim
+
+and then check again the md5sum:
+
+\verbatim
+$ gdcminfo --md5sum lossless_compressed.dcm
+\endverbatim
+
+The tool return: 0621954acd5815e0b4f7b65fcc6506b1
+
+\subsection checking_lossless Checking if Pixel Data is lossless
+
+In some environment one wish to check whether or not the DICOM file is
+lossless. It is fairly easy to do that in most cases. Only in two occasion this
+is not clear from the sole DICOM Attribute. When the Transfer Syntax is JPEG
+2000 Image Compression (1.2.840.10008.1.2.4.91) and when the Transfer Syntax is
+JPEG-LS Lossy (Near-Lossless) Image Compression (1.2.840.10008.1.2.4.81).
+
+In this case, the only solution is to open the Pixel Data element, read the
+specific JPEG header and check whether or not the JPEG transformation was
+lossless or not:
+
+\verbatim
+$ gdcminfo --check-compression gdcmData/MAROTECH_CT_JP2Lossy.dcm
+\endverbatim
+
+The tool returns: "Encapsulated Stream was found to be: lossy"
+
+\section see_also SEE ALSO
+
+<b>gdcmdump</b>(1), <b>gdcmraw</b>(1), <b>gdcmconv</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

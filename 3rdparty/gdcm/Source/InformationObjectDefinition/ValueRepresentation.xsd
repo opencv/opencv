@@ -1,0 +1,693 @@
+     <!--
+     http://xmlfr.org/documentations/tutoriels/001218-0001
+     -->
+     <!-- First version (russian poupee is too simple for large case -->
+     <!--
+<?xml version="1.0" encoding="utf-8"?>
+<xsd:schema
+     xmlns:xsd="http://www.w3.org/2000/10/XMLSchema">
+<xsd:element name="book">
+ <xsd:complexType>
+  <xsd:sequence>
+<!-- definition of simple type elements -->
+   <xsd:element name="title" type="xsd:string"/>
+   <xsd:element name="author" type="xsd:string"/>
+<!-- definition of complex type elements -->
+   <xsd:element name="character"
+        minOccurs="0" maxOccurs="unbounded">
+    <xsd:complexType>
+     <xsd:sequence>
+      <xsd:element name="name" type="xsd:string"/>
+      <xsd:element name="friend-of" type="xsd:string"
+      minOccurs="0" maxOccurs="unbounded"/>
+      <xsd:element name="since" type="xsd:date"/>
+      <xsd:element name="qualification" type="xsd:string"/>
+     </xsd:sequence>
+    </xsd:complexType>
+   </xsd:element>
+  </xsd:sequence>
+<!-- definition of attributes -->
+  <xsd:attribute name="isbn" type="xsd:string"/>
+ </xsd:complexType>
+</xsd:element>
+
+</xsd:schema>
+-->
+
+<?xml version="1.0" encoding="utf-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2000/10/XMLSchema">
+
+<!-- definition of simple types -->
+
+<xsd:simpleType name="nameType">
+ <xsd:restriction base="xsd:string">
+  <xsd:maxLength value="32"/>
+ </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="sinceType">
+ <xsd:restriction base="xsd:date"/>
+</xsd:simpleType>
+
+<xsd:simpleType name="descType">
+ <xsd:restriction base="xsd:string"/>
+</xsd:simpleType>
+
+<xsd:simpleType name="isbnType">
+ <xsd:restriction base="xsd:string">
+  <xsd:pattern value="[0-9]{10}"/>
+ </xsd:restriction>
+</xsd:simpleType>
+
+<!-- definition of complex types -->
+
+ <xsd:complexType name="characterType">
+  <xsd:sequence>
+   <xsd:element name="name" type="nameType"/>
+   <xsd:element name="friend-of" type="nameType"
+        minOccurs="0" maxOccurs="unbounded"/>
+   <xsd:element name="since" type="sinceType"/>
+   <xsd:element name="qualification" type="descType"/>
+  </xsd:sequence>
+ </xsd:complexType>
+
+ <xsd:complexType name="bookType">
+  <xsd:sequence>
+   <xsd:element name="title" type="nameType"/>
+   <xsd:element name="author" type="nameType"/>
+   <!-- the definition of the "character" element is
+        using the "characterType" complex type    -->
+   <xsd:element name="character" type="characterType"
+        minOccurs="0" maxOccurs="unbounded"/>
+  </xsd:sequence>
+  <xsd:attribute name="isbn" type="isbnType" use="required"/>
+ </xsd:complexType>
+
+<!-- Reference to "bookType" to define the
+     "book" element -->
+<xsd:element name="book" type="bookType"/>
+
+
+
+
+<!-- Start here (Mathieu) -->
+<!--
+PS 3.5-2006
+Page 25
+Table 6.2-1
+DICOM VALUE REPRESENTATIONS
+VR
+Name
+Definition Character
+Repertoire
+Length of Value
+AE
+Application
+Entity
+A string of characters that identifies an
+Application Entity with leading and trailing
+spaces (20H) being non-significant. A value
+consisting solely of spaces shall not be used.
+Default Character
+Repertoire
+excluding
+character code
+5CH (the
+BACKSLASH "\"
+in ISO-IR 6), and
+control characters
+LF, FF, CR and
+ESC.
+16 bytes
+maximum
+AS
+Age String
+A string of characters with one of the following
+formats -- nnnD, nnnW, nnnM, nnnY; where
+nnn shall contain the number of days for D,
+weeks for W, months for M, or years for Y.
+Example: "018M" would represent an age of
+18 months.
+"0"-"9", "D", "W",
+"M", "Y" of Default
+Character
+Repertoire
+4 bytes
+fixed
+AT
+Attribute Tag
+Ordered pair of 16-bit unsigned integers that is
+the value of a Data Element Tag.
+Example: A Data Element Tag of (0018,00FF)
+would be encoded as a series of 4 bytes in a
+Little-Endian Transfer Syntax as
+18H,00H,FFH,00H and in a Big-Endian
+Transfer Syntax as 00H,18H,00H,FFH.
+Note: The encoding of an AT value is exactly
+the same as the encoding of a Data
+Element Tag as defined in Section 7.
+not applicable 4 bytes
+fixed
+CS
+Code String
+A string of characters with leading or trailing
+spaces (20H) being non-significant.
+Uppercase
+characters, "0"-
+"9", the SPACE
+character, and
+underscore "_", of
+the Default
+Character
+Repertoire
+16 bytes
+maximum
+DA
+Date
+A string of characters of the format yyyymmdd;
+where yyyy shall contain year, mm shall
+contain the month, and dd shall contain the
+day. This conforms to the ANSI HISPP MSDS
+Date common data type.
+Example:
+"19930822" would represent August 22,
+1993.
+Notes: 1. For reasons of backward
+compatibility with versions of this
+standard prior to V3.0, it is
+recommended that implementations
+also support a string of characters of
+the format yyyy.mm.dd for this VR.
+"0"-"9" of Default
+Character
+Repertoire
+Note: For reasons
+specified in the
+previous column,
+implementations
+may wish to
+support the "."
+character as well.
+8 bytes
+fixed
+Note: For reasons
+specified in the
+previous columns,
+implementations
+may also wish to
+support a 10 byte
+fixed length as
+well.
+PS 3.5-2006
+Page 26
+2. See also DT VR in this table.
+DS
+Decimal
+String
+A string of characters representing either a
+fixed point number or a floating point number.
+A fixed point number shall contain only the
+characters 0-9 with an optional leading "+" or
+"-" and an optional "." to mark the decimal
+point. A floating point number shall be
+conveyed as defined in ANSI X3.9, with an "E"
+or "e" to indicate the start of the exponent.
+Decimal Strings may be padded with leading
+or trailing spaces. Embedded spaces are not
+allowed.
+Note: Data Elements with multiple values
+using this VR may not be properly
+encoded if Explicit-VR transfer syntax is
+used and the VL of this attribute
+exceeds 65534 bytes.
+"0"-"9", "+", "-",
+"E", "e", "." of
+Default Character
+Repertoire
+16 bytes
+maximum
+DT
+Date Time
+The Date Time common data type. Indicates a
+concatenated date-time ASCII string in the
+format: YYYYMMDDHHMMSS.FFFFFF&ZZZZ
+The components of this string, from left to
+right, are YYYY = Year, MM = Month, DD =
+Day, HH = Hour, MM = Minute, SS = Second,
+FFFFFF = Fractional Second, & = "+" or "-",
+and ZZZZ = Hours and Minutes of offset.
+&ZZZZ is an optional suffix for plus/minus
+offset from Coordinated Universal Time. A
+component that is omitted from the string is
+termed a null component. Trailing null
+components of Date Time are ignored. Non-
+trailing null components are prohibited, given
+that the optional suffix is not considered as a
+component.
+Note: For reasons of backward compatibility
+with versions of this standard prior to
+V3.0, many existing DICOM Data
+Elements use the separate DA and TM
+VRs. Standard and Private Data
+Elements defined in the future should
+use DT, when appropriate, to be more
+compliant with ANSI HISPP MSDS.
+"0"-"9", "+", "-", "."
+of Default
+Character
+Repertoire
+26 bytes
+maximum
+FL
+Floating Point
+Single
+Single precision binary floating point number
+represented in IEEE 754:1985 32-bit Floating
+Point Number Format.
+not applicable 4 bytes
+fixed
+FD
+Floating Point
+Double
+Double precision binary floating point number
+represented in IEEE 754:1985 64-bit Floating
+Point Number Format.
+not applicable 8 bytes
+fixed
+IS
+Integer String
+A string of characters representing an Integer
+in base-10 (decimal), shall contain only the
+characters 0 - 9, with an optional leading "+" or
+"-". It may be padded with leading and/or
+trailing spaces. Embedded spaces are not
+allowed.
+The integer, n, represented shall be in the
+"0"-"9", "+", "-" of
+Default Character
+Repertoire
+12 bytes
+maximum
+PS 3.5-2006
+Page 27
+range:
+-231 <= n <= (231 - 1).
+LO
+Long String
+A character string that may be padded with
+leading and/or trailing spaces. The character
+code 5CH (the BACKSLASH "\" in ISO-IR 6)
+shall not be present, as it is used as the
+delimiter between values in multiple valued
+data elements. The string shall not have
+Control Characters except for ESC.
+Default Character
+Repertoire and/or
+as defined by
+(0008,0005).
+64 chars
+maximum (see
+NOTE in 6.2)
+LT
+Long Text
+A character string that may contain one or
+more paragraphs. It may contain the Graphic
+Character set and the Control Characters, CR,
+LF, FF, and ESC. It may be padded with
+trailing spaces, which may be ignored, but
+leading spaces are considered to be
+significant. Data Elements with this VR shall
+not be multi-valued and therefore character
+code 5CH (the BACKSLASH "\" in ISO-IR 6)
+may be used.
+Default Character
+Repertoire and/or
+as defined by
+(0008,0005).
+10240 chars
+maximum (see
+NOTE in 6.2)
+OB
+Other Byte
+String
+A string of bytes where the encoding of the
+contents is specified by the negotiated
+Transfer Syntax. OB is a VR which is
+insensitive to Little/Big Endian byte ordering
+(see Section 7.3). The string of bytes shall be
+padded with a single trailing NULL byte value
+(00H) when necessary to achieve even length.
+not applicable see Transfer
+Syntax definition
+OF
+Other Float
+String
+A string of 32-bit IEEE 754:1985 floating point
+words. OF is a VR which requires byte
+swapping within each 32-bit word when
+changing between Little Endian and Big
+Endian byte ordering (see Section 7.3).
+not applicable 232
+-4 maximum
+OW
+Other Word
+String
+A string of 16-bit words where the encoding of
+the contents is specified by the negotiated
+Transfer Syntax. OW is a VR that requires
+byte swapping within each word when
+changing between Little Endian and Big
+Endian byte ordering (see Section 7.3).
+not applicable see Transfer
+Syntax definition
+PN
+Person Name
+A character string encoded using a 5
+component convention. The character code
+5CH (the BACKSLASH "\" in ISO-IR 6) shall
+not be present, as it is used as the delimiter
+between values in multiple valued data
+elements. The string may be padded with
+trailing spaces. The five components in their
+order of occurrence are: family name complex,
+given name complex, middle name, name
+prefix, name suffix. Any of the five components
+may be an empty string. The component
+delimiter shall be the caret "^" character (5EH).
+Delimiters are required for interior null
+components. Trailing null components and
+their delimiters may be omitted. Multiple
+entries are permitted in each component and
+Default Character
+Repertoire and/or
+as defined by
+(0008,0005)
+excluding Control
+Characters LF, FF,
+and CR but
+allowing Control
+Character ESC.
+64 chars
+maximum per
+component group
+(see NOTE in 6.2)
+PS 3.5-2006
+Page 28
+are encoded as natural text strings, in the
+format preferred by the named person. This
+conforms to the ANSI HISPP MSDS Person
+Name common data type.
+This group of five components is referred to as
+a Person Name component group.
+For the purpose of writing names in
+ideographic characters and in phonetic
+characters, up to 3 groups of components (see
+Annex H examples 1 and 2) may be used. The
+delimiter for component groups shall be the
+equals character "=" (3DH). The three
+component groups of components in their
+order of occurrence are: a single-byte
+character representation, an ideographic
+representation, and a phonetic representation.
+Any component group may be absent,
+including the first component group. In this
+case, the person name may start with one or
+more "=" delimiters. Delimiters are required for
+interior null component groups. Trailing null
+component groups and their delimiters may be
+omitted.
+Precise semantics are defined for each
+component group. See section 6.2.1.
+Examples:
+Rev. John Robert Quincy Adams, B.A.
+M.Div.
+"Adams^John Robert
+Quincy^^Rev.^B.A. M.Div."
+[One family name; three given names;
+no middle name; one prefix; two
+suffixes.]
+Susan Morrison-Jones, Ph.D., Chief
+Executive Officer
+"Morrison-Jones^Susan^^^Ph.D., Chief
+Executive Officer"
+[Two family names; one given name; no
+middle name; no prefix; two suffixes.]
+John Doe
+"Doe^John"
+[One family name; one given name; no
+middle name, prefix, or suffix. Delimiters
+have been omitted for the three trailing
+null components.]
+(for examples of the encoding of Person
+Names using multi-byte character sets
+see Annex H)
+Notes: 1. A similar multiple component
+convention is also used by the HL7 v2
+XPN data type. However, the XPN data
+type places the suffix component before
+the prefix, and has a sixth component
+"degree" that DICOM subsumes in the
+name suffix. There are also differences
+in the manner in which name
+PS 3.5-2006
+Page 29
+representation is identified.
+2. In typical American and European
+usage the first occurrence of "given
+name" would represent the "first name".
+The second and subsequent
+occurrences of the "given name" would
+typically be treated as a middle name(s).
+The "middle name" component is
+retained for the purpose of backward
+compatibility with existing standards.
+3. The implementer should remain
+mindful of earlier usage forms that
+represented "given names" as "first" and
+"middle" and that translations to and
+from this previous typical usage may be
+required.
+4. For reasons of backward compatibility
+with versions of this standard prior to
+V3.0, person names might be
+considered a single family name
+complex (single component without "^"
+delimiters).
+SH
+Short String
+A character string that may be padded with
+leading and/or trailing spaces. The character
+code 05CH (the BACKSLASH "\" in ISO-IR 6)
+shall not be present, as it is used as the
+delimiter between values for multiple data
+elements. The string shall not have Control
+Characters except ESC.
+Default Character
+Repertoire and/or
+as defined by
+(0008,0005).
+16 chars
+maximum (see
+NOTE in 6.2)
+SL
+Signed Long
+Signed binary integer 32 bits long in 2's
+complement form.
+Represents an integer, n, in the range:
+- 231 <= n <= (231 - 1).
+not applicable 4 bytes
+fixed
+SQ
+Sequence of
+Items
+Value is a Sequence of zero or more Items, as
+defined in Section 7.5.
+not applicable
+(see Section 7.5)
+not applicable
+(see Section 7.5)
+SS
+Signed Short
+Signed binary integer 16 bits long in 2's
+complement form. Represents an integer n in
+the range:
+-215 <= n <= (215 - 1).
+not applicable 2 bytes
+fixed
+ST
+Short Text
+A character string that may contain one or
+more paragraphs. It may contain the Graphic
+Character set and the Control Characters, CR,
+LF, FF, and ESC. It may be padded with
+trailing spaces, which may be ignored, but
+leading spaces are considered to be
+significant. Data Elements with this VR shall
+not be multi-valued and therefore character
+code 5CH (the BACKSLASH "\" in ISO-IR 6)
+may be used.
+Default Character
+Repertoire and/or
+as defined by
+(0008,0005).
+1024 chars
+maximum (see
+NOTE in 6.2)
+TM
+Time
+A string of characters of the format
+hhmmss.frac; where hh contains hours (range
+"00" - "23"), mm contains minutes (range "00" -
+"0"-"9", "." of
+Default Character
+Repertoire
+16 bytes
+maximum
+PS 3.5-2006
+Page 30
+"59"), ss contains seconds (range "00" -
+"59"), and frac contains a fractional part of a
+second as small as 1 millionth of a second
+(range "000000" - "999999"). A 24 hour clock
+is assumed. Midnight can be represented by
+only "0000" since "2400" would violate the
+hour range. The string may be padded with
+trailing spaces. Leading and embedded
+spaces are not allowed. One or more of the
+components mm, ss, or frac may be
+unspecified as long as every component to the
+right of an unspecified component is also
+unspecified. If frac is unspecified the
+preceding "." may not be included. Frac shall
+be held to six decimal places or less to ensure
+its format conforms to the ANSI HISPP MSDS
+Time common data type.
+Examples:
+1. "070907.0705 " represents a time of
+7 hours, 9 minutes and 7.0705
+seconds.
+2. "1010" represents a time of 10 hours,
+and 10 minutes.
+3. "021 " is an invalid value.
+Notes: 1. For reasons of backward
+compatibility with versions of this
+standard prior to V3.0, it is
+recommended that implementations
+also support a string of characters of
+the format hh:mm:ss.frac for this VR.
+2. See also DT VR in this table.
+UI
+Unique
+Identifier
+(UID)
+A character string containing a UID that is
+used to uniquely identify a wide variety of
+items. The UID is a series of numeric
+components separated by the period "."
+character. If a Value Field containing one or
+more UIDs is an odd number of bytes in
+length, the Value Field shall be padded with a
+single trailing NULL (00H) character to ensure
+that the Value Field is an even number of
+bytes in length. See Section 9 and Annex B
+for a complete specification and examples.
+"0"-"9", "." of
+Default Character
+Repertoire
+64 bytes
+maximum
+UL
+Unsigned
+Long
+Unsigned binary integer 32 bits long.
+Represents an integer n in the range:
+0 <= n < 232.
+not applicable 4 bytes
+fixed
+UN
+Unknown
+A string of bytes where the encoding of the
+contents is unknown (see Section 6.2.2).
+not applicable Any length valid
+for any of the
+other DICOM
+Value
+Representations
+US
+Unsigned
+Short
+Unsigned binary integer 16 bits long.
+Represents integer n in the range:
+not applicable 2 bytes
+fixed
+PS 3.5-2006
+Page 31
+0 <= n < 216.
+UT
+Unlimited Text
+A character string that may contain one or
+more paragraphs. It may contain the Graphic
+Character set and the Control Characters, CR,
+LF, FF, and ESC. It may be padded with
+trailing spaces, which may be ignored, but
+leading spaces are considered to be
+significant. Data Elements with this VR shall
+not be multi-valued and therefore character
+code 5CH (the BACKSLASH "\" in ISO-IR 6)
+may be used.
+Default Character
+Repertoire and/or
+as defined by
+(0008,0005).
+232
+-2
+Note: limited only by
+the size of the
+maximum
+unsigned integer
+representable in
+a 32 bit VL field
+minus one, since
+FFFFFFFFH is
+reserved.
+Note: For attributes that were present in ACR-NEMA 1.0 and 2.0 and that have been retired, the specifications
+of Value Representation and Value Multiplicity provided are recommendations for the purpose of
+interpreting their values in objects created in accordance with earlier versions of this standard. These
+recommendations are suggested as most appropriate for a particular attribute; however, there is no
+guarantee that historical objects will not violate some requirements or specified VR and/or VM.
+6.2.1 Ideographic and phonetic characters in Data Elements with VR of PN
+Character strings representing person names are encoded using a convention for PN value
+representations based on component groups with 5 components.
+For the purpose of writing names in ideographic characters and in phonetic characters, up to 3
+component groups may be used. The delimiter of the component group shall be the equals character "="
+(3DH). The three component groups in their order of occurrence are: a single-byte representation, an
+ideographic representation, and a phonetic representation.
+Any component group may be absent, including the first component group. In this case, the person name
+may start with one or more "=" delimiters. Delimiters are also required for interior null component groups.
+Trailing null component groups and their delimiters may be omitted.
+The first component group shall be encoded using a single-byte character encoding from a character set
+with no Code Extensions. The character set shall be the one specified by the Attribute Specific Character
+Set (0008,0005), value 1. If Attribute Specific Character Set (0008,0005) is not present, the default
+Character Repertoire ISO-IR 6 shall be used.
+The second group shall be used for ideographic characters. The character sets used will usually be
+those from Attribute Specific Character Set (0008,0005), value 2 through n, and may use ISO 2022
+escapes.
+The third group shall be used for phonetic characters. The character sets used shall be those from
+Attribute Specific Character Set (0008,0005), value 1 through n, and may use ISO 2022 escapes.
+Delimiter characters "^" and "=" are taken from the character set specified by value 1 of the Attribute
+Specific Character Set (0008,0005). If Attribute Specific Character Set (0008,0005), value 1 is not
+present, the default Character Repertoire ISO-IR 6 shall be used.
+At the beginning of the value of the Person Name data element, the following initial condition is assumed:
+if Attribute Specific Character Set (0008,0005), value 1 is not present, the default Character Repertoire
+ISO-IR 6 is invoked, and if the Attribute Specific Character Set (0008,0005), value 1 is present, the
+character set specified by value 1 of the Attribute is invoked.
+
+-->
+  <xsd:simpleType name="ApplicationEntity">
+    <xsd:restriction base="xsd:string">
+      <xsd:maxLength value="16"/>
+      <!-- TODO: remove backslah, string with only space is not allowed -->
+    </xsd:restriction>
+  </xsd:simpleType>`
+
+</xsd:schema>

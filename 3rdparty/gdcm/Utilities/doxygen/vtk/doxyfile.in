@@ -1,0 +1,157 @@
+# -------------------------------------------------------------------------
+# doxyfile for generic project
+# modified by S. Barre (Time-stamp: <2005-11-07 11:45:05 barre>
+# -------------------------------------------------------------------------
+
+PROJECT_NAME         = @DOXYGEN_PROJECT_NAME@
+
+FULL_PATH_NAMES      = YES
+WARN_IF_UNDOCUMENTED = NO
+
+GENERATE_TREEVIEW    = NO
+GENERATE_TODOLIST    = YES
+GENERATE_BUGLIST     = YES
+GENERATE_HTML        = YES
+GENERATE_HTMLHELP    = YES
+GENERATE_LATEX       = NO
+GENERATE_MAN         = NO
+GENERATE_RTF         = NO
+GENERATE_TAGFILE     = "@CMAKE_CURRENT_BINARY_DIR@/@DOXYGEN_PROJECT_NAME@.tag"
+
+PDF_HYPERLINKS       = YES
+
+HAVE_DOT             = YES
+#HAVE_DOT            = NO
+DOT_PATH             = "@DOT_PATH@"
+CLASS_GRAPH          = YES
+COLLABORATION_GRAPH  = YES
+TEMPLATE_RELATIONS   = YES
+INCLUDE_GRAPH        = YES
+INCLUDED_BY_GRAPH    = YES
+CLASS_DIAGRAMS       = YES
+GENERATE_LEGEND      = YES
+GRAPHICAL_HIERARCHY  = NO        # would be too large for vtkObject
+
+ALLEXTERNALS         = NO
+
+IMAGE_PATH           = "@CMAKE_CURRENT_SOURCE_DIR@"
+
+OUTPUT_DIRECTORY     = "@CMAKE_CURRENT_BINARY_DIR@/doc"
+
+INPUT                = \
+ "@CMAKE_CURRENT_BINARY_DIR@/dox/doc_@DOXYGEN_PROJECT_NAME@_index.dox" \
+ @DOXYGEN_PARSED_INPUT_DIRS@
+
+#TAGFILES             = "@CMAKE_CURRENT_BINARY_DIR@/vtkNightlyDoc.tag=http://www.vtk.org/doc/nightly/html"
+TAGFILES             = @TAGFILES@
+
+EXTRACT_ALL          = YES
+EXTRACT_PRIVATE      = NO
+EXTRACT_STATIC       = YES
+EXTRACT_LOCAL_CLASSES = NO
+HIDE_UNDOC_MEMBERS   = NO
+HIDE_UNDOC_CLASSES   = YES
+ALWAYS_DETAILED_SEC  = NO
+SOURCE_BROWSER       = YES
+INLINE_SOURCES       = NO
+CASE_SENSE_NAMES     = YES
+VERBATIM_HEADERS     = NO
+SHOW_INCLUDE_FILES   = YES
+JAVADOC_AUTOBRIEF    = YES
+SORT_MEMBER_DOCS     = NO
+DISTRIBUTE_GROUP_DOC = YES
+TAB_SIZE             = 3
+DETAILS_AT_TOP       = YES
+SHORT_NAMES          = @DOXYGEN_SHORT_NAMES@
+# PAPER_TYPE           = letter
+
+FILE_PATTERNS        = *.h
+RECURSIVE            = NO
+EXCLUDE              = Common/vtkSetGet.h
+EXCLUDE_PATTERNS     =
+
+HTML_ALIGN_MEMBERS   = YES
+ALPHABETICAL_INDEX   = YES
+COLS_IN_ALPHA_INDEX  = 3
+IGNORE_PREFIX        = @DOXYGEN_IGNORE_PREFIX@
+
+ENABLE_PREPROCESSING = YES
+MACRO_EXPANSION      = YES
+SEARCH_INCLUDES      = YES
+INCLUDE_PATH         =
+EXPAND_ONLY_PREDEF   = YES
+PREDEFINED  = "vtkSetMacro(name,type)= \
+                 virtual void Set##name (type);" \
+              "vtkGetMacro(name,type)= \
+                 virtual type Get##name ();" \
+              "vtkSetStringMacro(name)= \
+                 virtual void Set##name (const char*);" \
+              "vtkGetStringMacro(name)= \
+                 virtual char* Get##name ();" \
+              "vtkSetClampMacro(name,type,min,max)= \
+                 virtual void Set##name (type);" \
+              "vtkSetObjectMacro(name,type)= \
+                 virtual void Set##name (type*);" \
+              "vtkGetObjectMacro(name,type)= \
+                 virtual type *Get##name ();" \
+              "vtkBooleanMacro(name,type)= \
+                 virtual void name##On (); \
+                 virtual void name##Off ();" \
+              "vtkSetVector2Macro(name,type)= \
+                 virtual void Set##name (type, type); \
+                 void Set##name (type [2]);" \
+              "vtkGetVector2Macro(name,type)= \
+                 virtual type *Get##name (); \
+                 virtual void Get##name (type &, type &); \
+                 virtual void Get##name (type [2]);" \
+              "vtkSetVector3Macro(name,type)= \
+                 virtual void Set##name (type, type, type); \
+                 virtual void Set##name (type [3]);" \
+              "vtkGetVector3Macro(name,type)= \
+                 virtual type *Get##name (); \
+                 virtual void Get##name (type &, type &, type &); \
+                 virtual void Get##name (type [3]);" \
+              "vtkSetVector4Macro(name,type)= \
+                 virtual void Set##name (type, type, type, type); \
+                 virtual void Set##name (type [4]);" \
+              "vtkGetVector4Macro(name,type)= \
+                 virtual type *Get##name (); \
+                 virtual void Get##name (type &, type &, type &, type &); \
+                 virtual void Get##name (type [4]);" \
+               "vtkSetVector6Macro(name,type)= \
+                 virtual void Set##name (type, type, type, type, \
+                                         type, type); \
+                 virtual void Set##name (type [6]);" \
+               "vtkGetVector6Macro(name,type)= \
+                  virtual type *Get##name (); \
+                  virtual void Get##name (type &, type &, type &, \
+                                          type &, type &, type &); \
+                  virtual void Get##name (type [6]);" \
+               "vtkSetVectorMacro(name,type,count)= \
+                  virtual void Set##name(type data[]);" \
+               "vtkGetVectorMacro(name,type,count)= \
+                   virtual type *Get##name (); \
+                   virtual void Get##name(type data[##count]);" \
+               "vtkWorldCoordinateMacro(name)= \
+                   virtual vtkCoordinate *Get##name##Coordinate (); \
+                   virtual void Set##name(float x[3]); \
+                   virtual void Set##name(float x, float y, float z); \
+                   virtual float *Get##name();" \
+               "vtkViewportCoordinateMacro(name)= \
+                   virtual vtkCoordinate *Get##name##Coordinate (); \
+                   virtual void Set##name(float x[2]); \
+                   virtual void Set##name(float x, float y); \
+                   virtual float *Get##name();" \
+               "vtkTypeMacro(thisClass,superclass)= \
+                   typedef superclass Superclass; \
+                   virtual const char *GetClassName(); \
+                   static int IsTypeOf(const char *type); \
+                   virtual int IsA(const char *type); \
+                   static thisClass* SafeDownCast(vtkObject *o);" \
+               "vtkTypeRevisionMacro(thisClass,superclass)= \
+                   typedef superclass Superclass; \
+                   virtual const char *GetClassName(); \
+                   static int IsTypeOf(const char *type); \
+                   virtual int IsA(const char *type); \
+                   static thisClass* SafeDownCast(vtkObject *o);" \
+               "VTK_LEGACY(x)= x"

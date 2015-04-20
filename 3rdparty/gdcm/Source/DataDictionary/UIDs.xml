@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Program: GDCM (Grassroots DICOM). A DICOM library
+
+  Copyright (c) 2006-2011 Mathieu Malaterre
+  All rights reserved.
+  See Copyright.txt or http://gdcm.sourceforge.net/Copyright.html for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+-->
+<dict edition="2007">
+  <table ref="Table A-1" name="UID VALUES">
+    <uid value="1.2.840.10008.1.1" name="Verification SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.1.2" name="Implicit VR Little Endian: Default Transfer Syntax for DICOM" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.1" name="Explicit VR Little Endian" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.1.99" name="Deflated Explicit VR Little Endian" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.2" name="Explicit VR Big Endian" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.50" name="JPEG Baseline (Process 1): Default Transfer Syntax for Lossy JPEG 8 Bit Image Compression" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.51" name="JPEG Extended (Process 2 &amp; 4): Default Transfer Syntax for Lossy JPEG 12 Bit Image Compression (Process 4 only)" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.52" name="JPEG Extended (Process 3 &amp; 5)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.53" name="JPEG Spectral Selection, Non-Hierarchical (Process 6 &amp; 8)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.54" name="JPEG Spectral Selection, Non-Hierarchical (Process 7 &amp; 9)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.55" name="JPEG Full Progression, Non-Hierarchical (Process 10 &amp; 12)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.56" name="JPEG Full Progression, Non-Hierarchical (Process 11 &amp; 13)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.57" name="JPEG Lossless, Non-Hierarchical (Process 14)" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.58" name="JPEG Lossless, Non-Hierarchical (Process 15)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.59" name="JPEG Extended, Hierarchical (Process 16 &amp; 18)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.60" name="JPEG Extended, Hierarchical (Process 17 &amp; 19)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.61" name="JPEG Spectral Selection, Hierarchical (Process 20 &amp; 22)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.62" name="JPEG Spectral Selection, Hierarchical (Process 21 &amp; 23)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.63" name="JPEG Full Progression, Hierarchical (Process 24 &amp; 26)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.64" name="JPEG Full Progression, Hierarchical (Process 25 &amp; 27)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.65" name="JPEG Lossless, Hierarchical (Process 28)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.66" name="JPEG Lossless, Hierarchical (Process 29)" type="Transfer Syntax" part="PS 3.5" retired="true"/>
+    <uid value="1.2.840.10008.1.2.4.70" name="JPEG Lossless, Non-Hierarchical, First-Order Prediction (Process 14 [Selection Value 1]): Default Transfer Syntax for Lossless JPEG Image Compression" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.80" name="JPEG-LS Lossless Image Compression" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.81" name="JPEG-LS Lossy (Near-Lossless) Image Compression" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.90" name="JPEG 2000 Image Compression (Lossless Only)" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.91" name="JPEG 2000 Image Compression" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.92" name="JPEG 2000 Part 2 Multi-component Image Compression (Lossless Only)" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.93" name="JPEG 2000 Part 2 Multi-component Image Compression" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.94" name="JPIP Referenced" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.95" name="JPIP Referenced Deflate" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.4.100" name="MPEG2 Main Profile @ Main Level" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.5" name="RLE Lossless" type="Transfer Syntax" part="PS 3.5" retired="false"/>
+    <uid value="1.2.840.10008.1.2.6.1" name="RFC 2557 MIME encapsulation" type="Transfer Syntax" part="PS 3.10" retired="false"/>
+    <uid value="1.2.840.10008.1.3.10" name="Media Storage Directory Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.1" name="Talairach Brain Atlas Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.2" name="SPM2 T1 Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.3" name="SPM2 T2 Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.4" name="SPM2 PD Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.5" name="SPM2 EPI Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.6" name="SPM2 FIL T1 Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.7" name="SPM2 PET Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.8" name="SPM2 TRANSM Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.9" name="SPM2 SPECT Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.10" name="SPM2 GRAY Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.11" name="SPM2 WHITE Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.12" name="SPM2 CSF Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.13" name="SPM2 BRAINMASK Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.14" name="SPM2 AVG305T1 Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.15" name="SPM2 AVG152T1 Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.16" name="SPM2 AVG152T2 Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.17" name="SPM2 AVG152PD Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.1.18" name="SPM2 SINGLESUBJT1 Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.2.1" name="ICBM 452 T1 Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.4.2.2" name="ICBM Single Subject MRI Frame of Reference" type="Well-known frame of reference" part="" retired="false"/>
+    <uid value="1.2.840.10008.1.9" name="Basic Study Content Notification SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.1.20.1" name="Storage Commitment Push Model SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.1.20.1.1" name="Storage Commitment Push Model SOP Instance" type="Well-known SOP Instance" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.1.20.2" name="Storage Commitment Pull Model SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.1.20.2.1" name="Storage Commitment Pull Model SOP Instance" type="Well-known SOP Instance" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.1.40" name="Procedural Event Logging SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.1.40.1" name="Procedural Event Logging SOP Instance" type="Well-known SOP Instance" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.2.6.1" name="DICOM UID Registry" type="DICOM UIDs as a Coding Scheme" part="PS 3.6" retired="false"/>
+    <uid value="1.2.840.10008.2.16.4" name="DICOM Controlled Terminology" type="Coding Scheme" part="PS 3.16" retired="false"/>
+    <uid value="1.2.840.10008.3.1.1.1" name="DICOM Application Context Name" type="Application Context Name" part="PS 3.7" retired="false"/>
+    <uid value="1.2.840.10008.3.1.2.1.1" name="Detached Patient Management SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.3.1.2.1.4" name="Detached Patient Management Meta SOP Class" type="Meta SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.3.1.2.2.1" name="Detached Visit Management SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.3.1.2.3.1" name="Detached Study Management SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.3.1.2.3.2" name="Study Component Management SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.­2.840.10008.3.1.2.3.3" name="Modality Performed Procedure Step SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.­2.840.10008.3.1.2.3.4" name="Modality Performed Procedure Step Retrieve SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.­2.840.10008.3.1.2.3.5" name="Modality Performed Procedure Step Notification SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.3.1.2.5.1" name="Detached Results Management SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.3.1.2.5.4" name="Detached Results Management Meta SOP Class" type="Meta SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.3.1.2.5.5" name="Detached Study Management Meta SOP Class" type="Meta SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.3.1.2.6.1" name="Detached Interpretation Management SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.4.2" name="Storage Service Class" type="Service Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.1" name="Basic Film Session SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.2" name="Basic Film Box SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.4" name="Basic Grayscale Image Box SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.4.1" name="Basic Color Image Box SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.4.2" name="Referenced Image Box SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.9" name="Basic Grayscale Print Management Meta SOP Class" type="Meta SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.9.1" name="Referenced Grayscale Print Management Meta SOP Class" type="Meta SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.14" name="Print Job SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.15" name="Basic Annotation Box SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.16" name="Printer SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.16.376" name="Printer Configuration Retrieval SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.17" name="Printer SOP Instance" type="Well-known Printer SOP Instance" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.17.376" name="Printer Configuration Retrieval SOP Instance" type="Well-known Printer SOP Instance" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.18" name="Basic Color Print Management Meta SOP Class" type="Meta SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.18.1" name="Referenced Color Print Management Meta SOP Class" type="Meta SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.22" name="VOI LUT Box SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.23" name="Presentation LUT SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.1.24" name="Image Overlay Box SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.24.1" name="Basic Print Image Overlay Box SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.25" name="Print Queue SOP Instance" type="Well-known Print Queue SOP Instance" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.26" name="Print Queue Management SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.27" name="Stored Print Storage SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.29" name="Hardcopy Grayscale Image Storage SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.30" name="Hardcopy Color Image Storage SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.31" name="Pull Print Request SOP Class" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.32" name="Pull Stored Print Management Meta SOP Class" type="Meta SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.1.33" name="Media Creation Management SOP Class UID" type="SOP Class" part="PS3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.1" name="Computed Radiography Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.1.1" name="Digital X-Ray Image Storage – For Presentation" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.1.1.1" name="Digital X-Ray Image Storage – For Processing" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.1.2" name="Digital Mammography X-Ray Image Storage – For Presentation" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.1.2.1" name="Digital Mammography X-Ray Image Storage – For Processing" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.1.3" name="Digital Intra-oral X-Ray Image Storage – For Presentation" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.1.3.1" name="Digital Intra-oral X-Ray Image Storage – For Processing" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.2" name="CT Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.2.1" name="Enhanced CT Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.3" name="Ultrasound Multi-frame Image Storage" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.3.1" name="Ultrasound Multi-frame Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.4" name="MR Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.4.1" name="Enhanced MR Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.4.2" name="MR Spectroscopy Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.5" name="Nuclear Medicine Image Storage" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.6" name="Ultrasound Image Storage" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.6.1" name="Ultrasound Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.7" name="Secondary Capture Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.7.1" name="Multi-frame Single Bit Secondary Capture Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.7.2" name="Multi-frame Grayscale Byte Secondary Capture Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.7.3" name="Multi-frame Grayscale Word Secondary Capture Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.7.4" name="Multi-frame True Color Secondary Capture Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.8" name="Standalone Overlay Storage" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.9" name="Standalone Curve Storage" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.9.1.1" name="12-lead ECG Waveform Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.9.1.2" name="General ECG Waveform Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.9.1.3" name="Ambulatory ECG Waveform Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.9.2.1" name="Hemodynamic Waveform Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.9.3.1" name="Cardiac Electrophysiology Waveform Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.9.4.1" name="Basic Voice Audio Waveform Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.10" name="Standalone Modality LUT Storage" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.11" name="Standalone VOI LUT Storage" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.11.1" name="Grayscale Softcopy Presentation State Storage SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.11.2" name="Color Softcopy Presentation State Storage SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.11.3" name="Pseudo-Color Softcopy Presentation State Storage SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.11.4" name="Blending Softcopy Presentation State Storage SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.12.1" name="X-Ray Angiographic Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.12.1.1" name="Enhanced XA Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.12.2" name="X-Ray Radiofluoroscopic Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.12.2.1" name="Enhanced XRF Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.12.3" name="X-Ray Angiographic Bi-Plane Image Storage" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.20" name="Nuclear Medicine Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.66" name="Raw Data Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.66.1" name="Spatial Registration Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.66.2" name="Spatial Fiducials Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.66.3" name="Deformable Spatial Registration Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.66.4" name="Segmentation Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.67" name="Real World Value Mapping Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1" name="VL Image Storage" type="" part="" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.2" name="VL Multi-frame Image Storage" type="" part="" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.1" name="VL Endoscopic Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.1.1" name="Video Endoscopic Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.2" name="VL Microscopic Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.2.1" name="Video Microscopic Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.3" name="VL Slide-Coordinates Microscopic Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.4" name="VL Photographic Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.4.1" name="Video Photographic Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.5.1" name="Ophthalmic Photography 8 Bit Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.5.2" name="Ophthalmic Photography 16 Bit Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.77.1.5.3" name="Stereometric Relationship Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.88.11" name="Basic Text SR" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.88.22" name="Enhanced SR" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.88.33" name="Comprehensive SR" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.88.40" name="Procedure Log Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.88.50" name="Mammography CAD SR" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.88.59" name="Key Object Selection Document" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.88.65" name="Chest CAD SR" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.88.67" name="X-Ray Radiation Dose SR" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.104.1" name="Encapsulated PDF Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.128" name="Positron Emission Tomography Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.129" name="Standalone PET Curve Storage" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.481.1" name="RT Image Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.481.2" name="RT Dose Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.481.3" name="RT Structure Set Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.481.4" name="RT Beams Treatment Record Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.481.5" name="RT Plan Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.481.6" name="RT Brachy Treatment Record Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.481.7" name="RT Treatment Summary Record Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.481.8" name="RT Ion Plan Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.1.481.9" name="RT Ion Beams Treatment Record Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.2.1.1" name="Patient Root Query/Retrieve Information Model – FIND" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.2.1.2" name="Patient Root Query/Retrieve Information Model – MOVE" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.2.1.3" name="Patient Root Query/Retrieve Information Model – GET" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.2.2.1" name="Study Root Query/Retrieve Information Model – FIND" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.2.2.2" name="Study Root Query/Retrieve Information Model – MOVE" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.2.2.3" name="Study Root Query/Retrieve Information Model – GET" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.1.2.3.1" name="Patient/Study Only Query/Retrieve Information Model - FIND" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.2.3.2" name="Patient/Study Only Query/Retrieve Information Model - MOVE" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.1.2.3.3" name="Patient/Study Only Query/Retrieve Information Model - GET" type="SOP Class" part="PS 3.4" retired="true"/>
+    <uid value="1.2.840.10008.5.1.4.31" name="Modality Worklist Information Model – FIND" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.32.1" name="General Purpose Worklist Information Model – FIND" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.32.2" name="General Purpose Scheduled Procedure Step SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.32.3" name="General Purpose Performed Procedure Step SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.32" name="General Purpose Worklist Management Meta SOP Class" type="Meta SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.33" name="Instance Availability Notification SOP Class" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.37.1" name="General Relevant Patient Information Query" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.37.2" name="Breast Imaging Relevant Patient Information Query" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.37.3" name="Cardiac Relevant Patient Information Query" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.38.1" name="Hanging Protocol Storage" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.38.2" name="Hanging Protocol Information Model – FIND" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.5.1.4.38.3" name="Hanging Protocol Information Model – MOVE" type="SOP Class" part="PS 3.4" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.1" name="dicomDeviceName" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.2" name="dicomDescription" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.3" name="dicomManufacturer" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.4" name="dicomManufacturerModelName" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.5" name="dicomSoftwareVersion" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.6" name="dicomVendorData" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.7" name="dicomAETitle" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.8" name="dicomNetworkConnectionReference" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.9" name="dicomApplicationCluster" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.10" name="dicomAssociationInitiator" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.11" name="dicomAssociationAcceptor" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.12" name="dicomHostname" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.13" name="dicomPort" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.14" name="dicomSOPClass" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.15" name="dicomTransferRole" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.16" name="dicomTransferSyntax" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.17" name="dicomPrimaryDeviceType" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.18" name="dicomRelatedDeviceReference" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.19" name="dicomPreferredCalledAETitle" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.20" name="dicomTLSCyphersuite" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.21" name="dicomAuthorizedNodeCertificateReference" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.22" name="dicomThisNodeCertificateReference" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.23" name="dicomInstalled" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.24" name="dicomStationName" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.25" name="dicomDeviceSerialNumber" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.26" name="dicomInstitutionName" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.27" name="dicomInstitutionAddress" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.28" name="dicomInstitutionDepartmentName" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.29" name="dicomIssuerOfPatientID" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.30" name="dicomPreferredCallingAETitle" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.3.31" name="dicomSupportedCharacterSet" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.4.1" name="dicomConfigurationRoot" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.4.2" name="dicomDevicesRoot" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.4.3" name="dicomUniqueAETitlesRegistryRoot" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.4.4" name="dicomDevice" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.4.5" name="dicomNetworkAE" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.4.6" name="dicomNetworkConnection" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.4.7" name="dicomUniqueAETitle" type="LDAP OID" part="PS 3.15" retired="false"/>
+    <uid value="1.2.840.10008.15.0.4.8" name="dicomTransferCapability" type="LDAP OID" part="PS 3.15" retired="false"/>
+  </table>
+  <table ref="Table A-2" name="Well-known Frames of Reference">
+    <uid value="1.2.840.10008.1.4.1.1" name="Talairach Brain Atlas Frame of Reference" normative-reference="Talairach J. and Tournoux P. Co-Planar stereotactic atlas of the human brain. Stutgart: Georg Thieme Verlag, 1988."/>
+    <uid value="1.2.840.10008.1.4.1.2" name="SPM2 T1 Frame of Reference" normative-reference="SPM2 /templates/T1.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.3" name="SPM2 T2 Frame of Reference" normative-reference="SPM2 /templates/T2.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.4" name="SPM2 PD Frame of Reference" normative-reference="SPM2 /templates/PD.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.5" name="SPM2 EPI Frame of Reference" normative-reference="SPM2 /templates/EPI.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.6" name="SPM2 FIL T1 Frame of Reference" normative-reference="SPM2 /templates/filT1.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.7" name="SPM2 PET Frame of Reference" normative-reference="SPM2 /templates/PET.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.8" name="SPM2 TRANSM Frame of Reference" normative-reference="SPM2 /templates/Transm.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.9" name="SPM2 SPECT Frame of Reference" normative-reference="SPM2 /templates/SPECT.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.10" name="SPM2 GRAY Frame of Reference" normative-reference="SPM2 /apriori/gray.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.11" name="SPM2 WHITE Frame of Reference" normative-reference="SPM2 /apriori/white.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.12" name="SPM2 CSF Frame of Reference" normative-reference="SPM2 /apriori/csf.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.13" name="SPM2 BRAINMASK Frame of Reference" normative-reference="SPM2 /apriori/brainmask.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.14" name="SPM2 AVG305T1 Frame of Reference" normative-reference="SPM2 /canonical/avg305T1.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.15" name="SPM2 AVG152T1 Frame of Reference" normative-reference="SPM2 /canonical/avg152T1.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.16" name="SPM2 AVG152T2 Frame of Reference" normative-reference="SPM2 /canonical/avg152T2.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.17" name="SPM2 AVG152PD Frame of Reference" normative-reference="SPM2 /canonical/avg152PD.mnc"/>
+    <uid value="1.2.840.10008.1.4.1.18" name="SPM2 SINGLESUBJT1 Frame of Reference" normative-reference="SPM2 /canonical/single_subj_T1.mnc"/>
+    <uid value="1.2.840.10008.1.4.2.1" name="ICBM 452 T1 Frame of Reference" normative-reference="ICBM452 T1 Atlas"/>
+    <uid value="1.2.840.10008.1.4.2.2" name="ICBM Single Subject MRI Frame of Reference" normative-reference="ICBM Single Subject MRI Anatomical Template"/>
+  </table>
+</dict>

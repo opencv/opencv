@@ -1,0 +1,13 @@
+HOWTO USE THE TCL/TK APP IN 'jp3d/tcltk'
+----------------------------------------
+1. Download the 'BWidget-1.9.2'
+    http://www.sourceforge.net/projects/tcllib/
+
+2. Install it e.g. in '/usr/local/BWidget-1.9.2/'
+3. Add the lappend command in line 4
+  to jp3d/tcltk/LPI_JP3D_VM.tcl:
+
+#!/bin/sh
+# The next line is executed by /bin/sh, but not tcl \
+exec wish "$0" ${1+"$@"}
+lappend auto_path /usr/local/BWidget-1.9.2

@@ -1,0 +1,15 @@
+If you are reading this you are wondering what are ll those doxygen options:
+
+- I need HTML output for the doc at:
+http://gdcm.sourceforge.net/html/
+
+- I need the MAN output for the generated man pages, for debian packaging
+this is a lintian error when a cmd line tool does not prodivde a man-page.
+
+- I need XML output for the python help page. See also the doxy2swig.py
+that is located in Wrapping/Python dir.
+
+- Specify a special FOOTER so that Piwik engine is on and will generate traffic
+to sf.net.
+
+The rest of the non-default options is currently not documented...

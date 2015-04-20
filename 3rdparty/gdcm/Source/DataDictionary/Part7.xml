@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Program: GDCM (Grassroots DICOM). A DICOM library
+
+  Copyright (c) 2006-2011 Mathieu Malaterre
+  All rights reserved.
+  See Copyright.txt or http://gdcm.sourceforge.net/Copyright.html for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+-->
+  <dict ref="E.1" name="Registry of DICOM command elements">
+    <entry group="0000" element="0000" vr="UL" vm="1" keyword="CommandGroupLength" name="Command Group Length">
+      <description>
+               The even number of bytes from the end of the value field to the beginning of the next group.
+            </description>
+    </entry>
+    <entry group="0000" element="0002" vr="UI" vm="1" keyword="AffectedSOPClassUID" name="Affected SOP Class UID">
+      <description>
+               The affected SOP Class UID associated with the operation.
+            </description>
+    </entry>
+    <entry group="0000" element="0003" vr="UI" vm="1" keyword="RequestedSOPClassUID" name="Requested SOP Class UID">
+      <description>
+               The requested SOP Class UID associated with the operation.
+            </description>
+    </entry>
+    <entry group="0000" element="0100" vr="US" vm="1" keyword="CommandField" name="Command Field">
+      <description>
+               This field distinguishes the DIMSE operation conveyed by this Message. This field shall be set to one of the following values:
+               0001H       C-STORE-RQ
+               8001H       C-STORE-RSP
+               0010H       C-GET-RQ
+               8010H       C-GET-RSP
+               0020H       C-FIND-RQ
+               8020H       C-FIND-RSP
+               0021H       C-MOVE-RQ
+               8021H       C-MOVE-RSP
+               0030H       C-ECHO-RQ
+               8030H       C-ECHO-RSP
+               0100H       N-EVENT-REPORT-RQ
+               8100H       N-EVENT-REPORT-RSP
+               0110H       N-GET-RQ
+               8110H       N-GET-RSP
+               0120H       N-SET-RQ
+               8120H       N-SET-RSP
+               0130H       N-ACTION-RQ
+               8130H       N-ACTION-RSP
+               0140H       N-CREATE-RQ
+               8140H       N-CREATE-RSP
+               0150H       N-DELETE-RQ
+               8150H       N-DELETE-RSP
+               0FFFH       C-CANCEL-RQ
+            </description>
+    </entry>
+    <entry group="0000" element="0110" vr="US" vm="1" keyword="MessageID" name="Message ID">
+      <description>
+               Implementation-specific value that distinguishes this Message from other Messages.
+            </description>
+    </entry>
+    <entry group="0000" element="0120" vr="US" vm="1" keyword="MessageIDBeingRespondedTo" name="Message ID Being Responded To">
+      <description>
+               Shall be set to the value of the Message ID (0000,0110) field used in associated request Message.
+            </description>
+    </entry>
+    <entry group="0000" element="0600" vr="AE" vm="1" keyword="MoveDestination" name="Move Destination">
+      <description>
+               Shall be set to the DICOM AE Title of the destination DICOM AE to which the C-STORE sub-operations are being performed.
+            </description>
+    </entry>
+    <entry group="0000" element="0700" vr="US" vm="1" keyword="Priority" name="Priority">
+      <description>
+               The priority shall be set to one of the following values:
+               LOW = 0002H
+               MEDIUM = 0000H
+               HIGH = 0001H
+            </description>
+    </entry>
+    <entry group="0000" element="0800" vr="US" vm="1" keyword="CommandDataSetType" name="Command Data Set Type">
+      <description>
+               This field indicates if a Data Set is present in the Message. This field shall be set to the value of 0101H if no Data Set is present; any other value indicates a Data Set is included in the Message.
+            </description>
+    </entry>
+    <entry group="0000" element="0900" vr="US" vm="1" keyword="Status" name="Status">
+      <description>
+               Confirmation status of the operation. See Annex C.
+            </description>
+    </entry>
+    <entry group="0000" element="0901" vr="AT" vm="1-n" keyword="OffendingElement" name="Offending Element">
+      <description>
+               If status is Cxxx, then this field contains a list of
+                the elements in which the error was detected.
+            </description>
+    </entry>
+    <entry group="0000" element="0902" vr="LO" vm="1" keyword="ErrorComment" name="Error Comment">
+      <description>
+               This field contains an application-specific text description of the error detected.
+            </description>
+    </entry>
+    <entry group="0000" element="0903" vr="US" vm="1" keyword="ErrorID" name="Error ID">
+      <description>
+               This field shall optionally contain an application-specific error code.
+            </description>
+    </entry>
+    <entry group="0000" element="1000" vr="UI" vm="1" keyword="AffectedSOPInstanceUID" name="Affected SOP Instance UID">
+      <description>
+               Contains the UID of the SOP Instance for which this operation occurred.
+            </description>
+    </entry>
+    <entry group="0000" element="1001" vr="UI" vm="1" keyword="RequestedSOPInstanceUID" name="Requested SOP Instance UID">
+      <description>
+               Contains the UID of the SOP Instance for which this operation occurred.
+            </description>
+    </entry>
+    <entry group="0000" element="1002" vr="US" vm="1" keyword="EventTypeID" name="Event Type ID">
+      <description>
+               Values for this field are application-specific.
+            </description>
+    </entry>
+    <entry group="0000" element="1005" vr="AT" vm="1-n" keyword="AttributeIdentifierList" name="Attribute Identifier List">
+      <description>
+               This field contains an Attribute Tag for each of the n Attributes applicable.
+            </description>
+    </entry>
+    <entry group="0000" element="1008" vr="US" vm="1" keyword="ActionTypeID" name="Action Type ID">
+      <description>
+               Values for this field are application-specific.
+            </description>
+    </entry>
+    <entry group="0000" element="1020" vr="US" vm="1" keyword="NumberOfRemainingSuboperations" name="Number of Remaining Sub-operations">
+      <description>
+               The number of remaining C-STORE sub-operations to be invoked for the operation.
+            </description>
+    </entry>
+    <entry group="0000" element="1021" vr="US" vm="1" keyword="NumberOfCompletedSuboperations" name="Number of Completed Sub-operations">
+      <description>
+               The number of C-STORE sub-operations associated with this operation that have completed successfully.
+            </description>
+    </entry>
+    <entry group="0000" element="1022" vr="US" vm="1" keyword="NumberOfFailedSuboperations" name="Number of Failed Sub-operations">
+      <description>
+               The number of C-STORE sub-operations associated with this operation that have failed.
+            </description>
+    </entry>
+    <entry group="0000" element="1023" vr="US" vm="1" keyword="NumberOfWarningSuboperations" name="Number of Warning Sub-operations">
+      <description>
+               The number of C-STORE sub-operations associated with this operation that generated warning responses.
+            </description>
+    </entry>
+    <entry group="0000" element="1030" vr="AE" vm="1" keyword="MoveOriginatorApplicationEntityTitle" name="Move Originator Application Entity Title">
+      <description>
+               Contains the DICOM AE Title of the DICOM AE that invoked the C-MOVE operation from which this C-STORE sub-operation is being performed.
+            </description>
+    </entry>
+    <entry group="0000" element="1031" vr="US" vm="1" keyword="MoveOriginatorMessageID" name="Move Originator Message ID">
+      <description>
+               Contains the Message ID (0000,0110) of the C-MOVE-RQ Message from which this C-STORE sub-operation is being performed.
+            </description>
+    </entry>
+  </dict>
+  <dict ref="E.2" name="Retired command fields">
+    <entry group="0000" element="0001" vr="UL" vm="1" keyword="CommandLengthToEnd" name="Command Length to End" retired="true"/>
+    <entry group="0000" element="0010" vr="SH" vm="1" keyword="CommandRecognitionCode" name="Command Recognition Code" retired="true"/>
+    <entry group="0000" element="0200" vr="AE" vm="1" keyword="Initiator" name="Initiator" retired="true"/>
+    <entry group="0000" element="0300" vr="AE" vm="1" keyword="Receiver" name="Receiver" retired="true"/>
+    <entry group="0000" element="0400" vr="AE" vm="1" keyword="FindLocation" name="Find Location" retired="true"/>
+    <entry group="0000" element="0850" vr="US" vm="1" keyword="NumberOfMatches" name="Number of Matches" retired="true"/>
+    <entry group="0000" element="0860" vr="US" vm="1" keyword="ResponseSequenceNumber" name="Response Sequence Number" retired="true"/>
+    <entry group="0000" element="4000" vr="LT" vm="1" keyword="DialogReceiver" name="Dialog Receiver" retired="true"/>
+    <entry group="0000" element="4010" vr="LT" vm="1" keyword="TerminalType" name="Terminal Type" retired="true"/>
+    <entry group="0000" element="5010" vr="SH" vm="1" keyword="MessageSetID" name="Message Set ID" retired="true"/>
+    <entry group="0000" element="5020" vr="SH" vm="1" keyword="EndMessageID" name="End Message ID" retired="true"/>
+    <entry group="0000" element="5110" vr="LT" vm="1" keyword="DisplayFormat" name="Display Format" retired="true"/>
+    <entry group="0000" element="5120" vr="LT" vm="1" keyword="PagePositionID" name="Page Position ID" retired="true"/>
+    <entry group="0000" element="5130" vr="CS" vm="1" keyword="TextFormatID" name="Text Format ID" retired="true"/>
+    <entry group="0000" element="5140" vr="CS" vm="1" keyword="NormalReverse" name="Normal/Reverse" retired="true"/>
+    <entry group="0000" element="5150" vr="CS" vm="1" keyword="AddGrayScale" name="Add Gray Scale" retired="true"/>
+    <entry group="0000" element="5160" vr="CS" vm="1" keyword="Borders" name="Borders" retired="true"/>
+    <entry group="0000" element="5170" vr="IS" vm="1" keyword="Copies" name="Copies" retired="true"/>
+    <entry group="0000" element="5180" vr="CS" vm="1" keyword="CommandMagnificationType" name="Command Magnification Type" retired="true"/>
+    <entry group="0000" element="5190" vr="CS" vm="1" keyword="Erase" name="Erase" retired="true"/>
+    <entry group="0000" element="51a0" vr="CS" vm="1" keyword="Print" name="Print" retired="true"/>
+    <entry group="0000" element="51b0" vr="US" vm="1-n" keyword="Overlays" name="Overlays" retired="true"/>
+  </dict>

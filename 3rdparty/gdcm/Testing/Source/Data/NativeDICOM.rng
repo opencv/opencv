@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PS 3.19-2011
+  A.1.6          Schema
+  The Normative version of the XML Schema for the Native DICOM Model follows:
+-->
+<grammar ns="http://dicom.nema.org/PS3.19/models/NativeDICOM" xmlns="http://relaxng.org/ns/structure/1.0" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+  <!--
+    This schema was created as an intermediary, a means of describing
+    native binary encoded DICOM objects as XML Infosets, thus allowing
+    one to manipulate binary DICOM objects using familiar XML tools.
+    As such, the schema is designed to facilitate a simple, mechanical,
+    bi-directional translation between binary encoded DICOM and XML-like
+    constructs without constraints, and to simplify identifying portions
+    of a DICOM object using XPath statements.
+    
+    Since this schema has minimal type checking, it is neither intended
+    to be used for any operation that involves hand coding, nor to
+    describe a definitive, fully validating encoding of DICOM concepts
+    into XML, as what one might use, for example, in a robust XML
+    database system or in XML-based forms, though it may be used
+    as a means for translating binary DICOM Objects into such a form
+    (e.g. through an XSLT script).
+  -->
+  <start>
+    <element name="NativeDicomModel">
+      <ref name="DicomDataSet"/>
+    </element>
+  </start>
+  <!--
+    A DICOM Data Set is as defined in PS3.5. It does not appear
+    as an XML Element, since it does not appear in the binary encoded
+    DICOM objects. It exists here merely as a documentation aid.
+  -->
+  <define name="DicomDataSet">
+    <zeroOrMore>
+      <ref name="DicomAttribute"/>
+    </zeroOrMore>
+  </define>
+  <define name="DicomAttribute">
+    <element name="DicomAttribute">
+      <ref name="Tag"/>
+      <ref name="VR"/>
+      <optional>
+        <ref name="Keyword"/>
+      </optional>
+      <optional>
+        <ref name="PrivateCreator"/>
+      </optional>
+      <optional>
+        <choice>
+          <ref name="BulkData"/>
+          <oneOrMore>
+            <ref name="Value"/>
+          </oneOrMore>
+          <oneOrMore>
+            <ref name="Item"/>
+          </oneOrMore>
+          <oneOrMore>
+            <ref name="PersonName"/>
+          </oneOrMore>
+        </choice>
+      </optional>
+    </element>
+  </define>
+  <define name="BulkData">
+    <element name="BulkData">
+      <ref name="UUID"/>
+    </element>
+  </define>
+  <define name="Value">
+    <element name="Value">
+      <ref name="Number"/>
+      <data type="string"/>
+    </element>
+  </define>
+  <define name="Item">
+    <element name="Item">
+      <ref name="Number"/>
+      <ref name="DicomDataSet"/>
+    </element>
+  </define>
+  <define name="PersonName">
+    <element name="PersonName">
+      <ref name="Number"/>
+      <optional>
+        <element name="SingleByte">
+          <ref name="NameComponents"/>
+        </element>
+      </optional>
+      <optional>
+        <element name="Ideographic">
+          <ref name="NameComponents"/>
+        </element>
+      </optional>
+      <optional>
+        <element name="Phonetic">
+          <ref name="NameComponents"/>
+        </element>
+      </optional>
+    </element>
+  </define>
+  <define name="NameComponents">
+    <optional>
+      <element name="FamilyName">
+        <data type="string"/>
+      </element>
+    </optional>
+    <optional>
+      <element name="GivenName">
+        <data type="string"/>
+      </element>
+    </optional>
+    <optional>
+      <element name="MiddleName">
+        <data type="string"/>
+      </element>
+    </optional>
+    <optional>
+      <element name="NamePrefix">
+        <data type="string"/>
+      </element>
+    </optional>
+    <optional>
+      <element name="NameSuffix">
+        <data type="string"/>
+      </element>
+    </optional>
+  </define>
+  <!--
+    keyword is the attribute tag from PS3.6
+    (derived from the DICOM Attribute's name)
+  -->
+  <define name="Keyword">
+    <attribute name="keyword">
+      <data type="token"/>
+    </attribute>
+  </define>
+  <!-- canonical XML definition of Hex, with lowercase letters disallowed -->
+  <define name="Tag">
+    <attribute name="tag">
+      <data type="string">
+        <param name="minLength">8</param>
+        <param name="maxLength">8</param>
+        <param name="pattern">[0-9A-F]{8}</param>
+      </data>
+    </attribute>
+  </define>
+  <define name="VR">
+    <attribute name="vr">
+      <choice>
+        <value>AE</value>
+        <value>AS</value>
+        <value>AT</value>
+        <value>CS</value>
+        <value>DA</value>
+        <value>DS</value>
+        <value>DT</value>
+        <value>FL</value>
+        <value>FD</value>
+        <value>IS</value>
+        <value>LO</value>
+        <value>LT</value>
+        <value>OB</value>
+        <value>OF</value>
+        <value>OW</value>
+        <value>PN</value>
+        <value>SH</value>
+        <value>SL</value>
+        <value>SQ</value>
+        <value>SS</value>
+        <value>ST</value>
+        <value>TM</value>
+        <value>UI</value>
+        <value>UL</value>
+        <value>UN</value>
+        <value>US</value>
+        <value>UT</value>
+      </choice>
+    </attribute>
+  </define>
+  <define name="PrivateCreator">
+    <attribute name="privateCreator">
+      <data type="string"/>
+    </attribute>
+  </define>
+  <define name="UUID">
+    <attribute name="uuid">
+      <data type="string"/>
+    </attribute>
+  </define>
+  <define name="Number">
+    <attribute name="number">
+      <data type="positiveInteger"/>
+    </attribute>
+  </define>
+</grammar>

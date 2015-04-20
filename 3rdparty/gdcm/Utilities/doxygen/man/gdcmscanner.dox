@@ -1,0 +1,79 @@
+/*!
+
+\page gdcmscanner Scan a directory containing DICOM files.
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcmscanner [options] directory
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcmscanner is a command line tool to quickly extract value from a set
+of DICOM attribute in a DICOM File-Set.
+
+\subsection parameters parameters
+\verbatim
+  -d --dir       DICOM directory
+  -t --tag %d,%d DICOM tag(s) to look for
+\endverbatim
+
+\subsection options options
+\verbatim
+  -p --print      Print output.
+  -r --recursive  Recusively descend directory.
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\section usage Typical usage
+\section simple_usage Simple usage
+In order to display all the value for Patient Name (0010,0010) in the directory
+name \b gdcmData, simply do:
+
+\verbatim
+$ gdcmscanner -t 10,10 -d gdcmData -p
+\endverbatim
+
+\section complex_usage Complex usage
+
+Because gdcmscanner does not support progress, you have to wait until all files
+are traversed to see any results. This is quite cumbersome, on UNIX this can
+be worked around with the following trick:
+
+\verbatim
+$ find gdcmData -type d -exec gdcmscanner -t 10,10 -d {} -p ';'
+\endverbatim
+
+So all directory are locally traversed (no child directory are recursively
+traversed), which means results comes out much faster.
+
+\section see_also SEE ALSO
+
+<b>gdcmdump</b>(1), <b>gdcmraw</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

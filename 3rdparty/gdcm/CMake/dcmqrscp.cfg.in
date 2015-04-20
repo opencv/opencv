@@ -1,0 +1,20 @@
+# http://support.dcmtk.org/docs/dcmqrscp.html
+# http://support.dcmtk.org/docs/file_dcmqrset.html
+NetworkType     = "tcp"
+NetworkTCPPort  = 5679
+MaxPDUSize      = 16384
+MaxAssociations = 16
+Display         = "no"
+
+HostTable BEGIN
+gdcmdash        = (GDCMDASH, @DCMQRSCP_HOSTNAME@, @DCMQRSCP_PORT@)
+gdcmcompany     = gdcmdash
+HostTable END
+
+VendorTable BEGIN
+"GDCM Company"   = gdcmcompany
+VendorTable END
+
+AETable BEGIN
+GDCM_STORE   @DCMQRSCP_DIRECTORY@/GDCM_STORE   RW (9, 1024mb)   gdcmcompany
+AETable END

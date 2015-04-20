@@ -1,0 +1,46 @@
+# same as boost settings:
+#SET(CTEST_CUSTOM_MAXIMUM_NUMBER_OF_ERRORS 1000)
+#SET(CTEST_CUSTOM_MAXIMUM_NUMBER_OF_WARNINGS 1000)
+##SET(CTEST_CUSTOM_MAXIMUM_PASSED_TEST_OUTPUT_SIZE 1000000)
+#SET(CTEST_CUSTOM_MAXIMUM_PASSED_TEST_OUTPUT_SIZE 49152)
+#SET(CTEST_CUSTOM_MAXIMUM_FAILED_TEST_OUTPUT_SIZE 49152)
+
+SET(CTEST_CUSTOM_WARNING_EXCEPTION
+  ${CTEST_CUSTOM_WARNING_EXCEPTION}
+  "Utilities"
+  "Utilities.gdcmopenjpeg.*warning C4101: '.*' : unreferenced local variable"
+  "gdcm.*.cxx.obj : warning LNK4221: no public symbols found; archive member will be inaccessible"
+  "/usr/bin/ranlib: for architecture: .* file: .* has no symbols"
+  "gdcmcharls"
+  "gdcmexpat"
+  "warning CS0114:"
+  "warning CS0108:"
+  "warning CS0109:"
+  "warning CS1591:"
+  "gdcmJAVA_wrap.cxx" # swig generated
+  "gdcmswigPYTHON_wrap.cxx" # swig generated
+  "gdcmCSHARP_wrap.cxx" # swig generated
+  "gdcmPythonFilter.cxx" # need some love
+  "puff.c" # zlib code
+  "/usr/bin/ld: warning: libjpeg.so.62" # needed by .*libvtkIO.so, may conflict with libjpeg.so.8
+  "/usr/bin/ld: warning: libavcodec.so.52" # needed by .*libvtkIO.so, may conflict with libavcodec.so.53
+  "/usr/bin/ld: warning: libavformat.so.52" #needed by libvtkIO.so, may conflict with libavformat.so.53
+  "/usr/bin/ld: warning: libavutil.so.49" # needed by .*libvtkIO.so, may conflict with libavutil.so.51
+  "/usr/bin/ld: warning: libswscale.so.0" # needed by .*libvtkIO.so, may conflict with libswscale.so.2
+  )
+
+# Disable dynamic analysis on some tests:
+SET(CTEST_CUSTOM_MEMCHECK_IGNORE
+  ${CTEST_CUSTOM_MEMCHECK_IGNORE}
+  "Python"
+  "DCMDUMP"
+  "DCDUMP"
+  "DCMDJPEG"
+  "DCMDRLE"
+  "vtk"
+  )
+
+# ==3201== 8 bytes in 1 blocks are still reachable in loss record 2 of 8
+# ==3201==    at 0x4C20809: operator new(unsigned long) (vg_replace_malloc.c:230)
+# ==3201==    by 0x405E28F: DJDecoderRegistration::registerCodecs(E_DecompressionColorSpaceConversion, E_UIDCreation, E_PlanarConfiguration, bool) (in /usr/lib/libdcmjpeg.so.1.0.0)
+# ==3201==    by 0x402AB1: (within /usr/bin/dcmdjpeg)
