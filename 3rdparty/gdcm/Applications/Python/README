@@ -1,0 +1,62 @@
+= !CherryWado =
+
+== About ==
+!CherryWado is a WADO server written in python, using the !CherryPy web framework.
+
+DICOM images are handled with the GDCM DICOM toolkit command line utilities.
+
+For information about DICOM and Web Access to persistent Dicom Objects see
+http://en.wikipedia.org/wiki/DICOM.
+
+== Dependencies ==
+ * !CherryPy
+ * flup
+ * Python Imaging Library (PIL)
+ * DICOM Toolkit - gdcm (+VTK: gdcm2pnm)
+
+== Installation and configuration ==
+Our WADO server doesn't make any assumption about how / where you store DICOM
+files. Therefore, in order to use it, you need to tweak accessdata.py to specify
+a way to retrieve the requested DICOM object.
+
+You can test the server as follows:
+
+$ python wado.py test
+
+# preparation:
+
+mkdir -p /tmp/dicom/1.2.840.113619.2.5.1762386977.1328.985934491.590/1.2.840.113619.2.5.1762386977.1328.985934491.643/1.2.840.113619.2.5.1762386977.1328.985934491.693
+rmdir /tmp/dicom/1.2.840.113619.2.5.1762386977.1328.985934491.590/1.2.840.113619.2.5.1762386977.1328.985934491.643/1.2.840.113619.2.5.1762386977.1328.985934491.693
+cp gdcmData/012345.002.050.dcm /tmp/dicom/1.2.840.113619.2.5.1762386977.1328.985934491.590/1.2.840.113619.2.5.1762386977.1328.985934491.643/1.2.840.113619.2.5.1762386977.1328.985934491.693
+
+# Open in your favorite browser
+http://127.0.0.1:8080/?requestType=WADO&studyUID=1.2.840.113619.2.5.1762386977.1328.985934491.590&seriesUID=1.2.840.113619.2.5.1762386977.1328.985934491.643&objectUID=1.2.840.113619.2.5.1762386977.1328.985934491.693&contentType=image/png
+
+!CherryWado uses FLUP to ease deployment with lighttpd or Apache.
+
+Here is a lighttpd.conf snippet for your convenience:
+{{{
+$HTTP["url"] =~ "" {
+    fastcgi.server = (
+        "/wado/" => (
+           "wado" => (
+              "bin-path"         => "/path/to/wado.py",
+              "socket"           => "/tmp/wado.sock",
+              "check-local"      => "disable",
+              "disable-time"     => 1,
+              "min-procs"        => 1,
+              "max-procs"        => 10,
+           ),
+        ),
+    )
+}}}
+
+Make sure you have "mod_fastcgi" in server.modules!
+
+== License ==
+!CherryWado is licensed under the Apache License, Version 2.0.
+
+See http://www.apache.org/licenses/LICENSE-2.0 for the full text.
+
+== Authors ==
+Emanuele Rocca, Marco De Benedetto, Mathieu Malaterre
