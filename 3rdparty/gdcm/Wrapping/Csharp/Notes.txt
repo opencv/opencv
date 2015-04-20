@@ -1,0 +1,9 @@
+http://pragmatic.oreilly.com/pub/a/oreilly/dotnet/news/programmingCsharp_0801.html
+
+http://msdn.microsoft.com/en-us/library/yyaad03b(VS.80).aspx
+
+http://msdn.microsoft.com/en-us/magazine/cc301520.aspx
+
+http://cplus.about.com/
+
+http://andymcm.com/csharpfaq.htm
