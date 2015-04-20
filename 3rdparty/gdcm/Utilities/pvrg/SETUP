@@ -1,0 +1,80 @@
+JPEG version 1.2
+
+1) Printing documentation:
+
+Documentation is in the PostScript file doc.ps. It is about 50 pages
+long.
+
+2) Making the program.
+
+The makefile should be setup for most UNIX systems as is.  Simply type
+"make" in the source code directory.
+
+For SYSV only libraries, substitute the first line in the makefile
+#DEFINES = -DSYSV -DNOTRUNCATE for
+#DEFINES
+
+which allows for SYSV libraries to be used instead.  The NOTRUNCATE
+flag avoids the lack of the ftruncate() call used in io.c.
+
+Caution: For the compilation, the lexer.l file should be older than
+the lexer.c file otherwise many machines will try and lex the lexer.l
+file (thus clobbering potentially the lexer.c file).  In general, the
+tar will take out the lexer.l file first (it's specified to do that),
+so there shouldn't be any problems unless the directory is _copied_
+and then remade, in which case, the lexer.c file will be older because
+is lexically of lesser value than lexer.l.  This is a potential bug.
+
+3) Testing the program.
+
+Two small test files are nonint.jpg and blkint.jpg.  If you wish to
+extract them, type
+
+jpeg -d -s nonint.jpg
+jpeg -d -s blkint.jpg
+
+The resulting files should be in
+
+nonint.jpg.1 nonint.jpg.2 nonint.jpg.3
+blkint.jpg.1 blkint.jpg.2 blkint.jpg.3
+
+These files are raw raster-scan component files 128x128 for the Y
+(.1), 64x128 for the U(.2) and V(.3).
+
+4) Displaying the decompressed files.
+
+The decompressed *.1 *.2 *.3 files may be displayed through the
+program "cv" which may be obtained by anonymous ftp from
+havefun.stanford.edu:pub/cv/CVv1.1.tar.Z.  If the program is in your
+current directory search-path, type
+
+cv -iw 128 -ih 128 nonint.jpg -SF
+
+or
+
+cv -iw 128 -ih 128 blkint.jpg -SF
+
+5) Recompressing the sample files
+
+Use the following commands to recompress the nonint.jpg.* component
+files into the nonint.jpg2 file:
+
+jpeg -iw 128 -ih 128 -n -hf 2 nonint.jpg.1 nonint.jpg.2 nonint.jpg.3 \
+ -s nonint2.jpg
+
+Use the following commands to recompress the blkint.jpg.* component
+files into the blkint.jpg2 file:
+
+jpeg -iw 128 -ih 128  -hf 2 blkint.jpg.1 blkint.jpg.2 blkint.jpg.3 \
+ -s blkint2.jpg
+
+Surprisingly, recompressing and decompressing the blkint should yield
+the same result. (The nonint files will not yield the same result -
+but very close - since the non-interleaved mode defaults to using the
+LUMINANCE quantization matrix for the first color component of each
+scan.) See the documentation for more details on other parameters.
+
+6) Some short interpreted programs for the encoder: (See Chapter 4 of
+the documentation behind these programs).
+
+test.huff test.3stream  test.q

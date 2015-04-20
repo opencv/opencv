@@ -1,0 +1,8 @@
+
+For PC's the portability problem may be in the shift-division in the
+DCT's and the UNIX calls open, read, ftruncate, etc.
+
+For modification of the lexer.l file: Lex does not accept comments in
+the heading, unfortunately, the automatic header program puts that at
+the top.  Put the first comment (pvrg disclaimer, etc.) into the %{ %}
+body and all should be fine.

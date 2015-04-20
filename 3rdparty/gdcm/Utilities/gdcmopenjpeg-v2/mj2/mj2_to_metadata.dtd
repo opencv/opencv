@@ -1,0 +1,425 @@
+<!--
+Preliminary DTD for Open JPEG "mj2_to_metadata" function.
+Last revised: April 20, 2005
+Author:  Glenn Pearson, at U.S. National Library of Medicine.
+See mj2_to_metadata.c regarding copyright, license, disclaimer status.
+
+While the vocabulary of this DTD is based on the relevant portions of the
+ISO/IEC JPEG 200 standard, the detailed representation is the author's own.
+It is neither an ISO/IEC nor NLM official or consensus representation.
+Furthermore, it deviates from a pure representation of the ISO/IEC standard
+in these aspects:
+
+  - it is incomplete in a number of ways (which to some extent may be
+    addressed over time);
+  - it has extensions for "derived" data and "statistics";
+  - it is more flexible.  That is, some elements are marked as optional
+    not because they are optional in an MJ2 file, but because reporting
+    of them is optional based on current or projected mj2_to_metadata
+    command-line flags.
+-->
+<!ELEMENT MJ2_File (JP2?, FileType?, MovieBox?)>
+<!ELEMENT JP2 EMPTY>
+<!ATTLIST JP2 BoxType CDATA #FIXED "jP[space][space]">
+<!ATTLIST JP2 Signature CDATA #FIXED "0x0d0a870a">
+<!ELEMENT FileType (Brand, MinorVersion, CompatibilityList)>
+<!ATTLIST FileType BoxType CDATA #FIXED "ftyp">
+<!ELEMENT Brand (#PCDATA)> <!-- 4 characters max -->
+<!ELEMENT MinorVersion (#PCDATA)> <!-- 4 chararcters max -->
+<!ELEMENT CompatibilityList (CompatibleBrand)*>
+<!ATTLIST CompatibilityList Count CDATA #REQUIRED>  <!-- Count >= 0 -->
+<!ELEMENT CompatibleBrand (#PCDATA)> <!-- 4 characters max -->
+<!ELEMENT MovieBox (MovieHeader, Statistics?, Track*)>
+<!ATTLIST MovieBox BoxType CDATA #FIXED "moov">
+<!ELEMENT MovieHeader (CreationTime, ModificationTime, Timescale, Rate, Duration, Volume, TransformationMatrix)>
+<!ATTLIST MovieHeader BoxType CDATA #FIXED "mvhd">
+<!ELEMENT CreationTime (InSeconds?,AsLocalTime?)>
+<!ELEMENT InSeconds (#PCDATA)>
+<!ELEMENT AsLocalTime (#PCDATA)>
+<!ELEMENT ModificationTime (InSeconds?,AsLocalTime?)>
+<!ELEMENT Timescale (#PCDATA)> <!-- Timescale defines time units in one second -->
+<!ELEMENT Rate (AsHex | (AsHex, AsDecimal) | AsDecimal)>  <!-- Decimal is Approximation; Optional on input. -->
+<!ELEMENT AsHex (#PCDATA)>
+<!ELEMENT AsDecimal (#PCDATA)> 
+<!ELEMENT Duration (InTimeUnits | (InTimeUnits, InSeconds) | InSeconds)>  <!-- InSeconds Optional on input. -->
+<!ELEMENT InTimeUnits (#PCDATA)>
+<!ELEMENT Volume (AsHex | (AsHex, AsDecimal) | AsDecimal)>   <!-- hex default = 0x0100 -->
+<!-- Fixed 8.8 value of audio volume.  Full, normal value is 1.0 (0x0100) -->
+<!ELEMENT TransformationMatrix (TMa,TMb,TMu,TMc,TMd,TMv,TMx,TMy,TMw)> <!-- for video -->
+<!-- 3 x 3 Video Transformation Matrix {a,b,u,c,d,v,x,y,w}.  Required: u=0, v=0, w=1 -->
+<!-- Maps decompressed point (p,q) to rendered point (ap + cq + x, bp + dq + y) -->
+<!-- Stored as Fixed Point Hex: all are 16.16, except u,v,w are 2.30 -->
+<!-- Unity = 0x00010000,0,0,0,0x00010000,0,0,0,0x40000000 -->
+<!ELEMENT TMa (#PCDATA)>    
+<!ELEMENT TMb (#PCDATA)>  
+<!ELEMENT TMu (#PCDATA)> <!--Always "0x00000000" -->
+<!ELEMENT TMc (#PCDATA)>
+<!ELEMENT TMd (#PCDATA)>
+<!ELEMENT TMv (#PCDATA)> <!--Always "0x00000000" -->
+<!ELEMENT TMx (#PCDATA)>
+<!ELEMENT TMy (#PCDATA)>
+<!ELEMENT TMw (#PCDATA)> <!--Always "0x40000000" -->
+
+<!ELEMENT Statistics (TracksFound)>
+<!ELEMENT TracksFound (Video,Audio,Hint)>
+<!ELEMENT Video (#PCDATA)>
+<!ELEMENT Audio (#PCDATA)>
+<!ELEMENT Hint (#PCDATA)>
+ 
+
+<!-- For now, output info on at most one video track -->
+
+
+<!ELEMENT Track (TrackHeader, TrackReferenceContainer?, EditListContainer?, Media, JP2_Frame?)>  <!-- JP2_Frame is mj2_to_metadata extension -->
+<!ATTLIST Track BoxType CDATA #FIXED "trak">
+<!ATTLIST Track Instance CDATA #REQUIRED>
+<!ELEMENT TrackHeader (TrackID, TrackLayer?, Volume?, TransformationMatrix?, Width?, Height?)>
+<!ATTLIST TrackHeader BoxType CDATA #FIXED "tkhd">
+<!-- Not shown here: CreationTime, ModificationTime, Duration. -->
+<!-- These 3 fields are reported under MediaHeader below.   When reading these 3, -->
+<!-- m2j_to_metadata currently doesn't distinguish between TrackHeader and MediaHeader source. -->
+<!-- If both found, value read from MediaHeader is used. -->
+<!ELEMENT TrackID (#PCDATA)>
+<!ELEMENT TrackLayer (#PCDATA)>  <!-- front-to-back ordering of video tracks. 0 = normal, -1 is closer, etc. -->
+<!-- "Volume" element described above; here it is for particular audio track.  Full, normal (default = 0x0100) -->
+<!-- "TransformationMatrix" element described above; matrix here is applied before MovieHeader one. -->
+<!ELEMENT Width (AsHex | (AsHex, AsDecimal) | AsDecimal)>
+<!ELEMENT Height (AsHex | (AsHex, AsDecimal) | AsDecimal)>
+<!-- AsHex, AsDecimal already defined above -->
+ <!-- Width and Height are for the presentation; frames will be scaled to this -->
+<!-- /TrackHeader -->
+<!ELEMENT TrackReferenceContainer ANY>  <!-- TO DO: TrackReferenceContainer 'tref'  just used in hint track -->
+<!ELEMENT EditListContainer ANY>  <!-- TO DO: EditListContainer 'edts', contains EditList 'elst' with media-time, segment-duration, media-rate -->
+<!ELEMENT Media (MediaHeader, HandlerReference,MediaInfoContainer)>
+<!ATTLIST Media BoxType CDATA #FIXED "mdia">
+<!ELEMENT MediaHeader (CreationTime,ModificationTime,Timescale,Duration,Language)>
+<!ATTLIST MediaHeader BoxType CDATA #FIXED "mdhd">
+<!-- Elements already defined above: CreationTime, ModificationTime, Timescale, Duration -->
+<!ELEMENT Language (#PCDATA)> <!-- 3 chars max.  There's an enumeration available -->
+<!ELEMENT HandlerReference (HandlerType)>
+<!ATTLIST HandlerReference BoxType CDATA #FIXED "hdlr">
+<!ELEMENT HandlerType (#PCDATA)>
+<!ATTLIST HandlerType Code ( vide | soun | hint ) "vide">
+
+<!-- make the media headers multiple? -->
+<!ELEMENT MediaInfoContainer ((VideoMediaHeader | SoundMediaHeader | HintMediaHeader), DataInfo, SampleTable)>
+<!ATTLIST MediaInfoContainer BoxType CDATA #FIXED "minf">
+<!ELEMENT VideoMediaHeader (GraphicsMode, Opcolor)>
+<!ATTLIST VideoMediaHeader BoxType CDATA #FIXED "vmhd">
+<!ELEMENT GraphicsMode (#PCDATA)>
+          <!-- Enumerated values of graphics mode: -->
+          <!--  0x00 = copy (over existing image); -->
+          <!--  0x24 = transparent; 'blue-screen' this image using opcolor; -->
+          <!--  0x100 = alpha; alpha-blend this image -->
+          <!--  0x101 = whitealpha; alpha-blend this image, which has been blended with white; -->
+          <!--  0x102 = blackalpha; alpha-blend this image, which has been blended with black. -->
+<!ELEMENT Opcolor (Red,Green,Blue)>
+<!ELEMENT Red (#PCDATA)>
+<!ELEMENT Green (#PCDATA)>
+<!ELEMENT Blue (#PCDATA)>
+<!ELEMENT SoundMediaHeader (Balance)>
+<!ATTLIST SoundMediaHeader BoxType CDATA #FIXED "smhd">
+<!ELEMENT Balance (#PCDATA)>
+          <!-- Fixed Point 8.8, fixes mono track in stereo space. -->
+          <!-- 0.0 = center, -1.0 = full left, 1.0 = full right -->
+<!ELEMENT HintMediaHeader (MaxPDU_Size, AvgPDU_Size, MaxBitRate, AvgBitRate, SlidingAvgBitRate)>
+<!ATTLIST HintMediaHeader BoxType CDATA #FIXED "hmhd">
+<!ELEMENT MaxPDU_Size (#PCDATA)>
+          <!-- Size in bytes of largest PDU in this hint stream. -->
+<!ELEMENT AvgPDU_Size (#PCDATA)>
+           <!-- Average size in bytes of a PDU over the entire presentation. -->
+<!ELEMENT MaxBitRate (#PCDATA)>
+          <!-- Maximum rate in bits per second over any window of 1 second. -->
+<!ELEMENT AvgBitRate (#PCDATA)>
+          <!-- Averate rate in bits per second over the entire presentation. -->
+<!ELEMENT SlidingAvgBit (#PCDATA)>
+          <!-- Maximum rate in bits per second over any window of one minute. -->
+ 
+<!ELEMENT DataInfo (DataReference)>
+<!ATTLIST DataInfo BoxType CDATA #FIXED "dinf">
+<!ELEMENT DataReference (DataEntryUrlBox | DataEntryUrnBox )*>
+<!ATTLIST DataReference BoxType CDATA #FIXED "dref">
+<!ATTLIST DataReference URL_Count CDATA #REQUIRED>
+<!ATTLIST DataReference URN_Count CDATA #REQUIRED> <!-- table w. flags, URLs, URNs -->
+<!--  // Data structure does not distinguish between single URL, single URN, or DREF table or URLs & URNs.
+  // We could infer those, but for now just present everything as a DREF table.
+-->
+              <!-- No entries here mean that file is self-contained, as required by Simple Profile. -->
+
+<!ELEMENT DataEntryUrlBox (Location)>
+<!ATTLIST DataEntryUrlBox BoxType CDATA #FIXED "url[space]"> <!-- table w. flags, URLs, URNs -->
+            <!-- Only the first 16 bytes of URL location are recorded in mj2_to_metadata data structure. -->
+<!ELEMENT DataEntryUrnBox (Name, Location?)>
+<!ATTLIST DataEntryUrnBox BoxType CDATA #FIXED "urn[space]\">
+            <!-- Only the first 16 bytes each of URN name and optional location are recorded in mj2_to_metadata data structure. -->
+
+<!ELEMENT SampleTable (VisualSampleEntry,TimeToSample,SampleToChunk,SampleSize,ChunkOffset)>  <!-- structure doesn't do non-visual sample entry yet -->
+<!ATTLIST SampleTable BoxType CDATA #FIXED "stbl">  <!-- to add: entry count -->
+            <!-- Next are instances of generic SampleDescription BoxType=\"stsd\" -->
+ 
+    <!-- There could be multiple instances of this, but "entry_count" is just a local at read-time.
+       And it's used wrong, too, as count of just visual type, when it's really all 3 types.
+       This is referred to as "smj2" within mj2.c -->
+<!ELEMENT VisualSampleEntry (WidthAsInteger, HeightAsInteger, HorizontalRes, VerticalRes, CompressorName, Depth, JP2Header?, FieldCoding?, MJP2_Profile?, MJP2_Prefix?, MJP2_SubSampling?, MJP2_OriginalFormat?)>
+<!ATTLIST VisualSampleEntry BoxType CDATA #FIXED "mjp2">
+          <!-- If multiple instances of this, only first is shown here. -->
+<!ELEMENT WidthAsInteger (#PCDATA)>
+<!ELEMENT HeightAsInteger (#PCDATA)>
+<!ELEMENT HorizontalRes (AsHex | (AsHex, AsDecimal) | AsDecimal)>
+<!ELEMENT VerticalRes (AsHex | (AsHex, AsDecimal) | AsDecimal)>
+<!-- Typical value for both resolution is 72 (0x00480000) -->
+<!ELEMENT CompressorName (#PCDATA)>
+          <!-- Compressor name for debugging.  Standard restricts max length to 31 bytes. -->
+          <!-- Usually blank or \"Motion JPEG2000\" -->
+<!ELEMENT Depth (#PCDATA)>
+          <!-- Depth is: -->
+          <!--   0x20: alpha channels present (color or grayscale) -->
+          <!--   0x28: grayscale without alpha -->
+          <!--   0x18: color without alpha -->
+
+<!-- TODO somewhere: tk->jp2_struct.numcomps -->
+<!ELEMENT JP2Header (ImageHeader, ColourSpecification)>
+<!ATTLIST JP2Header BoxType CDATA #FIXED "jp2h">
+<!ELEMENT ImageHeader (HEIGHT, WIDTH, NC, BPC, C, UnkC, IPR)>
+<!ATTLIST ImageHeader BoxType CDATA #FIXED "ihdr">
+<!ELEMENT HEIGHT (#PCDATA)>  <!-- If 2 fields/frame, total deinterlaced height -->
+<!ELEMENT WIDTH (#PCDATA)>
+<!ELEMENT NC (#PCDATA)>  <!-- number of components -->
+<!ELEMENT BPC (AsHex | (AsHex,BitsPerPixel,Signed) | (BitsPerPixel,Signed))>
+<!ELEMENT BitsPerPixel (#PCDATA)>
+<!ELEMENT Signed (#PCDATA)>
+<!ELEMENT C (#PCDATA)>  <!-- Compression type.  Only "7" defined -->
+<!ELEMENT UnkC (#PCDATA)>  <!-- Colourspace Unknown. 1 = unknown, 0 = known -->
+<!ELEMENT IPR (#PCDATA)>  <!-- 1 = frame has Intellectual Prop. box; otherwise 0 -->
+<!ELEMENT ColourSpecification (METH, PREC, APPROX, EnumCS)>
+<!ATTLIST ColourSpecification BoxType CDATA #FIXED "colr">
+<!ELEMENT METH (#PCDATA)>  <!-- 1 = EnumCS field; 2 = PROFILE field (not yet generated) -->
+<!ELEMENT PREC (#PCDATA)> <!-- precedence must be 0 so far -->
+<!ELEMENT APPROX (#PCDATA)>  <!-- colourspace approximation must be 0 so far -->
+<!ELEMENT EnumCS (#PCDATA)> <!-- Valid enumerated MJ2 colourspaces: 16 (sRGB), 17 (grey sRGB), 18 (YCC) -->
+
+<!-- Following subboxes are optional -->
+<!ELEMENT FieldCoding (FieldCount, FieldOrder)>
+<!ATTLIST FieldCoding BoxType CDATA #FIXED "fiel">
+<!ELEMENT FieldCount (#PCDATA)>
+            <!-- Must be either 1 or 2 -->
+<!ELEMENT FieldOrder (#PCDATA)>
+            <!-- When FieldCount=2, FieldOrder means: -->
+            <!--   0: Field coding unknown -->
+            <!--   1: Field with topmost line is stored first in sample; fields are in temporal order -->
+            <!--   6: Field with topmost line is stored second in sample; fields are in temporal order -->
+            <!-- Defaults: FieldCount=1, FieldOrder=0 if FieldCoding box not present -->
+            <!-- Current implementation doesn't retain whether box was actually present. -->
+
+<!ELEMENT MJP2_Profile (CompatibleBrand*)>
+<!ATTLIST MJP2_Profile BoxType CDATA #FIXED "jp2p">
+<!ATTLIST MJP2_Profile Count CDATA #REQUIRED>
+
+<!ELEMENT MJP2_Prefix (Data*)>
+<!ATTLIST MJP2_Prefix BoxType CDATA #FIXED "jp2x">
+<!ATTLIST MJP2_Prefix Count CDATA #REQUIRED>
+<!-- We'll probably need better formatting than this  -->
+<!ELEMENT Data (#PCDATA)>    <!-- Multiple. Each entry is single byte -->
+
+<!ELEMENT MJP2_SubSampling (HorizontalSub, VerticalSub, HorizontalOffset, VerticalOffset)>
+<!ATTLIST MJP2_SubSampling BoxType CDATA #FIXED "jsub">
+<!-- These values are all 1 byte -->
+            <!-- Typical subsample value is 2 for 4:2:0 -->
+<!ELEMENT HorizontalSub (#PCDATA)>
+<!ELEMENT VerticalSub (#PCDATA)>
+<!ELEMENT HorizontalOffset (#PCDATA)>
+<!ELEMENT VerticalOffset (#PCDATA)>
+
+<!ELEMENT MJP2_OriginalFormat (OriginalFieldCount, OriginalFieldOrder)>
+<!ATTLIST MJP2_OriginalFormat BoxType CDATA #FIXED "orfo"> <!-- Part III Appx. 2 -->
+<!ELEMENT OriginalFieldCount (#PCDATA)>
+            <!-- In original material before encoding.  Must be either 1 or 2 -->
+<!ELEMENT OriginalFieldOrder (#PCDATA)>
+            <!-- When FieldCount=2, FieldOrder means: -->
+            <!--   0: Field coding unknown -->
+            <!--   11: Topmost line came from the earlier field; -->
+            <!--   16:  Topmost line came form the later field. -->
+            <!-- Defaults: FieldCount=1, FieldOrder=0 if FieldCoding box not present -->
+            <!-- Current implementation doesn't retain whether box was actually present. -->
+
+
+            <!-- mj2_to_metadata's data structure doesn't record Audio and Hint sample data currently. -->
+
+<!-- Within SampleTable: -->
+<!ELEMENT TimeToSample (SampleStatistics, SampleEntries)>
+<!ATTLIST TimeToSample BoxType CDATA #FIXED "stts">  
+<!ELEMENT SampleStatistics (TotalSamples)>  <!-- Not part of standard -->  
+<!ELEMENT TotalSamples (#PCDATA)>
+                <!-- For video, gives the total frames in the track, by summing all entries in the Sample Table -->
+
+<!ELEMENT SampleEntries (Table*)>
+<!ATTLIST SampleEntries EntryCount CDATA #REQUIRED>
+<!ELEMENT Table EMPTY> <!-- Multiple.  Attributes have values -->
+<!ATTLIST Table Entry CDATA #REQUIRED>
+<!ATTLIST Table SampleCount CDATA #REQUIRED>
+<!ATTLIST Table SampleDelta CDATA #REQUIRED>
+
+<!-- Within SampleTable: -->
+<!ELEMENT SampleToChunk (FirstChunk,SamplesPerChunk,SampleDescrIndex)>
+<!ATTLIST SampleToChunk BoxType CDATA #FIXED "stsc">
+<!ATTLIST SampleToChunk Count CDATA #REQUIRED>
+<!ELEMENT FirstChunk (#PCDATA)>
+<!ELEMENT SamplesPerChunk (#PCDATA)>
+<!ELEMENT SampleDescrIndex (#PCDATA)>
+<!ELEMENT SampleSize (Sample_Size,Sample_Count,EntrySize*)>
+<!ATTLIST SampleSize BoxType CDATA #FIXED "stsz">
+<!ELEMENT Sample_Size (#PCDATA)>
+<!ELEMENT Sample_Count (#PCDATA)>
+<!ELEMENT EntrySize (#PCDATA)>  <!-- appears multiply, but only with mj2_to_metadata option -t -->
+<!ATTLIST EntrySize Num CDATA #REQUIRED>
+<!ELEMENT ChunkOffset (EntryCount, Chunk_Offset*)>
+<!ATTLIST ChunkOffset BoxType CDATA #FIXED "stco">
+<!ELEMENT EntryCount (#PCDATA)>
+<!ELEMENT Chunk_Offset (#PCDATA)>  <!-- appears multiply, but only with mj2_to_metadata option -t -->
+<!ATTLIST Chunk_Offset Num CDATA #REQUIRED>
+<!-- </SampleTable> </MediaInfoContainer> </Media> -->
+
+<!-- TO DO: optional UserData 'udat', can contain multiple Copyright 'cprt' -->
+
+
+<!-- Optional, and only for Visual Track: given individual frame -->
+<!ELEMENT JP2_Frame (MainHeader, TilePartHeaders)>
+<!ATTLIST JP2_Frame Num CDATA #REQUIRED>
+<!ELEMENT MainHeader (StartOfCodestream,ImageAndFileSize,CodingStyleDefault,QuantizationDefault,QuantizationComponent*,RegionOfInterest?,ProgressionOrderChange*)>
+<!ELEMENT StartOfCodestream EMPTY>
+<!ATTLIST StartOfCodestream Marker CDATA #FIXED "SOC">
+<!ELEMENT ImageAndFileSize (Xsiz,Ysiz,XOsiz,YOsiz,XTsiz,YTsiz,XTOsiz,YTOsiz,Csiz,Component+)>
+<!ATTLIST ImageAndFileSize Marker CDATA #FIXED "SIZ">
+<!ELEMENT Xsiz (#PCDATA)>
+<!ELEMENT Ysiz (#PCDATA)>  <!-- Xsiz, Ysiz is the size of the reference grid. -->
+<!ELEMENT XOsiz (#PCDATA)>
+<!ELEMENT YOsiz (#PCDATA)>  <!-- XOsiz, YOsiz are offsets from grid origin to image origin. -->
+<!ELEMENT XTsiz (#PCDATA)>
+<!ELEMENT YTsiz (#PCDATA)>  <!-- XTsiz, YTsiz is the size of one tile with respect to the grid. -->
+<!ELEMENT XTOsiz (#PCDATA)>
+<!ELEMENT YTOsiz (#PCDATA)> <!-- XTOsiz, YTOsiz are offsets from grid origin to first tile origin. -->
+<!ELEMENT Csiz (#PCDATA)>  <!-- Csiz is the number of components in the image. -->
+<!-- For image components next -->
+<!ELEMENT Component (Ssiz,XRsiz,YRsiz,WidthOfData,HeightOfData)>
+<!ATTLIST Component Num CDATA #REQUIRED>
+<!ELEMENT Ssiz (AsHex | (AsHex,Signed,PrecisionInBits) | (Signed,PrecisionInBits))>
+<!-- Signed already defined -->
+<!ELEMENT PrecisionInBits (#PCDATA)>  <!--   Bits per pixel (bpp) or pixel depth. -->
+<!ELEMENT XRsiz (#PCDATA)>
+<!ELEMENT YRsiz (#PCDATA)> <!-- XRsiz, YRsiz denote pixel-sample-spacing on the grid, per Part I Annex B. -->
+<!ELEMENT WidthOfData (#PCDATA)>
+<!ELEMENT HeightOfData (#PCDATA)>  <!-- WidthOfData and HeightOfData are calculated values, e.g.: w = roundup((Xsiz - XOsiz)/ XRsiz) -->
+<!-- -->
+<!ELEMENT CodingStyleDefault (Scod,SGcod,SPcod)>
+<!ATTLIST CodingStyleDefault Marker CDATA #FIXED "COD">
+<!ELEMENT Scod (#PCDATA)>
+          <!-- For Scod, specific bits mean (where bit 0 is lowest or rightmost): -->
+          <!-- bit 0: Defines entropy coder precincts -->
+          <!--        0 = (PPx=15, PPy=15); 1 = precincts defined below. -->
+          <!-- bit 1: 1 = SOP marker may be used; 0 = not. -->
+          <!-- bit 2: 1 = EPH marker may be used; 0 = not. -->
+<!ELEMENT SGcod (ProgressionOrder,NumberOfLayers,MultipleComponentTransformation)>
+<!ELEMENT ProgressionOrder (#PCDATA)>
+            <!-- Defined Progression Order Values are: -->
+            <!-- 0 = LRCP; 1 = RLCP; 2 = RPCL; 3 = PCRL; 4 = CPRL -->
+            <!-- where L = "layer", R = "resolution level", C = "component", P = "position". -->
+<!ELEMENT NumberOfLayers (#PCDATA)>
+<!ELEMENT MultipleComponentTransformation (#PCDATA)>
+            <!-- For MCT, 0 = none, 1 = transform first 3 components for efficiency, per Part I Annex G -->
+<!ELEMENT SPcod (NumberOfDecompositionLevels,CodeblockWidth,CodeblockHeight,CodeblockStyle,Transformation)>
+<!ELEMENT NumberOfDecompositionLevels (#PCDATA)>
+<!ELEMENT CodeblockWidth (#PCDATA)>   <!-- CBW and CBH are non-negative, and summed cannot exceed 8 -->
+<!ELEMENT CodeblockHeight (#PCDATA)>  <!-- Codeblock dimension is 2^(value + 2) -->
+<!ELEMENT CodeblockStyle (#PCDATA)>
+            <!-- For CodeblockStyle, bits mean (with value 1=feature on, 0=off): -->
+            <!-- bit 0: Selective arithmetic coding bypass. -->
+            <!-- bit 1: Reset context probabilities on coding pass boundaries. -->
+            <!-- bit 2: Termination on each coding pass. -->
+            <!-- bit 3: Vertically causal context. -->
+            <!-- bit 4: Predictable termination. -->
+            <!-- bit 5: Segmentation symbols are used. -->
+<!ELEMENT Transformation (#PCDATA)> <!-- For Transformation, 0="9-7 irreversible filter", 1="5-3 reversible filter" -->
+        <!-- mj2_to_metadata implementation always reports component[0] as using default COD, -->
+        <!-- and any other component, with main-header style values different from [0], as COC. -->
+<!ELEMENT QuantizationDefault (Sqcd,SPqcd)>
+<!ATTLIST QuantizationDefault Marker CDATA #FIXED "QCD">
+<!ELEMENT Sqcd (AsHex | (AsHex,QuantizationStyle,NumberOfGuardBits) | (QuantizationStyle,NumberOfGuardBits))>
+<!ELEMENT QuantizationStyle (#PCDATA)>  <!-- Default quantization style for all components. -->
+            <!-- Quantization style (in Sqcd's low 5 bits) may be: -->
+            <!--   0 = No quantization. SPqcd size = 8 bits-->
+            <!--   1 = Scalar derived (values signaled for N(L)LL subband only). Use Eq. E.5. SPqcd size = 16. -->
+            <!--   2 = Scalar expounded (values signaled for each subband). SPqcd size = 16. -->
+<!ELEMENT NumberOfGuardBits (#PCDATA)>  <!-- 0-7 guard bits allowed (stored in Sqcd's high 3 bits) -->
+<!ELEMENT SPqcd (ReversibleStepSizeValue | QuantizationStepSizeValues )>  <!-- TO DO: Irreversible choices -->
+<!ELEMENT ReversibleStepSizeValue (DynamicRangeExponent+)>
+            <!-- Current mj2_to_metadata implementation dumps entire internal table, -->
+            <!-- until an exponent with zero value is reached. -->
+            <!-- Exponent epsilon(b) of reversible dynamic range. -->
+            <!-- Hex value is as stored, in high-order 5 bits. -->
+<!ELEMENT DynamicRangeExponent (AsHex | (AsHex, AsDecimal) | AsDecimal)>
+<!ATTLIST DynamicRangeExponent Subband CDATA #REQUIRED>
+<!ELEMENT QuantizationStepSizeValues (QuantizationValues+, CalculatedExponent*)>  <!-- Calculated exponents iff only subband 0 reported -->
+<!ELEMENT QuantizationValues (AsHex | (AsHex,Exponent,Mantissa) | (Exponent,Mantissa))>
+<!ATTLIST QuantizationValues Subband CDATA #REQUIRED>
+<!ELEMENT Exponent (#PCDATA)>
+<!ELEMENT Mantissa (#PCDATA)>
+<!ELEMENT CalculatedExponent (#PCDATA)>
+<!ATTLIST CalculatedExponent Subband CDATA #REQUIRED>
+<!-- /QuantizationDefault -->
+        <!-- mj2_to_metadata implementation always reports component[0] as using default QCD, -->
+        <!-- and any other component, with main-header quantization values different from [0], as QCC. -->
+<!ELEMENT QuantizationComponent (Sqcc,SPqcc)>
+<!ATTLIST QuantizationComponent Marker CDATA #FIXED "QCC">
+<!ATTLIST QuantizationComponent Component CDATA #REQUIRED>
+<!ELEMENT Sqcc (AsHex | (AsHex,QuantizationStyle,NumberOfGuardBits) | (QuantizationStyle,NumberOfGuardBits))>
+<!ELEMENT SPqcc (ReversibleStepSizeValue | QuantizationStepSizeValues )>  <!-- TO DO: Irreversible choices -->
+<!-- /QuantizationComponent -->
+<!-- Don't know if MJ2 files can have regions of interest.  Assume yes -->
+<!ELEMENT RegionOfInterest (Srgn,Crgn,Sprgn)> <!-- Optional in main header, at most 1 per component -->
+<!ATTLIST RegionOfInterest Marker CDATA #FIXED "RGN">
+<!ELEMENT Srgn (#PCDATA)>  <!-- ROI style.  Only style=0 defined: Implicit ROI (max. shift) -->
+<!ELEMENT Crgn (#PCDATA)>  <!-- Zero-based component number. -->
+<!ELEMENT SPrgn (#PCDATA)> <!-- Implicit ROI shift, i.e., binary shifting of ROI coefficients above background. -->
+<!-- </RegionOfInterest> -->
+<!ELEMENT ProgressionOrderChange (Progression+)> <!-- Optional in main header, at most 1 per component (but impl allows more?) -->
+<!ATTLIST ProgressionOrderChange Marker CDATA #REQUIRED>
+<!ELEMENT Progression (RSpoc,CSpoc,LYEpoc,REpoc,CEpoc,Ppoc)>
+<!ATTLIST Progression Num CDATA #REQUIRED>
+<!ELEMENT RSpoc (#PCDATA)> <!-- Resolution level index (inclusive) for progression start. Range: 0 to 33 -->
+<!ELEMENT CSpoc (#PCDATA)> <!-- Component index (inclusive) for progression start. -->
+<!ELEMENT LYEpoc (#PCDATA)> <!-- Layer index (exclusive) for progression end. -->
+<!ELEMENT REpoc (#PCDATA)> <!-- Resolution level index (exclusive) for progression end. Range: RSpoc to 33 -->
+<!ELEMENT CEpoc (#PCDATA)> <!-- Component index (exclusive) for progression end.  Minimum: CSpoc -->
+<!ELEMENT Ppoc (#PCDATA)> <!-- Defined Progression Order Values are: -->
+                          <!-- 0 = LRCP; 1 = RLCP; 2 = RPCL; 3 = PCRL; 4 = CPRL -->
+                          <!-- where L = "layer", R = "resolution level", C = "component", P = "position". -->
+<!-- </Progression>, </ProgressionOrderChange -->
+<!-- /MainHeader -->
+<!ELEMENT TilePartHeaders (TilePartHeader+)>
+<!ATTLIST TilePartHeaders Count CDATA #REQUIRED>
+<!ELEMENT TilePartHeader (StartOfTilePart,CodingStyleDefault,QuantizationDefault,QuantizationComponent*,RegionOfInterest?,ProgressionOrderChange*,StartOfData)>
+<!ATTLIST TilePartHeader Num CDATA #REQUIRED>
+<!ATTLIST TilePartHeader ID CDATA #REQUIRED>
+<!ELEMENT StartOfTilePart EMPTY>
+<!ATTLIST StartOfTilePart Marker CDATA #FIXED "SOT">
+<!-- CodingStyleDefault, QuantizationDefault, QuantizationComponent already defined -->
+        <!-- mj2_to_metadata implementation always reports component[0] as using default QCD, -->
+        <!-- and any other component, with tile-part-header quantization values different from [0], as QCC. -->
+<!ELEMENT StartOfData EMPTY> <!-- always empty for now -->
+<!ATTLIST StartOfData Marker CDATA #FIXED "SOD">
+          <!-- Tile-part bitstream, not shown, follows tile-part header and SOD marker. -->
+<!-- /TilePartHeader, /TilePartHeaders, /JP2_Frame -->
+<!-- </Track> -->
+
+<!-- to come:
+  <MovieExtends mvek> // possibly not in Simple Profile
+  <UserDataBox udat> contains <CopyrightBox cprt>
+  -->
+<!-- /MovieBox -->
+<!-- To come:
+  <mdat>
+  <moof>  // probably not in Simple Profile
+  <free>
+  <skip>
+  -->
+<!-- </MJ2_File> -->
