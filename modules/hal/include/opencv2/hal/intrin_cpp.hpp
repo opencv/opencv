@@ -735,11 +735,11 @@ OPENCV_HAL_IMPL_C_INIT(v_uint64x2, uint64, u64)
 OPENCV_HAL_IMPL_C_INIT(v_uint64x2, int64, s64)
 
 #define OPENCV_HAL_IMPL_C_SHIFT(_Tpvec, _Tp) \
-template<int n> inline _Tpvec v_lshift(const _Tpvec& a) \
+template<int n> inline _Tpvec v_shl(const _Tpvec& a) \
 { return a << n; } \
-template<int n> inline _Tpvec v_rshift(const _Tpvec& a) \
+template<int n> inline _Tpvec v_shr(const _Tpvec& a) \
 { return a >> n; } \
-template<int n> inline _Tpvec v_rshift_round(const _Tpvec& a) \
+template<int n> inline _Tpvec v_rshr(const _Tpvec& a) \
 { \
     _Tpvec c; \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
@@ -766,7 +766,7 @@ inline _Tpnvec v_##pack_suffix(const _Tpvec& a, const _Tpvec& b) \
     } \
     return c; \
 } \
-template<int n> inline _Tpnvec v_rshift_round_##pack_suffix(const _Tpvec& a, const _Tpvec& b) \
+template<int n> inline _Tpnvec v_rshr_##pack_suffix(const _Tpvec& a, const _Tpvec& b) \
 { \
     _Tpnvec c; \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
@@ -781,7 +781,7 @@ inline void v_##pack_suffix##_store(_Tpn* ptr, const _Tpvec& a) \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
         ptr[i] = saturate_cast<_Tpn>(a.s[i]); \
 } \
-template<int n> inline void v_rshift_round_##pack_suffix##_store(_Tpn* ptr, const _Tpvec& a) \
+template<int n> inline void v_rshr_##pack_suffix##_store(_Tpn* ptr, const _Tpvec& a) \
 { \
     for( int i = 0; i < _Tpvec::nlanes; i++ ) \
         ptr[i] = saturate_cast<_Tpn>((a.s[i] + ((_Tp)1 << (n - 1))) >> n); \
