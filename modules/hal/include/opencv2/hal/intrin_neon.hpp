@@ -264,14 +264,14 @@ inline void v_##pack##_store(_Tp* ptr, const _Tpwvec& a) \
     vst1_##suffix(ptr, a1); \
 } \
 template<int n> inline \
-_Tpvec v_rshift_round_##pack(const _Tpwvec& a, const _Tpwvec& b) \
+_Tpvec v_rshr_##pack(const _Tpwvec& a, const _Tpwvec& b) \
 { \
     hreg a1 = vqrshr##op##_n_##wsuffix(a.val, n); \
     hreg b1 = vqrshr##op##_n_##wsuffix(b.val, n); \
     return _Tpvec(vcombine_##suffix(a1, b1)); \
 } \
 template<int n> inline \
-void v_rshift_round_##pack##_store(_Tp* ptr, const _Tpwvec& a) \
+void v_rshr_##pack##_store(_Tp* ptr, const _Tpwvec& a) \
 { \
     hreg a1 = vqrshr##op##_n_##wsuffix(a.val, n); \
     vst1_##suffix(ptr, a1); \
@@ -283,7 +283,7 @@ OPENCV_HAL_IMPL_NEON_PACK(v_int8x16, schar, int8x8_t, s8, v_int16x8, s16, pack, 
 OPENCV_HAL_IMPL_NEON_PACK(v_uint16x8, ushort, uint16x4_t, u16, v_uint32x4, u32, pack, n)
 OPENCV_HAL_IMPL_NEON_PACK(v_uint16x8, ushort, uint16x4_t, u16, v_int32x4, s32, pack_u, un)
 OPENCV_HAL_IMPL_NEON_PACK(v_int16x8, short, int16x4_t, s16, v_int32x4, s32, pack, n)
-OPENCV_HAL_IMPL_NEON_PACK(v_uint32x4, unsigned, uint32x2_t, u32, v_uint64x2, u32, pack, n)
+OPENCV_HAL_IMPL_NEON_PACK(v_uint32x4, unsigned, uint32x2_t, u32, v_uint64x2, u64, pack, n)
 OPENCV_HAL_IMPL_NEON_PACK(v_int32x4, int, int32x2_t, s32, v_int64x2, s64, pack, n)
 
 inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
@@ -516,11 +516,11 @@ inline _Tpvec operator << (const _Tpvec& a, int n) \
 { return _Tpvec(vshlq_##suffix(a.val, vdupq_n_##ssuffix((_Tps)n))); } \
 inline _Tpvec operator >> (const _Tpvec& a, int n) \
 { return _Tpvec(vshlq_##suffix(a.val, vdupq_n_##ssuffix((_Tps)-n))); } \
-template<int n> inline _Tpvec lshift(const _Tpvec& a) \
+template<int n> inline _Tpvec v_shl(const _Tpvec& a) \
 { return _Tpvec(vshlq_n_##suffix(a.val, n)); } \
-template<int n> inline _Tpvec rshift(const _Tpvec& a) \
+template<int n> inline _Tpvec v_shr(const _Tpvec& a) \
 { return _Tpvec(vshrq_n_##suffix(a.val, n)); } \
-template<int n> inline _Tpvec rshift_round(const _Tpvec& a) \
+template<int n> inline _Tpvec v_rshr(const _Tpvec& a) \
 { return _Tpvec(vrshrq_n_##suffix(a.val, n)); }
 
 OPENCV_HAL_IMPL_NEON_SHIFT_OP(v_uint8x16, u8, schar, s8)

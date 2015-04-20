@@ -318,7 +318,7 @@ inline void v_pack_u_store(uchar* ptr, const v_int16x8& a)
 { _mm_storel_epi64((__m128i*)ptr, _mm_packus_epi16(a.val, a.val)); }
 
 template<int n> inline
-v_uint8x16 v_rshift_round_pack(const v_uint16x8& a, const v_uint16x8& b)
+v_uint8x16 v_rshr_pack(const v_uint16x8& a, const v_uint16x8& b)
 {
     // we assume that n > 0, and so the shifted 16-bit values can be treated as signed numbers.
     __m128i delta = _mm_set1_epi16((short)(1 << (n-1)));
@@ -327,7 +327,7 @@ v_uint8x16 v_rshift_round_pack(const v_uint16x8& a, const v_uint16x8& b)
 }
 
 template<int n> inline
-void v_rshift_round_pack_store(uchar* ptr, const v_uint16x8& a)
+void v_rshr_pack_store(uchar* ptr, const v_uint16x8& a)
 {
     __m128i delta = _mm_set1_epi16((short)(1 << (n-1)));
     __m128i a1 = _mm_srli_epi16(_mm_adds_epu16(a.val, delta), n);
@@ -335,7 +335,7 @@ void v_rshift_round_pack_store(uchar* ptr, const v_uint16x8& a)
 }
 
 template<int n> inline
-v_uint8x16 v_rshift_round_pack_u(const v_int16x8& a, const v_int16x8& b)
+v_uint8x16 v_rshr_pack_u(const v_int16x8& a, const v_int16x8& b)
 {
     __m128i delta = _mm_set1_epi16((short)(1 << (n-1)));
     return v_uint8x16(_mm_packus_epi16(_mm_srai_epi16(_mm_adds_epi16(a.val, delta), n),
@@ -343,7 +343,7 @@ v_uint8x16 v_rshift_round_pack_u(const v_int16x8& a, const v_int16x8& b)
 }
 
 template<int n> inline
-void v_rshift_round_pack_u_store(uchar* ptr, const v_int16x8& a)
+void v_rshr_pack_u_store(uchar* ptr, const v_int16x8& a)
 {
     __m128i delta = _mm_set1_epi16((short)(1 << (n-1)));
     __m128i a1 = _mm_srai_epi16(_mm_adds_epi16(a.val, delta), n);
@@ -357,7 +357,7 @@ inline void v_pack_store(schar* ptr, v_int16x8& a)
 { _mm_storel_epi64((__m128i*)ptr, _mm_packs_epi16(a.val, a.val)); }
 
 template<int n> inline
-v_int8x16 v_rshift_round_pack(const v_int16x8& a, const v_int16x8& b)
+v_int8x16 v_rshr_pack(const v_int16x8& a, const v_int16x8& b)
 {
     // we assume that n > 0, and so the shifted 16-bit values can be treated as signed numbers.
     __m128i delta = _mm_set1_epi16((short)(1 << (n-1)));
@@ -365,7 +365,7 @@ v_int8x16 v_rshift_round_pack(const v_int16x8& a, const v_int16x8& b)
                                      _mm_srai_epi16(_mm_adds_epi16(b.val, delta), n)));
 }
 template<int n> inline
-void v_rshift_round_pack_store(schar* ptr, const v_int16x8& a)
+void v_rshr_pack_store(schar* ptr, const v_int16x8& a)
 {
     // we assume that n > 0, and so the shifted 16-bit values can be treated as signed numbers.
     __m128i delta = _mm_set1_epi16((short)(1 << (n-1)));
@@ -398,7 +398,7 @@ inline void v_pack_store(ushort* ptr, const v_uint32x4& a)
 }
 
 template<int n> inline
-v_uint16x8 v_rshift_round_pack(const v_uint32x4& a, const v_uint32x4& b)
+v_uint16x8 v_rshr_pack(const v_uint32x4& a, const v_uint32x4& b)
 {
     __m128i delta = _mm_set1_epi32(1 << (n-1)), delta32 = _mm_set1_epi32(32768);
     __m128i a1 = _mm_sub_epi32(_mm_srli_epi32(_mm_add_epi32(a.val, delta), n), delta32);
@@ -407,7 +407,7 @@ v_uint16x8 v_rshift_round_pack(const v_uint32x4& a, const v_uint32x4& b)
 }
 
 template<int n> inline
-void v_rshift_round_pack_store(ushort* ptr, const v_uint32x4& a)
+void v_rshr_pack_store(ushort* ptr, const v_uint32x4& a)
 {
     __m128i delta = _mm_set1_epi32(1 << (n-1)), delta32 = _mm_set1_epi32(32768);
     __m128i a1 = _mm_sub_epi32(_mm_srli_epi32(_mm_add_epi32(a.val, delta), n), delta32);
@@ -431,7 +431,7 @@ inline void v_pack_u_store(ushort* ptr, const v_int32x4& a)
 }
 
 template<int n> inline
-void v_rshift_round_pack_u_store(ushort* ptr, const v_int32x4& a)
+void v_rshr_pack_u_store(ushort* ptr, const v_int32x4& a)
 {
     __m128i delta = _mm_set1_epi32(1 << (n-1)), delta32 = _mm_set1_epi32(32768);
     __m128i a1 = _mm_sub_epi32(_mm_srai_epi32(_mm_add_epi32(a.val, delta), n), delta32);
@@ -448,7 +448,7 @@ inline void v_pack_store(short* ptr, const v_int32x4& a)
 }
 
 template<int n> inline
-v_int16x8 v_rshift_round_pack(const v_int32x4& a, const v_int32x4& b)
+v_int16x8 v_rshr_pack(const v_int32x4& a, const v_int32x4& b)
 {
     __m128i delta = _mm_set1_epi32(1 << (n-1));
     return v_int16x8(_mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(a.val, delta), n),
@@ -456,7 +456,7 @@ v_int16x8 v_rshift_round_pack(const v_int32x4& a, const v_int32x4& b)
 }
 
 template<int n> inline
-void v_rshift_round_pack_store(short* ptr, const v_int32x4& a)
+void v_rshr_pack_store(short* ptr, const v_int32x4& a)
 {
     __m128i delta = _mm_set1_epi32(1 << (n-1));
     __m128i a1 = _mm_srai_epi32(_mm_add_epi32(a.val, delta), n);
@@ -493,19 +493,19 @@ inline void v_pack_store(int* ptr, const v_int64x2& a)
 }
 
 template<int n> inline
-v_uint32x4 v_rshift_round_pack(const v_uint64x2& a, const v_uint64x2& b)
+v_uint32x4 v_rshr_pack(const v_uint64x2& a, const v_uint64x2& b)
 {
     uint64 delta = (uint64)1 << (n-1);
     v_uint64x2 delta2(delta, delta);
-    __m128 a1 = _mm_srli_epi64(_mm_add_epi64(a.val, delta2.val), n);
-    __m128 b1 = _mm_srli_epi64(_mm_add_epi64(b.val, delta2.val), n);
+    __m128i a1 = _mm_srli_epi64(_mm_add_epi64(a.val, delta2.val), n);
+    __m128i b1 = _mm_srli_epi64(_mm_add_epi64(b.val, delta2.val), n);
     __m128i v0 = _mm_unpacklo_epi32(a1, b1); // a0 a1 0 0
     __m128i v1 = _mm_unpackhi_epi32(a1, b1); // b0 b1 0 0
     return v_uint32x4(_mm_unpacklo_epi64(v0, v1));
 }
 
 template<int n> inline
-void v_rshift_round_pack_store(unsigned* ptr, const v_uint64x2& a)
+void v_rshr_pack_store(unsigned* ptr, const v_uint64x2& a)
 {
     uint64 delta = (uint64)1 << (n-1);
     v_uint64x2 delta2(delta, delta);
@@ -526,7 +526,7 @@ inline __m128i v_srai_epi64(__m128i a, int imm)
 }
 
 template<int n> inline
-v_int32x4 v_rshift_round_pack(const v_int64x2& a, const v_int64x2& b)
+v_int32x4 v_rshr_pack(const v_int64x2& a, const v_int64x2& b)
 {
     int64 delta = (int64)1 << (n-1);
     v_int64x2 delta2(delta, delta);
@@ -538,7 +538,7 @@ v_int32x4 v_rshift_round_pack(const v_int64x2& a, const v_int64x2& b)
 }
 
 template<int n> inline
-void v_rshift_round_pack_store(int* ptr, const v_int64x2& a)
+void v_rshr_pack_store(int* ptr, const v_int64x2& a)
 {
     int64 delta = (int64)1 << (n-1);
     v_int64x2 delta2(delta, delta);
@@ -901,22 +901,22 @@ inline _Tpsvec operator >> (const _Tpsvec& a, int imm) \
     return _Tpsvec(srai(a.val, imm)); \
 } \
 template<int imm> \
-inline _Tpuvec v_lshift(const _Tpuvec& a) \
+inline _Tpuvec v_shl(const _Tpuvec& a) \
 { \
     return _Tpuvec(_mm_slli_##suffix(a.val, imm)); \
 } \
 template<int imm> \
-inline _Tpsvec v_lshift(const _Tpsvec& a) \
+inline _Tpsvec v_shl(const _Tpsvec& a) \
 { \
     return _Tpsvec(_mm_slli_##suffix(a.val, imm)); \
 } \
 template<int imm> \
-inline _Tpuvec v_rshift(const _Tpuvec& a) \
+inline _Tpuvec v_shr(const _Tpuvec& a) \
 { \
     return _Tpuvec(_mm_srli_##suffix(a.val, imm)); \
 } \
 template<int imm> \
-inline _Tpsvec v_rshift(const _Tpsvec& a) \
+inline _Tpsvec v_shr(const _Tpsvec& a) \
 { \
     return _Tpsvec(srai(a.val, imm)); \
 }
