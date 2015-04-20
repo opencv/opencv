@@ -162,6 +162,7 @@ OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF
 OCV_OPTION(WITH_OPENNI         "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_OPENNI2        "Include OpenNI2 support"                     OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_PNG            "Include PNG support"                         ON)
+OCV_OPTION(WITH_GDCM           "Include DICOM support"                       OFF)
 OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GIGEAPI        "Include Smartek GigE support"                ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
@@ -212,6 +213,7 @@ OCV_OPTION(BUILD_TIFF               "Build libtiff from source"          WIN32 O
 OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        WIN32 OR ANDROID OR APPLE )
 OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          WIN32 OR ANDROID OR APPLE )
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_GDCM               "Build GDCM from source"             WIN32 OR ANDROID OR APPLE OR UNIX)
 OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (WIN32 OR ANDROID OR APPLE) AND NOT WINRT)
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" ANDROID )
 
@@ -502,6 +504,7 @@ endif()
 # ----------------------------------------------------------------------------
 
 include(cmake/OpenCVFindLibsGrfmt.cmake)
+include(cmake/OpenCVFindLibsGDCM.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
@@ -869,6 +872,13 @@ if(WITH_PNG)
 else()
   status("    PNG:"        "NO")
 endif()
+
+if(WITH_GDCM)
+  status("    GDCM:"        "build")
+else()
+  status("    GDCM:"        "NO")
+endif()
+
 if(WITH_TIFF)
   if(TIFF_VERSION_STRING AND TIFF_FOUND)
     status("    TIFF:"     "${TIFF_LIBRARY} (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
