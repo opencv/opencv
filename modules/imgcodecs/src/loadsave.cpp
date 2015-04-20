@@ -45,6 +45,9 @@
 
 #include "precomp.hpp"
 #include "grfmts.hpp"
+#ifdef HAVE_DICOM
+#include "gdcm_dicom.hpp"
+#endif
 #undef min
 #undef max
 #include <iostream>
@@ -92,6 +95,9 @@ struct ImageCodecInitializer
     #ifdef HAVE_PNG
         decoders.push_back( makePtr<PngDecoder>() );
         encoders.push_back( makePtr<PngEncoder>() );
+    #endif
+    #ifdef HAVE_DICOM
+        decoders.push_back( makePtr<DICOMDecoder>() );
     #endif
     #ifdef HAVE_JASPER
         decoders.push_back( makePtr<Jpeg2KDecoder>() );
