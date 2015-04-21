@@ -72,6 +72,11 @@
                       (((x) & 0x00FF000000000000ULL) >> 40) | \
                       (((x) & 0xFF00000000000000ULL) >> 56))
 
+#else
+
+#include <endian.h>
+#include <byteswap.h>
+
 #endif
 
 #include "gdcmTag.h"
