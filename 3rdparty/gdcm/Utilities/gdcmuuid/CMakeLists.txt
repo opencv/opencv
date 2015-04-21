@@ -102,6 +102,15 @@ include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 add_library(${UUID_LIBRARY_NAME} ${UUID_SRCS})
 if(GDCM_LIBRARY_PROPERTIES)
 set_target_properties(${UUID_LIBRARY_NAME} PROPERTIES ${GDCM_LIBRARY_PROPERTIES})
+
+if(ENABLE_SOLUTION_FOLDERS)
+  set_target_properties(${UUID_LIBRARY_NAME} PROPERTIES FOLDER "3rdparty")
+endif()
+
+if(NOT BUILD_SHARED_LIBS)
+  ocv_install_target(${UUID_LIBRARY_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+endif()
+
 endif()
 if(WIN32 AND NOT CYGWIN)
   target_link_libraries(${UUID_LIBRARY_NAME} iphlpapi)
