@@ -21,6 +21,7 @@
 </libs>
 
 <skip_headers>
+    opencv2/hal/intrin*
     opencv2/core/cuda*
     opencv2/core/private*
     opencv/cxeigen.hpp

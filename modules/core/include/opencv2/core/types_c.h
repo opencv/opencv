@@ -113,22 +113,6 @@ bytes of the header. In C++ interface the role of CvArr is played by InputArray 
  */
 typedef void CvArr;
 
-typedef union Cv32suf
-{
-    int i;
-    unsigned u;
-    float f;
-}
-Cv32suf;
-
-typedef union Cv64suf
-{
-    int64 i;
-    uint64 u;
-    double f;
-}
-Cv64suf;
-
 typedef int CVStatus;
 
 /** @see cv::Error::Code */

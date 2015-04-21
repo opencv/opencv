@@ -40,10 +40,8 @@
 //
 //M*/
 
-#include "opencv2/hal.hpp"
-#include "opencv2/hal/intrin.hpp"
-#include <algorithm>
-#include <cmath>
-#include <cstdlib>
-#include <limits>
-#include <float.h>
+#include "precomp.hpp"
+
+namespace cv { namespace hal {
+
+}}
