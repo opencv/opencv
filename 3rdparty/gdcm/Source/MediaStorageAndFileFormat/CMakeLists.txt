@@ -1,5 +1,7 @@
 # Define the srcs for Media Storage And FileFormat
 # MSFF
+
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
 set(MSFF_SRCS
   gdcmFileStreamer.cxx
   gdcmJSON.cxx
