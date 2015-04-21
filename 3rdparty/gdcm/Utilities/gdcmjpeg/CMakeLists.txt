@@ -27,6 +27,9 @@ set(JPEG_LIBRARY_PROPERTIES ${JPEG_LIBRARY_PROPERTIES}
   SOVERSION "${JPEG_API_VERSION}"
 )
 
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
 
 # memmgr back ends: compile only one of these into a working library
 # (For now, let's use the mode that requires the image fit into memory.

@@ -45,6 +45,10 @@ if(WIN32)
   endif()
 endif()
 
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/zconf.in.h
     ${CMAKE_CURRENT_BINARY_DIR}/zconf.h

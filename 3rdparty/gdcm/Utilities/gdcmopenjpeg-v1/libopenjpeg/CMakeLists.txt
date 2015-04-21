@@ -29,6 +29,11 @@ if(WIN32)
     add_definitions(-DOPJ_STATIC)
   endif()
 endif()
+
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
 add_library(${OPENJPEG_LIBRARY_NAME} ${OPENJPEG_SRCS})
 set_target_properties(${OPENJPEG_LIBRARY_NAME} PROPERTIES
   ${OPENJPEG_LIBRARY_PROPERTIES} LINK_INTERFACE_LIBRARIES "")

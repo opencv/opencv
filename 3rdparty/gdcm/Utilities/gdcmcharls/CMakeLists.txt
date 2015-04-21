@@ -47,6 +47,10 @@ if(NOT CMAKE_BUILD_TYPE)
   endif()
 endif()
 
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
 #option(charls_BUILD_SHARED_LIBS "Build CharLS with shared libraries." OFF)
 #set(BUILD_SHARED_LIBS ${charls_BUILD_SHARED_LIBS})
 

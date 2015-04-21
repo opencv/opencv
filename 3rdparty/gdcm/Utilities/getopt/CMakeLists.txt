@@ -21,6 +21,10 @@ if(WIN32)
   endif ()
 endif()
 
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
 #include_directories(BEFORE
 #  ${CMAKE_CURRENT_SOURCE_DIR}
 #  )

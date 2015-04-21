@@ -20,6 +20,10 @@ set(EXPAT_LIBRARY_PROPERTIES ${EXPAT_LIBRARY_PROPERTIES}
   SOVERSION "${EXPAT_MAJOR_VERSION}.${EXPAT_MINOR_VERSION}"
 )
 
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
 # Do full dependency headers.
 include_regular_expression("^.*$")
 
