@@ -392,6 +392,8 @@ else()
   endif()
 endif()
 
+option(GDCM_USE_MEXD_MODULE "Use message exchange definition module" OFF)
+
 # Very advanced user option:
 # This will cause building of the broken JPEG library released by the Standford PVRG group:
 option(GDCM_USE_PVRG "Use pvrg lib, only turn it on if you know what you are doing." OFF)

@@ -5,6 +5,9 @@ subdirs(
   DataDictionary
   DataStructureAndEncodingDefinition
   InformationObjectDefinition
-  MediaStorageAndFileFormat
-  MessageExchangeDefinition
+  MediaStorageAndFileFormat  
   )
+
+if(GDCM_USE_MEXD_MODULE)
+  subdirs(MessageExchangeDefinition)
+endif()
