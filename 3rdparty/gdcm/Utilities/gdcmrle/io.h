@@ -40,6 +40,9 @@ public:
 class dest
 {
 public:
+  virtual ~dest(void){};
+
+public:
   typedef unsigned int streampos_t; // 32bits unsigned
 
   virtual int write( const char * in, int len ) = 0;
