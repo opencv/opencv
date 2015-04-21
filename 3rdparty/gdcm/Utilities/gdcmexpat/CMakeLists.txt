@@ -22,6 +22,7 @@ set(EXPAT_LIBRARY_PROPERTIES ${EXPAT_LIBRARY_PROPERTIES}
 
 if(UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
 
 # Do full dependency headers.

@@ -49,6 +49,7 @@ endif()
 
 if(UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
 
 #option(charls_BUILD_SHARED_LIBS "Build CharLS with shared libraries." OFF)

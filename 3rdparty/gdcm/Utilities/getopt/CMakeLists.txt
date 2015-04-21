@@ -46,6 +46,12 @@ set(GETOPT_LIBRARY_PROPERTIES ${GETOPT_LIBRARY_PROPERTIES}
 # guys really need help)
 add_library(${GETOPT_LIBRARY_NAME} ${GETOPT_SRCS})
 set_target_properties(${GETOPT_LIBRARY_NAME} PROPERTIES ${GETOPT_LIBRARY_PROPERTIES})
+
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX AND MINGW)
   # For some reason mingw fails to export the optind which is clearly marked as exported (using extern symbol)
   # ... for now use this flag :

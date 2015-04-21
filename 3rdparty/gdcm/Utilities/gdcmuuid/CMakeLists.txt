@@ -99,6 +99,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/uuid_mangle.h.in
 # for uuid_mangle.h
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+endif()
+
 add_library(${UUID_LIBRARY_NAME} ${UUID_SRCS})
 if(GDCM_LIBRARY_PROPERTIES)
 set_target_properties(${UUID_LIBRARY_NAME} PROPERTIES ${GDCM_LIBRARY_PROPERTIES})
