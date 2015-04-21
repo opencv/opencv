@@ -69,7 +69,8 @@ int main(int argc, const char* argv[])
         {
             std::cout << "Open CUDA Writer" << std::endl;
 
-            d_writer = cv::cudacodec::createVideoWriter("output_gpu.avi", frame.size(), FPS);
+            const cv::String outputFilename = "output_gpu.avi";
+            d_writer = cv::cudacodec::createVideoWriter(outputFilename, frame.size(), FPS);
         }
 
         d_frame.upload(frame);
