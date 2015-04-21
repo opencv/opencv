@@ -18,6 +18,7 @@
 #include <vector>
 #include <cstring> // memcpy
 #include <cassert>
+#include <algorithm>
 #include <stdint.h> // uint32_t
 
 namespace rle
