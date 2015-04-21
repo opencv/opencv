@@ -53,6 +53,7 @@
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
+#include "opencv2/hal.hpp"
 
 namespace cv
 {
@@ -400,136 +401,6 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
 #  define CV_DbgAssert(expr)
 #endif
 
-
-/////////////// saturate_cast (used in image & signal processing) ///////////////////
-
-/**
-Template function for accurate conversion from one primitive type to another.
-
-The functions saturate_cast resemble the standard C++ cast operations, such as static_cast\<T\>()
-and others. They perform an efficient and accurate conversion from one primitive type to another
-(see the introduction chapter). saturate in the name means that when the input value v is out of the
-range of the target type, the result is not formed just by taking low bits of the input, but instead
-the value is clipped. For example:
-@code
-    uchar a = saturate_cast<uchar>(-100); // a = 0 (UCHAR_MIN)
-    short b = saturate_cast<short>(33333.33333); // b = 32767 (SHRT_MAX)
-@endcode
-Such clipping is done when the target type is unsigned char , signed char , unsigned short or
-signed short . For 32-bit integers, no clipping is done.
-
-When the parameter is a floating-point value and the target type is an integer (8-, 16- or 32-bit),
-the floating-point value is first rounded to the nearest integer and then clipped if needed (when
-the target type is 8- or 16-bit).
-
-This operation is used in the simplest or most complex image processing functions in OpenCV.
-
-@param v Function parameter.
-@sa add, subtract, multiply, divide, Mat::convertTo
-*/
-template<typename _Tp> static inline _Tp saturate_cast(uchar v)    { return _Tp(v); }
-/** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(schar v)    { return _Tp(v); }
-/** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(ushort v)   { return _Tp(v); }
-/** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(short v)    { return _Tp(v); }
-/** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(unsigned v) { return _Tp(v); }
-/** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(int v)      { return _Tp(v); }
-/** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(float v)    { return _Tp(v); }
-/** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(double v)   { return _Tp(v); }
-/** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(int64 v)    { return _Tp(v); }
-/** @overload */
-template<typename _Tp> static inline _Tp saturate_cast(uint64 v)   { return _Tp(v); }
-
-//! @cond IGNORED
-
-template<> inline uchar saturate_cast<uchar>(schar v)        { return (uchar)std::max((int)v, 0); }
-template<> inline uchar saturate_cast<uchar>(ushort v)       { return (uchar)std::min((unsigned)v, (unsigned)UCHAR_MAX); }
-template<> inline uchar saturate_cast<uchar>(int v)          { return (uchar)((unsigned)v <= UCHAR_MAX ? v : v > 0 ? UCHAR_MAX : 0); }
-template<> inline uchar saturate_cast<uchar>(short v)        { return saturate_cast<uchar>((int)v); }
-template<> inline uchar saturate_cast<uchar>(unsigned v)     { return (uchar)std::min(v, (unsigned)UCHAR_MAX); }
-template<> inline uchar saturate_cast<uchar>(float v)        { int iv = cvRound(v); return saturate_cast<uchar>(iv); }
-template<> inline uchar saturate_cast<uchar>(double v)       { int iv = cvRound(v); return saturate_cast<uchar>(iv); }
-template<> inline uchar saturate_cast<uchar>(int64 v)        { return (uchar)((uint64)v <= (uint64)UCHAR_MAX ? v : v > 0 ? UCHAR_MAX : 0); }
-template<> inline uchar saturate_cast<uchar>(uint64 v)       { return (uchar)std::min(v, (uint64)UCHAR_MAX); }
-
-template<> inline schar saturate_cast<schar>(uchar v)        { return (schar)std::min((int)v, SCHAR_MAX); }
-template<> inline schar saturate_cast<schar>(ushort v)       { return (schar)std::min((unsigned)v, (unsigned)SCHAR_MAX); }
-template<> inline schar saturate_cast<schar>(int v)          { return (schar)((unsigned)(v-SCHAR_MIN) <= (unsigned)UCHAR_MAX ? v : v > 0 ? SCHAR_MAX : SCHAR_MIN); }
-template<> inline schar saturate_cast<schar>(short v)        { return saturate_cast<schar>((int)v); }
-template<> inline schar saturate_cast<schar>(unsigned v)     { return (schar)std::min(v, (unsigned)SCHAR_MAX); }
-template<> inline schar saturate_cast<schar>(float v)        { int iv = cvRound(v); return saturate_cast<schar>(iv); }
-template<> inline schar saturate_cast<schar>(double v)       { int iv = cvRound(v); return saturate_cast<schar>(iv); }
-template<> inline schar saturate_cast<schar>(int64 v)        { return (schar)((uint64)((int64)v-SCHAR_MIN) <= (uint64)UCHAR_MAX ? v : v > 0 ? SCHAR_MAX : SCHAR_MIN); }
-template<> inline schar saturate_cast<schar>(uint64 v)       { return (schar)std::min(v, (uint64)SCHAR_MAX); }
-
-template<> inline ushort saturate_cast<ushort>(schar v)      { return (ushort)std::max((int)v, 0); }
-template<> inline ushort saturate_cast<ushort>(short v)      { return (ushort)std::max((int)v, 0); }
-template<> inline ushort saturate_cast<ushort>(int v)        { return (ushort)((unsigned)v <= (unsigned)USHRT_MAX ? v : v > 0 ? USHRT_MAX : 0); }
-template<> inline ushort saturate_cast<ushort>(unsigned v)   { return (ushort)std::min(v, (unsigned)USHRT_MAX); }
-template<> inline ushort saturate_cast<ushort>(float v)      { int iv = cvRound(v); return saturate_cast<ushort>(iv); }
-template<> inline ushort saturate_cast<ushort>(double v)     { int iv = cvRound(v); return saturate_cast<ushort>(iv); }
-template<> inline ushort saturate_cast<ushort>(int64 v)      { return (ushort)((uint64)v <= (uint64)USHRT_MAX ? v : v > 0 ? USHRT_MAX : 0); }
-template<> inline ushort saturate_cast<ushort>(uint64 v)     { return (ushort)std::min(v, (uint64)USHRT_MAX); }
-
-template<> inline short saturate_cast<short>(ushort v)       { return (short)std::min((int)v, SHRT_MAX); }
-template<> inline short saturate_cast<short>(int v)          { return (short)((unsigned)(v - SHRT_MIN) <= (unsigned)USHRT_MAX ? v : v > 0 ? SHRT_MAX : SHRT_MIN); }
-template<> inline short saturate_cast<short>(unsigned v)     { return (short)std::min(v, (unsigned)SHRT_MAX); }
-template<> inline short saturate_cast<short>(float v)        { int iv = cvRound(v); return saturate_cast<short>(iv); }
-template<> inline short saturate_cast<short>(double v)       { int iv = cvRound(v); return saturate_cast<short>(iv); }
-template<> inline short saturate_cast<short>(int64 v)        { return (short)((uint64)((int64)v - SHRT_MIN) <= (uint64)USHRT_MAX ? v : v > 0 ? SHRT_MAX : SHRT_MIN); }
-template<> inline short saturate_cast<short>(uint64 v)       { return (short)std::min(v, (uint64)SHRT_MAX); }
-
-template<> inline int saturate_cast<int>(float v)            { return cvRound(v); }
-template<> inline int saturate_cast<int>(double v)           { return cvRound(v); }
-
-// we intentionally do not clip negative numbers, to make -1 become 0xffffffff etc.
-template<> inline unsigned saturate_cast<unsigned>(float v)  { return cvRound(v); }
-template<> inline unsigned saturate_cast<unsigned>(double v) { return cvRound(v); }
-
-//! @endcond
-
-//////////////////////////////// low-level functions ////////////////////////////////
-
-CV_EXPORTS int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n);
-CV_EXPORTS int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n);
-CV_EXPORTS bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n);
-CV_EXPORTS bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);
-
-CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
-CV_EXPORTS float normL1_(const float* a, const float* b, int n);
-CV_EXPORTS float normL2Sqr_(const float* a, const float* b, int n);
-
-CV_EXPORTS void exp(const float* src, float* dst, int n);
-CV_EXPORTS void log(const float* src, float* dst, int n);
-
-CV_EXPORTS void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
-CV_EXPORTS void magnitude(const float* x, const float* y, float* dst, int n);
-
-/** @brief Computes the cube root of an argument.
-
-The function cubeRoot computes \f$\sqrt[3]{\texttt{val}}\f$. Negative arguments are handled correctly.
-NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for
-single-precision data.
-@param val A function argument.
- */
-CV_EXPORTS_W float cubeRoot(float val);
-
-/** @brief Calculates the angle of a 2D vector in degrees.
-
-The function fastAtan2 calculates the full-range angle of an input 2D vector. The angle is measured
-in degrees and varies from 0 to 360 degrees. The accuracy is about 0.3 degrees.
-@param x x-coordinate of the vector.
-@param y y-coordinate of the vector.
- */
-CV_EXPORTS_W float fastAtan2(float y, float x);
-
 /*
  * Hamming distance functor - counts the bit differences between two strings - useful for the Brief descriptor
  * bit count of A exclusive XOR'ed with B
@@ -549,6 +420,11 @@ typedef Hamming HammingLUT;
 
 /////////////////////////////////// inline norms ////////////////////////////////////
 
+template<typename _Tp> inline _Tp cv_abs(_Tp x) { return std::abs(x); }
+inline int cv_abs(uchar x) { return x; }
+inline int cv_abs(schar x) { return std::abs(x); }
+inline int cv_abs(ushort x) { return x; }
+inline int cv_abs(short x) { return std::abs(x); }
 
 template<typename _Tp, typename _AccTp> static inline
 _AccTp normL2Sqr(const _Tp* a, int n)
@@ -578,12 +454,12 @@ _AccTp normL1(const _Tp* a, int n)
 #if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4 )
     {
-        s += (_AccTp)std::abs(a[i]) + (_AccTp)std::abs(a[i+1]) +
-            (_AccTp)std::abs(a[i+2]) + (_AccTp)std::abs(a[i+3]);
+        s += (_AccTp)cv_abs(a[i]) + (_AccTp)cv_abs(a[i+1]) +
+            (_AccTp)cv_abs(a[i+2]) + (_AccTp)cv_abs(a[i+3]);
     }
 #endif
     for( ; i < n; i++ )
-        s += std::abs(a[i]);
+        s += cv_abs(a[i]);
     return s;
 }
 
@@ -592,7 +468,7 @@ _AccTp normInf(const _Tp* a, int n)
 {
     _AccTp s = 0;
     for( int i = 0; i < n; i++ )
-        s = std::max(s, (_AccTp)std::abs(a[i]));
+        s = std::max(s, (_AccTp)cv_abs(a[i]));
     return s;
 }
 
@@ -616,11 +492,10 @@ _AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
     return s;
 }
 
-template<> inline
-float normL2Sqr(const float* a, const float* b, int n)
+inline float normL2Sqr(const float* a, const float* b, int n)
 {
     if( n >= 8 )
-        return normL2Sqr_(a, b, n);
+        return hal::normL2Sqr_(a, b, n);
     float s = 0;
     for( int i = 0; i < n; i++ )
     {
@@ -650,11 +525,10 @@ _AccTp normL1(const _Tp* a, const _Tp* b, int n)
     return s;
 }
 
-template<> inline
-float normL1(const float* a, const float* b, int n)
+inline float normL1(const float* a, const float* b, int n)
 {
     if( n >= 8 )
-        return normL1_(a, b, n);
+        return hal::normL1_(a, b, n);
     float s = 0;
     for( int i = 0; i < n; i++ )
     {
@@ -664,10 +538,9 @@ float normL1(const float* a, const float* b, int n)
     return s;
 }
 
-template<> inline
-int normL1(const uchar* a, const uchar* b, int n)
+inline int normL1(const uchar* a, const uchar* b, int n)
 {
-    return normL1_(a, b, n);
+    return hal::normL1_(a, b, n);
 }
 
 template<typename _Tp, typename _AccTp> static inline
@@ -682,6 +555,23 @@ _AccTp normInf(const _Tp* a, const _Tp* b, int n)
     return s;
 }
 
+/** @brief Computes the cube root of an argument.
+
+ The function cubeRoot computes \f$\sqrt[3]{\texttt{val}}\f$. Negative arguments are handled correctly.
+ NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for
+ single-precision data.
+ @param val A function argument.
+ */
+CV_EXPORTS_W float cubeRoot(float val);
+
+/** @brief Calculates the angle of a 2D vector in degrees.
+
+ The function fastAtan2 calculates the full-range angle of an input 2D vector. The angle is measured
+ in degrees and varies from 0 to 360 degrees. The accuracy is about 0.3 degrees.
+ @param x x-coordinate of the vector.
+ @param y y-coordinate of the vector.
+ */
+CV_EXPORTS_W float fastAtan2(float y, float x);
 
 ////////////////// forward declarations for important OpenCV types //////////////////
 

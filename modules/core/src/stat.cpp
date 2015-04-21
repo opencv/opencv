@@ -2416,140 +2416,6 @@ void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
 namespace cv
 {
 
-float normL2Sqr_(const float* a, const float* b, int n)
-{
-    int j = 0; float d = 0.f;
-#if CV_SSE
-    if( USE_SSE2 )
-    {
-        float CV_DECL_ALIGNED(16) buf[4];
-        __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
-
-        for( ; j <= n - 8; j += 8 )
-        {
-            __m128 t0 = _mm_sub_ps(_mm_loadu_ps(a + j), _mm_loadu_ps(b + j));
-            __m128 t1 = _mm_sub_ps(_mm_loadu_ps(a + j + 4), _mm_loadu_ps(b + j + 4));
-            d0 = _mm_add_ps(d0, _mm_mul_ps(t0, t0));
-            d1 = _mm_add_ps(d1, _mm_mul_ps(t1, t1));
-        }
-        _mm_store_ps(buf, _mm_add_ps(d0, d1));
-        d = buf[0] + buf[1] + buf[2] + buf[3];
-    }
-    else
-#endif
-    {
-        for( ; j <= n - 4; j += 4 )
-        {
-            float t0 = a[j] - b[j], t1 = a[j+1] - b[j+1], t2 = a[j+2] - b[j+2], t3 = a[j+3] - b[j+3];
-            d += t0*t0 + t1*t1 + t2*t2 + t3*t3;
-        }
-    }
-
-    for( ; j < n; j++ )
-    {
-        float t = a[j] - b[j];
-        d += t*t;
-    }
-    return d;
-}
-
-
-float normL1_(const float* a, const float* b, int n)
-{
-    int j = 0; float d = 0.f;
-#if CV_SSE
-    if( USE_SSE2 )
-    {
-        float CV_DECL_ALIGNED(16) buf[4];
-        static const int CV_DECL_ALIGNED(16) absbuf[4] = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
-        __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
-        __m128 absmask = _mm_load_ps((const float*)absbuf);
-
-        for( ; j <= n - 8; j += 8 )
-        {
-            __m128 t0 = _mm_sub_ps(_mm_loadu_ps(a + j), _mm_loadu_ps(b + j));
-            __m128 t1 = _mm_sub_ps(_mm_loadu_ps(a + j + 4), _mm_loadu_ps(b + j + 4));
-            d0 = _mm_add_ps(d0, _mm_and_ps(t0, absmask));
-            d1 = _mm_add_ps(d1, _mm_and_ps(t1, absmask));
-        }
-        _mm_store_ps(buf, _mm_add_ps(d0, d1));
-        d = buf[0] + buf[1] + buf[2] + buf[3];
-    }
-    else
-#elif CV_NEON
-    float32x4_t v_sum = vdupq_n_f32(0.0f);
-    for ( ; j <= n - 4; j += 4)
-        v_sum = vaddq_f32(v_sum, vabdq_f32(vld1q_f32(a + j), vld1q_f32(b + j)));
-
-    float CV_DECL_ALIGNED(16) buf[4];
-    vst1q_f32(buf, v_sum);
-    d = buf[0] + buf[1] + buf[2] + buf[3];
-#endif
-    {
-        for( ; j <= n - 4; j += 4 )
-        {
-            d += std::abs(a[j] - b[j]) + std::abs(a[j+1] - b[j+1]) +
-                    std::abs(a[j+2] - b[j+2]) + std::abs(a[j+3] - b[j+3]);
-        }
-    }
-
-    for( ; j < n; j++ )
-        d += std::abs(a[j] - b[j]);
-    return d;
-}
-
-int normL1_(const uchar* a, const uchar* b, int n)
-{
-    int j = 0, d = 0;
-#if CV_SSE
-    if( USE_SSE2 )
-    {
-        __m128i d0 = _mm_setzero_si128();
-
-        for( ; j <= n - 16; j += 16 )
-        {
-            __m128i t0 = _mm_loadu_si128((const __m128i*)(a + j));
-            __m128i t1 = _mm_loadu_si128((const __m128i*)(b + j));
-
-            d0 = _mm_add_epi32(d0, _mm_sad_epu8(t0, t1));
-        }
-
-        for( ; j <= n - 4; j += 4 )
-        {
-            __m128i t0 = _mm_cvtsi32_si128(*(const int*)(a + j));
-            __m128i t1 = _mm_cvtsi32_si128(*(const int*)(b + j));
-
-            d0 = _mm_add_epi32(d0, _mm_sad_epu8(t0, t1));
-        }
-        d = _mm_cvtsi128_si32(_mm_add_epi32(d0, _mm_unpackhi_epi64(d0, d0)));
-    }
-    else
-#elif CV_NEON
-    uint32x4_t v_sum = vdupq_n_u32(0.0f);
-    for ( ; j <= n - 16; j += 16)
-    {
-        uint8x16_t v_dst = vabdq_u8(vld1q_u8(a + j), vld1q_u8(b + j));
-        uint16x8_t v_low = vmovl_u8(vget_low_u8(v_dst)), v_high = vmovl_u8(vget_high_u8(v_dst));
-        v_sum = vaddq_u32(v_sum, vaddl_u16(vget_low_u16(v_low), vget_low_u16(v_high)));
-        v_sum = vaddq_u32(v_sum, vaddl_u16(vget_high_u16(v_low), vget_high_u16(v_high)));
-    }
-
-    uint CV_DECL_ALIGNED(16) buf[4];
-    vst1q_u32(buf, v_sum);
-    d = buf[0] + buf[1] + buf[2] + buf[3];
-#endif
-    {
-        for( ; j <= n - 4; j += 4 )
-        {
-            d += std::abs(a[j] - b[j]) + std::abs(a[j+1] - b[j+1]) +
-                    std::abs(a[j+2] - b[j+2]) + std::abs(a[j+3] - b[j+3]);
-        }
-    }
-    for( ; j < n; j++ )
-        d += std::abs(a[j] - b[j]);
-    return d;
-}
-
 template<typename T, typename ST> int
 normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
 {
@@ -2564,7 +2430,7 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, ST(std::abs(src[k])));
+                    result = std::max(result, ST(cv_abs(src[k])));
             }
     }
     *_result = result;
@@ -2585,7 +2451,7 @@ normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result += std::abs(src[k]);
+                    result += cv_abs(src[k]);
             }
     }
     *_result = result;
@@ -2684,9 +2550,7 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
 
 Hamming::ResultType Hamming::operator()( const unsigned char* a, const unsigned char* b, int size ) const
 {
-    int result = 0;
-    cv::hal::normHamming(a, b, size, result);
-    return result;
+    return cv::hal::normHamming(a, b, size);
 }
 
 #define CV_DEF_NORM_FUNC(L, suffix, type, ntype) \
@@ -3037,16 +2901,12 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
                 if( normType == NORM_HAMMING )
                 {
-                    int result = 0;
-                    cv::hal::normHamming(data, (int)len, result);
-                    return result;
+                    return hal::normHamming(data, (int)len);
                 }
 
                 if( normType == NORM_HAMMING2 )
                 {
-                    int result = 0;
-                    hal::normHamming(data, (int)len, 2, result);
-                    return result;
+                    return hal::normHamming(data, (int)len, 2);
                 }
             }
         }
@@ -3072,9 +2932,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            int one = 0;
-            cv::hal::normHamming(ptrs[0], total, cellSize, one);
-            result += one;
+            result += hal::normHamming(ptrs[0], total, cellSize);
         }
 
         return result;
@@ -3558,9 +3416,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            int one = 0;
-            hal::normHamming(ptrs[0], ptrs[1], total, cellSize, one);
-            result += one;
+            result += hal::normHamming(ptrs[0], ptrs[1], total, cellSize);
         }
 
         return result;
@@ -3698,7 +3554,7 @@ static void batchDistHamming(const uchar* src1, const uchar* src2, size_t step2,
     if( !mask )
     {
         for( int i = 0; i < nvecs; i++ )
-             hal::normHamming(src1, src2 + step2*i, len, dist[i]);
+             dist[i] = hal::normHamming(src1, src2 + step2*i, len);
     }
     else
     {
@@ -3706,7 +3562,7 @@ static void batchDistHamming(const uchar* src1, const uchar* src2, size_t step2,
         for( int i = 0; i < nvecs; i++ )
         {
             if (mask[i])
-                hal::normHamming(src1, src2 + step2*i, len, dist[i]);
+                dist[i] = hal::normHamming(src1, src2 + step2*i, len);
             else
                 dist[i] = val0;
         }
@@ -3720,7 +3576,7 @@ static void batchDistHamming2(const uchar* src1, const uchar* src2, size_t step2
     if( !mask )
     {
         for( int i = 0; i < nvecs; i++ )
-            hal::normHamming(src1, src2 + step2*i, len, 2, dist[i]);
+            dist[i] = hal::normHamming(src1, src2 + step2*i, len, 2);
     }
     else
     {
@@ -3728,7 +3584,7 @@ static void batchDistHamming2(const uchar* src1, const uchar* src2, size_t step2
         for( int i = 0; i < nvecs; i++ )
         {
             if (mask[i])
-                hal::normHamming(src1, src2 + step2*i, len, 2, dist[i]);
+                dist[i] = hal::normHamming(src1, src2 + step2*i, len, 2);
             else
                 dist[i] = val0;
         }
