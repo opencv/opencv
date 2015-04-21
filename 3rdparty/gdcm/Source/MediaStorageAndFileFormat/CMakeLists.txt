@@ -202,6 +202,10 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(gdcmMSFF PROPERTIES FOLDER "3rdparty")
 endif()
 
+if(NOT BUILD_SHARED_LIBS)
+  ocv_install_target(gdcmMSFF EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+endif()
+
 if(GDCM_USE_JPEGLS)
   target_link_libraries(gdcmMSFF ${GDCM_CHARLS_LIBRARIES})
 endif()

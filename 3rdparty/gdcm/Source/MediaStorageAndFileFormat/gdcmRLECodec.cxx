@@ -910,6 +910,9 @@ bool RLECodec::AppendRowEncode( std::ostream & os, const char * data, size_t dat
 class streamdest : public rle::dest
 {
 public:
+	virtual ~streamdest(void){};
+
+public:
   streamdest( std::ostream & os ):stream(os)
   {
   start = os.tellp();

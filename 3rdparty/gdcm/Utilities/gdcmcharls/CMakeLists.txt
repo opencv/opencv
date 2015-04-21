@@ -65,6 +65,10 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${CHARLS_LIBRARY_NAME} PROPERTIES FOLDER "3rdparty")
 endif()
 
+if(NOT BUILD_SHARED_LIBS)
+  ocv_install_target(${CHARLS_LIBRARY_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+endif()
+
 # Install library
 if(NOT CHARLS_INSTALL_NO_LIBRARIES)
   # Runtime

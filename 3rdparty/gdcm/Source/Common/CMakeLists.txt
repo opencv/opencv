@@ -181,6 +181,10 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(gdcmCommon PROPERTIES FOLDER "3rdparty")
 endif()
 
+if(NOT BUILD_SHARED_LIBS)
+  ocv_install_target(gdcmCommon EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+endif()
+
 #target_link_libraries(gdcmCommon ${GDCM_ZLIB_LIBRARIES}) # ${GDCM_POLARSSL_LIBRARIES})
 if(GDCM_BUILD_TESTING)
 target_link_libraries(gdcmCommon gdcmmd5 )

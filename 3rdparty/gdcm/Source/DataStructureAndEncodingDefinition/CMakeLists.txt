@@ -67,6 +67,10 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(gdcmDSED PROPERTIES FOLDER "3rdparty")
 endif()
 
+if(NOT BUILD_SHARED_LIBS)
+  ocv_install_target(gdcmDSED EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+endif()
+
 # libs
 install_library(gdcmDSED)
 # PDB

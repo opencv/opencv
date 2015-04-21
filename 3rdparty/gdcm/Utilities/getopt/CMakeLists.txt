@@ -52,6 +52,10 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${GETOPT_LIBRARY_NAME} PROPERTIES FOLDER "3rdparty")
 endif()
 
+if(NOT BUILD_SHARED_LIBS)
+  ocv_install_target(${GETOPT_LIBRARY_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+endif()
+
 #if(BUILD_EXAMPLES)
 #if(GDCM_BUILD_TESTING)
 #add_executable(ex_getopt ex_getopt.c)
