@@ -15,7 +15,7 @@ using namespace android;
 sp<IBinder> OpenCVEngineBinder = NULL;
 IPackageManager* PackageManager = NULL;
 
-JNIEXPORT jobject JNICALL Java_org_opencv_engine_BinderConnector_Connect(JNIEnv* env, jobject)
+JNIEXPORT jobject JNICALL Java_org_opencv_engine3_BinderConnector_Connect(JNIEnv* env, jobject)
 {
     LOGI("Creating new component");
     if (NULL != OpenCVEngineBinder.get())
@@ -30,7 +30,7 @@ JNIEXPORT jobject JNICALL Java_org_opencv_engine_BinderConnector_Connect(JNIEnv*
     return javaObjectForIBinder(env, OpenCVEngineBinder);
 }
 
-JNIEXPORT jboolean JNICALL Java_org_opencv_engine_BinderConnector_Init(JNIEnv* env, jobject , jobject market)
+JNIEXPORT jboolean JNICALL Java_org_opencv_engine3_BinderConnector_Init(JNIEnv* env, jobject , jobject market)
 {
     LOGD("Java_org_opencv_engine_BinderConnector_Init");
 
@@ -58,7 +58,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_engine_BinderConnector_Init(JNIEnv* e
     }
 }
 
-JNIEXPORT void JNICALL Java_org_opencv_engine_BinderConnector_Final(JNIEnv *, jobject)
+JNIEXPORT void JNICALL Java_org_opencv_engine3_BinderConnector_Final(JNIEnv *, jobject)
 {
     LOGD("Java_org_opencv_engine_BinderConnector_Final");
 

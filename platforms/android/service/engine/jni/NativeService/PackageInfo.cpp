@@ -27,7 +27,7 @@ map<int, string> PackageInfo::InitPlatformNameMap()
 
 const map<int, string> PackageInfo::PlatformNameMap = InitPlatformNameMap();
 const string PackageInfo::BasePackageName = "org.opencv.lib";
-const string  DEFAULT_ENGINE_INSTALL_PATH = "/data/data/org.opencv.engine";
+const string  DEFAULT_ENGINE_INSTALL_PATH = "/data/data/org.opencv.engine3";
 
 inline string JoinARMFeatures(int cpu_id)
 {
