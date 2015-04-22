@@ -1001,6 +1001,7 @@ struct CvVideoWriter_FFMPEG
     int               input_pix_fmt;
     Image_FFMPEG      temp_image;
     int               frame_width, frame_height;
+    int               frame_idx;
     bool              ok;
     struct SwsContext *img_convert_ctx;
 };
@@ -1078,6 +1079,7 @@ void CvVideoWriter_FFMPEG::init()
     memset(&temp_image, 0, sizeof(temp_image));
     img_convert_ctx = 0;
     frame_width = frame_height = 0;
+    frame_idx = 0;
     ok = false;
 }
 
@@ -1250,7 +1252,13 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 static const int OPENCV_NO_FRAMES_WRITTEN_CODE = 1000;
 
-static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_t * outbuf, uint32_t outbuf_size, AVFrame * picture )
+static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
+                                      uint8_t *, uint32_t,
+#else
+                                      uint8_t * outbuf, uint32_t outbuf_size,
+#endif
+                                      AVFrame * picture )
 {
 #if LIBAVFORMAT_BUILD > 4628
     AVCodecContext * c = video_st->codec;
@@ -1285,14 +1293,14 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
         pkt.size = 0;
         ret = avcodec_encode_video2(c, &pkt, picture, &got_output);
         if (ret < 0)
-            got_output = 0;
+            ;
         else if (got_output) {
-            //if (c->coded_frame->pts != (int64_t)AV_NOPTS_VALUE)
-            //    pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
-            //if (c->coded_frame->dts != (int64_t)AV_NOPTS_VALUE)
-            //    pkt.dts = av_rescale_q(c->coded_frame->dts, c->time_base, video_st->time_base);
-            //if (pkt.duration)
-            //    pkt.duration = av_rescale_q(pkt.duration, c->time_base, video_st->time_base);
+            if (pkt.pts != (int64_t)AV_NOPTS_VALUE)
+                pkt.pts = av_rescale_q(pkt.pts, c->time_base, video_st->time_base);
+            if (pkt.dts != (int64_t)AV_NOPTS_VALUE)
+                pkt.dts = av_rescale_q(pkt.dts, c->time_base, video_st->time_base);
+            if (pkt.duration)
+                pkt.duration = av_rescale_q(pkt.duration, c->time_base, video_st->time_base);
             pkt.stream_index= video_st->index;
             ret = av_write_frame(oc, &pkt);
             av_free_packet(&pkt);
@@ -1425,7 +1433,9 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
                        (PixelFormat)input_pix_fmt, width, height);
     }
 
+    picture->pts = frame_idx;
     ret = icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, picture) >= 0;
+    frame_idx++;
 
     return ret;
 }
@@ -1737,6 +1747,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
     frame_width = width;
     frame_height = height;
+    frame_idx = 0;
     ok = true;
 
     return true;
