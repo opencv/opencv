@@ -581,7 +581,7 @@ public:
      -   **CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported
          by DC1394 v 2.x backend currently)
 
-    **Note**: When querying a property that is not supported by the backend used by the VideoCapture
+    @note When querying a property that is not supported by the backend used by the VideoCapture
     class, value 0 is returned.
      */
     CV_WRAP virtual double get(int propId) const;
@@ -659,7 +659,7 @@ public:
      -   **VIDEOWRITER_PROP_QUALITY** Current quality of the encoded videostream.
      -   **VIDEOWRITER_PROP_FRAMEBYTES** (Read-only) Size of just encoded video frame; note that the encoding order may be different from representation order.
 
-     **Note**: When querying a property that is not supported by the backend used by the VideoWriter
+     @note When querying a property that is not supported by the backend used by the VideoWriter
      class, value 0 is returned.
      */
     CV_WRAP virtual double get(int propId) const;
