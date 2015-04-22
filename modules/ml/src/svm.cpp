@@ -1244,9 +1244,9 @@ public:
         uncompressed_sv.release();
     }
 
-    Mat getSupportVectors() const
+    Mat getSupportVectors(bool compressedSV) const
     {
-        if( params.kernelType == LINEAR)
+        if( params.kernelType == LINEAR && !compressedSV)
             return uncompressed_sv;
         else
             return sv;
