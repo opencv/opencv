@@ -344,7 +344,7 @@ class AviMjpegStream
 {
 public:
     AviMjpegStream();
-    //stores founded frames in m_frame_list which be accessed via getFrames
+    //stores founded frames in m_frame_list which can be accessed via getFrames
     bool parseAvi(MjpegInputStream& in_str);
     //stores founded frames in in_frame_list. getFrames() would return empty list
     bool parseAvi(MjpegInputStream& in_str, frame_list& in_frame_list);
@@ -377,7 +377,7 @@ protected:
     bool       m_is_indx_present;
 };
 
-AviMjpegStream::AviMjpegStream(): m_stream_id(0), m_movi_end(0), m_width(0), m_height(0), m_fps(0), m_is_indx_present(false)
+AviMjpegStream::AviMjpegStream(): m_stream_id(0), m_movi_start(0), m_movi_end(0), m_width(0), m_height(0), m_fps(0), m_is_indx_present(false)
 {
 }
 
