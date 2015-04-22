@@ -792,7 +792,9 @@ double CvCapture_FFMPEG::getProperty( int property_id )
     case CV_FFMPEG_CAP_PROP_FRAME_HEIGHT:
         return (double)frame.height;
     case CV_FFMPEG_CAP_PROP_FPS:
-#if LIBAVCODEC_BUILD > 4753
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
+        return av_q2d(video_st->avg_frame_rate);
+#elif LIBAVCODEC_BUILD > 4753
         return av_q2d(video_st->r_frame_rate);
 #else
         return (double)video_st->codec.frame_rate
@@ -840,7 +842,11 @@ int CvCapture_FFMPEG::get_bitrate()
 
 double CvCapture_FFMPEG::get_fps()
 {
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
+    double fps = r2d(ic->streams[video_stream]->avg_frame_rate);
+#else
     double fps = r2d(ic->streams[video_stream]->r_frame_rate);
+#endif
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     if (fps < eps_zero)
@@ -1235,8 +1241,7 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 #else
     AVCodecContext * c = &(video_st->codec);
 #endif
-    int out_size;
-    int ret = 0;
+    int ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
 
     if (oc->oformat->flags & AVFMT_RAWPICTURE) {
         /* raw video case. The API will change slightly in the near
@@ -1256,12 +1261,32 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
         ret = av_write_frame(oc, &pkt);
     } else {
         /* encode the image */
-        out_size = avcodec_encode_video(c, outbuf, outbuf_size, picture);
+        AVPacket pkt;
+        av_init_packet(&pkt);
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
+        int got_output = 0;
+        pkt.data = NULL;
+        pkt.size = 0;
+        ret = avcodec_encode_video2(c, &pkt, picture, &got_output);
+        if (ret < 0)
+            got_output = 0;
+        else if (got_output) {
+            //if (c->coded_frame->pts != (int64_t)AV_NOPTS_VALUE)
+            //    pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
+            //if (c->coded_frame->dts != (int64_t)AV_NOPTS_VALUE)
+            //    pkt.dts = av_rescale_q(c->coded_frame->dts, c->time_base, video_st->time_base);
+            //if (pkt.duration)
+            //    pkt.duration = av_rescale_q(pkt.duration, c->time_base, video_st->time_base);
+            pkt.stream_index= video_st->index;
+            ret = av_write_frame(oc, &pkt);
+            av_free_packet(&pkt);
+        }
+        else
+            ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
+#else
+        int out_size = avcodec_encode_video(c, outbuf, outbuf_size, picture);
         /* if zero size, it means the image was buffered */
         if (out_size > 0) {
-            AVPacket pkt;
-            av_init_packet(&pkt);
-
 #if LIBAVFORMAT_BUILD > 4752
             if(c->coded_frame->pts != (int64_t)AV_NOPTS_VALUE)
                 pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
@@ -1276,9 +1301,8 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 
             /* write the compressed frame in the media file */
             ret = av_write_frame(oc, &pkt);
-        } else {
-            ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
         }
+#endif
     }
     return ret;
 }
