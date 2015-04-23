@@ -99,7 +99,8 @@ PERF_TEST_P(Sz_Depth_Cn_KernelSz, Denoising_BilateralFilter,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, MatCn, int, int);
 
-PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans,
+// disabled, since it takes too much time
+PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, DISABLED_Denoising_NonLocalMeans,
             Combine(GPU_DENOISING_IMAGE_SIZES,
                     Values<MatDepth>(CV_8U),
                     GPU_CHANNELS_1_3,
@@ -143,7 +144,8 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, MatCn, int, int);
 
-PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_FastNonLocalMeans,
+// disabled, since it takes too much time
+PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, DISABLED_Denoising_FastNonLocalMeans,
             Combine(GPU_DENOISING_IMAGE_SIZES,
                     Values<MatDepth>(CV_8U),
                     GPU_CHANNELS_1_3,
