@@ -700,14 +700,18 @@ GPU_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
 }
 #endif
 
+#ifdef OPENCV_TINY_GPU_MODULE
 INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
     ALL_DEVICES,
-#ifdef OPENCV_TINY_GPU_MODULE
     testing::Values(NormCode(cv::NORM_L2)),
-#else
-    testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2)),
-#endif
     testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304)),
     testing::Values(UseMask(false), UseMask(true))));
+#else
+INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2)),
+    testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304)),
+    testing::Values(UseMask(false), UseMask(true))));
+#endif
 
 #endif // HAVE_CUDA
