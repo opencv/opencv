@@ -114,7 +114,7 @@ namespace cv { namespace gpu { namespace device
 
                     sum =       0.0625f * src(b.idx_row_low (src_y - 2), b.idx_col_high(x));
                     sum = sum + 0.25f   * src(b.idx_row_low (src_y - 1), b.idx_col_high(x));
-                    sum = sum + 0.375f  * src(src_y                    , b.idx_col_high(x));
+                    sum = sum + 0.375f  * src(b.idx_row_high(src_y    ), b.idx_col_high(x));
                     sum = sum + 0.25f   * src(b.idx_row_high(src_y + 1), b.idx_col_high(x));
                     sum = sum + 0.0625f * src(b.idx_row_high(src_y + 2), b.idx_col_high(x));
 
@@ -129,7 +129,7 @@ namespace cv { namespace gpu { namespace device
 
                     sum =       0.0625f * src(b.idx_row_low (src_y - 2), b.idx_col(left_x));
                     sum = sum + 0.25f   * src(b.idx_row_low (src_y - 1), b.idx_col(left_x));
-                    sum = sum + 0.375f  * src(src_y                    , b.idx_col(left_x));
+                    sum = sum + 0.375f  * src(b.idx_row_high(src_y    ), b.idx_col(left_x));
                     sum = sum + 0.25f   * src(b.idx_row_high(src_y + 1), b.idx_col(left_x));
                     sum = sum + 0.0625f * src(b.idx_row_high(src_y + 2), b.idx_col(left_x));
 
@@ -144,7 +144,7 @@ namespace cv { namespace gpu { namespace device
 
                     sum =       0.0625f * src(b.idx_row_low (src_y - 2), b.idx_col_high(right_x));
                     sum = sum + 0.25f   * src(b.idx_row_low (src_y - 1), b.idx_col_high(right_x));
-                    sum = sum + 0.375f  * src(src_y                    , b.idx_col_high(right_x));
+                    sum = sum + 0.375f  * src(b.idx_row_high(src_y    ), b.idx_col_high(right_x));
                     sum = sum + 0.25f   * src(b.idx_row_high(src_y + 1), b.idx_col_high(right_x));
                     sum = sum + 0.0625f * src(b.idx_row_high(src_y + 2), b.idx_col_high(right_x));
 
