@@ -552,11 +552,11 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
 }
 
 
-static Ptr<IVideoCapture> IVideoCapture_create(const String&)
+static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
 {
     Ptr<IVideoCapture> capture;
 
-    //capture = createMotionJpegCapture(filename);
+    capture = createMotionJpegCapture(filename);
     if (capture && capture->isOpened())
     {
         return capture;
