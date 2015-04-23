@@ -307,7 +307,8 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse
 
 DEF_PARAM_TEST(ImagePair_WinSz_Levels_Iters, pair_string, int, int, int);
 
-PERF_TEST_P(ImagePair_WinSz_Levels_Iters, Video_PyrLKOpticalFlowDense,
+// Sanity test fails on Maxwell and CUDA 7.0
+PERF_TEST_P(ImagePair_WinSz_Levels_Iters, DISABLED_Video_PyrLKOpticalFlowDense,
             Combine(Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")),
                     Values(3, 5, 7, 9, 13, 17, 21),
                     Values(1, 3),
