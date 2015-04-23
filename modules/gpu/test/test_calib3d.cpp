@@ -298,8 +298,8 @@ GPU_TEST_P(SolvePnPRansac, Accuracy)
                             camera_mat, cv::Mat(1, 8, CV_32F, cv::Scalar::all(0)),
                             rvec, tvec, false, 200, 2.f, 100, &inliers);
 
-    ASSERT_LE(cv::norm(rvec - rvec_gold), 1e-3);
-    ASSERT_LE(cv::norm(tvec - tvec_gold), 1e-3);
+    ASSERT_LE(cv::norm(rvec - rvec_gold), 2e-3);
+    ASSERT_LE(cv::norm(tvec - tvec_gold), 2e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Calib3D, SolvePnPRansac, ALL_DEVICES);
