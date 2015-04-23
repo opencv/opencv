@@ -641,7 +641,7 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     W.at<double>(2) = 0.;
 
     // F0 <- U*diag([W(1), W(2), 0])*V'
-    gemm( U, Mat::diag(W), 1., 0, 0., TF, GEMM_1_T );
+    gemm( U, Mat::diag(W), 1., 0, 0., TF, 0 );
     gemm( TF, V, 1., 0, 0., F0, 0/*CV_GEMM_B_T*/ );
 
     // apply the transformation that is inverse
