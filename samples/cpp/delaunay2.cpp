@@ -98,7 +98,7 @@ static void paint_voronoi( Mat& img, Subdiv2D& subdiv )
 
         ifacets[0] = ifacet;
         polylines(img, ifacets, true, Scalar(), 1, CV_AA, 0);
-        circle(img, centers[i], 3, Scalar(), -1, CV_AA, 0);
+        circle(img, centers[i], 3, Scalar(), CV_FILLED, CV_AA, 0);
     }
 }
 
