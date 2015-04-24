@@ -10,7 +10,7 @@ static void help()
 {
     cout << "\nThis program demonstrates circle finding with the Hough transform.\n"
             "Usage:\n"
-            "./houghcircles <image_name>, Default is pic1.png\n" << endl;
+            "./houghcircles <image_name>, Default is board.jpg\n" << endl;
 }
 
 int main(int argc, char** argv)
