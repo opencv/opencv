@@ -48,3 +48,23 @@ TEST(Core_SaturateCast, NegativeNotClipped)
 
     ASSERT_EQ(0xffffffff, val);
 }
+
+TEST(Core_Drawing, polylines_empty)
+{
+    Mat img(100, 100, CV_8UC1, Scalar(0));
+    vector<Point> pts; // empty
+    polylines(img, pts, false, Scalar(255));
+    int cnt = countNonZero(img);
+    ASSERT_EQ(cnt, 0);
+}
+
+TEST(Core_Drawing, polylines)
+{
+    Mat img(100, 100, CV_8UC1, Scalar(0));
+    vector<Point> pts;
+    pts.push_back(Point(0, 0));
+    pts.push_back(Point(20, 0));
+    polylines(img, pts, false, Scalar(255));
+    int cnt = countNonZero(img);
+    ASSERT_EQ(cnt, 21);
+}
