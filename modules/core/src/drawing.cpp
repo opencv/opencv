@@ -2215,7 +2215,10 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
     {
         Mat p = pts.getMat(manyContours ? i : -1);
         if( p.total() == 0 )
+        {
+            npts[i] = 0;
             continue;
+        }
         CV_Assert(p.checkVector(2, CV_32S) >= 0);
         ptsptr[i] = (Point*)p.data;
         npts[i] = p.rows*p.cols*p.channels()/2;
