@@ -279,7 +279,7 @@ application. It will be capable of accessing camera output, processing it and di
         android:label="@string/app_name"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
     @endcode
--#  Add OpenCV library initialization to your activity. Fix errors by adding requited imports.
+-#  Add OpenCV library initialization to your activity. Fix errors by adding required imports.
     @code{.java}
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -307,7 +307,7 @@ application. It will be capable of accessing camera output, processing it and di
     @endcode
 -#  Defines that your activity implements CvCameraViewListener2 interface and fix activity related
     errors by defining missed methods. For this activity define onCreate, onDestroy and onPause and
-    implement them according code snippet bellow. Fix errors by adding requited imports.
+    implement them according code snippet bellow. Fix errors by adding required imports.
     @code{.java}
     private CameraBridgeViewBase mOpenCvCameraView;
 
