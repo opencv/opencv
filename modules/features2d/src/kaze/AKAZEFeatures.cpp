@@ -812,7 +812,7 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
       }
     }
   }
-  fastAtan2(resY, resX, Ang, ang_size, false);
+  hal::fastAtan2(resY, resX, Ang, ang_size, false);
   // Loop slides pi/3 window around feature point
   for (ang1 = 0; ang1 < (float)(2.0 * CV_PI); ang1 += 0.15f) {
     ang2 = (ang1 + (float)(CV_PI / 3.0) >(float)(2.0*CV_PI) ? ang1 - (float)(5.0*CV_PI / 3.0) : ang1 + (float)(CV_PI / 3.0));

@@ -248,6 +248,25 @@ public:
             writeBlock();
     }
 
+    void jflush(unsigned currval, int bitIdx)
+    {
+        uchar v;
+        uchar* ptr = m_current;
+        currval |= (1 << bitIdx)-1;
+        while( bitIdx < 32 )
+        {
+            v = (uchar)(currval >> 24);
+            *ptr++ = v;
+            if( v == 255 )
+                *ptr++ = 0;
+            currval <<= 8;
+            bitIdx += 8;
+        }
+        m_current = ptr;
+        if( m_current >= m_end )
+            writeBlock();
+    }
+
     static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_size )
     {
         int  i, k;
@@ -1440,7 +1459,7 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
     }
 
     // Flush
-    JPUT_BITS((unsigned)-1, bit_idx & 31);
+    strm.jflush(currval, bit_idx);
     strm.jputShort( 0xFFD9 ); // EOI marker
     /*printf("total dct = %.1fms, total cvt = %.1fms\n",
      total_dct*1000./cv::getTickFrequency(),
