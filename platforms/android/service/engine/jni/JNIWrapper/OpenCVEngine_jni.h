@@ -12,7 +12,7 @@ extern "C" {
  * Method:    Connect
  * Signature: ()Landroid/os/IBinder;
  */
-JNIEXPORT jobject JNICALL Java_org_opencv_engine_BinderConnector_Connect
+JNIEXPORT jobject JNICALL Java_org_opencv_engine3_BinderConnector_Connect
   (JNIEnv *, jobject);
 
 /*
@@ -20,7 +20,7 @@ JNIEXPORT jobject JNICALL Java_org_opencv_engine_BinderConnector_Connect
  * Method:    Init
  * Signature: (Lorg/opencv/engine/MarketConnector;)Z
  */
-JNIEXPORT jboolean JNICALL Java_org_opencv_engine_BinderConnector_Init
+JNIEXPORT jboolean JNICALL Java_org_opencv_engine3_BinderConnector_Init
   (JNIEnv *, jobject, jobject);
 
 /*
@@ -28,7 +28,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_engine_BinderConnector_Init
  * Method:    Final
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_org_opencv_engine_BinderConnector_Final
+JNIEXPORT void JNICALL Java_org_opencv_engine3_BinderConnector_Final
   (JNIEnv *, jobject);
 
 #ifdef __cplusplus

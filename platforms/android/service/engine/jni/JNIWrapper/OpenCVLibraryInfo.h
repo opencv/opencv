@@ -6,19 +6,19 @@
 extern "C" {
 #endif
 
-JNIEXPORT jlong JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_open
+JNIEXPORT jlong JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_open
   (JNIEnv *, jobject, jstring);
 
-JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getPackageName
+JNIEXPORT jstring JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_getPackageName
   (JNIEnv *, jobject, jlong);
 
-JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getLibraryList
+JNIEXPORT jstring JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_getLibraryList
   (JNIEnv *, jobject, jlong);
 
-JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getVersionName
+JNIEXPORT jstring JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_getVersionName
   (JNIEnv *, jobject, jlong);
 
-JNIEXPORT void JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_close
+JNIEXPORT void JNICALL Java_org_opencv_engine3_OpenCVLibraryInfo_close
   (JNIEnv *, jobject, jlong);
 
 #ifdef __cplusplus

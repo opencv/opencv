@@ -49,7 +49,7 @@ namespace {
 template<typename _Tp> static inline bool
 decomposeCholesky(_Tp* A, size_t astep, int m)
 {
-    if (!Cholesky(A, astep, m, 0, 0, 0))
+    if (!hal::Cholesky(A, astep, m, 0, 0, 0))
         return false;
     astep /= sizeof(A[0]);
     for (int i = 0; i < m; ++i)

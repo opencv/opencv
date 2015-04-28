@@ -1,4 +1,4 @@
-package org.opencv.engine;
+package org.opencv.engine3;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -99,7 +99,7 @@ public class MarketConnector
         List<PackageInfo> AllPackages = mContext.getPackageManager().getInstalledPackages(PackageManager.GET_CONFIGURATIONS);
         List<PackageInfo> OpenCVPackages = new ArrayList<PackageInfo>();
         try {
-            OpenCVPackages.add(mContext.getPackageManager().getPackageInfo("org.opencv.engine", PackageManager.GET_CONFIGURATIONS));
+            OpenCVPackages.add(mContext.getPackageManager().getPackageInfo("org.opencv.engine3", PackageManager.GET_CONFIGURATIONS));
         } catch (NameNotFoundException e) {
             Log.e(TAG, "OpenCV Manager package info was not found!");
             e.printStackTrace();

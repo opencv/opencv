@@ -1,15 +1,15 @@
-package org.opencv.engine.manager;
+package org.opencv.engine3.manager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.StringTokenizer;
 
-import org.opencv.engine.HardwareDetector;
-import org.opencv.engine.MarketConnector;
-import org.opencv.engine.OpenCVEngineInterface;
-import org.opencv.engine.OpenCVEngineService;
-import org.opencv.engine.OpenCVLibraryInfo;
-import org.opencv.engine.R;
+import org.opencv.engine3.HardwareDetector;
+import org.opencv.engine3.MarketConnector;
+import org.opencv.engine3.OpenCVEngineInterface;
+import org.opencv.engine3.OpenCVEngineService;
+import org.opencv.engine3.OpenCVLibraryInfo;
+import org.opencv.engine3.R;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -161,7 +161,7 @@ public class ManagerActivity extends Activity
         mUpdateEngineButton.setOnClickListener(new OnClickListener() {
 
             public void onClick(View v) {
-                if (!mMarket.InstallAppFromMarket("org.opencv.engine"))
+                if (!mMarket.InstallAppFromMarket("org.opencv.engine3"))
                 {
                     Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
                     toast.show();
@@ -207,7 +207,7 @@ public class ManagerActivity extends Activity
 
             public void onItemClick(AdapterView<?> adapter, View view, int position, long id) {
                 //if (!mListViewItems.get((int) id).get("Name").equals("Built-in OpenCV library"));
-                if (!mInstalledPackageInfo[(int) id].packageName.equals("org.opencv.engine"))
+                if (!mInstalledPackageInfo[(int) id].packageName.equals("org.opencv.engine3"))
                 {
                     mInstalledPackageView.setTag(Integer.valueOf((int)id));
                     mActionDialog.show();
@@ -221,7 +221,7 @@ public class ManagerActivity extends Activity
             public void onReceive(Context context, Intent intent) {
                 Log.d("OpenCVManager/Receiver", "Broadcast message " + intent.getAction() + " receiver");
                 Log.d("OpenCVManager/Receiver", "Filling package list on broadcast message");
-                if (!bindService(new Intent("org.opencv.engine.BIND"),
+                if (!bindService(new Intent("org.opencv.engine3.BIND"),
                      new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
                 {
                     TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
@@ -350,7 +350,7 @@ public class ManagerActivity extends Activity
                 else
                     NativeLibDir = "/data/data/" + mInstalledPackageInfo[i].packageName + "/lib";
 
-                if (PackageName.equals("org.opencv.engine"))
+                if (PackageName.equals("org.opencv.engine3"))
                 {
                     OpenCVLibraryInfo NativeInfo = new OpenCVLibraryInfo(NativeLibDir);
                     if (NativeInfo.status())

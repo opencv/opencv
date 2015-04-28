@@ -1,4 +1,4 @@
-package org.opencv.engine.manager;
+package org.opencv.engine3.manager;
 
 import java.util.List;
 import java.util.Map;
