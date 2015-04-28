@@ -39,10 +39,13 @@
 //
 //M*/
 
-#ifndef __OPENCV_FT_IMAGEPROCESSING_H__
-#define __OPENCV_FT_IMAGEPROCESSING_H__
+#ifndef __OPENCV_FUZZY_H__
+#define __OPENCV_FUZZY_H__
 
 #include "opencv2/core.hpp"
+
+namespace cv
+{
 
 namespace ft
 {
@@ -55,19 +58,24 @@ namespace ft
     enum
     {
         ONE_STEP = 1,
-        MULTI_STEP = 2
+        MULTI_STEP = 2,
+        ITERATIVE = 3
     };
 
-    CV_EXPORTS void createKernel(cv::InputArray _A, cv::InputArray _B, cv::OutputArray _kernel, const int chn = 1);
-    CV_EXPORTS void createKernel(int function, int radius, cv::OutputArray _kernel, const int chn = 1);
+    CV_EXPORTS void FT02D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components, cv::InputArray mask);
+    CV_EXPORTS void FT02D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components);
+    CV_EXPORTS void FT02D_inverseFT(cv::InputArray components, cv::InputArray kernel, cv::OutputArray output, int width, int height, int type);
+    CV_EXPORTS void FT02D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask);
 
-    CV_EXPORTS void FT02D_components(cv::InputArray _matrix, cv::InputArray _kernel, cv::OutputArray _components, cv::InputArray _mask);
-    CV_EXPORTS void FT02D_components(cv::InputArray _matrix, cv::InputArray _kernel, cv::OutputArray _components);
-    CV_EXPORTS void FT02D_inverseFT(cv::InputArray _components, cv::InputArray _kernel, cv::OutputArray _output, int width, int height, int type);
-    CV_EXPORTS int FT02D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask);
+    CV_EXPORTS int FT02D_check(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask, cv::Mat &outputMask, bool firstStop = false);
+
+    CV_EXPORTS void createKernel(cv::InputArray A, cv::InputArray B, cv::OutputArray kernel, const int chn = 1);
+    CV_EXPORTS void createKernel(int function, int radius, cv::OutputArray kernel, const int chn = 1);
 
     CV_EXPORTS void inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius = 2, int function = ft::LINEAR, int algorithm = ft::ONE_STEP);
     CV_EXPORTS void filter(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output);
 }
 
-#endif // __OPENCV_FT_IMAGEPROCESSING_H__
+}
+
+#endif // __OPENCV_FUZZY_H__
