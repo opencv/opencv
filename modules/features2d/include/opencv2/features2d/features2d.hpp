@@ -879,7 +879,7 @@ CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const v
 /*
  * OpponentColorDescriptorExtractor
  *
- * Adapts a descriptor extractor to compute descripors in Opponent Color Space
+ * Adapts a descriptor extractor to compute descriptors in Opponent Color Space
  * (refer to van de Sande et al., CGIV 2008 "Color Descriptors for Object Category Recognition").
  * Input RGB image is transformed in Opponent Color Space. Then unadapted descriptor extractor
  * (set in constructor) computes descriptors on each of the three channel and concatenate

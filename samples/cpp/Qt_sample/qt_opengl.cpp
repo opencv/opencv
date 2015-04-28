@@ -13,6 +13,9 @@
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
 #else
+#if defined _MSC_VER && _MSC_VER >= 1600
+#include <windows.h>
+#endif
 #include <GL/gl.h>
 #endif
 
