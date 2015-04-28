@@ -651,7 +651,7 @@ icvGrowSeq( CvSeq *seq, int in_front_of )
         /* If there is a free space just after last allocated block
            and it is big enough then enlarge the last block.
            This can happen only if the new block is added to the end of sequence: */
-        if( (unsigned)(ICV_FREE_PTR(storage) - seq->block_max) < CV_STRUCT_ALIGN &&
+        if( (size_t)(ICV_FREE_PTR(storage) - seq->block_max) < CV_STRUCT_ALIGN &&
             storage->free_space >= seq->elem_size && !in_front_of )
         {
             int delta = storage->free_space / elem_size;

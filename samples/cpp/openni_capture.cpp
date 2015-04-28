@@ -13,14 +13,14 @@ static void help()
                         "The user gets some of the supported output images.\n"
             "\nAll supported output map types:\n"
             "1.) Data given from depth generator\n"
-            "   CV_CAP_OPENNI_DEPTH_MAP            - depth values in mm (CV_16UC1)\n"
-            "   CV_CAP_OPENNI_POINT_CLOUD_MAP      - XYZ in meters (CV_32FC3)\n"
-            "   CV_CAP_OPENNI_DISPARITY_MAP        - disparity in pixels (CV_8UC1)\n"
-            "   CV_CAP_OPENNI_DISPARITY_MAP_32F    - disparity in pixels (CV_32FC1)\n"
-            "   CV_CAP_OPENNI_VALID_DEPTH_MASK     - mask of valid pixels (not ocluded, not shaded etc.) (CV_8UC1)\n"
+            "   CAP_OPENNI_DEPTH_MAP            - depth values in mm (CV_16UC1)\n"
+            "   CAP_OPENNI_POINT_CLOUD_MAP      - XYZ in meters (CV_32FC3)\n"
+            "   CAP_OPENNI_DISPARITY_MAP        - disparity in pixels (CV_8UC1)\n"
+            "   CAP_OPENNI_DISPARITY_MAP_32F    - disparity in pixels (CV_32FC1)\n"
+            "   CAP_OPENNI_VALID_DEPTH_MASK     - mask of valid pixels (not ocluded, not shaded etc.) (CV_8UC1)\n"
             "2.) Data given from RGB image generator\n"
-            "   CV_CAP_OPENNI_BGR_IMAGE            - color image (CV_8UC3)\n"
-            "   CV_CAP_OPENNI_GRAY_IMAGE           - gray image (CV_8UC1)\n"
+            "   CAP_OPENNI_BGR_IMAGE            - color image (CV_8UC3)\n"
+            "   CAP_OPENNI_GRAY_IMAGE           - gray image (CV_8UC1)\n"
          << endl;
 }
 
@@ -89,8 +89,8 @@ static void printCommandLineParams()
 {
     cout << "-cd       Colorized disparity? (0 or 1; 1 by default) Ignored if disparity map is not selected to show." << endl;
     cout << "-fmd      Fixed max disparity? (0 or 1; 0 by default) Ignored if disparity map is not colorized (-cd 0)." << endl;
-    cout << "-mode     image mode: resolution and fps, supported three values:  0 - CV_CAP_OPENNI_VGA_30HZ, 1 - CV_CAP_OPENNI_SXGA_15HZ," << endl;
-    cout << "          2 - CV_CAP_OPENNI_SXGA_30HZ (0 by default). Ignored if rgb image or gray image are not selected to show." << endl;
+    cout << "-mode     image mode: resolution and fps, supported three values:  0 - CAP_OPENNI_VGA_30HZ, 1 - CAP_OPENNI_SXGA_15HZ," << endl;
+    cout << "          2 - CAP_OPENNI_SXGA_30HZ (0 by default). Ignored if rgb image or gray image are not selected to show." << endl;
     cout << "-m        Mask to set which output images are need. It is a string of size 5. Each element of this is '0' or '1' and" << endl;
     cout << "          determine: is depth map, disparity map, valid pixels mask, rgb image, gray image need or not (correspondently)?" << endl ;
     cout << "          By default -m 01010 i.e. disparity map and rgb image will be shown." << endl ;
