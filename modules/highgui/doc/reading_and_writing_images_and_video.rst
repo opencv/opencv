@@ -193,8 +193,8 @@ VideoCapture
 ------------
 .. ocv:class:: VideoCapture
 
-Class for video capturing from video files or cameras.
-The class provides C++ API for capturing video from cameras or for reading video files. Here is how the class can be used: ::
+Class for video capturing from video files, image sequences or cameras.
+The class provides C++ API for capturing video from cameras or for reading video files and image sequences. Here is how the class can be used: ::
 
     #include "opencv2/opencv.hpp"
 
