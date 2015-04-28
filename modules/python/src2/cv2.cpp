@@ -226,7 +226,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 
     if( PyInt_Check(o) )
     {
-        double v[] = {(double)PyInt_AsLong((PyObject*)o), 0., 0., 0.};
+        double v[] = {static_cast<double>(PyInt_AsLong((PyObject*)o)), 0., 0., 0.};
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
