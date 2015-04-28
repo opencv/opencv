@@ -12,7 +12,7 @@
 //
 // Copyright (C) 2015, Smart Engines Ltd, all rights reserved.
 // Copyright (C) 2015, Institute for Information Transmission Problems of the Russian Academy of Sciences (Kharkevich Institute), all rights reserved.
-// Copyright (C) 2015, Dmitry Nikolaev, Simon Karpenko, Michail Aliev, Elena "Erik Yorsh" Kuznetsova, all rights reserved.
+// Copyright (C) 2015, Dmitry Nikolaev, Simon Karpenko, Michail Aliev, Elena Kuznetsova, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,

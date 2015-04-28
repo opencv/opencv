@@ -12,7 +12,7 @@
 //
 // Copyright (C) 2015, Smart Engines Ltd, all rights reserved.
 // Copyright (C) 2015, Institute for Information Transmission Problems of the Russian Academy of Sciences (Kharkevich Institute), all rights reserved.
-// Copyright (C) 2015, Dmitry Nikolaev, Simon Karpenko, Michail Aliev, Elena "Erik Yorsh" Kuznetsova, all rights reserved.
+// Copyright (C) 2015, Dmitry Nikolaev, Simon Karpenko, Michail Aliev, Elena Kuznetsova, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -244,11 +244,11 @@ void fhtVo(Mat    &img0,
     }
 }
 
-void fhtVo(Mat    &img0,
-           Mat    &img1,
-           bool    isPositiveShift,
-           int     operation,
-           double  aspl)
+static void fhtVo(Mat    &img0,
+                  Mat    &img1,
+                  bool    isPositiveShift,
+                  int     operation,
+                  double  aspl)
 {
     int const depth = img0.depth();
     switch (depth)
@@ -352,10 +352,10 @@ static void calculateFHTQuadrant(Mat       &dst,
   FHT(dst, src, operation, bVert, bClock, aspl);
 }
 
-void createDstFhtMat(OutputArray dst,
-                     InputArray  src,
-                     int         depth,
-                     int         angleRange)
+static void createDstFhtMat(OutputArray dst,
+                            InputArray  src,
+                            int         depth,
+                            int         angleRange)
 {
     int const rows = src.size().height;
     int const cols = src.size().width;
@@ -854,7 +854,9 @@ void HoughPoint2Line(OutputArray  line,
     getRawPoint(rawPoint, quad, houghPoint, srcImgInfo, angleRange, makeSkew);
     bool ret = checkRawPoint(rawPoint, quad, srcImgInfo);
     if (!(rules & RO_IGNORE_BORDERS))
+    {
         CV_Assert(ret);
+    }
 
     LineSegment dstLine(Point(0, 0), Point(0, 0));
     switch (quad)

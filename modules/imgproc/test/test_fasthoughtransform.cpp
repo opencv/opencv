@@ -12,7 +12,7 @@
 //
 // Copyright (C) 2015, Smart Engines Ltd, all rights reserved.
 // Copyright (C) 2015, Institute for Information Transmission Problems of the Russian Academy of Sciences (Kharkevich Institute), all rights reserved.
-// Copyright (C) 2015, Dmitry Nikolaev, Simon Karpenko, Michail Aliev, Elena "Erik Yorsh" Kuznetsova, all rights reserved.
+// Copyright (C) 2015, Dmitry Nikolaev, Simon Karpenko, Michail Aliev, Elena Kuznetsova, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -95,6 +95,16 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 //  random utils
+template <typename T> struct Epsilon {
+    T operator()() { return saturate_cast<T>(1); }
+};
+template <> struct Epsilon<float> {
+    float operator()() { return 1e-3; }
+};
+template <> struct Epsilon<double> {
+    double operator()() { return 1e-6; }
+};
+
 template <typename T> struct Rand {
     T operator ()(T const &min_value, T const &max_value) {
         RNG& rng = cvtest::TS::ptr()->get_rng();
@@ -152,16 +162,6 @@ template <> struct MaxValue<float> {
 };
 template <> struct MaxValue<double> {
     double operator()() { return 10000.; }
-};
-
-template <typename T> struct Epsilon {
-    T operator()() { return saturate_cast<T>(1); }
-};
-template <> struct Epsilon<float> {
-    float operator()() { return 1e-3; }
-};
-template <> struct Epsilon<double> {
-    double operator()() { return 1e-6; }
 };
 
 template <typename T> struct Typ {
