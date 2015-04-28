@@ -438,9 +438,9 @@ static int countViolations(const cv::Mat& expected, const cv::Mat& actual, const
 
     if (v > 0 && max_violation != 0 && max_allowed != 0)
     {
-        int loc[10];
+        int loc[10] = {0};
         cv::minMaxIdx(maximum, 0, max_allowed, 0, loc, mask);
-        *max_violation = diff64f.at<double>(loc[1], loc[0]);
+        *max_violation = diff64f.at<double>(loc[0], loc[1]);
     }
 
     return v;
