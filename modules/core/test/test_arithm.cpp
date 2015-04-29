@@ -1791,3 +1791,13 @@ INSTANTIATE_TEST_CASE_P(Arithm, SubtractOutputMatNotEmpty, testing::Combine(
     testing::Values(perf::MatType(CV_8UC1), CV_8UC3, CV_8UC4, CV_16SC1, CV_16SC3),
     testing::Values(-1, CV_16S, CV_32S, CV_32F),
     testing::Bool()));
+
+
+TEST(Core_FindNonZero, singular)
+{
+    Mat img(10, 10, CV_8U, Scalar::all(0));
+    vector<Point> pts, pts2(10);
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
+}
