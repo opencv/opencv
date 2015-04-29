@@ -49,11 +49,12 @@ void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray comp
     Mat kernelMat = kernel.getMat();
     Mat maskMat = mask.getMat();
 
+    CV_Assert(matrixMat.channels() == 1 && kernelMat.channels() == 1 && maskMat.channels() == 1);
+
     int radiusX = (kernelMat.cols - 1) / 2;
     int radiusY = (kernelMat.rows - 1) / 2;
     int An = matrixMat.cols / radiusX + 1;
     int Bn = matrixMat.rows / radiusY + 1;
-    int type = matrixMat.type();
 
     Mat matrixPadded;
     Mat maskPadded;
@@ -61,7 +62,7 @@ void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray comp
     copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
     copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
 
-    components.create(Bn, An, type);
+    components.create(Bn, An, CV_32F);
     Mat componentsMat = components.getMat();
 
     for (int i = 0; i < An; i++)
@@ -79,10 +80,8 @@ void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray comp
             kernelMat.copyTo(kernelMasked, roiMask);
 
             Mat numerator = roiImage.mul(kernelMasked);
-            Scalar component;
-            divide(sum(numerator), sum(kernelMasked), component);
 
-            componentsMat.row(o).col(i) = component;
+            componentsMat.row(o).col(i) = sum(numerator) / sum(kernelMasked);
         }
     }
 }
@@ -94,21 +93,21 @@ void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray comp
     ft::FT02D_components(matrix, kernel, components, mask);
 }
 
-void ft::FT02D_inverseFT(InputArray components, InputArray kernel, OutputArray output, int width, int height, int type)
+void ft::FT02D_inverseFT(InputArray components, InputArray kernel, OutputArray output, int width, int height)
 {
-    // Only for 1chn yet because of the float!
-
     Mat componentsMat = components.getMat();
     Mat kernelMat = kernel.getMat();
+
+    CV_Assert(componentsMat.channels() == 1 && kernelMat.channels() == 1);
 
     int radiusX = (kernelMat.cols - 1) / 2;
     int radiusY = (kernelMat.rows - 1) / 2;
     int paddedOutputWidth = radiusX + width + kernelMat.cols;
     int paddedOutputHeight = radiusY + height + kernelMat.rows;
 
-    output.create(height, width, type);
+    output.create(height, width, CV_32F);
 
-    Mat outputZeroes(paddedOutputHeight, paddedOutputWidth, type, Scalar(0));
+    Mat outputZeroes(paddedOutputHeight, paddedOutputWidth, CV_32F, Scalar(0));
 
     for (int i = 0; i < componentsMat.cols; i++)
     {
@@ -119,9 +118,7 @@ void ft::FT02D_inverseFT(InputArray components, InputArray kernel, OutputArray o
             Rect area(centerX - radiusX, centerY - radiusY, kernelMat.cols, kernelMat.rows);
 
             Mat roiOutput(outputZeroes, area);
-            float value = componentsMat.at<float>(o,i);
-
-            add(roiOutput, kernelMat.mul(value), roiOutput);
+            roiOutput += kernelMat.mul(componentsMat.at<float>(o,i));
         }
     }
 
@@ -130,6 +127,8 @@ void ft::FT02D_inverseFT(InputArray components, InputArray kernel, OutputArray o
 
 void ft::FT02D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask)
 {
+    CV_Assert(image.channels() == kernel.channels());
+
     int radiusX = (kernel.cols - 1) / 2;
     int radiusY = (kernel.rows - 1) / 2;
     int An = image.cols / radiusX + 1;
@@ -175,6 +174,8 @@ void ft::FT02D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &out
 
 int ft::FT02D_check(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask, cv::Mat &outputMask, bool firstStop)
 {
+    CV_Assert(image.channels() == kernel.channels());
+
     int radiusX = (kernel.cols - 1) / 2;
     int radiusY = (kernel.rows - 1) / 2;
     int An = image.cols / radiusX + 1;
