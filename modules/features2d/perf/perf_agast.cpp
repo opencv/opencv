@@ -30,7 +30,7 @@ PERF_TEST_P(agast, detect, testing::Combine(
 
     declare.in(frame);
 
-    Ptr<FeatureDetector> fd = AgastFeatureDetector::create(20, true, type);
+    Ptr<FeatureDetector> fd = AgastFeatureDetector::create(70, true, type);
     ASSERT_FALSE( fd.empty() );
     vector<KeyPoint> points;
 
