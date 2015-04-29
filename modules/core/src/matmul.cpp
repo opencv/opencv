@@ -1195,7 +1195,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
     GEMMBlockMulFunc blockMulFunc;
     GEMMStoreFunc storeFunc;
     Mat *matD = &D, tmat;
-    int tmat_size = 0;
+    size_t tmat_size = 0;
     const uchar* Cdata = C.data;
     size_t Cstep = C.data ? (size_t)C.step : 0;
     AutoBuffer<uchar> buf;
@@ -1228,7 +1228,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 
     if( D.data == A.data || D.data == B.data )
     {
-        tmat_size = d_size.width*d_size.height*CV_ELEM_SIZE(type);
+        tmat_size = (size_t)d_size.width*d_size.height*CV_ELEM_SIZE(type);
         // Allocate tmat later, once the size of buf is known
         matD = &tmat;
     }
@@ -1319,7 +1319,7 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
         int is_b_t = flags & GEMM_2_T;
         int elem_size = CV_ELEM_SIZE(type);
         int dk0_1, dk0_2;
-        int a_buf_size = 0, b_buf_size, d_buf_size;
+        size_t a_buf_size = 0, b_buf_size, d_buf_size;
         uchar* a_buf = 0;
         uchar* b_buf = 0;
         uchar* d_buf = 0;
@@ -1360,12 +1360,12 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
             dn0 = block_size / dk0;
 
         dk0_1 = (dn0+dn0/8+2) & -2;
-        b_buf_size = (dk0+dk0/8+1)*dk0_1*elem_size;
-        d_buf_size = (dk0+dk0/8+1)*dk0_1*work_elem_size;
+        b_buf_size = (size_t)(dk0+dk0/8+1)*dk0_1*elem_size;
+        d_buf_size = (size_t)(dk0+dk0/8+1)*dk0_1*work_elem_size;
 
         if( is_a_t )
         {
-            a_buf_size = (dm0+dm0/8+1)*((dk0+dk0/8+2)&-2)*elem_size;
+            a_buf_size = (size_t)(dm0+dm0/8+1)*((dk0+dk0/8+2)&-2)*elem_size;
             flags &= ~GEMM_1_T;
         }
 
