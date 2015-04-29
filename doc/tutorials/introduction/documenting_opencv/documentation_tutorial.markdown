@@ -415,7 +415,8 @@ you can manually specify it in curly braces:
 
 To include whole example file into documentation, _include_ and _includelineno_ commands are used.
 The file is searched in common samples locations, so you can specify just its name or short part of
-the path. The _includelineno_ version also shows line numbers.
+the path. The _includelineno_ version also shows line numbers but prevents copy-pasting since
+the line numbers are included.
 
 @verbatim
 @include samples/cpp/test.cpp

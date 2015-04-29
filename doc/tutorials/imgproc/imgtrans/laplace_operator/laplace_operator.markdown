@@ -52,7 +52,7 @@ Code
 
 -#  The tutorial code's is shown lines below. You can also download it from
     [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp)
-    @includelineno samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp
+    @include samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp
 
 Explanation
 -----------

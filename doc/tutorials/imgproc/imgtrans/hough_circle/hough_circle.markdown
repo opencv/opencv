@@ -42,7 +42,7 @@ Code
 -#  The sample code that we will explain can be downloaded from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/houghcircles.cpp).
     A slightly fancier version (which shows trackbars for
     changing the threshold values) can be found [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp).
-    @includelineno samples/cpp/houghcircles.cpp
+    @include samples/cpp/houghcircles.cpp
 
 Explanation
 -----------

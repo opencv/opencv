@@ -15,7 +15,7 @@ Code
 ----
 
 You can download the code from [here ](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/viz/launching_viz.cpp).
-@includelineno samples/cpp/tutorial_code/viz/launching_viz.cpp
+@include samples/cpp/tutorial_code/viz/launching_viz.cpp
 
 Explanation
 -----------

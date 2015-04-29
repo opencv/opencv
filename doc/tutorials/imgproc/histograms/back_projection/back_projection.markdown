@@ -80,7 +80,7 @@ Code
         in samples.
 
 -   **Code at glance:**
-@includelineno samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp
+@include samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp
 
 Explanation
 -----------

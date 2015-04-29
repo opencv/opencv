@@ -28,7 +28,7 @@ of the bay rise 10, 50, and 100 meters.
 Code
 ----
 
-@includelineno cpp/tutorial_code/HighGUI/GDAL_IO/gdal-image.cpp
+@include cpp/tutorial_code/HighGUI/GDAL_IO/gdal-image.cpp
 
 How to Read Raster Data using GDAL
 ----------------------------------

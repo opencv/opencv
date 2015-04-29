@@ -193,7 +193,7 @@ Now to try this out download our little test [source code
 or get it from the sample code folder of the OpenCV sources. Add this to your project and build it.
 Here's its content:
 
-@includelineno cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp
+@include cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp
 
 You can start a Visual Studio build from two places. Either inside from the *IDE* (keyboard
 combination: Control-F5) or by navigating to your build directory and start the application with a
