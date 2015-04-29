@@ -527,7 +527,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
                         At[i*astep + k] = t;
                         asum += std::abs(t);
                     }
-                    asum = asum ? 1/asum : 0;
+                    asum = asum > eps*100 ? 1/asum : 0;
                     for( k = 0; k < m; k++ )
                         At[i*astep + k] *= asum;
                 }
