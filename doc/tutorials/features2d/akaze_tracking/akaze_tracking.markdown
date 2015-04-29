@@ -36,7 +36,7 @@ To run the code you have to specify input and output video path and object bound
 Source Code
 -----------
 
-@includelineno cpp/tutorial_code/features2D/AKAZE_tracking/planar_tracking.cpp
+@include cpp/tutorial_code/features2D/AKAZE_tracking/planar_tracking.cpp
 
 Explanation
 -----------

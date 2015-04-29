@@ -98,7 +98,7 @@ Code
 -#  The sample code that we will explain can be downloaded from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/houghlines.cpp). A slightly fancier version
     (which shows both Hough standard and probabilistic with trackbars for changing the threshold
     values) can be found [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
-    @includelineno samples/cpp/houghlines.cpp
+    @include samples/cpp/houghlines.cpp
 
 Explanation
 -----------

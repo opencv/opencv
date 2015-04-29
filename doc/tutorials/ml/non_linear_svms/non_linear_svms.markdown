@@ -89,7 +89,7 @@ Source Code
 You may also find the source code in `samples/cpp/tutorial_code/ml/non_linear_svms` folder of the OpenCV source library or
 [download it from here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp).
 
-@includelineno cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp
+@include cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp
 
 Explanation
 -----------
