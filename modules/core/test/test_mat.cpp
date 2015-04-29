@@ -1209,3 +1209,17 @@ TEST(Core_Mat, copyNx1ToVector)
 
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
 }
+
+TEST(Core_SVD, orthogonality)
+{
+    for( int i = 0; i < 2; i++ )
+    {
+        int type = i == 0 ? CV_32F : CV_64F;
+        Mat mat_D(2, 2, type);
+        mat_D.setTo(88.);
+        Mat mat_U, mat_W;
+        SVD::compute(mat_D, mat_W, mat_U, noArray(), SVD::FULL_UV);
+        mat_U *= mat_U.t();
+        ASSERT_LT(norm(mat_U, Mat::eye(2, 2, type), NORM_INF), 1e-5);
+    }
+}
