@@ -1154,6 +1154,21 @@ Mat _InputArray::getMat_(int i) const
         return !v.empty() ? Mat(size(), t, (void*)&v[0]) : Mat();
     }
 
+    if( k == STD_BOOL_VECTOR )
+    {
+        CV_Assert( i < 0 );
+        int t = CV_8U;
+        const std::vector<bool>& v = *(const std::vector<bool>*)obj;
+        int j, n = (int)v.size();
+        if( n == 0 )
+            return Mat();
+        Mat m(1, n, t);
+        uchar* dst = m.data;
+        for( j = 0; j < n; j++ )
+            dst[j] = (uchar)v[j];
+        return m;
+    }
+
     if( k == NONE )
         return Mat();
 
@@ -1481,6 +1496,13 @@ Size _InputArray::size(int i) const
         return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
     }
 
+    if( k == STD_BOOL_VECTOR )
+    {
+        CV_Assert( i < 0 );
+        const std::vector<bool>& v = *(const std::vector<bool>*)obj;
+        return Size((int)v.size(), 1);
+    }
+
     if( k == NONE )
         return Size();
 
@@ -1661,7 +1683,7 @@ int _InputArray::dims(int i) const
         return 2;
     }
 
-    if( k == STD_VECTOR )
+    if( k == STD_VECTOR || k == STD_BOOL_VECTOR )
     {
         CV_Assert( i < 0 );
         return 2;
@@ -1773,7 +1795,7 @@ int _InputArray::type(int i) const
     if( k == EXPR )
         return ((const MatExpr*)obj)->type();
 
-    if( k == MATX || k == STD_VECTOR || k == STD_VECTOR_VECTOR )
+    if( k == MATX || k == STD_VECTOR || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return CV_MAT_TYPE(flags);
 
     if( k == NONE )
@@ -1848,6 +1870,12 @@ bool _InputArray::empty() const
         return v.empty();
     }
 
+    if( k == STD_BOOL_VECTOR )
+    {
+        const std::vector<bool>& v = *(const std::vector<bool>*)obj;
+        return v.empty();
+    }
+
     if( k == NONE )
         return true;
 
@@ -1892,7 +1920,8 @@ bool _InputArray::isContinuous(int i) const
     if( k == UMAT )
         return i < 0 ? ((const UMat*)obj)->isContinuous() : true;
 
-    if( k == EXPR || k == MATX || k == STD_VECTOR || k == NONE || k == STD_VECTOR_VECTOR)
+    if( k == EXPR || k == MATX || k == STD_VECTOR ||
+        k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return true;
 
     if( k == STD_VECTOR_MAT )
@@ -1923,7 +1952,8 @@ bool _InputArray::isSubmatrix(int i) const
     if( k == UMAT )
         return i < 0 ? ((const UMat*)obj)->isSubmatrix() : false;
 
-    if( k == EXPR || k == MATX || k == STD_VECTOR || k == NONE || k == STD_VECTOR_VECTOR)
+    if( k == EXPR || k == MATX || k == STD_VECTOR ||
+        k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return false;
 
     if( k == STD_VECTOR_MAT )
@@ -1961,7 +1991,8 @@ size_t _InputArray::offset(int i) const
         return ((const UMat*)obj)->offset;
     }
 
-    if( k == EXPR || k == MATX || k == STD_VECTOR || k == NONE || k == STD_VECTOR_VECTOR)
+    if( k == EXPR || k == MATX || k == STD_VECTOR ||
+        k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return 0;
 
     if( k == STD_VECTOR_MAT )
@@ -2008,7 +2039,8 @@ size_t _InputArray::step(int i) const
         return ((const UMat*)obj)->step;
     }
 
-    if( k == EXPR || k == MATX || k == STD_VECTOR || k == NONE || k == STD_VECTOR_VECTOR)
+    if( k == EXPR || k == MATX || k == STD_VECTOR ||
+        k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return 0;
 
     if( k == STD_VECTOR_MAT )
@@ -2043,7 +2075,7 @@ void _InputArray::copyTo(const _OutputArray& arr) const
 
     if( k == NONE )
         arr.release();
-    else if( k == MAT || k == MATX || k == STD_VECTOR )
+    else if( k == MAT || k == MATX || k == STD_VECTOR || k == STD_BOOL_VECTOR )
     {
         Mat m = getMat();
         m.copyTo(arr);
@@ -2068,7 +2100,7 @@ void _InputArray::copyTo(const _OutputArray& arr, const _InputArray & mask) cons
 
     if( k == NONE )
         arr.release();
-    else if( k == MAT || k == MATX || k == STD_VECTOR )
+    else if( k == MAT || k == MATX || k == STD_VECTOR || k == STD_BOOL_VECTOR )
     {
         Mat m = getMat();
         m.copyTo(arr, mask);

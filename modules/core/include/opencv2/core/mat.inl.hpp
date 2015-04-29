@@ -77,6 +77,10 @@ template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<_Tp>& vec)
 { init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_READ, &vec); }
 
+inline
+_InputArray::_InputArray(const std::vector<bool>& vec)
+{ init(FIXED_TYPE + STD_BOOL_VECTOR + DataType<bool>::type + ACCESS_READ, &vec); }
+
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_READ, &vec); }
@@ -139,6 +143,10 @@ inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<_Tp>& vec)
 { init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
+
+inline
+_OutputArray::_OutputArray(std::vector<bool>&)
+{ CV_Error(Error::StsUnsupportedFormat, "std::vector<bool> cannot be an output array\n"); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<std::vector<_Tp> >& vec)
@@ -226,6 +234,9 @@ inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(STD_V
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
 { init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_RW, &vec); }
+
+inline _InputOutputArray::_InputOutputArray(std::vector<bool>&)
+{ CV_Error(Error::StsUnsupportedFormat, "std::vector<bool> cannot be an input/output array\n"); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<std::vector<_Tp> >& vec)

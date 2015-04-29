@@ -1801,3 +1801,18 @@ TEST(Core_FindNonZero, singular)
     findNonZero(img, pts2);
     ASSERT_TRUE(pts.empty() && pts2.empty());
 }
+
+TEST(Core_BoolVector, support)
+{
+    std::vector<bool> test;
+    int i, n = 205;
+    int nz = 0;
+    test.resize(n);
+    for( i = 0; i < n; i++ )
+    {
+        test[i] = theRNG().uniform(0, 2) != 0;
+        nz += (int)test[i];
+    }
+    ASSERT_EQ( nz, countNonZero(test) );
+    ASSERT_FLOAT_EQ((float)nz/n, (float)(mean(test)[0]));
+}
