@@ -445,7 +445,7 @@ public:
         THRESHOLD = 10000, NONMAX_SUPPRESSION = 10001,
     };
 
-    CV_WRAP static Ptr<AgastFeatureDetector> create( int threshold=10,
+    CV_WRAP static Ptr<AgastFeatureDetector> create( int threshold=40,
                                                      bool nonmaxSuppression=true,
                                                      int type=AgastFeatureDetector::OAST_9_16 );
 
