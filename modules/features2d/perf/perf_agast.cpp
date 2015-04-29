@@ -6,8 +6,10 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-CV_ENUM(AgastType, AgastFeatureDetector::AGAST_5_8, AgastFeatureDetector::AGAST_7_12d,
-                   AgastFeatureDetector::AGAST_7_12s, AgastFeatureDetector::OAST_9_16)
+enum { AGAST_5_8 = AgastFeatureDetector::AGAST_5_8, AGAST_7_12d = AgastFeatureDetector::AGAST_7_12d,
+       AGAST_7_12s = AgastFeatureDetector::AGAST_7_12s, OAST_9_16 = AgastFeatureDetector::OAST_9_16 };
+CV_ENUM(AgastType, AGAST_5_8, AGAST_7_12d,
+                   AGAST_7_12s, OAST_9_16)
 
 typedef std::tr1::tuple<string, AgastType> File_Type_t;
 typedef perf::TestBaseWithParam<File_Type_t> agast;
