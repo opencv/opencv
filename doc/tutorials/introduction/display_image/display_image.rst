@@ -68,7 +68,7 @@ Now we call the :imread:`imread <>` function which loads the image name specifie
 
    + CV_LOAD_IMAGE_UNCHANGED (<0) loads the image as is (including the alpha channel if present)
    + CV_LOAD_IMAGE_GRAYSCALE ( 0) loads the image as an intensity one
-   + CV_LOAD_IMAGE_COLOR     (>0) loads the image in the RGB format
+   + CV_LOAD_IMAGE_COLOR     (>0) loads the image in the BGR format
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp

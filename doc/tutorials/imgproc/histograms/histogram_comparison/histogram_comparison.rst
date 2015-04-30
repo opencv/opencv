@@ -93,7 +93,7 @@ Code
 Explanation
 ===========
 
-#. Declare variables such as the matrices to store the base image and the two other images to compare ( RGB and HSV )
+#. Declare variables such as the matrices to store the base image and the two other images to compare ( BGR and HSV )
 
    .. code-block:: cpp
 

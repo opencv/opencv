@@ -88,7 +88,7 @@ Code
      GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
 
      /// Convert the image to grayscale
-     cvtColor( src, src_gray, CV_RGB2GRAY );
+     cvtColor( src, src_gray, CV_BGR2GRAY );
 
      /// Create window
      namedWindow( window_name, CV_WINDOW_AUTOSIZE );
@@ -141,7 +141,7 @@ Explanation
 
    .. code-block:: cpp
 
-      cvtColor( src, src_gray, CV_RGB2GRAY );
+      cvtColor( src, src_gray, CV_BGR2GRAY );
 
 #. Apply the Laplacian operator to the grayscale image:
 
