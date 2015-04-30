@@ -76,12 +76,12 @@ There are, however, many other color systems each with their own advantages:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * RGB is the most common as our eyes use something similar, our display systems also compose colors using these.
+   * RGB is the most common as our eyes use something similar, but keep in mind that the OpenCV display system uses BGR colors.
    * The HSV and HLS decompose colors into their hue, saturation and value/luminance components, which is a more natural way for us to describe colors.  You might, for example, dismiss the value component, making your algorithm less sensitive to the light conditions of the input image.
    * YCrCb is used by the popular JPEG image format.
    * CIE L*a*b* is a perceptually uniform color space, which comes handy if you need to measure the *distance* of a given color to another color.
 
-Each of the color components has its own valid domains. This brings us to the data type used: how we store a component defines the control we have over its domain. The smallest data type possible is *char*, which means one byte or 8 bits. This may be unsigned (so can store values from 0 to 255) or signed (values from -127 to +127). Although in the case of three components (such as RGB) this already gives 16 million representable colors. We may acquire an even finer control by using the float (4 byte = 32 bit) or double (8 byte = 64 bit) data types for each component. Nevertheless, remember that increasing the size of a component also increases the size of the whole picture in the memory.
+Each of the color components has its own valid domains. This brings us to the data type used: how we store a component defines the control we have over its domain. The smallest data type possible is *char*, which means one byte or 8 bits. This may be unsigned (so can store values from 0 to 255) or signed (values from -127 to +127). Although in the case of three components (such as BGR) this already gives 16 million representable colors. We may acquire an even finer control by using the float (4 byte = 32 bit) or double (8 byte = 64 bit) data types for each component. Nevertheless, remember that increasing the size of a component also increases the size of the whole picture in the memory.
 
 Creating a *Mat* object explicitly
 ==================================
