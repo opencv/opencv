@@ -271,6 +271,7 @@ OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                
 OCV_OPTION(ANDROID_EXAMPLES_WITH_LIBS "Build binaries of Android examples with native libraries" OFF  IF ANDROID )
 OCV_OPTION(ENABLE_IMPL_COLLECTION     "Collect implementation data on function call"             OFF )
 OCV_OPTION(GENERATE_ABI_DESCRIPTOR    "Generate XML file for abi_compliance_checker tool" OFF IF UNIX)
+OCV_OPTION(ENABLE_CTEST               "Enable CTest-based testing"                               OFF )
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
@@ -1200,3 +1201,11 @@ endif()
 # ----------------------------------------------------------------------------
 
 include(cmake/OpenCVPackaging.cmake)
+
+# ----------------------------------------------------------------------------
+# CTest
+# ----------------------------------------------------------------------------
+
+if(ENABLE_CTEST)
+  add_subdirectory(ctest)
+endif()
