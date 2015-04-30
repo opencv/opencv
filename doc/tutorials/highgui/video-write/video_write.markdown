@@ -12,7 +12,7 @@ class, designed for this.
 -   What type of video files you can create with OpenCV
 -   How to extract a given color channel from a video
 
-As a simple demonstration I'll just extract one of the RGB color channels of an input video file
+As a simple demonstration I'll just extract one of the BGR color channels of an input video file
 into a new video. You can control the flow of the application from its console line arguments:
 
 -   The first argument points to the video file to work on
@@ -134,7 +134,7 @@ the object with success you can send the frames of the video in a sequential ord
 outputVideo.write(res);  //or
 outputVideo << res;
 @endcode
-Extracting a color channel from an RGB image means to set to zero the RGB values of the other
+Extracting a color channel from an BGR image means to set to zero the BGR values of the other
 channels. You can either do this with image scanning operations or by using the split and merge
 operations. You first split the channels up into different images, set the other channels to zero
 images of the same size and type and finally merge them back:

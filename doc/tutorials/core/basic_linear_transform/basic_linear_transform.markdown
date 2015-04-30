@@ -122,8 +122,8 @@ Explanation
     *image.size()* and *image.type()*
 
 -#  Now, to perform the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ we will access to each
-    pixel in image. Since we are operating with RGB images, we will have three values per pixel (R,
-    G and B), so we will also access them separately. Here is the piece of code:
+    pixel in image. Since we are operating with BGR images, we will have three values per pixel (B,
+    G and R), so we will also access them separately. Here is the piece of code:
     @code{.cpp}
     for( int y = 0; y < image.rows; y++ ) {
         for( int x = 0; x < image.cols; x++ ) {
