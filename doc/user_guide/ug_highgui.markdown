@@ -2,7 +2,7 @@ Using Kinect and other OpenNI compatible depth sensors {#tutorial_ug_highgui}
 ======================================================
 
 Depth sensors compatible with OpenNI (Kinect, XtionPRO, ...) are supported through VideoCapture
-class. Depth map, RGB image and some other formats of output can be retrieved by using familiar
+class. Depth map, BGR image and some other formats of output can be retrieved by using familiar
 interface of VideoCapture.
 
 In order to use depth sensor with OpenCV you should do the following preliminary steps:
@@ -46,7 +46,7 @@ VideoCapture can retrieve the following data:
     -   CAP_OPENNI_VALID_DEPTH_MASK - mask of valid pixels (not ocluded, not shaded etc.)
         (CV_8UC1)
 
--#  data given from RGB image generator:
+-#  data given from BGR image generator:
     -   CAP_OPENNI_BGR_IMAGE - color image (CV_8UC3)
     -   CAP_OPENNI_GRAY_IMAGE - gray image (CV_8UC1)
 
