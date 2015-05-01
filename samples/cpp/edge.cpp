@@ -35,7 +35,7 @@ static void help()
 string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
 string keys =
     {
-	"{@image|" + pathToDataSample + "/lena.jpg|input image file}"
+    "{@image|" + pathToDataSample + "/lena.jpg|input image file}"
     };
 
 int main( int argc, const char** argv )
