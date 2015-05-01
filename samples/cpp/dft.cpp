@@ -18,9 +18,10 @@ static void help()
             "./dft [image_name -- default ../data/lena.jpg]\n");
 }
 
+string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
 string keys =
 {
-    "{@image|"+string(PATH_DATA_SAMPLE_OPENCV)+"/lena.jpg|input image file}"
+    "{@image|"+pathToDataSample+"/lena.jpg|input image file}"
 };
 
 int main(int argc, const char ** argv)

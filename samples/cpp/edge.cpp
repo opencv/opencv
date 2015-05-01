@@ -32,9 +32,10 @@ static void help()
            "    /.edge [image_name -- Default is ../data/fruits.jpg]\n\n");
 }
 
+string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
 string keys =
     {
-    "{@image|" + string(PATH_DATA_SAMPLE_OPENCV) + "/lena.jpg|input image file}"
+	"{@image|" + pathToDataSample + "/lena.jpg|input image file}"
     };
 
 int main( int argc, const char** argv )

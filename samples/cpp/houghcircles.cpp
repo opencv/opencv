@@ -8,6 +8,8 @@
 using namespace cv;
 using namespace std;
 
+string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
+
 static void help()
 {
     cout << "\nThis program demonstrates circle finding with the Hough transform.\n"
@@ -17,7 +19,7 @@ static void help()
 
 int main(int argc, char** argv)
 {
-string filename = argc >= 2 ? argv[1] : string(PATH_DATA_SAMPLE_OPENCV)+"/board.jpg";
+string filename = argc >= 2 ? argv[1] : pathToDataSample+"/board.jpg";
 
     Mat img = imread(filename, 0);
     if(img.empty())

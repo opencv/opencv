@@ -14,6 +14,8 @@
 using namespace std;
 using namespace cv;
 
+string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
+
 static void help()
 {
     printf("\n"
@@ -56,7 +58,7 @@ static vector<Point> simpleContour( const Mat& currentQuery, int n=300 )
 int main(int argc, char** argv)
 {
     help();
-    string path = string(PATH_DATA_SAMPLE_OPENCV)+"/shape_sample/";
+	string path = pathToDataSample + "/shape_sample/";
     int indexQuery = 1;
     if( argc < 2 )
     {
