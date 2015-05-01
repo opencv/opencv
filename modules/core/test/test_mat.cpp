@@ -1210,6 +1210,13 @@ TEST(Core_Mat, copyNx1ToVector)
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
 }
 
+TEST(Core_Matx, fromMat_)
+{
+    Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
+    Matx22d b(a);
+    ASSERT_EQ( norm(a, b, NORM_INF), 0.);
+}
+
 TEST(Core_SVD, orthogonality)
 {
     for( int i = 0; i < 2; i++ )
