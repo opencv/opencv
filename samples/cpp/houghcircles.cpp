@@ -1,11 +1,14 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "../OpenCVsamples_cpp.h"
 
 #include <iostream>
 
 using namespace cv;
 using namespace std;
+
+string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
 
 static void help()
 {
@@ -16,7 +19,7 @@ static void help()
 
 int main(int argc, char** argv)
 {
-    const char* filename = argc >= 2 ? argv[1] : "../data/board.jpg";
+string filename = argc >= 2 ? argv[1] : pathToDataSample+"/board.jpg";
 
     Mat img = imread(filename, 0);
     if(img.empty())

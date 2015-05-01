@@ -3,6 +3,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
+#include "../OpenCVsamples_cpp.h"
 
 #include <stdio.h>
 
@@ -17,13 +18,12 @@ static void help()
             "./dft [image_name -- default ../data/lena.jpg]\n");
 }
 
-const char* keys =
-{
-    "{@image|../data/lena.jpg|input image file}"
-};
+string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
+string keys;
 
 int main(int argc, const char ** argv)
 {
+    keys = "{@image|" + pathToDataSample + "/lena.jpg|input image file}";
     help();
     CommandLineParser parser(argc, argv, keys);
     string filename = parser.get<string>(0);

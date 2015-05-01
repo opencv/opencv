@@ -2,6 +2,10 @@
 #  CMake file for C samples. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
+configure_file (
+	"${PROJECT_SOURCE_DIR}/samples/cpp/OpenCVsamples_cpp.h.in"
+	"${PROJECT_SOURCE_DIR}/samples/OpenCVsamples_cpp.h"
+	)
 
 SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_flann
     opencv_imgcodecs opencv_videoio opencv_highgui opencv_ml opencv_video

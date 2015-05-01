@@ -9,9 +9,12 @@
 #include <opencv2/core/utility.hpp>
 #include <iostream>
 #include <string>
+#include "../OpenCVsamples_cpp.h"
 
 using namespace std;
 using namespace cv;
+
+string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
 
 static void help()
 {
@@ -55,7 +58,7 @@ static vector<Point> simpleContour( const Mat& currentQuery, int n=300 )
 int main(int argc, char** argv)
 {
     help();
-    string path = "../data/shape_sample/";
+    string path = pathToDataSample + "/shape_sample/";
     int indexQuery = 1;
     if( argc < 2 )
     {

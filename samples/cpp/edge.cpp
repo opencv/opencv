@@ -2,6 +2,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
+#include "../OpenCVsamples_cpp.h"
 
 #include <stdio.h>
 
@@ -31,13 +32,12 @@ static void help()
            "    /.edge [image_name -- Default is ../data/fruits.jpg]\n\n");
 }
 
-const char* keys =
-{
-    "{@image |../data/fruits.jpg|input image name}"
-};
+string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
+string keys ;
 
 int main( int argc, const char** argv )
 {
+    keys = "{@image|" + pathToDataSample + "/lena.jpg|input image file}";
     help();
 
     CommandLineParser parser(argc, argv, keys);
