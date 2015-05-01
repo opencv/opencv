@@ -1,0 +1,2 @@
+// the configured options and settings for Tutorial
+#define PATH_DATA_SAMPLE_OPENCV "@PROJECT_SOURCE_DIR@/samples/data"

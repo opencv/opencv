@@ -3,6 +3,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
+#include "../OpenCVsamples_cpp.h"
 
 #include <stdio.h>
 
@@ -17,9 +18,9 @@ static void help()
             "./dft [image_name -- default ../data/lena.jpg]\n");
 }
 
-const char* keys =
+string keys =
 {
-    "{@image|../data/lena.jpg|input image file}"
+    "{@image|"+string(PATH_DATA_SAMPLE_OPENCV)+"/lena.jpg|input image file}"
 };
 
 int main(int argc, const char ** argv)
