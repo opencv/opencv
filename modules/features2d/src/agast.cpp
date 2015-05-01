@@ -7565,19 +7565,16 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
         size_t lastRowCorner_ind = 0, next_lastRowCorner_ind = 0;
 
         std::vector<int> nmsFlags;
-        std::vector<int>::iterator nmsFlags_p;
         std::vector<KeyPoint>::iterator currCorner_nms;
         std::vector<KeyPoint>::const_iterator currCorner;
 
         currCorner = keypoints.begin();
 
         nmsFlags.resize((int)num_Corners);
-        nmsFlags_p = nmsFlags.begin();
 
         // set all flags to MAXIMUM
-        for(j = num_Corners; j > 0; j--)
-            *nmsFlags_p++ = -1;
-        nmsFlags_p = nmsFlags.begin();
+        for(j = 0; j < num_Corners; j++)
+            nmsFlags[j] = -1;
 
         for(curr_idx = 0; curr_idx < num_Corners; curr_idx++)
         {
@@ -7655,11 +7652,18 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
             currCorner++;
         }
 
-        // removing non-maximum corners
+        // mark non-maximum corners
         for(curr_idx = 0; curr_idx < num_Corners; curr_idx++)
         {
-            if(*nmsFlags_p++ != -1)
-                keypoints.erase(keypoints.begin() + curr_idx);
+            if (nmsFlags[curr_idx] != -1)
+                keypoints[curr_idx].response = -1;
+        }
+
+        // erase non-maximum corners
+        for (j = keypoints.size(); j > 0; j--)
+        {
+            if (keypoints[j - 1].response == -1)
+                keypoints.erase(keypoints.begin() + j - 1 );
         }
     }
 }
