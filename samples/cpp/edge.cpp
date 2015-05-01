@@ -33,13 +33,11 @@ static void help()
 }
 
 string pathToDataSample(PATH_DATA_SAMPLE_OPENCV);
-string keys =
-    {
-    "{@image|" + pathToDataSample + "/lena.jpg|input image file}"
-    };
+string keys ;
 
 int main( int argc, const char** argv )
 {
+    keys = "{@image|" + pathToDataSample + "/lena.jpg|input image file}";
     help();
 
     CommandLineParser parser(argc, argv, keys);
