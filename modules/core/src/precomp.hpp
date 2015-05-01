@@ -290,4 +290,6 @@ extern bool __termination; // skip some cleanups, because process is terminating
 
 }
 
+#include "opencv2/hal/intrin.hpp"
+
 #endif /*_CXCORE_INTERNAL_H_*/

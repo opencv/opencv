@@ -2781,15 +2781,23 @@ struct Div_SIMD
     }
 };
 
-#if CV_SSE2
+template <typename T>
+struct Recip_SIMD
+{
+    int operator() (const T *, T *, int, double) const
+    {
+        return 0;
+    }
+};
 
-#if CV_SSE4_1
+
+#if CV_SIMD128
 
 template <>
 struct Div_SIMD<uchar>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE4_1); }
+    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const uchar * src1, const uchar * src2, uchar * dst, int width, double scale) const
     {
@@ -2798,50 +2806,44 @@ struct Div_SIMD<uchar>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_uint16x8 v_zero = v_setzero_u16();
 
         for ( ; x <= width - 8; x += 8)
         {
-            __m128i v_src1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)(src1 + x)), v_zero);
-            __m128i _v_src2 = _mm_loadl_epi64((const __m128i *)(src2 + x));
-            __m128i v_src2 = _mm_unpacklo_epi8(_v_src2, v_zero);
+            v_uint16x8 v_src1 = v_load_expand(src1 + x);
+            v_uint16x8 v_src2 = v_load_expand(src2 + x);
 
-            __m128i v_src1i = _mm_unpacklo_epi16(v_src1, v_zero);
-            __m128i v_src2i = _mm_unpacklo_epi16(v_src2, v_zero);
-            __m128d v_src1d = _mm_cvtepi32_pd(v_src1i);
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            v_src1d = _mm_cvtepi32_pd(_mm_srli_si128(v_src1i, 8));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_uint32x4 t0, t1, t2, t3;
+            v_expand(v_src1, t0, t1);
+            v_expand(v_src2, t2, t3);
 
-            v_src1i = _mm_unpackhi_epi16(v_src1, v_zero);
-            v_src2i = _mm_unpackhi_epi16(v_src2, v_zero);
-            v_src1d = _mm_cvtepi32_pd(v_src1i);
-            v_src2d = _mm_cvtepi32_pd(v_src2i);
-            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            v_src1d = _mm_cvtepi32_pd(_mm_srli_si128(v_src1i, 8));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_float32x4 f0 = v_cvt_f32(v_reinterpret_as_s32(t0));
+            v_float32x4 f1 = v_cvt_f32(v_reinterpret_as_s32(t1));
 
-            __m128i v_mask = _mm_cmpeq_epi8(_v_src2, v_zero);
-            _mm_storel_epi64((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packus_epi16(_mm_packs_epi32(v_dst_0, v_dst_1), v_zero)));
+            v_float32x4 f2 = v_cvt_f32(v_reinterpret_as_s32(t2));
+            v_float32x4 f3 = v_cvt_f32(v_reinterpret_as_s32(t3));
+
+            f0 = f0 * v_scale / f2;
+            f1 = f1 * v_scale / f3;
+
+            v_int32x4 i0 = v_round(f0), i1 = v_round(f1);
+            v_uint16x8 res = v_pack_u(i0, i1);
+
+            res = v_select(v_src2 == v_zero, v_zero, res);
+            v_pack_store(dst + x, res);
         }
 
         return x;
     }
 };
 
-#endif // CV_SSE4_1
 
 template <>
 struct Div_SIMD<schar>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2); }
+    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const schar * src1, const schar * src2, schar * dst, int width, double scale) const
     {
@@ -2850,50 +2852,44 @@ struct Div_SIMD<schar>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_int16x8 v_zero = v_setzero_s16();
 
         for ( ; x <= width - 8; x += 8)
         {
-            __m128i v_src1 = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _mm_loadl_epi64((const __m128i *)(src1 + x))), 8);
-            __m128i _v_src2 = _mm_loadl_epi64((const __m128i *)(src2 + x));
-            __m128i v_src2 = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _v_src2), 8);
+            v_int16x8 v_src1 = v_load_expand(src1 + x);
+            v_int16x8 v_src2 = v_load_expand(src2 + x);
 
-            __m128i v_src1i = _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src1), 16);
-            __m128i v_src2i = _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src2), 16);
-            __m128d v_src1d = _mm_cvtepi32_pd(v_src1i);
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            v_src1d = _mm_cvtepi32_pd(_mm_srli_si128(v_src1i, 8));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_int32x4 t0, t1, t2, t3;
+            v_expand(v_src1, t0, t1);
+            v_expand(v_src2, t2, t3);
 
-            v_src1i = _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src1), 16);
-            v_src2i = _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src2), 16);
-            v_src1d = _mm_cvtepi32_pd(v_src1i);
-            v_src2d = _mm_cvtepi32_pd(v_src2i);
-            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            v_src1d = _mm_cvtepi32_pd(_mm_srli_si128(v_src1i, 8));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_float32x4 f0 = v_cvt_f32(t0);
+            v_float32x4 f1 = v_cvt_f32(t1);
 
-            __m128i v_mask = _mm_cmpeq_epi8(_v_src2, v_zero);
-            _mm_storel_epi64((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packs_epi16(_mm_packs_epi32(v_dst_0, v_dst_1), v_zero)));
+            v_float32x4 f2 = v_cvt_f32(t2);
+            v_float32x4 f3 = v_cvt_f32(t3);
+
+            f0 = f0 * v_scale / f2;
+            f1 = f1 * v_scale / f3;
+
+            v_int32x4 i0 = v_round(f0), i1 = v_round(f1);
+            v_int16x8 res = v_pack(i0, i1);
+
+            res = v_select(v_src2 == v_zero, v_zero, res);
+            v_pack_store(dst + x, res);
         }
 
         return x;
     }
 };
 
-#if CV_SSE4_1
 
 template <>
 struct Div_SIMD<ushort>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE4_1); }
+    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const ushort * src1, const ushort * src2, ushort * dst, int width, double scale) const
     {
@@ -2902,49 +2898,43 @@ struct Div_SIMD<ushort>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_uint16x8 v_zero = v_setzero_u16();
 
         for ( ; x <= width - 8; x += 8)
         {
-            __m128i v_src1 = _mm_loadu_si128((const __m128i *)(src1 + x));
-            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+            v_uint16x8 v_src1 = v_load(src1 + x);
+            v_uint16x8 v_src2 = v_load(src2 + x);
 
-            __m128i v_src1i = _mm_unpacklo_epi16(v_src1, v_zero);
-            __m128i v_src2i = _mm_unpacklo_epi16(v_src2, v_zero);
-            __m128d v_src1d = _mm_cvtepi32_pd(v_src1i);
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            v_src1d = _mm_cvtepi32_pd(_mm_srli_si128(v_src1i, 8));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_uint32x4 t0, t1, t2, t3;
+            v_expand(v_src1, t0, t1);
+            v_expand(v_src2, t2, t3);
 
-            v_src1i = _mm_unpackhi_epi16(v_src1, v_zero);
-            v_src2i = _mm_unpackhi_epi16(v_src2, v_zero);
-            v_src1d = _mm_cvtepi32_pd(v_src1i);
-            v_src2d = _mm_cvtepi32_pd(v_src2i);
-            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            v_src1d = _mm_cvtepi32_pd(_mm_srli_si128(v_src1i, 8));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_float32x4 f0 = v_cvt_f32(v_reinterpret_as_s32(t0));
+            v_float32x4 f1 = v_cvt_f32(v_reinterpret_as_s32(t1));
 
-            __m128i v_mask = _mm_cmpeq_epi16(v_src2, v_zero);
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packus_epi32(v_dst_0, v_dst_1)));
+            v_float32x4 f2 = v_cvt_f32(v_reinterpret_as_s32(t2));
+            v_float32x4 f3 = v_cvt_f32(v_reinterpret_as_s32(t3));
+
+            f0 = f0 * v_scale / f2;
+            f1 = f1 * v_scale / f3;
+
+            v_int32x4 i0 = v_round(f0), i1 = v_round(f1);
+            v_uint16x8 res = v_pack_u(i0, i1);
+
+            res = v_select(v_src2 == v_zero, v_zero, res);
+            v_store(dst + x, res);
         }
 
         return x;
     }
 };
 
-#endif // CV_SSE4_1
-
 template <>
 struct Div_SIMD<short>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2); }
+    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const short * src1, const short * src2, short * dst, int width, double scale) const
     {
@@ -2953,36 +2943,32 @@ struct Div_SIMD<short>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_int16x8 v_zero = v_setzero_s16();
 
         for ( ; x <= width - 8; x += 8)
         {
-            __m128i v_src1 = _mm_loadu_si128((const __m128i *)(src1 + x));
-            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+            v_int16x8 v_src1 = v_load(src1 + x);
+            v_int16x8 v_src2 = v_load(src2 + x);
 
-            __m128i v_src1i = _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src1), 16);
-            __m128i v_src2i = _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src2), 16);
-            __m128d v_src1d = _mm_cvtepi32_pd(v_src1i);
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            v_src1d = _mm_cvtepi32_pd(_mm_srli_si128(v_src1i, 8));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_int32x4 t0, t1, t2, t3;
+            v_expand(v_src1, t0, t1);
+            v_expand(v_src2, t2, t3);
 
-            v_src1i = _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src1), 16);
-            v_src2i = _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src2), 16);
-            v_src1d = _mm_cvtepi32_pd(v_src1i);
-            v_src2d = _mm_cvtepi32_pd(v_src2i);
-            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            v_src1d = _mm_cvtepi32_pd(_mm_srli_si128(v_src1i, 8));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
-            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_float32x4 f0 = v_cvt_f32(t0);
+            v_float32x4 f1 = v_cvt_f32(t1);
 
-            __m128i v_mask = _mm_cmpeq_epi16(v_src2, v_zero);
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packs_epi32(v_dst_0, v_dst_1)));
+            v_float32x4 f2 = v_cvt_f32(t2);
+            v_float32x4 f3 = v_cvt_f32(t3);
+
+            f0 = f0 * v_scale / f2;
+            f1 = f1 * v_scale / f3;
+
+            v_int32x4 i0 = v_round(f0), i1 = v_round(f1);
+            v_int16x8 res = v_pack(i0, i1);
+
+            res = v_select(v_src2 == v_zero, v_zero, res);
+            v_store(dst + x, res);
         }
 
         return x;
@@ -2993,7 +2979,7 @@ template <>
 struct Div_SIMD<int>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2); }
+    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const int * src1, const int * src2, int * dst, int width, double scale) const
     {
@@ -3002,100 +2988,82 @@ struct Div_SIMD<int>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_int32x4 v_zero = v_setzero_s32();
 
-        for ( ; x <= width - 4; x += 4)
+        for ( ; x <= width - 8; x += 8)
         {
-            __m128i v_src1 = _mm_loadu_si128((const __m128i *)(src1 + x));
-            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+            v_int32x4 t0 = v_load(src1 + x);
+            v_int32x4 t1 = v_load(src1 + x + 4);
+            v_int32x4 t2 = v_load(src2 + x);
+            v_int32x4 t3 = v_load(src2 + x + 4);
 
-            __m128d v_src1d = _mm_cvtepi32_pd(v_src1);
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
+            v_float32x4 f0 = v_cvt_f32(t0);
+            v_float32x4 f1 = v_cvt_f32(t1);
+            v_float32x4 f2 = v_cvt_f32(t2);
+            v_float32x4 f3 = v_cvt_f32(t3);
 
-            v_src1d = _mm_cvtepi32_pd(_mm_srli_si128(v_src1, 8));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(_mm_mul_pd(v_src1d, v_scale), v_src2d));
+            f0 = f0 * v_scale / f2;
+            f1 = f1 * v_scale / f3;
 
-            __m128i v_dst = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
-            __m128i v_mask = _mm_cmpeq_epi32(v_src2, v_zero);
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(v_mask, v_dst));
+            v_int32x4 res0 = v_round(f0), res1 = v_round(f1);
+
+            res0 = v_select(t2 == v_zero, v_zero, res0);
+            res1 = v_select(t3 == v_zero, v_zero, res1);
+            v_store(dst + x, res0);
+            v_store(dst + x + 4, res1);
         }
 
         return x;
     }
 };
 
-#endif
 
-template<typename T> static void
-div_( const T* src1, size_t step1, const T* src2, size_t step2,
-      T* dst, size_t step, Size size, double scale )
+template <>
+struct Div_SIMD<float>
 {
-    step1 /= sizeof(src1[0]);
-    step2 /= sizeof(src2[0]);
-    step /= sizeof(dst[0]);
+    bool haveSIMD;
+    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
-    Div_SIMD<T> vop;
-
-    for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+    int operator() (const float * src1, const float * src2, float * dst, int width, double scale) const
     {
-        int i = vop(src1, src2, dst, size.width, scale);
-        #if CV_ENABLE_UNROLLED
-        for( ; i <= size.width - 4; i += 4 )
+        int x = 0;
+
+        if (!haveSIMD)
+            return x;
+
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_float32x4 v_zero = v_setzero_f32();
+
+        for ( ; x <= width - 8; x += 8)
         {
-            if( src2[i] != 0 && src2[i+1] != 0 && src2[i+2] != 0 && src2[i+3] != 0 )
-            {
-                double a = (double)src2[i] * src2[i+1];
-                double b = (double)src2[i+2] * src2[i+3];
-                double d = scale/(a * b);
-                b *= d;
-                a *= d;
+            v_float32x4 f0 = v_load(src1 + x);
+            v_float32x4 f1 = v_load(src1 + x + 4);
+            v_float32x4 f2 = v_load(src2 + x);
+            v_float32x4 f3 = v_load(src2 + x + 4);
 
-                T z0 = saturate_cast<T>(src2[i+1] * ((double)src1[i] * b));
-                T z1 = saturate_cast<T>(src2[i] * ((double)src1[i+1] * b));
-                T z2 = saturate_cast<T>(src2[i+3] * ((double)src1[i+2] * a));
-                T z3 = saturate_cast<T>(src2[i+2] * ((double)src1[i+3] * a));
+            v_float32x4 res0 = f0 * v_scale / f2;
+            v_float32x4 res1 = f1 * v_scale / f3;
 
-                dst[i] = z0; dst[i+1] = z1;
-                dst[i+2] = z2; dst[i+3] = z3;
-            }
-            else
-            {
-                T z0 = src2[i] != 0 ? saturate_cast<T>(src1[i]*scale/src2[i]) : 0;
-                T z1 = src2[i+1] != 0 ? saturate_cast<T>(src1[i+1]*scale/src2[i+1]) : 0;
-                T z2 = src2[i+2] != 0 ? saturate_cast<T>(src1[i+2]*scale/src2[i+2]) : 0;
-                T z3 = src2[i+3] != 0 ? saturate_cast<T>(src1[i+3]*scale/src2[i+3]) : 0;
+            res0 = v_select(f2 == v_zero, v_zero, res0);
+            res1 = v_select(f3 == v_zero, v_zero, res1);
 
-                dst[i] = z0; dst[i+1] = z1;
-                dst[i+2] = z2; dst[i+3] = z3;
-            }
+            v_store(dst + x, res0);
+            v_store(dst + x + 4, res1);
         }
-        #endif
-        for( ; i < size.width; i++ )
-            dst[i] = src2[i] != 0 ? saturate_cast<T>(src1[i]*scale/src2[i]) : 0;
-    }
-}
 
-template <typename T>
-struct Recip_SIMD
-{
-    int operator() (const T *, T *, int, double) const
-    {
-        return 0;
+        return x;
     }
 };
 
-#if CV_SSE2
 
-#if CV_SSE4_1
+///////////////////////// RECIPROCAL //////////////////////
 
 template <>
 struct Recip_SIMD<uchar>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE4_1); }
+    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const uchar * src2, uchar * dst, int width, double scale) const
     {
@@ -3104,43 +3072,39 @@ struct Recip_SIMD<uchar>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_uint16x8 v_zero = v_setzero_u16();
 
         for ( ; x <= width - 8; x += 8)
         {
-            __m128i _v_src2 = _mm_loadl_epi64((const __m128i *)(src2 + x));
-            __m128i v_src2 = _mm_unpacklo_epi8(_v_src2, v_zero);
+            v_uint16x8 v_src2 = v_load_expand(src2 + x);
 
-            __m128i v_src2i = _mm_unpacklo_epi16(v_src2, v_zero);
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_uint32x4 t0, t1;
+            v_expand(v_src2, t0, t1);
 
-            v_src2i = _mm_unpackhi_epi16(v_src2, v_zero);
-            v_src2d = _mm_cvtepi32_pd(v_src2i);
-            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_float32x4 f0 = v_cvt_f32(v_reinterpret_as_s32(t0));
+            v_float32x4 f1 = v_cvt_f32(v_reinterpret_as_s32(t1));
 
-            __m128i v_mask = _mm_cmpeq_epi8(_v_src2, v_zero);
-            _mm_storel_epi64((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packus_epi16(_mm_packs_epi32(v_dst_0, v_dst_1), v_zero)));
+            f0 = v_scale / f0;
+            f1 = v_scale / f1;
+
+            v_int32x4 i0 = v_round(f0), i1 = v_round(f1);
+            v_uint16x8 res = v_pack_u(i0, i1);
+
+            res = v_select(v_src2 == v_zero, v_zero, res);
+            v_pack_store(dst + x, res);
         }
 
         return x;
     }
 };
 
-#endif // CV_SSE4_1
 
 template <>
 struct Recip_SIMD<schar>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2); }
+    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const schar * src2, schar * dst, int width, double scale) const
     {
@@ -3149,43 +3113,39 @@ struct Recip_SIMD<schar>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_int16x8 v_zero = v_setzero_s16();
 
         for ( ; x <= width - 8; x += 8)
         {
-            __m128i _v_src2 = _mm_loadl_epi64((const __m128i *)(src2 + x));
-            __m128i v_src2 = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _v_src2), 8);
+            v_int16x8 v_src2 = v_load_expand(src2 + x);
 
-            __m128i v_src2i = _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src2), 16);
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_int32x4 t0, t1;
+            v_expand(v_src2, t0, t1);
 
-            v_src2i = _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src2), 16);
-            v_src2d = _mm_cvtepi32_pd(v_src2i);
-            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_float32x4 f0 = v_cvt_f32(t0);
+            v_float32x4 f1 = v_cvt_f32(t1);
 
-            __m128i v_mask = _mm_cmpeq_epi8(_v_src2, v_zero);
-            _mm_storel_epi64((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packs_epi16(_mm_packs_epi32(v_dst_0, v_dst_1), v_zero)));
+            f0 = v_scale / f0;
+            f1 = v_scale / f1;
+
+            v_int32x4 i0 = v_round(f0), i1 = v_round(f1);
+            v_int16x8 res = v_pack(i0, i1);
+
+            res = v_select(v_src2 == v_zero, v_zero, res);
+            v_pack_store(dst + x, res);
         }
 
         return x;
     }
 };
 
-#if CV_SSE4_1
 
 template <>
 struct Recip_SIMD<ushort>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE4_1); }
+    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const ushort * src2, ushort * dst, int width, double scale) const
     {
@@ -3194,42 +3154,38 @@ struct Recip_SIMD<ushort>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_uint16x8 v_zero = v_setzero_u16();
 
         for ( ; x <= width - 8; x += 8)
         {
-            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+            v_uint16x8 v_src2 = v_load(src2 + x);
 
-            __m128i v_src2i = _mm_unpacklo_epi16(v_src2, v_zero);
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_uint32x4 t0, t1;
+            v_expand(v_src2, t0, t1);
 
-            v_src2i = _mm_unpackhi_epi16(v_src2, v_zero);
-            v_src2d = _mm_cvtepi32_pd(v_src2i);
-            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_float32x4 f0 = v_cvt_f32(v_reinterpret_as_s32(t0));
+            v_float32x4 f1 = v_cvt_f32(v_reinterpret_as_s32(t1));
 
-            __m128i v_mask = _mm_cmpeq_epi16(v_src2, v_zero);
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packus_epi32(v_dst_0, v_dst_1)));
+            f0 = v_scale / f0;
+            f1 = v_scale / f1;
+
+            v_int32x4 i0 = v_round(f0), i1 = v_round(f1);
+            v_uint16x8 res = v_pack_u(i0, i1);
+
+            res = v_select(v_src2 == v_zero, v_zero, res);
+            v_store(dst + x, res);
         }
 
         return x;
     }
 };
 
-#endif // CV_SSE4_1
-
 template <>
 struct Recip_SIMD<short>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2); }
+    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const short * src2, short * dst, int width, double scale) const
     {
@@ -3238,29 +3194,27 @@ struct Recip_SIMD<short>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_int16x8 v_zero = v_setzero_s16();
 
         for ( ; x <= width - 8; x += 8)
         {
-            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+            v_int16x8 v_src2 = v_load(src2 + x);
 
-            __m128i v_src2i = _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src2), 16);
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2i);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            __m128i v_dst_0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_int32x4 t0, t1;
+            v_expand(v_src2, t0, t1);
 
-            v_src2i = _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src2), 16);
-            v_src2d = _mm_cvtepi32_pd(v_src2i);
-            v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2i, 8));
-            v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
-            __m128i v_dst_1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
+            v_float32x4 f0 = v_cvt_f32(t0);
+            v_float32x4 f1 = v_cvt_f32(t1);
 
-            __m128i v_mask = _mm_cmpeq_epi16(v_src2, v_zero);
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(v_mask, _mm_packs_epi32(v_dst_0, v_dst_1)));
+            f0 = v_scale / f0;
+            f1 = v_scale / f1;
+
+            v_int32x4 i0 = v_round(f0), i1 = v_round(f1);
+            v_int16x8 res = v_pack(i0, i1);
+
+            res = v_select(v_src2 == v_zero, v_zero, res);
+            v_store(dst + x, res);
         }
 
         return x;
@@ -3271,7 +3225,7 @@ template <>
 struct Recip_SIMD<int>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2); }
+    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
 
     int operator() (const int * src2, int * dst, int width, double scale) const
     {
@@ -3280,22 +3234,136 @@ struct Recip_SIMD<int>
         if (!haveSIMD)
             return x;
 
-        __m128d v_scale = _mm_set1_pd(scale);
-        __m128i v_zero = _mm_setzero_si128();
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_int32x4 v_zero = v_setzero_s32();
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            v_int32x4 t0 = v_load(src2 + x);
+            v_int32x4 t1 = v_load(src2 + x + 4);
+
+            v_float32x4 f0 = v_cvt_f32(t0);
+            v_float32x4 f1 = v_cvt_f32(t1);
+
+            f0 = v_scale / f0;
+            f1 = v_scale / f1;
+
+            v_int32x4 res0 = v_round(f0), res1 = v_round(f1);
+
+            res0 = v_select(t0 == v_zero, v_zero, res0);
+            res1 = v_select(t1 == v_zero, v_zero, res1);
+            v_store(dst + x, res0);
+            v_store(dst + x + 4, res1);
+        }
+
+        return x;
+    }
+};
+
+
+template <>
+struct Recip_SIMD<float>
+{
+    bool haveSIMD;
+    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+
+    int operator() (const float * src2, float * dst, int width, double scale) const
+    {
+        int x = 0;
+
+        if (!haveSIMD)
+            return x;
+
+        v_float32x4 v_scale = v_setall_f32((float)scale);
+        v_float32x4 v_zero = v_setzero_f32();
+
+        for ( ; x <= width - 8; x += 8)
+        {
+            v_float32x4 f0 = v_load(src2 + x);
+            v_float32x4 f1 = v_load(src2 + x + 4);
+
+            v_float32x4 res0 = v_scale / f0;
+            v_float32x4 res1 = v_scale / f1;
+
+            res0 = v_select(f0 == v_zero, v_zero, res0);
+            res1 = v_select(f1 == v_zero, v_zero, res1);
+
+            v_store(dst + x, res0);
+            v_store(dst + x + 4, res1);
+        }
+
+        return x;
+    }
+};
+
+#if CV_SIMD128_64F
+
+template <>
+struct Div_SIMD<double>
+{
+    bool haveSIMD;
+    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+
+    int operator() (const double * src1, const double * src2, double * dst, int width, double scale) const
+    {
+        int x = 0;
+
+        if (!haveSIMD)
+            return x;
+
+        v_float64x2 v_scale = v_setall_f64(scale);
+        v_float64x2 v_zero = v_setzero_f64();
 
         for ( ; x <= width - 4; x += 4)
         {
-            __m128i v_src2 = _mm_loadu_si128((const __m128i *)(src2 + x));
+            v_float64x2 f0 = v_load(src1 + x);
+            v_float64x2 f1 = v_load(src1 + x + 2);
+            v_float64x2 f2 = v_load(src2 + x);
+            v_float64x2 f3 = v_load(src2 + x + 2);
 
-            __m128d v_src2d = _mm_cvtepi32_pd(v_src2);
-            __m128i v_dst0 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            v_float64x2 res0 = f0 * v_scale / f2;
+            v_float64x2 res1 = f1 * v_scale / f3;
 
-            v_src2d = _mm_cvtepi32_pd(_mm_srli_si128(v_src2, 8));
-            __m128i v_dst1 = _mm_cvtpd_epi32(_mm_div_pd(v_scale, v_src2d));
+            res0 = v_select(f0 == v_zero, v_zero, res0);
+            res1 = v_select(f1 == v_zero, v_zero, res1);
 
-            __m128i v_dst = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(v_dst0), _mm_castsi128_ps(v_dst1)));
-            __m128i v_mask = _mm_cmpeq_epi32(v_src2, v_zero);
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_andnot_si128(v_mask, v_dst));
+            v_store(dst + x, res0);
+            v_store(dst + x + 2, res1);
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct Recip_SIMD<double>
+{
+    bool haveSIMD;
+    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+
+    int operator() (const double * src2, double * dst, int width, double scale) const
+    {
+        int x = 0;
+
+        if (!haveSIMD)
+            return x;
+
+        v_float64x2 v_scale = v_setall_f64(scale);
+        v_float64x2 v_zero = v_setzero_f64();
+
+        for ( ; x <= width - 4; x += 4)
+        {
+            v_float64x2 f0 = v_load(src2 + x);
+            v_float64x2 f1 = v_load(src2 + x + 2);
+
+            v_float64x2 res0 = v_scale / f0;
+            v_float64x2 res1 = v_scale / f1;
+
+            res0 = v_select(f0 == v_zero, v_zero, res0);
+            res1 = v_select(f1 == v_zero, v_zero, res1);
+
+            v_store(dst + x, res0);
+            v_store(dst + x + 2, res1);
         }
 
         return x;
@@ -3304,10 +3372,78 @@ struct Recip_SIMD<int>
 
 #endif
 
+#endif
+
 template<typename T> static void
-recip_( const T*, size_t, const T* src2, size_t step2,
-        T* dst, size_t step, Size size, double scale )
+div_i( const T* src1, size_t step1, const T* src2, size_t step2,
+      T* dst, size_t step, Size size, double scale )
 {
+    step1 /= sizeof(src1[0]);
+    step2 /= sizeof(src2[0]);
+    step /= sizeof(dst[0]);
+
+    Div_SIMD<T> vop;
+    float scale_f = (float)scale;
+
+    for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+    {
+        int i = vop(src1, src2, dst, size.width, scale);
+        for( ; i < size.width; i++ )
+        {
+            T num = src1[i], denom = src2[i];
+            dst[i] = denom != 0 ? saturate_cast<T>(num*scale_f/denom) : (T)0;
+        }
+    }
+}
+
+template<typename T> static void
+div_f( const T* src1, size_t step1, const T* src2, size_t step2,
+      T* dst, size_t step, Size size, double scale )
+{
+    T scale_f = (T)scale;
+    step1 /= sizeof(src1[0]);
+    step2 /= sizeof(src2[0]);
+    step /= sizeof(dst[0]);
+
+    Div_SIMD<T> vop;
+
+    for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+    {
+        int i = vop(src1, src2, dst, size.width, scale);
+        for( ; i < size.width; i++ )
+        {
+            T num = src1[i], denom = src2[i];
+            dst[i] = denom != 0 ? saturate_cast<T>(num*scale_f/denom) : (T)0;
+        }
+    }
+}
+
+template<typename T> static void
+recip_i( const T*, size_t, const T* src2, size_t step2,
+         T* dst, size_t step, Size size, double scale )
+{
+    step2 /= sizeof(src2[0]);
+    step /= sizeof(dst[0]);
+
+    Recip_SIMD<T> vop;
+    float scale_f = (float)scale;
+
+    for( ; size.height--; src2 += step2, dst += step )
+    {
+        int i = vop(src2, dst, size.width, scale);
+        for( ; i < size.width; i++ )
+        {
+            T denom = src2[i];
+            dst[i] = denom != 0 ? saturate_cast<T>(scale_f/denom) : (T)0;
+        }
+    }
+}
+
+template<typename T> static void
+recip_f( const T*, size_t, const T* src2, size_t step2,
+         T* dst, size_t step, Size size, double scale )
+{
+    T scale_f = (T)scale;
     step2 /= sizeof(src2[0]);
     step /= sizeof(dst[0]);
 
@@ -3316,39 +3452,11 @@ recip_( const T*, size_t, const T* src2, size_t step2,
     for( ; size.height--; src2 += step2, dst += step )
     {
         int i = vop(src2, dst, size.width, scale);
-        #if CV_ENABLE_UNROLLED
-        for( ; i <= size.width - 4; i += 4 )
-        {
-            if( src2[i] != 0 && src2[i+1] != 0 && src2[i+2] != 0 && src2[i+3] != 0 )
-            {
-                double a = (double)src2[i] * src2[i+1];
-                double b = (double)src2[i+2] * src2[i+3];
-                double d = scale/(a * b);
-                b *= d;
-                a *= d;
-
-                T z0 = saturate_cast<T>(src2[i+1] * b);
-                T z1 = saturate_cast<T>(src2[i] * b);
-                T z2 = saturate_cast<T>(src2[i+3] * a);
-                T z3 = saturate_cast<T>(src2[i+2] * a);
-
-                dst[i] = z0; dst[i+1] = z1;
-                dst[i+2] = z2; dst[i+3] = z3;
-            }
-            else
-            {
-                T z0 = src2[i] != 0 ? saturate_cast<T>(scale/src2[i]) : 0;
-                T z1 = src2[i+1] != 0 ? saturate_cast<T>(scale/src2[i+1]) : 0;
-                T z2 = src2[i+2] != 0 ? saturate_cast<T>(scale/src2[i+2]) : 0;
-                T z3 = src2[i+3] != 0 ? saturate_cast<T>(scale/src2[i+3]) : 0;
-
-                dst[i] = z0; dst[i+1] = z1;
-                dst[i+2] = z2; dst[i+3] = z3;
-            }
-        }
-        #endif
         for( ; i < size.width; i++ )
-            dst[i] = src2[i] != 0 ? saturate_cast<T>(scale/src2[i]) : 0;
+        {
+            T denom = src2[i];
+            dst[i] = denom != 0 ? saturate_cast<T>(scale_f/denom) : (T)0;
+        }
     }
 }
 
@@ -3459,87 +3567,87 @@ static void div8u( const uchar* src1, size_t step1, const uchar* src2, size_t st
                    uchar* dst, size_t step, Size sz, void* scale)
 {
     if( src1 )
-        div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+        div_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
     else
-        recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+        recip_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void div8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
                   schar* dst, size_t step, Size sz, void* scale)
 {
-    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    div_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void div16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
                     ushort* dst, size_t step, Size sz, void* scale)
 {
-    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    div_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void div16s( const short* src1, size_t step1, const short* src2, size_t step2,
                     short* dst, size_t step, Size sz, void* scale)
 {
-    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    div_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void div32s( const int* src1, size_t step1, const int* src2, size_t step2,
                     int* dst, size_t step, Size sz, void* scale)
 {
-    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    div_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void div32f( const float* src1, size_t step1, const float* src2, size_t step2,
                     float* dst, size_t step, Size sz, void* scale)
 {
-    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    div_f(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void div64f( const double* src1, size_t step1, const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* scale)
 {
-    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    div_f(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void recip8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
                   uchar* dst, size_t step, Size sz, void* scale)
 {
-    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    recip_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void recip8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
                   schar* dst, size_t step, Size sz, void* scale)
 {
-    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    recip_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void recip16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
                    ushort* dst, size_t step, Size sz, void* scale)
 {
-    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    recip_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void recip16s( const short* src1, size_t step1, const short* src2, size_t step2,
                    short* dst, size_t step, Size sz, void* scale)
 {
-    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    recip_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void recip32s( const int* src1, size_t step1, const int* src2, size_t step2,
                    int* dst, size_t step, Size sz, void* scale)
 {
-    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    recip_i(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void recip32f( const float* src1, size_t step1, const float* src2, size_t step2,
                    float* dst, size_t step, Size sz, void* scale)
 {
-    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    recip_f(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 static void recip64f( const double* src1, size_t step1, const double* src2, size_t step2,
                    double* dst, size_t step, Size sz, void* scale)
 {
-    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    recip_f(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
 }
 
 

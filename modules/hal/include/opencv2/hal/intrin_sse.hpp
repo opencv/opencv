@@ -614,6 +614,16 @@ inline v_int32x4 operator * (const v_int32x4& a, const v_int32x4& b)
     __m128i d1 = _mm_unpackhi_epi32(c0, c1);
     return v_int32x4(_mm_unpacklo_epi64(d0, d1));
 }
+inline v_uint32x4& operator *= (v_uint32x4& a, const v_uint32x4& b)
+{
+    a = a * b;
+    return a;
+}
+inline v_int32x4& operator *= (v_int32x4& a, const v_int32x4& b)
+{
+    a = a * b;
+    return a;
+}
 
 inline void v_mul_expand(const v_int16x8& a, const v_int16x8& b,
                          v_int32x4& c, v_int32x4& d)
