@@ -33,9 +33,9 @@ static void help()
 }
 
 string keys =
-	{
-	"{@image|" + string(PATH_DATA_SAMPLE_OPENCV) + "/lena.jpg|input image file}"
-	};
+    {
+    "{@image|" + string(PATH_DATA_SAMPLE_OPENCV) + "/lena.jpg|input image file}"
+    };
 
 int main( int argc, const char** argv )
 {
