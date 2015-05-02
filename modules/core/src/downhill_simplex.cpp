@@ -40,6 +40,9 @@
 //M*/
 #include "precomp.hpp"
 
+/*#define dprintf(x) printf x
+#define print_matrix(x) print(x)*/
+
 #define dprintf(x)
 #define print_matrix(x)
 
@@ -51,7 +54,7 @@ Downhill Simplex method in OpenCV dev 3.0.0 getting this error:
 
 OpenCV Error: Assertion failed (dims <= 2 && data && (unsigned)i0 < (unsigned)(s ize.p[0] * size.p[1])
 && elemSize() == (((((DataType<_Tp>::type) & ((512 - 1) << 3)) >> 3) + 1) << ((((sizeof(size_t)/4+1)16384|0x3a50)
->> ((DataType<_Tp>::typ e) & ((1 << 3) - 1))2) & 3))) in cv::Mat::at,
+>> ((DataType<_Tp>::typ e) & ((1 << 3) - 1))2) & 3))) in Mat::at,
 file C:\builds\master_PackSlave-w in32-vc12-shared\opencv\modules\core\include\opencv2/core/mat.inl.hpp, line 893
 
 ****Problem and Possible Fix*********************************************************************************************************
@@ -135,275 +138,279 @@ multiple lines in three dimensions as not all lines intersect in three dimension
 namespace cv
 {
 
-    class DownhillSolverImpl : public DownhillSolver
+class DownhillSolverImpl : public DownhillSolver
+{
+public:
+    DownhillSolverImpl()
     {
-    public:
-        void getInitStep(OutputArray step) const;
-        void setInitStep(InputArray step);
-        Ptr<Function> getFunction() const;
-        void setFunction(const Ptr<Function>& f);
-        TermCriteria getTermCriteria() const;
-        DownhillSolverImpl();
-        void setTermCriteria(const TermCriteria& termcrit);
-        double minimize(InputOutputArray x);
-    protected:
-        Ptr<MinProblemSolver::Function> _Function;
-        TermCriteria _termcrit;
-        Mat _step;
-        Mat_<double> buf_x;
-
-    private:
-        inline void createInitialSimplex(Mat_<double>& simplex,Mat& step);
-        inline double innerDownhillSimplex(cv::Mat_<double>& p,double MinRange,double MinError,int& nfunk,
-                const Ptr<MinProblemSolver::Function>& f,int nmax);
-        inline double tryNewPoint(Mat_<double>& p,Mat_<double>& y,Mat_<double>& coord_sum,const Ptr<MinProblemSolver::Function>& f,int ihi,
-                double fac,Mat_<double>& ptry);
-    };
-
-    double DownhillSolverImpl::tryNewPoint(
-        Mat_<double>& p,
-        Mat_<double>& y,
-        Mat_<double>&  coord_sum,
-        const Ptr<MinProblemSolver::Function>& f,
-        int      ihi,
-        double   fac,
-        Mat_<double>& ptry
-        )
-    {
-        int ndim=p.cols;
-        int j;
-        double fac1,fac2,ytry;
-
-        fac1=(1.0-fac)/ndim;
-        fac2=fac1-fac;
-        for (j=0;j<ndim;j++)
-        {
-            ptry(j)=coord_sum(j)*fac1-p(ihi,j)*fac2;
-        }
-        ytry=f->calc(ptry.ptr<double>());
-        if (ytry < y(ihi))
-        {
-            y(ihi)=ytry;
-            for (j=0;j<ndim;j++)
-            {
-                coord_sum(j) += ptry(j)-p(ihi,j);
-                p(ihi,j)=ptry(j);
-            }
-        }
-
-        return ytry;
+        _Function=Ptr<Function>();
+        _step=Mat_<double>();
     }
 
-    /*
-    Performs the actual minimization of MinProblemSolver::Function f (after the initialization was done)
-
-    The matrix p[ndim+1][1..ndim] represents ndim+1 vertices that
-    form a simplex - each row is an ndim vector.
-    On output, nfunk gives the number of function evaluations taken.
-    */
-    double DownhillSolverImpl::innerDownhillSimplex(
-        cv::Mat_<double>&   p,
-        double     MinRange,
-        double     MinError,
-        int&       nfunk,
-        const Ptr<MinProblemSolver::Function>& f,
-        int nmax
-        )
+    void getInitStep(OutputArray step) const { _step.copyTo(step); }
+    void setInitStep(InputArray step)
     {
-        int ndim=p.cols;
-        double res;
-        int i,ihi,ilo,inhi,j,mpts=ndim+1;
-        double error, range,ysave,ytry;
-        Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim+1,0.0);
+        // set dimensionality and make a deep copy of step
+        Mat m = step.getMat();
+        dprintf(("m.cols=%d\nm.rows=%d\n", m.cols, m.rows));
+        CV_Assert( std::min(m.cols, m.rows) == 1 && m.type() == CV_64FC1 );
+        if( m.rows == 1 )
+            m.copyTo(_step);
+        else
+            transpose(m, _step);
+    }
 
-        nfunk = 0;
+    Ptr<MinProblemSolver::Function> getFunction() const { return _Function; }
 
-        for(i=0;i<ndim+1;++i)
+    void setFunction(const Ptr<Function>& f) { _Function=f; }
+
+    TermCriteria getTermCriteria() const { return _termcrit; }
+
+    void setTermCriteria( const TermCriteria& termcrit )
+    {
+        CV_Assert( termcrit.type == (TermCriteria::MAX_ITER + TermCriteria::EPS) &&
+                   termcrit.epsilon > 0 &&
+                   termcrit.maxCount > 0 );
+        _termcrit=termcrit;
+    }
+
+    double minimize( InputOutputArray x_ )
+    {
+        dprintf(("hi from minimize\n"));
+        CV_Assert( !_Function.empty() );
+        dprintf(("termcrit:\n\ttype: %d\n\tmaxCount: %d\n\tEPS: %g\n",_termcrit.type,_termcrit.maxCount,_termcrit.epsilon));
+        dprintf(("step\n"));
+        print_matrix(_step);
+
+        Mat x = x_.getMat();
+        Mat_<double> simplex;
+
+        createInitialSimplex(x, simplex, _step);
+        int count = 0;
+        double res = innerDownhillSimplex(simplex,_termcrit.epsilon, _termcrit.epsilon,
+                                          count, _Function, _termcrit.maxCount);
+        dprintf(("%d iterations done\n",count));
+
+        if( !x.empty() )
         {
-            y(i) = f->calc(p[i]);
+            Mat simplex_0m(x.rows, x.cols, CV_64F, simplex.ptr<double>());
+            simplex_0m.convertTo(x, x.type());
         }
-
-        nfunk = ndim+1;
-
-        reduce(p,coord_sum,0,CV_REDUCE_SUM);
-
-        for (;;)
+        else
         {
-            ilo=0;
-            /*  find highest (worst), next-to-worst, and lowest
-                (best) points by going through all of them. */
-            ihi = y(0)>y(1) ? (inhi=1,0) : (inhi=0,1);
-            for (i=0;i<mpts;i++)
-            {
-                if (y(i) <= y(ilo))
-                    ilo=i;
-                if (y(i) > y(ihi))
-                {
-                    inhi=ihi;
-                    ihi=i;
-                }
-                else if (y(i) > y(inhi) && i != ihi)
-                    inhi=i;
-            }
-
-            /* check stop criterion */
-            error=fabs(y(ihi)-y(ilo));
-            range=0;
-            for(i=0;i<ndim;++i)
-            {
-                double min = p(0,i);
-                double max = p(0,i);
-                double d;
-                for(j=1;j<=ndim;++j)
-                {
-                    if( min > p(j,i) ) min = p(j,i);
-                    if( max < p(j,i) ) max = p(j,i);
-                }
-                d = fabs(max-min);
-                if(range < d) range = d;
-            }
-
-            if(range <= MinRange || error <= MinError)
-            { /* Put best point and value in first slot. */
-                std::swap(y(0),y(ilo));
-                for (i=0;i<ndim;i++)
-                {
-                    std::swap(p(0,i),p(ilo,i));
-                }
-                break;
-            }
-
-            if (nfunk >= nmax){
-                dprintf(("nmax exceeded\n"));
-                return y(ilo);
-            }
-            nfunk += 2;
-            /*Begin a new iteration. First, reflect the worst point about the centroid of others */
-            ytry = tryNewPoint(p,y,coord_sum,f,ihi,-1.0,buf);
-            if (ytry <= y(ilo))
-            { /*If that's better than the best point, go twice as far in that direction*/
-                ytry = tryNewPoint(p,y,coord_sum,f,ihi,2.0,buf);
-            }
-            else if (ytry >= y(inhi))
-            {   /* The new point is worse than the second-highest, but better
-                  than the worst so do not go so far in that direction */
-                ysave = y(ihi);
-                ytry = tryNewPoint(p,y,coord_sum,f,ihi,0.5,buf);
-                if (ytry >= ysave)
-                { /* Can't seem to improve things. Contract the simplex to good point
-               in hope to find a simplex landscape. */
-                    for (i=0;i<mpts;i++)
-                    {
-                        if (i != ilo)
-                        {
-                            for (j=0;j<ndim;j++)
-                            {
-                                p(i,j) = coord_sum(j) = 0.5*(p(i,j)+p(ilo,j));
-                            }
-                            y(i)=f->calc(coord_sum.ptr<double>());
-                        }
-                    }
-                    nfunk += ndim;
-                    reduce(p,coord_sum,0,CV_REDUCE_SUM);
-                }
-            } else --(nfunk); /* correct nfunk */
-            dprintf(("this is simplex on iteration %d\n",nfunk));
-            print_matrix(p);
-        } /* go to next iteration. */
-        res = y(0);
-
+            int x_type = x_.fixedType() ? x_.type() : CV_64F;
+            simplex.row(0).convertTo(x_, x_type);
+        }
         return res;
     }
+protected:
+    Ptr<MinProblemSolver::Function> _Function;
+    TermCriteria _termcrit;
+    Mat _step;
 
-    void DownhillSolverImpl::createInitialSimplex(Mat_<double>& simplex,Mat& step){
-        for(int i=1;i<=step.cols;++i)
+    inline void updateCoordSum(const Mat_<double>& p, Mat_<double>& coord_sum)
+    {
+        int i, j, m = p.rows, n = p.cols;
+        double* coord_sum_ = coord_sum.ptr<double>();
+        CV_Assert( coord_sum.cols == n && coord_sum.rows == 1 );
+
+        for( j = 0; j < n; j++ )
+            coord_sum_[j] = 0.;
+
+        for( i = 0; i < m; i++ )
         {
-            simplex.row(0).copyTo(simplex.row(i));
-            simplex(i,i-1)+= 0.5*step.at<double>(0,i-1);
+            const double* p_i = p.ptr<double>(i);
+            for( j = 0; j < n; j++ )
+                coord_sum_[j] += p_i[j];
         }
-        simplex.row(0) -= 0.5*step;
+    }
+
+    inline void createInitialSimplex( const Mat& x0, Mat_<double>& simplex, Mat& step )
+    {
+        int i, j, ndim = step.cols;
+        Mat x = x0;
+        if( x0.empty() )
+            x = Mat::zeros(1, ndim, CV_64F);
+        CV_Assert( (x.cols == 1 && x.rows == ndim) || (x.cols == ndim && x.rows == 1) );
+        CV_Assert( x.type() == CV_32F || x.type() == CV_64F );
+
+        simplex.create(ndim + 1, ndim);
+        Mat simplex_0m(x.rows, x.cols, CV_64F, simplex.ptr<double>());
+
+        x.convertTo(simplex_0m, CV_64F);
+        double* simplex_0 = simplex.ptr<double>();
+        const double* step_ = step.ptr<double>();
+        for( i = 1; i <= ndim; i++ )
+        {
+            double* simplex_i = simplex.ptr<double>(i);
+            for( j = 0; j < ndim; j++ )
+                simplex_i[j] = simplex_0[j];
+            simplex_i[i-1] += 0.5*step_[i-1];
+        }
+        for( j = 0; j < ndim; j++ )
+            simplex_0[j] -= 0.5*step_[j];
 
         dprintf(("this is simplex\n"));
         print_matrix(simplex);
     }
 
-    double DownhillSolverImpl::minimize(InputOutputArray x){
-        dprintf(("hi from minimize\n"));
-        CV_Assert(_Function.empty()==false);
-        dprintf(("termcrit:\n\ttype: %d\n\tmaxCount: %d\n\tEPS: %g\n",_termcrit.type,_termcrit.maxCount,_termcrit.epsilon));
-        dprintf(("step\n"));
-        print_matrix(_step);
+    /*
+     Performs the actual minimization of MinProblemSolver::Function f (after the initialization was done)
 
-        Mat x_mat=x.getMat();
-        CV_Assert(MIN(x_mat.rows,x_mat.cols)==1);
-        CV_Assert(MAX(x_mat.rows,x_mat.cols)==_step.cols);
-        CV_Assert(x_mat.type()==CV_64FC1);
+     The matrix p[ndim+1][1..ndim] represents ndim+1 vertices that
+     form a simplex - each row is an ndim vector.
+     On output, nfunk gives the number of function evaluations taken.
+    */
+    double innerDownhillSimplex( Mat_<double>& p,double MinRange,double MinError, int& nfunk,
+                                 const Ptr<MinProblemSolver::Function>& f, int nmax )
+    {
+        int i, j, ndim = p.cols;
+        Mat_<double> coord_sum(1, ndim), buf(1, ndim), y(1, ndim+1);
+        double* y_ = y.ptr<double>();
 
-        Mat_<double> proxy_x;
+        nfunk = 0;
 
-        if(x_mat.rows>1){
-            buf_x.create(1,_step.cols);
-            Mat_<double> proxy(_step.cols,1,buf_x.ptr<double>());
-            x_mat.copyTo(proxy);
-            proxy_x=buf_x;
-        }else{
-            proxy_x=x_mat;
+        for( i = 0; i <= ndim; i++ )
+            y_[i] = f->calc(p[i]);
+
+        nfunk = ndim+1;
+        updateCoordSum(p, coord_sum);
+
+        for (;;)
+        {
+            /*  find highest (worst), next-to-worst, and lowest
+             (best) points by going through all of them. */
+            int ilo = 0, ihi, inhi;
+            if( y_[0] > y_[1] )
+            {
+                ihi = 0; inhi = 1;
+            }
+            else
+            {
+                ihi = 1; inhi = 0;
+            }
+            for( i = 0; i <= ndim; i++ )
+            {
+                double yval = y_[i];
+                if (yval <= y_[ilo])
+                    ilo = i;
+                if (yval > y_[ihi])
+                {
+                    inhi = ihi;
+                    ihi = i;
+                }
+                else if (yval > y_[inhi] && i != ihi)
+                    inhi = i;
+            }
+            CV_Assert( ilo != ihi && ilo != inhi && ihi != inhi );
+            dprintf(("this is y on iteration %d:\n",nfunk));
+            print_matrix(y);
+
+            /* check stop criterion */
+            double error = fabs(y_[ihi] - y_[ilo]);
+            double range = 0;
+            for( j = 0; j < ndim; j++ )
+            {
+                double minval, maxval;
+                minval = maxval = p(0, j);
+                for( i = 1; i <= ndim; i++ )
+                {
+                    double pval = p(i, j);
+                    minval = std::min(minval, pval);
+                    maxval = std::max(maxval, pval);
+                }
+                range = std::max(range, fabs(maxval - minval));
+            }
+
+            if( range <= MinRange || error <= MinError || nfunk >= nmax )
+            {
+                /* Put best point and value in first slot. */
+                std::swap(y(0), y(ilo));
+                for( j = 0; j < ndim; j++ )
+                {
+                    std::swap(p(0, j), p(ilo, j));
+                }
+                break;
+            }
+            nfunk += 2;
+
+            double ylo = y_[ilo], ynhi = y_[inhi];
+            /* Begin a new iteration. First, reflect the worst point about the centroid of others */
+            double ytry = tryNewPoint(p, y, coord_sum, f, ihi, -1.0, buf);
+            if( ytry <= ylo )
+            {
+                /* If that's better than the best point, go twice as far in that direction */
+                ytry = tryNewPoint(p, y, coord_sum, f, ihi, 2.0, buf);
+            }
+            else if( ytry >= ynhi )
+            {
+                /* The new point is worse than the second-highest,
+                   do not go so far in that direction */
+                double ysave = y(ihi);
+                ytry = tryNewPoint(p, y, coord_sum, f, ihi, 0.5, buf);
+                if (ytry >= ysave)
+                {
+                    /* Can't seem to improve things. Contract the simplex to good point
+                       in hope to find a simplex landscape. */
+                    for( i = 0; i <= ndim; i++ )
+                    {
+                        if (i != ilo)
+                        {
+                            for( j = 0; j < ndim; j++ )
+                                p(i,j) = 0.5*(p(i,j) + p(ilo,j));
+                            y(i)=f->calc(p.ptr<double>(i));
+                        }
+                    }
+                    nfunk += ndim;
+                    updateCoordSum(p, coord_sum);
+                }
+            }
+            else --(nfunk); /* correct nfunk */
+            dprintf(("this is simplex on iteration %d\n",nfunk));
+            print_matrix(p);
+        } /* go to next iteration. */
+        return y(0);
+    }
+
+    inline double tryNewPoint(Mat_<double>& p, Mat_<double>& y, Mat_<double>& coord_sum,
+                              const Ptr<MinProblemSolver::Function>& f, int ihi,
+                              double fac, Mat_<double>& ptry)
+    {
+        int j, ndim = p.cols;
+
+        double fac1 = (1.0 - fac)/ndim;
+        double fac2 = fac1 - fac;
+        double* p_ihi = p.ptr<double>(ihi);
+        double* ptry_ = ptry.ptr<double>();
+        double* coord_sum_ = coord_sum.ptr<double>();
+
+        for( j = 0; j < ndim; j++ )
+            ptry_[j] = coord_sum_[j]*fac1 - p_ihi[j]*fac2;
+
+        double ytry = f->calc(ptry_);
+        if (ytry < y(ihi))
+        {
+            y(ihi) = ytry;
+            for( j = 0; j < ndim; j++ )
+                p_ihi[j] = ptry_[j];
+            updateCoordSum(p, coord_sum);
         }
 
-        int count=0;
-        int ndim=_step.cols;
-        Mat_<double> simplex=Mat_<double>(ndim+1,ndim,0.0);
+        return ytry;
+    }
+};
 
-        proxy_x.copyTo(simplex.row(0));
-        createInitialSimplex(simplex,_step);
-        double res = innerDownhillSimplex(
-                simplex,_termcrit.epsilon, _termcrit.epsilon, count,_Function,_termcrit.maxCount);
-        simplex.row(0).copyTo(proxy_x);
 
-        dprintf(("%d iterations done\n",count));
+// both minRange & minError are specified by termcrit.epsilon;
+// In addition, user may specify the number of iterations that the algorithm does.
+Ptr<DownhillSolver> DownhillSolver::create( const Ptr<MinProblemSolver::Function>& f,
+                                            InputArray initStep, TermCriteria termcrit )
+{
+    Ptr<DownhillSolver> DS = makePtr<DownhillSolverImpl>();
+    DS->setFunction(f);
+    DS->setInitStep(initStep);
+    DS->setTermCriteria(termcrit);
+    return DS;
+}
 
-        if(x_mat.rows>1){
-            Mat(x_mat.rows, 1, CV_64F, proxy_x.ptr<double>()).copyTo(x);
-        }
-        return res;
-    }
-    DownhillSolverImpl::DownhillSolverImpl(){
-        _Function=Ptr<Function>();
-        _step=Mat_<double>();
-    }
-    Ptr<MinProblemSolver::Function> DownhillSolverImpl::getFunction()const{
-        return _Function;
-    }
-    void DownhillSolverImpl::setFunction(const Ptr<Function>& f){
-        _Function=f;
-    }
-    TermCriteria DownhillSolverImpl::getTermCriteria()const{
-        return _termcrit;
-    }
-    void DownhillSolverImpl::setTermCriteria(const TermCriteria& termcrit){
-        CV_Assert(termcrit.type==(TermCriteria::MAX_ITER+TermCriteria::EPS) && termcrit.epsilon>0 && termcrit.maxCount>0);
-        _termcrit=termcrit;
-    }
-    // both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
-    Ptr<DownhillSolver> DownhillSolver::create(const Ptr<MinProblemSolver::Function>& f, InputArray initStep, TermCriteria termcrit){
-        Ptr<DownhillSolver> DS = makePtr<DownhillSolverImpl>();
-        DS->setFunction(f);
-        DS->setInitStep(initStep);
-        DS->setTermCriteria(termcrit);
-        return DS;
-    }
-    void DownhillSolverImpl::getInitStep(OutputArray step)const{
-        _step.copyTo(step);
-    }
-    void DownhillSolverImpl::setInitStep(InputArray step){
-        //set dimensionality and make a deep copy of step
-        Mat m=step.getMat();
-        dprintf(("m.cols=%d\nm.rows=%d\n",m.cols,m.rows));
-        CV_Assert(MIN(m.cols,m.rows)==1 && m.type()==CV_64FC1);
-        if(m.rows==1){
-            m.copyTo(_step);
-        }else{
-            transpose(m,_step);
-        }
-    }
 }

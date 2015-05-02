@@ -1475,13 +1475,15 @@ Mat_<_Tp> Mat_<_Tp>::operator()( const Range* ranges ) const
 template<typename _Tp> inline
 _Tp* Mat_<_Tp>::operator [](int y)
 {
-    return (_Tp*)ptr(y);
+    CV_DbgAssert( 0 <= y && y < rows );
+    return (_Tp*)(data + y*step.p[0]);
 }
 
 template<typename _Tp> inline
 const _Tp* Mat_<_Tp>::operator [](int y) const
 {
-    return (const _Tp*)ptr(y);
+    CV_DbgAssert( 0 <= y && y < rows );
+    return (const _Tp*)(data + y*step.p[0]);
 }
 
 template<typename _Tp> inline
