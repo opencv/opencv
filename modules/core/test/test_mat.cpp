@@ -1223,6 +1223,18 @@ TEST(Core_InputArray, empty)
     ASSERT_TRUE( _InputArray(data).empty() );
 }
 
+TEST(Core_CopyMask, bug1918)
+{
+    Mat_<unsigned char> tmpSrc(100,100);
+    tmpSrc = 124;
+    Mat_<unsigned char> tmpMask(100,100);
+    tmpMask = 255;
+    Mat_<unsigned char> tmpDst(100,100);
+    tmpDst = 2;
+    tmpSrc.copyTo(tmpDst,tmpMask);
+    ASSERT_EQ(sum(tmpDst)[0], 124*100*100);
+}
+
 TEST(Core_SVD, orthogonality)
 {
     for( int i = 0; i < 2; i++ )
