@@ -8,6 +8,8 @@
 * Docs: <http://docs.opencv.org>
 * Q&A forum: <http://answers.opencv.org>
 * Issue tracking: <http://code.opencv.org>
+* Getting Started: [Tutorials for all the platforms](http://docs.opencv.org/doc/tutorials/introduction/table_of_content_introduction/table_of_content_introduction.html)
+
 
 #### Contributing
 
