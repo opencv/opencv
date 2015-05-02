@@ -78,7 +78,7 @@ class RosenbrockF:public cv::MinProblemSolver::Function{
     }
 };
 
-TEST(DISABLED_Core_DownhillSolver, regression_basic){
+TEST(Core_DownhillSolver, regression_basic){
     cv::Ptr<cv::DownhillSolver> solver=cv::DownhillSolver::create();
 #if 1
     {

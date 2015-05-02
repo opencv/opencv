@@ -354,7 +354,7 @@ namespace cv
         int ndim=_step.cols;
         Mat_<double> simplex=Mat_<double>(ndim+1,ndim,0.0);
 
-        simplex.row(0).copyTo(proxy_x);
+        proxy_x.copyTo(simplex.row(0));
         createInitialSimplex(simplex,_step);
         double res = innerDownhillSimplex(
                 simplex,_termcrit.epsilon, _termcrit.epsilon, count,_Function,_termcrit.maxCount);
