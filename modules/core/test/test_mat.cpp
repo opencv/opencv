@@ -1217,6 +1217,12 @@ TEST(Core_Matx, fromMat_)
     ASSERT_EQ( norm(a, b, NORM_INF), 0.);
 }
 
+TEST(Core_InputArray, empty)
+{
+    vector<vector<Point> > data;
+    ASSERT_TRUE( _InputArray(data).empty() );
+}
+
 TEST(Core_SVD, orthogonality)
 {
     for( int i = 0; i < 2; i++ )
