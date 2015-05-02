@@ -7652,7 +7652,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
             currCorner++;
         }
 
-        // mark non-maximum corners
+        // marks non-maximum corners
         for(curr_idx = 0; curr_idx < num_Corners; curr_idx++)
         {
             if (nmsFlags[curr_idx] != -1)
