@@ -56,7 +56,7 @@ int main(void)
                 descriptorMatcher->match(descImg1, descImg2, matches, Mat());
  // Keep best matches only to have a nice drawing
                 Mat index;
-                Mat tab(matches.size(), 1, CV_32F);
+                Mat tab(int(matches.size()), 1, CV_32F);
                 for (int i = 0; i<matches.size(); i++)
                     tab.at<float>(i, 0) = matches[i].distance;
                 sortIdx(tab, index, SORT_EVERY_COLUMN + SORT_ASCENDING);
