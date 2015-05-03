@@ -40,11 +40,13 @@
 //M*/
 #include "precomp.hpp"
 
-/*#define dprintf(x) printf x
-#define print_matrix(x) print(x)*/
-
+#if 0
+#define dprintf(x) printf x
+#define print_matrix(x) print(x)
+#else
 #define dprintf(x)
 #define print_matrix(x)
+#endif
 
 /*
 
@@ -61,7 +63,7 @@ file C:\builds\master_PackSlave-w in32-vc12-shared\opencv\modules\core\include\o
 
 DownhillSolverImpl::innerDownhillSimplex something looks broken here:
 Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim,0.0);
-nfunk = 0;
+fcount = 0;
 for(i=0;i<ndim+1;++i)
 {
 y(i) = f->calc(p[i]);
@@ -153,7 +155,6 @@ public:
         // set dimensionality and make a deep copy of step
         Mat m = step.getMat();
         dprintf(("m.cols=%d\nm.rows=%d\n", m.cols, m.rows));
-        CV_Assert( std::min(m.cols, m.rows) == 1 && m.type() == CV_64FC1 );
         if( m.rows == 1 )
             m.copyTo(_step);
         else
@@ -178,17 +179,19 @@ public:
     {
         dprintf(("hi from minimize\n"));
         CV_Assert( !_Function.empty() );
+        CV_Assert( std::min(_step.cols, _step.rows) == 1 &&
+                  std::max(_step.cols, _step.rows) >= 2 &&
+                  _step.type() == CV_64FC1 );
         dprintf(("termcrit:\n\ttype: %d\n\tmaxCount: %d\n\tEPS: %g\n",_termcrit.type,_termcrit.maxCount,_termcrit.epsilon));
         dprintf(("step\n"));
         print_matrix(_step);
 
-        Mat x = x_.getMat();
-        Mat_<double> simplex;
+        Mat x = x_.getMat(), simplex;
 
         createInitialSimplex(x, simplex, _step);
         int count = 0;
         double res = innerDownhillSimplex(simplex,_termcrit.epsilon, _termcrit.epsilon,
-                                          count, _Function, _termcrit.maxCount);
+                                          count, _termcrit.maxCount);
         dprintf(("%d iterations done\n",count));
 
         if( !x.empty() )
@@ -208,7 +211,7 @@ protected:
     TermCriteria _termcrit;
     Mat _step;
 
-    inline void updateCoordSum(const Mat_<double>& p, Mat_<double>& coord_sum)
+    inline void updateCoordSum(const Mat& p, Mat& coord_sum)
     {
         int i, j, m = p.rows, n = p.cols;
         double* coord_sum_ = coord_sum.ptr<double>();
@@ -223,9 +226,13 @@ protected:
             for( j = 0; j < n; j++ )
                 coord_sum_[j] += p_i[j];
         }
+
+        dprintf(("\nupdated coord sum:\n"));
+        print_matrix(coord_sum);
+
     }
 
-    inline void createInitialSimplex( const Mat& x0, Mat_<double>& simplex, Mat& step )
+    inline void createInitialSimplex( const Mat& x0, Mat& simplex, Mat& step )
     {
         int i, j, ndim = step.cols;
         Mat x = x0;
@@ -234,7 +241,7 @@ protected:
         CV_Assert( (x.cols == 1 && x.rows == ndim) || (x.cols == ndim && x.rows == 1) );
         CV_Assert( x.type() == CV_32F || x.type() == CV_64F );
 
-        simplex.create(ndim + 1, ndim);
+        simplex.create(ndim + 1, ndim, CV_64F);
         Mat simplex_0m(x.rows, x.cols, CV_64F, simplex.ptr<double>());
 
         x.convertTo(simplex_0m, CV_64F);
@@ -250,7 +257,7 @@ protected:
         for( j = 0; j < ndim; j++ )
             simplex_0[j] -= 0.5*step_[j];
 
-        dprintf(("this is simplex\n"));
+        dprintf(("\nthis is simplex\n"));
         print_matrix(simplex);
     }
 
@@ -259,27 +266,24 @@ protected:
 
      The matrix p[ndim+1][1..ndim] represents ndim+1 vertices that
      form a simplex - each row is an ndim vector.
-     On output, nfunk gives the number of function evaluations taken.
+     On output, fcount gives the number of function evaluations taken.
     */
-    double innerDownhillSimplex( Mat_<double>& p,double MinRange,double MinError, int& nfunk,
-                                 const Ptr<MinProblemSolver::Function>& f, int nmax )
+    double innerDownhillSimplex( Mat& p, double MinRange, double MinError, int& fcount, int nmax )
     {
         int i, j, ndim = p.cols;
-        Mat_<double> coord_sum(1, ndim), buf(1, ndim), y(1, ndim+1);
+        Mat coord_sum(1, ndim, CV_64F), buf(1, ndim, CV_64F), y(1, ndim+1, CV_64F);
         double* y_ = y.ptr<double>();
 
-        nfunk = 0;
-
+        fcount = ndim+1;
         for( i = 0; i <= ndim; i++ )
-            y_[i] = f->calc(p[i]);
+            y_[i] = calc_f(p.ptr<double>(i));
 
-        nfunk = ndim+1;
         updateCoordSum(p, coord_sum);
 
         for (;;)
         {
-            /*  find highest (worst), next-to-worst, and lowest
-             (best) points by going through all of them. */
+            // find highest (worst), next-to-worst, and lowest
+            // (best) points by going through all of them.
             int ilo = 0, ihi, inhi;
             if( y_[0] > y_[1] )
             {
@@ -302,101 +306,145 @@ protected:
                 else if (yval > y_[inhi] && i != ihi)
                     inhi = i;
             }
-            CV_Assert( ilo != ihi && ilo != inhi && ihi != inhi );
-            dprintf(("this is y on iteration %d:\n",nfunk));
+            CV_Assert( ihi != inhi );
+            if( ilo == inhi || ilo == ihi )
+            {
+                for( i = 0; i <= ndim; i++ )
+                {
+                    double yval = y_[i];
+                    if( yval == y_[ilo] && i != ihi && i != inhi )
+                    {
+                        ilo = i;
+                        break;
+                    }
+                }
+            }
+            dprintf(("\nthis is y on iteration %d:\n",fcount));
             print_matrix(y);
 
-            /* check stop criterion */
+            // check stop criterion
             double error = fabs(y_[ihi] - y_[ilo]);
             double range = 0;
             for( j = 0; j < ndim; j++ )
             {
                 double minval, maxval;
-                minval = maxval = p(0, j);
+                minval = maxval = p.at<double>(0, j);
                 for( i = 1; i <= ndim; i++ )
                 {
-                    double pval = p(i, j);
+                    double pval = p.at<double>(i, j);
                     minval = std::min(minval, pval);
                     maxval = std::max(maxval, pval);
                 }
                 range = std::max(range, fabs(maxval - minval));
             }
 
-            if( range <= MinRange || error <= MinError || nfunk >= nmax )
+            if( range <= MinRange || error <= MinError || fcount >= nmax )
             {
-                /* Put best point and value in first slot. */
-                std::swap(y(0), y(ilo));
+                // Put best point and value in first slot.
+                std::swap(y_[0], y_[ilo]);
                 for( j = 0; j < ndim; j++ )
                 {
-                    std::swap(p(0, j), p(ilo, j));
+                    std::swap(p.at<double>(0, j), p.at<double>(ilo, j));
                 }
                 break;
             }
-            nfunk += 2;
 
-            double ylo = y_[ilo], ynhi = y_[inhi];
-            /* Begin a new iteration. First, reflect the worst point about the centroid of others */
-            double ytry = tryNewPoint(p, y, coord_sum, f, ihi, -1.0, buf);
-            if( ytry <= ylo )
+            double y_lo = y_[ilo], y_nhi = y_[inhi], y_hi = y_[ihi];
+            // Begin a new iteration. First, reflect the worst point about the centroid of others
+            double alpha = -1.0;
+            double y_alpha = tryNewPoint(p, coord_sum, ihi, alpha, buf, fcount);
+
+            dprintf(("\ny_lo=%g, y_nhi=%g, y_hi=%g, y_alpha=%g, p_alpha:\n", y_lo, y_nhi, y_hi, y_alpha));
+            print_matrix(buf);
+
+            if( y_alpha < y_nhi )
             {
-                /* If that's better than the best point, go twice as far in that direction */
-                ytry = tryNewPoint(p, y, coord_sum, f, ihi, 2.0, buf);
-            }
-            else if( ytry >= ynhi )
-            {
-                /* The new point is worse than the second-highest,
-                   do not go so far in that direction */
-                double ysave = y(ihi);
-                ytry = tryNewPoint(p, y, coord_sum, f, ihi, 0.5, buf);
-                if (ytry >= ysave)
+                if( y_alpha < y_lo )
                 {
-                    /* Can't seem to improve things. Contract the simplex to good point
-                       in hope to find a simplex landscape. */
+                    // If that's better than the best point, go twice as far in that direction
+                    double beta = -2.0;
+                    double y_beta = tryNewPoint(p, coord_sum, ihi, beta, buf, fcount);
+                    dprintf(("\ny_beta=%g, p_beta:\n", y_beta));
+                    print_matrix(buf);
+                    if( y_beta < y_alpha )
+                    {
+                        alpha = beta;
+                        y_alpha = y_beta;
+                    }
+                }
+                replacePoint(p, coord_sum, y, ihi, alpha, y_alpha);
+            }
+            else
+            {
+                // The new point is worse than the second-highest,
+                // do not go so far in that direction
+                double gamma = 0.5;
+                double y_gamma = tryNewPoint(p, coord_sum, ihi, gamma, buf, fcount);
+                dprintf(("\ny_gamma=%g, p_gamma:\n", y_gamma));
+                print_matrix(buf);
+                if( y_gamma < y_hi )
+                    replacePoint(p, coord_sum, y, ihi, gamma, y_gamma);
+                else
+                {
+                    // Can't seem to improve things.
+                    // Contract the simplex to good point
+                    // in hope to find a simplex landscape.
                     for( i = 0; i <= ndim; i++ )
                     {
                         if (i != ilo)
                         {
                             for( j = 0; j < ndim; j++ )
-                                p(i,j) = 0.5*(p(i,j) + p(ilo,j));
-                            y(i)=f->calc(p.ptr<double>(i));
+                                p.at<double>(i, j) = 0.5*(p.at<double>(i, j) + p.at<double>(ilo, j));
+                            y_[i] = calc_f(p.ptr<double>(i));
                         }
                     }
-                    nfunk += ndim;
+                    fcount += ndim;
                     updateCoordSum(p, coord_sum);
                 }
             }
-            else --(nfunk); /* correct nfunk */
-            dprintf(("this is simplex on iteration %d\n",nfunk));
+            dprintf(("\nthis is simplex on iteration %d\n",fcount));
             print_matrix(p);
-        } /* go to next iteration. */
-        return y(0);
+        }
+        return y_[0];
     }
 
-    inline double tryNewPoint(Mat_<double>& p, Mat_<double>& y, Mat_<double>& coord_sum,
-                              const Ptr<MinProblemSolver::Function>& f, int ihi,
-                              double fac, Mat_<double>& ptry)
+    inline double calc_f(const double* ptr)
+    {
+        double res = _Function->calc(ptr);
+        CV_Assert( !cvIsNaN(res) && !cvIsInf(res) );
+        return res;
+    }
+
+    double tryNewPoint( Mat& p, Mat& coord_sum, int ihi, double alpha_, Mat& ptry, int& fcount )
     {
         int j, ndim = p.cols;
 
-        double fac1 = (1.0 - fac)/ndim;
-        double fac2 = fac1 - fac;
+        double alpha = (1.0 - alpha_)/ndim;
+        double beta = alpha - alpha_;
         double* p_ihi = p.ptr<double>(ihi);
         double* ptry_ = ptry.ptr<double>();
         double* coord_sum_ = coord_sum.ptr<double>();
 
         for( j = 0; j < ndim; j++ )
-            ptry_[j] = coord_sum_[j]*fac1 - p_ihi[j]*fac2;
+            ptry_[j] = coord_sum_[j]*alpha - p_ihi[j]*beta;
 
-        double ytry = f->calc(ptry_);
-        if (ytry < y(ihi))
-        {
-            y(ihi) = ytry;
-            for( j = 0; j < ndim; j++ )
-                p_ihi[j] = ptry_[j];
-            updateCoordSum(p, coord_sum);
-        }
+        fcount++;
+        return calc_f(ptry_);
+    }
 
-        return ytry;
+    void replacePoint( Mat& p, Mat& coord_sum, Mat& y, int ihi, double alpha_, double ytry )
+    {
+        int j, ndim = p.cols;
+
+        double alpha = (1.0 - alpha_)/ndim;
+        double beta = alpha - alpha_;
+        double* p_ihi = p.ptr<double>(ihi);
+        double* coord_sum_ = coord_sum.ptr<double>();
+
+        for( j = 0; j < ndim; j++ )
+            p_ihi[j] = coord_sum_[j]*alpha - p_ihi[j]*beta;
+        y.at<double>(ihi) = ytry;
+        updateCoordSum(p, coord_sum);
     }
 };
 
