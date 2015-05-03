@@ -79,7 +79,7 @@ class RosenbrockF_CG:public cv::MinProblemSolver::Function{
     }
 };
 
-TEST(DISABLED_Core_ConjGradSolver, regression_basic){
+TEST(Core_ConjGradSolver, regression_basic){
     cv::Ptr<cv::ConjGradSolver> solver=cv::ConjGradSolver::create();
 #if 1
     {
