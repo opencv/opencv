@@ -12,7 +12,7 @@ int main(void)
     typeAlgoMatch.push_back("BruteForce");
     typeAlgoMatch.push_back("BruteForce-Hamming");
     typeAlgoMatch.push_back("BruteForce-Hamming(2)");
-    
+
     vector<String> typeDesc;
     typeDesc.push_back("AKAZE");
     typeDesc.push_back("ORB");
@@ -22,7 +22,7 @@ int main(void)
     vector<String> fileName;
     fileName.push_back("basketball1.png");
     fileName.push_back("basketball2.png");
-    
+
     Mat img1 = imread(dataFolder+fileName[0], IMREAD_GRAYSCALE);
     Mat img2 = imread(dataFolder+fileName[1], IMREAD_GRAYSCALE);
 
@@ -61,19 +61,15 @@ int main(void)
                     tab.at<float>(i, 0) = matches[i].distance;
                 sortIdx(tab, index, SORT_EVERY_COLUMN + SORT_ASCENDING);
                 vector<DMatch> bestMatches;	/*<! best match */
-            
                 for (int i = 0; i<30; i++)
                     bestMatches.push_back(matches[index.at<int>(i, 0)]);
-
                 Mat result;
                 drawMatches(img1, keyImg1, img2, keyImg2, bestMatches, result);
                 namedWindow(*itDesc+": "+*itMatcher, WINDOW_AUTOSIZE);
                 imshow(*itDesc + ": " + *itMatcher, result);
                 FileStorage fs(*itDesc+"_"+*itMatcher+"_"+fileName[0]+"_"+fileName[1]+".xml", FileStorage::WRITE);
                 fs<<"Matches"<<matches;
-
                 vector<DMatch>::iterator it;
-
                 cout << "Index \tIndex \tindex \tdistance\n";
                 cout << "in img1\tin img2\timage\t\n";
                 for (it = matches.begin(); it != matches.end(); it++)
