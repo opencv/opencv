@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     vector<String> typeAlgoMatch;
     vector<String> fileName;
     help();
-    // This descriptor are going to be detect and compute 
+    // This descriptor are going to be detect and compute
     typeDesc.push_back("AKAZE");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
     typeDesc.push_back("ORB");      // see http://docs.opencv.org/trunk/de/dbf/classcv_1_1BRISK.html
     typeDesc.push_back("BRISK");    // see http://docs.opencv.org/trunk/db/d95/classcv_1_1ORB.html
@@ -67,11 +67,11 @@ int main(int argc, char *argv[])
     {
         Ptr<DescriptorMatcher> descriptorMatcher;
         // Match between img1 and img2
-        vector<DMatch> matches;	        
-        // keypoint  for img1 and img2 
+        vector<DMatch> matches;
+        // keypoint  for img1 and img2
         vector<KeyPoint> keyImg1, keyImg2;
-        // Descriptor for img1 and img2 
-        Mat descImg1, descImg2;         
+        // Descriptor for img1 and img2
+        Mat descImg1, descImg2;
         vector<String>::iterator itMatcher = typeAlgoMatch.end();
         if (*itDesc == "AKAZE"){
             b = AKAZE::create();
