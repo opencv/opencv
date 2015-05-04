@@ -142,6 +142,7 @@
 - (void)layoutPreviewLayer;
 - (void)saveVideo;
 - (NSURL *)videoFileURL;
+- (NSString *)videoFileString;
 
 
 @end
