@@ -557,6 +557,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
                                                   withPresentationTime:lastSampleTime] ) {
                     NSLog(@"Video Writing Error");
                 }
+                if (pixelBuffer != nullptr)
+                    CVPixelBufferRelease(pixelBuffer);
             }
 
         }
