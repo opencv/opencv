@@ -26,7 +26,7 @@ From our previous tutorial, we know already a bit of *Pixel operators*. An inter
 
    g(x) = (1 - \alpha)f_{0}(x) + \alpha f_{1}(x)
 
-By varying :math:`\alpha` from :math:`0 \rightarrow 1` this operator can be used to perform a temporal *cross-disolve* between two images or videos, as seen in slide shows and film productions (cool, eh?)
+By varying :math:`\alpha` from :math:`0 \rightarrow 1` this operator can be used to perform a temporal *cross-dissolve* between two images or videos, as seen in slide shows and film productions (cool, eh?)
 
 Code
 =====

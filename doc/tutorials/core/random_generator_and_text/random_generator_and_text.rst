@@ -116,7 +116,7 @@ Explanation
         pt1.x = rng.uniform( x_1, x_2 );
         pt1.y = rng.uniform( y_1, y_2 );
 
-     * We know that **rng** is a *Random number generator* object. In the code above we are calling **rng.uniform(a,b)**. This generates a radombly uniformed distribution between the values **a** and **b** (inclusive in **a**, exclusive in **b**).
+     * We know that **rng** is a *Random number generator* object. In the code above we are calling **rng.uniform(a,b)**. This generates a randomly uniformed distribution between the values **a** and **b** (inclusive in **a**, exclusive in **b**).
 
      * From the explanation above, we deduce that the extremes *pt1* and *pt2* will be random values, so the lines positions will be quite impredictable, giving a nice visual effect (check out the Result section below).
 
@@ -138,7 +138,7 @@ Explanation
 
        As we can see, the return value is an *Scalar* with 3 randomly initialized values, which are used as the *R*, *G* and *B* parameters for the line color. Hence, the color of the lines will be random too!
 
-#. The explanation above applies for the other functions generating circles, ellipses, polygones, etc. The parameters such as *center* and *vertices* are also generated randomly.
+#. The explanation above applies for the other functions generating circles, ellipses, polygons, etc. The parameters such as *center* and *vertices* are also generated randomly.
 
 #. Before finishing, we also should take a look at the functions *Display_Random_Text* and *Displaying_Big_End*, since they both have a few interesting features:
 
