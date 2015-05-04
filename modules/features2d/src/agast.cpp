@@ -7665,6 +7665,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
             if (keypoints[j - 1].response == -1)
                 keypoints.erase(keypoints.begin() + j - 1 );
         }
+
     }
 }
 
