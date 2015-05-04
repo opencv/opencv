@@ -25,7 +25,7 @@ version of it ](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutoria
 You may also find the source code and these video file in the
 `samples/cpp/tutorial_code/HighGUI/video-input-psnr-ssim/` folder of the OpenCV source library.
 
-@includelineno cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video-input-psnr-ssim.cpp
+@include cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video-input-psnr-ssim.cpp
 
 How to read a video stream (online-camera or offline-file)?
 -----------------------------------------------------------

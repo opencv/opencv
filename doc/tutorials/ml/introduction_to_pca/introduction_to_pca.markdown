@@ -93,7 +93,7 @@ Source Code
 
 This tutorial code's is shown lines below. You can also download it from
     [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp).
-@includelineno cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp
+@include cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp
 
 @note Another example using PCA for dimensionality reduction while maintaining an amount of variance can be found at [opencv_source_code/samples/cpp/pca.cpp](https://github.com/Itseez/opencv/tree/master/samples/cpp/pca.cpp)
 

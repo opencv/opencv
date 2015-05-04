@@ -16,7 +16,7 @@ Source Code
 Download the source code from
 [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp).
 
-@includelineno cpp/tutorial_code/introduction/display_image/display_image.cpp
+@include cpp/tutorial_code/introduction/display_image/display_image.cpp
 
 Explanation
 -----------
