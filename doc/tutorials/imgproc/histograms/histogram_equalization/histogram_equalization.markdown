@@ -64,7 +64,7 @@ Code
 -   **Downloadable code**: Click
     [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp)
 -   **Code at glance:**
-    @includelineno samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp
+    @include samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp
 
 Explanation
 -----------

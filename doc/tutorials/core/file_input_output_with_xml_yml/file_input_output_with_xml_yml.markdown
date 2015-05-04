@@ -22,7 +22,7 @@ library.
 
 Here's a sample code of how to achieve all the stuff enumerated at the goal list.
 
-@includelineno cpp/tutorial_code/core/file_input_output/file_input_output.cpp
+@include cpp/tutorial_code/core/file_input_output/file_input_output.cpp
 
 Explanation
 -----------

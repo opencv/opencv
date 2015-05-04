@@ -31,7 +31,7 @@ Exposure sequence
 Source Code
 -----------
 
-@includelineno cpp/tutorial_code/photo/hdr_imaging/hdr_imaging.cpp
+@include cpp/tutorial_code/photo/hdr_imaging/hdr_imaging.cpp
 
 Explanation
 -----------

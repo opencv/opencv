@@ -47,7 +47,7 @@ Code
     [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp)
 -   **Code at glance:**
 
-@includelineno cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp
+@include cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp
 
 Explanation
 -----------

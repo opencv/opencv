@@ -22,7 +22,7 @@ Code
 This tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp)
 
-@includelineno cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp
+@include cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp
 
 Explanation
 -----------

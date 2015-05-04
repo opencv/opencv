@@ -94,7 +94,7 @@ the weight vector \f$\beta\f$ and the bias \f$\beta_{0}\f$ of the optimal hyperp
 Source Code
 -----------
 
-@includelineno cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp
+@include cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp
 
 Explanation
 -----------
