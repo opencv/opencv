@@ -272,6 +272,14 @@
     } else {
         NSLog(@"[Camera] Error: could not set session preset");
     }
+
+    AVCaptureDevice *audioCaptureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
+    NSError *error = nil;
+    AVCaptureDeviceInput *audioInput = [AVCaptureDeviceInput deviceInputWithDevice:audioCaptureDevice error:&error];
+    if (audioInput) {
+        NSLog(@"Adding audio capture devices ");
+        [self.captureSession addInput:audioInput];
+    }
 }
 
 - (void)createCaptureDevice;
