@@ -235,6 +235,7 @@ protected:
     inline void createInitialSimplex( const Mat& x0, Mat& simplex, Mat& step )
     {
         int i, j, ndim = step.cols;
+        CV_Assert( _Function->getDims() == ndim );
         Mat x = x0;
         if( x0.empty() )
             x = Mat::zeros(1, ndim, CV_64F);
