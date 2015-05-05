@@ -1363,7 +1363,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
-    bool is_ipower = fabs(ipower - power) < DBL_EPSILON, same = false,
+    bool is_ipower = fabs(ipower - power) < DBL_EPSILON,
             useOpenCL = _dst.isUMat() && _src.dims() <= 2;
 
     if( is_ipower && !(ocl::Device::getDefault().isIntel() && useOpenCL && depth != CV_64F))
@@ -1385,8 +1385,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
 
-    CV_OCL_RUN(useOpenCL,
-               ocl_pow(same ? _dst : _src, power, _dst, is_ipower, ipower))
+    CV_OCL_RUN(useOpenCL, ocl_pow(_src, power, _dst, is_ipower, ipower))
 
     Mat src = _src.getMat();
     _dst.create( src.dims, src.size, type );
