@@ -10,9 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2010, Willow Garage Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
+// Copyright (C) 2015, University of Ostrava, Institute for Research and Applications of Fuzzy Modeling,
+// Pavel Vlasanek, all rights reserved. Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -40,20 +39,12 @@
 //
 //M*/
 
-#ifndef __OPENCV_ALL_HPP__
-#define __OPENCV_ALL_HPP__
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
 
-#include "opencv2/core.hpp"
+#include "opencv2/core/private.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/photo.hpp"
-#include "opencv2/video.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/objdetect.hpp"
-#include "opencv2/calib3d.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/videoio.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/ml.hpp"
 #include "opencv2/fuzzy.hpp"
 
 #endif
