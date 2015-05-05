@@ -10,8 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2015, Pavel Vlasanek, all rights reserved.
-// Third party copyrights are property of their respective owners.
+// Copyright (C) 2015, University of Ostrava, Institute for Research and Applications of Fuzzy Modeling,
+// Pavel Vlasanek, all rights reserved. Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
