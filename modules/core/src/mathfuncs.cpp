@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include <limits>
 
 namespace cv
 {

@@ -2857,14 +2857,15 @@ TEST(Core_Pow, special)
                 r0 = std::pow(val, power);
             if( cvIsInf(r0) )
             {
-                ASSERT_TRUE(cvIsInf(r));
+                ASSERT_TRUE(cvIsInf(r) != 0);
             }
             else if( cvIsNaN(r0) )
             {
-                ASSERT_TRUE(cvIsNaN(r));
+                ASSERT_TRUE(cvIsNaN(r) != 0);
             }
             else
             {
+                ASSERT_TRUE(cvIsInf(r) == 0 && cvIsNaN(r) == 0);
                 ASSERT_LT(fabs(r - r0), eps);
             }
         }
