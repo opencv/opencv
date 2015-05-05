@@ -67,7 +67,7 @@ namespace ft
     CV_EXPORTS void FT02D_inverseFT(cv::InputArray components, cv::InputArray kernel, cv::OutputArray output, int width, int height);
     CV_EXPORTS void FT02D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask);
 
-    CV_EXPORTS int FT02D_check(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask, cv::Mat &outputMask, bool firstStop = false);
+    CV_EXPORTS int FT02D_iteration(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &imageOutput, const cv::Mat &mask, cv::Mat &maskOutput, bool firstStop = true);
 
     CV_EXPORTS void createKernel(cv::InputArray A, cv::InputArray B, cv::OutputArray kernel, const int chn = 1);
     CV_EXPORTS void createKernel(int function, int radius, cv::OutputArray kernel, const int chn = 1);

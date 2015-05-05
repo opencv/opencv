@@ -79,7 +79,8 @@ void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray comp
 
             kernelMat.copyTo(kernelMasked, roiMask);
 
-            Mat numerator = roiImage.mul(kernelMasked);
+            Mat numerator;
+            multiply(roiImage, kernelMasked, numerator, 1, CV_32F);
 
             componentsMat.row(o).col(i) = sum(numerator) / sum(kernelMasked);
         }
@@ -139,7 +140,7 @@ void ft::FT02D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &out
     Mat imagePadded;
     Mat maskPadded;
 
-    output = Mat::zeros(outputHeightPadded, outputWidthPadded, image.type());
+    output = Mat::zeros(outputHeightPadded, outputWidthPadded, CV_MAKETYPE(CV_32F, image.channels()));
 
     copyMakeBorder(image, imagePadded, radiusY, kernel.rows, radiusX, kernel.cols, BORDER_CONSTANT, Scalar(0));
     copyMakeBorder(mask, maskPadded, radiusY, kernel.rows, radiusX, kernel.cols, BORDER_CONSTANT, Scalar(0));
@@ -158,23 +159,26 @@ void ft::FT02D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &out
 
             kernel.copyTo(kernelMasked, roiMask);
 
-            Mat numerator = roiImage.mul(kernelMasked);
+            Mat numerator;
+            multiply(roiImage, kernelMasked, numerator, 1, CV_32F);
 
             Scalar component;
-            divide(sum(numerator), sum(kernelMasked), component);
+            divide(sum(numerator), sum(kernelMasked), component, 1, CV_32F);
+
+            Mat inverse;
+            multiply(kernel, component, inverse, 1, CV_32F);
 
             Mat roiOutput(output, area);
-
-            add(roiOutput, kernel.mul(component), roiOutput);
+            add(roiOutput, inverse, roiOutput);
         }
     }
 
     output = output(Rect(radiusX, radiusY, image.cols, image.rows));
 }
 
-int ft::FT02D_check(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask, cv::Mat &outputMask, bool firstStop)
+int ft::FT02D_iteration(const Mat &image, const Mat &kernel, Mat &imageOutput, const Mat &mask, Mat &maskOutput, bool firstStop)
 {
-    CV_Assert(image.channels() == kernel.channels());
+    CV_Assert(image.channels() == kernel.channels() && mask.channels() == 1);
 
     int radiusX = (kernel.cols - 1) / 2;
     int radiusY = (kernel.rows - 1) / 2;
@@ -187,7 +191,8 @@ int ft::FT02D_check(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output
     Mat imagePadded;
     Mat maskPadded;
 
-    output = Mat::zeros(outputHeightPadded, outputWidthPadded, image.type());
+    imageOutput = Mat::zeros(outputHeightPadded, outputWidthPadded, CV_MAKETYPE(CV_32F, image.channels()));
+    maskOutput = Mat::ones(outputHeightPadded, outputWidthPadded, CV_8UC1);
 
     copyMakeBorder(image, imagePadded, radiusY, kernel.rows, radiusX, kernel.cols, BORDER_CONSTANT, Scalar(0));
     copyMakeBorder(mask, maskPadded, radiusY, kernel.rows, radiusX, kernel.cols, BORDER_CONSTANT, Scalar(0));
@@ -206,7 +211,8 @@ int ft::FT02D_check(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output
 
             kernel.copyTo(kernelMasked, roiMask);
 
-            Mat numerator = roiImage.mul(kernelMasked);
+            Mat numerator;
+            multiply(roiImage, kernelMasked, numerator, 1, CV_32F);
 
             Scalar denominator = sum(kernelMasked);
 
@@ -214,30 +220,35 @@ int ft::FT02D_check(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output
             {
                 if (firstStop)
                 {
-                    output = output(Rect(radiusX, radiusY, image.cols, image.rows));
+                    imageOutput = imageOutput(Rect(radiusX, radiusY, image.cols, image.rows));
+                    maskOutput = maskPadded(Rect(radiusX, radiusY, image.cols, image.rows));
 
                     return -1;
                 }
                 else
                 {
                     undefinedComponents++;
-                    roiMask = 1;
+
+                    Mat roiMaskOutput(maskOutput, Rect(centerX - radiusX + 1, centerY - radiusY + 1, kernel.cols - 2, kernel.rows - 2));
+                    roiMaskOutput = 0;
 
                     continue;
                 }
             }
 
             Scalar component;
-            divide(sum(numerator), denominator, component);
+            divide(sum(numerator), denominator, component, 1, CV_32F);
 
-            Mat roiOutput(output, area);
+            Mat inverse;
+            multiply(kernel, component, inverse, 1, CV_32F);
 
-            add(roiOutput, kernel.mul(component), roiOutput);
+            Mat roiImageOutput(imageOutput, area);
+            add(roiImageOutput, inverse, roiImageOutput);
         }
     }
 
-    output = output(Rect(radiusX, radiusY, image.cols, image.rows));
-    outputMask = maskPadded(Rect(radiusX, radiusY, mask.cols, mask.rows));
+    imageOutput = imageOutput(Rect(radiusX, radiusY, image.cols, image.rows));
+    maskOutput = maskOutput(Rect(radiusX, radiusY, image.cols, image.rows));
 
     return undefinedComponents;
 }

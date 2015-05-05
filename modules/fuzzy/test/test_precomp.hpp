@@ -11,9 +11,6 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/core/private.hpp"
-#include "opencv2/imgproc.hpp"
-
 #include "opencv2/fuzzy.hpp"
 
 #endif
