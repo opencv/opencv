@@ -1089,11 +1089,12 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         }
     }
 
-    if( complex_output && (n & 1) == 0 )
+    if( complex_output && ((n & 1) == 0 || n == 1))
     {
         dst[-1] = dst[0];
         dst[0] = 0;
-        dst[n] = 0;
+        if( n > 1 )
+            dst[n] = 0;
     }
 }
 
