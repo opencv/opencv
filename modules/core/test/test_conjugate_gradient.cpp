@@ -60,16 +60,19 @@ static void mytest(cv::Ptr<cv::ConjGradSolver> solver,cv::Ptr<cv::MinProblemSolv
 
 class SphereF_CG:public cv::MinProblemSolver::Function{
 public:
+    int getDims() const { return 4; }
     double calc(const double* x)const{
         return x[0]*x[0]+x[1]*x[1]+x[2]*x[2]+x[3]*x[3];
     }
-    void getGradient(const double* x,double* grad){
+    // use automatically computed gradient
+    /*void getGradient(const double* x,double* grad){
         for(int i=0;i<4;i++){
             grad[i]=2*x[i];
         }
-    }
+    }*/
 };
 class RosenbrockF_CG:public cv::MinProblemSolver::Function{
+    int getDims() const { return 2; }
     double calc(const double* x)const{
         return 100*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0])+(1-x[0])*(1-x[0]);
     }
