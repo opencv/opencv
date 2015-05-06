@@ -85,7 +85,7 @@ void cv::viz::Viz3d::VizImpl::TimerCallback::Execute(vtkObject* caller, unsigned
 
 void cv::viz::Viz3d::VizImpl::ExitCallback::Execute(vtkObject*, unsigned long event_id, void*)
 {
-    if (event_id == vtkCommand::ExitEvent)
+    if (event_id == vtkCommand::ExitEvent && viz->interactor_)
     {
         viz->interactor_->TerminateApp();
         viz->interactor_ = 0;

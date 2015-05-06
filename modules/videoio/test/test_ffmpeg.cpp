@@ -132,6 +132,7 @@ public:
                         writer << img;
                     }
 
+                    writer.release();
                     if (!created) created = true;
                     else remove(filename.c_str());
                 }

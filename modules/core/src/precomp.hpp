@@ -55,6 +55,8 @@
 #include "opencv2/core/private.cuda.hpp"
 #include "opencv2/core/ocl.hpp"
 
+#include "opencv2/hal.hpp"
+
 #include <assert.h>
 #include <ctype.h>
 #include <float.h>

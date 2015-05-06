@@ -1113,7 +1113,7 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
                                         Input/Output Array
 \*************************************************************************************************/
 
-Mat _InputArray::getMat(int i) const
+Mat _InputArray::getMat_(int i) const
 {
     int k = kind();
     int accessFlags = flags & ACCESS_MASK;

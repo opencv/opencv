@@ -618,8 +618,7 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
 void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
 {
     const ScaleData& s = scaleData->at(scaleIdx);
-    tofs = (int)sbufSize.area();
-    sqofs = hasTiltedFeatures ? tofs*2 : tofs;
+    sqofs = hasTiltedFeatures ? sbufSize.area() * 2 : sbufSize.area();
 
     if (img.isUMat())
     {
@@ -660,6 +659,9 @@ void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
 
 void HaarEvaluator::computeOptFeatures()
 {
+    if (hasTiltedFeatures)
+        tofs = sbufSize.area();
+
     int sstep = sbufSize.width;
     CV_SUM_OFS( nofs[0], nofs[1], nofs[2], nofs[3], 0, normrect, sstep );
 

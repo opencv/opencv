@@ -973,26 +973,12 @@ int CV_FundamentalMatTest::prepare_test_case( int test_case_idx )
     return code;
 }
 
-
 void CV_FundamentalMatTest::run_func()
 {
-    //if(!test_cpp)
-    {
-        CvMat _input0 = test_mat[INPUT][0], _input1 = test_mat[INPUT][1];
-        CvMat F = test_mat[TEMP][0], mask = test_mat[TEMP][1];
-        f_result = cvFindFundamentalMat( &_input0, &_input1, &F, method, MAX(sigma*3, 0.01), 0, &mask );
-    }
-    /*else
-    {
-        cv::findFundamentalMat(const Mat& points1, const Mat& points2,
-        vector<uchar>& mask, int method=FM_RANSAC,
-        double param1=3., double param2=0.99 );
-
-        CV_EXPORTS Mat findFundamentalMat( const Mat& points1, const Mat& points2,
-                                          int method=FM_RANSAC,
-                                          double param1=3., double param2=0.99 );
-    }*/
-
+    // cvFindFundamentalMat calls cv::findFundamentalMat
+    CvMat _input0 = test_mat[INPUT][0], _input1 = test_mat[INPUT][1];
+    CvMat F = test_mat[TEMP][0], mask = test_mat[TEMP][1];
+    f_result = cvFindFundamentalMat( &_input0, &_input1, &F, method, MAX(sigma*3, 0.01), 0, &mask );
 }
 
 
@@ -1022,7 +1008,7 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
     F0 *= 1./f0[8];
 
     uchar* status = test_mat[TEMP][1].ptr();
-    double err_level = method <= CV_FM_8POINT ? 1 : get_success_error_level( test_case_idx, OUTPUT, 1 );
+    double err_level = get_success_error_level( test_case_idx, OUTPUT, 1 );
     uchar* mtfm1 = test_mat[REF_OUTPUT][1].ptr();
     uchar* mtfm2 = test_mat[OUTPUT][1].ptr();
     double* f_prop1 = test_mat[REF_OUTPUT][0].ptr<double>();

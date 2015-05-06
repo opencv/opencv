@@ -10,8 +10,10 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2015, Intel Corporation, all rights reserved.
 // Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2015, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -2449,9 +2451,7 @@ matrix. The Singular Value Decomposition is used to solve least-square
 problems, under-determined linear systems, invert matrices, compute
 condition numbers, and so on.
 
-For a faster operation, you can pass flags=SVD::MODIFY_A|... to modify
-the decomposed matrix when it is not necessary to preserve it. If you
-want to compute a condition number of a matrix or an absolute value of
+If you want to compute a condition number of a matrix or an absolute value of
 its determinant, you do not need `u` and `vt`. You can pass
 flags=SVD::NO_UV|... . Another flag SVD::FULL_UV indicates that full-size u
 and vt must be computed, which is not necessary most of the time.
@@ -2462,8 +2462,8 @@ class CV_EXPORTS SVD
 {
 public:
     enum Flags {
-        /** use the algorithm to modify the decomposed matrix; it can save space and speed up
-            processing */
+        /** allow the algorithm to modify the decomposed matrix; it can save space and speed up
+            processing. currently ignored. */
         MODIFY_A = 1,
         /** indicates that only a vector of singular values `w` is to be processed, while u and vt
             will be set to empty matrices */
@@ -2921,6 +2921,10 @@ public:
     Algorithm();
     virtual ~Algorithm();
 
+    /** @brief Clears the algorithm state
+    */
+    CV_WRAP virtual void clear() {}
+
     /** @brief Stores algorithm parameters in a file storage
     */
     virtual void write(FileStorage& fs) const { (void)fs; }
@@ -2928,6 +2932,75 @@ public:
     /** @brief Reads algorithm parameters from a file storage
     */
     virtual void read(const FileNode& fn) { (void)fn; }
+
+    /** @brief Returns true if the Algorithm is empty (e.g. in the very beginning or after unsuccessful read
+     */
+    virtual bool empty() const { return false; }
+
+    /** @brief Reads algorithm from the file node
+
+     This is static template method of Algorithm. It's usage is following (in the case of SVM):
+     @code
+     Ptr<SVM> svm = Algorithm::read<SVM>(fn);
+     @endcode
+     In order to make this method work, the derived class must overwrite Algorithm::read(const
+     FileNode& fn) and also have static create() method without parameters
+     (or with all the optional parameters)
+     */
+    template<typename _Tp> static Ptr<_Tp> read(const FileNode& fn)
+    {
+        Ptr<_Tp> obj = _Tp::create();
+        obj->read(fn);
+        return !obj->empty() ? obj : Ptr<_Tp>();
+    }
+
+    /** @brief Loads algorithm from the file
+
+     @param filename Name of the file to read.
+     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
+
+     This is static template method of Algorithm. It's usage is following (in the case of SVM):
+     @code
+     Ptr<SVM> svm = Algorithm::load<SVM>("my_svm_model.xml");
+     @endcode
+     In order to make this method work, the derived class must overwrite Algorithm::read(const
+     FileNode& fn).
+     */
+    template<typename _Tp> static Ptr<_Tp> load(const String& filename, const String& objname=String())
+    {
+        FileStorage fs(filename, FileStorage::READ);
+        FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
+        Ptr<_Tp> obj = _Tp::create();
+        obj->read(fn);
+        return !obj->empty() ? obj : Ptr<_Tp>();
+    }
+
+    /** @brief Loads algorithm from a String
+
+     @param strModel The string variable containing the model you want to load.
+     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
+
+     This is static template method of Algorithm. It's usage is following (in the case of SVM):
+     @code
+     Ptr<SVM> svm = Algorithm::loadFromString<SVM>(myStringModel);
+     @endcode
+     */
+    template<typename _Tp> static Ptr<_Tp> loadFromString(const String& strModel, const String& objname=String())
+    {
+        FileStorage fs(strModel, FileStorage::READ + FileStorage::MEMORY);
+        FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
+        Ptr<_Tp> obj = _Tp::create();
+        obj->read(fn);
+        return !obj->empty() ? obj : Ptr<_Tp>();
+    }
+
+    /** Saves the algorithm to a file.
+     In order to make this method work, the derived class must implement Algorithm::write(FileStorage& fs). */
+    CV_WRAP virtual void save(const String& filename) const;
+
+    /** Returns the algorithm string identifier.
+     This string is used as top level xml/yml node tag when the object is saved to a file or string. */
+    CV_WRAP virtual String getDefaultName() const;
 };
 
 struct Param {

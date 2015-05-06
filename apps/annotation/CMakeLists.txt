@@ -9,7 +9,7 @@ project(annotation)
 set(the_target opencv_annotation)
 
 ocv_target_include_directories(${the_target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
-ocv_target_include_modules(${the_target} ${OPENCV_ANNOTATION_DEPS})
+ocv_target_include_modules_recurse(${the_target} ${OPENCV_ANNOTATION_DEPS})
 
 file(GLOB SRCS *.cpp)
 

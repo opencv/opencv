@@ -109,12 +109,18 @@ typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
 
+#ifdef HAVE_OPENCV_FEATURES2D
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
+#endif
 
+#ifdef HAVE_OPENCV_FLANN
 typedef cvflann::flann_distance_t cvflann_flann_distance_t;
 typedef cvflann::flann_algorithm_t cvflann_flann_algorithm_t;
+#endif
 
+#ifdef HAVE_OPENCV_STITCHING
 typedef Stitcher::Status Status;
+#endif
 
 static PyObject* failmsgp(const char *fmt, ...)
 {
@@ -220,7 +226,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 
     if( PyInt_Check(o) )
     {
-        double v[] = {(double)PyInt_AsLong((PyObject*)o), 0., 0., 0.};
+        double v[] = {static_cast<double>(PyInt_AsLong((PyObject*)o)), 0., 0., 0.};
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
@@ -445,11 +451,13 @@ PyObject* pyopencv_from(const bool& value)
     return PyBool_FromLong(value);
 }
 
+#ifdef HAVE_OPENCV_STITCHING
 template<>
 PyObject* pyopencv_from(const Status& value)
 {
     return PyInt_FromLong(value);
 }
+#endif
 
 template<>
 bool pyopencv_to(PyObject* obj, bool& value, const char* name)
@@ -486,6 +494,7 @@ PyObject* pyopencv_from(const int& value)
     return PyInt_FromLong(value);
 }
 
+#ifdef HAVE_OPENCV_FLANN
 template<>
 PyObject* pyopencv_from(const cvflann_flann_algorithm_t& value)
 {
@@ -497,6 +506,7 @@ PyObject* pyopencv_from(const cvflann_flann_distance_t& value)
 {
     return PyInt_FromLong(int(value));
 }
+#endif
 
 template<>
 bool pyopencv_to(PyObject* obj, int& value, const char* name)
@@ -1004,6 +1014,7 @@ PyObject* pyopencv_from(const Moments& m)
                          "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
 }
 
+#ifdef HAVE_OPENCV_FLANN
 template<>
 bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
 {
@@ -1057,6 +1068,7 @@ bool pyopencv_to(PyObject* obj, cv::flann::SearchParams & value, const char * na
 {
     return pyopencv_to<cv::flann::IndexParams>(obj, value, name);
 }
+#endif
 
 template <typename T>
 bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
@@ -1065,6 +1077,7 @@ bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
     return pyopencv_to(o, *p, name);
 }
 
+#ifdef HAVE_OPENCV_FLANN
 template<>
 bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const char *name)
 {
@@ -1073,6 +1086,7 @@ bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const char *name)
     dist = (cvflann::flann_distance_t)d;
     return ok;
 }
+#endif
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1120,6 +1134,7 @@ static void OnMouse(int event, int x, int y, int flags, void* param)
     PyGILState_Release(gstate);
 }
 
+#ifdef HAVE_OPENCV_HIGHGUI
 static PyObject *pycvSetMouseCallback(PyObject*, PyObject *args, PyObject *kw)
 {
     const char *keywords[] = { "window_name", "on_mouse", "param", NULL };
@@ -1139,6 +1154,7 @@ static PyObject *pycvSetMouseCallback(PyObject*, PyObject *args, PyObject *kw)
     ERRWRAP2(setMouseCallback(name, OnMouse, Py_BuildValue("OO", on_mouse, param)));
     Py_RETURN_NONE;
 }
+#endif
 
 static void OnChange(int pos, void *param)
 {
@@ -1154,6 +1170,7 @@ static void OnChange(int pos, void *param)
     PyGILState_Release(gstate);
 }
 
+#ifdef HAVE_OPENCV_HIGHGUI
 static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
 {
     PyObject *on_change;
@@ -1171,6 +1188,7 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
     ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
     Py_RETURN_NONE;
 }
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -1200,8 +1218,10 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #include "pyopencv_generated_funcs.h"
 
 static PyMethodDef special_methods[] = {
+#ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
+#endif
   {NULL, NULL},
 };
 

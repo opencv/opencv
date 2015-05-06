@@ -1820,9 +1820,14 @@ static bool ocl_morphologyEx(InputArray _src, OutputArray _dst, int op,
 #endif
 
 void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
-                       InputArray kernel, Point anchor, int iterations,
+                       InputArray _kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
+    Mat kernel = _kernel.getMat();
+    if (kernel.empty())
+    {
+        kernel = getStructuringElement(MORPH_RECT, Size(3,3), Point(1,1));
+    }
 #ifdef HAVE_OPENCL
     Size ksize = kernel.size();
     anchor = normalizeAnchor(anchor, ksize);

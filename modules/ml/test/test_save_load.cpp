@@ -190,17 +190,17 @@ protected:
         bool isTree = modelName == CV_BOOST || modelName == CV_DTREE || modelName == CV_RTREES;
         Ptr<StatModel> model;
         if (modelName == CV_BOOST)
-            model = StatModel::load<Boost>(filename);
+            model = Algorithm::load<Boost>(filename);
         else if (modelName == CV_ANN)
-            model = StatModel::load<ANN_MLP>(filename);
+            model = Algorithm::load<ANN_MLP>(filename);
         else if (modelName == CV_DTREE)
-            model = StatModel::load<DTrees>(filename);
+            model = Algorithm::load<DTrees>(filename);
         else if (modelName == CV_NBAYES)
-            model = StatModel::load<NormalBayesClassifier>(filename);
+            model = Algorithm::load<NormalBayesClassifier>(filename);
         else if (modelName == CV_SVM)
-            model = StatModel::load<SVM>(filename);
+            model = Algorithm::load<SVM>(filename);
         else if (modelName == CV_RTREES)
-            model = StatModel::load<RTrees>(filename);
+            model = Algorithm::load<RTrees>(filename);
         if (!model)
         {
             code = cvtest::TS::FAIL_INVALID_TEST_DATA;
@@ -273,11 +273,11 @@ TEST(DISABLED_ML_SVM, linear_save_load)
 {
     Ptr<cv::ml::SVM> svm1, svm2, svm3;
 
-    svm1 = StatModel::load<SVM>("SVM45_X_38-1.xml");
-    svm2 = StatModel::load<SVM>("SVM45_X_38-2.xml");
+    svm1 = Algorithm::load<SVM>("SVM45_X_38-1.xml");
+    svm2 = Algorithm::load<SVM>("SVM45_X_38-2.xml");
     string tname = tempfile("a.xml");
     svm2->save(tname);
-    svm3 = StatModel::load<SVM>(tname);
+    svm3 = Algorithm::load<SVM>(tname);
 
     ASSERT_EQ(svm1->getVarCount(), svm2->getVarCount());
     ASSERT_EQ(svm1->getVarCount(), svm3->getVarCount());
