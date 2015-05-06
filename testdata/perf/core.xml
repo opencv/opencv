@@ -32356,7 +32356,6 @@
       <y>0</y>
       <val>1.</val></rng2></sortedClusterPointsNumber></MaxDim_MaxPoints_kmeans--kmeans---32--300->
  <!-- resumed -->
-
 <OCL_LUTFixture_LUT--LUT---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -44323,7 +44322,6 @@
       <cn>3</cn>
       <val>-6.1685991287231445e-01</val></rng2></dst></OCL_AddFixture_Add--Add---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_RepeatFixture_Repeat--Repeat---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -44547,7 +44545,6 @@
       <y>700</y>
       <val>-8.5245943069458008e-01</val></rng2></dst></OCL_RepeatFixture_Repeat--Repeat---1920x1080--32FC4->
  <!-- resumed -->
-
 <OCL_MinFixture_Min--Min---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -44848,7 +44845,6 @@
       <cn>1</cn>
       <val>1.3054652512073517e-01</val></rng2></dst></OCL_MinFixture_Min--Min---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_MaxFixture_Max--Max---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -45150,7 +45146,6 @@
       <cn>3</cn>
       <val>3.5846400260925293e-01</val></rng2></dst></OCL_MaxFixture_Max--Max---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_InRangeFixture_InRange--InRange---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -45440,7 +45435,6 @@
       <y>1815</y>
       <val>0.</val></rng2></dst></OCL_InRangeFixture_InRange--InRange---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_NormalizeFixture_Normalize--Normalize---640x480--8UC1--CV_MINMAX->
   <dst>
     <kind>655360</kind>
@@ -46639,7 +46633,6 @@
       <cn>1</cn>
       <val>1.6507266759872437e+00</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC4--CV_C->
  <!-- resumed -->
-
 <OCL_BitwiseAndFixture_Bitwise_and--Bitwise_and---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -46941,7 +46934,6 @@
       <cn>3</cn>
       <val>1.5724194049835205e-01</val></rng2></dst></OCL_BitwiseAndFixture_Bitwise_and--Bitwise_and---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_BitwiseXorFixture_Bitwise_xor--Bitwise_xor---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -47242,7 +47234,6 @@
       <y>1002</y>
       <val>-5.1087306269705575e-39</val></rng2></dst></OCL_BitwiseXorFixture_Bitwise_xor--Bitwise_xor---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_SqrtFixture_Sqrt--Sqrt---640x480--32FC1->
   <dst>
     <kind>655360</kind>
@@ -48088,7 +48079,6 @@
       <y>859</y>
       <val>-3.6441192030906677e-01</val></rng2></dst2></OCL_SplitFixture_Split--Split---3840x2160--CV_32F--3->
  <!-- resumed -->
-
 <OCL_MergeFixture_Merge--Merge---640x480--CV_8U--2->
   <dst>
     <kind>655360</kind>
@@ -48397,7 +48387,6 @@
       <cn>2</cn>
       <val>1.0536238551139832e-01</val></rng2></dst></OCL_MergeFixture_Merge--Merge---3840x2160--CV_32F--3->
  <!-- resumed -->
-
 <OCL_MulSpectrumsFixture_MulSpectrums--MulSpectrums---640x480--false->
   <dst>
     <kind>655360</kind>
@@ -48514,7 +48503,6 @@
       <cn>1</cn>
       <val>4.4296604394912720e-01</val></rng2></dst></OCL_MulSpectrumsFixture_MulSpectrums--MulSpectrums---1920x1080--true->
  <!-- resumed -->
-
 <OCL_MixChannelsFixture_MixChannels--MixChannels---640x480--CV_8U->
   <dst0>
     <kind>655360</kind>
@@ -48738,7 +48726,6 @@
       <cn>1</cn>
       <val>-3.2264012098312378e-01</val></rng2></dst1></OCL_MixChannelsFixture_MixChannels--MixChannels---1920x1080--CV_32F->
  <!-- resumed -->
-
 <OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_INF->
   <res>
     <kind>131072</kind>
@@ -49100,7 +49087,6 @@
       <data>
         2.3517006055211377e+03</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_L2->
  <!-- resumed -->
-
 <OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC1->
   <mean0>
     <kind>131072</kind>
@@ -49978,7 +49964,6 @@
       <data>
         5.7734831620565685e-01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC4->
  <!-- resumed -->
-
 <OCL_PatchNaNsFixture_PatchNaNs--PatchNaNs---640x480--32FC1->
   <src>
     <kind>655360</kind>
@@ -50130,7 +50115,6 @@
       <cn>2</cn>
       <val>6.4298254251480103e-01</val></rng2></src></OCL_PatchNaNsFixture_PatchNaNs--PatchNaNs---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_ConvertScaleAbsFixture_ConvertScaleAbs--ConvertScaleAbs---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -50732,7 +50716,6 @@
       <cn>2</cn>
       <val>-9.1357266902923584e-01</val></rng2></dst></OCL_ScaleAddFixture_ScaleAdd--ScaleAdd---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_PSNRFixture_PSNR--PSNR---640x480--8UC1->
   <psnr>
     <kind>131072</kind>
@@ -50814,7 +50797,6 @@
       <data>
         7.7479179962456977e+00</data></val></psnr></OCL_PSNRFixture_PSNR--PSNR---3840x2160--8UC4->
  <!-- resumed -->
-
 <OCL_InsertChannelFixture_InsertChannel--InsertChannel---640x480--CV_8U->
   <dst>
     <kind>655360</kind>
@@ -53244,7 +53226,6 @@
       <y>1337</y>
       <val>-1.7697904258966446e-02</val></rng2></dst></OCL_ReduceAccFixture_Reduce--Reduce---3840x2160---32FC1--32FC1---1--CV_REDUCE_AVG->
  <!-- resumed -->
-
 <OCL_UMatDotFixture_UMatDot--UMatDot---640x480--8UC1->
   <r>
     <kind>131072</kind>
@@ -53366,7 +53347,6 @@
       <data>
         -3.5295096351023938e+02</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--32FC4->
  <!-- resumed -->
-
 <OCL_AddFixture_Add--Add---640x480--8UC3->
   <dst>
     <kind>655360</kind>
@@ -54917,7 +54897,6 @@
       <cn>1</cn>
       <val>4.7029662132263184e+00</val></rng2></dst></OCL_AddWeightedFixture_AddWeighted--AddWeighted---3840x2160--32FC3->
  <!-- resumed -->
-
 <OCL_SetToFixture_SetTo--SetTo---640x480--8UC1->
   <src>
     <kind>655360</kind>
@@ -55220,7 +55199,6 @@
       <cn>2</cn>
       <val>17.</val></rng2></src></OCL_SetToFixture_SetTo--SetTo---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_CopyToFixture_CopyTo--CopyTo---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -55521,7 +55499,6 @@
       <cn>1</cn>
       <val>6.1173889786005020e-02</val></rng2></dst></OCL_CopyToFixture_CopyTo--CopyTo---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_ConvertToFixture_ConvertTo--ConvertTo---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -55823,7 +55800,6 @@
       <cn>3</cn>
       <val>0.</val></rng2></dst></OCL_ConvertToFixture_ConvertTo--ConvertTo---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_TransposeFixture_Transpose--Transpose---640x480--8UC3->
   <dst>
     <kind>655360</kind>
@@ -55975,7 +55951,6 @@
       <cn>1</cn>
       <val>-8.3581203222274780e-01</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---3840x2160--32FC3->
  <!-- resumed -->
-
 <OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---640x480--8UC3->
   <min_val>
     <kind>131072</kind>
@@ -56417,7 +56392,6 @@
       <data>
         0.</data></val></max_loc_y></OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---3840x2160--32FC3->
  <!-- resumed -->
-
 <OCL_NormFixture_Norm--Norm---640x480--8UC3--NORM_INF->
   <res>
     <kind>131072</kind>
@@ -57219,7 +57193,6 @@
       <y>1591</y>
       <val>8.4030303955078125e+00</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC3--CV_C->
  <!-- resumed -->
-
 <OCL_UMatDotFixture_UMatDot--UMatDot---640x480--8UC3->
   <r>
     <kind>131072</kind>
@@ -57281,7 +57254,6 @@
       <data>
         -7.5759086910812789e+02</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--32FC3->
  <!-- resumed -->
-
 <OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC3->
   <mean0>
     <kind>131072</kind>
@@ -57721,7 +57693,6 @@
       <data>
         0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC3->
  <!-- resumed -->
-
 <OCL_SumFixture_Sum--Sum---640x480--8UC3->
   <result>
     <kind>131072</kind>
@@ -57807,7 +57778,6 @@
         2.4892061187539387e+08 2.4883541214280701e+08
         2.4887278291827202e+08 0.</data></val></result></OCL_SumFixture_Sum--Sum---3840x2160--32FC3->
  <!-- resumed -->
-
 <sortFixture_sort--sort---640x480--8UC1--0->
   <b>
     <kind>65536</kind>
@@ -58973,7 +58943,6 @@
       <cn>1</cn>
       <val>-7.0312869548797607e-01</val></rng2></dst></OCL_CopyToFixture_CopyToWithMask--CopyToWithMask---3840x2160--32FC4->
  <!-- resumed -->
-
 <OCL_SetToFixture_SetToWithMask--SetToWithMask---640x480--8UC1->
   <src>
     <kind>655360</kind>
@@ -59275,7 +59244,6 @@
       <cn>3</cn>
       <val>17.</val></rng2></src></OCL_SetToFixture_SetToWithMask--SetToWithMask---3840x2160--32FC4->
  <!-- resumed -->
-
 <Size_MatType_FlagsType_dft--dft---320x480--32FC1--0->
   <dst>
     <kind>65536</kind>
@@ -60942,7 +60910,6 @@
       <y>902</y>
       <val>9.8985094123688005e+006</val></rng2></dst></Size_MatType_FlagsType_dft--dft---2048x2048--64FC1--DFT_INVERSE-DFT_COMPLEX_OUTPUT->
  <!-- resumed -->
-
 <Size_MatType_Flag_dct--dct---320x240--32FC1--0->
   <dst>
     <kind>65536</kind>
@@ -61808,7 +61775,6 @@
       <y>2030</y>
       <val>2.4248422247414887e+003</val></rng2></dst></Size_MatType_Flag_dct--dct---2048x2048--64FC1--DCT_INVERSE-DCT_ROWS->
  <!-- resumed -->
-
 <Size_MatType_FlagsType_NzeroRows_dft--dft---320x480--32FC1--0--true->
   <dst>
     <kind>65536</kind>
@@ -65140,7 +65106,6 @@
       <y>1529</y>
       <val>5.5196597184781414e+006</val></rng2></dst></Size_MatType_FlagsType_NzeroRows_dft--dft---2048x2048--64FC1--DFT_INVERSE-DFT_COMPLEX_OUTPUT--false->
  <!-- resumed -->
-
 <OCL_NormFixture_NormRel--NormRel---640x480--8UC1--NORM_INF->
   <res>
     <kind>131072</kind>
@@ -65682,7 +65647,6 @@
       <data>
         1.4142013739523016e+00</data></val></res></OCL_NormFixture_NormRel--NormRel---1920x1080--32FC4--NORM_L2->
  <!-- resumed -->
-
 <OCL_MeanStdDevFixture_MeanStdDevWithMask--MeanStdDevWithMask---640x480--8UC1->
   <mean0>
     <kind>131072</kind>
@@ -68486,2677 +68450,7 @@
       <y>901</y>
       <val>1.8374679982662201e-001</val></rng2></dst></OCL_PowFixture_Pow--Pow---3840x2160--32FC4->
  <!-- resumed -->
-
-<OCL_DftFixture_Dft--Dft---3--640x480--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.5234658203125000e+003</min>
-    <max>1.6019709472656250e+003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-2.9248956298828125e+002</val></last>
-    <rng1>
-      <x>456</x>
-      <y>369</y>
-      <cn>1</cn>
-      <val>3.7562646484375000e+002</val></rng1>
-    <rng2>
-      <x>185</x>
-      <y>391</y>
-      <val>2.5516319274902344e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--0->
-<OCL_DftFixture_Dft--Dft---3--640x480--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-7.1756729125976563e+001</min>
-    <max>6.3937961578369141e+001</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-8.2719202041625977e+000</val></last>
-    <rng1>
-      <x>306</x>
-      <y>448</y>
-      <val>-2.8412294387817383e+000</val></rng1>
-    <rng2>
-      <x>239</x>
-      <y>136</y>
-      <val>-1.0788815498352051e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--4->
-<OCL_DftFixture_Dft--Dft---3--640x480--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.9591986462473869e-003</min>
-    <max>5.2147493697702885e-003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-9.5211446750909090e-004</val></last>
-    <rng1>
-      <x>630</x>
-      <y>42</y>
-      <cn>1</cn>
-      <val>6.8788597127422690e-004</val></rng1>
-    <rng2>
-      <x>73</x>
-      <y>425</y>
-      <cn>1</cn>
-      <val>1.9803952891379595e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--2->
-<OCL_DftFixture_Dft--Dft---3--640x480--1->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.5234655761718750e+003</min>
-    <max>1.6019709472656250e+003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>8.4026840209960937e+001</val></last>
-    <rng1>
-      <x>66</x>
-      <y>31</y>
-      <val>-1.8187654113769531e+002</val></rng1>
-    <rng2>
-      <x>477</x>
-      <y>128</y>
-      <val>-3.2038580322265625e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--1->
-<OCL_DftFixture_Dft--Dft---3--640x480--3->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.9591981805860996e-003</min>
-    <max>5.2147493697702885e-003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>2.7352487086318433e-004</val></last>
-    <rng1>
-      <x>18</x>
-      <y>225</y>
-      <val>7.8506738645955920e-004</val></rng1>
-    <rng2>
-      <x>416</x>
-      <y>374</y>
-      <val>1.1490819742903113e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--3->
-<OCL_DftFixture_Dft--Dft---3--640x480--5->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-7.1756736755371094e+001</min>
-    <max>6.3937961578369141e+001</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-9.0716104507446289e+000</val></last>
-    <rng1>
-      <x>419</x>
-      <y>275</y>
-      <val>1.5366106033325195e+001</val></rng1>
-    <rng2>
-      <x>167</x>
-      <y>424</y>
-      <cn>1</cn>
-      <val>-1.1137609481811523e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--5->
-<OCL_DftFixture_Dft--Dft---3--1280x720--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.6459013671875000e+003</min>
-    <max>2.9969304199218750e+003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>5.8558189392089844e+001</val></last>
-    <rng1>
-      <x>241</x>
-      <y>492</y>
-      <cn>1</cn>
-      <val>7.8705682373046875e+002</val></rng1>
-    <rng2>
-      <x>163</x>
-      <y>435</y>
-      <cn>1</cn>
-      <val>7.7194805908203125e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--0->
-<OCL_DftFixture_Dft--Dft---3--1280x720--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.1306349182128906e+002</min>
-    <max>1.0395848083496094e+002</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>4.9575824737548828e+000</val></last>
-    <rng1>
-      <x>1008</x>
-      <y>589</y>
-      <cn>1</cn>
-      <val>-3.7646476745605469e+001</val></rng1>
-    <rng2>
-      <x>1018</x>
-      <y>656</y>
-      <cn>1</cn>
-      <val>3.4794136047363281e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--4->
-<OCL_DftFixture_Dft--Dft---3--1280x720--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.8709867037832737e-003</min>
-    <max>3.2518776133656502e-003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>6.3539700931869447e-005</val></last>
-    <rng1>
-      <x>843</x>
-      <y>616</y>
-      <val>-4.7254021046683192e-004</val></rng1>
-    <rng2>
-      <x>25</x>
-      <y>159</y>
-      <cn>1</cn>
-      <val>4.7758829896338284e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--2->
-<OCL_DftFixture_Dft--Dft---3--1280x720--1->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.6459011230468750e+003</min>
-    <max>2.9969306640625000e+003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-3.5291662597656250e+002</val></last>
-    <rng1>
-      <x>495</x>
-      <y>379</y>
-      <cn>1</cn>
-      <val>-1.1327764892578125e+002</val></rng1>
-    <rng2>
-      <x>641</x>
-      <y>265</y>
-      <cn>1</cn>
-      <val>2.6610467529296875e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--1->
-<OCL_DftFixture_Dft--Dft---3--1280x720--3->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.8709864709526300e-003</min>
-    <max>3.2518780790269375e-003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-3.8293906254693866e-004</val></last>
-    <rng1>
-      <x>628</x>
-      <y>384</y>
-      <val>-7.1606150595471263e-004</val></rng1>
-    <rng2>
-      <x>1157</x>
-      <y>299</y>
-      <val>-4.6011607628315687e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--3->
-<OCL_DftFixture_Dft--Dft---3--1280x720--5->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.1306349182128906e+002</min>
-    <max>1.0395848846435547e+002</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-1.4560832977294922e+001</val></last>
-    <rng1>
-      <x>628</x>
-      <y>288</y>
-      <val>1.3125076293945313e+000</val></rng1>
-    <rng2>
-      <x>138</x>
-      <y>246</y>
-      <val>3.7171276092529297e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--5->
-<OCL_DftFixture_Dft--Dft---3--1920x1080--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.1347578125000000e+003</min>
-    <max>4.2909980468750000e+003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>4.0544711303710937e+002</val></last>
-    <rng1>
-      <x>1916</x>
-      <y>629</y>
-      <val>-2.7917382812500000e+002</val></rng1>
-    <rng2>
-      <x>1672</x>
-      <y>1078</y>
-      <cn>1</cn>
-      <val>2.0644358825683594e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--0->
-<OCL_DftFixture_Dft--Dft---3--1920x1080--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.2429809570312500e+002</min>
-    <max>1.2386021423339844e+002</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-5.1539836883544922e+001</val></last>
-    <rng1>
-      <x>31</x>
-      <y>980</y>
-      <cn>1</cn>
-      <val>2.8575220108032227e+001</val></rng1>
-    <rng2>
-      <x>1043</x>
-      <y>867</y>
-      <cn>1</cn>
-      <val>-2.8481864929199219e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--4->
-<OCL_DftFixture_Dft--Dft---3--1920x1080--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.9939998164772987e-003</min>
-    <max>2.0693470723927021e-003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>1.9552811863832176e-004</val></last>
-    <rng1>
-      <x>1139</x>
-      <y>811</y>
-      <val>1.8305685080122203e-004</val></rng1>
-    <rng2>
-      <x>976</x>
-      <y>329</y>
-      <val>-4.6461928286589682e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--2->
-<OCL_DftFixture_Dft--Dft---3--1920x1080--1->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.1347578125000000e+003</min>
-    <max>4.2909980468750000e+003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-8.4110076904296875e+002</val></last>
-    <rng1>
-      <x>574</x>
-      <y>716</y>
-      <val>8.2683944702148438e+001</val></rng1>
-    <rng2>
-      <x>125</x>
-      <y>274</y>
-      <cn>1</cn>
-      <val>-3.3436444091796875e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--1->
-<OCL_DftFixture_Dft--Dft---3--1920x1080--3->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.9939998164772987e-003</min>
-    <max>2.0693470723927021e-003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-4.0562343201600015e-004</val></last>
-    <rng1>
-      <x>595</x>
-      <y>290</y>
-      <cn>1</cn>
-      <val>-3.8724186015315354e-004</val></rng1>
-    <rng2>
-      <x>1530</x>
-      <y>343</y>
-      <cn>1</cn>
-      <val>-1.2020694703096524e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--3->
-<OCL_DftFixture_Dft--Dft---3--1920x1080--5->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.2429809570312500e+002</min>
-    <max>1.2386022186279297e+002</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-9.6200342178344727e+000</val></last>
-    <rng1>
-      <x>848</x>
-      <y>510</y>
-      <cn>1</cn>
-      <val>-3.2595305442810059e+000</val></rng1>
-    <rng2>
-      <x>774</x>
-      <y>60</y>
-      <cn>1</cn>
-      <val>4.2031135559082031e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--5->
-<OCL_DftFixture_Dft--Dft---3--512x512--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.3416536865234375e+003</min>
-    <max>1.6937312011718750e+003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-2.0460989379882812e+002</val></last>
-    <rng1>
-      <x>332</x>
-      <y>212</y>
-      <val>-2.7976757049560547e+001</val></rng1>
-    <rng2>
-      <x>185</x>
-      <y>112</y>
-      <cn>1</cn>
-      <val>5.5045104980468750e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--0->
-<OCL_DftFixture_Dft--Dft---3--512x512--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-5.8405128479003906e+001</min>
-    <max>6.4360412597656250e+001</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-1.9676322937011719e+001</val></last>
-    <rng1>
-      <x>142</x>
-      <y>251</y>
-      <cn>1</cn>
-      <val>-4.8787450790405273e+000</val></rng1>
-    <rng2>
-      <x>378</x>
-      <y>86</y>
-      <cn>1</cn>
-      <val>-5.7393798828125000e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--4->
-<OCL_DftFixture_Dft--Dft---3--512x512--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-5.1180026493966579e-003</min>
-    <max>6.4610717818140984e-003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-7.8052480239421129e-004</val></last>
-    <rng1>
-      <x>182</x>
-      <y>454</y>
-      <val>-9.6230627968907356e-004</val></rng1>
-    <rng2>
-      <x>233</x>
-      <y>447</y>
-      <cn>1</cn>
-      <val>-2.6141344278585166e-005</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--2->
-<OCL_DftFixture_Dft--Dft---3--512x512--1->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.3416536865234375e+003</min>
-    <max>1.6937312011718750e+003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>1.0288627624511719e+002</val></last>
-    <rng1>
-      <x>398</x>
-      <y>389</y>
-      <cn>1</cn>
-      <val>1.8559088134765625e+002</val></rng1>
-    <rng2>
-      <x>315</x>
-      <y>252</y>
-      <val>2.8215048217773437e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--1->
-<OCL_DftFixture_Dft--Dft---3--512x512--3->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-5.1180026493966579e-003</min>
-    <max>6.4610717818140984e-003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>3.9247999666258693e-004</val></last>
-    <rng1>
-      <x>327</x>
-      <y>32</y>
-      <val>2.1324877161532640e-003</val></rng1>
-    <rng2>
-      <x>188</x>
-      <y>256</y>
-      <cn>1</cn>
-      <val>-1.1690015671774745e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--3->
-<OCL_DftFixture_Dft--Dft---3--512x512--5->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-5.8405128479003906e+001</min>
-    <max>6.4360412597656250e+001</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-1.5343931198120117e+001</val></last>
-    <rng1>
-      <x>296</x>
-      <y>103</y>
-      <cn>1</cn>
-      <val>8.6085071563720703e+000</val></rng1>
-    <rng2>
-      <x>348</x>
-      <y>10</y>
-      <cn>1</cn>
-      <val>5.0671091079711914e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--5->
-<OCL_DftFixture_Dft--Dft---3--1024x1024--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.7597880859375000e+003</min>
-    <max>2.9501313476562500e+003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>2.9745935058593750e+002</val></last>
-    <rng1>
-      <x>826</x>
-      <y>255</y>
-      <cn>1</cn>
-      <val>-4.6974645996093750e+002</val></rng1>
-    <rng2>
-      <x>67</x>
-      <y>526</y>
-      <val>-9.0256982421875000e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--0->
-<OCL_DftFixture_Dft--Dft---3--1024x1024--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-8.7497573852539063e+001</min>
-    <max>8.8923400878906250e+001</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>-9.4315853118896484e+000</val></last>
-    <rng1>
-      <x>179</x>
-      <y>656</y>
-      <val>-1.3837425231933594e+001</val></rng1>
-    <rng2>
-      <x>793</x>
-      <y>811</y>
-      <cn>1</cn>
-      <val>-2.5677877426147461e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--4->
-<OCL_DftFixture_Dft--Dft---3--1024x1024--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.6319390162825584e-003</min>
-    <max>2.8134644962847233e-003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>2.8367934282869101e-004</val></last>
-    <rng1>
-      <x>943</x>
-      <y>478</y>
-      <val>3.3218730823136866e-004</val></rng1>
-    <rng2>
-      <x>775</x>
-      <y>713</y>
-      <val>-4.2415654752403498e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--2->
-<OCL_DftFixture_Dft--Dft---3--1024x1024--1->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.7597880859375000e+003</min>
-    <max>2.9501313476562500e+003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>2.5984805297851562e+002</val></last>
-    <rng1>
-      <x>434</x>
-      <y>882</y>
-      <val>4.2021514892578125e+002</val></rng1>
-    <rng2>
-      <x>519</x>
-      <y>932</y>
-      <cn>1</cn>
-      <val>4.0920281982421875e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--1->
-<OCL_DftFixture_Dft--Dft---3--1024x1024--3->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.6319390162825584e-003</min>
-    <max>2.8134644962847233e-003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>2.4781041429378092e-004</val></last>
-    <rng1>
-      <x>477</x>
-      <y>83</y>
-      <cn>1</cn>
-      <val>7.6803978299722075e-004</val></rng1>
-    <rng2>
-      <x>733</x>
-      <y>78</y>
-      <cn>1</cn>
-      <val>2.0830193534493446e-005</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--3->
-<OCL_DftFixture_Dft--Dft---3--1024x1024--5->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-8.7497573852539063e+001</min>
-    <max>8.8923400878906250e+001</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>-7.7887630462646484e+000</val></last>
-    <rng1>
-      <x>947</x>
-      <y>314</y>
-      <val>2.4423290252685547e+001</val></rng1>
-    <rng2>
-      <x>51</x>
-      <y>454</y>
-      <val>-1.2244965553283691e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--5->
-<OCL_DftFixture_Dft--Dft---3--2048x2048--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-6.0436484375000000e+003</min>
-    <max>6.3852773437500000e+003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>6.3652172851562500e+002</val></last>
-    <rng1>
-      <x>1902</x>
-      <y>1327</y>
-      <cn>1</cn>
-      <val>-4.4833325195312500e+002</val></rng1>
-    <rng2>
-      <x>478</x>
-      <y>1682</y>
-      <val>-7.1308489990234375e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--0->
-<OCL_DftFixture_Dft--Dft---3--2048x2048--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.3675398254394531e+002</min>
-    <max>1.3769039916992187e+002</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>4.4921226501464844e+001</val></last>
-    <rng1>
-      <x>106</x>
-      <y>465</y>
-      <val>1.1692485809326172e+001</val></rng1>
-    <rng2>
-      <x>268</x>
-      <y>2038</y>
-      <cn>1</cn>
-      <val>9.1666841506958008e-001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--4->
-<OCL_DftFixture_Dft--Dft---3--2048x2048--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.4409180730581284e-003</min>
-    <max>1.5223687514662743e-003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>1.5175860607996583e-004</val></last>
-    <rng1>
-      <x>1172</x>
-      <y>738</y>
-      <val>1.0656677477527410e-004</val></rng1>
-    <rng2>
-      <x>795</x>
-      <y>798</y>
-      <cn>1</cn>
-      <val>-3.2510819437447935e-005</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--2->
-<OCL_DftFixture_Dft--Dft---3--2048x2048--1->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-6.0436484375000000e+003</min>
-    <max>6.3852773437500000e+003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>-4.5494207763671875e+002</val></last>
-    <rng1>
-      <x>496</x>
-      <y>46</y>
-      <val>-1.3417261962890625e+003</val></rng1>
-    <rng2>
-      <x>493</x>
-      <y>1468</y>
-      <val>5.7485290527343750e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--1->
-<OCL_DftFixture_Dft--Dft---3--2048x2048--3->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.4409180730581284e-003</min>
-    <max>1.5223687514662743e-003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>-1.0846664372365922e-004</val></last>
-    <rng1>
-      <x>630</x>
-      <y>2034</y>
-      <val>-1.5187205281108618e-004</val></rng1>
-    <rng2>
-      <x>1112</x>
-      <y>1870</y>
-      <val>-5.2663142560049891e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--3->
-<OCL_DftFixture_Dft--Dft---3--2048x2048--5->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.3675398254394531e+002</min>
-    <max>1.3769039916992187e+002</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>-2.4594898223876953e+001</val></last>
-    <rng1>
-      <x>1194</x>
-      <y>980</y>
-      <cn>1</cn>
-      <val>3.5683403015136719e+000</val></rng1>
-    <rng2>
-      <x>406</x>
-      <y>639</y>
-      <val>-4.9782909393310547e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--5->
-<OCL_DftFixture_Dft--Dft---0--640x480--0->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.1072291259765625e+003</min>
-    <max>1.2083461914062500e+003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-8.4375213623046875e+002</val></last>
-    <rng1>
-      <x>202</x>
-      <y>30</y>
-      <val>3.0022583007812500e+000</val></rng1>
-    <rng2>
-      <x>4</x>
-      <y>299</y>
-      <val>2.9904284667968750e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--0->
-<OCL_DftFixture_Dft--Dft---0--640x480--4->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.7716354370117188e+001</min>
-    <max>4.9679714202880859e+001</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-1.5985422134399414e+000</val></last>
-    <rng1>
-      <x>114</x>
-      <y>153</y>
-      <val>5.4678287506103516e+000</val></rng1>
-    <rng2>
-      <x>346</x>
-      <y>269</y>
-      <val>4.2677030563354492e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--4->
-<OCL_DftFixture_Dft--Dft---0--640x480--2->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-3.6042616702616215e-003</min>
-    <max>3.9334185421466827e-003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-2.7465890161693096e-003</val></last>
-    <rng1>
-      <x>614</x>
-      <y>39</y>
-      <val>4.5183068141341209e-004</val></rng1>
-    <rng2>
-      <x>585</x>
-      <y>375</y>
-      <val>-6.7399308318272233e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--2->
-<OCL_DftFixture_Dft--Dft---0--640x480--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-2.0038122558593750e+003</min>
-    <max>2.5554799804687500e+003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>9.7026348876953125e+002</val></last>
-    <rng1>
-      <x>10</x>
-      <y>290</y>
-      <val>-1.4816374206542969e+002</val></rng1>
-    <rng2>
-      <x>16</x>
-      <y>434</y>
-      <val>-2.6625816345214844e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--1->
-<OCL_DftFixture_Dft--Dft---0--640x480--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-6.5228263847529888e-003</min>
-    <max>8.3186198025941849e-003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>3.1584098469465971e-003</val></last>
-    <rng1>
-      <x>178</x>
-      <y>370</y>
-      <val>2.4051502987276763e-004</val></rng1>
-    <rng2>
-      <x>212</x>
-      <y>90</y>
-      <val>-1.7932171467691660e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--3->
-<OCL_DftFixture_Dft--Dft---0--640x480--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-9.1952560424804688e+001</min>
-    <max>9.8063636779785156e+001</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-7.6393127441406250e+000</val></last>
-    <rng1>
-      <x>609</x>
-      <y>231</y>
-      <val>1.3140497207641602e+000</val></rng1>
-    <rng2>
-      <x>30</x>
-      <y>49</y>
-      <val>-7.7576007843017578e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--5->
-<OCL_DftFixture_Dft--Dft---0--1280x720--0->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.9251503906250000e+003</min>
-    <max>1.8111767578125000e+003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>1.6098185729980469e+002</val></last>
-    <rng1>
-      <x>1167</x>
-      <y>95</y>
-      <val>8.2669903564453125e+002</val></rng1>
-    <rng2>
-      <x>1261</x>
-      <y>508</y>
-      <val>3.9924316406250000e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--0->
-<OCL_DftFixture_Dft--Dft---0--1280x720--4->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-7.1556953430175781e+001</min>
-    <max>6.8579994201660156e+001</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>1.3487660408020020e+001</val></last>
-    <rng1>
-      <x>708</x>
-      <y>519</y>
-      <val>-2.4074462890625000e+001</val></rng1>
-    <rng2>
-      <x>1122</x>
-      <y>111</y>
-      <val>1.0440045356750488e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--4->
-<OCL_DftFixture_Dft--Dft---0--1280x720--2->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-2.0889218430966139e-003</min>
-    <max>1.9652526825666428e-003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>1.7467650468461215e-004</val></last>
-    <rng1>
-      <x>655</x>
-      <y>556</y>
-      <val>-3.9217836456373334e-004</val></rng1>
-    <rng2>
-      <x>665</x>
-      <y>308</y>
-      <val>2.0044863049406558e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--2->
-<OCL_DftFixture_Dft--Dft---0--1280x720--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-3.7327233886718750e+003</min>
-    <max>3.6574746093750000e+003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-9.7831921386718750e+002</val></last>
-    <rng1>
-      <x>574</x>
-      <y>560</y>
-      <val>4.6057067871093750e+002</val></rng1>
-    <rng2>
-      <x>1244</x>
-      <y>516</y>
-      <val>5.3551068115234375e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--1->
-<OCL_DftFixture_Dft--Dft---0--1280x720--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.0502641350030899e-003</min>
-    <max>3.9686141535639763e-003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-1.0615442879498005e-003</val></last>
-    <rng1>
-      <x>95</x>
-      <y>318</y>
-      <val>1.3898505130782723e-003</val></rng1>
-    <rng2>
-      <x>413</x>
-      <y>611</y>
-      <val>-4.1424421942792833e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--3->
-<OCL_DftFixture_Dft--Dft---0--1280x720--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.4310020446777344e+002</min>
-    <max>1.3446759033203125e+002</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>2.3260665893554687e+001</val></last>
-    <rng1>
-      <x>975</x>
-      <y>299</y>
-      <val>-1.4240175247192383e+001</val></rng1>
-    <rng2>
-      <x>894</x>
-      <y>598</y>
-      <val>-3.3903068542480469e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--5->
-<OCL_DftFixture_Dft--Dft---0--1920x1080--0->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-2.8564409179687500e+003</min>
-    <max>2.7007797851562500e+003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-1.6664156494140625e+003</val></last>
-    <rng1>
-      <x>228</x>
-      <y>949</y>
-      <val>1.9604054260253906e+002</val></rng1>
-    <rng2>
-      <x>1475</x>
-      <y>259</y>
-      <val>-5.6325622558593750e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--0->
-<OCL_DftFixture_Dft--Dft---0--1920x1080--4->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-9.3113975524902344e+001</min>
-    <max>8.7445007324218750e+001</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>3.0273193359375000e+001</val></last>
-    <rng1>
-      <x>1724</x>
-      <y>728</y>
-      <val>-9.5228672027587891e+000</val></rng1>
-    <rng2>
-      <x>1859</x>
-      <y>442</y>
-      <val>-1.2368357181549072e-001</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--4->
-<OCL_DftFixture_Dft--Dft---0--1920x1080--2->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.3775274856016040e-003</min>
-    <max>1.3024593936279416e-003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-8.0363411689177155e-004</val></last>
-    <rng1>
-      <x>1028</x>
-      <y>711</y>
-      <val>1.3638958989758976e-005</val></rng1>
-    <rng2>
-      <x>526</x>
-      <y>689</y>
-      <val>-3.4197769127786160e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--2->
-<OCL_DftFixture_Dft--Dft---0--1920x1080--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-5.3654228515625000e+003</min>
-    <max>5.9195532226562500e+003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>5.4351464843750000e+002</val></last>
-    <rng1>
-      <x>1300</x>
-      <y>398</y>
-      <val>-1.4011728515625000e+003</val></rng1>
-    <rng2>
-      <x>278</x>
-      <y>971</y>
-      <val>7.9380657958984375e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--1->
-<OCL_DftFixture_Dft--Dft---0--1920x1080--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-2.5874916464090347e-003</min>
-    <max>2.8547227848321199e-003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>2.6211162912659347e-004</val></last>
-    <rng1>
-      <x>1433</x>
-      <y>516</y>
-      <val>1.3975835463497788e-004</val></rng1>
-    <rng2>
-      <x>977</x>
-      <y>12</y>
-      <val>1.1694952263496816e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--3->
-<OCL_DftFixture_Dft--Dft---0--1920x1080--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.7640060424804687e+002</min>
-    <max>1.8940054321289062e+002</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-5.3547611236572266e+000</val></last>
-    <rng1>
-      <x>370</x>
-      <y>499</y>
-      <val>-2.3577352523803711e+001</val></rng1>
-    <rng2>
-      <x>132</x>
-      <y>769</y>
-      <val>6.4706329345703125e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--5->
-<OCL_DftFixture_Dft--Dft---0--512x512--0->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-9.3175097656250000e+002</min>
-    <max>1.1139370117187500e+003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>4.6907409667968750e+002</val></last>
-    <rng1>
-      <x>338</x>
-      <y>288</y>
-      <val>-3.6995326995849609e+001</val></rng1>
-    <rng2>
-      <x>119</x>
-      <y>511</y>
-      <val>1.0956658935546875e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--0->
-<OCL_DftFixture_Dft--Dft---0--512x512--4->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.4166343688964844e+001</min>
-    <max>4.1305419921875000e+001</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>1.4784302711486816e+000</val></last>
-    <rng1>
-      <x>331</x>
-      <y>330</y>
-      <val>1.7834703445434570e+001</val></rng1>
-    <rng2>
-      <x>193</x>
-      <y>147</y>
-      <val>-8.8419427871704102e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--4->
-<OCL_DftFixture_Dft--Dft---0--512x512--2->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-3.5543479025363922e-003</min>
-    <max>4.2493324726819992e-003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>1.7893756739795208e-003</val></last>
-    <rng1>
-      <x>83</x>
-      <y>257</y>
-      <val>-8.9143577497452497e-004</val></rng1>
-    <rng2>
-      <x>240</x>
-      <y>101</y>
-      <val>7.9149636439979076e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--2->
-<OCL_DftFixture_Dft--Dft---0--512x512--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.7656032714843750e+003</min>
-    <max>2.5674216308593750e+003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>4.3014099121093750e+002</val></last>
-    <rng1>
-      <x>185</x>
-      <y>508</y>
-      <val>2.6064001464843750e+002</val></rng1>
-    <rng2>
-      <x>428</x>
-      <y>471</y>
-      <val>-1.1828601074218750e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--1->
-<OCL_DftFixture_Dft--Dft---0--512x512--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-6.7352419719099998e-003</min>
-    <max>9.7939362749457359e-003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>1.6408576630055904e-003</val></last>
-    <rng1>
-      <x>379</x>
-      <y>174</y>
-      <val>2.4670397397130728e-003</val></rng1>
-    <rng2>
-      <x>168</x>
-      <y>253</y>
-      <val>-1.0145830456167459e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--3->
-<OCL_DftFixture_Dft--Dft---0--512x512--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-8.2167190551757813e+001</min>
-    <max>8.5171165466308594e+001</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>2.0744350433349609e+001</val></last>
-    <rng1>
-      <x>186</x>
-      <y>203</y>
-      <val>-9.2652368545532227e+000</val></rng1>
-    <rng2>
-      <x>396</x>
-      <y>120</y>
-      <val>3.8690319061279297e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--5->
-<OCL_DftFixture_Dft--Dft---0--1024x1024--0->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.9359400634765625e+003</min>
-    <max>2.1328857421875000e+003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>1.0339891357421875e+003</val></last>
-    <rng1>
-      <x>635</x>
-      <y>291</y>
-      <val>-9.1116004943847656e+001</val></rng1>
-    <rng2>
-      <x>5</x>
-      <y>966</y>
-      <val>-1.8067610168457031e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--0->
-<OCL_DftFixture_Dft--Dft---0--1024x1024--4->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-7.2764175415039063e+001</min>
-    <max>5.6987190246582031e+001</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>5.2630701065063477e+000</val></last>
-    <rng1>
-      <x>774</x>
-      <y>723</y>
-      <val>-3.4358010292053223e+000</val></rng1>
-    <rng2>
-      <x>660</x>
-      <y>114</y>
-      <val>2.3273668289184570e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--4->
-<OCL_DftFixture_Dft--Dft---0--1024x1024--2->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.8462563166394830e-003</min>
-    <max>2.0340783521533012e-003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>9.8608888220041990e-004</val></last>
-    <rng1>
-      <x>0</x>
-      <y>235</y>
-      <val>9.6697782282717526e-005</val></rng1>
-    <rng2>
-      <x>405</x>
-      <y>995</y>
-      <val>-5.8553804410621524e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--2->
-<OCL_DftFixture_Dft--Dft---0--1024x1024--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.1064497070312500e+003</min>
-    <max>4.0333764648437500e+003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>5.3110876464843750e+002</val></last>
-    <rng1>
-      <x>554</x>
-      <y>589</y>
-      <val>-6.9643310546875000e+001</val></rng1>
-    <rng2>
-      <x>37</x>
-      <y>866</y>
-      <val>4.1582794189453125e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--1->
-<OCL_DftFixture_Dft--Dft---0--1024x1024--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-3.9162156172096729e-003</min>
-    <max>3.8465275429189205e-003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>5.0650478806346655e-004</val></last>
-    <rng1>
-      <x>365</x>
-      <y>757</y>
-      <val>-4.4180511031299829e-004</val></rng1>
-    <rng2>
-      <x>926</x>
-      <y>573</y>
-      <val>4.4768812949769199e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--3->
-<OCL_DftFixture_Dft--Dft---0--1024x1024--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.1952741241455078e+002</min>
-    <max>1.2535937500000000e+002</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>-2.3702394485473633e+001</val></last>
-    <rng1>
-      <x>378</x>
-      <y>301</y>
-      <val>-4.5724609375000000e+001</val></rng1>
-    <rng2>
-      <x>250</x>
-      <y>590</y>
-      <val>-6.5489974021911621e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--5->
-<OCL_DftFixture_Dft--Dft---0--2048x2048--0->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.2911962890625000e+003</min>
-    <max>4.5411250000000000e+003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>-2.0880459594726562e+002</val></last>
-    <rng1>
-      <x>1672</x>
-      <y>1546</y>
-      <val>1.1310111083984375e+003</val></rng1>
-    <rng2>
-      <x>51</x>
-      <y>946</y>
-      <val>1.0480687255859375e+003</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--0->
-<OCL_DftFixture_Dft--Dft---0--2048x2048--4->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.0420848083496094e+002</min>
-    <max>9.9364883422851562e+001</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>1.3053386688232422e+001</val></last>
-    <rng1>
-      <x>970</x>
-      <y>1428</y>
-      <val>-2.5455295562744141e+001</val></rng1>
-    <rng2>
-      <x>1950</x>
-      <y>2034</y>
-      <val>-8.6873054504394531e-002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--4->
-<OCL_DftFixture_Dft--Dft---0--2048x2048--2->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.0231009218841791e-003</min>
-    <max>1.0826885700225830e-003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>-4.9782895075622946e-005</val></last>
-    <rng1>
-      <x>410</x>
-      <y>1427</y>
-      <val>1.2317049549892545e-004</val></rng1>
-    <rng2>
-      <x>802</x>
-      <y>771</y>
-      <val>-2.5738662225194275e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--2->
-<OCL_DftFixture_Dft--Dft---0--2048x2048--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-8.2932558593750000e+003</min>
-    <max>8.3690703125000000e+003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>7.5369006347656250e+002</val></last>
-    <rng1>
-      <x>160</x>
-      <y>1383</y>
-      <val>-9.0553344726562500e+002</val></rng1>
-    <rng2>
-      <x>784</x>
-      <y>1809</y>
-      <val>-3.9557336425781250e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--1->
-<OCL_DftFixture_Dft--Dft---0--2048x2048--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.9772662781178951e-003</min>
-    <max>1.9953418523073196e-003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>1.7969371401704848e-004</val></last>
-    <rng1>
-      <x>532</x>
-      <y>874</y>
-      <val>3.6527830525301397e-004</val></rng1>
-    <rng2>
-      <x>1070</x>
-      <y>362</y>
-      <val>1.6735168173909187e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--3->
-<OCL_DftFixture_Dft--Dft---0--2048x2048--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.9905923461914062e+002</min>
-    <max>1.8314663696289062e+002</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>7.1013898849487305e+000</val></last>
-    <rng1>
-      <x>143</x>
-      <y>148</y>
-      <val>-3.7439376831054688e+001</val></rng1>
-    <rng2>
-      <x>1145</x>
-      <y>1052</y>
-      <val>-1.6366460800170898e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--5->
-<OCL_DftFixture_Dft--Dft---1--640x480--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.5234658203125000e+003</min>
-    <max>1.6019709472656250e+003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-2.9248956298828125e+002</val></last>
-    <rng1>
-      <x>595</x>
-      <y>312</y>
-      <val>5.3884155273437500e+001</val></rng1>
-    <rng2>
-      <x>474</x>
-      <y>54</y>
-      <cn>1</cn>
-      <val>-4.4803649902343750e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--0->
-<OCL_DftFixture_Dft--Dft---1--640x480--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-7.1756729125976563e+001</min>
-    <max>6.3937961578369141e+001</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-8.2719202041625977e+000</val></last>
-    <rng1>
-      <x>181</x>
-      <y>17</y>
-      <cn>1</cn>
-      <val>1.6877483367919922e+001</val></rng1>
-    <rng2>
-      <x>629</x>
-      <y>48</y>
-      <val>5.8088340759277344e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--4->
-<OCL_DftFixture_Dft--Dft---1--640x480--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.9591986462473869e-003</min>
-    <max>5.2147493697702885e-003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-9.5211446750909090e-004</val></last>
-    <rng1>
-      <x>300</x>
-      <y>429</y>
-      <cn>1</cn>
-      <val>-3.0578166479244828e-004</val></rng1>
-    <rng2>
-      <x>398</x>
-      <y>341</y>
-      <val>-1.2482337187975645e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--2->
-<OCL_DftFixture_Dft--Dft---1--640x480--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-2.0683947753906250e+003</min>
-    <max>1.9560002441406250e+003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>5.1366784667968750e+002</val></last>
-    <rng1>
-      <x>332</x>
-      <y>205</y>
-      <val>-5.2046563720703125e+002</val></rng1>
-    <rng2>
-      <x>6</x>
-      <y>11</y>
-      <val>4.6499029541015625e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--1->
-<OCL_DftFixture_Dft--Dft---1--640x480--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-6.7330561578273773e-003</min>
-    <max>6.3671884126961231e-003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>1.6720958519726992e-003</val></last>
-    <rng1>
-      <x>92</x>
-      <y>183</y>
-      <val>6.0439249500632286e-004</val></rng1>
-    <rng2>
-      <x>611</x>
-      <y>86</y>
-      <val>-4.3804309098049998e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--3->
-<OCL_DftFixture_Dft--Dft---1--640x480--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-9.4049453735351563e+001</min>
-    <max>9.2059417724609375e+001</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>2.1261772155761719e+001</val></last>
-    <rng1>
-      <x>198</x>
-      <y>262</y>
-      <val>1.0913048744201660e+001</val></rng1>
-    <rng2>
-      <x>90</x>
-      <y>425</y>
-      <val>-1.2276878356933594e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--5->
-<OCL_DftFixture_Dft--Dft---1--1280x720--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.6459013671875000e+003</min>
-    <max>2.9969304199218750e+003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>5.8558189392089844e+001</val></last>
-    <rng1>
-      <x>696</x>
-      <y>578</y>
-      <cn>1</cn>
-      <val>-6.7841278076171875e+002</val></rng1>
-    <rng2>
-      <x>736</x>
-      <y>447</y>
-      <val>-2.6904064941406250e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--0->
-<OCL_DftFixture_Dft--Dft---1--1280x720--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.1306349182128906e+002</min>
-    <max>1.0395848083496094e+002</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>4.9575824737548828e+000</val></last>
-    <rng1>
-      <x>1192</x>
-      <y>137</y>
-      <cn>1</cn>
-      <val>1.0623737335205078e+001</val></rng1>
-    <rng2>
-      <x>1201</x>
-      <y>668</y>
-      <val>1.8331418991088867e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--4->
-<OCL_DftFixture_Dft--Dft---1--1280x720--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.8709867037832737e-003</min>
-    <max>3.2518776133656502e-003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>6.3539700931869447e-005</val></last>
-    <rng1>
-      <x>610</x>
-      <y>10</y>
-      <cn>1</cn>
-      <val>4.4341324246488512e-004</val></rng1>
-    <rng2>
-      <x>1181</x>
-      <y>390</y>
-      <cn>1</cn>
-      <val>9.7587973868940026e-005</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--2->
-<OCL_DftFixture_Dft--Dft---1--1280x720--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-3.9134226074218750e+003</min>
-    <max>3.8115317382812500e+003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-1.5853870849609375e+003</val></last>
-    <rng1>
-      <x>1106</x>
-      <y>99</y>
-      <val>4.6619824218750000e+002</val></rng1>
-    <rng2>
-      <x>929</x>
-      <y>609</y>
-      <val>5.3965612792968750e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--1->
-<OCL_DftFixture_Dft--Dft---1--1280x720--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.2463354766368866e-003</min>
-    <max>4.1357767768204212e-003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-1.7202551243826747e-003</val></last>
-    <rng1>
-      <x>830</x>
-      <y>585</y>
-      <val>-7.2359602199867368e-004</val></rng1>
-    <rng2>
-      <x>324</x>
-      <y>313</y>
-      <val>1.6219940152950585e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--3->
-<OCL_DftFixture_Dft--Dft---1--1280x720--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.3376977539062500e+002</min>
-    <max>1.5222648620605469e+002</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-5.7070800781250000e+001</val></last>
-    <rng1>
-      <x>952</x>
-      <y>54</y>
-      <val>3.8554721832275391e+001</val></rng1>
-    <rng2>
-      <x>993</x>
-      <y>24</y>
-      <val>-5.6968200683593750e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--5->
-<OCL_DftFixture_Dft--Dft---1--1920x1080--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.1347578125000000e+003</min>
-    <max>4.2909980468750000e+003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>4.0544711303710937e+002</val></last>
-    <rng1>
-      <x>1610</x>
-      <y>485</y>
-      <cn>1</cn>
-      <val>7.9504998779296875e+002</val></rng1>
-    <rng2>
-      <x>1637</x>
-      <y>33</y>
-      <cn>1</cn>
-      <val>8.3989318847656250e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--0->
-<OCL_DftFixture_Dft--Dft---1--1920x1080--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.2429809570312500e+002</min>
-    <max>1.2386021423339844e+002</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-5.1539836883544922e+001</val></last>
-    <rng1>
-      <x>1358</x>
-      <y>503</y>
-      <cn>1</cn>
-      <val>9.0569877624511719e+000</val></rng1>
-    <rng2>
-      <x>12</x>
-      <y>1060</y>
-      <val>1.5114683151245117e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--4->
-<OCL_DftFixture_Dft--Dft---1--1920x1080--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.9939998164772987e-003</min>
-    <max>2.0693470723927021e-003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>1.9552811863832176e-004</val></last>
-    <rng1>
-      <x>448</x>
-      <y>997</y>
-      <cn>1</cn>
-      <val>1.4285328506957740e-004</val></rng1>
-    <rng2>
-      <x>1720</x>
-      <y>753</y>
-      <val>3.9332211599685252e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--2->
-<OCL_DftFixture_Dft--Dft---1--1920x1080--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-5.9134912109375000e+003</min>
-    <max>6.0123183593750000e+003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>1.4147390136718750e+003</val></last>
-    <rng1>
-      <x>123</x>
-      <y>251</y>
-      <val>-1.4352565917968750e+003</val></rng1>
-    <rng2>
-      <x>1001</x>
-      <y>767</y>
-      <val>-4.6742230224609375e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--1->
-<OCL_DftFixture_Dft--Dft---1--1920x1080--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-2.8517993632704020e-003</min>
-    <max>2.8994590975344181e-003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>6.8226223811507225e-004</val></last>
-    <rng1>
-      <x>652</x>
-      <y>128</y>
-      <val>-3.2775945146568120e-004</val></rng1>
-    <rng2>
-      <x>817</x>
-      <y>742</y>
-      <val>2.1175088477320969e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--3->
-<OCL_DftFixture_Dft--Dft---1--1920x1080--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.7288204956054687e+002</min>
-    <max>1.9252651977539062e+002</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>1.2948724746704102e+001</val></last>
-    <rng1>
-      <x>1557</x>
-      <y>298</y>
-      <val>-9.5856971740722656e+000</val></rng1>
-    <rng2>
-      <x>335</x>
-      <y>820</y>
-      <val>1.3827587127685547e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--5->
-<OCL_DftFixture_Dft--Dft---1--512x512--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.3416536865234375e+003</min>
-    <max>1.6937312011718750e+003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-2.0460989379882812e+002</val></last>
-    <rng1>
-      <x>411</x>
-      <y>351</y>
-      <val>-3.5491040039062500e+002</val></rng1>
-    <rng2>
-      <x>292</x>
-      <y>372</y>
-      <cn>1</cn>
-      <val>-1.2034826660156250e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--0->
-<OCL_DftFixture_Dft--Dft---1--512x512--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-5.8405128479003906e+001</min>
-    <max>6.4360412597656250e+001</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-1.9676322937011719e+001</val></last>
-    <rng1>
-      <x>368</x>
-      <y>407</y>
-      <cn>1</cn>
-      <val>-2.0450397491455078e+001</val></rng1>
-    <rng2>
-      <x>331</x>
-      <y>443</y>
-      <cn>1</cn>
-      <val>1.4892776489257812e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--4->
-<OCL_DftFixture_Dft--Dft---1--512x512--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-5.1180026493966579e-003</min>
-    <max>6.4610717818140984e-003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-7.8052480239421129e-004</val></last>
-    <rng1>
-      <x>65</x>
-      <y>334</y>
-      <cn>1</cn>
-      <val>-5.0861202180385590e-004</val></rng1>
-    <rng2>
-      <x>38</x>
-      <y>394</y>
-      <val>-9.9645671434700489e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--2->
-<OCL_DftFixture_Dft--Dft---1--512x512--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-2.0355322265625000e+003</min>
-    <max>2.0191181640625000e+003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-4.1634460449218750e+001</val></last>
-    <rng1>
-      <x>93</x>
-      <y>305</y>
-      <val>-7.6928149414062500e+002</val></rng1>
-    <rng2>
-      <x>79</x>
-      <y>484</y>
-      <val>8.2303576660156250e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--1->
-<OCL_DftFixture_Dft--Dft---1--512x512--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-7.7649392187595367e-003</min>
-    <max>7.7023245394229889e-003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-1.5882286243140697e-004</val></last>
-    <rng1>
-      <x>331</x>
-      <y>411</y>
-      <val>-8.0675131175667048e-004</val></rng1>
-    <rng2>
-      <x>215</x>
-      <y>57</y>
-      <val>3.5507108550518751e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--3->
-<OCL_DftFixture_Dft--Dft---1--512x512--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-8.5725822448730469e+001</min>
-    <max>8.3270675659179688e+001</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>5.2415475845336914e+000</val></last>
-    <rng1>
-      <x>395</x>
-      <y>486</y>
-      <val>7.4966697692871094e+000</val></rng1>
-    <rng2>
-      <x>379</x>
-      <y>73</y>
-      <val>-2.4869609832763672e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--5->
-<OCL_DftFixture_Dft--Dft---1--1024x1024--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.7597880859375000e+003</min>
-    <max>2.9501313476562500e+003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>2.9745935058593750e+002</val></last>
-    <rng1>
-      <x>800</x>
-      <y>967</y>
-      <cn>1</cn>
-      <val>3.4894427490234375e+002</val></rng1>
-    <rng2>
-      <x>844</x>
-      <y>705</y>
-      <cn>1</cn>
-      <val>4.2400170898437500e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--0->
-<OCL_DftFixture_Dft--Dft---1--1024x1024--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-8.7497573852539063e+001</min>
-    <max>8.8923400878906250e+001</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>-9.4315853118896484e+000</val></last>
-    <rng1>
-      <x>997</x>
-      <y>816</y>
-      <val>8.2776088714599609e+000</val></rng1>
-    <rng2>
-      <x>299</x>
-      <y>338</y>
-      <val>-1.0149783134460449e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--4->
-<OCL_DftFixture_Dft--Dft---1--1024x1024--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.6319390162825584e-003</min>
-    <max>2.8134644962847233e-003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>2.8367934282869101e-004</val></last>
-    <rng1>
-      <x>324</x>
-      <y>222</y>
-      <val>3.3438479295000434e-004</val></rng1>
-    <rng2>
-      <x>418</x>
-      <y>958</y>
-      <val>-3.8565063732676208e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--2->
-<OCL_DftFixture_Dft--Dft---1--1024x1024--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.2187353515625000e+003</min>
-    <max>4.6182304687500000e+003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>1.9366989135742187e+002</val></last>
-    <rng1>
-      <x>849</x>
-      <y>510</y>
-      <val>1.4146534423828125e+003</val></rng1>
-    <rng2>
-      <x>443</x>
-      <y>233</y>
-      <val>5.8062377929687500e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--1->
-<OCL_DftFixture_Dft--Dft---1--1024x1024--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.0232995525002480e-003</min>
-    <max>4.4042877852916718e-003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>1.8469800124876201e-004</val></last>
-    <rng1>
-      <x>586</x>
-      <y>258</y>
-      <val>2.0831120491493493e-004</val></rng1>
-    <rng2>
-      <x>208</x>
-      <y>568</y>
-      <val>1.1078173993155360e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--3->
-<OCL_DftFixture_Dft--Dft---1--1024x1024--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.2214597320556641e+002</min>
-    <max>1.1793898010253906e+002</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>2.5964756011962891e+000</val></last>
-    <rng1>
-      <x>566</x>
-      <y>84</y>
-      <val>-3.0718832015991211e+001</val></rng1>
-    <rng2>
-      <x>241</x>
-      <y>375</y>
-      <val>2.7658914566040039e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--5->
-<OCL_DftFixture_Dft--Dft---1--2048x2048--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-6.0436484375000000e+003</min>
-    <max>6.3852773437500000e+003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>6.3652172851562500e+002</val></last>
-    <rng1>
-      <x>1382</x>
-      <y>599</y>
-      <val>3.2888188476562500e+003</val></rng1>
-    <rng2>
-      <x>1499</x>
-      <y>23</y>
-      <val>-2.2552265625000000e+003</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--0->
-<OCL_DftFixture_Dft--Dft---1--2048x2048--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.3675398254394531e+002</min>
-    <max>1.3769039916992187e+002</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>4.4921226501464844e+001</val></last>
-    <rng1>
-      <x>1750</x>
-      <y>1889</y>
-      <val>-1.1195701599121094e+001</val></rng1>
-    <rng2>
-      <x>486</x>
-      <y>1041</y>
-      <val>-2.1817310333251953e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--4->
-<OCL_DftFixture_Dft--Dft---1--2048x2048--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.4409180730581284e-003</min>
-    <max>1.5223687514662743e-003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>1.5175860607996583e-004</val></last>
-    <rng1>
-      <x>698</x>
-      <y>1144</y>
-      <val>-1.3381133612710983e-004</val></rng1>
-    <rng2>
-      <x>871</x>
-      <y>1160</y>
-      <val>1.1001138773281127e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--2->
-<OCL_DftFixture_Dft--Dft---1--2048x2048--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-8.3394931640625000e+003</min>
-    <max>8.9605957031250000e+003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>3.3214997558593750e+003</val></last>
-    <rng1>
-      <x>38</x>
-      <y>1792</y>
-      <val>-1.5591685791015625e+003</val></rng1>
-    <rng2>
-      <x>559</x>
-      <y>548</y>
-      <val>2.6963608398437500e+003</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--1->
-<OCL_DftFixture_Dft--Dft---1--2048x2048--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.9882901106029749e-003</min>
-    <max>2.1363724954426289e-003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>7.9190725227817893e-004</val></last>
-    <rng1>
-      <x>1420</x>
-      <y>1818</y>
-      <val>-4.2486004531383514e-004</val></rng1>
-    <rng2>
-      <x>815</x>
-      <y>1077</y>
-      <val>-1.0835919238161296e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--3->
-<OCL_DftFixture_Dft--Dft---1--2048x2048--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.9562634277343750e+002</min>
-    <max>1.8655870056152344e+002</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>2.9400321960449219e+001</val></last>
-    <rng1>
-      <x>1923</x>
-      <y>193</y>
-      <val>-2.6049648284912109e+001</val></rng1>
-    <rng2>
-      <x>429</x>
-      <y>57</y>
-      <val>-3.2908563613891602e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--5->
-<OCL_DftFixture_Dft--Dft---2--640x480--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.2083461914062500e+003</min>
-    <max>1.2083461914062500e+003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-8.9627449035644531e+001</val></last>
-    <rng1>
-      <x>414</x>
-      <y>456</y>
-      <cn>1</cn>
-      <val>1.0630367279052734e+002</val></rng1>
-    <rng2>
-      <x>182</x>
-      <y>297</y>
-      <val>3.5488092041015625e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--0->
-<OCL_DftFixture_Dft--Dft---2--640x480--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.7716354370117188e+001</min>
-    <max>4.9679714202880859e+001</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-1.2874162197113037e-001</val></last>
-    <rng1>
-      <x>406</x>
-      <y>70</y>
-      <cn>1</cn>
-      <val>-8.5493361949920654e-001</val></rng1>
-    <rng2>
-      <x>359</x>
-      <y>435</y>
-      <val>4.8786275088787079e-002</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--4->
-<OCL_DftFixture_Dft--Dft---2--640x480--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-3.9334185421466827e-003</min>
-    <max>3.9334185421466827e-003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-2.9175603413023055e-004</val></last>
-    <rng1>
-      <x>7</x>
-      <y>207</y>
-      <cn>1</cn>
-      <val>1.9536004401743412e-004</val></rng1>
-    <rng2>
-      <x>436</x>
-      <y>382</y>
-      <cn>1</cn>
-      <val>-1.4158361591398716e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--2->
-<OCL_DftFixture_Dft--Dft---2--640x480--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-2.0038122558593750e+003</min>
-    <max>2.5554799804687500e+003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>9.7026348876953125e+002</val></last>
-    <rng1>
-      <x>549</x>
-      <y>280</y>
-      <val>5.3626092529296875e+002</val></rng1>
-    <rng2>
-      <x>541</x>
-      <y>305</y>
-      <val>-1.0388366699218750e+003</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--1->
-<OCL_DftFixture_Dft--Dft---2--640x480--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-6.5228263847529888e-003</min>
-    <max>8.3186198025941849e-003</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>3.1584098469465971e-003</val></last>
-    <rng1>
-      <x>639</x>
-      <y>303</y>
-      <val>1.5939981676638126e-004</val></rng1>
-    <rng2>
-      <x>199</x>
-      <y>49</y>
-      <val>-1.0325622279196978e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--3->
-<OCL_DftFixture_Dft--Dft---2--640x480--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-9.1952560424804688e+001</min>
-    <max>9.8063636779785156e+001</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-7.6393127441406250e+000</val></last>
-    <rng1>
-      <x>510</x>
-      <y>101</y>
-      <val>-1.5694625854492188e+001</val></rng1>
-    <rng2>
-      <x>315</x>
-      <y>402</y>
-      <val>-1.2423744201660156e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--5->
-<OCL_DftFixture_Dft--Dft---2--1280x720--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.9251503906250000e+003</min>
-    <max>1.8111767578125000e+003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-2.1648399353027344e+002</val></last>
-    <rng1>
-      <x>735</x>
-      <y>454</y>
-      <cn>1</cn>
-      <val>2.7028857421875000e+002</val></rng1>
-    <rng2>
-      <x>1013</x>
-      <y>468</y>
-      <cn>1</cn>
-      <val>-5.4651306152343750e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--0->
-<OCL_DftFixture_Dft--Dft---2--1280x720--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-7.1556953430175781e+001</min>
-    <max>6.8579994201660156e+001</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-6.8391388654708862e-001</val></last>
-    <rng1>
-      <x>217</x>
-      <y>7</y>
-      <val>-1.2289921760559082e+001</val></rng1>
-    <rng2>
-      <x>1214</x>
-      <y>163</y>
-      <cn>1</cn>
-      <val>4.2949011921882629e-001</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--4->
-<OCL_DftFixture_Dft--Dft---2--1280x720--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.0889218430966139e-003</min>
-    <max>1.9652526825666428e-003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-2.3490017338190228e-004</val></last>
-    <rng1>
-      <x>1028</x>
-      <y>9</y>
-      <cn>1</cn>
-      <val>7.7990189311094582e-005</val></rng1>
-    <rng2>
-      <x>776</x>
-      <y>406</y>
-      <cn>1</cn>
-      <val>2.5784512399695814e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--2->
-<OCL_DftFixture_Dft--Dft---2--1280x720--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-3.7327233886718750e+003</min>
-    <max>3.6574746093750000e+003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-9.7831921386718750e+002</val></last>
-    <rng1>
-      <x>503</x>
-      <y>519</y>
-      <val>3.8116088867187500e+001</val></rng1>
-    <rng2>
-      <x>701</x>
-      <y>676</y>
-      <val>4.9183663940429687e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--1->
-<OCL_DftFixture_Dft--Dft---2--1280x720--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.0502641350030899e-003</min>
-    <max>3.9686141535639763e-003</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>-1.0615442879498005e-003</val></last>
-    <rng1>
-      <x>348</x>
-      <y>209</y>
-      <val>1.4487357111647725e-003</val></rng1>
-    <rng2>
-      <x>345</x>
-      <y>354</y>
-      <val>-1.0281032882630825e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--3->
-<OCL_DftFixture_Dft--Dft---2--1280x720--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.4310020446777344e+002</min>
-    <max>1.3446759033203125e+002</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>2.3260665893554687e+001</val></last>
-    <rng1>
-      <x>1199</x>
-      <y>287</y>
-      <val>1.7221145629882812e+001</val></rng1>
-    <rng2>
-      <x>1045</x>
-      <y>217</y>
-      <val>3.8249603271484375e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--5->
-<OCL_DftFixture_Dft--Dft---2--1920x1080--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.8564409179687500e+003</min>
-    <max>2.8564409179687500e+003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-5.7948834228515625e+002</val></last>
-    <rng1>
-      <x>1277</x>
-      <y>784</y>
-      <val>-2.4625854492187500e+002</val></rng1>
-    <rng2>
-      <x>323</x>
-      <y>1040</y>
-      <val>-3.4331152343750000e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--0->
-<OCL_DftFixture_Dft--Dft---2--1920x1080--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-9.3113975524902344e+001</min>
-    <max>8.7445007324218750e+001</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>5.5513906478881836e-001</val></last>
-    <rng1>
-      <x>648</x>
-      <y>219</y>
-      <cn>1</cn>
-      <val>-2.0073486328125000e+001</val></rng1>
-    <rng2>
-      <x>277</x>
-      <y>97</y>
-      <cn>1</cn>
-      <val>-1.6213798522949219e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--4->
-<OCL_DftFixture_Dft--Dft---2--1920x1080--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.3775274856016040e-003</min>
-    <max>1.3775274856016040e-003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-2.7946004411205649e-004</val></last>
-    <rng1>
-      <x>509</x>
-      <y>457</y>
-      <cn>1</cn>
-      <val>-2.7384639906813391e-005</val></rng1>
-    <rng2>
-      <x>201</x>
-      <y>513</y>
-      <val>-3.0703080119565129e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--2->
-<OCL_DftFixture_Dft--Dft---2--1920x1080--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-5.3654228515625000e+003</min>
-    <max>5.9195532226562500e+003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>5.4351464843750000e+002</val></last>
-    <rng1>
-      <x>548</x>
-      <y>993</y>
-      <val>-3.4489489746093750e+002</val></rng1>
-    <rng2>
-      <x>1122</x>
-      <y>494</y>
-      <val>1.4644462890625000e+003</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--1->
-<OCL_DftFixture_Dft--Dft---2--1920x1080--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-2.5874916464090347e-003</min>
-    <max>2.8547227848321199e-003</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>2.6211162912659347e-004</val></last>
-    <rng1>
-      <x>1343</x>
-      <y>618</y>
-      <val>3.9344435208477080e-004</val></rng1>
-    <rng2>
-      <x>780</x>
-      <y>671</y>
-      <val>2.7094918186776340e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--3->
-<OCL_DftFixture_Dft--Dft---2--1920x1080--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.7640060424804687e+002</min>
-    <max>1.8940054321289062e+002</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-5.3547611236572266e+000</val></last>
-    <rng1>
-      <x>1210</x>
-      <y>531</y>
-      <val>3.6297161102294922e+001</val></rng1>
-    <rng2>
-      <x>1354</x>
-      <y>597</y>
-      <val>-1.0699986267089844e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--5->
-<OCL_DftFixture_Dft--Dft---2--512x512--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.0590302734375000e+003</min>
-    <max>1.1139370117187500e+003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-1.9425775146484375e+002</val></last>
-    <rng1>
-      <x>461</x>
-      <y>464</y>
-      <cn>1</cn>
-      <val>-1.3882223510742187e+002</val></rng1>
-    <rng2>
-      <x>447</x>
-      <y>90</y>
-      <val>-2.9497848510742188e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--0->
-<OCL_DftFixture_Dft--Dft---2--512x512--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.4166343688964844e+001</min>
-    <max>4.1305419921875000e+001</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-6.7794060707092285e-001</val></last>
-    <rng1>
-      <x>20</x>
-      <y>400</y>
-      <val>-3.0091099739074707e+000</val></rng1>
-    <rng2>
-      <x>419</x>
-      <y>500</y>
-      <val>4.7118774056434631e-001</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--4->
-<OCL_DftFixture_Dft--Dft---2--512x512--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.0398798882961273e-003</min>
-    <max>4.2493324726819992e-003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>-7.4103451333940029e-004</val></last>
-    <rng1>
-      <x>52</x>
-      <y>326</y>
-      <cn>1</cn>
-      <val>1.0068302508443594e-003</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>123</y>
-      <cn>1</cn>
-      <val>-1.1453457409515977e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--2->
-<OCL_DftFixture_Dft--Dft---2--512x512--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.7656032714843750e+003</min>
-    <max>2.5674216308593750e+003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>4.3014099121093750e+002</val></last>
-    <rng1>
-      <x>210</x>
-      <y>411</y>
-      <val>6.6603546142578125e+000</val></rng1>
-    <rng2>
-      <x>76</x>
-      <y>411</y>
-      <val>-1.8741537475585937e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--1->
-<OCL_DftFixture_Dft--Dft---2--512x512--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-6.7352419719099998e-003</min>
-    <max>9.7939362749457359e-003</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>1.6408576630055904e-003</val></last>
-    <rng1>
-      <x>76</x>
-      <y>276</y>
-      <val>1.9495992455631495e-004</val></rng1>
-    <rng2>
-      <x>269</x>
-      <y>499</y>
-      <val>-2.0803553052246571e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--3->
-<OCL_DftFixture_Dft--Dft---2--512x512--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-8.2167190551757813e+001</min>
-    <max>8.5171165466308594e+001</max>
-    <last>
-      <x>511</x>
-      <y>511</y>
-      <val>2.0744350433349609e+001</val></last>
-    <rng1>
-      <x>150</x>
-      <y>496</y>
-      <val>-2.3964443206787109e+000</val></rng1>
-    <rng2>
-      <x>137</x>
-      <y>17</y>
-      <val>-8.1248159408569336e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--5->
-<OCL_DftFixture_Dft--Dft---2--1024x1024--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-2.0542365722656250e+003</min>
-    <max>2.1328857421875000e+003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>3.8138647460937500e+002</val></last>
-    <rng1>
-      <x>920</x>
-      <y>703</y>
-      <cn>1</cn>
-      <val>-7.9739196777343750e+001</val></rng1>
-    <rng2>
-      <x>13</x>
-      <y>504</y>
-      <val>4.9501197814941406e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--0->
-<OCL_DftFixture_Dft--Dft---2--1024x1024--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-7.2764175415039063e+001</min>
-    <max>5.6987190246582031e+001</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>6.1252802610397339e-001</val></last>
-    <rng1>
-      <x>124</x>
-      <y>657</y>
-      <cn>1</cn>
-      <val>6.2503185272216797e+000</val></rng1>
-    <rng2>
-      <x>182</x>
-      <y>770</y>
-      <cn>1</cn>
-      <val>1.6431224822998047e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--4->
-<OCL_DftFixture_Dft--Dft---2--1024x1024--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.9590726587921381e-003</min>
-    <max>2.0340783521533012e-003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>3.6371848545968533e-004</val></last>
-    <rng1>
-      <x>535</x>
-      <y>960</y>
-      <val>2.7303711976855993e-004</val></rng1>
-    <rng2>
-      <x>792</x>
-      <y>164</y>
-      <val>-2.0334724104031920e-004</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--2->
-<OCL_DftFixture_Dft--Dft---2--1024x1024--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-4.1064497070312500e+003</min>
-    <max>4.0333764648437500e+003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>5.3110876464843750e+002</val></last>
-    <rng1>
-      <x>700</x>
-      <y>516</y>
-      <val>8.8822631835937500e+000</val></rng1>
-    <rng2>
-      <x>921</x>
-      <y>906</y>
-      <val>-1.6735780029296875e+003</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--1->
-<OCL_DftFixture_Dft--Dft---2--1024x1024--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-3.9162156172096729e-003</min>
-    <max>3.8465275429189205e-003</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>5.0650478806346655e-004</val></last>
-    <rng1>
-      <x>70</x>
-      <y>641</y>
-      <val>-6.3621992012485862e-005</val></rng1>
-    <rng2>
-      <x>383</x>
-      <y>667</y>
-      <val>1.6885212389752269e-003</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--3->
-<OCL_DftFixture_Dft--Dft---2--1024x1024--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.1952741241455078e+002</min>
-    <max>1.2535937500000000e+002</max>
-    <last>
-      <x>1023</x>
-      <y>1023</y>
-      <val>-2.3702394485473633e+001</val></last>
-    <rng1>
-      <x>347</x>
-      <y>939</y>
-      <val>1.5754802703857422e+001</val></rng1>
-    <rng2>
-      <x>143</x>
-      <y>124</y>
-      <val>-9.2735137939453125e+000</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--5->
-<OCL_DftFixture_Dft--Dft---2--2048x2048--0->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-4.2911962890625000e+003</min>
-    <max>4.5411250000000000e+003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>-6.2471710205078125e+001</val></last>
-    <rng1>
-      <x>1137</x>
-      <y>2003</y>
-      <cn>1</cn>
-      <val>-3.7778521728515625e+002</val></rng1>
-    <rng2>
-      <x>1593</x>
-      <y>405</y>
-      <cn>1</cn>
-      <val>7.2247082519531250e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--0->
-<OCL_DftFixture_Dft--Dft---2--2048x2048--4->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.0420848083496094e+002</min>
-    <max>9.9364883422851562e+001</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>-5.3013697266578674e-002</val></last>
-    <rng1>
-      <x>707</x>
-      <y>1163</y>
-      <val>-2.2267000198364258e+001</val></rng1>
-    <rng2>
-      <x>1239</x>
-      <y>1197</y>
-      <cn>1</cn>
-      <val>-8.9284127950668335e-001</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--4->
-<OCL_DftFixture_Dft--Dft---2--2048x2048--2->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>-1.0231009218841791e-003</min>
-    <max>1.0826885700225830e-003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>-1.4894416381139308e-005</val></last>
-    <rng1>
-      <x>1956</x>
-      <y>1109</y>
-      <cn>1</cn>
-      <val>-2.6377927861176431e-004</val></rng1>
-    <rng2>
-      <x>233</x>
-      <y>1401</y>
-      <cn>1</cn>
-      <val>-5.8142810303252190e-005</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--2->
-<OCL_DftFixture_Dft--Dft---2--2048x2048--1->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-8.2932558593750000e+003</min>
-    <max>8.3690703125000000e+003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>7.5369006347656250e+002</val></last>
-    <rng1>
-      <x>471</x>
-      <y>781</y>
-      <val>-1.8474157714843750e+002</val></rng1>
-    <rng2>
-      <x>363</x>
-      <y>371</y>
-      <val>3.8524511718750000e+002</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--1->
-<OCL_DftFixture_Dft--Dft---2--2048x2048--3->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.9772662781178951e-003</min>
-    <max>1.9953418523073196e-003</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>1.7969371401704848e-004</val></last>
-    <rng1>
-      <x>1782</x>
-      <y>763</y>
-      <val>-2.5892865960486233e-004</val></rng1>
-    <rng2>
-      <x>1868</x>
-      <y>623</y>
-      <val>1.2751144822686911e-005</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--3->
-<OCL_DftFixture_Dft--Dft---2--2048x2048--5->
-  <dst>
-    <kind>655360</kind>
-    <type>5</type>
-    <min>-1.9905923461914062e+002</min>
-    <max>1.8314663696289062e+002</max>
-    <last>
-      <x>2047</x>
-      <y>2047</y>
-      <val>7.1013898849487305e+000</val></last>
-    <rng1>
-      <x>1744</x>
-      <y>387</y>
-      <val>1.9480409622192383e+001</val></rng1>
-    <rng2>
-      <x>1491</x>
-      <y>1296</y>
-      <val>3.8177536010742188e+001</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--5->
  <!-- resumed -->
-
 <OCL_GemmFixture_Gemm--Gemm---640x640--0--32FC1->
   <dst>
     <kind>655360</kind>
@@ -71599,4 +68893,2654 @@
       <y>1059</y>
       <cn>1</cn>
       <val>-1.4919353027343750e+003</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1280x1280--GEMM_2_T-GEMM_3_T--32FC2->
+ <!-- resumed -->
+<OCL_DftFixture_Dft--Dft---3--640x480--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.5234655761718750e+03</min>
+    <max>1.6019710693359375e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-2.9248959350585938e+02</val></last>
+    <rng1>
+      <x>136</x>
+      <y>97</y>
+      <cn>1</cn>
+      <val>-5.9188806152343750e+02</val></rng1>
+    <rng2>
+      <x>58</x>
+      <y>28</y>
+      <cn>1</cn>
+      <val>4.4429855346679688e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--0->
+<OCL_DftFixture_Dft--Dft---3--640x480--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-7.1756736755371094e+01</min>
+    <max>6.3937961578369141e+01</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-8.2719154357910156e+00</val></last>
+    <rng1>
+      <x>52</x>
+      <y>26</y>
+      <val>-8.3847045898437500e-02</val></rng1>
+    <rng2>
+      <x>343</x>
+      <y>68</y>
+      <val>1.1325405120849609e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--4->
+<OCL_DftFixture_Dft--Dft---3--640x480--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.9591981805860996e-03</min>
+    <max>5.2147498354315758e-03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-9.5211458392441273e-04</val></last>
+    <rng1>
+      <x>593</x>
+      <y>93</y>
+      <cn>1</cn>
+      <val>8.7454263120889664e-04</val></rng1>
+    <rng2>
+      <x>322</x>
+      <y>273</y>
+      <val>6.8183144321665168e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--2->
+<OCL_DftFixture_Dft--Dft---3--640x480--1->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.5234655761718750e+03</min>
+    <max>1.6019709472656250e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>8.4026802062988281e+01</val></last>
+    <rng1>
+      <x>590</x>
+      <y>426</y>
+      <val>-2.2442895507812500e+02</val></rng1>
+    <rng2>
+      <x>600</x>
+      <y>295</y>
+      <val>5.5112622070312500e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--1->
+<OCL_DftFixture_Dft--Dft---3--640x480--3->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.9591981805860996e-03</min>
+    <max>5.2147493697702885e-03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>2.7352475444786251e-04</val></last>
+    <rng1>
+      <x>64</x>
+      <y>334</y>
+      <cn>1</cn>
+      <val>-6.7562342155724764e-04</val></rng1>
+    <rng2>
+      <x>617</x>
+      <y>146</y>
+      <val>-9.3651784118264914e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--3->
+<OCL_DftFixture_Dft--Dft---3--640x480--5->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-7.1756736755371094e+01</min>
+    <max>6.3937961578369141e+01</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-9.0716104507446289e+00</val></last>
+    <rng1>
+      <x>585</x>
+      <y>322</y>
+      <cn>1</cn>
+      <val>-1.8023452758789062e+01</val></rng1>
+    <rng2>
+      <x>505</x>
+      <y>87</y>
+      <val>3.1522163391113281e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--640x480--5->
+<OCL_DftFixture_Dft--Dft---3--1280x720--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.6459013671875000e+03</min>
+    <max>2.9969301757812500e+03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>5.8558128356933594e+01</val></last>
+    <rng1>
+      <x>897</x>
+      <y>552</y>
+      <val>9.3615066528320312e+01</val></rng1>
+    <rng2>
+      <x>213</x>
+      <y>690</y>
+      <cn>1</cn>
+      <val>3.0728805541992188e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--0->
+<OCL_DftFixture_Dft--Dft---3--1280x720--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.1306349182128906e+02</min>
+    <max>1.0395848083496094e+02</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>4.9575834274291992e+00</val></last>
+    <rng1>
+      <x>1076</x>
+      <y>482</y>
+      <val>5.1450839996337891e+01</val></rng1>
+    <rng2>
+      <x>1039</x>
+      <y>534</y>
+      <val>-7.3011231422424316e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--4->
+<OCL_DftFixture_Dft--Dft---3--1280x720--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.8709867037832737e-03</min>
+    <max>3.2518773805350065e-03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>6.3539635448250920e-05</val></last>
+    <rng1>
+      <x>756</x>
+      <y>453</y>
+      <cn>1</cn>
+      <val>-8.2692428259178996e-04</val></rng1>
+    <rng2>
+      <x>419</x>
+      <y>449</y>
+      <val>9.1638168669305742e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--2->
+<OCL_DftFixture_Dft--Dft---3--1280x720--1->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.6459013671875000e+03</min>
+    <max>2.9969304199218750e+03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-3.5291671752929688e+02</val></last>
+    <rng1>
+      <x>284</x>
+      <y>510</y>
+      <val>1.3454802246093750e+03</val></rng1>
+    <rng2>
+      <x>160</x>
+      <y>595</y>
+      <val>-1.1575411987304688e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--1->
+<OCL_DftFixture_Dft--Dft---3--1280x720--3->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.8709867037832737e-03</min>
+    <max>3.2518780790269375e-03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-3.8293912075459957e-04</val></last>
+    <rng1>
+      <x>75</x>
+      <y>287</y>
+      <cn>1</cn>
+      <val>-8.0202851677313447e-04</val></rng1>
+    <rng2>
+      <x>1181</x>
+      <y>479</y>
+      <cn>1</cn>
+      <val>-7.2807706601452082e-06</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--3->
+<OCL_DftFixture_Dft--Dft---3--1280x720--5->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.1306349182128906e+02</min>
+    <max>1.0395848083496094e+02</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-1.4560829162597656e+01</val></last>
+    <rng1>
+      <x>1211</x>
+      <y>412</y>
+      <cn>1</cn>
+      <val>2.6167149543762207e+00</val></rng1>
+    <rng2>
+      <x>978</x>
+      <y>587</y>
+      <val>-2.3873224258422852e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1280x720--5->
+<OCL_DftFixture_Dft--Dft---3--1920x1080--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.1347578125000000e+03</min>
+    <max>4.2909980468750000e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>4.0544717407226562e+02</val></last>
+    <rng1>
+      <x>231</x>
+      <y>63</y>
+      <cn>1</cn>
+      <val>9.1351196289062500e+02</val></rng1>
+    <rng2>
+      <x>1703</x>
+      <y>513</y>
+      <val>-7.4529187011718750e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--0->
+<OCL_DftFixture_Dft--Dft---3--1920x1080--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.2429809570312500e+02</min>
+    <max>1.2386022186279297e+02</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-5.1539844512939453e+01</val></last>
+    <rng1>
+      <x>1430</x>
+      <y>393</y>
+      <cn>1</cn>
+      <val>-6.8888006210327148e+00</val></rng1>
+    <rng2>
+      <x>1161</x>
+      <y>74</y>
+      <val>3.6612854003906250e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--4->
+<OCL_DftFixture_Dft--Dft---3--1920x1080--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.9939998164772987e-03</min>
+    <max>2.0693470723927021e-03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.9552814774215221e-04</val></last>
+    <rng1>
+      <x>792</x>
+      <y>567</y>
+      <val>2.6054552290588617e-04</val></rng1>
+    <rng2>
+      <x>1074</x>
+      <y>541</y>
+      <val>5.3838866733713076e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--2->
+<OCL_DftFixture_Dft--Dft---3--1920x1080--1->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.1347578125000000e+03</min>
+    <max>4.2909980468750000e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-8.4110070800781250e+02</val></last>
+    <rng1>
+      <x>576</x>
+      <y>61</y>
+      <cn>1</cn>
+      <val>-5.2679614257812500e+02</val></rng1>
+    <rng2>
+      <x>8</x>
+      <y>494</y>
+      <val>4.8098406982421875e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--1->
+<OCL_DftFixture_Dft--Dft---3--1920x1080--3->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.9939998164772987e-03</min>
+    <max>2.0693470723927021e-03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-4.0562349022366107e-04</val></last>
+    <rng1>
+      <x>837</x>
+      <y>1024</y>
+      <cn>1</cn>
+      <val>-2.5509740225970745e-04</val></rng1>
+    <rng2>
+      <x>1173</x>
+      <y>1011</y>
+      <val>6.7386165028437972e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--3->
+<OCL_DftFixture_Dft--Dft---3--1920x1080--5->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.2429809570312500e+02</min>
+    <max>1.2386021423339844e+02</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-9.6200361251831055e+00</val></last>
+    <rng1>
+      <x>389</x>
+      <y>383</y>
+      <val>3.5984268188476562e+01</val></rng1>
+    <rng2>
+      <x>1688</x>
+      <y>962</y>
+      <cn>1</cn>
+      <val>1.3335067749023438e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1920x1080--5->
+<OCL_DftFixture_Dft--Dft---3--512x512--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.3416535644531250e+03</min>
+    <max>1.6937312011718750e+03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-2.0460993957519531e+02</val></last>
+    <rng1>
+      <x>41</x>
+      <y>67</y>
+      <cn>1</cn>
+      <val>1.7339311218261719e+02</val></rng1>
+    <rng2>
+      <x>32</x>
+      <y>509</y>
+      <val>-8.6232284545898438e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--0->
+<OCL_DftFixture_Dft--Dft---3--512x512--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-5.8405124664306641e+01</min>
+    <max>6.4360412597656250e+01</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-1.9676321029663086e+01</val></last>
+    <rng1>
+      <x>272</x>
+      <y>402</y>
+      <val>-1.3489154815673828e+01</val></rng1>
+    <rng2>
+      <x>410</x>
+      <y>96</y>
+      <cn>1</cn>
+      <val>-5.1233854293823242e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--4->
+<OCL_DftFixture_Dft--Dft---3--512x512--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-5.1180021837353706e-03</min>
+    <max>6.4610717818140984e-03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-7.8052497701719403e-04</val></last>
+    <rng1>
+      <x>168</x>
+      <y>204</y>
+      <val>9.7702245693653822e-04</val></rng1>
+    <rng2>
+      <x>366</x>
+      <y>255</y>
+      <val>1.3295485405251384e-03</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--2->
+<OCL_DftFixture_Dft--Dft---3--512x512--1->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.3416535644531250e+03</min>
+    <max>1.6937310791015625e+03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>1.0288632202148438e+02</val></last>
+    <rng1>
+      <x>9</x>
+      <y>90</y>
+      <cn>1</cn>
+      <val>-1.0800233459472656e+02</val></rng1>
+    <rng2>
+      <x>351</x>
+      <y>67</y>
+      <cn>1</cn>
+      <val>-1.9616516113281250e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--1->
+<OCL_DftFixture_Dft--Dft---3--512x512--3->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-5.1180021837353706e-03</min>
+    <max>6.4610713161528111e-03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>3.9248017128556967e-04</val></last>
+    <rng1>
+      <x>105</x>
+      <y>413</y>
+      <val>-2.6251139934174716e-04</val></rng1>
+    <rng2>
+      <x>217</x>
+      <y>231</y>
+      <val>2.4025316815823317e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--3->
+<OCL_DftFixture_Dft--Dft---3--512x512--5->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-5.8405124664306641e+01</min>
+    <max>6.4360412597656250e+01</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-1.5343929290771484e+01</val></last>
+    <rng1>
+      <x>449</x>
+      <y>8</y>
+      <cn>1</cn>
+      <val>-5.7409138679504395e+00</val></rng1>
+    <rng2>
+      <x>180</x>
+      <y>25</y>
+      <val>-1.5304665565490723e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--512x512--5->
+<OCL_DftFixture_Dft--Dft---3--1024x1024--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.7597883300781250e+03</min>
+    <max>2.9501313476562500e+03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>2.9745916748046875e+02</val></last>
+    <rng1>
+      <x>266</x>
+      <y>97</y>
+      <cn>1</cn>
+      <val>1.1539882812500000e+03</val></rng1>
+    <rng2>
+      <x>883</x>
+      <y>203</y>
+      <cn>1</cn>
+      <val>2.3854960632324219e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--0->
+<OCL_DftFixture_Dft--Dft---3--1024x1024--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-8.7497573852539062e+01</min>
+    <max>8.8923408508300781e+01</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>-9.4315881729125977e+00</val></last>
+    <rng1>
+      <x>124</x>
+      <y>1020</y>
+      <val>-8.3785514831542969e+00</val></rng1>
+    <rng2>
+      <x>876</x>
+      <y>629</y>
+      <val>4.3166360855102539e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--4->
+<OCL_DftFixture_Dft--Dft---3--1024x1024--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.6319392491132021e-03</min>
+    <max>2.8134644962847233e-03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>2.8367916820570827e-04</val></last>
+    <rng1>
+      <x>691</x>
+      <y>804</y>
+      <cn>1</cn>
+      <val>2.0040746312588453e-04</val></rng1>
+    <rng2>
+      <x>390</x>
+      <y>362</y>
+      <val>1.0336516425013542e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--2->
+<OCL_DftFixture_Dft--Dft---3--1024x1024--1->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.7597880859375000e+03</min>
+    <max>2.9501313476562500e+03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>2.5984817504882812e+02</val></last>
+    <rng1>
+      <x>679</x>
+      <y>853</y>
+      <val>2.5394659423828125e+02</val></rng1>
+    <rng2>
+      <x>552</x>
+      <y>139</y>
+      <cn>1</cn>
+      <val>-2.5526268005371094e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--1->
+<OCL_DftFixture_Dft--Dft---3--1024x1024--3->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.6319390162825584e-03</min>
+    <max>2.8134644962847233e-03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>2.4781053070910275e-04</val></last>
+    <rng1>
+      <x>9</x>
+      <y>484</y>
+      <cn>1</cn>
+      <val>6.7530525848269463e-04</val></rng1>
+    <rng2>
+      <x>604</x>
+      <y>651</y>
+      <cn>1</cn>
+      <val>-7.7812734525650740e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--3->
+<OCL_DftFixture_Dft--Dft---3--1024x1024--5->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-8.7497573852539062e+01</min>
+    <max>8.8923400878906250e+01</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>-7.7887620925903320e+00</val></last>
+    <rng1>
+      <x>91</x>
+      <y>848</y>
+      <val>-2.7980453491210938e+01</val></rng1>
+    <rng2>
+      <x>956</x>
+      <y>102</y>
+      <cn>1</cn>
+      <val>-9.2803039550781250e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--1024x1024--5->
+<OCL_DftFixture_Dft--Dft---3--2048x2048--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-6.0436479492187500e+03</min>
+    <max>6.3852778320312500e+03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>6.3652160644531250e+02</val></last>
+    <rng1>
+      <x>1216</x>
+      <y>336</y>
+      <val>-2.3886782226562500e+03</val></rng1>
+    <rng2>
+      <x>1347</x>
+      <y>1624</y>
+      <val>1.8346538085937500e+03</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--0->
+<OCL_DftFixture_Dft--Dft---3--2048x2048--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.3675398254394531e+02</min>
+    <max>1.3769039916992188e+02</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>4.4921222686767578e+01</val></last>
+    <rng1>
+      <x>1841</x>
+      <y>375</y>
+      <val>1.5198179244995117e+01</val></rng1>
+    <rng2>
+      <x>1454</x>
+      <y>1423</y>
+      <val>1.8690702438354492e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--4->
+<OCL_DftFixture_Dft--Dft---3--2048x2048--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.4409179566428065e-03</min>
+    <max>1.5223688678815961e-03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>1.5175857697613537e-04</val></last>
+    <rng1>
+      <x>383</x>
+      <y>766</y>
+      <cn>1</cn>
+      <val>-4.3072609696537256e-04</val></rng1>
+    <rng2>
+      <x>1518</x>
+      <y>1372</y>
+      <val>3.3937042462639511e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--2->
+<OCL_DftFixture_Dft--Dft---3--2048x2048--1->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-6.0436484375000000e+03</min>
+    <max>6.3852773437500000e+03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>-4.5494183349609375e+02</val></last>
+    <rng1>
+      <x>492</x>
+      <y>905</y>
+      <cn>1</cn>
+      <val>1.2779956054687500e+02</val></rng1>
+    <rng2>
+      <x>1992</x>
+      <y>1251</y>
+      <val>8.6068994140625000e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--1->
+<OCL_DftFixture_Dft--Dft---3--2048x2048--3->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.4409180730581284e-03</min>
+    <max>1.5223687514662743e-03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>-1.0846658551599830e-04</val></last>
+    <rng1>
+      <x>1404</x>
+      <y>1937</y>
+      <val>-5.2799485274590552e-05</val></rng1>
+    <rng2>
+      <x>673</x>
+      <y>586</y>
+      <val>-1.6891224368009716e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--3->
+<OCL_DftFixture_Dft--Dft---3--2048x2048--5->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.3675398254394531e+02</min>
+    <max>1.3769039916992188e+02</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>-2.4594902038574219e+01</val></last>
+    <rng1>
+      <x>671</x>
+      <y>568</y>
+      <val>-2.2256862640380859e+01</val></rng1>
+    <rng2>
+      <x>402</x>
+      <y>167</y>
+      <cn>1</cn>
+      <val>-4.1894371032714844e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---3--2048x2048--5->
+<OCL_DftFixture_Dft--Dft---0--640x480--0->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.1072292480468750e+03</min>
+    <max>1.2083460693359375e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-8.4375213623046875e+02</val></last>
+    <rng1>
+      <x>328</x>
+      <y>436</y>
+      <val>-2.6554562377929688e+02</val></rng1>
+    <rng2>
+      <x>540</x>
+      <y>371</y>
+      <val>-1.1317094421386719e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--0->
+<OCL_DftFixture_Dft--Dft---0--640x480--4->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.7716354370117188e+01</min>
+    <max>4.9679710388183594e+01</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-1.5985388755798340e+00</val></last>
+    <rng1>
+      <x>422</x>
+      <y>306</y>
+      <val>1.4313036918640137e+01</val></rng1>
+    <rng2>
+      <x>335</x>
+      <y>97</y>
+      <val>-1.2978932857513428e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--4->
+<OCL_DftFixture_Dft--Dft---0--640x480--2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-3.6042619030922651e-03</min>
+    <max>3.9334180764853954e-03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-2.7465890161693096e-03</val></last>
+    <rng1>
+      <x>487</x>
+      <y>336</y>
+      <val>-1.8558129668235779e-03</val></rng1>
+    <rng2>
+      <x>48</x>
+      <y>317</y>
+      <val>-7.0950452936813235e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--2->
+<OCL_DftFixture_Dft--Dft---0--640x480--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-2.0038122558593750e+03</min>
+    <max>2.5554799804687500e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>9.7026354980468750e+02</val></last>
+    <rng1>
+      <x>444</x>
+      <y>286</y>
+      <val>9.2422473144531250e+02</val></rng1>
+    <rng2>
+      <x>352</x>
+      <y>68</y>
+      <val>1.9388032531738281e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--1->
+<OCL_DftFixture_Dft--Dft---0--640x480--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-6.5228263847529888e-03</min>
+    <max>8.3186198025941849e-03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>3.1584100797772408e-03</val></last>
+    <rng1>
+      <x>380</x>
+      <y>70</y>
+      <val>-1.4565757010132074e-03</val></rng1>
+    <rng2>
+      <x>540</x>
+      <y>97</y>
+      <val>-2.5186841958202422e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--3->
+<OCL_DftFixture_Dft--Dft---0--640x480--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.1952560424804688e+01</min>
+    <max>9.8063629150390625e+01</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-7.6393098831176758e+00</val></last>
+    <rng1>
+      <x>290</x>
+      <y>131</y>
+      <val>-3.1116115570068359e+01</val></rng1>
+    <rng2>
+      <x>41</x>
+      <y>61</y>
+      <val>-2.1529575347900391e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--640x480--5->
+<OCL_DftFixture_Dft--Dft---0--1280x720--0->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.9251502685546875e+03</min>
+    <max>1.8111767578125000e+03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>1.6098190307617188e+02</val></last>
+    <rng1>
+      <x>34</x>
+      <y>496</y>
+      <val>3.4594262695312500e+02</val></rng1>
+    <rng2>
+      <x>1249</x>
+      <y>59</y>
+      <val>-5.9687023925781250e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--0->
+<OCL_DftFixture_Dft--Dft---0--1280x720--4->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-7.1556945800781250e+01</min>
+    <max>6.8580001831054688e+01</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>1.3487661361694336e+01</val></last>
+    <rng1>
+      <x>853</x>
+      <y>204</y>
+      <val>8.7308015823364258e+00</val></rng1>
+    <rng2>
+      <x>593</x>
+      <y>506</y>
+      <val>1.6379425048828125e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--4->
+<OCL_DftFixture_Dft--Dft---0--1280x720--2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-2.0889218430966139e-03</min>
+    <max>1.9652526825666428e-03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>1.7467654834035784e-04</val></last>
+    <rng1>
+      <x>41</x>
+      <y>446</y>
+      <val>2.6562533457763493e-04</val></rng1>
+    <rng2>
+      <x>568</x>
+      <y>365</y>
+      <val>1.6371552192140371e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--2->
+<OCL_DftFixture_Dft--Dft---0--1280x720--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-3.7327233886718750e+03</min>
+    <max>3.6574741210937500e+03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-9.7831909179687500e+02</val></last>
+    <rng1>
+      <x>226</x>
+      <y>537</y>
+      <val>4.3000601196289062e+02</val></rng1>
+    <rng2>
+      <x>729</x>
+      <y>3</y>
+      <val>4.7170562744140625e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--1->
+<OCL_DftFixture_Dft--Dft---0--1280x720--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.0502641350030899e-03</min>
+    <max>3.9686136879026890e-03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-1.0615441715344787e-03</val></last>
+    <rng1>
+      <x>203</x>
+      <y>365</y>
+      <val>-2.8930857661180198e-04</val></rng1>
+    <rng2>
+      <x>984</x>
+      <y>313</y>
+      <val>-2.9659803840331733e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--3->
+<OCL_DftFixture_Dft--Dft---0--1280x720--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.4310023498535156e+02</min>
+    <max>1.3446760559082031e+02</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>2.3260662078857422e+01</val></last>
+    <rng1>
+      <x>536</x>
+      <y>6</y>
+      <val>-1.0601589202880859e+01</val></rng1>
+    <rng2>
+      <x>393</x>
+      <y>699</y>
+      <val>-9.2424507141113281e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1280x720--5->
+<OCL_DftFixture_Dft--Dft---0--1920x1080--0->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-2.8564411621093750e+03</min>
+    <max>2.7007797851562500e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-1.6664156494140625e+03</val></last>
+    <rng1>
+      <x>873</x>
+      <y>788</y>
+      <val>5.8850479125976562e+01</val></rng1>
+    <rng2>
+      <x>1431</x>
+      <y>12</y>
+      <val>-1.5318734741210938e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--0->
+<OCL_DftFixture_Dft--Dft---0--1920x1080--4->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.3113967895507812e+01</min>
+    <max>8.7445014953613281e+01</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>3.0273197174072266e+01</val></last>
+    <rng1>
+      <x>1767</x>
+      <y>918</y>
+      <val>-4.8264503479003906e-01</val></rng1>
+    <rng2>
+      <x>873</x>
+      <y>842</y>
+      <val>-2.4216523170471191e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--4->
+<OCL_DftFixture_Dft--Dft---0--1920x1080--2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.3775276020169258e-03</min>
+    <max>1.3024593936279416e-03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-8.0363411689177155e-04</val></last>
+    <rng1>
+      <x>253</x>
+      <y>584</y>
+      <val>-2.0346524465253424e-08</val></rng1>
+    <rng2>
+      <x>1385</x>
+      <y>580</y>
+      <val>5.3485733224079013e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--2->
+<OCL_DftFixture_Dft--Dft---0--1920x1080--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-5.3654238281250000e+03</min>
+    <max>5.9195527343750000e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>5.4351434326171875e+02</val></last>
+    <rng1>
+      <x>1382</x>
+      <y>747</y>
+      <val>1.5624956054687500e+03</val></rng1>
+    <rng2>
+      <x>292</x>
+      <y>766</y>
+      <val>-2.5551875000000000e+03</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--1->
+<OCL_DftFixture_Dft--Dft---0--1920x1080--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-2.5874921120703220e-03</min>
+    <max>2.8547225520014763e-03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>2.6211145450361073e-04</val></last>
+    <rng1>
+      <x>1042</x>
+      <y>697</y>
+      <val>-3.7599026109091938e-04</val></rng1>
+    <rng2>
+      <x>1509</x>
+      <y>474</y>
+      <val>4.8289915866916999e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--3->
+<OCL_DftFixture_Dft--Dft---0--1920x1080--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.7640057373046875e+02</min>
+    <max>1.8940055847167969e+02</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-5.3547515869140625e+00</val></last>
+    <rng1>
+      <x>204</x>
+      <y>19</y>
+      <val>7.4612533569335938e+01</val></rng1>
+    <rng2>
+      <x>1128</x>
+      <y>670</y>
+      <val>-4.5420036315917969e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1920x1080--5->
+<OCL_DftFixture_Dft--Dft---0--512x512--0->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.3175097656250000e+02</min>
+    <max>1.1139370117187500e+03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>4.6907409667968750e+02</val></last>
+    <rng1>
+      <x>386</x>
+      <y>486</y>
+      <val>1.4540472412109375e+02</val></rng1>
+    <rng2>
+      <x>422</x>
+      <y>130</y>
+      <val>8.4906288146972656e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--0->
+<OCL_DftFixture_Dft--Dft---0--512x512--4->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.4166343688964844e+01</min>
+    <max>4.1305416107177734e+01</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>1.4784302711486816e+00</val></last>
+    <rng1>
+      <x>204</x>
+      <y>410</y>
+      <val>-3.4120807647705078e+00</val></rng1>
+    <rng2>
+      <x>206</x>
+      <y>227</y>
+      <val>3.7446939945220947e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--4->
+<OCL_DftFixture_Dft--Dft---0--512x512--2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-3.5543479025363922e-03</min>
+    <max>4.2493324726819992e-03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>1.7893756739795208e-03</val></last>
+    <rng1>
+      <x>227</x>
+      <y>408</y>
+      <val>5.5642402730882168e-04</val></rng1>
+    <rng2>
+      <x>256</x>
+      <y>395</y>
+      <val>-9.7664725035429001e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--2->
+<OCL_DftFixture_Dft--Dft---0--512x512--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.7656035156250000e+03</min>
+    <max>2.5674216308593750e+03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>4.3014099121093750e+02</val></last>
+    <rng1>
+      <x>176</x>
+      <y>68</y>
+      <val>6.4585156250000000e+02</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>119</y>
+      <val>6.4672058105468750e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--1->
+<OCL_DftFixture_Dft--Dft---0--512x512--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-6.7352429032325745e-03</min>
+    <max>9.7939362749457359e-03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>1.6408576630055904e-03</val></last>
+    <rng1>
+      <x>31</x>
+      <y>199</y>
+      <val>-1.2642247602343559e-03</val></rng1>
+    <rng2>
+      <x>103</x>
+      <y>284</y>
+      <val>2.0829294808208942e-03</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--3->
+<OCL_DftFixture_Dft--Dft---0--512x512--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-8.2167190551757812e+01</min>
+    <max>8.5171157836914062e+01</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>2.0744348526000977e+01</val></last>
+    <rng1>
+      <x>321</x>
+      <y>460</y>
+      <val>6.3381204605102539e+00</val></rng1>
+    <rng2>
+      <x>460</x>
+      <y>507</y>
+      <val>-2.1472282409667969e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--512x512--5->
+<OCL_DftFixture_Dft--Dft---0--1024x1024--0->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.9359401855468750e+03</min>
+    <max>2.1328857421875000e+03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>1.0339891357421875e+03</val></last>
+    <rng1>
+      <x>321</x>
+      <y>550</y>
+      <val>-2.3860321044921875e+01</val></rng1>
+    <rng2>
+      <x>788</x>
+      <y>20</y>
+      <val>-2.5747448730468750e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--0->
+<OCL_DftFixture_Dft--Dft---0--1024x1024--4->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-7.2764167785644531e+01</min>
+    <max>5.6987190246582031e+01</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>5.2630701065063477e+00</val></last>
+    <rng1>
+      <x>692</x>
+      <y>927</y>
+      <val>-3.1171765327453613e+00</val></rng1>
+    <rng2>
+      <x>918</x>
+      <y>915</y>
+      <val>-1.6454219818115234e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--4->
+<OCL_DftFixture_Dft--Dft---0--1024x1024--2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.8462564330548048e-03</min>
+    <max>2.0340783521533012e-03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>9.8608888220041990e-04</val></last>
+    <rng1>
+      <x>106</x>
+      <y>863</y>
+      <val>7.7382486779242754e-05</val></rng1>
+    <rng2>
+      <x>991</x>
+      <y>76</y>
+      <val>-1.9924907246604562e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--2->
+<OCL_DftFixture_Dft--Dft---0--1024x1024--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.1064492187500000e+03</min>
+    <max>4.0333767089843750e+03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>5.3110870361328125e+02</val></last>
+    <rng1>
+      <x>564</x>
+      <y>568</y>
+      <val>-1.5054824218750000e+03</val></rng1>
+    <rng2>
+      <x>799</x>
+      <y>112</y>
+      <val>1.1808687744140625e+03</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--1->
+<OCL_DftFixture_Dft--Dft---0--1024x1024--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-3.9162151515483856e-03</min>
+    <max>3.8465277757495642e-03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>5.0650472985580564e-04</val></last>
+    <rng1>
+      <x>721</x>
+      <y>710</y>
+      <val>2.0149780903011560e-04</val></rng1>
+    <rng2>
+      <x>350</x>
+      <y>829</y>
+      <val>-4.6979266335256398e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--3->
+<OCL_DftFixture_Dft--Dft---0--1024x1024--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.1952742004394531e+02</min>
+    <max>1.2535937500000000e+02</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>-2.3702394485473633e+01</val></last>
+    <rng1>
+      <x>460</x>
+      <y>41</y>
+      <val>5.6525825500488281e+01</val></rng1>
+    <rng2>
+      <x>3</x>
+      <y>855</y>
+      <val>-2.5951120376586914e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--1024x1024--5->
+<OCL_DftFixture_Dft--Dft---0--2048x2048--0->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.2911962890625000e+03</min>
+    <max>4.5411250000000000e+03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>-2.0880459594726562e+02</val></last>
+    <rng1>
+      <x>1645</x>
+      <y>1353</y>
+      <val>-1.1873945312500000e+03</val></rng1>
+    <rng2>
+      <x>1722</x>
+      <y>1569</y>
+      <val>-3.1091656494140625e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--0->
+<OCL_DftFixture_Dft--Dft---0--2048x2048--4->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.0420848083496094e+02</min>
+    <max>9.9364883422851562e+01</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>1.3053386688232422e+01</val></last>
+    <rng1>
+      <x>850</x>
+      <y>290</y>
+      <val>3.0378746032714844e+01</val></rng1>
+    <rng2>
+      <x>1769</x>
+      <y>851</y>
+      <val>-4.9258360862731934e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--4->
+<OCL_DftFixture_Dft--Dft---0--2048x2048--2->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.0231009218841791e-03</min>
+    <max>1.0826885700225830e-03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>-4.9782895075622946e-05</val></last>
+    <rng1>
+      <x>515</x>
+      <y>2043</y>
+      <val>-1.9213301129639149e-04</val></rng1>
+    <rng2>
+      <x>720</x>
+      <y>1568</y>
+      <val>-1.8775787611957639e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--2->
+<OCL_DftFixture_Dft--Dft---0--2048x2048--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-8.2932558593750000e+03</min>
+    <max>8.3690703125000000e+03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>7.5369000244140625e+02</val></last>
+    <rng1>
+      <x>658</x>
+      <y>1243</y>
+      <val>2.2634843750000000e+03</val></rng1>
+    <rng2>
+      <x>1922</x>
+      <y>614</y>
+      <val>-2.4087236328125000e+03</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--1->
+<OCL_DftFixture_Dft--Dft---0--2048x2048--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.9772662781178951e-03</min>
+    <max>1.9953418523073196e-03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>1.7969369946513325e-04</val></last>
+    <rng1>
+      <x>302</x>
+      <y>391</y>
+      <val>-4.3853948591277003e-04</val></rng1>
+    <rng2>
+      <x>1198</x>
+      <y>1815</y>
+      <val>1.6996054910123348e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--3->
+<OCL_DftFixture_Dft--Dft---0--2048x2048--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.9905923461914062e+02</min>
+    <max>1.8314663696289062e+02</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>7.1013922691345215e+00</val></last>
+    <rng1>
+      <x>1480</x>
+      <y>817</y>
+      <val>4.0510162353515625e+01</val></rng1>
+    <rng2>
+      <x>983</x>
+      <y>1389</y>
+      <val>9.3654212951660156e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---0--2048x2048--5->
+<OCL_DftFixture_Dft--Dft---1--640x480--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.5234655761718750e+03</min>
+    <max>1.6019710693359375e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-2.9248959350585938e+02</val></last>
+    <rng1>
+      <x>47</x>
+      <y>121</y>
+      <val>4.5497860717773438e+02</val></rng1>
+    <rng2>
+      <x>298</x>
+      <y>479</y>
+      <cn>1</cn>
+      <val>-4.7902566528320312e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--0->
+<OCL_DftFixture_Dft--Dft---1--640x480--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-7.1756736755371094e+01</min>
+    <max>6.3937961578369141e+01</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-8.2719154357910156e+00</val></last>
+    <rng1>
+      <x>100</x>
+      <y>195</y>
+      <val>-7.0097241401672363e+00</val></rng1>
+    <rng2>
+      <x>553</x>
+      <y>51</y>
+      <cn>1</cn>
+      <val>-1.0525167465209961e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--4->
+<OCL_DftFixture_Dft--Dft---1--640x480--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.9591981805860996e-03</min>
+    <max>5.2147498354315758e-03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-9.5211458392441273e-04</val></last>
+    <rng1>
+      <x>485</x>
+      <y>194</y>
+      <val>-7.1878515882417560e-04</val></rng1>
+    <rng2>
+      <x>162</x>
+      <y>447</y>
+      <val>-9.1457983944565058e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--2->
+<OCL_DftFixture_Dft--Dft---1--640x480--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-2.0683947753906250e+03</min>
+    <max>1.9560004882812500e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>5.1366778564453125e+02</val></last>
+    <rng1>
+      <x>54</x>
+      <y>96</y>
+      <val>1.8289884948730469e+02</val></rng1>
+    <rng2>
+      <x>28</x>
+      <y>156</y>
+      <val>-1.4835183715820312e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--1->
+<OCL_DftFixture_Dft--Dft---1--640x480--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-6.7330561578273773e-03</min>
+    <max>6.3671893440186977e-03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>1.6720957355573773e-03</val></last>
+    <rng1>
+      <x>314</x>
+      <y>40</y>
+      <val>1.9925977103412151e-03</val></rng1>
+    <rng2>
+      <x>281</x>
+      <y>244</y>
+      <val>-4.0767353493720293e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--3->
+<OCL_DftFixture_Dft--Dft---1--640x480--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.4049461364746094e+01</min>
+    <max>9.2059425354003906e+01</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>2.1261775970458984e+01</val></last>
+    <rng1>
+      <x>311</x>
+      <y>44</y>
+      <val>1.4279791831970215e+01</val></rng1>
+    <rng2>
+      <x>379</x>
+      <y>352</y>
+      <val>9.5279502868652344e-01</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--640x480--5->
+<OCL_DftFixture_Dft--Dft---1--1280x720--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.6459013671875000e+03</min>
+    <max>2.9969301757812500e+03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>5.8558128356933594e+01</val></last>
+    <rng1>
+      <x>432</x>
+      <y>323</y>
+      <cn>1</cn>
+      <val>1.2652531738281250e+03</val></rng1>
+    <rng2>
+      <x>714</x>
+      <y>619</y>
+      <cn>1</cn>
+      <val>-1.2944907226562500e+03</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--0->
+<OCL_DftFixture_Dft--Dft---1--1280x720--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.1306349182128906e+02</min>
+    <max>1.0395848083496094e+02</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>4.9575834274291992e+00</val></last>
+    <rng1>
+      <x>1142</x>
+      <y>367</y>
+      <cn>1</cn>
+      <val>-1.2546226501464844e+01</val></rng1>
+    <rng2>
+      <x>182</x>
+      <y>578</y>
+      <val>-1.5723941802978516e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--4->
+<OCL_DftFixture_Dft--Dft---1--1280x720--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.8709867037832737e-03</min>
+    <max>3.2518773805350065e-03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>6.3539635448250920e-05</val></last>
+    <rng1>
+      <x>677</x>
+      <y>61</y>
+      <val>-7.8502029646188021e-04</val></rng1>
+    <rng2>
+      <x>483</x>
+      <y>303</y>
+      <cn>1</cn>
+      <val>-1.7859737272374332e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--2->
+<OCL_DftFixture_Dft--Dft---1--1280x720--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-3.9134223632812500e+03</min>
+    <max>3.8115317382812500e+03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-1.5853872070312500e+03</val></last>
+    <rng1>
+      <x>245</x>
+      <y>79</y>
+      <val>1.2859114990234375e+03</val></rng1>
+    <rng2>
+      <x>395</x>
+      <y>119</y>
+      <val>-1.2769206542968750e+03</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--1->
+<OCL_DftFixture_Dft--Dft---1--1280x720--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.2463350109755993e-03</min>
+    <max>4.1357767768204212e-03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-1.7202552407979965e-03</val></last>
+    <rng1>
+      <x>317</x>
+      <y>240</y>
+      <val>-6.9254735717549920e-04</val></rng1>
+    <rng2>
+      <x>1056</x>
+      <y>118</y>
+      <val>1.8743934342637658e-03</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--3->
+<OCL_DftFixture_Dft--Dft---1--1280x720--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.3376977539062500e+02</min>
+    <max>1.5222650146484375e+02</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-5.7070804595947266e+01</val></last>
+    <rng1>
+      <x>1142</x>
+      <y>416</y>
+      <val>-1.4942842483520508e+01</val></rng1>
+    <rng2>
+      <x>462</x>
+      <y>633</y>
+      <val>3.2446947097778320e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1280x720--5->
+<OCL_DftFixture_Dft--Dft---1--1920x1080--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.1347578125000000e+03</min>
+    <max>4.2909980468750000e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>4.0544717407226562e+02</val></last>
+    <rng1>
+      <x>1218</x>
+      <y>264</y>
+      <val>-5.2610131835937500e+02</val></rng1>
+    <rng2>
+      <x>529</x>
+      <y>868</y>
+      <val>-1.1088413085937500e+03</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--0->
+<OCL_DftFixture_Dft--Dft---1--1920x1080--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.2429809570312500e+02</min>
+    <max>1.2386022186279297e+02</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-5.1539844512939453e+01</val></last>
+    <rng1>
+      <x>1104</x>
+      <y>1072</y>
+      <val>1.6704487800598145e+00</val></rng1>
+    <rng2>
+      <x>230</x>
+      <y>1021</y>
+      <val>-1.5591324806213379e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--4->
+<OCL_DftFixture_Dft--Dft---1--1920x1080--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.9939998164772987e-03</min>
+    <max>2.0693470723927021e-03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.9552814774215221e-04</val></last>
+    <rng1>
+      <x>208</x>
+      <y>715</y>
+      <val>-2.2693474602419883e-04</val></rng1>
+    <rng2>
+      <x>1159</x>
+      <y>127</y>
+      <val>-7.8830971688148566e-06</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--2->
+<OCL_DftFixture_Dft--Dft---1--1920x1080--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-5.9134907226562500e+03</min>
+    <max>6.0123178710937500e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.4147390136718750e+03</val></last>
+    <rng1>
+      <x>1406</x>
+      <y>17</y>
+      <val>-9.2083862304687500e+01</val></rng1>
+    <rng2>
+      <x>118</x>
+      <y>773</y>
+      <val>-3.5081896972656250e+03</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--1->
+<OCL_DftFixture_Dft--Dft---1--1920x1080--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-2.8517991304397583e-03</min>
+    <max>2.8994588647037745e-03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>6.8226223811507225e-04</val></last>
+    <rng1>
+      <x>1191</x>
+      <y>340</y>
+      <val>-3.3126797643490136e-04</val></rng1>
+    <rng2>
+      <x>1242</x>
+      <y>635</y>
+      <val>-9.8078709561377764e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--3->
+<OCL_DftFixture_Dft--Dft---1--1920x1080--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.7288204956054688e+02</min>
+    <max>1.9252651977539062e+02</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.2948724746704102e+01</val></last>
+    <rng1>
+      <x>773</x>
+      <y>497</y>
+      <val>4.7150482177734375e+01</val></rng1>
+    <rng2>
+      <x>242</x>
+      <y>426</y>
+      <val>-3.4908962249755859e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1920x1080--5->
+<OCL_DftFixture_Dft--Dft---1--512x512--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.3416535644531250e+03</min>
+    <max>1.6937312011718750e+03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-2.0460993957519531e+02</val></last>
+    <rng1>
+      <x>208</x>
+      <y>375</y>
+      <cn>1</cn>
+      <val>1.5978454589843750e+01</val></rng1>
+    <rng2>
+      <x>432</x>
+      <y>476</y>
+      <val>-9.1562965393066406e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--0->
+<OCL_DftFixture_Dft--Dft---1--512x512--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-5.8405124664306641e+01</min>
+    <max>6.4360412597656250e+01</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-1.9676321029663086e+01</val></last>
+    <rng1>
+      <x>76</x>
+      <y>20</y>
+      <val>-9.5352745056152344e-01</val></rng1>
+    <rng2>
+      <x>191</x>
+      <y>57</y>
+      <cn>1</cn>
+      <val>1.0883298873901367e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--4->
+<OCL_DftFixture_Dft--Dft---1--512x512--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-5.1180021837353706e-03</min>
+    <max>6.4610717818140984e-03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-7.8052497701719403e-04</val></last>
+    <rng1>
+      <x>42</x>
+      <y>248</y>
+      <cn>1</cn>
+      <val>-2.3095624055713415e-04</val></rng1>
+    <rng2>
+      <x>128</x>
+      <y>26</y>
+      <val>-3.3720157807692885e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--2->
+<OCL_DftFixture_Dft--Dft---1--512x512--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-2.0355322265625000e+03</min>
+    <max>2.0191181640625000e+03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-4.1634460449218750e+01</val></last>
+    <rng1>
+      <x>459</x>
+      <y>286</y>
+      <val>-1.1408661651611328e+02</val></rng1>
+    <rng2>
+      <x>21</x>
+      <y>0</y>
+      <val>2.4141821289062500e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--1->
+<OCL_DftFixture_Dft--Dft---1--512x512--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-7.7649392187595367e-03</min>
+    <max>7.7023245394229889e-03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-1.5882286243140697e-04</val></last>
+    <rng1>
+      <x>247</x>
+      <y>296</y>
+      <val>-1.2062616879120469e-03</val></rng1>
+    <rng2>
+      <x>363</x>
+      <y>320</y>
+      <val>1.6919687623158097e-03</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--3->
+<OCL_DftFixture_Dft--Dft---1--512x512--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-8.5725814819335938e+01</min>
+    <max>8.3270675659179688e+01</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>5.2415466308593750e+00</val></last>
+    <rng1>
+      <x>288</x>
+      <y>169</y>
+      <val>-2.6139663696289062e+01</val></rng1>
+    <rng2>
+      <x>119</x>
+      <y>479</y>
+      <val>-4.3464183807373047e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--512x512--5->
+<OCL_DftFixture_Dft--Dft---1--1024x1024--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.7597883300781250e+03</min>
+    <max>2.9501313476562500e+03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>2.9745916748046875e+02</val></last>
+    <rng1>
+      <x>637</x>
+      <y>9</y>
+      <val>-7.9499914550781250e+02</val></rng1>
+    <rng2>
+      <x>158</x>
+      <y>361</y>
+      <val>5.9529992675781250e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--0->
+<OCL_DftFixture_Dft--Dft---1--1024x1024--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-8.7497573852539062e+01</min>
+    <max>8.8923408508300781e+01</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>-9.4315881729125977e+00</val></last>
+    <rng1>
+      <x>825</x>
+      <y>918</y>
+      <cn>1</cn>
+      <val>-2.0547641754150391e+01</val></rng1>
+    <rng2>
+      <x>812</x>
+      <y>544</y>
+      <val>-1.7052856445312500e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--4->
+<OCL_DftFixture_Dft--Dft---1--1024x1024--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.6319392491132021e-03</min>
+    <max>2.8134644962847233e-03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>2.8367916820570827e-04</val></last>
+    <rng1>
+      <x>577</x>
+      <y>766</y>
+      <val>-8.8834651978686452e-04</val></rng1>
+    <rng2>
+      <x>917</x>
+      <y>349</y>
+      <cn>1</cn>
+      <val>-1.0529735591262579e-03</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--2->
+<OCL_DftFixture_Dft--Dft---1--1024x1024--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.2187353515625000e+03</min>
+    <max>4.6182304687500000e+03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>1.9366989135742188e+02</val></last>
+    <rng1>
+      <x>865</x>
+      <y>576</y>
+      <val>-6.6135620117187500e+01</val></rng1>
+    <rng2>
+      <x>137</x>
+      <y>515</y>
+      <val>4.0208465576171875e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--1->
+<OCL_DftFixture_Dft--Dft---1--1024x1024--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.0232995525002480e-03</min>
+    <max>4.4042877852916718e-03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>1.8469800124876201e-04</val></last>
+    <rng1>
+      <x>327</x>
+      <y>697</y>
+      <val>-1.6439385944977403e-04</val></rng1>
+    <rng2>
+      <x>644</x>
+      <y>661</y>
+      <val>-1.6521778889000416e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--3->
+<OCL_DftFixture_Dft--Dft---1--1024x1024--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.2214597320556641e+02</min>
+    <max>1.1793898010253906e+02</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>2.5964756011962891e+00</val></last>
+    <rng1>
+      <x>197</x>
+      <y>552</y>
+      <val>3.9976062774658203e+01</val></rng1>
+    <rng2>
+      <x>907</x>
+      <y>216</y>
+      <val>-1.5684632301330566e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--1024x1024--5->
+<OCL_DftFixture_Dft--Dft---1--2048x2048--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-6.0436479492187500e+03</min>
+    <max>6.3852778320312500e+03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>6.3652160644531250e+02</val></last>
+    <rng1>
+      <x>1700</x>
+      <y>1156</y>
+      <val>-1.9883868408203125e+03</val></rng1>
+    <rng2>
+      <x>1849</x>
+      <y>71</y>
+      <cn>1</cn>
+      <val>5.4435791015625000e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--0->
+<OCL_DftFixture_Dft--Dft---1--2048x2048--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.3675398254394531e+02</min>
+    <max>1.3769039916992188e+02</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>4.4921222686767578e+01</val></last>
+    <rng1>
+      <x>1505</x>
+      <y>1426</y>
+      <val>-4.4071601867675781e+01</val></rng1>
+    <rng2>
+      <x>2043</x>
+      <y>38</y>
+      <val>-2.2362646102905273e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--4->
+<OCL_DftFixture_Dft--Dft---1--2048x2048--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.4409179566428065e-03</min>
+    <max>1.5223688678815961e-03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>1.5175857697613537e-04</val></last>
+    <rng1>
+      <x>710</x>
+      <y>575</y>
+      <val>6.8521047069225460e-05</val></rng1>
+    <rng2>
+      <x>1223</x>
+      <y>1981</y>
+      <val>-2.5445548817515373e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--2->
+<OCL_DftFixture_Dft--Dft---1--2048x2048--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-8.3394921875000000e+03</min>
+    <max>8.9605957031250000e+03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>3.3214995117187500e+03</val></last>
+    <rng1>
+      <x>1184</x>
+      <y>1389</y>
+      <val>5.1318872070312500e+03</val></rng1>
+    <rng2>
+      <x>979</x>
+      <y>723</y>
+      <val>-8.6644671630859375e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--1->
+<OCL_DftFixture_Dft--Dft---1--2048x2048--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.9882898777723312e-03</min>
+    <max>2.1363724954426289e-03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>7.9190719407051802e-04</val></last>
+    <rng1>
+      <x>1503</x>
+      <y>606</y>
+      <val>3.6057524266652763e-04</val></rng1>
+    <rng2>
+      <x>1843</x>
+      <y>1780</y>
+      <val>-1.8086592899635434e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--3->
+<OCL_DftFixture_Dft--Dft---1--2048x2048--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.9562634277343750e+02</min>
+    <max>1.8655868530273438e+02</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>2.9400316238403320e+01</val></last>
+    <rng1>
+      <x>837</x>
+      <y>533</y>
+      <val>4.8373405456542969e+01</val></rng1>
+    <rng2>
+      <x>229</x>
+      <y>1360</y>
+      <val>-2.2963714599609375e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---1--2048x2048--5->
+<OCL_DftFixture_Dft--Dft---2--640x480--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.2083460693359375e+03</min>
+    <max>1.2083460693359375e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-8.9627410888671875e+01</val></last>
+    <rng1>
+      <x>384</x>
+      <y>290</y>
+      <cn>1</cn>
+      <val>-3.7157611083984375e+02</val></rng1>
+    <rng2>
+      <x>253</x>
+      <y>9</y>
+      <val>-2.8215591430664062e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--0->
+<OCL_DftFixture_Dft--Dft---2--640x480--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.7716354370117188e+01</min>
+    <max>4.9679714202880859e+01</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-1.0766239166259766e+00</val></last>
+    <rng1>
+      <x>408</x>
+      <y>121</y>
+      <val>-4.1729164123535156e+00</val></rng1>
+    <rng2>
+      <x>603</x>
+      <y>192</y>
+      <cn>1</cn>
+      <val>2.4298149108886719e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--4->
+<OCL_DftFixture_Dft--Dft---2--640x480--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-3.9334180764853954e-03</min>
+    <max>3.9334180764853954e-03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-2.9175588861107826e-04</val></last>
+    <rng1>
+      <x>517</x>
+      <y>479</y>
+      <val>-5.0005904631689191e-04</val></rng1>
+    <rng2>
+      <x>451</x>
+      <y>430</y>
+      <cn>1</cn>
+      <val>2.6586223975755274e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--2->
+<OCL_DftFixture_Dft--Dft---2--640x480--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-2.0038122558593750e+03</min>
+    <max>2.5554799804687500e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>9.7026354980468750e+02</val></last>
+    <rng1>
+      <x>441</x>
+      <y>132</y>
+      <val>2.7891436767578125e+02</val></rng1>
+    <rng2>
+      <x>252</x>
+      <y>284</y>
+      <val>-2.3822607421875000e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--1->
+<OCL_DftFixture_Dft--Dft---2--640x480--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-6.5228263847529888e-03</min>
+    <max>8.3186198025941849e-03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>3.1584100797772408e-03</val></last>
+    <rng1>
+      <x>129</x>
+      <y>33</y>
+      <val>-9.3810859834775329e-04</val></rng1>
+    <rng2>
+      <x>192</x>
+      <y>150</y>
+      <val>9.4029150204733014e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--3->
+<OCL_DftFixture_Dft--Dft---2--640x480--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-9.1952560424804688e+01</min>
+    <max>9.8063636779785156e+01</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-7.6393136978149414e+00</val></last>
+    <rng1>
+      <x>164</x>
+      <y>163</y>
+      <val>-1.0889885902404785e+01</val></rng1>
+    <rng2>
+      <x>272</x>
+      <y>397</y>
+      <val>9.8509559631347656e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--640x480--5->
+<OCL_DftFixture_Dft--Dft---2--1280x720--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.9251503906250000e+03</min>
+    <max>1.8111767578125000e+03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-2.1648394775390625e+02</val></last>
+    <rng1>
+      <x>120</x>
+      <y>165</y>
+      <cn>1</cn>
+      <val>3.9609124755859375e+02</val></rng1>
+    <rng2>
+      <x>572</x>
+      <y>291</y>
+      <cn>1</cn>
+      <val>7.9196569824218750e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--0->
+<OCL_DftFixture_Dft--Dft---2--1280x720--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-7.1556961059570312e+01</min>
+    <max>6.8579994201660156e+01</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-7.1637911796569824e+00</val></last>
+    <rng1>
+      <x>759</x>
+      <y>533</y>
+      <val>-8.9979219436645508e+00</val></rng1>
+    <rng2>
+      <x>838</x>
+      <y>547</y>
+      <val>-8.7351310253143311e-01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--4->
+<OCL_DftFixture_Dft--Dft---2--1280x720--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.0889218430966139e-03</min>
+    <max>1.9652526825666428e-03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-2.3490012972615659e-04</val></last>
+    <rng1>
+      <x>796</x>
+      <y>265</y>
+      <cn>1</cn>
+      <val>2.4785261484794319e-04</val></rng1>
+    <rng2>
+      <x>678</x>
+      <y>224</y>
+      <val>1.9928798428736627e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--2->
+<OCL_DftFixture_Dft--Dft---2--1280x720--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-3.7327233886718750e+03</min>
+    <max>3.6574741210937500e+03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-9.7831909179687500e+02</val></last>
+    <rng1>
+      <x>670</x>
+      <y>483</y>
+      <val>-5.3827252197265625e+02</val></rng1>
+    <rng2>
+      <x>489</x>
+      <y>447</y>
+      <val>2.4658692932128906e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--1->
+<OCL_DftFixture_Dft--Dft---2--1280x720--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.0502641350030899e-03</min>
+    <max>3.9686136879026890e-03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-1.0615441715344787e-03</val></last>
+    <rng1>
+      <x>287</x>
+      <y>383</y>
+      <val>5.0738651771098375e-04</val></rng1>
+    <rng2>
+      <x>588</x>
+      <y>505</y>
+      <val>9.5193932065740228e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--3->
+<OCL_DftFixture_Dft--Dft---2--1280x720--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.4310023498535156e+02</min>
+    <max>1.3446759033203125e+02</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>2.3260662078857422e+01</val></last>
+    <rng1>
+      <x>1223</x>
+      <y>162</y>
+      <val>-1.8032096862792969e+01</val></rng1>
+    <rng2>
+      <x>209</x>
+      <y>31</y>
+      <val>-5.4024724960327148e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1280x720--5->
+<OCL_DftFixture_Dft--Dft---2--1920x1080--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.8564411621093750e+03</min>
+    <max>2.8564409179687500e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-5.7948840332031250e+02</val></last>
+    <rng1>
+      <x>103</x>
+      <y>662</y>
+      <val>-7.4740783691406250e+01</val></rng1>
+    <rng2>
+      <x>1857</x>
+      <y>363</y>
+      <cn>1</cn>
+      <val>1.3276763916015625e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--0->
+<OCL_DftFixture_Dft--Dft---2--1920x1080--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-9.3113960266113281e+01</min>
+    <max>9.3113960266113281e+01</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.6131866455078125e+01</val></last>
+    <rng1>
+      <x>148</x>
+      <y>909</y>
+      <cn>1</cn>
+      <val>-1.3837280273437500e+00</val></rng1>
+    <rng2>
+      <x>775</x>
+      <y>704</y>
+      <val>1.3605555534362793e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--4->
+<OCL_DftFixture_Dft--Dft---2--1920x1080--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.3775276020169258e-03</min>
+    <max>1.3775274856016040e-03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-2.7946007321588695e-04</val></last>
+    <rng1>
+      <x>1175</x>
+      <y>757</y>
+      <val>1.9643698760773987e-04</val></rng1>
+    <rng2>
+      <x>1607</x>
+      <y>661</y>
+      <val>-4.6565295633627102e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--2->
+<OCL_DftFixture_Dft--Dft---2--1920x1080--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-5.3654238281250000e+03</min>
+    <max>5.9195527343750000e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>5.4351434326171875e+02</val></last>
+    <rng1>
+      <x>530</x>
+      <y>1013</y>
+      <val>6.7780737304687500e+02</val></rng1>
+    <rng2>
+      <x>1045</x>
+      <y>341</y>
+      <val>-4.6974157714843750e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--1->
+<OCL_DftFixture_Dft--Dft---2--1920x1080--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-2.5874921120703220e-03</min>
+    <max>2.8547225520014763e-03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>2.6211145450361073e-04</val></last>
+    <rng1>
+      <x>1107</x>
+      <y>840</y>
+      <val>-1.7216123524121940e-04</val></rng1>
+    <rng2>
+      <x>991</x>
+      <y>677</y>
+      <val>-6.0118567489553243e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--3->
+<OCL_DftFixture_Dft--Dft---2--1920x1080--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.7640058898925781e+02</min>
+    <max>1.8940054321289062e+02</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-5.3547582626342773e+00</val></last>
+    <rng1>
+      <x>763</x>
+      <y>124</y>
+      <val>6.6866249084472656e+01</val></rng1>
+    <rng2>
+      <x>358</x>
+      <y>468</y>
+      <val>6.7178657531738281e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1920x1080--5->
+<OCL_DftFixture_Dft--Dft---2--512x512--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.0590302734375000e+03</min>
+    <max>1.1139370117187500e+03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-1.9425782775878906e+02</val></last>
+    <rng1>
+      <x>491</x>
+      <y>162</y>
+      <val>-7.1852317810058594e+01</val></rng1>
+    <rng2>
+      <x>437</x>
+      <y>0</y>
+      <val>-1.9772451782226562e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--0->
+<OCL_DftFixture_Dft--Dft---2--512x512--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.4166343688964844e+01</min>
+    <max>4.1702663421630859e+01</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>1.4796914100646973e+01</val></last>
+    <rng1>
+      <x>451</x>
+      <y>202</y>
+      <cn>1</cn>
+      <val>-8.6300468444824219e+00</val></rng1>
+    <rng2>
+      <x>321</x>
+      <y>278</y>
+      <cn>1</cn>
+      <val>2.3643293380737305e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--4->
+<OCL_DftFixture_Dft--Dft---2--512x512--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.0398798882961273e-03</min>
+    <max>4.2493324726819992e-03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>-7.4103480437770486e-04</val></last>
+    <rng1>
+      <x>455</x>
+      <y>390</y>
+      <val>4.4841290218755603e-04</val></rng1>
+    <rng2>
+      <x>351</x>
+      <y>244</y>
+      <val>1.7228263895958662e-03</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--2->
+<OCL_DftFixture_Dft--Dft---2--512x512--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.7656035156250000e+03</min>
+    <max>2.5674216308593750e+03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>4.3014099121093750e+02</val></last>
+    <rng1>
+      <x>484</x>
+      <y>108</y>
+      <val>5.7503833007812500e+02</val></rng1>
+    <rng2>
+      <x>79</x>
+      <y>273</y>
+      <val>8.8626373291015625e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--1->
+<OCL_DftFixture_Dft--Dft---2--512x512--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-6.7352429032325745e-03</min>
+    <max>9.7939362749457359e-03</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>1.6408576630055904e-03</val></last>
+    <rng1>
+      <x>494</x>
+      <y>93</y>
+      <val>4.7310790978372097e-04</val></rng1>
+    <rng2>
+      <x>132</x>
+      <y>391</y>
+      <val>-9.8510470706969500e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--3->
+<OCL_DftFixture_Dft--Dft---2--512x512--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-8.2167190551757812e+01</min>
+    <max>8.5171165466308594e+01</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>2.0744350433349609e+01</val></last>
+    <rng1>
+      <x>237</x>
+      <y>452</y>
+      <val>4.6032981872558594e+01</val></rng1>
+    <rng2>
+      <x>467</x>
+      <y>414</y>
+      <val>-8.2543735504150391e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--512x512--5->
+<OCL_DftFixture_Dft--Dft---2--1024x1024--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-2.0542365722656250e+03</min>
+    <max>2.1328857421875000e+03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>3.8138641357421875e+02</val></last>
+    <rng1>
+      <x>154</x>
+      <y>449</y>
+      <cn>1</cn>
+      <val>4.5732379150390625e+02</val></rng1>
+    <rng2>
+      <x>401</x>
+      <y>898</y>
+      <val>4.1068237304687500e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--0->
+<OCL_DftFixture_Dft--Dft---2--1024x1024--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-7.2764175415039062e+01</min>
+    <max>7.2764175415039062e+01</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>-1.8921277999877930e+01</val></last>
+    <rng1>
+      <x>208</x>
+      <y>742</y>
+      <val>1.2991220951080322e+00</val></rng1>
+    <rng2>
+      <x>641</x>
+      <y>19</y>
+      <val>3.1894068717956543e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--4->
+<OCL_DftFixture_Dft--Dft---2--1024x1024--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.9590726587921381e-03</min>
+    <max>2.0340783521533012e-03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>3.6371842725202441e-04</val></last>
+    <rng1>
+      <x>386</x>
+      <y>257</y>
+      <cn>1</cn>
+      <val>-1.0424446372780949e-04</val></rng1>
+    <rng2>
+      <x>166</x>
+      <y>1004</y>
+      <cn>1</cn>
+      <val>-7.9305202234536409e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--2->
+<OCL_DftFixture_Dft--Dft---2--1024x1024--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-4.1064492187500000e+03</min>
+    <max>4.0333767089843750e+03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>5.3110870361328125e+02</val></last>
+    <rng1>
+      <x>859</x>
+      <y>607</y>
+      <val>-3.7022207641601562e+02</val></rng1>
+    <rng2>
+      <x>336</x>
+      <y>282</y>
+      <val>4.3493008422851562e+02</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--1->
+<OCL_DftFixture_Dft--Dft---2--1024x1024--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-3.9162151515483856e-03</min>
+    <max>3.8465277757495642e-03</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>5.0650472985580564e-04</val></last>
+    <rng1>
+      <x>901</x>
+      <y>284</y>
+      <val>-1.2479824945330620e-03</val></rng1>
+    <rng2>
+      <x>918</x>
+      <y>882</y>
+      <val>-7.0243974914774299e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--3->
+<OCL_DftFixture_Dft--Dft---2--1024x1024--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.1952741241455078e+02</min>
+    <max>1.2535937500000000e+02</max>
+    <last>
+      <x>1023</x>
+      <y>1023</y>
+      <val>-2.3702396392822266e+01</val></last>
+    <rng1>
+      <x>65</x>
+      <y>298</y>
+      <val>2.4441333770751953e+01</val></rng1>
+    <rng2>
+      <x>1014</x>
+      <y>140</y>
+      <val>-7.5496187210083008e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--1024x1024--5->
+<OCL_DftFixture_Dft--Dft---2--2048x2048--0->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-4.2911962890625000e+03</min>
+    <max>4.5411250000000000e+03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>-6.2471771240234375e+01</val></last>
+    <rng1>
+      <x>1568</x>
+      <y>762</y>
+      <val>2.9922091674804688e+02</val></rng1>
+    <rng2>
+      <x>9</x>
+      <y>1196</y>
+      <val>1.0598641357421875e+03</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--0->
+<OCL_DftFixture_Dft--Dft---2--2048x2048--4->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.0420848846435547e+02</min>
+    <max>9.9364883422851562e+01</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>-1.3924459457397461e+01</val></last>
+    <rng1>
+      <x>1974</x>
+      <y>1884</y>
+      <cn>1</cn>
+      <val>-6.9690742492675781e+00</val></rng1>
+    <rng2>
+      <x>1811</x>
+      <y>64</y>
+      <val>1.1086032867431641e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--4->
+<OCL_DftFixture_Dft--Dft---2--2048x2048--2->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-1.0231009218841791e-03</min>
+    <max>1.0826885700225830e-03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>-1.4894430933054537e-05</val></last>
+    <rng1>
+      <x>199</x>
+      <y>57</y>
+      <cn>1</cn>
+      <val>-2.4952174862846732e-04</val></rng1>
+    <rng2>
+      <x>1790</x>
+      <y>642</y>
+      <val>4.1388251702301204e-05</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--2->
+<OCL_DftFixture_Dft--Dft---2--2048x2048--1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-8.2932558593750000e+03</min>
+    <max>8.3690703125000000e+03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>7.5369000244140625e+02</val></last>
+    <rng1>
+      <x>11</x>
+      <y>2001</y>
+      <val>-1.9614691162109375e+02</val></rng1>
+    <rng2>
+      <x>1675</x>
+      <y>34</y>
+      <val>-5.8602539062500000e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--1->
+<OCL_DftFixture_Dft--Dft---2--2048x2048--3->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.9772662781178951e-03</min>
+    <max>1.9953418523073196e-03</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>1.7969369946513325e-04</val></last>
+    <rng1>
+      <x>1153</x>
+      <y>640</y>
+      <val>-4.2948045302182436e-04</val></rng1>
+    <rng2>
+      <x>1397</x>
+      <y>637</y>
+      <val>4.8553830129094422e-04</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--3->
+<OCL_DftFixture_Dft--Dft---2--2048x2048--5->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.9905923461914062e+02</min>
+    <max>1.8314665222167969e+02</max>
+    <last>
+      <x>2047</x>
+      <y>2047</y>
+      <val>7.1013965606689453e+00</val></last>
+    <rng1>
+      <x>210</x>
+      <y>835</y>
+      <val>8.2003669738769531e+01</val></rng1>
+    <rng2>
+      <x>420</x>
+      <y>1107</y>
+      <val>-5.1237159729003906e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--5->
 </opencv_storage>
