@@ -1785,72 +1785,95 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Compare_Scalar, testing::Combine(
 //////////////////////////////////////////////////////////////////////////////
 // Bitwise_Array
 
-PARAM_TEST_CASE(Bitwise_Array, cv::gpu::DeviceInfo, cv::Size, MatType)
+PARAM_TEST_CASE(Bitwise_Array, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
     int type;
+    bool useRoi;
 
     cv::Mat src1;
     cv::Mat src2;
+
+    cv::Mat mask;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
         type = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
         src1 = randomMat(size, type, 0.0, std::numeric_limits<int>::max());
         src2 = randomMat(size, type, 0.0, std::numeric_limits<int>::max());
+
+        mask = randomMat(size, CV_8UC1, 0.0, 2.0);
     }
 };
 
 GPU_TEST_P(Bitwise_Array, Not)
 {
-    cv::gpu::GpuMat dst;
-    cv::gpu::bitwise_not(loadMat(src1), dst);
+    cv::gpu::GpuMat dst_nomask, dst_mask(src1.size(), src1.type(), cv::Scalar::all(0));
+    cv::gpu::bitwise_not(loadMat(src1, useRoi), dst_nomask);
+    cv::gpu::bitwise_not(loadMat(src1, useRoi), dst_mask, loadMat(mask, useRoi));
 
-    cv::Mat dst_gold = ~src1;
+    cv::Mat dst_gold_nomask, dst_gold_mask(src1.size(), src1.type(), cv::Scalar::all(0));
+    cv::bitwise_not(src1, dst_gold_nomask);
+    cv::bitwise_not(src1, dst_gold_mask, mask);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_nomask, dst_nomask, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_mask, dst_mask, 0.0);
 }
 
 GPU_TEST_P(Bitwise_Array, Or)
 {
-    cv::gpu::GpuMat dst;
-    cv::gpu::bitwise_or(loadMat(src1), loadMat(src2), dst);
+    cv::gpu::GpuMat dst_nomask, dst_mask(src1.size(), src1.type(), cv::Scalar::all(0));
+    cv::gpu::bitwise_or(loadMat(src1, useRoi), loadMat(src2, useRoi), dst_nomask);
+    cv::gpu::bitwise_or(loadMat(src1, useRoi), loadMat(src2, useRoi), dst_mask, loadMat(mask, useRoi));
 
-    cv::Mat dst_gold = src1 | src2;
+    cv::Mat dst_gold_nomask, dst_gold_mask(src1.size(), src1.type(), cv::Scalar::all(0));
+    cv::bitwise_or(src1, src2, dst_gold_nomask);
+    cv::bitwise_or(src1, src2, dst_gold_mask, mask);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_nomask, dst_nomask, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_mask, dst_mask, 0.0);
 }
 
 GPU_TEST_P(Bitwise_Array, And)
 {
-    cv::gpu::GpuMat dst;
-    cv::gpu::bitwise_and(loadMat(src1), loadMat(src2), dst);
+    cv::gpu::GpuMat dst_nomask, dst_mask(src1.size(), src1.type(), cv::Scalar::all(0));
+    cv::gpu::bitwise_and(loadMat(src1, useRoi), loadMat(src2, useRoi), dst_nomask);
+    cv::gpu::bitwise_and(loadMat(src1, useRoi), loadMat(src2, useRoi), dst_mask, loadMat(mask, useRoi));
 
-    cv::Mat dst_gold = src1 & src2;
+    cv::Mat dst_gold_nomask, dst_gold_mask(src1.size(), src1.type(), cv::Scalar::all(0));
+    cv::bitwise_and(src1, src2, dst_gold_nomask);
+    cv::bitwise_and(src1, src2, dst_gold_mask, mask);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_nomask, dst_nomask, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_mask, dst_mask, 0.0);
 }
 
 GPU_TEST_P(Bitwise_Array, Xor)
 {
-    cv::gpu::GpuMat dst;
-    cv::gpu::bitwise_xor(loadMat(src1), loadMat(src2), dst);
+    cv::gpu::GpuMat dst_nomask, dst_mask(src1.size(), src1.type(), cv::Scalar::all(0));
+    cv::gpu::bitwise_xor(loadMat(src1, useRoi), loadMat(src2, useRoi), dst_nomask);
+    cv::gpu::bitwise_xor(loadMat(src1, useRoi), loadMat(src2, useRoi), dst_mask, loadMat(mask, useRoi));
 
-    cv::Mat dst_gold = src1 ^ src2;
+    cv::Mat dst_gold_nomask, dst_gold_mask(src1.size(), src1.type(), cv::Scalar::all(0));
+    cv::bitwise_xor(src1, src2, dst_gold_nomask);
+    cv::bitwise_xor(src1, src2, dst_gold_mask, mask);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_nomask, dst_nomask, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_mask, dst_mask, 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Bitwise_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    TYPES(CV_8U, CV_32S, 1, 4)));
+    TYPES(CV_8U, CV_32S, 1, 4),
+    WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////////////////////////////
 // Bitwise_Scalar
