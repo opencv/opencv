@@ -393,7 +393,7 @@ class FuncVariant(object):
         self.name = self.wname = name
         self.isconstructor = isconstructor
 
-        self.rettype = handle_ptr(decl[1])
+        self.rettype = decl[4] if len(decl) >=5 else handle_ptr(decl[1])
         if self.rettype == "void":
             self.rettype = ""
         self.args = []
