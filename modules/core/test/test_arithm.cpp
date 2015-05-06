@@ -1791,3 +1791,28 @@ INSTANTIATE_TEST_CASE_P(Arithm, SubtractOutputMatNotEmpty, testing::Combine(
     testing::Values(perf::MatType(CV_8UC1), CV_8UC3, CV_8UC4, CV_16SC1, CV_16SC3),
     testing::Values(-1, CV_16S, CV_32S, CV_32F),
     testing::Bool()));
+
+
+TEST(Core_FindNonZero, singular)
+{
+    Mat img(10, 10, CV_8U, Scalar::all(0));
+    vector<Point> pts, pts2(10);
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
+}
+
+TEST(Core_BoolVector, support)
+{
+    std::vector<bool> test;
+    int i, n = 205;
+    int nz = 0;
+    test.resize(n);
+    for( i = 0; i < n; i++ )
+    {
+        test[i] = theRNG().uniform(0, 2) != 0;
+        nz += (int)test[i];
+    }
+    ASSERT_EQ( nz, countNonZero(test) );
+    ASSERT_FLOAT_EQ((float)nz/n, (float)(mean(test)[0]));
+}

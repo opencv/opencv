@@ -232,7 +232,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         int val = ((uchar*)a_data)[j];
-                        ((uchar*)b_data)[j] = (uchar)(val <= 1 ? val :
+                        ((uchar*)b_data)[j] = (uchar)(val == 0 ? 255 : val == 1 ? 1 :
                                                       val == 2 && ipower == -1 ? 1 : 0);
                     }
                 else
@@ -247,17 +247,17 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                 if( ipower < 0 )
                     for( j = 0; j < ncols; j++ )
                     {
-                        int val = ((char*)a_data)[j];
-                        ((char*)b_data)[j] = (char)((val&~1)==0 ? val :
+                        int val = ((schar*)a_data)[j];
+                        ((schar*)b_data)[j] = (schar)(val == 0 ? 127 : val == 1 ? 1 :
                                                     val ==-1 ? 1-2*(ipower&1) :
                                                     val == 2 && ipower == -1 ? 1 : 0);
                     }
                 else
                     for( j = 0; j < ncols; j++ )
                     {
-                        int val = ((char*)a_data)[j];
+                        int val = ((schar*)a_data)[j];
                         val = ipow( val, ipower );
-                        ((char*)b_data)[j] = saturate_cast<schar>(val);
+                        ((schar*)b_data)[j] = saturate_cast<schar>(val);
                     }
                 break;
             case CV_16U:
@@ -265,7 +265,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         int val = ((ushort*)a_data)[j];
-                        ((ushort*)b_data)[j] = (ushort)((val&~1)==0 ? val :
+                        ((ushort*)b_data)[j] = (ushort)(val == 0 ? 65535 : val == 1 ? 1 :
                                                         val ==-1 ? 1-2*(ipower&1) :
                                                         val == 2 && ipower == -1 ? 1 : 0);
                     }
@@ -282,7 +282,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         int val = ((short*)a_data)[j];
-                        ((short*)b_data)[j] = (short)((val&~1)==0 ? val :
+                        ((short*)b_data)[j] = (short)(val == 0 ? 32767 : val == 1 ? 1 :
                                                       val ==-1 ? 1-2*(ipower&1) :
                                                       val == 2 && ipower == -1 ? 1 : 0);
                     }
@@ -299,7 +299,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         int val = ((int*)a_data)[j];
-                        ((int*)b_data)[j] = (val&~1)==0 ? val :
+                        ((int*)b_data)[j] = val == 0 ? INT_MAX : val == 1 ? 1 :
                         val ==-1 ? 1-2*(ipower&1) :
                         val == 2 && ipower == -1 ? 1 : 0;
                     }
@@ -350,8 +350,6 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
         }
     }
 }
-
-
 
 ///////////////////////////////////////// matrix tests ////////////////////////////////////////////
 
@@ -2820,6 +2818,58 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     cv::absdiff(goldMean, actualMean.reshape(0,1), meanDiff);
     cv::Scalar sDiff = cv::sum(meanDiff);
     ASSERT_EQ(sDiff.dot(sDiff), 0.0);
+}
+
+TEST(Core_Pow, special)
+{
+    for( int i = 0; i < 100; i++ )
+    {
+        int n = theRNG().uniform(1, 30);
+        Mat mtx0(1, n, CV_8S), mtx, result;
+        randu(mtx0, -5, 5);
+
+        int type = theRNG().uniform(0, 2) ? CV_64F : CV_32F;
+        double eps = type == CV_32F ? 1e-3 : 1e-10;
+        mtx0.convertTo(mtx, type);
+        // generate power from [-n, n] interval with 1/8 step - enough to check various cases.
+        const int max_pf = 3;
+        int pf = theRNG().uniform(0, max_pf*2+1);
+        double power = ((1 << pf) - (1 << (max_pf*2-1)))/16.;
+        int ipower = cvRound(power);
+        bool is_ipower = ipower == power;
+        cv::pow(mtx, power, result);
+        for( int j = 0; j < n; j++ )
+        {
+            double val = type == CV_32F ? (double)mtx.at<float>(j) : mtx.at<double>(j);
+            double r = type == CV_32F ? (double)result.at<float>(j) : result.at<double>(j);
+            double r0;
+            if( power == 0. )
+                r0 = 1;
+            else if( is_ipower )
+            {
+                r0 = 1;
+                for( int k = 0; k < std::abs(ipower); k++ )
+                    r0 *= val;
+                if( ipower < 0 )
+                    r0 = 1./r0;
+            }
+            else
+                r0 = std::pow(val, power);
+            if( cvIsInf(r0) )
+            {
+                ASSERT_TRUE(cvIsInf(r) != 0);
+            }
+            else if( cvIsNaN(r0) )
+            {
+                ASSERT_TRUE(cvIsNaN(r) != 0);
+            }
+            else
+            {
+                ASSERT_TRUE(cvIsInf(r) == 0 && cvIsNaN(r) == 0);
+                ASSERT_LT(fabs(r - r0), eps);
+            }
+        }
+    }
 }
 
 /* End of file. */

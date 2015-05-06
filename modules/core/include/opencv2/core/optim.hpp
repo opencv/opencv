@@ -63,9 +63,11 @@ public:
     class CV_EXPORTS Function
     {
     public:
-       virtual ~Function() {}
-       virtual double calc(const double* x) const = 0;
-       virtual void getGradient(const double* /*x*/,double* /*grad*/) {}
+        virtual ~Function() {}
+        virtual int getDims() const = 0;
+        virtual double getGradientEps() const;
+        virtual double calc(const double* x) const = 0;
+        virtual void getGradient(const double* x,double* grad);
     };
 
     /** @brief Getter for the optimized function.
