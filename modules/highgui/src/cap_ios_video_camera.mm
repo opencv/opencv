@@ -117,13 +117,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
             NSLog(@"[Camera] Delete file %@", [self videoFileString]);
         }
 
-#if 0
         if ([[NSFileManager defaultManager] fileExistsAtPath:[self mediaFileString]]) {
             [[NSFileManager defaultManager] removeItemAtPath:[self mediaFileString] error:&error];
         }
-        
-        [self.movieFileOutput startRecordingToOutputFileURL:[self mediaFileURL] recordingDelegate:self];
-#endif
     }
 }
 
@@ -309,6 +305,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     }
     [[self.videoDataOutput connectionWithMediaType:AVMediaTypeVideo] setEnabled:YES];
 
+    //self.videoCaptureConnection = [self.videoDataOutput connectionWithMediaType:AVMediaTypeVideo];
+    //[self.videoCaptureConnection setEnabled:YES];
+
 
     // set default FPS
     if ([self.videoDataOutput connectionWithMediaType:AVMediaTypeVideo].supportsVideoMinFrameDuration) {
@@ -351,13 +350,13 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 - (void)createMovieFileOutput; 
 {
+    NSLog(@"createVideoFileOutput...");
     self.movieFileOutput  = [[AVCaptureMovieFileOutput alloc] init];
     CMTime maxDuration = CMTimeMake(30*60, 1);
     movieFileOutput.maxRecordedDuration = maxDuration;
     movieFileOutput.minFreeDiskSpaceLimit = (1024L)*(1024L*1024L);
     movieFileOutput.maxRecordedFileSize = (400L)*(1024L*1024L);
 
-    NSLog(@"createVideoFileOutput...");
 
     if ([self.captureSession canAddOutput:movieFileOutput]) {
         [captureSession addOutput:movieFileOutput];
@@ -366,6 +365,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     else {
         NSLog(@"Couldn't add movie output ");
     }
+
+    if (self.recordVideo == YES)
+        [self.movieFileOutput startRecordingToOutputFileURL:[self mediaFileURL] recordingDelegate:self];
 }
 
 
@@ -480,6 +482,13 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 {
     (void)captureOutput;
     (void)connection;
+
+    if (connection == self.audioCaptureConnection) {
+        NSLog(@"Audio Sample came in ");
+        return;
+    }
+
+    //NSLog(@"Video sample came in ");
     if (self.delegate) {
 
         // convert from Core Media to Core Video
@@ -674,6 +683,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     if ([fileManager fileExistsAtPath:outputPath]) {
         NSLog(@"file exists");
     }
+    NSLog(@"media URL %@", outputURL);
     return outputURL;
 }
 
@@ -685,7 +695,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 
 - (NSString*) mediaFileString {
-    NSString *outputPath = [[NSString alloc] initWithFormat:@"%@-%@", NSTemporaryDirectory(), @"media.mov"];
+    NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"media.mov"];
     return outputPath;
 }
 @end
