@@ -1896,53 +1896,53 @@ namespace cv { namespace gpu { namespace device
 
 namespace arithm
 {
-    template <typename T> void bitMatNot(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
+    template <typename T> void bitMatNot(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, bit_not<T>(), mask, stream);
+            transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, bit_not<T>(), SingleMaskChannels(mask, num_channels), stream);
         else
             transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, bit_not<T>(), WithOutMask(), stream);
     }
 
-    template <typename T> void bitMatAnd(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
+    template <typename T> void bitMatAnd(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_and<T>(), mask, stream);
+            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_and<T>(), SingleMaskChannels(mask, num_channels), stream);
         else
             transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_and<T>(), WithOutMask(), stream);
     }
 
-    template <typename T> void bitMatOr(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
+    template <typename T> void bitMatOr(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_or<T>(), mask, stream);
+            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_or<T>(), SingleMaskChannels(mask, num_channels), stream);
         else
             transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_or<T>(), WithOutMask(), stream);
     }
 
-    template <typename T> void bitMatXor(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
+    template <typename T> void bitMatXor(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_xor<T>(), mask, stream);
+            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_xor<T>(), SingleMaskChannels(mask, num_channels), stream);
         else
             transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_xor<T>(), WithOutMask(), stream);
     }
 
-    template void bitMatNot<uchar>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatNot<ushort>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatNot<uint>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    template void bitMatNot<uchar>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template void bitMatNot<ushort>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template void bitMatNot<uint>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
 
-    template void bitMatAnd<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatAnd<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatAnd<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    template void bitMatAnd<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template void bitMatAnd<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template void bitMatAnd<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
 
-    template void bitMatOr<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatOr<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatOr<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    template void bitMatOr<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template void bitMatOr<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template void bitMatOr<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
 
-    template void bitMatXor<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatXor<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatXor<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    template void bitMatXor<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template void bitMatXor<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template void bitMatXor<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
