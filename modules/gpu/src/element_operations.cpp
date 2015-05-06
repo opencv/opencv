@@ -1955,7 +1955,7 @@ void cv::gpu::compare(const GpuMat& src, Scalar sc, GpuMat& dst, int cmpop, Stre
 
 namespace arithm
 {
-    template <typename T> void bitMatNot(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    template <typename T> void bitMatNot(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
 }
 
 void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, Stream& s)
@@ -1964,39 +1964,73 @@ void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, St
 
     const int depth = src.depth();
 
-    CV_Assert( depth <= CV_64F );
+    CV_Assert( depth < CV_32F );
     CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
 
     dst.create(src.size(), src.type());
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    const int bcols = (int) (src.cols * src.elemSize());
-
-    if ((bcols & 3) == 0)
+    if (mask.empty())
     {
-        const int vcols = bcols >> 2;
+        const int bcols = (int) (src.cols * src.elemSize());
+        bool aligned =
+                isAligned(src.data, sizeof(unsigned int)) &&
+                isAligned(dst.data, sizeof(unsigned int));
 
-        bitMatNot<unsigned int>(
-                    PtrStepSzb(src.rows, vcols, src.data, src.step),
-                    PtrStepSzb(src.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else if ((bcols & 1) == 0)
-    {
-        const int vcols = bcols >> 1;
+        if (aligned && (bcols & 3) == 0)
+        {
+            const int vcols = bcols >> 2;
 
-        bitMatNot<unsigned short>(
-                    PtrStepSzb(src.rows, vcols, src.data, src.step),
-                    PtrStepSzb(src.rows, vcols, dst.data, dst.step),
-                    mask, stream);
+            bitMatNot<unsigned int>(
+                        PtrStepSzb(src.rows, vcols, src.data, src.step),
+                        PtrStepSzb(src.rows, vcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
+        else if (aligned && (bcols & 1) == 0)
+        {
+            const int vcols = bcols >> 1;
+
+            bitMatNot<unsigned short>(
+                        PtrStepSzb(src.rows, vcols, src.data, src.step),
+                        PtrStepSzb(src.rows, vcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
+        else
+        {
+            bitMatNot<unsigned char>(
+                        PtrStepSzb(src.rows, bcols, src.data, src.step),
+                        PtrStepSzb(src.rows, bcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
     }
     else
     {
-        bitMatNot<unsigned char>(
-                    PtrStepSzb(src.rows, bcols, src.data, src.step),
-                    PtrStepSzb(src.rows, bcols, dst.data, dst.step),
-                    mask, stream);
+        const int elem_size = src.elemSize1();
+        const int num_channels = src.channels();
+        const int bcols = src.cols * num_channels;
+
+        if (elem_size == 1)
+        {
+            bitMatNot<unsigned char>(
+                        PtrStepSzb(src.rows, bcols, src.data, src.step),
+                        PtrStepSzb(src.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
+        else if (elem_size == 2)
+        {
+            bitMatNot<unsigned short>(
+                        PtrStepSzb(src.rows, bcols, src.data, src.step),
+                        PtrStepSzb(src.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
+        else if (elem_size == 4)
+        {
+            bitMatNot<unsigned int>(
+                        PtrStepSzb(src.rows, bcols, src.data, src.step),
+                        PtrStepSzb(src.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
     }
 }
 
@@ -2005,9 +2039,9 @@ void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, St
 
 namespace arithm
 {
-    template <typename T> void bitMatAnd(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template <typename T> void bitMatOr(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template <typename T> void bitMatXor(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    template <typename T> void bitMatAnd(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template <typename T> void bitMatOr(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
+    template <typename T> void bitMatXor(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, int num_channels, cudaStream_t stream);
 }
 
 void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& s)
@@ -2016,7 +2050,7 @@ void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
 
     const int depth = src1.depth();
 
-    CV_Assert( depth <= CV_64F );
+    CV_Assert( depth < CV_32F );
     CV_Assert( src2.size() == src1.size() && src2.type() == src1.type() );
     CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src1.size()) );
 
@@ -2024,36 +2058,73 @@ void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    const int bcols = (int) (src1.cols * src1.elemSize());
-
-    if ((bcols & 3) == 0)
+    if (mask.empty())
     {
-        const int vcols = bcols >> 2;
+        const int bcols = (int) (src1.cols * src1.elemSize());
+        bool aligned =
+                isAligned(src1.data, sizeof(unsigned int)) &&
+                isAligned(src2.data, sizeof(unsigned int)) &&
+                isAligned(dst.data, sizeof(unsigned int));
 
-        bitMatAnd<unsigned int>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else if ((bcols & 1) == 0)
-    {
-        const int vcols = bcols >> 1;
+        if (aligned && (bcols & 3) == 0)
+        {
+            const int vcols = bcols >> 2;
 
-        bitMatAnd<unsigned short>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
+            bitMatAnd<unsigned int>(
+                        PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
+        else if (aligned && (bcols & 1) == 0)
+        {
+            const int vcols = bcols >> 1;
+
+            bitMatAnd<unsigned short>(
+                        PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
+        else
+        {
+            bitMatAnd<unsigned char>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
     }
     else
     {
+        const int elem_size = src1.elemSize1();
+        const int num_channels = src1.channels();
+        const int bcols = src1.cols * num_channels;
 
-        bitMatAnd<unsigned char>(
-                    PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
-                    mask, stream);
+        if (elem_size == 1)
+        {
+            bitMatAnd<unsigned char>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
+        else if (elem_size == 2)
+        {
+            bitMatAnd<unsigned short>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
+        else if (elem_size == 4)
+        {
+            bitMatAnd<unsigned int>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
     }
 }
 
@@ -2063,7 +2134,7 @@ void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, co
 
     const int depth = src1.depth();
 
-    CV_Assert( depth <= CV_64F );
+    CV_Assert( depth < CV_32F );
     CV_Assert( src2.size() == src1.size() && src2.type() == src1.type() );
     CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src1.size()) );
 
@@ -2071,36 +2142,73 @@ void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, co
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    const int bcols = (int) (src1.cols * src1.elemSize());
-
-    if ((bcols & 3) == 0)
+    if (mask.empty())
     {
-        const int vcols = bcols >> 2;
+        const int bcols = (int) (src1.cols * src1.elemSize());
+        bool aligned =
+                isAligned(src1.data, sizeof(unsigned int)) &&
+                isAligned(src2.data, sizeof(unsigned int)) &&
+                isAligned(dst.data, sizeof(unsigned int));
 
-        bitMatOr<unsigned int>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else if ((bcols & 1) == 0)
-    {
-        const int vcols = bcols >> 1;
+        if (aligned && (bcols & 3) == 0)
+        {
+            const int vcols = bcols >> 2;
 
-        bitMatOr<unsigned short>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
+            bitMatOr<unsigned int>(
+                        PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
+        else if (aligned && (bcols & 1) == 0)
+        {
+            const int vcols = bcols >> 1;
+
+            bitMatOr<unsigned short>(
+                        PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
+        else
+        {
+            bitMatOr<unsigned char>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
     }
     else
     {
+        const int elem_size = src1.elemSize1();
+        const int num_channels = src1.channels();
+        const int bcols = src1.cols * num_channels;
 
-        bitMatOr<unsigned char>(
-                    PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
-                    mask, stream);
+        if (elem_size == 1)
+        {
+            bitMatOr<unsigned char>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
+        else if (elem_size == 2)
+        {
+            bitMatOr<unsigned short>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
+        else if (elem_size == 4)
+        {
+            bitMatOr<unsigned int>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
     }
 }
 
@@ -2110,7 +2218,7 @@ void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
 
     const int depth = src1.depth();
 
-    CV_Assert( depth <= CV_64F );
+    CV_Assert( depth < CV_32F );
     CV_Assert( src2.size() == src1.size() && src2.type() == src1.type() );
     CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src1.size()) );
 
@@ -2118,36 +2226,73 @@ void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    const int bcols = (int) (src1.cols * src1.elemSize());
-
-    if ((bcols & 3) == 0)
+    if (mask.empty())
     {
-        const int vcols = bcols >> 2;
+        const int bcols = (int) (src1.cols * src1.elemSize());
+        bool aligned =
+                isAligned(src1.data, sizeof(unsigned int)) &&
+                isAligned(src2.data, sizeof(unsigned int)) &&
+                isAligned(dst.data, sizeof(unsigned int));
 
-        bitMatXor<unsigned int>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else if ((bcols & 1) == 0)
-    {
-        const int vcols = bcols >> 1;
+        if (aligned && (bcols & 3) == 0)
+        {
+            const int vcols = bcols >> 2;
 
-        bitMatXor<unsigned short>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
+            bitMatXor<unsigned int>(
+                        PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
+        else if (aligned && (bcols & 1) == 0)
+        {
+            const int vcols = bcols >> 1;
+
+            bitMatXor<unsigned short>(
+                        PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
+        else
+        {
+            bitMatXor<unsigned char>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        PtrStepb(), 1, stream);
+        }
     }
     else
     {
+        const int elem_size = src1.elemSize1();
+        const int num_channels = src1.channels();
+        const int bcols = src1.cols * num_channels;
 
-        bitMatXor<unsigned char>(
-                    PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
-                    mask, stream);
+        if (elem_size == 1)
+        {
+            bitMatXor<unsigned char>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
+        else if (elem_size == 2)
+        {
+            bitMatXor<unsigned short>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
+        else if (elem_size == 4)
+        {
+            bitMatXor<unsigned int>(
+                        PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                        PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                        PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                        mask, num_channels, stream);
+        }
     }
 }
 
