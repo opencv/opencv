@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include <limits>
 
 namespace cv
 {
@@ -889,38 +890,41 @@ struct iPow_SIMD
     }
 };
 
-#if CV_NEON
+#if CV_SIMD128
 
 template <>
 struct iPow_SIMD<uchar, int>
 {
-    int operator() ( const uchar * src, uchar * dst, int len, int power)
+    int operator() ( const uchar * src, uchar * dst, int len, int power )
     {
         int i = 0;
-        uint32x4_t v_1 = vdupq_n_u32(1u);
+        v_uint32x4 v_1 = v_setall_u32(1u);
 
         for ( ; i <= len - 8; i += 8)
         {
-            uint32x4_t v_a1 = v_1, v_a2 = v_1;
-            uint16x8_t v_src = vmovl_u8(vld1_u8(src + i));
-            uint32x4_t v_b1 = vmovl_u16(vget_low_u16(v_src)), v_b2 = vmovl_u16(vget_high_u16(v_src));
+            v_uint32x4 v_a1 = v_1, v_a2 = v_1;
+            v_uint16x8 v = v_load_expand(src + i);
+            v_uint32x4 v_b1, v_b2;
+            v_expand(v, v_b1, v_b2);
             int p = power;
 
             while( p > 1 )
             {
                 if (p & 1)
                 {
-                    v_a1 = vmulq_u32(v_a1, v_b1);
-                    v_a2 = vmulq_u32(v_a2, v_b2);
+                    v_a1 *= v_b1;
+                    v_a2 *= v_b2;
                 }
-                v_b1 = vmulq_u32(v_b1, v_b1);
-                v_b2 = vmulq_u32(v_b2, v_b2);
+                v_b1 *= v_b1;
+                v_b2 *= v_b2;
                 p >>= 1;
             }
 
-            v_a1 = vmulq_u32(v_a1, v_b1);
-            v_a2 = vmulq_u32(v_a2, v_b2);
-            vst1_u8(dst + i, vqmovn_u16(vcombine_u16(vqmovn_u32(v_a1), vqmovn_u32(v_a2))));
+            v_a1 *= v_b1;
+            v_a2 *= v_b2;
+
+            v = v_pack(v_a1, v_a2);
+            v_pack_store(dst + i, v);
         }
 
         return i;
@@ -933,30 +937,33 @@ struct iPow_SIMD<schar, int>
     int operator() ( const schar * src, schar * dst, int len, int power)
     {
         int i = 0;
-        int32x4_t v_1 = vdupq_n_s32(1);
+        v_int32x4 v_1 = v_setall_s32(1);
 
         for ( ; i <= len - 8; i += 8)
         {
-            int32x4_t v_a1 = v_1, v_a2 = v_1;
-            int16x8_t v_src = vmovl_s8(vld1_s8(src + i));
-            int32x4_t v_b1 = vmovl_s16(vget_low_s16(v_src)), v_b2 = vmovl_s16(vget_high_s16(v_src));
+            v_int32x4 v_a1 = v_1, v_a2 = v_1;
+            v_int16x8 v = v_load_expand(src + i);
+            v_int32x4 v_b1, v_b2;
+            v_expand(v, v_b1, v_b2);
             int p = power;
 
             while( p > 1 )
             {
                 if (p & 1)
                 {
-                    v_a1 = vmulq_s32(v_a1, v_b1);
-                    v_a2 = vmulq_s32(v_a2, v_b2);
+                    v_a1 *= v_b1;
+                    v_a2 *= v_b2;
                 }
-                v_b1 = vmulq_s32(v_b1, v_b1);
-                v_b2 = vmulq_s32(v_b2, v_b2);
+                v_b1 *= v_b1;
+                v_b2 *= v_b2;
                 p >>= 1;
             }
 
-            v_a1 = vmulq_s32(v_a1, v_b1);
-            v_a2 = vmulq_s32(v_a2, v_b2);
-            vst1_s8(dst + i, vqmovn_s16(vcombine_s16(vqmovn_s32(v_a1), vqmovn_s32(v_a2))));
+            v_a1 *= v_b1;
+            v_a2 *= v_b2;
+
+            v = v_pack(v_a1, v_a2);
+            v_pack_store(dst + i, v);
         }
 
         return i;
@@ -969,30 +976,33 @@ struct iPow_SIMD<ushort, int>
     int operator() ( const ushort * src, ushort * dst, int len, int power)
     {
         int i = 0;
-        uint32x4_t v_1 = vdupq_n_u32(1u);
+        v_uint32x4 v_1 = v_setall_u32(1u);
 
         for ( ; i <= len - 8; i += 8)
         {
-            uint32x4_t v_a1 = v_1, v_a2 = v_1;
-            uint16x8_t v_src = vld1q_u16(src + i);
-            uint32x4_t v_b1 = vmovl_u16(vget_low_u16(v_src)), v_b2 = vmovl_u16(vget_high_u16(v_src));
+            v_uint32x4 v_a1 = v_1, v_a2 = v_1;
+            v_uint16x8 v = v_load(src + i);
+            v_uint32x4 v_b1, v_b2;
+            v_expand(v, v_b1, v_b2);
             int p = power;
 
             while( p > 1 )
             {
                 if (p & 1)
                 {
-                    v_a1 = vmulq_u32(v_a1, v_b1);
-                    v_a2 = vmulq_u32(v_a2, v_b2);
+                    v_a1 *= v_b1;
+                    v_a2 *= v_b2;
                 }
-                v_b1 = vmulq_u32(v_b1, v_b1);
-                v_b2 = vmulq_u32(v_b2, v_b2);
+                v_b1 *= v_b1;
+                v_b2 *= v_b2;
                 p >>= 1;
             }
 
-            v_a1 = vmulq_u32(v_a1, v_b1);
-            v_a2 = vmulq_u32(v_a2, v_b2);
-            vst1q_u16(dst + i, vcombine_u16(vqmovn_u32(v_a1), vqmovn_u32(v_a2)));
+            v_a1 *= v_b1;
+            v_a2 *= v_b2;
+
+            v = v_pack(v_a1, v_a2);
+            v_store(dst + i, v);
         }
 
         return i;
@@ -1005,36 +1015,38 @@ struct iPow_SIMD<short, int>
     int operator() ( const short * src, short * dst, int len, int power)
     {
         int i = 0;
-        int32x4_t v_1 = vdupq_n_s32(1);
+        v_int32x4 v_1 = v_setall_s32(1);
 
         for ( ; i <= len - 8; i += 8)
         {
-            int32x4_t v_a1 = v_1, v_a2 = v_1;
-            int16x8_t v_src = vld1q_s16(src + i);
-            int32x4_t v_b1 = vmovl_s16(vget_low_s16(v_src)), v_b2 = vmovl_s16(vget_high_s16(v_src));
+            v_int32x4 v_a1 = v_1, v_a2 = v_1;
+            v_int16x8 v = v_load(src + i);
+            v_int32x4 v_b1, v_b2;
+            v_expand(v, v_b1, v_b2);
             int p = power;
 
             while( p > 1 )
             {
                 if (p & 1)
                 {
-                    v_a1 = vmulq_s32(v_a1, v_b1);
-                    v_a2 = vmulq_s32(v_a2, v_b2);
+                    v_a1 *= v_b1;
+                    v_a2 *= v_b2;
                 }
-                v_b1 = vmulq_s32(v_b1, v_b1);
-                v_b2 = vmulq_s32(v_b2, v_b2);
+                v_b1 *= v_b1;
+                v_b2 *= v_b2;
                 p >>= 1;
             }
 
-            v_a1 = vmulq_s32(v_a1, v_b1);
-            v_a2 = vmulq_s32(v_a2, v_b2);
-            vst1q_s16(dst + i, vcombine_s16(vqmovn_s32(v_a1), vqmovn_s32(v_a2)));
+            v_a1 *= v_b1;
+            v_a2 *= v_b2;
+
+            v = v_pack(v_a1, v_a2);
+            v_store(dst + i, v);
         }
 
         return i;
     }
 };
-
 
 template <>
 struct iPow_SIMD<int, int>
@@ -1042,23 +1054,31 @@ struct iPow_SIMD<int, int>
     int operator() ( const int * src, int * dst, int len, int power)
     {
         int i = 0;
-        int32x4_t v_1 = vdupq_n_s32(1);
+        v_int32x4 v_1 = v_setall_s32(1);
 
-        for ( ; i <= len - 4; i += 4)
+        for ( ; i <= len - 8; i += 8)
         {
-            int32x4_t v_b = vld1q_s32(src + i), v_a = v_1;
+            v_int32x4 v_a1 = v_1, v_a2 = v_1;
+            v_int32x4 v_b1 = v_load(src + i), v_b2 = v_load(src + i + 4);
             int p = power;
 
             while( p > 1 )
             {
                 if (p & 1)
-                    v_a = vmulq_s32(v_a, v_b);
-                v_b = vmulq_s32(v_b, v_b);
+                {
+                    v_a1 *= v_b1;
+                    v_a2 *= v_b2;
+                }
+                v_b1 *= v_b1;
+                v_b2 *= v_b2;
                 p >>= 1;
             }
 
-            v_a = vmulq_s32(v_a, v_b);
-            vst1q_s32(dst + i, v_a);
+            v_a1 *= v_b1;
+            v_a2 *= v_b2;
+
+            v_store(dst + i, v_a1);
+            v_store(dst + i + 4, v_a2);
         }
 
         return i;
@@ -1071,42 +1091,143 @@ struct iPow_SIMD<float, float>
     int operator() ( const float * src, float * dst, int len, int power)
     {
         int i = 0;
-        float32x4_t v_1 = vdupq_n_f32(1.0f);
+        v_float32x4 v_1 = v_setall_f32(1.f);
 
-        for ( ; i <= len - 4; i += 4)
+        for ( ; i <= len - 8; i += 8)
         {
-            float32x4_t v_b = vld1q_f32(src + i), v_a = v_1;
-            int p = power;
+            v_float32x4 v_a1 = v_1, v_a2 = v_1;
+            v_float32x4 v_b1 = v_load(src + i), v_b2 = v_load(src + i + 4);
+            int p = std::abs(power);
+            if( power < 0 )
+            {
+                v_b1 = v_1 / v_b1;
+                v_b2 = v_1 / v_b2;
+            }
 
             while( p > 1 )
             {
                 if (p & 1)
-                    v_a = vmulq_f32(v_a, v_b);
-                v_b = vmulq_f32(v_b, v_b);
+                {
+                    v_a1 *= v_b1;
+                    v_a2 *= v_b2;
+                }
+                v_b1 *= v_b1;
+                v_b2 *= v_b2;
                 p >>= 1;
             }
 
-            v_a = vmulq_f32(v_a, v_b);
-            vst1q_f32(dst + i, v_a);
+            v_a1 *= v_b1;
+            v_a2 *= v_b2;
+
+            v_store(dst + i, v_a1);
+            v_store(dst + i + 4, v_a2);
         }
 
         return i;
     }
 };
 
+#if CV_SIMD128_64F
+template <>
+struct iPow_SIMD<double, double>
+{
+    int operator() ( const double * src, double * dst, int len, int power)
+    {
+        int i = 0;
+        v_float64x2 v_1 = v_setall_f64(1.);
+
+        for ( ; i <= len - 4; i += 4)
+        {
+            v_float64x2 v_a1 = v_1, v_a2 = v_1;
+            v_float64x2 v_b1 = v_load(src + i), v_b2 = v_load(src + i + 2);
+            int p = std::abs(power);
+            if( power < 0 )
+            {
+                v_b1 = v_1 / v_b1;
+                v_b2 = v_1 / v_b2;
+            }
+
+            while( p > 1 )
+            {
+                if (p & 1)
+                {
+                    v_a1 *= v_b1;
+                    v_a2 *= v_b2;
+                }
+                v_b1 *= v_b1;
+                v_b2 *= v_b2;
+                p >>= 1;
+            }
+
+            v_a1 *= v_b1;
+            v_a2 *= v_b2;
+
+            v_store(dst + i, v_a1);
+            v_store(dst + i + 2, v_a2);
+        }
+
+        return i;
+    }
+};
+#endif
+
 #endif
 
 template<typename T, typename WT>
 static void
-iPow_( const T* src, T* dst, int len, int power )
+iPow_i( const T* src, T* dst, int len, int power )
 {
-    iPow_SIMD<T, WT> vop;
-    int i = vop(src, dst, len, power);
+    if( power < 0 )
+    {
+        T tab[5] =
+        {
+            power == -1 ? saturate_cast<T>(-1) : 0, (power & 1) ? -1 : 1,
+            std::numeric_limits<T>::max(), 1, power == -1 ? 1 : 0
+        };
+        for( int i = 0; i < len; i++ )
+        {
+            T val = src[i];
+            dst[i] = cv_abs(val) <= 2 ? tab[val + 2] : (T)0;
+        }
+    }
+    else
+    {
+        iPow_SIMD<T, WT> vop;
+        int i = vop(src, dst, len, power);
+
+        for( ; i < len; i++ )
+        {
+            WT a = 1, b = src[i];
+            int p = power;
+            while( p > 1 )
+            {
+                if( p & 1 )
+                    a *= b;
+                b *= b;
+                p >>= 1;
+            }
+
+            a *= b;
+            dst[i] = saturate_cast<T>(a);
+        }
+    }
+}
+
+template<typename T>
+static void
+iPow_f( const T* src, T* dst, int len, int power0 )
+{
+    iPow_SIMD<T, T> vop;
+    int i = vop(src, dst, len, power0);
+    int power = std::abs(power0);
 
     for( ; i < len; i++ )
     {
-        WT a = 1, b = src[i];
+        T a = 1, b = src[i];
         int p = power;
+        if( power0 < 0 )
+            b = 1/b;
+
         while( p > 1 )
         {
             if( p & 1 )
@@ -1116,44 +1237,43 @@ iPow_( const T* src, T* dst, int len, int power )
         }
 
         a *= b;
-        dst[i] = saturate_cast<T>(a);
+        dst[i] = a;
     }
 }
 
-
 static void iPow8u(const uchar* src, uchar* dst, int len, int power)
 {
-    iPow_<uchar, int>(src, dst, len, power);
+    iPow_i<uchar, unsigned>(src, dst, len, power);
 }
 
 static void iPow8s(const schar* src, schar* dst, int len, int power)
 {
-    iPow_<schar, int>(src, dst, len, power);
+    iPow_i<schar, int>(src, dst, len, power);
 }
 
 static void iPow16u(const ushort* src, ushort* dst, int len, int power)
 {
-    iPow_<ushort, int>(src, dst, len, power);
+    iPow_i<ushort, unsigned>(src, dst, len, power);
 }
 
 static void iPow16s(const short* src, short* dst, int len, int power)
 {
-    iPow_<short, int>(src, dst, len, power);
+    iPow_i<short, int>(src, dst, len, power);
 }
 
 static void iPow32s(const int* src, int* dst, int len, int power)
 {
-    iPow_<int, int>(src, dst, len, power);
+    iPow_i<int, int>(src, dst, len, power);
 }
 
 static void iPow32f(const float* src, float* dst, int len, int power)
 {
-    iPow_<float, float>(src, dst, len, power);
+    iPow_f<float>(src, dst, len, power);
 }
 
 static void iPow64f(const double* src, double* dst, int len, int power)
 {
-    iPow_<double, double>(src, dst, len, power);
+    iPow_f<double>(src, dst, len, power);
 }
 
 
@@ -1176,14 +1296,25 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     bool doubleSupport = d.doubleFPConfig() > 0;
 
     _dst.createSameSize(_src, type);
-    if (is_ipower && (ipower == 0 || ipower == 1))
+    if (is_ipower)
     {
         if (ipower == 0)
+        {
             _dst.setTo(Scalar::all(1));
-        else if (ipower == 1)
+            return true;
+        }
+        if (ipower == 1)
+        {
             _src.copyTo(_dst);
-
-        return true;
+            return true;
+        }
+        if( ipower < 0 )
+        {
+            if( depth == CV_32F || depth == CV_64F )
+                is_ipower = false;
+            else
+                return false;
+        }
     }
 
     if (depth == CV_64F && !doubleSupport)
@@ -1233,20 +1364,11 @@ void pow( InputArray _src, double power, OutputArray _dst )
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
-    bool is_ipower = fabs(ipower - power) < DBL_EPSILON, same = false,
+    bool is_ipower = fabs(ipower - power) < DBL_EPSILON,
             useOpenCL = _dst.isUMat() && _src.dims() <= 2;
 
     if( is_ipower && !(ocl::Device::getDefault().isIntel() && useOpenCL && depth != CV_64F))
     {
-        if( ipower < 0 )
-        {
-            divide( Scalar::all(1), _src, _dst );
-            if( ipower == -1 )
-                return;
-            ipower = -ipower;
-            same = true;
-        }
-
         switch( ipower )
         {
         case 0:
@@ -1257,59 +1379,18 @@ void pow( InputArray _src, double power, OutputArray _dst )
             _src.copyTo(_dst);
             return;
         case 2:
-#if defined(HAVE_IPP)
-            CV_IPP_CHECK()
-            {
-                if (depth == CV_32F && !same && ( (_src.dims() <= 2 && !ocl::useOpenCL()) ||
-                                                  (_src.dims() > 2 && _src.isContinuous() && _dst.isContinuous()) ))
-                {
-                    Mat src = _src.getMat();
-                    _dst.create( src.dims, src.size, type );
-                    Mat dst = _dst.getMat();
-
-                    Size size = src.size();
-                    int srcstep = (int)src.step, dststep = (int)dst.step, esz = CV_ELEM_SIZE(type);
-                    if (src.isContinuous() && dst.isContinuous())
-                    {
-                        size.width = (int)src.total();
-                        size.height = 1;
-                        srcstep = dststep = (int)src.total() * esz;
-                    }
-                    size.width *= cn;
-
-                    IppStatus status = ippiSqr_32f_C1R(src.ptr<Ipp32f>(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-
-                    if (status >= 0)
-                    {
-                        CV_IMPL_ADD(CV_IMPL_IPP);
-                        return;
-                    }
-                    setIppErrorStatus();
-                }
-            }
-#endif
-            if (same)
-                multiply(_dst, _dst, _dst);
-            else
-                multiply(_src, _src, _dst);
+            multiply(_src, _src, _dst);
             return;
         }
     }
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
 
-    CV_OCL_RUN(useOpenCL,
-               ocl_pow(same ? _dst : _src, power, _dst, is_ipower, ipower))
+    CV_OCL_RUN(useOpenCL, ocl_pow(_src, power, _dst, is_ipower, ipower))
 
-    Mat src, dst;
-    if (same)
-        src = dst = _dst.getMat();
-    else
-    {
-        src = _src.getMat();
-        _dst.create( src.dims, src.size, type );
-        dst = _dst.getMat();
-    }
+    Mat src = _src.getMat();
+    _dst.create( src.dims, src.size, type );
+    Mat dst = _dst.getMat();
 
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
@@ -1335,52 +1416,103 @@ void pow( InputArray _src, double power, OutputArray _dst )
     }
     else
     {
-#if defined(HAVE_IPP)
-        CV_IPP_CHECK()
-        {
-            if (src.isContinuous() && dst.isContinuous())
-            {
-                IppStatus status = depth == CV_32F ?
-                            ippsPowx_32f_A21(src.ptr<Ipp32f>(), (Ipp32f)power, dst.ptr<Ipp32f>(), (Ipp32s)(src.total() * cn)) :
-                            ippsPowx_64f_A50(src.ptr<Ipp64f>(), power, dst.ptr<Ipp64f>(), (Ipp32s)(src.total() * cn));
-
-                if (status >= 0)
-                {
-                    CV_IMPL_ADD(CV_IMPL_IPP);
-                    return;
-                }
-                setIppErrorStatus();
-            }
-        }
-#endif
-
         int j, k, blockSize = std::min(len, ((BLOCK_SIZE + cn-1)/cn)*cn);
         size_t esz1 = src.elemSize1();
+        AutoBuffer<uchar> buf;
+        Cv32suf inf32, nan32;
+        Cv64suf inf64, nan64;
+        float* fbuf = 0;
+        double* dbuf = 0;
+        inf32.i = 0x7f800000;
+        nan32.i = 0x7fffffff;
+        inf64.i = CV_BIG_INT(0x7FF0000000000000);
+        nan64.i = CV_BIG_INT(0x7FFFFFFFFFFFFFFF);
+
+        if( src.ptr() == dst.ptr() )
+        {
+            buf.allocate(blockSize*esz1);
+            fbuf = (float*)(uchar*)buf;
+            dbuf = (double*)(uchar*)buf;
+        }
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
             for( j = 0; j < len; j += blockSize )
             {
                 int bsz = std::min(len - j, blockSize);
+
+            #if defined(HAVE_IPP)
+                CV_IPP_CHECK()
+                {
+                    IppStatus status = depth == CV_32F ?
+                    ippsPowx_32f_A21((const float*)ptrs[0], (float)power, (float*)ptrs[1], bsz) :
+                    ippsPowx_64f_A50((const double*)ptrs[0], (double)power, (double*)ptrs[1], bsz);
+
+                    if (status >= 0)
+                    {
+                        CV_IMPL_ADD(CV_IMPL_IPP);
+                        ptrs[0] += bsz*esz1;
+                        ptrs[1] += bsz*esz1;
+                        continue;
+                    }
+                    setIppErrorStatus();
+                }
+            #endif
+
                 if( depth == CV_32F )
                 {
-                    const float* x = (const float*)ptrs[0];
+                    float* x0 = (float*)ptrs[0];
+                    float* x = fbuf ? fbuf : x0;
                     float* y = (float*)ptrs[1];
+
+                    if( x != x0 )
+                        memcpy(x, x0, bsz*esz1);
 
                     Log_32f(x, y, bsz);
                     for( k = 0; k < bsz; k++ )
                         y[k] = (float)(y[k]*power);
                     Exp_32f(y, y, bsz);
+                    for( k = 0; k < bsz; k++ )
+                    {
+                        if( x0[k] <= 0 )
+                        {
+                            if( x0[k] == 0.f )
+                            {
+                                if( power < 0 )
+                                    y[k] = inf32.f;
+                            }
+                            else
+                                y[k] = nan32.f;
+                        }
+                    }
                 }
                 else
                 {
-                    const double* x = (const double*)ptrs[0];
+                    double* x0 = (double*)ptrs[0];
+                    double* x = dbuf ? dbuf : x0;
                     double* y = (double*)ptrs[1];
+
+                    if( x != x0 )
+                        memcpy(x, x0, bsz*esz1);
 
                     Log_64f(x, y, bsz);
                     for( k = 0; k < bsz; k++ )
                         y[k] *= power;
                     Exp_64f(y, y, bsz);
+
+                    for( k = 0; k < bsz; k++ )
+                    {
+                        if( x0[k] <= 0 )
+                        {
+                            if( x0[k] == 0. )
+                            {
+                                if( power < 0 )
+                                    y[k] = inf64.f;
+                            }
+                            else
+                                y[k] = nan64.f;
+                        }
+                    }
                 }
                 ptrs[0] += bsz*esz1;
                 ptrs[1] += bsz*esz1;

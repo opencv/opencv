@@ -60,7 +60,6 @@ namespace cv
 #undef USE_IPP_DFT
 #endif
 
-
 /****************************************************************************************\
                                Discrete Fourier Transform
 \****************************************************************************************/
@@ -1090,11 +1089,12 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         }
     }
 
-    if( complex_output && (n & 1) == 0 )
+    if( complex_output && ((n & 1) == 0 || n == 1))
     {
         dst[-1] = dst[0];
         dst[0] = 0;
-        dst[n] = 0;
+        if( n > 1 )
+            dst[n] = 0;
     }
 }
 
@@ -2426,6 +2426,47 @@ static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
 
 #endif // HAVE_CLAMDFFT
 
+namespace cv
+{
+static void complementComplexOutput(Mat& dst, int len, int dft_dims)
+{
+    int i, n = dst.cols;
+    size_t elem_size = dst.elemSize1();
+    if( elem_size == sizeof(float) )
+    {
+        float* p0 = dst.ptr<float>();
+        size_t dstep = dst.step/sizeof(p0[0]);
+        for( i = 0; i < len; i++ )
+        {
+            float* p = p0 + dstep*i;
+            float* q = dft_dims == 1 || i == 0 || i*2 == len ? p : p0 + dstep*(len-i);
+
+            for( int j = 1; j < (n+1)/2; j++ )
+            {
+                p[(n-j)*2] = q[j*2];
+                p[(n-j)*2+1] = -q[j*2+1];
+            }
+        }
+    }
+    else
+    {
+        double* p0 = dst.ptr<double>();
+        size_t dstep = dst.step/sizeof(p0[0]);
+        for( i = 0; i < len; i++ )
+        {
+            double* p = p0 + dstep*i;
+            double* q = dft_dims == 1 || i == 0 || i*2 == len ? p : p0 + dstep*(len-i);
+
+            for( int j = 1; j < (n+1)/2; j++ )
+            {
+                p[(n-j)*2] = q[j*2];
+                p[(n-j)*2+1] = -q[j*2+1];
+            }
+        }
+    }
+}
+}
+
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
 #ifdef HAVE_CLAMDFFT
@@ -2705,7 +2746,11 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
             }
 
             if( stage != 1 )
+            {
+                if( !inv && real_transform && dst.channels() == 2 )
+                    complementComplexOutput(dst, nonzero_rows, 1);
                 break;
+            }
             src = dst;
         }
         else
@@ -2847,41 +2892,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
             if( stage != 0 )
             {
                 if( !inv && real_transform && dst.channels() == 2 && len > 1 )
-                {
-                    int n = dst.cols;
-                    if( elem_size == (int)sizeof(float) )
-                    {
-                        float* p0 = dst.ptr<float>();
-                        size_t dstep = dst.step/sizeof(p0[0]);
-                        for( i = 0; i < len; i++ )
-                        {
-                            float* p = p0 + dstep*i;
-                            float* q = i == 0 || i*2 == len ? p : p0 + dstep*(len-i);
-
-                            for( int j = 1; j < (n+1)/2; j++ )
-                            {
-                                p[(n-j)*2] = q[j*2];
-                                p[(n-j)*2+1] = -q[j*2+1];
-                            }
-                        }
-                    }
-                    else
-                    {
-                        double* p0 = dst.ptr<double>();
-                        size_t dstep = dst.step/sizeof(p0[0]);
-                        for( i = 0; i < len; i++ )
-                        {
-                            double* p = p0 + dstep*i;
-                            double* q = i == 0 || i*2 == len ? p : p0 + dstep*(len-i);
-
-                            for( int j = 1; j < (n+1)/2; j++ )
-                            {
-                                p[(n-j)*2] = q[j*2];
-                                p[(n-j)*2+1] = -q[j*2+1];
-                            }
-                        }
-                    }
-                }
+                    complementComplexOutput(dst, len, 2);
                 break;
             }
             src = dst;
