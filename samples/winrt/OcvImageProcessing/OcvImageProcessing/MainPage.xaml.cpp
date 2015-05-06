@@ -10,6 +10,10 @@
 #include <Robuffer.h>
 #include <vector>
 #include <opencv2\imgproc\types_c.h>
+#include <opencv2\imgcodecs\imgcodecs.hpp>
+#include <opencv2\core\core.hpp>
+
+#include <windows.storage.h>
 
 using namespace OcvImageProcessing;
 
@@ -18,6 +22,7 @@ using namespace concurrency;
 using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Storage::Streams;
+using namespace Windows::Storage;
 using namespace Windows::UI::Xaml::Media::Imaging;
 using namespace Windows::Graphics::Imaging;
 using namespace Windows::Foundation::Collections;
@@ -37,6 +42,17 @@ MainPage::MainPage()
 {
     InitializeComponent();
 
+#ifdef __OPENCV_IMGCODECS_HPP__
+
+    // Image loading OpenCV way ... way more simple
+    cv::Mat image = cv::imread("Assets/Lena.png");
+    Lena = cv::Mat(image.rows, image.cols, CV_8UC4);
+    cvtColor(image, Lena, CV_BGR2BGRA);
+    UpdateImage(Lena);
+
+#else
+
+    // Image loading WinRT way
     RandomAccessStreamReference^ streamRef = RandomAccessStreamReference::CreateFromUri(InputImageUri);
 
     task<IRandomAccessStreamWithContentType^> (streamRef->OpenReadAsync()).
@@ -68,6 +84,67 @@ MainPage::MainPage()
         memcpy(Lena.data, srcPixels->Data, 4*frameWidth*frameHeight);
         UpdateImage(Lena);
     });
+
+#endif
+}
+
+/// <summary>
+/// Temporary file creation example. Will be created in WinRT application temporary directory
+/// which usually is "C:\Users\{username}\AppData\Local\Packages\{package_id}\TempState\{random_name}.{suffix}"
+/// </summary>
+/// <param name="suffix">Temporary file suffix, e.g. "tmp"</param>
+std::string OcvImageProcessing::MainPage::CreateTempFile(const std::string &suffix) {
+    return cv::tempfile(suffix.c_str());
+}
+
+/// <summary>
+/// Creating/writing a file in the application local directory
+/// </summary>
+/// <param name="path">Image to save</param>
+bool OcvImageProcessing::MainPage::SaveImage(cv::Mat image) {
+    StorageFolder^ localFolderRT = ApplicationData::Current->LocalFolder;
+    cv::String localFile = ConvertPath(ApplicationData::Current->LocalFolder->Path) + "\\Lena.png";
+
+    return cv::imwrite(localFile, image);
+}
+
+/// <summary>
+/// Getting std::string from managed string via std::wstring.
+/// Provides an example of three ways to do it.
+/// Can't use this one: https://msdn.microsoft.com/en-us/library/bb384865.aspx, not available on WinRT.
+/// </summary>
+/// <param name="path">Path to be converted</param>
+cv::String OcvImageProcessing::MainPage::ConvertPath(Platform::String^ path) {
+    std::wstring localPathW(path->Begin());
+
+    // Opt #1
+    //std::string localPath(localPathW.begin(), localPathW.end());
+
+    // Opt #2
+    //std::string localPath(StrToWStr(localPathW));
+
+    // Opt #3
+    size_t outSize = localPathW.length() + 1;
+    char* localPathC = new char[outSize];
+    size_t charsConverted = 0;
+    wcstombs_s(&charsConverted, localPathC, outSize, localPathW.c_str(), localPathW.length());
+    cv::String localPath(localPathC);
+
+    // Implicit conversion from std::string to cv::String
+    return localPath;
+}
+
+std::string OcvImageProcessing::MainPage::StrToWStr(const std::wstring &input) {
+    if (input.empty()) {
+        return std::string();
+    }
+
+    int size = WideCharToMultiByte(CP_UTF8, 0, &input[0], (int)input.size(), NULL, 0, NULL, NULL);
+    std::string result(size, 0);
+
+    WideCharToMultiByte(CP_UTF8, 0, &input[0], (int)input.size(), &result[0], size, NULL, NULL);
+
+    return result;
 }
 
 /// <summary>
@@ -91,15 +168,16 @@ void OcvImageProcessing::MainPage::UpdateImage(const cv::Mat& image)
 
     // Obtain IBufferByteAccess
     ComPtr<IBufferByteAccess> pBufferByteAccess;
-    ComPtr<IUnknown> pBuffer((IUnknown*)buffer);
+    ComPtr<IInspectable> pBuffer((IInspectable*)buffer);
     pBuffer.As(&pBufferByteAccess);
 
     // Get pointer to pixel bytes
     pBufferByteAccess->Buffer(&dstPixels);
-    memcpy(dstPixels, image.data, 4*image.cols*image.rows);
+    memcpy(dstPixels, image.data, image.step.buf[1]*image.cols*image.rows);
 
     // Set the bitmap to the Image element
-    PreviewWidget->Source = bitmap;}
+    PreviewWidget->Source = bitmap;
+}
 
 
 cv::Mat OcvImageProcessing::MainPage::ApplyGrayFilter(const cv::Mat& image)

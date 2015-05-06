@@ -82,6 +82,11 @@ void PairwiseSeamFinder::run()
     }
 }
 
+void VoronoiSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                             std::vector<UMat> &masks)
+{
+    PairwiseSeamFinder::find(src, corners, masks);
+}
 
 void VoronoiSeamFinder::find(const std::vector<Size> &sizes, const std::vector<Point> &corners,
                              std::vector<UMat> &masks)

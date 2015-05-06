@@ -446,10 +446,9 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
 
     // store angle and radii
     rp[4] = -0.5 * atan2(gfp[2], gfp[1] - gfp[0]); // convert from APP angle usage
-    t = sin(-2.0 * rp[4]);
-    if( fabs(t) > fabs(gfp[2])*min_eps )
-        t = gfp[2]/t;
-    else
+    if( fabs(gfp[2]) > min_eps )
+        t = gfp[2]/sin(-2.0 * rp[4]);
+    else // ellipse is rotated by an integer multiple of pi/2
         t = gfp[1] - gfp[0];
     rp[2] = fabs(gfp[0] + gfp[1] - t);
     if( rp[2] > min_eps )

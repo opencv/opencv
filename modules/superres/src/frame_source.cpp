@@ -126,7 +126,7 @@ namespace
         else
         {
             // should never get here
-            CV_Assert(0);
+            CV_Error(Error::StsBadArg, "Failed to detect input frame kind" );
         }
     }
 

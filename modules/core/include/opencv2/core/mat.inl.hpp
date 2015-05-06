@@ -7,11 +7,13 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -61,6 +63,8 @@ inline void _InputArray::init(int _flags, const void* _obj, Size _sz)
 { flags = _flags; obj = (void*)_obj; sz = _sz; }
 
 inline void* _InputArray::getObj() const { return obj; }
+inline int _InputArray::getFlags() const { return flags; }
+inline Size _InputArray::getSz() const { return sz; }
 
 inline _InputArray::_InputArray() { init(NONE, 0); }
 inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
@@ -109,6 +113,13 @@ inline _InputArray::_InputArray(const cuda::HostMem& cuda_mem)
 { init(CUDA_HOST_MEM + ACCESS_READ, &cuda_mem); }
 
 inline _InputArray::~_InputArray() {}
+
+inline Mat _InputArray::getMat(int i) const
+{
+    if( kind() == MAT && i < 0 )
+        return *(const Mat*)obj;
+    return getMat_(i);
+}
 
 inline bool _InputArray::isMat() const { return kind() == _InputArray::MAT; }
 inline bool _InputArray::isUMat() const  { return kind() == _InputArray::UMAT; }

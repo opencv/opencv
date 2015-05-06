@@ -12,6 +12,8 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -70,9 +72,9 @@ template<typename _Tp, int m> struct Matx_FastInvOp
             b(i, i) = (_Tp)1;
 
         if( method == DECOMP_CHOLESKY )
-            return Cholesky(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m);
+            return hal::Cholesky(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m);
 
-        return LU(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m) != 0;
+        return hal::LU(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m) != 0;
     }
 };
 

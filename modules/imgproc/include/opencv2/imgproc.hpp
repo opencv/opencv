@@ -3494,7 +3494,7 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a
 specified point set. See the OpenCV sample minarea.cpp . Developer should keep in mind that the
-returned rotatedRect can contain negative indices when data is close the the containing Mat element
+returned rotatedRect can contain negative indices when data is close to the containing Mat element
 boundary.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat

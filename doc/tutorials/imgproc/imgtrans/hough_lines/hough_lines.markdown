@@ -55,7 +55,7 @@ Arranging the terms: \f$r = x \cos \theta + y \sin \theta\f$
 -#  We can do the same operation above for all the points in an image. If the curves of two
     different points intersect in the plane \f$\theta\f$ - \f$r\f$, that means that both points belong to a
     same line. For instance, following with the example above and drawing the plot for two more
-    points: \f$x_{1} = 9\f$, \f$y_{1} = 4\f$ and \f$x_{2} = 12\f$, \f$y_{2} = 3\f$, we get:
+    points: \f$x_{1} = 4\f$, \f$y_{1} = 9\f$ and \f$x_{2} = 12\f$, \f$y_{2} = 3\f$, we get:
 
     ![](images/Hough_Lines_Tutorial_Theory_2.jpg)
 

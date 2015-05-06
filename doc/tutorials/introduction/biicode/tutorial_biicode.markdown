@@ -41,7 +41,7 @@ Windows users also execute:
 $ bii cpp:configure -G "Visual Studio 12"
 @endcode
 
-Now execute ``bii cpp:build`` to build the project. **Note** that this can take a while, until it downloads and builds OpenCV. However, this is downloaded just once in your machine in your "user/.biicode" folder. If the OpenCV installation process fails, you might simply go there, delete OpenCV files inside "user/.biicode" and repeat.
+Now execute ``bii cpp:build`` to build the project. @note This can take a while, until it downloads and builds OpenCV. However, this is downloaded just once in your machine to your "user/.biicode" folder. If the OpenCV installation process fails, you might simply go there, delete OpenCV files inside "user/.biicode" and repeat.
 
 @code{.bash}
 $ bii cpp:build
@@ -137,7 +137,7 @@ replace with:
         diego/opencv(beta): 0
 @endcode
 
-**Note** that the first time you switch to 3.0-beta, it will also take a while to download and build the 3.0-beta release. From that point you can change back and forth between versions, just modifying your *biicode.conf requirements*.
+@note The first time you switch to 3.0-beta, it will also take a while to download and build the 3.0-beta release. From that point on you can change back and forth between versions just by modifying your *biicode.conf requirements*.
 
 Find the hooks and examples:
 * [OpenCV 2.4.10](http://www.biicode.com/diego/opencv)

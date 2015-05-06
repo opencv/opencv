@@ -79,7 +79,7 @@ public:
 
         for ( int i = begin; i<end; i++ )
         {
-            tdist2[i] = std::min(normL2Sqr_(data + step*i, data + stepci, dims), dist[i]);
+            tdist2[i] = std::min(normL2Sqr(data + step*i, data + stepci, dims), dist[i]);
         }
     }
 
@@ -114,7 +114,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
 
     for( i = 0; i < N; i++ )
     {
-        dist[i] = normL2Sqr_(data + step*i, data + step*centers[0], dims);
+        dist[i] = normL2Sqr(data + step*i, data + step*centers[0], dims);
         sum0 += dist[i];
     }
 
@@ -189,7 +189,7 @@ public:
             for( int k = 0; k < K; k++ )
             {
                 const float* center = centers.ptr<float>(k);
-                const double dist = normL2Sqr_(sample, center, dims);
+                const double dist = normL2Sqr(sample, center, dims);
 
                 if( min_dist > dist )
                 {
@@ -384,7 +384,7 @@ double cv::kmeans( InputArray _data, int K,
                         if( labels[i] != max_k )
                             continue;
                         sample = data.ptr<float>(i);
-                        double dist = normL2Sqr_(sample, _old_center, dims);
+                        double dist = normL2Sqr(sample, _old_center, dims);
 
                         if( max_dist <= dist )
                         {

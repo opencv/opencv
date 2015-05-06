@@ -145,7 +145,7 @@ Explanation
             of size **(w/4.0, w/16.0)**
         -   The ellipse is rotated **angle** degrees
         -   The ellipse extends an arc between **0** and **360** degrees
-        -   The color of the figure will be **Scalar( 255, 255, 0)** which means blue in RGB value.
+        -   The color of the figure will be **Scalar( 255, 0, 0)** which means blue in RGB value.
         -   The ellipse's **thickness** is 2.
     -   *MyFilledCircle*
         @code{.cpp}

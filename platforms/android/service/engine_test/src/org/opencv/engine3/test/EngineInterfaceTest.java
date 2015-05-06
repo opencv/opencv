@@ -1,7 +1,7 @@
-package org.opencv.engine.test;
+package org.opencv.engine3.test;
 
-import org.opencv.engine.OpenCVEngineInterface;
-import org.opencv.engine.OpenCVEngineService;
+import org.opencv.engine3.OpenCVEngineInterface;
+import org.opencv.engine3.OpenCVEngineService;
 
 import android.content.Intent;
 import android.os.IBinder;
@@ -18,7 +18,7 @@ public class EngineInterfaceTest extends ServiceTestCase<OpenCVEngineService>
 
     public void testVersion() throws RemoteException
     {
-        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine.BIND"));
+        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine3.BIND"));
         assertNotNull(ServiceBinder);
         OpenCVEngineInterface ServiceObj = OpenCVEngineInterface.Stub.asInterface(ServiceBinder);
         assertNotNull(ServiceObj);
@@ -28,7 +28,7 @@ public class EngineInterfaceTest extends ServiceTestCase<OpenCVEngineService>
 
     public void testInstallVersion() throws RemoteException
     {
-        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine"));
+        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine3"));
         assertNotNull(ServiceBinder);
         OpenCVEngineInterface ServiceObj = OpenCVEngineInterface.Stub.asInterface(ServiceBinder);
         assertNotNull(ServiceObj);
@@ -37,7 +37,7 @@ public class EngineInterfaceTest extends ServiceTestCase<OpenCVEngineService>
 
     public void testGetPathForExistVersion() throws RemoteException
     {
-        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine"));
+        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine3"));
         assertNotNull(ServiceBinder);
         OpenCVEngineInterface ServiceObj = OpenCVEngineInterface.Stub.asInterface(ServiceBinder);
         assertNotNull(ServiceObj);
@@ -46,7 +46,7 @@ public class EngineInterfaceTest extends ServiceTestCase<OpenCVEngineService>
 
     public void testGetPathForUnExistVersion() throws RemoteException
     {
-        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine"));
+        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine3"));
         assertNotNull(ServiceBinder);
         OpenCVEngineInterface ServiceObj = OpenCVEngineInterface.Stub.asInterface(ServiceBinder);
         assertNotNull(ServiceObj);
@@ -55,7 +55,7 @@ public class EngineInterfaceTest extends ServiceTestCase<OpenCVEngineService>
 
     public void testInstallAndGetVersion() throws RemoteException
     {
-        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine"));
+        IBinder ServiceBinder = bindService(new Intent("org.opencv.engine3"));
         assertNotNull(ServiceBinder);
         OpenCVEngineInterface ServiceObj = OpenCVEngineInterface.Stub.asInterface(ServiceBinder);
         assertNotNull(ServiceObj);

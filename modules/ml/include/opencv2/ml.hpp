@@ -297,10 +297,11 @@ public:
         COMPRESSED_INPUT=2,
         PREPROCESSED_INPUT=4
     };
-    CV_WRAP virtual void clear();
 
     /** @brief Returns the number of variables in training samples */
     CV_WRAP virtual int getVarCount() const = 0;
+
+    CV_WRAP virtual bool empty() const;
 
     /** @brief Returns true if the model is trained */
     CV_WRAP virtual bool isTrained() const = 0;
@@ -347,40 +348,6 @@ public:
      */
     CV_WRAP virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
 
-    /** @brief Loads model from the file
-
-    This is static template method of StatModel. It's usage is following (in the case of SVM):
-    @code
-    Ptr<SVM> svm = StatModel::load<SVM>("my_svm_model.xml");
-    @endcode
-    In order to make this method work, the derived class must overwrite Algorithm::read(const
-    FileNode& fn).
-     */
-    template<typename _Tp> static Ptr<_Tp> load(const String& filename)
-    {
-        FileStorage fs(filename, FileStorage::READ);
-        Ptr<_Tp> model = _Tp::create();
-        model->read(fs.getFirstTopLevelNode());
-        return model->isTrained() ? model : Ptr<_Tp>();
-    }
-
-    /** @brief Loads model from a String
-
-    @param strModel The string variable containing the model you want to load.
-
-    This is static template method of StatModel. It's usage is following (in the case of SVM):
-    @code
-    Ptr<SVM> svm = StatModel::loadFromString<SVM>(myStringModel);
-    @endcode
-     */
-    template<typename _Tp> static Ptr<_Tp> loadFromString(const String& strModel)
-    {
-        FileStorage fs(strModel, FileStorage::READ + FileStorage::MEMORY);
-        Ptr<_Tp> model = _Tp::create();
-        model->read(fs.getFirstTopLevelNode());
-        return model->isTrained() ? model : Ptr<_Tp>();
-    }
-
     /** @brief Create and train model with default parameters
 
     The class must implement static `create()` method with no parameters or with all default parameter values
@@ -390,14 +357,6 @@ public:
         Ptr<_Tp> model = _Tp::create();
         return !model.empty() && model->train(data, flags) ? model : Ptr<_Tp>();
     }
-
-    /** Saves the model to a file.
-    In order to make this method work, the derived class must implement Algorithm::write(FileStorage& fs). */
-    CV_WRAP virtual void save(const String& filename) const;
-
-    /** Returns model string identifier.
-    This string is used as top level xml/yml node tag when model is saved to a file or string. */
-    CV_WRAP virtual String getDefaultModelName() const = 0;
 };
 
 /****************************************************************************************\
@@ -939,7 +898,7 @@ public:
 
     /** Creates empty %EM model.
     The model should be trained then using StatModel::train(traindata, flags) method. Alternatively, you
-    can use one of the EM::train\* methods or load it from file using StatModel::load\<EM\>(filename).
+    can use one of the EM::train\* methods or load it from file using Algorithm::load\<EM\>(filename).
      */
     CV_WRAP static Ptr<EM> create();
 };
@@ -1127,7 +1086,7 @@ public:
 
     The static method creates empty decision tree with the specified parameters. It should be then
     trained using train method (see StatModel::train). Alternatively, you can load the model from
-    file using StatModel::load\<DTrees\>(filename).
+    file using Algorithm::load\<DTrees\>(filename).
      */
     CV_WRAP static Ptr<DTrees> create();
 };
@@ -1181,7 +1140,7 @@ public:
 
     /** Creates the empty model.
     Use StatModel::train to train the model, StatModel::train to create and train the model,
-    StatModel::load to load the pre-trained model.
+    Algorithm::load to load the pre-trained model.
      */
     CV_WRAP static Ptr<RTrees> create();
 };
@@ -1231,7 +1190,7 @@ public:
     };
 
     /** Creates the empty model.
-    Use StatModel::train to train the model, StatModel::load\<Boost\>(filename) to load the pre-trained model. */
+    Use StatModel::train to train the model, Algorithm::load\<Boost\>(filename) to load the pre-trained model. */
     CV_WRAP static Ptr<Boost> create();
 };
 
@@ -1416,7 +1375,7 @@ public:
 
     /** @brief Creates empty model
 
-    Use StatModel::train to train the model, StatModel::load\<ANN_MLP\>(filename) to load the pre-trained model.
+    Use StatModel::train to train the model, Algorithm::load\<ANN_MLP\>(filename) to load the pre-trained model.
     Note that the train method has optional flags: ANN_MLP::TrainFlags.
      */
     static Ptr<ANN_MLP> create();

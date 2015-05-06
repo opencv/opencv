@@ -43,33 +43,16 @@ if(ANDROID)
   endforeach()
 
   # build the list of opencv libs and dependencies for all modules
-  set(OPENCV_MODULES_CONFIGMAKE "")
-  set(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "")
-  set(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE "")
-  foreach(m ${OPENCV_MODULES_PUBLIC})
-    list(INSERT OPENCV_MODULES_CONFIGMAKE 0 ${${m}_MODULE_DEPS_${ocv_optkind}} ${m})
-    if(${m}_EXTRA_DEPS_${ocv_optkind})
-      list(INSERT OPENCV_EXTRA_COMPONENTS_CONFIGMAKE 0 ${${m}_EXTRA_DEPS_${ocv_optkind}})
-    endif()
-  endforeach()
+  ocv_get_all_libs(OPENCV_MODULES_CONFIGMAKE OPENCV_EXTRA_COMPONENTS_CONFIGMAKE OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE)
 
-  # split 3rdparty libs and modules
-  foreach(mod ${OPENCV_MODULES_CONFIGMAKE})
-    if(NOT mod MATCHES "^opencv_.+$")
-      list(INSERT OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE 0 ${mod})
-    endif()
-  endforeach()
-  if(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE)
-    list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE})
-  endif()
+  # list -> string
+  string(REPLACE ";" " " OPENCV_MODULES_CONFIGMAKE "${OPENCV_MODULES_CONFIGMAKE}")
+  string(REPLACE ";" " " OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "${OPENCV_EXTRA_COMPONENTS_CONFIGMAKE}")
+  string(REPLACE ";" " " OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE "${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE}")
 
-  # convert CMake lists to makefile literals
-  foreach(lst OPENCV_MODULES_CONFIGMAKE OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE OPENCV_EXTRA_COMPONENTS_CONFIGMAKE)
-    ocv_list_unique(${lst})
-    ocv_list_reverse(${lst})
-    string(REPLACE ";" " " ${lst} "${${lst}}")
-  endforeach()
+  # replace 'opencv_<module>' -> '<module>''
   string(REPLACE "opencv_" "" OPENCV_MODULES_CONFIGMAKE "${OPENCV_MODULES_CONFIGMAKE}")
+
 
   # prepare 3rd-party component list without TBB for armeabi and mips platforms. TBB is useless there.
   set(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE})

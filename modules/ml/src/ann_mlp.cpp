@@ -1294,7 +1294,7 @@ public:
         return layer_sizes.empty() ? 0 : layer_sizes[0];
     }
 
-    String getDefaultModelName() const
+    String getDefaultName() const
     {
         return "opencv_ml_ann_mlp";
     }

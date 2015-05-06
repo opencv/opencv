@@ -56,6 +56,11 @@ if(POLICY CMP0026)
   cmake_policy(SET CMP0026 OLD)
 endif()
 
+if (POLICY CMP0042)
+  # silence cmake 3.0+ warnings about MACOSX_RPATH
+  cmake_policy(SET CMP0042 OLD)
+endif()
+
 # must go before the project command
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE)
@@ -926,6 +931,7 @@ if(DEFINED WITH_FFMPEG)
   status("      format:"       HAVE_FFMPEG_FORMAT  THEN "YES (ver ${ALIASOF_libavformat_VERSION})" ELSE NO)
   status("      util:"         HAVE_FFMPEG_UTIL    THEN "YES (ver ${ALIASOF_libavutil_VERSION})"   ELSE NO)
   status("      swscale:"      HAVE_FFMPEG_SWSCALE THEN "YES (ver ${ALIASOF_libswscale_VERSION})"  ELSE NO)
+  status("      resample:"     HAVE_FFMPEG_RESAMPLE THEN "YES (ver ${ALIASOF_libavresample_VERSION})"  ELSE NO)
   status("      gentoo-style:" HAVE_GENTOO_FFMPEG  THEN YES                                        ELSE NO)
 endif(DEFINED WITH_FFMPEG)
 
