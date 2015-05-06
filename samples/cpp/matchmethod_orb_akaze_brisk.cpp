@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
     vector<String> typeAlgoMatch;
     vector<String> fileName;
     help();
+    system("cd");
     // This descriptor are going to be detect and compute
     typeDesc.push_back("AKAZE");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
     typeDesc.push_back("ORB");      // see http://docs.opencv.org/trunk/de/dbf/classcv_1_1BRISK.html
@@ -112,13 +113,15 @@ int main(int argc, char *argv[])
                 drawMatches(img1, keyImg1, img2, keyImg2, bestMatches, result);
                 namedWindow(*itDesc+": "+*itMatcher, WINDOW_AUTOSIZE);
                 imshow(*itDesc + ": " + *itMatcher, result);
-                FileStorage fs(*itDesc+"_"+*itMatcher+"_"+fileName[0]+"_"+fileName[1]+".xml", FileStorage::WRITE);
+                // Saved result could be wrong due to bug 4308
+                FileStorage fs(*itDesc + "_" + *itMatcher + ".yml", FileStorage::WRITE);
                 fs<<"Matches"<<matches;
                 vector<DMatch>::iterator it;
                 cout<<"**********Match results**********\n";
                 cout << "Index \tIndex \tdistance\n";
                 cout << "in img1\tin img2\n";
-                double cumSumDist2=0; // Use to compute distance between keyPoint matches and to evaluate match algorithm
+                // Use to compute distance between keyPoint matches and to evaluate match algorithm
+                double cumSumDist2=0;
                 for (it = bestMatches.begin(); it != bestMatches.end(); it++)
                 {
                     cout << it->queryIdx << "\t" <<  it->trainIdx << "\t"  <<  it->distance << "\n";
