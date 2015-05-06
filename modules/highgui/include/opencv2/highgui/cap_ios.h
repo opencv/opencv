@@ -40,6 +40,7 @@
 {
     AVCaptureSession* captureSession;
     AVCaptureConnection* videoCaptureConnection;
+    AVCaptureConnection* audioCaptureConnection;
     AVCaptureVideoPreviewLayer *captureVideoPreviewLayer;
 
     UIDeviceOrientation currentDeviceOrientation;
@@ -63,6 +64,7 @@
 
 @property (nonatomic, retain) AVCaptureSession* captureSession;
 @property (nonatomic, retain) AVCaptureConnection* videoCaptureConnection;
+@property (nonatomic, retain) AVCaptureConnection* audioCaptureConnection;
 
 @property (nonatomic, readonly) BOOL running;
 @property (nonatomic, readonly) BOOL captureSessionLoaded;
