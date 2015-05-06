@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--5000>
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>13</type>
+    <min>-8.4053613281250000e+03</min>
+    <max>4.3472421875000000e+03</max>
+    <last>
+      <x>4999</x>
+      <y>0</y>
+      <val>-6.1658561229705811e-01</val></last>
+    <rng1>
+      <x>2978</x>
+      <y>0</y>
+      <val>-1.3480089187622070e+01</val></rng1>
+    <rng2>
+      <x>616</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>-9.0677499771118164e-01</val></rng2></gpu_dst></Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--5000>
+<Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--10000>
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>13</type>
+    <min>-1.3267847656250000e+04</min>
+    <max>4.3472421875000000e+03</max>
+    <last>
+      <x>9999</x>
+      <y>0</y>
+      <val>1.6279506683349609e+00</val></last>
+    <rng1>
+      <x>9651</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>4.5482116937637329e-01</val></rng1>
+    <rng2>
+      <x>6221</x>
+      <y>0</y>
+      <val>-1.2366657257080078e+00</val></rng2></gpu_dst></Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--10000>
+<Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--20000>
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>13</type>
+    <min>-1.3267847656250000e+04</min>
+    <max>1.7305908203125000e+04</max>
+    <last>
+      <x>19999</x>
+      <y>0</y>
+      <val>1.4096817970275879e+00</val></last>
+    <rng1>
+      <x>17388</x>
+      <y>0</y>
+      <val>2.0169711112976074e+00</val></rng1>
+    <rng2>
+      <x>4927</x>
+      <y>0</y>
+      <val>1.4586313962936401e+00</val></rng2></gpu_dst></Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--20000>
+<Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--5000>
+  <gpu_rvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        6.65921807e-01 4.22319263e-01 8.84448111e-01</data></val></gpu_rvec>
+  <gpu_tvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        5.06799519e-02 1.65846586e-01 6.42464697e-01</data></val></gpu_tvec></Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--5000>
+<Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--10000>
+  <gpu_rvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        7.38510489e-01 2.35872045e-01 6.78437710e-01</data></val></gpu_rvec>
+  <gpu_tvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        5.30329764e-01 7.04620838e-01 8.19914341e-01</data></val></gpu_tvec></Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--10000>
+<Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--20000>
+  <gpu_rvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        2.85937667e-01 8.62490773e-01 2.78351873e-01</data></val></gpu_rvec>
+  <gpu_tvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        6.73862040e-01 1.45766456e-02 1.89692695e-02</data></val></gpu_tvec></Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--20000>
+</opencv_storage>

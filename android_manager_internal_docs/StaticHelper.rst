@@ -8,17 +8,17 @@ Java Static OpenCV Helper (internal)
     :synopsis: Implements Android dependent Java classes
 .. Class:: StaticHelper
 
-Helper class provides implementation of static OpenCV initialization. All OpenCV libraries must be included to application package.
+This helper class provides an implementation of static OpenCV initialization. All OpenCV libraries must be included into the application package.
 
-.. note:: This is internal class. Does not use it directly. Use OpenCVLoader.initDebug() instead!
+.. note:: This is an internal class. Do not use it directly, use OpenCVLoader.initDebug() instead!
 
 int initOpenCV()
 ----------------
 
 .. method:: int initOpenCV()
 
-    Tries to init OpenCV library using libraries from application package. Method uses libopencv_info.so library for getting 
+    Tries to initialise OpenCV library using libraries from the application package. Method uses libopencv_info.so library for getting a
     list of libraries in loading order. Method loads libopencv_java.so, if info library is not present.
 
     :rtype: boolean
-    :return: Return true if initialization was successful
+    :return: Return true if initialisation was successful

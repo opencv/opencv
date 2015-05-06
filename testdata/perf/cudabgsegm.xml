@@ -1,41 +1,5 @@
 <?xml version="1.0"?>
 <opencv_storage>
-<Video_FGDStatModel--FGDStatModel---gpu-video-768x576-avi->
-  <gpu_background>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>98</x>
-      <y>126</y>
-      <val>76.</val></rng1>
-    <rng2>
-      <x>677</x>
-      <y>334</y>
-      <cn>2</cn>
-      <val>160.</val></rng2></gpu_background>
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>47</x>
-      <y>94</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>359</x>
-      <y>338</y>
-      <val>0.</val></rng2></gpu_foreground></Video_FGDStatModel--FGDStatModel---gpu-video-768x576-avi->
 <Video_Cn_LearningRate_MOG--MOG----gpu-video-768x576-avi---Gray--0->
   <gpu_foreground>
     <kind>65536</kind>
@@ -360,6 +324,8 @@
       <x>976</x>
       <y>12</y>
       <val>0.</val></rng2></gpu_foreground></Video_Cn_MOG2--MOG2----gpu-video-1920x1080-avi---4->
+ <!-- resumed -->
+
 <Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-768x576-avi---1->
   <gpu_background>
     <kind>65536</kind>
@@ -371,13 +337,13 @@
       <y>575</y>
       <val>42.</val></last>
     <rng1>
-      <x>749</x>
-      <y>1</y>
-      <val>91.</val></rng1>
+      <x>164</x>
+      <y>447</y>
+      <val>59.</val></rng1>
     <rng2>
-      <x>347</x>
-      <y>444</y>
-      <val>88.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-768x576-avi---1->
+      <x>528</x>
+      <y>324</y>
+      <val>217.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-768x576-avi---1->
 <Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-768x576-avi---3->
   <gpu_background>
     <kind>65536</kind>
@@ -389,14 +355,13 @@
       <y>575</y>
       <val>45.</val></last>
     <rng1>
-      <x>751</x>
-      <y>211</y>
-      <cn>1</cn>
-      <val>89.</val></rng1>
+      <x>466</x>
+      <y>382</y>
+      <val>47.</val></rng1>
     <rng2>
-      <x>623</x>
-      <y>251</y>
-      <val>169.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-768x576-avi---3->
+      <x>674</x>
+      <y>390</y>
+      <val>183.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-768x576-avi---3->
 <Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-768x576-avi---4->
   <gpu_background>
     <kind>65536</kind>
@@ -408,14 +373,14 @@
       <y>575</y>
       <val>255.</val></last>
     <rng1>
-      <x>313</x>
-      <y>445</y>
-      <val>7.</val></rng1>
+      <x>229</x>
+      <y>126</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>109</x>
-      <y>416</y>
-      <cn>1</cn>
-      <val>48.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-768x576-avi---4->
+      <x>259</x>
+      <y>407</y>
+      <val>0.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-768x576-avi---4->
 <Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-1920x1080-avi---1->
   <gpu_background>
     <kind>65536</kind>
@@ -427,13 +392,13 @@
       <y>1079</y>
       <val>70.</val></last>
     <rng1>
-      <x>1083</x>
-      <y>785</y>
-      <val>135.</val></rng1>
+      <x>1480</x>
+      <y>195</y>
+      <val>152.</val></rng1>
     <rng2>
-      <x>1535</x>
-      <y>200</y>
-      <val>60.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-1920x1080-avi---1->
+      <x>883</x>
+      <y>538</y>
+      <val>139.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-1920x1080-avi---1->
 <Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-1920x1080-avi---3->
   <gpu_background>
     <kind>65536</kind>
@@ -445,15 +410,14 @@
       <y>1079</y>
       <val>119.</val></last>
     <rng1>
-      <x>1206</x>
-      <y>253</y>
+      <x>1132</x>
+      <y>407</y>
       <cn>2</cn>
-      <val>166.</val></rng1>
+      <val>154.</val></rng1>
     <rng2>
-      <x>307</x>
-      <y>664</y>
-      <cn>2</cn>
-      <val>25.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-1920x1080-avi---3->
+      <x>1813</x>
+      <y>949</y>
+      <val>3.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-1920x1080-avi---3->
 <Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-1920x1080-avi---4->
   <gpu_background>
     <kind>65536</kind>
@@ -465,175 +429,12 @@
       <y>1079</y>
       <val>255.</val></last>
     <rng1>
-      <x>1872</x>
-      <y>151</y>
+      <x>827</x>
+      <y>93</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>1457</x>
-      <y>830</y>
-      <cn>2</cn>
-      <val>108.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-1920x1080-avi---4->
-<Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---Gray--20->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>659</x>
-      <y>227</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>86</x>
-      <y>49</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---Gray--20->
-<Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---Gray--40->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>355</x>
-      <y>310</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>715</x>
-      <y>93</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---Gray--40->
-<Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---Gray--60->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>208</x>
-      <y>207</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>426</x>
-      <y>543</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---Gray--60->
-<Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGR--20->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>53</x>
-      <y>240</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>239</x>
-      <y>382</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGR--20->
-<Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGR--40->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>437</x>
-      <y>183</y>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>365</x>
-      <y>384</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGR--40->
-<Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGR--60->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>123</x>
-      <y>356</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>621</x>
-      <y>146</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGR--60->
-<Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGRA--20->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>402</x>
-      <y>245</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>527</x>
-      <y>209</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGRA--20->
-<Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGRA--40->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>474</x>
-      <y>40</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>442</x>
-      <y>140</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGRA--40->
-<Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGRA--60->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>218</x>
-      <y>245</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>409</x>
-      <y>406</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_MaxFeatures_GMG--GMG----gpu-video-768x576-avi---BGRA--60->
+      <x>750</x>
+      <y>656</y>
+      <val>201.</val></rng2></gpu_background></Video_Cn_MOG2GetBackgroundImage--MOG2GetBackgroundImage----gpu-video-1920x1080-avi---4->
 </opencv_storage>

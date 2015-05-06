@@ -8,47 +8,47 @@ Native OpenCV Manager service interface
     :synopsis: Defines OpenCV Manager interface for Android Binder component
 .. Class:: OpenCVEngine
 
-OpenCVEngine class provides Binder interface to OpenCV Manager Service
+This class provides a binder interface to the OpenCV Manager service
 
 int getEngineVersion()
 ----------------------
 
 .. method:: int GetEngineVersion()
 
-    Gets OpenCV Manager version
+    Get OpenCV Manager version
 
     :rtype: int
-    :return: Returns OpenCV Manager version
+    :return: Version of the OpenCV Manager
 
 android::String16 getLibPathByVersion()
 ---------------------------------------
 
 .. method:: android::String16 GetLibPathByVersion(android::String16 version)
 
-    Gets path to native OpenCV libraries 
+    Find already installed OpenCV library 
 
     :param version: OpenCV Library version
     :rtype: String;
-    :return: Returns path to OpenCV native libs or empty string if OpenCV was not found
+    :return: Path to OpenCV native libs or empty string if OpenCV was not found
 
 android::String16 getLibraryList()
 ----------------------------------
 
 .. method:: android::String16 GetLibraryList(android::String16 version)
 
-    Gets list of OpenCV native libraries in loading order
+    Get list of OpenCV native libraries in loading order
 
     :param version: OpenCV Library version
     :rtype: String;
-    :return: Returns OpenCV libraries names separated by semicolon symbol in loading order
+    :return: OpenCV library names separated by symbol ";" in loading order
 
 boolean installVersion()
 ------------------------
 
 .. method:: boolean InstallVersion(android::String16 version)
 
-    Trys to install defined version of OpenCV
+    Tries to install defined version of OpenCV
 
     :param version: OpenCV Library version
     :rtype: String
-    :return: Returns true if installation successful or package has been already installed
+    :return: True if installation was successful or package was already installed
