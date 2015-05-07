@@ -22,17 +22,17 @@ red line. All the expected straight lines are bulged out. Visit [Distortion
 
 ![image](images/calib_radial.jpg)
 
-This distortion is solved as follows:
+This distortion is represented as follows:
 
-\f[x_{corrected} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
-y_{corrected} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)\f]
+\f[x_{distorted} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
+y_{distorted} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)\f]
 
 Similarly, another distortion is the tangential distortion which occurs because image taking lense
 is not aligned perfectly parallel to the imaging plane. So some areas in image may look nearer than
-expected. It is solved as below:
+expected. It is represented as below:
 
-\f[x_{corrected} = x + [ 2p_1xy + p_2(r^2+2x^2)] \\
-y_{corrected} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]\f]
+\f[x_{distorted} = x + [ 2p_1xy + p_2(r^2+2x^2)] \\
+y_{distorted} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]\f]
 
 In short, we need to find five parameters, known as distortion coefficients given by:
 
