@@ -78,9 +78,9 @@ scaled to fit the 0 to 1 range.
 \f[L  \leftarrow \frac{V_{max} + V_{min}}{2}\f]
 \f[S  \leftarrow \fork { \frac{V_{max} - V_{min}}{V_{max} + V_{min}} }{if  \(L < 0.5\) }
     { \frac{V_{max} - V_{min}}{2 - (V_{max} + V_{min})} }{if  \(L \ge 0.5\) }\f]
-\f[H  \leftarrow \forkthree {{60(G - B)}/{S}}{if  \(V_{max}=R\) }
-  {{120+60(B - R)}/{S}}{if  \(V_{max}=G\) }
-  {{240+60(R - G)}/{S}}{if  \(V_{max}=B\) }\f]
+\f[H  \leftarrow \forkthree {{60(G - B)}/{(V_{max}-V_{min})}}{if  \(V_{max}=R\) }
+  {{120+60(B - R)}/{(V_{max}-V_{min})}}{if  \(V_{max}=G\) }
+  {{240+60(R - G)}/{(V_{max}-V_{min})}}{if  \(V_{max}=B\) }\f]
 If \f$H<0\f$ then \f$H \leftarrow H+360\f$ . On output \f$0 \leq L \leq 1\f$, \f$0 \leq S \leq
 1\f$, \f$0 \leq H \leq 360\f$ .
 
