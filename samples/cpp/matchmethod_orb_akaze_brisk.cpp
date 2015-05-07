@@ -21,8 +21,8 @@ int main(int argc, char *argv[])
     vector<String> typeAlgoMatch;
     vector<String> fileName;
     help();
-    system("cd");
     // This descriptor are going to be detect and compute
+    typeDesc.push_back("AKAZE-DESCRIPTOR_KAZE_UPRIGHT");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
     typeDesc.push_back("AKAZE");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
     typeDesc.push_back("ORB");      // see http://docs.opencv.org/trunk/de/dbf/classcv_1_1BRISK.html
     typeDesc.push_back("BRISK");    // see http://docs.opencv.org/trunk/db/d95/classcv_1_1ORB.html
@@ -74,9 +74,12 @@ int main(int argc, char *argv[])
         // Descriptor for img1 and img2
         Mat descImg1, descImg2;
         vector<String>::iterator itMatcher = typeAlgoMatch.end();
+        if (*itDesc == "AKAZE-DESCRIPTOR_KAZE_UPRIGHT"){
+            b = AKAZE::create(AKAZE::DESCRIPTOR_KAZE_UPRIGHT);
+            }
         if (*itDesc == "AKAZE"){
             b = AKAZE::create();
-        }
+            }
         if (*itDesc == "ORB"){
             b = ORB::create();
         }
@@ -93,44 +96,57 @@ int main(int argc, char *argv[])
             // Match method loop
             for (itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); itMatcher++){
                 descriptorMatcher = DescriptorMatcher::create(*itMatcher);
-                descriptorMatcher->match(descImg1, descImg2, matches, Mat());
-                // Keep best matches only to have a nice drawing.
-                // We sort distance between descriptor matches
-                Mat index;
-                int nbMatch=int(matches.size());
-                Mat tab(nbMatch, 1, CV_32F);
-                for (int i = 0; i<nbMatch; i++)
+                if ((*itMatcher == "BruteForce-Hamming" || *itMatcher == "BruteForce-Hamming(2)") && (b->descriptorType() == CV_32F || b->defaultNorm() <= NORM_L2SQR) )
                 {
-                    tab.at<float>(i, 0) = matches[i].distance;
+                    cout << "**************************************************************************\n";
+                    cout << "It's strange. You should use Hamming distance only for a binary descriptor\n";
+                    cout << "**************************************************************************\n";
                 }
-                sortIdx(tab, index, SORT_EVERY_COLUMN + SORT_ASCENDING);
-                vector<DMatch> bestMatches;
-                for (int i = 0; i<30; i++)
+                try 
                 {
-                    bestMatches.push_back(matches[index.at<int>(i, 0)]);
+                    descriptorMatcher->match(descImg1, descImg2, matches, Mat());
+                    // Keep best matches only to have a nice drawing.
+                    // We sort distance between descriptor matches
+                    Mat index;
+                    int nbMatch=int(matches.size());
+                    Mat tab(nbMatch, 1, CV_32F);
+                    for (int i = 0; i<nbMatch; i++)
+                    {
+                        tab.at<float>(i, 0) = matches[i].distance;
+                    }
+                    sortIdx(tab, index, SORT_EVERY_COLUMN + SORT_ASCENDING);
+                    vector<DMatch> bestMatches;
+                    for (int i = 0; i<30; i++)
+                    {
+                        bestMatches.push_back(matches[index.at<int>(i, 0)]);
+                    }
+                    Mat result;
+                    drawMatches(img1, keyImg1, img2, keyImg2, bestMatches, result);
+                    namedWindow(*itDesc+": "+*itMatcher, WINDOW_AUTOSIZE);
+                    imshow(*itDesc + ": " + *itMatcher, result);
+                    // Saved result could be wrong due to bug 4308
+                    FileStorage fs(*itDesc + "_" + *itMatcher + ".yml", FileStorage::WRITE);
+                    fs<<"Matches"<<matches;
+                    vector<DMatch>::iterator it;
+                    cout<<"**********Match results**********\n";
+                    cout << "Index \tIndex \tdistance\n";
+                    cout << "in img1\tin img2\n";
+                    // Use to compute distance between keyPoint matches and to evaluate match algorithm
+                    double cumSumDist2=0;
+                    for (it = bestMatches.begin(); it != bestMatches.end(); it++)
+                    {
+                        cout << it->queryIdx << "\t" <<  it->trainIdx << "\t"  <<  it->distance << "\n";
+                        Point2d p=keyImg1[it->queryIdx].pt-keyImg2[it->trainIdx].pt;
+                        cumSumDist2=p.x*p.x+p.y*p.y;
+                    }
+                    desMethCmp.push_back(cumSumDist2);
+                    waitKey();
                 }
-                Mat result;
-                drawMatches(img1, keyImg1, img2, keyImg2, bestMatches, result);
-                namedWindow(*itDesc+": "+*itMatcher, WINDOW_AUTOSIZE);
-                imshow(*itDesc + ": " + *itMatcher, result);
-                // Saved result could be wrong due to bug 4308
-                FileStorage fs(*itDesc + "_" + *itMatcher + ".yml", FileStorage::WRITE);
-                fs<<"Matches"<<matches;
-                vector<DMatch>::iterator it;
-                cout<<"**********Match results**********\n";
-                cout << "Index \tIndex \tdistance\n";
-                cout << "in img1\tin img2\n";
-                // Use to compute distance between keyPoint matches and to evaluate match algorithm
-                double cumSumDist2=0;
-                for (it = bestMatches.begin(); it != bestMatches.end(); it++)
-                {
-                    cout << it->queryIdx << "\t" <<  it->trainIdx << "\t"  <<  it->distance << "\n";
-                    Point2d p=keyImg1[it->queryIdx].pt-keyImg2[it->trainIdx].pt;
-                    cumSumDist2=p.x*p.x+p.y*p.y;
+                catch (Exception& e)
+                    {
+                    desMethCmp.push_back(-1);
+                    }
                 }
-                desMethCmp.push_back(cumSumDist2);
-                waitKey();
-            }
         }
         catch (Exception& e)
         {
@@ -139,11 +155,12 @@ int main(int argc, char *argv[])
             {
                 cout << "Matcher : " << *itMatcher << "\n";
             }
-            cout<<e.msg<<endl;
+            cout << e.msg << endl;
         }
     }
     int i=0;
     cout << "Cumulative distance between keypoint match for different algorithm and feature detector \n\t";
+    cout << "We cannot say which is the best but we can say results are differents! \n\t";
     for (vector<String>::iterator itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); itMatcher++)
     {
         cout<<*itMatcher<<"\t";
