@@ -110,13 +110,12 @@ int main(int argc, char *argv[])
         help();
         return(0);
         }
-    Mat imgOrig = imread(fileName[0], IMREAD_UNCHANGED),img;
-    if (imgOrig.rows*imgOrig.cols <= 0)
+    Mat img = imread(fileName[0], IMREAD_GRAYSCALE);
+    if (img.rows*img.cols <= 0)
         {
         cout << "Image " << fileName[0] << " is empty or cannot be found\n";
         return(0);
         }
-    GaussianBlur(imgOrig,img,Size(11,11),0.1,0.1);
 
     SimpleBlobDetector::Params pDefaultBLOB;
     MSERParams pDefaultMSER;
@@ -154,15 +153,23 @@ int main(int argc, char *argv[])
     for (int i=0;i<65536;i++)
         palette.push_back(Vec3b(rand(),rand(),rand()));
     help();
+
     typeDesc.push_back("MSER");
     pMSER.push_back(pDefaultMSER);
-    pMSER.back().minArea = 1;
-    pMSER.back().maxArea = img.rows*img.cols;
-
+    pMSER.back().delta=0;
+    pMSER.back().minArea = 25;
+    pMSER.back().maxArea = 80000;
+    pMSER.back().maxVariation= 0.5;
+    pMSER.back().minDiversity=0.8; // variation de taille entre deux seuillages ?
+    pMSER.back().areaThreshold= 200;
+    pMSER.back().maxEvolution = 1.01;
+    pMSER.back().minMargin=0.003;
+    pMSER.back().edgeBlurSize= 5;
     typeDesc.push_back("BLOB");
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByColor = true;
-    pBLOB.back().blobColor = 255;
+    pBLOB.back().blobColor = 0;
+
     // This descriptor are going to be detect and compute 4 BLOBS with 4 differents params
     // Param for first BLOB detector we want all
     typeDesc.push_back("BLOB");    // see http://docs.opencv.org/trunk/d0/d7a/classcv_1_1SimpleBlobDetector.html
@@ -211,28 +218,20 @@ int main(int argc, char *argv[])
             itBLOB++;
         }
         if (*itDesc == "MSER"){
-            b = MSER::create(itMSER->delta, itMSER->minArea,itMSER->maxArea,itMSER->maxVariation,itMSER->minDiversity,itMSER->maxEvolution,
-                itMSER->areaThreshold,itMSER->minMargin,itMSER->edgeBlurSize);
+            b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity, itMSER->maxEvolution,
+                             itMSER->areaThreshold, itMSER->minMargin, itMSER->edgeBlurSize);
+            b.dynamicCast<MSER>()->setPass2Only(true);
+            //b = MSER::create();
             }
         try {
             // We can detect keypoint with detect method
             vector<KeyPoint>  keyImg;
             vector<Rect>  zone;
             vector<vector <Point>>  region;
-            Mat     desc, result;
+            Mat     desc, result(img.rows,img.cols,CV_8UC3);
             int nb = img.channels();
-            if (img.channels() == 3)
-            {
-                img.copyTo(result);
-            }
-            else
-                {
-                vector<Mat> plan;
-                plan.push_back(img);
-                plan.push_back(img);
-                plan.push_back(img);
-                merge(plan, result);
-                }
+                
+
             if (b.dynamicCast<SimpleBlobDetector>() != NULL)
             {
                 Ptr<SimpleBlobDetector> sbd = b.dynamicCast<SimpleBlobDetector>();
@@ -245,32 +244,24 @@ int main(int argc, char *argv[])
             if (b.dynamicCast<MSER>() != NULL)
             {
                 Ptr<MSER> sbd = b.dynamicCast<MSER>();
-                sbd->detectRegions(img,  region, zone);
+                sbd->detectRegions(img, region, zone);
                 int i = 0;
                 
                 for (vector<Rect>::iterator r = zone.begin(); r != zone.end();r++,i++)
                 {
-                rectangle(result, *r, palette[i % 65536],2);
+                    // we draw a white rectangle which include all region pixels
+                    rectangle(result, *r, Vec3b(255, 255, 255), 2);
                 }
                 i=0;
                 for (vector<vector <Point>>::iterator itr = region.begin(); itr != region.end(); itr++, i++)
-                    {
+                {
                     for (vector <Point>::iterator itp = region[i].begin(); itp != region[i].end(); itp++)
-                        {
-
-                        result.at<Vec3b>(itp->y, itp->x) = Vec3b(0,0,0);
-                        }
-                    }
-                i = 0;
-                for (vector<vector <Point>>::iterator itr = region.begin(); itr != region.end(); itr++, i++)
                     {
-                    for (vector <Point>::iterator itp = region[i].begin(); itp != region[i].end(); itp++)
-                        {
-
-                        result.at<Vec3b>(itp->y, itp->x) = Vec3b(0,255,255);
-                        }
+                        // all pixels belonging to region are red
+                        result.at<Vec3b>(itp->y, itp->x) = Vec3b(0,0,128);
                     }
                 }
+            }
             namedWindow(*itDesc+label , WINDOW_AUTOSIZE);
             imshow(*itDesc + label, result);
             imshow("Original", img);
