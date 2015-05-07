@@ -266,6 +266,8 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
                 continue;
         }
 
+        if(moms.m00 == 0.0)
+            continue;
         center.location = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
 
         if (params.filterByColor)
@@ -286,8 +288,6 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
             center.radius = (dists[(dists.size() - 1) / 2] + dists[dists.size() / 2]) / 2.;
         }
 
-        if(moms.m00 == 0.0)
-            continue;
         centers.push_back(center);
 
 
