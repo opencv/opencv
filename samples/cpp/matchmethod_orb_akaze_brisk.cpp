@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
                     cout << "It's strange. You should use Hamming distance only for a binary descriptor\n";
                     cout << "**************************************************************************\n";
                 }
-                try 
+                try
                 {
                     descriptorMatcher->match(descImg1, descImg2, matches, Mat());
                     // Keep best matches only to have a nice drawing.
