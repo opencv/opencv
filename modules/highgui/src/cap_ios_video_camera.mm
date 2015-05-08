@@ -43,6 +43,11 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 @interface CvVideoCamera () {
     NSString* mediaPath;
+    int recordCountDown;
+    CMTime _lastSampleTime;
+    int64_t _timestampMs;
+    dispatch_queue_t movieWriterQueue;
+
 }
 
 
@@ -54,6 +59,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 @property (nonatomic, retain) CALayer *customPreviewLayer;
 @property (nonatomic, retain) AVCaptureVideoDataOutput *videoDataOutput;
 @property (nonatomic, retain) AVCaptureMovieFileOutput *movieFileOutput;
+@property (nonatomic, retain) dispatch_queue_t movieWriterQueue;
 
 @end
 
@@ -82,6 +88,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 @synthesize recordPixelBufferAdaptor;
 @synthesize recordAssetWriter;
 
+@synthesize timestampMs = _timestampMs;
+
+
 
 
 
@@ -89,12 +98,14 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 - (id)initWithParentView:(UIView*)parent;
 {
+    recordCountDown = 1000000000;
     self = [super initWithParentView:parent];
     if (self) {
         self.useAVCaptureVideoPreviewLayer = NO;
         self.recordVideo = NO;
         self.rotateVideo = NO;
     }
+    movieWriterQueue = nil;
     return self;
 }
 
@@ -105,6 +116,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 - (void)start;
 {
+    recordCountDown = 5;
+    movieWriterQueue = nil;
     [super start];
 
     if (self.recordVideo == YES) {
@@ -116,11 +129,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
         if (error == nil) {
             NSLog(@"[Camera] Delete file %@", [self videoFileString]);
         }
-
-        if ([[NSFileManager defaultManager] fileExistsAtPath:[self mediaFileString]]) {
-            [[NSFileManager defaultManager] removeItemAtPath:[self mediaFileString] error:&error];
-        }
     }
+
 }
 
 
@@ -146,6 +156,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
         self.recordAssetWriter = nil;
         self.recordAssetWriterInput = nil;
         self.recordPixelBufferAdaptor = nil;
+        if (movieWriterQueue)
+            dispatch_release(movieWriterQueue);
+        self.movieWriterQueue = nil;
     }
 
     [self.customPreviewLayer removeFromSuperlayer];
@@ -344,6 +357,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     [self.videoDataOutput setSampleBufferDelegate:self queue:videoDataOutputQueue];
 
 
+    if (self.recordVideo == YES && movieWriterQueue == nil) {
+        movieWriterQueue = dispatch_queue_create("opencv_movieWriter", DISPATCH_QUEUE_SERIAL);
+    }
     NSLog(@"[Camera] created AVCaptureVideoDataOutput at %d FPS", self.defaultFPS);
 }
 
@@ -477,6 +493,15 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 }
 #pragma mark - Protocol AVCaptureVideoDataOutputSampleBufferDelegate
 
+- (void)captureOutput:(AVCaptureOutput *)captureOutput didDropSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
+{
+    if (connection == self.audioCaptureConnection) {
+        NSLog(@"Audio sample did drop ");
+        return;
+    }
+    NSLog(@"Video Frame did drop ");
+}
+
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
 {
@@ -484,7 +509,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     (void)connection;
 
     if (connection == self.audioCaptureConnection) {
-        NSLog(@"Audio Sample came in ");
+        //NSLog(@"Audio Sample came in ");
         return;
     }
 
@@ -526,14 +551,21 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
         }
 
+
+        CMTime lastSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
+        int64_t msec = lastSampleTime.value / (lastSampleTime.timescale / 1000);
+        _timestampMs = msec;
+        //NSLog(@"Timestamp %u / %u, msec = %lu ", lastSampleTime.value, lastSampleTime.timescale, msec);
+        
+
         // delegate image processing to the delegate
         cv::Mat image((int)height, (int)width, format_opencv, bufferAddress, bytesPerRow);
-
-        CGImage* dstImage;
 
         if ([self.delegate respondsToSelector:@selector(processImage:)]) {
             [self.delegate processImage:image];
         }
+
+        CGImage* dstImage;
 
         // check if matrix data pointer or dimensions were changed by the delegate
         bool iOSimage = false;
@@ -595,17 +627,20 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 
         // render buffer
+        //dispatch_sync(dispatch_get_main_queue(), ^{
         dispatch_sync(dispatch_get_main_queue(), ^{
             self.customPreviewLayer.contents = (__bridge id)dstImage;
         });
 
+        if (recordCountDown > 0)
+            recordCountDown--;
 
-        if (self.recordVideo == YES) {
-            lastSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
-//			CMTimeShow(lastSampleTime);
+        if (self.recordVideo == YES && recordCountDown <= 0) {
+            //CMTimeShow(lastSampleTime);
+
             if (self.recordAssetWriter.status != AVAssetWriterStatusWriting) {
                 [self.recordAssetWriter startWriting];
-                [self.recordAssetWriter startSessionAtSourceTime:lastSampleTime];
+                [self.recordAssetWriter startSessionAtSourceTime:_lastSampleTime];
                 if (self.recordAssetWriter.status != AVAssetWriterStatusWriting) {
                     NSLog(@"[Camera] Recording Error: asset writer status is not writing: %@", self.recordAssetWriter.error);
                     return;
@@ -623,9 +658,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
                 if (pixelBuffer != nullptr)
                     CVPixelBufferRelease(pixelBuffer);
             }
-
         }
-
 
         // cleanup
         CGImageRelease(dstImage);
