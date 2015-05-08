@@ -86,7 +86,8 @@ int main(int argc, char *argv[])
         else if (*itDesc == "BRISK"){
             b = BRISK::create();
         }
-        try {
+        try
+        {
             // We can detect keypoint with detect method
             b->detect(img1, keyImg1, Mat());
             // and compute their descriptors with method  compute
@@ -144,6 +145,8 @@ int main(int argc, char *argv[])
                 }
                 catch (Exception& e)
                     {
+                    cout << e.msg << endl;
+                    cout << "Cumulative distance cannot be computed." << endl;
                     desMethCmp.push_back(-1);
                     }
                 }
