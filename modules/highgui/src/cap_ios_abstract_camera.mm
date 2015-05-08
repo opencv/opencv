@@ -35,9 +35,7 @@
 
 #pragma mark - Private Interface
 
-@interface CvAbstractCamera () {
-    AVCaptureAudioDataOutput *audioOut; 
-}
+@interface CvAbstractCamera ()
 
 @property (nonatomic, retain) AVCaptureVideoPreviewLayer* captureVideoPreviewLayer;
 
@@ -74,7 +72,6 @@
 @synthesize captureSession;
 @synthesize captureVideoPreviewLayer;
 @synthesize videoCaptureConnection;
-@synthesize audioCaptureConnection;
 @synthesize running;
 @synthesize captureSessionLoaded;
 @synthesize useAVCaptureVideoPreviewLayer;
@@ -209,7 +206,6 @@
     self.captureSession = nil;
     self.captureVideoPreviewLayer = nil;
     self.videoCaptureConnection = nil;
-    self.audioCaptureConnection = nil;
     captureSessionLoaded = NO;
 }
 
@@ -276,122 +272,7 @@
     } else {
         NSLog(@"[Camera] Error: could not set session preset");
     }
-
 }
-
-#if 0
-- (void)sampleCaptureSessionSetup {
-
-    if ( _captureSession ) {
-        return;
-    }
-
-    _captureSession = [[AVCaptureSession alloc] init];  
-
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(captureSessionNotification:) name:nil object:_captureSession];
-    _applicationWillEnterForegroundNotificationObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillEnterForegroundNotification object:[UIApplication sharedApplication] queue:nil usingBlock:^(NSNotification *note) {
-        // Retain self while the capture session is alive by referencing it in this observer block which is tied to the session lifetime
-        // Client must stop us running before we can be deallocated
-        [self applicationWillEnterForeground];
-    }];
-
-#if RECORD_AUDIO
-    /* Audio */
-    AVCaptureDevice *audioDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
-    AVCaptureDeviceInput *audioIn = [[AVCaptureDeviceInput alloc] initWithDevice:audioDevice error:nil];
-    if ( [_captureSession canAddInput:audioIn] ) {
-        [_captureSession addInput:audioIn];
-    }
-    [audioIn release];
-
-    AVCaptureAudioDataOutput *audioOut = [[AVCaptureAudioDataOutput alloc] init];
-    // Put audio on its own queue to ensure that our video processing doesn't cause us to drop audio
-    dispatch_queue_t audioCaptureQueue = dispatch_queue_create( "com.apple.sample.capturepipeline.audio", DISPATCH_QUEUE_SERIAL );
-    [audioOut setSampleBufferDelegate:self queue:audioCaptureQueue];
-    [audioCaptureQueue release];
-
-    if ( [_captureSession canAddOutput:audioOut] ) {
-        [_captureSession addOutput:audioOut];
-    }
-    self.audioConnection = [audioOut connectionWithMediaType:AVMediaTypeAudio];
-    [audioOut release];
-#endif // RECORD_AUDIO
-
-    /* Video */
-    AVCaptureDevice *videoDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-    _videoDevice = videoDevice;
-    AVCaptureDeviceInput *videoIn = [[AVCaptureDeviceInput alloc] initWithDevice:videoDevice error:nil];
-    if ( [_captureSession canAddInput:videoIn] ) {
-        [_captureSession addInput:videoIn];
-    }
-    [videoIn release];
-
-    AVCaptureVideoDataOutput *videoOut = [[AVCaptureVideoDataOutput alloc] init];
-    videoOut.videoSettings = @{ (id)kCVPixelBufferPixelFormatTypeKey : @(_renderer.inputPixelFormat) };
-    [videoOut setSampleBufferDelegate:self queue:_videoDataOutputQueue];
-
-    // RosyWriter records videos and we prefer not to have any dropped frames in the video recording.
-    // By setting alwaysDiscardsLateVideoFrames to NO we ensure that minor fluctuations in system load or in our processing time for a given frame won't cause framedrops.
-    // We do however need to ensure that on average we can process frames in realtime.
-    // If we were doing preview only we would probably want to set alwaysDiscardsLateVideoFrames to YES.
-    videoOut.alwaysDiscardsLateVideoFrames = NO;
-
-    if ( [_captureSession canAddOutput:videoOut] ) {
-        [_captureSession addOutput:videoOut];
-    }
-
-    _videoConnection = [videoOut connectionWithMediaType:AVMediaTypeVideo];
-
-    int frameRate;
-    NSString *sessionPreset = AVCaptureSessionPresetHigh;
-    CMTime frameDuration = kCMTimeInvalid;
-    // For single core systems like iPhone 4 and iPod Touch 4th Generation we use a lower resolution and framerate to maintain real-time performance.
-    if ( [NSProcessInfo processInfo].processorCount == 1 )
-    {
-        if ( [_captureSession canSetSessionPreset:AVCaptureSessionPreset640x480] ) {
-            sessionPreset = AVCaptureSessionPreset640x480;
-        }
-        frameRate = 15;
-    }
-    else
-    {
-#if ! USE_OPENGL_RENDERER
-        // When using the CPU renderers or the CoreImage renderer we lower the resolution to 720p so that all devices can maintain real-time performance (this is primarily for A5 based devices like iPhone 4s and iPod Touch 5th Generation).
-        if ( [_captureSession canSetSessionPreset:AVCaptureSessionPreset1280x720] ) {
-            sessionPreset = AVCaptureSessionPreset1280x720;
-        }
-#endif // ! USE_OPENGL_RENDERER
-
-        frameRate = 30;
-    }
-
-    _captureSession.sessionPreset = sessionPreset;
-
-    frameDuration = CMTimeMake( 1, frameRate );
-
-    NSError *error = nil;
-    if ( [videoDevice lockForConfiguration:&error] ) {
-        videoDevice.activeVideoMaxFrameDuration = frameDuration;
-        videoDevice.activeVideoMinFrameDuration = frameDuration;
-        [videoDevice unlockForConfiguration];
-    }
-    else {
-        NSLog( @"videoDevice lockForConfiguration returned error %@", error );
-    }
-
-    // Get the recommended compression settings after configuring the session/device.
-#if RECORD_AUDIO
-    _audioCompressionSettings = [[audioOut recommendedAudioSettingsForAssetWriterWithOutputFileType:AVFileTypeQuickTimeMovie] copy];
-#endif
-    _videoCompressionSettings = [[videoOut recommendedVideoSettingsForAssetWriterWithOutputFileType:AVFileTypeQuickTimeMovie] copy];
-
-    self.videoOrientation = _videoConnection.videoOrientation;
-
-    [videoOut release];
-
-    return;
-}
-#endif
 
 - (void)createCaptureDevice;
 {
@@ -400,36 +281,6 @@
     [self setDesiredCameraPosition:self.defaultAVCaptureDevicePosition];
     NSLog(@"[Camera] device connected? %@", device.connected ? @"YES" : @"NO");
     NSLog(@"[Camera] device position %@", (device.position == AVCaptureDevicePositionBack) ? @"back" : @"front");
-
-#if 0
-    AVCaptureDevice *audioCaptureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
-    NSError *error = nil;
-    //AVCaptureDeviceInput *audioInput = [AVCaptureDeviceInput deviceInputWithDevice:audioCaptureDevice error:&error];
-    AVCaptureDeviceInput *audioInput = [[AVCaptureDeviceInput alloc] initWithDevice:audioCaptureDevice error:nil];
-    if (audioInput) {
-        NSLog(@"Adding audio capture devices ");
-        [self.captureSession addInput:audioInput];
-        [audioInput release];
-    }
-
-    
-    // Put audio on its own queue to ensure that our video processing doesn't cause us to drop audio
-    audioOut = [[AVCaptureAudioDataOutput alloc] init];
-    dispatch_queue_t audioCaptureQueue = dispatch_queue_create("opencv.ios.audio", DISPATCH_QUEUE_SERIAL );
-    [audioOut setSampleBufferDelegate:self queue:audioCaptureQueue];
-
-    if ( [self.captureSession canAddOutput:audioOut] ) {
-        [self.captureSession addOutput:audioOut];
-        NSLog(@"audioOut added ");
-    }
-
-    [audioCaptureQueue release];
-
-    self.audioCaptureConnection = [audioOut connectionWithMediaType:AVMediaTypeAudio];
-
-    NSLog(@"Audio has been setup with callback ");
-#endif
-
 }
 
 
