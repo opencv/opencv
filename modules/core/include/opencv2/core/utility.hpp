@@ -539,7 +539,7 @@ private:
     virtual void deleteDataInstance(void* data) const { delete (T*)data; }
 };
 
-/** @brief designed for command line arguments parsing
+/** @brief Designed for command line parsing
 
 The sample below demonstrates how to use CommandLineParser:
 @code
@@ -569,8 +569,19 @@ The sample below demonstrates how to use CommandLineParser:
         return 0;
     }
 @endcode
-Syntax:
-@code
+
+### Keys syntax
+
+The keys parameter is a string containing several blocks, each one is enclosed in curley braces and
+describes one argument. Each argument contains three parts separated by the `|` symbol:
+
+-# argument names is a space-separated list of option synonyms (to mark argument as positional, prefix it with the `@` symbol)
+-# default value will be used if the argument was not provided (can be empty)
+-# help message (can be empty)
+
+For example:
+
+@code{.cpp}
     const String keys =
         "{help h usage ? |      | print this message   }"
         "{@image1        |      | image1 for compare   }"
@@ -581,27 +592,89 @@ Syntax:
         "{N count        |100   | count of objects     }"
         "{ts timestamp   |      | use time stamp       }"
         ;
+}
 @endcode
-Use:
-@code
-    # ./app -N=200 1.png 2.jpg 19 -ts
 
-    # ./app -fps=aaa
+### Usage
+
+For the described keys:
+
+@code{.sh}
+    # Good call (3 positional parameters: image1, image2 and repeat; N is 200, ts is true)
+    $ ./app -N=200 1.png 2.jpg 19 -ts
+
+    # Bad call
+    $ ./app -fps=aaa
     ERRORS:
     Exception: can not convert: [aaa] to [double]
 @endcode
  */
 class CV_EXPORTS CommandLineParser
 {
-    public:
+public:
+
+    /** @brief Constructor
+
+    Initializes command line parser object
+
+    @param argc number of command line arguments (from main())
+    @param argv array of command line arguments (from main())
+    @param keys string describing acceptable command line parameters (see class description for syntax)
+    */
     CommandLineParser(int argc, const char* const argv[], const String& keys);
+
+    /** @brief Copy constructor */
     CommandLineParser(const CommandLineParser& parser);
+
+    /** @brief Assignment operator */
     CommandLineParser& operator = (const CommandLineParser& parser);
 
+    /** @brief Destructor */
     ~CommandLineParser();
 
+    /** @brief Returns application path
+
+    This method returns the path to the executable from the command line (`argv[0]`).
+
+    For example, if the application has been started with such command:
+    @code{.sh}
+    $ ./bin/my-executable
+    @endcode
+    this method will return `./bin`.
+    */
     String getPathToApplication() const;
 
+    /** @brief Access arguments by name
+
+    Returns argument converted to selected type. If the argument is not known or can not be
+    converted to selected type, the error flag is set (can be checked with @ref check).
+
+    For example, define:
+    @code{.cpp}
+    String keys = "{N count||}";
+    @endcode
+
+    Call:
+    @code{.sh}
+    $ ./my-app -N=20
+    # or
+    $ ./my-app --count=20
+    @endcode
+
+    Access:
+    @code{.cpp}
+    int N = parser.get<int>("N");
+    @endcode
+
+    @param name name of the argument
+    @param space_delete remove spaces from the left and right of the string
+    @tparam T the argument will be converted to this type if possible
+
+    @note You can access positional arguments by their `@`-prefixed name:
+    @code{.cpp}
+    parser.get<String>("@image");
+    @endcode
+     */
     template <typename T>
     T get(const String& name, bool space_delete = true) const
     {
@@ -610,6 +683,30 @@ class CV_EXPORTS CommandLineParser
         return val;
     }
 
+    /** @brief Access positional arguments by index
+
+    Returns argument converted to selected type. Indexes are counted from zero.
+
+    For example, define:
+    @code{.cpp}
+    String keys = "{@arg1||}{@arg2||}"
+    @endcode
+
+    Call:
+    @code{.sh}
+    ./my-app abc qwe
+    @endcode
+
+    Access arguments:
+    @code{.cpp}
+    String val_1 = parser.get<String>(0); // returns "abc", arg1
+    String val_2 = parser.get<String>(1); // returns "qwe", arg2
+    @endcode
+
+    @param index index of the argument
+    @param space_delete remove spaces from the left and right of the string
+    @tparam T the argument will be converted to this type if possible
+     */
     template <typename T>
     T get(int index, bool space_delete = true) const
     {
@@ -618,13 +715,37 @@ class CV_EXPORTS CommandLineParser
         return val;
     }
 
+    /** @brief Check if field was provided in the command line
+
+    @param name argument name to check
+    */
     bool has(const String& name) const;
 
+    /** @brief Check for parsing errors
+
+    Returns true if error occured while accessing the parameters (bad conversion, missing arguments,
+    etc.). Call @ref printErrors to print error messages list.
+     */
     bool check() const;
 
+    /** @brief Set the about message
+
+    The about message will be shown when @ref printMessage is called, right before arguments table.
+     */
     void about(const String& message);
 
+    /** @brief Print help message
+
+    This method will print standard help message containing the about message and arguments description.
+
+    @sa about
+    */
     void printMessage() const;
+
+    /** @brief Print list of errors occured
+
+    @sa check
+    */
     void printErrors() const;
 
 protected:
