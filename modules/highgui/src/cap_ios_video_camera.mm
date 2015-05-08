@@ -42,24 +42,15 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 
 @interface CvVideoCamera () {
-    NSString* mediaPath;
-    int recordCountDown;
-    CMTime _lastSampleTime;
-    int64_t _timestampMs;
-    dispatch_queue_t movieWriterQueue;
-
+    int recordingCountDown;
 }
-
 
 - (void)createVideoDataOutput;
 - (void)createVideoFileOutput;
-- (void)createMovieFileOutput;
-- (NSString*) mediaFileString;
+
 
 @property (nonatomic, retain) CALayer *customPreviewLayer;
 @property (nonatomic, retain) AVCaptureVideoDataOutput *videoDataOutput;
-@property (nonatomic, retain) AVCaptureMovieFileOutput *movieFileOutput;
-@property (nonatomic, retain) dispatch_queue_t movieWriterQueue;
 
 @end
 
@@ -79,7 +70,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 @synthesize customPreviewLayer;
 @synthesize videoDataOutput;
-@synthesize movieFileOutput;
 
 @synthesize recordVideo;
 @synthesize rotateVideo;
@@ -88,24 +78,18 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 @synthesize recordPixelBufferAdaptor;
 @synthesize recordAssetWriter;
 
-@synthesize timestampMs = _timestampMs;
-
-
-
 
 
 #pragma mark - Constructors
 
 - (id)initWithParentView:(UIView*)parent;
 {
-    recordCountDown = 1000000000;
     self = [super initWithParentView:parent];
     if (self) {
         self.useAVCaptureVideoPreviewLayer = NO;
         self.recordVideo = NO;
         self.rotateVideo = NO;
     }
-    movieWriterQueue = nil;
     return self;
 }
 
@@ -116,8 +100,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 - (void)start;
 {
-    recordCountDown = 5;
-    movieWriterQueue = nil;
+    recordingCountDown = 10;
     [super start];
 
     if (self.recordVideo == YES) {
@@ -125,12 +108,10 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
         if ([[NSFileManager defaultManager] fileExistsAtPath:[self videoFileString]]) {
             [[NSFileManager defaultManager] removeItemAtPath:[self videoFileString] error:&error];
         }
-
         if (error == nil) {
             NSLog(@"[Camera] Delete file %@", [self videoFileString]);
         }
     }
-
 }
 
 
@@ -156,9 +137,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
         self.recordAssetWriter = nil;
         self.recordAssetWriterInput = nil;
         self.recordPixelBufferAdaptor = nil;
-        if (movieWriterQueue)
-            dispatch_release(movieWriterQueue);
-        self.movieWriterQueue = nil;
     }
 
     [self.customPreviewLayer removeFromSuperlayer];
@@ -318,9 +296,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     }
     [[self.videoDataOutput connectionWithMediaType:AVMediaTypeVideo] setEnabled:YES];
 
-    //self.videoCaptureConnection = [self.videoDataOutput connectionWithMediaType:AVMediaTypeVideo];
-    //[self.videoCaptureConnection setEnabled:YES];
-
 
     // set default FPS
     if ([self.videoDataOutput connectionWithMediaType:AVMediaTypeVideo].supportsVideoMinFrameDuration) {
@@ -357,34 +332,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     [self.videoDataOutput setSampleBufferDelegate:self queue:videoDataOutputQueue];
 
 
-    if (self.recordVideo == YES && movieWriterQueue == nil) {
-        movieWriterQueue = dispatch_queue_create("opencv_movieWriter", DISPATCH_QUEUE_SERIAL);
-    }
     NSLog(@"[Camera] created AVCaptureVideoDataOutput at %d FPS", self.defaultFPS);
 }
 
-
-- (void)createMovieFileOutput; 
-{
-    NSLog(@"createVideoFileOutput...");
-    self.movieFileOutput  = [[AVCaptureMovieFileOutput alloc] init];
-    CMTime maxDuration = CMTimeMake(30*60, 1);
-    movieFileOutput.maxRecordedDuration = maxDuration;
-    movieFileOutput.minFreeDiskSpaceLimit = (1024L)*(1024L*1024L);
-    movieFileOutput.maxRecordedFileSize = (400L)*(1024L*1024L);
-
-
-    if ([self.captureSession canAddOutput:movieFileOutput]) {
-        [captureSession addOutput:movieFileOutput];
-        NSLog(@"Successfully added movie output ");
-    }
-    else {
-        NSLog(@"Couldn't add movie output ");
-    }
-
-    if (self.recordVideo == YES)
-        [self.movieFileOutput startRecordingToOutputFileURL:[self mediaFileURL] recordingDelegate:self];
-}
 
 
 - (void)createVideoFileOutput;
@@ -431,7 +381,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     [self createVideoDataOutput];
     if (self.recordVideo == YES) {
         [self createVideoFileOutput];
-        //[self createMovieFileOutput];
     }
 }
 
@@ -473,47 +422,13 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     return pxbuffer;
 }
 
-
-- (void)captureOutput:(AVCaptureFileOutput *)captureOutput 
-        didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
-        fromConnections:(NSArray *)connections
-        error:(NSError *)error {
-
-#if 0
-    BOOL recordedSuccessfully = YES;
-    if ([error code] != noErr) {
-        // A problem occurred: Find out if the recording was successful.
-        id value = [[error userInfo] objectForKey:AVErrorRecordingSuccessfullyFinishedKey];
-        if (value) {
-            recordedSuccessfully = [value boolValue];
-        }
-    }
-#endif
-    NSLog(@"Capture File output done ");
-}
 #pragma mark - Protocol AVCaptureVideoDataOutputSampleBufferDelegate
-
-- (void)captureOutput:(AVCaptureOutput *)captureOutput didDropSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
-{
-    if (connection == self.audioCaptureConnection) {
-        NSLog(@"Audio sample did drop ");
-        return;
-    }
-    NSLog(@"Video Frame did drop ");
-}
 
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
 {
     (void)captureOutput;
     (void)connection;
-
-    if (connection == self.audioCaptureConnection) {
-        //NSLog(@"Audio Sample came in ");
-        return;
-    }
-
-    //NSLog(@"Video sample came in ");
     if (self.delegate) {
 
         // convert from Core Media to Core Video
@@ -551,21 +466,14 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
         }
 
-
-        CMTime lastSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
-        int64_t msec = lastSampleTime.value / (lastSampleTime.timescale / 1000);
-        _timestampMs = msec;
-        //NSLog(@"Timestamp %u / %u, msec = %lu ", lastSampleTime.value, lastSampleTime.timescale, msec);
-        
-
         // delegate image processing to the delegate
         cv::Mat image((int)height, (int)width, format_opencv, bufferAddress, bytesPerRow);
+
+        CGImage* dstImage;
 
         if ([self.delegate respondsToSelector:@selector(processImage:)]) {
             [self.delegate processImage:image];
         }
-
-        CGImage* dstImage;
 
         // check if matrix data pointer or dimensions were changed by the delegate
         bool iOSimage = false;
@@ -627,20 +535,18 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 
         // render buffer
-        //dispatch_sync(dispatch_get_main_queue(), ^{
         dispatch_sync(dispatch_get_main_queue(), ^{
             self.customPreviewLayer.contents = (__bridge id)dstImage;
         });
 
-        if (recordCountDown > 0)
-            recordCountDown--;
 
-        if (self.recordVideo == YES && recordCountDown <= 0) {
-            //CMTimeShow(lastSampleTime);
-
+        recordingCountDown--;
+        if (self.recordVideo == YES && recordingCountDown < 0) {
+            lastSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
+//			CMTimeShow(lastSampleTime);
             if (self.recordAssetWriter.status != AVAssetWriterStatusWriting) {
                 [self.recordAssetWriter startWriting];
-                [self.recordAssetWriter startSessionAtSourceTime:_lastSampleTime];
+                [self.recordAssetWriter startSessionAtSourceTime:lastSampleTime];
                 if (self.recordAssetWriter.status != AVAssetWriterStatusWriting) {
                     NSLog(@"[Camera] Recording Error: asset writer status is not writing: %@", self.recordAssetWriter.error);
                     return;
@@ -658,7 +564,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
                 if (pixelBuffer != nullptr)
                     CVPixelBufferRelease(pixelBuffer);
             }
+
         }
+
 
         // cleanup
         CGImageRelease(dstImage);
@@ -697,8 +605,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 - (NSURL *)videoFileURL;
 {
-    //NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
-    NSString *outputPath = self.videoFileString;
+    NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
     NSURL *outputURL = [NSURL fileURLWithPath:outputPath];
     NSFileManager *fileManager = [NSFileManager defaultManager];
     if ([fileManager fileExistsAtPath:outputPath]) {
@@ -708,17 +615,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 }
 
 
-- (NSURL *)mediaFileURL;
-{
-    NSString *outputPath = self.mediaFileString;
-    NSURL *outputURL = [NSURL fileURLWithPath:outputPath];
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    if ([fileManager fileExistsAtPath:outputPath]) {
-        NSLog(@"file exists");
-    }
-    NSLog(@"media URL %@", outputURL);
-    return outputURL;
-}
 
 - (NSString *)videoFileString;
 {
@@ -726,9 +622,4 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     return outputPath;
 }
 
-
-- (NSString*) mediaFileString {
-    NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"media.mov"];
-    return outputPath;
-}
 @end

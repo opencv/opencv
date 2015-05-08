@@ -40,7 +40,6 @@
 {
     AVCaptureSession* captureSession;
     AVCaptureConnection* videoCaptureConnection;
-    AVCaptureConnection* audioCaptureConnection;
     AVCaptureVideoPreviewLayer *captureVideoPreviewLayer;
 
     UIDeviceOrientation currentDeviceOrientation;
@@ -64,7 +63,6 @@
 
 @property (nonatomic, retain) AVCaptureSession* captureSession;
 @property (nonatomic, retain) AVCaptureConnection* videoCaptureConnection;
-@property (nonatomic, retain) AVCaptureConnection* audioCaptureConnection;
 
 @property (nonatomic, readonly) BOOL running;
 @property (nonatomic, readonly) BOOL captureSessionLoaded;
@@ -109,12 +107,11 @@
 #ifdef __cplusplus
 // delegate method for processing image frames
 - (void)processImage:(cv::Mat&)image;
-
 #endif
 
 @end
 
-@interface CvVideoCamera : CvAbstractCamera<AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureFileOutputRecordingDelegate>
+@interface CvVideoCamera : CvAbstractCamera<AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     AVCaptureVideoDataOutput *videoDataOutput;
 
@@ -129,6 +126,8 @@
     AVAssetWriterInputPixelBufferAdaptor* recordPixelBufferAdaptor;
     AVAssetWriter* recordAssetWriter;
 
+    CMTime lastSampleTime;
+
 }
 
 @property (nonatomic, assign) id<CvVideoCameraDelegate> delegate;
@@ -139,7 +138,6 @@
 @property (nonatomic, retain) AVAssetWriterInput* recordAssetWriterInput;
 @property (nonatomic, retain) AVAssetWriterInputPixelBufferAdaptor* recordPixelBufferAdaptor;
 @property (nonatomic, retain) AVAssetWriter* recordAssetWriter;
-@property (nonatomic, readonly) int64_t timestampMs;
 
 - (void)adjustLayoutToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation;
 - (void)layoutPreviewLayer;
