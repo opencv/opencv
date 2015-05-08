@@ -87,7 +87,8 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_MSMF         = 1400,  // Microsoft Media Foundation (via videoInput)
        CAP_INTELPERC    = 1500,   // Intel Perceptual Computing SDK
        CAP_OPENNI2      = 1600,   // OpenNI2 (for Kinect)
-       CAP_OPENNI2_ASUS = 1610   // OpenNI2 (for Asus Xtion and Occipital Structure sensors)
+       CAP_OPENNI2_ASUS = 1610,  // OpenNI2 (for Asus Xtion and Occipital Structure sensors)
+       CAP_GPHOTO2      = 1700   // gPhoto2 connection
      };
 
 // generic properties (based on DC1394 properties)
@@ -379,6 +380,24 @@ enum { CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integ
 enum { VIDEOWRITER_PROP_QUALITY = 1,    // Quality (0..100%) of the videostream encoded
        VIDEOWRITER_PROP_FRAMEBYTES = 2, // (Read-only): Size of just encoded video frame
      };
+
+// gPhoto2 properties, if propertyId is less than 0 then work on widget with that __additive inversed__ camera setting ID
+// Get IDs by using CAP_PROP_GPHOTO2_WIDGET_ENUMERATE.
+// @see CvCaptureCAM_GPHOTO2 for more info
+enum {
+    CAP_PROP_GPHOTO2_PREVIEW = 17001, // Capture only preview from liveview mode.
+    CAP_PROP_GPHOTO2_WIDGET_ENUMERATE = 17002, // Readonly, returns (const char *).
+    CAP_PROP_GPHOTO2_RELOAD_CONFIG = 17003, // Trigger, only by set. Reload camera settings.
+    CAP_PROP_GPHOTO2_RELOAD_ON_CHANGE = 17004, // Reload all settings on set.
+    CAP_PROP_GPHOTO2_COLLECT_MSGS = 17005, // Collect messages with details.
+    CAP_PROP_GPHOTO2_FLUSH_MSGS = 17006, // Readonly, returns (const char *).
+    CAP_PROP_SPEED = 17007, // Exposure speed. Can be readonly, depends on camera program.
+    CAP_PROP_APERTURE = 17008, // Aperture. Can be readonly, depends on camera program.
+    CAP_PROP_EXPOSUREPROGRAM = 17009, // Camera exposure program.
+    CAP_PROP_VIEWFINDER = 17010 // Enter liveview mode.
+};
+
+//enum {
 
 class IVideoCapture;
 
