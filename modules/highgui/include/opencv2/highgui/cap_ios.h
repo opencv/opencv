@@ -109,6 +109,7 @@
 #ifdef __cplusplus
 // delegate method for processing image frames
 - (void)processImage:(cv::Mat&)image;
+
 #endif
 
 @end
@@ -128,8 +129,6 @@
     AVAssetWriterInputPixelBufferAdaptor* recordPixelBufferAdaptor;
     AVAssetWriter* recordAssetWriter;
 
-    CMTime lastSampleTime;
-
 }
 
 @property (nonatomic, assign) id<CvVideoCameraDelegate> delegate;
@@ -140,6 +139,7 @@
 @property (nonatomic, retain) AVAssetWriterInput* recordAssetWriterInput;
 @property (nonatomic, retain) AVAssetWriterInputPixelBufferAdaptor* recordPixelBufferAdaptor;
 @property (nonatomic, retain) AVAssetWriter* recordAssetWriter;
+@property (nonatomic, readonly) int64_t timestampMs;
 
 - (void)adjustLayoutToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation;
 - (void)layoutPreviewLayer;

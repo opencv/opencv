@@ -401,6 +401,7 @@
     NSLog(@"[Camera] device connected? %@", device.connected ? @"YES" : @"NO");
     NSLog(@"[Camera] device position %@", (device.position == AVCaptureDevicePositionBack) ? @"back" : @"front");
 
+#if 0
     AVCaptureDevice *audioCaptureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
     NSError *error = nil;
     //AVCaptureDeviceInput *audioInput = [AVCaptureDeviceInput deviceInputWithDevice:audioCaptureDevice error:&error];
@@ -427,6 +428,7 @@
     self.audioCaptureConnection = [audioOut connectionWithMediaType:AVMediaTypeAudio];
 
     NSLog(@"Audio has been setup with callback ");
+#endif
 
 }
 
