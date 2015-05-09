@@ -97,10 +97,16 @@ int main(int argc, char *argv[])
             // Match method loop
             for (itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); itMatcher++){
                 descriptorMatcher = DescriptorMatcher::create(*itMatcher);
-                if ((*itMatcher == "BruteForce-Hamming" || *itMatcher == "BruteForce-Hamming(2)") && (b->descriptorType() == CV_32F || b->defaultNorm() <= NORM_L2SQR) )
+                if ((*itMatcher == "BruteForce-Hamming" || *itMatcher == "BruteForce-Hamming(2)") && (b->descriptorType() == CV_32F || b->defaultNorm() <= NORM_L2SQR))
                 {
                     cout << "**************************************************************************\n";
                     cout << "It's strange. You should use Hamming distance only for a binary descriptor\n";
+                    cout << "**************************************************************************\n";
+                }
+                if ((*itMatcher == "BruteForce" || *itMatcher == "BruteForce-L1") && (b->defaultNorm() >= NORM_HAMMING))
+                {
+                    cout << "**************************************************************************\n";
+                    cout << "It's strange. You shouldn't use L1 or L2 distance for a binary descriptor\n";
                     cout << "**************************************************************************\n";
                 }
                 try
