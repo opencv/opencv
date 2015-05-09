@@ -1,9 +1,12 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <map>
 #include <iostream>
 
 using namespace std;
 using namespace cv;
+
+void Example_MSER(vector<String> &fileName);
 
 static void help()
 {
@@ -65,7 +68,7 @@ String Legende(SimpleBlobDetector::Params &pAct)
         }
     if (pAct.filterByColor)
         {
-        String inf = static_cast<ostringstream*>(&(ostringstream() << pAct.blobColor))->str();
+        String inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.blobColor))->str();
         if (s.length() == 0)
             s = " Blob color " + inf;
         else
@@ -96,11 +99,14 @@ String Legende(SimpleBlobDetector::Params &pAct)
 
 int main(int argc, char *argv[])
 {
+    
     vector<String> fileName;
+    Example_MSER(fileName);
+    Mat img(600,800,CV_8UC1);
     if (argc == 1)
-        {
+    {
         fileName.push_back("../data/BLOB_MSER.bmp");
-        }
+    }
     else if (argc == 2)
         {
         fileName.push_back(argv[1]);
@@ -110,7 +116,7 @@ int main(int argc, char *argv[])
         help();
         return(0);
         }
-    Mat img = imread(fileName[0], IMREAD_GRAYSCALE);
+    img = imread(fileName[0], IMREAD_UNCHANGED);
     if (img.rows*img.cols <= 0)
         {
         cout << "Image " << fileName[0] << " is empty or cannot be found\n";
@@ -151,20 +157,17 @@ int main(int argc, char *argv[])
     // Color palette
     vector<Vec3b>  palette;
     for (int i=0;i<65536;i++)
-        palette.push_back(Vec3b(rand(),rand(),rand()));
+        palette.push_back(Vec3b((uchar)rand(), (uchar)rand(), (uchar)rand()));
     help();
 
-    typeDesc.push_back("MSER");
+/*    typeDesc.push_back("MSER");
     pMSER.push_back(pDefaultMSER);
-    pMSER.back().delta=0;
-    pMSER.back().minArea = 25;
-    pMSER.back().maxArea = 80000;
-    pMSER.back().maxVariation= 0.5;
-    pMSER.back().minDiversity=0.8; // variation de taille entre deux seuillages ?
-    pMSER.back().areaThreshold= 200;
-    pMSER.back().maxEvolution = 1.01;
-    pMSER.back().minMargin=0.003;
-    pMSER.back().edgeBlurSize= 5;
+    pMSER.back().delta = 1;
+    pMSER.back().minArea = 1;
+    pMSER.back().maxArea = 180000;
+    pMSER.back().maxVariation= 500;
+    pMSER.back().minDiversity = 0;
+    pMSER.back().pass2Only = false;*/
     typeDesc.push_back("BLOB");
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByColor = true;
@@ -176,7 +179,7 @@ int main(int argc, char *argv[])
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByArea = true;
     pBLOB.back().minArea = 1;
-    pBLOB.back().maxArea = img.rows*img.cols;
+    pBLOB.back().maxArea = int(img.rows*img.cols);
     // Param for second BLOB detector we want area between 500 and 2900 pixels
     typeDesc.push_back("BLOB");
     pBLOB.push_back(pDefaultBLOB);
@@ -192,13 +195,13 @@ int main(int argc, char *argv[])
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByInertia = true;
     pBLOB.back().minInertiaRatio = 0;
-    pBLOB.back().maxInertiaRatio = 0.2;
+    pBLOB.back().maxInertiaRatio = (float)0.2;
     // Param for Fourth BLOB detector we want ratio inertia
     typeDesc.push_back("BLOB");
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByConvexity = true;
     pBLOB.back().minConvexity = 0.;
-    pBLOB.back().maxConvexity = 0.9;
+    pBLOB.back().maxConvexity = (float)0.9;
 
 
     itBLOB = pBLOB.begin();
@@ -218,9 +221,17 @@ int main(int argc, char *argv[])
             itBLOB++;
         }
         if (*itDesc == "MSER"){
-            b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity, itMSER->maxEvolution,
-                             itMSER->areaThreshold, itMSER->minMargin, itMSER->edgeBlurSize);
-            b.dynamicCast<MSER>()->setPass2Only(true);
+            if(img.type()==CV_8UC3)
+            {
+                b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity, itMSER->maxEvolution,
+                                itMSER->areaThreshold, itMSER->minMargin, itMSER->edgeBlurSize);
+                b.dynamicCast<MSER>()->setPass2Only(itMSER->pass2Only);
+            }
+            else
+            {
+                b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity);
+            }
+            //b = MSER::create();
             //b = MSER::create();
             }
         try {
@@ -229,7 +240,6 @@ int main(int argc, char *argv[])
             vector<Rect>  zone;
             vector<vector <Point>>  region;
             Mat     desc, result(img.rows,img.cols,CV_8UC3);
-            int nb = img.channels();
                 
 
             if (b.dynamicCast<SimpleBlobDetector>() != NULL)
@@ -246,11 +256,11 @@ int main(int argc, char *argv[])
                 Ptr<MSER> sbd = b.dynamicCast<MSER>();
                 sbd->detectRegions(img, region, zone);
                 int i = 0;
-                
+                result=Scalar(0,0,0);
                 for (vector<Rect>::iterator r = zone.begin(); r != zone.end();r++,i++)
                 {
                     // we draw a white rectangle which include all region pixels
-                    rectangle(result, *r, Vec3b(255, 255, 255), 2);
+                    rectangle(result, *r, Vec3b(255, 0, 0), 2);
                 }
                 i=0;
                 for (vector<vector <Point>>::iterator itr = region.begin(); itr != region.end(); itr++, i++)
@@ -277,3 +287,167 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
+
+
+
+
+void Example_MSER(vector<String> &fileName)
+{
+    Mat img(600, 800, CV_8UC1);
+    fileName.push_back("SyntheticImage.bmp");
+    map<int, char> val;
+    int fond = 255;
+    img = Scalar(fond);
+    val[fond] = 1;
+    Point p[] = { Point(img.cols / 4, img.rows / 4), Point(3 * img.cols / 4, img.rows / 4) };
+    for (int j = 0; j<1; j++)
+        {
+        for (int i = 1; i<min(img.cols / 4, img.rows / 4); i += 2)
+            {
+            int v = 200 - (i / 40);
+            Rect r(p[j] - Point(i / 2, i / 2), Size(i, i));
+            rectangle(img, r, Scalar(v), 1);
+            if (val.find(v) == val.end())
+                val[v] = 1;
+            //circle(img, p[j], i, Scalar(255 - (j + 1)*(i / 30)),2);
+            }
+        }
+    for (int j = 1; j<2; j++)
+        {
+        for (int i = 1; i<min(img.cols / 4, img.rows / 4); i += 2)
+            {
+            int v = i / 40+30;
+            Rect r(p[j] - Point(i / 2, i / 2), Size(i, i));
+
+            rectangle(img, r, Scalar(v), 1);
+            if (val.find(v) == val.end())
+                val[v] = 1;
+            //circle(img, p[j], i, Scalar(255 - (j + 1)*(i / 30)),2);
+            }
+        }
+    int channel = 1;
+    int histSize =  256 ;
+    float range[] = { 0, 256 };
+    const float* histRange[] = { range };
+    Mat hist;
+    // we compute the histogram from the 0-th and 1-st channels
+
+    calcHist(&img, 1, 0, Mat(), hist, 1, &histSize, histRange, true, false);
+    Mat cumHist(hist.size(), hist.type());
+    cumHist.at<float>(0, 0) = hist.at<float>(0, 0);
+    for (int i = 1; i < hist.rows; i++)
+        cumHist.at<float>(i, 0) = cumHist.at<float>(i - 1, 0) + hist.at<float>(i, 0);
+    imwrite(fileName[0], img);
+    cout << "****************Maximal region************************\n";
+    for (map<int, char>::iterator it = val.begin(); it != val.end(); it++)
+        {
+        cout << "h" << it->first << "=\t" << hist.at<float>(it->first, 0) << "\t" << cumHist.at<float>(it->first, 0) << "\t\t";
+        if (it->first <= 254 && it->first >= 1)
+            {
+            cout << (cumHist.at<float>(it->first + 1, 0) - cumHist.at<float>(it->first - 1, 0)) / cumHist.at<float>(it->first, 0);
+            }
+        cout << endl;
+        }
+    cout << "****************Minimal region************************\n";
+    cumHist.at<float>(255, 0) = hist.at<float>(255, 0);
+    for (int i = 254; i >= 0; i--)
+        cumHist.at<float>(i, 0) = cumHist.at<float>(i + 1, 0) + hist.at<float>(i, 0);
+    map<int, char>::iterator it = val.end();
+    for (it--; it != val.begin(); it--)
+        {
+        cout << "h" << it->first << "=\t" << hist.at<float>(it->first, 0) << "\t" << cumHist.at<float>(it->first, 0) << "\t\t";
+        if (it->first <= 254 && it->first >= 1)
+            {
+            cout << (cumHist.at<float>(it->first - 1, 0) - cumHist.at<float>(it->first + 1, 0)) / cumHist.at<float>(it->first, 0);
+            }
+        cout << endl;
+        }
+    // img = imread("C:/Users/laurent_2/Pictures/basketball1.png", IMREAD_GRAYSCALE);
+
+    MSERParams pDefaultMSER;
+    // Descriptor array (BLOB or MSER)
+    vector<String> typeDesc;
+    // Param array for BLOB
+    // Param array for MSER
+    vector<MSERParams> pMSER;
+    vector<MSERParams>::iterator itMSER;
+
+    // Color palette
+    vector<Vec3b>  palette;
+    for (int i = 0; i<65536; i++)
+        palette.push_back(Vec3b((uchar)rand(), (uchar)rand(), (uchar)rand()));
+    help();
+
+    typeDesc.push_back("MSER");
+    pMSER.push_back(pDefaultMSER);
+    pMSER.back().delta = 1;
+    pMSER.back().minArea = 1;
+    pMSER.back().maxArea = 180000;
+    pMSER.back().maxVariation = 500;
+    pMSER.back().minDiversity = 0;
+    pMSER.back().pass2Only = true;
+    itMSER = pMSER.begin();
+    vector<double> desMethCmp;
+    Ptr<Feature2D> b;
+    String label;
+    // Descriptor loop
+    vector<String>::iterator itDesc;
+    for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); itDesc++)
+        {
+        vector<KeyPoint> keyImg1;
+        if (*itDesc == "MSER"){
+            if (img.type() == CV_8UC3)
+                {
+                b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity, itMSER->maxEvolution,
+                                 itMSER->areaThreshold, itMSER->minMargin, itMSER->edgeBlurSize);
+                b.dynamicCast<MSER>()->setPass2Only(itMSER->pass2Only);
+                }
+            else
+                {
+                b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity);
+                }
+            }
+        try {
+            // We can detect keypoint with detect method
+            vector<KeyPoint>  keyImg;
+            vector<Rect>  zone;
+            vector<vector <Point>>  region;
+            Mat     desc, result(img.rows, img.cols, CV_8UC3);
+            int nb = img.channels();
+
+            if (b.dynamicCast<MSER>() != NULL)
+                {
+                Ptr<MSER> sbd = b.dynamicCast<MSER>();
+                sbd->detectRegions(img, region, zone);
+                int i = 0;
+                result = Scalar(0, 0, 0);
+                for (vector<Rect>::iterator r = zone.begin(); r != zone.end(); r++, i++)
+                    {
+                    // we draw a white rectangle which include all region pixels
+                    rectangle(result, *r, Vec3b(255, 0, 0), 2);
+                    }
+                i = 0;
+                for (vector<vector <Point>>::iterator itr = region.begin(); itr != region.end(); itr++, i++)
+                    {
+                    for (vector <Point>::iterator itp = region[i].begin(); itp != region[i].end(); itp++)
+                        {
+                        // all pixels belonging to region are red
+                        result.at<Vec3b>(itp->y, itp->x) = Vec3b(0, 0, 128);
+                        }
+                    }
+                }
+            namedWindow(*itDesc + label, WINDOW_AUTOSIZE);
+            imshow(*itDesc + label, result);
+            imshow("Original", img);
+            FileStorage fs(*itDesc + "_" + fileName[0] + ".xml", FileStorage::WRITE);
+            fs << *itDesc << keyImg;
+            waitKey();
+            }
+        catch (Exception& e)
+            {
+            cout << "Feature : " << *itDesc << "\n";
+            cout << e.msg << endl;
+            }
+        }
+    return;
+    }
