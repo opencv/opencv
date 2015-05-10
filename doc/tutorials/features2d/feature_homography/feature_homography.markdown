@@ -20,6 +20,7 @@ This tutorial code's is shown lines below.
 #include <stdio.h>
 #include <iostream>
 #include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/calib3d.hpp"
@@ -50,8 +51,8 @@ int main( int argc, char** argv )
   std::vector<KeyPoint> keypoints_object, keypoints_scene;
   Mat descriptors_object, descriptors_scene;
 
-  detector->detectAndCompute( img_object, keypoints_object, descriptors_object );
-  detector->detectAndCompute( img_scene, keypoints_scene, descriptors_scene );
+  detector->detectAndCompute( img_object, Mat(), keypoints_object, descriptors_object );
+  detector->detectAndCompute( img_scene, Mat(), keypoints_scene, descriptors_scene );
 
   //-- Step 2: Matching descriptor vectors using FLANN matcher
   FlannBasedMatcher matcher;
@@ -81,13 +82,13 @@ int main( int argc, char** argv )
   Mat img_matches;
   drawMatches( img_object, keypoints_object, img_scene, keypoints_scene,
                good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-               vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+               std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 
   //-- Localize the object
   std::vector<Point2f> obj;
   std::vector<Point2f> scene;
 
-  for( int i = 0; i < good_matches.size(); i++ )
+  for( size_t i = 0; i < good_matches.size(); i++ )
   {
     //-- Get the keypoints from the good matches
     obj.push_back( keypoints_object[ good_matches[i].queryIdx ].pt );
