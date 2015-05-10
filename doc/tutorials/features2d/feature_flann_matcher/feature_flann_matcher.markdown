@@ -58,13 +58,13 @@ int main( int argc, char** argv )
   int minHessian = 400;
 
   Ptr<SURF> detector = SURF::create();
-  detector->setMinHessian(minHessian);
+  detector->setHessianThreshold(minHessian);
 
   std::vector<KeyPoint> keypoints_1, keypoints_2;
   Mat descriptors_1, descriptors_2;
 
-  detector->detectAndCompute( img_1, keypoints_1, descriptors_1 );
-  detector->detectAndCompute( img_2, keypoints_2, descriptors_2 );
+  detector->detectAndCompute( img_1, Mat(), keypoints_1, descriptors_1 );
+  detector->detectAndCompute( img_2, Mat(), keypoints_2, descriptors_2 );
 
   //-- Step 2: Matching descriptor vectors using FLANN matcher
   FlannBasedMatcher matcher;
