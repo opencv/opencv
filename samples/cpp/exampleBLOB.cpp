@@ -16,7 +16,7 @@ static void help()
 }
 
 
-String Legende(SimpleBlobDetector::Params &pAct)
+static String Legende(SimpleBlobDetector::Params &pAct)
 {
     String s = "";
     if (pAct.filterByArea)
@@ -103,13 +103,13 @@ int main(int argc, char *argv[])
     pDefaultBLOB.maxArea = 5000;
     pDefaultBLOB.filterByCircularity = false;
     pDefaultBLOB.minCircularity = 0.9f;
-    pDefaultBLOB.maxCircularity = std::numeric_limits<float>::max();
+    pDefaultBLOB.maxCircularity = (float)1e37;
     pDefaultBLOB.filterByInertia = false;
     pDefaultBLOB.minInertiaRatio = 0.1f;
-    pDefaultBLOB.maxInertiaRatio = std::numeric_limits<float>::max();
+    pDefaultBLOB.maxInertiaRatio = (float)1e37;
     pDefaultBLOB.filterByConvexity = false;
     pDefaultBLOB.minConvexity = 0.95f;
-    pDefaultBLOB.maxConvexity = std::numeric_limits<float>::max();
+    pDefaultBLOB.maxConvexity = (float)1e37;
     // Descriptor array (BLOB or MSER)
     vector<String> typeDesc;
     // Param array for BLOB
@@ -125,12 +125,8 @@ int main(int argc, char *argv[])
     }
     help();
 
-    typeDesc.push_back("BLOB");
-    pBLOB.push_back(pDefaultBLOB);
-    pBLOB.back().filterByColor = true;
-    pBLOB.back().blobColor = 0;
 
-    // This descriptor are going to be detect and compute BLOBS with 5 differents params
+    // This descriptor are going to be detect and compute BLOBS with 6 differents params
     // Param for first BLOB detector we want all
     typeDesc.push_back("BLOB");    // see http://docs.opencv.org/trunk/d0/d7a/classcv_1_1SimpleBlobDetector.html
     pBLOB.push_back(pDefaultBLOB);
@@ -153,12 +149,17 @@ int main(int argc, char *argv[])
     pBLOB.back().filterByInertia = true;
     pBLOB.back().minInertiaRatio = 0;
     pBLOB.back().maxInertiaRatio = (float)0.2;
-    // Param for Fourth BLOB detector we want ratio inertia
+    // Param for fifth BLOB detector we want ratio inertia
     typeDesc.push_back("BLOB");
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByConvexity = true;
     pBLOB.back().minConvexity = 0.;
     pBLOB.back().maxConvexity = (float)0.9;
+    // Param for six BLOB detector we want blob with gravity center color equal to 0 bug #4321 must be fixed
+    typeDesc.push_back("BLOB");
+    pBLOB.push_back(pDefaultBLOB);
+    pBLOB.back().filterByColor = true;
+    pBLOB.back().blobColor = 0;
 
     itBLOB = pBLOB.begin();
     vector<double> desMethCmp;
@@ -180,7 +181,7 @@ int main(int argc, char *argv[])
             // We can detect keypoint with detect method
             vector<KeyPoint>  keyImg;
             vector<Rect>  zone;
-            vector<vector <Point>>  region;
+            vector<vector <Point> >  region;
             Mat     desc, result(img.rows, img.cols, CV_8UC3);
             if (b.dynamicCast<SimpleBlobDetector>() != NULL)
             {
