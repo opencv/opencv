@@ -293,38 +293,52 @@ int main(int argc, char *argv[])
 
 void Example_MSER(vector<String> &fileName)
 {
-    Mat img(600, 800, CV_8UC1);
+    Mat img(800, 800, CV_8UC1);
     fileName.push_back("SyntheticImage.bmp");
     map<int, char> val;
-    int fond = 255;
+    int fond = 0;
     img = Scalar(fond);
     val[fond] = 1;
-    Point p[] = { Point(img.cols / 4, img.rows / 4), Point(3 * img.cols / 4, img.rows / 4) };
-    for (int j = 0; j<1; j++)
-        {
-        for (int i = 1; i<min(img.cols / 4, img.rows / 4); i += 2)
-            {
-            int v = 200 - (i / 40);
-            Rect r(p[j] - Point(i / 2, i / 2), Size(i, i));
-            rectangle(img, r, Scalar(v), 1);
-            if (val.find(v) == val.end())
-                val[v] = 1;
-            //circle(img, p[j], i, Scalar(255 - (j + 1)*(i / 30)),2);
-            }
-        }
-    for (int j = 1; j<2; j++)
-        {
-        for (int i = 1; i<min(img.cols / 4, img.rows / 4); i += 2)
-            {
-            int v = i / 40+30;
-            Rect r(p[j] - Point(i / 2, i / 2), Size(i, i));
+    int width1[]={390,380,300,290,280,270,260,250,210,190,150,100, 80,70};
+    int color1[]={ 80,180,160,140,120,100, 90,110,170,150,140,100,220};
+    Point p0(10, 10);
+    int *width,*color;
 
-            rectangle(img, r, Scalar(v), 1);
-            if (val.find(v) == val.end())
-                val[v] = 1;
-            //circle(img, p[j], i, Scalar(255 - (j + 1)*(i / 30)),2);
-            }
+    width = width1;
+    color = color1;
+    for (int i = 0; i<13; i++)
+        {
+        rectangle(img, Rect(p0, Size(width[i], width[i])), Scalar(color[i]), 1);
+        p0 += Point((width[i] - width[i + 1]) / 2, (width[i] - width[i + 1]) / 2);
+        floodFill(img, p0, Scalar(color[i]));
+
         }
+    p0 = Point(200, 600);
+    for (int i = 0; i<13; i++)
+        {
+        circle(img, p0, width[i] / 2, Scalar(color[i]), 1);
+        floodFill(img, p0, Scalar(color[i]));
+
+        }
+    for (int i = 0; i<13; i++)
+        color1[i] =  255 - color1[i];
+    p0 = Point(410, 10);
+    for (int i = 0; i<13; i++)
+        {
+        rectangle(img, Rect(p0, Size(width[i], width[i])), Scalar(color[i]), 1);
+        p0 += Point((width[i] - width[i + 1]) / 2, (width[i] - width[i + 1]) / 2);
+        floodFill(img, p0, Scalar(color[i]));
+
+        }
+
+    p0 = Point(600, 600);
+    for (int i = 0; i<13; i++)
+        {
+        circle(img, p0, width[i]/2,Scalar(color[i]), 1);
+        floodFill(img, p0 , Scalar(color[i]));
+
+        }
+
     int channel = 1;
     int histSize =  256 ;
     float range[] = { 0, 256 };
@@ -339,27 +353,33 @@ void Example_MSER(vector<String> &fileName)
         cumHist.at<float>(i, 0) = cumHist.at<float>(i - 1, 0) + hist.at<float>(i, 0);
     imwrite(fileName[0], img);
     cout << "****************Maximal region************************\n";
-    for (map<int, char>::iterator it = val.begin(); it != val.end(); it++)
+    cout << "i\th\t\tsh\t\tq\n";
+    cout << 0 << "\t" << hist.at<float>(0, 0) << "\t\t" << cumHist.at<float>(0, 0) << "\t\t\n";
+    for (int i = 1; i < hist.rows-1 ; i++)
         {
-        cout << "h" << it->first << "=\t" << hist.at<float>(it->first, 0) << "\t" << cumHist.at<float>(it->first, 0) << "\t\t";
-        if (it->first <= 254 && it->first >= 1)
+        if (cumHist.at<float>(i, 0)>0)
             {
-            cout << (cumHist.at<float>(it->first + 1, 0) - cumHist.at<float>(it->first - 1, 0)) / cumHist.at<float>(it->first, 0);
+            cout << i << "\t" << hist.at<float>(i, 0) << "\t\t" << cumHist.at<float>(i, 0) << "\t\t" << (cumHist.at<float>(i + 1, 0) - cumHist.at<float>(i, 0)) / cumHist.at<float>(i, 0);
             }
+        else
+            cout << i << "\t" << hist.at<float>(i, 0) << "\t\t" << cumHist.at<float>(i, 0) << "\t\t";
         cout << endl;
         }
+    cout << 255 << "\t" << hist.at<float>(255, 0) << "\t\t" << cumHist.at<float>(255, 0) << "\t\t\n";
     cout << "****************Minimal region************************\n";
     cumHist.at<float>(255, 0) = hist.at<float>(255, 0);
     for (int i = 254; i >= 0; i--)
         cumHist.at<float>(i, 0) = cumHist.at<float>(i + 1, 0) + hist.at<float>(i, 0);
-    map<int, char>::iterator it = val.end();
-    for (it--; it != val.begin(); it--)
+    cout << "Minimal region\ni\th\t\tsh\t\tq\n";
+    cout << 255-255 << "\t" << hist.at<float>(255, 0) << "\t\t" << cumHist.at<float>(255, 0) << "\t\t\n";
+    for (int i = 254; i>=0; i--)
         {
-        cout << "h" << it->first << "=\t" << hist.at<float>(it->first, 0) << "\t" << cumHist.at<float>(it->first, 0) << "\t\t";
-        if (it->first <= 254 && it->first >= 1)
+        if (cumHist.at<float>(i, 0)>0)
             {
-            cout << (cumHist.at<float>(it->first - 1, 0) - cumHist.at<float>(it->first + 1, 0)) / cumHist.at<float>(it->first, 0);
+            cout << 255 - i << "\t" << i << "\t" << hist.at<float>(i, 0) << "\t\t" << cumHist.at<float>(i, 0) << "\t\t" << (cumHist.at<float>(i + 1, 0) - cumHist.at<float>(i, 0)) / cumHist.at<float>(i, 0);
             }
+        else
+            cout << 255 - i << "\t" << i << "\t" << hist.at<float>(i, 0) << "\t\t" << cumHist.at<float>(i, 0) << "\t\t";
         cout << endl;
         }
     // img = imread("C:/Users/laurent_2/Pictures/basketball1.png", IMREAD_GRAYSCALE);
@@ -380,10 +400,10 @@ void Example_MSER(vector<String> &fileName)
 
     typeDesc.push_back("MSER");
     pMSER.push_back(pDefaultMSER);
-    pMSER.back().delta = 1;
+    pMSER.back().delta = 1000;
     pMSER.back().minArea = 1;
     pMSER.back().maxArea = 180000;
-    pMSER.back().maxVariation = 500;
+    pMSER.back().maxVariation = 1.701;
     pMSER.back().minDiversity = 0;
     pMSER.back().pass2Only = true;
     itMSER = pMSER.begin();
@@ -400,11 +420,11 @@ void Example_MSER(vector<String> &fileName)
                 {
                 b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity, itMSER->maxEvolution,
                                  itMSER->areaThreshold, itMSER->minMargin, itMSER->edgeBlurSize);
-                b.dynamicCast<MSER>()->setPass2Only(itMSER->pass2Only);
                 }
             else
                 {
                 b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity);
+                b.dynamicCast<MSER>()->setPass2Only(itMSER->pass2Only);
                 }
             }
         try {
@@ -421,21 +441,21 @@ void Example_MSER(vector<String> &fileName)
                 sbd->detectRegions(img, region, zone);
                 int i = 0;
                 result = Scalar(0, 0, 0);
-                for (vector<Rect>::iterator r = zone.begin(); r != zone.end(); r++, i++)
-                    {
-                    // we draw a white rectangle which include all region pixels
-                    rectangle(result, *r, Vec3b(255, 0, 0), 2);
-                    }
-                i = 0;
                 for (vector<vector <Point>>::iterator itr = region.begin(); itr != region.end(); itr++, i++)
+                {
+                    for (vector <Point>::iterator itp = region[i].begin(); itp != region[i].end(); itp+=2)
                     {
-                    for (vector <Point>::iterator itp = region[i].begin(); itp != region[i].end(); itp++)
-                        {
                         // all pixels belonging to region are red
                         result.at<Vec3b>(itp->y, itp->x) = Vec3b(0, 0, 128);
-                        }
                     }
                 }
+                i = 0;
+                 for (vector<Rect>::iterator r = zone.begin(); r != zone.end(); r++, i++)
+                {
+                    // we draw a white rectangle which include all region pixels
+                    rectangle(result, *r, Vec3b(255, 0, 0), 2);
+                }
+               }
             namedWindow(*itDesc + label, WINDOW_AUTOSIZE);
             imshow(*itDesc + label, result);
             imshow("Original", img);
