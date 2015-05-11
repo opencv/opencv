@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
             label = Legende(*itBLOB);
             itBLOB++;
         }
-        try 
+        try
         {
             // We can detect keypoint with detect method
             vector<KeyPoint>  keyImg;
@@ -204,7 +204,3 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
-
-
-
-
