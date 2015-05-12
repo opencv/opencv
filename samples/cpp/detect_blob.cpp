@@ -9,9 +9,9 @@ using namespace cv;
 
 static void help()
 {
-    cout << "\n This program demonstrates how to use BLOB and MSER to detect region \n"
+    cout << "\n This program demonstrates how to use BLOB to detect and filter region \n"
         "Usage: \n"
-        "  ./BLOB_MSER <image1(../data/forme2.jpg as default)>\n"
+        "  ./detect_blob <image1(../data/detect_blob.png as default)>\n"
         "Press a key when image window is active to change descriptor";
 }
 
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     Mat img(600, 800, CV_8UC1);
     if (argc == 1)
     {
-        fileName.push_back("../data/example_blob.bmp");
+        fileName.push_back("../data/detect_blob.png");
     }
     else if (argc == 2)
     {
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
         help();
         return(0);
     }
-    img = imread(fileName[0], IMREAD_UNCHANGED);
+    img = imread(fileName[0], IMREAD_COLOR);
     if (img.rows*img.cols <= 0)
     {
         cout << "Image " << fileName[0] << " is empty or cannot be found\n";
@@ -110,13 +110,11 @@ int main(int argc, char *argv[])
     pDefaultBLOB.filterByConvexity = false;
     pDefaultBLOB.minConvexity = 0.95f;
     pDefaultBLOB.maxConvexity = (float)1e37;
-    // Descriptor array (BLOB or MSER)
+    // Descriptor array for BLOB
     vector<String> typeDesc;
     // Param array for BLOB
     vector<SimpleBlobDetector::Params> pBLOB;
     vector<SimpleBlobDetector::Params>::iterator itBLOB;
-    // Param array for MSER
-
     // Color palette
     vector< Vec3b >  palette;
     for (int i = 0; i<65536; i++)
