@@ -68,6 +68,7 @@
 @property (nonatomic, readonly) BOOL captureSessionLoaded;
 
 @property (nonatomic, assign) int defaultFPS;
+@property (nonatomic, readonly) AVCaptureVideoPreviewLayer *captureVideoPreviewLayer;
 @property (nonatomic, assign) AVCaptureDevicePosition defaultAVCaptureDevicePosition;
 @property (nonatomic, assign) AVCaptureVideoOrientation defaultAVCaptureVideoOrientation;
 @property (nonatomic, assign) BOOL useAVCaptureVideoPreviewLayer;
@@ -142,6 +143,7 @@
 - (void)layoutPreviewLayer;
 - (void)saveVideo;
 - (NSURL *)videoFileURL;
+- (NSString *)videoFileString;
 
 
 @end
