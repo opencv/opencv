@@ -52,9 +52,9 @@
 #include <iostream>
 
 /// Geospatial Data Abstraction Library
-#include <gdal/cpl_conv.h>
-#include <gdal/gdal_priv.h>
-#include <gdal/gdal.h>
+#include <cpl_conv.h>
+#include <gdal_priv.h>
+#include <gdal.h>
 
 
 /// Start of CV Namespace
