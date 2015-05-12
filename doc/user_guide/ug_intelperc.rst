@@ -7,7 +7,7 @@ Senz3D and Intel Perceptual Computing SDK
 Using Creative Senz3D and other Intel Perceptual Computing SDK compatible depth sensors
 =======================================================================================
 
-Depth sensors compatible with Intel Perceptual Computing SDK are supported through ``VideoCapture`` class. Depth map, RGB image and some other formats of output can be retrieved by using familiar interface of ``VideoCapture``.
+Depth sensors compatible with Intel Perceptual Computing SDK are supported through ``VideoCapture`` class. Depth map, BGR image and some other formats of output can be retrieved by using familiar interface of ``VideoCapture``.
 
 In order to use depth sensor with OpenCV you should do the following preliminary steps:
 
@@ -28,7 +28,7 @@ VideoCapture can retrieve the following data:
       * ``CV_CAP_INTELPERC_UVDEPTH_MAP``     - each pixel contains two 32-bit floating point values in the range of 0-1, representing the mapping of depth coordinates to the color coordinates. (CV_32FC2)
       * ``CV_CAP_INTELPERC_IR_MAP``          - each pixel is a 16-bit integer. The value indicates the intensity of the reflected laser beam. (CV_16UC1)
 #.
-    data given from RGB image generator:
+    data given from BGR image generator:
       * ``CV_CAP_INTELPERC_IMAGE``           - color image. (CV_8UC3)
 
 In order to get depth map from depth sensor use ``VideoCapture::operator >>``, e. g. ::

@@ -44,14 +44,14 @@ or
 Scalar
 -------
 * Represents a 4-element vector. The type Scalar is widely used in OpenCV for passing pixel values.
-* In this tutorial, we will use it extensively to represent RGB color values (3 parameters). It is not necessary to define the last argument if it is not going to be used.
+* In this tutorial, we will use it extensively to represent BGR color values (3 parameters). It is not necessary to define the last argument if it is not going to be used.
 * Let's see an example, if we are asked for a color argument and we give:
 
   .. code-block:: cpp
 
      Scalar( a, b, c )
 
-  We would be defining a RGB color such as: *Red = c*, *Green = b* and *Blue = a*
+  We would be defining a BGR color such as: *Blue = a*, *Green = b* and *Red = c*
 
 
 Code
@@ -135,7 +135,7 @@ Explanation
 
         * Draw a line from Point **start** to Point **end**
         * The line is displayed in the image **img**
-        * The line color is defined by **Scalar( 0, 0, 0)** which is the RGB value correspondent to **Black**
+        * The line color is defined by **Scalar( 0, 0, 0)** which is the BGR value correspondent to **Black**
         * The line thickness is set to **thickness** (in this case 2)
         * The line is a 8-connected one (**lineType** = 8)
 
