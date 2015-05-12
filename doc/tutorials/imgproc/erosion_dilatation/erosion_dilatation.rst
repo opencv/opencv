@@ -177,7 +177,7 @@ Explanation
 
    .. container:: enumeratevisibleitemswithsquare
 
-      * Load an image (can be RGB or grayscale)
+      * Load an image (can be BGR or grayscale)
       * Create two windows (one for dilation output, the other for erosion)
       * Create a set of 02 Trackbars for each operation:
 

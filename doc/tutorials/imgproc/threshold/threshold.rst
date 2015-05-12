@@ -167,7 +167,7 @@ The tutorial code's is shown lines below. You can also download it from `here <h
      src = imread( argv[1], 1 );
 
      /// Convert the image to Gray
-     cvtColor( src, src_gray, CV_RGB2GRAY );
+     cvtColor( src, src_gray, CV_BGR2GRAY );
 
      /// Create a window to display results
      namedWindow( window_name, CV_WINDOW_AUTOSIZE );
@@ -221,14 +221,14 @@ Explanation
 
 #. Let's check the general structure of the program:
 
-   * Load an image. If it is RGB we convert it to Grayscale. For this, remember that we can use the function :cvt_color:`cvtColor <>`:
+   * Load an image. If it is BGR we convert it to Grayscale. For this, remember that we can use the function :cvt_color:`cvtColor <>`:
 
      .. code-block:: cpp
 
         src = imread( argv[1], 1 );
 
         /// Convert the image to Gray
-        cvtColor( src, src_gray, CV_RGB2GRAY );
+        cvtColor( src, src_gray, CV_BGR2GRAY );
 
 
    * Create a window to display the result
