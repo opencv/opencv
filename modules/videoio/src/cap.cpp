@@ -359,54 +359,62 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
  * Videoreader dispatching method: it tries to find the first
  * API that can access a given filename.
  */
-CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
+CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, int apiPreference)
 {
     CvCapture * result = 0;
 
+    switch(apiPreference) {
+    default:
+    case CV_CAP_FFMPEG:
 #ifdef HAVE_FFMPEG
-    if (! result)
-        result = cvCreateFileCapture_FFMPEG_proxy (filename);
+        if (! result)
+            result = cvCreateFileCapture_FFMPEG_proxy (filename);
 #endif
-
+    case CV_CAP_VFW:
 #ifdef HAVE_VFW
-    if (! result)
-        result = cvCreateFileCapture_VFW (filename);
+        if (! result)
+            result = cvCreateFileCapture_VFW (filename);
 #endif
-
+    case CV_CAP_MSMF:
 #ifdef HAVE_MSMF
-    if (! result)
-        result = cvCreateFileCapture_MSMF (filename);
+        if (! result)
+            result = cvCreateFileCapture_MSMF (filename);
 #endif
-
 #ifdef HAVE_XINE
-    if (! result)
-        result = cvCreateFileCapture_XINE (filename);
+        if (! result)
+            result = cvCreateFileCapture_XINE (filename);
 #endif
-
+    case CV_CAP_GSTREAMER:
 #ifdef HAVE_GSTREAMER
-    if (! result)
-        result = cvCreateCapture_GStreamer (CV_CAP_GSTREAMER_FILE, filename);
+        if (! result)
+            result = cvCreateCapture_GStreamer (CV_CAP_GSTREAMER_FILE, filename);
 #endif
-
+    case CV_CAP_QT:
 #if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
-    if (! result)
-        result = cvCreateFileCapture_QT (filename);
+        if (! result)
+            result = cvCreateFileCapture_QT (filename);
 #endif
-
+    case CV_CAP_AVFOUNDATION:
 #ifdef HAVE_AVFOUNDATION
-    if (! result)
-        result = cvCreateFileCapture_AVFoundation (filename);
+        if (! result)
+            result = cvCreateFileCapture_AVFoundation (filename);
 #endif
-
+    case CV_CAP_OPENNI:
 #ifdef HAVE_OPENNI
-    if (! result)
-        result = cvCreateFileCapture_OpenNI (filename);
+        if (! result)
+            result = cvCreateFileCapture_OpenNI (filename);
 #endif
-
-    if (! result)
-        result = cvCreateFileCapture_Images (filename);
+    case CV_CAP_IMAGES:
+        if (! result)
+            result = cvCreateFileCapture_Images (filename);
+    }
 
     return result;
+}
+
+CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
+{
+    return cvCreateFileCaptureWithPreference(filename, CV_CAP_ANY);
 }
 
 /**
@@ -615,14 +623,19 @@ static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int _fourcc
 VideoCapture::VideoCapture()
 {}
 
-VideoCapture::VideoCapture(const String& filename)
+VideoCapture::VideoCapture(const String& filename, int apiPreference)
 {
-    open(filename);
+    open(filename, apiPreference);
 }
 
-VideoCapture::VideoCapture(int device)
+VideoCapture::VideoCapture(const String& filename)
 {
-    open(device);
+    open(filename, CAP_ANY);
+}
+
+VideoCapture::VideoCapture(int index)
+{
+    open(index);
 }
 
 VideoCapture::~VideoCapture()
@@ -631,24 +644,29 @@ VideoCapture::~VideoCapture()
     cap.release();
 }
 
-bool VideoCapture::open(const String& filename)
+bool VideoCapture::open(const String& filename, int apiPreference)
 {
     if (isOpened()) release();
     icap = IVideoCapture_create(filename);
     if (!icap.empty())
         return true;
 
-    cap.reset(cvCreateFileCapture(filename.c_str()));
+    cap.reset(cvCreateFileCaptureWithPreference(filename.c_str(), apiPreference));
     return isOpened();
 }
 
-bool VideoCapture::open(int device)
+bool VideoCapture::open(const String& filename)
+{
+    return open(filename, CAP_ANY);
+}
+
+bool VideoCapture::open(int index)
 {
     if (isOpened()) release();
-    icap = IVideoCapture_create(device);
+    icap = IVideoCapture_create(index);
     if (!icap.empty())
         return true;
-    cap.reset(cvCreateCameraCapture(device));
+    cap.reset(cvCreateCameraCapture(index));
     return isOpened();
 }
 
