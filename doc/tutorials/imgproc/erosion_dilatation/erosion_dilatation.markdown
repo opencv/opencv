@@ -69,7 +69,7 @@ Explanation
 -#  Most of the stuff shown is known by you (if you have any doubt, please refer to the tutorials in
     previous sections). Let's check the general structure of the program:
 
-    -   Load an image (can be RGB or grayscale)
+    -   Load an image (can be BGR or grayscale)
     -   Create two windows (one for dilation output, the other for erosion)
     -   Create a set of 02 Trackbars for each operation:
         -   The first trackbar "Element" returns either **erosion_elem** or **dilation_elem**

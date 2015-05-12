@@ -194,15 +194,15 @@ while(1):
     mag, ang = cv2.cartToPolar(flow[...,0], flow[...,1])
     hsv[...,0] = ang*180/np.pi/2
     hsv[...,2] = cv2.normalize(mag,None,0,255,cv2.NORM_MINMAX)
-    rgb = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
+    bgr = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
 
-    cv2.imshow('frame2',rgb)
+    cv2.imshow('frame2',bgr)
     k = cv2.waitKey(30) & 0xff
     if k == 27:
         break
     elif k == ord('s'):
         cv2.imwrite('opticalfb.png',frame2)
-        cv2.imwrite('opticalhsv.png',rgb)
+        cv2.imwrite('opticalhsv.png',bgr)
     prvs = next
 
 cap.release()
