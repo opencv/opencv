@@ -34,7 +34,7 @@ Object Tracking
 ---------------
 
 Now we know how to convert BGR image to HSV, we can use this to extract a colored object. In HSV, it
-is more easier to represent a color than RGB color-space. In our application, we will try to extract
+is more easier to represent a color than in BGR color-space. In our application, we will try to extract
 a blue colored object. So here is the method:
 
 -   Take each frame of the video
