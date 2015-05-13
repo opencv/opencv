@@ -341,7 +341,7 @@ public:
 
     /** @brief Re-initializes Kalman filter. The previous content is destroyed.
 
-    @param dynamParams Dimensionalityensionality of the state.
+    @param dynamParams Dimensionality of the state.
     @param measureParams Dimensionality of the measurement.
     @param controlParams Dimensionality of the control vector.
     @param type Type of the created matrices that should be CV_32F or CV_64F.
