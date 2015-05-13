@@ -3741,7 +3741,8 @@ enum ColormapTypes
     COLORMAP_COOL = 8, //!< ![cool](pics/colormaps/colorscale_cool.jpg)
     COLORMAP_HSV = 9, //!< ![HSV](pics/colormaps/colorscale_hsv.jpg)
     COLORMAP_PINK = 10, //!< ![pink](pics/colormaps/colorscale_pink.jpg)
-    COLORMAP_HOT = 11 //!< ![hot](pics/colormaps/colorscale_hot.jpg)
+    COLORMAP_HOT = 11, //!< ![hot](pics/colormaps/colorscale_hot.jpg)
+    COLORMAP_PARULA = 12 //!< ![hot](pics/colormaps/colorscale_parula.jpg)
 };
 
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
