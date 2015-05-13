@@ -1530,7 +1530,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             # finalize()
             ci.j_code.write(
 """
-    protected void delete() {
+    public void delete() {
         delete(nativeObj);
     }
 """ )
