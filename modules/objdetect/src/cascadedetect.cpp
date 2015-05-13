@@ -680,7 +680,6 @@ void HaarEvaluator::computeOptFeatures()
 }
 
 bool HaarEvaluator::setImage(InputArray _image, const std::vector<float>& _scales){
-    tofs = 0;
     return FeatureEvaluator::setImage(_image, _scales);
 }
 
