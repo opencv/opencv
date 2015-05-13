@@ -1,4 +1,4 @@
-Using Creative Senz3D and other Intel Perceptual Computing SDK compatible depth sensors {#tutorial_ug_intelperc}
+Using Creative Senz3D and other Intel Perceptual Computing SDK compatible depth sensors {#tutorial_intelperc}
 =======================================================================================
 
 Depth sensors compatible with Intel Perceptual Computing SDK are supported through VideoCapture
@@ -78,5 +78,5 @@ there are two flags that should be used to set/get property of the needed genera
     flag value is assumed by default if neither of the two possible values of the property is set.
 
 For more information please refer to the example of usage
-[intelpercccaptureccpp](https://github.com/Itseez/opencv/tree/master/samples/cpp/intelperc_capture.cpp)
+[intelperc_capture.cpp](https://github.com/Itseez/opencv/tree/master/samples/cpp/intelperc_capture.cpp)
 in opencv/samples/cpp folder.

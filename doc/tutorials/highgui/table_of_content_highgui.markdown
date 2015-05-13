@@ -37,3 +37,7 @@ use the built-in graphical user interface of the library.
     *Author:* Marvin Smith
 
     Read common GIS Raster and DEM files to display and manipulate geographic data.
+
+-   @subpage tutorial_kinect_openni
+
+-   @subpage tutorial_intelperc
