@@ -3455,7 +3455,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
         bool symmetrical = (this->symmetryType & KERNEL_SYMMETRICAL) != 0;
         bool is_1_2_1 = ky[0] == 2 && ky[1] == 1;
         bool is_1_m2_1 = ky[0] == -2 && ky[1] == 1;
-        bool is_m1_0_1 = ky[1] == 1 || ky[1] == -1;
+        bool is_m1_0_1 = ky[0] == 0 && (ky[1] == 1 || ky[1] == -1);
         ST f0 = ky[0], f1 = ky[1];
         ST _delta = this->delta;
         CastOp castOp = this->castOp0;
@@ -3486,13 +3486,12 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+2] = castOp(s0);
                         D[i+3] = castOp(s1);
                     }
-                    #else
+                    #endif
                     for( ; i < width; i ++ )
                     {
                         ST s0 = S0[i] + S1[i]*2 + S2[i] + _delta;
                         D[i] = castOp(s0);
                     }
-                    #endif
                 }
                 else if( is_1_m2_1 )
                 {
@@ -3509,17 +3508,16 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+2] = castOp(s0);
                         D[i+3] = castOp(s1);
                     }
-                    #else
+                    #endif
                     for( ; i < width; i ++ )
                     {
                         ST s0 = S0[i] - S1[i]*2 + S2[i] + _delta;
                         D[i] = castOp(s0);
                     }
-                    #endif
                 }
                 else
                 {
-                   #if CV_ENABLE_UNROLLED
+                    #if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = (S0[i] + S2[i])*f1 + S1[i]*f0 + _delta;
@@ -3532,16 +3530,13 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+2] = castOp(s0);
                         D[i+3] = castOp(s1);
                     }
-                    #else
+                    #endif
                     for( ; i < width; i ++ )
                     {
                         ST s0 = (S0[i] + S2[i])*f1 + S1[i]*f0 + _delta;
                         D[i] = castOp(s0);
                     }
-                    #endif
                 }
-                for( ; i < width; i++ )
-                    D[i] = castOp((S0[i] + S2[i])*f1 + S1[i]*f0 + _delta);
             }
             else
             {
@@ -3549,7 +3544,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                 {
                     if( f1 < 0 )
                         std::swap(S0, S2);
-                   #if CV_ENABLE_UNROLLED
+                    #if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = S2[i] - S0[i] + _delta;
@@ -3562,19 +3557,18 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+2] = castOp(s0);
                         D[i+3] = castOp(s1);
                     }
-                    #else
+                    #endif
                     for( ; i < width; i ++ )
                     {
                         ST s0 = S2[i] - S0[i] + _delta;
                         D[i] = castOp(s0);
                     }
-                    #endif
                     if( f1 < 0 )
                         std::swap(S0, S2);
                 }
                 else
                 {
-                   #if CV_ENABLE_UNROLLED
+                    #if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = (S2[i] - S0[i])*f1 + _delta;
@@ -3588,10 +3582,9 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+3] = castOp(s1);
                     }
                     #endif
+                    for( ; i < width; i++ )
+                        D[i] = castOp((S2[i] - S0[i])*f1 + _delta);
                 }
-
-                for( ; i < width; i++ )
-                    D[i] = castOp((S2[i] - S0[i])*f1 + _delta);
             }
         }
     }
