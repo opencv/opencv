@@ -1654,4 +1654,18 @@ TEST(Imgproc_Warp, multichannel)
     }
 }
 
+TEST(Imgproc_GetAffineTransform, singularity)
+{
+    Point2f A_sample[3];
+    A_sample[0] = cv::Point2f(8, 9);
+    A_sample[1] = cv::Point2f(40, 41);
+    A_sample[2] = cv::Point2f(47, 48);
+    Point2f B_sample[3];
+    B_sample[0] = cv::Point2f(7.37465, 11.8295);
+    B_sample[1] = cv::Point2f(15.0113, 12.8994);
+    B_sample[2] = cv::Point2f(38.9943, 9.56297);
+    Mat trans = cv::getAffineTransform(A_sample, B_sample);
+    ASSERT_EQ(0.0, norm(trans, NORM_INF));
+}
+
 /* End of file. */
