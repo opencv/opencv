@@ -1668,4 +1668,28 @@ TEST(Imgproc_GetAffineTransform, singularity)
     ASSERT_EQ(0.0, norm(trans, NORM_INF));
 }
 
+TEST(Imgproc_Remap, DISABLED_memleak)
+{
+    Mat src;
+    const int N = 400;
+    src.create(N, N, CV_8U);
+    randu(src, 0, 256);
+    Mat map_x, map_y, dst;
+    dst.create( src.size(), src.type() );
+    map_x.create( src.size(), CV_32FC1 );
+    map_y.create( src.size(), CV_32FC1 );
+    randu(map_x, 0., N+0.);
+    randu(map_y, 0., N+0.);
+
+    for( int iter = 0; iter < 10000; iter++ )
+    {
+        if(iter % 100 == 0)
+        {
+            putchar('.');
+            fflush(stdout);
+        }
+        remap(src, dst, map_x, map_y, CV_INTER_LINEAR);
+    }
+}
+
 /* End of file. */
