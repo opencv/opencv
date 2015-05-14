@@ -119,4 +119,3 @@ protected:
     int         m_height;
     std::string m_window_name;
 };
-
