@@ -1,4 +1,4 @@
-Operations with images {#tutorial_ug_mat}
+Operations with images {#tutorial_mat_operations}
 ======================
 
 Input/Output
@@ -26,11 +26,6 @@ If you read a jpg file, a 3 channel image is created by default. If you need a g
 @note format of the file is determined by its extension.
 
 @note use imdecode and imencode to read and write image from/to memory rather than a file.
-
-XML/YAML
---------
-
-TBD
 
 Basic operations with images
 ----------------------------

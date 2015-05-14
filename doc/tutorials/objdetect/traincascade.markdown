@@ -1,4 +1,4 @@
-Cascade Classifier Training {#tutorial_ug_traincascade}
+Cascade Classifier Training {#tutorial_traincascade}
 ===========================
 
 Introduction

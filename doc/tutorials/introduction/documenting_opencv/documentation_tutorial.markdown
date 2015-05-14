@@ -77,8 +77,7 @@ Following scheme represents common documentation places for _opencv_ repository:
 <opencv>
 ├── doc             - doxygen config files, root page (root.markdown.in), BibTeX file (opencv.bib)
 │   ├── tutorials       - tutorials hierarchy (pages and images)
-│   ├── py_tutorials    - python tutorials hierarchy (pages and images)
-│   └── user_guide      - old user guide (pages and images)
+│   └── py_tutorials    - python tutorials hierarchy (pages and images)
 ├── modules
 │   └── <modulename>
 │       ├── doc         - documentation pages and images for module
