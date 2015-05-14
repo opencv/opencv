@@ -1632,4 +1632,26 @@ TEST(Resize, Area_half)
     }
 }
 
+TEST(Imgproc_Warp, multichannel)
+{
+    RNG& rng = theRNG();
+    for( int iter = 0; iter < 30; iter++ )
+    {
+        int width = rng.uniform(3, 333);
+        int height = rng.uniform(3, 333);
+        int cn = rng.uniform(1, 10);
+        Mat src(height, width, CV_8UC(cn)), dst;
+        //randu(src, 0, 256);
+        src.setTo(0.);
+
+        Mat rot = getRotationMatrix2D(Point2f(0.f, 0.f), 1, 1);
+        warpAffine(src, dst, rot, src.size());
+        ASSERT_EQ(0.0, norm(dst, NORM_INF));
+        Mat rot2 = Mat::eye(3, 3, rot.type());
+        rot.copyTo(rot2.rowRange(0, 2));
+        warpPerspective(src, dst, rot2, src.size());
+        ASSERT_EQ(0.0, norm(dst, NORM_INF));
+    }
+}
+
 /* End of file. */
