@@ -45,6 +45,8 @@ namespace cv
 
 enum { XY_SHIFT = 16, XY_ONE = 1 << XY_SHIFT, DRAWING_STORAGE_BLOCK = (1<<12) - 256 };
 
+static const int MAX_THICKNESS = 32767;
+
 struct PolyEdge
 {
     PolyEdge() : y0(0), y1(0), x(0), dx(0), next(0) {}
@@ -1664,7 +1666,7 @@ void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
-    CV_Assert( 0 <= thickness && thickness <= 255 );
+    CV_Assert( 0 <= thickness && thickness <= MAX_THICKNESS );
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
@@ -1699,7 +1701,7 @@ void rectangle( InputOutputArray _img, Point pt1, Point pt2,
     if( lineType == CV_AA && img.depth() != CV_8U )
         lineType = 8;
 
-    CV_Assert( thickness <= 255 );
+    CV_Assert( thickness <= MAX_THICKNESS );
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
@@ -1740,7 +1742,7 @@ void circle( InputOutputArray _img, Point center, int radius,
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
-    CV_Assert( radius >= 0 && thickness <= 255 &&
+    CV_Assert( radius >= 0 && thickness <= MAX_THICKNESS &&
         0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
@@ -1769,7 +1771,7 @@ void ellipse( InputOutputArray _img, Point center, Size axes,
         line_type = 8;
 
     CV_Assert( axes.width >= 0 && axes.height >= 0 &&
-        thickness <= 255 && 0 <= shift && shift <= XY_SHIFT );
+        thickness <= MAX_THICKNESS && 0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
     scalarToRawData(color, buf, img.type(), 0);
@@ -1795,7 +1797,7 @@ void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
         lineType = 8;
 
     CV_Assert( box.size.width >= 0 && box.size.height >= 0 &&
-               thickness <= 255 );
+               thickness <= MAX_THICKNESS );
 
     double buf[4];
     scalarToRawData(color, buf, img.type(), 0);
@@ -1857,7 +1859,7 @@ void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontour
         line_type = 8;
 
     CV_Assert( pts && npts && ncontours >= 0 &&
-               0 <= thickness && thickness <= 255 &&
+               0 <= thickness && thickness <= MAX_THICKNESS &&
                0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
@@ -2378,7 +2380,7 @@ cvDrawContours( void* _img, CvSeq* contour,
     if( !contour )
         return;
 
-    CV_Assert( thickness <= 255 );
+    CV_Assert( thickness <= MAX_THICKNESS );
 
     scalarToRawData( externalColor, ext_buf, img.type(), 0 );
     scalarToRawData( holeColor, hole_buf, img.type(), 0 );
