@@ -32,6 +32,9 @@ understanding how to manipulate the images on a pixel level.
     You'll find out how to scan images with neighbor access and use the @ref cv::filter2D
     function to apply kernel filters on images.
 
+-   @subpage tutorial_mat_operations
+
+    Reading/writing images from file, accessing pixels, primitive operations, visualizing images.
 
 -   @subpage tutorial_adding_images
 
