@@ -3960,7 +3960,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else
                     for( ; dx < X1; dx++, D += cn )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1], k;
+                        int sx = XY[dx*2], sy = XY[dx*2+1];
                         if( borderType == BORDER_CONSTANT &&
                             (sx >= ssize.width || sx+1 < 0 ||
                              sy >= ssize.height || sy+1 < 0) )
