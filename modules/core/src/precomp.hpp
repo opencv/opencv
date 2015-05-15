@@ -72,6 +72,20 @@
 #define GET_OPTIMIZED(func) (func)
 #endif
 
+inline void secure_cpy(void *dst,
+   size_t numberOfElements,
+   const void *src,
+   size_t count )
+{
+#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+    memcpy_s(dst, numberOfElements, src, count);
+#else
+    size_t real_size = numberOfElements > count ? count : numberOfElements;
+    memcpy(dst, src, real_size);
+#endif
+}
+
+
 namespace cv
 {
 

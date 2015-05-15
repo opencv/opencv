@@ -1711,16 +1711,9 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
         iterations = 1;
     }
 
-#if IPP_VERSION_X100 >= 801
-    CV_IPP_CHECK()
-    {
-        if( IPPMorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue) )
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-    }
-#endif
+
+    CV_IPP_RUN(IPP_VERSION_X100 >= 801, IPPMorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue))
+
 
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );

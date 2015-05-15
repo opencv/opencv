@@ -743,7 +743,11 @@ template<typename T> struct OpNot
     typedef T rtype;
     T operator()( T a, T ) const { return ~a; }
 };
-
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4100 )
+#endif
+#if defined(HAVE_IPP)
 #if (ARITHM_USE_IPP == 1)
 static inline void fixSteps(Size sz, size_t elemSize, size_t& step1, size_t& step2, size_t& step)
 {
@@ -752,22 +756,61 @@ static inline void fixSteps(Size sz, size_t elemSize, size_t& step1, size_t& ste
 }
 #endif
 
+static bool ipp_add8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz)
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAdd_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0))
+        return true;
+#endif
+    return false;
+}
+static bool ipp_add16u( const ushort* src1, size_t step1,
+                    const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz)
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAdd_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0))
+        return true;
+#endif
+    return false;
+}
+static bool ipp_add16s( const short* src1, size_t step1,
+                    const short* src2, size_t step2,
+                    short* dst, size_t step, Size sz)
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAdd_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0))
+        return true;
+#endif
+    return false;
+}
+static bool ipp_add32f( const float* src1, size_t step1,
+                    const float* src2, size_t step2,
+                    float* dst, size_t step, Size sz)
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAdd_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
+        return true;
+#endif
+    return false;
+}
+#endif
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
+
 static void add8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiAdd_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_add8u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<uchar, OpAdd<uchar>, IF_SIMD(VAdd<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -782,18 +825,8 @@ static void add16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiAdd_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_add16u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<ushort, OpAdd<ushort>, IF_SIMD(VAdd<ushort>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -801,18 +834,8 @@ static void add16s( const short* src1, size_t step1,
                     const short* src2, size_t step2,
                     short* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiAdd_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_add16s(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<short, OpAdd<short>, IF_SIMD(VAdd<short>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -827,18 +850,8 @@ static void add32f( const float* src1, size_t step1,
                     const float* src2, size_t step2,
                     float* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiAdd_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_add32f(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp32<float, OpAdd<float>, IF_SIMD(VAdd<float>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -849,22 +862,68 @@ static void add64f( const double* src1, size_t step1,
     vBinOp64<double, OpAdd<double>, IF_SIMD(VAdd<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4100 )
+#endif
+#if defined(HAVE_IPP)
+static bool ipp_sub8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiSub_8u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(sz), 0))
+        return  true;
+#endif
+    return false;
+}
+
+static bool ipp_sub16u( const ushort* src1, size_t step1,
+                    const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiSub_16u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(sz), 0))
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_sub16s( const short* src1, size_t step1,
+                    const short* src2, size_t step2,
+                    short* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiSub_16s_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(sz), 0))
+        return true;
+#endif
+    return false;
+}
+static bool ipp_sub32f( const float* src1, size_t step1,
+                   const float* src2, size_t step2,
+                   float* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiSub_32f_C1R(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(sz)))
+        return true;
+#endif
+    return false;
+}
+#endif
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
+
 static void sub8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiSub_8u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(sz), 0))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_sub8u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<uchar, OpSub<uchar>, IF_SIMD(VSub<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -879,18 +938,8 @@ static void sub16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiSub_16u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(sz), 0))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_sub16u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<ushort, OpSub<ushort>, IF_SIMD(VSub<ushort>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -898,18 +947,8 @@ static void sub16s( const short* src1, size_t step1,
                     const short* src2, size_t step2,
                     short* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiSub_16s_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(sz), 0))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_sub16s(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<short, OpSub<short>, IF_SIMD(VSub<short>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -924,18 +963,8 @@ static void sub32f( const float* src1, size_t step1,
                    const float* src2, size_t step2,
                    float* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiSub_32f_C1R(src2, (int)step2, src1, (int)step1, dst, (int)step, ippiSize(sz)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_sub32f(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp32<float, OpSub<float>, IF_SIMD(VSub<float>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -949,34 +978,117 @@ static void sub64f( const double* src1, size_t step1,
 template<> inline uchar OpMin<uchar>::operator ()(uchar a, uchar b) const { return CV_MIN_8U(a, b); }
 template<> inline uchar OpMax<uchar>::operator ()(uchar a, uchar b) const { return CV_MAX_8U(a, b); }
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4100 )
+#endif
+#ifdef HAVE_IPP
+static bool ipp_max8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    uchar* s1 = (uchar*)src1;
+    uchar* s2 = (uchar*)src2;
+    uchar* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMaxEvery_8u(s1, s2, d, sz.width))
+            break;
+        s1 += step1;
+        s2 += step2;
+        d  += step;
+    }
+    if (i == sz.height)
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_max16u( const ushort* src1, size_t step1,
+                    const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    ushort* s1 = (ushort*)src1;
+    ushort* s2 = (ushort*)src2;
+    ushort* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMaxEvery_16u(s1, s2, d, sz.width))
+            break;
+        s1 = (ushort*)((uchar*)s1 + step1);
+        s2 = (ushort*)((uchar*)s2 + step2);
+        d  = (ushort*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_max32f( const float* src1, size_t step1,
+                    const float* src2, size_t step2,
+                    float* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    float* s1 = (float*)src1;
+    float* s2 = (float*)src2;
+    float* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMaxEvery_32f(s1, s2, d, sz.width))
+            break;
+        s1 = (float*)((uchar*)s1 + step1);
+        s2 = (float*)((uchar*)s2 + step2);
+        d  = (float*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_max64f( const double* src1, size_t step1,
+                    const double* src2, size_t step2,
+                    double* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    double* s1 = (double*)src1;
+    double* s2 = (double*)src2;
+    double* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMaxEvery_64f(s1, s2, d, sz.width))
+            break;
+        s1 = (double*)((uchar*)s1 + step1);
+        s2 = (double*)((uchar*)s2 + step2);
+        d  = (double*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return true;
+#endif
+    return false;
+}
+#endif
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
+
 static void max8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        uchar* s1 = (uchar*)src1;
-        uchar* s2 = (uchar*)src2;
-        uchar* d  = dst;
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        int i = 0;
-        for(; i < sz.height; i++)
-        {
-            if (0 > ippsMaxEvery_8u(s1, s2, d, sz.width))
-                break;
-            s1 += step1;
-            s2 += step2;
-            d  += step;
-        }
-        if (i == sz.height)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_max8u(src1, step1, src2, step2, dst, step, sz))
+
     vBinOp<uchar, OpMax<uchar>, IF_SIMD(VMax<uchar>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
@@ -991,30 +1103,8 @@ static void max16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        ushort* s1 = (ushort*)src1;
-        ushort* s2 = (ushort*)src2;
-        ushort* d  = dst;
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        int i = 0;
-        for(; i < sz.height; i++)
-        {
-            if (0 > ippsMaxEvery_16u(s1, s2, d, sz.width))
-                break;
-            s1 = (ushort*)((uchar*)s1 + step1);
-            s2 = (ushort*)((uchar*)s2 + step2);
-            d  = (ushort*)((uchar*)d + step);
-        }
-        if (i == sz.height)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_max16u(src1, step1, src2, step2, dst, step, sz))
+
     vBinOp<ushort, OpMax<ushort>, IF_SIMD(VMax<ushort>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
@@ -1036,30 +1126,8 @@ static void max32f( const float* src1, size_t step1,
                     const float* src2, size_t step2,
                     float* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        float* s1 = (float*)src1;
-        float* s2 = (float*)src2;
-        float* d  = dst;
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        int i = 0;
-        for(; i < sz.height; i++)
-        {
-            if (0 > ippsMaxEvery_32f(s1, s2, d, sz.width))
-                break;
-            s1 = (float*)((uchar*)s1 + step1);
-            s2 = (float*)((uchar*)s2 + step2);
-            d  = (float*)((uchar*)d + step);
-        }
-        if (i == sz.height)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_max32f(src1, step1, src2, step2, dst, step, sz))
+
     vBinOp32<float, OpMax<float>, IF_SIMD(VMax<float>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
@@ -1067,61 +1135,123 @@ static void max64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-#if ARITHM_USE_IPP == 1
-    CV_IPP_CHECK()
-    {
-        double* s1 = (double*)src1;
-        double* s2 = (double*)src2;
-        double* d  = dst;
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        int i = 0;
-        for(; i < sz.height; i++)
-        {
-            if (0 > ippsMaxEvery_64f(s1, s2, d, sz.width))
-                break;
-            s1 = (double*)((uchar*)s1 + step1);
-            s2 = (double*)((uchar*)s2 + step2);
-            d  = (double*)((uchar*)d + step);
-        }
-        if (i == sz.height)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_max64f(src1, step1, src2, step2, dst, step, sz))
+
     vBinOp64<double, OpMax<double>, IF_SIMD(VMax<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
+
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4100 )
+#endif
+#if defined(HAVE_IPP)
+static bool ipp_min8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    uchar* s1 = (uchar*)src1;
+    uchar* s2 = (uchar*)src2;
+    uchar* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMinEvery_8u(s1, s2, d, sz.width))
+            break;
+        s1 += step1;
+        s2 += step2;
+        d  += step;
+    }
+    if (i == sz.height)
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_min16u( const ushort* src1, size_t step1,
+                    const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    ushort* s1 = (ushort*)src1;
+    ushort* s2 = (ushort*)src2;
+    ushort* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMinEvery_16u(s1, s2, d, sz.width))
+            break;
+        s1 = (ushort*)((uchar*)s1 + step1);
+        s2 = (ushort*)((uchar*)s2 + step2);
+        d  = (ushort*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_min32f( const float* src1, size_t step1,
+                    const float* src2, size_t step2,
+                    float* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    float* s1 = (float*)src1;
+    float* s2 = (float*)src2;
+    float* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMinEvery_32f(s1, s2, d, sz.width))
+            break;
+        s1 = (float*)((uchar*)s1 + step1);
+        s2 = (float*)((uchar*)s2 + step2);
+        d  = (float*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_min64f( const double* src1, size_t step1,
+                    const double* src2, size_t step2,
+                    double* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    double* s1 = (double*)src1;
+    double* s2 = (double*)src2;
+    double* d  = dst;
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    int i = 0;
+    for(; i < sz.height; i++)
+    {
+        if (0 > ippsMinEvery_64f(s1, s2, d, sz.width))
+            break;
+        s1 = (double*)((uchar*)s1 + step1);
+        s2 = (double*)((uchar*)s2 + step2);
+        d  = (double*)((uchar*)d + step);
+    }
+    if (i == sz.height)
+        return true;
+#endif
+    return false;
+}
+#endif
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
+
 
 static void min8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        uchar* s1 = (uchar*)src1;
-        uchar* s2 = (uchar*)src2;
-        uchar* d  = dst;
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        int i = 0;
-        for(; i < sz.height; i++)
-        {
-            if (0 > ippsMinEvery_8u(s1, s2, d, sz.width))
-                break;
-            s1 += step1;
-            s2 += step2;
-            d  += step;
-        }
-        if (i == sz.height)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_min8u(src1, step1, src2, step2, dst, step, sz))
+
     vBinOp<uchar, OpMin<uchar>, IF_SIMD(VMin<uchar>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
@@ -1136,30 +1266,8 @@ static void min16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        ushort* s1 = (ushort*)src1;
-        ushort* s2 = (ushort*)src2;
-        ushort* d  = dst;
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        int i = 0;
-        for(; i < sz.height; i++)
-        {
-            if (0 > ippsMinEvery_16u(s1, s2, d, sz.width))
-                break;
-            s1 = (ushort*)((uchar*)s1 + step1);
-            s2 = (ushort*)((uchar*)s2 + step2);
-            d  = (ushort*)((uchar*)d + step);
-        }
-        if (i == sz.height)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_min16u(src1, step1, src2, step2, dst, step, sz))
+
     vBinOp<ushort, OpMin<ushort>, IF_SIMD(VMin<ushort>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
@@ -1181,30 +1289,8 @@ static void min32f( const float* src1, size_t step1,
                     const float* src2, size_t step2,
                     float* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        float* s1 = (float*)src1;
-        float* s2 = (float*)src2;
-        float* d  = dst;
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        int i = 0;
-        for(; i < sz.height; i++)
-        {
-            if (0 > ippsMinEvery_32f(s1, s2, d, sz.width))
-                break;
-            s1 = (float*)((uchar*)s1 + step1);
-            s2 = (float*)((uchar*)s2 + step2);
-            d  = (float*)((uchar*)d + step);
-        }
-        if (i == sz.height)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_min32f(src1, step1, src2, step2, dst, step, sz))
+
     vBinOp32<float, OpMin<float>, IF_SIMD(VMin<float>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
@@ -1212,49 +1298,62 @@ static void min64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-#if ARITHM_USE_IPP == 1
-    CV_IPP_CHECK()
-    {
-        double* s1 = (double*)src1;
-        double* s2 = (double*)src2;
-        double* d  = dst;
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        int i = 0;
-        for(; i < sz.height; i++)
-        {
-            if (0 > ippsMinEvery_64f(s1, s2, d, sz.width))
-                break;
-            s1 = (double*)((uchar*)s1 + step1);
-            s2 = (double*)((uchar*)s2 + step2);
-            d  = (double*)((uchar*)d + step);
-        }
-        if (i == sz.height)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_min64f(src1, step1, src2, step2, dst, step, sz))
+
     vBinOp64<double, OpMin<double>, IF_SIMD(VMin<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
+
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4100 )
+#endif
+#if defined(HAVE_IPP)
+static bool ipp_absdiff8u( const uchar* src1, size_t step1,
+                       const uchar* src2, size_t step2,
+                       uchar* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAbsDiff_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_absdiff16u( const ushort* src1, size_t step1,
+                        const ushort* src2, size_t step2,
+                        ushort* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAbsDiff_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
+        return true;
+#endif
+    return false;
+}
+static bool ipp_absdiff32f( const float* src1, size_t step1,
+                        const float* src2, size_t step2,
+                        float* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAbsDiff_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
+        return true;
+#endif
+    return false;
+}
+#endif
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
+
 
 static void absdiff8u( const uchar* src1, size_t step1,
                        const uchar* src2, size_t step2,
                        uchar* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiAbsDiff_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_absdiff8u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<uchar, OpAbsDiff<uchar>, IF_SIMD(VAbsDiff<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -1269,18 +1368,8 @@ static void absdiff16u( const ushort* src1, size_t step1,
                         const ushort* src2, size_t step2,
                         ushort* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiAbsDiff_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_absdiff16u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<ushort, OpAbsDiff<ushort>, IF_SIMD(VAbsDiff<ushort>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -1302,18 +1391,8 @@ static void absdiff32f( const float* src1, size_t step1,
                         const float* src2, size_t step2,
                         float* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiAbsDiff_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_absdiff32f(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp32<float, OpAbsDiff<float>, IF_SIMD(VAbsDiff<float>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -1324,23 +1403,69 @@ static void absdiff64f( const double* src1, size_t step1,
     vBinOp64<double, OpAbsDiff<double>, IF_SIMD(VAbsDiff<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4100 )
+#endif
+#if defined(HAVE_IPP)
+static bool ipp_and8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiAnd_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_or8u( const uchar* src1, size_t step1,
+                  const uchar* src2, size_t step2,
+                  uchar* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiOr_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_xor8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+    if (0 <= ippiXor_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
+        return true;
+#endif
+    return false;
+}
+
+static bool ipp_not8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz )
+{
+#if (ARITHM_USE_IPP == 1)
+    fixSteps(sz, sizeof(dst[0]), step1, step2, step); (void)src2;
+    if (0 <= ippiNot_8u_C1R(src1, (int)step1, dst, (int)step, ippiSize(sz)))
+        return true;
+#endif
+    return false;
+}
+#endif
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
 
 static void and8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiAnd_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_and8u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<uchar, OpAnd<uchar>, IF_SIMD(VAnd<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -1348,18 +1473,8 @@ static void or8u( const uchar* src1, size_t step1,
                   const uchar* src2, size_t step2,
                   uchar* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiOr_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_or8u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<uchar, OpOr<uchar>, IF_SIMD(VOr<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -1367,18 +1482,8 @@ static void xor8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step);
-        if (0 <= ippiXor_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_xor8u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<uchar, OpXor<uchar>, IF_SIMD(VXor<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -1386,18 +1491,8 @@ static void not8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,
                    uchar* dst, size_t step, Size sz, void* )
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        fixSteps(sz, sizeof(dst[0]), step1, step2, step); (void)src2;
-        if (0 <= ippiNot_8u_C1R(src1, (int)step1, dst, (int)step, ippiSize(sz)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN(true, ipp_not8u(src1, step1, src2, step2, dst, step, sz))
+
     (vBinOp<uchar, OpNot<uchar>, IF_SIMD(VNot<uchar>)>(src1, step1, src2, step2, dst, step, sz));
 }
 
@@ -3460,25 +3555,58 @@ recip_f( const T*, size_t, const T* src2, size_t step2,
     }
 }
 
+#if defined HAVE_IPP
+static bool ipp_mul8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, float fscale)
+{
+    if (std::fabs(fscale - 1) <= FLT_EPSILON)
+    {
+        if (ippiMul_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0) >= 0)
+            return true;
+    }
+    return false;
+}
+static bool ipp_mul16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz, float fscale)
+{
+    if (std::fabs(fscale - 1) <= FLT_EPSILON)
+    {
+        if (ippiMul_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0) >= 0)
+            return true;
+    }
+    return false;
+}
+
+static bool ipp_mul16s( const short* src1, size_t step1, const short* src2, size_t step2,
+                    short* dst, size_t step, Size sz, float fscale)
+{
+    if (std::fabs(fscale - 1) <= FLT_EPSILON)
+    {
+        if (ippiMul_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0) >= 0)
+            return true;
+    }
+    return false;
+}
+static bool ipp_mul32f( const float* src1, size_t step1, const float* src2, size_t step2,
+                    float* dst, size_t step, Size sz, float fscale)
+{
+    if (std::fabs(fscale - 1) <= FLT_EPSILON)
+    {
+        if (ippiMul_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)) >= 0)
+            return true;
+    }
+    return false;
+}
+#endif
+
 
 static void mul8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
-                   uchar* dst, size_t step, Size sz, void* scale)
+                   uchar* dst, size_t step, Size sz, void* scale )
 {
     float fscale = (float)*(const double*)scale;
-#if defined HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        if (std::fabs(fscale - 1) <= FLT_EPSILON)
-        {
-            if (ippiMul_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+
+    CV_IPP_RUN(true, ipp_mul8u(src1, step1, src2, step2, dst, step, sz, fscale));
+
     mul_(src1, step1, src2, step2, dst, step, sz, fscale);
 }
 
@@ -3492,20 +3620,9 @@ static void mul16u( const ushort* src1, size_t step1, const ushort* src2, size_t
                     ushort* dst, size_t step, Size sz, void* scale)
 {
     float fscale = (float)*(const double*)scale;
-#if defined HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        if (std::fabs(fscale - 1) <= FLT_EPSILON)
-        {
-            if (ippiMul_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+
+    CV_IPP_RUN(true, ipp_mul16u(src1, step1, src2, step2, dst, step, sz, fscale));
+
     mul_(src1, step1, src2, step2, dst, step, sz, fscale);
 }
 
@@ -3513,20 +3630,9 @@ static void mul16s( const short* src1, size_t step1, const short* src2, size_t s
                     short* dst, size_t step, Size sz, void* scale)
 {
     float fscale = (float)*(const double*)scale;
-#if defined HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        if (std::fabs(fscale - 1) <= FLT_EPSILON)
-        {
-            if (ippiMul_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz), 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+
+    CV_IPP_RUN(true, ipp_mul16s(src1, step1, src2, step2, dst, step, sz, fscale));
+
     mul_(src1, step1, src2, step2, dst, step, sz, fscale);
 }
 
@@ -3540,20 +3646,9 @@ static void mul32f( const float* src1, size_t step1, const float* src2, size_t s
                     float* dst, size_t step, Size sz, void* scale)
 {
     float fscale = (float)*(const double*)scale;
-#if defined HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        if (std::fabs(fscale - 1) <= FLT_EPSILON)
-        {
-            if (ippiMul_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(sz)) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+
+    CV_IPP_RUN(true, ipp_mul32f(src1, step1, src2, step2, dst, step, sz, fscale));
+
     mul_(src1, step1, src2, step2, dst, step, sz, fscale);
 }
 
@@ -4544,6 +4639,11 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
     }
 }
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4100 )
+#endif
+#if defined(HAVE_IPP)
 #if ARITHM_USE_IPP
 inline static IppCmpOp convert_cmp(int _cmpop)
 {
@@ -4556,25 +4656,75 @@ inline static IppCmpOp convert_cmp(int _cmpop)
 }
 #endif
 
-static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+static bool ipp_cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
 #if ARITHM_USE_IPP
-    CV_IPP_CHECK()
+    IppCmpOp op = convert_cmp(*(int *)_cmpop);
+    if( op  >= 0 )
     {
-        IppCmpOp op = convert_cmp(*(int *)_cmpop);
-        if( op  >= 0 )
-        {
-            fixSteps(size, sizeof(dst[0]), step1, step2, step);
-            if (0 <= ippiCompare_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(size), op))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
+        fixSteps(size, sizeof(dst[0]), step1, step2, step);
+        if (0 <= ippiCompare_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(size), op))
+            return true;
     }
 #endif
+    return false;
+}
+
+static bool ipp_cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
+{
+#if ARITHM_USE_IPP
+    IppCmpOp op = convert_cmp(*(int *)_cmpop);
+    if( op  >= 0 )
+    {
+        fixSteps(size, sizeof(dst[0]), step1, step2, step);
+        if (0 <= ippiCompare_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(size), op))
+            return true;
+    }
+#endif
+    return false;
+}
+
+static bool ipp_cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
+{
+#if ARITHM_USE_IPP
+    IppCmpOp op = convert_cmp(*(int *)_cmpop);
+    if( op  > 0 )
+    {
+        fixSteps(size, sizeof(dst[0]), step1, step2, step);
+        if (0 <= ippiCompare_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(size), op))
+            return true;
+    }
+#endif
+    return false;
+}
+static bool ipp_cmp32f(const float* src1, size_t step1, const float* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
+{
+#if ARITHM_USE_IPP
+    IppCmpOp op = convert_cmp(*(int *)_cmpop);
+    if( op  >= 0 )
+    {
+        fixSteps(size, sizeof(dst[0]), step1, step2, step);
+        if (0 <= ippiCompare_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(size), op))
+            return true;
+    }
+#endif
+    return false;
+}
+#endif
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
+
+
+static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
+{
+    CV_IPP_RUN(true, ipp_cmp8u(src1, step1, src2, step2, dst, step, size, _cmpop))
+
   //vz optimized  cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
     int code = *(int*)_cmpop;
     step1 /= sizeof(src1[0]);
@@ -4666,44 +4816,16 @@ static void cmp8s(const schar* src1, size_t step1, const schar* src2, size_t ste
 static void cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
-#if ARITHM_USE_IPP
-    CV_IPP_CHECK()
-    {
-        IppCmpOp op = convert_cmp(*(int *)_cmpop);
-        if( op  >= 0 )
-        {
-            fixSteps(size, sizeof(dst[0]), step1, step2, step);
-            if (0 <= ippiCompare_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(size), op))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    CV_IPP_RUN(true, ipp_cmp16u(src1, step1, src2, step2, dst, step, size, _cmpop))
+
     cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
 }
 
 static void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
-#if ARITHM_USE_IPP
-    CV_IPP_CHECK()
-    {
-        IppCmpOp op = convert_cmp(*(int *)_cmpop);
-        if( op  > 0 )
-        {
-            fixSteps(size, sizeof(dst[0]), step1, step2, step);
-            if (0 <= ippiCompare_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(size), op))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    CV_IPP_RUN(true, ipp_cmp16s(src1, step1, src2, step2, dst, step, size, _cmpop))
+
    //vz optimized cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
 
     int code = *(int*)_cmpop;
@@ -4833,22 +4955,8 @@ static void cmp32s(const int* src1, size_t step1, const int* src2, size_t step2,
 static void cmp32f(const float* src1, size_t step1, const float* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
-#if ARITHM_USE_IPP
-    CV_IPP_CHECK()
-    {
-        IppCmpOp op = convert_cmp(*(int *)_cmpop);
-        if( op  >= 0 )
-        {
-            fixSteps(size, sizeof(dst[0]), step1, step2, step);
-            if (0 <= ippiCompare_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(size), op))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    CV_IPP_RUN(true, ipp_cmp32f(src1, step1, src2, step2, dst, step, size, _cmpop))
+
     cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
 }
 
@@ -5755,8 +5863,8 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
             ub = Mat(cn, 1, CV_32S, iubuf);
         }
 
-        convertAndUnrollScalar( lb, src.type(), lbuf, blocksize );
-        convertAndUnrollScalar( ub, src.type(), ubuf, blocksize );
+        convertAndUnrollScalar( lb, src.type(), lbuf, blocksize);
+        convertAndUnrollScalar( ub, src.type(), ubuf, blocksize);
     }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )

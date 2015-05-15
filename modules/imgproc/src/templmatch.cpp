@@ -895,85 +895,19 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
 }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
+namespace cv
 {
-    if (!_mask.empty())
-    {
-        cv::matchTemplateMask(_img, _templ, _result, method, _mask);
+static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method, int cn )
+{
+    if( method == CV_TM_CCORR )
         return;
-    }
-
-    int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
-    CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
-
-    bool needswap = _img.size().height < _templ.size().height || _img.size().width < _templ.size().width;
-    if (needswap)
-    {
-        CV_Assert(_img.size().height <= _templ.size().height && _img.size().width <= _templ.size().width);
-    }
-
-    CV_OCL_RUN(_img.dims() <= 2 && _result.isUMat(),
-               (!needswap ? ocl_matchTemplate(_img, _templ, _result, method) : ocl_matchTemplate(_templ, _img, _result, method)))
 
     int numType = method == CV_TM_CCORR || method == CV_TM_CCORR_NORMED ? 0 :
                   method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED ? 1 : 2;
     bool isNormed = method == CV_TM_CCORR_NORMED ||
                     method == CV_TM_SQDIFF_NORMED ||
                     method == CV_TM_CCOEFF_NORMED;
-
-    Mat img = _img.getMat(), templ = _templ.getMat();
-    if (needswap)
-        std::swap(img, templ);
-
-    Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
-    _result.create(corrSize, CV_32F);
-    Mat result = _result.getMat();
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::matchTemplate(img, templ, result, method))
-        return;
-#endif
-
-#if defined HAVE_IPP
-    bool useIppMT = false;
-    CV_IPP_CHECK()
-    {
-        useIppMT = (templ.rows < img.rows/2 && templ.cols < img.cols/2);
-
-        if (method == CV_TM_SQDIFF && cn == 1 && useIppMT)
-        {
-            if (ipp_sqrDistance(img, templ, result))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
-
-#if defined HAVE_IPP
-    if (cn == 1 && useIppMT)
-    {
-        if (!ipp_crossCorr(img, templ, result))
-        {
-            setIppErrorStatus();
-            crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
-        }
-        else
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-        }
-    }
-    else
-#endif
-    crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
-
-    if( method == CV_TM_CCORR )
-        return;
 
     double invArea = 1./((double)templ.rows * templ.cols);
 
@@ -1081,7 +1015,80 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         }
     }
 }
+}
 
+
+#if defined HAVE_IPP
+namespace cv
+{
+static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method, int cn )
+{
+    bool useIppMT = (templ.rows < img.rows/2 && templ.cols < img.cols/2);
+
+    if(cn == 1 && useIppMT)
+    {
+        if(method == CV_TM_SQDIFF)
+        {
+            if (ipp_sqrDistance(img, templ, result))
+                return true;
+        }
+        else
+        {
+            if(ipp_crossCorr(img, templ, result))
+            {
+                common_matchTemplate(img, templ, result, method, cn);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+}
+#endif
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
+{
+    if (!_mask.empty())
+    {
+        cv::matchTemplateMask(_img, _templ, _result, method, _mask);
+        return;
+    }
+
+    int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
+    CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
+
+    bool needswap = _img.size().height < _templ.size().height || _img.size().width < _templ.size().width;
+    if (needswap)
+    {
+        CV_Assert(_img.size().height <= _templ.size().height && _img.size().width <= _templ.size().width);
+    }
+
+    CV_OCL_RUN(_img.dims() <= 2 && _result.isUMat(),
+               (!needswap ? ocl_matchTemplate(_img, _templ, _result, method) : ocl_matchTemplate(_templ, _img, _result, method)))
+
+    Mat img = _img.getMat(), templ = _templ.getMat();
+    if (needswap)
+        std::swap(img, templ);
+
+    Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
+    _result.create(corrSize, CV_32F);
+    Mat result = _result.getMat();
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::useTegra() && tegra::matchTemplate(img, templ, result, method))
+        return;
+#endif
+
+    CV_IPP_RUN(true, ipp_matchTemplate(img, templ, result, method, cn))
+
+    crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
+
+    common_matchTemplate(img, templ, result, method, cn);
+}
 
 CV_IMPL void
 cvMatchTemplate( const CvArr* _img, const CvArr* _templ, CvArr* _result, int method )
