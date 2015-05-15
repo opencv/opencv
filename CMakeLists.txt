@@ -134,6 +134,10 @@ HunterGate(
 
 project(OpenCV CXX C)
 
+if(IOS)
+  set(CMAKE_SYSTEM_PROCESSOR "")
+endif()
+
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
