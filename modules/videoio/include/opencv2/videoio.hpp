@@ -50,6 +50,7 @@
   @{
     @defgroup videoio_c C API
     @defgroup videoio_ios iOS glue
+    @defgroup videoio_winrt WinRT glue
   @}
 */
 
@@ -85,8 +86,9 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
        CAP_GIGANETIX    = 1300,  // Smartek Giganetix GigEVisionSDK
        CAP_MSMF         = 1400,  // Microsoft Media Foundation (via videoInput)
-       CAP_INTELPERC    = 1500,   // Intel Perceptual Computing SDK
-       CAP_OPENNI2      = 1600,   // OpenNI2 (for Kinect)
+       CAP_WINRT        = 1410,  // Microsoft Windows Runtime using Media Foundation
+       CAP_INTELPERC    = 1500,  // Intel Perceptual Computing SDK
+       CAP_OPENNI2      = 1600,  // OpenNI2 (for Kinect)
        CAP_OPENNI2_ASUS = 1610   // OpenNI2 (for Asus Xtion and Occipital Structure sensors)
      };
 
