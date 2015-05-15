@@ -3805,20 +3805,20 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    int cn = _src.channels();
+    int k, cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
     size_t sstep = _src.step/sizeof(S0[0]);
-    Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
-        saturate_cast<T>(_borderValue[1]),
-        saturate_cast<T>(_borderValue[2]),
-        saturate_cast<T>(_borderValue[3]));
+    T cval[CV_CN_MAX];
     int dx, dy;
     CastOp castOp;
     VecOp vecOp;
 
+    for( k = 0; k < cn; k++ )
+        cval[k] = saturate_cast<T>(_borderValue[k & 3]);
+
     unsigned width1 = std::max(ssize.width-1, 0), height1 = std::max(ssize.height-1, 0);
-    CV_Assert( cn <= 4 && ssize.area() > 0 );
+    CV_Assert( ssize.area() > 0 );
 #if CV_SSE2
     if( _src.type() == CV_8UC3 )
         width1 = std::max(ssize.width-2, 0);
@@ -3882,7 +3882,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                         WT t2 = S[2]*w[0] + S[5]*w[1] + S[sstep+2]*w[2] + S[sstep+5]*w[3];
                         D[0] = castOp(t0); D[1] = castOp(t1); D[2] = castOp(t2);
                     }
-                else
+                else if( cn == 4 )
                     for( ; dx < X1; dx++, D += 4 )
                     {
                         int sx = XY[dx*2], sy = XY[dx*2+1];
@@ -3894,6 +3894,18 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                         t0 = S[2]*w[0] + S[6]*w[1] + S[sstep+2]*w[2] + S[sstep+6]*w[3];
                         t1 = S[3]*w[0] + S[7]*w[1] + S[sstep+3]*w[2] + S[sstep+7]*w[3];
                         D[2] = castOp(t0); D[3] = castOp(t1);
+                    }
+                else
+                    for( ; dx < X1; dx++, D += cn )
+                    {
+                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        const AT* w = wtab + FXY[dx]*4;
+                        const T* S = S0 + sy*sstep + sx*cn;
+                        for( k = 0; k < cn; k++ )
+                        {
+                            WT t0 = S[k]*w[0] + S[k+cn]*w[1] + S[sstep+k]*w[2] + S[sstep+k+cn]*w[3];
+                            D[k] = castOp(t0);
+                        }
                     }
             }
             else
@@ -3948,7 +3960,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else
                     for( ; dx < X1; dx++, D += cn )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1], k;
+                        int sx = XY[dx*2], sy = XY[dx*2+1];
                         if( borderType == BORDER_CONSTANT &&
                             (sx >= ssize.width || sx+1 < 0 ||
                              sy >= ssize.height || sy+1 < 0) )
