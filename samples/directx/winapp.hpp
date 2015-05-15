@@ -5,8 +5,6 @@
 
 #define WINCLASS "WinAppWnd"
 
-#define SAFE_RELEASE(p) if (p) { p->Release(); p = NULL; }
-
 class WinApp
 {
 public:
@@ -16,14 +14,13 @@ public:
         m_height      = height;
         m_window_name = window_name;
         m_hInstance   = ::GetModuleHandle(NULL);
+        m_hWnd        = 0;
     }
 
-    virtual ~WinApp()
-    {
-        ::UnregisterClass(WINCLASS, m_hInstance);
-    }
+    virtual ~WinApp() {}
 
-    int Create()
+
+    virtual int create()
     {
         WNDCLASSEX wcex;
 
@@ -41,9 +38,12 @@ public:
         wcex.hIconSm       = 0;
 
         ATOM wc = ::RegisterClassEx(&wcex);
+        if (!wc)
+            return -1;
 
         RECT rc = { 0, 0, m_width, m_height };
-        ::AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, false);
+        if(!::AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, false))
+            return -1;
 
         m_hWnd = ::CreateWindow(
                      (LPCTSTR)wc, m_window_name.c_str(),
@@ -58,10 +58,9 @@ public:
         ::UpdateWindow(m_hWnd);
         ::SetFocus(m_hWnd);
 
-        return init();
-    }
+        return 0;
+    } // create()
 
-    virtual LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) = 0;
 
     int run()
     {
@@ -78,23 +77,32 @@ public:
             }
             else
             {
-                render();
+                idle();
             }
         }
 
         return static_cast<int>(msg.wParam);
-    }
+    } // run()
+
+
+    virtual int cleanup()
+    {
+        ::DestroyWindow(m_hWnd);
+        ::UnregisterClass(WINCLASS, m_hInstance);
+        return 0;
+    } // cleanup()
 
 protected:
+    // dispatch message handling to method of class
     static LRESULT CALLBACK StaticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         WinApp* pWnd;
 
         if (message == WM_NCCREATE)
         {
-            LPCREATESTRUCT pCreateStruct = ((LPCREATESTRUCT)lParam);
-            pWnd = (WinApp*)(pCreateStruct->lpCreateParams);
-            ::SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)pWnd);
+            LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+            pWnd = static_cast<WinApp*>(pCreateStruct->lpCreateParams);
+            ::SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWnd));
         }
 
         pWnd = GetObjectFromWindow(hWnd);
@@ -103,15 +111,14 @@ protected:
             return pWnd->WndProc(hWnd, message, wParam, lParam);
         else
             return ::DefWindowProc(hWnd, message, wParam, lParam);
-    }
+    } // StaticWndProc()
 
-    inline static WinApp* GetObjectFromWindow(HWND hWnd)
-    {
-        return (WinApp*)::GetWindowLongPtr(hWnd, GWLP_USERDATA);
-    }
+    inline static WinApp* GetObjectFromWindow(HWND hWnd) { return (WinApp*)::GetWindowLongPtr(hWnd, GWLP_USERDATA); }
 
-    virtual int init() = 0;
-    virtual int render() = 0;
+    // actual wnd message handling
+    virtual LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) = 0;
+    // idle processing
+    virtual int idle() = 0;
 
     HINSTANCE   m_hInstance;
     HWND        m_hWnd;
