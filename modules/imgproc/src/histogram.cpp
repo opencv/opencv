@@ -1220,7 +1220,10 @@ private:
 
 }
 
-void cv::calcHist( const Mat* images, int nimages, const int* channels,
+#if defined(HAVE_IPP)
+namespace cv
+{
+static bool ipp_calchist(const Mat* images, int nimages, const int* channels,
                    InputArray _mask, OutputArray _hist, int dims, const int* histSize,
                    const float** ranges, bool uniform, bool accumulate )
 {
@@ -1228,13 +1231,10 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
 
     CV_Assert(dims > 0 && histSize);
 
-    const uchar* const histdata = _hist.getMat().ptr();
     _hist.create(dims, histSize, CV_32F);
     Mat hist = _hist.getMat(), ihist = hist;
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
 
-#ifdef HAVE_IPP
-    CV_IPP_CHECK()
     {
         if (nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
                 channels[0] == 0 && mask.empty() && images[0].dims <= 2 &&
@@ -1256,13 +1256,36 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
             if (ok)
             {
                 ihist.convertTo(hist, CV_32F);
-                CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
-                return;
+                CV_IMPL_ADD(CV_IMPL_IPP);
+                return true;
             }
-            setIppErrorStatus();
         }
     }
+    return false;
+}
+}
 #endif
+
+void cv::calcHist( const Mat* images, int nimages, const int* channels,
+                   InputArray _mask, OutputArray _hist, int dims, const int* histSize,
+                   const float** ranges, bool uniform, bool accumulate )
+{
+
+    CV_IPP_RUN(nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
+                channels[0] == 0 && _mask.getMat().empty() && images[0].dims <= 2 &&
+                !accumulate && uniform,
+                ipp_calchist(images, nimages, channels,
+                   _mask, _hist, dims, histSize,
+                   ranges, uniform, accumulate));
+
+    Mat mask = _mask.getMat();
+
+    CV_Assert(dims > 0 && histSize);
+
+    const uchar* const histdata = _hist.getMat().ptr();
+    _hist.create(dims, histSize, CV_32F);
+    Mat hist = _hist.getMat(), ihist = hist;
+    ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
 
     if( !accumulate || histdata != hist.data )
         hist = Scalar(0.);
