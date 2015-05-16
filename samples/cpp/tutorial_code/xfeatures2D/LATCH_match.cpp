@@ -19,7 +19,7 @@ int main(void)
     Mat img1 = imread("../data/graf1.png", IMREAD_GRAYSCALE);
     Mat img2 = imread("../data/graf3.png", IMREAD_GRAYSCALE);
 	
-    
+
 	Mat homography;
     FileStorage fs("../data/H1to3p.xml", FileStorage::READ);
 	
@@ -77,6 +77,7 @@ int main(void)
 	Mat res;
 	drawMatches(img1, inliers1, img2, inliers2, good_matches, res);
 	imwrite("../../samples/data/latch_res.png", res);
+	
 
 	double inlier_ratio = inliers1.size() * 1.0 / matched1.size();
 	cout << "LATCH Matching Results" << endl;
