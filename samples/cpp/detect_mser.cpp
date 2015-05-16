@@ -1,6 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include "opencv2/core/opengl.hpp"
-#include <cvconfig.h>
+#include "cvconfig.h"
 
 #include <vector>
 #include <map>
@@ -212,9 +212,9 @@ static void onMouse(int event, int x, int y, int flags, void*)
 }
 #endif
 
+#ifdef HAVE_OPENGL
 static void DrawOpenGLMSER(Mat img, Mat result)
 {
-#ifdef HAVE_OPENGL
     Mat imgGray;
     if (img.type() != CV_8UC1)
         cvtColor(img, imgGray, COLOR_BGR2GRAY);
@@ -327,8 +327,8 @@ static void DrawOpenGLMSER(Mat img, Mat result)
     }
     setOpenGlDrawCallback("OpenGL", 0, 0);
     destroyAllWindows();
-#endif
 }
+#endif
 
 static Mat MakeSyntheticImage()
 {
@@ -526,7 +526,9 @@ int main(int argc, char *argv[])
             cout << "Feature : " << *itDesc << "\n";
             cout << e.msg << endl;
         }
-        DrawOpenGLMSER(img,result);
+#ifdef HAVE_OPENGL
+        DrawOpenGLMSER(img, result);
+#endif
         waitKey();
     }
     return 0;
