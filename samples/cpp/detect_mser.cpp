@@ -1,9 +1,11 @@
 #include <opencv2/opencv.hpp>
 #include "opencv2/core/opengl.hpp"
+#include <cvconfig.h>
 
 #include <vector>
 #include <map>
 #include <iostream>
+#ifdef HAVE_OPENGL
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN 1
 #define NOMINMAX 1
@@ -20,7 +22,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #endif
-
+#endif
 
 
 using namespace std;
@@ -107,6 +109,7 @@ float	obsX = (float)0, obsY = (float)0, obsZ = (float)-10, tx = (float)0, ty = (
 float	thetaObs = (float)-1.570, phiObs = (float)1.570, rObs = (float)10;
 int prevX=-1,prevY=-1,prevTheta=-1000,prevPhi=-1000;
 
+#ifdef HAVE_OPENGL
 struct DrawData
 
     {
@@ -208,9 +211,11 @@ static void onMouse(int event, int x, int y, int flags, void*)
     }
 
 }
+#endif
 
 void DrawOpenGLMSER(Mat img, Mat result)
 {
+#ifdef HAVE_OPENGL
     Mat imgGray;
     if (img.type() != CV_8UC1)
         cvtColor(img, imgGray, COLOR_BGR2GRAY);
@@ -323,6 +328,7 @@ void DrawOpenGLMSER(Mat img, Mat result)
     }
     setOpenGlDrawCallback("OpenGL", 0, 0);
     destroyAllWindows();
+#endif
 }
 
 Mat MakeSyntheticImage()
