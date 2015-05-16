@@ -183,6 +183,11 @@ public:
         return allocate(o, dims0, sizes, type, step);
     }
 
+    void allocate(UMatData* /*u*/, int /*dims*/, const int* /*sizes*/, int /*type*/, void* /*data0*/, size_t* /*step*/, int /*flags*/, UMatUsageFlags /*usageFlags*/) const
+    {
+        return;
+    }
+
     bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
     {
         return stdAllocator->allocate(u, accessFlags, usageFlags);
@@ -197,6 +202,11 @@ public:
             Py_XDECREF(o);
             delete u;
         }
+    }
+
+    void deallocateData(UMatData* /*u*/) const
+    {
+        return;
     }
 
     const MatAllocator* stdAllocator;

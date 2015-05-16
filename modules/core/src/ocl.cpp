@@ -4246,6 +4246,57 @@ public:
         return u;
     }
 
+    void allocate(UMatData* u, int dims, const int* sizes, int type,
+                       void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const
+    {
+        if(!useOpenCL())
+            return;
+
+        UMatDataAutoLock lock(u);
+
+        CV_Assert(data == 0);
+        size_t total = CV_ELEM_SIZE(type);
+        for( int i = dims-1; i >= 0; i-- )
+        {
+            if( step )
+                step[i] = total;
+            total *= sizes[i];
+        }
+
+        Context& ctx = Context::getDefault();
+        int createFlags = 0, flags0 = 0;
+        getBestFlags(ctx, flags, usageFlags, createFlags, flags0);
+
+        size_t capacity = 0;
+        void* handle = NULL;
+        int allocatorFlags = 0;
+        if (createFlags == 0)
+        {
+            handle = bufferPool.allocate(total, capacity);
+            if (!handle)
+                return;
+            allocatorFlags = ALLOCATOR_FLAGS_BUFFER_POOL_USED;
+        }
+        else
+        {
+            capacity = total;
+            cl_int retval = 0;
+            handle = clCreateBuffer((cl_context)ctx.ptr(),
+                                          CL_MEM_READ_WRITE|createFlags, total, 0, &retval);
+            if( !handle || retval != CL_SUCCESS )
+                return;
+        }
+        u->prevAllocator = u->currAllocator = this;
+        u->data = 0;
+        u->size = total;
+        u->capacity = capacity;
+        u->handle = handle;
+        u->flags = flags0;
+        u->allocatorFlags_ = allocatorFlags;
+        CV_DbgAssert(!u->tempUMat()); // for bufferPool.release() consistency in deallocate()
+        return;
+    }
+
     bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
     {
         if(!u)
@@ -4523,6 +4574,11 @@ public:
             u->handle = 0;
             delete u;
         }
+    }
+
+    void deallocateData(UMatData* /*u*/) const
+    {
+        return;
     }
 
     void map(UMatData* u, int accessFlags) const

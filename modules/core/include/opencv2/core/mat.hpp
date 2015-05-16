@@ -408,8 +408,11 @@ public:
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
     virtual UMatData* allocate(int dims, const int* sizes, int type,
                                void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const = 0;
+    virtual void allocate(UMatData* u, int dims, const int* sizes, int type,
+                          void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const = 0;
     virtual bool allocate(UMatData* data, int accessflags, UMatUsageFlags usageFlags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
+    virtual void deallocateData(UMatData* data) const = 0;
     virtual void map(UMatData* data, int accessflags) const;
     virtual void unmap(UMatData* data) const;
     virtual void download(UMatData* data, void* dst, int dims, const size_t sz[],
