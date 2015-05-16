@@ -34,7 +34,7 @@ static void help()
         "  ./detect_mser <image1(without parameter a syntehtic image is used as default)>\n"
         "Press esc key when image window is active to change  descriptor parameter\n";
         "Press 2, 8, 4, 6, +,- or 5 keys in openGL windows to change view or use mouse\n";
-    }
+}
 
 struct MSERParams
 {
@@ -158,7 +158,7 @@ static void onMouse(int event, int x, int y, int flags, void*)
         prevPhi = -1000;
     }
     if (prevTheta != -1000)
-    {   
+    {
         if (x - prevTheta<0)
         {
             thetaObs +=(float)0.02;
@@ -179,23 +179,33 @@ static void onMouse(int event, int x, int y, int flags, void*)
         prevPhi = y;
     }
     if (event==EVENT_MOUSEWHEEL)
+    {
         if (getMouseWheelDelta(flags)>0)
             rObs += (float)0.1;
         else
             rObs -= (float)0.1;
-        float pi = (float)acos(-1.0);
+    }
+    float pi = (float)acos(-1.0);
     if (thetaObs>pi)
-        {
+    {
         thetaObs = -2 * pi + thetaObs;
-        }
+    }
     if (thetaObs<-pi)
+    {
         thetaObs = 2 * pi + thetaObs;
+    }
     if (phiObs>pi / 2)
+    {
         phiObs = pi / 2 - (float)0.0001;
+    }
     if (phiObs<-pi / 2)
+    {
         phiObs = -pi / 2 + (float)0.00001;
+    }
     if (rObs<0)
+    {
         rObs = 0;
+    }
 
 }
 
@@ -360,17 +370,15 @@ Mat MakeSyntheticImage()
 
     p0 = Point(600, 600);
     for (int i = 0; i<13; i++)
-        {
+    {
         circle(img, p0, width[i] / 2, Scalar(color[i]), 1);
         floodFill(img, p0, Scalar(color[i]));
-
-        }
+    }
     int histSize = 256;
     float range[] = { 0, 256 };
     const float* histRange[] = { range };
     Mat hist;
-    // we compute the histogram 
-
+    // we compute the histogram
     calcHist(&img, 1, 0, Mat(), hist, 1, &histSize, histRange, true, false);
     cout << "****************Maximal region************************\n";
     for (int i = 0; i < hist.rows ; i++)
@@ -478,7 +486,7 @@ int main(int argc, char *argv[])
             plan.push_back(img);
             merge(plan,result);
         }
-        try 
+        try
         {
             // We can detect regions using detectRegions method
             vector<KeyPoint>  keyImg;
@@ -518,7 +526,3 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
-
-
-
-
