@@ -18,75 +18,75 @@ int main(void)
 {
     Mat img1 = imread("../data/graf1.png", IMREAD_GRAYSCALE);
     Mat img2 = imread("../data/graf3.png", IMREAD_GRAYSCALE);
-	
 
-	Mat homography;
+
+    Mat homography;
     FileStorage fs("../data/H1to3p.xml", FileStorage::READ);
-	
-	fs.getFirstTopLevelNode() >> homography;
+
+    fs.getFirstTopLevelNode() >> homography;
 
     vector<KeyPoint> kpts1, kpts2;
     Mat desc1, desc2;
 
-	Ptr<cv::ORB> orb_detector = cv::ORB::create(10000);
+    Ptr<cv::ORB> orb_detector = cv::ORB::create(10000);
 
-	Ptr<xfeatures2d::LATCHDescriptorExtractor> latch = xfeatures2d::LATCHDescriptorExtractor::create();
+    Ptr<xfeatures2d::LATCHDescriptorExtractor> latch = xfeatures2d::LATCHDescriptorExtractor::create();
 
 
-	orb_detector->detect(img1, kpts1);
-	latch->compute(img1, kpts1, desc1);
+    orb_detector->detect(img1, kpts1);
+    latch->compute(img1, kpts1, desc1);
 
-	orb_detector->detect(img2, kpts2);
-	latch->compute(img2, kpts2, desc2);
+    orb_detector->detect(img2, kpts2);
+    latch->compute(img2, kpts2, desc2);
 
-	BFMatcher matcher(NORM_HAMMING);
-	vector< vector<DMatch> > nn_matches;
-	matcher.knnMatch(desc1, desc2, nn_matches, 2);
+    BFMatcher matcher(NORM_HAMMING);
+    vector< vector<DMatch> > nn_matches;
+    matcher.knnMatch(desc1, desc2, nn_matches, 2);
 
-	vector<KeyPoint> matched1, matched2, inliers1, inliers2;
-	vector<DMatch> good_matches;
-	for (size_t i = 0; i < nn_matches.size(); i++) {
-		DMatch first = nn_matches[i][0];
-		float dist1 = nn_matches[i][0].distance;
-		float dist2 = nn_matches[i][1].distance;
+    vector<KeyPoint> matched1, matched2, inliers1, inliers2;
+    vector<DMatch> good_matches;
+    for (size_t i = 0; i < nn_matches.size(); i++) {
+        DMatch first = nn_matches[i][0];
+        float dist1 = nn_matches[i][0].distance;
+        float dist2 = nn_matches[i][1].distance;
 
-		if (dist1 < nn_match_ratio * dist2) {
-			matched1.push_back(kpts1[first.queryIdx]);
-			matched2.push_back(kpts2[first.trainIdx]);
-		}
-	}
+        if (dist1 < nn_match_ratio * dist2) {
+            matched1.push_back(kpts1[first.queryIdx]);
+            matched2.push_back(kpts2[first.trainIdx]);
+        }
+    }
 
-	for (unsigned i = 0; i < matched1.size(); i++) {
-		Mat col = Mat::ones(3, 1, CV_64F);
-		col.at<double>(0) = matched1[i].pt.x;
-		col.at<double>(1) = matched1[i].pt.y;
+    for (unsigned i = 0; i < matched1.size(); i++) {
+        Mat col = Mat::ones(3, 1, CV_64F);
+        col.at<double>(0) = matched1[i].pt.x;
+        col.at<double>(1) = matched1[i].pt.y;
 
-		col = homography * col;
-		col /= col.at<double>(2);
-		double dist = sqrt(pow(col.at<double>(0) - matched2[i].pt.x, 2) +
-			pow(col.at<double>(1) - matched2[i].pt.y, 2));
+        col = homography * col;
+        col /= col.at<double>(2);
+        double dist = sqrt(pow(col.at<double>(0) - matched2[i].pt.x, 2) +
+            pow(col.at<double>(1) - matched2[i].pt.y, 2));
 
-		if (dist < inlier_threshold) {
-			int new_i = static_cast<int>(inliers1.size());
-			inliers1.push_back(matched1[i]);
-			inliers2.push_back(matched2[i]);
-			good_matches.push_back(DMatch(new_i, new_i, 0));
-		}
-	}
+        if (dist < inlier_threshold) {
+            int new_i = static_cast<int>(inliers1.size());
+            inliers1.push_back(matched1[i]);
+            inliers2.push_back(matched2[i]);
+            good_matches.push_back(DMatch(new_i, new_i, 0));
+        }
+    }
 
-	Mat res;
-	drawMatches(img1, inliers1, img2, inliers2, good_matches, res);
-	imwrite("../../samples/data/latch_res.png", res);
-	
+    Mat res;
+    drawMatches(img1, inliers1, img2, inliers2, good_matches, res);
+    imwrite("../../samples/data/latch_res.png", res);
 
-	double inlier_ratio = inliers1.size() * 1.0 / matched1.size();
-	cout << "LATCH Matching Results" << endl;
-	cout << "*******************************" << endl;
-	cout << "# Keypoints 1:                        \t" << kpts1.size() << endl;
-	cout << "# Keypoints 2:                        \t" << kpts2.size() << endl;
-	cout << "# Matches:                            \t" << matched1.size() << endl;
-	cout << "# Inliers:                            \t" << inliers1.size() << endl;
-	cout << "# Inliers Ratio:                      \t" << inlier_ratio << endl;
-	cout << endl;
+
+    double inlier_ratio = inliers1.size() * 1.0 / matched1.size();
+    cout << "LATCH Matching Results" << endl;
+    cout << "*******************************" << endl;
+    cout << "# Keypoints 1:                        \t" << kpts1.size() << endl;
+    cout << "# Keypoints 2:                        \t" << kpts2.size() << endl;
+    cout << "# Matches:                            \t" << matched1.size() << endl;
+    cout << "# Inliers:                            \t" << inliers1.size() << endl;
+    cout << "# Inliers Ratio:                      \t" << inlier_ratio << endl;
+    cout << endl;
     return 0;
 }
