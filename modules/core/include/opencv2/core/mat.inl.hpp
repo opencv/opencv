@@ -663,8 +663,14 @@ void Mat::addref()
 
 inline void Mat::release()
 {
-    if( u && CV_XADD(&u->refcount, -1) == 1 )
-        deallocate();
+    if( u )
+    {
+        // If this is last Mat wait for cleanup to finish or "u" may become invalid
+        if( u->refcount == 1 )
+            u->cleanUpEvent.wait();
+        if( CV_XADD(&u->refcount, -1) == 1 )
+            deallocate();
+    }
     u = NULL;
     datastart = dataend = datalimit = data = 0;
     for(int i = 0; i < dims; i++)

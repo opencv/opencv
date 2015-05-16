@@ -50,7 +50,7 @@ namespace cv {
 enum { UMAT_NLOCKS = 31 };
 static Mutex umatLocks[UMAT_NLOCKS];
 
-UMatData::UMatData(const MatAllocator* allocator)
+UMatData::UMatData(const MatAllocator* allocator) : cleanUpEvent(true)
 {
     prevAllocator = currAllocator = allocator;
     urefcount = refcount = 0;
@@ -221,6 +221,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
         temp_u->refcount = 1;
     }
+
     UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags); // TODO result is not checked
     hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);

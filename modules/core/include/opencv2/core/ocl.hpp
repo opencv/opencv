@@ -55,6 +55,7 @@ CV_EXPORTS_W bool haveAmdBlas();
 CV_EXPORTS_W bool haveAmdFft();
 CV_EXPORTS_W void setUseOpenCL(bool flag);
 CV_EXPORTS_W void finish();
+CV_EXPORTS_W void flush();
 
 CV_EXPORTS bool haveSVM();
 
@@ -290,6 +291,7 @@ public:
 
     bool create(const Context& c=Context(), const Device& d=Device());
     void finish();
+    void flush();
     void* ptr() const;
     static Queue& getDefault();
 
