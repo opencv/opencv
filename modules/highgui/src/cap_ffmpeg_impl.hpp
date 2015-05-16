@@ -713,10 +713,13 @@ bool CvCapture_FFMPEG::grabFrame()
         av_free_packet (&packet);
     }
 
-    if( valid ) {
+    if( valid )
+    {
         if ( first_frame_number < 0 )
             first_frame_number = dts_to_frame_number(picture_pts);
         frame_number = dts_to_frame_number(picture_pts) - first_frame_number;
+        if ( frame_number < 0 )
+            frame_number = get_total_frames();
     }
 
     // return if we have a new picture or not
