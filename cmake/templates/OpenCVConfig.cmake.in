@@ -313,3 +313,17 @@ endmacro()
 # installation directory for the status.
 find_package_handle_standard_args(OpenCV REQUIRED_VARS OpenCV_INSTALL_PATH
                                   VERSION_VAR OpenCV_VERSION ${_OpenCV_FPHSA_ARGS})
+
+include(CMakeFindDependencyMacro)
+
+if("@ZLIB_FOUND@")
+  find_dependency(ZLIB CONFIG)
+endif()
+
+if("@TIFF_FOUND@")
+  find_dependency(TIFF CONFIG)
+endif()
+
+if("@PNG_FOUND@")
+  find_dependency(PNG CONFIG)
+endif()
