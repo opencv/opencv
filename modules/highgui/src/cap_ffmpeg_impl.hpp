@@ -926,7 +926,6 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
                     if(!grabFrame())
                         break;
                 }
-                frame_number++;
                 break;
             }
             else
