@@ -34,7 +34,7 @@ static void help()
     cout << "\n This program demonstrates how to use MSER to detect extremal regions \n"
         "Usage: \n"
         "  ./detect_mser <image1(without parameter a syntehtic image is used as default)>\n"
-        "Press esc key when image window is active to change  descriptor parameter\n";
+        "Press esc key when image window is active to change  descriptor parameter\n"
         "Press 2, 8, 4, 6, +,- or 5 keys in openGL windows to change view or use mouse\n";
 }
 
@@ -70,7 +70,7 @@ struct MSERParams
     int edgeBlurSize;
 };
 
-String Legende(MSERParams &pAct)
+static String Legende(MSERParams &pAct)
 {
     String s="";
     String inf = static_cast<ostringstream*>(&(ostringstream() << pAct.minArea))->str();
@@ -118,9 +118,8 @@ struct DrawData
     ogl::Buffer indices;
     };
 
-void draw(void* userdata);
 
-void draw(void* userdata)
+static void draw(void* userdata)
 {
     DrawData* data = static_cast<DrawData*>(userdata);
     glMatrixMode(GL_MODELVIEW);
@@ -213,7 +212,7 @@ static void onMouse(int event, int x, int y, int flags, void*)
 }
 #endif
 
-void DrawOpenGLMSER(Mat img, Mat result)
+static void DrawOpenGLMSER(Mat img, Mat result)
 {
 #ifdef HAVE_OPENGL
     Mat imgGray;
@@ -331,7 +330,7 @@ void DrawOpenGLMSER(Mat img, Mat result)
 #endif
 }
 
-Mat MakeSyntheticImage()
+static Mat MakeSyntheticImage()
 {
     Mat img(800, 800, CV_8UC1);
     map<int, char> val;
@@ -497,7 +496,7 @@ int main(int argc, char *argv[])
             // We can detect regions using detectRegions method
             vector<KeyPoint>  keyImg;
             vector<Rect>  zone;
-            vector<vector <Point>>  region;
+            vector<vector <Point> >  region;
             Mat     desc;
 
             if (b.dynamicCast<MSER>() != NULL)
@@ -507,7 +506,7 @@ int main(int argc, char *argv[])
                 int i = 0;
                 //result = Scalar(0, 0, 0);
                 int nbPixelInMSER=0;
-                for (vector<vector <Point>>::iterator itr = region.begin(); itr != region.end(); itr++, i++)
+                for (vector<vector <Point> >::iterator itr = region.begin(); itr != region.end(); itr++, i++)
                 {
                     for (vector <Point>::iterator itp = region[i].begin(); itp != region[i].end(); itp ++)
                     {
