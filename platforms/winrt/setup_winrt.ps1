@@ -53,6 +53,10 @@ Param(
 
     [parameter(Mandatory=$False)]
     [String]
+    $TESTS = "None",
+
+    [parameter(Mandatory=$False)]
+    [String]
     [ValidateNotNull()]
     [ValidateSet("Visual Studio 12 2013","Visual Studio 11 2012")]
     $GENERATOR = "Visual Studio 12 2013",
@@ -129,6 +133,16 @@ function Call-MSBuild($path, $config)
     return $true
 }
 
+function RunAccuracyTests($path) {
+    md "$path\bin\Release\accuracy"
+    python "$PSScriptRoot\..\..\modules\ts\misc\run.py" -w "$path\bin\Release\accuracy" -a "$path\bin\Release"
+}
+
+function RunPerfTests($path) {
+    md "$path\bin\Release\perf"
+    python "$PSScriptRoot\..\..\modules\ts\misc\run.py" -w "$path\bin\Release\perf" "$path\bin\Release"
+}
+
 Function Execute() {
     If ($HELP.IsPresent) {
         ShowHelp
@@ -174,6 +188,7 @@ Function Execute() {
             Throw "$($_) is not valid! Please use x86, x64, ARM"
         }
     }
+
     D "Processed Architectures: $architectures"
 
     # Assuming we are in '<ocv-sources>/platforms/winrt' we should move up to sources root directory
@@ -263,6 +278,25 @@ Function Execute() {
 
                         Call-MSBuild "OpenCV.sln" "Release"
                         Call-MSBuild "INSTALL.vcxproj" "Release"
+
+                        Try {
+                            # Running tests for release versions:
+                            If ($TESTS -eq "ALL") {
+                                RunAccuracyTests "$path"
+                                RunPerfTests "$path"
+                            } else {
+                                If($TESTS -eq "ACC") {
+                                    RunAccuracyTests "$path"
+                                }
+                                If($TESTS -eq "PERF") {
+                                    RunPerfTests "$path"
+                                }
+                            }
+                        } Catch {
+                            $ErrorMessage = $_.Exception.Message
+                            L "Error: $ErrorMessage"
+                            exit
+                        }
                     }
                 } Catch {
                     $ErrorMessage = $_.Exception.Message
@@ -305,8 +339,10 @@ Function ShowHelp() {
     Write-Host "     cmd> setup_winrt.bat [params]"
     Write-Host "     cmd> PowerShell.exe -ExecutionPolicy Unrestricted -File setup_winrt.ps1 [params]"
     Write-Host "   Parameters:"
-    Write-Host "     setup_winrt [options] [platform] [version] [architecture] [generator] [install-path]"
+    Write-Host "     setup_winrt [options] [platform] [version] [architecture] [tests] [generator] [install-path]"
     Write-Host "     setup_winrt -b 'WP' 'x86,ARM' "
+    Write-Host "     setup_winrt -b 'WP' 'x86,ARM' ALL"
+    Write-Host "     setup_winrt -b 'WP' 'x86,ARM' -test PERF "
     Write-Host "     setup_winrt -architecture x86 -platform WP "
     Write-Host "     setup_winrt -arc x86 -plat 'WP,WS' "
     Write-Host "     setup_winrt -a x86 -g 'Visual Studio 11 2012' -pl WP "
@@ -329,6 +365,10 @@ Function ShowHelp() {
     Write-Host "                 Example: 'ARM,x64' "
     Write-Host "                 Options: x86, ARM, x64. Available options may be limited depending on your local setup. "
     Write-Host "                 Note that you'll need to use quotes to specify more than one architecture. "
+    Write-Host "     tests - Test sets to run. Requires -b option otherwise ignored. "
+    Write-Host "                 Default: None. "
+    Write-Host "                 Example: 'ALL' "
+    Write-Host "                 Options: ACC, PERF, ALL. "
     Write-Host "     generator - Visual Studio instance used to generate the projects. "
     Write-Host "                 Default: Visual Studio 12 2013 "
     Write-Host "                 Example: 'Visual Studio 11 2012' "
