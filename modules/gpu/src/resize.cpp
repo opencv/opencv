@@ -57,6 +57,18 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& stream)
 {
     typedef void (*func_t)(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
+
+#ifdef OPENCV_TINY_GPU_MODULE
+    static const func_t funcs[6][4] =
+    {
+        {device::resize<uchar>      , 0 /*device::resize<uchar2>*/ , device::resize<uchar3>     , device::resize<uchar4>     },
+        {0, 0, 0, 0},
+        {0, 0, 0, 0},
+        {0, 0, 0, 0},
+        {0, 0, 0, 0},
+        {device::resize<float>      , 0 /*device::resize<float2>*/ , device::resize<float3>     , device::resize<float4>     }
+    };
+#else
     static const func_t funcs[6][4] =
     {
         {device::resize<uchar>      , 0 /*device::resize<uchar2>*/ , device::resize<uchar3>     , device::resize<uchar4>     },
@@ -66,6 +78,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
         {0 /*device::resize<int>*/  , 0 /*device::resize<int2>*/   , 0 /*device::resize<int3>*/ , 0 /*device::resize<int4>*/ },
         {device::resize<float>      , 0 /*device::resize<float2>*/ , device::resize<float3>     , device::resize<float4>     }
     };
+#endif
 
     CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
     CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_AREA );

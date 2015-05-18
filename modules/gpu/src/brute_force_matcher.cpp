@@ -204,6 +204,26 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& query, const
                              const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
                              cudaStream_t stream);
 
+#ifdef OPENCV_TINY_GPU_MODULE
+    static const caller_t callers[3][6] =
+    {
+        {
+            0/*matchL1_gpu<unsigned char>*/, 0/*matchL1_gpu<signed char>*/,
+            0/*matchL1_gpu<unsigned short>*/, 0/*matchL1_gpu<short>*/,
+            0/*matchL1_gpu<int>*/, 0/*matchL1_gpu<float>*/
+        },
+        {
+            0/*matchL2_gpu<unsigned char>*/, 0/*matchL2_gpu<signed char>*/,
+            0/*matchL2_gpu<unsigned short>*/, 0/*matchL2_gpu<short>*/,
+            0/*matchL2_gpu<int>*/, matchL2_gpu<float>
+        },
+        {
+            matchHamming_gpu<unsigned char>, 0/*matchHamming_gpu<signed char>*/,
+            0/*matchHamming_gpu<unsigned short>*/, 0/*matchHamming_gpu<short>*/,
+            0/*matchHamming_gpu<int>*/, 0/*matchHamming_gpu<float>*/
+        }
+    };
+#else
     static const caller_t callers[3][6] =
     {
         {
@@ -222,6 +242,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& query, const
             matchHamming_gpu<int>, 0/*matchHamming_gpu<float>*/
         }
     };
+#endif
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     CV_Assert(train.cols == query.cols && train.type() == query.type());
@@ -334,6 +355,16 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& query, c
     GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
     const GpuMat& masks, Stream& stream)
 {
+#ifdef OPENCV_TINY_GPU_MODULE
+    (void)query;
+    (void)trainCollection;
+    (void)trainIdx;
+    (void)imgIdx;
+    (void)distance;
+    (void)masks;
+    (void)stream;
+    CV_Error(CV_StsNotImplemented, "not available in tiny build");
+#else
     if (query.empty() || trainCollection.empty())
         return;
 
@@ -374,6 +405,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& query, c
     CV_Assert(func != 0);
 
     func(query, trainCollection, masks, trainIdx, imgIdx, distance, StreamAccessor::getStream(stream));
+#endif
 }
 
 void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, vector<DMatch>& matches)
@@ -451,6 +483,26 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatchSingle(const GpuMat& query, co
                              const PtrStepSzb& trainIdx, const PtrStepSzb& distance, const PtrStepSzf& allDist,
                              cudaStream_t stream);
 
+#ifdef OPENCV_TINY_GPU_MODULE
+    static const caller_t callers[3][6] =
+    {
+        {
+            0/*matchL1_gpu<unsigned char>*/, 0/*matchL1_gpu<signed char>*/,
+            0/*matchL1_gpu<unsigned short>*/, 0/*matchL1_gpu<short>*/,
+            0/*matchL1_gpu<int>*/, 0/*matchL1_gpu<float>*/
+        },
+        {
+            0/*matchL2_gpu<unsigned char>*/, 0/*matchL2_gpu<signed char>*/,
+            0/*matchL2_gpu<unsigned short>*/, 0/*matchL2_gpu<short>*/,
+            0/*matchL2_gpu<int>*/, matchL2_gpu<float>
+        },
+        {
+            matchHamming_gpu<unsigned char>, 0/*matchHamming_gpu<signed char>*/,
+            0/*matchHamming_gpu<unsigned short>*/, 0/*matchHamming_gpu<short>*/,
+            0/*matchHamming_gpu<int>*/, 0/*matchHamming_gpu<float>*/
+        }
+    };
+#else
     static const caller_t callers[3][6] =
     {
         {
@@ -469,6 +521,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatchSingle(const GpuMat& query, co
             matchHamming_gpu<int>, 0/*matchHamming_gpu<float>*/
         }
     };
+#endif
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     CV_Assert(train.type() == query.type() && train.cols == query.cols);
@@ -568,6 +621,16 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch2Collection(const GpuMat& quer
     GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
     const GpuMat& maskCollection, Stream& stream)
 {
+#ifdef OPENCV_TINY_GPU_MODULE
+    (void)query;
+    (void)trainCollection;
+    (void)trainIdx;
+    (void)imgIdx;
+    (void)distance;
+    (void)maskCollection;
+    (void)stream;
+    CV_Error(CV_StsNotImplemented, "not available in tiny build");
+#else
     if (query.empty() || trainCollection.empty())
         return;
 
@@ -613,6 +676,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch2Collection(const GpuMat& quer
     CV_Assert(func != 0);
 
     func(query, trainCollection, maskCollection, trainIdx, imgIdx, distance, StreamAccessor::getStream(stream));
+#endif
 }
 
 void cv::gpu::BruteForceMatcher_GPU_base::knnMatch2Download(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance,
@@ -755,6 +819,26 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchSingle(const GpuMat& query,
                              const PtrStepSzi& trainIdx, const PtrStepSzf& distance, const PtrStepSz<unsigned int>& nMatches,
                              cudaStream_t stream);
 
+#ifdef OPENCV_TINY_GPU_MODULE
+    static const caller_t callers[3][6] =
+    {
+        {
+            0/*matchL1_gpu<unsigned char>*/, 0/*matchL1_gpu<signed char>*/,
+            0/*matchL1_gpu<unsigned short>*/, 0/*matchL1_gpu<short>*/,
+            0/*matchL1_gpu<int>*/, 0/*matchL1_gpu<float>*/
+        },
+        {
+            0/*matchL2_gpu<unsigned char>*/, 0/*matchL2_gpu<signed char>*/,
+            0/*matchL2_gpu<unsigned short>*/, 0/*matchL2_gpu<short>*/,
+            0/*matchL2_gpu<int>*/, matchL2_gpu<float>
+        },
+        {
+            matchHamming_gpu<unsigned char>, 0/*matchHamming_gpu<signed char>*/,
+            0/*matchHamming_gpu<unsigned short>*/, 0/*matchHamming_gpu<short>*/,
+            0/*matchHamming_gpu<int>*/, 0/*matchHamming_gpu<float>*/
+        }
+    };
+#else
     static const caller_t callers[3][6] =
     {
         {
@@ -773,6 +857,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchSingle(const GpuMat& query,
             matchHamming_gpu<int>, 0/*matchHamming_gpu<float>*/
         }
     };
+#endif
 
     const int nQuery = query.rows;
     const int nTrain = train.rows;
@@ -872,6 +957,17 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& query, const
 void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchCollection(const GpuMat& query, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, GpuMat& nMatches,
     float maxDistance, const vector<GpuMat>& masks, Stream& stream)
 {
+#ifdef OPENCV_TINY_GPU_MODULE
+    (void)query;
+    (void)trainIdx;
+    (void)imgIdx;
+    (void)distance;
+    (void)nMatches;
+    (void)maxDistance;
+    (void)masks;
+    (void)stream;
+    CV_Error(CV_StsNotImplemented, "not available in tiny build");
+#else
     if (query.empty() || empty())
         return;
 
@@ -926,6 +1022,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchCollection(const GpuMat& qu
 
     func(query, &trains_[0], static_cast<int>(trains_.size()), maxDistance, masks_.size() == 0 ? 0 : &masks_[0],
         trainIdx, imgIdx, distance, nMatches, StreamAccessor::getStream(stream));
+#endif
 }
 
 void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, const GpuMat& nMatches,

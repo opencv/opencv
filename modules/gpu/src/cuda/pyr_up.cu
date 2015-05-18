@@ -166,6 +166,7 @@ namespace cv { namespace gpu { namespace device
         template void pyrUp_gpu<uchar3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         template void pyrUp_gpu<uchar4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
+#ifndef OPENCV_TINY_GPU_MODULE
         //template void pyrUp_gpu<schar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         //template void pyrUp_gpu<char2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         //template void pyrUp_gpu<char3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -185,6 +186,7 @@ namespace cv { namespace gpu { namespace device
         //template void pyrUp_gpu<int2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         //template void pyrUp_gpu<int3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         //template void pyrUp_gpu<int4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+#endif
 
         template void pyrUp_gpu<float>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         //template void pyrUp_gpu<float2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);

@@ -225,6 +225,16 @@ GPU_TEST_P(WarpPerspective, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-1 : 1.0);
 }
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspective, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    DIRECT_INVERSE,
+    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR)),
+    testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_REFLECT)),
+    WHOLE_SUBMAT));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspective, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
@@ -233,6 +243,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspective, testing::Combine(
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
     testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_REFLECT), BorderType(cv::BORDER_WRAP)),
     WHOLE_SUBMAT));
+#endif
 
 ///////////////////////////////////////////////////////////////////
 // Test NPP
@@ -274,10 +285,18 @@ GPU_TEST_P(WarpPerspectiveNPP, Accuracy)
     EXPECT_MAT_SIMILAR(dst_gold, dst, 2e-2);
 }
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspectiveNPP, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    DIRECT_INVERSE,
+    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR))));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspectiveNPP, testing::Combine(
     ALL_DEVICES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     DIRECT_INVERSE,
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC))));
+#endif
 
 #endif // HAVE_CUDA

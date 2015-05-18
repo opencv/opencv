@@ -215,6 +215,12 @@ namespace cvtest
 
     using perf::MatDepth;
 
+#ifdef OPENCV_TINY_GPU_MODULE
+    #define ALL_DEPTH testing::Values(MatDepth(CV_8U), MatDepth(CV_32F))
+
+    #define DEPTH_PAIRS testing::Values(std::make_pair(MatDepth(CV_8U), MatDepth(CV_8U)),   \
+                                        std::make_pair(MatDepth(CV_32F), MatDepth(CV_32F)))
+#else
     #define ALL_DEPTH testing::Values(MatDepth(CV_8U), MatDepth(CV_8S), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32S), MatDepth(CV_32F), MatDepth(CV_64F))
 
     #define DEPTH_PAIRS testing::Values(std::make_pair(MatDepth(CV_8U), MatDepth(CV_8U)),   \
@@ -242,6 +248,7 @@ namespace cvtest
                                         std::make_pair(MatDepth(CV_32F), MatDepth(CV_64F)), \
                                                                                             \
                                         std::make_pair(MatDepth(CV_64F), MatDepth(CV_64F)))
+#endif
 
     // Type
 
@@ -318,7 +325,11 @@ namespace cvtest
     CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)
 
     CV_ENUM(BorderType, BORDER_REFLECT101, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_WRAP)
+#ifdef OPENCV_TINY_GPU_MODULE
+    #define ALL_BORDER_TYPES testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT))
+#else
     #define ALL_BORDER_TYPES testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT), BorderType(cv::BORDER_WRAP))
+#endif
 
     CV_FLAGS(WarpFlags, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, WARP_INVERSE_MAP)
 

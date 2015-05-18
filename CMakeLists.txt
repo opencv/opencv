@@ -194,6 +194,7 @@ OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for sta
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
 OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID AND ANDROID_SOURCE_TREE )
 OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )
+OCV_OPTION(BUILD_TINY_GPU_MODULE    "Build tiny gpu module with limited image format support" OFF )
 
 # 3rd party libs
 OCV_OPTION(BUILD_ZLIB               "Build zlib from source"             WIN32 OR APPLE )
@@ -996,6 +997,7 @@ if(HAVE_CUDA)
   status("    NVIDIA GPU arch:"      ${OPENCV_CUDA_ARCH_BIN})
   status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
   status("    Use fast math:"        CUDA_FAST_MATH THEN YES ELSE NO)
+  status("    Tiny gpu module:"      BUILD_TINY_GPU_MODULE THEN YES ELSE NO)
 endif()
 
 if(HAVE_OPENCL)

@@ -71,6 +71,12 @@ namespace cv { namespace gpu {
 
 using namespace ::cv::gpu::device;
 
+#ifdef OPENCV_TINY_GPU_MODULE
+    #define APPEND_16U(func) 0
+#else
+    #define APPEND_16U(func) func ## _16u
+#endif
+
 namespace
 {
     typedef void (*gpu_func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -78,10 +84,11 @@ namespace
     void bgr_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {bgr_to_rgb_8u, 0, bgr_to_rgb_16u, 0, 0, bgr_to_rgb_32f};
+        static const gpu_func_t funcs[] = {bgr_to_rgb_8u, 0, APPEND_16U(bgr_to_rgb), 0, 0, bgr_to_rgb_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));
 
@@ -91,10 +98,11 @@ namespace
     void bgr_to_bgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {bgr_to_bgra_8u, 0, bgr_to_bgra_16u, 0, 0, bgr_to_bgra_32f};
+        static const gpu_func_t funcs[] = {bgr_to_bgra_8u, 0, APPEND_16U(bgr_to_bgra), 0, 0, bgr_to_bgra_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));
 
@@ -104,10 +112,11 @@ namespace
     void bgr_to_rgba(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {bgr_to_rgba_8u, 0, bgr_to_rgba_16u, 0, 0, bgr_to_rgba_32f};
+        static const gpu_func_t funcs[] = {bgr_to_rgba_8u, 0, APPEND_16U(bgr_to_rgba), 0, 0, bgr_to_rgba_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));
 
@@ -117,10 +126,11 @@ namespace
     void bgra_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {bgra_to_bgr_8u, 0, bgra_to_bgr_16u, 0, 0, bgra_to_bgr_32f};
+        static const gpu_func_t funcs[] = {bgra_to_bgr_8u, 0, APPEND_16U(bgra_to_bgr), 0, 0, bgra_to_bgr_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));
 
@@ -130,10 +140,11 @@ namespace
     void bgra_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {bgra_to_rgb_8u, 0, bgra_to_rgb_16u, 0, 0, bgra_to_rgb_32f};
+        static const gpu_func_t funcs[] = {bgra_to_rgb_8u, 0, APPEND_16U(bgra_to_rgb), 0, 0, bgra_to_rgb_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));
 
@@ -143,10 +154,11 @@ namespace
     void bgra_to_rgba(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {bgra_to_rgba_8u, 0, bgra_to_rgba_16u, 0, 0, bgra_to_rgba_32f};
+        static const gpu_func_t funcs[] = {bgra_to_rgba_8u, 0, APPEND_16U(bgra_to_rgba), 0, 0, bgra_to_rgba_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));
 
@@ -316,10 +328,11 @@ namespace
     void gray_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {gray_to_bgr_8u, 0, gray_to_bgr_16u, 0, 0, gray_to_bgr_32f};
+        static const gpu_func_t funcs[] = {gray_to_bgr_8u, 0, APPEND_16U(gray_to_bgr), 0, 0, gray_to_bgr_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 1);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));
 
@@ -329,10 +342,11 @@ namespace
     void gray_to_bgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {gray_to_bgra_8u, 0, gray_to_bgra_16u, 0, 0, gray_to_bgra_32f};
+        static const gpu_func_t funcs[] = {gray_to_bgra_8u, 0, APPEND_16U(gray_to_bgra), 0, 0, gray_to_bgra_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 1);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));
 
@@ -382,10 +396,11 @@ namespace
     void rgb_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {rgb_to_gray_8u, 0, rgb_to_gray_16u, 0, 0, rgb_to_gray_32f};
+        static const gpu_func_t funcs[] = {rgb_to_gray_8u, 0, APPEND_16U(rgb_to_gray), 0, 0, rgb_to_gray_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));
 
@@ -395,10 +410,11 @@ namespace
     void bgr_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {bgr_to_gray_8u, 0, bgr_to_gray_16u, 0, 0, bgr_to_gray_32f};
+        static const gpu_func_t funcs[] = {bgr_to_gray_8u, 0, APPEND_16U(bgr_to_gray), 0, 0, bgr_to_gray_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));
 
@@ -408,10 +424,11 @@ namespace
     void rgba_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {rgba_to_gray_8u, 0, rgba_to_gray_16u, 0, 0, rgba_to_gray_32f};
+        static const gpu_func_t funcs[] = {rgba_to_gray_8u, 0, APPEND_16U(rgba_to_gray), 0, 0, rgba_to_gray_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));
 
@@ -421,10 +438,11 @@ namespace
     void bgra_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[] = {bgra_to_gray_8u, 0, bgra_to_gray_16u, 0, 0, bgra_to_gray_32f};
+        static const gpu_func_t funcs[] = {bgra_to_gray_8u, 0, APPEND_16U(bgra_to_gray), 0, 0, bgra_to_gray_32f};
 
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
+        CV_Assert(funcs[src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));
 
@@ -437,12 +455,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {rgb_to_yuv_8u, 0, rgb_to_yuv_16u, 0, 0, rgb_to_yuv_32f},
-                {rgba_to_yuv_8u, 0, rgba_to_yuv_16u, 0, 0, rgba_to_yuv_32f}
+                {rgb_to_yuv_8u, 0, APPEND_16U(rgb_to_yuv), 0, 0, rgb_to_yuv_32f},
+                {rgba_to_yuv_8u, 0, APPEND_16U(rgba_to_yuv), 0, 0, rgba_to_yuv_32f}
             },
             {
-                {rgb_to_yuv4_8u, 0, rgb_to_yuv4_16u, 0, 0, rgb_to_yuv4_32f},
-                {rgba_to_yuv4_8u, 0, rgba_to_yuv4_16u, 0, 0, rgba_to_yuv4_32f}
+                {rgb_to_yuv4_8u, 0, APPEND_16U(rgb_to_yuv4), 0, 0, rgb_to_yuv4_32f},
+                {rgba_to_yuv4_8u, 0, APPEND_16U(rgba_to_yuv4), 0, 0, rgba_to_yuv4_32f}
             }
         };
 
@@ -451,6 +469,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -463,12 +482,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {bgr_to_yuv_8u, 0, bgr_to_yuv_16u, 0, 0, bgr_to_yuv_32f},
-                {bgra_to_yuv_8u, 0, bgra_to_yuv_16u, 0, 0, bgra_to_yuv_32f}
+                {bgr_to_yuv_8u, 0, APPEND_16U(bgr_to_yuv), 0, 0, bgr_to_yuv_32f},
+                {bgra_to_yuv_8u, 0, APPEND_16U(bgra_to_yuv), 0, 0, bgra_to_yuv_32f}
             },
             {
-                {bgr_to_yuv4_8u, 0, bgr_to_yuv4_16u, 0, 0, bgr_to_yuv4_32f},
-                {bgra_to_yuv4_8u, 0, bgra_to_yuv4_16u, 0, 0, bgra_to_yuv4_32f}
+                {bgr_to_yuv4_8u, 0, APPEND_16U(bgr_to_yuv4), 0, 0, bgr_to_yuv4_32f},
+                {bgra_to_yuv4_8u, 0, APPEND_16U(bgra_to_yuv4), 0, 0, bgra_to_yuv4_32f}
             }
         };
 
@@ -477,6 +496,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -489,12 +509,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {yuv_to_rgb_8u, 0, yuv_to_rgb_16u, 0, 0, yuv_to_rgb_32f},
-                {yuv4_to_rgb_8u, 0, yuv4_to_rgb_16u, 0, 0, yuv4_to_rgb_32f}
+                {yuv_to_rgb_8u, 0, APPEND_16U(yuv_to_rgb), 0, 0, yuv_to_rgb_32f},
+                {yuv4_to_rgb_8u, 0, APPEND_16U(yuv4_to_rgb), 0, 0, yuv4_to_rgb_32f}
             },
             {
-                {yuv_to_rgba_8u, 0, yuv_to_rgba_16u, 0, 0, yuv_to_rgba_32f},
-                {yuv4_to_rgba_8u, 0, yuv4_to_rgba_16u, 0, 0, yuv4_to_rgba_32f}
+                {yuv_to_rgba_8u, 0, APPEND_16U(yuv_to_rgba), 0, 0, yuv_to_rgba_32f},
+                {yuv4_to_rgba_8u, 0, APPEND_16U(yuv4_to_rgba), 0, 0, yuv4_to_rgba_32f}
             }
         };
 
@@ -503,6 +523,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -515,12 +536,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {yuv_to_bgr_8u, 0, yuv_to_bgr_16u, 0, 0, yuv_to_bgr_32f},
-                {yuv4_to_bgr_8u, 0, yuv4_to_bgr_16u, 0, 0, yuv4_to_bgr_32f}
+                {yuv_to_bgr_8u, 0, APPEND_16U(yuv_to_bgr), 0, 0, yuv_to_bgr_32f},
+                {yuv4_to_bgr_8u, 0, APPEND_16U(yuv4_to_bgr), 0, 0, yuv4_to_bgr_32f}
             },
             {
-                {yuv_to_bgra_8u, 0, yuv_to_bgra_16u, 0, 0, yuv_to_bgra_32f},
-                {yuv4_to_bgra_8u, 0, yuv4_to_bgra_16u, 0, 0, yuv4_to_bgra_32f}
+                {yuv_to_bgra_8u, 0, APPEND_16U(yuv_to_bgra), 0, 0, yuv_to_bgra_32f},
+                {yuv4_to_bgra_8u, 0, APPEND_16U(yuv4_to_bgra), 0, 0, yuv4_to_bgra_32f}
             }
         };
 
@@ -529,6 +550,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -541,12 +563,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {rgb_to_YCrCb_8u, 0, rgb_to_YCrCb_16u, 0, 0, rgb_to_YCrCb_32f},
-                {rgba_to_YCrCb_8u, 0, rgba_to_YCrCb_16u, 0, 0, rgba_to_YCrCb_32f}
+                {rgb_to_YCrCb_8u, 0, APPEND_16U(rgb_to_YCrCb), 0, 0, rgb_to_YCrCb_32f},
+                {rgba_to_YCrCb_8u, 0, APPEND_16U(rgba_to_YCrCb), 0, 0, rgba_to_YCrCb_32f}
             },
             {
-                {rgb_to_YCrCb4_8u, 0, rgb_to_YCrCb4_16u, 0, 0, rgb_to_YCrCb4_32f},
-                {rgba_to_YCrCb4_8u, 0, rgba_to_YCrCb4_16u, 0, 0, rgba_to_YCrCb4_32f}
+                {rgb_to_YCrCb4_8u, 0, APPEND_16U(rgb_to_YCrCb4), 0, 0, rgb_to_YCrCb4_32f},
+                {rgba_to_YCrCb4_8u, 0, APPEND_16U(rgba_to_YCrCb4), 0, 0, rgba_to_YCrCb4_32f}
             }
         };
 
@@ -555,6 +577,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -567,12 +590,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {bgr_to_YCrCb_8u, 0, bgr_to_YCrCb_16u, 0, 0, bgr_to_YCrCb_32f},
-                {bgra_to_YCrCb_8u, 0, bgra_to_YCrCb_16u, 0, 0, bgra_to_YCrCb_32f}
+                {bgr_to_YCrCb_8u, 0, APPEND_16U(bgr_to_YCrCb), 0, 0, bgr_to_YCrCb_32f},
+                {bgra_to_YCrCb_8u, 0, APPEND_16U(bgra_to_YCrCb), 0, 0, bgra_to_YCrCb_32f}
             },
             {
-                {bgr_to_YCrCb4_8u, 0, bgr_to_YCrCb4_16u, 0, 0, bgr_to_YCrCb4_32f},
-                {bgra_to_YCrCb4_8u, 0, bgra_to_YCrCb4_16u, 0, 0, bgra_to_YCrCb4_32f}
+                {bgr_to_YCrCb4_8u, 0, APPEND_16U(bgr_to_YCrCb4), 0, 0, bgr_to_YCrCb4_32f},
+                {bgra_to_YCrCb4_8u, 0, APPEND_16U(bgra_to_YCrCb4), 0, 0, bgra_to_YCrCb4_32f}
             }
         };
 
@@ -581,6 +604,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -593,12 +617,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {YCrCb_to_rgb_8u, 0, YCrCb_to_rgb_16u, 0, 0, YCrCb_to_rgb_32f},
-                {YCrCb4_to_rgb_8u, 0, YCrCb4_to_rgb_16u, 0, 0, YCrCb4_to_rgb_32f}
+                {YCrCb_to_rgb_8u, 0, APPEND_16U(YCrCb_to_rgb), 0, 0, YCrCb_to_rgb_32f},
+                {YCrCb4_to_rgb_8u, 0, APPEND_16U(YCrCb4_to_rgb), 0, 0, YCrCb4_to_rgb_32f}
             },
             {
-                {YCrCb_to_rgba_8u, 0, YCrCb_to_rgba_16u, 0, 0, YCrCb_to_rgba_32f},
-                {YCrCb4_to_rgba_8u, 0, YCrCb4_to_rgba_16u, 0, 0, YCrCb4_to_rgba_32f}
+                {YCrCb_to_rgba_8u, 0, APPEND_16U(YCrCb_to_rgba), 0, 0, YCrCb_to_rgba_32f},
+                {YCrCb4_to_rgba_8u, 0, APPEND_16U(YCrCb4_to_rgba), 0, 0, YCrCb4_to_rgba_32f}
             }
         };
 
@@ -607,6 +631,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -619,12 +644,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {YCrCb_to_bgr_8u, 0, YCrCb_to_bgr_16u, 0, 0, YCrCb_to_bgr_32f},
-                {YCrCb4_to_bgr_8u, 0, YCrCb4_to_bgr_16u, 0, 0, YCrCb4_to_bgr_32f}
+                {YCrCb_to_bgr_8u, 0, APPEND_16U(YCrCb_to_bgr), 0, 0, YCrCb_to_bgr_32f},
+                {YCrCb4_to_bgr_8u, 0, APPEND_16U(YCrCb4_to_bgr), 0, 0, YCrCb4_to_bgr_32f}
             },
             {
-                {YCrCb_to_bgra_8u, 0, YCrCb_to_bgra_16u, 0, 0, YCrCb_to_bgra_32f},
-                {YCrCb4_to_bgra_8u, 0, YCrCb4_to_bgra_16u, 0, 0, YCrCb4_to_bgra_32f}
+                {YCrCb_to_bgra_8u, 0, APPEND_16U(YCrCb_to_bgra), 0, 0, YCrCb_to_bgra_32f},
+                {YCrCb4_to_bgra_8u, 0, APPEND_16U(YCrCb4_to_bgra), 0, 0, YCrCb4_to_bgra_32f}
             }
         };
 
@@ -633,6 +658,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -645,12 +671,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {rgb_to_xyz_8u, 0, rgb_to_xyz_16u, 0, 0, rgb_to_xyz_32f},
-                {rgba_to_xyz_8u, 0, rgba_to_xyz_16u, 0, 0, rgba_to_xyz_32f}
+                {rgb_to_xyz_8u, 0, APPEND_16U(rgb_to_xyz), 0, 0, rgb_to_xyz_32f},
+                {rgba_to_xyz_8u, 0, APPEND_16U(rgba_to_xyz), 0, 0, rgba_to_xyz_32f}
             },
             {
-                {rgb_to_xyz4_8u, 0, rgb_to_xyz4_16u, 0, 0, rgb_to_xyz4_32f},
-                {rgba_to_xyz4_8u, 0, rgba_to_xyz4_16u, 0, 0, rgba_to_xyz4_32f}
+                {rgb_to_xyz4_8u, 0, APPEND_16U(rgb_to_xyz4), 0, 0, rgb_to_xyz4_32f},
+                {rgba_to_xyz4_8u, 0, APPEND_16U(rgba_to_xyz4), 0, 0, rgba_to_xyz4_32f}
             }
         };
 
@@ -659,6 +685,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -671,12 +698,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {bgr_to_xyz_8u, 0, bgr_to_xyz_16u, 0, 0, bgr_to_xyz_32f},
-                {bgra_to_xyz_8u, 0, bgra_to_xyz_16u, 0, 0, bgra_to_xyz_32f}
+                {bgr_to_xyz_8u, 0, APPEND_16U(bgr_to_xyz), 0, 0, bgr_to_xyz_32f},
+                {bgra_to_xyz_8u, 0, APPEND_16U(bgra_to_xyz), 0, 0, bgra_to_xyz_32f}
             },
             {
-                {bgr_to_xyz4_8u, 0, bgr_to_xyz4_16u, 0, 0, bgr_to_xyz4_32f},
-                {bgra_to_xyz4_8u, 0, bgra_to_xyz4_16u, 0, 0, bgra_to_xyz4_32f}
+                {bgr_to_xyz4_8u, 0, APPEND_16U(bgr_to_xyz4), 0, 0, bgr_to_xyz4_32f},
+                {bgra_to_xyz4_8u, 0, APPEND_16U(bgra_to_xyz4), 0, 0, bgra_to_xyz4_32f}
             }
         };
 
@@ -685,6 +712,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -697,12 +725,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {xyz_to_rgb_8u, 0, xyz_to_rgb_16u, 0, 0, xyz_to_rgb_32f},
-                {xyz4_to_rgb_8u, 0, xyz4_to_rgb_16u, 0, 0, xyz4_to_rgb_32f}
+                {xyz_to_rgb_8u, 0, APPEND_16U(xyz_to_rgb), 0, 0, xyz_to_rgb_32f},
+                {xyz4_to_rgb_8u, 0, APPEND_16U(xyz4_to_rgb), 0, 0, xyz4_to_rgb_32f}
             },
             {
-                {xyz_to_rgba_8u, 0, xyz_to_rgba_16u, 0, 0, xyz_to_rgba_32f},
-                {xyz4_to_rgba_8u, 0, xyz4_to_rgba_16u, 0, 0, xyz4_to_rgba_32f}
+                {xyz_to_rgba_8u, 0, APPEND_16U(xyz_to_rgba), 0, 0, xyz_to_rgba_32f},
+                {xyz4_to_rgba_8u, 0, APPEND_16U(xyz4_to_rgba), 0, 0, xyz4_to_rgba_32f}
             }
         };
 
@@ -711,6 +739,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
@@ -723,12 +752,12 @@ namespace
         static const gpu_func_t funcs[2][2][6] =
         {
             {
-                {xyz_to_bgr_8u, 0, xyz_to_bgr_16u, 0, 0, xyz_to_bgr_32f},
-                {xyz4_to_bgr_8u, 0, xyz4_to_bgr_16u, 0, 0, xyz4_to_bgr_32f}
+                {xyz_to_bgr_8u, 0, APPEND_16U(xyz_to_bgr), 0, 0, xyz_to_bgr_32f},
+                {xyz4_to_bgr_8u, 0, APPEND_16U(xyz4_to_bgr), 0, 0, xyz4_to_bgr_32f}
             },
             {
-                {xyz_to_bgra_8u, 0, xyz_to_bgra_16u, 0, 0, xyz_to_bgra_32f},
-                {xyz4_to_bgra_8u, 0, xyz4_to_bgra_16u, 0, 0, xyz4_to_bgra_32f}
+                {xyz_to_bgra_8u, 0, APPEND_16U(xyz_to_bgra), 0, 0, xyz_to_bgra_32f},
+                {xyz4_to_bgra_8u, 0, APPEND_16U(xyz4_to_bgra), 0, 0, xyz4_to_bgra_32f}
             }
         };
 
@@ -737,6 +766,7 @@ namespace
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
+        CV_Assert(funcs[dcn == 4][src.channels() == 4][src.depth()] != 0);
 
         dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
