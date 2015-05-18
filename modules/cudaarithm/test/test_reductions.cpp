@@ -587,6 +587,44 @@ CUDA_TEST_P(MinMaxLoc, WithoutMask)
     }
 }
 
+CUDA_TEST_P(MinMaxLoc, OneRowMat)
+{
+    cv::Mat src = randomMat(cv::Size(size.width, 1), depth);
+
+    double minVal, maxVal;
+    cv::Point minLoc, maxLoc;
+    cv::cuda::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc);
+
+    double minVal_gold, maxVal_gold;
+    cv::Point minLoc_gold, maxLoc_gold;
+    minMaxLocGold(src, &minVal_gold, &maxVal_gold, &minLoc_gold, &maxLoc_gold);
+
+    EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+    EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+
+    expectEqual(src, minLoc_gold, minLoc);
+    expectEqual(src, maxLoc_gold, maxLoc);
+}
+
+CUDA_TEST_P(MinMaxLoc, OneColumnMat)
+{
+    cv::Mat src = randomMat(cv::Size(1, size.height), depth);
+
+    double minVal, maxVal;
+    cv::Point minLoc, maxLoc;
+    cv::cuda::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc);
+
+    double minVal_gold, maxVal_gold;
+    cv::Point minLoc_gold, maxLoc_gold;
+    minMaxLocGold(src, &minVal_gold, &maxVal_gold, &minLoc_gold, &maxLoc_gold);
+
+    EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+    EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+
+    expectEqual(src, minLoc_gold, minLoc);
+    expectEqual(src, maxLoc_gold, maxLoc);
+}
+
 CUDA_TEST_P(MinMaxLoc, Async)
 {
     cv::Mat src = randomMat(size, depth);
