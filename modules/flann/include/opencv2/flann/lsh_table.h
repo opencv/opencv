@@ -192,15 +192,16 @@ public:
     }
 
     /** Add a set of features to the table
+     * @param indexed_ofst previous indexed offset
      * @param dataset the values to store
      */
-    void add(Matrix<ElementType> dataset)
+    void add(int indexed_ofst, Matrix<ElementType> dataset)
     {
 #if USE_UNORDERED_MAP
         buckets_space_.rehash((buckets_space_.size() + dataset.rows) * 1.2);
 #endif
         // Add the features to the table
-        for (unsigned int i = 0; i < dataset.rows; ++i) add(i, dataset[i]);
+        for (unsigned int i = 0; i < dataset.rows; ++i) add(i + indexed_ofst, dataset[i]);
         // Now that the table is full, optimize it for speed/space
         optimize();
     }

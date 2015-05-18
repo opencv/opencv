@@ -111,6 +111,13 @@ public:
     }
 
     /**
+     * Dummy implementation for other algorithms of addable indexes after that.
+     */
+    void addIndex(const Matrix<ElementType>& /*wholeData*/, const Matrix<ElementType>& /*additionalData*/)
+    {
+    }
+
+    /**
      * Builds the index
      */
     void buildIndex()
