@@ -347,3 +347,31 @@ TEST( Features2d_DescriptorExtractor_AKAZE, regression )
                                               Hamming(), AKAZE::create());
     test.safe_run();
 }
+
+TEST( Features2d_DescriptorExtractor, batch )
+{
+    string path = string(cvtest::TS::ptr()->get_data_path() + "detectors_descriptors_evaluation/images_datasets/graf");
+    vector<Mat> imgs, descriptors;
+    vector<vector<KeyPoint> > keypoints;
+    int i, n = 6;
+    Ptr<ORB> orb = ORB::create();
+
+    for( i = 0; i < n; i++ )
+    {
+        string imgname = format("%s/img%d.png", path.c_str(), i+1);
+        Mat img = imread(imgname, 0);
+        imgs.push_back(img);
+    }
+
+    orb->detect(imgs, keypoints);
+    orb->compute(imgs, keypoints, descriptors);
+
+    ASSERT_EQ((int)keypoints.size(), n);
+    ASSERT_EQ((int)descriptors.size(), n);
+
+    for( i = 0; i < n; i++ )
+    {
+        EXPECT_GT((int)keypoints[i].size(), 100);
+        EXPECT_GT(descriptors[i].rows, 100);
+    }
+}
