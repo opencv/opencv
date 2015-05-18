@@ -330,24 +330,55 @@ namespace cv { namespace gpu { namespace device
 
         typedef void (*kernel_caller_t)(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, int maxdisp, cudaStream_t & stream);
 
+#ifdef OPENCV_TINY_GPU_MODULE
+        const static kernel_caller_t callers[] =
+        {
+            0,
+            kernel_caller< 1>,
+            kernel_caller< 2>,
+            kernel_caller< 3>,
+            kernel_caller< 4>,
+            kernel_caller< 5>,
+            0/*kernel_caller< 6>*/,
+            0/*kernel_caller< 7>*/,
+            0/*kernel_caller< 8>*/,
+            kernel_caller< 9>,
+            0/*kernel_caller<10>*/,
+            0/*kernel_caller<11>*/,
+            0/*kernel_caller<12>*/,
+            0/*kernel_caller<13>*/,
+            0/*kernel_caller<14>*/,
+            kernel_caller<15>,
+            0/*kernel_caller<16>*/,
+            0/*kernel_caller<17>*/,
+            0/*kernel_caller<18>*/,
+            0/*kernel_caller<19>*/,
+            0/*kernel_caller<20>*/,
+            0/*kernel_caller<21>*/,
+            0/*kernel_caller<22>*/,
+            0/*kernel_caller<23>*/,
+            0/*kernel_caller<24>*/,
+            0/*kernel_caller<25>*/,
+        };
+#else
         const static kernel_caller_t callers[] =
         {
             0,
             kernel_caller< 1>, kernel_caller< 2>, kernel_caller< 3>, kernel_caller< 4>, kernel_caller< 5>,
             kernel_caller< 6>, kernel_caller< 7>, kernel_caller< 8>, kernel_caller< 9>, kernel_caller<10>,
-            kernel_caller<11>, kernel_caller<12>, kernel_caller<13>, kernel_caller<15>, kernel_caller<15>,
+            kernel_caller<11>, kernel_caller<12>, kernel_caller<13>, kernel_caller<14>, kernel_caller<15>,
             kernel_caller<16>, kernel_caller<17>, kernel_caller<18>, kernel_caller<19>, kernel_caller<20>,
             kernel_caller<21>, kernel_caller<22>, kernel_caller<23>, kernel_caller<24>, kernel_caller<25>
-
-            //0,0,0, 0,0,0, 0,0,kernel_caller<9>
         };
+#endif
+
         const int calles_num = sizeof(callers)/sizeof(callers[0]);
 
         void stereoBM_GPU(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, int maxdisp, int winsz, const PtrStepSz<unsigned int>& minSSD_buf, cudaStream_t& stream)
         {
             int winsz2 = winsz >> 1;
 
-            if (winsz2 == 0 || winsz2 >= calles_num)
+            if (winsz2 == 0 || winsz2 >= calles_num || callers[winsz2] == 0)
                 cv::gpu::error("Unsupported window size", __FILE__, __LINE__, "stereoBM_GPU");
 
             //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferL1) );

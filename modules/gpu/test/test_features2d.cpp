@@ -310,6 +310,7 @@ GPU_TEST_P(BruteForceMatcher, Match_Single)
     ASSERT_EQ(0, badCount);
 }
 
+#ifndef OPENCV_TINY_GPU_MODULE
 GPU_TEST_P(BruteForceMatcher, Match_Collection)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
@@ -363,6 +364,7 @@ GPU_TEST_P(BruteForceMatcher, Match_Collection)
 
     ASSERT_EQ(0, badCount);
 }
+#endif
 
 GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
 {
@@ -442,6 +444,7 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
     ASSERT_EQ(0, badCount);
 }
 
+#ifndef OPENCV_TINY_GPU_MODULE
 GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
@@ -565,6 +568,7 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
 
     ASSERT_EQ(0, badCount);
 }
+#endif
 
 GPU_TEST_P(BruteForceMatcher, RadiusMatch_Single)
 {
@@ -615,6 +619,7 @@ GPU_TEST_P(BruteForceMatcher, RadiusMatch_Single)
     }
 }
 
+#ifndef OPENCV_TINY_GPU_MODULE
 GPU_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
@@ -693,11 +698,20 @@ GPU_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
         ASSERT_EQ(0, badCount);
     }
 }
+#endif
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(NormCode(cv::NORM_L2)),
+    testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304)),
+    testing::Values(UseMask(false), UseMask(true))));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
     ALL_DEVICES,
     testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2)),
     testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304)),
     testing::Values(UseMask(false), UseMask(true))));
+#endif
 
 #endif // HAVE_CUDA

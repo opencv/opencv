@@ -48,10 +48,16 @@ namespace cv { namespace gpu { namespace device
 #define OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name) \
     void name(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-#define OPENCV_GPU_DECLARE_CVTCOLOR_ALL(name)       \
-    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _8u)    \
-    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _16u)   \
-    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _32f)
+#ifdef OPENCV_TINY_GPU_MODULE
+    #define OPENCV_GPU_DECLARE_CVTCOLOR_ALL(name)       \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _8u)    \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _32f)
+#else
+    #define OPENCV_GPU_DECLARE_CVTCOLOR_ALL(name)       \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _8u)    \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _16u)   \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _32f)
+#endif
 
 #define OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(name)    \
     OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _8u)   \

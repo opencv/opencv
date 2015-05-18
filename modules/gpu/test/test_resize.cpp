@@ -174,6 +174,15 @@ GPU_TEST_P(Resize, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
 }
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Resize, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(0.3, 0.5, 1.5, 2.0),
+    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR)),
+    WHOLE_SUBMAT));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Resize, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
@@ -181,6 +190,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Resize, testing::Combine(
     testing::Values(0.3, 0.5, 1.5, 2.0),
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
     WHOLE_SUBMAT));
+#endif
 
 /////////////////
 
@@ -221,6 +231,15 @@ GPU_TEST_P(ResizeSameAsHost, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : src.depth() == CV_8U ? 4.0 : 1.0);
 }
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeSameAsHost, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(0.3, 0.5),
+    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_AREA)),
+    WHOLE_SUBMAT));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeSameAsHost, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
@@ -228,7 +247,17 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeSameAsHost, testing::Combine(
     testing::Values(0.3, 0.5),
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_AREA)),
     WHOLE_SUBMAT));
+#endif
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc2, ResizeSameAsHost, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(0.3, 0.5, 1.5, 2.0),
+    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR)),
+    WHOLE_SUBMAT));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc2, ResizeSameAsHost, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
@@ -236,5 +265,6 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc2, ResizeSameAsHost, testing::Combine(
     testing::Values(0.3, 0.5, 1.5, 2.0),
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR)),
     WHOLE_SUBMAT));
+#endif
 
 #endif // HAVE_CUDA

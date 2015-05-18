@@ -50,8 +50,13 @@
 
 namespace perf
 {
+#ifdef OPENCV_TINY_GPU_MODULE
+    #define ALL_BORDER_MODES testing::Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_CONSTANT), BorderMode(cv::BORDER_REFLECT))
+    #define ALL_INTERPOLATIONS testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_AREA))
+#else
     #define ALL_BORDER_MODES BorderMode::all()
     #define ALL_INTERPOLATIONS Interpolation::all()
+#endif
 
     CV_ENUM(BorderMode, BORDER_REFLECT101, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_WRAP)
     CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)

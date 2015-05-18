@@ -342,11 +342,13 @@ namespace cv { namespace gpu { namespace device
     template <> struct ResizeNearestDispatcher<uchar> : SelectImplForNearest<uchar> {};
     template <> struct ResizeNearestDispatcher<uchar4> : SelectImplForNearest<uchar4> {};
 
+#ifndef OPENCV_TINY_GPU_MODULE
     template <> struct ResizeNearestDispatcher<ushort> : SelectImplForNearest<ushort> {};
     template <> struct ResizeNearestDispatcher<ushort4> : SelectImplForNearest<ushort4> {};
 
     template <> struct ResizeNearestDispatcher<short> : SelectImplForNearest<short> {};
     template <> struct ResizeNearestDispatcher<short4> : SelectImplForNearest<short4> {};
+#endif
 
     template <> struct ResizeNearestDispatcher<float> : SelectImplForNearest<float> {};
     template <> struct ResizeNearestDispatcher<float4> : SelectImplForNearest<float4> {};
@@ -380,11 +382,13 @@ namespace cv { namespace gpu { namespace device
     template <> struct ResizeLinearDispatcher<uchar> : SelectImplForLinear<uchar> {};
     template <> struct ResizeLinearDispatcher<uchar4> : SelectImplForLinear<uchar4> {};
 
+#ifndef OPENCV_TINY_GPU_MODULE
     template <> struct ResizeLinearDispatcher<ushort> : SelectImplForLinear<ushort> {};
     template <> struct ResizeLinearDispatcher<ushort4> : SelectImplForLinear<ushort4> {};
 
     template <> struct ResizeLinearDispatcher<short> : SelectImplForLinear<short> {};
     template <> struct ResizeLinearDispatcher<short4> : SelectImplForLinear<short4> {};
+#endif
 
     template <> struct ResizeLinearDispatcher<float> : SelectImplForLinear<float> {};
     template <> struct ResizeLinearDispatcher<float4> : SelectImplForLinear<float4> {};
@@ -410,6 +414,7 @@ namespace cv { namespace gpu { namespace device
         }
     };
 
+#ifndef OPENCV_TINY_GPU_MODULE
     template <> struct ResizeCubicDispatcher<uchar> : SelectImplForCubic<uchar> {};
     template <> struct ResizeCubicDispatcher<uchar4> : SelectImplForCubic<uchar4> {};
 
@@ -421,6 +426,7 @@ namespace cv { namespace gpu { namespace device
 
     template <> struct ResizeCubicDispatcher<float> : SelectImplForCubic<float> {};
     template <> struct ResizeCubicDispatcher<float4> : SelectImplForCubic<float4> {};
+#endif
 
     // ResizeAreaDispatcher
 
@@ -467,7 +473,11 @@ namespace cv { namespace gpu { namespace device
         {
             ResizeNearestDispatcher<T>::call,
             ResizeLinearDispatcher<T>::call,
+#ifdef OPENCV_TINY_GPU_MODULE
+            0,
+#else
             ResizeCubicDispatcher<T>::call,
+#endif
             ResizeAreaDispatcher<T>::call
         };
 
@@ -475,13 +485,18 @@ namespace cv { namespace gpu { namespace device
         if (interpolation == 3 && (fx <= 1.f || fy <= 1.f))
             interpolation = 1;
 
-        funcs[interpolation](static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<T> >(srcWhole), yoff, xoff, static_cast< PtrStepSz<T> >(dst), fy, fx, stream);
+        const func_t func = funcs[interpolation];
+        if (!func)
+            cv::gpu::error("Unsupported input parameters for resize", __FILE__, __LINE__, "");
+
+        func(static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<T> >(srcWhole), yoff, xoff, static_cast< PtrStepSz<T> >(dst), fy, fx, stream);
     }
 
     template void resize<uchar >(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
     template void resize<uchar3>(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
     template void resize<uchar4>(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
 
+#ifndef OPENCV_TINY_GPU_MODULE
     template void resize<ushort >(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
     template void resize<ushort3>(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
     template void resize<ushort4>(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
@@ -489,6 +504,7 @@ namespace cv { namespace gpu { namespace device
     template void resize<short >(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
     template void resize<short3>(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
     template void resize<short4>(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
+#endif
 
     template void resize<float >(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
     template void resize<float3>(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);

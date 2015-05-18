@@ -90,10 +90,18 @@ namespace cv { namespace gpu { namespace device
                 CopyMakeBorderDispatcher<BrdReplicate, vec_type>::call,
                 CopyMakeBorderDispatcher<BrdConstant, vec_type>::call,
                 CopyMakeBorderDispatcher<BrdReflect, vec_type>::call,
+    #ifdef OPENCV_TINY_GPU_MODULE
+                0,
+    #else
                 CopyMakeBorderDispatcher<BrdWrap, vec_type>::call
+    #endif
             };
 
-            callers[borderMode](PtrStepSz<vec_type>(src), PtrStepSz<vec_type>(dst), top, left, borderValue, stream);
+            const caller_t caller = callers[borderMode];
+            if (!caller)
+                cv::gpu::error("Unsupported input parameters for copyMakeBorder", __FILE__, __LINE__, "");
+
+            caller(PtrStepSz<vec_type>(src), PtrStepSz<vec_type>(dst), top, left, borderValue, stream);
         }
 
         template void copyMakeBorder_gpu<uchar, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
@@ -101,6 +109,7 @@ namespace cv { namespace gpu { namespace device
         template void copyMakeBorder_gpu<uchar, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
         template void copyMakeBorder_gpu<uchar, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
 
+#ifndef OPENCV_TINY_GPU_MODULE
         //template void copyMakeBorder_gpu<schar, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
         //template void copyMakeBorder_gpu<schar, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
         //template void copyMakeBorder_gpu<schar, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
@@ -120,6 +129,7 @@ namespace cv { namespace gpu { namespace device
         //template void copyMakeBorder_gpu<int, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
         //template void copyMakeBorder_gpu<int, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
         //template void copyMakeBorder_gpu<int, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
+#endif
 
         template void copyMakeBorder_gpu<float, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
         //template void copyMakeBorder_gpu<float, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);

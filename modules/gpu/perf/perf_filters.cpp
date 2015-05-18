@@ -87,7 +87,19 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Blur,
 //////////////////////////////////////////////////////////////////////
 // Sobel
 
-PERF_TEST_P(Sz_Type_KernelSz, Filters_Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
+#ifdef OPENCV_TINY_GPU_MODULE
+PERF_TEST_P(Sz_Type_KernelSz, Filters_Sobel, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8UC1, CV_8UC4, CV_32FC1),
+    Values(3, 5, 7)
+))
+#else
+PERF_TEST_P(Sz_Type_KernelSz, Filters_Sobel, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8UC1, CV_8UC4, CV_32FC1),
+    Values(3, 5, 7, 9, 11, 13, 15)
+))
+#endif
 {
     declare.time(20.0);
 
@@ -154,7 +166,19 @@ PERF_TEST_P(Sz_Type, Filters_Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
 //////////////////////////////////////////////////////////////////////
 // GaussianBlur
 
-PERF_TEST_P(Sz_Type_KernelSz, Filters_GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
+#ifdef OPENCV_TINY_GPU_MODULE
+PERF_TEST_P(Sz_Type_KernelSz, Filters_GaussianBlur, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8UC1, CV_8UC4, CV_32FC1),
+    Values(3, 5, 7)
+))
+#else
+PERF_TEST_P(Sz_Type_KernelSz, Filters_GaussianBlur, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8UC1, CV_8UC4, CV_32FC1),
+    Values(3, 5, 7, 9, 11, 13, 15)
+))
+#endif
 {
     declare.time(20.0);
 

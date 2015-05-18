@@ -164,6 +164,21 @@ GPU_TEST_P(Sobel, Accuracy)
     EXPECT_MAT_NEAR(getInnerROI(dst_gold, ksize), getInnerROI(dst, ksize), CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
 }
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_32F)),
+    IMAGE_CHANNELS,
+    testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7))),
+    testing::Values(Deriv_X(0), Deriv_X(1), Deriv_X(2)),
+    testing::Values(Deriv_Y(0), Deriv_Y(1), Deriv_Y(2)),
+    testing::Values(BorderType(cv::BORDER_REFLECT101),
+                    BorderType(cv::BORDER_REPLICATE),
+                    BorderType(cv::BORDER_CONSTANT),
+                    BorderType(cv::BORDER_REFLECT)),
+    WHOLE_SUBMAT));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
@@ -177,6 +192,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
                     BorderType(cv::BORDER_CONSTANT),
                     BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Scharr
@@ -227,6 +243,20 @@ GPU_TEST_P(Scharr, Accuracy)
     EXPECT_MAT_NEAR(getInnerROI(dst_gold, cv::Size(3, 3)), getInnerROI(dst, cv::Size(3, 3)), CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
 }
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_Filter, Scharr, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_32F)),
+    IMAGE_CHANNELS,
+    testing::Values(Deriv_X(0), Deriv_X(1)),
+    testing::Values(Deriv_Y(0), Deriv_Y(1)),
+    testing::Values(BorderType(cv::BORDER_REFLECT101),
+                    BorderType(cv::BORDER_REPLICATE),
+                    BorderType(cv::BORDER_CONSTANT),
+                    BorderType(cv::BORDER_REFLECT)),
+    WHOLE_SUBMAT));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Scharr, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
@@ -239,6 +269,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Scharr, testing::Combine(
                     BorderType(cv::BORDER_CONSTANT),
                     BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // GaussianBlur
@@ -301,6 +332,21 @@ GPU_TEST_P(GaussianBlur, Accuracy)
     }
 }
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_Filter, GaussianBlur, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_32F)),
+    IMAGE_CHANNELS,
+    testing::Values(KSize(cv::Size(3, 3)),
+                    KSize(cv::Size(5, 5)),
+                    KSize(cv::Size(7, 7))),
+    testing::Values(BorderType(cv::BORDER_REFLECT101),
+                    BorderType(cv::BORDER_REPLICATE),
+                    BorderType(cv::BORDER_CONSTANT),
+                    BorderType(cv::BORDER_REFLECT)),
+    WHOLE_SUBMAT));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_Filter, GaussianBlur, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
@@ -326,6 +372,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, GaussianBlur, testing::Combine(
                     BorderType(cv::BORDER_CONSTANT),
                     BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Laplacian
@@ -565,6 +612,16 @@ GPU_TEST_P(Filter2D, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) == CV_32F ? 1e-1 : 1.0);
 }
 
+#ifdef OPENCV_TINY_GPU_MODULE
+INSTANTIATE_TEST_CASE_P(GPU_Filter, Filter2D, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC4)),
+    testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7)), KSize(cv::Size(11, 11)), KSize(cv::Size(13, 13)), KSize(cv::Size(15, 15))),
+    testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
+    testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT)),
+    WHOLE_SUBMAT));
+#else
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Filter2D, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
@@ -573,5 +630,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Filter2D, testing::Combine(
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
     testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
+#endif
 
 #endif // HAVE_CUDA
