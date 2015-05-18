@@ -531,10 +531,20 @@ void FlannBasedMatcher::clear()
 
 void FlannBasedMatcher::train()
 {
-    if( flannIndex.empty() || mergedDescriptors.size() < addedDescCount )
+    int trained = mergedDescriptors.size();
+    if (flannIndex.empty() || trained < addedDescCount)
     {
         mergedDescriptors.set( trainDescCollection );
-        flannIndex = new flann::Index( mergedDescriptors.getDescriptors(), *indexParams );
+
+        //  construct flannIndex class, if empty or Algorithm not equal FLANN_INDEX_LSH
+        if (flannIndex.empty() || flannIndex->getAlgorithm() != cvflann::FLANN_INDEX_LSH)
+        {
+            flannIndex = new flann::Index(mergedDescriptors.getDescriptors(), *indexParams);
+        }
+        else
+        {
+            flannIndex->build(mergedDescriptors.getDescriptors(), mergedDescriptors.getDescriptors().rowRange(trained, mergedDescriptors.size()), *indexParams, cvflann::FLANN_DIST_HAMMING);
+        }
     }
 }
 
