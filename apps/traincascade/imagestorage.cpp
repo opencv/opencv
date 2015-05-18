@@ -54,8 +54,10 @@ bool CvCascadeImageReader::NegReader::nextImg()
     for( size_t i = 0; i < count; i++ )
     {
         src = imread( imgFilenames[last++], 0 );
-        if( src.empty() )
+        if( src.empty() ){
+            last %= count;
             continue;
+        }
         round += last / count;
         round = round % (winSize.width * winSize.height);
         last %= count;
