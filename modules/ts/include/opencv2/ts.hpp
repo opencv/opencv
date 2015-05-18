@@ -588,3 +588,102 @@ int main(int argc, char **argv) \
 #endif
 
 #include "opencv2/ts/ts_perf.hpp"
+
+#ifdef WINRT
+#ifndef __FSTREAM_EMULATED__
+#define __FSTREAM_EMULATED__
+#include <stdlib.h>
+#include <fstream>
+#include <sstream>
+
+#undef ifstream
+#undef ofstream
+#define ifstream ifstream_emulated
+#define ofstream ofstream_emulated
+
+namespace std {
+
+class ifstream : public stringstream
+{
+    FILE* f;
+public:
+    ifstream(const char* filename, ios_base::openmode mode = ios_base::in)
+        : f(NULL)
+    {
+        string modeStr("r");
+        printf("Open file (read): %s\n", filename);
+        if (mode & ios_base::binary)
+            modeStr += "b";
+        f = fopen(filename, modeStr.c_str());
+
+        if (f == NULL)
+        {
+            printf("Can't open file: %s\n", filename);
+            return;
+        }
+        fseek(f, 0, SEEK_END);
+        size_t sz = ftell(f);
+        if (sz > 0)
+        {
+            char* buf = (char*) malloc(sz);
+            fseek(f, 0, SEEK_SET);
+            if (fread(buf, 1, sz, f) == sz)
+            {
+                this->str(std::string(buf, sz));
+            }
+            free(buf);
+        }
+    }
+
+    ~ifstream() { close(); }
+    bool is_open() const { return f != NULL; }
+    void close()
+    {
+        if (f)
+            fclose(f);
+        f = NULL;
+        this->str("");
+    }
+};
+
+class ofstream : public stringstream
+{
+    FILE* f;
+public:
+    ofstream(const char* filename, ios_base::openmode mode = ios_base::out)
+    : f(NULL)
+    {
+        open(filename, mode);
+    }
+    ~ofstream() { close(); }
+    void open(const char* filename, ios_base::openmode mode = ios_base::out)
+    {
+        string modeStr("w+");
+        if (mode & ios_base::trunc)
+            modeStr = "w";
+        if (mode & ios_base::binary)
+            modeStr += "b";
+        f = fopen(filename, modeStr.c_str());
+        printf("Open file (write): %s\n", filename);
+        if (f == NULL)
+        {
+            printf("Can't open file (write): %s\n", filename);
+            return;
+        }
+    }
+    bool is_open() const { return f != NULL; }
+    void close()
+    {
+        if (f)
+        {
+            fwrite(reinterpret_cast<const char *>(this->str().c_str()), this->str().size(), 1, f);
+            fclose(f);
+        }
+        f = NULL;
+        this->str("");
+    }
+};
+
+} // namespace std
+#endif // __FSTREAM_EMULATED__
+#endif // WINRT

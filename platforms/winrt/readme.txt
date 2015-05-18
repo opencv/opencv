@@ -119,3 +119,41 @@ To generate Windows Phone 8.1 x86 project files in the opencv/bin dir
 mkdir bin
 cd bin
 cmake -G "Visual Studio 12 2013" -DCMAKE_SYSTEM_NAME=WindowsPhone -DCMAKE_SYSTEM_VERSION=8.1 ../
+
+Running tests for Windows Store
+===============================
+1. You might need to install this if you haven't already: http://www.microsoft.com/en-US/download/details.aspx?id=40784
+
+2. Set OPENCV_TEST_DATA_PATH environment variable to location of opencv_extra/testdata (cloning of https://github.com/Itseez/opencv_extra repo required) to get tests work correctly. Also, set OPENCV_PERF_VALIDATION_DIR environment variable in case you are planning to have place where to store performance test results and compare them with the future test runs.
+
+3. In case you'd like to adjust some flags that are defaulted by setup_winrt script, go to "Manual build" section. Otherwise go to platforms/winrt and execute
+
+setup_winrt.bat "WS" "8.1" "x64"
+
+This will generate all files needed to build open_cv projects for selected platform in opencv\bin\<Depends on generated configuration>. Open the opencv\bin\<path to required configuration> directory and open the OpenCV.sln.
+
+4. Set OCV solution to Release mode and build it. They should build without errors and generate executables in "bin\WS\8.1\x64\bin\Release\" (or similar path depending on the configuration)
+
+5. Running tests:
+ - **Accuracy:** Run opencv_test_{module}.exe via console or as usual by double clicking it. You should see output in the console window
+ - **Performance:** Run opencv_perf_{module}.exe via console or as usual by double clicking it. You should see output in the console window. In case you'd like to write test results to file use --perf_write_validation_results=<filename> parameter; To compare current results to previous use --perf_read_validation_results=<filename>. This should read/write files from/to OPENCV_PERF_VALIDATION_DIR
+
+Manual build
+============
+
+ CMake interface:
+-----------------
+  1. Set CMAKE_SYSTEM_NAME to WindowsStore or WindowsPhone and CMAKE_SYSTEM_VERSION to 8.0 or 8.1
+  2. Set CMAKE_INSTALL_PREFIX using format "<install dir>\WS\8.1\x64" (this structure is required by samples)
+  3. Click "Configure" and choose required generator
+  4. Click "Generate"
+
+ Command line:
+--------------
+  1. md bin
+  2. cd bin
+  3. Add any required parameters to this command and execute it:
+
+  cmake -G "Visual Studio 12 2013 Win64" -DCMAKE_SYSTEM_NAME:String=WindowsStore -DCMAKE_SYSTEM_VERSION:String=8.1 -DCMAKE_VS_EFFECTIVE_PLATFORMS:String=x64 -DCMAKE_INSTALL_PREFIX:PATH=.\install\WS\8.1\x64\ ..
+
+Return to "Running tests for Windows Store", list item 4.

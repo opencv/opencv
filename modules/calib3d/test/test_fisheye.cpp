@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 #include <opencv2/ts/cuda_test.hpp>
 #include "../src/fisheye.hpp"
+#include "opencv2/videoio.hpp"
 
 class fisheyeTest : public ::testing::Test {
 
