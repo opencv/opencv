@@ -221,7 +221,7 @@ void CvCaptureCAM_XIMEA::resetCvImage()
     xiGetParamInt( hmv, XI_PRM_HEIGHT, &height);
     xiGetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, &format);
 
-    if( (int)image.width != width || (int)image.height != height || image.frm != (XI_IMG_FORMAT)format)
+    if( (int)image.width != frame->width || (int)image.height != frame->height || image.frm != (XI_IMG_FORMAT)format)
     {
         if(frame) cvReleaseImage(&frame);
         frame = NULL;

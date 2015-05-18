@@ -49,7 +49,7 @@ namespace cv { namespace hal {
 \****************************************************************************************/
 
 template<typename _Tp> static inline int
-LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
+LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n, _Tp eps)
 {
     int i, j, k, p = 1;
     astep /= sizeof(A[0]);
@@ -63,7 +63,7 @@ LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
             if( std::abs(A[j*astep + i]) > std::abs(A[k*astep + i]) )
                 k = j;
 
-        if( std::abs(A[k*astep + i]) < std::numeric_limits<_Tp>::epsilon() )
+        if( std::abs(A[k*astep + i]) < eps )
             return 0;
 
         if( k != i )
@@ -111,13 +111,13 @@ LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
 
 int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    return LUImpl(A, astep, m, b, bstep, n);
+    return LUImpl(A, astep, m, b, bstep, n, FLT_EPSILON*10);
 }
 
 
 int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    return LUImpl(A, astep, m, b, bstep, n);
+    return LUImpl(A, astep, m, b, bstep, n, DBL_EPSILON*100);
 }
 
 
