@@ -78,7 +78,7 @@ void Video::closeGrabber() {
     bGrabberInitInProgress = false;
 }
 
-
+// non-blocking
 bool Video::initGrabber(int device, int w, int h) {
     // already started?
     if (bGrabberInited || bGrabberInitInProgress) return false;
@@ -124,7 +124,7 @@ bool Video::initGrabber(int device, int w, int h) {
             // for 24 bpp
             props->Subtype = MediaEncodingSubtypes::Rgb24;      bytesPerPixel = 3;
 
-            // format used by XAML & WBM (for testing)
+            // XAML & WBM use BGRA8, so it would look like
             // props->Subtype = MediaEncodingSubtypes::Bgra8;   bytesPerPixel = 4;
 
             props->Width = width;
@@ -282,22 +282,20 @@ bool Video::listDevicesTask() {
 
     auto settings = ref new MediaCaptureInitializationSettings();
 
-    //vector <int> devices;
-
     create_task(DeviceInformation::FindAllAsync(DeviceClass::VideoCapture))
         .then([this, &ready](task<DeviceInformationCollection^> findTask)
     {
         m_devices = findTask.get();
 
-        for (size_t i = 0; i < m_devices->Size; i++)
-        {
-            // ofVideoDevice deviceInfo;
-            auto d = m_devices->GetAt(i);
-            //deviceInfo.bAvailable = true;
-            //deviceInfo.deviceName = PlatformStringToString(d->Name);
-            //deviceInfo.hardwareName = deviceInfo.deviceName;
-            // devices.push_back(deviceInfo);
-        }
+        // TODO: collect device data
+        // for (size_t i = 0; i < m_devices->Size; i++)
+        // {
+        //   .. deviceInfo;
+        //   auto d = m_devices->GetAt(i);
+        //   deviceInfo.bAvailable = true;
+        //   deviceInfo.deviceName = PlatformStringToString(d->Name);
+        //   deviceInfo.hardwareName = deviceInfo.deviceName;
+        // }
 
         ready = true;
     });

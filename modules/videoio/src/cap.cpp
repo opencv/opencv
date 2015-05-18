@@ -697,7 +697,7 @@ VideoCapture& VideoCapture::operator >> (Mat& image)
             bridge.bIsFrameNew = false;
 
             // needed here because setting Mat 'image' is not allowed by OutputArray in read()
-            Mat m(bridge.height, bridge.width, CV_8UC3, p);
+            Mat m(bridge.getHeight(), bridge.getWidth(), CV_8UC3, p);
             image = m;
         }
     }

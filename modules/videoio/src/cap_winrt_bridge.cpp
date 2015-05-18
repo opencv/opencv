@@ -45,7 +45,7 @@ using namespace ::std;
 /***************************** VideoioBridge class ******************************/
 
 // non-blocking
-void VideoioBridge::requestForUIthreadAsync(int action, int widthp, int heightp)
+void VideoioBridge::requestForUIthreadAsync(int action)
 {
     reporter.report(action);
 }
@@ -80,10 +80,79 @@ void VideoioBridge::allocateOutputBuffers()
     backOutputBuffer = ref new WriteableBitmap(width, height);
 }
 
+// performed on UI thread
+void VideoioBridge::allocateBuffers(int width, int height)
+{
+    // allocate input Mats (bgra8 = CV_8UC4, RGB24 = CV_8UC3)
+    frontInputMat.create(height, width, CV_8UC3);
+    backInputMat.create(height, width, CV_8UC3);
+
+    frontInputPtr = frontInputMat.ptr(0);
+    backInputPtr = backInputMat.ptr(0);
+
+    allocateOutputBuffers();
+}
+
+// performed on UI thread
+bool VideoioBridge::openCamera()
+{
+    // buffers must alloc'd on UI thread
+    allocateBuffers(width, height);
+
+    // nb. video capture device init must be done on UI thread;
+    if (!Video::getInstance().isStarted())
+    {
+        Video::getInstance().initGrabber(deviceIndex, width, height);
+        return true;
+    }
+
+    return false;
+}
+
+// nb on UI thread
+void VideoioBridge::updateFrameContainer()
+{
+    // copy output Mat to WBM
+    Video::getInstance().CopyOutput();
+
+    // set XAML image element with image WBM
+    cvImage->Source = backOutputBuffer;
+}
+
 void VideoioBridge::imshow()
 {
-    VideoioBridge::getInstance().swapOutputBuffers();
-    VideoioBridge::getInstance().requestForUIthreadAsync(cv::UPDATE_IMAGE_ELEMENT);
+    swapOutputBuffers();
+    requestForUIthreadAsync(cv::UPDATE_IMAGE_ELEMENT);
+}
+
+int VideoioBridge::getDeviceIndex()
+{
+    return deviceIndex;
+}
+
+void VideoioBridge::setDeviceIndex(int index)
+{
+    deviceIndex = index;
+}
+
+int VideoioBridge::getWidth()
+{
+    return width;
+}
+
+int VideoioBridge::getHeight()
+{
+    return height;
+}
+
+void VideoioBridge::setWidth(int _width)
+{
+    width = _width;
+}
+
+void VideoioBridge::setHeight(int _height)
+{
+    height = _height;
 }
 
 // end

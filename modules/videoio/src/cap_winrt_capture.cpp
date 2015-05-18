@@ -43,23 +43,9 @@ using namespace Microsoft::WRL;
 
 using namespace ::std;
 
-
-// nb. VideoCapture_WinRT is not a singleton, so the Mats are made file statics
-// we do not support more than one capture device simultaneously with the
-// design at this time
-
-// nb. inputBufferMutex was not able to guarantee that OpenCV Mats were
-// ready to accept data in the UI thread (memory access exceptions were thrown
-// even though buffer address was good).
-// Therefore allocation of Mats is also done on the UI thread before the video
-// device is initialized.
-
-static cv::Mat frontInputMat;
-static cv::Mat backInputMat;
-
 namespace cv {
 
-    /***************************** exported control functions ******************************/
+    /******************************* exported API functions **************************************/
 
     template <typename ...Args>
     void winrt_startMessageLoop(std::function<void(Args...)>&& callback, Args... args)
@@ -80,13 +66,13 @@ namespace cv {
             switch (action)
             {
             case OPEN_CAMERA:
-                winrt_openCamera();
+                VideoioBridge::getInstance().openCamera();
                 break;
             case CLOSE_CAMERA:
-                winrt_closeGrabber();
+                Video::getInstance().closeGrabber();
                 break;
             case UPDATE_IMAGE_ELEMENT:
-                winrt_updateFrameContainer();
+                VideoioBridge::getInstance().updateFrameContainer();
                 break;
             }
         });
@@ -98,7 +84,8 @@ namespace cv {
         winrt_startMessageLoop(std::function<void(Args...)>(callback), args...);
     }
 
-    void winrt_onVisibilityChanged(bool visible) {
+    void winrt_onVisibilityChanged(bool visible)
+    {
         if (visible)
         {
             VideoioBridge& bridge = VideoioBridge::getInstance();
@@ -108,99 +95,34 @@ namespace cv {
             {
                 if (Video::getInstance().isStarted()) return;
 
-                int device = bridge.deviceIndex;
-                int width = bridge.width;
-                int height = bridge.height;
+                int device = bridge.getDeviceIndex();
+                int width = bridge.getWidth();
+                int height = bridge.getHeight();
 
-                winrt_initGrabber(device, width, height);
+                Video::getInstance().initGrabber(device, width, height);
             }
         } else
         {
             //grabberStarted = false;
-            winrt_closeGrabber();
+            Video::getInstance().closeGrabber();
         }
     }
 
-    void winrt_imshow() {
+    void winrt_imshow()
+    {
         VideoioBridge::getInstance().imshow();
     }
 
-    void winrt_setFrameContainer(::Windows::UI::Xaml::Controls::Image^ image) {
+    void winrt_setFrameContainer(::Windows::UI::Xaml::Controls::Image^ image)
+    {
         VideoioBridge::getInstance().cvImage = image;
     }
-
-
-    /********************************* Internal helpers ************************************/
-
-    void winrt_updateFrameContainer()
-    {
-        // copy output Mat to WBM
-        winrt_copyOutput();
-
-        // set XAML image element with image WBM
-        VideoioBridge::getInstance().cvImage->Source = VideoioBridge::getInstance().backOutputBuffer;
-    }
-
-    // performed on UI thread
-    bool winrt_openCamera()
-    {
-        VideoioBridge& bridge = VideoioBridge::getInstance();
-
-        int device = bridge.deviceIndex;
-        int width = bridge.width;
-        int height = bridge.height;
-
-        // buffers must alloc'd on UI thread
-        winrt_allocateBuffers(width, height);
-
-        // nb. video capture device init must be done on UI thread;
-        if (!Video::getInstance().isStarted())
-        {
-            winrt_initGrabber(device, width, height);
-            return true;
-        }
-
-        return false;
-    }
-
-    // performed on UI thread
-    void winrt_allocateBuffers(int width, int height)
-    {
-        VideoioBridge& bridge = VideoioBridge::getInstance();
-
-        // allocate input Mats (bgra8 = CV_8UC4, RGB24 = CV_8UC3)
-        frontInputMat.create(height, width, CV_8UC3);
-        backInputMat.create(height, width, CV_8UC3);
-
-        bridge.frontInputPtr = frontInputMat.ptr(0);
-        bridge.backInputPtr = backInputMat.ptr(0);
-
-        bridge.allocateOutputBuffers();
-    }
-
-    // non-blocking
-    bool winrt_initGrabber(int device, int w, int h) {
-        // nb. Video class is not exported outside of this DLL
-        // due to complexities in the CaptureFrameGrabber ref class
-        // as written in the header not mixing well with pure C++ classes
-        return Video::getInstance().initGrabber(device, w, h);
-    }
-
-    void winrt_closeGrabber() {
-        Video::getInstance().closeGrabber();
-    }
-
-    // nb on UI thread
-    void winrt_copyOutput() {
-        Video::getInstance().CopyOutput();
-    }
-
 
     /********************************* VideoCapture_WinRT class ****************************/
 
     VideoCapture_WinRT::VideoCapture_WinRT(int device) : started(false)
     {
-        VideoioBridge::getInstance().deviceIndex = device;
+        VideoioBridge::getInstance().setDeviceIndex(device);
     }
 
     bool VideoCapture_WinRT::isOpened() const
@@ -240,14 +162,13 @@ namespace cv {
             if (width == 0) width = 640;
             if (height == 0) height = 480;
 
-            VideoioBridge::getInstance().width = width;
-            VideoioBridge::getInstance().height = height;
+            VideoioBridge::getInstance().setWidth(width);
+            VideoioBridge::getInstance().setHeight(height);
 
             // nb. Mats will be alloc'd on UI thread
 
             // request device init on UI thread - this does not block, and is async
-            VideoioBridge::getInstance().requestForUIthreadAsync(OPEN_CAMERA,
-                outArray.size().width, outArray.size().height);
+            VideoioBridge::getInstance().requestForUIthreadAsync(OPEN_CAMERA);
 
             started = true;
             return false;

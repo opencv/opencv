@@ -50,19 +50,27 @@ public:
     static VideoioBridge& getInstance();
 
     // call after initialization
-    void setReporter(Concurrency::progress_reporter<int> pr) { reporter = pr; }
+    void    setReporter(Concurrency::progress_reporter<int> pr) { reporter = pr; }
 
     // to be called from cvMain via cap_winrt on bg thread - non-blocking (async)
-    void requestForUIthreadAsync( int action, int width=0, int height=0 );
+    void    requestForUIthreadAsync(int action);
 
     // TODO: modify in window.cpp: void cv::imshow( const String& winname, InputArray _img )
     void    imshow(/*cv::InputArray matToShow*/);   // shows Mat in the cvImage element
     void    swapInputBuffers();
     void    allocateOutputBuffers();
     void    swapOutputBuffers();
+    void    updateFrameContainer();
+    bool    openCamera();
+    void    allocateBuffers(int width, int height);
 
+    int     getDeviceIndex();
+    void    setDeviceIndex(int index);
+    int     getWidth();
+    void    setWidth(int width);
+    int     getHeight();
+    void    setHeight(int height);
 
-    int                         deviceIndex, width, height;
     std::atomic<bool>           bIsFrameNew;
     std::mutex                  inputBufferMutex;   // input is double buffered
     unsigned char *             frontInputPtr;      // OpenCV reads this
@@ -93,4 +101,17 @@ private:
 
     std::atomic<bool>   deviceReady;
     Concurrency::progress_reporter<int> reporter;
+
+    // Mats are wrapped with singleton class, we do not support more than one
+    // capture device simultaneously with the design at this time
+    //
+    // nb. inputBufferMutex was not able to guarantee that OpenCV Mats were
+    // ready to accept data in the UI thread (memory access exceptions were thrown
+    // even though buffer address was good).
+    // Therefore allocation of Mats is also done on the UI thread before the video
+    // device is initialized.
+    cv::Mat frontInputMat;
+    cv::Mat backInputMat;
+
+    int deviceIndex, width, height;
 };

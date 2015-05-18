@@ -34,6 +34,7 @@
 class Video {
 public:
 
+    // non-blocking
     bool initGrabber(int device, int w, int h);
     void closeGrabber();
     bool isStarted();
