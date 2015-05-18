@@ -45,6 +45,24 @@ endif(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES Window
 
 if(WINRT)
   add_definitions(-DWINRT -DNO_GETENV)
+
+  # Making definitions available to other configurations and
+  # to filter dependency restrictions at compile time.
+  if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone)
+    set(WINRT_PHONE TRUE)
+    add_definitions(-DWINRT_PHONE)
+  elseif(CMAKE_SYSTEM_NAME MATCHES WindowsStore)
+    set(WINRT_STORE TRUE)
+    add_definitions(-DWINRT_STORE)
+  endif()
+
+  if(CMAKE_SYSTEM_VERSION MATCHES 8.1)
+    set(WINRT_8_1 TRUE)
+    add_definitions(-DWINRT_8_1)
+  elseif(CMAKE_SYSTEM_VERSION MATCHES 8.0)
+    set(WINRT_8_0 TRUE)
+    add_definitions(-DWINRT_8_0)
+  endif()
 endif()
 
 if(POLICY CMP0022)
@@ -488,7 +506,7 @@ include(cmake/OpenCVModule.cmake)
 #  Detect endianness of build platform
 # ----------------------------------------------------------------------------
 
-if(CMAKE_SYSTEM_NAME STREQUAL iOS)
+if(IOS)
   # test_big_endian needs try_compile, which doesn't work for iOS
   # http://public.kitware.com/Bug/view.php?id=12288
   set(WORDS_BIGENDIAN 0)

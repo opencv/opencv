@@ -1459,6 +1459,7 @@ void HOGDescriptor::detect(const Mat& img,
     Size winStride, Size padding, const std::vector<Point>& locations) const
 {
     hits.clear();
+    weights.clear();
     if( svmDetector.empty() )
         return;
 
