@@ -1034,7 +1034,7 @@ if(DEFINED WITH_INTELPERC)
 endif(DEFINED WITH_INTELPERC)
 
 if(DEFINED WITH_GPHOTO2)
-  status("    gPhoto2:"          HAVE_GPHOTO2          THEN "YES"                                        ELSE NO)
+  status("    gPhoto2:"        HAVE_GPHOTO2        THEN "YES"                                 ELSE NO)
 endif(DEFINED WITH_GPHOTO2)
 
 
