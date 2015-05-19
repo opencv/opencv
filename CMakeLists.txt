@@ -769,6 +769,11 @@ else()
 endif()
 status("    Precompiled headers:"     PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS THEN YES ELSE NO)
 
+# ========================== Dependencies ============================
+ocv_get_all_libs(deps_modules deps_extra deps_3rdparty)
+status("    Extra dependencies:" ${deps_extra})
+status("    3rdparty dependencies:" ${deps_3rdparty})
+
 # ========================== OpenCV modules ==========================
 status("")
 status("  OpenCV modules:")
@@ -909,7 +914,7 @@ else()
 endif()
 
 if( WITH_GDAL )
-  status("    GDAL:"   GDAL_FOUND THEN "${GDAL_LIBRARY}")
+  status("    GDAL:"   GDAL_FOUND THEN "${GDAL_LIBRARY}" ELSE "NO")
 else()
   status("    GDAL:"     "NO")
 endif()
