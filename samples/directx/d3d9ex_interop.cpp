@@ -295,4 +295,8 @@ private:
 
 
 // main func
-ENTRY_POINT(D3D9ExWinApp, "D3D9Ex interop sample");
+int main(int argc, char** argv)
+{
+    std::string title = "D3D9Ex interop sample";
+    return d3d_app<D3D9ExWinApp>(argc, argv, title);
+}
