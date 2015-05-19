@@ -73,9 +73,8 @@ PASSED_TESTS=""
 for t in "$OPENCV_TEST_PATH/"opencv_test_* "$OPENCV_TEST_PATH/"opencv_perf_*;
 do
     test_name=`basename "$t"`
-    report="$test_name-`date --rfc-3339=date`.xml"
 
-    cmd="$t --perf_min_samples=1 --perf_force_samples=1 --gtest_output=xml:\"$report\""
+    cmd="$t --perf_min_samples=1 --perf_force_samples=1 --gtest_output=xml:$test_name.xml"
 
     seg_reg="s/^/${TEXT_CYAN}[$test_name]${TEXT_RESET} /"                     # append test name
     if [ $COLOR_OUTPUT -eq 1 ]; then
@@ -107,9 +106,8 @@ done
 for t in $OPENCV_PYTHON_TESTS;
 do
     test_name=`basename "$t"`
-    report="$test_name-`date --rfc-3339=date`.xml"
 
-    cmd="py.test --junitxml $report \"$OPENCV_TEST_PATH\"/$t"
+    cmd="py.test --junitxml $test_name.xml \"$OPENCV_TEST_PATH\"/$t"
 
     seg_reg="s/^/${TEXT_CYAN}[$test_name]${TEXT_RESET} /"                 # append test name
 
