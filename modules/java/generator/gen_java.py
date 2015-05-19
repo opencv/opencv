@@ -14,7 +14,7 @@ class_ignore_list = (
     #core
     "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
     #videoio
-    "VideoWriter",
+    #"VideoWriter",
 )
 
 const_ignore_list = (
@@ -61,9 +61,9 @@ const_ignore_list = (
     "CV_CAP_PROP_POS_MSEC",
     "CV_CAP_PROP_POS_FRAMES",
     "CV_CAP_PROP_POS_AVI_RATIO",
-    "CV_CAP_PROP_FPS",
-    "CV_CAP_PROP_FOURCC",
-    "CV_CAP_PROP_FRAME_COUNT",
+    #"CV_CAP_PROP_FPS",
+    #"CV_CAP_PROP_FOURCC",
+    #"CV_CAP_PROP_FRAME_COUNT",
     "CV_CAP_PROP_FORMAT",
     "CV_CAP_PROP_MODE",
     "CV_CAP_PROP_BRIGHTNESS",
@@ -1530,8 +1530,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             # finalize()
             ci.j_code.write(
 """
-    @Override
-    protected void finalize() throws Throwable {
+    public void delete() {
         delete(nativeObj);
     }
 """ )

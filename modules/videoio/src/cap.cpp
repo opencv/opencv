@@ -43,6 +43,13 @@
 #include "cap_intelperc.hpp"
 #include "cap_dshow.hpp"
 
+// All WinRT versions older than 8.0 should provide classes used for video support
+#if defined(WINRT) && !defined(WINRT_8_0)
+#   include "cap_winrt_capture.hpp"
+#   include "cap_winrt_bridge.hpp"
+#   define WINRT_VIDEO
+#endif
+
 #if defined _M_X64 && defined _MSC_VER && !defined CV_ICC
 #pragma optimize("",off)
 #pragma warning(disable: 4748)
@@ -509,6 +516,9 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
 #ifdef HAVE_INTELPERC
         CV_CAP_INTELPERC,
 #endif
+#ifdef WINRT_VIDEO
+        CAP_WINRT,
+#endif
 #ifdef HAVE_GPHOTO2
         CV_CAP_GPHOTO2,
 #endif
@@ -529,6 +539,7 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
     {
 #if defined(HAVE_DSHOW)        || \
     defined(HAVE_INTELPERC)    || \
+    defined(WINRT_VIDEO)       || \
     defined(HAVE_GPHOTO2)      || \
     (0)
         Ptr<IVideoCapture> capture;
@@ -545,10 +556,19 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
                 capture = makePtr<VideoCapture_IntelPerC>();
                 break; // CV_CAP_INTEL_PERC
 #endif
+#ifdef WINRT_VIDEO
+        case CAP_WINRT:
+            capture = Ptr<IVideoCapture>(new cv::VideoCapture_WinRT(index));
+            if (capture)
+                return capture;
+            break; // CAP_WINRT
 #ifdef HAVE_GPHOTO2
             case CV_CAP_GPHOTO2:
                 capture = createGPhoto2Capture(index);
                 break;
+=======
+
+>>>>>>> master
 #endif
         }
         if (capture && capture->isOpened())
@@ -696,7 +716,29 @@ bool VideoCapture::read(OutputArray image)
 
 VideoCapture& VideoCapture::operator >> (Mat& image)
 {
+#ifdef WINRT_VIDEO
+    if (grab())
+    {
+        if (retrieve(image))
+        {
+            std::lock_guard<std::mutex> lock(VideoioBridge::getInstance().inputBufferMutex);
+            VideoioBridge& bridge = VideoioBridge::getInstance();
+
+            // double buffering
+            bridge.swapInputBuffers();
+            auto p = bridge.frontInputPtr;
+
+            bridge.bIsFrameNew = false;
+
+            // needed here because setting Mat 'image' is not allowed by OutputArray in read()
+            Mat m(bridge.height, bridge.width, CV_8UC3, p);
+            image = m;
+        }
+    }
+#else
     read(image);
+#endif
+
     return *this;
 }
 

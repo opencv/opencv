@@ -4714,8 +4714,8 @@ SparseMat::Hdr::Hdr( int _dims, const int* _sizes, int _type )
     refcount = 1;
 
     dims = _dims;
-    valueOffset = (int)alignSize(sizeof(SparseMat::Node) +
-        sizeof(int)*std::max(dims - CV_MAX_DIM, 0), CV_ELEM_SIZE1(_type));
+    valueOffset = (int)alignSize(sizeof(SparseMat::Node) - MAX_DIM*sizeof(int) +
+                                 dims*sizeof(int), CV_ELEM_SIZE1(_type));
     nodeSize = alignSize(valueOffset +
         CV_ELEM_SIZE(_type), (int)sizeof(size_t));
 
@@ -4816,7 +4816,8 @@ void SparseMat::copyTo( SparseMat& m ) const
 void SparseMat::copyTo( Mat& m ) const
 {
     CV_Assert( hdr );
-    m.create( dims(), hdr->size, type() );
+    int ndims = dims();
+    m.create( ndims, hdr->size, type() );
     m = Scalar(0);
 
     SparseMatConstIterator from = begin();
@@ -4825,7 +4826,7 @@ void SparseMat::copyTo( Mat& m ) const
     for( i = 0; i < N; i++, ++from )
     {
         const Node* n = from.node();
-        copyElem( from.ptr, m.ptr(n->idx), esz);
+        copyElem( from.ptr, (ndims > 1 ? m.ptr(n->idx) : m.ptr(n->idx[0])), esz);
     }
 }
 
@@ -5114,7 +5115,8 @@ uchar* SparseMat::newNode(const int* idx, size_t hashval)
     if( !hdr->freeList )
     {
         size_t i, nsz = hdr->nodeSize, psize = hdr->pool.size(),
-            newpsize = std::max(psize*2, 8*nsz);
+            newpsize = std::max(psize*3/2, 8*nsz);
+        newpsize = (newpsize/nsz)*nsz;
         hdr->pool.resize(newpsize);
         uchar* pool = &hdr->pool[0];
         hdr->freeList = std::max(psize, nsz);
