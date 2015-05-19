@@ -113,73 +113,74 @@ protected:
 };
 
 
-#define ENTRY_POINT(type, title) \
-static void help() \
-{ \
-    printf( \
-        "\nSample demonstrating interoperability of DirectX and OpenCL with OpenCV.\n" \
-        "Hot keys: \n" \
-        "    0 - no processing\n" \
-        "    1 - blur DX surface on CPU through OpenCV\n" \
-        "    2 - blur DX surface on GPU through OpenCV using OpenCL\n" \
-        "  ESC - exit\n\n"); \
-} \
- \
-static const char* keys = \
-{ \
-    "{c camera | true  | use camera or not}" \
-    "{f file   |       | movie file name  }" \
-    "{h help   | false | print help info  }" \
-}; \
- \
- \
-int main(int argc, char** argv) \
-{ \
+static void help()
+{
+    printf(
+        "\nSample demonstrating interoperability of DirectX and OpenCL with OpenCV.\n"
+        "Hot keys: \n"
+        "    0 - no processing\n"
+        "    1 - blur DX surface on CPU through OpenCV\n"
+        "    2 - blur DX surface on GPU through OpenCV using OpenCL\n"
+        "  ESC - exit\n\n");
+}
+
+
+static const char* keys =
+{
+    "{c camera | true  | use camera or not}"
+    "{f file   |       | movie file name  }"
+    "{h help   | false | print help info  }"
+};
+
+
+template <typename TApp>
+int d3d_app(int argc, char** argv, std::string& title)
+{
     cv::CommandLineParser parser(argc, argv, keys); \
     bool   useCamera = parser.has("camera"); \
     string file      = parser.get<string>("file"); \
     bool   showHelp  = parser.get<bool>("help"); \
- \
-    if (showHelp) \
-        help(); \
- \
-    parser.printMessage(); \
-  \
-    cv::VideoCapture cap; \
- \
-    if (useCamera) \
-        cap.open(0); \
-    else \
-        cap.open(file.c_str()); \
- \
-    if (!cap.isOpened()) \
-    { \
-        printf("can not open camera or video file\n"); \
-        return -1; \
-    } \
- \
-    int width  = (int)cap.get(CAP_PROP_FRAME_WIDTH); \
-    int height = (int)cap.get(CAP_PROP_FRAME_HEIGHT); \
- \
-    std::string wndname = title; \
- \
-    type app(width, height, wndname, cap); \
- \
-    try \
-    { \
-        app.create(); \
-        return app.run(); \
-    } \
- \
-    catch (cv::Exception& e) \
-    { \
-        std::cerr << "Exception: " << e.what() << std::endl; \
-        return 10; \
-    } \
- \
-    catch (...) \
-    { \
-        std::cerr << "FATAL ERROR: Unknown exception" << std::endl; \
-        return 11; \
-    } \
+
+    if (showHelp)
+        help();
+
+    parser.printMessage();
+
+    cv::VideoCapture cap;
+
+    if (useCamera)
+        cap.open(0);
+    else
+        cap.open(file.c_str());
+
+    if (!cap.isOpened())
+    {
+        printf("can not open camera or video file\n");
+        return -1;
+    }
+
+    int width  = (int)cap.get(CAP_PROP_FRAME_WIDTH);
+    int height = (int)cap.get(CAP_PROP_FRAME_HEIGHT);
+
+    std::string wndname = title;
+
+    TApp app(width, height, wndname, cap);
+
+    try
+    {
+        app.create();
+        return app.run();
+    }
+
+    catch (cv::Exception& e)
+    {
+        std::cerr << "Exception: " << e.what() << std::endl;
+        return 10;
+    }
+
+    catch (...)
+    {
+        std::cerr << "FATAL ERROR: Unknown exception" << std::endl;
+        return 11;
+    }
 }
