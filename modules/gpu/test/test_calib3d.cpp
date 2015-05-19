@@ -278,18 +278,20 @@ struct SolvePnPRansac : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 GPU_TEST_P(SolvePnPRansac, Accuracy)
 {
-    cv::Mat object = randomMat(cv::Size(5000, 1), CV_32FC3, 0, 100);
-    cv::Mat camera_mat = randomMat(cv::Size(3, 3), CV_32F, 0.5, 1);
+    // Use RNG with fixed seed to be reproducable
+    cv::RNG rng(123456789);
+    cv::theRNG() = rng;
+
+    cv::Mat object = cvtest::randomMat(rng, cv::Size(5000, 1), CV_32FC3, 0, 100, false);
+    cv::Mat camera_mat = cvtest::randomMat(rng, cv::Size(3, 3), CV_32FC1, 0.5, 1, false);
     camera_mat.at<float>(0, 1) = 0.f;
     camera_mat.at<float>(1, 0) = 0.f;
     camera_mat.at<float>(2, 0) = 0.f;
     camera_mat.at<float>(2, 1) = 0.f;
 
     std::vector<cv::Point2f> image_vec;
-    cv::Mat rvec_gold;
-    cv::Mat tvec_gold;
-    rvec_gold = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
-    tvec_gold = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
+    cv::Mat rvec_gold = cvtest::randomMat(rng, cv::Size(3, 1), CV_32F, 0, 1, false);
+    cv::Mat tvec_gold = cvtest::randomMat(rng, cv::Size(3, 1), CV_32F, 0, 1, false);
     cv::projectPoints(object, rvec_gold, tvec_gold, camera_mat, cv::Mat(1, 8, CV_32F, cv::Scalar::all(0)), image_vec);
 
     cv::Mat rvec, tvec;
