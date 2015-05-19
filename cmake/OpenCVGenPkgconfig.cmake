@@ -9,26 +9,33 @@
 # ${BIN_DIR}/unix-install/opencv.pc -> For use *with* "make install"
 # -------------------------------------------------------------------------------------------
 
-if(CMAKE_BUILD_TYPE MATCHES "Release")
-  set(ocv_optkind OPT)
-else()
-  set(ocv_optkind DBG)
-endif()
+macro(fix_prefix lst isown)
+  set(_lst)
+  foreach(item ${${lst}})
+    if(TARGET ${item})
+      get_target_property(item "${item}" LOCATION_${CMAKE_BUILD_TYPE})
+      if("${isown}")
+        get_filename_component(item "${item}" NAME_WE)
+        string(REGEX REPLACE "^lib(.*)" "\\1" item "${item}")
+      endif()
+    endif()
+    if(item MATCHES "^-l")
+      list(APPEND _lst "${item}")
+    elseif(item MATCHES "[\\/]")
+      get_filename_component(libdir "${item}" PATH)
+      get_filename_component(libname "${item}" NAME_WE)
+      string(REGEX REPLACE "^lib(.*)" "\\1" libname "${libname}")
+      list(APPEND _lst "-L${libdir}" "-l${libname}")
+    else()
+      list(APPEND _lst "-l${item}")
+    endif()
+  endforeach()
+  set(${lst} ${_lst})
+  unset(_lst)
+endmacro()
 
-#build the list of opencv libs and dependencies for all modules
-set(OpenCV_LIB_COMPONENTS "")
-set(OpenCV_EXTRA_COMPONENTS "")
-foreach(m ${OPENCV_MODULES_PUBLIC})
-  list(INSERT OpenCV_LIB_COMPONENTS 0 ${${m}_MODULE_DEPS_${ocv_optkind}} ${m})
-  if(${m}_EXTRA_DEPS_${ocv_optkind})
-    list(INSERT OpenCV_EXTRA_COMPONENTS 0 ${${m}_EXTRA_DEPS_${ocv_optkind}})
-  endif()
-endforeach()
-
-ocv_list_unique(OpenCV_LIB_COMPONENTS)
-ocv_list_unique(OpenCV_EXTRA_COMPONENTS)
-ocv_list_reverse(OpenCV_LIB_COMPONENTS)
-ocv_list_reverse(OpenCV_EXTRA_COMPONENTS)
+# build the list of opencv libs and dependencies for all modules
+ocv_get_all_libs(_modules _extra _3rdparty)
 
 #build the list of components
 
@@ -38,57 +45,38 @@ ocv_list_reverse(OpenCV_EXTRA_COMPONENTS)
 
 # world and contrib_world are special targets whose library should come first,
 # especially for static link.
-if(OpenCV_LIB_COMPONENTS MATCHES "opencv_world")
-  list(REMOVE_ITEM OpenCV_LIB_COMPONENTS "opencv_world")
-  list(INSERT OpenCV_LIB_COMPONENTS 0 "opencv_world")
+if(_modules MATCHES "opencv_world")
+  set(_modules "opencv_world")
 endif()
 
-if(OpenCV_LIB_COMPONENTS MATCHES "opencv_contrib_world")
-  list(REMOVE_ITEM OpenCV_LIB_COMPONENTS "opencv_contrib_world")
-  list(INSERT OpenCV_LIB_COMPONENTS 0 "opencv_contrib_world")
+if(_modules MATCHES "opencv_contrib_world")
+  list(REMOVE_ITEM _modules "opencv_contrib_world")
+  list(INSERT _modules 0 "opencv_contrib_world")
 endif()
 
-set(OpenCV_LIB_COMPONENTS_)
-foreach(CVLib ${OpenCV_LIB_COMPONENTS})
+fix_prefix(_modules TRUE)
+fix_prefix(_extra FALSE)
+fix_prefix(_3rdparty TRUE)
 
-  get_target_property(libloc ${CVLib} LOCATION_${CMAKE_BUILD_TYPE})
-  if(libloc MATCHES "3rdparty")
-    set(libpath "\${exec_prefix}/share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}")
-  else()
-    set(libpath "\${exec_prefix}/${OPENCV_LIB_INSTALL_PATH}")
-  endif()
-  list(APPEND OpenCV_LIB_COMPONENTS_ "-L${libpath}")
+ocv_list_unique(_modules)
+ocv_list_unique(_extra)
+ocv_list_unique(_3rdparty)
 
-  get_filename_component(libname ${CVLib} NAME_WE)
-  string(REGEX REPLACE "^lib" "" libname "${libname}")
-  list(APPEND OpenCV_LIB_COMPONENTS_ "-l${libname}")
-
-endforeach()
-
-# add extra dependencies required for OpenCV
-if(OpenCV_EXTRA_COMPONENTS)
-  foreach(extra_component ${OpenCV_EXTRA_COMPONENTS})
-
-    if(extra_component MATCHES "^-[lL]")
-      set(libprefix "")
-      set(libname "${extra_component}")
-    elseif(extra_component MATCHES "[\\/]")
-      get_filename_component(libdir "${extra_component}" PATH)
-      list(APPEND OpenCV_LIB_COMPONENTS_ "-L${libdir}")
-      get_filename_component(libname "${extra_component}" NAME_WE)
-      string(REGEX REPLACE "^lib" "" libname "${libname}")
-      set(libprefix "-l")
-    else()
-      set(libprefix "-l")
-      set(libname "${extra_component}")
-    endif()
-    list(APPEND OpenCV_LIB_COMPONENTS_ "${libprefix}${libname}")
-
-  endforeach()
+set(OPENCV_PC_LIBS
+  "-L\${exec_prefix}/${OPENCV_LIB_INSTALL_PATH}"
+  "${_modules}"
+)
+if (BUILD_SHARED_LIBS)
+  set(OPENCV_PC_LIBS_PRIVATE "${_extra}")
+else()
+  set(OPENCV_PC_LIBS_PRIVATE
+    "-L\${exec_prefix}/${OPENCV_3P_LIB_INSTALL_PATH}"
+    "${_3rdparty}"
+    "${_extra}"
+  )
 endif()
-
-list(REMOVE_DUPLICATES OpenCV_LIB_COMPONENTS_)
-string(REPLACE ";" " " OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS_}")
+string(REPLACE ";" " " OPENCV_PC_LIBS "${OPENCV_PC_LIBS}")
+string(REPLACE ";" " " OPENCV_PC_LIBS_PRIVATE "${OPENCV_PC_LIBS_PRIVATE}")
 
 #generate the .pc file
 set(prefix      "${CMAKE_INSTALL_PREFIX}")
