@@ -1531,7 +1531,18 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             ci.j_code.write(
 """
     public void delete() {
+        if (nativeObj == 0) {
+            throw new java.lang.UnsupportedOperationException("Native object address is NULL");
+        }
         delete(nativeObj);
+        nativeObj = 0;
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        if (nativeObj != 0) {
+            delete(nativeObj);
+        }
     }
 """ )
 
