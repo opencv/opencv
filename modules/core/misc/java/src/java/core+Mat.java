@@ -4,7 +4,7 @@ package org.opencv.core;
 //javadoc: Mat
 public class Mat {
 
-    public final long nativeObj;
+    public long nativeObj;
 
     public Mat(long addr)
     {
@@ -638,11 +638,21 @@ public class Mat {
     // javadoc: Mat::release()
     public void release()
     {
-
+        if (nativeObj == 0) {
+            throw new java.lang.UnsupportedOperationException("Native object address is NULL");
+        }
         n_release(nativeObj);
         n_delete(nativeObj);
-
+        nativeObj = 0;
         return;
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        if (nativeObj != 0) {
+            n_delete(nativeObj);
+        }
+        super.finalize();
     }
 
     //
