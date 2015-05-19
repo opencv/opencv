@@ -640,7 +640,6 @@ public class Mat {
     {
 
         n_release(nativeObj);
-        n_delete(nativeObj);
 
         return;
     }
@@ -905,6 +904,12 @@ public class Mat {
         Mat retVal = new Mat(n_zeros(size.width, size.height, type));
 
         return retVal;
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        n_delete(nativeObj);
+        super.finalize();
     }
 
     // javadoc:Mat::toString()
