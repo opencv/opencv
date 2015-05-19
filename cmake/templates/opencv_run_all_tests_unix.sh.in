@@ -88,7 +88,7 @@ do
     fi
 
     echo "${TEXT_CYAN}[$test_name]${TEXT_RESET} RUN : $cmd"
-    $cmd | sed -r "$seg_reg"
+    eval "$cmd" | tee "$test_name.log" | sed -r "$seg_reg"
     ret=${PIPESTATUS[0]}
     echo "${TEXT_CYAN}[$test_name]${TEXT_RESET} RETURN_CODE : $ret"
 
@@ -114,7 +114,7 @@ do
     seg_reg="s/^/${TEXT_CYAN}[$test_name]${TEXT_RESET} /"                 # append test name
 
     echo "${TEXT_CYAN}[$test_name]${TEXT_RESET} RUN : $cmd"
-    eval "$cmd" | sed -r "$seg_reg"
+    eval "$cmd" | tee "$test_name.log" | sed -r "$seg_reg"
 
     ret=${PIPESTATUS[0]}
     echo "${TEXT_CYAN}[$test_name]${TEXT_RESET} RETURN_CODE : $ret"
