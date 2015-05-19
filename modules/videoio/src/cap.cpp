@@ -562,13 +562,11 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
             if (capture)
                 return capture;
             break; // CAP_WINRT
+#endif
 #ifdef HAVE_GPHOTO2
             case CV_CAP_GPHOTO2:
                 capture = createGPhoto2Capture(index);
                 break;
-=======
-
->>>>>>> master
 #endif
         }
         if (capture && capture->isOpened())
