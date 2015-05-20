@@ -519,6 +519,9 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
 #ifdef WINRT_VIDEO
         CAP_WINRT,
 #endif
+#ifdef HAVE_GPHOTO2
+        CV_CAP_GPHOTO2,
+#endif
         -1, -1
     };
 
@@ -536,7 +539,8 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
     {
 #if defined(HAVE_DSHOW)        || \
     defined(HAVE_INTELPERC)    || \
-    defined(WINRT_VIDEO)         || \
+    defined(WINRT_VIDEO)       || \
+    defined(HAVE_GPHOTO2)      || \
     (0)
         Ptr<IVideoCapture> capture;
 
@@ -559,6 +563,11 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
                 return capture;
             break; // CAP_WINRT
 #endif
+#ifdef HAVE_GPHOTO2
+            case CV_CAP_GPHOTO2:
+                capture = createGPhoto2Capture(index);
+                break;
+#endif
         }
         if (capture && capture->isOpened())
             return capture;
@@ -572,14 +581,37 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
 
 static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
 {
-    Ptr<IVideoCapture> capture;
-
-    capture = createMotionJpegCapture(filename);
-    if (capture && capture->isOpened())
+    int  domains[] =
     {
-        return capture;
-    }
+        CV_CAP_ANY,
+#ifdef HAVE_GPHOTO2
+        CV_CAP_GPHOTO2,
+#endif
+        -1, -1
+    };
 
+    // try every possibly installed camera API
+    for (int i = 0; domains[i] >= 0; i++)
+    {
+        Ptr<IVideoCapture> capture;
+
+        switch (domains[i])
+        {
+        case CV_CAP_ANY:
+            capture = createMotionJpegCapture(filename);
+            break;
+#ifdef HAVE_GPHOTO2
+        case CV_CAP_GPHOTO2:
+            capture = createGPhoto2Capture(filename);
+            break;
+#endif
+        }
+
+        if (capture && capture->isOpened())
+        {
+            return capture;
+        }
+    }
     // failed open a camera
     return Ptr<IVideoCapture>();
 }
