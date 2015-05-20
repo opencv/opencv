@@ -186,6 +186,10 @@ if(HAVE_INTELPERC)
   list(APPEND VIDEOIO_LIBRARIES ${INTELPERC_LIBRARIES})
 endif(HAVE_INTELPERC)
 
+if(HAVE_GPHOTO2)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gphoto2.cpp)
+endif(HAVE_GPHOTO2)
+
 if(IOS)
   add_definitions(-DHAVE_IOS=1)
   list(APPEND videoio_srcs
