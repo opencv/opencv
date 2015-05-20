@@ -180,7 +180,7 @@ unset(__android_project_chain CACHE)
 # add_android_project(target_name ${path} NATIVE_DEPS opencv_core LIBRARY_DEPS ${OpenCV_BINARY_DIR} SDK_TARGET 11)
 macro(add_android_project target path)
   # parse arguments
-  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA IGNORE_MANIFEST)
+  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA IGNORE_MANIFEST COPY_LIBS)
   set(__varname "android_proj_")
   foreach(v ${android_proj_arglist})
     set(${__varname}${v} "")
@@ -334,14 +334,17 @@ macro(add_android_project target path)
       add_dependencies(${target} ${android_proj_native_deps})
     endif()
 
-    if(ANDROID_EXAMPLES_WITH_LIBS)
+    if (android_proj_COPY_LIBS OR ANDROID_EXAMPLES_WITH_LIBS)
+      message(STATUS "Android project with libs: " ${target})
       add_custom_target(
         ${target}_copy_libs
         COMMAND ${CMAKE_COMMAND} -DSRC_DIR=${OpenCV_BINARY_DIR}/lib -DDST_DIR=${android_proj_bin_dir}/libs -P ${OpenCV_SOURCE_DIR}/cmake/copyAndroidLibs.cmake
         WORKING_DIRECTORY ${OpenCV_BINARY_DIR}/lib
-        DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java
       )
       add_dependencies(${target} ${target}_copy_libs)
+      if (ANDROID_EXAMPLES_WITH_LIBS)
+        add_dependencies(${target}_copy_libs "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java)
+      endif()
     endif()
 
     if(__android_project_chain)

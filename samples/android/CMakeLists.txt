@@ -15,8 +15,6 @@ add_subdirectory(tutorial-1-camerapreview)
 add_subdirectory(tutorial-2-mixedprocessing)
 add_subdirectory(tutorial-3-cameracontrol)
 
-add_subdirectory(native-activity)
-
 # hello-android sample
 if(HAVE_opencv_highgui)
   add_executable(hello-android hello-android/main.cpp)
