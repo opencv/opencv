@@ -178,3 +178,6 @@
 /* Define if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #cmakedefine WORDS_BIGENDIAN
+
+/* gPhoto2 library */
+#cmakedefine HAVE_GPHOTO2
