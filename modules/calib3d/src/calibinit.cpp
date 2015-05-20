@@ -466,7 +466,6 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     if( out_corner_count )
         *out_corner_count = 0;
 
-    IplImage _img;
     int check_chessboard_result;
     int quad_count = 0, group_idx = 0, dilations = 0;
 
