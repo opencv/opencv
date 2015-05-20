@@ -22,7 +22,7 @@ int main(void)
 
     Mat homography;
     FileStorage fs("../data/H1to3p.xml", FileStorage::READ);
-
+    
     fs.getFirstTopLevelNode() >> homography;
 
     vector<KeyPoint> kpts1, kpts2;
@@ -30,7 +30,7 @@ int main(void)
 
     Ptr<cv::ORB> orb_detector = cv::ORB::create(10000);
 
-    Ptr<xfeatures2d::LATCHDescriptorExtractor> latch = xfeatures2d::LATCHDescriptorExtractor::create();
+    Ptr<xfeatures2d::LATCH> latch = xfeatures2d::LATCH::create();
 
 
     orb_detector->detect(img1, kpts1);
