@@ -45,6 +45,8 @@
 #ifndef __OPENCV_DEF_H__
 #define __OPENCV_DEF_H__
 
+#include "opencv2/core/cvdef.h"
+
 #if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
 #  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
 #endif

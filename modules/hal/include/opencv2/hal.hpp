@@ -63,35 +63,35 @@ enum
 
 }
 
-int normHamming(const uchar* a, int n);
-int normHamming(const uchar* a, const uchar* b, int n);
+CV_EXPORTS_W int normHamming(const uchar* a, int n);
+CV_EXPORTS_W int normHamming(const uchar* a, const uchar* b, int n);
 
-int normHamming(const uchar* a, int n, int cellSize);
-int normHamming(const uchar* a, const uchar* b, int n, int cellSize);
+CV_EXPORTS_W int normHamming(const uchar* a, int n, int cellSize);
+CV_EXPORTS_W int normHamming(const uchar* a, const uchar* b, int n, int cellSize);
 
 //////////////////////////////// low-level functions ////////////////////////////////
 
-int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n);
-int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n);
-bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n);
-bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+CV_EXPORTS_W int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+CV_EXPORTS_W int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+CV_EXPORTS_W bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+CV_EXPORTS_W bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);
 
-int normL1_(const uchar* a, const uchar* b, int n);
-float normL1_(const float* a, const float* b, int n);
-float normL2Sqr_(const float* a, const float* b, int n);
+CV_EXPORTS_W int normL1_(const uchar* a, const uchar* b, int n);
+CV_EXPORTS_W float normL1_(const float* a, const float* b, int n);
+CV_EXPORTS_W float normL2Sqr_(const float* a, const float* b, int n);
 
-void exp(const float* src, float* dst, int n);
-void exp(const double* src, double* dst, int n);
-void log(const float* src, float* dst, int n);
-void log(const double* src, double* dst, int n);
+CV_EXPORTS_W void exp(const float* src, float* dst, int n);
+CV_EXPORTS_W void exp(const double* src, double* dst, int n);
+CV_EXPORTS_W void log(const float* src, float* dst, int n);
+CV_EXPORTS_W void log(const double* src, double* dst, int n);
 
-void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
-void magnitude(const float* x, const float* y, float* dst, int n);
-void magnitude(const double* x, const double* y, double* dst, int n);
-void sqrt(const float* src, float* dst, int len);
-void sqrt(const double* src, double* dst, int len);
-void invSqrt(const float* src, float* dst, int len);
-void invSqrt(const double* src, double* dst, int len);
+CV_EXPORTS_W void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
+CV_EXPORTS_W void magnitude(const float* x, const float* y, float* dst, int n);
+CV_EXPORTS_W void magnitude(const double* x, const double* y, double* dst, int n);
+CV_EXPORTS_W void sqrt(const float* src, float* dst, int len);
+CV_EXPORTS_W void sqrt(const double* src, double* dst, int len);
+CV_EXPORTS_W void invSqrt(const float* src, float* dst, int len);
+CV_EXPORTS_W void invSqrt(const double* src, double* dst, int len);
 
 }} //cv::hal
 
