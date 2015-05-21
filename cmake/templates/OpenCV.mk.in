@@ -31,7 +31,16 @@ ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     endif
     OPENCV_DYNAMICUDA_MODULE:=@OPENCV_DYNAMICUDA_MODULE_CONFIGMAKE@
 else
-    OPENCV_DYNAMICUDA_MODULE:=
+    ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+        ifeq ($(OPENCV_HAVE_GPU_MODULE),on)
+            ifneq ($(CUDA_TOOLKIT_DIR),)
+                OPENCV_USE_GPU_MODULE:=on
+            endif
+        endif
+        OPENCV_DYNAMICUDA_MODULE:=@OPENCV_DYNAMICUDA_MODULE_CONFIGMAKE@
+    else
+        OPENCV_DYNAMICUDA_MODULE:=
+    endif
 endif
 
 CUDA_RUNTIME_LIBS:=@CUDA_RUNTIME_LIBS_CONFIGMAKE@
@@ -56,6 +65,10 @@ else
         OPENCV_3RDPARTY_COMPONENTS:=@OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE@
         OPENCV_EXTRA_COMPONENTS:=@OPENCV_EXTRA_COMPONENTS_CONFIGMAKE@
     endif
+    ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+        OPENCV_3RDPARTY_COMPONENTS:=@OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE@
+        OPENCV_EXTRA_COMPONENTS:=@OPENCV_EXTRA_COMPONENTS_CONFIGMAKE@
+    endif
     ifeq ($(TARGET_ARCH_ABI),x86)
         OPENCV_3RDPARTY_COMPONENTS:=@OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE@
         OPENCV_EXTRA_COMPONENTS:=@OPENCV_EXTRA_COMPONENTS_CONFIGMAKE@
@@ -76,6 +89,9 @@ ifeq ($(OPENCV_CAMERA_MODULES),on)
     endif
     ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
         OPENCV_CAMERA_MODULES:=@OPENCV_CAMERA_LIBS_ARMEABI_V7A_CONFIGCMAKE@
+    endif
+    ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+        OPENCV_CAMERA_MODULES:=@OPENCV_CAMERA_LIBS_ARM64_V8A_CONFIGCMAKE@
     endif
     ifeq ($(TARGET_ARCH_ABI),x86)
         OPENCV_CAMERA_MODULES:=@OPENCV_CAMERA_LIBS_X86_CONFIGCMAKE@
@@ -101,10 +117,18 @@ define add_opencv_module
     include $(PREBUILT_$(OPENCV_LIB_TYPE)_LIBRARY)
 endef
 
+ifndef CUDA_LIBS_DIR
+    ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+        CUDA_LIBS_DIR := $(CUDA_TOOLKIT_DIR)/targets/aarch64-linux-androideabi/lib
+    else
+        CUDA_LIBS_DIR := $(CUDA_TOOLKIT_DIR)/targets/armv7-linux-androideabi/lib
+    endif
+endif
+
 define add_cuda_module
     include $(CLEAR_VARS)
     LOCAL_MODULE:=$1
-    LOCAL_SRC_FILES:=$(CUDA_TOOLKIT_DIR)/targets/armv7-linux-androideabi/lib/lib$(1:opencv_dep_%=%).so
+    LOCAL_SRC_FILES:=$(CUDA_LIBS_DIR)/lib$(1:opencv_dep_%=%).so
     include $(PREBUILT_SHARED_LIBRARY)
 endef
 
@@ -202,7 +226,7 @@ ifeq ($(OPENCV_USE_GPU_MODULE),on)
     ifeq ($(INSTALL_CUDA_LIBRARIES),on)
         LOCAL_SHARED_LIBRARIES += $(foreach mod, $(CUDA_RUNTIME_LIBS), $(mod))
     else
-        LOCAL_LDLIBS += -L$(CUDA_TOOLKIT_DIR)/targets/armv7-linux-androideabi/lib \
+        LOCAL_LDLIBS += -L$(CUDA_LIBS_DIR) \
             $(foreach lib, $(CUDA_RUNTIME_LIBS), -l$(lib:opencv_dep_%=%))
     endif
     LOCAL_STATIC_LIBRARIES+=libopencv_gpu
