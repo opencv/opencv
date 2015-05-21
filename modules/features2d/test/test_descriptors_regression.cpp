@@ -390,45 +390,52 @@ TEST( Features2d_Feature2d, no_crash )
     size_t i, n = fnames.size();
     vector<KeyPoint> keypoints;
     Mat descriptors;
+    orb->setMaxFeatures(5000);
 
     for( i = 0; i < n; i++ )
     {
         printf("%d. image: %s:\n", (int)i, fnames[i].c_str());
+        if( strstr(fnames[i].c_str(), "MP.png") != 0 )
+            continue;
         bool checkCount = strstr(fnames[i].c_str(), "templ.png") == 0;
 
         Mat img = imread(fnames[i], -1);
         printf("\tAKAZE ... "); fflush(stdout);
         akaze->detectAndCompute(img, noArray(), keypoints, descriptors);
+        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
         if( checkCount )
         {
-            ASSERT_GT((int)keypoints.size(), 0);
+            EXPECT_GT((int)keypoints.size(), 0);
         }
         ASSERT_EQ(descriptors.rows, (int)keypoints.size());
         printf("ok\n");
 
         printf("\tKAZE ... "); fflush(stdout);
         kaze->detectAndCompute(img, noArray(), keypoints, descriptors);
+        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
         if( checkCount )
         {
-            ASSERT_GT((int)keypoints.size(), 0);
+            EXPECT_GT((int)keypoints.size(), 0);
         }
         ASSERT_EQ(descriptors.rows, (int)keypoints.size());
         printf("ok\n");
 
         printf("\tORB ... "); fflush(stdout);
         orb->detectAndCompute(img, noArray(), keypoints, descriptors);
+        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
         if( checkCount )
         {
-            ASSERT_GT((int)keypoints.size(), 0);
+            EXPECT_GT((int)keypoints.size(), 0);
         }
         ASSERT_EQ(descriptors.rows, (int)keypoints.size());
         printf("ok\n");
 
         printf("\tBRISK ... "); fflush(stdout);
         brisk->detectAndCompute(img, noArray(), keypoints, descriptors);
+        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
         if( checkCount )
         {
-            ASSERT_GT((int)keypoints.size(), 0);
+            EXPECT_GT((int)keypoints.size(), 0);
         }
         ASSERT_EQ(descriptors.rows, (int)keypoints.size());
         printf("ok\n");
