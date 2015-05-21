@@ -923,7 +923,7 @@ struct Mutex::Impl
     int refcount;
 };
 
-#elif defined __linux__ && !defined ANDROID
+#elif defined __linux__ && !defined ANDROID && !defined __LINUXTHREADS_OLD__
 
 struct Mutex::Impl
 {
