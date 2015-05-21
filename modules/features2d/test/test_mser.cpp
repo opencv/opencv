@@ -99,9 +99,9 @@ TEST(Features2d_MSER, cases)
     vector<vector<Point> > msers;
     vector<Rect> boxes;
 
-    RNG& rng = theRNG();
+    RNG rng((uint64)123456);
 
-    for( int i = 0; i < 30; i++ )
+    for( int i = 0; i < 100; i++ )
     {
         bool use_big_image = rng.uniform(0, 7) != 0;
         bool invert = rng.uniform(0, 2) != 0;
@@ -131,7 +131,7 @@ TEST(Features2d_MSER, cases)
         if( blur )
             GaussianBlur(src, src, Size(5, 5), 1.5, 1.5);
 
-        int minRegs = use_big_image ? 10 : 2;
+        int minRegs = use_big_image ? 7 : 2;
         int maxRegs = use_big_image ? 1000 : 15;
         if( binarize && (thresh == 0 || thresh == 255) )
             minRegs = maxRegs = 0;
