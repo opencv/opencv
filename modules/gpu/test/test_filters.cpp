@@ -240,7 +240,7 @@ GPU_TEST_P(Scharr, Accuracy)
     cv::Mat dst_gold;
     cv::Scharr(src, dst_gold, -1, dx, dy, 1.0, 0.0, borderType);
 
-    EXPECT_MAT_NEAR(getInnerROI(dst_gold, cv::Size(3, 3)), getInnerROI(dst, cv::Size(3, 3)), CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
+    EXPECT_MAT_NEAR(getInnerROI(dst_gold, 3), getInnerROI(dst, 3), CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
 }
 
 #ifdef OPENCV_TINY_GPU_MODULE
