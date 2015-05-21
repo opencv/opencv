@@ -110,7 +110,9 @@ enum
 
     CV_CAP_INTELPERC = 1500, // Intel Perceptual Computing
 
-    CV_CAP_OPENNI2 = 1600   // OpenNI2 (for Kinect)
+    CV_CAP_OPENNI2 = 1600,   // OpenNI2 (for Kinect)
+
+    CV_CAP_GPHOTO2 = 1700
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -389,6 +391,23 @@ enum
     CV_CAP_INTELPERC_UVDEPTH_MAP            = 1, // Each pixel contains two 32-bit floating point values in the range of 0-1, representing the mapping of depth coordinates to the color coordinates.
     CV_CAP_INTELPERC_IR_MAP                 = 2, // Each pixel is a 16-bit integer. The value indicates the intensity of the reflected laser beam.
     CV_CAP_INTELPERC_IMAGE                  = 3
+};
+
+// gPhoto2 properties, if propertyId is less than 0 then work on widget with that __additive inversed__ camera setting ID
+// Get IDs by using CAP_PROP_GPHOTO2_WIDGET_ENUMERATE.
+// @see CvCaptureCAM_GPHOTO2 for more info
+enum
+{
+    CV_CAP_PROP_GPHOTO2_PREVIEW           = 17001, // Capture only preview from liveview mode.
+    CV_CAP_PROP_GPHOTO2_WIDGET_ENUMERATE  = 17002, // Readonly, returns (const char *).
+    CV_CAP_PROP_GPHOTO2_RELOAD_CONFIG     = 17003, // Trigger, only by set. Reload camera settings.
+    CV_CAP_PROP_GPHOTO2_RELOAD_ON_CHANGE  = 17004, // Reload all settings on set.
+    CV_CAP_PROP_GPHOTO2_COLLECT_MSGS      = 17005, // Collect messages with details.
+    CV_CAP_PROP_GPHOTO2_FLUSH_MSGS        = 17006, // Readonly, returns (const char *).
+    CV_CAP_PROP_SPEED                     = 17007, // Exposure speed. Can be readonly, depends on camera program.
+    CV_CAP_PROP_APERTURE                  = 17008, // Aperture. Can be readonly, depends on camera program.
+    CV_CAP_PROP_EXPOSUREPROGRAM           = 17009, // Camera exposure program.
+    CV_CAP_PROP_VIEWFINDER                = 17010  // Enter liveview mode.
 };
 
 /* retrieve or set capture properties */
