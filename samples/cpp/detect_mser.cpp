@@ -1,6 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include "opencv2/core/opengl.hpp"
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #include <vector>
 #include <map>
