@@ -1,10 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include "opencv2/core/opengl.hpp"
-#ifndef HAVE_GTK 
-#include "cvconfig.h"
-#else
 #include "opencv2/cvconfig.h"
-#endif
 
 #include <vector>
 #include <map>
