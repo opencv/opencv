@@ -492,11 +492,9 @@ _AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
     return s;
 }
 
-inline float normL2Sqr(const float* a, const float* b, int n)
+static inline float normL2Sqr(const float* a, const float* b, int n)
 {
-    if( n >= 8 )
-        return hal::normL2Sqr_(a, b, n);
-    float s = 0;
+    float s = 0.f;
     for( int i = 0; i < n; i++ )
     {
         float v = a[i] - b[i];
@@ -527,20 +525,22 @@ _AccTp normL1(const _Tp* a, const _Tp* b, int n)
 
 inline float normL1(const float* a, const float* b, int n)
 {
-    if( n >= 8 )
-        return hal::normL1_(a, b, n);
-    float s = 0;
+    float s = 0.f;
     for( int i = 0; i < n; i++ )
     {
-        float v = a[i] - b[i];
-        s += std::abs(v);
+        s += std::abs(a[i] - b[i]);
     }
     return s;
 }
 
 inline int normL1(const uchar* a, const uchar* b, int n)
 {
-    return hal::normL1_(a, b, n);
+    int s = 0;
+    for( int i = 0; i < n; i++ )
+    {
+        s += std::abs(a[i] - b[i]);
+    }
+    return s;
 }
 
 template<typename _Tp, typename _AccTp> static inline
@@ -572,6 +572,15 @@ CV_EXPORTS_W float cubeRoot(float val);
  @param y y-coordinate of the vector.
  */
 CV_EXPORTS_W float fastAtan2(float y, float x);
+
+/** proxy for hal::LU */
+CV_EXPORTS int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+/** proxy for hal::LU */
+CV_EXPORTS int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+/** proxy for hal::Cholesky */
+CV_EXPORTS bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+/** proxy for hal::Cholesky */
+CV_EXPORTS bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);
 
 ////////////////// forward declarations for important OpenCV types //////////////////
 
