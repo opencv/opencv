@@ -1,3 +1,11 @@
+/*
+// Sample demonstrating interoperability of OpenCV UMat with Direct X surface
+// At first, the data obtained from video file or camera and
+// placed onto Direct X surface,
+// following mapping of this Direct X surface to OpenCV UMat and call cv::Blur
+// function. The result is mapped back to Direct X surface and rendered through
+// Direct X API.
+*/
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d9.h>
@@ -16,14 +24,6 @@
 using namespace std;
 using namespace cv;
 
-/*
-// Sample demonstrating interoperability of OpenCV UMat with Direct X surface
-// At first, the data obtained from video file or camera and
-// placed onto Direct X surface,
-// following mapping of this Direct X surface to OpenCV UMat and call cv::Blur
-// function. The result is mapped back to Direct X surface and rendered through
-// Direct X API.
-*/
 class D3D9ExWinApp : public D3DSample
 {
 public:
