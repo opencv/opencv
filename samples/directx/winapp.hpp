@@ -1,3 +1,7 @@
+/*
+// Sample demonstrating interoperability of OpenCV UMat with Direct X surface
+// Base class for Windows application
+*/
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <string>

@@ -1,3 +1,7 @@
+/*
+// Sample demonstrating interoperability of OpenCV UMat with Direct X surface
+// Base class for Direct X application
+*/
 #include <string>
 #include <iostream>
 #include <queue>
