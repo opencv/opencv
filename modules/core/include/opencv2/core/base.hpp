@@ -494,7 +494,13 @@ _AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
 
 static inline float normL2Sqr(const float* a, const float* b, int n)
 {
-    return normL2Sqr<float, float>(a, b, n);
+    float s = 0.f;
+    for( int i = 0; i < n; i++ )
+    {
+        float v = a[i] - b[i];
+        s += v*v;
+    }
+    return s;
 }
 
 template<typename _Tp, typename _AccTp> static inline
@@ -519,12 +525,22 @@ _AccTp normL1(const _Tp* a, const _Tp* b, int n)
 
 inline float normL1(const float* a, const float* b, int n)
 {
-    return normL1<float, float>(a, b, n);
+    float s = 0.f;
+    for( int i = 0; i < n; i++ )
+    {
+        s += std::abs(a[i] - b[i]);
+    }
+    return s;
 }
 
 inline int normL1(const uchar* a, const uchar* b, int n)
 {
-    return normL1<uchar, int>(a, b, n);
+    int s = 0;
+    for( int i = 0; i < n; i++ )
+    {
+        s += std::abs(a[i] - b[i]);
+    }
+    return s;
 }
 
 template<typename _Tp, typename _AccTp> static inline
