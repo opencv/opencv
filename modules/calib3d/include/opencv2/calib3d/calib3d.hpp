@@ -46,3 +46,12 @@
 #endif
 
 #include "opencv2/calib3d.hpp"
+// Performs a fast check if a chessboard is in the input image. This is a workaround to
+// a problem of cvFindChessboardCorners being slow on images with no chessboard.
+// This method works using a binary image as input
+// - src: input binary image
+// - size: chessboard size
+// Returns 1 if a chessboard can be in this image and findChessboardCorners should be called,
+// 0 if there is no chessboard, -1 in case of error
+CVAPI(int) cvCheckChessboardBinary(IplImage* src, CvSize size);
+
