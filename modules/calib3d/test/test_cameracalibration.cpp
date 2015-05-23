@@ -1875,3 +1875,29 @@ TEST(Calib3d_ProjectPoints_C, accuracy) { CV_ProjectPointsTest_C  test; test.saf
 TEST(Calib3d_ProjectPoints_CPP, regression) { CV_ProjectPointsTest_CPP test; test.safe_run(); }
 TEST(Calib3d_StereoCalibrate_C, regression) { CV_StereoCalibrationTest_C test; test.safe_run(); }
 TEST(Calib3d_StereoCalibrate_CPP, regression) { CV_StereoCalibrationTest_CPP test; test.safe_run(); }
+
+// the testcase by Christian Richardt
+TEST(Calib3d_Triangulate, accuracy)
+{
+    double P1data[] = { 250, 0, 200, 0, 0, 250, 150, 0, 0, 0, 1, 0 };
+    double P2data[] = { 250, 0, 200, -250, 0, 250, 150, 0, 0, 0, 1, 0 };
+    Mat P1(3, 4, CV_64F, P1data), P2(3, 4, CV_64F, P2data);
+
+    float x1data[] = { 200.f, 0.f };
+    float x2data[] = { 170.f, 1.f };
+    float Xdata[] = { 0.f, -5.f, 25/3.f };
+    Mat x1(2, 1, CV_32F, x1data);
+    Mat x2(2, 1, CV_32F, x2data);
+    Mat res0(1, 3, CV_32F, Xdata);
+    Mat res_, res;
+
+    triangulatePoints(P1, P2, x1, x2, res_);
+    transpose(res_, res_);
+    convertPointsFromHomogeneous(res_, res);
+    res = res.reshape(1, 1);
+
+    cout << "res0: " << res0 << endl;
+    cout << "res: " << res << endl;
+
+    ASSERT_LE(norm(res, res0, NORM_INF), 1e-1);
+}
