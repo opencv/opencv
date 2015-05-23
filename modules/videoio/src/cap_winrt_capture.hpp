@@ -42,17 +42,6 @@
 
 namespace cv {
 
-    /******************* Internal helpers **************************************/
-
-    void winrt_updateFrameContainer();
-    bool winrt_openCamera();
-    bool winrt_initGrabber(int device, int w, int h);
-    void winrt_closeGrabber();
-    void winrt_copyOutput();
-    void winrt_allocateBuffers(int width, int height);
-
-    /******************* VideoCapture_WinRT class ******************************/
-
     class VideoCapture_WinRT : public IVideoCapture
     {
     public:

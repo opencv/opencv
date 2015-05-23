@@ -54,9 +54,12 @@ CV_EXPORTS void winrt_startMessageLoop(void callback(Args...), Args... args);
 
 /** @brief
 @note
-    Sets the reporter method for the HighguiAssist singleton. Starts the main OpenCV as
-    an async thread in WinRT. See VideoCapture for the example of callback implementation.
-    Here is how the class can be used:
+    Starts (1) frame-grabbing loop and (2) message loop
+    1. Function passed as an argument must implement common OCV reading frames
+       pattern (see cv::VideoCapture documentation) AND call cv::winrt_imgshow().
+    2. Message processing loop required to overcome WinRT container and type
+       conversion restrictions. OCV provides default implementation
+       Here is how the class can be used:
 @code
     void cvMain()
     {
