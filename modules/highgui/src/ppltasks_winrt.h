@@ -8628,7 +8628,7 @@ auto when_all(_Iterator _Begin, _Iterator _End, Concurrency::cancellation_token 
 #endif
 
 /// <summary>
-///     Creates a task that will complete succesfully when both of the tasks supplied as arguments complete successfully.
+///     Creates a task that will complete successfully when both of the tasks supplied as arguments complete successfully.
 /// </summary>
 /// <typeparam name="_ReturnType">
 ///     The type of the returned task.
@@ -8660,7 +8660,7 @@ task<std::vector<_ReturnType>> operator&&(const task<_ReturnType> & _Lhs, const 
 }
 
 /// <summary>
-///     Creates a task that will complete succesfully when both of the tasks supplied as arguments complete successfully.
+///     Creates a task that will complete successfully when both of the tasks supplied as arguments complete successfully.
 /// </summary>
 /// <typeparam name="_ReturnType">
 ///     The type of the returned task.
@@ -8691,7 +8691,7 @@ task<std::vector<_ReturnType>> operator&&(const task<std::vector<_ReturnType>> &
 }
 
 /// <summary>
-///     Creates a task that will complete succesfully when both of the tasks supplied as arguments complete successfully.
+///     Creates a task that will complete successfully when both of the tasks supplied as arguments complete successfully.
 /// </summary>
 /// <typeparam name="_ReturnType">
 ///     The type of the returned task.
@@ -8722,7 +8722,7 @@ task<std::vector<_ReturnType>> operator&&(const task<_ReturnType> & _Lhs, const 
 }
 
 /// <summary>
-///     Creates a task that will complete succesfully when both of the tasks supplied as arguments complete successfully.
+///     Creates a task that will complete successfully when both of the tasks supplied as arguments complete successfully.
 /// </summary>
 /// <typeparam name="_ReturnType">
 ///     The type of the returned task.
@@ -8754,7 +8754,7 @@ task<std::vector<_ReturnType>> operator&&(const task<std::vector<_ReturnType>> &
 }
 
 /// <summary>
-///     Creates a task that will complete succesfully when both of the tasks supplied as arguments complete successfully.
+///     Creates a task that will complete successfully when both of the tasks supplied as arguments complete successfully.
 /// </summary>
 /// <typeparam name="_ReturnType">
 ///     The type of the returned task.
