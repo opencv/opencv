@@ -717,9 +717,9 @@ bool CvCapture_FFMPEG::grabFrame()
     {
         if ( first_frame_number < 0 )
             first_frame_number = dts_to_frame_number(picture_pts);
-        frame_number = dts_to_frame_number(picture_pts) - first_frame_number;
-        if ( frame_number < 0 )
-            frame_number = get_total_frames();
+        int64_t _frame_number_temp = dts_to_frame_number(picture_pts) - first_frame_number;
+        if ( _frame_number_temp >= 0 )
+            frame_number = _frame_number_temp;
     }
 
     // return if we have a new picture or not
