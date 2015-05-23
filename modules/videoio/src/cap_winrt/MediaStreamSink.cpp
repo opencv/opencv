@@ -227,7 +227,6 @@ HRESULT MediaStreamSink::IsMediaTypeSupported(__in IMFMediaType *mediaType, __de
     HRESULT hr = ExceptionBoundary([this, mediaType, closestMediaType, &supported]()
     {
         auto lock = _lock.LockExclusive();
-        HRESULT hr = S_OK;
 
         if (closestMediaType != nullptr)
         {
@@ -281,7 +280,6 @@ HRESULT MediaStreamSink::SetCurrentMediaType(__in IMFMediaType *mediaType)
     return ExceptionBoundary([this, mediaType]()
     {
         auto lock = _lock.LockExclusive();
-        HRESULT hr = S_OK;
 
         CHKNULL(mediaType);
 
