@@ -82,18 +82,18 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
         CV_Error( CV_StsUnmatchedSizes, "Size of projection matrices must be 3x4" );
 
     CvMat matrA;
-    double matrA_dat[24];
-    matrA = cvMat(6,4,CV_64F,matrA_dat);
+    double matrA_dat[16];
+    matrA = cvMat(4,4,CV_64F,matrA_dat);
 
     //CvMat matrU;
     CvMat matrW;
     CvMat matrV;
     //double matrU_dat[9*9];
-    double matrW_dat[6*4];
+    double matrW_dat[4*4];
     double matrV_dat[4*4];
 
     //matrU = cvMat(6,6,CV_64F,matrU_dat);
-    matrW = cvMat(6,4,CV_64F,matrW_dat);
+    matrW = cvMat(4,4,CV_64F,matrW_dat);
     matrV = cvMat(4,4,CV_64F,matrV_dat);
 
     CvMat* projPoints[2];
@@ -117,9 +117,8 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
             y = cvmGet(projPoints[j],1,i);
             for( int k = 0; k < 4; k++ )
             {
-                cvmSet(&matrA, j*3+0, k, x * cvmGet(projMatrs[j],2,k) -     cvmGet(projMatrs[j],0,k) );
-                cvmSet(&matrA, j*3+1, k, y * cvmGet(projMatrs[j],2,k) -     cvmGet(projMatrs[j],1,k) );
-                cvmSet(&matrA, j*3+2, k, x * cvmGet(projMatrs[j],1,k) - y * cvmGet(projMatrs[j],0,k) );
+                cvmSet(&matrA, j*2+0, k, x * cvmGet(projMatrs[j],2,k) - cvmGet(projMatrs[j],0,k) );
+                cvmSet(&matrA, j*2+1, k, y * cvmGet(projMatrs[j],2,k) - cvmGet(projMatrs[j],1,k) );
             }
         }
         /* Solve system for current point */
