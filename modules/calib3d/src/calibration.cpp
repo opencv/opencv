@@ -820,9 +820,9 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                         {
                             dpdk_p[5] = fx*x*cdist*(-icdist2)*icdist2*r2;
                             dpdk_p[dpdk_step+5] = fy*y*cdist*(-icdist2)*icdist2*r2;
-                            dpdk_p[6] = fx*x*icdist2*cdist*(-icdist2)*icdist2*r4;
+                            dpdk_p[6] = fx*x*cdist*(-icdist2)*icdist2*r4;
                             dpdk_p[dpdk_step+6] = fy*y*cdist*(-icdist2)*icdist2*r4;
-                            dpdk_p[7] = fx*x*icdist2*cdist*(-icdist2)*icdist2*r6;
+                            dpdk_p[7] = fx*x*cdist*(-icdist2)*icdist2*r6;
                             dpdk_p[dpdk_step+7] = fy*y*cdist*(-icdist2)*icdist2*r6;
                             if( _dpdk->cols > 8 )
                             {
