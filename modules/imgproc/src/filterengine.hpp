@@ -66,7 +66,7 @@ public:
     BaseRowFilter();
     //! the destructor
     virtual ~BaseRowFilter();
-    //! the filtering operator. Must be overrided in the derived classes. The horizontal border interpolation is done outside of the class.
+    //! the filtering operator. Must be overridden in the derived classes. The horizontal border interpolation is done outside of the class.
     virtual void operator()(const uchar* src, uchar* dst, int width, int cn) = 0;
 
     int ksize;
@@ -94,7 +94,7 @@ public:
     BaseColumnFilter();
     //! the destructor
     virtual ~BaseColumnFilter();
-    //! the filtering operator. Must be overrided in the derived classes. The vertical border interpolation is done outside of the class.
+    //! the filtering operator. Must be overridden in the derived classes. The vertical border interpolation is done outside of the class.
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int dstcount, int width) = 0;
     //! resets the internal buffers, if any
     virtual void reset();
