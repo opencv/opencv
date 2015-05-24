@@ -22,7 +22,7 @@ int main(void)
 
     Mat homography;
     FileStorage fs("../data/H1to3p.xml", FileStorage::READ);
-    
+
     fs.getFirstTopLevelNode() >> homography;
 
     vector<KeyPoint> kpts1, kpts2;
