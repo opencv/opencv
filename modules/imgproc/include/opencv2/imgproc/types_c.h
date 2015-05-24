@@ -462,7 +462,7 @@ enum
 };
 
 /*
-Internal structure that is used for sequental retrieving contours from the image.
+Internal structure that is used for sequential retrieving contours from the image.
 It supports both hierarchical and plane variants of Suzuki algorithm.
 */
 typedef struct _CvContourScanner* CvContourScanner;

@@ -215,7 +215,42 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         dptr0[0] = dptr0[size.width-1] = dptr1[0] = dptr1[size.width-1] = val0;
         x = 1;
 
-#if CV_SSE2
+#if CV_NEON
+        int16x8_t ftz = vdupq_n_s16 ((short) ftzero);
+        uint8x8_t ftz2 = vdup_n_u8 (cv::saturate_cast<uchar>(ftzero*2));
+
+        for(; x <=size.width-9; x += 8 )
+        {
+            uint8x8_t c0 = vld1_u8 (srow0 + x - 1);
+            uint8x8_t c1 = vld1_u8 (srow1 + x - 1);
+            uint8x8_t d0 = vld1_u8 (srow0 + x + 1);
+            uint8x8_t d1 = vld1_u8 (srow1 + x + 1);
+
+            int16x8_t t0 = vreinterpretq_s16_u16 (vsubl_u8 (d0, c0));
+            int16x8_t t1 = vreinterpretq_s16_u16 (vsubl_u8 (d1, c1));
+
+            uint8x8_t c2 = vld1_u8 (srow2 + x - 1);
+            uint8x8_t c3 = vld1_u8 (srow3 + x - 1);
+            uint8x8_t d2 = vld1_u8 (srow2 + x + 1);
+            uint8x8_t d3 = vld1_u8 (srow3 + x + 1);
+
+            int16x8_t t2 = vreinterpretq_s16_u16 (vsubl_u8 (d2, c2));
+            int16x8_t t3 = vreinterpretq_s16_u16 (vsubl_u8 (d3, c3));
+
+            int16x8_t v0 = vaddq_s16 (vaddq_s16 (t2, t0), vaddq_s16 (t1, t1));
+            int16x8_t v1 = vaddq_s16 (vaddq_s16 (t3, t1), vaddq_s16 (t2, t2));
+
+
+            uint8x8_t v0_u8 = vqmovun_s16 (vaddq_s16 (v0, ftz));
+            uint8x8_t v1_u8 = vqmovun_s16 (vaddq_s16 (v1, ftz));
+            v0_u8 =  vmin_u8 (v0_u8, ftz2);
+            v1_u8 =  vmin_u8 (v1_u8, ftz2);
+            vqmovun_s16 (vaddq_s16 (v1, ftz));
+
+            vst1_u8 (dptr0 + x, v0_u8);
+            vst1_u8 (dptr1 + x, v1_u8);
+        }
+#elif CV_SSE2
         if( useSIMD )
         {
             __m128i z = _mm_setzero_si128(), ftz = _mm_set1_epi16((short)ftzero),
@@ -260,10 +295,19 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         }
     }
 
+#if CV_NEON
+    uint8x16_t val0_16 = vdupq_n_u8 (val0);
+#endif
+
     for( ; y < size.height; y++ )
     {
         uchar* dptr = dst.ptr<uchar>(y);
-        for( x = 0; x < size.width; x++ )
+        x = 0;
+    #if CV_NEON
+        for(; x <= size.width-16; x+=16 )
+            vst1q_u8 (dptr + x, val0_16);
+    #endif
+        for(; x < size.width; x++ )
             dptr[x] = val0;
     }
 }
@@ -525,6 +569,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                            Mat& disp, Mat& cost, const StereoBMParams& state,
                            uchar* buf, int _dy0, int _dy1 )
 {
+
     const int ALIGN = 16;
     int x, y, d;
     int wsz = state.SADWindowSize, wsz2 = wsz/2;
@@ -539,6 +584,15 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
     short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT);
+
+#if CV_NEON
+    CV_Assert (ndisp % 8 == 0);
+    int32_t d0_4_temp [4];
+    for (int i = 0; i < 4; i ++)
+        d0_4_temp[i] = i;
+    int32x4_t d0_4 = vld1q_s32 (d0_4_temp);
+    int32x4_t dd_4 = vdupq_n_s32 (4);
+#endif
 
     int *sad, *hsad0, *hsad, *hsad_sub, *htext;
     uchar *cbuf0, *cbuf;
@@ -574,12 +628,29 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         for( y = -dy0; y < height + dy1; y++, hsad += ndisp, cbuf += ndisp, lptr += sstep, rptr += sstep )
         {
             int lval = lptr[0];
+        #if CV_NEON
+            int16x8_t lv = vdupq_n_s16 ((int16_t)lval);
+
+            for( d = 0; d < ndisp; d += 8 )
+            {
+                int16x8_t rv = vreinterpretq_s16_u16 (vmovl_u8 (vld1_u8 (rptr + d)));
+                int32x4_t hsad_l = vld1q_s32 (hsad + d);
+                int32x4_t hsad_h = vld1q_s32 (hsad + d + 4);
+                int16x8_t diff = vabdq_s16 (lv, rv);
+                vst1_u8 (cbuf + d, vmovn_u16(vreinterpretq_u16_s16(diff)));
+                hsad_l = vaddq_s32 (hsad_l, vmovl_s16(vget_low_s16 (diff)));
+                hsad_h = vaddq_s32 (hsad_h, vmovl_s16(vget_high_s16 (diff)));
+                vst1q_s32 ((hsad + d), hsad_l);
+                vst1q_s32 ((hsad + d + 4), hsad_h);
+            }
+        #else
             for( d = 0; d < ndisp; d++ )
             {
                 int diff = std::abs(lval - rptr[d]);
                 cbuf[d] = (uchar)diff;
                 hsad[d] = (int)(hsad[d] + diff);
             }
+        #endif
             htext[y] += tab[lval];
         }
     }
@@ -609,12 +680,31 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
         {
             int lval = lptr[0];
+        #if CV_NEON
+            int16x8_t lv = vdupq_n_s16 ((int16_t)lval);
+            for( d = 0; d < ndisp; d += 8 )
+            {
+                int16x8_t rv = vreinterpretq_s16_u16 (vmovl_u8 (vld1_u8 (rptr + d)));
+                int32x4_t hsad_l = vld1q_s32 (hsad + d);
+                int32x4_t hsad_h = vld1q_s32 (hsad + d + 4);
+                int16x8_t cbs = vreinterpretq_s16_u16 (vmovl_u8 (vld1_u8 (cbuf_sub + d)));
+                int16x8_t diff = vabdq_s16 (lv, rv);
+                int32x4_t diff_h = vsubl_s16 (vget_high_s16 (diff), vget_high_s16 (cbs));
+                int32x4_t diff_l = vsubl_s16 (vget_low_s16 (diff), vget_low_s16 (cbs));
+                vst1_u8 (cbuf + d, vmovn_u16(vreinterpretq_u16_s16(diff)));
+                hsad_h = vaddq_s32 (hsad_h, diff_h);
+                hsad_l = vaddq_s32 (hsad_l, diff_l);
+                vst1q_s32 ((hsad + d), hsad_l);
+                vst1q_s32 ((hsad + d + 4), hsad_h);
+            }
+        #else
             for( d = 0; d < ndisp; d++ )
             {
                 int diff = std::abs(lval - rptr[d]);
                 cbuf[d] = (uchar)diff;
                 hsad[d] = hsad[d] + diff - cbuf_sub[d];
             }
+        #endif
             htext[y] += tab[lval] - tab[lptr_sub[0]];
         }
 
@@ -630,8 +720,24 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
 
         hsad = hsad0 + (1 - dy0)*ndisp;
         for( y = 1 - dy0; y < wsz2; y++, hsad += ndisp )
+        {
+        #if CV_NEON
+            for( d = 0; d <= ndisp-8; d += 8 )
+            {
+                int32x4_t s0 = vld1q_s32 (sad + d);
+                int32x4_t s1 = vld1q_s32 (sad + d + 4);
+                int32x4_t t0 = vld1q_s32 (hsad + d);
+                int32x4_t t1 = vld1q_s32 (hsad + d + 4);
+                s0 = vaddq_s32 (s0, t0);
+                s1 = vaddq_s32 (s1, t1);
+                vst1q_s32 (sad + d, s0);
+                vst1q_s32 (sad + d + 4, s1);
+            }
+        #else
             for( d = 0; d < ndisp; d++ )
                 sad[d] = (int)(sad[d] + hsad[d]);
+        #endif
+        }
         int tsum = 0;
         for( y = -wsz2-1; y < wsz2; y++ )
             tsum += htext[y];
@@ -642,7 +748,61 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             int minsad = INT_MAX, mind = -1;
             hsad = hsad0 + MIN(y + wsz2, height+dy1-1)*ndisp;
             hsad_sub = hsad0 + MAX(y - wsz2 - 1, -dy0)*ndisp;
+        #if CV_NEON
+            int32x4_t minsad4 = vdupq_n_s32 (INT_MAX);
+            int32x4_t mind4 = vdupq_n_s32(0), d4 = d0_4;
 
+            for( d = 0; d <= ndisp-8; d += 8 )
+            {
+                int32x4_t u0 = vld1q_s32 (hsad_sub + d);
+                int32x4_t u1 = vld1q_s32 (hsad + d);
+
+                int32x4_t v0 = vld1q_s32 (hsad_sub + d + 4);
+                int32x4_t v1 = vld1q_s32 (hsad + d + 4);
+
+                int32x4_t usad4 = vld1q_s32(sad + d);
+                int32x4_t vsad4 = vld1q_s32(sad + d + 4);
+
+                u1 = vsubq_s32 (u1, u0);
+                v1 = vsubq_s32 (v1, v0);
+                usad4 = vaddq_s32 (usad4, u1);
+                vsad4 = vaddq_s32 (vsad4, v1);
+
+                uint32x4_t mask = vcgtq_s32 (minsad4, usad4);
+                minsad4 = vminq_s32 (minsad4, usad4);
+                mind4 = vbslq_s32(mask, d4, mind4);
+
+                vst1q_s32 (sad + d, usad4);
+                vst1q_s32 (sad + d + 4, vsad4);
+                d4 = vaddq_s32 (d4, dd_4);
+
+                mask = vcgtq_s32 (minsad4, vsad4);
+                minsad4 = vminq_s32 (minsad4, vsad4);
+                mind4 = vbslq_s32(mask, d4, mind4);
+
+                d4 = vaddq_s32 (d4, dd_4);
+
+            }
+            int32x2_t mind4_h = vget_high_s32 (mind4);
+            int32x2_t mind4_l = vget_low_s32 (mind4);
+            int32x2_t minsad4_h = vget_high_s32 (minsad4);
+            int32x2_t minsad4_l = vget_low_s32 (minsad4);
+
+            uint32x2_t mask = vorr_u32 (vclt_s32 (minsad4_h, minsad4_l), vand_u32 (vceq_s32 (minsad4_h, minsad4_l), vclt_s32 (mind4_h, mind4_l)));
+            mind4_h = vbsl_s32 (mask, mind4_h, mind4_l);
+            minsad4_h = vbsl_s32 (mask, minsad4_h, minsad4_l);
+
+            mind4_l = vext_s32 (mind4_h,mind4_h,1);
+            minsad4_l = vext_s32 (minsad4_h,minsad4_h,1);
+
+            mask = vorr_u32 (vclt_s32 (minsad4_h, minsad4_l), vand_u32 (vceq_s32 (minsad4_h, minsad4_l), vclt_s32 (mind4_h, mind4_l)));
+            mind4_h = vbsl_s32 (mask, mind4_h, mind4_l);
+            minsad4_h = vbsl_s32 (mask, minsad4_h, minsad4_l);
+
+            mind = (int) vget_lane_s32 (mind4_h, 0);
+            minsad = sad[mind];
+
+        #else
             for( d = 0; d < ndisp; d++ )
             {
                 int currsad = sad[d] + hsad[d] - hsad_sub[d];
@@ -653,6 +813,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                     mind = d;
                 }
             }
+        #endif
 
             tsum += htext[y + wsz2] - htext[y - wsz2 - 1];
             if( tsum < textureThreshold )
