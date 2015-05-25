@@ -54,7 +54,7 @@
 #define OPENCV_HAL_NOP(a) (a)
 #define OPENCV_HAL_1ST(a, b) (a)
 
-// unlike HAL API, which is in cv::hall,
+// unlike HAL API, which is in cv::hal,
 // we put intrinsics into cv namespace to make its
 // access from within opencv code more accessible
 namespace cv {
