@@ -344,3 +344,43 @@ TEST(Calib3d_SolvePnP, double_support)
     ASSERT_LE(norm(R, Mat_<double>(RF), NORM_INF), 1e-3);
     ASSERT_LE(norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
 }
+
+TEST(Calib3d_SolvePnP, translation)
+{
+    Mat cameraIntrinsic = Mat::eye(3,3, CV_32FC1);
+    vector<float> crvec;
+    crvec.push_back(0.f);
+    crvec.push_back(0.f);
+    crvec.push_back(0.f);
+    vector<float> ctvec;
+    ctvec.push_back(100.f);
+    ctvec.push_back(100.f);
+    ctvec.push_back(0.f);
+    vector<Point3f> p3d;
+    p3d.push_back(Point3f(0,0,0));
+    p3d.push_back(Point3f(0,0,10));
+    p3d.push_back(Point3f(0,10,10));
+    p3d.push_back(Point3f(10,10,10));
+    p3d.push_back(Point3f(2,5,5));
+
+    vector<Point2f> p2d;
+    projectPoints(p3d, crvec, ctvec, cameraIntrinsic, noArray(), p2d);
+    Mat rvec;
+    Mat tvec;
+    rvec =(Mat_<float>(3,1) << 0, 0, 0);
+    tvec = (Mat_<float>(3,1) << 100, 100, 0);
+
+    solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, true);
+    ASSERT_TRUE(checkRange(rvec));
+    ASSERT_TRUE(checkRange(tvec));
+
+    rvec =(Mat_<double>(3,1) << 0, 0, 0);
+    tvec = (Mat_<double>(3,1) << 100, 100, 0);
+    solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, true);
+    ASSERT_TRUE(checkRange(rvec));
+    ASSERT_TRUE(checkRange(tvec));
+
+    solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, false);
+    ASSERT_TRUE(checkRange(rvec));
+    ASSERT_TRUE(checkRange(tvec));
+}
