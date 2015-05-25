@@ -118,7 +118,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         PnP.compute_pose(R, tvec);
         Rodrigues(R, rvec);
         return true;
-    }
+    }*/
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
     return false;
