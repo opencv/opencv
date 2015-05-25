@@ -264,28 +264,16 @@ In some cases it is possible to support both versions of OpenCV.
 
 ### Source code
 
-To check library major version one of the following methods can be used:
-- if __CV_VERSION_EPOCH__ is defined - you are using 2.4 branch, otherwise - 3.x
-- __CV_MAJOR_VERSION__ is defined as `2` or `3` for corresponding version
-
-One of `opencv2/core/version.hpp` or `opencv2/core/core.hpp` files should be included to use these definitions.
-
-Examples:
+To check library major version in your application source code, the following method should be used:
 @code{.cpp}
-#ifdef CV_VERSION_EPOCH
-// do opencv 2 code
-#else
-// do opencv 3 code
-#endif
-@endcode
-or
-@code{.cpp}
+#include "opencv2/core/version.hpp"
 #if CV_MAJOR_VERSION == 2
 // do opencv 2 code
 #elif CV_MAJOR_VERSION == 3
 // do opencv 3 code
 #endif
 @endcode
+
 @note Do not use __CV_VERSION_MAJOR__, it has different meaning for 2.4 and 3.x branches!
 
 ### Build system
