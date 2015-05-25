@@ -669,7 +669,7 @@ TEST(Calib3d_Homography, fromImages)
     //-- Localize the model
     std::vector<Point2f> pointframe1;
     std::vector<Point2f> pointframe2;
-    for( int i = 0; i < good_matches.size(); i++ )
+    for( int i = 0; i < (int)good_matches.size(); i++ )
     {
         //-- Get the keypoints from the good matches
         pointframe1.push_back( keypoints_1[ good_matches[i].queryIdx ].pt );

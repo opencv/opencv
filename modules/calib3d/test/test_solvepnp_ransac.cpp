@@ -138,7 +138,7 @@ protected:
         }
 
         solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec,
-            false, 500, 0.5, 0.99, inliers, method);
+            false, 500, 0.5f, 0.99, inliers, method);
 
         bool isTestSuccess = inliers.size() >= points.size()*0.95;
 
@@ -254,10 +254,7 @@ protected:
 TEST(Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy) { CV_solvePnP_Test test; test.safe_run(); }
 
-
-#ifdef HAVE_TBB
-
-TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
+TEST(Calib3d_SolvePnPRansac, concurrency)
 {
     int count = 7*13;
 
@@ -287,12 +284,11 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
 
     {
         // limit concurrency to get deterministic result
-        cv::theRNG().state = 20121010;
-        tbb::task_scheduler_init one_thread(1);
+        theRNG().state = 20121010;
+        setNumThreads(1);
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec1, tvec1);
     }
 
-    if(1)
     {
         Mat rvec;
         Mat tvec;
@@ -306,8 +302,8 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
 
     {
         // single thread again
-        cv::theRNG().state = 20121010;
-        tbb::task_scheduler_init one_thread(1);
+        theRNG().state = 20121010;
+        setNumThreads(1);
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec2, tvec2);
     }
 
@@ -316,9 +312,7 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
 
     EXPECT_LT(rnorm, 1e-6);
     EXPECT_LT(tnorm, 1e-6);
-
 }
-#endif
 
 TEST(Calib3d_SolvePnP, double_support)
 {
@@ -338,8 +332,8 @@ TEST(Calib3d_SolvePnP, double_support)
     Mat R,t, RF, tF;
     vector<int> inliers;
 
-    solvePnPRansac(points3dF, points2dF, intrinsics, cv::Mat(), RF, tF, true, 100, 8, 0.999, inliers, cv::SOLVEPNP_P3P);
-    solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R, t, true, 100, 8, 0.999, inliers, cv::SOLVEPNP_P3P);
+    solvePnPRansac(points3dF, points2dF, intrinsics, cv::Mat(), RF, tF, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
+    solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R, t, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
 
     ASSERT_LE(norm(R, Mat_<double>(RF), NORM_INF), 1e-3);
     ASSERT_LE(norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
