@@ -192,7 +192,16 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         OutputArray _inliers, int flags)
 {
 
-    Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
+    Mat opoints0 = _opoints.getMat(), ipoints0 = _ipoints.getMat();
+    Mat opoints, ipoints;
+    if( opoints0.depth() == CV_64F || !opoints0.isContinuous() )
+        opoints0.convertTo(opoints, CV_32F);
+    else
+        opoints = opoints0;
+    if( ipoints0.depth() == CV_64F || !ipoints0.isContinuous() )
+        ipoints0.convertTo(ipoints, CV_32F);
+    else
+        ipoints = ipoints0;
 
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );

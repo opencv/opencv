@@ -319,3 +319,28 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
 
 }
 #endif
+
+TEST(Calib3d_SolvePnP, double_support)
+{
+    Matx33d intrinsics(5.4794130238156129e+002, 0., 2.9835545700043139e+002, 0.,
+                       5.4817724002728005e+002, 2.3062194051986233e+002, 0., 0., 1.);
+    std::vector<cv::Point3d> points3d;
+    std::vector<cv::Point2d> points2d;
+    std::vector<cv::Point3f> points3dF;
+    std::vector<cv::Point2f> points2dF;
+    for (int i = 0; i < 10 ; i++)
+    {
+        points3d.push_back(cv::Point3d(i,0,0));
+        points3dF.push_back(cv::Point3d(i,0,0));
+        points2d.push_back(cv::Point2f(i,0));
+        points2dF.push_back(cv::Point2d(i,0));
+    }
+    Mat R,t, RF, tF;
+    vector<int> inliers;
+
+    solvePnPRansac(points3dF, points2dF, intrinsics, cv::Mat(), RF, tF, true, 100, 8, 0.999, inliers, cv::SOLVEPNP_P3P);
+    solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R, t, true, 100, 8, 0.999, inliers, cv::SOLVEPNP_P3P);
+
+    ASSERT_LE(norm(R, Mat_<double>(RF), NORM_INF), 1e-3);
+    ASSERT_LE(norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
+}
