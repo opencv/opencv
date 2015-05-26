@@ -237,17 +237,23 @@ namespace perf
     #   else
             printf("[----------]\n[ GPU INFO ] \tRun on OS Windows x32.\n[----------]\n"), fflush(stdout);
     #   endif
-    #elif defined linux
-    #   if defined _LP64
-            printf("[----------]\n[ GPU INFO ] \tRun on OS Linux x64.\n[----------]\n"), fflush(stdout);
+    #elif defined ANDROID
+    #   if defined _LP64 || defined __LP64__
+            printf("[----------]\n[ GPU INFO ] \tRun on OS Android x64.\n[----------]\n"), fflush(stdout);
     #   else
-            printf("[----------]\n[ GPU INFO ] \tRun on OS Linux x32.\n[----------]\n"), fflush(stdout);
+            printf("[----------]\n[ GPU INFO ] \tRun on OS Android x32.\n[----------]\n"), fflush(stdout);
     #   endif
     #elif defined __APPLE__
-    #   if defined _LP64
+    #   if defined _LP64 || defined __LP64__
             printf("[----------]\n[ GPU INFO ] \tRun on OS Apple x64.\n[----------]\n"), fflush(stdout);
     #   else
             printf("[----------]\n[ GPU INFO ] \tRun on OS Apple x32.\n[----------]\n"), fflush(stdout);
+    #   endif
+    #elif defined linux
+    #   if defined _LP64 || defined __LP64__
+            printf("[----------]\n[ GPU INFO ] \tRun on OS Linux x64.\n[----------]\n"), fflush(stdout);
+    #   else
+            printf("[----------]\n[ GPU INFO ] \tRun on OS Linux x32.\n[----------]\n"), fflush(stdout);
     #   endif
     #endif
 
