@@ -1,0 +1,16 @@
+﻿<Page
+    x:Class="FaceDetection.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FaceDetection"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Button x:Name="InitBtn" Content="Initialize" HorizontalAlignment="Left" Height="67" Margin="69,81,0,0" VerticalAlignment="Top" Width="218" Click="InitBtn_Click"/>
+        <Button x:Name="detectBtn" Content="Detect Faces" HorizontalAlignment="Left" Height="67" Margin="69,168,0,0" VerticalAlignment="Top" Width="218" Click="detectBtn_Click"/>
+        <Image x:Name="img1" HorizontalAlignment="Left" Height="446" Margin="354,84,0,0" VerticalAlignment="Top" Width="883"/>
+
+    </Grid>
+</Page>
