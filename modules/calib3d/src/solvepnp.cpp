@@ -59,9 +59,33 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
-    _rvec.create(3, 1, CV_64F);
-    _tvec.create(3, 1, CV_64F);
-    Mat cameraMatrix = Mat_<double>(_cameraMatrix.getMat()), distCoeffs = Mat_<double>(_distCoeffs.getMat());
+
+    Mat rvec, tvec;
+    if( flags != SOLVEPNP_ITERATIVE )
+        useExtrinsicGuess = false;
+
+    if( useExtrinsicGuess )
+    {
+        int rtype = _rvec.type(), ttype = _tvec.type();
+        Size rsize = _rvec.size(), tsize = _tvec.size();
+        CV_Assert( (rtype == CV_32F || rtype == CV_64F) &&
+                   (ttype == CV_32F || ttype == CV_64F) );
+        CV_Assert( (rsize == Size(1, 3) || rsize == Size(3, 1)) &&
+                   (tsize == Size(1, 3) || tsize == Size(3, 1)) );
+    }
+    else
+    {
+        _rvec.create(3, 1, CV_64F);
+        _tvec.create(3, 1, CV_64F);
+    }
+    rvec = _rvec.getMat();
+    tvec = _tvec.getMat();
+
+    Mat cameraMatrix0 = _cameraMatrix.getMat();
+    Mat distCoeffs0 = _distCoeffs.getMat();
+    Mat cameraMatrix = Mat_<double>(cameraMatrix0);
+    Mat distCoeffs = Mat_<double>(distCoeffs0);
+    bool result = false;
 
     if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
     {
@@ -69,10 +93,10 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         epnp PnP(cameraMatrix, opoints, undistortedPoints);
 
-        Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        Mat R;
         PnP.compute_pose(R, tvec);
         Rodrigues(R, rvec);
-        return true;
+        result = true;
     }
     else if (flags == SOLVEPNP_P3P)
     {
@@ -81,21 +105,20 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         p3p P3Psolver(cameraMatrix);
 
-        Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-        bool result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
+        Mat R;
+        result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
         if (result)
             Rodrigues(R, rvec);
-        return result;
     }
     else if (flags == SOLVEPNP_ITERATIVE)
     {
         CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
         CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-        CvMat c_rvec = _rvec.getMat(), c_tvec = _tvec.getMat();
+        CvMat c_rvec = rvec, c_tvec = tvec;
         cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
                                      c_distCoeffs.rows*c_distCoeffs.cols ? &c_distCoeffs : 0,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
-        return true;
+        result = true;
     }
     /*else if (flags == SOLVEPNP_DLS)
     {
@@ -115,17 +138,13 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         upnp PnP(cameraMatrix, opoints, ipoints);
 
         Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-        double f = PnP.compute_pose(R, tvec);
+        PnP.compute_pose(R, tvec);
         Rodrigues(R, rvec);
-        if(cameraMatrix.type() == CV_32F)
-            cameraMatrix.at<float>(0,0) = cameraMatrix.at<float>(1,1) = (float)f;
-        else
-            cameraMatrix.at<double>(0,0) = cameraMatrix.at<double>(1,1) = f;
         return true;
     }*/
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
-    return false;
+    return result;
 }
 
 class PnPRansacCallback : public PointSetRegistrator::Callback
@@ -196,7 +215,16 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         OutputArray _inliers, int flags)
 {
 
-    Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
+    Mat opoints0 = _opoints.getMat(), ipoints0 = _ipoints.getMat();
+    Mat opoints, ipoints;
+    if( opoints0.depth() == CV_64F || !opoints0.isContinuous() )
+        opoints0.convertTo(opoints, CV_32F);
+    else
+        opoints = opoints0;
+    if( ipoints0.depth() == CV_64F || !ipoints0.isContinuous() )
+        ipoints0.convertTo(ipoints, CV_32F);
+    else
+        ipoints = ipoints0;
 
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );

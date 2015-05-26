@@ -2047,7 +2047,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     CV_Assert( CV_MAT_DEPTH(ctype) >= CV_32F && CV_MAT_CN(ctype) <= 2 );
     CV_Assert( coeffs0.rows == 1 || coeffs0.cols == 1 );
 
-    int n = coeffs0.cols + coeffs0.rows - 2;
+    int n0 = coeffs0.cols + coeffs0.rows - 2, n = n0;
 
     _roots0.create(n, 1, CV_MAKETYPE(cdepth, 2), -1, true, _OutputArray::DEPTH_MASK_FLT);
     Mat roots0 = _roots0.getMat();
@@ -2061,6 +2061,12 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         const double* rcoeffs = (const double*)roots;
         for( i = 0; i <= n; i++ )
             coeffs[i] = C(rcoeffs[i], 0);
+    }
+
+    for( ; n > 1; n-- )
+    {
+        if( std::abs(coeffs[n].re) + std::abs(coeffs[n].im) > DBL_EPSILON )
+            break;
     }
 
     C p(1, 0), r(1, 1);
@@ -2099,6 +2105,9 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             if( fabs(roots[i].im) < verySmallEps )
                 roots[i].im = 0;
     }
+
+    for( ; n < n0; n++ )
+        roots[n+1] = roots[n];
 
     Mat(roots0.size(), CV_64FC2, roots).convertTo(roots0, roots0.type());
     return maxDiff;
