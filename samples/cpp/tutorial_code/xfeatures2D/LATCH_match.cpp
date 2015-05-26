@@ -1,9 +1,14 @@
+#include <iostream>
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_XFEATURES2D
+
 #include <opencv2/features2d.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <vector>
-#include <iostream>
 
 // If you find this code useful, please add a reference to the following paper in your work:
 // Gil Levi and Tal Hassner, "LATCH: Learned Arrangements of Three Patch Codes", arXiv preprint arXiv:1501.03719, 15 Jan. 2015
@@ -90,3 +95,13 @@ int main(void)
     cout << endl;
     return 0;
 }
+
+#else
+
+int main()
+{
+    std::cerr << "OpenCV was built without xfeatures2d module" << std::endl;
+    return 0;
+}
+
+#endif
