@@ -662,7 +662,7 @@ TEST(Calib3d_Homography, fromImages)
     std::vector< DMatch > good_matches;
     for( int i = 0; i < descriptors_1.rows; i++ )
     {
-        if( matches[i].distance < min_dist*4 )
+        if( matches[i].distance <= 42 )
             good_matches.push_back( matches[i]);
     }
 
@@ -684,5 +684,5 @@ TEST(Calib3d_Homography, fromImages)
            (int)good_matches.size(), ninliers);
 
     ASSERT_TRUE(!H.empty());
-    ASSERT_GE(ninliers, 100);
+    ASSERT_GE(ninliers, 80);
 }
