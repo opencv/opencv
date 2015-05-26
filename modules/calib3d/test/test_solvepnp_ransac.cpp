@@ -326,7 +326,7 @@ TEST(Calib3d_SolvePnP, double_support)
     {
         points3d.push_back(cv::Point3d(i,0,0));
         points3dF.push_back(cv::Point3d(i,0,0));
-        points2d.push_back(cv::Point2f(i,0));
+        points2d.push_back(cv::Point2d(i,0));
         points2dF.push_back(cv::Point2d(i,0));
     }
     Mat R,t, RF, tF;
