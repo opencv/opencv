@@ -430,7 +430,12 @@ __kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_o
 
         for (int i = 0; i < pix_per_thr; ++i)
         {
-            ushort2 pos = l_stack[ atomic_dec(&l_counter) - 1 ];
+            int index = atomic_dec(&l_counter) - 1;
+            if (index < 0) {
+               atomic_inc(&l_counter);
+               continue;
+            }
+            ushort2 pos = l_stack[ index ];
 
             #pragma unroll
             for (int j = 0; j < 8; ++j)
