@@ -48,7 +48,7 @@
 #include "opencv2/videoio.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/ts/ts_perf.hpp"
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 namespace perf
 {

@@ -1,5 +1,5 @@
 #include <iostream>
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #ifndef HAVE_OPENGL
 int main()

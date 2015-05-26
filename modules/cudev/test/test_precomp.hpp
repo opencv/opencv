@@ -52,6 +52,6 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #endif

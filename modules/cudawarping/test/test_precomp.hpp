@@ -57,7 +57,7 @@
 #include "opencv2/cudawarping.hpp"
 #include "opencv2/imgproc.hpp"
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #include "interpolation.hpp"
 

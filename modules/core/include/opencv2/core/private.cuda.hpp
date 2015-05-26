@@ -48,7 +48,7 @@
 #  error this is a private header which should not be used from outside of the OpenCV library
 #endif
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/base.hpp"

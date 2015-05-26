@@ -59,6 +59,6 @@
 #include "opencv2/cudaobjdetect.hpp"
 #include "opencv2/objdetect.hpp"
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #endif

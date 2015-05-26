@@ -57,6 +57,6 @@
 #include "opencv2/cudafeatures2d.hpp"
 #include "opencv2/features2d.hpp"
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #endif

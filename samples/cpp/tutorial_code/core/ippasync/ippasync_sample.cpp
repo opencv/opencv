@@ -3,7 +3,7 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 using namespace std;
 using namespace cv;
