@@ -32,7 +32,7 @@ using cv::ParallelLoopBody;
 #include <queue>
 #include "cxmisc.h"
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 #ifdef HAVE_TBB
 #  include "tbb/tbb_stddef.h"
 #  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202

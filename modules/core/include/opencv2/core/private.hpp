@@ -49,7 +49,7 @@
 #endif
 
 #include "opencv2/core.hpp"
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #ifdef HAVE_EIGEN
 #  if defined __GNUC__ && defined __APPLE__

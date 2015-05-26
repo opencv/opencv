@@ -44,7 +44,7 @@
 #define __OPENCV_CUDA_TEST_UTILITY_HPP__
 
 #include <stdexcept>
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/imgcodecs.hpp"

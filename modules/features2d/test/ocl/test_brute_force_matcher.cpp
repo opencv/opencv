@@ -49,7 +49,7 @@
 //M*/
 
 #include "../test_precomp.hpp"
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL

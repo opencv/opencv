@@ -46,7 +46,7 @@
 #include "opencv2/ts/cuda_test.hpp"
 
 #include "opencv2/opencv_modules.hpp"
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #if defined (HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAIMGPROC)
 

@@ -57,6 +57,6 @@
 #include "opencv2/cudastereo.hpp"
 #include "opencv2/calib3d.hpp"
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #endif

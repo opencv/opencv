@@ -45,7 +45,7 @@
 
 #include <limits>
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/core/utility.hpp"

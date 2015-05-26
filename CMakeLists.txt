@@ -1181,7 +1181,7 @@ status("    C/C++ Examples:"    BUILD_EXAMPLES                       THEN YES EL
 status("")
 status("  Install path:" "${CMAKE_INSTALL_PREFIX}")
 status("")
-status("  cvconfig.h is in:" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}")
+status("  cvconfig.h is in:" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2")
 status("-----------------------------------------------------------------")
 status("")
 

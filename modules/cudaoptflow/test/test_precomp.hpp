@@ -60,6 +60,6 @@
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/video.hpp"
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #endif
