@@ -1194,10 +1194,6 @@ namespace cv
 }
 #endif
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4189 )
-#endif
 cv::Scalar cv::sum( InputArray _src )
 {
 #ifdef HAVE_OPENCL
@@ -1210,7 +1206,8 @@ cv::Scalar cv::sum( InputArray _src )
     size_t total_size = _src.total();
     int rows = _src.rows(), cols = rows ? (int)(total_size / rows) : 0;
     Mat src = _src.getMat();
-    CV_IPP_RUN((_src.dims() == 2 || (_src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)) && IPP_VERSION_MAJOR >= 7, 
+    cols;
+    CV_IPP_RUN((_src.dims() == 2 || (_src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)) && IPP_VERSION_MAJOR >= 7,
         ipp_sum(src, _res), _res);
     int k, cn = src.channels(), depth = src.depth();
 
@@ -1262,9 +1259,6 @@ cv::Scalar cv::sum( InputArray _src )
     }
     return s;
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 
 #ifdef HAVE_OPENCL
@@ -1314,10 +1308,6 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 #if defined HAVE_IPP
 namespace cv {
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4100 )
-#endif
 static bool ipp_countNonZero( Mat src, int & res )
 {
     int type = src.type();
@@ -1347,9 +1337,6 @@ static bool ipp_countNonZero( Mat src, int & res )
 
     return false;
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 }
 #endif
 
@@ -1761,10 +1748,6 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
 }
 #endif
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4189 )
-#endif
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
     CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
@@ -1775,6 +1758,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
         size_t total_size = _src.total();
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
     int rows = sz.height, cols = rows ? (int)(total_size / rows) : 0;
+    cols;
     CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)), 
         ipp_meanStdDev(src, _mean, _sdv, mask));
 
@@ -1871,9 +1855,6 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             dptr[k] = 0;
     }
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 
 /****************************************************************************************\
@@ -2320,10 +2301,6 @@ static bool ipp_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 
 }
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4189 )
-#endif
 void cv::minMaxIdx(InputArray _src, double* minVal,
                    double* maxVal, int* minIdx, int* maxIdx,
                    InputArray _mask)
@@ -2339,6 +2316,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     size_t total_size = _src.total();
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
     int rows = sz.height, cols = rows ? (int)(total_size/rows) : 0;
+    cols;
     CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)), 
         ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
@@ -2383,9 +2361,6 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     if( maxIdx )
         ofs2idx(src, maxidx, maxIdx);
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 
 void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,

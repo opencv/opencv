@@ -1398,10 +1398,6 @@ static bool ipp_boxfilter( InputArray _src, OutputArray _dst, int ddepth,
 #endif
 
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4189 )
-#endif
 void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
@@ -1432,7 +1428,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     ocvAnchor.y = anchor.y < 0 ? ksize.height / 2 : anchor.y;
     ippAnchor.x = ksize.width / 2 - (ksize.width % 2 == 0 ? 1 : 0);
     ippAnchor.y = ksize.height / 2 - (ksize.height % 2 == 0 ? 1 : 0);
-
+    ippBorderType;
     CV_IPP_RUN((normalize && !_src.isSubmatrix() && ddepth == sdepth &&
             (/*ippBorderType == BORDER_REPLICATE ||*/ /* returns ippStsStepErr: Step value is not valid */
              ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor &&
@@ -1444,9 +1440,6 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                         ksize, anchor, normalize, borderType );
     f->apply( src, dst );
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 
 void cv::blur( InputArray src, OutputArray dst,

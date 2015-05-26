@@ -4555,10 +4555,6 @@ cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
         _rowBorderType, _columnBorderType, _borderValue );
 }
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4100 )
-#endif
 #ifdef HAVE_IPP
 namespace cv
 {
@@ -4641,13 +4637,12 @@ static bool ipp_filter2D( InputArray _src, OutputArray _dst, int ddepth,
             }
         }
     }
+#else
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(ddepth); CV_UNUSED(_kernel), CV_UNUSED(anchor0), CV_UNUSED(delta), CV_UNUSED(borderType);
 #endif
     return false;
 }
 }
-#endif
-#ifdef _MSC_VER
-#pragma warning( pop )
 #endif
 
 

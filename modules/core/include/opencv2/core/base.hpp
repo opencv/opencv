@@ -305,6 +305,7 @@ enum BorderTypes {
 #define CV_SUPPRESS_DEPRECATED_START
 #define CV_SUPPRESS_DEPRECATED_END
 #endif
+#define CV_UNUSED(name) (void)name
 //! @endcond
 
 /*! @brief Signals an error and raises the exception.

@@ -3120,10 +3120,6 @@ static bool ipp_resize_mt(    Mat src, Mat dst,
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4189 )
-#endif
 void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
@@ -3283,7 +3279,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 #endif
 
 
-
+    ex; ey; IPP_RESIZE_EPS;
     CV_IPP_RUN(IPP_VERSION_X100 >= 701 && ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) || (ex == 0 && ey == 0 && depth == CV_64F)) &&
         (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
         !(interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 && depth == CV_8U) &&
@@ -3487,9 +3483,6 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     func( src, dst, xofs, fixpt ? (void*)ialpha : (void*)alpha, yofs,
           fixpt ? (void*)ibeta : (void*)beta, xmin, xmax, ksize );
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 
 

@@ -918,7 +918,7 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE))
 
-    CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))), 
+    CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))),
         ipp_accumulate(_src, _dst, _mask));
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
@@ -1010,7 +1010,7 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE_SQUARE))
 
-    CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))), 
+    CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))),
         ipp_accumulate_square(_src, _dst, _mask));
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();

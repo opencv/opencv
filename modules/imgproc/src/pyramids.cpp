@@ -1166,10 +1166,6 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 }
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4100 )
-#endif
 #if defined(HAVE_IPP)
 namespace cv
 {
@@ -1223,19 +1219,14 @@ static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, in
             }
         }
     }
+#else
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(_dsz); CV_UNUSED(borderType);
 #endif
     return false;
 }
 }
 #endif
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4189 )
-#endif
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
     CV_Assert(borderType != BORDER_CONSTANT);
@@ -1256,6 +1247,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    isolated; borderTypeNI;
     CV_IPP_RUN(borderTypeNI == BORDER_DEFAULT && (!_src.isSubmatrix() || isolated) && dsz == Size((_src.cols() + 1)/2, (_src.rows() + 1)/2), 
         ipp_pyrdown( _src,  _dst,  _dsz,  borderType));
 
@@ -1276,15 +1268,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
     func( src, dst, borderType );
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4100 )
-#endif
 #if defined(HAVE_IPP)
 namespace cv
 {
@@ -1336,19 +1321,14 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
             }
         }
     }
+#else
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(_dsz); CV_UNUSED(borderType);
 #endif
     return false;
 }
 }
 #endif
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4189 )
-#endif
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
     CV_Assert(borderType == BORDER_DEFAULT);
@@ -1370,6 +1350,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    isolated; borderTypeNI;
     CV_IPP_RUN(borderTypeNI == BORDER_DEFAULT && (!_src.isSubmatrix() || isolated) && dsz == Size(_src.cols()*2, _src.rows()*2),
         ipp_pyrup( _src,  _dst,  _dsz,  borderType));
 
@@ -1390,15 +1371,8 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
     func( src, dst, borderType );
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4100 )
-#endif
 #if defined(HAVE_IPP)
 namespace cv
 {
@@ -1504,19 +1478,14 @@ static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int max
         }
         return false;
     }
+#else
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(maxlevel); CV_UNUSED(borderType);
 #endif
     return false;
 }
 }
 #endif
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4189 )
-#endif
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
     CV_Assert(borderType != BORDER_CONSTANT);
@@ -1539,6 +1508,7 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
 
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    isolated; borderTypeNI;
     CV_IPP_RUN(((IPP_VERSION_X100 >= 801 && 0) && (borderTypeNI == BORDER_DEFAULT && (!_src.isSubmatrix() || isolated))),
         ipp_buildpyramid( _src,  _dst,  maxlevel,  borderType));
 
@@ -1546,9 +1516,6 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
     for( ; i <= maxlevel; i++ )
         pyrDown( _dst.getMatRef(i-1), _dst.getMatRef(i), Size(), borderType );
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 CV_IMPL void cvPyrDown( const void* srcarr, void* dstarr, int _filter )
 {

@@ -423,10 +423,6 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum,
 
 }
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4100 )
-#endif
 #if defined(HAVE_IPP)
 namespace cv
 {
@@ -483,13 +479,12 @@ static bool ipp_integral(InputArray _src, OutputArray _sum, OutputArray _sqsum, 
             return true;
         }
     }
+#else
+    CV_UNUSED(_src); CV_UNUSED(_sum); CV_UNUSED(_sqsum); CV_UNUSED(_tilted); CV_UNUSED(sdepth); CV_UNUSED(sqdepth);
 #endif
     return false;
 }
 }
-#endif
-#ifdef _MSC_VER
-#pragma warning( pop )
 #endif
 
 void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth, int sqdepth )

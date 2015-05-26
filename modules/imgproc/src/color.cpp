@@ -7325,10 +7325,6 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
 }//namespace cv
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4189 4702 )
-#endif
 #ifdef HAVE_IPP
 namespace cv
 {
@@ -7660,7 +7656,7 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 code == CV_BGR2HSV_FULL || code == CV_BGR2HLS_FULL ? 0 : 2;
             int hrange = depth == CV_32F ? 360 : code == CV_BGR2HSV || code == CV_RGB2HSV ||
                 code == CV_BGR2HLS || code == CV_RGB2HLS ? 180 : 256;
-
+            hrange;
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
 
@@ -7723,7 +7719,7 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 code == CV_HSV2BGR_FULL || code == CV_HLS2BGR_FULL ? 0 : 2;
             int hrange = depth == CV_32F ? 360 : code == CV_HSV2BGR || code == CV_HSV2RGB ||
                 code == CV_HLS2BGR || code == CV_HLS2RGB ? 180 : 255;
-
+            hrange;
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
@@ -7940,12 +7936,8 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         default:
             return false;
     }
-    return false;
 }
 }
-#endif
-#ifdef _MSC_VER
-#pragma warning( pop )
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////

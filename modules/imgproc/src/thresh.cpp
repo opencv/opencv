@@ -905,10 +905,6 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
 }
 
 #ifdef HAVE_IPP
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4100 )
-#endif
 static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size size, unsigned char &thresh)
 {
     int ippStatus = -1;
@@ -917,21 +913,16 @@ static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size 
     CV_SUPPRESS_DEPRECATED_START
     ippStatus = ippiComputeThreshold_Otsu_8u_C1R(_src, step, srcSize, &thresh);
     CV_SUPPRESS_DEPRECATED_END
+#else
+    CV_UNUSED(_src); CV_UNUSED(step); CV_UNUSED(size); CV_UNUSED(thresh);
 #endif
     if(ippStatus >= 0)
         return true;
     return false;
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 #endif
 
 
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4101 )
-#endif
 static double
 getThreshVal_Otsu_8u( const Mat& _src )
 {
@@ -945,6 +936,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
     }
 
     unsigned char thresh;
+    thresh;
     CV_IPP_RUN(true, ipp_getThreshVal_Otsu_8u(_src.ptr(), step, size, thresh), thresh);
 
 
@@ -999,9 +991,6 @@ getThreshVal_Otsu_8u( const Mat& _src )
 
     return max_val;
 }
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
 
 static double
 getThreshVal_Triangle_8u( const Mat& _src )
