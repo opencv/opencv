@@ -431,10 +431,8 @@ __kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_o
         for (int i = 0; i < pix_per_thr; ++i)
         {
             int index = atomic_dec(&l_counter) - 1;
-            if (index < 0) {
-               atomic_inc(&l_counter);
+            if (index < 0)
                continue;
-            }
             ushort2 pos = l_stack[ index ];
 
             #pragma unroll
@@ -453,6 +451,9 @@ __kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_o
                 }
             }
         }
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (l_counter < 0)
+            l_counter = 0;
         barrier(CLK_LOCAL_MEM_FENCE);
 
         while (p_counter > 0)
