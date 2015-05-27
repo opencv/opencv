@@ -289,9 +289,9 @@ void* cv::workcycleObjectDetectorFunction(void* p)
         ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->isObjectDetectingReady=false;
         ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->shouldObjectDetectingResultsBeForgot=false;
 #ifdef USE_STD_THREADS
-        objectDetectorThreadStartStop.notify_one();
+        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->objectDetectorThreadStartStop.notify_one();
 #else
-    pthread_cond_signal(&objectDetectorThreadStartStop);
+        pthread_cond_signal(&(((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->objectDetectorThreadStartStop));
 #endif
         ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->unlock();
     } catch(...) {
