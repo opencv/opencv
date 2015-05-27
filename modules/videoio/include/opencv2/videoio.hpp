@@ -645,7 +645,6 @@ public:
 
     The method opens video writer. Parameters are the same as in the constructor
     VideoWriter::VideoWriter.
-
      */
     CV_WRAP virtual bool open(const String& filename, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
@@ -653,6 +652,12 @@ public:
     /** @brief Returns true if video writer has been successfully initialized.
     */
     CV_WRAP virtual bool isOpened() const;
+
+    /** @brief Closes the video writer.
+
+    The methods are automatically called by subsequent VideoWriter::open and by the VideoWriter
+    destructor.
+     */
     CV_WRAP virtual void release();
     virtual VideoWriter& operator << (const Mat& image);
 
