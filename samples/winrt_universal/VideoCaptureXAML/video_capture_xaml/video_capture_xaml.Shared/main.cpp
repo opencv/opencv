@@ -28,22 +28,42 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/objdetect.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/videoio/cap_winrt.hpp>
+
+// Switch definitions below to apply different filters
+// TODO: add UX controls to manipulate filters at runtime
+
+//#define COLOR
+#define CANNY
+//#define FACES
 
 using namespace cv;
 
 namespace video_capture_xaml {
 
+    // forward declaration
+    void cvFilterColor(Mat &frame);
+    void cvFilterCanny(Mat &frame);
+    void cvDetectFaces(Mat &frame);
+
+    CascadeClassifier face_cascade;
+    String face_cascade_name = "Assets/haarcascade_frontalface_alt.xml";
+
     void cvMain()
     {
-        VideoCapture cam;
+        //initializing frame counter used by face detection logic
+        long frameCounter = 0;
+
+        // loading classifier for face detection
+        face_cascade.load(face_cascade_name);
 
         // open the default camera
+        VideoCapture cam;
         cam.open(0);
 
-        Mat edges;
         Mat frame;
 
         // process frames
@@ -51,37 +71,71 @@ namespace video_capture_xaml {
         {
             // get a new frame from camera - this is non-blocking per spec
             cam >> frame;
+            frameCounter++;
 
             // don't reprocess the same frame again
-            // nb if commented then flashing may occur
+            // if commented then flashing may occur
             if (!cam.grab()) continue;
 
             // image processing calculations here
-            // nb Mat frame is in RGB24 format (8UC3)
+            // Mat frame is in RGB24 format (8UC3)
 
-            // select processing type 1 or 2
-    #if 0
-            // image manipulation example #1
-            // write color bar at row 100 for 200 rows
-            auto ar = frame.ptr(100);
-            int bytesPerPixel = 3;
-            int adjust = (int)(((float)30 / 100.0f) * 255.0);
-            for (int i = 0; i < 640 * 100 * bytesPerPixel;)
-            {
-                ar[i++] = adjust;           // R
-                i++;                        // G
-                ar[i++] = 255 - adjust;     // B
+            // select processing type
+    #if defined COLOR
+            cvFilterColor(frame);
+    #elif defined CANNY
+            cvFilterCanny(frame);
+    #elif defined FACES
+            // processing every other frame to reduce the load
+            if (frameCounter % 2 == 0) {
+                cvDetectFaces(frame);
             }
-    #else
-            // image processing example #2
-            // apply 'canny' filter
-            cvtColor(frame, edges, COLOR_RGB2GRAY);
-            GaussianBlur(edges, edges, Size(7, 7), 1.5, 1.5);
-            Canny(edges, edges, 0, 30, 3);
-            cvtColor(edges, frame, COLOR_GRAY2RGB);
     #endif
+
             // important step to get XAML image component updated
             winrt_imshow();
+        }
+    }
+
+    // image processing example #1
+    // write color bar at row 100 for 200 rows
+    void cvFilterColor(Mat &frame)
+    {
+        auto ar = frame.ptr(100);
+        int bytesPerPixel = 3;
+        int adjust = (int)(((float)30 / 100.0f) * 255.0);
+        for (int i = 0; i < 640 * 100 * bytesPerPixel;)
+        {
+            ar[i++] = adjust;           // R
+            i++;                        // G
+            ar[i++] = 255 - adjust;     // B
+        }
+    }
+
+    // image processing example #2
+    // apply edge detection aka 'canny' filter
+    void cvFilterCanny(Mat &frame)
+    {
+        Mat edges;
+        cvtColor(frame, edges, COLOR_RGB2GRAY);
+        GaussianBlur(edges, edges, Size(7, 7), 1.5, 1.5);
+        Canny(edges, edges, 0, 30, 3);
+        cvtColor(edges, frame, COLOR_GRAY2RGB);
+    }
+
+    // image processing example #3
+    // detect human faces
+    void cvDetectFaces(Mat &frame)
+    {
+        Mat faces;
+        std::vector<cv::Rect> facesColl;
+        cvtColor(frame, faces, COLOR_RGB2GRAY);
+        equalizeHist(faces, faces);
+        face_cascade.detectMultiScale(faces, facesColl, 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, cv::Size(1, 1));
+        for (unsigned int i = 0; i < facesColl.size(); i++)
+        {
+            auto face = facesColl[i];
+            cv::rectangle(frame, face, cv::Scalar(0, 255, 255), 3);
         }
     }
 }
