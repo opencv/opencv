@@ -1312,11 +1312,14 @@ namespace cv {
 
 static bool ipp_countNonZero( Mat src, int & res )
 {
-    int type = src.type();
-    IppiSize roiSize = { src.cols, src.rows };
-    Ipp32s count = 0, srcstep = (Ipp32s)src.step;
+    Ipp32s count = 0;
     IppStatus status = (IppStatus)-1;
 
+
+#if !defined HAVE_IPP_ICV_ONLY
+    int type = src.type();
+    IppiSize roiSize = { src.cols, src.rows };
+    Ipp32s srcstep = (Ipp32s)src.step;
     if (src.isContinuous())
     {
         roiSize.width = (Ipp32s)src.total();
@@ -1324,7 +1327,6 @@ static bool ipp_countNonZero( Mat src, int & res )
         srcstep = (Ipp32s)src.total() * CV_ELEM_SIZE(type);
     }
 
-#if !defined HAVE_IPP_ICV_ONLY
     if (depth == CV_8U)
         status = ippiCountInRange_8u_C1R((const Ipp8u *)src.data, srcstep, roiSize, &count, 0, 0);
     else if (depth == CV_32F)
@@ -1760,13 +1762,13 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
-    Size sz = _src.dims() <= 2 ? _src.size() : Size();
 #ifdef HAVE_IPP
+    Size sz = _src.dims() <= 2 ? _src.size() : Size();
     size_t total_size = _src.total();
     int rows = sz.height;
     int cols = rows ? (int)(total_size / rows) : 0;
 #endif
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)), 
+    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)),
         ipp_meanStdDev(src, _mean, _sdv, mask));
 
 
@@ -2320,13 +2322,13 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    Size sz = _src.dims() <= 2 ? _src.size() : Size();
 #ifdef HAVE_IPP
+    Size sz = _src.dims() <= 2 ? _src.size() : Size();
     size_t total_size = _src.total();
     int rows = sz.height;
     int cols = rows ? (int)(total_size/rows) : 0;
 #endif
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)), 
+    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)),
         ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
 

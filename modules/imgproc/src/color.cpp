@@ -7331,7 +7331,7 @@ namespace cv
 static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
     int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), bidx;
+    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
 
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
@@ -7343,8 +7343,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:
             CV_Assert( scn == 3 || scn == 4 );
             dcn = code == CV_BGR2BGRA || code == CV_RGB2BGRA || code == CV_BGRA2RGBA ? 4 : 3;
-            bidx = code == CV_BGR2BGRA || code == CV_BGRA2BGR ? 0 : 2;
-
             _dst.create( sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
@@ -7506,7 +7504,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case CV_BGR2YUV: case CV_RGB2YUV:
         {
             CV_Assert( scn == 3 || scn == 4 );
-            bidx = code == CV_BGR2YCrCb || code == CV_BGR2YUV ? 0 : 2;
             static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
             static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
             const float* coeffs_f = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_f;
@@ -7548,7 +7545,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         {
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
-            bidx = code == CV_YCrCb2BGR || code == CV_YUV2BGR ? 0 : 2;
             static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
             static const int yuv_i[] = { 33292, -6472, -9519, 18678 };
             const float* coeffs_f = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? 0 : yuv_f;
@@ -7587,8 +7583,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 #if IPP_VERSION_MAJOR >= 7
         case CV_BGR2XYZ: case CV_RGB2XYZ:
             CV_Assert( scn == 3 || scn == 4 );
-            bidx = code == CV_BGR2XYZ ? 0 : 2;
-
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
 
@@ -7619,7 +7613,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case CV_XYZ2BGR: case CV_XYZ2RGB:
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
-            bidx = code == CV_XYZ2BGR ? 0 : 2;
 
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
@@ -7652,8 +7645,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case CV_BGR2HLS: case CV_RGB2HLS: case CV_BGR2HLS_FULL: case CV_RGB2HLS_FULL:
         {
             CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bidx = code == CV_BGR2HSV || code == CV_BGR2HLS ||
-                code == CV_BGR2HSV_FULL || code == CV_BGR2HLS_FULL ? 0 : 2;
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
 
@@ -7712,8 +7703,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         {
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bidx = code == CV_HSV2BGR || code == CV_HLS2BGR ||
-                code == CV_HSV2BGR_FULL || code == CV_HLS2BGR_FULL ? 0 : 2;
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
@@ -7769,8 +7758,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case CV_BGR2Luv: case CV_RGB2Luv: case CV_LBGR2Luv: case CV_LRGB2Luv:
         {
             CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bidx = code == CV_BGR2Lab || code == CV_BGR2Luv ||
-                   code == CV_LBGR2Lab || code == CV_LBGR2Luv ? 0 : 2;
             bool srgb = code == CV_BGR2Lab || code == CV_RGB2Lab ||
                         code == CV_BGR2Luv || code == CV_RGB2Luv;
 
@@ -7834,8 +7821,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         {
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bidx = code == CV_Lab2BGR || code == CV_Luv2BGR ||
-                   code == CV_Lab2LBGR || code == CV_Luv2LBGR ? 0 : 2;
             bool srgb = code == CV_Lab2BGR || code == CV_Lab2RGB ||
                     code == CV_Luv2BGR || code == CV_Luv2RGB;
 

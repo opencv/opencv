@@ -3243,10 +3243,6 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         inv_scale_y = (double)dsize.height/ssize.height;
     }
 
-    const double IPP_RESIZE_EPS = 1e-10;
-
-    double ex = fabs((double)dsize.width / _src.cols()  - inv_scale_x) / inv_scale_x;
-    double ey = fabs((double)dsize.height / _src.rows() - inv_scale_y) / inv_scale_y;
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
@@ -3256,14 +3252,6 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     bool is_area_fast = std::abs(scale_x - iscale_x) < DBL_EPSILON &&
             std::abs(scale_y - iscale_y) < DBL_EPSILON;
-
-
-    int mode = -1;
-    if (interpolation == INTER_LINEAR && _src.rows() >= 2 && _src.cols() >= 2)
-        mode = INTER_LINEAR;
-    else if (interpolation == INTER_CUBIC && _src.rows() >= 4 && _src.cols() >= 4)
-        mode = INTER_CUBIC;
-    Size sz1 = dsize;
 
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
@@ -3278,8 +3266,17 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         return;
 #endif
 
+#ifdef HAVE_IPP
+    int mode = -1;
+    if (interpolation == INTER_LINEAR && _src.rows() >= 2 && _src.cols() >= 2)
+        mode = INTER_LINEAR;
+    else if (interpolation == INTER_CUBIC && _src.rows() >= 4 && _src.cols() >= 4)
+        mode = INTER_CUBIC;
 
-    ex; ey; IPP_RESIZE_EPS;
+    const double IPP_RESIZE_EPS = 1e-10;
+    double ex = fabs((double)dsize.width / _src.cols()  - inv_scale_x) / inv_scale_x;
+    double ey = fabs((double)dsize.height / _src.rows() - inv_scale_y) / inv_scale_y;
+#endif
     CV_IPP_RUN(IPP_VERSION_X100 >= 701 && ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) || (ex == 0 && ey == 0 && depth == CV_64F)) &&
         (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
         !(interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 && depth == CV_8U) &&
