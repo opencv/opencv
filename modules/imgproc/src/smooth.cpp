@@ -1422,13 +1422,14 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         return;
 #endif
 
+#ifdef HAVE_IPP
     int ippBorderType = borderType & ~BORDER_ISOLATED;
+#endif
     Point ocvAnchor, ippAnchor;
     ocvAnchor.x = anchor.x < 0 ? ksize.width / 2 : anchor.x;
     ocvAnchor.y = anchor.y < 0 ? ksize.height / 2 : anchor.y;
     ippAnchor.x = ksize.width / 2 - (ksize.width % 2 == 0 ? 1 : 0);
     ippAnchor.y = ksize.height / 2 - (ksize.height % 2 == 0 ? 1 : 0);
-    ippBorderType;
     CV_IPP_RUN((normalize && !_src.isSubmatrix() && ddepth == sdepth &&
             (/*ippBorderType == BORDER_REPLICATE ||*/ /* returns ippStsStepErr: Step value is not valid */
              ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor &&

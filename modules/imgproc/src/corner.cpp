@@ -606,9 +606,10 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     {
         kerSize = 3;
     }
+#ifdef HAVE_IPP
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
-    isolated; borderTypeNI;
+#endif
     CV_IPP_RUN(((borderTypeNI == BORDER_REPLICATE && (!_src.isSubmatrix() || isolated)) &&
             (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5)) && IPP_VERSION_MAJOR >= 8,
     ipp_cornerMinEigenVal( _src, _dst, blockSize, ksize, borderType ));
@@ -688,9 +689,10 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, k, borderType, HARRIS))
 
+#ifdef HAVE_IPP
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
-    isolated; borderTypeNI;
+#endif
     CV_IPP_RUN(((ksize == 3 || ksize == 5) && (_src.type() == CV_8UC1 || _src.type() == CV_32FC1) &&
         (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE) && CV_MAT_CN(_src.type()) == 1 &&
         (!_src.isSubmatrix() || isolated)) && IPP_VERSION_X100 >= 801 && 0, ipp_cornerHarris( _src, _dst, blockSize, ksize, k, borderType ));

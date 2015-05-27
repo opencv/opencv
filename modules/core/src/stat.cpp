@@ -1196,17 +1196,19 @@ namespace cv
 
 cv::Scalar cv::sum( InputArray _src )
 {
-#ifdef HAVE_OPENCL
     Scalar _res;
+#ifdef HAVE_OPENCL
     CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_sum(_src, _res, OCL_OP_SUM),
                 _res)
 #endif
 
+#ifdef HAVE_IPP
     size_t total_size = _src.total();
-    int rows = _src.rows(), cols = rows ? (int)(total_size / rows) : 0;
+    int rows = _src.rows();
+    int cols = rows ? (int)(total_size / rows) : 0;
+#endif
     Mat src = _src.getMat();
-    cols;
     CV_IPP_RUN((_src.dims() == 2 || (_src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)) && IPP_VERSION_MAJOR >= 7,
         ipp_sum(src, _res), _res);
     int k, cn = src.channels(), depth = src.depth();
@@ -1346,8 +1348,11 @@ int cv::countNonZero( InputArray _src )
     int type = _src.type(), cn = CV_MAT_CN(type);
     CV_Assert( cn == 1 );
 
-#ifdef HAVE_OPENCL
+#if defined HAVE_OPENCL || defined HAVE_IPP
     int res = -1;
+#endif
+
+#ifdef HAVE_OPENCL
     CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_countNonZero(_src, res),
                 res)
@@ -1755,10 +1760,12 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
-        size_t total_size = _src.total();
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
-    int rows = sz.height, cols = rows ? (int)(total_size / rows) : 0;
-    cols;
+#ifdef HAVE_IPP
+    size_t total_size = _src.total();
+    int rows = sz.height;
+    int cols = rows ? (int)(total_size / rows) : 0;
+#endif
     CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)), 
         ipp_meanStdDev(src, _mean, _sdv, mask));
 
@@ -2313,10 +2320,12 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    size_t total_size = _src.total();
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
-    int rows = sz.height, cols = rows ? (int)(total_size/rows) : 0;
-    cols;
+#ifdef HAVE_IPP
+    size_t total_size = _src.total();
+    int rows = sz.height;
+    int cols = rows ? (int)(total_size/rows) : 0;
+#endif
     CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)), 
         ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
@@ -2824,8 +2833,11 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                normType == NORM_L2 || normType == NORM_L2SQR ||
                ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && _src.type() == CV_8U) );
 
-#ifdef HAVE_OPENCL
+#if defined HAVE_OPENCL || defined HAVE_IPP
     double _result = 0;
+#endif
+
+#ifdef HAVE_OPENCL
     CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_norm(_src, normType, _mask, _result),
                 _result)
@@ -3318,8 +3330,11 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 {
     CV_Assert( _src1.sameSize(_src2) && _src1.type() == _src2.type() );
 
-#ifdef HAVE_OPENCL
+#if defined HAVE_OPENCL || defined HAVE_IPP
     double _result = 0;
+#endif
+
+#ifdef HAVE_OPENCL
     CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src1.isUMat()),
                 ocl_norm(_src1, _src2, normType, _mask, _result),
                 _result)

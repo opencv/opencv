@@ -7654,9 +7654,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
             bidx = code == CV_BGR2HSV || code == CV_BGR2HLS ||
                 code == CV_BGR2HSV_FULL || code == CV_BGR2HLS_FULL ? 0 : 2;
-            int hrange = depth == CV_32F ? 360 : code == CV_BGR2HSV || code == CV_RGB2HSV ||
-                code == CV_BGR2HLS || code == CV_RGB2HLS ? 180 : 256;
-            hrange;
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
 
@@ -7717,9 +7714,6 @@ static bool ipp_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
             bidx = code == CV_HSV2BGR || code == CV_HLS2BGR ||
                 code == CV_HSV2BGR_FULL || code == CV_HLS2BGR_FULL ? 0 : 2;
-            int hrange = depth == CV_32F ? 360 : code == CV_HSV2BGR || code == CV_HSV2RGB ||
-                code == CV_HLS2BGR || code == CV_HLS2RGB ? 180 : 255;
-            hrange;
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
