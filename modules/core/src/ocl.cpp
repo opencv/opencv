@@ -2945,7 +2945,7 @@ void attachContext(String& platformName, void* platformID, void* context, void* 
     // just in case, ensure trailing zero for ASCIIZ string
     buf[sz] = 0;
 
-    String actualPlatformName = buf;
+    String actualPlatformName = (const char*)buf;
 
     // can't continue if actualPlatform doesn't match user supplied platform
     CV_OclDbgAssert(platformName == actualPlatformName);
