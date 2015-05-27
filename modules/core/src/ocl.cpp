@@ -1348,7 +1348,7 @@ OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
 #define CL_VERSION_1_2
 #endif
 
-#endif
+#endif // HAVE_OPENCL
 
 #ifdef _DEBUG
 #define CV_OclDbgAssert CV_DbgAssert
@@ -2924,6 +2924,48 @@ CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags)
 } // namespace cv::ocl::svm
 #endif // HAVE_OPENCL_SVM
 
+
+void attachContext(String& platformName, void* platformID, void* context, void* deviceID)
+{
+    cl_platform_id pl;
+    cl_device_id   d;
+
+    d = (cl_device_id)deviceID;
+
+    // get platform ID from user supplied device
+    CV_OclDbgAssert(clGetDeviceInfo(d, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &pl, NULL) == CL_SUCCESS);
+
+    // get platform name string length
+    size_t sz;
+    CV_OclDbgAssert(clGetPlatformInfo(pl, CL_PLATFORM_NAME, 0, 0, &sz) == CL_SUCCESS);
+
+    // get platform name string
+    AutoBuffer<char> buf(sz+1);
+    CV_OclDbgAssert(clGetPlatformInfo(pl, CL_PLATFORM_NAME, sz, buf, 0) == CL_SUCCESS);
+    // just in case, ensure trailing zero for ASCIIZ string
+    buf[sz] = 0;
+
+    String actualPlatformName = buf;
+
+    // can't continue if actualPlatform doesn't match user supplied platform
+    CV_OclDbgAssert(platformName == actualPlatformName);
+
+    // do not initialize context
+    Context ctx = Context::getDefault(false);
+
+    initializeContextFromHandle(ctx, platformID, context, deviceID);
+
+    // clear command queue, if any
+    getCoreTlsData().get()->oclQueue.finish();
+    Queue q;
+    getCoreTlsData().get()->oclQueue = q;
+
+    // addref to protect objects from releasing in user app on the way
+    CV_OclDbgAssert(clRetainContext((cl_context)context) == CL_SUCCESS);
+    CV_OclDbgAssert(clRetainDevice((cl_device_id)deviceID) == CL_SUCCESS);
+
+    return;
+}
 
 
 void initializeContextFromHandle(Context& ctx, void* platform, void* _context, void* _device)

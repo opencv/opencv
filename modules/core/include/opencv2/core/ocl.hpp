@@ -276,6 +276,16 @@ protected:
     Impl* p;
 };
 
+/*
+// Attaches OpenCL context to OpenCV
+// Params:
+//   platformName - name of OpenCL platform, must match with platform OpenCV initialized for
+//   platfromID   - ID of platform attached context was created for
+//   context      - attached OpenCL context
+//   deviceID     - ID of device, must be created from attached context
+*/
+CV_EXPORTS void attachContext(String& platformName, void* platformID, void* context, void* deviceID);
+
 // TODO Move to internal header
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
