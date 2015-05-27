@@ -838,8 +838,6 @@ OCL_FUNC(cl_int, clGetDeviceInfo,
           size_t * param_value_size_ret),
          (device, param_name, param_value_size, param_value, param_value_size_ret))
 
-OCL_FUNC(cl_int, clRetainDevice, (cl_device_id device))
-
 
 OCL_FUNC(cl_int, clGetDeviceIDs,
     (cl_platform_id platform,
@@ -860,9 +858,9 @@ OCL_FUNC_P(cl_context, clCreateContext,
 
 OCL_FUNC(cl_int, clReleaseContext, (cl_context context), (context))
 
-
-OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
 /*
+OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
+
 OCL_FUNC_P(cl_context, clCreateContextFromType,
     (const cl_context_properties * properties,
     cl_device_type device_type,
@@ -2961,10 +2959,6 @@ void attachContext(String& platformName, void* platformID, void* context, void* 
     getCoreTlsData().get()->oclQueue.finish();
     Queue q;
     getCoreTlsData().get()->oclQueue = q;
-
-    // addref to protect objects from releasing in user app on the way
-    CV_OclDbgAssert(clRetainContext((cl_context)context) == CL_SUCCESS);
-    CV_OclDbgAssert(clRetainDevice((cl_device_id)deviceID) == CL_SUCCESS);
 
     return;
 }
