@@ -66,6 +66,8 @@ endif()
 add_subdirectory(cpp)
 # FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
 
+add_subdirectory(opencl)
+
 if(WIN32)
   add_subdirectory(directx)
 endif()
