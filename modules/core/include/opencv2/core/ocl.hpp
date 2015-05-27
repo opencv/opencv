@@ -276,6 +276,58 @@ protected:
     Impl* p;
 };
 
+/*
+//! @brief Attaches OpenCL context to OpenCV
+//
+//! @note Note:
+//    OpenCV will check if available OpenCL platform has platformName name,
+//    then assign context to OpenCV and call clRetainContext function.
+//    The deviceID device will be used as target device and new command queue
+//    will be created.
+//
+// Params:
+//! @param platformName - name of OpenCL platform to attach,
+//!                       this string is used to check if platform is available
+//!                       to OpenCV at runtime
+//! @param platfromID   - ID of platform attached context was created for
+//! @param context      - OpenCL context to be attached to OpenCV
+//! @param deviceID     - ID of device, must be created from attached context
+*/
+CV_EXPORTS void attachContext(const String& platformName, void* platformID, void* context, void* deviceID);
+
+/*
+//! @brief Convert OpenCL buffer to UMat
+//
+//! @note Note:
+//   OpenCL buffer (cl_mem_buffer) should contain 2D image data, compatible with OpenCV.
+//   Memory content is not copied from clBuffer to UMat. Instead, buffer handle assigned
+//   to UMat and clRetainMemObject is called.
+//
+// Params:
+//! @param  cl_mem_buffer - source clBuffer handle
+//! @param  step          - num of bytes in single row
+//! @param  rows          - number of rows
+//! @param  cols          - number of cols
+//! @param  type          - OpenCV type of image
+//! @param  dst           - destination UMat
+*/
+CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst);
+
+/*
+//! @brief Convert OpenCL image2d_t to UMat
+//
+//! @note Note:
+//   OpenCL image2d_t (cl_mem_image), should be compatible with OpenCV
+//   UMat formats.
+//   Memory content is copied from image to UMat with
+//   clEnqueueCopyImageToBuffer function.
+//
+// Params:
+//! @param  cl_mem_image - source image2d_t handle
+//! @param  dst          - destination UMat
+*/
+CV_EXPORTS void convertFromImage(void* cl_mem_image, UMat& dst);
+
 // TODO Move to internal header
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
