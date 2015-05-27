@@ -838,6 +838,8 @@ OCL_FUNC(cl_int, clGetDeviceInfo,
           size_t * param_value_size_ret),
          (device, param_name, param_value_size, param_value, param_value_size_ret))
 
+OCL_FUNC(cl_int, clRetainDevice, (cl_device_id device))
+
 
 OCL_FUNC(cl_int, clGetDeviceIDs,
     (cl_platform_id platform,
@@ -858,9 +860,9 @@ OCL_FUNC_P(cl_context, clCreateContext,
 
 OCL_FUNC(cl_int, clReleaseContext, (cl_context context), (context))
 
-/*
-OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
 
+OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
+/*
 OCL_FUNC_P(cl_context, clCreateContextFromType,
     (const cl_context_properties * properties,
     cl_device_type device_type,
