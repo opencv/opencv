@@ -1402,8 +1402,10 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
     else if( featureTypeStr == CC_LBP )
         featureType = FeatureEvaluator::LBP;
     else if( featureTypeStr == CC_HOG )
+    {
         featureType = FeatureEvaluator::HOG;
-
+        CV_Error(Error::StsNotImplemented, "HOG cascade is not supported in 3.0");
+    }
     else
         return false;
 
