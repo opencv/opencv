@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "cascadedetect.hpp"
 #include "opencv2/core/core_c.h"
 #include "opencl_kernels_objdetect.hpp"
 
@@ -1822,7 +1823,9 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
             all_candidates.push_back(Rect(Point2d(locations[j]) * scale, scaled_win_size));
     }
     found_locations.assign(all_candidates.begin(), all_candidates.end());
-    cv::groupRectangles(found_locations, (int)group_threshold, 0.2);
+    groupRectangles(found_locations, (int)group_threshold, 0.2);
+    clipObjects(imgSize, found_locations, 0, 0);
+
     return true;
 }
 #endif //HAVE_OPENCL
@@ -1878,6 +1881,7 @@ void HOGDescriptor::detectMultiScale(
         groupRectangles_meanshift(foundLocations, foundWeights, foundScales, finalThreshold, winSize);
     else
         groupRectangles(foundLocations, foundWeights, (int)finalThreshold, 0.2);
+    clipObjects(imgSize, foundLocations, 0, &foundWeights);
 }
 
 void HOGDescriptor::detectMultiScale(InputArray img, std::vector<Rect>& foundLocations,
