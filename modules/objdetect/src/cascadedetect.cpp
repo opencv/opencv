@@ -627,33 +627,33 @@ void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
         int sqy = sy + (sqofs / sbufSize.width);
         UMat sum(usbuf, Rect(sx, sy, s.szi.width, s.szi.height));
         UMat sqsum(usbuf, Rect(sx, sqy, s.szi.width, s.szi.height));
-        sqsum.flags = (sqsum.flags & ~UMat::DEPTH_MASK) | CV_32F;
+        sqsum.flags = (sqsum.flags & ~UMat::DEPTH_MASK) | CV_32S;
 
         if (hasTiltedFeatures)
         {
             int sty = sy + (tofs / sbufSize.width);
             UMat tilted(usbuf, Rect(sx, sty, s.szi.width, s.szi.height));
-            integral(img, sum, sqsum, tilted, CV_32S, CV_32F);
+            integral(img, sum, sqsum, tilted, CV_32S, CV_32S);
         }
         else
         {
             UMatData* u = sqsum.u;
-            integral(img, sum, sqsum, noArray(), CV_32S, CV_32F);
-            CV_Assert(sqsum.u == u && sqsum.size() == s.szi && sqsum.type()==CV_32F);
+            integral(img, sum, sqsum, noArray(), CV_32S, CV_32S);
+            CV_Assert(sqsum.u == u && sqsum.size() == s.szi && sqsum.type()==CV_32S);
         }
     }
     else
     {
         Mat sum(s.szi, CV_32S, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
-        Mat sqsum(s.szi, CV_32F, sum.ptr<int>() + sqofs, sbuf.step);
+        Mat sqsum(s.szi, CV_32S, sum.ptr<int>() + sqofs, sbuf.step);
 
         if (hasTiltedFeatures)
         {
             Mat tilted(s.szi, CV_32S, sum.ptr<int>() + tofs, sbuf.step);
-            integral(img, sum, sqsum, tilted, CV_32S, CV_32F);
+            integral(img, sum, sqsum, tilted, CV_32S, CV_32S);
         }
         else
-            integral(img, sum, sqsum, noArray(), CV_32S, CV_32F);
+            integral(img, sum, sqsum, noArray(), CV_32S, CV_32S);
     }
 }
 
@@ -689,18 +689,23 @@ bool HaarEvaluator::setWindow( Point pt, int scaleIdx )
         return false;
 
     pwin = &sbuf.at<int>(pt) + s.layer_ofs;
-    const float* pq = (const float*)(pwin + sqofs);
+    const int* pq = (const int*)(pwin + sqofs);
     int valsum = CALC_SUM_OFS(nofs, pwin);
-    float valsqsum = CALC_SUM_OFS(nofs, pq);
+    unsigned valsqsum = (unsigned)(CALC_SUM_OFS(nofs, pq));
 
-    double nf = (double)normrect.area() * valsqsum - (double)valsum * valsum;
+    double area = normrect.area();
+    double nf = area * valsqsum - (double)valsum * valsum;
     if( nf > 0. )
+    {
         nf = std::sqrt(nf);
+        varianceNormFactor = (float)(1./nf);
+        return area*varianceNormFactor < 1e-1;
+    }
     else
-        nf = 1.;
-    varianceNormFactor = (float)(1./nf);
-
-    return true;
+    {
+        varianceNormFactor = 1.f;
+        return false;
+    }
 }
 
 

@@ -160,7 +160,7 @@ void runHaarClassifier(
                 __global const int* psum = psum1;
                 #endif
 
-                __global const float* psqsum = (__global const float*)(psum1 + sqofs);
+                __global const int* psqsum = (__global const int*)(psum1 + sqofs);
                 float sval = (psum[nofs.x] - psum[nofs.y] - psum[nofs.z] + psum[nofs.w])*invarea;
                 float sqval = (psqsum[nofs0.x] - psqsum[nofs0.y] - psqsum[nofs0.z] + psqsum[nofs0.w])*invarea;
                 float nf = (float)normarea * sqrt(max(sqval - sval * sval, 0.f));
