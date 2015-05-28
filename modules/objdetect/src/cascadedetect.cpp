@@ -1587,9 +1587,8 @@ bool CascadeClassifier::read(const FileNode &root)
     return ok;
 }
 
-static void clipObjects(Size sz, std::vector<Rect>& objects,
-                        std::vector<int>* a,
-                        std::vector<double>* b)
+void clipObjects(Size sz, std::vector<Rect>& objects,
+                 std::vector<int>* a, std::vector<double>* b)
 {
     size_t i, j = 0, n = objects.size();
     Rect win0 = Rect(0, 0, sz.width, sz.height);
