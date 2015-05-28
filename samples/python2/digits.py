@@ -86,20 +86,15 @@ class KNearest(StatModel):
 
 class SVM(StatModel):
     def __init__(self, C = 1, gamma = 0.5):
-        self.params = dict( kernel_type = cv2.ml.SVM_RBF,
-                            svm_type = cv2.ml.SVM_C_SVC,
-                            C = C,
-                            gamma = gamma )
         self.model = cv2.ml.SVM_create()
+        self.model.setGamma(gamma)
+        self.model.setC(C)
+        self.model.setKernel(cv2.ml.SVM_RBF)
+        self.model.setType(cv2.ml.SVM_C_SVC)
 
     def train(self, samples, responses):
         self.model = cv2.ml.SVM_create()
-        """ original code """
-        #self.model.train(samples, responses, params = self.params)
-        """ but it's either this """
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
-        """ or this """
-        #self.model.train(samples, params = self.params)
 
     def predict(self, samples):
         return self.model.predict(samples)[1][0].ravel()
