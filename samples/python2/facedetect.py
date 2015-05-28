@@ -49,11 +49,12 @@ if __name__ == '__main__':
         rects = detect(gray, cascade)
         vis = img.copy()
         draw_rects(vis, rects, (0, 255, 0))
-        for x1, y1, x2, y2 in rects:
-            roi = gray[y1:y2, x1:x2]
-            vis_roi = vis[y1:y2, x1:x2]
-            subrects = detect(roi.copy(), nested)
-            draw_rects(vis_roi, subrects, (255, 0, 0))
+        if not nested.empty():
+            for x1, y1, x2, y2 in rects:
+                roi = gray[y1:y2, x1:x2]
+                vis_roi = vis[y1:y2, x1:x2]
+                subrects = detect(roi.copy(), nested)
+                draw_rects(vis_roi, subrects, (255, 0, 0))
         dt = clock() - t
 
         draw_str(vis, (20, 20), 'time: %.1f ms' % (dt*1000))
