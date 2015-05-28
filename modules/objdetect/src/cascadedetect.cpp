@@ -1587,6 +1587,44 @@ bool CascadeClassifier::read(const FileNode &root)
     return ok;
 }
 
+static void clipObjects(Size sz, std::vector<Rect>& objects,
+                        std::vector<int>* a,
+                        std::vector<double>* b)
+{
+    size_t i, j = 0, n = objects.size();
+    Rect win0 = Rect(0, 0, sz.width, sz.height);
+    if(a)
+    {
+        CV_Assert(a->size() == n);
+    }
+    if(b)
+    {
+        CV_Assert(b->size() == n);
+    }
+
+    for( i = 0; i < n; i++ )
+    {
+        Rect r = win0 & objects[i];
+        if( r.area() > 0 )
+        {
+            objects[j] = r;
+            if( i > j )
+            {
+                if(a) a->at(j) = a->at(i);
+                if(b) b->at(j) = b->at(i);
+            }
+            j++;
+        }
+    }
+
+    if( j < n )
+    {
+        objects.resize(j);
+        if(a) a->resize(j);
+        if(b) b->resize(j);
+    }
+}
+
 void CascadeClassifier::detectMultiScale( InputArray image,
                       CV_OUT std::vector<Rect>& objects,
                       double scaleFactor,
@@ -1596,6 +1634,7 @@ void CascadeClassifier::detectMultiScale( InputArray image,
 {
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, scaleFactor, minNeighbors, flags, minSize, maxSize);
+    clipObjects(image.size(), objects, 0, 0);
 }
 
 void CascadeClassifier::detectMultiScale( InputArray image,
@@ -1608,6 +1647,7 @@ void CascadeClassifier::detectMultiScale( InputArray image,
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, numDetections,
                          scaleFactor, minNeighbors, flags, minSize, maxSize);
+    clipObjects(image.size(), objects, &numDetections, 0);
 }
 
 void CascadeClassifier::detectMultiScale( InputArray image,
@@ -1623,6 +1663,7 @@ void CascadeClassifier::detectMultiScale( InputArray image,
     cc->detectMultiScale(image, objects, rejectLevels, levelWeights,
                          scaleFactor, minNeighbors, flags,
                          minSize, maxSize, outputRejectLevels);
+    clipObjects(image.size(), objects, &rejectLevels, &levelWeights);
 }
 
 bool CascadeClassifier::isOldFormatCascade() const
