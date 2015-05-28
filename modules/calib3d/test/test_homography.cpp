@@ -662,7 +662,7 @@ TEST(Calib3d_Homography, fromImages)
     std::vector< DMatch > good_matches;
     for( int i = 0; i < descriptors_1.rows; i++ )
     {
-        if( matches[i].distance <= 42 )
+        if( matches[i].distance <= 100 )
             good_matches.push_back( matches[i]);
     }
 
@@ -676,13 +676,32 @@ TEST(Calib3d_Homography, fromImages)
         pointframe2.push_back( keypoints_2[ good_matches[i].trainIdx ].pt );
     }
 
-    Mat inliers;
-    Mat H = findHomography( pointframe1, pointframe2, RANSAC,3.0,inliers);
-    int ninliers = countNonZero(inliers);
-    printf("nfeatures1 = %d, nfeatures2=%d, good matches=%d, ninliers=%d\n",
+    Mat H0, H1, inliers0, inliers1;
+    double min_t0 = DBL_MAX, min_t1 = DBL_MAX;
+    for( int i = 0; i < 10; i++ )
+    {
+        double t = (double)getTickCount();
+        H0 = findHomography( pointframe1, pointframe2, RANSAC, 3.0, inliers0 );
+        t = (double)getTickCount() - t;
+        min_t0 = std::min(min_t0, t);
+    }
+    int ninliers0 = countNonZero(inliers0);
+    for( int i = 0; i < 10; i++ )
+    {
+        double t = (double)getTickCount();
+        H1 = findHomography( pointframe1, pointframe2, RHO, 3.0, inliers1 );
+        t = (double)getTickCount() - t;
+        min_t1 = std::min(min_t1, t);
+    }
+    int ninliers1 = countNonZero(inliers1);
+    double freq = getTickFrequency();
+    printf("nfeatures1 = %d, nfeatures2=%d, matches=%d, ninliers(RANSAC)=%d, "
+           "time(RANSAC)=%.2fmsec, ninliers(RHO)=%d, time(RHO)=%.2fmsec\n",
            (int)keypoints_1.size(), (int)keypoints_2.size(),
-           (int)good_matches.size(), ninliers);
+           (int)good_matches.size(), ninliers0, min_t0*1000./freq, ninliers1, min_t1*1000./freq);
 
-    ASSERT_TRUE(!H.empty());
-    ASSERT_GE(ninliers, 80);
+    ASSERT_TRUE(!H0.empty());
+    ASSERT_GE(ninliers0, 80);
+    ASSERT_TRUE(!H1.empty());
+    ASSERT_GE(ninliers1, 80);
 }
