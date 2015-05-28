@@ -347,7 +347,7 @@ static bool isContourConvex_( const Point_<_Tp>* p, int n )
     _Tp dy0 = cur_pt.y - prev_pt.y;
     int orientation = 0;
 
-    for( int i = 0; i < n-1; i++ )
+    for( int i = 0; i < n; i++ )
     {
         _Tp dxdy0, dydx0;
         _Tp dx, dy;
