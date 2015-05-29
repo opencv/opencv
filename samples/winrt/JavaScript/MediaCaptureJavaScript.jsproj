@@ -80,9 +80,9 @@
     <SDKReference Include="Microsoft.WinJS.2.0, Version=1.0" />
   </ItemGroup>
   <PropertyGroup Label="UserMacros">
-    <OpenCV_Bin>$(OPENCV_WINRT_INSTALL_DIR)WS\8.1\$(PlatformTarget)\$(PlatformTarget)\vc12\bin\</OpenCV_Bin>
-    <OpenCV_Lib>$(OPENCV_WINRT_INSTALL_DIR)WS\8.1\$(PlatformTarget)\$(PlatformTarget)\vc12\lib\</OpenCV_Lib>
-    <OpenCV_Include>$(OPENCV_WINRT_INSTALL_DIR)WS\8.1\$(PlatformTarget)\include\</OpenCV_Include>
+    <OpenCV_Bin>$(OPENCV_WINRT_INSTALL_DIR)\WS\8.1\$(PlatformTarget)\$(PlatformTarget)\vc12\bin\</OpenCV_Bin>
+    <OpenCV_Lib>$(OPENCV_WINRT_INSTALL_DIR)\WS\8.1\$(PlatformTarget)\$(PlatformTarget)\vc12\lib\</OpenCV_Lib>
+    <OpenCV_Include>$(OPENCV_WINRT_INSTALL_DIR)\WS\8.1\$(PlatformTarget)\include\</OpenCV_Include>
     <!--debug suffix for OpenCV dlls and libs -->
     <DebugSuffix Condition="'$(Configuration)'=='Debug'">d</DebugSuffix>
     <DebugSuffix Condition="'$(Configuration)'!='Debug'">

@@ -73,10 +73,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LibraryPath>$(OPENCV_WINRT_INSTALL_DIR)WP\8.1\x86\x86\vc12\lib;$(VC_LibraryPath_x86);$(WindowsPhoneSDK_LibraryPath_x86);</LibraryPath>
+    <LibraryPath>$(OPENCV_WINRT_INSTALL_DIR)\WP\8.1\x86\x86\vc12\lib;$(VC_LibraryPath_x86);$(WindowsPhoneSDK_LibraryPath_x86);</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <LibraryPath>$(OPENCV_WINRT_INSTALL_DIR)WP\8.1\ARM\ARM\vc12\lib;$(VC_LibraryPath_ARM);$(WindowsPhoneSDK_LibraryPath_arm);</LibraryPath>
+    <LibraryPath>$(OPENCV_WINRT_INSTALL_DIR)\WP\8.1\ARM\ARM\vc12\lib;$(VC_LibraryPath_ARM);$(WindowsPhoneSDK_LibraryPath_arm);</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
