@@ -57,7 +57,7 @@ bin
 
 "-b" flag in the command above builds each generated solutions in both "Debug" and "Release" configurations. It also builds the predefined "INSTALL" project within generated solutions. Building it creates a separate install location that accumulates binaries and includes for specified platforms. Default location is "<ocv-src>\bin\install\".
 
-WinRT samples reference 'install' binaries and include files via "OPENCV_WINRT_INSTALL_DIR" environment variable. Please declare it and point to "<ocv-src>\bin\install\" directory (note slash at the end) to resolve references within sample applications.
+WinRT samples reference 'install' binaries and include files via "OPENCV_WINRT_INSTALL_DIR" environment variable. Please declare it and point to "<ocv-src>\bin\install\" directory to resolve references within sample applications.
 
 If you don't want to build all configurations automatically, you can omit "-b" flag and build OpenCV.sln for the particular platform you are targeting manually. Due to the current limitations of CMake, separate x86/x64/ARM projects must be generated for each platform.
 
