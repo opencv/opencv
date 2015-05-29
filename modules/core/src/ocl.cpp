@@ -5816,40 +5816,6 @@ void* Image2D::ptr() const
     return p ? p->handle : 0;
 }
 
-void Image2D::attach(void* cl_image_handle)
-{
-    if (!haveOpenCL())
-        CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
-
-    cl_mem m = (cl_mem)cl_image_handle;
-    cl_context mem_context;
-
-    CV_OclDbgAssert(clGetMemObjectInfo(m, CL_MEM_CONTEXT, sizeof(cl_context), &mem_context, 0) == CL_SUCCESS);
-
-    cl_context ctx = (cl_context)Context::getDefault().ptr();
-
-    if (mem_context != ctx)
-        CV_Error(Error::OpenCLInitError, "memory object context doesn't match OpenCL context!");
-
-    cl_mem_object_type type;
-    CV_OclDbgAssert(clGetMemObjectInfo(m, CL_MEM_TYPE, sizeof(cl_mem_object_type), &type, 0) == CL_SUCCESS);
-
-    if (type != CL_MEM_OBJECT_IMAGE2D)
-        CV_Error(Error::OpenCLApiCallError, "memory object type mismatch!");
-
-    cl_image_format fmt;
-    CV_OclDbgAssert(clGetImageInfo(m, CL_IMAGE_FORMAT, sizeof(cl_image_format), &fmt, 0) == CL_SUCCESS);
-
-    if (p != 0)
-        // FIXME: what to do with non-empty Image2D?
-        CV_Error(Error::OpenCLApiCallError, "object not empty!");
-    else
-        // FIXME: currently, will call clReleaseMemObject at destruction!!!
-        p = new Impl(m);
-
-    return;
-}
-
 bool internal::isPerformanceCheckBypassed()
 {
     static bool initialized = false;
