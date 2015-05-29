@@ -2925,34 +2925,67 @@ CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags)
 #endif // HAVE_OPENCL_SVM
 
 
-void attachContext(String& platformName, void* platformID, void* context, void* deviceID)
+static void get_platform_name(cl_platform_id id, String& name)
 {
-    cl_platform_id pl;
-    cl_device_id   d;
-
-    d = (cl_device_id)deviceID;
-
-    // get platform ID from user supplied device
-    CV_OclDbgAssert(clGetDeviceInfo(d, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &pl, NULL) == CL_SUCCESS);
-
     // get platform name string length
-    size_t sz;
-    CV_OclDbgAssert(clGetPlatformInfo(pl, CL_PLATFORM_NAME, 0, 0, &sz) == CL_SUCCESS);
+    size_t sz = 0;
+    if (CL_SUCCESS != clGetPlatformInfo(id, CL_PLATFORM_NAME, 0, 0, &sz))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clGetPlatformInfo failed!");
 
     // get platform name string
-    AutoBuffer<char> buf(sz+1);
-    CV_OclDbgAssert(clGetPlatformInfo(pl, CL_PLATFORM_NAME, sz, buf, 0) == CL_SUCCESS);
+    AutoBuffer<char> buf(sz + 1);
+    if (CL_SUCCESS != clGetPlatformInfo(id, CL_PLATFORM_NAME, sz, buf, 0))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clGetPlatformInfo failed!");
+
     // just in case, ensure trailing zero for ASCIIZ string
     buf[sz] = 0;
 
-    String actualPlatformName = (const char*)buf;
+    name = (const char*)buf;
+}
 
-    // can't continue if actualPlatform doesn't match user supplied platform
-    CV_OclDbgAssert(platformName == actualPlatformName);
+void attachContext(String& platformName, void* platformID, void* context, void* deviceID)
+{
+    cl_uint cnt = 0;
 
-    // do not initialize context
+    if(CL_SUCCESS != clGetPlatformIDs(0, 0, &cnt))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clGetPlatformIDs failed!");
+
+    if (cnt == 0)
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "no OpenCL platform available!");
+
+    std::vector<cl_platform_id> platforms(cnt);
+
+    if(CL_SUCCESS != clGetPlatformIDs(cnt, &platforms[0], 0))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clGetPlatformIDs failed!");
+
+    bool platformAvailable = false;
+
+    // check if external platformName contained in list of available platforms in OpenCV
+    for (unsigned int i = 0; i < cnt; i++)
+    {
+        String availablePlatformName;
+        get_platform_name(platforms[i], availablePlatformName);
+        // external platform is found in the list of available platforms
+        if (platformName == availablePlatformName)
+        {
+            platformAvailable = true;
+            break;
+        }
+    }
+
+    if (!platformAvailable)
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "No matched platforms available!");
+
+    // check if platformID corresponds to platformName
+    String actualPlatformName;
+    get_platform_name((cl_platform_id)platformID, actualPlatformName);
+    if (platformName != actualPlatformName)
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "No matched platforms available!");
+
+    // do not initialize OpenCL context
     Context ctx = Context::getDefault(false);
 
+    // attach supplied context to OpenCV
     initializeContextFromHandle(ctx, platformID, context, deviceID);
 
     // clear command queue, if any
@@ -5572,6 +5605,12 @@ struct Image2D::Impl
         init(src, norm, alias);
     }
 
+    Impl(cl_mem mem_handle)
+    {
+        handle = mem_handle;
+        refcount = 1;
+    }
+
     ~Impl()
     {
         if (handle)
@@ -5775,6 +5814,40 @@ Image2D::~Image2D()
 void* Image2D::ptr() const
 {
     return p ? p->handle : 0;
+}
+
+void Image2D::attach(void* cl_image_handle)
+{
+    if (!haveOpenCL())
+        CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
+
+    cl_mem m = (cl_mem)cl_image_handle;
+    cl_context mem_context;
+
+    CV_OclDbgAssert(clGetMemObjectInfo(m, CL_MEM_CONTEXT, sizeof(cl_context), &mem_context, 0) == CL_SUCCESS);
+
+    cl_context ctx = (cl_context)Context::getDefault().ptr();
+
+    if (mem_context != ctx)
+        CV_Error(Error::OpenCLInitError, "memory object context doesn't match OpenCL context!");
+
+    cl_mem_object_type type;
+    CV_OclDbgAssert(clGetMemObjectInfo(m, CL_MEM_TYPE, sizeof(cl_mem_object_type), &type, 0) == CL_SUCCESS);
+
+    if (type != CL_MEM_OBJECT_IMAGE2D)
+        CV_Error(Error::OpenCLApiCallError, "memory object type mismatch!");
+
+    cl_image_format fmt;
+    CV_OclDbgAssert(clGetImageInfo(m, CL_IMAGE_FORMAT, sizeof(cl_image_format), &fmt, 0) == CL_SUCCESS);
+
+    if (p != 0)
+        // FIXME: what to do with non-empty Image2D?
+        CV_Error(Error::OpenCLApiCallError, "object not empty!");
+    else
+        // FIXME: currently, will call clReleaseMemObject at destruction!!!
+        p = new Impl(m);
+
+    return;
 }
 
 bool internal::isPerformanceCheckBypassed()
