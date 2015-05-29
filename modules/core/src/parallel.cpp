@@ -125,6 +125,8 @@
 #  define CV_PARALLEL_FRAMEWORK "winrt-concurrency"
 #elif defined HAVE_CONCURRENCY
 #  define CV_PARALLEL_FRAMEWORK "ms-concurrency"
+#elif defined HAVE_PTHREADS
+#  define CV_PARALLEL_FRAMEWORK "pthreads"
 #endif
 
 namespace cv
@@ -298,6 +300,10 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
             Concurrency::CurrentScheduler::Detach();
         }
 
+#elif defined HAVE_PTHREADS
+        void parallel_for_pthreads(const Range& range, const ParallelLoopBody& body, double nstripes);
+        parallel_for_pthreads(range, body, nstripes);
+
 #else
 
 #error You have hacked and compiling with unsupported parallel framework
@@ -352,6 +358,12 @@ int cv::getNumThreads(void)
     return 1 + (pplScheduler == 0
         ? Concurrency::CurrentScheduler::Get()->GetNumberOfVirtualProcessors()
         : pplScheduler->GetNumberOfVirtualProcessors());
+
+#elif defined HAVE_PTHREADS
+
+        size_t parallel_pthreads_get_threads_num();
+
+        return parallel_pthreads_get_threads_num();
 
 #else
 
@@ -409,6 +421,12 @@ void cv::setNumThreads( int threads )
                        Concurrency::MinConcurrency, threads-1,
                        Concurrency::MaxConcurrency, threads-1));
     }
+
+#elif defined HAVE_PTHREADS
+
+    void parallel_pthreads_set_threads_num(int num);
+
+    parallel_pthreads_set_threads_num(threads);
 
 #endif
 }
