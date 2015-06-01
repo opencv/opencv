@@ -48,6 +48,7 @@
 #endif
 
 #include "opencv2/core.hpp"
+#include "ocl.hpp"
 
 namespace cv { namespace ogl {
 
@@ -511,7 +512,30 @@ CV_EXPORTS void render(const Arrays& arr, int mode = POINTS, Scalar color = Scal
 */
 CV_EXPORTS void render(const Arrays& arr, InputArray indices, int mode = POINTS, Scalar color = Scalar::all(255));
 
-//! @} core_opengl
+/////////////////// CL-GL Interoperability Functions ///////////////////
+
+namespace ocl {
+using namespace cv::ocl;
+
+// TODO static functions in the Context class
+/** @brief Creates OpenCL context from GL.
+@return Returns reference to OpenCL Context
+ */
+CV_EXPORTS Context& initializeContextFromGL();
+
+} // namespace cv::ogl::ocl
+
+/** @brief Converts InputArray to Texture2D object.
+@param src     - source InputArray.
+@param texture - destination Texture2D object.
+ */
+CV_EXPORTS void convertToGLTexture2D(InputArray src, Texture2D& texture);
+
+/** @brief Converts Texture2D object to OutputArray.
+@param texture - source Texture2D object.
+@param dst     - destination OutputArray.
+ */
+CV_EXPORTS void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst);
 
 }} // namespace cv::ogl
 
