@@ -286,6 +286,21 @@ protected:
 */
 CV_EXPORTS void attachContext(String& platformName, void* platformID, void* context, void* deviceID);
 
+/*
+// Convert OpenCL clBuffer to UMat
+// Note:
+//   buffer should represent 2D image, compatible with OpenCV. Memory is not copied from clBuffer to UMat
+// Params:
+//   rows - number of rows
+//   cols - number of cols
+//   type - OpenCV type of image
+//   cl_mem_obj - source clBuffer handle
+//   dst  - destination UMat
+//   usageFlags - OpenCV UMatUsageFlags
+*/
+CV_EXPORTS void convertFromBuffer(int rows, int cols, int type, void* cl_mem_obj,
+    UMat& dst, UMatUsageFlags usageFlags = cv::USAGE_DEFAULT);
+
 // TODO Move to internal header
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 

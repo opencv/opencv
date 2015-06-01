@@ -5237,6 +5237,139 @@ MatAllocator* getOpenCLAllocator()
     return allocator;
 }
 
+
+//////////////////////////////////////////////////////////////////////////////
+// static helper funcs (dups from umatrix.cpp)
+
+static inline void setSize(UMat& m, int _dims, const int* _sz,
+    const size_t* _steps, bool autoSteps = false)
+{
+    CV_Assert(0 <= _dims && _dims <= CV_MAX_DIM);
+    if (m.dims != _dims)
+    {
+        if (m.step.p != m.step.buf)
+        {
+            fastFree(m.step.p);
+            m.step.p = m.step.buf;
+            m.size.p = &m.rows;
+        }
+        if (_dims > 2)
+        {
+            m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims + 1)*sizeof(m.size.p[0]));
+            m.size.p = (int*)(m.step.p + _dims) + 1;
+            m.size.p[-1] = _dims;
+            m.rows = m.cols = -1;
+        }
+    }
+
+    m.dims = _dims;
+    if (!_sz)
+        return;
+
+    size_t esz = CV_ELEM_SIZE(m.flags), total = esz;
+    int i;
+    for (i = _dims - 1; i >= 0; i--)
+    {
+        int s = _sz[i];
+        CV_Assert(s >= 0);
+        m.size.p[i] = s;
+
+        if (_steps)
+            m.step.p[i] = i < _dims - 1 ? _steps[i] : esz;
+        else if (autoSteps)
+        {
+            m.step.p[i] = total;
+            int64 total1 = (int64)total*s;
+            if ((uint64)total1 != (size_t)total1)
+                CV_Error(CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type");
+            total = (size_t)total1;
+        }
+    }
+
+    if (_dims == 1)
+    {
+        m.dims = 2;
+        m.cols = 1;
+        m.step[1] = esz;
+    }
+}
+
+static void updateContinuityFlag(UMat& m)
+{
+    int i, j;
+    for (i = 0; i < m.dims; i++)
+    {
+        if (m.size[i] > 1)
+            break;
+    }
+
+    for (j = m.dims - 1; j > i; j--)
+    {
+        if (m.step[j] * m.size[j] < m.step[j - 1])
+            break;
+    }
+
+    uint64 total = (uint64)m.step[0] * m.size[0];
+    if (j <= i && total == (size_t)total)
+        m.flags |= UMat::CONTINUOUS_FLAG;
+    else
+        m.flags &= ~UMat::CONTINUOUS_FLAG;
+}
+
+
+static void finalizeHdr(UMat& m)
+{
+    updateContinuityFlag(m);
+    int d = m.dims;
+    if (d > 2)
+        m.rows = m.cols = -1;
+}
+
+
+/*
+// Convert OpenCL clBuffer memory to UMat
+*/
+void convertFromBuffer(int rows, int cols, int type, void* cl_mem_obj, UMat& dst, UMatUsageFlags usageFlags)
+{
+    int d = 2;
+    int sizes[] = { rows, cols };
+
+    CV_Assert(0 <= d && d <= CV_MAX_DIM && sizes);
+
+    dst.release();
+
+    dst.flags      = (type & Mat::TYPE_MASK) | Mat::MAGIC_VAL;
+    dst.usageFlags = usageFlags;
+
+    setSize(dst, d, sizes, 0, true);
+    dst.offset = 0;
+
+    cl_mem             memobj = (cl_mem)cl_mem_obj;
+    cl_mem_object_type mem_type = 0;
+
+    CV_Assert(clGetMemObjectInfo(memobj, CL_MEM_TYPE, sizeof(cl_mem_object_type), &mem_type, 0) == CL_SUCCESS);
+
+    CV_Assert(CL_MEM_OBJECT_BUFFER == mem_type);
+
+    size_t total = 0;
+    CV_Assert(clGetMemObjectInfo(memobj, CL_MEM_SIZE, sizeof(size_t), &total, 0) == CL_SUCCESS);
+
+    // attach clBuffer to UMatData
+    dst.u = new UMatData(getOpenCLAllocator());
+    dst.u->data            = 0;
+    dst.u->allocatorFlags_ = 0;
+    dst.u->flags           = 0;
+    dst.u->handle          = cl_mem_obj;
+    dst.u->origdata        = 0;
+    dst.u->prevAllocator   = 0;
+    dst.u->size            = total;
+
+    finalizeHdr(dst);
+    dst.addref();
+
+    return;
+} // convertFromBuffer()
+
 ///////////////////////////////////////////// Utility functions /////////////////////////////////////////////////
 
 static void getDevices(std::vector<cl_device_id>& devices, cl_platform_id platform)
@@ -5603,12 +5736,6 @@ struct Image2D::Impl
         handle = 0;
         refcount = 1;
         init(src, norm, alias);
-    }
-
-    Impl(cl_mem mem_handle)
-    {
-        handle = mem_handle;
-        refcount = 1;
     }
 
     ~Impl()
