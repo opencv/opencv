@@ -252,7 +252,14 @@ pthread_mutex_t ThreadManager::m_manager_access_mutex = PTHREAD_RECURSIVE_MUTEX_
 
 ThreadManager::ptr_holder ThreadManager::m_instance;
 const char ThreadManager::m_env_name[] = "OPENCV_FOR_THREADS_NUM";
+
+#ifdef ANDROID
+// many modern phones/tables have 4-core CPUs. Let's use no more
+// than 2 threads by default not to overheat the devices
+const unsigned int ThreadManager::m_default_number_of_threads = 2;
+#else
 const unsigned int ThreadManager::m_default_number_of_threads = 8;
+#endif
 
 ForThread::~ForThread()
 {
@@ -399,11 +406,10 @@ ThreadManager::~ThreadManager()
 
 void ThreadManager::run(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
-    bool is_work_thread;
+    bool is_work_thread = m_is_work_thread.get()->value;
 
-    is_work_thread = m_is_work_thread.get()->value;
-
-    if( (getNumOfThreads() > 1) && !is_work_thread && (range.end - range.start > 1) )
+    if( (getNumOfThreads() > 1) && !is_work_thread &&
+        (range.end - range.start > 1) && (nstripes <= 0 || nstripes >= 1.5) )
     {
         int res = pthread_mutex_trylock(&m_manager_access_mutex);
 
