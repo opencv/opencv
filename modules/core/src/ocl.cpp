@@ -5334,7 +5334,7 @@ void convertFromBuffer(int rows, int cols, int type, void* cl_mem_obj, UMat& dst
     int d = 2;
     int sizes[] = { rows, cols };
 
-    CV_Assert(0 <= d && d <= CV_MAX_DIM && sizes);
+    CV_Assert(0 <= d && d <= CV_MAX_DIM);
 
     dst.release();
 
