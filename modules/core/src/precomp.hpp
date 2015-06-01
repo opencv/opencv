@@ -292,6 +292,12 @@ TLSData<CoreTLSData>& getCoreTlsData();
 #define CL_RUNTIME_EXPORT
 #endif
 
+#ifndef HAVE_PTHREADS
+#if !(defined WIN32 || defined _WIN32 || defined WINCE || defined HAVE_WINRT)
+#define HAVE_PTHREADS 1
+#endif
+#endif
+
 extern bool __termination; // skip some cleanups, because process is terminating
                            // (for example, if ExitProcess() was already called)
 
