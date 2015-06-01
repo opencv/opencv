@@ -945,7 +945,6 @@ OCL_FUNC(cl_int, clGetSupportedImageFormats,
  (context, flags, image_type, num_entries, image_formats, num_image_formats))
 
 
-/*
 OCL_FUNC(cl_int, clGetMemObjectInfo,
  (cl_mem memobj,
  cl_mem_info param_name,
@@ -954,6 +953,7 @@ OCL_FUNC(cl_int, clGetMemObjectInfo,
  size_t * param_value_size_ret),
  (memobj, param_name, param_value_size, param_value, param_value_size_ret))
 
+/*
 OCL_FUNC(cl_int, clGetImageInfo,
  (cl_mem image,
  cl_image_info param_name,
