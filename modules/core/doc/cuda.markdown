@@ -69,7 +69,7 @@ Utilizing Multiple GPUs
 -----------------------
 
 In the current version, each of the OpenCV CUDA algorithms can use only a single GPU. So, to utilize
-multiple GPUs, you have to manually distribute the work between GPUs. Switching active devie can be
+multiple GPUs, you have to manually distribute the work between GPUs. Switching active device can be
 done using cuda::setDevice() function. For more details please read Cuda C Programming Guide.
 
 While developing algorithms for multiple GPUs, note a data passing overhead. For primitive functions
