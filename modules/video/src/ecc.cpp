@@ -402,16 +402,19 @@ double cv::findTransformECC(InputArray templateImage,
 
     Mat inputMaskMat = inputMask.getMat();
     //to use it for mask warping
-    Mat preMask =
-      inputMaskMat.empty() ? Mat::ones(hd, wd, CV_8U) : inputMaskMat;
+    Mat preMask;
+    if(inputMask.empty())
+        preMask = Mat::ones(hd, wd, CV_8U);
+    else
+        threshold(inputMask, preMask, 0, 1, THRESH_BINARY);
 
     //gaussian filtering is optional
     src.convertTo(templateFloat, templateFloat.type());
-    GaussianBlur(templateFloat, templateFloat, Size(5, 5), 0, 0);//is in-place filtering slower?
+    GaussianBlur(templateFloat, templateFloat, Size(5, 5), 0, 0);
 
-    Mat preMaskFloat = Mat(hd, wd, CV_32F);
-    preMask.convertTo(preMaskFloat, preMaskFloat.type());
-    GaussianBlur(preMaskFloat, preMaskFloat, Size(5, 5), 0, 0);//is in-place filtering slower?
+    Mat preMaskFloat;
+    preMask.convertTo(preMaskFloat, CV_32F);
+    GaussianBlur(preMaskFloat, preMaskFloat, Size(5, 5), 0, 0);
     // Change threshold.
     preMaskFloat *= (0.5/0.95);
     // Rounding conversion.
@@ -512,7 +515,7 @@ double cv::findTransformECC(InputArray templateImage,
         // calculate enhanced correlation coefficiont (ECC)->rho
         last_rho = rho;
         rho = correlation/(imgNorm*tmpNorm);
-        if (isnan(rho)) {
+        if (cvIsNaN(rho)) {
           CV_Error(Error::StsNoConv, "NaN encountered.");
         }
 
