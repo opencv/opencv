@@ -11,16 +11,18 @@ import android.text.TextUtils;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.xmlpull.v1.XmlPullParser;
 
 public class OpenCVEngineService extends Service {
     private static final String TAG = "OpenCVEngine/Service";
     private IBinder mEngineInterface = null;
-    private ArrayList<LibVariant> variants = new ArrayList<LibVariant>();
+    private List<LibVariant> variants = new ArrayList<LibVariant>();
 
     private class LibVariant {
         public String version;
-        public ArrayList<String> files;
+        public List<String> files;
 
         public void parseFile(XmlResourceParser p) {
             try {
@@ -51,10 +53,9 @@ public class OpenCVEngineService extends Service {
 
         public boolean hasAllFiles(String path) {
             boolean result = true;
-            File f = new File(path);
-            for (File one : f.listFiles()) {
-                result &= files.contains(one.getName());
-            }
+            List<String> actualFiles = Arrays.asList((new File(path)).list());
+            for (String f : files)
+                result &= actualFiles.contains(f);
             return result;
         }
 
@@ -100,6 +101,7 @@ public class OpenCVEngineService extends Service {
                     && lib.files.size() != 0
                     && lib.hasAllFiles(getApplication().getApplicationInfo().nativeLibraryDir)) {
                 variants.add(lib);
+            Log.d(TAG, "Added config: " + lib.version);
             }
         }
         super.onCreate();
