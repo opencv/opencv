@@ -1540,6 +1540,30 @@ void CvVideoWriter_FFMPEG::close()
     init();
 }
 
+#define CV_PRINTABLE_CHAR(ch) ((ch) < 32 ? '?' : (ch))
+#define CV_TAG_TO_PRINTABLE_CHAR4(tag) CV_PRINTABLE_CHAR((tag) & 255), CV_PRINTABLE_CHAR(((tag) >> 8) & 255), CV_PRINTABLE_CHAR(((tag) >> 16) & 255), CV_PRINTABLE_CHAR(((tag) >> 24) & 255)
+
+static inline bool cv_ff_codec_tag_match(const AVCodecTag *tags, enum AVCodecID id, unsigned int tag)
+{
+    while (tags->id != AV_CODEC_ID_NONE)
+    {
+        if (tags->id == id && tags->tag == tag)
+            return true;
+        tags++;
+    }
+    return false;
+}
+static inline bool cv_ff_codec_tag_list_match(const AVCodecTag *const *tags, enum AVCodecID id, unsigned int tag)
+{
+    int i;
+    for (i = 0; tags && tags[i]; i++) {
+        bool res = cv_ff_codec_tag_match(tags[i], id, tag);
+        if (res)
+            return res;
+    }
+    return false;
+}
+
 /// Create a video writer object that uses FFMPEG
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, bool is_color )
@@ -1587,6 +1611,45 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #if LIBAVCODEC_VERSION_INT<((51<<16)+(49<<8)+0)
     if( (codec_id = codec_get_bmp_id( fourcc )) == CV_CODEC(CODEC_ID_NONE) )
         return false;
+#elif LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
+// APIchnages:
+// 2012-01-31 - dd6d3b0 - lavf 54.01.0
+//   Add avformat_get_riff_video_tags() and avformat_get_riff_audio_tags().
+    if( (codec_id = av_codec_get_id(fmt->codec_tag, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
+    {
+        const struct AVCodecTag * fallback_tags[] = {
+                avformat_get_riff_video_tags(),
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 25, 100)
+// APIchanges: ffmpeg only
+// 2014-01-19 - 1a193c4 - lavf 55.25.100 - avformat.h
+//   Add avformat_get_mov_video_tags() and avformat_get_mov_audio_tags().
+                // TODO ffmpeg only, need to skip libav: avformat_get_mov_video_tags(),
+#endif
+                codec_bmp_tags, NULL };
+        if( (codec_id = av_codec_get_id(fallback_tags, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
+        {
+            fflush(stdout);
+            fprintf(stderr, "OpenCV: FFMPEG: tag 0x%08x/'%c%c%c%c' is not found (format '%s / %s')'\n",
+                    fourcc, CV_TAG_TO_PRINTABLE_CHAR4(fourcc),
+                    fmt->name, fmt->long_name);
+            return false;
+        }
+    }
+    // validate tag
+    if (cv_ff_codec_tag_list_match(fmt->codec_tag, codec_id, fourcc) == false)
+    {
+        fflush(stdout);
+        fprintf(stderr, "OpenCV: FFMPEG: tag 0x%08x/'%c%c%c%c' is not supported with codec id %d and format '%s / %s'\n",
+                fourcc, CV_TAG_TO_PRINTABLE_CHAR4(fourcc),
+                codec_id, fmt->name, fmt->long_name);
+        int supported_tag;
+        if( (supported_tag = av_codec_get_tag(fmt->codec_tag, codec_id)) != 0 )
+        {
+            fprintf(stderr, "OpenCV: FFMPEG: fallback to use tag 0x%08x/'%c%c%c%c'\n",
+                    supported_tag, CV_TAG_TO_PRINTABLE_CHAR4(supported_tag));
+            fourcc = supported_tag;
+        }
+    }
 #else
     const struct AVCodecTag * tags[] = { codec_bmp_tags, NULL};
     if( (codec_id = av_codec_get_id(tags, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
