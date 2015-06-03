@@ -148,7 +148,7 @@ macro(ipp_detect_version)
         list(APPEND IPP_LIBRARIES ipp${name})
         # CMake doesn't support "install(TARGETS ${IPP_PREFIX}${name} " command with imported targets
         install(FILES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
-                DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
+                DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
         string(TOUPPER ${name} uname)
         set(IPP${uname}_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_3P_LIB_INSTALL_PATH}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}" CACHE INTERNAL "" FORCE)
         set(IPP${uname}_LOCATION_PATH "${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}" CACHE INTERNAL "" FORCE)

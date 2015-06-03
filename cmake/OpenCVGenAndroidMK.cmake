@@ -38,7 +38,7 @@ if(ANDROID)
   endforeach()
 
   if(BUILD_FAT_JAVA_LIB)
-    set(OPENCV_LIBS_CONFIGMAKE java)
+    set(OPENCV_LIBS_CONFIGMAKE java3)
   else()
     set(OPENCV_LIBS_CONFIGMAKE "${OPENCV_MODULES_CONFIGMAKE}")
   endif()
