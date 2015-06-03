@@ -49,8 +49,28 @@ using namespace cv;
 
 using namespace std;
 
+static const char* AVI_EXT = ".avi";
+static const char* MP4_EXT = ".mp4";
+
 class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
 {
+    struct TestFormatEntry {
+        int tag;
+        const char* ext;
+        bool required;
+    };
+
+    static long int getFileSize(string filename)
+    {
+        FILE *p_file = NULL;
+        p_file = fopen(filename.c_str(), "rb");
+        if (p_file == NULL)
+            return -1;
+        fseek(p_file, 0, SEEK_END);
+        long int size = ftell(p_file);
+        fclose(p_file);
+        return size;
+    }
 public:
     void run(int)
     {
@@ -59,36 +79,35 @@ public:
         const double fps0 = 15;
         const double time_sec = 1;
 
-        const int tags[] = {
-            0,
-            //VideoWriter::fourcc('D', 'I', 'V', '3'),
-            //VideoWriter::fourcc('D', 'I', 'V', 'X'),
-            VideoWriter::fourcc('D', 'X', '5', '0'),
-            VideoWriter::fourcc('F', 'L', 'V', '1'),
-            VideoWriter::fourcc('H', '2', '6', '1'),
-            VideoWriter::fourcc('H', '2', '6', '3'),
-            VideoWriter::fourcc('I', '4', '2', '0'),
-            //VideoWriter::fourcc('j', 'p', 'e', 'g'),
-            VideoWriter::fourcc('M', 'J', 'P', 'G'),
-            VideoWriter::fourcc('m', 'p', '4', 'v'),
-            VideoWriter::fourcc('M', 'P', 'E', 'G'),
-            //VideoWriter::fourcc('W', 'M', 'V', '1'),
-            //VideoWriter::fourcc('W', 'M', 'V', '2'),
-            VideoWriter::fourcc('X', 'V', 'I', 'D'),
-            //VideoWriter::fourcc('Y', 'U', 'Y', '2'),
+        const TestFormatEntry entries[] = {
+            {0, AVI_EXT, true},
+            //{VideoWriter::fourcc('D', 'I', 'V', '3'), AVI_EXT, true},
+            //{VideoWriter::fourcc('D', 'I', 'V', 'X'), AVI_EXT, true},
+            {VideoWriter::fourcc('D', 'X', '5', '0'), AVI_EXT, true},
+            {VideoWriter::fourcc('F', 'L', 'V', '1'), AVI_EXT, true},
+            {VideoWriter::fourcc('H', '2', '6', '1'), AVI_EXT, true},
+            {VideoWriter::fourcc('H', '2', '6', '3'), AVI_EXT, true},
+            {VideoWriter::fourcc('I', '4', '2', '0'), AVI_EXT, true},
+            //{VideoWriter::fourcc('j', 'p', 'e', 'g'), AVI_EXT, true},
+            {VideoWriter::fourcc('M', 'J', 'P', 'G'), AVI_EXT, true},
+            {VideoWriter::fourcc('m', 'p', '4', 'v'), AVI_EXT, true},
+            {VideoWriter::fourcc('M', 'P', 'E', 'G'), AVI_EXT, true},
+            //{VideoWriter::fourcc('W', 'M', 'V', '1'), AVI_EXT, true},
+            //{VideoWriter::fourcc('W', 'M', 'V', '2'), AVI_EXT, true},
+            {VideoWriter::fourcc('X', 'V', 'I', 'D'), AVI_EXT, true},
+            //{VideoWriter::fourcc('Y', 'U', 'Y', '2'), AVI_EXT, true},
+            {VideoWriter::fourcc('H', '2', '6', '4'), MP4_EXT, false}
         };
 
-        const size_t n = sizeof(tags)/sizeof(tags[0]);
-
-        bool created = false;
+        const size_t n = sizeof(entries)/sizeof(entries[0]);
 
         for (size_t j = 0; j < n; ++j)
         {
-            int tag = tags[j];
-            stringstream s;
-            s << tag;
+            int tag = entries[j].tag;
+            const char* ext = entries[j].ext;
+            string s = cv::format("%08x%s", tag, ext);
 
-            const string filename = tempfile((s.str()+".avi").c_str());
+            const string filename = tempfile(s.c_str());
 
             try
             {
@@ -113,11 +132,12 @@ public:
 
                 if (writer.isOpened() == false)
                 {
-                    ts->printf(ts->LOG, "\n\nFile name: %s\n", filename.c_str());
-                    ts->printf(ts->LOG, "Codec id: %d   Codec tag: %c%c%c%c\n", j,
+                    fprintf(stderr, "\n\nFile name: %s\n", filename.c_str());
+                    fprintf(stderr, "Codec id: %d   Codec tag: %c%c%c%c\n", (int)j,
                                tag & 255, (tag >> 8) & 255, (tag >> 16) & 255, (tag >> 24) & 255);
-                    ts->printf(ts->LOG, "Error: cannot create video file.");
-                    ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+                    fprintf(stderr, "Error: cannot create video file.");
+                    if (entries[j].required)
+                        ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                 }
                 else
                 {
@@ -133,8 +153,23 @@ public:
                     }
 
                     writer.release();
-                    if (!created) created = true;
-                    else remove(filename.c_str());
+                    long int sz = getFileSize(filename);
+                    if (sz < 0)
+                    {
+                        fprintf(stderr, "ERROR: File name: %s was not created\n", filename.c_str());
+                        if (entries[j].required)
+                            ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+                    }
+                    else
+                    {
+                        if (sz < 8192)
+                        {
+                            fprintf(stderr, "ERROR: File name: %s is very small (data write problems?)\n", filename.c_str());
+                            if (entries[j].required)
+                                ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+                        }
+                        remove(filename.c_str());
+                    }
                 }
             }
             catch(...)
