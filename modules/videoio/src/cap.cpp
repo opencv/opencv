@@ -158,9 +158,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_OPENNI2
         CV_CAP_OPENNI2,
 #endif
-#ifdef HAVE_ANDROID_NATIVE_CAMERA
-        CV_CAP_ANDROID,
-#endif
 #ifdef HAVE_XIMEA
         CV_CAP_XIAPI,
 #endif
@@ -208,7 +205,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     defined(HAVE_OPENNI2)      || \
     defined(HAVE_XIMEA)        || \
     defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_ANDROID_NATIVE_CAMERA) || \
     defined(HAVE_GIGE_API) || \
     defined(HAVE_INTELPERC)    || \
     (0)
@@ -327,14 +323,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
             if (capture)
                 return capture;
             break;
-#endif
-
-#ifdef HAVE_ANDROID_NATIVE_CAMERA
-        case CV_CAP_ANDROID:
-            capture = cvCreateCameraCapture_Android (index);
-            if (capture)
-                return capture;
-        break;
 #endif
 
 #ifdef HAVE_XIMEA

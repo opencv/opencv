@@ -1,5 +1,5 @@
 set(the_description "Media I/O")
-ocv_add_module(videoio opencv_imgproc opencv_imgcodecs OPTIONAL opencv_androidcamera WRAP java python)
+ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java python)
 
 # ----------------------------------------------------------------------------
 #  CMake file for videoio. See root CMakeLists.txt
@@ -117,11 +117,6 @@ if(HAVE_OPENNI2)
   ocv_include_directories(${OPENNI2_INCLUDE_DIR})
   list(APPEND VIDEOIO_LIBRARIES ${OPENNI2_LIBRARY})
 endif(HAVE_OPENNI2)
-
-if(HAVE_opencv_androidcamera)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_android.cpp)
-  add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)#TODO: remove this line
-endif(HAVE_opencv_androidcamera)
 
 if(HAVE_XIMEA)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ximea.cpp)

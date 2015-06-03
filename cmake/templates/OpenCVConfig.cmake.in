@@ -34,7 +34,6 @@
 #      - OpenCV_LIB_COMPONENTS           : Present OpenCV modules list
 #      - OpenCV_USE_MANGLED_PATHS        : Mangled OpenCV path flag
 #      - OpenCV_MODULES_SUFFIX           : The suffix for OpenCVModules-XXX.cmake file
-#      - OpenCV_HAVE_ANDROID_CAMERA      : Presence of Android native camera wrappers
 #
 #    Deprecated variables:
 #      - OpenCV_VERSION_TWEAK            : Always "0"
@@ -126,9 +125,6 @@ if(NOT WIN32 OR ANDROID)
     get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_INSTALL_PATH}" REALPATH)
   endif()
 endif()
-
-# Presence of Android native camera wrappers
-set(OpenCV_HAVE_ANDROID_CAMERA @HAVE_opencv_androidcamera@)
 
 # ======================================================
 # Include directories to add to the user project:
@@ -323,24 +319,6 @@ foreach(__opttype OPT DBG)
     link_directories(${OpenCV_CUDA_LIBS_RELPATH})
   endif()
 endforeach()
-
-# ==============================================================
-#  Android camera helper macro
-# ==============================================================
-if(OpenCV_HAVE_ANDROID_CAMERA)
-  macro(COPY_NATIVE_CAMERA_LIBS target)
-    get_target_property(target_location ${target} LOCATION)
-    get_filename_component(target_location "${target_location}" PATH)
-    file(GLOB camera_wrappers "${OpenCV_LIB_DIR_OPT}/libnative_camera_r*.so")
-    foreach(wrapper ${camera_wrappers})
-      add_custom_command(
-        TARGET ${target}
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${target_location}"
-      )
-    endforeach()
-  endmacro()
-endif()
 
 # ==============================================================
 # Compatibility stuff
