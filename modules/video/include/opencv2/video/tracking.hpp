@@ -331,6 +331,7 @@ public:
     with cvReleaseKalman(&kalmanFilter)
      */
     CV_WRAP KalmanFilter();
+
     /** @overload
     @param dynamParams Dimensionality of the state.
     @param measureParams Dimensionality of the measurement.
