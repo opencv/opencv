@@ -69,6 +69,9 @@ public class OpenCVEngineService extends Service {
                 if (diff > 0 || (diff != 0 && i == 0)) {
                     // requested version is greater than actual OR major version differs
                     return false;
+                } else if (diff < 0) {
+                    // version is compatible
+                    return true;
                 }
             }
             if (expected.length > i) {
