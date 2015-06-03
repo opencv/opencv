@@ -77,7 +77,7 @@ class AsyncServiceHelper
                 private LoaderCallbackInterface mUserAppCallback = Callback;
                 public String getPackageName()
                 {
-                    return "OpenCV3 Manager";
+                    return "OpenCV Manager";
                 }
                 public void install() {
                     Log.d(TAG, "Trying to install OpenCV Manager via Google Play");
@@ -123,7 +123,7 @@ class AsyncServiceHelper
                 private LoaderCallbackInterface mUserAppCallback = Callback;
                 public String getPackageName()
                 {
-                    return "OpenCV3 Manager";
+                    return "OpenCV Manager";
                 }
                 public void install()
                 {
