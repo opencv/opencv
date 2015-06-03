@@ -81,7 +81,7 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_PVAPI        = 800,   // PvAPI, Prosilica GigE SDK
        CAP_OPENNI       = 900,   // OpenNI (for Kinect)
        CAP_OPENNI_ASUS  = 910,   // OpenNI (for Asus Xtion)
-       CAP_ANDROID      = 1000,  // Android
+       CAP_ANDROID      = 1000,  // Android - not used
        CAP_XIAPI        = 1100,  // XIMEA Camera API
        CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
        CAP_GIGANETIX    = 1300,  // Smartek Giganetix GigEVisionSDK
@@ -272,72 +272,6 @@ enum { CAP_PROP_XI_DOWNSAMPLING  = 400, // Change image resolution by binning or
        CAP_PROP_XI_AEAG_LEVEL    = 419, // Average intensity of output signal AEAG should achieve(in %)
        CAP_PROP_XI_TIMEOUT       = 420  // Image capture timeout in milliseconds
      };
-
-
-// Properties for Android cameras
-enum { CAP_PROP_ANDROID_AUTOGRAB               = 1024,
-       CAP_PROP_ANDROID_PREVIEW_SIZES_STRING   = 1025, // readonly, tricky property, returns const char* indeed
-       CAP_PROP_ANDROID_PREVIEW_FORMAT         = 1026, // readonly, tricky property, returns const char* indeed
-       CAP_PROP_ANDROID_FLASH_MODE             = 8001,
-       CAP_PROP_ANDROID_FOCUS_MODE             = 8002,
-       CAP_PROP_ANDROID_WHITE_BALANCE          = 8003,
-       CAP_PROP_ANDROID_ANTIBANDING            = 8004,
-       CAP_PROP_ANDROID_FOCAL_LENGTH           = 8005,
-       CAP_PROP_ANDROID_FOCUS_DISTANCE_NEAR    = 8006,
-       CAP_PROP_ANDROID_FOCUS_DISTANCE_OPTIMAL = 8007,
-       CAP_PROP_ANDROID_FOCUS_DISTANCE_FAR     = 8008
-     };
-
-
-// Android camera output formats
-enum { CAP_ANDROID_COLOR_FRAME_BGR  = 0, //BGR
-       CAP_ANDROID_COLOR_FRAME      = CAP_ANDROID_COLOR_FRAME_BGR,
-       CAP_ANDROID_GREY_FRAME       = 1,  //Y
-       CAP_ANDROID_GRAY_FRAME       = CAP_ANDROID_GREY_FRAME,
-       CAP_ANDROID_COLOR_FRAME_RGB  = 2,
-       CAP_ANDROID_COLOR_FRAME_BGRA = 3,
-       CAP_ANDROID_COLOR_FRAME_RGBA = 4
-     };
-
-
-// Android camera flash modes
-enum { CAP_ANDROID_FLASH_MODE_AUTO     = 0,
-       CAP_ANDROID_FLASH_MODE_OFF      = 1,
-       CAP_ANDROID_FLASH_MODE_ON       = 2,
-       CAP_ANDROID_FLASH_MODE_RED_EYE  = 3,
-       CAP_ANDROID_FLASH_MODE_TORCH    = 4
-     };
-
-
-// Android camera focus modes
-enum { CAP_ANDROID_FOCUS_MODE_AUTO             = 0,
-       CAP_ANDROID_FOCUS_MODE_CONTINUOUS_VIDEO = 1,
-       CAP_ANDROID_FOCUS_MODE_EDOF             = 2,
-       CAP_ANDROID_FOCUS_MODE_FIXED            = 3,
-       CAP_ANDROID_FOCUS_MODE_INFINITY         = 4,
-       CAP_ANDROID_FOCUS_MODE_MACRO            = 5
-     };
-
-
-// Android camera white balance modes
-enum { CAP_ANDROID_WHITE_BALANCE_AUTO             = 0,
-       CAP_ANDROID_WHITE_BALANCE_CLOUDY_DAYLIGHT  = 1,
-       CAP_ANDROID_WHITE_BALANCE_DAYLIGHT         = 2,
-       CAP_ANDROID_WHITE_BALANCE_FLUORESCENT      = 3,
-       CAP_ANDROID_WHITE_BALANCE_INCANDESCENT     = 4,
-       CAP_ANDROID_WHITE_BALANCE_SHADE            = 5,
-       CAP_ANDROID_WHITE_BALANCE_TWILIGHT         = 6,
-       CAP_ANDROID_WHITE_BALANCE_WARM_FLUORESCENT = 7
-     };
-
-
-// Android camera antibanding modes
-enum { CAP_ANDROID_ANTIBANDING_50HZ = 0,
-       CAP_ANDROID_ANTIBANDING_60HZ = 1,
-       CAP_ANDROID_ANTIBANDING_AUTO = 2,
-       CAP_ANDROID_ANTIBANDING_OFF  = 3
-     };
-
 
 // Properties of cameras available through AVFOUNDATION interface
 enum { CAP_PROP_IOS_DEVICE_FOCUS        = 9001,

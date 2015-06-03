@@ -185,9 +185,7 @@ corresponding section of @ref tutorial_android_dev_intro.
 
 **warning**
 
-Please consider that some samples use Android Java Camera API, which is accessible
-   with an AVD. But most of samples use OpenCV Native Camera which **may not work** with an
-    emulator.
+Please consider that some samples use Android Java Camera API, which is accessible with an AVD.
 
 @note Recent *Android SDK tools, revision 19+* can run ARM v7a OS images but they available not for
 all Android versions.
