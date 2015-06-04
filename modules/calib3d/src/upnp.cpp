@@ -114,6 +114,7 @@ double upnp::compute_pose(Mat& R, Mat& t)
   SVD::compute(MtM, D, Ut, Vt, SVD::MODIFY_A | SVD::FULL_UV);
   Mat(Ut.t()).copyTo(Ut);
   M->release();
+  delete M;
 
   double l_6x12[6 * 12], rho[6];
   Mat L_6x12 = Mat(6, 12, CV_64F, l_6x12);
