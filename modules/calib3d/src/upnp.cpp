@@ -591,7 +591,7 @@ void upnp::gauss_newton(const Mat * L_6x12, const Mat * Rho, double betas[4], do
 
   if (f[0] < 0) f[0] = -f[0];
     fu = fv = f[0];
-    
+  
   A->release();
   delete A;
   
