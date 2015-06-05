@@ -1096,6 +1096,12 @@ void Mat::push_back(const Mat_<_Tp>& m)
     push_back((const Mat&)m);
 }
 
+template<> inline
+void Mat::push_back(const MatExpr& expr)
+{
+    push_back(static_cast<Mat>(expr));
+}
+
 ///////////////////////////// MatSize ////////////////////////////
 
 inline
