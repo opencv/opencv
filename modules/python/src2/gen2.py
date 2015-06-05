@@ -757,19 +757,6 @@ class PythonWrapperGenerator(object):
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
 
-        if classinfo.base:
-            chunks = classinfo.base.split('_')
-            base = '_'.join(chunks)
-            while base not in self.classes and len(chunks)>1:
-                del chunks[-2]
-                base = '_'.join(chunks)
-            if base not in self.classes:
-                print("Generator error: unable to resolve base %s for %s"
-                    % (classinfo.base, classinfo.name))
-                sys.exit(-1)
-            classinfo.base = base
-            classinfo.isalgorithm |= self.classes[base].isalgorithm
-
     def split_decl_name(self, name):
         chunks = name.split('.')
         namespace = chunks[:-1]
@@ -880,6 +867,22 @@ class PythonWrapperGenerator(object):
                 else:
                     # function
                     self.add_func(decl)
+
+        # step 1.5 check if all base classes exist
+        for name, classinfo in self.classes.items():
+            if classinfo.base:
+                chunks = classinfo.base.split('_')
+                base = '_'.join(chunks)
+                while base not in self.classes and len(chunks)>1:
+                    del chunks[-2]
+                    base = '_'.join(chunks)
+                if base not in self.classes:
+                    print("Generator error: unable to resolve base %s for %s"
+                        % (classinfo.base, classinfo.name))
+                    sys.exit(-1)
+                classinfo.base = base
+                classinfo.isalgorithm |= self.classes[base].isalgorithm
+                self.classes[name] = classinfo
 
         # step 2: generate code for the classes and their methods
         classlist = list(self.classes.items())
