@@ -2824,21 +2824,8 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
    {
 
 #ifdef HAVE_CAMV4L2
-     if (V4L2_SUPPORT == 0)
+     if (V4L2_SUPPORT == 1)
 #endif /* HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-     {
-
-       if (capture->mmaps)
-         free(capture->mmaps);
-       if (capture->memoryMap)
-         munmap(capture->memoryMap, capture->memoryBuffer.size);
-
-     }
-#endif /* HAVE_CAMV4L */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-     else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
 #ifdef HAVE_CAMV4L2
        {
        capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -2860,6 +2847,19 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
        }
      }
 #endif /* HAVE_CAMV4L2 */
+#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
+     else
+#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
+     {
+
+       if (capture->mmaps)
+         free(capture->mmaps);
+       if (capture->memoryMap)
+         munmap(capture->memoryMap, capture->memoryBuffer.size);
+
+     }
+#endif /* HAVE_CAMV4L */
 
      if (capture->deviceHandle != -1)
        close(capture->deviceHandle);
