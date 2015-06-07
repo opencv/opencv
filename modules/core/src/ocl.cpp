@@ -5355,7 +5355,7 @@ void convertFromBuffer(void* cl_mem_obj, size_t step, int rows, int cols, int ty
     size_t total = 0;
     CV_Assert(clGetMemObjectInfo(memobj, CL_MEM_SIZE, sizeof(size_t), &total, 0) == CL_SUCCESS);
 
-    CV_Assert(step >= cols * CV_ELEM_SIZE(type));
+    CV_Assert((int)step >= cols * CV_ELEM_SIZE(type));
     CV_Assert(total >= rows * step);
 
     // attach clBuffer to UMatData
