@@ -14,6 +14,10 @@ add_subdirectory(cpp)
 add_subdirectory(gpu)
 add_subdirectory(tapi)
 
+if(HAVE_OPENCL)
+  add_subdirectory(opencl)
+endif()
+
 if(WIN32 AND HAVE_DIRECTX)
   add_subdirectory(directx)
 endif()
