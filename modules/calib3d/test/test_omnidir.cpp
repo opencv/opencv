@@ -238,8 +238,8 @@ std::string omnidirTest::combine(const std::string& _item1, const std::string& _
 }
 
 
-int main(int argc, char* argv[])
-{
-    testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+// int main(int argc, char* argv[])
+// {
+//     testing::InitGoogleTest(&argc, argv);
+//     return RUN_ALL_TESTS();
+// }

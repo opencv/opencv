@@ -57,8 +57,8 @@ namespace cv { namespace
 
 /////////////////////////////////////////////////////////////////////////////
 //////// projectPoints
-void cv::omnidir::projectPoints(InputArray objectPoints, OutputArray imagePoints, 
-                InputArray rvec, InputArray tvec, InputArray K, InputArray D, double xi, OutputArray jacobian)
+void cv::omnidir::projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec, 
+    InputArray K, InputArray D, double xi, OutputArray jacobian)
 {
 	// only support CV_64FC3 so far
     CV_Assert(objectPoints.type() == CV_64FC3);
@@ -113,7 +113,6 @@ void cv::omnidir::projectPoints(InputArray objectPoints, OutputArray imagePoints
         Vec2d xd;
         double r2 = xu[0]*xu[0]+xu[1]*xu[1];
         double r4 = r2*r2;
-        double r6 = r2*r4;
         xd[0] = xu[0]*(1+k1*r2+k2*r4) + 2*p1*xu[0]*xu[1] + p2*(r2+2*xu[0]*xu[0]);
         xd[1] = xu[1]*(1+k1*r2+k2*r4) + p1*(r2+2*xu[1]*xu[1]) + 2*p2*xu[0]*xu[1];
 
