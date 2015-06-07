@@ -2943,7 +2943,8 @@ static void get_platform_name(cl_platform_id id, String& name)
     name = (const char*)buf;
 }
 
-void attachContext(String& platformName, void* platformID, void* context, void* deviceID)
+
+void attachContext(const String& platformName, void* platformID, void* context, void* deviceID)
 {
     cl_uint cnt = 0;
 
@@ -2994,7 +2995,7 @@ void attachContext(String& platformName, void* platformID, void* context, void* 
     getCoreTlsData().get()->oclQueue = q;
 
     return;
-}
+} // attachContext()
 
 
 void initializeContextFromHandle(Context& ctx, void* platform, void* _context, void* _device)
@@ -5329,7 +5330,7 @@ static void finalizeHdr(UMat& m)
 /*
 // Convert OpenCL clBuffer memory to UMat
 */
-void convertFromBuffer(int rows, int cols, int type, void* cl_mem_obj, UMat& dst, UMatUsageFlags usageFlags)
+void convertFromBuffer(void* cl_mem_obj, size_t step, int rows, int cols, int type, UMat& dst)
 {
     int d = 2;
     int sizes[] = { rows, cols };
@@ -5339,7 +5340,7 @@ void convertFromBuffer(int rows, int cols, int type, void* cl_mem_obj, UMat& dst
     dst.release();
 
     dst.flags      = (type & Mat::TYPE_MASK) | Mat::MAGIC_VAL;
-    dst.usageFlags = usageFlags;
+    dst.usageFlags = USAGE_DEFAULT;
 
     setSize(dst, d, sizes, 0, true);
     dst.offset = 0;
@@ -5354,10 +5355,13 @@ void convertFromBuffer(int rows, int cols, int type, void* cl_mem_obj, UMat& dst
     size_t total = 0;
     CV_Assert(clGetMemObjectInfo(memobj, CL_MEM_SIZE, sizeof(size_t), &total, 0) == CL_SUCCESS);
 
+    CV_Assert(step >= cols * CV_ELEM_SIZE(type));
+    CV_Assert(total >= rows * step);
+
     // attach clBuffer to UMatData
     dst.u = new UMatData(getOpenCLAllocator());
     dst.u->data            = 0;
-    dst.u->allocatorFlags_ = 0;
+    dst.u->allocatorFlags_ = 0; // not allocated from any OpenCV buffer pool
     dst.u->flags           = 0;
     dst.u->handle          = cl_mem_obj;
     dst.u->origdata        = 0;

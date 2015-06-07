@@ -279,27 +279,29 @@ protected:
 /*
 // Attaches OpenCL context to OpenCV
 // Params:
-//   platformName - name of OpenCL platform, must match with platform OpenCV initialized for
+//   platformName - name of OpenCL platform to attach,
+//                  this string is used to check if platform is available
+//                  to OpenCV at runtime
 //   platfromID   - ID of platform attached context was created for
-//   context      - attached OpenCL context
+//   context      - OpenCL context to be attached to OpenCV
 //   deviceID     - ID of device, must be created from attached context
 */
-CV_EXPORTS void attachContext(String& platformName, void* platformID, void* context, void* deviceID);
+CV_EXPORTS void attachContext(const String& platformName, void* platformID, void* context, void* deviceID);
 
 /*
 // Convert OpenCL clBuffer to UMat
 // Note:
-//   buffer should represent 2D image, compatible with OpenCV. Memory is not copied from clBuffer to UMat
+//   OpenCL buffer (cl_mem_obj) should represent 2D image, compatible with OpenCV.
+//   Memory is not copied from clBuffer to UMat
 // Params:
+//   cl_mem_obj - source clBuffer handle
+//   step - num of bytes in single row
 //   rows - number of rows
 //   cols - number of cols
 //   type - OpenCV type of image
-//   cl_mem_obj - source clBuffer handle
 //   dst  - destination UMat
-//   usageFlags - OpenCV UMatUsageFlags
 */
-CV_EXPORTS void convertFromBuffer(int rows, int cols, int type, void* cl_mem_obj,
-    UMat& dst, UMatUsageFlags usageFlags = cv::USAGE_DEFAULT);
+CV_EXPORTS void convertFromBuffer(void* cl_mem_obj, size_t step, int rows, int cols, int type, UMat& dst);
 
 // TODO Move to internal header
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
