@@ -16,6 +16,7 @@ SET (OPENCL_VERSION_STRING "0.1.0")
 SET (OPENCL_VERSION_MAJOR 0)
 SET (OPENCL_VERSION_MINOR 1)
 SET (OPENCL_VERSION_PATCH 0)
+set (OPENCL_FOUND FALSE)
 
 IF (APPLE)
 
@@ -82,50 +83,53 @@ ELSE (APPLE)
 		FIND_LIBRARY(_OPENCL_32_LIBRARIES OpenCL.lib HINTS ${OPENCL_LIBRARY_SEARCH_PATHS} PATHS ${OPENCL_LIB_DIR} ENV PATH)
 		FIND_LIBRARY(_OPENCL_64_LIBRARIES OpenCL.lib HINTS ${OPENCL_LIBRARY_64_SEARCH_PATHS} PATHS ${OPENCL_LIB_DIR} ENV PATH)
 
-		# Check if 64bit or 32bit versions links fine
-  		SET (_OPENCL_VERSION_SOURCE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/openclversion.c")
-  		#SET (_OPENCL_VERSION_SOURCE "${CMAKE_BINARY_DIR}/test.c")
-		FILE (WRITE "${_OPENCL_VERSION_SOURCE}"
-			"
-			#if __APPLE__
-			#include <OpenCL/cl.h>
-			#else /* !__APPLE__ */
-			#include <CL/cl.h>
-			#endif /* __APPLE__ */
-			int main()
-			{	
-			    cl_int result;
-			    cl_platform_id id;
-			    result = clGetPlatformIDs(1, &id, NULL);
-			    return result != CL_SUCCESS;
-			}
-			")
+                if(EXISTS ${_OPENCL_32_LIBRARIES} OR EXISTS ${_OPENCL_64_LIBRARIES})
+			# Check if 64bit or 32bit versions links fine
+  			SET (_OPENCL_VERSION_SOURCE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/openclversion.c")
+  			#SET (_OPENCL_VERSION_SOURCE "${CMAKE_BINARY_DIR}/test.c")
+			FILE (WRITE "${_OPENCL_VERSION_SOURCE}"
+				"
+				#if __APPLE__
+				#include <OpenCL/cl.h>
+				#else /* !__APPLE__ */
+				#include <CL/cl.h>
+				#endif /* __APPLE__ */
+				int main()
+				{	
+			    		cl_int result;
+			    		cl_platform_id id;
+			    		result = clGetPlatformIDs(1, &id, NULL);
+			    		return result != CL_SUCCESS;
+				}
+				")
 
-  		TRY_COMPILE(_OPENCL_64_COMPILE_SUCCESS ${CMAKE_BINARY_DIR} "${_OPENCL_VERSION_SOURCE}"
-			CMAKE_FLAGS
-			"-DINCLUDE_DIRECTORIES:STRING=${OPENCL_INCLUDE_DIRS}"
-			CMAKE_FLAGS
-			"-DLINK_LIBRARIES:STRING=${_OPENCL_64_LIBRARIES}"
-  		)
-
-		IF(_OPENCL_64_COMPILE_SUCCESS)
-			message(STATUS "OpenCL 64bit lib found.")
-			SET(OPENCL_LIBRARIES ${_OPENCL_64_LIBRARIES})
-  		ELSE()
-	  		TRY_COMPILE(_OPENCL_32_COMPILE_SUCCESS ${CMAKE_BINARY_DIR} "${_OPENCL_VERSION_SOURCE}"
+  			TRY_COMPILE(_OPENCL_64_COMPILE_SUCCESS ${CMAKE_BINARY_DIR} "${_OPENCL_VERSION_SOURCE}"
 				CMAKE_FLAGS
 				"-DINCLUDE_DIRECTORIES:STRING=${OPENCL_INCLUDE_DIRS}"
 				CMAKE_FLAGS
-				"-DLINK_LIBRARIES:STRING=${_OPENCL_32_LIBRARIES}"
-	  		)
-			IF(_OPENCL_32_COMPILE_SUCCESS)
-				message(STATUS "OpenCL 32bit lib found.")
-				SET(OPENCL_LIBRARIES ${_OPENCL_32_LIBRARIES})
-			ELSE()
-				message(STATUS "Couldn't link opencl..")
-			ENDIF()
-		ENDIF()
+				"-DLINK_LIBRARIES:STRING=${_OPENCL_64_LIBRARIES}"
+  			)
 
+			IF(_OPENCL_64_COMPILE_SUCCESS)
+				message(STATUS "OpenCL 64bit lib found.")
+				SET(OPENCL_LIBRARIES ${_OPENCL_64_LIBRARIES})
+  			ELSE()
+	  			TRY_COMPILE(_OPENCL_32_COMPILE_SUCCESS ${CMAKE_BINARY_DIR} "${_OPENCL_VERSION_SOURCE}"
+					CMAKE_FLAGS
+					"-DINCLUDE_DIRECTORIES:STRING=${OPENCL_INCLUDE_DIRS}"
+					CMAKE_FLAGS
+					"-DLINK_LIBRARIES:STRING=${_OPENCL_32_LIBRARIES}"
+	  			)
+				IF(_OPENCL_32_COMPILE_SUCCESS)
+					message(STATUS "OpenCL 32bit lib found.")
+					SET(OPENCL_LIBRARIES ${_OPENCL_32_LIBRARIES})
+				ELSE()
+					message(STATUS "Couldn't link opencl..")
+				ENDIF()
+			ENDIF()
+		else()
+			set(OPENCL_LIBRARIES NOTFOUND)
+		endif()
 
 	ELSE (WIN32)
   
@@ -160,6 +164,10 @@ IF(_OPENCL_CPP_INCLUDE_DIRS)
 	# This is often the same, so clean up
 	LIST( REMOVE_DUPLICATES OPENCL_INCLUDE_DIRS )
 ENDIF(_OPENCL_CPP_INCLUDE_DIRS)
+
+if( (NOT ${OPENCL_INCLUDE_DIRS} EQUAL NOTFOUND) AND (EXISTS ${OPENCL_LIBRARIES}) )
+set(OPENCL_FOUND TRUE)
+endif()
 
 MARK_AS_ADVANCED(
   OPENCL_INCLUDE_DIRS

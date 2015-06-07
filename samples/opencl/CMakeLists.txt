@@ -1,6 +1,6 @@
 include(FindOpenCL.cmake)
 
-SET(OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS
+set(OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS
   opencv_core
   opencv_imgproc
   opencv_video
@@ -15,7 +15,7 @@ SET(OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS
 
 ocv_check_dependencies(${OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS})
 
-if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
+if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND AND OPENCL_FOUND)
   set(project "opencl")
   string(TOUPPER "${project}" project_upper)
 
