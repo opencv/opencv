@@ -1100,9 +1100,9 @@ OCL_FUNC(cl_int, clGetKernelInfo,
  size_t * param_value_size_ret),
  (kernel, param_name, param_value_size, param_value, param_value_size_ret))
 
-OCL_FUNC(cl_int, clRetainMemObject, (cl_mem memobj), (memobj))
-
 */
+
+OCL_FUNC(cl_int, clRetainMemObject, (cl_mem memobj), (memobj))
 
 OCL_FUNC(cl_int, clReleaseMemObject, (cl_mem memobj), (memobj))
 
