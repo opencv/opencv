@@ -858,9 +858,9 @@ OCL_FUNC_P(cl_context, clCreateContext,
 
 OCL_FUNC(cl_int, clReleaseContext, (cl_context context), (context))
 
-/*
-OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
 
+OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
+/*
 OCL_FUNC_P(cl_context, clCreateContextFromType,
     (const cl_context_properties * properties,
     cl_device_type device_type,
@@ -2988,6 +2988,9 @@ void attachContext(const String& platformName, void* platformID, void* context, 
 
     // attach supplied context to OpenCV
     initializeContextFromHandle(ctx, platformID, context, deviceID);
+
+    if(CL_SUCCESS != clRetainContext((cl_context)context))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clRetainContext failed!");
 
     // clear command queue, if any
     getCoreTlsData().get()->oclQueue.finish();
@@ -5354,6 +5357,8 @@ void convertFromBuffer(void* cl_mem_obj, size_t step, int rows, int cols, int ty
 
     size_t total = 0;
     CV_Assert(clGetMemObjectInfo(memobj, CL_MEM_SIZE, sizeof(size_t), &total, 0) == CL_SUCCESS);
+
+    CV_Assert(clRetainMemObject(memobj) == CL_SUCCESS);
 
     CV_Assert((int)step >= cols * CV_ELEM_SIZE(type));
     CV_Assert(total >= rows * step);
