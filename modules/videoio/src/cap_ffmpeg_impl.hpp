@@ -1739,7 +1739,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     /* find the video encoder */
     codec = avcodec_find_encoder(c->codec_id);
     if (!codec) {
-        fprintf(stderr, "Could not find encoder for codec id %d: %s", c->codec_id, icvFFMPEGErrStr(
+        fprintf(stderr, "Could not find encoder for codec id %d: %s\n", c->codec_id, icvFFMPEGErrStr(
         #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
                 AVERROR_ENCODER_NOT_FOUND
         #else
@@ -1763,7 +1763,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
          avcodec_open(c, codec)
 #endif
          ) < 0) {
-        fprintf(stderr, "Could not open codec '%s': %s", codec->name, icvFFMPEGErrStr(err));
+        fprintf(stderr, "Could not open codec '%s': %s\n", codec->name, icvFFMPEGErrStr(err));
         return false;
     }
 
@@ -1967,6 +1967,13 @@ void OutputMediaStream_FFMPEG::close()
 
 AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC_ID codec_id, int w, int h, int bitrate, double fps, PixelFormat pixel_format)
 {
+    AVCodec* codec = avcodec_find_encoder(codec_id);
+    if (!codec)
+    {
+        fprintf(stderr, "Could not find encoder for codec id %d\n", codec_id);
+        return NULL;
+    }
+
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 10, 0)
         AVStream* st = avformat_new_stream(oc, 0);
     #else
@@ -1997,8 +2004,6 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
     // resolution must be a multiple of two
     c->width = w;
     c->height = h;
-
-    AVCodec* codec = avcodec_find_encoder(c->codec_id);
 
     // time base: this is the fundamental unit of time (in seconds) in terms
     // of which frame timestamps are represented. for fixed-fps content,
