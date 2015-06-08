@@ -211,7 +211,6 @@ void cv::omnidir::distortPoints(InputArray undistorted, OutputArray distorted, I
     Matx33d camMat = K.getMat();
     f = Vec2d(camMat(0,0), camMat(1,1));
     c = Vec2d(camMat(0,2), camMat(1,2));
-    double s = camMat(0,1);
     const Vec2d *srcd = undistorted.getMat().ptr<Vec2d>();
     Vec2d *desd = distorted.getMat().ptr<Vec2d>();
 
@@ -416,7 +415,7 @@ void cv::omnidir::initUndistortRectifyMap(InputArray K, InputArray D, double xi,
 /// cv::omnidir::undistortImage
 
 void cv::omnidir::undistortImage(InputArray distorted, OutputArray undistorted,
-    InputArray K, InputArray D, double xi, InputArray Knew, const Size& new_size)
+    InputArray K, InputArray D,  double xi, InputArray Knew, const Size& new_size)
 {
     Size size = new_size.area() != 0 ? new_size : distorted.size();
 

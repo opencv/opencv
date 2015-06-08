@@ -118,11 +118,12 @@ namespace omnidir
     @param undistorted The output undistorted image 
     @param K Camera matrix \f$K = \vecthreethree{f_x}{s}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
     @param D Input vector of distortion coefficients \f$(k_1, k_2, p_1, p_2)\f$.
+    @param xi The parameter xi for CMei's model
     @param Knew Camera matrix of the distorted image. By default, it is just K.
     @param new_size The new image size. By default, it is the size of distorted.
     */
     CV_EXPORTS_W void undistortImage(InputArray distorted, OutputArray undistorted,
-        InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
+        InputArray K, InputArray D, double xi, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
     /** @brief Perform omnidirectional camera calibration
 
