@@ -132,7 +132,13 @@
 namespace cv
 {
     ParallelLoopBody::~ParallelLoopBody() {}
+#if defined HAVE_PTHREADS && HAVE_PTHREADS
+    void parallel_for_pthreads(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes);
+    size_t parallel_pthreads_get_threads_num();
+    void parallel_pthreads_set_threads_num(int num);
+#endif
 }
+
 
 namespace
 {
@@ -301,7 +307,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
         }
 
 #elif defined HAVE_PTHREADS
-        void parallel_for_pthreads(const Range& range, const ParallelLoopBody& body, double nstripes);
+
         parallel_for_pthreads(range, body, nstripes);
 
 #else
@@ -360,8 +366,6 @@ int cv::getNumThreads(void)
         : pplScheduler->GetNumberOfVirtualProcessors());
 
 #elif defined HAVE_PTHREADS
-
-        size_t parallel_pthreads_get_threads_num();
 
         return parallel_pthreads_get_threads_num();
 
@@ -423,8 +427,6 @@ void cv::setNumThreads( int threads )
     }
 
 #elif defined HAVE_PTHREADS
-
-    void parallel_pthreads_set_threads_num(int num);
 
     parallel_pthreads_set_threads_num(threads);
 
