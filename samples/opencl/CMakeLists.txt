@@ -1,4 +1,5 @@
-include(FindOpenCL.cmake)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+find_package(OpenCL REQUIRED)
 
 set(OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS
   opencv_core

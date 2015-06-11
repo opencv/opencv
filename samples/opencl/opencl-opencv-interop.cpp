@@ -1,3 +1,10 @@
+/*
+// The example of interoperability between OpenCL and OpenCV.
+// This will loop through fraes of video either from input media file
+// or camera device and do processing of these data in OpenCL and then
+// in OpenCV. In OpenCL it does inversion of pixels in half of frame and
+// in OpenCV it does bluring the whole frame.
+*/
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -394,7 +401,6 @@ private:
 #endif
 };
 
-
 } // namespace opencl
 
 
@@ -402,14 +408,21 @@ class App
 {
 public:
     App(CommandLineParser& cmd);
+    ~App();
 
-    int initVideoSource();
     int initOpenCL();
+    int initVideoSource();
 
     int process_frame_with_open_cl(cv::Mat& frame, cl_mem* cl_buffer);
     int process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, int type, cv::UMat& u);
 
     int run();
+
+    bool isRunning() { return m_running; }
+    bool doProcess() { return m_process; }
+
+    void setRunning(bool running)   { m_running = running; }
+    void setDoProcess(bool process) { m_process = process; }
 
 protected:
     bool nextFrame(cv::Mat& frame) { return m_cap.read(frame); }
@@ -420,74 +433,96 @@ protected:
     std::string message() const;
 
 private:
-    // Args args;
-    bool running;
-    bool process;
+    bool                        m_running;
+    bool                        m_process;
 
-    int64 m_t0;
-    int64 m_t1;
-    double m_fps;
+    int64                       m_t0;
+    int64                       m_t1;
+    double                      m_fps;
 
-    string file_name;
-    int camera_id;
-    cv::VideoCapture m_cap;
-    cv::Mat m_frame;
-    cv::Mat m_frameGray;
+    string                      m_file_name;
+    int                         m_camera_id;
+    cv::VideoCapture            m_cap;
+    cv::Mat                     m_frame;
+    cv::Mat                     m_frameGray;
 
-    opencl::PlatformInfo m_platformInfo;
-    opencl::DeviceInfo   m_deviceInfo;
+    opencl::PlatformInfo        m_platformInfo;
+    opencl::DeviceInfo          m_deviceInfo;
     std::vector<cl_platform_id> m_platform_ids;
-    cl_context       m_context;
-    cl_device_id     m_device_id;
-    cl_command_queue m_queue;
-    cl_kernel        m_kernel;
+    cl_context                  m_context;
+    cl_device_id                m_device_id;
+    cl_command_queue            m_queue;
+    cl_program                  m_program;
+    cl_kernel                   m_kernel;
+    cl_mem                      m_buffer;
+    cl_event                    m_event;
 };
 
 
 App::App(CommandLineParser& cmd)
 {
-    cout << "\nPress ESC to exit\n"
-         << endl;
+    cout << "\nPress ESC to exit\n" << endl;
 
-    camera_id = cmd.get<int>("camera");
-    file_name = cmd.get<string>("video");
+    m_camera_id = cmd.get<int>("camera");
+    m_file_name = cmd.get<string>("video");
 
-    process = true;
+    m_running   = false;
+    m_process   = false;
+
+    m_context   = 0;
+    m_device_id = 0;
+    m_queue     = 0;
+    m_program   = 0;
+    m_kernel    = 0;
+    m_buffer    = 0;
+    m_event     = 0;
 } // ctor
 
 
-int App::initVideoSource()
+App::~App()
 {
-    try
+    if (m_queue)
     {
-        if (!file_name.empty() && camera_id == -1)
-        {
-            m_cap.open(file_name.c_str());
-            if (!m_cap.isOpened())
-                throw std::runtime_error(std::string("can't open video file: " + file_name));
-        }
-        else if (camera_id != -1)
-        {
-            m_cap.open(camera_id);
-            if (!m_cap.isOpened())
-            {
-                std::stringstream msg;
-                msg << "can't open camera: " << camera_id;
-                throw std::runtime_error(msg.str());
-            }
-        }
-        else
-            throw std::runtime_error(std::string("specify video source"));
+        clFinish(m_queue);
+        clReleaseCommandQueue(m_queue);
+        m_queue = 0;
     }
 
-    catch (std::exception e)
+    if (m_program)
     {
-        cerr << "ERROR: " << e.what() << std::endl;
-        return -1;
+        clReleaseProgram(m_program);
+        m_program = 0;
     }
 
-    return 0;
-}
+    if (m_buffer)
+    {
+        clReleaseMemObject(m_buffer);
+        m_buffer = 0;
+    }
+
+    if (m_event)
+    {
+        clReleaseEvent(m_event);
+    }
+
+    if (m_kernel)
+    {
+        clReleaseKernel(m_kernel);
+        m_kernel = 0;
+    }
+
+    if (m_device_id)
+    {
+        clReleaseDevice(m_device_id);
+        m_device_id = 0;
+    }
+
+    if (m_context)
+    {
+        clReleaseContext(m_context);
+        m_context = 0;
+    }
+} // dtor
 
 
 int App::initOpenCL()
@@ -544,15 +579,15 @@ int App::initOpenCL()
             "}";
 
         size_t len = strlen(kernelSrc);
-        cl_program program = clCreateProgramWithSource(m_context, 1, &kernelSrc, &len, &res);
-        if (0 == program || CL_SUCCESS != res)
+        m_program = clCreateProgramWithSource(m_context, 1, &kernelSrc, &len, &res);
+        if (0 == m_program || CL_SUCCESS != res)
             return -1;
 
-        res = clBuildProgram(program, 1, &m_device_id, 0, 0, 0);
+        res = clBuildProgram(m_program, 1, &m_device_id, 0, 0, 0);
         if (CL_SUCCESS != res)
             return -1;
 
-        m_kernel = clCreateKernel(program, "bitwise_inv_8uC1", &res);
+        m_kernel = clCreateKernel(m_program, "bitwise_inv_8uC1", &res);
         if (0 == m_kernel || CL_SUCCESS != res)
             return -1;
 
@@ -569,18 +604,65 @@ int App::initOpenCL()
 } // initOpenCL()
 
 
+int App::initVideoSource()
+{
+    try
+    {
+        if (!m_file_name.empty() && m_camera_id == -1)
+        {
+            m_cap.open(m_file_name.c_str());
+            if (!m_cap.isOpened())
+                throw std::runtime_error(std::string("can't open video file: " + m_file_name));
+        }
+        else if (m_camera_id != -1)
+        {
+            m_cap.open(m_camera_id);
+            if (!m_cap.isOpened())
+            {
+                std::stringstream msg;
+                msg << "can't open camera: " << m_camera_id;
+                throw std::runtime_error(msg.str());
+            }
+        }
+        else
+            throw std::runtime_error(std::string("specify video source"));
+    }
+
+    catch (std::exception e)
+    {
+        cerr << "ERROR: " << e.what() << std::endl;
+        return -1;
+    }
+
+    return 0;
+} // initVideoSource()
+
+
+// this function is an example of "typical" OpenCL processing pipeline
+// It creates OpenCL memory buffer from input media frame and
+// process these data (inverts each pixel value in half of frame)
+// with OpenCL kernel
 int App::process_frame_with_open_cl(cv::Mat& frame, cl_mem* buffer)
 {
     cl_int res = CL_SUCCESS;
-    cl_mem mem;
-    cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR;
 
-    mem = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
-    if (0 == mem || CL_SUCCESS != res)
-        return -1;
+    CV_Assert(buffer);
 
-    cl_event event = clCreateUserEvent(m_context, &res);
-    if (0 == event || CL_SUCCESS != res)
+    cl_mem mem = buffer[0];
+
+    if (0 == mem)
+    {
+        // allocate OpenCL memory to keep single frame,
+        // reuse this memory for subsecuent frames
+        // memory will be deallocated at dtor
+        cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR;
+        mem = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
+        if (0 == mem || CL_SUCCESS != res)
+            return -1;
+    }
+
+    m_event = clCreateUserEvent(m_context, &res);
+    if (0 == m_event || CL_SUCCESS != res)
         return -1;
 
     res = clSetKernelArg(m_kernel, 0, sizeof(buffer), &mem);
@@ -601,11 +683,11 @@ int App::process_frame_with_open_cl(cv::Mat& frame, cl_mem* buffer)
         return -1;
 
     size_t size[] = { frame.cols / 2, frame.rows };
-    res = clEnqueueNDRangeKernel(m_queue, m_kernel, 2, 0, size, 0, 0, 0, &event);
+    res = clEnqueueNDRangeKernel(m_queue, m_kernel, 2, 0, size, 0, 0, 0, &m_event);
     if (CL_SUCCESS != res)
         return -1;
 
-    res = clWaitForEvents(1, &event);
+    res = clWaitForEvents(1, &m_event);
     if (CL_SUCCESS != res)
         return - 1;
 
@@ -615,6 +697,9 @@ int App::process_frame_with_open_cl(cv::Mat& frame, cl_mem* buffer)
 }
 
 
+// this function is an exmple of interoperability between OpenCL buffer
+// and OpenCV UMat objects. It converts (without copying data) OpenCL buffer
+// to OpenCV UMat and then do blur on these data
 int App::process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, int type, cv::UMat& u)
 {
     cv::ocl::convertFromBuffer(buffer, step, rows, cols, type, u);
@@ -626,32 +711,35 @@ int App::process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int
 
 int App::run()
 {
-    if(0 != initVideoSource())
+    if (0 != initOpenCL())
         return -1;
 
-    if(0 != initOpenCL())
+    if (0 != initVideoSource())
         return -1;
 
-    Mat  img_to_show;
+    Mat img_to_show;
 
-    running = true;
+    // set running state until ESC pressed
+    setRunning(true);
+    // set process flag to show some data processing
+    // can be toggled on/off by 'p' button
+    setDoProcess(true);
 
     // Iterate over all frames
-    while (running && nextFrame(m_frame))
+    while (isRunning() && nextFrame(m_frame))
     {
         cv::cvtColor(m_frame, m_frameGray, COLOR_BGR2GRAY);
 
-        UMat uframe(m_frameGray.size(), m_frameGray.type());
+        UMat uframe;
 
         // work
         timerStart();
 
-        if (process)
+        if (doProcess())
         {
-            cl_mem buffer = 0;
-            process_frame_with_open_cl(m_frameGray, &buffer);
+            process_frame_with_open_cl(m_frameGray, &m_buffer);
             process_cl_buffer_with_opencv(
-                buffer, m_frameGray.step[0], m_frameGray.rows, m_frameGray.cols, m_frameGray.type(), uframe);
+                m_buffer, m_frameGray.step[0], m_frameGray.rows, m_frameGray.cols, m_frameGray.type(), uframe);
         }
         else
         {
@@ -679,12 +767,12 @@ void App::handleKey(char key)
     switch (key)
     {
     case 27:
-        running = false;
+        setRunning(false);
         break;
 
     case 'p':
     case 'P':
-        process = !process;
+        setDoProcess( !doProcess() );
         break;
     }
 }

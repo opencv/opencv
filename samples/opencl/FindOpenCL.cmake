@@ -1,3 +1,11 @@
+# This is a modified version of FindOpenCL.cmake from Mikael Lepisto:
+#   https://github.com/elhigu/cmake-findopencl
+#  Modifications were done to:
+#    -set OPENCL_FOUND var true/false depending on an attempt to find
+#     OpenCL results
+#    -preventing try compile block when no OpenCL libs found
+#
+
 # Find OpenCL
 #
 # To set manually the paths, define these environment variables:
