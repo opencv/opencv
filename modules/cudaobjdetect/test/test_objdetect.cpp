@@ -217,9 +217,9 @@ CUDA_TEST_P(HOG, GetDescriptors)
                               r[(x * blocks_per_win_y + y) * block_hist_size + k]);
     }
 }
-
+/*
 INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, HOG, ALL_DEVICES);
-
+*/
 //============== caltech hog tests =====================//
 
 struct CalTech : public ::testing::TestWithParam<std::tr1::tuple<cv::cuda::DeviceInfo, std::string> >
@@ -269,8 +269,204 @@ INSTANTIATE_TEST_CASE_P(detect, CalTech, testing::Combine(ALL_DEVICES,
         "caltech/image_00000527_0.png", "caltech/image_00000574_0.png")));
 
 
+//------------------------variable GPU HOG Tests------------------------//
+struct Hog_var : public ::testing::TestWithParam<std::tr1::tuple<cv::cuda::DeviceInfo, std::string> >
+{
+    cv::cuda::DeviceInfo devInfo;
+    cv::Mat img, c_img;
 
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        cv::cuda::setDevice(devInfo.deviceID());
 
+        cv::Rect roi(0, 0, 16, 32);
+        img = readImage(GET_PARAM(1), cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(img.empty());
+        c_img = img(roi);
+    }
+};
+
+CUDA_TEST_P(Hog_var, HOG)
+{
+    cv::cuda::GpuMat _img(c_img);
+    cv::cuda::GpuMat d_img;
+
+    int win_stride_width = 8;int win_stride_height = 8;
+    int win_width = 16;
+    int block_width = 8;
+    int block_stride_width = 4;int block_stride_height = 4;
+    int cell_width = 4;
+    int nbins = 9;
+
+    Size win_stride(win_stride_width, win_stride_height);
+    Size win_size(win_width, win_width * 2);
+    Size block_size(block_width, block_width);
+    Size block_stride(block_stride_width, block_stride_height);
+    Size cell_size(cell_width, cell_width);
+
+    cv::Ptr<cv::cuda::HOG> gpu_hog = cv::cuda::HOG::create(win_size, block_size, block_stride, cell_size, nbins);
+
+    gpu_hog->setNumLevels(13);
+    gpu_hog->setHitThreshold(0);
+    gpu_hog->setWinStride(win_stride);
+    gpu_hog->setScaleFactor(1.05);
+    gpu_hog->setGroupThreshold(8);
+    gpu_hog->compute(_img, d_img);
+
+    vector<float> gpu_desc_vec;
+    ASSERT_TRUE(gpu_desc_vec.empty());
+    cv::Mat R(d_img);
+
+    cv::HOGDescriptor cpu_hog(win_size, block_size, block_stride, cell_size, nbins);
+    cpu_hog.nlevels = 13;
+    vector<float> cpu_desc_vec;
+    ASSERT_TRUE(cpu_desc_vec.empty());
+    cpu_hog.compute(c_img, cpu_desc_vec, win_stride, Size(0,0));
+}
+
+INSTANTIATE_TEST_CASE_P(detect, Hog_var, testing::Combine(ALL_DEVICES,
+    ::testing::Values<std::string>("/hog/road.png")));
+
+struct Hog_var_cell : public ::testing::TestWithParam<std::tr1::tuple<cv::cuda::DeviceInfo, std::string> >
+{
+    cv::cuda::DeviceInfo devInfo;
+    cv::Mat img, c_img, c_img2, c_img3, c_img4;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        cv::cuda::setDevice(devInfo.deviceID());
+
+        cv::Rect roi(0, 0, 48, 96);
+        img = readImage(GET_PARAM(1), cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(img.empty());
+        c_img = img(roi);
+
+        cv::Rect roi2(0, 0, 54, 108);
+        c_img2 = img(roi2);
+
+        cv::Rect roi3(0, 0, 64, 128);
+        c_img3 = img(roi3);
+
+        cv::Rect roi4(0, 0, 32, 64);
+        c_img4 = img(roi4);
+    }
+};
+
+CUDA_TEST_P(Hog_var_cell, HOG)
+{
+    cv::cuda::GpuMat _img(c_img);
+    cv::cuda::GpuMat _img2(c_img2);
+    cv::cuda::GpuMat _img3(c_img3);
+    cv::cuda::GpuMat _img4(c_img4);
+    cv::cuda::GpuMat d_img;
+
+    ASSERT_FALSE(_img.empty());
+    ASSERT_TRUE(d_img.empty());
+
+    int win_stride_width = 8;int win_stride_height = 8;
+    int win_width = 48;
+    int block_width = 16;
+    int block_stride_width = 8;int block_stride_height = 8;
+    int cell_width = 8;
+    int nbins = 9;
+
+    Size win_stride(win_stride_width, win_stride_height);
+    Size win_size(win_width, win_width * 2);
+    Size block_size(block_width, block_width);
+    Size block_stride(block_stride_width, block_stride_height);
+    Size cell_size(cell_width, cell_width);
+
+    cv::Ptr<cv::cuda::HOG> gpu_hog = cv::cuda::HOG::create(win_size, block_size, block_stride, cell_size, nbins);
+
+    gpu_hog->setNumLevels(13);
+    gpu_hog->setHitThreshold(0);
+    gpu_hog->setWinStride(win_stride);
+    gpu_hog->setScaleFactor(1.05);
+    gpu_hog->setGroupThreshold(8);
+    gpu_hog->compute(_img, d_img);
+//------------------------------------------------------------------------------
+    cv::cuda::GpuMat d_img2;
+    ASSERT_TRUE(d_img2.empty());
+
+    int win_stride_width2 = 8;int win_stride_height2 = 8;
+    int win_width2 = 48;
+    int block_width2 = 16;
+    int block_stride_width2 = 8;int block_stride_height2 = 8;
+    int cell_width2 = 4;
+
+    Size win_stride2(win_stride_width2, win_stride_height2);
+    Size win_size2(win_width2, win_width2 * 2);
+    Size block_size2(block_width2, block_width2);
+    Size block_stride2(block_stride_width2, block_stride_height2);
+    Size cell_size2(cell_width2, cell_width2);
+
+    cv::Ptr<cv::cuda::HOG> gpu_hog2 = cv::cuda::HOG::create(win_size2, block_size2, block_stride2, cell_size2, nbins);
+    gpu_hog2->setWinStride(win_stride2);
+    gpu_hog2->compute(_img, d_img2);
+//------------------------------------------------------------------------------
+    cv::cuda::GpuMat d_img3;
+    ASSERT_TRUE(d_img3.empty());
+
+    int win_stride_width3 = 9;int win_stride_height3 = 9;
+    int win_width3 = 54;
+    int block_width3 = 18;
+    int block_stride_width3 = 9;int block_stride_height3 = 9;
+    int cell_width3 = 6;
+
+    Size win_stride3(win_stride_width3, win_stride_height3);
+    Size win_size3(win_width3, win_width3 * 2);
+    Size block_size3(block_width3, block_width3);
+    Size block_stride3(block_stride_width3, block_stride_height3);
+    Size cell_size3(cell_width3, cell_width3);
+
+    cv::Ptr<cv::cuda::HOG> gpu_hog3 = cv::cuda::HOG::create(win_size3, block_size3, block_stride3, cell_size3, nbins);
+    gpu_hog3->setWinStride(win_stride3);
+    gpu_hog3->compute(_img2, d_img3);
+//------------------------------------------------------------------------------
+    cv::cuda::GpuMat d_img4;
+    ASSERT_TRUE(d_img4.empty());
+
+    int win_stride_width4 = 16;int win_stride_height4 = 16;
+    int win_width4 = 64;
+    int block_width4 = 32;
+    int block_stride_width4 = 16;int block_stride_height4 = 16;
+    int cell_width4 = 8;
+
+    Size win_stride4(win_stride_width4, win_stride_height4);
+    Size win_size4(win_width4, win_width4 * 2);
+    Size block_size4(block_width4, block_width4);
+    Size block_stride4(block_stride_width4, block_stride_height4);
+    Size cell_size4(cell_width4, cell_width4);
+
+    cv::Ptr<cv::cuda::HOG> gpu_hog4 = cv::cuda::HOG::create(win_size4, block_size4, block_stride4, cell_size4, nbins);
+    gpu_hog4->setWinStride(win_stride4);
+    gpu_hog4->compute(_img3, d_img4);
+//------------------------------------------------------------------------------
+    cv::cuda::GpuMat d_img5;
+    ASSERT_TRUE(d_img5.empty());
+
+    int win_stride_width5 = 16;int win_stride_height5 = 16;
+    int win_width5 = 64;
+    int block_width5 = 32;
+    int block_stride_width5 = 16;int block_stride_height5 = 16;
+    int cell_width5 = 16;
+
+    Size win_stride5(win_stride_width5, win_stride_height5);
+    Size win_size5(win_width5, win_width5 * 2);
+    Size block_size5(block_width5, block_width5);
+    Size block_stride5(block_stride_width5, block_stride_height5);
+    Size cell_size5(cell_width5, cell_width5);
+
+    cv::Ptr<cv::cuda::HOG> gpu_hog5 = cv::cuda::HOG::create(win_size5, block_size5, block_stride5, cell_size5, nbins);
+    gpu_hog5->setWinStride(win_stride5);
+    gpu_hog5->compute(_img3, d_img5);
+//------------------------------------------------------------------------------
+}
+
+INSTANTIATE_TEST_CASE_P(detect, Hog_var_cell, testing::Combine(ALL_DEVICES,
+    ::testing::Values<std::string>("/hog/road.png")));
 //////////////////////////////////////////////////////////////////////////////////////////
 /// LBP classifier
 
