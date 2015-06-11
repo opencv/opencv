@@ -1,5 +1,9 @@
 # cmake 3.1 needed for find_package(OpenCL)
-#cmake_minimum_required(VERSION 3.1)
+
+if(CMAKE_VERSION VERSION_LESS "3.1")
+  message(STATUS "OpenCL samples require CMakes 3.1+")
+  return()
+endif()
 
 set(
     OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS
