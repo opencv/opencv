@@ -224,10 +224,10 @@ private:
     cl_int query_param(cl_device_id id, cl_device_info param, T& value)
     {
         cl_int res;
-        size_t size;
+        size_t size = 0;
 
         res = clGetDeviceInfo(id, param, 0, 0, &size);
-        if (CL_SUCCESS != res)
+        if (CL_SUCCESS != res && size != 0)
             throw std::runtime_error(std::string("clGetDeviceInfo failed"));
 
         if (0 == size)

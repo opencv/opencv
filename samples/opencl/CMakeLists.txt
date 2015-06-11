@@ -1,29 +1,26 @@
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}")
-find_package(OpenCL QUIET)
-
-set(OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS
-  opencv_core
-  opencv_imgproc
-  opencv_video
-  opencv_imgcodecs
-  opencv_videoio
-  opencv_highgui
-  opencv_objdetect
-  opencv_features2d
-  opencv_calib3d
-  opencv_flann
-  ${OPENCL_LIBRARIES})
+set(
+    OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS
+    opencv_core
+    opencv_imgproc
+    opencv_video
+    opencv_imgcodecs
+    opencv_videoio
+    opencv_highgui)
 
 ocv_check_dependencies(${OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS})
 
-if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND AND OPENCL_FOUND)
+if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
+
+  find_package(OpenCL 1.2 REQUIRED)
+
   set(project "opencl")
   string(TOUPPER "${project}" project_upper)
 
   project("${project}_samples")
 
-  include_directories(${OPENCL_INCLUDE_DIRS})
   ocv_include_modules_recurse(${OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS})
+
+  include_directories(${OpenCL_INCLUDE_DIR})
 
   # ---------------------------------------------
   #      Define executable targets
@@ -32,7 +29,11 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND AND OPENCL_FOUND)
     set(the_target "example_${project}_${name}")
     add_executable(${the_target} ${srcs})
 
-    ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS})
+    ocv_target_link_libraries(
+        ${the_target}
+        ${OPENCV_LINKER_LIBS}
+        ${OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS}
+        ${OpenCL_LIBRARY})
 
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "${project}-example-${name}"
@@ -57,11 +58,4 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND AND OPENCL_FOUND)
     file(GLOB sample_srcs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${sample}.*)
     OPENCV_DEFINE_OPENCL_EXAMPLE(${sample} ${sample_srcs})
   endforeach()
-endif()
-
-if(INSTALL_C_EXAMPLES AND NOT WIN32)
-  file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
-  install(FILES ${install_list}
-          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/opencl
-          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()
