@@ -1690,7 +1690,7 @@ See the line detection example below:
 
     using namespace cv;
     using namespace std;
-    
+
     int main(int argc, char** argv)
     {
         Mat src, dst, color_dst;
@@ -1776,7 +1776,7 @@ Example: :
 
     using namespace cv;
     using namespace std;
-    
+
     int main(int argc, char** argv)
     {
         Mat img, gray;
@@ -1799,7 +1799,7 @@ Example: :
         }
         namedWindow( "circles", 1 );
         imshow( "circles", img );
-        
+
         waitKey(0);
         return 0;
     }
