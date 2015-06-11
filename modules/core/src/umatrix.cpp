@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "umatrix.hpp"
 
 ///////////////////////////////// UMat implementation ///////////////////////////////
 
@@ -123,8 +124,8 @@ void swap( UMat& a, UMat& b )
 }
 
 
-static inline void setSize( UMat& m, int _dims, const int* _sz,
-                            const size_t* _steps, bool autoSteps=false )
+void setSize( UMat& m, int _dims, const int* _sz,
+                            const size_t* _steps, bool autoSteps )
 {
     CV_Assert( 0 <= _dims && _dims <= CV_MAX_DIM );
     if( m.dims != _dims )
@@ -176,7 +177,8 @@ static inline void setSize( UMat& m, int _dims, const int* _sz,
     }
 }
 
-static void updateContinuityFlag(UMat& m)
+
+void updateContinuityFlag(UMat& m)
 {
     int i, j;
     for( i = 0; i < m.dims; i++ )
@@ -199,13 +201,14 @@ static void updateContinuityFlag(UMat& m)
 }
 
 
-static void finalizeHdr(UMat& m)
+void finalizeHdr(UMat& m)
 {
     updateContinuityFlag(m);
     int d = m.dims;
     if( d > 2 )
         m.rows = m.cols = -1;
 }
+
 
 UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
 {

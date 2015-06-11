@@ -1,3 +1,6 @@
+# cmake 3.1 needed for find_package(OpenCL)
+#cmake_minimum_required(VERSION 3.1)
+
 set(
     OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS
     opencv_core
@@ -10,8 +13,6 @@ set(
 ocv_check_dependencies(${OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS})
 
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
-
-  cmake_minimum_required(VERSION 3.1)
 
   find_package(OpenCL 1.2 REQUIRED)
 
