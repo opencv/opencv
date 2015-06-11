@@ -1689,7 +1689,8 @@ See the line detection example below:
     #include <opencv2/highgui.hpp>
 
     using namespace cv;
-
+    using namespace std;
+    
     int main(int argc, char** argv)
     {
         Mat src, dst, color_dst;
@@ -1774,11 +1775,12 @@ Example: :
     #include <math.h>
 
     using namespace cv;
-
+    using namespace std;
+    
     int main(int argc, char** argv)
     {
         Mat img, gray;
-        if( argc != 2 && !(img=imread(argv[1], 1)).data)
+        if( argc != 2 || !(img=imread(argv[1], 1)).data)
             return -1;
         cvtColor(img, gray, COLOR_BGR2GRAY);
         // smooth it, otherwise a lot of false circles may be detected
@@ -1797,6 +1799,8 @@ Example: :
         }
         namedWindow( "circles", 1 );
         imshow( "circles", img );
+        
+        waitKey(0);
         return 0;
     }
 @endcode
