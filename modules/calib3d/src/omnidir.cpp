@@ -57,7 +57,7 @@
  *     Pattern", in IROS 2013.
  */
 #include "omnidir.hpp"
-
+#include <vector>
 namespace cv { namespace
 {
     struct JacobianRow
@@ -78,17 +78,17 @@ void cv::omnidir::projectPoints(InputArray objectPoints, OutputArray imagePoints
 {
 	// only support CV_64FC3 so far
     CV_Assert(objectPoints.type() == CV_64FC3);
-	CV_Assert(rvec.type() == CV_64F && rvec.total() == 3);
-    CV_Assert(tvec.type() == CV_64F && tvec.total() == 3);
-	CV_Assert(K.type() == CV_64F && K.size() == Size(3,3));
-	CV_Assert(D.type() == CV_64F && D.total() == 4);
+	CV_Assert(_rvec.type() == CV_64F && _rvec.total() == 3);
+    CV_Assert(_tvec.type() == CV_64F && _tvec.total() == 3);
+	CV_Assert(_K.type() == CV_64F && _K.size() == Size(3,3));
+	CV_Assert(_D.type() == CV_64F && _D.total() == 4);
     // each row is an image point
     imagePoints.create(objectPoints.size(), CV_MAKETYPE(objectPoints.depth(), 2));
     size_t n = objectPoints.total();
-    Vec3d om = *rvec.getMat().ptr<Vec3d>();   
-    Vec3d T  = *tvec.getMat().ptr<Vec3d>(); 
-    Matx33d Kc = K.getMat();
-    Vec<double, 4> kp= (Vec<double,4>)*D.getMat().ptr<Vec<double,4> >();
+    Vec3d om = *_rvec.getMat().ptr<Vec3d>();   
+    Vec3d T  = *_tvec.getMat().ptr<Vec3d>(); 
+    Matx33d Kc = _K.getMat();
+    Vec<double, 4> kp= (Vec<double,4>)*_D.getMat().ptr<Vec<double,4> >();
 
     Vec2d f,c;
     f = Vec2d(Kc(0,0),Kc(1,1));
@@ -128,7 +128,7 @@ void cv::omnidir::projectPoints(InputArray objectPoints, OutputArray imagePoints
         Vec2d xd;
         double r2 = xu[0]*xu[0]+xu[1]*xu[1];
         double r4 = r2*r2;
-        double r6 = r2*r4;
+
         xd[0] = xu[0]*(1+k1*r2+k2*r4) + 2*p1*xu[0]*xu[1] + p2*(r2+2*xu[0]*xu[0]);
         xd[1] = xu[1]*(1+k1*r2+k2*r4) + p1*(r2+2*xu[1]*xu[1]) + 2*p2*xu[0]*xu[1];
 
@@ -466,7 +466,7 @@ void cv::omnidir::internal::initializeCalibration(InputOutputArrayOfArrays patte
         // objectPoints should be 3-channel data, imagePoints should be 2-channel data
         CV_Assert(objPoints.type() == CV_64FC3 && imgPoints.type() == CV_64FC2);
 
-        vector<cv::Mat> xy, uv;
+        std::vector<cv::Mat> xy, uv;
         cv::split(objPoints, xy);
         cv::split(imgPoints, uv);
 
@@ -702,7 +702,7 @@ double cv::omnidir::calibrate(InputOutputArrayOfArrays patternPoints, InputOutpu
 
     // optimization
     const double alpha_smooth = 0.4;
-    const double thresh_cond = 1e6;
+    //const double thresh_cond = 1e6;
     double change = 1;
     for(int iter = 0; ; ++iter)
     {
@@ -855,11 +855,8 @@ void cv::omnidir::internal::estimateUncertainties(InputArrayOfArrays objectPoint
     sqrt(_JTJ_inv, _JTJ_inv);
 
     errors = 3 * s * _JTJ_inv.diag();
+    checkFixed(errors, flags, n);
     
-    if(CALIB_FIX_SKEW)
-    {
-        errors.at<double>(6*n + 2) = 0;
-    }
     rms = 0;
     const Vec2d* ptr_ex = reprojError.ptr<Vec2d>();
     for (size_t i = 0; i < reprojError.total(); i++)
