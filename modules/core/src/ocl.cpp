@@ -1039,6 +1039,7 @@ OCL_FUNC(cl_int, clEnqueueCopyImage,
  cl_event * event),
  (command_queue, src_image, dst_image, src_origin, dst_origin,
  region, num_events_in_wait_list, event_wait_list, event))
+*/
 
 OCL_FUNC(cl_int, clEnqueueCopyImageToBuffer,
  (cl_command_queue command_queue,
@@ -1052,7 +1053,6 @@ OCL_FUNC(cl_int, clEnqueueCopyImageToBuffer,
  cl_event * event),
  (command_queue, src_image, dst_buffer, src_origin, region, dst_offset,
  num_events_in_wait_list, event_wait_list, event))
-*/
 
 OCL_FUNC(cl_int, clEnqueueCopyBufferToImage,
  (cl_command_queue command_queue,
