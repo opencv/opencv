@@ -2003,53 +2003,7 @@ namespace omnidir
         InputOutputArray K, double& xi, InputOutputArray D, OutputArrayOfArrays omAll, OutputArrayOfArrays tAll,
         int flags, TermCriteria criteria);
 
-    /** @brief Stereo calibration for omnidirectional camera model. It computes the intrinsic parameters for two
-    cameras and the extrinsic parameters between two cameras
 
-    @param objectPoints Vector of vector of pattern points in world (pattern) coordiante, 1xN/Nx1 3-channel
-    @param imagePoints1 Vector of vector of correspoinding image points of the first camera
-    @param imagePoints2 Vector of vector of correspoinding image points of the second camera
-    @param imageSize Image size of calibration images.
-    @param K1 Output calibrated camera matrix. If you want to initialize K1 by yourself, input a non-empty K1.
-    @param xi1 Ouput parameter xi for the first camera for CMei's model
-    @param D1 Output distortion parameters \f$(k_1, k_2, p_1, p_2)\f$ for the first camera
-    @param K2 Output calibrated camera matrix. If you want to initialize K2 by yourself, input a non-empty K2.
-    @param xi2 Ouput parameter xi for the second camera for CMei's model
-    @param D2 Output distortion parameters \f$(k_1, k_2, p_1, p_2)\f$ for the second camera
-    @param R Output rotation between the first and second camera
-    @param T Output translation between the first and second camera
-    @param flags The flags that control stereoCalibrate
-    @param criteria Termination criteria for optimization
-    */
-    CV_EXPORTS_W double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
-        Size imageSize, InputOutputArray K1, double& xi1, InputOutputArray D1, InputOutputArray K2, double& xi2,
-        InputOutputArray D2, OutputArray R, OutputArray T, int flags, TermCriteria criteria);
-
-    /** @brief Stereo rectification for omnidirectional camera model. It computes the rectification rotations for two cameras
-
-    @param K1 Input camera matrix of the first camera
-    @param D1 Input distortion parameters \f$(k_1, k_2, p_1, p_2)\f$ for the first camera
-    @param xi1 Input parameter xi for the first camera for CMei's model
-    @param K2 Input camera matrix of the second camera
-    @param D2 Input distortion parameters \f$(k_1, k_2, p_1, p_2)\f$ for the second camera
-    @param xi2 Input parameter xi for the second camera for CMei's model
-    @param imageSize Image size of calibration images.
-    @param R Rotation between the first and second camera
-    @param tvec Translation between the first and second camera
-    @param R1 Output 3x3 rotation matrix for the first camera
-    @param R2 Output 3x3 rotation matrix for the second camera
-    @param P1 Output 3x4 projection matrix in the rectified coordinate systems for the first
-    camera.
-    @param P2 Output 3x4 projection matrix in the rectified coordinate systems for the second
-    camera.
-    @param Q Output 4x4 disparity-to-depth mapping matrix
-    @param flags The flags that control stereoRectify
-    @param newImageSize New image size of rectified images. When it is (0,0), the new image size is
-    equivalent to imageSize
-    */
-    CV_EXPORTS_W void stereoRectify(InputArray K1, InputArray D1, double xi1, InputArray K2, InputArray D2, double xi2, const Size imageSize,
-        InputArray R, InputArray tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags,
-        const Size& newImageSize);
 //! @} calib3d_omnidir
 }
 

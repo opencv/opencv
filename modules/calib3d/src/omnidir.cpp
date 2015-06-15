@@ -74,21 +74,21 @@ namespace cv { namespace
 /////////////////////////////////////////////////////////////////////////////
 //////// projectPoints
 void cv::omnidir::projectPoints(InputArray objectPoints, OutputArray imagePoints,
-                InputArray _rvec, InputArray _tvec, InputArray _K, InputArray _D, double xi, OutputArray jacobian)
+                InputArray rvec, InputArray tvec, InputArray K, InputArray D, double xi, OutputArray jacobian)
 {
 
     CV_Assert(objectPoints.type() == CV_64FC3);
-    CV_Assert(_rvec.type() == CV_64F && _rvec.total() == 3);
-    CV_Assert(_tvec.type() == CV_64F && _tvec.total() == 3);
-    CV_Assert(_K.type() == CV_64F && _K.size() == Size(3,3));
-    CV_Assert(_D.type() == CV_64F && _D.total() == 4);
+    CV_Assert(rvec.type() == CV_64F && rvec.total() == 3);
+    CV_Assert(tvec.type() == CV_64F && tvec.total() == 3);
+    CV_Assert(K.type() == CV_64F && K.size() == Size(3,3));
+    CV_Assert(D.type() == CV_64F && D.total() == 4);
     // each row is an image point
     imagePoints.create(objectPoints.size(), CV_MAKETYPE(objectPoints.depth(), 2));
     int n = (int)objectPoints.total();
-    Vec3d om = *_rvec.getMat().ptr<Vec3d>();
-    Vec3d T  = *_tvec.getMat().ptr<Vec3d>();
-    Matx33d Kc = _K.getMat();
-    Vec<double, 4> kp= (Vec<double,4>)*_D.getMat().ptr<Vec<double,4> >();
+    Vec3d om = *rvec.getMat().ptr<Vec3d>();
+    Vec3d T  = *tvec.getMat().ptr<Vec3d>();
+    Matx33d Kc = K.getMat();
+    Vec<double, 4> kp= (Vec<double,4>)*D.getMat().ptr<Vec<double,4> >();
 
     Vec2d f,c;
 
@@ -474,7 +474,7 @@ void cv::omnidir::internal::initializeCalibration(InputOutputArrayOfArrays patte
         int n_point = imgPoints.rows * imgPoints.cols;
         cv::Mat x = xy[0].reshape(1, n_point), y = xy[1].reshape(1, n_point),
                 u = uv[0].reshape(1, n_point) - u0, v = uv[1].reshape(1, n_point) - v0;
-        
+
         cv::Mat sqrRho = u.mul(u) + v.mul(v);
         // compute extrinsic parameters
         cv::Mat M(n_point, 6, CV_64F);
@@ -562,7 +562,7 @@ void cv::omnidir::internal::initializeCalibration(InputOutputArrayOfArrays patte
                 // project pattern points to images
                 Mat projedImgPoints;
                 Matx33d Kc(gamma, 0, u0, 0, gamma, v0, 0, 0, 1);
-                
+
                 // reproj error
                 cv::omnidir::projectPoints(objPoints, projedImgPoints, om, t, Kc, Matx14d(0, 0, 0, 0), 1, cv::noArray());
                 double reprojectError = omnidir::internal::computeMeanReproerr(imgPoints, projedImgPoints);
@@ -1037,11 +1037,17 @@ void cv::omnidir::internal::fillFixed(Mat&G, int flags, int n)
     }
 }
 
-double cv::omnidir::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
-    Size imageSize, InputOutputArray K1, double& xi1, InputOutputArray D1, InputOutputArray K2, double& xi2,
-    InputOutputArray D2, OutputArray R, OutputArray T, int flags, TermCriteria criteria);
+//double cv::omnidir::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+//    Size imageSize, InputOutputArray K1, double& xi1, InputOutputArray D1, InputOutputArray K2, double& xi2,
+//    InputOutputArray D2, OutputArray R, OutputArray T, int flags, TermCriteria criteria)
+//{
+//    return 1;
+//}
 
 
-void cv::omnidir::stereoRectify(InputArray K1, InputArray D1, double xi1, InputArray K2, InputArray D2, double xi2, const Size imageSize,
-    InputArray R, InputArray tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags,
-    const Size& newImageSize);
+//void cv::omnidir::stereoRectify(InputArray K1, InputArray D1, double xi1, InputArray K2, InputArray D2, double xi2, const Size imageSize,
+//    InputArray R, InputArray tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags,
+//    const Size& newImageSize)
+//{
+//
+//}
