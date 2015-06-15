@@ -954,7 +954,6 @@ OCL_FUNC(cl_int, clGetMemObjectInfo,
  size_t * param_value_size_ret),
  (memobj, param_name, param_value_size, param_value, param_value_size_ret))
 
-/*
 OCL_FUNC(cl_int, clGetImageInfo,
  (cl_mem image,
  cl_image_info param_name,
@@ -963,6 +962,7 @@ OCL_FUNC(cl_int, clGetImageInfo,
  size_t * param_value_size_ret),
  (image, param_name, param_value_size, param_value, param_value_size_ret))
 
+/*
 OCL_FUNC(cl_int, clCreateKernelsInProgram,
  (cl_program program,
  cl_uint num_kernels,
