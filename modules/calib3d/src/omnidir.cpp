@@ -614,8 +614,8 @@ void cv::omnidir::internal::initializeCalibration(InputOutputArrayOfArrays patte
     cv::Mat(tFilter).convertTo(tAll, CV_64FC3);
    
     int depth1 = patternPoints.depth(), depth2 = imagePoints.depth();
-    patternPoints.create(Size(1, patternPointsFilter.size()), CV_MAKETYPE(depth1,3));
-    imagePoints.create(Size(1, patternPointsFilter.size()), CV_MAKETYPE(depth2,2));
+    patternPoints.create(Size(1, (int)patternPointsFilter.size()), CV_MAKETYPE(depth1,3));
+    imagePoints.create(Size(1, (int)patternPointsFilter.size()), CV_MAKETYPE(depth2,2));
 
     for(int i = 0; i < (int)patternPointsFilter.size(); ++i)
     {
@@ -889,7 +889,7 @@ double cv::omnidir::internal::computeMeanReproerr(InputArrayOfArrays imagePoints
     for (int i = 0; i < n; i++)
     {
         Mat errorI = imagePoints.getMat(i) - proImagePoints.getMat(i);
-        totalPoints += errorI.total();
+        totalPoints += (int)errorI.total();
         Vec2d* ptr_err = errorI.ptr<Vec2d>();
         for (int j = 0; j < (int)errorI.total(); j++)
         {

@@ -179,15 +179,15 @@ pattern (every view is described by several 3D-2D point correspondences).
     
     \f[X_c = R X_w + T \f]
 
-    where R and T are rotation and translation matrix. Then Xc is then projected to unit sphere:
+    where R and T are rotation and translation matrix. Then \f$ X_c \f$ is then projected to unit sphere:
 
     \f[ X_s = \frac{Xc}{||Xc||}  \f]
 
-    Let Xs = [x, y, z], then Xs is projected to normalized plane:
+    Let \f$ X_s = (x, y, z) \f$, then \f$ X_s \f$ is projected to normalized plane:
 
     \f[ (x_u, y_u, 1) = (\frac{x}{z + \xi}, \frac{y}{z + \xi}, 1) \f]
 
-    So far the point contains no distortion, add distortion by 
+    where \f$ \xi \f$ is a parameter of camera. So far the point contains no distortion, add distortion by 
 
     \f[ x_d = (1 + k_1 r^2 + k_2 r^4 )*x_u + 2p_1 x_u y_u + p_2(r^2 + 2x_u^2 )  \\
         y_d = (1 + k_1 r^2 + k_2 r^4 )*y_u + p_1 (r^2 + 2y_u^2) + 2p_2 x_u y_u \f]
@@ -199,7 +199,7 @@ pattern (every view is described by several 3D-2D point correspondences).
     \f[ u = f_x x_d + s y_d + c_x \\
         v = f_y y_d + c_y \f]
 
-    where s is the skew coefficient and [cx; cy] are image centers.
+    where \f$ s\f$ is the skew coefficient and \f$ (cx, cy\f$ are image centers.
 
   @}
  */
