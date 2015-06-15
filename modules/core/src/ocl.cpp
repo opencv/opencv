@@ -5292,6 +5292,101 @@ void convertFromBuffer(void* cl_mem_obj, size_t step, int rows, int cols, int ty
     return;
 } // convertFromBuffer()
 
+
+/*
+// Convert OpenCL clImage memory to UMat
+*/
+void convertFromImage(void* cl_mem_obj, UMat& dst)
+{
+    cl_mem             clImage = (cl_mem)cl_mem_obj;
+    cl_mem_object_type mem_type = 0;
+
+    CV_Assert(clGetMemObjectInfo(clImage, CL_MEM_TYPE, sizeof(cl_mem_object_type), &mem_type, 0) == CL_SUCCESS);
+
+    CV_Assert(CL_MEM_OBJECT_IMAGE2D == mem_type);
+
+    cl_image_format fmt = { 0, 0 };
+    CV_Assert(clGetImageInfo(clImage, CL_IMAGE_FORMAT, sizeof(cl_image_format), &fmt, 0) == CL_SUCCESS);
+
+    int depth = CV_8U;
+    switch (fmt.image_channel_data_type)
+    {
+    case CL_UNORM_INT8:
+    case CL_UNSIGNED_INT8:
+        depth = CV_8U;
+        break;
+
+    case CL_SNORM_INT8:
+    case CL_SIGNED_INT8:
+        depth = CV_8S;
+        break;
+
+    case CL_UNORM_INT16:
+    case CL_UNSIGNED_INT16:
+        depth = CV_16U;
+        break;
+
+    case CL_SNORM_INT16:
+    case CL_SIGNED_INT16:
+        depth = CV_16S;
+        break;
+
+    case CL_SIGNED_INT32:
+        depth = CV_32S;
+        break;
+
+    case CL_FLOAT:
+        depth = CV_32F;
+        break;
+
+    default:
+        CV_Error(cv::Error::OpenCLApiCallError, "Not supported image_channel_data_type");
+    }
+
+    int type = CV_8UC1;
+    switch (fmt.image_channel_order)
+    {
+    case CL_R:
+        type = CV_MAKE_TYPE(depth, 1);
+        break;
+
+    case CL_RGBA:
+    case CL_BGRA:
+    case CL_ARGB:
+         type = CV_MAKE_TYPE(depth, 4);
+        break;
+
+    default:
+        CV_Error(cv::Error::OpenCLApiCallError, "Not supported image_channel_order");
+        break;
+    }
+
+    size_t step = 0;
+    CV_Assert(clGetImageInfo(clImage, CL_IMAGE_ROW_PITCH, sizeof(size_t), &step, 0) == CL_SUCCESS);
+
+    size_t w = 0;
+    CV_Assert(clGetImageInfo(clImage, CL_IMAGE_WIDTH, sizeof(size_t), &w, 0) == CL_SUCCESS);
+
+    size_t h = 0;
+    CV_Assert(clGetImageInfo(clImage, CL_IMAGE_HEIGHT, sizeof(size_t), &h, 0) == CL_SUCCESS);
+
+    dst.create((int)h, (int)w, type);
+
+    cl_mem clBuffer = (cl_mem)dst.handle(ACCESS_READ);
+
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
+    size_t offset = 0;
+    size_t src_origin[3] = { 0, 0, 0 };
+    size_t region[3] = { w, h, 1 };
+    CV_Assert(clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL) == CL_SUCCESS);
+
+    CV_Assert(clFinish(q) == CL_SUCCESS);
+
+    return;
+} // convertFromImage()
+
+
 ///////////////////////////////////////////// Utility functions /////////////////////////////////////////////////
 
 static void getDevices(std::vector<cl_device_id>& devices, cl_platform_id platform)

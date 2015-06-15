@@ -1,6 +1,6 @@
 /*
 // The example of interoperability between OpenCL and OpenCV.
-// This will loop through fraes of video either from input media file
+// This will loop through frames of video either from input media file
 // or camera device and do processing of these data in OpenCL and then
 // in OpenCV. In OpenCL it does inversion of pixels in half of frame and
 // in OpenCV it does bluring the whole frame.
@@ -413,16 +413,19 @@ public:
     int initOpenCL();
     int initVideoSource();
 
-    int process_frame_with_open_cl(cv::Mat& frame, cl_mem* cl_buffer);
+    int process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* cl_buffer);
     int process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, int type, cv::UMat& u);
+    int process_cl_image_with_opencv(cl_mem image, cv::UMat& u);
 
     int run();
 
     bool isRunning() { return m_running; }
     bool doProcess() { return m_process; }
+    bool useBuffer() { return m_use_buffer; }
 
-    void setRunning(bool running)   { m_running = running; }
-    void setDoProcess(bool process) { m_process = process; }
+    void setRunning(bool running)      { m_running = running; }
+    void setDoProcess(bool process)    { m_process = process; }
+    void setUseBuffer(bool use_buffer) { m_use_buffer = use_buffer; }
 
 protected:
     bool nextFrame(cv::Mat& frame) { return m_cap.read(frame); }
@@ -435,6 +438,7 @@ protected:
 private:
     bool                        m_running;
     bool                        m_process;
+    bool                        m_use_buffer;
 
     int64                       m_t0;
     int64                       m_t1;
@@ -453,8 +457,9 @@ private:
     cl_device_id                m_device_id;
     cl_command_queue            m_queue;
     cl_program                  m_program;
-    cl_kernel                   m_kernel;
-    cl_mem                      m_buffer;
+    cl_kernel                   m_kernelBuf;
+    cl_kernel                   m_kernelImg;
+    cl_mem                      m_mem_obj;
     cl_event                    m_event;
 };
 
@@ -462,20 +467,24 @@ private:
 App::App(CommandLineParser& cmd)
 {
     cout << "\nPress ESC to exit\n" << endl;
+    cout << "\n      'p' to toggle ON/OFF processing\n" << endl;
+    cout << "\n       SPACE to switch between OpenCL buffer/image\n" << endl;
 
-    m_camera_id = cmd.get<int>("camera");
-    m_file_name = cmd.get<string>("video");
+    m_camera_id  = cmd.get<int>("camera");
+    m_file_name  = cmd.get<string>("video");
 
-    m_running   = false;
-    m_process   = false;
+    m_running    = false;
+    m_process    = false;
+    m_use_buffer = false;
 
-    m_context   = 0;
-    m_device_id = 0;
-    m_queue     = 0;
-    m_program   = 0;
-    m_kernel    = 0;
-    m_buffer    = 0;
-    m_event     = 0;
+    m_context    = 0;
+    m_device_id  = 0;
+    m_queue      = 0;
+    m_program    = 0;
+    m_kernelBuf  = 0;
+    m_kernelImg  = 0;
+    m_mem_obj    = 0;
+    m_event      = 0;
 } // ctor
 
 
@@ -494,10 +503,10 @@ App::~App()
         m_program = 0;
     }
 
-    if (m_buffer)
+    if (m_mem_obj)
     {
-        clReleaseMemObject(m_buffer);
-        m_buffer = 0;
+        clReleaseMemObject(m_mem_obj);
+        m_mem_obj = 0;
     }
 
     if (m_event)
@@ -505,10 +514,16 @@ App::~App()
         clReleaseEvent(m_event);
     }
 
-    if (m_kernel)
+    if (m_kernelBuf)
     {
-        clReleaseKernel(m_kernel);
-        m_kernel = 0;
+        clReleaseKernel(m_kernelBuf);
+        m_kernelBuf = 0;
+    }
+
+    if (m_kernelImg)
+    {
+        clReleaseKernel(m_kernelImg);
+        m_kernelImg = 0;
     }
 
     if (m_device_id)
@@ -566,7 +581,7 @@ int App::initOpenCL()
 
         const char* kernelSrc =
             "__kernel "
-            "void bitwise_inv_8uC1("
+            "void bitwise_inv_buf_8uC1("
             "    __global unsigned char* pSrcDst,"
             "             int            srcDstStep,"
             "             int            rows,"
@@ -574,10 +589,21 @@ int App::initOpenCL()
             "{"
             "    int x = get_global_id(0);"
             "    int y = get_global_id(1);"
-            "        int idx = mad24(y, srcDstStep, mad24(x, 1, 0));"
-            "            pSrcDst[idx] = ~pSrcDst[idx];"
+            "    int idx = mad24(y, srcDstStep, x);"
+            "    pSrcDst[idx] = ~pSrcDst[idx];"
+            "}"
+            "__kernel "
+            "void bitwise_inv_img_8uC1("
+            "    read_only  image2d_t srcImg,"
+            "    write_only image2d_t dstImg)"
+            "{"
+            "    int x = get_global_id(0);"
+            "    int y = get_global_id(1);"
+            "    int2 coord = (int2)(x, y);"
+            "    uint4 val = read_imageui(srcImg, coord);"
+            "    val.x = (~val.x) & 0x000000FF;"
+            "    write_imageui(dstImg, coord, val);"
             "}";
-
         size_t len = strlen(kernelSrc);
         m_program = clCreateProgramWithSource(m_context, 1, &kernelSrc, &len, &res);
         if (0 == m_program || CL_SUCCESS != res)
@@ -587,8 +613,12 @@ int App::initOpenCL()
         if (CL_SUCCESS != res)
             return -1;
 
-        m_kernel = clCreateKernel(m_program, "bitwise_inv_8uC1", &res);
-        if (0 == m_kernel || CL_SUCCESS != res)
+        m_kernelBuf = clCreateKernel(m_program, "bitwise_inv_buf_8uC1", &res);
+        if (0 == m_kernelBuf || CL_SUCCESS != res)
+            return -1;
+
+        m_kernelImg = clCreateKernel(m_program, "bitwise_inv_img_8uC1", &res);
+        if (0 == m_kernelImg || CL_SUCCESS != res)
             return -1;
 
         m_platformInfo.QueryInfo(m_platform_ids[i]);
@@ -639,51 +669,91 @@ int App::initVideoSource()
 
 
 // this function is an example of "typical" OpenCL processing pipeline
-// It creates OpenCL memory buffer from input media frame and
-// process these data (inverts each pixel value in half of frame)
-// with OpenCL kernel
-int App::process_frame_with_open_cl(cv::Mat& frame, cl_mem* buffer)
+// It creates OpenCL buffer or image, depending on use_buffer flag,
+// from input media frame and process these data
+// (inverts each pixel value in half of frame) with OpenCL kernel
+int App::process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* mem_obj)
 {
     cl_int res = CL_SUCCESS;
 
-    CV_Assert(buffer);
+    CV_Assert(mem_obj);
 
-    cl_mem mem = buffer[0];
+    cl_kernel kernel = 0;
+    cl_mem mem = mem_obj[0];
 
     if (0 == mem)
     {
-        // allocate OpenCL memory to keep single frame,
-        // reuse this memory for subsecuent frames
-        // memory will be deallocated at dtor
+        // first time initialization
+
         cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR;
-        mem = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
-        if (0 == mem || CL_SUCCESS != res)
-            return -1;
+        if (use_buffer)
+        {
+            // allocate OpenCL memory to keep single frame,
+            // reuse this memory for subsecuent frames
+            // memory will be deallocated at dtor
+            mem = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
+            if (0 == mem || CL_SUCCESS != res)
+                return -1;
+
+            res = clSetKernelArg(m_kernelBuf, 0, sizeof(cl_mem), &mem);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            res = clSetKernelArg(m_kernelBuf, 1, sizeof(int), &frame.step[0]);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            res = clSetKernelArg(m_kernelBuf, 2, sizeof(int), &frame.rows);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            int cols2 = frame.cols / 2;
+            res = clSetKernelArg(m_kernelBuf, 3, sizeof(int), &cols2);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            kernel = m_kernelBuf;
+        }
+        else
+        {
+            cl_image_format fmt;
+            fmt.image_channel_order     = CL_R;
+            fmt.image_channel_data_type = CL_UNSIGNED_INT8;
+
+            cl_image_desc desc;
+            desc.image_type        = CL_MEM_OBJECT_IMAGE2D;
+            desc.image_width       = frame.cols;
+            desc.image_height      = frame.rows;
+            desc.image_depth       = 0;
+            desc.image_array_size  = 0;
+            desc.image_row_pitch   = frame.step[0];
+            desc.image_slice_pitch = 0;
+            desc.num_mip_levels    = 0;
+            desc.num_samples       = 0;
+            desc.buffer            = 0;
+            mem = clCreateImage(m_context, flags, &fmt, &desc, frame.ptr(), &res);
+            if (0 == mem || CL_SUCCESS != res)
+                return -1;
+
+            res = clSetKernelArg(m_kernelImg, 0, sizeof(cl_mem), &mem);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            res = clSetKernelArg(m_kernelImg, 1, sizeof(cl_mem), &mem);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            kernel = m_kernelImg;
+        }
     }
 
     m_event = clCreateUserEvent(m_context, &res);
     if (0 == m_event || CL_SUCCESS != res)
         return -1;
 
-    res = clSetKernelArg(m_kernel, 0, sizeof(buffer), &mem);
-    if (CL_SUCCESS != res)
-        return -1;
-
-    res = clSetKernelArg(m_kernel, 1, sizeof(int), &frame.step[0]);
-    if (CL_SUCCESS != res)
-        return -1;
-
-    res = clSetKernelArg(m_kernel, 2, sizeof(int), &frame.rows);
-    if (CL_SUCCESS != res)
-        return -1;
-
-    int cl = frame.cols / 2;
-    res = clSetKernelArg(m_kernel, 3, sizeof(int), &cl);
-    if (CL_SUCCESS != res)
-        return -1;
-
+    // process left half of frame in OpenCL
     size_t size[] = { frame.cols / 2, frame.rows };
-    res = clEnqueueNDRangeKernel(m_queue, m_kernel, 2, 0, size, 0, 0, 0, &m_event);
+    res = clEnqueueNDRangeKernel(m_queue, kernel, 2, 0, size, 0, 0, 0, &m_event);
     if (CL_SUCCESS != res)
         return -1;
 
@@ -691,19 +761,51 @@ int App::process_frame_with_open_cl(cv::Mat& frame, cl_mem* buffer)
     if (CL_SUCCESS != res)
         return - 1;
 
-    buffer[0] = mem;
+    mem_obj[0] = mem;
 
     return  0;
 }
 
 
-// this function is an exmple of interoperability between OpenCL buffer
+// this function is an example of interoperability between OpenCL buffer
 // and OpenCV UMat objects. It converts (without copying data) OpenCL buffer
 // to OpenCV UMat and then do blur on these data
 int App::process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, int type, cv::UMat& u)
 {
     cv::ocl::convertFromBuffer(buffer, step, rows, cols, type, u);
-    cv::blur(u, u, cv::Size(7, 7), cv::Point(-3, -3));
+
+    // process right half of frame in OpenCV
+    cv::Point pt(u.cols / 2, 0);
+    cv::Size  sz(u.cols / 2, u.rows);
+    cv::Rect roi(pt, sz);
+    cv::UMat uroi(u, roi);
+    cv::blur(uroi, uroi, cv::Size(7, 7), cv::Point(-3, -3));
+
+    if (buffer)
+        clReleaseMemObject(buffer);
+    m_mem_obj = 0;
+
+    return 0;
+}
+
+
+// this function is an example of interoperability between OpenCL image
+// and OpenCV UMat objects. It converts OpenCL image
+// to OpenCV UMat and then do blur on these data
+int App::process_cl_image_with_opencv(cl_mem image, cv::UMat& u)
+{
+    cv::ocl::convertFromImage(image, u);
+
+    // process right half of frame in OpenCV
+    cv::Point pt(u.cols / 2, 0);
+    cv::Size  sz(u.cols / 2, u.rows);
+    cv::Rect roi(pt, sz);
+    cv::UMat uroi(u, roi);
+    cv::blur(uroi, uroi, cv::Size(7, 7), cv::Point(-3, -3));
+
+    if (image)
+        clReleaseMemObject(image);
+    m_mem_obj = 0;
 
     return 0;
 }
@@ -724,6 +826,11 @@ int App::run()
     // set process flag to show some data processing
     // can be toggled on/off by 'p' button
     setDoProcess(true);
+    // set use buffer flag,
+    // when it is set to true, will demo interop opencl buffer and cv::Umat,
+    // otherwise demo interop opencl image and cv::UMat
+    // can be switched on/of by SPACE button
+    setUseBuffer(true);
 
     // Iterate over all frames
     while (isRunning() && nextFrame(m_frame))
@@ -737,9 +844,13 @@ int App::run()
 
         if (doProcess())
         {
-            process_frame_with_open_cl(m_frameGray, &m_buffer);
-            process_cl_buffer_with_opencv(
-                m_buffer, m_frameGray.step[0], m_frameGray.rows, m_frameGray.cols, m_frameGray.type(), uframe);
+            process_frame_with_open_cl(m_frameGray, useBuffer(), &m_mem_obj);
+
+            if (useBuffer())
+                process_cl_buffer_with_opencv(
+                    m_mem_obj, m_frameGray.step[0], m_frameGray.rows, m_frameGray.cols, m_frameGray.type(), uframe);
+            else
+                process_cl_image_with_opencv(m_mem_obj, uframe);
         }
         else
         {
@@ -750,9 +861,13 @@ int App::run()
 
         uframe.copyTo(img_to_show);
 
-        putText(img_to_show, "OpenCL platform: " + m_platformInfo.Name(), Point(5, 30), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
-        putText(img_to_show, "device: " + m_deviceInfo.Name(), Point(5, 60), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
-        putText(img_to_show, "FPS: " + fpsStr(), Point(5, 90), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+        putText(img_to_show, "Version : " + m_platformInfo.Version(), Point(5, 30), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+        putText(img_to_show, "Name : " + m_platformInfo.Name(), Point(5, 60), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+        putText(img_to_show, "Device : " + m_deviceInfo.Name(), Point(5, 90), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+        cv::String memtype = useBuffer() ? "buffer" : "image";
+        putText(img_to_show, "interop with OpenCL " + memtype, Point(5, 120), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+        putText(img_to_show, "FPS : " + fpsStr(), Point(5, 150), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+
         imshow("opencl_interop", img_to_show);
 
         handleKey((char)waitKey(3));
@@ -770,9 +885,16 @@ void App::handleKey(char key)
         setRunning(false);
         break;
 
+    case ' ':
+        setUseBuffer(!useBuffer());
+        break;
+
     case 'p':
     case 'P':
         setDoProcess( !doProcess() );
+        break;
+
+    default:
         break;
     }
 }
