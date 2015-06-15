@@ -83,7 +83,7 @@ TEST_F(omnidirTest, projectPoints)
     cv::omnidir::undistortPoints(distorted0, undist1, this->K, this->D, xi, cv::noArray());
     cv::Vec2d* u1 = undist1.ptr<cv::Vec2d>();
     cv::Vec3d* u2 = undist2.ptr<cv::Vec3d>();
-    
+
     // transform to unit sphere
     for(int i = 0; i  < (int)distorted0.total(); ++i)
     {
@@ -96,7 +96,7 @@ TEST_F(omnidirTest, projectPoints)
         u2[i] = cv::Vec3d(temp1[0]*(Zs+xi), temp1[1]*(Zs+xi), Zs);
     }
     cv::omnidir::distortPoints(undist1, distorted1, this->K, this->D);
-    cv::Vec2d dis1 =(cv::Vec2d)*distorted1.ptr<cv::Vec2d>();
+    //cv::Vec2d dis1 =(cv::Vec2d)*distorted1.ptr<cv::Vec2d>();
     cv::omnidir::projectPoints(undist2, distorted2, cv::Vec3d::all(0), cv::Vec3d::all(0), this->K, this->D, xi, cv::noArray());
 
     EXPECT_LT(cv::norm(distorted0-distorted1), 1e-9);

@@ -62,7 +62,7 @@ namespace internal
     void fillFixed(Mat&G, int flags, int n);
 } // internal
 
-    
+
 } // omnidir
 
 } //cv
