@@ -95,7 +95,7 @@ TEST_F(omnidirTest, projectPoints)
         double Zs = (-b + sqrt(b*b - 4*a*cc))/(2*a);
         u2[i] = cv::Vec3d(temp1[0]*(Zs+xi), temp1[1]*(Zs+xi), Zs);
     }
-    cv::omnidir::distortPoints(undist1, distorted1, this->K, this->D, xi);
+    cv::omnidir::distortPoints(undist1, distorted1, this->K, this->D);
     cv::Vec2d dis1 =(cv::Vec2d)*distorted1.ptr<cv::Vec2d>();
     cv::omnidir::projectPoints(undist2, distorted2, cv::Vec3d::all(0), cv::Vec3d::all(0), this->K, this->D, xi, cv::noArray());
 

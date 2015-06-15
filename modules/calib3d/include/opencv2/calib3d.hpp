@@ -173,6 +173,34 @@ pattern (every view is described by several 3D-2D point correspondences).
 
     @defgroup calib3d_c C API
 
+    @defgroup calib3d_omnidir Omnidirectional camera model
+
+    For a 3D point Xw in world coordinate, it is first transformed to camera coordinate:
+    
+    \f[X_c = R X_w + T \f]
+
+    where R and T are rotation and translation matrix. Then Xc is then projected to unit sphere:
+
+    \f[ X_s = \frac{Xc}{||Xc||}  \f]
+
+    Let Xs = [x, y, z], then Xs is projected to normalized plane:
+
+    \f[ (x_u, y_u, 1) = (\frac{x}{z + \xi}, \frac{y}{z + \xi}, 1) \f]
+
+    So far the point contains no distortion, add distortion by 
+
+    \f[ x_d = (1 + k_1 r^2 + k_2 r^4 )*x_u + 2p_1 x_u y_u + p_2(r^2 + 2x_u^2 )  \\
+        y_d = (1 + k_1 r^2 + k_2 r^4 )*y_u + p_1 (r^2 + 2y_u^2) + 2p_2 x_u y_u \f]
+
+    where \f$ r^2 = x_u^2 + y_u^2\f$ and \f$(k_1, k_2, p_1, p_2)\f$ are distortion coefficients.
+
+    At last, convert to pixel coordinates:
+
+    \f[ u = f_x x_d + s y_d + c_x \\
+        v = f_y y_d + c_y \f]
+
+    where s is the skew coefficient and [cx; cy] are image centers.
+
   @}
  */
 
@@ -1864,22 +1892,26 @@ namespace fisheye
 //! @} calib3d_fisheye
 }
 
+/** @brief The methods in this namespace is to calibrate omnidirectional cameras.
+    This module was accepted as a GSoC 2015 project for OpenCV, authored by
+    Baisheng Lai, mentored by Bo Li.
+  @ingroup calib3d_omnidir
+*/
 namespace omnidir
 {
+    //! @addtogroup calib3d_omnidir
+    //! @{
     enum {
-        CALIB_FIX_SKEW              = 1,
-        CALIB_FIX_K1                = 2,
-        CALIB_FIX_K2                = 4,
-        CALIB_FIX_P1                = 8,
-        CALIB_FIX_P2                = 16,
-        CALIB_FIX_XI                = 32
+        CALIB_USE_GUESS             = 1,
+        CALIB_FIX_SKEW              = 2,
+        CALIB_FIX_K1                = 4,
+        CALIB_FIX_K2                = 8,
+        CALIB_FIX_P1                = 16,
+        CALIB_FIX_P2                = 32,
+        CALIB_FIX_XI                = 64,
+        CALIB_FIX_GAMMA             = 128,
+        CALIB_FIX_CENTER            = 256
     };
-
-
-/**
- * This module was accepted as a GSoC 2015 project for OpenCV, authored by
- * Baisheng Lai, mentored by Bo Li.
- */
 
     /** @brief Projects points for omnidirectional camera using CMei's model
 
@@ -1904,8 +1936,7 @@ namespace omnidir
 
     /** @brief Undistort 2D image points for omnidirectional camera using CMei's model
 
-    @param Array of distorted image points, 1xN/Nx1 2-channel of tyep CV_64F 
-    
+    @param distorted Array of distorted image points, 1xN/Nx1 2-channel of tyep CV_64F 
     @param K Camera matrix \f$K = \vecthreethree{f_x}{s}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
     @param D Distortion coefficients \f$(k_1, k_2, p_1, p_2)\f$.
     @param xi The parameter xi for CMei's model
@@ -1913,6 +1944,7 @@ namespace omnidir
     1-channel or 1x1 3-channel
     @param undistorted array of normalized object points, 1xN/Nx1 2-channel of type CV_64F
      */
+
     CV_EXPORTS_W void undistortPoints(InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, double xi, InputArray R);
     
     /** @brief Distorts 2D object points to image points, similar to projectPoints
@@ -1920,20 +1952,20 @@ namespace omnidir
     @param undistorted Array of undistorted object points, 1xN/Nx1 2-channel with type CV_64F
     @param K Camera matrix \f$K = \vecthreethree{f_x}{s}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
     @param D Input vector of distortion coefficients \f$(k_1, k_2, p_1, p_2)\f$.
-    @param xi The parameter xi for CMei's model
     @param distorted Array of distorted image points of tyep CV_64F
      */
-    CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double xi);
+    CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D);
 
     /** @brief Computes undistortion and rectification maps for omnidirectional camera image transform by cv::remap(). 
     If D is empty zero distortion is used, if R or P is empty identity matrixes are used.
 
     @param K Camera matrix \f$K = \vecthreethree{f_x}{s}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
     @param D Input vector of distortion coefficients \f$(k_1, k_2, p_1, p_2)\f$.
+    @param xi The parameter xi for CMei's model
     @param R Rotation trainsform between the original and object space : 3x3 1-channel, or vector: 3x1/1x3
     @param P New camera matrix (3x3) or new projection matrix (3x4)
     @param size Undistorted image size.
-    @param m1type Type of the first output map that can be CV_32FC1 or CV_16SC2 . See convertMaps()
+    @param mltype Type of the first output map that can be CV_32FC1 or CV_16SC2 . See convertMaps()
     for details.
     @param map1 The first output map.
     @param map2 The second output map.
@@ -1956,7 +1988,7 @@ namespace omnidir
 
         /** @brief Perform omnidirectional camera calibration
 
-    @param objectPoints Vector of vector of pattern points in world (pattern) coordiante, 1xN/Nx1 3-channel
+    @param patternPoints Vector of vector of pattern points in world (pattern) coordiante, 1xN/Nx1 3-channel
     @param imagePoints Vector of vector of correspoinding image points of objectPoints
     @param size Image size of calibration images.
     @param K Output calibrated camera matrix. If you want to initialize K by yourself, input a non-empty K.
@@ -1988,7 +2020,6 @@ namespace omnidir
     @param T Output translation between the first and second camera
     @param flags The flags that control stereoCalibrate
     @param criteria Termination criteria for optimization
-    @
     */
     CV_EXPORTS_W double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2, 
         Size imageSize, InputOutputArray K1, double& xi1, InputOutputArray D1, InputOutputArray K2, double& xi2, 
