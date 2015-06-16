@@ -648,20 +648,22 @@ void cv::omnidir::internal::computeJacobian(InputArrayOfArrays objectPoints, Inp
 }
 
 double cv::omnidir::calibrate(InputOutputArrayOfArrays patternPoints, InputOutputArrayOfArrays imagePoints, Size size,
-    InputOutputArray K, double& xi, InputOutputArray D, OutputArrayOfArrays omAll, OutputArrayOfArrays tAll,
+    InputOutputArray K, InputOutputArray xi, InputOutputArray D, OutputArrayOfArrays omAll, OutputArrayOfArrays tAll,
     int flags, TermCriteria criteria)
 {
     CV_Assert(!patternPoints.empty() && !imagePoints.empty() && patternPoints.total() == imagePoints.total());
     CV_Assert(patternPoints.type() == CV_64FC3 && imagePoints.type() == CV_64FC2);
     CV_Assert((!K.empty() && K.size() == Size(3,3)) || K.empty());
     CV_Assert((!D.empty() && D.total() == 4) || D.empty());
+    CV_Assert((!xi.empty() && xi.total() == 1) || xi.empty());
 
+    double _xi;
     // initialization
-    cv::omnidir::internal::initializeCalibration(patternPoints, imagePoints, size, omAll, tAll, K, xi);
+    cv::omnidir::internal::initializeCalibration(patternPoints, imagePoints, size, omAll, tAll, K, _xi);
     int n = (int)patternPoints.total();
     Mat finalParam(1, 10 + 6*n, CV_64F);
     Mat currentParam(1, 10 + 6*n, CV_64F);
-    cv::omnidir::internal::encodeParameters(K, omAll, tAll, Mat::zeros(1,4,CV_64F), xi, n, currentParam);
+    cv::omnidir::internal::encodeParameters(K, omAll, tAll, Mat::zeros(1,4,CV_64F), _xi, n, currentParam);
 
     // optimization
     const double alpha_smooth = 0.1;
@@ -690,17 +692,21 @@ double cv::omnidir::calibrate(InputOutputArrayOfArrays patternPoints, InputOutpu
         currentParam = finalParam.clone();
 
     }
-    cv::omnidir::internal::decodeParameters(currentParam, K, omAll, tAll, D, xi);
+    cv::omnidir::internal::decodeParameters(currentParam, K, omAll, tAll, D, _xi);
 
     std::vector<Mat> proImagePoints;
 
     for (int i = 0; i < n; ++i)
     {
         Mat imgPointsi;
-        cv::omnidir::projectPoints(patternPoints.getMat(i), imgPointsi, omAll.getMat().at<cv::Vec3d>(i), tAll.getMat().at<cv::Vec3d>(i), K, xi, D, noArray());
+        cv::omnidir::projectPoints(patternPoints.getMat(i), imgPointsi, omAll.getMat().at<cv::Vec3d>(i), tAll.getMat().at<cv::Vec3d>(i), K, _xi, D, noArray());
         proImagePoints.push_back(imgPointsi);
     }
     //double meanRepr = omnidir::internal::computeMeanReproerr(imagePoints, proImagePoints);
+    xi.create(1, 1, CV_64F);
+    Mat xi_m = Mat(1, 1, CV_64F);
+    xi_m.at<double>(0) = _xi;
+    xi_m.copyTo(xi.getMat());
     Vec2d std_error;
     double rms;
     Mat errors;
