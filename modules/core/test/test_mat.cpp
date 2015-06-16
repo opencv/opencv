@@ -1214,7 +1214,7 @@ TEST(Core_Matx, fromMat_)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
     Matx22d b(a);
-    ASSERT_EQ( norm(a, b, NORM_INF), 0.);
+    ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
 TEST(Core_InputArray, empty)
