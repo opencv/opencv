@@ -5244,9 +5244,9 @@ MatAllocator* getOpenCLAllocator()
 
 
 /*
-// Convert OpenCL clBuffer memory to UMat
+// Convert OpenCL buffer memory to UMat
 */
-void convertFromBuffer(void* cl_mem_obj, size_t step, int rows, int cols, int type, UMat& dst)
+void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst)
 {
     int d = 2;
     int sizes[] = { rows, cols };
@@ -5261,7 +5261,7 @@ void convertFromBuffer(void* cl_mem_obj, size_t step, int rows, int cols, int ty
     setSize(dst, d, sizes, 0, true);
     dst.offset = 0;
 
-    cl_mem             memobj = (cl_mem)cl_mem_obj;
+    cl_mem             memobj = (cl_mem)cl_mem_buffer;
     cl_mem_object_type mem_type = 0;
 
     CV_Assert(clGetMemObjectInfo(memobj, CL_MEM_TYPE, sizeof(cl_mem_object_type), &mem_type, 0) == CL_SUCCESS);
@@ -5281,7 +5281,7 @@ void convertFromBuffer(void* cl_mem_obj, size_t step, int rows, int cols, int ty
     dst.u->data            = 0;
     dst.u->allocatorFlags_ = 0; // not allocated from any OpenCV buffer pool
     dst.u->flags           = 0;
-    dst.u->handle          = cl_mem_obj;
+    dst.u->handle          = cl_mem_buffer;
     dst.u->origdata        = 0;
     dst.u->prevAllocator   = 0;
     dst.u->size            = total;
@@ -5294,11 +5294,11 @@ void convertFromBuffer(void* cl_mem_obj, size_t step, int rows, int cols, int ty
 
 
 /*
-// Convert OpenCL clImage memory to UMat
+// Convert OpenCL image2d memory to UMat
 */
-void convertFromImage(void* cl_mem_obj, UMat& dst)
+void convertFromImage(void* cl_mem_image, UMat& dst)
 {
-    cl_mem             clImage = (cl_mem)cl_mem_obj;
+    cl_mem             clImage = (cl_mem)cl_mem_image;
     cl_mem_object_type mem_type = 0;
 
     CV_Assert(clGetMemObjectInfo(clImage, CL_MEM_TYPE, sizeof(cl_mem_object_type), &mem_type, 0) == CL_SUCCESS);
