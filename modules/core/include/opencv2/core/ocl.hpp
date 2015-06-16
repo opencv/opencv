@@ -276,7 +276,7 @@ protected:
     Impl* p;
 };
 
-/*! @fn
+/*
 //! @brief Attaches OpenCL context to OpenCV
 //
 //! @note Note:
@@ -295,7 +295,7 @@ protected:
 */
 CV_EXPORTS void attachContext(const String& platformName, void* platformID, void* context, void* deviceID);
 
-/*! @fn
+/*
 //! @brief Convert OpenCL buffer to UMat
 //
 //! @note Note:
@@ -313,7 +313,7 @@ CV_EXPORTS void attachContext(const String& platformName, void* platformID, void
 */
 CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst);
 
-/*! @fn
+/*
 //! @brief Convert OpenCL image2d_t to UMat
 //
 //! @note Note:
