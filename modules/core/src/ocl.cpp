@@ -5294,7 +5294,7 @@ void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int
 
 
 /*
-// Convert OpenCL image2d memory to UMat
+// Convert OpenCL image2d_t memory to UMat
 */
 void convertFromImage(void* cl_mem_image, UMat& dst)
 {
