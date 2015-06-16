@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if defined HAVE_PTHREADS && HAVE_PTHREADS
+#ifdef HAVE_PTHREADS_PF
 
 #include <algorithm>
 #include <pthread.h>

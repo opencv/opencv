@@ -139,6 +139,12 @@
 /* PNG codec */
 #cmakedefine HAVE_PNG
 
+/* Posix threads (pthreads) */
+#cmakedefine HAVE_PTHREADS
+
+/* parallel_for with pthreads */
+#cmakedefine HAVE_PTHREADS_PF
+
 /* Qt support */
 #cmakedefine HAVE_QT
 
