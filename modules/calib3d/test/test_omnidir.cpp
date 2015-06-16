@@ -66,7 +66,7 @@ TEST_F(omnidirTest, projectPoints)
     double xi = this->xi;
 
     const int N = 20;
-    cv::Mat distorted0(1, N*N, CV_64FC2), undist1, undist2, distorted1, distorted2;
+    cv::Mat distorted0(1, N*N, CV_64FC2), undist1, undist2, distorted2;
     undist2.create(distorted0.size(), CV_MAKETYPE(distorted0.depth(), 3));
     cv::Vec2d* pts = distorted0.ptr<cv::Vec2d>();
 
@@ -95,11 +95,8 @@ TEST_F(omnidirTest, projectPoints)
         double Zs = (-b + sqrt(b*b - 4*a*cc))/(2*a);
         u2[i] = cv::Vec3d(temp1[0]*(Zs+xi), temp1[1]*(Zs+xi), Zs);
     }
-    cv::omnidir::distortPoints(undist1, distorted1, this->K, this->D);
-    //cv::Vec2d dis1 =(cv::Vec2d)*distorted1.ptr<cv::Vec2d>();
-    cv::omnidir::projectPoints(undist2, distorted2, cv::Vec3d::all(0), cv::Vec3d::all(0), this->K, this->D, xi, cv::noArray());
+    cv::omnidir::projectPoints(undist2, distorted2, cv::Vec3d::all(0), cv::Vec3d::all(0), this->K, xi, this->D, cv::noArray());
 
-    EXPECT_LT(cv::norm(distorted0-distorted1), 1e-9);
     EXPECT_LT(cv::norm(distorted0-distorted2), 1e-9);
 }
 TEST_F(omnidirTest, jacobian)
@@ -140,14 +137,14 @@ TEST_F(omnidirTest, jacobian)
         0,                 0,           1);
 
     cv::Mat jacobians;
-    cv::omnidir::projectPoints(X, x1, om, T, K, D, xi, jacobians);
+    cv::omnidir::projectPoints(X, x1, om, T, K, xi, D, jacobians);
 
     // Test on T:
     cv::Mat dT(3, 1, CV_64FC1);
     r.fill(dT, cv::RNG::NORMAL, 0, 1);
     dT *= 1e-9*cv::norm(T);
     cv::Mat T2 = T + dT;
-    cv::omnidir::projectPoints(X, x2, om, T2, K, D, xi, cv::noArray());
+    cv::omnidir::projectPoints(X, x2, om, T2, K, xi, D, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(3,6) * dT).reshape(2,1);
     EXPECT_LT(cv::norm(x2 - xpred), 1e-10);
 
@@ -156,7 +153,7 @@ TEST_F(omnidirTest, jacobian)
     r.fill(dom, cv::RNG::NORMAL, 0, 1);
     dom *= 1e-9*cv::norm(om);
     cv::Mat om2 = om + dom;
-    cv::omnidir::projectPoints(X, x2, om2, T, K, D, xi, cv::noArray());
+    cv::omnidir::projectPoints(X, x2, om2, T, K, xi, D, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(0,3) * dom).reshape(2,1);
     EXPECT_LT(cv::norm(x2 - xpred) , 1e-10);
 
@@ -165,7 +162,7 @@ TEST_F(omnidirTest, jacobian)
     r.fill(df, cv::RNG::NORMAL, 0, 1);
     df *= 1e-9 * cv::norm(f);
     cv::Matx33d K2 = K + cv::Matx33d(df.at<double>(0), 0, 0, 0, df.at<double>(1), 0, 0, 0, 1);
-    cv::omnidir::projectPoints(X, x2, om, T, K2, D, xi, cv::noArray());
+    cv::omnidir::projectPoints(X, x2, om, T, K2, xi, D, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(6,8)* df).reshape(2, 1);
     EXPECT_LT(cv::norm(x2 - xpred), 1e-10);
 
@@ -175,7 +172,7 @@ TEST_F(omnidirTest, jacobian)
     double s2 = s + ds;
     K2 = K;
     K2(0,1) = s2;
-    cv::omnidir::projectPoints(X, x2, om, T, K2, D, xi, cv::noArray());
+    cv::omnidir::projectPoints(X, x2, om, T, K2, xi, D, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(8,9)*ds).reshape(2, 1);
     EXPECT_LT(cv::norm(x2 - xpred), 1e-10);
 
@@ -184,7 +181,7 @@ TEST_F(omnidirTest, jacobian)
     r.fill(dc, cv::RNG::NORMAL, 0, 1);
     dc *= 1e-9 * cv::norm(c);
     K2 = K + cv::Matx33d(0, 0, dc.at<double>(0), 0, 0, dc.at<double>(1), 0, 0, 1);
-    cv::omnidir::projectPoints(X, x2, om, T, K2, D, xi, cv::noArray());
+    cv::omnidir::projectPoints(X, x2, om, T, K2, xi, D, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(9,11)*dc).reshape(2, 1);
     EXPECT_LT(cv::norm(x2 - xpred), 1e-10);
 
@@ -192,7 +189,7 @@ TEST_F(omnidirTest, jacobian)
     double dxi = r.gaussian(1);
     dxi *= 1e-9 * abs(xi);
     double xi2 = xi + dxi;
-    cv::omnidir::projectPoints(X, x2, om, T, K, D, xi2, cv::noArray());
+    cv::omnidir::projectPoints(X, x2, om, T, K, xi2, D, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(11,12)*dxi).reshape(2, 1);
     EXPECT_LT(cv::norm(x2 - xpred), 1e-10);
 
@@ -201,7 +198,7 @@ TEST_F(omnidirTest, jacobian)
     r.fill(dD, cv::RNG::NORMAL, 0, 1);
     dD *= 1e-9 * cv::norm(D);
     cv::Mat D2 = D + dD;
-    cv::omnidir::projectPoints(X, x2, om, T, K, D2, xi, cv::noArray());
+    cv::omnidir::projectPoints(X, x2, om, T, K, xi, D2, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(12,16)*dD).reshape(2, 1);
     EXPECT_LT(cv::norm(x2 - xpred), 1e-10);
 }

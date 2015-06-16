@@ -56,8 +56,9 @@
  *     Calibration Toolbox Using A Feature Descriptor-Based Calibration
  *     Pattern", in IROS 2013.
  */
+#include "precomp.hpp"
 #include "omnidir.hpp"
-#include <vector>
+
 namespace cv { namespace
 {
     struct JacobianRow
@@ -74,7 +75,7 @@ namespace cv { namespace
 /////////////////////////////////////////////////////////////////////////////
 //////// projectPoints
 void cv::omnidir::projectPoints(InputArray objectPoints, OutputArray imagePoints,
-                InputArray rvec, InputArray tvec, InputArray K, InputArray D, double xi, OutputArray jacobian)
+                InputArray rvec, InputArray tvec, InputArray K, double xi, InputArray D, OutputArray jacobian)
 {
 
     CV_Assert(objectPoints.type() == CV_64FC3);
@@ -206,50 +207,6 @@ void cv::omnidir::projectPoints(InputArray objectPoints, OutputArray imagePoints
          }
     }
 }
-
-/////////////////////////////////////////////////////////////////////////////
-//////// distortPoints
-void cv::omnidir::distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D)
-{
-    CV_Assert(undistorted.type() == CV_64FC2);
-    CV_Assert(K.type() == CV_64F && K.size() == Size(3,3));
-    CV_Assert(D.type() == CV_64F && D.total() == 4);
-
-    distorted.create(undistorted.size(), undistorted.type());
-    int n = (int)undistorted.total();
-
-    CV_Assert(K.size() == Size(3, 3) && K.type() == CV_64F && D.total() == 4);
-
-    Vec4d kp = (Vec4d)*D.getMat().ptr<Vec4d>();
-    Vec2d k = Vec2d(kp[0], kp[1]);
-    Vec2d p = Vec2d(kp[2], kp[3]);
-
-    Vec2d f, c;
-    Matx33d camMat = K.getMat();
-    f = Vec2d(camMat(0,0), camMat(1,1));
-    c = Vec2d(camMat(0,2), camMat(1,2));
-    const Vec2d *srcd = undistorted.getMat().ptr<Vec2d>();
-    Vec2d *desd = distorted.getMat().ptr<Vec2d>();
-
-    for (int i = 0; i < n; i++)
-    {
-        // camera plane
-        Vec2d xu = srcd[i];
-        double r2 = xu[0]*xu[0] + xu[1]*xu[1];
-        double r4 = r2*r2;
-
-        // add distortion
-        Vec2d xd;
-        xd[0] = (1+k[0]*r2+k[1]*r4)*xu[0] + 2*p[0]*xu[0]*xu[1] + p[1]*(r2+2*xu[0]*xu[0]);
-        xd[1] = (1+k[0]*r2+k[1]*r4)*xu[1] + p[0]*(r2+2*xu[1]*xu[1]) + 2*p[1]*xu[0]*xu[1];
-
-        // project to image
-        Vec3d pr = camMat * Vec3d(xd[0], xd[1], 1);
-        desd[i] = Vec2d(pr[0],pr[1]);
-    }
-}
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 //////// undistortPoints
@@ -564,7 +521,7 @@ void cv::omnidir::internal::initializeCalibration(InputOutputArrayOfArrays patte
                 Matx33d Kc(gamma, 0, u0, 0, gamma, v0, 0, 0, 1);
 
                 // reproj error
-                cv::omnidir::projectPoints(objPoints, projedImgPoints, om, t, Kc, Matx14d(0, 0, 0, 0), 1, cv::noArray());
+                cv::omnidir::projectPoints(objPoints, projedImgPoints, om, t, Kc, 1, Matx14d(0, 0, 0, 0), cv::noArray());
                 double reprojectError = omnidir::internal::computeMeanReproerr(imgPoints, projedImgPoints);
 
                 // if this reproject error is smaller
@@ -597,7 +554,7 @@ void cv::omnidir::internal::initializeCalibration(InputOutputArrayOfArrays patte
     for (int i = 0; i< n_img; i++)
     {
         Mat _projected;
-        cv::omnidir::projectPoints(patternPoints.getMat(i), _projected, v_omAll[i], v_tAll[i], _K, Matx14d(0, 0, 0, 0), 1, cv::noArray());
+        cv::omnidir::projectPoints(patternPoints.getMat(i), _projected, v_omAll[i], v_tAll[i], _K, 1, Matx14d(0, 0, 0, 0), cv::noArray());
         double _error = omnidir::internal::computeMeanReproerr(imagePoints.getMat(i), _projected);
         if(_error < 20)
         {
@@ -655,7 +612,7 @@ void cv::omnidir::internal::computeJacobian(InputArrayOfArrays objectPoints, Inp
         om = parameters.getMat().colRange(i*6, i*6+3);
         T = parameters.getMat().colRange(i*6+3, (i+1)*6);
         Mat imgProj, jacobian;
-        omnidir::projectPoints(objPoints, imgProj, om, T, K, D, xi, jacobian);
+        omnidir::projectPoints(objPoints, imgProj, om, T, K, xi, D, jacobian);
         Mat projError = imgPoints - imgProj;
 
         // The intrinsic part of Jacobian
@@ -740,7 +697,7 @@ double cv::omnidir::calibrate(InputOutputArrayOfArrays patternPoints, InputOutpu
     for (int i = 0; i < n; ++i)
     {
         Mat imgPointsi;
-        cv::omnidir::projectPoints(patternPoints.getMat(i), imgPointsi, omAll.getMat().at<cv::Vec3d>(i), tAll.getMat().at<cv::Vec3d>(i), K, D, xi, noArray());
+        cv::omnidir::projectPoints(patternPoints.getMat(i), imgPointsi, omAll.getMat().at<cv::Vec3d>(i), tAll.getMat().at<cv::Vec3d>(i), K, xi, D, noArray());
         proImagePoints.push_back(imgPointsi);
     }
     //double meanRepr = omnidir::internal::computeMeanReproerr(imagePoints, proImagePoints);
@@ -840,7 +797,7 @@ void cv::omnidir::internal::estimateUncertainties(InputArrayOfArrays objectPoint
         Mat T = parameters.getMat().colRange(i*6+3, (i+1)*6);
 
         Mat x;
-        omnidir::projectPoints(objPoints, x, om, T, K, D, xi, cv::noArray());
+        omnidir::projectPoints(objPoints, x, om, T, K, xi, D, cv::noArray());
 
         Mat errorx = (imgPoints - x);
 

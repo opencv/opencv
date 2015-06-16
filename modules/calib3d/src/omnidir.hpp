@@ -42,7 +42,7 @@
 #define __OPENCV_OMNIDIR_HPP__
 #ifdef __cplusplus
 #include "precomp.hpp"
-
+#include <vector>
 namespace cv
 {
 namespace omnidir

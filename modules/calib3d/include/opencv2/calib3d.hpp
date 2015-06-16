@@ -1932,7 +1932,7 @@ namespace omnidir
     onstains the derivatives of image pixel points wrt intrinsic and extrinsic parametes.
      */
     CV_EXPORTS_W void projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec,
-                       InputArray K, InputArray D, double xi,OutputArray jacobian = noArray());
+                       InputArray K, double xi, InputArray D, OutputArray jacobian = noArray());
 
     /** @brief Undistort 2D image points for omnidirectional camera using CMei's model
 
@@ -1946,15 +1946,6 @@ namespace omnidir
      */
 
     CV_EXPORTS_W void undistortPoints(InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, double xi, InputArray R);
-
-    /** @brief Distorts 2D object points to image points, similar to projectPoints
-
-    @param undistorted Array of undistorted object points, 1xN/Nx1 2-channel with type CV_64F
-    @param K Camera matrix \f$K = \vecthreethree{f_x}{s}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
-    @param D Input vector of distortion coefficients \f$(k_1, k_2, p_1, p_2)\f$.
-    @param distorted Array of distorted image points of tyep CV_64F
-     */
-    CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D);
 
     /** @brief Computes undistortion and rectification maps for omnidirectional camera image transform by cv::remap().
     If D is empty zero distortion is used, if R or P is empty identity matrixes are used.
