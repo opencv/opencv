@@ -2194,7 +2194,7 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
     for( k = 0; k < 2; k++ ) {
         const CvMat* A = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
         const CvMat* Dk = k == 0 ? _distCoeffs1 : _distCoeffs2;
-        double dk1 = Dk ? cvmGet(Dk, 0, 0) : 0;
+        double dk1 = Dk && Dk->data.ptr ? cvmGet(Dk, 0, 0) : 0;
         double fc = cvmGet(A,idx^1,idx^1);
         if( dk1 < 0 ) {
             fc *= 1 + dk1*(nx*nx + ny*ny)/(4*fc*fc);
@@ -3372,7 +3372,9 @@ void cv::stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
         p_Q = &(c_Q = _Qmat.getMat());
     }
 
-    cvStereoRectify( &c_cameraMatrix1, &c_cameraMatrix2, &c_distCoeffs1, &c_distCoeffs2,
+    CvMat *p_distCoeffs1 = distCoeffs1.empty() ? NULL : &c_distCoeffs1;
+    CvMat *p_distCoeffs2 = distCoeffs2.empty() ? NULL : &c_distCoeffs2;
+    cvStereoRectify( &c_cameraMatrix1, &c_cameraMatrix2, p_distCoeffs1, p_distCoeffs2,
         imageSize, &c_R, &c_T, &c_R1, &c_R2, &c_P1, &c_P2, p_Q, flags, alpha,
         newImageSize, (CvRect*)validPixROI1, (CvRect*)validPixROI2);
 }
