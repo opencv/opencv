@@ -1022,27 +1022,12 @@ FlannBasedMatcher::FlannBasedMatcher( const Ptr<flann::IndexParams>& _indexParam
 void FlannBasedMatcher::add( InputArrayOfArrays _descriptors )
 {
     DescriptorMatcher::add( _descriptors );
-    if(_descriptors.isUMatVector() || _descriptors.isUMat())
+    std::vector<UMat> descriptors;
+    _descriptors.getUMatVector(descriptors);
+
+    for( size_t i = 0; i < descriptors.size(); i++ )
     {
-        std::vector<UMat> descriptors;
-        _descriptors.getUMatVector(descriptors);
-        for( size_t i = 0; i < descriptors.size(); i++ )
-        {
-            addedDescCount += descriptors[i].rows;
-        }
-    }
-    else if(_descriptors.isMatVector() || _descriptors.isMat())
-    {
-        std::vector<Mat> descriptors;
-        _descriptors.getMatVector(descriptors);
-        for( size_t i = 0; i < descriptors.size(); i++ )
-        {
-            addedDescCount += descriptors[i].rows;
-        }
-    }
-    else
-    {
-        CV_Assert( _descriptors.isUMat() || _descriptors.isUMatVector() || _descriptors.isMat() || _descriptors.isMatVector());
+        addedDescCount += descriptors[i].rows;
     }
 }
 
