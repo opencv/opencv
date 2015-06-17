@@ -564,7 +564,9 @@ public:
     @param fourcc 4-character code of codec used to compress the frames. For example,
     VideoWriter::fourcc('P','I','M','1') is a MPEG-1 codec, VideoWriter::fourcc('M','J','P','G') is a
     motion-jpeg codec etc. List of codes can be obtained at [Video Codecs by
-    FOURCC](http://www.fourcc.org/codecs.php) page.
+    FOURCC](http://www.fourcc.org/codecs.php) page. FFMPEG backend with MP4 container natively uses
+    other values as fourcc code: see [ObjectType](http://www.mp4ra.org/codecs.html),
+    so you may receive a warning message from OpenCV about fourcc code conversion.
     @param fps Framerate of the created video stream.
     @param frameSize Size of the video frames.
     @param isColor If it is not zero, the encoder will expect and encode color frames, otherwise it
