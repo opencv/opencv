@@ -176,15 +176,11 @@ macro(ocv_add_module _name)
       endif()
     endif()
 
-    # add HAL as dependency
-    if(NOT "${the_module}" STREQUAL "opencv_hal")
-      ocv_add_dependencies(${the_module} opencv_hal)
-    endif()
-
     # add self to the world dependencies
     if((NOT DEFINED OPENCV_MODULE_IS_PART_OF_WORLD
         AND NOT OPENCV_MODULE_${the_module}_CLASS STREQUAL "BINDINGS"
-        AND NOT OPENCV_PROCESSING_EXTRA_MODULES)
+        AND NOT OPENCV_PROCESSING_EXTRA_MODULES
+        AND (NOT BUILD_SHARED_LIBS OR NOT "x${OPENCV_MODULE_TYPE}" STREQUAL "xSTATIC"))
         OR OPENCV_MODULE_IS_PART_OF_WORLD
         )
       set(OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD ON CACHE INTERNAL "")
