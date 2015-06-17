@@ -282,6 +282,8 @@ else()
   set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
 endif()
 
+file(MAKE_DIRECTORY "${OpenCV_BINARY_DIR}/bin")
+
 # step 4: build jar
 if(ANDROID)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/classes.jar")
