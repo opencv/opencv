@@ -190,9 +190,13 @@ public:
 
     void deallocate(UMatData* u) const
     {
-        if(u)
+        if(!u)
+            return;
+        PyEnsureGIL gil;
+        CV_Assert(u->urefcount >= 0);
+        CV_Assert(u->refcount >= 0);
+        if(u->refcount == 0)
         {
-            PyEnsureGIL gil;
             PyObject* o = (PyObject*)u->userdata;
             Py_XDECREF(o);
             delete u;
