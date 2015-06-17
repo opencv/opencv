@@ -1,7 +1,3 @@
-if (WINRT)
-  ocv_module_disable(highgui)
-endif()
-
 set(the_description "High-level GUI and Media I/O")
 ocv_add_module(highgui opencv_imgproc opencv_imgcodecs opencv_videoio WRAP python)
 
@@ -11,8 +7,7 @@ ocv_add_module(highgui opencv_imgproc opencv_imgcodecs opencv_videoio WRAP pytho
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-# Compilation with /ZW is not allowed for *.c files
-if(HAVE_WINRT_CX AND NOT WINRT)
+if(WINRT_8_1)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
@@ -70,6 +65,25 @@ elseif(HAVE_QT)
   ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag)
   if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
+  endif()
+elseif(WINRT AND NOT WINRT_8_0)
+  # Dependencies used by the implementation referenced
+  # below are not available on WinRT 8.0.
+  # Enabling it for WiRT 8.1+ only.
+  status("  ${name}: WinRT detected")
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_winrt.cpp)
+
+  # libraries below are neither available nor required
+  # on ARM devices and/or Windows Phone
+  if(WINRT_PHONE OR (OpenCV_ARCH STREQUAL "ARM"))
+    list(REMOVE_ITEM HIGHGUI_LIBRARIES "comctl32" "gdi32" "ole32" "setupapi")
+    if(WINRT_PHONE)
+      status("  ${name}: Windows Phone detected")
+    elseif(OpenCV_ARCH STREQUAL "ARM")
+      status("  ${name}: ARM detected")
+    endif()
+    status("  ${name}:   Removing 'comctl32.lib, gdi32.lib, ole32.lib, setupapi.lib'")
+    status("  ${name}:   Leaving '${HIGHGUI_LIBRARIES}'")
   endif()
 elseif(HAVE_WIN32UI)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_w32.cpp)
