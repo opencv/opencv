@@ -41,11 +41,17 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include "umatrix.hpp"
 
 ///////////////////////////////// UMat implementation ///////////////////////////////
 
 namespace cv {
+
+// forward decls, implementation is below in this file
+void setSize(UMat& m, int _dims, const int* _sz, const size_t* _steps,
+             bool autoSteps = false);
+
+void updateContinuityFlag(UMat& m);
+void finalizeHdr(UMat& m);
 
 // it should be a prime number for the best hash function
 enum { UMAT_NLOCKS = 31 };

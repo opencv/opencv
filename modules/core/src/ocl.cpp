@@ -51,7 +51,6 @@
 #define CV_OPENCL_SHOW_SVM_ERROR_LOG    1
 #define CV_OPENCL_SHOW_SVM_LOG          0
 
-#include "umatrix.hpp"
 #include "opencv2/core/bufferpool.hpp"
 #ifndef LOG_BUFFER_POOL
 # if 0
@@ -2944,7 +2943,9 @@ static void get_platform_name(cl_platform_id id, String& name)
     name = (const char*)buf;
 }
 
-
+/*
+// Attaches OpenCL context to OpenCV
+*/
 void attachContext(const String& platformName, void* platformID, void* context, void* deviceID)
 {
     cl_uint cnt = 0;
@@ -3226,10 +3227,10 @@ struct Kernel::Impl
     bool haveTempDstUMats;
 };
 
-}}
+}} // namespace cv::ocl
 
-extern "C"
-{
+extern "C" {
+
 static void CL_CALLBACK oclCleanupCallback(cl_event, cl_int, void *p)
 {
     ((cv::ocl::Kernel::Impl*)p)->finit();
@@ -5242,6 +5243,22 @@ MatAllocator* getOpenCLAllocator()
     return allocator;
 }
 
+}} // namespace cv::ocl
+
+
+namespace cv {
+
+// three funcs below are implemented in umatrix.cpp
+void setSize( UMat& m, int _dims, const int* _sz, const size_t* _steps,
+              bool autoSteps = false );
+
+void updateContinuityFlag(UMat& m);
+void finalizeHdr(UMat& m);
+
+} // namespace cv
+
+
+namespace cv { namespace ocl {
 
 /*
 // Convert OpenCL buffer memory to UMat
