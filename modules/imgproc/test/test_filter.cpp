@@ -582,9 +582,12 @@ void CV_SpatialGradientTest::get_test_array_types_and_sizes( int test_case_idx,
 
     sizes[OUTPUT][1] = sizes[REF_OUTPUT][1] = sizes[OUTPUT][0];
 
-    // Only CV_16S1 for now
-    types[INPUT][0] = types[OUTPUT][0] = types[OUTPUT][1] = types[REF_OUTPUT][0]
-        = types[REF_OUTPUT][1] = CV_MAKETYPE(CV_16S, 1);
+    // Inputs are only CV_8UC1 for now
+    types[INPUT][0] = CV_8UC1;
+
+    // Outputs are only CV_16SC1 for now
+    types[OUTPUT][0] = types[OUTPUT][1] = types[REF_OUTPUT][0]
+        = types[REF_OUTPUT][1] = CV_16SC1;
 
     ksize = 3;
 }
@@ -592,11 +595,11 @@ void CV_SpatialGradientTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_SpatialGradientTest::run_func()
 {
-    spatialGradient( cvarrToMat(test_array[INPUT][0]),
-                     cvarrToMat(test_array[OUTPUT][0]),
-                     cvarrToMat(test_array[OUTPUT][1]),
-                     ksize
-    );
+    Mat dx, dy;
+    spatialGradient( test_mat[INPUT][0].clone(), dx, dy, ksize );
+
+    test_mat[OUTPUT][0] = dx;
+    test_mat[OUTPUT][1] = dy;
 }
 
 
