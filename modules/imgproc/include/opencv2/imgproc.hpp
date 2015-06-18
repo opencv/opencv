@@ -1369,6 +1369,15 @@ CV_EXPORTS_W void Sobel( InputArray src, OutputArray dst, int ddepth,
                          double scale = 1, double delta = 0,
                          int borderType = BORDER_DEFAULT );
 
+/** @brief TODO
+
+TODO
+
+ */
+
+CV_EXPORTS_W void spatialGradient( InputArray src, OutputArray dx,
+                                   OutputArray dy, int ksize );
+
 /** @brief Calculates the first x- or y- image derivative using Scharr operator.
 
 The function computes the first x- or y- spatial image derivative using the Scharr operator. The
