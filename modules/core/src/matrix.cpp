@@ -222,10 +222,14 @@ public:
     }
 };
 
+static StdMatAllocator *mat_allocator = NULL;
 MatAllocator* Mat::getStdAllocator()
 {
-    static StdMatAllocator allocator;
-    return &allocator;
+    if (mat_allocator == NULL)
+    {
+        mat_allocator = new StdMatAllocator();
+    }
+    return mat_allocator;
 }
 
 void swap( Mat& a, Mat& b )
