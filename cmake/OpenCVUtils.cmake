@@ -824,7 +824,7 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
   endif()
 
   # split 3rdparty libs and modules
-  list(REMOVE_ITEM ${_modules} ${${_3rdparty}} ${${_extra}})
+  list(REMOVE_ITEM ${_modules} ${${_3rdparty}} ${${_extra}} non_empty_list)
 
   # convert CMake lists to makefile literals
   foreach(lst ${_modules} ${_3rdparty} ${_extra})
