@@ -47,7 +47,7 @@ class VideoioBridge
 {
 public:
 
-    static VideoioBridge& getInstance();
+    CV_EXPORTS static VideoioBridge& getInstance();
 
     // call after initialization
     void    setReporter(Concurrency::progress_reporter<int> pr) { reporter = pr; }
@@ -56,19 +56,19 @@ public:
     void    requestForUIthreadAsync(int action);
 
     // TODO: modify in window.cpp: void cv::imshow( const String& winname, InputArray _img )
-    void    imshow(/*cv::InputArray matToShow*/);   // shows Mat in the cvImage element
+    CV_EXPORTS void    imshow(/*cv::InputArray matToShow*/);   // shows Mat in the cvImage element
     void    swapInputBuffers();
     void    allocateOutputBuffers();
     void    swapOutputBuffers();
     void    updateFrameContainer();
     bool    openCamera();
-    void    allocateBuffers(int width, int height);
+    CV_EXPORTS void    allocateBuffers(int width, int height);
 
-    int     getDeviceIndex();
+    CV_EXPORTS int     getDeviceIndex();
     void    setDeviceIndex(int index);
-    int     getWidth();
+    CV_EXPORTS int     getWidth();
     void    setWidth(int width);
-    int     getHeight();
+    CV_EXPORTS int     getHeight();
     void    setHeight(int height);
 
     std::atomic<bool>           bIsFrameNew;

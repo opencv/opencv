@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <_PropertySheetDisplayName>OpenCV, 1.0</_PropertySheetDisplayName>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <Link>
+     <AdditionalDependencies>opencv_core300d.lib;opencv_imgproc300d.lib;opencv_imgcodecs300d.lib;opencv_objdetect300d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(FrameworkSDKRoot)..\..\UAP\v0.8.0.0\ExtensionSDKs\OpenCVExtensionSDK\1.0\DesignTime\include;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_WINRT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(FrameworkSDKRoot)..\..\UAP\v0.8.0.0\ExtensionSDKs\OpenCVExtensionSDK\1.0\DesignTime\$(Configuration)\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

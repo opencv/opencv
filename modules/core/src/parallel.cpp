@@ -108,7 +108,7 @@
         #include <dispatch/dispatch.h>
         #include <pthread.h>
     #elif defined WINRT
-        #include <ppltasks.h>
+        #include <ppl.h>
     #elif defined HAVE_CONCURRENCY
         #include <ppl.h>
     #endif
