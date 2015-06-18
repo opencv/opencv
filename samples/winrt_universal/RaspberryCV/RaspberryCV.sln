@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.22823.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RaspberryCV", "RaspberryCV\RaspberryCV.vcxproj", "{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|ARM = Release|ARM
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Debug|ARM.ActiveCfg = Debug|ARM
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Debug|ARM.Build.0 = Debug|ARM
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Debug|ARM.Deploy.0 = Debug|ARM
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Debug|x64.ActiveCfg = Debug|ARM
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Debug|x86.ActiveCfg = Debug|ARM
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Release|ARM.ActiveCfg = Release|ARM
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Release|ARM.Build.0 = Release|ARM
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Release|ARM.Deploy.0 = Release|ARM
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Release|x64.ActiveCfg = Release|ARM
+		{0C4A1B5F-3555-4B61-ADEA-CCF0D285BA65}.Release|x86.ActiveCfg = Release|ARM
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

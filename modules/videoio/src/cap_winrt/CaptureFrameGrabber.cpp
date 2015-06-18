@@ -94,7 +94,7 @@ Media::CaptureFrameGrabber::~CaptureFrameGrabber()
 
 void Media::CaptureFrameGrabber::ShowCameraSettings()
 {
-#if WINAPI_FAMILY!=WINAPI_FAMILY_PHONE_APP
+#if 0
     if (_state == State::Started)
     {
         CameraOptionsUI::Show(_capture.Get());
