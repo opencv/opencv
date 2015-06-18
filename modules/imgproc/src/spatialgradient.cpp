@@ -45,12 +45,24 @@
 namespace cv
 {
 
-void spatialGradient( InputArray src, OutputArray dx, OutputArray dy, int ksize )
+void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy, int ksize )
 {
 
+    Mat src = _src.getMat();
+    CV_Assert(!src.empty());
+    CV_Assert(src.isContinuous());
+    CV_Assert(src.type() == CV_8UC1);
+
+    _dx.create(src.size(), CV_16SC1);
+    _dy.create(src.size(), CV_16SC1);
+    Mat dx = _dx.getMat(),
+        dy = _dy.getMat();
+    CV_Assert(dx.isContinuous());
+    CV_Assert(dy.isContinuous());
+
     // TODO: Vectorize using hal intrinsics
-    Sobel( src, dx, CV_16S, 1, 0, 3 );
-    Sobel( src, dy, CV_16S, 0, 1, 3 );
+    Sobel( src, dx, CV_16SC1, 1, 0, ksize );
+    Sobel( src, dy, CV_16SC1, 0, 1, ksize );
 }
 
 }
