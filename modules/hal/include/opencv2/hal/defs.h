@@ -179,7 +179,7 @@
 #  define CV_NEON 1
 #endif
 
-#if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__)
+#if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__
 #  define CV_VFP 1
 #endif
 
