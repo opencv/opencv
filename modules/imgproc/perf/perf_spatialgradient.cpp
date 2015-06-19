@@ -31,4 +31,3 @@ PERF_TEST_P( Size_Ksize, spatialGradient,
     SANITY_CHECK(dx);
     SANITY_CHECK(dy);
 }
-
