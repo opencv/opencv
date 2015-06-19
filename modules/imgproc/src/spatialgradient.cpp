@@ -189,20 +189,18 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy, int ksi
               v_spm1, v_spm2, v_spn1, v_spn2, v_spp1, v_spp2,
               v_two = v_setall_s16(2),
               v_sdx1, v_sdx2, v_sdy1, v_sdy2;
-    for ( i = 1; i < H - 1; i++ )
+
+    // Go through 16-column chunks at a time
     for ( j = 1; j < W - 1 - 15; j += 16 )
     {
-        // Load
-        idx = i*W + j;
+        // Load top two rows for 3x3 Sobel filter
+        idx = W + j;
         v_umm = v_load(&p_src[idx - W - 1]);
         v_umn = v_load(&p_src[idx - W]);
         v_ump = v_load(&p_src[idx - W + 1]);
         v_unm = v_load(&p_src[idx - 1]);
         v_unn = v_load(&p_src[idx]);
         v_unp = v_load(&p_src[idx + 1]);
-        v_upm = v_load(&p_src[idx + W - 1]);
-        v_upn = v_load(&p_src[idx + W]);
-        v_upp = v_load(&p_src[idx + W + 1]);
 
         // Expand to uint
         v_expand(v_umm, v_umm1, v_umm2);
@@ -211,9 +209,6 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy, int ksi
         v_expand(v_unm, v_unm1, v_unm2);
         v_expand(v_unn, v_unn1, v_unn2);
         v_expand(v_unp, v_unp1, v_unp2);
-        v_expand(v_upm, v_upm1, v_upm2);
-        v_expand(v_upn, v_upn1, v_upn2);
-        v_expand(v_upp, v_upp1, v_upp2);
 
         // Convert to int
         v_smm1 = v_reinterpret_as_s16(v_umm1);
@@ -228,26 +223,56 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy, int ksi
         v_snn2 = v_reinterpret_as_s16(v_unn2);
         v_snp1 = v_reinterpret_as_s16(v_unp1);
         v_snp2 = v_reinterpret_as_s16(v_unp2);
-        v_spm1 = v_reinterpret_as_s16(v_upm1);
-        v_spm2 = v_reinterpret_as_s16(v_upm2);
-        v_spn1 = v_reinterpret_as_s16(v_upn1);
-        v_spn2 = v_reinterpret_as_s16(v_upn2);
-        v_spp1 = v_reinterpret_as_s16(v_upp1);
-        v_spp2 = v_reinterpret_as_s16(v_upp2);
 
-        // dx
-        v_sdx1 = (v_smp1 - v_smm1) + v_two*(v_snp1 - v_snm1) + (v_spp1 - v_spm1);
-        v_sdx2 = (v_smp2 - v_smm2) + v_two*(v_snp2 - v_snm2) + (v_spp2 - v_spm2);
+        for ( i = 1; i < H - 1; i++ )
+        {
+            // Load last row for 3x3 Sobel filter
+            idx = i*W + j;
+            v_upm = v_load(&p_src[idx + W - 1]);
+            v_upn = v_load(&p_src[idx + W]);
+            v_upp = v_load(&p_src[idx + W + 1]);
 
-        // dy
-        v_sdy1 = (v_spm1 - v_smm1) + v_two*(v_spn1 - v_smn1) + (v_spp1 - v_smp1);
-        v_sdy2 = (v_spm2 - v_smm2) + v_two*(v_spn2 - v_smn2) + (v_spp2 - v_smp2);
+            // Expand to uint
+            v_expand(v_upm, v_upm1, v_upm2);
+            v_expand(v_upn, v_upn1, v_upn2);
+            v_expand(v_upp, v_upp1, v_upp2);
 
-        // Store
-        v_store(&p_dx[idx],   v_sdx1);
-        v_store(&p_dx[idx+8], v_sdx2);
-        v_store(&p_dy[idx],   v_sdy1);
-        v_store(&p_dy[idx+8], v_sdy2);
+            // Convert to int
+            v_spm1 = v_reinterpret_as_s16(v_upm1);
+            v_spm2 = v_reinterpret_as_s16(v_upm2);
+            v_spn1 = v_reinterpret_as_s16(v_upn1);
+            v_spn2 = v_reinterpret_as_s16(v_upn2);
+            v_spp1 = v_reinterpret_as_s16(v_upp1);
+            v_spp2 = v_reinterpret_as_s16(v_upp2);
+
+            // dx
+            v_sdx1 = (v_smp1 - v_smm1) + v_two*(v_snp1 - v_snm1) + (v_spp1 - v_spm1);
+            v_sdx2 = (v_smp2 - v_smm2) + v_two*(v_snp2 - v_snm2) + (v_spp2 - v_spm2);
+
+            // dy
+            v_sdy1 = (v_spm1 - v_smm1) + v_two*(v_spn1 - v_smn1) + (v_spp1 - v_smp1);
+            v_sdy2 = (v_spm2 - v_smm2) + v_two*(v_spn2 - v_smn2) + (v_spp2 - v_smp2);
+
+            // Store
+            v_store(&p_dx[idx],   v_sdx1);
+            v_store(&p_dx[idx+8], v_sdx2);
+            v_store(&p_dy[idx],   v_sdy1);
+            v_store(&p_dy[idx+8], v_sdy2);
+
+            // Shift loaded rows up one
+            v_smm1 = v_snm1;
+            v_smm2 = v_snm2;
+            v_smn1 = v_snn1;
+            v_smn2 = v_snn2;
+            v_smp1 = v_snp1;
+            v_smp2 = v_snp2;
+            v_snm1 = v_spm1;
+            v_snm2 = v_spm2;
+            v_snn1 = v_spn1;
+            v_snn2 = v_spn2;
+            v_snp1 = v_spp1;
+            v_snp2 = v_spp2;
+        }
     }
 
     // Cleanup
