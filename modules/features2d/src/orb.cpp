@@ -57,6 +57,7 @@ template<typename _Tp> inline void copyVectorToUMat(const std::vector<_Tp>& v, O
         Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
 }
 
+#ifdef HAVE_OPENCL
 static bool
 ocl_HarrisResponses(const UMat& imgbuf,
                     const UMat& layerinfo,
@@ -120,7 +121,7 @@ ocl_computeOrbDescriptors(const UMat& imgbuf, const UMat& layerInfo,
                          ocl::KernelArg::PtrReadOnly(pattern),
                          nkeypoints, dsize).run(1, globalSize, 0, true);
 }
-
+#endif
 
 /**
  * Function that computes the Harris responses in a
@@ -726,6 +727,7 @@ int ORB_Impl::defaultNorm() const
     return NORM_HAMMING;
 }
 
+#ifdef HAVE_OPENCL
 static void uploadORBKeypoints(const std::vector<KeyPoint>& src, std::vector<Vec3i>& buf, OutputArray dst)
 {
     size_t i, n = src.size();
@@ -758,7 +760,7 @@ static void uploadORBKeypoints(const std::vector<KeyPoint>& src,
     }
     copyVectorToUMat(buf, dst);
 }
-
+#endif
 
 /** Compute the ORB_Impl keypoints on an image
  * @param image_pyramid the image pyramid to compute the features and descriptors on
@@ -776,6 +778,10 @@ static void computeKeyPoints(const Mat& imagePyramid,
                              int edgeThreshold, int patchSize, int scoreType,
                              bool useOCL, int fastThreshold  )
 {
+#ifndef HAVE_OPENCL
+    (void)uimagePyramid;(void)ulayerInfo;(void)useOCL;
+#endif
+
     int i, nkeypoints, level, nlevels = (int)layerInfo.size();
     std::vector<int> nfeaturesPerLevel(nlevels);
 
@@ -862,6 +868,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
     // Select best features using the Harris cornerness (better scoring than FAST)
     if( scoreType == ORB_Impl::HARRIS_SCORE )
     {
+#ifdef HAVE_OPENCL
         if( useOCL )
         {
             uploadORBKeypoints(allKeypoints, ukeypoints_buf, ukeypoints);
@@ -877,6 +884,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
         }
 
         if( !useOCL )
+#endif
             HarrisResponses(imagePyramid, layerInfo, allKeypoints, 7, HARRIS_K);
 
         std::vector<KeyPoint> newAllKeypoints;
@@ -902,6 +910,8 @@ static void computeKeyPoints(const Mat& imagePyramid,
     }
 
     nkeypoints = (int)allKeypoints.size();
+
+#ifdef HAVE_OPENCL
     if( useOCL )
     {
         UMat uumax;
@@ -922,6 +932,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
     }
 
     if( !useOCL )
+#endif
     {
         ICAngles(imagePyramid, layerInfo, allKeypoints, umax, halfPatchSize);
     }
@@ -1147,6 +1158,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
         }
 
+#ifdef HAVE_OPENCL
         if( useOCL )
         {
             imagePyramid.copyTo(uimagePyramid);
@@ -1166,6 +1178,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
         }
 
         if( !useOCL )
+#endif
         {
             Mat descriptors = _descriptors.getMat();
             computeOrbDescriptors(imagePyramid, layerInfo, layerScale,
