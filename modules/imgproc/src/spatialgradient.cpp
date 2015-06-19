@@ -186,39 +186,40 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy, int ksi
               v_two = v_setall_s16(2),
               v_sdx1, v_sdx2, v_sdy1, v_sdy2;
 
-    // Go through 16-column chunks at a time
-    for ( j = 1; j < W - 1 - 15; j += 16 )
+    for ( i = 1; i < H - 1; i++ )
     {
-        // Load top two rows for 3x3 Sobel filter
-        idx = W + j;
-        v_um = v_load(&p_src[idx - W - 1]);
-        v_un = v_load(&p_src[idx - W]);
-        v_up = v_load(&p_src[idx - W + 1]);
-        v_expand(v_um, v_um1, v_um2);
-        v_expand(v_un, v_un1, v_un2);
-        v_expand(v_up, v_up1, v_up2);
-        v_smm1 = v_reinterpret_as_s16(v_um1);
-        v_smm2 = v_reinterpret_as_s16(v_um2);
-        v_smn1 = v_reinterpret_as_s16(v_un1);
-        v_smn2 = v_reinterpret_as_s16(v_un2);
-        v_smp1 = v_reinterpret_as_s16(v_up1);
-        v_smp2 = v_reinterpret_as_s16(v_up2);
-
-        v_um = v_load(&p_src[idx - 1]);
-        v_un = v_load(&p_src[idx]);
-        v_up = v_load(&p_src[idx + 1]);
-        v_expand(v_um, v_um1, v_um2);
-        v_expand(v_un, v_un1, v_un2);
-        v_expand(v_up, v_up1, v_up2);
-        v_snm1 = v_reinterpret_as_s16(v_um1);
-        v_snm2 = v_reinterpret_as_s16(v_um2);
-        v_snn1 = v_reinterpret_as_s16(v_un1);
-        v_snn2 = v_reinterpret_as_s16(v_un2);
-        v_snp1 = v_reinterpret_as_s16(v_up1);
-        v_snp2 = v_reinterpret_as_s16(v_up2);
-
-        for ( i = 1; i < H - 1; i++ )
+        // 16-column chunks at a time
+        for ( j = 1; j < W - 1 - 15; j += 16 )
         {
+            // Load top row for 3x3 Sobel filter
+            idx = i*W + j;
+            v_um = v_load(&p_src[idx - W - 1]);
+            v_un = v_load(&p_src[idx - W]);
+            v_up = v_load(&p_src[idx - W + 1]);
+            v_expand(v_um, v_um1, v_um2);
+            v_expand(v_un, v_un1, v_un2);
+            v_expand(v_up, v_up1, v_up2);
+            v_smm1 = v_reinterpret_as_s16(v_um1);
+            v_smm2 = v_reinterpret_as_s16(v_um2);
+            v_smn1 = v_reinterpret_as_s16(v_un1);
+            v_smn2 = v_reinterpret_as_s16(v_un2);
+            v_smp1 = v_reinterpret_as_s16(v_up1);
+            v_smp2 = v_reinterpret_as_s16(v_up2);
+
+            // Load second row for 3x3 Sobel filter
+            v_um = v_load(&p_src[idx - 1]);
+            v_un = v_load(&p_src[idx]);
+            v_up = v_load(&p_src[idx + 1]);
+            v_expand(v_um, v_um1, v_um2);
+            v_expand(v_un, v_un1, v_un2);
+            v_expand(v_up, v_up1, v_up2);
+            v_snm1 = v_reinterpret_as_s16(v_um1);
+            v_snm2 = v_reinterpret_as_s16(v_um2);
+            v_snn1 = v_reinterpret_as_s16(v_un1);
+            v_snn2 = v_reinterpret_as_s16(v_un2);
+            v_snp1 = v_reinterpret_as_s16(v_up1);
+            v_snp2 = v_reinterpret_as_s16(v_up2);
+
             // Load last row for 3x3 Sobel filter
             v_um = v_load(&p_src[idx + W - 1]);
             v_un = v_load(&p_src[idx + W]);
@@ -246,35 +247,17 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy, int ksi
             v_store(&p_dx[idx+8], v_sdx2);
             v_store(&p_dy[idx],   v_sdy1);
             v_store(&p_dy[idx+8], v_sdy2);
-
-            // Shift loaded rows up one
-            v_smm1 = v_snm1;
-            v_smm2 = v_snm2;
-            v_smn1 = v_snn1;
-            v_smn2 = v_snn2;
-            v_smp1 = v_snp1;
-            v_smp2 = v_snp2;
-            v_snm1 = v_spm1;
-            v_snm2 = v_spm2;
-            v_snn1 = v_spn1;
-            v_snn2 = v_spn2;
-            v_snp1 = v_spp1;
-            v_snp2 = v_spp2;
-
-            idx += W;
         }
-    }
 
-    // Cleanup
-    int end_j = j;
-    for ( i = 1; i < H - 1; i++ )
-    for ( j = end_j; j < W - 1; j++ )
-    {
-        idx = i*W + j;
-        p_dx[idx] = -(p_src[idx-W-1] + 2*p_src[idx-1] + p_src[idx+W-1]) +
-                     (p_src[idx-W+1] + 2*p_src[idx+1] + p_src[idx+W+1]);
-        p_dy[idx] = -(p_src[idx-W-1] + 2*p_src[idx-W] + p_src[idx-W+1]) +
-                     (p_src[idx+W-1] + 2*p_src[idx+W] + p_src[idx+W+1]);
+        // Cleanup
+        for ( ; j < W - 1; j++ )
+        {
+            idx = i*W + j;
+            p_dx[idx] = -(p_src[idx-W-1] + 2*p_src[idx-1] + p_src[idx+W-1]) +
+                         (p_src[idx-W+1] + 2*p_src[idx+1] + p_src[idx+W+1]);
+            p_dy[idx] = -(p_src[idx-W-1] + 2*p_src[idx-W] + p_src[idx-W+1]) +
+                         (p_src[idx+W-1] + 2*p_src[idx+W] + p_src[idx+W+1]);
+        }
     }
 #else
     for ( i = 1; i < H - 1; i++ )
