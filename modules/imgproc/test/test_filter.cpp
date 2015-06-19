@@ -602,7 +602,6 @@ void CV_SpatialGradientTest::run_func()
     test_mat[OUTPUT][1] = dy;
 }
 
-
 void CV_SpatialGradientTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     int dx, dy;
