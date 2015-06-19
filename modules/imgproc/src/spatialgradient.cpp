@@ -220,7 +220,6 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy, int ksi
         for ( i = 1; i < H - 1; i++ )
         {
             // Load last row for 3x3 Sobel filter
-            idx = i*W + j;
             v_um = v_load(&p_src[idx + W - 1]);
             v_un = v_load(&p_src[idx + W]);
             v_up = v_load(&p_src[idx + W + 1]);
@@ -261,6 +260,8 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy, int ksi
             v_snn2 = v_spn2;
             v_snp1 = v_spp1;
             v_snp2 = v_spp2;
+
+            idx += W;
         }
     }
 
