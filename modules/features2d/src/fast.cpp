@@ -250,6 +250,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
     }
 }
 
+#ifdef HAVE_OPENCL
 template<typename pt>
 struct cmp_pt
 {
@@ -326,16 +327,18 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 
     return true;
 }
-
+#endif
 
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
+#ifdef HAVE_OPENCL
   if( ocl::useOpenCL() && _img.isUMat() && type == FastFeatureDetector::TYPE_9_16 &&
       ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000))
   {
     CV_IMPL_ADD(CV_IMPL_OCL);
     return;
   }
+#endif
 
   switch(type) {
     case FastFeatureDetector::TYPE_5_8:

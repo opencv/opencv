@@ -122,11 +122,13 @@ protected:
     int medianFiltering;
 
 private:
-   void procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2, Mat_<float>& u3);
+    void procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2, Mat_<float>& u3);
 
+#ifdef HAVE_OPENCL
     bool procOneScale_ocl(const UMat& I0, const UMat& I1, UMat& u1, UMat& u2);
 
     bool calc_ocl(InputArray I0, InputArray I1, InputOutputArray flow);
+#endif
     struct dataMat
     {
         std::vector<Mat_<float> > I0s;
@@ -170,6 +172,8 @@ private:
         Mat_<float> u3x_buf;
         Mat_<float> u3y_buf;
     } dm;
+
+#ifdef HAVE_OPENCL
     struct dataUMat
     {
         std::vector<UMat> I0s;
@@ -195,8 +199,10 @@ private:
         UMat diff_buf;
         UMat norm_buf;
     } dum;
+#endif
 };
 
+#ifdef HAVE_OPENCL
 namespace cv_ocl_tvl1flow
 {
     bool centeredGradient(const UMat &src, UMat &dx, UMat &dy);
@@ -353,6 +359,7 @@ bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
     return kernel.run(2, globalsize, NULL, false);
 
 }
+#endif
 
 OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
 {
@@ -499,6 +506,7 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
     merge(uxy, 2, _flow);
 }
 
+#ifdef HAVE_OPENCL
 bool OpticalFlowDual_TVL1::calc_ocl(InputArray _I0, InputArray _I1, InputOutputArray _flow)
 {
     UMat I0 = _I0.getUMat();
@@ -598,6 +606,7 @@ bool OpticalFlowDual_TVL1::calc_ocl(InputArray _I0, InputArray _I1, InputOutputA
     merge(uxy, _flow);
     return true;
 }
+#endif
 
 ////////////////////////////////////////////////////////////
 // buildFlowMap
@@ -1180,6 +1189,7 @@ void estimateDualVariables(const Mat_<float>& u1x, const Mat_<float>& u1y,
     parallel_for_(Range(0, u1x.rows), body);
 }
 
+#ifdef HAVE_OPENCL
 bool OpticalFlowDual_TVL1::procOneScale_ocl(const UMat& I0, const UMat& I1, UMat& u1, UMat& u2)
 {
     using namespace cv_ocl_tvl1flow;
@@ -1267,6 +1277,7 @@ bool OpticalFlowDual_TVL1::procOneScale_ocl(const UMat& I0, const UMat& I1, UMat
     }
     return true;
 }
+#endif
 
 void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2, Mat_<float>& u3)
 {
@@ -1402,6 +1413,7 @@ void OpticalFlowDual_TVL1::collectGarbage()
     dm.u2x_buf.release();
     dm.u2y_buf.release();
 
+#ifdef HAVE_OPENCL
     //dataUMat structure dum
     dum.I0s.clear();
     dum.I1s.clear();
@@ -1425,6 +1437,7 @@ void OpticalFlowDual_TVL1::collectGarbage()
 
     dum.diff_buf.release();
     dum.norm_buf.release();
+#endif
 }
 
 } // namespace
