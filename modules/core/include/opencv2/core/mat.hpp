@@ -1796,7 +1796,7 @@ public:
 
     /** @brief Invoke with arguments functor, and runs the functor over all matrix element.
 
-    The methos runs operation in parallel. Operation is passed by arguments. Operation have to be a
+    The methods runs operation in parallel. Operation is passed by arguments. Operation have to be a
     function pointer, a function object or a lambda(C++11).
 
     All of below operation is equal. Put 0xFF to first channel of all matrix elements:
@@ -3240,7 +3240,7 @@ Here are examples of matrix expressions:
     // sharpen image using "unsharp mask" algorithm
     Mat blurred; double sigma = 1, threshold = 5, amount = 1;
     GaussianBlur(img, blurred, Size(), sigma, sigma);
-    Mat lowConstrastMask = abs(img - blurred) < threshold;
+    Mat lowContrastMask = abs(img - blurred) < threshold;
     Mat sharpened = img*(1+amount) + blurred*(-amount);
     img.copyTo(sharpened, lowContrastMask);
 @endcode
