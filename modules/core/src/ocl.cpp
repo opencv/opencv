@@ -5237,10 +5237,15 @@ public:
     MatAllocator* matStdAllocator;
 };
 
+// This line should not force OpenCL runtime initialization! (don't put "new OpenCLAllocator()" here)
+static MatAllocator *ocl_allocator = NULL;
 MatAllocator* getOpenCLAllocator()
 {
-    static MatAllocator * allocator = new OpenCLAllocator();
-    return allocator;
+    if (ocl_allocator == NULL)
+    {
+        ocl_allocator = new OpenCLAllocator();
+    }
+    return ocl_allocator;
 }
 
 }} // namespace cv::ocl
