@@ -295,6 +295,22 @@ TLSData<CoreTLSData>& getCoreTlsData();
 extern bool __termination; // skip some cleanups, because process is terminating
                            // (for example, if ExitProcess() was already called)
 
+cv::Mutex& getInitializationMutex();
+
+// TODO Memory barriers?
+#define CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, RET_VALUE) \
+    static TYPE* volatile instance = NULL; \
+    if (instance == NULL) \
+    { \
+        cv::AutoLock lock(cv::getInitializationMutex()); \
+        if (instance == NULL) \
+            instance = INITIALIZER; \
+    } \
+    return RET_VALUE;
+
+#define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
+#define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
+
 }
 
 #include "opencv2/hal/intrin.hpp"
