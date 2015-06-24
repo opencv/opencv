@@ -5841,7 +5841,6 @@ private:
 
 static bool ipp_lut(Mat &src, Mat &lut, Mat &dst)
 {
-    int cn = src.channels();
     int lutcn = lut.channels();
 
     if(src.dims > 2)

@@ -691,7 +691,6 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 #if defined HAVE_IPP
 static bool ipp_flip( Mat &src, Mat &dst, int flip_mode )
 {
-    Size size = src.size();
     int type = src.type();
 
     typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
