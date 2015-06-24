@@ -195,7 +195,10 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 
 #  define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR)
 
-#define IPP_ALIGN 32 // required for AVX optimization
+#ifdef CV_MALLOC_ALIGN
+#undef CV_MALLOC_ALIGN
+#endif
+#define CV_MALLOC_ALIGN 32 // required for AVX optimization
 
 #define setIppErrorStatus() cv::ipp::setIppStatus(-1, CV_Func, __FILE__, __LINE__)
 
