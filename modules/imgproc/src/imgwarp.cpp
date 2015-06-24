@@ -3092,7 +3092,32 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
 #endif
 
+#if IPP_VERSION_X100 >= 701
+static bool ipp_resize_mt(    Mat src, Mat dst,
+                        double inv_scale_x, double inv_scale_y, int interpolation)
+{
+    int mode = -1;
+    if (interpolation == INTER_LINEAR && src.rows >= 2 && src.cols >= 2)
+        mode = ippLinear;
+    else if (interpolation == INTER_CUBIC && src.rows >= 4 && src.cols >= 4)
+        mode = ippCubic;
+    else
+        return false;
+
+    bool ok = true;
+    Range range(0, src.rows);
+    IPPresizeInvoker invoker(src, dst, inv_scale_x, inv_scale_y, mode, &ok);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+    if( ok )
+        return true;
+
+    return false;
 }
+#endif
+
+}
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -3219,6 +3244,17 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         inv_scale_y = (double)dsize.height/ssize.height;
     }
 
+
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
+
+    int iscale_x = saturate_cast<int>(scale_x);
+    int iscale_y = saturate_cast<int>(scale_y);
+
+    bool is_area_fast = std::abs(scale_x - iscale_x) < DBL_EPSILON &&
+            std::abs(scale_y - iscale_y) < DBL_EPSILON;
+
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
 
@@ -3231,59 +3267,32 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         return;
 #endif
 
-    int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
-    int k, sx, sy, dx, dy;
+#ifdef HAVE_IPP
+    int mode = -1;
+    if (interpolation == INTER_LINEAR && _src.rows() >= 2 && _src.cols() >= 2)
+        mode = INTER_LINEAR;
+    else if (interpolation == INTER_CUBIC && _src.rows() >= 4 && _src.cols() >= 4)
+        mode = INTER_CUBIC;
 
-    int iscale_x = saturate_cast<int>(scale_x);
-    int iscale_y = saturate_cast<int>(scale_y);
-
-    bool is_area_fast = std::abs(scale_x - iscale_x) < DBL_EPSILON &&
-            std::abs(scale_y - iscale_y) < DBL_EPSILON;
-
-#if IPP_VERSION_X100 >= 701
-    CV_IPP_CHECK()
-    {
-#define IPP_RESIZE_EPS 1e-10
-
-        double ex = fabs((double)dsize.width / src.cols  - inv_scale_x) / inv_scale_x;
-        double ey = fabs((double)dsize.height / src.rows - inv_scale_y) / inv_scale_y;
-
-        if ( ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) || (ex == 0 && ey == 0 && depth == CV_64F)) &&
-             (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
-             !(interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 && depth == CV_8U))
-        {
-            int mode = -1;
-            if (interpolation == INTER_LINEAR && src.rows >= 2 && src.cols >= 2)
-                mode = ippLinear;
-            else if (interpolation == INTER_CUBIC && src.rows >= 4 && src.cols >= 4)
-                mode = ippCubic;
-
-            if( mode >= 0 && (cn == 1 || cn == 3 || cn == 4) &&
-                (depth == CV_16U || depth == CV_16S || depth == CV_32F ||
-                (depth == CV_64F && mode == ippLinear)))
-            {
-                bool ok = true;
-                Range range(0, src.rows);
-                IPPresizeInvoker invoker(src, dst, inv_scale_x, inv_scale_y, mode, &ok);
-                parallel_for_(range, invoker, dst.total()/(double)(1<<16));
-                if( ok )
-                {
-                    CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
-                    return;
-                }
-                setIppErrorStatus();
-            }
-        }
-#undef IPP_RESIZE_EPS
-    }
+    const double IPP_RESIZE_EPS = 1e-10;
+    double ex = fabs((double)dsize.width / _src.cols()  - inv_scale_x) / inv_scale_x;
+    double ey = fabs((double)dsize.height / _src.rows() - inv_scale_y) / inv_scale_y;
 #endif
+    CV_IPP_RUN(IPP_VERSION_X100 >= 701 && ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) || (ex == 0 && ey == 0 && depth == CV_64F)) &&
+        (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
+        !(interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 && depth == CV_8U) &&
+        mode >= 0 && (cn == 1 || cn == 3 || cn == 4) && (depth == CV_16U || depth == CV_16S || depth == CV_32F ||
+        (depth == CV_64F && mode == INTER_LINEAR)), ipp_resize_mt(src, dst, inv_scale_x, inv_scale_y, interpolation))
+
 
     if( interpolation == INTER_NEAREST )
     {
         resizeNN( src, dst, inv_scale_x, inv_scale_y );
         return;
     }
+
+    int k, sx, sy, dx, dy;
+
 
     {
         // in case of scale_x && scale_y is equal to 2
