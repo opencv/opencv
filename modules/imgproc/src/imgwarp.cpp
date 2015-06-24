@@ -3120,6 +3120,7 @@ static bool ipp_resize_mt(    Mat src, Mat dst,
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
+
 void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
@@ -3480,7 +3481,6 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     func( src, dst, xofs, fixpt ? (void*)ialpha : (void*)alpha, yofs,
           fixpt ? (void*)ibeta : (void*)beta, xmin, xmax, ksize );
 }
-
 
 
 /****************************************************************************************\

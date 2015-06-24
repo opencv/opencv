@@ -72,7 +72,6 @@
 #define GET_OPTIMIZED(func) (func)
 #endif
 
-
 namespace cv
 {
 

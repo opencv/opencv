@@ -3088,18 +3088,14 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 
 #endif
 
-
 #ifdef HAVE_IPP
-static bool ipp_transpose( InputArray _src, OutputArray _dst )
+static bool ipp_transpose( Mat &src, Mat &dst )
 {
-    int type = _src.type();
+    int type = src.type();
     typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
     typedef IppStatus (CV_STDCALL * ippiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
     ippiTranspose ippFunc = 0;
     ippiTransposeI ippFuncI = 0;
-
-    Mat dst = _dst.getMat();
-    Mat src = _src.getMat();
 
     if (dst.data == src.data && dst.cols == dst.rows)
     {
@@ -3186,8 +3182,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
-    CV_IPP_RUN(true, ipp_transpose(_src, _dst))
-
+    CV_IPP_RUN(true, ipp_transpose(src, dst))
 
     if( dst.data == src.data )
     {

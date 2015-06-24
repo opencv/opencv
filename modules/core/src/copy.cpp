@@ -424,9 +424,8 @@ Mat& Mat::operator = (const Scalar& s)
 }
 
 #if defined HAVE_IPP
-static bool ipp_Mat_setTo(Mat *src, InputArray _value, InputArray _mask)
+static bool ipp_Mat_setTo(Mat *src, Mat &value, Mat &mask)
 {
-    Mat value = _value.getMat(), mask = _mask.getMat();
     int cn = src->channels(), depth0 = src->depth();
 
     if (!mask.empty() && (src->dims <= 2 || (src->isContinuous() && mask.isContinuous())) &&
@@ -515,8 +514,7 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
     CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
 
-    CV_IPP_RUN(true, ipp_Mat_setTo((cv::Mat*)this, _value, _mask), *this)
-
+    CV_IPP_RUN(true, ipp_Mat_setTo((cv::Mat*)this, value, mask), *this)
 
     size_t esz = elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
@@ -691,13 +689,10 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 #endif
 
 #if defined HAVE_IPP
-static bool ipp_flip( InputArray _src, OutputArray _dst, int flip_mode )
+static bool ipp_flip( Mat &src, Mat &dst, int flip_mode )
 {
-    Size size = _src.size();
-    Mat src = _src.getMat();
+    Size size = src.size();
     int type = src.type();
-    _dst.create( size, type );
-    Mat dst = _dst.getMat();
 
     typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
     typedef IppStatus (CV_STDCALL * ippiMirrorI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize, IppiAxis flip);
@@ -786,13 +781,13 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
     CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src, _dst, flip_mode))
 
-    CV_IPP_RUN(true, ipp_flip(_src, _dst, flip_mode));
-
-
     Mat src = _src.getMat();
     int type = src.type();
     _dst.create( size, type );
     Mat dst = _dst.getMat();
+
+    CV_IPP_RUN(true, ipp_flip(src, dst, flip_mode));
+
     size_t esz = CV_ELEM_SIZE(type);
 
     if( flip_mode <= 0 )

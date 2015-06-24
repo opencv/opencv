@@ -1138,23 +1138,19 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
 
 #endif
 
-}
-
-#if defined (HAVE_IPP)
-namespace cv
+#ifdef HAVE_IPP
+static bool ipp_sum(Mat &src, Scalar &_res)
 {
-    static bool ipp_sum(Mat src, Scalar & _res)
-{
-#if (IPP_VERSION_MAJOR >= 7)
+#if IPP_VERSION_MAJOR >= 7
     int cn = src.channels();
     size_t total_size = src.total();
-    int rows = src.size[0], cols = rows ? (int)(total_size / rows) : 0;
-    if (src.dims == 2 || (src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size))
+    int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
+    if( src.dims == 2 || (src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         IppiSize sz = { cols, rows };
         int type = src.type();
-        typedef IppStatus(CV_STDCALL* ippiSumFuncHint)(const void*, int, IppiSize, double *, IppHintAlgorithm);
-        typedef IppStatus(CV_STDCALL* ippiSumFuncNoHint)(const void*, int, IppiSize, double *);
+        typedef IppStatus (CV_STDCALL* ippiSumFuncHint)(const void*, int, IppiSize, double *, IppHintAlgorithm);
+        typedef IppStatus (CV_STDCALL* ippiSumFuncNoHint)(const void*, int, IppiSize, double *);
         ippiSumFuncHint ippFuncHint =
             type == CV_32FC1 ? (ippiSumFuncHint)ippiSum_32f_C1R :
             type == CV_32FC3 ? (ippiSumFuncHint)ippiSum_32f_C3R :
@@ -1172,49 +1168,45 @@ namespace cv
             type == CV_16SC4 ? (ippiSumFuncNoHint)ippiSum_16s_C4R :
             0;
         CV_Assert(!ippFuncHint || !ippFuncNoHint);
-        if (ippFuncHint || ippFuncNoHint)
+        if( ippFuncHint || ippFuncNoHint )
         {
             Ipp64f res[4];
             IppStatus ret = ippFuncHint ? ippFuncHint(src.ptr(), (int)src.step[0], sz, res, ippAlgHintAccurate) :
-                ippFuncNoHint(src.ptr(), (int)src.step[0], sz, res);
-            CV_Assert(cn <= 4);
-            cn = min(cn, 4);
-            if (ret >= 0)
+                            ippFuncNoHint(src.ptr(), (int)src.step[0], sz, res);
+            if( ret >= 0 )
             {
                 for( int i = 0; i < cn; i++ )
                     _res[i] = res[i];
                 return true;
             }
-            return false;
         }
     }
+#else
+    CV_UNUSED(src); CV_UNUSED(_res);
 #endif
     return false;
 }
-}
 #endif
+
+}
 
 cv::Scalar cv::sum( InputArray _src )
 {
+#if defined HAVE_OPENCL || defined HAVE_IPP
     Scalar _res;
+#endif
+
 #ifdef HAVE_OPENCL
     CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_sum(_src, _res, OCL_OP_SUM),
                 _res)
 #endif
 
-#ifdef HAVE_IPP
-    size_t total_size = _src.total();
-    int rows = _src.rows();
-    int cols = rows ? (int)(total_size / rows) : 0;
-#endif
     Mat src = _src.getMat();
-    CV_IPP_RUN((_src.dims() == 2 || (_src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)) && IPP_VERSION_MAJOR >= 7,
-        ipp_sum(src, _res), _res);
+    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_sum(src, _res), _res);
+
     int k, cn = src.channels(), depth = src.depth();
-
     SumFunc func = getSumFunc(depth);
-
     CV_Assert( cn <= 4 && func != 0 );
 
     const Mat* arrays[] = {&src, 0};
@@ -1261,7 +1253,6 @@ cv::Scalar cv::sum( InputArray _src )
     }
     return s;
 }
-
 
 #ifdef HAVE_OPENCL
 
@@ -1310,7 +1301,7 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 #if defined HAVE_IPP
 namespace cv {
 
-static bool ipp_countNonZero( Mat src, int & res )
+static bool ipp_countNonZero( Mat &src, int &res )
 {
 #if !defined HAVE_IPP_ICV_ONLY
     Ipp32s count = 0;
@@ -1644,110 +1635,113 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
 #endif
 
-#if defined (HAVE_IPP)
+#ifdef HAVE_IPP
 namespace cv
 {
 static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
 {
-#if (IPP_VERSION_MAJOR >= 7)
+#if IPP_VERSION_MAJOR >= 7
     int cn = src.channels();
     size_t total_size = src.total();
-    int rows = src.size[0], cols = rows ? (int)(total_size / rows) : 0;
-
-    Ipp64f mean_temp[3];
-    Ipp64f stddev_temp[3];
-    Ipp64f *pmean = &mean_temp[0];
-    Ipp64f *pstddev = &stddev_temp[0];
-    Mat mean, stddev;
-    int dcn_mean = -1;
-    if (_mean.needed())
+    int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
+    if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
-        if (!_mean.fixedSize())
-            _mean.create(cn, 1, CV_64F, -1, true);
-        mean = _mean.getMat();
-        dcn_mean = (int)mean.total();
-        pmean = mean.ptr<Ipp64f>();
-    }
-    int dcn_stddev = -1;
-    if (_sdv.needed())
-    {
-        if (!_sdv.fixedSize())
-            _sdv.create(cn, 1, CV_64F, -1, true);
-        stddev = _sdv.getMat();
-        dcn_stddev = (int)stddev.total();
-        pstddev = stddev.ptr<Ipp64f>();
-    }
-    for (int c = cn; c < dcn_mean; c++)
-        pmean[c] = 0;
-    for (int c = cn; c < dcn_stddev; c++)
-        pstddev[c] = 0;
-    IppiSize sz = { cols, rows };
-    int type = src.type();
-
-    if (!mask.empty())
-    {
-        typedef IppStatus(CV_STDCALL* ippiMaskMeanStdDevFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *, Ipp64f *);
-        ippiMaskMeanStdDevFuncC1 ippFuncC1 =
-            type == CV_8UC1  ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_8u_C1MR :
+        Ipp64f mean_temp[3];
+        Ipp64f stddev_temp[3];
+        Ipp64f *pmean = &mean_temp[0];
+        Ipp64f *pstddev = &stddev_temp[0];
+        Mat mean, stddev;
+        int dcn_mean = -1;
+        if( _mean.needed() )
+        {
+            if( !_mean.fixedSize() )
+                _mean.create(cn, 1, CV_64F, -1, true);
+            mean = _mean.getMat();
+            dcn_mean = (int)mean.total();
+            pmean = mean.ptr<Ipp64f>();
+        }
+        int dcn_stddev = -1;
+        if( _sdv.needed() )
+        {
+            if( !_sdv.fixedSize() )
+                _sdv.create(cn, 1, CV_64F, -1, true);
+            stddev = _sdv.getMat();
+            dcn_stddev = (int)stddev.total();
+            pstddev = stddev.ptr<Ipp64f>();
+        }
+        for( int c = cn; c < dcn_mean; c++ )
+            pmean[c] = 0;
+        for( int c = cn; c < dcn_stddev; c++ )
+            pstddev[c] = 0;
+        IppiSize sz = { cols, rows };
+        int type = src.type();
+        if( !mask.empty() )
+        {
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *, Ipp64f *);
+            ippiMaskMeanStdDevFuncC1 ippFuncC1 =
+            type == CV_8UC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_8u_C1MR :
             type == CV_16UC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_16u_C1MR :
             type == CV_32FC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_32f_C1MR :
             0;
-        if (ippFuncC1)
-        {
-            if (ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, pmean, pstddev) >= 0)
+            if( ippFuncC1 )
             {
-                return true;
+                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, pmean, pstddev) >= 0 )
+                {
+                    return true;
+                }
             }
-        }
-        typedef IppStatus(CV_STDCALL* ippiMaskMeanStdDevFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
-        ippiMaskMeanStdDevFuncC3 ippFuncC3 =
-            type == CV_8UC3  ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_8u_C3CMR :
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
+            ippiMaskMeanStdDevFuncC3 ippFuncC3 =
+            type == CV_8UC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_8u_C3CMR :
             type == CV_16UC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_16u_C3CMR :
             type == CV_32FC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_32f_C3CMR :
             0;
-        if (ippFuncC3)
-        {
-            if (ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
-                ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
-                ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0)
+            if( ippFuncC3 )
             {
-                return true;
+                if( ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
+                {
+                    return true;
+                }
             }
         }
-    }
-    else
-    {
-        typedef IppStatus(CV_STDCALL* ippiMeanStdDevFuncC1)(const void *, int, IppiSize, Ipp64f *, Ipp64f *);
-        ippiMeanStdDevFuncC1 ippFuncC1 =
-            type == CV_8UC1  ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_8u_C1R :
+        else
+        {
+            typedef IppStatus (CV_STDCALL* ippiMeanStdDevFuncC1)(const void *, int, IppiSize, Ipp64f *, Ipp64f *);
+            ippiMeanStdDevFuncC1 ippFuncC1 =
+            type == CV_8UC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_8u_C1R :
             type == CV_16UC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_16u_C1R :
 #if (IPP_VERSION_X100 >= 801)
             type == CV_32FC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_32f_C1R ://Aug 2013: bug in IPP 7.1, 8.0
 #endif
             0;
-        if (ippFuncC1)
-        {
-            if (ippFuncC1(src.ptr(), (int)src.step[0], sz, pmean, pstddev) >= 0)
+            if( ippFuncC1 )
             {
-                return true;
+                if( ippFuncC1(src.ptr(), (int)src.step[0], sz, pmean, pstddev) >= 0 )
+                {
+                    return true;
+                }
             }
-        }
-        typedef IppStatus(CV_STDCALL* ippiMeanStdDevFuncC3)(const void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
-        ippiMeanStdDevFuncC3 ippFuncC3 =
-            type == CV_8UC3  ? (ippiMeanStdDevFuncC3)ippiMean_StdDev_8u_C3CR :
+            typedef IppStatus (CV_STDCALL* ippiMeanStdDevFuncC3)(const void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
+            ippiMeanStdDevFuncC3 ippFuncC3 =
+            type == CV_8UC3 ? (ippiMeanStdDevFuncC3)ippiMean_StdDev_8u_C3CR :
             type == CV_16UC3 ? (ippiMeanStdDevFuncC3)ippiMean_StdDev_16u_C3CR :
             type == CV_32FC3 ? (ippiMeanStdDevFuncC3)ippiMean_StdDev_32f_C3CR :
             0;
-        if (ippFuncC3)
-        {
-            if (ippFuncC3(src.ptr(), (int)src.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
-                ippFuncC3(src.ptr(), (int)src.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
-                ippFuncC3(src.ptr(), (int)src.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0)
+            if( ippFuncC3 )
             {
-                return true;
+                if( ippFuncC3(src.ptr(), (int)src.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
+                    ippFuncC3(src.ptr(), (int)src.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
+                {
+                    return true;
+                }
             }
         }
     }
+#else
+    CV_UNUSED(src); CV_UNUSED(_mean); CV_UNUSED(_sdv); CV_UNUSED(mask);
 #endif
     return false;
 }
@@ -1761,19 +1755,10 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
-#ifdef HAVE_IPP
-    Size sz = _src.dims() <= 2 ? _src.size() : Size();
-    size_t total_size = _src.total();
-    int rows = sz.height;
-    int cols = rows ? (int)(total_size / rows) : 0;
-#endif
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)),
-        ipp_meanStdDev(src, _mean, _sdv, mask));
 
+    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_meanStdDev(src, _mean, _sdv, mask));
 
     int k, cn = src.channels(), depth = src.depth();
-
-
 
     SumSqrFunc func = getSumSqrTab(depth);
 
@@ -1863,7 +1848,6 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             dptr[k] = 0;
     }
 }
-
 
 /****************************************************************************************\
 *                                       minMaxLoc                                        *
@@ -2216,93 +2200,99 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 
 #endif
 
-#if defined (HAVE_IPP)
-static bool ipp_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minIdx, int* maxIdx, InputArray _mask)
+#ifdef HAVE_IPP
+static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx, int* maxIdx, Mat &mask)
 {
-#if (IPP_VERSION_MAJOR >= 7)
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    Mat src = _src.getMat(), mask = _mask.getMat();
-
+#if IPP_VERSION_MAJOR >= 7
+    int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
-    IppiSize sz = { cols * cn, rows };
-
-    if( !mask.empty() )
+    if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
-        typedef IppStatus (CV_STDCALL* ippiMaskMinMaxIndxFuncC1)(const void *, int, const void *, int,
-                                                                    IppiSize, Ipp32f *, Ipp32f *, IppiPoint *, IppiPoint *);
+        IppiSize sz = { cols * cn, rows };
 
-        CV_SUPPRESS_DEPRECATED_START
-        ippiMaskMinMaxIndxFuncC1 ippFuncC1 =
-            type == CV_8UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1MR :
-            type == CV_8SC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1MR :
-            type == CV_16UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1MR :
-            type == CV_32FC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1MR : 0;
-        CV_SUPPRESS_DEPRECATED_END
-
-        if( ippFuncC1 )
+        if( !mask.empty() )
         {
-            Ipp32f min, max;
-            IppiPoint minp, maxp;
-            if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
+            typedef IppStatus (CV_STDCALL* ippiMaskMinMaxIndxFuncC1)(const void *, int, const void *, int,
+                                                                        IppiSize, Ipp32f *, Ipp32f *, IppiPoint *, IppiPoint *);
+
+            CV_SUPPRESS_DEPRECATED_START
+            ippiMaskMinMaxIndxFuncC1 ippFuncC1 =
+                type == CV_8UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1MR :
+                type == CV_8SC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1MR :
+                type == CV_16UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1MR :
+                type == CV_32FC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1MR : 0;
+            CV_SUPPRESS_DEPRECATED_END
+
+            if( ippFuncC1 )
             {
-                if( minVal )
-                    *minVal = (double)min;
-                if( maxVal )
-                    *maxVal = (double)max;
-                if( !minp.x && !minp.y && !maxp.x && !maxp.y && !mask.ptr()[0] )
-                    minp.x = maxp.x = -1;
-                if( minIdx )
+                Ipp32f min, max;
+                IppiPoint minp, maxp;
+                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
                 {
-                    size_t minidx = minp.y * cols + minp.x + 1;
-                    ofs2idx(src, minidx, minIdx);
+                    if( minVal )
+                        *minVal = (double)min;
+                    if( maxVal )
+                        *maxVal = (double)max;
+                    if( !minp.x && !minp.y && !maxp.x && !maxp.y && !mask.ptr()[0] )
+                        minp.x = maxp.x = -1;
+                    if( minIdx )
+                    {
+                        size_t minidx = minp.y * cols + minp.x + 1;
+                        ofs2idx(src, minidx, minIdx);
+                    }
+                    if( maxIdx )
+                    {
+                        size_t maxidx = maxp.y * cols + maxp.x + 1;
+                        ofs2idx(src, maxidx, maxIdx);
+                    }
+                    return true;
                 }
-                if( maxIdx )
-                {
-                    size_t maxidx = maxp.y * cols + maxp.x + 1;
-                    ofs2idx(src, maxidx, maxIdx);
-                }
-                return true;
             }
         }
-    }
-    else
-    {
-        typedef IppStatus (CV_STDCALL* ippiMinMaxIndxFuncC1)(const void *, int, IppiSize, Ipp32f *, Ipp32f *, IppiPoint *, IppiPoint *);
-
-        CV_SUPPRESS_DEPRECATED_START
-        ippiMinMaxIndxFuncC1 ippFuncC1 =
-            depth == CV_8U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
-            depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
-            depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
-            depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R : 0;
-        CV_SUPPRESS_DEPRECATED_END
-
-        if( ippFuncC1 )
+        else
         {
-            Ipp32f min, max;
-            IppiPoint minp, maxp;
-            if( ippFuncC1(src.ptr(), (int)src.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
-            {
-                if( minVal )
-                    *minVal = (double)min;
-                if( maxVal )
-                    *maxVal = (double)max;
-                if( minIdx )
-                {
-                    size_t minidx = minp.y * cols + minp.x + 1;
-                    ofs2idx(src, minidx, minIdx);
-                }
-                if( maxIdx )
-                {
-                    size_t maxidx = maxp.y * cols + maxp.x + 1;
-                    ofs2idx(src, maxidx, maxIdx);
-                }
-                return true;
-            }
-        }
-    }
+            typedef IppStatus (CV_STDCALL* ippiMinMaxIndxFuncC1)(const void *, int, IppiSize, Ipp32f *, Ipp32f *, IppiPoint *, IppiPoint *);
+
+            CV_SUPPRESS_DEPRECATED_START
+            ippiMinMaxIndxFuncC1 ippFuncC1 =
+                depth == CV_8U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
+                depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
+                depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
+#if !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
+                depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
 #endif
+                0;
+            CV_SUPPRESS_DEPRECATED_END
+
+            if( ippFuncC1 )
+            {
+                Ipp32f min, max;
+                IppiPoint minp, maxp;
+                if( ippFuncC1(src.ptr(), (int)src.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
+                {
+                    if( minVal )
+                        *minVal = (double)min;
+                    if( maxVal )
+                        *maxVal = (double)max;
+                    if( minIdx )
+                    {
+                        size_t minidx = minp.y * cols + minp.x + 1;
+                        ofs2idx(src, minidx, minIdx);
+                    }
+                    if( maxIdx )
+                    {
+                        size_t maxidx = maxp.y * cols + maxp.x + 1;
+                        ofs2idx(src, maxidx, maxIdx);
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+#else
+#endif
+    CV_UNUSED(src); CV_UNUSED(minVal); CV_UNUSED(maxVal); CV_UNUSED(minIdx); CV_UNUSED(maxIdx); CV_UNUSED(mask);
     return false;
 }
 #endif
@@ -2321,15 +2311,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-#ifdef HAVE_IPP
-    Size sz = _src.dims() <= 2 ? _src.size() : Size();
-    size_t total_size = _src.total();
-    int rows = sz.height;
-    int cols = rows ? (int)(total_size/rows) : 0;
-#endif
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7 && (_src.dims() == 2 || (_src.isContinuous() && _mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)),
-        ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
-
+    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
     MinMaxIdxFunc func = getMinmaxTab(depth);
     CV_Assert( func != 0 );
@@ -2371,7 +2353,6 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     if( maxIdx )
         ofs2idx(src, maxidx, maxIdx);
 }
-
 
 void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
                     Point* minLoc, Point* maxLoc, InputArray mask )
@@ -2652,180 +2633,174 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 
 #endif
 
-}
-
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-
-namespace cv {
-static bool ipp_norm(InputArray _src, int normType, InputArray _mask, double & result)
+#ifdef HAVE_IPP
+static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
 {
-    Mat src = _src.getMat(), mask = _mask.getMat();
+#if IPP_VERSION_MAJOR >= 7
     int cn = src.channels();
     size_t total_size = src.total();
-    int rows = src.size[0], cols = rows ? (int)(total_size / rows) : 0;
-    if ((src.dims == 2 || (src.isContinuous() && mask.isContinuous()))
+    int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
+
+    if( (src.dims == 2 || (src.isContinuous() && mask.isContinuous()))
         && cols > 0 && (size_t)rows*cols == total_size
         && (normType == NORM_INF || normType == NORM_L1 ||
-        normType == NORM_L2 || normType == NORM_L2SQR))
+            normType == NORM_L2 || normType == NORM_L2SQR) )
     {
         IppiSize sz = { cols, rows };
         int type = src.type();
-        if (!mask.empty())
+        if( !mask.empty() )
+        {
+            typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *);
+            ippiMaskNormFuncC1 ippFuncC1 =
+                normType == NORM_INF ?
+                (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_8u_C1MR :
+                type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_8s_C1MR :
+//                type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_16u_C1MR :
+                type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_32f_C1MR :
+                0) :
+            normType == NORM_L1 ?
+                (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8u_C1MR :
+                type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8s_C1MR :
+                type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_16u_C1MR :
+                type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_32f_C1MR :
+                0) :
+            normType == NORM_L2 || normType == NORM_L2SQR ?
+                (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_8u_C1MR :
+                type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_8s_C1MR :
+                type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_16u_C1MR :
+                type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_32f_C1MR :
+                0) : 0;
+            if( ippFuncC1 )
             {
-                typedef IppStatus(CV_STDCALL* ippiMaskNormFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *);
-                ippiMaskNormFuncC1 ippFuncC1 =
-                    normType == NORM_INF ?
-                    (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_8u_C1MR :
-                    type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_8s_C1MR :
-                    //                type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_16u_C1MR :
-                    type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_32f_C1MR :
-                    0) :
-                    normType == NORM_L1 ?
-                    (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8u_C1MR :
-                    type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8s_C1MR :
-                    type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_16u_C1MR :
-                    type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_32f_C1MR :
-                    0) :
-                    normType == NORM_L2 || normType == NORM_L2SQR ?
-                    (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_8u_C1MR :
-                    type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_8s_C1MR :
-                    type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_16u_C1MR :
-                    type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_32f_C1MR :
-                    0) : 0;
-                if (ippFuncC1)
+                Ipp64f norm;
+                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
                 {
-                    Ipp64f norm;
-                    if (ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0)
-                    {
-                        result = normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
-                        return true;
-                    }
-                    return false;
+                    result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
+                    return true;
                 }
-                /*typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
-                ippiMaskNormFuncC3 ippFuncC3 =
+            }
+            /*typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
+            ippiMaskNormFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_8u_C3CMR :
                 type == CV_8SC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_8s_C3CMR :
                 type == CV_16UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_32f_C3CMR :
                 0) :
-                normType == NORM_L1 ?
+            normType == NORM_L1 ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_8u_C3CMR :
                 type == CV_8SC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_8s_C3CMR :
                 type == CV_16UC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_32f_C3CMR :
                 0) :
-                normType == NORM_L2 || normType == NORM_L2SQR ?
+            normType == NORM_L2 || normType == NORM_L2SQR ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_8u_C3CMR :
                 type == CV_8SC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_8s_C3CMR :
                 type == CV_16UC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_32f_C3CMR :
                 0) : 0;
-                if( ippFuncC3 )
-                {
+            if( ippFuncC3 )
+            {
                 Ipp64f norm1, norm2, norm3;
                 if( ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 1, &norm1) >= 0 &&
-                ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 2, &norm2) >= 0 &&
-                ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 3, &norm3) >= 0)
+                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 2, &norm2) >= 0 &&
+                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 3, &norm3) >= 0)
                 {
-                Ipp64f norm =
-                normType == NORM_INF ? std::max(std::max(norm1, norm2), norm3) :
-                normType == NORM_L1 ? norm1 + norm2 + norm3 :
-                normType == NORM_L2 || normType == NORM_L2SQR ? std::sqrt(norm1 * norm1 + norm2 * norm2 + norm3 * norm3) :
-                0;
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
+                    Ipp64f norm =
+                        normType == NORM_INF ? std::max(std::max(norm1, norm2), norm3) :
+                        normType == NORM_L1 ? norm1 + norm2 + norm3 :
+                        normType == NORM_L2 || normType == NORM_L2SQR ? std::sqrt(norm1 * norm1 + norm2 * norm2 + norm3 * norm3) :
+                        0;
+                    result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
+                    return true;
                 }
-                setIppErrorStatus();
-                }*/
-            }
-            else
-            {
-                typedef IppStatus(CV_STDCALL* ippiNormFuncHint)(const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
-                typedef IppStatus(CV_STDCALL* ippiNormFuncNoHint)(const void *, int, IppiSize, Ipp64f *);
-                ippiNormFuncHint ippFuncHint =
-                    normType == NORM_L1 ?
-                    (type == CV_32FC1 ? (ippiNormFuncHint)ippiNorm_L1_32f_C1R :
-                    type == CV_32FC3 ? (ippiNormFuncHint)ippiNorm_L1_32f_C3R :
-                    type == CV_32FC4 ? (ippiNormFuncHint)ippiNorm_L1_32f_C4R :
-                    0) :
-                    normType == NORM_L2 || normType == NORM_L2SQR ?
-                    (type == CV_32FC1 ? (ippiNormFuncHint)ippiNorm_L2_32f_C1R :
-                    type == CV_32FC3 ? (ippiNormFuncHint)ippiNorm_L2_32f_C3R :
-                    type == CV_32FC4 ? (ippiNormFuncHint)ippiNorm_L2_32f_C4R :
-                    0) : 0;
-                ippiNormFuncNoHint ippFuncNoHint =
-                    normType == NORM_INF ?
-                    (type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_8u_C1R :
-                    type == CV_8UC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_8u_C3R :
-                    type == CV_8UC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_8u_C4R :
-                    type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C1R :
-                    type == CV_16UC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C3R :
-                    type == CV_16UC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C4R :
-                    type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C1R :
+            }*/
+        }
+        else
+        {
+            typedef IppStatus (CV_STDCALL* ippiNormFuncHint)(const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
+            typedef IppStatus (CV_STDCALL* ippiNormFuncNoHint)(const void *, int, IppiSize, Ipp64f *);
+            ippiNormFuncHint ippFuncHint =
+                normType == NORM_L1 ?
+                (type == CV_32FC1 ? (ippiNormFuncHint)ippiNorm_L1_32f_C1R :
+                type == CV_32FC3 ? (ippiNormFuncHint)ippiNorm_L1_32f_C3R :
+                type == CV_32FC4 ? (ippiNormFuncHint)ippiNorm_L1_32f_C4R :
+                0) :
+                normType == NORM_L2 || normType == NORM_L2SQR ?
+                (type == CV_32FC1 ? (ippiNormFuncHint)ippiNorm_L2_32f_C1R :
+                type == CV_32FC3 ? (ippiNormFuncHint)ippiNorm_L2_32f_C3R :
+                type == CV_32FC4 ? (ippiNormFuncHint)ippiNorm_L2_32f_C4R :
+                0) : 0;
+            ippiNormFuncNoHint ippFuncNoHint =
+                normType == NORM_INF ?
+                (type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_8u_C1R :
+                type == CV_8UC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_8u_C3R :
+                type == CV_8UC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_8u_C4R :
+                type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C1R :
+                type == CV_16UC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C3R :
+                type == CV_16UC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C4R :
+                type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C1R :
 #if (IPP_VERSION_X100 >= 801)
-                    type == CV_16SC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
-                    type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+                type == CV_16SC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+                type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
 #endif
-                    type == CV_32FC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_32f_C1R :
-                    type == CV_32FC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_32f_C3R :
-                    type == CV_32FC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_32f_C4R :
-                    0) :
-                    normType == NORM_L1 ?
-                    (type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L1_8u_C1R :
-                    type == CV_8UC3 ? (ippiNormFuncNoHint)ippiNorm_L1_8u_C3R :
-                    type == CV_8UC4 ? (ippiNormFuncNoHint)ippiNorm_L1_8u_C4R :
-                    type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_L1_16u_C1R :
-                    type == CV_16UC3 ? (ippiNormFuncNoHint)ippiNorm_L1_16u_C3R :
-                    type == CV_16UC4 ? (ippiNormFuncNoHint)ippiNorm_L1_16u_C4R :
-                    type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_L1_16s_C1R :
-                    type == CV_16SC3 ? (ippiNormFuncNoHint)ippiNorm_L1_16s_C3R :
-                    type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_L1_16s_C4R :
-                    0) :
-                    normType == NORM_L2 || normType == NORM_L2SQR ?
-                    (type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C1R :
-                    type == CV_8UC3 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C3R :
-                    type == CV_8UC4 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C4R :
-                    type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C1R :
-                    type == CV_16UC3 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C3R :
-                    type == CV_16UC4 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C4R :
-                    type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16s_C1R :
-                    type == CV_16SC3 ? (ippiNormFuncNoHint)ippiNorm_L2_16s_C3R :
-                    type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_L2_16s_C4R :
-                    0) : 0;
-                // Make sure only zero or one version of the function pointer is valid
-                CV_Assert(!ippFuncHint || !ippFuncNoHint);
-                if (ippFuncHint || ippFuncNoHint)
+                type == CV_32FC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_32f_C1R :
+                type == CV_32FC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_32f_C3R :
+                type == CV_32FC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_32f_C4R :
+                0) :
+                normType == NORM_L1 ?
+                (type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L1_8u_C1R :
+                type == CV_8UC3 ? (ippiNormFuncNoHint)ippiNorm_L1_8u_C3R :
+                type == CV_8UC4 ? (ippiNormFuncNoHint)ippiNorm_L1_8u_C4R :
+                type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_L1_16u_C1R :
+                type == CV_16UC3 ? (ippiNormFuncNoHint)ippiNorm_L1_16u_C3R :
+                type == CV_16UC4 ? (ippiNormFuncNoHint)ippiNorm_L1_16u_C4R :
+                type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_L1_16s_C1R :
+                type == CV_16SC3 ? (ippiNormFuncNoHint)ippiNorm_L1_16s_C3R :
+                type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_L1_16s_C4R :
+                0) :
+                normType == NORM_L2 || normType == NORM_L2SQR ?
+                (type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C1R :
+                type == CV_8UC3 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C3R :
+                type == CV_8UC4 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C4R :
+                type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C1R :
+                type == CV_16UC3 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C3R :
+                type == CV_16UC4 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C4R :
+                type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16s_C1R :
+                type == CV_16SC3 ? (ippiNormFuncNoHint)ippiNorm_L2_16s_C3R :
+                type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_L2_16s_C4R :
+                0) : 0;
+            // Make sure only zero or one version of the function pointer is valid
+            CV_Assert(!ippFuncHint || !ippFuncNoHint);
+            if( ippFuncHint || ippFuncNoHint )
+            {
+                Ipp64f norm_array[4];
+                IppStatus ret = ippFuncHint ? ippFuncHint(src.ptr(), (int)src.step[0], sz, norm_array, ippAlgHintAccurate) :
+                                ippFuncNoHint(src.ptr(), (int)src.step[0], sz, norm_array);
+                if( ret >= 0 )
                 {
-                    Ipp64f norm_array[4];
-                    IppStatus ret = ippFuncHint ? ippFuncHint(src.ptr(), (int)src.step[0], sz, norm_array, ippAlgHintAccurate) :
-                        ippFuncNoHint(src.ptr(), (int)src.step[0], sz, norm_array);
-                    if (ret >= 0)
+                    Ipp64f norm = (normType == NORM_L2 || normType == NORM_L2SQR) ? norm_array[0] * norm_array[0] : norm_array[0];
+                    for( int i = 1; i < cn; i++ )
                     {
-                        Ipp64f norm = (normType == NORM_L2 || normType == NORM_L2SQR) ? norm_array[0] * norm_array[0] : norm_array[0];
-                        CV_Assert(cn <= 4);
-                        cn = min(cn, 4);
-                        for (int i = 1; i < cn; i++)
-                        {
-                            norm =
-                                normType == NORM_INF ? std::max(norm, norm_array[i]) :
-                                normType == NORM_L1 ? norm + norm_array[i] :
-                                normType == NORM_L2 || normType == NORM_L2SQR ? norm + norm_array[i] * norm_array[i] :
-                                0;
-                        }
-                        result = normType == NORM_L2 ? (double)std::sqrt(norm) : (double)norm;
-                        return true;
+                        norm =
+                            normType == NORM_INF ? std::max(norm, norm_array[i]) :
+                            normType == NORM_L1 ? norm + norm_array[i] :
+                            normType == NORM_L2 || normType == NORM_L2SQR ? norm + norm_array[i] * norm_array[i] :
+                            0;
                     }
-                    return false;
+                    result = (normType == NORM_L2 ? (double)std::sqrt(norm) : (double)norm);
+                    return true;
                 }
             }
         }
-        return false;
     }
+#else
+    CV_UNUSED(src); CV_UNUSED(normType); CV_UNUSED(mask); CV_UNUSED(result);
+#endif
+    return false;
 }
 #endif
-
+}
 
 double cv::norm( InputArray _src, int normType, InputArray _mask )
 {
@@ -2845,9 +2820,9 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 #endif
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    int depth = src.depth(), cn = src.channels();
-    CV_IPP_RUN(true, ipp_norm(_src, normType, _mask, _result), _result);
+    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_norm(src, normType, mask, _result), _result);
 
+    int depth = src.depth(), cn = src.channels();
     if( src.isContinuous() && mask.empty() )
     {
         size_t len = src.total()*cn;
@@ -3044,28 +3019,31 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
 
 #endif
 
+#ifdef HAVE_IPP
 namespace cv
 {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    static bool ipp_norm_rel(InputArray _src1, InputArray _src2, int normType, InputArray _mask, double & result)
-    {
-        Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask, double &result)
+{
+#if IPP_VERSION_MAJOR >= 7
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
 
+    if( normType & CV_RELATIVE )
+    {
         normType &= NORM_TYPE_MASK;
-        CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
-            ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U));
+        CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
+                ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
         size_t total_size = src1.total();
-        int rows = src1.size[0], cols = rows ? (int)(total_size / rows) : 0;
-        if ((src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
+        int rows = src1.size[0], cols = rows ? (int)(total_size/rows) : 0;
+        if( (src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
             && cols > 0 && (size_t)rows*cols == total_size
             && (normType == NORM_INF || normType == NORM_L1 ||
-            normType == NORM_L2 || normType == NORM_L2SQR))
+                normType == NORM_L2 || normType == NORM_L2SQR) )
         {
             IppiSize sz = { cols, rows };
             int type = src1.type();
-            if (!mask.empty())
+            if( !mask.empty() )
             {
-                typedef IppStatus(CV_STDCALL* ippiMaskNormRelFuncC1)(const void *, int, const void *, int, const void *, int, IppiSize, Ipp64f *);
+                typedef IppStatus (CV_STDCALL* ippiMaskNormRelFuncC1)(const void *, int, const void *, int, const void *, int, IppiSize, Ipp64f *);
                 ippiMaskNormRelFuncC1 ippFuncC1 =
                     normType == NORM_INF ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_8u_C1MR :
@@ -3089,21 +3067,20 @@ namespace cv
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_32f_C1MR :
                     0) : 0;
-                if (ippFuncC1)
+                if( ippFuncC1 )
                 {
                     Ipp64f norm;
-                    if (ippFuncC1(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0)
+                    if( ippFuncC1(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
                     {
-                        result = normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
+                        result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
                         return true;
                     }
-                    return false;
                 }
             }
             else
             {
-                typedef IppStatus(CV_STDCALL* ippiNormRelFuncNoHint)(const void *, int, const void *, int, IppiSize, Ipp64f *);
-                typedef IppStatus(CV_STDCALL* ippiNormRelFuncHint)(const void *, int, const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
+                typedef IppStatus (CV_STDCALL* ippiNormRelFuncNoHint)(const void *, int, const void *, int, IppiSize, Ipp64f *);
+                typedef IppStatus (CV_STDCALL* ippiNormRelFuncHint)(const void *, int, const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
                 ippiNormRelFuncNoHint ippFuncNoHint =
                     normType == NORM_INF ?
                     (type == CV_8UC1 ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_8u_C1R :
@@ -3131,200 +3108,199 @@ namespace cv
                 if (ippFuncNoHint)
                 {
                     Ipp64f norm;
-                    if (ippFuncNoHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm) >= 0)
+                    if( ippFuncNoHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm) >= 0 )
                     {
                         result = (double)norm;
                         return true;
                     }
-                    return false;
                 }
                 if (ippFuncHint)
                 {
                     Ipp64f norm;
-                    if (ippFuncHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm, ippAlgHintAccurate) >= 0)
+                    if( ippFuncHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm, ippAlgHintAccurate) >= 0 )
                     {
                         result = (double)norm;
                         return true;
                     }
-                    return false;
                 }
             }
         }
         return false;
     }
-    static bool ipp_norm_dif(InputArray _src1, InputArray _src2, int normType, InputArray _mask, double & result)
+
+    normType &= 7;
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
+               normType == NORM_L2 || normType == NORM_L2SQR ||
+              ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
+
+    size_t total_size = src1.total();
+    int rows = src1.size[0], cols = rows ? (int)(total_size/rows) : 0;
+    if( (src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
+        && cols > 0 && (size_t)rows*cols == total_size
+        && (normType == NORM_INF || normType == NORM_L1 ||
+            normType == NORM_L2 || normType == NORM_L2SQR) )
     {
-        Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
-        size_t total_size = src1.total();
-        int rows = src1.size[0], cols = rows ? (int)(total_size / rows) : 0;
-        if ((src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
-            && cols > 0 && (size_t)rows*cols == total_size
-            && (normType == NORM_INF || normType == NORM_L1 ||
-            normType == NORM_L2 || normType == NORM_L2SQR))
+        IppiSize sz = { cols, rows };
+        int type = src1.type();
+        if( !mask.empty() )
         {
-            IppiSize sz = { cols, rows };
-            int type = src1.type();
-            if (!mask.empty())
+            typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC1)(const void *, int, const void *, int, const void *, int, IppiSize, Ipp64f *);
+            ippiMaskNormDiffFuncC1 ippFuncC1 =
+                normType == NORM_INF ?
+                (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_8u_C1MR :
+                type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_8s_C1MR :
+                type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_16u_C1MR :
+                type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_32f_C1MR :
+                0) :
+                normType == NORM_L1 ?
+                (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8u_C1MR :
+#ifndef __APPLE__
+                type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
+#endif
+                type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_16u_C1MR :
+                type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_32f_C1MR :
+                0) :
+                normType == NORM_L2 || normType == NORM_L2SQR ?
+                (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_8u_C1MR :
+                type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_8s_C1MR :
+                type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_16u_C1MR :
+                type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_32f_C1MR :
+                0) : 0;
+            if( ippFuncC1 )
             {
-                typedef IppStatus(CV_STDCALL* ippiMaskNormDiffFuncC1)(const void *, int, const void *, int, const void *, int, IppiSize, Ipp64f *);
-                ippiMaskNormDiffFuncC1 ippFuncC1 =
-                    normType == NORM_INF ?
-                    (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_8u_C1MR :
-                    type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_8s_C1MR :
-                    type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_16u_C1MR :
-                    type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_32f_C1MR :
-                    0) :
-                    normType == NORM_L1 ?
-                    (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8u_C1MR :
-#ifndef __APPLE__
-                    type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
-#endif
-                    type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_16u_C1MR :
-                    type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_32f_C1MR :
-                    0) :
-                    normType == NORM_L2 || normType == NORM_L2SQR ?
-                    (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_8u_C1MR :
-                    type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_8s_C1MR :
-                    type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_16u_C1MR :
-                    type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_32f_C1MR :
-                    0) : 0;
-                if (ippFuncC1)
+                Ipp64f norm;
+                if( ippFuncC1(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
                 {
-                    Ipp64f norm;
-                    if (ippFuncC1(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0)
-                    {
-                        result = normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
-                        return true;
-                    }
-                    return false;
+                    result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
+                    return true;
                 }
-#ifndef __APPLE__
-                typedef IppStatus(CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
-                ippiMaskNormDiffFuncC3 ippFuncC3 =
-                    normType == NORM_INF ?
-                    (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8u_C3CMR :
-                    type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8s_C3CMR :
-                    type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_16u_C3CMR :
-                    type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_32f_C3CMR :
-                    0) :
-                    normType == NORM_L1 ?
-                    (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8u_C3CMR :
-                    type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8s_C3CMR :
-                    type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_16u_C3CMR :
-                    type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_32f_C3CMR :
-                    0) :
-                    normType == NORM_L2 || normType == NORM_L2SQR ?
-                    (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_8u_C3CMR :
-                    type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_8s_C3CMR :
-                    type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_16u_C3CMR :
-                    type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_32f_C3CMR :
-                    0) : 0;
-                if (ippFuncC3)
-                {
-                    Ipp64f norm1, norm2, norm3;
-                    if (ippFuncC3(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 1, &norm1) >= 0 &&
-                        ippFuncC3(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 2, &norm2) >= 0 &&
-                        ippFuncC3(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 3, &norm3) >= 0)
-                    {
-                        Ipp64f norm =
-                            normType == NORM_INF ? std::max(std::max(norm1, norm2), norm3) :
-                            normType == NORM_L1 ? norm1 + norm2 + norm3 :
-                            normType == NORM_L2 || normType == NORM_L2SQR ? std::sqrt(norm1 * norm1 + norm2 * norm2 + norm3 * norm3) :
-                            0;
-                        result = normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm;
-                        return true;
-                    }
-                    return false;
-                }
-#endif
             }
-            else
+#ifndef __APPLE__
+            typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
+            ippiMaskNormDiffFuncC3 ippFuncC3 =
+                normType == NORM_INF ?
+                (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8u_C3CMR :
+                type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8s_C3CMR :
+                type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_16u_C3CMR :
+                type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_32f_C3CMR :
+                0) :
+                normType == NORM_L1 ?
+                (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8u_C3CMR :
+                type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8s_C3CMR :
+                type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_16u_C3CMR :
+                type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_32f_C3CMR :
+                0) :
+                normType == NORM_L2 || normType == NORM_L2SQR ?
+                (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_8u_C3CMR :
+                type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_8s_C3CMR :
+                type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_16u_C3CMR :
+                type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_32f_C3CMR :
+                0) : 0;
+            if( ippFuncC3 )
             {
-                typedef IppStatus(CV_STDCALL* ippiNormDiffFuncHint)(const void *, int, const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
-                typedef IppStatus(CV_STDCALL* ippiNormDiffFuncNoHint)(const void *, int, const void *, int, IppiSize, Ipp64f *);
-                ippiNormDiffFuncHint ippFuncHint =
-                    normType == NORM_L1 ?
-                    (type == CV_32FC1 ? (ippiNormDiffFuncHint)ippiNormDiff_L1_32f_C1R :
-                    type == CV_32FC3 ? (ippiNormDiffFuncHint)ippiNormDiff_L1_32f_C3R :
-                    type == CV_32FC4 ? (ippiNormDiffFuncHint)ippiNormDiff_L1_32f_C4R :
-                    0) :
-                    normType == NORM_L2 || normType == NORM_L2SQR ?
-                    (type == CV_32FC1 ? (ippiNormDiffFuncHint)ippiNormDiff_L2_32f_C1R :
-                    type == CV_32FC3 ? (ippiNormDiffFuncHint)ippiNormDiff_L2_32f_C3R :
-                    type == CV_32FC4 ? (ippiNormDiffFuncHint)ippiNormDiff_L2_32f_C4R :
-                    0) : 0;
-                ippiNormDiffFuncNoHint ippFuncNoHint =
-                    normType == NORM_INF ?
-                    (type == CV_8UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C1R :
-                    type == CV_8UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C3R :
-                    type == CV_8UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C4R :
-                    type == CV_16UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C1R :
-                    type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C3R :
-                    type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C4R :
-                    type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C1R :
-#if (IPP_VERSION_X100 >= 801)
-                    type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
-                    type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
-#endif
-                    type == CV_32FC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_32f_C1R :
-                    type == CV_32FC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_32f_C3R :
-                    type == CV_32FC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_32f_C4R :
-                    0) :
-                    normType == NORM_L1 ?
-                    (type == CV_8UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C1R :
-                    type == CV_8UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C3R :
-                    type == CV_8UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C4R :
-                    type == CV_16UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C1R :
-                    type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C3R :
-                    type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C4R :
-#if !(IPP_VERSION_X100 == 802 && (!defined(IPP_VERSION_UPDATE) || IPP_VERSION_UPDATE <= 1)) // Oct 2014: Accuracy issue with IPP 8.2 / 8.2.1
-                    type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C1R :
-#endif
-                    type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C3R :
-                    type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C4R :
-                    0) :
-                    normType == NORM_L2 || normType == NORM_L2SQR ?
-                    (type == CV_8UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C1R :
-                    type == CV_8UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C3R :
-                    type == CV_8UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C4R :
-                    type == CV_16UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16u_C1R :
-                    type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16u_C3R :
-                    type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16u_C4R :
-                    type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16s_C1R :
-                    type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16s_C3R :
-                    type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16s_C4R :
-                    0) : 0;
-                // Make sure only zero or one version of the function pointer is valid
-                CV_Assert(!ippFuncHint || !ippFuncNoHint);
-                if (ippFuncHint || ippFuncNoHint)
+                Ipp64f norm1, norm2, norm3;
+                if( ippFuncC3(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 1, &norm1) >= 0 &&
+                    ippFuncC3(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 2, &norm2) >= 0 &&
+                    ippFuncC3(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 3, &norm3) >= 0)
                 {
-                    Ipp64f norm_array[4];
-                    IppStatus ret = ippFuncHint ? ippFuncHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array, ippAlgHintAccurate) :
-                        ippFuncNoHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array);
-                    if (ret >= 0)
+                    Ipp64f norm =
+                        normType == NORM_INF ? std::max(std::max(norm1, norm2), norm3) :
+                        normType == NORM_L1 ? norm1 + norm2 + norm3 :
+                        normType == NORM_L2 || normType == NORM_L2SQR ? std::sqrt(norm1 * norm1 + norm2 * norm2 + norm3 * norm3) :
+                        0;
+                    result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
+                    return true;
+                }
+            }
+#endif
+        }
+        else
+        {
+            typedef IppStatus (CV_STDCALL* ippiNormDiffFuncHint)(const void *, int, const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
+            typedef IppStatus (CV_STDCALL* ippiNormDiffFuncNoHint)(const void *, int, const void *, int, IppiSize, Ipp64f *);
+            ippiNormDiffFuncHint ippFuncHint =
+                normType == NORM_L1 ?
+                (type == CV_32FC1 ? (ippiNormDiffFuncHint)ippiNormDiff_L1_32f_C1R :
+                type == CV_32FC3 ? (ippiNormDiffFuncHint)ippiNormDiff_L1_32f_C3R :
+                type == CV_32FC4 ? (ippiNormDiffFuncHint)ippiNormDiff_L1_32f_C4R :
+                0) :
+                normType == NORM_L2 || normType == NORM_L2SQR ?
+                (type == CV_32FC1 ? (ippiNormDiffFuncHint)ippiNormDiff_L2_32f_C1R :
+                type == CV_32FC3 ? (ippiNormDiffFuncHint)ippiNormDiff_L2_32f_C3R :
+                type == CV_32FC4 ? (ippiNormDiffFuncHint)ippiNormDiff_L2_32f_C4R :
+                0) : 0;
+            ippiNormDiffFuncNoHint ippFuncNoHint =
+                normType == NORM_INF ?
+                (type == CV_8UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C1R :
+                type == CV_8UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C3R :
+                type == CV_8UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C4R :
+                type == CV_16UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C1R :
+                type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C3R :
+                type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C4R :
+                type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C1R :
+#if (IPP_VERSION_X100 >= 801)
+                type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+                type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
+#endif
+                type == CV_32FC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_32f_C1R :
+                type == CV_32FC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_32f_C3R :
+                type == CV_32FC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_32f_C4R :
+                0) :
+                normType == NORM_L1 ?
+                (type == CV_8UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C1R :
+                type == CV_8UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C3R :
+                type == CV_8UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C4R :
+                type == CV_16UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C1R :
+                type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C3R :
+                type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C4R :
+#if !(IPP_VERSION_X100 == 802 && (!defined(IPP_VERSION_UPDATE) || IPP_VERSION_UPDATE <= 1)) // Oct 2014: Accuracy issue with IPP 8.2 / 8.2.1
+                type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C1R :
+#endif
+                type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C3R :
+                type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C4R :
+                0) :
+                normType == NORM_L2 || normType == NORM_L2SQR ?
+                (type == CV_8UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C1R :
+                type == CV_8UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C3R :
+                type == CV_8UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C4R :
+                type == CV_16UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16u_C1R :
+                type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16u_C3R :
+                type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16u_C4R :
+                type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16s_C1R :
+                type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16s_C3R :
+                type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16s_C4R :
+                0) : 0;
+            // Make sure only zero or one version of the function pointer is valid
+            CV_Assert(!ippFuncHint || !ippFuncNoHint);
+            if( ippFuncHint || ippFuncNoHint )
+            {
+                Ipp64f norm_array[4];
+                IppStatus ret = ippFuncHint ? ippFuncHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array, ippAlgHintAccurate) :
+                                ippFuncNoHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array);
+                if( ret >= 0 )
+                {
+                    Ipp64f norm = (normType == NORM_L2 || normType == NORM_L2SQR) ? norm_array[0] * norm_array[0] : norm_array[0];
+                    for( int i = 1; i < src1.channels(); i++ )
                     {
-                        Ipp64f norm = (normType == NORM_L2 || normType == NORM_L2SQR) ? norm_array[0] * norm_array[0] : norm_array[0];
-                        CV_Assert(src1.channels() <= 4);
-                        int cn = min(src1.channels(), 4);
-                        for (int i = 1; i < cn; i++)
-                        {
-                            norm =
-                                normType == NORM_INF ? std::max(norm, norm_array[i]) :
-                                normType == NORM_L1 ? norm + norm_array[i] :
-                                normType == NORM_L2 || normType == NORM_L2SQR ? norm + norm_array[i] * norm_array[i] :
-                                0;
-                        }
-                        result = normType == NORM_L2 ? (double)std::sqrt(norm) : (double)norm;
-                        return true;
+                        norm =
+                            normType == NORM_INF ? std::max(norm, norm_array[i]) :
+                            normType == NORM_L1 ? norm + norm_array[i] :
+                            normType == NORM_L2 || normType == NORM_L2SQR ? norm + norm_array[i] * norm_array[i] :
+                            0;
                     }
-                    return false;
+                    result = (normType == NORM_L2 ? (double)std::sqrt(norm) : (double)norm);
+                    return true;
                 }
             }
         }
-        return false;
     }
+#else
+    CV_UNUSED(_src1); CV_UNUSED(_src2); CV_UNUSED(normType); CV_UNUSED(_mask); CV_UNUSED(result);
 #endif
+    return false;
 }
+}
+#endif
 
 
 double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
@@ -3341,9 +3317,10 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 _result)
 #endif
 
+    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_norm(_src1, _src2, normType, _mask, _result), _result);
+
     if( normType & CV_RELATIVE )
     {
-        CV_IPP_RUN(true, ipp_norm_rel(_src1, _src2, normType, _mask, _result), _result);
         return norm(_src1, _src2, normType & ~CV_RELATIVE, _mask)/(norm(_src2, normType, _mask) + DBL_EPSILON);
     }
 
@@ -3354,7 +3331,6 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
                normType == NORM_L2 || normType == NORM_L2SQR ||
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
-    CV_IPP_RUN(true, ipp_norm_dif(_src1, _src2, normType, _mask, _result), _result);
 
     if( src1.isContinuous() && src2.isContinuous() && mask.empty() )
     {
