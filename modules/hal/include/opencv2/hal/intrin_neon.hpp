@@ -747,7 +747,7 @@ inline v_int32x4 v_trunc(const v_float32x4& a)
 { return v_int32x4(vcvtq_s32_f32(a.val)); }
 
 #define OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(_Tpvec, suffix) \
-inline void transpose4x4(const v_##_Tpvec& a0, const v_##_Tpvec& a1, \
+inline void v_transpose4x4(const v_##_Tpvec& a0, const v_##_Tpvec& a1, \
                          const v_##_Tpvec& a2, const v_##_Tpvec& a3, \
                          v_##_Tpvec& b0, v_##_Tpvec& b1, \
                          v_##_Tpvec& b2, v_##_Tpvec& b3) \
