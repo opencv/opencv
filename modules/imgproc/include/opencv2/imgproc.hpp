@@ -326,9 +326,7 @@ enum AdaptiveThresholdTypes {
     window) of the \f$\texttt{blockSize} \times \texttt{blockSize}\f$ neighborhood of \f$(x, y)\f$
     minus C . The default sigma (standard deviation) is used for the specified blockSize . See
     cv::getGaussianKernel*/
-    ADAPTIVE_THRESH_GAUSSIAN_C = 1,
-     /** Like ADAPTIVE_THRESH_GAUSSIAN_C except that GaussianBlur use CV_32F for blurring to avoid rounding error*/
-   ADAPTIVE_THRESH_GAUSSIAN_C_FLOAT = 2
+    ADAPTIVE_THRESH_GAUSSIAN_C = 1
 };
 
 //! cv::undistort mode

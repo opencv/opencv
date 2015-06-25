@@ -1299,8 +1299,6 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         boxFilter( src, mean, src.type(), Size(blockSize, blockSize),
                    Point(-1,-1), true, BORDER_REPLICATE );
     else if (method == ADAPTIVE_THRESH_GAUSSIAN_C)
-        GaussianBlur(src, mean, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE);
-    else if (method == ADAPTIVE_THRESH_GAUSSIAN_C_FLOAT)
     {
         Mat srcfloat,meanfloat;
         src.convertTo(srcfloat,CV_32F);
