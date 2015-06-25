@@ -126,8 +126,11 @@
 // Authors: wan@google.com (Zhanyong Wan)
 //
 // Low-level types and utilities for porting Google Test to various
-// platforms.  They are subject to change without notice.  DO NOT USE
-// THEM IN USER CODE.
+// platforms.  All macros ending with _ and symbols defined in an
+// internal namespace are subject to change without notice.  Code
+// outside Google Test MUST NOT USE THEM DIRECTLY.  Macros that don't
+// end with _ are part of Google Test's public API and can be used by
+// code outside Google Test.
 //
 // This file is fundamental to Google Test.  All other Google Test source
 // files are expected to #include this.  Therefore, it cannot #include
@@ -136,9 +139,30 @@
 #ifndef GTEST_INCLUDE_GTEST_INTERNAL_GTEST_PORT_H_
 #define GTEST_INCLUDE_GTEST_INTERNAL_GTEST_PORT_H_
 
-// The user can define the following macros in the build script to
-// control Google Test's behavior.  If the user doesn't define a macro
-// in this list, Google Test will define it.
+// Environment-describing macros
+// -----------------------------
+//
+// Google Test can be used in many different environments.  Macros in
+// this section tell Google Test what kind of environment it is being
+// used in, such that Google Test can provide environment-specific
+// features and implementations.
+//
+// Google Test tries to automatically detect the properties of its
+// environment, so users usually don't need to worry about these
+// macros.  However, the automatic detection is not perfect.
+// Sometimes it's necessary for a user to define some of the following
+// macros in the build script to override Google Test's decisions.
+//
+// If the user doesn't define a macro in the list, Google Test will
+// provide a default definition.  After this header is #included, all
+// macros in this list will be defined to either 1 or 0.
+//
+// Notes to maintainers:
+//   - Each macro here is a user-tweakable knob; do not grow the list
+//     lightly.
+//   - Use #if to key off these macros.  Don't use #ifdef or "#if
+//     defined(...)", which will not work as these macros are ALWAYS
+//     defined.
 //
 //   GTEST_HAS_CLONE          - Define it to 1/0 to indicate that clone(2)
 //                              is/isn't available.
@@ -182,18 +206,23 @@
 //                            - Define to 1 when compiling Google Test itself
 //                              as a shared library.
 
-// This header defines the following utilities:
+// Platform-indicating macros
+// --------------------------
 //
-// Macros indicating the current platform (defined to 1 if compiled on
-// the given platform; otherwise undefined):
+// Macros indicating the platform on which Google Test is being used
+// (a macro is defined to 1 if compiled on the given platform;
+// otherwise UNDEFINED -- it's never defined to 0.).  Google Test
+// defines these macros automatically.  Code outside Google Test MUST
+// NOT define them.
+//
 //   GTEST_OS_AIX      - IBM AIX
 //   GTEST_OS_CYGWIN   - Cygwin
+//   GTEST_OS_FREEBSD  - FreeBSD
 //   GTEST_OS_HPUX     - HP-UX
 //   GTEST_OS_LINUX    - Linux
 //     GTEST_OS_LINUX_ANDROID - Google Android
 //   GTEST_OS_MAC      - Mac OS X
 //     GTEST_OS_IOS    - iOS
-//       GTEST_OS_IOS_SIMULATOR - iOS simulator
 //   GTEST_OS_NACL     - Google Native Client (NaCl)
 //   GTEST_OS_OPENBSD  - OpenBSD
 //   GTEST_OS_QNX      - QNX
@@ -203,6 +232,8 @@
 //     GTEST_OS_WINDOWS_DESKTOP  - Windows Desktop
 //     GTEST_OS_WINDOWS_MINGW    - MinGW
 //     GTEST_OS_WINDOWS_MOBILE   - Windows Mobile
+//     GTEST_OS_WINDOWS_PHONE    - Windows Phone
+//     GTEST_OS_WINDOWS_RT       - Windows Store App/WinRT
 //   GTEST_OS_ZOS      - z/OS
 //
 // Among the platforms, Cygwin, Linux, Max OS X, and Windows have the
@@ -212,22 +243,50 @@
 // googletestframework@googlegroups.com (patches for fixing them are
 // even more welcome!).
 //
-// Note that it is possible that none of the GTEST_OS_* macros are defined.
+// It is possible that none of the GTEST_OS_* macros are defined.
+
+// Feature-indicating macros
+// -------------------------
 //
-// Macros indicating available Google Test features (defined to 1 if
-// the corresponding feature is supported; otherwise undefined):
+// Macros indicating which Google Test features are available (a macro
+// is defined to 1 if the corresponding feature is supported;
+// otherwise UNDEFINED -- it's never defined to 0.).  Google Test
+// defines these macros automatically.  Code outside Google Test MUST
+// NOT define them.
+//
+// These macros are public so that portable tests can be written.
+// Such tests typically surround code using a feature with an #if
+// which controls that code.  For example:
+//
+// #if GTEST_HAS_DEATH_TEST
+//   EXPECT_DEATH(DoSomethingDeadly());
+// #endif
+//
 //   GTEST_HAS_COMBINE      - the Combine() function (for value-parameterized
 //                            tests)
 //   GTEST_HAS_DEATH_TEST   - death tests
 //   GTEST_HAS_PARAM_TEST   - value-parameterized tests
 //   GTEST_HAS_TYPED_TEST   - typed tests
 //   GTEST_HAS_TYPED_TEST_P - type-parameterized tests
+//   GTEST_IS_THREADSAFE    - Google Test is thread-safe.
 //   GTEST_USES_POSIX_RE    - enhanced POSIX regex is used. Do not confuse with
 //                            GTEST_HAS_POSIX_RE (see above) which users can
 //                            define themselves.
 //   GTEST_USES_SIMPLE_RE   - our own simple regex is used;
 //                            the above two are mutually exclusive.
 //   GTEST_CAN_COMPARE_NULL - accepts untyped NULL in EXPECT_EQ().
+
+// Misc public macros
+// ------------------
+//
+//   GTEST_FLAG(flag_name)  - references the variable corresponding to
+//                            the given Google Test flag.
+
+// Internal utilities
+// ------------------
+//
+// The following macros and utilities are for Google Test's INTERNAL
+// use only.  Code outside Google Test MUST NOT USE THEM DIRECTLY.
 //
 // Macros for basic C++ coding:
 //   GTEST_AMBIGUOUS_ELSE_BLOCKER_ - for disabling a gcc warning.
@@ -236,13 +295,18 @@
 //   GTEST_DISALLOW_ASSIGN_   - disables operator=.
 //   GTEST_DISALLOW_COPY_AND_ASSIGN_ - disables copy ctor and operator=.
 //   GTEST_MUST_USE_RESULT_   - declares that a function's result must be used.
+//   GTEST_INTENTIONAL_CONST_COND_PUSH_ - start code section where MSVC C4127 is
+//                                        suppressed (constant conditional).
+//   GTEST_INTENTIONAL_CONST_COND_POP_  - finish code section where MSVC C4127
+//                                        is suppressed.
+//
+// C++11 feature wrappers:
+//
+//   testing::internal::move  - portability wrapper for std::move.
 //
 // Synchronization:
 //   Mutex, MutexLock, ThreadLocal, GetThreadCount()
-//                  - synchronization primitives.
-//   GTEST_IS_THREADSAFE - defined to 1 to indicate that the above
-//                         synchronization primitives have real implementations
-//                         and Google Test is thread-safe; or 0 otherwise.
+//                            - synchronization primitives.
 //
 // Template meta programming:
 //   is_pointer     - as in TR1; needed on Symbian and IBM XL C/C++ only.
@@ -278,7 +342,6 @@
 //   BiggestInt     - the biggest signed integer type.
 //
 // Command-line utilities:
-//   GTEST_FLAG()       - references a flag.
 //   GTEST_DECLARE_*()  - declares a flag.
 //   GTEST_DEFINE_*()   - defines a flag.
 //   GetInjectableArgvs() - returns the command line as a vector of strings.
@@ -304,9 +367,11 @@
 # include <TargetConditionals.h>
 #endif
 
+#include <algorithm>  // NOLINT
 #include <iostream>  // NOLINT
 #include <sstream>  // NOLINT
 #include <string>  // NOLINT
+#include <utility>
 
 #define GTEST_DEV_EMAIL_ "googletestframework@@googlegroups.com"
 #define GTEST_FLAG_PREFIX_ "gtest_"
@@ -333,6 +398,19 @@
 #  define GTEST_OS_WINDOWS_MOBILE 1
 # elif defined(__MINGW__) || defined(__MINGW32__)
 #  define GTEST_OS_WINDOWS_MINGW 1
+# elif defined(WINAPI_FAMILY)
+#  include <winapifamily.h>
+#  if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#   define GTEST_OS_WINDOWS_DESKTOP 1
+#  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE_APP)
+#   define GTEST_OS_WINDOWS_PHONE 1
+#  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
+#   define GTEST_OS_WINDOWS_RT 1
+#  else
+    // WINAPI_FAMILY defined but no known partition matched.
+    // Default to desktop.
+#   define GTEST_OS_WINDOWS_DESKTOP 1
+#  endif
 # else
 #  define GTEST_OS_WINDOWS_DESKTOP 1
 # endif  // _WIN32_WCE
@@ -340,10 +418,9 @@
 # define GTEST_OS_MAC 1
 # if TARGET_OS_IPHONE
 #  define GTEST_OS_IOS 1
-#  if TARGET_IPHONE_SIMULATOR
-#   define GTEST_OS_IOS_SIMULATOR 1
-#  endif
 # endif
+#elif defined __FreeBSD__
+# define GTEST_OS_FREEBSD 1
 #elif defined __linux__
 # define GTEST_OS_LINUX 1
 # if defined __ANDROID__
@@ -365,6 +442,23 @@
 # define GTEST_OS_QNX 1
 #endif  // __CYGWIN__
 
+// Macros for disabling Microsoft Visual C++ warnings.
+//
+//   GTEST_DISABLE_MSC_WARNINGS_PUSH_(4800 4385)
+//   /* code that triggers warnings C4800 and C4385 */
+//   GTEST_DISABLE_MSC_WARNINGS_POP_()
+#if _MSC_VER >= 1500
+# define GTEST_DISABLE_MSC_WARNINGS_PUSH_(warnings) \
+    __pragma(warning(push))                        \
+    __pragma(warning(disable: warnings))
+# define GTEST_DISABLE_MSC_WARNINGS_POP_()          \
+    __pragma(warning(pop))
+#else
+// Older versions of MSVC don't have __pragma.
+# define GTEST_DISABLE_MSC_WARNINGS_PUSH_(warnings)
+# define GTEST_DISABLE_MSC_WARNINGS_POP_()
+#endif
+
 #ifndef GTEST_LANG_CXX11
 // gcc and clang define __GXX_EXPERIMENTAL_CXX0X__ when
 // -std={c,gnu}++{0x,11} is passed.  The C++11 standard specifies a
@@ -378,19 +472,80 @@
 # endif
 #endif
 
+// Distinct from C++11 language support, some environments don't provide
+// proper C++11 library support. Notably, it's possible to build in
+// C++11 mode when targeting Mac OS X 10.6, which has an old libstdc++
+// with no C++11 support.
+//
+// libstdc++ has sufficient C++11 support as of GCC 4.6.0, __GLIBCXX__
+// 20110325, but maintenance releases in the 4.4 and 4.5 series followed
+// this date, so check for those versions by their date stamps.
+// https://gcc.gnu.org/onlinedocs/libstdc++/manual/abi.html#abi.versioning
+#if GTEST_LANG_CXX11 && \
+    (!defined(__GLIBCXX__) || ( \
+        __GLIBCXX__ >= 20110325ul &&  /* GCC >= 4.6.0 */ \
+        /* Blacklist of patch releases of older branches: */ \
+        __GLIBCXX__ != 20110416ul &&  /* GCC 4.4.6 */ \
+        __GLIBCXX__ != 20120313ul &&  /* GCC 4.4.7 */ \
+        __GLIBCXX__ != 20110428ul &&  /* GCC 4.5.3 */ \
+        __GLIBCXX__ != 20120702ul))   /* GCC 4.5.4 */
+# define GTEST_STDLIB_CXX11 1
+#endif
+
+// Only use C++11 library features if the library provides them.
+#if GTEST_STDLIB_CXX11
+# define GTEST_HAS_STD_BEGIN_AND_END_ 1
+# define GTEST_HAS_STD_FORWARD_LIST_ 1
+# define GTEST_HAS_STD_FUNCTION_ 1
+# define GTEST_HAS_STD_INITIALIZER_LIST_ 1
+# define GTEST_HAS_STD_MOVE_ 1
+# define GTEST_HAS_STD_UNIQUE_PTR_ 1
+#endif
+
+// C++11 specifies that <tuple> provides std::tuple.
+// Some platforms still might not have it, however.
+#if GTEST_LANG_CXX11
+# define GTEST_HAS_STD_TUPLE_ 1
+# if defined(__clang__)
+// Inspired by http://clang.llvm.org/docs/LanguageExtensions.html#__has_include
+#  if defined(__has_include) && !__has_include(<tuple>)
+#   undef GTEST_HAS_STD_TUPLE_
+#  endif
+# elif defined(_MSC_VER)
+// Inspired by boost/config/stdlib/dinkumware.hpp
+#  if defined(_CPPLIB_VER) && _CPPLIB_VER < 520
+#   undef GTEST_HAS_STD_TUPLE_
+#  endif
+# elif defined(__GLIBCXX__)
+// Inspired by boost/config/stdlib/libstdcpp3.hpp,
+// http://gcc.gnu.org/gcc-4.2/changes.html and
+// http://gcc.gnu.org/onlinedocs/libstdc++/manual/bk01pt01ch01.html#manual.intro.status.standard.200x
+#  if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 2)
+#   undef GTEST_HAS_STD_TUPLE_
+#  endif
+# endif
+#endif
+
 // Brings in definitions for functions used in the testing::internal::posix
 // namespace (read, write, close, chdir, isatty, stat). We do not currently
 // use them on Windows Mobile.
-#if !GTEST_OS_WINDOWS
+#if GTEST_OS_WINDOWS
+# if !GTEST_OS_WINDOWS_MOBILE
+#  include <direct.h>
+#  include <io.h>
+# endif
+// In order to avoid having to include <windows.h>, use forward declaration
+// assuming CRITICAL_SECTION is a typedef of _RTL_CRITICAL_SECTION.
+// This assumption is verified by
+// WindowsTypesTest.CRITICAL_SECTIONIs_RTL_CRITICAL_SECTION.
+struct _RTL_CRITICAL_SECTION;
+#else
 // This assumes that non-Windows OSes provide unistd.h. For OSes where this
 // is not the case, we need to include headers that provide the functions
 // mentioned above.
 # include <unistd.h>
 # include <strings.h>
-#elif !GTEST_OS_WINDOWS_MOBILE
-# include <direct.h>
-# include <io.h>
-#endif
+#endif  // GTEST_OS_WINDOWS
 
 #if GTEST_OS_LINUX_ANDROID
 // Used to define __ANDROID_API__ matching the target NDK API level.
@@ -442,6 +597,15 @@
 #   define _HAS_EXCEPTIONS 1
 #  endif  // _HAS_EXCEPTIONS
 #  define GTEST_HAS_EXCEPTIONS _HAS_EXCEPTIONS
+# elif defined(__clang__)
+// clang defines __EXCEPTIONS iff exceptions are enabled before clang 220714,
+// but iff cleanups are enabled after that. In Obj-C++ files, there can be
+// cleanups for ObjC exceptions which also need cleanups, even if C++ exceptions
+// are disabled. clang has __has_feature(cxx_exceptions) which checks for C++
+// exceptions starting at clang r206352, but which checked for cleanups prior to
+// that. To reliably check for C++ exception availability with clang, check for
+// __EXCEPTIONS && __has_feature(cxx_exceptions).
+#  define GTEST_HAS_EXCEPTIONS (__EXCEPTIONS && __has_feature(cxx_exceptions))
 # elif defined(__GNUC__) && __EXCEPTIONS
 // gcc defines __EXCEPTIONS to 1 iff exceptions are enabled.
 #  define GTEST_HAS_EXCEPTIONS 1
@@ -567,13 +731,13 @@
 
 // Determines whether Google Test can use the pthreads library.
 #ifndef GTEST_HAS_PTHREAD
-// The user didn't tell us explicitly, so we assume pthreads support is
-// available on Linux and Mac.
+// The user didn't tell us explicitly, so we make reasonable assumptions about
+// which platforms have pthreads support.
 //
 // To disable threading support in Google Test, add -DGTEST_HAS_PTHREAD=0
 // to your compiler flags.
 # define GTEST_HAS_PTHREAD (GTEST_OS_LINUX || GTEST_OS_MAC || GTEST_OS_HPUX \
-    || GTEST_OS_QNX)
+    || GTEST_OS_QNX || GTEST_OS_FREEBSD || GTEST_OS_NACL)
 #endif  // GTEST_HAS_PTHREAD
 
 #if GTEST_HAS_PTHREAD
@@ -635,8 +799,18 @@
 
 // To avoid conditional compilation everywhere, we make it
 // gtest-port.h's responsibility to #include the header implementing
-// tr1/tuple.
+// tuple.
+#if GTEST_HAS_STD_TUPLE_
+# include <tuple>  // IWYU pragma: export
+# define GTEST_TUPLE_NAMESPACE_ ::std
+#endif  // GTEST_HAS_STD_TUPLE_
+
+// We include tr1::tuple even if std::tuple is available to define printers for
+// them.
 #if GTEST_HAS_TR1_TUPLE
+# ifndef GTEST_TUPLE_NAMESPACE_
+#  define GTEST_TUPLE_NAMESPACE_ ::std::tr1
+# endif  // GTEST_TUPLE_NAMESPACE_
 
 # if GTEST_USE_OWN_TR1_TUPLE
 // This file was GENERATED by command:
@@ -692,6 +866,14 @@
 # define GTEST_DECLARE_TUPLE_AS_FRIEND_ \
     template <GTEST_10_TYPENAMES_(U)> friend class tuple; \
    private:
+#endif
+
+// Visual Studio 2010, 2012, and 2013 define symbols in std::tr1 that conflict
+// with our own definitions. Therefore using our own tuple does not work on
+// those compilers.
+#if defined(_MSC_VER) && _MSC_VER >= 1600  /* 1600 is Visual Studio 2010 */
+# error "gtest's tuple doesn't compile on Visual Studio 2010 or later. \
+GTEST_USE_OWN_TR1_TUPLE must be set to 0 on those compilers."
 #endif
 
 // GTEST_n_TUPLE_(T) is the type of an n-tuple.
@@ -1681,7 +1863,7 @@ using ::std::tuple_size;
 // This prevents <boost/tr1/detail/config.hpp>, which defines
 // BOOST_HAS_TR1_TUPLE, from being #included by Boost's <tuple>.
 #  define BOOST_TR1_DETAIL_CONFIG_HPP_INCLUDED
-#  include <tuple>
+#  include <tuple>  // IWYU pragma: export  // NOLINT
 
 # elif defined(__GNUC__) && (GTEST_GCC_VER_ >= 40000)
 // GCC 4.0+ implements tr1/tuple in the <tr1/tuple> header.  This does
@@ -1704,7 +1886,7 @@ using ::std::tuple_size;
 # else
 // If the compiler is not GCC 4.0+, we assume the user is using a
 // spec-conforming TR1 implementation.
-#  include <tuple>  // NOLINT
+#  include <tuple>  // IWYU pragma: export  // NOLINT
 # endif  // GTEST_USE_OWN_TR1_TUPLE
 
 #endif  // GTEST_HAS_TR1_TUPLE
@@ -1738,7 +1920,8 @@ using ::std::tuple_size;
 #ifndef GTEST_HAS_STREAM_REDIRECTION
 // By default, we assume that stream redirection is supported on all
 // platforms except known mobile ones.
-# if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_SYMBIAN
+# if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_SYMBIAN || \
+    GTEST_OS_WINDOWS_PHONE || GTEST_OS_WINDOWS_RT
 #  define GTEST_HAS_STREAM_REDIRECTION 0
 # else
 #  define GTEST_HAS_STREAM_REDIRECTION 1
@@ -1750,10 +1933,10 @@ using ::std::tuple_size;
 // abort() in a VC 7.1 application compiled as GUI in debug config
 // pops up a dialog window that cannot be suppressed programmatically.
 #if (GTEST_OS_LINUX || GTEST_OS_CYGWIN || GTEST_OS_SOLARIS || \
-     (GTEST_OS_MAC && !GTEST_OS_IOS) || GTEST_OS_IOS_SIMULATOR || \
+     (GTEST_OS_MAC && !GTEST_OS_IOS) || \
      (GTEST_OS_WINDOWS_DESKTOP && _MSC_VER >= 1400) || \
      GTEST_OS_WINDOWS_MINGW || GTEST_OS_AIX || GTEST_OS_HPUX || \
-     GTEST_OS_OPENBSD || GTEST_OS_QNX)
+     GTEST_OS_OPENBSD || GTEST_OS_QNX || GTEST_OS_FREEBSD)
 # define GTEST_HAS_DEATH_TEST 1
 # include <vector>  // NOLINT
 #endif
@@ -1819,7 +2002,12 @@ using ::std::tuple_size;
 // compiler the variable/parameter does not have to be used.
 #if defined(__GNUC__) && !defined(COMPILER_ICC)
 # define GTEST_ATTRIBUTE_UNUSED_ __attribute__ ((unused))
-#else
+#elif defined(__clang__)
+# if __has_attribute(unused)
+#  define GTEST_ATTRIBUTE_UNUSED_ __attribute__ ((unused))
+# endif
+#endif
+#ifndef GTEST_ATTRIBUTE_UNUSED_
 # define GTEST_ATTRIBUTE_UNUSED_
 #endif
 
@@ -1845,6 +2033,19 @@ using ::std::tuple_size;
 # define GTEST_MUST_USE_RESULT_
 #endif  // __GNUC__ && (GTEST_GCC_VER_ >= 30400) && !COMPILER_ICC
 
+// MS C++ compiler emits warning when a conditional expression is compile time
+// constant. In some contexts this warning is false positive and needs to be
+// suppressed. Use the following two macros in such cases:
+//
+// GTEST_INTENTIONAL_CONST_COND_PUSH_()
+// while (true) {
+// GTEST_INTENTIONAL_CONST_COND_POP_()
+// }
+# define GTEST_INTENTIONAL_CONST_COND_PUSH_() \
+    GTEST_DISABLE_MSC_WARNINGS_PUSH_(4127)
+# define GTEST_INTENTIONAL_CONST_COND_POP_() \
+    GTEST_DISABLE_MSC_WARNINGS_POP_()
+
 // Determine whether the compiler supports Microsoft's Structured Exception
 // Handling.  This is supported by several Windows compilers but generally
 // does not exist on any other system.
@@ -1858,6 +2059,11 @@ using ::std::tuple_size;
 // Assume no SEH.
 #  define GTEST_HAS_SEH 0
 # endif
+
+#define GTEST_IS_THREADSAFE \
+    (0 \
+     || (GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT) \
+     || GTEST_HAS_PTHREAD)
 
 #endif  // GTEST_HAS_SEH
 
@@ -1889,9 +2095,57 @@ using ::std::tuple_size;
 # define GTEST_HAS_CXXABI_H_ 0
 #endif
 
+// A function level attribute to disable checking for use of uninitialized
+// memory when built with MemorySanitizer.
+#if defined(__clang__)
+# if __has_feature(memory_sanitizer)
+#  define GTEST_ATTRIBUTE_NO_SANITIZE_MEMORY_ \
+       __attribute__((no_sanitize_memory))
+# else
+#  define GTEST_ATTRIBUTE_NO_SANITIZE_MEMORY_
+# endif  // __has_feature(memory_sanitizer)
+#else
+# define GTEST_ATTRIBUTE_NO_SANITIZE_MEMORY_
+#endif  // __clang__
+
+// A function level attribute to disable AddressSanitizer instrumentation.
+#if defined(__clang__)
+# if __has_feature(address_sanitizer)
+#  define GTEST_ATTRIBUTE_NO_SANITIZE_ADDRESS_ \
+       __attribute__((no_sanitize_address))
+# else
+#  define GTEST_ATTRIBUTE_NO_SANITIZE_ADDRESS_
+# endif  // __has_feature(address_sanitizer)
+#else
+# define GTEST_ATTRIBUTE_NO_SANITIZE_ADDRESS_
+#endif  // __clang__
+
+// A function level attribute to disable ThreadSanitizer instrumentation.
+#if defined(__clang__)
+# if __has_feature(thread_sanitizer)
+#  define GTEST_ATTRIBUTE_NO_SANITIZE_THREAD_ \
+       __attribute__((no_sanitize_thread))
+# else
+#  define GTEST_ATTRIBUTE_NO_SANITIZE_THREAD_
+# endif  // __has_feature(thread_sanitizer)
+#else
+# define GTEST_ATTRIBUTE_NO_SANITIZE_THREAD_
+#endif  // __clang__
+
 namespace testing {
 
 class Message;
+
+#if defined(GTEST_TUPLE_NAMESPACE_)
+// Import tuple and friends into the ::testing namespace.
+// It is part of our interface, having them in ::testing allows us to change
+// their types as needed.
+using GTEST_TUPLE_NAMESPACE_::get;
+using GTEST_TUPLE_NAMESPACE_::make_tuple;
+using GTEST_TUPLE_NAMESPACE_::tuple;
+using GTEST_TUPLE_NAMESPACE_::tuple_size;
+using GTEST_TUPLE_NAMESPACE_::tuple_element;
+#endif  // defined(GTEST_TUPLE_NAMESPACE_)
 
 namespace internal {
 
@@ -1904,8 +2158,8 @@ class Secret;
 // expression is true. For example, you could use it to verify the
 // size of a static array:
 //
-//   GTEST_COMPILE_ASSERT_(ARRAYSIZE(content_type_names) == CONTENT_NUM_TYPES,
-//                         content_type_names_incorrect_size);
+//   GTEST_COMPILE_ASSERT_(GTEST_ARRAY_SIZE_(names) == NUM_NAMES,
+//                         names_incorrect_size);
 //
 // or to make sure a struct is smaller than a certain size:
 //
@@ -1915,15 +2169,21 @@ class Secret;
 // the expression is false, most compilers will issue a warning/error
 // containing the name of the variable.
 
+#if GTEST_LANG_CXX11
+# define GTEST_COMPILE_ASSERT_(expr, msg) static_assert(expr, #msg)
+#else  // !GTEST_LANG_CXX11
 template <bool>
-struct CompileAssert {
+  struct CompileAssert {
 };
 
-#define GTEST_COMPILE_ASSERT_(expr, msg) \
+# define GTEST_COMPILE_ASSERT_(expr, msg) \
   typedef ::testing::internal::CompileAssert<(static_cast<bool>(expr))> \
       msg[static_cast<bool>(expr) ? 1 : -1] GTEST_ATTRIBUTE_UNUSED_
+#endif  // !GTEST_LANG_CXX11
 
 // Implementation details of GTEST_COMPILE_ASSERT_:
+//
+// (In C++11, we simply use static_assert instead of the following)
 //
 // - GTEST_COMPILE_ASSERT_ works by defining an array type that has -1
 //   elements (and thus is invalid) when the expression is false.
@@ -1971,7 +2231,12 @@ template <typename T1, typename T2>
 struct StaticAssertTypeEqHelper;
 
 template <typename T>
-struct StaticAssertTypeEqHelper<T, T> {};
+struct StaticAssertTypeEqHelper<T, T> {
+  enum { value = true };
+};
+
+// Evaluates to the number of elements in 'array'.
+#define GTEST_ARRAY_SIZE_(array) (sizeof(array) / sizeof(array[0]))
 
 #if GTEST_HAS_GLOBAL_STRING
 typedef ::string string;
@@ -2018,6 +2283,11 @@ class scoped_ptr {
       }
       ptr_ = p;
     }
+  }
+
+  friend void swap(scoped_ptr& a, scoped_ptr& b) {
+    using std::swap;
+    swap(a.ptr_, b.ptr_);
   }
 
  private:
@@ -2181,6 +2451,15 @@ inline void FlushInfoLog() { fflush(NULL); }
     GTEST_LOG_(FATAL) << #posix_call << "failed with error " \
                       << gtest_error
 
+#if GTEST_HAS_STD_MOVE_
+using std::move;
+#else  // GTEST_HAS_STD_MOVE_
+template <typename T>
+const T& move(const T& t) {
+  return t;
+}
+#endif  // GTEST_HAS_STD_MOVE_
+
 // INTERNAL IMPLEMENTATION - DO NOT USE IN USER CODE.
 //
 // Use ImplicitCast_ as a safe version of static_cast for upcasting in
@@ -2202,7 +2481,7 @@ inline void FlushInfoLog() { fflush(NULL); }
 // similar functions users may have (e.g., implicit_cast). The internal
 // namespace alone is not enough because the function can be found by ADL.
 template<typename To>
-inline To ImplicitCast_(To x) { return x; }
+inline To ImplicitCast_(To x) { return ::testing::internal::move(x); }
 
 // When you upcast (that is, cast a pointer from type Foo to type
 // SuperclassOfFoo), it's fine to use ImplicitCast_<>, since upcasts
@@ -2231,7 +2510,9 @@ inline To DownCast_(From* f) {  // so we only accept pointers
   // for compile-time type checking, and has no overhead in an
   // optimized build at run-time, as it will be optimized away
   // completely.
+  GTEST_INTENTIONAL_CONST_COND_PUSH_()
   if (false) {
+  GTEST_INTENTIONAL_CONST_COND_POP_()
     const To to = NULL;
     ::testing::internal::ImplicitCast_<From*>(to);
   }
@@ -2286,12 +2567,11 @@ extern ::std::vector<testing::internal::string> g_argvs;
 #endif  // GTEST_HAS_DEATH_TEST
 
 // Defines synchronization primitives.
-
-#if GTEST_HAS_PTHREAD
-
-// Sleeps for (roughly) n milli-seconds.  This function is only for
-// testing Google Test's own constructs.  Don't use it in user tests,
-// either directly or indirectly.
+#if GTEST_IS_THREADSAFE
+# if GTEST_HAS_PTHREAD
+// Sleeps for (roughly) n milliseconds.  This function is only for testing
+// Google Test's own constructs.  Don't use it in user tests, either
+// directly or indirectly.
 inline void SleepMilliseconds(int n) {
   const timespec time = {
     0,                  // 0 seconds.
@@ -2299,7 +2579,10 @@ inline void SleepMilliseconds(int n) {
   };
   nanosleep(&time, NULL);
 }
+# endif  // GTEST_HAS_PTHREAD
 
+# if 0  // OS detection
+# elif GTEST_HAS_PTHREAD
 // Allows a controller thread to pause execution of newly created
 // threads until notified.  Instances of this class must be created
 // and destroyed in the controller thread.
@@ -2343,6 +2626,62 @@ class Notification {
   GTEST_DISALLOW_COPY_AND_ASSIGN_(Notification);
 };
 
+# elif GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT
+
+GTEST_API_ void SleepMilliseconds(int n);
+
+// Provides leak-safe Windows kernel handle ownership.
+// Used in death tests and in threading support.
+class GTEST_API_ AutoHandle {
+ public:
+  // Assume that Win32 HANDLE type is equivalent to void*. Doing so allows us to
+  // avoid including <windows.h> in this header file. Including <windows.h> is
+  // undesirable because it defines a lot of symbols and macros that tend to
+  // conflict with client code. This assumption is verified by
+  // WindowsTypesTest.HANDLEIsVoidStar.
+  typedef void* Handle;
+  AutoHandle();
+  explicit AutoHandle(Handle handle);
+
+  ~AutoHandle();
+
+  Handle Get() const;
+  void Reset();
+  void Reset(Handle handle);
+
+ private:
+  // Returns true iff the handle is a valid handle object that can be closed.
+  bool IsCloseable() const;
+
+  Handle handle_;
+
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(AutoHandle);
+};
+
+// Allows a controller thread to pause execution of newly created
+// threads until notified.  Instances of this class must be created
+// and destroyed in the controller thread.
+//
+// This class is only for testing Google Test's own constructs. Do not
+// use it in user tests, either directly or indirectly.
+class GTEST_API_ Notification {
+ public:
+  Notification();
+  void Notify();
+  void WaitForNotification();
+
+ private:
+  AutoHandle event_;
+
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(Notification);
+};
+# endif  // OS detection
+
+// On MinGW, we can have both GTEST_OS_WINDOWS and GTEST_HAS_PTHREAD
+// defined, but we don't want to use MinGW's pthreads implementation, which
+// has conformance problems with some versions of the POSIX standard.
+# if GTEST_HAS_PTHREAD && !GTEST_OS_WINDOWS_MINGW
+
 // As a C-function, ThreadFuncWithCLinkage cannot be templated itself.
 // Consequently, it cannot select a correct instantiation of ThreadWithParam
 // in order to call its Run(). Introducing ThreadWithParamBase as a
@@ -2380,10 +2719,9 @@ extern "C" inline void* ThreadFuncWithCLinkage(void* thread) {
 template <typename T>
 class ThreadWithParam : public ThreadWithParamBase {
  public:
-  typedef void (*UserThreadFunc)(T);
+  typedef void UserThreadFunc(T);
 
-  ThreadWithParam(
-      UserThreadFunc func, T param, Notification* thread_can_start)
+  ThreadWithParam(UserThreadFunc* func, T param, Notification* thread_can_start)
       : func_(func),
         param_(param),
         thread_can_start_(thread_can_start),
@@ -2410,7 +2748,7 @@ class ThreadWithParam : public ThreadWithParamBase {
   }
 
  private:
-  const UserThreadFunc func_;  // User-supplied thread function.
+  UserThreadFunc* const func_;  // User-supplied thread function.
   const T param_;  // User-supplied parameter to the thread function.
   // When non-NULL, used to block execution until the controller thread
   // notifies.
@@ -2420,26 +2758,255 @@ class ThreadWithParam : public ThreadWithParamBase {
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(ThreadWithParam);
 };
+# endif  // GTEST_HAS_PTHREAD && !GTEST_OS_WINDOWS_MINGW
 
-// MutexBase and Mutex implement mutex on pthreads-based platforms. They
-// are used in conjunction with class MutexLock:
+# if 0  // OS detection
+# elif GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT
+
+// Mutex implements mutex on Windows platforms.  It is used in conjunction
+// with class MutexLock:
 //
 //   Mutex mutex;
 //   ...
-//   MutexLock lock(&mutex);  // Acquires the mutex and releases it at the end
-//                            // of the current scope.
+//   MutexLock lock(&mutex);  // Acquires the mutex and releases it at the
+//                            // end of the current scope.
 //
-// MutexBase implements behavior for both statically and dynamically
-// allocated mutexes.  Do not use MutexBase directly.  Instead, write
-// the following to define a static mutex:
-//
+// A static Mutex *must* be defined or declared using one of the following
+// macros:
 //   GTEST_DEFINE_STATIC_MUTEX_(g_some_mutex);
-//
-// You can forward declare a static mutex like this:
-//
 //   GTEST_DECLARE_STATIC_MUTEX_(g_some_mutex);
 //
-// To create a dynamic mutex, just define an object of type Mutex.
+// (A non-static Mutex is defined/declared in the usual way).
+class GTEST_API_ Mutex {
+ public:
+  enum MutexType { kStatic = 0, kDynamic = 1 };
+  // We rely on kStaticMutex being 0 as it is to what the linker initializes
+  // type_ in static mutexes.  critical_section_ will be initialized lazily
+  // in ThreadSafeLazyInit().
+  enum StaticConstructorSelector { kStaticMutex = 0 };
+
+  // This constructor intentionally does nothing.  It relies on type_ being
+  // statically initialized to 0 (effectively setting it to kStatic) and on
+  // ThreadSafeLazyInit() to lazily initialize the rest of the members.
+  explicit Mutex(StaticConstructorSelector /*dummy*/) {}
+
+  Mutex();
+  ~Mutex();
+
+  void Lock();
+
+  void Unlock();
+
+  // Does nothing if the current thread holds the mutex. Otherwise, crashes
+  // with high probability.
+  void AssertHeld();
+
+ private:
+  // Initializes owner_thread_id_ and critical_section_ in static mutexes.
+  void ThreadSafeLazyInit();
+
+  // Per http://blogs.msdn.com/b/oldnewthing/archive/2004/02/23/78395.aspx,
+  // we assume that 0 is an invalid value for thread IDs.
+  unsigned int owner_thread_id_;
+
+  // For static mutexes, we rely on these members being initialized to zeros
+  // by the linker.
+  MutexType type_;
+  long critical_section_init_phase_;  // NOLINT
+  _RTL_CRITICAL_SECTION* critical_section_;
+
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(Mutex);
+};
+
+# define GTEST_DECLARE_STATIC_MUTEX_(mutex) \
+    extern ::testing::internal::Mutex mutex
+
+# define GTEST_DEFINE_STATIC_MUTEX_(mutex) \
+    ::testing::internal::Mutex mutex(::testing::internal::Mutex::kStaticMutex)
+
+// We cannot name this class MutexLock because the ctor declaration would
+// conflict with a macro named MutexLock, which is defined on some
+// platforms. That macro is used as a defensive measure to prevent against
+// inadvertent misuses of MutexLock like "MutexLock(&mu)" rather than
+// "MutexLock l(&mu)".  Hence the typedef trick below.
+class GTestMutexLock {
+ public:
+  explicit GTestMutexLock(Mutex* mutex)
+      : mutex_(mutex) { mutex_->Lock(); }
+
+  ~GTestMutexLock() { mutex_->Unlock(); }
+
+ private:
+  Mutex* const mutex_;
+
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(GTestMutexLock);
+};
+
+typedef GTestMutexLock MutexLock;
+
+// Base class for ValueHolder<T>.  Allows a caller to hold and delete a value
+// without knowing its type.
+class ThreadLocalValueHolderBase {
+ public:
+  virtual ~ThreadLocalValueHolderBase() {}
+};
+
+// Provides a way for a thread to send notifications to a ThreadLocal
+// regardless of its parameter type.
+class ThreadLocalBase {
+ public:
+  // Creates a new ValueHolder<T> object holding a default value passed to
+  // this ThreadLocal<T>'s constructor and returns it.  It is the caller's
+  // responsibility not to call this when the ThreadLocal<T> instance already
+  // has a value on the current thread.
+  virtual ThreadLocalValueHolderBase* NewValueForCurrentThread() const = 0;
+
+ protected:
+  ThreadLocalBase() {}
+  virtual ~ThreadLocalBase() {}
+
+ private:
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(ThreadLocalBase);
+};
+
+// Maps a thread to a set of ThreadLocals that have values instantiated on that
+// thread and notifies them when the thread exits.  A ThreadLocal instance is
+// expected to persist until all threads it has values on have terminated.
+class GTEST_API_ ThreadLocalRegistry {
+ public:
+  // Registers thread_local_instance as having value on the current thread.
+  // Returns a value that can be used to identify the thread from other threads.
+  static ThreadLocalValueHolderBase* GetValueOnCurrentThread(
+      const ThreadLocalBase* thread_local_instance);
+
+  // Invoked when a ThreadLocal instance is destroyed.
+  static void OnThreadLocalDestroyed(
+      const ThreadLocalBase* thread_local_instance);
+};
+
+class GTEST_API_ ThreadWithParamBase {
+ public:
+  void Join();
+
+ protected:
+  class Runnable {
+   public:
+    virtual ~Runnable() {}
+    virtual void Run() = 0;
+  };
+
+  ThreadWithParamBase(Runnable *runnable, Notification* thread_can_start);
+  virtual ~ThreadWithParamBase();
+
+ private:
+  AutoHandle thread_;
+};
+
+// Helper class for testing Google Test's multi-threading constructs.
+template <typename T>
+class ThreadWithParam : public ThreadWithParamBase {
+ public:
+  typedef void UserThreadFunc(T);
+
+  ThreadWithParam(UserThreadFunc* func, T param, Notification* thread_can_start)
+      : ThreadWithParamBase(new RunnableImpl(func, param), thread_can_start) {
+  }
+  virtual ~ThreadWithParam() {}
+
+ private:
+  class RunnableImpl : public Runnable {
+   public:
+    RunnableImpl(UserThreadFunc* func, T param)
+        : func_(func),
+          param_(param) {
+    }
+    virtual ~RunnableImpl() {}
+    virtual void Run() {
+      func_(param_);
+    }
+
+   private:
+    UserThreadFunc* const func_;
+    const T param_;
+
+    GTEST_DISALLOW_COPY_AND_ASSIGN_(RunnableImpl);
+  };
+
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(ThreadWithParam);
+};
+
+// Implements thread-local storage on Windows systems.
+//
+//   // Thread 1
+//   ThreadLocal<int> tl(100);  // 100 is the default value for each thread.
+//
+//   // Thread 2
+//   tl.set(150);  // Changes the value for thread 2 only.
+//   EXPECT_EQ(150, tl.get());
+//
+//   // Thread 1
+//   EXPECT_EQ(100, tl.get());  // In thread 1, tl has the original value.
+//   tl.set(200);
+//   EXPECT_EQ(200, tl.get());
+//
+// The template type argument T must have a public copy constructor.
+// In addition, the default ThreadLocal constructor requires T to have
+// a public default constructor.
+//
+// The users of a TheadLocal instance have to make sure that all but one
+// threads (including the main one) using that instance have exited before
+// destroying it. Otherwise, the per-thread objects managed for them by the
+// ThreadLocal instance are not guaranteed to be destroyed on all platforms.
+//
+// Google Test only uses global ThreadLocal objects.  That means they
+// will die after main() has returned.  Therefore, no per-thread
+// object managed by Google Test will be leaked as long as all threads
+// using Google Test have exited when main() returns.
+template <typename T>
+class ThreadLocal : public ThreadLocalBase {
+ public:
+  ThreadLocal() : default_() {}
+  explicit ThreadLocal(const T& value) : default_(value) {}
+
+  ~ThreadLocal() { ThreadLocalRegistry::OnThreadLocalDestroyed(this); }
+
+  T* pointer() { return GetOrCreateValue(); }
+  const T* pointer() const { return GetOrCreateValue(); }
+  const T& get() const { return *pointer(); }
+  void set(const T& value) { *pointer() = value; }
+
+ private:
+  // Holds a value of T.  Can be deleted via its base class without the caller
+  // knowing the type of T.
+  class ValueHolder : public ThreadLocalValueHolderBase {
+   public:
+    explicit ValueHolder(const T& value) : value_(value) {}
+
+    T* pointer() { return &value_; }
+
+   private:
+    T value_;
+    GTEST_DISALLOW_COPY_AND_ASSIGN_(ValueHolder);
+  };
+
+
+  T* GetOrCreateValue() const {
+    return static_cast<ValueHolder*>(
+        ThreadLocalRegistry::GetValueOnCurrentThread(this))->pointer();
+  }
+
+  virtual ThreadLocalValueHolderBase* NewValueForCurrentThread() const {
+    return new ValueHolder(default_);
+  }
+
+  const T default_;  // The default value for each thread.
+
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(ThreadLocal);
+};
+
+# elif GTEST_HAS_PTHREAD
+
+// MutexBase and Mutex implement mutex on pthreads-based platforms.
 class MutexBase {
  public:
   // Acquires this mutex.
@@ -2484,8 +3051,8 @@ class MutexBase {
 };
 
 // Forward-declares a static mutex.
-# define GTEST_DECLARE_STATIC_MUTEX_(mutex) \
-    extern ::testing::internal::MutexBase mutex
+#  define GTEST_DECLARE_STATIC_MUTEX_(mutex) \
+     extern ::testing::internal::MutexBase mutex
 
 // Defines and statically (i.e. at link time) initializes a static mutex.
 // The initialization list here does not explicitly initialize each field,
@@ -2493,8 +3060,8 @@ class MutexBase {
 // particular, the owner_ field (a pthread_t) is not explicitly initialized.
 // This allows initialization to work whether pthread_t is a scalar or struct.
 // The flag -Wmissing-field-initializers must not be specified for this to work.
-# define GTEST_DEFINE_STATIC_MUTEX_(mutex) \
-    ::testing::internal::MutexBase mutex = { PTHREAD_MUTEX_INITIALIZER, false }
+#  define GTEST_DEFINE_STATIC_MUTEX_(mutex) \
+     ::testing::internal::MutexBase mutex = { PTHREAD_MUTEX_INITIALIZER, false }
 
 // The Mutex class can only be used for mutexes created at runtime. It
 // shares its API with MutexBase otherwise.
@@ -2512,9 +3079,11 @@ class Mutex : public MutexBase {
   GTEST_DISALLOW_COPY_AND_ASSIGN_(Mutex);
 };
 
-// We cannot name this class MutexLock as the ctor declaration would
+// We cannot name this class MutexLock because the ctor declaration would
 // conflict with a macro named MutexLock, which is defined on some
-// platforms.  Hence the typedef trick below.
+// platforms. That macro is used as a defensive measure to prevent against
+// inadvertent misuses of MutexLock like "MutexLock(&mu)" rather than
+// "MutexLock l(&mu)".  Hence the typedef trick below.
 class GTestMutexLock {
  public:
   explicit GTestMutexLock(MutexBase* mutex)
@@ -2548,34 +3117,6 @@ extern "C" inline void DeleteThreadLocalValue(void* value_holder) {
 }
 
 // Implements thread-local storage on pthreads-based systems.
-//
-//   // Thread 1
-//   ThreadLocal<int> tl(100);  // 100 is the default value for each thread.
-//
-//   // Thread 2
-//   tl.set(150);  // Changes the value for thread 2 only.
-//   EXPECT_EQ(150, tl.get());
-//
-//   // Thread 1
-//   EXPECT_EQ(100, tl.get());  // In thread 1, tl has the original value.
-//   tl.set(200);
-//   EXPECT_EQ(200, tl.get());
-//
-// The template type argument T must have a public copy constructor.
-// In addition, the default ThreadLocal constructor requires T to have
-// a public default constructor.
-//
-// An object managed for a thread by a ThreadLocal instance is deleted
-// when the thread exits.  Or, if the ThreadLocal instance dies in
-// that thread, when the ThreadLocal dies.  It's the user's
-// responsibility to ensure that all other threads using a ThreadLocal
-// have exited when it dies, or the per-thread objects for those
-// threads will not be deleted.
-//
-// Google Test only uses global ThreadLocal objects.  That means they
-// will die after main() has returned.  Therefore, no per-thread
-// object managed by Google Test will be leaked as long as all threads
-// using Google Test have exited when main() returns.
 template <typename T>
 class ThreadLocal {
  public:
@@ -2640,9 +3181,9 @@ class ThreadLocal {
   GTEST_DISALLOW_COPY_AND_ASSIGN_(ThreadLocal);
 };
 
-# define GTEST_IS_THREADSAFE 1
+# endif  // OS detection
 
-#else  // GTEST_HAS_PTHREAD
+#else  // GTEST_IS_THREADSAFE
 
 // A dummy implementation of synchronization primitives (mutex, lock,
 // and thread-local variable).  Necessary for compiling Google Test where
@@ -2662,6 +3203,11 @@ class Mutex {
 
 # define GTEST_DEFINE_STATIC_MUTEX_(mutex) ::testing::internal::Mutex mutex
 
+// We cannot name this class MutexLock because the ctor declaration would
+// conflict with a macro named MutexLock, which is defined on some
+// platforms. That macro is used as a defensive measure to prevent against
+// inadvertent misuses of MutexLock like "MutexLock(&mu)" rather than
+// "MutexLock l(&mu)".  Hence the typedef trick below.
 class GTestMutexLock {
  public:
   explicit GTestMutexLock(Mutex*) {}  // NOLINT
@@ -2682,11 +3228,7 @@ class ThreadLocal {
   T value_;
 };
 
-// The above synchronization primitives have dummy implementations.
-// Therefore Google Test is not thread-safe.
-# define GTEST_IS_THREADSAFE 0
-
-#endif  // GTEST_HAS_PTHREAD
+#endif  // GTEST_IS_THREADSAFE
 
 // Returns the number of threads running in the process, or 0 to indicate that
 // we cannot detect it.
@@ -2796,6 +3338,13 @@ inline char ToUpper(char ch) {
   return static_cast<char>(toupper(static_cast<unsigned char>(ch)));
 }
 
+inline std::string StripTrailingSpaces(std::string str) {
+  std::string::iterator it = str.end();
+  while (it != str.begin() && IsSpace(*--it))
+    it = str.erase(it);
+  return str;
+}
+
 // The testing::internal::posix namespace holds wrappers for common
 // POSIX functions.  These wrappers hide the differences between
 // Windows/MSVC and POSIX systems.  Since some compilers define these
@@ -2859,11 +3408,7 @@ inline bool IsDir(const StatStruct& st) { return S_ISDIR(st.st_mode); }
 
 // Functions deprecated by MSVC 8.0.
 
-#ifdef _MSC_VER
-// Temporarily disable warning 4996 (deprecated function).
-# pragma warning(push)
-# pragma warning(disable:4996)
-#endif
+GTEST_DISABLE_MSC_WARNINGS_PUSH_(4996 /* deprecated function */)
 
 inline const char* StrNCpy(char* dest, const char* src, size_t n) {
   return strncpy(dest, src, n);
@@ -2873,7 +3418,7 @@ inline const char* StrNCpy(char* dest, const char* src, size_t n) {
 // StrError() aren't needed on Windows CE at this time and thus not
 // defined there.
 
-#if !GTEST_OS_WINDOWS_MOBILE
+#if !GTEST_OS_WINDOWS_MOBILE && !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT
 inline int ChDir(const char* dir) { return chdir(dir); }
 #endif
 inline FILE* FOpen(const char* path, const char* mode) {
@@ -2897,8 +3442,9 @@ inline int Close(int fd) { return close(fd); }
 inline const char* StrError(int errnum) { return strerror(errnum); }
 #endif
 inline const char* GetEnv(const char* name) {
-#if GTEST_OS_WINDOWS_MOBILE
+#if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_WINDOWS_PHONE | GTEST_OS_WINDOWS_RT
   // We are on Windows CE, which has no environment variables.
+  static_cast<void>(name);  // To prevent 'unused argument' warning.
   return NULL;
 #elif defined(__BORLANDC__) || defined(__SunOS_5_8) || defined(__SunOS_5_9)
   // Environment variables which we programmatically clear will be set to the
@@ -2910,9 +3456,7 @@ inline const char* GetEnv(const char* name) {
 #endif
 }
 
-#ifdef _MSC_VER
-# pragma warning(pop)  // Restores the warning state.
-#endif
+GTEST_DISABLE_MSC_WARNINGS_POP_()
 
 #if GTEST_OS_WINDOWS_MOBILE
 // Windows CE has no C library. The abort() function is used in
@@ -3053,6 +3597,7 @@ const char* StringFromGTestEnv(const char* flag, const char* default_val);
 
 #endif  // GTEST_INCLUDE_GTEST_INTERNAL_GTEST_PORT_H_
 
+
 #if GTEST_OS_LINUX
 # include <stdlib.h>
 # include <sys/types.h>
@@ -3070,6 +3615,8 @@ const char* StringFromGTestEnv(const char* flag, const char* default_val);
 #include <iomanip>
 #include <limits>
 #include <set>
+#include <string>
+#include <vector>
 
 // Copyright 2005, Google Inc.
 // All rights reserved.
@@ -7131,6 +7678,36 @@ class GTEST_API_ ScopedTrace {
                             // c'tor and d'tor.  Therefore it doesn't
                             // need to be used otherwise.
 
+namespace edit_distance {
+// Returns the optimal edits to go from 'left' to 'right'.
+// All edits cost the same, with replace having lower priority than
+// add/remove.
+// Simple implementation of the Wagner–Fischer algorithm.
+// See http://en.wikipedia.org/wiki/Wagner-Fischer_algorithm
+enum EditType { kMatch, kAdd, kRemove, kReplace };
+GTEST_API_ std::vector<EditType> CalculateOptimalEdits(
+    const std::vector<size_t>& left, const std::vector<size_t>& right);
+
+// Same as above, but the input is represented as strings.
+GTEST_API_ std::vector<EditType> CalculateOptimalEdits(
+    const std::vector<std::string>& left,
+    const std::vector<std::string>& right);
+
+// Create a diff of the input strings in Unified diff format.
+GTEST_API_ std::string CreateUnifiedDiff(const std::vector<std::string>& left,
+                                         const std::vector<std::string>& right,
+                                         size_t context = 2);
+
+}  // namespace edit_distance
+
+// Calculate the diff between 'left' and 'right' and return it in unified diff
+// format.
+// If not null, stores in 'total_line_count' the total number of lines found
+// in left + right.
+GTEST_API_ std::string DiffStrings(const std::string& left,
+                                   const std::string& right,
+                                   size_t* total_line_count);
+
 // Constructs and returns the message for an equality assertion
 // (e.g. ASSERT_EQ, EXPECT_STREQ, etc) failure.
 //
@@ -7540,7 +8117,7 @@ class TypeParameterizedTest {
     MakeAndRegisterTestInfo(
         (std::string(prefix) + (prefix[0] == '\0' ? "" : "/") + case_name + "/"
          + StreamableToString(index)).c_str(),
-        GetPrefixUntilComma(test_names).c_str(),
+        StripTrailingSpaces(GetPrefixUntilComma(test_names)).c_str(),
         GetTypeName<Type>().c_str(),
         NULL,  // No value parameter.
         GetTypeId<FixtureClass>(),
@@ -7744,7 +8321,7 @@ class ImplicitlyConvertible {
   // MakeFrom() is an expression whose type is From.  We cannot simply
   // use From(), as the type From may not have a public default
   // constructor.
-  static From MakeFrom();
+  static typename AddReference<From>::type MakeFrom();
 
   // These two functions are overloaded.  Given an expression
   // Helper(x), the compiler will pick the first version if x can be
@@ -7762,25 +8339,20 @@ class ImplicitlyConvertible {
   // We have to put the 'public' section after the 'private' section,
   // or MSVC refuses to compile the code.
  public:
-  // MSVC warns about implicitly converting from double to int for
-  // possible loss of data, so we need to temporarily disable the
-  // warning.
-#ifdef _MSC_VER
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4244)  // Temporarily disables warning 4244.
-
-  static const bool value =
-      sizeof(Helper(ImplicitlyConvertible::MakeFrom())) == 1;
-# pragma warning(pop)           // Restores the warning state.
-#elif defined(__BORLANDC__)
+#if defined(__BORLANDC__)
   // C++Builder cannot use member overload resolution during template
   // instantiation.  The simplest workaround is to use its C++0x type traits
   // functions (C++Builder 2009 and above only).
   static const bool value = __is_convertible(From, To);
 #else
+  // MSVC warns about implicitly converting from double to int for
+  // possible loss of data, so we need to temporarily disable the
+  // warning.
+  GTEST_DISABLE_MSC_WARNINGS_PUSH_(4244)
   static const bool value =
       sizeof(Helper(ImplicitlyConvertible::MakeFrom())) == 1;
-#endif  // _MSV_VER
+  GTEST_DISABLE_MSC_WARNINGS_POP_()
+#endif  // __BORLANDC__
 };
 template <typename From, typename To>
 const bool ImplicitlyConvertible<From, To>::value;
@@ -7906,11 +8478,10 @@ void CopyArray(const T* from, size_t size, U* to) {
 
 // The relation between an NativeArray object (see below) and the
 // native array it represents.
-enum RelationToSource {
-  kReference,  // The NativeArray references the native array.
-  kCopy        // The NativeArray makes a copy of the native array and
-               // owns the copy.
-};
+// We use 2 different structs to allow non-copyable types to be used, as long
+// as RelationToSourceReference() is passed.
+struct RelationToSourceReference {};
+struct RelationToSourceCopy {};
 
 // Adapts a native array to a read-only STL-style container.  Instead
 // of the complete STL container concept, this adaptor only implements
@@ -7928,22 +8499,23 @@ class NativeArray {
   typedef Element* iterator;
   typedef const Element* const_iterator;
 
-  // Constructs from a native array.
-  NativeArray(const Element* array, size_t count, RelationToSource relation) {
-    Init(array, count, relation);
+  // Constructs from a native array. References the source.
+  NativeArray(const Element* array, size_t count, RelationToSourceReference) {
+    InitRef(array, count);
+  }
+
+  // Constructs from a native array. Copies the source.
+  NativeArray(const Element* array, size_t count, RelationToSourceCopy) {
+    InitCopy(array, count);
   }
 
   // Copy constructor.
   NativeArray(const NativeArray& rhs) {
-    Init(rhs.array_, rhs.size_, rhs.relation_to_source_);
+    (this->*rhs.clone_)(rhs.array_, rhs.size_);
   }
 
   ~NativeArray() {
-    // Ensures that the user doesn't instantiate NativeArray with a
-    // const or reference type.
-    static_cast<void>(StaticAssertTypeEqHelper<Element,
-        GTEST_REMOVE_REFERENCE_AND_CONST_(Element)>());
-    if (relation_to_source_ == kCopy)
+    if (clone_ != &NativeArray::InitRef)
       delete[] array_;
   }
 
@@ -7957,23 +8529,30 @@ class NativeArray {
   }
 
  private:
-  // Initializes this object; makes a copy of the input array if
-  // 'relation' is kCopy.
-  void Init(const Element* array, size_t a_size, RelationToSource relation) {
-    if (relation == kReference) {
-      array_ = array;
-    } else {
-      Element* const copy = new Element[a_size];
-      CopyArray(array, a_size, copy);
-      array_ = copy;
-    }
+  enum {
+    kCheckTypeIsNotConstOrAReference = StaticAssertTypeEqHelper<
+        Element, GTEST_REMOVE_REFERENCE_AND_CONST_(Element)>::value,
+  };
+
+  // Initializes this object with a copy of the input.
+  void InitCopy(const Element* array, size_t a_size) {
+    Element* const copy = new Element[a_size];
+    CopyArray(array, a_size, copy);
+    array_ = copy;
     size_ = a_size;
-    relation_to_source_ = relation;
+    clone_ = &NativeArray::InitCopy;
+  }
+
+  // Initializes this object with a reference of the input.
+  void InitRef(const Element* array, size_t a_size) {
+    array_ = array;
+    size_ = a_size;
+    clone_ = &NativeArray::InitRef;
   }
 
   const Element* array_;
   size_t size_;
-  RelationToSource relation_to_source_;
+  void (NativeArray::*clone_)(const Element*, size_t);
 
   GTEST_DISALLOW_ASSIGN_(NativeArray);
 };
@@ -8116,6 +8695,7 @@ class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : public parent_class {\
 void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody()
 
 #endif  // GTEST_INCLUDE_GTEST_INTERNAL_GTEST_INTERNAL_H_
+
 // Copyright 2005, Google Inc.
 // All rights reserved.
 //
@@ -9070,7 +9650,12 @@ class linked_ptr_internal {
     MutexLock lock(&g_linked_ptr_mutex);
 
     linked_ptr_internal const* p = ptr;
-    while (p->next_ != ptr) p = p->next_;
+    while (p->next_ != ptr) {
+      assert(p->next_ != this &&
+             "Trying to join() a linked ring we are already in. "
+             "Is GMock thread safety enabled?");
+      p = p->next_;
+    }
     p->next_ = this;
     next_ = ptr;
   }
@@ -9083,7 +9668,12 @@ class linked_ptr_internal {
 
     if (next_ == this) return true;
     linked_ptr_internal const* p = next_;
-    while (p->next_ != this) p = p->next_;
+    while (p->next_ != this) {
+      assert(p->next_ != next_ &&
+             "Trying to depart() a linked ring we are not in. "
+             "Is GMock thread safety enabled?");
+      p = p->next_;
+    }
     p->next_ = next_;
     return false;
   }
@@ -9293,6 +9883,10 @@ linked_ptr<T> make_linked_ptr(T* ptr) {
 #include <string>
 #include <utility>
 #include <vector>
+
+#if GTEST_HAS_STD_TUPLE_
+# include <tuple>
+#endif
 
 namespace testing {
 
@@ -9671,14 +10265,16 @@ inline void PrintTo(const ::std::wstring& s, ::std::ostream* os) {
 }
 #endif  // GTEST_HAS_STD_WSTRING
 
-#if GTEST_HAS_TR1_TUPLE
-// Overload for ::std::tr1::tuple.  Needed for printing function arguments,
-// which are packed as tuples.
-
+#if GTEST_HAS_TR1_TUPLE || GTEST_HAS_STD_TUPLE_
 // Helper function for printing a tuple.  T must be instantiated with
 // a tuple type.
 template <typename T>
 void PrintTupleTo(const T& t, ::std::ostream* os);
+#endif  // GTEST_HAS_TR1_TUPLE || GTEST_HAS_STD_TUPLE_
+
+#if GTEST_HAS_TR1_TUPLE
+// Overload for ::std::tr1::tuple.  Needed for printing function arguments,
+// which are packed as tuples.
 
 // Overloaded PrintTo() for tuples of various arities.  We support
 // tuples of up-to 10 fields.  The following implementation works
@@ -9752,6 +10348,13 @@ void PrintTo(
 }
 #endif  // GTEST_HAS_TR1_TUPLE
 
+#if GTEST_HAS_STD_TUPLE_
+template <typename... Types>
+void PrintTo(const ::std::tuple<Types...>& t, ::std::ostream* os) {
+  PrintTupleTo(t, os);
+}
+#endif  // GTEST_HAS_STD_TUPLE_
+
 // Overload for std::pair.
 template <typename T1, typename T2>
 void PrintTo(const ::std::pair<T1, T2>& value, ::std::ostream* os) {
@@ -9771,10 +10374,7 @@ class UniversalPrinter {
  public:
   // MSVC warns about adding const to a function type, so we want to
   // disable the warning.
-#ifdef _MSC_VER
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4180)  // Temporarily disables warning 4180.
-#endif  // _MSC_VER
+  GTEST_DISABLE_MSC_WARNINGS_PUSH_(4180)
 
   // Note: we deliberately don't call this PrintTo(), as that name
   // conflicts with ::testing::internal::PrintTo in the body of the
@@ -9791,9 +10391,7 @@ class UniversalPrinter {
     PrintTo(value, os);
   }
 
-#ifdef _MSC_VER
-# pragma warning(pop)           // Restores the warning state.
-#endif  // _MSC_VER
+  GTEST_DISABLE_MSC_WARNINGS_POP_()
 };
 
 // UniversalPrintArray(begin, len, os) prints an array of 'len'
@@ -9845,10 +10443,7 @@ class UniversalPrinter<T&> {
  public:
   // MSVC warns about adding const to a function type, so we want to
   // disable the warning.
-#ifdef _MSC_VER
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4180)  // Temporarily disables warning 4180.
-#endif  // _MSC_VER
+  GTEST_DISABLE_MSC_WARNINGS_PUSH_(4180)
 
   static void Print(const T& value, ::std::ostream* os) {
     // Prints the address of the value.  We use reinterpret_cast here
@@ -9859,9 +10454,7 @@ class UniversalPrinter<T&> {
     UniversalPrint(value, os);
   }
 
-#ifdef _MSC_VER
-# pragma warning(pop)           // Restores the warning state.
-#endif  // _MSC_VER
+  GTEST_DISABLE_MSC_WARNINGS_POP_()
 };
 
 // Prints a value tersely: for a reference type, the referenced value
@@ -9947,16 +10540,65 @@ void UniversalPrint(const T& value, ::std::ostream* os) {
   UniversalPrinter<T1>::Print(value, os);
 }
 
-#if GTEST_HAS_TR1_TUPLE
 typedef ::std::vector<string> Strings;
 
+// TuplePolicy<TupleT> must provide:
+// - tuple_size
+//     size of tuple TupleT.
+// - get<size_t I>(const TupleT& t)
+//     static function extracting element I of tuple TupleT.
+// - tuple_element<size_t I>::type
+//     type of element I of tuple TupleT.
+template <typename TupleT>
+struct TuplePolicy;
+
+#if GTEST_HAS_TR1_TUPLE
+template <typename TupleT>
+struct TuplePolicy {
+  typedef TupleT Tuple;
+  static const size_t tuple_size = ::std::tr1::tuple_size<Tuple>::value;
+
+  template <size_t I>
+  struct tuple_element : ::std::tr1::tuple_element<I, Tuple> {};
+
+  template <size_t I>
+  static typename AddReference<
+      const typename ::std::tr1::tuple_element<I, Tuple>::type>::type get(
+      const Tuple& tuple) {
+    return ::std::tr1::get<I>(tuple);
+  }
+};
+template <typename TupleT>
+const size_t TuplePolicy<TupleT>::tuple_size;
+#endif  // GTEST_HAS_TR1_TUPLE
+
+#if GTEST_HAS_STD_TUPLE_
+template <typename... Types>
+struct TuplePolicy< ::std::tuple<Types...> > {
+  typedef ::std::tuple<Types...> Tuple;
+  static const size_t tuple_size = ::std::tuple_size<Tuple>::value;
+
+  template <size_t I>
+  struct tuple_element : ::std::tuple_element<I, Tuple> {};
+
+  template <size_t I>
+  static const typename ::std::tuple_element<I, Tuple>::type& get(
+      const Tuple& tuple) {
+    return ::std::get<I>(tuple);
+  }
+};
+template <typename... Types>
+const size_t TuplePolicy< ::std::tuple<Types...> >::tuple_size;
+#endif  // GTEST_HAS_STD_TUPLE_
+
+#if GTEST_HAS_TR1_TUPLE || GTEST_HAS_STD_TUPLE_
 // This helper template allows PrintTo() for tuples and
 // UniversalTersePrintTupleFieldsToStrings() to be defined by
 // induction on the number of tuple fields.  The idea is that
 // TuplePrefixPrinter<N>::PrintPrefixTo(t, os) prints the first N
 // fields in tuple t, and can be defined in terms of
 // TuplePrefixPrinter<N - 1>.
-
+//
 // The inductive case.
 template <size_t N>
 struct TuplePrefixPrinter {
@@ -9964,9 +10606,14 @@ struct TuplePrefixPrinter {
   template <typename Tuple>
   static void PrintPrefixTo(const Tuple& t, ::std::ostream* os) {
     TuplePrefixPrinter<N - 1>::PrintPrefixTo(t, os);
-    *os << ", ";
-    UniversalPrinter<typename ::std::tr1::tuple_element<N - 1, Tuple>::type>
-        ::Print(::std::tr1::get<N - 1>(t), os);
+    GTEST_INTENTIONAL_CONST_COND_PUSH_()
+    if (N > 1) {
+    GTEST_INTENTIONAL_CONST_COND_POP_()
+      *os << ", ";
+    }
+    UniversalPrinter<
+        typename TuplePolicy<Tuple>::template tuple_element<N - 1>::type>
+        ::Print(TuplePolicy<Tuple>::template get<N - 1>(t), os);
   }
 
   // Tersely prints the first N fields of a tuple to a string vector,
@@ -9975,12 +10622,12 @@ struct TuplePrefixPrinter {
   static void TersePrintPrefixToStrings(const Tuple& t, Strings* strings) {
     TuplePrefixPrinter<N - 1>::TersePrintPrefixToStrings(t, strings);
     ::std::stringstream ss;
-    UniversalTersePrint(::std::tr1::get<N - 1>(t), &ss);
+    UniversalTersePrint(TuplePolicy<Tuple>::template get<N - 1>(t), &ss);
     strings->push_back(ss.str());
   }
 };
 
-// Base cases.
+// Base case.
 template <>
 struct TuplePrefixPrinter<0> {
   template <typename Tuple>
@@ -9989,34 +10636,13 @@ struct TuplePrefixPrinter<0> {
   template <typename Tuple>
   static void TersePrintPrefixToStrings(const Tuple&, Strings*) {}
 };
-// We have to specialize the entire TuplePrefixPrinter<> class
-// template here, even though the definition of
-// TersePrintPrefixToStrings() is the same as the generic version, as
-// Embarcadero (formerly CodeGear, formerly Borland) C++ doesn't
-// support specializing a method template of a class template.
-template <>
-struct TuplePrefixPrinter<1> {
-  template <typename Tuple>
-  static void PrintPrefixTo(const Tuple& t, ::std::ostream* os) {
-    UniversalPrinter<typename ::std::tr1::tuple_element<0, Tuple>::type>::
-        Print(::std::tr1::get<0>(t), os);
-  }
 
-  template <typename Tuple>
-  static void TersePrintPrefixToStrings(const Tuple& t, Strings* strings) {
-    ::std::stringstream ss;
-    UniversalTersePrint(::std::tr1::get<0>(t), &ss);
-    strings->push_back(ss.str());
-  }
-};
-
-// Helper function for printing a tuple.  T must be instantiated with
-// a tuple type.
-template <typename T>
-void PrintTupleTo(const T& t, ::std::ostream* os) {
+// Helper function for printing a tuple.
+// Tuple must be either std::tr1::tuple or std::tuple type.
+template <typename Tuple>
+void PrintTupleTo(const Tuple& t, ::std::ostream* os) {
   *os << "(";
-  TuplePrefixPrinter< ::std::tr1::tuple_size<T>::value>::
-      PrintPrefixTo(t, os);
+  TuplePrefixPrinter<TuplePolicy<Tuple>::tuple_size>::PrintPrefixTo(t, os);
   *os << ")";
 }
 
@@ -10026,11 +10652,11 @@ void PrintTupleTo(const T& t, ::std::ostream* os) {
 template <typename Tuple>
 Strings UniversalTersePrintTupleFieldsToStrings(const Tuple& value) {
   Strings result;
-  TuplePrefixPrinter< ::std::tr1::tuple_size<Tuple>::value>::
+  TuplePrefixPrinter<TuplePolicy<Tuple>::tuple_size>::
       TersePrintPrefixToStrings(value, &result);
   return result;
 }
-#endif  // GTEST_HAS_TR1_TUPLE
+#endif  // GTEST_HAS_TR1_TUPLE || GTEST_HAS_STD_TUPLE_
 
 }  // namespace internal
 
@@ -10658,7 +11284,7 @@ class ParameterizedTestCaseRegistry {
 // and at most 10 arguments in Combine. Please contact
 // googletestframework@googlegroups.com if you need more.
 // Please note that the number of arguments to Combine is limited
-// by the maximum arity of the implementation of tr1::tuple which is
+// by the maximum arity of the implementation of tuple which is
 // currently set at 10.
 
 #ifndef GTEST_INCLUDE_GTEST_INTERNAL_GTEST_PARAM_UTIL_GENERATED_H_
@@ -13773,9 +14399,9 @@ class ValueArray50 {
 //
 template <typename T1, typename T2>
 class CartesianProductGenerator2
-    : public ParamGeneratorInterface< ::std::tr1::tuple<T1, T2> > {
+    : public ParamGeneratorInterface< ::testing::tuple<T1, T2> > {
  public:
-  typedef ::std::tr1::tuple<T1, T2> ParamType;
+  typedef ::testing::tuple<T1, T2> ParamType;
 
   CartesianProductGenerator2(const ParamGenerator<T1>& g1,
       const ParamGenerator<T2>& g2)
@@ -13888,9 +14514,9 @@ class CartesianProductGenerator2
 
 template <typename T1, typename T2, typename T3>
 class CartesianProductGenerator3
-    : public ParamGeneratorInterface< ::std::tr1::tuple<T1, T2, T3> > {
+    : public ParamGeneratorInterface< ::testing::tuple<T1, T2, T3> > {
  public:
-  typedef ::std::tr1::tuple<T1, T2, T3> ParamType;
+  typedef ::testing::tuple<T1, T2, T3> ParamType;
 
   CartesianProductGenerator3(const ParamGenerator<T1>& g1,
       const ParamGenerator<T2>& g2, const ParamGenerator<T3>& g3)
@@ -14020,9 +14646,9 @@ class CartesianProductGenerator3
 
 template <typename T1, typename T2, typename T3, typename T4>
 class CartesianProductGenerator4
-    : public ParamGeneratorInterface< ::std::tr1::tuple<T1, T2, T3, T4> > {
+    : public ParamGeneratorInterface< ::testing::tuple<T1, T2, T3, T4> > {
  public:
-  typedef ::std::tr1::tuple<T1, T2, T3, T4> ParamType;
+  typedef ::testing::tuple<T1, T2, T3, T4> ParamType;
 
   CartesianProductGenerator4(const ParamGenerator<T1>& g1,
       const ParamGenerator<T2>& g2, const ParamGenerator<T3>& g3,
@@ -14171,9 +14797,9 @@ class CartesianProductGenerator4
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
 class CartesianProductGenerator5
-    : public ParamGeneratorInterface< ::std::tr1::tuple<T1, T2, T3, T4, T5> > {
+    : public ParamGeneratorInterface< ::testing::tuple<T1, T2, T3, T4, T5> > {
  public:
-  typedef ::std::tr1::tuple<T1, T2, T3, T4, T5> ParamType;
+  typedef ::testing::tuple<T1, T2, T3, T4, T5> ParamType;
 
   CartesianProductGenerator5(const ParamGenerator<T1>& g1,
       const ParamGenerator<T2>& g2, const ParamGenerator<T3>& g3,
@@ -14339,10 +14965,10 @@ class CartesianProductGenerator5
 template <typename T1, typename T2, typename T3, typename T4, typename T5,
     typename T6>
 class CartesianProductGenerator6
-    : public ParamGeneratorInterface< ::std::tr1::tuple<T1, T2, T3, T4, T5,
+    : public ParamGeneratorInterface< ::testing::tuple<T1, T2, T3, T4, T5,
         T6> > {
  public:
-  typedef ::std::tr1::tuple<T1, T2, T3, T4, T5, T6> ParamType;
+  typedef ::testing::tuple<T1, T2, T3, T4, T5, T6> ParamType;
 
   CartesianProductGenerator6(const ParamGenerator<T1>& g1,
       const ParamGenerator<T2>& g2, const ParamGenerator<T3>& g3,
@@ -14525,10 +15151,10 @@ class CartesianProductGenerator6
 template <typename T1, typename T2, typename T3, typename T4, typename T5,
     typename T6, typename T7>
 class CartesianProductGenerator7
-    : public ParamGeneratorInterface< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6,
+    : public ParamGeneratorInterface< ::testing::tuple<T1, T2, T3, T4, T5, T6,
         T7> > {
  public:
-  typedef ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7> ParamType;
+  typedef ::testing::tuple<T1, T2, T3, T4, T5, T6, T7> ParamType;
 
   CartesianProductGenerator7(const ParamGenerator<T1>& g1,
       const ParamGenerator<T2>& g2, const ParamGenerator<T3>& g3,
@@ -14728,10 +15354,10 @@ class CartesianProductGenerator7
 template <typename T1, typename T2, typename T3, typename T4, typename T5,
     typename T6, typename T7, typename T8>
 class CartesianProductGenerator8
-    : public ParamGeneratorInterface< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6,
+    : public ParamGeneratorInterface< ::testing::tuple<T1, T2, T3, T4, T5, T6,
         T7, T8> > {
  public:
-  typedef ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7, T8> ParamType;
+  typedef ::testing::tuple<T1, T2, T3, T4, T5, T6, T7, T8> ParamType;
 
   CartesianProductGenerator8(const ParamGenerator<T1>& g1,
       const ParamGenerator<T2>& g2, const ParamGenerator<T3>& g3,
@@ -14950,10 +15576,10 @@ class CartesianProductGenerator8
 template <typename T1, typename T2, typename T3, typename T4, typename T5,
     typename T6, typename T7, typename T8, typename T9>
 class CartesianProductGenerator9
-    : public ParamGeneratorInterface< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6,
+    : public ParamGeneratorInterface< ::testing::tuple<T1, T2, T3, T4, T5, T6,
         T7, T8, T9> > {
  public:
-  typedef ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7, T8, T9> ParamType;
+  typedef ::testing::tuple<T1, T2, T3, T4, T5, T6, T7, T8, T9> ParamType;
 
   CartesianProductGenerator9(const ParamGenerator<T1>& g1,
       const ParamGenerator<T2>& g2, const ParamGenerator<T3>& g3,
@@ -15189,10 +15815,10 @@ class CartesianProductGenerator9
 template <typename T1, typename T2, typename T3, typename T4, typename T5,
     typename T6, typename T7, typename T8, typename T9, typename T10>
 class CartesianProductGenerator10
-    : public ParamGeneratorInterface< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6,
+    : public ParamGeneratorInterface< ::testing::tuple<T1, T2, T3, T4, T5, T6,
         T7, T8, T9, T10> > {
  public:
-  typedef ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> ParamType;
+  typedef ::testing::tuple<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> ParamType;
 
   CartesianProductGenerator10(const ParamGenerator<T1>& g1,
       const ParamGenerator<T2>& g2, const ParamGenerator<T3>& g3,
@@ -15454,8 +16080,8 @@ class CartesianProductHolder2 {
 CartesianProductHolder2(const Generator1& g1, const Generator2& g2)
       : g1_(g1), g2_(g2) {}
   template <typename T1, typename T2>
-  operator ParamGenerator< ::std::tr1::tuple<T1, T2> >() const {
-    return ParamGenerator< ::std::tr1::tuple<T1, T2> >(
+  operator ParamGenerator< ::testing::tuple<T1, T2> >() const {
+    return ParamGenerator< ::testing::tuple<T1, T2> >(
         new CartesianProductGenerator2<T1, T2>(
         static_cast<ParamGenerator<T1> >(g1_),
         static_cast<ParamGenerator<T2> >(g2_)));
@@ -15476,8 +16102,8 @@ CartesianProductHolder3(const Generator1& g1, const Generator2& g2,
     const Generator3& g3)
       : g1_(g1), g2_(g2), g3_(g3) {}
   template <typename T1, typename T2, typename T3>
-  operator ParamGenerator< ::std::tr1::tuple<T1, T2, T3> >() const {
-    return ParamGenerator< ::std::tr1::tuple<T1, T2, T3> >(
+  operator ParamGenerator< ::testing::tuple<T1, T2, T3> >() const {
+    return ParamGenerator< ::testing::tuple<T1, T2, T3> >(
         new CartesianProductGenerator3<T1, T2, T3>(
         static_cast<ParamGenerator<T1> >(g1_),
         static_cast<ParamGenerator<T2> >(g2_),
@@ -15501,8 +16127,8 @@ CartesianProductHolder4(const Generator1& g1, const Generator2& g2,
     const Generator3& g3, const Generator4& g4)
       : g1_(g1), g2_(g2), g3_(g3), g4_(g4) {}
   template <typename T1, typename T2, typename T3, typename T4>
-  operator ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4> >() const {
-    return ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4> >(
+  operator ParamGenerator< ::testing::tuple<T1, T2, T3, T4> >() const {
+    return ParamGenerator< ::testing::tuple<T1, T2, T3, T4> >(
         new CartesianProductGenerator4<T1, T2, T3, T4>(
         static_cast<ParamGenerator<T1> >(g1_),
         static_cast<ParamGenerator<T2> >(g2_),
@@ -15528,8 +16154,8 @@ CartesianProductHolder5(const Generator1& g1, const Generator2& g2,
     const Generator3& g3, const Generator4& g4, const Generator5& g5)
       : g1_(g1), g2_(g2), g3_(g3), g4_(g4), g5_(g5) {}
   template <typename T1, typename T2, typename T3, typename T4, typename T5>
-  operator ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5> >() const {
-    return ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5> >(
+  operator ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5> >() const {
+    return ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5> >(
         new CartesianProductGenerator5<T1, T2, T3, T4, T5>(
         static_cast<ParamGenerator<T1> >(g1_),
         static_cast<ParamGenerator<T2> >(g2_),
@@ -15559,8 +16185,8 @@ CartesianProductHolder6(const Generator1& g1, const Generator2& g2,
       : g1_(g1), g2_(g2), g3_(g3), g4_(g4), g5_(g5), g6_(g6) {}
   template <typename T1, typename T2, typename T3, typename T4, typename T5,
       typename T6>
-  operator ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6> >() const {
-    return ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6> >(
+  operator ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6> >() const {
+    return ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6> >(
         new CartesianProductGenerator6<T1, T2, T3, T4, T5, T6>(
         static_cast<ParamGenerator<T1> >(g1_),
         static_cast<ParamGenerator<T2> >(g2_),
@@ -15592,9 +16218,9 @@ CartesianProductHolder7(const Generator1& g1, const Generator2& g2,
       : g1_(g1), g2_(g2), g3_(g3), g4_(g4), g5_(g5), g6_(g6), g7_(g7) {}
   template <typename T1, typename T2, typename T3, typename T4, typename T5,
       typename T6, typename T7>
-  operator ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6,
+  operator ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6,
       T7> >() const {
-    return ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7> >(
+    return ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6, T7> >(
         new CartesianProductGenerator7<T1, T2, T3, T4, T5, T6, T7>(
         static_cast<ParamGenerator<T1> >(g1_),
         static_cast<ParamGenerator<T2> >(g2_),
@@ -15630,9 +16256,9 @@ CartesianProductHolder8(const Generator1& g1, const Generator2& g2,
           g8_(g8) {}
   template <typename T1, typename T2, typename T3, typename T4, typename T5,
       typename T6, typename T7, typename T8>
-  operator ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7,
+  operator ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6, T7,
       T8> >() const {
-    return ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7, T8> >(
+    return ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6, T7, T8> >(
         new CartesianProductGenerator8<T1, T2, T3, T4, T5, T6, T7, T8>(
         static_cast<ParamGenerator<T1> >(g1_),
         static_cast<ParamGenerator<T2> >(g2_),
@@ -15671,9 +16297,9 @@ CartesianProductHolder9(const Generator1& g1, const Generator2& g2,
           g9_(g9) {}
   template <typename T1, typename T2, typename T3, typename T4, typename T5,
       typename T6, typename T7, typename T8, typename T9>
-  operator ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7, T8,
+  operator ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6, T7, T8,
       T9> >() const {
-    return ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7, T8,
+    return ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6, T7, T8,
         T9> >(
         new CartesianProductGenerator9<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
         static_cast<ParamGenerator<T1> >(g1_),
@@ -15715,10 +16341,10 @@ CartesianProductHolder10(const Generator1& g1, const Generator2& g2,
           g9_(g9), g10_(g10) {}
   template <typename T1, typename T2, typename T3, typename T4, typename T5,
       typename T6, typename T7, typename T8, typename T9, typename T10>
-  operator ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7, T8,
-      T9, T10> >() const {
-    return ParamGenerator< ::std::tr1::tuple<T1, T2, T3, T4, T5, T6, T7, T8,
-        T9, T10> >(
+  operator ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6, T7, T8, T9,
+      T10> >() const {
+    return ParamGenerator< ::testing::tuple<T1, T2, T3, T4, T5, T6, T7, T8, T9,
+        T10> >(
         new CartesianProductGenerator10<T1, T2, T3, T4, T5, T6, T7, T8, T9,
             T10>(
         static_cast<ParamGenerator<T1> >(g1_),
@@ -17483,14 +18109,14 @@ INSTANTIATE_TYPED_TEST_CASE_P(My, FooTest, MyTypes);
 // class ::string, which has the same interface as ::std::string, but
 // has a different implementation.
 //
-// The user can define GTEST_HAS_GLOBAL_STRING to 1 to indicate that
+// You can define GTEST_HAS_GLOBAL_STRING to 1 to indicate that
 // ::string is available AND is a distinct type to ::std::string, or
 // define it to 0 to indicate otherwise.
 //
-// If the user's ::std::string and ::string are the same class due to
-// aliasing, he should define GTEST_HAS_GLOBAL_STRING to 0.
+// If ::std::string and ::string are the same class on your platform
+// due to aliasing, you should define GTEST_HAS_GLOBAL_STRING to 0.
 //
-// If the user doesn't define GTEST_HAS_GLOBAL_STRING, it is defined
+// If you do not define GTEST_HAS_GLOBAL_STRING, it is defined
 // heuristically.
 
 namespace testing {
@@ -17671,8 +18297,31 @@ class GTEST_API_ AssertionResult {
   // Copy constructor.
   // Used in EXPECT_TRUE/FALSE(assertion_result).
   AssertionResult(const AssertionResult& other);
+
+  GTEST_DISABLE_MSC_WARNINGS_PUSH_(4800 /* forcing value to bool */)
+
   // Used in the EXPECT_TRUE/FALSE(bool_expression).
-  explicit AssertionResult(bool success) : success_(success) {}
+  //
+  // T must be contextually convertible to bool.
+  //
+  // The second parameter prevents this overload from being considered if
+  // the argument is implicitly convertible to AssertionResult. In that case
+  // we want AssertionResult's copy constructor to be used.
+  template <typename T>
+  explicit AssertionResult(
+      const T& success,
+      typename internal::EnableIf<
+          !internal::ImplicitlyConvertible<T, AssertionResult>::value>::type*
+          /*enabler*/ = NULL)
+      : success_(success) {}
+
+  GTEST_DISABLE_MSC_WARNINGS_POP_()
+
+  // Assignment operator.
+  AssertionResult& operator=(AssertionResult other) {
+    swap(other);
+    return *this;
+  }
 
   // Returns true iff the assertion succeeded.
   operator bool() const { return success_; }  // NOLINT
@@ -17713,6 +18362,9 @@ class GTEST_API_ AssertionResult {
     message_->append(a_message.GetString().c_str());
   }
 
+  // Swap the contents of this AssertionResult with other.
+  void swap(AssertionResult& other);
+
   // Stores result of the assertion predicate.
   bool success_;
   // Stores the message describing the condition in case the expectation
@@ -17720,8 +18372,6 @@ class GTEST_API_ AssertionResult {
   // Referenced via a pointer to avoid taking too much stack frame space
   // with test assertions.
   internal::scoped_ptr< ::std::string> message_;
-
-  GTEST_DISALLOW_ASSIGN_(AssertionResult);
 };
 
 // Makes a successful assertion result.
@@ -17748,8 +18398,8 @@ GTEST_API_ AssertionResult AssertionFailure(const Message& msg);
 //
 //   class FooTest : public testing::Test {
 //    protected:
-//     virtual void SetUp() { ... }
-//     virtual void TearDown() { ... }
+//     void SetUp() override { ... }
+//     void TearDown() override { ... }
 //     ...
 //   };
 //
@@ -17844,17 +18494,17 @@ class GTEST_API_ Test {
   // Uses a GTestFlagSaver to save and restore all Google Test flags.
   const internal::GTestFlagSaver* const gtest_flag_saver_;
 
-  // Often a user mis-spells SetUp() as Setup() and spends a long time
+  // Often a user misspells SetUp() as Setup() and spends a long time
   // wondering why it is never called by Google Test.  The declaration of
   // the following method is solely for catching such an error at
   // compile time:
   //
   //   - The return type is deliberately chosen to be not void, so it
-  //   will be a conflict if a user declares void Setup() in his test
-  //   fixture.
+  //   will be a conflict if void Setup() is declared in the user's
+  //   test fixture.
   //
   //   - This method is private, so it will be another compiler error
-  //   if a user calls it from his test fixture.
+  //   if the method is called from the user's test fixture.
   //
   // DO NOT OVERRIDE THIS FUNCTION.
   //
@@ -18337,7 +18987,7 @@ class GTEST_API_ TestCase {
 };
 
 // An Environment object is capable of setting up and tearing down an
-// environment.  The user should subclass this to define his own
+// environment.  You should subclass this to define your own
 // environment(s).
 //
 // An Environment object does the set-up and tear-down in virtual
@@ -18846,31 +19496,34 @@ std::string FormatForComparisonFailureMessage(
   return FormatForComparison<T1, T2>::Format(value);
 }
 
+// Separate the error generating code from the code path to reduce the stack
+// frame size of CmpHelperEQ. This helps reduce the overhead of some sanitizers
+// when calling EXPECT_* in a tight loop.
+template <typename T1, typename T2>
+AssertionResult CmpHelperEQFailure(const char* expected_expression,
+                                   const char* actual_expression,
+                                   const T1& expected, const T2& actual) {
+  return EqFailure(expected_expression,
+                   actual_expression,
+                   FormatForComparisonFailureMessage(expected, actual),
+                   FormatForComparisonFailureMessage(actual, expected),
+                   false);
+}
+
 // The helper function for {ASSERT|EXPECT}_EQ.
 template <typename T1, typename T2>
 AssertionResult CmpHelperEQ(const char* expected_expression,
                             const char* actual_expression,
                             const T1& expected,
                             const T2& actual) {
-#ifdef _MSC_VER
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4389)  // Temporarily disables warning on
-                                // signed/unsigned mismatch.
-#endif
-
+GTEST_DISABLE_MSC_WARNINGS_PUSH_(4389 /* signed/unsigned mismatch */)
   if (expected == actual) {
     return AssertionSuccess();
   }
+GTEST_DISABLE_MSC_WARNINGS_POP_()
 
-#ifdef _MSC_VER
-# pragma warning(pop)          // Restores the warning state.
-#endif
-
-  return EqFailure(expected_expression,
-                   actual_expression,
-                   FormatForComparisonFailureMessage(expected, actual),
-                   FormatForComparisonFailureMessage(actual, expected),
-                   false);
+  return CmpHelperEQFailure(expected_expression, actual_expression, expected,
+                            actual);
 }
 
 // With this overloaded version, we allow anonymous enums to be used
@@ -18958,6 +19611,19 @@ class EqHelper<true> {
   }
 };
 
+// Separate the error generating code from the code path to reduce the stack
+// frame size of CmpHelperOP. This helps reduce the overhead of some sanitizers
+// when calling EXPECT_OP in a tight loop.
+template <typename T1, typename T2>
+AssertionResult CmpHelperOpFailure(const char* expr1, const char* expr2,
+                                   const T1& val1, const T2& val2,
+                                   const char* op) {
+  return AssertionFailure()
+         << "Expected: (" << expr1 << ") " << op << " (" << expr2
+         << "), actual: " << FormatForComparisonFailureMessage(val1, val2)
+         << " vs " << FormatForComparisonFailureMessage(val2, val1);
+}
+
 // A macro for implementing the helper functions needed to implement
 // ASSERT_?? and EXPECT_??.  It is here just to avoid copy-and-paste
 // of similar code.
@@ -18968,6 +19634,7 @@ class EqHelper<true> {
 // with gcc 4.
 //
 // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
+
 #define GTEST_IMPL_CMP_HELPER_(op_name, op)\
 template <typename T1, typename T2>\
 AssertionResult CmpHelper##op_name(const char* expr1, const char* expr2, \
@@ -18975,10 +19642,7 @@ AssertionResult CmpHelper##op_name(const char* expr1, const char* expr2, \
   if (val1 op val2) {\
     return AssertionSuccess();\
   } else {\
-    return AssertionFailure() \
-        << "Expected: (" << expr1 << ") " #op " (" << expr2\
-        << "), actual: " << FormatForComparisonFailureMessage(val1, val2)\
-        << " vs " << FormatForComparisonFailureMessage(val2, val1);\
+    return CmpHelperOpFailure(expr1, expr2, val1, val2, #op);\
   }\
 }\
 GTEST_API_ AssertionResult CmpHelper##op_name(\
@@ -19985,8 +20649,8 @@ bool StaticAssertTypeEq() {
 // The convention is to end the test case name with "Test".  For
 // example, a test case for the Foo class can be named FooTest.
 //
-// The user should put his test code between braces after using this
-// macro.  Example:
+// Test code should appear between braces after an invocation of
+// this macro.  Example:
 //
 //   TEST(FooTest, InitializesCorrectly) {
 //     Foo foo;

@@ -316,6 +316,8 @@ class GTEST_API_ SingleFailureChecker {
 #include <algorithm>
 #include <iomanip>
 #include <limits>
+#include <list>
+#include <map>
 #include <ostream>  // NOLINT
 #include <sstream>
 #include <vector>
@@ -350,6 +352,7 @@ class GTEST_API_ SingleFailureChecker {
 #elif GTEST_OS_WINDOWS_MOBILE  // We are on Windows CE.
 
 # include <windows.h>  // NOLINT
+# undef min
 
 #elif GTEST_OS_WINDOWS  // We are on Windows proper.
 
@@ -372,6 +375,7 @@ class GTEST_API_ SingleFailureChecker {
 // cpplint thinks that the header is already included, so we want to
 // silence it.
 # include <windows.h>  // NOLINT
+# undef min
 
 #else
 
@@ -394,6 +398,8 @@ class GTEST_API_ SingleFailureChecker {
 #if GTEST_CAN_STREAM_RESULTS_
 # include <arpa/inet.h>  // NOLINT
 # include <netdb.h>  // NOLINT
+# include <sys/socket.h>  // NOLINT
+# include <sys/types.h>  // NOLINT
 #endif
 
 // Indicates that this translation unit is part of Google Test's
@@ -444,7 +450,7 @@ class GTEST_API_ SingleFailureChecker {
 // GTEST_IMPLEMENTATION_ is defined to 1 iff the current translation unit is
 // part of Google Test's implementation; otherwise it's undefined.
 #if !GTEST_IMPLEMENTATION_
-// A user is trying to include this from his code - just say no.
+// If this file is included from the user's code, just say no.
 # error "gtest-internal-inl.h is part of Google Test's internal implementation."
 # error "It must not be included except by Google Test itself."
 #endif  // GTEST_IMPLEMENTATION_
@@ -1369,32 +1375,6 @@ GTEST_API_ void ParseGoogleTestFlagsOnly(int* argc, wchar_t** argv);
 // platform.
 GTEST_API_ std::string GetLastErrnoDescription();
 
-# if GTEST_OS_WINDOWS
-// Provides leak-safe Windows kernel handle ownership.
-class AutoHandle {
- public:
-  AutoHandle() : handle_(INVALID_HANDLE_VALUE) {}
-  explicit AutoHandle(HANDLE handle) : handle_(handle) {}
-
-  ~AutoHandle() { Reset(); }
-
-  HANDLE Get() const { return handle_; }
-  void Reset() { Reset(INVALID_HANDLE_VALUE); }
-  void Reset(HANDLE handle) {
-    if (handle != handle_) {
-      if (handle_ != INVALID_HANDLE_VALUE)
-        ::CloseHandle(handle_);
-      handle_ = handle;
-    }
-  }
-
- private:
-  HANDLE handle_;
-
-  GTEST_DISALLOW_COPY_AND_ASSIGN_(AutoHandle);
-};
-# endif  // GTEST_OS_WINDOWS
-
 // Attempts to parse a string into a positive integer pointed to by the
 // number parameter.  Returns true if that is possible.
 // GTEST_HAS_DEATH_TEST implies that we have ::std::string, so we can use
@@ -2286,21 +2266,13 @@ TimeInMillis GetTimeInMillis() {
 #elif GTEST_OS_WINDOWS && !GTEST_HAS_GETTIMEOFDAY_
   __timeb64 now;
 
-# ifdef _MSC_VER
-
   // MSVC 8 deprecates _ftime64(), so we want to suppress warning 4996
   // (deprecated function) there.
   // TODO(kenton@google.com): Use GetTickCount()?  Or use
   //   SystemTimeToFileTime()
-#  pragma warning(push)          // Saves the current warning state.
-#  pragma warning(disable:4996)  // Temporarily disables warning 4996.
+  GTEST_DISABLE_MSC_WARNINGS_PUSH_(4996)
   _ftime64(&now);
-#  pragma warning(pop)           // Restores the warning state.
-# else
-
-  _ftime64(&now);
-
-# endif  // _MSC_VER
+  GTEST_DISABLE_MSC_WARNINGS_POP_()
 
   return static_cast<TimeInMillis>(now.time) * 1000 + now.millitm;
 #elif GTEST_HAS_GETTIMEOFDAY_
@@ -2440,6 +2412,13 @@ AssertionResult::AssertionResult(const AssertionResult& other)
                static_cast< ::std::string*>(NULL)) {
 }
 
+// Swaps two AssertionResults.
+void AssertionResult::swap(AssertionResult& other) {
+  using std::swap;
+  swap(success_, other.success_);
+  swap(message_, other.message_);
+}
+
 // Returns the assertion's negation. Used with EXPECT/ASSERT_FALSE.
 AssertionResult AssertionResult::operator!() const {
   AssertionResult negation(!success_);
@@ -2465,6 +2444,276 @@ AssertionResult AssertionFailure(const Message& message) {
 }
 
 namespace internal {
+
+namespace edit_distance {
+std::vector<EditType> CalculateOptimalEdits(const std::vector<size_t>& left,
+                                            const std::vector<size_t>& right) {
+  std::vector<std::vector<double> > costs(
+      left.size() + 1, std::vector<double>(right.size() + 1));
+  std::vector<std::vector<EditType> > best_move(
+      left.size() + 1, std::vector<EditType>(right.size() + 1));
+
+  // Populate for empty right.
+  for (size_t l_i = 0; l_i < costs.size(); ++l_i) {
+    costs[l_i][0] = static_cast<double>(l_i);
+    best_move[l_i][0] = kRemove;
+  }
+  // Populate for empty left.
+  for (size_t r_i = 1; r_i < costs[0].size(); ++r_i) {
+    costs[0][r_i] = static_cast<double>(r_i);
+    best_move[0][r_i] = kAdd;
+  }
+
+  for (size_t l_i = 0; l_i < left.size(); ++l_i) {
+    for (size_t r_i = 0; r_i < right.size(); ++r_i) {
+      if (left[l_i] == right[r_i]) {
+        // Found a match. Consume it.
+        costs[l_i + 1][r_i + 1] = costs[l_i][r_i];
+        best_move[l_i + 1][r_i + 1] = kMatch;
+        continue;
+      }
+
+      const double add = costs[l_i + 1][r_i];
+      const double remove = costs[l_i][r_i + 1];
+      const double replace = costs[l_i][r_i];
+      if (add < remove && add < replace) {
+        costs[l_i + 1][r_i + 1] = add + 1;
+        best_move[l_i + 1][r_i + 1] = kAdd;
+      } else if (remove < add && remove < replace) {
+        costs[l_i + 1][r_i + 1] = remove + 1;
+        best_move[l_i + 1][r_i + 1] = kRemove;
+      } else {
+        // We make replace a little more expensive than add/remove to lower
+        // their priority.
+        costs[l_i + 1][r_i + 1] = replace + 1.00001;
+        best_move[l_i + 1][r_i + 1] = kReplace;
+      }
+    }
+  }
+
+  // Reconstruct the best path. We do it in reverse order.
+  std::vector<EditType> best_path;
+  for (size_t l_i = left.size(), r_i = right.size(); l_i > 0 || r_i > 0;) {
+    EditType move = best_move[l_i][r_i];
+    best_path.push_back(move);
+    l_i -= move != kAdd;
+    r_i -= move != kRemove;
+  }
+  std::reverse(best_path.begin(), best_path.end());
+  return best_path;
+}
+
+namespace {
+
+// Helper class to convert string into ids with deduplication.
+class InternalStrings {
+ public:
+  size_t GetId(const std::string& str) {
+    IdMap::iterator it = ids_.find(str);
+    if (it != ids_.end()) return it->second;
+    size_t id = ids_.size();
+    return ids_[str] = id;
+  }
+
+ private:
+  typedef std::map<std::string, size_t> IdMap;
+  IdMap ids_;
+};
+
+}  // namespace
+
+std::vector<EditType> CalculateOptimalEdits(
+    const std::vector<std::string>& left,
+    const std::vector<std::string>& right) {
+  std::vector<size_t> left_ids, right_ids;
+  {
+    InternalStrings intern_table;
+    for (size_t i = 0; i < left.size(); ++i) {
+      left_ids.push_back(intern_table.GetId(left[i]));
+    }
+    for (size_t i = 0; i < right.size(); ++i) {
+      right_ids.push_back(intern_table.GetId(right[i]));
+    }
+  }
+  return CalculateOptimalEdits(left_ids, right_ids);
+}
+
+namespace {
+
+// Helper class that holds the state for one hunk and prints it out to the
+// stream.
+// It reorders adds/removes when possible to group all removes before all
+// adds. It also adds the hunk header before printint into the stream.
+class Hunk {
+ public:
+  Hunk(size_t left_start, size_t right_start)
+      : left_start_(left_start),
+        right_start_(right_start),
+        adds_(),
+        removes_(),
+        common_() {}
+
+  void PushLine(char edit, const char* line) {
+    switch (edit) {
+      case ' ':
+        ++common_;
+        FlushEdits();
+        hunk_.push_back(std::make_pair(' ', line));
+        break;
+      case '-':
+        ++removes_;
+        hunk_removes_.push_back(std::make_pair('-', line));
+        break;
+      case '+':
+        ++adds_;
+        hunk_adds_.push_back(std::make_pair('+', line));
+        break;
+    }
+  }
+
+  void PrintTo(std::ostream* os) {
+    PrintHeader(os);
+    FlushEdits();
+    for (std::list<std::pair<char, const char*> >::const_iterator it =
+             hunk_.begin();
+         it != hunk_.end(); ++it) {
+      *os << it->first << it->second << "\n";
+    }
+  }
+
+  bool has_edits() const { return adds_ || removes_; }
+
+ private:
+  void FlushEdits() {
+    hunk_.splice(hunk_.end(), hunk_removes_);
+    hunk_.splice(hunk_.end(), hunk_adds_);
+  }
+
+  // Print a unified diff header for one hunk.
+  // The format is
+  //   "@@ -<left_start>,<left_length> +<right_start>,<right_length> @@"
+  // where the left/right parts are ommitted if unnecessary.
+  void PrintHeader(std::ostream* ss) const {
+    *ss << "@@ ";
+    if (removes_) {
+      *ss << "-" << left_start_ << "," << (removes_ + common_);
+    }
+    if (removes_ && adds_) {
+      *ss << " ";
+    }
+    if (adds_) {
+      *ss << "+" << right_start_ << "," << (adds_ + common_);
+    }
+    *ss << " @@\n";
+  }
+
+  size_t left_start_, right_start_;
+  size_t adds_, removes_, common_;
+  std::list<std::pair<char, const char*> > hunk_, hunk_adds_, hunk_removes_;
+};
+
+}  // namespace
+
+// Create a list of diff hunks in Unified diff format.
+// Each hunk has a header generated by PrintHeader above plus a body with
+// lines prefixed with ' ' for no change, '-' for deletion and '+' for
+// addition.
+// 'context' represents the desired unchanged prefix/suffix around the diff.
+// If two hunks are close enough that their contexts overlap, then they are
+// joined into one hunk.
+std::string CreateUnifiedDiff(const std::vector<std::string>& left,
+                              const std::vector<std::string>& right,
+                              size_t context) {
+  const std::vector<EditType> edits = CalculateOptimalEdits(left, right);
+
+  size_t l_i = 0, r_i = 0, edit_i = 0;
+  std::stringstream ss;
+  while (edit_i < edits.size()) {
+    // Find first edit.
+    while (edit_i < edits.size() && edits[edit_i] == kMatch) {
+      ++l_i;
+      ++r_i;
+      ++edit_i;
+    }
+
+    // Find the first line to include in the hunk.
+    const size_t prefix_context = std::min(l_i, context);
+    Hunk hunk(l_i - prefix_context + 1, r_i - prefix_context + 1);
+    for (size_t i = prefix_context; i > 0; --i) {
+      hunk.PushLine(' ', left[l_i - i].c_str());
+    }
+
+    // Iterate the edits until we found enough suffix for the hunk or the input
+    // is over.
+    size_t n_suffix = 0;
+    for (; edit_i < edits.size(); ++edit_i) {
+      if (n_suffix >= context) {
+        // Continue only if the next hunk is very close.
+        std::vector<EditType>::const_iterator it = edits.begin() + edit_i;
+        while (it != edits.end() && *it == kMatch) ++it;
+        if (it == edits.end() || (it - edits.begin()) - edit_i >= context) {
+          // There is no next edit or it is too far away.
+          break;
+        }
+      }
+
+      EditType edit = edits[edit_i];
+      // Reset count when a non match is found.
+      n_suffix = edit == kMatch ? n_suffix + 1 : 0;
+
+      if (edit == kMatch || edit == kRemove || edit == kReplace) {
+        hunk.PushLine(edit == kMatch ? ' ' : '-', left[l_i].c_str());
+      }
+      if (edit == kAdd || edit == kReplace) {
+        hunk.PushLine('+', right[r_i].c_str());
+      }
+
+      // Advance indices, depending on edit type.
+      l_i += edit != kAdd;
+      r_i += edit != kRemove;
+    }
+
+    if (!hunk.has_edits()) {
+      // We are done. We don't want this hunk.
+      break;
+    }
+
+    hunk.PrintTo(&ss);
+  }
+  return ss.str();
+}
+
+}  // namespace edit_distance
+
+namespace {
+
+// The string representation of the values received in EqFailure() are already
+// escaped. Split them on escaped '\n' boundaries. Leave all other escaped
+// characters the same.
+std::vector<std::string> SplitEscapedString(const std::string& str) {
+  std::vector<std::string> lines;
+  size_t start = 0, end = str.size();
+  if (end > 2 && str[0] == '"' && str[end - 1] == '"') {
+    ++start;
+    --end;
+  }
+  bool escaped = false;
+  for (size_t i = start; i + 1 < end; ++i) {
+    if (escaped) {
+      escaped = false;
+      if (str[i] == 'n') {
+        lines.push_back(str.substr(start, i - start - 1));
+        start = i + 1;
+      }
+    } else {
+      escaped = str[i] == '\\';
+    }
+  }
+  lines.push_back(str.substr(start, end - start));
+  return lines;
+}
+
+}  // namespace
 
 // Constructs and returns the message for an equality assertion
 // (e.g. ASSERT_EQ, EXPECT_STREQ, etc) failure.
@@ -2498,6 +2747,17 @@ AssertionResult EqFailure(const char* expected_expression,
   }
   if (expected_value != expected_expression) {
     msg << "\nWhich is: " << expected_value;
+  }
+
+  if (!expected_value.empty() && !actual_value.empty()) {
+    const std::vector<std::string> expected_lines =
+        SplitEscapedString(expected_value);
+    const std::vector<std::string> actual_lines =
+        SplitEscapedString(actual_value);
+    if (expected_lines.size() > 1 || actual_lines.size() > 1) {
+      msg << "\nWith diff:\n"
+          << edit_distance::CreateUnifiedDiff(expected_lines, actual_lines);
+    }
   }
 
   return AssertionFailure() << msg;
@@ -3447,8 +3707,8 @@ bool Test::HasSameFixtureClass() {
     const bool this_is_TEST = this_fixture_id == internal::GetTestTypeId();
 
     if (first_is_TEST || this_is_TEST) {
-      // The user mixed TEST and TEST_F in this test case - we'll tell
-      // him/her how to fix it.
+      // Both TEST and TEST_F appear in same test case, which is incorrect.
+      // Tell the user how to fix this.
 
       // Gets the name of the TEST and the name of the TEST_F.  Note
       // that first_is_TEST and this_is_TEST cannot both be true, as
@@ -3468,8 +3728,8 @@ bool Test::HasSameFixtureClass() {
           << "want to change the TEST to TEST_F or move it to another test\n"
           << "case.";
     } else {
-      // The user defined two fixture classes with the same name in
-      // two namespaces - we'll tell him/her how to fix it.
+      // Two fixture classes with the same name appear in two different
+      // namespaces, which is not allowed. Tell the user how to fix this.
       ADD_FAILURE()
           << "All tests in the same test case must use the same test fixture\n"
           << "class.  However, in test case "
@@ -4038,7 +4298,8 @@ enum GTestColor {
   COLOR_YELLOW
 };
 
-#if GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE
+#if GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE && \
+    !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT
 
 // Returns the character attribute for the given color.
 WORD GetColorAttribute(GTestColor color) {
@@ -4083,6 +4344,8 @@ bool ShouldUseColor(bool stdout_is_tty) {
         String::CStringEquals(term, "xterm-256color") ||
         String::CStringEquals(term, "screen") ||
         String::CStringEquals(term, "screen-256color") ||
+        String::CStringEquals(term, "rxvt-unicode") ||
+        String::CStringEquals(term, "rxvt-unicode-256color") ||
         String::CStringEquals(term, "linux") ||
         String::CStringEquals(term, "cygwin");
     return stdout_is_tty && term_supports_color;
@@ -4106,8 +4369,9 @@ void ColoredPrintf(GTestColor color, const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
 
-#if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_SYMBIAN || GTEST_OS_ZOS || GTEST_OS_IOS
-  const bool use_color = false;
+#if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_SYMBIAN || GTEST_OS_ZOS || \
+    GTEST_OS_IOS || GTEST_OS_WINDOWS_PHONE || GTEST_OS_WINDOWS_RT
+  const bool use_color = AlwaysFalse();
 #else
   static const bool in_color_mode =
       ShouldUseColor(posix::IsATTY(posix::FileNo(stdout)) != 0);
@@ -4121,7 +4385,8 @@ void ColoredPrintf(GTestColor color, const char* fmt, ...) {
     return;
   }
 
-#if GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE
+#if GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE && \
+    !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT
   const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
 
   // Gets the current text color.
@@ -4696,34 +4961,39 @@ std::string XmlUnitTestResultPrinter::RemoveInvalidXmlCharacters(
 // Formats the given time in milliseconds as seconds.
 std::string FormatTimeInMillisAsSeconds(TimeInMillis ms) {
   ::std::stringstream ss;
-  ss << ms/1000.0;
+  ss << (static_cast<double>(ms) * 1e-3);
   return ss.str();
+}
+
+static bool PortableLocaltime(time_t seconds, struct tm* out) {
+#if defined(_MSC_VER)
+  return localtime_s(out, &seconds) == 0;
+#elif defined(__MINGW32__) || defined(__MINGW64__)
+  // MINGW <time.h> provides neither localtime_r nor localtime_s, but uses
+  // Windows' localtime(), which has a thread-local tm buffer.
+  struct tm* tm_ptr = localtime(&seconds);  // NOLINT
+  if (tm_ptr == NULL)
+    return false;
+  *out = *tm_ptr;
+  return true;
+#else
+  return localtime_r(&seconds, out) != NULL;
+#endif
 }
 
 // Converts the given epoch time in milliseconds to a date string in the ISO
 // 8601 format, without the timezone information.
 std::string FormatEpochTimeInMillisAsIso8601(TimeInMillis ms) {
-  // Using non-reentrant version as localtime_r is not portable.
-  time_t seconds = static_cast<time_t>(ms / 1000);
-#ifdef _MSC_VER
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4996)  // Temporarily disables warning 4996
-                                // (function or variable may be unsafe).
-  const struct tm* const time_struct = localtime(&seconds);  // NOLINT
-# pragma warning(pop)           // Restores the warning state again.
-#else
-  const struct tm* const time_struct = localtime(&seconds);  // NOLINT
-#endif
-  if (time_struct == NULL)
-    return "";  // Invalid ms value
-
+  struct tm time_struct;
+  if (!PortableLocaltime(static_cast<time_t>(ms / 1000), &time_struct))
+    return "";
   // YYYY-MM-DDThh:mm:ss
-  return StreamableToString(time_struct->tm_year + 1900) + "-" +
-      String::FormatIntWidth2(time_struct->tm_mon + 1) + "-" +
-      String::FormatIntWidth2(time_struct->tm_mday) + "T" +
-      String::FormatIntWidth2(time_struct->tm_hour) + ":" +
-      String::FormatIntWidth2(time_struct->tm_min) + ":" +
-      String::FormatIntWidth2(time_struct->tm_sec);
+  return StreamableToString(time_struct.tm_year + 1900) + "-" +
+      String::FormatIntWidth2(time_struct.tm_mon + 1) + "-" +
+      String::FormatIntWidth2(time_struct.tm_mday) + "T" +
+      String::FormatIntWidth2(time_struct.tm_hour) + ":" +
+      String::FormatIntWidth2(time_struct.tm_min) + ":" +
+      String::FormatIntWidth2(time_struct.tm_sec);
 }
 
 // Streams an XML CDATA section, escaping invalid CDATA sequences as needed.
@@ -5296,7 +5566,7 @@ void UnitTest::AddTestPartResult(
     // with another testing framework) and specify the former on the
     // command line for debugging.
     if (GTEST_FLAG(break_on_failure)) {
-#if GTEST_OS_WINDOWS
+#if GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT
       // Using DebugBreak on Windows allows gtest to still break into a debugger
       // when a failure happens and both the --gtest_break_on_failure and
       // the --gtest_catch_exceptions flags are specified.
@@ -5374,7 +5644,7 @@ int UnitTest::Run() {
   // process. In either case the user does not want to see pop-up dialogs
   // about crashes - they are expected.
   if (impl()->catch_exceptions() || in_death_test_child_process) {
-# if !GTEST_OS_WINDOWS_MOBILE
+# if !GTEST_OS_WINDOWS_MOBILE && !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT
     // SetErrorMode doesn't exist on CE.
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOALIGNMENTFAULTEXCEPT |
                  SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
@@ -5477,17 +5747,10 @@ namespace internal {
 
 UnitTestImpl::UnitTestImpl(UnitTest* parent)
     : parent_(parent),
-#ifdef _MSC_VER
-# pragma warning(push)                    // Saves the current warning state.
-# pragma warning(disable:4355)            // Temporarily disables warning 4355
-                                         // (using this in initializer).
+      GTEST_DISABLE_MSC_WARNINGS_PUSH_(4355 /* using this in initializer */)
       default_global_test_part_result_reporter_(this),
       default_per_thread_test_part_result_reporter_(this),
-# pragma warning(pop)                     // Restores the warning state again.
-#else
-      default_global_test_part_result_reporter_(this),
-      default_per_thread_test_part_result_reporter_(this),
-#endif  // _MSC_VER
+      GTEST_DISABLE_MSC_WARNINGS_POP_()
       global_test_part_result_repoter_(
           &default_global_test_part_result_reporter_),
       per_thread_test_part_result_reporter_(
@@ -6563,9 +6826,9 @@ void InitGoogleTest(int* argc, wchar_t** argv) {
 
 // Indicates that this translation unit is part of Google Test's
 // implementation.  It must come before gtest-internal-inl.h is
-// included, or there will be a compiler error.  This trick is to
-// prevent a user from accidentally including gtest-internal-inl.h in
-// his code.
+// included, or there will be a compiler error.  This trick exists to
+// prevent the accidental inclusion of gtest-internal-inl.h in the
+// user's code.
 #define GTEST_IMPLEMENTATION_ 1
 #undef GTEST_IMPLEMENTATION_
 
@@ -7479,6 +7742,8 @@ void StackLowerThanAddress(const void* ptr, bool* result) {
   *result = (&dummy < ptr);
 }
 
+// Make sure AddressSanitizer does not tamper with the stack here.
+GTEST_ATTRIBUTE_NO_SANITIZE_ADDRESS_
 bool StackGrowsDown() {
   int dummy;
   bool result;
@@ -7904,7 +8169,6 @@ namespace internal {
 // of them.
 const char kPathSeparator = '\\';
 const char kAlternatePathSeparator = '/';
-const char kPathSeparatorString[] = "\\";
 const char kAlternatePathSeparatorString[] = "/";
 # if GTEST_OS_WINDOWS_MOBILE
 // Windows CE doesn't have a current directory. You should not use
@@ -7918,7 +8182,6 @@ const char kCurrentDirectoryString[] = ".\\";
 # endif  // GTEST_OS_WINDOWS_MOBILE
 #else
 const char kPathSeparator = '/';
-const char kPathSeparatorString[] = "/";
 const char kCurrentDirectoryString[] = "./";
 #endif  // GTEST_OS_WINDOWS
 
@@ -7933,7 +8196,7 @@ static bool IsPathSeparator(char c) {
 
 // Returns the current working directory, or "" if unsuccessful.
 FilePath FilePath::GetCurrentDir() {
-#if GTEST_OS_WINDOWS_MOBILE
+#if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_WINDOWS_PHONE || GTEST_OS_WINDOWS_RT
   // Windows CE doesn't have a current directory, so we just return
   // something reasonable.
   return FilePath(kCurrentDirectoryString);
@@ -7942,7 +8205,14 @@ FilePath FilePath::GetCurrentDir() {
   return FilePath(_getcwd(cwd, sizeof(cwd)) == NULL ? "" : cwd);
 #else
   char cwd[GTEST_PATH_MAX_ + 1] = { '\0' };
-  return FilePath(getcwd(cwd, sizeof(cwd)) == NULL ? "" : cwd);
+  char* result = getcwd(cwd, sizeof(cwd));
+# if GTEST_OS_NACL
+  // getcwd will likely fail in NaCl due to the sandbox, so return something
+  // reasonable. The user may have provided a shim implementation for getcwd,
+  // however, so fallback only when failure is detected.
+  return FilePath(result == NULL ? kCurrentDirectoryString : cwd);
+# endif  // GTEST_OS_NACL
+  return FilePath(result == NULL ? "" : cwd);
 #endif  // GTEST_OS_WINDOWS_MOBILE
 }
 
@@ -8251,14 +8521,14 @@ void FilePath::Normalize() {
 #include <stdio.h>
 #include <string.h>
 
-#if GTEST_OS_WINDOWS_MOBILE
-# include <windows.h>  // For TerminateProcess()
-#elif GTEST_OS_WINDOWS
+#if GTEST_OS_WINDOWS
+# include <windows.h>
 # include <io.h>
 # include <sys/stat.h>
+# include <map>  // Used in ThreadLocal.
 #else
 # include <unistd.h>
-#endif  // GTEST_OS_WINDOWS_MOBILE
+#endif  // GTEST_OS_WINDOWS
 
 #if GTEST_OS_MAC
 # include <mach/mach_init.h>
@@ -8268,15 +8538,16 @@ void FilePath::Normalize() {
 
 #if GTEST_OS_QNX
 # include <devctl.h>
+# include <fcntl.h>
 # include <sys/procfs.h>
 #endif  // GTEST_OS_QNX
 
 
 // Indicates that this translation unit is part of Google Test's
 // implementation.  It must come before gtest-internal-inl.h is
-// included, or there will be a compiler error.  This trick is to
-// prevent a user from accidentally including gtest-internal-inl.h in
-// his code.
+// included, or there will be a compiler error.  This trick exists to
+// prevent the accidental inclusion of gtest-internal-inl.h in the
+// user's code.
 #define GTEST_IMPLEMENTATION_ 1
 #undef GTEST_IMPLEMENTATION_
 
@@ -8342,6 +8613,389 @@ size_t GetThreadCount() {
 }
 
 #endif  // GTEST_OS_MAC
+
+#if GTEST_IS_THREADSAFE && GTEST_OS_WINDOWS
+
+void SleepMilliseconds(int n) {
+  ::Sleep(n);
+}
+
+AutoHandle::AutoHandle()
+    : handle_(INVALID_HANDLE_VALUE) {}
+
+AutoHandle::AutoHandle(Handle handle)
+    : handle_(handle) {}
+
+AutoHandle::~AutoHandle() {
+  Reset();
+}
+
+AutoHandle::Handle AutoHandle::Get() const {
+  return handle_;
+}
+
+void AutoHandle::Reset() {
+  Reset(INVALID_HANDLE_VALUE);
+}
+
+void AutoHandle::Reset(HANDLE handle) {
+  // Resetting with the same handle we already own is invalid.
+  if (handle_ != handle) {
+    if (IsCloseable()) {
+      ::CloseHandle(handle_);
+    }
+    handle_ = handle;
+  } else {
+    GTEST_CHECK_(!IsCloseable())
+        << "Resetting a valid handle to itself is likely a programmer error "
+            "and thus not allowed.";
+  }
+}
+
+bool AutoHandle::IsCloseable() const {
+  // Different Windows APIs may use either of these values to represent an
+  // invalid handle.
+  return handle_ != NULL && handle_ != INVALID_HANDLE_VALUE;
+}
+
+Notification::Notification()
+    : event_(::CreateEvent(NULL,   // Default security attributes.
+                           TRUE,   // Do not reset automatically.
+                           FALSE,  // Initially unset.
+                           NULL)) {  // Anonymous event.
+  GTEST_CHECK_(event_.Get() != NULL);
+}
+
+void Notification::Notify() {
+  GTEST_CHECK_(::SetEvent(event_.Get()) != FALSE);
+}
+
+void Notification::WaitForNotification() {
+  GTEST_CHECK_(
+      ::WaitForSingleObject(event_.Get(), INFINITE) == WAIT_OBJECT_0);
+}
+
+Mutex::Mutex()
+    : type_(kDynamic),
+      owner_thread_id_(0),
+      critical_section_init_phase_(0),
+      critical_section_(new CRITICAL_SECTION) {
+  ::InitializeCriticalSection(critical_section_);
+}
+
+Mutex::~Mutex() {
+  // Static mutexes are leaked intentionally. It is not thread-safe to try
+  // to clean them up.
+  // TODO(yukawa): Switch to Slim Reader/Writer (SRW) Locks, which requires
+  // nothing to clean it up but is available only on Vista and later.
+  // http://msdn.microsoft.com/en-us/library/windows/desktop/aa904937.aspx
+  if (type_ == kDynamic) {
+    ::DeleteCriticalSection(critical_section_);
+    delete critical_section_;
+    critical_section_ = NULL;
+  }
+}
+
+void Mutex::Lock() {
+  ThreadSafeLazyInit();
+  ::EnterCriticalSection(critical_section_);
+  owner_thread_id_ = ::GetCurrentThreadId();
+}
+
+void Mutex::Unlock() {
+  ThreadSafeLazyInit();
+  // We don't protect writing to owner_thread_id_ here, as it's the
+  // caller's responsibility to ensure that the current thread holds the
+  // mutex when this is called.
+  owner_thread_id_ = 0;
+  ::LeaveCriticalSection(critical_section_);
+}
+
+// Does nothing if the current thread holds the mutex. Otherwise, crashes
+// with high probability.
+void Mutex::AssertHeld() {
+  ThreadSafeLazyInit();
+  GTEST_CHECK_(owner_thread_id_ == ::GetCurrentThreadId())
+      << "The current thread is not holding the mutex @" << this;
+}
+
+// Initializes owner_thread_id_ and critical_section_ in static mutexes.
+void Mutex::ThreadSafeLazyInit() {
+  // Dynamic mutexes are initialized in the constructor.
+  if (type_ == kStatic) {
+    switch (
+        ::InterlockedCompareExchange(&critical_section_init_phase_, 1L, 0L)) {
+      case 0:
+        // If critical_section_init_phase_ was 0 before the exchange, we
+        // are the first to test it and need to perform the initialization.
+        owner_thread_id_ = 0;
+        critical_section_ = new CRITICAL_SECTION;
+        ::InitializeCriticalSection(critical_section_);
+        // Updates the critical_section_init_phase_ to 2 to signal
+        // initialization complete.
+        GTEST_CHECK_(::InterlockedCompareExchange(
+                          &critical_section_init_phase_, 2L, 1L) ==
+                      1L);
+        break;
+      case 1:
+        // Somebody else is already initializing the mutex; spin until they
+        // are done.
+        while (::InterlockedCompareExchange(&critical_section_init_phase_,
+                                            2L,
+                                            2L) != 2L) {
+          // Possibly yields the rest of the thread's time slice to other
+          // threads.
+          ::Sleep(0);
+        }
+        break;
+
+      case 2:
+        break;  // The mutex is already initialized and ready for use.
+
+      default:
+        GTEST_CHECK_(false)
+            << "Unexpected value of critical_section_init_phase_ "
+            << "while initializing a static mutex.";
+    }
+  }
+}
+
+namespace {
+
+class ThreadWithParamSupport : public ThreadWithParamBase {
+ public:
+  static HANDLE CreateThread(Runnable* runnable,
+                             Notification* thread_can_start) {
+    ThreadMainParam* param = new ThreadMainParam(runnable, thread_can_start);
+    DWORD thread_id;
+    // TODO(yukawa): Consider to use _beginthreadex instead.
+    HANDLE thread_handle = ::CreateThread(
+        NULL,    // Default security.
+        0,       // Default stack size.
+        &ThreadWithParamSupport::ThreadMain,
+        param,   // Parameter to ThreadMainStatic
+        0x0,     // Default creation flags.
+        &thread_id);  // Need a valid pointer for the call to work under Win98.
+    GTEST_CHECK_(thread_handle != NULL) << "CreateThread failed with error "
+                                        << ::GetLastError() << ".";
+    if (thread_handle == NULL) {
+      delete param;
+    }
+    return thread_handle;
+  }
+
+ private:
+  struct ThreadMainParam {
+    ThreadMainParam(Runnable* runnable, Notification* thread_can_start)
+        : runnable_(runnable),
+          thread_can_start_(thread_can_start) {
+    }
+    scoped_ptr<Runnable> runnable_;
+    // Does not own.
+    Notification* thread_can_start_;
+  };
+
+  static DWORD WINAPI ThreadMain(void* ptr) {
+    // Transfers ownership.
+    scoped_ptr<ThreadMainParam> param(static_cast<ThreadMainParam*>(ptr));
+    if (param->thread_can_start_ != NULL)
+      param->thread_can_start_->WaitForNotification();
+    param->runnable_->Run();
+    return 0;
+  }
+
+  // Prohibit instantiation.
+  ThreadWithParamSupport();
+
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(ThreadWithParamSupport);
+};
+
+}  // namespace
+
+ThreadWithParamBase::ThreadWithParamBase(Runnable *runnable,
+                                         Notification* thread_can_start)
+      : thread_(ThreadWithParamSupport::CreateThread(runnable,
+                                                     thread_can_start)) {
+}
+
+ThreadWithParamBase::~ThreadWithParamBase() {
+  Join();
+}
+
+void ThreadWithParamBase::Join() {
+  GTEST_CHECK_(::WaitForSingleObject(thread_.Get(), INFINITE) == WAIT_OBJECT_0)
+      << "Failed to join the thread with error " << ::GetLastError() << ".";
+}
+
+// Maps a thread to a set of ThreadIdToThreadLocals that have values
+// instantiated on that thread and notifies them when the thread exits.  A
+// ThreadLocal instance is expected to persist until all threads it has
+// values on have terminated.
+class ThreadLocalRegistryImpl {
+ public:
+  // Registers thread_local_instance as having value on the current thread.
+  // Returns a value that can be used to identify the thread from other threads.
+  static ThreadLocalValueHolderBase* GetValueOnCurrentThread(
+      const ThreadLocalBase* thread_local_instance) {
+    DWORD current_thread = ::GetCurrentThreadId();
+    MutexLock lock(&mutex_);
+    ThreadIdToThreadLocals* const thread_to_thread_locals =
+        GetThreadLocalsMapLocked();
+    ThreadIdToThreadLocals::iterator thread_local_pos =
+        thread_to_thread_locals->find(current_thread);
+    if (thread_local_pos == thread_to_thread_locals->end()) {
+      thread_local_pos = thread_to_thread_locals->insert(
+          std::make_pair(current_thread, ThreadLocalValues())).first;
+      StartWatcherThreadFor(current_thread);
+    }
+    ThreadLocalValues& thread_local_values = thread_local_pos->second;
+    ThreadLocalValues::iterator value_pos =
+        thread_local_values.find(thread_local_instance);
+    if (value_pos == thread_local_values.end()) {
+      value_pos =
+          thread_local_values
+              .insert(std::make_pair(
+                  thread_local_instance,
+                  linked_ptr<ThreadLocalValueHolderBase>(
+                      thread_local_instance->NewValueForCurrentThread())))
+              .first;
+    }
+    return value_pos->second.get();
+  }
+
+  static void OnThreadLocalDestroyed(
+      const ThreadLocalBase* thread_local_instance) {
+    std::vector<linked_ptr<ThreadLocalValueHolderBase> > value_holders;
+    // Clean up the ThreadLocalValues data structure while holding the lock, but
+    // defer the destruction of the ThreadLocalValueHolderBases.
+    {
+      MutexLock lock(&mutex_);
+      ThreadIdToThreadLocals* const thread_to_thread_locals =
+          GetThreadLocalsMapLocked();
+      for (ThreadIdToThreadLocals::iterator it =
+          thread_to_thread_locals->begin();
+          it != thread_to_thread_locals->end();
+          ++it) {
+        ThreadLocalValues& thread_local_values = it->second;
+        ThreadLocalValues::iterator value_pos =
+            thread_local_values.find(thread_local_instance);
+        if (value_pos != thread_local_values.end()) {
+          value_holders.push_back(value_pos->second);
+          thread_local_values.erase(value_pos);
+          // This 'if' can only be successful at most once, so theoretically we
+          // could break out of the loop here, but we don't bother doing so.
+        }
+      }
+    }
+    // Outside the lock, let the destructor for 'value_holders' deallocate the
+    // ThreadLocalValueHolderBases.
+  }
+
+  static void OnThreadExit(DWORD thread_id) {
+    GTEST_CHECK_(thread_id != 0) << ::GetLastError();
+    std::vector<linked_ptr<ThreadLocalValueHolderBase> > value_holders;
+    // Clean up the ThreadIdToThreadLocals data structure while holding the
+    // lock, but defer the destruction of the ThreadLocalValueHolderBases.
+    {
+      MutexLock lock(&mutex_);
+      ThreadIdToThreadLocals* const thread_to_thread_locals =
+          GetThreadLocalsMapLocked();
+      ThreadIdToThreadLocals::iterator thread_local_pos =
+          thread_to_thread_locals->find(thread_id);
+      if (thread_local_pos != thread_to_thread_locals->end()) {
+        ThreadLocalValues& thread_local_values = thread_local_pos->second;
+        for (ThreadLocalValues::iterator value_pos =
+            thread_local_values.begin();
+            value_pos != thread_local_values.end();
+            ++value_pos) {
+          value_holders.push_back(value_pos->second);
+        }
+        thread_to_thread_locals->erase(thread_local_pos);
+      }
+    }
+    // Outside the lock, let the destructor for 'value_holders' deallocate the
+    // ThreadLocalValueHolderBases.
+  }
+
+ private:
+  // In a particular thread, maps a ThreadLocal object to its value.
+  typedef std::map<const ThreadLocalBase*,
+                   linked_ptr<ThreadLocalValueHolderBase> > ThreadLocalValues;
+  // Stores all ThreadIdToThreadLocals having values in a thread, indexed by
+  // thread's ID.
+  typedef std::map<DWORD, ThreadLocalValues> ThreadIdToThreadLocals;
+
+  // Holds the thread id and thread handle that we pass from
+  // StartWatcherThreadFor to WatcherThreadFunc.
+  typedef std::pair<DWORD, HANDLE> ThreadIdAndHandle;
+
+  static void StartWatcherThreadFor(DWORD thread_id) {
+    // The returned handle will be kept in thread_map and closed by
+    // watcher_thread in WatcherThreadFunc.
+    HANDLE thread = ::OpenThread(SYNCHRONIZE | THREAD_QUERY_INFORMATION,
+                                 FALSE,
+                                 thread_id);
+    GTEST_CHECK_(thread != NULL);
+    // We need to to pass a valid thread ID pointer into CreateThread for it
+    // to work correctly under Win98.
+    DWORD watcher_thread_id;
+    HANDLE watcher_thread = ::CreateThread(
+        NULL,   // Default security.
+        0,      // Default stack size
+        &ThreadLocalRegistryImpl::WatcherThreadFunc,
+        reinterpret_cast<LPVOID>(new ThreadIdAndHandle(thread_id, thread)),
+        CREATE_SUSPENDED,
+        &watcher_thread_id);
+    GTEST_CHECK_(watcher_thread != NULL);
+    // Give the watcher thread the same priority as ours to avoid being
+    // blocked by it.
+    ::SetThreadPriority(watcher_thread,
+                        ::GetThreadPriority(::GetCurrentThread()));
+    ::ResumeThread(watcher_thread);
+    ::CloseHandle(watcher_thread);
+  }
+
+  // Monitors exit from a given thread and notifies those
+  // ThreadIdToThreadLocals about thread termination.
+  static DWORD WINAPI WatcherThreadFunc(LPVOID param) {
+    const ThreadIdAndHandle* tah =
+        reinterpret_cast<const ThreadIdAndHandle*>(param);
+    GTEST_CHECK_(
+        ::WaitForSingleObject(tah->second, INFINITE) == WAIT_OBJECT_0);
+    OnThreadExit(tah->first);
+    ::CloseHandle(tah->second);
+    delete tah;
+    return 0;
+  }
+
+  // Returns map of thread local instances.
+  static ThreadIdToThreadLocals* GetThreadLocalsMapLocked() {
+    mutex_.AssertHeld();
+    static ThreadIdToThreadLocals* map = new ThreadIdToThreadLocals;
+    return map;
+  }
+
+  // Protects access to GetThreadLocalsMapLocked() and its return value.
+  static Mutex mutex_;
+  // Protects access to GetThreadMapLocked() and its return value.
+  static Mutex thread_map_mutex_;
+};
+
+Mutex ThreadLocalRegistryImpl::mutex_(Mutex::kStaticMutex);
+Mutex ThreadLocalRegistryImpl::thread_map_mutex_(Mutex::kStaticMutex);
+
+ThreadLocalValueHolderBase* ThreadLocalRegistry::GetValueOnCurrentThread(
+      const ThreadLocalBase* thread_local_instance) {
+  return ThreadLocalRegistryImpl::GetValueOnCurrentThread(
+      thread_local_instance);
+}
+
+void ThreadLocalRegistry::OnThreadLocalDestroyed(
+      const ThreadLocalBase* thread_local_instance) {
+  ThreadLocalRegistryImpl::OnThreadLocalDestroyed(thread_local_instance);
+}
+
+#endif  // GTEST_IS_THREADSAFE && GTEST_OS_WINDOWS
 
 #if GTEST_USES_POSIX_RE
 
@@ -8712,10 +9366,7 @@ GTestLog::~GTestLog() {
 }
 // Disable Microsoft deprecation warnings for POSIX functions called from
 // this class (creat, dup, dup2, and close)
-#ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable: 4996)
-#endif  // _MSC_VER
+GTEST_DISABLE_MSC_WARNINGS_PUSH_(4996)
 
 #if GTEST_HAS_STREAM_REDIRECTION
 
@@ -8834,9 +9485,7 @@ std::string CapturedStream::ReadEntireFile(FILE* file) {
   return content;
 }
 
-# ifdef _MSC_VER
-#  pragma warning(pop)
-# endif  // _MSC_VER
+GTEST_DISABLE_MSC_WARNINGS_POP_()
 
 static CapturedStream* g_captured_stderr = NULL;
 static CapturedStream* g_captured_stdout = NULL;
@@ -9059,6 +9708,7 @@ const char* StringFromGTestEnv(const char* flag, const char* default_value) {
 
 #include <ctype.h>
 #include <stdio.h>
+#include <cwchar>
 #include <ostream>  // NOLINT
 #include <string>
 
@@ -9069,6 +9719,9 @@ namespace {
 using ::std::ostream;
 
 // Prints a segment of bytes in the given object.
+GTEST_ATTRIBUTE_NO_SANITIZE_MEMORY_
+GTEST_ATTRIBUTE_NO_SANITIZE_ADDRESS_
+GTEST_ATTRIBUTE_NO_SANITIZE_THREAD_
 void PrintByteSegmentInObjectTo(const unsigned char* obj_bytes, size_t start,
                                 size_t count, ostream* os) {
   char text[5] = "";
@@ -9265,6 +9918,9 @@ void PrintTo(wchar_t wc, ostream* os) {
 // The array starts at begin, the length is len, it may include '\0' characters
 // and may not be NUL-terminated.
 template <typename CharType>
+GTEST_ATTRIBUTE_NO_SANITIZE_MEMORY_
+GTEST_ATTRIBUTE_NO_SANITIZE_ADDRESS_
+GTEST_ATTRIBUTE_NO_SANITIZE_THREAD_
 static void PrintCharsAsStringTo(
     const CharType* begin, size_t len, ostream* os) {
   const char* const kQuoteBegin = sizeof(CharType) == 1 ? "\"" : "L\"";
@@ -9286,6 +9942,9 @@ static void PrintCharsAsStringTo(
 // Prints a (const) char/wchar_t array of 'len' elements, starting at address
 // 'begin'.  CharType must be either char or wchar_t.
 template <typename CharType>
+GTEST_ATTRIBUTE_NO_SANITIZE_MEMORY_
+GTEST_ATTRIBUTE_NO_SANITIZE_ADDRESS_
+GTEST_ATTRIBUTE_NO_SANITIZE_THREAD_
 static void UniversalPrintCharArray(
     const CharType* begin, size_t len, ostream* os) {
   // The code
@@ -9342,7 +10001,7 @@ void PrintTo(const wchar_t* s, ostream* os) {
     *os << "NULL";
   } else {
     *os << ImplicitCast_<const void*>(s) << " pointing to ";
-    PrintCharsAsStringTo(s, wcslen(s), os);
+    PrintCharsAsStringTo(s, std::wcslen(s), os);
   }
 }
 #endif  // wchar_t is native
@@ -9410,9 +10069,9 @@ void PrintWideStringTo(const ::std::wstring& s, ostream* os) {
 
 // Indicates that this translation unit is part of Google Test's
 // implementation.  It must come before gtest-internal-inl.h is
-// included, or there will be a compiler error.  This trick is to
-// prevent a user from accidentally including gtest-internal-inl.h in
-// his code.
+// included, or there will be a compiler error.  This trick exists to
+// prevent the accidental inclusion of gtest-internal-inl.h in the
+// user's code.
 #define GTEST_IMPLEMENTATION_ 1
 #undef GTEST_IMPLEMENTATION_
 
@@ -9527,6 +10186,15 @@ static const char* SkipSpaces(const char* str) {
   return str;
 }
 
+static std::vector<std::string> SplitIntoTestNames(const char* src) {
+  std::vector<std::string> name_vec;
+  src = SkipSpaces(src);
+  for (; src != NULL; src = SkipComma(src)) {
+    name_vec.push_back(StripTrailingSpaces(GetPrefixUntilComma(src)));
+  }
+  return name_vec;
+}
+
 // Verifies that registered_tests match the test names in
 // defined_test_names_; returns registered_tests if successful, or
 // aborts the program otherwise.
@@ -9535,15 +10203,14 @@ const char* TypedTestCasePState::VerifyRegisteredTestNames(
   typedef ::std::set<const char*>::const_iterator DefinedTestIter;
   registered_ = true;
 
-  // Skip initial whitespace in registered_tests since some
-  // preprocessors prefix stringizied literals with whitespace.
-  registered_tests = SkipSpaces(registered_tests);
+  std::vector<std::string> name_vec = SplitIntoTestNames(registered_tests);
 
   Message errors;
-  ::std::set<std::string> tests;
-  for (const char* names = registered_tests; names != NULL;
-       names = SkipComma(names)) {
-    const std::string name = GetPrefixUntilComma(names);
+
+  std::set<std::string> tests;
+  for (std::vector<std::string>::const_iterator name_it = name_vec.begin();
+       name_it != name_vec.end(); ++name_it) {
+    const std::string& name = *name_it;
     if (tests.count(name) != 0) {
       errors << "Test " << name << " is listed more than once.\n";
       continue;
