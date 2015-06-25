@@ -388,15 +388,38 @@
 #endif  // __GNUC__
 
 // Determines the platform on which Google Test is compiled.
+#define GTEST_OS_CYGWIN 0
+#define GTEST_OS_SYMBIAN 0
+#define GTEST_OS_WINDOWS 0
+#define GTEST_OS_WINDOWS_MOBILE 0
+#define GTEST_OS_WINDOWS_MINGW 0
+#define GTEST_OS_WINDOWS_DESKTOP 0
+#define GTEST_OS_MAC 0
+#define GTEST_OS_LINUX 0
+#define GTEST_OS_LINUX_ANDROID 0
+#define GTEST_OS_ZOS 0
+#define GTEST_OS_SOLARIS 0
+#define GTEST_OS_AIX 0
+#define GTEST_OS_HPUX 0
+#define GTEST_OS_NACL 0
+#define GTEST_OS_OPENBSD 0
+#define GTEST_OS_QNX 0
+#define GTEST_OS_IOS 0
+
 #ifdef __CYGWIN__
+# undef GTEST_OS_CYGWIN
 # define GTEST_OS_CYGWIN 1
 #elif defined __SYMBIAN32__
+# undef GTEST_OS_SYMBIAN
 # define GTEST_OS_SYMBIAN 1
 #elif defined _WIN32
+# undef GTEST_OS_WINDOWS
 # define GTEST_OS_WINDOWS 1
 # ifdef _WIN32_WCE
+#  undef GTEST_OS_WINDOWS_MOBILE
 #  define GTEST_OS_WINDOWS_MOBILE 1
 # elif defined(__MINGW__) || defined(__MINGW32__)
+#  undef GTEST_OS_WINDOWS_MINGW
 #  define GTEST_OS_WINDOWS_MINGW 1
 # elif defined(WINAPI_FAMILY)
 #  include <winapifamily.h>
@@ -412,33 +435,45 @@
 #   define GTEST_OS_WINDOWS_DESKTOP 1
 #  endif
 # else
+#  undef GTEST_OS_WINDOWS_DESKTOP
 #  define GTEST_OS_WINDOWS_DESKTOP 1
 # endif  // _WIN32_WCE
 #elif defined __APPLE__
+# undef GTEST_OS_MAC
 # define GTEST_OS_MAC 1
 # if TARGET_OS_IPHONE
+#  undef GTEST_OS_IOS
 #  define GTEST_OS_IOS 1
 # endif
 #elif defined __FreeBSD__
 # define GTEST_OS_FREEBSD 1
 #elif defined __linux__
+# undef GTEST_OS_LINUX
 # define GTEST_OS_LINUX 1
 # if defined __ANDROID__
+#  undef GTEST_OS_LINUX_ANDROID
 #  define GTEST_OS_LINUX_ANDROID 1
 # endif
 #elif defined __MVS__
+# undef GTEST_OS_ZOS
 # define GTEST_OS_ZOS 1
 #elif defined(__sun) && defined(__SVR4)
+# undef GTEST_OS_SOLARIS
 # define GTEST_OS_SOLARIS 1
 #elif defined(_AIX)
+# undef GTEST_OS_AIX
 # define GTEST_OS_AIX 1
 #elif defined(__hpux)
+# undef GTEST_OS_HPUX
 # define GTEST_OS_HPUX 1
 #elif defined __native_client__
+# undef GTEST_OS_NACL
 # define GTEST_OS_NACL 1
 #elif defined __OpenBSD__
+# undef GTEST_OS_OPENBSD
 # define GTEST_OS_OPENBSD 1
 #elif defined __QNX__
+# undef GTEST_OS_QNX
 # define GTEST_OS_QNX 1
 #endif  // __CYGWIN__
 
@@ -464,7 +499,7 @@
 // -std={c,gnu}++{0x,11} is passed.  The C++11 standard specifies a
 // value for __cplusplus, and recent versions of clang, gcc, and
 // probably other compilers set that too in C++11 mode.
-# if __GXX_EXPERIMENTAL_CXX0X__ || __cplusplus >= 201103L
+# if defined __GXX_EXPERIMENTAL_CXX0X__ || __cplusplus >= 201103L
 // Compiling in at least C++11 mode.
 #  define GTEST_LANG_CXX11 1
 # else
@@ -555,11 +590,11 @@ struct _RTL_CRITICAL_SECTION;
 // Defines this to true iff Google Test can use POSIX regular expressions.
 #ifndef GTEST_HAS_POSIX_RE
 # if GTEST_OS_LINUX_ANDROID
-// On Android, <regex.h> is only available starting with Gingerbread.
-#  define GTEST_HAS_POSIX_RE (__ANDROID_API__ >= 9)
+// On Android, <regex.h> is only available starting with Froyo.
+#  define GTEST_HAS_POSIX_RE (__ANDROID_API__ >= 8)
 # else
-#  define GTEST_HAS_POSIX_RE (!GTEST_OS_WINDOWS)
-# endif
+# define GTEST_HAS_POSIX_RE (!GTEST_OS_WINDOWS)
+#endif
 #endif
 
 #if GTEST_HAS_POSIX_RE
@@ -571,18 +606,21 @@ struct _RTL_CRITICAL_SECTION;
 # include <regex.h>  // NOLINT
 
 # define GTEST_USES_POSIX_RE 1
+# define GTEST_USES_SIMPLE_RE 0
 
 #elif GTEST_OS_WINDOWS
 
 // <regex.h> is not available on Windows.  Use our own simple regex
 // implementation instead.
 # define GTEST_USES_SIMPLE_RE 1
+# define GTEST_USES_POSIX_RE  0
 
 #else
 
 // <regex.h> may not be available on this platform.  Use our own
 // simple regex implementation instead.
 # define GTEST_USES_SIMPLE_RE 1
+# define GTEST_USES_POSIX_RE  0
 
 #endif  // GTEST_HAS_POSIX_RE
 
@@ -691,8 +729,8 @@ struct _RTL_CRITICAL_SECTION;
        !defined(__EXCEPTIONS)
 #    define GTEST_HAS_RTTI 0
 #   else
-#    define GTEST_HAS_RTTI 1
-#   endif  // GTEST_OS_LINUX_ANDROID && __STLPORT_MAJOR && !__EXCEPTIONS
+#   define GTEST_HAS_RTTI 1
+#   endif  // GTEST_OS_LINUX_ANDROID && _STLPORT_MAJOR && !__EXCEPTIONS
 #  else
 #   define GTEST_HAS_RTTI 0
 #  endif  // __GXX_RTTI
@@ -758,7 +796,7 @@ struct _RTL_CRITICAL_SECTION;
 #  define GTEST_HAS_TR1_TUPLE 0
 # else
 // The user didn't tell us not to do it, so we assume it's OK.
-#  define GTEST_HAS_TR1_TUPLE 1
+# define GTEST_HAS_TR1_TUPLE 1
 # endif
 #endif  // GTEST_HAS_TR1_TUPLE
 
@@ -778,8 +816,11 @@ struct _RTL_CRITICAL_SECTION;
 // support TR1 tuple.  libc++ only provides std::tuple, in C++11 mode,
 // and it can be used with some compilers that define __GNUC__.
 # if (defined(__GNUC__) && !defined(__CUDACC__) && (GTEST_GCC_VER_ >= 40000) \
-      && !GTEST_OS_QNX && !defined(_LIBCPP_VERSION)) || _MSC_VER >= 1600
+      && !GTEST_OS_QNX && !defined(_LIBCPP_VERSION)) && !defined(_STLPORT_MAJOR) \
+      || (defined(_MSC_VER) && _MSC_VER >= 1600)
 #  define GTEST_ENV_HAS_TR1_TUPLE_ 1
+# else
+#  define GTEST_ENV_HAS_TR1_TUPLE_ 0
 # endif
 
 // C++11 specifies that <tuple> provides std::tuple. Use that if gtest is used
@@ -787,12 +828,16 @@ struct _RTL_CRITICAL_SECTION;
 // can build with clang but need to use gcc4.2's libstdc++).
 # if GTEST_LANG_CXX11 && (!defined(__GLIBCXX__) || __GLIBCXX__ > 20110325)
 #  define GTEST_ENV_HAS_STD_TUPLE_ 1
+# else
+#  define GTEST_ENV_HAS_STD_TUPLE_ 0
 # endif
 
 # if GTEST_ENV_HAS_TR1_TUPLE_ || GTEST_ENV_HAS_STD_TUPLE_
 #  define GTEST_USE_OWN_TR1_TUPLE 0
 # else
 #  define GTEST_USE_OWN_TR1_TUPLE 1
+#  undef  GTEST_HAS_TR1_TUPLE
+#  define GTEST_HAS_TR1_TUPLE 1
 # endif
 
 #endif  // GTEST_USE_OWN_TR1_TUPLE
@@ -965,52 +1010,52 @@ template <bool kIndexValid, int kIndex, class Tuple>
 struct TupleElement;
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 0, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 0, GTEST_10_TUPLE_(T)> {
   typedef T0 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 1, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 1, GTEST_10_TUPLE_(T)> {
   typedef T1 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 2, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 2, GTEST_10_TUPLE_(T)> {
   typedef T2 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 3, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 3, GTEST_10_TUPLE_(T)> {
   typedef T3 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 4, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 4, GTEST_10_TUPLE_(T)> {
   typedef T4 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 5, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 5, GTEST_10_TUPLE_(T)> {
   typedef T5 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 6, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 6, GTEST_10_TUPLE_(T)> {
   typedef T6 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 7, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 7, GTEST_10_TUPLE_(T)> {
   typedef T7 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 8, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 8, GTEST_10_TUPLE_(T)> {
   typedef T8 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 9, GTEST_10_TUPLE_(T) > {
+struct TupleElement<true, 9, GTEST_10_TUPLE_(T)> {
   typedef T9 type;
 };
 
@@ -1553,57 +1598,57 @@ inline GTEST_10_TUPLE_(T) make_tuple(const T0& f0, const T1& f1, const T2& f2,
 template <typename Tuple> struct tuple_size;
 
 template <GTEST_0_TYPENAMES_(T)>
-struct tuple_size<GTEST_0_TUPLE_(T) > {
+struct tuple_size<GTEST_0_TUPLE_(T)> {
   static const int value = 0;
 };
 
 template <GTEST_1_TYPENAMES_(T)>
-struct tuple_size<GTEST_1_TUPLE_(T) > {
+struct tuple_size<GTEST_1_TUPLE_(T)> {
   static const int value = 1;
 };
 
 template <GTEST_2_TYPENAMES_(T)>
-struct tuple_size<GTEST_2_TUPLE_(T) > {
+struct tuple_size<GTEST_2_TUPLE_(T)> {
   static const int value = 2;
 };
 
 template <GTEST_3_TYPENAMES_(T)>
-struct tuple_size<GTEST_3_TUPLE_(T) > {
+struct tuple_size<GTEST_3_TUPLE_(T)> {
   static const int value = 3;
 };
 
 template <GTEST_4_TYPENAMES_(T)>
-struct tuple_size<GTEST_4_TUPLE_(T) > {
+struct tuple_size<GTEST_4_TUPLE_(T)> {
   static const int value = 4;
 };
 
 template <GTEST_5_TYPENAMES_(T)>
-struct tuple_size<GTEST_5_TUPLE_(T) > {
+struct tuple_size<GTEST_5_TUPLE_(T)> {
   static const int value = 5;
 };
 
 template <GTEST_6_TYPENAMES_(T)>
-struct tuple_size<GTEST_6_TUPLE_(T) > {
+struct tuple_size<GTEST_6_TUPLE_(T)> {
   static const int value = 6;
 };
 
 template <GTEST_7_TYPENAMES_(T)>
-struct tuple_size<GTEST_7_TUPLE_(T) > {
+struct tuple_size<GTEST_7_TUPLE_(T)> {
   static const int value = 7;
 };
 
 template <GTEST_8_TYPENAMES_(T)>
-struct tuple_size<GTEST_8_TUPLE_(T) > {
+struct tuple_size<GTEST_8_TUPLE_(T)> {
   static const int value = 8;
 };
 
 template <GTEST_9_TYPENAMES_(T)>
-struct tuple_size<GTEST_9_TUPLE_(T) > {
+struct tuple_size<GTEST_9_TUPLE_(T)> {
   static const int value = 9;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct tuple_size<GTEST_10_TUPLE_(T) > {
+struct tuple_size<GTEST_10_TUPLE_(T)> {
   static const int value = 10;
 };
 
@@ -1789,8 +1834,8 @@ template <GTEST_10_TYPENAMES_(T), GTEST_10_TYPENAMES_(U)>
 inline bool operator==(const GTEST_10_TUPLE_(T)& t,
                        const GTEST_10_TUPLE_(U)& u) {
   return gtest_internal::SameSizeTuplePrefixComparator<
-      tuple_size<GTEST_10_TUPLE_(T) >::value,
-      tuple_size<GTEST_10_TUPLE_(U) >::value>::Eq(t, u);
+      tuple_size<GTEST_10_TUPLE_(T)>::value,
+      tuple_size<GTEST_10_TUPLE_(U)>::value>::Eq(t, u);
 }
 
 template <GTEST_10_TYPENAMES_(T), GTEST_10_TYPENAMES_(U)>
@@ -1901,13 +1946,13 @@ using ::std::tuple_size;
 # if GTEST_OS_LINUX && !defined(__ia64__)
 #  if GTEST_OS_LINUX_ANDROID
 // On Android, clone() is only available on ARM starting with Gingerbread.
-#    if defined(__arm__) && __ANDROID_API__ >= 9
+#    if (defined(__arm__) || defined(__mips__)) && __ANDROID_API__ >= 9
 #     define GTEST_HAS_CLONE 1
 #    else
 #     define GTEST_HAS_CLONE 0
 #    endif
 #  else
-#   define GTEST_HAS_CLONE 1
+#  define GTEST_HAS_CLONE 1
 #  endif
 # else
 #  define GTEST_HAS_CLONE 0
@@ -1939,6 +1984,8 @@ using ::std::tuple_size;
      GTEST_OS_OPENBSD || GTEST_OS_QNX || GTEST_OS_FREEBSD)
 # define GTEST_HAS_DEATH_TEST 1
 # include <vector>  // NOLINT
+#else
+# define GTEST_HAS_DEATH_TEST 0
 #endif
 
 // We don't support MSVC 7.1 with exceptions disabled now.  Therefore
@@ -1971,6 +2018,8 @@ using ::std::tuple_size;
 // Determines whether test results can be streamed to a socket.
 #if GTEST_OS_LINUX
 # define GTEST_CAN_STREAM_RESULTS_ 1
+#else
+# define GTEST_CAN_STREAM_RESULTS_ 0
 #endif
 
 // Defines some utility macros.
@@ -2078,7 +2127,7 @@ using ::std::tuple_size;
 #endif  // _MSC_VER
 
 #ifndef GTEST_API_
-# define GTEST_API_
+# define GTEST_API_ CV_EXPORTS
 #endif
 
 #ifdef __GNUC__
@@ -3474,7 +3523,7 @@ inline void Abort() { abort(); }
 // MSVC-based platforms.  We map the GTEST_SNPRINTF_ macro to the appropriate
 // function in order to achieve that.  We use macro definition here because
 // snprintf is a variadic function.
-#if _MSC_VER >= 1400 && !GTEST_OS_WINDOWS_MOBILE
+#if defined(_MSC_VER) && _MSC_VER >= 1400 && !GTEST_OS_WINDOWS_MOBILE
 // MSVC 2005 and above support variadic macros.
 # define GTEST_SNPRINTF_(buffer, size, format, ...) \
      _snprintf_s(buffer, size, size, format, __VA_ARGS__)
@@ -7652,10 +7701,20 @@ GTEST_API_ std::string AppendUserMessage(
 // errors presumably detectable only at run time.  Since
 // std::runtime_error inherits from std::exception, many testing
 // frameworks know how to extract and print the message inside it.
+
+#ifdef _MSC_VER
+# pragma warning(push)          // Saves the current warning state.
+# pragma warning(disable:4275)  // Temporarily disables warning 4275.
+#endif  // _MSC_VER
+
 class GTEST_API_ GoogleTestFailureException : public ::std::runtime_error {
  public:
   explicit GoogleTestFailureException(const TestPartResult& failure);
 };
+
+#ifdef _MSC_VER
+# pragma warning(pop)           // Restores the warning state.
+#endif  // _MSC_VER
 
 #endif  // GTEST_HAS_EXCEPTIONS
 
@@ -17812,7 +17871,7 @@ class GTEST_API_ TestPartResultArray {
 };
 
 // This interface knows how to report a test part result.
-class TestPartResultReporterInterface {
+class GTEST_API_ TestPartResultReporterInterface {
  public:
   virtual ~TestPartResultReporterInterface() {}
 
@@ -18141,6 +18200,9 @@ GTEST_DECLARE_string_(color);
 // This flag sets up the filter to select by name using a glob pattern
 // the tests to run. If the filter is not given all tests are executed.
 GTEST_DECLARE_string_(filter);
+
+// OpenCV extension: same as filter, but for the parameters string.
+GTEST_DECLARE_string_(param_filter);
 
 // This flag causes the Google Test to list tests. None of the tests listed
 // are actually run if the flag is provided.
@@ -19823,8 +19885,8 @@ class GTEST_API_ AssertHelper {
         : type(t), file(srcfile), line(line_num), message(msg) { }
 
     TestPartResult::Type const type;
-    const char* const file;
-    int const line;
+    const char*        const file;
+    int                const line;
     std::string const message;
 
    private:

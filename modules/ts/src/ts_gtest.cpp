@@ -36,7 +36,12 @@
 
 // This line ensures that gtest.h can be compiled on its own, even
 // when it's fused.
-#include "gtest/gtest.h"
+#include "precomp.hpp"
+
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#endif
 
 // The following lines pull in the real gtest *.cc files.
 // Copyright 2005, Google Inc.
@@ -498,6 +503,7 @@ const char kBreakOnFailureFlag[] = "break_on_failure";
 const char kCatchExceptionsFlag[] = "catch_exceptions";
 const char kColorFlag[] = "color";
 const char kFilterFlag[] = "filter";
+const char kParamFilterFlag[] = "param_filter";
 const char kListTestsFlag[] = "list_tests";
 const char kOutputFlag[] = "output";
 const char kPrintTimeFlag[] = "print_time";
@@ -576,6 +582,7 @@ class GTestFlagSaver {
     death_test_style_ = GTEST_FLAG(death_test_style);
     death_test_use_fork_ = GTEST_FLAG(death_test_use_fork);
     filter_ = GTEST_FLAG(filter);
+    param_filter_ = GTEST_FLAG(param_filter);
     internal_run_death_test_ = GTEST_FLAG(internal_run_death_test);
     list_tests_ = GTEST_FLAG(list_tests);
     output_ = GTEST_FLAG(output);
@@ -597,6 +604,7 @@ class GTestFlagSaver {
     GTEST_FLAG(death_test_style) = death_test_style_;
     GTEST_FLAG(death_test_use_fork) = death_test_use_fork_;
     GTEST_FLAG(filter) = filter_;
+    GTEST_FLAG(param_filter) = param_filter_;
     GTEST_FLAG(internal_run_death_test) = internal_run_death_test_;
     GTEST_FLAG(list_tests) = list_tests_;
     GTEST_FLAG(output) = output_;
@@ -618,6 +626,7 @@ class GTestFlagSaver {
   std::string death_test_style_;
   bool death_test_use_fork_;
   std::string filter_;
+  std::string param_filter_;
   std::string internal_run_death_test_;
   bool list_tests_;
   std::string output_;
@@ -1356,6 +1365,7 @@ GTEST_API_ bool IsAsciiWhiteSpace(char ch);
 GTEST_API_ bool IsAsciiWordChar(char ch);
 GTEST_API_ bool IsValidEscape(char ch);
 GTEST_API_ bool AtomMatchesChar(bool escaped, char pattern, char ch);
+GTEST_API_ std::string FormatRegexSyntaxError(const char* regex, int index);
 GTEST_API_ bool ValidateRegex(const char* regex);
 GTEST_API_ bool MatchRegexAtHead(const char* regex, const char* str);
 GTEST_API_ bool MatchRepetitionAndRegexAtHead(
@@ -1682,6 +1692,12 @@ GTEST_DEFINE_string_(
     "'-' and a : separated list of negative patterns (tests to "
     "exclude).  A test is run if it matches one of the positive "
     "patterns and does not match any of the negative patterns.");
+
+GTEST_DEFINE_string_(
+    param_filter,
+    internal::StringFromGTestEnv("param_filter", GetDefaultFilter()),
+    "Same syntax and semantics as for param, but these patterns "
+    "have to match the test's parameters.");
 
 GTEST_DEFINE_bool_(list_tests, false,
                    "List all tests without running them.");
@@ -2070,7 +2086,7 @@ extern const TypeId kTestTypeIdInGoogleTest = GetTestTypeId();
 // This predicate-formatter checks that 'results' contains a test part
 // failure of the given type and that the failure message contains the
 // given substring.
-AssertionResult HasOneFailure(const char* /* results_expr */,
+static AssertionResult HasOneFailure(const char* /* results_expr */,
                               const char* /* type_expr */,
                               const char* /* substr_expr */,
                               const TestPartResultArray& results,
@@ -3559,7 +3575,7 @@ static std::string FormatWordList(const std::vector<std::string>& words) {
   return word_list.GetString();
 }
 
-bool ValidateTestPropertyName(const std::string& property_name,
+static bool ValidateTestPropertyName(const std::string& property_name,
                               const std::vector<std::string>& reserved_names) {
   if (std::find(reserved_names.begin(), reserved_names.end(), property_name) !=
           reserved_names.end()) {
@@ -3787,7 +3803,7 @@ static std::string PrintTestPartResultToString(
 
 GoogleTestFailureException::GoogleTestFailureException(
     const TestPartResult& failure)
-    : ::std::runtime_error(PrintTestPartResultToString(failure).c_str()) {}
+      : ::std::runtime_error(PrintTestPartResultToString(failure).c_str()) {}
 
 #endif  // GTEST_HAS_EXCEPTIONS
 
@@ -4315,7 +4331,7 @@ WORD GetColorAttribute(GTestColor color) {
 
 // Returns the ANSI color code for the given color.  COLOR_DEFAULT is
 // an invalid input.
-const char* GetAnsiColorCode(GTestColor color) {
+static const char* GetAnsiColorCode(GTestColor color) {
   switch (color) {
     case COLOR_RED:     return "1";
     case COLOR_GREEN:   return "2";
@@ -4365,7 +4381,7 @@ bool ShouldUseColor(bool stdout_is_tty) {
 // cannot simply emit special characters and have the terminal change colors.
 // This routine must actually emit the characters rather than return a string
 // that would be colored when printed, as can be done on Linux.
-void ColoredPrintf(GTestColor color, const char* fmt, ...) {
+static void ColoredPrintf(GTestColor color, const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
 
@@ -4418,7 +4434,7 @@ void ColoredPrintf(GTestColor color, const char* fmt, ...) {
 static const char kTypeParamLabel[] = "TypeParam";
 static const char kValueParamLabel[] = "GetParam()";
 
-void PrintFullTestCommentIfPresent(const TestInfo& test_info) {
+static void PrintFullTestCommentIfPresent(const TestInfo& test_info) {
   const char* const type_param = test_info.type_param();
   const char* const value_param = test_info.value_param();
 
@@ -4477,6 +4493,14 @@ void PrettyUnitTestResultPrinter::OnTestIterationStart(
   if (!String::CStringEquals(filter, kUniversalFilter)) {
     ColoredPrintf(COLOR_YELLOW,
                   "Note: %s filter = %s\n", GTEST_NAME_, filter);
+  }
+
+  const char* const param_filter = GTEST_FLAG(param_filter).c_str();
+
+  // Ditto.
+  if (!String::CStringEquals(param_filter, kUniversalFilter)) {
+    ColoredPrintf(COLOR_YELLOW,
+                  "Note: %s parameter filter = %s\n", GTEST_NAME_, param_filter);
   }
 
   if (internal::ShouldShard(kTestTotalShards, kTestShardIndex, false)) {
@@ -4892,38 +4916,38 @@ std::string XmlUnitTestResultPrinter::EscapeXml(
   for (size_t i = 0; i < str.size(); ++i) {
     const char ch = str[i];
     switch (ch) {
-      case '<':
-        m << "&lt;";
-        break;
-      case '>':
-        m << "&gt;";
-        break;
-      case '&':
-        m << "&amp;";
-        break;
-      case '\'':
-        if (is_attribute)
-          m << "&apos;";
-        else
-          m << '\'';
-        break;
-      case '"':
-        if (is_attribute)
-          m << "&quot;";
-        else
-          m << '"';
-        break;
-      default:
+        case '<':
+          m << "&lt;";
+          break;
+        case '>':
+          m << "&gt;";
+          break;
+        case '&':
+          m << "&amp;";
+          break;
+        case '\'':
+          if (is_attribute)
+            m << "&apos;";
+          else
+            m << '\'';
+          break;
+        case '"':
+          if (is_attribute)
+            m << "&quot;";
+          else
+            m << '"';
+          break;
+        default:
         if (IsValidXmlCharacter(ch)) {
           if (is_attribute && IsNormalizableWhitespace(ch))
             m << "&#x" << String::FormatByte(static_cast<unsigned char>(ch))
               << ";";
-          else
+            else
             m << ch;
-        }
-        break;
+          }
+          break;
+      }
     }
-  }
 
   return m.GetString();
 }
@@ -5392,7 +5416,7 @@ void TestEventListeners::SuppressEventForwarding() {
 // We don't protect this under mutex_ as a user is not supposed to
 // call this before main() starts, from which point on the return
 // value will never change.
-UnitTest* UnitTest::GetInstance() {
+UnitTest * UnitTest::GetInstance() {
   // When compiled with MSVC 7.1 in optimized mode, destroying the
   // UnitTest object upon exiting the program messes up the exit code,
   // causing successful tests to appear failed.  We have to use a
@@ -5404,13 +5428,13 @@ UnitTest* UnitTest::GetInstance() {
   // default implementation.  Use this implementation to keep good OO
   // design with private destructor.
 
-#if (_MSC_VER == 1310 && !defined(_DEBUG)) || defined(__BORLANDC__)
+#if (defined(_MSC_VER) && _MSC_VER == 1310 && !defined(_DEBUG)) || defined(__BORLANDC__)
   static UnitTest* const instance = new UnitTest;
   return instance;
 #else
   static UnitTest instance;
   return &instance;
-#endif  // (_MSC_VER == 1310 && !defined(_DEBUG)) || defined(__BORLANDC__)
+#endif  // (defined(_MSC_VER) && _MSC_VER == 1310 && !defined(_DEBUG)) || defined(__BORLANDC__)
 }
 
 // Gets the number of successful test cases.
@@ -6228,9 +6252,15 @@ int UnitTestImpl::FilterTests(ReactionToSharding shard_tests) {
                                                    kDisableTestFilter);
       test_info->is_disabled_ = is_disabled;
 
+      const std::string value_param(test_info->value_param() == NULL ?
+                                    "" : test_info->value_param());
+
       const bool matches_filter =
           internal::UnitTestOptions::FilterMatchesTest(test_case_name,
-                                                       test_name);
+                                                       test_name) &&
+          internal::UnitTestOptions::MatchesFilter(value_param,
+                                                   GTEST_FLAG(param_filter).c_str());
+
       test_info->matches_filter_ = matches_filter;
 
       const bool is_runnable =
@@ -6295,7 +6325,7 @@ void UnitTestImpl::ListTestsMatchingFilter() {
             // We print the type parameter on a single line to make
             // the output easy to parse by a program.
             PrintOnOneLine(test_case->type_param(), kMaxParamLength);
-          }
+        }
           printf("\n");
         }
         printf("  %s", test_info->name());
@@ -6421,7 +6451,7 @@ bool SkipPrefix(const char* prefix, const char** pstr) {
 // part can be omitted.
 //
 // Returns the value of the flag, or NULL if the parsing failed.
-const char* ParseFlagValue(const char* str,
+static const char* ParseFlagValue(const char* str,
                            const char* flag,
                            bool def_optional) {
   // str and flag must not be NULL.
@@ -6459,7 +6489,7 @@ const char* ParseFlagValue(const char* str,
 //
 // On success, stores the value of the flag in *value, and returns
 // true.  On failure, returns false without changing *value.
-bool ParseBoolFlag(const char* str, const char* flag, bool* value) {
+static bool ParseBoolFlag(const char* str, const char* flag, bool* value) {
   // Gets the value of the flag as a string.
   const char* const value_str = ParseFlagValue(str, flag, true);
 
@@ -6493,7 +6523,7 @@ bool ParseInt32Flag(const char* str, const char* flag, Int32* value) {
 //
 // On success, stores the value of the flag in *value, and returns
 // true.  On failure, returns false without changing *value.
-bool ParseStringFlag(const char* str, const char* flag, std::string* value) {
+static bool ParseStringFlag(const char* str, const char* flag, std::string* value) {
   // Gets the value of the flag as a string.
   const char* const value_str = ParseFlagValue(str, flag, false);
 
@@ -6578,6 +6608,12 @@ static const char kColorEncodedHelpMessage[] =
 "      Run only the tests whose name matches one of the positive patterns but\n"
 "      none of the negative patterns. '?' matches any single character; '*'\n"
 "      matches any substring; ':' separates two patterns.\n"
+"  @G--" GTEST_FLAG_PREFIX_ "param_filter=@YPOSITIVE_PATTERNS"
+    "[@G-@YNEGATIVE_PATTERNS]@D\n"
+"      Like @G--" GTEST_FLAG_PREFIX_
+                      "filter@D, but applies to the test's parameter. If a\n"
+"      test is not parameterized, its parameter is considered to be the\n"
+"      empty string.\n"
 "  @G--" GTEST_FLAG_PREFIX_ "also_run_disabled_tests@D\n"
 "      Run all disabled tests too.\n"
 "\n"
@@ -6655,6 +6691,7 @@ void ParseGoogleTestFlagsOnlyImpl(int* argc, CharType** argv) {
         ParseBoolFlag(arg, kDeathTestUseFork,
                       &GTEST_FLAG(death_test_use_fork)) ||
         ParseStringFlag(arg, kFilterFlag, &GTEST_FLAG(filter)) ||
+        ParseStringFlag(arg, kParamFilterFlag, &GTEST_FLAG(param_filter)) ||
         ParseStringFlag(arg, kInternalRunDeathTestFlag,
                         &GTEST_FLAG(internal_run_death_test)) ||
         ParseBoolFlag(arg, kListTestsFlag, &GTEST_FLAG(list_tests)) ||
@@ -6877,7 +6914,9 @@ namespace internal {
 
 // Valid only for fast death tests. Indicates the code is running in the
 // child process of a fast style death test.
+# if !GTEST_OS_WINDOWS
 static bool g_in_fast_death_test_child = false;
+# endif
 
 // Returns a Boolean value indicating whether the caller is currently
 // executing in the context of the death test child process.  Tools such as
@@ -7005,7 +7044,7 @@ enum DeathTestOutcome { IN_PROGRESS, DIED, LIVED, RETURNED, THREW };
 // message is propagated back to the parent process.  Otherwise, the
 // message is simply printed to stderr.  In either case, the program
 // then exits with status 1.
-void DeathTestAbort(const std::string& message) {
+static void DeathTestAbort(const std::string& message) {
   // On a POSIX system, this function may be called from a threadsafe-style
   // death test child process, which operates on a very small stack.  Use
   // the heap for any additional non-minuscule memory requirements.
@@ -7742,14 +7781,16 @@ void StackLowerThanAddress(const void* ptr, bool* result) {
   *result = (&dummy < ptr);
 }
 
+#if GTEST_HAS_CLONE
 // Make sure AddressSanitizer does not tamper with the stack here.
 GTEST_ATTRIBUTE_NO_SANITIZE_ADDRESS_
-bool StackGrowsDown() {
+static bool StackGrowsDown() {
   int dummy;
   bool result;
   StackLowerThanAddress(&dummy, &result);
   return result;
 }
+#endif
 
 // Spawns a child process with the same executable as the current process in
 // a thread-safe manner and instructs it to run the death test.  The
@@ -9491,7 +9532,7 @@ static CapturedStream* g_captured_stderr = NULL;
 static CapturedStream* g_captured_stdout = NULL;
 
 // Starts capturing an output stream (stdout/stderr).
-void CaptureStream(int fd, const char* stream_name, CapturedStream** stream) {
+static void CaptureStream(int fd, const char* stream_name, CapturedStream** stream) {
   if (*stream != NULL) {
     GTEST_LOG_(FATAL) << "Only one " << stream_name
                       << " capturer can exist at a time.";
@@ -9500,7 +9541,7 @@ void CaptureStream(int fd, const char* stream_name, CapturedStream** stream) {
 }
 
 // Stops capturing the output stream and returns the captured string.
-std::string GetCapturedStream(CapturedStream** captured_stream) {
+static std::string GetCapturedStream(CapturedStream** captured_stream) {
   const std::string content = (*captured_stream)->GetCapturedString();
 
   delete *captured_stream;
