@@ -388,13 +388,20 @@
 #endif  // __GNUC__
 
 // Determines the platform on which Google Test is compiled.
+
+// Can't disable warning:
+// #pragma GCC diagnostic ignored "-Wundef"
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
 #define GTEST_OS_CYGWIN 0
 #define GTEST_OS_SYMBIAN 0
 #define GTEST_OS_WINDOWS 0
 #define GTEST_OS_WINDOWS_MOBILE 0
 #define GTEST_OS_WINDOWS_MINGW 0
 #define GTEST_OS_WINDOWS_DESKTOP 0
+#define GTEST_OS_WINDOWS_PHONE 0
+#define GTEST_OS_WINDOWS_RT 0
 #define GTEST_OS_MAC 0
+#define GTEST_OS_FREEBSD 0
 #define GTEST_OS_LINUX 0
 #define GTEST_OS_LINUX_ANDROID 0
 #define GTEST_OS_ZOS 0
@@ -424,14 +431,18 @@
 # elif defined(WINAPI_FAMILY)
 #  include <winapifamily.h>
 #  if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#   undef GTEST_OS_WINDOWS_DESKTOP
 #   define GTEST_OS_WINDOWS_DESKTOP 1
 #  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE_APP)
+#   undef GTEST_OS_WINDOWS_PHONE
 #   define GTEST_OS_WINDOWS_PHONE 1
 #  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
+#   undef GTEST_OS_WINDOWS_RT
 #   define GTEST_OS_WINDOWS_RT 1
 #  else
     // WINAPI_FAMILY defined but no known partition matched.
     // Default to desktop.
+#   undef GTEST_OS_WINDOWS_DESKTOP
 #   define GTEST_OS_WINDOWS_DESKTOP 1
 #  endif
 # else
@@ -446,6 +457,7 @@
 #  define GTEST_OS_IOS 1
 # endif
 #elif defined __FreeBSD__
+# undef GTEST_OS_FREEBSD
 # define GTEST_OS_FREEBSD 1
 #elif defined __linux__
 # undef GTEST_OS_LINUX
@@ -482,7 +494,7 @@
 //   GTEST_DISABLE_MSC_WARNINGS_PUSH_(4800 4385)
 //   /* code that triggers warnings C4800 and C4385 */
 //   GTEST_DISABLE_MSC_WARNINGS_POP_()
-#if _MSC_VER >= 1500
+#if defined _MSC_VER && _MSC_VER >= 1500
 # define GTEST_DISABLE_MSC_WARNINGS_PUSH_(warnings) \
     __pragma(warning(push))                        \
     __pragma(warning(disable: warnings))
@@ -525,6 +537,8 @@
         __GLIBCXX__ != 20110428ul &&  /* GCC 4.5.3 */ \
         __GLIBCXX__ != 20120702ul))   /* GCC 4.5.4 */
 # define GTEST_STDLIB_CXX11 1
+#else
+# define GTEST_STDLIB_CXX11 0
 #endif
 
 // Only use C++11 library features if the library provides them.
@@ -559,6 +573,9 @@
 #   undef GTEST_HAS_STD_TUPLE_
 #  endif
 # endif
+#endif
+#ifndef GTEST_HAS_STD_TUPLE_
+#define GTEST_HAS_STD_TUPLE_ 0
 #endif
 
 // Brings in definitions for functions used in the testing::internal::posix
@@ -2500,7 +2517,7 @@ inline void FlushInfoLog() { fflush(NULL); }
     GTEST_LOG_(FATAL) << #posix_call << "failed with error " \
                       << gtest_error
 
-#if GTEST_HAS_STD_MOVE_
+#if defined GTEST_HAS_STD_MOVE_ && GTEST_HAS_STD_MOVE_
 using std::move;
 #else  // GTEST_HAS_STD_MOVE_
 template <typename T>
