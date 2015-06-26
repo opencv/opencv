@@ -301,9 +301,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
         for ( ; j < W; j++ )
         {
-            j_p = j - 1;
             j_n = j + 1;
-            if ( j_p <  0 ) j_p = j + j_offl;
             if ( j_n >= W ) j_n = j + j_offr;
 
             // Get values for next column
