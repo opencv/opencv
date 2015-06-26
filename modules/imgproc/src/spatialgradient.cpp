@@ -74,9 +74,9 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
     // Store pointers to rows of input/output data
     // Padded by two rows for border handling
-    uchar* P_src[H+2];
-    short* P_dx [H+2];
-    short* P_dy [H+2];
+    std::vector<uchar*> P_src(H+2);
+    std::vector<short*> P_dx (H+2);
+    std::vector<short*> P_dy (H+2);
 
     int i_top    = 0,     // Case for H == 1 && W == 1 && BORDER_REPLICATE
         i_bottom = H - 1,
