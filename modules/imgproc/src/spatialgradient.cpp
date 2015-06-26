@@ -284,23 +284,39 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
      *           1  2  1
      */
     int j_p, j_n;
+    uchar v00, v01, v02, v10, v11, v12, v20, v21, v22;
     for ( i = 0; i < H; i++ )
     {
         p_src = P_src[i]; c_src = P_src[i+1]; n_src = P_src[i+2];
         c_dx  = P_dx [i];
         c_dy  = P_dy [i];
 
-        for ( j = i >= i_start ? 0 : j_start; j < W; j++ )
+        // Pre-load 2 columns
+        j = i >= i_start ? 0 : j_start;
+        j_p = j - 1;
+        if ( j_p <  0 ) j_p = j + j_offl;
+        v00 = p_src[j_p]; v01 = p_src[j];
+        v10 = c_src[j_p]; v11 = c_src[j];
+        v20 = n_src[j_p]; v21 = n_src[j];
+
+        for ( ; j < W; j++ )
         {
             j_p = j - 1;
             j_n = j + 1;
             if ( j_p <  0 ) j_p = j + j_offl;
             if ( j_n >= W ) j_n = j + j_offr;
 
-            c_dx[j] = -(p_src[j_p] + c_src[j_p] + c_src[j_p] + n_src[j_p]) +
-                       (p_src[j_n] + c_src[j_n] + c_src[j_n] + n_src[j_n]);
-            c_dy[j] = -(p_src[j_p] + p_src[j]   + p_src[j]   + p_src[j_n]) +
-                       (n_src[j_p] + n_src[j]   + n_src[j]   + n_src[j_n]);
+            // Get values for next column
+            v02 = p_src[j_n];
+            v12 = c_src[j_n];
+            v22 = n_src[j_n];
+
+            c_dx[j] = -(v00 + v10 + v10 + v20) + (v02 + v12 + v12 + v22);
+            c_dy[j] = -(v00 + v01 + v01 + v02) + (v20 + v21 + v21 + v22);
+
+            // Move values back one column for next iteration
+            v00 = v01; v10 = v11; v20 = v21;
+            v01 = v02; v11 = v12; v21 = v22;
         }
     }
 
