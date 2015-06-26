@@ -70,7 +70,8 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
               W = src.cols;
 
     // Row, column indices
-    int i, j;
+    int i = 0,
+        j = 0;
 
     // Store pointers to rows of input/output data
     // Padded by two rows for border handling
