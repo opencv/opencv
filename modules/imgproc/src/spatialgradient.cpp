@@ -111,8 +111,8 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     uchar *p_src, *c_src, *n_src; // previous, current, next row
     short *c_dx,  *c_dy;
 
+    int i_start = 0;
     int j_start = 0;
-/*
 #if CV_SIMD128
     // Characters in variable names have the following meanings:
     // u: unsigned char
@@ -123,90 +123,156 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     // n: offset  0
     // p: offset  1
     // Example: umn is offset -1 in row and offset 0 in column
+    uchar tmp;
     v_uint8x16 v_um, v_un, v_up;
     v_uint16x8 v_um1, v_um2, v_un1, v_un2, v_up1, v_up2;
-    v_int16x8 v_smm1, v_smm2, v_smn1, v_smn2, v_smp1, v_smp2,
-              v_snm1, v_snm2, v_snn1, v_snn2, v_snp1, v_snp2,
-              v_spm1, v_spm2, v_spn1, v_spn2, v_spp1, v_spp2,
-              v_two = v_setall_s16(2),
-              v_sdx1, v_sdx2, v_sdy1, v_sdy2;
+    v_int16x8 v_s1m1, v_s1m2, v_s1n1, v_s1n2, v_s1p1, v_s1p2,
+              v_s2m1, v_s2m2, v_s2n1, v_s2n2, v_s2p1, v_s2p2,
+              v_s3m1, v_s3m2, v_s3n1, v_s3n2, v_s3p1, v_s3p2,
+              v_s4m1, v_s4m2, v_s4n1, v_s4n2, v_s4p1, v_s4p2,
+              v_tmp,  v_sdx1, v_sdx2, v_sdy1, v_sdy2;
 
-    for ( i = 1; i < H - 1; i++ )
+    uchar *m_src;
+    short *c_dx1, *c_dx2, *c_dy1, *c_dy2;
+    for ( i = 0; i < H - 2; i += 2 )
     {
+        p_src = P_src[i]; c_src = P_src[i+1]; n_src = P_src[i+2]; m_src = P_src[i+3];
+        c_dx1 = P_dx [i];
+        c_dy1 = P_dy [i];
+        c_dx2 = P_dx [i+1];
+        c_dy2 = P_dy [i+1];
+
         // 16-column chunks at a time
-        for ( j = 1; j < W - 1 - 15; j += 16 )
+        for ( j = 0; j < W - 15; j += 16 )
         {
+            bool left = false, right = false;
+            if ( j == 0 )      left  = true;
+            if ( j == W - 16 ) right = true;
+
             // Load top row for 3x3 Sobel filter
-            idx = i*W + j;
-            v_um = v_load(&p_src[idx - W - 1]);
-            v_un = v_load(&p_src[idx - W]);
-            v_up = v_load(&p_src[idx - W + 1]);
+            if ( left ) { tmp = p_src[j-1]; p_src[j-1] = p_src[j+j_offl]; }
+            v_um = v_load(&p_src[j-1]);
+            if ( left ) p_src[j-1] = tmp;
+
+            v_un = v_load(&p_src[j]);
+
+            if ( right ) { tmp = p_src[j+16]; p_src[j+16] = p_src[j+15+j_offr]; }
+            v_up = v_load(&p_src[j+1]);
+            if ( right ) p_src[j+16] = tmp;
+
             v_expand(v_um, v_um1, v_um2);
             v_expand(v_un, v_un1, v_un2);
             v_expand(v_up, v_up1, v_up2);
-            v_smm1 = v_reinterpret_as_s16(v_um1);
-            v_smm2 = v_reinterpret_as_s16(v_um2);
-            v_smn1 = v_reinterpret_as_s16(v_un1);
-            v_smn2 = v_reinterpret_as_s16(v_un2);
-            v_smp1 = v_reinterpret_as_s16(v_up1);
-            v_smp2 = v_reinterpret_as_s16(v_up2);
+            v_s1m1 = v_reinterpret_as_s16(v_um1);
+            v_s1m2 = v_reinterpret_as_s16(v_um2);
+            v_s1n1 = v_reinterpret_as_s16(v_un1);
+            v_s1n2 = v_reinterpret_as_s16(v_un2);
+            v_s1p1 = v_reinterpret_as_s16(v_up1);
+            v_s1p2 = v_reinterpret_as_s16(v_up2);
 
             // Load second row for 3x3 Sobel filter
-            v_um = v_load(&p_src[idx - 1]);
-            v_un = v_load(&p_src[idx]);
-            v_up = v_load(&p_src[idx + 1]);
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_snm1 = v_reinterpret_as_s16(v_um1);
-            v_snm2 = v_reinterpret_as_s16(v_um2);
-            v_snn1 = v_reinterpret_as_s16(v_un1);
-            v_snn2 = v_reinterpret_as_s16(v_un2);
-            v_snp1 = v_reinterpret_as_s16(v_up1);
-            v_snp2 = v_reinterpret_as_s16(v_up2);
+            if ( left ) { tmp = c_src[j-1]; c_src[j-1] = c_src[j+j_offl]; }
+            v_um = v_load(&c_src[j-1]);
+            if ( left ) c_src[j-1] = tmp;
 
-            // Load last row for 3x3 Sobel filter
-            v_um = v_load(&p_src[idx + W - 1]);
-            v_un = v_load(&p_src[idx + W]);
-            v_up = v_load(&p_src[idx + W + 1]);
+            v_un = v_load(&c_src[j]);
+
+            if ( right ) { tmp = c_src[j+16]; c_src[j+16] = c_src[j+15+j_offr]; }
+            v_up = v_load(&c_src[j+1]);
+            if ( right ) c_src[j+16] = tmp;
+
             v_expand(v_um, v_um1, v_um2);
             v_expand(v_un, v_un1, v_un2);
             v_expand(v_up, v_up1, v_up2);
-            v_spm1 = v_reinterpret_as_s16(v_um1);
-            v_spm2 = v_reinterpret_as_s16(v_um2);
-            v_spn1 = v_reinterpret_as_s16(v_un1);
-            v_spn2 = v_reinterpret_as_s16(v_un2);
-            v_spp1 = v_reinterpret_as_s16(v_up1);
-            v_spp2 = v_reinterpret_as_s16(v_up2);
+            v_s2m1 = v_reinterpret_as_s16(v_um1);
+            v_s2m2 = v_reinterpret_as_s16(v_um2);
+            v_s2n1 = v_reinterpret_as_s16(v_un1);
+            v_s2n2 = v_reinterpret_as_s16(v_un2);
+            v_s2p1 = v_reinterpret_as_s16(v_up1);
+            v_s2p2 = v_reinterpret_as_s16(v_up2);
+
+            // Load third row for 3x3 Sobel filter
+            if ( left ) { tmp = n_src[j-1]; n_src[j-1] = n_src[j+j_offl]; }
+            v_um = v_load(&n_src[j-1]);
+            if ( left ) n_src[j-1] = tmp;
+
+            v_un = v_load(&n_src[j]);
+
+            if ( right ) { tmp = n_src[j+16]; n_src[j+16] = n_src[j+15+j_offr]; }
+            v_up = v_load(&n_src[j+1]);
+            if ( right ) n_src[j+16] = tmp;
+
+            v_expand(v_um, v_um1, v_um2);
+            v_expand(v_un, v_un1, v_un2);
+            v_expand(v_up, v_up1, v_up2);
+            v_s3m1 = v_reinterpret_as_s16(v_um1);
+            v_s3m2 = v_reinterpret_as_s16(v_um2);
+            v_s3n1 = v_reinterpret_as_s16(v_un1);
+            v_s3n2 = v_reinterpret_as_s16(v_un2);
+            v_s3p1 = v_reinterpret_as_s16(v_up1);
+            v_s3p2 = v_reinterpret_as_s16(v_up2);
+
+            // Load fourth row for 3x3 Sobel filter
+            if ( left ) { tmp = m_src[j-1]; m_src[j-1] = m_src[j+j_offl]; }
+            v_um = v_load(&m_src[j-1]);
+            if ( left ) m_src[j-1] = tmp;
+
+            v_un = v_load(&m_src[j]);
+
+            if ( right ) { tmp = m_src[j+16]; m_src[j+16] = m_src[j+15+j_offr]; }
+            v_up = v_load(&m_src[j+1]);
+            if ( right ) m_src[j+16] = tmp;
+
+            v_expand(v_um, v_um1, v_um2);
+            v_expand(v_un, v_un1, v_un2);
+            v_expand(v_up, v_up1, v_up2);
+            v_s4m1 = v_reinterpret_as_s16(v_um1);
+            v_s4m2 = v_reinterpret_as_s16(v_um2);
+            v_s4n1 = v_reinterpret_as_s16(v_un1);
+            v_s4n2 = v_reinterpret_as_s16(v_un2);
+            v_s4p1 = v_reinterpret_as_s16(v_up1);
+            v_s4p2 = v_reinterpret_as_s16(v_up2);
 
             // dx
-            v_sdx1 = (v_smp1 - v_smm1) + v_two*(v_snp1 - v_snm1) + (v_spp1 - v_spm1);
-            v_sdx2 = (v_smp2 - v_smm2) + v_two*(v_snp2 - v_snm2) + (v_spp2 - v_spm2);
+            v_tmp = v_s2p1 - v_s2m1;
+            v_sdx1 = (v_s1p1 - v_s1m1) + (v_tmp + v_tmp) + (v_s3p1 - v_s3m1);
+            v_tmp = v_s2p2 - v_s2m2;
+            v_sdx2 = (v_s1p2 - v_s1m2) + (v_tmp + v_tmp) + (v_s3p2 - v_s3m2);
 
             // dy
-            v_sdy1 = (v_spm1 - v_smm1) + v_two*(v_spn1 - v_smn1) + (v_spp1 - v_smp1);
-            v_sdy2 = (v_spm2 - v_smm2) + v_two*(v_spn2 - v_smn2) + (v_spp2 - v_smp2);
+            v_tmp = v_s3n1 - v_s1n1;
+            v_sdy1 = (v_s3m1 - v_s1m1) + (v_tmp + v_tmp) + (v_s3p1 - v_s1p1);
+            v_tmp = v_s3n2 - v_s1n2;
+            v_sdy2 = (v_s3m2 - v_s1m2) + (v_tmp + v_tmp) + (v_s3p2 - v_s1p2);
 
             // Store
-            v_store(&p_dx[idx],   v_sdx1);
-            v_store(&p_dx[idx+8], v_sdx2);
-            v_store(&p_dy[idx],   v_sdy1);
-            v_store(&p_dy[idx+8], v_sdy2);
-        }
+            v_store(&c_dx1[j],   v_sdx1);
+            v_store(&c_dx1[j+8], v_sdx2);
+            v_store(&c_dy1[j],   v_sdy1);
+            v_store(&c_dy1[j+8], v_sdy2);
 
-        // Cleanup
-        for ( ; j < W - 1; j++ )
-        {
-            idx = i*W + j;
-            p_dx[idx] = -(p_src[idx-W-1] + 2*p_src[idx-1] + p_src[idx+W-1]) +
-                         (p_src[idx-W+1] + 2*p_src[idx+1] + p_src[idx+W+1]);
-            p_dy[idx] = -(p_src[idx-W-1] + 2*p_src[idx-W] + p_src[idx-W+1]) +
-                         (p_src[idx+W-1] + 2*p_src[idx+W] + p_src[idx+W+1]);
+            // dx
+            v_tmp = v_s3p1 - v_s3m1;
+            v_sdx1 = (v_s2p1 - v_s2m1) + (v_tmp + v_tmp) + (v_s4p1 - v_s4m1);
+            v_tmp = v_s3p2 - v_s3m2;
+            v_sdx2 = (v_s2p2 - v_s2m2) + (v_tmp + v_tmp) + (v_s4p2 - v_s4m2);
+
+            // dy
+            v_tmp = v_s4n1 - v_s2n1;
+            v_sdy1 = (v_s4m1 - v_s2m1) + (v_tmp + v_tmp) + (v_s4p1 - v_s2p1);
+            v_tmp = v_s4n2 - v_s2n2;
+            v_sdy2 = (v_s4m2 - v_s2m2) + (v_tmp + v_tmp) + (v_s4p2 - v_s2p2);
+
+            // Store
+            v_store(&c_dx2[j],   v_sdx1);
+            v_store(&c_dx2[j+8], v_sdx2);
+            v_store(&c_dy2[j],   v_sdy1);
+            v_store(&c_dy2[j+8], v_sdy2);
         }
     }
-#else
-*/
-
+    i_start = i;
+    j_start = j;
+#endif
     /* NOTE:
      *
      * Sobel-x: -1  0  1
@@ -224,7 +290,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
         c_dx  = P_dx [i];
         c_dy  = P_dy [i];
 
-        for ( j = j_start; j < W; j++ )
+        for ( j = i >= i_start ? 0 : j_start; j < W; j++ )
         {
             j_p = j - 1;
             j_n = j + 1;
@@ -237,7 +303,6 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
                        (n_src[j_p] + n_src[j]   + n_src[j]   + n_src[j_n]);
         }
     }
-//#endif
 
 }
 
