@@ -65,7 +65,10 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
             cvSetModeWindow_CARBON(name,prop_value);
         #elif defined (HAVE_COCOA)
             cvSetModeWindow_COCOA(name,prop_value);
+        #elif defined (WINRT)
+            cvSetModeWindow_WinRT(name, prop_value);
         #endif
+
     break;
 
     case CV_WND_PROP_AUTOSIZE:
@@ -104,6 +107,8 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetModeWindow_CARBON(name);
         #elif defined (HAVE_COCOA)
             return cvGetModeWindow_COCOA(name);
+        #elif defined (WINRT)
+            return cvGetModeWindow_WinRT(name);
         #else
             return -1;
         #endif
