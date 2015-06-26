@@ -365,45 +365,64 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
 
     switch(apiPreference) {
     default:
-    case CV_CAP_FFMPEG:
+        // user specified an API we do not know
+        // bail out to let the user know that it is not available
+        if (apiPreference) break;
+
 #ifdef HAVE_FFMPEG
+    case CV_CAP_FFMPEG:
         if (! result)
             result = cvCreateFileCapture_FFMPEG_proxy (filename);
+        if (apiPreference) break;
 #endif
-    case CV_CAP_VFW:
+
 #ifdef HAVE_VFW
+    case CV_CAP_VFW:
         if (! result)
             result = cvCreateFileCapture_VFW (filename);
+        if (apiPreference) break;
 #endif
+
     case CV_CAP_MSMF:
 #ifdef HAVE_MSMF
         if (! result)
             result = cvCreateFileCapture_MSMF (filename);
 #endif
+
 #ifdef HAVE_XINE
         if (! result)
             result = cvCreateFileCapture_XINE (filename);
 #endif
-    case CV_CAP_GSTREAMER:
+        if (apiPreference) break;
+
 #ifdef HAVE_GSTREAMER
+    case CV_CAP_GSTREAMER:
         if (! result)
             result = cvCreateCapture_GStreamer (CV_CAP_GSTREAMER_FILE, filename);
+        if (apiPreference) break;
 #endif
-    case CV_CAP_QT:
+
 #if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
+    case CV_CAP_QT:
         if (! result)
             result = cvCreateFileCapture_QT (filename);
+        if (apiPreference) break;
 #endif
-    case CV_CAP_AVFOUNDATION:
+
 #ifdef HAVE_AVFOUNDATION
+    case CV_CAP_AVFOUNDATION:
         if (! result)
             result = cvCreateFileCapture_AVFoundation (filename);
+        if (apiPreference) break;
 #endif
-    case CV_CAP_OPENNI:
+
 #ifdef HAVE_OPENNI
+    case CV_CAP_OPENNI:
         if (! result)
             result = cvCreateFileCapture_OpenNI (filename);
+        if (apiPreference) break;
 #endif
+
     case CV_CAP_IMAGES:
         if (! result)
             result = cvCreateFileCapture_Images (filename);
