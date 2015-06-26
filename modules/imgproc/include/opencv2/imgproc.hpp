@@ -1382,12 +1382,14 @@ Sobel( src, dy, CV_16SC1, 0, 1, 3 );
 @param dx output image with first-order derivative in x.
 @param dy output image with first-order derivative in y.
 @param ksize size of Sobel kernel. It must be 3.
+@param borderType pixel extrapolation method, see cv::BorderTypes
 
 @sa Sobel
  */
 
 CV_EXPORTS_W void spatialGradient( InputArray src, OutputArray dx,
-                                   OutputArray dy, int ksize = 3 );
+                                   OutputArray dy, int ksize = 3,
+                                   int borderType = BORDER_DEFAULT );
 
 /** @brief Calculates the first x- or y- image derivative using Scharr operator.
 
