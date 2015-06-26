@@ -14,7 +14,7 @@ PERF_TEST_P( Size_Ksize_BorderType, spatialGradient,
     Combine(
         SZ_ALL_HD,
         Values( 3 ),
-        Values( BORDER_DEFAULT )
+        Values( BORDER_DEFAULT, BORDER_REPLICATE )
     )
 )
 {
