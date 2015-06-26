@@ -587,19 +587,17 @@ void CV_SpatialGradientTest::get_test_array_types_and_sizes( int test_case_idx,
 
     // Outputs are only CV_16SC1 for now
     types[OUTPUT][0] = types[OUTPUT][1] = types[REF_OUTPUT][0]
-        = types[REF_OUTPUT][1] = CV_16SC1;
+                     = types[REF_OUTPUT][1] = CV_16SC1;
 
     ksize = 3;
+    border = BORDER_DEFAULT; // TODO: Add BORDER_REPLICATE
 }
 
 
 void CV_SpatialGradientTest::run_func()
 {
-    Mat dx, dy;
-    spatialGradient( test_mat[INPUT][0].clone(), dx, dy, ksize );
-
-    test_mat[OUTPUT][0] = dx;
-    test_mat[OUTPUT][1] = dy;
+    spatialGradient( test_mat[INPUT][0], test_mat[OUTPUT][0],
+                     test_mat[OUTPUT][1], ksize, border );
 }
 
 void CV_SpatialGradientTest::prepare_to_validation( int /*test_case_idx*/ )
@@ -607,10 +605,12 @@ void CV_SpatialGradientTest::prepare_to_validation( int /*test_case_idx*/ )
     int dx, dy;
 
     dx = 1; dy = 0;
-    Sobel( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], CV_16SC1, dx, dy, ksize );
+    Sobel( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], CV_16SC1, dx, dy, ksize,
+           1, 0, border );
 
     dx = 0; dy = 1;
-    Sobel( test_mat[INPUT][0], test_mat[REF_OUTPUT][1], CV_16SC1, dx, dy, ksize );
+    Sobel( test_mat[INPUT][0], test_mat[REF_OUTPUT][1], CV_16SC1, dx, dy, ksize,
+           1, 0, border );
 }
 
 
