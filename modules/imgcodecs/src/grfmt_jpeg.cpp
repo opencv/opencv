@@ -242,8 +242,11 @@ bool  JpegDecoder::readHeader()
         {
             jpeg_read_header( &state->cinfo, TRUE );
 
-            m_width = state->cinfo.image_width;
-            m_height = state->cinfo.image_height;
+            state->cinfo.scale_num=1;
+            state->cinfo.scale_denom = cvSetJpegScale(0);
+            jpeg_calc_output_dimensions(&state->cinfo);
+            m_width = state->cinfo.output_width;
+            m_height = state->cinfo.output_height;
             m_type = state->cinfo.num_components > 1 ? CV_8UC3 : CV_8UC1;
             result = true;
         }
