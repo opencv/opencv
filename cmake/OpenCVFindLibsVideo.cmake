@@ -311,3 +311,9 @@ endif()
 if(WITH_INTELPERC)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIntelPerCSDK.cmake")
 endif(WITH_INTELPERC)
+
+# --- gPhoto2 ---
+ocv_clear_vars(HAVE_GPHOTO2)
+if(WITH_GPHOTO2)
+  CHECK_MODULE(libgphoto2 HAVE_GPHOTO2)
+endif(WITH_GPHOTO2)

@@ -221,7 +221,7 @@ void CvCaptureCAM_XIMEA::resetCvImage()
     xiGetParamInt( hmv, XI_PRM_HEIGHT, &height);
     xiGetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, &format);
 
-    if( (int)image.width != width || (int)image.height != height || image.frm != (XI_IMG_FORMAT)format)
+    if( (int)image.width != frame->width || (int)image.height != frame->height || image.frm != (XI_IMG_FORMAT)format)
     {
         if(frame) cvReleaseImage(&frame);
         frame = NULL;
@@ -277,7 +277,7 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
     case CV_CAP_PROP_XI_AUTO_WB       : xiGetParamInt( hmv, XI_PRM_AUTO_WB, &ival); return ival;
     case CV_CAP_PROP_XI_AEAG          : xiGetParamInt( hmv, XI_PRM_AEAG, &ival); return ival;
     case CV_CAP_PROP_XI_EXP_PRIORITY  : xiGetParamFloat( hmv, XI_PRM_EXP_PRIORITY, &fval); return fval;
-    case CV_CAP_PROP_XI_AE_MAX_LIMIT  : xiGetParamInt( hmv, XI_PRM_EXP_PRIORITY, &ival); return ival;
+    case CV_CAP_PROP_XI_AE_MAX_LIMIT  : xiGetParamInt( hmv, XI_PRM_AE_MAX_LIMIT, &ival); return ival;
     case CV_CAP_PROP_XI_AG_MAX_LIMIT  : xiGetParamFloat( hmv, XI_PRM_AG_MAX_LIMIT, &fval); return fval;
     case CV_CAP_PROP_XI_AEAG_LEVEL    : xiGetParamInt( hmv, XI_PRM_AEAG_LEVEL, &ival); return ival;
     case CV_CAP_PROP_XI_TIMEOUT       : return timeout;
@@ -310,7 +310,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_OFFSET_Y      : mvret = xiSetParamInt( hmv, XI_PRM_OFFSET_Y, ival); break;
     case CV_CAP_PROP_XI_TRG_SOURCE    : mvret = xiSetParamInt( hmv, XI_PRM_TRG_SOURCE, ival); break;
     case CV_CAP_PROP_XI_GPI_SELECTOR  : mvret = xiSetParamInt( hmv, XI_PRM_GPI_SELECTOR, ival); break;
-    case CV_CAP_PROP_XI_TRG_SOFTWARE  : mvret = xiSetParamInt( hmv, XI_PRM_TRG_SOURCE, 1); break;
+    case CV_CAP_PROP_XI_TRG_SOFTWARE  : mvret = xiSetParamInt( hmv, XI_PRM_TRG_SOFTWARE, 1); break;
     case CV_CAP_PROP_XI_GPI_MODE      : mvret = xiSetParamInt( hmv, XI_PRM_GPI_MODE, ival); break;
     case CV_CAP_PROP_XI_GPI_LEVEL     : mvret = xiSetParamInt( hmv, XI_PRM_GPI_LEVEL, ival); break;
     case CV_CAP_PROP_XI_GPO_SELECTOR  : mvret = xiSetParamInt( hmv, XI_PRM_GPO_SELECTOR, ival); break;
@@ -318,10 +318,10 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_LED_SELECTOR  : mvret = xiSetParamInt( hmv, XI_PRM_LED_SELECTOR, ival); break;
     case CV_CAP_PROP_XI_LED_MODE      : mvret = xiSetParamInt( hmv, XI_PRM_LED_MODE, ival); break;
     case CV_CAP_PROP_XI_AUTO_WB       : mvret = xiSetParamInt( hmv, XI_PRM_AUTO_WB, ival); break;
-    case CV_CAP_PROP_XI_MANUAL_WB     : mvret = xiSetParamInt( hmv, XI_PRM_LED_MODE, ival); break;
+    case CV_CAP_PROP_XI_MANUAL_WB     : mvret = xiSetParamInt( hmv, XI_PRM_MANUAL_WB, ival); break;
     case CV_CAP_PROP_XI_AEAG          : mvret = xiSetParamInt( hmv, XI_PRM_AEAG, ival); break;
     case CV_CAP_PROP_XI_EXP_PRIORITY  : mvret = xiSetParamFloat( hmv, XI_PRM_EXP_PRIORITY, fval); break;
-    case CV_CAP_PROP_XI_AE_MAX_LIMIT  : mvret = xiSetParamInt( hmv, XI_PRM_EXP_PRIORITY, ival); break;
+    case CV_CAP_PROP_XI_AE_MAX_LIMIT  : mvret = xiSetParamInt( hmv, XI_PRM_AE_MAX_LIMIT, ival); break;
     case CV_CAP_PROP_XI_AG_MAX_LIMIT  : mvret = xiSetParamFloat( hmv, XI_PRM_AG_MAX_LIMIT, fval); break;
     case CV_CAP_PROP_XI_AEAG_LEVEL    : mvret = xiSetParamInt( hmv, XI_PRM_AEAG_LEVEL, ival); break;
     case CV_CAP_PROP_XI_TIMEOUT       : timeout = ival; break;

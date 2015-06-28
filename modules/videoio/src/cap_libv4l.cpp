@@ -102,7 +102,7 @@ I modified the following:
     autosetup_capture_mode_v4l2 -> autodetect capture modes for v4l2
   - Modifications are according with Video4Linux old codes
   - Video4Linux handling is automatically if it does not recognize a Video4Linux2 device
-  - Tested succesful with Logitech Quickcam Express (V4L), Creative Vista (V4L) and Genius VideoCam Notebook (V4L2)
+  - Tested successfully with Logitech Quickcam Express (V4L), Creative Vista (V4L) and Genius VideoCam Notebook (V4L2)
   - Correct source lines with compiler warning messages
   - Information message from v4l/v4l2 detection
 
@@ -113,7 +113,7 @@ I modified the following:
   - SN9C10x chip based webcams support
   - New methods are internal:
     bayer2rgb24, sonix_decompress -> decoder routines for SN9C10x decoding from Takafumi Mizuno <taka-qce@ls-a.jp> with his pleasure :)
-  - Tested succesful with Genius VideoCam Notebook (V4L2)
+  - Tested successfully with Genius VideoCam Notebook (V4L2)
 
 Sixth Patch: Sept 10, 2005 Csaba Kertesz sign@freemail.hu
 For Release:  OpenCV-Linux Beta5 OpenCV-0.9.7
@@ -123,7 +123,7 @@ I added the following:
   - Get and change V4L capture controls (hue, saturation, brightness, contrast)
   - New method is internal:
     icvSetControl -> set capture controls
-  - Tested succesful with Creative Vista (V4L)
+  - Tested successfully with Creative Vista (V4L)
 
 Seventh Patch: Sept 10, 2005 Csaba Kertesz sign@freemail.hu
 For Release:  OpenCV-Linux Beta5 OpenCV-0.9.7
@@ -132,7 +132,7 @@ I added the following:
   - Detect, get and change V4L2 capture controls (hue, saturation, brightness, contrast, gain)
   - New methods are internal:
     v4l2_scan_controls_enumerate_menu, v4l2_scan_controls -> detect capture control intervals
-  - Tested succesful with Genius VideoCam Notebook (V4L2)
+  - Tested successfully with Genius VideoCam Notebook (V4L2)
 
 8th patch: Jan 5, 2006, Olivier.Bornet@idiap.ch
 Add support of V4L2_PIX_FMT_YUYV and V4L2_PIX_FMT_MJPEG.

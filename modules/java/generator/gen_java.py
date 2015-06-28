@@ -507,55 +507,6 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
         "moveWindow"        : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "resizeWindow"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
     }, # Highgui
-
-    'VideoCapture' :
-    {
-        "getSupportedPreviewSizes" :
-        {
-            'j_code' :
-"""
-    public java.util.List<org.opencv.core.Size> getSupportedPreviewSizes()
-    {
-        String[] sizes_str = getSupportedPreviewSizes_0(nativeObj).split(",");
-        java.util.List<org.opencv.core.Size> sizes = new java.util.ArrayList<org.opencv.core.Size>(sizes_str.length);
-
-        for (String str : sizes_str) {
-            String[] wh = str.split("x");
-            sizes.add(new org.opencv.core.Size(Double.parseDouble(wh[0]), Double.parseDouble(wh[1])));
-        }
-
-        return sizes;
-    }
-
-""",
-            'jn_code' :
-"""\n    private static native String getSupportedPreviewSizes_0(long nativeObj);\n""",
-            'cpp_code' :
-"""
-JNIEXPORT jstring JNICALL Java_org_opencv_videoio_VideoCapture_getSupportedPreviewSizes_10
-  (JNIEnv *env, jclass, jlong self);
-
-JNIEXPORT jstring JNICALL Java_org_opencv_videoio_VideoCapture_getSupportedPreviewSizes_10
-  (JNIEnv *env, jclass, jlong self)
-{
-    static const char method_name[] = "videoio::VideoCapture_getSupportedPreviewSizes_10()";
-    try {
-        LOGD("%s", method_name);
-        VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
-        union {double prop; const char* name;} u;
-        u.prop = me->get(CAP_PROP_ANDROID_PREVIEW_SIZES_STRING);
-        return env->NewStringUTF(u.name);
-    } catch(const std::exception &e) {
-        throwJavaException(env, &e, method_name);
-    } catch (...) {
-        throwJavaException(env, 0, method_name);
-    }
-    return env->NewStringUTF("");
-}
-
-""",
-        }, # getSupportedPreviewSizes
-    }, # VideoCapture
 }
 
 # { class : { func : { arg_name : {"ctype" : ctype, "attrib" : [attrib]} } } }
@@ -1240,6 +1191,7 @@ class JavaWrapperGenerator(object):
                     if "O" in a.out:
                         if not type_dict[a.ctype]["j_type"].startswith("MatOf"):
                             j_epilogue.append("Converters.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})
+                            j_epilogue.append( "%s_mat.release();" % a.name )
                         c_epilogue.append( "%(t)s_to_Mat( %(n)s, %(n)s_mat );" % {"n" : a.name, "t" : a.ctype} )
                 else:
                     fields = type_dict[a.ctype].get("jn_args", ((a.ctype, ""),))

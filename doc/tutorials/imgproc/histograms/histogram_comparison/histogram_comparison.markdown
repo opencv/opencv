@@ -53,7 +53,7 @@ Explanation
 -----------
 
 -#  Declare variables such as the matrices to store the base image and the two other images to
-    compare ( RGB and HSV )
+    compare ( BGR and HSV )
     @code{.cpp}
     Mat src_base, hsv_base;
     Mat src_test1, hsv_test1;

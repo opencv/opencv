@@ -72,9 +72,9 @@ template<typename _Tp, int m> struct Matx_FastInvOp
             b(i, i) = (_Tp)1;
 
         if( method == DECOMP_CHOLESKY )
-            return hal::Cholesky(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m);
+            return Cholesky(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m);
 
-        return hal::LU(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m) != 0;
+        return LU(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m) != 0;
     }
 };
 

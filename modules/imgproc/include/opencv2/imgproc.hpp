@@ -1689,6 +1689,7 @@ See the line detection example below:
     #include <opencv2/highgui.hpp>
 
     using namespace cv;
+    using namespace std;
 
     int main(int argc, char** argv)
     {
@@ -1774,18 +1775,19 @@ Example: :
     #include <math.h>
 
     using namespace cv;
+    using namespace std;
 
     int main(int argc, char** argv)
     {
         Mat img, gray;
-        if( argc != 2 && !(img=imread(argv[1], 1)).data)
+        if( argc != 2 || !(img=imread(argv[1], 1)).data)
             return -1;
         cvtColor(img, gray, COLOR_BGR2GRAY);
         // smooth it, otherwise a lot of false circles may be detected
         GaussianBlur( gray, gray, Size(9, 9), 2, 2 );
         vector<Vec3f> circles;
         HoughCircles(gray, circles, HOUGH_GRADIENT,
-                     2, gray->rows/4, 200, 100 );
+                     2, gray.rows/4, 200, 100 );
         for( size_t i = 0; i < circles.size(); i++ )
         {
              Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
@@ -1797,6 +1799,8 @@ Example: :
         }
         namedWindow( "circles", 1 );
         imshow( "circles", img );
+
+        waitKey(0);
         return 0;
     }
 @endcode
@@ -3741,7 +3745,8 @@ enum ColormapTypes
     COLORMAP_COOL = 8, //!< ![cool](pics/colormaps/colorscale_cool.jpg)
     COLORMAP_HSV = 9, //!< ![HSV](pics/colormaps/colorscale_hsv.jpg)
     COLORMAP_PINK = 10, //!< ![pink](pics/colormaps/colorscale_pink.jpg)
-    COLORMAP_HOT = 11 //!< ![hot](pics/colormaps/colorscale_hot.jpg)
+    COLORMAP_HOT = 11, //!< ![hot](pics/colormaps/colorscale_hot.jpg)
+    COLORMAP_PARULA = 12 //!< ![hot](pics/colormaps/colorscale_parula.jpg)
 };
 
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.

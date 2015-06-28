@@ -108,7 +108,7 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
             }
         }
         impl->error = true;
-        impl->error_message = impl->error_message + "Unknown parametes " + name + "\n";
+        impl->error_message = impl->error_message + "Unknown parameter " + name + "\n";
     }
     catch (std::exception& e)
     {
@@ -133,7 +133,7 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
             }
         }
         impl->error = true;
-        impl->error_message = impl->error_message + "Unknown parametes #" + format("%d", index) + "\n";
+        impl->error_message = impl->error_message + "Unknown parameter #" + format("%d", index) + "\n";
     }
     catch(std::exception & e)
     {

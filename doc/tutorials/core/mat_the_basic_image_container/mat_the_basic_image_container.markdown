@@ -118,8 +118,8 @@ added.
 
 There are, however, many other color systems each with their own advantages:
 
--   RGB is the most common as our eyes use something similar, our display systems also compose
-    colors using these.
+-   RGB is the most common as our eyes use something similar, however keep in mind that OpenCV standard display
+    system composes colors using the BGR color space (a switch of the red and blue channel).
 -   The HSV and HLS decompose colors into their hue, saturation and value/luminance components,
     which is a more natural way for us to describe colors. You might, for example, dismiss the last
     component, making your algorithm less sensible to the light conditions of the input image.

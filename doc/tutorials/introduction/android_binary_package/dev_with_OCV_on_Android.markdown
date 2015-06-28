@@ -356,10 +356,7 @@ from camera and implements CvCameraViewListener2 interface to get frames from ca
 First of all we create our application view using xml layout. Our layout consists of the only one
 full screen component of class org.opencv.android.JavaCameraView. This class is implemented inside
 OpenCV library. It is inherited from CameraBridgeViewBase, that extends SurfaceView and uses
-standard Android camera API. Alternatively you can use org.opencv.android.NativeCameraView class,
-that implements the same interface, but uses VideoCapture class as camera access back-end.
-opencv:show_fps="true" and opencv:camera_id="any" options enable FPS message and allow to use any
-camera on device. Application tries to use back camera first.
+standard Android camera API.
 
 After creating layout we need to implement Activity class. OpenCV initialization process has been
 already discussed above. In this sample we use asynchronous initialization. Implementation of

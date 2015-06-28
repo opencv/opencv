@@ -104,13 +104,13 @@ Explanation
 -----------
 
 -#  Let's check the general structure of the program:
-    -   Load an image. If it is RGB we convert it to Grayscale. For this, remember that we can use
+    -   Load an image. If it is BGR we convert it to Grayscale. For this, remember that we can use
         the function @ref cv::cvtColor :
         @code{.cpp}
         src = imread( argv[1], 1 );
 
         /// Convert the image to Gray
-        cvtColor( src, src_gray, COLOR_RGB2GRAY );
+        cvtColor( src, src_gray, COLOR_BGR2GRAY );
         @endcode
     -   Create a window to display the result
         @code{.cpp}

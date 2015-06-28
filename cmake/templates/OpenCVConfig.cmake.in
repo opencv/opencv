@@ -7,7 +7,7 @@
 #    In your CMakeLists.txt, add these lines:
 #
 #    find_package(OpenCV REQUIRED)
-#    include_directories(${OpenCV_INCLUDE_DIRS})
+#    include_directories(${OpenCV_INCLUDE_DIRS}) # Not needed for CMake >= 2.8.11
 #    target_link_libraries(MY_TARGET_NAME ${OpenCV_LIBS})
 #
 #    Or you can search for specific OpenCV modules:
@@ -34,7 +34,6 @@
 #      - OpenCV_LIB_COMPONENTS           : Present OpenCV modules list
 #      - OpenCV_USE_MANGLED_PATHS        : Mangled OpenCV path flag
 #      - OpenCV_MODULES_SUFFIX           : The suffix for OpenCVModules-XXX.cmake file
-#      - OpenCV_HAVE_ANDROID_CAMERA      : Presence of Android native camera wrappers
 #
 #    Deprecated variables:
 #      - OpenCV_VERSION_TWEAK            : Always "0"
@@ -127,9 +126,6 @@ if(NOT WIN32 OR ANDROID)
   endif()
 endif()
 
-# Presence of Android native camera wrappers
-set(OpenCV_HAVE_ANDROID_CAMERA @HAVE_opencv_androidcamera@)
-
 # ======================================================
 # Include directories to add to the user project:
 # ======================================================
@@ -179,6 +175,20 @@ if(OpenCV2_INCLUDE_DIRS)
     set(OpenCV_3RDPARTY_LIB_DIR_OPT "${OpenCV_3RDPARTY_LIB_DIR_OPT}/Release")
     set(OpenCV_3RDPARTY_LIB_DIR_DBG "${OpenCV_3RDPARTY_LIB_DIR_DBG}/Debug")
   endif()
+endif()
+
+if(NOT CMAKE_VERSION VERSION_LESS "2.8.11")
+  # Target property INTERFACE_INCLUDE_DIRECTORIES available since 2.8.11:
+  # * http://www.cmake.org/cmake/help/v2.8.11/cmake.html#prop_tgt:INTERFACE_INCLUDE_DIRECTORIES
+  foreach(__component ${OpenCV_LIB_COMPONENTS})
+    if(TARGET ${__component})
+      set_target_properties(
+          ${__component}
+          PROPERTIES
+          INTERFACE_INCLUDE_DIRECTORIES "${OpenCV_INCLUDE_DIRS}"
+      )
+    endif()
+  endforeach()
 endif()
 
 # ==============================================================
@@ -323,24 +333,6 @@ foreach(__opttype OPT DBG)
     link_directories(${OpenCV_CUDA_LIBS_RELPATH})
   endif()
 endforeach()
-
-# ==============================================================
-#  Android camera helper macro
-# ==============================================================
-if(OpenCV_HAVE_ANDROID_CAMERA)
-  macro(COPY_NATIVE_CAMERA_LIBS target)
-    get_target_property(target_location ${target} LOCATION)
-    get_filename_component(target_location "${target_location}" PATH)
-    file(GLOB camera_wrappers "${OpenCV_LIB_DIR_OPT}/libnative_camera_r*.so")
-    foreach(wrapper ${camera_wrappers})
-      add_custom_command(
-        TARGET ${target}
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${target_location}"
-      )
-    endforeach()
-  endmacro()
-endif()
 
 # ==============================================================
 # Compatibility stuff

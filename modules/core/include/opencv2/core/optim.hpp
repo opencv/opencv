@@ -276,7 +276,7 @@ column vector and \f$x\f$ is an arbitrary `n`-by-`1` column vector, which satisf
 
 Simplex algorithm is one of many algorithms that are designed to handle this sort of problems
 efficiently. Although it is not optimal in theoretical sense (there exist algorithms that can solve
-any problem written as above in polynomial type, while simplex method degenerates to exponential
+any problem written as above in polynomial time, while simplex method degenerates to exponential
 time for some special cases), it is well-studied, easy to implement and is shown to work well for
 real-life purposes.
 

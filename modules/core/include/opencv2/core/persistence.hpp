@@ -660,6 +660,7 @@ CV_EXPORTS void write( FileStorage& fs, const String& name, const String& value 
 CV_EXPORTS void write( FileStorage& fs, const String& name, const Mat& value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const SparseMat& value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<KeyPoint>& value);
+CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<DMatch>& value);
 
 CV_EXPORTS void writeScalar( FileStorage& fs, int value );
 CV_EXPORTS void writeScalar( FileStorage& fs, float value );
@@ -678,6 +679,7 @@ CV_EXPORTS void read(const FileNode& node, String& value, const String& default_
 CV_EXPORTS void read(const FileNode& node, Mat& mat, const Mat& default_mat = Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat = SparseMat() );
 CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
+CV_EXPORTS void read(const FileNode& node, std::vector<DMatch>& matches);
 
 template<typename _Tp> static inline void read(const FileNode& node, Point_<_Tp>& value, const Point_<_Tp>& default_value)
 {

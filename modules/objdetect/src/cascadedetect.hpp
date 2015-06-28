@@ -5,6 +5,9 @@
 namespace cv
 {
 
+void clipObjects(Size sz, std::vector<Rect>& objects,
+                 std::vector<int>* a, std::vector<double>* b);
+
 class FeatureEvaluator
 {
 public:
@@ -347,7 +350,6 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
 
-    virtual bool setImage(InputArray _image, const std::vector<float>& _scales);
     virtual bool setWindow(Point p, int scaleIdx);
     Rect getNormRect() const;
     int getSquaresOffset() const;

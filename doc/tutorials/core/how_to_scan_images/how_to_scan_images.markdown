@@ -57,7 +57,7 @@ the samples directory of OpenCV at the cpp tutorial code for the core section. I
 how_to_scan_images imageName.jpg intValueToReduce [G]
 @endcode
 The final argument is optional. If given the image will be loaded in gray scale format, otherwise
-the RGB color way is used. The first thing is to calculate the lookup table.
+the BGR color space is used. The first thing is to calculate the lookup table.
 
 @snippet how_to_scan_images.cpp dividewith
 
@@ -88,7 +88,7 @@ case of a gray scale image we have something like:
 ![](tutorial_how_matrix_stored_1.png)
 
 For multichannel images the columns contain as many sub columns as the number of channels. For
-example in case of an RGB color system:
+example in case of an BGR color system:
 
 ![](tutorial_how_matrix_stored_2.png)
 

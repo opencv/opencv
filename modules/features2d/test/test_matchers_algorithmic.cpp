@@ -543,3 +543,13 @@ TEST( Features2d_DescriptorMatcher_FlannBased, regression )
                                   DescriptorMatcher::create("FlannBased"), 0.04f );
     test.safe_run();
 }
+
+TEST( Features2d_DMatch, read_write )
+{
+    FileStorage fs(".xml", FileStorage::WRITE + FileStorage::MEMORY);
+    vector<DMatch> matches;
+    matches.push_back(DMatch(1,2,3,4.5f));
+    fs << "Match" << matches;
+    String str = fs.releaseAndGetString();
+    ASSERT_NE( strstr(str.c_str(), "4.5"), (char*)0 );
+}

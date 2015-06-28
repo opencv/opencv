@@ -1360,4 +1360,32 @@ TEST(Objdetect_HOGDetector_Strict, accuracy)
         std::vector<float> descriptors;
         reference_hog.compute(image, descriptors);
     }
- }
+}
+
+TEST(Objdetect_CascadeDetector, small_img)
+{
+    String root = cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/";
+    String cascades[] =
+    {
+        root + "haarcascade_frontalface_alt.xml",
+        root + "lbpcascade_frontalface.xml",
+        String()
+    };
+
+    vector<Rect> objects;
+    RNG rng((uint64)-1);
+
+    for( int i = 0; !cascades[i].empty(); i++ )
+    {
+        printf("%d. %s\n", i, cascades[i].c_str());
+        CascadeClassifier cascade(cascades[i]);
+        for( int j = 0; j < 100; j++ )
+        {
+            int width = rng.uniform(1, 100);
+            int height = rng.uniform(1, 100);
+            Mat img(height, width, CV_8U);
+            randu(img, 0, 256);
+            cascade.detectMultiScale(img, objects);
+        }
+    }
+}

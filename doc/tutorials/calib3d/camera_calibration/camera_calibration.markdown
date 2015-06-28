@@ -14,18 +14,18 @@ Theory
 For the distortion OpenCV takes into account the radial and tangential factors. For the radial
 factor one uses the following formula:
 
-\f[x_{corrected} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
-y_{corrected} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)\f]
+\f[x_{distorted} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
+y_{distorted} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)\f]
 
-So for an old pixel point at \f$(x,y)\f$ coordinates in the input image, its position on the corrected
-output image will be \f$(x_{corrected} y_{corrected})\f$. The presence of the radial distortion
-manifests in form of the "barrel" or "fish-eye" effect.
+So for an undistorted pixel point at \f$(x,y)\f$ coordinates, its position on the distorted image
+will be \f$(x_{distorted} y_{distorted})\f$. The presence of the radial distortion manifests in form
+of the "barrel" or "fish-eye" effect.
 
 Tangential distortion occurs because the image taking lenses are not perfectly parallel to the
-imaging plane. It can be corrected via the formulas:
+imaging plane. It can be represented via the formulas:
 
-\f[x_{corrected} = x + [ 2p_1xy + p_2(r^2+2x^2)] \\
-y_{corrected} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]\f]
+\f[x_{distorted} = x + [ 2p_1xy + p_2(r^2+2x^2)] \\
+y_{distorted} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]\f]
 
 So we have five distortion parameters which in OpenCV are presented as one row matrix with 5
 columns:

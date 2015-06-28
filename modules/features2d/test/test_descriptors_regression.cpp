@@ -347,3 +347,97 @@ TEST( Features2d_DescriptorExtractor_AKAZE, regression )
                                               Hamming(), AKAZE::create());
     test.safe_run();
 }
+
+TEST( Features2d_DescriptorExtractor, batch )
+{
+    string path = string(cvtest::TS::ptr()->get_data_path() + "detectors_descriptors_evaluation/images_datasets/graf");
+    vector<Mat> imgs, descriptors;
+    vector<vector<KeyPoint> > keypoints;
+    int i, n = 6;
+    Ptr<ORB> orb = ORB::create();
+
+    for( i = 0; i < n; i++ )
+    {
+        string imgname = format("%s/img%d.png", path.c_str(), i+1);
+        Mat img = imread(imgname, 0);
+        imgs.push_back(img);
+    }
+
+    orb->detect(imgs, keypoints);
+    orb->compute(imgs, keypoints, descriptors);
+
+    ASSERT_EQ((int)keypoints.size(), n);
+    ASSERT_EQ((int)descriptors.size(), n);
+
+    for( i = 0; i < n; i++ )
+    {
+        EXPECT_GT((int)keypoints[i].size(), 100);
+        EXPECT_GT(descriptors[i].rows, 100);
+    }
+}
+
+TEST( Features2d_Feature2d, no_crash )
+{
+    const String& pattern = string(cvtest::TS::ptr()->get_data_path() + "shared/*.png");
+    vector<String> fnames;
+    glob(pattern, fnames, false);
+    sort(fnames.begin(), fnames.end());
+
+    Ptr<AKAZE> akaze = AKAZE::create();
+    Ptr<ORB> orb = ORB::create();
+    Ptr<KAZE> kaze = KAZE::create();
+    Ptr<BRISK> brisk = BRISK::create();
+    size_t i, n = fnames.size();
+    vector<KeyPoint> keypoints;
+    Mat descriptors;
+    orb->setMaxFeatures(5000);
+
+    for( i = 0; i < n; i++ )
+    {
+        printf("%d. image: %s:\n", (int)i, fnames[i].c_str());
+        if( strstr(fnames[i].c_str(), "MP.png") != 0 )
+            continue;
+        bool checkCount = strstr(fnames[i].c_str(), "templ.png") == 0;
+
+        Mat img = imread(fnames[i], -1);
+        printf("\tAKAZE ... "); fflush(stdout);
+        akaze->detectAndCompute(img, noArray(), keypoints, descriptors);
+        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
+        if( checkCount )
+        {
+            EXPECT_GT((int)keypoints.size(), 0);
+        }
+        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
+        printf("ok\n");
+
+        printf("\tKAZE ... "); fflush(stdout);
+        kaze->detectAndCompute(img, noArray(), keypoints, descriptors);
+        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
+        if( checkCount )
+        {
+            EXPECT_GT((int)keypoints.size(), 0);
+        }
+        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
+        printf("ok\n");
+
+        printf("\tORB ... "); fflush(stdout);
+        orb->detectAndCompute(img, noArray(), keypoints, descriptors);
+        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
+        if( checkCount )
+        {
+            EXPECT_GT((int)keypoints.size(), 0);
+        }
+        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
+        printf("ok\n");
+
+        printf("\tBRISK ... "); fflush(stdout);
+        brisk->detectAndCompute(img, noArray(), keypoints, descriptors);
+        printf("(%d keypoints) ", (int)keypoints.size()); fflush(stdout);
+        if( checkCount )
+        {
+            EXPECT_GT((int)keypoints.size(), 0);
+        }
+        ASSERT_EQ(descriptors.rows, (int)keypoints.size());
+        printf("ok\n");
+    }
+}

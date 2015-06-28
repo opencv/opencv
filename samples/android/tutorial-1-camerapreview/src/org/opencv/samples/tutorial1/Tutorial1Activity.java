@@ -54,10 +54,7 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
 
         setContentView(R.layout.tutorial1_surface_view);
 
-        if (mIsJavaCamera)
-            mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_java_surface_view);
-        else
-            mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_native_surface_view);
+        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_java_surface_view);
 
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
 
@@ -89,40 +86,6 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
         super.onDestroy();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        Log.i(TAG, "called onCreateOptionsMenu");
-        mItemSwitchCamera = menu.add("Toggle Native/Java camera");
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        String toastMesage = new String();
-        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
-
-        if (item == mItemSwitchCamera) {
-            mOpenCvCameraView.setVisibility(SurfaceView.GONE);
-            mIsJavaCamera = !mIsJavaCamera;
-
-            if (mIsJavaCamera) {
-                mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_java_surface_view);
-                toastMesage = "Java Camera";
-            } else {
-                mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_native_surface_view);
-                toastMesage = "Native Camera";
-            }
-
-            mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
-            mOpenCvCameraView.setCvCameraViewListener(this);
-            mOpenCvCameraView.enableView();
-            Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
-            toast.show();
-        }
-
-        return true;
     }
 
     public void onCameraViewStarted(int width, int height) {

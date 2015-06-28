@@ -257,3 +257,37 @@ _cuda_ module has been split into several smaller pieces:
 Documentation format {#tutorial_transition_docs}
 --------------------
 Documentation has been converted to Doxygen format. You can find updated documentation writing guide in _Tutorials_ section of _OpenCV_ reference documentation (@ref tutorial_documentation).
+
+Support both versions {#tutorial_transition_both}
+---------------------
+In some cases it is possible to support both versions of OpenCV.
+
+### Source code
+
+To check library major version in your application source code, the following method should be used:
+@code{.cpp}
+#include "opencv2/core/version.hpp"
+#if CV_MAJOR_VERSION == 2
+// do opencv 2 code
+#elif CV_MAJOR_VERSION == 3
+// do opencv 3 code
+#endif
+@endcode
+
+@note Do not use __CV_VERSION_MAJOR__, it has different meaning for 2.4 and 3.x branches!
+
+### Build system
+
+It is possible to link different modules or enable/disable some of the features in your application by checking library version in the build system. Standard cmake or pkg-config variables can be used for this:
+- `OpenCV_VERSION` for cmake will contain full version: "2.4.11" or "3.0.0" for example
+- `OpenCV_VERSION_MAJOR` for cmake will contain only major version number: 2 or 3
+- pkg-config file has standard field `Version`
+
+Example:
+@code{.cmake}
+if(OpenCV_VERSION VERSION_LESS "3.0")
+# use 2.4 modules
+else()
+# use 3.x modules
+endif()
+@endcode

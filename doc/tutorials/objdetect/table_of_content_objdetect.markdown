@@ -10,3 +10,7 @@ Ever wondered how your digital camera detects peoples and faces? Look here to fi
     *Author:* Ana Huamán
 
     Here we learn how to use *objdetect* to find objects in our images or videos
+
+-   @subpage tutorial_traincascade
+
+    This tutorial describes _opencv_traincascade_ application and its parameters.

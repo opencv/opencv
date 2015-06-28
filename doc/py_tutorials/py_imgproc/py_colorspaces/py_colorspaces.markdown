@@ -34,7 +34,7 @@ Object Tracking
 ---------------
 
 Now we know how to convert BGR image to HSV, we can use this to extract a colored object. In HSV, it
-is more easier to represent a color than RGB color-space. In our application, we will try to extract
+is more easier to represent a color than in BGR color-space. In our application, we will try to extract
 a blue colored object. So here is the method:
 
 -   Take each frame of the video
@@ -89,7 +89,7 @@ just by moving your hand in front of camera and many other funny stuffs.
 How to find HSV values to track?
 --------------------------------
 
-This is a common question found in [stackoverflow.com](www.stackoverflow.com). It is very simple and
+This is a common question found in [stackoverflow.com](http://www.stackoverflow.com). It is very simple and
 you can use the same function, cv2.cvtColor(). Instead of passing an image, you just pass the BGR
 values you want. For example, to find the HSV value of Green, try following commands in Python
 terminal:

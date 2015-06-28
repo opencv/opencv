@@ -96,7 +96,7 @@ void goodFeaturesToTrack_Demo( int, void* )
   /// Draw corners detected
   cout<<"** Number of corners detected: "<<corners.size()<<endl;
   int r = 4;
-  for( int i = 0; i < corners.size(); i++ )
+  for( size_t i = 0; i < corners.size(); i++ )
      { circle( copy, corners[i], r, Scalar(rng.uniform(0,255), rng.uniform(0,255),
               rng.uniform(0,255)), -1, 8, 0 ); }
 

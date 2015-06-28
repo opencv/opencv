@@ -577,8 +577,8 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
     {
         hg_windows = 0;
 
-        gtk_disable_setlocale();
         gtk_init( &argc, &argv );
+        setlocale(LC_NUMERIC,"C");
 
         #ifdef HAVE_OPENGL
             gtk_gl_init(&argc, &argv);

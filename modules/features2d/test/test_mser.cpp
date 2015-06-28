@@ -41,171 +41,121 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-
-#if 0
+#include "opencv2/highgui.hpp"
 
 #include <vector>
 #include <string>
 using namespace std;
 using namespace cv;
 
-class CV_MserTest : public cvtest::BaseTest
+#undef RENDER_MSERS
+#define RENDER_MSERS 0
+
+#if defined RENDER_MSERS && RENDER_MSERS
+static void renderMSERs(const Mat& gray, Mat& img, const vector<vector<Point> >& msers)
 {
-public:
-    CV_MserTest();
-protected:
-    void run(int);
-    int LoadBoxes(const char* path, vector<CvBox2D>& boxes);
-    int SaveBoxes(const char* path, const vector<CvBox2D>& boxes);
-    int CompareBoxes(const vector<CvBox2D>& boxes1,const vector<CvBox2D>& boxes2, float max_rel_diff = 0.01f);
-};
-
-CV_MserTest::CV_MserTest()
-{
-}
-
-int CV_MserTest::LoadBoxes(const char* path, vector<CvBox2D>& boxes)
-{
-    boxes.clear();
-    FILE* f = fopen(path,"r");
-
-    if (f==NULL)
+    cvtColor(gray, img, COLOR_GRAY2BGR);
+    RNG rng((uint64)1749583);
+    for( int i = 0; i < (int)msers.size(); i++ )
     {
-        return 0;
-    }
+        uchar b = rng.uniform(0, 256);
+        uchar g = rng.uniform(0, 256);
+        uchar r = rng.uniform(0, 256);
+        Vec3b color(b, g, r);
 
-    while (!feof(f))
-    {
-        CvBox2D box;
-        int values_read = fscanf(f,"%f,%f,%f,%f,%f\n",&box.angle,&box.center.x,&box.center.y,&box.size.width,&box.size.height);
-        CV_Assert(values_read == 5);
-        boxes.push_back(box);
-    }
-    fclose(f);
-    return 1;
-}
-
-int CV_MserTest::SaveBoxes(const char* path, const vector<CvBox2D>& boxes)
-{
-    FILE* f = fopen(path,"w");
-    if (f==NULL)
-    {
-        return 0;
-    }
-    for (int i=0;i<(int)boxes.size();i++)
-    {
-        fprintf(f,"%f,%f,%f,%f,%f\n",boxes[i].angle,boxes[i].center.x,boxes[i].center.y,boxes[i].size.width,boxes[i].size.height);
-    }
-    fclose(f);
-    return 1;
-}
-
-int CV_MserTest::CompareBoxes(const vector<CvBox2D>& boxes1,const vector<CvBox2D>& boxes2, float max_rel_diff)
-{
-    if (boxes1.size() != boxes2.size())
-        return 0;
-
-    for (int i=0; i<(int)boxes1.size();i++)
-    {
-        float rel_diff;
-        if (!((boxes1[i].angle == 0.0f) && (abs(boxes2[i].angle) < max_rel_diff)))
-        {
-            float angle_diff = (float)fmod(boxes1[i].angle - boxes2[i].angle, 180);
-            // for angular correctness, it makes no sense to use a "relative" error.
-            // a 1-degree error around 5 degrees is equally bas as around 250 degrees.
-            // in correct cases, angle_diff can now be a bit above 0 or a bit below 180
-            if (angle_diff > 90.0f)
-            {
-                    angle_diff -= 180.0f;
-            }
-            rel_diff = (float)fabs(angle_diff);
-            if (rel_diff > max_rel_diff)
-                return i;
-        }
-
-        if (!((boxes1[i].center.x == 0.0f) && (abs(boxes2[i].center.x) < max_rel_diff)))
-        {
-            rel_diff = abs(boxes1[i].center.x-boxes2[i].center.x)/abs(boxes1[i].center.x);
-            if (rel_diff > max_rel_diff)
-                return i;
-        }
-
-        if (!((boxes1[i].center.y == 0.0f) && (abs(boxes2[i].center.y) < max_rel_diff)))
-        {
-            rel_diff = abs(boxes1[i].center.y-boxes2[i].center.y)/abs(boxes1[i].center.y);
-            if (rel_diff > max_rel_diff)
-                return i;
-        }
-        if (!((boxes1[i].size.width == 0.0f) && (abs(boxes2[i].size.width) < max_rel_diff)))
-        {
-            rel_diff = abs(boxes1[i].size.width-boxes2[i].size.width)/abs(boxes1[i].size.width);
-            if (rel_diff > max_rel_diff)
-            return i;
-        }
-
-        if (!((boxes1[i].size.height == 0.0f) && (abs(boxes2[i].size.height) < max_rel_diff)))
-        {
-            rel_diff = abs(boxes1[i].size.height-boxes2[i].size.height)/abs(boxes1[i].size.height);
-            if (rel_diff > max_rel_diff)
-                return i;
-        }
-    }
-
-    return -1;
-}
-
-void CV_MserTest::run(int)
-{
-    string image_path = string(ts->get_data_path()) + "mser/puzzle.png";
-
-    Mat img = imread( image_path );
-    if (img.empty())
-    {
-        ts->printf( cvtest::TS::LOG, "Unable to open image mser/puzzle.png\n");
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
-        return;
-    }
-
-    Mat yuv;
-    cvtColor(img, yuv, COLOR_BGR2YCrCb);
-    vector<vector<Point> > msers;
-    MSER()(yuv, msers);
-
-    vector<CvBox2D> boxes;
-    vector<CvBox2D> boxes_orig;
-    for ( size_t i = 0; i < msers.size(); i++ )
-    {
-        RotatedRect box = fitEllipse(msers[i]);
-        box.angle=(float)CV_PI/2-box.angle;
-        boxes.push_back(box);
-    }
-
-    string boxes_path = string(ts->get_data_path()) + "mser/boxes.txt";
-    string calc_boxes_path = string(ts->get_data_path()) + "mser/boxes.calc.txt";
-
-    if (!LoadBoxes(boxes_path.c_str(),boxes_orig))
-    {
-        SaveBoxes(boxes_path.c_str(),boxes);
-        ts->printf( cvtest::TS::LOG, "Unable to open data file mser/boxes.txt\n");
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
-        return;
-    }
-
-    const float dissimularity = 0.01f;
-    int n_box = CompareBoxes(boxes_orig,boxes,dissimularity);
-    if (n_box < 0)
-    {
-        ts->set_failed_test_info(cvtest::TS::OK);
-    }
-    else
-    {
-        SaveBoxes(calc_boxes_path.c_str(), boxes);
-        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-        ts->printf( cvtest::TS::LOG, "Incorrect correspondence in box %d\n",n_box);
+        const Point* pt = &msers[i][0];
+        size_t j, n = msers[i].size();
+        for( j = 0; j < n; j++ )
+            img.at<Vec3b>(pt[j]) = color;
     }
 }
-
-TEST(Features2d_MSER, DISABLED_regression) { CV_MserTest test; test.safe_run(); }
-
 #endif
+
+TEST(Features2d_MSER, cases)
+{
+    uchar buf[] =
+    {
+         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+         255, 255, 255, 255, 255,   0,   0,   0,   0, 255, 255, 255, 255, 255, 255, 255, 255, 255,   0,   0,   0,   0, 255, 255, 255, 255,
+         255, 255, 255, 255, 255,   0,   0,   0,   0,   0, 255, 255, 255, 255, 255, 255, 255, 255,   0,   0,   0,   0, 255, 255, 255, 255,
+         255, 255, 255, 255, 255,   0,   0,   0,   0,   0, 255, 255, 255, 255, 255, 255, 255, 255,   0,   0,   0,   0, 255, 255, 255, 255,
+         255, 255, 255, 255, 255,   0,   0,   0,   0, 255, 255, 255, 255, 255, 255, 255, 255, 255,   0,   0,   0,   0, 255, 255, 255, 255,
+         255, 255, 255, 255, 255, 255,   0,   0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,   0,   0, 255, 255, 255, 255, 255,
+         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
+    };
+    Mat big_image = imread(cvtest::TS::ptr()->get_data_path() + "mser/puzzle.png", 0);
+    Mat small_image(14, 26, CV_8U, buf);
+    static const int thresharr[] = { 0, 70, 120, 180, 255 };
+
+    const int kDelta = 5;
+    Ptr<MSER> mserExtractor = MSER::create( kDelta );
+    vector<vector<Point> > msers;
+    vector<Rect> boxes;
+
+    RNG rng((uint64)123456);
+
+    for( int i = 0; i < 100; i++ )
+    {
+        bool use_big_image = rng.uniform(0, 7) != 0;
+        bool invert = rng.uniform(0, 2) != 0;
+        bool binarize = use_big_image ? rng.uniform(0, 5) != 0 : false;
+        bool blur = rng.uniform(0, 2) != 0;
+        int thresh = thresharr[rng.uniform(0, 5)];
+
+        /*if( i == 0 )
+        {
+            use_big_image = true;
+            invert = binarize = blur = false;
+        }*/
+
+        const Mat& src0 = use_big_image ? big_image : small_image;
+        Mat src = src0.clone();
+
+        int kMinArea = use_big_image ? 256 : 10;
+        int kMaxArea = (int)src.total()/4;
+
+        mserExtractor->setMinArea(kMinArea);
+        mserExtractor->setMaxArea(kMaxArea);
+
+        if( invert )
+            bitwise_not(src, src);
+        if( binarize )
+            threshold(src, src, thresh, 255, THRESH_BINARY);
+        if( blur )
+            GaussianBlur(src, src, Size(5, 5), 1.5, 1.5);
+
+        int minRegs = use_big_image ? 7 : 2;
+        int maxRegs = use_big_image ? 1000 : 15;
+        if( binarize && (thresh == 0 || thresh == 255) )
+            minRegs = maxRegs = 0;
+
+        mserExtractor->detectRegions( src, msers, boxes );
+        int nmsers = (int)msers.size();
+        ASSERT_EQ(nmsers, (int)boxes.size());
+
+        if( maxRegs < nmsers || minRegs > nmsers )
+        {
+            printf("%d. minArea=%d, maxArea=%d, nmsers=%d, minRegs=%d, maxRegs=%d, "
+                   "image=%s, invert=%d, binarize=%d, thresh=%d, blur=%d\n",
+                   i, kMinArea, kMaxArea, nmsers, minRegs, maxRegs, use_big_image ? "big" : "small",
+                   (int)invert, (int)binarize, thresh, (int)blur);
+    #if defined RENDER_MSERS && RENDER_MSERS
+            Mat image;
+            imshow("source", src);
+            renderMSERs(src, image, msers);
+            imshow("result", image);
+            waitKey();
+    #endif
+        }
+
+        ASSERT_LE(minRegs, nmsers);
+        ASSERT_GE(maxRegs, nmsers);
+    }
+}

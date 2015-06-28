@@ -29,12 +29,12 @@
  *
  * OpenCV functions for MSER extraction
  *
- * 1. there are two different implementation of MSER, one for grey image, one for color image
- * 2. the grey image algorithm is taken from: Linear Time Maximally Stable Extremal Regions;
+ * 1. there are two different implementation of MSER, one for gray image, one for color image
+ * 2. the gray image algorithm is taken from: Linear Time Maximally Stable Extremal Regions;
  *    the paper claims to be faster than union-find method;
  *    it actually get 1.5~2m/s on my centrino L7200 1.2GHz laptop.
  * 3. the color image algorithm is taken from: Maximally Stable Colour Regions for Recognition and Match;
- *    it should be much slower than grey image method ( 3~4 times );
+ *    it should be much slower than gray image method ( 3~4 times );
  *    the chi_table.h file is taken directly from paper's source code which is distributed under GPL.
  * 4. though the name is *contours*, the result actually is a list of point set.
  */
@@ -121,15 +121,129 @@ public:
     };
     typedef int PPixel;
 
+    struct WParams
+    {
+        Params p;
+        vector<vector<Point> >* msers;
+        vector<Rect>* bboxvec;
+        Pixel* pix0;
+        int step;
+    };
+
     // the history of region grown
     struct CompHistory
     {
-        CompHistory() { shortcut = child = 0; stable = val = size = 0; }
-        CompHistory* shortcut;
-        CompHistory* child;
-        int stable; // when it ever stabled before, record the size
+        CompHistory()
+        {
+            parent_ = child_ = next_ = 0;
+            val = size = 0;
+            var = -1.f;
+            head = 0;
+            checked = false;
+        }
+        void updateTree( WParams& wp, CompHistory** _h0, CompHistory** _h1, bool final )
+        {
+            if( var >= 0.f )
+                return;
+            int delta = wp.p.delta;
+
+            CompHistory* h0_ = 0, *h1_ = 0;
+            CompHistory* c = child_;
+            if( size >= wp.p.minArea )
+            {
+                for( ; c != 0; c = c->next_ )
+                {
+                    if( c->var < 0.f )
+                        c->updateTree(wp, c == child_ ? &h0_ : 0, c == child_ ? &h1_ : 0, final);
+                    if( c->var < 0.f )
+                        return;
+                }
+            }
+
+            // find h0 and h1 such that:
+            //    h0->val >= h->val - delta and (h0->parent == 0 or h0->parent->val < h->val - delta)
+            //    h1->val <= h->val + delta and (h1->child == 0 or h1->child->val < h->val + delta)
+            // then we will adjust h0 and h1 as h moves towards latest
+            CompHistory* h0 = this, *h1 = h1_ && h1_->size > size ? h1_ : this;
+            if( h0_ )
+            {
+                for( h0 = h0_; h0 != this && h0->val < val - delta; h0 = h0->parent_ )
+                    ;
+            }
+            else
+            {
+                for( ; h0->child_ && h0->child_->val >= val - delta; h0 = h0->child_ )
+                    ;
+            }
+
+            for( ; h1->parent_ && h1->parent_->val <= val + delta; h1 = h1->parent_ )
+                ;
+
+            if( _h0 ) *_h0 = h0;
+            if( _h1 ) *_h1 = h1;
+
+            // when we do not well-defined ER(h->val + delta), we stop
+            // the process of computing variances unless we are at the final step
+            if( !final && !h1->parent_ && h1->val < val + delta )
+                return;
+
+            var = (float)(h1->size - h0->size)/size;
+            c = child_;
+            for( ; c != 0; c = c->next_ )
+                c->checkAndCapture(wp);
+            if( final && !parent_ )
+                checkAndCapture(wp);
+        }
+
+        void checkAndCapture( WParams& wp )
+        {
+            if( checked )
+                return;
+            checked = true;
+            if( size < wp.p.minArea || size > wp.p.maxArea || var < 0.f || var > wp.p.maxVariation )
+                return;
+            if( child_ )
+            {
+                CompHistory* c = child_;
+                for( ; c != 0; c = c->next_ )
+                {
+                    if( c->var >= 0.f && var > c->var )
+                        return;
+                }
+            }
+            if( parent_ && parent_->var >= 0.f && var >= parent_->var )
+                return;
+            int xmin = INT_MAX, ymin = INT_MAX, xmax = INT_MIN, ymax = INT_MIN, j = 0;
+            wp.msers->push_back(vector<Point>());
+            vector<Point>& region = wp.msers->back();
+            region.resize(size);
+            const Pixel* pix0 = wp.pix0;
+            int step = wp.step;
+
+            for( PPixel pix = head; j < size; j++, pix = pix0[pix].getNext() )
+            {
+                int y = pix/step;
+                int x = pix - y*step;
+
+                xmin = std::min(xmin, x);
+                xmax = std::max(xmax, x);
+                ymin = std::min(ymin, y);
+                ymax = std::max(ymax, y);
+
+                region[j] = Point(x, y);
+            }
+
+            wp.bboxvec->push_back(Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1));
+        }
+
+        CompHistory* child_;
+        CompHistory* parent_;
+        CompHistory* next_;
         int val;
         int size;
+        float var;
+        PPixel head;
+        bool checked;
     };
 
     struct ConnectedComp
@@ -144,141 +258,87 @@ public:
             head = tail = 0;
             history = 0;
             size = 0;
-            grey_level = gray;
-            dvar = false;
-            var = 0;
+            gray_level = gray;
         }
 
         // add history chunk to a connected component
-        void growHistory( CompHistory* h )
+        void growHistory( CompHistory*& hptr, WParams& wp, int new_gray_level, bool final, bool force=false )
         {
-            h->child = h;
-            if( !history )
+            bool update = final;
+            if( new_gray_level < 0 )
+                new_gray_level = gray_level;
+            if( !history || (history->size != size && size > 0 &&
+                (gray_level != history->val || force)))
             {
-                h->shortcut = h;
-                h->stable = 0;
+                CompHistory* h = hptr++;
+                h->parent_ = 0;
+                h->child_ = history;
+                h->next_ = 0;
+                if( history )
+                    history->parent_ = h;
+                h->val = gray_level;
+                h->size = size;
+                h->head = head;
+
+                history = h;
+                h->var = FLT_MAX;
+                h->checked = true;
+                if( h->size >= wp.p.minArea )
+                {
+                    h->var = -1.f;
+                    h->checked = false;
+                    update = true;
+                }
             }
-            else
-            {
-                history->child = h;
-                h->shortcut = history->shortcut;
-                h->stable = history->stable;
-            }
-            h->val = grey_level;
-            h->size = size;
-            history = h;
+            gray_level = new_gray_level;
+            if( update && history )
+                history->updateTree(wp, 0, 0, final);
         }
 
         // merging two connected components
-        static void
-        merge( const ConnectedComp* comp1,
-              const ConnectedComp* comp2,
-              ConnectedComp* comp,
-              CompHistory* h,
-              Pixel* pix0 )
+        void merge( ConnectedComp* comp1, ConnectedComp* comp2,
+                    CompHistory*& hptr, WParams& wp )
         {
-            comp->grey_level = comp2->grey_level;
-            h->child = h;
-            // select the winner by size
-            if ( comp1->size < comp2->size )
+            comp1->growHistory( hptr, wp, -1, false );
+            comp2->growHistory( hptr, wp, -1, false );
+
+            if( comp1->size < comp2->size )
                 std::swap(comp1, comp2);
 
-            if( !comp1->history )
+            if( comp2->size == 0 )
             {
-                h->shortcut = h;
-                h->stable = 0;
-            }
-            else
-            {
-                comp1->history->child = h;
-                h->shortcut = comp1->history->shortcut;
-                h->stable = comp1->history->stable;
-            }
-            if( comp2->history && comp2->history->stable > h->stable )
-                h->stable = comp2->history->stable;
-            h->val = comp1->grey_level;
-            h->size = comp1->size;
-            // put comp1 to history
-            comp->var = comp1->var;
-            comp->dvar = comp1->dvar;
-            if( comp1->size > 0 && comp2->size > 0 )
-                pix0[comp1->tail].setNext(comp2->head);
-            PPixel head = comp1->size > 0 ? comp1->head : comp2->head;
-            PPixel tail = comp2->size > 0 ? comp2->tail : comp1->tail;
-            // always made the newly added in the last of the pixel list (comp1 ... comp2)
-            comp->head = head;
-            comp->tail = tail;
-            comp->history = h;
-            comp->size = comp1->size + comp2->size;
-        }
-
-        float calcVariation( int delta ) const
-        {
-            if( !history )
-                return 1.f;
-            int val = grey_level;
-            CompHistory* shortcut = history->shortcut;
-            while( shortcut != shortcut->shortcut && shortcut->val + delta > val )
-                shortcut = shortcut->shortcut;
-            CompHistory* child = shortcut->child;
-            while( child != child->child && child->val + delta <= val )
-            {
-                shortcut = child;
-                child = child->child;
-            }
-            // get the position of history where the shortcut->val <= delta+val and shortcut->child->val >= delta+val
-            history->shortcut = shortcut;
-            return (float)(size - shortcut->size)/(float)shortcut->size;
-            // here is a small modification of MSER where cal ||R_{i}-R_{i-delta}||/||R_{i-delta}||
-            // in standard MSER, cal ||R_{i+delta}-R_{i-delta}||/||R_{i}||
-            // my calculation is simpler and much easier to implement
-        }
-
-        bool isStable(const Params& p)
-        {
-            // tricky part: it actually check the stablity of one-step back
-            if( !history || history->size <= p.minArea || history->size >= p.maxArea )
-                return false;
-            float div = (float)(history->size - history->stable)/(float)history->size;
-            float _var = calcVariation( p.delta );
-            bool _dvar = (var < _var) || (history->val + 1 < grey_level);
-            bool stable = _dvar && !dvar && _var < p.maxVariation && div > p.minDiversity;
-            var = _var;
-            dvar = _dvar;
-            if( stable )
-                history->stable = history->size;
-            return stable;
-        }
-
-        // convert the point set to CvSeq
-        Rect capture( const Pixel* pix0, int step, vector<Point>& region ) const
-        {
-            int xmin = INT_MAX, ymin = INT_MAX, xmax = INT_MIN, ymax = INT_MIN;
-            region.clear();
-
-            for( PPixel pix = head; pix != 0; pix = pix0[pix].getNext() )
-            {
-                int y = pix/step;
-                int x = pix - y*step;
-
-                xmin = std::min(xmin, x);
-                xmax = std::max(xmax, x);
-                ymin = std::min(ymin, y);
-                ymax = std::max(ymax, y);
-
-                region.push_back(Point(x, y));
+                gray_level = comp1->gray_level;
+                head = comp1->head;
+                tail = comp1->tail;
+                size = comp1->size;
+                history = comp1->history;
+                return;
             }
 
-            return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+            CompHistory* h1 = comp1->history;
+            CompHistory* h2 = comp2->history;
+
+            gray_level = std::max(comp1->gray_level, comp2->gray_level);
+            history = comp1->history;
+            wp.pix0[comp1->tail].setNext(comp2->head);
+
+            head = comp1->head;
+            tail = comp2->tail;
+            size = comp1->size + comp2->size;
+            bool keep_2nd = h2->size > wp.p.minArea;
+            growHistory( hptr, wp, -1, false, keep_2nd );
+            if( keep_2nd )
+            {
+                h1->next_ = h2;
+                h2->parent_ = history;
+            }
         }
 
         PPixel head;
         PPixel tail;
         CompHistory* history;
-        int grey_level;
+        int gray_level;
         int size;
-        float var; // the current variation (most time is the variation of one-step back)
-        bool dvar; // the derivative of last var
     };
 
     void detectRegions( InputArray image,
@@ -296,7 +356,7 @@ public:
         heapbuf.resize(cols*rows + 256);
         histbuf.resize(cols*rows);
         Pixel borderpix;
-        borderpix.setDir(4);
+        borderpix.setDir(5);
 
         for( j = 0; j < step; j++ )
         {
@@ -349,6 +409,12 @@ public:
         Pixel** heap[256];
         ConnectedComp comp[257];
         ConnectedComp* comptr = &comp[0];
+        WParams wp;
+        wp.p = params;
+        wp.msers = &msers;
+        wp.bboxvec = &bboxvec;
+        wp.pix0 = ptr0;
+        wp.step = step;
 
         heap[0] = &heapbuf[0];
         heap[0][0] = 0;
@@ -359,9 +425,9 @@ public:
             heap[i][0] = 0;
         }
 
-        comptr->grey_level = 256;
+        comptr->gray_level = 256;
         comptr++;
-        comptr->grey_level = ptr->getGray(ptr0, imgptr0, mask);
+        comptr->gray_level = ptr->getGray(ptr0, imgptr0, mask);
         ptr->setDir(1);
         int dir[] = { 0, 1, step, -1, -step };
         for( ;; )
@@ -427,47 +493,31 @@ public:
 
                 ptr = *heap[curr_gray];
                 heap[curr_gray]--;
-                if( curr_gray < comptr[-1].grey_level )
-                {
-                    // check the stablity and push a new history, increase the grey level
-                    if( comptr->isStable(params) )
-                    {
-                        msers.push_back(vector<Point>());
-                        vector<Point>& mser = msers.back();
 
-                        Rect box = comptr->capture( ptr0, step, mser );
-                        bboxvec.push_back(box);
-                    }
-                    comptr->growHistory( histptr++ );
-                    comptr[0].grey_level = curr_gray;
-                }
+                if( curr_gray < comptr[-1].gray_level )
+                    comptr->growHistory(histptr, wp, curr_gray, false);
                 else
                 {
-                    // keep merging top two comp in stack until the grey level >= pixel_val
+                    // keep merging top two comp in stack until the gray level >= pixel_val
                     for(;;)
                     {
                         comptr--;
-                        ConnectedComp::merge(comptr+1, comptr, comptr, histptr++, ptr0);
-                        if( curr_gray <= comptr[0].grey_level )
+                        comptr->merge(comptr, comptr+1, histptr, wp);
+                        if( curr_gray <= comptr[0].gray_level )
                             break;
-                        if( curr_gray < comptr[-1].grey_level )
+                        if( curr_gray < comptr[-1].gray_level )
                         {
-                            // check the stablity here otherwise it wouldn't be an ER
-                            if( comptr->isStable(params) )
-                            {
-                                msers.push_back(vector<Point>());
-                                vector<Point>& mser = msers.back();
-
-                                Rect box = comptr->capture( ptr0, step, mser );
-                                bboxvec.push_back(box);
-                            }
-                            comptr->growHistory( histptr++ );
-                            comptr[0].grey_level = curr_gray;
+                            comptr->growHistory(histptr, wp, curr_gray, false);
                             break;
                         }
                     }
                 }
             }
+        }
+
+        for( ; comptr->gray_level != 256; comptr-- )
+        {
+            comptr->growHistory(histptr, wp, 256, true, true);
         }
     }
 

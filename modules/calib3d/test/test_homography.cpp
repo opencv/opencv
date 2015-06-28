@@ -568,3 +568,140 @@ void CV_HomographyTest::run(int)
 }
 
 TEST(Calib3d_Homography, accuracy) { CV_HomographyTest test; test.safe_run(); }
+
+TEST(Calib3d_Homography, EKcase)
+{
+    float pt1data[] =
+    {
+        2.80073029e+002f, 2.39591217e+002f, 2.21912201e+002f, 2.59783997e+002f,
+        2.16053192e+002f, 2.78826569e+002f, 2.22782532e+002f, 2.82330383e+002f,
+        2.09924820e+002f, 2.89122559e+002f, 2.11077698e+002f, 2.89384674e+002f,
+        2.25287689e+002f, 2.88795532e+002f, 2.11180801e+002f, 2.89653503e+002f,
+        2.24126404e+002f, 2.90466064e+002f, 2.10914429e+002f, 2.90886963e+002f,
+        2.23439362e+002f, 2.91657715e+002f, 2.24809387e+002f, 2.91891602e+002f,
+        2.09809082e+002f, 2.92891113e+002f, 2.08771164e+002f, 2.93093231e+002f,
+        2.23160095e+002f, 2.93259460e+002f, 2.07874023e+002f, 2.93989990e+002f,
+        2.08963638e+002f, 2.94209839e+002f, 2.23963165e+002f, 2.94479645e+002f,
+        2.23241791e+002f, 2.94887817e+002f, 2.09438782e+002f, 2.95233337e+002f,
+        2.08901886e+002f, 2.95762878e+002f, 2.21867981e+002f, 2.95747711e+002f,
+        2.24195511e+002f, 2.98270905e+002f, 2.09331345e+002f, 3.05958191e+002f,
+        2.24727875e+002f, 3.07186035e+002f, 2.26718842e+002f, 3.08095795e+002f,
+        2.25363953e+002f, 3.08200226e+002f, 2.19897797e+002f, 3.13845093e+002f,
+        2.25013474e+002f, 3.15558777e+002f
+    };
+
+    float pt2data[] =
+    {
+        1.84072723e+002f, 1.43591202e+002f, 1.25912483e+002f, 1.63783859e+002f,
+        2.06439407e+002f, 2.20573929e+002f, 1.43801437e+002f, 1.80703903e+002f,
+        9.77904129e+000f, 2.49660202e+002f, 1.38458405e+001f, 2.14502701e+002f,
+        1.50636337e+002f, 2.15597183e+002f, 6.43103180e+001f, 2.51667648e+002f,
+        1.54952499e+002f, 2.20780014e+002f, 1.26638412e+002f, 2.43040924e+002f,
+        3.67568909e+002f, 1.83624954e+001f, 1.60657944e+002f, 2.21794052e+002f,
+        -1.29507828e+000f, 3.32472443e+002f, 8.51442242e+000f, 4.15561554e+002f,
+        1.27161377e+002f, 1.97260361e+002f, 5.40714645e+000f, 4.90978302e+002f,
+        2.25571690e+001f, 3.96912415e+002f, 2.95664978e+002f, 7.36064959e+000f,
+        1.27241104e+002f, 1.98887573e+002f, -1.25569367e+000f, 3.87713226e+002f,
+        1.04194012e+001f, 4.31495758e+002f, 1.25868874e+002f, 1.99751617e+002f,
+        1.28195480e+002f, 2.02270355e+002f, 2.23436356e+002f, 1.80489182e+002f,
+        1.28727692e+002f, 2.11185410e+002f, 2.03336639e+002f, 2.52182083e+002f,
+        1.29366486e+002f, 2.12201904e+002f, 1.23897598e+002f, 2.17847351e+002f,
+        1.29015259e+002f, 2.19560623e+002f
+    };
+
+    int npoints = (int)(sizeof(pt1data)/sizeof(pt1data[0])/2);
+
+    Mat p1(1, npoints, CV_32FC2, pt1data);
+    Mat p2(1, npoints, CV_32FC2, pt2data);
+    Mat mask;
+
+    Mat h = findHomography(p1, p2, RANSAC, 0.01, mask);
+    ASSERT_TRUE(!h.empty());
+
+    transpose(mask, mask);
+    Mat p3, mask2;
+    int ninliers = countNonZero(mask);
+    Mat nmask[] = { mask, mask };
+    merge(nmask, 2, mask2);
+    perspectiveTransform(p1, p3, h);
+    mask2 = mask2.reshape(1);
+    p2 = p2.reshape(1);
+    p3 = p3.reshape(1);
+    double err = norm(p2, p3, NORM_INF, mask2);
+
+    printf("ninliers: %d, inliers err: %.2g\n", ninliers, err);
+    ASSERT_GE(ninliers, 10);
+    ASSERT_LE(err, 0.01);
+}
+
+TEST(Calib3d_Homography, fromImages)
+{
+    Mat img_1 = imread(cvtest::TS::ptr()->get_data_path() + "cv/optflow/image1.png", 0);
+    Mat img_2 = imread(cvtest::TS::ptr()->get_data_path() + "cv/optflow/image2.png", 0);
+    Ptr<ORB> orb = ORB::create();
+    vector<KeyPoint> keypoints_1, keypoints_2;
+    Mat descriptors_1, descriptors_2;
+    orb->detectAndCompute( img_1, Mat(), keypoints_1, descriptors_1, false );
+    orb->detectAndCompute( img_2, Mat(), keypoints_2, descriptors_2, false );
+
+    //-- Step 3: Matching descriptor vectors using Brute Force matcher
+    BFMatcher  matcher(NORM_HAMMING,false);
+    std::vector< DMatch > matches;
+    matcher.match( descriptors_1, descriptors_2, matches );
+
+    double max_dist = 0; double min_dist = 100;
+    //-- Quick calculation of max and min distances between keypoints
+    for( int i = 0; i < descriptors_1.rows; i++ )
+    {
+        double dist = matches[i].distance;
+        if( dist < min_dist ) min_dist = dist;
+        if( dist > max_dist ) max_dist = dist;
+    }
+
+    //-- Draw only "good" matches (i.e. whose distance is less than 3*min_dist )
+    std::vector< DMatch > good_matches;
+    for( int i = 0; i < descriptors_1.rows; i++ )
+    {
+        if( matches[i].distance <= 100 )
+            good_matches.push_back( matches[i]);
+    }
+
+    //-- Localize the model
+    std::vector<Point2f> pointframe1;
+    std::vector<Point2f> pointframe2;
+    for( int i = 0; i < (int)good_matches.size(); i++ )
+    {
+        //-- Get the keypoints from the good matches
+        pointframe1.push_back( keypoints_1[ good_matches[i].queryIdx ].pt );
+        pointframe2.push_back( keypoints_2[ good_matches[i].trainIdx ].pt );
+    }
+
+    Mat H0, H1, inliers0, inliers1;
+    double min_t0 = DBL_MAX, min_t1 = DBL_MAX;
+    for( int i = 0; i < 10; i++ )
+    {
+        double t = (double)getTickCount();
+        H0 = findHomography( pointframe1, pointframe2, RANSAC, 3.0, inliers0 );
+        t = (double)getTickCount() - t;
+        min_t0 = std::min(min_t0, t);
+    }
+    int ninliers0 = countNonZero(inliers0);
+    for( int i = 0; i < 10; i++ )
+    {
+        double t = (double)getTickCount();
+        H1 = findHomography( pointframe1, pointframe2, RHO, 3.0, inliers1 );
+        t = (double)getTickCount() - t;
+        min_t1 = std::min(min_t1, t);
+    }
+    int ninliers1 = countNonZero(inliers1);
+    double freq = getTickFrequency();
+    printf("nfeatures1 = %d, nfeatures2=%d, matches=%d, ninliers(RANSAC)=%d, "
+           "time(RANSAC)=%.2fmsec, ninliers(RHO)=%d, time(RHO)=%.2fmsec\n",
+           (int)keypoints_1.size(), (int)keypoints_2.size(),
+           (int)good_matches.size(), ninliers0, min_t0*1000./freq, ninliers1, min_t1*1000./freq);
+
+    ASSERT_TRUE(!H0.empty());
+    ASSERT_GE(ninliers0, 80);
+    ASSERT_TRUE(!H1.empty());
+    ASSERT_GE(ninliers1, 80);
+}

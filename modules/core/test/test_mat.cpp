@@ -1214,7 +1214,7 @@ TEST(Core_Matx, fromMat_)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
     Matx22d b(a);
-    ASSERT_EQ( norm(a, b, NORM_INF), 0.);
+    ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
 TEST(Core_InputArray, empty)
@@ -1247,4 +1247,28 @@ TEST(Core_SVD, orthogonality)
         mat_U *= mat_U.t();
         ASSERT_LT(norm(mat_U, Mat::eye(2, 2, type), NORM_INF), 1e-5);
     }
+}
+
+
+TEST(Core_SparseMat, footprint)
+{
+    int n = 1000000;
+    int sz[] = { n, n };
+    SparseMat m(2, sz, CV_64F);
+
+    int nodeSize0 = (int)m.hdr->nodeSize;
+    double dataSize0 = ((double)m.hdr->pool.size() + (double)m.hdr->hashtab.size()*sizeof(size_t))*1e-6;
+    printf("before: node size=%d bytes, data size=%.0f Mbytes\n", nodeSize0, dataSize0);
+
+    for (int i = 0; i < n; i++)
+    {
+        m.ref<double>(i, i) = 1;
+    }
+
+    double dataSize1 = ((double)m.hdr->pool.size() + (double)m.hdr->hashtab.size()*sizeof(size_t))*1e-6;
+    double threshold = (n*nodeSize0*1.6 + n*2.*sizeof(size_t))*1e-6;
+    printf("after: data size=%.0f Mbytes, threshold=%.0f MBytes\n", dataSize1, threshold);
+
+    ASSERT_LE((int)m.hdr->nodeSize, 32);
+    ASSERT_LE(dataSize1, threshold);
 }

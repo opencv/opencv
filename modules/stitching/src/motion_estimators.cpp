@@ -607,6 +607,11 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
 #if ENABLE_LOG
     int64 t = getTickCount();
 #endif
+    if (rmats.size() <= 1)
+    {
+        LOGLN("Wave correcting, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+        return;
+    }
 
     Mat moment = Mat::zeros(3, 3, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)

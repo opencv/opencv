@@ -1709,4 +1709,21 @@ TEST(Calib3d_ConvertHomogeneoous, accuracy) { CV_ConvertHomogeneousTest test; te
 TEST(Calib3d_ComputeEpilines, accuracy) { CV_ComputeEpilinesTest test; test.safe_run(); }
 TEST(Calib3d_FindEssentialMat, accuracy) { CV_EssentialMatTest test; test.safe_run(); }
 
+TEST(Calib3d_FindFundamentalMat, correctMatches)
+{
+    double fdata[] = {0, 0, 0, 0, 0, -1, 0, 1, 0};
+    double p1data[] = {200, 0, 1};
+    double p2data[] = {170, 0, 1};
+
+    Mat F(3, 3, CV_64F, fdata);
+    Mat p1(1, 1, CV_64FC2, p1data);
+    Mat p2(1, 1, CV_64FC2, p2data);
+    Mat np1, np2;
+
+    correctMatches(F, p1, p2, np1, np2);
+
+    cout << np1 << endl;
+    cout << np2 << endl;
+}
+
 /* End of file. */

@@ -56,7 +56,7 @@ Explanation
 -----------
 
 -#  We begin by loading an image using @ref cv::imread , located in the path given by *imageName*.
-    For this example, assume you are loading a RGB image.
+    For this example, assume you are loading a BGR image.
 -#  Now we are going to convert our image from BGR to Grayscale format. OpenCV has a really nice
     function to do this kind of transformations:
     @code{.cpp}

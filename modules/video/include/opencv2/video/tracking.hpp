@@ -278,6 +278,7 @@ order to provide an image similar to templateImage, same type as temlateImage.
 criteria.epsilon defines the threshold of the increment in the correlation coefficient between two
 iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
 Default values are shown in the declaration above.
+@param inputMask An optional mask to indicate valid values of inputImage.
 
 The function estimates the optimum transformation (warpMatrix) with respect to ECC criterion
 (@cite EP08), that is
@@ -309,7 +310,8 @@ estimateRigidTransform, findHomography
  */
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
                                       InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
-                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001));
+                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
+                                      InputArray inputMask = noArray());
 
 /** @brief Kalman filter class.
 
@@ -341,7 +343,7 @@ public:
 
     /** @brief Re-initializes Kalman filter. The previous content is destroyed.
 
-    @param dynamParams Dimensionalityensionality of the state.
+    @param dynamParams Dimensionality of the state.
     @param measureParams Dimensionality of the measurement.
     @param controlParams Dimensionality of the control vector.
     @param type Type of the created matrices that should be CV_32F or CV_64F.

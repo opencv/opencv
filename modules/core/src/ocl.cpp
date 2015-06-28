@@ -858,9 +858,9 @@ OCL_FUNC_P(cl_context, clCreateContext,
 
 OCL_FUNC(cl_int, clReleaseContext, (cl_context context), (context))
 
-/*
-OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
 
+OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
+/*
 OCL_FUNC_P(cl_context, clCreateContextFromType,
     (const cl_context_properties * properties,
     cl_device_type device_type,
@@ -945,7 +945,6 @@ OCL_FUNC(cl_int, clGetSupportedImageFormats,
  (context, flags, image_type, num_entries, image_formats, num_image_formats))
 
 
-/*
 OCL_FUNC(cl_int, clGetMemObjectInfo,
  (cl_mem memobj,
  cl_mem_info param_name,
@@ -962,6 +961,7 @@ OCL_FUNC(cl_int, clGetImageInfo,
  size_t * param_value_size_ret),
  (image, param_name, param_value_size, param_value, param_value_size_ret))
 
+/*
 OCL_FUNC(cl_int, clCreateKernelsInProgram,
  (cl_program program,
  cl_uint num_kernels,
@@ -1038,20 +1038,20 @@ OCL_FUNC(cl_int, clEnqueueCopyImage,
  cl_event * event),
  (command_queue, src_image, dst_image, src_origin, dst_origin,
  region, num_events_in_wait_list, event_wait_list, event))
+*/
 
 OCL_FUNC(cl_int, clEnqueueCopyImageToBuffer,
  (cl_command_queue command_queue,
  cl_mem src_image,
  cl_mem dst_buffer,
- const size_t * src_origin[3],
- const size_t * region[3],
+ const size_t * src_origin,
+ const size_t * region,
  size_t dst_offset,
  cl_uint num_events_in_wait_list,
  const cl_event * event_wait_list,
  cl_event * event),
  (command_queue, src_image, dst_buffer, src_origin, region, dst_offset,
  num_events_in_wait_list, event_wait_list, event))
-*/
 
 OCL_FUNC(cl_int, clEnqueueCopyBufferToImage,
  (cl_command_queue command_queue,
@@ -1100,9 +1100,9 @@ OCL_FUNC(cl_int, clGetKernelInfo,
  size_t * param_value_size_ret),
  (kernel, param_name, param_value_size, param_value, param_value_size_ret))
 
-OCL_FUNC(cl_int, clRetainMemObject, (cl_mem memobj), (memobj))
-
 */
+
+OCL_FUNC(cl_int, clRetainMemObject, (cl_mem memobj), (memobj))
 
 OCL_FUNC(cl_int, clReleaseMemObject, (cl_mem memobj), (memobj))
 
@@ -1348,7 +1348,7 @@ OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
 #define CL_VERSION_1_2
 #endif
 
-#endif
+#endif // HAVE_OPENCL
 
 #ifdef _DEBUG
 #define CV_OclDbgAssert CV_DbgAssert
@@ -2925,6 +2925,83 @@ CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags)
 #endif // HAVE_OPENCL_SVM
 
 
+static void get_platform_name(cl_platform_id id, String& name)
+{
+    // get platform name string length
+    size_t sz = 0;
+    if (CL_SUCCESS != clGetPlatformInfo(id, CL_PLATFORM_NAME, 0, 0, &sz))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clGetPlatformInfo failed!");
+
+    // get platform name string
+    AutoBuffer<char> buf(sz + 1);
+    if (CL_SUCCESS != clGetPlatformInfo(id, CL_PLATFORM_NAME, sz, buf, 0))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clGetPlatformInfo failed!");
+
+    // just in case, ensure trailing zero for ASCIIZ string
+    buf[sz] = 0;
+
+    name = (const char*)buf;
+}
+
+/*
+// Attaches OpenCL context to OpenCV
+*/
+void attachContext(const String& platformName, void* platformID, void* context, void* deviceID)
+{
+    cl_uint cnt = 0;
+
+    if(CL_SUCCESS != clGetPlatformIDs(0, 0, &cnt))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clGetPlatformIDs failed!");
+
+    if (cnt == 0)
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "no OpenCL platform available!");
+
+    std::vector<cl_platform_id> platforms(cnt);
+
+    if(CL_SUCCESS != clGetPlatformIDs(cnt, &platforms[0], 0))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clGetPlatformIDs failed!");
+
+    bool platformAvailable = false;
+
+    // check if external platformName contained in list of available platforms in OpenCV
+    for (unsigned int i = 0; i < cnt; i++)
+    {
+        String availablePlatformName;
+        get_platform_name(platforms[i], availablePlatformName);
+        // external platform is found in the list of available platforms
+        if (platformName == availablePlatformName)
+        {
+            platformAvailable = true;
+            break;
+        }
+    }
+
+    if (!platformAvailable)
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "No matched platforms available!");
+
+    // check if platformID corresponds to platformName
+    String actualPlatformName;
+    get_platform_name((cl_platform_id)platformID, actualPlatformName);
+    if (platformName != actualPlatformName)
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "No matched platforms available!");
+
+    // do not initialize OpenCL context
+    Context ctx = Context::getDefault(false);
+
+    // attach supplied context to OpenCV
+    initializeContextFromHandle(ctx, platformID, context, deviceID);
+
+    if(CL_SUCCESS != clRetainContext((cl_context)context))
+        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "clRetainContext failed!");
+
+    // clear command queue, if any
+    getCoreTlsData().get()->oclQueue.finish();
+    Queue q;
+    getCoreTlsData().get()->oclQueue = q;
+
+    return;
+} // attachContext()
+
 
 void initializeContextFromHandle(Context& ctx, void* platform, void* _context, void* _device)
 {
@@ -3150,10 +3227,10 @@ struct Kernel::Impl
     bool haveTempDstUMats;
 };
 
-}}
+}} // namespace cv::ocl
 
-extern "C"
-{
+extern "C" {
+
 static void CL_CALLBACK oclCleanupCallback(cl_event, cl_int, void *p)
 {
     ((cv::ocl::Kernel::Impl*)p)->finit();
@@ -5160,11 +5237,177 @@ public:
     MatAllocator* matStdAllocator;
 };
 
+// This line should not force OpenCL runtime initialization! (don't put "new OpenCLAllocator()" here)
+static MatAllocator *ocl_allocator = NULL;
 MatAllocator* getOpenCLAllocator()
 {
-    static MatAllocator * allocator = new OpenCLAllocator();
-    return allocator;
+    if (ocl_allocator == NULL)
+    {
+        ocl_allocator = new OpenCLAllocator();
+    }
+    return ocl_allocator;
 }
+
+}} // namespace cv::ocl
+
+
+namespace cv {
+
+// three funcs below are implemented in umatrix.cpp
+void setSize( UMat& m, int _dims, const int* _sz, const size_t* _steps,
+              bool autoSteps = false );
+
+void updateContinuityFlag(UMat& m);
+void finalizeHdr(UMat& m);
+
+} // namespace cv
+
+
+namespace cv { namespace ocl {
+
+/*
+// Convert OpenCL buffer memory to UMat
+*/
+void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst)
+{
+    int d = 2;
+    int sizes[] = { rows, cols };
+
+    CV_Assert(0 <= d && d <= CV_MAX_DIM);
+
+    dst.release();
+
+    dst.flags      = (type & Mat::TYPE_MASK) | Mat::MAGIC_VAL;
+    dst.usageFlags = USAGE_DEFAULT;
+
+    setSize(dst, d, sizes, 0, true);
+    dst.offset = 0;
+
+    cl_mem             memobj = (cl_mem)cl_mem_buffer;
+    cl_mem_object_type mem_type = 0;
+
+    CV_Assert(clGetMemObjectInfo(memobj, CL_MEM_TYPE, sizeof(cl_mem_object_type), &mem_type, 0) == CL_SUCCESS);
+
+    CV_Assert(CL_MEM_OBJECT_BUFFER == mem_type);
+
+    size_t total = 0;
+    CV_Assert(clGetMemObjectInfo(memobj, CL_MEM_SIZE, sizeof(size_t), &total, 0) == CL_SUCCESS);
+
+    CV_Assert(clRetainMemObject(memobj) == CL_SUCCESS);
+
+    CV_Assert((int)step >= cols * CV_ELEM_SIZE(type));
+    CV_Assert(total >= rows * step);
+
+    // attach clBuffer to UMatData
+    dst.u = new UMatData(getOpenCLAllocator());
+    dst.u->data            = 0;
+    dst.u->allocatorFlags_ = 0; // not allocated from any OpenCV buffer pool
+    dst.u->flags           = 0;
+    dst.u->handle          = cl_mem_buffer;
+    dst.u->origdata        = 0;
+    dst.u->prevAllocator   = 0;
+    dst.u->size            = total;
+
+    finalizeHdr(dst);
+    dst.addref();
+
+    return;
+} // convertFromBuffer()
+
+
+/*
+// Convert OpenCL image2d_t memory to UMat
+*/
+void convertFromImage(void* cl_mem_image, UMat& dst)
+{
+    cl_mem             clImage = (cl_mem)cl_mem_image;
+    cl_mem_object_type mem_type = 0;
+
+    CV_Assert(clGetMemObjectInfo(clImage, CL_MEM_TYPE, sizeof(cl_mem_object_type), &mem_type, 0) == CL_SUCCESS);
+
+    CV_Assert(CL_MEM_OBJECT_IMAGE2D == mem_type);
+
+    cl_image_format fmt = { 0, 0 };
+    CV_Assert(clGetImageInfo(clImage, CL_IMAGE_FORMAT, sizeof(cl_image_format), &fmt, 0) == CL_SUCCESS);
+
+    int depth = CV_8U;
+    switch (fmt.image_channel_data_type)
+    {
+    case CL_UNORM_INT8:
+    case CL_UNSIGNED_INT8:
+        depth = CV_8U;
+        break;
+
+    case CL_SNORM_INT8:
+    case CL_SIGNED_INT8:
+        depth = CV_8S;
+        break;
+
+    case CL_UNORM_INT16:
+    case CL_UNSIGNED_INT16:
+        depth = CV_16U;
+        break;
+
+    case CL_SNORM_INT16:
+    case CL_SIGNED_INT16:
+        depth = CV_16S;
+        break;
+
+    case CL_SIGNED_INT32:
+        depth = CV_32S;
+        break;
+
+    case CL_FLOAT:
+        depth = CV_32F;
+        break;
+
+    default:
+        CV_Error(cv::Error::OpenCLApiCallError, "Not supported image_channel_data_type");
+    }
+
+    int type = CV_8UC1;
+    switch (fmt.image_channel_order)
+    {
+    case CL_R:
+        type = CV_MAKE_TYPE(depth, 1);
+        break;
+
+    case CL_RGBA:
+    case CL_BGRA:
+    case CL_ARGB:
+         type = CV_MAKE_TYPE(depth, 4);
+        break;
+
+    default:
+        CV_Error(cv::Error::OpenCLApiCallError, "Not supported image_channel_order");
+        break;
+    }
+
+    size_t step = 0;
+    CV_Assert(clGetImageInfo(clImage, CL_IMAGE_ROW_PITCH, sizeof(size_t), &step, 0) == CL_SUCCESS);
+
+    size_t w = 0;
+    CV_Assert(clGetImageInfo(clImage, CL_IMAGE_WIDTH, sizeof(size_t), &w, 0) == CL_SUCCESS);
+
+    size_t h = 0;
+    CV_Assert(clGetImageInfo(clImage, CL_IMAGE_HEIGHT, sizeof(size_t), &h, 0) == CL_SUCCESS);
+
+    dst.create((int)h, (int)w, type);
+
+    cl_mem clBuffer = (cl_mem)dst.handle(ACCESS_READ);
+
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
+    size_t offset = 0;
+    size_t src_origin[3] = { 0, 0, 0 };
+    size_t region[3] = { w, h, 1 };
+    CV_Assert(clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL) == CL_SUCCESS);
+
+    CV_Assert(clFinish(q) == CL_SUCCESS);
+
+    return;
+} // convertFromImage()
+
 
 ///////////////////////////////////////////// Utility functions /////////////////////////////////////////////////
 

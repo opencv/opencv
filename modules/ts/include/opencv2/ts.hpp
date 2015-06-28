@@ -382,7 +382,7 @@ public:
         FAIL_HANG=-13,
 
         // unexpected response on passing bad arguments to the tested function
-        // (the function crashed, proceed succesfully (while it should not), or returned
+        // (the function crashed, proceed successfully (while it should not), or returned
         // error code that is different from what is expected)
         FAIL_BAD_ARG_CHECK=-14,
 
@@ -392,7 +392,7 @@ public:
         // the test has been skipped because it is not in the selected subset of the tests to run,
         // because it has been run already within the same run with the same parameters, or because
         // of some other reason and this is not considered as an error.
-        // Normally TS::run() (or overrided method in the derived class) takes care of what
+        // Normally TS::run() (or overridden method in the derived class) takes care of what
         // needs to be run, so this code should not occur.
         SKIPPED=1
     };

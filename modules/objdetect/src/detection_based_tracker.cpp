@@ -284,7 +284,16 @@ void* cv::workcycleObjectDetectorFunction(void* p)
 {
     CATCH_ALL_AND_LOG({ ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->workcycleObjectDetector(); });
     try{
+        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->lock();
         ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->stateThread = cv::DetectionBasedTracker::SeparateDetectionWork::STATE_THREAD_STOPPED;
+        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->isObjectDetectingReady=false;
+        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->shouldObjectDetectingResultsBeForgot=false;
+#ifdef USE_STD_THREADS
+        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->objectDetectorThreadStartStop.notify_one();
+#else
+        pthread_cond_signal(&(((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->objectDetectorThreadStartStop));
+#endif
+        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->unlock();
     } catch(...) {
         LOGE0("DetectionBasedTracker: workcycleObjectDetectorFunction: ERROR concerning pointer, received as the function parameter");
     }
@@ -436,25 +445,6 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
 
         objects.clear();
     }// while(isWorking())
-
-#ifdef USE_STD_THREADS
-    mtx_lock.lock();
-#else
-    pthread_mutex_lock(&mutex);
-#endif
-
-    stateThread=STATE_THREAD_STOPPED;
-
-    isObjectDetectingReady=false;
-    shouldObjectDetectingResultsBeForgot=false;
-
-#ifdef USE_STD_THREADS
-    objectDetectorThreadStartStop.notify_one();
-    mtx_lock.unlock();
-#else
-    pthread_cond_signal(&objectDetectorThreadStartStop);
-    pthread_mutex_unlock(&mutex);
-#endif
 
     LOGI("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector: Returning");
 }

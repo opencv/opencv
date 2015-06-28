@@ -37,7 +37,7 @@ function(find_python preferred_version min_version library_env include_dir_env
     # standard FindPythonInterp always prefers executable from system path
     # this is really important because we are using the interpreter for numpy search and for choosing the install location
     foreach(_CURRENT_VERSION ${Python_ADDITIONAL_VERSIONS} "${preferred_version}" "${min_version}")
-      find_host_program(executable
+      find_host_program(PYTHON_EXECUTABLE
         NAMES python${_CURRENT_VERSION} python
         PATHS
           [HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Python\\\\PythonCore\\\\${_CURRENT_VERSION}\\\\InstallPath]

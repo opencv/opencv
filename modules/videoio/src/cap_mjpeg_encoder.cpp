@@ -1237,10 +1237,10 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
     }
 
     strm.jputShort(0*256 + 63); // start and end of spectral selection - for
-    // sequental DCT start is 0 and end is 63
+    // sequential DCT start is 0 and end is 63
 
     strm.putByte( 0 );  // successive approximation bit position
-    // high & low - (0,0) for sequental DCT
+    // high & low - (0,0) for sequential DCT
     unsigned currval = 0, code = 0, tempval = 0;
     int bit_idx = 32;
 

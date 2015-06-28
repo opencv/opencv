@@ -98,9 +98,9 @@ enum
     CV_CAP_OPENNI   =900,   // OpenNI (for Kinect)
     CV_CAP_OPENNI_ASUS =910,   // OpenNI (for Asus Xtion)
 
-    CV_CAP_ANDROID  =1000,  // Android
-    CV_CAP_ANDROID_BACK =CV_CAP_ANDROID+99, // Android back camera
-    CV_CAP_ANDROID_FRONT =CV_CAP_ANDROID+98, // Android front camera
+    CV_CAP_ANDROID  =1000,  // Android - not used
+    CV_CAP_ANDROID_BACK =CV_CAP_ANDROID+99, // Android back camera - not used
+    CV_CAP_ANDROID_FRONT =CV_CAP_ANDROID+98, // Android front camera - not used
 
     CV_CAP_XIAPI    =1100,   // XIMEA Camera API
 
@@ -110,7 +110,9 @@ enum
 
     CV_CAP_INTELPERC = 1500, // Intel Perceptual Computing
 
-    CV_CAP_OPENNI2 = 1600   // OpenNI2 (for Kinect)
+    CV_CAP_OPENNI2 = 1600,   // OpenNI2 (for Kinect)
+
+    CV_CAP_GPHOTO2 = 1700
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -181,6 +183,7 @@ enum
     CV_CAP_PROP_ROLL          =35,
     CV_CAP_PROP_IRIS          =36,
     CV_CAP_PROP_SETTINGS      =37,
+    CV_CAP_PROP_BUFFERSIZE    =38,
 
     CV_CAP_PROP_AUTOGRAB      =1024, // property for videoio class CvCapture_Android only
     CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // readonly, tricky property, returns cpnst char* indeed
@@ -327,68 +330,29 @@ enum
     CV_CAP_OPENNI_QVGA_60HZ    = 4
 };
 
-//supported by Android camera output formats
-enum
-{
-    CV_CAP_ANDROID_COLOR_FRAME_BGR = 0, //BGR
-    CV_CAP_ANDROID_COLOR_FRAME = CV_CAP_ANDROID_COLOR_FRAME_BGR,
-    CV_CAP_ANDROID_GREY_FRAME  = 1,  //Y
-    CV_CAP_ANDROID_GRAY_FRAME  = CV_CAP_ANDROID_GREY_FRAME,
-    CV_CAP_ANDROID_COLOR_FRAME_RGB = 2,
-    CV_CAP_ANDROID_COLOR_FRAME_BGRA = 3,
-    CV_CAP_ANDROID_COLOR_FRAME_RGBA = 4
-};
-
-// supported Android camera flash modes
-enum
-{
-    CV_CAP_ANDROID_FLASH_MODE_AUTO = 0,
-    CV_CAP_ANDROID_FLASH_MODE_OFF,
-    CV_CAP_ANDROID_FLASH_MODE_ON,
-    CV_CAP_ANDROID_FLASH_MODE_RED_EYE,
-    CV_CAP_ANDROID_FLASH_MODE_TORCH
-};
-
-// supported Android camera focus modes
-enum
-{
-    CV_CAP_ANDROID_FOCUS_MODE_AUTO = 0,
-    CV_CAP_ANDROID_FOCUS_MODE_CONTINUOUS_PICTURE,
-    CV_CAP_ANDROID_FOCUS_MODE_CONTINUOUS_VIDEO,
-    CV_CAP_ANDROID_FOCUS_MODE_EDOF,
-    CV_CAP_ANDROID_FOCUS_MODE_FIXED,
-    CV_CAP_ANDROID_FOCUS_MODE_INFINITY,
-    CV_CAP_ANDROID_FOCUS_MODE_MACRO
-};
-
-// supported Android camera white balance modes
-enum
-{
-    CV_CAP_ANDROID_WHITE_BALANCE_AUTO = 0,
-    CV_CAP_ANDROID_WHITE_BALANCE_CLOUDY_DAYLIGHT,
-    CV_CAP_ANDROID_WHITE_BALANCE_DAYLIGHT,
-    CV_CAP_ANDROID_WHITE_BALANCE_FLUORESCENT,
-    CV_CAP_ANDROID_WHITE_BALANCE_INCANDESCENT,
-    CV_CAP_ANDROID_WHITE_BALANCE_SHADE,
-    CV_CAP_ANDROID_WHITE_BALANCE_TWILIGHT,
-    CV_CAP_ANDROID_WHITE_BALANCE_WARM_FLUORESCENT
-};
-
-// supported Android camera antibanding modes
-enum
-{
-    CV_CAP_ANDROID_ANTIBANDING_50HZ = 0,
-    CV_CAP_ANDROID_ANTIBANDING_60HZ,
-    CV_CAP_ANDROID_ANTIBANDING_AUTO,
-    CV_CAP_ANDROID_ANTIBANDING_OFF
-};
-
 enum
 {
     CV_CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integer. The value indicates the distance from an object to the camera's XY plane or the Cartesian depth.
     CV_CAP_INTELPERC_UVDEPTH_MAP            = 1, // Each pixel contains two 32-bit floating point values in the range of 0-1, representing the mapping of depth coordinates to the color coordinates.
     CV_CAP_INTELPERC_IR_MAP                 = 2, // Each pixel is a 16-bit integer. The value indicates the intensity of the reflected laser beam.
     CV_CAP_INTELPERC_IMAGE                  = 3
+};
+
+// gPhoto2 properties, if propertyId is less than 0 then work on widget with that __additive inversed__ camera setting ID
+// Get IDs by using CAP_PROP_GPHOTO2_WIDGET_ENUMERATE.
+// @see CvCaptureCAM_GPHOTO2 for more info
+enum
+{
+    CV_CAP_PROP_GPHOTO2_PREVIEW           = 17001, // Capture only preview from liveview mode.
+    CV_CAP_PROP_GPHOTO2_WIDGET_ENUMERATE  = 17002, // Readonly, returns (const char *).
+    CV_CAP_PROP_GPHOTO2_RELOAD_CONFIG     = 17003, // Trigger, only by set. Reload camera settings.
+    CV_CAP_PROP_GPHOTO2_RELOAD_ON_CHANGE  = 17004, // Reload all settings on set.
+    CV_CAP_PROP_GPHOTO2_COLLECT_MSGS      = 17005, // Collect messages with details.
+    CV_CAP_PROP_GPHOTO2_FLUSH_MSGS        = 17006, // Readonly, returns (const char *).
+    CV_CAP_PROP_SPEED                     = 17007, // Exposure speed. Can be readonly, depends on camera program.
+    CV_CAP_PROP_APERTURE                  = 17008, // Aperture. Can be readonly, depends on camera program.
+    CV_CAP_PROP_EXPOSUREPROGRAM           = 17009, // Camera exposure program.
+    CV_CAP_PROP_VIEWFINDER                = 17010  // Enter liveview mode.
 };
 
 /* retrieve or set capture properties */

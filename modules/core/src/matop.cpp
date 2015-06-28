@@ -203,7 +203,11 @@ public:
     static void makeExpr(MatExpr& res, int method, int ndims, const int* sizes, int type, double alpha=1);
 };
 
-static MatOp_Initializer g_MatOp_Initializer;
+static MatOp_Initializer* getGlobalMatOpInitializer()
+{
+    static MatOp_Initializer initializer;
+    return &initializer;
+}
 
 static inline bool isIdentity(const MatExpr& e) { return e.op == &g_MatOp_Identity; }
 static inline bool isAddEx(const MatExpr& e) { return e.op == &g_MatOp_AddEx; }
@@ -216,7 +220,7 @@ static inline bool isInv(const MatExpr& e) { return e.op == &g_MatOp_Invert; }
 static inline bool isSolve(const MatExpr& e) { return e.op == &g_MatOp_Solve; }
 static inline bool isGEMM(const MatExpr& e) { return e.op == &g_MatOp_GEMM; }
 static inline bool isMatProd(const MatExpr& e) { return e.op == &g_MatOp_GEMM && (!e.c.data || e.beta == 0); }
-static inline bool isInitializer(const MatExpr& e) { return e.op == &g_MatOp_Initializer; }
+static inline bool isInitializer(const MatExpr& e) { return e.op == getGlobalMatOpInitializer(); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1043,14 +1047,14 @@ MatExpr min(const Mat& a, const Mat& b)
 MatExpr min(const Mat& a, double s)
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, 'm', a, s);
+    MatOp_Bin::makeExpr(e, 'n', a, s);
     return e;
 }
 
 MatExpr min(double s, const Mat& a)
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, 'm', a, s);
+    MatOp_Bin::makeExpr(e, 'n', a, s);
     return e;
 }
 
@@ -1064,14 +1068,14 @@ MatExpr max(const Mat& a, const Mat& b)
 MatExpr max(const Mat& a, double s)
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, 'M', a, s);
+    MatOp_Bin::makeExpr(e, 'N', a, s);
     return e;
 }
 
 MatExpr max(double s, const Mat& a)
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, 'M', a, s);
+    MatOp_Bin::makeExpr(e, 'N', a, s);
     return e;
 }
 
@@ -1337,13 +1341,13 @@ void MatOp_Bin::assign(const MatExpr& e, Mat& m, int _type) const
         bitwise_xor(e.a, e.s, dst);
     else if( e.flags == '~' && !e.b.data )
         bitwise_not(e.a, dst);
-    else if( e.flags == 'm' && e.b.data )
+    else if( e.flags == 'm' )
         cv::min(e.a, e.b, dst);
-    else if( e.flags == 'm' && !e.b.data )
+    else if( e.flags == 'n' )
         cv::min(e.a, e.s[0], dst);
-    else if( e.flags == 'M' && e.b.data )
+    else if( e.flags == 'M' )
         cv::max(e.a, e.b, dst);
-    else if( e.flags == 'M' && !e.b.data )
+    else if( e.flags == 'N' )
         cv::max(e.a, e.s[0], dst);
     else if( e.flags == 'a' && e.b.data )
         cv::absdiff(e.a, e.b, dst);
@@ -1580,12 +1584,12 @@ void MatOp_Initializer::multiply(const MatExpr& e, double s, MatExpr& res) const
 
 inline void MatOp_Initializer::makeExpr(MatExpr& res, int method, Size sz, int type, double alpha)
 {
-    res = MatExpr(&g_MatOp_Initializer, method, Mat(sz, type, (void*)0), Mat(), Mat(), alpha, 0);
+    res = MatExpr(getGlobalMatOpInitializer(), method, Mat(sz, type, (void*)0), Mat(), Mat(), alpha, 0);
 }
 
 inline void MatOp_Initializer::makeExpr(MatExpr& res, int method, int ndims, const int* sizes, int type, double alpha)
 {
-    res = MatExpr(&g_MatOp_Initializer, method, Mat(ndims, sizes, type, (void*)0), Mat(), Mat(), alpha, 0);
+    res = MatExpr(getGlobalMatOpInitializer(), method, Mat(ndims, sizes, type, (void*)0), Mat(), Mat(), alpha, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////

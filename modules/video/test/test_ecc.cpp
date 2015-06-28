@@ -394,8 +394,91 @@ void CV_ECC_Test_Homography::run(int from)
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
+class CV_ECC_Test_Mask : public CV_ECC_BaseTest
+{
+public:
+    CV_ECC_Test_Mask();
+protected:
+    void run(int);
+
+    bool testMask(int);
+};
+
+CV_ECC_Test_Mask::CV_ECC_Test_Mask(){}
+
+bool CV_ECC_Test_Mask::testMask(int from)
+{
+    Mat img = imread( string(ts->get_data_path()) + "shared/fruits.png", 0);
+
+
+    if (img.empty())
+    {
+        ts->printf( ts->LOG, "test image can not be read");
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        return false;
+    }
+    Mat scaledImage;
+    resize(img, scaledImage, Size(216, 216));
+
+    Mat_<float> testImg;
+    scaledImage.convertTo(testImg, testImg.type());
+
+    cv::RNG rng = ts->get_rng();
+
+    int progress=0;
+
+    for (int k=from; k<ntests; k++){
+
+        ts->update_context( this, k, true );
+        progress = update_progress(progress, k, ntests, 0);
+
+        Mat translationGround = (Mat_<float>(2,3) << 1, 0, (rng.uniform(10.f, 20.f)),
+            0, 1, (rng.uniform(10.f, 20.f)));
+
+        Mat warpedImage;
+
+        warpAffine(testImg, warpedImage, translationGround,
+            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+
+        Mat mapTranslation = (Mat_<float>(2,3) << 1, 0, 0, 0, 1, 0);
+
+        Mat_<unsigned char> mask = Mat_<unsigned char>::ones(testImg.rows, testImg.cols);
+        for (int i=testImg.rows*2/3; i<testImg.rows; i++) {
+          for (int j=testImg.cols*2/3; j<testImg.cols; j++) {
+            testImg(i, j) = 0;
+            mask(i, j) = 0;
+          }
+        }
+
+        findTransformECC(warpedImage, testImg, mapTranslation, 0,
+            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon), mask);
+
+        if (!isMapCorrect(mapTranslation)){
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+            return false;
+        }
+
+        if (computeRMS(mapTranslation, translationGround)>MAX_RMS_ECC){
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+            ts->printf( ts->LOG, "RMS = %f",
+                computeRMS(mapTranslation, translationGround));
+            return false;
+        }
+
+    }
+    return true;
+}
+
+void CV_ECC_Test_Mask::run(int from)
+{
+    if (!testMask(from))
+        return;
+
+    ts->set_failed_test_info(cvtest::TS::OK);
+}
 
 TEST(Video_ECC_Translation, accuracy) { CV_ECC_Test_Translation test; test.safe_run();}
 TEST(Video_ECC_Euclidean, accuracy) { CV_ECC_Test_Euclidean test; test.safe_run(); }
 TEST(Video_ECC_Affine, accuracy) { CV_ECC_Test_Affine test; test.safe_run(); }
 TEST(Video_ECC_Homography, accuracy) { CV_ECC_Test_Homography test; test.safe_run(); }
+TEST(Video_ECC_Mask, accuracy) { CV_ECC_Test_Mask test; test.safe_run(); }

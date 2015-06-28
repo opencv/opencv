@@ -739,6 +739,11 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     if( !(flags & CV_WINDOW_AUTOSIZE))//YV add border in order to resize the window
        defStyle |= WS_SIZEBOX;
 
+#ifdef HAVE_OPENGL
+    if (flags & CV_WINDOW_OPENGL)
+        defStyle |= WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+#endif
+
     icvLoadWindowPos( name, rect );
 
     mainhWnd = CreateWindow( "Main HighGUI class", name, defStyle | WS_OVERLAPPED,

@@ -101,7 +101,7 @@ possible to use the old functions and in the end just transform the result to a 
 
 @snippet interoperability_with_OpenCV_1.cpp new
 
-Because, we want to mess around with the images luma component we first convert from the default RGB
+Because, we want to mess around with the images luma component we first convert from the default BGR
 to the YUV color space and then split the result up into separate planes. Here the program splits:
 in the first example it processes each plane using one of the three major image scanning algorithms
 in OpenCV (C [] operator, iterator, individual element access). In a second variant we add to the

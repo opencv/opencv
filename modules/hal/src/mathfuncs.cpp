@@ -42,6 +42,8 @@
 
 #include "precomp.hpp"
 
+#undef HAVE_IPP
+
 namespace cv { namespace hal {
 
 ///////////////////////////////////// ATAN2 ////////////////////////////////////
@@ -160,6 +162,19 @@ void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angle
 
 void magnitude(const float* x, const float* y, float* mag, int len)
 {
+#if defined HAVE_IPP
+    CV_IPP_CHECK()
+    {
+        IppStatus status = ippsMagnitude_32f(x, y, mag, len);
+        if (status >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
+#endif
+
     int i = 0;
 
 #if CV_SIMD128
@@ -183,6 +198,19 @@ void magnitude(const float* x, const float* y, float* mag, int len)
 
 void magnitude(const double* x, const double* y, double* mag, int len)
 {
+#if defined(HAVE_IPP)
+    CV_IPP_CHECK()
+    {
+        IppStatus status = ippsMagnitude_64f(x, y, mag, len);
+        if (status >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
+#endif
+
     int i = 0;
 
 #if CV_SIMD128_64F
@@ -207,6 +235,18 @@ void magnitude(const double* x, const double* y, double* mag, int len)
 
 void invSqrt(const float* src, float* dst, int len)
 {
+#if defined(HAVE_IPP)
+    CV_IPP_CHECK()
+    {
+        if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
+#endif
+
     int i = 0;
 
 #if CV_SIMD128
@@ -241,6 +281,18 @@ void invSqrt(const double* src, double* dst, int len)
 
 void sqrt(const float* src, float* dst, int len)
 {
+#if defined(HAVE_IPP)
+    CV_IPP_CHECK()
+    {
+        if (ippsSqrt_32f_A21(src, dst, len) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
+#endif
+
     int i = 0;
 
 #if CV_SIMD128
@@ -260,6 +312,18 @@ void sqrt(const float* src, float* dst, int len)
 
 void sqrt(const double* src, double* dst, int len)
 {
+#if defined(HAVE_IPP)
+    CV_IPP_CHECK()
+    {
+        if (ippsSqrt_64f_A50(src, dst, len) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
+    }
+#endif
+
     int i = 0;
 
 #if CV_SIMD128_64F

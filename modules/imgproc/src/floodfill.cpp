@@ -484,6 +484,11 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     int depth = img.depth();
     int cn = img.channels();
 
+    if ( (cn != 1) && (cn != 3) )
+    {
+        CV_Error( CV_StsBadArg, "Number of channels in input image must be 1 or 3" );
+    }
+
     if( connectivity == 0 )
         connectivity = 4;
     else if( connectivity != 4 && connectivity != 8 )

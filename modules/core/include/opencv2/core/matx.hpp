@@ -134,7 +134,7 @@ public:
     //! dot product computed in double-precision arithmetics
     double ddot(const Matx<_Tp, m, n>& v) const;
 
-    //! convertion to another data type
+    //! conversion to another data type
     template<typename T2> operator Matx<T2, m, n>() const;
 
     //! change the matrix shape
@@ -337,7 +337,7 @@ public:
       For other dimensionalities the exception is raised
     */
     Vec cross(const Vec& v) const;
-    //! convertion to another data type
+    //! conversion to another data type
     template<typename T2> operator Vec<T2, cn>() const;
 
     /*! element access */
@@ -427,7 +427,7 @@ template<typename _Tp, int m> struct Matx_DetOp
     double operator ()(const Matx<_Tp, m, m>& a) const
     {
         Matx<_Tp, m, m> temp = a;
-        double p = hal::LU(temp.val, m*sizeof(_Tp), m, 0, 0, 0);
+        double p = LU(temp.val, m*sizeof(_Tp), m, 0, 0, 0);
         if( p == 0 )
             return p;
         for( int i = 0; i < m; i++ )

@@ -186,6 +186,9 @@ namespace cv
 
     Ptr<IVideoCapture> createMotionJpegCapture(const String& filename);
     Ptr<IVideoWriter> createMotionJpegWriter( const String& filename, double fps, Size frameSize, bool iscolor );
+
+    Ptr<IVideoCapture> createGPhoto2Capture(int index);
+    Ptr<IVideoCapture> createGPhoto2Capture(const String& deviceName);
 };
 
 #endif /* __VIDEOIO_H_ */

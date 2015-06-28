@@ -82,8 +82,8 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
         CV_Error( CV_StsUnmatchedSizes, "Size of projection matrices must be 3x4" );
 
     // preallocate SVD matrices on stack
-    cv::Matx<double, 6, 4> matrA;
-    cv::Matx<double, 6, 4> matrU;
+    cv::Matx<double, 4, 4> matrA;
+    cv::Matx<double, 4, 4> matrU;
     cv::Matx<double, 4, 1> matrW;
     cv::Matx<double, 4, 4> matrV;
 
@@ -101,9 +101,8 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
             y = cvmGet(projPoints[j],1,i);
             for( int k = 0; k < 4; k++ )
             {
-                matrA(j*3+0, k) = x * cvmGet(projMatrs[j],2,k) -     cvmGet(projMatrs[j],0,k);
-                matrA(j*3+1, k) = y * cvmGet(projMatrs[j],2,k) -     cvmGet(projMatrs[j],1,k);
-                matrA(j*3+2, k) = x * cvmGet(projMatrs[j],1,k) - y * cvmGet(projMatrs[j],0,k);
+                matrA(j*2+0, k) = x * cvmGet(projMatrs[j],2,k) - cvmGet(projMatrs[j],0,k);
+                matrA(j*2+1, k) = y * cvmGet(projMatrs[j],2,k) - cvmGet(projMatrs[j],1,k);
             }
         }
         /* Solve system for current point */

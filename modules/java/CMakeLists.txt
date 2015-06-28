@@ -174,8 +174,8 @@ endforeach()
 file(REMOVE_RECURSE "${probe_dir}")
 
 if(NOT ANDROID)
-  ocv_list_filterout(handwritten_java_sources "/(engine3|android)\\\\+")
-  ocv_list_filterout(handwritten_aidl_sources "/(engine3|android)\\\\+")
+  ocv_list_filterout(handwritten_java_sources "/(engine|android)\\\\+")
+  ocv_list_filterout(handwritten_aidl_sources "/(engine|android)\\\\+")
 else()
   file(GLOB_RECURSE handwrittren_lib_project_files_rel RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/" "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/*")
   list(REMOVE_ITEM handwrittren_lib_project_files_rel "${ANDROID_MANIFEST_FILE}")
@@ -277,10 +277,12 @@ endif(ANDROID AND ANDROID_EXECUTABLE)
 set(step3_depends ${step2_depends} ${step3_input_files} ${copied_files})
 
 if(ANDROID)
-  set(LIB_NAME_SUFIX "")
+  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}")
 else()
   set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
 endif()
+
+file(MAKE_DIRECTORY "${OpenCV_BINARY_DIR}/bin")
 
 # step 4: build jar
 if(ANDROID)
@@ -357,18 +359,6 @@ else()
   ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
 endif()
 
-if(ANDROID)
-  ocv_target_link_libraries(${the_module} jnigraphics) # for Mat <=> Bitmap converters
-
-  # force strip library after the build command
-  # because samples and tests will make a copy of the library before install
-  get_target_property(__opencv_java_location ${the_module} LOCATION)
-  # Turn off stripping in debug build
-  if ( NOT (CMAKE_BUILD_TYPE MATCHES "Debug"))
-    add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${__opencv_java_location}")
-  endif()
-endif()
-
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
     OUTPUT_NAME "${the_module}${LIB_NAME_SUFIX}"
@@ -378,6 +368,19 @@ set_target_properties(${the_module} PROPERTIES
     INSTALL_NAME_DIR ${OPENCV_LIB_INSTALL_PATH}
     LINK_INTERFACE_LIBRARIES ""
     )
+
+if(ANDROID)
+  ocv_target_link_libraries(${the_module} jnigraphics) # for Mat <=> Bitmap converters
+  ocv_target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_LINKER_LIBS} jnigraphics)
+
+  # force strip library after the build command
+  # because samples and tests will make a copy of the library before install
+  get_target_property(__opencv_java_location ${the_module} LOCATION)
+  # Turn off stripping in debug build
+  if ( NOT (CMAKE_BUILD_TYPE MATCHES "Debug"))
+    add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${__opencv_java_location}")
+  endif()
+endif()
 
 if(WIN32)
   set_target_properties(${the_module} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
