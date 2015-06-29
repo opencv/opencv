@@ -1246,7 +1246,11 @@ endif()
 
 # ABI-specific flags
 if( ARMEABI_V7A )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv7-a -mfloat-abi=softfp" )
+ if (DEFINED ARMEABI_HARD)
+  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv7-a -mfloat-abi=hard" )
+ else()
+  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv7-a -mfloat-abi=softfp" )
+ endif()
  if( NEON )
   set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -mfpu=neon" )
  elseif( VFPV3 )
