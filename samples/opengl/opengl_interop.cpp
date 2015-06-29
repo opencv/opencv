@@ -42,19 +42,14 @@ public:
 
     ~GLWinApp() {}
 
-    int onClose(void)
+    virtual void cleanup()
     {
         m_shutdown = true;
-        cleanup();
-#if defined(WIN32) || defined(_WIN32)
-        ::DestroyWindow(m_hWnd);
-#elif defined(__linux__)
+#if defined(__linux__)
         glXMakeCurrent(m_display, None, NULL);
         glXDestroyContext(m_display, m_glctx);
-        XDestroyWindow(m_display, m_window);
-        XCloseDisplay(m_display);
 #endif
-        return 0;
+        WinApp::cleanup();
     }
 
 #if defined(WIN32) || defined(_WIN32)
@@ -75,12 +70,14 @@ public:
             }
             else if (wParam == VK_ESCAPE)
             {
-                return onClose();
+                cleanup();
+                return 0;
             }
             break;
 
         case WM_CLOSE:
-            return onClose();
+            cleanup();
+            return 0;
 
         case WM_DESTROY:
             ::PostQuitMessage(0);
@@ -117,7 +114,7 @@ public:
             if ((Atom)e.xclient.data.l[0] == m_WM_DELETE_WINDOW)
             {
                 m_end_loop = true;
-                onClose();
+                cleanup();
             }
             else
             {
@@ -144,7 +141,7 @@ public:
                 break;
             case XK_Escape:
                 m_end_loop = true;
-                onClose();
+                cleanup();
                 break;
             }
             break;
@@ -155,7 +152,7 @@ public:
     }
 #endif
 
-    int init(void)
+    int init()
     {
 #if defined(WIN32) || defined(_WIN32)
         m_hDC = GetDC(m_hWnd);
@@ -180,7 +177,7 @@ public:
 
         if (cv::ocl::haveOpenCL())
         {
-            m_oclCtx = cv::ogl::ocl::initializeContextFromGL();
+            (void) cv::ogl::ocl::initializeContextFromGL();
         }
 
         m_oclDevName = cv::ocl::useOpenCL() ?
@@ -342,11 +339,6 @@ public:
         return 0;
     }
 
-    int cleanup(void)
-    {
-        return 0;
-    }
-
 protected:
 
 #if defined(WIN32) || defined(_WIN32)
@@ -415,7 +407,6 @@ private:
     cv::VideoCapture   m_cap;
     cv::Mat            m_frame_bgr;
     cv::Mat            m_frame_rgba;
-    cv::ocl::Context   m_oclCtx;
     cv::String         m_oclDevName;
 };
 
