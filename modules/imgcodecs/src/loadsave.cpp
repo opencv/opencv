@@ -405,7 +405,7 @@ Mat imread( const String& filename, int flags )
 {
     /// create the basic container
     Mat img;
-    int scale_denom = 0;
+  /*  int scale_denom = 0;
 
     if ((flags & IMREAD_LOAD_SCALE_HALF) == IMREAD_LOAD_SCALE_HALF )
     scale_denom = 2;
@@ -414,12 +414,12 @@ Mat imread( const String& filename, int flags )
     if ((flags & IMREAD_LOAD_SCALE_EIGHTH) == IMREAD_LOAD_SCALE_EIGHTH )
     scale_denom = 8;
 
-    scale_denom = cvSetJpegScale(scale_denom);
+    scale_denom = cvSetJpegScale(scale_denom);*/
 
     /// load the data
     imread_( filename, flags, LOAD_MAT, &img );
 
-    cvSetJpegScale(scale_denom);
+   // cvSetJpegScale(scale_denom);
 
     /// return a reference to the data
     return img;
