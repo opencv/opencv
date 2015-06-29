@@ -116,6 +116,16 @@ public:
         return init();
     }
 
+    virtual void cleanup()
+    {
+#if defined(WIN32) || defined(_WIN32)
+        ::DestroyWindow(m_hWnd);
+#elif defined(__linux__)
+        XDestroyWindow(m_display, m_window);
+        XCloseDisplay(m_display);
+#endif
+    }
+
 #if defined(WIN32) || defined(_WIN32)
     virtual LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) = 0;
 #endif
