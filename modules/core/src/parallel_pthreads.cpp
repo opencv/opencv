@@ -80,25 +80,31 @@ struct work_load
         set(range, body, nstripes);
     }
 
-    void set(const cv::Range& range, const cv::ParallelLoopBody& body, int nstripes)
+    void set(const cv::Range& range, const cv::ParallelLoopBody& body, unsigned int nstripes)
     {
         m_body = &body;
         m_range = &range;
-        m_nstripes = nstripes;
-        m_blocks_count = ((m_range->end - m_range->start - 1)/m_nstripes) + 1;
+
+        //ensure that nstripes not larger than range length
+        m_nstripes = std::min( unsigned(m_range->end - m_range->start) , nstripes);
+
+        m_block_size = ((m_range->end - m_range->start - 1)/m_nstripes) + 1;
+
+        //ensure that nstripes not larger than blocks count, so we would never go out of range
+        m_nstripes = std::min(m_nstripes, unsigned(((m_range->end - m_range->start - 1)/m_block_size) + 1) );
     }
 
     const cv::ParallelLoopBody* m_body;
     const cv::Range*            m_range;
-    int                         m_nstripes;
-    unsigned int                m_blocks_count;
+    unsigned int                         m_nstripes;
+    int                m_block_size;
 
     void clear()
     {
         m_body = 0;
         m_range = 0;
         m_nstripes = 0;
-        m_blocks_count = 0;
+        m_block_size = 0;
     }
 };
 
@@ -331,10 +337,10 @@ void ForThread::execute()
 
     work_load& load = m_parent->m_work_load;
 
-    while(m_current_pos < load.m_blocks_count)
+    while(m_current_pos < load.m_nstripes)
     {
-        int start = load.m_range->start + m_current_pos*load.m_nstripes;
-        int end = std::min(start + load.m_nstripes, load.m_range->end);
+        int start = load.m_range->start + m_current_pos*load.m_block_size;
+        int end = std::min(start + load.m_block_size, load.m_range->end);
 
         load.m_body->operator()(cv::Range(start, end));
 
@@ -417,9 +423,11 @@ void ThreadManager::run(const cv::Range& range, const cv::ParallelLoopBody& body
         {
             if(initPool())
             {
-                double min_stripes = double(range.end - range.start)/(4*m_threads.size());
+                if(nstripes < 1) nstripes = 4*m_threads.size();
 
-                nstripes = std::max(nstripes, min_stripes);
+                double max_stripes = 4*m_threads.size();
+
+                nstripes = std::min(nstripes, max_stripes);
 
                 pthread_mutex_lock(&m_manager_task_mutex);
 
@@ -429,7 +437,7 @@ void ThreadManager::run(const cv::Range& range, const cv::ParallelLoopBody& body
 
                 m_task_complete = false;
 
-                m_work_load.set(range, body, std::ceil(nstripes));
+                m_work_load.set(range, body, cvCeil(nstripes));
 
                 for(size_t i = 0; i < m_threads.size(); ++i)
                 {

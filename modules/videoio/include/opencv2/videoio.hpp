@@ -315,6 +315,7 @@ enum { CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integ
 
 enum { VIDEOWRITER_PROP_QUALITY = 1,    // Quality (0..100%) of the videostream encoded
        VIDEOWRITER_PROP_FRAMEBYTES = 2, // (Read-only): Size of just encoded video frame
+       VIDEOWRITER_PROP_NSTRIPES = 3    // Number of stripes for parallel encoding. -1 for auto detection
      };
 
 // gPhoto2 properties, if propertyId is less than 0 then work on widget with that __additive inversed__ camera setting ID
@@ -610,6 +611,7 @@ public:
 
      @param propId Property identifier. It can be one of the following:
      -   **VIDEOWRITER_PROP_QUALITY** Quality (0..100%) of the videostream encoded. Can be adjusted dynamically in some codecs.
+     -   **VIDEOWRITER_PROP_NSTRIPES** Number of stripes for parallel encoding
      @param value Value of the property.
      */
     CV_WRAP virtual bool set(int propId, double value);
@@ -619,6 +621,7 @@ public:
      @param propId Property identifier. It can be one of the following:
      -   **VIDEOWRITER_PROP_QUALITY** Current quality of the encoded videostream.
      -   **VIDEOWRITER_PROP_FRAMEBYTES** (Read-only) Size of just encoded video frame; note that the encoding order may be different from representation order.
+     -   **VIDEOWRITER_PROP_NSTRIPES** Number of stripes for parallel encoding
 
      @note When querying a property that is not supported by the backend used by the VideoWriter
      class, value 0 is returned.
