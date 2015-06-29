@@ -207,21 +207,6 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             v_int16x8 v_s3p1 = v_reinterpret_as_s16(v_up1);
             v_int16x8 v_s3p2 = v_reinterpret_as_s16(v_up2);
 
-            // Load fourth row for 3x3 Sobel filter
-            v_um = v_load(&m_src[j-1]);
-            v_un = v_load(&m_src[j]);
-            v_up = v_load(&m_src[j+1]);
-
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_int16x8 v_s4m1 = v_reinterpret_as_s16(v_um1);
-            v_int16x8 v_s4m2 = v_reinterpret_as_s16(v_um2);
-            v_int16x8 v_s4n1 = v_reinterpret_as_s16(v_un1);
-            v_int16x8 v_s4n2 = v_reinterpret_as_s16(v_un2);
-            v_int16x8 v_s4p1 = v_reinterpret_as_s16(v_up1);
-            v_int16x8 v_s4p2 = v_reinterpret_as_s16(v_up2);
-
             // dx & dy for rows 1, 2, 3
             v_int16x8 v_sdx1, v_sdy1;
             spatialGradientKernel<v_int16x8>( v_sdx1, v_sdy1,
@@ -240,6 +225,21 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             v_store(&c_dx[j+8], v_sdx2);
             v_store(&c_dy[j],   v_sdy1);
             v_store(&c_dy[j+8], v_sdy2);
+
+            // Load fourth row for 3x3 Sobel filter
+            v_um = v_load(&m_src[j-1]);
+            v_un = v_load(&m_src[j]);
+            v_up = v_load(&m_src[j+1]);
+
+            v_expand(v_um, v_um1, v_um2);
+            v_expand(v_un, v_un1, v_un2);
+            v_expand(v_up, v_up1, v_up2);
+            v_int16x8 v_s4m1 = v_reinterpret_as_s16(v_um1);
+            v_int16x8 v_s4m2 = v_reinterpret_as_s16(v_um2);
+            v_int16x8 v_s4n1 = v_reinterpret_as_s16(v_un1);
+            v_int16x8 v_s4n2 = v_reinterpret_as_s16(v_un2);
+            v_int16x8 v_s4p1 = v_reinterpret_as_s16(v_up1);
+            v_int16x8 v_s4p2 = v_reinterpret_as_s16(v_up2);
 
             // dx & dy for rows 2, 3, 4
             spatialGradientKernel<v_int16x8>( v_sdx1, v_sdy1,
