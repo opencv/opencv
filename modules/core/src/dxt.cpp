@@ -2026,8 +2026,7 @@ class OCL_FftPlanCache
 public:
     static OCL_FftPlanCache & getInstance()
     {
-        static OCL_FftPlanCache planCache;
-        return planCache;
+        CV_SINGLETON_LAZY_INIT_REF(OCL_FftPlanCache, new OCL_FftPlanCache())
     }
 
     Ptr<OCL_FftPlan> getFftPlan(int dft_size, int depth)
@@ -2291,8 +2290,7 @@ class PlanCache
 public:
     static PlanCache & getInstance()
     {
-        static PlanCache planCache;
-        return planCache;
+        CV_SINGLETON_LAZY_INIT_REF(PlanCache, new PlanCache())
     }
 
     clAmdFftPlanHandle getPlanHandle(const Size & dft_size, int src_step, int dst_step, bool doubleFP,

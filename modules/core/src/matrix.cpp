@@ -222,14 +222,9 @@ public:
     }
 };
 
-static StdMatAllocator *mat_allocator = NULL;
 MatAllocator* Mat::getStdAllocator()
 {
-    if (mat_allocator == NULL)
-    {
-        mat_allocator = new StdMatAllocator();
-    }
-    return mat_allocator;
+    CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
 }
 
 void swap( Mat& a, Mat& b )
