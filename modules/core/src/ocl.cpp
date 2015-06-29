@@ -1510,8 +1510,7 @@ class AmdBlasHelper
 public:
     static AmdBlasHelper & getInstance()
     {
-        static AmdBlasHelper amdBlas;
-        return amdBlas;
+        CV_SINGLETON_LAZY_INIT_REF(AmdBlasHelper, new AmdBlasHelper())
     }
 
     bool isAvailable() const
@@ -1533,35 +1532,36 @@ protected:
     {
         if (!g_isAmdBlasInitialized)
         {
-            AutoLock lock(m);
+            AutoLock lock(getInitializationMutex());
 
-            if (!g_isAmdBlasInitialized && haveOpenCL())
+            if (!g_isAmdBlasInitialized)
             {
-                try
+                if (haveOpenCL())
                 {
-                    g_isAmdBlasAvailable = clAmdBlasSetup() == clAmdBlasSuccess;
+                    try
+                    {
+                        g_isAmdBlasAvailable = clAmdBlasSetup() == clAmdBlasSuccess;
+                    }
+                    catch (...)
+                    {
+                        g_isAmdBlasAvailable = false;
+                    }
                 }
-                catch (...)
-                {
+                else
                     g_isAmdBlasAvailable = false;
-                }
-            }
-            else
-                g_isAmdBlasAvailable = false;
 
-            g_isAmdBlasInitialized = true;
+                g_isAmdBlasInitialized = true;
+            }
         }
     }
 
 private:
-    static Mutex m;
     static bool g_isAmdBlasInitialized;
     static bool g_isAmdBlasAvailable;
 };
 
 bool AmdBlasHelper::g_isAmdBlasAvailable = false;
 bool AmdBlasHelper::g_isAmdBlasInitialized = false;
-Mutex AmdBlasHelper::m;
 
 bool haveAmdBlas()
 {
@@ -1584,8 +1584,7 @@ class AmdFftHelper
 public:
     static AmdFftHelper & getInstance()
     {
-        static AmdFftHelper amdFft;
-        return amdFft;
+        CV_SINGLETON_LAZY_INIT_REF(AmdFftHelper, new AmdFftHelper())
     }
 
     bool isAvailable() const
@@ -1607,34 +1606,36 @@ protected:
     {
         if (!g_isAmdFftInitialized)
         {
-            AutoLock lock(m);
+            AutoLock lock(getInitializationMutex());
 
-            if (!g_isAmdFftInitialized && haveOpenCL())
+            if (!g_isAmdFftInitialized)
             {
-                try
+                if (haveOpenCL())
                 {
-                    cl_uint major, minor, patch;
-                    CV_Assert(clAmdFftInitSetupData(&setupData) == CLFFT_SUCCESS);
+                    try
+                    {
+                        cl_uint major, minor, patch;
+                        CV_Assert(clAmdFftInitSetupData(&setupData) == CLFFT_SUCCESS);
 
-                    // it throws exception in case AmdFft binaries are not found
-                    CV_Assert(clAmdFftGetVersion(&major, &minor, &patch) == CLFFT_SUCCESS);
-                    g_isAmdFftAvailable = true;
+                        // it throws exception in case AmdFft binaries are not found
+                        CV_Assert(clAmdFftGetVersion(&major, &minor, &patch) == CLFFT_SUCCESS);
+                        g_isAmdFftAvailable = true;
+                    }
+                    catch (const Exception &)
+                    {
+                        g_isAmdFftAvailable = false;
+                    }
                 }
-                catch (const Exception &)
-                {
+                else
                     g_isAmdFftAvailable = false;
-                }
-            }
-            else
-                g_isAmdFftAvailable = false;
 
-            g_isAmdFftInitialized = true;
+                g_isAmdFftInitialized = true;
+            }
         }
     }
 
 private:
     static clAmdFftSetupData setupData;
-    static Mutex m;
     static bool g_isAmdFftInitialized;
     static bool g_isAmdFftAvailable;
 };
@@ -1642,7 +1643,6 @@ private:
 clAmdFftSetupData AmdFftHelper::setupData;
 bool AmdFftHelper::g_isAmdFftAvailable = false;
 bool AmdFftHelper::g_isAmdFftInitialized = false;
-Mutex AmdFftHelper::m;
 
 bool haveAmdFft()
 {
@@ -5237,15 +5237,9 @@ public:
     MatAllocator* matStdAllocator;
 };
 
-// This line should not force OpenCL runtime initialization! (don't put "new OpenCLAllocator()" here)
-static MatAllocator *ocl_allocator = NULL;
 MatAllocator* getOpenCLAllocator()
 {
-    if (ocl_allocator == NULL)
-    {
-        ocl_allocator = new OpenCLAllocator();
-    }
-    return ocl_allocator;
+    CV_SINGLETON_LAZY_INIT(MatAllocator, new OpenCLAllocator())
 }
 
 }} // namespace cv::ocl
