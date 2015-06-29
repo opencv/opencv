@@ -1,3 +1,5 @@
+Purpose of this branch is to keep samples that can be built in VS2015RC and pregenerated projects as CMake that supports VS2015 was not released on the moment this branch created
+
 ## OpenCV: Open Source Computer Vision Library
 
 * [Building for WinRT 8.x](#building-for-winrt-8x)
