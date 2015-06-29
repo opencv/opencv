@@ -43,8 +43,37 @@
 #include "precomp.hpp"
 #include "opencv2/hal/intrin.hpp"
 
+#include <iostream>
 namespace cv
 {
+
+/* NOTE:
+ *
+ * Sobel-x: -1  0  1
+ *          -2  0  2
+ *          -1  0  1
+ *
+ * Sobel-y: -1 -2 -1
+ *           0  0  0
+ *           1  2  1
+ */
+template <typename T>
+static inline void spatialGradientKernel( T& vx, T& vy,
+                                          T v00, T v01, T v02,
+                                          T v10,        T v12,
+                                          T v20, T v21, T v22 )
+{
+    // vx = (v22 - v00) + (v02 - v20) + 2 * (v12 - v10)
+    // vy = (v22 - v00) + (v20 - v02) + 2 * (v21 - v01)
+
+    T tmp_add = v22 - v00,
+      tmp_sub = v02 - v20,
+      tmp_x   = v12 - v10,
+      tmp_y   = v21 - v01;
+
+    vx = tmp_add + tmp_sub + tmp_x + tmp_x;
+    vy = tmp_add - tmp_sub + tmp_y + tmp_y;
+}
 
 void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
                       int ksize, int borderType )
@@ -115,7 +144,6 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     int i_start = 0;
     int j_start = 0;
 #if CV_SIMD128
-    uchar tmp;
     uchar *m_src;
     short *n_dx, *n_dy;
 
@@ -133,24 +161,13 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
         p_src = P_src[i]; c_src = P_src[i+1]; n_src = P_src[i+2]; m_src = P_src[i+3];
         c_dx = P_dx[i]; c_dy = P_dy[i]; n_dx = P_dx[i+1]; n_dy = P_dy[i+1];
 
-        // 16-column chunks at a time
-        for ( j = 0; j < W - 15; j += 16 )
+        // Process rest of columns 16-column chunks at a time
+        for ( j = 1; j < W - 16; j += 16 )
         {
-            bool left = false, right = false;
-            if ( j == 0 )      left  = true;
-            if ( j == W - 16 ) right = true;
-
             // Load top row for 3x3 Sobel filter
-            if ( left ) { tmp = p_src[j-1]; p_src[j-1] = p_src[j+j_offl]; }
             v_uint8x16 v_um = v_load(&p_src[j-1]);
-            if ( left ) p_src[j-1] = tmp;
-
             v_uint8x16 v_un = v_load(&p_src[j]);
-
-            if ( right ) { tmp = p_src[j+16]; p_src[j+16] = p_src[j+15+j_offr]; }
             v_uint8x16 v_up = v_load(&p_src[j+1]);
-            if ( right ) p_src[j+16] = tmp;
-
             v_uint16x8 v_um1, v_um2, v_un1, v_un2, v_up1, v_up2;
             v_expand(v_um, v_um1, v_um2);
             v_expand(v_un, v_un1, v_un2);
@@ -163,16 +180,9 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             v_int16x8 v_s1p2 = v_reinterpret_as_s16(v_up2);
 
             // Load second row for 3x3 Sobel filter
-            if ( left ) { tmp = c_src[j-1]; c_src[j-1] = c_src[j+j_offl]; }
             v_um = v_load(&c_src[j-1]);
-            if ( left ) c_src[j-1] = tmp;
-
             v_un = v_load(&c_src[j]);
-
-            if ( right ) { tmp = c_src[j+16]; c_src[j+16] = c_src[j+15+j_offr]; }
             v_up = v_load(&c_src[j+1]);
-            if ( right ) c_src[j+16] = tmp;
-
             v_expand(v_um, v_um1, v_um2);
             v_expand(v_un, v_un1, v_un2);
             v_expand(v_up, v_up1, v_up2);
@@ -184,16 +194,9 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             v_int16x8 v_s2p2 = v_reinterpret_as_s16(v_up2);
 
             // Load third row for 3x3 Sobel filter
-            if ( left ) { tmp = n_src[j-1]; n_src[j-1] = n_src[j+j_offl]; }
             v_um = v_load(&n_src[j-1]);
-            if ( left ) n_src[j-1] = tmp;
-
             v_un = v_load(&n_src[j]);
-
-            if ( right ) { tmp = n_src[j+16]; n_src[j+16] = n_src[j+15+j_offr]; }
             v_up = v_load(&n_src[j+1]);
-            if ( right ) n_src[j+16] = tmp;
-
             v_expand(v_um, v_um1, v_um2);
             v_expand(v_un, v_un1, v_un2);
             v_expand(v_up, v_up1, v_up2);
@@ -205,15 +208,9 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             v_int16x8 v_s3p2 = v_reinterpret_as_s16(v_up2);
 
             // Load fourth row for 3x3 Sobel filter
-            if ( left ) { tmp = m_src[j-1]; m_src[j-1] = m_src[j+j_offl]; }
             v_um = v_load(&m_src[j-1]);
-            if ( left ) m_src[j-1] = tmp;
-
             v_un = v_load(&m_src[j]);
-
-            if ( right ) { tmp = m_src[j+16]; m_src[j+16] = m_src[j+15+j_offr]; }
             v_up = v_load(&m_src[j+1]);
-            if ( right ) m_src[j+16] = tmp;
 
             v_expand(v_um, v_um1, v_um2);
             v_expand(v_un, v_un1, v_un2);
@@ -225,17 +222,18 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             v_int16x8 v_s4p1 = v_reinterpret_as_s16(v_up1);
             v_int16x8 v_s4p2 = v_reinterpret_as_s16(v_up2);
 
-            // dx
-            v_int16x8 v_tmp = v_s2p1 - v_s2m1;
-            v_int16x8 v_sdx1 = (v_s1p1 - v_s1m1) + (v_tmp + v_tmp) + (v_s3p1 - v_s3m1);
-            v_tmp = v_s2p2 - v_s2m2;
-            v_int16x8 v_sdx2 = (v_s1p2 - v_s1m2) + (v_tmp + v_tmp) + (v_s3p2 - v_s3m2);
+            // dx & dy for rows 1, 2, 3
+            v_int16x8 v_sdx1, v_sdy1;
+            spatialGradientKernel<v_int16x8>( v_sdx1, v_sdy1,
+                                              v_s1m1, v_s1n1, v_s1p1,
+                                              v_s2m1,         v_s2p1,
+                                              v_s3m1, v_s3n1, v_s3p1 );
 
-            // dy
-            v_tmp = v_s3n1 - v_s1n1;
-            v_int16x8 v_sdy1 = (v_s3m1 - v_s1m1) + (v_tmp + v_tmp) + (v_s3p1 - v_s1p1);
-            v_tmp = v_s3n2 - v_s1n2;
-            v_int16x8 v_sdy2 = (v_s3m2 - v_s1m2) + (v_tmp + v_tmp) + (v_s3p2 - v_s1p2);
+            v_int16x8 v_sdx2, v_sdy2;
+            spatialGradientKernel<v_int16x8>( v_sdx2, v_sdy2,
+                                              v_s1m2, v_s1n2, v_s1p2,
+                                              v_s2m2,         v_s2p2,
+                                              v_s3m2, v_s3n2, v_s3p2 );
 
             // Store
             v_store(&c_dx[j],   v_sdx1);
@@ -243,17 +241,16 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             v_store(&c_dy[j],   v_sdy1);
             v_store(&c_dy[j+8], v_sdy2);
 
-            // dx
-            v_tmp = v_s3p1 - v_s3m1;
-            v_sdx1 = (v_s2p1 - v_s2m1) + (v_tmp + v_tmp) + (v_s4p1 - v_s4m1);
-            v_tmp = v_s3p2 - v_s3m2;
-            v_sdx2 = (v_s2p2 - v_s2m2) + (v_tmp + v_tmp) + (v_s4p2 - v_s4m2);
+            // dx & dy for rows 2, 3, 4
+            spatialGradientKernel<v_int16x8>( v_sdx1, v_sdy1,
+                                              v_s2m1, v_s2n1, v_s2p1,
+                                              v_s3m1,         v_s3p1,
+                                              v_s4m1, v_s4n1, v_s4p1 );
 
-            // dy
-            v_tmp = v_s4n1 - v_s2n1;
-            v_sdy1 = (v_s4m1 - v_s2m1) + (v_tmp + v_tmp) + (v_s4p1 - v_s2p1);
-            v_tmp = v_s4n2 - v_s2n2;
-            v_sdy2 = (v_s4m2 - v_s2m2) + (v_tmp + v_tmp) + (v_s4p2 - v_s2p2);
+            spatialGradientKernel<v_int16x8>( v_sdx2, v_sdy2,
+                                              v_s2m2, v_s2n2, v_s2p2,
+                                              v_s3m2,         v_s3p2,
+                                              v_s4m2, v_s4n2, v_s4p2 );
 
             // Store
             v_store(&n_dx[j],   v_sdx1);
@@ -265,16 +262,6 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     i_start = i;
     j_start = j;
 #endif
-    /* NOTE:
-     *
-     * Sobel-x: -1  0  1
-     *          -2  0  2
-     *          -1  0  1
-     *
-     * Sobel-y: -1 -2 -1
-     *           0  0  0
-     *           1  2  1
-     */
     int j_p, j_n;
     uchar v00, v01, v02, v10, v11, v12, v20, v21, v22;
     for ( i = 0; i < H; i++ )
@@ -283,30 +270,44 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
         c_dx  = P_dx [i];
         c_dy  = P_dy [i];
 
-        // Pre-load 2 columns
-        j = i >= i_start ? 0 : j_start;
+        // Process left-most column
+        j = 0;
+        j_p = j + j_offl;
+        j_n = 1;
+        if ( j_n >= W ) j_n = j + j_offr;
+        v00 = p_src[j_p]; v01 = p_src[j]; v02 = p_src[j_n];
+        v10 = c_src[j_p]; v11 = c_src[j]; v12 = c_src[j_n];
+        v20 = n_src[j_p]; v21 = n_src[j]; v22 = n_src[j_n];
+        spatialGradientKernel<short>( c_dx[0], c_dy[0], v00, v01, v02, v10,
+                                      v12, v20, v21, v22 );
+        v00 = v01; v10 = v11; v20 = v21;
+        v01 = v02; v11 = v12; v21 = v22;
+
+        // Process middle columns
+        j = i >= i_start ? 1 : j_start;
         j_p = j - 1;
-        if ( j_p <  0 ) j_p = j + j_offl;
         v00 = p_src[j_p]; v01 = p_src[j];
         v10 = c_src[j_p]; v11 = c_src[j];
         v20 = n_src[j_p]; v21 = n_src[j];
 
-        for ( ; j < W; j++ )
+        for ( ; j < W - 1; j++ )
         {
-            j_n = j + 1;
-            if ( j_n >= W ) j_n = j + j_offr;
-
             // Get values for next column
-            v02 = p_src[j_n];
-            v12 = c_src[j_n];
-            v22 = n_src[j_n];
-
-            c_dx[j] = -(v00 + v10 + v10 + v20) + (v02 + v12 + v12 + v22);
-            c_dy[j] = -(v00 + v01 + v01 + v02) + (v20 + v21 + v21 + v22);
+            j_n = j + 1; v02 = p_src[j_n]; v12 = c_src[j_n]; v22 = n_src[j_n];
+            spatialGradientKernel<short>( c_dx[j], c_dy[j], v00, v01, v02, v10,
+                                          v12, v20, v21, v22 );
 
             // Move values back one column for next iteration
             v00 = v01; v10 = v11; v20 = v21;
             v01 = v02; v11 = v12; v21 = v22;
+        }
+
+        // Process right-most column
+        if ( j < W )
+        {
+            j_n = j + j_offr; v02 = p_src[j_n]; v12 = c_src[j_n]; v22 = n_src[j_n];
+            spatialGradientKernel<short>( c_dx[j], c_dy[j], v00, v01, v02, v10,
+                                          v12, v20, v21, v22 );
         }
     }
 
