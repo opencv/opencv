@@ -1666,37 +1666,20 @@ Context& initializeContextFromGL()
 
         // query device
         device = NULL;
-        size_t numDevices = 0;
-        {
-            size_t sizeDevices = 0;
-            status = clGetGLContextInfoKHR(properties, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, 0, NULL, &sizeDevices);
-            if (status == CL_SUCCESS)
-            {
-                numDevices = sizeDevices / sizeof(cl_device_id);
-                if (numDevices > 0)
-                {
-                    numDevices = 1;
-                    sizeDevices = numDevices * sizeof(cl_device_id);
-                    status = clGetGLContextInfoKHR(properties, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, sizeDevices, (void*)&device, NULL);
-                }
-            }
-            if (status != CL_SUCCESS)
-                continue;
-        }
+        status = clGetGLContextInfoKHR(properties, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, sizeof(cl_device_id), (void*)&device, NULL);
+        if (status != CL_SUCCESS)
+            continue;
 
         // create context
-        if (numDevices > 0)
+        context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+        if (status != CL_SUCCESS)
         {
-            context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
-            if (status != CL_SUCCESS)
-            {
-                clReleaseDevice(device);
-            }
-            else
-            {
-                found = i;
-                break;
-            }
+            clReleaseDevice(device);
+        }
+        else
+        {
+            found = i;
+            break;
         }
     }
 
@@ -1711,13 +1694,6 @@ Context& initializeContextFromGL()
 
 } // namespace cv::ogl::ocl
 
-#if defined(HAVE_OPENGL) && defined(HAVE_OPENCL)
-static void __OpenCLinitializeGL()
-{
-// temp stub
-}
-#endif // defined(HAVE_OPENGL) && defined(HAVE_OPENCL)
-
 void convertToGLTexture2D(InputArray src, Texture2D& texture)
 {
     (void)src; (void)texture;
@@ -1726,9 +1702,6 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
 #else
-    // ... // check "interop available" flag first (i.e. sharegroup existence)
-    __OpenCLinitializeGL();
-
     Size srcSize = src.size();
     CV_Assert(srcSize.width == (int)texture.cols() && srcSize.height == (int)texture.rows());
 
@@ -1781,9 +1754,6 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
 #else
-    // ... // check "interop available" flag first (i.e. sharegroup existence)
-    __OpenCLinitializeGL();
-
     // check texture format
     const int dtype = CV_8UC4;
     CV_Assert(texture.format() == Texture2D::RGBA);
