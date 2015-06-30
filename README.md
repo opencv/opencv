@@ -1,4 +1,10 @@
-Purpose of this branch is to keep samples that can be built in VS2015RC and pregenerated projects as CMake that supports VS2015 was not released on the moment this branch created
+Purpose of this branch is to keep samples that can be built in VS2015RC and pregenerated projects as CMake that supports VS2015 was not released on the moment this branch created.
+
+Currently samples are started on Win10/VS201RC but there is not request for accesing camera. And as a result there is no image from camera in the app. Possible VS2015RC issue. Need to be checked on VS2015 release and fixed if reproduced
+
+Needs maintanence: rebasing on the latest [Itseez](https://github.com/Itseez/opencv) master; Regenerating of projects (Look for "Long way" in [README](#test-vs2015-branch)); Checking builds/runs for required samples (mentioned [there](#vs2015-samples-branch)). Adding of CI integration with AppVeyor or other similar tool can be used to reduce maintanence effort.
+
+Support of this branch can be dropped as "no more required" after CMake with VS2015 support released and related WinRT build script (platforms/winrt/setup_winrt.ps1) and code updates applied + related samples fixed for working on Win10/VS2015
 
 ## OpenCV: Open Source Computer Vision Library
 
