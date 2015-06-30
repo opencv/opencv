@@ -102,12 +102,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     int i = 0,
         j = 0;
 
-    // Store pointers to rows of input/output data
-    // Padded by two rows for border handling
-    std::vector<uchar*> P_src(H+2);
-    std::vector<short*> P_dx (H+2);
-    std::vector<short*> P_dy (H+2);
-
+    // Handle border types
     int i_top    = 0,     // Case for H == 1 && W == 1 && BORDER_REPLICATE
         i_bottom = H - 1,
         j_offl   = 0,     // j offset from 0th   pixel to reach -1st pixel
@@ -125,16 +120,6 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             j_offl = 1;
             j_offr = -1;
         }
-    }
-
-    P_src[0]   = src.ptr<uchar>(i_top); // Mirrored top border
-    P_src[H+1] = src.ptr<uchar>(i_bottom); // Mirrored bottom border
-
-    for ( i = 0; i < H; i++ )
-    {
-        P_src[i+1] = src.ptr<uchar>(i);
-        P_dx [i]   =  dx.ptr<short>(i);
-        P_dy [i]   =  dy.ptr<short>(i);
     }
 
     // Pointer to row vectors
@@ -158,8 +143,19 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     // Example: umn is offset -1 in row and offset 0 in column
     for ( i = 0; i < H - 1; i += 2 )
     {
-        p_src = P_src[i]; c_src = P_src[i+1]; n_src = P_src[i+2]; m_src = P_src[i+3];
-        c_dx = P_dx[i]; c_dy = P_dy[i]; n_dx = P_dx[i+1]; n_dy = P_dy[i+1];
+        if   ( i == 0 ) p_src = src.ptr<uchar>(i_top);
+        else            p_src = src.ptr<uchar>(i-1);
+
+        c_src = src.ptr<uchar>(i);
+        n_src = src.ptr<uchar>(i+1);
+
+        if ( i == H - 2 ) m_src = src.ptr<uchar>(i_bottom);
+        else              m_src = src.ptr<uchar>(i+2);
+
+        c_dx = dx.ptr<short>(i);
+        c_dy = dy.ptr<short>(i);
+        n_dx = dx.ptr<short>(i+1);
+        n_dy = dy.ptr<short>(i+1);
 
         // Process rest of columns 16-column chunks at a time
         for ( j = 1; j < W - 16; j += 16 )
@@ -266,9 +262,16 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     uchar v00, v01, v02, v10, v11, v12, v20, v21, v22;
     for ( i = 0; i < H; i++ )
     {
-        p_src = P_src[i]; c_src = P_src[i+1]; n_src = P_src[i+2];
-        c_dx  = P_dx [i];
-        c_dy  = P_dy [i];
+        if   ( i == 0 ) p_src = src.ptr<uchar>(i_top);
+        else            p_src = src.ptr<uchar>(i-1);
+
+        c_src = src.ptr<uchar>(i);
+
+        if ( i == H - 1 ) n_src = src.ptr<uchar>(i_bottom);
+        else              n_src = src.ptr<uchar>(i+1);
+
+        c_dx = dx.ptr<short>(i);
+        c_dy = dy.ptr<short>(i);
 
         // Process left-most column
         j = 0;
