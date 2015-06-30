@@ -383,7 +383,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
     // read the header to make sure it succeeds
     if (!decoder->readHeader())
         return 0;
-    
+
     cvSetJpegScale(scale_denom);
 
     for (;;)
