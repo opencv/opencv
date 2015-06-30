@@ -250,8 +250,8 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
   endif()
 endforeach()
 
-if(__remap_warnings AND NOT OpenCV_FIND_QUIETLY)
-  message("OpenCV: configurations remap warnings:\n${__remap_warnings}OpenCV: Check variable OPENCV_MAP_IMPORTED_CONFIG=${OPENCV_MAP_IMPORTED_CONFIG}")
+if(TARGET opencv_world)
+  set(OpenCV_LIBS opencv_world)
 endif()
 
 # ==============================================================
