@@ -128,7 +128,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
     int i_start = 0;
     int j_start = 0;
-#if CV_SIMD128
+#if CV_SIMD128 && CV_SSE2
     uchar *m_src;
     short *n_dx, *n_dy;
 
