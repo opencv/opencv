@@ -1189,6 +1189,52 @@ TEST(Core_Mat, reshape_1942)
     ASSERT_EQ(1, cn);
 }
 
+TEST(Core_Mat, push_back)
+{
+    Mat a = (Mat_<float>(1,2) << 3.4884074f, 1.4159607f);
+    Mat b = (Mat_<float>(1,2) << 0.78737736f, 2.3456569f);
+
+    a.push_back(b);
+
+    ASSERT_EQ(2, a.cols);
+    ASSERT_EQ(2, a.rows);
+
+    ASSERT_FLOAT_EQ(3.4884074f, a.at<float>(0, 0));
+    ASSERT_FLOAT_EQ(1.4159607f, a.at<float>(0, 1));
+    ASSERT_FLOAT_EQ(0.78737736f, a.at<float>(1, 0));
+    ASSERT_FLOAT_EQ(2.3456569f, a.at<float>(1, 1));
+
+    Mat c = (Mat_<float>(2,2) << -0.88010466f, 0.3009364f, 2.22399974f, -5.45933905f);
+
+    ASSERT_EQ(c.rows, a.cols);
+
+    a.push_back(c.t());
+
+    ASSERT_EQ(2, a.cols);
+    ASSERT_EQ(4, a.rows);
+
+    ASSERT_FLOAT_EQ(3.4884074f, a.at<float>(0, 0));
+    ASSERT_FLOAT_EQ(1.4159607f, a.at<float>(0, 1));
+    ASSERT_FLOAT_EQ(0.78737736f, a.at<float>(1, 0));
+    ASSERT_FLOAT_EQ(2.3456569f, a.at<float>(1, 1));
+    ASSERT_FLOAT_EQ(-0.88010466f, a.at<float>(2, 0));
+    ASSERT_FLOAT_EQ(2.22399974f, a.at<float>(2, 1));
+    ASSERT_FLOAT_EQ(0.3009364f, a.at<float>(3, 0));
+    ASSERT_FLOAT_EQ(-5.45933905f, a.at<float>(3, 1));
+
+    a.push_back(Mat::ones(2, 2, CV_32FC1));
+
+    ASSERT_EQ(6, a.rows);
+
+    for(int row=4; row<a.rows; row++) {
+
+        for(int col=0; col<a.cols; col++) {
+
+            ASSERT_FLOAT_EQ(1.f, a.at<float>(row, col));
+        }
+    }
+}
+
 TEST(Core_Mat, copyNx1ToVector)
 {
     cv::Mat_<uchar> src(5, 1);
