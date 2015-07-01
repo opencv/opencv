@@ -201,7 +201,7 @@ framework:
 @param nthreads Number of threads used by OpenCV.
 @sa getNumThreads, getThreadNum
  */
-CV_EXPORTS void setNumThreads(int nthreads);
+CV_EXPORTS_W void setNumThreads(int nthreads);
 
 /** @brief Returns the number of threads used by OpenCV for parallel regions.
 
@@ -219,7 +219,7 @@ The exact meaning of return value depends on the threading framework used by Ope
   available for the process.
 @sa setNumThreads, getThreadNum
  */
-CV_EXPORTS int getNumThreads();
+CV_EXPORTS_W int getNumThreads();
 
 /** @brief Returns the index of the currently executed thread within the current parallel region. Always
 returns 0 if called outside of parallel region.
@@ -233,7 +233,7 @@ The exact meaning of return value depends on the threading framework used by Ope
 - `C=` – The index of the current parallel task.
 @sa setNumThreads, getNumThreads
  */
-CV_EXPORTS int getThreadNum();
+CV_EXPORTS_W int getThreadNum();
 
 /** @brief Returns full configuration time cmake output.
 
