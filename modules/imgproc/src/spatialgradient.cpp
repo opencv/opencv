@@ -59,9 +59,9 @@ namespace cv
  */
 template <typename T>
 static inline void spatialGradientKernel( T& vx, T& vy,
-                                          T v00, T v01, T v02,
-                                          T v10,        T v12,
-                                          T v20, T v21, T v22 )
+                                          const T& v00, const T& v01, const T& v02,
+                                          const T& v10,               const T& v12,
+                                          const T& v20, const T& v21, const T& v22 )
 {
     // vx = (v22 - v00) + (v02 - v20) + 2 * (v12 - v10)
     // vy = (v22 - v00) + (v20 - v02) + 2 * (v21 - v01)
