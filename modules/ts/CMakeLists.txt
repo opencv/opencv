@@ -1,11 +1,18 @@
 set(the_description "The ts module")
 
-if(IOS OR WINRT)
+if(IOS)
   ocv_module_disable(ts)
 endif()
 
 set(OPENCV_MODULE_TYPE STATIC)
 set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
+
+if(WINRT)
+  # WINRT doesn't have access to environment variables
+  # so adding corresponding macros during CMake run
+  add_env_definitions(OPENCV_TEST_DATA_PATH)
+  add_env_definitions(OPENCV_PERF_VALIDATION_DIR)
+endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
 
