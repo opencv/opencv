@@ -319,8 +319,9 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
         //  a) multi-dimensional (ndims > 2) arrays, as well as simpler 1- and 2-dimensional cases
         //  b) transposed arrays, where _strides[] elements go in non-descending order
         //  c) flipped arrays, where some of _strides[] elements are negative
-        if( (i == ndims-1 && (size_t)_strides[i] != elemsize) ||
-            (i < ndims-1 && _strides[i] < _strides[i+1]) )
+        // the _sizes[i] > 1 is needed to avoid spurious copies when NPY_RELAXED_STRIDES is set
+        if( (i == ndims-1 && _sizes[i] > 1 && (size_t)_strides[i] != elemsize) ||
+            (i < ndims-1 && _sizes[i] > 1 && _strides[i] < _strides[i+1]) )
             needcopy = true;
     }
 
@@ -347,10 +348,21 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
         _strides = PyArray_STRIDES(oarr);
     }
 
-    for(int i = 0; i < ndims; i++)
+    // Normalize strides in case NPY_RELAXED_STRIDES is set
+    size_t default_step = elemsize;
+    for ( int i = ndims - 1; i >= 0; --i )
     {
         size[i] = (int)_sizes[i];
-        step[i] = (size_t)_strides[i];
+        if ( size[i] > 1 )
+        {
+            step[i] = (size_t)_strides[i];
+            default_step = step[i] * size[i];
+        }
+        else
+        {
+            step[i] = default_step;
+            default_step *= size[i];
+        }
     }
 
     // handle degenerate case
