@@ -275,6 +275,22 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
         float h = 3, float hColor = 3,
         int templateWindowSize = 7, int searchWindowSize = 21);
 
+
+/** @brief A vectorised version of fastNlMeansDenoising. Using a template window
+size of 7 and search window size of 21.
+
+Currently only works on images of type @ref CV_8UC3.
+
+@param src Input 8-bit 3-channel image.
+@param dst Output image with the same size and type as src.
+@param h Array of parameters regulating filter strength, either one parameter
+applied to all channels or one per channel in dst. Big h value perfectly removes
+noise but also removes image details, smaller h value preserves details but also
+preserves some noise.
+ */
+CV_EXPORTS_W void halNlMeansDenoising( InputArray _src, OutputArray _dst,
+                                       float h );
+
 /** @brief Primal-dual algorithm is an algorithm for solving special types of variational problems (that is,
 finding a function to minimize some functional). As the image denoising, in particular, may be seen
 as the variational problem, primal-dual algorithm then can be used to perform denoising and this is

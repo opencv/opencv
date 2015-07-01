@@ -167,3 +167,23 @@ TEST(Photo_Denoising, speed)
     t = (double)getTickCount() - t;
     printf("execution time: %gms\n", t*1000./getTickFrequency());
 }
+
+TEST(Photo_DenoisingHALColored, regression)
+{
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
+    string original_path = folder + "lena_noised_gaussian_sigma=10.png";
+    string expected_path = folder + "lena_noised_denoised_lab12_tw=7_sw=21_h=10_h2=10.png";
+
+    Mat original = imread(original_path, IMREAD_COLOR);
+    Mat expected = imread(expected_path, IMREAD_COLOR);
+
+    ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
+    ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
+
+    Mat result;
+    halNlMeansDenoising(original, result, 10);
+
+    DUMP(result, expected_path + ".res.png");
+
+    ASSERT_EQ(0, cvtest::norm(result, expected, NORM_L2));
+}

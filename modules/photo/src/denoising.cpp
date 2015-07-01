@@ -431,3 +431,137 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
 
     cvtColor(dst_lab, dst, COLOR_Lab2LBGR);
 }
+
+void cv::halNlMeansDenoising( InputArray _src, OutputArray _dst, float h )
+{
+    // Prepare InputArray src
+    const Mat src = _src.getMat();
+    CV_Assert( !src.empty() );
+    CV_Assert( src.type() == CV_8UC3 ); // TODO: Support more types, 8UC1 and C4 for Bayer
+
+    // Prepare OutputArray dst
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
+
+    // NOTE: templateWindowSize = 7
+    //       searchWindowSize   = 21
+    // TODO: Ask @vpisarev, are these defaults fine?
+    //       @ref mentions 7, 35 for colour images
+    // @ref http://www.ipol.im/pub/art/2011/bcm_nlm/
+    const int T  = 7,     // Template window width
+              hT = T / 2, // 3
+              S  = 21,    // Search window width
+              N  = S - T, // Neighbour coordinates width
+              hN = N / 2; // 7
+
+    // OPTIMISATION TODOS:
+    // - exploit symmetry in sum_abs(P_a - P_b) == sum_abs(P_b - P_a)
+
+    // STEP 0) Calculate weight lookup table W
+    //             sigma = h / 0.4
+    //             Wij = exp( -max(dij - 2*sigma*sigma, 0) / (h*h) )
+    //         NOTE: dij = sum_abs(P_i - P_j)
+    //         @ref http://www.ipol.im/pub/art/2011/bcm_nlm/
+    //
+    // TODO: Ask @vpisarev, is this correct?
+    //       OpenCV uses:
+    //           double w = std::exp(-dij*dij / (h*h * nchannels));
+    double max_d = 255*T*T,
+           fac = - 1.f / (3*h*h), w;
+    std::vector<float> W((int)max_d);
+    for ( size_t i = 0; i < W.size(); i++ )
+    {
+        w = std::exp(fac*i);
+        W[i] = w;
+        if ( w < 1e-3 ) // TODO: Make parameter
+        {
+            max_d = i;
+            W.resize(i + 1);
+            break;
+        }
+    }
+
+    int I = src.rows,
+        J = src.cols,
+        i = 0,
+        j = 0;
+
+    const Vec3b *p_src, *p_c, *p_n;
+    Vec3b *p_dst, p;
+
+    int x0_c, y0_c, dx_c, dy_c, x0_n, y0_n, x_c, x_n, d;
+    Mat D = Mat(src.size(), CV_16UC1);
+    double sum_w, sum_pw0, sum_pw1, sum_pw2;
+
+    // For each pixel
+    for ( i = 0; i < I; i++ )
+    {
+        p_src = src.ptr<Vec3b>(i);
+        p_dst = dst.ptr<Vec3b>(i);
+
+        y0_c = std::min(std::max(0, i-hT), I-T-1);
+        dy_c = i-hT - y0_c;
+
+        for ( j = 0; j < J; j++ )
+        {
+
+            // STEP 1) Take 7x7=49/c patch (P_c)
+            x0_c = std::min(std::max(0, j-hT), J-T-1);
+            dx_c = j-hT - x0_c;
+
+            // Add self
+            sum_pw0 = p_src[j][0];
+            sum_pw1 = p_src[j][1];
+            sum_pw2 = p_src[j][2];
+            sum_w = 1.f;
+
+            // For each neighbour patch (P_n) in 21x21=441/c region
+            for ( int ni = -hN; ni <= hN; ni++ )
+            {
+                y0_n = i + ni - hT;
+                if ( y0_n < 0 || y0_n >= I-T ) continue;
+
+                for ( int nj = -hN; nj <= hN; nj++ )
+                {
+                    // Get starting point for P_n, current neighbour patch
+                    x0_n = j + nj - hT;
+                    if ( x0_n < 0 || x0_n >= J-T || ( ni == 0 && nj == 0 ) )
+                        continue;
+
+                    // STEP 2) d_cn = sum_abs(P_c - P_n) = sum_abs(P_n - P_c) = d_nc
+                    d = 0;
+                    for ( int pi = 0; pi < T; pi++ )
+                    {
+                        p_c = src.ptr<Vec3b>(y0_c+pi);
+                        p_n = src.ptr<Vec3b>(y0_n+ni+pi);
+                        x_c = x0_c;
+                        x_n = x0_n + nj;
+                        for ( int pj = 0; pj < T; pj++ )
+                        {
+                            d += (
+                                     std::abs(p_n[x_n][0] - p_c[x_c][0]) +
+                                     std::abs(p_n[x_n][1] - p_c[x_c][1]) +
+                                     std::abs(p_n[x_n][2] - p_c[x_c][2])
+                                 );
+                            x_c++;
+                            x_n++;
+                        }
+                    }
+
+                    // STEP 3) Lookup w_cn in table W
+                    d /= 3;
+                    w = d > max_d ? 0 : W[d];
+
+                    p = src.at<Vec3b>(y0_n+hT+dy_c, x0_n+hT+dx_c);
+                    sum_pw0 += w*p[0]; sum_pw1 += w*p[1]; sum_pw2 += w*p[2];
+                    sum_w += w;
+                }
+            }
+
+            // STEP 4) Calculate denoised pixel sum(p_c*w_cn)/sum(w_cn) for centre pixel p_c
+            p_dst[j][0] = (uchar)(sum_pw0 / sum_w);
+            p_dst[j][1] = (uchar)(sum_pw1 / sum_w);
+            p_dst[j][2] = (uchar)(sum_pw2 / sum_w);
+        }
+    }
+}
