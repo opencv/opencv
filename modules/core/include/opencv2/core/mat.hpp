@@ -222,6 +222,7 @@ public:
     bool isMatVector() const;
     bool isUMatVector() const;
     bool isMatx() const;
+    bool isVector() const;
 
     ~_InputArray();
 
