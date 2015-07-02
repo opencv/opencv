@@ -18,6 +18,10 @@ if(WIN32 AND HAVE_DIRECTX)
   add_subdirectory(directx)
 endif()
 
+if((NOT ANDROID) AND HAVE_OPENGL)
+  add_subdirectory(opengl)
+endif()
+
 if(ANDROID AND BUILD_ANDROID_EXAMPLES)
   add_subdirectory(android)
 endif()
