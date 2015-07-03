@@ -433,7 +433,6 @@ private:
     std::vector<unsigned> data;
     int bits_free;
     unsigned m_pos;
-    bool m_is_full;
     unsigned m_data_len;
 };
 
@@ -443,7 +442,7 @@ class mjpeg_buffer_keeper
 public:
     mjpeg_buffer_keeper()
     {
-        m_last_bit_len = 0;
+        reset();
     }
 
     mjpeg_buffer& operator[](int i)
@@ -496,7 +495,7 @@ public:
                 }
                 else
                 {
-                    memcpy(&m_output_buffer[current_pos], buffer.get_data(), sizeof(buffer.get_data()[0])*(buffer.get_len() -1 ));
+                    memcpy(&m_output_buffer[current_pos], buffer.get_data(), sizeof(buffer.get_data()[0])*(buffer.get_len() - 1 ));
                     m_data_len += buffer.get_len() - 1;
                     currval = buffer.get_data()[buffer.get_len() - 1];
                 }
@@ -505,27 +504,20 @@ public:
             {
                 for(unsigned i = 0; i < buffer.get_len() - 1; ++i)
                 {
-                    if( bits <= 0 )
-                    {
-                        currval |= ((unsigned)buffer.get_data()[i] >> -bits);
+                    currval |= ( (unsigned)buffer.get_data()[i] >> (31 & (-bits)) );
 
-                        m_output_buffer[m_data_len++] = currval;
+                    m_output_buffer[m_data_len++] = currval;
 
-                        currval = (bits < 0) ? (buffer.get_data()[i] << (bits + 32)) : 0;
-                    }
-                    else
-                    {
-                        currval |= (buffer.get_data()[i] << bits);
-                    }
+                    currval = buffer.get_data()[i] << (bits + 32);
                 }
 
-                currval |= ((unsigned)buffer.get_data()[buffer.get_len() - 1] >> -bits);
+                currval |= ( (unsigned)buffer.get_data()[buffer.get_len() - 1] >> (31 & (-bits)) );
 
-                if( (buffer.get_bits_free() == 32 ? 0 : buffer.get_bits_free()) <= -bits)
+                if( buffer.get_bits_free() <= -bits)
                 {
                     m_output_buffer[m_data_len++] = currval;
 
-                    currval = (bits < 0) ? (buffer.get_data()[buffer.get_len() - 1] << (bits + 32)) : 0;
+                    currval = buffer.get_data()[buffer.get_len() - 1] << (bits + 32);
                 }
             }
 
@@ -1534,7 +1526,7 @@ public:
         {
             if(height*width > min_pixels_count)
             {
-                stripes_count = 4;
+                stripes_count = default_stripes_count;
             }
         }
         else
@@ -1735,7 +1727,10 @@ private:
     const short (&fdct_qtab)[2][64];
     const uchar* cat_table;
     int stripes_count;
+    static const int default_stripes_count;
 };
+
+const int MjpegEncoder::default_stripes_count = 4;
 
 void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspace, int input_channels )
 {
