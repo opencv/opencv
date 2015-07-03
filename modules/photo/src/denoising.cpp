@@ -448,120 +448,121 @@ void cv::halNlMeansDenoising( InputArray _src, OutputArray _dst, float h )
     // TODO: Ask @vpisarev, are these defaults fine?
     //       @ref mentions 7, 35 for colour images
     // @ref http://www.ipol.im/pub/art/2011/bcm_nlm/
-    const int T  = 7,     // Template window width
-              hT = T / 2, // 3
-              S  = 21,    // Search window width
-              N  = S - T, // Neighbour coordinates width
-              hN = N / 2; // 7
+    const int T  = 7,         // Template window width
+              hT = T / 2,     // 3
+              S  = 21,        // Search window width
+              N  = S - T + 1, // Neighbour search width
+              hN = N / 2;
 
     // OPTIMISATION TODOS:
     // - exploit symmetry in sum_abs(P_a - P_b) == sum_abs(P_b - P_a)
 
     // STEP 0) Calculate weight lookup table W
-    //             sigma = h / 0.4
-    //             Wij = exp( -max(dij - 2*sigma*sigma, 0) / (h*h) )
+    //             Wij = exp( -dij / (3*h*h) )
     //         NOTE: dij = sum_abs(P_i - P_j)
-    //         @ref http://www.ipol.im/pub/art/2011/bcm_nlm/
-    //
-    // TODO: Ask @vpisarev, is this correct?
-    //       OpenCV uses:
-    //           double w = std::exp(-dij*dij / (h*h * nchannels));
     double max_d = 255*T*T,
-           fac = - 1.f / (3*h*h), w;
+           fac = - 1.f / (9*h*h);
     std::vector<float> W((int)max_d);
     for ( size_t i = 0; i < W.size(); i++ )
     {
-        w = std::exp(fac*i);
+        float w = std::exp(fac*i);
         W[i] = w;
         if ( w < 1e-3 ) // TODO: Make parameter
         {
             max_d = i;
-            W.resize(i + 1);
-            break;
+            W.resize(i);
+        }
+
+    }
+
+    int Y = src.rows,
+        X = src.cols;
+
+    // Intermediate structures
+    Array2d<unsigned int> S_d(Y, X); // Sum of differences
+    Mat Z = Mat::zeros(src.size(), CV_32FC1);
+    Mat O = Mat::zeros(src.size(), CV_32FC3);
+    dst = Scalar(0);
+
+    // For each search window translation
+    for ( int sy = -hN; sy <= hN; sy++ )
+    for ( int sx = -hN; sx <= hN; sx++ )
+    {
+        // Build S_d
+        for ( int y = 0; y < Y; y++ )
+        for ( int x = 0; x < X; x++ )
+        {
+            // Offset pixel position
+            int _y = y + sy,
+                _x = x + sx;
+
+            // BORDER_DEFAULT: gfedcb|abcdefgh|gfedcba
+            // Handle top/left border
+            _y = _y < 0 ? -_y : _y;
+            _x = _x < 0 ? -_x : _x;
+            // Handle bottom/right border
+            _y = _y < Y ? _y : Y - (_y - Y) - 2;
+            _x = _x < X ? _x : X - (_x - X) - 2;
+
+            // Calculate distance value
+            Vec3b p  = src.at<Vec3b>( y,  x),
+                  _p = src.at<Vec3b>(_y, _x);
+            unsigned int d = std::abs(p[0] - _p[0]) +
+                             std::abs(p[1] - _p[1]) +
+                             std::abs(p[2] - _p[2]);
+
+            // Accumulate to form summed area table
+            if ( x == 0 && y == 0 )
+            {
+                S_d.row_ptr(y)[x] = d;
+            }
+            else if ( x == 0 )
+            {
+                S_d.row_ptr(y)[x] = d + S_d.row_ptr(y-1)[x];
+            }
+            else if ( y == 0 )
+            {
+                S_d.row_ptr(y)[x] = d + S_d.row_ptr(y)[x-1];
+            }
+            else
+            {
+                S_d.row_ptr(y)[x] = d + S_d.row_ptr(y-1)[x] -
+                    S_d.row_ptr(y-1)[x-1] + S_d.row_ptr(y)[x-1];
+            }
+        }
+
+        for ( int y = 0; y < Y; y++ )
+        for ( int x = 0; x < X; x++ )
+        {
+            // Compute weights
+            int _y = y + sy,
+                _x = x + sx;
+            if ( _y < 0 || _x < 0 || _y >= Y || _x >= X ) continue;
+
+            int px0 = MAX(x-hT-2, 0), px1 = MIN(x+hT, X-1),
+                py0 = MAX(y-hT-2, 0), py1 = MIN(y+hT, Y-1);
+            unsigned int d = (S_d.row_ptr(py1)[px1] - S_d.row_ptr(py1)[px0]) +
+                             (S_d.row_ptr(py0)[px0] - S_d.row_ptr(py0)[px1]);
+            if ( d < max_d )
+            {
+                float w = W[d];
+                Vec3b i = src.at<Vec3b>(_y, _x);
+                Vec3f o = O.at<Vec3f>(y, x);
+                o[0] += w*i[0];
+                o[1] += w*i[1];
+                o[2] += w*i[2];
+                O.at<Vec3f>(y, x) = o;
+                Z.at<float>(y, x) += w;
+            }
         }
     }
 
-    int I = src.rows,
-        J = src.cols,
-        i = 0,
-        j = 0;
-
-    const Vec3b *p_src, *p_c, *p_n;
-    Vec3b *p_dst, p;
-
-    int x0_c, y0_c, dx_c, dy_c, x0_n, y0_n, x_c, x_n, d;
-    Mat D = Mat(src.size(), CV_16UC1);
-    double sum_w, sum_pw0, sum_pw1, sum_pw2;
-
-    // For each pixel
-    for ( i = 0; i < I; i++ )
+    // Apply to destination image
+    for ( int y = 0; y < Y; y++ )
+    for ( int x = 0; x < X; x++ )
     {
-        p_src = src.ptr<Vec3b>(i);
-        p_dst = dst.ptr<Vec3b>(i);
-
-        y0_c = std::min(std::max(0, i-hT), I-T-1);
-        dy_c = i-hT - y0_c;
-
-        for ( j = 0; j < J; j++ )
-        {
-
-            // STEP 1) Take 7x7=49/c patch (P_c)
-            x0_c = std::min(std::max(0, j-hT), J-T-1);
-            dx_c = j-hT - x0_c;
-
-            // Add self
-            sum_pw0 = p_src[j][0];
-            sum_pw1 = p_src[j][1];
-            sum_pw2 = p_src[j][2];
-            sum_w = 1.f;
-
-            // For each neighbour patch (P_n) in 21x21=441/c region
-            for ( int ni = -hN; ni <= hN; ni++ )
-            {
-                y0_n = i + ni - hT;
-                if ( y0_n < 0 || y0_n >= I-T ) continue;
-
-                for ( int nj = -hN; nj <= hN; nj++ )
-                {
-                    // Get starting point for P_n, current neighbour patch
-                    x0_n = j + nj - hT;
-                    if ( x0_n < 0 || x0_n >= J-T || ( ni == 0 && nj == 0 ) )
-                        continue;
-
-                    // STEP 2) d_cn = sum_abs(P_c - P_n) = sum_abs(P_n - P_c) = d_nc
-                    d = 0;
-                    for ( int pi = 0; pi < T; pi++ )
-                    {
-                        p_c = src.ptr<Vec3b>(y0_c+pi);
-                        p_n = src.ptr<Vec3b>(y0_n+ni+pi);
-                        x_c = x0_c;
-                        x_n = x0_n + nj;
-                        for ( int pj = 0; pj < T; pj++ )
-                        {
-                            d += (
-                                     std::abs(p_n[x_n][0] - p_c[x_c][0]) +
-                                     std::abs(p_n[x_n][1] - p_c[x_c][1]) +
-                                     std::abs(p_n[x_n][2] - p_c[x_c][2])
-                                 );
-                            x_c++;
-                            x_n++;
-                        }
-                    }
-
-                    // STEP 3) Lookup w_cn in table W
-                    d /= 3;
-                    w = d > max_d ? 0 : W[d];
-
-                    p = src.at<Vec3b>(y0_n+hT+dy_c, x0_n+hT+dx_c);
-                    sum_pw0 += w*p[0]; sum_pw1 += w*p[1]; sum_pw2 += w*p[2];
-                    sum_w += w;
-                }
-            }
-
-            // STEP 4) Calculate denoised pixel sum(p_c*w_cn)/sum(w_cn) for centre pixel p_c
-            p_dst[j][0] = (uchar)(sum_pw0 / sum_w);
-            p_dst[j][1] = (uchar)(sum_pw1 / sum_w);
-            p_dst[j][2] = (uchar)(sum_pw2 / sum_w);
-        }
+        Vec3f o = O.at<Vec3f>(y, x);
+        float z = Z.at<float>(y, x);
+        dst.at<Vec3b>(y, x) = o / z;
     }
 }
