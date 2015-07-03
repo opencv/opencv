@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/hal/intrin.hpp"
 
 #include "fast_nlmeans_denoising_invoker.hpp"
 #include "fast_nlmeans_multi_denoising_invoker.hpp"
@@ -565,14 +566,84 @@ void cv::halNlMeansDenoising( InputArray _src, OutputArray _dst, float h )
     }
 
     // Apply to destination image
-    for ( int y = 0; y < Y; y++ )
+    int i = 0, y = 0, x = 0;
+#if CV_SIMD128
+    int XY = X * Y;
+    p_O = O.ptr<Vec3f>(0);
+    p_Z = Z.ptr<float>(0);
+
+    for ( ; i < XY-17; i += 16 )
     {
+        // Load Zs
+        v_float32x4 v_Z0 = v_load(&p_Z[i]);
+        v_float32x4 v_Z1 = v_load(&p_Z[i+4]);
+        v_float32x4 v_Z2 = v_load(&p_Z[i+8]);
+        v_float32x4 v_Z3 = v_load(&p_Z[i+12]);
+
+        // Load 16 values from O
+        v_uint32x4 v_O00, v_O01, v_O02,
+                   v_O10, v_O11, v_O12,
+                   v_O20, v_O21, v_O22,
+                   v_O30, v_O31, v_O32;
+        v_load_deinterleave((const unsigned*)&p_O[i], v_O00, v_O01, v_O02);
+        v_load_deinterleave((const unsigned*)&p_O[i+4], v_O10, v_O11, v_O12);
+        v_load_deinterleave((const unsigned*)&p_O[i+8], v_O20, v_O21, v_O22);
+        v_load_deinterleave((const unsigned*)&p_O[i+12], v_O30, v_O31, v_O32);
+
+        // Calculate final pixel values
+        v_float32x4 v_fD00 = v_reinterpret_as_f32(v_O00) / v_Z0;
+        v_float32x4 v_fD01 = v_reinterpret_as_f32(v_O01) / v_Z0;
+        v_float32x4 v_fD02 = v_reinterpret_as_f32(v_O02) / v_Z0;
+
+        v_float32x4 v_fD10 = v_reinterpret_as_f32(v_O10) / v_Z1;
+        v_float32x4 v_fD11 = v_reinterpret_as_f32(v_O11) / v_Z1;
+        v_float32x4 v_fD12 = v_reinterpret_as_f32(v_O12) / v_Z1;
+
+        v_float32x4 v_fD20 = v_reinterpret_as_f32(v_O20) / v_Z2;
+        v_float32x4 v_fD21 = v_reinterpret_as_f32(v_O21) / v_Z2;
+        v_float32x4 v_fD22 = v_reinterpret_as_f32(v_O22) / v_Z2;
+
+        v_float32x4 v_fD30 = v_reinterpret_as_f32(v_O30) / v_Z3;
+        v_float32x4 v_fD31 = v_reinterpret_as_f32(v_O31) / v_Z3;
+        v_float32x4 v_fD32 = v_reinterpret_as_f32(v_O32) / v_Z3;
+
+        // Round and pack into u8
+        v_uint16x8 v_sD00 = v_pack(v_reinterpret_as_u32(v_round(v_fD00)),
+                                   v_reinterpret_as_u32(v_round(v_fD10)));
+        v_uint16x8 v_sD10 = v_pack(v_reinterpret_as_u32(v_round(v_fD20)),
+                                   v_reinterpret_as_u32(v_round(v_fD30)));
+
+        v_uint16x8 v_sD01 = v_pack(v_reinterpret_as_u32(v_round(v_fD01)),
+                                   v_reinterpret_as_u32(v_round(v_fD11)));
+        v_uint16x8 v_sD11 = v_pack(v_reinterpret_as_u32(v_round(v_fD21)),
+                                   v_reinterpret_as_u32(v_round(v_fD31)));
+
+        v_uint16x8 v_sD02 = v_pack(v_reinterpret_as_u32(v_round(v_fD02)),
+                                   v_reinterpret_as_u32(v_round(v_fD12)));
+        v_uint16x8 v_sD12 = v_pack(v_reinterpret_as_u32(v_round(v_fD22)),
+                                   v_reinterpret_as_u32(v_round(v_fD32)));
+
+        // Store
+        v_uint8x16 v_uD0 = v_pack(v_sD00, v_sD10);
+        v_uint8x16 v_uD1 = v_pack(v_sD01, v_sD11);
+        v_uint8x16 v_uD2 = v_pack(v_sD02, v_sD12);
+
+        y = i / X;
+        x = i % X;
+        v_store_interleave((uchar*)&dst.ptr<Vec3b>(y)[x], v_uD0, v_uD1, v_uD2);
+    }
+    y = i / X;
+    x = i % X;
+#endif
+    for ( ; y < Y; y++ )
+    {
+        p_O = O.ptr<Vec3f>(y);
+        p_Z = Z.ptr<float>(y);
         p_dst = dst.ptr<Vec3b>(y);
-        for ( int x = 0; x < X; x++ )
+        for ( ; x < X; x++ )
         {
-            Vec3f o = O.at<Vec3f>(y, x);
-            float z = Z.at<float>(y, x);
-            p_dst[x] = o / z;
+            p_dst[x] = p_O[x] / p_Z[x];
         }
+        x = 0; // Subsequent rows need x = 0 to start inner loop
     }
 }
