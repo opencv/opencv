@@ -1970,6 +1970,8 @@ static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 
 #ifdef HAVE_OPENCL
 
+#define MINMAX_STRUCT_ALIGNMENT 8 // sizeof double
+
 template <typename T>
 void getMinMaxRes(const Mat & db, double * minVal, double * maxVal,
                   int* minLoc, int* maxLoc,
@@ -1980,28 +1982,32 @@ void getMinMaxRes(const Mat & db, double * minVal, double * maxVal,
     T maxval = std::numeric_limits<T>::min() > 0 ? -std::numeric_limits<T>::max() : std::numeric_limits<T>::min(), maxval2 = maxval;
     uint minloc = index_max, maxloc = index_max;
 
-    int index = 0;
+    size_t index = 0;
     const T * minptr = NULL, * maxptr = NULL, * maxptr2 = NULL;
     const uint * minlocptr = NULL, * maxlocptr = NULL;
     if (minVal || minLoc)
     {
         minptr = db.ptr<T>();
         index += sizeof(T) * groupnum;
+        index = alignSize(index, MINMAX_STRUCT_ALIGNMENT);
     }
     if (maxVal || maxLoc)
     {
         maxptr = (const T *)(db.ptr() + index);
         index += sizeof(T) * groupnum;
+        index = alignSize(index, MINMAX_STRUCT_ALIGNMENT);
     }
     if (minLoc)
     {
         minlocptr = (const uint *)(db.ptr() + index);
         index += sizeof(uint) * groupnum;
+        index = alignSize(index, MINMAX_STRUCT_ALIGNMENT);
     }
     if (maxLoc)
     {
         maxlocptr = (const uint *)(db.ptr() + index);
         index += sizeof(uint) * groupnum;
+        index = alignSize(index, MINMAX_STRUCT_ALIGNMENT);
     }
     if (maxVal2)
         maxptr2 = (const T *)(db.ptr() + index);
@@ -2121,7 +2127,8 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     char cvt[2][40];
     String opts = format("-D DEPTH_%d -D srcT1=%s%s -D WGS=%d -D srcT=%s"
                          " -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d%s%s%s%s"
-                         " -D dstT1=%s -D dstT=%s -D convertToDT=%s%s%s%s%s -D wdepth=%d -D convertFromU=%s",
+                         " -D dstT1=%s -D dstT=%s -D convertToDT=%s%s%s%s%s -D wdepth=%d -D convertFromU=%s"
+                         " -D MINMAX_STRUCT_ALIGNMENT=%d",
                          depth, ocl::typeToStr(depth), haveMask ? " -D HAVE_MASK" : "", (int)wgs,
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), wgs2_aligned,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
@@ -2134,7 +2141,8 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
                          absValues ? " -D OP_ABS" : "",
                          haveSrc2 ? " -D HAVE_SRC2" : "", maxVal2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "", ddepth,
-                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, kercn, cvt[1]) : "noconvert");
+                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, kercn, cvt[1]) : "noconvert",
+                         MINMAX_STRUCT_ALIGNMENT);
 
     ocl::Kernel k("minmaxloc", ocl::core::minmaxloc_oclsrc, opts);
     if (k.empty())
@@ -2143,7 +2151,8 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     int esz = CV_ELEM_SIZE(ddepth), esz32s = CV_ELEM_SIZE1(CV_32S),
             dbsize = groupnum * ((needMinVal ? esz : 0) + (needMaxVal ? esz : 0) +
                                  (needMinLoc ? esz32s : 0) + (needMaxLoc ? esz32s : 0) +
-                                 (maxVal2 ? esz : 0));
+                                 (maxVal2 ? esz : 0))
+                     + 5 * MINMAX_STRUCT_ALIGNMENT;
     UMat src = _src.getUMat(), src2 = _src2.getUMat(), db(1, dbsize, CV_8UC1), mask = _mask.getUMat();
 
     if (cn > 1 && !haveMask)
