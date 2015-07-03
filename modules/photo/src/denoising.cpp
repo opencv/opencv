@@ -484,85 +484,95 @@ void cv::halNlMeansDenoising( InputArray _src, OutputArray _dst, float h )
     Mat O = Mat::zeros(src.size(), CV_32FC3);
     dst = Scalar(0);
 
+    // Pointer vars
+    const Vec3b *p_src;
+    unsigned int *p_Sd0, *p_Sd1;
+    Vec3f *p_O;
+    float *p_Z;
+    Vec3b *p_dst;
+
     // For each search window translation
     for ( int sy = -hN; sy <= hN; sy++ )
     for ( int sx = -hN; sx <= hN; sx++ )
     {
         // Build S_d
         for ( int y = 0; y < Y; y++ )
-        for ( int x = 0; x < X; x++ )
         {
-            // Offset pixel position
-            int _y = y + sy,
-                _x = x + sx;
+            p_src = src.ptr<Vec3b>(y);
+            p_Sd0 = S_d.row_ptr(y-1);
+            p_Sd1 = S_d.row_ptr(y);
 
-            // BORDER_DEFAULT: gfedcb|abcdefgh|gfedcba
-            // Handle top/left border
-            _y = _y < 0 ? -_y : _y;
-            _x = _x < 0 ? -_x : _x;
-            // Handle bottom/right border
-            _y = _y < Y ? _y : Y - (_y - Y) - 2;
-            _x = _x < X ? _x : X - (_x - X) - 2;
+            for ( int x = 0; x < X; x++ )
+            {
+                // Offset pixel position
+                int _y = y + sy,
+                    _x = x + sx;
 
-            // Calculate distance value
-            Vec3b p  = src.at<Vec3b>( y,  x),
-                  _p = src.at<Vec3b>(_y, _x);
-            unsigned int d = std::abs(p[0] - _p[0]) +
-                             std::abs(p[1] - _p[1]) +
-                             std::abs(p[2] - _p[2]);
+                // BORDER_DEFAULT: gfedcb|abcdefgh|gfedcba
+                // Handle top/left border
+                _y = _y < 0 ? -_y : _y;
+                _x = _x < 0 ? -_x : _x;
+                // Handle bottom/right border
+                _y = _y < Y ? _y : Y - (_y - Y) - 2;
+                _x = _x < X ? _x : X - (_x - X) - 2;
 
-            // Accumulate to form summed area table
-            if ( x == 0 && y == 0 )
-            {
-                S_d.row_ptr(y)[x] = d;
-            }
-            else if ( x == 0 )
-            {
-                S_d.row_ptr(y)[x] = d + S_d.row_ptr(y-1)[x];
-            }
-            else if ( y == 0 )
-            {
-                S_d.row_ptr(y)[x] = d + S_d.row_ptr(y)[x-1];
-            }
-            else
-            {
-                S_d.row_ptr(y)[x] = d + S_d.row_ptr(y-1)[x] -
-                    S_d.row_ptr(y-1)[x-1] + S_d.row_ptr(y)[x-1];
+                // Calculate distance value
+                Vec3b p  = p_src[x], _p = src.at<Vec3b>(_y, _x);
+                unsigned int d = std::abs(p[0] - _p[0]) +
+                                 std::abs(p[1] - _p[1]) +
+                                 std::abs(p[2] - _p[2]);
+
+                // Accumulate to form summed area table
+                unsigned int dd;
+                if ( x == 0 && y == 0 ) dd = 0;
+                else if ( x == 0 )      dd = p_Sd0[x];
+                else if ( y == 0 )      dd = p_Sd1[x-1];
+                else                    dd = p_Sd0[x] - p_Sd0[x-1] + p_Sd1[x-1];
+                p_Sd1[x] = d + dd;
             }
         }
 
         for ( int y = 0; y < Y; y++ )
-        for ( int x = 0; x < X; x++ )
         {
-            // Compute weights
-            int _y = y + sy,
-                _x = x + sx;
-            if ( _y < 0 || _x < 0 || _y >= Y || _x >= X ) continue;
+            p_O = O.ptr<Vec3f>(y);
+            p_Z = Z.ptr<float>(y);
 
-            int px0 = MAX(x-hT-2, 0), px1 = MIN(x+hT, X-1),
-                py0 = MAX(y-hT-2, 0), py1 = MIN(y+hT, Y-1);
-            unsigned int d = (S_d.row_ptr(py1)[px1] - S_d.row_ptr(py1)[px0]) +
-                             (S_d.row_ptr(py0)[px0] - S_d.row_ptr(py0)[px1]);
-            if ( d < max_d )
+            for ( int x = 0; x < X; x++ )
             {
-                float w = W[d];
-                Vec3b i = src.at<Vec3b>(_y, _x);
-                Vec3f o = O.at<Vec3f>(y, x);
-                o[0] += w*i[0];
-                o[1] += w*i[1];
-                o[2] += w*i[2];
-                O.at<Vec3f>(y, x) = o;
-                Z.at<float>(y, x) += w;
+                // Compute weights
+                int _y = y + sy,
+                    _x = x + sx;
+                if ( _y < 0 || _x < 0 || _y >= Y || _x >= X ) continue;
+
+                int px0 = MAX(x-hT-2, 0), px1 = MIN(x+hT, X-1),
+                    py0 = MAX(y-hT-2, 0), py1 = MIN(y+hT, Y-1);
+                p_Sd0 = S_d.row_ptr(py0);
+                p_Sd1 = S_d.row_ptr(py1);
+                unsigned int d = (p_Sd1[px1] - p_Sd1[px0]) - (p_Sd0[px1] - p_Sd0[px0]);
+                if ( d < max_d )
+                {
+                    float w = W[d];
+                    Vec3b i = src.at<Vec3b>(_y, _x);
+                    Vec3f o = p_O[x];
+                    o[0] += w*i[0];
+                    o[1] += w*i[1];
+                    o[2] += w*i[2];
+                    p_O[x] = o;
+                    p_Z[x] += w;
+                }
             }
         }
     }
 
     // Apply to destination image
     for ( int y = 0; y < Y; y++ )
-    for ( int x = 0; x < X; x++ )
     {
-        Vec3f o = O.at<Vec3f>(y, x);
-        float z = Z.at<float>(y, x);
-        dst.at<Vec3b>(y, x) = o / z;
+        p_dst = dst.ptr<Vec3b>(y);
+        for ( int x = 0; x < X; x++ )
+        {
+            Vec3f o = O.at<Vec3f>(y, x);
+            float z = Z.at<float>(y, x);
+            p_dst[x] = o / z;
+        }
     }
 }
