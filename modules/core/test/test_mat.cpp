@@ -1318,3 +1318,85 @@ TEST(Core_SparseMat, footprint)
     ASSERT_LE((int)m.hdr->nodeSize, 32);
     ASSERT_LE(dataSize1, threshold);
 }
+
+
+// Can't fix without duty hacks or broken user code (PR #4159)
+TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
+{
+    cv::Mat_<uchar> src_base(5, 1);
+    std::vector<uchar> dst8;
+
+    src_base << 1, 2, 3, 4, 5;
+
+    Mat src(src_base);
+    OutputArray _dst(dst8);
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+}
+
+TEST(Core_Mat_vector, copyTo_roi_column)
+{
+    cv::Mat_<uchar> src_base(5, 2);
+    std::vector<uchar> dst1;
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.col(0));
+#if 0 // Can't fix without duty hacks or broken user code (PR #4159)
+    OutputArray _dst(dst1);
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+#endif
+
+    std::vector<uchar> dst2;
+    src.copyTo(dst2);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst2) << std::endl;
+    EXPECT_EQ((size_t)5, dst2.size());
+    EXPECT_EQ(1, (int)dst2[0]);
+    EXPECT_EQ(3, (int)dst2[1]);
+    EXPECT_EQ(5, (int)dst2[2]);
+    EXPECT_EQ(7, (int)dst2[3]);
+    EXPECT_EQ(9, (int)dst2[4]);
+}
+
+TEST(Core_Mat_vector, copyTo_roi_row)
+{
+    cv::Mat_<uchar> src_base(2, 5);
+    std::vector<uchar> dst1;
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.row(0));
+    OutputArray _dst(dst1);
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+
+    std::vector<uchar> dst2;
+    src.copyTo(dst2);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst2) << std::endl;
+    EXPECT_EQ((size_t)5, dst2.size());
+    EXPECT_EQ(1, (int)dst2[0]);
+    EXPECT_EQ(2, (int)dst2[1]);
+    EXPECT_EQ(3, (int)dst2[2]);
+    EXPECT_EQ(4, (int)dst2[3]);
+    EXPECT_EQ(5, (int)dst2[4]);
+}
