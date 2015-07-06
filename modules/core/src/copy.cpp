@@ -285,6 +285,11 @@ void Mat::copyTo( OutputArray _dst ) const
 
         if( rows > 0 && cols > 0 )
         {
+            // For some cases (with vector) dst.size != src.size, so force to column-based form
+            // It prevents memory corruption in case of column-based src
+            if (_dst.isVector())
+                dst = dst.reshape(0, (int)dst.total());
+
             const uchar* sptr = data;
             uchar* dptr = dst.data;
 
