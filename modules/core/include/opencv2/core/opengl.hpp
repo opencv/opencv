@@ -537,6 +537,27 @@ CV_EXPORTS void convertToGLTexture2D(InputArray src, Texture2D& texture);
  */
 CV_EXPORTS void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst);
 
+/** @brief Maps Buffer object to process on CL side (convert to UMat).
+
+Function creates CL buffer from GL one, and then constructs UMat that can be used
+to process buffer data with OpenCV functions. Note that in current implementation
+UMat constructed this way doesn't own corresponding GL buffer object, so it is
+the user responsibility to close down CL/GL buffers relationships by explicitly
+calling unmapGLBuffer() function.
+@param buffer      - source Buffer object.
+@param accessFlags - data access flags (ACCESS_READ|ACCESS_WRITE).
+@return Returns UMat object
+ */
+CV_EXPORTS UMat mapGLBuffer(const Buffer& buffer, int accessFlags = ACCESS_READ|ACCESS_WRITE);
+
+/** @brief Unmaps Buffer object (releases UMat, previously mapped from Buffer).
+
+Function must be called explicitly by the user for each UMat previously constructed
+by the call to mapGLBuffer() function.
+@param u           - source UMat, created by mapGLBuffer().
+ */
+CV_EXPORTS void unmapGLBuffer(UMat& u);
+
 }} // namespace cv::ogl
 
 namespace cv { namespace cuda {
