@@ -1178,6 +1178,11 @@ TEST(Core_IOArray, submat_create)
     EXPECT_THROW( OutputArray_create2(A.row(0)), cv::Exception );
 }
 
+TEST(Core_Mat, issue4457_pass_null_ptr)
+{
+    ASSERT_ANY_THROW(cv::Mat mask(45, 45, CV_32F, 0));
+}
+
 TEST(Core_Mat, reshape_1942)
 {
     cv::Mat A = (cv::Mat_<float>(2,3) << 3.4884074, 1.4159607, 0.78737736,  2.3456569, -0.88010466, 0.3009364);
