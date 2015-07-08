@@ -272,7 +272,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     if ((flags & IMREAD_LOAD_SCALE_EIGHTH) == IMREAD_LOAD_SCALE_EIGHTH )
     scale_denom = 8;
 
-    scale_denom = cvSetJpegScale(scale_denom);
+    decoder->setScale(scale_denom);
 
     /// set the filename in the driver
     decoder->setSource(filename);
@@ -280,8 +280,6 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
    // read the header to make sure it succeeds
    if( !decoder->readHeader() )
         return 0;
-
-    cvSetJpegScale(scale_denom);
 
     // established the required input image size
     CvSize size;
