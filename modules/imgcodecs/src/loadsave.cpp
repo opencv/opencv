@@ -55,8 +55,6 @@
 namespace cv
 {
 
-volatile int JPEG_SCALE_DENOM = 1;
-
 /**
  * @struct ImageCodecInitializer
  *
@@ -364,25 +362,12 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         return 0;
     }
 
-    int scale_denom = 0;
-
-    if ((flags & IMREAD_LOAD_SCALE_HALF) == IMREAD_LOAD_SCALE_HALF )
-    scale_denom = 2;
-    if ((flags & IMREAD_LOAD_SCALE_QUARTER) == IMREAD_LOAD_SCALE_QUARTER )
-    scale_denom = 4;
-    if ((flags & IMREAD_LOAD_SCALE_EIGHTH) == IMREAD_LOAD_SCALE_EIGHTH )
-    scale_denom = 8;
-
-    scale_denom = cvSetJpegScale(scale_denom);
-
     /// set the filename in the driver
     decoder->setSource(filename);
 
     // read the header to make sure it succeeds
     if (!decoder->readHeader())
         return 0;
-
-    cvSetJpegScale(scale_denom);
 
     for (;;)
     {
@@ -729,16 +714,6 @@ cvEncodeImage( const char* ext, const CvArr* arr, const int* _params )
     memcpy( _buf->data.ptr, &buf[0], buf.size() );
 
     return _buf;
-}
-
-CV_IMPL int
-cvSetJpegScale( int Value )
-{
-    int prevValue = cv::JPEG_SCALE_DENOM;
-    if ( Value > 0 )
-         cv::JPEG_SCALE_DENOM=Value;
-    return prevValue;
-
 }
 
 
