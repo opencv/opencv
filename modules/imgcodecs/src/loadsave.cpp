@@ -716,5 +716,4 @@ cvEncodeImage( const char* ext, const CvArr* arr, const int* _params )
     return _buf;
 }
 
-
 /* End of file. */
