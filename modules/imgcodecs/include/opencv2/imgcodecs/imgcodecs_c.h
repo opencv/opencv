@@ -119,8 +119,6 @@ CVAPI(void) cvConvertImage( const CvArr* src, CvArr* dst, int flags CV_DEFAULT(0
 CVAPI(int) cvHaveImageReader(const char* filename);
 CVAPI(int) cvHaveImageWriter(const char* filename);
 
-/* utility function: set scale factor for loading jpeg image*/
-CVAPI(int) cvSetJpegScale(int Value);
 
 /****************************************************************************************\
 *                              Obsolete functions/synonyms                               *
