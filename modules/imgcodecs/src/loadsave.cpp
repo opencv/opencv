@@ -414,7 +414,7 @@ Mat imread( const String& filename, int flags )
     return img;
 }
 
-Mat imread_reduced( const String& filename, int flags, int scale_denom=1 )
+Mat imread_reduced( const String& filename, int flags, int scale_denom )
 {
     /// create the basic container
     Mat img;
