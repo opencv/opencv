@@ -261,16 +261,12 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         return 0;
     }
 
-    int scale_denom = 0;
-
     if ((flags & IMREAD_LOAD_SCALE_HALF) == IMREAD_LOAD_SCALE_HALF )
-    scale_denom = 2;
+    decoder->setScale( 2 );;
     if ((flags & IMREAD_LOAD_SCALE_QUARTER) == IMREAD_LOAD_SCALE_QUARTER )
-    scale_denom = 4;
+    decoder->setScale( 4 );
     if ((flags & IMREAD_LOAD_SCALE_EIGHTH) == IMREAD_LOAD_SCALE_EIGHTH )
-    scale_denom = 8;
-
-    decoder->setScale(scale_denom);
+    decoder->setScale( 8 );
 
     /// set the filename in the driver
     decoder->setSource(filename);
