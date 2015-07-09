@@ -177,10 +177,6 @@ public:
 
             switch (m_mode)
             {
-                case MODE_NOP:
-                    // no processing
-                    break;
-
                 case MODE_CPU:
                 {
                     // process video frame on CPU
@@ -195,7 +191,7 @@ public:
 
                     cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, (int)mappedTex.RowPitch);
 
-                    if (!m_disableProcessing)
+                    if (m_demo_processing)
                     {
                         // blur D3D10 surface with OpenCV on CPU
                         cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
@@ -213,9 +209,9 @@ public:
 
                     cv::directx::convertFromD3D10Texture2D(pSurface, u);
 
-                    if (!m_disableProcessing)
+                    if (m_demo_processing)
                     {
-                        // blur D3D9 surface with OpenCV on GPU with OpenCL
+                        // blur D3D10 surface with OpenCV on GPU with OpenCL
                         cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
                     }
 
@@ -266,13 +262,15 @@ public:
 
         cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, (int)mappedTex.RowPitch);
 
-        cv::String strMode    = cv::format("%s", m_modeStr[mode].c_str());
-        cv::String strFPS     = cv::format("%2.1f", fps);
-        cv::String strDevName = cv::format("%s", oclDevName.c_str());
+        cv::String strMode       = cv::format("%s", m_modeStr[mode].c_str());
+        cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
+        cv::String strFPS        = cv::format("%2.1f", fps);
+        cv::String strDevName    = cv::format("%s", oclDevName.c_str());
 
         cv::putText(m, strMode, cv::Point(0, 16), 1, 0.8, cv::Scalar(0, 0, 0));
-        cv::putText(m, strFPS, cv::Point(0, 32), 1, 0.8, cv::Scalar(0, 0, 0));
-        cv::putText(m, strDevName, cv::Point(0, 48), 1, 0.8, cv::Scalar(0, 0, 0));
+        cv::putText(m, strProcessing, cv::Point(0, 32), 1, 0.8, cv::Scalar(0, 0, 0));
+        cv::putText(m, strFPS, cv::Point(0, 48), 1, 0.8, cv::Scalar(0, 0, 0));
+        cv::putText(m, strDevName, cv::Point(0, 64), 1, 0.8, cv::Scalar(0, 0, 0));
 
         m_pSurface->Unmap(subResource);
 
