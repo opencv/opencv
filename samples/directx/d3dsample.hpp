@@ -22,7 +22,6 @@ class D3DSample : public WinApp
 public:
     enum MODE
     {
-        MODE_NOP,
         MODE_CPU,
         MODE_GPU
     };
@@ -31,11 +30,10 @@ public:
         WinApp(width, height, window_name)
     {
         m_shutdown          = false;
-        m_mode              = MODE_NOP;
-        m_modeStr[0]        = cv::String("No processing");
-        m_modeStr[1]        = cv::String("Processing on CPU");
-        m_modeStr[2]        = cv::String("Processing on GPU");
-        m_disableProcessing = false;
+        m_mode              = MODE_CPU;
+        m_modeStr[0]        = cv::String("Processing on CPU");
+        m_modeStr[1]        = cv::String("Processing on GPU");
+        m_demo_processing   = false;
         m_cap               = cap;
     }
 
@@ -76,14 +74,19 @@ protected:
         switch (message)
         {
         case WM_CHAR:
-            if (wParam >= '0' && wParam <= '2')
+            if (wParam == '1')
             {
-                m_mode = static_cast<MODE>((char)wParam - '0');
+                m_mode = MODE_CPU;
+                return 0;
+            }
+            if (wParam == '2')
+            {
+                m_mode = MODE_GPU;
                 return 0;
             }
             else if (wParam == VK_SPACE)
             {
-                m_disableProcessing = !m_disableProcessing;
+                m_demo_processing = !m_demo_processing;
                 return 0;
             }
             else if (wParam == VK_ESCAPE)
@@ -108,9 +111,9 @@ protected:
 
 protected:
     bool               m_shutdown;
-    bool               m_disableProcessing;
+    bool               m_demo_processing;
     MODE               m_mode;
-    cv::String         m_modeStr[3];
+    cv::String         m_modeStr[2];
     cv::VideoCapture   m_cap;
     cv::Mat            m_frame_bgr;
     cv::Mat            m_frame_rgba;
@@ -122,10 +125,10 @@ static void help()
     printf(
         "\nSample demonstrating interoperability of DirectX and OpenCL with OpenCV.\n"
         "Hot keys: \n"
-        "    0 - no processing\n"
-        "    1 - blur DX surface on CPU through OpenCV\n"
-        "    2 - blur DX surface on GPU through OpenCV using OpenCL\n"
-        "  ESC - exit\n\n");
+        "  SPACE - turn processing on/off\n"
+        "    1   - process DX surface through OpenCV on CPU\n"
+        "    2   - process DX surface through OpenCV on GPU (via OpenCL)\n"
+        "  ESC   - exit\n\n");
 }
 
 
