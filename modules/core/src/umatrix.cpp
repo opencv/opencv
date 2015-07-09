@@ -230,7 +230,20 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
         temp_u->refcount = 1;
     }
-    UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags); // TODO result is not checked
+    bool allocated = false;
+    try
+    {
+        allocated = UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags);
+    }
+    catch (const cv::Exception& e)
+    {
+        fprintf(stderr, "Exception: %s\n", e.what());
+    }
+    if (!allocated)
+    {
+        allocated = getStdAllocator()->allocate(temp_u, accessFlags, usageFlags);
+        CV_Assert(allocated);
+    }
     hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);
     finalizeHdr(hdr);
@@ -269,8 +282,11 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
     if( total() > 0 )
     {
         MatAllocator *a = allocator, *a0 = getStdAllocator();
-        if(!a)
+        if (!a)
+        {
             a = a0;
+            a0 = Mat::getStdAllocator();
+        }
         try
         {
             u = a->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
