@@ -154,10 +154,6 @@ public:
 
             switch (m_mode)
             {
-                case MODE_NOP:
-                    // no processing
-                    break;
-
                 case MODE_CPU:
                 {
                     // process video frame on CPU
@@ -172,7 +168,7 @@ public:
 
                     cv::Mat m(m_height, m_width, CV_8UC4, memDesc.pBits, memDesc.Pitch);
 
-                    if (!m_disableProcessing)
+                    if (m_demo_processing)
                     {
                         // blur D3D9 surface with OpenCV on CPU
                         cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
@@ -194,7 +190,7 @@ public:
 
                     cv::directx::convertFromDirect3DSurface9(pSurface, u);
 
-                    if (!m_disableProcessing)
+                    if (m_demo_processing)
                     {
                         // blur D3D9 surface with OpenCV on GPU with OpenCL
                         cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
@@ -259,6 +255,11 @@ public:
 
             buf[0] = 0;
             sprintf(buf, "Mode: %s", m_modeStr[mode].c_str());
+            ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
+
+            y += tm.tmHeight;
+            buf[0] = 0;
+            sprintf(buf, m_demo_processing ? "blur frame" : "copy frame");
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
