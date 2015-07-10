@@ -1106,7 +1106,7 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
     float di = 0.0, dx = 0.0, dy = 0.0;
     float ri = 0.0, rx = 0.0, ry = 0.0, xf = 0.0, yf = 0.0;
     float sample_x = 0.0, sample_y = 0.0, ratio = 0.0;
-    int x1 = 0, y1 = 0, sample_step = 0, pattern_size = 0;
+    int x1 = 0, y1 = 0, pattern_size = 0;
     int level = 0, nsamples = 0, scale = 0;
     int dcount1 = 0, dcount2 = 0;
 
