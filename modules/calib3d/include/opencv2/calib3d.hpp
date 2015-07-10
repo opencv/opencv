@@ -1187,7 +1187,7 @@ are feature points from cameras with same focal length and principle point.
 @param pp principle point of the camera.
 @param method Method for computing a fundamental matrix.
 -   **RANSAC** for the RANSAC algorithm.
--   **MEDS** for the LMedS algorithm.
+-   **LMEDS** for the LMedS algorithm.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
