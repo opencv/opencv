@@ -67,7 +67,7 @@ public:
 
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
-    virtual bool setScale( const int& scale_denom );
+    virtual int setScale( const int& scale_denom );
     virtual bool readHeader() = 0;
     virtual bool readData( Mat& img ) = 0;
 
