@@ -533,6 +533,10 @@ ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 #  Path for additional modules
 # ----------------------------------------------------------------------------
 set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV modules (can be ;-separated list of paths)")
+if(OPENCV_WITH_EXTRA_MODULES)
+  hunter_add_package(OpenCV-Extra)
+  set(OPENCV_EXTRA_MODULES_PATH "${OPENCV-EXTRA_ROOT}/modules")
+endif()
 
 # ----------------------------------------------------------------------------
 #  Autodetect if we are in a GIT repository
