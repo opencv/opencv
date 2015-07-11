@@ -82,10 +82,11 @@ bool BaseImageDecoder::checkSignature( const String& signature ) const
     return signature.size() >= len && memcmp( signature.c_str(), m_signature.c_str(), len ) == 0;
 }
 
-bool BaseImageDecoder::setScale( const int& scale_denom )
+int BaseImageDecoder::setScale( const int& scale_denom )
 {
+    int temp = m_scale_denom;
     m_scale_denom = scale_denom;
-    return true;
+    return temp;
 }
 
 ImageDecoder BaseImageDecoder::newDecoder() const
