@@ -319,6 +319,11 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
         return 0;
     }
 
+    if( (scale_denom > 1 ) & ( decoder->setScale( scale_denom ) > 1 ) )
+    {
+        resize(*mat,*mat,Size(size.width/scale_denom,size.height/scale_denom));
+    }
+
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
         hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
