@@ -17,6 +17,46 @@
 #define SAFE_RELEASE(p) if (p) { p->Release(); p = NULL; }
 
 
+class Timer
+{
+public:
+    Timer() : m_t0(0), m_t1(0)
+    {
+        m_tick_frequency = (float)cv::getTickFrequency();
+    }
+
+    void start()
+    {
+        m_t0 = cv::getTickCount();
+        time_queue.push(m_t0);
+    }
+
+    void stop()
+    {
+        if (time_queue.size() > 1)
+            m_t1 = time_queue.front();
+
+        if (time_queue.size() >= 25)
+            time_queue.pop();
+    }
+
+    float fps()
+    {
+        size_t sz = time_queue.size();
+
+        float fps = sz * m_tick_frequency / (m_t0 - m_t1);
+
+        return fps;
+    }
+
+public:
+    float m_tick_frequency;
+    int64 m_t0;
+    int64 m_t1;
+    std::queue<int64> time_queue;
+};
+
+
 class D3DSample : public WinApp
 {
 public:
@@ -45,27 +85,6 @@ public:
     {
         m_shutdown = true;
         return WinApp::cleanup();
-    }
-
-    static float getFps()
-    {
-        static std::queue<int64> time_queue;
-
-        int64 now = cv::getTickCount();
-        int64 then = 0;
-        time_queue.push(now);
-
-        if (time_queue.size() >= 2)
-            then = time_queue.front();
-
-        if (time_queue.size() >= 25)
-            time_queue.pop();
-
-        size_t sz = time_queue.size();
-
-        float fps = sz * (float)cv::getTickFrequency() / (now - then);
-
-        return fps;
     }
 
 protected:
@@ -117,6 +136,7 @@ protected:
     cv::VideoCapture   m_cap;
     cv::Mat            m_frame_bgr;
     cv::Mat            m_frame_rgba;
+    Timer              m_timer;
 };
 
 
