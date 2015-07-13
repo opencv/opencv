@@ -152,6 +152,8 @@ public:
                 return -1;
             }
 
+            m_timer.start();
+
             switch (m_mode)
             {
                 case MODE_CPU:
@@ -203,7 +205,9 @@ public:
 
             } // switch
 
-            print_info(pSurface, m_mode, getFps(), m_oclDevName);
+            m_timer.stop();
+
+            print_info(pSurface, m_mode, m_timer.fps(), m_oclDevName);
 
             // traditional DX render pipeline:
             //   BitBlt surface to backBuffer and flip backBuffer to frontBuffer

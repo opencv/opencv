@@ -68,6 +68,13 @@ namespace ocl {
 using namespace cv::ocl;
 
 //! @addtogroup core_directx
+// This section describes OpenCL and DirectX interoperability.
+//
+// To enable DirectX support, configure OpenCV using CMake with WITH_DIRECTX=ON . Note, DirectX is
+// supported only on Windows.
+//
+// To use OpenCL functionality you should first initialize OpenCL context from DirectX resource.
+//
 //! @{
 
 // TODO static functions in the Context class
