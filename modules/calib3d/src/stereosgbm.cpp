@@ -1157,6 +1157,10 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
             for( x = minX1; x < maxX1; x++ )
             {
                 int d = dptr[x], c = cptr[x];
+
+                if( d == INVALID_DISP_SCALED )
+                    continue;
+
                 int x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT);
 
                 if( disp2cost[x2] > c )
@@ -1173,9 +1177,13 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
             for( x = minX1; x < maxX1; x++ )
             {
                 int d = dptr[x], c = cptr[x];
+
+                if( d == INVALID_DISP_SCALED )
+                    continue;
+
                 int x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT);
 
-                if( disp2cost[x2] < c )
+                if( disp2cost[x2] > c )
                 {
                     disp2cost[x2] = c;
                     disp2buf[x2] = d;
