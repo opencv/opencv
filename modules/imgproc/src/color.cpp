@@ -1463,6 +1463,102 @@ struct RGB2Gray<float>
 
 #elif CV_SSE2
 
+template <>
+struct RGB2Gray<float>
+{
+    typedef float channel_type;
+
+    RGB2Gray(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
+    {
+        static const float coeffs0[] = { 0.299f, 0.587f, 0.114f };
+        memcpy( coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]) );
+        if(blueIdx == 0)
+            std::swap(coeffs[0], coeffs[2]);
+
+        v_cb = _mm_set1_ps(coeffs[0]);
+        v_cg = _mm_set1_ps(coeffs[1]);
+        v_cr = _mm_set1_ps(coeffs[2]);
+
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+    }
+
+    void process(__m128 v_b, __m128 v_g, __m128 v_r,
+                 __m128 & v_gray) const
+    {
+        v_gray = _mm_mul_ps(v_r, v_cr);
+        v_gray = _mm_add_ps(v_gray, _mm_mul_ps(v_g, v_cg));
+        v_gray = _mm_add_ps(v_gray, _mm_mul_ps(v_b, v_cb));
+    }
+
+    void operator()(const float * src, float * dst, int n) const
+    {
+        int scn = srccn, i = 0;
+        float cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
+
+        if (scn == 3 && haveSIMD)
+        {
+            for ( ; i <= n - 8; i += 8, src += scn * 8)
+            {
+                __m128 v_r0 = _mm_loadu_ps(src);
+                __m128 v_r1 = _mm_loadu_ps(src + 4);
+                __m128 v_g0 = _mm_loadu_ps(src + 8);
+                __m128 v_g1 = _mm_loadu_ps(src + 12);
+                __m128 v_b0 = _mm_loadu_ps(src + 16);
+                __m128 v_b1 = _mm_loadu_ps(src + 20);
+
+                _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+
+                __m128 v_gray0;
+                process(v_r0, v_g0, v_b0,
+                        v_gray0);
+
+                __m128 v_gray1;
+                process(v_r1, v_g1, v_b1,
+                        v_gray1);
+
+                _mm_storeu_ps(dst + i, v_gray0);
+                _mm_storeu_ps(dst + i + 4, v_gray1);
+            }
+        }
+        else if (scn == 4 && haveSIMD)
+        {
+            for ( ; i <= n - 8; i += 8, src += scn * 8)
+            {
+                __m128 v_r0 = _mm_loadu_ps(src);
+                __m128 v_r1 = _mm_loadu_ps(src + 4);
+                __m128 v_g0 = _mm_loadu_ps(src + 8);
+                __m128 v_g1 = _mm_loadu_ps(src + 12);
+                __m128 v_b0 = _mm_loadu_ps(src + 16);
+                __m128 v_b1 = _mm_loadu_ps(src + 20);
+                __m128 v_a0 = _mm_loadu_ps(src + 24);
+                __m128 v_a1 = _mm_loadu_ps(src + 28);
+
+                _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
+
+                __m128 v_gray0;
+                process(v_r0, v_g0, v_b0,
+                        v_gray0);
+
+                __m128 v_gray1;
+                process(v_r1, v_g1, v_b1,
+                        v_gray1);
+
+                _mm_storeu_ps(dst + i, v_gray0);
+                _mm_storeu_ps(dst + i + 4, v_gray1);
+            }
+        }
+
+        for ( ; i < n; i++, src += scn)
+            dst[i] = src[0]*cb + src[1]*cg + src[2]*cr;
+    }
+
+    int srccn;
+    float coeffs[3];
+    __m128 v_cb, v_cg, v_cr;
+    bool haveSIMD;
+};
+#endif // CV_SSE2
+
 #if CV_SSE4_1
 
 template <>
@@ -1577,104 +1673,7 @@ struct RGB2Gray<ushort>
     bool haveSIMD;
 };
 
-#endif // CV_SSE4_1
-
-template <>
-struct RGB2Gray<float>
-{
-    typedef float channel_type;
-
-    RGB2Gray(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
-    {
-        static const float coeffs0[] = { 0.299f, 0.587f, 0.114f };
-        memcpy( coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]) );
-        if(blueIdx == 0)
-            std::swap(coeffs[0], coeffs[2]);
-
-        v_cb = _mm_set1_ps(coeffs[0]);
-        v_cg = _mm_set1_ps(coeffs[1]);
-        v_cr = _mm_set1_ps(coeffs[2]);
-
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
-    }
-
-    void process(__m128 v_b, __m128 v_g, __m128 v_r,
-                 __m128 & v_gray) const
-    {
-        v_gray = _mm_mul_ps(v_r, v_cr);
-        v_gray = _mm_add_ps(v_gray, _mm_mul_ps(v_g, v_cg));
-        v_gray = _mm_add_ps(v_gray, _mm_mul_ps(v_b, v_cb));
-    }
-
-    void operator()(const float * src, float * dst, int n) const
-    {
-        int scn = srccn, i = 0;
-        float cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
-
-        if (scn == 3 && haveSIMD)
-        {
-            for ( ; i <= n - 8; i += 8, src += scn * 8)
-            {
-                __m128 v_r0 = _mm_loadu_ps(src);
-                __m128 v_r1 = _mm_loadu_ps(src + 4);
-                __m128 v_g0 = _mm_loadu_ps(src + 8);
-                __m128 v_g1 = _mm_loadu_ps(src + 12);
-                __m128 v_b0 = _mm_loadu_ps(src + 16);
-                __m128 v_b1 = _mm_loadu_ps(src + 20);
-
-                _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
-
-                __m128 v_gray0;
-                process(v_r0, v_g0, v_b0,
-                        v_gray0);
-
-                __m128 v_gray1;
-                process(v_r1, v_g1, v_b1,
-                        v_gray1);
-
-                _mm_storeu_ps(dst + i, v_gray0);
-                _mm_storeu_ps(dst + i + 4, v_gray1);
-            }
-        }
-        else if (scn == 4 && haveSIMD)
-        {
-            for ( ; i <= n - 8; i += 8, src += scn * 8)
-            {
-                __m128 v_r0 = _mm_loadu_ps(src);
-                __m128 v_r1 = _mm_loadu_ps(src + 4);
-                __m128 v_g0 = _mm_loadu_ps(src + 8);
-                __m128 v_g1 = _mm_loadu_ps(src + 12);
-                __m128 v_b0 = _mm_loadu_ps(src + 16);
-                __m128 v_b1 = _mm_loadu_ps(src + 20);
-                __m128 v_a0 = _mm_loadu_ps(src + 24);
-                __m128 v_a1 = _mm_loadu_ps(src + 28);
-
-                _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
-
-                __m128 v_gray0;
-                process(v_r0, v_g0, v_b0,
-                        v_gray0);
-
-                __m128 v_gray1;
-                process(v_r1, v_g1, v_b1,
-                        v_gray1);
-
-                _mm_storeu_ps(dst + i, v_gray0);
-                _mm_storeu_ps(dst + i + 4, v_gray1);
-            }
-        }
-
-        for ( ; i < n; i++, src += scn)
-            dst[i] = src[0]*cb + src[1]*cg + src[2]*cr;
-    }
-
-    int srccn;
-    float coeffs[3];
-    __m128 v_cb, v_cg, v_cr;
-    bool haveSIMD;
-};
-
-#else
+#else // CV_SSE4_1
 
 template<> struct RGB2Gray<ushort>
 {
