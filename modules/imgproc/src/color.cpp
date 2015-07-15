@@ -1674,7 +1674,9 @@ struct RGB2Gray<float>
     bool haveSIMD;
 };
 
-#else
+#endif // CV_SSE2
+
+#if !CV_NEON && !CV_SSE4_1
 
 template<> struct RGB2Gray<ushort>
 {
@@ -1698,7 +1700,7 @@ template<> struct RGB2Gray<ushort>
     int coeffs[3];
 };
 
-#endif
+#endif // !CV_NEON && !CV_SSE4_1
 
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
