@@ -2591,6 +2591,7 @@ void DefaultViewPort::resizeEvent(QResizeEvent* evnt)
         if (fabs(ratioX - ratioY) * 100 > ratioX) //avoid infinity loop / epsilon = 1% of ratioX
         {
             resize(newSize);
+            viewport()->resize(newSize);
 
             //move to the middle
             //newSize get the delta offset to place the picture in the middle of its parent
