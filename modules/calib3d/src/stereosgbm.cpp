@@ -111,7 +111,7 @@ struct StereoSGBMParams
 };
 
 /*
- For each pixel row1[x], max(-maxD, 0) <= minX <= x < maxX <= width - max(0, -minD),
+ For each pixel row1[x], max(maxD, 0) <= minX <= x < maxX <= width - max(0, -minD),
  and for each disparity minD<=d<maxD the function
  computes the cost (cost[(x-minX)*(maxD - minD) + (d - minD)]), depending on the difference between
  row1[x] and row2[x-d]. The subpixel algorithm from
@@ -126,7 +126,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
                             int tabOfs, int )
 {
     int x, c, width = img1.cols, cn = img1.channels();
-    int minX1 = std::max(-maxD, 0), maxX1 = width + std::min(minD, 0);
+    int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
     int minX2 = std::max(minX1 - maxD, 0), maxX2 = std::min(maxX1 - minD, width);
     int D = maxD - minD, width1 = maxX1 - minX1, width2 = maxX2 - minX2;
     const PixType *row1 = img1.ptr<PixType>(y), *row2 = img2.ptr<PixType>(y);
@@ -333,7 +333,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     int disp12MaxDiff = params.disp12MaxDiff > 0 ? params.disp12MaxDiff : 1;
     int P1 = params.P1 > 0 ? params.P1 : 2, P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);
     int k, width = disp1.cols, height = disp1.rows;
-    int minX1 = std::max(-maxD, 0), maxX1 = width + std::min(minD, 0);
+    int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
     int D = maxD - minD, width1 = maxX1 - minX1;
     int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
     int SW2 = SADWindowSize.width/2, SH2 = SADWindowSize.height/2;
@@ -866,7 +866,7 @@ buffers(_buffers), img1(&_img1), img2(&_img2), dst_disp(_dst_disp), clipTab(_cli
 
     width = img1->cols; height = img1->rows;
     minD = params.minDisparity; maxD = minD + params.numDisparities; D = maxD - minD;
-    minX1 = std::max(-maxD, 0); maxX1 = width + std::min(minD, 0); width1 = maxX1 - minX1;
+    minX1 = std::max(maxD, 0); maxX1 = width + std::min(minD, 0); width1 = maxX1 - minX1;
     CV_Assert( D % 16 == 0 );
 
     SW2 = SH2 = params.SADWindowSize > 0 ? params.SADWindowSize/2 : 1;
