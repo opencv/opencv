@@ -131,6 +131,9 @@ returns an empty matrix ( Mat::data==NULL ). Currently, the following file forma
  */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
+
+CV_EXPORTS_W Mat imread_reduced( const String& filename, int flags = IMREAD_COLOR, int scale_denom=1 );
+
 /** @brief Loads a multi-page image from a file. (see imread for details.)
 
 @param filename Name of file to be loaded.
