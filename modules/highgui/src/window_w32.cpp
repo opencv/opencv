@@ -1882,9 +1882,6 @@ static void showSaveDialog(CvWindow* window)
 #ifdef HAVE_JPEG
                       "JPEG files (*.jpeg;*.jpg;*.jpe)\0*.jpeg;*.jpg;*.jpe\0"
 #endif
-#ifdef HAVE_PNG
-                      "Windows bitmap (*.bmp;*.dib)\0*.bmp;*.dib\0"
-#endif
 #ifdef HAVE_TIFF
                       "TIFF Files (*.tiff;*.tif)\0*.tiff;*.tif\0"
 #endif
