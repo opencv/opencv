@@ -199,14 +199,14 @@ public:
                         cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
                     }
 
-                    cv::String strMode = cv::format("%s", m_modeStr[MODE_CPU].c_str());
+                    cv::String strMode = cv::format("mode: %s", m_modeStr[MODE_CPU].c_str());
                     cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
-                    cv::String strFPS = cv::format("%2.1f", m_timer.fps());
-                    cv::String strDevName = cv::format("%s", m_oclDevName.c_str());
+                    cv::String strTime = cv::format("time: %4.1f msec", m_timer.time(Timer::UNITS::MSEC));
+                    cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
 
                     cv::putText(m, strMode, cv::Point(0, 16), 1, 0.8, cv::Scalar(0, 0, 0));
                     cv::putText(m, strProcessing, cv::Point(0, 32), 1, 0.8, cv::Scalar(0, 0, 0));
-                    cv::putText(m, strFPS, cv::Point(0, 48), 1, 0.8, cv::Scalar(0, 0, 0));
+                    cv::putText(m, strTime, cv::Point(0, 48), 1, 0.8, cv::Scalar(0, 0, 0));
                     cv::putText(m, strDevName, cv::Point(0, 64), 1, 0.8, cv::Scalar(0, 0, 0));
 
                     pSurface->Unmap(subResource);
@@ -227,14 +227,14 @@ public:
                         cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
                     }
 
-                    cv::String strMode = cv::format("%s", m_modeStr[MODE_GPU].c_str());
+                    cv::String strMode = cv::format("mode: %s", m_modeStr[MODE_GPU].c_str());
                     cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
-                    cv::String strFPS = cv::format("%2.1f", m_timer.fps());
-                    cv::String strDevName = cv::format("%s", m_oclDevName.c_str());
+                    cv::String strTime = cv::format("time: %4.1f msec", m_timer.time(Timer::UNITS::MSEC));
+                    cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
 
                     cv::putText(u, strMode, cv::Point(0, 16), 1, 0.8, cv::Scalar(0, 0, 0));
                     cv::putText(u, strProcessing, cv::Point(0, 32), 1, 0.8, cv::Scalar(0, 0, 0));
-                    cv::putText(u, strFPS, cv::Point(0, 48), 1, 0.8, cv::Scalar(0, 0, 0));
+                    cv::putText(u, strTime, cv::Point(0, 48), 1, 0.8, cv::Scalar(0, 0, 0));
                     cv::putText(u, strDevName, cv::Point(0, 64), 1, 0.8, cv::Scalar(0, 0, 0));
 
                     cv::directx::convertToD3D10Texture2D(u, pSurface);
