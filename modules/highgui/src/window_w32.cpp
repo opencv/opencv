@@ -1874,7 +1874,7 @@ static void showSaveDialog(CvWindow* window)
     ofn.lStructSize = sizeof(ofn);
 #endif
     ofn.hwndOwner = window->hwnd;
-#ifdef HAVE_PNG   
+#ifdef HAVE_PNG
     ofn.lpstrFilter = "Portable Network Graphics files (*.png)\0*.png\0"
 #else
     ofn.lpstrFilter = "Windows bitmap (*.bmp;*.dib)\0*.bmp;*.dib\0"
@@ -1882,7 +1882,7 @@ static void showSaveDialog(CvWindow* window)
 #ifdef HAVE_JPEG
                       "JPEG files (*.jpeg;*.jpg;*.jpe)\0*.jpeg;*.jpg;*.jpe\0"
 #endif
-#ifdef HAVE_PNG 
+#ifdef HAVE_PNG
                       "Windows bitmap (*.bmp;*.dib)\0*.bmp;*.dib\0"
 #endif
 #ifdef HAVE_TIFF
