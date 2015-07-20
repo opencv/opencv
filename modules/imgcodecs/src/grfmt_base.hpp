@@ -67,6 +67,7 @@ public:
 
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
+    virtual int setScale( const int& scale_denom );
     virtual bool readHeader() = 0;
     virtual bool readData( Mat& img ) = 0;
 
@@ -81,6 +82,7 @@ protected:
     int  m_width;  // width  of the image ( filled by readHeader )
     int  m_height; // height of the image ( filled by readHeader )
     int  m_type;
+    int  m_scale_denom;
     String m_filename;
     String m_signature;
     Mat m_buf;
