@@ -522,6 +522,86 @@ TEST_P(UMatTestUMatOperations, diag)
 
 INSTANTIATE_TEST_CASE_P(UMat, UMatTestUMatOperations, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, UMAT_TEST_SIZES, Bool()));
 
+//////////////////////////////////////////////////////////////////////////////
+// UMat created from user allocated host memory (USE_HOST_PTR)
+PARAM_TEST_CASE(UseHostPtr, int, int, Size, bool)
+{
+    void* pData;
+    int total;
+//    Mat m;
+//    Mat d;
+//    UMat u;
+    int type;
+    int depth;
+    int cn;
+    int step;
+    Size size;
+    Size roi_size;
+    bool opencl_on;
+    bool old_val;
+
+    virtual void SetUp()
+    {
+        depth     = GET_PARAM(0);
+        cn        = GET_PARAM(1);
+        size      = GET_PARAM(2);
+        opencl_on = GET_PARAM(3);
+
+        type = CV_MAKE_TYPE(depth, cn);
+        step = size.width * cn * CV_ELEM_SIZE1(type);
+        total = step * size.height;
+        pData = new unsigned char[total];
+
+        old_val = cv::ocl::useOpenCL();
+    }
+
+    virtual void TearDown()
+    {
+        if (pData != NULL)
+            delete[] pData;
+
+        cv::ocl::setUseOpenCL(old_val);
+    }
+};
+
+TEST_P(UseHostPtr, ext_mem)
+{
+    cv::ocl::setUseOpenCL(opencl_on);
+
+    Mat m = Mat(size, type, pData, step);
+    m.setTo(cv::Scalar::all(2));
+
+    UMat u = m.getUMat(ACCESS_WRITE);
+    cv::add(u, cv::Scalar::all(2), u);
+
+    Mat d = u.getMat(ACCESS_READ);
+
+    Mat expected(m.size(), m.type(), cv::Scalar::all(4));
+    double norm = cvtest::norm(d, expected, NORM_INF);
+
+    EXPECT_EQ(0, norm);
+}
+
+TEST_P(UseHostPtr, int_mem)
+{
+    cv::ocl::setUseOpenCL(opencl_on);
+
+    Mat m = Mat(size, type);
+    m.setTo(cv::Scalar::all(2));
+
+    UMat u = m.getUMat(ACCESS_WRITE);
+    cv::add(u, cv::Scalar::all(2), u);
+
+    Mat d = u.getMat(ACCESS_READ);
+
+    Mat expected(m.size(), m.type(), cv::Scalar::all(4));
+    double norm = cvtest::norm(d, expected, NORM_INF);
+
+    EXPECT_EQ(0, norm);
+}
+
+INSTANTIATE_TEST_CASE_P(UMat, UseHostPtr, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, UMAT_TEST_SIZES, Bool()));
+
 ///////////////////////////////////////////////////////////////// OpenCL ////////////////////////////////////////////////////////////////////////////
 
 TEST(UMat, BufferPoolGrowing)

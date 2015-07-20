@@ -228,7 +228,10 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         if(!a)
             a = a0;
         temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
-        temp_u->refcount = 1;
+        // VD-FIX memory leak aspect of bug 4006
+        // when Mat created from external memory, there is no UMatData and so, do not need
+        // increase refcount
+//        temp_u->refcount = 1;
     }
     UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags); // TODO result is not checked
     hdr.flags = flags;
@@ -588,11 +591,14 @@ Mat UMat::getMat(int accessFlags) const
     CV_Assert(u->data != 0);
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
     hdr.flags = flags;
-    hdr.u = u;
-    hdr.datastart = u->data;
-    hdr.data = u->data + offset;
-    hdr.datalimit = hdr.dataend = u->data + u->size;
-    CV_XADD(&hdr.u->refcount, 1);
+    if (u->refcount) // VD_FIX bug4006
+    {
+        hdr.u = u;
+        hdr.datastart = u->data;
+        hdr.data = u->data + offset;
+        hdr.datalimit = hdr.dataend = u->data + u->size;
+        CV_XADD(&hdr.u->refcount, 1);
+    }
     return hdr;
 }
 

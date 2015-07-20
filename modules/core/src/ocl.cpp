@@ -4397,7 +4397,7 @@ public:
 #endif
             {
                 tempUMatFlags = UMatData::TEMP_UMAT;
-                handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
+                handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR | createFlags,
                                            u->size, u->origdata, &retval);
                 if((!handle || retval < 0) && !(accessFlags & ACCESS_FAST))
                 {
@@ -4510,7 +4510,7 @@ public:
                     {
                         AlignedDataPtr<false, true> alignedPtr(u->origdata, u->size, CV_OPENCL_DATA_PTR_ALIGNMENT);
                         CV_OclDbgAssert(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                            u->size, alignedPtr.getAlignedPtr(), 0, 0, 0) == CL_SUCCESS);
+                            u->size, alignedPtr.getAlignedPtr(), 0, 0, 0) == CL_SUCCESS);
                     }
                     else
                     {
@@ -4653,7 +4653,8 @@ public:
                 if (u->data) // FIXIT Workaround for UMat synchronization issue
                 {
                     //CV_Assert(u->hostCopyObsolete() == false);
-                    return;
+// VD_FIX: bug 4006
+//                    return;
                 }
 
                 cl_int retval = 0;
