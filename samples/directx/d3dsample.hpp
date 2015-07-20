@@ -20,40 +20,44 @@
 class Timer
 {
 public:
-    Timer() : m_t0(0), m_t1(0)
+    enum UNITS
+    {
+        USEC = 0,
+        MSEC,
+        SEC
+    };
+
+    Timer() : m_t0(0), m_diff(0)
     {
         m_tick_frequency = (float)cv::getTickFrequency();
+
+        m_unit_mul[USEC] = 1000000;
+        m_unit_mul[MSEC] = 1000;
+        m_unit_mul[SEC]  = 1;
     }
 
     void start()
     {
         m_t0 = cv::getTickCount();
-        time_queue.push(m_t0);
     }
 
     void stop()
     {
-        if (time_queue.size() > 1)
-            m_t1 = time_queue.front();
-
-        if (time_queue.size() >= 25)
-            time_queue.pop();
+        m_diff = cv::getTickCount() - m_t0;
     }
 
-    float fps()
+    float time(UNITS u = UNITS::MSEC)
     {
-        size_t sz = time_queue.size();
+        float sec = m_diff / m_tick_frequency;
 
-        float fps = sz * m_tick_frequency / (m_t0 - m_t1);
-
-        return fps;
+        return sec * m_unit_mul[u];
     }
 
 public:
     float m_tick_frequency;
     int64 m_t0;
-    int64 m_t1;
-    std::queue<int64> time_queue;
+    int64 m_diff;
+    int   m_unit_mul[3];
 };
 
 
