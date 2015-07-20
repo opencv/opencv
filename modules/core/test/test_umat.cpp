@@ -526,7 +526,7 @@ INSTANTIATE_TEST_CASE_P(UMat, UMatTestUMatOperations, Combine(OCL_ALL_DEPTHS, OC
 // UMat created from user allocated host memory (USE_HOST_PTR)
 PARAM_TEST_CASE(UseHostPtr, int, int, Size, bool)
 {
-    void* pData;
+    unsigned char* pData;
     int total;
 //    Mat m;
 //    Mat d;
