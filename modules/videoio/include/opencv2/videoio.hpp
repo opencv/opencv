@@ -90,7 +90,10 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_INTELPERC    = 1500,  // Intel Perceptual Computing SDK
        CAP_OPENNI2      = 1600,  // OpenNI2 (for Kinect)
        CAP_OPENNI2_ASUS = 1610,  // OpenNI2 (for Asus Xtion and Occipital Structure sensors)
-       CAP_GPHOTO2      = 1700   // gPhoto2 connection
+       CAP_GPHOTO2      = 1700,  // gPhoto2 connection
+       CAP_GSTREAMER    = 1800,  // GStreamer
+       CAP_FFMPEG       = 1900,  // FFMPEG
+       CAP_IMAGES       = 2000   // OpenCV Image Sequence (e.g. img_%02d.jpg)
      };
 
 // generic properties (based on DC1394 properties)
@@ -398,10 +401,19 @@ public:
     CV_WRAP VideoCapture(const String& filename);
 
     /** @overload
-    @param device id of the opened video capturing device (i.e. a camera index). If there is a single
-    camera connected, just pass 0.
+    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
+    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+
+    @param apiPreference preferred Capture API to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. CAP_FFMPEG or CAP_IMAGES
     */
-    CV_WRAP VideoCapture(int device);
+    CV_WRAP VideoCapture(const String& filename, int apiPreference);
+
+    /** @overload
+    @param index = camera_id + domain_offset (CAP_*). id of the video capturing device to open. If there is a single
+    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + CAP_MSMF
+    */
+    CV_WRAP VideoCapture(int index);
 
     virtual ~VideoCapture();
 
@@ -415,9 +427,10 @@ public:
     CV_WRAP virtual bool open(const String& filename);
 
     /** @overload
-    @param device id of the opened video capturing device (i.e. a camera index).
+    @param index = camera_id + domain_offset (CAP_*). id of the video capturing device to open. If there is a single
+    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + CAP_MSMF
     */
-    CV_WRAP virtual bool open(int device);
+    CV_WRAP virtual bool open(int index);
 
     /** @brief Returns true if video capturing has been initialized already.
 
@@ -540,6 +553,18 @@ public:
     class, value 0 is returned.
      */
     CV_WRAP virtual double get(int propId) const;
+
+    /** @overload
+
+    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
+    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+
+    @param apiPreference preferred Capture API to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. CAP_FFMPEG or CAP_IMAGES
+
+    The methods first call VideoCapture::release to close the already opened file or camera.
+     */
+    CV_WRAP virtual bool open(const String& filename, int apiPreference);
 
 protected:
     Ptr<CvCapture> cap;
