@@ -152,6 +152,8 @@ public:
                 return -1;
             }
 
+            m_timer.start();
+
             switch (m_mode)
             {
                 case MODE_CPU:
@@ -203,7 +205,9 @@ public:
 
             } // switch
 
-            print_info(pSurface, m_mode, getFps(), m_oclDevName);
+            m_timer.stop();
+
+            print_info(pSurface, m_mode, m_timer.time(Timer::UNITS::MSEC), m_oclDevName);
 
             // traditional DX render pipeline:
             //   BitBlt surface to backBuffer and flip backBuffer to frontBuffer
@@ -231,7 +235,7 @@ public:
     } // render()
 
 
-    void print_info(LPDIRECT3DSURFACE9 pSurface, int mode, float fps, cv::String oclDevName)
+    void print_info(LPDIRECT3DSURFACE9 pSurface, int mode, float time, cv::String oclDevName)
     {
         HDC hDC;
 
@@ -254,7 +258,7 @@ public:
             int  y = 0;
 
             buf[0] = 0;
-            sprintf(buf, "Mode: %s", m_modeStr[mode].c_str());
+            sprintf(buf, "mode: %s", m_modeStr[mode].c_str());
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
@@ -264,7 +268,7 @@ public:
 
             y += tm.tmHeight;
             buf[0] = 0;
-            sprintf(buf, "FPS: %2.1f", fps);
+            sprintf(buf, "time: %4.1f msec", time);
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
