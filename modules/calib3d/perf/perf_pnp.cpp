@@ -90,6 +90,11 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
     warmup(rvec, WARMUP_RNG);
     warmup(tvec, WARMUP_RNG);
 
+    // normalize Rodrigues vector
+    Mat rvec_tmp = Mat::eye(3, 3, CV_32F);
+    Rodrigues(rvec, rvec_tmp);
+    Rodrigues(rvec_tmp, rvec);
+
     projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
 
     //add noise
