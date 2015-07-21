@@ -566,6 +566,7 @@ inline v_reg<_Tp, n> v_combine_low(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& 
         c.s[i] = a.s[i];
         c.s[i+(n/2)] = b.s[i];
     }
+    return c;
 }
 
 template<typename _Tp, int n>
@@ -577,6 +578,7 @@ inline v_reg<_Tp, n> v_combine_high(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>&
         c.s[i] = a.s[i+(n/2)];
         c.s[i+(n/2)] = b.s[i+(n/2)];
     }
+    return c;
 }
 
 template<typename _Tp, int n>
@@ -590,6 +592,18 @@ inline void v_recombine(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
         high.s[i] = a.s[i+(n/2)];
         high.s[i+(n/2)] = b.s[i+(n/2)];
     }
+}
+
+template<int s, typename _Tp, int n>
+inline v_reg<_Tp, n> v_extract(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+{
+    v_reg<_Tp, n> r;
+    int i = 0;
+    for (; i < s; ++i)
+        r.s[i] = a.s[i+n-s];
+    for (; i < n; ++i)
+        r.s[i] = b.s[i-s];
+    return r;
 }
 
 template<int n> inline v_reg<int, n> v_round(const v_reg<float, n>& a)
