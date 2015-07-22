@@ -397,7 +397,7 @@ update_box (j_decompress_ptr cinfo, boxptr boxp)
   /* Update box volume.
    * We use 2-norm rather than real volume here; this biases the method
    * against making long narrow boxes, and it has the side benefit that
-   * a box is splittable iff norm > 0.
+   * a box is splittable if norm > 0.
    * Since the differences are expressed in histogram-cell units,
    * we have to shift back to JSAMPLE units to get consistent distances;
    * after which, we scale according to the selected distance scale factors.

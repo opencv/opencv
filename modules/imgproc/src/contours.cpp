@@ -438,7 +438,7 @@ cvStartFindContours( void* _img, CvMemStorage* storage,
       retain contours that satisfy with some criteria and reject others.
       In hierarchic case the resulting tree is the part of original tree with
       some nodes absent. But in the resulting tree the contour1 is a child
-      (may be indirect) of contour2 iff in the original tree the contour1
+      (may be indirect) of contour2 if in the original tree the contour1
       is a child (may be indirect) of contour2.
 */
 static void
