@@ -41,6 +41,8 @@
 
 #include "test_precomp.hpp"
 
+#define elementsof(_a)          ( sizeof(_a) / sizeof((_a)[0]) )
+
 using namespace cv;
 using namespace std;
 
@@ -1505,12 +1507,15 @@ void CV_FitLineTest::generate_point_set( void* pointsSet )
 
         for( k = 0; k < n; k++ )
         {
-            p[k] = (float)((cvtest::randReal(rng)-0.5)*max_noise*2 + t*line0[k] + line0[k+n]);
+            if ( (k < elementsof(p)) && (k + n < elementsof(line0)) )
+            {
+                p[k] = (float)((cvtest::randReal(rng)-0.5)*max_noise*2 + t*line0[k] + line0[k+n]);
 
-            if( point_type == CV_32S )
-                pi[k] = cvRound(p[k]);
-            else
-                pf[k] = p[k];
+                if( point_type == CV_32S )
+                    pi[k] = cvRound(p[k]);
+                else
+                    pf[k] = p[k];
+            }
         }
     }
 }
