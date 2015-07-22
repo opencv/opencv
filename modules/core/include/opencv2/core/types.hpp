@@ -590,7 +590,7 @@ public:
     // returns (v0, -v1, -v2, -v3)
     Scalar_<_Tp> conj() const;
 
-    // returns true iff v1 == v2 == v3 == 0
+    // returns true if v1 == v2 == v3 == 0
     bool isReal() const;
 };
 

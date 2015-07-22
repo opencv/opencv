@@ -2861,7 +2861,7 @@ public:
     _Tp& back();
     //! returns read-only reference to the last sequence element
     const _Tp& back() const;
-    //! returns true iff the sequence contains no elements
+    //! returns true if the sequence contains no elements
     bool empty() const;
 
     //! removes all the elements from the sequence
