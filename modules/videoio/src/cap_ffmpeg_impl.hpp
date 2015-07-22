@@ -586,6 +586,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     if (err < 0)
     {
         CV_WARN("Error opening file");
+        CV_WARN(_filename);
         goto exit_func;
     }
     err =
