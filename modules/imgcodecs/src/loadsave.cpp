@@ -430,7 +430,7 @@ Mat imread( const String& filename, int flags )
  * @param[in] flags Flags you wish to set.
  * @param[in] scale_denom Scale value
 */
-Mat imread_reduced( const String& filename, int flags, int scale_denom )
+Mat imread( const String& filename, int flags, int scale_denom )
 {
     /// create the basic container
     Mat img;
