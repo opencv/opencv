@@ -253,8 +253,7 @@ inline void GetPatch(image2d_t J, float x, float y,
               float* Pch, float* Dx, float* Dy,
               float* b1, float* b2)
 {
-    float J_val = read_imagef(J, sampler, (float2)(x, y)).x;
-    float diff = (J_val - *Pch) * 32.0f;
+    float diff = read_imagef(J, sampler, (float2)(x,y)).x-*Pch;
     *b1 = mad(diff, *Dx, *b1);
     *b2 = mad(diff, *Dy, *b2);
 }
@@ -481,8 +480,8 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
         barrier(CLK_LOCAL_MEM_FENCE);
 
         float2 delta;
-        delta.x = mad(A12, b2, - A22 * b1);
-        delta.y = mad(A12, b1, - A11 * b2);
+        delta.x = mad(A12, b2, - A22 * b1) * 32.0f;
+        delta.y = mad(A12, b1, - A11 * b2) * 32.0f;
 
         prevPt += delta;
         loc0 += delta;
