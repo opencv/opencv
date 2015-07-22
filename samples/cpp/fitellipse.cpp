@@ -81,6 +81,8 @@ void processImage(int /*h*/, void*)
 
         if( MAX(box.size.width, box.size.height) > MIN(box.size.width, box.size.height)*30 )
             continue;
+        if (box.center.x < 0 || box.center.y < 0 || box.center.x > bimage.cols || box.center.y > bimage.rows)
+            continue;
         drawContours(cimage, contours, (int)i, Scalar::all(255), 1, 8);
 
         ellipse(cimage, box, Scalar(0,0,255), 1, LINE_AA);
