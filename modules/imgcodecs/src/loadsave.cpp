@@ -238,7 +238,7 @@ enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
  *
 */
 static void*
-imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_denom=1 )
+imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize = Size() )
 {
     IplImage* image = 0;
     CvMat *matrix = 0;
@@ -262,8 +262,8 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
         return 0;
     }
 
-    /// set the scale_denom in the driver
-    decoder->setScale( scale_denom );
+    /// set desired image size in the driver
+    decoder->setSize( dsize );
 
     /// set the filename in the driver
     decoder->setSource(filename);
@@ -320,10 +320,24 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
         return 0;
     }
 
-    int testdecoder = decoder->setScale( scale_denom ); // if decoder is JpegDecoder then testdecoder will be 1
-    if( (scale_denom > 1 ) & ( testdecoder > 1 ) )
+    Size testdecoder = decoder->setSize( dsize ); // if decoder is JpegDecoder then testdecoder will be Size()
+    int scale_denom = max( testdecoder.width , testdecoder.height );
+
+    if( scale_denom > 8 )
     {
-        resize(*mat,*mat,Size(size.width/scale_denom,size.height/scale_denom));
+        if( dsize.width == 0)
+        {
+            dsize.width = mat->cols * dsize.height / mat->rows;
+        }
+        else if( dsize.height == 0)
+        {
+            dsize.height = mat->rows * dsize.width / mat->cols;
+        }
+        resize( *mat, *mat, dsize );
+    }
+    else if( scale_denom > 1 )
+    {
+        resize( *mat, *mat, Size( size.width / scale_denom , size.height / scale_denom ) );
     }
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
@@ -428,15 +442,15 @@ Mat imread( const String& filename, int flags )
  *
  * @param[in] filename File to load
  * @param[in] flags Flags you wish to set.
- * @param[in] scale_denom Scale value
+ * @param[in] dsize Specified size
 */
-Mat imread_reduced( const String& filename, int flags, int scale_denom )
+Mat imread( const String& filename, int flags, Size dsize )
 {
     /// create the basic container
     Mat img;
 
     /// load the data
-    imread_( filename, flags, LOAD_MAT, &img, scale_denom );
+    imread_( filename, flags, LOAD_MAT, &img, dsize );
 
     /// return a reference to the data
     return img;
