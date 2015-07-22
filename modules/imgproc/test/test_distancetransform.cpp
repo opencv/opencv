@@ -200,7 +200,7 @@ cvTsDistTransform( const CvMat* _src, CvMat* _dst, int dist_type,
         ofs[2] = -tstep; delta[2] = mask[0];
         ofs[3] = -tstep+1; delta[3] = mask[1];
 #ifdef ANDROID
-	// the used optimizer of android target currently does only imperfectly account for the correlation between actual/local max count and the max id used for initializing the ofs array.
+        // the used optimizer of android target currently does only imperfectly account for the correlation between actual/local max count and the max id used for initializing the ofs array.
         // the below init will suppress a set of related false warnings for array members not always beeing initialized for any case. the warning is probably only based on the total/overall max count.
         ofs[4] = 0;
         ofs[5] = 0;
