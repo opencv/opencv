@@ -2247,7 +2247,7 @@ public:
     UMat operator()( const Rect& roi ) const;
     UMat operator()( const Range* ranges ) const;
 
-    //! returns true iff the matrix data is continuous
+    //! returns true if the matrix data is continuous
     // (i.e. when there are no gaps between successive rows).
     // similar to CV_IS_MAT_CONT(cvmat->type)
     bool isContinuous() const;

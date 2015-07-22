@@ -589,14 +589,14 @@ struct jpeg_decompress_struct {
   /* These fields record data obtained from optional markers recognized by
    * the JPEG library.
    */
-  boolean saw_JFIF_marker;	/* TRUE iff a JFIF APP0 marker was found */
+  boolean saw_JFIF_marker;	/* TRUE if a JFIF APP0 marker was found */
   /* Data copied from JFIF marker; only valid if saw_JFIF_marker is TRUE: */
   UINT8 JFIF_major_version;	/* JFIF version number */
   UINT8 JFIF_minor_version;
   UINT8 density_unit;		/* JFIF code for pixel size units */
   UINT16 X_density;		/* Horizontal pixel density */
   UINT16 Y_density;		/* Vertical pixel density */
-  boolean saw_Adobe_marker;	/* TRUE iff an Adobe APP14 marker was found */
+  boolean saw_Adobe_marker;	/* TRUE if an Adobe APP14 marker was found */
   UINT8 Adobe_transform;	/* Color transform code from Adobe marker */
 
   J_COLOR_TRANSFORM color_transform;

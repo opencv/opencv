@@ -446,7 +446,7 @@ class GTEST_API_ SingleFailureChecker {
 #ifndef GTEST_SRC_GTEST_INTERNAL_INL_H_
 #define GTEST_SRC_GTEST_INTERNAL_INL_H_
 
-// GTEST_IMPLEMENTATION_ is defined to 1 iff the current translation unit is
+// GTEST_IMPLEMENTATION_ is defined to 1 if the current translation unit is
 // part of Google Test's implementation; otherwise it's undefined.
 #if !GTEST_IMPLEMENTATION_
 // A user is trying to include this from his code - just say no.
@@ -511,14 +511,14 @@ const char kThrowOnFailureFlag[] = "throw_on_failure";
 // A valid random seed must be in [1, kMaxRandomSeed].
 const int kMaxRandomSeed = 99999;
 
-// g_help_flag is true iff the --help flag or an equivalent form is
+// g_help_flag is true if the --help flag or an equivalent form is
 // specified on the command line.
 GTEST_API_ extern bool g_help_flag;
 
 // Returns the current time in milliseconds.
 GTEST_API_ TimeInMillis GetTimeInMillis();
 
-// Returns true iff Google Test should use colors in the output.
+// Returns true if Google Test should use colors in the output.
 GTEST_API_ bool ShouldUseColor(bool stdout_is_tty);
 
 // Formats the given time in milliseconds as seconds.
@@ -678,7 +678,7 @@ GTEST_API_ bool ShouldShard(const char* total_shards_str,
 GTEST_API_ Int32 Int32FromEnvOrDie(const char* env_var, Int32 default_val);
 
 // Given the total number of shards, the shard index, and the test id,
-// returns true iff the test should be run on this shard. The test id is
+// returns true if the test should be run on this shard. The test id is
 // some arbitrary but unique non-negative integer assigned to each test
 // method. Assumes that 0 <= shard_index < total_shards.
 GTEST_API_ bool ShouldRunTestOnShard(
@@ -760,7 +760,7 @@ class TestPropertyKeyIs {
   // TestPropertyKeyIs has NO default constructor.
   explicit TestPropertyKeyIs(const std::string& key) : key_(key) {}
 
-  // Returns true iff the test name of test property matches on key_.
+  // Returns true if the test name of test property matches on key_.
   bool operator()(const TestProperty& test_property) const {
     return test_property.key() == key_;
   }
@@ -793,14 +793,14 @@ class GTEST_API_ UnitTestOptions {
 
   // Functions for processing the gtest_filter flag.
 
-  // Returns true iff the wildcard pattern matches the string.  The
+  // Returns true if the wildcard pattern matches the string.  The
   // first ':' or '\0' character in pattern marks the end of it.
   //
   // This recursive algorithm isn't very efficient, but is clear and
   // works well enough for matching test names, which are short.
   static bool PatternMatchesString(const char *pattern, const char *str);
 
-  // Returns true iff the user-specified filter matches the test case
+  // Returns true if the user-specified filter matches the test case
   // name and the test name.
   static bool FilterMatchesTest(const std::string &test_case_name,
                                 const std::string &test_name);
@@ -982,10 +982,10 @@ class GTEST_API_ UnitTestImpl {
   // Gets the elapsed time, in milliseconds.
   TimeInMillis elapsed_time() const { return elapsed_time_; }
 
-  // Returns true iff the unit test passed (i.e. all test cases passed).
+  // Returns true if the unit test passed (i.e. all test cases passed).
   bool Passed() const { return !Failed(); }
 
-  // Returns true iff the unit test failed (i.e. some test case failed
+  // Returns true if the unit test failed (i.e. some test case failed
   // or something outside of all tests failed).
   bool Failed() const {
     return failed_test_case_count() > 0 || ad_hoc_test_result()->Failed();
@@ -1308,7 +1308,7 @@ class GTEST_API_ UnitTestImpl {
   // desired.
   OsStackTraceGetterInterface* os_stack_trace_getter_;
 
-  // True iff PostFlagParsingInit() has been called.
+  // True if PostFlagParsingInit() has been called.
   bool post_flag_parse_init_performed_;
 
   // The random number seed used at the beginning of the test run.
@@ -1670,7 +1670,7 @@ namespace internal {
 // stack trace.
 const char kStackTraceMarker[] = "\nStack trace:\n";
 
-// g_help_flag is true iff the --help flag or an equivalent form is
+// g_help_flag is true if the --help flag or an equivalent form is
 // specified on the command line.
 bool g_help_flag = false;
 
@@ -1688,12 +1688,12 @@ GTEST_DEFINE_bool_(
 GTEST_DEFINE_bool_(
     break_on_failure,
     internal::BoolFromGTestEnv("break_on_failure", false),
-    "True iff a failed assertion should be a debugger break-point.");
+    "True if a failed assertion should be a debugger break-point.");
 
 GTEST_DEFINE_bool_(
     catch_exceptions,
     internal::BoolFromGTestEnv("catch_exceptions", true),
-    "True iff " GTEST_NAME_
+    "True if " GTEST_NAME_
     " should catch exceptions and treat them as test failures.");
 
 GTEST_DEFINE_string_(
@@ -1737,7 +1737,7 @@ GTEST_DEFINE_string_(
 GTEST_DEFINE_bool_(
     print_time,
     internal::BoolFromGTestEnv("print_time", true),
-    "True iff " GTEST_NAME_
+    "True if " GTEST_NAME_
     " should display elapsed time in text output.");
 
 GTEST_DEFINE_int32_(
@@ -1754,13 +1754,13 @@ GTEST_DEFINE_int32_(
 
 GTEST_DEFINE_bool_(
     show_internal_stack_frames, false,
-    "True iff " GTEST_NAME_ " should include internal stack frames when "
+    "True if " GTEST_NAME_ " should include internal stack frames when "
     "printing test failure stack traces.");
 
 GTEST_DEFINE_bool_(
     shuffle,
     internal::BoolFromGTestEnv("shuffle", false),
-    "True iff " GTEST_NAME_
+    "True if " GTEST_NAME_
     " should randomize tests' order on every run.");
 
 GTEST_DEFINE_int32_(
@@ -1804,7 +1804,7 @@ UInt32 Random::Generate(UInt32 range) {
   return state_ % range;
 }
 
-// GTestIsInitialized() returns true iff the user has initialized
+// GTestIsInitialized() returns true if the user has initialized
 // Google Test.  Useful for catching the user mistake of not initializing
 // Google Test before calling RUN_ALL_TESTS().
 //
@@ -1827,17 +1827,17 @@ static int SumOverTestCaseList(const std::vector<TestCase*>& case_list,
   return sum;
 }
 
-// Returns true iff the test case passed.
+// Returns true if the test case passed.
 static bool TestCasePassed(const TestCase* test_case) {
   return test_case->should_run() && test_case->Passed();
 }
 
-// Returns true iff the test case failed.
+// Returns true if the test case failed.
 static bool TestCaseFailed(const TestCase* test_case) {
   return test_case->should_run() && test_case->Failed();
 }
 
-// Returns true iff test_case contains at least one test that should
+// Returns true if test_case contains at least one test that should
 // run.
 static bool ShouldRunTestCase(const TestCase* test_case) {
   return test_case->should_run();
@@ -1932,7 +1932,7 @@ std::string UnitTestOptions::GetAbsolutePathToOutputFile() {
   return result.string();
 }
 
-// Returns true iff the wildcard pattern matches the string.  The
+// Returns true if the wildcard pattern matches the string.  The
 // first ':' or '\0' character in pattern marks the end of it.
 //
 // This recursive algorithm isn't very efficient, but is clear and
@@ -1975,7 +1975,7 @@ bool UnitTestOptions::MatchesFilter(
   }
 }
 
-// Returns true iff the user-specified filter matches the test case
+// Returns true if the user-specified filter matches the test case
 // name and the test name.
 bool UnitTestOptions::FilterMatchesTest(const std::string &test_case_name,
                                         const std::string &test_name) {
@@ -2368,7 +2368,7 @@ const char* String::Utf16ToAnsi(LPCWSTR utf16_str)  {
 
 #endif  // GTEST_OS_WINDOWS_MOBILE
 
-// Compares two C strings.  Returns true iff they have the same content.
+// Compares two C strings.  Returns true if they have the same content.
 //
 // Unlike strcmp(), this function can handle NULL argument(s).  A NULL
 // C string is considered different to any non-NULL C string,
@@ -2494,7 +2494,7 @@ namespace internal {
 //   expected_value:      "5"
 //   actual_value:        "6"
 //
-// The ignoring_case parameter is true iff the assertion is a
+// The ignoring_case parameter is true if the assertion is a
 // *_STRCASEEQ*.  When it's true, the string " (ignoring case)" will
 // be inserted into the message.
 AssertionResult EqFailure(const char* expected_expression,
@@ -2727,7 +2727,7 @@ namespace {
 
 // Helper functions for implementing IsSubString() and IsNotSubstring().
 
-// This group of overloaded functions return true iff needle is a
+// This group of overloaded functions return true if needle is a
 // substring of haystack.  NULL is considered a substring of itself
 // only.
 
@@ -3028,7 +3028,7 @@ std::string String::ShowWideCString(const wchar_t * wide_c_str) {
   return internal::WideStringToUtf8(wide_c_str, -1);
 }
 
-// Compares two wide C strings.  Returns true iff they have the same
+// Compares two wide C strings.  Returns true if they have the same
 // content.
 //
 // Unlike wcscmp(), this function can handle NULL argument(s).  A NULL
@@ -3073,7 +3073,7 @@ AssertionResult CmpHelperSTRNE(const char* s1_expression,
                             << " vs " << PrintToString(s2);
 }
 
-// Compares two C strings, ignoring case.  Returns true iff they have
+// Compares two C strings, ignoring case.  Returns true if they have
 // the same content.
 //
 // Unlike strcasecmp(), this function can handle NULL argument(s).  A
@@ -3087,7 +3087,7 @@ bool String::CaseInsensitiveCStringEquals(const char * lhs, const char * rhs) {
   return posix::StrCaseCmp(lhs, rhs) == 0;
 }
 
-  // Compares two wide C strings, ignoring case.  Returns true iff they
+  // Compares two wide C strings, ignoring case.  Returns true if they
   // have the same content.
   //
   // Unlike wcscasecmp(), this function can handle NULL argument(s).
@@ -3121,7 +3121,7 @@ bool String::CaseInsensitiveWideCStringEquals(const wchar_t* lhs,
 #endif  // OS selector
 }
 
-// Returns true iff str ends with the given suffix, ignoring case.
+// Returns true if str ends with the given suffix, ignoring case.
 // Any string is considered to end with an empty suffix.
 bool String::EndsWithCaseInsensitive(
     const std::string& str, const std::string& suffix) {
@@ -3343,7 +3343,7 @@ void TestResult::Clear() {
   elapsed_time_ = 0;
 }
 
-// Returns true iff the test failed.
+// Returns true if the test failed.
 bool TestResult::Failed() const {
   for (int i = 0; i < total_part_count(); ++i) {
     if (GetTestPartResult(i).failed())
@@ -3352,22 +3352,22 @@ bool TestResult::Failed() const {
   return false;
 }
 
-// Returns true iff the test part fatally failed.
+// Returns true if the test part fatally failed.
 static bool TestPartFatallyFailed(const TestPartResult& result) {
   return result.fatally_failed();
 }
 
-// Returns true iff the test fatally failed.
+// Returns true if the test fatally failed.
 bool TestResult::HasFatalFailure() const {
   return CountIf(test_part_results_, TestPartFatallyFailed) > 0;
 }
 
-// Returns true iff the test part non-fatally failed.
+// Returns true if the test part non-fatally failed.
 static bool TestPartNonfatallyFailed(const TestPartResult& result) {
   return result.nonfatally_failed();
 }
 
-// Returns true iff the test has a non-fatal failure.
+// Returns true if the test has a non-fatal failure.
 bool TestResult::HasNonfatalFailure() const {
   return CountIf(test_part_results_, TestPartNonfatallyFailed) > 0;
 }
@@ -3659,12 +3659,12 @@ void Test::Run() {
       this, &Test::TearDown, "TearDown()");
 }
 
-// Returns true iff the current test has a fatal failure.
+// Returns true if the current test has a fatal failure.
 bool Test::HasFatalFailure() {
   return internal::GetUnitTestImpl()->current_test_result()->HasFatalFailure();
 }
 
-// Returns true iff the current test has a non-fatal failure.
+// Returns true if the current test has a non-fatal failure.
 bool Test::HasNonfatalFailure() {
   return internal::GetUnitTestImpl()->current_test_result()->
       HasNonfatalFailure();
@@ -3768,7 +3768,7 @@ class TestNameIs {
   explicit TestNameIs(const char* name)
       : name_(name) {}
 
-  // Returns true iff the test name of test_info matches name_.
+  // Returns true if the test name of test_info matches name_.
   bool operator()(const TestInfo * test_info) const {
     return test_info && test_info->name() == name_;
   }
@@ -4081,7 +4081,7 @@ static const char* GetAnsiColorCode(GTestColor color) {
 
 #endif  // GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE
 
-// Returns true iff Google Test should use colors in the output.
+// Returns true if Google Test should use colors in the output.
 bool ShouldUseColor(bool stdout_is_tty) {
   const char* const gtest_color = GTEST_FLAG(color).c_str();
 
@@ -5228,10 +5228,10 @@ internal::TimeInMillis UnitTest::elapsed_time() const {
   return impl()->elapsed_time();
 }
 
-// Returns true iff the unit test passed (i.e. all test cases passed).
+// Returns true if the unit test passed (i.e. all test cases passed).
 bool UnitTest::Passed() const { return impl()->Passed(); }
 
-// Returns true iff the unit test failed (i.e. some test case failed
+// Returns true if the unit test failed (i.e. some test case failed
 // or something outside of all tests failed).
 bool UnitTest::Failed() const { return impl()->Failed(); }
 
@@ -5657,7 +5657,7 @@ class TestCaseNameIs {
   explicit TestCaseNameIs(const std::string& name)
       : name_(name) {}
 
-  // Returns true iff the name of test_case matches name_.
+  // Returns true if the name of test_case matches name_.
   bool operator()(const TestCase* test_case) const {
     return test_case != NULL && strcmp(test_case->name(), name_.c_str()) == 0;
   }
@@ -5749,7 +5749,7 @@ bool UnitTestImpl::RunAllTests() {
   // protocol.
   internal::WriteToShardStatusFileIfNeeded();
 
-  // True iff we are in a subprocess for running a thread-safe-style
+  // True if we are in a subprocess for running a thread-safe-style
   // death test.
   bool in_subprocess_for_death_test = false;
 
@@ -5776,7 +5776,7 @@ bool UnitTestImpl::RunAllTests() {
   random_seed_ = GTEST_FLAG(shuffle) ?
       GetRandomSeedFromFlag(GTEST_FLAG(random_seed)) : 0;
 
-  // True iff at least one test has failed.
+  // True if at least one test has failed.
   bool failed = false;
 
   TestEventListener* repeater = listeners()->repeater();
@@ -5946,7 +5946,7 @@ Int32 Int32FromEnvOrDie(const char* var, Int32 default_val) {
 }
 
 // Given the total number of shards, the shard index, and the test id,
-// returns true iff the test should be run on this shard. The test id is
+// returns true if the test should be run on this shard. The test id is
 // some arbitrary but unique non-negative integer assigned to each test
 // method. Assumes that 0 <= shard_index < total_shards.
 bool ShouldRunTestOnShard(int total_shards, int shard_index, int test_id) {
@@ -7057,7 +7057,7 @@ static ::std::string FormatDeathTestOutput(const ::std::string& output) {
 //   status_ok: true if exit_status is acceptable in the context of
 //              this particular death test, which fails if it is false
 //
-// Returns true iff all of the above conditions are met.  Otherwise, the
+// Returns true if all of the above conditions are met.  Otherwise, the
 // first failing condition, in the order given above, is the one that is
 // reported. Also sets the last death test message string.
 bool DeathTestImpl::Passed(bool status_ok) {
@@ -8409,7 +8409,7 @@ RE::~RE() {
   free(const_cast<char*>(pattern_));
 }
 
-// Returns true iff regular expression re matches the entire str.
+// Returns true if regular expression re matches the entire str.
 bool RE::FullMatch(const char* str, const RE& re) {
   if (!re.is_valid_) return false;
 
@@ -8417,7 +8417,7 @@ bool RE::FullMatch(const char* str, const RE& re) {
   return regexec(&re.full_regex_, str, 1, &match, 0) == 0;
 }
 
-// Returns true iff regular expression re matches a substring of str
+// Returns true if regular expression re matches a substring of str
 // (including str itself).
 bool RE::PartialMatch(const char* str, const RE& re) {
   if (!re.is_valid_) return false;
@@ -8458,13 +8458,13 @@ void RE::Init(const char* regex) {
 
 #elif GTEST_USES_SIMPLE_RE
 
-// Returns true iff ch appears anywhere in str (excluding the
+// Returns true if ch appears anywhere in str (excluding the
 // terminating '\0' character).
 bool IsInSet(char ch, const char* str) {
   return ch != '\0' && strchr(str, ch) != NULL;
 }
 
-// Returns true iff ch belongs to the given classification.  Unlike
+// Returns true if ch belongs to the given classification.  Unlike
 // similar functions in <ctype.h>, these aren't affected by the
 // current locale.
 bool IsAsciiDigit(char ch) { return '0' <= ch && ch <= '9'; }
@@ -8478,12 +8478,12 @@ bool IsAsciiWordChar(char ch) {
       ('0' <= ch && ch <= '9') || ch == '_';
 }
 
-// Returns true iff "\\c" is a supported escape sequence.
+// Returns true if "\\c" is a supported escape sequence.
 bool IsValidEscape(char c) {
   return (IsAsciiPunct(c) || IsInSet(c, "dDfnrsStvwW"));
 }
 
-// Returns true iff the given atom (specified by escaped and pattern)
+// Returns true if the given atom (specified by escaped and pattern)
 // matches ch.  The result is undefined if the atom is invalid.
 bool AtomMatchesChar(bool escaped, char pattern_char, char ch) {
   if (escaped) {  // "\\p" where p is pattern_char.
@@ -8525,7 +8525,7 @@ bool ValidateRegex(const char* regex) {
 
   bool is_valid = true;
 
-  // True iff ?, *, or + can follow the previous atom.
+  // True if ?, *, or + can follow the previous atom.
   bool prev_repeatable = false;
   for (int i = 0; regex[i]; i++) {
     if (regex[i] == '\\') {  // An escape sequence
@@ -8601,7 +8601,7 @@ bool MatchRepetitionAndRegexAtHead(
   return false;
 }
 
-// Returns true iff regex matches a prefix of str.  regex must be a
+// Returns true if regex matches a prefix of str.  regex must be a
 // valid simple regular expression and not start with "^", or the
 // result is undefined.
 bool MatchRegexAtHead(const char* regex, const char* str) {
@@ -8632,7 +8632,7 @@ bool MatchRegexAtHead(const char* regex, const char* str) {
   }
 }
 
-// Returns true iff regex matches any substring of str.  regex must be
+// Returns true if regex matches any substring of str.  regex must be
 // a valid simple regular expression, or the result is undefined.
 //
 // The algorithm is recursive, but the recursion depth doesn't exceed
@@ -8662,12 +8662,12 @@ RE::~RE() {
   free(const_cast<char*>(full_pattern_));
 }
 
-// Returns true iff regular expression re matches the entire str.
+// Returns true if regular expression re matches the entire str.
 bool RE::FullMatch(const char* str, const RE& re) {
   return re.is_valid_ && MatchRegexAnywhere(re.full_pattern_, str);
 }
 
-// Returns true iff regular expression re matches a substring of str
+// Returns true if regular expression re matches a substring of str
 // (including str itself).
 bool RE::PartialMatch(const char* str, const RE& re) {
   return re.is_valid_ && MatchRegexAnywhere(re.pattern_, str);
@@ -9024,7 +9024,7 @@ bool ParseInt32(const Message& src_text, const char* str, Int32* value) {
 // Reads and returns the Boolean environment variable corresponding to
 // the given flag; if it's not set, returns default_value.
 //
-// The value is considered true iff it's not "0".
+// The value is considered true if it's not "0".
 bool BoolFromGTestEnv(const char* flag, bool default_value) {
   const std::string env_var = FlagToEnvVar(flag);
   const char* const string_value = posix::GetEnv(env_var.c_str());

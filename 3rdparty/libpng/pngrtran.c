@@ -1320,7 +1320,7 @@ png_init_read_transformations(png_structp png_ptr)
     *  1) PNG_EXPAND (including PNG_EXPAND_tRNS)
     *  2) PNG_STRIP_ALPHA (if no compose)
     *  3) PNG_RGB_TO_GRAY
-    *  4) PNG_GRAY_TO_RGB iff !PNG_BACKGROUND_IS_GRAY
+    *  4) PNG_GRAY_TO_RGB if !PNG_BACKGROUND_IS_GRAY
     *  5) PNG_COMPOSE
     *  6) PNG_GAMMA
     *  7) PNG_STRIP_ALPHA (if compose)
@@ -1329,7 +1329,7 @@ png_init_read_transformations(png_structp png_ptr)
     * 10) PNG_16_TO_8
     * 11) PNG_QUANTIZE (converts to palette)
     * 12) PNG_EXPAND_16
-    * 13) PNG_GRAY_TO_RGB iff PNG_BACKGROUND_IS_GRAY
+    * 13) PNG_GRAY_TO_RGB if PNG_BACKGROUND_IS_GRAY
     * 14) PNG_INVERT_MONO
     * 15) PNG_SHIFT
     * 16) PNG_PACK

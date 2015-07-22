@@ -1263,7 +1263,7 @@ icvCheckQuadGroup( CvCBQuad **quad_group, int quad_count,
     CvCBCorner* first = 0, *first2 = 0, *right, *cur, *below, *c;
 
     // build dual graph, which vertices are internal quad corners
-    // and two vertices are connected iff they lie on the same quad edge
+    // and two vertices are connected if they lie on the same quad edge
     for( i = 0; i < quad_count; i++ )
     {
         CvCBQuad* q = quad_group[i];
