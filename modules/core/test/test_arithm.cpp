@@ -1792,3 +1792,21 @@ INSTANTIATE_TEST_CASE_P(Arithm, SubtractOutputMatNotEmpty, testing::Combine(
     testing::Values(perf::MatType(CV_8UC1), CV_8UC3, CV_8UC4, CV_16SC1, CV_16SC3),
     testing::Values(-1, CV_16S, CV_32S, CV_32F),
     testing::Bool()));
+
+TEST(MinMaxLoc, Mat_IntMax_Without_Mask)
+{
+    Mat_<int> mat(50, 50);
+    int iMaxVal = numeric_limits<int>::max();
+    mat.setTo(iMaxVal);
+
+    double min, max;
+    Point minLoc, maxLoc;
+
+    minMaxLoc(mat, &min, &max, &minLoc, &maxLoc, Mat());
+
+    ASSERT_EQ(iMaxVal, min);
+    ASSERT_EQ(iMaxVal, max);
+
+    ASSERT_EQ(Point(0, 0), minLoc);
+    ASSERT_EQ(Point(0, 0), maxLoc);
+}
