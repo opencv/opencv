@@ -1,3 +1,10 @@
+/*
+// Sample demonstrating interoperability of OpenCV UMat with OpenGL texture.
+// At first, the data obtained from video file or camera and placed onto
+// OpenGL texture, following mapping of this OpenGL texture to OpenCV UMat
+// and call cv::Blur function. The result is mapped back to OpenGL texture
+// and rendered through OpenGL API.
+*/
 #if defined(WIN32) || defined(_WIN32)
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
@@ -25,6 +32,16 @@
 # pragma comment(lib, "glu32.lib")
 #endif
 
+/*
+// Press key   to
+//       0     no processing
+//       1     processing on CPU
+//       2     processing on GPU
+//       9     toggle texture/buffer
+//       space toggle processing on/off, preserve mode
+//       esc   quit
+*/
+
 class GLWinApp : public WinApp
 {
 public:
@@ -33,9 +50,12 @@ public:
     {
         m_shutdown = false;
         m_mode = 0;
-        m_modeStr[0] = cv::String("No processing");
-        m_modeStr[1] = cv::String("Processing on CPU");
-        m_modeStr[2] = cv::String("Processing on GPU");
+        m_modeStr[0] = cv::String("Texture/No processing");
+        m_modeStr[1] = cv::String("Texture/Processing on CPU");
+        m_modeStr[2] = cv::String("Texture/Processing on GPU");
+        m_modeStr[3] = cv::String("Buffer/No processing");
+        m_modeStr[4] = cv::String("Buffer/Processing on CPU");
+        m_modeStr[5] = cv::String("Buffer/Processing on GPU");
         m_disableProcessing = false;
         m_cap = cap;
     }
@@ -60,7 +80,12 @@ public:
         case WM_CHAR:
             if (wParam >= '0' && wParam <= '2')
             {
-                m_mode = (char)wParam - '0';
+                set_mode((char)wParam - '0');
+                return 0;
+            }
+            else if (wParam == '9')
+            {
+                toggle_buffer();
                 return 0;
             }
             else if (wParam == VK_SPACE)
@@ -131,13 +156,16 @@ public:
                 m_disableProcessing = !m_disableProcessing;
                 break;
             case XK_0:
-                m_mode = 0;
+                set_mode(0);
                 break;
             case XK_1:
-                m_mode = 1;
+                set_mode(1);
                 break;
             case XK_2:
-                m_mode = 2;
+                set_mode(2);
+                break;
+            case XK_9:
+                toggle_buffer();
                 break;
             case XK_Escape:
                 m_end_loop = true;
@@ -187,14 +215,17 @@ public:
         return 0;
     } // init()
 
-    int get_texture(cv::ogl::Texture2D& texture)
+    int get_frame(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer)
     {
         if (!m_cap.read(m_frame_bgr))
             return -1;
 
         cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_RGB2RGBA);
 
-        texture.copyFrom(m_frame_rgba);
+        if (use_buffer())
+            buffer.copyFrom(m_frame_rgba);
+        else
+            texture.copyFrom(m_frame_rgba);
 
         return 0;
     }
@@ -254,14 +285,16 @@ public:
 
             int r;
             cv::ogl::Texture2D texture;
+            cv::ogl::Buffer buffer;
 
-            r = get_texture(texture);
+            r = get_frame(texture, buffer);
             if (r != 0)
             {
                 return -1;
             }
 
-            switch (m_mode)
+            bool do_buffer = use_buffer();
+            switch (get_mode())
             {
                 case 0:
                     // no processing
@@ -272,13 +305,21 @@ public:
                     // process video frame on CPU
                     cv::Mat m(m_height, m_width, CV_8UC4);
 
-                    texture.copyTo(m);
+                    if (do_buffer)
+                        buffer.copyTo(m);
+                    else
+                        texture.copyTo(m);
+
                     if (!m_disableProcessing)
                     {
                         // blur texture image with OpenCV on CPU
                         cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
                     }
-                    texture.copyFrom(m);
+
+                    if (do_buffer)
+                        buffer.copyFrom(m);
+                    else
+                        texture.copyFrom(m);
 
                     break;
                 }
@@ -288,18 +329,33 @@ public:
                     // process video frame on GPU
                     cv::UMat u;
 
-                    cv::ogl::convertFromGLTexture2D(texture, u);
+                    if (do_buffer)
+                        u = cv::ogl::mapGLBuffer(buffer);
+                    else
+                        cv::ogl::convertFromGLTexture2D(texture, u);
+
                     if (!m_disableProcessing)
                     {
                         // blur texture image with OpenCV on GPU with OpenCL
                         cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
                     }
-                    cv::ogl::convertToGLTexture2D(u, texture);
+
+                    if (do_buffer)
+                        cv::ogl::unmapGLBuffer(u);
+                    else
+                        cv::ogl::convertToGLTexture2D(u, texture);
 
                     break;
                 }
 
             } // switch
+
+            if (do_buffer) // buffer -> texture
+            {
+                cv::Mat m(m_height, m_width, CV_8UC4);
+                buffer.copyTo(m);
+                texture.copyFrom(m);
+            }
 
 #if defined(__linux__)
             XWindowAttributes window_attributes;
@@ -393,10 +449,35 @@ protected:
     }
 #endif
 
+    // modes: 0,1,2 - use texture
+    //        3,4,5 - use buffer
+    bool use_buffer()
+    {
+        return bool(m_mode >= 3);
+    }
+    void toggle_buffer()
+    {
+        if (m_mode < 3)
+            m_mode += 3;
+        else
+            m_mode -= 3;
+    }
+    int get_mode()
+    {
+        return (m_mode % 3);
+    }
+    void set_mode(int mode)
+    {
+        bool do_buffer = bool(m_mode >= 3);
+        m_mode = (mode % 3);
+        if (do_buffer)
+            m_mode += 3;
+    }
+
 private:
     bool               m_shutdown;
     int                m_mode;
-    cv::String         m_modeStr[3];
+    cv::String         m_modeStr[3*2];
     int                m_disableProcessing;
 #if defined(WIN32) || defined(_WIN32)
     HDC                m_hDC;

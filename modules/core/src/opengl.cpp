@@ -1804,4 +1804,84 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
 #endif
 }
 
+//void mapGLBuffer(const Buffer& buffer, UMat& dst, int accessFlags)
+UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
+{
+    (void)buffer; (void)accessFlags;
+#if !defined(HAVE_OPENGL)
+    NO_OPENGL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL)
+    NO_OPENCL_SUPPORT_ERROR;
+#else
+    using namespace cv::ocl;
+    Context& ctx = Context::getDefault();
+    cl_context context = (cl_context)ctx.ptr();
+    cl_command_queue clQueue = (cl_command_queue)Queue::getDefault().ptr();
+
+    int clAccessFlags = 0;
+    switch (accessFlags & (ACCESS_READ|ACCESS_WRITE))
+    {
+    default:
+    case ACCESS_READ|ACCESS_WRITE:
+        clAccessFlags = CL_MEM_READ_WRITE;
+        break;
+    case ACCESS_READ:
+        clAccessFlags = CL_MEM_READ_ONLY;
+        break;
+    case ACCESS_WRITE:
+        clAccessFlags = CL_MEM_WRITE_ONLY;
+        break;
+    }
+
+    cl_int status = 0;
+    cl_mem clBuffer = clCreateFromGLBuffer(context, clAccessFlags, buffer.bufId(), &status);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromGLBuffer failed");
+
+    gl::Finish();
+
+    status = clEnqueueAcquireGLObjects(clQueue, 1, &clBuffer, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
+
+    size_t step = buffer.cols() * buffer.elemSize();
+    int rows = buffer.rows();
+    int cols = buffer.cols();
+    int type = buffer.type();
+
+    UMat u;
+    convertFromBuffer(clBuffer, step, rows, cols, type, u);
+    return u;
+#endif
+}
+
+void unmapGLBuffer(UMat& u)
+{
+    (void)u;
+#if !defined(HAVE_OPENGL)
+    NO_OPENGL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL)
+    NO_OPENCL_SUPPORT_ERROR;
+#else
+    using namespace cv::ocl;
+    cl_command_queue clQueue = (cl_command_queue)Queue::getDefault().ptr();
+
+    cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
+
+    u.release();
+
+    cl_int status = clEnqueueReleaseGLObjects(clQueue, 1, &clBuffer, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseGLObjects failed");
+
+    status = clFinish(clQueue);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clFinish failed");
+
+    status = clReleaseMemObject(clBuffer);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMemObject failed");
+#endif
+}
+
 }} // namespace cv::ogl
