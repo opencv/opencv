@@ -106,7 +106,7 @@ void CV_VideoPositioningTest::generate_idx_seq(CvCapture* cap, int method)
         {
             RNG rng(N);
             idx.clear();
-            for( int i = 0; i < N-1; i++ )
+            for( int i = 0; i >= 0 && i < N-1; i++ )
                 idx.push_back(rng.uniform(0, N));
             idx.push_back(N-1);
             std::swap(idx.at(rng.uniform(0, N-1)), idx.at(N-1));

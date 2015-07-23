@@ -395,7 +395,7 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
 
 bool  JpegDecoder::readData( Mat& img )
 {
-    bool result = false;
+    volatile bool result = false;
     int step = (int)img.step;
     bool color = img.channels() > 1;
 
@@ -557,7 +557,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         fileWrapper() : f(0) {}
         ~fileWrapper() { if(f) fclose(f); }
     };
-    bool result = false;
+    volatile bool result = false;
     fileWrapper fw;
     int width = img.cols, height = img.rows;
 
