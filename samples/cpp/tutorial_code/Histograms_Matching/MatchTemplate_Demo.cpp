@@ -27,8 +27,13 @@ void MatchingMethod( int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
+  if (argc < 3)
+  {
+    cerr << "Not enough parmeters" << endl;
+    return -1;
+  }
   /// Load image and template
   img = imread( argv[1], 1 );
   templ = imread( argv[2], 1 );
