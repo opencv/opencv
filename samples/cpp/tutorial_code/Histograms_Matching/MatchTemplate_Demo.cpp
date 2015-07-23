@@ -31,7 +31,7 @@ int main( int argc, char** argv )
 {
   if (argc < 3)
   {
-    cerr << "Not enough parmeters" << endl;
+    cout << "Not enough parmeters" << endl;
     return -1;
   }
   /// Load image and template
