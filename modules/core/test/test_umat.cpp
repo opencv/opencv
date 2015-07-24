@@ -572,7 +572,7 @@ TEST_P(getUMat, custom_ptr)
 
     EXPECT_EQ(0, norm);
 
-    delete[] pData;
+    delete[] (unsigned char*)pData;
 }
 
 TEST_P(getUMat, self_allocated)
