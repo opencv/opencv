@@ -913,10 +913,20 @@ namespace cv
             prevImg.convertTo(prevPyr[0], CV_32F);
             nextImg.convertTo(nextPyr[0], CV_32F);
 
+            std::vector<UMat> tempPyr; tempPyr.resize(maxLevel + 1);
+            tempPyr[0].create(Size(prevPyr[0].cols*2, prevPyr[0].rows), prevPyr[0].type());
+            prevPyr[0].copyTo(tempPyr[0](Rect(0, 0, prevPyr[0].cols, prevPyr[0].rows)));
+            nextPyr[0].copyTo(tempPyr[0](Rect(prevPyr[0].cols, 0, nextPyr[0].cols, prevPyr[0].rows)));
+
             for (int level = 1; level <= maxLevel; ++level)
             {
-                pyrDown(prevPyr[level - 1], prevPyr[level]);
-                pyrDown(nextPyr[level - 1], nextPyr[level]);
+                pyrDown(tempPyr[level-1], tempPyr[level]);
+           }
+
+            for (int level = 1; level <= maxLevel; ++level)
+            {
+                prevPyr[level] = tempPyr[level].rowRange(0, tempPyr[level].rows).colRange(0, tempPyr[level].cols/2);
+                nextPyr[level] = tempPyr[level].rowRange(0, tempPyr[level].rows).colRange(tempPyr[level].cols/2, tempPyr[level].cols);
             }
 
             // dI/dx ~ Ix, dI/dy ~ Iy
