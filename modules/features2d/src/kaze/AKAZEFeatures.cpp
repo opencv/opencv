@@ -1174,12 +1174,12 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
         dcount2++;
       }
     }
-        
-    // Do binary comparison first level
-    for (int i = 0; i < (z + 2) * (z + 2); i++) {
-      for (int j = i + 1; j < (z + 2) * (z + 2); j++) {
-        if (*(values[z].ptr<float>(i)) > *(values[z].ptr<float>(j))) {
-          desc[dcount1 / 8] |= (1 << (dcount1 % 8));
+	
+	// Do binary comparison first level
+	for (int i = 0; i < (z + 2) * (z + 2); i++) {
+	  for (int j = i + 1; j < (z + 2) * (z + 2); j++) {
+		if (*(values[z].ptr<float>(i)) > *(values[z].ptr<float>(j))) {
+		  desc[dcount1 / 8] |= (1 << (dcount1 % 8));
         }
         dcount1++;
                 
@@ -1192,8 +1192,8 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
           desc[dcount1 / 8] |= (1 << (dcount1 % 8));
         }
         dcount1++;
-      }
-    }
+	  }
+	}
   }
 }
 
