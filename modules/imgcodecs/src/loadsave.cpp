@@ -238,7 +238,7 @@ enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
  *
 */
 static void*
-imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_denom=1 )
+imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize = Size() )
 {
     IplImage* image = 0;
     CvMat *matrix = 0;
@@ -263,7 +263,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
     }
 
     /// set the scale_denom in the driver
-    decoder->setScale( scale_denom );
+    decoder->setScale( dsize );
 
     /// set the filename in the driver
     decoder->setSource(filename);
@@ -430,13 +430,13 @@ Mat imread( const String& filename, int flags )
  * @param[in] flags Flags you wish to set.
  * @param[in] scale_denom Scale value
 */
-Mat imread( const String& filename, int flags, int scale_denom )
+Mat imread( const String& filename, int flags, Size dsize )
 {
     /// create the basic container
     Mat img;
 
     /// load the data
-    imread_( filename, flags, LOAD_MAT, &img, scale_denom );
+    imread_( filename, flags, LOAD_MAT, &img, dsize );
 
     /// return a reference to the data
     return img;
