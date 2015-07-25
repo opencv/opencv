@@ -137,7 +137,7 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
 use `scale_denom` parameter to load image resized
 */
-CV_EXPORTS_W Mat imread( const String& filename, int flags, int scale_denom );
+CV_EXPORTS_W Mat imread( const String& filename, int flags, Size dsize );
 
 /** @brief Loads a multi-page image from a file. (see imread for details.)
 
