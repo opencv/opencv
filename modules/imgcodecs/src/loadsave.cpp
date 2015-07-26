@@ -263,7 +263,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize 
     }
 
     /// set the scale_denom in the driver
-    decoder->setScale( dsize );
+    decoder->setSize( dsize );
 
     /// set the filename in the driver
     decoder->setSource(filename);
@@ -320,10 +320,10 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize 
         return 0;
     }
 
-    int testdecoder = decoder->setScale( scale_denom ); // if decoder is JpegDecoder then testdecoder will be 1
-    if( (scale_denom > 1 ) & ( testdecoder > 1 ) )
+    Size testdecoder = decoder->setSize( dsize ); // if decoder is JpegDecoder then testdecoder will be Size()
+    if( (dsize != Size() ) & ( testdecoder != Size() ) )
     {
-        resize(*mat,*mat,Size(size.width/scale_denom,size.height/scale_denom));
+        resize(*mat,*mat,dsize);
     }
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
