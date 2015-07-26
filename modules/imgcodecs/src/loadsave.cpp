@@ -428,7 +428,7 @@ Mat imread( const String& filename, int flags )
  *
  * @param[in] filename File to load
  * @param[in] flags Flags you wish to set.
- * @param[in] scale_denom Scale value
+ * @param[in] dsize Target size
 */
 Mat imread( const String& filename, int flags, Size dsize )
 {
