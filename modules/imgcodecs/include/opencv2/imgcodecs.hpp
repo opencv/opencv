@@ -135,7 +135,7 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
 /** @overload
 
-use `scale_denom` parameter to load image resized
+use `dsize` parameter to load image resized
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags, Size dsize );
 
