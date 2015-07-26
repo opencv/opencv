@@ -321,7 +321,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize 
     }
 
     Size testdecoder = decoder->setSize( dsize ); // if decoder is JpegDecoder then testdecoder will be Size()
-    if( (dsize != Size() ) & ( testdecoder != Size() ) )
+    if( (dsize != Size( 0, 0 ) ) & ( testdecoder != Size( 0, 0 ) ) )
     {
         resize(*mat,*mat,dsize);
     }
