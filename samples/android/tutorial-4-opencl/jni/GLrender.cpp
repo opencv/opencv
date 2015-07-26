@@ -51,7 +51,7 @@ const char fss2D[] = \
 int progOES = 0;
 int prog2D = 0;
 
-GLuint FBOtex = 0;
+GLuint FBOtex = 0, FBOtex2 = 0;
 GLuint FBO = 0;
 
 GLuint texOES = 0;
@@ -75,6 +75,7 @@ static void releaseFBO()
         FBO = 0;
     }
     deleteTex(&FBOtex);
+    deleteTex(&FBOtex2);
     glDeleteProgram(prog2D);
     prog2D = 0;
 }
@@ -127,9 +128,19 @@ static int makeShaderProg(const char* vss, const char* fss)
     return program;
 }
 
+
 static void initFBO(int width, int height)
 {
+    LOGD("initFBO(%d, %d)", width, height);
     releaseFBO();
+
+    glGenTextures(1, &FBOtex2);
+    glBindTexture(GL_TEXTURE_2D, FBOtex2);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     glGenTextures(1, &FBOtex);
     glBindTexture(GL_TEXTURE_2D, FBOtex);
@@ -227,20 +238,17 @@ void drawFrameProcCPU()
     drawTex(FBOtex, GL_TEXTURE_2D, 0);
 }
 
-void procOCL(int tex, int w, int h)
-{
-    //TODO: not yet implemented
-}
-
+void procOCL(int tex, int w, int h);
+void procOCL_I2I(int texIn, int texOut, int w, int h);
 void drawFrameProcOCL()
 {
     drawTex(texOES, GL_TEXTURE_EXTERNAL_OES, FBO);
 
     // modify pixels in FBO texture using OpenCL and CL-GL interop
-    procOCL(FBOtex, texWidth, texHeight);
+    procOCL_I2I(FBOtex, FBOtex2, texWidth, texHeight);
 
     // render to screen
-    drawTex(FBOtex, GL_TEXTURE_2D, 0);
+    drawTex(FBOtex2, GL_TEXTURE_2D, 0);
 }
 
 
@@ -249,13 +257,16 @@ extern "C" void drawFrame()
     LOGD("*** drawFrame() ***");
     int64_t t = getTimeMs();
     //drawFrameOrig();
-    drawFrameProcCPU();
+    //drawFrameProcCPU();
+    drawFrameProcOCL();
     glFinish();
     LOGD("*** drawFrame() costs %d ms ***", getTimeInterval(t));
 }
 
+void closeCL();
 extern "C" void closeGL()
 {
+    closeCL();
     LOGD("closeGL");
     deleteTex(&texOES);
 
@@ -266,6 +277,7 @@ extern "C" void closeGL()
     releaseFBO();
 }
 
+void initCL();
 extern "C" int initGL()
 {
     LOGD("initGL");
@@ -286,6 +298,8 @@ extern "C" int initGL()
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    initCL();
 
     return texOES;
 }
