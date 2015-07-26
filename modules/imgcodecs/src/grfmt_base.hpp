@@ -82,7 +82,7 @@ protected:
     int  m_width;  // width  of the image ( filled by readHeader )
     int  m_height; // height of the image ( filled by readHeader )
     int  m_type;
-    Size  m_size;
+    Size m_size;
     String m_filename;
     String m_signature;
     Mat m_buf;
