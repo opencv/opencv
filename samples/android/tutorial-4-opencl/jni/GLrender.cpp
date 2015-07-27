@@ -238,17 +238,18 @@ void drawFrameProcCPU()
     drawTex(FBOtex, GL_TEXTURE_2D, 0);
 }
 
-void procOCL(int tex, int w, int h);
 void procOCL_I2I(int texIn, int texOut, int w, int h);
+void procOCL_OCV(int tex, int w, int h);
 void drawFrameProcOCL()
 {
     drawTex(texOES, GL_TEXTURE_EXTERNAL_OES, FBO);
 
     // modify pixels in FBO texture using OpenCL and CL-GL interop
-    procOCL_I2I(FBOtex, FBOtex2, texWidth, texHeight);
+    //procOCL_I2I(FBOtex, FBOtex2, texWidth, texHeight);
+     procOCL_OCV(FBOtex, texWidth, texHeight);
 
     // render to screen
-    drawTex(FBOtex2, GL_TEXTURE_2D, 0);
+    drawTex(/*FBOtex2*/FBOtex, GL_TEXTURE_2D, 0);
 }
 
 
