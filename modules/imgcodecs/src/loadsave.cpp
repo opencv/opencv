@@ -320,8 +320,8 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize 
         return 0;
     }
 
-    Size testdecoder = decoder->setSize( dsize ); // if decoder is JpegDecoder then testdecoder will be Size()
-    if( (dsize != Size( 0, 0 ) ) & ( testdecoder != Size( 0, 0 ) ) )
+    Size testdecoder = decoder->setSize( dsize ); // if decoder is JpegDecoder then testdecoder will be Size( m_scale_denom , m_scale_denom )
+    if( ( testdecoder.width | testdecoder.height ) > 8  )
     {
         resize(*mat,*mat,dsize);
     }
@@ -428,7 +428,7 @@ Mat imread( const String& filename, int flags )
  *
  * @param[in] filename File to load
  * @param[in] flags Flags you wish to set.
- * @param[in] dsize Target size
+ * @param[in] dsize Specified size
 */
 Mat imread( const String& filename, int flags, Size dsize )
 {
