@@ -606,7 +606,7 @@ void* UMat::handle(int accessFlags) const
     // check flags: if CPU copy is newer, copy it back to GPU.
     if( u->deviceCopyObsolete() )
     {
-        CV_Assert(u->refcount == 0);
+        CV_Assert(u->refcount == 0 || u->origdata);
         u->currAllocator->unmap(u);
     }
 
