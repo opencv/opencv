@@ -84,7 +84,7 @@ bool BaseImageDecoder::checkSignature( const String& signature ) const
 
 Size BaseImageDecoder::setSize( const Size& dsize )
 {
-    Size temp = dsize;
+    Size temp = m_size;
     m_size = dsize;
     return temp;
 }
