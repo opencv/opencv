@@ -557,6 +557,8 @@ OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int16x8, short, s16)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint32x4, unsigned, u32)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int32x4, int, s32)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, f32)
 
 #define OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(_Tpvec, scalartype, func, scalar_func) \
@@ -719,6 +721,23 @@ OPENCV_HAL_IMPL_NEON_UNPACKS(int16x8, s16)
 OPENCV_HAL_IMPL_NEON_UNPACKS(uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_UNPACKS(int32x4, s32)
 OPENCV_HAL_IMPL_NEON_UNPACKS(float32x4, f32)
+
+#define OPENCV_HAL_IMPL_NEON_EXTRACT(_Tpvec, suffix) \
+template <int s> \
+inline v_##_Tpvec v_extract(const v_##_Tpvec& a, const v_##_Tpvec& b) \
+{ \
+    return v_##_Tpvec(vextq_##suffix(a.val, b.val, s)); \
+}
+
+OPENCV_HAL_IMPL_NEON_EXTRACT(uint8x16, u8)
+OPENCV_HAL_IMPL_NEON_EXTRACT(int8x16, s8)
+OPENCV_HAL_IMPL_NEON_EXTRACT(uint16x8, u16)
+OPENCV_HAL_IMPL_NEON_EXTRACT(int16x8, s16)
+OPENCV_HAL_IMPL_NEON_EXTRACT(uint32x4, u32)
+OPENCV_HAL_IMPL_NEON_EXTRACT(int32x4, s32)
+OPENCV_HAL_IMPL_NEON_EXTRACT(uint64x2, u64)
+OPENCV_HAL_IMPL_NEON_EXTRACT(int64x2, s64)
+OPENCV_HAL_IMPL_NEON_EXTRACT(float32x4, f32)
 
 inline v_int32x4 v_round(const v_float32x4& a)
 {
