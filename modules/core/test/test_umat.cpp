@@ -897,8 +897,9 @@ TEST(UMat, ReadBufferRect)
     EXPECT_MAT_NEAR(t, t2, 0);
 }
 
+
 // Use iGPU or OPENCV_OPENCL_DEVICE=:CPU: to catch problem
-TEST(UMat, DISABLED_synchronization_map_unmap)
+TEST(UMat, synchronization_map_unmap)
 {
     class TestParallelLoopBody : public cv::ParallelLoopBody
     {
@@ -935,6 +936,7 @@ TEST(UMat, DISABLED_synchronization_map_unmap)
     }
 }
 
+
 TEST(UMat, async_unmap)
 {
     for (int i = 0; i < 20; i++)
@@ -960,6 +962,7 @@ TEST(UMat, async_unmap)
         }
     }
 }
+
 
 TEST(UMat, unmap_in_class)
 {
@@ -1024,7 +1027,7 @@ TEST(UMat, map_unmap_counting)
 
 
 
-TEST(UMat, Test_same_behaviour_read_and_read)
+TEST(UMat, DISABLED_Test_same_behaviour_read_and_read)
 {
     bool exceptionDetected = false;
     try
