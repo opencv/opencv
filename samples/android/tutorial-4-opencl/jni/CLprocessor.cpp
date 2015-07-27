@@ -3,6 +3,9 @@
 
 #include <EGL/egl.h>
 
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/ocl.hpp>
+
 #include "common.hpp"
 
 const char oclProgB2B[] = "// clBuffer to clBuffer";
@@ -79,6 +82,8 @@ cl::Program theProgB2B, theProgI2B, theProgI2I;
 
 void initCL()
 {
+    dumpCLinfo();
+
     EGLDisplay mEglDisplay = eglGetCurrentDisplay();
     if (mEglDisplay == EGL_NO_DISPLAY)
         LOGE("initCL: eglGetCurrentDisplay() returned 'EGL_NO_DISPLAY', error = %x", eglGetError());
@@ -113,6 +118,12 @@ void initCL()
         cl::Program::Sources src(1, std::make_pair(oclProgI2I, sizeof(oclProgI2I)));
         theProgI2I = cl::Program(theContext, src);
         theProgI2I.build(devs);
+
+        cv::ocl::attachContext(p.getInfo<CL_PLATFORM_NAME>(), p(), theContext(), devs[0]());
+        if( cv::ocl::useOpenCL() )
+            LOGD("OpenCV+OpenCL works OK!");
+        else
+            LOGE("Can't init OpenCV with OpenCL TAPI");
     }
     catch(cl::Error& e)
     {
@@ -165,4 +176,39 @@ void procOCL_I2I(int texIn, int texOut, int w, int h)
     theQueue.enqueueReleaseGLObjects(&images);
     theQueue.finish();
     LOGD("enqueueReleaseGLObjects() costs %d ms", getTimeInterval(t));
+}
+
+void procOCL_OCV(int tex, int w, int h)
+{
+    int64_t t = getTimeMs();
+    cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, tex);
+    std::vector < cl::Memory > images(1, imgIn);
+    theQueue.enqueueAcquireGLObjects(&images);
+    theQueue.finish();
+    cv::UMat uIn, uOut, uTmp;
+    cv::ocl::convertFromImage(imgIn(), uIn);
+    LOGD("loading texture data to OpenCV UMat costs %d ms", getTimeInterval(t));
+    theQueue.enqueueReleaseGLObjects(&images);
+
+    t = getTimeMs();
+    //cv::blur(uIn, uOut, cv::Size(5, 5));
+    cv::Laplacian(uIn, uTmp, CV_8U);
+    cv:multiply(uTmp, 10, uOut);
+    cv::ocl::finish();
+    LOGD("OpenCV processing costs %d ms", getTimeInterval(t));
+
+    t = getTimeMs();
+    cl::ImageGL imgOut(theContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex);
+    images.clear();
+    images.push_back(imgOut);
+    theQueue.enqueueAcquireGLObjects(&images);
+    cl_mem clBuffer = (cl_mem)uOut.handle(cv::ACCESS_READ);
+    cl_command_queue q = (cl_command_queue)cv::ocl::Queue::getDefault().ptr();
+    size_t offset = 0;
+    size_t origin[3] = { 0, 0, 0 };
+    size_t region[3] = { w, h, 1 };
+    CV_Assert(clEnqueueCopyBufferToImage (q, clBuffer, imgOut(), offset, origin, region, 0, NULL, NULL) == CL_SUCCESS);
+    theQueue.enqueueReleaseGLObjects(&images);
+    cv::ocl::finish();
+    LOGD("uploading results to texture costs %d ms", getTimeInterval(t));
 }

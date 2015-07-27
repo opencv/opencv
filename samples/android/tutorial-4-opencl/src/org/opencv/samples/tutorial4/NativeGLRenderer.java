@@ -3,6 +3,7 @@ package org.opencv.samples.tutorial4;
 public class NativeGLRenderer {
     static
     {
+        System.loadLibrary("opencv_java3");
         System.loadLibrary("JNIrender");
     }
     public static native int initGL();
