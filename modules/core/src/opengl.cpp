@@ -47,7 +47,9 @@
 #  ifdef HAVE_CUDA
 #    include <cuda_gl_interop.h>
 #  endif
-#endif
+#else // HAVE_OPENGL
+#  define NO_OPENGL_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenGL support")
+#endif // HAVE_OPENGL
 
 using namespace cv;
 using namespace cv::cuda;
@@ -1572,3 +1574,314 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
     }
 #endif
 }
+
+////////////////////////////////////////////////////////////////////////
+// CL-GL Interoperability
+
+#ifdef HAVE_OPENCL
+#  include "opencv2/core/opencl/runtime/opencl_gl.hpp"
+#else // HAVE_OPENCL
+#  define NO_OPENCL_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
+#endif // HAVE_OPENCL
+
+#if defined(HAVE_OPENGL)
+#  if defined(ANDROID)
+#    include <EGL/egl.h>
+#  elif defined(__linux__)
+#    include <GL/glx.h>
+#  endif
+#endif // HAVE_OPENGL
+
+namespace cv { namespace ogl {
+
+namespace ocl {
+
+Context& initializeContextFromGL()
+{
+#if !defined(HAVE_OPENGL)
+    NO_OPENGL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL)
+    NO_OPENCL_SUPPORT_ERROR;
+#else
+    cl_uint numPlatforms;
+    cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
+    if (numPlatforms == 0)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
+
+    std::vector<cl_platform_id> platforms(numPlatforms);
+    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
+
+    // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
+
+    int found = -1;
+    cl_device_id device = NULL;
+    cl_context context = NULL;
+
+    for (int i = 0; i < (int)numPlatforms; i++)
+    {
+        // query platform extension: presence of "cl_khr_gl_sharing" extension is requred
+        {
+            AutoBuffer<char> extensionStr;
+
+            size_t extensionSize;
+            status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, 0, NULL, &extensionSize);
+            if (status == CL_SUCCESS)
+            {
+                extensionStr.allocate(extensionSize+1);
+                status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, extensionSize, (char*)extensionStr, NULL);
+            }
+            if (status != CL_SUCCESS)
+                CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platform extension string");
+
+            if (!strstr((const char*)extensionStr, "cl_khr_gl_sharing"))
+                continue;
+        }
+
+        clGetGLContextInfoKHR_fn clGetGLContextInfoKHR = (clGetGLContextInfoKHR_fn)
+                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetGLContextInfoKHR");
+        if (!clGetGLContextInfoKHR)
+            continue;
+
+        cl_context_properties properties[] =
+        {
+#if defined(WIN32) || defined(_WIN32)
+            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+            CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
+            CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+#elif defined(ANDROID)
+            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+            CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
+            CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),
+#elif defined(__linux__)
+            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+            CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
+            CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
+#endif
+            0
+        };
+
+        // query device
+        device = NULL;
+        status = clGetGLContextInfoKHR(properties, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, sizeof(cl_device_id), (void*)&device, NULL);
+        if (status != CL_SUCCESS)
+            continue;
+
+        // create context
+        context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+        if (status != CL_SUCCESS)
+        {
+            clReleaseDevice(device);
+        }
+        else
+        {
+            found = i;
+            break;
+        }
+    }
+
+    if (found < 0)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for OpenGL interop");
+
+    Context& ctx = Context::getDefault(false);
+    initializeContextFromHandle(ctx, platforms[found], context, device);
+    return ctx;
+#endif
+}
+
+} // namespace cv::ogl::ocl
+
+void convertToGLTexture2D(InputArray src, Texture2D& texture)
+{
+    (void)src; (void)texture;
+#if !defined(HAVE_OPENGL)
+    NO_OPENGL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL)
+    NO_OPENCL_SUPPORT_ERROR;
+#else
+    Size srcSize = src.size();
+    CV_Assert(srcSize.width == (int)texture.cols() && srcSize.height == (int)texture.rows());
+
+    using namespace cv::ocl;
+    Context& ctx = Context::getDefault();
+    cl_context context = (cl_context)ctx.ptr();
+
+    UMat u = src.getUMat();
+
+    // TODO Add support for roi
+    CV_Assert(u.offset == 0);
+    CV_Assert(u.isContinuous());
+
+    cl_int status = 0;
+    cl_mem clImage = clCreateFromGLTexture(context, CL_MEM_WRITE_ONLY, gl::TEXTURE_2D, 0, texture.texId(), &status);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromGLTexture failed");
+
+    cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
+
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+    status = clEnqueueAcquireGLObjects(q, 1, &clImage, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
+    size_t offset = 0; // TODO
+    size_t dst_origin[3] = {0, 0, 0};
+    size_t region[3] = {u.cols, u.rows, 1};
+    status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
+    status = clEnqueueReleaseGLObjects(q, 1, &clImage, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseGLObjects failed");
+
+    status = clFinish(q); // TODO Use events
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clFinish failed");
+
+    status = clReleaseMemObject(clImage); // TODO RAII
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMemObject failed");
+#endif
+}
+
+void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
+{
+    (void)texture; (void)dst;
+#if !defined(HAVE_OPENGL)
+    NO_OPENGL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL)
+    NO_OPENCL_SUPPORT_ERROR;
+#else
+    // check texture format
+    const int dtype = CV_8UC4;
+    CV_Assert(texture.format() == Texture2D::RGBA);
+
+    int textureType = dtype;
+    CV_Assert(textureType >= 0);
+
+    using namespace cv::ocl;
+    Context& ctx = Context::getDefault();
+    cl_context context = (cl_context)ctx.ptr();
+
+    // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
+    dst.create(texture.size(), textureType);
+    UMat u = dst.getUMat();
+
+    // TODO Add support for roi
+    CV_Assert(u.offset == 0);
+    CV_Assert(u.isContinuous());
+
+    cl_int status = 0;
+    cl_mem clImage = clCreateFromGLTexture(context, CL_MEM_READ_ONLY, gl::TEXTURE_2D, 0, texture.texId(), &status);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromGLTexture failed");
+
+    cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
+
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+    status = clEnqueueAcquireGLObjects(q, 1, &clImage, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
+    size_t offset = 0; // TODO
+    size_t src_origin[3] = {0, 0, 0};
+    size_t region[3] = {u.cols, u.rows, 1};
+    status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
+    status = clEnqueueReleaseGLObjects(q, 1, &clImage, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseGLObjects failed");
+
+    status = clFinish(q); // TODO Use events
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clFinish failed");
+
+    status = clReleaseMemObject(clImage); // TODO RAII
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMemObject failed");
+#endif
+}
+
+//void mapGLBuffer(const Buffer& buffer, UMat& dst, int accessFlags)
+UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
+{
+    (void)buffer; (void)accessFlags;
+#if !defined(HAVE_OPENGL)
+    NO_OPENGL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL)
+    NO_OPENCL_SUPPORT_ERROR;
+#else
+    using namespace cv::ocl;
+    Context& ctx = Context::getDefault();
+    cl_context context = (cl_context)ctx.ptr();
+    cl_command_queue clQueue = (cl_command_queue)Queue::getDefault().ptr();
+
+    int clAccessFlags = 0;
+    switch (accessFlags & (ACCESS_READ|ACCESS_WRITE))
+    {
+    default:
+    case ACCESS_READ|ACCESS_WRITE:
+        clAccessFlags = CL_MEM_READ_WRITE;
+        break;
+    case ACCESS_READ:
+        clAccessFlags = CL_MEM_READ_ONLY;
+        break;
+    case ACCESS_WRITE:
+        clAccessFlags = CL_MEM_WRITE_ONLY;
+        break;
+    }
+
+    cl_int status = 0;
+    cl_mem clBuffer = clCreateFromGLBuffer(context, clAccessFlags, buffer.bufId(), &status);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromGLBuffer failed");
+
+    gl::Finish();
+
+    status = clEnqueueAcquireGLObjects(clQueue, 1, &clBuffer, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
+
+    size_t step = buffer.cols() * buffer.elemSize();
+    int rows = buffer.rows();
+    int cols = buffer.cols();
+    int type = buffer.type();
+
+    UMat u;
+    convertFromBuffer(clBuffer, step, rows, cols, type, u);
+    return u;
+#endif
+}
+
+void unmapGLBuffer(UMat& u)
+{
+    (void)u;
+#if !defined(HAVE_OPENGL)
+    NO_OPENGL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL)
+    NO_OPENCL_SUPPORT_ERROR;
+#else
+    using namespace cv::ocl;
+    cl_command_queue clQueue = (cl_command_queue)Queue::getDefault().ptr();
+
+    cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
+
+    u.release();
+
+    cl_int status = clEnqueueReleaseGLObjects(clQueue, 1, &clBuffer, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseGLObjects failed");
+
+    status = clFinish(clQueue);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clFinish failed");
+
+    status = clReleaseMemObject(clBuffer);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMemObject failed");
+#endif
+}
+
+}} // namespace cv::ogl

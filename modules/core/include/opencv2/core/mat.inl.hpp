@@ -130,6 +130,7 @@ inline bool _InputArray::isUMat() const  { return kind() == _InputArray::UMAT; }
 inline bool _InputArray::isMatVector() const { return kind() == _InputArray::STD_VECTOR_MAT; }
 inline bool _InputArray::isUMatVector() const  { return kind() == _InputArray::STD_VECTOR_UMAT; }
 inline bool _InputArray::isMatx() const { return kind() == _InputArray::MATX; }
+inline bool _InputArray::isVector() const { return kind() == _InputArray::STD_VECTOR || kind() == _InputArray::STD_BOOL_VECTOR; }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -396,6 +397,8 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
+    CV_Assert(total() == 0 || data != NULL);
+
     size_t esz = CV_ELEM_SIZE(_type), esz1 = CV_ELEM_SIZE1(_type);
     size_t minstep = cols * esz;
     if( _step == AUTO_STEP )
@@ -427,6 +430,8 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
+    CV_Assert(total() == 0 || data != NULL);
+
     size_t esz = CV_ELEM_SIZE(_type), esz1 = CV_ELEM_SIZE1(_type);
     size_t minstep = cols*esz;
     if( _step == AUTO_STEP )
@@ -1096,6 +1101,12 @@ void Mat::push_back(const Mat_<_Tp>& m)
     push_back((const Mat&)m);
 }
 
+template<> inline
+void Mat::push_back(const MatExpr& expr)
+{
+    push_back(static_cast<Mat>(expr));
+}
+
 ///////////////////////////// MatSize ////////////////////////////
 
 inline
@@ -1586,7 +1597,13 @@ template<typename _Tp> template<int n> inline
 Mat_<_Tp>::operator Vec<typename DataType<_Tp>::channel_type, n>() const
 {
     CV_Assert(n % DataType<_Tp>::channels == 0);
+
+#if defined _MSC_VER
+    const Mat* pMat = (const Mat*)this; // workaround for MSVS <= 2012 compiler bugs (but GCC 4.6 dislikes this workaround)
+    return pMat->operator Vec<typename DataType<_Tp>::channel_type, n>();
+#else
     return this->Mat::operator Vec<typename DataType<_Tp>::channel_type, n>();
+#endif
 }
 
 template<typename _Tp> template<int m, int n> inline
@@ -1594,8 +1611,14 @@ Mat_<_Tp>::operator Matx<typename DataType<_Tp>::channel_type, m, n>() const
 {
     CV_Assert(n % DataType<_Tp>::channels == 0);
 
+#if defined _MSC_VER
+    const Mat* pMat = (const Mat*)this; // workaround for MSVS <= 2012 compiler bugs (but GCC 4.6 dislikes this workaround)
+    Matx<typename DataType<_Tp>::channel_type, m, n> res = pMat->operator Matx<typename DataType<_Tp>::channel_type, m, n>();
+    return res;
+#else
     Matx<typename DataType<_Tp>::channel_type, m, n> res = this->Mat::operator Matx<typename DataType<_Tp>::channel_type, m, n>();
     return res;
+#endif
 }
 
 template<typename _Tp> inline

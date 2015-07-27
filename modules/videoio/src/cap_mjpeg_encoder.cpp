@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include <vector>
+#include <deque>
 
 #if CV_NEON
 #define WITH_NEON
@@ -350,14 +351,253 @@ protected:
 };
 
 
+class mjpeg_buffer
+{
+public:
+    mjpeg_buffer()
+    {
+        reset();
+    }
+
+    void resize(int size)
+    {
+        data.resize(size);
+    }
+
+    void put(unsigned bits, int len)
+    {
+        if((m_pos == (data.size() - 1) && len > bits_free) || m_pos == data.size())
+        {
+            resize(int(2*data.size()));
+        }
+
+        bits_free -= (len);
+        unsigned int tempval = (bits) & bit_mask[(len)];
+
+        if( bits_free <= 0 )
+        {
+            data[m_pos] |= ((unsigned)tempval >> -bits_free);
+
+            bits_free += 32;
+            ++m_pos;
+            data[m_pos] = bits_free < 32 ? (tempval << bits_free) : 0;
+        }
+        else
+        {
+            data[m_pos] |= (tempval << bits_free);
+        }
+    }
+
+    void finish()
+    {
+        if(bits_free == 32)
+        {
+            bits_free = 0;
+            m_data_len = m_pos;
+        }
+        else
+        {
+            m_data_len = m_pos + 1;
+        }
+    }
+
+    void reset()
+    {
+        bits_free = 32;
+        m_pos = 0;
+        m_data_len = 0;
+    }
+
+    void clear()
+    {
+        //we need to clear only first element, the rest would be overwritten
+        data[0] = 0;
+    }
+
+    int get_bits_free()
+    {
+        return bits_free;
+    }
+
+    unsigned* get_data()
+    {
+        return &data[0];
+    }
+
+    unsigned get_len()
+    {
+        return m_data_len;
+    }
+
+private:
+    std::vector<unsigned> data;
+    int bits_free;
+    unsigned m_pos;
+    unsigned m_data_len;
+};
+
+
+class mjpeg_buffer_keeper
+{
+public:
+    mjpeg_buffer_keeper()
+    {
+        reset();
+    }
+
+    mjpeg_buffer& operator[](int i)
+    {
+        return m_buffer_list[i];
+    }
+
+    void allocate_buffers(int count, int size)
+    {
+        for(int i = (int)m_buffer_list.size(); i < count; ++i)
+        {
+            m_buffer_list.push_back(mjpeg_buffer());
+            m_buffer_list.back().resize(size);
+        }
+    }
+
+    unsigned* get_data()
+    {
+        //if there is only one buffer (single thread) there is no need to stack buffers
+        if(m_buffer_list.size() == 1)
+        {
+            m_buffer_list[0].finish();
+
+            m_data_len = m_buffer_list[0].get_len();
+            m_last_bit_len = m_buffer_list[0].get_bits_free() ? 32 - m_buffer_list[0].get_bits_free() : 0;
+
+            return m_buffer_list[0].get_data();
+        }
+
+        allocate_output_buffer();
+
+        int bits = 0;
+        unsigned currval = 0;
+        m_data_len = 0;
+
+        for(unsigned j = 0; j < m_buffer_list.size(); ++j)
+        {
+            mjpeg_buffer& buffer = m_buffer_list[j];
+
+            //if no bit shift required we could use memcpy
+            if(bits == 0)
+            {
+                size_t current_pos = m_data_len;
+
+                if(buffer.get_bits_free() == 0)
+                {
+                    memcpy(&m_output_buffer[current_pos], buffer.get_data(), sizeof(buffer.get_data()[0])*buffer.get_len());
+                    m_data_len += buffer.get_len();
+                    currval = 0;
+                }
+                else
+                {
+                    memcpy(&m_output_buffer[current_pos], buffer.get_data(), sizeof(buffer.get_data()[0])*(buffer.get_len() - 1 ));
+                    m_data_len += buffer.get_len() - 1;
+                    currval = buffer.get_data()[buffer.get_len() - 1];
+                }
+            }
+            else
+            {
+                for(unsigned i = 0; i < buffer.get_len() - 1; ++i)
+                {
+                    currval |= ( (unsigned)buffer.get_data()[i] >> (31 & (-bits)) );
+
+                    m_output_buffer[m_data_len++] = currval;
+
+                    currval = buffer.get_data()[i] << (bits + 32);
+                }
+
+                currval |= ( (unsigned)buffer.get_data()[buffer.get_len() - 1] >> (31 & (-bits)) );
+
+                if( buffer.get_bits_free() <= -bits)
+                {
+                    m_output_buffer[m_data_len++] = currval;
+
+                    currval = buffer.get_data()[buffer.get_len() - 1] << (bits + 32);
+                }
+            }
+
+            bits += buffer.get_bits_free();
+
+            if(bits > 0)
+            {
+                bits -= 32;
+            }
+        }
+
+        //bits == 0 means that last element shouldn't be used.
+        m_output_buffer[m_data_len++] = currval;
+
+        m_last_bit_len = -bits;
+
+        return &m_output_buffer[0];
+    }
+
+    int get_last_bit_len()
+    {
+        return m_last_bit_len;
+    }
+
+    int get_data_size()
+    {
+        return m_data_len;
+    }
+
+    void reset()
+    {
+        m_last_bit_len = 0;
+        for(unsigned i = 0; i < m_buffer_list.size(); ++i)
+        {
+            m_buffer_list[i].reset();
+        }
+
+        //there is no need to erase output buffer since it would be overwritten
+        m_data_len = 0;
+    }
+
+private:
+
+    void allocate_output_buffer()
+    {
+        unsigned total_size = 0;
+
+        for(unsigned i = 0; i < m_buffer_list.size(); ++i)
+        {
+            m_buffer_list[i].finish();
+            total_size += m_buffer_list[i].get_len();
+        }
+
+        if(total_size > m_output_buffer.size())
+        {
+            m_output_buffer.clear();
+            m_output_buffer.resize(total_size);
+        }
+    }
+
+    std::deque<mjpeg_buffer> m_buffer_list;
+    std::vector<unsigned> m_output_buffer;
+    int m_data_len;
+    int m_last_bit_len;
+};
+
 class MotionJpegWriter : public IVideoWriter
 {
 public:
-    MotionJpegWriter() { rawstream = false; }
+    MotionJpegWriter()
+    {
+        rawstream = false;
+        nstripes = -1;
+    }
+
     MotionJpegWriter(const String& filename, double fps, Size size, bool iscolor)
     {
         rawstream = false;
         open(filename, fps, size, iscolor);
+        nstripes = -1;
     }
     ~MotionJpegWriter() { close(); }
 
@@ -616,6 +856,8 @@ public:
             return quality;
         if( propId == VIDEOWRITER_PROP_FRAMEBYTES )
             return frameSize.empty() ? 0. : (double)frameSize.back();
+        if( propId == VIDEOWRITER_PROP_NSTRIPES )
+            return nstripes;
         return 0.;
     }
 
@@ -626,6 +868,13 @@ public:
             quality = value;
             return true;
         }
+
+        if( propId == VIDEOWRITER_PROP_NSTRIPES)
+        {
+            nstripes = value;
+            return true;
+        }
+
         return false;
     }
 
@@ -638,6 +887,8 @@ protected:
     size_t moviPointer;
     std::vector<size_t> frameOffset, frameSize, AVIChunkSizeIndex, frameNumIndexes;
     bool rawstream;
+    mjpeg_buffer_keeper buffers_list;
+    double nstripes;
 
     BitStream strm;
 };
@@ -1107,6 +1358,380 @@ static void aan_fdct8x8( const short *src, short *dst,
 }
 #endif
 
+
+inline void convertToYUV(int colorspace, int channels, int input_channels, short* UV_data, short* Y_data, const uchar* pix_data, int y_limit, int x_limit, int step, int u_plane_ofs, int v_plane_ofs)
+{
+    int i, j;
+    const int UV_step = 16;
+    int  x_scale = channels > 1 ? 2 : 1, y_scale = x_scale;
+    int  Y_step = x_scale*8;
+
+    if( channels > 1 )
+    {
+        if( colorspace == COLORSPACE_YUV444P && y_limit == 16 && x_limit == 16 )
+        {
+            for( i = 0; i < y_limit; i += 2, pix_data += step*2, Y_data += Y_step*2, UV_data += UV_step )
+            {
+#ifdef WITH_NEON
+                {
+                    uint16x8_t masklo = vdupq_n_u16(255);
+                    uint16x8_t lane = vld1q_u16((unsigned short*)(pix_data+v_plane_ofs));
+                    uint16x8_t t1 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
+                    lane = vld1q_u16((unsigned short*)(pix_data + v_plane_ofs + step));
+                    uint16x8_t t2 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
+                    t1 = vaddq_u16(t1, t2);
+                    vst1q_s16(UV_data, vsubq_s16(vreinterpretq_s16_u16(t1), vdupq_n_s16(128*4)));
+
+                    lane = vld1q_u16((unsigned short*)(pix_data+u_plane_ofs));
+                    t1 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
+                    lane = vld1q_u16((unsigned short*)(pix_data + u_plane_ofs + step));
+                    t2 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
+                    t1 = vaddq_u16(t1, t2);
+                    vst1q_s16(UV_data + 8, vsubq_s16(vreinterpretq_s16_u16(t1), vdupq_n_s16(128*4)));
+                }
+
+                {
+                    int16x8_t lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data)));
+                    int16x8_t delta = vdupq_n_s16(128);
+                    lane = vsubq_s16(lane, delta);
+                    vst1q_s16(Y_data, lane);
+
+                    lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data+8)));
+                    lane = vsubq_s16(lane, delta);
+                    vst1q_s16(Y_data + 8, lane);
+
+                    lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data+step)));
+                    lane = vsubq_s16(lane, delta);
+                    vst1q_s16(Y_data+Y_step, lane);
+
+                    lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data + step + 8)));
+                    lane = vsubq_s16(lane, delta);
+                    vst1q_s16(Y_data+Y_step + 8, lane);
+                }
+#else
+                for( j = 0; j < x_limit; j += 2, pix_data += 2 )
+                {
+                    Y_data[j] = pix_data[0] - 128;
+                    Y_data[j+1] = pix_data[1] - 128;
+                    Y_data[j+Y_step] = pix_data[step] - 128;
+                    Y_data[j+Y_step+1] = pix_data[step+1] - 128;
+
+                    UV_data[j>>1] = pix_data[v_plane_ofs] + pix_data[v_plane_ofs+1] +
+                        pix_data[v_plane_ofs+step] + pix_data[v_plane_ofs+step+1] - 128*4;
+                    UV_data[(j>>1)+8] = pix_data[u_plane_ofs] + pix_data[u_plane_ofs+1] +
+                        pix_data[u_plane_ofs+step] + pix_data[u_plane_ofs+step+1] - 128*4;
+
+                }
+
+                pix_data -= x_limit*input_channels;
+#endif
+            }
+        }
+        else
+        {
+            for( i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step )
+            {
+                for( j = 0; j < x_limit; j++, pix_data += input_channels )
+                {
+                    int Y, U, V;
+
+                    if( colorspace == COLORSPACE_BGR )
+                    {
+                        int r = pix_data[2];
+                        int g = pix_data[1];
+                        int b = pix_data[0];
+
+                        Y = DCT_DESCALE( r*y_r + g*y_g + b*y_b, fixc) - 128;
+                        U = DCT_DESCALE( r*cb_r + g*cb_g + b*cb_b, fixc );
+                        V = DCT_DESCALE( r*cr_r + g*cr_g + b*cr_b, fixc );
+                    }
+                    else if( colorspace == COLORSPACE_RGBA )
+                    {
+                        int r = pix_data[0];
+                        int g = pix_data[1];
+                        int b = pix_data[2];
+
+                        Y = DCT_DESCALE( r*y_r + g*y_g + b*y_b, fixc) - 128;
+                        U = DCT_DESCALE( r*cb_r + g*cb_g + b*cb_b, fixc );
+                        V = DCT_DESCALE( r*cr_r + g*cr_g + b*cr_b, fixc );
+                    }
+                    else
+                    {
+                        Y = pix_data[0] - 128;
+                        U = pix_data[v_plane_ofs] - 128;
+                        V = pix_data[u_plane_ofs] - 128;
+                    }
+
+                    int j2 = j >> (x_scale - 1);
+                    Y_data[j] = (short)Y;
+                    UV_data[j2] = (short)(UV_data[j2] + U);
+                    UV_data[j2 + 8] = (short)(UV_data[j2 + 8] + V);
+                }
+
+                pix_data -= x_limit*input_channels;
+                if( ((i+1) & (y_scale - 1)) == 0 )
+                {
+                    UV_data += UV_step;
+                }
+            }
+        }
+
+    }
+    else
+    {
+        for( i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step )
+        {
+            for( j = 0; j < x_limit; j++ )
+                Y_data[j] = (short)(pix_data[j]*4 - 128*4);
+        }
+    }
+}
+
+class MjpegEncoder : public ParallelLoopBody
+{
+public:
+    MjpegEncoder(int _height,
+        int _width,
+        int _step,
+        const uchar* _data,
+        int _input_channels,
+        int _channels,
+        int _colorspace,
+        unsigned (&_huff_dc_tab)[2][16],
+        unsigned (&_huff_ac_tab)[2][256],
+        short (&_fdct_qtab)[2][64],
+        uchar* _cat_table,
+        mjpeg_buffer_keeper& _buffer_list,
+        double nstripes
+    ) :
+        m_buffer_list(_buffer_list),
+        height(_height),
+        width(_width),
+        step(_step),
+        in_data(_data),
+        input_channels(_input_channels),
+        channels(_channels),
+        colorspace(_colorspace),
+        huff_dc_tab(_huff_dc_tab),
+        huff_ac_tab(_huff_ac_tab),
+        fdct_qtab(_fdct_qtab),
+        cat_table(_cat_table)
+    {
+        //empirically found value. if number of pixels is less than that value there is no sense to parallelize it.
+        const int min_pixels_count = 96*96;
+
+        stripes_count = 1;
+
+        if(nstripes < 0)
+        {
+            if(height*width > min_pixels_count)
+            {
+                stripes_count = default_stripes_count;
+            }
+        }
+        else
+        {
+            stripes_count = cvCeil(nstripes);
+        }
+
+        int y_scale = channels > 1 ? 2 : 1;
+        int y_step = y_scale * 8;
+
+        int max_stripes = (height - 1)/y_step + 1;
+
+        stripes_count = std::min(stripes_count, max_stripes);
+
+        m_buffer_list.allocate_buffers(stripes_count, (height*width*2)/stripes_count);
+    }
+
+    void operator()( const cv::Range& range ) const
+    {
+        const int CAT_TAB_SIZE = 4096;
+        unsigned code = 0;
+
+#define JPUT_BITS(val, bits) output_buffer.put(val, bits)
+
+#define JPUT_HUFF(val, table) \
+    code = table[(val) + 2]; \
+    JPUT_BITS(code >> 8, (int)(code & 255))
+
+        int x, y;
+        int i, j;
+
+        short  buffer[4096];
+        int  x_scale = channels > 1 ? 2 : 1, y_scale = x_scale;
+        int  dc_pred[] = { 0, 0, 0 };
+        int  x_step = x_scale * 8;
+        int  y_step = y_scale * 8;
+        short  block[6][64];
+        int  luma_count = x_scale*y_scale;
+        int  block_count = luma_count + channels - 1;
+        int u_plane_ofs = step*height;
+        int v_plane_ofs = u_plane_ofs + step*height;
+        const uchar* data = in_data;
+        const uchar* init_data = data;
+
+        int num_steps = (height - 1)/y_step + 1;
+
+        //if this is not first stripe we need to calculate dc_pred from previous step
+        if(range.start > 0)
+        {
+            y = y_step*int(num_steps*range.start/stripes_count - 1);
+            data = init_data + y*step;
+
+            for( x = 0; x < width; x += x_step )
+            {
+                int x_limit = x_step;
+                int y_limit = y_step;
+                const uchar* pix_data = data + x*input_channels;
+                short* Y_data = block[0];
+                short* UV_data = block[luma_count];
+
+                if( x + x_limit > width ) x_limit = width - x;
+                if( y + y_limit > height ) y_limit = height - y;
+
+                memset( block, 0, block_count*64*sizeof(block[0][0]));
+
+                convertToYUV(colorspace, channels, input_channels, UV_data, Y_data, pix_data, y_limit, x_limit, step, u_plane_ofs, v_plane_ofs);
+
+                for( i = 0; i < block_count; i++ )
+                {
+                    int is_chroma = i >= luma_count;
+                    int src_step = x_scale * 8;
+                    const short* src_ptr = block[i & -2] + (i & 1)*8;
+
+                    aan_fdct8x8( src_ptr, buffer, src_step, fdct_qtab[is_chroma] );
+
+                    j = is_chroma + (i > luma_count);
+                    dc_pred[j] = buffer[0];
+                }
+            }
+        }
+
+        for(int k = range.start; k < range.end; ++k)
+        {
+            mjpeg_buffer& output_buffer = m_buffer_list[k];
+            output_buffer.clear();
+
+            int y_min = y_step*int(num_steps*k/stripes_count);
+            int y_max = y_step*int(num_steps*(k+1)/stripes_count);
+
+            if(k == stripes_count - 1)
+            {
+                y_max = height;
+            }
+
+
+            data = init_data + y_min*step;
+
+            for( y = y_min; y < y_max; y += y_step, data += y_step*step )
+            {
+                for( x = 0; x < width; x += x_step )
+                {
+                    int x_limit = x_step;
+                    int y_limit = y_step;
+                    const uchar* pix_data = data + x*input_channels;
+                    short* Y_data = block[0];
+                    short* UV_data = block[luma_count];
+
+                    if( x + x_limit > width ) x_limit = width - x;
+                    if( y + y_limit > height ) y_limit = height - y;
+
+                    memset( block, 0, block_count*64*sizeof(block[0][0]));
+
+                    convertToYUV(colorspace, channels, input_channels, UV_data, Y_data, pix_data, y_limit, x_limit, step, u_plane_ofs, v_plane_ofs);
+
+                    for( i = 0; i < block_count; i++ )
+                    {
+                        int is_chroma = i >= luma_count;
+                        int src_step = x_scale * 8;
+                        int run = 0, val;
+                        const short* src_ptr = block[i & -2] + (i & 1)*8;
+                        const unsigned* htable = huff_ac_tab[is_chroma];
+
+                        aan_fdct8x8( src_ptr, buffer, src_step, fdct_qtab[is_chroma] );
+
+                        j = is_chroma + (i > luma_count);
+                        val = buffer[0] - dc_pred[j];
+                        dc_pred[j] = buffer[0];
+
+                        {
+                            int cat = cat_table[val + CAT_TAB_SIZE];
+
+                            //CV_Assert( cat <= 11 );
+                            JPUT_HUFF( cat, huff_dc_tab[is_chroma] );
+                            JPUT_BITS( val - (val < 0 ? 1 : 0), cat );
+                        }
+
+                        for( j = 1; j < 64; j++ )
+                        {
+                            val = buffer[zigzag[j]];
+
+                            if( val == 0 )
+                            {
+                                run++;
+                            }
+                            else
+                            {
+                                while( run >= 16 )
+                                {
+                                    JPUT_HUFF( 0xF0, htable ); // encode 16 zeros
+                                    run -= 16;
+                                }
+
+                                {
+                                    int cat = cat_table[val + CAT_TAB_SIZE];
+                                    //CV_Assert( cat <= 10 );
+                                    JPUT_HUFF( cat + run*16, htable );
+                                    JPUT_BITS( val - (val < 0 ? 1 : 0), cat );
+                                }
+
+                                run = 0;
+                            }
+                        }
+
+                        if( run )
+                        {
+                            JPUT_HUFF( 0x00, htable ); // encode EOB
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    cv::Range getRange()
+    {
+        return cv::Range(0, stripes_count);
+    }
+
+    double getNStripes()
+    {
+        return stripes_count;
+    }
+
+    mjpeg_buffer_keeper& m_buffer_list;
+private:
+
+    MjpegEncoder& operator=( const MjpegEncoder & ) { return *this; }
+
+    const int height;
+    const int width;
+    const int step;
+    const uchar* in_data;
+    const int input_channels;
+    const int channels;
+    const int colorspace;
+    const unsigned (&huff_dc_tab)[2][16];
+    const unsigned (&huff_ac_tab)[2][256];
+    const short (&fdct_qtab)[2][64];
+    const uchar* cat_table;
+    int stripes_count;
+    static const int default_stripes_count;
+};
+
+const int MjpegEncoder::default_stripes_count = 4;
+
 void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspace, int input_channels )
 {
     //double total_cvt = 0, total_dct = 0;
@@ -1133,7 +1758,6 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
     //   for every block:
     //     calc dct and quantize
     //     encode block.
-    int x, y;
     int i, j;
     const int max_quality = 12;
     short fdct_qtab[2][64];
@@ -1141,18 +1765,9 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
     unsigned huff_ac_tab[2][256];
 
     int  x_scale = channels > 1 ? 2 : 1, y_scale = x_scale;
-    int  dc_pred[] = { 0, 0, 0 };
-    int  x_step = x_scale * 8;
-    int  y_step = y_scale * 8;
-    short  block[6][64];
     short  buffer[4096];
     int*   hbuffer = (int*)buffer;
     int  luma_count = x_scale*y_scale;
-    int  block_count = luma_count + channels - 1;
-    int  Y_step = x_scale*8;
-    const int UV_step = 16;
-    int u_plane_ofs = step*height;
-    int v_plane_ofs = u_plane_ofs + step*height;
     double _quality = quality*0.01*max_quality;
 
     if( _quality < 1. ) _quality = 1.;
@@ -1241,229 +1856,27 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
 
     strm.putByte( 0 );  // successive approximation bit position
     // high & low - (0,0) for sequential DCT
-    unsigned currval = 0, code = 0, tempval = 0;
-    int bit_idx = 32;
 
-#define JPUT_BITS(val, bits) \
-    bit_idx -= (bits); \
-    tempval = (val) & bit_mask[(bits)]; \
-    if( bit_idx <= 0 ) \
-    {  \
-        strm.jput(currval | ((unsigned)tempval >> -bit_idx)); \
-        bit_idx += 32; \
-        currval = bit_idx < 32 ? (tempval << bit_idx) : 0; \
-    } \
-    else \
-        currval |= (tempval << bit_idx)
+    buffers_list.reset();
 
-#define JPUT_HUFF(val, table) \
-    code = table[(val) + 2]; \
-    JPUT_BITS(code >> 8, (int)(code & 255))
+    MjpegEncoder parallel_encoder(height, width, step, data, input_channels, channels, colorspace, huff_dc_tab, huff_ac_tab, fdct_qtab, cat_table, buffers_list, nstripes);
 
-    // encode data
-    for( y = 0; y < height; y += y_step, data += y_step*step )
+    cv::parallel_for_(parallel_encoder.getRange(), parallel_encoder, parallel_encoder.getNStripes());
+
+    //std::vector<unsigned>& v = parallel_encoder.m_buffer_list.get_data();
+    unsigned* v = buffers_list.get_data();
+    unsigned last_data_elem = buffers_list.get_data_size() - 1;
+
+    for(unsigned k = 0; k < last_data_elem; ++k)
     {
-        for( x = 0; x < width; x += x_step )
-        {
-            int x_limit = x_step;
-            int y_limit = y_step;
-            const uchar* pix_data = data + x*input_channels;
-            short* Y_data = block[0];
-
-            if( x + x_limit > width ) x_limit = width - x;
-            if( y + y_limit > height ) y_limit = height - y;
-
-            memset( block, 0, block_count*64*sizeof(block[0][0]));
-
-            if( channels > 1 )
-            {
-                short* UV_data = block[luma_count];
-                // double t = (double)cv::getTickCount();
-
-                if( colorspace == COLORSPACE_YUV444P && y_limit == 16 && x_limit == 16 )
-                {
-                    for( i = 0; i < y_limit; i += 2, pix_data += step*2, Y_data += Y_step*2, UV_data += UV_step )
-                    {
-#ifdef WITH_NEON
-                        {
-                            uint16x8_t masklo = vdupq_n_u16(255);
-                            uint16x8_t lane = vld1q_u16((unsigned short*)(pix_data+v_plane_ofs));
-                            uint16x8_t t1 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
-                            lane = vld1q_u16((unsigned short*)(pix_data + v_plane_ofs + step));
-                            uint16x8_t t2 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
-                            t1 = vaddq_u16(t1, t2);
-                            vst1q_s16(UV_data, vsubq_s16(vreinterpretq_s16_u16(t1), vdupq_n_s16(128*4)));
-
-                            lane = vld1q_u16((unsigned short*)(pix_data+u_plane_ofs));
-                            t1 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
-                            lane = vld1q_u16((unsigned short*)(pix_data + u_plane_ofs + step));
-                            t2 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
-                            t1 = vaddq_u16(t1, t2);
-                            vst1q_s16(UV_data + 8, vsubq_s16(vreinterpretq_s16_u16(t1), vdupq_n_s16(128*4)));
-                        }
-
-                        {
-                            int16x8_t lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data)));
-                            int16x8_t delta = vdupq_n_s16(128);
-                            lane = vsubq_s16(lane, delta);
-                            vst1q_s16(Y_data, lane);
-
-                            lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data+8)));
-                            lane = vsubq_s16(lane, delta);
-                            vst1q_s16(Y_data + 8, lane);
-
-                            lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data+step)));
-                            lane = vsubq_s16(lane, delta);
-                            vst1q_s16(Y_data+Y_step, lane);
-
-                            lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data + step + 8)));
-                            lane = vsubq_s16(lane, delta);
-                            vst1q_s16(Y_data+Y_step + 8, lane);
-                        }
-#else
-                        for( j = 0; j < x_limit; j += 2, pix_data += 2 )
-                        {
-                            Y_data[j] = pix_data[0] - 128;
-                            Y_data[j+1] = pix_data[1] - 128;
-                            Y_data[j+Y_step] = pix_data[step] - 128;
-                            Y_data[j+Y_step+1] = pix_data[step+1] - 128;
-
-                            UV_data[j>>1] = pix_data[v_plane_ofs] + pix_data[v_plane_ofs+1] +
-                                pix_data[v_plane_ofs+step] + pix_data[v_plane_ofs+step+1] - 128*4;
-                            UV_data[(j>>1)+8] = pix_data[u_plane_ofs] + pix_data[u_plane_ofs+1] +
-                                pix_data[u_plane_ofs+step] + pix_data[u_plane_ofs+step+1] - 128*4;
-
-                        }
-
-                        pix_data -= x_limit*input_channels;
-#endif
-                    }
-                }
-                else
-                {
-                    for( i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step )
-                    {
-                        for( j = 0; j < x_limit; j++, pix_data += input_channels )
-                        {
-                            int Y, U, V;
-
-                            if( colorspace == COLORSPACE_BGR )
-                            {
-                                int r = pix_data[2];
-                                int g = pix_data[1];
-                                int b = pix_data[0];
-
-                                Y = DCT_DESCALE( r*y_r + g*y_g + b*y_b, fixc) - 128;
-                                U = DCT_DESCALE( r*cb_r + g*cb_g + b*cb_b, fixc );
-                                V = DCT_DESCALE( r*cr_r + g*cr_g + b*cr_b, fixc );
-                            }
-                            else if( colorspace == COLORSPACE_RGBA )
-                            {
-                                int r = pix_data[0];
-                                int g = pix_data[1];
-                                int b = pix_data[2];
-
-                                Y = DCT_DESCALE( r*y_r + g*y_g + b*y_b, fixc) - 128;
-                                U = DCT_DESCALE( r*cb_r + g*cb_g + b*cb_b, fixc );
-                                V = DCT_DESCALE( r*cr_r + g*cr_g + b*cr_b, fixc );
-                            }
-                            else
-                            {
-                                Y = pix_data[0] - 128;
-                                U = pix_data[v_plane_ofs] - 128;
-                                V = pix_data[u_plane_ofs] - 128;
-                            }
-
-                            int j2 = j >> (x_scale - 1);
-                            Y_data[j] = (short)Y;
-                            UV_data[j2] = (short)(UV_data[j2] + U);
-                            UV_data[j2 + 8] = (short)(UV_data[j2 + 8] + V);
-                        }
-
-                        pix_data -= x_limit*input_channels;
-                        if( ((i+1) & (y_scale - 1)) == 0 )
-                        {
-                            UV_data += UV_step;
-                        }
-                    }
-                }
-
-                // total_cvt += (double)cv::getTickCount() - t;
-            }
-            else
-            {
-                for( i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step )
-                {
-                    for( j = 0; j < x_limit; j++ )
-                        Y_data[j] = (short)(pix_data[j]*4 - 128*4);
-                }
-            }
-
-            for( i = 0; i < block_count; i++ )
-            {
-                int is_chroma = i >= luma_count;
-                int src_step = x_scale * 8;
-                int run = 0, val;
-                const short* src_ptr = block[i & -2] + (i & 1)*8;
-                const unsigned* htable = huff_ac_tab[is_chroma];
-
-                //double t = (double)cv::getTickCount();
-                aan_fdct8x8( src_ptr, buffer, src_step, fdct_qtab[is_chroma] );
-                //total_dct += (double)cv::getTickCount() - t;
-
-                j = is_chroma + (i > luma_count);
-                val = buffer[0] - dc_pred[j];
-                dc_pred[j] = buffer[0];
-
-                {
-                    int cat = cat_table[val + CAT_TAB_SIZE];
-
-                    //CV_Assert( cat <= 11 );
-                    JPUT_HUFF( cat, huff_dc_tab[is_chroma] );
-                    JPUT_BITS( val - (val < 0 ? 1 : 0), cat );
-                }
-
-                for( j = 1; j < 64; j++ )
-                {
-                    val = buffer[zigzag[j]];
-
-                    if( val == 0 )
-                    {
-                        run++;
-                    }
-                    else
-                    {
-                        while( run >= 16 )
-                        {
-                            JPUT_HUFF( 0xF0, htable ); // encode 16 zeros
-                            run -= 16;
-                        }
-
-                        {
-                            int cat = cat_table[val + CAT_TAB_SIZE];
-                            //CV_Assert( cat <= 10 );
-                            JPUT_HUFF( cat + run*16, htable );
-                            JPUT_BITS( val - (val < 0 ? 1 : 0), cat );
-                        }
-
-                        run = 0;
-                    }
-                }
-
-                if( run )
-                {
-                    JPUT_HUFF( 0x00, htable ); // encode EOB
-                }
-            }
-        }
+        strm.jput(v[k]);
     }
-
-    // Flush
-    strm.jflush(currval, bit_idx);
+    strm.jflush(v[last_data_elem], 32 - buffers_list.get_last_bit_len());
     strm.jputShort( 0xFFD9 ); // EOI marker
     /*printf("total dct = %.1fms, total cvt = %.1fms\n",
      total_dct*1000./cv::getTickFrequency(),
      total_cvt*1000./cv::getTickFrequency());*/
+
     size_t pos = strm.getPos();
     size_t pos1 = (pos + 3) & ~3;
     for( ; pos < pos1; pos++ )

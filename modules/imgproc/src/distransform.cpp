@@ -438,7 +438,7 @@ static void getDistanceTransformMask( int maskType, float *metrics )
         metrics[2] = 2.1969f;
         break;
     default:
-        CV_Error(CV_StsBadArg, "Uknown metric type");
+        CV_Error(CV_StsBadArg, "Unknown metric type");
     }
 }
 
@@ -662,7 +662,7 @@ distanceATS_L1_8u( const Mat& src, Mat& dst )
 
         // do right edge
         a = lut[dbase[width-1+dststep]];
-        dbase[width-1] = (uchar)(MIN(a, dbase[width-1]));
+        a = dbase[width-1] = (uchar)(MIN(a, dbase[width-1]));
 
         for( x = width - 2; x >= 0; x-- )
         {
@@ -730,7 +730,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     float _mask[5] = {0};
 
     if( maskSize != CV_DIST_MASK_3 && maskSize != CV_DIST_MASK_5 && maskSize != CV_DIST_MASK_PRECISE )
-        CV_Error( CV_StsBadSize, "Mask size should be 3 or 5 or 0 (presize)" );
+        CV_Error( CV_StsBadSize, "Mask size should be 3 or 5 or 0 (precise)" );
 
     if( distType == CV_DIST_C || distType == CV_DIST_L1 )
         maskSize = !need_labels ? CV_DIST_MASK_3 : CV_DIST_MASK_5;

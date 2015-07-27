@@ -292,14 +292,24 @@ TLSData<CoreTLSData>& getCoreTlsData();
 #define CL_RUNTIME_EXPORT
 #endif
 
-#ifndef HAVE_PTHREADS
-#if !(defined WIN32 || defined _WIN32 || defined WINCE || defined HAVE_WINRT)
-#define HAVE_PTHREADS 1
-#endif
-#endif
-
 extern bool __termination; // skip some cleanups, because process is terminating
                            // (for example, if ExitProcess() was already called)
+
+cv::Mutex& getInitializationMutex();
+
+// TODO Memory barriers?
+#define CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, RET_VALUE) \
+    static TYPE* volatile instance = NULL; \
+    if (instance == NULL) \
+    { \
+        cv::AutoLock lock(cv::getInitializationMutex()); \
+        if (instance == NULL) \
+            instance = INITIALIZER; \
+    } \
+    return RET_VALUE;
+
+#define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
+#define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
 }
 

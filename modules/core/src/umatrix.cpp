@@ -46,6 +46,13 @@
 
 namespace cv {
 
+// forward decls, implementation is below in this file
+void setSize(UMat& m, int _dims, const int* _sz, const size_t* _steps,
+             bool autoSteps = false);
+
+void updateContinuityFlag(UMat& m);
+void finalizeHdr(UMat& m);
+
 // it should be a prime number for the best hash function
 enum { UMAT_NLOCKS = 31 };
 static Mutex umatLocks[UMAT_NLOCKS];
@@ -123,8 +130,8 @@ void swap( UMat& a, UMat& b )
 }
 
 
-static inline void setSize( UMat& m, int _dims, const int* _sz,
-                            const size_t* _steps, bool autoSteps=false )
+void setSize( UMat& m, int _dims, const int* _sz,
+                            const size_t* _steps, bool autoSteps )
 {
     CV_Assert( 0 <= _dims && _dims <= CV_MAX_DIM );
     if( m.dims != _dims )
@@ -176,7 +183,8 @@ static inline void setSize( UMat& m, int _dims, const int* _sz,
     }
 }
 
-static void updateContinuityFlag(UMat& m)
+
+void updateContinuityFlag(UMat& m)
 {
     int i, j;
     for( i = 0; i < m.dims; i++ )
@@ -199,13 +207,14 @@ static void updateContinuityFlag(UMat& m)
 }
 
 
-static void finalizeHdr(UMat& m)
+void finalizeHdr(UMat& m)
 {
     updateContinuityFlag(m);
     int d = m.dims;
     if( d > 2 )
         m.rows = m.cols = -1;
 }
+
 
 UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
 {
@@ -737,7 +746,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
                              ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),
                              ocl::convertTypeStr(sdepth, wdepth, 1, cvt[0]),
                              ocl::convertTypeStr(wdepth, ddepth, 1, cvt[1]),
-                             doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", noScale ? " -D NO_SCALE" : ""));
         if (!k.empty())
         {
             UMat src = *this;
@@ -748,7 +757,9 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
             ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
                     dstarg = ocl::KernelArg::WriteOnly(dst, cn);
 
-            if (wdepth == CV_32F)
+            if (noScale)
+                k.args(srcarg, dstarg, rowsPerWI);
+            else if (wdepth == CV_32F)
                 k.args(srcarg, dstarg, alphaf, betaf, rowsPerWI);
             else
                 k.args(srcarg, dstarg, alpha, beta, rowsPerWI);

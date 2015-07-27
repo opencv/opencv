@@ -66,6 +66,10 @@ UIImage* MatToUIImage(const cv::Mat& image) {
     CGDataProviderRef provider =
             CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
 
+    // Preserve alpha transparency, if exists
+    bool alpha = image.channels() == 4;
+    CGBitmapInfo bitmapInfo = (alpha ? kCGImageAlphaLast : kCGImageAlphaNone) | kCGBitmapByteOrderDefault;
+
     // Creating CGImage from cv::Mat
     CGImageRef imageRef = CGImageCreate(image.cols,
                                         image.rows,
@@ -73,8 +77,7 @@ UIImage* MatToUIImage(const cv::Mat& image) {
                                         8 * image.elemSize(),
                                         image.step.p[0],
                                         colorSpace,
-                                        kCGImageAlphaNone|
-                                        kCGBitmapByteOrderDefault,
+                                        bitmapInfo,
                                         provider,
                                         NULL,
                                         false,

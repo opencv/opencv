@@ -568,7 +568,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
-    int err = avformat_open_input(&ic, _filename, NULL, NULL);
+    int err = avformat_open_input(&ic, _filename, NULL, &dict);
 #else
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
 #endif
@@ -1543,7 +1543,7 @@ void CvVideoWriter_FFMPEG::close()
 #define CV_PRINTABLE_CHAR(ch) ((ch) < 32 ? '?' : (ch))
 #define CV_TAG_TO_PRINTABLE_CHAR4(tag) CV_PRINTABLE_CHAR((tag) & 255), CV_PRINTABLE_CHAR(((tag) >> 8) & 255), CV_PRINTABLE_CHAR(((tag) >> 16) & 255), CV_PRINTABLE_CHAR(((tag) >> 24) & 255)
 
-static inline bool cv_ff_codec_tag_match(const AVCodecTag *tags, enum AVCodecID id, unsigned int tag)
+static inline bool cv_ff_codec_tag_match(const AVCodecTag *tags, CV_CODEC_ID id, unsigned int tag)
 {
     while (tags->id != AV_CODEC_ID_NONE)
     {
@@ -1553,7 +1553,7 @@ static inline bool cv_ff_codec_tag_match(const AVCodecTag *tags, enum AVCodecID 
     }
     return false;
 }
-static inline bool cv_ff_codec_tag_list_match(const AVCodecTag *const *tags, enum AVCodecID id, unsigned int tag)
+static inline bool cv_ff_codec_tag_list_match(const AVCodecTag *const *tags, CV_CODEC_ID id, unsigned int tag)
 {
     int i;
     for (i = 0; tags && tags[i]; i++) {
@@ -1611,21 +1611,24 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #if LIBAVCODEC_VERSION_INT<((51<<16)+(49<<8)+0)
     if( (codec_id = codec_get_bmp_id( fourcc )) == CV_CODEC(CODEC_ID_NONE) )
         return false;
-#elif LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
-// APIchnages:
-// 2012-01-31 - dd6d3b0 - lavf 54.01.0
-//   Add avformat_get_riff_video_tags() and avformat_get_riff_audio_tags().
+#else
     if( (codec_id = av_codec_get_id(fmt->codec_tag, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
     {
         const struct AVCodecTag * fallback_tags[] = {
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
+// APIchanges:
+// 2012-01-31 - dd6d3b0 - lavf 54.01.0
+//   Add avformat_get_riff_video_tags() and avformat_get_riff_audio_tags().
                 avformat_get_riff_video_tags(),
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 25, 100)
+#endif
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 25, 100) && defined LIBAVFORMAT_VERSION_MICRO && LIBAVFORMAT_VERSION_MICRO >= 100
 // APIchanges: ffmpeg only
 // 2014-01-19 - 1a193c4 - lavf 55.25.100 - avformat.h
 //   Add avformat_get_mov_video_tags() and avformat_get_mov_audio_tags().
-                // TODO ffmpeg only, need to skip libav: avformat_get_mov_video_tags(),
+                avformat_get_mov_video_tags(),
 #endif
-                codec_bmp_tags, NULL };
+                codec_bmp_tags, // fallback for avformat < 54.1
+                NULL };
         if( (codec_id = av_codec_get_id(fallback_tags, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
         {
             fflush(stdout);
@@ -1650,10 +1653,6 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             fourcc = supported_tag;
         }
     }
-#else
-    const struct AVCodecTag * tags[] = { codec_bmp_tags, NULL};
-    if( (codec_id = av_codec_get_id(tags, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
-        return false;
 #endif
 
     // alloc memory for context
@@ -1740,7 +1739,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     /* find the video encoder */
     codec = avcodec_find_encoder(c->codec_id);
     if (!codec) {
-        fprintf(stderr, "Could not find encoder for codec id %d: %s", c->codec_id, icvFFMPEGErrStr(
+        fprintf(stderr, "Could not find encoder for codec id %d: %s\n", c->codec_id, icvFFMPEGErrStr(
         #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
                 AVERROR_ENCODER_NOT_FOUND
         #else
@@ -1764,7 +1763,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
          avcodec_open(c, codec)
 #endif
          ) < 0) {
-        fprintf(stderr, "Could not open codec '%s': %s", codec->name, icvFFMPEGErrStr(err));
+        fprintf(stderr, "Could not open codec '%s': %s\n", codec->name, icvFFMPEGErrStr(err));
         return false;
     }
 
@@ -1968,6 +1967,13 @@ void OutputMediaStream_FFMPEG::close()
 
 AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC_ID codec_id, int w, int h, int bitrate, double fps, PixelFormat pixel_format)
 {
+    AVCodec* codec = avcodec_find_encoder(codec_id);
+    if (!codec)
+    {
+        fprintf(stderr, "Could not find encoder for codec id %d\n", codec_id);
+        return NULL;
+    }
+
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 10, 0)
         AVStream* st = avformat_new_stream(oc, 0);
     #else
@@ -1998,8 +2004,6 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
     // resolution must be a multiple of two
     c->width = w;
     c->height = h;
-
-    AVCodec* codec = avcodec_find_encoder(c->codec_id);
 
     // time base: this is the fundamental unit of time (in seconds) in terms
     // of which frame timestamps are represented. for fixed-fps content,

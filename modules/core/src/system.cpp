@@ -43,6 +43,20 @@
 
 #include "precomp.hpp"
 
+namespace cv {
+
+static Mutex* __initialization_mutex = NULL;
+Mutex& getInitializationMutex()
+{
+    if (__initialization_mutex == NULL)
+        __initialization_mutex = new Mutex();
+    return *__initialization_mutex;
+}
+// force initialization (single-threaded environment)
+Mutex* __initialization_mutex_initializer = &getInitializationMutex();
+
+} // namespace cv
+
 #ifdef _MSC_VER
 # if _MSC_VER >= 1700
 #  pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
@@ -1108,8 +1122,7 @@ public:
 // For more information: http://www.parashift.com/c++-faq/static-init-order-on-first-use.html
 static TLSContainerStorage& getTLSContainerStorage()
 {
-    static TLSContainerStorage *tlsContainerStorage = new TLSContainerStorage();
-    return *tlsContainerStorage;
+    CV_SINGLETON_LAZY_INIT_REF(TLSContainerStorage, new TLSContainerStorage())
 }
 
 TLSDataContainer::TLSDataContainer()
@@ -1153,20 +1166,16 @@ TLSStorage::~TLSStorage()
 }
 
 
-
 TLSData<CoreTLSData>& getCoreTlsData()
 {
-    static TLSData<CoreTLSData> *value = new TLSData<CoreTLSData>();
-    return *value;
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<CoreTLSData>, new TLSData<CoreTLSData>())
 }
-
 
 
 #ifdef CV_COLLECT_IMPL_DATA
 ImplCollector& getImplData()
 {
-    static ImplCollector *value = new ImplCollector();
-    return *value;
+    CV_SINGLETON_LAZY_INIT_REF(ImplCollector, new ImplCollector())
 }
 
 void setImpl(int flags)

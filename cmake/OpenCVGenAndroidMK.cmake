@@ -30,13 +30,6 @@ if(ANDROID)
   # replace 'opencv_<module>' -> '<module>''
   string(REPLACE "opencv_" "" OPENCV_MODULES_CONFIGMAKE "${OPENCV_MODULES_CONFIGMAKE}")
 
-
-  # prepare 3rd-party component list without TBB for armeabi and mips platforms. TBB is useless there.
-  set(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE})
-  foreach(mod ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB})
-     string(REPLACE "tbb" "" OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB "${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB}")
-  endforeach()
-
   if(BUILD_FAT_JAVA_LIB)
     set(OPENCV_LIBS_CONFIGMAKE java3)
   else()
@@ -52,6 +45,7 @@ if(ANDROID)
   set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/3rdparty/lib/\$(OPENCV_TARGET_ARCH_ABI)")
 
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/OpenCV.mk" @ONLY)
+  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV-abi.mk.in" "${CMAKE_BINARY_DIR}/OpenCV-${ANDROID_NDK_ABI_NAME}.mk" @ONLY)
 
   # -------------------------------------------------------------------------------------------
   #  Part 2/2: ${BIN_DIR}/unix-install/OpenCV.mk -> For use with "make install"
@@ -62,5 +56,7 @@ if(ANDROID)
   set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../3rdparty/libs/\$(OPENCV_TARGET_ARCH_ABI)")
 
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk" @ONLY)
+  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV-abi.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV-${ANDROID_NDK_ABI_NAME}.mk" @ONLY)
   install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH} COMPONENT dev)
+  install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV-${ANDROID_NDK_ABI_NAME}.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH} COMPONENT dev)
 endif(ANDROID)

@@ -18,6 +18,10 @@ if(WIN32 AND HAVE_DIRECTX)
   add_subdirectory(directx)
 endif()
 
+if((NOT ANDROID) AND HAVE_OPENGL)
+  add_subdirectory(opengl)
+endif()
+
 if(ANDROID AND BUILD_ANDROID_EXAMPLES)
   add_subdirectory(android)
 endif()
@@ -65,6 +69,8 @@ endif()
 
 add_subdirectory(cpp)
 # FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
+
+add_subdirectory(opencl)
 
 if(WIN32)
   add_subdirectory(directx)
