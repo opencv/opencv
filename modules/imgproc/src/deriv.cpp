@@ -547,7 +547,39 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
     }
     return false;
 }
-
+#ifdef HAVE_IPP
+static bool ipp_sobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType)
+{
+    if (ksize < 0)
+    {
+        if (IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return true;
+        }
+    }
+    else if (0 < ksize)
+    {
+        if (IPPDerivSobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType))
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return true;
+        }
+    }
+    return false;
+}
+static bool ipp_scharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
+{
+#if IPP_VERSION_MAJOR >= 7
+    if (IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType))
+    {
+        CV_IMPL_ADD(CV_IMPL_IPP);
+        return true;
+    }
+#endif
+    return false;
+}
+#endif
 }
 
 #endif
@@ -572,27 +604,10 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-#ifdef HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        if (ksize < 0)
-        {
-            if (IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-        }
-        else if (0 < ksize)
-        {
-            if (IPPDerivSobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-        }
-    }
-#endif
+
+    CV_IPP_RUN(true, ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
+
+
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
     Mat kx, ky;
@@ -628,16 +643,10 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    CV_IPP_CHECK()
-    {
-        if (IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-    }
-#endif
+
+    CV_IPP_RUN(true, ipp_scharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType));
+
+
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
     Mat kx, ky;
@@ -799,33 +808,30 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
 
 #endif
 
-void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
-                    double scale, double delta, int borderType )
+#if defined(HAVE_IPP)
+namespace cv
+{
+static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ddepth, int ksize,
+                    double scale, double delta, int borderType)
 {
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
-#ifdef HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        if ((ksize == 3 || ksize == 5) && ((borderType & BORDER_ISOLATED) != 0 || !_src.isSubmatrix()) &&
-            ((stype == CV_8UC1 && ddepth == CV_16S) || (ddepth == CV_32F && stype == CV_32FC1)) && !ocl::useOpenCL())
-        {
-            int iscale = saturate_cast<int>(scale), idelta = saturate_cast<int>(delta);
-            bool floatScale = std::fabs(scale - iscale) > DBL_EPSILON, needScale = iscale != 1;
-            bool floatDelta = std::fabs(delta - idelta) > DBL_EPSILON, needDelta = delta != 0;
-            int borderTypeNI = borderType & ~BORDER_ISOLATED;
-            Mat src = _src.getMat(), dst = _dst.getMat();
+    int iscale = saturate_cast<int>(scale), idelta = saturate_cast<int>(delta);
+    bool floatScale = std::fabs(scale - iscale) > DBL_EPSILON, needScale = iscale != 1;
+    bool floatDelta = std::fabs(delta - idelta) > DBL_EPSILON, needDelta = delta != 0;
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    Mat src = _src.getMat(), dst = _dst.getMat();
 
-            if (src.data != dst.data)
-            {
-                Ipp32s bufsize;
-                IppStatus status = (IppStatus)-1;
-                IppiSize roisize = { src.cols, src.rows };
-                IppiMaskSize masksize = ksize == 3 ? ippMskSize3x3 : ippMskSize5x5;
-                IppiBorderType borderTypeIpp = ippiGetBorderType(borderTypeNI);
+    if (src.data != dst.data)
+    {
+        Ipp32s bufsize;
+        IppStatus status = (IppStatus)-1;
+        IppiSize roisize = { src.cols, src.rows };
+        IppiMaskSize masksize = ksize == 3 ? ippMskSize3x3 : ippMskSize5x5;
+        IppiBorderType borderTypeIpp = ippiGetBorderType(borderTypeNI);
 
 #define IPP_FILTER_LAPLACIAN(ippsrctype, ippdsttype, ippfavor) \
         do \
@@ -839,38 +845,50 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
             } \
         } while ((void)0, 0)
 
-                CV_SUPPRESS_DEPRECATED_START
-                if (sdepth == CV_8U && ddepth == CV_16S && !floatScale && !floatDelta)
-                {
-                    IPP_FILTER_LAPLACIAN(Ipp8u, Ipp16s, 8u16s);
+        CV_SUPPRESS_DEPRECATED_START
+        if (sdepth == CV_8U && ddepth == CV_16S && !floatScale && !floatDelta)
+        {
+            IPP_FILTER_LAPLACIAN(Ipp8u, Ipp16s, 8u16s);
 
-                    if (needScale && status >= 0)
-                        status = ippiMulC_16s_C1IRSfs((Ipp16s)iscale, dst.ptr<Ipp16s>(), (int)dst.step, roisize, 0);
-                    if (needDelta && status >= 0)
-                        status = ippiAddC_16s_C1IRSfs((Ipp16s)idelta, dst.ptr<Ipp16s>(), (int)dst.step, roisize, 0);
-                }
-                else if (sdepth == CV_32F && ddepth == CV_32F)
-                {
-                    IPP_FILTER_LAPLACIAN(Ipp32f, Ipp32f, 32f);
-
-                    if (needScale && status >= 0)
-                        status = ippiMulC_32f_C1IR((Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, roisize);
-                    if (needDelta && status >= 0)
-                        status = ippiAddC_32f_C1IR((Ipp32f)delta, dst.ptr<Ipp32f>(), (int)dst.step, roisize);
-                }
-                CV_SUPPRESS_DEPRECATED_END
-
-                if (status >= 0)
-                {
-                    CV_IMPL_ADD(CV_IMPL_IPP);
-                    return;
-                }
-                setIppErrorStatus();
-            }
+            if (needScale && status >= 0)
+                status = ippiMulC_16s_C1IRSfs((Ipp16s)iscale, dst.ptr<Ipp16s>(), (int)dst.step, roisize, 0);
+            if (needDelta && status >= 0)
+                status = ippiAddC_16s_C1IRSfs((Ipp16s)idelta, dst.ptr<Ipp16s>(), (int)dst.step, roisize, 0);
         }
-#undef IPP_FILTER_LAPLACIAN
+        else if (sdepth == CV_32F && ddepth == CV_32F)
+        {
+            IPP_FILTER_LAPLACIAN(Ipp32f, Ipp32f, 32f);
+
+            if (needScale && status >= 0)
+                status = ippiMulC_32f_C1IR((Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, roisize);
+            if (needDelta && status >= 0)
+                status = ippiAddC_32f_C1IR((Ipp32f)delta, dst.ptr<Ipp32f>(), (int)dst.step, roisize);
+        }
+        CV_SUPPRESS_DEPRECATED_END
+
+        if (status >= 0)
+            return true;
     }
+
+#undef IPP_FILTER_LAPLACIAN
+    return false;
+}
+}
 #endif
+
+
+void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
+                    double scale, double delta, int borderType )
+{
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
+    if (ddepth < 0)
+        ddepth = sdepth;
+    _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
+
+    CV_IPP_RUN((ksize == 3 || ksize == 5) && ((borderType & BORDER_ISOLATED) != 0 || !_src.isSubmatrix()) &&
+        ((stype == CV_8UC1 && ddepth == CV_16S) || (ddepth == CV_32F && stype == CV_32FC1)) && (!cv::ocl::useOpenCL()),
+        ipp_Laplacian(_src, _dst, ddepth, ksize, scale, delta, borderType));
+
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra() && scale == 1.0 && delta == 0)

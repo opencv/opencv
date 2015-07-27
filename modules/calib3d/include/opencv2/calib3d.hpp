@@ -444,7 +444,7 @@ vector\<Point3f\> ), where N is the number of points in the view.
 @param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+the vector is empty, the zero distortion coefficients are assumed.
 @param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
 vector\<Point2f\> .
 @param jacobian Optional output 2Nx(10+\<numDistCoeffs\>) jacobian matrix of derivatives of image
@@ -1187,7 +1187,7 @@ are feature points from cameras with same focal length and principle point.
 @param pp principle point of the camera.
 @param method Method for computing a fundamental matrix.
 -   **RANSAC** for the RANSAC algorithm.
--   **MEDS** for the LMedS algorithm.
+-   **LMEDS** for the LMedS algorithm.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
@@ -1555,7 +1555,8 @@ public:
     enum
     {
         MODE_SGBM = 0,
-        MODE_HH   = 1
+        MODE_HH   = 1,
+        MODE_SGBM_3WAY = 2
     };
 
     CV_WRAP virtual int getPreFilterCap() const = 0;

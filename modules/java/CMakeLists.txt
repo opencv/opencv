@@ -282,6 +282,8 @@ else()
   set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
 endif()
 
+file(MAKE_DIRECTORY "${OpenCV_BINARY_DIR}/bin")
+
 # step 4: build jar
 if(ANDROID)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/classes.jar")
@@ -369,6 +371,7 @@ set_target_properties(${the_module} PROPERTIES
 
 if(ANDROID)
   ocv_target_link_libraries(${the_module} jnigraphics) # for Mat <=> Bitmap converters
+  ocv_target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_LINKER_LIBS} jnigraphics)
 
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install

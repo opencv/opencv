@@ -1178,6 +1178,11 @@ TEST(Core_IOArray, submat_create)
     EXPECT_THROW( OutputArray_create2(A.row(0)), cv::Exception );
 }
 
+TEST(Core_Mat, issue4457_pass_null_ptr)
+{
+    ASSERT_ANY_THROW(cv::Mat mask(45, 45, CV_32F, 0));
+}
+
 TEST(Core_Mat, reshape_1942)
 {
     cv::Mat A = (cv::Mat_<float>(2,3) << 3.4884074, 1.4159607, 0.78737736,  2.3456569, -0.88010466, 0.3009364);
@@ -1187,6 +1192,52 @@ TEST(Core_Mat, reshape_1942)
         cn = M.channels();
     );
     ASSERT_EQ(1, cn);
+}
+
+TEST(Core_Mat, push_back)
+{
+    Mat a = (Mat_<float>(1,2) << 3.4884074f, 1.4159607f);
+    Mat b = (Mat_<float>(1,2) << 0.78737736f, 2.3456569f);
+
+    a.push_back(b);
+
+    ASSERT_EQ(2, a.cols);
+    ASSERT_EQ(2, a.rows);
+
+    ASSERT_FLOAT_EQ(3.4884074f, a.at<float>(0, 0));
+    ASSERT_FLOAT_EQ(1.4159607f, a.at<float>(0, 1));
+    ASSERT_FLOAT_EQ(0.78737736f, a.at<float>(1, 0));
+    ASSERT_FLOAT_EQ(2.3456569f, a.at<float>(1, 1));
+
+    Mat c = (Mat_<float>(2,2) << -0.88010466f, 0.3009364f, 2.22399974f, -5.45933905f);
+
+    ASSERT_EQ(c.rows, a.cols);
+
+    a.push_back(c.t());
+
+    ASSERT_EQ(2, a.cols);
+    ASSERT_EQ(4, a.rows);
+
+    ASSERT_FLOAT_EQ(3.4884074f, a.at<float>(0, 0));
+    ASSERT_FLOAT_EQ(1.4159607f, a.at<float>(0, 1));
+    ASSERT_FLOAT_EQ(0.78737736f, a.at<float>(1, 0));
+    ASSERT_FLOAT_EQ(2.3456569f, a.at<float>(1, 1));
+    ASSERT_FLOAT_EQ(-0.88010466f, a.at<float>(2, 0));
+    ASSERT_FLOAT_EQ(2.22399974f, a.at<float>(2, 1));
+    ASSERT_FLOAT_EQ(0.3009364f, a.at<float>(3, 0));
+    ASSERT_FLOAT_EQ(-5.45933905f, a.at<float>(3, 1));
+
+    a.push_back(Mat::ones(2, 2, CV_32FC1));
+
+    ASSERT_EQ(6, a.rows);
+
+    for(int row=4; row<a.rows; row++) {
+
+        for(int col=0; col<a.cols; col++) {
+
+            ASSERT_FLOAT_EQ(1.f, a.at<float>(row, col));
+        }
+    }
 }
 
 TEST(Core_Mat, copyNx1ToVector)
@@ -1214,7 +1265,7 @@ TEST(Core_Matx, fromMat_)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
     Matx22d b(a);
-    ASSERT_EQ( norm(a, b, NORM_INF), 0.);
+    ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
 TEST(Core_InputArray, empty)
@@ -1271,4 +1322,86 @@ TEST(Core_SparseMat, footprint)
 
     ASSERT_LE((int)m.hdr->nodeSize, 32);
     ASSERT_LE(dataSize1, threshold);
+}
+
+
+// Can't fix without duty hacks or broken user code (PR #4159)
+TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
+{
+    cv::Mat_<uchar> src_base(5, 1);
+    std::vector<uchar> dst8;
+
+    src_base << 1, 2, 3, 4, 5;
+
+    Mat src(src_base);
+    OutputArray _dst(dst8);
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+}
+
+TEST(Core_Mat_vector, copyTo_roi_column)
+{
+    cv::Mat_<uchar> src_base(5, 2);
+    std::vector<uchar> dst1;
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.col(0));
+#if 0 // Can't fix without duty hacks or broken user code (PR #4159)
+    OutputArray _dst(dst1);
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+#endif
+
+    std::vector<uchar> dst2;
+    src.copyTo(dst2);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst2) << std::endl;
+    EXPECT_EQ((size_t)5, dst2.size());
+    EXPECT_EQ(1, (int)dst2[0]);
+    EXPECT_EQ(3, (int)dst2[1]);
+    EXPECT_EQ(5, (int)dst2[2]);
+    EXPECT_EQ(7, (int)dst2[3]);
+    EXPECT_EQ(9, (int)dst2[4]);
+}
+
+TEST(Core_Mat_vector, copyTo_roi_row)
+{
+    cv::Mat_<uchar> src_base(2, 5);
+    std::vector<uchar> dst1;
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.row(0));
+    OutputArray _dst(dst1);
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+
+    std::vector<uchar> dst2;
+    src.copyTo(dst2);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst2) << std::endl;
+    EXPECT_EQ((size_t)5, dst2.size());
+    EXPECT_EQ(1, (int)dst2[0]);
+    EXPECT_EQ(2, (int)dst2[1]);
+    EXPECT_EQ(3, (int)dst2[2]);
+    EXPECT_EQ(4, (int)dst2[3]);
+    EXPECT_EQ(5, (int)dst2[4]);
 }
