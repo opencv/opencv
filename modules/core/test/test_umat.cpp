@@ -935,9 +935,7 @@ TEST(UMat, DISABLED_synchronization_map_unmap)
     }
 }
 
-} } // namespace cvtest::ocl
-
-TEST(UMat, DISABLED_bug_with_unmap)
+TEST(UMat, async_unmap)
 {
     for (int i = 0; i < 20; i++)
     {
@@ -963,7 +961,7 @@ TEST(UMat, DISABLED_bug_with_unmap)
     }
 }
 
-TEST(UMat, DISABLED_bug_with_unmap_in_class)
+TEST(UMat, unmap_in_class)
 {
     class Logic
     {
@@ -1003,6 +1001,28 @@ TEST(UMat, DISABLED_bug_with_unmap_in_class)
         ADD_FAILURE();
     }
 }
+
+
+TEST(UMat, map_unmap_counting)
+{
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+    std::cout << "Host memory: " << cv::ocl::Device::getDefault().hostUnifiedMemory() << std::endl;
+    Mat m(Size(10, 10), CV_8UC1);
+    UMat um = m.getUMat(ACCESS_RW);
+    {
+        Mat d = um.getMat(ACCESS_RW);
+        d.release();
+    }
+    void* h = NULL;
+    EXPECT_NO_THROW(h = um.handle(ACCESS_RW));
+    std::cout << "Handle: " << h << std::endl;
+}
+
+
 
 TEST(UMat, Test_same_behaviour_read_and_read)
 {
@@ -1070,3 +1090,6 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
     }
     ASSERT_TRUE(exceptionDetected); // data race
 }
+
+
+} } // namespace cvtest::ocl
