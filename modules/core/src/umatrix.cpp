@@ -746,7 +746,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
                              ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),
                              ocl::convertTypeStr(sdepth, wdepth, 1, cvt[0]),
                              ocl::convertTypeStr(wdepth, ddepth, 1, cvt[1]),
-                             doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", noScale ? " -D NO_SCALE" : ""));
         if (!k.empty())
         {
             UMat src = *this;
@@ -757,7 +757,9 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
             ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
                     dstarg = ocl::KernelArg::WriteOnly(dst, cn);
 
-            if (wdepth == CV_32F)
+            if (noScale)
+                k.args(srcarg, dstarg, rowsPerWI);
+            else if (wdepth == CV_32F)
                 k.args(srcarg, dstarg, alphaf, betaf, rowsPerWI);
             else
                 k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
