@@ -257,7 +257,7 @@ bool  JpegDecoder::readHeader()
             }
             else if( m_scale_denom == m_size.height )
             {
-                m_scale_denom = state->cinfo.image_width / m_size.height;
+                m_scale_denom = state->cinfo.image_height / m_size.height;
             }
 
             state->cinfo.scale_num = 1;
