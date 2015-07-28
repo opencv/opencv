@@ -42,14 +42,18 @@
 
 #include "precomp.hpp"
 
-using namespace cv;
-using namespace cv::cuda;
-
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-Ptr<OpticalFlowDual_TVL1> cv::cuda::OpticalFlowDual_TVL1::create(double, double, double, int, int, double, int, double, double, bool) { throw_no_cuda(); return Ptr<OpticalFlowDual_TVL1>(); }
+cv::Ptr<cv::cuda::OpticalFlowDual_TVL1> cv::cuda::OpticalFlowDual_TVL1::create(double, double, double, int, int, double, int, double, double, bool)
+{
+    throw_no_cuda();
+    return Ptr<cv::cuda::OpticalFlowDual_TVL1>();
+}
 
 #else
+
+using namespace cv;
+using namespace cv::cuda;
 
 namespace tvl1flow
 {
