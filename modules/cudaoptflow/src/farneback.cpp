@@ -47,7 +47,7 @@ using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-Ptr<FarnebackOpticalFlow> cv::cuda::FarnebackOpticalFlow::create(int, double, bool, int, int, int, double, int) { throw_no_cuda(); return Ptr<BroxOpticalFlow>(); }
+Ptr<FarnebackOpticalFlow> cv::cuda::FarnebackOpticalFlow::create(int, double, bool, int, int, int, double, int) { throw_no_cuda(); return Ptr<FarnebackOpticalFlow>(); }
 
 #else
 

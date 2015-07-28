@@ -49,7 +49,7 @@ using namespace cv::cuda;
 
 Ptr<SparsePyrLKOpticalFlow> cv::cuda::SparsePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<SparsePyrLKOpticalFlow>(); }
 
-Ptr<DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<SparsePyrLKOpticalFlow>(); }
+Ptr<DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<DensePyrLKOpticalFlow>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
