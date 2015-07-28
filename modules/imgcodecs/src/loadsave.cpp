@@ -321,7 +321,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize 
     }
 
     Size testdecoder = decoder->setSize( dsize ); // if decoder is JpegDecoder then testdecoder will be Size( m_scale_denom , m_scale_denom )
-    int scale_denom = max(testdecoder.width , testdecoder.height );
+    int scale_denom = max( testdecoder.width , testdecoder.height );
 
     if( scale_denom > 8 )
     {
@@ -333,12 +333,13 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize 
         {
             dsize.height = mat->rows / ( mat->cols / dsize.width );
         }
-        resize(*mat,*mat,dsize);
+        resize( *mat, *mat, dsize );
     }
     else if( scale_denom > 1 )
     {
-        resize(*mat,*mat,Size( size.width / scale_denom , size.height / scale_denom ));
+        resize( *mat, *mat, Size( size.width / scale_denom , size.height / scale_denom ) );
     }
+
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
         hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
