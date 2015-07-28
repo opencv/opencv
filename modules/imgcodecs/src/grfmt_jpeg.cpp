@@ -259,7 +259,7 @@ bool  JpegDecoder::readHeader()
             {
                 m_scale_denom = state->cinfo.image_width / m_size.height;
             }
-    
+
             state->cinfo.scale_num = 1;
             state->cinfo.scale_denom = m_scale_denom;
             jpeg_calc_output_dimensions(&state->cinfo);
