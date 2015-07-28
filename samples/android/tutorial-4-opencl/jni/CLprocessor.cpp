@@ -13,22 +13,21 @@ const char oclProgI2B[] = "// clImage to clBuffer";
 const char oclProgI2I[] = \
   "__constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST; \n" \
     "\n" \
-    "__kernel void blur( \n" \
+    "__kernel void Laplacian( \n" \
     "        __read_only image2d_t imgIn, \n" \
-    "        __write_only image2d_t imgOut, \n" \
-    "        __private int size \n" \
+    "        __write_only image2d_t imgOut \n" \
     "    ) { \n" \
     "  \n" \
     "    const int2 pos = {get_global_id(0), get_global_id(1)}; \n" \
     "  \n" \
     "    float4 sum = (float4) 0.0f; \n" \
-    "    for(int x = -size/2; x <= size/2; x++) { \n" \
-    "        for(int y = -size/2; y <= size/2; y++) { \n" \
-    "            sum += read_imagef(imgIn, sampler, pos + (int2)(x,y)); \n" \
-    "        } \n" \
-    "    } \n" \
+    "    sum += read_imagef(imgIn, sampler, pos + (int2)(-1,0)); \n" \
+    "    sum += read_imagef(imgIn, sampler, pos + (int2)(+1,0)); \n" \
+    "    sum += read_imagef(imgIn, sampler, pos + (int2)(0,-1)); \n" \
+    "    sum += read_imagef(imgIn, sampler, pos + (int2)(0,+1)); \n" \
+    "    sum -= read_imagef(imgIn, sampler, pos) * 4; \n" \
     "  \n" \
-    "    write_imagef(imgOut, pos, sum/size/size); \n" \
+    "    write_imagef(imgOut, pos, sum*10); \n" \
     "} \n";
 
 void dumpCLinfo()
@@ -160,15 +159,14 @@ void procOCL_I2I(int texIn, int texOut, int w, int h)
     LOGD("enqueueAcquireGLObjects() costs %d ms", getTimeInterval(t));
 
     t = getTimeMs();
-    cl::Kernel blur(theProgI2I, "blur"); //TODO: may be done once
-    blur.setArg(0, imgIn);
-    blur.setArg(1, imgOut);
-    blur.setArg(2, 5); //5x5
+    cl::Kernel Laplacian(theProgI2I, "Laplacian"); //TODO: may be done once
+    Laplacian.setArg(0, imgIn);
+    Laplacian.setArg(1, imgOut);
     theQueue.finish();
     LOGD("Kernel() costs %d ms", getTimeInterval(t));
 
     t = getTimeMs();
-    theQueue.enqueueNDRangeKernel(blur, cl::NullRange, cl::NDRange(w, h), cl::NullRange);
+    theQueue.enqueueNDRangeKernel(Laplacian, cl::NullRange, cl::NDRange(w, h), cl::NullRange);
     theQueue.finish();
     LOGD("enqueueNDRangeKernel() costs %d ms", getTimeInterval(t));
 
