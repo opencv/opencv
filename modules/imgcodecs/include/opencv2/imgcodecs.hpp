@@ -110,9 +110,11 @@ returns an empty matrix ( Mat::data==NULL ). Currently, the following file forma
 -   JPEG 2000 files - \*.jp2 (see the *Notes* section)
 -   Portable Network Graphics - \*.png (see the *Notes* section)
 -   WebP - \*.webp (see the *Notes* section)
--   Portable image format - \*.pbm, \*.pgm, \*.ppm (always supported)
+-   Portable image format - \*.pbm, \*.pgm, \*.ppm \*.pxm, \*.pnm (always supported)
 -   Sun rasters - \*.sr, \*.ras (always supported)
 -   TIFF files - \*.tiff, \*.tif (see the *Notes* section)
+-   OpenEXR Image files - \*.exr (see the *Notes* section)
+-   Radiance HDR - \*.hdr, \*.pic (always supported)
 
 @note
 
@@ -131,13 +133,11 @@ returns an empty matrix ( Mat::data==NULL ). Currently, the following file forma
  */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
-/** @brief Loads and resizes down an image from a file.
-@anchor imread_reduced
-@param filename Name of file to be loaded.
-@param flags Flag that can take values of @ref cv::ImreadModes
-@param scale_denom
- */
-CV_EXPORTS_W Mat imread_reduced( const String& filename, int flags = IMREAD_COLOR, int scale_denom=1 );
+/** @overload
+
+use `dsize` parameter to load image resized
+*/
+CV_EXPORTS_W Mat imread( const String& filename, int flags, Size dsize );
 
 /** @brief Loads a multi-page image from a file. (see imread for details.)
 
