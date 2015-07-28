@@ -322,7 +322,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize 
 
     Size testdecoder = decoder->setSize( dsize ); // if decoder is JpegDecoder then testdecoder will be Size( m_scale_denom , m_scale_denom )
     int scale_denom = max(testdecoder.width , testdecoder.height );
-    
+
     if( scale_denom > 8 )
     {
         if( dsize.width == 0)
