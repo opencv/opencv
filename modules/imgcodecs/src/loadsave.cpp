@@ -327,11 +327,11 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize 
     {
         if( dsize.width == 0)
         {
-            dsize.width = mat->cols / ( mat->rows / dsize.height );
+            dsize.width = mat->cols * dsize.height / mat->rows;
         }
         else if( dsize.height == 0)
         {
-            dsize.height = mat->rows / ( mat->cols / dsize.width );
+            dsize.height = mat->rows * dsize.width / mat->cols;
         }
         resize( *mat, *mat, dsize );
     }
