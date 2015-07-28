@@ -3,7 +3,7 @@
 
 #include "common.hpp"
 
-float vertexes[] = {
+float vertices[] = {
         -1.0f, -1.0f,
         -1.0f,  1.0f,
          1.0f, -1.0f,
@@ -28,7 +28,7 @@ const char vss[] = \
             "varying vec2 texCoord;\n" \
             "void main() {\n" \
             "  texCoord = vTexCoord;\n" \
-            "  gl_Position = vec4 ( vPosition.x, vPosition.y, 0.0, 1.0 );\n" \
+            "  gl_Position = vec4 ( vPosition, 0.0f, 1.0f );\n" \
             "}";
 
 const char fssOES[] = \
@@ -48,8 +48,11 @@ const char fss2D[] = \
             "  gl_FragColor = texture2D(sTexture,texCoord);\n" \
             "}";
 
-int progOES = 0;
-int prog2D = 0;
+GLuint progOES = 0;
+GLuint prog2D = 0;
+
+GLint vPosOES, vTCOES;
+GLint vPos2D, vTC2D;
 
 GLuint FBOtex = 0, FBOtex2 = 0;
 GLuint FBO = 0;
@@ -80,13 +83,16 @@ static void releaseFBO()
     prog2D = 0;
 }
 
-static inline void logShaderCompileError(GLuint shader)
+static inline void logShaderCompileError(GLuint shader, bool isProgram = false)
 {
     GLchar msg[512];
     msg[0] = 0;
     GLsizei len;
-    glGetShaderInfoLog(shader, sizeof(msg) - 1, &len, msg);
-    LOGE("Could not compile shader: %s", msg);
+    if(isProgram)
+        glGetProgramInfoLog(shader, sizeof(msg)-1, &len, msg);
+    else
+        glGetShaderInfoLog(shader, sizeof(msg)-1, &len, msg);
+    LOGE("Could not compile shader/program: %s", msg);
 }
 
 static int makeShaderProg(const char* vss, const char* fss)
@@ -96,9 +102,9 @@ static int makeShaderProg(const char* vss, const char* fss)
     const GLchar* text = vss;
     glShaderSource(vshader, 1, &text, 0);
     glCompileShader(vshader);
-    int compiled;
+    GLint compiled;
     glGetShaderiv(vshader, GL_COMPILE_STATUS, &compiled);
-    if (compiled == 0) {
+    if (!compiled) {
         logShaderCompileError(vshader);
         glDeleteShader(vshader);
         vshader = 0;
@@ -110,7 +116,7 @@ static int makeShaderProg(const char* vss, const char* fss)
     glShaderSource(fshader, 1, &text, 0);
     glCompileShader(fshader);
     glGetShaderiv(fshader, GL_COMPILE_STATUS, &compiled);
-    if (compiled == 0) {
+    if (!compiled) {
         logShaderCompileError(fshader);
         glDeleteShader(fshader);
         fshader = 0;
@@ -121,6 +127,23 @@ static int makeShaderProg(const char* vss, const char* fss)
     glAttachShader(program, vshader);
     glAttachShader(program, fshader);
     glLinkProgram(program);
+    GLint linked;
+    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    if (!linked)
+    {
+        logShaderCompileError(program, true);
+        glDeleteProgram(program);
+        program = 0;
+    }
+    glValidateProgram(program);
+    GLint validated;
+    glGetProgramiv(program, GL_VALIDATE_STATUS, &validated);
+    if (!validated)
+    {
+        logShaderCompileError(program, true);
+        glDeleteProgram(program);
+        program = 0;
+    }
 
     if(vshader) glDeleteShader(vshader);
     if(fshader) glDeleteShader(fshader);
@@ -160,6 +183,10 @@ static void initFBO(int width, int height)
         LOGE("initFBO failed: %d", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
     prog2D = makeShaderProg(vss, fss2D);
+    vPos2D = glGetAttribLocation(prog2D, "vPosition");
+    vTC2D  = glGetAttribLocation(prog2D, "vTexCoord");
+    glEnableVertexAttribArray(vPos2D);
+    glEnableVertexAttribArray(vTC2D);
 }
 
 void drawTex(int tex, GLenum texType, GLuint fbo)
@@ -171,19 +198,17 @@ void drawTex(int tex, GLenum texType, GLuint fbo)
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    int prog = texType == GL_TEXTURE_EXTERNAL_OES ? progOES : prog2D;
+    GLuint prog     = texType == GL_TEXTURE_EXTERNAL_OES ? progOES     : prog2D;
+    GLint vPos      = texType == GL_TEXTURE_EXTERNAL_OES ? vPosOES     : vPos2D;
+    GLint vTC       = texType == GL_TEXTURE_EXTERNAL_OES ? vTCOES      : vTC2D;
+    float* texCoord = texType == GL_TEXTURE_EXTERNAL_OES ? texCoordOES : texCoord2D;
     glUseProgram(prog);
-    int vPos  = glGetAttribLocation(prog, "vPosition");
-    int vTC = glGetAttribLocation(prog, "vTexCoord");
+    glVertexAttribPointer(vPos, 2, GL_FLOAT, false, 4*2, vertices);
+    glVertexAttribPointer(vTC,  2, GL_FLOAT, false, 4*2, texCoord);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(texType, tex);
     glUniform1i(glGetUniformLocation(prog, "sTexture"), 0);
-
-    glVertexAttribPointer(vPos, 2, GL_FLOAT, false, 4*2, vertexes);
-    glVertexAttribPointer(vTC,  2, GL_FLOAT, false, 4*2, texType == GL_TEXTURE_EXTERNAL_OES ? texCoordOES : texCoord2D);
-    glEnableVertexAttribArray(vPos);
-    glEnableVertexAttribArray(vTC);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glFlush();
@@ -245,11 +270,11 @@ void drawFrameProcOCL()
     drawTex(texOES, GL_TEXTURE_EXTERNAL_OES, FBO);
 
     // modify pixels in FBO texture using OpenCL and CL-GL interop
-    //procOCL_I2I(FBOtex, FBOtex2, texWidth, texHeight);
-     procOCL_OCV(FBOtex, texWidth, texHeight);
+    procOCL_I2I(FBOtex, FBOtex2, texWidth, texHeight);
+    //procOCL_OCV(FBOtex, texWidth, texHeight);
 
     // render to screen
-    drawTex(/*FBOtex2*/FBOtex, GL_TEXTURE_2D, 0);
+    drawTex(FBOtex2, GL_TEXTURE_2D, 0);
 }
 
 
@@ -289,6 +314,10 @@ extern "C" int initGL()
     LOGD("GL_VERSION = %s", vs);
 
     progOES = makeShaderProg(vss, fssOES);
+    vPosOES = glGetAttribLocation(progOES, "vPosition");
+    vTCOES  = glGetAttribLocation(progOES, "vTexCoord");
+    glEnableVertexAttribArray(vPosOES);
+    glEnableVertexAttribArray(vTCOES);
 
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
