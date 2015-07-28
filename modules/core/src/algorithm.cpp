@@ -56,7 +56,8 @@ Algorithm::~Algorithm()
 void Algorithm::save(const String& filename) const
 {
     FileStorage fs(filename, FileStorage::WRITE);
-     fs << getDefaultName() << "*";
+    fs << getDefaultName() << "*";
+         
     fs << "format" << (int)3;
     write(fs);
     fs << "}";
