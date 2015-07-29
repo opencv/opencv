@@ -625,7 +625,7 @@ PERF_TEST_P(Sz_Depth, Core_Sqrt, Combine(
 
         TEST_CYCLE() cv::gpu::sqrt(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-2);
     }
     else
     {
@@ -665,7 +665,7 @@ PERF_TEST_P(Sz_Depth, Core_Log, Combine(
 
         TEST_CYCLE() cv::gpu::log(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-1);
     }
     else
     {
@@ -705,7 +705,7 @@ PERF_TEST_P(Sz_Depth, Core_Exp, Combine(
 
         TEST_CYCLE() cv::gpu::exp(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-2);
     }
     else
     {
