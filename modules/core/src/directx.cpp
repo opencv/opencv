@@ -168,7 +168,7 @@ int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT)
     //case DXGI_FORMAT_BC7_TYPELESS:
     //case DXGI_FORMAT_BC7_UNORM:
     //case DXGI_FORMAT_BC7_UNORM_SRGB:
-    case DXGI_FORMAT_NV12: return CV_8UC4;
+    case DXGI_FORMAT_NV12: return CV_8UC3;
     default: break;
     }
     return errorType;
@@ -710,7 +710,7 @@ namespace ocl {
 
 #if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
 static
-bool ocl_convert_nv12_to_rgba(
+bool ocl_convert_nv12_to_bgr(
     cl_mem clImageY,
     cl_mem clImageUV,
     cl_mem clBuffer,
@@ -719,7 +719,7 @@ bool ocl_convert_nv12_to_rgba(
     int rows)
 {
     ocl::Kernel k;
-    k.create("YUV2RGBA_NV12_8u", cv::ocl::core::cvtclr_dx_oclsrc, "");
+    k.create("YUV2BGR_NV12_8u", cv::ocl::core::cvtclr_dx_oclsrc, "");
     if (k.empty())
         return false;
 
@@ -731,7 +731,7 @@ bool ocl_convert_nv12_to_rgba(
 
 
 static
-bool ocl_convert_rgba_to_nv12(
+bool ocl_convert_bgr_to_nv12(
     cl_mem clBuffer,
     int step,
     int cols,
@@ -740,7 +740,7 @@ bool ocl_convert_rgba_to_nv12(
     cl_mem clImageUV)
 {
     ocl::Kernel k;
-    k.create("RGBA2YUV_NV12_8u", cv::ocl::core::cvtclr_dx_oclsrc, "");
+    k.create("BGR2YUV_NV12_8u", cv::ocl::core::cvtclr_dx_oclsrc, "");
     if (k.empty())
         return false;
 
@@ -813,8 +813,8 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
 
-        if(!ocl::ocl_convert_rgba_to_nv12(clBuffer, (int)u.step[0], u.cols, u.rows, clImage, clImageUV))
-            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_rgba_to_nv12 failed");
+        if(!ocl::ocl_convert_bgr_to_nv12(clBuffer, (int)u.step[0], u.cols, u.rows, clImage, clImageUV))
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_bgr_to_nv12 failed");
 
         status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
         if (status != CL_SUCCESS)
@@ -911,8 +911,8 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
 
-        if(!ocl::ocl_convert_nv12_to_rgba(clImage, clImageUV, clBuffer, (int)u.step[0], u.cols, u.rows))
-            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_nv12_to_rgba failed");
+        if(!ocl::ocl_convert_nv12_to_bgr(clImage, clImageUV, clBuffer, (int)u.step[0], u.cols, u.rows))
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_nv12_to_bgr failed");
 
         status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
         if (status != CL_SUCCESS)
