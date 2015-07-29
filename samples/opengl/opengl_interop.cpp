@@ -494,20 +494,64 @@ private:
     cv::String         m_oclDevName;
 };
 
+static void help()
+{
+    printf(
+        "\nSample demonstrating interoperability of OpenGL and OpenCL with OpenCV.\n"
+        "Hot keys: \n"
+        "  SPACE - turn processing on/off\n"
+        "    1   - process GL data through OpenCV on CPU\n"
+        "    2   - process GL data through OpenCV on GPU (via OpenCL)\n"
+        "    9   - toggle use of GL texture/GL buffer\n"
+        "  ESC   - exit\n\n");
+}
+
+static const char* keys =
+{
+    "{c camera | true  | use camera or not}"
+    "{f file   |       | movie file name  }"
+    "{h help   | false | print help info  }"
+};
+
 using namespace cv;
+using namespace std;
 
 int main(int argc, char** argv)
 {
+    cv::CommandLineParser parser(argc, argv, keys); \
+    bool   useCamera = parser.has("camera"); \
+    string file      = parser.get<string>("file"); \
+    bool   showHelp  = parser.get<bool>("help"); \
+
+    if (showHelp)
+    {
+        help();
+        return 0;
+    }
+
+    parser.printMessage();
+
     cv::VideoCapture cap;
 
-    if (argc > 1)
-        cap.open(argv[1]);
-    else
+    if (useCamera)
         cap.open(0);
+    else
+        cap.open(file.c_str());
+
+    if (!cap.isOpened())
+    {
+        printf("can not open camera or video file\n");
+        return -1;
+    }
 
     int width = (int)cap.get(CAP_PROP_FRAME_WIDTH);
     int height = (int)cap.get(CAP_PROP_FRAME_HEIGHT);
-    std::string wndname = "WGL Window";
+
+#if defined(WIN32) || defined(_WIN32)
+    string wndname = "WGL Window";
+#elif defined(__linux__)
+    string wndname = "GLX Window";
+#endif
 
     GLWinApp app(width, height, wndname, cap);
 
@@ -518,12 +562,12 @@ int main(int argc, char** argv)
     }
     catch (cv::Exception& e)
     {
-        std::cerr << "Exception: " << e.what() << std::endl;
+        cerr << "Exception: " << e.what() << endl;
         return 10;
     }
     catch (...)
     {
-        std::cerr << "FATAL ERROR: Unknown exception" << std::endl;
+        cerr << "FATAL ERROR: Unknown exception" << endl;
         return 11;
     }
 }
