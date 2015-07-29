@@ -162,7 +162,7 @@ public:
             desc_nv12_cpu_copy.SampleDesc.Quality = 0;
             desc_nv12_cpu_copy.BindFlags          = 0;
             desc_nv12_cpu_copy.Usage              = D3D11_USAGE_STAGING;
-            desc_nv12_cpu_copy.CPUAccessFlags     = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
+            desc_nv12_cpu_copy.CPUAccessFlags     = /*D3D11_CPU_ACCESS_WRITE | */D3D11_CPU_ACCESS_READ;
             desc_nv12_cpu_copy.MiscFlags          = 0;
 
             r = m_pD3D11Dev->CreateTexture2D(&desc_nv12_cpu_copy, 0, &m_pSurfaceNV12_cpu_copy);
