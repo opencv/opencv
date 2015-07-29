@@ -162,9 +162,9 @@ public:
                 idle();
             }
         } while (!m_end_loop);
-#endif
 
         return 0;
+#endif
     }
 
 protected:

@@ -223,9 +223,9 @@ public:
         cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_RGB2RGBA);
 
         if (use_buffer())
-            buffer.copyFrom(m_frame_rgba);
+            buffer.copyFrom(m_frame_rgba, cv::ogl::Buffer::PIXEL_UNPACK_BUFFER, true);
         else
-            texture.copyFrom(m_frame_rgba);
+            texture.copyFrom(m_frame_rgba, true);
 
         return 0;
     }
@@ -287,6 +287,9 @@ public:
             cv::ogl::Texture2D texture;
             cv::ogl::Buffer buffer;
 
+            texture.setAutoRelease(true);
+            buffer.setAutoRelease(true);
+
             r = get_frame(texture, buffer);
             if (r != 0)
             {
@@ -317,9 +320,9 @@ public:
                     }
 
                     if (do_buffer)
-                        buffer.copyFrom(m);
+                        buffer.copyFrom(m, cv::ogl::Buffer::PIXEL_UNPACK_BUFFER, true);
                     else
-                        texture.copyFrom(m);
+                        texture.copyFrom(m, true);
 
                     break;
                 }
@@ -354,7 +357,7 @@ public:
             {
                 cv::Mat m(m_height, m_width, CV_8UC4);
                 buffer.copyTo(m);
-                texture.copyFrom(m);
+                texture.copyFrom(m, true);
             }
 
 #if defined(__linux__)
