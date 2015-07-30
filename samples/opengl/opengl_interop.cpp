@@ -113,23 +113,6 @@ public:
     }
 #endif
 
-    static float getFps()
-    {
-        static std::queue<int64> time_queue;
-
-        int64 now = cv::getTickCount();
-        int64 then = 0;
-        time_queue.push(now);
-
-        if (time_queue.size() >= 2)
-            then = time_queue.front();
-
-        if (time_queue.size() >= 25)
-            time_queue.pop();
-
-        return time_queue.size() * (float)cv::getTickFrequency() / (now - then);
-    }
-
 #if defined(__linux__)
     int handle_event(XEvent& e)
     {
@@ -230,7 +213,7 @@ public:
         return 0;
     }
 
-    void print_info(int mode, float fps, cv::String oclDevName)
+    void print_info(int mode, float time, cv::String oclDevName)
     {
 #if defined(WIN32) || defined(_WIN32)
         HDC hDC = m_hDC;
@@ -253,7 +236,7 @@ public:
 
             y += tm.tmHeight;
             buf[0] = 0;
-            sprintf_s(buf, sizeof(buf)-1, "FPS: %2.1f", fps);
+            sprintf_s(buf, sizeof(buf)-1, "Time: %2.1f", time);
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
@@ -266,7 +249,7 @@ public:
 #elif defined(__linux__)
 
         char buf[256+1];
-        snprintf(buf, sizeof(buf)-1, "FPS: %2.1f Mode: %s Device: %s", fps, m_modeStr[mode].c_str(), oclDevName.c_str());
+        snprintf(buf, sizeof(buf)-1, "Time: %2.1f Mode: %s Device: %s", time, m_modeStr[mode].c_str(), oclDevName.c_str());
         XStoreName(m_display, m_window, buf);
 #endif
     }
@@ -297,60 +280,20 @@ public:
             }
 
             bool do_buffer = use_buffer();
+
             switch (get_mode())
             {
-                case 0:
-                    // no processing
+                case 0: // no processing
+                    m_timer.clear();
                     break;
 
-                case 1:
-                {
-                    // process video frame on CPU
-                    cv::Mat m(m_height, m_width, CV_8UC4);
-
-                    if (do_buffer)
-                        buffer.copyTo(m);
-                    else
-                        texture.copyTo(m);
-
-                    if (!m_disableProcessing)
-                    {
-                        // blur texture image with OpenCV on CPU
-                        cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
-                    }
-
-                    if (do_buffer)
-                        buffer.copyFrom(m, cv::ogl::Buffer::PIXEL_UNPACK_BUFFER, true);
-                    else
-                        texture.copyFrom(m, true);
-
+                case 1: // process frame on CPU
+                    processFrameCPU(texture, buffer);
                     break;
-                }
 
-                case 2:
-                {
-                    // process video frame on GPU
-                    cv::UMat u;
-
-                    if (do_buffer)
-                        u = cv::ogl::mapGLBuffer(buffer);
-                    else
-                        cv::ogl::convertFromGLTexture2D(texture, u);
-
-                    if (!m_disableProcessing)
-                    {
-                        // blur texture image with OpenCV on GPU with OpenCL
-                        cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
-                    }
-
-                    if (do_buffer)
-                        cv::ogl::unmapGLBuffer(u);
-                    else
-                        cv::ogl::convertToGLTexture2D(u, texture);
-
+                case 2: // process frame on GPU
+                    processFrameGPU(texture, buffer);
                     break;
-                }
-
             } // switch
 
             if (do_buffer) // buffer -> texture
@@ -385,7 +328,7 @@ public:
             glXSwapBuffers(m_display, m_window);
 #endif
 
-            print_info(m_mode, getFps(), m_oclDevName);
+            print_info(m_mode, m_timer.time(Timer::UNITS::MSEC), m_oclDevName);
         }
 
 
@@ -399,6 +342,60 @@ public:
     }
 
 protected:
+
+    void processFrameCPU(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer)
+    {
+        cv::Mat m(m_height, m_width, CV_8UC4);
+
+        bool do_buffer = use_buffer();
+
+        m_timer.start();
+
+        if (do_buffer)
+            buffer.copyTo(m);
+        else
+            texture.copyTo(m);
+
+        if (!m_disableProcessing)
+        {
+            // blur texture image with OpenCV on CPU
+            cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
+        }
+
+        if (do_buffer)
+            buffer.copyFrom(m, cv::ogl::Buffer::PIXEL_UNPACK_BUFFER, true);
+        else
+            texture.copyFrom(m, true);
+
+        m_timer.stop();
+    }
+
+    void processFrameGPU(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer)
+    {
+        cv::UMat u;
+
+        bool do_buffer = use_buffer();
+
+        m_timer.start();
+
+        if (do_buffer)
+            u = cv::ogl::mapGLBuffer(buffer);
+        else
+            cv::ogl::convertFromGLTexture2D(texture, u);
+
+        if (!m_disableProcessing)
+        {
+            // blur texture image with OpenCV on GPU with OpenCL
+            cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
+        }
+
+        if (do_buffer)
+            cv::ogl::unmapGLBuffer(u);
+        else
+            cv::ogl::convertToGLTexture2D(u, texture);
+
+        m_timer.stop();
+    }
 
 #if defined(WIN32) || defined(_WIN32)
     int setup_pixel_format()
