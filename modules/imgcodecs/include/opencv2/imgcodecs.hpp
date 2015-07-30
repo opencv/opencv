@@ -136,10 +136,10 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 /** @overload
 
 example usage:
-imread( "fruits.jpg", IMREAD_COLOR, Size(8,8) ) when the width and height are smaller than 9 load image scaled 1/given value
-imread( "fruits.jpg", IMREAD_COLOR, Size(320,240) ) load image and resize it according given width and height
-imread( "fruits.jpg", IMREAD_COLOR, Size(320,0) ) load image and resize it according given width and calculate height
-imread( "fruits.jpg", IMREAD_COLOR, Size(0,200) ) load image and resize it according given height and calculate width
+-   imread( "fruits.jpg", IMREAD_COLOR, Size(8,8) ) when the width and height are smaller than 9 load image scaled 1/given value
+-   imread( "fruits.jpg", IMREAD_COLOR, Size(320,240) ) load image and resize it according given width and height
+-   imread( "fruits.jpg", IMREAD_COLOR, Size(320,0) ) load image and resize it according given width and calculate height
+-   imread( "fruits.jpg", IMREAD_COLOR, Size(0,200) ) load image and resize it according given height and calculate width
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags, Size dsize );
 
