@@ -168,7 +168,9 @@ int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT)
     //case DXGI_FORMAT_BC7_TYPELESS:
     //case DXGI_FORMAT_BC7_UNORM:
     //case DXGI_FORMAT_BC7_UNORM_SRGB:
+#ifdef HAVE_DIRECTX_NV12
     case DXGI_FORMAT_NV12: return CV_8UC3;
+#endif
     default: break;
     }
     return errorType;
@@ -709,6 +711,8 @@ static void __OpenCLinitializeD3D11()
 namespace ocl {
 
 #if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
+#ifdef HAVE_DIRECTX_NV12
+
 static
 bool ocl_convert_nv12_to_bgr(
     cl_mem clImageY,
@@ -749,6 +753,8 @@ bool ocl_convert_bgr_to_nv12(
     size_t globalsize[] = { cols, rows };
     return k.run(2, globalsize, 0, false);
 }
+
+#endif // HAVE_DIRECTX_NV12
 #endif // HAVE_DIRECTX && HAVE_OPENCL
 
 } // namespace ocl
@@ -794,12 +800,14 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
 
+#ifdef HAVE_DIRECTX_NV12
     if(DXGI_FORMAT_NV12 == desc.Format)
     {
         clImageUV = clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 1, &status);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
     }
+#endif
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
@@ -807,6 +815,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
 
+#ifdef HAVE_DIRECTX_NV12
     if(DXGI_FORMAT_NV12 == desc.Format)
     {
         status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
@@ -821,6 +830,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
     }
     else
+#endif
     {
         size_t offset = 0; // TODO
         size_t origin[3] = { 0, 0, 0 };
@@ -843,12 +853,15 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
 
+#ifdef HAVE_DIRECTX_NV12
     if(DXGI_FORMAT_NV12 == desc.Format)
     {
         status = clReleaseMemObject(clImageUV);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
     }
+#endif
+
 #else
     // TODO memcpy
     NO_OPENCL_SUPPORT_ERROR;
@@ -886,18 +899,20 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 
     cl_int status = 0;
     cl_mem clImage = 0;
-    cl_mem clImageUV = 0;
 
     clImage = clCreateFromD3D11Texture2DKHR(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 0, &status);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
 
+#ifdef HAVE_DIRECTX_NV12
+    cl_mem clImageUV = 0;
     if(DXGI_FORMAT_NV12 == desc.Format)
     {
         clImageUV = clCreateFromD3D11Texture2DKHR(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 1, &status);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
     }
+#endif
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
@@ -905,6 +920,7 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
 
+#ifdef HAVE_DIRECTX_NV12
     if(DXGI_FORMAT_NV12 == desc.Format)
     {
         status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
@@ -919,6 +935,7 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
     }
     else
+#endif
     {
         size_t offset = 0; // TODO
         size_t origin[3] = { 0, 0, 0 };
@@ -941,12 +958,15 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
 
+#ifdef HAVE_DIRECTX_NV12
     if(DXGI_FORMAT_NV12 == desc.Format)
     {
         status = clReleaseMemObject(clImageUV);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
     }
+#endif
+
 #else
     // TODO memcpy
     NO_OPENCL_SUPPORT_ERROR;
