@@ -2,14 +2,16 @@ package org.opencv.samples.tutorial4;
 
 import android.content.Context;
 import android.opengl.GLSurfaceView;
+import android.util.AttributeSet;
 import android.view.SurfaceHolder;
+import android.widget.TextView;
 
-class MyGLSurfaceView extends GLSurfaceView {
+public class MyGLSurfaceView extends GLSurfaceView {
 
     MyGLRendererBase mRenderer;
 
-    MyGLSurfaceView(Context context) {
-        super(context);
+    public MyGLSurfaceView(Context context, AttributeSet attrs) {
+        super(context, attrs);
 
         if(android.os.Build.VERSION.SDK_INT >= 21)
             mRenderer = new Camera2Renderer(this);
@@ -19,6 +21,10 @@ class MyGLSurfaceView extends GLSurfaceView {
         setEGLContextClientVersion(2);
         setRenderer(mRenderer);
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+    }
+
+    public void setFpsTextView(TextView tv) {
+        mRenderer.setFpsTextView(tv);
     }
 
     @Override

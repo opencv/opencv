@@ -5,6 +5,7 @@ import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.TextView;
 
 public class Tutorial4Activity extends Activity {
 
@@ -20,8 +21,12 @@ public class Tutorial4Activity extends Activity {
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        mView = new MyGLSurfaceView(this);
-        setContentView(mView);
+        //mView = new MyGLSurfaceView(this, null);
+        //setContentView(mView);
+        setContentView(R.layout.activity);
+        mView = (MyGLSurfaceView) findViewById(R.id.my_gl_surface_view);
+        TextView tv = (TextView)findViewById(R.id.fps_text_view);
+        mView.setFpsTextView(tv);
     }
 
     @Override
