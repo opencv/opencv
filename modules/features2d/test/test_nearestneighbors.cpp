@@ -125,7 +125,7 @@ int NearestNeighborTest::checkFind( const Mat& data )
 void NearestNeighborTest::run( int /*start_from*/ ) {
     int code = cvtest::TS::OK, tempCode;
     Mat desc( featuresCount, dims, CV_32FC1 );
-    randu( desc, Scalar(minValue), Scalar(maxValue) );
+    ts->get_rng().fill( desc, RNG::UNIFORM, minValue, maxValue );
 
     createModel( desc );
 
