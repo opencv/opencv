@@ -109,19 +109,21 @@ CV_EXPORTS Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDire
 //! @addtogroup core_directx
 //! @{
 
-//! @brief Converts InputArray to ID3D11Texture2D
+//! @brief Converts InputArray to ID3D11Texture2D. If destination texture format is DXGI_FORMAT_NV12 then
+//!        input UMat expected to be in BGR format and data will be downsampled and color-converted to NV12.
 //
-//! @note Note: function does memory copy from src to
+//! @note Note: Destination texture must be allocated by application. Function does memory copy from src to
 //!             pD3D11Texture2D
 //
 //! @param src - source InputArray
 //! @param pD3D11Texture2D - destination D3D11 texture
 CV_EXPORTS void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D);
 
-//! @brief Converts ID3D11Texture2D to OutputArray
+//! @brief Converts ID3D11Texture2D to OutputArray. If input texture format is DXGI_FORMAT_NV12 then
+//!        data will be upsampled and color-converted to BGR format.
 //
-//! @note Note: function does memory copy from pD3D11Texture2D
-//!             to dst
+//! @note Note: Destination matrix will be re-allocated if it has not enough memory to match texture size.
+//!             function does memory copy from pD3D11Texture2D to dst
 //
 //! @param pD3D11Texture2D - source D3D11 texture
 //! @param dst             - destination OutputArray
