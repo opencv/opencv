@@ -135,7 +135,7 @@ public:
         if (!m_cap.read(m_frame_bgr))
             return -1;
 
-        cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_RGB2BGRA);
+        cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_BGR2RGBA);
 
         UINT subResource = ::D3D10CalcSubresource(0, 0, 1);
 
@@ -166,6 +166,9 @@ public:
             if (m_shutdown)
                 return 0;
 
+            // capture user input once
+            MODE mode = (m_mode == MODE_GPU_NV12) ? MODE_GPU_RGBA : m_mode;
+
             HRESULT r;
             ID3D10Texture2D* pSurface;
 
@@ -177,7 +180,7 @@ public:
 
             m_timer.start();
 
-            switch (m_mode)
+            switch (mode)
             {
                 case MODE_CPU:
                 {
@@ -214,7 +217,7 @@ public:
                     break;
                 }
 
-                case MODE_GPU:
+                case MODE_GPU_RGBA:
                 {
                     // process video frame on GPU
                     cv::UMat u;
@@ -227,7 +230,7 @@ public:
                         cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
                     }
 
-                    cv::String strMode = cv::format("mode: %s", m_modeStr[MODE_GPU].c_str());
+                    cv::String strMode = cv::format("mode: %s", m_modeStr[MODE_GPU_RGBA].c_str());
                     cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
                     cv::String strTime = cv::format("time: %4.1f msec", m_timer.time(Timer::UNITS::MSEC));
                     cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
