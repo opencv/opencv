@@ -1017,7 +1017,7 @@ void SGBM3WayMainLoop::getRawMatchingCost(CostType* C, // target cost-volume row
     }
 }
 
-#if CV_SIMD128 && CV_SSE2
+#if CV_SIMD128
 // define some additional reduce operations:
 inline short min(const v_int16x8& a)
 {
@@ -1055,7 +1055,7 @@ inline short min_pos(const v_int16x8& val,const v_int16x8& pos)
 inline void accumulateCostsLeftTop(CostType* leftBuf, CostType* leftBuf_prev, CostType* topBuf, CostType* costs,
                                    CostType& leftMinCost, CostType& topMinCost, int D, int P1, int P2)
 {
-#if CV_SIMD128 && CV_SSE2
+#if CV_SIMD128
     v_int16x8 P1_reg = v_setall_s16(cv::saturate_cast<CostType>(P1));
 
     v_int16x8 leftMinCostP2_reg   = v_setall_s16(cv::saturate_cast<CostType>(leftMinCost+P2));
@@ -1078,13 +1078,9 @@ inline void accumulateCostsLeftTop(CostType* leftBuf, CostType* leftBuf_prev, Co
         //lookahead load:
         src2 = v_load_aligned(leftBuf_prev+i+8);
 
-        //get shifted versions of the current block:
-        src_shifted_left  = v_int16x8(_mm_slli_si128(src1_leftBuf.val, 2));
-        src_shifted_right = v_int16x8(_mm_srli_si128(src1_leftBuf.val, 2));
-
-        // replace shifted-in zeros with proper values and add P1:
-        src_shifted_left  = (src_shifted_left  | v_int16x8(_mm_srli_si128(src0_leftBuf.val, 14)))+P1_reg;
-        src_shifted_right = (src_shifted_right | v_int16x8(_mm_slli_si128(src2.val,         14)))+P1_reg;
+        //get shifted versions of the current block and add P1:
+        src_shifted_left  = v_extract<7> (src0_leftBuf,src1_leftBuf) + P1_reg;
+        src_shifted_right = v_extract<1> (src1_leftBuf,src2        ) + P1_reg;
 
         // process and save current block:
         res = v_load_aligned(costs+i) + (v_min(v_min(src_shifted_left,src_shifted_right),v_min(src1_leftBuf,leftMinCostP2_reg))-leftMinCostP2_reg);
@@ -1099,13 +1095,9 @@ inline void accumulateCostsLeftTop(CostType* leftBuf, CostType* leftBuf_prev, Co
         //lookahead load:
         src2 = v_load_aligned(topBuf+i+8);
 
-        //get shifted versions of the current block:
-        src_shifted_left  = v_int16x8(_mm_slli_si128(src1_topBuf.val, 2));
-        src_shifted_right = v_int16x8(_mm_srli_si128(src1_topBuf.val, 2));
-
-        // replace shifted-in zeros with proper values and add P1:
-        src_shifted_left  = (src_shifted_left  | v_int16x8(_mm_srli_si128(src0_topBuf.val, 14)))+P1_reg;
-        src_shifted_right = (src_shifted_right | v_int16x8(_mm_slli_si128(src2.val       , 14)))+P1_reg;
+        //get shifted versions of the current block and add P1:
+        src_shifted_left  = v_extract<7> (src0_topBuf,src1_topBuf) + P1_reg;
+        src_shifted_right = v_extract<1> (src1_topBuf,src2       ) + P1_reg;
 
         // process and save current block:
         res = v_load_aligned(costs+i) + (v_min(v_min(src_shifted_left,src_shifted_right),v_min(src1_topBuf,topMinCostP2_reg))-topMinCostP2_reg);
@@ -1119,26 +1111,18 @@ inline void accumulateCostsLeftTop(CostType* leftBuf, CostType* leftBuf_prev, Co
 
     // a bit different processing for the last cycle of the loop:
     //process leftBuf:
-    src_shifted_left  = v_int16x8(_mm_slli_si128(src1_leftBuf.val, 2));
-    src_shifted_right = v_int16x8(_mm_srli_si128(src1_leftBuf.val, 2));
-
     src2 = v_setall_s16(SHRT_MAX);
-
-    src_shifted_left  = (src_shifted_left  | v_int16x8(_mm_srli_si128(src0_leftBuf.val, 14)))+P1_reg;
-    src_shifted_right = (src_shifted_right | v_int16x8(_mm_slli_si128(src2.val        , 14)))+P1_reg;
+    src_shifted_left  = v_extract<7> (src0_leftBuf,src1_leftBuf) + P1_reg;
+    src_shifted_right = v_extract<1> (src1_leftBuf,src2        ) + P1_reg;
 
     res = v_load_aligned(costs+D-8) + (v_min(v_min(src_shifted_left,src_shifted_right),v_min(src1_leftBuf,leftMinCostP2_reg))-leftMinCostP2_reg);
     leftMinCost = min(v_min(leftMinCost_new_reg,res));
     v_store_aligned(leftBuf+D-8, res);
 
     //process topBuf:
-    src_shifted_left  = v_int16x8(_mm_slli_si128(src1_topBuf.val, 2));
-    src_shifted_right = v_int16x8(_mm_srli_si128(src1_topBuf.val, 2));
-
     src2 = v_setall_s16(SHRT_MAX);
-
-    src_shifted_left  = (src_shifted_left  | v_int16x8(_mm_srli_si128(src0_topBuf.val, 14)))+P1_reg;
-    src_shifted_right = (src_shifted_right | v_int16x8(_mm_slli_si128(src2.val       , 14)))+P1_reg;
+    src_shifted_left  = v_extract<7> (src0_topBuf,src1_topBuf) + P1_reg;
+    src_shifted_right = v_extract<1> (src1_topBuf,src2       ) + P1_reg;
 
     res = v_load_aligned(costs+D-8) + (v_min(v_min(src_shifted_left,src_shifted_right),v_min(src1_topBuf,topMinCostP2_reg))-topMinCostP2_reg);
     topMinCost = min(v_min(topMinCost_new_reg,res));
@@ -1178,7 +1162,7 @@ inline void accumulateCostsLeftTop(CostType* leftBuf, CostType* leftBuf_prev, Co
 inline void accumulateCostsRight(CostType* rightBuf, CostType* topBuf, CostType* leftBuf, CostType* costs,
                                  CostType& rightMinCost, int D, int P1, int P2, int& optimal_disp, CostType& min_cost)
 {
-#if CV_SIMD128 && CV_SSE2
+#if CV_SIMD128
     v_int16x8 P1_reg = v_setall_s16(cv::saturate_cast<CostType>(P1));
 
     v_int16x8 rightMinCostP2_reg   = v_setall_s16(cv::saturate_cast<CostType>(rightMinCost+P2));
@@ -1200,13 +1184,9 @@ inline void accumulateCostsRight(CostType* rightBuf, CostType* topBuf, CostType*
         //lookahead load:
         src2 = v_load_aligned(rightBuf+i+8);
 
-        //get shifted versions of the current block:
-        src_shifted_left  = v_int16x8(_mm_slli_si128(src1_rightBuf.val, 2));
-        src_shifted_right = v_int16x8(_mm_srli_si128(src1_rightBuf.val, 2));
-
-        // replace shifted-in zeros with proper values and add P1:
-        src_shifted_left  = (src_shifted_left  | v_int16x8(_mm_srli_si128(src0_rightBuf.val, 14)))+P1_reg;
-        src_shifted_right = (src_shifted_right | v_int16x8(_mm_slli_si128(src2.val         , 14)))+P1_reg;
+        //get shifted versions of the current block and add P1:
+        src_shifted_left  = v_extract<7> (src0_rightBuf,src1_rightBuf) + P1_reg;
+        src_shifted_right = v_extract<1> (src1_rightBuf,src2         ) + P1_reg;
 
         // process and save current block:
         res = v_load_aligned(costs+i) + (v_min(v_min(src_shifted_left,src_shifted_right),v_min(src1_rightBuf,rightMinCostP2_reg))-rightMinCostP2_reg);
@@ -1228,13 +1208,9 @@ inline void accumulateCostsRight(CostType* rightBuf, CostType* topBuf, CostType*
     }
 
     // a bit different processing for the last cycle of the loop:
-    src_shifted_left  = v_int16x8(_mm_slli_si128(src1_rightBuf.val, 2));
-    src_shifted_right = v_int16x8(_mm_srli_si128(src1_rightBuf.val, 2));
-
     src2 = v_setall_s16(SHRT_MAX);
-
-    src_shifted_left  = (src_shifted_left  | v_int16x8(_mm_srli_si128(src0_rightBuf.val, 14)))+P1_reg;
-    src_shifted_right = (src_shifted_right | v_int16x8(_mm_slli_si128(src2.val         , 14)))+P1_reg;
+    src_shifted_left  = v_extract<7> (src0_rightBuf,src1_rightBuf) + P1_reg;
+    src_shifted_right = v_extract<1> (src1_rightBuf,src2         ) + P1_reg;
 
     res = v_load_aligned(costs+D-8) + (v_min(v_min(src_shifted_left,src_shifted_right),v_min(src1_rightBuf,rightMinCostP2_reg))-rightMinCostP2_reg);
     rightMinCost = min(v_min(rightMinCost_new_reg,res));
