@@ -175,11 +175,11 @@ TEST_P(UMatBasicTests, base)
 
 TEST_P(UMatBasicTests, DISABLED_copyTo)
 {
-    UMat roi_ua;
-    Mat roi_a;
     int i;
     if(useRoi)
     {
+        UMat roi_ua;
+        Mat roi_a;
         roi_ua = UMat(ua, roi);
         roi_a = Mat(a, roi);
         roi_a.copyTo(roi_ua);
@@ -230,7 +230,7 @@ TEST_P(UMatBasicTests, DISABLED_copyTo)
     }
 }
 
-TEST_P(UMatBasicTests, DISABLED_GetUMat)
+TEST_P(UMatBasicTests, GetUMat)
 {
     if(useRoi)
     {
@@ -284,7 +284,7 @@ PARAM_TEST_CASE(UMatTestReshape,  int, int, Size, bool)
     }
 };
 
-TEST_P(UMatTestReshape, DISABLED_reshape)
+TEST_P(UMatTestReshape, reshape)
 {
     a = randomMat(size,type, -100, 100);
     a.copyTo(ua);
