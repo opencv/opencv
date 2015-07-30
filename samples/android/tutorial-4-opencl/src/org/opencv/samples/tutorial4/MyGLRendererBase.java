@@ -6,7 +6,11 @@ import javax.microedition.khronos.opengles.GL10;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+import android.view.View;
+import android.widget.TextView;
 
 public abstract class MyGLRendererBase implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
     protected final String LOGTAG = "MyGLRendererBase";
@@ -15,6 +19,7 @@ public abstract class MyGLRendererBase implements GLSurfaceView.Renderer, Surfac
 
     protected SurfaceTexture mSTex;
     protected MyGLSurfaceView mView;
+    protected TextView mFpsText;
 
     protected boolean mGLInit = false;
     protected boolean mTexUpdate = false;
@@ -26,6 +31,11 @@ public abstract class MyGLRendererBase implements GLSurfaceView.Renderer, Surfac
     protected abstract void openCamera();
     protected abstract void closeCamera();
     protected abstract void setCameraPreviewSize(int width, int height);
+
+    public void setFpsTextView(TextView fpsTV)
+    {
+        mFpsText = fpsTV;
+    }
 
     public void onResume() {
         Log.i(LOGTAG, "onResume");
@@ -70,8 +80,16 @@ public abstract class MyGLRendererBase implements GLSurfaceView.Renderer, Surfac
         frameCounter++;
         if(frameCounter >= 10)
         {
-            int fps = (int) (frameCounter * 1e9 / (System.nanoTime() - lastNanoTime));
+            final int fps = (int) (frameCounter * 1e9 / (System.nanoTime() - lastNanoTime));
             Log.i(LOGTAG, "drawFrame() FPS: "+fps);
+            if(mFpsText != null) {
+                Runnable fpsUpdater = new Runnable() {
+                    public void run() {
+                        mFpsText.setText("FPS: " + fps);
+                    }
+                };
+                new Handler(Looper.getMainLooper()).post(fpsUpdater);
+            }
             frameCounter = 0;
             lastNanoTime = System.nanoTime();
         }
