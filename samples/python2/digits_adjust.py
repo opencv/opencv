@@ -6,32 +6,18 @@ Grid search is used to find the best parameters for SVM and KNearest classifiers
 SVM adjustment follows the guidelines given in
 http://www.csie.ntu.edu.tw/~cjlin/papers/guide/guide.pdf
 
-Threading or cloud computing (with http://www.picloud.com/)) may be used
-to speedup the computation.
-
 Usage:
-  digits_adjust.py [--model {svm|knearest}] [--cloud] [--env <PiCloud environment>]
+  digits_adjust.py [--model {svm|knearest}]
 
   --model {svm|knearest}   - select the classifier (SVM is the default)
-  --cloud                  - use PiCloud computing platform
-  --env                    - cloud environment name
 
 '''
-# TODO cloud env setup tutorial
 
 import numpy as np
 import cv2
 from multiprocessing.pool import ThreadPool
 
 from digits import *
-
-try:
-    import cloud
-    have_cloud = True
-except ImportError:
-    have_cloud = False
-
-
 
 def cross_validate(model_class, params, samples, labels, kfold = 3, pool = None):
     n = len(samples)
@@ -57,23 +43,10 @@ def cross_validate(model_class, params, samples, labels, kfold = 3, pool = None)
 
 
 class App(object):
-    def __init__(self, usecloud=False, cloud_env=''):
-        if usecloud and not have_cloud:
-            print 'warning: cloud module is not installed, running locally'
-            usecloud = False
-        self.usecloud = usecloud
-        self.cloud_env = cloud_env
-
-        if self.usecloud:
-            print 'uploading dataset to cloud...'
-            cloud.files.put(DIGITS_FN)
-            self.preprocess_job = cloud.call(self.preprocess, _env=self.cloud_env)
-        else:
-            self._samples, self._labels = self.preprocess()
+    def __init__(self):
+        self._samples, self._labels = self.preprocess()
 
     def preprocess(self):
-        if self.usecloud:
-            cloud.files.get(DIGITS_FN)
         digits, labels = load_digits(DIGITS_FN)
         shuffle = np.random.permutation(len(digits))
         digits, labels = digits[shuffle], labels[shuffle]
@@ -82,18 +55,11 @@ class App(object):
         return samples, labels
 
     def get_dataset(self):
-        if self.usecloud:
-            return cloud.result(self.preprocess_job)
-        else:
-            return self._samples, self._labels
+        return self._samples, self._labels
 
     def run_jobs(self, f, jobs):
-        if self.usecloud:
-            jids = cloud.map(f, jobs, _env=self.cloud_env, _profile=True, _depends_on=self.preprocess_job)
-            ires = cloud.iresult(jids)
-        else:
-            pool = ThreadPool(processes=cv2.getNumberOfCPUs())
-            ires = pool.imap_unordered(f, jobs)
+        pool = ThreadPool(processes=cv2.getNumberOfCPUs())
+        ires = pool.imap_unordered(f, jobs)
         return ires
 
     def adjust_SVM(self):
@@ -147,7 +113,7 @@ if __name__ == '__main__':
 
     print __doc__
 
-    args, _ = getopt.getopt(sys.argv[1:], '', ['model=', 'cloud', 'env='])
+    args, _ = getopt.getopt(sys.argv[1:], '', ['model='])
     args = dict(args)
     args.setdefault('--model', 'svm')
     args.setdefault('--env', '')
@@ -156,7 +122,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     t = clock()
-    app = App(usecloud='--cloud' in args, cloud_env = args['--env'])
+    app = App()
     if args['--model'] == 'knearest':
         app.adjust_KNearest()
     else:
