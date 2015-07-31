@@ -175,10 +175,10 @@ static const char* keys =
 template <typename TApp>
 int d3d_app(int argc, char** argv, std::string& title)
 {
-    cv::CommandLineParser parser(argc, argv, keys); \
-    bool   useCamera = parser.has("camera"); \
-    string file      = parser.get<string>("file"); \
-    bool   showHelp  = parser.get<bool>("help"); \
+    cv::CommandLineParser parser(argc, argv, keys);
+    bool   useCamera = parser.has("camera");
+    string file      = parser.get<string>("file");
+    bool   showHelp  = parser.get<bool>("help");
 
     if (showHelp)
         help();

@@ -111,6 +111,7 @@ public:
 
         m_pSurfaceRGBA = 0;
         m_pSurfaceNV12 = 0;
+        m_pSurfaceNV12_cpu_copy = 0;
 
         D3D11_TEXTURE2D_DESC desc_rgba;
 
