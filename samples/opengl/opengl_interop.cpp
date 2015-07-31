@@ -34,7 +34,6 @@
 
 /*
 // Press key   to
-//       0     no processing
 //       1     processing on CPU
 //       2     processing on GPU
 //       9     toggle texture/buffer
@@ -45,19 +44,22 @@
 class GLWinApp : public WinApp
 {
 public:
+    enum MODE
+    {
+        MODE_CPU = 0,
+        MODE_GPU
+    };
+
     GLWinApp(int width, int height, std::string& window_name, cv::VideoCapture& cap) :
         WinApp(width, height, window_name)
     {
-        m_shutdown = false;
-        m_mode = 0;
-        m_modeStr[0] = cv::String("Texture/No processing");
-        m_modeStr[1] = cv::String("Texture/Processing on CPU");
-        m_modeStr[2] = cv::String("Texture/Processing on GPU");
-        m_modeStr[3] = cv::String("Buffer/No processing");
-        m_modeStr[4] = cv::String("Buffer/Processing on CPU");
-        m_modeStr[5] = cv::String("Buffer/Processing on GPU");
-        m_disableProcessing = false;
-        m_cap = cap;
+        m_shutdown        = false;
+        m_use_buffer      = false;
+        m_demo_processing = true;
+        m_mode            = MODE_CPU;
+        m_modeStr[0]      = cv::String("Processing on CPU");
+        m_modeStr[1]      = cv::String("Processing on GPU");
+        m_cap             = cap;
     }
 
     ~GLWinApp() {}
@@ -78,9 +80,14 @@ public:
         switch (message)
         {
         case WM_CHAR:
-            if (wParam >= '0' && wParam <= '2')
+            if (wParam == '1')
             {
-                set_mode((char)wParam - '0');
+                set_mode(MODE_CPU);
+                return 0;
+            }
+            if (wParam == '2')
+            {
+                set_mode(MODE_GPU);
                 return 0;
             }
             else if (wParam == '9')
@@ -90,7 +97,7 @@ public:
             }
             else if (wParam == VK_SPACE)
             {
-                m_disableProcessing = !m_disableProcessing;
+                m_demo_processing = !m_demo_processing;
                 return 0;
             }
             else if (wParam == VK_ESCAPE)
@@ -136,16 +143,13 @@ public:
             switch(keycode_to_keysym(e.xkey.keycode))
             {
             case XK_space:
-                m_disableProcessing = !m_disableProcessing;
-                break;
-            case XK_0:
-                set_mode(0);
+                m_demo_processing = !m_demo_processing;
                 break;
             case XK_1:
-                set_mode(1);
+                set_mode(MODE_CPU);
                 break;
             case XK_2:
-                set_mode(2);
+                set_mode(MODE_GPU);
                 break;
             case XK_9:
                 toggle_buffer();
@@ -198,14 +202,14 @@ public:
         return 0;
     } // init()
 
-    int get_frame(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer)
+    int get_frame(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer, bool do_buffer)
     {
         if (!m_cap.read(m_frame_bgr))
             return -1;
 
         cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_RGB2RGBA);
 
-        if (use_buffer())
+        if (do_buffer)
             buffer.copyFrom(m_frame_rgba, cv::ogl::Buffer::PIXEL_UNPACK_BUFFER, true);
         else
             texture.copyFrom(m_frame_rgba, true);
@@ -213,7 +217,7 @@ public:
         return 0;
     }
 
-    void print_info(int mode, float time, cv::String oclDevName)
+    void print_info(MODE mode, float time, cv::String& oclDevName)
     {
 #if defined(WIN32) || defined(_WIN32)
         HDC hDC = m_hDC;
@@ -231,12 +235,12 @@ public:
             int  y = 0;
 
             buf[0] = 0;
-            sprintf_s(buf, sizeof(buf)-1, "Mode: %s", m_modeStr[mode].c_str());
+            sprintf_s(buf, sizeof(buf)-1, "Mode: %s OpenGL %s", m_modeStr[mode].c_str(), use_buffer() ? "buffer" : "texture");
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
             buf[0] = 0;
-            sprintf_s(buf, sizeof(buf)-1, "Time: %2.1f", time);
+            sprintf_s(buf, sizeof(buf)-1, "Time, msec: %2.1f", time);
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
@@ -249,7 +253,7 @@ public:
 #elif defined(__linux__)
 
         char buf[256+1];
-        snprintf(buf, sizeof(buf)-1, "Time: %2.1f Mode: %s Device: %s", time, m_modeStr[mode].c_str(), oclDevName.c_str());
+        snprintf(buf, sizeof(buf)-1, "Time, msec: %2.1f, Mode: %s OpenGL %s, Device: %s", time, m_modeStr[mode].c_str(), use_buffer() ? "buffer" : "texture", oclDevName.c_str());
         XStoreName(m_display, m_window, buf);
 #endif
     }
@@ -273,26 +277,23 @@ public:
             texture.setAutoRelease(true);
             buffer.setAutoRelease(true);
 
-            r = get_frame(texture, buffer);
+            MODE mode = get_mode();
+            bool do_buffer = use_buffer();
+
+            r = get_frame(texture, buffer, do_buffer);
             if (r != 0)
             {
                 return -1;
             }
 
-            bool do_buffer = use_buffer();
-
-            switch (get_mode())
+            switch (mode)
             {
-                case 0: // no processing
-                    m_timer.clear();
+                case MODE_CPU: // process frame on CPU
+                    processFrameCPU(texture, buffer, do_buffer);
                     break;
 
-                case 1: // process frame on CPU
-                    processFrameCPU(texture, buffer);
-                    break;
-
-                case 2: // process frame on GPU
-                    processFrameGPU(texture, buffer);
+                case MODE_GPU: // process frame on GPU
+                    processFrameGPU(texture, buffer, do_buffer);
                     break;
             } // switch
 
@@ -328,7 +329,7 @@ public:
             glXSwapBuffers(m_display, m_window);
 #endif
 
-            print_info(m_mode, m_timer.time(Timer::UNITS::MSEC), m_oclDevName);
+            print_info(mode, m_timer.time(Timer::UNITS::MSEC), m_oclDevName);
         }
 
 
@@ -343,11 +344,9 @@ public:
 
 protected:
 
-    void processFrameCPU(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer)
+    void processFrameCPU(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer, bool do_buffer)
     {
         cv::Mat m(m_height, m_width, CV_8UC4);
-
-        bool do_buffer = use_buffer();
 
         m_timer.start();
 
@@ -356,7 +355,7 @@ protected:
         else
             texture.copyTo(m);
 
-        if (!m_disableProcessing)
+        if (m_demo_processing)
         {
             // blur texture image with OpenCV on CPU
             cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
@@ -370,11 +369,9 @@ protected:
         m_timer.stop();
     }
 
-    void processFrameGPU(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer)
+    void processFrameGPU(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer, bool do_buffer)
     {
         cv::UMat u;
-
-        bool do_buffer = use_buffer();
 
         m_timer.start();
 
@@ -383,7 +380,7 @@ protected:
         else
             cv::ogl::convertFromGLTexture2D(texture, u);
 
-        if (!m_disableProcessing)
+        if (m_demo_processing)
         {
             // blur texture image with OpenCV on GPU with OpenCL
             cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
@@ -432,8 +429,10 @@ protected:
         int pfmt = ChoosePixelFormat(m_hDC, &pfd);
         if (pfmt == 0)
             return -1;
+
         if (SetPixelFormat(m_hDC, pfmt, &pfd) == 0)
             return -2;
+
         return 0;
     }
 #endif
@@ -449,36 +448,17 @@ protected:
     }
 #endif
 
-    // modes: 0,1,2 - use texture
-    //        3,4,5 - use buffer
-    bool use_buffer()
-    {
-        return bool(m_mode >= 3);
-    }
-    void toggle_buffer()
-    {
-        if (m_mode < 3)
-            m_mode += 3;
-        else
-            m_mode -= 3;
-    }
-    int get_mode()
-    {
-        return (m_mode % 3);
-    }
-    void set_mode(int mode)
-    {
-        bool do_buffer = bool(m_mode >= 3);
-        m_mode = (mode % 3);
-        if (do_buffer)
-            m_mode += 3;
-    }
+    bool use_buffer()        { return m_use_buffer; }
+    void toggle_buffer()     { m_use_buffer = !m_use_buffer; }
+    MODE get_mode()          { return m_mode; }
+    void set_mode(MODE mode) { m_mode = mode; }
 
 private:
     bool               m_shutdown;
-    int                m_mode;
-    cv::String         m_modeStr[3*2];
-    int                m_disableProcessing;
+    bool               m_use_buffer;
+    bool               m_demo_processing;
+    MODE               m_mode;
+    cv::String         m_modeStr[2];
 #if defined(WIN32) || defined(_WIN32)
     HDC                m_hDC;
     HGLRC              m_hRC;
@@ -515,10 +495,10 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    cv::CommandLineParser parser(argc, argv, keys); \
-    bool   useCamera = parser.has("camera"); \
-    string file      = parser.get<string>("file"); \
-    bool   showHelp  = parser.get<bool>("help"); \
+    cv::CommandLineParser parser(argc, argv, keys);
+    bool   useCamera = parser.has("camera");
+    string file      = parser.get<string>("file");
+    bool   showHelp  = parser.get<bool>("help");
 
     if (showHelp)
     {
@@ -541,7 +521,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    int width = (int)cap.get(CAP_PROP_FRAME_WIDTH);
+    int width  = (int)cap.get(CAP_PROP_FRAME_WIDTH);
     int height = (int)cap.get(CAP_PROP_FRAME_HEIGHT);
 
 #if defined(WIN32) || defined(_WIN32)
