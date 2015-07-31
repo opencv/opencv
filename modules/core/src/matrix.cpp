@@ -51,8 +51,11 @@
 
 namespace cv {
 
-void MatAllocator::map(UMatData*, int) const
+void MatAllocator::map(UMatData* u, int) const
 {
+    // VD-FIX: when useOpenCL == false and UMat created from Mat with user allocated memory
+    if (u->data == 0)
+        u->data = u->origdata;
 }
 
 void MatAllocator::unmap(UMatData* u) const
@@ -189,7 +192,8 @@ public:
         }
         uchar* data = data0 ? (uchar*)data0 : (uchar*)fastMalloc(total);
         UMatData* u = new UMatData(this);
-        u->data = u->origdata = data;
+        u->data = data0 ? 0 : data; // VD-FIX bug 4006 - create UMat from user host memory (USE_HOST_PTR)
+        u->origdata = data;
         u->size = total;
         if(data0)
             u->flags |= UMatData::USER_ALLOCATED;
