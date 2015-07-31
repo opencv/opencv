@@ -1,6 +1,8 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
+#include <opencv2/opencv.hpp>
+
 #include "common.hpp"
 
 float vertices[] = {
@@ -59,6 +61,10 @@ GLuint FBO = 0;
 
 GLuint texOES = 0;
 int texWidth = 0, texHeight = 0;
+
+enum ProcMode {PROC_MODE_CPU=1, PROC_MODE_OCL_DIRECT=2, PROC_MODE_OCL_OCV=3};
+
+ProcMode procMode = PROC_MODE_CPU;
 
 static inline void deleteTex(GLuint* tex)
 {
@@ -223,12 +229,9 @@ void drawFrameOrig()
 void procCPU(char* buff, int w, int h)
 {
     int64_t t = getTimeMs();
-    for(int i=0; i<h; i++)
-    {
-        buff[i*w*4+i*4+0] = 255;
-        buff[i*w*4+i*4+4] = 255;
-        buff[i*w*4+i*4+8] = 255;
-    }
+    cv::Mat m(h, w, CV_8UC4, buff);
+    cv::Laplacian(m, m, CV_8U);
+    m *= 10;
     LOGD("procCPU() costs %d ms", getTimeInterval(t));
 }
 
@@ -271,20 +274,35 @@ void drawFrameProcOCL()
 
     // modify pixels in FBO texture using OpenCL and CL-GL interop
     procOCL_I2I(FBOtex, FBOtex2, texWidth, texHeight);
-    //procOCL_OCV(FBOtex, texWidth, texHeight);
 
     // render to screen
     drawTex(FBOtex2, GL_TEXTURE_2D, 0);
 }
 
+void drawFrameProcOCLOCV()
+{
+    drawTex(texOES, GL_TEXTURE_EXTERNAL_OES, FBO);
+
+    // modify pixels in FBO texture using OpenCL and CL-GL interop
+    procOCL_OCV(FBOtex, texWidth, texHeight);
+
+    // render to screen
+    drawTex(FBOtex, GL_TEXTURE_2D, 0);
+}
 
 extern "C" void drawFrame()
 {
     LOGD("*** drawFrame() ***");
     int64_t t = getTimeMs();
-    //drawFrameOrig();
-    //drawFrameProcCPU();
-    drawFrameProcOCL();
+
+    switch(procMode)
+    {
+    case PROC_MODE_CPU:        drawFrameProcCPU();    break;
+    case PROC_MODE_OCL_DIRECT: drawFrameProcOCL();    break;
+    case PROC_MODE_OCL_OCV:    drawFrameProcOCLOCV(); break;
+    default: drawFrameOrig();
+    }
+
     glFinish();
     LOGD("*** drawFrame() costs %d ms ***", getTimeInterval(t));
 }
@@ -341,4 +359,14 @@ extern "C" void changeSize(int width, int height)
     texWidth = width <= MAX_W ? width : MAX_W;
     texHeight = height <= MAX_H ? height : MAX_H;
     initFBO(texWidth, texHeight);
+}
+
+extern "C" void setProcessingMode(int mode)
+{
+    switch(mode)
+    {
+    case PROC_MODE_CPU:        procMode = PROC_MODE_CPU;        break;
+    case PROC_MODE_OCL_DIRECT: procMode = PROC_MODE_OCL_DIRECT; break;
+    case PROC_MODE_OCL_OCV:    procMode = PROC_MODE_OCL_OCV;    break;
+    }
 }

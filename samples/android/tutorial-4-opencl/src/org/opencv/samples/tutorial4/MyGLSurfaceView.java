@@ -1,8 +1,10 @@
 package org.opencv.samples.tutorial4;
 
+import android.app.Activity;
 import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.widget.TextView;
 
@@ -52,5 +54,12 @@ public class MyGLSurfaceView extends GLSurfaceView {
     public void onPause() {
         mRenderer.onPause();
         super.onPause();
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent e) {
+        if(e.getAction() == MotionEvent.ACTION_DOWN)
+            ((Activity)getContext()).openOptionsMenu();
+        return true;
     }
 }
