@@ -57,6 +57,7 @@
 
 /* DirectX */
 #cmakedefine HAVE_DIRECTX
+#cmakedefine HAVE_DIRECTX_NV12
 #cmakedefine HAVE_D3D11
 #cmakedefine HAVE_D3D10
 #cmakedefine HAVE_D3D9

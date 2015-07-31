@@ -27,8 +27,10 @@ using namespace cv;
 class D3D11WinApp : public D3DSample
 {
 public:
-    D3D11WinApp(int width, int height, std::string& window_name, cv::VideoCapture& cap) :
-        D3DSample(width, height, window_name, cap) {}
+    D3D11WinApp(int width, int height, std::string& window_name, cv::VideoCapture& cap)
+    : D3DSample(width, height, window_name, cap),
+      m_nv12_available(false)
+    {}
 
     ~D3D11WinApp() {}
 
@@ -74,13 +76,14 @@ public:
             throw std::runtime_error("D3D11CreateDeviceAndSwapChain() failed!");
         }
 
-        m_nv12_available = true;
+#if defined(_WIN32_WINNT_WIN8) && _WIN32_WINNT >= _WIN32_WINNT_WIN8
         UINT fmt = 0;
         r = m_pD3D11Dev->CheckFormatSupport(DXGI_FORMAT_NV12, &fmt);
-        if (FAILED(r))
+        if (SUCCEEDED(r))
         {
-            m_nv12_available = false;
+            m_nv12_available = true;
         }
+#endif
 
         r = m_pD3D11SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&m_pBackBuffer);
         if (FAILED(r))
@@ -129,6 +132,7 @@ public:
             throw std::runtime_error("Can't create DX texture");
         }
 
+#if defined(_WIN32_WINNT_WIN8) && _WIN32_WINNT >= _WIN32_WINNT_WIN8
         if(m_nv12_available)
         {
             D3D11_TEXTURE2D_DESC desc_nv12;
@@ -171,6 +175,7 @@ public:
                 throw std::runtime_error("Can't create DX NV12 texture");
             }
         }
+#endif
 
         // initialize OpenCL context of OpenCV lib from DirectX
         if (cv::ocl::haveOpenCL())
