@@ -48,7 +48,13 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"../data/fruits.jpg";
+    cv::CommandLineParser parser(argc, argv, "{help h | | }{ @input | ../data/fruits.jpg | }");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string filename = parser.get<string>("@input");
     Mat img0 = imread(filename, 1), imgGray;
 
     if( img0.empty() )

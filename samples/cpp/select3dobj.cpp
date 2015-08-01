@@ -30,14 +30,14 @@ const char* helphelp =
 "compute the homography of the plane the calibration pattern is on. It also shows grabCut\n"
 "segmentation etc.\n"
 "\n"
-"select3dobj -w <board_width> -h <board_height> [-s <square_size>]\n"
-"           -i <camera_intrinsics_filename> -o <output_prefix> [video_filename/cameraId]\n"
+"select3dobj -w=<board_width> -h=<board_height> [-s=<square_size>]\n"
+"           -i=<camera_intrinsics_filename> -o=<output_prefix>\n"
 "\n"
-" -w <board_width>          Number of chessboard corners wide\n"
-" -h <board_height>         Number of chessboard corners width\n"
-" [-s <square_size>]            Optional measure of chessboard squares in meters\n"
-" -i <camera_intrinsics_filename> Camera matrix .yml file from calibration.cpp\n"
-" -o <output_prefix>        Prefix the output segmentation images with this\n"
+" -w=<board_width>          Number of chessboard corners wide\n"
+" -h=<board_height>         Number of chessboard corners width\n"
+" [-s=<square_size>]            Optional measure of chessboard squares in meters\n"
+" -i=<camera_intrinsics_filename> Camera matrix .yml file from calibration.cpp\n"
+" -o=<output_prefix>        Prefix the output segmentation images with this\n"
 " [video_filename/cameraId]  If present, read from that video file or that ID\n"
 "\n"
 "Using a camera's intrinsics (from calibrating a camera -- see calibration.cpp) and an\n"
@@ -384,8 +384,8 @@ static bool readStringList( const string& filename, vector<string>& l )
 
 int main(int argc, char** argv)
 {
-    const char* help = "Usage: select3dobj -w <board_width> -h <board_height> [-s <square_size>]\n"
-           "\t-i <intrinsics_filename> -o <output_prefix> [video_filename/cameraId]\n";
+    const char* help = "Usage: select3dobj -w=<board_width> -h=<board_height> [-s=<square_size>]\n"
+           "\t-i=<intrinsics_filename> -o=<output_prefix> [video_filename/cameraId]\n";
     const char* screen_help =
     "Actions: \n"
     "\tSelect object as 3D box with the mouse. That's it\n"
@@ -394,82 +394,59 @@ int main(int argc, char** argv)
     "\tENTER - Confirm the selection. Grab next object in video mode.\n"
     "\tq - Exit the program\n";
 
-    if(argc < 5)
+    cv::CommandLineParser parser(argc, argv, "{help h||}{w||}{h||}{s|1|}{i||}{o||}{@input|0|}");
+    if (parser.has("help"))
     {
         puts(helphelp);
         puts(help);
         return 0;
     }
-    const char* intrinsicsFilename = 0;
-    const char* outprefix = 0;
-    const char* inputName = 0;
+    string intrinsicsFilename;
+    string outprefix = "";
+    string inputName = "";
     int cameraId = 0;
     Size boardSize;
-    double squareSize = 1;
+    double squareSize;
     vector<string> imageList;
-
-    for( int i = 1; i < argc; i++ )
+    intrinsicsFilename = parser.get<string>("i");
+    outprefix = parser.get<string>("o");
+    boardSize.width = parser.get<int>("w");
+    boardSize.height = parser.get<int>("h");
+    squareSize = parser.get<double>("s");
+    if ( parser.get<string>("@input").size() == 1 && isdigit(parser.get<string>("@input")[0]) )
+        cameraId = parser.get<int>("@input");
+    else
+        inputName = parser.get<string>("@input");
+    if (!parser.check())
     {
-        if( strcmp(argv[i], "-i") == 0 )
-            intrinsicsFilename = argv[++i];
-        else if( strcmp(argv[i], "-o") == 0 )
-            outprefix = argv[++i];
-        else if( strcmp(argv[i], "-w") == 0 )
-        {
-            if(sscanf(argv[++i], "%d", &boardSize.width) != 1 || boardSize.width <= 0)
-            {
-                printf("Incorrect -w parameter (must be a positive integer)\n");
-                puts(help);
-                return 0;
-            }
-        }
-        else if( strcmp(argv[i], "-h") == 0 )
-        {
-            if(sscanf(argv[++i], "%d", &boardSize.height) != 1 || boardSize.height <= 0)
-            {
-                printf("Incorrect -h parameter (must be a positive integer)\n");
-                puts(help);
-                return 0;
-            }
-        }
-        else if( strcmp(argv[i], "-s") == 0 )
-        {
-            if(sscanf(argv[++i], "%lf", &squareSize) != 1 || squareSize <= 0)
-            {
-                printf("Incorrect -w parameter (must be a positive real number)\n");
-                puts(help);
-                return 0;
-            }
-        }
-        else if( argv[i][0] != '-' )
-        {
-            if( isdigit(argv[i][0]))
-                sscanf(argv[i], "%d", &cameraId);
-            else
-                inputName = argv[i];
-        }
-        else
-        {
-            printf("Incorrect option\n");
-            puts(help);
-            return 0;
-        }
+        puts(help);
+        parser.printErrors();
+        return 0;
     }
-
-    if( !intrinsicsFilename || !outprefix ||
-        boardSize.width <= 0 || boardSize.height <= 0 )
+    if ( boardSize.width <= 0 )
     {
-        printf("Some of the required parameters are missing\n");
+        printf("Incorrect -w parameter (must be a positive integer)\n");
         puts(help);
         return 0;
     }
-
+    if ( boardSize.height <= 0 )
+    {
+        printf("Incorrect -h parameter (must be a positive integer)\n");
+        puts(help);
+        return 0;
+    }
+    if ( squareSize <= 0 )
+    {
+        printf("Incorrect -s parameter (must be a positive real number)\n");
+        puts(help);
+        return 0;
+    }
     Mat cameraMatrix, distCoeffs;
     Size calibratedImageSize;
     readCameraMatrix(intrinsicsFilename, cameraMatrix, distCoeffs, calibratedImageSize );
 
     VideoCapture capture;
-    if( inputName )
+    if( !inputName.empty() )
     {
         if( !readStringList(inputName, imageList) &&
             !capture.open(inputName))
@@ -486,21 +463,21 @@ int main(int argc, char** argv)
 
     const char* outbarename = 0;
     {
-        outbarename = strrchr(outprefix, '/');
-        const char* tmp = strrchr(outprefix, '\\');
+        outbarename = strrchr(outprefix.c_str(), '/');
+        const char* tmp = strrchr(outprefix.c_str(), '\\');
         char cmd[1000];
-        sprintf(cmd, "mkdir %s", outprefix);
+        sprintf(cmd, "mkdir %s", outprefix.c_str());
         if( tmp && tmp > outbarename )
             outbarename = tmp;
         if( outbarename )
         {
-            cmd[6 + outbarename - outprefix] = '\0';
+            cmd[6 + outbarename - outprefix.c_str()] = '\0';
             int result = system(cmd);
             CV_Assert(result == 0);
             outbarename++;
         }
         else
-            outbarename = outprefix;
+            outbarename = outprefix.c_str();
     }
 
     Mat frame, shownFrame, selectedObjFrame, mapxy;
@@ -510,7 +487,7 @@ int main(int argc, char** argv)
     setMouseCallback("View", onMouse, 0);
     bool boardFound = false;
 
-    string indexFilename = format("%s_index.yml", outprefix);
+    string indexFilename = format("%s_index.yml", outprefix.c_str());
 
     vector<string> capturedImgList;
     vector<Rect> roiList;
@@ -588,7 +565,7 @@ int main(int argc, char** argv)
                     char path[1000];
                     for(;frameIdx < maxFrameIdx;frameIdx++)
                     {
-                        sprintf(path, "%s%04d.jpg", outprefix, frameIdx);
+                        sprintf(path, "%s%04d.jpg", outprefix.c_str(), frameIdx);
                         FILE* f = fopen(path, "rb");
                         if( !f )
                             break;
@@ -596,7 +573,7 @@ int main(int argc, char** argv)
                     }
                     if( frameIdx == maxFrameIdx )
                     {
-                        printf("Can not save the image as %s<...>.jpg", outprefix);
+                        printf("Can not save the image as %s<...>.jpg", outprefix.c_str());
                         break;
                     }
                     imwrite(path, selectedObjFrame(r));
