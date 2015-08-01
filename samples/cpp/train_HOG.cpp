@@ -88,7 +88,7 @@ void load_images( const string & prefix, const string & filename, vector< Mat > 
     while( !end_of_parsing )
     {
         getline( file, line );
-        if( line == "" ) // no more file to read
+        if( line.empty() ) // no more file to read
         {
             end_of_parsing = true;
             break;
@@ -403,23 +403,33 @@ void test_it( const Size & size )
 
 int main( int argc, char** argv )
 {
-    if( argc != 5 )
+    cv::CommandLineParser parser(argc, argv, "{help h|| show help message}"
+            "{pd||pos_dir}{p||pos.lst}{nd||neg_dir}{n||neg.lst}");
+    if (parser.has("help"))
     {
-        cout << "Wrong number of parameters." << endl
-            << "Usage: " << argv[0] << " pos_dir pos.lst neg_dir neg.lst" << endl
-            << "example: " << argv[0] << " /INRIA_dataset/ Train/pos.lst /INRIA_dataset/ Train/neg.lst" << endl;
-        exit( -1 );
+        parser.printMessage();
+        exit(0);
     }
     vector< Mat > pos_lst;
     vector< Mat > full_neg_lst;
     vector< Mat > neg_lst;
     vector< Mat > gradient_lst;
     vector< int > labels;
-
-    load_images( argv[1], argv[2], pos_lst );
+    string pos_dir = parser.get<string>("pd");
+    string pos = parser.get<string>("p");
+    string neg_dir = parser.get<string>("nd");
+    string neg = parser.get<string>("n");
+    if( pos_dir.empty() || pos.empty() || neg_dir.empty() || neg.empty() )
+    {
+        cout << "Wrong number of parameters." << endl
+            << "Usage: " << argv[0] << " --pd=pos_dir -p=pos.lst --nd=neg_dir -n=neg.lst" << endl
+            << "example: " << argv[0] << " --pd=/INRIA_dataset/ -p=Train/pos.lst --nd=/INRIA_dataset/ -n=Train/neg.lst" << endl;
+        exit( -1 );
+    }
+    load_images( pos_dir, pos, pos_lst );
     labels.assign( pos_lst.size(), +1 );
     const unsigned int old = (unsigned int)labels.size();
-    load_images( argv[3], argv[4], full_neg_lst );
+    load_images( neg_dir, neg, full_neg_lst );
     sample_neg( full_neg_lst, neg_lst, Size( 96,160 ) );
     labels.insert( labels.end(), neg_lst.size(), -1 );
     CV_Assert( old < labels.size() );
