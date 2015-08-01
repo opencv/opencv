@@ -33,14 +33,17 @@ static void help()
 
 const char* keys =
 {
-    "{@image |../data/fruits.jpg|input image name}"
+    "{help h||}{@image |../data/fruits.jpg|input image name}"
 };
 
 int main( int argc, const char** argv )
 {
-    help();
-
     CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     string filename = parser.get<string>(0);
 
     image = imread(filename, 1);

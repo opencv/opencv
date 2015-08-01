@@ -47,15 +47,19 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"../data/fruits.jpg";
+    cv::CommandLineParser parser(argc, argv, "{help h||}{@image|../data/fruits.jpg|}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string filename = parser.get<string>("@image");
     Mat img0 = imread(filename, -1);
     if(img0.empty())
     {
         cout << "Couldn't open the image " << filename << ". Usage: inpaint <image_name>\n" << endl;
         return 0;
     }
-
-    help();
 
     namedWindow( "image", 1 );
 

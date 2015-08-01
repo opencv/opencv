@@ -25,61 +25,42 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
                     CascadeClassifier& nestedCascade,
                     double scale, bool tryflip );
 
-string cascadeName = "../../data/haarcascades/haarcascade_frontalface_alt.xml";
-string nestedCascadeName = "../../data/haarcascades/haarcascade_smile.xml";
+string cascadeName;
+string nestedCascadeName;
 
 int main( int argc, const char** argv )
 {
     VideoCapture capture;
     Mat frame, image;
-    const string scaleOpt = "--scale=";
-    size_t scaleOptLen = scaleOpt.length();
-    const string cascadeOpt = "--cascade=";
-    size_t cascadeOptLen = cascadeOpt.length();
-    const string nestedCascadeOpt = "--smile-cascade";
-    size_t nestedCascadeOptLen = nestedCascadeOpt.length();
-    const string tryFlipOpt = "--try-flip";
-    size_t tryFlipOptLen = tryFlipOpt.length();
     string inputName;
-    bool tryflip = false;
+    bool tryflip;
 
     help();
 
     CascadeClassifier cascade, nestedCascade;
-    double scale = 1;
-
-    for( int i = 1; i < argc; i++ )
+    double scale;
+    cv::CommandLineParser parser(argc, argv,
+        "{help h||}{scale|1|}"
+        "{cascade|../../data/haarcascades/haarcascade_frontalface_alt.xml|}"
+        "{smile-cascade|../../data/haarcascades/haarcascade_smile.xml|}"
+        "{try-flip||}{@input||}");
+    if (parser.has("help"))
     {
-        cout << "Processing " << i << " " <<  argv[i] << endl;
-        if( cascadeOpt.compare( 0, cascadeOptLen, argv[i], cascadeOptLen ) == 0 )
-        {
-            cascadeName.assign( argv[i] + cascadeOptLen );
-            cout << "  from which we have cascadeName= " << cascadeName << endl;
-        }
-        else if( nestedCascadeOpt.compare( 0, nestedCascadeOptLen, argv[i], nestedCascadeOptLen ) == 0 )
-        {
-            if( argv[i][nestedCascadeOpt.length()] == '=' )
-                nestedCascadeName.assign( argv[i] + nestedCascadeOpt.length() + 1 );
-        }
-        else if( scaleOpt.compare( 0, scaleOptLen, argv[i], scaleOptLen ) == 0 )
-        {
-            if( !sscanf( argv[i] + scaleOpt.length(), "%lf", &scale ) || scale < 1 )
-                scale = 1;
-            cout << " from which we read scale = " << scale << endl;
-        }
-        else if( tryFlipOpt.compare( 0, tryFlipOptLen, argv[i], tryFlipOptLen ) == 0 )
-        {
-            tryflip = true;
-            cout << " will try to flip image horizontally to detect assymetric objects\n";
-        }
-        else if( argv[i][0] == '-' )
-        {
-            cerr << "WARNING: Unknown option " << argv[i] << endl;
-        }
-        else
-            inputName.assign( argv[i] );
+        help();
+        return 0;
     }
-
+    cascadeName = parser.get<string>("cascade");
+    nestedCascadeName = parser.get<string>("smile-cascade");
+    tryflip = parser.has("try-flip");
+    inputName = parser.get<string>("@input");
+    scale = parser.get<int>("scale");
+    if (!parser.check())
+    {
+        help();
+        return 1;
+    }
+    if (scale < 1)
+        scale = 1;
     if( !cascade.load( cascadeName ) )
     {
         cerr << "ERROR: Could not load face cascade" << endl;
@@ -92,10 +73,9 @@ int main( int argc, const char** argv )
         help();
         return -1;
     }
-
-    if( inputName.empty() || (isdigit(inputName.c_str()[0]) && inputName.c_str()[1] == '\0') )
+    if( inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1) )
     {
-        int c = inputName.empty() ? 0 : inputName.c_str()[0] - '0' ;
+        int c = inputName.empty() ? 0 : inputName[0] - '0' ;
         if(!capture.open(c))
             cout << "Capture from camera #" <<  c << " didn't work" << endl;
     }

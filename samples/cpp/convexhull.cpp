@@ -13,12 +13,16 @@ static void help()
          << "./convexhull\n" << endl;
 }
 
-int main( int /*argc*/, char** /*argv*/ )
+int main( int argc, char** argv )
 {
+    CommandLineParser parser(argc, argv, "{help h||}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     Mat img(500, 500, CV_8UC3);
     RNG& rng = theRNG();
-
-    help();
 
     for(;;)
     {
