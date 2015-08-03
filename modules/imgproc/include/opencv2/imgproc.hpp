@@ -1968,8 +1968,8 @@ way:
     // specify fx and fy and let the function compute the destination image size.
     resize(src, dst, Size(), 0.5, 0.5, interpolation);
 @endcode
-To shrink an image, it will generally look best with CV_INTER_AREA interpolation, whereas to
-enlarge an image, it will generally look best with CV_INTER_CUBIC (slow) or CV_INTER_LINEAR
+To shrink an image, it will generally look best with cv::INTER_AREA interpolation, whereas to
+enlarge an image, it will generally look best with cv::INTER_CUBIC (slow) or cv::INTER_LINEAR
 (faster but still looks OK).
 
 @param src input image.
