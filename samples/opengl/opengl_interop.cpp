@@ -113,23 +113,6 @@ public:
     }
 #endif
 
-    static float getFps()
-    {
-        static std::queue<int64> time_queue;
-
-        int64 now = cv::getTickCount();
-        int64 then = 0;
-        time_queue.push(now);
-
-        if (time_queue.size() >= 2)
-            then = time_queue.front();
-
-        if (time_queue.size() >= 25)
-            time_queue.pop();
-
-        return time_queue.size() * (float)cv::getTickFrequency() / (now - then);
-    }
-
 #if defined(__linux__)
     int handle_event(XEvent& e)
     {
@@ -223,14 +206,14 @@ public:
         cv::cvtColor(m_frame_bgr, m_frame_rgba, CV_RGB2RGBA);
 
         if (use_buffer())
-            buffer.copyFrom(m_frame_rgba);
+            buffer.copyFrom(m_frame_rgba, cv::ogl::Buffer::PIXEL_UNPACK_BUFFER, true);
         else
-            texture.copyFrom(m_frame_rgba);
+            texture.copyFrom(m_frame_rgba, true);
 
         return 0;
     }
 
-    void print_info(int mode, float fps, cv::String oclDevName)
+    void print_info(int mode, float time, cv::String oclDevName)
     {
 #if defined(WIN32) || defined(_WIN32)
         HDC hDC = m_hDC;
@@ -253,7 +236,7 @@ public:
 
             y += tm.tmHeight;
             buf[0] = 0;
-            sprintf_s(buf, sizeof(buf)-1, "FPS: %2.1f", fps);
+            sprintf_s(buf, sizeof(buf)-1, "Time: %2.1f", time);
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
@@ -266,7 +249,7 @@ public:
 #elif defined(__linux__)
 
         char buf[256+1];
-        snprintf(buf, sizeof(buf)-1, "FPS: %2.1f Mode: %s Device: %s", fps, m_modeStr[mode].c_str(), oclDevName.c_str());
+        snprintf(buf, sizeof(buf)-1, "Time: %2.1f Mode: %s Device: %s", time, m_modeStr[mode].c_str(), oclDevName.c_str());
         XStoreName(m_display, m_window, buf);
 #endif
     }
@@ -287,6 +270,9 @@ public:
             cv::ogl::Texture2D texture;
             cv::ogl::Buffer buffer;
 
+            texture.setAutoRelease(true);
+            buffer.setAutoRelease(true);
+
             r = get_frame(texture, buffer);
             if (r != 0)
             {
@@ -294,67 +280,27 @@ public:
             }
 
             bool do_buffer = use_buffer();
+
             switch (get_mode())
             {
-                case 0:
-                    // no processing
+                case 0: // no processing
+                    m_timer.clear();
                     break;
 
-                case 1:
-                {
-                    // process video frame on CPU
-                    cv::Mat m(m_height, m_width, CV_8UC4);
-
-                    if (do_buffer)
-                        buffer.copyTo(m);
-                    else
-                        texture.copyTo(m);
-
-                    if (!m_disableProcessing)
-                    {
-                        // blur texture image with OpenCV on CPU
-                        cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
-                    }
-
-                    if (do_buffer)
-                        buffer.copyFrom(m);
-                    else
-                        texture.copyFrom(m);
-
+                case 1: // process frame on CPU
+                    processFrameCPU(texture, buffer);
                     break;
-                }
 
-                case 2:
-                {
-                    // process video frame on GPU
-                    cv::UMat u;
-
-                    if (do_buffer)
-                        u = cv::ogl::mapGLBuffer(buffer);
-                    else
-                        cv::ogl::convertFromGLTexture2D(texture, u);
-
-                    if (!m_disableProcessing)
-                    {
-                        // blur texture image with OpenCV on GPU with OpenCL
-                        cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
-                    }
-
-                    if (do_buffer)
-                        cv::ogl::unmapGLBuffer(u);
-                    else
-                        cv::ogl::convertToGLTexture2D(u, texture);
-
+                case 2: // process frame on GPU
+                    processFrameGPU(texture, buffer);
                     break;
-                }
-
             } // switch
 
             if (do_buffer) // buffer -> texture
             {
                 cv::Mat m(m_height, m_width, CV_8UC4);
                 buffer.copyTo(m);
-                texture.copyFrom(m);
+                texture.copyFrom(m, true);
             }
 
 #if defined(__linux__)
@@ -382,7 +328,7 @@ public:
             glXSwapBuffers(m_display, m_window);
 #endif
 
-            print_info(m_mode, getFps(), m_oclDevName);
+            print_info(m_mode, m_timer.time(Timer::UNITS::MSEC), m_oclDevName);
         }
 
 
@@ -396,6 +342,60 @@ public:
     }
 
 protected:
+
+    void processFrameCPU(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer)
+    {
+        cv::Mat m(m_height, m_width, CV_8UC4);
+
+        bool do_buffer = use_buffer();
+
+        m_timer.start();
+
+        if (do_buffer)
+            buffer.copyTo(m);
+        else
+            texture.copyTo(m);
+
+        if (!m_disableProcessing)
+        {
+            // blur texture image with OpenCV on CPU
+            cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
+        }
+
+        if (do_buffer)
+            buffer.copyFrom(m, cv::ogl::Buffer::PIXEL_UNPACK_BUFFER, true);
+        else
+            texture.copyFrom(m, true);
+
+        m_timer.stop();
+    }
+
+    void processFrameGPU(cv::ogl::Texture2D& texture, cv::ogl::Buffer& buffer)
+    {
+        cv::UMat u;
+
+        bool do_buffer = use_buffer();
+
+        m_timer.start();
+
+        if (do_buffer)
+            u = cv::ogl::mapGLBuffer(buffer);
+        else
+            cv::ogl::convertFromGLTexture2D(texture, u);
+
+        if (!m_disableProcessing)
+        {
+            // blur texture image with OpenCV on GPU with OpenCL
+            cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
+        }
+
+        if (do_buffer)
+            cv::ogl::unmapGLBuffer(u);
+        else
+            cv::ogl::convertToGLTexture2D(u, texture);
+
+        m_timer.stop();
+    }
 
 #if defined(WIN32) || defined(_WIN32)
     int setup_pixel_format()
@@ -491,20 +491,64 @@ private:
     cv::String         m_oclDevName;
 };
 
+static void help()
+{
+    printf(
+        "\nSample demonstrating interoperability of OpenGL and OpenCL with OpenCV.\n"
+        "Hot keys: \n"
+        "  SPACE - turn processing on/off\n"
+        "    1   - process GL data through OpenCV on CPU\n"
+        "    2   - process GL data through OpenCV on GPU (via OpenCL)\n"
+        "    9   - toggle use of GL texture/GL buffer\n"
+        "  ESC   - exit\n\n");
+}
+
+static const char* keys =
+{
+    "{c camera | true  | use camera or not}"
+    "{f file   |       | movie file name  }"
+    "{h help   | false | print help info  }"
+};
+
 using namespace cv;
+using namespace std;
 
 int main(int argc, char** argv)
 {
+    cv::CommandLineParser parser(argc, argv, keys); \
+    bool   useCamera = parser.has("camera"); \
+    string file      = parser.get<string>("file"); \
+    bool   showHelp  = parser.get<bool>("help"); \
+
+    if (showHelp)
+    {
+        help();
+        return 0;
+    }
+
+    parser.printMessage();
+
     cv::VideoCapture cap;
 
-    if (argc > 1)
-        cap.open(argv[1]);
-    else
+    if (useCamera)
         cap.open(0);
+    else
+        cap.open(file.c_str());
+
+    if (!cap.isOpened())
+    {
+        printf("can not open camera or video file\n");
+        return -1;
+    }
 
     int width = (int)cap.get(CAP_PROP_FRAME_WIDTH);
     int height = (int)cap.get(CAP_PROP_FRAME_HEIGHT);
-    std::string wndname = "WGL Window";
+
+#if defined(WIN32) || defined(_WIN32)
+    string wndname = "WGL Window";
+#elif defined(__linux__)
+    string wndname = "GLX Window";
+#endif
 
     GLWinApp app(width, height, wndname, cap);
 
@@ -515,12 +559,12 @@ int main(int argc, char** argv)
     }
     catch (cv::Exception& e)
     {
-        std::cerr << "Exception: " << e.what() << std::endl;
+        cerr << "Exception: " << e.what() << endl;
         return 10;
     }
     catch (...)
     {
-        std::cerr << "FATAL ERROR: Unknown exception" << std::endl;
+        cerr << "FATAL ERROR: Unknown exception" << endl;
         return 11;
     }
 }
