@@ -340,6 +340,8 @@ videos, it will display the video frame-by-frame)
 
 [Windows Backend Only] Pressing Ctrl+C will copy the image to the clipboard.
 
+[Windows Backend Only] Pressing Ctrl+S will show a dialog to save the image.
+
  */
 CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
 
