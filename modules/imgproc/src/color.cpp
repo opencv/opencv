@@ -8425,6 +8425,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 CV_Assert( dcn == 1 );
                 CV_Assert( scn == 2 && depth == CV_8U );
 
+                src.release(); // T-API datarace fixup
                 extractChannel(_src, _dst, code == CV_YUV2GRAY_UYVY ? 1 : 0);
             }
             break;

@@ -4320,6 +4320,7 @@ public:
         u->flags = flags0;
         u->allocatorFlags_ = allocatorFlags;
         CV_DbgAssert(!u->tempUMat()); // for bufferPool.release() consistency in deallocate()
+        u->markHostCopyObsolete(true);
         return u;
     }
 
@@ -4460,6 +4461,7 @@ public:
         CV_Assert(u->handle != 0 && u->urefcount == 0);
         if(u->tempUMat())
         {
+            CV_Assert(u->origdata);
 //            UMatDataAutoLock lock(u);
 
             if( u->hostCopyObsolete() && u->refcount > 0 )
@@ -4514,7 +4516,7 @@ public:
                     }
                     else
                     {
-                        // TODO Is it really needed for clCreateBuffer with CL_MEM_USE_HOST_PTR?
+                        // CL_MEM_USE_HOST_PTR (nothing is required) and OTHER cases
                         cl_int retval = 0;
                         void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
                                                         (CL_MAP_READ | CL_MAP_WRITE),
@@ -4545,20 +4547,27 @@ public:
                 clReleaseMemObject((cl_mem)u->handle);
             }
             u->handle = 0;
+            u->markDeviceCopyObsolete(true);
             u->currAllocator = u->prevAllocator;
-            if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
+            u->prevAllocator = NULL;
+            if(u->data && u->copyOnMap() && u->data != u->origdata)
                 fastFree(u->data);
             u->data = u->origdata;
             if(u->refcount == 0)
+            {
                 u->currAllocator->deallocate(u);
+                u = NULL;
+            }
         }
         else
         {
+            CV_Assert(u->origdata == NULL);
             CV_Assert(u->refcount == 0);
-            if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
+            if(u->data && u->copyOnMap() && u->data != u->origdata)
             {
                 fastFree(u->data);
                 u->data = 0;
+                u->markHostCopyObsolete(true);
             }
             if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_USED)
             {
@@ -4598,8 +4607,11 @@ public:
                 clReleaseMemObject((cl_mem)u->handle);
             }
             u->handle = 0;
+            u->markDeviceCopyObsolete(true);
             delete u;
+            u = NULL;
         }
+        CV_Assert(u == NULL || u->refcount);
     }
 
     void map(UMatData* u, int accessFlags) const
@@ -4650,9 +4662,9 @@ public:
                     return;
                 }
 #endif
-                if (u->data) // FIXIT Workaround for UMat synchronization issue
+                if (!u->hostCopyObsolete()) // FIXIT Workaround for UMat synchronization issue
                 {
-                    //CV_Assert(u->hostCopyObsolete() == false);
+                    CV_Assert(u->data);
                     return;
                 }
 
@@ -4732,7 +4744,7 @@ public:
                 }
                 u->data = 0;
                 u->markDeviceCopyObsolete(false);
-                u->markHostCopyObsolete(false);
+                u->markHostCopyObsolete(true);
                 return;
             }
 #endif
@@ -4755,7 +4767,7 @@ public:
                                 u->size, alignedPtr.getAlignedPtr(), 0, 0, 0)) == CL_SUCCESS );
         }
         u->markDeviceCopyObsolete(false);
-        u->markHostCopyObsolete(false);
+        u->markHostCopyObsolete(true);
     }
 
     bool checkContinuous(int dims, const size_t sz[],
