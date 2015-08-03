@@ -172,21 +172,23 @@ namespace cv
 //! @addtogroup highgui
 //! @{
 
-// Flags for namedWindow
-enum { WINDOW_NORMAL     = 0x00000000, // the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size
-       WINDOW_AUTOSIZE   = 0x00000001, // the user cannot resize the window, the size is constrainted by the image displayed
-       WINDOW_OPENGL     = 0x00001000, // window with opengl support
+//! Flags for cv::namedWindow
+enum WindowFlags {
+       WINDOW_NORMAL     = 0x00000000, //!< the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size
+       WINDOW_AUTOSIZE   = 0x00000001, //!< the user cannot resize the window, the size is constrainted by the image displayed
+       WINDOW_OPENGL     = 0x00001000, //!< window with opengl support
 
-       WINDOW_FULLSCREEN = 1,          // change the window to fullscreen
-       WINDOW_FREERATIO  = 0x00000100, // the image expends as much as it can (no ratio constraint)
-       WINDOW_KEEPRATIO  = 0x00000000  // the ratio of the image is respected
+       WINDOW_FULLSCREEN = 1,          //!< change the window to fullscreen
+       WINDOW_FREERATIO  = 0x00000100, //!< the image expends as much as it can (no ratio constraint)
+       WINDOW_KEEPRATIO  = 0x00000000  //!< the ratio of the image is respected
      };
 
-// Flags for set / getWindowProperty
-enum { WND_PROP_FULLSCREEN   = 0, // fullscreen property    (can be WINDOW_NORMAL or WINDOW_FULLSCREEN)
-       WND_PROP_AUTOSIZE     = 1, // autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE)
-       WND_PROP_ASPECT_RATIO = 2, // window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO);
-       WND_PROP_OPENGL       = 3  // opengl support
+//! Flags for cv::setWindowProperty / cv::getWindowProperty
+enum WindowPropertyFlags {
+       WND_PROP_FULLSCREEN   = 0, //!< fullscreen property    (can be WINDOW_NORMAL or WINDOW_FULLSCREEN)
+       WND_PROP_AUTOSIZE     = 1, //!< autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE)
+       WND_PROP_ASPECT_RATIO = 2, //!< window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO);
+       WND_PROP_OPENGL       = 3  //!< opengl support
      };
 
 enum { EVENT_MOUSEMOVE      = 0,
@@ -211,24 +213,27 @@ enum { EVENT_FLAG_LBUTTON   = 1,
        EVENT_FLAG_ALTKEY    = 32
      };
 
-// Qt font
-enum {  QT_FONT_LIGHT           = 25, //QFont::Light,
-        QT_FONT_NORMAL          = 50, //QFont::Normal,
-        QT_FONT_DEMIBOLD        = 63, //QFont::DemiBold,
-        QT_FONT_BOLD            = 75, //QFont::Bold,
-        QT_FONT_BLACK           = 87  //QFont::Black
+//! Qt font weight
+enum QtFontWeights {
+        QT_FONT_LIGHT           = 25, //!< QFont::Light ( Weight of 25 )
+        QT_FONT_NORMAL          = 50, //!< QFont::Normal ( Weight of 50 )
+        QT_FONT_DEMIBOLD        = 63, //!< QFont::DemiBold ( Weight of 63 )
+        QT_FONT_BOLD            = 75, //!< QFont::Bold ( Weight of 75 )
+        QT_FONT_BLACK           = 87  //!< QFont::Black ( Weight of 87 )
      };
 
-// Qt font style
-enum {  QT_STYLE_NORMAL         = 0, //QFont::StyleNormal,
-        QT_STYLE_ITALIC         = 1, //QFont::StyleItalic,
-        QT_STYLE_OBLIQUE        = 2  //QFont::StyleOblique
+//! Qt font style
+enum QtFontStyles {
+        QT_STYLE_NORMAL         = 0, //!< QFont::StyleNormal
+        QT_STYLE_ITALIC         = 1, //!< QFont::StyleItalic
+        QT_STYLE_OBLIQUE        = 2  //!< QFont::StyleOblique
      };
 
-// Qt "button" type
-enum { QT_PUSH_BUTTON = 0,
-       QT_CHECKBOX    = 1,
-       QT_RADIOBOX    = 2
+//! Qt "button" type
+enum QtButtonTypes {
+       QT_PUSH_BUTTON = 0, //!< Push button
+       QT_CHECKBOX    = 1, //!< Checkbox button
+       QT_RADIOBOX    = 2  //!< Radiobox button
      };
 
 
@@ -240,32 +245,28 @@ typedef void (*ButtonCallback)(int state, void* userdata);
 /** @brief Creates a window.
 
 @param winname Name of the window in the window caption that may be used as a window identifier.
-@param flags Flags of the window. The supported flags are:
-> -   **WINDOW_NORMAL** If this is set, the user can resize the window (no constraint).
-> -   **WINDOW_AUTOSIZE** If this is set, the window size is automatically adjusted to fit the
->     displayed image (see imshow ), and you cannot change the window size manually.
-> -   **WINDOW_OPENGL** If this is set, the window will be created with OpenGL support.
+@param flags Flags of the window. The supported flags are: (cv::WindowFlags)
 
 The function namedWindow creates a window that can be used as a placeholder for images and
 trackbars. Created windows are referred to by their names.
 
 If a window with the same name already exists, the function does nothing.
 
-You can call destroyWindow or destroyAllWindows to close the window and de-allocate any associated
+You can call cv::destroyWindow or cv::destroyAllWindows to close the window and de-allocate any associated
 memory usage. For a simple program, you do not really have to call these functions because all the
 resources and windows of the application are closed automatically by the operating system upon exit.
 
 @note
 
 Qt backend supports additional flags:
- -   **CV_WINDOW_NORMAL or CV_WINDOW_AUTOSIZE:** CV_WINDOW_NORMAL enables you to resize the
-     window, whereas CV_WINDOW_AUTOSIZE adjusts automatically the window size to fit the
+ -   **WINDOW_NORMAL or WINDOW_AUTOSIZE:** WINDOW_NORMAL enables you to resize the
+     window, whereas WINDOW_AUTOSIZE adjusts automatically the window size to fit the
      displayed image (see imshow ), and you cannot change the window size manually.
- -   **CV_WINDOW_FREERATIO or CV_WINDOW_KEEPRATIO:** CV_WINDOW_FREERATIO adjusts the image
-     with no respect to its ratio, whereas CV_WINDOW_KEEPRATIO keeps the image ratio.
+ -   **WINDOW_FREERATIO or WINDOW_KEEPRATIO:** WINDOW_FREERATIO adjusts the image
+     with no respect to its ratio, whereas WINDOW_KEEPRATIO keeps the image ratio.
  -   **CV_GUI_NORMAL or CV_GUI_EXPANDED:** CV_GUI_NORMAL is the old way to draw the window
      without statusbar and toolbar, whereas CV_GUI_EXPANDED is a new enhanced GUI.
-By default, flags == CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_EXPANDED
+By default, flags == WINDOW_AUTOSIZE | WINDOW_KEEPRATIO | CV_GUI_EXPANDED
  */
 CV_EXPORTS_W void namedWindow(const String& winname, int flags = WINDOW_AUTOSIZE);
 
@@ -314,7 +315,7 @@ CV_EXPORTS_W int waitKey(int delay = 0);
 @param mat Image to be shown.
 
 The function imshow displays an image in the specified window. If the window was created with the
-CV_WINDOW_AUTOSIZE flag, the image is shown with its original size, however it is still limited by the screen resolution.
+WINDOW_AUTOSIZE flag, the image is shown with its original size, however it is still limited by the screen resolution.
 Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
 
 -   If the image is 8-bit unsigned, it is displayed as is.
@@ -326,19 +327,21 @@ Otherwise, the image is scaled to fit the window. The function may scale the ima
 If window was created with OpenGL support, imshow also support ogl::Buffer , ogl::Texture2D and
 cuda::GpuMat as input.
 
-If the window was not created before this function, it is assumed creating a window with CV_WINDOW_AUTOSIZE.
+If the window was not created before this function, it is assumed creating a window with WINDOW_AUTOSIZE.
 
 If you need to show an image that is bigger than the screen resolution, you will need to call namedWindow("", WINDOW_NORMAL) before the imshow.
 
-@note This function should be followed by waitKey function which displays the image for specified
-milliseconds. Otherwise, it won't display the image. For example, waitKey(0) will display the window
-infinitely until any keypress (it is suitable for image display). waitKey(25) will display a frame
+@note This function should be followed by cv::waitKey function which displays the image for specified
+milliseconds. Otherwise, it won't display the image. For example, cv::waitKey(0) will display the window
+infinitely until any keypress (it is suitable for image display). cv::waitKey(25) will display a frame
 for 25 ms, after which display will be automatically closed. (If you put it in a loop to read
 videos, it will display the video frame-by-frame)
 
 @note
 
 [Windows Backend Only] Pressing Ctrl+C will copy the image to the clipboard.
+
+[Windows Backend Only] Pressing Ctrl+S will show a dialog to save the image.
 
  */
 CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
@@ -352,7 +355,7 @@ CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
 @note
 
 -   The specified window size is for the image area. Toolbars are not counted.
--   Only windows created without CV_WINDOW_AUTOSIZE flag can be resized.
+-   Only windows created without WINDOW_AUTOSIZE flag can be resized.
  */
 CV_EXPORTS_W void resizeWindow(const String& winname, int width, int height);
 
@@ -367,21 +370,8 @@ CV_EXPORTS_W void moveWindow(const String& winname, int x, int y);
 /** @brief Changes parameters of a window dynamically.
 
 @param winname Name of the window.
-@param prop_id Window property to edit. The following operation flags are available:
- -   **CV_WND_PROP_FULLSCREEN** Change if the window is fullscreen ( CV_WINDOW_NORMAL or
-     CV_WINDOW_FULLSCREEN ).
- -   **CV_WND_PROP_AUTOSIZE** Change if the window is resizable (CV_WINDOW_NORMAL or
-     CV_WINDOW_AUTOSIZE ).
- -   **CV_WND_PROP_ASPECTRATIO** Change if the aspect ratio of the image is preserved (
-     CV_WINDOW_FREERATIO or CV_WINDOW_KEEPRATIO ).
-@param prop_value New value of the window property. The following operation flags are available:
- -   **CV_WINDOW_NORMAL** Change the window to normal size or make the window resizable.
- -   **CV_WINDOW_AUTOSIZE** Constrain the size by the displayed image. The window is not
-     resizable.
- -   **CV_WINDOW_FULLSCREEN** Change the window to fullscreen.
- -   **CV_WINDOW_FREERATIO** Make the window resizable without any ratio constraints.
- -   **CV_WINDOW_KEEPRATIO** Make the window resizable, but preserve the proportions of the
-     displayed image.
+@param prop_id Window property to edit. The supported operation flags are: (cv::WindowPropertyFlags)
+@param prop_value New value of the window property. The supported flags are: (cv::WindowFlags)
 
 The function setWindowProperty enables changing properties of a window.
  */
@@ -394,13 +384,7 @@ CV_EXPORTS_W void setWindowTitle(const String& winname, const String& title);
 /** @brief Provides parameters of a window.
 
 @param winname Name of the window.
-@param prop_id Window property to retrieve. The following operation flags are available:
- -   **CV_WND_PROP_FULLSCREEN** Change if the window is fullscreen ( CV_WINDOW_NORMAL or
-     CV_WINDOW_FULLSCREEN ).
- -   **CV_WND_PROP_AUTOSIZE** Change if the window is resizable (CV_WINDOW_NORMAL or
-     CV_WINDOW_AUTOSIZE ).
- -   **CV_WND_PROP_ASPECTRATIO** Change if the aspect ratio of the image is preserved
-     (CV_WINDOW_FREERATIO or CV_WINDOW_KEEPRATIO ).
+@param prop_id Window property to retrieve. The following operation flags are available: (cv::WindowPropertyFlags)
 
 See setWindowProperty to know the meaning of the returned values.
 
@@ -466,10 +450,6 @@ control panel.
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
 
-@note
-
--   An example of using the trackbar functionality can be found at
-    opencv_source_code/samples/cpp/connected_components.cpp
  */
 CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
                               int* value, int count,
@@ -609,25 +589,15 @@ struct QtFont
 font is set to a system-dependent default value. Generally, this is 12 points.
 @param color Color of the font in BGRA where A = 255 is fully transparent. Use the macro CV _ RGB
 for simplicity.
-@param weight Font weight. The following operation flags are available:
- -   **CV_FONT_LIGHT** Weight of 25
- -   **CV_FONT_NORMAL** Weight of 50
- -   **CV_FONT_DEMIBOLD** Weight of 63
- -   **CV_FONT_BOLD** Weight of 75
- -   **CV_FONT_BLACK** Weight of 87
-
- You can also specify a positive integer for better control.
-@param style Font style. The following operation flags are available:
- -   **CV_STYLE_NORMAL** Normal font
- -   **CV_STYLE_ITALIC** Italic font
- -   **CV_STYLE_OBLIQUE** Oblique font
+@param weight Font weight. Available operation flags are : (cv::QtFontWeights) You can also specify a positive integer for better control.
+@param style Font style. The following operation flags are available: (cv::QtFontStyles)
 @param spacing Spacing between characters. It can be negative or positive.
 
-The function fontQt creates a CvFont object. This CvFont is not compatible with putText .
+The function fontQt creates a QtFont object. This QtFont is not compatible with putText .
 
 A basic usage of this function is the following: :
 @code
-    CvFont font = fontQt(''Times'');
+    QtFont font = fontQt(''Times'');
     addText( img1, ``Hello World !'', Point(50,50), font);
 @endcode
  */
@@ -642,7 +612,7 @@ CV_EXPORTS QtFont fontQt(const String& nameFont, int pointSize = -1,
 @param org Point(x,y) where the text should start on an image.
 @param font Font to use to draw a text.
 
-The function addText draws *text* on an image *img* using a specific font *font* (see example fontQt
+The function addText draws *text* on an image *img* using a specific font *font* (see example cv::fontQt
 )
  */
 CV_EXPORTS void addText( const Mat& img, const String& text, Point org, const QtFont& font);
@@ -669,7 +639,7 @@ CV_EXPORTS void displayOverlay(const String& winname, const String& text, int de
 the previous text timed out, the timer is restarted and the text is updated. If this value is
 zero, the text never disappears.
 
-The function displayOverlay displays useful information/tips on top of the window for a certain
+The function displayStatusBar displays useful information/tips on top of the window for a certain
 amount of time *delayms* . This information is displayed on the window statusbar (the window must be
 created with the CV_GUI_EXPANDED flags).
  */
@@ -705,11 +675,7 @@ CV_EXPORTS  void stopLoop();
 This function should be prototyped as void Foo(int state,\*void); . *state* is the current state
 of the button. It could be -1 for a push button, 0 or 1 for a check/radio box button.
 @param userdata Pointer passed to the callback function.
-@param type Optional type of the button.
- -   **CV_PUSH_BUTTON** Push button
- -   **CV_CHECKBOX** Checkbox button
- -   **CV_RADIOBOX** Radiobox button. The radiobox on the same buttonbar (same line) are
-     exclusive, that is only one can be selected at a time.
+@param type Optional type of the button. Available types are: (cv::QtButtonTypes)
 @param initial_button_state Default state of the button. Use for checkbox and radiobox. Its
 value could be 0 or 1. *(Optional)*
 
@@ -720,10 +686,10 @@ control panel before, or if the last element attached to the control panel was a
 See below various examples of the createButton function call: :
 @code
     createButton(NULL,callbackButton);//create a push button "button 0", that will call callbackButton.
-    createButton("button2",callbackButton,NULL,CV_CHECKBOX,0);
+    createButton("button2",callbackButton,NULL,QT_CHECKBOX,0);
     createButton("button3",callbackButton,&value);
-    createButton("button5",callbackButton1,NULL,CV_RADIOBOX);
-    createButton("button6",callbackButton2,NULL,CV_PUSH_BUTTON,1);
+    createButton("button5",callbackButton1,NULL,QT_RADIOBOX);
+    createButton("button6",callbackButton2,NULL,QT_PUSH_BUTTON,1);
 @endcode
 */
 CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
