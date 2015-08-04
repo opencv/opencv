@@ -638,9 +638,9 @@ public:
 
         //If there are responses in the csv file, save them. If not, responses matrix will contain just zeros
         if (noutputvars != 0){ 
-            Mat(nsamples, noutputvars, CV_32F, &allresponses[0]).copyTo(tempResponses);
-            setData(tempSamples, ROW_SAMPLE, tempResponses, noArray(), noArray(),
-                    noArray(), Mat(vtypes).clone(), tempMissing);
+        Mat(nsamples, noutputvars, CV_32F, &allresponses[0]).copyTo(tempResponses);
+        setData(tempSamples, ROW_SAMPLE, tempResponses, noArray(), noArray(),
+                noArray(), Mat(vtypes).clone(), tempMissing);
         }
         else{
             Mat zero_mat(nsamples, 1, CV_32F, Scalar(0));
