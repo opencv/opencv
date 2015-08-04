@@ -648,7 +648,6 @@ public:
 			setData(tempSamples, ROW_SAMPLE, tempResponses, noArray(), noArray(),
 				noArray(), noArray(), tempMissing);
 		}
-		
         bool ok = !samples.empty();
         if(ok)
             std::swap(tempNameMap, nameMap);
