@@ -829,6 +829,24 @@ TEST(UMat, Sync)
     EXPECT_EQ(0, cvtest::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
 }
 
+TEST(UMat, SyncTemp)
+{
+    Mat m(10, 10, CV_8UC1);
+
+    {
+        UMat um = m.getUMat(ACCESS_WRITE);
+
+        {
+            Mat m2 = um.getMat(ACCESS_WRITE);
+            m2.setTo(cv::Scalar::all(17));
+        }
+
+        um.setTo(cv::Scalar::all(19));
+
+        EXPECT_EQ(0, cvtest::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
+    }
+}
+
 TEST(UMat, CopyToIfDeviceCopyIsObsolete)
 {
     UMat um(7, 2, CV_8UC1);
