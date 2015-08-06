@@ -1029,14 +1029,14 @@ TEST(UMat, map_unmap_counting)
 ///////////// oclCleanupCallback threadsafe check (#5062) /////////////////////
 
 // Case 1: reuse of old src Mat in OCL pipe. Hard to catch!
-OCL_TEST(UMat, OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
+OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
 {
     if (!cv::ocl::useOpenCL())
     {
         std::cout << "OpenCL is not enabled. Skip test" << std::endl;
         return;
     }
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < 100; j++)
     {
         const Size srcSize(320, 240);
         const int type = CV_8UC1;
@@ -1060,18 +1060,19 @@ OCL_TEST(UMat, OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
         }
 
         EXPECT_MAT_NEAR(dst_ref, dst, 1);
+        printf(".\n"); fflush(stdout);
     }
 }
 
 // Case 2: concurent deallocation of UMatData between UMat and Mat deallocators. Hard to catch!
-OCL_TEST(UMat, OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
+OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
 {
     if (!cv::ocl::useOpenCL())
     {
         std::cout << "OpenCL is not enabled. Skip test" << std::endl;
         return;
     }
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < 100; j++)
     {
         const Size srcSize(320, 240);
         const int type = CV_8UC1;
@@ -1090,6 +1091,7 @@ OCL_TEST(UMat, OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
             }
             ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
         }
+        printf(".\n"); fflush(stdout);
     }
 }
 
