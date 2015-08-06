@@ -2507,7 +2507,7 @@ The function ``pow`` raises every element of the input array to ``power`` :
 
 .. math::
 
-    \texttt{dst} (I) =  \fork{\texttt{src}(I)^power}{if \texttt{power} is integer}{|\texttt{src}(I)|^power}{otherwise}
+    \texttt{dst} (I) =  \fork{\texttt{src}(I)^{power}}{if \texttt{power} is integer}{|\texttt{src}(I)|^{power}}{otherwise}
 
 So, for a non-integer power exponent, the absolute values of input array elements are used. However, it is possible to get true values for negative values using some extra operations. In the example below, computing the 5th root of array ``src``  shows: ::
 
