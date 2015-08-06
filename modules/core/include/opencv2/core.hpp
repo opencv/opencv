@@ -1345,7 +1345,7 @@ CV_EXPORTS_W void sqrt(InputArray src, OutputArray dst);
 /** @brief Raises every array element to a power.
 
 The function pow raises every element of the input array to power :
-\f[\texttt{dst} (I) =  \fork{\texttt{src}(I)^power}{if \texttt{power} is integer}{|\texttt{src}(I)|^power}{otherwise}\f]
+\f[\texttt{dst} (I) =  \fork{\texttt{src}(I)^{power}}{if \texttt{power} is integer}{|\texttt{src}(I)|^{power}}{otherwise}\f]
 
 So, for a non-integer power exponent, the absolute values of input array
 elements are used. However, it is possible to get true values for
