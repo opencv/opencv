@@ -53,7 +53,8 @@ static void image_jacobian_homo_ECC(const Mat& src1, const Mat& src2,
                                     const Mat& src5, Mat& dst)
 {
 
-
+  int *p;
+  *p = 4;
     CV_Assert(src1.size() == src2.size());
     CV_Assert(src1.size() == src3.size());
     CV_Assert(src1.size() == src4.size());
