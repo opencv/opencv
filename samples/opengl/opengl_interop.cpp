@@ -329,7 +329,7 @@ public:
             glXSwapBuffers(m_display, m_window);
 #endif
 
-            print_info(mode, m_timer.time(Timer::UNITS::MSEC), m_oclDevName);
+            print_info(mode, m_timer.time(Timer::MSEC), m_oclDevName);
         }
 
 
