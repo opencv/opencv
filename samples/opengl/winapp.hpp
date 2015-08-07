@@ -56,7 +56,7 @@ public:
         m_diff = cv::getTickCount() - m_t0;
     }
 
-    float time(UNITS u = UNITS::MSEC)
+    float time(UNITS u = MSEC)
     {
         float sec = m_diff / m_tick_frequency;
 
