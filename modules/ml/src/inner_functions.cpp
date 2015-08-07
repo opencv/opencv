@@ -777,7 +777,8 @@ cvGetTrainSamples( const CvMat* train_data, int tflag,
 
     __BEGIN__;
 
-    int i, j, var_count, sample_count, s_step, v_step;
+    int i, j, var_count, sample_count;
+    size_t s_step, v_step, s;
     bool copy_data;
     const float* data;
     const int *s_idx, *v_idx;
@@ -815,7 +816,7 @@ cvGetTrainSamples( const CvMat* train_data, int tflag,
     {
         samples[0] = (float*)(samples + sample_count);
         if( tflag != CV_ROW_SAMPLE )
-            CV_SWAP( s_step, v_step, i );
+            CV_SWAP( s_step, v_step, s );
 
         for( i = 0; i < sample_count; i++ )
         {
