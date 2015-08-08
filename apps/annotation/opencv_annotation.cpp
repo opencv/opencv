@@ -1,8 +1,51 @@
+////////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                          License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+////////////////////////////////////////////////////////////////////////////////////////
+
 /*****************************************************************************************************
 USAGE:
 ./opencv_annotation -images <folder location> -annotations <ouput file>
 
-Created by: Puttemans Steven
+Created by: Puttemans Steven - February 2015
 *****************************************************************************************************/
 
 #include <opencv2/core.hpp>
@@ -13,6 +56,12 @@ Created by: Puttemans Steven
 
 #include <fstream>
 #include <iostream>
+
+#if defined(_WIN32)
+   #include <direct.h>
+#else
+   #include <sys/stat.h>
+#endif
 
 using namespace std;
 using namespace cv;
@@ -178,8 +227,33 @@ int main( int argc, const char** argv )
         }
     }
 
+    // Check if the folder actually exists
+    // If -1 is returned then the folder actually exists, and thus you can continue
+    // In all other cases there was a folder creation and thus the folder did not exist
+    #if defined(_WIN32)
+    if(_mkdir(image_folder.c_str()) != -1){
+        // Generate an error message
+        cerr << "The image folder given does not exist. Please check again!" << endl;
+        // Remove the created folder again, to ensure a second run with same code fails again
+        _rmdir(image_folder.c_str());
+        return 0;
+    }
+    #else
+    if(mkdir(image_folder.c_str(), 0777) != -1){
+        // Generate an error message
+        cerr << "The image folder given does not exist. Please check again!" << endl;
+        // Remove the created folder again, to ensure a second run with same code fails again
+        remove(image_folder.c_str());
+        return 0;
+    }
+    #endif
+
     // Create the outputfilestream
     ofstream output(annotations.c_str());
+    if ( !output.is_open() ){
+        cerr << "The path for the output file contains an error and could not be opened. Please check again!" << endl;
+        return 0;
+    }
 
     // Return the image filenames inside the image folder
     vector<String> filenames;
@@ -192,6 +266,12 @@ int main( int argc, const char** argv )
     for (size_t i = 0; i < filenames.size(); i++){
         // Read in an image
         Mat current_image = imread(filenames[i]);
+
+        // Check if the image is actually read - avoid other files in the folder, because glob() takes them all
+        // If not then simply skip this iteration
+        if(current_image.empty()){
+            continue;
+        }
 
         // Perform annotations & generate corresponding output
         stringstream output_stream;
