@@ -4197,6 +4197,61 @@ private:
     AlignedDataPtr(const AlignedDataPtr&); // disabled
     AlignedDataPtr& operator=(const AlignedDataPtr&); // disabled
 };
+
+template <bool readAccess, bool writeAccess>
+class AlignedDataPtr2D
+{
+protected:
+    const size_t size_;
+    uchar* const originPtr_;
+    const size_t alignment_;
+    uchar* ptr_;
+    uchar* allocatedPtr_;
+    size_t rows_;
+    size_t cols_;
+    size_t step_;
+
+public:
+    AlignedDataPtr2D(uchar* ptr, size_t rows, size_t cols, size_t step, size_t alignment)
+        : size_(rows*step), originPtr_(ptr), alignment_(alignment), ptr_(ptr), allocatedPtr_(NULL), rows_(rows), cols_(cols), step_(step)
+    {
+        CV_DbgAssert((alignment & (alignment - 1)) == 0); // check for 2^n
+        if (((size_t)ptr_ & (alignment - 1)) != 0)
+        {
+            allocatedPtr_ = new uchar[size_ + alignment - 1];
+            ptr_ = (uchar*)(((uintptr_t)allocatedPtr_ + (alignment - 1)) & ~(alignment - 1));
+            if (readAccess)
+            {
+                for (size_t i = 0; i < rows_; i++)
+                    memcpy(ptr_ + i*step_, originPtr_ + i*step_, cols_);
+            }
+        }
+    }
+
+    uchar* getAlignedPtr() const
+    {
+        CV_DbgAssert(((size_t)ptr_ & (alignment_ - 1)) == 0);
+        return ptr_;
+    }
+
+    ~AlignedDataPtr2D()
+    {
+        if (allocatedPtr_)
+        {
+            if (writeAccess)
+            {
+                for (size_t i = 0; i < rows_; i++)
+                    memcpy(originPtr_ + i*step_, ptr_ + i*step_, cols_);
+            }
+            delete[] allocatedPtr_;
+            allocatedPtr_ = NULL;
+        }
+        ptr_ = NULL;
+    }
+private:
+    AlignedDataPtr2D(const AlignedDataPtr2D&); // disabled
+    AlignedDataPtr2D& operator=(const AlignedDataPtr2D&); // disabled
+};
 #if defined _MSC_VER
 #pragma warning(default:4127) // conditional expression is constant
 #endif
@@ -4930,17 +4985,22 @@ public:
         else
 #endif
         {
-            AlignedDataPtr<false, true> alignedPtr((uchar*)dstptr, sz[0] * dststep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
             if( iscontinuous )
             {
-                CV_Assert( clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                                               srcrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0) >= 0 );
+                AlignedDataPtr<false, true> alignedPtr((uchar*)dstptr, total, CV_OPENCL_DATA_PTR_ALIGNMENT);
+                CV_Assert(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                    srcrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0) >= 0 );
             }
             else
             {
+                AlignedDataPtr2D<false, true> alignedPtr((uchar*)dstptr, new_sz[1], new_sz[0], new_dststep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
+                uchar* ptr = alignedPtr.getAlignedPtr();
+
                 CV_Assert( clEnqueueReadBufferRect(q, (cl_mem)u->handle, CL_TRUE,
-                                new_srcofs, new_dstofs, new_sz, new_srcstep[0], new_srcstep[1],
-                                new_dststep[0], new_dststep[1], alignedPtr.getAlignedPtr(), 0, 0, 0) >= 0 );
+                    new_srcofs, new_dstofs, new_sz,
+                    new_srcstep[0], 0,
+                    new_dststep[0], 0,
+                    ptr, 0, 0, 0) >= 0 );
             }
         }
     }
@@ -5042,17 +5102,22 @@ public:
         else
 #endif
         {
-            AlignedDataPtr<true, false> alignedPtr((uchar*)srcptr, sz[0] * srcstep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
             if( iscontinuous )
             {
-                CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle,
-                    CL_TRUE, dstrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0) >= 0 );
+                AlignedDataPtr<true, false> alignedPtr((uchar*)srcptr, total, CV_OPENCL_DATA_PTR_ALIGNMENT);
+                CV_Assert(clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                    dstrawofs, total, alignedPtr.getAlignedPtr(), 0, 0, 0) >= 0);
             }
             else
             {
-                CV_Assert( clEnqueueWriteBufferRect(q, (cl_mem)u->handle, CL_TRUE,
-                    new_dstofs, new_srcofs, new_sz, new_dststep[0], new_dststep[1],
-                    new_srcstep[0], new_srcstep[1], alignedPtr.getAlignedPtr(), 0, 0, 0) >= 0 );
+                AlignedDataPtr2D<true, false> alignedPtr((uchar*)srcptr, new_sz[1], new_sz[0], new_dststep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
+                uchar* ptr = alignedPtr.getAlignedPtr();
+
+                CV_Assert(clEnqueueWriteBufferRect(q, (cl_mem)u->handle, CL_TRUE,
+                    new_dstofs, new_srcofs, new_sz,
+                    new_dststep[0], 0,
+                    new_srcstep[0], 0,
+                    ptr, 0, 0, 0) >= 0 );
             }
         }
         u->markHostCopyObsolete(true);
@@ -5199,8 +5264,8 @@ public:
             {
                 CV_Assert( (retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
                                                    new_srcofs, new_dstofs, new_sz,
-                                                   new_srcstep[0], new_srcstep[1],
-                                                   new_dststep[0], new_dststep[1],
+                                                   new_srcstep[0], 0,
+                                                   new_dststep[0], 0,
                                                    0, 0, 0)) == CL_SUCCESS );
             }
         }
@@ -5211,7 +5276,7 @@ public:
 
 #ifdef HAVE_OPENCL_SVM
         if ((dst->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_BUFFER ||
-                (dst->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_SYSTEM)
+            (dst->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_SYSTEM)
         {
             // nothing
         }
