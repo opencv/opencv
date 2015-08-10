@@ -1044,6 +1044,76 @@ TEST(UMat, map_unmap_counting)
 }
 
 
+///////////// oclCleanupCallback threadsafe check (#5062) /////////////////////
+
+// Case 1: reuse of old src Mat in OCL pipe. Hard to catch!
+OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
+{
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+    for (int j = 0; j < 100; j++)
+    {
+        const Size srcSize(320, 240);
+        const int type = CV_8UC1;
+        const int dtype = CV_16UC1;
+
+        Mat src(srcSize, type);
+        Mat dst_ref(srcSize, dtype);
+
+        // Generate reference data as additional check
+        OCL_OFF(src.convertTo(dst_ref, dtype));
+        cv::ocl::setUseOpenCL(true); // restore OpenCL state
+
+        UMat dst(srcSize, dtype);
+
+        // Use multiple iterations to increase chance of data race catching
+        for(int k = 0; k < 10000; k++)
+        {
+            UMat tmpUMat = src.getUMat(ACCESS_RW);
+            tmpUMat.convertTo(dst, dtype);
+            ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
+        }
+
+        EXPECT_MAT_NEAR(dst_ref, dst, 1);
+        printf(".\n"); fflush(stdout);
+    }
+}
+
+// Case 2: concurent deallocation of UMatData between UMat and Mat deallocators. Hard to catch!
+OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
+{
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+    for (int j = 0; j < 100; j++)
+    {
+        const Size srcSize(320, 240);
+        const int type = CV_8UC1;
+        const int dtype = CV_16UC1;
+
+        // This test is only relevant for OCL
+        UMat dst(srcSize, dtype);
+
+        // Use multiple iterations to increase chance of data race catching
+        for(int k = 0; k < 10000; k++)
+        {
+            Mat src(srcSize, type); // Declare src inside loop now to catch its destruction on stack
+            {
+                UMat tmpUMat = src.getUMat(ACCESS_RW);
+                tmpUMat.convertTo(dst, dtype);
+            }
+            ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
+        }
+        printf(".\n"); fflush(stdout);
+    }
+}
+
+
 
 TEST(UMat, DISABLED_Test_same_behaviour_read_and_read)
 {
