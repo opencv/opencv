@@ -13,7 +13,7 @@ function(_icv_downloader)
     set(OPENCV_ICV_PLATFORM "macosx")
     set(OPENCV_ICV_PACKAGE_SUBDIR "/ippicv_osx")
   elseif(UNIX)
-    if(ANDROID AND (NOT ANDROID_ABI STREQUAL x86))
+    if(ANDROID AND NOT (ANDROID_ABI STREQUAL x86 OR ANDROID_ABI STREQUAL x86_64))
       return()
     endif()
     set(OPENCV_ICV_PACKAGE_NAME "ippicv_linux_20141027.tgz")
@@ -75,7 +75,7 @@ function(_icv_downloader)
       message(FATAL_ERROR "ICV: Failed to download ICV package: ${OPENCV_ICV_PACKAGE_NAME}. Status=${__status}")
     else()
       # Don't remove this code, because EXPECTED_MD5 parameter doesn't fail "file(DOWNLOAD)" step
-      # on wrong hash 
+      # on wrong hash
       file(MD5 "${OPENCV_ICV_PACKAGE_ARCHIVE}" archive_md5)
       if(NOT archive_md5 STREQUAL OPENCV_ICV_PACKAGE_HASH)
         message(FATAL_ERROR "ICV: Downloaded copy of ICV package has invalid MD5 hash: ${archive_md5} (expected: ${OPENCV_ICV_PACKAGE_HASH})")
