@@ -173,7 +173,7 @@ TEST_P(UMatBasicTests, base)
     ASSERT_EQ(ub.total(), total);
 }
 
-TEST_P(UMatBasicTests, DISABLED_copyTo)
+TEST_P(UMatBasicTests, copyTo)
 {
     int i;
     if(useRoi)
