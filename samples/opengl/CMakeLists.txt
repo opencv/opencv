@@ -1,3 +1,13 @@
+if(UNIX)
+  find_package(X11 QUIET)
+  if(NOT X11_FOUND)
+    message(STATUS "OpenGL samples require development files for libX11")
+    return()
+  endif()
+  include_directories(${X11_INCLUDE_DIR})
+  set(SAMPLE_LINKER_DEPS "${X11_LIBRARIES}")
+endif()
+
 SET(OPENCV_OPENGL_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui)
 
 ocv_check_dependencies(${OPENCV_OPENGL_SAMPLES_REQUIRED_DEPS})
@@ -17,7 +27,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     set(the_target "example_${project}_${name}")
     add_executable(${the_target} ${srcs})
 
-    ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_OPENGL_SAMPLES_REQUIRED_DEPS})
+    ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_OPENGL_SAMPLES_REQUIRED_DEPS} ${SAMPLE_LINKER_DEPS})
 
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "${project}-example-${name}"
