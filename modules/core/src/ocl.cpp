@@ -5110,7 +5110,7 @@ public:
             }
             else
             {
-                AlignedDataPtr2D<true, false> alignedPtr((uchar*)srcptr, new_sz[1], new_sz[0], new_dststep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
+                AlignedDataPtr2D<true, false> alignedPtr((uchar*)srcptr, new_sz[1], new_sz[0], new_srcstep[0], CV_OPENCL_DATA_PTR_ALIGNMENT);
                 uchar* ptr = alignedPtr.getAlignedPtr();
 
                 CV_Assert(clEnqueueWriteBufferRect(q, (cl_mem)u->handle, CL_TRUE,
