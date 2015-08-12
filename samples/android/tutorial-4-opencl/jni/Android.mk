@@ -13,6 +13,10 @@ else
   include ../../sdk/native/jni/OpenCV.mk
 endif
 
+ifndef OPENCL_SDK
+  $(error Specify OPENCL_SDK to Android OpenCL SDK location)
+endif
+
 # add OpenCL
 LOCAL_C_INCLUDES += $(OPENCL_SDK)/include
 LOCAL_LDLIBS += -L$(OPENCL_SDK)/lib/$(TARGET_ARCH_ABI) -lOpenCL
