@@ -316,5 +316,3 @@ if __name__ == "__main__":
     log.info("=====")
     log.info("SDK location: %s", builder.resultdest)
     log.info("Documentation location: %s", builder.docdest)
-
-
