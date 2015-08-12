@@ -513,30 +513,42 @@ private:
     AutoLock& operator = (const AutoLock&);
 };
 
+// TLS interface
 class CV_EXPORTS TLSDataContainer
 {
-private:
-    int key_;
 protected:
     TLSDataContainer();
     virtual ~TLSDataContainer();
-public:
-    virtual void* createDataInstance() const = 0;
-    virtual void deleteDataInstance(void* data) const = 0;
 
+#if OPENCV_ABI_COMPATIBILITY > 300
     void* getData() const;
+    void  release();
+
+private:
+#else
+    void  release();
+
+public:
+    void* getData() const;
+#endif
+    virtual void* createDataInstance() const = 0;
+    virtual void  deleteDataInstance(void* pData) const = 0;
+
+    int key_;
 };
 
+// Main TLS data class
 template <typename T>
 class TLSData : protected TLSDataContainer
 {
 public:
-    inline TLSData() {}
-    inline ~TLSData() {}
-    inline T* get() const { return (T*)getData(); }
+    inline TLSData()        {}
+    inline ~TLSData()       { release();            } // Release key and delete associated data
+    inline T* get() const   { return (T*)getData(); } // Get data assosiated with key
+
 private:
-    virtual void* createDataInstance() const { return new T; }
-    virtual void deleteDataInstance(void* data) const { delete (T*)data; }
+    virtual void* createDataInstance() const {return new T;}                // Wrapper to allocate data by template
+    virtual void  deleteDataInstance(void* pData) const {delete (T*)pData;} // Wrapper to release data by template
 };
 
 /** @brief Designed for command line parsing
