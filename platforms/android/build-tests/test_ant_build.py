@@ -75,4 +75,3 @@ if __name__ == '__main__':
     res = unittest.TextTestRunner(verbosity=3).run(s)
     if not res.wasSuccessful():
         sys.exit(res)
-
