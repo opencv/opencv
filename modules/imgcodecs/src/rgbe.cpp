@@ -182,6 +182,8 @@ int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info)
     info->programtype[0] = 0;
     info->gamma = info->exposure = 1.0;
   }
+
+  // 1. read first line
   if (fgets(buf,sizeof(buf)/sizeof(buf[0]),fp) == NULL)
     return rgbe_error(rgbe_read_error,NULL);
   if ((buf[0] != '#')||(buf[1] != '?')) {
@@ -196,14 +198,19 @@ int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info)
       info->programtype[i] = buf[i+2];
     }
     info->programtype[i] = 0;
+  }
+
+  // 2. reading other header lines
+  bool hasFormat = false;
+  for(;;) {
     if (fgets(buf,sizeof(buf)/sizeof(buf[0]),fp) == 0)
       return rgbe_error(rgbe_read_error,NULL);
-  }
-  for(;;) {
-    if ((buf[0] == 0)||(buf[0] == '\n'))
-      return rgbe_error(rgbe_format_error,"no FORMAT specifier found");
+    if (buf[0] == '\n') // end of the header
+      break;
+    else if (buf[0] == '#') // commment
+      continue;
     else if (strcmp(buf,"FORMAT=32-bit_rle_rgbe\n") == 0)
-      break;       /* format found so break out of loop */
+      hasFormat = true;
     else if (info && (sscanf(buf,"GAMMA=%g",&tempf) == 1)) {
       info->gamma = tempf;
       info->valid |= RGBE_VALID_GAMMA;
@@ -212,14 +219,14 @@ int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info)
       info->exposure = tempf;
       info->valid |= RGBE_VALID_EXPOSURE;
     }
-    if (fgets(buf,sizeof(buf)/sizeof(buf[0]),fp) == 0)
-      return rgbe_error(rgbe_read_error,NULL);
   }
-  if (fgets(buf,sizeof(buf)/sizeof(buf[0]),fp) == 0)
-    return rgbe_error(rgbe_read_error,NULL);
   if (strcmp(buf,"\n") != 0)
     return rgbe_error(rgbe_format_error,
           "missing blank line after FORMAT specifier");
+  if (!hasFormat)
+      return rgbe_error(rgbe_format_error, "missing FORMAT specifier");
+
+  // 3. reading resolution string
   if (fgets(buf,sizeof(buf)/sizeof(buf[0]),fp) == 0)
     return rgbe_error(rgbe_read_error,NULL);
   if (sscanf(buf,"-Y %d +X %d",height,width) < 2)
