@@ -282,7 +282,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 
     if( type < 0 )
     {
-        if( typenum == NPY_INT64 || typenum == NPY_UINT64 || type == NPY_LONG )
+        if( typenum == NPY_INT64 || typenum == NPY_UINT64 || typenum == NPY_LONG )
         {
             needcopy = needcast = true;
             new_typenum = NPY_INT;
