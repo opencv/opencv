@@ -14,6 +14,7 @@ add_subdirectory(color-blob-detection)
 add_subdirectory(tutorial-1-camerapreview)
 add_subdirectory(tutorial-2-mixedprocessing)
 add_subdirectory(tutorial-3-cameracontrol)
+add_subdirectory(tutorial-4-opencl)
 
 # hello-android sample
 if(HAVE_opencv_highgui)

@@ -3,10 +3,18 @@ LOCAL_PATH := $(call my-dir)
 # add OpenCV
 include $(CLEAR_VARS)
 OPENCV_INSTALL_MODULES:=on
-ifeq ($(O4A_SDK_ROOT),)
-    include ../../sdk/native/jni/OpenCV.mk
+ifdef OPENCV_ANDROID_SDK
+  ifneq ("","$(wildcard $(OPENCV_ANDROID_SDK)/OpenCV.mk)")
+    include ${OPENCV_ANDROID_SDK}/OpenCV.mk
+  else
+    include ${OPENCV_ANDROID_SDK}/sdk/native/jni/OpenCV.mk
+  endif
 else
-    include $(O4A_SDK_ROOT)/sdk/native/jni/OpenCV.mk
+  include ../../sdk/native/jni/OpenCV.mk
+endif
+
+ifndef OPENCL_SDK
+  $(error Specify OPENCL_SDK to Android OpenCL SDK location)
 endif
 
 # add OpenCL
