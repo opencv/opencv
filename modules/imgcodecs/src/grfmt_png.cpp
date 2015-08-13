@@ -58,11 +58,7 @@
 #  define _FILE_OFFSET_BITS 0
 #endif
 
-#ifdef HAVE_LIBPNG_PNG_H
-#include <libpng/png.h>
-#else
 #include <png.h>
-#endif
 #include <zlib.h>
 
 #include "grfmt_png.hpp"
