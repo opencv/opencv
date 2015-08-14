@@ -129,6 +129,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     // interpret preferred interface (0 = autodetect)
     int pref = (index / 100) * 100;
 
+    // remove pref from index
+    index -= pref;
+
     // local variable to memorize the captured device
     CvCapture *capture = 0;
 
