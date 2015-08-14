@@ -493,6 +493,7 @@ class Core_SeqBaseTest : public Core_DynStructBaseTest
 {
 public:
     Core_SeqBaseTest();
+    virtual ~Core_SeqBaseTest();
     void clear();
     void run( int );
 
@@ -503,11 +504,14 @@ protected:
     int test_seq_ops( int iters );
 };
 
-
 Core_SeqBaseTest::Core_SeqBaseTest()
 {
 }
 
+Core_SeqBaseTest::~Core_SeqBaseTest()
+{
+    clear();
+}
 
 void Core_SeqBaseTest::clear()
 {
@@ -1208,6 +1212,7 @@ class Core_SetTest : public Core_DynStructBaseTest
 {
 public:
     Core_SetTest();
+    virtual ~Core_SetTest();
     void clear();
     void run( int );
 
@@ -1221,6 +1226,10 @@ Core_SetTest::Core_SetTest()
 {
 }
 
+Core_SetTest::~Core_SetTest()
+{
+    clear();
+}
 
 void Core_SetTest::clear()
 {
@@ -1419,6 +1428,7 @@ class Core_GraphTest : public Core_DynStructBaseTest
 {
 public:
     Core_GraphTest();
+    virtual ~Core_GraphTest();
     void clear();
     void run( int );
 
@@ -1432,6 +1442,10 @@ Core_GraphTest::Core_GraphTest()
 {
 }
 
+Core_GraphTest::~Core_GraphTest()
+{
+    clear();
+}
 
 void Core_GraphTest::clear()
 {
@@ -2044,6 +2058,8 @@ void Core_GraphScanTest::run( int )
                 CV_TS_SEQ_CHECK_CONDITION( vtx_count == 0 && edge_count == 0,
                                           "Not every vertex/edge has been visited" );
                 update_progressbar();
+
+                cvReleaseGraphScanner( &scanner );
             }
 
             // for a random graph the test just checks that every graph vertex and
@@ -2108,8 +2124,6 @@ void Core_GraphScanTest::run( int )
     catch(int)
     {
     }
-
-    cvReleaseGraphScanner( &scanner );
 }
 
 
