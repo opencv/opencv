@@ -1,7 +1,7 @@
 #!/bin/sh
 cd `dirname $0`/..
 
-mkdir -p build_android_arm
-cd build_android_arm
+mkdir -p build_android_arm_softfp
+cd build_android_arm_softfp
 
 cmake -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
