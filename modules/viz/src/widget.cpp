@@ -114,6 +114,7 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
         case OPACITY:             actor->GetProperty()->SetOpacity(value);          break;
         case LINE_WIDTH:          actor->GetProperty()->SetLineWidth(float(value)); break;
         case IMMEDIATE_RENDERING: actor->GetMapper()->SetImmediateModeRendering(int(value)); break;
+        case AMBIENT:             actor->GetProperty()->SetAmbient(float(value)); break;
         case FONT_SIZE:
         {
             vtkTextActor* text_actor = vtkTextActor::SafeDownCast(actor);
