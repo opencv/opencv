@@ -323,6 +323,7 @@ BadArgTest::BadArgTest()
     progress        = -1;
     test_case_idx   = -1;
     freq            = cv::getTickFrequency();
+    t               = -1;
     // oldErrorCbk     = 0;
     // oldErrorCbkData = 0;
 }
@@ -338,6 +339,7 @@ int BadArgTest::run_test_case( int expected_code, const string& _descr )
     {
         test_case_idx = 0;
         progress      = 0;
+        t             = 0;
         dt            = 0;
     }
     else
