@@ -371,9 +371,7 @@ void CvCapture_GStreamer::startPipeline()
     if (status == GST_STATE_CHANGE_ASYNC)
     {
         // wait for status update
-        GstState st1;
-        GstState st2;
-        status = gst_element_get_state(pipeline, &st1, &st2, GST_CLOCK_TIME_NONE);
+        status = gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
     }
     if (status == GST_STATE_CHANGE_FAILURE)
     {
@@ -568,21 +566,39 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     GstElementFactory * testfac;
     GstStateChangeReturn status;
 
-    if (type == CV_CAP_GSTREAMER_V4L){
+    int cameraID = -1;
+    if (type == CV_CAP_GSTREAMER_V4L ||
+            type == CV_CAP_GSTREAMER_V4L2)
+    {
+        cameraID = static_cast<int>(reinterpret_cast<intptr_t>(filename));
+    }
+
+    std::stringstream stdstream;
+    std::string stdfilename;
+
+    if (type == CV_CAP_GSTREAMER_V4L)
+    {
         testfac = gst_element_factory_find("v4lsrc");
         if (!testfac){
             return false;
         }
         g_object_unref(G_OBJECT(testfac));
-        filename = "v4lsrc ! "COLOR_ELEM" ! appsink";
+
+        stdstream << "v4lsrc device=/dev/video" << cameraID << " ! " << COLOR_ELEM << " ! appsink";
+        stdfilename = stdstream.str();
+        filename = stdfilename.c_str();
     }
-    if (type == CV_CAP_GSTREAMER_V4L2){
+    else if (type == CV_CAP_GSTREAMER_V4L2)
+    {
         testfac = gst_element_factory_find("v4l2src");
         if (!testfac){
             return false;
         }
         g_object_unref(G_OBJECT(testfac));
-        filename = "v4l2src ! "COLOR_ELEM" ! appsink";
+
+        stdstream << "v4l2src device=/dev/video" << cameraID << " ! " << COLOR_ELEM << " ! appsink";
+        stdfilename = stdstream.str();
+        filename = stdfilename.c_str();
     }
 
 
@@ -620,7 +636,9 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             stream = true;
             manualpipeline = true;
         }
-    } else {
+    }
+    else
+    {
         stream = true;
         uri = g_strdup(filename);
     }
@@ -641,64 +659,77 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             uridecodebin = gst_element_make_from_uri(GST_URI_SRC, uri, "src", NULL);
 #endif
             element_from_uri = true;
-        }else{
+        }
+        else
+        {
             uridecodebin = gst_element_factory_make("uridecodebin", NULL);
             g_object_set(G_OBJECT(uridecodebin), "uri", uri, NULL);
         }
         g_free(protocol);
 
-        if(!uridecodebin) {
+        if(!uridecodebin)
+        {
             //fprintf(stderr, "GStreamer: Error opening bin: %s\n", err->message);
             close();
             return false;
         }
     }
 
-    if(manualpipeline)
+    if (manualpipeline)
     {
         GstIterator *it = NULL;
 #if GST_VERSION_MAJOR == 0
         it = gst_bin_iterate_sinks(GST_BIN(uridecodebin));
-        if(gst_iterator_next(it, (gpointer *)&sink) != GST_ITERATOR_OK) {
+        if (gst_iterator_next(it, (gpointer *)&sink) != GST_ITERATOR_OK)
+        {
             CV_ERROR(CV_StsError, "GStreamer: cannot find appsink in manual pipeline\n");
             return false;
         }
 #else
-        it = gst_bin_iterate_sinks (GST_BIN(uridecodebin));
+        it = gst_bin_iterate_elements(GST_BIN(uridecodebin));
 
-        gboolean done = FALSE;
+        gboolean done = false;
         GstElement *element = NULL;
         gchar* name = NULL;
         GValue value = G_VALUE_INIT;
 
-        while (!done) {
-          switch (gst_iterator_next (it, &value)) {
+        while (!done)
+        {
+            switch (gst_iterator_next (it, &value))
+            {
             case GST_ITERATOR_OK:
-              element = GST_ELEMENT (g_value_get_object (&value));
-              name = gst_element_get_name(element);
-              if (name){
-                if(strstr(name, "opencvsink") != NULL || strstr(name, "appsink") != NULL) {
-                  sink = GST_ELEMENT ( gst_object_ref (element) );
-                  done = TRUE;
+                element = GST_ELEMENT (g_value_get_object (&value));
+                name = gst_element_get_name(element);
+                if (name)
+                {
+                    if (strstr(name, "opencvsink") != NULL || strstr(name, "appsink") != NULL)
+                    {
+                        sink = GST_ELEMENT ( gst_object_ref (element) );
+                        done = sink && color;
+                    }
+                    else if (strstr(name, COLOR_ELEM) != NULL)
+                    {
+                        color = GST_ELEMENT ( gst_object_ref (element) );
+                        done = sink && color;
+                    }
+                    g_free(name);
                 }
-                g_free(name);
-              }
-              g_value_unset (&value);
+                g_value_unset (&value);
 
-              break;
+                break;
             case GST_ITERATOR_RESYNC:
-              gst_iterator_resync (it);
-              break;
+                gst_iterator_resync (it);
+                break;
             case GST_ITERATOR_ERROR:
             case GST_ITERATOR_DONE:
-              done = TRUE;
-              break;
-          }
+                done = TRUE;
+                break;
+            }
         }
         gst_iterator_free (it);
 
-
-        if (!sink){
+        if (!sink)
+        {
             CV_ERROR(CV_StsError, "GStreamer: cannot find appsink in manual pipeline\n");
             return false;
         }
@@ -715,18 +746,23 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
         gst_bin_add_many(GST_BIN(pipeline), uridecodebin, color, sink, NULL);
 
-        if(element_from_uri) {
-            if(!gst_element_link(uridecodebin, color)) {
+        if(element_from_uri)
+        {
+            if(!gst_element_link(uridecodebin, color))
+            {
                 CV_ERROR(CV_StsError, "GStreamer: cannot link color -> sink\n");
                 gst_object_unref(pipeline);
                 pipeline = NULL;
                 return false;
             }
-        }else{
+        }
+        else
+        {
             g_signal_connect(uridecodebin, "pad-added", G_CALLBACK(newPad), color);
         }
 
-        if(!gst_element_link(color, sink)) {
+        if(!gst_element_link(color, sink))
+        {
             CV_ERROR(CV_StsError, "GStreamer: cannot link color -> sink\n");
             gst_object_unref(pipeline);
             pipeline = NULL;
@@ -754,16 +790,13 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
     gst_caps_unref(caps);
 
-    // For video files only: set pipeline to PAUSED state to get its duration
-    if (file)
     {
-        status = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PAUSED);
+        status = gst_element_set_state(GST_ELEMENT(pipeline),
+                                       file ? GST_STATE_PAUSED : GST_STATE_PLAYING);
         if (status == GST_STATE_CHANGE_ASYNC)
         {
             // wait for status update
-            GstState st1;
-            GstState st2;
-            status = gst_element_get_state(pipeline, &st1, &st2, GST_CLOCK_TIME_NONE);
+            status = gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
         }
         if (status == GST_STATE_CHANGE_FAILURE)
         {
@@ -814,14 +847,9 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
         fps = (double)num/(double)denom;
 
-         // GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
-    }
-    else
-    {
-        duration = -1;
-        width = -1;
-        height = -1;
-        fps = -1;
+         // GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline")
+
+        stopPipeline();
     }
 
     __END__;
