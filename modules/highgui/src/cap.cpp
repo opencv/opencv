@@ -238,10 +238,12 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #endif
 
 #ifdef HAVE_GSTREAMER
-            capture = cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L2, 0);
+            capture = cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L2,
+                                                reinterpret_cast<char *>(index));
             if (capture)
                 return capture;
-            capture = cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L, 0);
+            capture = cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L,
+                                                reinterpret_cast<char *>(index));
             if (capture)
                 return capture;
 #endif
