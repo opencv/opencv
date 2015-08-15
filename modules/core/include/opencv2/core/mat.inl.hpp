@@ -1746,12 +1746,13 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (Mat&& m)
 {
     if( DataType<_Tp>::type == m.type() )
     {
-        Mat::operator = (m);
+        Mat::operator = ((Mat&&)m);
         return *this;
     }
     if( DataType<_Tp>::depth == m.depth() )
     {
-        return (*this = m.reshape(DataType<_Tp>::channels, m.dims, 0));
+        Mat::operator = ((Mat&&)m.reshape(DataType<_Tp>::channels, m.dims, 0));
+        return *this;
     }
     CV_DbgAssert(DataType<_Tp>::channels == m.channels());
     m.convertTo(*this, type());
