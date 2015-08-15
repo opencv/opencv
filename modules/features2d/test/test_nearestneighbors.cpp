@@ -67,13 +67,13 @@ protected:
     virtual void run( int start_from );
     virtual void createModel( const Mat& data ) = 0;
     virtual int findNeighbors( Mat& points, Mat& neighbors ) = 0;
-    virtual int checkGetPoins( const Mat& data );
+    virtual int checkGetPoints( const Mat& data );
     virtual int checkFindBoxed();
     virtual int checkFind( const Mat& data );
     virtual void releaseModel() = 0;
 };
 
-int NearestNeighborTest::checkGetPoins( const Mat& )
+int NearestNeighborTest::checkGetPoints( const Mat& )
 {
    return cvtest::TS::OK;
 }
@@ -131,7 +131,7 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
 
     createModel( desc );
 
-    tempCode = checkGetPoins( desc );
+    tempCode = checkGetPoints( desc );
     if( tempCode != cvtest::TS::OK )
     {
         ts->printf( cvtest::TS::LOG, "bad accuracy of GetPoints \n" );
