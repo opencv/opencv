@@ -2291,6 +2291,11 @@ public:
     //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
     int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;
 
+#ifdef CV_CXX_MOVE_SEMANTICS
+    UMat(UMat&& m);
+    UMat& operator = (UMat&& m);
+#endif
+
     void* handle(int accessFlags) const;
     void ndoffset(size_t* ofs) const;
 
