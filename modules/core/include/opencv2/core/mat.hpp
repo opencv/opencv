@@ -2089,6 +2089,16 @@ public:
     template<int n> operator Vec<typename DataType<_Tp>::channel_type, n>() const;
     //! conversion to Matx
     template<int m, int n> operator Matx<typename DataType<_Tp>::channel_type, m, n>() const;
+
+#ifdef CV_CXX_MOVE_SEMANTICS
+    Mat_(Mat_&& m);
+    Mat_& operator = (Mat_&& m);
+
+    Mat_(Mat&& m);
+    Mat_& operator = (Mat&& m);
+
+    Mat_(MatExpr&& e);
+#endif
 };
 
 typedef Mat_<uchar> Mat1b;
