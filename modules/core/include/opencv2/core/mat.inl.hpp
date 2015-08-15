@@ -1718,6 +1718,56 @@ void Mat_<_Tp>::forEach(const Functor& operation) const {
     Mat::forEach<_Tp, Functor>(operation);
 }
 
+#ifdef CV_CXX_MOVE_SEMANTICS
+
+template<typename _Tp> inline
+Mat_<_Tp>::Mat_(Mat_&& m)
+    : Mat(m)
+{
+}
+
+template<typename _Tp> inline
+Mat_<_Tp>& Mat_<_Tp>::operator = (Mat_&& m)
+{
+    Mat::operator = (m);
+    return *this;
+}
+
+template<typename _Tp> inline
+Mat_<_Tp>::Mat_(Mat&& m)
+    : Mat()
+{
+    flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<_Tp>::type;
+    *this = m;
+}
+
+template<typename _Tp> inline
+Mat_<_Tp>& Mat_<_Tp>::operator = (Mat&& m)
+{
+    if( DataType<_Tp>::type == m.type() )
+    {
+        Mat::operator = (m);
+        return *this;
+    }
+    if( DataType<_Tp>::depth == m.depth() )
+    {
+        return (*this = m.reshape(DataType<_Tp>::channels, m.dims, 0));
+    }
+    CV_DbgAssert(DataType<_Tp>::channels == m.channels());
+    m.convertTo(*this, type());
+    return *this;
+}
+
+template<typename _Tp> inline
+Mat_<_Tp>::Mat_(MatExpr&& e)
+    : Mat()
+{
+    flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<_Tp>::type;
+    *this = Mat(e);
+}
+
+#endif
+
 ///////////////////////////// SparseMat /////////////////////////////
 
 inline
