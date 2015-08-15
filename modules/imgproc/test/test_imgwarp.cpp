@@ -1426,6 +1426,9 @@ TEST(Imgproc_cvWarpAffine, regression)
     int h = src->height;
     cv2DRotationMatrix(cvPoint2D32f(w*0.5f, h*0.5f), 45.0, 1.0, &M);
     cvWarpAffine(src, dst, &M);
+
+    cvReleaseImage(&src);
+    cvReleaseImage(&dst);
 }
 
 TEST(Imgproc_fitLine_vector_3d, regression)
