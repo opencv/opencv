@@ -252,6 +252,29 @@ Ptr<Y> Ptr<T>::dynamicCast() const
     return Ptr<Y>(*this, dynamic_cast<Y*>(stored));
 }
 
+#ifdef CV_CXX_MOVE_SEMANTICS
+
+template<typename T>
+Ptr<T>::Ptr(Ptr&& o) : owner(o.owner), stored(o.stored)
+{
+    o.owner = NULL;
+    o.stored = NULL;
+}
+
+template<typename T>
+Ptr<T>& Ptr<T>::operator = (Ptr<T>&& o)
+{
+    release();
+    owner = o.owner;
+    stored = o.stored;
+    o.owner = NULL;
+    o.stored = NULL;
+    return *this;
+}
+
+#endif
+
+
 template<typename T>
 void swap(Ptr<T>& ptr1, Ptr<T>& ptr2){
     ptr1.swap(ptr2);
