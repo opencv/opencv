@@ -496,7 +496,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     cv::CommandLineParser parser(argc, argv, keys);
-    bool   useCamera = parser.has("camera");
+    bool   useCamera = parser.get<bool>("camera");
     string file      = parser.get<string>("file");
     bool   showHelp  = parser.get<bool>("help");
 
