@@ -568,8 +568,8 @@ struct ConversionYUV
         if (rgbReader_)
             delete rgbReader_;
 
-        if (rgbReader_)
-            delete rgbReader_;
+        if (rgbWriter_)
+            delete rgbWriter_;
 
         if (grayWriter_)
             delete grayWriter_;
