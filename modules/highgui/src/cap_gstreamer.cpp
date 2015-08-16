@@ -145,6 +145,7 @@ protected:
                        gpointer    data);
     GstElement*   pipeline;
     GstElement*   uridecodebin;
+    GstElement*   v4l2src;
     GstElement*   color;
     GstElement*   sink;
 #if GST_VERSION_MAJOR > 0
@@ -168,6 +169,7 @@ void CvCapture_GStreamer::init()
 {
     pipeline = NULL;
     uridecodebin = NULL;
+    v4l2src = NULL;
     color = NULL;
     sink = NULL;
 #if GST_VERSION_MAJOR > 0
@@ -707,14 +709,18 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
                     if (strstr(name, "opencvsink") != NULL || strstr(name, "appsink") != NULL)
                     {
                         sink = GST_ELEMENT ( gst_object_ref (element) );
-                        done = sink && color;
                     }
                     else if (strstr(name, COLOR_ELEM_NAME) != NULL)
                     {
                         color = GST_ELEMENT ( gst_object_ref (element) );
-                        done = sink && color;
+                    }
+                    else if (strstr(name, "v4l") != NULL)
+                    {
+                        v4l2src = GST_ELEMENT ( gst_object_ref (element) );
                     }
                     g_free(name);
+
+                    done = sink && color && v4l2src;
                 }
 #if GST_VERSION_MAJOR > 0
                 g_value_unset (&value);
@@ -884,7 +890,7 @@ double CvCapture_GStreamer::getProperty( int propId )
 
     if(!pipeline) {
         CV_WARN("GStreamer: no pipeline");
-        return false;
+        return 0;
     }
 
     switch(propId) {
@@ -893,7 +899,7 @@ double CvCapture_GStreamer::getProperty( int propId )
         status = gst_element_query_position(sink, FORMAT, &value);
         if(!status) {
             CV_WARN("GStreamer: unable to query position of stream");
-            return false;
+            return 0;
         }
         return value * 1e-6; // nano seconds to milli seconds
     case CV_CAP_PROP_POS_FRAMES:
@@ -901,7 +907,7 @@ double CvCapture_GStreamer::getProperty( int propId )
         status = gst_element_query_position(sink, FORMAT, &value);
         if(!status) {
             CV_WARN("GStreamer: unable to query position of stream");
-            return false;
+            return 0;
         }
         return value;
     case CV_CAP_PROP_POS_AVI_RATIO:
@@ -909,7 +915,7 @@ double CvCapture_GStreamer::getProperty( int propId )
         status = gst_element_query_position(sink, FORMAT, &value);
         if(!status) {
             CV_WARN("GStreamer: unable to query position of stream");
-            return false;
+            return 0;
         }
         return ((double) value) / GST_FORMAT_PERCENT_MAX;
     case CV_CAP_PROP_FRAME_WIDTH:
@@ -928,6 +934,21 @@ double CvCapture_GStreamer::getProperty( int propId )
     case CV_CAP_PROP_CONTRAST:
     case CV_CAP_PROP_SATURATION:
     case CV_CAP_PROP_HUE:
+        if (v4l2src)
+        {
+            const gchar * propName =
+                    propId == CV_CAP_PROP_BRIGHTNESS ? "brightness" :
+                    propId == CV_CAP_PROP_CONTRAST ? "contrast" :
+                    propId == CV_CAP_PROP_SATURATION ? "saturation" :
+                    propId == CV_CAP_PROP_HUE ? "hue" : NULL;
+
+            if (propName)
+            {
+                gint32 value32 = 0;
+                g_object_get(G_OBJECT(v4l2src), propName, &value32, NULL);
+                return value32;
+            }
+        }
     case CV_CAP_PROP_GAIN:
     case CV_CAP_PROP_CONVERT_RGB:
         break;
@@ -944,7 +965,7 @@ double CvCapture_GStreamer::getProperty( int propId )
 
 #undef FORMAT
 
-    return false;
+    return 0;
 }
 
 /*!
@@ -1023,6 +1044,21 @@ bool CvCapture_GStreamer::setProperty( int propId, double value )
     case CV_CAP_PROP_CONTRAST:
     case CV_CAP_PROP_SATURATION:
     case CV_CAP_PROP_HUE:
+        if (v4l2src)
+        {
+            const gchar * propName =
+                    propId == CV_CAP_PROP_BRIGHTNESS ? "brightness" :
+                    propId == CV_CAP_PROP_CONTRAST ? "contrast" :
+                    propId == CV_CAP_PROP_SATURATION ? "saturation" :
+                    propId == CV_CAP_PROP_HUE ? "hue" : NULL;
+
+            if (propName)
+            {
+                gint32 value32 = cv::saturate_cast<gint32>(value);
+                g_object_set(G_OBJECT(v4l2src), propName, &value32, NULL);
+                return true;
+            }
+        }
     case CV_CAP_PROP_GAIN:
     case CV_CAP_PROP_CONVERT_RGB:
         break;
