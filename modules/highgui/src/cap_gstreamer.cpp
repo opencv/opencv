@@ -75,10 +75,13 @@
 
 #if GST_VERSION_MAJOR == 0
 #define COLOR_ELEM "ffmpegcolorspace"
+#define COLOR_ELEM_NAME "ffmpegcsp"
 #elif FULL_GST_VERSION < VERSION_NUM(1,5,0)
 #define COLOR_ELEM "videoconvert"
+#define COLOR_ELEM_NAME COLOR_ELEM
 #else
 #define COLOR_ELEM "autovideoconvert"
+#define COLOR_ELEM_NAME COLOR_ELEM
 #endif
 
 void toFraction(double decimal, double &numerator, double &denominator);
@@ -677,28 +680,27 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     if (manualpipeline)
     {
-        GstIterator *it = NULL;
-#if GST_VERSION_MAJOR == 0
-        it = gst_bin_iterate_sinks(GST_BIN(uridecodebin));
-        if (gst_iterator_next(it, (gpointer *)&sink) != GST_ITERATOR_OK)
-        {
-            CV_ERROR(CV_StsError, "GStreamer: cannot find appsink in manual pipeline\n");
-            return false;
-        }
-#else
-        it = gst_bin_iterate_elements(GST_BIN(uridecodebin));
+        GstIterator *it = gst_bin_iterate_elements(GST_BIN(uridecodebin));
 
-        gboolean done = false;
         GstElement *element = NULL;
+        gboolean done = false;
         gchar* name = NULL;
+#if GST_VERSION_MAJOR > 0
         GValue value = G_VALUE_INIT;
+#endif
 
         while (!done)
         {
+#if GST_VERSION_MAJOR > 0
             switch (gst_iterator_next (it, &value))
             {
             case GST_ITERATOR_OK:
                 element = GST_ELEMENT (g_value_get_object (&value));
+#else
+            switch (gst_iterator_next (it, (gpointer *)&element))
+            {
+            case GST_ITERATOR_OK:
+#endif
                 name = gst_element_get_name(element);
                 if (name)
                 {
@@ -707,14 +709,16 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
                         sink = GST_ELEMENT ( gst_object_ref (element) );
                         done = sink && color;
                     }
-                    else if (strstr(name, COLOR_ELEM) != NULL)
+                    else if (strstr(name, COLOR_ELEM_NAME) != NULL)
                     {
                         color = GST_ELEMENT ( gst_object_ref (element) );
                         done = sink && color;
                     }
                     g_free(name);
                 }
+#if GST_VERSION_MAJOR > 0
                 g_value_unset (&value);
+#endif
 
                 break;
             case GST_ITERATOR_RESYNC:
@@ -733,7 +737,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             CV_ERROR(CV_StsError, "GStreamer: cannot find appsink in manual pipeline\n");
             return false;
         }
-#endif
+
         pipeline = uridecodebin;
     }
     else
