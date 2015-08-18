@@ -85,11 +85,11 @@ class KalmanFilterUnscented: public KalmanFilterInterface
     Mat xyCov;                                  // estimate of the covariance between x* and y* (Sxy), DP x MP
     Mat yyCov;                                  // estimate of the y* cross-covariance matrix (Syy), MP x MP
 
-    Mat r;                                      // zero vector of process noise for getting transitionSPFuncVals, 
+    Mat r;                                      // zero vector of process noise for getting transitionSPFuncVals,
     Mat q;                                      // zero vector of measurement noise for getting measurementSPFuncVals
 
 
-//get sigma points 
+//get sigma points
     Mat getSigmaPoints( const Mat& mean, const Mat& covMatrix, double coef );
 
 public:
@@ -253,7 +253,7 @@ Mat KalmanFilterUnscented::correct(const Mat& measurement)
     {
         x = sigmaPoints( Rect( i, 0, 1, DP) );
         hx = measurementSPFuncVals( Rect( i, 0, 1, MP) );
-        h( x, r, hx );       
+        h( x, r, hx );
     }
 
 // compute the estimate of measurement as mean h-function value at sigma point

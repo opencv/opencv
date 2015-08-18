@@ -180,7 +180,7 @@ public:
     */
     CV_WRAP KalmanFilterUnscentedParams(){}
 
-    /** 
+    /**
     * @param dp - dimensionality of the state vector,
     * @param mp - dimensionality of the measurement vector,
     * @param cp - dimensionality of the control vector,
@@ -196,7 +196,7 @@ public:
     /** The function for initialization of Unscented Kalman filter
     * @param dp - dimensionality of the state vector,
     * @param mp - dimensionality of the measurement vector,
-    * @param cp - dimensionality of the control vector,  
+    * @param cp - dimensionality of the control vector,
     * @param processNoiseCovDiag - value of elements on main diagonal process noise cross-covariance matrix,
     * @param measurementNoiseCovDiag - value of elements on main diagonal measurement noise cross-covariance matrix,
     * @param _f - function for computing the next state from the previous state,
@@ -216,7 +216,7 @@ public:
 
     CV_WRAP KalmanFilterUnscentedAugmentedParams(){}
 
-    /** 
+    /**
     * @param dp - dimensionality of the state vector,
     * @param mp - dimensionality of the measurement vector,
     * @param cp - dimensionality of the control vector,
@@ -268,5 +268,3 @@ CV_WRAP cv::Ptr<KalmanFilterInterface> createUnscKalmanFilter( const KalmanFilte
 CV_WRAP cv::Ptr<KalmanFilterInterface> createAugUnscKalmanFilter( const KalmanFilterUnscentedAugmentedParams &params );
 
 } // cv
-
-
