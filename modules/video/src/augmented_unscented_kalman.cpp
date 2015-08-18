@@ -39,16 +39,16 @@ KalmanFilterUnscentedAugmentedParams::
 class KalmanFilterUnscentedAugmented: public KalmanFilterInterface
 {
 
-    int DP;                                     // dimensionality of the state vector    
-    int MP;                                     // dimensionality of the measurement vector  
-    int CP;                                     // dimensionality of the control vector  
+    int DP;                                     // dimensionality of the state vector
+    int MP;                                     // dimensionality of the measurement vector
+    int CP;                                     // dimensionality of the control vector
     int DAug;                                   // dimensionality of the augmented vector, DAug = 2*DP + MP
     int dataType;                               // type of elements of vectors and matrices
 
     Mat state;                                  // estimate of the system state (x*), DP x 1
     Mat errorCov;                               // estimate of the state cross-covariance matrix (P), DP x DP
 
-    Mat stateAug;                               // augmented state vector (xa*), DAug x 1, 
+    Mat stateAug;                               // augmented state vector (xa*), DAug x 1,
                                                 // xa* = ( x*
                                                 //         0
                                                 //        ...
@@ -61,14 +61,14 @@ class KalmanFilterUnscentedAugmented: public KalmanFilterInterface
     Mat processNoiseCov;                        // process noise cross-covariance matrix (Q), DP x DP
     Mat measurementNoiseCov;                    // measurement noise cross-covariance matrix (R), MP x MP
 
-    StateFunction f;                            // function for computing the next state from the previous state, f(x, u, q), 
+    StateFunction f;                            // function for computing the next state from the previous state, f(x, u, q),
                                                 // x - previous state vector,
                                                 // u - control vector,
-                                                // q - process noise vector   
-    
+                                                // q - process noise vector,
+
     MeasFunction h;                             // function for computing the measurement from the state, h(x, r)
                                                 // x - state vector,
-                                                // r - measurement noise vector  
+                                                // r - measurement noise vector.
 
 // Parameters of algorithm
     double alpha;                               // parameter, default is 1e-3
@@ -96,7 +96,7 @@ class KalmanFilterUnscentedAugmented: public KalmanFilterInterface
     Mat xyCov;                                  // estimate of the covariance between x* and y* (Sxy), DP x MP
     Mat yyCov;                                  // estimate of the y* cross-covariance matrix (Syy), MP x MP
 
-    Mat r;                                      // zero vector of process noise for getting transitionSPFuncVals, 
+    Mat r;                                      // zero vector of process noise for getting transitionSPFuncVals,
     Mat q;                                      // zero vector of measurement noise for getting measurementSPFuncVals
 
 

@@ -39,9 +39,9 @@ KalmanFilterUnscentedParams::
 class KalmanFilterUnscented: public KalmanFilterInterface
 {
 
-    int DP;                                     // dimensionality of the state vector    
-    int MP;                                     // dimensionality of the measurement vector  
-    int CP;                                     // dimensionality of the control vector  
+    int DP;                                     // dimensionality of the state vector
+    int MP;                                     // dimensionality of the measurement vector
+    int CP;                                     // dimensionality of the control vector
     int dataType;                               // type of elements of vectors and matrices
 
     Mat state;                                  // estimate of the system state (x*), DP x 1
@@ -50,14 +50,14 @@ class KalmanFilterUnscented: public KalmanFilterInterface
     Mat processNoiseCov;                        // process noise cross-covariance matrix (Q), DP x DP
     Mat measurementNoiseCov;                    // measurement noise cross-covariance matrix (R), MP x MP
 
-    StateFunction f;                            // function for computing the next state from the previous state, f(x, u, q), 
+    StateFunction f;                            // function for computing the next state from the previous state, f(x, u, q),
                                                 // x - previous state vector,
                                                 // u - control vector,
-                                                // q - process noise vector   
-    
+                                                // q - process noise vector,
+
     MeasFunction h;                             // function for computing the measurement from the state, h(x, r)
                                                 // x - state vector,
-                                                // r - measurement noise vector  
+                                                // r - measurement noise vector.
 
 // Parameters of algorithm
     double alpha;                               // parameter, default is 1e-3
