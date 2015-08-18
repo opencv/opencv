@@ -7,11 +7,12 @@ namespace cv
 {
 
 /** @brief Cholesky decomposition
-* The function performs Cholesky decomposition <https://en.wikipedia.org/wiki/Cholesky_decomposition>. 
-* @param A - the Hermitian, positive-definite matrix,
-* @param astep - size of row in A,
-* @param asize - number of cols and rows in A,
-* @param L - the lower triangular matrix, A = L*Lt.
+
+ The function performs Cholesky decomposition <https://en.wikipedia.org/wiki/Cholesky_decomposition>. 
+ @param A - the Hermitian, positive-definite matrix,
+ @param astep - size of row in A,
+ @param asize - number of cols and rows in A,
+ @param L - the lower triangular matrix, A = L*Lt.
 */
 template<typename _Tp> bool
 choleskyDecomposition( const _Tp* A, size_t astep, const int asize, _Tp* L )
@@ -49,9 +50,7 @@ choleskyDecomposition( const _Tp* A, size_t astep, const int asize, _Tp* L )
     return true;
 }
 
-/** @brief Interface.
-* The interface for Kalman filter, Unscented Kalman filter and Augmented Unscented Kalman filter.
-
+/** @brief The interface for Kalman filter, Unscented Kalman filter and Augmented Unscented Kalman filter.
 */
 class CV_EXPORTS_W KalmanFilterInterface
 {
@@ -61,28 +60,28 @@ public:
 
     /** The function performs prediction step of the algorithm
     * @param control - the current control vector,    
-    * @return - the predicted estimate of the state.
+    * @return the predicted estimate of the state.
     */
     CV_WRAP virtual Mat predict( const Mat& control = Mat() ) = 0;
 
     /** The function performs correction step of the algorithm
     * @param measurement - the current measurement vector,    
-    * @return - the corrected estimate of the state.
+    * @return the corrected estimate of the state.
     */
     CV_WRAP virtual Mat correct( const Mat& measurement ) = 0;
 
     /** 
-    * @return - the process noise cross-covariance matrix.
+    * @return the process noise cross-covariance matrix.
     */
     CV_WRAP virtual Mat getProcessNoiseCov() const = 0;
 
     /** 
-    * @return - the measurement noise cross-covariance matrix.
+    * @return the measurement noise cross-covariance matrix.
     */
     CV_WRAP virtual Mat getMeasurementNoiseCov() const = 0;
 
     /** 
-    * @return - the current estimate of the state.
+    * @return the current estimate of the state.
     */
     CV_WRAP virtual Mat getState() const = 0;
 };
@@ -97,9 +96,9 @@ public:
     CV_PROP_RW Mat stateInit;                              //!< Initial state, DP x 1, default is zero.
     CV_PROP_RW Mat errorCovInit;                           //!< Initial state cross-covariance matrix, DP x DP, default is identity.
 
-    CV_PROP_RW Mat transitionMatrix;                       //!< State transition matrix (A), DP x DP.
-    CV_PROP_RW Mat controlMatrix;                          //!< Control matrix (B) (not used if there is no control), DP x CP.
-    CV_PROP_RW Mat measurementMatrix;                      //!< Measurement matrix (H), DP x MP.
+    CV_PROP_RW Mat transitionMatrix;                       //!< State transition matrix, DP x DP.
+    CV_PROP_RW Mat controlMatrix;                          //!< Control matrix (not used if there is no control), DP x CP.
+    CV_PROP_RW Mat measurementMatrix;                      //!< Measurement matrix, DP x MP.
 
     CV_PROP_RW Mat processNoiseCov;                        //!< Process noise cross-covariance matrix, DP x DP.
     CV_PROP_RW Mat measurementNoiseCov;                    //!< Measurement noise cross-covariance matrix, MP x MP.
@@ -188,9 +187,11 @@ public:
     * @param cp - dimensionality of the control vector,  
     * @param processNoiseCovDiag - value of elements on main diagonal process noise cross-covariance matrix,
     * @param measurementNoiseCovDiag - value of elements on main diagonal measurement noise cross-covariance matrix,
+    * @param _f - function for computing the next state from the previous state,
+    * @param _h - function for computing the measurement from the state,
     * @param type - type of the created matrices that should be CV_32F or CV_64F.
     */
-    CV_WRAP KalmanFilterUnscentedParams( int DP, int MP, int CP, double processNoiseCovDiag, double measurementNoiseCovDiag,
+    CV_WRAP KalmanFilterUnscentedParams( int dp, int mp, int cp, double processNoiseCovDiag, double measurementNoiseCovDiag,
                                 StateFunction _f, MeasFunction _h, int type = CV_64F );
 
     /** The function for initialization of Unscented Kalman filter
@@ -199,9 +200,11 @@ public:
     * @param cp - dimensionality of the control vector,  
     * @param processNoiseCovDiag - value of elements on main diagonal process noise cross-covariance matrix,
     * @param measurementNoiseCovDiag - value of elements on main diagonal measurement noise cross-covariance matrix,
+    * @param _f - function for computing the next state from the previous state,
+    * @param _h - function for computing the measurement from the state,
     * @param type - type of the created matrices that should be CV_32F or CV_64F.
     */
-    CV_WRAP void init( int DP, int MP, int CP, double processNoiseCovDiag, double measurementNoiseCovDiag,
+    CV_WRAP void init( int dp, int mp, int cp, double processNoiseCovDiag, double measurementNoiseCovDiag,
                                 StateFunction _f, MeasFunction _h, int type = CV_64F );
 };
 
@@ -220,9 +223,11 @@ public:
     * @param cp - dimensionality of the control vector,  
     * @param processNoiseCovDiag - value of elements on main diagonal process noise cross-covariance matrix,
     * @param measurementNoiseCovDiag - value of elements on main diagonal measurement noise cross-covariance matrix,
+    * @param _f - function for computing the next state from the previous state,
+    * @param _h - function for computing the measurement from the state,
     * @param type - type of the created matrices that should be CV_32F or CV_64F.
     */
-    CV_WRAP KalmanFilterUnscentedAugmentedParams( int DP, int MP, int CP, double processNoiseCovDiag, double measurementNoiseCovDiag,
+    CV_WRAP KalmanFilterUnscentedAugmentedParams( int dp, int mp, int cp, double processNoiseCovDiag, double measurementNoiseCovDiag,
                                 StateFunction _f, MeasFunction _h, int type = CV_64F );
 
     /** The function for initialization of Augmented Unscented Kalman filter
@@ -231,32 +236,37 @@ public:
     * @param cp - dimensionality of the control vector,  
     * @param processNoiseCovDiag - value of elements on main diagonal process noise cross-covariance matrix,
     * @param measurementNoiseCovDiag - value of elements on main diagonal measurement noise cross-covariance matrix,
+    * @param _f - function for computing the next state from the previous state,
+    * @param _h - function for computing the measurement from the state,
     * @param type - type of the created matrices that should be CV_32F or CV_64F.
     */
-    CV_WRAP void init( int DP, int MP, int CP, double processNoiseCovDiag, double measurementNoiseCovDiag,
+    CV_WRAP void init( int dp, int mp, int cp, double processNoiseCovDiag, double measurementNoiseCovDiag,
                                 StateFunction _f, MeasFunction _h, int type = CV_64F );
 };
 
 
 
-/** Kalman Filter factory method
+/** @brief Kalman Filter factory method
+
 * The class implements a standard Kalman filter <http://en.wikipedia.org/wiki/Kalman_filter>. 
 * However, you can modify transitionMatrix, controlMatrix, and measurementMatrix to get an extended Kalman filter functionality.
 * @param params - an object of the KalmanFilterParams class containing KF parameters. 
-* @return - pointer to the object of the KalmanFilter class implementing KalmanFilterInterface.
+* @return pointer to the object of the KalmanFilter class implementing KalmanFilterInterface.
 */
 CV_WRAP cv::Ptr<KalmanFilterInterface> createKalmanFilter( const KalmanFilterParams &params );
-/** Unscented Kalman Filter factory method
+/** @brief Unscented Kalman Filter factory method
+
 * The class implements an Unscented Kalman filter <https://en.wikipedia.org/wiki/Kalman_filter#Unscented_Kalman_filter>.
 * @param params - an object of the KalmanFilterUnscentedParams class containing UKF parameters.
-* @return - pointer to the object of the KalmanFilterUnscented class implementing KalmanFilterInterface.
+* @return pointer to the object of the KalmanFilterUnscented class implementing KalmanFilterInterface.
 */
 CV_WRAP cv::Ptr<KalmanFilterInterface> createUnscKalmanFilter( const KalmanFilterUnscentedParams &params );
-/** Augmented Unscented Kalman Filter factory method
+/** @brief Augmented Unscented Kalman Filter factory method
+
 * The class implements an Augmented Unscented Kalman filter http://becs.aalto.fi/en/research/bayes/ekfukf/documentation.pdf, page 31-33.
 * AUKF is more accurate than UKF but its computational complexity is larger.
 * @param params - an object of the KalmanFilterUnscentedAugmentedParams class containing AUKF parameters. 
-* @return - pointer to the object of the KalmanFilterUnscentedAugmented class implementing KalmanFilterInterface.
+* @return pointer to the object of the KalmanFilterUnscentedAugmented class implementing KalmanFilterInterface.
 */
 CV_WRAP cv::Ptr<KalmanFilterInterface> createAugUnscKalmanFilter( const KalmanFilterUnscentedAugmentedParams &params );
 
