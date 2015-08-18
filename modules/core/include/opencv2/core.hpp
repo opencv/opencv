@@ -1,6 +1,3 @@
-/*! \file core.hpp
-    \brief The Core Functionality
- */
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
