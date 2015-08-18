@@ -821,8 +821,8 @@ class ClassInfo(GeneralInfo):
 
     def getAllMethods(self):
         result = []
-        result.extend([fi for fi in sorted(self.methods) if fi.isconstructor])
-        result.extend([fi for fi in sorted(self.methods) if not fi.isconstructor])
+        result.extend([fi for fi in self.methods if fi.isconstructor])
+        result.extend([fi for fi in self.methods if not fi.isconstructor])
         return result
 
     def addMethod(self, fi):
