@@ -58,6 +58,8 @@
 
 #include "opencv2/hal/defs.h"
 
+#define OPENCV_ABI_COMPATIBILITY 300
+
 #ifdef __OPENCV_BUILD
 #  define DISABLE_OPENCV_24_COMPATIBILITY
 #endif
