@@ -32,4 +32,3 @@ If you find the solution to the problem yourself, then you can provide your own 
 Now you can check the status of your pull request at the [OpenCV buildbot](http://pullrequest.opencv.org/#/summary/). If any error pops up, then please address it!
 
 Now wait for an official OpenCV developer to help you out, provide comments on your fix and once everything is fine, it will all be merged.
-
