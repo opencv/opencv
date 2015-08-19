@@ -326,7 +326,7 @@ CV_EXPORTS_W int getNumberOfCPUs();
 /** @brief Aligns a pointer to the specified number of bytes.
 
 The function returns the aligned pointer of the same type as the input pointer:
-\f[\texttt{(\_Tp*)(((size\_t)ptr + n-1) \& -n)}\f]
+\f[\texttt{(_Tp*)(((size_t)ptr + n-1) & -n)}\f]
 @param ptr Aligned pointer.
 @param n Alignment size that must be a power of two.
  */
@@ -338,7 +338,7 @@ template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_
 /** @brief Aligns a buffer size to the specified number of bytes.
 
 The function returns the minimum number that is greater or equal to sz and is divisible by n :
-\f[\texttt{(sz + n-1) \& -n}\f]
+\f[\texttt{(sz + n-1) & -n}\f]
 @param sz Buffer size to align.
 @param n Alignment size that must be a power of two.
  */
