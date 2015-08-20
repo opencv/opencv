@@ -1377,6 +1377,8 @@ TEST(Imgproc_cvWarpAffine, regression)
     IplImage* src = cvCreateImage(cvSize(100, 100), IPL_DEPTH_8U, 1);
     IplImage* dst = cvCreateImage(cvSize(100, 100), IPL_DEPTH_8U, 1);
 
+    cvZero(src);
+
     float m[6];
     CvMat M = cvMat( 2, 3, CV_32F, m );
     int w = src->width;
