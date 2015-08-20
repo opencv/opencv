@@ -1,7 +1,3 @@
-/*! \file imgproc.hpp
- \brief The Image Processing
- */
-
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
