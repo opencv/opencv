@@ -129,3 +129,12 @@ TEST(Core_OutputArrayAssign, _Matxf_UMatd)
 
     EXPECT_LE(maxAbsDiff(expected, actual), FLT_EPSILON);
 }
+
+
+TEST(Core_String, find_last_of__with__empty_string)
+{
+    cv::String s;
+    size_t p = s.find_last_of("q", 0);
+    // npos is not exported: EXPECT_EQ(cv::String::npos, p);
+    EXPECT_EQ(std::string::npos, p);
+}
