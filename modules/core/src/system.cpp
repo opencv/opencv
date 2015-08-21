@@ -1089,9 +1089,10 @@ public:
 
         for(size_t i = 0; i < threads.size(); i++)
         {
-            if(threads[i]->slots[slotIdx])
+            std::vector<void*>& thread_slots = threads[i]->slots;
+            if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
             {
-                dataVec.push_back(threads[i]->slots[slotIdx]);
+                dataVec.push_back(thread_slots[slotIdx]);
                 threads[i]->slots[slotIdx] = 0;
             }
         }
