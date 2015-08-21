@@ -173,13 +173,14 @@ namespace cv
 //! @{
 
 // Flags for namedWindow
-enum { WINDOW_NORMAL     = 0x00000000, // the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size
-       WINDOW_AUTOSIZE   = 0x00000001, // the user cannot resize the window, the size is constrainted by the image displayed
-       WINDOW_OPENGL     = 0x00001000, // window with opengl support
+enum WindowFlags {
+       WINDOW_NORMAL     = 0x00000000, //!< the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size
+       WINDOW_AUTOSIZE   = 0x00000001, //!< the user cannot resize the window, the size is constrainted by the image displayed
+       WINDOW_OPENGL     = 0x00001000, //!< window with opengl support
 
-       WINDOW_FULLSCREEN = 1,          // change the window to fullscreen
-       WINDOW_FREERATIO  = 0x00000100, // the image expends as much as it can (no ratio constraint)
-       WINDOW_KEEPRATIO  = 0x00000000  // the ratio of the image is respected
+       WINDOW_FULLSCREEN = 1,          //!< change the window to fullscreen
+       WINDOW_FREERATIO  = 0x00000100, //!< the image expends as much as it can (no ratio constraint)
+       WINDOW_KEEPRATIO  = 0x00000000  //!< the ratio of the image is respected
      };
 
 // Flags for set / getWindowProperty
@@ -240,11 +241,7 @@ typedef void (*ButtonCallback)(int state, void* userdata);
 /** @brief Creates a window.
 
 @param winname Name of the window in the window caption that may be used as a window identifier.
-@param flags Flags of the window. The supported flags are:
-> -   **WINDOW_NORMAL** If this is set, the user can resize the window (no constraint).
-> -   **WINDOW_AUTOSIZE** If this is set, the window size is automatically adjusted to fit the
->     displayed image (see imshow ), and you cannot change the window size manually.
-> -   **WINDOW_OPENGL** If this is set, the window will be created with OpenGL support.
+@param flags Flags of the window. The supported flags are: (cv::WindowFlags)
 
 The function namedWindow creates a window that can be used as a placeholder for images and
 trackbars. Created windows are referred to by their names.
