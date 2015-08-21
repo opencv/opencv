@@ -317,3 +317,11 @@ ocv_clear_vars(HAVE_GPHOTO2)
 if(WITH_GPHOTO2)
   CHECK_MODULE(libgphoto2 HAVE_GPHOTO2)
 endif(WITH_GPHOTO2)
+
+# --- VA-API ---
+if(WITH_VAAPI)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindVAAPI.cmake")
+  if(VAAPI_IOCL_INCLUDE_DIR)
+    ocv_include_directories(${VAAPI_IOCL_INCLUDE_DIR})
+  endif()
+endif(WITH_VAAPI)

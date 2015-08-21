@@ -22,6 +22,10 @@ if((NOT ANDROID) AND HAVE_OPENGL)
   add_subdirectory(opengl)
 endif()
 
+if(UNIX AND NOT ANDROID AND HAVE_VAAPI)
+  add_subdirectory(vaapi)
+endif()
+
 if(ANDROID AND BUILD_ANDROID_EXAMPLES)
   add_subdirectory(android)
 endif()
