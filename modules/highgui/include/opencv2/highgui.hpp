@@ -242,10 +242,6 @@ typedef void (*ButtonCallback)(int state, void* userdata);
 
 @param winname Name of the window in the window caption that may be used as a window identifier.
 @param flags Flags of the window. The supported flags are: (cv::WindowFlags)
--> -   **WINDOW_NORMAL** If this is set, the user can resize the window (no constraint).
--> -   **WINDOW_AUTOSIZE** If this is set, the window size is automatically adjusted to fit the
-->     displayed image (see imshow ), and you cannot change the window size manually.
--> -   **WINDOW_OPENGL** If this is set, the window will be created with OpenGL support.
 
 The function namedWindow creates a window that can be used as a placeholder for images and
 trackbars. Created windows are referred to by their names.
