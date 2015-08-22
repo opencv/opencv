@@ -85,7 +85,7 @@ PARAM_TEST_CASE(ConvertTo, MatDepth, MatDepth, Channels, bool)
     }
 };
 
-OCL_TEST_P(ConvertTo, Accuracy)
+OCL_TEST_P(ConvertTo, WithScale_Accuracy)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -95,6 +95,20 @@ OCL_TEST_P(ConvertTo, Accuracy)
 
         OCL_OFF(src_roi.convertTo(dst_roi, dstType, alpha, beta));
         OCL_ON(usrc_roi.convertTo(udst_roi, dstType, alpha, beta));
+
+        double eps = CV_MAT_DEPTH(dstType) >= CV_32F ? 2e-4 : 1;
+        OCL_EXPECT_MATS_NEAR(dst, eps);
+    }
+}
+
+OCL_TEST_P(ConvertTo, NoScale_Accuracy)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(src_roi.convertTo(dst_roi, dstType, 1, 0));
+        OCL_ON(usrc_roi.convertTo(udst_roi, dstType, 1, 0));
 
         double eps = CV_MAT_DEPTH(dstType) >= CV_32F ? 2e-4 : 1;
         OCL_EXPECT_MATS_NEAR(dst, eps);
