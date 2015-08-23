@@ -59,9 +59,9 @@ def build_opencv(srcroot, buildroot, target, arch):
         cmakeargs += " -DENABLE_NEON=ON"
 
     if opencv_contrib_path is not None:
-        cmakeargs += " -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON -DOPENCV_EXTRA_MODULES_PATH=%s -DBUILD_opencv_contrib_world=ON" % opencv_contrib_path
-        build_target = "opencv_contrib_world"
-        libname = "libopencv_contrib_world.a"
+        cmakeargs += " -DOPENCV_EXTRA_MODULES_PATH=%s -DBUILD_opencv_world=ON" % opencv_contrib_path
+        build_target = "ALL_BUILD"
+        libname = "libopencv_world.a"
     else:
         cmakeargs += " -DBUILD_opencv_world=ON"
         build_target = "ALL_BUILD"
@@ -85,8 +85,8 @@ def build_opencv(srcroot, buildroot, target, arch):
 def put_framework_together(srcroot, dstroot):
     "constructs the framework directory after all the targets are built"
 
-    name = "opencv2" if opencv_contrib_path is None else "opencv2_contrib"
-    libname = "libopencv_world.a" if opencv_contrib_path is None else "libopencv_contrib_world.a"
+    name = "opencv2"
+    libname = "libopencv_world.a"
 
     # find the list of targets (basically, ["iPhoneOS", "iPhoneSimulator"])
     targetlist = glob.glob(os.path.join(dstroot, "build", "*"))
