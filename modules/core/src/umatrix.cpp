@@ -744,7 +744,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
 
         char cvt[2][40];
         ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
-                      format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s",
+                      format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s%s",
                              ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),
                              ocl::convertTypeStr(sdepth, wdepth, 1, cvt[0]),
                              ocl::convertTypeStr(wdepth, ddepth, 1, cvt[1]),
