@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.opencv.engine"
-    android:versionCode="3000"
+    android:versionCode="300@ANDROID_PLATFORM_ID@"
     android:versionName="3.00">
 
     <uses-sdk android:minSdkVersion="@ANDROID_NATIVE_API_LEVEL@" android:targetSdkVersion="22"/>

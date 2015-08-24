@@ -567,13 +567,13 @@ bool CvCapture_OpenNI2::setDepthGeneratorProperty( int propIdx, double propValue
     {
     case CV_CAP_PROP_OPENNI_REGISTRATION:
         {
-            if( propValue < 1.0 ) // "on"
+            if( propValue != 0.0 ) // "on"
             {
                 // if there isn't image generator (i.e. ASUS XtionPro doesn't have it)
                 // then the property isn't avaliable
                 if ( color.isValid() )
                 {
-                    openni::ImageRegistrationMode mode = propValue < 1.0 ? openni::IMAGE_REGISTRATION_DEPTH_TO_COLOR : openni::IMAGE_REGISTRATION_OFF;
+                    openni::ImageRegistrationMode mode = propValue != 0.0 ? openni::IMAGE_REGISTRATION_DEPTH_TO_COLOR : openni::IMAGE_REGISTRATION_OFF;
                     if( !device.getImageRegistrationMode() == mode )
                     {
                         if (device.isImageRegistrationModeSupported(mode))
@@ -903,7 +903,7 @@ IplImage* CvCapture_OpenNI2::retrieveFrame( int outputType )
     return image;
 }
 
-CvCapture* cvCreateCameraCapture_OpenNI( int index )
+CvCapture* cvCreateCameraCapture_OpenNI2( int index )
 {
     CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( index );
 

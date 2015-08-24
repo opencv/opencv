@@ -904,6 +904,24 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     }
 }
 
+#ifdef HAVE_IPP
+static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size size, unsigned char &thresh)
+{
+#if IPP_VERSION_X100 >= 801 && !HAVE_ICV
+    int ippStatus = -1;
+    IppiSize srcSize = { size.width, size.height };
+    CV_SUPPRESS_DEPRECATED_START
+    ippStatus = ippiComputeThreshold_Otsu_8u_C1R(_src, step, srcSize, &thresh);
+    CV_SUPPRESS_DEPRECATED_END
+
+    if(ippStatus >= 0)
+        return true;
+#else
+    CV_UNUSED(_src); CV_UNUSED(step); CV_UNUSED(size); CV_UNUSED(thresh);
+#endif
+    return false;
+}
+#endif
 
 static double
 getThreshVal_Otsu_8u( const Mat& _src )
@@ -917,21 +935,9 @@ getThreshVal_Otsu_8u( const Mat& _src )
         step = size.width;
     }
 
-#if IPP_VERSION_X100 >= 801 && !defined(HAVE_IPP_ICV_ONLY)
-    CV_IPP_CHECK()
-    {
-        IppiSize srcSize = { size.width, size.height };
-        Ipp8u thresh;
-        CV_SUPPRESS_DEPRECATED_START
-        IppStatus ok = ippiComputeThreshold_Otsu_8u_C1R(_src.ptr(), step, srcSize, &thresh);
-        CV_SUPPRESS_DEPRECATED_END
-        if (ok >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return thresh;
-        }
-        setIppErrorStatus();
-    }
+#ifdef HAVE_IPP
+    unsigned char thresh;
+    CV_IPP_RUN(IPP_VERSION_X100 >= 801 && !HAVE_ICV, ipp_getThreshVal_Otsu_8u(_src.ptr(), step, size, thresh), thresh);
 #endif
 
     const int N = 256;
@@ -1295,11 +1301,17 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
     if( src.data != dst.data )
         mean = dst;
 
-    if( method == ADAPTIVE_THRESH_MEAN_C )
+    if (method == ADAPTIVE_THRESH_MEAN_C)
         boxFilter( src, mean, src.type(), Size(blockSize, blockSize),
                    Point(-1,-1), true, BORDER_REPLICATE );
-    else if( method == ADAPTIVE_THRESH_GAUSSIAN_C )
-        GaussianBlur( src, mean, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE );
+    else if (method == ADAPTIVE_THRESH_GAUSSIAN_C)
+    {
+        Mat srcfloat,meanfloat;
+        src.convertTo(srcfloat,CV_32F);
+        meanfloat=srcfloat;
+        GaussianBlur(srcfloat, meanfloat, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE);
+        meanfloat.convertTo(mean, src.type());
+    }
     else
         CV_Error( CV_StsBadFlag, "Unknown/unsupported adaptive threshold method" );
 

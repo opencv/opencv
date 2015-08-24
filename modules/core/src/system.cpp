@@ -43,6 +43,20 @@
 
 #include "precomp.hpp"
 
+namespace cv {
+
+static Mutex* __initialization_mutex = NULL;
+Mutex& getInitializationMutex()
+{
+    if (__initialization_mutex == NULL)
+        __initialization_mutex = new Mutex();
+    return *__initialization_mutex;
+}
+// force initialization (single-threaded environment)
+Mutex* __initialization_mutex_initializer = &getInitializationMutex();
+
+} // namespace cv
+
 #ifdef _MSC_VER
 # if _MSC_VER >= 1700
 #  pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
@@ -922,87 +936,255 @@ bool Mutex::trylock() { return impl->trylock(); }
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
-class TLSStorage
-{
-    std::vector<void*> tlsData_;
-public:
-    TLSStorage() { tlsData_.reserve(16); }
-    ~TLSStorage();
-    inline void* getData(int key) const
-    {
-        CV_DbgAssert(key >= 0);
-        return (key < (int)tlsData_.size()) ? tlsData_[key] : NULL;
-    }
-    inline void setData(int key, void* data)
-    {
-        CV_DbgAssert(key >= 0);
-        if (key >= (int)tlsData_.size())
-        {
-            tlsData_.resize(key + 1, NULL);
-        }
-        tlsData_[key] = data;
-    }
-
-    inline static TLSStorage* get();
-};
-
 #ifdef WIN32
 #ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
 #endif
-
-#ifdef WINRT
-    // using C++11 thread attribute for local thread data
-    static __declspec( thread ) TLSStorage* g_tlsdata = NULL;
-
-    static void deleteThreadData()
-    {
-        if (g_tlsdata)
-        {
-            delete g_tlsdata;
-            g_tlsdata = NULL;
-        }
-    }
-
-    inline TLSStorage* TLSStorage::get()
-    {
-        if (!g_tlsdata)
-        {
-            g_tlsdata = new TLSStorage;
-        }
-        return g_tlsdata;
-    }
-#else
-#ifdef WINCE
-#   define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
+#ifndef TLS_OUT_OF_INDEXES
+#define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
 #endif
-    static DWORD tlsKey = TLS_OUT_OF_INDEXES;
+#endif
 
-    static void deleteThreadData()
+// TLS platform abstraction layer
+class TlsAbstraction
+{
+public:
+    TlsAbstraction();
+    ~TlsAbstraction();
+    void* GetData() const;
+    void  SetData(void *pData);
+
+private:
+#ifdef WIN32
+#ifndef WINRT
+    DWORD tlsKey;
+#endif
+#else // WIN32
+    pthread_key_t  tlsKey;
+#endif
+};
+
+#ifdef WIN32
+#ifdef WINRT
+static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
+TlsAbstraction::TlsAbstraction() {}
+TlsAbstraction::~TlsAbstraction() {}
+void* TlsAbstraction::GetData() const
+{
+    return tlsData;
+}
+void  TlsAbstraction::SetData(void *pData)
+{
+    tlsData = pData;
+}
+#else //WINRT
+TlsAbstraction::TlsAbstraction()
+{
+    tlsKey = TlsAlloc();
+    CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
+}
+TlsAbstraction::~TlsAbstraction()
+{
+    TlsFree(tlsKey);
+}
+void* TlsAbstraction::GetData() const
+{
+    return TlsGetValue(tlsKey);
+}
+void  TlsAbstraction::SetData(void *pData)
+{
+    CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
+}
+#endif
+#else // WIN32
+TlsAbstraction::TlsAbstraction()
+{
+    CV_Assert(pthread_key_create(&tlsKey, NULL) == 0);
+}
+TlsAbstraction::~TlsAbstraction()
+{
+    CV_Assert(pthread_key_delete(tlsKey) == 0);
+}
+void* TlsAbstraction::GetData() const
+{
+    return pthread_getspecific(tlsKey);
+}
+void  TlsAbstraction::SetData(void *pData)
+{
+    CV_Assert(pthread_setspecific(tlsKey, pData) == 0);
+}
+#endif
+
+// Per-thread data structure
+struct ThreadData
+{
+    ThreadData()
     {
-        if(tlsKey != TLS_OUT_OF_INDEXES)
-        {
-            delete (TLSStorage*)TlsGetValue(tlsKey);
-            TlsSetValue(tlsKey, NULL);
-        }
+        idx = 0;
+        slots.reserve(32);
     }
 
-    inline TLSStorage* TLSStorage::get()
+    std::vector<void*> slots; // Data array for a thread
+    size_t idx;               // Thread index in TLS storage. This is not OS thread ID!
+};
+
+// Main TLS storage class
+class TlsStorage
+{
+public:
+    TlsStorage()
     {
-        if (tlsKey == TLS_OUT_OF_INDEXES)
-        {
-            tlsKey = TlsAlloc();
-            CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
-        }
-        TLSStorage* d = (TLSStorage*)TlsGetValue(tlsKey);
-        if (!d)
-        {
-            d = new TLSStorage;
-            TlsSetValue(tlsKey, d);
-        }
-        return d;
+        tlsSlots = 0;
+        threads.reserve(32);
     }
-#endif //WINRT
+    ~TlsStorage()
+    {
+        for(size_t i = 0; i < threads.size(); i++)
+        {
+            if(threads[i])
+            {
+                /* Current architecture doesn't allow proper global objects relase, so this check can cause crashes
+
+                // Check if all slots were properly cleared
+                for(size_t j = 0; j < threads[i]->slots.size(); j++)
+                {
+                    CV_Assert(threads[i]->slots[j] == 0);
+                }
+                */
+                delete threads[i];
+            }
+        }
+        threads.clear();
+    }
+
+    void releaseThread()
+    {
+        AutoLock guard(mtxGlobalAccess);
+        ThreadData *pTD = (ThreadData*)tls.GetData();
+        for(size_t i = 0; i < threads.size(); i++)
+        {
+            if(pTD == threads[i])
+            {
+                threads[i] = 0;
+                break;
+            }
+        }
+        tls.SetData(0);
+        delete pTD;
+    }
+
+    // Reserve TLS storage index
+    size_t reserveSlot()
+    {
+        AutoLock guard(mtxGlobalAccess);
+        tlsSlots++;
+        return (tlsSlots-1);
+    }
+
+    // Release TLS storage index and pass assosiated data to caller
+    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec)
+    {
+        AutoLock guard(mtxGlobalAccess);
+        CV_Assert(tlsSlots > slotIdx);
+
+        for(size_t i = 0; i < threads.size(); i++)
+        {
+            std::vector<void*>& thread_slots = threads[i]->slots;
+            if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
+            {
+                dataVec.push_back(thread_slots[slotIdx]);
+                threads[i]->slots[slotIdx] = 0;
+            }
+        }
+        // If we removing last element, decriment slots size to save space
+        if(tlsSlots-1 == slotIdx)
+            tlsSlots--;
+    }
+
+    // Get data by TLS storage index
+    void* getData(size_t slotIdx) const
+    {
+        CV_Assert(tlsSlots > slotIdx);
+
+        ThreadData* threadData = (ThreadData*)tls.GetData();
+        if(threadData && threadData->slots.size() > slotIdx)
+            return threadData->slots[slotIdx];
+
+        return NULL;
+    }
+
+    // Set data to storage index
+    void setData(size_t slotIdx, void* pData)
+    {
+        CV_Assert(pData != NULL);
+
+        ThreadData* threadData = (ThreadData*)tls.GetData();
+        if(!threadData)
+        {
+            threadData = new ThreadData;
+            tls.SetData((void*)threadData);
+            {
+                AutoLock guard(mtxGlobalAccess);
+                threadData->idx = threads.size();
+                threads.push_back(threadData);
+            }
+        }
+
+        if(slotIdx >= threadData->slots.size())
+            threadData->slots.resize(slotIdx+1);
+        threadData->slots[slotIdx] = pData;
+    }
+
+private:
+    TlsAbstraction tls; // TLS abstraction layer instance
+
+    Mutex  mtxGlobalAccess;           // Shared objects operation guard
+    size_t tlsSlots;                  // TLS storage counter
+    std::vector<ThreadData*> threads; // Array for all allocated data. Thread data pointers are placed here to allow data cleanup
+};
+
+// Create global TLS storage object
+static TlsStorage &getTlsStorage()
+{
+    CV_SINGLETON_LAZY_INIT_REF(TlsStorage, new TlsStorage())
+}
+
+TLSDataContainer::TLSDataContainer()
+{
+    key_ = (int)getTlsStorage().reserveSlot(); // Reserve key from TLS storage
+}
+
+TLSDataContainer::~TLSDataContainer()
+{
+    CV_Assert(key_ == -1); // Key must be released in child object
+}
+
+void TLSDataContainer::release()
+{
+    std::vector<void*> data;
+    data.reserve(32);
+    getTlsStorage().releaseSlot(key_, data); // Release key and get stored data for proper destruction
+    for(size_t i = 0; i < data.size(); i++)  // Delete all assosiated data
+        deleteDataInstance(data[i]);
+    key_ = -1;
+}
+
+void* TLSDataContainer::getData() const
+{
+    void* pData = getTlsStorage().getData(key_); // Check if data was already allocated
+    if(!pData)
+    {
+        // Create new data instance and save it to TLS storage
+        pData = createDataInstance();
+        getTlsStorage().setData(key_, pData);
+    }
+    return pData;
+}
+
+TLSData<CoreTLSData>& getCoreTlsData()
+{
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<CoreTLSData>, new TLSData<CoreTLSData>())
+}
 
 #if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
 #ifdef WINRT
@@ -1023,150 +1205,17 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
             // Not allowed to free resources if lpReserved is non-null
             // http://msdn.microsoft.com/en-us/library/windows/desktop/ms682583.aspx
             cv::deleteThreadAllocData();
-            cv::deleteThreadData();
+            cv::getTlsStorage().releaseThread();
         }
     }
     return TRUE;
 }
 #endif
 
-#else
-    static pthread_key_t tlsKey = 0;
-    static pthread_once_t tlsKeyOnce = PTHREAD_ONCE_INIT;
-
-    static void deleteTLSStorage(void* data)
-    {
-        delete (TLSStorage*)data;
-    }
-
-    static void makeKey()
-    {
-        int errcode = pthread_key_create(&tlsKey, deleteTLSStorage);
-        CV_Assert(errcode == 0);
-    }
-
-    inline TLSStorage* TLSStorage::get()
-    {
-        pthread_once(&tlsKeyOnce, makeKey);
-        TLSStorage* d = (TLSStorage*)pthread_getspecific(tlsKey);
-        if( !d )
-        {
-            d = new TLSStorage;
-            pthread_setspecific(tlsKey, d);
-        }
-        return d;
-    }
-#endif
-
-class TLSContainerStorage
-{
-    cv::Mutex mutex_;
-    std::vector<TLSDataContainer*> tlsContainers_;
-public:
-    TLSContainerStorage() { }
-    ~TLSContainerStorage()
-    {
-        for (size_t i = 0; i < tlsContainers_.size(); i++)
-        {
-            CV_DbgAssert(tlsContainers_[i] == NULL); // not all keys released
-            tlsContainers_[i] = NULL;
-        }
-    }
-
-    int allocateKey(TLSDataContainer* pContainer)
-    {
-        cv::AutoLock lock(mutex_);
-        tlsContainers_.push_back(pContainer);
-        return (int)tlsContainers_.size() - 1;
-    }
-    void releaseKey(int id, TLSDataContainer* pContainer)
-    {
-        cv::AutoLock lock(mutex_);
-        CV_Assert(tlsContainers_[id] == pContainer);
-        tlsContainers_[id] = NULL;
-        // currently, we don't go into thread's TLSData and release data for this key
-    }
-
-    void destroyData(int key, void* data)
-    {
-        cv::AutoLock lock(mutex_);
-        TLSDataContainer* k = tlsContainers_[key];
-        if (!k)
-            return;
-        try
-        {
-            k->deleteDataInstance(data);
-        }
-        catch (...)
-        {
-            CV_DbgAssert(k == NULL); // Debug this!
-        }
-    }
-};
-
-// This is a wrapper function that will ensure 'tlsContainerStorage' is constructed on first use.
-// For more information: http://www.parashift.com/c++-faq/static-init-order-on-first-use.html
-static TLSContainerStorage& getTLSContainerStorage()
-{
-    static TLSContainerStorage *tlsContainerStorage = new TLSContainerStorage();
-    return *tlsContainerStorage;
-}
-
-TLSDataContainer::TLSDataContainer()
-    : key_(-1)
-{
-    key_ = getTLSContainerStorage().allocateKey(this);
-}
-
-TLSDataContainer::~TLSDataContainer()
-{
-    getTLSContainerStorage().releaseKey(key_, this);
-    key_ = -1;
-}
-
-void* TLSDataContainer::getData() const
-{
-    CV_Assert(key_ >= 0);
-    TLSStorage* tlsData = TLSStorage::get();
-    void* data = tlsData->getData(key_);
-    if (!data)
-    {
-        data = this->createDataInstance();
-        CV_DbgAssert(data != NULL);
-        tlsData->setData(key_, data);
-    }
-    return data;
-}
-
-TLSStorage::~TLSStorage()
-{
-    for (int i = 0; i < (int)tlsData_.size(); i++)
-    {
-        void*& data = tlsData_[i];
-        if (data)
-        {
-            getTLSContainerStorage().destroyData(i, data);
-            data = NULL;
-        }
-    }
-    tlsData_.clear();
-}
-
-
-
-TLSData<CoreTLSData>& getCoreTlsData()
-{
-    static TLSData<CoreTLSData> *value = new TLSData<CoreTLSData>();
-    return *value;
-}
-
-
-
 #ifdef CV_COLLECT_IMPL_DATA
 ImplCollector& getImplData()
 {
-    static ImplCollector *value = new ImplCollector();
-    return *value;
+    CV_SINGLETON_LAZY_INIT_REF(ImplCollector, new ImplCollector())
 }
 
 void setImpl(int flags)

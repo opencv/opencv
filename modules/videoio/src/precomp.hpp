@@ -120,6 +120,7 @@ CvCapture* cvCreateFileCapture_MSMF (const char* filename);
 CvVideoWriter* cvCreateVideoWriter_MSMF( const char* filename, int fourcc,
                                         double fps, CvSize frameSize, int is_color );
 CvCapture* cvCreateCameraCapture_OpenNI( int index );
+CvCapture* cvCreateCameraCapture_OpenNI2( int index );
 CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
 CvCapture* cvCreateCameraCapture_Android( int index );
 CvCapture* cvCreateCameraCapture_XIMEA( int index );

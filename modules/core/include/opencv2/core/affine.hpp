@@ -110,7 +110,7 @@ namespace cv
         //! a.rotate(R) is equivalent to Affine(R, 0) * a;
         Affine3 rotate(const Mat3& R) const;
 
-        //! a.rotate(R) is equivalent to Affine(rvec, 0) * a;
+        //! a.rotate(rvec) is equivalent to Affine(rvec, 0) * a;
         Affine3 rotate(const Vec3& rvec) const;
 
         //! a.translate(t) is equivalent to Affine(E, t) * a;

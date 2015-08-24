@@ -34,6 +34,7 @@ endif(HAVE_DOC_GENERATOR)
 if(BUILD_DOCS AND DOXYGEN_FOUND)
   # not documented modules list
   list(APPEND blacklist "ts" "java" "python2" "python3" "world" "contrib_world")
+  unset(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
 
   # gathering headers
   set(paths_include)
@@ -70,7 +71,23 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
       if(EXISTS "${tutorial_dir}")
         list(APPEND paths_tutorial "${tutorial_dir}")
         list(APPEND deps ${tutorial_dir})
+
+        # tutorial reference entry
+        file(GLOB tutorials RELATIVE "${OPENCV_MODULE_opencv_${m}_LOCATION}" "${tutorial_dir}/*.markdown")
+        foreach (t ${tutorials})
+          if (NOT DEFINED CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
+            set(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT "- @ref tutorial_contrib_root")
+            set(tutorial_contrib_root "${CMAKE_CURRENT_BINARY_DIR}/contrib_tutorials.markdown")
+            file(WRITE "${tutorial_contrib_root}"
+              "Tutorials for contrib modules {#tutorial_contrib_root}\n"
+              "=============================\n")
+          endif()
+          file(STRINGS "${OPENCV_MODULE_opencv_${m}_LOCATION}/${t}" tutorial_id LIMIT_COUNT 1 REGEX ".*{#[^}]+}")
+          string(REGEX REPLACE ".*{#([^}]+)}" "\\1" tutorial_id "${tutorial_id}")
+          file(APPEND "${tutorial_contrib_root}" "- ${m}. @subpage ${tutorial_id}\n")
+        endforeach()
       endif()
+
       # BiBTeX file
       set(bib_file "${docs_dir}/${m}.bib")
       if(EXISTS "${bib_file}")
@@ -114,7 +131,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(example_path "${CMAKE_SOURCE_DIR}/samples")
 
   # set export variables
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial}")
   # TODO: remove paths_doc from EXAMPLE_PATH after face module tutorials/samples moved to separate folders
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${example_path} ; ${paths_doc} ; ${paths_sample}")

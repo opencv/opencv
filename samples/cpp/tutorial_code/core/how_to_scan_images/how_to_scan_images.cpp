@@ -134,7 +134,7 @@ int main( int argc, char* argv[])
 Mat& ScanImageAndReduceC(Mat& I, const uchar* const table)
 {
     // accept only char type matrices
-    CV_Assert(I.depth() != sizeof(uchar));
+    CV_Assert(I.depth() == CV_8U);
 
     int channels = I.channels();
 
@@ -165,7 +165,7 @@ Mat& ScanImageAndReduceC(Mat& I, const uchar* const table)
 Mat& ScanImageAndReduceIterator(Mat& I, const uchar* const table)
 {
     // accept only char type matrices
-    CV_Assert(I.depth() != sizeof(uchar));
+    CV_Assert(I.depth() == CV_8U);
 
     const int channels = I.channels();
     switch(channels)
@@ -197,7 +197,7 @@ Mat& ScanImageAndReduceIterator(Mat& I, const uchar* const table)
 Mat& ScanImageAndReduceRandomAccess(Mat& I, const uchar* const table)
 {
     // accept only char type matrices
-    CV_Assert(I.depth() != sizeof(uchar));
+    CV_Assert(I.depth() == CV_8U);
 
     const int channels = I.channels();
     switch(channels)

@@ -17,25 +17,69 @@
 #define SAFE_RELEASE(p) if (p) { p->Release(); p = NULL; }
 
 
+class Timer
+{
+public:
+    enum UNITS
+    {
+        USEC = 0,
+        MSEC,
+        SEC
+    };
+
+    Timer() : m_t0(0), m_diff(0)
+    {
+        m_tick_frequency = (float)cv::getTickFrequency();
+
+        m_unit_mul[USEC] = 1000000;
+        m_unit_mul[MSEC] = 1000;
+        m_unit_mul[SEC]  = 1;
+    }
+
+    void start()
+    {
+        m_t0 = cv::getTickCount();
+    }
+
+    void stop()
+    {
+        m_diff = cv::getTickCount() - m_t0;
+    }
+
+    float time(UNITS u = UNITS::MSEC)
+    {
+        float sec = m_diff / m_tick_frequency;
+
+        return sec * m_unit_mul[u];
+    }
+
+public:
+    float m_tick_frequency;
+    int64 m_t0;
+    int64 m_diff;
+    int   m_unit_mul[3];
+};
+
+
 class D3DSample : public WinApp
 {
 public:
     enum MODE
     {
-        MODE_NOP,
         MODE_CPU,
-        MODE_GPU
+        MODE_GPU_RGBA,
+        MODE_GPU_NV12
     };
 
     D3DSample(int width, int height, std::string& window_name, cv::VideoCapture& cap) :
         WinApp(width, height, window_name)
     {
         m_shutdown          = false;
-        m_mode              = MODE_NOP;
-        m_modeStr[0]        = cv::String("No processing");
-        m_modeStr[1]        = cv::String("Processing on CPU");
-        m_modeStr[2]        = cv::String("Processing on GPU");
-        m_disableProcessing = false;
+        m_mode              = MODE_CPU;
+        m_modeStr[0]        = cv::String("Processing on CPU");
+        m_modeStr[1]        = cv::String("Processing on GPU RGBA");
+        m_modeStr[2]        = cv::String("Processing on GPU NV12");
+        m_demo_processing   = false;
         m_cap               = cap;
     }
 
@@ -49,41 +93,30 @@ public:
         return WinApp::cleanup();
     }
 
-    static float getFps()
-    {
-        static std::queue<int64> time_queue;
-
-        int64 now = cv::getTickCount();
-        int64 then = 0;
-        time_queue.push(now);
-
-        if (time_queue.size() >= 2)
-            then = time_queue.front();
-
-        if (time_queue.size() >= 25)
-            time_queue.pop();
-
-        size_t sz = time_queue.size();
-
-        float fps = sz * (float)cv::getTickFrequency() / (now - then);
-
-        return fps;
-    }
-
 protected:
     virtual LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         switch (message)
         {
         case WM_CHAR:
-            if (wParam >= '0' && wParam <= '2')
+            if (wParam == '1')
             {
-                m_mode = static_cast<MODE>((char)wParam - '0');
+                m_mode = MODE_CPU;
+                return 0;
+            }
+            if (wParam == '2')
+            {
+                m_mode = MODE_GPU_RGBA;
+                return 0;
+            }
+            if (wParam == '3')
+            {
+                m_mode = MODE_GPU_NV12;
                 return 0;
             }
             else if (wParam == VK_SPACE)
             {
-                m_disableProcessing = !m_disableProcessing;
+                m_demo_processing = !m_demo_processing;
                 return 0;
             }
             else if (wParam == VK_ESCAPE)
@@ -108,12 +141,13 @@ protected:
 
 protected:
     bool               m_shutdown;
-    bool               m_disableProcessing;
+    bool               m_demo_processing;
     MODE               m_mode;
     cv::String         m_modeStr[3];
     cv::VideoCapture   m_cap;
     cv::Mat            m_frame_bgr;
     cv::Mat            m_frame_rgba;
+    Timer              m_timer;
 };
 
 
@@ -122,10 +156,11 @@ static void help()
     printf(
         "\nSample demonstrating interoperability of DirectX and OpenCL with OpenCV.\n"
         "Hot keys: \n"
-        "    0 - no processing\n"
-        "    1 - blur DX surface on CPU through OpenCV\n"
-        "    2 - blur DX surface on GPU through OpenCV using OpenCL\n"
-        "  ESC - exit\n\n");
+        "  SPACE - turn processing on/off\n"
+        "    1   - process DX surface through OpenCV on CPU\n"
+        "    2   - process DX RGBA surface through OpenCV on GPU (via OpenCL)\n"
+        "    3   - process DX NV12 surface through OpenCV on GPU (via OpenCL)\n"
+        "  ESC   - exit\n\n");
 }
 
 
@@ -140,10 +175,10 @@ static const char* keys =
 template <typename TApp>
 int d3d_app(int argc, char** argv, std::string& title)
 {
-    cv::CommandLineParser parser(argc, argv, keys); \
-    bool   useCamera = parser.has("camera"); \
-    string file      = parser.get<string>("file"); \
-    bool   showHelp  = parser.get<bool>("help"); \
+    cv::CommandLineParser parser(argc, argv, keys);
+    bool   useCamera = parser.has("camera");
+    string file      = parser.get<string>("file");
+    bool   showHelp  = parser.get<bool>("help");
 
     if (showHelp)
         help();

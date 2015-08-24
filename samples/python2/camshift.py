@@ -83,7 +83,7 @@ class App(object):
                 hsv_roi = hsv[y0:y1, x0:x1]
                 mask_roi = mask[y0:y1, x0:x1]
                 hist = cv2.calcHist( [hsv_roi], [0], mask_roi, [16], [0, 180] )
-                cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX);
+                cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)
                 self.hist = hist.reshape(-1)
                 self.show_hist()
 

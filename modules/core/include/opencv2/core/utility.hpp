@@ -201,7 +201,7 @@ framework:
 @param nthreads Number of threads used by OpenCV.
 @sa getNumThreads, getThreadNum
  */
-CV_EXPORTS void setNumThreads(int nthreads);
+CV_EXPORTS_W void setNumThreads(int nthreads);
 
 /** @brief Returns the number of threads used by OpenCV for parallel regions.
 
@@ -219,7 +219,7 @@ The exact meaning of return value depends on the threading framework used by Ope
   available for the process.
 @sa setNumThreads, getThreadNum
  */
-CV_EXPORTS int getNumThreads();
+CV_EXPORTS_W int getNumThreads();
 
 /** @brief Returns the index of the currently executed thread within the current parallel region. Always
 returns 0 if called outside of parallel region.
@@ -233,7 +233,7 @@ The exact meaning of return value depends on the threading framework used by Ope
 - `C=` – The index of the current parallel task.
 @sa setNumThreads, getNumThreads
  */
-CV_EXPORTS int getThreadNum();
+CV_EXPORTS_W int getThreadNum();
 
 /** @brief Returns full configuration time cmake output.
 
@@ -326,7 +326,7 @@ CV_EXPORTS_W int getNumberOfCPUs();
 /** @brief Aligns a pointer to the specified number of bytes.
 
 The function returns the aligned pointer of the same type as the input pointer:
-\f[\texttt{(\_Tp*)(((size\_t)ptr + n-1) \& -n)}\f]
+\f[\texttt{(_Tp*)(((size_t)ptr + n-1) & -n)}\f]
 @param ptr Aligned pointer.
 @param n Alignment size that must be a power of two.
  */
@@ -338,7 +338,7 @@ template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_
 /** @brief Aligns a buffer size to the specified number of bytes.
 
 The function returns the minimum number that is greater or equal to sz and is divisible by n :
-\f[\texttt{(sz + n-1) \& -n}\f]
+\f[\texttt{(sz + n-1) & -n}\f]
 @param sz Buffer size to align.
 @param n Alignment size that must be a power of two.
  */
@@ -513,30 +513,42 @@ private:
     AutoLock& operator = (const AutoLock&);
 };
 
+// TLS interface
 class CV_EXPORTS TLSDataContainer
 {
-private:
-    int key_;
 protected:
     TLSDataContainer();
     virtual ~TLSDataContainer();
-public:
-    virtual void* createDataInstance() const = 0;
-    virtual void deleteDataInstance(void* data) const = 0;
 
+#if OPENCV_ABI_COMPATIBILITY > 300
     void* getData() const;
+    void  release();
+
+private:
+#else
+    void  release();
+
+public:
+    void* getData() const;
+#endif
+    virtual void* createDataInstance() const = 0;
+    virtual void  deleteDataInstance(void* pData) const = 0;
+
+    int key_;
 };
 
+// Main TLS data class
 template <typename T>
 class TLSData : protected TLSDataContainer
 {
 public:
-    inline TLSData() {}
-    inline ~TLSData() {}
-    inline T* get() const { return (T*)getData(); }
+    inline TLSData()        {}
+    inline ~TLSData()       { release();            } // Release key and delete associated data
+    inline T* get() const   { return (T*)getData(); } // Get data assosiated with key
+
 private:
-    virtual void* createDataInstance() const { return new T; }
-    virtual void deleteDataInstance(void* data) const { delete (T*)data; }
+    virtual void* createDataInstance() const {return new T;}                // Wrapper to allocate data by template
+    virtual void  deleteDataInstance(void* pData) const {delete (T*)pData;} // Wrapper to release data by template
 };
 
 /** @brief Designed for command line parsing

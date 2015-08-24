@@ -5194,18 +5194,7 @@ dtype* dst, size_t dstep, Size size, double* scale) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    CV_IPP_CHECK()\
-    {\
-        if (src && dst)\
-        {\
-            if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
-            {\
-                CV_IMPL_ADD(CV_IMPL_IPP)\
-                return; \
-            }\
-            setIppErrorStatus(); \
-        }\
-    }\
+    CV_IPP_RUN(src && dst, ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0)\
     cvt_(src, sstep, dst, dstep, size); \
 }
 
@@ -5213,18 +5202,7 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    CV_IPP_CHECK()\
-    {\
-        if (src && dst)\
-        {\
-            if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
-            {\
-                CV_IMPL_ADD(CV_IMPL_IPP)\
-                return; \
-            }\
-            setIppErrorStatus(); \
-        }\
-    }\
+    CV_IPP_RUN(src && dst, ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0)\
     cvt_(src, sstep, dst, dstep, size); \
 }
 #else
@@ -5860,6 +5838,45 @@ private:
     IppLUTParallelBody_LUTCN& operator=(const IppLUTParallelBody_LUTCN&);
 };
 } // namespace ipp
+
+static bool ipp_lut(Mat &src, Mat &lut, Mat &dst)
+{
+    int lutcn = lut.channels();
+
+    if(src.dims > 2)
+        return false;
+
+    bool ok = false;
+    Ptr<ParallelLoopBody> body;
+
+    size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
+#if 0 // there are no performance benefits (PR #2653)
+    if (lutcn == 1)
+    {
+        ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTC1(src, lut, dst, &ok);
+        body.reset(p);
+    }
+    else
+#endif
+    if ((lutcn == 3 || lutcn == 4) && elemSize1 == 1)
+    {
+        ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTCN(src, lut, dst, &ok);
+        body.reset(p);
+    }
+
+    if (body != NULL && ok)
+    {
+        Range all(0, dst.rows);
+        if (dst.total()>>18)
+            parallel_for_(all, *body, (double)std::max((size_t)1, dst.total()>>16));
+        else
+            (*body)(all);
+        if (ok)
+            return true;
+    }
+
+    return false;
+}
 #endif // IPP
 
 class LUTParallelBody : public ParallelLoopBody
@@ -5923,29 +5940,13 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
+    CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
+
     if (_src.dims() <= 2)
     {
         bool ok = false;
         Ptr<ParallelLoopBody> body;
-#if defined(HAVE_IPP)
-        CV_IPP_CHECK()
-        {
-            size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
-#if 0 // there are no performance benefits (PR #2653)
-            if (lutcn == 1)
-            {
-                ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTC1(src, lut, dst, &ok);
-                body.reset(p);
-            }
-            else
-#endif
-            if ((lutcn == 3 || lutcn == 4) && elemSize1 == 1)
-            {
-                ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTCN(src, lut, dst, &ok);
-                body.reset(p);
-            }
-        }
-#endif
+
         if (body == NULL || ok == false)
         {
             ok = false;

@@ -224,8 +224,7 @@ public:
 
 MatAllocator* Mat::getStdAllocator()
 {
-    static StdMatAllocator allocator;
-    return &allocator;
+    CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
 }
 
 void swap( Mat& a, Mat& b )
@@ -3088,7 +3087,73 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 
 #endif
 
+#ifdef HAVE_IPP
+static bool ipp_transpose( Mat &src, Mat &dst )
+{
+    int type = src.type();
+    typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
+    typedef IppStatus (CV_STDCALL * ippiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
+    ippiTranspose ippFunc = 0;
+    ippiTransposeI ippFuncI = 0;
+
+    if (dst.data == src.data && dst.cols == dst.rows)
+    {
+        CV_SUPPRESS_DEPRECATED_START
+        ippFuncI =
+            type == CV_8UC1 ? (ippiTransposeI)ippiTranspose_8u_C1IR :
+            type == CV_8UC3 ? (ippiTransposeI)ippiTranspose_8u_C3IR :
+            type == CV_8UC4 ? (ippiTransposeI)ippiTranspose_8u_C4IR :
+            type == CV_16UC1 ? (ippiTransposeI)ippiTranspose_16u_C1IR :
+            type == CV_16UC3 ? (ippiTransposeI)ippiTranspose_16u_C3IR :
+            type == CV_16UC4 ? (ippiTransposeI)ippiTranspose_16u_C4IR :
+            type == CV_16SC1 ? (ippiTransposeI)ippiTranspose_16s_C1IR :
+            type == CV_16SC3 ? (ippiTransposeI)ippiTranspose_16s_C3IR :
+            type == CV_16SC4 ? (ippiTransposeI)ippiTranspose_16s_C4IR :
+            type == CV_32SC1 ? (ippiTransposeI)ippiTranspose_32s_C1IR :
+            type == CV_32SC3 ? (ippiTransposeI)ippiTranspose_32s_C3IR :
+            type == CV_32SC4 ? (ippiTransposeI)ippiTranspose_32s_C4IR :
+            type == CV_32FC1 ? (ippiTransposeI)ippiTranspose_32f_C1IR :
+            type == CV_32FC3 ? (ippiTransposeI)ippiTranspose_32f_C3IR :
+            type == CV_32FC4 ? (ippiTransposeI)ippiTranspose_32f_C4IR : 0;
+        CV_SUPPRESS_DEPRECATED_END
+    }
+    else
+    {
+        ippFunc =
+            type == CV_8UC1 ? (ippiTranspose)ippiTranspose_8u_C1R :
+            type == CV_8UC3 ? (ippiTranspose)ippiTranspose_8u_C3R :
+            type == CV_8UC4 ? (ippiTranspose)ippiTranspose_8u_C4R :
+            type == CV_16UC1 ? (ippiTranspose)ippiTranspose_16u_C1R :
+            type == CV_16UC3 ? (ippiTranspose)ippiTranspose_16u_C3R :
+            type == CV_16UC4 ? (ippiTranspose)ippiTranspose_16u_C4R :
+            type == CV_16SC1 ? (ippiTranspose)ippiTranspose_16s_C1R :
+            type == CV_16SC3 ? (ippiTranspose)ippiTranspose_16s_C3R :
+            type == CV_16SC4 ? (ippiTranspose)ippiTranspose_16s_C4R :
+            type == CV_32SC1 ? (ippiTranspose)ippiTranspose_32s_C1R :
+            type == CV_32SC3 ? (ippiTranspose)ippiTranspose_32s_C3R :
+            type == CV_32SC4 ? (ippiTranspose)ippiTranspose_32s_C4R :
+            type == CV_32FC1 ? (ippiTranspose)ippiTranspose_32f_C1R :
+            type == CV_32FC3 ? (ippiTranspose)ippiTranspose_32f_C3R :
+            type == CV_32FC4 ? (ippiTranspose)ippiTranspose_32f_C4R : 0;
+    }
+
+    IppiSize roiSize = { src.cols, src.rows };
+    if (ippFunc != 0)
+    {
+        if (ippFunc(src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
+            return true;
+    }
+    else if (ippFuncI != 0)
+    {
+        if (ippFuncI(dst.ptr(), (int)dst.step, roiSize) >= 0)
+            return true;
+    }
+    return false;
 }
+#endif
+
+}
+
 
 void cv::transpose( InputArray _src, OutputArray _dst )
 {
@@ -3116,76 +3181,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
-#if defined HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
-        typedef IppStatus (CV_STDCALL * ippiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
-        ippiTranspose ippFunc = 0;
-        ippiTransposeI ippFuncI = 0;
-
-        if (dst.data == src.data && dst.cols == dst.rows)
-        {
-            CV_SUPPRESS_DEPRECATED_START
-            ippFuncI =
-                type == CV_8UC1 ? (ippiTransposeI)ippiTranspose_8u_C1IR :
-                type == CV_8UC3 ? (ippiTransposeI)ippiTranspose_8u_C3IR :
-                type == CV_8UC4 ? (ippiTransposeI)ippiTranspose_8u_C4IR :
-                type == CV_16UC1 ? (ippiTransposeI)ippiTranspose_16u_C1IR :
-                type == CV_16UC3 ? (ippiTransposeI)ippiTranspose_16u_C3IR :
-                type == CV_16UC4 ? (ippiTransposeI)ippiTranspose_16u_C4IR :
-                type == CV_16SC1 ? (ippiTransposeI)ippiTranspose_16s_C1IR :
-                type == CV_16SC3 ? (ippiTransposeI)ippiTranspose_16s_C3IR :
-                type == CV_16SC4 ? (ippiTransposeI)ippiTranspose_16s_C4IR :
-                type == CV_32SC1 ? (ippiTransposeI)ippiTranspose_32s_C1IR :
-                type == CV_32SC3 ? (ippiTransposeI)ippiTranspose_32s_C3IR :
-                type == CV_32SC4 ? (ippiTransposeI)ippiTranspose_32s_C4IR :
-                type == CV_32FC1 ? (ippiTransposeI)ippiTranspose_32f_C1IR :
-                type == CV_32FC3 ? (ippiTransposeI)ippiTranspose_32f_C3IR :
-                type == CV_32FC4 ? (ippiTransposeI)ippiTranspose_32f_C4IR : 0;
-            CV_SUPPRESS_DEPRECATED_END
-        }
-        else
-        {
-            ippFunc =
-                type == CV_8UC1 ? (ippiTranspose)ippiTranspose_8u_C1R :
-                type == CV_8UC3 ? (ippiTranspose)ippiTranspose_8u_C3R :
-                type == CV_8UC4 ? (ippiTranspose)ippiTranspose_8u_C4R :
-                type == CV_16UC1 ? (ippiTranspose)ippiTranspose_16u_C1R :
-                type == CV_16UC3 ? (ippiTranspose)ippiTranspose_16u_C3R :
-                type == CV_16UC4 ? (ippiTranspose)ippiTranspose_16u_C4R :
-                type == CV_16SC1 ? (ippiTranspose)ippiTranspose_16s_C1R :
-                type == CV_16SC3 ? (ippiTranspose)ippiTranspose_16s_C3R :
-                type == CV_16SC4 ? (ippiTranspose)ippiTranspose_16s_C4R :
-                type == CV_32SC1 ? (ippiTranspose)ippiTranspose_32s_C1R :
-                type == CV_32SC3 ? (ippiTranspose)ippiTranspose_32s_C3R :
-                type == CV_32SC4 ? (ippiTranspose)ippiTranspose_32s_C4R :
-                type == CV_32FC1 ? (ippiTranspose)ippiTranspose_32f_C1R :
-                type == CV_32FC3 ? (ippiTranspose)ippiTranspose_32f_C3R :
-                type == CV_32FC4 ? (ippiTranspose)ippiTranspose_32f_C4R : 0;
-        }
-
-        IppiSize roiSize = { src.cols, src.rows };
-        if (ippFunc != 0)
-        {
-            if (ippFunc(src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-        else if (ippFuncI != 0)
-        {
-            if (ippFuncI(dst.ptr(), (int)dst.step, roiSize) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    CV_IPP_RUN(true, ipp_transpose(src, dst))
 
     if( dst.data == src.data )
     {
@@ -4261,7 +4257,45 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
             return reshape(_cn, _newsz[0]);
     }
 
-    CV_Error(CV_StsNotImplemented, "");
+    if (isContinuous())
+    {
+        CV_Assert(_cn >= 0 && _newndims > 0 && _newndims <= CV_MAX_DIM && _newsz);
+
+        if (_cn == 0)
+            _cn = this->channels();
+        else
+            CV_Assert(_cn <= CV_CN_MAX);
+
+        size_t total_elem1_ref = this->total() * this->channels();
+        size_t total_elem1 = _cn;
+
+        AutoBuffer<int, 4> newsz_buf( (size_t)_newndims );
+
+        for (int i = 0; i < _newndims; i++)
+        {
+            CV_Assert(_newsz[i] >= 0);
+
+            if (_newsz[i] > 0)
+                newsz_buf[i] = _newsz[i];
+            else if (i < dims)
+                newsz_buf[i] = this->size[i];
+            else
+                CV_Error(CV_StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
+
+            total_elem1 *= (size_t)newsz_buf[i];
+        }
+
+        if (total_elem1 != total_elem1_ref)
+            CV_Error(CV_StsUnmatchedSizes, "Requested and source matrices have different count of elements");
+
+        Mat hdr = *this;
+        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
+        setSize(hdr, _newndims, (int*)newsz_buf, NULL, true);
+
+        return hdr;
+    }
+
+    CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
     // TBD
     return Mat();
 }

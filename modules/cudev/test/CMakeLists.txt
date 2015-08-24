@@ -45,4 +45,8 @@ if(OCV_DEPENDENCIES_FOUND)
   enable_testing()
   get_target_property(LOC ${the_target} LOCATION)
   add_test(${the_target} "${LOC}")
+
+  if(INSTALL_TESTS)
+    install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+  endif()
 endif()

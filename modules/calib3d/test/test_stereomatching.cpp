@@ -742,7 +742,7 @@ protected:
     {
         int ndisp;
         int winSize;
-        bool fullDP;
+        int mode;
     };
     vector<RunParams> caseRunParams;
 
@@ -757,7 +757,7 @@ protected:
             RunParams params;
             String ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
             String winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
-            String fullDP = fn[i+4]; params.fullDP = atoi(fullDP.c_str()) == 0 ? false : true;
+            String mode = fn[i+4]; params.mode = atoi(mode.c_str());
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );
@@ -773,8 +773,7 @@ protected:
         Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, params.ndisp, params.winSize,
                                                  10*params.winSize*params.winSize,
                                                  40*params.winSize*params.winSize,
-                                                 1, 63, 10, 100, 32, params.fullDP ?
-                                                 StereoSGBM::MODE_HH : StereoSGBM::MODE_SGBM );
+                                                 1, 63, 10, 100, 32, params.mode );
         sgbm->compute( leftImg, rightImg, leftDisp );
         CV_Assert( leftDisp.type() == CV_16SC1 );
         leftDisp/=16;

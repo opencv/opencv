@@ -313,7 +313,7 @@ public:
             CV_Error( CV_StsBadArg,
                      "The input samples must be 32f matrix with the number of columns = nallvars" );
 
-        if( samples.rows > 1 && _results.needed() )
+        if( (samples.rows > 1) && (! _results.needed()) )
             CV_Error( CV_StsNullPtr,
                      "When the number of input samples is >1, the output vector of results must be passed" );
 
