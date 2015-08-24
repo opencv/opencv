@@ -4257,7 +4257,45 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
             return reshape(_cn, _newsz[0]);
     }
 
-    CV_Error(CV_StsNotImplemented, "");
+    if (isContinuous())
+    {
+        CV_Assert(_cn >= 0 && _newndims > 0 && _newndims <= CV_MAX_DIM && _newsz);
+
+        if (_cn == 0)
+            _cn = this->channels();
+        else
+            CV_Assert(_cn <= CV_CN_MAX);
+
+        size_t total_elem1_ref = this->total() * this->channels();
+        size_t total_elem1 = _cn;
+
+        AutoBuffer<int, 4> newsz_buf( (size_t)_newndims );
+
+        for (int i = 0; i < _newndims; i++)
+        {
+            CV_Assert(_newsz[i] >= 0);
+
+            if (_newsz[i] > 0)
+                newsz_buf[i] = _newsz[i];
+            else if (i < dims)
+                newsz_buf[i] = this->size[i];
+            else
+                CV_Error(CV_StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
+
+            total_elem1 *= (size_t)newsz_buf[i];
+        }
+
+        if (total_elem1 != total_elem1_ref)
+            CV_Error(CV_StsUnmatchedSizes, "Requested and source matrices have different count of elements");
+
+        Mat hdr = *this;
+        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
+        setSize(hdr, _newndims, (int*)newsz_buf, NULL, true);
+
+        return hdr;
+    }
+
+    CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
     // TBD
     return Mat();
 }
