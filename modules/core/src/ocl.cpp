@@ -4572,16 +4572,13 @@ public:
                     else
                     {
                         // CL_MEM_USE_HOST_PTR (nothing is required) and OTHER cases
-                        if (u->flags & UMatData::USER_ALLOCATED)
-                        {
-                            cl_int retval = 0;
-                            void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                                (CL_MAP_READ | CL_MAP_WRITE),
-                                0, u->size, 0, 0, 0, &retval);
-                            CV_OclDbgAssert(retval == CL_SUCCESS);
-                            CV_OclDbgAssert(clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0) == CL_SUCCESS);
-                            CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
-                        }
+                        cl_int retval = 0;
+                        void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                        (CL_MAP_READ | CL_MAP_WRITE),
+                                                        0, u->size, 0, 0, 0, &retval);
+                        CV_OclDbgAssert(retval == CL_SUCCESS);
+                        CV_OclDbgAssert(clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0) == CL_SUCCESS);
+                        CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
                     }
                 }
                 u->markHostCopyObsolete(false);
