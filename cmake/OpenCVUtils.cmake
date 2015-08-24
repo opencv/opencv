@@ -565,20 +565,22 @@ function(ocv_install_target)
 
 #      message(STATUS "Process ${__target} dst=${__dst}...")
       if(DEFINED __dst)
-        if(CMAKE_VERSION VERSION_LESS 2.8.12)
+        # If CMake version is >=3.1.0 or <2.8.12.
+        if(NOT CMAKE_VERSION VERSION_LESS 3.1.0 OR CMAKE_VERSION VERSION_LESS 2.8.12)
           get_target_property(fname ${__target} LOCATION_DEBUG)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Debug)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug)
           endif()
 
           get_target_property(fname ${__target} LOCATION_RELEASE)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Release)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release)
           endif()
         else()
-          # CMake 2.8.12 brokes PDB support in STATIC libraries for MSVS
+          # CMake 2.8.12 broke PDB support for STATIC libraries from MSVS, fix was introduced in CMake 3.1.0.
+          message(WARNING "PDB's are not supported from this version of CMake, use CMake version later then 3.1.0 or before 2.8.12.")
         endif()
       endif()
     endif()
