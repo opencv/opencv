@@ -230,4 +230,23 @@
 #  endif
 #endif
 
+
+/****************************************************************************************\
+*                                    C++ Move semantics                                  *
+\****************************************************************************************/
+
+#ifndef CV_CXX_MOVE_SEMANTICS
+#  if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__) || defined(_MSC_VER) && _MSC_VER >= 1600
+#    define CV_CXX_MOVE_SEMANTICS 1
+#  elif defined(__clang)
+#    if __has_feature(cxx_rvalue_references)
+#      define CV_CXX_MOVE_SEMANTICS 1
+#    endif
+#  endif
+#else
+#  if CV_CXX_MOVE_SEMANTICS == 0
+#    undef CV_CXX_MOVE_SEMANTICS
+#  endif
+#endif
+
 #endif // __OPENCV_CORE_CVDEF_H__
