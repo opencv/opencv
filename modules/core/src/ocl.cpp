@@ -4683,8 +4683,6 @@ public:
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
-        // FIXIT Workaround for UMat synchronization issue
-        // if( u->refcount == 0 )
         {
             if( !u->copyOnMap() )
             {
@@ -4717,11 +4715,6 @@ public:
                     return;
                 }
 #endif
-                if (!u->hostCopyObsolete()) // FIXIT Workaround for UMat synchronization issue
-                {
-                    CV_Assert(u->data);
-                    return;
-                }
 
                 cl_int retval = 0;
                 u->data = (uchar*)clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
@@ -4768,10 +4761,6 @@ public:
 
         UMatDataAutoLock autolock(u);
 
-        // FIXIT Workaround for UMat synchronization issue
-        if(u->refcount > 0)
-            return;
-
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
         cl_int retval = 0;
         if( !u->copyOnMap() && u->deviceMemMapped() )
@@ -4797,7 +4786,8 @@ public:
                         u->allocatorFlags_ &= ~svm::OPENCL_SVM_BUFFER_MAP;
                     }
                 }
-                u->data = 0;
+                if (u->refcount == 0)
+                    u->data = 0;
                 u->markDeviceCopyObsolete(false);
                 u->markHostCopyObsolete(true);
                 return;
@@ -4810,7 +4800,9 @@ public:
                 // required for multithreaded applications (see stitching test)
                 CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
             }
-            u->data = 0;
+
+            if (u->refcount == 0)
+                u->data = 0;
         }
         else if( u->copyOnMap() && u->deviceCopyObsolete() )
         {

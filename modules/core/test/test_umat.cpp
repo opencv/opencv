@@ -1035,8 +1035,9 @@ TEST(UMat, map_unmap_counting)
     Mat m(Size(10, 10), CV_8UC1);
     UMat um = m.getUMat(ACCESS_RW);
     {
-        Mat d = um.getMat(ACCESS_RW);
-        d.release();
+        Mat d1 = um.getMat(ACCESS_RW);
+        //Mat d2 = um.getMat(ACCESS_RW);
+        d1.release();
     }
     void* h = NULL;
     EXPECT_NO_THROW(h = um.handle(ACCESS_RW));
