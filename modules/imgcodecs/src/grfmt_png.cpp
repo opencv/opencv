@@ -224,7 +224,7 @@ bool  PngDecoder::readHeader()
 
 bool  PngDecoder::readData( Mat& img )
 {
-    bool result = false;
+    volatile bool result = false;
     AutoBuffer<uchar*> _buffer(m_height);
     uchar** buffer = _buffer;
     int color = img.channels() > 1;
@@ -342,10 +342,10 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     png_structp png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
     png_infop info_ptr = 0;
-    FILE* f = 0;
+    FILE * volatile f = 0;
     int y, width = img.cols, height = img.rows;
     int depth = img.depth(), channels = img.channels();
-    bool result = false;
+    volatile bool result = false;
     AutoBuffer<uchar*> buffer;
 
     if( depth != CV_8U && depth != CV_16U )

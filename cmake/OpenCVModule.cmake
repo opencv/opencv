@@ -248,31 +248,40 @@ macro(ocv_glob_modules)
   foreach(__path ${ARGN})
     if("${__path}" STREQUAL "EXTRA")
       set(OPENCV_PROCESSING_EXTRA_MODULES 1)
-    endif()
-    get_filename_component(__path "${__path}" ABSOLUTE)
+    else()
+      get_filename_component(__path "${__path}" ABSOLUTE)
 
-    list(FIND __directories_observed "${__path}" __pathIdx)
-    if(__pathIdx GREATER -1)
-      message(FATAL_ERROR "The directory ${__path} is observed for OpenCV modules second time.")
-    endif()
-    list(APPEND __directories_observed "${__path}")
+      list(FIND __directories_observed "${__path}" __pathIdx)
+      if(__pathIdx GREATER -1)
+        message(FATAL_ERROR "The directory ${__path} is observed for OpenCV modules second time.")
+      endif()
+      list(APPEND __directories_observed "${__path}")
 
-    file(GLOB __ocvmodules RELATIVE "${__path}" "${__path}/*")
-    if(__ocvmodules)
-      list(SORT __ocvmodules)
-      foreach(mod ${__ocvmodules})
-        get_filename_component(__modpath "${__path}/${mod}" ABSOLUTE)
-        if(EXISTS "${__modpath}/CMakeLists.txt")
+      set(__count 0)
+      file(GLOB __ocvmodules RELATIVE "${__path}" "${__path}/*")
+      if(__ocvmodules)
+        list(SORT __ocvmodules)
+        foreach(mod ${__ocvmodules})
+          get_filename_component(__modpath "${__path}/${mod}" ABSOLUTE)
+          if(EXISTS "${__modpath}/CMakeLists.txt")
 
-          list(FIND __directories_observed "${__modpath}" __pathIdx)
-          if(__pathIdx GREATER -1)
-            message(FATAL_ERROR "The module from ${__modpath} is already loaded.")
+            list(FIND __directories_observed "${__modpath}" __pathIdx)
+            if(__pathIdx GREATER -1)
+              message(FATAL_ERROR "The module from ${__modpath} is already loaded.")
+            endif()
+            list(APPEND __directories_observed "${__modpath}")
+
+            add_subdirectory("${__modpath}" "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
+
+            if (DEFINED OPENCV_MODULE_opencv_${mod}_LOCATION)
+              math(EXPR __count "${__count} + 1")
+            endif()
           endif()
-          list(APPEND __directories_observed "${__modpath}")
-
-          add_subdirectory("${__modpath}" "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
-        endif()
-      endforeach()
+        endforeach()
+      endif()
+      if (OPENCV_PROCESSING_EXTRA_MODULES AND ${__count} LESS 1)
+        message(SEND_ERROR "No extra modules found in folder: ${__path}\nPlease provide path to 'opencv_contrib/modules' folder.")
+      endif()
     endif()
   endforeach()
   ocv_clear_vars(__ocvmodules __directories_observed __path __modpath __pathIdx)
@@ -769,7 +778,10 @@ macro(_ocv_create_module)
   set_target_properties(${the_module} PROPERTIES
     OUTPUT_NAME "${the_module}${OPENCV_DLLVERSION}"
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    COMPILE_PDB_NAME "${the_module}${OPENCV_DLLVERSION}"
+    COMPILE_PDB_NAME_DEBUG "${the_module}${OPENCV_DLLVERSION}${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
+    COMPILE_PDB_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR lib

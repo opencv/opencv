@@ -242,8 +242,12 @@ bool  JpegDecoder::readHeader()
         {
             jpeg_read_header( &state->cinfo, TRUE );
 
-            m_width = state->cinfo.image_width;
-            m_height = state->cinfo.image_height;
+            state->cinfo.scale_num=1;
+            state->cinfo.scale_denom = m_scale_denom;
+            m_scale_denom=1; // trick! to know which decoder used scale_denom see imread_
+            jpeg_calc_output_dimensions(&state->cinfo);
+            m_width = state->cinfo.output_width;
+            m_height = state->cinfo.output_height;
             m_type = state->cinfo.num_components > 1 ? CV_8UC3 : CV_8UC1;
             result = true;
         }
@@ -391,7 +395,7 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
 
 bool  JpegDecoder::readData( Mat& img )
 {
-    bool result = false;
+    volatile bool result = false;
     int step = (int)img.step;
     bool color = img.channels() > 1;
 
@@ -553,7 +557,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         fileWrapper() : f(0) {}
         ~fileWrapper() { if(f) fclose(f); }
     };
-    bool result = false;
+    volatile bool result = false;
     fileWrapper fw;
     int width = img.cols, height = img.rows;
 

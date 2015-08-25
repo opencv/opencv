@@ -790,7 +790,7 @@ public:
     Returns vector of covariation matrices. Number of matrices is the number of gaussian mixtures,
     each matrix is a square floating-point matrix NxN, where N is the space dimensionality.
      */
-    virtual void getCovs(std::vector<Mat>& covs) const = 0;
+    CV_WRAP virtual void getCovs(CV_OUT std::vector<Mat>& covs) const = 0;
 
     /** @brief Returns a likelihood logarithm value and an index of the most probable mixture component
     for the given sample.
@@ -804,7 +804,7 @@ public:
     the sample. First element is an index of the most probable mixture component for the given
     sample.
      */
-    CV_WRAP CV_WRAP virtual Vec2d predict2(InputArray sample, OutputArray probs) const = 0;
+    CV_WRAP virtual Vec2d predict2(InputArray sample, OutputArray probs) const = 0;
 
     /** @brief Estimate the Gaussian mixture parameters from a samples set.
 

@@ -77,7 +77,6 @@ class KNearest(StatModel):
         self.model = cv2.ml.KNearest_create()
 
     def train(self, samples, responses):
-        self.model = cv2.ml.KNearest_create()
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
@@ -93,7 +92,6 @@ class SVM(StatModel):
         self.model.setType(cv2.ml.SVM_C_SVC)
 
     def train(self, samples, responses):
-        self.model = cv2.ml.SVM_create()
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):

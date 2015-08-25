@@ -221,6 +221,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     UMat hdr;
     if(!data)
         return hdr;
+    accessFlags |= ACCESS_RW;
     UMatData* temp_u = u;
     if(!temp_u)
     {
@@ -228,9 +229,21 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         if(!a)
             a = a0;
         temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
-        temp_u->refcount = 1;
     }
-    UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags); // TODO result is not checked
+    bool allocated = false;
+    try
+    {
+        allocated = UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags);
+    }
+    catch (const cv::Exception& e)
+    {
+        fprintf(stderr, "Exception: %s\n", e.what());
+    }
+    if (!allocated)
+    {
+        allocated = getStdAllocator()->allocate(temp_u, accessFlags, usageFlags);
+        CV_Assert(allocated);
+    }
     hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);
     finalizeHdr(hdr);
@@ -269,8 +282,11 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
     if( total() > 0 )
     {
         MatAllocator *a = allocator, *a0 = getStdAllocator();
-        if(!a)
+        if (!a)
+        {
             a = a0;
+            a0 = Mat::getStdAllocator();
+        }
         try
         {
             u = a->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
@@ -574,17 +590,56 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
             return reshape(_cn, _newsz[0]);
     }
 
-    CV_Error(CV_StsNotImplemented, "");
+    if (isContinuous())
+    {
+        CV_Assert(_cn >= 0 && _newndims > 0 && _newndims <= CV_MAX_DIM && _newsz);
+
+        if (_cn == 0)
+            _cn = this->channels();
+        else
+            CV_Assert(_cn <= CV_CN_MAX);
+
+        size_t total_elem1_ref = this->total() * this->channels();
+        size_t total_elem1 = _cn;
+
+        AutoBuffer<int, 4> newsz_buf( (size_t)_newndims );
+
+        for (int i = 0; i < _newndims; i++)
+        {
+            CV_Assert(_newsz[i] >= 0);
+
+            if (_newsz[i] > 0)
+                newsz_buf[i] = _newsz[i];
+            else if (i < dims)
+                newsz_buf[i] = this->size[i];
+            else
+                CV_Error(CV_StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
+
+            total_elem1 *= (size_t)newsz_buf[i];
+        }
+
+        if (total_elem1 != total_elem1_ref)
+            CV_Error(CV_StsUnmatchedSizes, "Requested and source matrices have different count of elements");
+
+        UMat hdr = *this;
+        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
+        setSize(hdr, _newndims, (int*)newsz_buf, NULL, true);
+
+        return hdr;
+    }
+
+    CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
     // TBD
     return UMat();
 }
-
 
 Mat UMat::getMat(int accessFlags) const
 {
     if(!u)
         return Mat();
-    u->currAllocator->map(u, accessFlags | ACCESS_READ); // TODO Support ACCESS_WRITE without unnecessary data transfers
+    // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
+    accessFlags |= ACCESS_RW;
+    u->currAllocator->map(u, accessFlags);
     CV_Assert(u->data != 0);
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
     hdr.flags = flags;
@@ -604,7 +659,7 @@ void* UMat::handle(int accessFlags) const
     // check flags: if CPU copy is newer, copy it back to GPU.
     if( u->deviceCopyObsolete() )
     {
-        CV_Assert(u->refcount == 0);
+        CV_Assert(u->refcount == 0 || u->origdata);
         u->currAllocator->unmap(u);
     }
 
@@ -742,11 +797,11 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
 
         char cvt[2][40];
         ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
-                      format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s",
+                      format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s%s",
                              ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),
                              ocl::convertTypeStr(sdepth, wdepth, 1, cvt[0]),
                              ocl::convertTypeStr(wdepth, ddepth, 1, cvt[1]),
-                             doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", noScale ? " -D NO_SCALE" : ""));
         if (!k.empty())
         {
             UMat src = *this;
@@ -757,7 +812,9 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
             ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
                     dstarg = ocl::KernelArg::WriteOnly(dst, cn);
 
-            if (wdepth == CV_32F)
+            if (noScale)
+                k.args(srcarg, dstarg, rowsPerWI);
+            else if (wdepth == CV_32F)
                 k.args(srcarg, dstarg, alphaf, betaf, rowsPerWI);
             else
                 k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
