@@ -1,0 +1,77 @@
+name: "test_reshape_splice_split"
+input: "input"
+
+layer{
+    type: "Split"
+    name: "dummy_split"
+    bottom: "input"
+    top: "dummy_split_0"
+    top: "dummy_split_1"
+}
+layer{
+    type: "Slice"
+    name: "dummy_slice_0"
+    bottom: "dummy_split_0"
+    slice_param{
+        slice_point: 1
+        slice_point: 2
+    }
+    top: "dummy_slice_0_0"
+    top: "dummy_slice_0_1"
+    top: "dummy_slice_0_2"
+}
+layer{
+    type: "Slice"
+    name: "dummy_slice_1"
+    bottom: "dummy_split_1"
+    slice_param{
+        slice_point: 1
+        slice_point: 2
+    }
+    top: "dummy_slice_1_0"
+    top: "dummy_slice_1_1"
+    top: "dummy_slice_1_2"
+}
+layer{
+    type: "Sigmoid"
+    name: "alter_sliced_split"
+    bottom: "dummy_slice_1_2"
+    top: "dummy_slice_1_2"
+}
+layer{
+    type: "Concat"
+    name: "dummy_concat"
+    bottom: "dummy_slice_0_0"
+    bottom: "dummy_slice_1_1"
+    bottom: "dummy_slice_0_2"
+    top: "dummy_concat"
+}
+layer{
+    type: "Reshape"
+    name: "dummy_reshape"
+    bottom: "dummy_concat"
+    reshape_param{
+        shape{
+            dim: 0
+            dim: 1
+            dim: 1
+            dim: -1
+            dim: 1
+        }
+        axis: 1
+        num_axes: 1
+    }
+    top: "dummy_reshape"
+}
+layer{
+    type: "Flatten"
+    name: "dummy_reshape_undo"
+    bottom: "dummy_reshape"
+    top: "dummy_reshape_undo"
+}
+layer{
+    type: "Split"
+    name: "output"
+    bottom: "dummy_reshape_undo"
+    top: "output"
+}

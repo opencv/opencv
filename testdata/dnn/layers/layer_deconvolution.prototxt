@@ -1,0 +1,39 @@
+name: "test_Convolution"
+input: "input"
+
+input_dim: 2
+input_dim: 12
+input_dim: 36
+input_dim: 37
+
+layer {
+  type: "Deconvolution"
+
+  convolution_param
+  {
+  	group: 3
+    num_output: 12
+
+  	pad_h: 0
+  	pad_w: 1
+  	kernel_h: 4
+  	kernel_w: 5
+  	stride_h: 2
+  	stride_w: 3
+
+    weight_filler{
+      type: 'uniform'
+      min: -1
+      max: 1
+    }
+    bias_filler {
+      type: 'uniform'
+      min: -1
+      max: 1
+    }
+  }
+
+  name: "output"
+  bottom: "input"
+  top: "output"
+}
