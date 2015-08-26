@@ -4571,7 +4571,6 @@ public:
                     }
                     else
                     {
-                        // CL_MEM_USE_HOST_PTR (nothing is required) and OTHER cases
                         cl_int retval = 0;
                         void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
                                                         (CL_MAP_READ | CL_MAP_WRITE),
