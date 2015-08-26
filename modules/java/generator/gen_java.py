@@ -924,6 +924,10 @@ class FuncInfo(GeneralInfo):
     def __repr__(self):
         return Template("FUNC <$ctype $namespace.$classpath.$name $args>").substitute(**self.__dict__)
 
+    def __lt__(self, other):
+        return self.__repr__() < other.__repr__()
+
+
 class JavaWrapperGenerator(object):
     def __init__(self):
         self.clear()
