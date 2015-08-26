@@ -120,8 +120,10 @@ set(STD_OPENCV_DEV libopencv-dev)
 
 foreach(module calib3d contrib core features2d flann gpu highgui imgproc legacy
                ml objdetect ocl photo stitching superres ts video videostab)
-  list(APPEND STD_OPENCV_LIBS "libopencv-${module}2.4")
-  list(APPEND STD_OPENCV_DEV "libopencv-${module}-dev")
+  if(HAVE_opencv_${module})
+    list(APPEND STD_OPENCV_LIBS "libopencv-${module}2.4")
+    list(APPEND STD_OPENCV_DEV "libopencv-${module}-dev")
+  endif()
 endforeach()
 
 string(REPLACE ";" ", " CPACK_COMPONENT_LIBS_CONFLICTS "${STD_OPENCV_LIBS}")
