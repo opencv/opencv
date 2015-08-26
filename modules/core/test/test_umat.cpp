@@ -1036,7 +1036,7 @@ TEST(UMat, map_unmap_counting)
     UMat um = m.getUMat(ACCESS_RW);
     {
         Mat d1 = um.getMat(ACCESS_RW);
-        //Mat d2 = um.getMat(ACCESS_RW);
+        Mat d2 = um.getMat(ACCESS_RW);
         d1.release();
     }
     void* h = NULL;
