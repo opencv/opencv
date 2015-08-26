@@ -140,7 +140,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\..\vs2015\WS\10.0\x86\modules\winrt\opencv_winrt.vcxproj">
       <Project>{0ca85b79-912a-4d30-ad07-36450b47feba}</Project>
-      <Name>opencvRT</Name>
+      <Name>opencv_winrt</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
