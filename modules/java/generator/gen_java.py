@@ -13,8 +13,6 @@ else:
 class_ignore_list = (
     #core
     "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
-    #videoio
-    "VideoWriter",
 )
 
 const_ignore_list = (
@@ -186,6 +184,7 @@ type_dict = {
     "env"     : { "j_type" : "", "jn_type" : "", "jni_type" : "JNIEnv*"},
     "cls"     : { "j_type" : "", "jn_type" : "", "jni_type" : "jclass"},
     "bool"    : { "j_type" : "boolean", "jn_type" : "boolean", "jni_type" : "jboolean", "suffix" : "Z" },
+    "char"    : { "j_type" : "char", "jn_type" : "char", "jni_type" : "jchar", "suffix" : "C" },
     "int"     : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
     "long"    : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
     "float"   : { "j_type" : "float", "jn_type" : "float", "jni_type" : "jfloat", "suffix" : "F" },
