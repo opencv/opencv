@@ -26,6 +26,8 @@
     <AppContainerApplication>true</AppContainerApplication>
     <ApplicationType>Windows store</ApplicationType>
     <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -97,7 +99,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>opencv_core300d.lib;opencv_imgproc300d.lib;opencv_videoio300d.lib;WindowsPhoneCore.lib;RuntimeObject.lib;PhoneAppModelHost.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\..\..\vs2015\WS\10.0\x86\lib\Debug\;$(WindowsSdkDir)Extension SDKs\Windows Mobile\10.0.0.1\Lib\um\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\..\..\vs2015\WS\10.0\x86\lib\Debug\;$(WindowsSdkDir)Extension SDKs\Windows Mobile\10.0.10240.0\Lib\um\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

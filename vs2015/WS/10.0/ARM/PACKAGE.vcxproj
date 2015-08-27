@@ -1,3 +1,4 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="14.0">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM">
@@ -19,6 +20,7 @@
     <Keyword>Win32Proj</Keyword>
     <Platform>ARM</Platform>
     <ProjectName>PACKAGE</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
@@ -40,11 +42,11 @@
     <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-    <PropertyGroup>
-      <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-      <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-      <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    </PropertyGroup>
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <Midl>
       <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -99,11 +101,13 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CustomBuild Include="CMakeFiles\50882c82837ed5471a9261ce14330545\PACKAGE_force.rule">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'"> </Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+      </Message>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/CMakeFiles/50882c82837ed5471a9261ce14330545/PACKAGE_force.rule;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\CMakeFiles\PACKAGE_force</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|ARM'"> </Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+      </Message>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/CMakeFiles/50882c82837ed5471a9261ce14330545/PACKAGE_force.rule;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\CMakeFiles\PACKAGE_force</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</LinkObjects>
