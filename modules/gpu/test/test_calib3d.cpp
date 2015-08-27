@@ -114,7 +114,9 @@ GPU_TEST_P(StereoBeliefPropagation, Regression)
     cv::Mat h_disp(disp);
     h_disp.convertTo(h_disp, disp_gold.depth());
 
-    EXPECT_MAT_NEAR(disp_gold, h_disp, 0.0);
+    cv::Rect roi(0, 0, disp_gold.cols - 20, disp_gold.rows - 20);
+
+    EXPECT_MAT_NEAR(disp_gold(roi), h_disp(roi), 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Calib3D, StereoBeliefPropagation, ALL_DEVICES);
