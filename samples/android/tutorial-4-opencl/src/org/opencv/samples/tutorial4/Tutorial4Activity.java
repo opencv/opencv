@@ -34,11 +34,11 @@ public class Tutorial4Activity extends Activity {
         mProcMode = (TextView)findViewById(R.id.proc_mode_text_view);
         runOnUiThread(new Runnable() {
             public void run() {
-                mProcMode.setText("Processing mode: CPU");
+                mProcMode.setText("Processing mode: No processing");
             }
         });
 
-        NativeGLRenderer.setProcessingMode(NativeGLRenderer.PROCESSING_MODE_CPU);    }
+        NativeGLRenderer.setProcessingMode(NativeGLRenderer.PROCESSING_MODE_NO_PROCESSING);    }
 
     @Override
     protected void onPause() {
@@ -62,6 +62,14 @@ public class Tutorial4Activity extends Activity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+        case R.id.no_proc:
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    mProcMode.setText("Processing mode: No Processing");
+                }
+            });
+            NativeGLRenderer.setProcessingMode(NativeGLRenderer.PROCESSING_MODE_NO_PROCESSING);
+            return true;
         case R.id.cpu:
             runOnUiThread(new Runnable() {
                 public void run() {

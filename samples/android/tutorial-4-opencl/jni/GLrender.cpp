@@ -63,9 +63,9 @@ GLuint FBO = 0;
 GLuint texOES = 0;
 int texWidth = 0, texHeight = 0;
 
-enum ProcMode {PROC_MODE_CPU=1, PROC_MODE_OCL_DIRECT=2, PROC_MODE_OCL_OCV=3};
+enum ProcMode {PROC_MODE_NO_PROC=0, PROC_MODE_CPU=1, PROC_MODE_OCL_DIRECT=2, PROC_MODE_OCL_OCV=3};
 
-ProcMode procMode = PROC_MODE_CPU;
+ProcMode procMode = PROC_MODE_NO_PROC;
 
 static inline void deleteTex(GLuint* tex)
 {
@@ -298,6 +298,7 @@ extern "C" void drawFrame()
 
     switch(procMode)
     {
+    case PROC_MODE_NO_PROC:    drawFrameOrig();       break;
     case PROC_MODE_CPU:        drawFrameProcCPU();    break;
     case PROC_MODE_OCL_DIRECT: drawFrameProcOCL();    break;
     case PROC_MODE_OCL_OCV:    drawFrameProcOCLOCV(); break;
@@ -366,6 +367,7 @@ extern "C" void setProcessingMode(int mode)
 {
     switch(mode)
     {
+    case PROC_MODE_NO_PROC:    procMode = PROC_MODE_NO_PROC;    break;
     case PROC_MODE_CPU:        procMode = PROC_MODE_CPU;        break;
     case PROC_MODE_OCL_DIRECT: procMode = PROC_MODE_OCL_DIRECT; break;
     case PROC_MODE_OCL_OCV:    procMode = PROC_MODE_OCL_OCV;    break;

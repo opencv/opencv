@@ -7,6 +7,7 @@ public class NativeGLRenderer {
         System.loadLibrary("JNIrender");
     }
 
+    public static final int PROCESSING_MODE_NO_PROCESSING = 0;
     public static final int PROCESSING_MODE_CPU = 1;
     public static final int PROCESSING_MODE_OCL_DIRECT = 2;
     public static final int PROCESSING_MODE_OCL_OCV = 3;
