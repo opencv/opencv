@@ -79,6 +79,7 @@ void dumpCLinfo()
 cl::Context theContext;
 cl::CommandQueue theQueue;
 cl::Program theProgB2B, theProgI2B, theProgI2I;
+bool haveOpenCL = false;
 
 void initCL()
 {
@@ -100,6 +101,7 @@ void initCL()
 
     try
     {
+        haveOpenCL = false;
         cl::Platform p = cl::Platform::getDefault();
         std::string ext = p.getInfo<CL_PLATFORM_EXTENSIONS>();
         if(ext.find("cl_khr_gl_sharing") == std::string::npos)
@@ -124,6 +126,7 @@ void initCL()
             LOGD("OpenCV+OpenCL works OK!");
         else
             LOGE("Can't init OpenCV with OpenCL TAPI");
+        haveOpenCL = true;
     }
     catch(cl::Error& e)
     {
@@ -147,6 +150,8 @@ void closeCL()
 #define GL_TEXTURE_2D 0x0DE1
 void procOCL_I2I(int texIn, int texOut, int w, int h)
 {
+    if(!haveOpenCL) return;
+
     LOGD("procOCL_I2I(%d, %d, %d, %d)", texIn, texOut, w, h);
     cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, texIn);
     cl::ImageGL imgOut(theContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texOut);
@@ -179,6 +184,8 @@ void procOCL_I2I(int texIn, int texOut, int w, int h)
 
 void procOCL_OCV(int tex, int w, int h)
 {
+    if(!haveOpenCL) return;
+
     int64_t t = getTimeMs();
     cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, tex);
     std::vector < cl::Memory > images(1, imgIn);
