@@ -31,7 +31,7 @@ const char vss[] = \
             "varying vec2 texCoord;\n" \
             "void main() {\n" \
             "  texCoord = vTexCoord;\n" \
-            "  gl_Position = vec4 ( vPosition, 0.0f, 1.0f );\n" \
+            "  gl_Position = vec4 ( vPosition, 0.0, 1.0 );\n" \
             "}";
 
 const char fssOES[] = \
@@ -268,7 +268,7 @@ void drawFrameProcCPU()
 }
 
 void procOCL_I2I(int texIn, int texOut, int w, int h);
-void procOCL_OCV(int tex, int w, int h);
+void procOCL_OCV(int texIn, int texOut, int w, int h);
 void drawFrameProcOCL()
 {
     drawTex(texOES, GL_TEXTURE_EXTERNAL_OES, FBO);
@@ -285,10 +285,10 @@ void drawFrameProcOCLOCV()
     drawTex(texOES, GL_TEXTURE_EXTERNAL_OES, FBO);
 
     // modify pixels in FBO texture using OpenCL and CL-GL interop
-    procOCL_OCV(FBOtex, texWidth, texHeight);
+    procOCL_OCV(FBOtex, FBOtex2, texWidth, texHeight);
 
     // render to screen
-    drawTex(FBOtex, GL_TEXTURE_2D, 0);
+    drawTex(FBOtex2, GL_TEXTURE_2D, 0);
 }
 
 extern "C" void drawFrame()
