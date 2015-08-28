@@ -378,13 +378,12 @@ endfunction()
 function(__ocv_list_merge_debug_optimized_tokens lst)
   if(${lst})
     set(__lst "${${lst}}")
-    # replace at begining 
+    # replace at begining
     string(REGEX REPLACE "^debug;" "debug@@" __lst "${__lst}")
     string(REGEX REPLACE "^optimized;" "optimized@@" __lst "${__lst}")
     # replace elsewhere
-    string(REGEX REPLACE ";debug;" ";debug@@" __lst "${__lst}")   
-    string(REGEX REPLACE ";optimized;" ";optimized@@" __lst "${__lst}")
-    
+    string(REGEX REPLACE ";debug;" ";debug@@" __lst "${__lst}")
+    string(REGEX REPLACE ";optimized;" ";optimized@@" __lst "${__lst}")    
     set(${lst} ${__lst} PARENT_SCOPE)
   endif()
 endfunction()
@@ -392,10 +391,9 @@ endfunction()
 function(__ocv_list_split_debug_optimized_tokens lst)
   if(${lst})
     set(__lst "${${lst}}")
-    string(REGEX REPLACE "debug@@" "debug;" __lst "${__lst}")                    
+    string(REGEX REPLACE "debug@@" "debug;" __lst "${__lst}")
     # replace in the middle of the string
     string(REGEX REPLACE "optimized@@" "optimized;" __lst "${__lst}")
-    
     set(${lst} ${__lst} PARENT_SCOPE)
   endif()
 endfunction()
@@ -500,8 +498,7 @@ function(__ocv_resolve_dependencies)
     # next to their library before sorting
     __ocv_list_merge_debug_optimized_tokens(OPENCV_MODULE_${m}_DEPS_EXT)
     ocv_list_sort(OPENCV_MODULE_${m}_DEPS_EXT)
-    __ocv_list_split_debug_optimized_tokens(OPENCV_MODULE_${m}_DEPS_EXT)    
-  
+    __ocv_list_split_debug_optimized_tokens(OPENCV_MODULE_${m}_DEPS_EXT)
     set(LINK_DEPS ${OPENCV_MODULE_${m}_DEPS})
 
     # process world
