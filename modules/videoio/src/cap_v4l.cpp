@@ -303,6 +303,7 @@ typedef struct CvCaptureCAM_V4L
     int deviceHandle;
     int bufferIndex;
     int FirstCapture;
+    int returnFrame;
 #ifdef HAVE_CAMV4L
     struct video_capability capability;
     struct video_window     captureWindow;
@@ -1167,6 +1168,8 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
    }
 #endif  /* HAVE_CAMV4L2 */
 
+   capture->returnFrame = 1;
+
    return capture;
 }; /* End icvOpenCAM_V4L */
 
@@ -1197,6 +1200,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
 
         default:
             /* display the error and stop processing */
+            capture->returnFrame = 0;
             perror ("VIDIOC_DQBUF");
             return 1;
         }
@@ -2287,7 +2291,10 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
   }
 #endif /* HAVE_CAMV4L */
 
-   return(&capture->frame);
+  if (capture->returnFrame == 1)
+    return(&capture->frame);
+  else
+    return 0;
 }
 
 static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
