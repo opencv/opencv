@@ -1926,6 +1926,9 @@ protected:
 bool CvCaptureCAM_V4L_CPP::open( int index )
 {
     close();
+    // Force a refresh of the indexList
+    numCameras = 0;
+    indexList = 0;
     captureV4L = icvCaptureFromCAM_V4L(index);
     return captureV4L != 0;
 }
