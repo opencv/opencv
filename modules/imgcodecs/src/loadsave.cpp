@@ -238,7 +238,7 @@ enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
  *
 */
 static void*
-imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_denom=1 )
+imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, ImreadCallback onLoad=0 )
 {
     IplImage* image = 0;
     CvMat *matrix = 0;
@@ -262,8 +262,8 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
         return 0;
     }
 
-    /// set the scale_denom in the driver
-    decoder->setScale( scale_denom );
+    /// set callback function in the driver
+    decoder->setCallback( onLoad );
 
     /// set the filename in the driver
     decoder->setSource(filename);
@@ -320,10 +320,9 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
         return 0;
     }
 
-    int testdecoder = decoder->setScale( scale_denom ); // if decoder is JpegDecoder then testdecoder will be 1
-    if( (scale_denom > 1 ) & ( testdecoder > 1 ) )
+    if( onLoad ) //if callback function specified call it.
     {
-        resize(*mat,*mat,Size(size.width/scale_denom,size.height/scale_denom));
+        onLoad( size.width, size.height, mat );
     }
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
@@ -430,13 +429,13 @@ Mat imread( const String& filename, int flags )
  * @param[in] flags Flags you wish to set.
  * @param[in] scale_denom Scale value
 */
-Mat imread_reduced( const String& filename, int flags, int scale_denom )
+Mat imread_reduced( const String& filename, int flags, ImreadCallback onLoad )
 {
     /// create the basic container
     Mat img;
 
     /// load the data
-    imread_( filename, flags, LOAD_MAT, &img, scale_denom );
+    imread_( filename, flags, LOAD_MAT, &img, onLoad );
 
     /// return a reference to the data
     return img;

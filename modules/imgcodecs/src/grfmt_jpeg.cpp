@@ -243,8 +243,12 @@ bool  JpegDecoder::readHeader()
             jpeg_read_header( &state->cinfo, TRUE );
 
             state->cinfo.scale_num=1;
-            state->cinfo.scale_denom = m_scale_denom;
-            m_scale_denom=1; // trick! to know which decoder used scale_denom see imread_
+            if(m_callback)
+            {
+                state->cinfo.scale_denom = m_callback( state->cinfo.image_width, state->cinfo.image_height, NULL );
+            }
+            else state->cinfo.scale_denom = 1;
+
             jpeg_calc_output_dimensions(&state->cinfo);
             m_width = state->cinfo.output_width;
             m_height = state->cinfo.output_height;
