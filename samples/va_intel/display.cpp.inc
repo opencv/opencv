@@ -10,9 +10,9 @@
 #include <va/va.h>
 #include <va/va_drm.h>
 
-#define VAAPI_PCI_DIR "/sys/bus/pci/devices"
-#define VAAPI_DRI_DIR "/dev/dri/"
-#define VAAPI_PCI_DISPLAY_CONTROLLER_CLASS 0x03
+#define VA_INTEL_PCI_DIR "/sys/bus/pci/devices"
+#define VA_INTEL_DRI_DIR "/dev/dri/"
+#define VA_INTEL_PCI_DISPLAY_CONTROLLER_CLASS 0x03
 
 namespace va {
 
@@ -70,7 +70,7 @@ static unsigned readId(const char* devName, const char* idName)
     long int id = 0;
 
     char fileName[256];
-    snprintf(fileName, sizeof(fileName), "%s/%s/%s", VAAPI_PCI_DIR, devName, idName);
+    snprintf(fileName, sizeof(fileName), "%s/%s/%s", VA_INTEL_PCI_DIR, devName, idName);
 
     FILE* file = fopen(fileName, "r");
     if (file)
@@ -88,14 +88,14 @@ static int findAdapter(unsigned desiredVendorId)
     int adapterIndex = -1;
     int numAdapters = 0;
 
-    Directory dir(VAAPI_PCI_DIR);
+    Directory dir(VA_INTEL_PCI_DIR);
 
     for (int i = 0;  i < dir.count();  ++i)
     {
         const char* name = dir[i]->d_name;
 
         unsigned classId = readId(name, "class");
-        if ((classId >> 16) == VAAPI_PCI_DISPLAY_CONTROLLER_CLASS)
+        if ((classId >> 16) == VA_INTEL_PCI_DISPLAY_CONTROLLER_CLASS)
         {
             unsigned vendorId = readId(name, "vendor");
             if (vendorId == desiredVendorId)
@@ -122,9 +122,9 @@ public:
             numbers[1] = adapterIndex;
             for (int i = 0;  i < NUM_NODES;  ++i)
             {
-                int sz = sizeof(VAAPI_DRI_DIR) + strlen(names[i]) + 3;
+                int sz = sizeof(VA_INTEL_DRI_DIR) + strlen(names[i]) + 3;
                 paths[i] = new char [sz];
-                snprintf(paths[i], sz, "%s%s%d", VAAPI_DRI_DIR, names[i], numbers[i]);
+                snprintf(paths[i], sz, "%s%s%d", VA_INTEL_DRI_DIR, names[i], numbers[i]);
             }
         }
     ~NodeInfo()

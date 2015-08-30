@@ -24,6 +24,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <string>
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -39,7 +41,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/core/vaapi.hpp"
+#include "opencv2/core/va_intel.hpp"
 
 #define CHECK_VASTATUS(va_status,func)                                  \
 if (va_status != VA_STATUS_SUCCESS) {                                   \
@@ -129,7 +131,55 @@ static VASliceParameterBufferMPEG2 slice_param={
 #define CLIP_WIDTH  16
 #define CLIP_HEIGHT 16
 
-static void dumpSurface(VADisplay display, VASurfaceID surface_id, const char* fileName)
+class Timer
+{
+public:
+    enum UNITS
+    {
+        USEC = 0,
+        MSEC,
+        SEC
+    };
+
+    Timer() : m_t0(0), m_diff(0)
+    {
+        m_tick_frequency = (float)cv::getTickFrequency();
+
+        m_unit_mul[USEC] = 1000000;
+        m_unit_mul[MSEC] = 1000;
+        m_unit_mul[SEC]  = 1;
+    }
+
+    void clear()
+    {
+        m_t0 = m_diff = 0;
+    }
+
+    void start()
+    {
+        m_t0 = cv::getTickCount();
+    }
+
+    void stop()
+    {
+        m_diff = cv::getTickCount() - m_t0;
+    }
+
+    float time(UNITS u = MSEC)
+    {
+        float sec = m_diff / m_tick_frequency;
+
+        return sec * m_unit_mul[u];
+    }
+
+public:
+    float m_tick_frequency;
+    int64 m_t0;
+    int64 m_diff;
+    int   m_unit_mul[3];
+};
+
+static void dumpSurface(VADisplay display, VASurfaceID surface_id, const char* fileName, bool doInterop)
 {
     VAStatus va_status;
 
@@ -153,7 +203,8 @@ static void dumpSurface(VADisplay display, VASurfaceID surface_id, const char* f
     printf("image.pitches[0..2] = 0x%08x 0x%08x 0x%08x\n", image.pitches[0], image.pitches[1], image.pitches[2]);
     printf("image.offsets[0..2] = 0x%08x 0x%08x 0x%08x\n", image.offsets[0], image.offsets[1], image.offsets[2]);
 */
-    FILE* out = fopen(fileName, "wb");
+    std::string fn = std::string(fileName) + std::string(doInterop ? ".gpu" : ".cpu");
+    FILE* out = fopen(fn.c_str(), "wb");
     if (!out)
     {
         perror(fileName);
@@ -169,10 +220,8 @@ static void dumpSurface(VADisplay display, VASurfaceID surface_id, const char* f
     CHECK_VASTATUS(va_status, "vaDestroyImage");
 }
 
-int main(int argc,char **argv)
+static float run(const char* fn1, const char* fn2, bool doInterop)
 {
-    (void)argc; (void)argv;
-
     VAEntrypoint entrypoints[5];
     int num_entrypoints,vld_entrypoint;
     VAConfigAttrib attrib;
@@ -181,24 +230,10 @@ int main(int argc,char **argv)
     VAContextID context_id;
     VABufferID pic_param_buf,iqmatrix_buf,slice_param_buf,slice_data_buf;
     VAStatus va_status;
+    Timer t;
 
-    if (argc < 3)
-    {
-        fprintf(stderr,
-                "Usage: vaapi_interop file1 file2\n\n"
-                "where:  file1 is to be created, contains original surface data (NV12)\n"
-                "        file2 is to be created, contains processed surface data (NV12)\n");
-        exit(0);
-    }
-
-    if (!va::openDisplay())
-    {
-        fprintf(stderr, "Failed to open VA display for CL-VA interoperability\n");
-        exit(1);
-    }
-    fprintf(stderr, "VA display opened successfully\n");
-
-    cv::vaapi::ocl::initializeContextFromVA(va::display);
+    fprintf(stderr, "Run on %s\n", doInterop ? "GPU" : "CPU");
+    cv::va_intel::ocl::initializeContextFromVA(va::display, doInterop);
 
     va_status = vaQueryConfigEntrypoints(va::display, VAProfileMPEG2Main, entrypoints,
                                          &num_entrypoints);
@@ -294,22 +329,50 @@ int main(int argc,char **argv)
     va_status = vaSyncSurface(va::display, surface_id);
     CHECK_VASTATUS(va_status, "vaSyncSurface");
 
-    dumpSurface(va::display, surface_id, argv[1]);
+    dumpSurface(va::display, surface_id, fn1, doInterop);
 
     cv::Size size(CLIP_WIDTH,CLIP_HEIGHT);
     cv::UMat u;
 
-    cv::vaapi::convertFromVASurface(surface_id, size, u);
+    t.start();
+    cv::va_intel::convertFromVASurface(va::display, surface_id, size, u);
     cv::blur(u, u, cv::Size(7, 7), cv::Point(-3, -3));
-    cv::vaapi::convertToVASurface(u, surface_id, size);
+    cv::va_intel::convertToVASurface(va::display, u, surface_id, size);
+    t.stop();
 
-    dumpSurface(va::display, surface_id, argv[2]);
+    dumpSurface(va::display, surface_id, fn2, doInterop);
 
     vaDestroySurfaces(va::display,&surface_id,1);
     vaDestroyConfig(va::display,config_id);
     vaDestroyContext(va::display,context_id);
 
-    vaTerminate(va::display);
+    return t.time(Timer::MSEC);
+}
+
+int main(int argc,char **argv)
+{
+    if (argc < 3)
+    {
+        fprintf(stderr,
+                "Usage: va_intel_interop file1 file2\n\n"
+                "where:  file1 is to be created, contains original surface data (NV12)\n"
+                "        file2 is to be created, contains processed surface data (NV12)\n");
+        exit(0);
+    }
+
+    if (!va::openDisplay())
+    {
+        fprintf(stderr, "Failed to open VA display for CL-VA interoperability\n");
+        exit(1);
+    }
+    fprintf(stderr, "VA display opened successfully\n");
+
+    float gpuTime = run(argv[1], argv[2], true);
+    float cpuTime = run(argv[1], argv[2], false);
+
+    fprintf(stderr, "GPU processing time, msec: %7.3f\n", gpuTime);
+    fprintf(stderr, "CPU processing time, msec: %7.3f\n", cpuTime);
+
     va::closeDisplay();
     return 0;
 }

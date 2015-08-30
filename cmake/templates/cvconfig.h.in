@@ -189,5 +189,8 @@
 /* gPhoto2 library */
 #cmakedefine HAVE_GPHOTO2
 
-/* Intel VA-API */
-#cmakedefine HAVE_VAAPI
+/* VA library (libva) */
+#cmakedefine HAVE_VA
+
+/* Intel VA-API/OpenCL */
+#cmakedefine HAVE_VA_INTEL
