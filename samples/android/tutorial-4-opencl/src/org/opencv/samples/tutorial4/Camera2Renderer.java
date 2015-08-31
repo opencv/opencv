@@ -4,12 +4,8 @@ import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
-
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Point;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -73,7 +69,6 @@ import android.view.Surface;
                      Math.abs(aspect - (float)w/h) < 0.2 ) {
                     bestWidth = w;
                     bestHeight = h;
-                    //mPreviewSize = psize;
                 }
             }
             Log.i(LOGTAG, "best size: "+bestWidth+"x"+bestHeight);
@@ -156,9 +151,9 @@ import android.view.Surface;
 
         @Override
         public void onDisconnected(CameraDevice cameraDevice) {
-            //mCameraOpenCloseLock.release();
             cameraDevice.close();
             mCameraDevice = null;
+            mCameraOpenCloseLock.release();
         }
 
         @Override
@@ -185,6 +180,7 @@ import android.view.Surface;
                 return;
             }
             if(null == mSTex) {
+                mCameraOpenCloseLock.release();
                 Log.e(LOGTAG, "createCameraPreviewSession: preview SurfaceTexture is null");
                 return;
             }
@@ -192,7 +188,6 @@ import android.view.Surface;
             mSTex.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
 
             Surface surface = new Surface(mSTex);
-            Log.d(LOGTAG, "createCameraPreviewSession: surface = " + surface);
 
             mPreviewRequestBuilder = mCameraDevice
                     .createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
@@ -215,6 +210,7 @@ import android.view.Surface;
                                 mCaptureSession.setRepeatingRequest(
                                         mPreviewRequestBuilder.build(), null,
                                         mBackgroundHandler);
+                                Log.i(LOGTAG, "CameraPreviewSession has been started");
                             } catch (CameraAccessException e) {
                                 Log.e(LOGTAG, "createCaptureSession failed");
                             }
@@ -227,7 +223,7 @@ import android.view.Surface;
                             Log.e(LOGTAG, "createCameraPreviewSession failed");
                             mCameraOpenCloseLock.release();
                         }
-                    }, null);
+                    }, mBackgroundHandler);
         } catch (CameraAccessException e) {
             Log.e(LOGTAG, "createCameraPreviewSession");
         } catch (InterruptedException e) {
@@ -235,7 +231,7 @@ import android.view.Surface;
                     "Interrupted while createCameraPreviewSession", e);
         }
         finally {
-            mCameraOpenCloseLock.release();
+            //mCameraOpenCloseLock.release();
         }
     }
 
@@ -262,12 +258,15 @@ import android.view.Surface;
 
     @Override
     protected void setCameraPreviewSize(int width, int height) {
-        //mPreviewSize = new Size(width, height);
-        if( !cacPreviewSize(width, height) )
-            return;
+        Log.i(LOGTAG, "setCameraPreviewSize("+width+"x"+height+")");
         try {
             mCameraOpenCloseLock.acquire();
+            if( !cacPreviewSize(width, height) ) {
+                mCameraOpenCloseLock.release();
+                return;
+            }
             if (null != mCaptureSession) {
+                Log.d(LOGTAG, "closing existing previewSession");
                 mCaptureSession.close();
                 mCaptureSession = null;
             }
