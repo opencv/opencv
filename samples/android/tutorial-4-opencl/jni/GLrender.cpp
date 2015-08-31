@@ -31,7 +31,7 @@ const char vss[] = \
             "varying vec2 texCoord;\n" \
             "void main() {\n" \
             "  texCoord = vTexCoord;\n" \
-            "  gl_Position = vec4 ( vPosition, 0.0f, 1.0f );\n" \
+            "  gl_Position = vec4 ( vPosition, 0.0, 1.0 );\n" \
             "}";
 
 const char fssOES[] = \
@@ -63,9 +63,9 @@ GLuint FBO = 0;
 GLuint texOES = 0;
 int texWidth = 0, texHeight = 0;
 
-enum ProcMode {PROC_MODE_CPU=1, PROC_MODE_OCL_DIRECT=2, PROC_MODE_OCL_OCV=3};
+enum ProcMode {PROC_MODE_NO_PROC=0, PROC_MODE_CPU=1, PROC_MODE_OCL_DIRECT=2, PROC_MODE_OCL_OCV=3};
 
-ProcMode procMode = PROC_MODE_CPU;
+ProcMode procMode = PROC_MODE_NO_PROC;
 
 static inline void deleteTex(GLuint* tex)
 {
@@ -268,7 +268,7 @@ void drawFrameProcCPU()
 }
 
 void procOCL_I2I(int texIn, int texOut, int w, int h);
-void procOCL_OCV(int tex, int w, int h);
+void procOCL_OCV(int texIn, int texOut, int w, int h);
 void drawFrameProcOCL()
 {
     drawTex(texOES, GL_TEXTURE_EXTERNAL_OES, FBO);
@@ -285,10 +285,10 @@ void drawFrameProcOCLOCV()
     drawTex(texOES, GL_TEXTURE_EXTERNAL_OES, FBO);
 
     // modify pixels in FBO texture using OpenCL and CL-GL interop
-    procOCL_OCV(FBOtex, texWidth, texHeight);
+    procOCL_OCV(FBOtex, FBOtex2, texWidth, texHeight);
 
     // render to screen
-    drawTex(FBOtex, GL_TEXTURE_2D, 0);
+    drawTex(FBOtex2, GL_TEXTURE_2D, 0);
 }
 
 extern "C" void drawFrame()
@@ -298,6 +298,7 @@ extern "C" void drawFrame()
 
     switch(procMode)
     {
+    case PROC_MODE_NO_PROC:    drawFrameOrig();       break;
     case PROC_MODE_CPU:        drawFrameProcCPU();    break;
     case PROC_MODE_OCL_DIRECT: drawFrameProcOCL();    break;
     case PROC_MODE_OCL_OCV:    drawFrameProcOCLOCV(); break;
@@ -366,6 +367,7 @@ extern "C" void setProcessingMode(int mode)
 {
     switch(mode)
     {
+    case PROC_MODE_NO_PROC:    procMode = PROC_MODE_NO_PROC;    break;
     case PROC_MODE_CPU:        procMode = PROC_MODE_CPU;        break;
     case PROC_MODE_OCL_DIRECT: procMode = PROC_MODE_OCL_DIRECT; break;
     case PROC_MODE_OCL_OCV:    procMode = PROC_MODE_OCL_OCV;    break;

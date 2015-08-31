@@ -1,4 +1,5 @@
 #define __CL_ENABLE_EXCEPTIONS
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS /*let's give a chance for OpenCL 1.1 devices*/
 #include <CL/cl.hpp>
 
 #include <EGL/egl.h>
@@ -79,6 +80,7 @@ void dumpCLinfo()
 cl::Context theContext;
 cl::CommandQueue theQueue;
 cl::Program theProgB2B, theProgI2B, theProgI2I;
+bool haveOpenCL = false;
 
 void initCL()
 {
@@ -100,6 +102,7 @@ void initCL()
 
     try
     {
+        haveOpenCL = false;
         cl::Platform p = cl::Platform::getDefault();
         std::string ext = p.getInfo<CL_PLATFORM_EXTENSIONS>();
         if(ext.find("cl_khr_gl_sharing") == std::string::npos)
@@ -124,6 +127,7 @@ void initCL()
             LOGD("OpenCV+OpenCL works OK!");
         else
             LOGE("Can't init OpenCV with OpenCL TAPI");
+        haveOpenCL = true;
     }
     catch(cl::Error& e)
     {
@@ -147,6 +151,8 @@ void closeCL()
 #define GL_TEXTURE_2D 0x0DE1
 void procOCL_I2I(int texIn, int texOut, int w, int h)
 {
+    if(!haveOpenCL) return;
+
     LOGD("procOCL_I2I(%d, %d, %d, %d)", texIn, texOut, w, h);
     cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, texIn);
     cl::ImageGL imgOut(theContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texOut);
@@ -177,10 +183,12 @@ void procOCL_I2I(int texIn, int texOut, int w, int h)
     LOGD("enqueueReleaseGLObjects() costs %d ms", getTimeInterval(t));
 }
 
-void procOCL_OCV(int tex, int w, int h)
+void procOCL_OCV(int texIn, int texOut, int w, int h)
 {
+    if(!haveOpenCL) return;
+
     int64_t t = getTimeMs();
-    cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, tex);
+    cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, texIn);
     std::vector < cl::Memory > images(1, imgIn);
     theQueue.enqueueAcquireGLObjects(&images);
     theQueue.finish();
@@ -197,7 +205,7 @@ void procOCL_OCV(int tex, int w, int h)
     LOGD("OpenCV processing costs %d ms", getTimeInterval(t));
 
     t = getTimeMs();
-    cl::ImageGL imgOut(theContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex);
+    cl::ImageGL imgOut(theContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texOut);
     images.clear();
     images.push_back(imgOut);
     theQueue.enqueueAcquireGLObjects(&images);
