@@ -1192,6 +1192,9 @@ TLSData<CoreTLSData>& getCoreTlsData()
 #endif
 
 extern "C"
+BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved);
+
+extern "C"
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
 {
     if (fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH)
