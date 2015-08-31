@@ -213,7 +213,7 @@ ImageDecoder JpegDecoder::newDecoder() const
 
 bool  JpegDecoder::readHeader()
 {
-    bool result = false;
+    volatile bool result = false;
     close();
 
     JpegState* state = new JpegState;

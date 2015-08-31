@@ -10,16 +10,16 @@ class Fail(Exception):
     def __str__(self):
         return "ERROR" if self.t is None else self.t
 
-def execute(cmd):
+def execute(cmd, shell=False):
     try:
         log.info("Executing: %s" % cmd)
-        retcode = subprocess.call(cmd)
+        retcode = subprocess.call(cmd, shell=shell)
         if retcode < 0:
             raise Fail("Child was terminated by signal:" %s -retcode)
         elif retcode > 0:
             raise Fail("Child returned: %s" % retcode)
     except OSError as e:
-        raise Fail("Execution failed: %s" % e)
+        raise Fail("Execution failed: %s" % e.strerror)
 
 def rm_one(d):
     d = os.path.abspath(d)
@@ -180,7 +180,7 @@ class Builder:
             log.info("Generating XML config: %s", xmlname)
             ET.ElementTree(r).write(xmlname, encoding="utf-8")
         execute(["ninja", "opencv_engine"])
-        execute(["ant", "-f", os.path.join(apkdest, "build.xml"), "debug"])
+        execute(["ant", "-f", os.path.join(apkdest, "build.xml"), "debug"], shell=True)
         # TODO: Sign apk
 
     def build_javadoc(self):
@@ -278,12 +278,13 @@ if __name__ == "__main__":
     log.info("Detected OpenCV version: %s", builder.opencv_version)
     log.info("Detected Engine version: %s", builder.engine_version)
 
-    for one in args.extra_pack:
-        i = one.find(":")
-        if i > 0 and i < len(one) - 1:
-            builder.add_extra_pack(one[:i], one[i+1:])
-        else:
-            raise Fail("Bad extra pack provided: %s, should be in form '<version>:<path-to-native-libs>'" % one)
+    if args.extra_pack:
+        for one in args.extra_pack:
+            i = one.find(":")
+            if i > 0 and i < len(one) - 1:
+                builder.add_extra_pack(one[:i], one[i+1:])
+            else:
+                raise Fail("Bad extra pack provided: %s, should be in form '<version>:<path-to-native-libs>'" % one)
 
     engines = []
     for i, abi in enumerate(ABIs):
