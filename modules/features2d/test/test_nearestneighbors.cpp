@@ -159,7 +159,7 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
 class CV_KDTreeTest_CPP : public NearestNeighborTest
 {
 public:
-    CV_KDTreeTest_CPP() {}
+    CV_KDTreeTest_CPP() : NearestNeighborTest(), tr(NULL) {}
 protected:
     virtual void createModel( const Mat& data );
     virtual int checkGetPoints( const Mat& data );
@@ -244,7 +244,7 @@ void CV_KDTreeTest_CPP::releaseModel()
 class CV_FlannTest : public NearestNeighborTest
 {
 public:
-    CV_FlannTest() {}
+    CV_FlannTest() : NearestNeighborTest(), index(NULL) { }
 protected:
     void createIndex( const Mat& data, const IndexParams& params );
     int knnSearch( Mat& points, Mat& neighbors );
@@ -255,6 +255,9 @@ protected:
 
 void CV_FlannTest::createIndex( const Mat& data, const IndexParams& params )
 {
+    // release previously allocated index
+    releaseModel();
+
     index = new Index( data, params );
 }
 
@@ -321,7 +324,11 @@ int CV_FlannTest::radiusSearch( Mat& points, Mat& neighbors )
 
 void CV_FlannTest::releaseModel()
 {
-    delete index;
+    if (index)
+    {
+        delete index;
+        index = NULL;
+    }
 }
 
 //---------------------------------------
