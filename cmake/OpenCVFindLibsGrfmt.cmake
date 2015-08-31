@@ -6,13 +6,10 @@
 if(BUILD_ZLIB)
   ocv_clear_vars(ZLIB_FOUND)
 else()
-  find_package(ZLIB "${MIN_VER_ZLIB}")
-  if(ZLIB_FOUND AND ANDROID)
-    if(ZLIB_LIBRARIES STREQUAL "${ANDROID_SYSROOT}/usr/lib/libz.so" OR
-        ZLIB_LIBRARIES STREQUAL "${ANDROID_SYSROOT}/usr/lib64/libz.so")
-      set(ZLIB_LIBRARIES z)
-    endif()
+  if(NOT ZLIB_FOUND)
+    find_package(ZLIB "${MIN_VER_ZLIB}")
   endif()
+  ocv_register_imported_library(z ZLIB_LIBRARY ZLIB_LIBRARIES)
 endif()
 
 if(NOT ZLIB_FOUND)
