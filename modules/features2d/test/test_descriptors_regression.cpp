@@ -61,7 +61,7 @@ static void writeMatInBin( const Mat& mat, const string& filename )
         fwrite( (void*)&mat.rows, sizeof(int), 1, f );
         fwrite( (void*)&mat.cols, sizeof(int), 1, f );
         fwrite( (void*)&type, sizeof(int), 1, f );
-        int dataSize = (int)(mat.step * mat.rows * mat.channels());
+        int dataSize = (int)(mat.step * mat.rows);
         fwrite( (void*)&dataSize, sizeof(int), 1, f );
         fwrite( (void*)mat.data, 1, dataSize, f );
         fclose(f);
@@ -80,12 +80,15 @@ static Mat readMatFromBin( const string& filename )
         size_t elements_read4 = fread( (void*)&dataSize, sizeof(int), 1, f );
         CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
 
-        uchar* data = (uchar*)cvAlloc(dataSize);
-        size_t elements_read = fread( (void*)data, 1, dataSize, f );
+        Mat returnMat(rows, cols, type);
+        CV_Assert(returnMat.step * returnMat.rows == (size_t)(dataSize));
+
+        size_t elements_read = fread( (void*)returnMat.data, 1, dataSize, f );
         CV_Assert(elements_read == (size_t)(dataSize));
+
         fclose(f);
 
-        return Mat( rows, cols, type, data );
+        return returnMat;
     }
     return Mat();
 }
