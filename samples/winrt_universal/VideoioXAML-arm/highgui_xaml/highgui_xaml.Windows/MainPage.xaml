@@ -1,0 +1,22 @@
+﻿<Page
+    x:Class="highgui_xaml.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:highgui_xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <TextBlock HorizontalAlignment="Left" Margin="20,35,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontSize="24">
+        	<Run Text="OpenCV: videoio implementation using XAML and Universal App Framework"/>
+        	<Run/>
+        </TextBlock>
+        <Image Name="cvImage" HorizontalAlignment="Left" Height="480" Margin="20,100,0,0" VerticalAlignment="Top" Width="640"/>
+        <!--Slider Name="cvSlider" Visibility="Collapsed" HorizontalAlignment="Left" Margin="20,610,0,0" VerticalAlignment="Top" Width="640"/>
+        <TextBlock HorizontalAlignment="Left" Margin="20,670,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontSize="18">
+            <Run Text="Move slider to adjust threshold"/>
+            <Run/>
+        </TextBlock-->
+    </Grid>
+</Page>

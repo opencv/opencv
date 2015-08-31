@@ -35,14 +35,14 @@ class Video {
 public:
 
     // non-blocking
-    bool initGrabber(int device, int w, int h);
-    void closeGrabber();
-    bool isStarted();
+    CV_EXPORTS bool initGrabber(int device, int w, int h);
+    CV_EXPORTS void closeGrabber();
+    CV_EXPORTS bool isStarted();
 
     // singleton
-    static Video &getInstance();
+    CV_EXPORTS static Video &getInstance();
 
-    void CopyOutput();
+    CV_EXPORTS void CopyOutput();
 
 private:
     // singleton

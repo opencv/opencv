@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\ann_mlp.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\boost.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\data.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\em.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\gbt.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\inner_functions.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\kdtree.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\knearest.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\lr.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\nbayes.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\rtrees.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\svm.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\testset.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\ml\src\tree.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="opencv_ml_pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\ml\include\opencv2\ml.hpp">
+      <Filter>Include\opencv2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\ml\include\opencv2\ml\ml.hpp">
+      <Filter>Include\opencv2\ml</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\ml\src\kdtree.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\ml\src\precomp.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cvconfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\ml\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{6F652BDE-35E3-4D70-97BC-72653848239E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{D1153171-3EAE-4E07-A75B-6FEA6093C934}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src">
+      <UniqueIdentifier>{053E470E-10F7-487D-BF54-53FF229F67D2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include">
+      <UniqueIdentifier>{FB0B924D-1977-45F4-87DA-535BCB56C720}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\opencv2">
+      <UniqueIdentifier>{05C50465-64FB-4CAF-B4FC-FA03AA6E6725}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\opencv2\ml">
+      <UniqueIdentifier>{A59D0B7F-98FC-4A86-B784-08FF116B55C2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

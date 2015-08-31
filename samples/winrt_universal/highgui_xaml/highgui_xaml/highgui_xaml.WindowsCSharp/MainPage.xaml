@@ -1,0 +1,26 @@
+﻿<Page
+    x:Class="highgui_xaml.WindowsCSharp.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:highgui_xaml.WindowsCSharp"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <TextBlock x:Name="textBlock" HorizontalAlignment="Left" Margin="46,50,0,0" TextWrapping="Wrap" VerticalAlignment="Top">
+    		<Run Text="OpenCV:::  VideoIO using C#"/>
+    		<LineBreak/>
+    		<Run/>
+        </TextBlock>
+        <ComboBox x:Name="comboBox" HorizontalAlignment="Left" Margin="46,90,0,0" VerticalAlignment="Top" Width="228" SelectionChanged="comboBox_SelectionChanged">
+            <ComboBoxItem Content="Passthrough"/>
+            <ComboBoxItem Content="Gray"/>
+            <ComboBoxItem Content="Shades"/>
+            <ComboBoxItem Content="Canny"/>
+            <ComboBoxItem Content="Contour"/>
+            <ComboBoxItem Content="Face Detect"/>
+        </ComboBox>
+        <Image x:Name="OCVImage" HorizontalAlignment="Left" Height="480" Margin="46,150,0,0" VerticalAlignment="Top" Width="640"/>
+    </Grid>
+</Page>

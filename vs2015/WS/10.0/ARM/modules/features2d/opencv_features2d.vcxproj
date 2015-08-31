@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="14.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{1D7C9E07-12E5-41BB-AA11-63EDB73F5538}</ProjectGUID>
+    <ApplicationType>Windows Store</ApplicationType>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>ARM</Platform>
+    <ProjectName>opencv_features2d</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\bin\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">opencv_features2d.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">opencv_features2d300d</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\bin\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">opencv_features2d.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">opencv_features2d300</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\features2d\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/features2d/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/features2d/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Debug";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Debug\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\features2d\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\features2d\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:ARM /debug %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Debug\opencv_hal300d.lib;..\..\lib\Debug\opencv_flann300d.lib;..\..\lib\Debug\opencv_imgproc300d.lib;..\..\lib\Debug\opencv_ml300d.lib;..\..\lib\Debug\opencv_core300d.lib;..\..\lib\Debug\opencv_hal300d.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>libc;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/lib/Debug/opencv_features2d300d.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/bin/Debug/opencv_features2d300d.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\features2d\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/features2d/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/features2d/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Release";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Release\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\features2d\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\features2d\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:ARM %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Release\opencv_hal300.lib;..\..\lib\Release\opencv_flann300.lib;..\..\lib\Release\opencv_imgproc300.lib;..\..\lib\Release\opencv_ml300.lib;..\..\lib\Release\opencv_core300.lib;..\..\lib\Release\opencv_hal300.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>libc;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/lib/Release/opencv_features2d300.lib</ImportLibrary>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/bin/Release/opencv_features2d300.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\features2d\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Building Custom Rule $(OCV2015_ROOT)/modules/features2d/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)/modules/features2d/CMakeLists.txt;$(OCV2015_ROOT)\modules\features2d\CMakeLists.txt;$(OCV2015_ROOT)\modules\features2d\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Building Custom Rule $(OCV2015_ROOT)/modules/features2d/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)/modules/features2d/CMakeLists.txt;$(OCV2015_ROOT)\modules\features2d\CMakeLists.txt;$(OCV2015_ROOT)\modules\features2d\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\CMakeFiles\3461e432ab4c2794d62b65c6cfeed1c7\opencl_kernels_features2d.cpp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Generating opencl_kernels_features2d.cpp, opencl_kernels_features2d.hpp</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/CMakeFiles/3461e432ab4c2794d62b65c6cfeed1c7/opencl_kernels_features2d.cpp.rule;$(OCV2015_ROOT)\modules\features2d\src\opencl\brute_force_match.cl;$(OCV2015_ROOT)\modules\features2d\src\opencl\fast.cl;$(OCV2015_ROOT)\modules\features2d\src\opencl\orb.cl;$(OCV2015_ROOT)\cmake\cl2cpp.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d\opencl_kernels_features2d.cpp;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d\opencl_kernels_features2d.hpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Generating opencl_kernels_features2d.cpp, opencl_kernels_features2d.hpp</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/CMakeFiles/3461e432ab4c2794d62b65c6cfeed1c7/opencl_kernels_features2d.cpp.rule;$(OCV2015_ROOT)\modules\features2d\src\opencl\brute_force_match.cl;$(OCV2015_ROOT)\modules\features2d\src\opencl\fast.cl;$(OCV2015_ROOT)\modules\features2d\src\opencl\orb.cl;$(OCV2015_ROOT)\cmake\cl2cpp.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d\opencl_kernels_features2d.cpp;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\features2d\opencl_kernels_features2d.hpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\include\opencv2\features2d.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\include\opencv2\features2d\features2d.hpp" />
+    <ClInclude Include="opencl_kernels_features2d.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\agast_score.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\fast_score.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\precomp.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\kaze\AKAZEConfig.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\kaze\AKAZEFeatures.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\kaze\fed.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\kaze\KAZEConfig.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\kaze\KAZEFeatures.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\kaze\nldiffusion_functions.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\kaze\TEvolution.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\features2d\src\kaze\utils.h" />
+    <ClInclude Include="..\..\cvconfig.h" />
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\agast.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\agast_score.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\akaze.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\bagofwords.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\blobdetector.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\brisk.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\draw.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\dynamic.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\evaluation.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\fast.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\fast_score.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\feature2d.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\gftt.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\kaze\AKAZEFeatures.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\kaze\fed.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\kaze\KAZEFeatures.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\kaze\nldiffusion_functions.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\kaze.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\keypoint.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\matchers.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\mser.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\features2d\src\orb.cpp" />
+    <ClCompile Include="opencl_kernels_features2d.cpp" />
+    <ClCompile Include="opencv_features2d_pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)/modules/features2d/src/precomp.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)/modules/features2d/src/precomp.hpp</PrecompiledHeaderFile>
+    </ClCompile>
+    <None Include="..\..\..\..\..\..\modules\features2d\src\opencl\brute_force_match.cl" />
+    <None Include="..\..\..\..\..\..\modules\features2d\src\opencl\fast.cl" />
+    <None Include="..\..\..\..\..\..\modules\features2d\src\opencl\orb.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/ZERO_CHECK.vcxproj">
+      <Project>14BF26F8-F9CC-4B1D-AF14-75250463B102</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/modules/core/opencv_core.vcxproj">
+      <Project>0316DD57-4D5D-4E1A-88B2-6534F3107542</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/modules/flann/opencv_flann.vcxproj">
+      <Project>E3916DE2-D6B3-4FA6-9A14-32F9CE5DCC96</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/modules/hal/opencv_hal.vcxproj">
+      <Project>ED6F12A1-E1A9-4D89-A606-8F299A1B3E2A</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/modules/imgproc/opencv_imgproc.vcxproj">
+      <Project>8F0814BE-1833-41FA-B0B2-0424F3EF899A</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/modules/ml/opencv_ml.vcxproj">
+      <Project>B356F9DF-3142-449F-A3D2-C86CAF2E9058</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

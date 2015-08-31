@@ -1,0 +1,309 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="14.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{D9E6EAA4-E2FC-45A7-B693-7D13D189DD06}</ProjectGUID>
+    <ApplicationType>Windows Store</ApplicationType>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>opencv_imgproc</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\bin\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">opencv_imgproc.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">opencv_imgproc300d</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\bin\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">opencv_imgproc.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">opencv_imgproc300</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgproc\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/imgproc/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/imgproc/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Debug";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Debug\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgproc\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgproc\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:x64 /debug %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Debug\opencv_hal300d.lib;..\..\lib\Debug\opencv_core300d.lib;..\..\lib\Debug\opencv_hal300d.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>libc;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/lib/Debug/opencv_imgproc300d.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/bin/Debug/opencv_imgproc300d.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgproc\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/imgproc/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/imgproc/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Release";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Release\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgproc\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgproc\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:x64 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Release\opencv_hal300.lib;..\..\lib\Release\opencv_core300.lib;..\..\lib\Release\opencv_hal300.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>libc;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/lib/Release/opencv_imgproc300.lib</ImportLibrary>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/bin/Release/opencv_imgproc300.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\imgproc\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule $(OCV2015_ROOT)/modules/imgproc/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/modules/imgproc/CMakeLists.txt;$(OCV2015_ROOT)\modules\imgproc\CMakeLists.txt;$(OCV2015_ROOT)\modules\imgproc\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule $(OCV2015_ROOT)/modules/imgproc/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/modules/imgproc/CMakeLists.txt;$(OCV2015_ROOT)\modules\imgproc\CMakeLists.txt;$(OCV2015_ROOT)\modules\imgproc\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\CMakeFiles\3ae85fcca10c30bacba6a0378e1947f1\opencl_kernels_imgproc.cpp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating opencl_kernels_imgproc.cpp, opencl_kernels_imgproc.hpp</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/vs2015/WS/10.0/x64/CMakeFiles/3ae85fcca10c30bacba6a0378e1947f1/opencl_kernels_imgproc.cpp.rule;$(OCV2015_ROOT)\modules\imgproc\src\opencl\accumulate.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\bilateral.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\blend_linear.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\boxFilter.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\calc_back_project.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\canny.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\clahe.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\corner.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\covardata.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\cvtcolor.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filter2D.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filter2DSmall.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filterSepCol.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filterSepRow.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filterSep_singlePass.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filterSmall.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\gftt.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\histogram.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\hough_lines.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\integral_sum.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\laplacian5.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\match_template.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\medianFilter.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\moments.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\morph.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\precornerdetect.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\pyr_down.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\pyr_up.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\remap.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\resize.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\threshold.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\warp_affine.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\warp_perspective.cl;$(OCV2015_ROOT)\cmake\cl2cpp.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc\opencl_kernels_imgproc.cpp;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc\opencl_kernels_imgproc.hpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating opencl_kernels_imgproc.cpp, opencl_kernels_imgproc.hpp</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/vs2015/WS/10.0/x64/CMakeFiles/3ae85fcca10c30bacba6a0378e1947f1/opencl_kernels_imgproc.cpp.rule;$(OCV2015_ROOT)\modules\imgproc\src\opencl\accumulate.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\bilateral.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\blend_linear.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\boxFilter.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\calc_back_project.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\canny.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\clahe.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\corner.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\covardata.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\cvtcolor.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filter2D.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filter2DSmall.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filterSepCol.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filterSepRow.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filterSep_singlePass.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\filterSmall.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\gftt.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\histogram.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\hough_lines.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\integral_sum.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\laplacian5.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\match_template.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\medianFilter.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\moments.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\morph.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\precornerdetect.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\pyr_down.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\pyr_up.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\remap.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\resize.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\threshold.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\warp_affine.cl;$(OCV2015_ROOT)\modules\imgproc\src\opencl\warp_perspective.cl;$(OCV2015_ROOT)\cmake\cl2cpp.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc\opencl_kernels_imgproc.cpp;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgproc\opencl_kernels_imgproc.hpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\imgproc\include\opencv2\imgproc.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgproc\include\opencv2\imgproc\imgproc.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgproc\include\opencv2\imgproc\imgproc_c.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgproc\include\opencv2\imgproc\types_c.h" />
+    <ClInclude Include="opencl_kernels_imgproc.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgproc\src\filterengine.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgproc\src\gcgraph.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgproc\src\precomp.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgproc\src\_geom.h" />
+    <ClInclude Include="..\..\cvconfig.h" />
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\accum.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\approx.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\blend.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\canny.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\clahe.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\color.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\colormap.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\connectedcomponents.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\contours.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\convhull.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\corner.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\cornersubpix.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\demosaicing.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\deriv.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\distransform.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\drawing.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\emd.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\featureselect.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\filter.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\floodfill.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\gabor.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\generalized_hough.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\geometry.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\grabcut.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\hershey_fonts.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\histogram.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\hough.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\imgwarp.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\intersection.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\linefit.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\lsd.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\matchcontours.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\min_enclosing_triangle.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\moments.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\morph.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\phasecorr.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\pyramids.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\rotcalipers.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\samplers.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\segmentation.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\shapedescr.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\smooth.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\subdivision2d.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\sumpixels.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\tables.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\templmatch.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\thresh.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\undistort.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgproc\src\utils.cpp" />
+    <ClCompile Include="opencl_kernels_imgproc.cpp" />
+    <ClCompile Include="opencv_imgproc_pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/modules/imgproc/src/precomp.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/modules/imgproc/src/precomp.hpp</PrecompiledHeaderFile>
+    </ClCompile>
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\accumulate.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\bilateral.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\blend_linear.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\boxFilter.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\calc_back_project.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\canny.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\clahe.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\corner.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\covardata.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\cvtcolor.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\filter2D.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\filter2DSmall.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\filterSepCol.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\filterSepRow.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\filterSep_singlePass.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\filterSmall.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\gftt.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\histogram.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\hough_lines.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\integral_sum.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\laplacian5.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\match_template.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\medianFilter.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\moments.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\morph.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\precornerdetect.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\pyr_down.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\pyr_up.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\remap.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\resize.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\threshold.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\warp_affine.cl" />
+    <None Include="..\..\..\..\..\..\modules\imgproc\src\opencl\warp_perspective.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/ZERO_CHECK.vcxproj">
+      <Project>F7C2BCF6-9BE2-4272-AAD9-6075F4430F5C</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/core/opencv_core.vcxproj">
+      <Project>AD3AD579-91EB-4492-AA03-F78B231B429D</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/hal/opencv_hal.vcxproj">
+      <Project>770A6C51-203A-4D29-8B14-656B1E11BAA2</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

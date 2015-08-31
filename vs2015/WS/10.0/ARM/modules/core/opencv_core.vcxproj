@@ -1,0 +1,354 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="14.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{0316DD57-4D5D-4E1A-88B2-6534F3107542}</ProjectGUID>
+    <ApplicationType>Windows Store</ApplicationType>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>ARM</Platform>
+    <ProjectName>opencv_core</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\bin\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">opencv_core.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">opencv_core300d</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\bin\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">opencv_core.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">opencv_core300</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\core\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/core/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/core/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Debug";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Debug\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\core\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\core\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:ARM /debug %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Debug\opencv_hal300d.lib;..\..\3rdparty\lib\Debug\zlibd.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>libc;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/lib/Debug/opencv_core300d.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/bin/Debug/opencv_core300d.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\core\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/core/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/core/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Release";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Release\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\core\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\core\src;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:ARM %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Release\opencv_hal300.lib;..\..\3rdparty\lib\Release\zlib.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>libc;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/lib/Release/opencv_core300.lib</ImportLibrary>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/bin/Release/opencv_core300.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\core\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Building Custom Rule $(OCV2015_ROOT)/modules/core/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)/modules/core/CMakeLists.txt;$(OCV2015_ROOT)\modules\core\CMakeLists.txt;$(OCV2015_ROOT)\modules\core\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Building Custom Rule $(OCV2015_ROOT)/modules/core/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)/modules/core/CMakeLists.txt;$(OCV2015_ROOT)\modules\core\CMakeLists.txt;$(OCV2015_ROOT)\modules\core\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\CMakeFiles\6c43a80e3144f10d409d7daa6f54dfe3\opencl_kernels_core.cpp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Generating opencl_kernels_core.cpp, opencl_kernels_core.hpp</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/CMakeFiles/6c43a80e3144f10d409d7daa6f54dfe3/opencl_kernels_core.cpp.rule;$(OCV2015_ROOT)\modules\core\src\opencl\arithm.cl;$(OCV2015_ROOT)\modules\core\src\opencl\convert.cl;$(OCV2015_ROOT)\modules\core\src\opencl\copymakeborder.cl;$(OCV2015_ROOT)\modules\core\src\opencl\copyset.cl;$(OCV2015_ROOT)\modules\core\src\opencl\fft.cl;$(OCV2015_ROOT)\modules\core\src\opencl\flip.cl;$(OCV2015_ROOT)\modules\core\src\opencl\gemm.cl;$(OCV2015_ROOT)\modules\core\src\opencl\inrange.cl;$(OCV2015_ROOT)\modules\core\src\opencl\lut.cl;$(OCV2015_ROOT)\modules\core\src\opencl\meanstddev.cl;$(OCV2015_ROOT)\modules\core\src\opencl\minmaxloc.cl;$(OCV2015_ROOT)\modules\core\src\opencl\mixchannels.cl;$(OCV2015_ROOT)\modules\core\src\opencl\mulspectrums.cl;$(OCV2015_ROOT)\modules\core\src\opencl\normalize.cl;$(OCV2015_ROOT)\modules\core\src\opencl\reduce.cl;$(OCV2015_ROOT)\modules\core\src\opencl\reduce2.cl;$(OCV2015_ROOT)\modules\core\src\opencl\repeat.cl;$(OCV2015_ROOT)\modules\core\src\opencl\set_identity.cl;$(OCV2015_ROOT)\modules\core\src\opencl\split_merge.cl;$(OCV2015_ROOT)\modules\core\src\opencl\transpose.cl;$(OCV2015_ROOT)\cmake\cl2cpp.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core\opencl_kernels_core.cpp;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core\opencl_kernels_core.hpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Generating opencl_kernels_core.cpp, opencl_kernels_core.hpp</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/CMakeFiles/6c43a80e3144f10d409d7daa6f54dfe3/opencl_kernels_core.cpp.rule;$(OCV2015_ROOT)\modules\core\src\opencl\arithm.cl;$(OCV2015_ROOT)\modules\core\src\opencl\convert.cl;$(OCV2015_ROOT)\modules\core\src\opencl\copymakeborder.cl;$(OCV2015_ROOT)\modules\core\src\opencl\copyset.cl;$(OCV2015_ROOT)\modules\core\src\opencl\fft.cl;$(OCV2015_ROOT)\modules\core\src\opencl\flip.cl;$(OCV2015_ROOT)\modules\core\src\opencl\gemm.cl;$(OCV2015_ROOT)\modules\core\src\opencl\inrange.cl;$(OCV2015_ROOT)\modules\core\src\opencl\lut.cl;$(OCV2015_ROOT)\modules\core\src\opencl\meanstddev.cl;$(OCV2015_ROOT)\modules\core\src\opencl\minmaxloc.cl;$(OCV2015_ROOT)\modules\core\src\opencl\mixchannels.cl;$(OCV2015_ROOT)\modules\core\src\opencl\mulspectrums.cl;$(OCV2015_ROOT)\modules\core\src\opencl\normalize.cl;$(OCV2015_ROOT)\modules\core\src\opencl\reduce.cl;$(OCV2015_ROOT)\modules\core\src\opencl\reduce2.cl;$(OCV2015_ROOT)\modules\core\src\opencl\repeat.cl;$(OCV2015_ROOT)\modules\core\src\opencl\set_identity.cl;$(OCV2015_ROOT)\modules\core\src\opencl\split_merge.cl;$(OCV2015_ROOT)\modules\core\src\opencl\transpose.cl;$(OCV2015_ROOT)\cmake\cl2cpp.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core\opencl_kernels_core.cpp;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\modules\core\opencl_kernels_core.hpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\block.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\border_interpolate.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\color.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\common.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\datamov_utils.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\dynamic_smem.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\emulation.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\filters.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\funcattrib.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\functional.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\limits.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\reduce.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\saturate_cast.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\scan.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\simd_functions.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\transform.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\type_traits.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\utility.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\vec_distance.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\vec_math.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\vec_traits.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\warp.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\warp_reduce.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\warp_shuffle.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\color_detail.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\reduce.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\reduce_key_val.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\transform_detail.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\type_traits_detail.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\vec_distance_detail.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\affine.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\base.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\bufferpool.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\core.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda.inl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda_stream_accessor.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda_types.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cvstd.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cvstd.inl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\directx.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\eigen.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\ippasync.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\mat.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\mat.inl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\matx.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\ocl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\ocl_genbase.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\opengl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\operations.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\optim.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\persistence.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\private.cuda.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\private.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\ptr.inl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\sse_utils.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\traits.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\types.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\utility.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\version.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\wimage.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\core_c.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cvdef.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\types_c.h" />
+    <ClInclude Include="opencl_kernels_core.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\bufferpool.impl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\directx.inc.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\gl_core_3_1.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\autogenerated\opencl_clamdblas_impl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\autogenerated\opencl_clamdfft_impl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\autogenerated\opencl_core_impl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\runtime_common.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\precomp.hpp" />
+    <ClInclude Include="..\..\cvconfig.h" />
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\algorithm.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\alloc.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\arithm.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\array.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\command_line_parser.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\conjugate_gradient.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\convert.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\copy.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\cuda_gpu_mat.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\cuda_host_mem.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\cuda_info.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\cuda_stream.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\datastructs.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\directx.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\downhill_simplex.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\dxt.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\glob.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\gl_core_3_1.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\kmeans.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\lapack.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\lda.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\lpsolver.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\mathfuncs.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\matmul.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\matop.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\matrix.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\ocl.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\opencl_clamdblas.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\opencl_clamdfft.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\opencl_core.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\opengl.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\out.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\parallel.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\parallel_pthreads.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\pca.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\persistence.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\rand.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\stat.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\stl.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\system.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\tables.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\types.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\umatrix.cpp" />
+    <ClCompile Include="opencl_kernels_core.cpp" />
+    <ClCompile Include="opencv_core_pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)/modules/core/src/precomp.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)/modules/core/src/precomp.hpp</PrecompiledHeaderFile>
+    </ClCompile>
+    <None Include="version_string.inc" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\arithm.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\convert.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\copymakeborder.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\copyset.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\fft.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\flip.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\gemm.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\inrange.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\lut.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\meanstddev.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\minmaxloc.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\mixchannels.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\mulspectrums.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\normalize.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\reduce.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\reduce2.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\repeat.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\set_identity.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\split_merge.cl" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\transpose.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/ZERO_CHECK.vcxproj">
+      <Project>14BF26F8-F9CC-4B1D-AF14-75250463B102</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/modules/hal/opencv_hal.vcxproj">
+      <Project>ED6F12A1-E1A9-4D89-A606-8F299A1B3E2A</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/3rdparty/zlib/zlib.vcxproj">
+      <Project>1D0DEE65-ED23-48AA-9E4B-201225935D01</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

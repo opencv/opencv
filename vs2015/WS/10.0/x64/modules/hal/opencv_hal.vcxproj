@@ -1,0 +1,184 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="14.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{770A6C51-203A-4D29-8B14-656B1E11BAA2}</ProjectGUID>
+    <ApplicationType>Windows Store</ApplicationType>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>opencv_hal</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\lib\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">opencv_hal.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">opencv_hal300d</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\lib\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">opencv_hal.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">opencv_hal300</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\hal\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\hal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/hal/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/hal/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\hal\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\hal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\hal\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\hal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\hal\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\hal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/hal/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/hal/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\hal\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\hal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\hal\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\hal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\hal\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule $(OCV2015_ROOT)/modules/hal/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/modules/hal/CMakeLists.txt;$(OCV2015_ROOT)\modules\hal\CMakeLists.txt;$(OCV2015_ROOT)\modules\hal\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\hal\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule $(OCV2015_ROOT)/modules/hal/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/modules/hal/CMakeLists.txt;$(OCV2015_ROOT)\modules\hal\CMakeLists.txt;$(OCV2015_ROOT)\modules\hal\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\hal\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\hal\include\opencv2\hal.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\hal\include\opencv2\hal\intrin.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\hal\include\opencv2\hal\intrin_cpp.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\hal\include\opencv2\hal\intrin_neon.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\hal\include\opencv2\hal\intrin_sse.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\hal\include\opencv2\hal\defs.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\hal\src\precomp.hpp" />
+    <ClInclude Include="..\..\cvconfig.h" />
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\hal\src\arithm.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\hal\src\color.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\hal\src\filter.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\hal\src\mathfuncs.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\hal\src\matrix.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\hal\src\resize.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\hal\src\stat.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\hal\src\warp.cpp" />
+    <ClCompile Include="opencv_hal_pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/modules/hal/src/precomp.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/modules/hal/src/precomp.hpp</PrecompiledHeaderFile>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/ZERO_CHECK.vcxproj">
+      <Project>F7C2BCF6-9BE2-4272-AAD9-6075F4430F5C</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

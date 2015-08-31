@@ -1,0 +1,64 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ALL_BUILD", "ALL_BUILD.vcxproj", "{13F8A5AC-A24B-4911-853E-49B9CF5A5C7D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{05CE52CC-3112-453C-A2D6-C50B13D25281} = {05CE52CC-3112-453C-A2D6-C50B13D25281}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "INSTALL", "INSTALL.vcxproj", "{C04575E0-41A7-4499-9060-5A2C79CECAF0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{13F8A5AC-A24B-4911-853E-49B9CF5A5C7D} = {13F8A5AC-A24B-4911-853E-49B9CF5A5C7D}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PACKAGE", "PACKAGE.vcxproj", "{3EEDC26E-0FCC-4DFA-B66B-AEEC2A28BB0A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{13F8A5AC-A24B-4911-853E-49B9CF5A5C7D} = {13F8A5AC-A24B-4911-853E-49B9CF5A5C7D}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZERO_CHECK", "..\..\ZERO_CHECK.vcxproj", "{14BF26F8-F9CC-4B1D-AF14-75250463B102}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libjasper", "libjasper.vcxproj", "{05CE52CC-3112-453C-A2D6-C50B13D25281}"
+	ProjectSection(ProjectDependencies) = postProject
+		{14BF26F8-F9CC-4B1D-AF14-75250463B102} = {14BF26F8-F9CC-4B1D-AF14-75250463B102}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3rdparty", "3rdparty", "{322B37FF-68D4-48FD-9321-5DA4883AA24E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CMakeTargets", "CMakeTargets", "{54021ACF-E474-4304-8203-7987035E9E9B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Release|ARM = Release|ARM
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{13F8A5AC-A24B-4911-853E-49B9CF5A5C7D}.Debug|ARM.ActiveCfg = Debug|ARM
+		{13F8A5AC-A24B-4911-853E-49B9CF5A5C7D}.Debug|ARM.Build.0 = Debug|ARM
+		{13F8A5AC-A24B-4911-853E-49B9CF5A5C7D}.Release|ARM.ActiveCfg = Release|ARM
+		{13F8A5AC-A24B-4911-853E-49B9CF5A5C7D}.Release|ARM.Build.0 = Release|ARM
+		{C04575E0-41A7-4499-9060-5A2C79CECAF0}.Debug|ARM.ActiveCfg = Debug|ARM
+		{C04575E0-41A7-4499-9060-5A2C79CECAF0}.Release|ARM.ActiveCfg = Release|ARM
+		{3EEDC26E-0FCC-4DFA-B66B-AEEC2A28BB0A}.Debug|ARM.ActiveCfg = Debug|ARM
+		{3EEDC26E-0FCC-4DFA-B66B-AEEC2A28BB0A}.Release|ARM.ActiveCfg = Release|ARM
+		{14BF26F8-F9CC-4B1D-AF14-75250463B102}.Debug|ARM.ActiveCfg = Debug|ARM
+		{14BF26F8-F9CC-4B1D-AF14-75250463B102}.Debug|ARM.Build.0 = Debug|ARM
+		{14BF26F8-F9CC-4B1D-AF14-75250463B102}.Release|ARM.ActiveCfg = Release|ARM
+		{14BF26F8-F9CC-4B1D-AF14-75250463B102}.Release|ARM.Build.0 = Release|ARM
+		{05CE52CC-3112-453C-A2D6-C50B13D25281}.Debug|ARM.ActiveCfg = Debug|ARM
+		{05CE52CC-3112-453C-A2D6-C50B13D25281}.Debug|ARM.Build.0 = Debug|ARM
+		{05CE52CC-3112-453C-A2D6-C50B13D25281}.Release|ARM.ActiveCfg = Release|ARM
+		{05CE52CC-3112-453C-A2D6-C50B13D25281}.Release|ARM.Build.0 = Release|ARM
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{05CE52CC-3112-453C-A2D6-C50B13D25281} = {322B37FF-68D4-48FD-9321-5DA4883AA24E}
+		{C04575E0-41A7-4499-9060-5A2C79CECAF0} = {54021ACF-E474-4304-8203-7987035E9E9B}
+		{3EEDC26E-0FCC-4DFA-B66B-AEEC2A28BB0A} = {54021ACF-E474-4304-8203-7987035E9E9B}
+		{14BF26F8-F9CC-4B1D-AF14-75250463B102} = {54021ACF-E474-4304-8203-7987035E9E9B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,234 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="14.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{05CE52CC-3112-453C-A2D6-C50B13D25281}</ProjectGUID>
+    <ApplicationType>Windows Store</ApplicationType>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>ARM</Platform>
+    <ProjectName>libjasper</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\lib\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">libjasper.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">libjasperd</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\lib\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">libjasper.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">libjasper</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <CompileAs>CompileAsC</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4013;4018;4101;4244;4267;4715</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;EXCLUDE_MIF_SUPPORT;EXCLUDE_PNM_SUPPORT;EXCLUDE_BMP_SUPPORT;EXCLUDE_RAS_SUPPORT;EXCLUDE_JPG_SUPPORT;EXCLUDE_PGX_SUPPORT;JAS_WIN_MSVC_BUILD;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;EXCLUDE_MIF_SUPPORT;EXCLUDE_PNM_SUPPORT;EXCLUDE_BMP_SUPPORT;EXCLUDE_RAS_SUPPORT;EXCLUDE_JPG_SUPPORT;EXCLUDE_PGX_SUPPORT;JAS_WIN_MSVC_BUILD;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsC</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4013;4018;4101;4244;4267;4715</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;EXCLUDE_MIF_SUPPORT;EXCLUDE_PNM_SUPPORT;EXCLUDE_BMP_SUPPORT;EXCLUDE_RAS_SUPPORT;EXCLUDE_JPG_SUPPORT;EXCLUDE_PGX_SUPPORT;JAS_WIN_MSVC_BUILD;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;EXCLUDE_MIF_SUPPORT;EXCLUDE_PNM_SUPPORT;EXCLUDE_BMP_SUPPORT;EXCLUDE_RAS_SUPPORT;EXCLUDE_JPG_SUPPORT;EXCLUDE_PGX_SUPPORT;JAS_WIN_MSVC_BUILD;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\ARM;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\3rdparty\libjasper\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Building Custom Rule $(OCV2015_ROOT)/3rdparty/libjasper/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)/3rdparty/libjasper/CMakeLists.txt;$(OCV2015_ROOT)\3rdparty\libjasper\CMakeLists.txt;$(OCV2015_ROOT)\3rdparty\libjasper\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\libjasper\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Building Custom Rule $(OCV2015_ROOT)/3rdparty/libjasper/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)/3rdparty/libjasper/CMakeLists.txt;$(OCV2015_ROOT)\3rdparty\libjasper\CMakeLists.txt;$(OCV2015_ROOT)\3rdparty\libjasper\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\3rdparty\libjasper\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jp2_cod.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jp2_dec.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_bs.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_cod.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_cs.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_dec.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_enc.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_fix.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_flt.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_math.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_mct.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_mqcod.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_mqdec.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_mqenc.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_qmfb.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t1cod.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t1dec.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t1enc.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t2cod.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t2dec.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t2enc.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_tagtree.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_tsfb.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_util.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jasper.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_cm.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_config.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_config2.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_debug.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_fix.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_getopt.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_icc.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_image.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_init.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_malloc.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_math.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_seq.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_stream.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_string.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_tmr.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_tvp.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_types.h" />
+    <ClInclude Include="..\..\..\..\..\..\3rdparty\libjasper\jasper\jas_version.h" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_cm.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_debug.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_getopt.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_icc.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_iccdata.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_image.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_init.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_malloc.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_seq.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_stream.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_string.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_tmr.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_tvp.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jas_version.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jp2_cod.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jp2_dec.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jp2_enc.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_bs.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_cs.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_dec.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_enc.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_math.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_mct.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_mqcod.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_mqdec.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_mqenc.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_qmfb.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t1cod.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t1dec.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t1enc.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t2cod.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t2dec.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_t2enc.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_tagtree.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_tsfb.c" />
+    <ClCompile Include="..\..\..\..\..\..\3rdparty\libjasper\jpc_util.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/ZERO_CHECK.vcxproj">
+      <Project>14BF26F8-F9CC-4B1D-AF14-75250463B102</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

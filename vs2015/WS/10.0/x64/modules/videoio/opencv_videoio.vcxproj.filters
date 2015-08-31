@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_images.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_mjpeg_encoder.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_mjpeg_decoder.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_capture.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_bridge.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_video.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\CaptureFrameGrabber.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\MediaStreamSink.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_cmu.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="opencv_videoio_pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio.hpp">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio\videoio.hpp">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio\cap_ios.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio\videoio_c.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio\cap_winrt.hpp">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\precomp.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_capture.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_bridge.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_video.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\MFIncludes.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\CaptureFrameGrabber.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\MediaSink.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\MediaStreamSink.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cvconfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\videoio\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{6F652BDE-35E3-4D70-97BC-72653848239E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{D1153171-3EAE-4E07-A75B-6FEA6093C934}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src">
+      <UniqueIdentifier>{053E470E-10F7-487D-BF54-53FF229F67D2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include">
+      <UniqueIdentifier>{FB0B924D-1977-45F4-87DA-535BCB56C720}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

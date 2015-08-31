@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resources">
+      <UniqueIdentifier>c49e9093-788f-43a2-88be-39c5aca1a467</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tga;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Include">
+      <UniqueIdentifier>{a629dd4f-c672-4354-af50-82acc54c638f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{99cf7af8-aa3d-4d99-bb91-c089f065d818}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\opencvrt">
+      <UniqueIdentifier>{9c592f10-a865-49ca-9a97-93a77dd93b0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src">
+      <UniqueIdentifier>{edac69f1-78e5-4259-8a93-5af553e7c4cf}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\winrt\src\precomp.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\winrt\include\opencvrt\cascadeclassifier.hpp">
+      <Filter>Include\opencvrt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\winrt\include\opencvrt\imgproc.hpp">
+      <Filter>Include\opencvrt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\winrt\include\opencvrt\mat.hpp">
+      <Filter>Include\opencvrt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\winrt\include\opencvrt\rttypes.hpp">
+      <Filter>Include\opencvrt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\winrt\include\opencvrt\videoio.hpp">
+      <Filter>Include\opencvrt</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\..\modules\winrt\src\cascadeclassifier.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\winrt\src\imgproc.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\winrt\src\mat.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\winrt\src\videoio.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="opencv_winrt_pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

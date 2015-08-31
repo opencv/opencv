@@ -1,0 +1,14 @@
+# Package Information for pkg-config
+
+prefix=C:/Users/ocv_install
+exec_prefix=${prefix}
+libdir=${exec_prefix}/x64/vc14/lib
+includedir_old=${prefix}/include/opencv
+includedir_new=${prefix}/include
+
+Name: OpenCV
+Description: Open Source Computer Vision Library
+Version: 3.0.0
+Libs: -L${exec_prefix}/x64/vc14/lib -lopencv_shape300 -lopencv_stitching300 -lopencv_objdetect300 -lopencv_videostab300 -lopencv_calib3d300 -lopencv_videoio300 -lopencv_imgcodecs300 -lopencv_features2d300 -lopencv_video300 -lopencv_photo300 -lopencv_ml300 -lopencv_imgproc300 -lopencv_flann300 -lopencv_core300 -lopencv_hal300
+Libs.private: 
+Cflags: -I${includedir_old} -I${includedir_new}

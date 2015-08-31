@@ -1,0 +1,64 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ALL_BUILD", "ALL_BUILD.vcxproj", "{DCD1CAAE-E77A-4A01-9D43-7E65770EC593}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C09B933F-40DC-487D-B06B-1285E82FB5F0} = {C09B933F-40DC-487D-B06B-1285E82FB5F0}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "INSTALL", "INSTALL.vcxproj", "{2D8E1045-D6F8-40A8-B224-1BC3BA65F8FB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DCD1CAAE-E77A-4A01-9D43-7E65770EC593} = {DCD1CAAE-E77A-4A01-9D43-7E65770EC593}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PACKAGE", "PACKAGE.vcxproj", "{0969EBF4-F4DF-4C0E-8EAD-E6D02846F2B0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DCD1CAAE-E77A-4A01-9D43-7E65770EC593} = {DCD1CAAE-E77A-4A01-9D43-7E65770EC593}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZERO_CHECK", "..\..\ZERO_CHECK.vcxproj", "{A352CFBE-D001-4C41-AD8B-1D9D2AD17AA0}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "zlib.vcxproj", "{C09B933F-40DC-487D-B06B-1285E82FB5F0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A352CFBE-D001-4C41-AD8B-1D9D2AD17AA0} = {A352CFBE-D001-4C41-AD8B-1D9D2AD17AA0}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3rdparty", "3rdparty", "{9C281C3E-AAA9-4FAF-BABB-4713ABB4F672}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CMakeTargets", "CMakeTargets", "{4CB5F27C-7609-4B10-824B-90F339B6B38D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DCD1CAAE-E77A-4A01-9D43-7E65770EC593}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DCD1CAAE-E77A-4A01-9D43-7E65770EC593}.Debug|Win32.Build.0 = Debug|Win32
+		{DCD1CAAE-E77A-4A01-9D43-7E65770EC593}.Release|Win32.ActiveCfg = Release|Win32
+		{DCD1CAAE-E77A-4A01-9D43-7E65770EC593}.Release|Win32.Build.0 = Release|Win32
+		{2D8E1045-D6F8-40A8-B224-1BC3BA65F8FB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2D8E1045-D6F8-40A8-B224-1BC3BA65F8FB}.Release|Win32.ActiveCfg = Release|Win32
+		{0969EBF4-F4DF-4C0E-8EAD-E6D02846F2B0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0969EBF4-F4DF-4C0E-8EAD-E6D02846F2B0}.Release|Win32.ActiveCfg = Release|Win32
+		{A352CFBE-D001-4C41-AD8B-1D9D2AD17AA0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A352CFBE-D001-4C41-AD8B-1D9D2AD17AA0}.Debug|Win32.Build.0 = Debug|Win32
+		{A352CFBE-D001-4C41-AD8B-1D9D2AD17AA0}.Release|Win32.ActiveCfg = Release|Win32
+		{A352CFBE-D001-4C41-AD8B-1D9D2AD17AA0}.Release|Win32.Build.0 = Release|Win32
+		{C09B933F-40DC-487D-B06B-1285E82FB5F0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C09B933F-40DC-487D-B06B-1285E82FB5F0}.Debug|Win32.Build.0 = Debug|Win32
+		{C09B933F-40DC-487D-B06B-1285E82FB5F0}.Release|Win32.ActiveCfg = Release|Win32
+		{C09B933F-40DC-487D-B06B-1285E82FB5F0}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C09B933F-40DC-487D-B06B-1285E82FB5F0} = {9C281C3E-AAA9-4FAF-BABB-4713ABB4F672}
+		{2D8E1045-D6F8-40A8-B224-1BC3BA65F8FB} = {4CB5F27C-7609-4B10-824B-90F339B6B38D}
+		{0969EBF4-F4DF-4C0E-8EAD-E6D02846F2B0} = {4CB5F27C-7609-4B10-824B-90F339B6B38D}
+		{A352CFBE-D001-4C41-AD8B-1D9D2AD17AA0} = {4CB5F27C-7609-4B10-824B-90F339B6B38D}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal
