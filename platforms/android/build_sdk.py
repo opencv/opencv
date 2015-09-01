@@ -19,7 +19,7 @@ def execute(cmd, shell=False):
         elif retcode > 0:
             raise Fail("Child returned: %s" % retcode)
     except OSError as e:
-        raise Fail("Execution failed: %s" % e.strerror)
+        raise Fail("Execution failed: %d / %s" % (e.errno, e.strerror))
 
 def rm_one(d):
     d = os.path.abspath(d)
@@ -169,6 +169,7 @@ class Builder:
         for ver, d in self.extra_packs + [("3.0.0", os.path.join(self.libdest, "lib"))]:
             r = ET.Element("library", attrib={"version": ver})
             log.info("Adding libraries from %s", d)
+
             for f in glob.glob(os.path.join(d, abi.name, "*.so")):
                 log.info("Copy file: %s", f)
                 shutil.copy2(f, apklibdest)
@@ -176,11 +177,15 @@ class Builder:
                     continue
                 log.info("Register file: %s", os.path.basename(f))
                 n = ET.SubElement(r, "file", attrib={"name": os.path.basename(f)})
-            xmlname = os.path.join(apkxmldest, "config%s.xml" % ver.replace(".", ""))
-            log.info("Generating XML config: %s", xmlname)
-            ET.ElementTree(r).write(xmlname, encoding="utf-8")
+
+            if len(list(r)) > 0:
+                xmlname = os.path.join(apkxmldest, "config%s.xml" % ver.replace(".", ""))
+                log.info("Generating XML config: %s", xmlname)
+                ET.ElementTree(r).write(xmlname, encoding="utf-8")
+
         execute(["ninja", "opencv_engine"])
-        execute(["ant", "-f", os.path.join(apkdest, "build.xml"), "debug"], shell=True)
+        execute(["ant", "-f", os.path.join(apkdest, "build.xml"), "debug"],
+            shell=(sys.platform == 'win32'))
         # TODO: Sign apk
 
     def build_javadoc(self):
