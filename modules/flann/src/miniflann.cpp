@@ -318,12 +318,14 @@ buildIndex_(void*& index, const Mat& wholedata, const Mat& data, const IndexPara
 
     ::cvflann::Matrix<ElementType> dataset((ElementType*)data.data, data.rows, data.cols);
 
-    IndexType* _index = NULL;
-    if( !index || getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR) != FLANN_INDEX_LSH) // currently, additional index support is the lsh algorithm only.
+    // currently, additional index support is the lsh algorithm only.
+    if( !index || getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR) != FLANN_INDEX_LSH)
     {
-        _index = new IndexType(dataset, get_params(params), dist);
+        Ptr<IndexType> _index = makePtr<IndexType>(dataset, get_params(params), dist);
         _index->buildIndex();
         index = _index;
+        // HACK to prevent object destruction
+        _index.obj = NULL;
     }
     else // build additional lsh index
     {
