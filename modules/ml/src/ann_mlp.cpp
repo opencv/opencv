@@ -1535,6 +1535,10 @@ void CvANN_MLP::read( CvFileStorage* fs, CvFileNode* node )
 
     _layer_sizes = (CvMat*)cvReadByName( fs, node, "layer_sizes" );
     CV_CALL( create( _layer_sizes, SIGMOID_SYM, 0, 0 ));
+
+    cvReleaseMat( &_layer_sizes );
+    _layer_sizes = NULL;
+
     l_count = layer_sizes->cols;
 
     CV_CALL( read_params( fs, node ));
