@@ -537,6 +537,9 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     if( data )
         delete data;
 
+    if ( pair16u32s_ptr )
+        cvFree( &pair16u32s_ptr );
+
     if (_fdst)
         cvFree( &_fdst );
     if (_idst)
