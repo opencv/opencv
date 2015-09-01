@@ -1274,13 +1274,18 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
         return -FLT_MAX;
 
     float* pred_resp = 0;
+    bool needsFreeing = false;
+
     if (resp)
     {
         resp->resize(n);
         pred_resp = &((*resp)[0]);
     }
     else
+    {
         pred_resp = new float[n];
+        needsFreeing = true;
+    }
 
     Sample_predictor predictor = Sample_predictor(this, pred_resp, _data->get_values(),
             _data->get_missing(), _sample_idx);
@@ -1312,6 +1317,9 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
         }
         err = err / (float)n;
     }
+
+    if (needsFreeing)
+        delete[]pred_resp;
 
     return err;
 }
