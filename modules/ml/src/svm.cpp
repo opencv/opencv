@@ -2315,7 +2315,12 @@ void CvSVM::write( CvFileStorage* fs, const char* name ) const
                       params.svm_type == CvSVM::ONE_CLASS ? 1 : 0;
     const CvSVMDecisionFunc* df = decision_func;
     if( !isSvmModelApplicable(sv_total, var_all, var_count, class_count) )
+    {
+        cvReleaseFileStorage( &fs );
+        fs = NULL;
+
         CV_ERROR( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
+    }
 
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_SVM );
 
