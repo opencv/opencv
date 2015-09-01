@@ -243,7 +243,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         for (int i=1; i<n; ++i)
         {
             int k = 0;
-            while ((int(orig_response->data.fl[i]) - class_labels->data.i[k]) && (k<j))
+            while ((k<j) && (int(orig_response->data.fl[i]) - class_labels->data.i[k]))
                 k++;
             if (k == j)
             {
