@@ -271,7 +271,7 @@ enum BorderTypes {
 #  endif
 #endif
 #ifndef CV_StaticAssert
-#  if defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
+#  if !defined(__clang__) && defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
 #    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
 #  else
      template <bool x> struct CV_StaticAssert_failed;
