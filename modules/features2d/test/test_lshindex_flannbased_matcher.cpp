@@ -303,7 +303,8 @@ public:
     //
     // constructor
     //
-    CV_FeatureDetectorMatcherBaseTest(testparam* _tp, double _accuracy_margin, cv::Feature2D* _fe, cv::DescriptorMatcher *_flmatcher, string _flmatchername, int norm_type_for_bfmatcher) :
+    CV_FeatureDetectorMatcherBaseTest(testparam* _tp, double _accuracy_margin, cv::Feature2D* _fe,
+                                      cv::DescriptorMatcher *_flmatcher, string _flmatchername, int norm_type_for_bfmatcher) :
         tp(_tp),
         target_accuracy_margin_from_bfmatcher(_accuracy_margin),
         fe(_fe),
@@ -316,6 +317,15 @@ public:
 #endif
         // create brute force matcher for accuracy of reference
         bfmatcher = new cv::BFMatcher(norm_type_for_bfmatcher);
+    }
+
+    virtual ~CV_FeatureDetectorMatcherBaseTest()
+    {
+        if (bfmatcher)
+        {
+            delete bfmatcher;
+            bfmatcher = NULL;
+        }
     }
 
     //
