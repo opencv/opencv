@@ -271,7 +271,7 @@ enum BorderTypes {
 #  endif
 #endif
 #ifndef CV_StaticAssert
-#  if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC_MINOR__ > 2)
+#  if !defined(__clang__) && defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
 #    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
 #  else
      template <bool x> struct CV_StaticAssert_failed;
@@ -296,7 +296,7 @@ enum BorderTypes {
     CV_DO_PRAGMA(warning(push)) \
     CV_DO_PRAGMA(warning(disable: 4996))
 #define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(warning(pop))
-#elif defined (__clang__) || ((__GNUC__)  && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 5))))
+#elif defined (__clang__) || ((__GNUC__)  && (__GNUC__*100 + __GNUC_MINOR__ > 405))
 #define CV_SUPPRESS_DEPRECATED_START \
     CV_DO_PRAGMA(GCC diagnostic push) \
     CV_DO_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")

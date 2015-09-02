@@ -1593,7 +1593,7 @@ NCVStatus nppsStCompact_32s(Ncv32s *d_src, Ncv32u srcLen,
 }
 
 
-#if defined __GNUC__ && __GNUC__ > 2 && __GNUC_MINOR__  > 4
+#if defined __GNUC__ && (__GNUC__*100 + __GNUC_MINOR__ > 204)
 typedef Ncv32u __attribute__((__may_alias__)) Ncv32u_a;
 #else
 typedef Ncv32u Ncv32u_a;
