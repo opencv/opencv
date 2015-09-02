@@ -112,7 +112,7 @@ SVMSGD* SVMSGD::clone() const{
 }
 
 void SVMSGD::train(cv::Mat trainFeatures, cv::Mat labels){
-    
+
     // Initialize _nFeatures
     _slidingWindowSize = trainFeatures.rows;
     _nFeatures = trainFeatures.cols;
@@ -135,7 +135,7 @@ void SVMSGD::train(cv::Mat trainFeatures, cv::Mat labels){
     }
 }
 
-float SVMSGD::predict(cv::Mat newFeature){  
+float SVMSGD::predict(cv::Mat newFeature){
     float innerProduct;
 
     if (_initPredict){
@@ -156,7 +156,7 @@ float SVMSGD::predict(cv::Mat newFeature){
         // Update the featuresSlider with newFeature and _labelSlider with label
         newFeature.row(0).copyTo(_featuresSlider.row(_sliderCounter));
         _labelSlider[_sliderCounter] = label;
-        
+
         // Update weights with a random index
         if (_sliderCounter == _slidingWindowSize-1){
             generateRandomIndex();
@@ -166,14 +166,14 @@ float SVMSGD::predict(cv::Mat newFeature){
         // _sliderCounter++ if < _slidingWindowSize
         _sliderCounter = (_sliderCounter == _slidingWindowSize-1) ? 0 : (_sliderCounter+1);
     }
-        
+
     return label;
 }
 
 void SVMSGD::generateRandomIndex(){
     // Choose random sample, using Mikolov's fast almost-uniform random number
     _randomNumber = _randomNumber * (unsigned long long) 25214903917 + 11;
-    _randomIndex = _randomNumber % (unsigned long long) _slidingWindowSize; 
+    _randomIndex = _randomNumber % (unsigned long long) _slidingWindowSize;
 }
 
 float SVMSGD::calcInnerProduct(float *rowDataPointer){

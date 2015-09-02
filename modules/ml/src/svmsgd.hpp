@@ -86,7 +86,7 @@ class CV_EXPORTS_W SVMSGD {
 
         @param lambda regularization
         @param learnRate learning rate
-        @param nIterations number of training iterations 
+        @param nIterations number of training iterations
 
         */
         SVMSGD(float lambda = 0.000001, float learnRate = 2, uint nIterations = 100000);
@@ -96,7 +96,7 @@ class CV_EXPORTS_W SVMSGD {
         @param updateFrequency online update frequency
         @param lambda regularization
         @param learnRate learning rate
-        @param nIterations number of training iterations 
+        @param nIterations number of training iterations
 
         */
         SVMSGD(uint updateFrequency, float lambda = 0.000001, float learnRate = 2, uint nIterations = 100000);
@@ -108,7 +108,7 @@ class CV_EXPORTS_W SVMSGD {
         The function trains the SGDSVM classifier using the train features and the correspondent labels (-1 or 1).
 
         @param trainFeatures features used for training. Each row is a new sample.
-        @param labels mat (size Nx1 with N = number of features) with the label of each training feature. 
+        @param labels mat (size Nx1 with N = number of features) with the label of each training feature.
 
         */
         virtual void train(cv::Mat trainFeatures, cv::Mat labels);
@@ -117,16 +117,16 @@ class CV_EXPORTS_W SVMSGD {
 
         The function predicts and returns the label of a new feature vector, using the previously trained SVM model.
 
-        @param newFeature new feature vector used for prediction 
+        @param newFeature new feature vector used for prediction
 
         */
         virtual float predict(cv::Mat newFeature);
-        
+
         /** @brief Returns the weights of the trained model.
 
         */
         virtual std::vector<float> getWeights(){ return _weights; };
-        
+
         /** @brief Sets the weights of the trained model.
 
         @weights weights used to predict the label of a new feature vector.
@@ -146,7 +146,7 @@ class CV_EXPORTS_W SVMSGD {
         // Random index generation
         long long int _randomNumber;
         unsigned int _randomIndex;
-        
+
         // Number of features and samples
         unsigned int _nFeatures;
         unsigned int _nTrainSamples;
