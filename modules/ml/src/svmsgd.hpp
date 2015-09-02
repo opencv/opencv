@@ -56,92 +56,92 @@ namespace ml
 
 class CV_EXPORTS_W SVMSGD {
 
-	public:
-		/** @brief SGDSVM constructor.
+    public:
+        /** @brief SGDSVM constructor.
 
-		@param lambda regularization
-		@param learnRate learning rate
-		@param nIterations number of training iterations 
+        @param lambda regularization
+        @param learnRate learning rate
+        @param nIterations number of training iterations 
 
-		*/
-		SVMSGD(float lambda = 0.000001, float learnRate = 2, uint nIterations = 100000);
+        */
+        SVMSGD(float lambda = 0.000001, float learnRate = 2, uint nIterations = 100000);
 
-		/** @brief SGDSVM constructor.
+        /** @brief SGDSVM constructor.
 
-		@param updateFrequency online update frequency
-		@param lambda regularization
-		@param learnRate learning rate
-		@param nIterations number of training iterations 
+        @param updateFrequency online update frequency
+        @param lambda regularization
+        @param learnRate learning rate
+        @param nIterations number of training iterations 
 
-		*/
-		SVMSGD(uint updateFrequency, float lambda = 0.000001, float learnRate = 2, uint nIterations = 100000);
-		virtual ~SVMSGD();
-		virtual SVMSGD* clone() const;
+        */
+        SVMSGD(uint updateFrequency, float lambda = 0.000001, float learnRate = 2, uint nIterations = 100000);
+        virtual ~SVMSGD();
+        virtual SVMSGD* clone() const;
 
-		/** @brief Train the SGDSVM classifier.
+        /** @brief Train the SGDSVM classifier.
 
-		The function trains the SGDSVM classifier using the train features and the correspondent labels (-1 or 1).
+        The function trains the SGDSVM classifier using the train features and the correspondent labels (-1 or 1).
 
-		@param trainFeatures features used for training. Each row is a new sample.
-		@param labels mat (size Nx1 with N = number of features) with the label of each training feature. 
+        @param trainFeatures features used for training. Each row is a new sample.
+        @param labels mat (size Nx1 with N = number of features) with the label of each training feature. 
 
-		*/
-		virtual void train(cv::Mat trainFeatures, cv::Mat labels);
+        */
+        virtual void train(cv::Mat trainFeatures, cv::Mat labels);
 
-		/** @brief Predict the label of a new feature vector.
+        /** @brief Predict the label of a new feature vector.
 
-		The function predicts and returns the label of a new feature vector, using the previously trained SVM model.
+        The function predicts and returns the label of a new feature vector, using the previously trained SVM model.
 
-		@param newFeature new feature vector used for prediction 
+        @param newFeature new feature vector used for prediction 
 
-		*/
-		virtual float predict(cv::Mat newFeature);
-		
-		/** @brief Returns the weights of the trained model.
+        */
+        virtual float predict(cv::Mat newFeature);
+        
+        /** @brief Returns the weights of the trained model.
 
-		*/
-		virtual std::vector<float> getWeights(){ return _weights; };
-		
-		/** @brief Sets the weights of the trained model.
+        */
+        virtual std::vector<float> getWeights(){ return _weights; };
+        
+        /** @brief Sets the weights of the trained model.
 
-		@weights weights used to predict the label of a new feature vector.
+        @weights weights used to predict the label of a new feature vector.
 
-		*/
-		virtual void setWeights(std::vector<float> weights){ _weights = weights; };
+        */
+        virtual void setWeights(std::vector<float> weights){ _weights = weights; };
 
-	private:
-		void updateWeights();
-		void generateRandomIndex();
-		float calcInnerProduct(float *rowDataPointer);
-		void updateWeights(float innerProduct, float *rowDataPointer, int label);
+    private:
+        void updateWeights();
+        void generateRandomIndex();
+        float calcInnerProduct(float *rowDataPointer);
+        void updateWeights(float innerProduct, float *rowDataPointer, int label);
 
-		// Vector with SVM weights
-		std::vector<float> _weights;
+        // Vector with SVM weights
+        std::vector<float> _weights;
 
-		// Random index generation
-		long long int _randomNumber;
-		unsigned int _randomIndex;
-		
-		// Number of features and samples
-		unsigned int _nFeatures;
-		unsigned int _nTrainSamples;
+        // Random index generation
+        long long int _randomNumber;
+        unsigned int _randomIndex;
+        
+        // Number of features and samples
+        unsigned int _nFeatures;
+        unsigned int _nTrainSamples;
 
-		// Parameters for learning
-		float _lambda;  //regularization
-		float _learnRate;  //learning rate
-		unsigned int _nIterations; //number of training iterations
+        // Parameters for learning
+        float _lambda;  //regularization
+        float _learnRate;  //learning rate
+        unsigned int _nIterations; //number of training iterations
 
-		// Vars to control the features slider matrix
-		bool _onlineUpdate;
-		bool _initPredict;
-		uint _slidingWindowSize;
-		uint _predictSlidingWindowSize;
-		float* _labelSlider;
-		float _learnRateDecay;
+        // Vars to control the features slider matrix
+        bool _onlineUpdate;
+        bool _initPredict;
+        uint _slidingWindowSize;
+        uint _predictSlidingWindowSize;
+        float* _labelSlider;
+        float _learnRateDecay;
 
-		// Mat with features slider and correspondent counter
-		unsigned int _sliderCounter;
-		cv::Mat _featuresSlider;
+        // Mat with features slider and correspondent counter
+        unsigned int _sliderCounter;
+        cv::Mat _featuresSlider;
 
 };
 
