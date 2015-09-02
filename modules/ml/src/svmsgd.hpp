@@ -50,11 +50,27 @@
 \****************************************************************************************/
 
 
-/** @brief Stochastic Gradient Descent SVM classifier
+/*!
+Stochastic Gradient Descent SVM classifier
 
 SVMSGD provides a fast and easy-to-use implementation of the SVM classifier using the Stochastic Gradient Descent approach, as presented in @cite bottou2010large.
 The gradient descent show amazing performance for large-scale problems, reducing the computing time. This allows a fast and reliable online update of the classifier for each new feature which
 is fundamental when dealing with different conditions over time (like weather and illumination changes, for example).
+
+First, create the SVMSGD object. To enable the online update, a value for updateFrequency should be defined.
+
+Then the SVM model can be trained using the train features and the correspondent labels.
+
+After that, the label of a new feature vector can be predicted using the predict function. If the updateFrequency was defined in the constructor, the predict function will update the weights automatically.
+
+// Initialize object
+SvmSgd SVMSGD;
+
+// Train the Stochastic Gradient Descent SVM
+SVMSGD.train(trainFeatures, labels);
+
+// Predict label for the new feature vector (1xM)
+predictedLabel = SVMSGD.predict(newFeatureVector);
 
 */
 
