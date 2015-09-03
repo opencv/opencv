@@ -2804,7 +2804,7 @@ void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, St
     }
     else
     {
-        const int elem_size = src.elemSize1();
+        const int elem_size = static_cast<int>(src.elemSize1());
         const int num_channels = src.channels();
         const int bcols = src.cols * num_channels;
 
@@ -2895,7 +2895,7 @@ void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
     }
     else
     {
-        const int elem_size = src1.elemSize1();
+        const int elem_size = static_cast<int>(src1.elemSize1());
         const int num_channels = src1.channels();
         const int bcols = src1.cols * num_channels;
 
@@ -2979,7 +2979,7 @@ void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, co
     }
     else
     {
-        const int elem_size = src1.elemSize1();
+        const int elem_size = static_cast<int>(src1.elemSize1());
         const int num_channels = src1.channels();
         const int bcols = src1.cols * num_channels;
 
@@ -3063,7 +3063,7 @@ void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
     }
     else
     {
-        const int elem_size = src1.elemSize1();
+        const int elem_size = static_cast<int>(src1.elemSize1());
         const int num_channels = src1.channels();
         const int bcols = src1.cols * num_channels;
 
