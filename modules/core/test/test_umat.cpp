@@ -243,9 +243,11 @@ TEST_P(UMatBasicTests, GetUMat)
         EXPECT_MAT_NEAR(ub, ua, 0);
     }
     {
-        Mat b;
-        b = a.getUMat(ACCESS_RW).getMat(ACCESS_RW);
-        EXPECT_MAT_NEAR(b, a, 0);
+        UMat u = a.getUMat(ACCESS_RW);
+        {
+            Mat b = u.getMat(ACCESS_RW);
+            EXPECT_MAT_NEAR(b, a, 0);
+        }
     }
     {
         Mat b;
@@ -253,9 +255,11 @@ TEST_P(UMatBasicTests, GetUMat)
         EXPECT_MAT_NEAR(b, a, 0);
     }
     {
-        UMat ub;
-        ub = ua.getMat(ACCESS_RW).getUMat(ACCESS_RW);
-        EXPECT_MAT_NEAR(ub, ua, 0);
+        Mat m = ua.getMat(ACCESS_RW);
+        {
+            UMat ub = m.getUMat(ACCESS_RW);
+            EXPECT_MAT_NEAR(ub, ua, 0);
+        }
     }
 }
 
@@ -1268,5 +1272,17 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
     ASSERT_TRUE(exceptionDetected); // data race
 }
 
+TEST(UMat, mat_umat_sync)
+{
+    UMat u(10, 10, CV_8UC1, Scalar(1));
+    {
+        Mat m = u.getMat(ACCESS_RW).reshape(1);
+        m.setTo(Scalar(255));
+    }
+
+    UMat uDiff;
+    compare(u, 255, uDiff, CMP_NE);
+    ASSERT_EQ(0, countNonZero(uDiff));
+}
 
 } } // namespace cvtest::ocl
