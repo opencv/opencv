@@ -60,7 +60,7 @@ static Mutex umatLocks[UMAT_NLOCKS];
 UMatData::UMatData(const MatAllocator* allocator)
 {
     prevAllocator = currAllocator = allocator;
-    urefcount = refcount = 0;
+    urefcount = refcount = mapcount = 0;
     data = origdata = 0;
     size = 0;
     flags = 0;
@@ -73,6 +73,7 @@ UMatData::~UMatData()
 {
     prevAllocator = currAllocator = 0;
     urefcount = refcount = 0;
+    CV_Assert(mapcount == 0);
     data = origdata = 0;
     size = 0;
     flags = 0;
@@ -221,6 +222,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     UMat hdr;
     if(!data)
         return hdr;
+    CV_Assert((!u || u->mapcount==0) && "Don't get UMat from temp-Mat!");
     accessFlags |= ACCESS_RW;
     UMatData* temp_u = u;
     if(!temp_u)
@@ -637,18 +639,28 @@ Mat UMat::getMat(int accessFlags) const
 {
     if(!u)
         return Mat();
+    CV_Assert(!u->tempUMat() && "Don't get Mat from temp UMat! Use copyTo().");
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
     accessFlags |= ACCESS_RW;
-    u->currAllocator->map(u, accessFlags);
-    CV_Assert(u->data != 0);
-    Mat hdr(dims, size.p, type(), u->data + offset, step.p);
-    hdr.flags = flags;
-    hdr.u = u;
-    hdr.datastart = u->data;
-    hdr.data = u->data + offset;
-    hdr.datalimit = hdr.dataend = u->data + u->size;
-    CV_XADD(&hdr.u->refcount, 1);
-    return hdr;
+    UMatDataAutoLock autolock(u);
+    if(CV_XADD(&u->refcount, 1) == 0)
+        u->currAllocator->map(u, accessFlags);
+    if (u->data != 0)
+    {
+        Mat hdr(dims, size.p, type(), u->data + offset, step.p);
+        hdr.flags = flags;
+        hdr.u = u;
+        hdr.datastart = u->data;
+        hdr.data = u->data + offset;
+        hdr.datalimit = hdr.dataend = u->data + u->size;
+        return hdr;
+    }
+    else
+    {
+        CV_XADD(&u->refcount, -1);
+        CV_Assert(u->data != 0);
+        return Mat();
+    }
 }
 
 void* UMat::handle(int accessFlags) const

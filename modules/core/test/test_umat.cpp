@@ -230,7 +230,7 @@ TEST_P(UMatBasicTests, copyTo)
     }
 }
 
-TEST_P(UMatBasicTests, GetUMat)
+TEST_P(UMatBasicTests, DISABLED_GetUMat)
 {
     if(useRoi)
     {
@@ -243,9 +243,11 @@ TEST_P(UMatBasicTests, GetUMat)
         EXPECT_MAT_NEAR(ub, ua, 0);
     }
     {
-        Mat b;
-        b = a.getUMat(ACCESS_RW).getMat(ACCESS_RW);
-        EXPECT_MAT_NEAR(b, a, 0);
+        UMat u = a.getUMat(ACCESS_RW);
+        {
+            Mat b = u.getMat(ACCESS_RW); // don't get temp Mat from temp UMat, use copyTo()
+            EXPECT_MAT_NEAR(b, a, 0);
+        }
     }
     {
         Mat b;
@@ -253,9 +255,11 @@ TEST_P(UMatBasicTests, GetUMat)
         EXPECT_MAT_NEAR(b, a, 0);
     }
     {
-        UMat ub;
-        ub = ua.getMat(ACCESS_RW).getUMat(ACCESS_RW);
-        EXPECT_MAT_NEAR(ub, ua, 0);
+        Mat m = ua.getMat(ACCESS_RW);
+        {
+            UMat ub = m.getUMat(ACCESS_RW);
+            EXPECT_MAT_NEAR(ub, ua, 0);
+        }
     }
 }
 
@@ -632,7 +636,8 @@ TEST_P(getUMat, custom_ptr)
     UMat u = m.getUMat(ACCESS_RW);
     cv::add(u, cv::Scalar::all(2), u);
 
-    Mat d = u.getMat(ACCESS_READ);
+    Mat d;// = u.getMat(ACCESS_READ); // don't get Mat from temp UMat!
+    u.copyTo(d);
 
     Mat expected(m.size(), m.type(), cv::Scalar::all(4));
     double norm = cvtest::norm(d, expected, NORM_INF);
@@ -650,7 +655,8 @@ TEST_P(getUMat, self_allocated)
     UMat u = m.getUMat(ACCESS_RW);
     cv::add(u, cv::Scalar::all(2), u);
 
-    Mat d = u.getMat(ACCESS_READ);
+    Mat d; // = u.getMat(ACCESS_READ); // don't get Mat from temp UMat
+    u.copyTo(d);
 
     Mat expected(m.size(), m.type(), cv::Scalar::all(4));
     double norm = cvtest::norm(d, expected, NORM_INF);
@@ -896,7 +902,7 @@ TEST(UMat, Sync)
     EXPECT_EQ(0, cvtest::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
 }
 
-TEST(UMat, SyncTemp)
+TEST(UMat, DISABLED_SyncTemp)
 {
     Mat m(10, 10, CV_8UC1);
 
@@ -904,7 +910,7 @@ TEST(UMat, SyncTemp)
         UMat um = m.getUMat(ACCESS_WRITE);
 
         {
-            Mat m2 = um.getMat(ACCESS_WRITE);
+            Mat m2 = um.getMat(ACCESS_WRITE); // don't get temp Mat from temp UMat, use copyTo()
             m2.setTo(cv::Scalar::all(17));
         }
 
@@ -1091,7 +1097,7 @@ TEST(UMat, unmap_in_class)
 }
 
 
-TEST(UMat, map_unmap_counting)
+TEST(UMat, DISABLED_map_unmap_counting)
 {
     if (!cv::ocl::useOpenCL())
     {
@@ -1102,8 +1108,8 @@ TEST(UMat, map_unmap_counting)
     Mat m(Size(10, 10), CV_8UC1);
     UMat um = m.getUMat(ACCESS_RW);
     {
-        Mat d1 = um.getMat(ACCESS_RW);
-        Mat d2 = um.getMat(ACCESS_RW);
+        Mat d1 = um.getMat(ACCESS_RW); // don't get temp Mat from temp UMat, use copyTo()
+        Mat d2 = um.getMat(ACCESS_RW); // don't get temp Mat from temp UMat, use copyTo()
         d1.release();
     }
     void* h = NULL;
@@ -1250,5 +1256,17 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
     ASSERT_TRUE(exceptionDetected); // data race
 }
 
+TEST(UMat, mat_umat_sync)
+{
+    UMat u(10, 10, CV_8UC1, Scalar(1));
+    {
+        Mat m = u.getMat(ACCESS_RW).reshape(1);
+        m.setTo(Scalar(255));
+    }
+
+    UMat uDiff;
+    compare(u, 255, uDiff, CMP_NE);
+    ASSERT_EQ(0, countNonZero(uDiff));
+}
 
 } } // namespace cvtest::ocl

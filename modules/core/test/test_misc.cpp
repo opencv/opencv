@@ -101,7 +101,8 @@ TEST(Core_OutputArrayAssign, _Matxd_UMatd)
 TEST(Core_OutputArrayAssign, _Matxd_UMatf)
 {
     Mat expected = (Mat_<float>(2,3) << 1, 2, 3, .1, .2, .3);
-    UMat uexpected = expected.getUMat(ACCESS_READ);
+    UMat uexpected;// = expected.getUMat(ACCESS_READ);
+    expected.copyTo(uexpected); // OutputArray::assign() calls convertTo(double) that calls uexpected.getMat() on iGPU, so don't use temp UMat here, make copyTo()
     Matx23d actualx;
 
     {
@@ -117,7 +118,8 @@ TEST(Core_OutputArrayAssign, _Matxd_UMatf)
 TEST(Core_OutputArrayAssign, _Matxf_UMatd)
 {
     Mat expected = (Mat_<double>(2,3) << 1, 2, 3, .1, .2, .3);
-    UMat uexpected = expected.getUMat(ACCESS_READ);
+    UMat uexpected;// = expected.getUMat(ACCESS_READ);
+    expected.copyTo(uexpected); // OutputArray::assign() calls convertTo() that calls uexpected.getMat() on iGPU, so don't use temp UMat here, make copyTo()
     Matx23f actualx;
 
     {
