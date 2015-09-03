@@ -160,7 +160,7 @@ float SVMSGD::predict(cv::Mat newFeature){
         // Update weights with a random index
         if (_sliderCounter == _slidingWindowSize-1){
             generateRandomIndex();
-            updateWeights(innerProduct, _featuresSlider.ptr<float>(_randomIndex), int(_labelSlider[_randomIndex]) ;
+            updateWeights(innerProduct, _featuresSlider.ptr<float>(_randomIndex), int(_labelSlider[_randomIndex]) );
         }
 
         // _sliderCounter++ if < _slidingWindowSize
