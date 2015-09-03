@@ -75,7 +75,7 @@ SVMSGD::SVMSGD(float lambda, float learnRate, uint nIterations){
     _onlineUpdate = false;
 }
 
-SVMSGD::SVMSGD(uint updateFrequency, float lambda, float learnRate, uint nIterations){
+SVMSGD::SVMSGD(uint updateFrequency, float learnRateDecay, float lambda, float learnRate, uint nIterations){
 
     // Initialize with random seed
     _randomNumber = 1;
@@ -100,7 +100,7 @@ SVMSGD::SVMSGD(uint updateFrequency, float lambda, float learnRate, uint nIterat
     _onlineUpdate = true;
 
     // Learn rate decay: _learnRate = _learnRate * _learnDecay
-    _learnRateDecay = 0.1;
+    _learnRateDecay = learnRateDecay;
 }
 
 SVMSGD::~SVMSGD(){
@@ -148,32 +148,32 @@ float SVMSGD::predict(cv::Mat newFeature){
     }
 
     innerProduct = calcInnerProduct(newFeature.ptr<float>(0));
-    
+
     // Resultant label (-1 or 1)
     int label = (innerProduct>=0) ? 1 : -1;
 
     if (_onlineUpdate){
         // Update the featuresSlider with newFeature and _labelSlider with label
         newFeature.row(0).copyTo(_featuresSlider.row(_sliderCounter));
-        _labelSlider[_sliderCounter] = label;
+        _labelSlider[_sliderCounter] = float(label);
 
         // Update weights with a random index
         if (_sliderCounter == _slidingWindowSize-1){
             generateRandomIndex();
-            updateWeights(innerProduct, _featuresSlider.ptr<float>(_randomIndex), _labelSlider[_randomIndex]);
+            updateWeights(innerProduct, _featuresSlider.ptr<float>(_randomIndex), int(_labelSlider[_randomIndex]) ;
         }
 
         // _sliderCounter++ if < _slidingWindowSize
         _sliderCounter = (_sliderCounter == _slidingWindowSize-1) ? 0 : (_sliderCounter+1);
     }
 
-    return label;
+    return float(label);
 }
 
 void SVMSGD::generateRandomIndex(){
     // Choose random sample, using Mikolov's fast almost-uniform random number
     _randomNumber = _randomNumber * (unsigned long long) 25214903917 + 11;
-    _randomIndex = _randomNumber % (unsigned long long) _slidingWindowSize;
+    _randomIndex = uint(_randomNumber % (unsigned long long) _slidingWindowSize);
 }
 
 float SVMSGD::calcInnerProduct(float *rowDataPointer){

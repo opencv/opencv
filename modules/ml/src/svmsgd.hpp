@@ -99,7 +99,7 @@ class CV_EXPORTS_W SVMSGD {
         @param nIterations number of training iterations
 
         */
-        SVMSGD(uint updateFrequency, float lambda = 0.000001, float learnRate = 2, uint nIterations = 100000);
+        SVMSGD(uint updateFrequency, float learnRateDecay = 1, float lambda = 0.000001, float learnRate = 2, uint nIterations = 100000);
         virtual ~SVMSGD();
         virtual SVMSGD* clone() const;
 
