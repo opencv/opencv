@@ -658,7 +658,7 @@ Mat UMat::getMat(int accessFlags) const
     else
     {
         CV_XADD(&u->refcount, -1);
-        CV_Assert(u->data != 0);
+        CV_Assert(u->data != 0 && "Error mapping of UMat to host memory.");
         return Mat();
     }
 }
