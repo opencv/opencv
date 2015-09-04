@@ -100,7 +100,8 @@ PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, MatDepth, bool, bool, bool, bool)
     void generateTestData()
     {
         src = randomMat(dft_size, CV_MAKE_TYPE(depth, cn), 0.0, 100.0);
-        usrc = src.getUMat(ACCESS_READ);
+        //usrc = src.getUMat(ACCESS_READ); // cv::dft() can call usrc.getMat() if use CPU path that causes error, so using copyTo()
+        src.copyTo(usrc);
     }
 };
 
