@@ -453,6 +453,103 @@ public:
     void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
 
+/*!
+Felzenszwalb's Histogram of Oriented Gradients
+FHOGDescriptor provide an easy-to-use implementation of the Felzenszwalb HOG features extractor, as presented in @cite Felzenszwalb10 .
+
+@code
+// Cell size
+int cellSize = 4;
+
+// Scale applied
+int scale = 1;
+
+// Create object
+HogFeature FHOGDescriptor(cellSize, scale);
+
+// Extract FHOGDescriptor features
+cv::Mat features = FHOGDescriptor.getFeature(image);
+@endcode
+*/
+class  CV_EXPORTS_W FHOGDescriptor {
+
+  /*typedef struct{
+      int sizeX;
+      int sizeY;
+      int numFeatures;
+      float *map;
+  } CvLSVMFeatureMapCaskade;*/
+
+  public:
+
+    /** @brief FHOGDescriptor constructor
+
+        @param cellSize cell size, in pixels
+        @param scale scale applied to the image
+
+    */
+    FHOGDescriptor(uint cellSize = 4, uint scale = 1);
+
+    virtual ~FHOGDescriptor();
+
+    virtual FHOGDescriptor* clone() const;
+
+    /** @brief Get cell size value.
+
+        @returns _cellSize cell size
+
+    */
+    virtual uint getCellSize(){ return _cellSize; };
+
+    /** @brief Set cell size value.
+
+        @param cellSize cell size
+
+    */
+    virtual void setCellSize(uint cellSize){ _cellSize = cellSize; };
+
+    /** @brief Get scale value.
+
+        @returns _scale scale value
+
+    */
+    virtual uint getScale(){ return _scale; };
+
+    /** @brief Set scale value.
+
+        @param scale scale value
+
+    */
+    virtual void setScale(uint scale){ _scale = scale; };
+
+    /** @brief Performs features extraction
+
+        @param image source image
+
+    */
+    virtual cv::Mat extractFeatures(cv::Mat image);
+
+    /** @brief Feature Map Description
+
+      Modified from latentsvm module's "_lsvmc_latentsvm.h"
+
+    */
+    typedef struct{
+        int sizeX;
+        int sizeY;
+        int numFeatures;
+        float *map;
+    } CvLSVMFeatureMapCaskade;
+
+  private:
+    uint _cellSize;
+    uint _scale;
+    cv::Size _tmplSz;
+    cv::Mat _featuresMap;
+    cv::Mat _featurePaddingMat;
+    CvLSVMFeatureMapCaskade *_map;
+};
+
 //! @} objdetect
 
 }

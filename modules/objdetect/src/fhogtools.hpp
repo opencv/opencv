@@ -47,8 +47,8 @@
 /*                      Latent SVM prediction API                            */
 /*****************************************************************************/
 
-#ifndef FHOGTOOLS_H_
-#define FHOGTOOLS_H_
+#ifndef FHOGDescriptorTOOLS_H_
+#define FHOGDescriptorTOOLS_H_
 
 #include <stdio.h>
 //#include "_lsvmc_types.h"
@@ -69,12 +69,12 @@
 //                   to set and get feature vectors (i,j)
 //                   used formula map[(j * sizeX + i) * p + k], where
 //                   k - component of feature vector in cell (i, j)
-typedef struct{
+/*typedef struct{
     int sizeX;
     int sizeY;
     int numFeatures;
     float *map;
-} CvLSVMFeatureMapCaskade;
+} cv::FHOGDescriptor::CvLSVMFeatureMapCaskade;*/
 
 
 #include "float.h"
@@ -132,7 +132,7 @@ typedef struct{
 // RESULT
 // Error status
 */
-int getFeatureMaps(const IplImage * image, const int k, CvLSVMFeatureMapCaskade **map);
+int getFeatureMaps(const IplImage * image, const int k, cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **map);
 
 
 /*
@@ -148,7 +148,7 @@ int getFeatureMaps(const IplImage * image, const int k, CvLSVMFeatureMapCaskade 
 // RESULT
 // Error status
 */
-int normalizeAndTruncate(CvLSVMFeatureMapCaskade *map, const float alfa);
+int normalizeAndTruncate(cv::FHOGDescriptor::CvLSVMFeatureMapCaskade *map, const float alfa);
 
 /*
 // Feature map reduction
@@ -164,15 +164,15 @@ int normalizeAndTruncate(CvLSVMFeatureMapCaskade *map, const float alfa);
 // RESULT
 // Error status
 */
-int PCAFeatureMaps(CvLSVMFeatureMapCaskade *map);
+int PCAFeatureMaps(cv::FHOGDescriptor::CvLSVMFeatureMapCaskade *map);
 
 
 //modified from "lsvmc_routine.h"
 
-int allocFeatureMapObject(CvLSVMFeatureMapCaskade **obj, const int sizeX, const int sizeY,
+int allocFeatureMapObject(cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **obj, const int sizeX, const int sizeY,
                           const int p);
 
-int freeFeatureMapObject (CvLSVMFeatureMapCaskade **obj);
+int freeFeatureMapObject (cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **obj);
 
 
 #endif

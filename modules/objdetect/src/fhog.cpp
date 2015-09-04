@@ -48,28 +48,27 @@
 \****************************************************************************************/
 
 namespace cv {
-namespace ml {
 
-FHOG::FHOG(uint cellSize, uint scale){
+FHOGDescriptor::FHOGDescriptor(uint cellSize, uint scale){
 
     _cellSize = cellSize;
     _scale = scale;
 
 }
 
-FHOG::~FHOG(){
+FHOGDescriptor::~FHOGDescriptor(){
 
     freeFeatureMapObject(&_map);
 
 }
 
-FHOG* FHOG::clone() const{
+FHOGDescriptor* FHOGDescriptor::clone() const{
 
-    return new FHOG(*this);
+    return new FHOGDescriptor(*this);
 
 }
 
-Mat FHOG::extractFeatures(Mat image){
+Mat FHOGDescriptor::extractFeatures(Mat image){
 
     _tmplSz.width = _scale * image.cols;
     _tmplSz.height = _scale * image.rows;
@@ -100,5 +99,4 @@ Mat FHOG::extractFeatures(Mat image){
 
 }
 
-}
 }

@@ -77,7 +77,7 @@
 // RESULT
 // Error status
 */
-int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMapCaskade **map)
+int getFeatureMaps(const IplImage* image, const int k, cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **map)
 {
     int sizeX, sizeY;
     int p, px, stringSize;
@@ -287,7 +287,7 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMapCaskade *
 // RESULT
 // Error status
 */
-int normalizeAndTruncate(CvLSVMFeatureMapCaskade *map, const float alfa)
+int normalizeAndTruncate(cv::FHOGDescriptor::CvLSVMFeatureMapCaskade *map, const float alfa)
 {
     int i,j, ii;
     int sizeX, sizeY, p, pos, pp, xp, pos1, pos2;
@@ -411,7 +411,7 @@ int normalizeAndTruncate(CvLSVMFeatureMapCaskade *map, const float alfa)
 // RESULT
 // Error status
 */
-int PCAFeatureMaps(CvLSVMFeatureMapCaskade *map)
+int PCAFeatureMaps(cv::FHOGDescriptor::CvLSVMFeatureMapCaskade *map)
 {
     int i,j, ii, jj, k;
     int sizeX, sizeY, p,  pp, xp, yp, pos1, pos2;
@@ -484,11 +484,11 @@ int PCAFeatureMaps(CvLSVMFeatureMapCaskade *map)
 
 //modified from "lsvmc_routine.cpp"
 
-int allocFeatureMapObject(CvLSVMFeatureMapCaskade **obj, const int sizeX,
+int allocFeatureMapObject(cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **obj, const int sizeX,
                           const int sizeY, const int numFeatures)
 {
     int i;
-    (*obj) = (CvLSVMFeatureMapCaskade *)malloc(sizeof(CvLSVMFeatureMapCaskade));
+    (*obj) = (cv::FHOGDescriptor::CvLSVMFeatureMapCaskade *)malloc(sizeof(cv::FHOGDescriptor::CvLSVMFeatureMapCaskade));
     (*obj)->sizeX       = sizeX;
     (*obj)->sizeY       = sizeY;
     (*obj)->numFeatures = numFeatures;
@@ -501,7 +501,7 @@ int allocFeatureMapObject(CvLSVMFeatureMapCaskade **obj, const int sizeX,
     return LATENT_SVM_OK;
 }
 
-int freeFeatureMapObject (CvLSVMFeatureMapCaskade **obj)
+int freeFeatureMapObject (cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **obj)
 {
     if(*obj == NULL) return LATENT_SVM_MEM_NULL;
     free((*obj)->map);
