@@ -542,5 +542,4 @@ int main()
         else if(key == 'q')
             exit(0);
     }
-    waitKey(0);
 }
