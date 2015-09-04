@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "svmsgd.hpp"
 
 /****************************************************************************************\
 *                        Stochastic Gradient Descent SVM Classifier                      *
