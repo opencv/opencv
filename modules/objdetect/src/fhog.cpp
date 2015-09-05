@@ -88,8 +88,7 @@ Mat FHOGDescriptor::extractFeatures(Mat image){
     image.copyTo(featurePaddingMat);
 
     // HOG features
-    IplImage zz = featurePaddingMat;
-    getFeatureMaps(&zz, _cellSize, &_map);
+    getFeatureMaps(featurePaddingMat, _cellSize, &_map);
     normalizeAndTruncate(_map, 0.2f);
     PCAFeatureMaps(_map);
     _featuresMap = Mat(Size(_map->numFeatures*_map->sizeX*_map->sizeY,1), CV_32F, _map->map);  // Procedure do deal with cv::Mat multichannel bug

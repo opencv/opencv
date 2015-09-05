@@ -63,12 +63,11 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-
 /*
 // Getting feature map for the selected subimage
 //
 // API
-// int getFeatureMaps(const IplImage * image, const int k, featureMap **map);
+// int getFeatureMaps(cv::Mat image, const int k, featureMap **map);
 // INPUT
 // image             - selected subimage
 // k                 - size of cells
@@ -77,7 +76,7 @@
 // RESULT
 // Error status
 */
-int getFeatureMaps(const IplImage* image, const int k, cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **map)
+int getFeatureMaps(cv::Mat image, const int k, cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **map)
 {
     int sizeX, sizeY;
     int p, px, stringSize;
@@ -88,13 +87,13 @@ int getFeatureMaps(const IplImage* image, const int k, cv::FHOGDescriptor::CvLSV
     int   ch;
     float magnitude, x, y, tx, ty;
 
-    IplImage * dx, * dy;
+    cv::Mat dx, dy;
     int *nearest;
     float *w, a_x, b_x;
 
     float kernel[3] = {-1.f, 0.f, 1.f};
-    CvMat kernel_dx = cvMat(1, 3, CV_32F, kernel);
-    CvMat kernel_dy = cvMat(3, 1, CV_32F, kernel);
+    cv::Mat kernel_dx = cv::Mat(1, 3, CV_32F, kernel);
+    cv::Mat kernel_dy = cv::Mat(3, 1, CV_32F, kernel);
 
     float * r;
     int   * alfa;
@@ -104,15 +103,10 @@ int getFeatureMaps(const IplImage* image, const int k, cv::FHOGDescriptor::CvLSV
     float max, dotProd;
     int   maxi;
 
-    height = image->height;
-    width  = image->width ;
+    height = image.rows;
+    width  = image.cols ;
 
-    numChannels = image->nChannels;
-
-    dx    = cvCreateImage(cvSize(image->width, image->height),
-                          IPL_DEPTH_32F, 3);
-    dy    = cvCreateImage(cvSize(image->width, image->height),
-                          IPL_DEPTH_32F, 3);
+    numChannels = image.channels();
 
     sizeX = width  / k;
     sizeY = height / k;
@@ -121,8 +115,8 @@ int getFeatureMaps(const IplImage* image, const int k, cv::FHOGDescriptor::CvLSV
     stringSize = sizeX * p;
     allocFeatureMapObject(map, sizeX, sizeY, p);
 
-    cvFilter2D(image, dx, &kernel_dx, cvPoint(-1, 0));
-    cvFilter2D(image, dy, &kernel_dy, cvPoint(0, -1));
+    filter2D(image, dx, CV_32F, kernel_dx, cvPoint(-1, 0));
+    filter2D(image, dy, CV_32F, kernel_dy, cvPoint(0, -1));
 
     float arg_vector;
     for(i = 0; i <= NUM_SECTOR; i++)
@@ -137,8 +131,10 @@ int getFeatureMaps(const IplImage* image, const int k, cv::FHOGDescriptor::CvLSV
 
     for(j = 1; j < height - 1; j++)
     {
-        datadx = (float*)(dx->imageData + dx->widthStep * j);
-        datady = (float*)(dy->imageData + dy->widthStep * j);
+
+        datadx = (float*)(dx.data + dx.step * j) ;
+        datady = (float*)(dy.data + dy.step * j) ;
+
         for(i = 1; i < width - 1; i++)
         {
             c = 0;
@@ -150,6 +146,7 @@ int getFeatureMaps(const IplImage* image, const int k, cv::FHOGDescriptor::CvLSV
             {
                 tx = (datadx[i * numChannels + ch]);
                 ty = (datady[i * numChannels + ch]);
+
                 magnitude = sqrtf(tx * tx + ty * ty);
                 if(magnitude > r[j * width + i])
                 {
@@ -260,10 +257,6 @@ int getFeatureMaps(const IplImage* image, const int k, cv::FHOGDescriptor::CvLSV
         }/*for(ii = 0; ii < k; ii++)*/
       }/*for(j = 1; j < sizeX - 1; j++)*/
     }/*for(i = 1; i < sizeY - 1; i++)*/
-
-    cvReleaseImage(&dx);
-    cvReleaseImage(&dy);
-
 
     free(w);
     free(nearest);

@@ -58,7 +58,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
-#include "opencv2/objectdetect.hpp"
+#include "precomp.hpp"
 
 
 //modified from "_lsvmc_types.h"
@@ -125,7 +125,7 @@
 // Getting feature map for the selected subimage
 //
 // API
-// int getFeatureMaps(const IplImage * image, const int k, featureMap **map);
+// int getFeatureMaps(cv::Mat image, const int k, featureMap **map);
 // INPUT
 // image             - selected subimage
 // k                 - size of cells
@@ -134,7 +134,7 @@
 // RESULT
 // Error status
 */
-int getFeatureMaps(const IplImage * image, const int k, cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **map);
+int getFeatureMaps(cv::Mat image, const int k, cv::FHOGDescriptor::CvLSVMFeatureMapCaskade **map);
 
 
 /*
