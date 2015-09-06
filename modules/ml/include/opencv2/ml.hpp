@@ -1507,13 +1507,13 @@ After that, the label of a new feature vector can be predicted using the predict
 
 @code
 // Initialize object
-SvmSgd SVMSGD;
+SVMSGD SvmSgd;
 
 // Train the Stochastic Gradient Descent SVM
-SVMSGD.train(trainFeatures, labels);
+SvmSgd.train(trainFeatures, labels);
 
 // Predict label for the new feature vector (1xM)
-predictedLabel = SVMSGD.predict(newFeatureVector);
+predictedLabel = SvmSgd.predict(newFeatureVector);
 @endcode
 
 */
