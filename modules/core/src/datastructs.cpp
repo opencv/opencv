@@ -1695,6 +1695,9 @@ cvSeqRemoveSlice( CvSeq* seq, CvSlice slice )
 
     slice.end_index = slice.start_index + length;
 
+    if ( slice.start_index == slice.end_index )
+        return;
+
     if( slice.end_index < total )
     {
         CvSeqReader reader_to, reader_from;
