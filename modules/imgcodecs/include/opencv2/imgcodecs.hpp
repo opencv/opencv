@@ -133,13 +133,51 @@ returns an empty matrix ( Mat::data==NULL ). Currently, the following file forma
  */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
-/** @brief Loads and resizes down an image from a file.
+/** @brief Callback function See cv::imread_reduced
+@param width width of the image.
+@param height height of the image.
+@param image loaded image.
+*/
+typedef int (*ImreadCallback)( int pos, void* userdata );
+
+/** @brief Loads an image from a file with Callback function support.
 @anchor imread_reduced
+The function imread_reduced loads an image from the specified file with Callback function support and returns it.
+You can see below code how to specify and use the callback.
+@code
+
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+
+using namespace cv;
+
+int onLoad( int width, int height, Mat* img )
+{
+    int scale = 1;
+    if( width > 80 )
+        scale =  width / 80;
+
+    if( img && (scale > 1 )) // you can do some operations on the image before imread_reduced returns it.
+    {
+        resize( *img, *img, Size( width/scale, height/scale ));
+    }
+
+    return scale;
+}
+
+int main( int argc, char** argv )
+{
+    Mat image = imread_reduced("lena.jpg", IMREAD_COLOR, onLoad );
+    imshow("imread_reduced test",image);
+    waitKey();
+    return 0;
+}
+@endcode
 @param filename Name of file to be loaded.
 @param flags Flag that can take values of @ref cv::ImreadModes
-@param scale_denom
+@param onLoad Callback function
  */
-CV_EXPORTS_W Mat imread_reduced( const String& filename, int flags = IMREAD_COLOR, int scale_denom=1 );
+CV_EXPORTS_W Mat imread_reduced( const String& filename, int flags = IMREAD_COLOR, ImreadCallback onLoad=0 );
 
 /** @brief Loads a multi-page image from a file. (see imread for details.)
 

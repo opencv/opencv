@@ -52,7 +52,7 @@ BaseImageDecoder::BaseImageDecoder()
     m_width = m_height = 0;
     m_type = -1;
     m_buf_supported = false;
-    m_scale_denom = 1;
+    m_callback = 0;
 }
 
 bool BaseImageDecoder::setSource( const String& filename )
@@ -82,11 +82,10 @@ bool BaseImageDecoder::checkSignature( const String& signature ) const
     return signature.size() >= len && memcmp( signature.c_str(), m_signature.c_str(), len ) == 0;
 }
 
-int BaseImageDecoder::setScale( const int& scale_denom )
+bool BaseImageDecoder::setCallback( const ImreadCallback& callback )
 {
-    int temp = m_scale_denom;
-    m_scale_denom = scale_denom;
-    return temp;
+    m_callback = callback;
+    return true;
 }
 
 ImageDecoder BaseImageDecoder::newDecoder() const
