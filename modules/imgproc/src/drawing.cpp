@@ -1748,7 +1748,7 @@ void circle( InputOutputArray _img, Point center, int radius,
     double buf[4];
     scalarToRawData(color, buf, img.type(), 0);
 
-    if( thickness > 1 || line_type >= CV_AA )
+    if( thickness > 1 || line_type >= CV_AA || shift > 0 )
     {
         center.x <<= XY_SHIFT - shift;
         center.y <<= XY_SHIFT - shift;
