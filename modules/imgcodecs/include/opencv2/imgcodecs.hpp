@@ -138,7 +138,7 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 @param height height of the image.
 @param image loaded image.
 */
-typedef int (*ImreadCallback)( int width, int height, Mat* image );
+typedef int (*ImreadCallback)( int width, int height );
 
 /** @brief Loads an image from a file with Callback function support.
 @anchor imread_reduced
