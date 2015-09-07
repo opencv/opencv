@@ -245,7 +245,7 @@ bool  JpegDecoder::readHeader()
             state->cinfo.scale_num=1;
             if(m_callback)
             {
-                state->cinfo.scale_denom = m_callback( state->cinfo.image_width, state->cinfo.image_height, NULL );
+                state->cinfo.scale_denom = m_callback( state->cinfo.image_width, state->cinfo.image_height );
             }
             else state->cinfo.scale_denom = 1;
 
