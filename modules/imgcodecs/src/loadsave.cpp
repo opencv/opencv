@@ -320,11 +320,6 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, ImreadCallb
         return 0;
     }
 
-    if( onLoad ) //if callback function specified call it.
-    {
-        onLoad( size.width, size.height );
-    }
-
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
         hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
