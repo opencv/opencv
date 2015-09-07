@@ -340,15 +340,15 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
     Size srcSize = src.size();
     CV_Assert(srcSize.width == size.width && srcSize.height == size.height);
 
-    UMat u = src.getUMat();
-
-    // TODO Add support for roi
-    CV_Assert(u.offset == 0);
-    CV_Assert(u.isContinuous());
-
 # if (defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL))
     if (contextInitialized)
     {
+        UMat u = src.getUMat();
+
+        // TODO Add support for roi
+        CV_Assert(u.offset == 0);
+        CV_Assert(u.isContinuous());
+
         cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
         using namespace cv::ocl;
@@ -390,6 +390,12 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
     else
 # endif // HAVE_VA_INTEL && HAVE_OPENCL
     {
+        Mat m = src.getMat(ACCESS_READ);
+
+        // TODO Add support for roi
+        CV_Assert(m.data == m.datastart);
+        CV_Assert(m.isContinuous());
+
         VAStatus status = 0;
 
         status = vaSyncSurface(display, surface);
@@ -408,7 +414,6 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 
         CV_Assert(image.format.fourcc == VA_FOURCC_NV12);
 
-        Mat m = u.getMat(ACCESS_READ);
         copy_convert_bgr_to_nv12(image, m, buffer);
 
         status = vaUnmapBuffer(display, image.buf);
@@ -432,15 +437,16 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(size, dtype);
-    UMat u = dst.getUMat();
-
-    // TODO Add support for roi
-    CV_Assert(u.offset == 0);
-    CV_Assert(u.isContinuous());
 
 # if (defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL))
     if (contextInitialized)
     {
+        UMat u = dst.getUMat();
+
+        // TODO Add support for roi
+        CV_Assert(u.offset == 0);
+        CV_Assert(u.isContinuous());
+
         cl_mem clBuffer = (cl_mem)u.handle(ACCESS_WRITE);
 
         using namespace cv::ocl;
@@ -482,6 +488,12 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
     else
 # endif // HAVE_VA_INTEL && HAVE_OPENCL
     {
+        Mat m = dst.getMat(ACCESS_WRITE);
+
+        // TODO Add support for roi
+        CV_Assert(m.data == m.datastart);
+        CV_Assert(m.isContinuous());
+
         VAStatus status = 0;
 
         status = vaSyncSurface(display, surface);
@@ -500,7 +512,6 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 
         CV_Assert(image.format.fourcc == VA_FOURCC_NV12);
 
-        Mat m = u.getMat(ACCESS_WRITE);
         copy_convert_nv12_to_bgr(image, buffer, m);
 
         status = vaUnmapBuffer(display, image.buf);
