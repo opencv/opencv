@@ -157,10 +157,9 @@ int onLoad( int width, int height, Mat* img )
     if( width > 80 )
         scale =  width / 80;
 
-    if( img && (scale > 1 ))
+    if( img && (scale > 1 )) // you can do some operations on the image before imread_reduced returns it.
     {
         resize( *img, *img, Size( width/scale, height/scale ));
-     imshow("resized",*img);
     }
 
     return scale;
