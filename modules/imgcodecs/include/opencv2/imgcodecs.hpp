@@ -157,9 +157,10 @@ int onLoad( int width, int height, Mat* img )
     if( width > 80 )
         scale =  width / 80;
 
-    if(img)
+    if( img && (scale > 1 ))
     {
         resize( *img, *img, Size( width/scale, height/scale ));
+     imshow("resized",*img);
     }
 
     return scale;
