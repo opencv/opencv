@@ -263,7 +263,7 @@ TEST_P(UMatBasicTests, GetUMat)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(UMat, UMatBasicTests, Combine(testing::Values(CV_8U), testing::Values(1, 2),
+INSTANTIATE_TEST_CASE_P(UMat, UMatBasicTests, Combine(testing::Values(CV_8U, CV_64F), testing::Values(1, 2),
     testing::Values(cv::Size(1, 1), cv::Size(1, 128), cv::Size(128, 1), cv::Size(128, 128), cv::Size(640, 480)), Bool()));
 
 //////////////////////////////////////////////////////////////// Reshape ////////////////////////////////////////////////////////////////////////
@@ -1084,7 +1084,7 @@ TEST(UMat, unmap_in_class)
                 Mat dst;
                 m.convertTo(dst, CV_32FC1);
                 // some additional CPU-based per-pixel processing into dst
-                intermediateResult = dst.getUMat(ACCESS_READ);
+                intermediateResult = dst.getUMat(ACCESS_READ); // this violates lifetime of base(dst) / derived (intermediateResult) objects. Use copyTo?
                 std::cout << "data processed..." << std::endl;
             } // problem is here: dst::~Mat()
             std::cout << "leave ProcessData()" << std::endl;
@@ -1283,6 +1283,50 @@ TEST(UMat, mat_umat_sync)
     UMat uDiff;
     compare(u, 255, uDiff, CMP_NE);
     ASSERT_EQ(0, countNonZero(uDiff));
+}
+
+TEST(UMat, testTempObjects_UMat)
+{
+    UMat u(10, 10, CV_8UC1, Scalar(1));
+    {
+        UMat u2 = u.getMat(ACCESS_RW).getUMat(ACCESS_RW);
+        u2.setTo(Scalar(255));
+    }
+
+    UMat uDiff;
+    compare(u, 255, uDiff, CMP_NE);
+    ASSERT_EQ(0, countNonZero(uDiff));
+}
+
+TEST(UMat, testTempObjects_Mat)
+{
+    Mat m(10, 10, CV_8UC1, Scalar(1));
+    {
+        Mat m2;
+        ASSERT_ANY_THROW(m2 = m.getUMat(ACCESS_RW).getMat(ACCESS_RW));
+    }
+}
+
+TEST(UMat, testWrongLifetime_UMat)
+{
+    UMat u(10, 10, CV_8UC1, Scalar(1));
+    {
+        UMat u2 = u.getMat(ACCESS_RW).getUMat(ACCESS_RW);
+        u.release(); // base object
+        u2.release(); // derived object, should show warning message
+    }
+}
+
+TEST(UMat, testWrongLifetime_Mat)
+{
+    Mat m(10, 10, CV_8UC1, Scalar(1));
+    {
+        UMat u = m.getUMat(ACCESS_RW);
+        Mat m2 = u.getMat(ACCESS_RW);
+        m.release(); // base object
+        m2.release(); // map of derived object
+        u.release(); // derived object, should show warning message
+    }
 }
 
 } } // namespace cvtest::ocl
