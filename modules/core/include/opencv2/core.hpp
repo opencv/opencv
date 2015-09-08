@@ -2381,8 +2381,7 @@ class CV_EXPORTS LDA
 {
 public:
     /** @brief constructor
-    Initializes a LDA with num_components (default 0) and specifies how
-    samples are aligned (default dataAsRow=true).
+    Initializes a LDA with num_components (default 0).
     */
     explicit LDA(int num_components = 0);
 
@@ -2413,15 +2412,17 @@ public:
       */
     ~LDA();
 
-    /** Compute the discriminants for data in src and labels.
+    /** Compute the discriminants for data in src (row aligned) and labels.
       */
     void compute(InputArrayOfArrays src, InputArray labels);
 
     /** Projects samples into the LDA subspace.
+        src may be one or more row aligned samples.
       */
     Mat project(InputArray src);
 
     /** Reconstructs projections from the LDA subspace.
+        src may be one or more row aligned projections.
       */
     Mat reconstruct(InputArray src);
 
@@ -2437,11 +2438,10 @@ public:
     static Mat subspaceReconstruct(InputArray W, InputArray mean, InputArray src);
 
 protected:
-    bool _dataAsRow;
+    bool _dataAsRow; // unused, but needed for 3.0 ABI compatibility.
     int _num_components;
     Mat _eigenvectors;
     Mat _eigenvalues;
-
     void lda(InputArrayOfArrays src, InputArray labels);
 };
 
