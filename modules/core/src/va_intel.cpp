@@ -390,7 +390,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
     else
 # endif // HAVE_VA_INTEL && HAVE_OPENCL
     {
-        Mat m = src.getMat(ACCESS_READ);
+        Mat m = src.getMat();
 
         // TODO Add support for roi
         CV_Assert(m.data == m.datastart);
@@ -488,7 +488,7 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
     else
 # endif // HAVE_VA_INTEL && HAVE_OPENCL
     {
-        Mat m = dst.getMat(ACCESS_WRITE);
+        Mat m = dst.getMat();
 
         // TODO Add support for roi
         CV_Assert(m.data == m.datastart);
