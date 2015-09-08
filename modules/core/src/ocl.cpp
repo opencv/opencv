@@ -4453,8 +4453,11 @@ public:
 #endif
             {
                 tempUMatFlags = UMatData::TEMP_UMAT;
-                handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
-                                           u->size, u->origdata, &retval);
+                if (u->origdata == cv::alignPtr(u->origdata, 4)) // There are OpenCL runtime issues for less aligned data
+                {
+                    handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
+                                            u->size, u->origdata, &retval);
+                }
                 if((!handle || retval < 0) && !(accessFlags & ACCESS_FAST))
                 {
                     handle = clCreateBuffer(ctx_handle, CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags,
@@ -4510,17 +4513,17 @@ public:
         if(!u)
             return;
 
-        CV_Assert(u->urefcount >= 0);
-        CV_Assert(u->refcount >= 0);
+        CV_Assert(u->urefcount == 0);
+        CV_Assert(u->refcount == 0 && "UMat deallocation error: some derived Mat is still alive");
 
-        CV_Assert(u->handle != 0 && u->urefcount == 0);
+        CV_Assert(u->handle != 0);
         CV_Assert(u->mapcount == 0);
         if(u->tempUMat())
         {
             CV_Assert(u->origdata);
 //            UMatDataAutoLock lock(u);
 
-            if( u->hostCopyObsolete() && u->refcount > 0 )
+            if (u->hostCopyObsolete())
             {
 #ifdef HAVE_OPENCL_SVM
                 if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
@@ -4579,13 +4582,22 @@ public:
                             void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
                                 (CL_MAP_READ | CL_MAP_WRITE),
                                 0, u->size, 0, 0, 0, &retval);
+                            CV_Assert(u->origdata == data);
                             CV_OclDbgAssert(retval == CL_SUCCESS);
+                            if (u->originalUMatData)
+                            {
+                                CV_Assert(u->originalUMatData->data == data);
+                            }
                             CV_OclDbgAssert(clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0) == CL_SUCCESS);
                             CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
                         }
                     }
                 }
                 u->markHostCopyObsolete(false);
+            }
+            else
+            {
+                // nothing
             }
 #ifdef HAVE_OPENCL_SVM
             if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) != 0)
@@ -4612,16 +4624,12 @@ public:
             if(u->data && u->copyOnMap() && u->data != u->origdata)
                 fastFree(u->data);
             u->data = u->origdata;
-            if(u->refcount == 0)
-            {
-                u->currAllocator->deallocate(u);
-                u = NULL;
-            }
+            u->currAllocator->deallocate(u);
+            u = NULL;
         }
         else
         {
             CV_Assert(u->origdata == NULL);
-            CV_Assert(u->refcount == 0);
             if(u->data && u->copyOnMap() && u->data != u->origdata)
             {
                 fastFree(u->data);
@@ -4670,17 +4678,13 @@ public:
             delete u;
             u = NULL;
         }
-        CV_Assert(u == NULL || u->refcount);
+        CV_Assert(u == NULL);
     }
 
+    // synchronized call (external UMatDataAutoLock, see UMat::getMat)
     void map(UMatData* u, int accessFlags) const
     {
-        if(!u)
-            return;
-
-        CV_Assert( u->handle != 0 );
-
-        UMatDataAutoLock autolock(u);
+        CV_Assert(u && u->handle);
 
         if(accessFlags & ACCESS_WRITE)
             u->markDeviceCopyObsolete(true);

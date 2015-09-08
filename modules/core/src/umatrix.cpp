@@ -67,6 +67,7 @@ UMatData::UMatData(const MatAllocator* allocator)
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
+    originalUMatData = NULL;
 }
 
 UMatData::~UMatData()
@@ -80,6 +81,50 @@ UMatData::~UMatData()
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
+    if (originalUMatData)
+    {
+        UMatData* u = originalUMatData;
+        CV_XADD(&(u->urefcount), -1);
+        CV_XADD(&(u->refcount), -1);
+        bool showWarn = false;
+        if (u->refcount == 0)
+        {
+            if (u->urefcount > 0)
+                showWarn = true;
+            // simulate Mat::deallocate
+            if (u->mapcount != 0)
+            {
+                (u->currAllocator ? u->currAllocator : /* TODO allocator ? allocator :*/ Mat::getStdAllocator())->unmap(u);
+            }
+            else
+            {
+                // we don't do "map", so we can't do "unmap"
+            }
+        }
+        if (u->refcount == 0 && u->urefcount == 0) // oops, we need to free resources
+        {
+            showWarn = true;
+            // simulate UMat::deallocate
+            u->currAllocator->deallocate(u);
+        }
+#ifndef NDEBUG
+        if (showWarn)
+        {
+            static int warn_message_showed = 0;
+            if (warn_message_showed++ < 100)
+            {
+                fflush(stdout);
+                fprintf(stderr, "\n! OPENCV warning: getUMat()/getMat() call chain possible problem."
+                                "\n!                 Base object is dead, while nested/derived object is still alive or processed."
+                                "\n!                 Please check lifetime of UMat/Mat objects!\n");
+                fflush(stderr);
+            }
+        }
+#else
+        (void)showWarn;
+#endif
+        originalUMatData = NULL;
+    }
 }
 
 void UMatData::lock()
@@ -222,20 +267,34 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     UMat hdr;
     if(!data)
         return hdr;
-    CV_Assert((!u || u->mapcount==0) && "Don't get UMat from temp-Mat!");
+    Size wholeSize;
+    Point ofs;
+    locateROI(wholeSize, ofs);
+    Size sz(cols, rows);
+    if (ofs.x != 0 || ofs.y != 0)
+    {
+        Mat src = *this;
+        int dtop = ofs.y;
+        int dbottom = wholeSize.height - src.rows - ofs.y;
+        int dleft = ofs.x;
+        int dright = wholeSize.width - src.cols - ofs.x;
+        src.adjustROI(dtop, dbottom, dleft, dright);
+        return src.getUMat(accessFlags, usageFlags)(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
+    }
+    CV_Assert(data == datastart);
+
     accessFlags |= ACCESS_RW;
-    UMatData* temp_u = u;
-    if(!temp_u)
+    UMatData* new_u = NULL;
     {
         MatAllocator *a = allocator, *a0 = getStdAllocator();
         if(!a)
             a = a0;
-        temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
+        new_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
     }
     bool allocated = false;
     try
     {
-        allocated = UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags);
+        allocated = UMat::getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
     }
     catch (const cv::Exception& e)
     {
@@ -243,14 +302,26 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     }
     if (!allocated)
     {
-        allocated = getStdAllocator()->allocate(temp_u, accessFlags, usageFlags);
+        allocated = getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
         CV_Assert(allocated);
+    }
+    if (u != NULL)
+    {
+#ifdef HAVE_OPENCL
+        if (ocl::useOpenCL() && new_u->currAllocator == ocl::getOpenCLAllocator())
+        {
+            CV_Assert(new_u->tempUMat());
+        }
+#endif
+        new_u->originalUMatData = u;
+        CV_XADD(&(u->refcount), 1);
+        CV_XADD(&(u->urefcount), 1);
     }
     hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);
     finalizeHdr(hdr);
-    hdr.u = temp_u;
-    hdr.offset = data - datastart;
+    hdr.u = new_u;
+    hdr.offset = 0; //data - datastart;
     hdr.addref();
     return hdr;
 }
@@ -639,7 +710,6 @@ Mat UMat::getMat(int accessFlags) const
 {
     if(!u)
         return Mat();
-    CV_Assert(!u->tempUMat() && "Don't get Mat from temp UMat! Use copyTo().");
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
     accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);
@@ -668,10 +738,10 @@ void* UMat::handle(int accessFlags) const
     if( !u )
         return 0;
 
-    // check flags: if CPU copy is newer, copy it back to GPU.
-    if( u->deviceCopyObsolete() )
+    CV_Assert(u->refcount == 0);
+    CV_Assert(!u->deviceCopyObsolete() || u->copyOnMap());
+    if (u->deviceCopyObsolete())
     {
-        CV_Assert(u->refcount == 0 || u->origdata);
         u->currAllocator->unmap(u);
     }
 
