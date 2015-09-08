@@ -45,7 +45,7 @@
 
 #define CHECK_VASTATUS(va_status,func)                                  \
 if (va_status != VA_STATUS_SUCCESS) {                                   \
-    fprintf(stderr,"%s:%s (%d) failed,exit\n", __func__, func, __LINE__); \
+    fprintf(stderr,"%s:%s (%d) failed(status=0x%08x),exit\n", __func__, func, __LINE__, va_status); \
     exit(1);                                                            \
 }
 
@@ -334,6 +334,9 @@ static float run(const char* fn1, const char* fn2, bool doInterop)
     cv::Size size(CLIP_WIDTH,CLIP_HEIGHT);
     cv::UMat u;
 
+    cv::va_intel::convertFromVASurface(va::display, surface_id, size, u);
+    cv::blur(u, u, cv::Size(7, 7), cv::Point(-3, -3));
+    cv::va_intel::convertToVASurface(va::display, u, surface_id, size);
     t.start();
     cv::va_intel::convertFromVASurface(va::display, surface_id, size, u);
     cv::blur(u, u, cv::Size(7, 7), cv::Point(-3, -3));
