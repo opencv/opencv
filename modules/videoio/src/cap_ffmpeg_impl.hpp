@@ -323,10 +323,12 @@ void CvCapture_FFMPEG::close()
 
     if( picture )
     {
-        // FFmpeg and Libav added av_frame_free in different versions.
-#if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
+        // FFmpeg and Libav added av_frame_free & avcodec_free_frame in different versions.
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 1, 100)
+       av_frame_free(&picture);
+#elif LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
     ? CALC_FFMPEG_VERSION(54, 59, 100) : CALC_FFMPEG_VERSION(54, 28, 0))
-        av_frame_free(&picture);
+        avcodec_free_frame(&picture);
 #else
         av_free(picture);
 #endif
@@ -641,7 +643,11 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
             video_stream = i;
             video_st = ic->streams[i];
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 1, 100)
             picture = av_frame_alloc();
+#else
+            picture = avcodec_alloc_frame();
+#endif
 
             rgb_picture.data[0] = (uint8_t*)malloc(
                     avpicture_get_size( PIX_FMT_BGR24,
@@ -1119,7 +1125,11 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
     uint8_t * picture_buf;
     int size;
 
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 1, 100)
     picture = av_frame_alloc();
+#else
+    picture = avcodec_alloc_frame();
+#endif
     if (!picture)
         return NULL;
     size = avpicture_get_size( (AVPixelFormat) pix_fmt, width, height);
