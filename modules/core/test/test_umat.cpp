@@ -615,31 +615,49 @@ PARAM_TEST_CASE(getUMat, int, int, Size, bool)
         cv::ocl::setUseOpenCL(isOpenCL_enabled);
     }
 
+    // UMat created from user allocated host memory (USE_HOST_PTR)
+    void custom_ptr_test(size_t align_base, size_t align_offset)
+    {
+        void* pData_allocated = new unsigned char [size.area() * CV_ELEM_SIZE(type) + (align_base + align_offset)];
+        void* pData = (char*)alignPtr(pData_allocated, (int)align_base) + align_offset;
+        size_t step = size.width * CV_ELEM_SIZE(type);
+
+        {
+            Mat m = Mat(size, type, pData, step);
+            m.setTo(cv::Scalar::all(2));
+
+            UMat u = m.getUMat(ACCESS_RW);
+            cv::add(u, cv::Scalar::all(2), u);
+
+            Mat d = u.getMat(ACCESS_READ);
+
+            Mat expected(m.size(), m.type(), cv::Scalar::all(4));
+            double norm = cvtest::norm(d, expected, NORM_INF);
+
+            EXPECT_EQ(0, norm);
+        }
+
+        delete[] (unsigned char*)pData_allocated;
+    }
+
 private:
     bool useOpenCL;
     bool isOpenCL_enabled;
 };
 
-// UMat created from user allocated host memory (USE_HOST_PTR)
-TEST_P(getUMat, custom_ptr)
+TEST_P(getUMat, custom_ptr_align_4Kb)
 {
-    void* pData = new unsigned char [size.area() * CV_ELEM_SIZE(type)];
-    size_t step = size.width * CV_ELEM_SIZE(type);
+    custom_ptr_test(4096, 0);
+}
 
-    Mat m = Mat(size, type, pData, step);
-    m.setTo(cv::Scalar::all(2));
+TEST_P(getUMat, custom_ptr_align_64b)
+{
+    custom_ptr_test(4096, 64);
+}
 
-    UMat u = m.getUMat(ACCESS_RW);
-    cv::add(u, cv::Scalar::all(2), u);
-
-    Mat d = u.getMat(ACCESS_READ);
-
-    Mat expected(m.size(), m.type(), cv::Scalar::all(4));
-    double norm = cvtest::norm(d, expected, NORM_INF);
-
-    EXPECT_EQ(0, norm);
-
-    delete[] (unsigned char*)pData;
+TEST_P(getUMat, custom_ptr_align_none)
+{
+    custom_ptr_test(4096, cv::alignSize(CV_ELEM_SIZE(type), 4));
 }
 
 TEST_P(getUMat, self_allocated)
@@ -659,7 +677,7 @@ TEST_P(getUMat, self_allocated)
 }
 
 INSTANTIATE_TEST_CASE_P(UMat, getUMat, Combine(
-        Values(CV_8U), // depth
+        Values(CV_8U, CV_64F), // depth
         Values(1, 3), // channels
         Values(cv::Size(1, 1), cv::Size(255, 255), cv::Size(256, 256)), // Size
         Bool() // useOpenCL
