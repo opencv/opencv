@@ -1,0 +1,26 @@
+name: "test_Pooling_max"
+input: "input"
+
+input_dim: 2
+input_dim: 6
+input_dim: 75
+input_dim: 113
+
+layer {
+  type: "Pooling"
+
+  pooling_param
+  {
+  	pool: AVE
+  	pad_h: 2
+  	pad_w: 1
+  	kernel_h: 3
+  	kernel_w: 5
+  	stride_h: 2
+  	stride_w: 1
+  }
+
+  name: "output"
+  bottom: "input"
+  top: "output"
+}

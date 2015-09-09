@@ -1,0 +1,21 @@
+name: "test_LRN_channels"
+input: "input"
+
+input_dim: 2
+input_dim: 6
+input_dim: 75
+input_dim: 113
+
+layer {
+  type: "LRN"
+  lrn_param {
+  	norm_region: ACROSS_CHANNELS;
+    local_size: 5
+    alpha: 1.1
+    beta: 0.75
+  }
+
+  name: "output"
+  bottom: "input"
+  top: "output"
+}

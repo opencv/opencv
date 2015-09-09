@@ -1,0 +1,166 @@
+name: "gtsrb"
+input: "input"
+input_dim: 1
+input_dim: 3
+input_dim: 48
+input_dim: 48
+
+layers {
+  bottom: "input"
+  top: "layer1"
+  name: "layer1"
+  type: CONVOLUTION
+  blobs_lr: 1
+  blobs_lr: 2
+  convolution_param {
+    num_output: 100
+    kernel_size: 7
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layers {
+  name: "tanh1"
+  bottom: "layer1"
+  top: "layer1"
+  type: TANH
+}
+layers {
+  bottom: "layer1"
+  top: "layer2"
+  name: "layer2"
+  type: POOLING
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+
+layers {
+  bottom: "layer2"
+  top: "layer3"
+  name: "layer3"
+  type: CONVOLUTION
+  blobs_lr: 1
+  blobs_lr: 2
+  convolution_param {
+    num_output: 150
+    kernel_size: 4
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layers {
+  name: "tanh3"
+  bottom: "layer3"
+  top: "layer3"
+  type: TANH
+}
+layers {
+  bottom: "layer3"
+  top: "layer4"
+  name: "layer4"
+  type: POOLING
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+
+layers {
+  bottom: "layer4"
+  top: "layer5"
+  name: "layer5"
+  type: CONVOLUTION
+  blobs_lr: 1
+  blobs_lr: 2
+  convolution_param {
+    num_output: 250
+    kernel_size: 4
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layers {
+  name: "tanh5"
+  bottom: "layer5"
+  top: "layer5"
+  type: TANH
+}
+layers {
+  bottom: "layer5"
+  top: "layer6"
+  name: "layer6"
+  type: POOLING
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+
+layers {
+  bottom: "layer6"
+  top: "layer7"
+  name: "layer7"
+  type: INNER_PRODUCT
+  blobs_lr: 1
+  blobs_lr: 2
+  inner_product_param {
+    num_output: 300
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layers {
+  name: "tanh7"
+  bottom: "layer7"
+  top: "layer7"
+  type: TANH
+}
+
+layers {
+  bottom: "layer7"
+  top: "layer8"
+  name: "layer8"
+  type: INNER_PRODUCT
+  blobs_lr: 1
+  blobs_lr: 2
+  inner_product_param {
+    num_output: 43
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layers {
+  name: "loss"
+  top: "loss"
+  bottom: "layer8"
+  type: SOFTMAX
+}
