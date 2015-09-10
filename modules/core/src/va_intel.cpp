@@ -142,7 +142,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
     }
 # endif // HAVE_VA_INTEL && HAVE_OPENCL
     {
-        Context& ctx = Context::getDefault(false);
+        Context& ctx = Context::getDefault(true);
         return ctx;
     }
 #endif  // !HAVE_VA
