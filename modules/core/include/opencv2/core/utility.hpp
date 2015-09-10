@@ -618,7 +618,7 @@ For the described keys:
     # Bad call
     $ ./app -fps=aaa
     ERRORS:
-    Exception: can not convert: [aaa] to [double]
+    Parameter 'fps': can not convert: [aaa] to [double]
 @endcode
  */
 class CV_EXPORTS CommandLineParser
