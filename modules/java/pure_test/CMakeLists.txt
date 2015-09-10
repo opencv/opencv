@@ -24,7 +24,7 @@ file(GLOB_RECURSE test_files RELATIVE "${test_dir}" "${test_dir}/src/*")
 file(GLOB_RECURSE test_lib_files RELATIVE "${test_dir}" "${test_dir}/lib/*.jar")
 foreach(f ${test_files} ${test_lib_files})
   add_custom_command(OUTPUT "${opencv_test_java_bin_dir}/${f}"
-                     COMMAND ${CMAKE_COMMAND} -E copy "${test_dir}/${f}" "${opencv_test_java_bin_dir}/${f}"
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_dir}/${f}" "${opencv_test_java_bin_dir}/${f}"
                      DEPENDS "${test_dir}/${f}"
                      COMMENT "Copying ${f}"
                     )
@@ -33,13 +33,13 @@ endforeach()
 
 # Copy the OpenCV jar after it has been generated.
 add_custom_command(OUTPUT "${opencv_test_java_bin_dir}/bin/${JAR_NAME}"
-                   COMMAND ${CMAKE_COMMAND} -E copy "${JAR_FILE}" "${opencv_test_java_bin_dir}/bin/${JAR_NAME}"
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${JAR_FILE}" "${opencv_test_java_bin_dir}/bin/${JAR_NAME}"
                    DEPENDS "${JAR_FILE}"
                    COMMENT "Copying the OpenCV jar"
                   )
 
 add_custom_command(OUTPUT "${opencv_test_java_bin_dir}/build.xml"
-                   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/build.xml" "${opencv_test_java_bin_dir}/build.xml"
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/build.xml" "${opencv_test_java_bin_dir}/build.xml"
                    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/build.xml"
                    COMMENT "Copying build.xml"
                   )
