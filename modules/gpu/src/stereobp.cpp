@@ -67,7 +67,7 @@ namespace cv { namespace gpu { namespace device
         template<typename T, typename D>
         void comp_data_gpu(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream);
         template<typename T>
-        void data_step_down_gpu(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
+        void data_step_down_gpu(int dst_cols, int dst_rows, int src_cols, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
         template <typename T>
         void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream);
         template <typename T>
@@ -253,7 +253,7 @@ namespace
 
         void calcBP(GpuMat& disp, Stream& stream)
         {
-            typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
+            typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_cols, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
             static const data_step_down_t data_step_down_callers[2] =
             {
                 data_step_down_gpu<short>, data_step_down_gpu<float>
@@ -288,7 +288,7 @@ namespace
 
                 createContinuous(rows_all[i] * rthis.ndisp, cols_all[i], rthis.msg_type, datas[i]);
 
-                data_step_down_callers[funcIdx](cols_all[i], rows_all[i], rows_all[i-1], datas[i-1], datas[i], cudaStream);
+                data_step_down_callers[funcIdx](cols_all[i], rows_all[i], cols_all[i-1], rows_all[i-1], datas[i-1], datas[i], cudaStream);
             }
 
             PtrStepSzb mus[] = {u, u2};
