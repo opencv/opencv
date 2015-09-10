@@ -203,7 +203,7 @@ static void dumpSurface(VADisplay display, VASurfaceID surface_id, const char* f
     printf("image.pitches[0..2] = 0x%08x 0x%08x 0x%08x\n", image.pitches[0], image.pitches[1], image.pitches[2]);
     printf("image.offsets[0..2] = 0x%08x 0x%08x 0x%08x\n", image.offsets[0], image.offsets[1], image.offsets[2]);
 */
-    std::string fn = std::string(fileName) + std::string(doInterop ? ".gpu" : ".cpu");
+    std::string fn = std::string(fileName) + std::string(doInterop ? ".on" : ".off");
     FILE* out = fopen(fn.c_str(), "wb");
     if (!out)
     {
@@ -232,7 +232,6 @@ static float run(const char* fn1, const char* fn2, bool doInterop)
     VAStatus va_status;
     Timer t;
 
-    fprintf(stderr, "Run on %s\n", doInterop ? "GPU" : "CPU");
     cv::va_intel::ocl::initializeContextFromVA(va::display, doInterop);
 
     va_status = vaQueryConfigEntrypoints(va::display, VAProfileMPEG2Main, entrypoints,
@@ -352,13 +351,58 @@ static float run(const char* fn1, const char* fn2, bool doInterop)
     return t.time(Timer::MSEC);
 }
 
-int main(int argc,char **argv)
+class CmdlineParser
 {
-    if (argc < 3)
+public:
+    CmdlineParser(int argc, char** argv):
+        m_argc(argc), m_argv(argv)
+        {}
+    // true => go, false => usage/exit; extra args/unknown options are ignored for simplicity
+    bool run()
+        {
+            int n = 0;
+            m_files[0] = m_files[1] = 0;
+            m_interop = true;
+            for (int i = 1; i < m_argc; ++i)
+            {
+                const char *arg = m_argv[i];
+                if (arg[0] == '-') // option
+                {
+                    if (!strcmp(arg, "-f"))
+                        m_interop = false;
+                }
+                else // parameter
+                {
+                    if (n < 2)
+                        m_files[n++] = arg;
+                }
+            }
+            return bool(n >= 2);
+        }
+    bool isInterop() const
+        {
+            return m_interop;
+        }
+    const char* getFile(int n) const
+        {
+            return ((n >= 0) && (n < 2)) ? m_files[n] : 0;
+        }
+private:
+    int m_argc;
+    char** m_argv;
+    const char* m_files[2];
+    bool m_interop;
+};
+
+int main(int argc, char** argv)
+{
+    CmdlineParser cmd(argc, argv);
+    if (!cmd.run())
     {
         fprintf(stderr,
-                "Usage: va_intel_interop file1 file2\n\n"
-                "where:  file1 is to be created, contains original surface data (NV12)\n"
+                "Usage: va_intel_interop [-f] file1 file2\n\n"
+                "where:  -f    option indicates interop is off (fallback mode); interop is on by default\n"
+                "        file1 is to be created, contains original surface data (NV12)\n"
                 "        file2 is to be created, contains processed surface data (NV12)\n");
         exit(0);
     }
@@ -370,11 +414,13 @@ int main(int argc,char **argv)
     }
     fprintf(stderr, "VA display opened successfully\n");
 
-    float gpuTime = run(argv[1], argv[2], true);
-    float cpuTime = run(argv[1], argv[2], false);
+    const char* file0 = cmd.getFile(0);
+    const char* file1 = cmd.getFile(1);
+    bool doInterop = cmd.isInterop();
 
-    fprintf(stderr, "GPU processing time, msec: %7.3f\n", gpuTime);
-    fprintf(stderr, "CPU processing time, msec: %7.3f\n", cpuTime);
+    float time = run(file0, file1, doInterop);
+
+    fprintf(stderr, "Interop %s: processing time, msec: %7.3f\n", (doInterop ? "ON " : "OFF"), time);
 
     va::closeDisplay();
     return 0;
