@@ -213,8 +213,8 @@ namespace
 
             if (rthis.levels > 1)
             {
-                int less_rows = rows / 2;
-                int less_cols = cols / 2;
+                int less_rows = (rows + 1) / 2;
+                int less_cols = (cols + 1) / 2;
 
                 createContinuous(less_rows * rthis.ndisp, less_cols, rthis.msg_type, u2);
                 createContinuous(less_rows * rthis.ndisp, less_cols, rthis.msg_type, d2);
@@ -283,8 +283,8 @@ namespace
 
             for (int i = 1; i < rthis.levels; ++i)
             {
-                cols_all[i] = cols_all[i-1] / 2;
-                rows_all[i] = rows_all[i-1] / 2;
+                cols_all[i] = (cols_all[i-1] + 1) / 2;
+                rows_all[i] = (rows_all[i-1] + 1) / 2;
 
                 createContinuous(rows_all[i] * rthis.ndisp, cols_all[i], rthis.msg_type, datas[i]);
 
