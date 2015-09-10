@@ -7,24 +7,38 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "cvconfig.h"
+
 #include <va/va.h>
-#include <va/va_drm.h>
+#if defined(HAVE_VA_INTEL)
+# include <va/va_drm.h>
+#elif defined(HAVE_VA)
+# include <va/va_x11.h>
+# include <X11/Xlib.h>
+#endif //HAVE_VA_INTEL / HAVE_VA
+
+namespace va {
+
+#if defined(HAVE_VA_INTEL) || defined(HAVE_VA)
+
+bool openDisplay();
+void closeDisplay();
+
+VADisplay display = NULL;
+bool initialized = false;
+
+#endif //HAVE_VA_INTEL || HAVE_VA
+
+#if defined(HAVE_VA_INTEL)
 
 #define VA_INTEL_PCI_DIR "/sys/bus/pci/devices"
 #define VA_INTEL_DRI_DIR "/dev/dri/"
 #define VA_INTEL_PCI_DISPLAY_CONTROLLER_CLASS 0x03
 
-namespace va {
-
 static unsigned readId(const char* devName, const char* idName);
 static int findAdapter(unsigned desiredVendorId);
 
-bool openDisplay();
-void closeDisplay();
-
 int drmfd = -1;
-VADisplay display = NULL;
-bool initialized = false;
 
 class Directory
 {
@@ -204,5 +218,54 @@ void closeDisplay()
         initialized = false;
     }
 }
+
+#elif defined(HAVE_VA)
+
+static Display* x11Display = 0;
+
+bool openDisplay()
+{
+    if (!initialized)
+    {
+        display = 0;
+
+        x11Display = XOpenDisplay("");
+        if (x11Display != 0)
+        {
+            display = vaGetDisplay(x11Display);
+            if (display)
+            {
+                int majorVersion = 0, minorVersion = 0;
+                if (vaInitialize(display, &majorVersion, &minorVersion) == VA_STATUS_SUCCESS)
+                {
+                    initialized = true;
+                    return true;
+                }
+                display = 0;
+            }
+            XCloseDisplay(x11Display);
+            x11Display = 0;
+        }
+
+        return false; // Can't initialize X11/VA display
+    }
+    return true;
+}
+
+void closeDisplay()
+{
+    if (initialized)
+    {
+        if (display)
+            vaTerminate(display);
+        if (x11Display)
+            XCloseDisplay(x11Display);
+        display = 0;
+        x11Display = 0;
+        initialized = false;
+    }
+}
+
+#endif // HAVE_VA_INTEL / HAVE_VA
 
 } // namespace va
