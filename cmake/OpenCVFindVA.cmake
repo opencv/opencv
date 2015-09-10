@@ -12,7 +12,7 @@ endif()
 
 if(VA_INCLUDE_DIR)
     set(HAVE_VA TRUE)
-    set(VA_LIBRARIES "-lva")
+    set(VA_LIBRARIES "-lva" "-lva-x11")
 else()
     set(HAVE_VA FALSE)
     message(WARNING "libva installation is not found.")
