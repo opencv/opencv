@@ -81,7 +81,7 @@ macro(copy_common_tests _src_location _dst_location _deps)
   foreach(f ${_files})
     add_custom_command(
         OUTPUT "${_dst}/${f}"
-        COMMAND ${CMAKE_COMMAND} -E copy "${_src}/${f}" "${_dst}/${f}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_src}/${f}" "${_dst}/${f}"
         MAIN_DEPENDENCY "${_src}/${f}"
         COMMENT "Copying ${f}")
     list(APPEND ${_deps} "${_src}/${f}" "${_dst}/${f}")
@@ -102,7 +102,7 @@ macro(copy_modules_tests _modules _dst_location _deps)
     foreach (f ${_files})
       add_custom_command(
           OUTPUT "${_dst}/${_tree}/${f}"
-          COMMAND ${CMAKE_COMMAND} -E copy "${_src}/${f}" "${_dst}/${_tree}/${f}"
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_src}/${f}" "${_dst}/${_tree}/${f}"
           MAIN_DEPENDENCY "${_src}/${f}"
           COMMENT "Copying ${f}")
       list(APPEND ${_deps} "${_src}/${f}" "${_dst}/${_tree}/${f}")
@@ -208,7 +208,7 @@ foreach(java_file ${step3_input_files})
   string(REPLACE "+" "/" java_file_name "${java_file_name}")
   set(output_name "${OpenCV_BINARY_DIR}/src/org/opencv/${java_file_name}")
   add_custom_command(OUTPUT "${output_name}"
-                     COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${output_name}"
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${java_file}" "${output_name}"
                      MAIN_DEPENDENCY "${java_file}"
                      DEPENDS ${step1_depends} ${generated_java_sources} ${handwritten_java_sources}
                      COMMENT "Generating src/org/opencv/${java_file_name}"
@@ -239,7 +239,7 @@ if(ANDROID)
   foreach(jni_file ${handwritten_cpp_sources} ${handwritten_h_sources} ${generated_cpp_sources})
     get_filename_component(jni_file_name "${jni_file}" NAME)
     add_custom_command(OUTPUT "${OpenCV_BINARY_DIR}/jni/${jni_file_name}"
-                       COMMAND ${CMAKE_COMMAND} -E copy "${jni_file}" "${OpenCV_BINARY_DIR}/jni/${jni_file_name}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${jni_file}" "${OpenCV_BINARY_DIR}/jni/${jni_file_name}"
                        DEPENDS "${jni_file}" ${java_hdr_deps}
                        COMMENT "Generating jni/${jni_file_name}"
                       )
@@ -257,9 +257,9 @@ if(ANDROID AND ANDROID_EXECUTABLE)
 
   add_custom_command(OUTPUT ${lib_target_files} "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
                      COMMAND ${CMAKE_COMMAND} -E remove ${lib_target_files}
-                     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
                      COMMAND ${ANDROID_EXECUTABLE} --silent create lib-project --path \"${OpenCV_BINARY_DIR}\" --target \"${lib_target_sdk_target}\" --name OpenCV --package org.opencv 2>\"${CMAKE_CURRENT_BINARY_DIR}/create_lib_project.log\"
-                     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
                      MAIN_DEPENDENCY "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
                      DEPENDS ${android_step3_input_files} ${android_copied_files}
                      COMMENT "Generating OpenCV Android library project. SDK target: ${lib_target_sdk_target}"
