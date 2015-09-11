@@ -496,6 +496,8 @@ struct CV_EXPORTS UMatData
     void* handle;
     void* userdata;
     int allocatorFlags_;
+    int mapcount;
+    UMatData* originalUMatData;
 };
 
 
