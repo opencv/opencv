@@ -786,7 +786,7 @@ class CppHeaderParser(object):
                 sys.exit(-1)
 
             while 1:
-                token, pos = self.find_next_token(l, [";", "\"", "{", "}", "//", "/*"])
+                token, pos = self.find_next_token(l, [";", "\"", "{", "}", "//", "/*", "OCL_FALLBACK"])
 
                 if not token:
                     block_head += " " + l
@@ -819,6 +819,9 @@ class CppHeaderParser(object):
                     block_head += " " + l[:pos2+1]
                     l = l[pos2+1:]
                     continue
+
+                if token == "OCL_FALLBACK":
+                    l = l[:pos]
 
                 stmt = (block_head + " " + l[:pos]).strip()
                 stmt = " ".join(stmt.split()) # normalize the statement
