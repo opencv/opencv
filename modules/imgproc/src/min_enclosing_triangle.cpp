@@ -727,7 +727,7 @@ static bool isValidMinimalTriangle(const cv::Point2f &vertexA, const cv::Point2f
                           ? (areEqualPoints(midpointSideB, polygon[b]))
                           : (isPointOnLineSegment(midpointSideB, sideBStartVertex, sideBEndVertex));
 
-    bool sideCValid = isPointOnLineSegment(midpointSideC, sideCStartVertex, sideCEndVertex);
+    bool sideCValid = (validationFlag == VALIDATION_SIDES_FLUSH) || isPointOnLineSegment(midpointSideC, sideCStartVertex, sideCEndVertex);
 
     return (sideAValid && sideBValid && sideCValid);
 }
