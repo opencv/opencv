@@ -22,6 +22,11 @@ f     - change distance function
 ESC   - exit
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
 import numpy as np
 import cv2
 
@@ -43,7 +48,11 @@ def sample_line(p1, p2, n, noise=0.0):
     return p1 + (p2-p1)*t + np.random.normal(size=(n, 2))*noise
 
 dist_func_names = it.cycle('DIST_L2 DIST_L1 DIST_L12 DIST_FAIR DIST_WELSCH DIST_HUBER'.split())
-cur_func_name = dist_func_names.next()
+
+if PY3:
+    cur_func_name = next(dist_func_names)
+else:
+    cur_func_name = dist_func_names.next()
 
 def update(_=None):
     noise = cv2.getTrackbarPos('noise', 'fit line')
@@ -71,7 +80,7 @@ def update(_=None):
     cv2.imshow('fit line', img)
 
 if __name__ == '__main__':
-    print __doc__
+    print(__doc__)
 
     cv2.namedWindow('fit line')
     cv2.createTrackbar('noise', 'fit line', 3, 50, update)
@@ -81,6 +90,9 @@ if __name__ == '__main__':
         update()
         ch = cv2.waitKey(0) & 0xFF
         if ch == ord('f'):
-            cur_func_name = dist_func_names.next()
+            if PY3:
+                cur_func_name = next(dist_func_names)
+            else:
+                cur_func_name = dist_func_names.next()
         if ch == 27:
             break

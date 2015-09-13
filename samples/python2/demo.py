@@ -4,16 +4,25 @@
 Sample-launcher application.
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
 # local modules
 from common import splitfn
 
 # built-in modules
-import sys
 import webbrowser
-import Tkinter as tk
 from glob import glob
 from subprocess import Popen
-from ScrolledText import ScrolledText
+
+if PY3:
+    import tkinter as tk
+    from tkinter.scrolledtext import ScrolledText
+else:
+    import Tkinter as tk
+    from ScrolledText import ScrolledText
 
 
 #from IPython.Shell import IPShellEmbed
@@ -97,14 +106,17 @@ class App:
         run_btn.pack()
 
     def on_link(self, url):
-        print url
+        print(url)
         webbrowser.open(url)
 
     def on_demo_select(self, evt):
         name = self.demos_lb.get( self.demos_lb.curselection()[0] )
         fn = self.samples[name]
         loc = {}
-        execfile(fn, loc)
+        if PY3:
+            exec(open(fn).read(), loc)
+        else:
+            execfile(fn, loc)
         descr = loc.get('__doc__', 'no-description')
 
         self.linker.reset()
@@ -152,7 +164,7 @@ class App:
 
     def on_run(self, *args):
         cmd = self.cmd_entry.get()
-        print 'running:', cmd
+        print('running:', cmd)
         Popen(sys.executable + ' ' + cmd, shell=True)
 
     def run(self):

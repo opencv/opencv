@@ -7,6 +7,14 @@ Multiscale Turing Patterns generator
 Inspired by http://www.jonathanmccabe.com/Cyclic_Symmetric_Multi-Scale_Turing_Patterns.pdf
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    xrange = range
+
 import numpy as np
 import cv2
 from common import draw_str
@@ -20,7 +28,7 @@ Press ESC to stop.
 '''
 
 if __name__ == '__main__':
-    print help_message
+    print(help_message)
 
     w, h = 512, 512
 
@@ -30,7 +38,7 @@ if __name__ == '__main__':
     if '-o' in args:
         fn = args['-o']
         out = cv2.VideoWriter(args['-o'], cv2.VideoWriter_fourcc(*'DIB '), 30.0, (w, h), False)
-        print 'writing %s ...' % fn
+        print('writing %s ...' % fn)
 
     a = np.zeros((h, w), np.float32)
     cv2.randu(a, np.array([0]), np.array([1]))

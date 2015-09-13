@@ -8,6 +8,10 @@ Demonstrate using a mouse to interact with an image:
  When they let go of the mouse, it correlates (using matchTemplate) that patch with the image.
  ESC to exit
 '''
+
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -46,7 +50,7 @@ def onmouse(event, x, y, flags, param):
             cv2.rectangle(img, (sel[0], sel[1]), (sel[2], sel[3]), (0,255,255), 1)
             cv2.imshow("gray", img)
         else:
-            print "selection is complete"
+            print("selection is complete")
             drag_start = None
 
 if __name__ == '__main__':
@@ -61,7 +65,7 @@ if __name__ == '__main__':
     for infile in glob.glob( os.path.join(path, '*.*') ):
         ext = os.path.splitext(infile)[1][1:] #get the filename extenstion
         if ext == "png" or ext == "jpg" or ext == "bmp" or ext == "tiff" or ext == "pbm":
-            print infile
+            print(infile)
 
             img=cv2.imread(infile,1)
             if img == None:
