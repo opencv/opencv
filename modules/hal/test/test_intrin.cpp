@@ -317,7 +317,7 @@ template<typename R> struct TheTest
         for (int i = 0; i < R::nlanes; ++i)
         {
             EXPECT_FLOAT_EQ((float)std::sqrt(dataA[i]), (float)resB[i]);
-            EXPECT_FLOAT_EQ((float)1/std::sqrt(dataA[i]), (float)resC[i]);
+            EXPECT_FLOAT_EQ(1/(float)std::sqrt(dataA[i]), (float)resC[i]);
             EXPECT_FLOAT_EQ((float)abs(dataA[i]), (float)resE[i]);
         }
 
