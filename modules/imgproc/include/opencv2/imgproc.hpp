@@ -3402,10 +3402,11 @@ CV_EXPORTS_W int connectedComponents(InputArray image, OutputArray labels,
 /** @overload
 @param image the image to be labeled
 @param labels destination labeled image
-@param stats statistics output for each label, including the background label, see below for
+@param stats CV_32S statistics output for each label, including the background label - see below for
 available statistics. Statistics are accessed via stats(label, COLUMN) where COLUMN is one of
 cv::ConnectedComponentsTypes
-@param centroids floating point centroid (x,y) output for each label, including the background label
+@param centroids CV_64F centroid (x,y) output for each label, including the background label.
+Centroids are accessed via centroids(label, 0) for x coordinate and centroids(label, 1) for y coordinate
 @param connectivity 8 or 4 for 8-way or 4-way connectivity respectively
 @param ltype output image label type. Currently CV_32S and CV_16U are supported.
 */
