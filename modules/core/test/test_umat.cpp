@@ -960,8 +960,7 @@ TEST(UMat, setOpenCL)
 {
 #ifndef HAVE_OPENCL
     return; // test skipped
-#endif
-
+#else
     // save the current state
     bool useOCL = cv::ocl::useOpenCL();
 
@@ -999,6 +998,7 @@ TEST(UMat, setOpenCL)
 
     // reset state to the previous one
     cv::ocl::setUseOpenCL(useOCL);
+#endif
 }
 
 TEST(UMat, ReadBufferRect)
