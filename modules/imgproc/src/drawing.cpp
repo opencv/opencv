@@ -610,12 +610,12 @@ LineAA( Mat& img, Point pt1, Point pt2, const void* color )
                 ICV_PUT_POINT();
                 ICV_PUT_POINT();
 
-                tptr += step;
+                tptr += 4;
                 a = (ep_corr * FilterTable[dist] >> 8) & 0xff;
                 ICV_PUT_POINT();
                 ICV_PUT_POINT();
 
-                tptr += step;
+                tptr += 4;
                 a = (ep_corr * FilterTable[63 - dist] >> 8) & 0xff;
                 ICV_PUT_POINT();
                 ICV_PUT_POINT();
