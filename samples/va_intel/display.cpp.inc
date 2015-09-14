@@ -7,24 +7,38 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <va/va.h>
-#include <va/va_drm.h>
+#include "cvconfig.h"
 
-#define VAAPI_PCI_DIR "/sys/bus/pci/devices"
-#define VAAPI_DRI_DIR "/dev/dri/"
-#define VAAPI_PCI_DISPLAY_CONTROLLER_CLASS 0x03
+#include <va/va.h>
+#if defined(HAVE_VA_INTEL)
+# include <va/va_drm.h>
+#elif defined(HAVE_VA)
+# include <va/va_x11.h>
+# include <X11/Xlib.h>
+#endif //HAVE_VA_INTEL / HAVE_VA
 
 namespace va {
 
-static unsigned readId(const char* devName, const char* idName);
-static int findAdapter(unsigned desiredVendorId);
+#if defined(HAVE_VA_INTEL) || defined(HAVE_VA)
 
 bool openDisplay();
 void closeDisplay();
 
-int drmfd = -1;
 VADisplay display = NULL;
 bool initialized = false;
+
+#endif //HAVE_VA_INTEL || HAVE_VA
+
+#if defined(HAVE_VA_INTEL)
+
+#define VA_INTEL_PCI_DIR "/sys/bus/pci/devices"
+#define VA_INTEL_DRI_DIR "/dev/dri/"
+#define VA_INTEL_PCI_DISPLAY_CONTROLLER_CLASS 0x03
+
+static unsigned readId(const char* devName, const char* idName);
+static int findAdapter(unsigned desiredVendorId);
+
+int drmfd = -1;
 
 class Directory
 {
@@ -70,7 +84,7 @@ static unsigned readId(const char* devName, const char* idName)
     long int id = 0;
 
     char fileName[256];
-    snprintf(fileName, sizeof(fileName), "%s/%s/%s", VAAPI_PCI_DIR, devName, idName);
+    snprintf(fileName, sizeof(fileName), "%s/%s/%s", VA_INTEL_PCI_DIR, devName, idName);
 
     FILE* file = fopen(fileName, "r");
     if (file)
@@ -88,14 +102,14 @@ static int findAdapter(unsigned desiredVendorId)
     int adapterIndex = -1;
     int numAdapters = 0;
 
-    Directory dir(VAAPI_PCI_DIR);
+    Directory dir(VA_INTEL_PCI_DIR);
 
     for (int i = 0;  i < dir.count();  ++i)
     {
         const char* name = dir[i]->d_name;
 
         unsigned classId = readId(name, "class");
-        if ((classId >> 16) == VAAPI_PCI_DISPLAY_CONTROLLER_CLASS)
+        if ((classId >> 16) == VA_INTEL_PCI_DISPLAY_CONTROLLER_CLASS)
         {
             unsigned vendorId = readId(name, "vendor");
             if (vendorId == desiredVendorId)
@@ -122,9 +136,9 @@ public:
             numbers[1] = adapterIndex;
             for (int i = 0;  i < NUM_NODES;  ++i)
             {
-                int sz = sizeof(VAAPI_DRI_DIR) + strlen(names[i]) + 3;
+                int sz = sizeof(VA_INTEL_DRI_DIR) + strlen(names[i]) + 3;
                 paths[i] = new char [sz];
-                snprintf(paths[i], sz, "%s%s%d", VAAPI_DRI_DIR, names[i], numbers[i]);
+                snprintf(paths[i], sz, "%s%s%d", VA_INTEL_DRI_DIR, names[i], numbers[i]);
             }
         }
     ~NodeInfo()
@@ -204,5 +218,54 @@ void closeDisplay()
         initialized = false;
     }
 }
+
+#elif defined(HAVE_VA)
+
+static Display* x11Display = 0;
+
+bool openDisplay()
+{
+    if (!initialized)
+    {
+        display = 0;
+
+        x11Display = XOpenDisplay("");
+        if (x11Display != 0)
+        {
+            display = vaGetDisplay(x11Display);
+            if (display)
+            {
+                int majorVersion = 0, minorVersion = 0;
+                if (vaInitialize(display, &majorVersion, &minorVersion) == VA_STATUS_SUCCESS)
+                {
+                    initialized = true;
+                    return true;
+                }
+                display = 0;
+            }
+            XCloseDisplay(x11Display);
+            x11Display = 0;
+        }
+
+        return false; // Can't initialize X11/VA display
+    }
+    return true;
+}
+
+void closeDisplay()
+{
+    if (initialized)
+    {
+        if (display)
+            vaTerminate(display);
+        if (x11Display)
+            XCloseDisplay(x11Display);
+        display = 0;
+        x11Display = 0;
+        initialized = false;
+    }
+}
+
+#endif // HAVE_VA_INTEL / HAVE_VA
 
 } // namespace va
