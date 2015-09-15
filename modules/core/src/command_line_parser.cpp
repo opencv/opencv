@@ -334,9 +334,9 @@ bool CommandLineParser::has(const String& name) const
     {
         for (size_t j = 0; j < impl->data[i].keys.size(); j++)
         {
-            if (name.compare(impl->data[i].keys[j]) == 0 && String("true").compare(impl->data[i].def_value) == 0)
+            if (name == impl->data[i].keys[j])
             {
-                return true;
+                return !impl->cat_string(impl->data[i].def_value).empty();
             }
         }
     }

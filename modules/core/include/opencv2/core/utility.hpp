@@ -607,6 +607,10 @@ For example:
 }
 @endcode
 
+Note that there are no default values for `help` and `timestamp` so we can check their presence using the `has()` method.
+Arguments with default values are considered to be always present. Use the `get()` method in these cases to check their
+actual value instead.
+
 ### Usage
 
 For the described keys:
