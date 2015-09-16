@@ -1034,7 +1034,7 @@ class TlsStorage
 public:
     TlsStorage()
     {
-        tlsSlots = 0;
+        tlsSlots.reserve(32);
         threads.reserve(32);
     }
     ~TlsStorage()
@@ -1077,15 +1077,27 @@ public:
     size_t reserveSlot()
     {
         AutoLock guard(mtxGlobalAccess);
-        tlsSlots++;
-        return (tlsSlots-1);
+
+        // Find unused slots
+        for(size_t slot = 0; slot < tlsSlots.size(); slot++)
+        {
+            if(!tlsSlots[slot])
+            {
+                tlsSlots[slot] = 1;
+                return slot;
+            }
+        }
+
+        // Create new slot
+        tlsSlots.push_back(1);
+        return (tlsSlots.size()-1);
     }
 
     // Release TLS storage index and pass assosiated data to caller
     void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec)
     {
         AutoLock guard(mtxGlobalAccess);
-        CV_Assert(tlsSlots > slotIdx);
+        CV_Assert(tlsSlots.size() > slotIdx);
 
         for(size_t i = 0; i < threads.size(); i++)
         {
@@ -1096,15 +1108,14 @@ public:
                 threads[i]->slots[slotIdx] = 0;
             }
         }
-        // If we removing last element, decriment slots size to save space
-        if(tlsSlots-1 == slotIdx)
-            tlsSlots--;
+
+        tlsSlots[slotIdx] = 0;
     }
 
     // Get data by TLS storage index
     void* getData(size_t slotIdx) const
     {
-        CV_Assert(tlsSlots > slotIdx);
+        CV_Assert(tlsSlots.size() > slotIdx);
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(threadData && threadData->slots.size() > slotIdx)
@@ -1113,10 +1124,24 @@ public:
         return NULL;
     }
 
+    // Gather data from threads by TLS storage index
+    void gather(size_t slotIdx, std::vector<void*> &dataVec)
+    {
+        AutoLock guard(mtxGlobalAccess);
+        CV_Assert(tlsSlots.size() > slotIdx);
+
+        for(size_t i = 0; i < threads.size(); i++)
+        {
+            std::vector<void*>& thread_slots = threads[i]->slots;
+            if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
+                dataVec.push_back(thread_slots[slotIdx]);
+        }
+    }
+
     // Set data to storage index
     void setData(size_t slotIdx, void* pData)
     {
-        CV_Assert(pData != NULL);
+        CV_Assert(tlsSlots.size() > slotIdx && pData != NULL);
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(!threadData)
@@ -1131,7 +1156,11 @@ public:
         }
 
         if(slotIdx >= threadData->slots.size())
-            threadData->slots.resize(slotIdx+1);
+        {
+            AutoLock guard(mtxGlobalAccess);
+            while(slotIdx >= threadData->slots.size())
+                threadData->slots.push_back(NULL);
+        }
         threadData->slots[slotIdx] = pData;
     }
 
@@ -1139,7 +1168,7 @@ private:
     TlsAbstraction tls; // TLS abstraction layer instance
 
     Mutex  mtxGlobalAccess;           // Shared objects operation guard
-    size_t tlsSlots;                  // TLS storage counter
+    std::vector<int> tlsSlots;        // TLS keys state
     std::vector<ThreadData*> threads; // Array for all allocated data. Thread data pointers are placed here to allow data cleanup
 };
 
@@ -1157,6 +1186,11 @@ TLSDataContainer::TLSDataContainer()
 TLSDataContainer::~TLSDataContainer()
 {
     CV_Assert(key_ == -1); // Key must be released in child object
+}
+
+void TLSDataContainer::gatherData(std::vector<void*> &data) const
+{
+    getTlsStorage().gather(key_, data);
 }
 
 void TLSDataContainer::release()
