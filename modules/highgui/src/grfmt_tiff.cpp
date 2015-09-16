@@ -226,7 +226,7 @@ bool  TiffDecoder::readData( Mat& img )
                 bpp = 8;
                 ncn = 4;
             }
-            const size_t buffer_size = bpp * ncn * tile_height0 * tile_width0;
+            const size_t buffer_size = (bpp/bitsPerByte) * ncn * tile_height0 * tile_width0;
             AutoBuffer<uchar> _buffer( buffer_size );
             uchar* buffer = _buffer;
             ushort* buffer16 = (ushort*)buffer;
