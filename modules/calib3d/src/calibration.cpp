@@ -3221,14 +3221,25 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
 
     bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
 
+    bool rvecs_mat_vec = _rvecs.isMatVector();
+    bool tvecs_mat_vec = _tvecs.isMatVector();
+
     if( rvecs_needed ) {
         _rvecs.create(nimages, 1, CV_64FC3);
-        rvecM.create(nimages, 3, CV_64F);
+
+        if(rvecs_mat_vec)
+            rvecM.create(nimages, 3, CV_64F);
+        else
+            rvecM = _rvecs.getMat();
     }
 
     if( tvecs_needed ) {
         _tvecs.create(nimages, 1, CV_64FC3);
-        tvecM.create(nimages, 3, CV_64F);
+
+        if(tvecs_mat_vec)
+            tvecM.create(nimages, 3, CV_64F);
+        else
+            tvecM = _tvecs.getMat();
     }
 
     collectCalibrationData( _objectPoints, _imagePoints, noArray(),
@@ -3242,15 +3253,16 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
                                           rvecs_needed ? &c_rvecM : NULL,
                                           tvecs_needed ? &c_tvecM : NULL, flags, criteria );
 
+    // overly complicated and inefficient rvec/ tvec handling to support vector<Mat>
     for(int i = 0; i < nimages; i++ )
     {
-        if( rvecs_needed )
+        if( rvecs_needed && rvecs_mat_vec)
         {
             _rvecs.create(3, 1, CV_64F, i, true);
             Mat rv = _rvecs.getMat(i);
             memcpy(rv.ptr(), rvecM.ptr(i), 3*sizeof(double));
         }
-        if( tvecs_needed )
+        if( tvecs_needed && tvecs_mat_vec)
         {
             _tvecs.create(3, 1, CV_64F, i, true);
             Mat tv = _tvecs.getMat(i);
