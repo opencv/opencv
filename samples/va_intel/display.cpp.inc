@@ -10,26 +10,15 @@
 #include "cvconfig.h"
 
 #include <va/va.h>
-#if defined(HAVE_VA_INTEL)
 # include <va/va_drm.h>
-#elif defined(HAVE_VA)
-# include <va/va_x11.h>
-# include <X11/Xlib.h>
-#endif //HAVE_VA_INTEL / HAVE_VA
 
 namespace va {
-
-#if defined(HAVE_VA_INTEL) || defined(HAVE_VA)
 
 bool openDisplay();
 void closeDisplay();
 
 VADisplay display = NULL;
 bool initialized = false;
-
-#endif //HAVE_VA_INTEL || HAVE_VA
-
-#if defined(HAVE_VA_INTEL)
 
 #define VA_INTEL_PCI_DIR "/sys/bus/pci/devices"
 #define VA_INTEL_DRI_DIR "/dev/dri/"
@@ -161,46 +150,74 @@ private:
     char* paths[NUM_NODES];
 };
 
+static bool openDeviceIntel();
+static bool openDeviceGeneric();
+
+static bool openDeviceIntel()
+{
+    const unsigned IntelVendorID = 0x8086;
+
+    int adapterIndex = findAdapter(IntelVendorID);
+    if (adapterIndex >= 0)
+    {
+        NodeInfo nodes(adapterIndex);
+
+        for (int i = 0; i < nodes.count(); ++i)
+        {
+            drmfd = open(nodes.path(i), O_RDWR);
+            if (drmfd >= 0)
+            {
+                display = vaGetDisplayDRM(drmfd);
+                if (display)
+                    return true;
+                close(drmfd);
+                drmfd = -1;
+            }
+        }
+    }
+    return false;
+}
+
+static bool openDeviceGeneric()
+{
+    static const char* device_paths[] = { "/dev/dri/renderD128", "/dev/dri/card0" };
+    static const int num_devices = sizeof(device_paths) / sizeof(device_paths[0]);
+
+    for (int i = 0; i < num_devices; ++i)
+    {
+        drmfd = open(device_paths[i], O_RDWR);
+        if (drmfd >= 0)
+        {
+            display = vaGetDisplayDRM(drmfd);
+            if (display)
+                return true;
+            close(drmfd);
+            drmfd = -1;
+        }
+    }
+    return false;
+}
+
 bool openDisplay()
 {
     if (!initialized)
     {
-        const unsigned IntelVendorID = 0x8086;
-
         drmfd = -1;
         display = 0;
 
-        int adapterIndex = findAdapter(IntelVendorID);
-        if (adapterIndex >= 0)
+        if (openDeviceIntel() || openDeviceGeneric())
         {
-            NodeInfo nodes(adapterIndex);
-
-            for (int i = 0;  i < nodes.count();  ++i)
+            int majorVersion = 0, minorVersion = 0;
+            if (vaInitialize(display, &majorVersion, &minorVersion) == VA_STATUS_SUCCESS)
             {
-                drmfd = open(nodes.path(i), O_RDWR);
-                if (drmfd >= 0)
-                {
-                    display = vaGetDisplayDRM(drmfd);
-                    if (display)
-                    {
-                        int majorVersion = 0, minorVersion = 0;
-                        if (vaInitialize(display, &majorVersion, &minorVersion) == VA_STATUS_SUCCESS)
-                        {
-                            initialized = true;
-                            return true;
-                        }
-                        display = 0;
-                    }
-                    close(drmfd);
-                    drmfd = -1;
-                }
+                initialized = true;
+                return true;
             }
+            close(drmfd);
+            display = 0;
+            drmfd = -1;
         }
-
-        if (adapterIndex < 0)
-            return false; // Can't find Intel display adapter
-        if ((drmfd < 0) || !display)
-            return false; // Can't load VA display
+        return false; // Can't open VA display
     }
     return true;
 }
@@ -218,54 +235,5 @@ void closeDisplay()
         initialized = false;
     }
 }
-
-#elif defined(HAVE_VA)
-
-static Display* x11Display = 0;
-
-bool openDisplay()
-{
-    if (!initialized)
-    {
-        display = 0;
-
-        x11Display = XOpenDisplay("");
-        if (x11Display != 0)
-        {
-            display = vaGetDisplay(x11Display);
-            if (display)
-            {
-                int majorVersion = 0, minorVersion = 0;
-                if (vaInitialize(display, &majorVersion, &minorVersion) == VA_STATUS_SUCCESS)
-                {
-                    initialized = true;
-                    return true;
-                }
-                display = 0;
-            }
-            XCloseDisplay(x11Display);
-            x11Display = 0;
-        }
-
-        return false; // Can't initialize X11/VA display
-    }
-    return true;
-}
-
-void closeDisplay()
-{
-    if (initialized)
-    {
-        if (display)
-            vaTerminate(display);
-        if (x11Display)
-            XCloseDisplay(x11Display);
-        display = 0;
-        x11Display = 0;
-        initialized = false;
-    }
-}
-
-#endif // HAVE_VA_INTEL / HAVE_VA
 
 } // namespace va
