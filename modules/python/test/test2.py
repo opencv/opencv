@@ -2,17 +2,8 @@
 
 import unittest
 import random
-import time
-import math
-import sys
-import array
 import urllib
-import tarfile
 import hashlib
-import os
-import getopt
-import operator
-import functools
 import numpy as np
 import cv2
 import cv2.cv as cv
