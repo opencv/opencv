@@ -2,7 +2,7 @@
 
 import unittest
 import random
-import urllib
+import urllib2
 import hashlib
 import numpy as np
 import cv2
@@ -12,7 +12,7 @@ class NewOpenCVTests(unittest.TestCase):
 
     def get_sample(self, filename, iscolor = cv.CV_LOAD_IMAGE_COLOR):
         if not filename in self.image_cache:
-            filedata = urllib.urlopen("https://raw.github.com/Itseez/opencv/2.4/" + filename).read()
+            filedata = urllib2.urlopen("https://raw.github.com/Itseez/opencv/2.4/" + filename).read()
             image = cv2.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
             self.assertFalse(image is None)
             self.image_cache[filename] = image
