@@ -352,6 +352,7 @@ CV_IMPL CvString
 cvMemStorageAllocString( CvMemStorage* storage, const char* ptr, int len )
 {
     CvString str;
+    memset(&str, 0, sizeof(CvString));
 
     str.len = len >= 0 ? len : (int)strlen(ptr);
     str.ptr = (char*)cvMemStorageAlloc( storage, str.len + 1 );

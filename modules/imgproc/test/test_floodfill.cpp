@@ -508,6 +508,8 @@ _exit_:
     comp[7] = new_val.val[2];
 #endif
     comp[8] = 0;
+
+    cvReleaseMemStorage(&st);
 }
 
 
