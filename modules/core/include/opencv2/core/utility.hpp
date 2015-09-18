@@ -520,6 +520,7 @@ protected:
     TLSDataContainer();
     virtual ~TLSDataContainer();
 
+    void  gatherData(std::vector<void*> &data) const;
 #if OPENCV_ABI_COMPATIBILITY > 300
     void* getData() const;
     void  release();
@@ -546,9 +547,20 @@ public:
     inline ~TLSData()       { release();            } // Release key and delete associated data
     inline T* get() const   { return (T*)getData(); } // Get data assosiated with key
 
+     // Get data from all threads
+    inline void gather(std::vector<T*> &data) const
+    {
+        std::vector<void*> &dataVoid = reinterpret_cast<std::vector<void*>&>(data);
+        gatherData(dataVoid);
+    }
+
 private:
     virtual void* createDataInstance() const {return new T;}                // Wrapper to allocate data by template
     virtual void  deleteDataInstance(void* pData) const {delete (T*)pData;} // Wrapper to release data by template
+
+    // Disable TLS copy operations
+    TLSData(TLSData &) {};
+    TLSData& operator =(const TLSData &) {return *this;};
 };
 
 /** @brief Designed for command line parsing
