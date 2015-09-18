@@ -56,6 +56,8 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
   if(HAVE_${mod})
     unset(HAVE_${mod} CACHE)
   endif()
+  unset(OPENCV_MODULE_${mod}_DEPS CACHE)
+  unset(OPENCV_MODULE_${mod}_DEPS_EXT CACHE)
   unset(OPENCV_MODULE_${mod}_REQ_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_OPT_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_PRIVATE_REQ_DEPS CACHE)

@@ -2232,6 +2232,7 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
         Mat p = pts.getMat(manyContours ? i : -1);
         if( p.total() == 0 )
         {
+            ptsptr[i] = NULL;
             npts[i] = 0;
             continue;
         }
