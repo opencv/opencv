@@ -41,7 +41,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 
 
-@interface CvVideoCamera ()
+@interface CvVideoCamera () {
+    int recordingCountDown;
+}
 
 - (void)createVideoDataOutput;
 - (void)createVideoFileOutput;
@@ -98,6 +100,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 - (void)start;
 {
+    recordingCountDown = 10;
     [super start];
 
     if (self.recordVideo == YES) {
@@ -551,7 +554,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
         });
 
 
-        if (self.recordVideo == YES) {
+        recordingCountDown--;
+        if (self.recordVideo == YES && recordingCountDown < 0) {
             lastSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
 //			CMTimeShow(lastSampleTime);
             if (self.recordAssetWriter.status != AVAssetWriterStatusWriting) {
@@ -571,6 +575,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
                                                   withPresentationTime:lastSampleTime] ) {
                     NSLog(@"Video Writing Error");
                 }
+                if (pixelBuffer != nullptr)
+                    CVPixelBufferRelease(pixelBuffer);
             }
 
         }
