@@ -12,6 +12,14 @@ References:
 Alexander Mordvintsev 6/10/12
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    xrange = range
+
 import numpy as np
 import cv2
 import video
@@ -38,7 +46,7 @@ def merge_lappyr(levels):
 
 if __name__ == '__main__':
     import sys
-    print __doc__
+    print(__doc__)
 
     try:
         fn = sys.argv[1]

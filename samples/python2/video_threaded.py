@@ -15,6 +15,8 @@ Keyboard shortcuts:
    space - switch between multi and single threaded processing
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
 
 import numpy as np
 import cv2
@@ -37,7 +39,7 @@ class DummyTask:
 if __name__ == '__main__':
     import sys
 
-    print __doc__
+    print(__doc__)
 
     try:
         fn = sys.argv[1]
