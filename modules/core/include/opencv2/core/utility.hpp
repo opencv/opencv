@@ -619,6 +619,10 @@ For example:
 }
 @endcode
 
+Note that there are no default values for `help` and `timestamp` so we can check their presence using the `has()` method.
+Arguments with default values are considered to be always present. Use the `get()` method in these cases to check their
+actual value instead.
+
 ### Usage
 
 For the described keys:
@@ -630,7 +634,7 @@ For the described keys:
     # Bad call
     $ ./app -fps=aaa
     ERRORS:
-    Exception: can not convert: [aaa] to [double]
+    Parameter 'fps': can not convert: [aaa] to [double]
 @endcode
  */
 class CV_EXPORTS CommandLineParser

@@ -97,23 +97,28 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
         {
             for (size_t j = 0; j < impl->data[i].keys.size(); j++)
             {
-                if (name.compare(impl->data[i].keys[j]) == 0)
+                if (name == impl->data[i].keys[j])
                 {
                     String v = impl->data[i].def_value;
                     if (space_delete)
                         v = impl->cat_string(v);
+
+                    // it is an error if we just got the default value here
+                    if(v.empty())
+                        break;
+
                     from_str(v, type, dst);
                     return;
                 }
             }
         }
         impl->error = true;
-        impl->error_message = impl->error_message + "Unknown parameter " + name + "\n";
+        impl->error_message = impl->error_message + "Missing parameter: '" + name + "'\n";
     }
-    catch (std::exception& e)
+    catch (Exception& e)
     {
         impl->error = true;
-        impl->error_message = impl->error_message + "Exception: " + String(e.what()) + "\n";
+        impl->error_message = impl->error_message + "Parameter '"+ name + "': " + e.err + "\n";
     }
 }
 
@@ -128,17 +133,22 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
             {
                 String v = impl->data[i].def_value;
                 if (space_delete == true) v = impl->cat_string(v);
+
+                // it is an error if we just got the default value here
+                if(v.empty())
+                    break;
+
                 from_str(v, type, dst);
                 return;
             }
         }
         impl->error = true;
-        impl->error_message = impl->error_message + "Unknown parameter #" + format("%d", index) + "\n";
+        impl->error_message = impl->error_message + "Missing parameter #" + format("%d", index) + "\n";
     }
-    catch(std::exception & e)
+    catch(Exception& e)
     {
         impl->error = true;
-        impl->error_message = impl->error_message + "Exception: " + String(e.what()) + "\n";
+        impl->error_message = impl->error_message + format("Parameter #%d: ", index) + e.err + "\n";
     }
 }
 
@@ -324,9 +334,9 @@ bool CommandLineParser::has(const String& name) const
     {
         for (size_t j = 0; j < impl->data[i].keys.size(); j++)
         {
-            if (name.compare(impl->data[i].keys[j]) == 0 && String("true").compare(impl->data[i].def_value) == 0)
+            if (name == impl->data[i].keys[j])
             {
-                return true;
+                return !impl->cat_string(impl->data[i].def_value).empty();
             }
         }
     }
