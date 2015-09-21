@@ -314,7 +314,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     // making it difficult to detect smaller squares.
     for( k = 0; k < 6; k++ )
     {
-		int max_quad_buf_size = 0;
+        int max_quad_buf_size = 0;
         for( dilations = min_dilations; dilations <= max_dilations; dilations++ )
         {
             if (found)
@@ -1758,7 +1758,7 @@ icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
     cvEndFindContours( &scanner );
 
     // allocate quad & corner buffers
-    *max_quad_buf_size = MAX(1, (root->total+root->total / 2)) * 2; 
+    *max_quad_buf_size = MAX(1, (root->total+root->total / 2)) * 2;
     *out_quads = (CvCBQuad*)cvAlloc(*max_quad_buf_size * sizeof((*out_quads)[0]));
     *out_corners = (CvCBCorner*)cvAlloc(*max_quad_buf_size * 4 * sizeof((*out_corners)[0]));
 
