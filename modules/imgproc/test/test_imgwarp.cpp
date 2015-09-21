@@ -1372,6 +1372,49 @@ void CV_GetQuadSubPixTest::prepare_to_validation( int /*test_case_idx*/ )
         dst.convertTo(dst0, dst0.depth());
 }
 
+////////////////////////////// resizeArea /////////////////////////////////
+
+template <typename T>
+static void check_resize_area(const Mat& expected, const Mat& actual, double tolerance = 1.0)
+{
+    ASSERT_EQ(actual.type(), expected.type());
+    ASSERT_EQ(actual.size(), expected.size());
+
+    Mat diff;
+    absdiff(actual, expected, diff);
+
+    Mat one_channel_diff = diff; //.reshape(1);
+
+    Size dsize = actual.size();
+    bool next = true;
+    for (int dy = 0; dy < dsize.height && next; ++dy)
+    {
+        const T* eD = expected.ptr<T>(dy);
+        const T* aD = actual.ptr<T>(dy);
+
+        for (int dx = 0; dx < dsize.width && next; ++dx)
+            if (fabs(static_cast<double>(aD[dx] - eD[dx])) > tolerance)
+            {
+                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Inf norm: %f\n", static_cast<float>(norm(actual, expected, NORM_INF)));
+                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Error in : (%d, %d)\n", dx, dy);
+
+                const int radius = 3;
+                int rmin = MAX(dy - radius, 0), rmax = MIN(dy + radius, dsize.height);
+                int cmin = MAX(dx - radius, 0), cmax = MIN(dx + radius, dsize.width);
+
+                std::cout << "Abs diff:" << std::endl << diff << std::endl;
+                std::cout << "actual result:\n" << actual(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+                std::cout << "expected result:\n" << expected(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+
+                next = false;
+            }
+    }
+
+    ASSERT_EQ(0, norm(one_channel_diff, cv::NORM_INF));
+}
+
+///////////////////////////////////////////////////////////////////////////
+
 TEST(Imgproc_cvWarpAffine, regression)
 {
     IplImage* src = cvCreateImage(cvSize(100, 100), IPL_DEPTH_8U, 1);
@@ -1501,41 +1544,45 @@ TEST(Imgproc_resize_area, regression)
 
     cv::resize(src, actual, cv::Size(), 0.3, 0.3, INTER_AREA);
 
-    ASSERT_EQ(actual.type(), expected.type());
-    ASSERT_EQ(actual.size(), expected.size());
+    check_resize_area<ushort>(expected, actual, 1.0);
+}
 
-    Mat diff;
-    absdiff(actual, expected, diff);
+TEST(Imgproc_resize_area, regression_half_round)
+{
+    static uchar input_data[32 * 32];
+    for(int i = 0; i < 32 * 32; ++i)
+        input_data[i] = (uchar)(i % 2 + 253 + i / (16 * 32));
 
-    Mat one_channel_diff = diff; //.reshape(1);
+    static uchar expected_data[16 * 16];
+    for(int i = 0; i < 16 * 16; ++i)
+        expected_data[i] = (uchar)(254 + i / (16 * 8));
 
-    float elem_diff = 1.0f;
-    Size dsize = actual.size();
-    bool next = true;
-    for (int dy = 0; dy < dsize.height && next; ++dy)
-    {
-        ushort* eD = expected.ptr<ushort>(dy);
-        ushort* aD = actual.ptr<ushort>(dy);
+    cv::Mat src(32, 32, CV_8UC1, input_data);
+    cv::Mat expected(16, 16, CV_8UC1, expected_data);
+    cv::Mat actual(expected.size(), expected.type());
 
-        for (int dx = 0; dx < dsize.width && next; ++dx)
-            if (fabs(static_cast<float>(aD[dx] - eD[dx])) > elem_diff)
-            {
-                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Inf norm: %f\n", static_cast<float>(norm(actual, expected, NORM_INF)));
-                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Error in : (%d, %d)\n", dx, dy);
+    cv::resize(src, actual, cv::Size(), 0.5, 0.5, INTER_AREA);
 
-                const int radius = 3;
-                int rmin = MAX(dy - radius, 0), rmax = MIN(dy + radius, dsize.height);
-                int cmin = MAX(dx - radius, 0), cmax = MIN(dx + radius, dsize.width);
+    check_resize_area<uchar>(expected, actual, 0.5);
+}
 
-                std::cout << "Abs diff:" << std::endl << diff << std::endl;
-                std::cout << "actual result:\n" << actual(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
-                std::cout << "expected result:\n" << expected(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+TEST(Imgproc_resize_area, regression_quarter_round)
+{
+    static uchar input_data[32 * 32];
+    for(int i = 0; i < 32 * 32; ++i)
+        input_data[i] = (uchar)(i % 2 + 253 + i / (16 * 32));
 
-                next = false;
-            }
-    }
+    static uchar expected_data[8 * 8];
+    for(int i = 0; i < 8 * 8; ++i)
+        expected_data[i] = 254;
 
-    ASSERT_EQ(cvtest::norm(one_channel_diff, cv::NORM_INF), 0);
+    cv::Mat src(32, 32, CV_8UC1, input_data);
+    cv::Mat expected(8, 8, CV_8UC1, expected_data);
+    cv::Mat actual(expected.size(), expected.type());
+
+    cv::resize(src, actual, cv::Size(), 0.25, 0.25, INTER_AREA);
+
+    check_resize_area<uchar>(expected, actual, 0.5);
 }
 
 
