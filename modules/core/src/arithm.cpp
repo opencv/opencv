@@ -4692,7 +4692,7 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
     CV_IPP_CHECK()
     {
         IppCmpOp op = convert_cmp(*(int *)_cmpop);
-        if( op  > 0 )
+        if( op >= 0 )
         {
             fixSteps(size, sizeof(dst[0]), step1, step2, step);
             if (0 <= ippiCompare_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(size), op))
