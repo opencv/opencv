@@ -937,9 +937,9 @@ public:
 // Linear Discriminant Analysis implementation
 //------------------------------------------------------------------------------
 
-LDA::LDA(int num_components) : _num_components(num_components) { }
+LDA::LDA(int num_components) : _dataAsRow(true), _num_components(num_components) { }
 
-LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _num_components(num_components)
+LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _dataAsRow(true),  _num_components(num_components)
 {
     this->compute(src, labels); //! compute eigenvectors and eigenvalues
 }
@@ -1106,14 +1106,14 @@ void LDA::compute(InputArrayOfArrays _src, InputArray _lbls) {
     }
 }
 
-// Projects samples into the LDA subspace.
+// Projects one or more row aligned samples into the LDA subspace.
 Mat LDA::project(InputArray src) {
-   return subspaceProject(_eigenvectors, Mat(), _dataAsRow ? src : src.getMat().t());
+   return subspaceProject(_eigenvectors, Mat(), src);
 }
 
-// Reconstructs projections from the LDA subspace.
+// Reconstructs projections from the LDA subspace from one or more row aligned samples.
 Mat LDA::reconstruct(InputArray src) {
-   return subspaceReconstruct(_eigenvectors, Mat(), _dataAsRow ? src : src.getMat().t());
+   return subspaceReconstruct(_eigenvectors, Mat(), src);
 }
 
 }
