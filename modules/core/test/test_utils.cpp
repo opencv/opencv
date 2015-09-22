@@ -15,6 +15,18 @@ static const char * const keys =
     "{ n unused  |       | dummy }"
 ;
 
+TEST(CommandLineParser, testFailure)
+{
+    const char* argv[] = {"<bin>", "-q"};
+    const int argc = 2;
+    cv::CommandLineParser parser(argc, argv, keys);
+    EXPECT_ANY_THROW(parser.has("q"));
+    EXPECT_ANY_THROW(parser.get<bool>("q"));
+    EXPECT_ANY_THROW(parser.get<bool>(0));
+
+    parser.get<bool>("h");
+    EXPECT_FALSE(parser.check());
+}
 TEST(CommandLineParser, testHas_noValues)
 {
     const char* argv[] = {"<bin>", "-h", "--info"};
@@ -26,7 +38,6 @@ TEST(CommandLineParser, testHas_noValues)
     EXPECT_TRUE(parser.has("i"));
     EXPECT_FALSE(parser.has("n"));
     EXPECT_FALSE(parser.has("unused"));
-    EXPECT_FALSE(parser.has("q")); // TODO Throw ???
 }
 TEST(CommandLineParser, testHas_TrueValues)
 {
@@ -39,7 +50,6 @@ TEST(CommandLineParser, testHas_TrueValues)
     EXPECT_TRUE(parser.has("i"));
     EXPECT_FALSE(parser.has("n"));
     EXPECT_FALSE(parser.has("unused"));
-    EXPECT_FALSE(parser.has("q")); // TODO Throw ???
 }
 TEST(CommandLineParser, testHas_TrueValues1)
 {
@@ -52,7 +62,6 @@ TEST(CommandLineParser, testHas_TrueValues1)
     EXPECT_TRUE(parser.has("i"));
     EXPECT_FALSE(parser.has("n"));
     EXPECT_FALSE(parser.has("unused"));
-    EXPECT_FALSE(parser.has("q")); // TODO Throw ???
 }
 TEST(CommandLineParser, testHas_FalseValues0)
 {
@@ -65,7 +74,6 @@ TEST(CommandLineParser, testHas_FalseValues0)
     EXPECT_TRUE(parser.has("i"));
     EXPECT_FALSE(parser.has("n"));
     EXPECT_FALSE(parser.has("unused"));
-    EXPECT_FALSE(parser.has("q")); // TODO Throw ???
 }
 
 TEST(CommandLineParser, testBoolOption_noArgs)

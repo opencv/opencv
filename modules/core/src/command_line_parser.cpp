@@ -37,7 +37,7 @@ struct CommandLineParser::Impl
 };
 
 
-static String get_type_name(int type)
+static const char* get_type_name(int type)
 {
     if( type == Param::INT )
         return "int";
@@ -78,14 +78,11 @@ static void from_str(const String& str, int type, void* dst)
     else if( type == Param::STRING )
         *(String*)dst = str;
     else
-        throw cv::Exception(CV_StsBadArg, "unknown/unsupported parameter type", "", __FILE__, __LINE__);
+        CV_Error(Error::StsBadArg, "unknown/unsupported parameter type");
 
     if (ss.fail())
     {
-        String err_msg = "can not convert: [" + str +
-        + "] to [" + get_type_name(type) + "]";
-
-        throw cv::Exception(CV_StsBadArg, err_msg, "", __FILE__, __LINE__);
+        CV_Error_(Error::StsBadArg, ("can not convert: [%s] to [%s]", str.c_str(), get_type_name(type)));
     }
 }
 
@@ -103,23 +100,27 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
                     if (space_delete)
                         v = impl->cat_string(v);
 
-                    // it is an error if we just got the default value here
-                    if (v.empty() && type != Param::STRING)
-                        break;
+                    // the key was neither specified nor has it a default value
+                    if(v.empty() && type != Param::STRING) {
+                        impl->error = true;
+                        impl->error_message = impl->error_message + "Missing parameter: '" + name + "'\n";
+                        return;
+                    }
 
                     from_str(v, type, dst);
                     return;
                 }
             }
         }
-        impl->error = true;
-        impl->error_message = impl->error_message + "Missing parameter: '" + name + "'\n";
     }
     catch (Exception& e)
     {
         impl->error = true;
         impl->error_message = impl->error_message + "Parameter '"+ name + "': " + e.err + "\n";
+        return;
     }
+
+    CV_Error_(Error::StsBadArg, ("undeclared key '%s' requested", name.c_str()));
 }
 
 
@@ -134,22 +135,25 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
                 String v = impl->data[i].def_value;
                 if (space_delete == true) v = impl->cat_string(v);
 
-                // it is an error if we just got the default value here
-                if(v.empty())
-                    break;
-
+                // the key was neither specified nor has it a default value
+                if(v.empty() && type != Param::STRING) {
+                    impl->error = true;
+                    impl->error_message = impl->error_message + format("Missing parameter #%d\n", index);
+                    return;
+                }
                 from_str(v, type, dst);
                 return;
             }
         }
-        impl->error = true;
-        impl->error_message = impl->error_message + "Missing parameter #" + format("%d", index) + "\n";
     }
     catch(Exception& e)
     {
         impl->error = true;
         impl->error_message = impl->error_message + format("Parameter #%d: ", index) + e.err + "\n";
+        return;
     }
+
+    CV_Error_(Error::StsBadArg, ("undeclared position %d requested", index));
 }
 
 static bool cmp_params(const CommandLineParserParams & p1, const CommandLineParserParams & p2)
@@ -340,6 +344,8 @@ bool CommandLineParser::has(const String& name) const
             }
         }
     }
+
+    CV_Error_(Error::StsBadArg, ("undeclared key '%s' requested", name.c_str()));
     return false;
 }
 
