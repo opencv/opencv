@@ -576,6 +576,8 @@ private:
 
     char* allocate(size_t len); // len without trailing 0
     void deallocate();
+
+    String(int); // disabled and invalid. Catch invalid usages like, commandLineParser.has(0) problem
 };
 
 //! @} core_basic
