@@ -914,7 +914,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     if (!args.check())
     {
         args.printErrors();
-        exit();
+        exit(1);
     }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
