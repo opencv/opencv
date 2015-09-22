@@ -104,7 +104,7 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
                         v = impl->cat_string(v);
 
                     // it is an error if we just got the default value here
-                    if(v.empty())
+                    if (v.empty() && type != Param::STRING)
                         break;
 
                     from_str(v, type, dst);
