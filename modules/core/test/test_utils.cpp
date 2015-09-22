@@ -137,12 +137,14 @@ TEST(CommandLineParser, testPositional_noArgs)
     const char* argv[] = {"<bin>"};
     const int argc = 1;
     cv::CommandLineParser parser(argc, argv, keys2);
-    //EXPECT_FALSE(parser.has("arg1"));
-    //EXPECT_FALSE(parser.has("arg2"));
-    //EXPECT_EQ("default1", parser.get<String>("arg1"));
+    EXPECT_TRUE(parser.has("@arg1"));
+    EXPECT_FALSE(parser.has("@arg2"));
+    EXPECT_EQ("default1", parser.get<String>("@arg1"));
     EXPECT_EQ("default1", parser.get<String>(0));
-    //??? EXPECT_ANY_THROW(parser.get<String>("arg2"));
-    //??? EXPECT_ANY_THROW(parser.get<String>(1));
+
+    parser.get<String>("@arg2");
+    parser.get<String>(1);
+    EXPECT_TRUE(parser.check());
 }
 
 TEST(CommandLineParser, testPositional_default)
@@ -150,10 +152,10 @@ TEST(CommandLineParser, testPositional_default)
     const char* argv[] = {"<bin>", "test1", "test2"};
     const int argc = 3;
     cv::CommandLineParser parser(argc, argv, keys2);
-    //EXPECT_TRUE(parser.has("arg1"));
-    //EXPECT_TRUE(parser.has("arg2"));
-    //EXPECT_EQ("test1", parser.get<String>("arg1"));
-    //EXPECT_EQ("test2", parser.get<String>("arg2"));
+    EXPECT_TRUE(parser.has("@arg1"));
+    EXPECT_TRUE(parser.has("@arg2"));
+    EXPECT_EQ("test1", parser.get<String>("@arg1"));
+    EXPECT_EQ("test2", parser.get<String>("@arg2"));
     EXPECT_EQ("test1", parser.get<String>(0));
     EXPECT_EQ("test2", parser.get<String>(1));
 }
@@ -163,10 +165,10 @@ TEST(CommandLineParser, testPositional_withFlagsBefore)
     const char* argv[] = {"<bin>", "-h", "test1", "test2"};
     const int argc = 4;
     cv::CommandLineParser parser(argc, argv, keys2);
-    //EXPECT_TRUE(parser.has("arg1"));
-    //EXPECT_TRUE(parser.has("arg2"));
-    //EXPECT_EQ("test1", parser.get<String>("arg1"));
-    //EXPECT_EQ("test2", parser.get<String>("arg2"));
+    EXPECT_TRUE(parser.has("@arg1"));
+    EXPECT_TRUE(parser.has("@arg2"));
+    EXPECT_EQ("test1", parser.get<String>("@arg1"));
+    EXPECT_EQ("test2", parser.get<String>("@arg2"));
     EXPECT_EQ("test1", parser.get<String>(0));
     EXPECT_EQ("test2", parser.get<String>(1));
 }
@@ -176,10 +178,10 @@ TEST(CommandLineParser, testPositional_withFlagsAfter)
     const char* argv[] = {"<bin>", "test1", "test2", "-h"};
     const int argc = 4;
     cv::CommandLineParser parser(argc, argv, keys2);
-    //EXPECT_TRUE(parser.has("arg1"));
-    //EXPECT_TRUE(parser.has("arg2"));
-    //EXPECT_EQ("test1", parser.get<String>("arg1"));
-    //EXPECT_EQ("test2", parser.get<String>("arg2"));
+    EXPECT_TRUE(parser.has("@arg1"));
+    EXPECT_TRUE(parser.has("@arg2"));
+    EXPECT_EQ("test1", parser.get<String>("@arg1"));
+    EXPECT_EQ("test2", parser.get<String>("@arg2"));
     EXPECT_EQ("test1", parser.get<String>(0));
     EXPECT_EQ("test2", parser.get<String>(1));
 }
