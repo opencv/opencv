@@ -212,6 +212,15 @@ CVAPI(void) cvInitIntrinsicParams2D( const CvMat* object_points,
 // 0 if there is no chessboard, -1 in case of error
 CVAPI(int) cvCheckChessboard(IplImage* src, CvSize size);
 
+// Performs a fast check if a chessboard is in the input image. This is a workaround to
+// a problem of cvFindChessboardCorners being slow on images with no chessboard.
+// This method works using a binary image as input
+// - src: input binary image
+// - size: chessboard size
+// Returns 1 if a chessboard can be in this image and findChessboardCorners should be called,
+// 0 if there is no chessboard, -1 in case of error
+CVAPI(int) cvCheckChessboardBinary(IplImage* src, CvSize size);
+
     /* Detects corners on a chessboard calibration pattern */
 CVAPI(int) cvFindChessboardCorners( const void* image, CvSize pattern_size,
                                     CvPoint2D32f* corners,
