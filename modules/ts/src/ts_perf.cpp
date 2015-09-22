@@ -819,10 +819,8 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_write_sanity  = args.get<bool>("perf_write_sanity");
     param_verify_sanity = args.get<bool>("perf_verify_sanity");
 
-#ifndef WINRT
+#ifdef HAVE_IPP
     test_ipp_check      = !args.get<bool>("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
-#else
-    test_ipp_check = false;
 #endif
     param_threads       = args.get<int>("perf_threads");
 #ifdef CV_COLLECT_IMPL_DATA
@@ -916,7 +914,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     if (!args.check())
     {
         args.printErrors();
-        return;
+        exit();
     }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
