@@ -1909,7 +1909,8 @@ static void showSaveDialog(CvWindow* window)
 
     if (GetSaveFileName(&ofn))
     {
-        cv::Mat tmp; cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data), tmp, 0);
+        cv::Mat tmp;
+        cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data, (sz.cx * channels + 3) & -4), tmp, 0);
         cv::imwrite(szFileName, tmp);
     }
 }
