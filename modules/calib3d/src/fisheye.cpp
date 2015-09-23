@@ -794,8 +794,42 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
     if (K.needed()) cv::Mat(_K).convertTo(K, K.empty() ? CV_64FC1 : K.type());
     if (D.needed()) cv::Mat(finalParam.k).convertTo(D, D.empty() ? CV_64FC1 : D.type());
-    if (rvecs.needed()) cv::Mat(omc).convertTo(rvecs, rvecs.empty() ? CV_64FC3 : rvecs.type());
-    if (tvecs.needed()) cv::Mat(Tc).convertTo(tvecs, tvecs.empty() ? CV_64FC3 : tvecs.type());
+
+    if (rvecs.needed())
+    {
+        if( rvecs.kind() == _InputArray::STD_VECTOR_MAT )
+        {
+            rvecs.create((int)objectPoints.total(), 1, CV_64FC3);
+            for( int i = 0; i < (int)objectPoints.total(); i++ )
+            {
+                rvecs.create(3, 1, CV_64F, i, true);
+                Mat rv = rvecs.getMat(i);
+                *rv.ptr<Vec3d>(0) = omc[i];
+            }
+        }
+        else
+        {
+            cv::Mat(omc).convertTo(rvecs, rvecs.fixedType() ? rvecs.type() : CV_64FC3);
+        }
+    }
+
+    if (tvecs.needed())
+    {
+        if( tvecs.kind() == _InputArray::STD_VECTOR_MAT )
+        {
+            tvecs.create((int)objectPoints.total(), 1, CV_64FC3);
+            for( int i = 0; i < (int)objectPoints.total(); i++ )
+            {
+                tvecs.create(3, 1, CV_64F, i, true);
+                Mat tv = tvecs.getMat(i);
+                *tv.ptr<Vec3d>(0) = Tc[i];
+            }
+        }
+        else
+        {
+            cv::Mat(Tc).convertTo(tvecs, tvecs.fixedType() ? tvecs.type() : CV_64FC3);
+        }
+    }
 
     return rms;
 }
