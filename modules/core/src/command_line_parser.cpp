@@ -234,25 +234,21 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const S
     jj = 0;
     for (int i = 1; i < argc; i++)
     {
-        String s = String(argv[i]);
+        String s(argv[i]);
+        bool hasSingleDash = s.length() > 1 && s[0] == '-';
 
-        if (s.find('=') != String::npos && s.find('=') < s.length())
+        if (hasSingleDash)
         {
-            std::vector<String> k_v = impl->split_string(s, '=', true);
-            for (int h = 0; h < 2; h++)
-            {
-                if (k_v[0][0] == '-')
-                    k_v[0] = k_v[0].substr(1, k_v[0].length() -1);
+            bool hasDoubleDash = s.length() > 2 && s[1] == '-';
+            String key = s.substr(hasDoubleDash ? 2 : 1);
+            String value = "true";
+            size_t equalsPos = key.find('=');
+
+            if(equalsPos != String::npos) {
+                value = key.substr(equalsPos + 1);
+                key = key.substr(0, equalsPos);
             }
-            impl->apply_params(k_v[0], k_v[1]);
-        }
-        else if (s.length() > 2 && s[0] == '-' && s[1] == '-')
-        {
-            impl->apply_params(s.substr(2), "true");
-        }
-        else if (s.length() > 1 && s[0] == '-')
-        {
-            impl->apply_params(s.substr(1), "true");
+            impl->apply_params(key, value);
         }
         else
         {

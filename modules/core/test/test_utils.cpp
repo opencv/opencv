@@ -203,4 +203,19 @@ TEST(CommandLineParser, testEmptyStringValue)
     EXPECT_FALSE(parser.check());
 }
 
+TEST(CommandLineParser, positional_regression_5074_equal_sign)
+{
+    static const char * const keys3 =
+            "{ @eq0 |  | }"
+            "{ eq1  |  | }";
+
+    const char* argv[] = {"<bin>", "1=0", "--eq1=1=0"};
+    const int argc = 3;
+    cv::CommandLineParser parser(argc, argv, keys3);
+    EXPECT_EQ("1=0", parser.get<String>("@eq0"));
+    EXPECT_EQ("1=0", parser.get<String>(0));
+    EXPECT_EQ("1=0", parser.get<String>("eq1"));
+    EXPECT_TRUE(parser.check());
+}
+
 } // namespace
