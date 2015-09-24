@@ -24,6 +24,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <iostream>
+#include <stdexcept>
 #include <string>
 
 #include <stdio.h>
@@ -41,96 +43,84 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/core/va_intel.hpp"
 #include "cvconfig.h"
 
-#define CHECK_VASTATUS(va_status,func)                                  \
-if (va_status != VA_STATUS_SUCCESS) {                                   \
-    fprintf(stderr,"%s:%s (%d) failed(status=0x%08x),exit\n", __func__, func, __LINE__, va_status); \
-    exit(1);                                                            \
-}
+#define CHECK_VASTATUS(_status,_func) \
+    if (_status != VA_STATUS_SUCCESS) \
+    { \
+        char str[256]; \
+        snprintf(str, sizeof(str)-1, "%s:%s (%d) failed(status=0x%08x),exit\n", __func__, _func, __LINE__, _status); \
+        throw std::runtime_error(str); \
+    }
 
-/* Data dump of a 16x16 MPEG2 video clip,it has one I frame
- */
-static unsigned char mpeg2_clip[]={
-    0x00,0x00,0x01,0xb3,0x01,0x00,0x10,0x13,0xff,0xff,0xe0,0x18,0x00,0x00,0x01,0xb5,
-    0x14,0x8a,0x00,0x01,0x00,0x00,0x00,0x00,0x01,0xb8,0x00,0x08,0x00,0x00,0x00,0x00,
-    0x01,0x00,0x00,0x0f,0xff,0xf8,0x00,0x00,0x01,0xb5,0x8f,0xff,0xf3,0x41,0x80,0x00,
-    0x00,0x01,0x01,0x13,0xe1,0x00,0x15,0x81,0x54,0xe0,0x2a,0x05,0x43,0x00,0x2d,0x60,
-    0x18,0x01,0x4e,0x82,0xb9,0x58,0xb1,0x83,0x49,0xa4,0xa0,0x2e,0x05,0x80,0x4b,0x7a,
-    0x00,0x01,0x38,0x20,0x80,0xe8,0x05,0xff,0x60,0x18,0xe0,0x1d,0x80,0x98,0x01,0xf8,
-    0x06,0x00,0x54,0x02,0xc0,0x18,0x14,0x03,0xb2,0x92,0x80,0xc0,0x18,0x94,0x42,0x2c,
-    0xb2,0x11,0x64,0xa0,0x12,0x5e,0x78,0x03,0x3c,0x01,0x80,0x0e,0x80,0x18,0x80,0x6b,
-    0xca,0x4e,0x01,0x0f,0xe4,0x32,0xc9,0xbf,0x01,0x42,0x69,0x43,0x50,0x4b,0x01,0xc9,
-    0x45,0x80,0x50,0x01,0x38,0x65,0xe8,0x01,0x03,0xf3,0xc0,0x76,0x00,0xe0,0x03,0x20,
-    0x28,0x18,0x01,0xa9,0x34,0x04,0xc5,0xe0,0x0b,0x0b,0x04,0x20,0x06,0xc0,0x89,0xff,
-    0x60,0x12,0x12,0x8a,0x2c,0x34,0x11,0xff,0xf6,0xe2,0x40,0xc0,0x30,0x1b,0x7a,0x01,
-    0xa9,0x0d,0x00,0xac,0x64
+class CmdlineParser
+{
+public:
+    enum { fnInput=0, fnOutput1, fnOutput2, _fnNumFiles }; // file name indices
+    CmdlineParser(int argc, char** argv):
+        m_argc(argc), m_argv(argv)
+        {}
+    void usage()
+        {
+            fprintf(stderr,
+#if defined(HAVE_VA_INTEL)
+                    "Usage: va_intel_interop [-f] infile outfile1 outfile2\n\n"
+                    "Interop ON/OFF version\n\n"
+                    "where:  -f    option indicates interop is off (fallback mode); interop is on by default\n"
+#elif defined(HAVE_VA)
+                    "Usage: va_intel_interop infile outfile1 outfile2\n\n"
+                    "Interop OFF only version\n\n"
+                    "where:\n"
+#endif //HAVE_VA_INTEL / HAVE_VA
+                    "        infile   is to be existing, contains input image data (bmp, jpg, png, tiff, etc)\n"
+                    "        outfile1 is to be created, contains original surface data (NV12)\n"
+                    "        outfile2 is to be created, contains processed surface data (NV12)\n");
+        }
+    // true => go, false => usage/exit; extra args/unknown options are ignored for simplicity
+    bool run()
+        {
+            int n = 0;
+            for (int i = 0; i < _fnNumFiles; ++i)
+                m_files[i] = 0;
+#if defined(HAVE_VA_INTEL)
+            m_interop = true;
+#elif defined(HAVE_VA)
+            m_interop = false;
+#endif //HAVE_VA_INTEL / HAVE_VA
+            for (int i = 1; i < m_argc; ++i)
+            {
+                const char *arg = m_argv[i];
+                if (arg[0] == '-') // option
+                {
+#if defined(HAVE_VA_INTEL)
+                    if (!strcmp(arg, "-f"))
+                        m_interop = false;
+#endif //HAVE_VA_INTEL
+                }
+                else // parameter
+                {
+                    if (n < _fnNumFiles)
+                        m_files[n++] = arg;
+                }
+            }
+            return bool(n >= _fnNumFiles);
+        }
+    bool isInterop() const
+        {
+            return m_interop;
+        }
+    const char* getFile(int n) const
+        {
+            return ((n >= 0) && (n < _fnNumFiles)) ? m_files[n] : 0;
+        }
+private:
+    int m_argc;
+    char** m_argv;
+    const char* m_files[_fnNumFiles];
+    bool m_interop;
 };
-
-/* hardcoded here without a bitstream parser helper
- * please see picture mpeg2-I.jpg for bitstream details
- */
-static VAPictureParameterBufferMPEG2 pic_param={
-  horizontal_size:16,
-  vertical_size:16,
-  forward_reference_picture:0xffffffff,
-  backward_reference_picture:0xffffffff,
-  picture_coding_type:1,
-  f_code:0xffff,
-  {
-      {
-        intra_dc_precision:0,
-        picture_structure:3,
-        top_field_first:0,
-        frame_pred_frame_dct:1,
-        concealment_motion_vectors:0,
-        q_scale_type:0,
-        intra_vlc_format:0,
-        alternate_scan:0,
-        repeat_first_field:0,
-        progressive_frame:1 ,
-        is_first_field:1
-      },
-  }
-};
-
-/* see MPEG2 spec65 for the defines of matrix */
-static VAIQMatrixBufferMPEG2 iq_matrix = {
-  load_intra_quantiser_matrix:1,
-  load_non_intra_quantiser_matrix:1,
-  load_chroma_intra_quantiser_matrix:0,
-  load_chroma_non_intra_quantiser_matrix:0,
-  intra_quantiser_matrix:{
-         8, 16, 16, 19, 16, 19, 22, 22,
-        22, 22, 22, 22, 26, 24, 26, 27,
-        27, 27, 26, 26, 26, 26, 27, 27,
-        27, 29, 29, 29, 34, 34, 34, 29,
-        29, 29, 27, 27, 29, 29, 32, 32,
-        34, 34, 37, 38, 37, 35, 35, 34,
-        35, 38, 38, 40, 40, 40, 48, 48,
-        46, 46, 56, 56, 58, 69, 69, 83
-    },
-  non_intra_quantiser_matrix:{16},
-  chroma_intra_quantiser_matrix:{0},
-  chroma_non_intra_quantiser_matrix:{0}
-};
-
-#if 1
-static VASliceParameterBufferMPEG2 slice_param={
-  slice_data_size:150,
-  slice_data_offset:0,
-  slice_data_flag:0,
-  macroblock_offset:38, /* 4byte + 6bits=38bits */
-  slice_horizontal_position:0,
-  slice_vertical_position:0,
-  quantiser_scale_code:2,
-  intra_slice_flag:0
-};
-#endif
-
-#define CLIP_WIDTH  16
-#define CLIP_HEIGHT 16
 
 class Timer
 {
@@ -180,261 +170,109 @@ public:
     int   m_unit_mul[3];
 };
 
-static void dumpSurface(VADisplay display, VASurfaceID surface_id, const char* fileName, bool doInterop)
-{
-    VAStatus va_status;
-
-    va_status = vaSyncSurface(display, surface_id);
-    CHECK_VASTATUS(va_status, "vaSyncSurface");
-
-    VAImage image;
-    va_status = vaDeriveImage(display, surface_id, &image);
-    CHECK_VASTATUS(va_status, "vaDeriveImage");
-
-    unsigned char* buffer = 0;
-    va_status = vaMapBuffer(display, image.buf, (void **)&buffer);
-    CHECK_VASTATUS(va_status, "vaMapBuffer");
-
-    CV_Assert(image.format.fourcc == VA_FOURCC_NV12);
-/*
-    printf("image.format.fourcc = 0x%08x\n", image.format.fourcc);
-    printf("image.[width x height] = %d x %d\n", image.width, image.height);
-    printf("image.data_size = %d\n", image.data_size);
-    printf("image.num_planes = %d\n", image.num_planes);
-    printf("image.pitches[0..2] = 0x%08x 0x%08x 0x%08x\n", image.pitches[0], image.pitches[1], image.pitches[2]);
-    printf("image.offsets[0..2] = 0x%08x 0x%08x 0x%08x\n", image.offsets[0], image.offsets[1], image.offsets[2]);
-*/
-    std::string fn = std::string(fileName) + std::string(doInterop ? ".on" : ".off");
-    FILE* out = fopen(fn.c_str(), "wb");
-    if (!out)
-    {
-        perror(fileName);
-        exit(1);
-    }
-    fwrite(buffer, 1, image.data_size, out);
-    fclose(out);
-
-    vaUnmapBuffer(display, image.buf);
-    CHECK_VASTATUS(va_status, "vaUnmapBuffer");
-
-    vaDestroyImage(display, image.image_id);
-    CHECK_VASTATUS(va_status, "vaDestroyImage");
-}
-
-static float run(const char* fn1, const char* fn2, bool doInterop)
+static void checkIfAvailableYUV420()
 {
     VAEntrypoint entrypoints[5];
     int num_entrypoints,vld_entrypoint;
     VAConfigAttrib attrib;
-    VAConfigID config_id;
-    VASurfaceID surface_id;
-    VAContextID context_id;
-    VABufferID pic_param_buf,iqmatrix_buf,slice_param_buf,slice_data_buf;
-    VAStatus va_status;
-    Timer t;
+    VAStatus status;
 
-    cv::va_intel::ocl::initializeContextFromVA(va::display, doInterop);
+    status = vaQueryConfigEntrypoints(va::display, VAProfileMPEG2Main, entrypoints, &num_entrypoints);
+    CHECK_VASTATUS(status, "vaQueryConfigEntrypoints");
 
-    va_status = vaQueryConfigEntrypoints(va::display, VAProfileMPEG2Main, entrypoints,
-                                         &num_entrypoints);
-    CHECK_VASTATUS(va_status, "vaQueryConfigEntrypoints");
-
-    for (vld_entrypoint = 0; vld_entrypoint < num_entrypoints; vld_entrypoint++) {
+    for (vld_entrypoint = 0; vld_entrypoint < num_entrypoints; ++vld_entrypoint)
+    {
         if (entrypoints[vld_entrypoint] == VAEntrypointVLD)
             break;
     }
-    if (vld_entrypoint == num_entrypoints) {
-        /* not find VLD entry point */
-        assert(0);
-    }
+    if (vld_entrypoint == num_entrypoints)
+        throw std::runtime_error("Failed to find VLD entry point");
 
-    /* Assuming finding VLD, find out the format for the render target */
     attrib.type = VAConfigAttribRTFormat;
-    vaGetConfigAttributes(va::display, VAProfileMPEG2Main, VAEntrypointVLD,
-                          &attrib, 1);
-    if ((attrib.value & VA_RT_FORMAT_YUV420) == 0) {
-        /* not find desired YUV420 RT format */
-        assert(0);
-    }
+    vaGetConfigAttributes(va::display, VAProfileMPEG2Main, VAEntrypointVLD, &attrib, 1);
+    if ((attrib.value & VA_RT_FORMAT_YUV420) == 0)
+        throw std::runtime_error("Desired YUV420 RT format not found");
+}
 
-    va_status = vaCreateConfig(va::display, VAProfileMPEG2Main, VAEntrypointVLD,
-                               &attrib, 1,&config_id);
-    CHECK_VASTATUS(va_status, "vaCreateConfig");
+static cv::UMat readImage(const char* fileName)
+{
+    cv::Mat m = cv::imread(fileName);
+    if (m.empty())
+        throw std::runtime_error("Failed to load image: " + std::string(fileName));
+    return m.getUMat(cv::ACCESS_RW);
+}
 
-    va_status = vaCreateSurfaces(
-        va::display,
-        VA_RT_FORMAT_YUV420, CLIP_WIDTH, CLIP_HEIGHT,
-        &surface_id, 1,
-        NULL, 0
-    );
-    CHECK_VASTATUS(va_status, "vaCreateSurfaces");
+static void writeImage(const cv::UMat& u, const char* fileName, bool doInterop)
+{
+    std::string fn = std::string(fileName) + std::string(doInterop ? ".on" : ".off") + std::string(".jpg");
+    cv::imwrite(fn, u);
+}
 
-    /* Create a context for this decode pipe */
-    va_status = vaCreateContext(va::display, config_id,
-                                CLIP_WIDTH,
-                                ((CLIP_HEIGHT+15)/16)*16,
-                                VA_PROGRESSIVE,
-                                &surface_id,
-                                1,
-                                &context_id);
-    CHECK_VASTATUS(va_status, "vaCreateContext");
+static float run(const char* infile, const char* outfile1, const char* outfile2, bool doInterop)
+{
+    VASurfaceID surface;
+    VAStatus status;
+    Timer t;
 
-    va_status = vaCreateBuffer(va::display, context_id,
-                               VAPictureParameterBufferType,
-                               sizeof(VAPictureParameterBufferMPEG2),
-                               1, &pic_param,
-                               &pic_param_buf);
-    CHECK_VASTATUS(va_status, "vaCreateBuffer");
+    // initialize CL context for CL/VA interop
+    cv::va_intel::ocl::initializeContextFromVA(va::display, doInterop);
 
-    va_status = vaCreateBuffer(va::display, context_id,
-                               VAIQMatrixBufferType,
-                               sizeof(VAIQMatrixBufferMPEG2),
-                               1, &iq_matrix,
-                               &iqmatrix_buf );
-    CHECK_VASTATUS(va_status, "vaCreateBuffer");
+    // load input image
+    cv::UMat u1 = readImage(infile);
+    cv::Size size2 = u1.size();
+    status = vaCreateSurfaces(va::display, VA_RT_FORMAT_YUV420, size2.width, size2.height, &surface, 1, NULL, 0);
+    CHECK_VASTATUS(status, "vaCreateSurfaces");
 
-    va_status = vaCreateBuffer(va::display, context_id,
-                               VASliceParameterBufferType,
-                               sizeof(VASliceParameterBufferMPEG2),
-                               1,
-                               &slice_param, &slice_param_buf);
-    CHECK_VASTATUS(va_status, "vaCreateBuffer");
+    // transfer image into VA surface, make sure all CL initialization is done (kernels etc)
+    cv::va_intel::convertToVASurface(va::display, u1, surface, size2);
+    cv::va_intel::convertFromVASurface(va::display, surface, size2, u1);
+    cv::UMat u2;
+    cv::blur(u1, u2, cv::Size(7, 7), cv::Point(-3, -3));
 
-    va_status = vaCreateBuffer(va::display, context_id,
-                               VASliceDataBufferType,
-                               0xc4-0x2f+1,
-                               1,
-                               mpeg2_clip+0x2f,
-                               &slice_data_buf);
-    CHECK_VASTATUS(va_status, "vaCreateBuffer");
-
-    va_status = vaBeginPicture(va::display, context_id, surface_id);
-    CHECK_VASTATUS(va_status, "vaBeginPicture");
-
-    va_status = vaRenderPicture(va::display,context_id, &pic_param_buf, 1);
-    CHECK_VASTATUS(va_status, "vaRenderPicture");
-
-    va_status = vaRenderPicture(va::display,context_id, &iqmatrix_buf, 1);
-    CHECK_VASTATUS(va_status, "vaRenderPicture");
-
-    va_status = vaRenderPicture(va::display,context_id, &slice_param_buf, 1);
-    CHECK_VASTATUS(va_status, "vaRenderPicture");
-
-    va_status = vaRenderPicture(va::display,context_id, &slice_data_buf, 1);
-    CHECK_VASTATUS(va_status, "vaRenderPicture");
-
-    va_status = vaEndPicture(va::display,context_id);
-    CHECK_VASTATUS(va_status, "vaEndPicture");
-
-    va_status = vaSyncSurface(va::display, surface_id);
-    CHECK_VASTATUS(va_status, "vaSyncSurface");
-
-    dumpSurface(va::display, surface_id, fn1, doInterop);
-
-    cv::Size size(CLIP_WIDTH,CLIP_HEIGHT);
-    cv::UMat u;
-
-    cv::va_intel::convertFromVASurface(va::display, surface_id, size, u);
-    cv::blur(u, u, cv::Size(7, 7), cv::Point(-3, -3));
-    cv::va_intel::convertToVASurface(va::display, u, surface_id, size);
+    // measure performance on some image processing
+    writeImage(u1, outfile1, doInterop);
     t.start();
-    cv::va_intel::convertFromVASurface(va::display, surface_id, size, u);
-    cv::blur(u, u, cv::Size(7, 7), cv::Point(-3, -3));
-    cv::va_intel::convertToVASurface(va::display, u, surface_id, size);
+    cv::va_intel::convertFromVASurface(va::display, surface, size2, u1);
+    cv::blur(u1, u2, cv::Size(7, 7), cv::Point(-3, -3));
+    cv::va_intel::convertToVASurface(va::display, u2, surface, size2);
     t.stop();
+    writeImage(u2, outfile2, doInterop);
 
-    dumpSurface(va::display, surface_id, fn2, doInterop);
-
-    vaDestroySurfaces(va::display,&surface_id,1);
-    vaDestroyConfig(va::display,config_id);
-    vaDestroyContext(va::display,context_id);
+    vaDestroySurfaces(va::display, &surface,1);
 
     return t.time(Timer::MSEC);
 }
 
-class CmdlineParser
-{
-public:
-    CmdlineParser(int argc, char** argv):
-        m_argc(argc), m_argv(argv)
-        {}
-    // true => go, false => usage/exit; extra args/unknown options are ignored for simplicity
-    bool run()
-        {
-            int n = 0;
-            m_files[0] = m_files[1] = 0;
-#if defined(HAVE_VA_INTEL)
-            m_interop = true;
-#elif defined(HAVE_VA)
-            m_interop = false;
-#endif //HAVE_VA_INTEL / HAVE_VA
-            for (int i = 1; i < m_argc; ++i)
-            {
-                const char *arg = m_argv[i];
-                if (arg[0] == '-') // option
-                {
-#if defined(HAVE_VA_INTEL)
-                    if (!strcmp(arg, "-f"))
-                        m_interop = false;
-#endif //HAVE_VA_INTEL
-                }
-                else // parameter
-                {
-                    if (n < 2)
-                        m_files[n++] = arg;
-                }
-            }
-            return bool(n >= 2);
-        }
-    bool isInterop() const
-        {
-            return m_interop;
-        }
-    const char* getFile(int n) const
-        {
-            return ((n >= 0) && (n < 2)) ? m_files[n] : 0;
-        }
-private:
-    int m_argc;
-    char** m_argv;
-    const char* m_files[2];
-    bool m_interop;
-};
-
 int main(int argc, char** argv)
 {
-    CmdlineParser cmd(argc, argv);
-    if (!cmd.run())
+    try
     {
-        fprintf(stderr,
-#if defined(HAVE_VA_INTEL)
-                "Usage: va_intel_interop [-f] file1 file2\n\n"
-                "Interop ON/OFF version\n\n"
-                "where:  -f    option indicates interop is off (fallback mode); interop is on by default\n"
-#elif defined(HAVE_VA)
-                "Usage: va_intel_interop file1 file2\n\n"
-                "Interop OFF only version\n\n"
-                "where:\n"
-#endif //HAVE_VA_INTEL / HAVE_VA
-                "        file1 is to be created, contains original surface data (NV12)\n"
-                "        file2 is to be created, contains processed surface data (NV12)\n");
-        exit(0);
-    }
+        CmdlineParser cmd(argc, argv);
+        if (!cmd.run())
+        {
+            cmd.usage();
+            return 0;
+        }
 
-    if (!va::openDisplay())
+        if (!va::openDisplay())
+            throw std::runtime_error("Failed to open VA display for CL-VA interoperability");
+        std::cout << "VA display opened successfully" << std::endl;
+
+        checkIfAvailableYUV420();
+
+        const char* infile = cmd.getFile(CmdlineParser::fnInput);
+        const char* outfile1 = cmd.getFile(CmdlineParser::fnOutput1);
+        const char* outfile2 = cmd.getFile(CmdlineParser::fnOutput2);
+        bool doInterop = cmd.isInterop();
+
+        float time = run(infile, outfile1, outfile2, doInterop);
+
+        std::cout << "Interop " << (doInterop ? "ON " : "OFF") << ": processing time, msec: " << time << std::endl;
+    }
+    catch (std::exception& ex)
     {
-        fprintf(stderr, "Failed to open VA display for CL-VA interoperability\n");
-        exit(1);
+        std::cerr << "ERROR: " << ex.what() << std::endl;
     }
-    fprintf(stderr, "VA display opened successfully\n");
-
-    const char* file0 = cmd.getFile(0);
-    const char* file1 = cmd.getFile(1);
-    bool doInterop = cmd.isInterop();
-
-    float time = run(file0, file1, doInterop);
-
-    fprintf(stderr, "Interop %s: processing time, msec: %7.3f\n", (doInterop ? "ON " : "OFF"), time);
 
     va::closeDisplay();
     return 0;
