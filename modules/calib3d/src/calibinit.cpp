@@ -154,7 +154,7 @@ struct CvCBQuad
 //static CvMat* debug_img = 0;
 
 static int icvGenerateQuads( CvCBQuad **quads, CvCBCorner **corners,
-                             CvMemStorage *storage, CvMat *image, int flags );
+                             CvMemStorage *storage, CvMat *image, int flags, int *max_quad_buf_size);
 
 /*static int
 icvGenerateQuadsEx( CvCBQuad **out_quads, CvCBCorner **out_corners,
@@ -174,7 +174,7 @@ static int icvCleanFoundConnectedQuads( int quad_count,
 
 static int icvOrderFoundConnectedQuads( int quad_count, CvCBQuad **quads,
            int *all_count, CvCBQuad **all_quads, CvCBCorner **corners,
-           CvSize pattern_size, CvMemStorage* storage );
+           CvSize pattern_size, int max_quad_buf_size, CvMemStorage* storage );
 
 static void icvOrderQuad(CvCBQuad *quad, CvCBCorner *corner, int common);
 
@@ -185,7 +185,7 @@ static int icvTrimRow(CvCBQuad **quads, int count, int row, int dir);
 #endif
 
 static int icvAddOuterQuad(CvCBQuad *quad, CvCBQuad **quads, int quad_count,
-                    CvCBQuad **all_quads, int all_count, CvCBCorner **corners);
+                    CvCBQuad **all_quads, int all_count, CvCBCorner **corners, int max_quad_buf_size);
 
 static void icvRemoveQuadFromGroup(CvCBQuad **quads, int count, CvCBQuad *q0);
 
@@ -314,6 +314,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     // making it difficult to detect smaller squares.
     for( k = 0; k < 6; k++ )
     {
+        int max_quad_buf_size = 0;
         for( dilations = min_dilations; dilations <= max_dilations; dilations++ )
         {
             if (found)
@@ -369,7 +370,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
                 cvRectangle( thresh_img, cvPoint(0,0), cvPoint(thresh_img->cols-1,
                     thresh_img->rows-1), CV_RGB(255,255,255), 3, 8);
 
-                quad_count = icvGenerateQuads( &quads, &corners, storage, thresh_img, flags );
+                quad_count = icvGenerateQuads( &quads, &corners, storage, thresh_img, flags, &max_quad_buf_size);
 
                 PRINTF("Quad count: %d/%d\n", quad_count, expected_corners_num);
             }
@@ -409,8 +410,8 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
             // allocate extra for adding in icvOrderFoundQuads
             cvFree(&quad_group);
             cvFree(&corner_group);
-            quad_group = (CvCBQuad**)cvAlloc( sizeof(quad_group[0]) * (quad_count+quad_count / 2));
-            corner_group = (CvCBCorner**)cvAlloc( sizeof(corner_group[0]) * (quad_count+quad_count / 2)*4 );
+            quad_group = (CvCBQuad**)cvAlloc( sizeof(quad_group[0]) * max_quad_buf_size);
+            corner_group = (CvCBCorner**)cvAlloc( sizeof(corner_group[0]) * max_quad_buf_size * 4 );
 
             for( group_idx = 0; ; group_idx++ )
             {
@@ -425,7 +426,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
                 // maybe delete or add some
                 PRINTF("Starting ordering of inner quads\n");
                 count = icvOrderFoundConnectedQuads(count, quad_group, &quad_count, &quads, &corners,
-                    pattern_size, storage );
+                    pattern_size, max_quad_buf_size, storage );
                 PRINTF("Orig count: %d  After ordering: %d\n", icount, count);
 
 
@@ -624,7 +625,7 @@ icvCheckBoardMonotony( CvPoint2D32f* corners, CvSize pattern_size )
 static int
 icvOrderFoundConnectedQuads( int quad_count, CvCBQuad **quads,
         int *all_count, CvCBQuad **all_quads, CvCBCorner **corners,
-        CvSize pattern_size, CvMemStorage* storage )
+        CvSize pattern_size, int max_quad_buf_size, CvMemStorage* storage )
 {
     cv::Ptr<CvMemStorage> temp_storage(cvCreateChildMemStorage( storage ));
     CvSeq* stack = cvCreateSeq( 0, sizeof(*stack), sizeof(void*), temp_storage );
@@ -804,15 +805,18 @@ icvOrderFoundConnectedQuads( int quad_count, CvCBQuad **quads,
     if (found > 0)
     {
         PRINTF("Found %d inner quads not connected to outer quads, repairing\n", found);
-        for (int i=0; i<quad_count; i++)
+        for (int i=0; i<quad_count && *all_count < max_quad_buf_size; i++)
         {
             if (quads[i]->count < 4 && quads[i]->ordered)
             {
-                int added = icvAddOuterQuad(quads[i],quads,quad_count,all_quads,*all_count,corners);
+                int added = icvAddOuterQuad(quads[i],quads,quad_count,all_quads,*all_count,corners, max_quad_buf_size);
                 *all_count += added;
                 quad_count += added;
             }
         }
+
+        if (*all_count >= max_quad_buf_size)
+            return 0;
     }
 
 
@@ -855,11 +859,11 @@ icvOrderFoundConnectedQuads( int quad_count, CvCBQuad **quads,
 
 static int
 icvAddOuterQuad( CvCBQuad *quad, CvCBQuad **quads, int quad_count,
-        CvCBQuad **all_quads, int all_count, CvCBCorner **corners )
+        CvCBQuad **all_quads, int all_count, CvCBCorner **corners, int max_quad_buf_size )
 
 {
     int added = 0;
-    for (int i=0; i<4; i++) // find no-neighbor corners
+    for (int i=0; i<4 && all_count < max_quad_buf_size; i++) // find no-neighbor corners
     {
         if (!quad->neighbors[i])    // ok, create and add neighbor
         {
@@ -1649,7 +1653,7 @@ static void icvFindQuadNeighbors( CvCBQuad *quads, int quad_count )
 
 static int
 icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
-                  CvMemStorage *storage, CvMat *image, int flags )
+                  CvMemStorage *storage, CvMat *image, int flags, int *max_quad_buf_size )
 {
     int quad_count = 0;
     cv::Ptr<CvMemStorage> temp_storage;
@@ -1754,8 +1758,9 @@ icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
     cvEndFindContours( &scanner );
 
     // allocate quad & corner buffers
-    *out_quads = (CvCBQuad*)cvAlloc((root->total+root->total / 2) * sizeof((*out_quads)[0]));
-    *out_corners = (CvCBCorner*)cvAlloc((root->total+root->total / 2) * 4 * sizeof((*out_corners)[0]));
+    *max_quad_buf_size = MAX(1, (root->total+root->total / 2)) * 2;
+    *out_quads = (CvCBQuad*)cvAlloc(*max_quad_buf_size * sizeof((*out_quads)[0]));
+    *out_corners = (CvCBCorner*)cvAlloc(*max_quad_buf_size * 4 * sizeof((*out_corners)[0]));
 
     // Create array of quads structures
     for( idx = 0; idx < root->total; idx++ )
