@@ -18,7 +18,7 @@ template<typename T> struct step_functor : public thrust::unary_function<int, in
 	__host__ __device__ step_functor(int columns_, int step_, int channels_ = 1) : columns(columns_), step(step_), channels(channels_)	{	};
 	__host__ step_functor(cv::cuda::GpuMat& mat)
 	{
-		CV_Assert(mat.depth() == CV_TYPE<T>::DEPTH);
+		CV_Assert(mat.depth() == cv::DataType<T>::depth);
 		columns = mat.cols;
 		step = mat.step / sizeof(T);
 		channels = mat.channels();		
