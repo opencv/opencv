@@ -45,19 +45,21 @@ int main(void)
 	// generated value.  Sort by the randomly generated value while maintaining index association.
 	//! [sort]
 	{
-		cv::cuda::GpuMat d_idx(1, 100, CV_32SC2);
-
-		auto keyBegin = GpuMatBeginItr<int>(d_idx, 1);
-		auto keyEnd = GpuMatEndItr<int>(d_idx, 1);
-
-		auto idxBegin = GpuMatBeginItr<int>(d_idx, 0);
-		auto idxEnd = GpuMatEndItr<int>(d_idx, 0);
-
+		cv::cuda::GpuMat d_data(1, 100, CV_32SC2);
+		// Thrust compatible begin and end iterators to channel 1 of this matrix
+		auto keyBegin = GpuMatBeginItr<int>(d_data, 1);
+		auto keyEnd = GpuMatEndItr<int>(d_data, 1);
+		// Thrust compatible begin and end iterators to channel 0 of this matrix
+		auto idxBegin = GpuMatBeginItr<int>(d_data, 0);
+		auto idxEnd = GpuMatEndItr<int>(d_data, 0);
+		// Fill the index channel with a sequence of numbers from 0 to 100
 		thrust::sequence(idxBegin, idxEnd);
-		thrust::transform(idxBegin, idxEnd, keyBegin, prg(0, 10));
+		// Fill the key channel with random numbers between 0 and 10.  A counting iterator is used here to give an integer value for each location as an input to prg::operator()
+		thrust::transform(thrust::make_counting_iterator(0), thrust::make_counting_iterator(d_data.cols), keyBegin, prg(0, 10));
+		// Sort the key channel and index channel such that the keys and indecies stay together
 		thrust::sort_by_key(keyBegin, keyEnd, idxBegin);
 
-		cv::Mat h_idx(d_idx);
+		cv::Mat h_idx(d_data);
 	}
 	//! [sort]
 
@@ -92,10 +94,14 @@ int main(void)
 		auto valueEnd = GpuMatEndItr<float>(d_value);
 		cv::cuda::Stream stream;
 		//! [random_gen_stream]
+		// Same as the random generation code from before except now the transformation is being performed on a stream
 		thrust::transform(thrust::system::cuda::par.on(cv::cuda::StreamAccessor::getStream(stream)), thrust::make_counting_iterator(0), thrust::make_counting_iterator(d_value.cols), valueBegin, prg(-1, 1));
 		//! [random_gen_stream]
+		// Count the number of values we are going to copy
 		int count = thrust::count_if(thrust::system::cuda::par.on(cv::cuda::StreamAccessor::getStream(stream)), valueBegin, valueEnd, pred_greater<float>(0.0));
+		// Allocate a destination for copied values
 		cv::cuda::GpuMat d_valueGreater(1, count, CV_32F);
+		// Copy values that satisfy the predicate.
 		thrust::copy_if(thrust::system::cuda::par.on(cv::cuda::StreamAccessor::getStream(stream)), valueBegin, valueEnd, GpuMatBeginItr<float>(d_valueGreater), pred_greater<float>(0.0));
 		cv::Mat h_greater(d_valueGreater);
 	}
