@@ -62,12 +62,18 @@ namespace cv
 
 //! Imread flags
 enum ImreadModes {
-       IMREAD_UNCHANGED  = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped).
-       IMREAD_GRAYSCALE  = 0,  //!< If set, always convert image to the single channel grayscale image.
-       IMREAD_COLOR      = 1,  //!< If set, always convert image to the 3 channel BGR color image.
-       IMREAD_ANYDEPTH   = 2,  //!< If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
-       IMREAD_ANYCOLOR   = 4,  //!< If set, the image is read in any possible color format.
-       IMREAD_LOAD_GDAL  = 8   //!< If set, use the gdal driver for loading the image.
+       IMREAD_UNCHANGED            = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped).
+       IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image.
+       IMREAD_COLOR                = 1,  //!< If set, always convert image to the 3 channel BGR color image.
+       IMREAD_ANYDEPTH             = 2,  //!< If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
+       IMREAD_ANYCOLOR             = 4,  //!< If set, the image is read in any possible color format.
+       IMREAD_LOAD_GDAL            = 8,  //!< If set, use the gdal driver for loading the image.
+       IMREAD_GRAYSCALE_REDUCED_2  = 16, //!< If set, always convert image to the single channel grayscale image and the image size reduced 1/2.
+       IMREAD_COLOR_REDUCED_2      = 17, //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/2.
+       IMREAD_GRAYSCALE_REDUCED_4  = 32, //!< If set, always convert image to the single channel grayscale image and the image size reduced 1/4.
+       IMREAD_COLOR_REDUCED_4      = 33, //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/4.
+       IMREAD_GRAYSCALE_REDUCED_8  = 64, //!< If set, always convert image to the single channel grayscale image and the image size reduced 1/8.
+       IMREAD_COLOR_REDUCED_8      = 65  //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/8.
      };
 
 //! Imwrite flags
@@ -132,14 +138,6 @@ returns an empty matrix ( Mat::data==NULL ). Currently, the following file forma
 @note In the case of color images, the decoded images will have the channels stored in B G R order.
  */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
-
-/** @brief Loads and resizes down an image from a file.
-@anchor imread_reduced
-@param filename Name of file to be loaded.
-@param flags Flag that can take values of @ref cv::ImreadModes
-@param scale_denom
- */
-CV_EXPORTS_W Mat imread_reduced( const String& filename, int flags = IMREAD_COLOR, int scale_denom=1 );
 
 /** @brief Loads a multi-page image from a file. (see imread for details.)
 
