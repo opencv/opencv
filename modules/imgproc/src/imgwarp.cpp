@@ -50,19 +50,15 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-static IppStatus sts = ippInit();
-#endif
-
 namespace cv
 {
-#if IPP_VERSION_X100 >= 701
+#if IPP_VERSION_X100 >= 710
     typedef IppStatus (CV_STDCALL* ippiResizeFunc)(const void*, int, const void*, int, IppiPoint, IppiSize, IppiBorderType, void*, void*, Ipp8u*);
     typedef IppStatus (CV_STDCALL* ippiResizeGetBufferSize)(void*, IppiSize, Ipp32u, int*);
     typedef IppStatus (CV_STDCALL* ippiResizeGetSrcOffset)(void*, IppiPoint, IppiPoint*);
 #endif
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7) && 0
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700) && IPP_DISABLE_BLOCK
     typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
     typedef IppStatus (CV_STDCALL* ippiWarpPerspectiveFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [3][3], int);
     typedef IppStatus (CV_STDCALL* ippiWarpAffineBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [2][3], int);
@@ -2745,7 +2741,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     getBufferSizeFunc = (ippiResizeGetBufferSize)ippiResizeGetBufferSize_##TYPE; \
     getSrcOffsetFunc =  (ippiResizeGetSrcOffset)ippiResizeGetSrcOffset_##TYPE;
 
-#if IPP_VERSION_X100 >= 701
+#if IPP_VERSION_X100 >= 710
 class IPPresizeInvoker :
     public ParallelLoopBody
 {
@@ -2765,7 +2761,7 @@ public:
 
         switch (type)
         {
-#if 0 // disabled since it breaks tests for CascadeClassifier
+#if IPP_DISABLE_BLOCK // disabled since it breaks tests for CascadeClassifier
             case CV_8UC1:  SET_IPP_RESIZE_PTR(8u,C1);  break;
             case CV_8UC3:  SET_IPP_RESIZE_PTR(8u,C3);  break;
             case CV_8UC4:  SET_IPP_RESIZE_PTR(8u,C4);  break;
@@ -3092,7 +3088,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
 #endif
 
-#if IPP_VERSION_X100 >= 701
+#if IPP_VERSION_X100 >= 710
 static bool ipp_resize_mt(    Mat src, Mat dst,
                         double inv_scale_x, double inv_scale_y, int interpolation)
 {
@@ -3278,7 +3274,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     double ex = fabs((double)dsize.width / _src.cols()  - inv_scale_x) / inv_scale_x;
     double ey = fabs((double)dsize.height / _src.rows() - inv_scale_y) / inv_scale_y;
 #endif
-    CV_IPP_RUN(IPP_VERSION_X100 >= 701 && ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) || (ex == 0 && ey == 0 && depth == CV_64F)) &&
+    CV_IPP_RUN(IPP_VERSION_X100 >= 710 && ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) || (ex == 0 && ey == 0 && depth == CV_64F)) &&
         (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
         !(interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 && depth == CV_8U) &&
         mode >= 0 && (cn == 1 || cn == 3 || cn == 4) && (depth == CV_16U || depth == CV_16S || depth == CV_32F ||
@@ -4576,7 +4572,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
 
 #endif
 
-#if IPP_VERSION_X100 >= 0 && !defined HAVE_IPP_ICV_ONLY && 0
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
 
 typedef IppStatus (CV_STDCALL * ippiRemap)(const void * pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi,
                                            const Ipp32f* pxMap, int xMapStep, const Ipp32f* pyMap, int yMapStep,
@@ -4684,7 +4680,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
 
-#if IPP_VERSION_X100 >= 0 && !defined HAVE_IPP_ICV_ONLY && 0
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         if ((interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_NEAREST) &&
@@ -5410,7 +5406,7 @@ private:
 };
 
 
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR >= 801 && 0
+#if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
 class IPPWarpAffineInvoker :
     public ParallelLoopBody
 {
@@ -5615,7 +5611,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     const int AB_BITS = MAX(10, (int)INTER_BITS);
     const int AB_SCALE = 1 << AB_BITS;
 
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR >= 801 && 0
+#if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -6039,7 +6035,7 @@ private:
 };
 
 
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR >= 801 && 0
+#if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
 class IPPWarpPerspectiveInvoker :
     public ParallelLoopBody
 {
@@ -6124,7 +6120,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 #endif
 
 
-#if defined (HAVE_IPP) && IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR >= 801 && 0
+#if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);

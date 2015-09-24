@@ -1668,6 +1668,7 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
+#if IPP_VERSION_X100 >= 810
     int type = _src.type();
     Size size = _src.size();
 
@@ -1742,10 +1743,7 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                         ippFree(pBuffer);
 
                     if(status >= 0)
-                    {
-                        CV_IMPL_ADD(CV_IMPL_IPP);
                         return true;
-                    }
 
 #undef IPP_FILTER_GAUSS_C1
 #undef IPP_FILTER_GAUSS_CN
@@ -1753,6 +1751,9 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
             }
         }
     }
+#else
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(ksize); CV_UNUSED(sigma1); CV_UNUSED(sigma2); CV_UNUSED(borderType);
+#endif
     return false;
 }
 }
@@ -1788,9 +1789,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
 #endif
 
-
     CV_IPP_RUN(true, ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
-
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
@@ -2708,7 +2707,7 @@ namespace cv
 {
 static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
 {
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 810
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
@@ -2754,6 +2753,8 @@ static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
             IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
     }
 #undef IPP_FILTER_MEDIAN_BORDER
+#else
+    CV_UNUSED(_src0); CV_UNUSED(_dst); CV_UNUSED(ksize);
 #endif
     return false;
 }
@@ -2777,7 +2778,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
-    CV_IPP_RUN(IPP_VERSION_X100 >= 801 && ksize <= 5, ipp_medianFilter(_src0,_dst, ksize));
+    CV_IPP_RUN(IPP_VERSION_X100 >= 810 && ksize <= 5, ipp_medianFilter(_src0,_dst, ksize));
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra() && tegra::medianBlur(src0, dst, ksize))
@@ -2995,7 +2996,7 @@ private:
     float *space_weight, *color_weight;
 };
 
-#if defined (HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && 0
+#if defined (HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_DISABLE_BLOCK
 class IPPBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
@@ -3165,7 +3166,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7) && 0
+#if defined HAVE_IPP && (IPP_VERSION_X100 >= 700) && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         if( cn == 1 )

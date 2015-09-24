@@ -1140,7 +1140,7 @@ private:
 static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kernel,
                               const Size& ksize, const Point &anchor, bool rectKernel)
 {
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 810
     int type = src.type();
     const Mat* _src = &src;
     Mat temp;
@@ -1155,18 +1155,18 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
 
     if (!rectKernel)
     {
-#if 1
+#if IPP_VERSION_X100 >= 900
         if (((kernel.cols - 1) / 2 != anchor.x) || ((kernel.rows - 1) / 2 != anchor.y))
             return false;
         #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
         case cvtype: \
             {\
                 int specSize = 0, bufferSize = 0;\
-                if (0 > ippiMorphologyBorderGetSize_##flavor(roiSize.width, kernelSize, &specSize, &bufferSize))\
+                if (0 > ippiMorphologyBorderGetSize_##flavor(roiSize, kernelSize, &specSize, &bufferSize))\
                     return false;\
                 IppiMorphState *pSpec = (IppiMorphState*)ippMalloc(specSize);\
                 Ipp8u *pBuffer = (Ipp8u*)ippMalloc(bufferSize);\
-                if (0 > ippiMorphologyBorderInit_##flavor(roiSize.width, kernel.ptr(), kernelSize, pSpec, pBuffer))\
+                if (0 > ippiMorphologyBorderInit_##flavor(roiSize, kernel.ptr(), kernelSize, pSpec, pBuffer))\
                 {\
                     ippFree(pBuffer);\
                     ippFree(pSpec);\
@@ -1192,8 +1192,7 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
         case cvtype: \
             {\
                 int specSize = 0;\
-                int bufferSize = 0;\
-                if (0 > ippiMorphologyGetSize_##flavor( roiSize.width, kernel.ptr() kernelSize, &specSize))\
+                if (0 > ippiMorphologyGetSize_##flavor( roiSize.width, kernel.ptr(), kernelSize, &specSize))\
                     return false;\
                 bool ok = false;\
                 IppiMorphState* pState = (IppiMorphState*)ippMalloc(specSize);\
@@ -1213,6 +1212,7 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
             }\
             break;
 #endif
+        CV_SUPPRESS_DEPRECATED_START
         switch (type)
         {
         IPP_MORPH_CASE(CV_8UC1, 8u_C1R, 8u);
@@ -1224,11 +1224,39 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
         default:
             ;
         }
-
+        CV_SUPPRESS_DEPRECATED_END
         #undef IPP_MORPH_CASE
     }
     else
     {
+#if IPP_VERSION_X100 >= 900
+        if (((kernel.cols - 1) / 2 != anchor.x) || ((kernel.rows - 1) / 2 != anchor.y)) // Arbitrary anchor is no longer supporeted since IPP 9.0.0
+            return false;
+
+        #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
+        case cvtype: \
+            {\
+                if (op == MORPH_ERODE)\
+                {\
+                    int bufSize = 0;\
+                    if (0 > ippiFilterMinBorderGetBufferSize(roiSize, kernelSize, ipp##data_type, 1, &bufSize))\
+                        return false;\
+                    AutoBuffer<uchar> buf(bufSize + 64);\
+                    uchar* buffer = alignPtr((uchar*)buf, 32);\
+                    return (0 <= ippiFilterMinBorder_##flavor(_src->ptr<Ipp##data_type>(), (int)_src->step[0], dst.ptr<Ipp##data_type>(), (int)dst.step[0], roiSize, kernelSize, ippBorderRepl, 0, buffer));\
+                }\
+                else\
+                {\
+                    int bufSize = 0;\
+                    if (0 > ippiFilterMaxBorderGetBufferSize(roiSize, kernelSize, ipp##data_type, 1, &bufSize))\
+                        return false;\
+                    AutoBuffer<uchar> buf(bufSize + 64);\
+                    uchar* buffer = alignPtr((uchar*)buf, 32);\
+                    return (0 <= ippiFilterMaxBorder_##flavor(_src->ptr<Ipp##data_type>(), (int)_src->step[0], dst.ptr<Ipp##data_type>(), (int)dst.step[0], roiSize, kernelSize, ippBorderRepl, 0, buffer));\
+                }\
+            }\
+            break;
+#else
         IppiPoint point = {anchor.x, anchor.y};
 
         #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
@@ -1244,6 +1272,7 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
                 return (0 <= ippiFilterMaxBorderReplicate_##flavor(_src->ptr<Ipp##data_type>(), (int)_src->step[0], dst.ptr<Ipp##data_type>(), (int)dst.step[0], roiSize, kernelSize, point, buffer));\
             }\
             break;
+#endif
 
         switch (type)
         {
@@ -1715,7 +1744,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
         iterations = 1;
     }
 
-    CV_IPP_RUN(IPP_VERSION_X100 >= 801, ipp_MorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue))
+    CV_IPP_RUN(IPP_VERSION_X100 >= 810, ipp_MorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue))
 
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );

@@ -44,26 +44,32 @@
 #include "opencl_kernels_imgproc.hpp"
 
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
 #define USE_IPP_CANNY 1
 #else
-#undef USE_IPP_CANNY
+#define USE_IPP_CANNY 0
 #endif
 
 
 namespace cv
 {
-
-#ifdef USE_IPP_CANNY
+#ifdef HAVE_IPP
 static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
 {
+#if USE_IPP_CANNY
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
 
+#if IPP_VERSION_X100 < 900
     if (ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size) < 0)
         return false;
     if (ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
         return false;
+#else
+    if(ippiFilterSobelGetBufferSize(roi, ippMskSize3x3, ippNormL2, ipp8u, ipp16s, 1, &size) < 0)
+        return false;
+#endif
+
     size = std::max(size, size1);
 
     if (ippiCannyGetSize(roi, &size1) < 0)
@@ -90,6 +96,10 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
                               _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0 )
         return false;
     return true;
+#else
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(low); CV_UNUSED(high);
+    return false;
+#endif
 }
 #endif
 
@@ -610,20 +620,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         return;
 #endif
 
-#ifdef USE_IPP_CANNY
-    CV_IPP_CHECK()
-    {
-        if( aperture_size == 3 && !L2gradient && 1 == cn )
-        {
-            if (ippCanny(src, dst, (float)low_thresh, (float)high_thresh))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    CV_IPP_RUN(USE_IPP_CANNY && (aperture_size == 3 && !L2gradient && 1 == cn), ippCanny(src, dst, (float)low_thresh, (float)high_thresh))
 
 #ifdef HAVE_TBB
 

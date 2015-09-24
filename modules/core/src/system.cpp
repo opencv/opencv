@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 
 namespace cv {
 
@@ -1305,26 +1306,80 @@ void setUseCollection(bool flag)
 namespace ipp
 {
 
-static int ippStatus = 0; // 0 - all is ok, -1 - IPP functions failed
-static const char * funcname = NULL, * filename = NULL;
-static int linen = 0;
+struct IPPInitSingelton
+{
+    IPPInitSingelton()
+    {
+        useIPP      = true;
+        ippStatus   = 0;
+        funcname    = NULL;
+        filename    = NULL;
+        linen       = 0;
+
+#ifdef HAVE_IPP
+#if IPP_VERSION_X100 >= 800
+        ippInit();
+#else
+        ippStaticInit();
+#endif
+
+        const char* pIppEnv = getenv("OPENCV_IPP");
+        cv::String env = pIppEnv;
+        if(env.size())
+        {
+            if(env == "disabled")
+            {
+                std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << std::endl;
+                useIPP = false;
+            }
+#if IPP_VERSION_X100 >= 900
+            else if(env == "sse")
+                ippSetCpuFeatures(ippCPUID_SSE);
+            else if(env == "sse2")
+                ippSetCpuFeatures(ippCPUID_SSE2);
+            else if(env == "sse42")
+                ippSetCpuFeatures(ippCPUID_SSE42);
+            else if(env == "avx")
+                ippSetCpuFeatures(ippCPUID_AVX);
+            else if(env == "avx2")
+                ippSetCpuFeatures(ippCPUID_AVX2);
+#endif
+            else
+                std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << std::endl;
+        }
+#endif
+    }
+
+    bool useIPP;
+
+    int         ippStatus; // 0 - all is ok, -1 - IPP functions failed
+    const char *funcname;
+    const char *filename;
+    int         linen;
+};
+
+IPPInitSingelton& getIPPSingelton()
+{
+    static IPPInitSingelton sing;
+    return sing;
+}
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
-    ippStatus = status;
-    funcname = _funcname;
-    filename = _filename;
-    linen = _line;
+    getIPPSingelton().ippStatus = status;
+    getIPPSingelton().funcname = _funcname;
+    getIPPSingelton().filename = _filename;
+    getIPPSingelton().linen = _line;
 }
 
 int getIppStatus()
 {
-    return ippStatus;
+    return getIPPSingelton().ippStatus;
 }
 
 String getIppErrorLocation()
 {
-    return format("%s:%d %s", filename ? filename : "", linen, funcname ? funcname : "");
+    return format("%s:%d %s", getIPPSingelton().filename ? getIPPSingelton().filename : "", getIPPSingelton().linen, getIPPSingelton().funcname ? getIPPSingelton().funcname : "");
 }
 
 bool useIPP()
@@ -1333,11 +1388,7 @@ bool useIPP()
     CoreTLSData* data = getCoreTlsData().get();
     if(data->useIPP < 0)
     {
-        const char* pIppEnv = getenv("OPENCV_IPP");
-        if(pIppEnv && (cv::String(pIppEnv) == "disabled"))
-            data->useIPP = false;
-        else
-            data->useIPP = true;
+        data->useIPP = getIPPSingelton().useIPP;
     }
     return (data->useIPP > 0);
 #else
