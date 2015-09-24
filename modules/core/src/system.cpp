@@ -1358,7 +1358,7 @@ struct IPPInitSingelton
     int         linen;
 };
 
-IPPInitSingelton& getIPPSingelton()
+static IPPInitSingelton& getIPPSingelton()
 {
     static IPPInitSingelton sing;
     return sing;

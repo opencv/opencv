@@ -3462,7 +3462,7 @@ private:
     bool *ok;
 };
 
-bool DctIPPLoop(const Mat& src, Mat& dst, bool inv)
+static bool DctIPPLoop(const Mat& src, Mat& dst, bool inv)
 {
     bool ok;
     parallel_for_(Range(0, src.rows), DctIPPLoop_Invoker(src, dst, inv, &ok), src.rows/(double)(1<<4) );
