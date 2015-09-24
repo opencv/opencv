@@ -1185,29 +1185,31 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
             }\
             break;
 #else
-        IppiPoint point = {anchor.x, anchor.y};
-        // this is case, which can be used with the anchor not in center of the kernel, but
-        // ippiMorphologyBorderGetSize_, ippiErodeBorderReplicate_ and ippiDilateBorderReplicate_ are deprecated.
+        if (((kernel.cols - 1) / 2 != anchor.x) || ((kernel.rows - 1) / 2 != anchor.y))
+            return false;
         #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
         case cvtype: \
             {\
-                int specSize = 0;\
-                if (0 > ippiMorphologyGetSize_##flavor( roiSize.width, kernel.ptr(), kernelSize, &specSize))\
+                int specSize = 0, bufferSize = 0;\
+                if (0 > ippiMorphologyBorderGetSize_##flavor(roiSize.width, kernelSize, &specSize, &bufferSize))\
                     return false;\
-                bool ok = false;\
-                IppiMorphState* pState = (IppiMorphState*)ippMalloc(specSize);\
-                if (ippiMorphologyInit_##flavor(roiSize.width, kernel.ptr(), kernelSize, point, pState) >= 0)\
+                IppiMorphState *pSpec = (IppiMorphState*)ippMalloc(specSize);\
+                Ipp8u *pBuffer = (Ipp8u*)ippMalloc(bufferSize);\
+                if (0 > ippiMorphologyBorderInit_##flavor(roiSize.width, kernel.ptr(), kernelSize, pSpec, pBuffer))\
                 {\
-                    if (op == MORPH_ERODE)\
-                        ok = ippiErodeBorderReplicate_##flavor(_src->ptr<Ipp##data_type>(), (int)_src->step[0],\
-                            dst.ptr<Ipp##data_type>(), (int)dst.step[0],\
-                            roiSize, ippBorderRepl, pState ) >= 0;\
-                    else\
-                        ok = ippiDilateBorderReplicate_##flavor(_src->ptr<Ipp##data_type>(), (int)_src->step[0],\
-                            dst.ptr<Ipp##data_type>(), (int)dst.step[0],\
-                            roiSize, ippBorderRepl, pState ) >= 0;\
+                    ippFree(pBuffer);\
+                    ippFree(pSpec);\
+                    return false;\
                 }\
-                ippFree(pState);\
+                bool ok = false;\
+                if (op == MORPH_ERODE)\
+                    ok = (0 <= ippiErodeBorder_##flavor(_src->ptr<Ipp##data_type>(), (int)_src->step[0], dst.ptr<Ipp##data_type>(), (int)dst.step[0],\
+                                            roiSize, ippBorderRepl, 0, pSpec, pBuffer));\
+                else\
+                    ok = (0 <= ippiDilateBorder_##flavor(_src->ptr<Ipp##data_type>(), (int)_src->step[0], dst.ptr<Ipp##data_type>(), (int)dst.step[0],\
+                                            roiSize, ippBorderRepl, 0, pSpec, pBuffer));\
+                ippFree(pBuffer);\
+                ippFree(pSpec);\
                 return ok;\
             }\
             break;
@@ -1274,6 +1276,7 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
             break;
 #endif
 
+        CV_SUPPRESS_DEPRECATED_START
         switch (type)
         {
         IPP_MORPH_CASE(CV_8UC1, 8u_C1R, 8u);
@@ -1285,6 +1288,7 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
         default:
             ;
         }
+        CV_SUPPRESS_DEPRECATED_END
         #undef IPP_MORPH_CASE
     }
 #else
