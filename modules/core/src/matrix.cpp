@@ -3367,22 +3367,20 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceMinR32f reduceR_<float, float, OpMin<float> >
 #define reduceMinR64f reduceR_<double,double,OpMin<double> >
 
-#if IPP_VERSION_X100 > 0
-
-static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
+#ifdef HAVE_IPP
+static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
 {
-    cv::Size size = srcmat.size();
-    IppiSize roisize = { size.width, 1 };
     int sstep = (int)srcmat.step, stype = srcmat.type(),
-            sdepth = CV_MAT_DEPTH(stype), ddepth = dstmat.depth();
+            ddepth = dstmat.depth();
+
+    IppiSize roisize = { srcmat.size().width, 1 };
 
     typedef IppStatus (CV_STDCALL * ippiSum)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum);
     typedef IppStatus (CV_STDCALL * ippiSumHint)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum, IppHintAlgorithm hint);
     ippiSum ippFunc = 0;
     ippiSumHint ippFuncHint = 0;
-    cv::ReduceFunc func = 0;
 
-    if (ddepth == CV_64F)
+    if(ddepth == CV_64F)
     {
         ippFunc =
             stype == CV_8UC1 ? (ippiSum)ippiSum_8u_C1R :
@@ -3398,41 +3396,46 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
             stype == CV_32FC1 ? (ippiSumHint)ippiSum_32f_C1R :
             stype == CV_32FC3 ? (ippiSumHint)ippiSum_32f_C3R :
             stype == CV_32FC4 ? (ippiSumHint)ippiSum_32f_C4R : 0;
+    }
+
+    if(ippFunc)
+    {
+        for(int y = 0; y < srcmat.size().height; y++)
+        {
+            if(ippFunc(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
+                return false;
+        }
+        return true;
+    }
+    else if(ippFuncHint)
+    {
+        for(int y = 0; y < srcmat.size().height; y++)
+        {
+            if(ippFuncHint(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
+                return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
+{
+    CV_IPP_RUN(true, ipp_reduceSumC_8u16u16s32f_64f(srcmat, dstmat));
+
+    cv::ReduceFunc func = 0;
+
+    if(dstmat.depth() == CV_64F)
+    {
+        int sdepth = CV_MAT_DEPTH(srcmat.type());
         func =
             sdepth == CV_8U ? (cv::ReduceFunc)cv::reduceC_<uchar, double,   cv::OpAdd<double> > :
             sdepth == CV_16U ? (cv::ReduceFunc)cv::reduceC_<ushort, double,   cv::OpAdd<double> > :
             sdepth == CV_16S ? (cv::ReduceFunc)cv::reduceC_<short, double,   cv::OpAdd<double> > :
             sdepth == CV_32F ? (cv::ReduceFunc)cv::reduceC_<float, double,   cv::OpAdd<double> > : 0;
     }
-    CV_Assert(!(ippFunc && ippFuncHint) && func);
-
-    CV_IPP_CHECK()
-    {
-        if (ippFunc)
-        {
-            for (int y = 0; y < size.height; ++y)
-                if (ippFunc(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
-                {
-                    setIppErrorStatus();
-                    cv::Mat dstroi = dstmat.rowRange(y, y + 1);
-                    func(srcmat.rowRange(y, y + 1), dstroi);
-                }
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        else if (ippFuncHint)
-        {
-            for (int y = 0; y < size.height; ++y)
-                if (ippFuncHint(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
-                {
-                    setIppErrorStatus();
-                    cv::Mat dstroi = dstmat.rowRange(y, y + 1);
-                    func(srcmat.rowRange(y, y + 1), dstroi);
-                }
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-    }
+    CV_Assert(func);
 
     func(srcmat, dstmat);
 }
@@ -3446,7 +3449,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC32f32f reduceC_<float, float, OpAdd<float> >
 #define reduceSumC64f64f reduceC_<double,double,OpAdd<double> >
 
-#if IPP_VERSION_X100 > 0
+#ifdef HAVE_IPP
 #define reduceSumC8u64f  reduceSumC_8u16u16s32f_64f
 #define reduceSumC16u64f reduceSumC_8u16u16s32f_64f
 #define reduceSumC16s64f reduceSumC_8u16u16s32f_64f
@@ -3458,35 +3461,32 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
 #endif
 
-#if IPP_VERSION_X100 > 0
+#ifdef HAVE_IPP
 #define REDUCE_OP(favor, optype, type1, type2) \
+static inline bool ipp_reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
+{ \
+    if((srcmat.channels() == 1)) \
+    { \
+        int sstep = (int)srcmat.step; \
+        typedef Ipp##favor IppType; \
+        IppiSize roisize = ippiSize(srcmat.size().width, 1);\
+        for(int y = 0; y < srcmat.size().height; y++)\
+        {\
+            if(ippi##optype##_##favor##_C1R(srcmat.ptr<IppType>(y), sstep, roisize, dstmat.ptr<IppType>(y)) < 0)\
+                return false;\
+        }\
+        return true;\
+    }\
+    return false; \
+} \
 static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
 { \
-    typedef Ipp##favor IppType; \
-    cv::Size size = srcmat.size(); \
-    IppiSize roisize = ippiSize(size.width, 1);\
-    int sstep = (int)srcmat.step; \
-     \
-    if (CV_IPP_CHECK_COND && (srcmat.channels() == 1)) \
-    { \
-        for (int y = 0; y < size.height; ++y) \
-            if (ippi##optype##_##favor##_C1R(srcmat.ptr<IppType>(y), sstep, roisize, dstmat.ptr<IppType>(y)) < 0) \
-            { \
-                setIppErrorStatus(); \
-                cv::Mat dstroi = dstmat.rowRange(y, y + 1); \
-                cv::reduceC_ < type1, type2, cv::Op##optype < type2 > >(srcmat.rowRange(y, y + 1), dstroi); \
-            } \
-            else \
-            { \
-                CV_IMPL_ADD(CV_IMPL_IPP);\
-            } \
-        return; \
-    } \
+    CV_IPP_RUN(true, ipp_reduce##optype##C##favor(srcmat, dstmat)); \
     cv::reduceC_ < type1, type2, cv::Op##optype < type2 > >(srcmat, dstmat); \
 }
 #endif
 
-#if IPP_VERSION_X100 > 0
+#ifdef HAVE_IPP
 REDUCE_OP(8u, Max, uchar, uchar)
 REDUCE_OP(16u, Max, ushort, ushort)
 REDUCE_OP(16s, Max, short, short)
@@ -3499,7 +3499,7 @@ REDUCE_OP(32f, Max, float, float)
 #endif
 #define reduceMaxC64f reduceC_<double,double,OpMax<double> >
 
-#if IPP_VERSION_X100 > 0
+#ifdef HAVE_IPP
 REDUCE_OP(8u, Min, uchar, uchar)
 REDUCE_OP(16u, Min, ushort, ushort)
 REDUCE_OP(16s, Min, short, short)
@@ -3772,7 +3772,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 namespace cv
 {
 
-#if IPP_VERSION_X100 > 0
+#ifdef HAVE_IPP
 #define USE_IPP_SORT
 
 typedef IppStatus (CV_STDCALL * IppSortFunc)(void *, int);
@@ -3782,18 +3782,24 @@ static IppSortFunc getSortFunc(int depth, bool sortDescending)
 {
     if (!sortDescending)
         return depth == CV_8U ? (IppSortFunc)ippsSortAscend_8u_I :
-            /*depth == CV_16U ? (IppSortFunc)ippsSortAscend_16u_I :
+#if IPP_DISABLE_BLOCK
+            depth == CV_16U ? (IppSortFunc)ippsSortAscend_16u_I :
             depth == CV_16S ? (IppSortFunc)ippsSortAscend_16s_I :
             depth == CV_32S ? (IppSortFunc)ippsSortAscend_32s_I :
             depth == CV_32F ? (IppSortFunc)ippsSortAscend_32f_I :
-            depth == CV_64F ? (IppSortFunc)ippsSortAscend_64f_I :*/ 0;
+            depth == CV_64F ? (IppSortFunc)ippsSortAscend_64f_I :
+#endif
+            0;
     else
         return depth == CV_8U ? (IppSortFunc)ippsSortDescend_8u_I :
-            /*depth == CV_16U ? (IppSortFunc)ippsSortDescend_16u_I :
+#if IPP_DISABLE_BLOCK
+            depth == CV_16U ? (IppSortFunc)ippsSortDescend_16u_I :
             depth == CV_16S ? (IppSortFunc)ippsSortDescend_16s_I :
             depth == CV_32S ? (IppSortFunc)ippsSortDescend_32s_I :
             depth == CV_32F ? (IppSortFunc)ippsSortDescend_32f_I :
-            depth == CV_64F ? (IppSortFunc)ippsSortDescend_64f_I :*/ 0;
+            depth == CV_64F ? (IppSortFunc)ippsSortDescend_64f_I :
+#endif
+            0;
 }
 
 static IppFlipFunc getFlipFunc(int depth)
@@ -3908,7 +3914,7 @@ public:
     const _Tp* arr;
 };
 
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
 
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(void *, int *, int);
 
@@ -3955,7 +3961,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
     bptr = (T*)buf;
     _iptr = (int*)ibuf;
 
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
     int depth = src.depth();
     IppSortIndexFunc ippFunc = 0;
     IppFlipFunc ippFlipFunc = 0;
@@ -3984,27 +3990,27 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         for( j = 0; j < len; j++ )
             iptr[j] = j;
 
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
         if (sortRows || !ippFunc || ippFunc(ptr, iptr, len) < 0)
 #endif
         {
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
             setIppErrorStatus();
 #endif
             std::sort( iptr, iptr + len, LessThanIdx<T>(ptr) );
             if( sortDescending )
             {
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
                 if (!ippFlipFunc || ippFlipFunc(iptr, len) < 0)
 #endif
                 {
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
                     setIppErrorStatus();
 #endif
                     for( j = 0; j < len/2; j++ )
                         std::swap(iptr[j], iptr[len-1-j]);
                 }
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
                 else
                 {
                     CV_IMPL_ADD(CV_IMPL_IPP);
@@ -4012,7 +4018,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 #endif
             }
         }
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
         else
         {
             CV_IMPL_ADD(CV_IMPL_IPP);
