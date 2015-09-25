@@ -268,7 +268,6 @@ static inline IppDataType ippiGetDataType(int depth)
 #elif IPP_VERSION_X100 >= 800
 #define IPP_INITIALIZER                         \
 {                                               \
-    printf("_________IPP init\n");              \
     ippInit();                                  \
 }
 #else
