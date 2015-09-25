@@ -23,13 +23,11 @@ The following code will produce an iterator for a GpuMat
 @snippet samples/cpp/tutorial_code/gpu/gpu-thrust-interop/Thrust_interop.hpp begin_itr
 @snippet samples/cpp/tutorial_code/gpu/gpu-thrust-interop/Thrust_interop.hpp end_itr
 
-Our goal is to have an iterator that will start at the beginning of the matrix, and increment correctly to access continuous matrix elements.  This is trivial for a continuous row, but how about for a column
-of a pitched matrix?  To do this we need the iterator to be aware of the matrix dimensions and step.  This information is embedded in the step_functor.  
+Our goal is to have an iterator that will start at the beginning of the matrix, and increment correctly to access continuous matrix elements.  This is trivial for a continuous row, but how about for a column of a pitched matrix?  To do this we need the iterator to be aware of the matrix dimensions and step.  This information is embedded in the step_functor.
 @snippet samples/cpp/tutorial_code/gpu/gpu-thrust-interop/Thrust_interop.hpp step_functor
 The step functor takes in an index value and returns the appropriate
 offset from the beginning of the matrix.  The counting iterator simply increments over the range of pixel elements.  Combined into the transform_iterator we have an iterator that counts from 0 to M*N and correctly
-increments to account for the pitched memory of a GpuMat.  Unfortunately this does not include any memory location information, for that we need a thrust::device_ptr.  By combining a device pointer with the 
-transform_iterator we can point thrust to the first element of our matrix and have it step accordingly.
+increments to account for the pitched memory of a GpuMat.  Unfortunately this does not include any memory location information, for that we need a thrust::device_ptr.  By combining a device pointer with the transform_iterator we can point thrust to the first element of our matrix and have it step accordingly.
 
 Fill a GpuMat with random numbers
 ----
@@ -47,13 +45,12 @@ Now we will populate our matrix with values between 0 and 10 with a thrust trans
 Sort a column of a GpuMat in place
 ----
 
-Lets fill matrix elements with random values and an index.  Afterwards we will sort the random numbers and the indecies. 
+Lets fill matrix elements with random values and an index.  Afterwards we will sort the random numbers and the indecies.
 @snippet samples/cpp/tutorial_code/gpu/gpu-thrust-interop/main.cu sort
 
 Copy values greater than 0 to a new gpu matrix while using streams
 ----
-In this example we're going to see how cv::cuda::Streams can be used with thrust.  Unfortunately this specific example uses functions that must return 
-results to the CPU so it isn't the optimal use of streams.
+In this example we're going to see how cv::cuda::Streams can be used with thrust.  Unfortunately this specific example uses functions that must return results to the CPU so it isn't the optimal use of streams.
 
 @snippet samples/cpp/tutorial_code/gpu/gpu-thrust-interop/main.cu copy_greater
 
