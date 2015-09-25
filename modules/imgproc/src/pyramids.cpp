@@ -1171,7 +1171,7 @@ namespace cv
 {
 static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-#if IPP_VERSION_X100 >= 801 && 0
+#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     Size dsz = _dsz.area() == 0 ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
@@ -1276,7 +1276,7 @@ namespace cv
 {
 static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-#if IPP_VERSION_X100 >= 801 && 0
+#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
     Size dsz = _dsz.area() == 0 ? Size(_src.cols()*2, _src.rows()*2) : _dsz;
 
@@ -1380,7 +1380,7 @@ namespace cv
 {
 static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-#if IPP_VERSION_X100 >= 801 && 0
+#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     Mat src = _src.getMat();
     _dst.create( maxlevel + 1, 1, 0 );
     _dst.getMatRef(0) = src;
@@ -1508,7 +1508,7 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
 
     int i=1;
 
-    CV_IPP_RUN(((IPP_VERSION_X100 >= 801 && 0) && ((borderType & ~BORDER_ISOLATED) == BORDER_DEFAULT && (!_src.isSubmatrix() || ((borderType & BORDER_ISOLATED) != 0)))),
+    CV_IPP_RUN(((IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK) && ((borderType & ~BORDER_ISOLATED) == BORDER_DEFAULT && (!_src.isSubmatrix() || ((borderType & BORDER_ISOLATED) != 0)))),
         ipp_buildpyramid( _src,  _dst,  maxlevel,  borderType));
 
     for( ; i <= maxlevel; i++ )

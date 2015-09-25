@@ -1176,7 +1176,6 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
 }
 
 #ifdef HAVE_IPP
-
 class IPPCalcHistInvoker :
     public ParallelLoopBody
 {

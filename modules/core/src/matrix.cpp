@@ -3782,18 +3782,24 @@ static IppSortFunc getSortFunc(int depth, bool sortDescending)
 {
     if (!sortDescending)
         return depth == CV_8U ? (IppSortFunc)ippsSortAscend_8u_I :
-            /*depth == CV_16U ? (IppSortFunc)ippsSortAscend_16u_I :
+#if IPP_DISABLE_BLOCK
+            depth == CV_16U ? (IppSortFunc)ippsSortAscend_16u_I :
             depth == CV_16S ? (IppSortFunc)ippsSortAscend_16s_I :
             depth == CV_32S ? (IppSortFunc)ippsSortAscend_32s_I :
             depth == CV_32F ? (IppSortFunc)ippsSortAscend_32f_I :
-            depth == CV_64F ? (IppSortFunc)ippsSortAscend_64f_I :*/ 0;
+            depth == CV_64F ? (IppSortFunc)ippsSortAscend_64f_I :
+#endif
+            0;
     else
         return depth == CV_8U ? (IppSortFunc)ippsSortDescend_8u_I :
-            /*depth == CV_16U ? (IppSortFunc)ippsSortDescend_16u_I :
+#if IPP_DISABLE_BLOCK
+            depth == CV_16U ? (IppSortFunc)ippsSortDescend_16u_I :
             depth == CV_16S ? (IppSortFunc)ippsSortDescend_16s_I :
             depth == CV_32S ? (IppSortFunc)ippsSortDescend_32s_I :
             depth == CV_32F ? (IppSortFunc)ippsSortDescend_32f_I :
-            depth == CV_64F ? (IppSortFunc)ippsSortDescend_64f_I :*/ 0;
+            depth == CV_64F ? (IppSortFunc)ippsSortDescend_64f_I :
+#endif
+            0;
 }
 
 static IppFlipFunc getFlipFunc(int depth)
@@ -3908,7 +3914,7 @@ public:
     const _Tp* arr;
 };
 
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
 
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(void *, int *, int);
 
@@ -3955,7 +3961,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
     bptr = (T*)buf;
     _iptr = (int*)ibuf;
 
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
     int depth = src.depth();
     IppSortIndexFunc ippFunc = 0;
     IppFlipFunc ippFlipFunc = 0;
@@ -3984,27 +3990,27 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         for( j = 0; j < len; j++ )
             iptr[j] = j;
 
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
         if (sortRows || !ippFunc || ippFunc(ptr, iptr, len) < 0)
 #endif
         {
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
             setIppErrorStatus();
 #endif
             std::sort( iptr, iptr + len, LessThanIdx<T>(ptr) );
             if( sortDescending )
             {
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
                 if (!ippFlipFunc || ippFlipFunc(iptr, len) < 0)
 #endif
                 {
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
                     setIppErrorStatus();
 #endif
                     for( j = 0; j < len/2; j++ )
                         std::swap(iptr[j], iptr[len-1-j]);
                 }
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
                 else
                 {
                     CV_IMPL_ADD(CV_IMPL_IPP);
@@ -4012,7 +4018,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 #endif
             }
         }
-#if defined USE_IPP_SORT && 0
+#if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
         else
         {
             CV_IMPL_ADD(CV_IMPL_IPP);

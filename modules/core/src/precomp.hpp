@@ -206,7 +206,7 @@ extern volatile bool USE_AVX2;
 
 enum { BLOCK_SIZE = 1024 };
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+#if defined HAVE_IPP && (IPP_VERSION_X100 >= 700)
 #define ARITHM_USE_IPP 1
 #else
 #define ARITHM_USE_IPP 0
