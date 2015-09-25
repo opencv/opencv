@@ -16,7 +16,7 @@
 		To use an input video  -> give the path of the input video, like "/tmp/x.avi"
 		To use an image list   -> give the path to the XML or YAML file containing the list of the images, like "/tmp/circles_list.xml"
 		-->
-  <Input>"images/CameraCalibraation/VID5/VID5.xml"</Input>
+  <Input>"images/CameraCalibration/VID5/VID5.xml"</Input>
   <!--  If true (non-zero) we flip the input images around the horizontal axis.-->
   <Input_FlipAroundHorizontalAxis>0</Input_FlipAroundHorizontalAxis>
   
