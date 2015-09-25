@@ -1200,7 +1200,6 @@ public:
             *ok = false;
             return;
         }
-        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
 
         for (int i = 0; i < histSize; ++i)
             CV_XADD((int *)(hist->data + i * hist->step), *(int *)(phist.data + i * phist.step));
@@ -1256,7 +1255,6 @@ static bool ipp_calchist(const Mat* images, int nimages, const int* channels,
             if (ok)
             {
                 ihist.convertTo(hist, CV_32F);
-                CV_IMPL_ADD(CV_IMPL_IPP);
                 return true;
             }
         }

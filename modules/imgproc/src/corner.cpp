@@ -603,11 +603,7 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, 0.0, borderType, MINEIGENVAL))
 
 #ifdef HAVE_IPP
-    int kerSize = ksize;
-    if (ksize < 0)
-    {
-        kerSize = 3;
-    }
+    int kerSize = (ksize < 0)?3:ksize;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
 #endif
