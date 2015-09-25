@@ -60,10 +60,16 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
 
+#if IPP_VERSION_X100 < 900
     if (ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size) < 0)
         return false;
     if (ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
         return false;
+#else
+    if(ippiFilterSobelGetBufferSize(roi, ippMskSize3x3, ippNormL2, ipp8u, ipp16s, 1, &size) < 0)
+        return false;
+#endif
+
     size = std::max(size, size1);
 
     if (ippiCannyGetSize(roi, &size1) < 0)
