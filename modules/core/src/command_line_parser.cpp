@@ -4,6 +4,20 @@
 namespace cv
 {
 
+namespace {
+static const char* noneValue = "<none>";
+
+static String cat_string(const String& str)
+{
+    int left = 0, right = (int)str.length();
+    while( left <= right && str[left] == ' ' )
+        left++;
+    while( right > left && str[right-1] == ' ' )
+        right--;
+    return left >= right ? String("") : str.substr(left, right-left);
+}
+}
+
 struct CommandLineParserParams
 {
 public:
@@ -27,7 +41,6 @@ struct CommandLineParser::Impl
 
     std::vector<String> split_range_string(const String& str, char fs, char ss) const;
     std::vector<String> split_string(const String& str, char symbol = ' ', bool create_empty_item = false) const;
-    String cat_string(const String& str) const;
 
     void apply_params(const String& key, const String& value);
     void apply_params(int i, String value);
@@ -98,10 +111,10 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
                 {
                     String v = impl->data[i].def_value;
                     if (space_delete)
-                        v = impl->cat_string(v);
+                        v = cat_string(v);
 
                     // the key was neither specified nor has it a default value
-                    if(v.empty() && type != Param::STRING) {
+                    if((v.empty() && type != Param::STRING) || v == noneValue) {
                         impl->error = true;
                         impl->error_message = impl->error_message + "Missing parameter: '" + name + "'\n";
                         return;
@@ -133,10 +146,10 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
             if (impl->data[i].number == index)
             {
                 String v = impl->data[i].def_value;
-                if (space_delete == true) v = impl->cat_string(v);
+                if (space_delete == true) v = cat_string(v);
 
                 // the key was neither specified nor has it a default value
-                if(v.empty() && type != Param::STRING) {
+                if((v.empty() && type != Param::STRING) || v == noneValue) {
                     impl->error = true;
                     impl->error_message = impl->error_message + format("Missing parameter #%d\n", index);
                     return;
@@ -198,7 +211,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const S
         CommandLineParserParams p;
         p.keys = impl->split_string(l[0]);
         p.def_value = l[1];
-        p.help_message = impl->cat_string(l[2]);
+        p.help_message = cat_string(l[2]);
         p.number = -1;
         if (p.keys.size() <= 0)
         {
@@ -221,25 +234,21 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const S
     jj = 0;
     for (int i = 1; i < argc; i++)
     {
-        String s = String(argv[i]);
+        String s(argv[i]);
+        bool hasSingleDash = s.length() > 1 && s[0] == '-';
 
-        if (s.find('=') != String::npos && s.find('=') < s.length())
+        if (hasSingleDash)
         {
-            std::vector<String> k_v = impl->split_string(s, '=', true);
-            for (int h = 0; h < 2; h++)
-            {
-                if (k_v[0][0] == '-')
-                    k_v[0] = k_v[0].substr(1, k_v[0].length() -1);
+            bool hasDoubleDash = s.length() > 2 && s[1] == '-';
+            String key = s.substr(hasDoubleDash ? 2 : 1);
+            String value = "true";
+            size_t equalsPos = key.find('=');
+
+            if(equalsPos != String::npos) {
+                value = key.substr(equalsPos + 1);
+                key = key.substr(0, equalsPos);
             }
-            impl->apply_params(k_v[0], k_v[1]);
-        }
-        else if (s.length() > 2 && s[0] == '-' && s[1] == '-')
-        {
-            impl->apply_params(s.substr(2), "true");
-        }
-        else if (s.length() > 1 && s[0] == '-')
-        {
-            impl->apply_params(s.substr(1), "true");
+            impl->apply_params(key, value);
         }
         else
         {
@@ -317,16 +326,6 @@ void CommandLineParser::Impl::sort_params()
     std::sort (data.begin(), data.end(), cmp_params);
 }
 
-String CommandLineParser::Impl::cat_string(const String& str) const
-{
-    int left = 0, right = (int)str.length();
-    while( left <= right && str[left] == ' ' )
-        left++;
-    while( right > left && str[right-1] == ' ' )
-        right--;
-    return left >= right ? String("") : str.substr(left, right-left);
-}
-
 String CommandLineParser::getPathToApplication() const
 {
     return impl->path_to_app;
@@ -340,7 +339,8 @@ bool CommandLineParser::has(const String& name) const
         {
             if (name == impl->data[i].keys[j])
             {
-                return !impl->cat_string(impl->data[i].def_value).empty();
+                const String v = cat_string(impl->data[i].def_value);
+                return !v.empty() && v != noneValue;
             }
         }
     }
@@ -404,7 +404,7 @@ void CommandLineParser::printMessage() const
                     printf(", ");
                 }
             }
-            String dv = impl->cat_string(impl->data[i].def_value);
+            String dv = cat_string(impl->data[i].def_value);
             if (dv.compare("") != 0)
             {
                 printf(" (value:%s)", dv.c_str());
@@ -424,7 +424,7 @@ void CommandLineParser::printMessage() const
 
             printf("%s", k.c_str());
 
-            String dv = impl->cat_string(impl->data[i].def_value);
+            String dv = cat_string(impl->data[i].def_value);
             if (dv.compare("") != 0)
             {
                 printf(" (value:%s)", dv.c_str());
