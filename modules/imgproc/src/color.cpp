@@ -96,7 +96,7 @@
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
 #define MAX_IPP8u   255
 #define MAX_IPP16u  65535
 #define MAX_IPP32f  1.0
@@ -200,7 +200,7 @@ void CvtColorLoop(const Mat& src, Mat& dst, const Cvt& cvt)
     parallel_for_(Range(0, src.rows), CvtColorLoop_Invoker<Cvt>(src, dst, cvt), src.total()/(double)(1<<16) );
 }
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
 
 typedef IppStatus (CV_STDCALL* ippiReorderFunc)(const void *, int, void *, int, IppiSize, const int *);
 typedef IppStatus (CV_STDCALL* ippiGeneralFunc)(const void *, int, void *, int, IppiSize);
@@ -305,7 +305,7 @@ static ippiReorderFunc ippiSwapChannelsC3RTab[] =
     0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
 };
 
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 810
 static ippiReorderFunc ippiSwapChannelsC4RTab[] =
 {
     (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
@@ -379,7 +379,7 @@ static ippiGeneralFunc ippiHLS2RGBTab[] =
     0, (ippiGeneralFunc)ippiHLSToRGB_32f_C3R, 0, 0
 };
 
-#if !defined(HAVE_IPP_ICV_ONLY) && 0
+#if !defined(HAVE_IPP_ICV_ONLY) && IPP_DISABLE_BLOCK
 static ippiGeneralFunc ippiRGBToLUVTab[] =
 {
     (ippiGeneralFunc)ippiRGBToLUV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToLUV_16u_C3R, 0,
@@ -7336,7 +7336,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
 
     switch( code )
     {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
         case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
         case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:
             CV_Assert( scn == 3 || scn == 4 );
@@ -7369,7 +7369,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
                     return true;
             }
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 810
             else if( code == CV_RGBA2BGRA )
             {
                 if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
@@ -7379,7 +7379,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
             return false;
 #endif
 
-#if 0 // breaks OCL accuracy tests
+#if IPP_DISABLE_BLOCK // breaks OCL accuracy tests
         case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
         case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
             CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
@@ -7450,7 +7450,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
             CV_SUPPRESS_DEPRECATED_END
             return false;
 
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
         case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
@@ -7497,7 +7497,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
             return false;
 #endif
 
-#if 0
+#if IPP_DISABLE_BLOCK
         case CV_BGR2YCrCb: case CV_RGB2YCrCb:
         case CV_BGR2YUV: case CV_RGB2YUV:
         {
@@ -7537,7 +7537,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
         }
 #endif
 
-#if 0
+#if IPP_DISABLE_BLOCK
         case CV_YCrCb2BGR: case CV_YCrCb2RGB:
         case CV_YUV2BGR: case CV_YUV2RGB:
         {
@@ -7578,7 +7578,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
         }
 #endif
 
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
         case CV_BGR2XYZ: case CV_RGB2XYZ:
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 3));
@@ -7607,7 +7607,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
             return false;
 #endif
 
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
         case CV_XYZ2BGR: case CV_XYZ2RGB:
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
@@ -7638,7 +7638,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
             return false;
 #endif
 
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
         case CV_BGR2HSV: case CV_RGB2HSV: case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL:
         case CV_BGR2HLS: case CV_RGB2HLS: case CV_BGR2HLS_FULL: case CV_RGB2HLS_FULL:
         {
@@ -7648,7 +7648,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
 
             if( depth == CV_8U || depth == CV_16U )
             {
-#if 0 // breaks OCL accuracy tests
+#if IPP_DISABLE_BLOCK // breaks OCL accuracy tests
                 if( code == CV_BGR2HSV_FULL && scn == 3 )
                 {
                     if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
@@ -7695,7 +7695,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
         }
 #endif
 
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
         case CV_HSV2BGR: case CV_HSV2RGB: case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL:
         case CV_HLS2BGR: case CV_HLS2RGB: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
         {
@@ -7751,7 +7751,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
         }
 #endif
 
-#if 0
+#if IPP_DISABLE_BLOCK
         case CV_BGR2Lab: case CV_RGB2Lab: case CV_LBGR2Lab: case CV_LRGB2Lab:
         case CV_BGR2Luv: case CV_RGB2Luv: case CV_LBGR2Luv: case CV_LRGB2Luv:
         {
@@ -7813,7 +7813,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
         }
 #endif
 
-#if 0
+#if IPP_DISABLE_BLOCK
         case CV_Lab2BGR: case CV_Lab2RGB: case CV_Lab2LBGR: case CV_Lab2LRGB:
         case CV_Luv2BGR: case CV_Luv2RGB: case CV_Luv2LBGR: case CV_Luv2LRGB:
         {

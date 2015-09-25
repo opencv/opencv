@@ -1141,7 +1141,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
 #ifdef HAVE_IPP
 static bool ipp_sum(Mat &src, Scalar &_res)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     int cn = src.channels();
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
@@ -1203,7 +1203,7 @@ cv::Scalar cv::sum( InputArray _src )
 #endif
 
     Mat src = _src.getMat();
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_sum(src, _res), _res);
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_sum(src, _res), _res);
 
     int k, cn = src.channels(), depth = src.depth();
     SumFunc func = getSumFunc(depth);
@@ -1645,7 +1645,7 @@ namespace cv
 {
 static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     int cn = src.channels();
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
@@ -1717,7 +1717,7 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
             ippiMeanStdDevFuncC1 ippFuncC1 =
             type == CV_8UC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_8u_C1R :
             type == CV_16UC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_16u_C1R :
-#if (IPP_VERSION_X100 >= 801)
+#if (IPP_VERSION_X100 >= 810)
             type == CV_32FC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_32f_C1R ://Aug 2013: bug in IPP 7.1, 8.0
 #endif
             0;
@@ -1761,7 +1761,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
 
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_meanStdDev(src, _mean, _sdv, mask));
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
     int k, cn = src.channels(), depth = src.depth();
 
@@ -2217,7 +2217,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 #ifdef HAVE_IPP
 static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx, int* maxIdx, Mat &mask)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
@@ -2325,7 +2325,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
     MinMaxIdxFunc func = getMinmaxTab(depth);
     CV_Assert( func != 0 );
@@ -2658,7 +2658,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 #ifdef HAVE_IPP
 static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     int cn = src.channels();
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
@@ -2701,7 +2701,8 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                     return true;
                 }
             }
-            /*typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
+#if IPP_DISABLED_BLOCK
+            typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_8u_C3CMR :
@@ -2736,7 +2737,8 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                     result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
                     return true;
                 }
-            }*/
+            }
+#endif
         }
         else
         {
@@ -2762,7 +2764,7 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                 type == CV_16UC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C1R :
-#if (IPP_VERSION_X100 >= 801)
+#if (IPP_VERSION_X100 >= 810)
                 type == CV_16SC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
 #endif
@@ -2842,7 +2844,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 #endif
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_norm(src, normType, mask, _result), _result);
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(src, normType, mask, _result), _result);
 
     int depth = src.depth(), cn = src.channels();
     if( src.isContinuous() && mask.empty() )
@@ -3046,7 +3048,7 @@ namespace cv
 {
 static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask, double &result)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
 
     if( normType & CV_RELATIVE )
@@ -3260,7 +3262,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C1R :
-#if (IPP_VERSION_X100 >= 801)
+#if (IPP_VERSION_X100 >= 810)
                 type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
 #endif
@@ -3275,7 +3277,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_16UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C1R :
                 type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C3R :
                 type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C4R :
-#if !(IPP_VERSION_X100 == 802 && (!defined(IPP_VERSION_UPDATE) || IPP_VERSION_UPDATE <= 1)) // Oct 2014: Accuracy issue with IPP 8.2 / 8.2.1
+#if !(IPP_VERSION_X100 == 820 || IPP_VERSION_X100 == 821) // Oct 2014: Accuracy issue with IPP 8.2 / 8.2.1
                 type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C1R :
 #endif
                 type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C3R :
@@ -3339,7 +3341,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 _result)
 #endif
 
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_norm(_src1, _src2, normType, _mask, _result), _result);
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(_src1, _src2, normType, _mask, _result), _result);
 
     if( normType & CV_RELATIVE )
     {

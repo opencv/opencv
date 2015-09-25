@@ -44,7 +44,7 @@
 #include "opencl_kernels_imgproc.hpp"
 
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
 #define USE_IPP_CANNY 1
 #else
 #define USE_IPP_CANNY 0

@@ -1691,7 +1691,7 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
 #ifdef HAVE_IPP
 static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int maxDiff)
 {
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 810
     int type = img.type();
     Ipp32s bufsize = 0;
     IppiSize roisize = { img.cols, img.rows };
@@ -1739,7 +1739,7 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
 
     int newVal = cvRound(_newval), maxDiff = cvRound(_maxDiff);
 
-    CV_IPP_RUN(IPP_VERSION_X100 >= 801 && !__buf.needed() && (type == CV_8UC1 || type == CV_16SC1), ipp_filterSpeckles(img, maxSpeckleSize, newVal, maxDiff));
+    CV_IPP_RUN(IPP_VERSION_X100 >= 810 && !__buf.needed() && (type == CV_8UC1 || type == CV_16SC1), ipp_filterSpeckles(img, maxSpeckleSize, newVal, maxDiff));
 
     if (type == CV_8UC1)
         filterSpecklesImpl<uchar>(img, newVal, maxSpeckleSize, maxDiff, _buf);

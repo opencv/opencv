@@ -191,9 +191,16 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 \****************************************************************************************/
 
 #ifdef HAVE_IPP
-#  include "ipp.h"
+#include "ipp.h"
 
-#  define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR)
+#ifndef IPP_VERSION_UPDATE // prior to 7.1
+#define IPP_VERSION_UPDATE 0
+#endif
+
+#define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR*10 + IPP_VERSION_UPDATE)
+
+// General define for ipp function disabling
+#define IPP_DISABLE_BLOCK 0
 
 #ifdef CV_MALLOC_ALIGN
 #undef CV_MALLOC_ALIGN
@@ -235,7 +242,7 @@ static inline IppDataType ippiGetDataType(int depth)
 }
 
 #else
-#  define IPP_VERSION_X100 0
+#define IPP_VERSION_X100 0
 #endif
 
 #ifdef HAVE_IPP_ICV_ONLY
