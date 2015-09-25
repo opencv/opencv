@@ -21,7 +21,7 @@ template<typename T> struct step_functor : public thrust::unary_function<int, in
 		CV_Assert(mat.depth() == cv::DataType<T>::depth);
 		columns = mat.cols;
 		step = mat.step / sizeof(T);
-		channels = mat.channels();		
+		channels = mat.channels();
 	}
 	__host__ __device__
 		int operator()(int x) const
@@ -34,7 +34,7 @@ template<typename T> struct step_functor : public thrust::unary_function<int, in
 //! [step_functor]
 //! [begin_itr]
 /*
-	@Brief GpuMatBeginItr returns a thrust compatible iterator to the beginning of a GPU mat's memory.  
+	@Brief GpuMatBeginItr returns a thrust compatible iterator to the beginning of a GPU mat's memory.
 	@Param mat is the input matrix
 	@Param channel is the channel of the matrix that the iterator is accessing.  If set to -1, the iterator will access every element in sequential order
 */
@@ -66,5 +66,3 @@ thrust::permutation_iterator<thrust::device_ptr<T>, thrust::transform_iterator<s
 		thrust::make_transform_iterator(thrust::make_counting_iterator(mat.rows*mat.cols), step_functor<T>(mat.cols, mat.step / sizeof(T), mat.channels())));
 }
 //! [end_itr]
-
-
