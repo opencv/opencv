@@ -378,21 +378,6 @@ bool checkHardwareSupport(int feature)
 
 
 volatile bool useOptimizedFlag = true;
-#ifdef HAVE_IPP
-struct IPPInitializer
-{
-    IPPInitializer(void)
-    {
-#if IPP_VERSION_MAJOR >= 8
-        ippInit();
-#else
-        ippStaticInit();
-#endif
-    }
-};
-
-IPPInitializer ippInitializer;
-#endif
 
 volatile bool USE_SSE2 = featuresEnabled.have[CV_CPU_SSE2];
 volatile bool USE_SSE4_2 = featuresEnabled.have[CV_CPU_SSE4_2];
@@ -1308,6 +1293,7 @@ namespace ipp
 
 struct IPPInitSingelton
 {
+public:
     IPPInitSingelton()
     {
         useIPP      = true;
@@ -1315,14 +1301,9 @@ struct IPPInitSingelton
         funcname    = NULL;
         filename    = NULL;
         linen       = 0;
+        ippFeatures = 0;
 
 #ifdef HAVE_IPP
-#if IPP_VERSION_X100 >= 800
-        ippInit();
-#else
-        ippStaticInit();
-#endif
-
         const char* pIppEnv = getenv("OPENCV_IPP");
         cv::String env = pIppEnv;
         if(env.size())
@@ -1332,21 +1313,21 @@ struct IPPInitSingelton
                 std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << std::endl;
                 useIPP = false;
             }
-#if IPP_VERSION_X100 >= 900
             else if(env == "sse")
-                ippSetCpuFeatures(ippCPUID_SSE);
+                ippFeatures = ippCPUID_SSE;
             else if(env == "sse2")
-                ippSetCpuFeatures(ippCPUID_SSE2);
+                ippFeatures = ippCPUID_SSE2;
             else if(env == "sse42")
-                ippSetCpuFeatures(ippCPUID_SSE42);
+                ippFeatures = ippCPUID_SSE42;
             else if(env == "avx")
-                ippSetCpuFeatures(ippCPUID_AVX);
+                ippFeatures = ippCPUID_AVX;
             else if(env == "avx2")
-                ippSetCpuFeatures(ippCPUID_AVX2);
-#endif
+                ippFeatures = ippCPUID_AVX2;
             else
                 std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << std::endl;
         }
+
+        IPP_INITIALIZER
 #endif
     }
 
@@ -1356,12 +1337,22 @@ struct IPPInitSingelton
     const char *funcname;
     const char *filename;
     int         linen;
+    int         ippFeatures;
 };
 
 static IPPInitSingelton& getIPPSingelton()
 {
     static IPPInitSingelton sing;
     return sing;
+}
+
+int getIppFeatures()
+{
+#ifdef HAVE_IPP
+    return getIPPSingelton().ippFeatures;
+#else
+    return 0;
+#endif
 }
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)

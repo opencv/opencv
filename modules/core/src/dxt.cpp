@@ -3368,10 +3368,10 @@ public:
             return;
 
         ippiDCTFunc     ippDctFun   = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
-        ippiDCTInit     ippInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
-        ippiDCTGetSize  ippGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
+        ippiDCTInit     ippDctInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
+        ippiDCTGetSize  ippDctGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
 
-        if(ippGetSize(srcRoiSize, &specSize, &initSize, &bufferSize) < 0)
+        if(ippDctGetSize(srcRoiSize, &specSize, &initSize, &bufferSize) < 0)
         {
             *ok = false;
             return;
@@ -3397,7 +3397,7 @@ public:
             IPP_RETURN
         }
 
-        if(ippInit(pDCTSpec, srcRoiSize, pInitBuf) < 0)
+        if(ippDctInit(pDCTSpec, srcRoiSize, pInitBuf) < 0)
         {
             *ok = false;
             IPP_RETURN
@@ -3494,11 +3494,11 @@ static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
             if(pInitBuf)                \
                 ippFree(pInitBuf);      \
 
-        ippiDCTFunc     ippDctFun   = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
-        ippiDCTInit     ippInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
-        ippiDCTGetSize  ippGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
+        ippiDCTFunc     ippDctFun      = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
+        ippiDCTInit     ippDctInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
+        ippiDCTGetSize  ippDctGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
 
-        if(ippGetSize(srcRoiSize, &specSize, &initSize, &bufferSize) < 0)
+        if(ippDctGetSize(srcRoiSize, &specSize, &initSize, &bufferSize) < 0)
             return false;
 
         pDCTSpec = (Ipp8u*)ippMalloc(specSize);
@@ -3518,7 +3518,7 @@ static bool ippi_DCT_32f(const Mat& src, Mat& dst, bool inv, bool row)
             return false;
         }
 
-        if(ippInit(pDCTSpec, srcRoiSize, pInitBuf) < 0)
+        if(ippDctInit(pDCTSpec, srcRoiSize, pInitBuf) < 0)
         {
             IPP_RELEASE
             return false;
