@@ -6364,8 +6364,6 @@ struct Cmp_SIMD<double>
                 _mm_storeu_si128((__m128i *)(dst + x), _mm_packs_epi16(_mm_packs_epi32(v_cmp0, v_cmp1), _mm_packs_epi32(v_cmp2, v_cmp3)));
             }
 
-        
-
         return x;
     }
 
