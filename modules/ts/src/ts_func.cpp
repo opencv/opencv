@@ -980,12 +980,12 @@ minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
         for( size_t i = 0; i < total; i++ )
         {
             _Tp val = src[i];
-            if( minval > val )
+            if( minval > val || !minpos )
             {
                 minval = val;
                 minpos = startidx + i;
             }
-            if( maxval < val )
+            if( maxval < val || !maxpos )
             {
                 maxval = val;
                 maxpos = startidx + i;
@@ -997,12 +997,12 @@ minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
         for( size_t i = 0; i < total; i++ )
         {
             _Tp val = src[i];
-            if( minval > val && mask[i] )
+            if( (minval > val || !minpos) && mask[i] )
             {
                 minval = val;
                 minpos = startidx + i;
             }
-            if( maxval < val && mask[i] )
+            if( (maxval < val || !maxpos) && mask[i] )
             {
                 maxval = val;
                 maxpos = startidx + i;
@@ -1049,8 +1049,8 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
     size_t startidx = 1, total = planes[0].total();
     size_t i, nplanes = it.nplanes;
     int depth = src.depth();
-    double maxval = depth < CV_32F ? INT_MIN : depth == CV_32F ? -FLT_MAX : -DBL_MAX;
-    double minval = depth < CV_32F ? INT_MAX : depth == CV_32F ? FLT_MAX : DBL_MAX;
+    double minval = 0;
+    double maxval = 0;
     size_t maxidx = 0, minidx = 0;
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
@@ -1092,9 +1092,6 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
             CV_Assert(0);
         }
     }
-
-    if( minidx == 0 )
-        minval = maxval = 0;
 
     if( _maxval )
         *_maxval = maxval;

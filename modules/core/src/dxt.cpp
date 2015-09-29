@@ -3473,21 +3473,7 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     _dst.create( src.rows, src.cols, type );
     Mat dst = _dst.getMat();
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    CV_IPP_CHECK()
-    {
-        bool row = (flags & DCT_ROWS) != 0;
-        if (src.type() == CV_32F)
-        {
-            if(ippi_DCT_32f(src,dst,inv, row))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700 && src.type() == CV_32F, ippi_DCT_32f(src, dst, inv, ((flags & DCT_ROWS) != 0)))
 
     DCTFunc dct_func = dct_tbl[(int)inv + (depth == CV_64F)*2];
 

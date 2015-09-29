@@ -50,7 +50,7 @@
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/opengl.hpp"
-#include "opencv2/core/vaapi.hpp"
+#include "opencv2/core/va_intel.hpp"
 
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/private.cuda.hpp"

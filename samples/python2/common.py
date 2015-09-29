@@ -4,6 +4,14 @@
 This module contains some common routines used by other samples.
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    from functools import reduce
+
 import numpy as np
 import cv2
 
@@ -70,7 +78,8 @@ def mtx2rvec(R):
     axis = np.cross(vt[0], vt[1])
     return axis * np.arctan2(s, c)
 
-def draw_str(dst, (x, y), s):
+def draw_str(dst, target, s):
+    x, y = target
     cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
     cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
 
@@ -135,12 +144,12 @@ def clock():
 
 @contextmanager
 def Timer(msg):
-    print msg, '...',
+    print(msg, '...',)
     start = clock()
     try:
         yield
     finally:
-        print "%.2f ms" % ((clock()-start)*1000)
+        print("%.2f ms" % ((clock()-start)*1000))
 
 class StatValue:
     def __init__(self, smooth_coef = 0.5):
@@ -192,7 +201,11 @@ class RectSelector:
 def grouper(n, iterable, fillvalue=None):
     '''grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx'''
     args = [iter(iterable)] * n
-    return it.izip_longest(fillvalue=fillvalue, *args)
+    if PY3:
+        output = it.zip_longest(fillvalue=fillvalue, *args)
+    else:
+        output = it.izip_longest(fillvalue=fillvalue, *args)
+    return output
 
 def mosaic(w, imgs):
     '''Make a grid from images.
@@ -201,7 +214,10 @@ def mosaic(w, imgs):
     imgs -- images (must have same size and format)
     '''
     imgs = iter(imgs)
-    img0 = imgs.next()
+    if PY3:
+        img0 = next(imgs)
+    else:
+        img0 = imgs.next()
     pad = np.zeros_like(img0)
     imgs = it.chain([img0], imgs)
     rows = grouper(w, imgs, pad)

@@ -379,7 +379,7 @@ public:
             }
             else if(covMatType == COV_MAT_DIAGONAL)
             {
-                covsEigenValues[clusterIndex] = svd.w;
+                covsEigenValues[clusterIndex] = covs[clusterIndex].diag().clone(); //Preserve the original order of eigen values.
             }
             else //COV_MAT_GENERIC
             {
