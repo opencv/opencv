@@ -2680,7 +2680,7 @@ struct Mul_SIMD<schar, float>
                 __m128i v_src21 = _mm_loadu_si128((__m128i const *)(src2 + x + 16));
 
                 __m256i v_s10 = _mm256_cvtepi8_epi16(v_src10);
-                __m256i v_s11 = _mm256_cvtepi8_epi16(v_src11); 
+                __m256i v_s11 = _mm256_cvtepi8_epi16(v_src11);
                 __m256i v_s20 = _mm256_cvtepi8_epi16(v_src20);
                 __m256i v_s21 = _mm256_cvtepi8_epi16(v_src21);
 
@@ -2705,7 +2705,7 @@ struct Mul_SIMD<schar, float>
 
                 v_s10 = _mm256_packs_epi32(v_s100, v_s101);
                 v_s11 = _mm256_packs_epi32(v_s110, v_s111);
-                
+
                 _mm256_storeu_si256((__m256i*)(dst+x), _mm256_packs_epi16(v_s10, v_s11));
             }
         else
@@ -2925,7 +2925,6 @@ struct Mul_SIMD<int, double>
                 __m256d v_dst00 = _mm256_mul_pd(v_s10, v_s20);
                 __m256d v_dst01 = _mm256_mul_pd(v_s11, v_s21);
 
-                
                 v_src10 = _mm256_cvtpd_epi32(v_dst00);
                 v_src11 = _mm256_cvtpd_epi32(v_dst01);
 
@@ -6079,7 +6078,7 @@ struct Cmp_SIMD<schar>
 
         if (!haveAVX)
             return x;
-        
+
         if (code == CMP_GT)
             for (; x <= width - 32; x += 32)
                 _mm256_storeu_si256((__m256i *)(dst + x), _mm256_cmpgt_epi8(_mm256_loadu_si256((const __m256i *)(src1 + x)),
@@ -6131,7 +6130,7 @@ struct Cmp_SIMD<short>
 
         if (!haveAVX)
             return x;
-        
+
         if (code == CMP_GT)
             for (; x <= width - 32; x += 32)
             {
