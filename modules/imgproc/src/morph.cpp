@@ -1140,7 +1140,7 @@ private:
 static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kernel,
                               const Size& ksize, const Point &anchor, bool rectKernel)
 {
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 810
     int type = src.type();
     const Mat* _src = &src;
     Mat temp;
@@ -1715,7 +1715,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
         iterations = 1;
     }
 
-    CV_IPP_RUN(IPP_VERSION_X100 >= 801, ipp_MorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue))
+    CV_IPP_RUN(IPP_VERSION_X100 >= 810, ipp_MorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue))
 
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
