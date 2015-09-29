@@ -2701,7 +2701,7 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                     return true;
                 }
             }
-#if IPP_DISABLED_BLOCK
+#if IPP_DISABLE_BLOCK
             typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
