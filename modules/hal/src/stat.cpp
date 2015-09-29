@@ -184,7 +184,20 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
 float normL2Sqr_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
-#if CV_SSE
+#if CV_AVX2
+	float CV_DECL_ALIGNED(32) buf[8];
+	__m256 d0 = _mm256_setzero_ps(), d1 = _mm256_setzero_ps();
+
+	for (; j <= n - 16; j += 16)
+	{
+		__m256 t0 = _mm256_sub_ps(_mm256_loadu_ps(a + j), _mm256_loadu_ps(b + j));
+		__m256 t1 = _mm256_sub_ps(_mm256_loadu_ps(a + j + 8), _mm256_loadu_ps(b + j + 8));
+		d0 = _mm256_add_ps(d0, _mm256_mul_ps(t0, t0));
+		d1 = _mm256_add_ps(d1, _mm256_mul_ps(t1, t1));
+	}
+	_mm256_store_ps(buf, _mm256_add_ps(d0, d1));
+	d = buf[0] + buf[1] + buf[2] + buf[3] + buf[4] + buf[5] + buf[6] + buf[7];
+#elif CV_SSE
     float CV_DECL_ALIGNED(16) buf[4];
     __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
 
@@ -218,7 +231,22 @@ float normL2Sqr_(const float* a, const float* b, int n)
 float normL1_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
-#if CV_SSE
+#if CV_AVX2
+	float CV_DECL_ALIGNED(32) buf[8];
+	static const int CV_DECL_ALIGNED(32) absbuf[8] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff };
+	__m256 d0 = _mm256_setzero_ps(), d1 = _mm256_setzero_ps();
+	__m256 absmask = _mm256_load_ps((const float*)absbuf);
+
+	for (; j <= n - 16; j += 16)
+	{
+		__m256 t0 = _mm256_sub_ps(_mm256_loadu_ps(a + j), _mm256_loadu_ps(b + j));
+		__m256 t1 = _mm256_sub_ps(_mm256_loadu_ps(a + j + 8), _mm256_loadu_ps(b + j + 8));
+		d0 = _mm256_add_ps(d0, _mm256_and_ps(t0, absmask));
+		d1 = _mm256_add_ps(d1, _mm256_and_ps(t1, absmask));
+	}
+	_mm256_store_ps(buf, _mm256_add_ps(d0, d1));
+	d = buf[0] + buf[1] + buf[2] + buf[3] + buf[4] + buf[5] + buf[6] + buf[7];
+#elif CV_SSE
     float CV_DECL_ALIGNED(16) buf[4];
     static const int CV_DECL_ALIGNED(16) absbuf[4] = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
     __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
@@ -276,7 +304,7 @@ int normL1_(const uchar* a, const uchar* b, int n)
 
         d0 = _mm_add_epi32(d0, _mm_sad_epu8(t0, t1));
     }
-    d = _mm_cvtsi128_si32(_mm_add_epi32(d0, _mm_unpackhi_epi64(d0, d0)));
+    d += _mm_cvtsi128_si32(_mm_add_epi32(d0, _mm_unpackhi_epi64(d0, d0)));
 #elif CV_NEON
     uint32x4_t v_sum = vdupq_n_u32(0.0f);
     for ( ; j <= n - 16; j += 16)
