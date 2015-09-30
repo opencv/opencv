@@ -7416,6 +7416,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
             return false;
 #endif
 
+#if IPP_VERSION_X100 < 900
         case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
         case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
             if(dcn <= 0) dcn = (code==CV_BGR5652BGRA || code==CV_BGR5552BGRA || code==CV_BGR5652RGBA || code==CV_BGR5552RGBA) ? 4 : 3;
@@ -7449,6 +7450,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
             }
             CV_SUPPRESS_DEPRECATED_END
             return false;
+#endif
 
 #if IPP_VERSION_X100 >= 700
         case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:

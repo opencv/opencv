@@ -2233,7 +2233,9 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
             CV_SUPPRESS_DEPRECATED_START
             ippiMaskMinMaxIndxFuncC1 ippFuncC1 =
                 type == CV_8UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1MR : 0;
             CV_SUPPRESS_DEPRECATED_END
@@ -2270,8 +2272,12 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
 
             CV_SUPPRESS_DEPRECATED_START
             ippiMinMaxIndxFuncC1 ippFuncC1 =
+#if IPP_VERSION_X100 != 900 // bug in 9.0.0 avx2 optimization
                 depth == CV_8U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
+#endif
+#if IPP_VERSION_X100 < 900
                 depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
+#endif
                 depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
 #if !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
                 depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
@@ -2676,19 +2682,25 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
             ippiMaskNormFuncC1 ippFuncC1 =
                 normType == NORM_INF ?
                 (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_8s_C1MR :
+#endif
 //                type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_32f_C1MR :
                 0) :
             normType == NORM_L1 ?
                 (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_32f_C1MR :
                 0) :
             normType == NORM_L2 || normType == NORM_L2SQR ?
                 (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_32f_C1MR :
                 0) : 0;
@@ -3071,23 +3083,29 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 ippiMaskNormRelFuncC1 ippFuncC1 =
                     normType == NORM_INF ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_8u_C1MR :
+#if IPP_VERSION_X100 < 900
 #ifndef __APPLE__
                     type == CV_8SC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_8s_C1MR :
+#endif
 #endif
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_32f_C1MR :
                     0) :
                     normType == NORM_L1 ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_8u_C1MR :
+#if IPP_VERSION_X100 < 900
 #ifndef __APPLE__
                     type == CV_8SC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_8s_C1MR :
+#endif
 #endif
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_32f_C1MR :
                     0) :
                     normType == NORM_L2 || normType == NORM_L2SQR ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                     type == CV_8SC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_8s_C1MR :
+#endif
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_32f_C1MR :
                     0) : 0;
@@ -3172,21 +3190,27 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
             ippiMaskNormDiffFuncC1 ippFuncC1 =
                 normType == NORM_INF ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_32f_C1MR :
                 0) :
                 normType == NORM_L1 ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8u_C1MR :
+#if IPP_VERSION_X100 < 900
 #ifndef __APPLE__
                 type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
+#endif
 #endif
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_32f_C1MR :
                 0) :
                 normType == NORM_L2 || normType == NORM_L2SQR ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_32f_C1MR :
                 0) : 0;
@@ -3204,19 +3228,25 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
             ippiMaskNormDiffFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8u_C3CMR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8s_C3CMR :
+#endif
                 type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_32f_C3CMR :
                 0) :
                 normType == NORM_L1 ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8u_C3CMR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8s_C3CMR :
+#endif
                 type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_32f_C3CMR :
                 0) :
                 normType == NORM_L2 || normType == NORM_L2SQR ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_8u_C3CMR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_8s_C3CMR :
+#endif
                 type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_32f_C3CMR :
                 0) : 0;
