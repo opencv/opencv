@@ -165,7 +165,11 @@ icvReleaseHidHaarClassifierCascade( CvHidHaarClassifierCascade** _cascade )
             for( i = 0; i < cascade->count; i++ )
             {
                 if( cascade->ipp_stages[i] )
+#if IPP_VERSION_X100 < 900
                     ippiHaarClassifierFree_32f( (IppiHaarClassifier_32f*)cascade->ipp_stages[i] );
+#else
+                    cvFree(&cascade->ipp_stages[i]);
+#endif
             }
         }
         cvFree( &cascade->ipp_stages );
