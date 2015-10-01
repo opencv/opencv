@@ -1344,8 +1344,7 @@ public:
 
 static IPPInitSingelton& getIPPSingelton()
 {
-    static IPPInitSingelton sing;
-    return sing;
+    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingelton, new IPPInitSingelton())
 }
 
 int getIppFeatures()
