@@ -14,6 +14,9 @@ Keys:
   ESC   - exit
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -23,11 +26,11 @@ if __name__ == '__main__':
         fn = sys.argv[1]
     except:
         fn = '../data/fruits.jpg'
-    print __doc__
+    print(__doc__)
 
     img = cv2.imread(fn, True)
     if img is None:
-        print 'Failed to load image file:', fn
+        print('Failed to load image file:', fn)
         sys.exit(1)
 
     h, w = img.shape[:2]
@@ -68,10 +71,10 @@ if __name__ == '__main__':
             break
         if ch == ord('f'):
             fixed_range = not fixed_range
-            print 'using %s range' % ('floating', 'fixed')[fixed_range]
+            print('using %s range' % ('floating', 'fixed')[fixed_range])
             update()
         if ch == ord('c'):
             connectivity = 12-connectivity
-            print 'connectivity =', connectivity
+            print('connectivity =', connectivity)
             update()
     cv2.destroyAllWindows()

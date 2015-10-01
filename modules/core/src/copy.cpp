@@ -377,7 +377,7 @@ Mat& Mat::operator = (const Scalar& s)
 
     if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
     {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && 0
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
         CV_IPP_CHECK()
         {
             if (dims <= 2 || isContinuous())
@@ -1157,7 +1157,7 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
 
     borderType &= ~BORDER_ISOLATED;
 
-#if defined HAVE_IPP && 0
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         typedef IppStatus (CV_STDCALL * ippiCopyMakeBorder)(const void * pSrc, int srcStep, IppiSize srcRoiSize, void * pDst,

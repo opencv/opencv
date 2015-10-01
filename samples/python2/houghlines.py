@@ -4,6 +4,9 @@ This example illustrates how to use Hough Transform to find lines
 Usage: ./houghlines.py [<image_name>]
 image argument defaults to ../data/pic1.png
 '''
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import cv2
 import numpy as np
 import sys
@@ -15,7 +18,7 @@ if __name__ == '__main__':
         fn = sys.argv[1]
     except:
         fn = "../data/pic1.png"
-    print __doc__
+    print(__doc__)
     src = cv2.imread(fn)
     dst = cv2.Canny(src, 50, 200)
     cdst = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)

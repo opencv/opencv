@@ -1688,6 +1688,45 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
     }
 }
 
+#ifdef HAVE_IPP
+static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int maxDiff)
+{
+#if IPP_VERSION_X100 >= 810
+    int type = img.type();
+    Ipp32s bufsize = 0;
+    IppiSize roisize = { img.cols, img.rows };
+    IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp16s;
+    Ipp8u *pBuffer = NULL;
+    IppStatus status = ippStsNoErr;
+
+    if(ippiMarkSpecklesGetBufferSize(roisize, datatype, CV_MAT_CN(type), &bufsize) < 0)
+        return false;
+
+    pBuffer = (Ipp8u*)ippMalloc(bufsize);
+    if(!pBuffer && bufsize)
+        return false;
+
+    if (type == CV_8UC1)
+    {
+        status = ippiMarkSpeckles_8u_C1IR(img.ptr<Ipp8u>(), (int)img.step, roisize,
+                                            (Ipp8u)newVal, maxSpeckleSize, (Ipp8u)maxDiff, ippiNormL1, pBuffer);
+    }
+    else
+    {
+        status = ippiMarkSpeckles_16s_C1IR(img.ptr<Ipp16s>(), (int)img.step, roisize,
+                                            (Ipp16s)newVal, maxSpeckleSize, (Ipp16s)maxDiff, ippiNormL1, pBuffer);
+    }
+    if(pBuffer) ippFree(pBuffer);
+
+    if (status >= 0)
+        return true;
+#else
+    CV_UNUSED(img); CV_UNUSED(maxSpeckleSize); CV_UNUSED(newVal); CV_UNUSED(maxDiff);
+#endif
+    return false;
+}
+#endif
+
 }
 
 void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSize,
@@ -1700,37 +1739,7 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
 
     int newVal = cvRound(_newval), maxDiff = cvRound(_maxDiff);
 
-#if IPP_VERSION_X100 >= 801
-    CV_IPP_CHECK()
-    {
-        Ipp32s bufsize = 0;
-        IppiSize roisize = { img.cols, img.rows };
-        IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp16s;
-
-        if (!__buf.needed() && (type == CV_8UC1 || type == CV_16SC1))
-        {
-            IppStatus status = ippiMarkSpecklesGetBufferSize(roisize, datatype, CV_MAT_CN(type), &bufsize);
-            Ipp8u * buffer = ippsMalloc_8u(bufsize);
-
-            if ((int)status >= 0)
-            {
-                if (type == CV_8UC1)
-                    status = ippiMarkSpeckles_8u_C1IR(img.ptr<Ipp8u>(), (int)img.step, roisize,
-                                                      (Ipp8u)newVal, maxSpeckleSize, (Ipp8u)maxDiff, ippiNormL1, buffer);
-                else
-                    status = ippiMarkSpeckles_16s_C1IR(img.ptr<Ipp16s>(), (int)img.step, roisize,
-                                                       (Ipp16s)newVal, maxSpeckleSize, (Ipp16s)maxDiff, ippiNormL1, buffer);
-            }
-
-            if (status >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    CV_IPP_RUN(IPP_VERSION_X100 >= 810 && !__buf.needed() && (type == CV_8UC1 || type == CV_16SC1), ipp_filterSpeckles(img, maxSpeckleSize, newVal, maxDiff));
 
     if (type == CV_8UC1)
         filterSpecklesImpl<uchar>(img, newVal, maxSpeckleSize, maxDiff, _buf);

@@ -374,7 +374,7 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     _patch.create(patchSize, CV_MAKETYPE(ddepth, cn));
     Mat patch = _patch.getMat();
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
     CV_IPP_CHECK()
     {
         typedef IppStatus (CV_STDCALL *ippiGetRectSubPixFunc)( const void* src, int src_step,

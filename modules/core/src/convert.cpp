@@ -5682,7 +5682,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 #if defined(HAVE_IPP)
 namespace ipp {
 
-#if 0 // there are no performance benefits (PR #2653)
+#if IPP_DISABLE_BLOCK // there are no performance benefits (PR #2653)
 class IppLUTParallelBody_LUTC1 : public ParallelLoopBody
 {
 public:
@@ -5850,7 +5850,7 @@ static bool ipp_lut(Mat &src, Mat &lut, Mat &dst)
     Ptr<ParallelLoopBody> body;
 
     size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
-#if 0 // there are no performance benefits (PR #2653)
+#if IPP_DISABLE_BLOCK // there are no performance benefits (PR #2653)
     if (lutcn == 1)
     {
         ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTC1(src, lut, dst, &ok);

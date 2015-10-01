@@ -528,7 +528,7 @@ namespace cv
 {
 static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
-#if IPP_VERSION_MAJOR >= 8
+#if IPP_VERSION_X100 >= 800
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
@@ -603,16 +603,12 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, 0.0, borderType, MINEIGENVAL))
 
 #ifdef HAVE_IPP
-    int kerSize = ksize;
-    if (ksize < 0)
-    {
-        kerSize = 3;
-    }
+    int kerSize = (ksize < 0)?3:ksize;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
 #endif
     CV_IPP_RUN(((borderTypeNI == BORDER_REPLICATE && (!_src.isSubmatrix() || isolated)) &&
-            (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5)) && IPP_VERSION_MAJOR >= 8,
+            (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5)) && IPP_VERSION_X100 >= 800,
     ipp_cornerMinEigenVal( _src, _dst, blockSize, ksize, borderType ));
 
 
@@ -629,7 +625,7 @@ namespace cv
 {
 static bool ipp_cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
-#if IPP_VERSION_X100 >= 801 && 0
+#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
@@ -696,7 +692,7 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
 #endif
     CV_IPP_RUN(((ksize == 3 || ksize == 5) && (_src.type() == CV_8UC1 || _src.type() == CV_32FC1) &&
         (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE) && CV_MAT_CN(_src.type()) == 1 &&
-        (!_src.isSubmatrix() || isolated)) && IPP_VERSION_X100 >= 801 && 0, ipp_cornerHarris( _src, _dst, blockSize, ksize, k, borderType ));
+        (!_src.isSubmatrix() || isolated)) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK, ipp_cornerHarris( _src, _dst, blockSize, ksize, k, borderType ));
 
 
     Mat src = _src.getMat();

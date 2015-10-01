@@ -22,6 +22,14 @@ Keys:
     b     - toggle back-projected probability visualization
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    xrange = range
+
 import numpy as np
 import cv2
 
@@ -103,7 +111,7 @@ class App(object):
                 try:
                     cv2.ellipse(vis, track_box, (0, 0, 255), 2)
                 except:
-                    print track_box
+                    print(track_box)
 
             cv2.imshow('camshift', vis)
 
@@ -121,5 +129,5 @@ if __name__ == '__main__':
         video_src = sys.argv[1]
     except:
         video_src = 0
-    print __doc__
+    print(__doc__)
     App(video_src).run()

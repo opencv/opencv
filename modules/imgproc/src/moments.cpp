@@ -577,7 +577,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         if( cn > 1 )
             CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
 
-#if IPP_VERSION_X100 >= 801 && 0
+#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
         CV_IPP_CHECK()
         {
             if (!binary)
