@@ -6,6 +6,8 @@
 #
 
 function(_icv_downloader)
+  # Commit SHA in the opencv_3rdparty repo
+  set(IPPICV_BINARIES_COMMIT "3d41df448b589aa076d9d27ace344d3ef709e4b9")
   # Define actual ICV versions
   if(APPLE)
     set(OPENCV_ICV_PACKAGE_NAME "ippicv_macosx_20141027.tgz")
@@ -62,7 +64,7 @@ function(_icv_downloader)
       if(DEFINED ENV{OPENCV_ICV_URL})
         set(OPENCV_ICV_URL $ENV{OPENCV_ICV_URL})
       else()
-        set(OPENCV_ICV_URL "http://sourceforge.net/projects/opencvlibrary/files/3rdparty/ippicv")
+        set(OPENCV_ICV_URL "https://raw.githubusercontent.com/Itseez/opencv_3rdparty/${IPPICV_BINARIES_COMMIT}/ippicv")
       endif()
     endif()
 
