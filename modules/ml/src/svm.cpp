@@ -1824,6 +1824,8 @@ public:
 
         params = best_params;
         class_labels = class_labels0;
+        // make sure we updated the kernel and other parameters
+        setParams(params);
         return do_train( samples, responses );
     }
 
