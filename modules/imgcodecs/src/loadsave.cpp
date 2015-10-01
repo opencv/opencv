@@ -265,11 +265,11 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     int scale_denom = 1;
     if( flags > IMREAD_LOAD_GDAL )
     {
-    if( flags & IMREAD_GRAYSCALE_REDUCED_2 )
+    if( flags & IMREAD_REDUCED_GRAYSCALE_2 )
         scale_denom = 2;
-    else if( flags & IMREAD_GRAYSCALE_REDUCED_4 )
+    else if( flags & IMREAD_REDUCED_GRAYSCALE_4 )
         scale_denom = 4;
-    else if( flags & IMREAD_GRAYSCALE_REDUCED_8 )
+    else if( flags & IMREAD_REDUCED_GRAYSCALE_8 )
         scale_denom = 8;
     }
 
