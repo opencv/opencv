@@ -61,7 +61,7 @@ public:
     void setClustersNumber(int val)
     {
         nclusters = val;
-        CV_Assert(nclusters > 1);
+        CV_Assert(nclusters >= 1);
     }
 
     int getClustersNumber() const
