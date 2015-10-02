@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 
 namespace cv {
 
@@ -377,21 +378,6 @@ bool checkHardwareSupport(int feature)
 
 
 volatile bool useOptimizedFlag = true;
-#ifdef HAVE_IPP
-struct IPPInitializer
-{
-    IPPInitializer(void)
-    {
-#if IPP_VERSION_MAJOR >= 8
-        ippInit();
-#else
-        ippStaticInit();
-#endif
-    }
-};
-
-IPPInitializer ippInitializer;
-#endif
 
 volatile bool USE_SSE2 = featuresEnabled.have[CV_CPU_SSE2];
 volatile bool USE_SSE4_2 = featuresEnabled.have[CV_CPU_SSE4_2];
@@ -1305,26 +1291,87 @@ void setUseCollection(bool flag)
 namespace ipp
 {
 
-static int ippStatus = 0; // 0 - all is ok, -1 - IPP functions failed
-static const char * funcname = NULL, * filename = NULL;
-static int linen = 0;
+struct IPPInitSingelton
+{
+public:
+    IPPInitSingelton()
+    {
+        useIPP      = true;
+        ippStatus   = 0;
+        funcname    = NULL;
+        filename    = NULL;
+        linen       = 0;
+        ippFeatures = 0;
+
+#ifdef HAVE_IPP
+        const char* pIppEnv = getenv("OPENCV_IPP");
+        cv::String env = pIppEnv;
+        if(env.size())
+        {
+            if(env == "disabled")
+            {
+                std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << std::endl;
+                useIPP = false;
+            }
+#if IPP_VERSION_X100 >= 900
+            else if(env == "sse")
+                ippFeatures = ippCPUID_SSE;
+            else if(env == "sse2")
+                ippFeatures = ippCPUID_SSE2;
+            else if(env == "sse42")
+                ippFeatures = ippCPUID_SSE42;
+            else if(env == "avx")
+                ippFeatures = ippCPUID_AVX;
+            else if(env == "avx2")
+                ippFeatures = ippCPUID_AVX2;
+#endif
+            else
+                std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << std::endl;
+        }
+
+        IPP_INITIALIZER(ippFeatures)
+#endif
+    }
+
+    bool useIPP;
+
+    int         ippStatus; // 0 - all is ok, -1 - IPP functions failed
+    const char *funcname;
+    const char *filename;
+    int         linen;
+    int         ippFeatures;
+};
+
+static IPPInitSingelton& getIPPSingelton()
+{
+    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingelton, new IPPInitSingelton())
+}
+
+int getIppFeatures()
+{
+#ifdef HAVE_IPP
+    return getIPPSingelton().ippFeatures;
+#else
+    return 0;
+#endif
+}
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
-    ippStatus = status;
-    funcname = _funcname;
-    filename = _filename;
-    linen = _line;
+    getIPPSingelton().ippStatus = status;
+    getIPPSingelton().funcname = _funcname;
+    getIPPSingelton().filename = _filename;
+    getIPPSingelton().linen = _line;
 }
 
 int getIppStatus()
 {
-    return ippStatus;
+    return getIPPSingelton().ippStatus;
 }
 
 String getIppErrorLocation()
 {
-    return format("%s:%d %s", filename ? filename : "", linen, funcname ? funcname : "");
+    return format("%s:%d %s", getIPPSingelton().filename ? getIPPSingelton().filename : "", getIPPSingelton().linen, getIPPSingelton().funcname ? getIPPSingelton().funcname : "");
 }
 
 bool useIPP()
@@ -1333,11 +1380,7 @@ bool useIPP()
     CoreTLSData* data = getCoreTlsData().get();
     if(data->useIPP < 0)
     {
-        const char* pIppEnv = getenv("OPENCV_IPP");
-        if(pIppEnv && (cv::String(pIppEnv) == "disabled"))
-            data->useIPP = false;
-        else
-            data->useIPP = true;
+        data->useIPP = getIPPSingelton().useIPP;
     }
     return (data->useIPP > 0);
 #else
