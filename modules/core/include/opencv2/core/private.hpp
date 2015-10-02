@@ -256,6 +256,42 @@ static inline IppDataType ippiGetDataType(int depth)
 #define HAVE_ICV 0
 #endif
 
+#if defined HAVE_IPP
+#if IPP_VERSION_X100 >= 900
+#define IPP_INITIALIZER(FEAT)                           \
+{                                                       \
+    if(FEAT)                                            \
+        ippSetCpuFeatures(FEAT);                        \
+    else                                                \
+        ippInit();                                      \
+}
+#elif IPP_VERSION_X100 >= 800
+#define IPP_INITIALIZER(FEAT)                           \
+{                                                       \
+    ippInit();                                          \
+}
+#else
+#define IPP_INITIALIZER(FEAT)                           \
+{                                                       \
+    ippStaticInit();                                    \
+}
+#endif
+
+#ifdef CVAPI_EXPORTS
+#define IPP_INITIALIZER_AUTO                            \
+struct __IppInitializer__                               \
+{                                                       \
+    __IppInitializer__()                                \
+    {IPP_INITIALIZER(cv::ipp::getIppFeatures())}        \
+};                                                      \
+static struct __IppInitializer__ __ipp_initializer__;
+#else
+#define IPP_INITIALIZER_AUTO
+#endif
+#else
+#define IPP_INITIALIZER
+#define IPP_INITIALIZER_AUTO
+#endif
 
 #define CV_IPP_CHECK_COND (cv::ipp::useIPP())
 #define CV_IPP_CHECK() if(CV_IPP_CHECK_COND)
