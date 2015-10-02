@@ -1130,6 +1130,11 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
 #endif
     if (!picture)
         return NULL;
+
+    picture->format = pix_fmt;
+    picture->width = width;
+    picture->height = height;
+
     size = avpicture_get_size( (AVPixelFormat) pix_fmt, width, height);
     if(alloc){
         picture_buf = (uint8_t *) malloc(size);
