@@ -377,6 +377,29 @@ function(__ocv_sort_modules_by_deps __lst)
   set(${__lst} "${result}" PARENT_SCOPE)
 endfunction()
 
+function(__ocv_list_merge_debug_optimized_tokens lst)
+  if(${lst})
+    set(__lst "${${lst}}")
+    # replace at begining
+    string(REGEX REPLACE "^debug;" "debug@@" __lst "${__lst}")
+    string(REGEX REPLACE "^optimized;" "optimized@@" __lst "${__lst}")
+    # replace elsewhere
+    string(REGEX REPLACE ";debug;" ";debug@@" __lst "${__lst}")
+    string(REGEX REPLACE ";optimized;" ";optimized@@" __lst "${__lst}")    
+    set(${lst} ${__lst} PARENT_SCOPE)
+  endif()
+endfunction()
+
+function(__ocv_list_split_debug_optimized_tokens lst)
+  if(${lst})
+    set(__lst "${${lst}}")
+    string(REGEX REPLACE "debug@@" "debug;" __lst "${__lst}")
+    # replace in the middle of the string
+    string(REGEX REPLACE "optimized@@" "optimized;" __lst "${__lst}")
+    set(${lst} ${__lst} PARENT_SCOPE)
+  endif()
+endfunction()
+
 # resolve dependensies
 function(__ocv_resolve_dependencies)
   foreach(m ${OPENCV_MODULES_DISABLED_USER})
@@ -473,8 +496,11 @@ function(__ocv_resolve_dependencies)
   # reorder dependencies
   foreach(m ${OPENCV_MODULES_BUILD})
     __ocv_sort_modules_by_deps(OPENCV_MODULE_${m}_DEPS)
+    # Here we take care off keeping the debug and optimized tokens
+    # next to their library before sorting
+    __ocv_list_merge_debug_optimized_tokens(OPENCV_MODULE_${m}_DEPS_EXT)
     ocv_list_sort(OPENCV_MODULE_${m}_DEPS_EXT)
-
+    __ocv_list_split_debug_optimized_tokens(OPENCV_MODULE_${m}_DEPS_EXT)
     set(LINK_DEPS ${OPENCV_MODULE_${m}_DEPS})
 
     # process world
