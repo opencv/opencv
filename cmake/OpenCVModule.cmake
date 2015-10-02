@@ -473,7 +473,6 @@ function(__ocv_resolve_dependencies)
   # reorder dependencies
   foreach(m ${OPENCV_MODULES_BUILD})
     __ocv_sort_modules_by_deps(OPENCV_MODULE_${m}_DEPS)
-    ocv_list_sort(OPENCV_MODULE_${m}_DEPS_EXT)
 
     set(LINK_DEPS ${OPENCV_MODULE_${m}_DEPS})
 
