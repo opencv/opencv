@@ -2684,6 +2684,9 @@ struct Mul_SIMD<schar, float>
                 __m256i v_s20 = _mm256_cvtepi8_epi16(v_src20);
                 __m256i v_s21 = _mm256_cvtepi8_epi16(v_src21);
 
+                //v_s10 = _mm256_mullo_epi16(v_s10, v_s20);
+                //v_s11 = _mm256_mullo_epi16(v_s11, v_s21);
+
                 __m256i v_s100 = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(v_s10, 0));
                 __m256i v_s101 = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(v_s10, 1));
                 __m256i v_s110 = _mm256_cvtepi16_epi32(_mm256_extracti128_si256(v_s11, 0));
@@ -6482,6 +6485,86 @@ struct Cmp_SIMD<schar>
 };
 
 template <>
+struct Cmp_SIMD<short>
+{
+    explicit Cmp_SIMD(int code_) :
+        code(code_)
+    {
+        CV_Assert(code == CMP_GT || code == CMP_LE ||
+            code == CMP_EQ || code == CMP_NE);
+
+        haveSSE = checkHardwareSupport(CV_CPU_SSE2);
+
+        v_mask = _mm_set1_epi8(-1);
+    }
+
+    int operator () (const short * src1, const short * src2, uchar * dst, int width) const
+    {
+        int x = 0;
+
+        if (!haveSSE)
+            return x;
+
+        if (code == CMP_GT || code == CMP_LE)
+        {
+            __m128i m128 = code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16(-1);
+            for (; x <= size.width - 16; x += 16)
+            {
+                __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                r00 = _mm_xor_si128(_mm_cmpgt_epi16(r00, r10), m128);
+                __m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
+                __m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
+                r01 = _mm_xor_si128(_mm_cmpgt_epi16(r01, r11), m128);
+                r11 = _mm_packs_epi16(r00, r01);
+                _mm_storeu_si128((__m128i*)(dst + x), r11);
+            }
+            if (x <= size.width - 8)
+            {
+                __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                r00 = _mm_xor_si128(_mm_cmpgt_epi16(r00, r10), m128);
+                r10 = _mm_packs_epi16(r00, r00);
+                _mm_storel_epi64((__m128i*)(dst + x), r10);
+
+                x += 8;
+            }
+        }
+        else if (code == CMP_EQ || code == CMP_NE)
+        {
+            __m128i m128 = code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16(-1);
+            for (; x <= size.width - 16; x += 16)
+            {
+                __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                r00 = _mm_xor_si128(_mm_cmpeq_epi16(r00, r10), m128);
+                __m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
+                __m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
+                r01 = _mm_xor_si128(_mm_cmpeq_epi16(r01, r11), m128);
+                r11 = _mm_packs_epi16(r00, r01);
+                _mm_storeu_si128((__m128i*)(dst + x), r11);
+            }
+            if (x <= size.width - 8)
+            {
+                __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                r00 = _mm_xor_si128(_mm_cmpeq_epi16(r00, r10), m128);
+                r10 = _mm_packs_epi16(r00, r00);
+                _mm_storel_epi64((__m128i*)(dst + x), r10);
+
+                x += 8;
+            }
+        }
+
+        return x;
+    }
+
+    int code;
+    __m128i v_mask;
+    bool haveSSE;
+};
+
+template <>
 struct Cmp_SIMD<int>
 {
     explicit Cmp_SIMD(int code_) :
@@ -6595,7 +6678,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
         int m = code == CMP_EQ ? 0 : 255;
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
-            int x = 0;
+            int x = vop(src1, src2, dst, size.width);
             #if CV_ENABLE_UNROLLED
             for( ; x <= size.width - 4; x += 4 )
             {
