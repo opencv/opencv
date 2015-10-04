@@ -6508,7 +6508,7 @@ struct Cmp_SIMD<short>
         if (code == CMP_GT || code == CMP_LE)
         {
             __m128i m128 = code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16(-1);
-            for (; x <= size.width - 16; x += 16)
+            for (; x <= width - 16; x += 16)
             {
                 __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
                 __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
@@ -6519,7 +6519,7 @@ struct Cmp_SIMD<short>
                 r11 = _mm_packs_epi16(r00, r01);
                 _mm_storeu_si128((__m128i*)(dst + x), r11);
             }
-            if (x <= size.width - 8)
+            if (x <= width - 8)
             {
                 __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
                 __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
@@ -6533,7 +6533,7 @@ struct Cmp_SIMD<short>
         else if (code == CMP_EQ || code == CMP_NE)
         {
             __m128i m128 = code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16(-1);
-            for (; x <= size.width - 16; x += 16)
+            for (; x <= width - 16; x += 16)
             {
                 __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
                 __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
@@ -6544,7 +6544,7 @@ struct Cmp_SIMD<short>
                 r11 = _mm_packs_epi16(r00, r01);
                 _mm_storeu_si128((__m128i*)(dst + x), r11);
             }
-            if (x <= size.width - 8)
+            if (x <= width - 8)
             {
                 __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
                 __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
