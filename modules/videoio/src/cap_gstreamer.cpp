@@ -146,7 +146,6 @@ protected:
     GstElement*   sink;
 #if GST_VERSION_MAJOR > 0
     GstSample*    sample;
-    GstMapInfo*   info;
 #endif
     GstBuffer*    buffer;
     GstCaps*      caps;
@@ -169,7 +168,6 @@ void CvCapture_GStreamer::init()
     sink = NULL;
 #if GST_VERSION_MAJOR > 0
     sample = NULL;
-    info = new GstMapInfo;
 #endif
     buffer = NULL;
     caps = NULL;
@@ -318,17 +316,16 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
 #if GST_VERSION_MAJOR == 0
     frame->imageData = (char *)GST_BUFFER_DATA(buffer);
 #else
-    // the data ptr in GstMapInfo is only valid throughout the mapifo objects life.
-    // TODO: check if reusing the mapinfo object is ok.
-
-    gboolean success = gst_buffer_map(buffer,info, (GstMapFlags)GST_MAP_READ);
+    // info.data ptr is valid until next grabFrame where the associated sample is unref'd
+    GstMapInfo info = GstMapInfo();
+    gboolean success = gst_buffer_map(buffer,&info, (GstMapFlags)GST_MAP_READ);
     if (!success){
         //something weird went wrong here. abort. abort.
         //fprintf(stderr,"GStreamer: unable to map buffer");
         return 0;
     }
-    frame->imageData = (char*)info->data;
-    gst_buffer_unmap(buffer,info);
+    frame->imageData = (char*)info.data;
+    gst_buffer_unmap(buffer,&info);
 #endif
 
     return frame;
