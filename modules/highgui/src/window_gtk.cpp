@@ -246,7 +246,7 @@ cvImageWidget_get_preferred_width (GtkWidget *widget, gint *minimal_width, gint 
   CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
   if(image_widget->original_image != NULL) {
-    *minimal_width = image_widget->flags & CV_WINDOW_AUTOSIZE ?
+    *minimal_width = (image_widget->flags & CV_WINDOW_AUTOSIZE) != CV_WINDOW_AUTOSIZE ?
       gdk_window_get_width(gtk_widget_get_window(widget)) : image_widget->original_image->cols;
   }
   else {
@@ -270,7 +270,7 @@ cvImageWidget_get_preferred_height (GtkWidget *widget, gint *minimal_height, gin
   CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
   if(image_widget->original_image != NULL) {
-    *minimal_height = image_widget->flags & CV_WINDOW_AUTOSIZE ?
+    *minimal_height = (image_widget->flags & CV_WINDOW_AUTOSIZE) != CV_WINDOW_AUTOSIZE ?
       gdk_window_get_height(gtk_widget_get_window(widget)) : image_widget->original_image->rows;
   }
   else {
