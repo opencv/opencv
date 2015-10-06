@@ -27,7 +27,7 @@ template<typename T> struct step_functor : public thrust::unary_function<int, in
         int operator()(int x) const
     {
         int row = x / columns;
-        int idx = (row * step) + (x % columns)*channels; 
+        int idx = (row * step) + (x % columns)*channels;
         return idx;
     }
 };
