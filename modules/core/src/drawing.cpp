@@ -2095,7 +2095,7 @@ void putText( Mat& img, const string& text, Point org,
     pts.reserve(1 << 10);
     const char **faces = cv::g_HersheyGlyphs;
 
-    for( int i = 0; text[i] != '\0'; i++ )
+    for( int i = 0; i < (int)text.size(); i++ )
     {
         int c = (uchar)text[i];
         Point p;
@@ -2142,7 +2142,7 @@ Size getTextSize( const string& text, int fontFace, double fontScale, int thickn
     int cap_line = (ascii[0] >> 4) & 15;
     size.height = cvRound((cap_line + base_line)*fontScale + (thickness+1)/2);
 
-    for( int i = 0; text[i] != '\0'; i++ )
+    for( int i = 0; i < (int)text.size(); i++ )
     {
         int c = (uchar)text[i];
         Point p;
