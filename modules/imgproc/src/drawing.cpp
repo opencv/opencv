@@ -2090,6 +2090,10 @@ void putText( InputOutputArray _img, const String& text, Point org,
               int thickness, int line_type, bool bottomLeftOrigin )
 
 {
+    if ( text.empty() )
+    {
+        return;
+    }
     Mat img = _img.getMat();
     const int* ascii = getFontData(fontFace);
 
