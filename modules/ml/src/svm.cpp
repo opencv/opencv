@@ -2062,6 +2062,21 @@ public:
         }
         fs << "]";
 
+        if ( !uncompressed_sv.empty() )
+        {
+            // write the joint collection of uncompressed support vectors
+            int uncompressed_sv_total = uncompressed_sv.rows;
+            fs << "uncompressed_sv_total" << uncompressed_sv_total;
+            fs << "uncompressed_support_vectors" << "[";
+            for( i = 0; i < uncompressed_sv_total; i++ )
+            {
+                fs << "[:";
+                fs.writeRaw("f", uncompressed_sv.ptr(i), uncompressed_sv.cols*uncompressed_sv.elemSize());
+                fs << "]";
+            }
+            fs << "]";
+        }
+
         // write decision functions
         int df_count = (int)decision_func.size();
 
@@ -2174,12 +2189,29 @@ public:
         FileNode sv_node = fn["support_vectors"];
 
         CV_Assert((int)sv_node.size() == sv_total);
-        sv.create(sv_total, var_count, CV_32F);
 
+        sv.create(sv_total, var_count, CV_32F);
         FileNodeIterator sv_it = sv_node.begin();
         for( i = 0; i < sv_total; i++, ++sv_it )
         {
             (*sv_it).readRaw("f", sv.ptr(i), var_count*sv.elemSize());
+        }
+
+        int uncompressed_sv_total = (int)fn["uncompressed_sv_total"];
+
+        if( uncompressed_sv_total > 0 )
+        {
+            // read uncompressed support vectors
+            FileNode uncompressed_sv_node = fn["uncompressed_support_vectors"];
+
+            CV_Assert((int)uncompressed_sv_node.size() == uncompressed_sv_total);
+            uncompressed_sv.create(uncompressed_sv_total, var_count, CV_32F);
+
+            FileNodeIterator uncompressed_sv_it = uncompressed_sv_node.begin();
+            for( i = 0; i < uncompressed_sv_total; i++, ++uncompressed_sv_it )
+            {
+                (*uncompressed_sv_it).readRaw("f", uncompressed_sv.ptr(i), var_count*uncompressed_sv.elemSize());
+            }
         }
 
         // read decision functions
