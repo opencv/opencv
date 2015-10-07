@@ -1,17 +1,17 @@
 package org.opencv.android;
 
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
-import org.opencv.core.Mat;
+import org.opencv.R;
 
-import android.app.Activity;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
-import android.view.MotionEvent;
+import android.util.Log;
 import android.view.SurfaceHolder;
-import android.widget.TextView;
 
 public class CameraGLSurfaceView extends GLSurfaceView {
+
+    private static final String LOGTAG = "CameraGLSurfaceView";
 
     public interface CameraTextureListener {
         /**
@@ -29,23 +29,32 @@ public class CameraGLSurfaceView extends GLSurfaceView {
         public void onCameraViewStopped();
 
         /**
-         * This method is invoked when delivery of the frame needs to be done.
-         * The returned values - is a modified frame which needs to be displayed on the screen.
-         * TODO: pass the parameters specifying the format of the frame (BPP, YUV or RGB and etc)
+         * This method is invoked when a new preview frame from Camera is ready.
+         * @param texIn -  the OpenGL texture ID that contains frame in RGBA format
+         * @param texOut - the OpenGL texture ID that can be used to store modified frame image t display
+         * @param width -  the width of the frame
+         * @param height - the height of the frame
+         * @return `true` if `texOut` should be displayed, `false` - to show `texIn`
          */
-        public boolean onCameraFrame(int texIn, int texOut, int width, int height);
+        public boolean onCameraTexture(int texIn, int texOut, int width, int height);
     };
 
     private CameraTextureListener mTexListener;
-    private CameraRenderer mRenderer;
+    private CameraGLRendererBase mRenderer;
 
     public CameraGLSurfaceView(Context context, AttributeSet attrs) {
         super(context, attrs);
 
-        /*if(android.os.Build.VERSION.SDK_INT >= 21)
+        TypedArray styledAttrs = getContext().obtainStyledAttributes(attrs, R.styleable.CameraBridgeViewBase);
+        int cameraIndex = styledAttrs.getInt(R.styleable.CameraBridgeViewBase_camera_id, -1);
+        styledAttrs.recycle();
+
+        if(android.os.Build.VERSION.SDK_INT >= 21)
             mRenderer = new Camera2Renderer(this);
-        else*/
+        else
             mRenderer = new CameraRenderer(this);
+
+        setCameraIndex(cameraIndex);
 
         setEGLContextClientVersion(2);
         setRenderer(mRenderer);
@@ -62,6 +71,14 @@ public class CameraGLSurfaceView extends GLSurfaceView {
         return mTexListener;
     }
 
+    public void setCameraIndex(int cameraIndex) {
+        mRenderer.setCameraIndex(cameraIndex);
+    }
+
+    public void setMaxCameraPreviewSize(int maxWidth, int maxHeight) {
+        mRenderer.setMaxCameraPreviewSize(maxWidth, maxHeight);
+    }
+
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         super.surfaceCreated(holder);
@@ -69,6 +86,7 @@ public class CameraGLSurfaceView extends GLSurfaceView {
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
+        mRenderer.mHaveSurface = false;
         super.surfaceDestroyed(holder);
     }
 
@@ -79,20 +97,23 @@ public class CameraGLSurfaceView extends GLSurfaceView {
 
     @Override
     public void onResume() {
+        Log.i(LOGTAG, "onResume");
         super.onResume();
         mRenderer.onResume();
     }
 
     @Override
     public void onPause() {
+        Log.i(LOGTAG, "onPause");
         mRenderer.onPause();
         super.onPause();
     }
 
-    @Override
-    public boolean onTouchEvent(MotionEvent e) {
-        if(e.getAction() == MotionEvent.ACTION_DOWN)
-            ((Activity)getContext()).openOptionsMenu();
-        return true;
+    public void enableView() {
+        mRenderer.enableView();
+    }
+
+    public void disableView() {
+        mRenderer.disableView();
     }
 }

@@ -181,6 +181,17 @@ else()
   list(REMOVE_ITEM handwrittren_lib_project_files_rel "${ANDROID_MANIFEST_FILE}")
 endif()
 
+#  Calc default SDK Target
+android_get_compatible_target(android_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET} 11)
+string(REGEX REPLACE "android-" "" android_sdk_target_num ${android_sdk_target})
+
+if( (ANDROID_SDK_TARGET AND ANDROID_SDK_TARGET LESS 21) OR (android_sdk_target_num LESS 21) )
+  message(STATUS "[OpenCV for Android SDK]: A new OpenGL Camera Bridge (CameraGLSurfaceView, CameraGLRendererBase, CameraRenderer, Camera2Renderer) is disabled, because ANDROID_SDK_TARGET (${android_sdk_target_num}) < 21")
+  ocv_list_filterout(handwritten_java_sources "android\\\\+CameraGL")
+  ocv_list_filterout(handwritten_java_sources "android\\\\+Camera.?Renderer")
+endif()
+
+
 # IMPORTANT: add dependencies to cmake (we should rerun cmake if any of these files is modified)
 add_cmake_dependencies(${scripts_gen_java} ${scripts_hdr_parser} ${opencv_public_headers})
 
