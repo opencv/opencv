@@ -237,23 +237,17 @@ void drawFrameProcCPU(int w, int h, int texOut)
     int64_t t;
 
     // let's modify pixels in FBO texture in C++ code (on CPU)
-    const int BUFF_SIZE = 1<<24;//2k*2k*4;
-    static char tmpBuff[BUFF_SIZE];
-    if(w*h > BUFF_SIZE)
-    {
-        LOGE("Internal temp buffer is too small, can't make CPU frame processing");
-        return;
-    }
+    static cv::Mat m;
+    m.create(h, w, CV_8UC4);
 
     // read
     t = getTimeMs();
     // expecting FBO to be bound
-    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, tmpBuff);
+    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, m.data);
     LOGD("glReadPixels() costs %d ms", getTimeInterval(t));
 
    // modify
     t = getTimeMs();
-    cv::Mat m(h, w, CV_8UC4, tmpBuff);
     cv::Laplacian(m, m, CV_8U);
     m *= 10;
     LOGD("Laplacian() costs %d ms", getTimeInterval(t));
@@ -262,7 +256,7 @@ void drawFrameProcCPU(int w, int h, int texOut)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texOut);
     t = getTimeMs();
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, tmpBuff);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, m.data);
     LOGD("glTexSubImage2D() costs %d ms", getTimeInterval(t));
 }
 
