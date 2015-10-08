@@ -1,32 +1,20 @@
 #include <jni.h>
 
-int initGL();
-void closeGL();
-void changeSize(int width, int height);
-void drawFrame();
-void setProcessingMode(int mode);
+int initCL();
+void closeCL();
+void processFrame(int tex1, int tex2, int w, int h, int mode);
 
-JNIEXPORT jint JNICALL Java_org_opencv_samples_tutorial4_NativeGLRenderer_initGL(JNIEnv * env, jclass cls)
+JNIEXPORT jint JNICALL Java_org_opencv_samples_tutorial4_NativePart_initCL(JNIEnv * env, jclass cls)
 {
-    return initGL();
+    return initCL();
 }
 
-JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial4_NativeGLRenderer_closeGL(JNIEnv * env, jclass cls)
+JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial4_NativePart_closeCL(JNIEnv * env, jclass cls)
 {
-    closeGL();
+    closeCL();
 }
 
-JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial4_NativeGLRenderer_changeSize(JNIEnv * env, jclass cls, jint width, jint height)
+JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial4_NativePart_processFrame(JNIEnv * env, jclass cls, jint tex1, jint tex2, jint w, jint h, jint mode)
 {
-    changeSize(width, height);
-}
-
-JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial4_NativeGLRenderer_drawFrame(JNIEnv * env, jclass cls)
-{
-    drawFrame();
-}
-
-JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial4_NativeGLRenderer_setProcessingMode(JNIEnv * env, jclass cls, jint mode)
-{
-    setProcessingMode(mode);
+    processFrame(tex1, tex2, w, h, mode);
 }

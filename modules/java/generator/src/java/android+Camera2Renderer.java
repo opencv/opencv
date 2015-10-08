@@ -1,10 +1,9 @@
-package org.opencv.samples.tutorial4;
+package org.opencv.android;
 
 import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-
-import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -20,38 +19,45 @@ import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 
-@SuppressLint("NewApi") public class Camera2Renderer extends MyGLRendererBase {
+@TargetApi(21)
+public class Camera2Renderer extends CameraGLRendererBase {
 
     protected final String LOGTAG = "Camera2Renderer";
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mCaptureSession;
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private String mCameraID;
-    private Size mPreviewSize = new Size(1280, 720);
+    private Size mPreviewSize = new Size(-1, -1);
 
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
     private Semaphore mCameraOpenCloseLock = new Semaphore(1);
 
-    Camera2Renderer(MyGLSurfaceView view) {
+    Camera2Renderer(CameraGLSurfaceView view) {
         super(view);
     }
 
-    public void onResume() {
-        stopBackgroundThread();
-        super.onResume();
+    @Override
+    protected void doStart() {
+        Log.d(LOGTAG, "doStart");
         startBackgroundThread();
+        super.doStart();
     }
 
-    public void onPause() {
-        super.onPause();
+
+    @Override
+    protected void doStop() {
+        Log.d(LOGTAG, "doStop");
+        super.doStop();
         stopBackgroundThread();
     }
 
-     boolean cacPreviewSize(final int width, final int height) {
+    boolean cacPreviewSize(final int width, final int height) {
         Log.i(LOGTAG, "cacPreviewSize: "+width+"x"+height);
-        if(mCameraID == null)
+        if(mCameraID == null) {
+            Log.e(LOGTAG, "Camera isn't initialized!");
             return false;
+        }
         CameraManager manager = (CameraManager) mView.getContext()
                 .getSystemService(Context.CAMERA_SERVICE);
         try {
@@ -72,7 +78,8 @@ import android.view.Surface;
                 }
             }
             Log.i(LOGTAG, "best size: "+bestWidth+"x"+bestHeight);
-            if( mPreviewSize.getWidth() == bestWidth &&
+            if( bestWidth == 0 || bestHeight == 0 ||
+                mPreviewSize.getWidth() == bestWidth &&
                 mPreviewSize.getHeight() == bestHeight )
                 return false;
             else {
@@ -89,26 +96,38 @@ import android.view.Surface;
         return false;
     }
 
-    protected void openCamera() {
+    @Override
+    protected void openCamera(int id) {
         Log.i(LOGTAG, "openCamera");
-        //closeCamera();
-        CameraManager manager = (CameraManager) mView.getContext()
-                .getSystemService(Context.CAMERA_SERVICE);
+        CameraManager manager = (CameraManager) mView.getContext().getSystemService(Context.CAMERA_SERVICE);
         try {
-            for (String cameraID : manager.getCameraIdList()) {
-                CameraCharacteristics characteristics = manager
-                    .getCameraCharacteristics(cameraID);
-                if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT)
-                    continue;
-
-                mCameraID = cameraID;
-                break;
+            String camList[] = manager.getCameraIdList();
+            if(camList.length == 0) {
+                Log.e(LOGTAG, "Error: camera isn't detected.");
+                return;
             }
-            if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-                throw new RuntimeException(
-                        "Time out waiting to lock camera opening.");
+            if(id == CameraBridgeViewBase.CAMERA_ID_ANY) {
+                mCameraID = camList[0];
+            } else {
+                for (String cameraID : camList) {
+                    CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraID);
+                    if( id == CameraBridgeViewBase.CAMERA_ID_BACK &&
+                        characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK ||
+                        id == CameraBridgeViewBase.CAMERA_ID_FRONT &&
+                        characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
+                        mCameraID = cameraID;
+                        break;
+                    }
+                }
             }
-            manager.openCamera(mCameraID, mStateCallback, mBackgroundHandler);
+            if(mCameraID != null) {
+                if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
+                    throw new RuntimeException(
+                            "Time out waiting to lock camera opening.");
+                }
+                Log.i(LOGTAG, "Opening camera: " + mCameraID);
+                manager.openCamera(mCameraID, mStateCallback, mBackgroundHandler);
+            }
         } catch (CameraAccessException e) {
             Log.e(LOGTAG, "OpenCamera - Camera Access Exception");
         } catch (IllegalArgumentException e) {
@@ -120,6 +139,7 @@ import android.view.Surface;
         }
     }
 
+    @Override
     protected void closeCamera() {
         Log.i(LOGTAG, "closeCamera");
         try {
@@ -133,8 +153,7 @@ import android.view.Surface;
                 mCameraDevice = null;
             }
         } catch (InterruptedException e) {
-            throw new RuntimeException(
-                    "Interrupted while trying to lock camera closing.", e);
+            throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
         } finally {
             mCameraOpenCloseLock.release();
         }
@@ -166,7 +185,10 @@ import android.view.Surface;
     };
 
     private void createCameraPreviewSession() {
-        Log.i(LOGTAG, "createCameraPreviewSession");
+        int w=mPreviewSize.getWidth(), h=mPreviewSize.getHeight();
+        Log.i(LOGTAG, "createCameraPreviewSession("+w+"x"+h+")");
+        if(w<0 || h<0)
+            return;
         try {
             mCameraOpenCloseLock.acquire();
             if (null == mCameraDevice) {
@@ -179,15 +201,14 @@ import android.view.Surface;
                 Log.e(LOGTAG, "createCameraPreviewSession: mCaptureSession is already started");
                 return;
             }
-            if(null == mSTex) {
+            if(null == mSTexture) {
                 mCameraOpenCloseLock.release();
                 Log.e(LOGTAG, "createCameraPreviewSession: preview SurfaceTexture is null");
                 return;
             }
-            Log.d(LOGTAG, "starting preview "+mPreviewSize.getWidth()+"x"+mPreviewSize.getHeight());
-            mSTex.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            mSTexture.setDefaultBufferSize(w, h);
 
-            Surface surface = new Surface(mSTex);
+            Surface surface = new Surface(mSTexture);
 
             mPreviewRequestBuilder = mCameraDevice
                     .createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
@@ -196,20 +217,13 @@ import android.view.Surface;
             mCameraDevice.createCaptureSession(Arrays.asList(surface),
                     new CameraCaptureSession.StateCallback() {
                         @Override
-                        public void onConfigured(
-                                CameraCaptureSession cameraCaptureSession) {
+                        public void onConfigured( CameraCaptureSession cameraCaptureSession) {
                             mCaptureSession = cameraCaptureSession;
                             try {
-                                mPreviewRequestBuilder
-                                        .set(CaptureRequest.CONTROL_AF_MODE,
-                                                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-                                mPreviewRequestBuilder
-                                        .set(CaptureRequest.CONTROL_AE_MODE,
-                                                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
 
-                                mCaptureSession.setRepeatingRequest(
-                                        mPreviewRequestBuilder.build(), null,
-                                        mBackgroundHandler);
+                                mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
                                 Log.i(LOGTAG, "CameraPreviewSession has been started");
                             } catch (CameraAccessException e) {
                                 Log.e(LOGTAG, "createCaptureSession failed");
@@ -237,6 +251,7 @@ import android.view.Surface;
 
     private void startBackgroundThread() {
         Log.i(LOGTAG, "startBackgroundThread");
+        stopBackgroundThread();
         mBackgroundThread = new HandlerThread("CameraBackground");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
@@ -259,9 +274,16 @@ import android.view.Surface;
     @Override
     protected void setCameraPreviewSize(int width, int height) {
         Log.i(LOGTAG, "setCameraPreviewSize("+width+"x"+height+")");
+        if(mMaxCameraWidth  > 0 && mMaxCameraWidth  < width)  width  = mMaxCameraWidth;
+        if(mMaxCameraHeight > 0 && mMaxCameraHeight < height) height = mMaxCameraHeight;
         try {
             mCameraOpenCloseLock.acquire();
-            if( !cacPreviewSize(width, height) ) {
+
+            boolean needReconfig = cacPreviewSize(width, height);
+            mCameraWidth  = mPreviewSize.getWidth();
+            mCameraHeight = mPreviewSize.getHeight();
+
+            if( !needReconfig ) {
                 mCameraOpenCloseLock.release();
                 return;
             }
@@ -274,8 +296,7 @@ import android.view.Surface;
             createCameraPreviewSession();
         } catch (InterruptedException e) {
             mCameraOpenCloseLock.release();
-            throw new RuntimeException(
-                    "Interrupted while setCameraPreviewSize.", e);
+            throw new RuntimeException("Interrupted while setCameraPreviewSize.", e);
         }
     }
 }
