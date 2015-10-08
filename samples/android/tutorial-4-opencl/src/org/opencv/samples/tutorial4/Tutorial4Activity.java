@@ -29,8 +29,8 @@ public class Tutorial4Activity extends Activity {
         //setContentView(mView);
         setContentView(R.layout.activity);
         mView = (MyGLSurfaceView) findViewById(R.id.my_gl_surface_view);
+        mView.setCameraTextureListener(mView);
         TextView tv = (TextView)findViewById(R.id.fps_text_view);
-        mView.setFpsTextView(tv);
         mProcMode = (TextView)findViewById(R.id.proc_mode_text_view);
         runOnUiThread(new Runnable() {
             public void run() {
@@ -38,7 +38,8 @@ public class Tutorial4Activity extends Activity {
             }
         });
 
-        NativeGLRenderer.setProcessingMode(NativeGLRenderer.PROCESSING_MODE_NO_PROCESSING);    }
+        mView.setProcessingMode(NativePart.PROCESSING_MODE_NO_PROCESSING);
+    }
 
     @Override
     protected void onPause() {
@@ -68,7 +69,7 @@ public class Tutorial4Activity extends Activity {
                     mProcMode.setText("Processing mode: No Processing");
                 }
             });
-            NativeGLRenderer.setProcessingMode(NativeGLRenderer.PROCESSING_MODE_NO_PROCESSING);
+            mView.setProcessingMode(NativePart.PROCESSING_MODE_NO_PROCESSING);
             return true;
         case R.id.cpu:
             runOnUiThread(new Runnable() {
@@ -76,7 +77,7 @@ public class Tutorial4Activity extends Activity {
                     mProcMode.setText("Processing mode: CPU");
                 }
             });
-            NativeGLRenderer.setProcessingMode(NativeGLRenderer.PROCESSING_MODE_CPU);
+            mView.setProcessingMode(NativePart.PROCESSING_MODE_CPU);
             return true;
         case R.id.ocl_direct:
             runOnUiThread(new Runnable() {
@@ -84,7 +85,7 @@ public class Tutorial4Activity extends Activity {
                     mProcMode.setText("Processing mode: OpenCL direct");
                 }
             });
-            NativeGLRenderer.setProcessingMode(NativeGLRenderer.PROCESSING_MODE_OCL_DIRECT);
+            mView.setProcessingMode(NativePart.PROCESSING_MODE_OCL_DIRECT);
             return true;
         case R.id.ocl_ocv:
             runOnUiThread(new Runnable() {
@@ -92,7 +93,7 @@ public class Tutorial4Activity extends Activity {
                     mProcMode.setText("Processing mode: OpenCL via OpenCV (TAPI)");
                 }
             });
-            NativeGLRenderer.setProcessingMode(NativeGLRenderer.PROCESSING_MODE_OCL_OCV);
+            mView.setProcessingMode(NativePart.PROCESSING_MODE_OCL_OCV);
             return true;
         default:
             return false;
