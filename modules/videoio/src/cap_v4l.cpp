@@ -244,6 +244,7 @@ make & enjoy!
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480
+#define DEFAULT_V4L_FPS 30
 
 #define CHANNEL_NUMBER 1
 #define MAX_CAMERAS 8
@@ -315,6 +316,9 @@ typedef struct CvCaptureCAM_V4L
 
 #ifdef HAVE_CAMV4L2
    enum PALETTE_TYPE palette;
+   int index;
+   int width, height;
+   __u32 fps;
    /* V4L2 variables */
    buffer buffers[MAX_V4L_BUFFERS + 1];
    struct v4l2_capability cap;
@@ -372,8 +376,6 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int );
 
 static double icvGetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id );
 static int    icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id, double value );
-
-static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h);
 
 /***********************   Implementations  ***************************************/
 
@@ -440,8 +442,8 @@ static int try_palette_v4l2(CvCaptureCAM_V4L* capture, unsigned long colorspace)
   capture->form.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   capture->form.fmt.pix.pixelformat = colorspace;
   capture->form.fmt.pix.field       = V4L2_FIELD_ANY;
-  capture->form.fmt.pix.width = DEFAULT_V4L_WIDTH;
-  capture->form.fmt.pix.height = DEFAULT_V4L_HEIGHT;
+  capture->form.fmt.pix.width       = capture->width;
+  capture->form.fmt.pix.height      = capture->height;
 
   if (-1 == ioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form))
       return -1;
@@ -725,8 +727,21 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture)
   v4l2_control_range(capture, V4L2_CID_FOCUS_ABSOLUTE);
 }
 
-static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
+static int v4l2_set_fps(CvCaptureCAM_V4L* capture) {
+    v4l2_streamparm setfps;
+    CLEAR(setfps);
+    setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    setfps.parm.capture.timeperframe.numerator = 1;
+    setfps.parm.capture.timeperframe.denominator = capture->fps;
+    return ioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps);
+}
+
+static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
 {
+   char deviceName[MAX_DEVICE_DRIVER_NAME];
+   /* Print the CameraNumber at the end of the string with a width of one character */
+   sprintf(deviceName, "/dev/video%1d", capture->index);
+
    if (try_init_v4l2(capture, deviceName) != 1) {
        /* init of the v4l2 device is not OK */
        return -1;
@@ -777,14 +792,11 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
        return -1;
    }
 
-   if (V4L2_SUPPORT == 0)
-   {
-   }
-
    if (autosetup_capture_mode_v4l2(capture) == -1)
        return -1;
 
-   icvSetVideoSize(capture, DEFAULT_V4L_WIDTH, DEFAULT_V4L_HEIGHT);
+   /* try to set framerate */
+   v4l2_set_fps(capture);
 
    unsigned int min;
 
@@ -887,8 +899,21 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
    /* Allocate space for RGBA data */
    capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
 
+   // reinitialize buffers
+   capture->FirstCapture = 1;
+
    return 1;
 }; /* End _capture_V4L2 */
+
+/**
+ * some properties can not be changed while the device is in streaming mode.
+ * this method closes and re-opens the device to re-start the stream.
+ * this also causes buffers to be reallocated if the frame size was changed.
+ */
+static int v4l2_reset( CvCaptureCAM_V4L* capture) {
+    icvCloseCAM_V4L(capture);
+    return _capture_V4L2(capture);
+}
 
 #endif /* HAVE_CAMV4L2 */
 
@@ -1019,8 +1044,6 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
    static int autoindex;
    autoindex = 0;
 
-   char deviceName[MAX_DEVICE_DRIVER_NAME];
-
    if (!numCameras)
       icvInitCapture_V4L(); /* Havent called icvInitCapture yet - do it now! */
    if (!numCameras)
@@ -1049,8 +1072,7 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
      index=autoindex;
      autoindex++;// i can recall icvOpenCAM_V4l with index=-1 for next camera
    }
-   /* Print the CameraNumber at the end of the string with a width of one character */
-   sprintf(deviceName, "/dev/video%1d", index);
+   capture->index = index;
 
    /* w/o memset some parts  arent initialized - AKA: Fill it with zeros so it is clean */
    memset(capture,0,sizeof(CvCaptureCAM_V4L));
@@ -1059,19 +1081,25 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
    capture->FirstCapture = 1;
 
 #ifdef HAVE_CAMV4L2
-   if (_capture_V4L2 (capture, deviceName) == -1) {
+   capture->width = DEFAULT_V4L_WIDTH;
+   capture->height = DEFAULT_V4L_HEIGHT;
+   capture->fps = DEFAULT_V4L_FPS;
+
+   if (_capture_V4L2 (capture) == -1) {
        icvCloseCAM_V4L(capture);
        V4L2_SUPPORT = 0;
 #endif  /* HAVE_CAMV4L2 */
 #ifdef HAVE_CAMV4L
+       char deviceName[MAX_DEVICE_DRIVER_NAME];
+       /* Print the CameraNumber at the end of the string with a width of one character */
+       sprintf(deviceName, "/dev/video%1d", capture->index);
+
        if (_capture_V4L (capture, deviceName) == -1) {
            icvCloseCAM_V4L(capture);
            return NULL;
        }
 #endif  /* HAVE_CAMV4L */
 #ifdef HAVE_CAMV4L2
-   } else {
-       V4L2_SUPPORT = 1;
    }
 #endif  /* HAVE_CAMV4L2 */
 
@@ -2247,6 +2275,18 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
           return capture->form.fmt.pix.height;
       }
 
+      if(property_id == CV_CAP_PROP_FPS) {
+          struct v4l2_streamparm sp;
+          CLEAR(sp);
+          sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+          if (ioctl(capture->deviceHandle, VIDIOC_G_PARM, &sp) < 0){
+              fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to get camera FPS\n");
+              return -1;
+          }
+
+          return sp.parm.capture.timeperframe.denominator / (double)sp.parm.capture.timeperframe.numerator;
+      }
+
       /* initialize the control structure */
 
       if(property_id == CV_CAP_PROP_POS_MSEC) {
@@ -2376,113 +2416,6 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
 
 };
 
-static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
-
-#ifdef HAVE_CAMV4L2
-
-  if (V4L2_SUPPORT == 1)
-  {
-
-    CLEAR (capture->cropcap);
-    capture->cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-    if (ioctl (capture->deviceHandle, VIDIOC_CROPCAP, &capture->cropcap) < 0) {
-        fprintf(stderr, "VIDEOIO ERROR: V4L/V4L2: VIDIOC_CROPCAP\n");
-    } else {
-
-        CLEAR (capture->crop);
-        capture->crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        capture->crop.c= capture->cropcap.defrect;
-
-        /* set the crop area, but don't exit if the device don't support croping */
-        if (ioctl (capture->deviceHandle, VIDIOC_S_CROP, &capture->crop) < 0) {
-            fprintf(stderr, "VIDEOIO ERROR: V4L/V4L2: VIDIOC_S_CROP\n");
-        }
-    }
-
-    CLEAR (capture->form);
-    capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-    /* read the current setting, mainly to retreive the pixelformat information */
-    ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form);
-
-    /* set the values we want to change */
-    capture->form.fmt.pix.width = w;
-    capture->form.fmt.pix.height = h;
-    capture->form.fmt.win.chromakey = 0;
-    capture->form.fmt.win.field = V4L2_FIELD_ANY;
-    capture->form.fmt.win.clips = 0;
-    capture->form.fmt.win.clipcount = 0;
-    capture->form.fmt.pix.field = V4L2_FIELD_ANY;
-
-    /* ask the device to change the size
-     * don't test if the set of the size is ok, because some device
-     * don't allow changing the size, and we will get the real size
-     * later */
-    ioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form);
-
-    /* try to set framerate to 30 fps */
-    struct v4l2_streamparm setfps;
-    memset (&setfps, 0, sizeof(struct v4l2_streamparm));
-    setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    setfps.parm.capture.timeperframe.numerator = 1;
-    setfps.parm.capture.timeperframe.denominator = 30;
-    ioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps);
-
-    /* we need to re-initialize some things, like buffers, because the size has
-     * changed */
-    capture->FirstCapture = 1;
-
-    /* Get window info again, to get the real value */
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form))
-    {
-      fprintf(stderr, "VIDEOIO ERROR: V4L/V4L2: Could not obtain specifics of capture window.\n\n");
-
-      icvCloseCAM_V4L(capture);
-
-      return 0;
-    }
-
-    return 0;
-
-  }
-#endif /* HAVE_CAMV4L2 */
-#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
-    else
-#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
-#ifdef HAVE_CAMV4L
-  {
-
-    if (capture==0) return 0;
-     if (w>capture->capability.maxwidth) {
-       w=capture->capability.maxwidth;
-     }
-     if (h>capture->capability.maxheight) {
-       h=capture->capability.maxheight;
-     }
-
-     capture->captureWindow.width=w;
-     capture->captureWindow.height=h;
-
-     if (ioctl(capture->deviceHandle, VIDIOCSWIN, &capture->captureWindow) < 0) {
-       icvCloseCAM_V4L(capture);
-       return 0;
-     }
-
-     if (ioctl(capture->deviceHandle, VIDIOCGWIN, &capture->captureWindow) < 0) {
-       icvCloseCAM_V4L(capture);
-       return 0;
-     }
-
-     capture->FirstCapture = 1;
-
-  }
-#endif /* HAVE_CAMV4L */
-
-  return 0;
-
-}
-
 static int icvSetControl (CvCaptureCAM_V4L* capture,
                           int property_id, double value) {
 
@@ -2589,22 +2522,29 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 
     /* two subsequent calls setting WIDTH and HEIGHT will change
        the video size */
-    /* the first one will return an error, though. */
 
     switch (property_id) {
     case CV_CAP_PROP_FRAME_WIDTH:
         width = cvRound(value);
         if(width !=0 && height != 0) {
-            retval = icvSetVideoSize( capture, width, height);
+            capture->width = width;
+            capture->height = height;
+            retval = v4l2_reset( capture);
             width = height = 0;
         }
         break;
     case CV_CAP_PROP_FRAME_HEIGHT:
         height = cvRound(value);
         if(width !=0 && height != 0) {
-            retval = icvSetVideoSize( capture, width, height);
+            capture->width = width;
+            capture->height = height;
+            retval = v4l2_reset( capture);
             width = height = 0;
         }
+        break;
+    case CV_CAP_PROP_FPS:
+        capture->fps = value;
+        retval = v4l2_reset( capture);
         break;
     default:
         retval = icvSetControl(capture, property_id, value);
