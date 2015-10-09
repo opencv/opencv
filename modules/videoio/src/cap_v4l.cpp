@@ -2303,15 +2303,11 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
           return -1;
       }
 
-      if(property_id == CV_CAP_PROP_AUTOFOCUS) {
-          return (double)capture->control.value;
-      }
-
       /* get the min/max values */
       cv::Range range = capture->getRange(property_id);
 
       /* all was OK, so convert to 0.0 - 1.0 range, and return the value */
-      return ((float)capture->control.value - range.start + 1) / range.size();
+      return ((float)capture->control.value - range.start) / range.size();
 
   }
 #endif /* HAVE_CAMV4L2 */
