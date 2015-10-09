@@ -998,7 +998,7 @@ public:
                     {
                         if( result == 1 )
                             result = -(int)classifier->data.stages.size();
-                        if( classifier->data.stages.size() + result == 0 )
+                        if( -result >= 0 ) // TODO: Add variable to define a specific last accepted Stage - ABI_COMPATIBILITY problem with new/changed virtual functions - PR #5362
                         {
                             mtx->lock();
                             rectangles->push_back(Rect(cvRound(x*scalingFactor),
