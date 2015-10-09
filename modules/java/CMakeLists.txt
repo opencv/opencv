@@ -7,6 +7,13 @@ if(IOS OR WINRT OR NOT PYTHON_DEFAULT_AVAILABLE OR NOT ANT_EXECUTABLE OR NOT (JN
   ocv_module_disable(java)
 endif()
 
+if(EXISTS ${CMAKE_BINARY_DIR}/src)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/src")
+endif()
+if(EXISTS ${CMAKE_BINARY_DIR}/gen)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/gen")
+endif()
+
 set(the_description "The java bindings")
 ocv_add_module(java BINDINGS opencv_core opencv_imgproc)
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp")
