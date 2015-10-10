@@ -422,24 +422,20 @@ try_palette(int fd,
 
 #ifdef HAVE_CAMV4L2
 
-static int try_palette_v4l2(CvCaptureCAM_V4L* capture, unsigned long colorspace)
+static bool try_palette_v4l2(CvCaptureCAM_V4L* capture)
 {
   CLEAR (capture->form);
 
   capture->form.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  capture->form.fmt.pix.pixelformat = colorspace;
+  capture->form.fmt.pix.pixelformat = capture->palette;
   capture->form.fmt.pix.field       = V4L2_FIELD_ANY;
   capture->form.fmt.pix.width       = capture->width;
   capture->form.fmt.pix.height      = capture->height;
 
   if (-1 == ioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form))
-      return -1;
+      return false;
 
-
-  if (colorspace != capture->form.fmt.pix.pixelformat)
-    return -1;
-  else
-    return 0;
+  return capture->palette == capture->form.fmt.pix.pixelformat;
 }
 
 #endif /* HAVE_CAMV4L2 */
@@ -547,67 +543,34 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
 
 }
 
-static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
-{
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_BGR24) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_BGR24;
-  }
-  else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_YVU420) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_YVU420;
-  }
-  else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_YUV411P) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_YUV411P;
-  }
-  else
-
+static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
+    __u32 try_order[] = {
+            V4L2_PIX_FMT_BGR24,
+            V4L2_PIX_FMT_YVU420,
+            V4L2_PIX_FMT_YUV411P,
 #ifdef HAVE_JPEG
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_MJPEG) == 0 ||
-      try_palette_v4l2(capture, V4L2_PIX_FMT_JPEG) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_MJPEG;
-  }
-  else
+            V4L2_PIX_FMT_MJPEG,
+            V4L2_PIX_FMT_JPEG,
 #endif
+            V4L2_PIX_FMT_YUYV,
+            V4L2_PIX_FMT_UYVY,
+            V4L2_PIX_FMT_SN9C10X,
+            V4L2_PIX_FMT_SBGGR8,
+            V4L2_PIX_FMT_SGBRG8,
+            V4L2_PIX_FMT_RGB24
+    };
 
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_YUYV) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_YUYV;
-  }
-  else if (try_palette_v4l2(capture, V4L2_PIX_FMT_UYVY) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_UYVY;
-  }
-  else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_SN9C10X) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_SN9C10X;
-  } else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_SBGGR8) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_SBGGR8;
-  } else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_SGBRG8) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_SGBRG8;
-  }
-  else if (try_palette_v4l2(capture, V4L2_PIX_FMT_RGB24) == 0)
-  {
-    capture->palette = V4L2_PIX_FMT_RGB24;
-  }
-      else
-  {
-    fprintf(stderr, "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
+    for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
+        capture->palette = try_order[i];
+        if (try_palette_v4l2(capture)) {
+            return 0;
+        }
+    }
+
+    fprintf(stderr,
+            "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
     icvCloseCAM_V4L(capture);
     return -1;
-  }
-
-  return 0;
-
 }
 
 #endif /* HAVE_CAMV4L2 */
