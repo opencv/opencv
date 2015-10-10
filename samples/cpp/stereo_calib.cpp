@@ -56,7 +56,7 @@ static int print_help()
 
 
 static void
-StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=true, bool showRectified=true)
+StereoCalib(const vector<string>& imagelist, Size boardSize,bool displayCorners = false, bool useCalibrated=true, bool showRectified=true)
 {
     if( imagelist.size() % 2 != 0 )
     {
@@ -64,7 +64,6 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
         return;
     }
 
-    bool displayCorners = false;//true;
     const int maxScale = 2;
     const float squareSize = 1.f;  // Set this to your actual square size
     // ARRAY AND VECTOR STORAGE:
@@ -165,8 +164,8 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
     cout << "Running stereo calibration ...\n";
 
     Mat cameraMatrix[2], distCoeffs[2];
-    cameraMatrix[0] = Mat::eye(3, 3, CV_64F);
-    cameraMatrix[1] = Mat::eye(3, 3, CV_64F);
+    cameraMatrix[0] = initCameraMatrix2D(objectPoints,imagePoints[0],imageSize,0);
+    cameraMatrix[1] = initCameraMatrix2D(objectPoints,imagePoints[1],imageSize,0);
     Mat R, T, E, F;
 
     double rms = stereoCalibrate(objectPoints, imagePoints[0], imagePoints[1],
@@ -175,6 +174,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
                     imageSize, R, T, E, F,
                     CALIB_FIX_ASPECT_RATIO +
                     CALIB_ZERO_TANGENT_DIST +
+                    CALIB_USE_INTRINSIC_GUESS +
                     CALIB_SAME_FOCAL_LENGTH +
                     CALIB_RATIONAL_MODEL +
                     CALIB_FIX_K3 + CALIB_FIX_K4 + CALIB_FIX_K5,
@@ -209,7 +209,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
         }
         npoints += npt;
     }
-    cout << "average reprojection err = " <<  err/npoints << endl;
+    cout << "average epipolar err = " <<  err/npoints << endl;
 
     // save intrinsic parameters
     FileStorage fs("../data/intrinsics.yml", FileStorage::WRITE);
@@ -399,6 +399,6 @@ int main(int argc, char** argv)
         return print_help();
     }
 
-    StereoCalib(imagelist, boardSize, true, showRectified);
+    StereoCalib(imagelist, boardSize,false, true, showRectified);
     return 0;
 }

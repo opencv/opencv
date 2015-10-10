@@ -645,6 +645,7 @@ namespace cudev
 
 namespace ipp
 {
+CV_EXPORTS int getIppFeatures();
 CV_EXPORTS void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
                              int line = 0);
 CV_EXPORTS int getIppStatus();

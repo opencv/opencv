@@ -750,9 +750,6 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     if( !video_st || !picture->data[0] )
         return false;
 
-    avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], AV_PIX_FMT_RGB24,
-                   video_st->codec->width, video_st->codec->height);
-
     if( img_convert_ctx == NULL ||
         frame.width != video_st->codec->width ||
         frame.height != video_st->codec->height )
@@ -775,7 +772,16 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
         if (img_convert_ctx == NULL)
             return false;//CV_Error(0, "Cannot initialize the conversion context!");
+
+        rgb_picture.data[0] = (uint8_t*)realloc(rgb_picture.data[0],
+                avpicture_get_size( AV_PIX_FMT_BGR24,
+                                    video_st->codec->width, video_st->codec->height ));
+        frame.data = rgb_picture.data[0];
     }
+
+    avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], AV_PIX_FMT_RGB24,
+                   video_st->codec->width, video_st->codec->height);
+    frame.step = rgb_picture.linesize[0];
 
     sws_scale(
             img_convert_ctx,
@@ -1130,6 +1136,11 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
 #endif
     if (!picture)
         return NULL;
+
+    picture->format = pix_fmt;
+    picture->width = width;
+    picture->height = height;
+
     size = avpicture_get_size( (AVPixelFormat) pix_fmt, width, height);
     if(alloc){
         picture_buf = (uint8_t *) malloc(size);
@@ -1269,7 +1280,8 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
       c->gop_size = -1;
       c->qmin = -1;
       c->bit_rate = 0;
-      av_opt_set(c->priv_data,"crf","23", 0);
+      if (c->priv_data)
+          av_opt_set(c->priv_data,"crf","23", 0);
     }
 #endif
 

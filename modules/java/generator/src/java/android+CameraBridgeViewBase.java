@@ -3,10 +3,8 @@ package org.opencv.android;
 import java.util.List;
 
 import org.opencv.R;
-import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
-import org.opencv.videoio.Videoio;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -451,7 +449,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
      */
     protected abstract void disconnectCamera();
 
-    // NOTE: On Android 4.1.x the function must be called before SurfaceTextre constructor!
+    // NOTE: On Android 4.1.x the function must be called before SurfaceTexture constructor!
     protected void AllocateCache()
     {
         mCacheBitmap = Bitmap.createBitmap(mFrameWidth, mFrameHeight, Bitmap.Config.ARGB_8888);

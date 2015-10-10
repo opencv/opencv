@@ -142,9 +142,8 @@ TEST(CommandLineParser, testPositional_noArgs)
     EXPECT_EQ("default1", parser.get<String>("@arg1"));
     EXPECT_EQ("default1", parser.get<String>(0));
 
-    parser.get<String>("@arg2");
-    parser.get<String>(1);
-    EXPECT_TRUE(parser.check());
+    EXPECT_EQ("", parser.get<String>("@arg2"));
+    EXPECT_EQ("", parser.get<String>(1));
 }
 
 TEST(CommandLineParser, testPositional_default)
@@ -184,6 +183,39 @@ TEST(CommandLineParser, testPositional_withFlagsAfter)
     EXPECT_EQ("test2", parser.get<String>("@arg2"));
     EXPECT_EQ("test1", parser.get<String>(0));
     EXPECT_EQ("test2", parser.get<String>(1));
+}
+
+TEST(CommandLineParser, testEmptyStringValue)
+{
+    static const char * const keys3 =
+            "{ @pos0 |        | empty default value }"
+            "{ @pos1 | <none> | forbid empty default value }";
+
+    const char* argv[] = {"<bin>"};
+    const int argc = 1;
+    cv::CommandLineParser parser(argc, argv, keys3);
+    // EXPECT_TRUE(parser.has("@pos0"));
+    EXPECT_EQ("", parser.get<String>("@pos0"));
+    EXPECT_TRUE(parser.check());
+
+    EXPECT_FALSE(parser.has("@pos1"));
+    parser.get<String>(1);
+    EXPECT_FALSE(parser.check());
+}
+
+TEST(CommandLineParser, positional_regression_5074_equal_sign)
+{
+    static const char * const keys3 =
+            "{ @eq0 |  | }"
+            "{ eq1  |  | }";
+
+    const char* argv[] = {"<bin>", "1=0", "--eq1=1=0"};
+    const int argc = 3;
+    cv::CommandLineParser parser(argc, argv, keys3);
+    EXPECT_EQ("1=0", parser.get<String>("@eq0"));
+    EXPECT_EQ("1=0", parser.get<String>(0));
+    EXPECT_EQ("1=0", parser.get<String>("eq1"));
+    EXPECT_TRUE(parser.check());
 }
 
 } // namespace

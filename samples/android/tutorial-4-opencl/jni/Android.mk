@@ -21,7 +21,7 @@ endif
 LOCAL_C_INCLUDES += $(OPENCL_SDK)/include
 LOCAL_LDLIBS += -L$(OPENCL_SDK)/lib/$(TARGET_ARCH_ABI) -lOpenCL
 
-LOCAL_MODULE    := JNIrender
-LOCAL_SRC_FILES := jni.c GLrender.cpp CLprocessor.cpp
+LOCAL_MODULE    := JNIpart
+LOCAL_SRC_FILES := jni.c CLprocessor.cpp
 LOCAL_LDLIBS    += -llog -lGLESv2 -lEGL
 include $(BUILD_SHARED_LIBRARY)
