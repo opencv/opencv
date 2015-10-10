@@ -1612,15 +1612,11 @@ uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
 
 /* convert from mjpeg to rgb24 */
 static bool
-mjpeg_to_rgb24 (int width, int height,
-        unsigned char *src, int length,
-        unsigned char *dst)
-{
-  cv::Mat temp=cv::imdecode(cv::Mat(std::vector<uchar>(src, src + length)), 1);
-  if( !temp.data || temp.cols != width || temp.rows != height )
-    return false;
-  memcpy(dst, temp.data, width*height*3);
-  return true;
+mjpeg_to_rgb24(int width, int height, unsigned char* src, int length, IplImage* dst) {
+    using namespace cv;
+    Mat temp = cvarrToMat(dst);
+    imdecode(Mat(1, length, CV_8U, src), IMREAD_COLOR, &temp);
+    return temp.data && temp.cols == width && temp.rows == height;
 }
 
 #endif
@@ -2068,7 +2064,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
                     (unsigned char*)(capture->buffers[capture->bufferIndex]
                              .start),
                     capture->buffers[capture->bufferIndex].length,
-                    (unsigned char*)capture->frame.imageData))
+                    &capture->frame))
           return 0;
         break;
 #endif
