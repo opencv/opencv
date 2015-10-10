@@ -107,6 +107,7 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             if( channels == 1 ){ return CV_8UC1; }
             if( channels == 3 ){ return CV_8UC3; }
             if( channels == 4 ){ return CV_8UC4; }
+            else { return CV_8UC(channels); }
             return -1;
 
         /// UInt16
@@ -114,6 +115,7 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             if( channels == 1 ){ return CV_16UC1; }
             if( channels == 3 ){ return CV_16UC3; }
             if( channels == 4 ){ return CV_16UC4; }
+            else { return CV_16UC(channels); }
             return -1;
 
         /// Int16
@@ -121,6 +123,7 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             if( channels == 1 ){ return CV_16SC1; }
             if( channels == 3 ){ return CV_16SC3; }
             if( channels == 4 ){ return CV_16SC4; }
+            else { return CV_16SC(channels); }
             return -1;
 
         /// UInt32
@@ -129,6 +132,7 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             if( channels == 1 ){ return CV_32SC1; }
             if( channels == 3 ){ return CV_32SC3; }
             if( channels == 4 ){ return CV_32SC4; }
+            else { return CV_32SC(channels); }
             return -1;
 
         default:
@@ -286,6 +290,16 @@ void write_pixel( const double& pixelValue,
         else{ throw std::runtime_error("Unknown image depth, gdal: 4, image: 4"); }
     }
 
+    // input: > 4 channels, output: > 4 channels
+    else if( gdalChannels > 4 && image.channels() > 4 ){
+        if( image.depth() == CV_8U ){       image.ptr<uchar>(row,col)[channel]          = newValue; }
+        else if( image.depth() == CV_16U ){ image.ptr<unsigned short>(row,col)[channel] = newValue; }
+        else if( image.depth() == CV_16S ){ image.ptr<short>(row,col)[channel]          = newValue; }
+        else if( image.depth() == CV_32S ){ image.ptr<int>(row,col)[channel]            = newValue; }
+        else if( image.depth() == CV_32F ){ image.ptr<float>(row,col)[channel]          = newValue; }
+        else if( image.depth() == CV_64F ){ image.ptr<double>(row,col)[channel]         = newValue; }
+        else{ throw std::runtime_error("Unknown image depth, gdal: N, img: N"); }
+    }
     // otherwise, throw an error
     else{
         throw std::runtime_error("error: can't convert types.");
@@ -362,6 +376,7 @@ bool GdalDecoder::readData( Mat& img ){
     // iterate over each raster band
     // note that OpenCV does bgr rather than rgb
     int nChannels = m_dataset->GetRasterCount();
+
     GDALColorTable* gdalColorTable = NULL;
     if( m_dataset->GetRasterBand(1)->GetColorTable() != NULL ){
         gdalColorTable = m_dataset->GetRasterBand(1)->GetColorTable();

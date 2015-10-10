@@ -279,7 +279,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
 
     // grab the decoded type
     int type = decoder->type();
-    if( flags != IMREAD_UNCHANGED )
+    if( (flags & IMREAD_LOAD_GDAL) == 0 && flags != IMREAD_UNCHANGED )
     {
         if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
