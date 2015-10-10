@@ -2453,8 +2453,6 @@ CV_IMPL int cvStereoRectifyUncalibrated(
     CvPoint3D64f* lines2;
 
     CV_Assert( CV_IS_MAT(_points1) && CV_IS_MAT(_points2) &&
-        (_points1->rows == 1 || _points1->cols == 1) &&
-        (_points2->rows == 1 || _points2->cols == 1) &&
         CV_ARE_SIZES_EQ(_points1, _points2) );
 
     npoints = _points1->rows * _points1->cols * CV_MAT_CN(_points1->type) / 2;
