@@ -280,24 +280,11 @@ static unsigned int n_buffers = 0;
 #define V4L2_PIX_FMT_SN9C10X  v4l2_fourcc('S','9','1','0') /* SN9C10x cmpr. */
 #endif
 
-#ifndef V4L2_PIX_FMT_SGBRG
-#define V4L2_PIX_FMT_SGBRG v4l2_fourcc('G','B','R','G') /* bayer GBRG   GBGB.. RGRG.. */
+#ifndef V4L2_PIX_FMT_SGBRG8
+#define V4L2_PIX_FMT_SGBRG8 v4l2_fourcc('G','B','R','G') /* bayer GBRG   GBGB.. RGRG.. */
 #endif
 
 #endif  /* HAVE_CAMV4L2 */
-
-enum PALETTE_TYPE {
-  PALETTE_BGR24 = 1,
-  PALETTE_YVU420,
-  PALETTE_YUV411P,
-  PALETTE_YUYV,
-  PALETTE_UYVY,
-  PALETTE_SBGGR8,
-  PALETTE_SN9C10X,
-  PALETTE_MJPEG,
-  PALETTE_SGBRG,
-  PALETTE_RGB24
-};
 
 typedef struct CvCaptureCAM_V4L
 {
@@ -315,7 +302,7 @@ typedef struct CvCaptureCAM_V4L
     IplImage frame;
 
 #ifdef HAVE_CAMV4L2
-   enum PALETTE_TYPE palette;
+   __u32 palette;
    int index;
    int width, height;
    __u32 fps;
@@ -564,17 +551,17 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
 {
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_BGR24) == 0)
   {
-    capture->palette = PALETTE_BGR24;
+    capture->palette = V4L2_PIX_FMT_BGR24;
   }
   else
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_YVU420) == 0)
   {
-    capture->palette = PALETTE_YVU420;
+    capture->palette = V4L2_PIX_FMT_YVU420;
   }
   else
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_YUV411P) == 0)
   {
-    capture->palette = PALETTE_YUV411P;
+    capture->palette = V4L2_PIX_FMT_YUV411P;
   }
   else
 
@@ -582,35 +569,35 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_MJPEG) == 0 ||
       try_palette_v4l2(capture, V4L2_PIX_FMT_JPEG) == 0)
   {
-    capture->palette = PALETTE_MJPEG;
+    capture->palette = V4L2_PIX_FMT_MJPEG;
   }
   else
 #endif
 
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_YUYV) == 0)
   {
-    capture->palette = PALETTE_YUYV;
+    capture->palette = V4L2_PIX_FMT_YUYV;
   }
   else if (try_palette_v4l2(capture, V4L2_PIX_FMT_UYVY) == 0)
   {
-    capture->palette = PALETTE_UYVY;
+    capture->palette = V4L2_PIX_FMT_UYVY;
   }
   else
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_SN9C10X) == 0)
   {
-    capture->palette = PALETTE_SN9C10X;
+    capture->palette = V4L2_PIX_FMT_SN9C10X;
   } else
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_SBGGR8) == 0)
   {
-    capture->palette = PALETTE_SBGGR8;
+    capture->palette = V4L2_PIX_FMT_SBGGR8;
   } else
-  if (try_palette_v4l2(capture, V4L2_PIX_FMT_SGBRG) == 0)
+  if (try_palette_v4l2(capture, V4L2_PIX_FMT_SGBRG8) == 0)
   {
-    capture->palette = PALETTE_SGBRG;
+    capture->palette = V4L2_PIX_FMT_SGBRG8;
   }
   else if (try_palette_v4l2(capture, V4L2_PIX_FMT_RGB24) == 0)
   {
-    capture->palette = PALETTE_RGB24;
+    capture->palette = V4L2_PIX_FMT_RGB24;
   }
       else
   {
@@ -2103,27 +2090,28 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
   {
     switch (capture->palette)
     {
-    case PALETTE_BGR24:
+    case V4L2_PIX_FMT_BGR24:
         memcpy((char *)capture->frame.imageData,
                (char *)capture->buffers[capture->bufferIndex].start,
                capture->frame.imageSize);
         break;
 
-    case PALETTE_YVU420:
+    case V4L2_PIX_FMT_YVU420:
         yuv420p_to_rgb24(capture->form.fmt.pix.width,
                  capture->form.fmt.pix.height,
                  (unsigned char*)(capture->buffers[capture->bufferIndex].start),
                  (unsigned char*)capture->frame.imageData);
         break;
 
-    case PALETTE_YUV411P:
+    case V4L2_PIX_FMT_YUV411P:
         yuv411p_to_rgb24(capture->form.fmt.pix.width,
                  capture->form.fmt.pix.height,
                  (unsigned char*)(capture->buffers[capture->bufferIndex].start),
                  (unsigned char*)capture->frame.imageData);
         break;
 #ifdef HAVE_JPEG
-    case PALETTE_MJPEG:
+    case V4L2_PIX_FMT_MJPEG:
+    case V4L2_PIX_FMT_JPEG:
         if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
                     capture->form.fmt.pix.height,
                     (unsigned char*)(capture->buffers[capture->bufferIndex]
@@ -2134,26 +2122,26 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
         break;
 #endif
 
-    case PALETTE_YUYV:
+    case V4L2_PIX_FMT_YUYV:
         yuyv_to_rgb24(capture->form.fmt.pix.width,
                   capture->form.fmt.pix.height,
                   (unsigned char*)(capture->buffers[capture->bufferIndex].start),
                   (unsigned char*)capture->frame.imageData);
         break;
-    case PALETTE_UYVY:
+    case V4L2_PIX_FMT_UYVY:
         uyvy_to_rgb24(capture->form.fmt.pix.width,
                   capture->form.fmt.pix.height,
                   (unsigned char*)(capture->buffers[capture->bufferIndex].start),
                   (unsigned char*)capture->frame.imageData);
         break;
-    case PALETTE_SBGGR8:
+    case V4L2_PIX_FMT_SBGGR8:
         bayer2rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
                 (unsigned char*)capture->buffers[capture->bufferIndex].start,
                 (unsigned char*)capture->frame.imageData);
         break;
 
-    case PALETTE_SN9C10X:
+    case V4L2_PIX_FMT_SN9C10X:
         sonix_decompress_init();
         sonix_decompress(capture->form.fmt.pix.width,
                  capture->form.fmt.pix.height,
@@ -2166,13 +2154,13 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
                 (unsigned char*)capture->frame.imageData);
         break;
 
-    case PALETTE_SGBRG:
+    case V4L2_PIX_FMT_SGBRG8:
         sgbrg2rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
                 (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
                 (unsigned char*)capture->frame.imageData);
         break;
-    case PALETTE_RGB24:
+    case V4L2_PIX_FMT_RGB24:
         rgb24_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
                 (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
@@ -2273,6 +2261,11 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
           return capture->form.fmt.pix.width;
       case CV_CAP_PROP_FRAME_HEIGHT:
           return capture->form.fmt.pix.height;
+      case CV_CAP_PROP_FOURCC:
+      case CV_CAP_PROP_MODE:
+          return capture->palette;
+      case CV_CAP_PROP_FORMAT:
+          return CV_8UC3;
       }
 
       if(property_id == CV_CAP_PROP_FPS) {
