@@ -50,6 +50,7 @@
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/opengl.hpp"
+#include "opencv2/core/va_intel.hpp"
 
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/private.cuda.hpp"
@@ -205,7 +206,7 @@ extern volatile bool USE_AVX2;
 
 enum { BLOCK_SIZE = 1024 };
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+#if defined HAVE_IPP && (IPP_VERSION_X100 >= 700)
 #define ARITHM_USE_IPP 1
 #else
 #define ARITHM_USE_IPP 0

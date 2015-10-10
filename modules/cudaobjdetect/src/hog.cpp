@@ -51,34 +51,45 @@ Ptr<cuda::HOG> cv::cuda::HOG::create(Size, Size, Size, Size, int) { throw_no_cud
 
 #else
 
+/****************************************************************************************\
+      The code below is implementation of HOG (Histogram-of-Oriented Gradients)
+      descriptor and object detection, introduced by Navneet Dalal and Bill Triggs.
+
+      The computed feature vectors are compatible with the
+      INRIA Object Detection and Localization Toolkit
+      (http://pascal.inrialpes.fr/soft/olt/)
+\****************************************************************************************/
+
 namespace cv { namespace cuda { namespace device
 {
     namespace hog
     {
         void set_up_constants(int nbins, int block_stride_x, int block_stride_y,
-                              int nblocks_win_x, int nblocks_win_y);
+                              int nblocks_win_x, int nblocks_win_y,
+                              int ncells_block_x, int ncells_block_y);
 
-        void compute_hists(int nbins, int block_stride_x, int blovck_stride_y,
-                           int height, int width, const cv::cuda::PtrStepSzf& grad,
-                           const cv::cuda::PtrStepSzb& qangle, float sigma, float* block_hists);
+        void compute_hists(int nbins, int block_stride_x, int block_stride_y,
+                           int height, int width, const PtrStepSzf& grad,
+                           const PtrStepSzb& qangle, float sigma, float* block_hists,
+                           int cell_size_x, int cell_size_y, int ncells_block_x, int ncells_block_y);
 
         void normalize_hists(int nbins, int block_stride_x, int block_stride_y,
-                             int height, int width, float* block_hists, float threshold);
+                             int height, int width, float* block_hists, float threshold, int cell_size_x, int cell_size_y, int ncells_block_x, int ncells_block_y);
 
         void classify_hists(int win_height, int win_width, int block_stride_y,
                             int block_stride_x, int win_stride_y, int win_stride_x, int height,
                             int width, float* block_hists, float* coefs, float free_coef,
-                            float threshold, unsigned char* labels);
+                            float threshold, int cell_size_x, int ncells_block_x, unsigned char* labels);
 
         void compute_confidence_hists(int win_height, int win_width, int block_stride_y, int block_stride_x,
                            int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
-                           float* coefs, float free_coef, float threshold, float *confidences);
+                           float* coefs, float free_coef, float threshold, int cell_size_x, int ncells_block_x, float *confidences);
 
         void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x,
-                                    int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
+                                    int win_stride_y, int win_stride_x, int height, int width, float* block_hists, int cell_size_x, int ncells_block_x,
                                     cv::cuda::PtrStepSzf descriptors);
         void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x,
-                                    int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
+                                    int win_stride_y, int win_stride_x, int height, int width, float* block_hists, int cell_size_x, int ncells_block_x,
                                     cv::cuda::PtrStepSzf descriptors);
 
         void compute_gradients_8UC1(int nbins, int height, int width, const cv::cuda::PtrStepSzb& img,
@@ -167,6 +178,7 @@ namespace
         double scale0_;
         int group_threshold_;
         int descr_format_;
+        Size cells_per_block_;
 
     private:
         int getTotalHistSize(Size img_size) const;
@@ -197,7 +209,8 @@ namespace
         win_stride_(block_stride),
         scale0_(1.05),
         group_threshold_(2),
-        descr_format_(DESCR_FORMAT_COL_BY_COL)
+        descr_format_(DESCR_FORMAT_COL_BY_COL),
+        cells_per_block_(block_size.width / cell_size.width, block_size.height / cell_size.height)
     {
         CV_Assert((win_size.width  - block_size.width ) % block_stride.width  == 0 &&
                   (win_size.height - block_size.height) % block_stride.height == 0);
@@ -205,12 +218,13 @@ namespace
         CV_Assert(block_size.width % cell_size.width == 0 &&
                   block_size.height % cell_size.height == 0);
 
-        CV_Assert(block_stride == cell_size);
+        // Navneet Dalal and Bill Triggs. Histograms of oriented gradients for
+        // human detection. In International Conference on Computer Vision and
+        // Pattern Recognition, volume 2, pages 886–893, June 2005
+        // http://lear.inrialpes.fr/people/triggs/pubs/Dalal-cvpr05.pdf (28.07.2015) [Figure 5]
+        CV_Assert(block_stride == (block_size / 2));
 
-        CV_Assert(cell_size == Size(8, 8));
-
-        Size cells_per_block(block_size.width / cell_size.width, block_size.height / cell_size.height);
-        CV_Assert(cells_per_block == Size(2, 2));
+        CV_Assert(cell_size.width == cell_size.height);
     }
 
     static int numPartsWithin(int size, int part_size, int stride)
@@ -231,8 +245,7 @@ namespace
 
     size_t HOG_Impl::getBlockHistogramSize() const
     {
-        Size cells_per_block(block_size_.width / cell_size_.width, block_size_.height / cell_size_.height);
-        return nbins_ * cells_per_block.area();
+        return nbins_ * cells_per_block_.area();
     }
 
     double HOG_Impl::getWinSigma() const
@@ -313,6 +326,7 @@ namespace
                                 detector_.ptr<float>(),
                                 (float)free_coef_,
                                 (float)hit_threshold_,
+                                cell_size_.width, cells_per_block_.width,
                                 labels.ptr());
 
             Mat labels_host;
@@ -339,6 +353,7 @@ namespace
                                           detector_.ptr<float>(),
                                           (float)free_coef_,
                                           (float)hit_threshold_,
+                                          cell_size_.width, cells_per_block_.width,
                                           labels.ptr<float>());
 
             Mat labels_host;
@@ -465,6 +480,7 @@ namespace
                                         win_stride_.height, win_stride_.width,
                                         img.rows, img.cols,
                                         block_hists.ptr<float>(),
+                                        cell_size_.width, cells_per_block_.width,
                                         descriptors);
             break;
         case DESCR_FORMAT_COL_BY_COL:
@@ -473,6 +489,7 @@ namespace
                                         win_stride_.height, win_stride_.width,
                                         img.rows, img.cols,
                                         block_hists.ptr<float>(),
+                                        cell_size_.width, cells_per_block_.width,
                                         descriptors);
             break;
         default:
@@ -490,7 +507,7 @@ namespace
     void HOG_Impl::computeBlockHistograms(const GpuMat& img, GpuMat& block_hists)
     {
         cv::Size blocks_per_win = numPartsWithin(win_size_, block_size_, block_stride_);
-        hog::set_up_constants(nbins_, block_stride_.width, block_stride_.height, blocks_per_win.width, blocks_per_win.height);
+        hog::set_up_constants(nbins_, block_stride_.width, block_stride_.height, blocks_per_win.width, blocks_per_win.height, cells_per_block_.width, cells_per_block_.height);
 
         BufferPool pool(Stream::Null());
 
@@ -505,13 +522,17 @@ namespace
                            img.rows, img.cols,
                            grad, qangle,
                            (float)getWinSigma(),
-                           block_hists.ptr<float>());
+                           block_hists.ptr<float>(),
+                           cell_size_.width, cell_size_.height,
+                           cells_per_block_.width, cells_per_block_.height);
 
         hog::normalize_hists(nbins_,
                              block_stride_.width, block_stride_.height,
                              img.rows, img.cols,
                              block_hists.ptr<float>(),
-                             (float)threshold_L2hys_);
+                             (float)threshold_L2hys_,
+                             cell_size_.width, cell_size_.height,
+                             cells_per_block_.width, cells_per_block_.height);
     }
 
     void HOG_Impl::computeGradient(const GpuMat& img, GpuMat& grad, GpuMat& qangle)

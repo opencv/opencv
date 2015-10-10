@@ -26,9 +26,9 @@ std::ostream& operator << (std::ostream& out, const TickMeter& tm);
 
 TickMeter::TickMeter() { reset(); }
 int64 TickMeter::getTimeTicks() const { return sumTime; }
-double TickMeter::getTimeMicro() const { return (double)getTimeTicks()/cv::getTickFrequency(); }
-double TickMeter::getTimeMilli() const { return getTimeMicro()*1e-3; }
-double TickMeter::getTimeSec() const { return getTimeMilli()*1e-3; }
+double TickMeter::getTimeMicro() const { return  getTimeMilli()*1e3;}
+double TickMeter::getTimeMilli() const { return getTimeSec()*1e3; }
+double TickMeter::getTimeSec() const { return (double)getTimeTicks()/cv::getTickFrequency();}
 int64 TickMeter::getCounter() const { return counter; }
 void TickMeter::reset() {startTime = 0; sumTime = 0; counter = 0; }
 

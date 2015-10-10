@@ -1909,7 +1909,8 @@ static void showSaveDialog(CvWindow* window)
 
     if (GetSaveFileName(&ofn))
     {
-        cv::Mat tmp; cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data), tmp, 0);
+        cv::Mat tmp;
+        cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data, (sz.cx * channels + 3) & -4), tmp, 0);
         cv::imwrite(szFileName, tmp);
     }
 }
@@ -2036,8 +2037,8 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     trackbar = icvFindTrackbarByName(window,trackbar_name);
     if( !trackbar )
     {
-        TBBUTTON tbs = {0};
-        TBBUTTONINFO tbis = {0};
+        TBBUTTON tbs = {};
+        TBBUTTONINFO tbis = {};
         RECT rect;
         int bcount;
         int len = (int)strlen( trackbar_name );

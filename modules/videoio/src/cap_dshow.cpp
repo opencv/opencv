@@ -93,6 +93,11 @@ Thanks to:
 #pragma warning(disable: 4995)
 #endif
 
+#ifdef __MINGW32__
+// MinGW does not understand COM interfaces
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+
 #include <tchar.h>
 #include <stdlib.h>
 #include <stdio.h>

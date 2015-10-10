@@ -77,7 +77,7 @@ See the example below:
 import cv2
 import numpy as np
 
-filename = 'chessboard.jpg'
+filename = 'chessboard.png'
 img = cv2.imread(filename)
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 

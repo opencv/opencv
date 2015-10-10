@@ -129,6 +129,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     // interpret preferred interface (0 = autodetect)
     int pref = (index / 100) * 100;
 
+    // remove pref from index
+    index -= pref;
+
     // local variable to memorize the captured device
     CvCapture *capture = 0;
 
@@ -231,7 +234,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_OPENNI2
     case CV_CAP_OPENNI2:
         if (!capture)
-            capture = cvCreateCameraCapture_OpenNI(index);
+            capture = cvCreateCameraCapture_OpenNI2(index);
         if (pref) break;
 #endif
 

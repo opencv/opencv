@@ -512,7 +512,7 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
     OutputArray P, double balance, const Size& new_size, double fov_scale)
 {
     CV_Assert( K.size() == Size(3, 3)       && (K.depth() == CV_32F || K.depth() == CV_64F));
-    CV_Assert((D.empty() || D.total() == 4) && (D.depth() == CV_32F || D.depth() == CV_64F || D.empty()));
+    CV_Assert(D.empty() || ((D.total() == 4) && (D.depth() == CV_32F || D.depth() == CV_64F)));
 
     int w = image_size.width, h = image_size.height;
     balance = std::min(std::max(balance, 0.0), 1.0);
@@ -694,12 +694,12 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
     CV_Assert(!objectPoints.empty() && !imagePoints.empty() && objectPoints.total() == imagePoints.total());
     CV_Assert(objectPoints.type() == CV_32FC3 || objectPoints.type() == CV_64FC3);
     CV_Assert(imagePoints.type() == CV_32FC2 || imagePoints.type() == CV_64FC2);
-    CV_Assert((!K.empty() && K.size() == Size(3,3)) || K.empty());
-    CV_Assert((!D.empty() && D.total() == 4) || D.empty());
-    CV_Assert((!rvecs.empty() && rvecs.channels() == 3) || rvecs.empty());
-    CV_Assert((!tvecs.empty() && tvecs.channels() == 3) || tvecs.empty());
+    CV_Assert(K.empty() || (K.size() == Size(3,3)));
+    CV_Assert(D.empty() || (D.total() == 4));
+    CV_Assert(rvecs.empty() || (rvecs.channels() == 3));
+    CV_Assert(tvecs.empty() || (tvecs.channels() == 3));
 
-    CV_Assert(((flags & CALIB_USE_INTRINSIC_GUESS) && !K.empty() && !D.empty()) || !(flags & CALIB_USE_INTRINSIC_GUESS));
+    CV_Assert((!K.empty() && !D.empty()) || !(flags & CALIB_USE_INTRINSIC_GUESS));
 
     using namespace cv::internal;
     //-------------------------------Initialization
@@ -825,12 +825,12 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     CV_Assert(imagePoints1.type() == CV_32FC2 || imagePoints1.type() == CV_64FC2);
     CV_Assert(imagePoints2.type() == CV_32FC2 || imagePoints2.type() == CV_64FC2);
 
-    CV_Assert((!K1.empty() && K1.size() == Size(3,3)) || K1.empty());
-    CV_Assert((!D1.empty() && D1.total() == 4) || D1.empty());
-    CV_Assert((!K2.empty() && K1.size() == Size(3,3)) || K2.empty());
-    CV_Assert((!D2.empty() && D1.total() == 4) || D2.empty());
+    CV_Assert(K1.empty() || (K1.size() == Size(3,3)));
+    CV_Assert(D1.empty() || (D1.total() == 4));
+    CV_Assert(K2.empty() || (K1.size() == Size(3,3)));
+    CV_Assert(D2.empty() || (D1.total() == 4));
 
-    CV_Assert(((flags & CALIB_FIX_INTRINSIC) && !K1.empty() && !K2.empty() && !D1.empty() && !D2.empty()) || !(flags & CALIB_FIX_INTRINSIC));
+    CV_Assert((!K1.empty() && !K2.empty() && !D1.empty() && !D2.empty()) || !(flags & CALIB_FIX_INTRINSIC));
 
     //-------------------------------Initialization
 

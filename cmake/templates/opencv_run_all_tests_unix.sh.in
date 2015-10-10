@@ -55,6 +55,15 @@ OPENCV_TEST_PATH=@CMAKE_INSTALL_PREFIX@/@OPENCV_TEST_INSTALL_PATH@
 OPENCV_PYTHON_TESTS=@OPENCV_PYTHON_TESTS_LIST@
 export OPENCV_TEST_DATA_PATH=@CMAKE_INSTALL_PREFIX@/share/OpenCV/testdata
 
+CUR_DIR=`pwd`
+if [ -d "$CUR_DIR" -a -w "$CUR_DIR" ]; then
+    echo "${TEXT_CYAN}CUR_DIR : $CUR_DIR${TEXT_RESET}"
+else
+    echo "${TEXT_RED}Error: Do not have permissions to write to $CUR_DIR${TEXT_RESET}"
+    echo "${TEXT_RED}Please run the script from directory with write access${TEXT_RESET}"
+    exit 1
+fi
+
 # Run tests
 
 SUMMARY_STATUS=0
@@ -64,9 +73,8 @@ PASSED_TESTS=""
 for t in "$OPENCV_TEST_PATH/"opencv_test_* "$OPENCV_TEST_PATH/"opencv_perf_*;
 do
     test_name=`basename "$t"`
-    report="$test_name-`date --rfc-3339=date`.xml"
 
-    cmd="$t --perf_min_samples=1 --perf_force_samples=1 --gtest_output=xml:\"$report\""
+    cmd="$t --perf_min_samples=1 --perf_force_samples=1 --gtest_output=xml:$test_name.xml"
 
     seg_reg="s/^/${TEXT_CYAN}[$test_name]${TEXT_RESET} /"                     # append test name
     if [ $COLOR_OUTPUT -eq 1 ]; then
@@ -79,7 +87,7 @@ do
     fi
 
     echo "${TEXT_CYAN}[$test_name]${TEXT_RESET} RUN : $cmd"
-    $cmd | sed -r "$seg_reg"
+    eval "$cmd" | tee "$test_name.log" | sed -r "$seg_reg"
     ret=${PIPESTATUS[0]}
     echo "${TEXT_CYAN}[$test_name]${TEXT_RESET} RETURN_CODE : $ret"
 
@@ -98,14 +106,13 @@ done
 for t in $OPENCV_PYTHON_TESTS;
 do
     test_name=`basename "$t"`
-    report="$test_name-`date --rfc-3339=date`.xml"
 
-    cmd="py.test --junitxml $report \"$OPENCV_TEST_PATH\"/$t"
+    cmd="py.test --junitxml $test_name.xml \"$OPENCV_TEST_PATH\"/$t"
 
     seg_reg="s/^/${TEXT_CYAN}[$test_name]${TEXT_RESET} /"                 # append test name
 
     echo "${TEXT_CYAN}[$test_name]${TEXT_RESET} RUN : $cmd"
-    eval "$cmd" | sed -r "$seg_reg"
+    eval "$cmd" | tee "$test_name.log" | sed -r "$seg_reg"
 
     ret=${PIPESTATUS[0]}
     echo "${TEXT_CYAN}[$test_name]${TEXT_RESET} RETURN_CODE : $ret"

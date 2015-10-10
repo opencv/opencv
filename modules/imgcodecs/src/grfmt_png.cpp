@@ -140,7 +140,7 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, uchar* dst, size_t size )
 
 bool  PngDecoder::readHeader()
 {
-    bool result = false;
+    volatile bool result = false;
     close();
 
     png_structp png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );

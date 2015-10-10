@@ -6,6 +6,8 @@
 #
 
 function(_icv_downloader)
+  # Commit SHA in the opencv_3rdparty repo
+  set(IPPICV_BINARIES_COMMIT "3d41df448b589aa076d9d27ace344d3ef709e4b9")
   # Define actual ICV versions
   if(APPLE)
     set(OPENCV_ICV_PACKAGE_NAME "ippicv_macosx_20141027.tgz")
@@ -13,7 +15,7 @@ function(_icv_downloader)
     set(OPENCV_ICV_PLATFORM "macosx")
     set(OPENCV_ICV_PACKAGE_SUBDIR "/ippicv_osx")
   elseif(UNIX)
-    if(ANDROID AND (NOT ANDROID_ABI STREQUAL x86))
+    if(ANDROID AND NOT (ANDROID_ABI STREQUAL x86 OR ANDROID_ABI STREQUAL x86_64))
       return()
     endif()
     set(OPENCV_ICV_PACKAGE_NAME "ippicv_linux_20141027.tgz")
@@ -62,7 +64,7 @@ function(_icv_downloader)
       if(DEFINED ENV{OPENCV_ICV_URL})
         set(OPENCV_ICV_URL $ENV{OPENCV_ICV_URL})
       else()
-        set(OPENCV_ICV_URL "http://sourceforge.net/projects/opencvlibrary/files/3rdparty/ippicv")
+        set(OPENCV_ICV_URL "https://raw.githubusercontent.com/Itseez/opencv_3rdparty/${IPPICV_BINARIES_COMMIT}/ippicv")
       endif()
     endif()
 
@@ -75,7 +77,7 @@ function(_icv_downloader)
       message(FATAL_ERROR "ICV: Failed to download ICV package: ${OPENCV_ICV_PACKAGE_NAME}. Status=${__status}")
     else()
       # Don't remove this code, because EXPECTED_MD5 parameter doesn't fail "file(DOWNLOAD)" step
-      # on wrong hash 
+      # on wrong hash
       file(MD5 "${OPENCV_ICV_PACKAGE_ARCHIVE}" archive_md5)
       if(NOT archive_md5 STREQUAL OPENCV_ICV_PACKAGE_HASH)
         message(FATAL_ERROR "ICV: Downloaded copy of ICV package has invalid MD5 hash: ${archive_md5} (expected: ${OPENCV_ICV_PACKAGE_HASH})")

@@ -44,7 +44,7 @@ The references are:
 
 #include "agast_score.hpp"
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #pragma warning( disable : 4127 )
 #endif
 

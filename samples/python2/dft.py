@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import cv2
 import numpy as np
 import sys
@@ -57,7 +60,7 @@ if __name__ == "__main__":
         im = cv2.imread(sys.argv[1])
     else :
         im = cv2.imread('../data/baboon.jpg')
-        print "usage : python dft.py <image_file>"
+        print("usage : python dft.py <image_file>")
 
     # convert to grayscale
     im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)

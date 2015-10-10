@@ -45,6 +45,9 @@
 #ifndef __OPENCV_DEF_H__
 #define __OPENCV_DEF_H__
 
+//! @addtogroup hal_utils
+//! @{
+
 #if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
 #  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
 #endif
@@ -335,9 +338,6 @@ Cv64suf;
 #  include "tegra_round.hpp"
 #endif
 
-//! @addtogroup core_utils
-//! @{
-
 #if CV_VFP
     // 1. general scheme
     #define ARM_ROUND(_value, _asm_string) \
@@ -567,15 +567,19 @@ CV_INLINE int cvIsInf( float value )
     return (ieee754.u & 0x7fffffff) == 0x7f800000;
 }
 
+//! @}
+
 #include <algorithm>
 
 namespace cv
 {
 
+//! @addtogroup hal_utils
+//! @{
+
 /////////////// saturate_cast (used in image & signal processing) ///////////////////
 
-/**
- Template function for accurate conversion from one primitive type to another.
+/** @brief Template function for accurate conversion from one primitive type to another.
 
  The functions saturate_cast resemble the standard C++ cast operations, such as static_cast\<T\>()
  and others. They perform an efficient and accurate conversion from one primitive type to another
@@ -617,8 +621,6 @@ template<typename _Tp> static inline _Tp saturate_cast(double v)   { return _Tp(
 template<typename _Tp> static inline _Tp saturate_cast(int64 v)    { return _Tp(v); }
 /** @overload */
 template<typename _Tp> static inline _Tp saturate_cast(uint64 v)   { return _Tp(v); }
-
-//! @cond IGNORED
 
 template<> inline uchar saturate_cast<uchar>(schar v)        { return (uchar)std::max((int)v, 0); }
 template<> inline uchar saturate_cast<uchar>(ushort v)       { return (uchar)std::min((unsigned)v, (unsigned)UCHAR_MAX); }
@@ -664,12 +666,10 @@ template<> inline int saturate_cast<int>(double v)           { return cvRound(v)
 template<> inline unsigned saturate_cast<unsigned>(float v)  { return cvRound(v); }
 template<> inline unsigned saturate_cast<unsigned>(double v) { return cvRound(v); }
 
-//! @endcond
+//! @}
 
 }
 
 #endif // __cplusplus
-
-//! @} core_utils
 
 #endif //__OPENCV_HAL_H__

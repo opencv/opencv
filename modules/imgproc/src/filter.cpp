@@ -47,7 +47,7 @@
                                     Base Image Filter
 \****************************************************************************************/
 
-#if IPP_VERSION_X100 >= 701
+#if IPP_VERSION_X100 >= 710
 #define USE_IPP_SEP_FILTERS 1
 #else
 #undef USE_IPP_SEP_FILTERS
@@ -1415,14 +1415,14 @@ struct RowVec_32f
     {
         kernel = _kernel;
         haveSSE = checkHardwareSupport(CV_CPU_SSE);
-#if defined USE_IPP_SEP_FILTERS && 0
+#if defined USE_IPP_SEP_FILTERS && IPP_DISABLE_BLOCK
         bufsz = -1;
 #endif
     }
 
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
-#if defined USE_IPP_SEP_FILTERS && 0
+#if defined USE_IPP_SEP_FILTERS && IPP_DISABLE_BLOCK
         CV_IPP_CHECK()
         {
             int ret = ippiOperator(_src, _dst, width, cn);
@@ -1463,7 +1463,7 @@ struct RowVec_32f
 
     Mat kernel;
     bool haveSSE;
-#if defined USE_IPP_SEP_FILTERS && 0
+#if defined USE_IPP_SEP_FILTERS && IPP_DISABLE_BLOCK
 private:
     mutable int bufsz;
     int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const

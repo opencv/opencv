@@ -610,12 +610,12 @@ LineAA( Mat& img, Point pt1, Point pt2, const void* color )
                 ICV_PUT_POINT();
                 ICV_PUT_POINT();
 
-                tptr += step;
+                tptr += 4;
                 a = (ep_corr * FilterTable[dist] >> 8) & 0xff;
                 ICV_PUT_POINT();
                 ICV_PUT_POINT();
 
-                tptr += step;
+                tptr += 4;
                 a = (ep_corr * FilterTable[63 - dist] >> 8) & 0xff;
                 ICV_PUT_POINT();
                 ICV_PUT_POINT();
@@ -1748,7 +1748,7 @@ void circle( InputOutputArray _img, Point center, int radius,
     double buf[4];
     scalarToRawData(color, buf, img.type(), 0);
 
-    if( thickness > 1 || line_type >= CV_AA )
+    if( thickness > 1 || line_type >= CV_AA || shift > 0 )
     {
         center.x <<= XY_SHIFT - shift;
         center.y <<= XY_SHIFT - shift;
@@ -2090,6 +2090,10 @@ void putText( InputOutputArray _img, const String& text, Point org,
               int thickness, int line_type, bool bottomLeftOrigin )
 
 {
+    if ( text.empty() )
+    {
+        return;
+    }
     Mat img = _img.getMat();
     const int* ascii = getFontData(fontFace);
 
@@ -2111,7 +2115,7 @@ void putText( InputOutputArray _img, const String& text, Point org,
     pts.reserve(1 << 10);
     const char **faces = cv::g_HersheyGlyphs;
 
-    for( int i = 0; text[i] != '\0'; i++ )
+    for( int i = 0; i < (int)text.size(); i++ )
     {
         int c = (uchar)text[i];
         Point p;
@@ -2158,7 +2162,7 @@ Size getTextSize( const String& text, int fontFace, double fontScale, int thickn
     int cap_line = (ascii[0] >> 4) & 15;
     size.height = cvRound((cap_line + base_line)*fontScale + (thickness+1)/2);
 
-    for( int i = 0; text[i] != '\0'; i++ )
+    for( int i = 0; i < (int)text.size(); i++ )
     {
         int c = (uchar)text[i];
         Point p;
@@ -2232,6 +2236,7 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
         Mat p = pts.getMat(manyContours ? i : -1);
         if( p.total() == 0 )
         {
+            ptsptr[i] = NULL;
             npts[i] = 0;
             continue;
         }

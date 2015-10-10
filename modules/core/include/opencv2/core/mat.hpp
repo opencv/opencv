@@ -496,6 +496,8 @@ struct CV_EXPORTS UMatData
     void* handle;
     void* userdata;
     int allocatorFlags_;
+    int mapcount;
+    UMatData* originalUMatData;
 };
 
 
@@ -1854,6 +1856,11 @@ public:
     /** @overload */
     template<typename _Tp, typename Functor> void forEach(const Functor& operation) const;
 
+#ifdef CV_CXX_MOVE_SEMANTICS
+    Mat(Mat&& m);
+    Mat& operator = (Mat&& m);
+#endif
+
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
     enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
 
@@ -2084,6 +2091,16 @@ public:
     template<int n> operator Vec<typename DataType<_Tp>::channel_type, n>() const;
     //! conversion to Matx
     template<int m, int n> operator Matx<typename DataType<_Tp>::channel_type, m, n>() const;
+
+#ifdef CV_CXX_MOVE_SEMANTICS
+    Mat_(Mat_&& m);
+    Mat_& operator = (Mat_&& m);
+
+    Mat_(Mat&& m);
+    Mat_& operator = (Mat&& m);
+
+    Mat_(MatExpr&& e);
+#endif
 };
 
 typedef Mat_<uchar> Mat1b;
@@ -2275,6 +2292,11 @@ public:
 
     //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
     int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;
+
+#ifdef CV_CXX_MOVE_SEMANTICS
+    UMat(UMat&& m);
+    UMat& operator = (UMat&& m);
+#endif
 
     void* handle(int accessFlags) const;
     void ndoffset(size_t* ofs) const;
