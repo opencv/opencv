@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 
 #include <fstream>
+#include <sstream>
 
 using namespace cv;
 using namespace std;
@@ -116,6 +117,150 @@ TEST(Imgcodecs_imread, regression)
             ASSERT_TRUE(imread_compare(path, IMREAD_LOAD_GDAL));
         }
     }
+}
+
+template<class T>
+string to_string(T i)
+{
+    stringstream ss;
+    string s;
+    ss << i;
+    s = ss.str();
+
+    return s;
+}
+
+
+/**
+ * Test for check whether reading exif orientation tag was processed successfully or not
+ * The test info is the set of 8 images named testExifRotate_{1 to 8}.jpg
+ * The test image is the square 10x10 points divided by four sub-squares:
+ * (R corresponds to Red, G to Green, B to Blue, W to white)
+ * ---------             ---------
+ * | R | G |             | G | R |
+ * |-------| - (tag 1)   |-------| - (tag 2)
+ * | B | W |             | W | B |
+ * ---------             ---------
+ *
+ * ---------             ---------
+ * | W | B |             | B | W |
+ * |-------| - (tag 3)   |-------| - (tag 4)
+ * | G | R |             | R | G |
+ * ---------             ---------
+ *
+ * ---------             ---------
+ * | R | B |             | G | W |
+ * |-------| - (tag 5)   |-------| - (tag 6)
+ * | G | W |             | R | B |
+ * ---------             ---------
+ *
+ * ---------             ---------
+ * | W | G |             | B | R |
+ * |-------| - (tag 7)   |-------| - (tag 8)
+ * | B | R |             | W | G |
+ * ---------             ---------
+ *
+ *
+ * Every image contains exif field with orientation tag (0x112)
+ * After reading each image the corresponding matrix must be read as
+ * ---------
+ * | R | G |
+ * |-------|
+ * | B | W |
+ * ---------
+ *
+ */
+class CV_GrfmtJpegExifOrientationTest : public cvtest::BaseTest
+{
+public:
+    void run(int)
+    {
+        try
+        {
+            for( int i = 1; i <= 8; ++i)
+            {
+                string fileName = "readwrite/testExifOrientation_" + to_string(i) + ".jpg";
+                m_img = imread(string(ts->get_data_path()) + fileName);
+                if( !m_img.data )
+                {
+                    ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
+                }
+                ts->printf(cvtest::TS::LOG, "start  reading image\t%s\n", fileName.c_str());
+                if( !checkOrientation() )
+                {
+                    ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+                }
+            }
+
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+        }
+    }
+private:
+    bool checkOrientation();
+    Mat m_img;
+};
+
+
+bool CV_GrfmtJpegExifOrientationTest::checkOrientation()
+{
+    Vec3b vec;
+    int red = 0;
+    int green = 0;
+    int blue = 0;
+
+    const int colorThresholdHigh = 250;
+    const int colorThresholdLow = 5;
+
+    //Checking the first quadrant (with supposed red)
+    vec = m_img.at<Vec3b>(2, 2); //some point inside the square
+    red   = vec.val[2];
+    green = vec.val[1];
+    blue  = vec.val[0];
+
+    ts->printf(cvtest::TS::LOG, "RED QUADRANT:\n");
+    ts->printf(cvtest::TS::LOG, "Red calculated:\t\t%d\n", red);
+    ts->printf(cvtest::TS::LOG, "Green calculated:\t%d\n", green);
+    ts->printf(cvtest::TS::LOG, "Blue calculated:\t%d\n", blue);
+    if( red < colorThresholdHigh ) return false;
+    if( blue > colorThresholdLow ) return false;
+    if( green > colorThresholdLow ) return false;
+
+    //Checking the second quadrant (with supposed green)
+    vec = m_img.at<Vec3b>(2, 7);  //some point inside the square
+    red   = vec.val[2];
+    green = vec.val[1];
+    blue  = vec.val[0];
+    ts->printf(cvtest::TS::LOG, "GREEN QUADRANT:\n");
+    ts->printf(cvtest::TS::LOG, "Red calculated:\t\t%d\n", red);
+    ts->printf(cvtest::TS::LOG, "Green calculated:\t%d\n", green);
+    ts->printf(cvtest::TS::LOG, "Blue calculated:\t%d\n", blue);
+    if( green < colorThresholdHigh ) return false;
+    if( red > colorThresholdLow ) return false;
+    if( blue > colorThresholdLow ) return false;
+
+    //Checking the third quadrant (with supposed blue)
+    vec = m_img.at<Vec3b>(7, 2);  //some point inside the square
+    red   = vec.val[2];
+    green = vec.val[1];
+    blue  = vec.val[0];
+    ts->printf(cvtest::TS::LOG, "BLUE QUADRANT:\n");
+    ts->printf(cvtest::TS::LOG, "Red calculated:\t\t%d\n", red);
+    ts->printf(cvtest::TS::LOG, "Green calculated:\t%d\n", green);
+    ts->printf(cvtest::TS::LOG, "Blue calculated:\t%d\n", blue);
+    if( blue < colorThresholdHigh ) return false;
+    if( red > colorThresholdLow ) return false;
+    if( green > colorThresholdLow ) return false;
+
+    return true;
+}
+
+TEST(Imgcodecs_jpeg_exif, setOrientation)
+{
+    CV_GrfmtJpegExifOrientationTest test;
+    test.safe_run();
 }
 
 #ifdef HAVE_JASPER
