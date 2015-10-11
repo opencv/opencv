@@ -1244,12 +1244,14 @@ public:
         uncompressed_sv.release();
     }
 
-    Mat getSupportVectors(bool compressedSV) const
+    Mat getUncompressedSupportVectors() const
     {
-        if( params.kernelType == LINEAR && !compressedSV)
-            return uncompressed_sv;
-        else
-            return sv;
+        return uncompressed_sv;
+    }
+
+    Mat getSupportVectors() const
+    {
+        return sv;
     }
 
     CV_IMPL_PROPERTY(int, Type, params.svmType)
