@@ -396,6 +396,10 @@ TEST(Highgui_Video_parallel_writers_and_readers, accuracy)
         if (code == 1)
             std::cerr << "Couldn't delete " << *i << std::endl;
     }
+
+    // delete the readers
+    for (std::vector<VideoCapture *>::iterator i = readers.begin(), end = readers.end(); i != end; ++i)
+        delete *i;
 }
 
 #endif
