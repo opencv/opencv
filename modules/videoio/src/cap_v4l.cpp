@@ -1939,18 +1939,16 @@ static int sonix_decompress(int width, int height, unsigned char *inp, unsigned 
 static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
 #ifdef HAVE_CAMV4L2
-  if (V4L2_SUPPORT == 0)
-#endif /* HAVE_CAMV4L2 */
 #ifdef HAVE_CAMV4L
+  if (V4L2_SUPPORT == 0)
   {
-
     /* [FD] this really belongs here */
     if (ioctl(capture->deviceHandle, VIDIOCSYNC, &capture->mmaps[capture->bufferIndex].frame) == -1) {
       fprintf( stderr, "VIDEOIO ERROR: V4L: Could not SYNC to video stream. %s\n", strerror(errno));
     }
-
   }
 #endif /* HAVE_CAMV4L */
+#endif /* HAVE_CAMV4L2 */
 
    /* Now get what has already been captured as a IplImage return */
 
