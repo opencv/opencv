@@ -1695,32 +1695,33 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 
             if (ippiFilterGaussianGetBufferSize(roiSize, (Ipp32u)ksize.width, dataType, cn, &specSize, &bufferSize) >= 0)
             {
-                IppFilterGaussianSpec * pSpec = (IppFilterGaussianSpec *)ippMalloc(specSize);
-                Ipp8u * pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+                IppAutoBuffer<IppFilterGaussianSpec> spec(specSize);
+                IppAutoBuffer<Ipp8u> buffer(bufferSize);
 
-                if (ippiFilterGaussianInit(roiSize, (Ipp32u)ksize.width, (Ipp32f)sigma1, ippBorder, dataType, 1, pSpec, pBuffer) >= 0)
+                if (ippiFilterGaussianInit(roiSize, (Ipp32u)ksize.width, (Ipp32f)sigma1, ippBorder, dataType, cn, spec, buffer) >= 0)
                 {
 #define IPP_FILTER_GAUSS_C1(ippfavor) \
                     { \
-                        typedef Ipp##ippfavor ippType; \
-                        ippType borderValues = 0; \
-                        status = ippiFilterGaussianBorder_##ippfavor##_C1R(src.ptr<ippType>(), (int)src.step, \
-                                dst.ptr<ippType>(), (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
+                        Ipp##ippfavor borderValues = 0; \
+                        status = ippiFilterGaussianBorder_##ippfavor##_C1R(src.ptr<Ipp##ippfavor>(), (int)src.step, \
+                                dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
                     }
 
 #define IPP_FILTER_GAUSS_CN(ippfavor, ippcn) \
                     { \
-                        typedef Ipp##ippfavor ippType; \
-                        ippType borderValues[] = { 0, 0, 0 }; \
-                        status = ippiFilterGaussianBorder_##ippfavor##_C##ippcn##R(src.ptr<ippType>(), (int)src.step, \
-                                dst.ptr<ippType>(), (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
+                        Ipp##ippfavor borderValues[] = { 0, 0, 0 }; \
+                        status = ippiFilterGaussianBorder_##ippfavor##_C##ippcn##R(src.ptr<Ipp##ippfavor>(), (int)src.step, \
+                                dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
                     }
 
                     IppStatus status = ippStsErr;
 #if !HAVE_ICV
+#if IPP_VERSION_X100 > 901 // Buffer overflow in IPP
                     if (type == CV_8UC1)
                         IPP_FILTER_GAUSS_C1(8u)
-                    else if (type == CV_8UC3)
+                    else
+#endif
+                    if (type == CV_8UC3)
                         IPP_FILTER_GAUSS_CN(8u, 3)
                     else if (type == CV_16UC1)
                         IPP_FILTER_GAUSS_C1(16u)
@@ -1736,11 +1737,6 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 #endif
                     if (type == CV_32FC1)
                         IPP_FILTER_GAUSS_C1(32f)
-
-                    if (pSpec)
-                        ippFree(pSpec);
-                    if (pBuffer)
-                        ippFree(pBuffer);
 
                     if(status >= 0)
                         return true;
