@@ -1318,6 +1318,12 @@ public:
                 ippFeatures = ippCPUID_SSE;
             else if(env == "sse2")
                 ippFeatures = ippCPUID_SSE2;
+            else if(env == "sse3")
+                ippFeatures = ippCPUID_SSE3;
+            else if(env == "ssse3")
+                ippFeatures = ippCPUID_SSSE3;
+            else if(env == "sse41")
+                ippFeatures = ippCPUID_SSE41;
             else if(env == "sse42")
                 ippFeatures = ippCPUID_SSE42;
             else if(env == "avx")

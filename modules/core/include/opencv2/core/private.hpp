@@ -241,6 +241,26 @@ static inline IppDataType ippiGetDataType(int depth)
         depth == CV_64F ? ipp64f : (IppDataType)-1;
 }
 
+// IPP temporary buffer hepler
+template<typename T>
+class IppAutoBuffer
+{
+public:
+    IppAutoBuffer() { m_pBuffer = NULL; }
+    IppAutoBuffer(int size) { Alloc(size); }
+    ~IppAutoBuffer() { Release(); }
+    T* Alloc(int size) { m_pBuffer = (T*)ippMalloc(size); return m_pBuffer; }
+    void Release() { if(m_pBuffer) ippFree(m_pBuffer); }
+    inline operator T* () { return (T*)m_pBuffer;}
+    inline operator const T* () const { return (const T*)m_pBuffer;}
+private:
+    // Disable copy operations
+    IppAutoBuffer(IppAutoBuffer &) {};
+    IppAutoBuffer& operator =(const IppAutoBuffer &) {return *this;};
+
+    T* m_pBuffer;
+};
+
 #else
 #define IPP_VERSION_X100 0
 #endif

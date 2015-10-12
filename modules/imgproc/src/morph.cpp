@@ -1231,17 +1231,18 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
     }
     else
     {
+#if IPP_VERSION_X100 != 900 // Problems with accuracy in 9.0.0
 #if IPP_VERSION_X100 >= 900
-        if (((kernel.cols - 1) / 2 != anchor.x) || ((kernel.rows - 1) / 2 != anchor.y)) // Arbitrary anchor is no longer supporeted since IPP 9.0.0
+        if (((kernelSize.width - 1) / 2 != anchor.x) || ((kernelSize.height - 1) / 2 != anchor.y)) // Arbitrary anchor is no longer supporeted since IPP 9.0.0
             return false;
 
-        #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
+        #define IPP_MORPH_CASE(cvtype, flavor, data_type, cn) \
         case cvtype: \
             {\
                 if (op == MORPH_ERODE)\
                 {\
                     int bufSize = 0;\
-                    if (0 > ippiFilterMinBorderGetBufferSize(roiSize, kernelSize, ipp##data_type, 1, &bufSize))\
+                    if (0 > ippiFilterMinBorderGetBufferSize(roiSize, kernelSize, ipp##data_type, cn, &bufSize))\
                         return false;\
                     AutoBuffer<uchar> buf(bufSize + 64);\
                     uchar* buffer = alignPtr((uchar*)buf, 32);\
@@ -1250,7 +1251,7 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
                 else\
                 {\
                     int bufSize = 0;\
-                    if (0 > ippiFilterMaxBorderGetBufferSize(roiSize, kernelSize, ipp##data_type, 1, &bufSize))\
+                    if (0 > ippiFilterMaxBorderGetBufferSize(roiSize, kernelSize, ipp##data_type, cn, &bufSize))\
                         return false;\
                     AutoBuffer<uchar> buf(bufSize + 64);\
                     uchar* buffer = alignPtr((uchar*)buf, 32);\
@@ -1261,7 +1262,7 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
 #else
         IppiPoint point = {anchor.x, anchor.y};
 
-        #define IPP_MORPH_CASE(cvtype, flavor, data_type) \
+        #define IPP_MORPH_CASE(cvtype, flavor, data_type, cn) \
         case cvtype: \
             {\
                 int bufSize = 0;\
@@ -1279,17 +1280,18 @@ static bool ipp_MorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kern
         CV_SUPPRESS_DEPRECATED_START
         switch (type)
         {
-        IPP_MORPH_CASE(CV_8UC1, 8u_C1R, 8u);
-        IPP_MORPH_CASE(CV_8UC3, 8u_C3R, 8u);
-        IPP_MORPH_CASE(CV_8UC4, 8u_C4R, 8u);
-        IPP_MORPH_CASE(CV_32FC1, 32f_C1R, 32f);
-        IPP_MORPH_CASE(CV_32FC3, 32f_C3R, 32f);
-        IPP_MORPH_CASE(CV_32FC4, 32f_C4R, 32f);
+        IPP_MORPH_CASE(CV_8UC1, 8u_C1R, 8u, 1);
+        IPP_MORPH_CASE(CV_8UC3, 8u_C3R, 8u, 3);
+        IPP_MORPH_CASE(CV_8UC4, 8u_C4R, 8u, 4);
+        IPP_MORPH_CASE(CV_32FC1, 32f_C1R, 32f, 1);
+        IPP_MORPH_CASE(CV_32FC3, 32f_C3R, 32f, 3);
+        IPP_MORPH_CASE(CV_32FC4, 32f_C4R, 32f, 4);
         default:
             ;
         }
         CV_SUPPRESS_DEPRECATED_END
         #undef IPP_MORPH_CASE
+#endif
     }
 #else
     CV_UNUSED(op); CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(kernel); CV_UNUSED(ksize); CV_UNUSED(anchor); CV_UNUSED(rectKernel);
