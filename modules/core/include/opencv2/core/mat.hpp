@@ -194,7 +194,7 @@ public:
     UMat getUMat(int idx=-1) const;
     void getMatVector(std::vector<Mat>& mv) const;
     void getUMatVector(std::vector<UMat>& umv) const;
-    void getGpuMatVector(std::vector<cuda::GpuMat>** gpumv) const;
+    void getGpuMatVector(std::vector<cuda::GpuMat>& gpumv) const;
     cuda::GpuMat getGpuMat() const;
     ogl::Buffer getOGlBuffer() const;
 

@@ -1429,12 +1429,12 @@ cuda::GpuMat _InputArray::getGpuMat() const
     CV_Error(cv::Error::StsNotImplemented, "getGpuMat is available only for cuda::GpuMat and cuda::HostMem");
     return cuda::GpuMat();
 }
-void _InputArray::getGpuMatVector(std::vector<cuda::GpuMat>** gpumv) const
+void _InputArray::getGpuMatVector(std::vector<cuda::GpuMat>& gpumv) const
 {
     int k = kind();
     if (k == STD_VECTOR_CUDA_GPU_MAT)
     {
-        *gpumv = (std::vector<cuda::GpuMat>*)obj;
+        gpumv = *(std::vector<cuda::GpuMat>*)obj;
     }
 }
 ogl::Buffer _InputArray::getOGlBuffer() const
