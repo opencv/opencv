@@ -19,6 +19,7 @@ OpenCV makes it easy for businesses to utilize and modify the code.")
   set(CPACK_PACKAGE_VERSION_MINOR "${OPENCV_VERSION_MINOR}")
   set(CPACK_PACKAGE_VERSION_PATCH "${OPENCV_VERSION_PATCH}")
   set(CPACK_PACKAGE_VERSION "${OPENCV_VCSVERSION}")
+  set(OPENCV_DEBIAN_COPYRIGHT_FILE "")
 endif(NOT OPENCV_CUSTOM_PACKAGE_INFO)
 
 set(CPACK_STRIP_FILES 1)
@@ -192,7 +193,7 @@ if(CPACK_GENERATOR STREQUAL "DEB")
     set(DEBIAN_CHANGELOG_OUT_FILE    "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian")
     set(DEBIAN_CHANGELOG_OUT_FILE_GZ "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian.gz")
     set(CHANGELOG_PACKAGE_NAME "${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}")
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/changelog.Debian.in" "${DEBIAN_CHANGELOG_OUT_FILE}" @ONLY)
+    configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/changelog.Debian.in" "${DEBIAN_CHANGELOG_OUT_FILE}" @ONLY)
 
     execute_process(COMMAND "${GZIP_TOOL}" "-cf9" "${DEBIAN_CHANGELOG_OUT_FILE}"
                     OUTPUT_FILE "${DEBIAN_CHANGELOG_OUT_FILE_GZ}"
@@ -213,6 +214,12 @@ if(CPACK_GENERATOR STREQUAL "DEB")
     install(FILES "${CHANGELOG_OUT_FILE_GZ}"
             DESTINATION "share/doc/${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}"
             COMPONENT "${comp}")
+
+    if(OPENCV_DEBIAN_COPYRIGHT_FILE)
+        install(FILES "${OPENCV_DEBIAN_COPYRIGHT_FILE}"
+                DESTINATION "share/doc/${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}"
+                COMPONENT "${comp}")
+    endif()
 
   endforeach()
 endif()
