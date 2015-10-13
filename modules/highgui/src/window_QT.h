@@ -73,7 +73,6 @@
 #include <QFileDialog>
 #include <QToolBar>
 #include <QAction>
-#include <QPushButton>
 #include <QCheckBox>
 #include <QRadioButton>
 #include <QButtonGroup>
