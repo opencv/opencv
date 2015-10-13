@@ -3131,7 +3131,7 @@ static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
 
 static double dotProd_16s(const short* src1, const short* src2, int len)
 {
-#if (ARITHM_USE_IPP == 1)
+#if (ARITHM_USE_IPP == 1) && (IPP_VERSION_X100 != 900) // bug in IPP 9.0.0
     CV_IPP_CHECK()
     {
         double r = 0;
