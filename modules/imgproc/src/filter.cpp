@@ -4579,7 +4579,11 @@ static bool ipp_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
         ktype = kernel.type(), kdepth = CV_MAT_DEPTH(ktype);
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
+#if IPP_VERSION_X100 >= 900
     Point ippAnchor((kernel.cols-1)/2, (kernel.rows-1)/2);
+#else
+    Point ippAnchor(kernel.cols >> 1, kernel.rows >> 1);
+#endif
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     IppiBorderType ippBorderType = ippiGetBorderType(borderTypeNI);
 
@@ -4618,13 +4622,21 @@ static bool ipp_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 {
                     Ipp32f *pKerBuffer = (Ipp32f*)kernel.data;
                     IppAutoBuffer<Ipp32f> kerTmp;
-                    if(kernel.step != kernel.cols)
+                    int kerStep = sizeof(Ipp32f)*kernelSize.width;
+#if IPP_VERSION_X100 >= 900
+                    if(kernel.step != kerStep)
                     {
-                        kerTmp.Alloc(sizeof(Ipp32f)*kernelSize.width*kernelSize.height);
-                        if(ippiCopy_32f_C1R((Ipp32f*)kernel.data, (int)kernel.step, kerTmp, kernelSize.width*sizeof(Ipp32f), kernelSize) < 0)
+                        kerTmp.Alloc(kerStep*kernelSize.height);
+                        if(ippiCopy_32f_C1R((Ipp32f*)kernel.data, (int)kernel.step, kerTmp, kerStep, kernelSize) < 0)
                             return false;
                         pKerBuffer = kerTmp;
                     }
+#else
+                    kerTmp.Alloc(kerStep*kernelSize.height);
+                    Mat kerFlip(Size(kernelSize.width, kernelSize.height), CV_32FC1, kerTmp, kerStep);
+                    flip(kernel, kerFlip, -1);
+                    pKerBuffer = kerTmp;
+#endif
 
                     if((status = ippiFilterBorderInit_32f(pKerBuffer, kernelSize,
                         dataType, cn, ippRndFinancial, spec)) >= 0 )
@@ -4637,13 +4649,21 @@ static bool ipp_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 {
                     Ipp16s *pKerBuffer = (Ipp16s*)kernel.data;
                     IppAutoBuffer<Ipp16s> kerTmp;
-                    if(kernel.step != kernel.cols)
+                    int kerStep = sizeof(Ipp16s)*kernelSize.width;
+#if IPP_VERSION_X100 >= 900
+                    if(kernel.step != kerStep)
                     {
-                        kerTmp.Alloc(sizeof(Ipp16s)*kernelSize.width*kernelSize.height);
-                        if(ippiCopy_16s_C1R((Ipp16s*)kernel.data, (int)kernel.step, kerTmp, kernelSize.width*sizeof(Ipp16s), kernelSize) < 0)
+                        kerTmp.Alloc(kerStep*kernelSize.height);
+                        if(ippiCopy_16s_C1R((Ipp16s*)kernel.data, (int)kernel.step, kerTmp, kerStep, kernelSize) < 0)
                             return false;
                         pKerBuffer = kerTmp;
                     }
+#else
+                    kerTmp.Alloc(kerStep*kernelSize.height);
+                    Mat kerFlip(Size(kernelSize.width, kernelSize.height), CV_16SC1, kerTmp, kerStep);
+                    flip(kernel, kerFlip, -1);
+                    pKerBuffer = kerTmp;
+#endif
 
                     if((status = ippiFilterBorderInit_16s(pKerBuffer, kernelSize,
                         0, dataType, cn, ippRndFinancial, spec)) >= 0)
