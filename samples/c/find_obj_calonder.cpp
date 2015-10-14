@@ -1,12 +1,25 @@
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
-#include "opencv2/legacy/legacy.hpp"
-
+#include "opencv2/opencv_modules.hpp"
 #include <iostream>
-#include <fstream>
+
+#ifndef HAVE_OPENCV_NONFREE
+
+int main(int, char**)
+{
+    std::cout << "The sample requires nonfree module that is not available in your OpenCV distribution." << std::endl;
+    return -1;
+}
+
+#else
+
+# include "opencv2/highgui/highgui.hpp"
+# include "opencv2/core/core.hpp"
+# include "opencv2/imgproc/imgproc.hpp"
+# include "opencv2/features2d/features2d.hpp"
+# include "opencv2/nonfree/nonfree.hpp"
+# include "opencv2/legacy/legacy.hpp"
+
+# include <iostream>
+# include <fstream>
 
 using namespace std;
 using namespace cv;
@@ -164,3 +177,5 @@ int main( int argc, char **argv )
 
     return 0;
 }
+
+#endif

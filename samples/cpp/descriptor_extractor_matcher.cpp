@@ -1,8 +1,11 @@
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
+#ifdef HAVE_OPENCV_NONFREE
+# include "opencv2/nonfree/nonfree.hpp"
+#endif
 
 #include <iostream>
 
@@ -17,14 +20,14 @@ static void help(char** argv)
      << "Case1: second image is obtained from the first (given) image using random generated homography matrix\n"
      << argv[0] << " [detectorType] [descriptorType] [matcherType] [matcherFilterType] [image] [evaluate(0 or 1)]\n"
      << "Example of case1:\n"
-     << "./descriptor_extractor_matcher SURF SURF FlannBased NoneFilter cola.jpg 0\n"
+     << "./descriptor_extractor_matcher ORB ORB FlannBased NoneFilter cola.jpg 0\n"
      << "\n"
      << "Case2: both images are given. If ransacReprojThreshold>=0 then homography matrix are calculated\n"
      << argv[0] << " [detectorType] [descriptorType] [matcherType] [matcherFilterType] [image1] [image2] [ransacReprojThreshold]\n"
      << "\n"
      << "Matches are filtered using homography matrix in case1 and case2 (if ransacReprojThreshold>=0)\n"
      << "Example of case2:\n"
-     << "./descriptor_extractor_matcher SURF SURF BruteForce CrossCheckFilter cola1.jpg cola2.jpg 3\n"
+     << "./descriptor_extractor_matcher ORB ORB BruteForce CrossCheckFilter cola1.jpg cola2.jpg 3\n"
      << "\n"
      << "Possible detectorType values: see in documentation on createFeatureDetector().\n"
      << "Possible descriptorType values: see in documentation on createDescriptorExtractor().\n"
@@ -239,7 +242,11 @@ int main(int argc, char** argv)
         return -1;
     }
 
+#ifdef HAVE_OPENCV_NONFREE
     cv::initModule_nonfree();
+#else
+    cout << "Warning: OpenCV is built without nonfree support SIFT, SURF and some other algorithms are not available." << endl;
+#endif
 
     bool isWarpPerspective = argc == 7;
     double ransacReprojThreshold = -1;
