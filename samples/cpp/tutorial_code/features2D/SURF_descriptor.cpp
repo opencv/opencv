@@ -80,6 +80,6 @@ int main( int argc, char** argv )
  * @function readme
  */
 void readme()
-{ std::cout << " Usage: ./SURF_descriptor <img1> <img2>" << std::endl; }
+{ printf(" Usage: ./SURF_descriptor <img1> <img2>\n"); }
 
 #endif
