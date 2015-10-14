@@ -225,8 +225,10 @@ enum MorphTypes{
                         //!< \f[\texttt{dst} = \mathrm{morph\_grad} ( \texttt{src} , \texttt{element} )= \mathrm{dilate} ( \texttt{src} , \texttt{element} )- \mathrm{erode} ( \texttt{src} , \texttt{element} )\f]
     MORPH_TOPHAT   = 5, //!< "top hat"
                         //!< \f[\texttt{dst} = \mathrm{tophat} ( \texttt{src} , \texttt{element} )= \texttt{src} - \mathrm{open} ( \texttt{src} , \texttt{element} )\f]
-    MORPH_BLACKHAT = 6  //!< "black hat"
+    MORPH_BLACKHAT = 6, //!< "black hat"
                         //!< \f[\texttt{dst} = \mathrm{blackhat} ( \texttt{src} , \texttt{element} )= \mathrm{close} ( \texttt{src} , \texttt{element} )- \texttt{src}\f]
+    MORPH_HITMISS  = 7  //!< "hit and miss"
+                        //!<   .- Only supported for CV_8UC1 binary images. Tutorial can be found in [this page](http://opencv-code.com/tutorials/hit-or-miss-transform-in-opencv/)
 };
 
 //! shape of the structuring element
