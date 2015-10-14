@@ -1870,6 +1870,8 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
 
+    Mat k1, k2, e1, e2;		//only for hit and miss op
+
     switch( op )
     {
     case MORPH_ERODE:
@@ -1904,6 +1906,22 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
         dilate( src, temp, kernel, anchor, iterations, borderType, borderValue );
         erode( temp, temp, kernel, anchor, iterations, borderType, borderValue );
         dst = temp - src;
+        break;
+    case MORPH_HITMISS:
+        CV_Assert(src.type() == CV_8U && src.channels() == 1);
+        k1 = (kernel == 1) / 255;
+        k2 = (kernel == -1) / 255;
+        normalize(src, src, 0, 1, NORM_MINMAX);
+        if (countNonZero(k1) <= 0)
+            e1 = src;
+        else
+            erode(src, e1, k1, anchor, iterations, borderType, borderValue);
+        if (countNonZero(k2) <= 0)
+            e2 = src;
+        else
+            erode(1 - src, e2, k2, anchor, iterations, borderType, borderValue);
+        dst = e1 & e2;
+        normalize(dst, dst, 0, 255, NORM_MINMAX);
         break;
     default:
         CV_Error( CV_StsBadArg, "unknown morphological operation" );
