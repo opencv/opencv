@@ -17,7 +17,7 @@ class TestAntBuild(unittest.TestCase):
         self.sample_dir = os.path.join(self.workdir, "project")
 
     def shortDescription(self):
-        return "TARGET: %s, SAMPLE: %s" % (self.target, os.path.basename(self.src_sample_dir))
+        return "TARGET: %r, SAMPLE: %s" % (self.target, os.path.basename(self.src_sample_dir))
 
     def setUp(self):
         if os.path.exists(self.workdir):
@@ -32,7 +32,7 @@ class TestAntBuild(unittest.TestCase):
             shutil.rmtree(self.workdir)
 
     def runTest(self):
-        cmd = [os.path.join(os.environ["ANDROID_SDK"], "tools", "android"), "update", "project", "-p", self.lib_dir, "-t", self.target]
+        cmd = [os.path.join(os.environ["ANDROID_SDK"], "tools", "android"), "update", "project", "-p", self.lib_dir, "-t", self.target[0]]
         retcode = subprocess.call(cmd)
         self.assertEqual(retcode, 0, "android update opencv project failed")
 
@@ -40,7 +40,7 @@ class TestAntBuild(unittest.TestCase):
         retcode = subprocess.call(cmd)
         self.assertEqual(retcode, 0, "opencv ant build failed")
 
-        cmd = [os.path.join(os.environ["ANDROID_SDK"], "tools", "android"), "update", "project", "-p", self.sample_dir, "-t", self.target, "-l", os.path.relpath(self.lib_dir, self.sample_dir)]
+        cmd = [os.path.join(os.environ["ANDROID_SDK"], "tools", "android"), "update", "project", "-p", self.sample_dir, "-t", self.target[1], "-l", os.path.relpath(self.lib_dir, self.sample_dir)]
         retcode = subprocess.call(cmd)
         self.assertEqual(retcode, 0, "android update sample project failed")
 
@@ -50,7 +50,7 @@ class TestAntBuild(unittest.TestCase):
 
 def suite(workdir, opencv_lib_path, opencv_samples_path):
     suite = unittest.TestSuite()
-    for target in ["android-14", "android-17"]:
+    for target in [("android-21", "android-14"), ("android-21", "android-17")]:
         for item in os.listdir(opencv_samples_path):
             item = os.path.join(opencv_samples_path, item)
             if (os.path.exists(os.path.join(item, "AndroidManifest.xml"))):
