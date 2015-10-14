@@ -49,9 +49,21 @@
 //
 //M*/
 
+#include "opencv2/opencv_modules.hpp"
+#include <iostream>
 
-#include "opencv2/opencv.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
+#ifndef HAVE_OPENCV_NONFREE
+
+int main(int, char**)
+{
+    std::cout << "The sample requires nonfree module that is not available in your OpenCV distribution." << std::endl;
+    return -1;
+}
+
+#else
+
+# include "opencv2/opencv.hpp"
+# include "opencv2/nonfree/nonfree.hpp"
 
 using namespace cv;
 using namespace std;
@@ -212,3 +224,5 @@ int main(int argc, char * argv[]) {
 
     return 0;
 }
+
+#endif
