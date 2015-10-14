@@ -68,8 +68,14 @@ endif()
 
 add_subdirectory(c)
 add_subdirectory(cpp)
-add_subdirectory(ocl)
-add_subdirectory(gpu)
+ocv_check_dependencies(opencv_ocl)
+if (OCV_DEPENDENCIES_FOUND)
+  add_subdirectory(ocl)
+endif()
+ocv_check_dependencies(opencv_gpu)
+if (OCV_DEPENDENCIES_FOUND)
+  add_subdirectory(gpu)
+endif()
 
 #
 # END OF BUILD CASE 2: Build samples with library binaries

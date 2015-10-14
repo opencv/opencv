@@ -4,13 +4,24 @@
  * @author A. Huaman
  */
 
+#include "opencv2/opencv_modules.hpp"
 #include <stdio.h>
-#include <iostream>
-#include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/nonfree/features2d.hpp"
+
+#ifndef HAVE_OPENCV_NONFREE
+
+int main(int, char**)
+{
+    printf("The sample requires nonfree module that is not available in your OpenCV distribution.\n");
+    return -1;
+}
+
+#else
+
+# include "opencv2/core/core.hpp"
+# include "opencv2/features2d/features2d.hpp"
+# include "opencv2/highgui/highgui.hpp"
+# include "opencv2/calib3d/calib3d.hpp"
+# include "opencv2/nonfree/features2d.hpp"
 
 using namespace cv;
 
@@ -29,7 +40,7 @@ int main( int argc, char** argv )
   Mat img_scene = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
 
   if( !img_object.data || !img_scene.data )
-  { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
+  { printf(" --(!) Error reading images \n"); return -1; }
 
   //-- Step 1: Detect the keypoints using SURF Detector
   int minHessian = 400;
@@ -121,4 +132,6 @@ int main( int argc, char** argv )
  * @function readme
  */
 void readme()
-{ std::cout << " Usage: ./SURF_Homography <img1> <img2>" << std::endl; }
+{ printf(" Usage: ./SURF_Homography <img1> <img2>\n"); }
+
+#endif

@@ -4,12 +4,23 @@
  * @author A. Huaman
  */
 
-#include <stdio.h>
+#include "opencv2/opencv_modules.hpp"
 #include <iostream>
-#include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/nonfree/features2d.hpp"
+
+#ifndef HAVE_OPENCV_NONFREE
+
+int main(int, char**)
+{
+    std::cout << "The sample requires nonfree module that is not available in your OpenCV distribution." << std::endl;
+    return -1;
+}
+
+#else
+
+# include "opencv2/core/core.hpp"
+# include "opencv2/features2d/features2d.hpp"
+# include "opencv2/highgui/highgui.hpp"
+# include "opencv2/nonfree/features2d.hpp"
 
 using namespace cv;
 
@@ -60,3 +71,5 @@ int main( int argc, char** argv )
  */
 void readme()
 { std::cout << " Usage: ./SURF_detector <img1> <img2>" << std::endl; }
+
+#endif
