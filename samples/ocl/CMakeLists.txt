@@ -10,7 +10,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   project("${project}_samples")
 
-  ocv_include_modules(${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules(${OPENCV_OCL_SAMPLES_REQUIRED_DEPS} opencv_nonfree)
 
   if(HAVE_OPENCL)
     ocv_include_directories(${OPENCL_INCLUDE_DIR})

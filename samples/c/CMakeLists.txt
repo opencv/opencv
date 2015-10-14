@@ -16,7 +16,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
   endif()
 
-  ocv_include_modules(${OPENCV_C_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules(${OPENCV_C_SAMPLES_REQUIRED_DEPS} opencv_nonfree)
 
   # ---------------------------------------------
   #      Define executable targets
