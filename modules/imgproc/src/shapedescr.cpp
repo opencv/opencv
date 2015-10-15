@@ -317,7 +317,7 @@ double cv::arcLength( InputArray _curve, bool is_closed )
     {
         Point2f p = is_float ? ptf[i] : Point2f((float)pti[i].x,(float)pti[i].y);
         float dx = p.x - prev.x, dy = p.y - prev.y;
-        perimeter += sqrtf(dx*dx + dy*dy);
+        perimeter += std::sqrt(dx*dx + dy*dy);
 
         prev = p;
     }
