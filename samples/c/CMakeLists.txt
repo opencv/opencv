@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------------
 
 SET(OPENCV_C_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc
-    opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo opencv_nonfree
+    opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo
     opencv_features2d opencv_calib3d opencv_legacy opencv_contrib)
 
 ocv_check_dependencies(${OPENCV_C_SAMPLES_REQUIRED_DEPS})
@@ -16,7 +16,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
   endif()
 
-  ocv_include_modules(${OPENCV_C_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules(${OPENCV_C_SAMPLES_REQUIRED_DEPS} opencv_nonfree)
 
   # ---------------------------------------------
   #      Define executable targets

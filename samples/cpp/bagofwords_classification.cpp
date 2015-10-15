@@ -1,29 +1,41 @@
 #include "opencv2/opencv_modules.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
-#include "opencv2/ml/ml.hpp"
-#ifdef HAVE_OPENCV_OCL
-#define _OCL_SVM_ 1 //select whether using ocl::svm method or not, default is using
-#include "opencv2/ocl/ocl.hpp"
-#endif
-
-#include <fstream>
 #include <iostream>
-#include <memory>
-#include <functional>
 
-#if defined WIN32 || defined _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#undef min
-#undef max
-#include "sys/types.h"
-#endif
-#include <sys/stat.h>
+#ifndef HAVE_OPENCV_NONFREE
 
-#define DEBUG_DESC_PROGRESS
+int main(int, char**)
+{
+    std::cout << "The sample requires nonfree module that is not available in your OpenCV distribution." << std::endl;
+    return -1;
+}
+
+#else
+
+# include "opencv2/highgui/highgui.hpp"
+# include "opencv2/imgproc/imgproc.hpp"
+# include "opencv2/features2d/features2d.hpp"
+# include "opencv2/nonfree/nonfree.hpp"
+# include "opencv2/ml/ml.hpp"
+# ifdef HAVE_OPENCV_OCL
+# define _OCL_SVM_ 1 //select whether using ocl::svm method or not, default is using
+#  include "opencv2/ocl/ocl.hpp"
+# endif
+
+# include <fstream>
+# include <memory>
+# include <functional>
+
+
+# if defined WIN32 || defined _WIN32
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#  undef min
+#  undef max
+#  include "sys/types.h"
+# endif
+# include <sys/stat.h>
+
+# define DEBUG_DESC_PROGRESS
 
 using namespace cv;
 using namespace std;
@@ -2623,3 +2635,5 @@ int main(int argc, char** argv)
     }
     return 0;
 }
+
+#endif
