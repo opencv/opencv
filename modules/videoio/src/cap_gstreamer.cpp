@@ -601,6 +601,8 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             else
             {
                 CV_WARN("GStreamer: Error opening file\n");
+                CV_WARN(filename);
+                CV_WARN(uri);
                 close();
                 return false;
             }
