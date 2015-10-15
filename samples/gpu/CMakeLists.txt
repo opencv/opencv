@@ -112,6 +112,6 @@ if (OCV_DEPENDENCIES_FOUND AND INSTALL_C_EXAMPLES AND NOT WIN32)
     list_filterout(install_list ".*driver_api_stereo_multi.cpp")
   endif()
   install(FILES ${install_list}
-          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu
-          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
+          DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu"
+          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ COMPONENT samples)
 endif()
