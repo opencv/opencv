@@ -4,18 +4,30 @@
  * Author: Liu Liu
  * liuliu.1987+opencv@gmail.com
  */
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/legacy/legacy.hpp"
-#include "opencv2/legacy/compat.hpp"
 
-#include <iostream>
-#include <vector>
+#include "opencv2/opencv_modules.hpp"
 #include <stdio.h>
+
+#ifndef HAVE_OPENCV_NONFREE
+
+int main(int, char**)
+{
+    printf("The sample requires nonfree module that is not available in your OpenCV distribution.\n");
+    return -1;
+}
+
+#else
+
+# include "opencv2/objdetect/objdetect.hpp"
+# include "opencv2/features2d/features2d.hpp"
+# include "opencv2/highgui/highgui.hpp"
+# include "opencv2/calib3d/calib3d.hpp"
+# include "opencv2/nonfree/nonfree.hpp"
+# include "opencv2/imgproc/imgproc_c.h"
+# include "opencv2/legacy/legacy.hpp"
+# include "opencv2/legacy/compat.hpp"
+
+# include <vector>
 
 using namespace std;
 static void help()
@@ -320,3 +332,5 @@ int main(int argc, char** argv)
 
     return 0;
 }
+
+#endif

@@ -1,11 +1,22 @@
+#include "opencv2/opencv_modules.hpp"
 #include <iostream>
-#include <stdio.h>
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/ocl/ocl.hpp"
-#include "opencv2/nonfree/ocl.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
+
+#ifndef HAVE_OPENCV_NONFREE
+
+int main(int, char**)
+{
+    std::cout << "The sample requires nonfree module that is not available in your OpenCV distribution." << std::endl;
+    return -1;
+}
+
+#else
+
+# include "opencv2/core/core.hpp"
+# include "opencv2/highgui/highgui.hpp"
+# include "opencv2/ocl/ocl.hpp"
+# include "opencv2/nonfree/ocl.hpp"
+# include "opencv2/calib3d/calib3d.hpp"
+# include "opencv2/nonfree/nonfree.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
@@ -326,3 +337,5 @@ int main(int argc, char* argv[])
     waitKey(0);
     return EXIT_SUCCESS;
 }
+
+#endif
