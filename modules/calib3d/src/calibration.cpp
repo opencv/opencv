@@ -818,8 +818,8 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                 }
                 dpdf_p += dpdf_step*2;
             }
-            for (size_t row = 0; row < 2; ++row)
-                for (size_t col = 0; col < 2; ++col)
+            for (int row = 0; row < 2; ++row)
+                for (int col = 0; col < 2; ++col)
                     dMatTilt(row,col) = matTilt(row,col)*vecTilt(2)
                       - matTilt(2,col)*vecTilt(row);
             double invProjSquare = (invProj*invProj);

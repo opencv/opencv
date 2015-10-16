@@ -128,7 +128,7 @@ protected:
         cv::Vec<double, NUM_DIST_COEFF_TILT>& coeff,
         const cv::Vec<double, NUM_DIST_COEFF_TILT>& max)
     {
-        for (size_t i = 0; i < coeff.rows; ++i)
+        for (int i = 0; i < coeff.rows; ++i)
             coeff(i) += m_rng.uniform(-max(i), max(i));
     }
 
@@ -262,13 +262,13 @@ void cameraCalibrationTiltTest::SetUp()
     angle.push_back(maxAngle);
     cv::Matx33d baseMatrix;
     cv::Rodrigues(m_pointTargetRvec.front(), baseMatrix);
-    for (double a : angle)
+    for (std::vector<double>::const_iterator itAngle = angle.begin(); itAngle != angle.end(); ++itAngle)
     {
         cv::Matx33d rmat;
-        for (size_t i = 0; i < 2; ++i)
+        for (int i = 0; i < 2; ++i)
         {
             cv::Vec3d rvec(0,0,0);
-            rvec(i) = a;
+            rvec(i) = *itAngle;
             cv::Rodrigues(rvec, rmat);
             rmat = baseMatrix*rmat;
             cv::Rodrigues(rmat, rvec);
@@ -322,12 +322,12 @@ void cameraCalibrationTiltTest::numericalDerivative(
         cv::projectPoints(obj, r, t, cm, dc, pix1);
         *(param[col]) = save;
 
-        auto it0 = pix0.begin();
-        auto it1 = pix1.begin();
-        size_t row = 0;
+        std::vector<cv::Point2d>::const_iterator it0 = pix0.begin();
+        std::vector<cv::Point2d>::const_iterator it1 = pix1.begin();
+        int row = 0;
         for (;it0 != pix0.end(); ++it0, ++it1)
         {
-            auto d = invEps*(*it0 - *it1);
+            cv::Point2d d = invEps*(*it0 - *it1);
             jac.at<double>(row, col) = d.x;
             ++row;
             jac.at<double>(row, col) = d.y;
@@ -341,8 +341,8 @@ void cameraCalibrationTiltTest::removeInvalidPoints(
     std::vector<cv::Point3d>& objectPoints)
 {
     // remove object and imgage points out of range
-    auto itImg = imagePoints.begin();
-    auto itObj = objectPoints.begin();
+    std::vector<cv::Point2d>::iterator itImg = imagePoints.begin();
+    std::vector<cv::Point3d>::iterator itObj = objectPoints.begin();
     while (itImg != imagePoints.end())
     {
         bool ok =
@@ -369,15 +369,15 @@ void cameraCalibrationTiltTest::addNoiseRemoveInvalidPoints(
     std::vector<cv::Point2f>& noisyImagePoints,
     double halfWidthNoise)
 {
-    auto itImg = imagePoints.begin();
-    auto itObj = objectPoints.begin();
+    std::vector<cv::Point2f>::iterator itImg = imagePoints.begin();
+    std::vector<cv::Point3f>::iterator itObj = objectPoints.begin();
     noisyImagePoints.clear();
     noisyImagePoints.reserve(imagePoints.size());
     while (itImg != imagePoints.end())
     {
         cv::Point2f pix = *itImg + cv::Point2f(
-            m_rng.uniform(-halfWidthNoise, halfWidthNoise),
-            m_rng.uniform(-halfWidthNoise, halfWidthNoise));
+            (float)m_rng.uniform(-halfWidthNoise, halfWidthNoise),
+            (float)m_rng.uniform(-halfWidthNoise, halfWidthNoise));
         bool ok =
             pix.x >= 0 &&
             pix.x <= m_imageSize.width - 1.0 &&
@@ -401,9 +401,9 @@ void cameraCalibrationTiltTest::addNoiseRemoveInvalidPoints(
 TEST_F(cameraCalibrationTiltTest, projectPoints)
 {
     std::vector<cv::Point2d> imagePoints;
-    auto objectPoints = m_pointTarget;
-    auto rvec = m_pointTargetRvec.front();
-    auto tvec = m_pointTargetTvec.front();
+    std::vector<cv::Point3d> objectPoints = m_pointTarget;
+    cv::Vec3d rvec = m_pointTargetRvec.front();
+    cv::Vec3d tvec = m_pointTargetTvec.front();
 
     cv::Vec<double, NUM_DIST_COEFF_TILT> coeffNoiseHalfWidth(
         .1, .1, // k1 k2
@@ -414,7 +414,7 @@ TEST_F(cameraCalibrationTiltTest, projectPoints)
     for (size_t numTest = 0; numTest < 10; ++numTest)
     {
         // create random distortion coefficients
-        auto distortionCoeff = m_distortionCoeff;
+        cv::Vec<double, NUM_DIST_COEFF_TILT> distortionCoeff = m_distortionCoeff;
         randomDistortionCoeff(distortionCoeff, coeffNoiseHalfWidth);
 
         // projection
@@ -429,8 +429,8 @@ TEST_F(cameraCalibrationTiltTest, projectPoints)
         // remove object and imgage points out of range
         removeInvalidPoints(imagePoints, objectPoints);
 
-        size_t numPoints = imagePoints.size();
-        size_t numParams = 10 + distortionCoeff.rows;
+        int numPoints = imagePoints.size();
+        int numParams = 10 + distortionCoeff.rows;
         cv::Mat jacobian(2*numPoints, numParams, CV_64FC1);
 
         // projection and jacobian
@@ -493,7 +493,7 @@ TEST_F(cameraCalibrationTiltTest, undistortPoints)
 
     for (size_t numTest = 0; numTest < 10; ++numTest)
     {
-        auto distortionCoeff = m_distortionCoeff;
+        cv::Vec<double, NUM_DIST_COEFF_TILT> distortionCoeff = m_distortionCoeff;
         randomDistortionCoeff(distortionCoeff, coeffNoiseHalfWidth);
 
         // distorted points
@@ -511,8 +511,9 @@ TEST_F(cameraCalibrationTiltTest, undistortPoints)
 
         // copy normalized points to 3D
         std::vector<cv::Point3d> objectPoints;
-        for (auto& pnt : normalizedUndistorted)
-            objectPoints.push_back(cv::Point3d(pnt.x, pnt.y, 1));
+        for (std::vector<cv::Point2d>::const_iterator itPnt = normalizedUndistorted.begin();
+            itPnt != normalizedUndistorted.end(); ++itPnt)
+            objectPoints.push_back(cv::Point3d(itPnt->x, itPnt->y, 1));
 
         // project
         std::vector<cv::Point2d> imagePoints(objectPoints.size());
@@ -566,23 +567,26 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
     double pixelNoiseHalfWidth = .5;
     std::vector<cv::Point3f> pointTarget;
     pointTarget.reserve(m_pointTarget.size());
-    for (auto it = m_pointTarget.begin(); it != m_pointTarget.end(); ++it)
-        pointTarget.push_back(cv::Point3f(it->x, it->y, it->z));
+    for (std::vector<cv::Point3d>::const_iterator it = m_pointTarget.begin(); it != m_pointTarget.end(); ++it)
+        pointTarget.push_back(cv::Point3f(
+        (float)(it->x),
+        (float)(it->y),
+        (float)(it->z)));
 
     for (size_t numTest = 0; numTest < 5; ++numTest)
     {
         // create random distortion coefficients
-        auto distortionCoeff = m_distortionCoeff;
+        cv::Vec<double, NUM_DIST_COEFF_TILT> distortionCoeff = m_distortionCoeff;
         randomDistortionCoeff(distortionCoeff, coeffNoiseHalfWidth);
 
         // container for calibration data
-        std::vector<std::vector<cv::Point3f>> viewsObjectPoints;
-        std::vector<std::vector<cv::Point2f>> viewsImagePoints;
-        std::vector<std::vector<cv::Point2f>> viewsNoisyImagePoints;
+        std::vector<std::vector<cv::Point3f> > viewsObjectPoints;
+        std::vector<std::vector<cv::Point2f> > viewsImagePoints;
+        std::vector<std::vector<cv::Point2f> > viewsNoisyImagePoints;
 
         // simulate calibration data with projectPoints
-        auto itRvec = m_pointTargetRvec.begin();
-        auto itTvec = m_pointTargetTvec.begin();
+        std::vector<cv::Vec3d>::const_iterator itRvec = m_pointTargetRvec.begin();
+        std::vector<cv::Vec3d>::const_iterator itTvec = m_pointTargetTvec.begin();
         // loop over different views
         for (;itRvec != m_pointTargetRvec.end(); ++ itRvec, ++itTvec)
         {
