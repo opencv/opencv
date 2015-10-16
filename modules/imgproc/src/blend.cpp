@@ -111,7 +111,7 @@ static bool ocl_blendLinear( InputArray _src1, InputArray _src2, InputArray _wei
            ocl::KernelArg::ReadOnlyNoSize(weights1), ocl::KernelArg::ReadOnlyNoSize(weights2),
            ocl::KernelArg::WriteOnly(dst));
 
-    size_t globalsize[2] = { dst.cols, dst.rows };
+    size_t globalsize[2] = { (size_t)dst.cols, (size_t)dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 

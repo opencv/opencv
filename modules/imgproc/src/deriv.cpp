@@ -702,7 +702,7 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     else
         k.args(d2xarg, d2yarg, dstarg, iscale, idelta);
 
-    size_t globalsize[] = { dst.cols * cn / kercn, dst.rows };
+    size_t globalsize[] = { (size_t)dst.cols * cn / kercn, (size_t)dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 

@@ -394,7 +394,7 @@ static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
         Dx.create(src.size(), CV_32FC1);
         Dy.create(src.size(), CV_32FC1);
 
-        size_t localsize[2] = { sobel_lsz, sobel_lsz };
+        size_t localsize[2] = { (size_t)sobel_lsz, (size_t)sobel_lsz };
         size_t globalsize[2] = { localsize[0] * (1 + (src.cols - 1) / localsize[0]),
                                  localsize[1] * (1 + (src.rows - 1) / localsize[1]) };
 
@@ -515,7 +515,7 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
            ocl::KernelArg::ReadOnlyNoSize(D2x), ocl::KernelArg::ReadOnlyNoSize(D2y),
            ocl::KernelArg::ReadOnlyNoSize(Dxy), ocl::KernelArg::WriteOnly(dst), (float)factor);
 
-    size_t globalsize[2] = { dst.cols, dst.rows };
+    size_t globalsize[2] = { (size_t)dst.cols, (size_t)dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 

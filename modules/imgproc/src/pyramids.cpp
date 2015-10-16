@@ -1107,8 +1107,8 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
 
-    size_t localThreads[2]  = { local_size/kercn, 1 };
-    size_t globalThreads[2] = { (src.cols + (kercn-1))/kercn, (dst.rows + 1) / 2 };
+    size_t localThreads[2]  = { (size_t)local_size/kercn, 1 };
+    size_t globalThreads[2] = { ((size_t)src.cols + (kercn-1))/kercn, ((size_t)dst.rows + 1) / 2 };
     return k.run(2, globalThreads, localThreads, false);
 }
 
@@ -1144,8 +1144,8 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
             ocl::typeToStr(depth), channels, local_size
     );
-    size_t globalThreads[2] = { dst.cols, dst.rows };
-    size_t localThreads[2] = { local_size, local_size };
+    size_t globalThreads[2] = { (size_t)dst.cols, (size_t)dst.rows };
+    size_t localThreads[2] = { (size_t)local_size, (size_t)local_size };
     ocl::Kernel k;
     if (ocl::Device::getDefault().isIntel() && channels == 1)
     {

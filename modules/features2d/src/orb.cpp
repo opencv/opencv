@@ -64,7 +64,7 @@ ocl_HarrisResponses(const UMat& imgbuf,
                     UMat& responses,
                     int nkeypoints, int blockSize, float harris_k)
 {
-    size_t globalSize[] = {nkeypoints};
+    size_t globalSize[] = {(size_t)nkeypoints};
 
     float scale = 1.f/((1 << 2) * blockSize * 255.f);
     float scale_sq_sq = scale * scale * scale * scale;
@@ -86,7 +86,7 @@ ocl_ICAngles(const UMat& imgbuf, const UMat& layerinfo,
              const UMat& keypoints, UMat& responses,
              const UMat& umax, int nkeypoints, int half_k)
 {
-    size_t globalSize[] = {nkeypoints};
+    size_t globalSize[] = {(size_t)nkeypoints};
 
     ocl::Kernel icangle_ker("ORB_ICAngle", ocl::features2d::orb_oclsrc, "-D ORB_ANGLES");
     if( icangle_ker.empty() )
@@ -106,7 +106,7 @@ ocl_computeOrbDescriptors(const UMat& imgbuf, const UMat& layerInfo,
                           const UMat& keypoints, UMat& desc, const UMat& pattern,
                           int nkeypoints, int dsize, int wta_k)
 {
-    size_t globalSize[] = {nkeypoints};
+    size_t globalSize[] = {(size_t)nkeypoints};
 
     ocl::Kernel desc_ker("ORB_computeDescriptor", ocl::features2d::orb_oclsrc,
                          format("-D ORB_DESCRIPTORS -D WTA_K=%d", wta_k));

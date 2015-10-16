@@ -6692,7 +6692,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
     int pxPerWIx = 1;
 
-    size_t globalsize[] = { src.cols, (src.rows + pxPerWIy - 1) / pxPerWIy };
+    size_t globalsize[] = { (size_t)src.cols, ((size_t)src.rows + pxPerWIy - 1) / pxPerWIy };
     cv::String opts = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
                              depth, scn, pxPerWIy);
 

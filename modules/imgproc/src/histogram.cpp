@@ -2220,7 +2220,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         mapk.args(ocl::KernelArg::ReadOnlyNoSize(im), ocl::KernelArg::PtrReadOnly(lut),
                   ocl::KernelArg::WriteOnly(dst));
 
-        size_t globalsize[2] = { size.width, size.height };
+        size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
         return mapk.run(2, globalsize, NULL, false);
     }
     else if (histdims == 2)
@@ -2267,7 +2267,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         mapk.args(ocl::KernelArg::ReadOnlyNoSize(im0), ocl::KernelArg::ReadOnlyNoSize(im1),
                ocl::KernelArg::ReadOnlyNoSize(hist), ocl::KernelArg::PtrReadOnly(lut), scale, ocl::KernelArg::WriteOnly(dst));
 
-        size_t globalsize[2] = { size.width, size.height };
+        size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
         return mapk.run(2, globalsize, NULL, false);
     }
     return false;

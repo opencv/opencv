@@ -1411,7 +1411,7 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE",
                                        "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
-    size_t globalsize[2] = { size.width, size.height };
+    size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
 
     UMat src = _src.getUMat();
     if (!isolated)
@@ -1592,7 +1592,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
 #else
     size_t localThreads[2] = { 16, 16 };
 #endif
-    size_t globalThreads[2] = { ssize.width, ssize.height };
+    size_t globalThreads[2] = { (size_t)ssize.width, (size_t)ssize.height };
 
 #ifdef __APPLE__
     if( actual_op != MORPH_ERODE && actual_op != MORPH_DILATE )
