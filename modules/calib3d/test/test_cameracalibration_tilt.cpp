@@ -313,7 +313,7 @@ void cameraCalibrationTiltTest::numericalDerivative(
     std::vector<cv::Point2d> pix0, pix1;
     double invEps = .5/eps;
 
-    for (size_t col = 0; col < 10+NUM_DIST_COEFF_TILT; ++col)
+    for (int col = 0; col < 10+NUM_DIST_COEFF_TILT; ++col)
     {
         double save = *(param[col]);
         *(param[col]) = save + eps;
@@ -429,7 +429,7 @@ TEST_F(cameraCalibrationTiltTest, projectPoints)
         // remove object and imgage points out of range
         removeInvalidPoints(imagePoints, objectPoints);
 
-        int numPoints = imagePoints.size();
+        int numPoints = (int)imagePoints.size();
         int numParams = 10 + distortionCoeff.rows;
         cv::Mat jacobian(2*numPoints, numParams, CV_64FC1);
 
@@ -535,8 +535,8 @@ void show(const std::string& name, const INPUT in, const ESTIMATE est)
         << ", diff = " << est-in << ")\n";
 }
 
-template <typename INPUT, typename ESTIMATE>
-void showVec(const std::string& name, const INPUT& in, const ESTIMATE& est)
+template <typename INPUT>
+void showVec(const std::string& name, const INPUT& in, const cv::Mat& est)
 {
 
     for (size_t i = 0; i < in.channels; ++i)
