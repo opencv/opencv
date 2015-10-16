@@ -99,7 +99,7 @@ static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsi
     _output.create(input.size(), input.type());
     output = _output.getUMat();
 
-    size_t globalThreads[3] = { input.cols, input.rows, 1 };
+    size_t globalThreads[3] = { (size_t)input.cols, (size_t)input.rows, 1 };
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols,
         prefilterCap, scale_g, scale_s);
@@ -180,7 +180,7 @@ static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int pre
     _output.create(input.size(), input.type());
     output = _output.getUMat();
 
-    size_t globalThreads[3] = { input.cols, input.rows, 1 };
+    size_t globalThreads[3] = { (size_t)input.cols, (size_t)input.rows, 1 };
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols, prefilterCap);
 
@@ -927,8 +927,8 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
 
     int globalX = (disp.cols + sizeX - 1) / sizeX,
         globalY = (disp.rows + sizeY - 1) / sizeY;
-    size_t globalThreads[3] = {N, globalX, globalY};
-    size_t localThreads[3]  = {N, 1, 1};
+    size_t globalThreads[3] = {(size_t)N, (size_t)globalX, (size_t)globalY};
+    size_t localThreads[3]  = {(size_t)N, 1, 1};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));

@@ -729,7 +729,7 @@ bool ocl_convert_nv12_to_bgr(
 
     k.args(clImageY, clImageUV, clBuffer, step, cols, rows);
 
-    size_t globalsize[] = { cols, rows };
+    size_t globalsize[] = { (size_t)cols, (size_t)rows };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -750,7 +750,7 @@ bool ocl_convert_bgr_to_nv12(
 
     k.args(clBuffer, step, cols, rows, clImageY, clImageUV);
 
-    size_t globalsize[] = { cols, rows };
+    size_t globalsize[] = { (size_t)cols, (size_t)rows };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -834,7 +834,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     {
         size_t offset = 0; // TODO
         size_t origin[3] = { 0, 0, 0 };
-        size_t region[3] = { u.cols, u.rows, 1 };
+        size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1 };
 
         status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, origin, region, 0, NULL, NULL);
         if (status != CL_SUCCESS)
@@ -939,7 +939,7 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     {
         size_t offset = 0; // TODO
         size_t origin[3] = { 0, 0, 0 };
-        size_t region[3] = { u.cols, u.rows, 1 };
+        size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1 };
 
         status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, origin, region, offset, 0, NULL, NULL);
         if (status != CL_SUCCESS)
@@ -1041,7 +1041,7 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D10ObjectsKHR failed");
     size_t offset = 0; // TODO
     size_t dst_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
@@ -1100,7 +1100,7 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D10ObjectsKHR failed");
     size_t offset = 0; // TODO
     size_t src_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
@@ -1195,7 +1195,7 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireDX9MediaSurfacesKHR failed");
     size_t offset = 0; // TODO
     size_t dst_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
@@ -1261,7 +1261,7 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireDX9MediaSurfacesKHR failed");
     size_t offset = 0; // TODO
     size_t src_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");

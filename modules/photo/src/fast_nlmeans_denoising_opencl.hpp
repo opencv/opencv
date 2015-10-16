@@ -77,7 +77,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight,
            almostDist2ActualDistMultiplier, fixedPointMult,
            ocl::KernelArg::Constant(den, (hn == 3 ? 4 : hn)*sizeof(FT)), WEIGHT_THRESHOLD);
 
-    size_t globalsize[1] = { almostMaxDist };
+    size_t globalsize[1] = { (size_t)almostMaxDist };
     return k.run(1, globalsize, NULL, false);
 }
 
@@ -172,7 +172,7 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, const fl
            ocl::KernelArg::PtrReadOnly(almostDist2Weight),
            ocl::KernelArg::PtrReadOnly(buffer), almostTemplateWindowSizeSqBinShift);
 
-    size_t globalsize[2] = { nblocksx * ctaSize, nblocksy }, localsize[2] = { ctaSize, 1 };
+    size_t globalsize[2] = { (size_t)nblocksx * ctaSize, (size_t)nblocksy }, localsize[2] = { (size_t)ctaSize, 1 };
     if (!k.run(2, globalsize, localsize, false)) return false;
 
     if (cn == 3) {

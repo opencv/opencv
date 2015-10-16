@@ -1298,7 +1298,11 @@ TEST(UMat, testTempObjects_UMat)
     ASSERT_EQ(0, countNonZero(uDiff));
 }
 
-TEST(UMat, testTempObjects_Mat)
+// Disabled due to failure in VS 2015:
+//  C++11 is enabled by default ==>
+//  destructors have implicit 'noexcept(true)' specifier ==>
+//  throwing exception from destructor is not handled correctly
+TEST(UMat, DISABLED_testTempObjects_Mat)
 {
     Mat m(10, 10, CV_8UC1, Scalar(1));
     {
