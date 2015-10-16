@@ -43,8 +43,6 @@
 #ifndef __OPENCV_IMGPROC_DETAIL_DISTORTION_MODEL_HPP__
 #define __OPENCV_IMGPROC_DETAIL_DISTORTION_MODEL_HPP__
 
-#include "precomp.hpp"
-
 //! @cond IGNORED
 
 namespace cv { namespace detail {
