@@ -1,0 +1,8 @@
+language: c
+before_script:
+ - sudo apt-get update && sudo apt-get --yes build-dep libopencv-dev
+ - git clone git://code.opencv.org/opencv_extra.git && export OPENCV_TEST_DATA_PATH=opencv_extra
+script:
+# there's no make check target, so test scripts have to be invoked manually
+# make -j4 causes memory error
+ - cmake . && make -j3 && bin/opencv_test_calib3d && bin/opencv_test_core && bin/opencv_test_features2d && bin/opencv_test_flann && bin/opencv_test_hal && bin/opencv_test_highgui && bin/opencv_test_imgcodecs && bin/opencv_test_imgproc && bin/opencv_test_ml && bin/opencv_test_objdetect && bin/opencv_test_photo && bin/opencv_test_shape && bin/opencv_test_stitching && bin/opencv_test_superres && bin/opencv_test_video && bin/opencv_test_videoio && sudo make install
