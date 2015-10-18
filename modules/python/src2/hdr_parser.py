@@ -7,6 +7,7 @@ import os, sys, re, string, io
 opencv_hdr_list = [
 "../../core/include/opencv2/core.hpp",
 "../../core/include/opencv2/core/ocl.hpp",
+"../../core/include/opencv2/core/types.hpp",
 "../../flann/include/opencv2/flann/miniflann.hpp",
 "../../ml/include/opencv2/ml.hpp",
 "../../imgproc/include/opencv2/imgproc.hpp",
