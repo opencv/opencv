@@ -24,7 +24,12 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   MACRO(OPENCV_DEFINE_C_EXAMPLE name srcs)
     set(the_target "example_${name}")
     add_executable(${the_target} ${srcs})
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_C_SAMPLES_REQUIRED_DEPS} m)
+    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_C_SAMPLES_REQUIRED_DEPS})
+
+    if(UNIX)
+        find_package (Threads)
+        target_link_libraries(${the_target} "${CMAKE_THREAD_LIBS_INIT}" m)
+    endif()
 
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "c-example-${name}"

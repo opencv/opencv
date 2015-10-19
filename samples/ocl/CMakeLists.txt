@@ -25,6 +25,11 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
 
+    if(UNIX)
+        find_package (Threads)
+        target_link_libraries(${the_target} "${CMAKE_THREAD_LIBS_INIT}" m)
+    endif()
+
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "${project}-example-${name}"
       PROJECT_LABEL "(EXAMPLE_${project_upper}) ${name}")
