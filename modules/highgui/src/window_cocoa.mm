@@ -62,6 +62,7 @@ CV_IMPL void cvSetMouseCallback( const char* name, CvMouseCallback function, voi
 CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name ) {return 0;}
 CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos) {}
 CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval) {}
+CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval) {}
 CV_IMPL void* cvGetWindowHandle( const char* name ) {return NULL;}
 CV_IMPL const char* cvGetWindowName( void* window_handle ) {return NULL;}
 CV_IMPL int cvNamedWindow( const char* name, int flags ) {return 0; }
@@ -426,7 +427,7 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
 
 CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval)
 {
-    CV_FUNCNAME("cvSetTrackbarPos");
+    CV_FUNCNAME("cvSetTrackbarMax");
 
     CVWindow *window = nil;
     CVSlider *slider = nil;
@@ -454,7 +455,37 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
     __END__;
 }
 
-CV_IMPL void* cvGetWindowHandle( const char* name )
+CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval)
+{
+    CV_FUNCNAME("cvSetTrackbarMin");
+
+    CVWindow *window = nil;
+    CVSlider *slider = nil;
+    NSAutoreleasePool* localpool5 = nil;
+
+    __BEGIN__;
+    //cout << "cvSetTrackbarPos" << endl;
+    if(trackbar_name == NULL || window_name == NULL)
+        CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
+
+    if (localpool5 != nil) [localpool5 drain];
+    localpool5 = [[NSAutoreleasePool alloc] init];
+
+    window = cvGetWindow(window_name);
+    if(window) {
+        slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
+        if(slider) {
+            if(minval >= 0) {
+                [[slider slider] setMinValue:minval];
+            }
+        }
+    }
+    [localpool5 drain];
+
+    __END__;
+}
+
+CV_IMPL void* cvGetWindowHandle( const char* name )k
 {
     //cout << "cvGetWindowHandle" << endl;
     return cvGetWindow(name);

@@ -508,6 +508,7 @@ typedef struct CvTrackbar
     int* data;
     int pos;
     int maxval;
+    int minval;
     CvTrackbarCallback notify;
     CvTrackbarCallback2 notify2;
     void* userdata;
@@ -1607,11 +1608,48 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
             trackbar = icvFindTrackbarByName(window, trackbar_name);
             if (trackbar)
             {
-                trackbar->maxval = maxval;
+                trackbar->maxval = (trackbar->minval>maxval)?trackbar->minval:maxval;
 
                 CV_LOCK_MUTEX();
 
                 gtk_range_set_range(GTK_RANGE(trackbar->widget), 0, trackbar->maxval);
+
+                CV_UNLOCK_MUTEX();
+            }
+        }
+    }
+
+    __END__;
+}
+
+
+CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval)
+{
+    CV_FUNCNAME("cvSetTrackbarMin");
+
+    __BEGIN__;
+
+    if (minval >= 0)
+    {
+        CvWindow* window = 0;
+        CvTrackbar* trackbar = 0;
+
+        if (trackbar_name == 0 || window_name == 0)
+        {
+            CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name");
+        }
+
+        window = icvFindWindowByName( window_name );
+        if (window)
+        {
+            trackbar = icvFindTrackbarByName(window, trackbar_name);
+            if (trackbar)
+            {
+                trackbar->minval = (minval<trackbar->maxval)?minval:trackbar->maxval;
+
+                CV_LOCK_MUTEX();
+
+                gtk_range_set_range(GTK_RANGE(trackbar->widget), minval, trackbar->maxval);
 
                 CV_UNLOCK_MUTEX();
             }
