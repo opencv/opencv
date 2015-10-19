@@ -446,6 +446,8 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
         slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
             if(maxval >= 0) {
+                int minval = [[slider slider] minValue];
+                maxval = (minval>maxval)?minval:maxval;
                 [[slider slider] setMaxValue:maxval];
             }
         }
@@ -464,7 +466,6 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     NSAutoreleasePool* localpool5 = nil;
 
     __BEGIN__;
-    //cout << "cvSetTrackbarPos" << endl;
     if(trackbar_name == NULL || window_name == NULL)
         CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
 
@@ -476,6 +477,8 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
         slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
             if(minval >= 0) {
+                int maxval = [[slider slider] maxValue];
+                minval = (minval<maxval)?minval:maxval;
                 [[slider slider] setMinValue:minval];
             }
         }
@@ -485,7 +488,7 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     __END__;
 }
 
-CV_IMPL void* cvGetWindowHandle( const char* name )k
+CV_IMPL void* cvGetWindowHandle( const char* name )
 {
     //cout << "cvGetWindowHandle" << endl;
     return cvGetWindow(name);

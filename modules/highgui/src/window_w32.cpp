@@ -138,6 +138,7 @@ typedef struct CvTrackbar
     int* data;
     int pos;
     int maxval;
+    int minval;
     void (*notify)(int);
     void (*notify2)(int, void*);
     void* userdata;
@@ -2341,7 +2342,7 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
 
     __BEGIN__;
 
-    if (maxval >= 0)
+    if (minval >= 0)
     {
         CvWindow* window = 0;
         CvTrackbar* trackbar = 0;
