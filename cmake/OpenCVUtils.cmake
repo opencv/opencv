@@ -630,3 +630,21 @@ function(ocv_source_group group)
   file(GLOB srcs ${OCV_SOURCE_GROUP_GLOB})
   source_group(${group} FILES ${srcs})
 endfunction()
+
+# build the list of simple dependencies, that links via "-l"
+#  _all_libs - name of variable with input list
+#  _simple - name of variable with output list of simple libs
+#  _other - name of variable with _all_libs - _simple
+macro(ocv_extract_simple_libs _all_libs _simple _other)
+  set(${_simple} "")
+  set(${_other} "")
+  foreach(_l ${${_all_libs}})
+    if(TARGET ${_l})
+        list(APPEND ${_other} ${_l})
+    elseif(EXISTS "${_l}")
+        list(APPEND ${_other} ${_l})
+    else()
+        list(APPEND ${_simple} ${_l})
+    endif()
+  endforeach()
+endmacro()
