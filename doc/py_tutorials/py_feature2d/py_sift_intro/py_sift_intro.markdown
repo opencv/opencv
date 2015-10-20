@@ -104,7 +104,7 @@ greater than 0.8, they are rejected. It eliminaters around 90% of false matches 
 
 So this is a summary of SIFT algorithm. For more details and understanding, reading the original
 paper is highly recommended. Remember one thing, this algorithm is patented. So this algorithm is
-included in Non-free module in OpenCV.
+included in [the opencv contrib repo](https://github.com/Itseez/opencv_contrib)
 
 SIFT in OpenCV
 --------------
@@ -119,7 +119,7 @@ import numpy as np
 img = cv2.imread('home.jpg')
 gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
-sift = cv2.SIFT()
+sift = cv2.xfeatures2d.SIFT_create()
 kp = sift.detect(gray,None)
 
 img=cv2.drawKeypoints(gray,kp)
@@ -151,7 +151,7 @@ Now to calculate the descriptor, OpenCV provides two methods.
 
 We will see the second method:
 @code{.py}
-sift = cv2.SIFT()
+sift = cv2.xfeatures2d.SIFT_create()
 kp, des = sift.detectAndCompute(gray,None)
 @endcode
 Here kp will be a list of keypoints and des is a numpy array of shape
