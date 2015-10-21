@@ -151,6 +151,8 @@ public:
     void    setPosition(double pos);
     double  getMaxPosition();
     void    setMaxPosition(double pos);
+    double  getMinPosition();
+    void    setMinPosition(double pos);
     Slider^ getSlider();
     void    setSlider(Slider^ pos);
 
