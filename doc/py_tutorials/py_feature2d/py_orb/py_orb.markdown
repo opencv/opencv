@@ -69,8 +69,8 @@ from matplotlib import pyplot as plt
 
 img = cv2.imread('simple.jpg',0)
 
-# Initiate STAR detector
-orb = cv2.ORB()
+# Initiate ORB detector
+orb = cv2.ORB_create()
 
 # find the keypoints with ORB
 kp = orb.detect(img,None)
