@@ -526,6 +526,21 @@ panel.
  */
 CV_EXPORTS_W void setTrackbarMax(const String& trackbarname, const String& winname, int maxval);
 
+/** @brief Sets the trackbar minimum position.
+
+The function sets the minimum position of the specified trackbar in the specified window.
+
+@note
+
+[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+panel.
+
+@param trackbarname Name of the trackbar.
+@param winname Name of the window that is the parent of trackbar.
+@param minval New maximum position.
+ */
+CV_EXPORTS_W void setTrackbarMin(const String& trackbarname, const String& winname, int minval);
+
 //! @addtogroup highgui_opengl OpenGL support
 //! @{
 
