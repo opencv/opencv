@@ -1346,7 +1346,7 @@ Copies the matrix to another one.
 
     :param m: Destination matrix. If it does not have a proper size or type before the operation, it is reallocated.
 
-    :param mask: Operation mask. Its non-zero elements indicate which matrix elements need to be copied.
+    :param mask: Operation mask. Its non-zero elements indicate which matrix elements need to be copied. Keep in mind that the mask needs to be of type CV_8U and can have 1 or multiple channels.
 
 The method copies the matrix data to another matrix. Before copying the data, the method invokes ::
 
