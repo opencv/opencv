@@ -97,8 +97,8 @@ static bool ocl_matchSingle(InputArray query, InputArray train,
     if(k.empty())
         return false;
 
-    size_t globalSize[] = {(query.size().height + block_size - 1) / block_size * block_size, block_size};
-    size_t localSize[] = {block_size, block_size};
+    size_t globalSize[] = {((size_t)query.size().height + block_size - 1) / block_size * block_size, (size_t)block_size};
+    size_t localSize[] = {(size_t)block_size, (size_t)block_size};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(uquery));
@@ -197,8 +197,8 @@ static bool ocl_knnMatchSingle(InputArray query, InputArray train, UMat &trainId
     if(k.empty())
         return false;
 
-    size_t globalSize[] = {(query_rows + block_size - 1) / block_size * block_size, block_size};
-    size_t localSize[] = {block_size, block_size};
+    size_t globalSize[] = {((size_t)query_rows + block_size - 1) / block_size * block_size, (size_t)block_size};
+    size_t localSize[] = {(size_t)block_size, (size_t)block_size};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(uquery));
@@ -306,8 +306,8 @@ static bool ocl_radiusMatchSingle(InputArray query, InputArray train,
     if (k.empty())
         return false;
 
-    size_t globalSize[] = {(train_rows + block_size - 1) / block_size * block_size, (query_rows + block_size - 1) / block_size * block_size};
-    size_t localSize[] = {block_size, block_size};
+    size_t globalSize[] = {((size_t)train_rows + block_size - 1) / block_size * block_size, ((size_t)query_rows + block_size - 1) / block_size * block_size};
+    size_t localSize[] = {(size_t)block_size, (size_t)block_size};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(uquery));

@@ -840,7 +840,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
                    haveDstUninit ? ocl::KernelArg::WriteOnly(dst) :
                                    ocl::KernelArg::ReadWrite(dst));
 
-            size_t globalsize[2] = { cols, rows };
+            size_t globalsize[2] = { (size_t)cols, (size_t)rows };
             if (k.run(2, globalsize, NULL, false))
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
@@ -901,7 +901,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
             else
                 k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
 
-            size_t globalsize[2] = { dst.cols * cn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+            size_t globalsize[2] = { (size_t)dst.cols * cn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, false))
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
@@ -957,7 +957,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
                 setK.args(dstarg, scalararg);
             }
 
-            size_t globalsize[] = { cols * cn / kercn, (rows + rowsPerWI - 1) / rowsPerWI };
+            size_t globalsize[] = { (size_t)cols * cn / kercn, ((size_t)rows + rowsPerWI - 1) / rowsPerWI };
             if( setK.run(2, globalsize, NULL, false) )
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);

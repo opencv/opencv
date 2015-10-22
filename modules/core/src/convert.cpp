@@ -902,7 +902,7 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
         argidx = k.set(argidx, ocl::KernelArg::WriteOnlyNoSize(dst[i]));
     k.set(argidx, rowsPerWI);
 
-    size_t globalsize[2] = { size.width, (size.height + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)size.width, ((size_t)size.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1069,7 +1069,7 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
     argidx = k.set(argidx, ocl::KernelArg::WriteOnly(dst));
     k.set(argidx, rowsPerWI);
 
-    size_t globalsize[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1338,7 +1338,7 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
     argindex = k.set(argindex, size.width);
     k.set(argindex, rowsPerWI);
 
-    size_t globalsize[2] = { size.width, (size.height + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)size.width, ((size_t)size.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -5505,7 +5505,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
     else if (wdepth == CV_64F)
         k.args(srcarg, dstarg, alpha, beta);
 
-    size_t globalsize[2] = { src.cols * cn / kercn, (src.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)src.cols * cn / kercn, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -5673,7 +5673,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
         ocl::KernelArg::WriteOnly(dst, dcn, kercn));
 
-    size_t globalSize[2] = { dst.cols * dcn / kercn, (dst.rows + 3) / 4 };
+    size_t globalSize[2] = { (size_t)dst.cols * dcn / kercn, ((size_t)dst.rows + 3) / 4 };
     return k.run(2, globalSize, NULL, false);
 }
 
@@ -6053,7 +6053,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
                 k.args(srcarg, maskarg, dstarg);
         }
 
-        size_t globalsize[2] = { src.cols, (src.rows + rowsPerWI - 1) / rowsPerWI };
+        size_t globalsize[2] = { (size_t)src.cols, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
         return k.run(2, globalsize, NULL, false);
     }
     else

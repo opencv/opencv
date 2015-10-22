@@ -164,8 +164,8 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
                         ocl::KernelArg::WriteOnlyNoSize(map),
                         (float) low, (float) high);
 
-        size_t globalsize[2] = { size.width, size.height },
-                localsize[2] = { lSizeX, lSizeY };
+        size_t globalsize[2] = { (size_t)size.width, (size_t)size.height },
+                localsize[2] = { (size_t)lSizeX, (size_t)lSizeY };
 
         if (!with_sobel.run(2, globalsize, localsize, false))
             return false;
@@ -193,8 +193,8 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
                            ocl::KernelArg::WriteOnly(map),
                            low, high);
 
-        size_t globalsize[2] = { size.width, size.height },
-                localsize[2] = { lSizeX, lSizeY };
+        size_t globalsize[2] = { (size_t)size.width, (size_t)size.height },
+                localsize[2] = { (size_t)lSizeX, (size_t)lSizeY };
 
         if (!without_sobel.run(2, globalsize, localsize, false))
             return false;
@@ -210,7 +210,7 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
     if (sizey == 0)
         sizey = 1;
 
-    size_t globalsize[2] = { size.width, (size.height + PIX_PER_WI - 1) / PIX_PER_WI }, localsize[2] = { lSizeX, sizey };
+    size_t globalsize[2] = { (size_t)size.width, ((size_t)size.height + PIX_PER_WI - 1) / PIX_PER_WI }, localsize[2] = { (size_t)lSizeX, (size_t)sizey };
 
     ocl::Kernel edgesHysteresis("stage2_hysteresis", ocl::imgproc::canny_oclsrc,
                                 format("-D STAGE2 -D PIX_PER_WI=%d -D LOCAL_X=%d -D LOCAL_Y=%d",

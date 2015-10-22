@@ -205,11 +205,11 @@ namespace
 
         static const double maxVals[] =
         {
-            std::numeric_limits<uchar>::max(),
-            std::numeric_limits<schar>::max(),
-            std::numeric_limits<ushort>::max(),
-            std::numeric_limits<short>::max(),
-            std::numeric_limits<int>::max(),
+            (double)std::numeric_limits<uchar>::max(),
+            (double)std::numeric_limits<schar>::max(),
+            (double)std::numeric_limits<ushort>::max(),
+            (double)std::numeric_limits<short>::max(),
+            (double)std::numeric_limits<int>::max(),
             1.0,
             1.0,
         };
