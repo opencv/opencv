@@ -887,11 +887,6 @@ protected:
 };
 
 /**
- * \brief Debug function to colormap a quantized image for viewing.
- */
-void colormap(const Mat& quantized, Mat& dst);
-
-/**
  * \brief Represents a successful template match.
  */
 struct CV_EXPORTS Match
