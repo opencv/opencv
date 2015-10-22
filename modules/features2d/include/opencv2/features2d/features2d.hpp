@@ -423,8 +423,6 @@ public:
            float patternScale = 22.0f,
            int nOctaves = 4,
            const vector<int>& selectedPairs = vector<int>());
-    FREAK( const FREAK& rhs );
-    FREAK& operator=( const FREAK& );
 
     virtual ~FREAK();
 
