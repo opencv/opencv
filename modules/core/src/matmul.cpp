@@ -859,8 +859,8 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
                ocl::KernelArg::ReadWrite(D, cn, kercn),
                sizeA.width, (float)alpha, (float)beta);
 
-    size_t globalsize[2] = { sizeD.width * cn / kercn, sizeD.height};
-    size_t localsize[2] = { block_size, block_size};
+    size_t globalsize[2] = { (size_t)sizeD.width * cn / kercn, (size_t)sizeD.height};
+    size_t localsize[2] = { (size_t)block_size, (size_t)block_size};
     return k.run(2, globalsize, block_size!=1 ? localsize : NULL, false);
 }
 #endif
@@ -2304,7 +2304,7 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
     else
         k.args(src1arg, src2arg, dstarg, alpha);
 
-    size_t globalsize[2] = { dst.cols * cn / kercn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst.cols * cn / kercn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 

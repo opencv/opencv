@@ -156,7 +156,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                    thresholdarg, (int)possibleCornersCount);
         }
 
-        size_t globalsize[2] = { eig.cols - 2, eig.rows - 2 };
+        size_t globalsize[2] = { (size_t)eig.cols - 2, (size_t)eig.rows - 2 };
         if (!k.run(2, globalsize, NULL, false))
             return false;
 

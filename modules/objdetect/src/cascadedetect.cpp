@@ -1051,7 +1051,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     if( localsz.area() == 0 )
         return false;
     Size lbufSize = featureEvaluator->getLocalBufSize();
-    size_t localsize[] = { localsz.width, localsz.height };
+    size_t localsize[] = { (size_t)localsz.width, (size_t)localsz.height };
     const int grp_per_CU = 12;
     size_t globalsize[] = { grp_per_CU*ocl::Device::getDefault().maxComputeUnits()*localsize[0], localsize[1] };
     bool ok = false;

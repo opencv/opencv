@@ -44,6 +44,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4099 /wd4100 /wd4101 /wd4127 /wd
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4334) # vs2005 Win64
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4267) # vs2008 Win64
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4456) # vs2015
 
 if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")

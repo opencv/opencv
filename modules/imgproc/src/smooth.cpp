@@ -1057,7 +1057,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         wtype = CV_MAKE_TYPE(wdepth, cn), dtype = CV_MAKE_TYPE(ddepth, cn);
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
-    size_t globalsize[2] = { size.width, size.height };
+    size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
     size_t localsize_general[2] = { 0, 1 }, * localsize = NULL;
 
     UMat src = _src.getUMat();
@@ -3128,7 +3128,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
            ocl::KernelArg::PtrReadOnly(uspace_weight),
            ocl::KernelArg::PtrReadOnly(uspace_ofs));
 
-    size_t globalsize[2] = { dst.cols / sizeDiv, dst.rows };
+    size_t globalsize[2] = { (size_t)dst.cols / sizeDiv, (size_t)dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 

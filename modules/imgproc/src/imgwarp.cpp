@@ -2900,7 +2900,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
     Size ssize = src.size();
     ocl::Kernel k;
-    size_t globalsize[] = { dst.cols, dst.rows };
+    size_t globalsize[] = { (size_t)dst.cols, (size_t)dst.rows };
 
     ocl::Image2D srcImage;
 
@@ -4566,7 +4566,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     else
         k.args(srcarg, dstarg, map1arg, ocl::KernelArg::ReadOnlyNoSize(map2), scalararg);
 
-    size_t globalThreads[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalThreads[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalThreads, NULL, false);
 }
 
@@ -5555,7 +5555,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
            ocl::KernelArg(0, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
 
-    size_t globalThreads[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalThreads[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalThreads, NULL, false);
 }
 
