@@ -1908,10 +1908,10 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
         dst = temp - src;
         break;
     case MORPH_HITMISS:
-        CV_Assert(src.type() == CV_8U && src.channels() == 1);
         k1 = (kernel == 1) / 255;
         k2 = (kernel == -1) / 255;
         normalize(src, src, 0, 1, NORM_MINMAX);
+        CV_Assert(src.type() == CV_8UC1);
         if (countNonZero(k1) <= 0)
             e1 = src;
         else
