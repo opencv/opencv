@@ -664,7 +664,7 @@ CV_IMPL void cvSetTrackbarMax(const char* name_bar, const char* window_name, int
         QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
         if (t)
         {
-            int minval = t->slider->getMinimum();
+            int minval = t->slider->minimum();
             maxval = (maxval>minval)?maxval:minval;
             t->slider->setMaximum(maxval);
         }
@@ -679,7 +679,7 @@ CV_IMPL void cvSetTrackbarMin(const char* name_bar, const char* window_name, int
         QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
         if (t)
         {
-            int maxval = t->slider->getMaximum();
+            int maxval = t->slider->maximum();
             minval = (maxval<minval)?maxval:minval;
             t->slider->setMinimum(minval);
         }
