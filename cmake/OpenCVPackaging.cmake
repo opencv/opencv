@@ -127,6 +127,8 @@ foreach(module calib3d contrib core features2d flann gpu highgui imgproc legacy
   endif()
 endforeach()
 
+list(APPEND STD_OPENCV_DEV "libhighgui-dev" "libcv-dev" "libcvaux-dev")
+
 string(REPLACE ";" ", " CPACK_COMPONENT_LIBS_CONFLICTS "${STD_OPENCV_LIBS}")
 string(REPLACE ";" ", " CPACK_COMPONENT_LIBS_PROVIDES "${STD_OPENCV_LIBS}")
 string(REPLACE ";" ", " CPACK_COMPONENT_LIBS_REPLACES "${STD_OPENCV_LIBS}")
