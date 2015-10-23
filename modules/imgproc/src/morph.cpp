@@ -1908,10 +1908,9 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
         dst = temp - src;
         break;
     case MORPH_HITMISS:
-        k1 = (kernel == 1) / 255;
-        k2 = (kernel == -1) / 255;
-        normalize(src, src, 0, 1, NORM_MINMAX);
         CV_Assert(src.type() == CV_8UC1);
+        k1 = (kernel == 1);
+        k2 = (kernel == -1);
         if (countNonZero(k1) <= 0)
             e1 = src;
         else
@@ -1919,9 +1918,12 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
         if (countNonZero(k2) <= 0)
             e2 = src;
         else
-            erode(1 - src, e2, k2, anchor, iterations, borderType, borderValue);
+        {
+            Mat src_complement;
+            bitwise_not(src, src_complement);
+            erode(src_complement, e2, k2, anchor, iterations, borderType, borderValue);
+        }
         dst = e1 & e2;
-        normalize(dst, dst, 0, 255, NORM_MINMAX);
         break;
     default:
         CV_Error( CV_StsBadArg, "unknown morphological operation" );
