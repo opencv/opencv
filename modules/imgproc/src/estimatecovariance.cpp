@@ -49,9 +49,12 @@ A previous and less efficient version of the algorithm can be found:
 
 */
 
-//#include "precomp.hpp"
-#include <opencv2/opencv.hpp>
-#include <omp.h>
+#include "precomp.hpp"
+//#include <opencv2/opencv.hpp>
+
+#ifdef HAVE_OPENMP
+	#include <omp.h>
+#endif
 
 using namespace cv;
 using namespace std;

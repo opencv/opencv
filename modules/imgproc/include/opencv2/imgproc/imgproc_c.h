@@ -422,8 +422,10 @@ CVAPI(float)  cvCalcEMD2( const CvArr* signature1,
                           float* lower_bound CV_DEFAULT(NULL),
                           void* userdata CV_DEFAULT(NULL));
 
-/**
-@param src The source image
+/** @brief Computes the estimated covariance matrix of an image using the sliding
+window forumlation.
+
+@param src The source image. Input image must be of a complex type.
 @param windowRows The number of rows in the window.
 @param windowCols The number of cols in the window.
 The window size parameters control the accuracy of the estimation. 
