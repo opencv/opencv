@@ -265,7 +265,7 @@ struct buffer
 
 static unsigned int n_buffers = 0;
 
-struct CvCaptureCAM_V4L
+struct CvCaptureCAM_V4L : public CvCapture
 {
     int deviceHandle;
     int bufferIndex;
@@ -297,6 +297,13 @@ struct CvCaptureCAM_V4L
    /* V4L2 control variables */
    Range focus, brightness, contrast, saturation, hue, gain, exposure;
 
+   bool open(int _index);
+
+   virtual double getProperty(int) const;
+   virtual bool setProperty(int, double);
+   virtual bool grabFrame();
+   virtual IplImage* retrieveFrame(int);
+
    Range getRange(int property_id) const {
        switch (property_id) {
        case CV_CAP_PROP_BRIGHTNESS:
@@ -320,7 +327,7 @@ struct CvCaptureCAM_V4L
        }
    }
 
-   ~CvCaptureCAM_V4L();
+   virtual ~CvCaptureCAM_V4L();
 };
 
 static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture );
@@ -743,53 +750,50 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
  * this also causes buffers to be reallocated if the frame size was changed.
  */
 static bool v4l2_reset( CvCaptureCAM_V4L* capture) {
+    int index = capture->index;
     icvCloseCAM_V4L(capture);
+    capture->index = index;
     return _capture_V4L2(capture) == 1;
 }
 
-static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
+bool CvCaptureCAM_V4L::open(int _index)
 {
    int autoindex = 0;
+
+   index = -1; // set the capture to closed state
 
    if (!numCameras)
       icvInitCapture_V4L(); /* Havent called icvInitCapture yet - do it now! */
    if (!numCameras)
-     return NULL; /* Are there any /dev/video input sources? */
+     return false; /* Are there any /dev/video input sources? */
 
    //search index in indexList
-   if ( (index>-1) && ! ((1 << index) & indexList) )
+   if ( (_index>-1) && ! ((1 << _index) & indexList) )
    {
-     fprintf( stderr, "VIDEOIO ERROR: V4L: index %d is not correct!\n",index);
-     return NULL; /* Did someone ask for not correct video source number? */
+     fprintf( stderr, "VIDEOIO ERROR: V4L: index %d is not correct!\n",_index);
+     return false; /* Did someone ask for not correct video source number? */
    }
 
    /* Select camera, or rather, V4L video source */
-   if (index<0) { // Asking for the first device available
+   if (_index<0) { // Asking for the first device available
      for (; autoindex<MAX_CAMERAS;autoindex++)
     if (indexList & (1<<autoindex))
         break;
      if (autoindex==MAX_CAMERAS)
-    return NULL;
-     index=autoindex;
+    return false;
+     _index=autoindex;
      autoindex++;// i can recall icvOpenCAM_V4l with index=-1 for next camera
    }
 
-   CvCaptureCAM_V4L* capture = new CvCaptureCAM_V4L(); // will throw on OOM
-   capture->index = index;
-   capture->FirstCapture = 1;
-   capture->width = DEFAULT_V4L_WIDTH;
-   capture->height = DEFAULT_V4L_HEIGHT;
-   capture->fps = DEFAULT_V4L_FPS;
-   capture->convert_rgb = true;
+   index = _index;
+   FirstCapture = 1;
+   width = DEFAULT_V4L_WIDTH;
+   height = DEFAULT_V4L_HEIGHT;
+   fps = DEFAULT_V4L_FPS;
+   convert_rgb = true;
 
-   if (_capture_V4L2 (capture) == -1) {
-       icvCloseCAM_V4L(capture);
-       delete capture;
-       return NULL;
-   }
-
-   return capture;
-}; /* End icvOpenCAM_V4L */
+   return _capture_V4L2(this) == 1;
+}
 
 static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
     v4l2_buffer buf = v4l2_buffer();
@@ -1863,12 +1867,13 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
    /* Deallocate space - Hopefully, no leaks */
 
-   if (capture)
+   if (capture->index > -1)
    {
+       if (capture->deviceHandle != -1)
        {
-       capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-       if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
-           perror ("Unable to stop the stream.");
+           capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+           if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
+               perror ("Unable to stop the stream");
        }
 
        for (unsigned int n_buffers_ = 0; n_buffers_ < capture->req.count; ++n_buffers_)
@@ -1888,77 +1893,44 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
      if (capture->deviceHandle != -1)
        close(capture->deviceHandle);
 
-     if (capture->frame.imageData) cvFree(&capture->frame.imageData);
-      //cvFree((void **)capture);
+     if (capture->frame.imageData)
+         cvFree(&capture->frame.imageData);
+
+     capture->index = -1; // flag that the capture is closed
    }
 };
 
-
-class CvCaptureCAM_V4L_CPP : public CvCapture
+bool CvCaptureCAM_V4L::grabFrame()
 {
-public:
-    CvCaptureCAM_V4L_CPP() { captureV4L = 0; }
-    virtual ~CvCaptureCAM_V4L_CPP() { close(); }
-
-    bool open( int index );
-    void close();
-
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-protected:
-
-    CvCaptureCAM_V4L* captureV4L;
-};
-
-bool CvCaptureCAM_V4L_CPP::open( int index )
-{
-    close();
-    captureV4L = icvCaptureFromCAM_V4L(index);
-    return captureV4L != 0;
+    return icvGrabFrameCAM_V4L( this );
 }
 
-void CvCaptureCAM_V4L_CPP::close()
+IplImage* CvCaptureCAM_V4L::retrieveFrame(int)
 {
-    if( captureV4L )
-    {
-        delete captureV4L;
-        captureV4L = NULL;
-    }
+    return icvRetrieveFrameCAM_V4L( this, 0 );
 }
 
-bool CvCaptureCAM_V4L_CPP::grabFrame()
+double CvCaptureCAM_V4L::getProperty( int propId ) const
 {
-    return captureV4L ? icvGrabFrameCAM_V4L( captureV4L ) : false;
+    return icvGetPropertyCAM_V4L( this, propId );
 }
 
-IplImage* CvCaptureCAM_V4L_CPP::retrieveFrame(int)
+bool CvCaptureCAM_V4L::setProperty( int propId, double value )
 {
-    return captureV4L ? icvRetrieveFrameCAM_V4L( captureV4L, 0 ) : 0;
-}
-
-double CvCaptureCAM_V4L_CPP::getProperty( int propId ) const
-{
-    return captureV4L ? icvGetPropertyCAM_V4L( captureV4L, propId ) : 0.0;
-}
-
-bool CvCaptureCAM_V4L_CPP::setProperty( int propId, double value )
-{
-    return captureV4L ? icvSetPropertyCAM_V4L( captureV4L, propId, value ) : false;
+    return icvSetPropertyCAM_V4L( this, propId, value );
 }
 
 } // end namespace cv
 
 CvCapture* cvCreateCameraCapture_V4L( int index )
 {
-    cv::CvCaptureCAM_V4L_CPP* capture = new cv::CvCaptureCAM_V4L_CPP;
+    cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if( capture->open( index ))
+    if(capture->open(index))
         return capture;
 
     delete capture;
-    return 0;
+    return NULL;
 }
 
 #endif
