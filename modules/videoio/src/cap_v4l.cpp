@@ -558,6 +558,9 @@ static int v4l2_num_channels(__u32 palette) {
     case V4L2_PIX_FMT_YUYV:
     case V4L2_PIX_FMT_UYVY:
         return 2;
+    case V4L2_PIX_FMT_BGR24:
+    case V4L2_PIX_FMT_RGB24:
+        return 3;
     default:
         return 0;
     }
@@ -1366,16 +1369,10 @@ static void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, uns
     }
 }
 
-static void
+static inline void
 rgb24_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
 {
-  const int size = width * height;
-  for(int i = 0; i < size; ++i, src += 3, dst += 3)
-  {
-    *(dst + 0) = *(src + 2);
-    *(dst + 1) = *(src + 1);
-    *(dst + 2) = *(src + 0);
-  }
+    cvtColor(Mat(height, width, CV_8UC3, src), Mat(height, width, CV_8UC3, dst), COLOR_RGB2BGR);
 }
 
 #define CLAMP(x)        ((x)<0?0:((x)>255)?255:(x))
