@@ -133,10 +133,10 @@ OCL_TEST_P(Kmeans, Mat){
                 // verify lables with ground truth resutls
                 int label = labels.at<int>(row_idx);
                 int header_label = dd_labels.at<int>(row_idx);
-                for(int j = 0; (j < MHEIGHT/K)||(i == K-1 && j < MHEIGHT/K+MHEIGHT%K); j++)
+                for(int j2 = 0; (j2 < MHEIGHT/K)||(i == K-1 && j2 < MHEIGHT/K+MHEIGHT%K); j2++)
                 {
-                    ASSERT_NEAR(labels.at<int>(row_idx+j), label, 0);
-                    ASSERT_NEAR(dd_labels.at<int>(row_idx+j), header_label, 0);
+                    ASSERT_NEAR(labels.at<int>(row_idx+j2), label, 0);
+                    ASSERT_NEAR(dd_labels.at<int>(row_idx+j2), header_label, 0);
                 }
 
                 // verify centers

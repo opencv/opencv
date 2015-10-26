@@ -80,7 +80,7 @@ namespace cv
                 int cols = divUp(mat_dst.cols + offset_cols, vector_length);
 
                 size_t localThreads[3]  = { 64, 4, 1 };
-                size_t globalThreads[3] = { cols, mat_dst.rows, 1 };
+                size_t globalThreads[3] = { (size_t)cols, (size_t)mat_dst.rows, 1 };
 
                 int dst_step1 = mat_dst.cols * mat_dst.elemSize();
                 vector<pair<size_t , const void *> > args;
@@ -254,7 +254,7 @@ namespace cv
                             || devInfo.deviceVersion.find("Build 78712") != std::string::npos))
                     build_options += " -D BYPASS_VSTORE=true";
 
-                size_t globalThreads[3] = { divUp(src.cols, VEC_SIZE), src.rows, 1 };
+                size_t globalThreads[3] = { divUp(src.cols, VEC_SIZE), (size_t)src.rows, 1 };
                 openCLExecuteKernel(clCtx, &split_mat, kernelName, globalThreads, NULL, args, -1, -1, build_options.c_str());
             }
             static void split(const oclMat &mat_src, oclMat *mat_dst)

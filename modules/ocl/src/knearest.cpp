@@ -93,13 +93,13 @@ bool KNearestNeighbour::train(const Mat& trainData, Mat& labels, Mat& sampleIdx,
     return cv_knn_train;
 }
 
-void KNearestNeighbour::find_nearest(const oclMat& samples, int k, oclMat& lables)
+void KNearestNeighbour::find_nearest(const oclMat& lsamples, int k, oclMat& lables)
 {
     CV_Assert(!samples_ocl.empty());
-    lables.create(samples.rows, 1, CV_32FC1);
+    lables.create(lsamples.rows, 1, CV_32FC1);
 
-    CV_Assert(samples.cols == CvKNearest::var_count);
-    CV_Assert(samples.type() == CV_32FC1);
+    CV_Assert(lsamples.cols == CvKNearest::var_count);
+    CV_Assert(lsamples.type() == CV_32FC1);
     CV_Assert(k >= 1 && k <= max_k);
 
     int k1 = KNearest::get_sample_count();
@@ -112,8 +112,8 @@ void KNearestNeighbour::find_nearest(const oclMat& samples, int k, oclMat& lable
         nThreads = 256;
 
     int smem_size = nThreads * k * 4 * 2;
-    size_t local_thread[] = {1, nThreads, 1};
-    size_t global_thread[] = {1, samples.rows, 1};
+    size_t local_thread[] = {1, (size_t)nThreads, 1};
+    size_t global_thread[] = {1, (size_t)lsamples.rows, 1};
 
     char build_option[50];
     if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
@@ -125,16 +125,16 @@ void KNearestNeighbour::find_nearest(const oclMat& samples, int k, oclMat& lable
     std::vector< std::pair<size_t, const void*> > args;
 
     int samples_ocl_step = samples_ocl.step/samples_ocl.elemSize();
-    int samples_step = samples.step/samples.elemSize();
+    int samples_step = lsamples.step/lsamples.elemSize();
     int lables_step = lables.step/lables.elemSize();
 
     int _regression = 0;
     if(CvKNearest::regression)
         _regression = 1;
 
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&samples.data));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&samples.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&samples.cols));
+    args.push_back(make_pair(sizeof(cl_mem), (void*)&lsamples.data));
+    args.push_back(make_pair(sizeof(cl_int), (void*)&lsamples.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void*)&lsamples.cols));
     args.push_back(make_pair(sizeof(cl_int), (void*)&samples_step));
     args.push_back(make_pair(sizeof(cl_int), (void*)&k));
     args.push_back(make_pair(sizeof(cl_mem), (void*)&samples_ocl.data));

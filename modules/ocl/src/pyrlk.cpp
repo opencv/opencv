@@ -84,7 +84,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     Context  *clCxt = I.clCxt;
     string kernelName = "lkSparse";
     size_t localThreads[3]  = { 8, 8, 1 };
-    size_t globalThreads[3] = { 8 * ptcount, 8, 1};
+    size_t globalThreads[3] = { 8 * (size_t)ptcount, 8, 1};
     int cn = I.oclchannels();
     char calcErr = level==0?1:0;
 
@@ -217,7 +217,7 @@ static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
     string kernelName = "lkDense";
 
     size_t localThreads[3]  = { 16, 16, 1 };
-    size_t globalThreads[3] = { I.cols, I.rows, 1};
+    size_t globalThreads[3] = { (size_t)I.cols, (size_t)I.rows, 1};
 
     cl_char calcErr = err ? 1 : 0;
 

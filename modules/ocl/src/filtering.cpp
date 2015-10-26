@@ -690,20 +690,20 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, const Mat &kernel,
         size_t lt[3] = {BLOCK_SIZE, 1, 1};
         size_t gt[3] = {divUp(dst.cols, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE, divUp(dst.rows, BLOCK_SIZE_Y), 1};
 
-        cl_kernel kernel = openCLGetKernelFromSource(src.clCxt, &filtering_filter2D, "filter2D", -1, -1, build_options);
+        cl_kernel localKernel = openCLGetKernelFromSource(src.clCxt, &filtering_filter2D, "filter2D", -1, -1, build_options);
 
         size_t kernelWorkGroupSize;
-        openCLSafeCall(clGetKernelWorkGroupInfo(kernel, getClDeviceID(src.clCxt),
+        openCLSafeCall(clGetKernelWorkGroupInfo(localKernel, getClDeviceID(src.clCxt),
                                                 CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &kernelWorkGroupSize, 0));
         if (lt[0] > kernelWorkGroupSize)
         {
-            clReleaseKernel(kernel);
+            clReleaseKernel(localKernel);
             CV_Assert(BLOCK_SIZE > kernelWorkGroupSize);
             tryWorkItems = kernelWorkGroupSize;
             continue;
         }
 
-        openCLExecuteKernel(src.clCxt, kernel, gt, lt, args); // kernel will be released here
+        openCLExecuteKernel(src.clCxt, localKernel, gt, lt, args); // kernel will be released here
     } while (false);
 }
 
@@ -1170,7 +1170,7 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
 #else
     size_t localThreads[3] = { 16, 16, 1 };
 #endif
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)dst.cols, (size_t)dst.rows, 1 };
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" };
     std::string buildOptions = format("-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s",

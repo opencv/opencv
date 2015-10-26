@@ -119,8 +119,8 @@ public:
     void compute_descriptors_gpu(const oclMat &descriptors, const oclMat &keypoints, int nFeatures);
     // end of kernel callers declarations
 
-    SURF_OCL_Invoker(SURF_OCL &surf, const oclMat &img, const oclMat &mask) :
-        surf_(surf),
+    SURF_OCL_Invoker(SURF_OCL &theSurf, const oclMat &img, const oclMat &mask) :
+        surf_(theSurf),
         img_cols(img.cols), img_rows(img.rows),
         use_mask(!mask.empty()), counters(oclMat()),
         imgTex(NULL), sumTex(NULL), maskSumTex(NULL), _img(img)
@@ -139,7 +139,7 @@ public:
         CV_Assert(layer_rows - 2 * min_margin > 0);
         CV_Assert(layer_cols - 2 * min_margin > 0);
 
-        maxFeatures   = std::min(static_cast<int>(img.size().area() * surf.keypointsRatio), 65535);
+        maxFeatures   = std::min(static_cast<int>(img.size().area() * theSurf.keypointsRatio), 65535);
         maxCandidates = std::min(static_cast<int>(1.5 * maxFeatures), 65535);
 
         CV_Assert(maxFeatures > 0);
@@ -396,9 +396,9 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, oclMat
 {
     if (!img.empty())
     {
-        SURF_OCL_Invoker surf(*this, img, mask);
+        SURF_OCL_Invoker theSurf(*this, img, mask);
 
-        surf.detectKeypoints(keypoints);
+        theSurf.detectKeypoints(keypoints);
     }
 }
 
@@ -407,16 +407,16 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, oclMat
 {
     if (!img.empty())
     {
-        SURF_OCL_Invoker surf(*this, img, mask);
+        SURF_OCL_Invoker theSurf(*this, img, mask);
 
         if (!useProvidedKeypoints)
-            surf.detectKeypoints(keypoints);
+            theSurf.detectKeypoints(keypoints);
         else if (!upright)
         {
-            surf.findOrientation(keypoints);
+            theSurf.findOrientation(keypoints);
         }
 
-        surf.computeDescriptors(keypoints, descriptors, descriptorSize());
+        theSurf.computeDescriptors(keypoints, descriptors, descriptorSize());
     }
 }
 
@@ -482,23 +482,23 @@ void cv::ocl::SURF_OCL::operator()(InputArray img, InputArray mask, vector<KeyPo
             _mask.upload(mask.getMat());
     }
 
-    SURF_OCL_Invoker surf((SURF_OCL&)*this, _img, _mask);
+    SURF_OCL_Invoker theSurf((SURF_OCL&)*this, _img, _mask);
     oclMat keypointsGPU;
 
     if (!useProvidedKeypoints || !upright)
         ((SURF_OCL*)this)->uploadKeypoints(keypoints, keypointsGPU);
 
     if (!useProvidedKeypoints)
-        surf.detectKeypoints(keypointsGPU);
+        theSurf.detectKeypoints(keypointsGPU);
     else if (!upright)
-        surf.findOrientation(keypointsGPU);
+        theSurf.findOrientation(keypointsGPU);
     if(keypointsGPU.cols*keypointsGPU.rows != 0)
         ((SURF_OCL*)this)->downloadKeypoints(keypointsGPU, keypoints);
 
     if( descriptors.needed() )
     {
         oclMat descriptorsGPU;
-        surf.computeDescriptors(keypointsGPU, descriptorsGPU, descriptorSize());
+        theSurf.computeDescriptors(keypointsGPU, descriptorsGPU, descriptorSize());
         Size sz = descriptorsGPU.size();
         if( descriptors.kind() == _InputArray::STD_VECTOR )
         {
