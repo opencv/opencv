@@ -10,12 +10,9 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Peng Xiao, pengxiao@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -30,7 +27,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors as is and
+// This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -43,47 +40,14 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
-#ifdef HAVE_OPENCL
+#ifndef __OPENCV_PERF_UTIL_HPP__
+#define __OPENCV_PERF_UTIL_HPP__
 
-////////////////////////////////////////////////////////
-// Canny
-IMPLEMENT_PARAM_CLASS(AppertureSize, int)
-IMPLEMENT_PARAM_CLASS(L2gradient, bool)
-
-PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
-{
-    int apperture_size;
-    bool useL2gradient;
-
-    cv::Mat edges_gold;
-    virtual void SetUp()
-    {
-        apperture_size = GET_PARAM(0);
-        useL2gradient = GET_PARAM(1);
-    }
-};
-
-OCL_TEST_P(Canny, Accuracy)
-{
-    cv::Mat img = readImage("cv/shared/fruits.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
-
-    double low_thresh = 50.0;
-    double high_thresh = 100.0;
-
-    cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);
-
-    cv::ocl::oclMat edges;
-    cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    cv::Mat local_edges_gold;
-    cv::Canny(img, local_edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    EXPECT_MAT_SIMILAR(local_edges_gold, edges, 1e-2);
+namespace perf {
+DEF_PARAM_TEST_1(Sz, cv::Size);
+typedef ::perf::Size_MatType Sz_Type;
+DEF_PARAM_TEST(Sz_Depth, cv::Size, ::perf::MatDepth);
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, ::perf::MatDepth, MatCn);
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Canny, testing::Combine(
-                            testing::Values(AppertureSize(3), AppertureSize(5)),
-                            testing::Values(L2gradient(false), L2gradient(true))));
-#endif
+#endif // __OPENCV_PERF_UTIL_HPP__

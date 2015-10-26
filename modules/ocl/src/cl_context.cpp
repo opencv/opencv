@@ -167,28 +167,28 @@ struct DeviceInfoImpl: public DeviceInfo
         parseOpenCLVersion(this->deviceVersion,
                 this->deviceVersionMajor, this->deviceVersionMinor);
 
-        size_t maxWorkGroupSize = 0;
-        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_WORK_GROUP_SIZE, maxWorkGroupSize));
-        this->maxWorkGroupSize = maxWorkGroupSize;
+        size_t maxWGS = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_WORK_GROUP_SIZE, maxWGS));
+        this->maxWorkGroupSize = maxWGS;
 
         cl_uint maxDimensions = 0;
         openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, maxDimensions));
-        std::vector<size_t> maxWorkItemSizes(maxDimensions);
+        std::vector<size_t> maxWIS(maxDimensions);
         openCLSafeCall(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * maxDimensions,
-                (void *)&maxWorkItemSizes[0], 0));
-        this->maxWorkItemSizes = maxWorkItemSizes;
+                (void *)&maxWIS[0], 0));
+        this->maxWorkItemSizes = maxWIS;
 
-        cl_uint maxComputeUnits = 0;
-        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_COMPUTE_UNITS, maxComputeUnits));
-        this->maxComputeUnits = maxComputeUnits;
+        cl_uint maxCU = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_COMPUTE_UNITS, maxCU));
+        this->maxComputeUnits = maxCU;
 
-        cl_ulong localMemorySize = 0;
-        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_LOCAL_MEM_SIZE, localMemorySize));
-        this->localMemorySize = (size_t)localMemorySize;
+        cl_ulong localMS = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_LOCAL_MEM_SIZE, localMS));
+        this->localMemorySize = (size_t)localMS;
 
-        cl_ulong maxMemAllocSize = 0;
-        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, maxMemAllocSize));
-        this->maxMemAllocSize = (size_t)maxMemAllocSize;
+        cl_ulong maxMAS = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, maxMAS));
+        this->maxMemAllocSize = (size_t)maxMAS;
 
         cl_bool unifiedMemory = false;
         openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_HOST_UNIFIED_MEMORY, unifiedMemory));

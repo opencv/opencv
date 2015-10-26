@@ -195,7 +195,7 @@ void cv::ocl::distanceToCenters(const oclMat &src, const oclMat &centers, Mat &d
     args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset));
     args.push_back(make_pair(sizeof(cl_int), (void *)&centers_offset));
 
-    size_t globalThreads[3] = { all_dist_count, 1, 1 };
+    size_t globalThreads[3] = { (size_t)all_dist_count, 1, 1 };
 
     openCLExecuteKernel(Context::getContext(), &kmeans_kernel,
                         "distanceToCenters", globalThreads, NULL, args, -1, -1, build_opt_ss.str().c_str());

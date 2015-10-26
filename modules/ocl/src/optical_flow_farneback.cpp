@@ -66,7 +66,7 @@ static void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oc
 #else
     size_t localThreads[3] = { 32, 8, 1 };
 #endif
-    size_t globalThreads[3] = { flowx.cols, flowx.rows, 1 };
+    size_t globalThreads[3] = { (size_t)flowx.cols, (size_t)flowx.rows, 1 };
 
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&M.data));
@@ -95,7 +95,7 @@ static void boxFilter5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 #else
     size_t localThreads[3] = { 256, 1, 1 };
 #endif
-    size_t globalThreads[3] = { src.cols, height, 1 };
+    size_t globalThreads[3] = { (size_t)src.cols, (size_t)height, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * 5 * sizeof(float);
 
     std::vector< std::pair<size_t, const void *> > args;
@@ -121,7 +121,7 @@ static void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
 #else
     size_t localThreads[3] = { 32, 8, 1 };
 #endif
-    size_t globalThreads[3] = { cols, flowx.rows, 1 };
+    size_t globalThreads[3] = { (size_t)cols, (size_t)flowx.rows, 1 };
 
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&flowx.data));
@@ -161,7 +161,7 @@ void cv::ocl::FarnebackOpticalFlow::gaussianBlurOcl(const oclMat &src, int ksize
 #else
     size_t localThreads[3] = { 256, 1, 1 };
 #endif
-    size_t globalThreads[3] = { src.cols, src.rows, 1 };
+    size_t globalThreads[3] = { (size_t)src.cols, (size_t)src.rows, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * sizeof(float);
 
     CV_Assert(dst.size() == src.size());
@@ -180,7 +180,7 @@ void cv::ocl::FarnebackOpticalFlow::gaussianBlurOcl(const oclMat &src, int ksize
                         globalThreads, localThreads, args, -1, -1);
 }
 
-void cv::ocl::FarnebackOpticalFlow::polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
+void cv::ocl::FarnebackOpticalFlow::polynomialExpansionOcl(const oclMat &src, int lpolyN, oclMat &dst)
 {
     string kernelName("polynomialExpansion");
 
@@ -189,7 +189,7 @@ void cv::ocl::FarnebackOpticalFlow::polynomialExpansionOcl(const oclMat &src, in
 #else
     size_t localThreads[3] = { 256, 1, 1 };
 #endif
-    size_t globalThreads[3] = { divUp(src.cols, localThreads[0] - 2*polyN) * localThreads[0], src.rows, 1 };
+    size_t globalThreads[3] = { divUp(src.cols, localThreads[0] - 2*lpolyN) * localThreads[0], (size_t)src.rows, 1 };
     int smem_size = 3 * localThreads[0] * sizeof(float);
 
     std::vector< std::pair<size_t, const void *> > args;
@@ -206,7 +206,7 @@ void cv::ocl::FarnebackOpticalFlow::polynomialExpansionOcl(const oclMat &src, in
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
 
     char opt [128];
-    sprintf(opt, "-D polyN=%d", polyN);
+    sprintf(opt, "-D polyN=%d", lpolyN);
 
     openCLExecuteKernel(Context::getContext(), &optical_flow_farneback, kernelName,
                         globalThreads, localThreads, args, -1, -1, opt);
@@ -221,7 +221,7 @@ void cv::ocl::FarnebackOpticalFlow::gaussianBlur5Ocl(const oclMat &src, int ksiz
 #else
     size_t localThreads[3] = { 256, 1, 1 };
 #endif
-    size_t globalThreads[3] = { src.cols, height, 1 };
+    size_t globalThreads[3] = { (size_t)src.cols, (size_t)height, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * 5 * sizeof(float);
 
     std::vector< std::pair<size_t, const void *> > args;

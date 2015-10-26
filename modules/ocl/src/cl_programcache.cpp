@@ -397,16 +397,16 @@ struct ProgramFileCache
                                             sizeof(size_t),
                                             &binarySize, NULL));
 
-                    std::vector<char> binary(binarySize);
+                    std::vector<char> localBinary(binarySize);
 
-                    char* ptr = &binary[0];
+                    char* ptr = &localBinary[0];
                     openCLSafeCall(clGetProgramInfo(program,
                                             CL_PROGRAM_BINARIES,
                                             sizeof(char*),
                                             &ptr,
                                             NULL));
 
-                    if (!writeConfigurationToFile(options, binary))
+                    if (!writeConfigurationToFile(options, localBinary))
                     {
                         std::cerr << "Can't write data to file: " << fileName_ << std::endl;
                     }
@@ -463,7 +463,7 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
         }
 
         {
-            cv::AutoLock lockCache(mutexCache);
+            cv::AutoLock localLockCache(mutexCache);
             cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
             if (!!program)
             {
@@ -478,7 +478,7 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
     // second check
     if (source->name)
     {
-        cv::AutoLock lockCache(mutexCache);
+        cv::AutoLock localLockCache(mutexCache);
         cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
         if (!!program)
         {
@@ -504,7 +504,7 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
     //Cache the binary for future use if build_options is null
     if (source->name)
     {
-        cv::AutoLock lockCache(mutexCache);
+        cv::AutoLock localLockCache(mutexCache);
         this->addProgram(src_sign.str(), program);
     }
     return program;
