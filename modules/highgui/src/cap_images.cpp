@@ -120,7 +120,7 @@ bool CvCapture_Images::grabFrame()
         grabbedInOpen = false;
         ++currentframe;
 
-        return true;
+        return frame != NULL;
     }
 
     cvReleaseImage(&frame);
@@ -128,7 +128,7 @@ bool CvCapture_Images::grabFrame()
     if( frame )
         currentframe++;
 
-    return frame != 0;
+    return frame != NULL;
 }
 
 IplImage* CvCapture_Images::retrieveFrame(int)
