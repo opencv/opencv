@@ -294,11 +294,11 @@ bool CvCapture_Images::open(const char * _filename)
     firstframe = offset;
 
     // grab frame to enable properties retrieval
-    grabFrame();
+    bool grabRes = grabFrame();
     grabbedInOpen = true;
     currentframe = 0;
 
-    return true;
+    return grabRes;
 }
 
 
