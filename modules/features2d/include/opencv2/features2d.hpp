@@ -408,6 +408,25 @@ public:
     CV_WRAP virtual int getType() const = 0;
 };
 
+/** @brief Estimates cornerness for prespecified KeyPoints using the FAST algorithm
+
+@param image grayscale image where keypoints (corners) are detected.
+@param keypoints keypoints which should be tested to fit the FAST criteria. Keypoints not beeing
+detected as corners are removed.
+@param threshold threshold on difference between intensity of the central pixel and pixels of a
+circle around this pixel.
+@param nonmaxSuppression if true, non-maximum suppression is applied to detected corners
+(keypoints).
+@param type one of the three neighborhoods as defined in the paper:
+FastFeatureDetector::TYPE_9_16, FastFeatureDetector::TYPE_7_12,
+FastFeatureDetector::TYPE_5_8
+
+Detects corners using the FAST algorithm by @cite Rosten06 .
+ */
+CV_EXPORTS void FAST_KP( InputArray image, CV_IN_OUT std::vector<KeyPoint>& keypoints,
+                      int threshold, bool nonmaxSuppression=true, int type=FastFeatureDetector::TYPE_9_16);
+
+
 /** @overload */
 CV_EXPORTS void AGAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
                       int threshold, bool nonmaxSuppression=true );

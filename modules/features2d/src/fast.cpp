@@ -360,6 +360,154 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     FAST(_img, keypoints, threshold, nonmax_suppression, FastFeatureDetector::TYPE_9_16);
 }
 
+template<int patternSize>
+void FAST_KP_t( InputArray image, std::vector<KeyPoint>& keypoints, int threshold, bool nonmaxSuppression ) {
+    if (keypoints.empty()) {
+        FAST_t<patternSize>(image, keypoints, threshold, nonmaxSuppression);
+        return;
+    }
+
+    Mat img = image.getMat();
+    const int K = patternSize/2, N = patternSize + K + 1;
+
+    int i, k, pixel[25];
+    makeOffsets(pixel, (int)img.step, patternSize);
+
+    keypoints.clear();
+
+    threshold = std::min(std::max(threshold, 0), 255);
+
+    uchar threshold_tab[512];
+    for( i = -255; i <= 255; i++ )
+        threshold_tab[i+255] = (uchar)(i < -threshold ? 1 : i > threshold ? 2 : 0);
+
+    AutoBuffer<uchar> _buf((img.cols+16)*3*(sizeof(int) + sizeof(uchar)) + 128);
+    uchar* buf[3];
+    buf[0] = _buf; buf[1] = buf[0] + img.cols; buf[2] = buf[1] + img.cols;
+    int* cpbuf[3];
+    cpbuf[0] = (int*)alignPtr(buf[2] + img.cols, sizeof(int)) + 1;
+    cpbuf[1] = cpbuf[0] + img.cols + 1;
+    cpbuf[2] = cpbuf[1] + img.cols + 1;
+    memset(buf[0], 0, img.cols*3);
+
+    // Calculate threshold for the keypoints
+    for (size_t keyPointIdx=0; keyPointIdx < keypoints.size(); keyPointIdx++) {
+        // Set response to -1:
+        // All keypoints with response <= 0 will be removed afterwards
+        keypoints[keyPointIdx].response = -1;
+
+        // Poiter to keyPoint in image
+        Point keyPoint = keypoints[keyPointIdx].pt;
+        const uchar* ptr = img.ptr<uchar>(keyPoint.y, keyPoint.x);
+
+        // value of the pixel at certain position
+        int v = ptr[0];
+
+        // Initialize Lookup table
+        // If k=v --> tab[k] is at the center of the thrshold table
+        // The threshold table is made as follows:
+        // -255         -threshold         0        +threshold        255
+        // 111111111111111111|0000000000000|0000000000000|222222222222222
+        const uchar* tab = &threshold_tab[0] - v + 255;
+
+        // Calculate the fast value
+        int d = tab[ptr[pixel[0]]] | tab[ptr[pixel[8]]];
+
+        if( d == 0 )
+            continue;
+
+        d &= tab[ptr[pixel[2]]] | tab[ptr[pixel[10]]];
+        d &= tab[ptr[pixel[4]]] | tab[ptr[pixel[12]]];
+        d &= tab[ptr[pixel[6]]] | tab[ptr[pixel[14]]];
+
+        if( d == 0 )
+            continue;
+
+        d &= tab[ptr[pixel[1]]] | tab[ptr[pixel[9]]];
+        d &= tab[ptr[pixel[3]]] | tab[ptr[pixel[11]]];
+        d &= tab[ptr[pixel[5]]] | tab[ptr[pixel[13]]];
+        d &= tab[ptr[pixel[7]]] | tab[ptr[pixel[15]]];
+
+        // For at least half pixels darker than v count the number
+        if( d & 1 )
+        {
+            int vt = v - threshold, count = 0;
+
+            for(k = 0; k < N; k++ )
+            {
+                int x = ptr[pixel[k]];
+                if(x < vt)
+                {
+                    if( ++count > K )
+                    {
+                        // Calculate score
+                        keypoints[keyPointIdx].response = (uchar)cornerScore<patternSize>(ptr, pixel, threshold);
+                        // Non Maxima Supression I
+                        if (nonmaxSuppression && keyPointIdx>0 && keypoints[keyPointIdx-1].response < keypoints[keyPointIdx].response) {
+                            keypoints[keyPointIdx-1].response = -1;
+                        }
+                        break;
+                    }
+                }
+                else
+                    count = 0;
+            }
+        }
+
+        // For at least half pixels brighter than v count the number
+        if(d & 2 )
+        {
+            int vt = v + threshold, count = 0;
+
+            for(k = 0; k < N; k++ )
+            {
+                int x = ptr[pixel[k]];
+                if(x > vt)
+                {
+                    if( ++count > K )
+                    {
+                        // Calculate score
+                        keypoints[keyPointIdx].response = (uchar)cornerScore<patternSize>(ptr, pixel, threshold);
+                        // Non Maxima Suppression I
+                        if (nonmaxSuppression && keyPointIdx>0 &&keypoints[keyPointIdx-1].response < keypoints[keyPointIdx].response) {
+                            keypoints[keyPointIdx-1].response = -1;
+                        }
+                        break;
+                    }
+                }
+                else
+                    count = 0;
+            }
+        }
+
+    }
+
+    // Remove unused Keypoints
+    int maxKeypointSize = keypoints.size();
+    for (int keyPointIdx=maxKeypointSize-1; keyPointIdx >= 0; keyPointIdx--) {
+        if (keypoints[keyPointIdx].response <= 0) {
+            keypoints.erase(keypoints.begin() + keyPointIdx);
+        } else if (nonmaxSuppression && keyPointIdx>0 && keypoints[keyPointIdx-1].response > keypoints[keyPointIdx].response) {
+            // Non Maxima Suppression II
+            keypoints.erase(keypoints.begin() + keyPointIdx);
+        }
+    }
+}
+
+void FAST_KP(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+{
+  switch(type) {
+    case FastFeatureDetector::TYPE_5_8:
+      FAST_KP_t<8>(_img, keypoints, threshold, nonmax_suppression);
+      break;
+    case FastFeatureDetector::TYPE_7_12:
+      FAST_KP_t<12>(_img, keypoints, threshold, nonmax_suppression);
+      break;
+    case FastFeatureDetector::TYPE_9_16:
+      FAST_KP_t<16>(_img, keypoints, threshold, nonmax_suppression);
+      break;
+  }
+}
 
 class FastFeatureDetector_Impl : public FastFeatureDetector
 {
