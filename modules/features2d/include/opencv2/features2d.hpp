@@ -354,13 +354,14 @@ public:
 };
 
 /** @overload */
-CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
+CV_EXPORTS void FAST( InputArray image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints,
                       int threshold, bool nonmaxSuppression=true );
 
 /** @brief Detects corners using the FAST algorithm
 
 @param image grayscale image where keypoints (corners) are detected.
-@param keypoints keypoints detected on the image.
+@param keypoints keypoints detected on the image. Can be initialized with some Keypoints which
+should be tested to fit the FAST criteria.
 @param threshold threshold on difference between intensity of the central pixel and pixels of a
 circle around this pixel.
 @param nonmaxSuppression if true, non-maximum suppression is applied to detected corners
@@ -375,7 +376,7 @@ Detects corners using the FAST algorithm by @cite Rosten06 .
 cv2.FAST_FEATURE_DETECTOR_TYPE_7_12 and cv2.FAST_FEATURE_DETECTOR_TYPE_9_16. For corner
 detection, use cv2.FAST.detect() method.
  */
-CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
+CV_EXPORTS void FAST( InputArray image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints,
                       int threshold, bool nonmaxSuppression, int type );
 
 //! @} features2d_main
