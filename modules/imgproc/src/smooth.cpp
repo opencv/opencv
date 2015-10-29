@@ -1716,7 +1716,7 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 
                     IppStatus status = ippStsErr;
 #if !HAVE_ICV
-#if IPP_VERSION_X100 > 901 // Buffer overflow in IPP
+#if IPP_VERSION_X100 > 900 // Buffer overflow may happen in IPP 9.0.0 and less
                     if (type == CV_8UC1)
                         IPP_FILTER_GAUSS_C1(8u)
                     else
