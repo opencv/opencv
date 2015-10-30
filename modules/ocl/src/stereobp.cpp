@@ -116,7 +116,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&data.step));
                 args.push_back( make_pair( sizeof(cl_mem) , (void *)&cl_con_struct));
 
-                size_t gt[3] = {left.cols, left.rows, 1}, lt[3] = {16, 16, 1};
+                size_t gt[3] = {(size_t)left.cols, (size_t)left.rows, 1}, lt[3] = {16, 16, 1};
 
                 const int OPT_SIZE = 50;
                 char cn_opt [OPT_SIZE] = "";
@@ -148,7 +148,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&disp));
 
-                size_t gt[3] = {dst_cols, dst_rows, 1}, lt[3] = {16, 16, 1};
+                size_t gt[3] = {(size_t)dst_cols, (size_t)dst_rows, 1}, lt[3] = {16, 16, 1};
                 const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
                 openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, t_opt);
             }
@@ -173,7 +173,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&ndisp));
 
-                size_t gt[3] = {dst_cols, dst_rows, 1}, lt[3] = {16, 16, 1};
+                size_t gt[3] = {(size_t)dst_cols, (size_t)dst_rows, 1}, lt[3] = {16, 16, 1};
                 const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
                 openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, t_opt);
             }
@@ -223,7 +223,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_float) , (void *)&cmax_disc_term));
                 args.push_back( make_pair( sizeof(cl_float) , (void *)&cdisc_single_jump));
 
-                size_t gt[3] = {cols, rows, 1}, lt[3] = {16, 16, 1};
+                size_t gt[3] = {(size_t)cols, (size_t)rows, 1}, lt[3] = {16, 16, 1};
                 char opt[80] = "";
                 sprintf(opt, "-D %s -D CNDISP=%d", data_type == CV_16S ? "T_SHORT":"T_FLOAT", cndisp);
                 openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, opt);
@@ -263,7 +263,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&disp.step));
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&ndisp));
 
-                size_t gt[3] = {disp.cols, disp.rows, 1}, lt[3] = {16, 16, 1};
+                size_t gt[3] = {(size_t)disp.cols, (size_t)disp.rows, 1}, lt[3] = {16, 16, 1};
                 const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
                 openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, t_opt);
             }

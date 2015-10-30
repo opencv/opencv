@@ -238,7 +238,7 @@ static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask
     char compile_option[32];
     sprintf(compile_option, "-D GENTYPE=%s", string_types[dst.oclchannels() - 1][dst.depth()].c_str());
     size_t localThreads[3] = {16, 16, 1};
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)dst.cols, (size_t)dst.rows, 1 };
 
     int dststep_in_pixel = dst.step / dst.elemSize(), dstoffset_in_pixel = dst.offset / dst.elemSize();
     int srcstep_in_pixel = src.step / src.elemSize(), srcoffset_in_pixel = src.offset / src.elemSize();
@@ -426,7 +426,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
     vector<pair<size_t , const void *> > args;
 
     size_t localThreads[3] = {16, 16, 1};
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)dst.cols, (size_t)dst.rows, 1 };
     int step_in_pixel = dst.step / dst.elemSize(), offset_in_pixel = dst.offset / dst.elemSize();
 
     if (dst.type() == CV_8UC1)
@@ -469,7 +469,7 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols);
     vector<pair<size_t , const void *> > args;
     size_t localThreads[3] = { 16, 16, 1 };
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)dst.cols, (size_t)dst.rows, 1 };
     int step_in_pixel = dst.step / dst.elemSize(), offset_in_pixel = dst.offset / dst.elemSize();
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };

@@ -67,7 +67,7 @@ void cv::ocl::columnSum(const oclMat &src, oclMat &dst)
     args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset));
 
-    size_t globalThreads[3] = {dst.cols, 1, 1};
+    size_t globalThreads[3] = {(size_t)dst.cols, 1, 1};
     size_t localThreads[3]  = {256, 1, 1};
 
     openCLExecuteKernel(src.clCxt, &imgproc_columnsum, "columnSum", globalThreads, localThreads, args, src.oclchannels(), src.depth());

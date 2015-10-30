@@ -136,7 +136,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
                 args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
 
-                size_t globalThreads[3] = {result.cols, result.rows, 1};
+                size_t globalThreads[3] = {(size_t)result.cols, (size_t)result.rows, 1};
                 size_t localThreads[3]  = {16, 16, 1};
 
                 const char * build_opt = image.oclchannels() == 4 ? "-D CN4" : "";
@@ -170,7 +170,7 @@ namespace cv
             args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
             args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
 
-            size_t globalThreads[3] = {result.cols, result.rows, 1};
+            size_t globalThreads[3] = {(size_t)result.cols, (size_t)result.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};
             openCLExecuteKernel(clCxt, &match_template, kernelName, globalThreads, localThreads, args, 1, CV_8U);
         }
@@ -205,7 +205,7 @@ namespace cv
             args.push_back( make_pair( sizeof(cl_int), (void *)&templ.step));
             args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
 
-            size_t globalThreads[3] = {result.cols, result.rows, 1};
+            size_t globalThreads[3] = {(size_t)result.cols, (size_t)result.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};
             openCLExecuteKernel(clCxt, &match_template, kernelName, globalThreads, localThreads, args, image.oclchannels(), image.depth());
         }
@@ -269,7 +269,7 @@ namespace cv
             args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
             args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
 
-            size_t globalThreads[3] = {result.cols, result.rows, 1};
+            size_t globalThreads[3] = {(size_t)result.cols, (size_t)result.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};
             openCLExecuteKernel(clCxt, &match_template, kernelName, globalThreads, localThreads, args, 1, CV_8U);
         }
@@ -304,7 +304,7 @@ namespace cv
             args.push_back( make_pair( sizeof(cl_int), (void *)&templ.step));
             args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
 
-            size_t globalThreads[3] = {result.cols, result.rows, 1};
+            size_t globalThreads[3] = {(size_t)result.cols, (size_t)result.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};
             openCLExecuteKernel(clCxt, &match_template, kernelName, globalThreads, localThreads, args, image.oclchannels(), image.depth());
         }
@@ -321,7 +321,7 @@ namespace cv
             string kernelName;
 
             kernelName = "matchTemplate_Prepared_CCOFF";
-            size_t globalThreads[3] = {result.cols, result.rows, 1};
+            size_t globalThreads[3] = {(size_t)result.cols, (size_t)result.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};
 
             vector< pair<size_t, const void *> > args;
@@ -394,7 +394,7 @@ namespace cv
             string kernelName;
 
             kernelName = "matchTemplate_Prepared_CCOFF_NORMED";
-            size_t globalThreads[3] = {result.cols, result.rows, 1};
+            size_t globalThreads[3] = {(size_t)result.cols, (size_t)result.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};
 
             vector< pair<size_t, const void *> > args;
@@ -492,7 +492,7 @@ namespace cv
             string kernelName;
 
             kernelName = "extractFirstChannel";
-            size_t globalThreads[3] = {result.cols, result.rows, 1};
+            size_t globalThreads[3] = {(size_t)result.cols, (size_t)result.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};
 
             vector< pair<size_t, const void *> > args;

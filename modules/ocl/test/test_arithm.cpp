@@ -717,12 +717,12 @@ OCL_TEST_P(MinMax, MAT)
         {
             minVal = std::numeric_limits<double>::max();
             maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < src1_roi.rows; ++i)
-                for (int j = 0; j < src1_roi.cols; ++j)
+            for (int i2 = 0; i2 < src1_roi.rows; ++i2)
+                for (int j2 = 0; j2 < src1_roi.cols; ++j2)
                 {
-                    signed char val = src1_roi.at<signed char>(i, j);
-                    if (val < minVal) minVal = val;
-                    if (val > maxVal) maxVal = val;
+                    signed char oneVal = src1_roi.at<signed char>(i2, j2);
+                    if (oneVal < minVal) minVal = oneVal;
+                    if (oneVal > maxVal) maxVal = oneVal;
                 }
         }
 
@@ -739,10 +739,10 @@ OCL_TEST_P(MinMax, MASK)
     enum { MAX_IDX = 0, MIN_IDX };
     static const double minMaxGolds[2][7] =
     {
-        { std::numeric_limits<uchar>::min(), std::numeric_limits<char>::min(), std::numeric_limits<ushort>::min(),
-          std::numeric_limits<short>::min(), std::numeric_limits<int>::min(), -std::numeric_limits<float>::max(), -std::numeric_limits<double>::max() },
-        { std::numeric_limits<uchar>::max(), std::numeric_limits<char>::max(), std::numeric_limits<ushort>::max(),
-          std::numeric_limits<short>::max(), std::numeric_limits<int>::max(), std::numeric_limits<float>::max(), std::numeric_limits<double>::max() },
+        { (double)std::numeric_limits<uchar>::min(), (double)std::numeric_limits<char>::min(), (double)std::numeric_limits<ushort>::min(),
+          (double)std::numeric_limits<short>::min(), (double)std::numeric_limits<int>::min(), (double)-std::numeric_limits<float>::max(), (double)-std::numeric_limits<double>::max() },
+        { (double)std::numeric_limits<uchar>::max(), (double)std::numeric_limits<char>::max(), (double)std::numeric_limits<ushort>::max(),
+          (double)std::numeric_limits<short>::max(), (double)std::numeric_limits<int>::max(), (double)std::numeric_limits<float>::max(), (double)std::numeric_limits<double>::max() },
     };
 
     for (int j = 0; j < LOOP_TIMES; j++)
@@ -758,13 +758,13 @@ OCL_TEST_P(MinMax, MASK)
         {
             minVal = std::numeric_limits<double>::max();
             maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < src1_roi.rows; ++i)
-                for (int j = 0; j < src1_roi.cols; ++j)
+            for (int i2 = 0; i2 < src1_roi.rows; ++i2)
+                for (int j2 = 0; j2 < src1_roi.cols; ++j2)
                 {
-                    signed char val = src1_roi.at<signed char>(i, j);
-                    unsigned char m = mask_roi.at<unsigned char>(i, j);
-                    if (val < minVal && m) minVal = val;
-                    if (val > maxVal && m) maxVal = val;
+                    signed char oneVal = src1_roi.at<signed char>(i2, j2);
+                    unsigned char m = mask_roi.at<unsigned char>(i2, j2);
+                    if (oneVal < minVal && m) minVal = oneVal;
+                    if (oneVal > maxVal && m) maxVal = oneVal;
                 }
         }
 
@@ -796,29 +796,29 @@ OCL_TEST_P(MinMaxLoc, MAT)
 
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
-        int depth = src1.depth();
+        int oneDepth = src1.depth();
 
-        if (depth != CV_8S)
+        if (oneDepth != CV_8S)
             cv::minMaxLoc(src1_roi, &minVal, &maxVal, &minLoc, &maxLoc);
         else
         {
             minVal = std::numeric_limits<double>::max();
             maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < src1_roi.rows; ++i)
-                for (int j = 0; j < src1_roi.cols; ++j)
+            for (int i2 = 0; i2 < src1_roi.rows; ++i2)
+                for (int j2 = 0; j2 < src1_roi.cols; ++j2)
                 {
-                    signed char val = src1_roi.at<signed char>(i, j);
-                    if (val < minVal)
+                    signed char oneVal = src1_roi.at<signed char>(i2, j2);
+                    if (oneVal < minVal)
                     {
-                        minVal = val;
-                        minLoc.x = j;
-                        minLoc.y = i;
+                        minVal = oneVal;
+                        minLoc.x = j2;
+                        minLoc.y = i2;
                     }
-                    if (val > maxVal)
+                    if (oneVal > maxVal)
                     {
-                        maxVal = val;
-                        maxLoc.x = j;
-                        maxLoc.y = i;
+                        maxVal = oneVal;
+                        maxLoc.x = j2;
+                        maxLoc.y = i2;
                     }
                 }
         }
@@ -828,7 +828,7 @@ OCL_TEST_P(MinMaxLoc, MAT)
         cv::ocl::minMaxLoc(gsrc1_roi, &minVal_, &maxVal_, &minLoc_, &maxLoc_, cv::ocl::oclMat());
 
         double error0 = 0., error1 = 0., minlocVal = 0., minlocVal_ = 0., maxlocVal = 0., maxlocVal_ = 0.;
-        if (depth == 0)
+        if (oneDepth == 0)
         {
             minlocVal = src1_roi.at<unsigned char>(minLoc);
             minlocVal_ = src1_roi.at<unsigned char>(minLoc_);
@@ -837,7 +837,7 @@ OCL_TEST_P(MinMaxLoc, MAT)
             error0 = ::abs(src1_roi.at<unsigned char>(minLoc_) - src1_roi.at<unsigned char>(minLoc));
             error1 = ::abs(src1_roi.at<unsigned char>(maxLoc_) - src1_roi.at<unsigned char>(maxLoc));
         }
-        if (depth == 1)
+        if (oneDepth == 1)
         {
             minlocVal = src1_roi.at<signed char>(minLoc);
             minlocVal_ = src1_roi.at<signed char>(minLoc_);
@@ -846,7 +846,7 @@ OCL_TEST_P(MinMaxLoc, MAT)
             error0 = ::abs(src1_roi.at<signed char>(minLoc_) - src1_roi.at<signed char>(minLoc));
             error1 = ::abs(src1_roi.at<signed char>(maxLoc_) - src1_roi.at<signed char>(maxLoc));
         }
-        if (depth == 2)
+        if (oneDepth == 2)
         {
             minlocVal = src1_roi.at<unsigned short>(minLoc);
             minlocVal_ = src1_roi.at<unsigned short>(minLoc_);
@@ -855,7 +855,7 @@ OCL_TEST_P(MinMaxLoc, MAT)
             error0 = ::abs(src1_roi.at<unsigned short>(minLoc_) - src1_roi.at<unsigned short>(minLoc));
             error1 = ::abs(src1_roi.at<unsigned short>(maxLoc_) - src1_roi.at<unsigned short>(maxLoc));
         }
-        if (depth == 3)
+        if (oneDepth == 3)
         {
             minlocVal = src1_roi.at<signed short>(minLoc);
             minlocVal_ = src1_roi.at<signed short>(minLoc_);
@@ -864,7 +864,7 @@ OCL_TEST_P(MinMaxLoc, MAT)
             error0 = ::abs(src1_roi.at<signed short>(minLoc_) - src1_roi.at<signed short>(minLoc));
             error1 = ::abs(src1_roi.at<signed short>(maxLoc_) - src1_roi.at<signed short>(maxLoc));
         }
-        if (depth == 4)
+        if (oneDepth == 4)
         {
             minlocVal = src1_roi.at<int>(minLoc);
             minlocVal_ = src1_roi.at<int>(minLoc_);
@@ -873,7 +873,7 @@ OCL_TEST_P(MinMaxLoc, MAT)
             error0 = ::abs(src1_roi.at<int>(minLoc_) - src1_roi.at<int>(minLoc));
             error1 = ::abs(src1_roi.at<int>(maxLoc_) - src1_roi.at<int>(maxLoc));
         }
-        if (depth == 5)
+        if (oneDepth == 5)
         {
             minlocVal = src1_roi.at<float>(minLoc);
             minlocVal_ = src1_roi.at<float>(minLoc_);
@@ -882,7 +882,7 @@ OCL_TEST_P(MinMaxLoc, MAT)
             error0 = ::abs(src1_roi.at<float>(minLoc_) - src1_roi.at<float>(minLoc));
             error1 = ::abs(src1_roi.at<float>(maxLoc_) - src1_roi.at<float>(maxLoc));
         }
-        if (depth == 6)
+        if (oneDepth == 6)
         {
             minlocVal = src1_roi.at<double>(minLoc);
             minlocVal_ = src1_roi.at<double>(minLoc_);
@@ -909,29 +909,29 @@ OCL_TEST_P(MinMaxLoc, MASK)
         random_roi();
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
-        int depth = src1.depth();
-        if (depth != CV_8S)
+        int oneDepth = src1.depth();
+        if (oneDepth != CV_8S)
             cv::minMaxLoc(src1_roi, &minVal, &maxVal, &minLoc, &maxLoc, mask_roi);
         else
         {
             minVal = std::numeric_limits<double>::max();
             maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < src1_roi.rows; ++i)
-                for (int j = 0; j < src1_roi.cols; ++j)
+            for (int i2 = 0; i2 < src1_roi.rows; ++i2)
+                for (int j2 = 0; j2 < src1_roi.cols; ++j2)
                 {
-                    signed char val = src1_roi.at<signed char>(i, j);
-                    unsigned char m = mask_roi.at<unsigned char>(i , j);
-                    if (val < minVal && m)
+                    signed char oneVal = src1_roi.at<signed char>(i2, j2);
+                    unsigned char m = mask_roi.at<unsigned char>(i2 , j2);
+                    if (oneVal < minVal && m)
                     {
-                        minVal = val;
-                        minLoc.x = j;
-                        minLoc.y = i;
+                        minVal = oneVal;
+                        minLoc.x = j2;
+                        minLoc.y = i2;
                     }
-                    if (val > maxVal && m)
+                    if (oneVal > maxVal && m)
                     {
-                        maxVal = val;
-                        maxLoc.x = j;
-                        maxLoc.y = i;
+                        maxVal = oneVal;
+                        maxLoc.x = j2;
+                        maxLoc.y = i2;
                     }
                 }
         }
@@ -942,7 +942,7 @@ OCL_TEST_P(MinMaxLoc, MASK)
 
         double error0 = 0., error1 = 0., minlocVal = 0., minlocVal_ = 0., maxlocVal = 0., maxlocVal_ = 0.;
         if (minLoc_.x == -1 || minLoc_.y == -1 || maxLoc_.x == -1 || maxLoc_.y == -1) continue;
-        if (depth == 0)
+        if (oneDepth == 0)
         {
             minlocVal = src1_roi.at<unsigned char>(minLoc);
             minlocVal_ = src1_roi.at<unsigned char>(minLoc_);
@@ -951,7 +951,7 @@ OCL_TEST_P(MinMaxLoc, MASK)
             error0 = ::abs(src1_roi.at<unsigned char>(minLoc_) - src1_roi.at<unsigned char>(minLoc));
             error1 = ::abs(src1_roi.at<unsigned char>(maxLoc_) - src1_roi.at<unsigned char>(maxLoc));
         }
-        if (depth == 1)
+        if (oneDepth == 1)
         {
             minlocVal = src1_roi.at<signed char>(minLoc);
             minlocVal_ = src1_roi.at<signed char>(minLoc_);
@@ -960,7 +960,7 @@ OCL_TEST_P(MinMaxLoc, MASK)
             error0 = ::abs(src1_roi.at<signed char>(minLoc_) - src1_roi.at<signed char>(minLoc));
             error1 = ::abs(src1_roi.at<signed char>(maxLoc_) - src1_roi.at<signed char>(maxLoc));
         }
-        if (depth == 2)
+        if (oneDepth == 2)
         {
             minlocVal = src1_roi.at<unsigned short>(minLoc);
             minlocVal_ = src1_roi.at<unsigned short>(minLoc_);
@@ -969,7 +969,7 @@ OCL_TEST_P(MinMaxLoc, MASK)
             error0 = ::abs(src1_roi.at<unsigned short>(minLoc_) - src1_roi.at<unsigned short>(minLoc));
             error1 = ::abs(src1_roi.at<unsigned short>(maxLoc_) - src1_roi.at<unsigned short>(maxLoc));
         }
-        if (depth == 3)
+        if (oneDepth == 3)
         {
             minlocVal = src1_roi.at<signed short>(minLoc);
             minlocVal_ = src1_roi.at<signed short>(minLoc_);
@@ -978,7 +978,7 @@ OCL_TEST_P(MinMaxLoc, MASK)
             error0 = ::abs(src1_roi.at<signed short>(minLoc_) - src1_roi.at<signed short>(minLoc));
             error1 = ::abs(src1_roi.at<signed short>(maxLoc_) - src1_roi.at<signed short>(maxLoc));
         }
-        if (depth == 4)
+        if (oneDepth == 4)
         {
             minlocVal = src1_roi.at<int>(minLoc);
             minlocVal_ = src1_roi.at<int>(minLoc_);
@@ -987,7 +987,7 @@ OCL_TEST_P(MinMaxLoc, MASK)
             error0 = ::abs(src1_roi.at<int>(minLoc_) - src1_roi.at<int>(minLoc));
             error1 = ::abs(src1_roi.at<int>(maxLoc_) - src1_roi.at<int>(maxLoc));
         }
-        if (depth == 5)
+        if (oneDepth == 5)
         {
             minlocVal = src1_roi.at<float>(minLoc);
             minlocVal_ = src1_roi.at<float>(minLoc_);
@@ -996,7 +996,7 @@ OCL_TEST_P(MinMaxLoc, MASK)
             error0 = ::abs(src1_roi.at<float>(minLoc_) - src1_roi.at<float>(minLoc));
             error1 = ::abs(src1_roi.at<float>(maxLoc_) - src1_roi.at<float>(maxLoc));
         }
-        if (depth == 6)
+        if (oneDepth == 6)
         {
             minlocVal = src1_roi.at<double>(minLoc);
             minlocVal_ = src1_roi.at<double>(minLoc_);

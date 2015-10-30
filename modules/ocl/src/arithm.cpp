@@ -108,7 +108,7 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
 #else
     size_t localThreads[3]  = { 16, 16, 1 };
 #endif
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)dst.cols, (size_t)dst.rows, 1 };
 
     std::string kernelName = "arithm_binary_op";
 
@@ -266,7 +266,7 @@ static void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, int
 
     int depth = src1.depth();
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)dst.cols, (size_t)dst.rows, 1 };
 
     int src1step1 = src1.step1(), src1offset1 = src1.offset / src1.elemSize1();
     int src2step1 = src2.step1(), src2offset1 = src2.offset / src2.elemSize1();
@@ -336,7 +336,7 @@ static void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int groupn
     args.push_back( make_pair( sizeof(cl_int) , (void *)&total ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum ));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
-    size_t globalThreads[3] = { groupnum * 256, 1, 1 };
+    size_t globalThreads[3] = { (size_t)groupnum * 256, 1, 1 };
 
 #ifdef ANDROID
     openCLExecuteKernel(src.clCxt, &arithm_sum, "arithm_op_sum", globalThreads, NULL,
@@ -514,7 +514,7 @@ static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem
         buildOptions += " -D WITH_MASK";
     }
 
-    size_t globalThreads[3] = { groupnum * 256, 1, 1 };
+    size_t globalThreads[3] = { (size_t)groupnum * 256, 1, 1 };
     size_t localThreads[3] = { 256, 1, 1 };
 
     // kernel use fixed grid size, replace lt on NULL is impossible without kernel changes
@@ -638,7 +638,7 @@ static void arithm_absdiff_nonsaturate_run(const oclMat & src1, const oclMat & s
 #else
     size_t localThreads[3]  = { 16, 16, 1 };
 #endif
-    size_t globalThreads[3] = { diff.cols, diff.rows, 1 };
+    size_t globalThreads[3] = { (size_t)diff.cols, (size_t)diff.rows, 1 };
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
     const char * const channelMap[] = { "", "", "2", "4", "4" };
@@ -744,7 +744,7 @@ static void arithmetic_flip_run(const oclMat &src, oclMat &dst, string kernelNam
     std::string buildOptions = format("-D T=%s%s", typeMap[dst.depth()], channelMap[dst.oclchannels()]);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, rows, 1 };
+    size_t globalThreads[3] = { (size_t)cols, (size_t)rows, 1 };
 
     int elemSize = src.elemSize();
     int src_step = src.step / elemSize, src_offset = src.offset / elemSize;
@@ -797,7 +797,7 @@ static void arithmetic_lut_run(const oclMat &src, const oclMat &lut, oclMat &dst
     int cols1 = src.cols * src.oclchannels();
 
     size_t localSize[] = { 16, 16, 1 };
-    size_t globalSize[] = { lut.channels() == 1 ? cols1 : src.cols, src.rows, 1 };
+    size_t globalSize[] = { (size_t)(lut.channels() == 1 ? cols1 : src.cols), (size_t)src.rows, 1 };
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
     std::string buildOptions = format("-D srcT=%s -D dstT=%s", typeMap[sdepth], typeMap[dst.depth()]);
@@ -862,7 +862,7 @@ static void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, string kernel
 #else
     size_t localThreads[3]  = { 64, 4, 1 };
 #endif
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)dst.cols, (size_t)dst.rows, 1 };
 
     std::string buildOptions = format("-D srcT=%s",
                                       ddepth == CV_32F ? "float" : "double");
@@ -904,7 +904,7 @@ static void arithmetic_magnitude_phase_run(const oclMat &src1, const oclMat &src
 #else
     size_t localThreads[3]  = { 64, 4, 1 };
 #endif
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)dst.cols, (size_t)dst.rows, 1 };
 
     int src1_step = src1.step / src1.elemSize(), src1_offset = src1.offset / src1.elemSize();
     int src2_step = src2.step / src2.elemSize(), src2_offset = src2.offset / src2.elemSize();
@@ -956,7 +956,7 @@ static void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat 
 #else
     size_t localThreads[3]  = { 64, 4, 1 };
 #endif
-    size_t globalThreads[3] = { cols1, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)cols1, (size_t)dst.rows, 1 };
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
@@ -1006,7 +1006,7 @@ static void arithmetic_cartToPolar_run(const oclMat &src1, const oclMat &src2, o
 #else
     size_t localThreads[3]  = { 64, 4, 1 };
 #endif
-    size_t globalThreads[3] = { cols, src1.rows, 1 };
+    size_t globalThreads[3] = { (size_t)cols, (size_t)src1.rows, 1 };
 
     int src1_step = src1.step / src1.elemSize1(), src1_offset = src1.offset / src1.elemSize1();
     int src2_step = src2.step / src2.elemSize1(), src2_offset = src2.offset / src2.elemSize1();
@@ -1064,7 +1064,7 @@ static void arithmetic_ptc_run(const oclMat &src1, const oclMat &src2, oclMat &d
 #else
     size_t localThreads[3]  = { 64, 4, 1 };
 #endif
-    size_t globalThreads[3] = { cols, rows, 1 };
+    size_t globalThreads[3] = { (size_t)cols, (size_t)rows, 1 };
 
     int src1_step = src1.step / src1.elemSize1(), src1_offset = src1.offset / src1.elemSize1();
     int src2_step = src2.step / src2.elemSize1(), src2_offset = src2.offset / src2.elemSize1();
@@ -1138,7 +1138,7 @@ static void arithmetic_minMaxLoc_run(const oclMat &src, cl_mem &dst, int vlen , 
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
     char build_options[50];
     sprintf(build_options, "-D DEPTH_%d -D REPEAT_S%d -D REPEAT_E%d", src.depth(), repeat_s, repeat_e);
-    size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
+    size_t gt[3] = {(size_t)groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
 
     // kernel use fixed grid size, replace lt on NULL is impossible without kernel changes
     openCLExecuteKernel(src.clCxt, &arithm_minMaxLoc, "arithm_op_minMaxLoc", gt, lt, args, -1, -1, build_options);
@@ -1147,7 +1147,7 @@ static void arithmetic_minMaxLoc_run(const oclMat &src, cl_mem &dst, int vlen , 
 static void arithmetic_minMaxLoc_mask_run(const oclMat &src, const oclMat &mask, cl_mem &dst, int vlen, int groupnum)
 {
     vector<pair<size_t , const void *> > args;
-    size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
+    size_t gt[3] = {(size_t)groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
     char build_options[50];
     if (src.oclchannels() == 1)
     {
@@ -1284,7 +1284,7 @@ static void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int grou
     args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum ));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
 
-    size_t globalThreads[3] = { groupnum * 256, 1, 1 };
+    size_t globalThreads[3] = { (size_t)groupnum * 256, 1, 1 };
 
 #ifdef ANDROID
     openCLExecuteKernel(src.clCxt, &arithm_nonzero, "arithm_op_nonzero", globalThreads, NULL,
@@ -1409,7 +1409,7 @@ static void bitwise_run(const oclMat & src1, const oclMat & src2, const Scalar &
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
 
-    size_t globalsize[3] = { dst.cols * ocn / kercn, dst.rows, 1 };
+    size_t globalsize[3] = { (size_t)dst.cols * ocn / kercn, (size_t)dst.rows, 1 };
     globalsize[0] = divUp(globalsize[0], 256) * 256;
     openCLExecuteKernel(src1.clCxt, &arithm_bitwise, "arithm_bitwise", globalsize, NULL,
                         args, -1, -1, buildOptions.c_str());
@@ -1543,7 +1543,7 @@ static void transpose_run(const oclMat &src, oclMat &dst, string kernelName, boo
                                       channelsString[src.channels()]);
 
     size_t localThreads[3]  = { TILE_DIM, BLOCK_ROWS, 1 };
-    size_t globalThreads[3] = { src.cols, inplace ? src.rows : divUp(src.rows, TILE_DIM) * BLOCK_ROWS, 1 };
+    size_t globalThreads[3] = { (size_t)src.cols, inplace ? (size_t)src.rows : divUp(src.rows, TILE_DIM) * BLOCK_ROWS, 1 };
 
     int srcstep1 = src.step / src.elemSize(), dststep1 = dst.step / dst.elemSize();
     int srcoffset1 = src.offset / src.elemSize(), dstoffset1 = dst.offset / dst.elemSize();
@@ -1610,7 +1610,7 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
                                       typeMap[depth], hasDouble ? "double" : "float", typeMap[depth],
                                       depth >= CV_32F ? "" : "_sat_rte");
 
-    size_t globalThreads[3] = { cols1, dst.rows, 1};
+    size_t globalThreads[3] = { (size_t)cols1, (size_t)dst.rows, 1};
 
     float alpha_f = static_cast<float>(alpha),
             beta_f = static_cast<float>(beta),
@@ -1663,7 +1663,7 @@ static void arithmetic_pow_run(const oclMat &src, double p, oclMat &dst, string 
     int depth = dst.depth();
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+    size_t globalThreads[3] = { (size_t)dst.cols, (size_t)dst.rows, 1 };
 
     const char * const typeStr = depth == CV_32F ? "float" : "double";
     const char * const channelMap[] = { "", "", "2", "4", "4" };
@@ -1721,7 +1721,7 @@ void cv::ocl::setIdentity(oclMat& src, const Scalar & scalar)
 
     int src_step1 = src.step / src.elemSize(), src_offset1 = src.offset / src.elemSize();
     size_t local_threads[] = { 16, 16, 1 };
-    size_t global_threads[] = { src.cols, src.rows, 1 };
+    size_t global_threads[] = { (size_t)src.cols, (size_t)src.rows, 1 };
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
     const char * const channelMap[] = { "", "", "2", "4", "4" };

@@ -96,7 +96,7 @@ void btv_l1_device_ocl::buildMotionMaps(const oclMat& forwardMotionX, const oclM
     Context* clCxt = Context::getContext();
 
     size_t local_thread[] = {32, 8, 1};
-    size_t global_thread[] = {forwardMapX.cols, forwardMapX.rows, 1};
+    size_t global_thread[] = {(size_t)forwardMapX.cols, (size_t)forwardMapX.rows, 1};
 
     int forwardMotionX_step = (int)(forwardMotionX.step/forwardMotionX.elemSize());
     int forwardMotionY_step = (int)(forwardMotionY.step/forwardMotionY.elemSize());
@@ -139,7 +139,7 @@ void btv_l1_device_ocl::upscale(const oclMat& src, oclMat& dst, int scale)
     Context* clCxt = Context::getContext();
 
     size_t local_thread[] = {32, 8, 1};
-    size_t global_thread[] = {src.cols, src.rows, 1};
+    size_t global_thread[] = {(size_t)src.cols, (size_t)src.rows, 1};
 
     int src_step = (int)(src.step/src.elemSize());
     int dst_step = (int)(dst.step/dst.elemSize());
@@ -175,7 +175,7 @@ void btv_l1_device_ocl::diffSign(const oclMat& src1, const oclMat& src2, oclMat&
     int dst_step = (int)(dst_.step/dst_.elemSize());
 
     size_t local_thread[] = {32, 8, 1};
-    size_t global_thread[] = {src1_.cols, src1_.rows, 1};
+    size_t global_thread[] = {(size_t)src1_.cols, (size_t)src1_.rows, 1};
 
     String kernel_name = "diffSignKernel";
     vector< pair<size_t, const void*> > args;
@@ -201,7 +201,7 @@ void btv_l1_device_ocl::calcBtvRegularization(const oclMat& src, oclMat& dst, in
     oclMat dst_ = dst.reshape(1);
 
     size_t local_thread[] = {32, 8, 1};
-    size_t global_thread[] = {src.cols, src.rows, 1};
+    size_t global_thread[] = {(size_t)src.cols, (size_t)src.rows, 1};
 
     int src_step = (int)(src_.step/src_.elemSize());
     int dst_step = (int)(dst_.step/dst_.elemSize());
