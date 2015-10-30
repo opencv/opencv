@@ -97,6 +97,7 @@ typedef std::vector<Vec4f> vector_Vec4f;
 typedef std::vector<Vec6f> vector_Vec6f;
 typedef std::vector<Vec4i> vector_Vec4i;
 typedef std::vector<Rect> vector_Rect;
+typedef std::vector<Rect2d> vector_Rect2d;
 typedef std::vector<KeyPoint> vector_KeyPoint;
 typedef std::vector<Mat> vector_Mat;
 typedef std::vector<DMatch> vector_DMatch;
@@ -647,6 +648,21 @@ template<>
 PyObject* pyopencv_from(const Rect& r)
 {
     return Py_BuildValue("(iiii)", r.x, r.y, r.width, r.height);
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, Rect2d& r, const char* name)
+{
+    (void)name;
+    if(!obj || obj == Py_None)
+        return true;
+    return PyArg_ParseTuple(obj, "dddd", &r.x, &r.y, &r.width, &r.height) > 0;
+}
+
+template<>
+PyObject* pyopencv_from(const Rect2d& r)
+{
+    return Py_BuildValue("(dddd)", r.x, r.y, r.width, r.height);
 }
 
 template<>
