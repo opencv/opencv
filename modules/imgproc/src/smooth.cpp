@@ -3108,7 +3108,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
      }
      ocl::Kernel k(kernelName.c_str(), ocl::imgproc::bilateral_oclsrc,
             format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
-            " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=%f",
+            " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=(float)%f",
             radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
             ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
             ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
