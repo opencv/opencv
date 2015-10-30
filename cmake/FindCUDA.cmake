@@ -685,6 +685,9 @@ macro(cuda_find_library_local_first_with_path_ext _var _names _doc _path_ext )
     # and old paths.
     set(_cuda_64bit_lib_dir "${_path_ext}lib/x64" "${_path_ext}lib64" "${_path_ext}libx64" )
   endif()
+  if(CMAKE_CROSSCOMPILING AND (ARM OR AARCH64))
+    set(_cuda_cross_arm_lib_dir "${_path_ext}lib/stubs")
+  endif()
   if(CUDA_VERSION VERSION_GREATER "6.0")
     set(_cuda_static_lib_names "")
     foreach(name ${_names})
@@ -698,7 +701,7 @@ macro(cuda_find_library_local_first_with_path_ext _var _names _doc _path_ext )
     PATHS "${CUDA_TOOLKIT_TARGET_DIR}" "${CUDA_TOOLKIT_ROOT_DIR}"
     ENV CUDA_PATH
     ENV CUDA_LIB_PATH
-    PATH_SUFFIXES ${_cuda_64bit_lib_dir} "${_path_ext}lib/Win32" "${_path_ext}lib" "${_path_ext}libWin32"
+    PATH_SUFFIXES ${_cuda_64bit_lib_dir} ${_cuda_cross_arm_lib_dir} "${_path_ext}lib/Win32" "${_path_ext}lib" "${_path_ext}libWin32"
     DOC ${_doc}
     NO_DEFAULT_PATH
     )
