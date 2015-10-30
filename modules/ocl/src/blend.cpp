@@ -59,7 +59,7 @@ void cv::ocl::blendLinear(const oclMat &src1, const oclMat &src2, const oclMat &
 
     dst.create(src1.size(), src1.type());
 
-    size_t globalSize[] = { dst.cols, dst.rows, 1};
+    size_t globalSize[] = { (size_t)dst.cols, (size_t)dst.rows, 1};
     size_t localSize[] = { 16, 16, 1 };
 
     int depth = dst.depth(), ocn = dst.oclchannels();

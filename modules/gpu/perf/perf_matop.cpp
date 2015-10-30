@@ -41,6 +41,7 @@
 //M*/
 
 #include "perf_precomp.hpp"
+#include "perf_util.hpp"
 
 using namespace std;
 using namespace testing;

@@ -65,7 +65,7 @@ static void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterC
     string kernelName = "prefilter_xsobel";
 
     size_t blockSize = 1;
-    size_t globalThreads[3] = { input.cols, input.rows, 1 };
+    size_t globalThreads[3] = { (size_t)input.cols, (size_t)input.rows, 1 };
     size_t localThreads[3]  = { blockSize, blockSize, 1 };
 
     std::vector< std::pair<size_t, const void *> > args;
@@ -103,7 +103,7 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
                             sizeof(cl_uint);
     //size_t blockSize = 1;
     size_t localThreads[]  = { BLOCK_W, 1, 1 };
-    size_t globalThreads[] = { left.cols - maxdisp - 2 * winsz2,
+    size_t globalThreads[] = { (size_t)left.cols - maxdisp - 2 * winsz2,
                                divUp(left.rows - 2 * winsz2, ROWSperTHREAD),
                                1 };
 
@@ -135,7 +135,7 @@ static void postfilter_textureness(oclMat &left, int winSize,
 
     size_t blockSize = 1;
     size_t localThreads[]  = { BLOCK_W, blockSize ,1};
-    size_t globalThreads[] = { left.cols,
+    size_t globalThreads[] = { (size_t)left.cols,
                                divUp(left.rows, 2 * ROWSperTHREAD),
                                1 };
 

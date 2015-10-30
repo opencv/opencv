@@ -902,9 +902,9 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             // pack node info to have less memory loads on the device side
             oclMat  oclNodesPK(1,sizeof(cl_int) * NODE_SIZE * nodenum,CV_8U);
             {
-                cl_int  status;
-                cl_int* pNodesPK = (cl_int*)clEnqueueMapBuffer(getClCommandQueue(oclNodesPK.clCxt),(cl_mem)oclNodesPK.datastart,true,CL_MAP_WRITE, 0, oclNodesPK.step, 0,0,0,&status);
-                openCLVerifyCall(status);
+                cl_int  localStatus;
+                cl_int* pNodesPK = (cl_int*)clEnqueueMapBuffer(getClCommandQueue(oclNodesPK.clCxt),(cl_mem)oclNodesPK.datastart,true,CL_MAP_WRITE, 0, oclNodesPK.step, 0,0,0,&localStatus);
+                openCLVerifyCall(localStatus);
                 //use known local data stride to precalulate indexes
                 int DATA_SIZE_X = (localThreads[0]+cascade->orig_window_size.width);
                 // check that maximal value is less than maximal unsigned short
@@ -921,11 +921,11 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
                     struct NodePK * pOut = (struct NodePK *)(pNodesPK + NODE_SIZE*i);
                     for(int k=0;k<3;++k)
                     {// calc 4 short indexes in shared local mem for each rectangle instead of 2 (x,y) pair.
-                        int* p = &(node[i].p[k][0]);
-                        pOut->slm_index[k][0] = (unsigned short)(p[1]*DATA_SIZE_X+p[0]);
-                        pOut->slm_index[k][1] = (unsigned short)(p[1]*DATA_SIZE_X+p[2]);
-                        pOut->slm_index[k][2] = (unsigned short)(p[3]*DATA_SIZE_X+p[0]);
-                        pOut->slm_index[k][3] = (unsigned short)(p[3]*DATA_SIZE_X+p[2]);
+                        int* lp = &(node[i].p[k][0]);
+                        pOut->slm_index[k][0] = (unsigned short)(lp[1]*DATA_SIZE_X+lp[0]);
+                        pOut->slm_index[k][1] = (unsigned short)(lp[1]*DATA_SIZE_X+lp[2]);
+                        pOut->slm_index[k][2] = (unsigned short)(lp[3]*DATA_SIZE_X+lp[0]);
+                        pOut->slm_index[k][3] = (unsigned short)(lp[3]*DATA_SIZE_X+lp[2]);
                     }
                     //store used float point values for each node
                     pOut->weight[0] = node[i].weight[0];
@@ -959,13 +959,13 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             if(WGNumTotal>WGNumSampled)
             {// small images and each pixel is processed
                 // setup global sizes to have linear array of workgroups with WGNum size
-                int     pixelstep = 1;
-                size_t  LS[3]={localThreads[0]/pixelstep,localThreads[1]/pixelstep,1};
+                int     pstep = 1;
+                size_t  LS[3]={localThreads[0]/pstep,localThreads[1]/pstep,1};
                 globalThreads[0] = LS[0]*(WGNumTotal-WGNumSampled);
                 globalThreads[1] = LS[1];
                 globalThreads[2] = 1;
                 string options1 = options;
-                options1 += format(" -D PIXEL_STEP=%d",pixelstep);
+                options1 += format(" -D PIXEL_STEP=%d",pstep);
                 options1 += format(" -D WGSTART=%d",WGNumSampled);
                 options1 += format(" -D LSx=%d",LS[0]);
                 options1 += format(" -D LSy=%d",LS[1]);
@@ -975,13 +975,13 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             if(WGNumSampled>0)
             {// large images each 4th pixel is processed
                 // setup global sizes to have linear array of workgroups with WGNum size
-                int     pixelstep = 2;
-                size_t  LS[3]={localThreads[0]/pixelstep,localThreads[1]/pixelstep,1};
+                int     pstep = 2;
+                size_t  LS[3]={localThreads[0]/pstep,localThreads[1]/pstep,1};
                 globalThreads[0] = LS[0]*WGNumSampled;
                 globalThreads[1] = LS[1];
                 globalThreads[2] = 1;
                 string options2 = options;
-                options2 += format(" -D PIXEL_STEP=%d",pixelstep);
+                options2 += format(" -D PIXEL_STEP=%d",pstep);
                 options2 += format(" -D WGSTART=%d",0);
                 options2 += format(" -D LSx=%d",LS[0]);
                 options2 += format(" -D LSy=%d",LS[1]);
@@ -1117,7 +1117,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             args1.push_back ( make_pair(sizeof(cl_float) , (void *)&correction[i] ));
             args1.push_back ( make_pair(sizeof(cl_int) , (void *)&startnodenum ));
 
-            size_t globalThreads2[3] = {nodenum, 1, 1};
+            size_t globalThreads2[3] = {(size_t)nodenum, 1, 1};
             openCLExecuteKernel(gsum.clCxt, &haarobjectdetect_scaled2, "gpuscaleclassifier", globalThreads2, NULL/*localThreads2*/, args1, -1, -1);
         }
 
@@ -1255,7 +1255,7 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
 {
     int blocksize = 8;
     int grp_per_CU = 12;
-    size_t localThreads[3] = { blocksize, blocksize, 1 };
+    size_t localThreads[3] = { (size_t)blocksize, (size_t)blocksize, 1 };
     size_t globalThreads[3] = { grp_per_CU * cv::ocl::Context::getContext()->getDeviceInfo().maxComputeUnits *localThreads[0],
         localThreads[1],
         1 };
@@ -1531,7 +1531,7 @@ void cv::ocl::OclCascadeClassifierBuf::Init(const int rows, const int cols,
             args1.push_back ( make_pair(sizeof(cl_float) , (void *)&correction[i] ));
             args1.push_back ( make_pair(sizeof(cl_int) , (void *)&startnodenum ));
 
-            size_t globalThreads2[3] = {m_nodenum, 1, 1};
+            size_t globalThreads2[3] = {(size_t)m_nodenum, 1, 1};
 
             openCLExecuteKernel(Context::getContext(), &haarobjectdetect_scaled2, "gpuscaleclassifier", globalThreads2, NULL/*localThreads2*/, args1, -1, -1);
         }

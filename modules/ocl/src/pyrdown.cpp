@@ -63,7 +63,7 @@ static void pyrdown_run(const oclMat &src, const oclMat &dst)
     string kernelName = "pyrDown";
 
     size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { src.cols, dst.rows, 1};
+    size_t globalThreads[3] = { (size_t)src.cols, (size_t)dst.rows, 1};
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));

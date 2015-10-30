@@ -358,18 +358,18 @@ static void sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreater
 {
     Context * cxt = Context::getContext();
 
-    const size_t GROUP_SIZE = cxt->getDeviceInfo().maxWorkGroupSize >= 256 ? 256: 128;
+    const size_t groupSize = cxt->getDeviceInfo().maxWorkGroupSize >= 256 ? 256: 128;
 
     size_t globalThreads[3] = {vecSize, 1, 1};
-    size_t localThreads[3]  = {GROUP_SIZE, 1, 1};
+    size_t localThreads[3]  = {groupSize, 1, 1};
 
     std::vector< std::pair<size_t, const void *> > args;
     char build_opt_buf [100];
     genSortBuildOption(keys, vals, isGreaterThan, build_opt_buf);
 
     String kernelname[] = {String("blockInsertionSort"), String("merge")};
-    int keylds_size = GROUP_SIZE * keys.elemSize();
-    int vallds_size = GROUP_SIZE * vals.elemSize();
+    int keylds_size = groupSize * keys.elemSize();
+    int vallds_size = groupSize * vals.elemSize();
     args.push_back(std::make_pair(sizeof(cl_mem),  (void *)&keys.data));
     args.push_back(std::make_pair(sizeof(cl_mem),  (void *)&vals.data));
     args.push_back(std::make_pair(sizeof(cl_uint), (void *)&vecSize));
@@ -379,7 +379,7 @@ static void sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreater
     openCLExecuteKernel(cxt, &kernel_stablesort_by_key, kernelname[0], globalThreads, localThreads, args, -1, -1, build_opt_buf);
 
     //  Early exit for the case of no merge passes, values are already in destination vector
-    if(vecSize <= GROUP_SIZE)
+    if(vecSize <= groupSize)
     {
         return;
     }

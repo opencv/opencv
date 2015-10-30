@@ -320,5 +320,8 @@ if(MSVC)
 
   if(NOT ENABLE_NOISY_WARNINGS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251") #class 'std::XXX' needs to have dll-interface to be used by clients of YYY
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4275") # non dll-interface class 'std::exception' used as base for dll-interface class 'cv::Exception'
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4589") # Constructor of abstract class ... ignores initializer for virtual base class 'cv::Algorithm'
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4359") # Alignment specifier is less than actual alignment (4), and will be ignored
   endif()
 endif()

@@ -141,7 +141,7 @@ void interpolate::memsetKernel(float val, oclMat &img, int height, int offset)
     args.push_back( make_pair( sizeof(cl_int), (void *)&step));
     args.push_back( make_pair( sizeof(cl_int), (void *)&offset));
 
-    size_t globalThreads[3] = {img.cols, height, 1};
+    size_t globalThreads[3] = {(size_t)img.cols, (size_t)height, 1};
     size_t localThreads[3]  = {16, 16, 1};
     openCLExecuteKernel(clCxt, &interpolate_frames, kernelName, globalThreads, localThreads, args, -1, -1);
 }
@@ -161,7 +161,7 @@ void interpolate::normalizeKernel(oclMat &buffer, int height, int factor_offset,
     args.push_back( make_pair( sizeof(cl_int), (void *)&factor_offset));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset));
 
-    size_t globalThreads[3] = {buffer.cols, height, 1};
+    size_t globalThreads[3] = {(size_t)buffer.cols, (size_t)height, 1};
     size_t localThreads[3]  = {16, 16, 1};
     openCLExecuteKernel(clCxt, &interpolate_frames, kernelName, globalThreads, localThreads, args, -1, -1);
 }
@@ -190,7 +190,7 @@ void interpolate::forwardWarpKernel(const oclMat &src, oclMat &buffer, const ocl
     args.push_back( make_pair( sizeof(cl_int), (void *)&d_offset));
     args.push_back( make_pair( sizeof(cl_float), (void *)&time_scale));
 
-    size_t globalThreads[3] = {src.cols, src.rows, 1};
+    size_t globalThreads[3] = {(size_t)src.cols, (size_t)src.rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
     openCLExecuteKernel(clCxt, &interpolate_frames, kernelName, globalThreads, localThreads, args, -1, -1);
 }
@@ -220,7 +220,7 @@ void interpolate::blendFrames(const oclMat &frame0, const oclMat &/*frame1*/, co
     args.push_back( make_pair( sizeof(cl_int), (void *)&step));
     args.push_back( make_pair( sizeof(cl_float), (void *)&pos));
 
-    size_t globalThreads[3] = {frame0.cols, frame0.rows, 1};
+    size_t globalThreads[3] = {(size_t)frame0.cols, (size_t)frame0.rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
     openCLExecuteKernel(clCxt, &interpolate_frames, kernelName, globalThreads, localThreads, args, -1, -1);
 }
