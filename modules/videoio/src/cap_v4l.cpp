@@ -552,6 +552,7 @@ static int v4l2_set_fps(CvCaptureCAM_V4L* capture) {
 
 static int v4l2_num_channels(__u32 palette) {
     switch(palette) {
+    case V4L2_PIX_FMT_YVU420:
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
         return 1;
@@ -571,10 +572,17 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
     int channels = 3;
 
     if (!capture->convert_rgb) {
-        if (capture->palette == V4L2_PIX_FMT_MJPEG || capture->palette == V4L2_PIX_FMT_JPEG) {
-            size = CvSize(capture->buffers[capture->bufferIndex].length, 1);
-        }
         channels = v4l2_num_channels(capture->palette);
+
+        switch(capture->palette) {
+        case V4L2_PIX_FMT_MJPEG:
+        case V4L2_PIX_FMT_JPEG:
+            size = CvSize(capture->buffers[capture->bufferIndex].length, 1);
+            break;
+        case V4L2_PIX_FMT_YVU420:
+            size.height = size.height * 3 / 2; // "1.5" channels
+            break;
+        }
     }
 
     /* Set up Image data */
@@ -965,45 +973,6 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 #define LIMIT(x) ((x)>0xffffff?0xff: ((x)<=0xffff?0:((x)>>16)))
 
 static inline void
-move_420_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
-               int rowPixels, unsigned char * rgb)
-{
-    const int rvScale = 91881;
-    const int guScale = -22553;
-    const int gvScale = -46801;
-    const int buScale = 116129;
-    const int yScale  = 65536;
-    int r, g, b;
-
-    g = guScale * u + gvScale * v;
-//  if (force_rgb) {
-//      r = buScale * u;
-//      b = rvScale * v;
-//  } else {
-        r = rvScale * v;
-        b = buScale * u;
-//  }
-
-    yTL *= yScale; yTR *= yScale;
-    yBL *= yScale; yBR *= yScale;
-
-    /* Write out top two pixels */
-    rgb[0] = LIMIT(b+yTL); rgb[1] = LIMIT(g+yTL);
-    rgb[2] = LIMIT(r+yTL);
-
-    rgb[3] = LIMIT(b+yTR); rgb[4] = LIMIT(g+yTR);
-    rgb[5] = LIMIT(r+yTR);
-
-    /* Skip down to next line to write out bottom two pixels */
-    rgb += 3 * rowPixels;
-    rgb[0] = LIMIT(b+yBL); rgb[1] = LIMIT(g+yBL);
-    rgb[2] = LIMIT(r+yBL);
-
-    rgb[3] = LIMIT(b+yBR); rgb[4] = LIMIT(g+yBR);
-    rgb[5] = LIMIT(r+yBR);
-}
-
-static inline void
 move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
                int /*rowPixels*/, unsigned char * rgb)
 {
@@ -1042,49 +1011,12 @@ move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
     rgb[5] = LIMIT(r+yBR);
 }
 
-// Consider a YUV420P image of 8x2 pixels.
-//
-// A plane of Y values    A B C D E F G H
-//                        I J K L M N O P
-//
-// A plane of U values    1   2   3   4
-// A plane of V values    1   2   3   4 ....
-//
-// The U1/V1 samples correspond to the ABIJ pixels.
-//     U2/V2 samples correspond to the CDKL pixels.
-//
 /* Converts from planar YUV420P to RGB24. */
-static void
-yuv420p_to_rgb24(int width, int height,
-           unsigned char *pIn0, unsigned char *pOut0)
+static inline void
+yuv420p_to_rgb24(int width, int height, uchar* src, uchar* dst)
 {
-    const int numpix = width * height;
-    const int bytes = 24 >> 3;
-    int i, j, y00, y01, y10, y11, u, v;
-    unsigned char *pY = pIn0;
-    unsigned char *pU = pY + numpix;
-    unsigned char *pV = pU + numpix / 4;
-    unsigned char *pOut = pOut0;
-
-    for (j = 0; j <= height - 2; j += 2) {
-        for (i = 0; i <= width - 2; i += 2) {
-            y00 = *pY;
-            y01 = *(pY + 1);
-            y10 = *(pY + width);
-            y11 = *(pY + width + 1);
-            u = (*pU++) - 128;
-            v = (*pV++) - 128;
-
-            move_420_block(y00, y01, y10, y11, u, v,
-                       width, pOut);
-
-            pY += 2;
-            pOut += 2 * bytes;
-
-        }
-        pY += width;
-        pOut += width * bytes;
-    }
+    cvtColor(Mat(height * 3 / 2, width, CV_8U, src), Mat(height, width, CV_8UC3, dst),
+             COLOR_YUV2BGR_YV12);
 }
 
 // Consider a YUV411P image of 8x2 pixels.
