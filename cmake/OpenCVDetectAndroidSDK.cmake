@@ -240,7 +240,7 @@ macro(add_android_project target path)
     foreach(f ${android_proj_files})
       add_custom_command(
         OUTPUT "${android_proj_bin_dir}/${f}"
-        COMMAND ${CMAKE_COMMAND} -E copy "${path}/${f}" "${android_proj_bin_dir}/${f}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${path}/${f}" "${android_proj_bin_dir}/${f}"
         MAIN_DEPENDENCY "${path}/${f}"
         COMMENT "Copying ${f}")
       list(APPEND android_proj_file_deps "${path}/${f}" "${android_proj_bin_dir}/${f}")
@@ -353,7 +353,7 @@ macro(add_android_project target path)
     set(__android_project_chain ${target} CACHE INTERNAL "auxiliary variable used for Android progects chaining")
 
     # put the final .apk to the OpenCV's bin folder
-    add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${android_proj_bin_dir}/bin/${target}-debug.apk" "${OpenCV_BINARY_DIR}/bin/${target}.apk")
+    add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${android_proj_bin_dir}/bin/${target}-debug.apk" "${OpenCV_BINARY_DIR}/bin/${target}.apk")
     if(INSTALL_ANDROID_EXAMPLES AND "${target}" MATCHES "^example-")
       #apk
       install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "samples" COMPONENT samples)

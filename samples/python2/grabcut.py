@@ -27,6 +27,9 @@ Key 's' - To save the results
 ===============================================================================
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 import sys
@@ -72,13 +75,13 @@ def onmouse(event,x,y,flags,param):
         cv2.rectangle(img,(ix,iy),(x,y),BLUE,2)
         rect = (min(ix,x),min(iy,y),abs(ix-x),abs(iy-y))
         rect_or_mask = 0
-        print " Now press the key 'n' a few times until no further change \n"
+        print(" Now press the key 'n' a few times until no further change \n")
 
     # draw touchup curves
 
     if event == cv2.EVENT_LBUTTONDOWN:
         if rect_over == False:
-            print "first draw rectangle \n"
+            print("first draw rectangle \n")
         else:
             drawing = True
             cv2.circle(img,(x,y),thickness,value['color'],-1)
@@ -98,14 +101,14 @@ def onmouse(event,x,y,flags,param):
 if __name__ == '__main__':
 
     # print documentation
-    print __doc__
+    print(__doc__)
 
     # Loading images
     if len(sys.argv) == 2:
         filename = sys.argv[1] # for drawing purposes
     else:
-        print "No input image given, so loading default image, ../data/lena.jpg \n"
-        print "Correct Usage: python grabcut.py <filename> \n"
+        print("No input image given, so loading default image, ../data/lena.jpg \n")
+        print("Correct Usage: python grabcut.py <filename> \n")
         filename = '../data/lena.jpg'
 
     img = cv2.imread(filename)
@@ -119,8 +122,8 @@ if __name__ == '__main__':
     cv2.setMouseCallback('input',onmouse)
     cv2.moveWindow('input',img.shape[1]+10,90)
 
-    print " Instructions: \n"
-    print " Draw a rectangle around the object using right mouse button \n"
+    print(" Instructions: \n")
+    print(" Draw a rectangle around the object using right mouse button \n")
 
     while(1):
 
@@ -132,10 +135,10 @@ if __name__ == '__main__':
         if k == 27:         # esc to exit
             break
         elif k == ord('0'): # BG drawing
-            print " mark background regions with left mouse button \n"
+            print(" mark background regions with left mouse button \n")
             value = DRAW_BG
         elif k == ord('1'): # FG drawing
-            print " mark foreground regions with left mouse button \n"
+            print(" mark foreground regions with left mouse button \n")
             value = DRAW_FG
         elif k == ord('2'): # PR_BG drawing
             value = DRAW_PR_BG
@@ -145,9 +148,9 @@ if __name__ == '__main__':
             bar = np.zeros((img.shape[0],5,3),np.uint8)
             res = np.hstack((img2,bar,img,bar,output))
             cv2.imwrite('grabcut_output.png',res)
-            print " Result saved as image \n"
+            print(" Result saved as image \n")
         elif k == ord('r'): # reset everything
-            print "resetting \n"
+            print("resetting \n")
             rect = (0,0,1,1)
             drawing = False
             rectangle = False
@@ -158,8 +161,8 @@ if __name__ == '__main__':
             mask = np.zeros(img.shape[:2],dtype = np.uint8) # mask initialized to PR_BG
             output = np.zeros(img.shape,np.uint8)           # output image to be shown
         elif k == ord('n'): # segment the image
-            print """ For finer touchups, mark foreground and background after pressing keys 0-3
-            and again press 'n' \n"""
+            print(""" For finer touchups, mark foreground and background after pressing keys 0-3
+            and again press 'n' \n""")
             if (rect_or_mask == 0):         # grabcut with rect
                 bgdmodel = np.zeros((1,65),np.float64)
                 fgdmodel = np.zeros((1,65),np.float64)

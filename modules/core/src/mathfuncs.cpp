@@ -93,7 +93,7 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
     else
         k.args(src1arg, src2arg, dstarg);
 
-    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[] = { (size_t)src1.cols * cn / kercn, ((size_t)src1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -330,7 +330,7 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
            ocl::KernelArg::WriteOnly(dst1, cn),
            ocl::KernelArg::WriteOnlyNoSize(dst2));
 
-    size_t globalsize[2] = { dst1.cols * cn, (dst1.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst1.cols * cn, ((size_t)dst1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -612,7 +612,7 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
     k.args(ocl::KernelArg::ReadOnlyNoSize(mag), ocl::KernelArg::ReadOnlyNoSize(angle),
            ocl::KernelArg::WriteOnly(dst1, cn), ocl::KernelArg::WriteOnlyNoSize(dst2));
 
-    size_t globalsize[2] = { dst1.cols * cn, (dst1.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst1.cols * cn, ((size_t)dst1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1181,8 +1181,8 @@ iPow_i( const T* src, T* dst, int len, int power )
     {
         T tab[5] =
         {
-            power == -1 ? saturate_cast<T>(-1) : 0, (power & 1) ? -1 : 1,
-            std::numeric_limits<T>::max(), 1, power == -1 ? 1 : 0
+            saturate_cast<T>(power == -1 ? -1 : 0), saturate_cast<T>((power & 1) ? -1 : 1),
+            std::numeric_limits<T>::max(), 1, saturate_cast<T>(power == -1 ? 1 : 0)
         };
         for( int i = 0; i < len; i++ )
         {
@@ -1349,7 +1349,7 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
             k.args(srcarg, dstarg, power);
     }
 
-    size_t globalsize[2] = { dst.cols *  cn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst.cols *  cn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1734,7 +1734,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
     k.args(ocl::KernelArg::ReadOnlyNoSize(a),
            ocl::KernelArg::WriteOnly(a, cn), (float)value);
 
-    size_t globalsize[2] = { a.cols * cn, (a.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)a.cols * cn, ((size_t)a.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 

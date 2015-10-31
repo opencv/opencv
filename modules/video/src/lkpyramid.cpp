@@ -976,7 +976,7 @@ namespace cv
             int ptcount, int level)
         {
             size_t localThreads[3]  = { 8, 8};
-            size_t globalThreads[3] = { 8 * ptcount, 8};
+            size_t globalThreads[3] = { 8 * (size_t)ptcount, 8};
             char calcErr = (0 == level) ? 1 : 0;
 
             cv::String build_options;
@@ -1009,7 +1009,7 @@ namespace cv
             idxArg = kernel.set(idxArg, (int)winSize.height); // int c_winSize_y
             idxArg = kernel.set(idxArg, (int)iters); // int c_iters
             idxArg = kernel.set(idxArg, (char)calcErr); //char calcErr
-            return kernel.run(2, globalThreads, localThreads, false);
+            return kernel.run(2, globalThreads, localThreads, true); // sync=true because ocl::Image2D lifetime is not handled well for temp UMat
         }
     private:
         inline static bool isDeviceCPU()

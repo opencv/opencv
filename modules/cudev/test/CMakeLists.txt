@@ -32,6 +32,10 @@ if(OCV_DEPENDENCIES_FOUND)
   ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES})
   add_dependencies(opencv_tests ${the_target})
 
+  set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL}")
+  set_source_files_properties(${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch}
+    PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};AccuracyTest")
+
   # Additional target properties
   set_target_properties(${the_target} PROPERTIES
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
@@ -42,9 +46,7 @@ if(OCV_DEPENDENCIES_FOUND)
     set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
   endif()
 
-  enable_testing()
-  get_target_property(LOC ${the_target} LOCATION)
-  add_test(${the_target} "${LOC}")
+  ocv_add_test_from_target("${the_target}" "Accuracy" "${the_target}")
 
   if(INSTALL_TESTS)
     install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)

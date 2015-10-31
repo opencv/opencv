@@ -7,24 +7,27 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <va/va.h>
-#include <va/va_drm.h>
+#include "cvconfig.h"
 
-#define VAAPI_PCI_DIR "/sys/bus/pci/devices"
-#define VAAPI_DRI_DIR "/dev/dri/"
-#define VAAPI_PCI_DISPLAY_CONTROLLER_CLASS 0x03
+#include <va/va.h>
+# include <va/va_drm.h>
 
 namespace va {
-
-static unsigned readId(const char* devName, const char* idName);
-static int findAdapter(unsigned desiredVendorId);
 
 bool openDisplay();
 void closeDisplay();
 
-int drmfd = -1;
 VADisplay display = NULL;
 bool initialized = false;
+
+#define VA_INTEL_PCI_DIR "/sys/bus/pci/devices"
+#define VA_INTEL_DRI_DIR "/dev/dri/"
+#define VA_INTEL_PCI_DISPLAY_CONTROLLER_CLASS 0x03
+
+static unsigned readId(const char* devName, const char* idName);
+static int findAdapter(unsigned desiredVendorId);
+
+int drmfd = -1;
 
 class Directory
 {
@@ -70,7 +73,7 @@ static unsigned readId(const char* devName, const char* idName)
     long int id = 0;
 
     char fileName[256];
-    snprintf(fileName, sizeof(fileName), "%s/%s/%s", VAAPI_PCI_DIR, devName, idName);
+    snprintf(fileName, sizeof(fileName), "%s/%s/%s", VA_INTEL_PCI_DIR, devName, idName);
 
     FILE* file = fopen(fileName, "r");
     if (file)
@@ -88,14 +91,14 @@ static int findAdapter(unsigned desiredVendorId)
     int adapterIndex = -1;
     int numAdapters = 0;
 
-    Directory dir(VAAPI_PCI_DIR);
+    Directory dir(VA_INTEL_PCI_DIR);
 
     for (int i = 0;  i < dir.count();  ++i)
     {
         const char* name = dir[i]->d_name;
 
         unsigned classId = readId(name, "class");
-        if ((classId >> 16) == VAAPI_PCI_DISPLAY_CONTROLLER_CLASS)
+        if ((classId >> 16) == VA_INTEL_PCI_DISPLAY_CONTROLLER_CLASS)
         {
             unsigned vendorId = readId(name, "vendor");
             if (vendorId == desiredVendorId)
@@ -122,9 +125,9 @@ public:
             numbers[1] = adapterIndex;
             for (int i = 0;  i < NUM_NODES;  ++i)
             {
-                int sz = sizeof(VAAPI_DRI_DIR) + strlen(names[i]) + 3;
+                int sz = sizeof(VA_INTEL_DRI_DIR) + strlen(names[i]) + 3;
                 paths[i] = new char [sz];
-                snprintf(paths[i], sz, "%s%s%d", VAAPI_DRI_DIR, names[i], numbers[i]);
+                snprintf(paths[i], sz, "%s%s%d", VA_INTEL_DRI_DIR, names[i], numbers[i]);
             }
         }
     ~NodeInfo()
@@ -147,46 +150,74 @@ private:
     char* paths[NUM_NODES];
 };
 
+static bool openDeviceIntel();
+static bool openDeviceGeneric();
+
+static bool openDeviceIntel()
+{
+    const unsigned IntelVendorID = 0x8086;
+
+    int adapterIndex = findAdapter(IntelVendorID);
+    if (adapterIndex >= 0)
+    {
+        NodeInfo nodes(adapterIndex);
+
+        for (int i = 0; i < nodes.count(); ++i)
+        {
+            drmfd = open(nodes.path(i), O_RDWR);
+            if (drmfd >= 0)
+            {
+                display = vaGetDisplayDRM(drmfd);
+                if (display)
+                    return true;
+                close(drmfd);
+                drmfd = -1;
+            }
+        }
+    }
+    return false;
+}
+
+static bool openDeviceGeneric()
+{
+    static const char* device_paths[] = { "/dev/dri/renderD128", "/dev/dri/card0" };
+    static const int num_devices = sizeof(device_paths) / sizeof(device_paths[0]);
+
+    for (int i = 0; i < num_devices; ++i)
+    {
+        drmfd = open(device_paths[i], O_RDWR);
+        if (drmfd >= 0)
+        {
+            display = vaGetDisplayDRM(drmfd);
+            if (display)
+                return true;
+            close(drmfd);
+            drmfd = -1;
+        }
+    }
+    return false;
+}
+
 bool openDisplay()
 {
     if (!initialized)
     {
-        const unsigned IntelVendorID = 0x8086;
-
         drmfd = -1;
         display = 0;
 
-        int adapterIndex = findAdapter(IntelVendorID);
-        if (adapterIndex >= 0)
+        if (openDeviceIntel() || openDeviceGeneric())
         {
-            NodeInfo nodes(adapterIndex);
-
-            for (int i = 0;  i < nodes.count();  ++i)
+            int majorVersion = 0, minorVersion = 0;
+            if (vaInitialize(display, &majorVersion, &minorVersion) == VA_STATUS_SUCCESS)
             {
-                drmfd = open(nodes.path(i), O_RDWR);
-                if (drmfd >= 0)
-                {
-                    display = vaGetDisplayDRM(drmfd);
-                    if (display)
-                    {
-                        int majorVersion = 0, minorVersion = 0;
-                        if (vaInitialize(display, &majorVersion, &minorVersion) == VA_STATUS_SUCCESS)
-                        {
-                            initialized = true;
-                            return true;
-                        }
-                        display = 0;
-                    }
-                    close(drmfd);
-                    drmfd = -1;
-                }
+                initialized = true;
+                return true;
             }
+            close(drmfd);
+            display = 0;
+            drmfd = -1;
         }
-
-        if (adapterIndex < 0)
-            return false; // Can't find Intel display adapter
-        if ((drmfd < 0) || !display)
-            return false; // Can't load VA display
+        return false; // Can't open VA display
     }
     return true;
 }

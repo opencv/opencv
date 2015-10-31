@@ -11,6 +11,8 @@ Keys:
   v     - toggle voronoi mode
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
 
 import numpy as np
 import cv2
@@ -23,11 +25,11 @@ if __name__ == '__main__':
         fn = sys.argv[1]
     except:
         fn = '../data/fruits.jpg'
-    print __doc__
+    print(__doc__)
 
     img = cv2.imread(fn, 0)
     if img is None:
-        print 'Failed to load fn:', fn
+        print('Failed to load fn:', fn)
         sys.exit(1)
 
     cm = make_cmap('jet')
@@ -62,7 +64,7 @@ if __name__ == '__main__':
             break
         if ch == ord('v'):
             voronoi = not voronoi
-            print 'showing', ['distance', 'voronoi'][voronoi]
+            print('showing', ['distance', 'voronoi'][voronoi])
             update()
         if need_update:
             update()

@@ -170,6 +170,22 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
     }
 }
 
+CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval)
+{
+    CV_FUNCNAME("cvSetTrackbarMin");
+
+    if (minval >= 0)
+    {
+        if (trackbar_name == 0 || window_name == 0)
+            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+
+        CvTrackbar* trackbar = HighguiBridge::getInstance().findTrackbarByName(trackbar_name, window_name);
+
+        if (trackbar)
+            trackbar->setMinPosition(minval);
+    }
+}
+
 CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
 {
     int pos = -1;

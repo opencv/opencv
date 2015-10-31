@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 
 namespace cv {
 
@@ -377,21 +378,6 @@ bool checkHardwareSupport(int feature)
 
 
 volatile bool useOptimizedFlag = true;
-#ifdef HAVE_IPP
-struct IPPInitializer
-{
-    IPPInitializer(void)
-    {
-#if IPP_VERSION_MAJOR >= 8
-        ippInit();
-#else
-        ippStaticInit();
-#endif
-    }
-};
-
-IPPInitializer ippInitializer;
-#endif
 
 volatile bool USE_SSE2 = featuresEnabled.have[CV_CPU_SSE2];
 volatile bool USE_SSE4_2 = featuresEnabled.have[CV_CPU_SSE4_2];
@@ -1034,7 +1020,7 @@ class TlsStorage
 public:
     TlsStorage()
     {
-        tlsSlots = 0;
+        tlsSlots.reserve(32);
         threads.reserve(32);
     }
     ~TlsStorage()
@@ -1077,15 +1063,27 @@ public:
     size_t reserveSlot()
     {
         AutoLock guard(mtxGlobalAccess);
-        tlsSlots++;
-        return (tlsSlots-1);
+
+        // Find unused slots
+        for(size_t slot = 0; slot < tlsSlots.size(); slot++)
+        {
+            if(!tlsSlots[slot])
+            {
+                tlsSlots[slot] = 1;
+                return slot;
+            }
+        }
+
+        // Create new slot
+        tlsSlots.push_back(1);
+        return (tlsSlots.size()-1);
     }
 
     // Release TLS storage index and pass assosiated data to caller
     void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec)
     {
         AutoLock guard(mtxGlobalAccess);
-        CV_Assert(tlsSlots > slotIdx);
+        CV_Assert(tlsSlots.size() > slotIdx);
 
         for(size_t i = 0; i < threads.size(); i++)
         {
@@ -1096,15 +1094,14 @@ public:
                 threads[i]->slots[slotIdx] = 0;
             }
         }
-        // If we removing last element, decriment slots size to save space
-        if(tlsSlots-1 == slotIdx)
-            tlsSlots--;
+
+        tlsSlots[slotIdx] = 0;
     }
 
     // Get data by TLS storage index
     void* getData(size_t slotIdx) const
     {
-        CV_Assert(tlsSlots > slotIdx);
+        CV_Assert(tlsSlots.size() > slotIdx);
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(threadData && threadData->slots.size() > slotIdx)
@@ -1113,10 +1110,24 @@ public:
         return NULL;
     }
 
+    // Gather data from threads by TLS storage index
+    void gather(size_t slotIdx, std::vector<void*> &dataVec)
+    {
+        AutoLock guard(mtxGlobalAccess);
+        CV_Assert(tlsSlots.size() > slotIdx);
+
+        for(size_t i = 0; i < threads.size(); i++)
+        {
+            std::vector<void*>& thread_slots = threads[i]->slots;
+            if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
+                dataVec.push_back(thread_slots[slotIdx]);
+        }
+    }
+
     // Set data to storage index
     void setData(size_t slotIdx, void* pData)
     {
-        CV_Assert(pData != NULL);
+        CV_Assert(tlsSlots.size() > slotIdx && pData != NULL);
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(!threadData)
@@ -1131,7 +1142,11 @@ public:
         }
 
         if(slotIdx >= threadData->slots.size())
-            threadData->slots.resize(slotIdx+1);
+        {
+            AutoLock guard(mtxGlobalAccess);
+            while(slotIdx >= threadData->slots.size())
+                threadData->slots.push_back(NULL);
+        }
         threadData->slots[slotIdx] = pData;
     }
 
@@ -1139,7 +1154,7 @@ private:
     TlsAbstraction tls; // TLS abstraction layer instance
 
     Mutex  mtxGlobalAccess;           // Shared objects operation guard
-    size_t tlsSlots;                  // TLS storage counter
+    std::vector<int> tlsSlots;        // TLS keys state
     std::vector<ThreadData*> threads; // Array for all allocated data. Thread data pointers are placed here to allow data cleanup
 };
 
@@ -1157,6 +1172,11 @@ TLSDataContainer::TLSDataContainer()
 TLSDataContainer::~TLSDataContainer()
 {
     CV_Assert(key_ == -1); // Key must be released in child object
+}
+
+void TLSDataContainer::gatherData(std::vector<void*> &data) const
+{
+    getTlsStorage().gather(key_, data);
 }
 
 void TLSDataContainer::release()
@@ -1271,26 +1291,93 @@ void setUseCollection(bool flag)
 namespace ipp
 {
 
-static int ippStatus = 0; // 0 - all is ok, -1 - IPP functions failed
-static const char * funcname = NULL, * filename = NULL;
-static int linen = 0;
+struct IPPInitSingelton
+{
+public:
+    IPPInitSingelton()
+    {
+        useIPP      = true;
+        ippStatus   = 0;
+        funcname    = NULL;
+        filename    = NULL;
+        linen       = 0;
+        ippFeatures = 0;
+
+#ifdef HAVE_IPP
+        const char* pIppEnv = getenv("OPENCV_IPP");
+        cv::String env = pIppEnv;
+        if(env.size())
+        {
+            if(env == "disabled")
+            {
+                std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << std::endl;
+                useIPP = false;
+            }
+#if IPP_VERSION_X100 >= 900
+            else if(env == "sse")
+                ippFeatures = ippCPUID_SSE;
+            else if(env == "sse2")
+                ippFeatures = ippCPUID_SSE2;
+            else if(env == "sse3")
+                ippFeatures = ippCPUID_SSE3;
+            else if(env == "ssse3")
+                ippFeatures = ippCPUID_SSSE3;
+            else if(env == "sse41")
+                ippFeatures = ippCPUID_SSE41;
+            else if(env == "sse42")
+                ippFeatures = ippCPUID_SSE42;
+            else if(env == "avx")
+                ippFeatures = ippCPUID_AVX;
+            else if(env == "avx2")
+                ippFeatures = ippCPUID_AVX2;
+#endif
+            else
+                std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << std::endl;
+        }
+
+        IPP_INITIALIZER(ippFeatures)
+#endif
+    }
+
+    bool useIPP;
+
+    int         ippStatus; // 0 - all is ok, -1 - IPP functions failed
+    const char *funcname;
+    const char *filename;
+    int         linen;
+    int         ippFeatures;
+};
+
+static IPPInitSingelton& getIPPSingelton()
+{
+    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingelton, new IPPInitSingelton())
+}
+
+int getIppFeatures()
+{
+#ifdef HAVE_IPP
+    return getIPPSingelton().ippFeatures;
+#else
+    return 0;
+#endif
+}
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
-    ippStatus = status;
-    funcname = _funcname;
-    filename = _filename;
-    linen = _line;
+    getIPPSingelton().ippStatus = status;
+    getIPPSingelton().funcname = _funcname;
+    getIPPSingelton().filename = _filename;
+    getIPPSingelton().linen = _line;
 }
 
 int getIppStatus()
 {
-    return ippStatus;
+    return getIPPSingelton().ippStatus;
 }
 
 String getIppErrorLocation()
 {
-    return format("%s:%d %s", filename ? filename : "", linen, funcname ? funcname : "");
+    return format("%s:%d %s", getIPPSingelton().filename ? getIPPSingelton().filename : "", getIPPSingelton().linen, getIPPSingelton().funcname ? getIPPSingelton().funcname : "");
 }
 
 bool useIPP()
@@ -1299,11 +1386,7 @@ bool useIPP()
     CoreTLSData* data = getCoreTlsData().get();
     if(data->useIPP < 0)
     {
-        const char* pIppEnv = getenv("OPENCV_IPP");
-        if(pIppEnv && (cv::String(pIppEnv) == "disabled"))
-            data->useIPP = false;
-        else
-            data->useIPP = true;
+        data->useIPP = getIPPSingelton().useIPP;
     }
     return (data->useIPP > 0);
 #else

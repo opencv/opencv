@@ -49,9 +49,20 @@
 
 /**
   @defgroup hal Hardware Acceleration Layer
+  @{
+    @defgroup hal_intrin Universal intrinsics
+    @{
+      @defgroup hal_intrin_impl Private implementation helpers
+    @}
+    @defgroup hal_utils Platform-dependent utils
+  @}
 */
 
+
 namespace cv { namespace hal {
+
+//! @addtogroup hal
+//! @{
 
 namespace Error {
 
@@ -92,6 +103,8 @@ void sqrt(const float* src, float* dst, int len);
 void sqrt(const double* src, double* dst, int len);
 void invSqrt(const float* src, float* dst, int len);
 void invSqrt(const double* src, double* dst, int len);
+
+//! @}
 
 }} //cv::hal
 

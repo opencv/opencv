@@ -304,14 +304,18 @@ void ForThread::stop()
 {
     if(m_state == eFTStarted)
     {
+        pthread_mutex_lock(&m_thread_mutex);
         m_state = eFTToStop;
+        pthread_mutex_unlock(&m_thread_mutex);
 
         run();
 
         pthread_join(m_posix_thread, NULL);
     }
 
+    pthread_mutex_lock(&m_thread_mutex);
     m_state = eFTStoped;
+    pthread_mutex_unlock(&m_thread_mutex);
 }
 
 void ForThread::run()
