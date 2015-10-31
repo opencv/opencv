@@ -222,7 +222,6 @@ cvStartFindContours( void* _img, CvMemStorage* storage,
     scanner->lnbd.x = 0;
     scanner->lnbd.y = 1;
     scanner->nbd = 2;
-    scanner->mode = (int) mode;
     scanner->frame_info.contour = &(scanner->frame);
     scanner->frame_info.is_hole = 1;
     scanner->frame_info.next = 0;

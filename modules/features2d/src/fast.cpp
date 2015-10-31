@@ -262,7 +262,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
     UMat img = _img.getUMat();
     if( img.cols < 7 || img.rows < 7 )
         return false;
-    size_t globalsize[] = { img.cols-6, img.rows-6 };
+    size_t globalsize[] = { (size_t)img.cols-6, (size_t)img.rows-6 };
 
     ocl::Kernel fastKptKernel("FAST_findKeypoints", ocl::features2d::fast_oclsrc);
     if (fastKptKernel.empty())
@@ -306,7 +306,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
         if (fastNMSKernel.empty())
             return false;
 
-        size_t globalsize_nms[] = { counter };
+        size_t globalsize_nms[] = { (size_t)counter };
         if( !fastNMSKernel.args(ocl::KernelArg::PtrReadOnly(kp1),
                                 ocl::KernelArg::PtrReadWrite(kp2),
                                 ocl::KernelArg::ReadOnly(img),

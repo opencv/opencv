@@ -785,7 +785,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     {
         if( maskSize == CV_DIST_MASK_3 )
         {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
             CV_IPP_CHECK()
             {
                 IppiSize roi = { src.cols, src.rows };
@@ -802,7 +802,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
         }
         else
         {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
             CV_IPP_CHECK()
             {
                 IppiSize roi = { src.cols, src.rows };

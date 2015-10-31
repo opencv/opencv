@@ -1176,12 +1176,11 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
 }
 
 #ifdef HAVE_IPP
-
 class IPPCalcHistInvoker :
     public ParallelLoopBody
 {
 public:
-    IPPCalcHistInvoker(const Mat & _src, Mat & _hist, AutoBuffer<Ipp32s> & _levels, Ipp32s _histSize, Ipp32s _low, Ipp32s _high, bool * _ok) :
+    IPPCalcHistInvoker(const Mat & _src, Mat & _hist, AutoBuffer<Ipp32f> & _levels, Ipp32s _histSize, Ipp32f _low, Ipp32f _high, bool * _ok) :
         ParallelLoopBody(), src(&_src), hist(&_hist), levels(&_levels), histSize(_histSize), low(_low), high(_high), ok(_ok)
     {
         *ok = true;
@@ -1190,17 +1189,58 @@ public:
     virtual void operator() (const Range & range) const
     {
         Mat phist(hist->size(), hist->type(), Scalar::all(0));
+#if IPP_VERSION_X100 >= 900
+        IppiSize roi = {src->cols, range.end - range.start};
+        int bufferSize = 0;
+        int specSize = 0;
+        IppiHistogramSpec *pSpec = NULL;
+        Ipp8u *pBuffer = NULL;
 
-        IppStatus status = ippiHistogramEven_8u_C1R(
-            src->ptr(range.start), (int)src->step, ippiSize(src->cols, range.end - range.start),
-            phist.ptr<Ipp32s>(), (Ipp32s *)*levels, histSize, low, high);
-
-        if (status < 0)
+        if(ippiHistogramGetBufferSize(ipp8u, roi, &histSize, 1, 1, &specSize, &bufferSize) < 0)
         {
             *ok = false;
             return;
         }
-        CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+
+        pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+        if(!pBuffer && bufferSize)
+        {
+            *ok = false;
+            return;
+        }
+
+        pSpec = (IppiHistogramSpec*)ippMalloc(specSize);
+        if(!pSpec && specSize)
+        {
+            if(pBuffer) ippFree(pBuffer);
+            *ok = false;
+            return;
+        }
+
+        if(ippiHistogramUniformInit(ipp8u, (Ipp32f*)&low, (Ipp32f*)&high, (Ipp32s*)&histSize, 1, pSpec) < 0)
+        {
+            if(pSpec)   ippFree(pSpec);
+            if(pBuffer) ippFree(pBuffer);
+            *ok = false;
+            return;
+        }
+
+        IppStatus status = ippiHistogram_8u_C1R(src->ptr(range.start), (int)src->step, ippiSize(src->cols, range.end - range.start),
+            phist.ptr<Ipp32u>(), pSpec, pBuffer);
+
+        if(pSpec)   ippFree(pSpec);
+        if(pBuffer) ippFree(pBuffer);
+#else
+        CV_SUPPRESS_DEPRECATED_START
+        IppStatus status = ippiHistogramEven_8u_C1R(src->ptr(range.start), (int)src->step, ippiSize(src->cols, range.end - range.start),
+            phist.ptr<Ipp32s>(), (Ipp32s*)(Ipp32f*)*levels, histSize, (Ipp32s)low, (Ipp32s)high);
+        CV_SUPPRESS_DEPRECATED_END
+#endif
+        if(status < 0)
+        {
+            *ok = false;
+            return;
+        }
 
         for (int i = 0; i < histSize; ++i)
             CV_XADD((int *)(hist->data + i * hist->step), *(int *)(phist.data + i * phist.step));
@@ -1209,8 +1249,9 @@ public:
 private:
     const Mat * src;
     Mat * hist;
-    AutoBuffer<Ipp32s> * levels;
-    Ipp32s histSize, low, high;
+    AutoBuffer<Ipp32f> * levels;
+    Ipp32s histSize;
+    Ipp32f low, high;
     bool * ok;
 
     const IPPCalcHistInvoker & operator = (const IPPCalcHistInvoker & );
@@ -1241,7 +1282,7 @@ static bool ipp_calchist(const Mat* images, int nimages, const int* channels,
                 !accumulate && uniform)
         {
             ihist.setTo(Scalar::all(0));
-            AutoBuffer<Ipp32s> levels(histSize[0] + 1);
+            AutoBuffer<Ipp32f> levels(histSize[0] + 1);
 
             bool ok = true;
             const Mat & src = images[0];
@@ -1249,14 +1290,13 @@ static bool ipp_calchist(const Mat* images, int nimages, const int* channels,
 #ifdef HAVE_CONCURRENCY
             nstripes = 1;
 #endif
-            IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, (Ipp32s)ranges[0][0], (Ipp32s)ranges[0][1], &ok);
+            IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, ranges[0][0], ranges[0][1], &ok);
             Range range(0, src.rows);
             parallel_for_(range, invoker, nstripes);
 
             if (ok)
             {
                 ihist.convertTo(hist, CV_32F);
-                CV_IMPL_ADD(CV_IMPL_IPP);
                 return true;
             }
         }
@@ -2180,7 +2220,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         mapk.args(ocl::KernelArg::ReadOnlyNoSize(im), ocl::KernelArg::PtrReadOnly(lut),
                   ocl::KernelArg::WriteOnly(dst));
 
-        size_t globalsize[2] = { size.width, size.height };
+        size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
         return mapk.run(2, globalsize, NULL, false);
     }
     else if (histdims == 2)
@@ -2227,7 +2267,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         mapk.args(ocl::KernelArg::ReadOnlyNoSize(im0), ocl::KernelArg::ReadOnlyNoSize(im1),
                ocl::KernelArg::ReadOnlyNoSize(hist), ocl::KernelArg::PtrReadOnly(lut), scale, ocl::KernelArg::WriteOnly(dst));
 
-        size_t globalsize[2] = { size.width, size.height };
+        size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
         return mapk.run(2, globalsize, NULL, false);
     }
     return false;

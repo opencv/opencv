@@ -496,6 +496,8 @@ struct CV_EXPORTS UMatData
     void* handle;
     void* userdata;
     int allocatorFlags_;
+    int mapcount;
+    UMatData* originalUMatData;
 };
 
 
@@ -1071,6 +1073,7 @@ public:
     @param m Destination matrix. If it does not have a proper size or type before the operation, it is
     reallocated.
     @param mask Operation mask. Its non-zero elements indicate which matrix elements need to be copied.
+    The mask has to be of type CV_8U and can have 1 or multiple channels.
     */
     void copyTo( OutputArray m, InputArray mask ) const;
 

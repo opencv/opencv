@@ -7511,19 +7511,22 @@ Ptr<AgastFeatureDetector> AgastFeatureDetector::create( int threshold, bool nonm
 
 void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
+
+    std::vector<KeyPoint> kpts;
+
     // detect
     switch(type) {
       case AgastFeatureDetector::AGAST_5_8:
-        AGAST_5_8(_img, keypoints, threshold);
+        AGAST_5_8(_img, kpts, threshold);
         break;
       case AgastFeatureDetector::AGAST_7_12d:
-        AGAST_7_12d(_img, keypoints, threshold);
+        AGAST_7_12d(_img, kpts, threshold);
         break;
       case AgastFeatureDetector::AGAST_7_12s:
-        AGAST_7_12s(_img, keypoints, threshold);
+        AGAST_7_12s(_img, kpts, threshold);
         break;
       case AgastFeatureDetector::OAST_9_16:
-        OAST_9_16(_img, keypoints, threshold);
+        OAST_9_16(_img, kpts, threshold);
         break;
     }
 
@@ -7534,7 +7537,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
     makeAgastOffsets(pixel_, (int)img.step, type);
 
     std::vector<KeyPoint>::iterator kpt;
-    for(kpt = keypoints.begin(); kpt != keypoints.end(); kpt++)
+    for(kpt = kpts.begin(); kpt != kpts.end(); kpt++)
     {
         switch(type) {
           case AgastFeatureDetector::AGAST_5_8:
@@ -7555,20 +7558,21 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
             break;
         }
     }
+
     // suppression
     if(nonmax_suppression)
     {
         size_t j;
         size_t curr_idx;
         size_t lastRow = 0, next_lastRow = 0;
-        size_t num_Corners = keypoints.size();
+        size_t num_Corners = kpts.size();
         size_t lastRowCorner_ind = 0, next_lastRowCorner_ind = 0;
 
         std::vector<int> nmsFlags;
         std::vector<KeyPoint>::iterator currCorner_nms;
         std::vector<KeyPoint>::const_iterator currCorner;
 
-        currCorner = keypoints.begin();
+        currCorner = kpts.begin();
 
         nmsFlags.resize((int)num_Corners);
 
@@ -7593,11 +7597,11 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
             if(lastRow + 1 == currCorner->pt.y)
             {
                 // find the corner above the current one
-                while( (keypoints[lastRowCorner_ind].pt.x < currCorner->pt.x)
-                    && (keypoints[lastRowCorner_ind].pt.y == lastRow) )
+                while( (kpts[lastRowCorner_ind].pt.x < currCorner->pt.x)
+                    && (kpts[lastRowCorner_ind].pt.y == lastRow) )
                     lastRowCorner_ind++;
 
-                    if( (keypoints[lastRowCorner_ind].pt.x == currCorner->pt.x)
+                    if( (kpts[lastRowCorner_ind].pt.x == currCorner->pt.x)
                      && (lastRowCorner_ind != curr_idx) )
                     {
                         size_t w = lastRowCorner_ind;
@@ -7605,7 +7609,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
                         while(nmsFlags[w] != -1)
                             w = nmsFlags[w];
 
-                        if(keypoints[curr_idx].response < keypoints[w].response)
+                        if(kpts[curr_idx].response < kpts[w].response)
                             nmsFlags[curr_idx] = (int)w;
                         else
                             nmsFlags[w] = (int)curr_idx;
@@ -7614,8 +7618,8 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
 
             // check left
             t = (int)curr_idx - 1;
-            if( (curr_idx != 0) && (keypoints[t].pt.y == currCorner->pt.y)
-             && (keypoints[t].pt.x + 1 == currCorner->pt.x) )
+            if( (curr_idx != 0) && (kpts[t].pt.y == currCorner->pt.y)
+             && (kpts[t].pt.x + 1 == currCorner->pt.x) )
             {
                 int currCornerMaxAbove_ind = nmsFlags[curr_idx];
                 // find the maximum in that area
@@ -7626,7 +7630,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
                 {
                     if((size_t)t != curr_idx)
                     {
-                        if ( keypoints[curr_idx].response < keypoints[t].response )
+                        if ( kpts[curr_idx].response < kpts[t].response )
                             nmsFlags[curr_idx] = t;
                         else
                             nmsFlags[t] = (int)curr_idx;
@@ -7636,7 +7640,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
                 {
                     if(t != currCornerMaxAbove_ind)
                     {
-                        if(keypoints[currCornerMaxAbove_ind].response < keypoints[t].response)
+                        if(kpts[currCornerMaxAbove_ind].response < kpts[t].response)
                         {
                             nmsFlags[currCornerMaxAbove_ind] = t;
                             nmsFlags[curr_idx] = t;
@@ -7652,19 +7656,15 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
             currCorner++;
         }
 
-        // marks non-maximum corners
+        // collecting maximum corners
         for(curr_idx = 0; curr_idx < num_Corners; curr_idx++)
         {
-            if (nmsFlags[curr_idx] != -1)
-                keypoints[curr_idx].response = -1;
+            if (nmsFlags[curr_idx] == -1)
+                keypoints.push_back(kpts[curr_idx]);
         }
-
-        // erase non-maximum corners
-        for (j = keypoints.size(); j > 0; j--)
-        {
-            if (keypoints[j - 1].response == -1)
-                keypoints.erase(keypoints.begin() + j - 1 );
-        }
+    } else
+    {
+      keypoints = kpts;
     }
 }
 

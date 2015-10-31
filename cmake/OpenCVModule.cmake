@@ -26,6 +26,7 @@
 
 # To control the setup of the module you could also set:
 # the_description - text to be used as current module description
+# the_label - label for current module
 # OPENCV_MODULE_TYPE - STATIC|SHARED - set to force override global settings for current module
 # OPENCV_MODULE_IS_PART_OF_WORLD - ON|OFF (default ON) - should the module be added to the opencv_world?
 # BUILD_${the_module}_INIT - ON|OFF (default ON) - initial value for BUILD_${the_module}
@@ -56,6 +57,8 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
   if(HAVE_${mod})
     unset(HAVE_${mod} CACHE)
   endif()
+  unset(OPENCV_MODULE_${mod}_DEPS CACHE)
+  unset(OPENCV_MODULE_${mod}_DEPS_EXT CACHE)
   unset(OPENCV_MODULE_${mod}_REQ_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_OPT_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_PRIVATE_REQ_DEPS CACHE)
@@ -188,6 +191,15 @@ macro(ocv_add_module _name)
     else()
       set(OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD OFF CACHE INTERNAL "")
     endif()
+
+    if(NOT DEFINED the_label)
+      if(OPENCV_PROCESSING_EXTRA_MODULES)
+        set(the_label "Extra")
+      else()
+        set(the_label "Main")
+      endif()
+    endif()
+    set(OPENCV_MODULE_${the_module}_LABEL "${the_label};${the_module}" CACHE INTERNAL "")
 
     if(BUILD_${the_module})
       set(OPENCV_MODULES_BUILD ${OPENCV_MODULES_BUILD} "${the_module}" CACHE INTERNAL "List of OpenCV modules included into the build")
@@ -471,7 +483,6 @@ function(__ocv_resolve_dependencies)
   # reorder dependencies
   foreach(m ${OPENCV_MODULES_BUILD})
     __ocv_sort_modules_by_deps(OPENCV_MODULE_${m}_DEPS)
-    ocv_list_sort(OPENCV_MODULE_${m}_DEPS_EXT)
 
     set(LINK_DEPS ${OPENCV_MODULE_${m}_DEPS})
 
@@ -762,6 +773,10 @@ macro(_ocv_create_module)
   unset(sub_links)
   unset(cuda_objs)
 
+  set_target_properties(${the_module} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
+  set_source_files_properties(${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES} ${${the_module}_pch}
+    PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
+
   ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
   ocv_target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
   ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
@@ -969,6 +984,10 @@ function(ocv_add_perf_tests)
       ocv_target_link_libraries(${the_target} ${perf_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_perf_tests ${the_target})
 
+      set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};PerfTest")
+      set_source_files_properties(${OPENCV_PERF_${the_module}_SOURCES} ${${the_target}_pch}
+        PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};PerfTest")
+
       # Additional target properties
       set_target_properties(${the_target} PROPERTIES
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
@@ -989,6 +1008,12 @@ function(ocv_add_perf_tests)
       if(NOT BUILD_opencv_world)
         _ocv_add_precompiled_headers(${the_target})
       endif()
+
+      ocv_add_test_from_target("${the_target}" "Performance" "${the_target}")
+      ocv_add_test_from_target("opencv_sanity_${name}" "Sanity" "${the_target}"
+                               "--perf_min_samples=1"
+                               "--perf_force_samples=1"
+                               "--perf_verify_sanity")
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
@@ -1035,6 +1060,10 @@ function(ocv_add_accuracy_tests)
       ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
 
+      set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};AccuracyTest")
+      set_source_files_properties(${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch}
+        PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};AccuracyTest")
+
       # Additional target properties
       set_target_properties(${the_target} PROPERTIES
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
@@ -1045,21 +1074,11 @@ function(ocv_add_accuracy_tests)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
       endif()
 
-      enable_testing()
-      get_target_property(LOC ${the_target} LOCATION)
-      add_test(${the_target} "${LOC}")
-
-      if(WINRT)
-        # removing APPCONTAINER from tests to run from console
-        # look for detailed description inside of ocv_create_module macro above
-        add_custom_command(TARGET "opencv_test_${name}"
-                           POST_BUILD
-                           COMMAND link.exe /edit /APPCONTAINER:NO $(TargetPath))
-      endif()
-
       if(NOT BUILD_opencv_world)
         _ocv_add_precompiled_headers(${the_target})
       endif()
+
+      ocv_add_test_from_target("${the_target}" "Accuracy" "${the_target}")
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
@@ -1091,6 +1110,10 @@ function(ocv_add_samples)
         ocv_target_include_modules(${the_target} ${samples_deps})
         ocv_target_link_libraries(${the_target} ${samples_deps})
         set_target_properties(${the_target} PROPERTIES PROJECT_LABEL "(sample) ${name}")
+
+        set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Sample")
+        set_source_files_properties("${source}"
+          PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Sample")
 
         if(ENABLE_SOLUTION_FOLDERS)
           set_target_properties(${the_target} PROPERTIES

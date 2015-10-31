@@ -1,6 +1,6 @@
 #if defined(_MSC_VER) && (_MSC_VER >= 1800)
 // eliminating duplicated round() declaration
-#define HAVE_ROUND
+#define HAVE_ROUND 1
 #endif
 
 #include <Python.h>

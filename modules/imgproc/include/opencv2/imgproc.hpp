@@ -1922,7 +1922,7 @@ CV_EXPORTS_W void dilate( InputArray src, OutputArray dst, InputArray kernel,
 
 /** @brief Performs advanced morphological transformations.
 
-The function can perform advanced morphological transformations using an erosion and dilation as
+The function morphologyEx can perform advanced morphological transformations using an erosion and dilation as
 basic operations.
 
 Any of the operations can be done in-place. In case of multi-channel images, each channel is
@@ -1930,11 +1930,11 @@ processed independently.
 
 @param src Source image. The number of channels can be arbitrary. The depth should be one of
 CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
-@param dst Destination image of the same size and type as  src\` .
-@param kernel Structuring element. It can be created using getStructuringElement.
+@param dst Destination image of the same size and type as source image.
+@param op Type of a morphological operation, see cv::MorphTypes
+@param kernel Structuring element. It can be created using cv::getStructuringElement.
 @param anchor Anchor position with the kernel. Negative values mean that the anchor is at the
 kernel center.
-@param op Type of a morphological operation, see cv::MorphTypes
 @param iterations Number of times erosion and dilation are applied.
 @param borderType Pixel extrapolation method, see cv::BorderTypes
 @param borderValue Border value in case of a constant border. The default value has a special
@@ -3404,8 +3404,9 @@ CV_EXPORTS_W int connectedComponents(InputArray image, OutputArray labels,
 @param labels destination labeled image
 @param stats statistics output for each label, including the background label, see below for
 available statistics. Statistics are accessed via stats(label, COLUMN) where COLUMN is one of
-cv::ConnectedComponentsTypes
-@param centroids floating point centroid (x,y) output for each label, including the background label
+cv::ConnectedComponentsTypes. The data type is CV_32S.
+@param centroids centroid output for each label, including the background label. Centroids are
+accessed via centroids(label, 0) for x and centroids(label, 1) for y. The data type CV_64F.
 @param connectivity 8 or 4 for 8-way or 4-way connectivity respectively
 @param ltype output image label type. Currently CV_32S and CV_16U are supported.
 */

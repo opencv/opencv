@@ -352,6 +352,7 @@ CV_IMPL CvString
 cvMemStorageAllocString( CvMemStorage* storage, const char* ptr, int len )
 {
     CvString str;
+    memset(&str, 0, sizeof(CvString));
 
     str.len = len >= 0 ? len : (int)strlen(ptr);
     str.ptr = (char*)cvMemStorageAlloc( storage, str.len + 1 );
@@ -1693,6 +1694,9 @@ cvSeqRemoveSlice( CvSeq* seq, CvSlice slice )
         CV_Error( CV_StsOutOfRange, "start slice index is out of range" );
 
     slice.end_index = slice.start_index + length;
+
+    if ( slice.start_index == slice.end_index )
+        return;
 
     if( slice.end_index < total )
     {

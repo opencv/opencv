@@ -15,11 +15,12 @@ else()
 endif()
 
 include_directories(${ANDROID_OPENCL_SDK}/include)
-link_directories(${ANDROID_OPENCL_SDK}/lib/${ANDROID_ABI})
+link_directories(${ANDROID_OPENCL_SDK}/lib/${ANDROID_NDK_ABI_NAME})
 add_android_project(${sample} "${CMAKE_CURRENT_SOURCE_DIR}"
     LIBRARY_DEPS ${OpenCV_BINARY_DIR}
     SDK_TARGET 21 ${ANDROID_SDK_TARGET}
     NATIVE_DEPS ${native_deps} -lGLESv2 -lEGL -lOpenCL
+    COPY_LIBS YES
 )
 if(TARGET ${sample})
   add_dependencies(opencv_android_examples ${sample})

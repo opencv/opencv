@@ -911,3 +911,32 @@ function(ocv_download)
 
   set(DOWNLOAD_PACKAGE_LOCATION ${DOWNLOAD_TARGET} PARENT_SCOPE)
 endfunction()
+
+function(ocv_add_test_from_target test_name test_kind the_target)
+  if(CMAKE_VERSION VERSION_GREATER "2.8" AND NOT CMAKE_CROSSCOMPILING)
+    if(NOT "${test_kind}" MATCHES "^(Accuracy|Performance|Sanity)$")
+      message(FATAL_ERROR "Unknown test kind : ${test_kind}")
+    endif()
+    if(NOT TARGET "${the_target}")
+      message(FATAL_ERROR "${the_target} is not a CMake target")
+    endif()
+
+    string(TOLOWER "${test_kind}" test_kind_lower)
+    set(test_report_dir "${CMAKE_BINARY_DIR}/test-reports/${test_kind_lower}")
+    file(MAKE_DIRECTORY "${test_report_dir}")
+
+    add_test(NAME "${test_name}"
+      COMMAND "${the_target}"
+              "--gtest_output=xml:${the_target}.xml"
+              ${ARGN})
+
+    set_tests_properties("${test_name}" PROPERTIES
+      LABELS "${OPENCV_MODULE_${the_module}_LABEL};${test_kind}"
+      WORKING_DIRECTORY "${test_report_dir}")
+
+    if(OPENCV_TEST_DATA_PATH)
+      set_tests_properties("${test_name}" PROPERTIES
+        ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
+    endif()
+  endif()
+endfunction()
