@@ -461,7 +461,7 @@ bool GdalDecoder::readData( Mat& img ){
 bool GdalDecoder::readHeader(){
 
     // load the dataset
-    m_dataset = (GDALDataset*) GDALOpen( m_filename.c_str(), GA_ReadOnly);
+    m_dataset = (GDALDataset*) GDALOpen( m_filename.c_str(), GA_Update);
 
     // if dataset is null, then there was a problem
     if( m_dataset == NULL ){
