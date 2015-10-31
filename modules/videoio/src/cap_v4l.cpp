@@ -1066,60 +1066,17 @@ yuv411p_to_rgb24(int width, int height,
 }
 
 /* convert from 4:2:2 YUYV interlaced to RGB24 */
-/* based on ccvt_yuyv_bgr32() from camstream */
-#define SAT(c) \
-        if (c & (~255)) { if (c < 0) c = 0; else c = 255; }
-
 static void
 yuyv_to_rgb24(int width, int height, unsigned char* src, unsigned char* dst) {
     cvtColor(Mat(height, width, CV_8UC2, src), Mat(height, width, CV_8UC3, dst),
              COLOR_YUV2BGR_YUYV);
 }
 
-static void
+static inline void
 uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
 {
-   unsigned char *s;
-   unsigned char *d;
-   int l, c;
-   int r, g, b, cr, cg, cb, y1, y2;
-
-   l = height;
-   s = src;
-   d = dst;
-   while (l--) {
-      c = width >> 1;
-      while (c--) {
-         cb = ((*s - 128) * 454) >> 8;
-         cg = (*s++ - 128) * 88;
-         y1 = *s++;
-         cr = ((*s - 128) * 359) >> 8;
-         cg = (cg + (*s++ - 128) * 183) >> 8;
-         y2 = *s++;
-
-         r = y1 + cr;
-         b = y1 + cb;
-         g = y1 - cg;
-         SAT(r);
-         SAT(g);
-         SAT(b);
-
-     *d++ = b;
-     *d++ = g;
-     *d++ = r;
-
-         r = y2 + cr;
-         b = y2 + cb;
-         g = y2 - cg;
-         SAT(r);
-         SAT(g);
-         SAT(b);
-
-     *d++ = b;
-     *d++ = g;
-     *d++ = r;
-      }
-   }
+    cvtColor(Mat(height, width, CV_8UC2, src), Mat(height, width, CV_8UC3, dst),
+             COLOR_YUV2BGR_UYVY);
 }
 #ifdef HAVE_JPEG
 
