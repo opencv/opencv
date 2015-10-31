@@ -823,14 +823,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CV_FFMPEG_CAP_PROP_FRAME_HEIGHT:
         return (double)frame.height;
     case CV_FFMPEG_CAP_PROP_FPS:
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
-        return av_q2d(video_st->avg_frame_rate);
-#elif LIBAVCODEC_BUILD > 4753
-        return av_q2d(video_st->r_frame_rate);
-#else
-        return (double)video_st->codec.frame_rate
-                / (double)video_st->codec.frame_rate_base;
-#endif
+        return get_fps();
     case CV_FFMPEG_CAP_PROP_FOURCC:
 #if LIBAVFORMAT_BUILD > 4628
         return (double)video_st->codec->codec_tag;
