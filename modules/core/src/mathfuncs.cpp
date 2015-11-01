@@ -2469,7 +2469,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 {
     typedef Complex<double> C;
-
+    
     double maxDiff = 0;
     int iter, i, j;
     Mat coeffs0 = _coeffs0.getMat();
@@ -2494,8 +2494,8 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         for( i = 0; i <= n; i++ )
             coeffs[i] = C(rcoeffs[i], 0);
     }
-
-    C p(1, 0), r(1, 1);
+    
+    C p(1, 0), r(0.4, 0.9);
 
     for( i = 0; i < n; i++ )
     {
@@ -2514,7 +2514,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             for( j = 0; j < n; j++ )
             {
                 num = num*p + coeffs[n-j-1];
-                if( j != i ) denom = denom * (p - roots[j]);
+                if( j != i ) denom = denom * (p - roots[j]);     
             }
             num /= denom;
             roots[i] = p - num;
@@ -2523,7 +2523,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         if( maxDiff <= 0 )
             break;
     }
-
+    
     if( coeffs0.channels() == 1 )
     {
         const double verySmallEps = 1e-100;
