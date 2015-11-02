@@ -247,7 +247,12 @@ bool  TiffDecoder::readData( Mat& img )
                (!is_tiled && tile_height0 == std::numeric_limits<uint32>::max()) )
                 tile_height0 = m_height;
 
-            const size_t buffer_size = bpp * ncn * tile_height0 * tile_width0;
+            if(dst_bpp == 8) {
+                // we will use TIFFReadRGBA* functions, so allocate temporary buffer for 32bit RGBA
+                bpp = 8;
+                ncn = 4;
+            }
+            const size_t buffer_size = (bpp/bitsPerByte) * ncn * tile_height0 * tile_width0;
             AutoBuffer<uchar> _buffer( buffer_size );
             uchar* buffer = _buffer;
             ushort* buffer16 = (ushort*)buffer;
