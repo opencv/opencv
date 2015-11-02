@@ -2517,8 +2517,8 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                 num = num*p + coeffs[n-j-1];
                 if( j != i )
                 {
-                    if ( (p - roots[j]).re != 0 || (p - roots[j]).im != 0 ) 
-                        denom = denom * (p - roots[j]); 
+                    if ( (p - roots[j]).re != 0 || (p - roots[j]).im != 0 )
+                        denom = denom * (p - roots[j]);
                     else
                         num_same_root++;
                 }
@@ -2550,14 +2550,14 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                     if( old_num_re < 0 ) num.im = -num.im;
                 }
             }
-            
+
             roots[i] = p - num;
             maxDiff = max(maxDiff, abs(num));
         }
         if( maxDiff <= 0 )
             break;
     }
-    
+
     if( coeffs0.channels() == 1 )
     {
         const double verySmallEps = 1e-100;
