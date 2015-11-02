@@ -2495,7 +2495,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             coeffs[i] = C(rcoeffs[i], 0);
     }
     
-    C p(1, 0), r(0.4, 0.9);
+    C p(1, 0), r(1, 1);
 
     for( i = 0; i < n; i++ )
     {
@@ -2511,12 +2511,46 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         {
             p = roots[i];
             C num = coeffs[n], denom = coeffs[n];
+            int num_same_root = 1;
             for( j = 0; j < n; j++ )
             {
                 num = num*p + coeffs[n-j-1];
-                if( j != i ) denom = denom * (p - roots[j]);     
+                if( j != i )
+                {
+                    if ( (p - roots[j]).re != 0 || (p - roots[j]).im != 0 ) 
+                        denom = denom * (p - roots[j]); 
+                    else
+                        num_same_root++;
+                }
             }
             num /= denom;
+            if( num_same_root > 1)
+            {
+                for( j = 0; j < num_same_root / 2; j++)
+                {
+                    double old_num_re = num.re;
+                    double old_num_im = num.im;
+
+                    num.re = old_num_re*old_num_re + old_num_im*old_num_im;
+                    Mat num_re_arr = (Mat_<double>(1,1) << num.re);
+                    cv::sqrt(num_re_arr, num_re_arr);
+                    num.re = num_re_arr.at<double>(0, 0);
+                    num.re += old_num_re;
+                    num.im = num.re - old_num_re;
+                    num.re /= 2;
+                    num_re_arr.at<double>(0, 0) = num.re;
+                    cv::sqrt(num_re_arr, num_re_arr);
+                    num.re = num_re_arr.at<double>(0, 0);
+
+                    Mat num_im_arr = (Mat_<double>(1,1) << num.im);
+                    num.im /= 2;
+                    num_im_arr.at<double>(0, 0) = num.re;
+                    cv::sqrt(num_im_arr, num_im_arr);
+                    num.im = num_im_arr.at<double>(0, 0);
+                    if( old_num_re < 0 ) num.im = -num.im;
+                }
+            }
+            
             roots[i] = p - num;
             maxDiff = max(maxDiff, abs(num));
         }
