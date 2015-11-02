@@ -127,6 +127,7 @@ Currently, the following file formats are supported:
 -   TIFF files - \*.tiff, \*.tif (see the *Notes* section)
 -   OpenEXR Image files - \*.exr (see the *Notes* section)
 -   Radiance HDR - \*.hdr, \*.pic (always supported)
+-   Raster and Vector geospatial data supported by Gdal (see the *Notes* section)
 
 @note
 
@@ -141,6 +142,10 @@ Currently, the following file formats are supported:
     codecs supplied with an OS image. Install the relevant packages (do not forget the development
     files, for example, "libjpeg-dev", in Debian\* and Ubuntu\*) to get the codec support or turn
     on the OPENCV_BUILD_3RDPARTY_LIBS flag in CMake.
+-   In the case you set *WITH_GDAL* flag to true in CMake and @ref IMREAD_LOAD_GDAL to load the image,
+    then [GDAL](http://www.gdal.org) driver will be used in order to decode the image by supporting
+    the following formats: [Raster](http://www.gdal.org/formats_list.html),
+    [Vector](http://www.gdal.org/ogr_formats.html).
 @param filename Name of file to be loaded.
 @param flags Flag that can take values of cv::ImreadModes
 */
