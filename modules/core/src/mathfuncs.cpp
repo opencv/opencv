@@ -2493,7 +2493,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         for( i = 0; i <= n; i++ )
             coeffs[i] = C(rcoeffs[i], 0);
     }
-    
+
     C p(1, 0), r(1, 1);
     for( i = 0; i < n; i++ )
     {
