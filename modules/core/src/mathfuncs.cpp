@@ -2469,7 +2469,6 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 {
     typedef Complex<double> C;
-    
     double maxDiff = 0;
     int iter, i, j;
     Mat coeffs0 = _coeffs0.getMat();
@@ -2496,7 +2495,6 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     }
     
     C p(1, 0), r(1, 1);
-
     for( i = 0; i < n; i++ )
     {
         roots[i] = p;
