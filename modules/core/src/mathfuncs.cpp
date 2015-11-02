@@ -2530,21 +2530,14 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                     double old_num_im = num.im;
 
                     num.re = old_num_re*old_num_re + old_num_im*old_num_im;
-                    Mat num_re_arr = (Mat_<double>(1,1) << num.re);
-                    cv::sqrt(num_re_arr, num_re_arr);
-                    num.re = num_re_arr.at<double>(0, 0);
+                    num.re = std::sqrt(num.re);
                     num.re += old_num_re;
                     num.im = num.re - old_num_re;
                     num.re /= 2;
-                    num_re_arr.at<double>(0, 0) = num.re;
-                    cv::sqrt(num_re_arr, num_re_arr);
-                    num.re = num_re_arr.at<double>(0, 0);
+                    num.re = std::sqrt(num.re);
 
-                    Mat num_im_arr = (Mat_<double>(1,1) << num.im);
                     num.im /= 2;
-                    num_im_arr.at<double>(0, 0) = num.re;
-                    cv::sqrt(num_im_arr, num_im_arr);
-                    num.im = num_im_arr.at<double>(0, 0);
+                    num.im = std::sqrt(num.im);
                     if( old_num_re < 0 ) num.im = -num.im;
                 }
             }
