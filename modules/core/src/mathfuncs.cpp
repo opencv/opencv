@@ -2469,6 +2469,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 {
     typedef Complex<double> C;
+
     double maxDiff = 0;
     int iter, i, j;
     Mat coeffs0 = _coeffs0.getMat();
