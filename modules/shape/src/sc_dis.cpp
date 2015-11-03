@@ -763,7 +763,7 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
     inliers1.reserve(sizeScd1);
     for (size_t kc = 0; kc<inliers1.size(); kc++)
     {
-        if (rowsol[kc]<sizeScd1) // if a real match
+        if (rowsol[kc]<sizeScd2) // if a real match
             inliers1[kc]=1;
         else
             inliers1[kc]=0;
@@ -771,7 +771,7 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
     inliers2.reserve(sizeScd2);
     for (size_t kc = 0; kc<inliers2.size(); kc++)
     {
-        if (colsol[kc]<sizeScd2) // if a real match
+        if (colsol[kc]<sizeScd1) // if a real match
             inliers2[kc]=1;
         else
             inliers2[kc]=0;
