@@ -355,9 +355,6 @@ double LogisticRegressionImpl::compute_cost(const Mat& _data, const Mat& _labels
     log(d_b, d_b);
     multiply(d_b, 1-_labels, d_b);
 
-    double sda = sum(d_a)[0];
-    double sdb = sum(d_b)[0];
-
     cost = (-1.0/m) * (sum(d_a)[0] + sum(d_b)[0]);
     cost = cost + rparameter;
 
@@ -410,12 +407,10 @@ Mat LogisticRegressionImpl::batch_gradient_descent(const Mat& _data, const Mat& 
     }
 
     int llambda = 0;
-    double ccost;
-    int m, n;
+    int m;
     Mat theta_p = _init_theta.clone();
     Mat gradient( theta_p.rows, theta_p.cols, theta_p.type() );
     m = _data.rows;
-    n = _data.cols;
 
     if (params.norm != REG_DISABLE)
     {
@@ -425,7 +420,7 @@ Mat LogisticRegressionImpl::batch_gradient_descent(const Mat& _data, const Mat& 
     for(int i = 0;i<this->params.num_iters;i++)
     {
         // this seems to only be called to ensure that cost is not NaN
-        ccost = compute_cost(_data, _labels, theta_p);
+        compute_cost(_data, _labels, theta_p);
 
         compute_gradient( _data, _labels, theta_p, llambda, gradient );
 
@@ -438,8 +433,7 @@ Mat LogisticRegressionImpl::mini_batch_gradient_descent(const Mat& _data, const 
 {
     // implements batch gradient descent
     int lambda_l = 0;
-    double ccost;
-    int m, n;
+    int m;
     int j = 0;
     int size_b = this->params.mini_batch_size;
 
@@ -477,10 +471,9 @@ Mat LogisticRegressionImpl::mini_batch_gradient_descent(const Mat& _data, const 
         }
 
         m = data_d.rows;
-        n = data_d.cols;
 
         // this seems to only be called to ensure that cost is not NaN
-        ccost = compute_cost(data_d, labels_l, theta_p);
+        compute_cost(data_d, labels_l, theta_p);
 
         compute_gradient(data_d, labels_l, theta_p, lambda_l, gradient);
 
