@@ -1231,6 +1231,8 @@ Performs advanced morphological transformations.
 
             * **MORPH_BLACKHAT** - "black hat"
 
+            * **MORPH_HITMISS** - "hit and miss"
+
     :param iterations: Number of times erosion and dilation are applied.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
@@ -1268,6 +1270,8 @@ Morphological gradient:
 .. math::
 
     \texttt{dst} = \mathrm{blackhat} ( \texttt{src} , \texttt{element} )= \mathrm{close} ( \texttt{src} , \texttt{element} )- \texttt{src}
+
+"Hit and Miss": Only supported for CV_8UC1 binary images. Tutorial can be found in this page: http://opencv-code.com/tutorials/hit-or-miss-transform-in-opencv/
 
 Any of the operations can be done in-place. In case of multi-channel images, each channel is processed independently.
 
