@@ -2351,7 +2351,7 @@ void Core_SolvePolyTest::run( int )
 template<typename T>
 static void checkRoot(Mat& r, T re, T im)
 {
-    for (size_t i = 0; i < r.total(); i++)
+    for (int i = 0; i < r.cols*r.rows; i++)
     {
         Vec<T, 2> v = *(Vec<T, 2>*)r.ptr(i);
         if (fabs(re - v[0]) < 1e-6 && fabs(im - v[1]) < 1e-6)

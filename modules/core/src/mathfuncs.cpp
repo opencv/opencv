@@ -2544,15 +2544,15 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                 }
 
                 if( num_same_root % 2 != 0){
-                    Mat cube_coefs(4, 1, CV_32FC1);
-                    Mat cube_roots(3, 1, CV_32FC2);
-                    cube_coefs.at<float>(3) = -(std::pow(old_num_re, 3));
-                    cube_coefs.at<float>(2) = -(15*std::pow(old_num_re, 2) + 27*std::pow(old_num_im, 2));
-                    cube_coefs.at<float>(1) = -48*old_num_re;
-                    cube_coefs.at<float>(0) = 64;
+                    Mat cube_coefs(4, 1, CV_64FC1);
+                    Mat cube_roots(3, 1, CV_64FC2);
+                    cube_coefs.at<double>(3) = -(std::pow(old_num_re, 3));
+                    cube_coefs.at<double>(2) = -(15*std::pow(old_num_re, 2) + 27*std::pow(old_num_im, 2));
+                    cube_coefs.at<double>(1) = -48*old_num_re;
+                    cube_coefs.at<double>(0) = 64;
                     cv::solveCubic(cube_coefs, cube_roots);
 
-                    num.re = cv::cubeRoot(cube_roots.at<float>(0));
+                    num.re = cv::cubeRoot(cube_roots.at<double>(0));
                     num.im = std::sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3*num.re));
                 }
             }
