@@ -1232,12 +1232,12 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                     CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
 {
     const int NINTRINSIC = 16;
-    Ptr<CvMat> matM, _m, _Ji, _Je, _err;
     CvLevMarq solver;
     double reprojErr = 0;
 
-    double A[9],  k[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
-    CvMat matA = cvMat(3, 3, CV_64F, A), _k;
+    Matx33d A;
+    double k[12] = {0};
+    CvMat matA = cvMat(3, 3, CV_64F, A.val), _k;
     int i, nimages, maxPoints = 0, ni = 0, pos, total = 0, nparams, npstep, cn;
     double aspectRatio = 0.;
 
@@ -1302,25 +1302,31 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         ni = npoints->data.i[i*npstep];
         if( ni < 4 )
         {
-            char buf[100];
-            sprintf( buf, "The number of points in the view #%d is < 4", i );
-            CV_Error( CV_StsOutOfRange, buf );
+            CV_Error_( CV_StsOutOfRange, ("The number of points in the view #%d is < 4", i));
         }
         maxPoints = MAX( maxPoints, ni );
         total += ni;
     }
 
-    matM.reset(cvCreateMat( 1, total, CV_64FC3 ));
-    _m.reset(cvCreateMat( 1, total, CV_64FC2 ));
+    Mat matM( 1, total, CV_64FC3 );
+    Mat _m( 1, total, CV_64FC2 );
 
-    cvConvertPointsHomogeneous( objectPoints, matM );
-    cvConvertPointsHomogeneous( imagePoints, _m );
+    if(CV_MAT_CN(objectPoints->type) == 3) {
+        cvarrToMat(objectPoints).convertTo(matM, CV_64F);
+    } else {
+        convertPointsHomogeneous(cvarrToMat(objectPoints), matM);
+    }
+
+    if(CV_MAT_CN(imagePoints->type) == 2) {
+        cvarrToMat(imagePoints).convertTo(_m, CV_64F);
+    } else {
+        convertPointsHomogeneous(cvarrToMat(imagePoints), _m);
+    }
 
     nparams = NINTRINSIC + nimages*6;
-    _Ji.reset(cvCreateMat( maxPoints*2, NINTRINSIC, CV_64FC1 ));
-    _Je.reset(cvCreateMat( maxPoints*2, 6, CV_64FC1 ));
-    _err.reset(cvCreateMat( maxPoints*2, 1, CV_64FC1 ));
-    cvZero( _Ji );
+    Mat _Ji( maxPoints*2, NINTRINSIC, CV_64FC1, Scalar(0));
+    Mat _Je( maxPoints*2, 6, CV_64FC1 );
+    Mat _err( maxPoints*2, 1, CV_64FC1 );
 
     _k = cvMat( distCoeffs->rows, distCoeffs->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(distCoeffs->type)), k);
     if( distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) < 8 )
@@ -1336,23 +1342,23 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     if( flags & CV_CALIB_USE_INTRINSIC_GUESS )
     {
         cvConvert( cameraMatrix, &matA );
-        if( A[0] <= 0 || A[4] <= 0 )
+        if( A(0, 0) <= 0 || A(1, 1) <= 0 )
             CV_Error( CV_StsOutOfRange, "Focal length (fx and fy) must be positive" );
-        if( A[2] < 0 || A[2] >= imageSize.width ||
-            A[5] < 0 || A[5] >= imageSize.height )
+        if( A(0, 2) < 0 || A(0, 2) >= imageSize.width ||
+            A(1, 2) < 0 || A(1, 2) >= imageSize.height )
             CV_Error( CV_StsOutOfRange, "Principal point must be within the image" );
-        if( fabs(A[1]) > 1e-5 )
+        if( fabs(A(0, 1)) > 1e-5 )
             CV_Error( CV_StsOutOfRange, "Non-zero skew is not supported by the function" );
-        if( fabs(A[3]) > 1e-5 || fabs(A[6]) > 1e-5 ||
-            fabs(A[7]) > 1e-5 || fabs(A[8]-1) > 1e-5 )
+        if( fabs(A(1, 0)) > 1e-5 || fabs(A(2, 0)) > 1e-5 ||
+            fabs(A(2, 1)) > 1e-5 || fabs(A(2,2)-1) > 1e-5 )
             CV_Error( CV_StsOutOfRange,
                 "The intrinsic matrix must have [fx 0 cx; 0 fy cy; 0 0 1] shape" );
-        A[1] = A[3] = A[6] = A[7] = 0.;
-        A[8] = 1.;
+        A(0, 1) = A(1, 0) = A(2, 0) = A(2, 1) = 0.;
+        A(2, 2) = 1.;
 
         if( flags & CV_CALIB_FIX_ASPECT_RATIO )
         {
-            aspectRatio = A[0]/A[4];
+            aspectRatio = A(0, 0)/A(1, 1);
 
             if( aspectRatio < minValidAspectRatio || aspectRatio > maxValidAspectRatio )
                 CV_Error( CV_StsOutOfRange,
@@ -1362,13 +1368,13 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     }
     else
     {
-        CvScalar mean, sdv;
-        cvAvgSdv( matM, &mean, &sdv );
-        if( fabs(mean.val[2]) > 1e-5 || fabs(sdv.val[2]) > 1e-5 )
+        Scalar mean, sdv;
+        meanStdDev(matM, mean, sdv);
+        if( fabs(mean[2]) > 1e-5 || fabs(sdv[2]) > 1e-5 )
             CV_Error( CV_StsBadArg,
             "For non-planar calibration rigs the initial intrinsic matrix must be specified" );
         for( i = 0; i < total; i++ )
-            ((CvPoint3D64f*)matM->data.db)[i].z = 0.;
+            matM.at<Point3d>(i).z = 0.;
 
         if( flags & CV_CALIB_FIX_ASPECT_RATIO )
         {
@@ -1378,7 +1384,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                 CV_Error( CV_StsOutOfRange,
                     "The specified aspect ratio (= cameraMatrix[0][0] / cameraMatrix[1][1]) is incorrect" );
         }
-        cvInitIntrinsicParams2D( matM, _m, npoints, imageSize, &matA, aspectRatio );
+        CvMat _matM(matM), m(_m);
+        cvInitIntrinsicParams2D( &_matM, &m, npoints, imageSize, &matA, aspectRatio );
     }
 
     solver.init( nparams, 0, termCrit );
@@ -1387,10 +1394,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     double* param = solver.param->data.db;
     uchar* mask = solver.mask->data.ptr;
 
-    param[0] = A[0]; param[1] = A[4]; param[2] = A[2]; param[3] = A[5];
-    param[4] = k[0]; param[5] = k[1]; param[6] = k[2]; param[7] = k[3];
-    param[8] = k[4]; param[9] = k[5]; param[10] = k[6]; param[11] = k[7];
-    param[12] = k[8]; param[13] = k[9]; param[14] = k[10]; param[15] = k[11];
+    param[0] = A(0, 0); param[1] = A(1, 1); param[2] = A(0, 2); param[3] = A(1, 2);
+    std::copy(k, k + 12, param + 4);
 
     if( flags & CV_CALIB_FIX_FOCAL_LENGTH )
         mask[0] = mask[1] = 0;
@@ -1405,18 +1410,13 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         flags |= CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5 + CV_CALIB_FIX_K6;
     if( !(flags & CV_CALIB_THIN_PRISM_MODEL))
         flags |= CALIB_FIX_S1_S2_S3_S4;
-    if( flags & CV_CALIB_FIX_K1 )
-        mask[4] = 0;
-    if( flags & CV_CALIB_FIX_K2 )
-        mask[5] = 0;
-    if( flags & CV_CALIB_FIX_K3 )
-        mask[8] = 0;
-    if( flags & CV_CALIB_FIX_K4 )
-        mask[9] = 0;
-    if( flags & CV_CALIB_FIX_K5 )
-        mask[10] = 0;
-    if( flags & CV_CALIB_FIX_K6 )
-        mask[11] = 0;
+
+    mask[ 4] = !(flags & CALIB_FIX_K1);
+    mask[ 5] = !(flags & CALIB_FIX_K2);
+    mask[ 8] = !(flags & CALIB_FIX_K3);
+    mask[ 9] = !(flags & CALIB_FIX_K4);
+    mask[10] = !(flags & CALIB_FIX_K5);
+    mask[11] = !(flags & CALIB_FIX_K6);
 
     if(flags & CALIB_FIX_S1_S2_S3_S4)
     {
@@ -1430,14 +1430,14 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     // 2. initialize extrinsic parameters
     for( i = 0, pos = 0; i < nimages; i++, pos += ni )
     {
-        CvMat _Mi, _mi, _ri, _ti;
+        CvMat _ri, _ti;
         ni = npoints->data.i[i*npstep];
 
         cvGetRows( solver.param, &_ri, NINTRINSIC + i*6, NINTRINSIC + i*6 + 3 );
         cvGetRows( solver.param, &_ti, NINTRINSIC + i*6 + 3, NINTRINSIC + i*6 + 6 );
 
-        cvGetCols( matM, &_Mi, pos, pos + ni );
-        cvGetCols( _m, &_mi, pos, pos + ni );
+        CvMat _Mi(matM.colRange(pos, pos + ni));
+        CvMat _mi(_m.colRange(pos, pos + ni));
 
         cvFindExtrinsicCameraParams2( &_Mi, &_mi, &matA, &_k, &_ri, &_ti );
     }
@@ -1457,10 +1457,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
             pparam[0] = pparam[1]*aspectRatio;
         }
 
-        A[0] = param[0]; A[4] = param[1]; A[2] = param[2]; A[5] = param[3];
-        k[0] = param[4]; k[1] = param[5]; k[2] = param[6]; k[3] = param[7];
-        k[4] = param[8]; k[5] = param[9]; k[6] = param[10]; k[7] = param[11];
-        k[8] = param[12];k[9] = param[13];k[10] = param[14];k[11] = param[15];
+        A(0, 0) = param[0]; A(1, 1) = param[1]; A(0, 2) = param[2]; A(1, 2) = param[3];
+        std::copy(param + 4, param + 4 + 12, k);
 
         if( !proceed )
             break;
@@ -1469,24 +1467,24 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
 
         for( i = 0, pos = 0; i < nimages; i++, pos += ni )
         {
-            CvMat _Mi, _mi, _ri, _ti, _dpdr, _dpdt, _dpdf, _dpdc, _dpdk, _mp, _part;
+            CvMat _ri, _ti;
             ni = npoints->data.i[i*npstep];
 
             cvGetRows( solver.param, &_ri, NINTRINSIC + i*6, NINTRINSIC + i*6 + 3 );
             cvGetRows( solver.param, &_ti, NINTRINSIC + i*6 + 3, NINTRINSIC + i*6 + 6 );
 
-            cvGetCols( matM, &_Mi, pos, pos + ni );
-            cvGetCols( _m, &_mi, pos, pos + ni );
+            CvMat _Mi(matM.colRange(pos, pos + ni));
+            CvMat _mi(_m.colRange(pos, pos + ni));
 
-            _Je->rows = _Ji->rows = _err->rows = ni*2;
-            cvGetCols( _Je, &_dpdr, 0, 3 );
-            cvGetCols( _Je, &_dpdt, 3, 6 );
-            cvGetCols( _Ji, &_dpdf, 0, 2 );
-            cvGetCols( _Ji, &_dpdc, 2, 4 );
-            cvGetCols( _Ji, &_dpdk, 4, NINTRINSIC );
-            cvReshape( _err, &_mp, 2, 1 );
+            _Je.resize(ni*2); _Ji.resize(ni*2); _err.resize(ni*2);
+            CvMat _dpdr(_Je.colRange(0, 3));
+            CvMat _dpdt(_Je.colRange(3, 6));
+            CvMat _dpdf(_Ji.colRange(0, 2));
+            CvMat _dpdc(_Ji.colRange(2, 4));
+            CvMat _dpdk(_Ji.colRange(4, NINTRINSIC));
+            CvMat _mp(_err.reshape(2, 1));
 
-            if( _JtJ || _JtErr )
+            if( solver.state == CvLevMarq::CALC_J )
             {
                  cvProjectPoints2( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
                                   (flags & CV_CALIB_FIX_FOCAL_LENGTH) ? 0 : &_dpdf,
@@ -1498,26 +1496,20 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
 
             cvSub( &_mp, &_mi, &_mp );
 
-            if( _JtJ || _JtErr )
+            if( solver.state == CvLevMarq::CALC_J )
             {
-                cvGetSubRect( _JtJ, &_part, cvRect(0,0,NINTRINSIC,NINTRINSIC) );
-                cvGEMM( _Ji, _Ji, 1, &_part, 1, &_part, CV_GEMM_A_T );
+                Mat JtJ(cvarrToMat(_JtJ)), JtErr(cvarrToMat(_JtErr));
 
-                cvGetSubRect( _JtJ, &_part, cvRect(NINTRINSIC+i*6,NINTRINSIC+i*6,6,6) );
-                cvGEMM( _Je, _Je, 1, 0, 0, &_part, CV_GEMM_A_T );
+                // see HZ: (A6.14) for details on the structure of the Jacobian
+                JtJ(Rect(0, 0, NINTRINSIC, NINTRINSIC)) += _Ji.t() * _Ji;
+                JtJ(Rect(NINTRINSIC + i * 6, NINTRINSIC + i * 6, 6, 6)) = _Je.t() * _Je;
+                JtJ(Rect(NINTRINSIC + i * 6, 0, 6, NINTRINSIC)) = _Ji.t() * _Je;
 
-                cvGetSubRect( _JtJ, &_part, cvRect(NINTRINSIC+i*6,0,6,NINTRINSIC) );
-                cvGEMM( _Ji, _Je, 1, 0, 0, &_part, CV_GEMM_A_T );
-
-                cvGetRows( _JtErr, &_part, 0, NINTRINSIC );
-                cvGEMM( _Ji, _err, 1, &_part, 1, &_part, CV_GEMM_A_T );
-
-                cvGetRows( _JtErr, &_part, NINTRINSIC + i*6, NINTRINSIC + (i+1)*6 );
-                cvGEMM( _Je, _err, 1, 0, 0, &_part, CV_GEMM_A_T );
+                JtErr.rowRange(0, NINTRINSIC) += _Ji.t() * _err;
+                JtErr.rowRange(NINTRINSIC + i * 6, NINTRINSIC + (i + 1) * 6) = _Je.t() * _err;
             }
 
-            double errNorm = cvNorm( &_mp, 0, CV_L2 );
-            reprojErr += errNorm*errNorm;
+            reprojErr += norm(_err, NORM_L2SQR);
         }
         if( _errNorm )
             *_errNorm = reprojErr;
