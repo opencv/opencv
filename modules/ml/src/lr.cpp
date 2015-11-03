@@ -108,8 +108,9 @@ public:
 protected:
     Mat calc_sigmoid(const Mat& data) const;
     double compute_cost(const Mat& _data, const Mat& _labels, const Mat& _init_theta);
-    Mat compute_batch_gradient(const Mat& _data, const Mat& _labels, const Mat& _init_theta);
-    Mat compute_mini_batch_gradient(const Mat& _data, const Mat& _labels, const Mat& _init_theta);
+    void compute_gradient(const Mat& _data, const Mat& _labels, const Mat &_theta, const double _lambda, Mat & _gradient );
+    Mat batch_gradient_descent(const Mat& _data, const Mat& _labels, const Mat& _init_theta);
+    Mat mini_batch_gradient_descent(const Mat& _data, const Mat& _labels, const Mat& _init_theta);
     bool set_label_map(const Mat& _labels_i);
     Mat remap_labels(const Mat& _labels_i, const map<int, int>& lmap) const;
 protected:
@@ -156,13 +157,8 @@ bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
     int num_classes = (int) this->forward_mapper.size();
 
     // add a column of ones
-    Mat data_t = Mat::zeros(_data_i.rows, _data_i.cols+1, CV_32F);
-    vconcat(Mat(_data_i.rows, 1, _data_i.type(), Scalar::all(1.0)), data_t.col(0));
-
-    for (int i=1;i<data_t.cols;i++)
-    {
-        vconcat(_data_i.col(i-1), data_t.col(i));
-    }
+    Mat data_t;
+    hconcat( cv::Mat::ones( _data_i.rows, 1, CV_32F ), _data_i, data_t );
 
     if(num_classes < 2)
     {
@@ -188,9 +184,9 @@ bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
     {
         labels_l.convertTo(labels, CV_32F);
         if(this->params.train_method == LogisticRegression::BATCH)
-            new_theta = compute_batch_gradient(data_t, labels, init_theta);
+            new_theta = batch_gradient_descent(data_t, labels, init_theta);
         else
-            new_theta = compute_mini_batch_gradient(data_t, labels, init_theta);
+            new_theta = mini_batch_gradient_descent(data_t, labels, init_theta);
         thetas = new_theta.t();
     }
     else
@@ -204,9 +200,9 @@ bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
             new_local_labels = (labels_l == it->second)/255;
             new_local_labels.convertTo(labels, CV_32F);
             if(this->params.train_method == LogisticRegression::BATCH)
-                new_theta = compute_batch_gradient(data_t, labels, init_theta);
+                new_theta = batch_gradient_descent(data_t, labels, init_theta);
             else
-                new_theta = compute_mini_batch_gradient(data_t, labels, init_theta);
+                new_theta = mini_batch_gradient_descent(data_t, labels, init_theta);
             hconcat(new_theta.t(), thetas.row(ii));
             ii += 1;
         }
@@ -221,12 +217,14 @@ bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
     return ok;
 }
 
-float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, int) const
+float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, int flags) const
 {
     /* returns a class of the predicted class
     class names can be 1,2,3,4, .... etc */
     Mat thetas, data, pred_labs;
     data = samples.getMat();
+
+    const bool rawout = flags & StatModel::RAW_OUTPUT;
 
     // check if learnt_mats array is populated
     if(this->learnt_thetas.total()<=0)
@@ -239,18 +237,17 @@ float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, i
     }
 
     // add a column of ones
-    Mat data_t = Mat::zeros(data.rows, data.cols+1, CV_32F);
-    for (int i=0;i<data_t.cols;i++)
-    {
-        if(i==0)
-        {
-            vconcat(Mat(data.rows, 1, data.type(), Scalar::all(1.0)), data_t.col(i));
-            continue;
-        }
-        vconcat(data.col(i-1), data_t.col(i));
-    }
+    Mat data_t;
+    hconcat( cv::Mat::ones( data.rows, 1, CV_32F ), data, data_t );
 
-    this->learnt_thetas.convertTo(thetas, CV_32F);
+    if ( learnt_thetas.type() == CV_32F )
+    {
+        thetas = learnt_thetas;
+    }
+    else
+    {
+        this->learnt_thetas.convertTo( thetas, CV_32F );
+    }
 
     CV_Assert(thetas.rows > 0);
 
@@ -292,9 +289,21 @@ float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, i
     pred_labs = remap_labels(labels_c, this->reverse_mapper);
     // convert pred_labs to integer type
     pred_labs.convertTo(pred_labs, CV_32S);
-    pred_labs.copyTo(results);
-    // TODO: determine
-    return 0;
+
+    // return either the labels or the raw output
+    if ( results.needed() )
+    {
+        if ( rawout )
+        {
+            pred_m.copyTo( results );
+        }
+        else
+        {
+            pred_labs.copyTo(results);
+        }
+    }
+
+    return ( pred_labs.empty() ? 0.f : (float) pred_labs.at< int >( 0 ) );
 }
 
 Mat LogisticRegressionImpl::calc_sigmoid(const Mat& data) const
@@ -320,7 +329,6 @@ double LogisticRegressionImpl::compute_cost(const Mat& _data, const Mat& _labels
     n = _data.cols;
 
     theta_b = _init_theta(Range(1, n), Range::all());
-    multiply(theta_b, theta_b, theta_c, 1);
 
     if (params.norm != REG_DISABLE)
     {
@@ -334,31 +342,63 @@ double LogisticRegressionImpl::compute_cost(const Mat& _data, const Mat& _labels
     else
     {
         // assuming it to be L2 by default
+        multiply(theta_b, theta_b, theta_c, 1);
         rparameter = (llambda/(2*m)) * sum(theta_c)[0];
     }
 
-    d_a = calc_sigmoid(_data* _init_theta);
-
-
+    d_a = calc_sigmoid(_data * _init_theta);
     log(d_a, d_a);
     multiply(d_a, _labels, d_a);
 
-    d_b = 1 - calc_sigmoid(_data * _init_theta);
+    // use the fact that: log(1 - sigmoid(x)) = log(sigmoid(-x))
+    d_b = calc_sigmoid(- _data * _init_theta);
     log(d_b, d_b);
     multiply(d_b, 1-_labels, d_b);
 
     cost = (-1.0/m) * (sum(d_a)[0] + sum(d_b)[0]);
     cost = cost + rparameter;
 
+    if(cvIsNaN( cost ) == 1)
+    {
+        CV_Error( CV_StsBadArg, "check training parameters. Invalid training classifier" );
+    }
+
     return cost;
 }
 
-Mat LogisticRegressionImpl::compute_batch_gradient(const Mat& _data, const Mat& _labels, const Mat& _init_theta)
+
+void LogisticRegressionImpl::compute_gradient(const Mat& _data, const Mat& _labels, const Mat &_theta, const double _lambda, Mat & _gradient )
+{
+    const int m = _data.rows;
+    Mat pcal_a, pcal_b, pcal_ab;
+
+    const Mat z = _data * _theta;
+
+    CV_Assert( _gradient.rows == _theta.rows && _gradient.cols == _theta.cols );
+
+    pcal_a = calc_sigmoid(z) - _labels;
+    pcal_b = _data(Range::all(), Range(0,1));
+    multiply(pcal_a, pcal_b, pcal_ab, 1);
+
+    _gradient.row(0) = ((float)1/m) * sum(pcal_ab)[0];
+
+    //cout<<"for each training data entry"<<endl;
+    for(int ii = 1;ii<_gradient.rows;ii++)
+    {
+        pcal_b = _data(Range::all(), Range(ii,ii+1));
+        multiply(pcal_a, pcal_b, pcal_ab, 1);
+
+        _gradient.row(ii) = (1.0/m)*sum(pcal_ab)[0] + (_lambda/m) * _theta.row(ii);
+    }
+}
+
+
+Mat LogisticRegressionImpl::batch_gradient_descent(const Mat& _data, const Mat& _labels, const Mat& _init_theta)
 {
     // implements batch gradient descent
     if(this->params.alpha<=0)
     {
-        CV_Error( CV_StsBadArg, "check training parameters for the classifier" );
+        CV_Error( CV_StsBadArg, "check training parameters (learning rate) for the classifier" );
     }
 
     if(this->params.num_iters <= 0)
@@ -367,15 +407,10 @@ Mat LogisticRegressionImpl::compute_batch_gradient(const Mat& _data, const Mat& 
     }
 
     int llambda = 0;
-    double ccost;
-    int m, n;
-    Mat pcal_a;
-    Mat pcal_b;
-    Mat pcal_ab;
-    Mat gradient;
+    int m;
     Mat theta_p = _init_theta.clone();
+    Mat gradient( theta_p.rows, theta_p.cols, theta_p.type() );
     m = _data.rows;
-    n = _data.cols;
 
     if (params.norm != REG_DISABLE)
     {
@@ -384,50 +419,21 @@ Mat LogisticRegressionImpl::compute_batch_gradient(const Mat& _data, const Mat& 
 
     for(int i = 0;i<this->params.num_iters;i++)
     {
-        ccost = compute_cost(_data, _labels, theta_p);
+        // this seems to only be called to ensure that cost is not NaN
+        compute_cost(_data, _labels, theta_p);
 
-        if( cvIsNaN( ccost ) )
-        {
-            CV_Error( CV_StsBadArg, "check training parameters. Invalid training classifier" );
-        }
-
-        pcal_b = calc_sigmoid((_data*theta_p) - _labels);
-
-        pcal_a = (static_cast<double>(1/m)) * _data.t();
-
-        gradient = pcal_a * pcal_b;
-
-        pcal_a = calc_sigmoid(_data*theta_p) - _labels;
-
-        pcal_b = _data(Range::all(), Range(0,1));
-
-        multiply(pcal_a, pcal_b, pcal_ab, 1);
-
-        gradient.row(0) = ((float)1/m) * sum(pcal_ab)[0];
-
-        pcal_b = _data(Range::all(), Range(1,n));
-
-        //cout<<"for each training data entry"<<endl;
-        for(int ii = 1;ii<gradient.rows;ii++)
-        {
-            pcal_b = _data(Range::all(), Range(ii,ii+1));
-
-            multiply(pcal_a, pcal_b, pcal_ab, 1);
-
-            gradient.row(ii) = (1.0/m)*sum(pcal_ab)[0] + (llambda/m) * theta_p.row(ii);
-        }
+        compute_gradient( _data, _labels, theta_p, llambda, gradient );
 
         theta_p = theta_p - ( static_cast<double>(this->params.alpha)/m)*gradient;
     }
     return theta_p;
 }
 
-Mat LogisticRegressionImpl::compute_mini_batch_gradient(const Mat& _data, const Mat& _labels, const Mat& _init_theta)
+Mat LogisticRegressionImpl::mini_batch_gradient_descent(const Mat& _data, const Mat& _labels, const Mat& _init_theta)
 {
     // implements batch gradient descent
     int lambda_l = 0;
-    double ccost;
-    int m, n;
+    int m;
     int j = 0;
     int size_b = this->params.mini_batch_size;
 
@@ -441,11 +447,8 @@ Mat LogisticRegressionImpl::compute_mini_batch_gradient(const Mat& _data, const 
         CV_Error( CV_StsBadArg, "number of iterations cannot be zero or a negative number" );
     }
 
-    Mat pcal_a;
-    Mat pcal_b;
-    Mat pcal_ab;
-    Mat gradient;
     Mat theta_p = _init_theta.clone();
+    Mat gradient( theta_p.rows, theta_p.cols, theta_p.type() );
     Mat data_d;
     Mat labels_l;
 
@@ -468,46 +471,19 @@ Mat LogisticRegressionImpl::compute_mini_batch_gradient(const Mat& _data, const 
         }
 
         m = data_d.rows;
-        n = data_d.cols;
 
-        ccost = compute_cost(data_d, labels_l, theta_p);
+        // this seems to only be called to ensure that cost is not NaN
+        compute_cost(data_d, labels_l, theta_p);
 
-        if( cvIsNaN( ccost ) == 1)
-        {
-            CV_Error( CV_StsBadArg, "check training parameters. Invalid training classifier" );
-        }
-
-        pcal_b = calc_sigmoid((data_d*theta_p) - labels_l);
-
-        pcal_a = (static_cast<double>(1/m)) * data_d.t();
-
-        gradient = pcal_a * pcal_b;
-
-        pcal_a = calc_sigmoid(data_d*theta_p) - labels_l;
-
-        pcal_b = data_d(Range::all(), Range(0,1));
-
-        multiply(pcal_a, pcal_b, pcal_ab, 1);
-
-        gradient.row(0) = ((float)1/m) * sum(pcal_ab)[0];
-
-        pcal_b = data_d(Range::all(), Range(1,n));
-
-        for(int k = 1;k<gradient.rows;k++)
-        {
-            pcal_b = data_d(Range::all(), Range(k,k+1));
-            multiply(pcal_a, pcal_b, pcal_ab, 1);
-            gradient.row(k) = (1.0/m)*sum(pcal_ab)[0] + (lambda_l/m) * theta_p.row(k);
-        }
+        compute_gradient(data_d, labels_l, theta_p, lambda_l, gradient);
 
         theta_p = theta_p - ( static_cast<double>(this->params.alpha)/m)*gradient;
 
-        j+=this->params.mini_batch_size;
+        j += this->params.mini_batch_size;
 
-        if(j+size_b>_data.rows)
-        {
-            // if parsed through all data variables
-            break;
+        // if parsed through all data variables
+        if (j >= _data.rows) {
+            j = 0;
         }
     }
     return theta_p;
