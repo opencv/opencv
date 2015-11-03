@@ -303,7 +303,7 @@ float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, i
         }
     }
 
-    return ( pred_labs.empty() ? 0 : pred_labs.at< int >( 0 ) );
+    return ( pred_labs.empty() ? 0.f : (float) pred_labs.at< int >( 0 ) );
 }
 
 Mat LogisticRegressionImpl::calc_sigmoid(const Mat& data) const
