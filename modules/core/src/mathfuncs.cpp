@@ -2525,11 +2525,12 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             num /= denom;
             if( num_same_root > 1)
             {
-                for( j = 0; j < num_same_root / 2; j++)
-                {
-                    double old_num_re = num.re;
-                    double old_num_im = num.im;
+                double old_num_re = num.re;
+                double old_num_im = num.im;
+                int square_root_times = num_same_root % 2 == 0 ? num_same_root / 2 : num_same_root / 2 - 1;
 
+                for( j = 0; j < square_root_times; j++)
+                {
                     num.re = old_num_re*old_num_re + old_num_im*old_num_im;
                     num.re = std::sqrt(num.re);
                     num.re += old_num_re;
@@ -2540,6 +2541,19 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                     num.im /= 2;
                     num.im = std::sqrt(num.im);
                     if( old_num_re < 0 ) num.im = -num.im;
+                }
+
+                if( num_same_root % 2 != 0){
+                    Mat cube_coefs(4, 1, CV_32FC1);
+                    Mat cube_roots(3, 1, CV_32FC2);
+                    cube_coefs.at<float>(3) = -(std::powf(old_num_re, 3));
+                    cube_coefs.at<float>(2) = -(15*std::powf(old_num_re, 2) + 27*std::powf(old_num_im, 2));
+                    cube_coefs.at<float>(1) = -48*old_num_re;
+                    cube_coefs.at<float>(0) = 64;
+                    cv::solveCubic(cube_coefs, cube_roots);
+
+                    num.re = std::cbrt(cube_roots.at<float>(0));
+                    num.im = std::sqrtf(std::powf(num.re, 2) / 3 - old_num_re / (3*num.re));
                 }
             }
 
