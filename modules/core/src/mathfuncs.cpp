@@ -2552,7 +2552,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                     cube_coefs.at<double>(0) = 64;
                     cv::solveCubic(cube_coefs, cube_roots);
 
-                    num.re = cv::cubeRoot(cube_roots.at<double>(0));
+                    num.re = std::cbrt(cube_roots.at<double>(0));
                     num.im = std::sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3*num.re));
                 }
             }
