@@ -3226,7 +3226,6 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     Size ssize = _src.size();
 
-    CV_Assert( ssize.area() > 0 );
     CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
     if( dsize.area() == 0 )
     {
@@ -3823,7 +3822,6 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
         cval[k] = saturate_cast<T>(_borderValue[k & 3]);
 
     unsigned width1 = std::max(ssize.width-1, 0), height1 = std::max(ssize.height-1, 0);
-    CV_Assert( ssize.area() > 0 );
 #if CV_SSE2
     if( _src.type() == CV_8UC3 )
         width1 = std::max(ssize.width-2, 0);
