@@ -158,6 +158,9 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
 
             case APP1: //actual Exif Marker
                 exifSize = getFieldSize(f);
+                if (exifSize <= offsetToTiffHeader) {
+                    throw ExifParsingError();
+                }
                 m_data.resize( exifSize - offsetToTiffHeader );
                 fseek(f, static_cast<long>( offsetToTiffHeader ), SEEK_CUR);
                 count = fread( &m_data[0], sizeof( unsigned char ), exifSize - offsetToTiffHeader, f );
