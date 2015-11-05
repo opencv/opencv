@@ -301,7 +301,7 @@ double cv::arcLength( InputArray _curve, bool is_closed )
     CV_Assert( count >= 0 && (depth == CV_32F || depth == CV_32S));
     double perimeter = 0;
 
-    int i;
+	int i;
 
     if( count <= 1 )
         return 0.;
@@ -317,7 +317,7 @@ double cv::arcLength( InputArray _curve, bool is_closed )
     {
         Point2f p = is_float ? ptf[i] : Point2f((float)pti[i].x,(float)pti[i].y);
         float dx = p.x - prev.x, dy = p.y - prev.y;
-        perimeter += std::sqrt(dx*dx + dy*dy);
+        perimeter += sqrtf(dx*dx + dy*dy);
 
         prev = p;
     }
