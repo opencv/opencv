@@ -61,7 +61,6 @@
 #endif
 
 #include "opencv2/ts/ts.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
