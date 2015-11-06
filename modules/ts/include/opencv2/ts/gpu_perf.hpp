@@ -73,6 +73,11 @@ namespace perf
     #define DEF_PARAM_TEST(name, ...) typedef ::perf::TestBaseWithParam< std::tr1::tuple< __VA_ARGS__ > > name
     #define DEF_PARAM_TEST_1(name, param_type) typedef ::perf::TestBaseWithParam< param_type > name
 
+    DEF_PARAM_TEST_1(Sz, cv::Size);
+    typedef ::perf::Size_MatType Sz_Type;
+    DEF_PARAM_TEST(Sz_Depth, cv::Size, ::perf::MatDepth);
+    DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, ::perf::MatDepth, MatCn);
+
     #define GPU_TYPICAL_MAT_SIZES testing::Values(perf::sz720p, perf::szSXGA, perf::sz1080p)
 
     #define FAIL_NO_CPU() FAIL() << "No such CPU implementation analogy"
