@@ -2436,7 +2436,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
             x2 = t0 * cos(t1 + (4.*CV_PI/3)) - t2;
             n = 3;
         }
-        else if( d == 0)
+        else if( d == 0 )
         {
             if(R >= 0)
             {
