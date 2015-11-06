@@ -120,8 +120,6 @@ void CvLevMarq::init( int nparams, int nerrs, CvTermCriteria criteria0, bool _co
 
 bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
 {
-    double change;
-
     matJ = _err = 0;
 
     assert( !err.empty() );
@@ -174,7 +172,7 @@ bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
 
     lambdaLg10 = MAX(lambdaLg10-1, -16);
     if( ++iters >= criteria.max_iter ||
-        (change = cvNorm(param, prevParam, CV_RELATIVE_L2)) < criteria.epsilon )
+        cvNorm(param, prevParam, CV_RELATIVE_L2) < criteria.epsilon )
     {
         _param = param;
         state = DONE;
@@ -193,8 +191,6 @@ bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
 
 bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, double*& _errNorm )
 {
-    double change;
-
     CV_Assert( !err );
     if( state == DONE )
     {
@@ -243,7 +239,7 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
 
     lambdaLg10 = MAX(lambdaLg10-1, -16);
     if( ++iters >= criteria.max_iter ||
-        (change = cvNorm(param, prevParam, CV_RELATIVE_L2)) < criteria.epsilon )
+        cvNorm(param, prevParam, CV_RELATIVE_L2) < criteria.epsilon )
     {
         _param = param;
         state = DONE;
@@ -262,32 +258,38 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
 
 void CvLevMarq::step()
 {
+    using namespace cv;
     const double LOG10 = log(10.);
     double lambda = exp(lambdaLg10*LOG10);
-    int i, j, nparams = param->rows;
+    int nparams = param->rows;
 
-    for( i = 0; i < nparams; i++ )
+    Mat _JtJ = cvarrToMat(JtJ);
+    Mat _JtJN = cvarrToMat(JtJN);
+    Mat _JtJW = cvarrToMat(JtJW);
+    Mat _JtJV = cvarrToMat(JtJV);
+
+    for( int i = 0; i < nparams; i++ )
         if( mask->data.ptr[i] == 0 )
         {
-            double *row = JtJ->data.db + i*nparams, *col = JtJ->data.db + i;
-            for( j = 0; j < nparams; j++ )
-                row[j] = col[j*nparams] = 0;
+            _JtJ.row(i) = 0;
+            _JtJ.col(i) = 0;
             JtErr->data.db[i] = 0;
         }
 
     if( !err )
-        cvCompleteSymm( JtJ, completeSymmFlag );
+        completeSymm( _JtJ, completeSymmFlag );
+
+    _JtJ.copyTo(_JtJN);
 #if 1
-    cvCopy( JtJ, JtJN );
-    for( i = 0; i < nparams; i++ )
-        JtJN->data.db[(nparams+1)*i] *= 1. + lambda;
+    _JtJN.diag() *= 1. + lambda;
 #else
-    cvSetIdentity(JtJN, cvRealScalar(lambda));
-    cvAdd( JtJ, JtJN, JtJN );
+    _JtJN.diag() += lambda;
 #endif
-    cvSVD( JtJN, JtJW, 0, JtJV, CV_SVD_MODIFY_A + CV_SVD_U_T + CV_SVD_V_T );
-    cvSVBkSb( JtJW, JtJV, JtJV, JtErr, param, CV_SVD_U_T + CV_SVD_V_T );
-    for( i = 0; i < nparams; i++ )
+    // solve(JtJN, JtErr, param, DECOMP_SVD);
+    SVD::compute(_JtJN, _JtJW, noArray(), _JtJV, SVD::MODIFY_A);
+    SVD::backSubst(_JtJW, _JtJV.t(), _JtJV, cvarrToMat(JtErr), cvarrToMat(param));
+
+    for( int i = 0; i < nparams; i++ )
         param->data.db[i] = prevParam->data.db[i] - (mask->data.ptr[i] ? param->data.db[i] : 0);
 }
 
