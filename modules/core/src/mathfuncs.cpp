@@ -2424,7 +2424,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         double Qcubed = Q * Q * Q;
         double d = Qcubed - R * R;
 
-        if( d >= 0 )
+        if( d > 0 )
         {
             double theta = acos(R / sqrt(Qcubed));
             double sqrtQ = sqrt(Q);
@@ -2436,11 +2436,27 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
             x2 = t0 * cos(t1 + (4.*CV_PI/3)) - t2;
             n = 3;
         }
+        else if( d == 0)
+        {
+            if(R >= 0)
+            {
+                x0 = pow(R/4, 1./3) - a1/3;
+                x1 = -pow(2*R, 1./3) - a1/3;
+            }
+            else
+            {
+                x0 = -pow(-R/4, 1./3) - a1/3;
+                x1 = pow(-2*R, 1./3) - a1/3;
+            }
+            x2 = 0;
+            n = x0 == x1 ? 1 : 2;
+            x1 = x0 == x1 ? 0 : x1;
+        }
         else
         {
             double e;
             d = sqrt(-d);
-            e = pow(d + fabs(R), 0.333333333333);
+            e = pow(d + fabs(R), 1./3);
             if( R > 0 )
                 e = -e;
             x0 = (e + Q / e) - a1 * (1./3);
