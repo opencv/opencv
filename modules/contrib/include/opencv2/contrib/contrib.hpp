@@ -853,8 +853,7 @@ namespace cv
     class CV_EXPORTS LDA
     {
     public:
-        // Initializes a LDA with num_components (default 0) and specifies how
-        // samples are aligned (default dataAsRow=true).
+        // Initializes a LDA with num_components (default 0).
         LDA(int num_components = 0) :
             _num_components(num_components) {};
 
@@ -895,13 +894,18 @@ namespace cv
         // Destructor.
         ~LDA() {}
 
-        //! Compute the discriminants for data in src and labels.
+        /** Compute the discriminants for data in src (row aligned) and labels.
+          */
         void compute(InputArrayOfArrays src, InputArray labels);
 
-        // Projects samples into the LDA subspace.
+        /** Projects samples into the LDA subspace.
+            src may be one or more row aligned samples.
+          */
         Mat project(InputArray src);
 
-        // Reconstructs projections from the LDA subspace.
+        /** Reconstructs projections from the LDA subspace.
+            src may be one or more row aligned projections.
+          */
         Mat reconstruct(InputArray src);
 
         // Returns the eigenvectors of this LDA.
@@ -911,7 +915,7 @@ namespace cv
         Mat eigenvalues() const { return _eigenvalues; }
 
     protected:
-        bool _dataAsRow;
+        bool _dataAsRow; // unused, but needed for ABI compatibility.
         int _num_components;
         Mat _eigenvectors;
         Mat _eigenvalues;
