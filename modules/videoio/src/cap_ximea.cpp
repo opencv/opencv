@@ -229,29 +229,29 @@ void CvCaptureCAM_XIMEA::resetCvImage()
     switch( image.frm)
     {
     case XI_MONO8       :
-    case XI_RAW8        : 
+    case XI_RAW8         :
         {
-            if(frame->depth != IPL_DEPTH_8U || frame->nChannels != 1) 
+            if(frame->depth != IPL_DEPTH_8U || frame->nChannels != 1)
                 do_reset = true;
         }
         break;
     case XI_MONO16      :
-    case XI_RAW16       : 
+    case XI_RAW16        :
         {
-            if(frame->depth != IPL_DEPTH_16U || frame->nChannels != 1) 
+            if(frame->depth != IPL_DEPTH_16U || frame->nChannels != 1)
                 do_reset = true;
         }
         break;
     case XI_RGB24       :
-    case XI_RGB_PLANAR  : 
+    case XI_RGB_PLANAR  :
         {
-            if(frame->depth != IPL_DEPTH_8U || frame->nChannels != 3) 
+            if(frame->depth != IPL_DEPTH_8U || frame->nChannels != 3)
                 do_reset = true;
         }
         break;
     case XI_RGB32       :
         {
-            if(frame->depth != IPL_DEPTH_8U || frame->nChannels != 4) 
+            if(frame->depth != IPL_DEPTH_8U || frame->nChannels != 4)
                 do_reset = true;
         }
         break;
@@ -290,12 +290,12 @@ int CvCaptureCAM_XIMEA::ocvParamtoXimeaParam(int property_id)
     switch (property_id)
     {
         // OCV parameters
-    case CV_CAP_PROP_POS_FRAMES: 
+    case CV_CAP_PROP_POS_FRAMES:
         // Number of successfully transferred frames on transport layer.
         stat = xiSetParamInt(hmv, XI_PRM_COUNTER_SELECTOR, XI_CNT_SEL_TRANSPORT_TRANSFERRED_FRAMES);
         if (stat) errMsg("xiSetParamInt(XI_PRM_COUNTER_SELECTOR)", stat);
         return CV_CAP_PROP_XI_COUNTER_VALUE;
-    case CV_CAP_PROP_FRAME_WIDTH: return CV_CAP_PROP_XI_WIDTH; 
+    case CV_CAP_PROP_FRAME_WIDTH: return CV_CAP_PROP_XI_WIDTH;
     case CV_CAP_PROP_FRAME_HEIGHT: return CV_CAP_PROP_XI_HEIGHT;
     case CV_CAP_PROP_FPS: return CV_CAP_PROP_XI_FRAMERATE;
     case CV_CAP_PROP_GAIN: return CV_CAP_PROP_XI_GAIN;
@@ -325,14 +325,13 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
 
     // convert OCV property id to XIMEA id if necessary
     property_id = ocvParamtoXimeaParam(property_id);
-    
+
     // decode OpenCV parameter to xiAPI parameter
     switch( property_id )
     {
-    case CV_CAP_PROP_XI_TIMEOUT: 
-        timeout = (int) value; 
+    case CV_CAP_PROP_XI_TIMEOUT:
+        timeout = (int) value;
         return true;
-    
     case CV_CAP_PROP_XI_EXPOSURE:
         ximea_param = "exposure";
         value_type = xiTypeInteger;
@@ -984,9 +983,8 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id )
     // decode OpenCV parameter to xiAPI parameter
     switch( property_id )
     {
-    case CV_CAP_PROP_XI_TIMEOUT: 
+    case CV_CAP_PROP_XI_TIMEOUT:
         return (double) timeout;
-    
     case CV_CAP_PROP_XI_EXPOSURE:
         ximea_param = "exposure";
         value_type = xiTypeInteger;
@@ -1661,14 +1659,13 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum)
         error_message = "Unknown error value";
     }
 
-    #if defined WIN32 || defined _WIN32    
-    char buf[512]="";    
-    sprintf( buf, "%s : %d, %s\n", msg, errNum, error_message.c_str());    
+    #if defined WIN32 || defined _WIN32
+    char buf[512]="";
+    sprintf( buf, "%s : %d, %s\n", msg, errNum, error_message.c_str());
     OutputDebugString(buf);
-    #else    
+    #else
     fprintf(stderr, "%s : %d, %s\n", msg, errNum, error_message.c_str());
     #endif
 }
 
 /**********************************************************************************/
-    
