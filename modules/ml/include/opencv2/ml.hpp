@@ -1482,10 +1482,6 @@ public:
 */
 CV_EXPORTS void randMVNormal( InputArray mean, InputArray cov, int nsamples, OutputArray samples);
 
-/** @brief Generates sample from gaussian mixture distribution */
-CV_EXPORTS void randGaussMixture( InputArray means, InputArray covs, InputArray weights,
-                                  int nsamples, OutputArray samples, OutputArray sampClasses );
-
 /** @brief Creates test set */
 CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int nclasses,
                                                 OutputArray samples, OutputArray responses);
