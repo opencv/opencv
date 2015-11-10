@@ -352,7 +352,7 @@ CV_EXPORTS_W Mat getGaborKernel( Size ksize, double sigma, double theta, double 
 enum { MORPH_ERODE=CV_MOP_ERODE, MORPH_DILATE=CV_MOP_DILATE,
        MORPH_OPEN=CV_MOP_OPEN, MORPH_CLOSE=CV_MOP_CLOSE,
        MORPH_GRADIENT=CV_MOP_GRADIENT, MORPH_TOPHAT=CV_MOP_TOPHAT,
-       MORPH_BLACKHAT=CV_MOP_BLACKHAT };
+       MORPH_BLACKHAT=CV_MOP_BLACKHAT, MORPH_HITMISS };
 
 //! returns horizontal 1D morphological filter
 CV_EXPORTS Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int anchor=-1);
