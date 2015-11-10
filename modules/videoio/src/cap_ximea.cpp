@@ -300,6 +300,7 @@ int CvCaptureCAM_XIMEA::ocvParamtoXimeaParam(int property_id)
     case CV_CAP_PROP_FPS: return CV_CAP_PROP_XI_FRAMERATE;
     case CV_CAP_PROP_GAIN: return CV_CAP_PROP_XI_GAIN;
     case CV_CAP_PROP_EXPOSURE: return CV_CAP_PROP_XI_EXPOSURE;
+    case CV_CAP_PROP_XI_DATA_FORMAT: return CV_CAP_PROP_XI_IMAGE_DATA_FORMAT;
     default:
         return property_id;
     }
