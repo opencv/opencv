@@ -259,7 +259,7 @@ enum
     CV_CAP_PROP_XI_AE_MAX_LIMIT                                 = 417, // Maximum limit of exposure in AEAG procedure
     CV_CAP_PROP_XI_AG_MAX_LIMIT                                 = 418,  // Maximum limit of gain in AEAG procedure
     CV_CAP_PROP_XI_AEAG_LEVEL                                   = 419, // Average intensity of output signal AEAG should achieve(in %)
-    CV_CAP_PROP_XI_TIMEOUT                                      = 420, // Image capture timeout in milliseconds   
+    CV_CAP_PROP_XI_TIMEOUT                                      = 420, // Image capture timeout in milliseconds
     CV_CAP_PROP_XI_EXPOSURE                                     = 421, // Exposure time in microseconds
     CV_CAP_PROP_XI_EXPOSURE_BURST_COUNT                         = 422, // Sets the number of times of exposure in one frame.
     CV_CAP_PROP_XI_GAIN_SELECTOR                                = 423, // Gain selector for parameter Gain allows to select different type of gains.
