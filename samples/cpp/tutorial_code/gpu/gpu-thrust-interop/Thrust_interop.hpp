@@ -42,7 +42,10 @@ template<typename T>
 thrust::permutation_iterator<thrust::device_ptr<T>, thrust::transform_iterator<step_functor<T>, thrust::counting_iterator<int>>>  GpuMatBeginItr(cv::cuda::GpuMat mat, int channel = 0)
 {
     if (channel == -1)
+    {
         mat = mat.reshape(1);
+        channel = 0;
+    }
     CV_Assert(mat.depth() == cv::DataType<T>::depth);
     CV_Assert(channel < mat.channels());
     return thrust::make_permutation_iterator(thrust::device_pointer_cast(mat.ptr<T>(0) + channel),
@@ -59,7 +62,10 @@ template<typename T>
 thrust::permutation_iterator<thrust::device_ptr<T>, thrust::transform_iterator<step_functor<T>, thrust::counting_iterator<int>>>  GpuMatEndItr(cv::cuda::GpuMat mat, int channel = 0)
 {
     if (channel == -1)
+    {
         mat = mat.reshape(1);
+        channel = 0;
+    }
     CV_Assert(mat.depth() == cv::DataType<T>::depth);
     CV_Assert(channel < mat.channels());
     return thrust::make_permutation_iterator(thrust::device_pointer_cast(mat.ptr<T>(0) + channel),
