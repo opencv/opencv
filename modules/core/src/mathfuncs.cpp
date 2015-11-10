@@ -2440,13 +2440,13 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         {
             if(R >= 0)
             {
-                x0 = pow(R/4, 1./3) - a1/3;
-                x1 = -pow(2*R, 1./3) - a1/3;
+                x0 = -2*pow(R, 1./3) - a1/3;
+                x1 = pow(R, 1./3) - a1/3;
             }
             else
             {
-                x0 = -pow(-R/4, 1./3) - a1/3;
-                x1 = pow(-2*R, 1./3) - a1/3;
+                x0 = 2*pow(-R, 1./3) - a1/3;
+                x1 = -pow(-R, 1./3) - a1/3;
             }
             x2 = 0;
             n = x0 == x1 ? 1 : 2;
