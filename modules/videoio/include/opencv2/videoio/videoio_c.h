@@ -240,6 +240,7 @@ enum
     CV_CAP_PROP_PVAPI_PIXELFORMAT           = 306, // Pixel format
 
     // Properties of cameras available through XIMEA SDK interface
+    CV_CAP_PROP_XI_DOWNSAMPLING                                 = 400, // Change image resolution by binning or skipping.
     CV_CAP_PROP_XI_DATA_FORMAT                                  = 401, // Output data format.
     CV_CAP_PROP_XI_OFFSET_X                                     = 402, // Horizontal offset from the origin to the area of interest (in pixels).
     CV_CAP_PROP_XI_OFFSET_Y                                     = 403, // Vertical offset from the origin to the area of interest (in pixels).
@@ -264,7 +265,6 @@ enum
     CV_CAP_PROP_XI_EXPOSURE_BURST_COUNT                         = 422, // Sets the number of times of exposure in one frame.
     CV_CAP_PROP_XI_GAIN_SELECTOR                                = 423, // Gain selector for parameter Gain allows to select different type of gains.
     CV_CAP_PROP_XI_GAIN                                         = 424, // Gain in dB
-    CV_CAP_PROP_XI_DOWNSAMPLING                                 = 425, // Change image resolution by binning or skipping.
     CV_CAP_PROP_XI_DOWNSAMPLING_TYPE                            = 426, // Change image downsampling type.
     CV_CAP_PROP_XI_BINNING_SELECTOR                             = 427, // Binning engine selector.
     CV_CAP_PROP_XI_BINNING_VERTICAL                             = 428, // Vertical Binning - number of vertical photo-sensitive cells to combine together.
