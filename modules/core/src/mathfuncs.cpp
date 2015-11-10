@@ -1364,10 +1364,16 @@ void pow( InputArray _src, double power, OutputArray _dst )
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
-    bool is_ipower = fabs(ipower - power) < DBL_EPSILON,
-            useOpenCL = _dst.isUMat() && _src.dims() <= 2;
+    bool is_ipower = fabs(ipower - power) < DBL_EPSILON;
+#ifdef HAVE_OPENCL
+    bool useOpenCL = _dst.isUMat() && _src.dims() <= 2;
+#endif
 
-    if( is_ipower && !(ocl::Device::getDefault().isIntel() && useOpenCL && depth != CV_64F))
+    if( is_ipower
+#ifdef HAVE_OPENCL
+            && !(useOpenCL && ocl::Device::getDefault().isIntel() && depth != CV_64F)
+#endif
+      )
     {
         switch( ipower )
         {

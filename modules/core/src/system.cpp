@@ -391,7 +391,9 @@ void setUseOptimized( bool flag )
     USE_SSE2 = currentFeatures->have[CV_CPU_SSE2];
 
     ipp::setUseIPP(flag);
+#ifdef HAVE_OPENCL
     ocl::setUseOpenCL(flag);
+#endif
 #ifdef HAVE_TEGRA_OPTIMIZATION
     ::tegra::setUseTegra(flag);
 #endif

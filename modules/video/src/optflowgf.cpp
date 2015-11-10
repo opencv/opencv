@@ -583,6 +583,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
 }
 
+#ifdef HAVE_OPENCL
 namespace cv
 {
 class FarnebackOpticalFlow
@@ -1074,17 +1075,20 @@ static bool ocl_calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
     return true;
 }
 }
+#endif // HAVE_OPENCL
 
 void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
                                InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
                                int iterations, int poly_n, double poly_sigma, int flags )
 {
+#ifdef HAVE_OPENCL
     bool use_opencl = ocl::useOpenCL() && _flow0.isUMat();
     if( use_opencl && ocl_calcOpticalFlowFarneback(_prev0, _next0, _flow0, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags))
     {
         CV_IMPL_ADD(CV_IMPL_OCL);
         return;
     }
+#endif
 
     Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
     const int min_size = 32;

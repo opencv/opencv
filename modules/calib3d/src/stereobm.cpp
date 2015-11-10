@@ -86,6 +86,7 @@ struct StereoBMParams
     int dispType;
 };
 
+#ifdef HAVE_OPENCL
 static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsize, int prefilterCap)
 {
     ocl::Kernel k("prefilter_norm", ocl::calib3d::stereobm_oclsrc, cv::format("-D WSZ=%d", winsize));
@@ -106,6 +107,7 @@ static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsi
 
     return k.run(2, globalThreads, NULL, false);
 }
+#endif
 
 static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uchar* buf )
 {
@@ -170,6 +172,7 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uc
     }
 }
 
+#ifdef HAVE_OPENCL
 static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int prefilterCap)
 {
     ocl::Kernel k("prefilter_xsobel", ocl::calib3d::stereobm_oclsrc);
@@ -186,6 +189,7 @@ static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int pre
 
     return k.run(2, globalThreads, NULL, false);
 }
+#endif
 
 static void
 prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
@@ -849,6 +853,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     }
 }
 
+#ifdef HAVE_OPENCL
 static bool ocl_prefiltering(InputArray left0, InputArray right0, OutputArray left, OutputArray right, StereoBMParams* state)
 {
     if( state->preFilterType == StereoBM::PREFILTER_NORMALIZED_RESPONSE )
@@ -867,6 +872,7 @@ static bool ocl_prefiltering(InputArray left0, InputArray right0, OutputArray le
     }
     return true;
 }
+#endif
 
 struct PrefilterInvoker : public ParallelLoopBody
 {
@@ -896,6 +902,7 @@ struct PrefilterInvoker : public ParallelLoopBody
     StereoBMParams* state;
 };
 
+#ifdef HAVE_OPENCL
 static bool ocl_stereobm( InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
 {
@@ -940,6 +947,7 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
     idx = k.set(idx, state->uniquenessRatio);
     return k.run(3, globalThreads, localThreads, false);
 }
+#endif
 
 struct FindStereoCorrespInvoker : public ParallelLoopBody
 {
@@ -1074,6 +1082,7 @@ public:
 
         int FILTERED = (params.minDisparity - 1) << DISPARITY_SHIFT;
 
+#ifdef HAVE_OPENCL
         if(ocl::useOpenCL() && disparr.isUMat() && params.textureThreshold == 0)
         {
             UMat left, right;
@@ -1090,6 +1099,7 @@ public:
                 }
             }
         }
+#endif
 
         Mat left0 = leftarr.getMat(), right0 = rightarr.getMat();
         disparr.create(left0.size(), dtype);
