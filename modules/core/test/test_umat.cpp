@@ -691,6 +691,7 @@ INSTANTIATE_TEST_CASE_P(UMat, getUMat, Combine(
 
 ///////////////////////////////////////////////////////////////// OpenCL ////////////////////////////////////////////////////////////////////////////
 
+#ifdef HAVE_OPENCL
 TEST(UMat, BufferPoolGrowing)
 {
 #ifdef _DEBUG
@@ -716,6 +717,7 @@ TEST(UMat, BufferPoolGrowing)
     else
         std::cout << "Skipped, no OpenCL" << std::endl;
 }
+#endif
 
 class CV_UMatTest :
         public cvtest::BaseTest
@@ -956,6 +958,9 @@ TEST(UMat, CopyToIfDeviceCopyIsObsolete)
 
 TEST(UMat, setOpenCL)
 {
+#ifndef HAVE_OPENCL
+    return; // test skipped
+#else
     // save the current state
     bool useOCL = cv::ocl::useOpenCL();
 
@@ -993,6 +998,7 @@ TEST(UMat, setOpenCL)
 
     // reset state to the previous one
     cv::ocl::setUseOpenCL(useOCL);
+#endif
 }
 
 TEST(UMat, ReadBufferRect)
