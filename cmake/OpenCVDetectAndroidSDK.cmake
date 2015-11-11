@@ -306,23 +306,17 @@ macro(add_android_project target path)
 
     # build java part
     if(android_proj_IGNORE_JAVA)
-      add_custom_command(
-         OUTPUT "${android_proj_bin_dir}/bin/${target}-debug.apk"
-         COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
-         COMMAND ${CMAKE_COMMAND} -E touch "${android_proj_bin_dir}/bin/${target}-debug.apk" # needed because ant does not update the timestamp of updated apk
-         WORKING_DIRECTORY "${android_proj_bin_dir}"
-         MAIN_DEPENDENCY "${android_proj_bin_dir}/${ANDROID_MANIFEST_FILE}"
-         DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME})
+      set(android_proj_extra_deps "")
     else()
-      add_custom_command(
-         OUTPUT "${android_proj_bin_dir}/bin/${target}-debug.apk"
-         COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
-         COMMAND ${CMAKE_COMMAND} -E touch "${android_proj_bin_dir}/bin/${target}-debug.apk" # needed because ant does not update the timestamp of updated apk
-         WORKING_DIRECTORY "${android_proj_bin_dir}"
-         MAIN_DEPENDENCY "${android_proj_bin_dir}/${ANDROID_MANIFEST_FILE}"
-         DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java # as we are part of OpenCV we can just force this dependency
-         DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME})
+      list(APPEND android_proj_extra_deps "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java)
     endif()
+    add_custom_command(
+       OUTPUT "${android_proj_bin_dir}/bin/${target}-debug.apk"
+       COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug -Djava.target=1.6 -Djava.source=1.6
+       COMMAND ${CMAKE_COMMAND} -E touch "${android_proj_bin_dir}/bin/${target}-debug.apk" # needed because ant does not update the timestamp of updated apk
+       WORKING_DIRECTORY "${android_proj_bin_dir}"
+       MAIN_DEPENDENCY "${android_proj_bin_dir}/${ANDROID_MANIFEST_FILE}"
+       DEPENDS ${android_proj_extra_deps} ${android_proj_file_deps} ${JNI_LIB_NAME})
 
     unset(JNI_LIB_NAME)
 

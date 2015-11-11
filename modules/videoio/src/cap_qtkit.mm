@@ -294,7 +294,7 @@ bool CvCaptureCAM::grabFrame(double timeOut) {
     // method exits immediately"
     // using usleep() is not a good alternative, because it may block the GUI.
     // Create a dummy timer so that runUntilDate does not exit immediately:
-    [NSTimer scheduledTimerWithTimeInterval:100 target:nil selector:@selector(doFireTimer:) userInfo:nil repeats:YES];
+    [NSTimer scheduledTimerWithTimeInterval:100 target:capture selector:@selector(doFireTimer:) userInfo:nil repeats:YES];
     while (![capture updateImage] && (total += sleepTime)<=timeOut) {
         [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:sleepTime]];
     }
