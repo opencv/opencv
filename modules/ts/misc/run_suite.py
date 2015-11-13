@@ -48,22 +48,25 @@ class TestSuite(object):
         return sorted(self.getAliases(fname), key = len)[0]
 
     def getAliases(self, fname):
+        def getCuts(fname, prefix):
+            # filename w/o extension (opencv_test_core)
+            noext = re.sub(r"\.(exe|apk)$", '', fname)
+            # filename w/o prefix (core.exe)
+            nopref = fname
+            if fname.startswith(prefix):
+                nopref = fname[len(prefix):]
+            # filename w/o prefix and extension (core)
+            noprefext = noext
+            if noext.startswith(prefix):
+                noprefext = noext[len(prefix):]
+            return noext, nopref, noprefext
         # input is full path ('/home/.../bin/opencv_test_core') or 'java'
         res = [fname]
         fname = os.path.basename(fname)
         res.append(fname) # filename (opencv_test_core.exe)
-        noext = re.sub(r"\.(exe|apk)$", '', fname)
-        res.append(noext) # filename w/o extension (opencv_test_core)
-        nopref = None
-        if fname.startswith(self.nameprefix):
-            nopref = fname[len(self.nameprefix):]
-            res.append(nopref) # filename w/o prefix (core)
-        if noext.startswith(self.nameprefix):
-            res.append(noext[len(self.nameprefix):])
-        if self.options.configuration == "Debug":
-            res.append(re.sub(r"d$", '', noext))  # MSVC debug config, remove 'd' suffix
-            if nopref:
-                res.append(re.sub(r"d$", '', nopref))  # MSVC debug config, remove 'd' suffix
+        for s in getCuts(fname, self.nameprefix):
+            res.append(s)
+            res.append(re.sub(r"d$", '', s)) # MSVC debug config, remove 'd' suffix
         return set(res)
 
     def getTest(self, name):

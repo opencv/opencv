@@ -152,7 +152,7 @@ parse_patterns = (
     {'name': "opencv_home",              'default': None,       'pattern': re.compile(r"^OpenCV_SOURCE_DIR:STATIC=(.+)$")},
     {'name': "opencv_build",             'default': None,       'pattern': re.compile(r"^OpenCV_BINARY_DIR:STATIC=(.+)$")},
     {'name': "tests_dir",                'default': None,       'pattern': re.compile(r"^EXECUTABLE_OUTPUT_PATH:PATH=(.+)$")},
-    {'name': "build_type",               'default': "Release",  'pattern': re.compile(r"^CMAKE_BUILD_TYPE:STRING=(.*)$")},
+    {'name': "build_type",               'default': "Release",  'pattern': re.compile(r"^CMAKE_BUILD_TYPE:\w+=(.*)$")},
     {'name': "git_executable",           'default': None,       'pattern': re.compile(r"^GIT_EXECUTABLE:FILEPATH=(.*)$")},
     {'name': "cxx_flags",                'default': "",         'pattern': re.compile(r"^CMAKE_CXX_FLAGS:STRING=(.*)$")},
     {'name': "cxx_flags_debug",          'default': "",         'pattern': re.compile(r"^CMAKE_CXX_FLAGS_DEBUG:STRING=(.*)$")},
@@ -214,7 +214,7 @@ class CMakeCache:
         # fix VS test binary path (add Debug or Release)
         if "Visual Studio" in self.cmake_generator:
             if cfg:
-                self.tests_dir = os.path.join(self.tests_dir, self.options.configuration)
+                self.tests_dir = os.path.join(self.tests_dir, cfg)
             else:
                 self.tests_dir = os.path.join(self.tests_dir, self.build_type)
 
