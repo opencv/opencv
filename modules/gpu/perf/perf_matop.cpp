@@ -41,7 +41,7 @@
 //M*/
 
 #include "perf_precomp.hpp"
-#include "perf_util.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
 
 using namespace std;
 using namespace testing;
