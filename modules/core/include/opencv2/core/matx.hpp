@@ -840,9 +840,17 @@ double norm(const Matx<_Tp, m, n>& M)
 template<typename _Tp, int m, int n> static inline
 double norm(const Matx<_Tp, m, n>& M, int normType)
 {
-    return normType == NORM_INF ? (double)normInf<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
-        normType == NORM_L1 ? (double)normL1<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
-        std::sqrt((double)normL2Sqr<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n));
+    switch(normType) {
+    case NORM_INF:
+        return (double)normInf<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n);
+    case NORM_L1:
+        return (double)normL1<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n);
+    case NORM_L2SQR:
+        return (double)normL2Sqr<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n);
+    default:
+    case NORM_L2:
+        return std::sqrt((double)normL2Sqr<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n));
+    }
 }
 
 
