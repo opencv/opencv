@@ -174,17 +174,19 @@ parse_patterns = (
 )
 
 class CMakeCache:
-    def __init__(self):
+    def __init__(self, cfg = None):
         self.setDefaultAttrs()
         self.cmake_home_vcver = None
         self.opencv_home_vcver = None
         self.featuresSIMD = None
         self.main_modules = []
+        if cfg:
+            self.build_type = cfg
 
     def setDummy(self, path):
         self.tests_dir = os.path.normpath(path)
 
-    def read(self, path, fname, cfg):
+    def read(self, path, fname):
         rx = re.compile(r'^opencv_(\w+)_SOURCE_DIR:STATIC=(.*)$')
         module_paths = {} # name -> path
         with open(fname, "rt") as cachefile:
@@ -213,10 +215,7 @@ class CMakeCache:
 
         # fix VS test binary path (add Debug or Release)
         if "Visual Studio" in self.cmake_generator:
-            if cfg:
-                self.tests_dir = os.path.join(self.tests_dir, cfg)
-            else:
-                self.tests_dir = os.path.join(self.tests_dir, self.build_type)
+            self.tests_dir = os.path.join(self.tests_dir, self.build_type)
 
         self.cmake_home_vcver = readGitVersion(self.git_executable, self.cmake_home)
         if self.opencv_home == self.cmake_home:

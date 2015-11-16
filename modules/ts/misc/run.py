@@ -31,7 +31,7 @@ if __name__ == "__main__":
     parser.add_argument("--list", action="store_true", default=False, help="List available tests (executables)")
     parser.add_argument("--list_short", action="store_true", default=False, help="List available tests (aliases)")
     parser.add_argument("--list_short_main", action="store_true", default=False, help="List available tests (main repository, aliases)")
-    parser.add_argument("--configuration", metavar="CFG", default="", help="Visual Studio: force Debug or Release configuration")
+    parser.add_argument("--configuration", metavar="CFG", default=None, help="Force Debug or Release configuration (for Visual Studio and Java tests build)")
     parser.add_argument("-n", "--dry_run", action="store_true", help="Do not run the tests")
     parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Print more debug information")
 
@@ -95,12 +95,12 @@ if __name__ == "__main__":
         try:
             if not os.path.isdir(path):
                 raise Err("Not a directory (should contain CMakeCache.txt ot test executables)")
-            cache = CMakeCache()
+            cache = CMakeCache(args.configuration)
             fname = os.path.join(path, "CMakeCache.txt")
 
             if os.path.isfile(fname):
                 log.debug("Reading cmake cache file: %s", fname)
-                cache.read(path, fname, args.configuration)
+                cache.read(path, fname)
             else:
                 log.debug("Assuming folder contains tests: %s", path)
                 cache.setDummy(path)
