@@ -418,8 +418,8 @@ namespace cvtest
 
             if (dist < maxPtDif &&
                 fabs(p1.size - p2.size) < maxSizeDif &&
-                abs(p1.angle - p2.angle) < maxAngleDif &&
-                abs(p1.response - p2.response) < maxResponseDif &&
+                std::abs(p1.angle - p2.angle) < maxAngleDif &&
+                std::abs(p1.response - p2.response) < maxResponseDif &&
                 p1.octave == p2.octave &&
                 p1.class_id == p2.class_id)
             {

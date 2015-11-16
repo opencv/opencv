@@ -879,8 +879,8 @@ OCL_TEST_P(MinMaxLoc, MAT)
             minlocVal_ = src1_roi.at<float>(minLoc_);
             maxlocVal = src1_roi.at<float>(maxLoc);
             maxlocVal_ = src1_roi.at<float>(maxLoc_);
-            error0 = ::abs(src1_roi.at<float>(minLoc_) - src1_roi.at<float>(minLoc));
-            error1 = ::abs(src1_roi.at<float>(maxLoc_) - src1_roi.at<float>(maxLoc));
+            error0 = std::abs(src1_roi.at<float>(minLoc_) - src1_roi.at<float>(minLoc));
+            error1 = std::abs(src1_roi.at<float>(maxLoc_) - src1_roi.at<float>(maxLoc));
         }
         if (oneDepth == 6)
         {
@@ -888,8 +888,8 @@ OCL_TEST_P(MinMaxLoc, MAT)
             minlocVal_ = src1_roi.at<double>(minLoc_);
             maxlocVal = src1_roi.at<double>(maxLoc);
             maxlocVal_ = src1_roi.at<double>(maxLoc_);
-            error0 = ::abs(src1_roi.at<double>(minLoc_) - src1_roi.at<double>(minLoc));
-            error1 = ::abs(src1_roi.at<double>(maxLoc_) - src1_roi.at<double>(maxLoc));
+            error0 = std::abs(src1_roi.at<double>(minLoc_) - src1_roi.at<double>(minLoc));
+            error1 = std::abs(src1_roi.at<double>(maxLoc_) - src1_roi.at<double>(maxLoc));
         }
 
         EXPECT_DOUBLE_EQ(minVal_, minVal);
@@ -993,8 +993,8 @@ OCL_TEST_P(MinMaxLoc, MASK)
             minlocVal_ = src1_roi.at<float>(minLoc_);
             maxlocVal = src1_roi.at<float>(maxLoc);
             maxlocVal_ = src1_roi.at<float>(maxLoc_);
-            error0 = ::abs(src1_roi.at<float>(minLoc_) - src1_roi.at<float>(minLoc));
-            error1 = ::abs(src1_roi.at<float>(maxLoc_) - src1_roi.at<float>(maxLoc));
+            error0 = std::abs(src1_roi.at<float>(minLoc_) - src1_roi.at<float>(minLoc));
+            error1 = std::abs(src1_roi.at<float>(maxLoc_) - src1_roi.at<float>(maxLoc));
         }
         if (oneDepth == 6)
         {
@@ -1002,8 +1002,8 @@ OCL_TEST_P(MinMaxLoc, MASK)
             minlocVal_ = src1_roi.at<double>(minLoc_);
             maxlocVal = src1_roi.at<double>(maxLoc);
             maxlocVal_ = src1_roi.at<double>(maxLoc_);
-            error0 = ::abs(src1_roi.at<double>(minLoc_) - src1_roi.at<double>(minLoc));
-            error1 = ::abs(src1_roi.at<double>(maxLoc_) - src1_roi.at<double>(maxLoc));
+            error0 = std::abs(src1_roi.at<double>(minLoc_) - src1_roi.at<double>(minLoc));
+            error1 = std::abs(src1_roi.at<double>(maxLoc_) - src1_roi.at<double>(maxLoc));
         }
 
         EXPECT_DOUBLE_EQ(minVal_, minVal);
