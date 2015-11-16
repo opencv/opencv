@@ -66,7 +66,9 @@ class TestSuite(object):
         res.append(fname) # filename (opencv_test_core.exe)
         for s in getCuts(fname, self.nameprefix):
             res.append(s)
-            res.append(re.sub(r"d$", '', s)) # MSVC debug config, remove 'd' suffix
+            if self.cache.build_type == "Debug":
+                res.append(re.sub(r"d$", '', s)) # MSVC debug config, remove 'd' suffix
+        log.debug("Aliases: %s", set(res))
         return set(res)
 
     def getTest(self, name):
@@ -104,10 +106,7 @@ class TestSuite(object):
         args = args[:]
         exe = os.path.abspath(path)
         if path == "java":
-            cfg = self.cache.build_type
-            if self.options.configuration:
-                cfg = self.options.configuration
-            cmd = [self.cache.ant_executable, "-Dopencv.build.type=%s" % cfg, "buildAndTest"]
+            cmd = [self.cache.ant_executable, "-Dopencv.build.type=%s" % self.cache.build_type, "buildAndTest"]
             ret = execute(cmd, cwd = self.cache.java_test_binary_dir + "/.build")
             return None, ret
         else:
