@@ -648,11 +648,13 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             picture = avcodec_alloc_frame();
 #endif
 
+            int w2 = (enc->width + 7) & ~7;
+
             rgb_picture.data[0] = (uint8_t*)malloc(
                     avpicture_get_size( AV_PIX_FMT_BGR24,
-                                        enc->width, enc->height ));
+                                        w2, enc->height ));
             avpicture_fill( (AVPicture*)&rgb_picture, rgb_picture.data[0],
-                            AV_PIX_FMT_BGR24, enc->width, enc->height );
+                            AV_PIX_FMT_BGR24, w2, enc->height );
 
             frame.width = enc->width;
             frame.height = enc->height;
@@ -752,6 +754,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     if( !video_st || !picture->data[0] )
         return false;
 
+    int w2 = (video_st->codec->width + 7) & ~7;
+
     if( img_convert_ctx == NULL ||
         frame.width != video_st->codec->width ||
         frame.height != video_st->codec->height )
@@ -777,12 +781,12 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
         rgb_picture.data[0] = (uint8_t*)realloc(rgb_picture.data[0],
                 avpicture_get_size( AV_PIX_FMT_BGR24,
-                                    video_st->codec->width, video_st->codec->height ));
+                                    w2, video_st->codec->height ));
         frame.data = rgb_picture.data[0];
     }
 
     avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], AV_PIX_FMT_RGB24,
-                   video_st->codec->width, video_st->codec->height);
+                   w2, video_st->codec->height);
     frame.step = rgb_picture.linesize[0];
 
     sws_scale(
