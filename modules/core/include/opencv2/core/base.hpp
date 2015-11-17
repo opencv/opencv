@@ -260,6 +260,8 @@ enum BorderTypes {
 #  endif
 #  if __has_extension(cxx_static_assert)
 #    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
+#  elif __has_extension(c_static_assert)
+#    define CV_StaticAssert(condition, reason)    _Static_assert((condition), reason " " #condition)
 #  endif
 #elif defined(__GNUC__)
 #  if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L)
