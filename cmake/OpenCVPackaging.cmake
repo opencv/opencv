@@ -178,6 +178,85 @@ if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
   set(CPACK_DEBIAN_COMPONENT_TESTS_SECTION "misc")
 endif(NOT OPENCV_CUSTOM_PACKAGE_INFO)
 
+set(CPACK_DEBIAN_COMPONENT_DOCS_ARCHITECTURE "all")
+
+# lintian stuff
+
+#
+# ocv_generate_lintian_overrides_file: generates lintian overrides file for
+#   the specified component (deb-package). It's assumed that <comp>_LINTIAN_OVERRIDES
+#   variable with suppressed tags is defined.
+#
+# Usage: ocv_generate_lintian_overrides_file(<component name>)
+#
+
+function(ocv_generate_lintian_overrides_file comp)
+    string(TOUPPER ${comp} comp_upcase)
+
+    set(package_name ${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME})
+    set(suppressions ${${comp_upcase}_LINTIAN_OVERRIDES})
+
+    if(suppressions)
+        if(NOT package_name)
+            message(FATAL_ERROR "Package name for the ${comp} component is not defined")
+        endif()
+
+        # generate content of lintian overrides file
+
+        foreach(suppression ${suppressions})
+            set(line "${package_name}: ${suppression}")
+            if(content)
+                set(content "${content}\n${line}")
+            else()
+                set(content "${line}")
+            endif()
+        endforeach()
+
+        # create file and install it
+        set(cpack_tmp_dir "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}")
+        set(overrides_filename "${cpack_tmp_dir}/${package_name}")
+
+        file(WRITE "${overrides_filename}" "${content}")
+
+        # install generated file
+        install(FILES "${overrides_filename}"
+            DESTINATION share/lintian/overrides/
+            COMPONENT ${comp})
+
+        unset(content)
+    endif()
+endfunction()
+
+set(LIBS_LINTIAN_OVERRIDES "binary-or-shlib-defines-rpath" # usr/lib/libopencv_core.so.2.4.12
+                           "package-name-doesnt-match-sonames") # libopencv-calib3d2.4 libopencv-contrib2.4
+
+if(HAVE_opencv_python)
+    set(PYTHON_LINTIAN_OVERRIDES "binary-or-shlib-defines-rpath" # usr/lib/python2.7/dist-packages/cv2.so
+                                 "missing-dependency-on-numpy-abi")
+else()
+    set(PYTHON_LINTIAN_OVERRIDES "empty-binary-package") # python module is off
+endif()
+
+if(NOT HAVE_opencv_java)
+    set(JAVA_LINTIAN_OVERRIDES "empty-binary-package") # Java is off
+else()
+    # TODO: add smht here
+endif()
+
+set(DEV_LINTIAN_OVERRIDES "binary-or-shlib-defines-rpath" # usr/bin/opencv_traincascade
+                          "binary-without-manpage") # usr/bin/opencv_traincascade
+
+if(NOT INSTALL_C_EXAMPLES)
+    set(SAMPLES_LINTIAN_OVERRIDES "empty-binary-package") # samples are not installed
+endif()
+
+if(INSTALL_TESTS)
+    set(TESTS_LINTIAN_OVERRIDES "arch-dependent-file-in-usr-share" # usr/share/OpenCV/bin/opencv_test_ml
+                                "binary-or-shlib-defines-rpath") # usr/share/OpenCV/bin/opencv_test_ml
+else()
+    set(TESTS_LINTIAN_OVERRIDES "empty-binary-package") # there is no tests
+endif()
+
 if(CPACK_GENERATOR STREQUAL "DEB")
   find_program(GZIP_TOOL NAMES "gzip" PATHS "/bin" "/usr/bin" "/usr/local/bin")
   if(NOT GZIP_TOOL)
@@ -192,6 +271,7 @@ if(CPACK_GENERATOR STREQUAL "DEB")
   set(ALL_COMPONENTS "libs" "dev" "docs" "python" "java" "samples" "tests")
   foreach (comp ${ALL_COMPONENTS})
     string(TOUPPER "${comp}" comp_upcase)
+
     set(DEBIAN_CHANGELOG_OUT_FILE    "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian")
     set(DEBIAN_CHANGELOG_OUT_FILE_GZ "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian.gz")
     set(CHANGELOG_PACKAGE_NAME "${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}")
@@ -222,6 +302,8 @@ if(CPACK_GENERATOR STREQUAL "DEB")
                 DESTINATION "share/doc/${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}"
                 COMPONENT "${comp}")
     endif()
+
+    ocv_generate_lintian_overrides_file("${comp}")
 
   endforeach()
 endif()
