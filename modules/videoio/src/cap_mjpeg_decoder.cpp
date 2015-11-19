@@ -554,7 +554,7 @@ bool AviMjpegStream::parseHdrlList(MjpegInputStream& in_str)
             m_is_indx_present = ((avi_hdr.dwFlags & 0x10) != 0);
             DWORD number_of_streams = avi_hdr.dwStreams;
             m_width = avi_hdr.dwWidth;
-            m_height = avi_hdr.dwWidth;
+            m_height = avi_hdr.dwHeight;
 
             //the number of strl lists must be equal to number of streams specified in main avi header
             for(DWORD i = 0; i < number_of_streams; ++i)
