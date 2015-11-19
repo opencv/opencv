@@ -66,7 +66,7 @@ class TestSuite(object):
         res.append(fname) # filename (opencv_test_core.exe)
         for s in getCuts(fname, self.nameprefix):
             res.append(s)
-            if self.cache.build_type == "Debug":
+            if self.cache.build_type == "Debug" and "Visual Studio" in self.cache.cmake_generator:
                 res.append(re.sub(r"d$", '', s)) # MSVC debug config, remove 'd' suffix
         log.debug("Aliases: %s", set(res))
         return set(res)
