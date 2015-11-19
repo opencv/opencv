@@ -89,6 +89,7 @@ struct Stream::Impl
     }
 
     cudaStream_t stream;
+    bool own_stream;
     int ref_counter;
 };
 
@@ -335,6 +336,7 @@ void cv::gpu::Stream::create()
     impl = (Stream::Impl*) fastMalloc(sizeof(Stream::Impl));
 
     impl->stream = stream;
+    impl->own_stream = true;
     impl->ref_counter = 1;
 }
 
@@ -342,9 +344,23 @@ void cv::gpu::Stream::release()
 {
     if (impl && CV_XADD(&impl->ref_counter, -1) == 1)
     {
-        cudaSafeCall( cudaStreamDestroy(impl->stream) );
+        if (impl->own_stream)
+        {
+            cudaSafeCall( cudaStreamDestroy(impl->stream) );
+        }
         cv::fastFree(impl);
     }
+}
+
+Stream StreamAccessor::wrapStream(cudaStream_t stream)
+{
+    Stream::Impl* impl = (Stream::Impl*) fastMalloc(sizeof(Stream::Impl));
+
+    impl->stream = stream;
+    impl->own_stream = false;
+    impl->ref_counter = 1;
+
+    return Stream(impl);
 }
 
 #endif /* !defined (HAVE_CUDA) */
