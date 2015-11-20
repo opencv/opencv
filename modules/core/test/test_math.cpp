@@ -2330,6 +2330,17 @@ void Core_SolvePolyTest::run( int )
             pass = pass && div < err_eps;
         }
 
+        //test x^3 = 0
+        cv::Mat coeffs_5623(4, 1, CV_64FC1);
+        cv::Mat r_5623(3, 1, CV_64FC2);
+        coeffs_5623.at<double>(0) = 1;
+        coeffs_5623.at<double>(1) = 0;
+        coeffs_5623.at<double>(2) = 0;
+        coeffs_5623.at<double>(3) = 0;
+        double prec_5623 = cv::solveCubic(coeffs_5623, r_5623);
+        pass = pass && r_5623.at<double>(0) == 0 && r_5623.at<double>(1) == 0 && r_5623.at<double>(2) == 0;
+        pass = pass && prec_5623 == 1;
+
         if (!pass)
         {
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
