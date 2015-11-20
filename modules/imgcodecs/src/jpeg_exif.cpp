@@ -401,6 +401,9 @@ std::string ExifReader::getString(const size_t offset) const
     {
         dataOffset = getU32( offset + 8 );
     }
+    if (dataOffset > m_data.size() || dataOffset + size > m_data.size()) {
+        throw ExifParsingError();
+    }
     std::vector<uint8_t>::const_iterator it = m_data.begin() + dataOffset;
     std::string result( it, it + size ); //copy vector content into result
 
