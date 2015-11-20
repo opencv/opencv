@@ -177,8 +177,6 @@ should have alpha set to 0, fully opaque pixels should have alpha set to 255/655
 The sample below shows how to create such a BGRA image and store to PNG file. It also demonstrates how to set custom
 compression parameters :
 @code
-    #include <vector>
-    #include <stdio.h>
     #include <opencv2/opencv.hpp>
 
     using namespace cv;
@@ -211,7 +209,7 @@ compression parameters :
         try {
             imwrite("alpha.png", mat, compression_params);
         }
-        catch (runtime_error& ex) {
+        catch (cv::Exception& ex) {
             fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
             return 1;
         }
