@@ -64,11 +64,13 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 # endif
 #endif
 
-#if defined ANDROID || defined __linux__
+#if defined ANDROID || defined __linux__ || defined __FreeBSD__
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <elf.h>
+#if defined ANDROID || defined __linux__
 #  include <linux/auxvec.h>
+#endif
 #endif
 
 #if defined WIN32 || defined _WIN32 || defined WINCE
