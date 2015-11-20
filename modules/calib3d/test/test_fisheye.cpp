@@ -368,7 +368,7 @@ TEST_F(fisheyeTest, EtimateUncertainties)
     double thresh_cond = 1e6;
     int check_cond = 1;
     param.Init(cv::Vec2d(theK(0,0), theK(1,1)), cv::Vec2d(theK(0,2), theK(1, 2)), theD);
-    param.isEstimate = std::vector<int>(9, 1);
+    param.isEstimate = std::vector<uchar>(9, 1);
     param.isEstimate[4] = 0;
 
     errors.isEstimate = param.isEstimate;
