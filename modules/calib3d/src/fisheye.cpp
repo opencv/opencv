@@ -53,7 +53,7 @@ namespace cv { namespace
         double dalpha;
     };
 
-    void subMatrix(const Mat& src, Mat& dst, const std::vector<int>& cols, const std::vector<int>& rows);
+    void subMatrix(const Mat& src, Mat& dst, const std::vector<uchar>& cols, const std::vector<uchar>& rows);
 }}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -899,7 +899,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     intrinsicLeft_errors.isEstimate = intrinsicLeft.isEstimate;
     intrinsicRight_errors.isEstimate = intrinsicRight.isEstimate;
 
-    std::vector<int> selectedParams;
+    std::vector<uchar> selectedParams;
     std::vector<int> tmp(6 * (n_images + 1), 1);
     selectedParams.insert(selectedParams.end(), intrinsicLeft.isEstimate.begin(), intrinsicLeft.isEstimate.end());
     selectedParams.insert(selectedParams.end(), intrinsicRight.isEstimate.begin(), intrinsicRight.isEstimate.end());
@@ -999,7 +999,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
         cv::Vec6d oldTom(Tcur[0], Tcur[1], Tcur[2], omcur[0], omcur[1], omcur[2]);
 
         //update all parameters
-        cv::subMatrix(J, J, selectedParams, std::vector<int>(J.rows, 1));
+        cv::subMatrix(J, J, selectedParams, std::vector<uchar>(J.rows, 1));
         int a = cv::countNonZero(intrinsicLeft.isEstimate);
         int b = cv::countNonZero(intrinsicRight.isEstimate);
         cv::Mat deltas;
@@ -1050,7 +1050,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
 }
 
 namespace cv{ namespace {
-void subMatrix(const Mat& src, Mat& dst, const std::vector<int>& cols, const std::vector<int>& rows)
+void subMatrix(const Mat& src, Mat& dst, const std::vector<uchar>& cols, const std::vector<uchar>& rows)
 {
     CV_Assert(src.channels() == 1);
 
@@ -1435,11 +1435,11 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
         }
     }
 
-    std::vector<int> idxs(param.isEstimate);
+    std::vector<uchar> idxs(param.isEstimate);
     idxs.insert(idxs.end(), 6 * n, 1);
 
     subMatrix(JJ2, JJ2, idxs, idxs);
-    subMatrix(ex3, ex3, std::vector<int>(1, 1), idxs);
+    subMatrix(ex3, ex3, std::vector<uchar>(1, 1), idxs);
 }
 
 void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
