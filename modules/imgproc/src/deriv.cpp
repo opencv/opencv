@@ -321,15 +321,13 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
 
     if (src.type() == CV_8U && dst.type() == CV_16S && scale == 1)
     {
-#if IPP_VERSION_X100 >= 900
-        if(ippiFilterSobelGetBufferSize(roi, kernel, ippNormL2, ipp8u, ipp16s, 1, &bufSize) < 0)
-            return false;
-        buffer.allocate(bufSize);
-#endif
-
         if ((dx == 1) && (dy == 0))
         {
-#if IPP_VERSION_X100 < 900
+#if IPP_VERSION_X100 >= 900
+            if (0 > ippiFilterSobelNegVertBorderGetBufferSize(roi, kernel, ipp8u, ipp16s, 1,&bufSize))
+                return false;
+            buffer.allocate(bufSize);
+#else
             if (0 > ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, kernel,&bufSize))
                 return false;
             buffer.allocate(bufSize);
@@ -344,7 +342,11 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
 
         if ((dx == 0) && (dy == 1))
         {
-#if IPP_VERSION_X100 < 900
+#if IPP_VERSION_X100 >= 900
+            if (0 > ippiFilterSobelHorizBorderGetBufferSize(roi, kernel, ipp8u, ipp16s, 1,&bufSize))
+                return false;
+            buffer.allocate(bufSize);
+#else
             if (0 > ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, kernel,&bufSize))
                 return false;
             buffer.allocate(bufSize);
@@ -360,7 +362,11 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
 #if !defined(HAVE_IPP_ICV_ONLY)
         if ((dx == 2) && (dy == 0))
         {
-#if IPP_VERSION_X100 < 900
+#if IPP_VERSION_X100 >= 900
+            if (0 > ippiFilterSobelVertSecondBorderGetBufferSize(roi, kernel, ipp8u, ipp16s, 1,&bufSize))
+                return false;
+            buffer.allocate(bufSize);
+#else
             if (0 > ippiFilterSobelVertSecondGetBufferSize_8u16s_C1R(roi, kernel,&bufSize))
                 return false;
             buffer.allocate(bufSize);
@@ -375,7 +381,11 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
 
         if ((dx == 0) && (dy == 2))
         {
-#if IPP_VERSION_X100 < 900
+#if IPP_VERSION_X100 >= 900
+            if (0 > ippiFilterSobelHorizSecondBorderGetBufferSize(roi, kernel, ipp8u, ipp16s, 1,&bufSize))
+                return false;
+            buffer.allocate(bufSize);
+#else
             if (0 > ippiFilterSobelHorizSecondGetBufferSize_8u16s_C1R(roi, kernel,&bufSize))
                 return false;
             buffer.allocate(bufSize);
@@ -392,16 +402,14 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
 
     if (src.type() == CV_32F && dst.type() == CV_32F)
     {
-#if IPP_VERSION_X100 >= 900
-        if(ippiFilterSobelGetBufferSize(roi, kernel, ippNormL2, ipp32f, ipp32f, 1, &bufSize) < 0)
-            return false;
-        buffer.allocate(bufSize);
-#endif
-
 #if IPP_DISABLE_BLOCK
         if ((dx == 1) && (dy == 0))
         {
-#if IPP_VERSION_X100 < 900
+#if IPP_VERSION_X100 >= 900
+            if (0 > ippiFilterSobelNegVertBorderGetBufferSize(roi, kernel, ipp32f, ipp32f, 1,&bufSize))
+                return false;
+            buffer.allocate(bufSize);
+#else
             if (0 > ippiFilterSobelNegVertGetBufferSize_32f_C1R(roi, kernel, &bufSize))
                 return false;
             buffer.allocate(bufSize);
@@ -418,7 +426,11 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
 
         if ((dx == 0) && (dy == 1))
         {
-#if IPP_VERSION_X100 < 900
+#if IPP_VERSION_X100 >= 900
+            if (0 > ippiFilterSobelHorizBorderGetBufferSize(roi, kernel, ipp32f, ipp32f, 1,&bufSize))
+                return false;
+            buffer.allocate(bufSize);
+#else
             if (0 > ippiFilterSobelHorizGetBufferSize_32f_C1R(roi, kernel,&bufSize))
                 return false;
             buffer.allocate(bufSize);
@@ -436,7 +448,11 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
 #if !defined(HAVE_IPP_ICV_ONLY)
         if((dx == 2) && (dy == 0))
         {
-#if IPP_VERSION_X100 < 900
+#if IPP_VERSION_X100 >= 900
+            if (0 > ippiFilterSobelVertSecondBorderGetBufferSize(roi, kernel, ipp32f, ipp32f, 1,&bufSize))
+                return false;
+            buffer.allocate(bufSize);
+#else
             if (0 > ippiFilterSobelVertSecondGetBufferSize_32f_C1R(roi, kernel,&bufSize))
                 return false;
             buffer.allocate(bufSize);
@@ -453,7 +469,11 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
 
         if((dx == 0) && (dy == 2))
         {
-#if IPP_VERSION_X100 < 900
+#if IPP_VERSION_X100 >= 900
+            if (0 > ippiFilterSobelHorizSecondBorderGetBufferSize(roi, kernel, ipp32f, ipp32f, 1,&bufSize))
+                return false;
+            buffer.allocate(bufSize);
+#else
             if (0 > ippiFilterSobelHorizSecondGetBufferSize_32f_C1R(roi, kernel,&bufSize))
                 return false;
             buffer.allocate(bufSize);
