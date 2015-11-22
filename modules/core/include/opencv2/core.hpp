@@ -845,14 +845,14 @@ CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 /** @brief Copies specified channels from input arrays to the specified channels of
 output arrays.
 
-The function mixChannels provide an advanced mechanism for shuffling image channels.
+The function cv::mixChannels provide an advanced mechanism for shuffling image channels.
 
 cv::split and cv::merge and some forms of cv::cvtColor are partial cases of cv::mixChannels .
 
 In the example below, the code splits a 4-channel BGRA image into a 3-channel BGR (with B and R
 channels swapped) and a separate alpha-channel image:
 @code{.cpp}
-    Mat bgra( 100, 100, CV_8UC4, Scalar(1,2,3,4) );
+    Mat bgra( 100, 100, CV_8UC4, Scalar(255,0,0,255) );
     Mat bgr( bgra.rows, bgra.cols, CV_8UC3 );
     Mat alpha( bgra.rows, bgra.cols, CV_8UC1 );
 
@@ -881,7 +881,7 @@ src[0].channels() + src[1].channels()-1, and so on, the same scheme is used for 
 channels; as a special case, when fromTo[k\*2] is negative, the corresponding output channel is
 filled with zero .
 @param npairs number of index pairs in fromTo.
-@sa split, merge, cvtColor
+@sa cv::split, cv::merge, cv::cvtColor
 */
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
