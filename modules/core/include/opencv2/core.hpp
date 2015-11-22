@@ -870,7 +870,7 @@ function.
 @param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
 @param nsrcs number of matrices in src.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param ndsts number of matrices in dst.
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
@@ -887,9 +887,9 @@ CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts
                             const int* fromTo, size_t npairs);
 
 /** @overload
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
@@ -904,9 +904,9 @@ CV_EXPORTS void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst
                             const int* fromTo, size_t npairs);
 
 /** @overload
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
