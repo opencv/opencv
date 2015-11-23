@@ -270,7 +270,7 @@
 */
 
 #if !defined _MSC_VER && !defined __BORLANDC__
-#  if defined __cplusplus && __cplusplus >= 201103L
+#  if defined __cplusplus && __cplusplus >= 201103L && !defined __APPLE__
 #    include <cstdint>
      typedef std::uint32_t uint;
 #  else
