@@ -924,11 +924,10 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 
     CV_Assert( !_mv.fixedType() || _mv.empty() || _mv.type() == m.depth() );
 
-    Size size = m.size();
     int depth = m.depth(), cn = m.channels();
     _mv.create(cn, 1, depth);
     for (int i = 0; i < cn; ++i)
-        _mv.create(size, depth, i);
+        _mv.create(m.dims, m.size.p, depth, i);
 
     std::vector<Mat> dst;
     _mv.getMatVector(dst);
