@@ -4372,8 +4372,8 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
         hr = MFCopyImage(
             pData,                      // Destination buffer.
             cbWidth,                    // Destination stride.
-            (BYTE*)videoFrameBuffer,    // First row in source image.
-            cbWidth,                    // Source stride.
+            ((BYTE*)videoFrameBuffer) + (videoHeight-1)*cbWidth,    // First row in source image.
+            -cbWidth,                   // Source stride.
             cbWidth,                    // Image width in bytes.
             videoHeight                 // Image height in pixels.
             );
