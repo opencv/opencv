@@ -9375,7 +9375,7 @@ int agast_cornerScore<AgastFeatureDetector::AGAST_5_8>(const uchar* ptr, const i
 #else // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
 
 
-int agast_tree_search(const unsigned long table_struct32[], int pixel_[], const unsigned char* const ptr, int threshold)
+int agast_tree_search(const uint32_t table_struct32[], int pixel_[], const unsigned char* const ptr, int threshold)
 {
     register const int cb = *ptr + threshold;
     register const int c_b = *ptr - threshold;
@@ -9404,10 +9404,10 @@ int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, int agas
     int bmin = threshold;
     int bmax = 255;
     int b_test = (bmax + bmin)/2;
-    unsigned long *table_struct;
+    uint32_t *table_struct;
 
     int result;
-    static const unsigned long table_5_8_corner_struct[] =
+    static const uint32_t table_5_8_corner_struct[] =
     {       0x00010026,0x20020017,0x3003000c,0x50040009,0x10050007,0x406d0006,0x706d006c,0x4008006c,
         0x606d006c,0x100a006c,0x406d000b,0x706d006c,0x700d0012,0x600e006c,0x500f0011,0x106d0010,
         0x406d006c,0x106d006c,0x5013106c,0x3014106c,0x7015106c,0x4016106c,0x606d106c,0x5018001c,
@@ -9423,7 +9423,7 @@ int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, int agas
         0x4061006c,0x606d006c,0x3063106c,0x5064106c,0x20651069,0x10661067,0x406d106c,0x4068106c,
         0x606d106c,0x706a106c,0x406b106c,0x606d106c,0x000000fe,0x000000ff};
 
-    static const unsigned long table_7_12d_corner_struct[] =
+    static const uint32_t table_7_12d_corner_struct[] =
     {       0x000100b5,0x50020036,0x20030025,0x9004001d,0x10050015,0x6006000f,0x3007000a,0x41870008,
         0xa0090186,0xb1870186,0x800b0186,0xa00c0186,0xb187000d,0x400e0186,0x71870186,0xb0100186,
         0x30110013,0x41870012,0xa1870186,0x80140186,0xa1870186,0x60160186,0x70170186,0x80180186,
@@ -9474,7 +9474,7 @@ int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, int agas
         0x21871186,0x817a1186,0xa1871186,0xb17c1186,0x817d1186,0xa1871186,0x217f1186,0x31801186,
         0x41811186,0x71821186,0x11831184,0x61871186,0x61851186,0x81871186,0x000000fe,0x000000ff};
 
-    static const unsigned long table_7_12s_corner_struct[] =
+    static const uint32_t table_7_12s_corner_struct[] =
     {       0x0001032b,0x50020104,0x20031026,0x70040748,0x97481005,0x90060748,0x1007100f,0x67481008,
         0x60090748,0x800a0748,0x400b000d,0x3749000c,0xa7490748,0xa00e0748,0xb7490748,0x1010001e,
         0x60111014,0x80120748,0xa0130748,0xb7490748,0x6015001b,0x80160748,0x40170019,0x37490018,
@@ -9710,7 +9710,7 @@ int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, int agas
         0x67481741,0x67420748,0x87430748,0x47440746,0x37490745,0xa7490748,0xa7470748,0xb7490748,
         0x000000fe,0x000000ff};
 
-    static const unsigned long table_9_16_corner_struct[] =
+    static const uint32_t table_9_16_corner_struct[] =
     {       0x00010138,0x200200d3,0x4003008a,0x50040051,0x70050027,0x30060016,0x1007000d,0x6008000a,
         0x82ad0009,0xf2ad02ac,0xd00b02ac,0xe00c02ac,0xf2ad02ac,0x800e02ac,0x900f02ac,0xa01002ac,
         0x62ad0011,0xb01202ac,0xc01302ac,0xd01402ac,0xe01502ac,0xf2ad02ac,0xa01702ac,0xb01802ac,
@@ -9801,17 +9801,17 @@ int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, int agas
 
     switch(agasttype) {
       case AgastFeatureDetector::AGAST_5_8:
-        table_struct=(unsigned long *)(table_5_8_corner_struct);
+        table_struct=(uint32_t *)(table_5_8_corner_struct);
         break;
       case AgastFeatureDetector::AGAST_7_12d:
-        table_struct=(unsigned long *)(table_7_12d_corner_struct);
+        table_struct=(uint32_t *)(table_7_12d_corner_struct);
         break;
       case AgastFeatureDetector::AGAST_7_12s:
-        table_struct=(unsigned long *)(table_7_12s_corner_struct);
+        table_struct=(uint32_t *)(table_7_12s_corner_struct);
         break;
       case AgastFeatureDetector::OAST_9_16:
       default:
-        table_struct=(unsigned long *)(table_9_16_corner_struct);
+        table_struct=(uint32_t *)(table_9_16_corner_struct);
         break;
     }
 
