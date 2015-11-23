@@ -111,11 +111,18 @@ namespace cv
                               bool useProvidedKeypoints)
         {
             cv::Mat img = image.getMat();
-            if (img.type() != CV_8UC1)
+            if (img.channels() > 1)
                 cvtColor(image, img, COLOR_BGR2GRAY);
 
             Mat img1_32;
-            img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
+            if ( img.depth() == CV_32F )
+                img1_32 = img;
+            else if ( img.depth() == CV_8U )
+                img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
+            else if ( img.depth() == CV_16U )
+                img.convertTo(img1_32, CV_32F, 1.0 / 65535.0, 0);
+
+            CV_Assert( ! img1_32.empty() );
 
             KAZEOptions options;
             options.img_width = img.cols;
