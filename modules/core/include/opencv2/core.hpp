@@ -867,10 +867,10 @@ channels swapped) and a separate alpha-channel image:
 @note Unlike many other new-style C++ functions in OpenCV (see the introduction section and
 Mat::create ), cv::mixChannels requires the output arrays to be pre-allocated before calling the
 function.
-@param src input array or vector of matrices; all of the matrices must have the same size and the
+@param src input array of matrices; all of the matrices must have the same size and the
 same depth.
 @param nsrcs number of matrices in src.
-@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
+@param dst output array of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param ndsts number of matrices in dst.
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
@@ -880,7 +880,7 @@ src[0].channels()-1, the second input image channels are indexed from src[0].cha
 src[0].channels() + src[1].channels()-1, and so on, the same scheme is used for the output image
 channels; as a special case, when fromTo[k\*2] is negative, the corresponding output channel is
 filled with zero .
-@param npairs number of index pairs in fromTo.
+@param npairs number of index pairs in @c fromTo.
 @sa cv::split, cv::merge, cv::cvtColor
 */
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
