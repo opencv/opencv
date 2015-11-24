@@ -238,7 +238,11 @@ enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
  *
 */
 static void*
+<<<<<<< HEAD
+imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, Size dsize = Size() )
+=======
 imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
+>>>>>>> origin/patch-3
 {
     IplImage* image = 0;
     CvMat *matrix = 0;
@@ -274,7 +278,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     }
 
     /// set the scale_denom in the driver
-    decoder->setScale( scale_denom );
+    decoder->setSize( dsize );
 
     /// set the filename in the driver
     decoder->setSource( filename );
@@ -331,9 +335,30 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         return 0;
     }
 
+<<<<<<< HEAD
+    Size testdecoder = decoder->setSize( dsize ); // if decoder is JpegDecoder then testdecoder will be Size( m_scale_denom , m_scale_denom )
+    int scale_denom = max( testdecoder.width , testdecoder.height );
+
+    if( scale_denom > 8 )
+    {
+        if( dsize.width == 0)
+        {
+            dsize.width = mat->cols * dsize.height / mat->rows;
+        }
+        else if( dsize.height == 0)
+        {
+            dsize.height = mat->rows * dsize.width / mat->cols;
+        }
+        resize( *mat, *mat, dsize );
+    }
+    else if( scale_denom > 1 )
+    {
+        resize( *mat, *mat, Size( size.width / scale_denom , size.height / scale_denom ) );
+=======
     if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
     {
         resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ) );
+>>>>>>> origin/patch-3
     }
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
@@ -432,6 +457,30 @@ Mat imread( const String& filename, int flags )
 }
 
 /**
+<<<<<<< HEAD
+ * Read an image and resize it
+ *
+ *  This function merely calls the actual implementation above and returns itself.
+ *
+ * @param[in] filename File to load
+ * @param[in] flags Flags you wish to set.
+ * @param[in] dsize Specified size
+*/
+Mat imread( const String& filename, int flags, Size dsize )
+{
+    /// create the basic container
+    Mat img;
+
+    /// load the data
+    imread_( filename, flags, LOAD_MAT, &img, dsize );
+
+    /// return a reference to the data
+    return img;
+}
+
+/**
+=======
+>>>>>>> origin/patch-3
 * Read a multi-page image
 *
 *  This function merely calls the actual implementation above and returns itself.
