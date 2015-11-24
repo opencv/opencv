@@ -66,7 +66,9 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
     if (ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
         return false;
 #else
-    if(ippiFilterSobelGetBufferSize(roi, ippMskSize3x3, ippNormL2, ipp8u, ipp16s, 1, &size) < 0)
+    if (ippiFilterSobelNegVertBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size) < 0)
+        return false;
+    if (ippiFilterSobelHorizBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size1) < 0)
         return false;
 #endif
 

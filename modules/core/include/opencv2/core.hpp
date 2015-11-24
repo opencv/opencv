@@ -694,6 +694,37 @@ min-max but modify the whole array, you can use norm and Mat::convertTo.
 In case of sparse matrices, only the non-zero values are analyzed and transformed. Because of this,
 the range transformation for sparse matrices is not allowed since it can shift the zero level.
 
+Possible usage with some positive example data:
+@code{.cpp}
+    vector<double> positiveData = { 2.0, 8.0, 10.0 };
+    vector<double> normalizedData_l1, normalizedData_l2, normalizedData_inf, normalizedData_minmax;
+
+    // Norm to probability (total count)
+    // sum(numbers) = 20.0
+    // 2.0      0.1     (2.0/20.0)
+    // 8.0      0.4     (8.0/20.0)
+    // 10.0     0.5     (10.0/20.0)
+    normalize(positiveData, normalizedData_l1, 1.0, 0.0, NORM_L1);
+
+    // Norm to unit vector: ||positiveData|| = 1.0
+    // 2.0      0.15
+    // 8.0      0.62
+    // 10.0     0.77
+    normalize(positiveData, normalizedData_l2, 1.0, 0.0, NORM_L2);
+
+    // Norm to max element
+    // 2.0      0.2     (2.0/10.0)
+    // 8.0      0.8     (8.0/10.0)
+    // 10.0     1.0     (10.0/10.0)
+    normalize(positiveData, normalizedData_inf, 1.0, 0.0, NORM_INF);
+
+    // Norm to range [0.0;1.0]
+    // 2.0      0.0     (shift to left border)
+    // 8.0      0.75    (6.0/8.0)
+    // 10.0     1.0     (shift to right border)
+    normalize(positiveData, normalizedData_minmax, 1.0, 0.0, NORM_MINMAX);
+@endcode
+
 @param src input array.
 @param dst output array of the same size as src .
 @param alpha norm value to normalize to or the lower range boundary in case of the range
