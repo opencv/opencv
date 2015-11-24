@@ -1194,6 +1194,73 @@ TEST(Core_Mat, reshape_1942)
     ASSERT_EQ(1, cn);
 }
 
+static void check_ndim_shape(const cv::Mat &mat, int cn, int ndims, const int *sizes)
+{
+    EXPECT_EQ(mat.channels(), cn);
+    EXPECT_EQ(mat.dims, ndims);
+
+    if (mat.dims != ndims)
+        return;
+
+    for (int i = 0; i < ndims; i++)
+        EXPECT_EQ(mat.size[i], sizes[i]);
+}
+
+TEST(Core_Mat, reshape_ndims_2)
+{
+    const cv::Mat A(8, 16, CV_8UC3);
+    cv::Mat B;
+
+    {
+        int new_sizes_mask[] = { 0, 3, 4, 4 };
+        int new_sizes_real[] = { 8, 3, 4, 4 };
+        ASSERT_NO_THROW(B = A.reshape(1, 4, new_sizes_mask));
+        check_ndim_shape(B, 1, 4, new_sizes_real);
+    }
+    {
+        int new_sizes[] = { 16, 8 };
+        ASSERT_NO_THROW(B = A.reshape(0, 2, new_sizes));
+        check_ndim_shape(B, 3, 2, new_sizes);
+        EXPECT_EQ(B.rows, new_sizes[0]);
+        EXPECT_EQ(B.cols, new_sizes[1]);
+    }
+    {
+        int new_sizes[] = { 2, 5, 1, 3 };
+        cv::Mat A_sliced = A(cv::Range::all(), cv::Range(0, 15));
+        ASSERT_ANY_THROW(A_sliced.reshape(4, 4, new_sizes));
+    }
+}
+
+TEST(Core_Mat, reshape_ndims_4)
+{
+    const int sizes[] = { 2, 6, 4, 12 };
+    const cv::Mat A(4, sizes, CV_8UC3);
+    cv::Mat B;
+
+    {
+        int new_sizes_mask[] = { 0, 864 };
+        int new_sizes_real[] = { 2, 864 };
+        ASSERT_NO_THROW(B = A.reshape(1, 2, new_sizes_mask));
+        check_ndim_shape(B, 1, 2, new_sizes_real);
+        EXPECT_EQ(B.rows, new_sizes_real[0]);
+        EXPECT_EQ(B.cols, new_sizes_real[1]);
+    }
+    {
+        int new_sizes_mask[] = { 4, 0, 0, 2, 3 };
+        int new_sizes_real[] = { 4, 6, 4, 2, 3 };
+        ASSERT_NO_THROW(B = A.reshape(0, 5, new_sizes_mask));
+        check_ndim_shape(B, 3, 5, new_sizes_real);
+    }
+    {
+        int new_sizes_mask[] = { 1, 1 };
+        ASSERT_ANY_THROW(A.reshape(0, 2, new_sizes_mask));
+    }
+    {
+        int new_sizes_mask[] = { 4, 6, 3, 3, 0 };
+        ASSERT_ANY_THROW(A.reshape(0, 5, new_sizes_mask));
+    }
+}
+
 TEST(Core_Mat, push_back)
 {
     Mat a = (Mat_<float>(1,2) << 3.4884074f, 1.4159607f);

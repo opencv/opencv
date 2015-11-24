@@ -189,6 +189,10 @@ namespace cv
              */
             String getWindowName() const;
 
+            /** @brief Returns the Mat screenshot of the current scene.
+            */
+            cv::Mat getScreenshot() const;
+
             /** @brief Saves screenshot of the current scene.
 
             @param file Name of the file.
@@ -223,6 +227,26 @@ namespace cv
             @param force_redraw If true, window renders.
              */
             void spinOnce(int time = 1, bool force_redraw = false);
+
+            /** @brief Create a window in memory instead of on the screen.
+             */
+            void setOffScreenRendering();
+
+            /** @brief Remove all lights from the current scene.
+            */
+            void removeAllLights();
+
+            /** @brief Add a light in the scene.
+
+            @param position The position of the light.
+            @param focalPoint The point at which the light is shining
+            @param color The color of the light
+            @param diffuseColor The diffuse color of the light
+            @param ambientColor The ambient color of the light
+            @param specularColor The specular color of the light
+             */
+            void addLight(Vec3d position, Vec3d focalPoint = Vec3d(0, 0, 0), Color color = Color::white(),
+                          Color diffuseColor = Color::white(), Color ambientColor = Color::black(), Color specularColor = Color::white());
 
             /** @brief Returns whether the event loop has been stopped.
             */

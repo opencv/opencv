@@ -565,20 +565,22 @@ function(ocv_install_target)
 
 #      message(STATUS "Process ${__target} dst=${__dst}...")
       if(DEFINED __dst)
-        if(CMAKE_VERSION VERSION_LESS 2.8.12)
+        # If CMake version is >=3.1.0 or <2.8.12.
+        if(NOT CMAKE_VERSION VERSION_LESS 3.1.0 OR CMAKE_VERSION VERSION_LESS 2.8.12)
           get_target_property(fname ${__target} LOCATION_DEBUG)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Debug)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug)
           endif()
 
           get_target_property(fname ${__target} LOCATION_RELEASE)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Release)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release)
           endif()
         else()
-          # CMake 2.8.12 brokes PDB support in STATIC libraries for MSVS
+          # CMake 2.8.12 broke PDB support for STATIC libraries from MSVS, fix was introduced in CMake 3.1.0.
+          message(WARNING "PDB's are not supported from this version of CMake, use CMake version later then 3.1.0 or before 2.8.12.")
         endif()
       endif()
     endif()
@@ -908,4 +910,33 @@ function(ocv_download)
   endif()
 
   set(DOWNLOAD_PACKAGE_LOCATION ${DOWNLOAD_TARGET} PARENT_SCOPE)
+endfunction()
+
+function(ocv_add_test_from_target test_name test_kind the_target)
+  if(CMAKE_VERSION VERSION_GREATER "2.8" AND NOT CMAKE_CROSSCOMPILING)
+    if(NOT "${test_kind}" MATCHES "^(Accuracy|Performance|Sanity)$")
+      message(FATAL_ERROR "Unknown test kind : ${test_kind}")
+    endif()
+    if(NOT TARGET "${the_target}")
+      message(FATAL_ERROR "${the_target} is not a CMake target")
+    endif()
+
+    string(TOLOWER "${test_kind}" test_kind_lower)
+    set(test_report_dir "${CMAKE_BINARY_DIR}/test-reports/${test_kind_lower}")
+    file(MAKE_DIRECTORY "${test_report_dir}")
+
+    add_test(NAME "${test_name}"
+      COMMAND "${the_target}"
+              "--gtest_output=xml:${the_target}.xml"
+              ${ARGN})
+
+    set_tests_properties("${test_name}" PROPERTIES
+      LABELS "${OPENCV_MODULE_${the_module}_LABEL};${test_kind}"
+      WORKING_DIRECTORY "${test_report_dir}")
+
+    if(OPENCV_TEST_DATA_PATH)
+      set_tests_properties("${test_name}" PROPERTIES
+        ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
+    endif()
+  endif()
 endfunction()

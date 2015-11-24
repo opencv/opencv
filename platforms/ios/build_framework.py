@@ -25,141 +25,165 @@ The script should handle minor OpenCV updates efficiently
 However, opencv2.framework directory is erased and recreated on each run.
 """
 
-import glob, re, os, os.path, shutil, string, sys, exceptions, subprocess, argparse
+from __future__ import print_function
+import glob, re, os, os.path, shutil, string, sys, argparse, traceback
+from subprocess import check_call, check_output, CalledProcessError
 
-opencv_contrib_path = None
+def execute(cmd, cwd = None):
+    print("Executing: %s in %s" % (cmd, cwd), file=sys.stderr)
+    retcode = check_call(cmd, cwd = cwd)
+    if retcode != 0:
+        raise Exception("Child returned:", retcode)
 
-def execute(cmd):
-    try:
-        print >>sys.stderr, "Executing:", cmd
-        retcode = subprocess.call(cmd, shell=True)
-        if retcode < 0:
-            raise Exception("Child was terminated by signal:", -retcode)
-        elif retcode > 0:
-            raise Exception("Child returned:", retcode)
-    except OSError as e:
-        raise Exception("Execution failed:", e)
+def getXCodeMajor():
+    ret = check_output(["xcodebuild", "-version"])
+    m = re.match(r'XCode\s+(\d)\..*', ret, flags=re.IGNORECASE)
+    if m:
+        return int(m.group(1))
+    return 0
 
-def build_opencv(srcroot, buildroot, target, arch):
-    "builds OpenCV for device or simulator"
+class Builder:
+    def __init__(self, opencv, contrib):
+        self.opencv = os.path.abspath(opencv)
+        self.contrib = None
+        if contrib:
+            modpath = os.path.join(contrib, "modules")
+            if os.path.isdir(modpath):
+                self.contrib = os.path.abspath(modpath)
+            else:
+                print("Note: contrib repository is bad - modules subfolder not found", file=sys.stderr)
+        self.targets = [
+            ("armv7", "iPhoneOS"),
+            ("armv7s", "iPhoneOS"),
+            ("arm64", "iPhoneOS"),
+            ("i386", "iPhoneSimulator"),
+            ("x86_64", "iPhoneSimulator")
+       ]
 
-    builddir = os.path.join(buildroot, target + '-' + arch)
-    if not os.path.isdir(builddir):
-        os.makedirs(builddir)
-    currdir = os.getcwd()
-    os.chdir(builddir)
-    # for some reason, if you do not specify CMAKE_BUILD_TYPE, it puts libs to "RELEASE" rather than "Release"
-    cmakeargs = ("-GXcode " +
-                "-DCMAKE_BUILD_TYPE=Release " +
-                "-DCMAKE_TOOLCHAIN_FILE=%s/platforms/ios/cmake/Toolchains/Toolchain-%s_Xcode.cmake " +
-                "-DCMAKE_C_FLAGS=\"-Wno-implicit-function-declaration\" " +
-                "-DCMAKE_INSTALL_PREFIX=install") % (srcroot, target)
+    def getBD(self, parent, t):
+        res = os.path.join(parent, '%s-%s' % t)
+        if not os.path.isdir(res):
+            os.makedirs(res)
+        return os.path.abspath(res)
 
-    if arch.startswith("armv"):
-        cmakeargs += " -DENABLE_NEON=ON"
+    def build(self, outdir):
+        outdir = os.path.abspath(outdir)
+        if not os.path.isdir(outdir):
+            os.makedirs(outdir)
+        mainWD = os.path.join(outdir, "build")
+        dirs = []
 
-    if opencv_contrib_path is not None:
-        cmakeargs += " -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON -DOPENCV_EXTRA_MODULES_PATH=%s -DBUILD_opencv_contrib_world=ON" % opencv_contrib_path
-        build_target = "opencv_contrib_world"
-        libname = "libopencv_contrib_world.a"
-    else:
-        cmakeargs += " -DBUILD_opencv_world=ON"
-        build_target = "ALL_BUILD"
-        libname = "libopencv_world.a"
+        xcode_ver = getXCodeMajor()
 
-    # if cmake cache exists, just rerun cmake to update OpenCV.xcodeproj if necessary
-    if os.path.isfile(os.path.join(builddir, "CMakeCache.txt")):
-        execute("cmake %s ." % (cmakeargs,))
-    else:
-        execute("cmake %s %s" % (cmakeargs, srcroot))
+        for t in self.targets:
+            mainBD = self.getBD(mainWD, t)
+            dirs.append(mainBD)
+            cmake_flags = []
+            if self.contrib:
+                cmake_flags.append("-DOPENCV_EXTRA_MODULES_PATH=%s" % self.contrib)
+            if xcode_ver >= 7 and not "Simulator" in t[1]:
+                cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
+                cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
+            self.buildOne(t[0], t[1], mainBD, cmake_flags)
+            self.mergeLibs(mainBD)
+        self.makeFramework(outdir, dirs)
 
-    for wlib in [builddir + "/modules/world/UninstalledProducts/" + libname,
-                 builddir + "/lib/Release/" + libname]:
-        if os.path.isfile(wlib):
-            os.remove(wlib)
+    def buildOne(self, arch, target, builddir, cmakeargs = []):
+        # Run cmake
+        toolchain = os.path.join(self.opencv, "platforms", "ios", "cmake", "Toolchains", "Toolchain-%s_Xcode.cmake" % target)
+        cmakecmd = [
+            "cmake",
+            "-GXcode",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain,
+            "-DCMAKE_INSTALL_PREFIX=install",
+        ]
+        if arch.startswith("armv"):
+            cmakecmd.append("-DENABLE_NEON=ON")
+        cmakecmd.append(self.opencv)
+        cmakecmd.extend(cmakeargs)
+        execute(cmakecmd, cwd = builddir)
+        # Clean and build
+        cleanlist = []
+        cleanlist.extend(glob.glob(os.path.join(builddir, "lib", "Release", "*.a")))
+        cleanlist.extend(glob.glob(os.path.join(builddir, "modules", "*", "UninstalledProducts", "*.a")))
+        print("Cleaning files:\n\t%s" % "\n\t".join(cleanlist), file=sys.stderr)
+        for f in cleanlist:
+            if os.path.isfile(f):
+                os.remove(f)
+        buildcmd = [
+            "xcodebuild",
+            "IPHONEOS_DEPLOYMENT_TARGET=6.0",
+            "ARCHS=%s" % arch,
+            "-sdk", target.lower(),
+            "-configuration", "Release",
+            "-parallelizeTargets",
+            "-jobs", "8",
+        ]
+        execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir)
+        execute(buildcmd + ["-target", "install", "install"], cwd = builddir)
 
-    execute("xcodebuild IPHONEOS_DEPLOYMENT_TARGET=6.0 -parallelizeTargets ARCHS=%s -jobs 8 -sdk %s -configuration Release -target %s" % (arch, target.lower(), build_target))
-    execute("xcodebuild IPHONEOS_DEPLOYMENT_TARGET=6.0 ARCHS=%s -sdk %s -configuration Release -target install install" % (arch, target.lower()))
-    os.chdir(currdir)
+    def mergeLibs(self, builddir):
+        res = os.path.join(builddir, "lib", "Release", "libopencv_merged.a")
+        libs = glob.glob(os.path.join(builddir, "lib", "Release", "*.a"))
+        libs3 = glob.glob(os.path.join(builddir, "3rdparty", "lib", "Release", "*.a"))
+        print("Merging libraries:\n\t%s" % "\n\t".join(libs + libs3), file=sys.stderr)
+        execute(["libtool", "-static", "-o", res] + libs + libs3)
 
-def put_framework_together(srcroot, dstroot):
-    "constructs the framework directory after all the targets are built"
+    def makeFramework(self, outdir, builddirs):
+        name = "opencv2"
+        libname = "libopencv_merged.a"
 
-    name = "opencv2" if opencv_contrib_path is None else "opencv2_contrib"
-    libname = "libopencv_world.a" if opencv_contrib_path is None else "libopencv_contrib_world.a"
+        # set the current dir to the dst root
+        framework_dir = os.path.join(outdir, "%s.framework" % name)
+        if os.path.isdir(framework_dir):
+            shutil.rmtree(framework_dir)
+        os.makedirs(framework_dir)
 
-    # find the list of targets (basically, ["iPhoneOS", "iPhoneSimulator"])
-    targetlist = glob.glob(os.path.join(dstroot, "build", "*"))
-    targetlist = [os.path.basename(t) for t in targetlist]
+        dstdir = os.path.join(framework_dir, "Versions", "A")
 
-    # set the current dir to the dst root
-    currdir = os.getcwd()
-    framework_dir = dstroot + "/%s.framework" % name
-    if os.path.isdir(framework_dir):
-        shutil.rmtree(framework_dir)
-    os.makedirs(framework_dir)
-    os.chdir(framework_dir)
+        # copy headers from one of build folders
+        shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(dstdir, "Headers"))
 
-    # form the directory tree
-    dstdir = "Versions/A"
-    os.makedirs(dstdir + "/Resources")
+        # make universal static lib
+        libs = [os.path.join(d, "lib", "Release", libname) for d in builddirs]
+        lipocmd = ["lipo", "-create"]
+        lipocmd.extend(libs)
+        lipocmd.extend(["-o", os.path.join(dstdir, name)])
+        print("Creating universal library from:\n\t%s" % "\n\t".join(libs), file=sys.stderr)
+        execute(lipocmd)
 
-    tdir0 = "../build/" + targetlist[0]
-    # copy headers
-    shutil.copytree(tdir0 + "/install/include/opencv2", dstdir + "/Headers")
+        # copy Info.plist
+        resdir = os.path.join(dstdir, "Resources")
+        os.makedirs(resdir)
+        shutil.copyfile(os.path.join(builddirs[0], "ios", "Info.plist"), os.path.join(resdir, "Info.plist"))
 
-    # make universal static lib
-    wlist = " ".join(["../build/" + t + "/lib/Release/" + libname for t in targetlist])
-    execute("lipo -create " + wlist + " -o " + dstdir + "/%s" % name)
-
-    # copy Info.plist
-    shutil.copyfile(tdir0 + "/ios/Info.plist", dstdir + "/Resources/Info.plist")
-
-    # make symbolic links
-    os.symlink("A", "Versions/Current")
-    os.symlink("Versions/Current/Headers", "Headers")
-    os.symlink("Versions/Current/Resources", "Resources")
-    os.symlink("Versions/Current/%s" % name, name)
-
-
-def build_framework(srcroot, dstroot):
-    "main function to do all the work"
-
-    targets = [("armv7", "iPhoneOS"),
-               ("armv7s", "iPhoneOS"),
-               ("arm64", "iPhoneOS"),
-               ("i386", "iPhoneSimulator"),
-               ("x86_64", "iPhoneSimulator")]
-    for t in targets:
-        build_opencv(srcroot, os.path.join(dstroot, "build"), t[1], t[0])
-
-    put_framework_together(srcroot, dstroot)
-
+        # make symbolic links
+        links = [
+            (["A"], ["Versions", "Current"]),
+            (["Versions", "Current", "Headers"], ["Headers"]),
+            (["Versions", "Current", "Resources"], ["Resources"]),
+            (["Versions", "Current", name], [name])
+        ]
+        for l in links:
+            s = os.path.join(*l[0])
+            d = os.path.join(framework_dir, *l[1])
+            os.symlink(s, d)
 
 if __name__ == "__main__":
+    folder = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
     parser = argparse.ArgumentParser(description='The script builds OpenCV.framework for iOS.')
-    parser.add_argument('outputdir', nargs=1, help='folder to put built framework')
-    parser.add_argument('--contrib', help="folder with opencv_contrib repository")
+    parser.add_argument('out', metavar='OUTDIR', help='folder to put built framework')
+    parser.add_argument('--opencv', metavar='DIR', default=folder, help='folder with opencv repository (default is "../.." relative to script location)')
+    parser.add_argument('--contrib', metavar='DIR', default=None, help='folder with opencv_contrib repository (default is "None" - build only main framework)')
     args = parser.parse_args()
 
-    # path to OpenCV main repository - hardcoded ../..
-    opencv_path = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
-    print "OpenCV:", opencv_path
-
-    # path to OpenCV_contrib repository, can be empty - global variable
-    if hasattr(args, "contrib") and args.contrib is not None:
-        if os.path.isdir(args.contrib + "/modules"):
-            opencv_contrib_path = os.path.abspath(args.contrib + "/modules")
-            print "Contrib:", opencv_contrib_path
-        else:
-            print "Note: contrib repository is bad: modules subfolder not found"
-
-    # result path - folder where framework will be located
-    output_path = os.path.abspath(args.outputdir[0])
-    print "Output:", output_path
-
+    b = Builder(args.opencv, args.contrib)
     try:
-        build_framework(opencv_path, output_path)
+        b.build(args.out)
     except Exception as e:
-        print >>sys.stderr, e
+        print("="*60, file=sys.stderr)
+        print("ERROR: %s" % e, file=sys.stderr)
+        print("="*60, file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         sys.exit(1)

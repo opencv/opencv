@@ -63,7 +63,7 @@ int main(int argc, const char* argv[])
         "{ i iterations | 180       | Iteration count }"
         "{ t temporal   | 4         | Radius of the temporal search area }"
         "{ f flow       | farneback | Optical flow algorithm (farneback, simple, tvl1, brox, pyrlk) }"
-        "{ g            | false     | CPU as default device, cuda for CUDA }"
+        "{ g gpu        | false     | CPU as default device, cuda for CUDA }"
         "{ h help       | false     | Print help message }"
     );
 

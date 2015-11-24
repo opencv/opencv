@@ -636,9 +636,18 @@ public:
                 vtypes[ninputvars] = VAR_CATEGORICAL;
         }
 
-        Mat(nsamples, noutputvars, CV_32F, &allresponses[0]).copyTo(tempResponses);
-        setData(tempSamples, ROW_SAMPLE, tempResponses, noArray(), noArray(),
-                noArray(), Mat(vtypes).clone(), tempMissing);
+        //If there are responses in the csv file, save them. If not, responses matrix will contain just zeros
+        if (noutputvars != 0){
+            Mat(nsamples, noutputvars, CV_32F, &allresponses[0]).copyTo(tempResponses);
+            setData(tempSamples, ROW_SAMPLE, tempResponses, noArray(), noArray(),
+                    noArray(), Mat(vtypes).clone(), tempMissing);
+        }
+        else{
+            Mat zero_mat(nsamples, 1, CV_32F, Scalar(0));
+            zero_mat.copyTo(tempResponses);
+            setData(tempSamples, ROW_SAMPLE, tempResponses, noArray(), noArray(),
+                    noArray(), noArray(), tempMissing);
+        }
         bool ok = !samples.empty();
         if(ok)
             std::swap(tempNameMap, nameMap);

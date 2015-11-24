@@ -519,7 +519,7 @@ The function LUT fills the output array with values from the look-up table. Indi
 are taken from the input array. That is, the function processes each element of src as follows:
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
-\f[d =  \fork{0}{if \texttt{src} has depth \texttt{CV\_8U}}{128}{if \texttt{src} has depth \texttt{CV\_8S}}\f]
+\f[d =  \fork{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}\f]
 @param src input array of 8-bit elements.
 @param lut look-up table of 256 elements; in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
@@ -617,21 +617,21 @@ relative difference norm.
 The functions norm calculate an absolute norm of src1 (when there is no
 src2 ):
 
-\f[norm =  \forkthree{\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM\_INF}\) }
-{ \| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM\_L1}\) }
-{ \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM\_L2}\) }\f]
+\f[norm =  \forkthree{\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+{ \| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
+{ \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
 
 or an absolute or relative difference norm if src2 is there:
 
-\f[norm =  \forkthree{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM\_INF}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM\_L1}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM\_L2}\) }\f]
+\f[norm =  \forkthree{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+{ \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
+{ \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
 
 or
 
-\f[norm =  \forkthree{\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM\_RELATIVE\_INF}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM\_RELATIVE\_L1}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM\_RELATIVE\_L2}\) }\f]
+\f[norm =  \forkthree{\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_INF}\) }
+{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L1}\) }
+{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L2}\) }\f]
 
 The functions norm return the calculated norm.
 
@@ -845,32 +845,32 @@ CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 /** @brief Copies specified channels from input arrays to the specified channels of
 output arrays.
 
-The functions mixChannels provide an advanced mechanism for shuffling image channels.
+The function cv::mixChannels provide an advanced mechanism for shuffling image channels.
 
-split and merge and some forms of cvtColor are partial cases of mixChannels .
+cv::split and cv::merge and some forms of cv::cvtColor are partial cases of cv::mixChannels .
 
-In the example below, the code splits a 4-channel RGBA image into a 3-channel BGR (with R and B
+In the example below, the code splits a 4-channel BGRA image into a 3-channel BGR (with B and R
 channels swapped) and a separate alpha-channel image:
 @code{.cpp}
-    Mat rgba( 100, 100, CV_8UC4, Scalar(1,2,3,4) );
-    Mat bgr( rgba.rows, rgba.cols, CV_8UC3 );
-    Mat alpha( rgba.rows, rgba.cols, CV_8UC1 );
+    Mat bgra( 100, 100, CV_8UC4, Scalar(255,0,0,255) );
+    Mat bgr( bgra.rows, bgra.cols, CV_8UC3 );
+    Mat alpha( bgra.rows, bgra.cols, CV_8UC1 );
 
     // forming an array of matrices is a quite efficient operation,
     // because the matrix data is not copied, only the headers
     Mat out[] = { bgr, alpha };
-    // rgba[0] -> bgr[2], rgba[1] -> bgr[1],
-    // rgba[2] -> bgr[0], rgba[3] -> alpha[0]
+    // bgra[0] -> bgr[2], bgra[1] -> bgr[1],
+    // bgra[2] -> bgr[0], bgra[3] -> alpha[0]
     int from_to[] = { 0,2, 1,1, 2,0, 3,3 };
-    mixChannels( &rgba, 1, out, 2, from_to, 4 );
+    mixChannels( &bgra, 1, out, 2, from_to, 4 );
 @endcode
 @note Unlike many other new-style C++ functions in OpenCV (see the introduction section and
-Mat::create ), mixChannels requires the output arrays to be pre-allocated before calling the
+Mat::create ), cv::mixChannels requires the output arrays to be pre-allocated before calling the
 function.
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array of matrices; all of the matrices must have the same size and the
 same depth.
 @param nsrcs number of matrices in src.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param ndsts number of matrices in dst.
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
@@ -880,16 +880,16 @@ src[0].channels()-1, the second input image channels are indexed from src[0].cha
 src[0].channels() + src[1].channels()-1, and so on, the same scheme is used for the output image
 channels; as a special case, when fromTo[k\*2] is negative, the corresponding output channel is
 filled with zero .
-@param npairs number of index pairs in fromTo.
-@sa split, merge, cvtColor
+@param npairs number of index pairs in @c fromTo.
+@sa cv::split, cv::merge, cv::cvtColor
 */
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
 
 /** @overload
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
@@ -904,9 +904,9 @@ CV_EXPORTS void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst
                             const int* fromTo, size_t npairs);
 
 /** @overload
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
@@ -1345,7 +1345,7 @@ CV_EXPORTS_W void sqrt(InputArray src, OutputArray dst);
 /** @brief Raises every array element to a power.
 
 The function pow raises every element of the input array to power :
-\f[\texttt{dst} (I) =  \fork{\texttt{src}(I)^power}{if \texttt{power} is integer}{|\texttt{src}(I)|^power}{otherwise}\f]
+\f[\texttt{dst} (I) =  \fork{\texttt{src}(I)^{power}}{if \(\texttt{power}\) is integer}{|\texttt{src}(I)|^{power}}{otherwise}\f]
 
 So, for a non-integer power exponent, the absolute values of input array
 elements are used. However, it is possible to get true values for
@@ -2381,8 +2381,7 @@ class CV_EXPORTS LDA
 {
 public:
     /** @brief constructor
-    Initializes a LDA with num_components (default 0) and specifies how
-    samples are aligned (default dataAsRow=true).
+    Initializes a LDA with num_components (default 0).
     */
     explicit LDA(int num_components = 0);
 
@@ -2413,15 +2412,17 @@ public:
       */
     ~LDA();
 
-    /** Compute the discriminants for data in src and labels.
+    /** Compute the discriminants for data in src (row aligned) and labels.
       */
     void compute(InputArrayOfArrays src, InputArray labels);
 
     /** Projects samples into the LDA subspace.
+        src may be one or more row aligned samples.
       */
     Mat project(InputArray src);
 
     /** Reconstructs projections from the LDA subspace.
+        src may be one or more row aligned projections.
       */
     Mat reconstruct(InputArray src);
 
@@ -2437,11 +2438,10 @@ public:
     static Mat subspaceReconstruct(InputArray W, InputArray mean, InputArray src);
 
 protected:
-    bool _dataAsRow;
+    bool _dataAsRow; // unused, but needed for 3.0 ABI compatibility.
     int _num_components;
     Mat _eigenvectors;
     Mat _eigenvalues;
-
     void lda(InputArrayOfArrays src, InputArray labels);
 };
 

@@ -1040,7 +1040,7 @@ public:
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
 struct getNeighbors { int operator ()(const CvAvgComp& e) const { return e.neighbors; } };
 
-
+#ifdef HAVE_OPENCL
 bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<float>& scales,
                                                             std::vector<Rect>& candidates )
 {
@@ -1051,7 +1051,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     if( localsz.area() == 0 )
         return false;
     Size lbufSize = featureEvaluator->getLocalBufSize();
-    size_t localsize[] = { localsz.width, localsz.height };
+    size_t localsize[] = { (size_t)localsz.width, (size_t)localsz.height };
     const int grp_per_CU = 12;
     size_t globalsize[] = { grp_per_CU*ocl::Device::getDefault().maxComputeUnits()*localsize[0], localsize[1] };
     bool ok = false;
@@ -1171,6 +1171,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     }
     return ok;
 }
+#endif
 
 bool CascadeClassifierImpl::isOldFormatCascade() const
 {
@@ -1278,10 +1279,12 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
     if( scales.size() == 0 || !featureEvaluator->setImage(gray, scales) )
         return;
 
+#ifdef HAVE_OPENCL
     // OpenCL code
     CV_OCL_RUN(use_ocl, ocl_detectMultiScaleNoGrouping( scales, candidates ))
 
     tryOpenCL = false;
+#endif
 
     // CPU code
     featureEvaluator->getMats();
@@ -1527,9 +1530,11 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
 
 bool CascadeClassifierImpl::read_(const FileNode& root)
 {
+#ifdef HAVE_OPENCL
     tryOpenCL = true;
     haarKernel = ocl::Kernel();
     lbpKernel = ocl::Kernel();
+#endif
     ustages.release();
     unodes.release();
     uleaves.release();

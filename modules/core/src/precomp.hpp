@@ -50,10 +50,13 @@
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/opengl.hpp"
+#include "opencv2/core/va_intel.hpp"
 
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/private.cuda.hpp"
+#ifdef HAVE_OPENCL
 #include "opencv2/core/ocl.hpp"
+#endif
 
 #include "opencv2/hal.hpp"
 
@@ -205,7 +208,7 @@ extern volatile bool USE_AVX2;
 
 enum { BLOCK_SIZE = 1024 };
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+#if defined HAVE_IPP && (IPP_VERSION_X100 >= 700)
 #define ARITHM_USE_IPP 1
 #else
 #define ARITHM_USE_IPP 0
@@ -261,7 +264,11 @@ struct ImplCollector
 
 struct CoreTLSData
 {
-    CoreTLSData() : device(0), useOpenCL(-1), useIPP(-1)
+    CoreTLSData() :
+//#ifdef HAVE_OPENCL
+        device(0), useOpenCL(-1),
+//#endif
+        useIPP(-1)
     {
 #ifdef HAVE_TEGRA_OPTIMIZATION
         useTegra = -1;
@@ -269,9 +276,11 @@ struct CoreTLSData
     }
 
     RNG rng;
+//#ifdef HAVE_OPENCL
     int device;
     ocl::Queue oclQueue;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
+//#endif
     int useIPP; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #ifdef HAVE_TEGRA_OPTIMIZATION
     int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized

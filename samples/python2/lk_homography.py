@@ -20,6 +20,9 @@ SPACE - start tracking
 r     - toggle RANSAC
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 import video
@@ -108,7 +111,7 @@ def main():
     except:
         video_src = 0
 
-    print __doc__
+    print(__doc__)
     App(video_src).run()
     cv2.destroyAllWindows()
 

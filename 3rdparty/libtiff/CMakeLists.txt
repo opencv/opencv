@@ -93,6 +93,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4100 /wd4127 /wd4311 /wd4701 /wd
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4267 /wd4305 /wd4306) # vs2008 Win64
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4703) # vs2012
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4456 /wd4457 /wd4312) # vs2015
 
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4267 /wd4244 /wd4018)
 
@@ -107,6 +108,8 @@ set_target_properties(${TIFF_LIBRARY}
     PROPERTIES
     OUTPUT_NAME "${TIFF_LIBRARY}"
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    COMPILE_PDB_NAME ${TIFF_LIBRARY}
+    COMPILE_PDB_NAME_DEBUG "${TIFF_LIBRARY}${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
     )
 

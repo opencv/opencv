@@ -30,6 +30,9 @@ Examples:
 [1] http://en.wikipedia.org/wiki/Wiener_deconvolution
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -63,7 +66,7 @@ def defocus_kernel(d, sz=65):
 
 
 if __name__ == '__main__':
-    print __doc__
+    print(__doc__)
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['circle', 'angle=', 'd=', 'snr='])
     opts = dict(opts)
@@ -76,7 +79,7 @@ if __name__ == '__main__':
 
     img = cv2.imread(fn, 0)
     if img is None:
-        print 'Failed to load fn1:', fn1
+        print('Failed to load fn1:', fn1)
         sys.exit(1)
 
     img = np.float32(img)/255.0

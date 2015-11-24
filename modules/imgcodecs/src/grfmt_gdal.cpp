@@ -107,6 +107,7 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             if( channels == 1 ){ return CV_8UC1; }
             if( channels == 3 ){ return CV_8UC3; }
             if( channels == 4 ){ return CV_8UC4; }
+            else { return CV_8UC(channels); }
             return -1;
 
         /// UInt16
@@ -114,6 +115,7 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             if( channels == 1 ){ return CV_16UC1; }
             if( channels == 3 ){ return CV_16UC3; }
             if( channels == 4 ){ return CV_16UC4; }
+            else { return CV_16UC(channels); }
             return -1;
 
         /// Int16
@@ -121,6 +123,7 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             if( channels == 1 ){ return CV_16SC1; }
             if( channels == 3 ){ return CV_16SC3; }
             if( channels == 4 ){ return CV_16SC4; }
+            else { return CV_16SC(channels); }
             return -1;
 
         /// UInt32
@@ -129,6 +132,21 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             if( channels == 1 ){ return CV_32SC1; }
             if( channels == 3 ){ return CV_32SC3; }
             if( channels == 4 ){ return CV_32SC4; }
+            else { return CV_32SC(channels); }
+            return -1;
+
+        case GDT_Float32:
+            if( channels == 1 ){ return CV_32FC1; }
+            if( channels == 3 ){ return CV_32FC3; }
+            if( channels == 4 ){ return CV_32FC4; }
+            else { return CV_32FC(channels); }
+            return -1;
+
+        case GDT_Float64:
+            if( channels == 1 ){ return CV_64FC1; }
+            if( channels == 3 ){ return CV_64FC3; }
+            if( channels == 4 ){ return CV_64FC4; }
+            else { return CV_64FC(channels); }
             return -1;
 
         default:
@@ -203,6 +221,13 @@ double range_cast( const GDALDataType& gdalType,
         return value;
     }
 
+    // float32 -> float32
+    // float64 -> float64
+    if( (gdalType == GDT_Float32 || gdalType == GDT_Float64) &&
+        ( cvDepth == CV_32F     ||  cvDepth == CV_64F   )){
+        return value;
+    }
+
     std::cout << GDALGetDataTypeName( gdalType ) << std::endl;
     std::cout << "warning: unknown range cast requested." << std::endl;
     return (value);
@@ -225,58 +250,58 @@ void write_pixel( const double& pixelValue,
 
     // input: 1 channel, output: 1 channel
     if( gdalChannels == 1 && image.channels() == 1 ){
-        if( image.depth() == CV_8U ){       image.at<uchar>(row,col)          = newValue; }
-        else if( image.depth() == CV_16U ){ image.at<unsigned short>(row,col) = newValue; }
-        else if( image.depth() == CV_16S ){ image.at<short>(row,col)          = newValue; }
-        else if( image.depth() == CV_32S ){ image.at<int>(row,col)            = newValue; }
-        else if( image.depth() == CV_32F ){ image.at<float>(row,col)          = newValue; }
-        else if( image.depth() == CV_64F ){ image.at<double>(row,col)         = newValue; }
+        if( image.depth() == CV_8U ){       image.ptr<uchar>(row)[col]          = newValue; }
+        else if( image.depth() == CV_16U ){ image.ptr<unsigned short>(row)[col] = newValue; }
+        else if( image.depth() == CV_16S ){ image.ptr<short>(row)[col]          = newValue; }
+        else if( image.depth() == CV_32S ){ image.ptr<int>(row)[col]            = newValue; }
+        else if( image.depth() == CV_32F ){ image.ptr<float>(row)[col]          = newValue; }
+        else if( image.depth() == CV_64F ){ image.ptr<double>(row)[col]         = newValue; }
         else{ throw std::runtime_error("Unknown image depth, gdal: 1, img: 1"); }
     }
 
     // input: 1 channel, output: 3 channel
     else if( gdalChannels == 1 && image.channels() == 3 ){
-        if( image.depth() == CV_8U ){   image.at<Vec3b>(row,col) = Vec3b(newValue,newValue,newValue); }
-        else if( image.depth() == CV_16U ){  image.at<Vec3s>(row,col) = Vec3s(newValue,newValue,newValue); }
-        else if( image.depth() == CV_16S ){  image.at<Vec3s>(row,col) = Vec3s(newValue,newValue,newValue); }
-        else if( image.depth() == CV_32S ){  image.at<Vec3i>(row,col) = Vec3i(newValue,newValue,newValue); }
-        else if( image.depth() == CV_32F ){  image.at<Vec3f>(row,col) = Vec3f(newValue,newValue,newValue); }
-        else if( image.depth() == CV_64F ){  image.at<Vec3d>(row,col) = Vec3d(newValue,newValue,newValue); }
+        if( image.depth() == CV_8U ){        image.ptr<Vec3b>(row)[col] = Vec3b(newValue,newValue,newValue); }
+        else if( image.depth() == CV_16U ){  image.ptr<Vec3s>(row)[col] = Vec3s(newValue,newValue,newValue); }
+        else if( image.depth() == CV_16S ){  image.ptr<Vec3s>(row)[col] = Vec3s(newValue,newValue,newValue); }
+        else if( image.depth() == CV_32S ){  image.ptr<Vec3i>(row)[col] = Vec3i(newValue,newValue,newValue); }
+        else if( image.depth() == CV_32F ){  image.ptr<Vec3f>(row)[col] = Vec3f(newValue,newValue,newValue); }
+        else if( image.depth() == CV_64F ){  image.ptr<Vec3d>(row)[col] = Vec3d(newValue,newValue,newValue); }
         else{                          throw std::runtime_error("Unknown image depth, gdal:1, img: 3"); }
     }
 
     // input: 3 channel, output: 1 channel
     else if( gdalChannels == 3 && image.channels() == 1 ){
-        if( image.depth() == CV_8U ){   image.at<uchar>(row,col) += (newValue/3.0); }
+        if( image.depth() == CV_8U ){   image.ptr<uchar>(row)[col] += (newValue/3.0); }
         else{ throw std::runtime_error("Unknown image depth, gdal:3, img: 1"); }
     }
 
     // input: 4 channel, output: 1 channel
     else if( gdalChannels == 4 && image.channels() == 1 ){
-        if( image.depth() == CV_8U ){   image.at<uchar>(row,col) = newValue;  }
+        if( image.depth() == CV_8U ){   image.ptr<uchar>(row)[col] = newValue;  }
         else{ throw std::runtime_error("Unknown image depth, gdal: 4, image: 1"); }
     }
 
     // input: 3 channel, output: 3 channel
     else if( gdalChannels == 3 && image.channels() == 3 ){
         if( image.depth() == CV_8U ){  image.at<Vec3b>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_16U ){  image.at<Vec3s>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_16S ){  image.at<Vec3s>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_32S ){  image.at<Vec3i>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_32F ){  image.at<Vec3f>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_64F ){  image.at<Vec3d>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_16U ){  image.ptr<Vec3s>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_16S ){  image.ptr<Vec3s>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_32S ){  image.ptr<Vec3i>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_32F ){  image.ptr<Vec3f>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_64F ){  image.ptr<Vec3d>(row,col)[channel] = newValue;  }
         else{ throw std::runtime_error("Unknown image depth, gdal: 3, image: 3"); }
     }
 
     // input: 4 channel, output: 3 channel
     else if( gdalChannels == 4 && image.channels() == 3 ){
         if( channel >= 4 ){ return; }
-        else if( image.depth() == CV_8U  && channel < 4  ){  image.at<Vec3b>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_16U && channel < 4 ){  image.at<Vec3s>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_16S && channel < 4 ){  image.at<Vec3s>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_32S && channel < 4 ){  image.at<Vec3i>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_32F && channel < 4 ){  image.at<Vec3f>(row,col)[channel] = newValue;  }
-        else if( image.depth() == CV_64F && channel < 4 ){  image.at<Vec3d>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_8U  && channel < 4 ){  image.ptr<Vec3b>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_16U && channel < 4 ){  image.ptr<Vec3s>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_16S && channel < 4 ){  image.ptr<Vec3s>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_32S && channel < 4 ){  image.ptr<Vec3i>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_32F && channel < 4 ){  image.ptr<Vec3f>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_64F && channel < 4 ){  image.ptr<Vec3d>(row,col)[channel] = newValue;  }
         else{ throw std::runtime_error("Unknown image depth, gdal: 4, image: 3"); }
     }
 
@@ -286,6 +311,16 @@ void write_pixel( const double& pixelValue,
         else{ throw std::runtime_error("Unknown image depth, gdal: 4, image: 4"); }
     }
 
+    // input: > 4 channels, output: > 4 channels
+    else if( gdalChannels > 4 && image.channels() > 4 ){
+        if( image.depth() == CV_8U ){       image.ptr<uchar>(row,col)[channel]          = newValue; }
+        else if( image.depth() == CV_16U ){ image.ptr<unsigned short>(row,col)[channel] = newValue; }
+        else if( image.depth() == CV_16S ){ image.ptr<short>(row,col)[channel]          = newValue; }
+        else if( image.depth() == CV_32S ){ image.ptr<int>(row,col)[channel]            = newValue; }
+        else if( image.depth() == CV_32F ){ image.ptr<float>(row,col)[channel]          = newValue; }
+        else if( image.depth() == CV_64F ){ image.ptr<double>(row,col)[channel]         = newValue; }
+        else{ throw std::runtime_error("Unknown image depth, gdal: N, img: N"); }
+    }
     // otherwise, throw an error
     else{
         throw std::runtime_error("error: can't convert types.");
@@ -362,6 +397,7 @@ bool GdalDecoder::readData( Mat& img ){
     // iterate over each raster band
     // note that OpenCV does bgr rather than rgb
     int nChannels = m_dataset->GetRasterCount();
+
     GDALColorTable* gdalColorTable = NULL;
     if( m_dataset->GetRasterBand(1)->GetColorTable() != NULL ){
         gdalColorTable = m_dataset->GetRasterBand(1)->GetColorTable();

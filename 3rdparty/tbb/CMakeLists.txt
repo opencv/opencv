@@ -212,7 +212,13 @@ else()
 endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
-string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+# filter out flags that are not handled well by the TBB code
+foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+  string(REPLACE "-Werror=non-virtual-dtor" "" ${var} "${${var}}")
+  string(REPLACE "-fvisibility=hidden" "" ${var} "${${var}}")
+  string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
+endforeach()
 
 if (WIN32)
   set(tbb_debug_postfix "_debug") # to fit pragmas in _windef.h inside TBB
@@ -223,6 +229,8 @@ endif()
 set_target_properties(tbb
   PROPERTIES OUTPUT_NAME tbb
   DEBUG_POSTFIX "${tbb_debug_postfix}"
+  COMPILE_PDB_NAME tbb
+  COMPILE_PDB_NAME_DEBUG "tbb${OPENCV_DEBUG_POSTFIX}"
   ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
   RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
   )

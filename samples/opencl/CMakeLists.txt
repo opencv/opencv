@@ -18,7 +18,11 @@ ocv_check_dependencies(${OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS})
 
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
-  find_package(OpenCL 1.2 REQUIRED)
+  find_package(OpenCL 1.2 QUIET)
+  if(NOT OpenCL_FOUND)
+    message(STATUS "OpenCL samples are skipped: OpenCL SDK is required")
+    return()
+  endif()
 
   set(project "opencl")
   string(TOUPPER "${project}" project_upper)
