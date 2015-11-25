@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<PropertyGroup>
+	<_PropertySheetDisplayName>OpenCV ARM, 1.0</_PropertySheetDisplayName>
+	</PropertyGroup>
+
+	<PropertyGroup Label="UserMacros">
+		<!--debug suffix for OpenCV dlls and libs -->
+		<DebugSuffix Condition="'$(Configuration)'=='Debug'">d</DebugSuffix>
+		<DebugSuffix Condition="'$(Configuration)'!='Debug'">
+		</DebugSuffix>
+	</PropertyGroup>
+
+	<ItemDefinitionGroup >
+		<Link>
+		 <AdditionalDependencies>opencv_core300$(DebugSuffix).lib;opencv_imgproc300$(DebugSuffix).lib;opencv_imgcodecs300$(DebugSuffix).lib;opencv_objdetect300$(DebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+	
+	<ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\include;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+     
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

@@ -1,0 +1,260 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="14.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{41083FF2-0F8E-4900-B4B1-6720BE86D8AB}</ProjectGUID>
+    <ApplicationType>Windows Store</ApplicationType>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>opencv_imgcodecs</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\bin\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">opencv_imgcodecs.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">opencv_imgcodecs300d</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\bin\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">opencv_imgcodecs.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">opencv_imgcodecs300</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libpng;$(OCV2015_ROOT)\3rdparty\libjpeg;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\zlib;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgcodecs\include;$(OCV2015_ROOT)\modules\imgcodecs\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgcodecs;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/imgcodecs/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/imgcodecs/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;IMGCODECS_EXPORTS;CMAKE_INTDIR="Debug";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;IMGCODECS_EXPORTS;CMAKE_INTDIR=\"Debug\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libpng;$(OCV2015_ROOT)\3rdparty\libjpeg;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\zlib;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgcodecs\include;$(OCV2015_ROOT)\modules\imgcodecs\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgcodecs;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libpng;$(OCV2015_ROOT)\3rdparty\libjpeg;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\zlib;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgcodecs\include;$(OCV2015_ROOT)\modules\imgcodecs\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgcodecs;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:x64 /debug %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Debug\opencv_hal300d.lib;..\..\lib\Debug\opencv_imgproc300d.lib;..\..\3rdparty\lib\Debug\zlibd.lib;..\..\3rdparty\lib\Debug\libjpegd.lib;..\..\3rdparty\lib\Debug\libpngd.lib;..\..\3rdparty\lib\Debug\libtiffd.lib;..\..\3rdparty\lib\Debug\libjasperd.lib;..\..\lib\Debug\opencv_core300d.lib;..\..\lib\Debug\opencv_hal300d.lib;..\..\3rdparty\lib\Debug\zlibd.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>atlthunk.lib;atlsd.lib;libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/lib/Debug/opencv_imgcodecs300d.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/bin/Debug/opencv_imgcodecs300d.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libpng;$(OCV2015_ROOT)\3rdparty\libjpeg;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\zlib;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgcodecs\include;$(OCV2015_ROOT)\modules\imgcodecs\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgcodecs;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/imgcodecs/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/imgcodecs/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;IMGCODECS_EXPORTS;CMAKE_INTDIR="Release";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;IMGCODECS_EXPORTS;CMAKE_INTDIR=\"Release\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libpng;$(OCV2015_ROOT)\3rdparty\libjpeg;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\zlib;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgcodecs\include;$(OCV2015_ROOT)\modules\imgcodecs\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgcodecs;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\3rdparty\libjasper;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libtiff;$(OCV2015_ROOT)\3rdparty\libpng;$(OCV2015_ROOT)\3rdparty\libjpeg;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\3rdparty\zlib;$(OCV2015_ROOT)\3rdparty\zlib;$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\imgcodecs\include;$(OCV2015_ROOT)\modules\imgcodecs\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgcodecs;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:x64 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Release\opencv_hal300.lib;..\..\lib\Release\opencv_imgproc300.lib;..\..\3rdparty\lib\Release\zlib.lib;..\..\3rdparty\lib\Release\libjpeg.lib;..\..\3rdparty\lib\Release\libpng.lib;..\..\3rdparty\lib\Release\libtiff.lib;..\..\3rdparty\lib\Release\libjasper.lib;..\..\lib\Release\opencv_core300.lib;..\..\lib\Release\opencv_hal300.lib;..\..\3rdparty\lib\Release\zlib.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>atlthunk.lib;atlsd.lib;libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/lib/Release/opencv_imgcodecs300.lib</ImportLibrary>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/bin/Release/opencv_imgcodecs300.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\imgcodecs\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule $(OCV2015_ROOT)/modules/imgcodecs/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/modules/imgcodecs/CMakeLists.txt;$(OCV2015_ROOT)\modules\imgcodecs\CMakeLists.txt;$(OCV2015_ROOT)\modules\imgcodecs\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgcodecs\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule $(OCV2015_ROOT)/modules/imgcodecs/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/modules/imgcodecs/CMakeLists.txt;$(OCV2015_ROOT)\modules\imgcodecs\CMakeLists.txt;$(OCV2015_ROOT)\modules\imgcodecs\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\imgcodecs\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\include\opencv2\imgcodecs.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\include\opencv2\imgcodecs\imgcodecs.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\include\opencv2\imgcodecs\imgcodecs_c.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\include\opencv2\imgcodecs\ios.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\precomp.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\utils.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmts.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_base.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_bmp.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_exr.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_gdal.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_hdr.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_jpeg.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_jpeg2000.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_png.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_pxm.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_sunras.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_tiff.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_webp.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\bitstrm.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\imgcodecs\src\rgbe.hpp" />
+    <ClInclude Include="..\..\cvconfig.h" />
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\loadsave.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\utils.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_base.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_bmp.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_exr.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_gdal.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_hdr.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_jpeg.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_jpeg2000.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_png.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_pxm.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_sunras.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_tiff.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\grfmt_webp.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\bitstrm.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\imgcodecs\src\rgbe.cpp" />
+    <ClCompile Include="opencv_imgcodecs_pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/modules/imgcodecs/src/precomp.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/modules/imgcodecs/src/precomp.hpp</PrecompiledHeaderFile>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/ZERO_CHECK.vcxproj">
+      <Project>F7C2BCF6-9BE2-4272-AAD9-6075F4430F5C</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/3rdparty/libjasper/libjasper.vcxproj">
+      <Project>695D788F-A096-4054-9CE5-A0D9BB018980</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/3rdparty/libjpeg/libjpeg.vcxproj">
+      <Project>35A7860F-9915-49FD-9F2A-F9B4AA5E0965</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/3rdparty/libpng/libpng.vcxproj">
+      <Project>3C383E1D-6C58-4A4B-B78B-2779354C8C7B</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/3rdparty/libtiff/libtiff.vcxproj">
+      <Project>9C5867C5-F9DE-449F-95AE-01B64A9AEB50</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/core/opencv_core.vcxproj">
+      <Project>AD3AD579-91EB-4492-AA03-F78B231B429D</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/hal/opencv_hal.vcxproj">
+      <Project>770A6C51-203A-4D29-8B14-656B1E11BAA2</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/imgproc/opencv_imgproc.vcxproj">
+      <Project>D9E6EAA4-E2FC-45A7-B693-7D13D189DD06</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/3rdparty/zlib/zlib.vcxproj">
+      <Project>D7456BF1-74CC-4BB0-B8BA-C80E20EAEFDC</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

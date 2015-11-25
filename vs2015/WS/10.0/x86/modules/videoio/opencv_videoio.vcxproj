@@ -1,0 +1,232 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="14.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{3CD1611E-B590-4A96-A1FF-F6C5D81A7D07}</ProjectGUID>
+    <ApplicationType>Windows Store</ApplicationType>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>Win32</Platform>
+    <ProjectName>opencv_videoio</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OCV2015_ROOT)\vs2015\WS\10.0\x86\bin\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">opencv_videoio.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">opencv_videoio300d</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OCV2015_ROOT)\vs2015\WS\10.0\x86\bin\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">opencv_videoio.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">opencv_videoio300</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x86;$(OCV2015_ROOT)\3rdparty\include;$(OCV2015_ROOT)\3rdparty\include\ffmpeg_;$(OCV2015_ROOT)\modules\videoio\include;$(OCV2015_ROOT)\modules\videoio\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x86\modules\videoio;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgcodecs\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>true</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/videoio/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/videoio/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;VIDEOIO_EXPORTS;CMAKE_INTDIR="Debug";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;VIDEOIO_EXPORTS;CMAKE_INTDIR=\"Debug\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x86;$(OCV2015_ROOT)\3rdparty\include;$(OCV2015_ROOT)\3rdparty\include\ffmpeg_;$(OCV2015_ROOT)\modules\videoio\include;$(OCV2015_ROOT)\modules\videoio\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x86\modules\videoio;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgcodecs\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x86;$(OCV2015_ROOT)\3rdparty\include;$(OCV2015_ROOT)\3rdparty\include\ffmpeg_;$(OCV2015_ROOT)\modules\videoio\include;$(OCV2015_ROOT)\modules\videoio\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x86\modules\videoio;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgcodecs\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:X86 /debug %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Debug\opencv_hal300d.lib;..\..\lib\Debug\opencv_imgcodecs300d.lib;..\..\lib\Debug\opencv_imgproc300d.lib;..\..\lib\Debug\opencv_core300d.lib;..\..\lib\Debug\opencv_hal300d.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OCV2015_ROOT)/3rdparty/lib;$(OCV2015_ROOT)/3rdparty/lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>atlthunk.lib;atlsd.lib;libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/x86/lib/Debug/opencv_videoio300d.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/x86/bin/Debug/opencv_videoio300d.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x86;$(OCV2015_ROOT)\3rdparty\include;$(OCV2015_ROOT)\3rdparty\include\ffmpeg_;$(OCV2015_ROOT)\modules\videoio\include;$(OCV2015_ROOT)\modules\videoio\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x86\modules\videoio;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgcodecs\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>true</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/videoio/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/videoio/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;VIDEOIO_EXPORTS;CMAKE_INTDIR="Release";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;VIDEOIO_EXPORTS;CMAKE_INTDIR=\"Release\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x86;$(OCV2015_ROOT)\3rdparty\include;$(OCV2015_ROOT)\3rdparty\include\ffmpeg_;$(OCV2015_ROOT)\modules\videoio\include;$(OCV2015_ROOT)\modules\videoio\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x86\modules\videoio;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgcodecs\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x86;$(OCV2015_ROOT)\3rdparty\include;$(OCV2015_ROOT)\3rdparty\include\ffmpeg_;$(OCV2015_ROOT)\modules\videoio\include;$(OCV2015_ROOT)\modules\videoio\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x86\modules\videoio;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgcodecs\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:X86 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Release\opencv_hal300.lib;..\..\lib\Release\opencv_imgcodecs300.lib;..\..\lib\Release\opencv_imgproc300.lib;..\..\lib\Release\opencv_core300.lib;..\..\lib\Release\opencv_hal300.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OCV2015_ROOT)/3rdparty/lib;$(OCV2015_ROOT)/3rdparty/lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>atlthunk.lib;atlsd.lib;libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/x86/lib/Release/opencv_videoio300.lib</ImportLibrary>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/x86/bin/Release/opencv_videoio300.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\videoio\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building Custom Rule $(OCV2015_ROOT)/modules/videoio/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OCV2015_ROOT)/modules/videoio/CMakeLists.txt;$(OCV2015_ROOT)\modules\videoio\CMakeLists.txt;$(OCV2015_ROOT)\modules\videoio\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OCV2015_ROOT)\vs2015\WS\10.0\x86\modules\videoio\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building Custom Rule $(OCV2015_ROOT)/modules/videoio/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OCV2015_ROOT)/modules/videoio/CMakeLists.txt;$(OCV2015_ROOT)\modules\videoio\CMakeLists.txt;$(OCV2015_ROOT)\modules\videoio\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OCV2015_ROOT)\vs2015\WS\10.0\x86\modules\videoio\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio\videoio.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio\cap_ios.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio\videoio_c.h" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\include\opencv2\videoio\cap_winrt.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\precomp.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_capture.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_bridge.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_video.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\MFIncludes.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\CaptureFrameGrabber.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\MediaSink.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\MediaStreamSink.hpp" />
+    <ClInclude Include="..\..\cvconfig.h" />
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_images.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_mjpeg_encoder.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_mjpeg_decoder.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_capture.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_bridge.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt_video.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\CaptureFrameGrabber.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_winrt\MediaStreamSink.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\videoio\src\cap_cmu.cpp" />
+    <ClCompile Include="opencv_videoio_pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OCV2015_ROOT)/modules/videoio/src/precomp.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OCV2015_ROOT)/modules/videoio/src/precomp.hpp</PrecompiledHeaderFile>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x86/ZERO_CHECK.vcxproj">
+      <Project>A352CFBE-D001-4C41-AD8B-1D9D2AD17AA0</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x86/modules/core/opencv_core.vcxproj">
+      <Project>DDFFB668-4364-4EF0-A111-069EB83EA58F</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x86/modules/hal/opencv_hal.vcxproj">
+      <Project>20BFC08F-B01F-419E-85A7-AB030F1A21D4</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x86/modules/imgcodecs/opencv_imgcodecs.vcxproj">
+      <Project>A5A2BAE4-2432-4107-9869-2CD4A09E9281</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x86/modules/imgproc/opencv_imgproc.vcxproj">
+      <Project>807B28A1-FFFB-4495-89A4-D3351F210A4F</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

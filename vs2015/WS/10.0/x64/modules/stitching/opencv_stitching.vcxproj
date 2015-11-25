@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="14.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{909D1073-679D-432E-B291-E293255B25EB}</ProjectGUID>
+    <ApplicationType>Windows Store</ApplicationType>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>opencv_stitching</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\bin\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">opencv_stitching.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">opencv_stitching300d</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\bin\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">opencv_stitching.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">opencv_stitching300</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\stitching\include;$(OCV2015_ROOT)\modules\stitching\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;$(OCV2015_ROOT)\modules\objdetect\include;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\calib3d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/stitching/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/stitching/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Debug";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_DEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Debug\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\stitching\include;$(OCV2015_ROOT)\modules\stitching\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;$(OCV2015_ROOT)\modules\objdetect\include;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\calib3d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\stitching\include;$(OCV2015_ROOT)\modules\stitching\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;$(OCV2015_ROOT)\modules\objdetect\include;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\calib3d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:x64 /debug %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Debug\opencv_hal300d.lib;..\..\lib\Debug\opencv_objdetect300d.lib;..\..\lib\Debug\opencv_calib3d300d.lib;..\..\lib\Debug\opencv_features2d300d.lib;..\..\lib\Debug\opencv_flann300d.lib;..\..\lib\Debug\opencv_imgproc300d.lib;..\..\lib\Debug\opencv_ml300d.lib;..\..\lib\Debug\opencv_core300d.lib;..\..\lib\Debug\opencv_hal300d.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>libc;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/lib/Debug/opencv_stitching300d.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/bin/Debug/opencv_stitching300d.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions> /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\stitching\include;$(OCV2015_ROOT)\modules\stitching\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;$(OCV2015_ROOT)\modules\objdetect\include;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\calib3d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForcedIncludeFiles>$(OCV2015_ROOT)/modules/stitching/src/precomp.hpp</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(OCV2015_ROOT)/modules/stitching/src/precomp.hpp</PrecompiledHeaderFile>
+      <ProcessorNumber>1</ProcessorNumber>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR="Release";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;UNICODE;_UNICODE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NDEBUG;CVAPI_EXPORTS;WINRT;NO_GETENV;WINRT_STORE;WINVER=_WIN32_WINNT_WIN8;NTDDI_VERSION=NTDDI_WIN8;_WIN32_WINNT=_WIN32_WINNT_WIN8;_VARIADIC_MAX=10;__OPENCV_BUILD=1;CMAKE_INTDIR=\"Release\";CVAPI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\stitching\include;$(OCV2015_ROOT)\modules\stitching\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;$(OCV2015_ROOT)\modules\objdetect\include;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\calib3d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\modules\stitching\include;$(OCV2015_ROOT)\modules\stitching\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\flann\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\ml\include;$(OCV2015_ROOT)\modules\objdetect\include;$(OCV2015_ROOT)\modules\features2d\include;$(OCV2015_ROOT)\modules\calib3d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:x64 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MinCore.lib;..\..\lib\Release\opencv_hal300.lib;..\..\lib\Release\opencv_objdetect300.lib;..\..\lib\Release\opencv_calib3d300.lib;..\..\lib\Release\opencv_features2d300.lib;..\..\lib\Release\opencv_flann300.lib;..\..\lib\Release\opencv_imgproc300.lib;..\..\lib\Release\opencv_ml300.lib;..\..\lib\Release\opencv_core300.lib;..\..\lib\Release\opencv_hal300.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <IgnoreSpecificDefaultLibraries>libc;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/lib/Release/opencv_stitching300.lib</ImportLibrary>
+      <ProgramDataBaseFile>$(OCV2015_ROOT)/vs2015/WS/10.0/x64/bin/Release/opencv_stitching300.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version />
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\stitching\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule $(OCV2015_ROOT)/modules/stitching/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/modules/stitching/CMakeLists.txt;$(OCV2015_ROOT)\modules\stitching\CMakeLists.txt;$(OCV2015_ROOT)\modules\stitching\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule $(OCV2015_ROOT)/modules/stitching/CMakeLists.txt</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/modules/stitching/CMakeLists.txt;$(OCV2015_ROOT)\modules\stitching\CMakeLists.txt;$(OCV2015_ROOT)\modules\stitching\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\CMakeFiles\64ca458c1c9a46f77743efdc157734da\opencl_kernels_stitching.cpp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating opencl_kernels_stitching.cpp, opencl_kernels_stitching.hpp</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/vs2015/WS/10.0/x64/CMakeFiles/64ca458c1c9a46f77743efdc157734da/opencl_kernels_stitching.cpp.rule;$(OCV2015_ROOT)\modules\stitching\src\opencl\multibandblend.cl;$(OCV2015_ROOT)\modules\stitching\src\opencl\warpers.cl;$(OCV2015_ROOT)\cmake\cl2cpp.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching\opencl_kernels_stitching.cpp;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching\opencl_kernels_stitching.hpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating opencl_kernels_stitching.cpp, opencl_kernels_stitching.hpp</Message>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/vs2015/WS/10.0/x64/CMakeFiles/64ca458c1c9a46f77743efdc157734da/opencl_kernels_stitching.cpp.rule;$(OCV2015_ROOT)\modules\stitching\src\opencl\multibandblend.cl;$(OCV2015_ROOT)\modules\stitching\src\opencl\warpers.cl;$(OCV2015_ROOT)\cmake\cl2cpp.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching\opencl_kernels_stitching.cpp;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\stitching\opencl_kernels_stitching.hpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\warpers.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\autocalib.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\blenders.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\camera.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\exposure_compensate.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\matchers.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\motion_estimators.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\seam_finders.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\timelapsers.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\util.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\util_inl.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\warpers.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\include\opencv2\stitching\detail\warpers_inl.hpp" />
+    <ClInclude Include="opencl_kernels_stitching.hpp" />
+    <ClInclude Include="..\..\..\..\..\..\modules\stitching\src\precomp.hpp" />
+    <ClInclude Include="..\..\cvconfig.h" />
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\autocalib.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\blenders.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\camera.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\exposure_compensate.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\matchers.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\motion_estimators.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\seam_finders.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\stitcher.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\timelapsers.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\util.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\warpers.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\modules\stitching\src\warpers_cuda.cpp" />
+    <ClCompile Include="opencl_kernels_stitching.cpp" />
+    <ClCompile Include="opencv_stitching_pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OCV2015_ROOT)/modules/stitching/src/precomp.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OCV2015_ROOT)/modules/stitching/src/precomp.hpp</PrecompiledHeaderFile>
+    </ClCompile>
+    <None Include="..\..\..\..\..\..\modules\stitching\src\opencl\multibandblend.cl" />
+    <None Include="..\..\..\..\..\..\modules\stitching\src\opencl\warpers.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/ZERO_CHECK.vcxproj">
+      <Project>F7C2BCF6-9BE2-4272-AAD9-6075F4430F5C</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/calib3d/opencv_calib3d.vcxproj">
+      <Project>9C75511F-9E61-47E0-9DE4-4491AF56B440</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/core/opencv_core.vcxproj">
+      <Project>AD3AD579-91EB-4492-AA03-F78B231B429D</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/features2d/opencv_features2d.vcxproj">
+      <Project>8672655A-B710-4957-A535-A110572274D8</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/flann/opencv_flann.vcxproj">
+      <Project>97FDE78A-57F0-4C07-B279-747D5EEFB399</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/hal/opencv_hal.vcxproj">
+      <Project>770A6C51-203A-4D29-8B14-656B1E11BAA2</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/imgproc/opencv_imgproc.vcxproj">
+      <Project>D9E6EAA4-E2FC-45A7-B693-7D13D189DD06</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/ml/opencv_ml.vcxproj">
+      <Project>6CDC54F3-D602-4CFB-B78A-14B0E89A900B</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(OCV2015_ROOT)/vs2015/WS/10.0/x64/modules/objdetect/opencv_objdetect.vcxproj">
+      <Project>31F0C7B2-2745-47C5-9AFD-FEA48710DFF9</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

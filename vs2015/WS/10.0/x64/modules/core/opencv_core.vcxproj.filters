@@ -1,0 +1,483 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\algorithm.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\alloc.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\arithm.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\array.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\command_line_parser.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\conjugate_gradient.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\convert.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\copy.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\cuda_gpu_mat.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\cuda_host_mem.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\cuda_info.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\cuda_stream.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\datastructs.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\directx.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\downhill_simplex.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\dxt.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\glob.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\gl_core_3_1.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\kmeans.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\lapack.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\lda.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\lpsolver.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\mathfuncs.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\matmul.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\matop.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\matrix.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\ocl.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\opencl_clamdblas.cpp">
+      <Filter>Src\opencl\runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\opencl_clamdfft.cpp">
+      <Filter>Src\opencl\runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\opencl_core.cpp">
+      <Filter>Src\opencl\runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\opengl.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\out.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\parallel.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\parallel_pthreads.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\pca.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\persistence.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\rand.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\stat.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\stl.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\system.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\tables.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\types.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\modules\core\src\umatrix.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="opencl_kernels_core.cpp">
+      <Filter>Src\opencl\kernels\autogenerated</Filter>
+    </ClCompile>
+    <ClCompile Include="opencv_core_pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\block.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\border_interpolate.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\color.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\common.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\datamov_utils.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\dynamic_smem.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\emulation.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\filters.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\funcattrib.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\functional.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\limits.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\reduce.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\saturate_cast.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\scan.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\simd_functions.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\transform.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\type_traits.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\utility.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\vec_distance.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\vec_math.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\vec_traits.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\warp.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\warp_reduce.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\warp_shuffle.hpp">
+      <Filter>Cuda Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\color_detail.hpp">
+      <Filter>Cuda Headers\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\reduce.hpp">
+      <Filter>Cuda Headers\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\reduce_key_val.hpp">
+      <Filter>Cuda Headers\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\transform_detail.hpp">
+      <Filter>Cuda Headers\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\type_traits_detail.hpp">
+      <Filter>Cuda Headers\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda\detail\vec_distance_detail.hpp">
+      <Filter>Cuda Headers\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core.hpp">
+      <Filter>Include\opencv2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\affine.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\base.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\bufferpool.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\core.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda.inl.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda_stream_accessor.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cuda_types.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cvstd.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cvstd.inl.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\directx.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\eigen.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\ippasync.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\mat.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\mat.inl.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\matx.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\ocl.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\ocl_genbase.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\opengl.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\operations.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\optim.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\persistence.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\private.cuda.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\private.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\ptr.inl.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\sse_utils.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\traits.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\types.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\utility.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\version.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\wimage.hpp">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\core_c.h">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\cvdef.h">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\include\opencv2\core\types_c.h">
+      <Filter>Include\opencv2\core</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl_kernels_core.hpp">
+      <Filter>Src\opencl\kernels\autogenerated</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\bufferpool.impl.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\directx.inc.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\gl_core_3_1.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\autogenerated\opencl_clamdblas_impl.hpp">
+      <Filter>Src\opencl\runtime\autogenerated</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\autogenerated\opencl_clamdfft_impl.hpp">
+      <Filter>Src\opencl\runtime\autogenerated</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\autogenerated\opencl_core_impl.hpp">
+      <Filter>Src\opencl\runtime\autogenerated</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\opencl\runtime\runtime_common.hpp">
+      <Filter>Src\opencl\runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\modules\core\src\precomp.hpp">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cvconfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\opencv2\opencv_modules.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\..\..\..\modules\core\CMakeLists.txt" />
+    <CustomBuild Include="..\..\CMakeFiles\d5f2fae057ee453ac887ecd74e979937\opencl_kernels_core.cpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="version_string.inc" />
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\arithm.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\convert.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\copymakeborder.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\copyset.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\fft.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\flip.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\gemm.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\inrange.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\lut.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\meanstddev.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\minmaxloc.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\mixchannels.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\mulspectrums.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\normalize.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\reduce.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\reduce2.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\repeat.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\set_identity.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\split_merge.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\modules\core\src\opencl\transpose.cl">
+      <Filter>Src\opencl\kernels</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Src\opencl\runtime">
+      <UniqueIdentifier>{B1C2774B-DD89-4467-B553-25EFFDB745BC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\opencl\kernels">
+      <UniqueIdentifier>{E34861BC-67DE-4183-9F25-9A774B5FC651}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\opencv2">
+      <UniqueIdentifier>{05C50465-64FB-4CAF-B4FC-FA03AA6E6725}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\opencl\runtime\autogenerated">
+      <UniqueIdentifier>{4EA07AF8-F3D0-45C4-AF23-7469BF995B42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\opencl">
+      <UniqueIdentifier>{C09941E1-428F-4DE3-BCD2-C793C2D94200}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\opencl\kernels\autogenerated">
+      <UniqueIdentifier>{E967A56E-CD90-4123-BFBE-4E89781D9500}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\opencv2\core">
+      <UniqueIdentifier>{A8415A8B-2081-4F96-8ADB-9ECF8181A4AA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Cuda Headers\Detail">
+      <UniqueIdentifier>{179D32C1-C34E-4A7A-ACBD-F033AAC55579}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{6F652BDE-35E3-4D70-97BC-72653848239E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{D1153171-3EAE-4E07-A75B-6FEA6093C934}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{050184BE-C3F0-4F82-BC2F-9A34B0267BBA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Cuda Headers">
+      <UniqueIdentifier>{A328B88B-07CE-4165-9101-8C3FC4F9B107}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src">
+      <UniqueIdentifier>{053E470E-10F7-487D-BF54-53FF229F67D2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include">
+      <UniqueIdentifier>{FB0B924D-1977-45F4-87DA-535BCB56C720}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
