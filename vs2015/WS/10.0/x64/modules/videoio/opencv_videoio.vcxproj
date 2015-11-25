@@ -119,7 +119,7 @@
       <AdditionalIncludeDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\x64;$(OCV2015_ROOT)\3rdparty\include;$(OCV2015_ROOT)\3rdparty\include\ffmpeg_;$(OCV2015_ROOT)\modules\videoio\include;$(OCV2015_ROOT)\modules\videoio\src;$(OCV2015_ROOT)\vs2015\WS\10.0\x64\modules\videoio;$(OCV2015_ROOT)\modules\hal\include;$(OCV2015_ROOT)\modules\core\include;$(OCV2015_ROOT)\modules\imgproc\include;$(OCV2015_ROOT)\modules\imgcodecs\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Release/</AssemblerListingLocation>
       <CompileAs>CompileAsCpp</CompileAs>
-      <CompileAsWinRT>false</CompileAsWinRT>
+      <CompileAsWinRT>true</CompileAsWinRT>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4251;4324</DisableSpecificWarnings>
       <ExceptionHandling>Async</ExceptionHandling>
