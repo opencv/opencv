@@ -72,7 +72,6 @@ public:
 };
 
 
-bool verbose=true;
 
 
 const String keys =
