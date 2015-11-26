@@ -65,9 +65,7 @@ public:
 
     }
     ParallelMeanLine& operator=(const ParallelMeanLine &) {
-        CV_Assert(false);
-        // We can not remove this implementation because Visual Studio warning C4822.
-        return *this;
+         return *this;
     };
 };
 
