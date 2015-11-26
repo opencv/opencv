@@ -77,7 +77,7 @@ bool verbose=true;
 
 const String keys =
 "{help h usage ? |      | This program demonstrated the use of class ParallelLoopBody for threading\n ./ParallelLoopBody [image_name -- default ../data/lena.jpg]  --thread <int> default 16}"
-"{@image         |f:/lib/opencv/samples//data/lena.jpg      | image to process     }"
+"{@image         |../data/lena.jpg      | image to process     }"
     "{@thread        |16    | number o fthread     }"
     "{@verbose       |true   | verbose mode     }"
     ;
