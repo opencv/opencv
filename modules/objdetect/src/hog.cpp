@@ -1224,7 +1224,7 @@ static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_
     }
     else
     {
-        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
         if(k.empty())
             return false;
         if(is_cpu)
@@ -1651,7 +1651,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
     {
     case 180:
         nthreads = 180;
-        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
         if(k.empty())
             return false;
         if(is_cpu)
@@ -1667,7 +1667,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
 
     case 252:
         nthreads = 256;
-        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
         if(k.empty())
             return false;
         if(is_cpu)
@@ -1683,7 +1683,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
 
     default:
         nthreads = 256;
-        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
         if(k.empty())
             return false;
         if(is_cpu)
