@@ -24,7 +24,7 @@ public:
         verbose(false)
     {}
     void Verbose(bool b){verbose=b;}
-    virtual void operator()(const Range& range) const 
+    virtual void operator()(const Range& range) const
     {
 
         int h = imgSrc.cols;
