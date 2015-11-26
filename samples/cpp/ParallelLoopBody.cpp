@@ -24,7 +24,7 @@ public:
         verbose(false)
     {}
     void Verbose(bool b){verbose=b;}
-    virtual void operator()( const Range& range ) const 
+    virtual void operator()(const Range& range) const 
     {
 
         int h = imgSrc.cols;
@@ -58,7 +58,7 @@ public:
                        *ptr=255;
                    else if (v<0)
                        *ptr=0;
-                   else 
+                   else
                        *ptr=(uchar)v;
             }
         }
@@ -119,9 +119,7 @@ int main (int argc,char **argv)
     tps=(tpsFin - tpsIni) / getTickFrequency();
     cout << "For " << nbThreads << " thread times is " << tps << "s\n";
     cout << "*****************************************************************************************\n";
-       
     imshow("Processed Image",m);
     waitKey();
     return 0;
 }
-
