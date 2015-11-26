@@ -252,7 +252,8 @@ endif()
 
 if(INSTALL_TESTS)
     set(TESTS_LINTIAN_OVERRIDES "arch-dependent-file-in-usr-share" # usr/share/OpenCV/bin/opencv_test_ml
-                                "binary-or-shlib-defines-rpath") # usr/share/OpenCV/bin/opencv_test_ml
+                                "binary-or-shlib-defines-rpath" # usr/share/OpenCV/bin/opencv_test_ml
+                                "python-script-but-no-python-dep") # usr/share/OpenCV/bin/calchist.py
 else()
     set(TESTS_LINTIAN_OVERRIDES "empty-binary-package") # there is no tests
 endif()
