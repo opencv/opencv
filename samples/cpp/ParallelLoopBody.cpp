@@ -6,7 +6,8 @@
 using namespace cv;
 using namespace std;
 
-
+// This class use ParallelLoopBody to process image using thread
+// ParallelMeanLine process image to have for each line a mean value of 128 and standard deviation of 64
 class ParallelMeanLine: public cv::ParallelLoopBody
 {
 private:
@@ -71,9 +72,7 @@ public:
 };
 
 
-int nbThreads = 16;
 bool verbose=true;
-String fileName;
 
 
 const String keys =
@@ -87,8 +86,6 @@ const String keys =
 
 int main (int argc,char **argv)
 {
-    cout << getNumThreads() << "\n";
-    cout << getBuildInformation() << "\n";
     CommandLineParser parser(argc, argv, keys);
     if (parser.has("help"))
     {
@@ -98,6 +95,9 @@ int main (int argc,char **argv)
     String fileName = parser.get<String>(0);
     int nbThreads = parser.get<int>(1);
     bool verbose = parser.get<bool>(2);
+    cout <<"default value for thread number : "<< getNumThreads() << "\n";
+    setNumThreads(nbThreads);
+    cout <<"This value is fixed now to  : "<< getNumThreads() << "\n";
     Mat m=imread(fileName,CV_LOAD_IMAGE_GRAYSCALE);
     if (m.empty())
     {
@@ -114,7 +114,6 @@ int main (int argc,char **argv)
 
     ParallelMeanLine x(m,meanLine,stdLine);
     x.Verbose(verbose);
-    setNumThreads(nbThreads);
     int64 tpsIni = getTickCount();
     parallel_for_(cv::Range(0,m.rows), x,nbThreads);
     int64  tpsFin = getTickCount();
