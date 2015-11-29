@@ -187,7 +187,7 @@ public:
                 oobidx.clear();
                 for( i = 0; i < n; i++ )
                 {
-                    if( !oobmask[i] )
+                    if( oobmask[i] )
                         oobidx.push_back(i);
                 }
                 int n_oob = (int)oobidx.size();
@@ -235,6 +235,7 @@ public:
                     oobperm.resize(n_oob);
                     for( i = 0; i < n_oob; i++ )
                         oobperm[i] = oobidx[i];
+					std::random_shuffle(oobperm.begin(), oobperm.end());
 
                     for( vi_ = 0; vi_ < nvars; vi_++ )
                     {
@@ -254,7 +255,7 @@ public:
                             sample0 = Mat( nallvars, 1, CV_32F, psamples + sstep0*w->sidx[j], sstep1*sizeof(psamples[0]) );
                             for( k = 0; k < nallvars; k++ )
                                 sample.at<float>(k) = sample0.at<float>(k);
-                            sample.at<float>(vi) = psamples[sstep0*w->sidx[vj] + sstep1*vi];
+							sample.at<float>(vi) = psamples[sstep0*w->sidx[vj] + sstep1*vi];
 
                             double val = predictTrees(Range(treeidx, treeidx+1), sample, predictFlags);
                             if( !_isClassifier )
