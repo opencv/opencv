@@ -4292,7 +4292,7 @@ public:
         bufferPoolSVM.setMaxReservedSize(poolSize);
 #endif
 
-        matStdAllocator = Mat::getStdAllocator();
+        matStdAllocator = Mat::getDefaultAllocator();
     }
 
     UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step,
@@ -4918,7 +4918,7 @@ public:
 
         if( u->data && !u->hostCopyObsolete() )
         {
-            Mat::getStdAllocator()->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
+            Mat::getDefaultAllocator()->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
             return;
         }
         CV_Assert( u->handle != 0 );
@@ -5042,7 +5042,7 @@ public:
         //    2. we overwrite part of the matrix, but the GPU copy is out-of-date
         if( u->data && (u->hostCopyObsolete() < u->deviceCopyObsolete() || total == u->size))
         {
-            Mat::getStdAllocator()->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
+            Mat::getDefaultAllocator()->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
             u->markHostCopyObsolete(false);
             u->markDeviceCopyObsolete(true);
             return;
