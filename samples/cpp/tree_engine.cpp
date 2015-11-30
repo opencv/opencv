@@ -63,7 +63,6 @@ int main(int argc, char** argv)
     const double train_test_split_ratio = 0.5;
 
     Ptr<TrainData> data = TrainData::loadFromCSV(filename, 0, response_idx, response_idx+1, typespec);
-
     if( data.empty() )
     {
         printf("ERROR: File %s can not be read\n", filename);
@@ -71,6 +70,7 @@ int main(int argc, char** argv)
     }
 
     data->setTrainTestSplitRatio(train_test_split_ratio);
+	std::cout << "Test/Train: " << data->getNTestSamples() << "/" << data->getNTrainSamples();
 
     printf("======DTREE=====\n");
     Ptr<DTrees> dtree = DTrees::create();
@@ -101,15 +101,25 @@ int main(int argc, char** argv)
     printf("======RTREES=====\n");
     Ptr<RTrees> rtrees = RTrees::create();
     rtrees->setMaxDepth(10);
-    rtrees->setMinSampleCount(2);
+    //rtrees->setMinSampleCount(1);
+	rtrees->setActiveVarCount(2);
     rtrees->setRegressionAccuracy(0);
     rtrees->setUseSurrogates(false);
     rtrees->setMaxCategories(16);
     rtrees->setPriors(Mat());
-    rtrees->setCalculateVarImportance(false);
+    rtrees->setCalculateVarImportance(true);
     rtrees->setActiveVarCount(0);
-    rtrees->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 0));
+    rtrees->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 10, 0));
     train_and_print_errs(rtrees, data);
+	std::cout << rtrees->isClassifier() << std::endl;
+	cv::Mat ref_labels = data->getClassLabels();
+	cv::Mat test_data = data->getTestSampleIdx();
+	cv::Mat predict_labels;
+	rtrees->predict(data->getSamples(), predict_labels);
 
-    return 0;
+	cv::Mat variable_importance = rtrees->getVarImportance();
+	for (int i = 0; i < variable_importance.rows; i++) {
+		std::cout << variable_importance.at<float>(i, 0) << std::endl;
+	}
+    return 0; 
 }
