@@ -331,11 +331,13 @@ namespace cv { namespace cuda { namespace device
             if (threadIdx.x < block_hist_size)
                 elem = hist[0];
 
+            __syncthreads(); // prevent race condition (redundant?)
             float sum = reduce_smem<nthreads>(squares, elem * elem);
 
             float scale = 1.0f / (::sqrtf(sum) + 0.1f * block_hist_size);
             elem = ::min(elem * scale, threshold);
 
+            __syncthreads(); // prevent race condition
             sum = reduce_smem<nthreads>(squares, elem * elem);
 
             scale = 1.0f / (::sqrtf(sum) + 1e-3f);
