@@ -45,26 +45,34 @@
 #include <queue>
 
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
 #define USE_IPP_CANNY 1
 #else
-#undef USE_IPP_CANNY
+#define USE_IPP_CANNY 0
 #endif
 
 
 namespace cv
 {
-
-#ifdef USE_IPP_CANNY
+#ifdef HAVE_IPP
 static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
 {
+#if USE_IPP_CANNY
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
 
+#if IPP_VERSION_X100 < 900
     if (ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size) < 0)
         return false;
     if (ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
         return false;
+#else
+    if (ippiFilterSobelNegVertBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size) < 0)
+        return false;
+    if (ippiFilterSobelHorizBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size1) < 0)
+        return false;
+#endif
+
     size = std::max(size, size1);
 
     if (ippiCannyGetSize(roi, &size1) < 0)
@@ -76,21 +84,25 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
 
     Mat _dx(_src.rows, _src.cols, CV_16S);
     if( ippiFilterSobelNegVertBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
-                                               _dx.ptr<short>(), (int)_dx.step, roi,
-                                               ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
+                    _dx.ptr<short>(), (int)_dx.step, roi,
+                    ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
         return false;
 
     Mat _dy(_src.rows, _src.cols, CV_16S);
     if( ippiFilterSobelHorizBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
-                                             _dy.ptr<short>(), (int)_dy.step, roi,
-                                             ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
+                    _dy.ptr<short>(), (int)_dy.step, roi,
+                    ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
         return false;
 
     if( ippiCanny_16s8u_C1R(_dx.ptr<short>(), (int)_dx.step,
-                            _dy.ptr<short>(), (int)_dy.step,
-                            _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0 )
+                               _dy.ptr<short>(), (int)_dy.step,
+                              _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0 )
         return false;
     return true;
+#else
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(low); CV_UNUSED(high);
+    return false;
+#endif
 }
 #endif
 
@@ -733,7 +745,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     CV_OCL_RUN(_dst.isUMat() && (cn == 1 || cn == 3),
                ocl_Canny(_src, _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
 
-    Mat src = _src.getMat(), dst = _dst.getMat();
+            Mat src = _src.getMat(), dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra() && tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
@@ -802,9 +814,9 @@ void cv::Canny( InputArray _src, OutputArray _dst,
             if (!m[mapstep + 1])	CANNY_PUSH_SERIAL(m + mapstep + 1);
         }
 
-//          finalPass finPass(src, dst, map, mapstep);
-//          parallel_for_(Range(0, src.rows), finPass, numOfCPUs);
-//          return;
+        //          finalPass finPass(src, dst, map, mapstep);
+        //          parallel_for_(Range(0, src.rows), finPass, numOfCPUs);
+        //          return;
     } else {
 
         ////////////////// serial way //////////////////////////////////////////
