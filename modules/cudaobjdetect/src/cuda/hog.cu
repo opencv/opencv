@@ -925,7 +925,6 @@ namespace cv { namespace cuda { namespace device
         // Resize
 
         texture<uchar4, 2, cudaReadModeNormalizedFloat> resize8UC4_tex;
-        texture<uchar3, 2, cudaReadModeNormalizedFloat> resize8UC3_tex;
         texture<uchar,  2, cudaReadModeNormalizedFloat> resize8UC1_tex;
 
         __global__ void resize_for_hog_kernel(float sx, float sy, PtrStepSz<uchar> dst, int colOfs)
@@ -937,18 +936,6 @@ namespace cv { namespace cuda { namespace device
                 dst.ptr(y)[x] = tex2D(resize8UC1_tex, x * sx + colOfs, y * sy) * 255;
         }
         
-        __global__ void resize_for_hog_kernel(float sx, float sy, PtrStepSz<uchar3> dst, int colOfs)
-        {
-            unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
-            unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-            if (x < dst.cols && y < dst.rows)
-            {
-                float3 val = tex2D(resize8UC3_tex, x * sx + colOfs, y * sy);
-                dst.ptr(y)[x] = make_uchar3(val.x * 255, val.y * 255, val.z * 255);
-            }
-        }
-
         __global__ void resize_for_hog_kernel(float sx, float sy, PtrStepSz<uchar4> dst, int colOfs)
         {
             unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -994,7 +981,6 @@ namespace cv { namespace cuda { namespace device
         }
 
         void resize_8UC1(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
-        void resize_8UC3(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar3> (src, dst, resize8UC3_tex); }
         void resize_8UC4(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
     } // namespace hog
 }}} // namespace cv { namespace cuda { namespace cudev
