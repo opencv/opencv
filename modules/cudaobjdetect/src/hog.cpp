@@ -384,7 +384,7 @@ namespace
     {
         const GpuMat img = _img.getGpuMat();
 
-        CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC3 || img.type() == CV_8UC4 );
+        CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC4 );
         CV_Assert( confidences == NULL || group_threshold_ == 0 );
 
         std::vector<double> level_scale;
