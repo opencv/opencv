@@ -723,6 +723,128 @@ namespace cv { namespace cuda { namespace device
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
+        
+        template <int nthreads, int correct_gamma>
+        __global__ void compute_gradients_8UC3_kernel(int height, int width, const PtrStepb img,
+                                                      float angle_scale, PtrStepf grad, PtrStepb qangle)
+        {
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+            const uchar3* row = (const uchar3*)img.ptr(blockIdx.y);
+
+            __shared__ float sh_row[(nthreads + 2) * 3];
+
+            uchar3 val;
+            if (x < width)
+                val = row[x];
+            else
+                val = row[width - 2];
+
+            sh_row[threadIdx.x + 1] = val.x;
+            sh_row[threadIdx.x + 1 + (nthreads + 2)] = val.y;
+            sh_row[threadIdx.x + 1 + 2 * (nthreads + 2)] = val.z;
+
+            if (threadIdx.x == 0)
+            {
+                val = row[::max(x - 1, 1)];
+                sh_row[0] = val.x;
+                sh_row[(nthreads + 2)] = val.y;
+                sh_row[2 * (nthreads + 2)] = val.z;
+            }
+
+            if (threadIdx.x == blockDim.x - 1)
+            {
+                val = row[::min(x + 1, width - 2)];
+                sh_row[blockDim.x + 1] = val.x;
+                sh_row[blockDim.x + 1 + (nthreads + 2)] = val.y;
+                sh_row[blockDim.x + 1 + 2 * (nthreads + 2)] = val.z;
+            }
+
+            __syncthreads();
+            if (x < width)
+            {
+                float3 a, b;
+
+                b.x = sh_row[threadIdx.x + 2];
+                b.y = sh_row[threadIdx.x + 2 + (nthreads + 2)];
+                b.z = sh_row[threadIdx.x + 2 + 2 * (nthreads + 2)];
+                a.x = sh_row[threadIdx.x];
+                a.y = sh_row[threadIdx.x + (nthreads + 2)];
+                a.z = sh_row[threadIdx.x + 2 * (nthreads + 2)];
+
+                float3 dx;
+                if (correct_gamma)
+                    dx = make_float3(::sqrtf(b.x) - ::sqrtf(a.x), ::sqrtf(b.y) - ::sqrtf(a.y), ::sqrtf(b.z) - ::sqrtf(a.z));
+                else
+                    dx = make_float3(b.x - a.x, b.y - a.y, b.z - a.z);
+
+                float3 dy = make_float3(0.f, 0.f, 0.f);
+
+                if (blockIdx.y > 0 && blockIdx.y < height - 1)
+                {
+                    val = ((const uchar3*)img.ptr(blockIdx.y - 1))[x];
+                    a = make_float3(val.x, val.y, val.z);
+
+                    val = ((const uchar3*)img.ptr(blockIdx.y + 1))[x];
+                    b = make_float3(val.x, val.y, val.z);
+
+                    if (correct_gamma)
+                        dy = make_float3(::sqrtf(b.x) - ::sqrtf(a.x), ::sqrtf(b.y) - ::sqrtf(a.y), ::sqrtf(b.z) - ::sqrtf(a.z));
+                    else
+                        dy = make_float3(b.x - a.x, b.y - a.y, b.z - a.z);
+                }
+
+                float best_dx = dx.x;
+                float best_dy = dy.x;
+
+                float mag0 = dx.x * dx.x + dy.x * dy.x;
+                float mag1 = dx.y * dx.y + dy.y * dy.y;
+                if (mag0 < mag1)
+                {
+                    best_dx = dx.y;
+                    best_dy = dy.y;
+                    mag0 = mag1;
+                }
+
+                mag1 = dx.z * dx.z + dy.z * dy.z;
+                if (mag0 < mag1)
+                {
+                    best_dx = dx.z;
+                    best_dy = dy.z;
+                    mag0 = mag1;
+                }
+
+                mag0 = ::sqrtf(mag0);
+
+                float ang = (::atan2f(best_dy, best_dx) + CV_PI_F) * angle_scale - 0.5f;
+                int hidx = (int)::floorf(ang);
+                ang -= hidx;
+                hidx = (hidx + cnbins) % cnbins;
+
+                ((uchar2*)qangle.ptr(blockIdx.y))[x] = make_uchar2(hidx, (hidx + 1) % cnbins);
+                ((float2*)grad.ptr(blockIdx.y))[x] = make_float2(mag0 * (1.f - ang), mag0 * ang);
+            }
+        }
+
+
+        void compute_gradients_8UC3(int nbins, int height, int width, const PtrStepSzb& img,
+                                    float angle_scale, PtrStepSzf grad, PtrStepSzb qangle, bool correct_gamma)
+        {
+            (void)nbins;
+            const int nthreads = 256;
+
+            dim3 bdim(nthreads, 1);
+            dim3 gdim(divUp(width, bdim.x), divUp(height, bdim.y));
+
+            if (correct_gamma)
+                compute_gradients_8UC3_kernel<nthreads, 1><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
+            else
+                compute_gradients_8UC3_kernel<nthreads, 0><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
+
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+        }
 
         template <int nthreads, int correct_gamma>
         __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrStepb img,
