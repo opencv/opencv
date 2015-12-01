@@ -96,6 +96,8 @@ namespace cv { namespace cuda { namespace device
                                     float angle_scale, cv::cuda::PtrStepSzf grad, cv::cuda::PtrStepSzb qangle, bool correct_gamma);
         void compute_gradients_8UC4(int nbins, int height, int width, const cv::cuda::PtrStepSzb& img,
                                     float angle_scale, cv::cuda::PtrStepSzf grad, cv::cuda::PtrStepSzb qangle, bool correct_gamma);
+        void compute_gradients_8UC3(int nbins, int height, int width, const cv::cuda::PtrStepSzb& img,
+                                    float angle_scale, cv::cuda::PtrStepSzf grad, cv::cuda::PtrStepSzb qangle, bool correct_gamma);
 
         void resize_8UC1(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
         void resize_8UC4(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
@@ -456,7 +458,7 @@ namespace
     {
         const GpuMat img = _img.getGpuMat();
 
-        CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC4 );
+        CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC3 || img.type() == CV_8UC4 );
         CV_Assert( win_stride_.width % block_stride_.width == 0 && win_stride_.height % block_stride_.height == 0 );
         CV_Assert( !stream );
 
@@ -545,6 +547,9 @@ namespace
         {
             case CV_8UC1:
                 hog::compute_gradients_8UC1(nbins_, img.rows, img.cols, img, angleScale, grad, qangle, gamma_correction_);
+                break;
+            case CV_8UC3:
+                hog::compute_gradients_8UC3(nbins_, img.rows, img.cols, img, angleScale, grad, qangle, gamma_correction_);
                 break;
             case CV_8UC4:
                 hog::compute_gradients_8UC4(nbins_, img.rows, img.cols, img, angleScale, grad, qangle, gamma_correction_);
