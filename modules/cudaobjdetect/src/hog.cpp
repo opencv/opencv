@@ -100,6 +100,7 @@ namespace cv { namespace cuda { namespace device
                                     float angle_scale, cv::cuda::PtrStepSzf grad, cv::cuda::PtrStepSzb qangle, bool correct_gamma);
 
         void resize_8UC1(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
+        void resize_8UC3(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
         void resize_8UC4(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
     }
 }}}
@@ -302,7 +303,7 @@ namespace
     {
         const GpuMat img = _img.getGpuMat();
 
-        CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC4 );
+        CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC3 || img.type() == CV_8UC4 );
         CV_Assert( win_stride_.width % block_stride_.width == 0 && win_stride_.height % block_stride_.height == 0 );
 
         hits.clear();
@@ -383,7 +384,7 @@ namespace
     {
         const GpuMat img = _img.getGpuMat();
 
-        CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC4 );
+        CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC3 || img.type() == CV_8UC4 );
         CV_Assert( confidences == NULL || group_threshold_ == 0 );
 
         std::vector<double> level_scale;
@@ -428,6 +429,7 @@ namespace
                 switch (img.type())
                 {
                     case CV_8UC1: hog::resize_8UC1(img, smaller_img); break;
+                    case CV_8UC3: hog::resize_8UC3(img, smaller_img); break;
                     case CV_8UC4: hog::resize_8UC4(img, smaller_img); break;
                 }
             }
