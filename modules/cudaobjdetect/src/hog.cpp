@@ -100,7 +100,6 @@ namespace cv { namespace cuda { namespace device
                                     float angle_scale, cv::cuda::PtrStepSzf grad, cv::cuda::PtrStepSzb qangle, bool correct_gamma);
 
         void resize_8UC1(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
-        void resize_8UC3(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
         void resize_8UC4(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
     }
 }}}
@@ -429,7 +428,6 @@ namespace
                 switch (img.type())
                 {
                     case CV_8UC1: hog::resize_8UC1(img, smaller_img); break;
-                    case CV_8UC3: hog::resize_8UC3(img, smaller_img); break;
                     case CV_8UC4: hog::resize_8UC4(img, smaller_img); break;
                 }
             }
