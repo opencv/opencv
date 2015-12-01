@@ -935,7 +935,6 @@ namespace cv { namespace cuda { namespace device
             if (x < dst.cols && y < dst.rows)
                 dst.ptr(y)[x] = tex2D(resize8UC1_tex, x * sx + colOfs, y * sy) * 255;
         }
-        
         __global__ void resize_for_hog_kernel(float sx, float sy, PtrStepSz<uchar4> dst, int colOfs)
         {
             unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
