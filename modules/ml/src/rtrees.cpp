@@ -217,7 +217,7 @@ public:
                     else
                     {
                         int ival = cvRound(val);
-						//Voting scheme to combine OOB errors of each tree
+                        //Voting scheme to combine OOB errors of each tree
                         int* votes = &oobvotes[j*nclasses];
                         votes[ival]++;
                         int best_class = 0;
@@ -236,7 +236,7 @@ public:
                     oobperm.resize(n_oob);
                     for( i = 0; i < n_oob; i++ )
                         oobperm[i] = oobidx[i];
-					std::random_shuffle(oobperm.begin(), oobperm.end()); //Randomly shuffle indices so we can permute features
+                    std::random_shuffle(oobperm.begin(), oobperm.end()); //Randomly shuffle indices so we can permute features
 
                     for( vi_ = 0; vi_ < nvars; vi_++ )
                     {
@@ -248,8 +248,8 @@ public:
                             j = oobidx[i];
                             int vj = oobperm[i];
                             sample0 = Mat( nallvars, 1, CV_32F, psamples + sstep0*w->sidx[j], sstep1*sizeof(psamples[0]) );
-							Mat sample_clone = sample0.clone(); //create a copy so we don't mess up the original data
-							sample_clone.at<float>(vi) = psamples[sstep0*w->sidx[vj] + sstep1*vi];
+                            Mat sample_clone = sample0.clone(); //create a copy so we don't mess up the original data
+                            sample_clone.at<float>(vi) = psamples[sstep0*w->sidx[vj] + sstep1*vi];
 
                             double val = predictTrees(Range(treeidx, treeidx+1), sample_clone, predictFlags);
                             if( !_isClassifier )
@@ -257,10 +257,10 @@ public:
                                 val = (val - w->ord_responses[w->sidx[j]])/max_response;
                                 ncorrect_responses_permuted += exp( -val*val );
                             }
-							else 
-							{
-								ncorrect_responses_permuted += cvRound(val) == w->cat_responses[w->sidx[j]];
-							}
+                            else 
+                            {
+                                ncorrect_responses_permuted += cvRound(val) == w->cat_responses[w->sidx[j]];
+                            }
                                 
                         }
                         varImportance[vi] += (float)(ncorrect_responses - ncorrect_responses_permuted);
