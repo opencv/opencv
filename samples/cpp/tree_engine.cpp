@@ -101,25 +101,24 @@ int main(int argc, char** argv)
     printf("======RTREES=====\n");
     Ptr<RTrees> rtrees = RTrees::create();
     rtrees->setMaxDepth(10);
-    //rtrees->setMinSampleCount(1);
-	rtrees->setActiveVarCount(2);
+    rtrees->setMinSampleCount(2);
     rtrees->setRegressionAccuracy(0);
     rtrees->setUseSurrogates(false);
     rtrees->setMaxCategories(16);
     rtrees->setPriors(Mat());
     rtrees->setCalculateVarImportance(true);
     rtrees->setActiveVarCount(0);
-    rtrees->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 10, 0));
+    rtrees->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 0));
     train_and_print_errs(rtrees, data);
-	std::cout << rtrees->isClassifier() << std::endl;
 	cv::Mat ref_labels = data->getClassLabels();
 	cv::Mat test_data = data->getTestSampleIdx();
 	cv::Mat predict_labels;
 	rtrees->predict(data->getSamples(), predict_labels);
 
 	cv::Mat variable_importance = rtrees->getVarImportance();
+	std::cout << "Estimated variable importance" << std::endl;
 	for (int i = 0; i < variable_importance.rows; i++) {
-		std::cout << variable_importance.at<float>(i, 0) << std::endl;
+		std::cout << "Variable " << i << ": " << variable_importance.at<float>(i, 0) << std::endl;
 	}
     return 0; 
 }
