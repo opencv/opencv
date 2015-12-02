@@ -336,7 +336,7 @@ int CvCascadeClassifier::fillPassedSamples( int first, int count, bool isPositiv
             consumed++;
 
             featureEvaluator->setImage( img, isPositive ? 1 : 0, i );
-            if( predict( i ) == 1.0F )
+            if( predict( i ) == 1 )
             {
                 getcount++;
                 printf("%s current samples: %d\r", isPositive ? "POS":"NEG", getcount);
