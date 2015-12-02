@@ -257,11 +257,10 @@ public:
                                 val = (val - w->ord_responses[w->sidx[j]])/max_response;
                                 ncorrect_responses_permuted += exp( -val*val );
                             }
-                            else 
+                            else
                             {
                                 ncorrect_responses_permuted += cvRound(val) == w->cat_responses[w->sidx[j]];
                             }
-                                
                         }
                         varImportance[vi] += (float)(ncorrect_responses - ncorrect_responses_permuted);
                     }

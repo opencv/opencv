@@ -70,7 +70,7 @@ int main(int argc, char** argv)
     }
 
     data->setTrainTestSplitRatio(train_test_split_ratio);
-	std::cout << "Test/Train: " << data->getNTestSamples() << "/" << data->getNTrainSamples();
+    std::cout << "Test/Train: " << data->getNTestSamples() << "/" << data->getNTrainSamples();
 
     printf("======DTREE=====\n");
     Ptr<DTrees> dtree = DTrees::create();
@@ -118,7 +118,7 @@ int main(int argc, char** argv)
     cv::Mat variable_importance = rtrees->getVarImportance();
     std::cout << "Estimated variable importance" << std::endl;
     for (int i = 0; i < variable_importance.rows; i++) {
-	    std::cout << "Variable " << i << ": " << variable_importance.at<float>(i, 0) << std::endl;
+        std::cout << "Variable " << i << ": " << variable_importance.at<float>(i, 0) << std::endl;
     }
-    return 0; 
+    return 0;
 }
