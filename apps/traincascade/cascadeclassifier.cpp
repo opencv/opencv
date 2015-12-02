@@ -326,14 +326,13 @@ int CvCascadeClassifier::fillPassedSamples( int first, int count, bool isPositiv
     {
         for( ; ; )
         {
-            if( consumed != 0 && ((double)getcount+1)/(double)(int64)consumed <= minimumAcceptanceRatio )
-                return getcount;
-
             bool isGetImg = isPositive ? imgReader.getPos( img ) :
                                            imgReader.getNeg( img );
             if( !isGetImg )
                 return getcount;
             consumed++;
+            if( ((double)getcount+1)/(double)(int64)consumed <= minimumAcceptanceRatio )
+                return getcount;
 
             featureEvaluator->setImage( img, isPositive ? 1 : 0, i );
             if( predict( i ) == 1.0F )
