@@ -839,7 +839,7 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
     if (sumX*sumX + sumY*sumY > max) {
       // store largest orientation
       max = sumX*sumX + sumY*sumY;
-      kpt.angle = getAngle(sumX, sumY);
+      kpt.angle = getAngle(sumX, sumY) * 180. / CV_PI;
     }
   }
 }
