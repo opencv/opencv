@@ -217,6 +217,7 @@ public:
                     else
                     {
                         int ival = cvRound(val);
+						//Voting scheme to combine OOB errors of each tree
                         int* votes = &oobvotes[j*nclasses];
                         votes[ival]++;
                         int best_class = 0;
@@ -239,7 +240,7 @@ public:
 
                     for( vi_ = 0; vi_ < nvars; vi_++ )
                     {
-                        vi = vidx ? vidx[vi_] : vi_; //no clue what this should achieve. Just use vi_?
+                        vi = vidx ? vidx[vi_] : vi_; //Ensure that only the user specified predictors are used for training
                         double ncorrect_responses_permuted = 0;
 
                         for( i = 0; i < n_oob; i++ )
