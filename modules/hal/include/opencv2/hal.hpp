@@ -247,15 +247,7 @@ template<typename T> struct OpAbsDiff
     typedef T type1;
     typedef T type2;
     typedef T rtype;
-    T operator()(T a, T b) const { return (T)std::abs(a - b); }
-};
-
-template<typename T, typename WT=T> struct OpAbsDiffS
-{
-    typedef T type1;
-    typedef WT type2;
-    typedef T rtype;
-    T operator()(T a, WT b) const { return saturate_cast<T>(std::abs(a - b)); }
+    T operator()(T a, T b) const { return a > b ? a - b : b - a; }
 };
 
 template<typename T> struct OpAnd
