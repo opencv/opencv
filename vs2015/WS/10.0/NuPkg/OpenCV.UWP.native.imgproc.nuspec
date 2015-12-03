@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package>
+ <metadata>
+    <id>OpenCV.UWP.native.imgproc</id>
+    <version>0.0.1-alpha</version>
+    <title>OpenCV for UWP/C++ - imgproc</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>OpenCV Imgproc - its DLLs, and its C++ header/import files</description>
+    <summary>Imgproc contains primitives for manipulating images</summary>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.core" version="0.0.1-alpha" />
+    </dependencies>
+ </metadata>
+</package>

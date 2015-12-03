@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package>
+ <metadata>
+    <id>OpenCV.UWP.native.core</id>
+    <version>0.0.1-alpha</version>
+    <title>OpenCV for UWP/C++ - core</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>OpenCV Core - its DLLs, and its C++ header/import files</description>
+    <summary>Core contains the core OpenCV functionality</summary>
+    <dependencies>
+    </dependencies>
+ </metadata>
+</package>

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package>
+ <metadata>
+    <id>OpenCV.UWP.native.imgcodecs</id>
+    <version>0.0.1-alpha</version>
+    <title>OpenCV for UWP/C++ - imgcodecs</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>OpenCV Imgcodecs - its DLLs, and its C++ header/import files</description>
+    <summary>Imgproc contains methods for loading images</summary>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.imgproc" version="0.0.1-alpha" />
+    </dependencies>
+ </metadata>
+</package>
