@@ -45,7 +45,7 @@
 #include "precomp.hpp"
 #include "arithm_simd.hpp"
 #include "arithm_core.hpp"
-#include "opencv2/hal/replacement.hpp"
+#include "replacement.hpp"
 
 namespace cv { namespace hal {
 
