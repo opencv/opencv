@@ -44,6 +44,8 @@
 
 #include "opencv2/hal/defs.h"
 
+namespace cv {
+
 #if CV_NEON
 
 inline int32x2_t cv_vrnd_s32_f32(float32x2_t v)
@@ -119,5 +121,7 @@ inline float32x2_t cv_vsqrt_f32(float32x2_t val)
 }
 
 #endif
+
+}
 
 #endif // __OPENCV_HAL_NEON_UTILS_HPP__
