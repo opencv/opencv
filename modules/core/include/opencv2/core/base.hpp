@@ -679,8 +679,8 @@ CV_EXPORTS void setUseIPP(bool flag);
 
 //! @} core_utils
 
-#include "opencv2/hal/neon_utils.hpp"
-
 } // cv
+
+#include "opencv2/hal/neon_utils.hpp"
 
 #endif //__OPENCV_CORE_BASE_HPP__
