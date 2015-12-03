@@ -163,6 +163,9 @@ CV_EXPORTS void gemm(const Mat& src1, const Mat& src2, double alpha,
                      const Mat& src3, double beta, Mat& dst, int flags);
     CV_EXPORTS void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& shift );
 CV_EXPORTS double crossCorr(const Mat& src1, const Mat& src2);
+CV_EXPORTS void threshold( const Mat& src, Mat& dst, double thresh, double maxval, int thresh_type );
+CV_EXPORTS void minMaxIdx( InputArray _img, double* minVal, double* maxVal,
+                    Point* minLoc, Point* maxLoc, InputArray _mask );
 
 struct CV_EXPORTS MatInfo
 {
