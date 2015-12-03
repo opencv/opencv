@@ -31,4 +31,3 @@ int slow_not8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
             dst[x] = ~src1[x];
     return cv::hal::Error::Ok;
 }
-
