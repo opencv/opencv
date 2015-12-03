@@ -239,7 +239,7 @@ public:
                     for (i = n_oob - 1; i > 0; --i)  //Randomly shuffle indices so we can permute features
                     {
                         int r_i = rng.uniform(0, i + 1);
-                        std::swap(oobperm[r_i], oobperm[r_i]);
+                        std::swap(oobperm[i], oobperm[r_i]);
                     }
 
                     for( vi_ = 0; vi_ < nvars; vi_++ )
