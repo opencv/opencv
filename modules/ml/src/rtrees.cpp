@@ -236,7 +236,11 @@ public:
                     oobperm.resize(n_oob);
                     for( i = 0; i < n_oob; i++ )
                         oobperm[i] = oobidx[i];
-                    std::random_shuffle(oobperm.begin(), oobperm.end()); //Randomly shuffle indices so we can permute features
+                    for (i = n_oob - 1; i > 0; --i)  //Randomly shuffle indices so we can permute features
+                    {
+                        int r_i = rng.uniform(0, i + 1);
+                        std::swap(oobperm[r_i], oobperm[r_i]);
+                    }
 
                     for( vi_ = 0; vi_ < nvars; vi_++ )
                     {
