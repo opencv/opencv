@@ -51,6 +51,7 @@
 #include <cassert>
 
 #include "opencv2/hal/sse_utils.hpp"
+#include "opencv2/hal/neon_utils.hpp"
 
 #if defined HAVE_IPP && (IPP_VERSION_X100 >= 700)
 #define ARITHM_USE_IPP 1
