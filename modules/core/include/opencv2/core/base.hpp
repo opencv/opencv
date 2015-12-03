@@ -762,6 +762,4 @@ inline float32x2_t cv_vsqrt_f32(float32x2_t val)
 
 } // cv
 
-#include "sse_utils.hpp"
-
 #endif //__OPENCV_CORE_BASE_HPP__
