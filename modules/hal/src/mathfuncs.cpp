@@ -72,7 +72,43 @@ void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angle
         return;
 #endif
 
-#if CV_SSE2
+#if CV_AVX2
+    Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
+    __m256 eps = _mm256_set1_ps((float)DBL_EPSILON), absmask = _mm256_set1_ps(iabsmask.f);
+    __m256 _90 = _mm256_set1_ps(90.f),  _180 = _mm256_set1_ps(180.f), _360 = _mm256_set1_ps(360.f);
+    __m256 z = _mm256_setzero_ps(),   scale4 = _mm256_set1_ps(scale);
+    __m256 p1 = _mm256_set1_ps(atan2_p1), p3 = _mm256_set1_ps(atan2_p3);
+    __m256 p5 = _mm256_set1_ps(atan2_p5), p7 = _mm256_set1_ps(atan2_p7);
+
+    for (; i <= len - 8; i += 8)
+    {
+        __m256 x = _mm256_loadu_ps(X + i), y = _mm256_loadu_ps(Y + i);
+        __m256 ax = _mm256_and_ps(x, absmask), ay = _mm256_and_ps(y, absmask);
+
+        __m256 mask = _mm256_cmp_ps(ax, ay, _CMP_LT_OQ);
+        __m256 tmin = _mm256_min_ps(ax, ay), tmax = _mm256_max_ps(ax, ay);
+        __m256 c = _mm256_div_ps(tmin, _mm256_add_ps(tmax, eps));
+        __m256 c2 = _mm256_mul_ps(c, c);
+        __m256 a = _mm256_mul_ps(c2, p7);
+        a = _mm256_mul_ps(_mm256_add_ps(a, p5), c2);
+        a = _mm256_mul_ps(_mm256_add_ps(a, p3), c2);
+        a = _mm256_mul_ps(_mm256_add_ps(a, p1), c);
+
+        __m256 b = _mm256_sub_ps(_90, a);
+        a = _mm256_xor_ps(a, _mm256_and_ps(_mm256_xor_ps(a, b), mask));
+
+        b = _mm256_sub_ps(_180, a);
+        mask = _mm256_cmp_ps(x, z, _CMP_LT_OQ);
+        a = _mm256_xor_ps(a, _mm256_and_ps(_mm256_xor_ps(a, b), mask));
+
+        b = _mm256_sub_ps(_360, a);
+        mask = _mm256_cmp_ps(y, z, _CMP_LT_OQ);
+        a = _mm256_xor_ps(a, _mm256_and_ps(_mm256_xor_ps(a, b), mask));
+
+        a = _mm256_mul_ps(a, scale4);
+        _mm256_storeu_ps(angle + i, a);
+    }
+#elif CV_SSE2
     Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
     __m128 eps = _mm_set1_ps((float)DBL_EPSILON), absmask = _mm_set1_ps(iabsmask.f);
     __m128 _90 = _mm_set1_ps(90.f), _180 = _mm_set1_ps(180.f), _360 = _mm_set1_ps(360.f);
@@ -177,7 +213,19 @@ void magnitude(const float* x, const float* y, float* mag, int len)
 
     int i = 0;
 
-#if CV_SIMD128
+#if CV_AVX2
+    for (; i <= len - 16; i += 16)
+    {
+        __m256 x0 = _mm256_loadu_ps(x + i);
+        __m256 y0 = _mm256_loadu_ps(y + i);
+        __m256 x1 = _mm256_loadu_ps(x + i + 8);
+        __m256 y1 = _mm256_loadu_ps(y + i + 8);
+        x0 = _mm256_sqrt_ps(_mm256_fmadd_ps(x0, x0, _mm256_mul_ps(y0, y0)));
+        x1 = _mm256_sqrt_ps(_mm256_fmadd_ps(x1, x1, _mm256_mul_ps(y1, y1)));
+        _mm256_storeu_ps(mag + i, x0);
+        _mm256_storeu_ps(mag + i + 8, x1);
+    }
+#elif CV_SIMD128
     for( ; i <= len - 8; i += 8 )
     {
         v_float32x4 x0 = v_load(x + i), x1 = v_load(x + i + 4);
@@ -213,7 +261,19 @@ void magnitude(const double* x, const double* y, double* mag, int len)
 
     int i = 0;
 
-#if CV_SIMD128_64F
+#if CV_AVX2
+    for (; i <= len - 8; i += 8)
+    {
+        __m256d x0 = _mm256_loadu_pd(x + i);
+        __m256d y0 = _mm256_loadu_pd(y + i);
+        __m256d x1 = _mm256_loadu_pd(x + i + 4);
+        __m256d y1 = _mm256_loadu_pd(y + i + 4);
+        x0 = _mm256_sqrt_pd(_mm256_fmadd_pd(x0, x0, _mm256_mul_pd(y0, y0)));
+        x1 = _mm256_sqrt_pd(_mm256_fmadd_pd(x1, x1, _mm256_mul_pd(y1, y1)));
+        _mm256_storeu_pd(mag + i, x0);
+        _mm256_storeu_pd(mag + i + 4, x1);
+    }
+#elif CV_SIMD128_64F
     for( ; i <= len - 4; i += 4 )
     {
         v_float64x2 x0 = v_load(x + i), x1 = v_load(x + i + 2);
@@ -249,7 +309,17 @@ void invSqrt(const float* src, float* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD128
+#if CV_AVX2
+    for (; i <= len - 16; i += 16)
+    {
+        __m256 x0 = _mm256_loadu_ps(src + i);
+        __m256 x1 = _mm256_loadu_ps(src + i + 8);
+        x0 = _mm256_rsqrt_ps(x0);
+        x1 = _mm256_rsqrt_ps(x1);
+        _mm256_storeu_ps(dst + i, x0);
+        _mm256_storeu_ps(dst + i + 8, x1);
+    }
+#elif CV_SIMD128
     for( ; i <= len - 8; i += 8 )
     {
         v_float32x4 t0 = v_load(src + i), t1 = v_load(src + i + 4);
@@ -268,7 +338,18 @@ void invSqrt(const double* src, double* dst, int len)
 {
     int i = 0;
 
-#if CV_SSE2
+#if CV_AVX2
+    __m256d _one = _mm256_set1_pd(1.0);
+    for (; i <= len - 8; i += 8)
+    {
+        __m256d x0 = _mm256_loadu_pd(src + i);
+        __m256d x1 = _mm256_loadu_pd(src + i + 4);
+        x0 = _mm256_div_pd(_one, _mm256_sqrt_pd(x0));
+        x1 = _mm256_div_pd(_one, _mm256_sqrt_pd(x1));
+        _mm256_storeu_pd(dst + i, x0);
+        _mm256_storeu_pd(dst + i + 4, x1);
+    }
+#elif CV_SSE2
     __m128d v_1 = _mm_set1_pd(1.0);
     for ( ; i <= len - 2; i += 2)
         _mm_storeu_pd(dst + i, _mm_div_pd(v_1, _mm_sqrt_pd(_mm_loadu_pd(src + i))));
@@ -295,7 +376,17 @@ void sqrt(const float* src, float* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD128
+#if CV_AVX2
+    for (; i <= len - 16; i += 16)
+    {
+        __m256 x0 = _mm256_loadu_ps(src + i);
+        __m256 x1 = _mm256_loadu_ps(src + i + 8);
+        x0 = _mm256_sqrt_ps(x0);
+        x1 = _mm256_sqrt_ps(x1);
+        _mm256_storeu_ps(dst + i, x0);
+        _mm256_storeu_ps(dst + i + 8, x1);
+    }
+#elif CV_SIMD128
     for( ; i <= len - 8; i += 8 )
     {
         v_float32x4 t0 = v_load(src + i), t1 = v_load(src + i + 4);
@@ -326,7 +417,17 @@ void sqrt(const double* src, double* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD128_64F
+#if CV_AVX2
+    for (; i <= len - 8; i += 8)
+    {
+        __m256d x0 = _mm256_loadu_pd(src + i);
+        __m256d x1 = _mm256_loadu_pd(src + i + 4);
+        x0 = _mm256_sqrt_pd(x0);
+        x1 = _mm256_sqrt_pd(x1);
+        _mm256_storeu_pd(dst + i, x0);
+        _mm256_storeu_pd(dst + i + 4, x1);
+    }
+#elif CV_SIMD128_64F
     for( ; i <= len - 4; i += 4 )
     {
         v_float64x2 t0 = v_load(src + i), t1 = v_load(src + i + 2);
