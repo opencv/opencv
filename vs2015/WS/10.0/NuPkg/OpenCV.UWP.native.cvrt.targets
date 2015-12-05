@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <OpenCVFixedPlatform Condition="'$(Platform)' == 'Win32'">x86</OpenCVFixedPlatform>
+    <OpenCVFixedPlatform Condition="'$(Platform)' != 'Win32'">$(Platform)</OpenCVFixedPlatform>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'UAP'">
+    <Reference Include="$(MSBuildThisFileDirectory)..\..\lib\uap\cvRT.winmd">
+      <Implementation>opencv_winrt.dll</Implementation>
+    </Reference>
+    <ReferenceCopyLocalPaths Condition="'$(Configuration)' == 'Release'" Include="$(MSBuildThisFileDirectory)..\..\runtimes\win10-$(OpenCVFixedPlatform)\native\opencv_winrt.dll" />
+    <ReferenceCopyLocalPaths Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildThisFileDirectory)win10-$(OpenCVFixedPlatform)\opencv_winrt.dll" />
+  </ItemGroup>
+</Project>

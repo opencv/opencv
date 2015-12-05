@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>OpenCV.UWP.native.stitching</id>
+    <version>0.0.2-alpha</version>
+    <title>OpenCV Stitching (for UWP/C++)</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>OpenCV Stitching - Images Stitching (for UWP/C++)</summary>
+    <description>Contains DLLs and C++ header/import files for OpenCV Stitching module, for use in UWP apps. Stitching is for feature finding and image matching, rotation estimation, autocalibration, image warping, seam estimation, exposure compensation and image blenders.</description>
+    <licenseUrl>https://raw.githubusercontent.com/Itseez/opencv/master/LICENSE</licenseUrl>
+    <projectUrl>http://docs.opencv.org/3.0.0/d1/d46/group__stitching.html</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ljw1004/opencv/vs2015-samples/vs2015/WS/10.0/NuPkg/opencv.uwp.png</iconUrl>
+    <tags>opencv UWP</tags>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.calib3d" version="0.0.2-alpha" />
+    </dependencies>
+  </metadata>
+</package>

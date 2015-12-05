@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>OpenCV.UWP.native.all</id>
+    <version>0.0.2-alpha</version>
+    <title>OpenCV All (for UWP/C++)</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>OpenCV All - All-in-one package (for UWP/C++)</summary>
+    <description>This is the all-in-one package for (almost) all the OpenCV.UWP.native packages, plus a few catch-all headers. You're advised to instead bring in only the packages you need.</description>
+    <licenseUrl>https://raw.githubusercontent.com/Itseez/opencv/master/LICENSE</licenseUrl>
+    <projectUrl>http://opencv.org/</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ljw1004/opencv/vs2015-samples/vs2015/WS/10.0/NuPkg/opencv.uwp.png</iconUrl>
+    <tags>opencv UWP</tags>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.calib3d" version="0.0.2-alpha" />
+      <dependency id="OpenCV.UWP.native.video" version="0.0.2-alpha" />
+      <dependency id="OpenCV.UWP.native.photo" version="0.0.2-alpha" />
+      <dependency id="OpenCV.UWP.native.videoio" version="0.0.2-alpha" />
+      <dependency id="OpenCV.UWP.native.objdetect" version="0.0.2-alpha" />
+    </dependencies>
+  </metadata>
+</package>
