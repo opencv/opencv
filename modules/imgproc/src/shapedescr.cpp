@@ -98,14 +98,15 @@ static int findEnslosingCicle4pts_32f( Point2f* pts, Point2f& _center, float& _r
 
     int idxs[4] = { 0, 1, 2, 3 };
     int i, j, k = 1, mi = 0;
-    float max_dist = 0;
-    Point2f center;
+    float max_dist = 0.0f;
+    Point2f center = pts[0];
     Point2f min_center;
     float radius, min_radius = FLT_MAX;
     Point2f res_pts[4];
+    const float eps = FLT_EPSILON;
 
     center = min_center = pts[0];
-    radius = 1.f;
+    radius = 0.f;
 
     for( i = 0; i < 4; i++ )
         for( j = i + 1; j < 4; j++ )
@@ -120,7 +121,7 @@ static int findEnslosingCicle4pts_32f( Point2f* pts, Point2f& _center, float& _r
             }
         }
 
-    if( max_dist > 0 )
+    if( max_dist > 0.0f )
     {
         k = 2;
         for( i = 0; i < 4; i++ )
@@ -134,12 +135,10 @@ static int findEnslosingCicle4pts_32f( Point2f* pts, Point2f& _center, float& _r
 
         center = Point2f( (pts[idxs[0]].x + pts[idxs[1]].x)*0.5f,
                           (pts[idxs[0]].y + pts[idxs[1]].y)*0.5f );
-        radius = (float)(norm(pts[idxs[0]] - center)*1.03);
-        if( radius < 1.f )
-            radius = 1.f;
+        radius = (float)(norm(pts[idxs[0]] - center)) + eps;
 
-        if( pointInCircle( pts[idxs[2]], center, radius ) >= 0 &&
-            pointInCircle( pts[idxs[3]], center, radius ) >= 0 )
+        if( pointInCircle( pts[idxs[2]], center, radius ) >= 0.0 &&
+            pointInCircle( pts[idxs[3]], center, radius ) >= 0.0 )
         {
             k = 2; //rand()%2+2;
         }
@@ -151,11 +150,8 @@ static int findEnslosingCicle4pts_32f( Point2f* pts, Point2f& _center, float& _r
                 if( findCircle( pts[shuffles[i][0]], pts[shuffles[i][1]],
                                 pts[shuffles[i][2]], &center, &radius ) )
                 {
-                    radius *= 1.03f;
-                    if( radius < 2.f )
-                        radius = 2.f;
-
-                    if( pointInCircle( pts[shuffles[i][3]], center, radius ) >= 0 &&
+                    radius += eps;
+                    if( pointInCircle( pts[shuffles[i][3]], center, radius ) >= 0.0 &&
                         min_radius > radius )
                     {
                         min_radius = radius;
