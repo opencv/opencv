@@ -181,6 +181,7 @@ public:
     TrainData::getClassLabels.
      */
     CV_WRAP virtual Mat getTrainNormCatResponses() const = 0;
+    CV_WRAP virtual Mat getTestSamples() const = 0;
     CV_WRAP virtual Mat getTestResponses() const = 0;
     CV_WRAP virtual Mat getTestNormCatResponses() const = 0;
     CV_WRAP virtual Mat getResponses() const = 0;
