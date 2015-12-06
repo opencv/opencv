@@ -110,6 +110,7 @@ set(OpenCV_SHARED @BUILD_SHARED_LIBS@)
 set(OpenCV_USE_MANGLED_PATHS @OpenCV_USE_MANGLED_PATHS_CONFIGCMAKE@)
 
 # Extract the directory where *this* file has been installed (determined at cmake run-time)
+unset(OpenCV_CONFIG_PATH CACHE)
 get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH CACHE)
 
 if(NOT WIN32 OR ANDROID)
