@@ -227,6 +227,32 @@ function(ocv_generate_lintian_overrides_file comp)
     endif()
 endfunction()
 
+function(ocv_get_lintian_version version)
+    find_program(LINTIAN_EXECUTABLE lintian)
+
+    if(NOT LINTIAN_EXECUTABLE)
+        return()
+    endif()
+
+    execute_process(COMMAND ${LINTIAN_EXECUTABLE} --version
+              WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+              RESULT_VARIABLE LINTIAN_EXITCODE
+              OUTPUT_VARIABLE LINTIAN_VERSION
+              ERROR_QUIET)
+
+    if(NOT LINTIAN_EXITCODE EQUAL 0)
+        return()
+    endif()
+
+    if(LINTIAN_VERSION MATCHES "([0-9]+\\.[0-9]+\\.[0-9]+)")
+        set(LINTIAN_VERSION "${CMAKE_MATCH_1}" CACHE INTERNAL "Lintian version")
+    endif()
+
+    set("${version}" "${LINTIAN_VERSION}" PARENT_SCOPE)
+endfunction()
+
+ocv_get_lintian_version(LINTIAN_VERSION)
+
 set(LIBS_LINTIAN_OVERRIDES "binary-or-shlib-defines-rpath" # usr/lib/libopencv_core.so.2.4.12
                            "package-name-doesnt-match-sonames") # libopencv-calib3d2.4 libopencv-contrib2.4
 
@@ -245,6 +271,11 @@ endif()
 
 set(DEV_LINTIAN_OVERRIDES "binary-or-shlib-defines-rpath" # usr/bin/opencv_traincascade
                           "binary-without-manpage") # usr/bin/opencv_traincascade
+
+if(LINTIAN_VERSION VERSION_GREATER "2.5.30" OR
+    LINTIAN_VERSION VERSION_EQUAL "2.5.30")
+    list(APPEND DEV_LINTIAN_OVERRIDES "pkg-config-bad-directive") # usr/lib/pkgconfig/opencv.pc -L/usr/local/cuda-7.0/lib64
+endif()
 
 if(NOT INSTALL_C_EXAMPLES)
     set(SAMPLES_LINTIAN_OVERRIDES "empty-binary-package") # samples are not installed
