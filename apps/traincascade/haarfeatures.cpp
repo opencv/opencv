@@ -102,11 +102,11 @@ void CvHaarEvaluator::setImage(const Mat& img, uchar clsLabel, int idx)
     Mat innSum(winSize.height + 1, winSize.width + 1, sum.type(), sum.ptr<int>((int)idx));
     Mat innSqSum;
     if (((const CvHaarFeatureParams*)featureParams)->mode == CvHaarFeatureParams::ALL) {
-		Mat innTilted(winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>((int)idx));
-		integral(img, innSum, innSqSum, innTilted);
-	}
-	else
-		integral(img, innSum, innSqSum);
+	Mat innTilted(winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>((int)idx));
+	integral(img, innSum, innSqSum, innTilted);
+    }
+    else
+    	integral(img, innSum, innSqSum);
     normfactor.ptr<float>(0)[idx] = calcNormFactor( innSum, innSqSum );
 }
 
