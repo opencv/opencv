@@ -166,19 +166,12 @@ For this sequence we got the following estimation:
 Additional Resources
 --------------------
 
-1.  Paul E Debevec and Jitendra Malik. Recovering high dynamic range radiance maps from photographs.
-	In ACM SIGGRAPH 2008 classes, page 31. ACM, 2008.
-2.	Mark A Robertson, Sean Borman, and Robert L Stevenson. Dynamic range improvement through multiple exposures.
-	In Image Processing, 1999. ICIP 99. Proceedings. 1999 International Conference on, volume 3, pages 159–163.
-	IEEE, 1999.	
-3.  Tom Mertens, Jan Kautz, and Frank Van Reeth. Exposure fusion. In Computer Graphics and Applications, 2007.
-	PG'07. 15th Pacific Conference on, pages 382–390. IEEE, 2007.	
-4.  Images from [Wikipedia-HDR](https://en.wikipedia.org/wiki/High-dynamic-range_imaging)
+1. Paul E Debevec and Jitendra Malik. Recovering high dynamic range radiance maps from photographs. In ACM SIGGRAPH 2008 classes, page 31. ACM, 2008.
+2. Mark A Robertson, Sean Borman, and Robert L Stevenson. Dynamic range improvement through multiple exposures. In Image Processing, 1999. ICIP 99. Proceedings. 1999 International Conference on, volume 3, pages 159–163. IEEE, 1999.
+3. Tom Mertens, Jan Kautz, and Frank Van Reeth. Exposure fusion. In Computer Graphics and Applications, 2007. PG'07. 15th Pacific Conference on, pages 382–390. IEEE, 2007.
+4. Images from [Wikipedia-HDR](https://en.wikipedia.org/wiki/High-dynamic-range_imaging)
 
 Exercises
 ---------
-1. Try all tonemap algorithms: [Drago](http://docs.opencv.org/master/da/d53/classcv_1_1TonemapDrago.html),
-	[Durand](http://docs.opencv.org/master/da/d3d/classcv_1_1TonemapDurand.html),
-	[Mantiuk](http://docs.opencv.org/master/de/d76/classcv_1_1TonemapMantiuk.html) and
-	[Reinhard](http://docs.opencv.org/master/d0/dec/classcv_1_1TonemapReinhard.html).
+1. Try all tonemap algorithms: [Drago](http://docs.opencv.org/master/da/d53/classcv_1_1TonemapDrago.html), [Durand](http://docs.opencv.org/master/da/d3d/classcv_1_1TonemapDurand.html), [Mantiuk](http://docs.opencv.org/master/de/d76/classcv_1_1TonemapMantiuk.html) and [Reinhard](http://docs.opencv.org/master/d0/dec/classcv_1_1TonemapReinhard.html).
 2. Try changing the parameters in the HDR calibration and tonemap methods.
