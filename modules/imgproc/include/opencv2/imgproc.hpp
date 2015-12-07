@@ -3393,7 +3393,7 @@ represents the background label. ltype specifies the output label image type, an
 consideration based on the total number of labels or alternatively the total number of pixels in
 the source image.
 
-@param image the image to be labeled
+@param image the 8-bit single-channel image to be labeled
 @param labels destination labeled image
 @param connectivity 8 or 4 for 8-way or 4-way connectivity respectively
 @param ltype output image label type. Currently CV_32S and CV_16U are supported.
@@ -3402,7 +3402,7 @@ CV_EXPORTS_W int connectedComponents(InputArray image, OutputArray labels,
                                      int connectivity = 8, int ltype = CV_32S);
 
 /** @overload
-@param image the image to be labeled
+@param image the 8-bit single-channel image to be labeled
 @param labels destination labeled image
 @param stats statistics output for each label, including the background label, see below for
 available statistics. Statistics are accessed via stats(label, COLUMN) where COLUMN is one of
