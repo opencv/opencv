@@ -46,6 +46,7 @@
 #define __OPENCV_HAL_HPP__
 
 #include "opencv2/hal/defs.h"
+#include "opencv2/hal/interface.hpp"
 
 /**
   @defgroup hal Hardware Acceleration Layer
@@ -58,21 +59,18 @@
   @}
 */
 
-
 namespace cv { namespace hal {
 
 //! @addtogroup hal
 //! @{
 
-namespace Error {
-
-enum
+class Failure
 {
-    Ok = 0,
-    Unknown = -1
+public:
+    Failure(int code_ = Error::Unknown) : code(code_) {}
+public:
+    int code;
 };
-
-}
 
 int normHamming(const uchar* a, int n);
 int normHamming(const uchar* a, const uchar* b, int n);
@@ -104,8 +102,186 @@ void sqrt(const double* src, double* dst, int len);
 void invSqrt(const float* src, float* dst, int len);
 void invSqrt(const double* src, double* dst, int len);
 
+void split8u(const uchar* src, uchar** dst, int len, int cn );
+void split16u(const ushort* src, ushort** dst, int len, int cn );
+void split32s(const int* src, int** dst, int len, int cn );
+void split64s(const int64* src, int64** dst, int len, int cn );
+
+void merge8u(const uchar** src, uchar* dst, int len, int cn );
+void merge16u(const ushort** src, ushort* dst, int len, int cn );
+void merge32s(const int** src, int* dst, int len, int cn );
+void merge64s(const int64** src, int64* dst, int len, int cn );
+
+void add8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
+void add8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* );
+void add16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* );
+void add16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* );
+void add32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
+void add32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
+void add64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+
+void sub8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
+void sub8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* );
+void sub16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* );
+void sub16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* );
+void sub32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
+void sub32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
+void sub64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+
+void max8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
+void max8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* );
+void max16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* );
+void max16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* );
+void max32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
+void max32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
+void max64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+
+void min8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
+void min8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* );
+void min16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* );
+void min16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* );
+void min32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
+void min32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
+void min64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+
+void absdiff8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
+void absdiff8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* );
+void absdiff16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* );
+void absdiff16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* );
+void absdiff32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* );
+void absdiff32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* );
+void absdiff64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* );
+
+void and8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
+void or8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
+void xor8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
+void not8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* );
+
+void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+void cmp8s(const schar* src1, size_t step1, const schar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+void cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+void cmp32s(const int* src1, size_t step1, const int* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+void cmp32f(const float* src1, size_t step1, const float* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+void cmp64f(const double* src1, size_t step1, const double* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _cmpop);
+
+void mul8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
+void mul8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
+void mul16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* scale);
+void mul16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* scale);
+void mul32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
+void mul32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
+void mul64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
+
+void div8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
+void div8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
+void div16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* scale);
+void div16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* scale);
+void div32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
+void div32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
+void div64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
+
+void recip8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
+void recip8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
+void recip16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* scale);
+void recip16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* scale);
+void recip32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
+void recip32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
+void recip64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
+
+void addWeighted8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _scalars );
+void addWeighted8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scalars );
+void addWeighted16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* scalars );
+void addWeighted16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* scalars );
+void addWeighted32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scalars );
+void addWeighted32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scalars );
+void addWeighted64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scalars );
 //! @}
 
 }} //cv::hal
+
+namespace cv {
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + b); }
+};
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a - b); }
+};
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpRSub
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(b - a); }
+};
+
+template<typename T> struct OpMin
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator ()(const T a, const T b) const { return std::min(a, b); }
+};
+
+template<typename T> struct OpMax
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator ()(const T a, const T b) const { return std::max(a, b); }
+};
+
+template<typename T> struct OpAbsDiff
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()(T a, T b) const { return a > b ? a - b : b - a; }
+};
+
+template<typename T> struct OpAnd
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T b ) const { return a & b; }
+};
+
+template<typename T> struct OpOr
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T b ) const { return a | b; }
+};
+
+template<typename T> struct OpXor
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T b ) const { return a ^ b; }
+};
+
+template<typename T> struct OpNot
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T ) const { return ~a; }
+};
+
+}
 
 #endif //__OPENCV_HAL_HPP__
