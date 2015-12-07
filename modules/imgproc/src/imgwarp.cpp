@@ -3257,7 +3257,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     Mat src = _src.getMat();
     _dst.create(dsize, src.type());
     Mat dst = _dst.getMat();
-    
+
     if (dsize == ssize) {
       // Source and destination are of same size. Use simple copy.
       src.copyTo(dst);
