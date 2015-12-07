@@ -2360,6 +2360,55 @@ void Core_SolvePolyTest::run( int )
     }
 }
 
+template<typename T>
+static void checkRoot(Mat& r, T re, T im)
+{
+    for (int i = 0; i < r.cols*r.rows; i++)
+    {
+        Vec<T, 2> v = *(Vec<T, 2>*)r.ptr(i);
+        if (fabs(re - v[0]) < 1e-6 && fabs(im - v[1]) < 1e-6)
+        {
+            v[0] = std::numeric_limits<T>::quiet_NaN();
+            v[1] = std::numeric_limits<T>::quiet_NaN();
+            return;
+        }
+    }
+    GTEST_NONFATAL_FAILURE_("Can't find root") << "(" << re << ", " << im << ")";
+}
+TEST(Core_SolvePoly, regression_5599)
+{
+    // x^4 - x^2 = 0, roots: 1, -1, 0, 0
+    cv::Mat coefs = (cv::Mat_<float>(1,5) << 0, 0, -1, 0, 1 );
+    {
+        cv::Mat r;
+        double prec;
+        prec = cv::solvePoly(coefs, r);
+        EXPECT_LE(prec, 1e-6);
+        EXPECT_EQ(4, r.total());
+        //std::cout << "Preciseness = " << prec << std::endl;
+        //std::cout << "roots:\n" << r << "\n" << std::endl;
+        ASSERT_EQ(CV_32FC2, r.type());
+        checkRoot<float>(r, 1, 0);
+        checkRoot<float>(r, -1, 0);
+        checkRoot<float>(r, 0, 0);
+        checkRoot<float>(r, 0, 0);
+    }
+    // x^2 - 2x + 1 = 0,  roots: 1, 1
+    coefs = (cv::Mat_<float>(1,3) << 1, -2, 1 );
+    {
+        cv::Mat r;
+        double prec;
+        prec = cv::solvePoly(coefs, r);
+        EXPECT_LE(prec, 1e-6);
+        EXPECT_EQ(2, r.total());
+        //std::cout << "Preciseness = " << prec << std::endl;
+        //std::cout << "roots:\n" << r << "\n" << std::endl;
+        ASSERT_EQ(CV_32FC2, r.type());
+        checkRoot<float>(r, 1, 0);
+        checkRoot<float>(r, 1, 0);
+    }
+}
+
 class Core_PhaseTest : public cvtest::BaseTest
 {
 public:
