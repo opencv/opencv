@@ -876,34 +876,34 @@ CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 /** @brief Copies specified channels from input arrays to the specified channels of
 output arrays.
 
-The functions mixChannels provide an advanced mechanism for shuffling image channels.
+The function cv::mixChannels provides an advanced mechanism for shuffling image channels.
 
-split and merge and some forms of cvtColor are partial cases of mixChannels .
+cv::split and cv::merge and some forms of cv::cvtColor are partial cases of cv::mixChannels .
 
-In the example below, the code splits a 4-channel RGBA image into a 3-channel BGR (with R and B
+In the example below, the code splits a 4-channel BGRA image into a 3-channel BGR (with B and R
 channels swapped) and a separate alpha-channel image:
 @code{.cpp}
-    Mat rgba( 100, 100, CV_8UC4, Scalar(1,2,3,4) );
-    Mat bgr( rgba.rows, rgba.cols, CV_8UC3 );
-    Mat alpha( rgba.rows, rgba.cols, CV_8UC1 );
+    Mat bgra( 100, 100, CV_8UC4, Scalar(255,0,0,255) );
+    Mat bgr( bgra.rows, bgra.cols, CV_8UC3 );
+    Mat alpha( bgra.rows, bgra.cols, CV_8UC1 );
 
     // forming an array of matrices is a quite efficient operation,
     // because the matrix data is not copied, only the headers
     Mat out[] = { bgr, alpha };
-    // rgba[0] -> bgr[2], rgba[1] -> bgr[1],
-    // rgba[2] -> bgr[0], rgba[3] -> alpha[0]
+    // bgra[0] -> bgr[2], bgra[1] -> bgr[1],
+    // bgra[2] -> bgr[0], bgra[3] -> alpha[0]
     int from_to[] = { 0,2, 1,1, 2,0, 3,3 };
-    mixChannels( &rgba, 1, out, 2, from_to, 4 );
+    mixChannels( &bgra, 1, out, 2, from_to, 4 );
 @endcode
 @note Unlike many other new-style C++ functions in OpenCV (see the introduction section and
-Mat::create ), mixChannels requires the output arrays to be pre-allocated before calling the
+Mat::create ), cv::mixChannels requires the output arrays to be pre-allocated before calling the
 function.
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param nsrcs number of matrices in src.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
-depth must be the same as in src[0].
-@param ndsts number of matrices in dst.
+@param nsrcs number of matrices in `src`.
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
+depth must be the same as in `src[0]`.
+@param ndsts number of matrices in `dst`.
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
 dst; the continuous channel numbering is used: the first input image channels are indexed from 0 to
@@ -911,16 +911,16 @@ src[0].channels()-1, the second input image channels are indexed from src[0].cha
 src[0].channels() + src[1].channels()-1, and so on, the same scheme is used for the output image
 channels; as a special case, when fromTo[k\*2] is negative, the corresponding output channel is
 filled with zero .
-@param npairs number of index pairs in fromTo.
-@sa split, merge, cvtColor
+@param npairs number of index pairs in `fromTo`.
+@sa cv::split, cv::merge, cv::cvtColor
 */
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
 
 /** @overload
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
@@ -935,9 +935,9 @@ CV_EXPORTS void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst
                             const int* fromTo, size_t npairs);
 
 /** @overload
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
