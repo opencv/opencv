@@ -2108,12 +2108,53 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         {
             p = roots[i];
             C num = coeffs[n], denom = coeffs[n];
+            int num_same_root = 1;
             for( j = 0; j < n; j++ )
             {
                 num = num*p + coeffs[n-j-1];
-                if( j != i ) denom = denom * (p - roots[j]);
+                if( j != i )
+                {
+                    if ( (p - roots[j]).re != 0 || (p - roots[j]).im != 0 )
+                        denom = denom * (p - roots[j]);
+                    else
+                        num_same_root++;
+                }
             }
             num /= denom;
+            if( num_same_root > 1)
+            {
+                double old_num_re = num.re;
+                double old_num_im = num.im;
+                int square_root_times = num_same_root % 2 == 0 ? num_same_root / 2 : num_same_root / 2 - 1;
+
+                for( j = 0; j < square_root_times; j++)
+                {
+                    num.re = old_num_re*old_num_re + old_num_im*old_num_im;
+                    num.re = sqrt(num.re);
+                    num.re += old_num_re;
+                    num.im = num.re - old_num_re;
+                    num.re /= 2;
+                    num.re = sqrt(num.re);
+
+                    num.im /= 2;
+                    num.im = sqrt(num.im);
+                    if( old_num_re < 0 ) num.im = -num.im;
+                }
+
+                if( num_same_root % 2 != 0){
+                    Mat cube_coefs(4, 1, CV_64FC1);
+                    Mat cube_roots(3, 1, CV_64FC2);
+                    cube_coefs.at<double>(3) = -(pow(old_num_re, 3));
+                    cube_coefs.at<double>(2) = -(15*pow(old_num_re, 2) + 27*pow(old_num_im, 2));
+                    cube_coefs.at<double>(1) = -48*old_num_re;
+                    cube_coefs.at<double>(0) = 64;
+                    solveCubic(cube_coefs, cube_roots);
+
+                    if(cube_roots.at<double>(0) >= 0) num.re = pow(cube_roots.at<double>(0), 1./3);
+                    else num.re = -pow(-cube_roots.at<double>(0), 1./3);
+                    num.im = sqrt(pow(num.re, 2) / 3 - old_num_re / (3*num.re));
+                }
+            }
             roots[i] = p - num;
             maxDiff = std::max(maxDiff, cv::abs(num));
         }
