@@ -1133,18 +1133,22 @@ void EstimateDualVariablesBody::operator() (const Range& range) const
         {
             const float g1 = static_cast<float>(hypot(u1xRow[x], u1yRow[x]));
             const float g2 = static_cast<float>(hypot(u2xRow[x], u2yRow[x]));
-            const float g3 = static_cast<float>(hypot(u3xRow[x], u3yRow[x]));
 
             const float ng1  = 1.0f + taut * g1;
             const float ng2 =  1.0f + taut * g2;
-            const float ng3 = 1.0f + taut * g3;
 
             p11Row[x] = (p11Row[x] + taut * u1xRow[x]) / ng1;
             p12Row[x] = (p12Row[x] + taut * u1yRow[x]) / ng1;
             p21Row[x] = (p21Row[x] + taut * u2xRow[x]) / ng2;
             p22Row[x] = (p22Row[x] + taut * u2yRow[x]) / ng2;
-            if (use_gamma) p31Row[x] = (p31Row[x] + taut * u3xRow[x]) / ng3;
-            if (use_gamma) p32Row[x] = (p32Row[x] + taut * u3yRow[x]) / ng3;
+
+            if (use_gamma)
+            {
+                const float g3 = static_cast<float>(hypot(u3xRow[x], u3yRow[x]));
+                const float ng3 = 1.0f + taut * g3;
+                p31Row[x] = (p31Row[x] + taut * u3xRow[x]) / ng3;
+                p32Row[x] = (p32Row[x] + taut * u3yRow[x]) / ng3;
+            }
         }
     }
 }
