@@ -1174,8 +1174,8 @@ template<typename _Tp> inline _OutputArray::_OutputArray(const _Tp* vec, int n)
 class CV_EXPORTS MatOp
 {
 public:
-    MatOp() {};
-    virtual ~MatOp() {};
+    MatOp() {}
+    virtual ~MatOp() {}
 
     virtual bool elementWise(const MatExpr& expr) const;
     virtual void assign(const MatExpr& expr, Mat& m, int type=-1) const = 0;
