@@ -164,8 +164,8 @@ void findSecondPoint(const PT *pts, int i, Point2f &center, float &radius)
 
     for (int j = 1; j < i; ++j)
     {
-        float dx = center.x - (float)pts[j].x;
-        float dy = center.y - (float)pts[j].y;
+        dx = center.x - (float)pts[j].x;
+        dy = center.y - (float)pts[j].y;
         if (norm(Point2f(dx, dy)) < radius)
         {
             continue;
@@ -224,13 +224,11 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
     const Point* ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
-    Point2f pt = is_float ? ptsf[0] : Point2f((float)ptsi[0].x,(float)ptsi[0].y);
-    
     // point count <= 3
     if (count <= 3)
     {
         Point2f ptsf3[3];
-        for (size_t i = 0; i < count; ++i)
+        for (int i = 0; i < count; ++i)
         {
             ptsf3[i] = (is_float) ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
         }
