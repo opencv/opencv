@@ -12,7 +12,7 @@ endif(WITH_VFW)
 
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
-# try to find gstreamer 1.x first
+# try to find gstreamer 1.x first if 0.10 was not requested
 if(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
   CHECK_MODULE(gstreamer-base-1.0 HAVE_GSTREAMER_BASE)
   CHECK_MODULE(gstreamer-video-1.0 HAVE_GSTREAMER_VIDEO)
@@ -29,7 +29,7 @@ if(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
       set(GSTREAMER_PBUTILS_VERSION ${ALIASOF_gstreamer-pbutils-1.0_VERSION})
   endif()
 
-endif(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
+endif()
 
 # if gstreamer 1.x was not found, or we specified we wanted 0.10, try to find it
 if(WITH_GSTREAMER AND NOT HAVE_GSTREAMER OR WITH_GSTREAMER_0_10)
