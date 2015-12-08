@@ -270,7 +270,11 @@ int JpegDecoder::getOrientation()
     ExifReader reader( m_filename );
     if( reader.parse() )
     {
-        orientation = reader.getTag( ORIENTATION ).field_u16;//orientation is unsigned short, so check field_u16
+        ExifEntry_t entry = reader.getTag( ORIENTATION );
+        if (entry.tag != INVALID_TAG)
+        {
+            orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
+        }
     }
 
     return orientation;
