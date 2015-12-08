@@ -447,6 +447,9 @@ circle around this pixel.
 AgastFeatureDetector::AGAST_5_8, AgastFeatureDetector::AGAST_7_12d,
 AgastFeatureDetector::AGAST_7_12s, AgastFeatureDetector::OAST_9_16
 
+For non-Intel platforms, there is a tree optimised variant of AGAST with same numerical results.
+The 32-bit binary tree tables were generated automatically from original code using perl script.
+The perl script and examples of tree generation are placed in features2d/doc folder.
 Detects corners using the AGAST algorithm by @cite mair2010_agast .
 
  */
