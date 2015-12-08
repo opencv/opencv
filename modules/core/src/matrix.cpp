@@ -220,25 +220,25 @@ public:
 };
 namespace
 {
-	MatAllocator* g_matAllocator = nullptr;
+    MatAllocator* g_matAllocator = NULL;
 }
 
 
 MatAllocator* Mat::getDefaultAllocator()
 {
-	if (g_matAllocator == nullptr)
-	{
-		g_matAllocator = getStdAllocator();
-	}
-	return g_matAllocator;
+    if (g_matAllocator == NULL)
+    {
+        g_matAllocator = getStdAllocator();
+    }
+    return g_matAllocator;
 }
 void Mat::setDefaultAllocator(MatAllocator* allocator)
 {
-	g_matAllocator = allocator;
+    g_matAllocator = allocator;
 }
 MatAllocator* Mat::getStdAllocator()
 {
-	CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
+    CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
 }
 
 void swap( Mat& a, Mat& b )
