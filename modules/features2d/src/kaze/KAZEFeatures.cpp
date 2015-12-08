@@ -638,7 +638,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEv
         if (sumX*sumX + sumY*sumY > max) {
             // store largest orientation
             max = sumX*sumX + sumY*sumY;
-            kpt.angle = getAngle(sumX, sumY);
+            kpt.angle = getAngle(sumX, sumY) * 180.f / static_cast<float>(CV_PI);
         }
     }
 }
