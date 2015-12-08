@@ -43,8 +43,7 @@
 namespace cv
 {
 
-
-// inner product 
+// inner product
 static float innerProduct(Point2f &v1, Point2f &v2)
 {
     return v1.x * v2.y - v1.y * v2.x;
@@ -58,7 +57,7 @@ static void findCircle3pts(Point2f *pts, Point2f &center, float &radius)
 
     if (innerProduct(v1, v2) == 0.0f)
     {
-        // v1, v2 colineation, can not determine a unique circle 
+        // v1, v2 colineation, can not determine a unique circle
         // find the longtest distance as diameter line
         float d1 = (float)norm(pts[0] - pts[1]);
         float d2 = (float)norm(pts[0] - pts[2]);
