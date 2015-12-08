@@ -636,7 +636,7 @@ IplConvKernelFP;
 #define CV_IS_CONT_MAT          CV_IS_MAT_CONT
 #define CV_SUBMAT_FLAG_SHIFT    15
 #define CV_SUBMAT_FLAG          (1 << CV_SUBMAT_FLAG_SHIFT)
-#define CV_IS_SUBMAT(flags)     ((flags) & CV_MAT_SUBMAT_FLAG)
+#define CV_IS_SUBMAT(flags)     ((flags) & CV_SUBMAT_FLAG)
 
 #define CV_MAGIC_MASK       0xFFFF0000
 #define CV_MAT_MAGIC_VAL    0x42420000
