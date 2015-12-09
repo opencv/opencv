@@ -922,8 +922,8 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
 /** @brief Computes rectification transforms for each head of a calibrated stereo camera.
 
 @param cameraMatrix1 First camera matrix.
-@param cameraMatrix2 Second camera matrix.
 @param distCoeffs1 First camera distortion parameters.
+@param cameraMatrix2 Second camera matrix.
 @param distCoeffs2 Second camera distortion parameters.
 @param imageSize Size of the image used for stereo calibration.
 @param R Rotation matrix between the coordinate systems of the first and the second cameras.
