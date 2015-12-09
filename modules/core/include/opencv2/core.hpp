@@ -1509,7 +1509,7 @@ CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
 
 /** @brief Checks every element of an input array for invalid values.
 
-The functions checkRange check that every array element is neither NaN nor infinite. When minVal \<
+The functions checkRange check that every array element is neither NaN nor infinite. When minVal \>
 -DBL_MAX and maxVal \< DBL_MAX, the functions also check that each value is between minVal and
 maxVal. In case of multi-channel arrays, each channel is processed independently. If some values
 are out of range, position of the first outlier is stored in pos (when pos != NULL). Then, the
@@ -2905,6 +2905,21 @@ public:
     static Ptr<Formatter> get(int fmt = FMT_DEFAULT);
 
 };
+
+static inline
+String& operator << (String& out, Ptr<Formatted> fmtd)
+{
+    fmtd->reset();
+    for(const char* str = fmtd->next(); str; str = fmtd->next())
+        out += cv::String(str);
+    return out;
+}
+
+static inline
+String& operator << (String& out, const Mat& mtx)
+{
+    return out << Formatter::get()->format(mtx);
+}
 
 //////////////////////////////////////// Algorithm ////////////////////////////////////
 

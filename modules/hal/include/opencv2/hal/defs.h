@@ -415,7 +415,7 @@ CV_INLINE int cvFloor( double value )
 #endif
 }
 
-/** @brief Rounds floating-point number to the nearest integer not larger than the original.
+/** @brief Rounds floating-point number to the nearest integer not smaller than the original.
 
  The function computes an integer i such that:
  \f[i \le \texttt{value} < i+1\f]
