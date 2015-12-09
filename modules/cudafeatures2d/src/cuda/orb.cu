@@ -44,6 +44,8 @@
 
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
+#include <thrust/system/cuda/execution_policy.h>
+
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
@@ -56,13 +58,17 @@ namespace cv { namespace cuda { namespace device
         ////////////////////////////////////////////////////////////////////////////////////////////////////////
         // cull
 
-        int cull_gpu(int* loc, float* response, int size, int n_points)
+        int cull_gpu(int* loc, float* response, int size, int n_points, cudaStream_t stream)
         {
             thrust::device_ptr<int> loc_ptr(loc);
             thrust::device_ptr<float> response_ptr(response);
-
-            thrust::sort_by_key(response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
-
+            if(stream)
+            {
+                thrust::sort_by_key(thrust::cuda::par.on(stream), response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
+            }else
+            {
+                thrust::sort_by_key(response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
+            }
             return n_points;
         }
 
