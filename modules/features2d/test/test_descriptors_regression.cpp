@@ -162,7 +162,8 @@ protected:
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
         }
 
-        image.create( 50, 50, CV_8UC3 );
+        RNG rng;
+        image = cvtest::randomMat(rng, Size(50, 50), CV_8UC3, 0, 255, false);
         try
         {
             dextractor->compute( image, keypoints, descriptors );
