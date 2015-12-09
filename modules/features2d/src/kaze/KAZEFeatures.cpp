@@ -512,7 +512,7 @@ public:
         for (int i = range.start; i < range.end; i++)
         {
             kpts[i].angle = 0.0;
-                        if (options_.upright)
+            if (options_.upright)
             {
                 kpts[i].angle = 0.0;
                                 if (options_.extended)
@@ -805,7 +805,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const KeyPoint &kpt, float 
     yf = kpt.pt.y;
     xf = kpt.pt.x;
     scale = fRound(kpt.size / 2.0f);
-    angle = kpt.angle;
+    angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
     level = kpt.class_id;
     co = cos(angle);
     si = sin(angle);
@@ -1088,7 +1088,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float
     yf = kpt.pt.y;
     xf = kpt.pt.x;
     scale = fRound(kpt.size / 2.0f);
-    angle = kpt.angle;
+    angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
     level = kpt.class_id;
     co = cos(angle);
     si = sin(angle);
