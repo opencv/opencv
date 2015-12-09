@@ -648,9 +648,9 @@ namespace
 
             // Filter keypoints by image border
             ensureSizeIsEnough(sz, CV_8UC1, buf_);
-            buf_.setTo(Scalar::all(0));
+            buf_.setTo(Scalar::all(0), stream);
             Rect inner(edgeThreshold_, edgeThreshold_, sz.width - 2 * edgeThreshold_, sz.height - 2 * edgeThreshold_);
-            buf_(inner).setTo(Scalar::all(255));
+            buf_(inner).setTo(Scalar::all(255), stream);
 
             cuda::bitwise_and(maskPyr_[level], buf_, maskPyr_[level], stream);
         }
@@ -796,8 +796,8 @@ namespace
             GpuMat range = keyPointsRange.rowRange(2, 4);
             keyPointsPyr_[level](Range(1, 3), Range(0, keyPointsCount_[level])).copyTo(range, stream);
 
-            keyPointsRange.row(4).setTo(Scalar::all(level));
-            keyPointsRange.row(5).setTo(Scalar::all(patchSize_ * sf));
+            keyPointsRange.row(4).setTo(Scalar::all(level), stream);
+            keyPointsRange.row(5).setTo(Scalar::all(patchSize_ * sf), stream);
 
             offset += keyPointsCount_[level];
         }
