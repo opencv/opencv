@@ -2331,10 +2331,10 @@ static void addChildContour(InputArrayOfArrays contours,
 
         int h_next = hierarchy[i][0], h_prev = hierarchy[i][1],
             v_next = hierarchy[i][2], v_prev = hierarchy[i][3];
-        seq[i].h_next = (size_t)h_next < ncontours ? &seq[h_next] : 0;
-        seq[i].h_prev = (size_t)h_prev < ncontours ? &seq[h_prev] : 0;
-        seq[i].v_next = (size_t)v_next < ncontours ? &seq[v_next] : 0;
-        seq[i].v_prev = (size_t)v_prev < ncontours ? &seq[v_prev] : 0;
+        seq[i].h_next = (0 <= h_next && h_next < (int)ncontours) ? &seq[h_next] : 0;
+        seq[i].h_prev = (0 <= h_prev && h_prev < (int)ncontours) ? &seq[h_prev] : 0;
+        seq[i].v_next = (0 <= v_next && v_next < (int)ncontours) ? &seq[v_next] : 0;
+        seq[i].v_prev = (0 <= v_prev && v_prev < (int)ncontours) ? &seq[v_prev] : 0;
 
         if( v_next >= 0 )
             addChildContour(contours, ncontours, hierarchy, v_next, seq, block);

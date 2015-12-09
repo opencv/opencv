@@ -320,7 +320,6 @@ protected:
     void run_func();
     int validate_test_results( int test_case_idx );
 
-    int aperture_size;
     Mat src, src_gray;
     Mat src_gray32f, src_gray8U;
     Mat mask;
@@ -348,7 +347,7 @@ CV_GoodFeatureToTTest::CV_GoodFeatureToTTest()
     k = 0.04;
     mask = Mat();
     test_case_count = 4;
-
+    SrcType = 0;
 }
 
 int CV_GoodFeatureToTTest::prepare_test_case( int test_case_idx )
