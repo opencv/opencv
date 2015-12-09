@@ -48,7 +48,9 @@
  * \brief Use GStreamer to read/write video
  */
 #include "precomp.hpp"
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 #include <string.h>
 #include <gst/gst.h>
 #include <gst/gstbuffer.h>
@@ -82,6 +84,14 @@
 #else
 #define COLOR_ELEM "autovideoconvert"
 #define COLOR_ELEM_NAME COLOR_ELEM
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#include <sys/stat.h>
 #endif
 
 void toFraction(double decimal, double &numerator, double &denominator);
@@ -590,9 +600,20 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     // else, we might have a file or a manual pipeline.
     // if gstreamer cannot parse the manual pipeline, we assume we were given and
     // ordinary file path.
-    if(!gst_uri_is_valid(filename))
+    if (!gst_uri_is_valid(filename))
     {
+#ifdef _MSC_VER
+        uri = new char[2048];
+        DWORD pathSize = GetFullPathName(filename, 2048, uri, NULL);
+        struct stat buf;
+        if (pathSize == 0 || stat(uri, &buf) != 0)
+        {
+            delete uri;
+            uri = NULL;
+        }
+#else
         uri = realpath(filename, NULL);
+#endif
         stream = false;
         if(uri)
         {
