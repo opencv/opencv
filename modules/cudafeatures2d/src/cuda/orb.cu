@@ -45,6 +45,7 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/system/cuda/execution_policy.h>
+#include <thrust/version.h>
 
 
 #include "opencv2/core/cuda/common.hpp"
@@ -62,6 +63,7 @@ namespace cv { namespace cuda { namespace device
         {
             thrust::device_ptr<int> loc_ptr(loc);
             thrust::device_ptr<float> response_ptr(response);
+#if THRUST_VERSION >= 100800
             if(stream)
             {
                 thrust::sort_by_key(thrust::cuda::par.on(stream), response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
@@ -69,6 +71,9 @@ namespace cv { namespace cuda { namespace device
             {
                 thrust::sort_by_key(response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
             }
+#else
+            thrust::sort_by_key(response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
+#endif
             return n_points;
         }
 
