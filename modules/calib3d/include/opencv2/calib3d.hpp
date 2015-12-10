@@ -225,7 +225,8 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
        // for stereo rectification
-       CALIB_ZERO_DISPARITY      = 0x00400
+       CALIB_ZERO_DISPARITY      = 0x00400,
+       CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
      };
 
 //! the algorithm for finding fundamental matrix

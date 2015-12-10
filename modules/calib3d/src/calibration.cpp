@@ -1232,7 +1232,6 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                     CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
 {
     const int NINTRINSIC = 16;
-    CvLevMarq solver;
     double reprojErr = 0;
 
     Matx33d A;
@@ -1388,7 +1387,11 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         cvInitIntrinsicParams2D( &_matM, &m, npoints, imageSize, &matA, aspectRatio );
     }
 
-    solver.init( nparams, 0, termCrit );
+    CvLevMarq solver( nparams, 0, termCrit );
+
+    if(flags & CALIB_USE_LU) {
+        solver.solveMethod = DECOMP_LU;
+    }
 
     {
     double* param = solver.param->data.db;
@@ -1635,7 +1638,6 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
 {
     const int NINTRINSIC = 16;
     Ptr<CvMat> npoints, err, J_LR, Je, Ji, imagePoints[2], objectPoints, RT0;
-    CvLevMarq solver;
     double reprojErr = 0;
 
     double A[2][9], dk[2][12]={{0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0,0,0}}, rlr[9];
@@ -1737,7 +1739,12 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
     // storage for initial [om(R){i}|t{i}] (in order to compute the median for each component)
     RT0.reset(cvCreateMat( 6, nimages, CV_64F ));
 
-    solver.init( nparams, 0, termCrit );
+    CvLevMarq solver( nparams, 0, termCrit );
+
+    if(flags & CALIB_USE_LU) {
+        solver.solveMethod = DECOMP_LU;
+    }
+
     if( recomputeIntrinsics )
     {
         uchar* imask = solver.mask->data.ptr + nparams - NINTRINSIC*2;
