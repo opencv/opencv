@@ -59,17 +59,26 @@ namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
-        void medianFiltering_gpu(const PtrStepSzb& src, PtrStepSzb dst, int sp, int sr, int maxIter);
+        void medianFiltering_gpu(const PtrStepSzb& src, PtrStepSzb dst, int kernel, int partitions);
     }
 }}}
 
 void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int kernel){
-    meanShiftFiltering(_src,_dst,kernel,128);
+    cv::cuda::meanShiftFiltering(_src,_dst,kernel,128);
 }
 
 void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int kernel, int partitions)
 {
-    using namespace ::cv::cuda::device::imgproc;
+//    using namespace ::cv::cuda::device::imgproc;
+
+                //     int maxKernelSize=min(imSize,81);
+
+    // cv::cuda::GpuMat devHist(1, src.cols*histSize*partitions,CV_32SC1);
+    // cv::cuda::GpuMat devCoarseHist(1,src.cols*histCoarseSize*partitions,CV_32SC1);
+
+    // devHist.release();
+    // devCoarseHist.release();
+
 
 }
 
