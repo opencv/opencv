@@ -3,7 +3,7 @@
 #
 # ----------------------------------------------------------------------------
 
-if(NEON)
+if(ENABLE_NEON)
   project(${PNG_LIBRARY} C ASM)
 else()
   project(${PNG_LIBRARY} C)
@@ -28,7 +28,7 @@ file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
 
-if(NEON AND ARM)
+if(ENABLE_NEON)
   list(APPEND lib_srcs arm/arm_init.c arm/filter_neon.S arm/filter_neon_intrinsics.c)
   add_definitions(-DPNG_ARM_NEON_OPT=2)
 endif()
