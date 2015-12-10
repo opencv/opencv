@@ -457,7 +457,7 @@
 
 /* Memory model/platform independent fns */
 #ifndef PNG_ABORT
-#  ifdef _WINDOWS_
+#  if defined(_WINDOWS_) && !defined(WINRT)
 #    define PNG_ABORT() ExitProcess(0)
 #  else
 #    define PNG_ABORT() abort()
