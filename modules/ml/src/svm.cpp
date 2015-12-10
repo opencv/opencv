@@ -1822,8 +1822,8 @@ public:
             }
         }
 
-        params = best_params;
         class_labels = class_labels0;
+        setParams(best_params);
         return do_train( samples, responses );
     }
 
