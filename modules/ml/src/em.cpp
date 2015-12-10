@@ -161,7 +161,7 @@ public:
     {
         bool needprobs = _outputs.needed();
         Mat samples = _inputs.getMat(), probs, probsrow;
-        int ptype = CV_32F;
+        int ptype = CV_64F;
         float firstres = 0.f;
         int i, nsamples = samples.rows;
 
@@ -187,7 +187,7 @@ public:
 
     Vec2d predict2(InputArray _sample, OutputArray _probs) const
     {
-        int ptype = CV_32F;
+        int ptype = CV_64F;
         Mat sample = _sample.getMat();
         CV_Assert(isTrained());
 
