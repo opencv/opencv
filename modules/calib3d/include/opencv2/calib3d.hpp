@@ -1403,6 +1403,17 @@ CV_EXPORTS_W void reprojectImageTo3D( InputArray disparity,
                                       bool handleMissingValues = false,
                                       int ddepth = -1 );
 
+/** @brief Calculates the Sampson Distance between two points.
+
+The function sampsonDistance calculates and returns the first order approximation of the geometric error as:
+\f[sd( \texttt{pt1} , \texttt{pt2} )= \frac{(\texttt{pt2}^t \cdot \texttt{F} \cdot \texttt{pt1})^2}{(\texttt{F} \cdot \texttt{pt1})(0) + (\texttt{F} \cdot \texttt{pt1})(1) + (\texttt{F}^t \cdot \texttt{pt2})(0) + (\texttt{F}^t \cdot \texttt{pt2})(1)}\f]
+The fundamental matrix may be calculated using the cv::findFundamentalMat function. See HZ 11.4.3 for details.
+@param pt1 first homogeneous 2d point
+@param pt2 second homogeneous 2d point
+@param F fundamental matrix
+*/
+CV_EXPORTS_W double sampsonDistance(InputArray pt1, InputArray pt2, InputArray F);
+
 /** @brief Computes an optimal affine transformation between two 3D point sets.
 
 @param src First input 3D point set.
