@@ -1039,4 +1039,24 @@ void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
         convertPointsToHomogeneous(_src, _dst);
 }
 
+double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F) {
+    CV_Assert(_pt1.type() == CV_64F && _pt1.type() == CV_64F && _F.type() == CV_64F);
+    CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
+
+    Mat pt1(_pt1.getMat());
+    Mat pt2(_pt2.getMat());
+    Mat F(_F.getMat());
+
+    Vec3d F_pt1 = *F.ptr<Matx33d>() * *pt1.ptr<Vec3d>();
+    Vec3d Ft_pt2 = F.ptr<Matx33d>()->t() * *pt2.ptr<Vec3d>();
+
+    double v = pt2.ptr<Vec3d>()->dot(F_pt1);
+
+    // square
+    Ft_pt2 = Ft_pt2.mul(Ft_pt2);
+    F_pt1 = F_pt1.mul(F_pt1);
+
+    return v*v / (F_pt1[0] + F_pt1[1] + Ft_pt2[0] + Ft_pt2[1]);
+}
+
 /* End of file. */
