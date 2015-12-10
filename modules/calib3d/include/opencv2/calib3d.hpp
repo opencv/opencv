@@ -1182,6 +1182,39 @@ CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
 be floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
+@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+Note that this function assumes that points1 and points2 are feature points from cameras with the
+same camera matrix.
+@param method Method for computing a fundamental matrix.
+-   **RANSAC** for the RANSAC algorithm.
+-   **MEDS** for the LMedS algorithm.
+@param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
+line in pixels, beyond which the point is considered an outlier and is not used for computing the
+final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
+point localization, image resolution, and the image noise.
+@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
+confidence (probability) that the estimated matrix is correct.
+@param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
+for the other points. The array is computed only in the RANSAC and LMedS methods.
+
+This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
+@cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
+
+\f[[p_2; 1]^T K^{-T} E K^{-1} [p_1; 1] = 0\f]
+
+where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding points in the first and the
+second images, respectively. The result of this function may be passed further to
+decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
+ */
+CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
+                                 InputArray cameraMatrix, int method = RANSAC,
+                                 double prob = 0.999, double threshold = 1.0,
+                                 OutputArray mask = noArray() );
+
+/** @overload
+@param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
+be floating-point (single or double precision).
+@param points2 Array of the second image points of the same size and format as points1 .
 @param focal focal length of the camera. Note that this function assumes that points1 and points2
 are feature points from cameras with same focal length and principle point.
 @param pp principle point of the camera.
@@ -1197,19 +1230,15 @@ confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
 
-This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
-@cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
+This function differs from the one above that it computes camera matrix from focal length and
+principal point:
 
-\f[[p_2; 1]^T K^{-T} E K^{-1} [p_1; 1] = 0 \\\f]\f[K =
+\f[K =
 \begin{bmatrix}
 f & 0 & x_{pp}  \\
 0 & f & y_{pp}  \\
 0 & 0 & 1
 \end{bmatrix}\f]
-
-where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding points in the first and the
-second images, respectively. The result of this function may be passed further to
-decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
  */
 CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  double focal = 1.0, Point2d pp = Point2d(0, 0),
@@ -1237,11 +1266,11 @@ the check.
 @param points1 Array of N 2D points from the first image. The point coordinates should be
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
+@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+Note that this function assumes that points1 and points2 are feature points from cameras with the
+same camera matrix.
 @param R Recovered relative rotation.
 @param t Recoverd relative translation.
-@param focal Focal length of the camera. Note that this function assumes that points1 and points2
-are feature points from cameras with same focal length and principle point.
-@param pp Principle point of the camera.
 @param mask Input/output mask for inliers in points1 and points2.
 :   If it is not empty, then it marks inliers in points1 and points2 for then given essential
 matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
@@ -1265,19 +1294,48 @@ points1 and points2 are the same input for findEssentialMat. :
         points2[i] = ...;
     }
 
-    double focal = 1.0;
-    cv::Point2d pp(0.0, 0.0);
+    // cametra matrix with both focal lengths = 1, and principal point = (0, 0)
+    Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+
     Mat E, R, t, mask;
 
-    E = findEssentialMat(points1, points2, focal, pp, RANSAC, 0.999, 1.0, mask);
-    recoverPose(E, points1, points2, R, t, focal, pp, mask);
+    E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+    recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
 @endcode
+ */
+CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
+                            InputArray cameraMatrix, OutputArray R, OutputArray t,
+                            InputOutputArray mask = noArray() );
+
+/** @overload
+@param E The input essential matrix.
+@param points1 Array of N 2D points from the first image. The point coordinates should be
+floating-point (single or double precision).
+@param points2 Array of the second image points of the same size and format as points1 .
+@param R Recovered relative rotation.
+@param t Recoverd relative translation.
+@param focal Focal length of the camera. Note that this function assumes that points1 and points2
+are feature points from cameras with same focal length and principle point.
+@param pp Principle point of the camera.
+@param mask Input/output mask for inliers in points1 and points2.
+:   If it is not empty, then it marks inliers in points1 and points2 for then given essential
+matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
+which pass the cheirality check.
+
+This function differs from the one above that it computes camera matrix from focal length and
+principal point:
+
+\f[K =
+\begin{bmatrix}
+f & 0 & x_{pp}  \\
+0 & f & y_{pp}  \\
+0 & 0 & 1
+\end{bmatrix}\f]
  */
 CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
                             OutputArray R, OutputArray t,
                             double focal = 1.0, Point2d pp = Point2d(0, 0),
                             InputOutputArray mask = noArray() );
-
 
 /** @brief For points in an image of a stereo pair, computes the corresponding epilines in the other image.
 
