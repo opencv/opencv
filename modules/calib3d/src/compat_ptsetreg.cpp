@@ -58,6 +58,7 @@ CvLevMarq::CvLevMarq()
     iters = 0;
     completeSymmFlag = false;
     errNorm = prevErrNorm = DBL_MAX;
+    solveMethod = cv::DECOMP_SVD;
 }
 
 CvLevMarq::CvLevMarq( int nparams, int nerrs, CvTermCriteria criteria0, bool _completeSymmFlag )
@@ -113,6 +114,7 @@ void CvLevMarq::init( int nparams, int nerrs, CvTermCriteria criteria0, bool _co
     state = STARTED;
     iters = 0;
     completeSymmFlag = _completeSymmFlag;
+    solveMethod = cv::DECOMP_SVD;
 }
 
 bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
@@ -314,7 +316,7 @@ void CvLevMarq::step()
 #else
     _JtJN.diag() += lambda;
 #endif
-    solve(_JtJN, _JtErr, nonzero_param);
+    solve(_JtJN, _JtErr, nonzero_param, solveMethod);
 
     int j = 0;
     for( int i = 0; i < nparams; i++ )
