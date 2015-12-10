@@ -652,7 +652,7 @@ namespace
             Rect inner(edgeThreshold_, edgeThreshold_, sz.width - 2 * edgeThreshold_, sz.height - 2 * edgeThreshold_);
             buf_(inner).setTo(Scalar::all(255), stream);
 
-            cuda::bitwise_and(maskPyr_[level], buf_, maskPyr_[level], stream);
+            cuda::bitwise_and(maskPyr_[level], buf_, maskPyr_[level], cv::noArray(), stream);
         }
     }
 
