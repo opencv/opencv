@@ -233,12 +233,13 @@ public:
                 oobError /= n_oob;
                 if( rparams.calcVarImportance && n_oob > 1 )
                 {
+                    Mat sample_clone;
                     oobperm.resize(n_oob);
                     for( i = 0; i < n_oob; i++ )
                         oobperm[i] = oobidx[i];
                     for (i = n_oob - 1; i > 0; --i)  //Randomly shuffle indices so we can permute features
                     {
-                        int r_i = rng.uniform(0, i + 1);
+                        int r_i = rng.uniform(0, n_oob);
                         std::swap(oobperm[i], oobperm[r_i]);
                     }
 
@@ -252,7 +253,7 @@ public:
                             j = oobidx[i];
                             int vj = oobperm[i];
                             sample0 = Mat( nallvars, 1, CV_32F, psamples + sstep0*w->sidx[j], sstep1*sizeof(psamples[0]) );
-                            Mat sample_clone = sample0.clone(); //create a copy so we don't mess up the original data
+                            sample0.copyTo(sample_clone); //create a copy so we don't mess up the original data
                             sample_clone.at<float>(vi) = psamples[sstep0*w->sidx[vj] + sstep1*vi];
 
                             double val = predictTrees(Range(treeidx, treeidx+1), sample_clone, predictFlags);
