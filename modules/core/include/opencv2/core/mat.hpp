@@ -1895,6 +1895,8 @@ public:
     MatAllocator* allocator;
     //! and the standard allocator
     static MatAllocator* getStdAllocator();
+    static MatAllocator* getDefaultAllocator();
+    static void setDefaultAllocator(MatAllocator* allocator);
 
     //! interaction with UMat
     UMatData* u;
