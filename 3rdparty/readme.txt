@@ -14,7 +14,7 @@ libjpeg               The Independent JPEG Group's JPEG software.
                       WITH_JPEG CMake option must be ON to add libjpeg support to imgcodecs.
 ------------------------------------------------------------------------------------
 libpng                Portable Network Graphics library.
-                      Copyright (c) 2004, 2006-2012 Glenn Randers-Pehrson.
+                      The license and copyright notes can be found in libpng/LICENSE.
                       See libpng home page http://www.libpng.org
                       for details and links to the source code
 
