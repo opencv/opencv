@@ -2215,7 +2215,7 @@ class PlanCache
             clAmdFftDim dim = dft_size.height == 1 || dft_rows ? CLFFT_1D : CLFFT_2D;
 
             size_t batchSize = dft_rows ? dft_size.height : 1;
-            size_t clLengthsIn[3] = { dft_size.width, dft_rows ? 1 : dft_size.height, 1 };
+            size_t clLengthsIn[3] = { (size_t)dft_size.width, dft_rows ? 1 : (size_t)dft_size.height, 1 };
             size_t clStridesIn[3] = { 1, 1, 1 };
             size_t clStridesOut[3]  = { 1, 1, 1 };
             int elemSize = doubleFP ? sizeof(double) : sizeof(float);
