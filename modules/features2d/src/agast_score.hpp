@@ -52,10 +52,17 @@ The references are:
 namespace cv
 {
 
+#if !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
+int agast_tree_search(const uint32_t table_struct32[], int pixel_[], const unsigned char* const ptr, int threshold);
+int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, int agasttype);
+#endif //!(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
+
+
 void makeAgastOffsets(int pixel[16], int row_stride, int type);
 
 template<int type>
 int agast_cornerScore(const uchar* ptr, const int pixel[], int threshold);
+
 
 }
 #endif

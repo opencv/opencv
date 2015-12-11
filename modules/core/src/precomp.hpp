@@ -83,6 +83,11 @@ typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, Size sz,
                        void*);
 
+typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
+                       const uchar* src2, size_t step2,
+                       uchar* dst, size_t step, int width, int height,
+                       void*);
+
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
@@ -113,46 +118,6 @@ extern const uchar g_Saturate8u[];
 #if defined WIN32 || defined _WIN32
 void deleteThreadAllocData();
 #endif
-
-template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + b); }
-};
-
-template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a - b); }
-};
-
-template<typename T1, typename T2=T1, typename T3=T1> struct OpRSub
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(b - a); }
-};
-
-template<typename T> struct OpMin
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator ()(const T a, const T b) const { return std::min(a, b); }
-};
-
-template<typename T> struct OpMax
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator ()(const T a, const T b) const { return std::max(a, b); }
-};
 
 inline Size getContinuousSize_( int flags, int cols, int rows, int widthScale )
 {
@@ -200,11 +165,6 @@ struct NoVec
 {
     size_t operator()(const void*, const void*, void*, size_t) const { return 0; }
 };
-
-extern volatile bool USE_SSE2;
-extern volatile bool USE_SSE4_2;
-extern volatile bool USE_AVX;
-extern volatile bool USE_AVX2;
 
 enum { BLOCK_SIZE = 1024 };
 

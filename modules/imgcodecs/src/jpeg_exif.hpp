@@ -111,6 +111,8 @@ typedef std::pair<uint32_t, uint32_t> u_rational_t;
  */
 struct ExifEntry_t
 {
+    ExifEntry_t();
+
     std::vector<u_rational_t> field_u_rational; ///< vector of rational fields
     std::string field_str;                      ///< any kind of textual information
 

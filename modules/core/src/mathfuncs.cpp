@@ -1571,9 +1571,8 @@ template<> struct mat_type_assotiations<CV_32S>
     static const type max_allowable = INT_MAX;
 };
 
-// inclusive maxVal !!!
 template<int depth>
-bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value)
+static bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal)
 {
     typedef mat_type_assotiations<depth> type_ass;
 
@@ -1591,20 +1590,19 @@ bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal, doubl
     for (int j = 0; j < as_one_channel.rows; ++j)
         for (int i = 0; i < as_one_channel.cols; ++i)
         {
-            if (as_one_channel.at<typename type_ass::type>(j ,i) < minVal || as_one_channel.at<typename type_ass::type>(j ,i) > maxVal)
+            typename type_ass::type v = as_one_channel.at<typename type_ass::type>(j ,i);
+            if (v < minVal || v > maxVal)
             {
-                bad_pt.y = j ;
-                bad_pt.x = i % src.channels();
-                bad_value = as_one_channel.at<typename type_ass::type>(j ,i);
+                bad_pt.y = j;
+                bad_pt.x = i / src.channels();
                 return false;
             }
         }
-    bad_value = 0.0;
 
     return true;
 }
 
-typedef bool (*check_range_function)(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value);
+typedef bool (*check_range_function)(cv::Mat src, Point& bad_pt, int minVal, int maxVal);
 
 check_range_function check_range_functions[] =
 {
@@ -1621,15 +1619,16 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
     if ( src.dims > 2 )
     {
+        CV_Assert(pt == NULL); // no way to provide location info
+
         const Mat* arrays[] = {&src, 0};
         Mat planes[1];
         NAryMatIterator it(arrays, planes);
 
         for ( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            if (!checkRange( it.planes[0], quiet, pt, minVal, maxVal ))
+            if (!checkRange( it.planes[0], quiet, NULL, minVal, maxVal ))
             {
-                // todo: set index properly
                 return false;
             }
         }
@@ -1638,20 +1637,19 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
     int depth = src.depth();
     Point badPt(-1, -1);
-    double badValue = 0;
 
     if (depth < CV_32F)
     {
-        // see "Bug #1784"
-        int minVali = minVal<(-INT_MAX - 1) ? (-INT_MAX - 1) : cvFloor(minVal);
-        int maxVali = maxVal>INT_MAX ? INT_MAX : cvCeil(maxVal) - 1; // checkIntegerRang() use inclusive maxVal
+        int minVali = minVal <= INT_MIN ? INT_MIN : cvFloor(minVal);
+        int maxVali = maxVal > INT_MAX ? INT_MAX : cvCeil(maxVal) - 1;
 
-        (check_range_functions[depth])(src, badPt, minVali, maxVali, badValue);
+        (check_range_functions[depth])(src, badPt, minVali, maxVali);
     }
     else
     {
         int i, loc = 0;
-        Size size = getContinuousSize( src, src.channels() );
+        int cn = src.channels();
+        Size size = getContinuousSize( src, cn );
 
         if( depth == CV_32F )
         {
@@ -1675,8 +1673,8 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
                     if( val < ia || val >= ib )
                     {
-                        badPt = Point((loc + i) % src.cols, (loc + i) / src.cols);
-                        badValue = ((const float*)isrc)[i];
+                        int pixelId = (loc + i) / cn;
+                        badPt = Point(pixelId % src.cols, pixelId / src.cols);
                         break;
                     }
                 }
@@ -1704,8 +1702,8 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
                     if( val < ia || val >= ib )
                     {
-                        badPt = Point((loc + i) % src.cols, (loc + i) / src.cols);
-                        badValue = ((const double*)isrc)[i];
+                        int pixelId = (loc + i) / cn;
+                        badPt = Point(pixelId % src.cols, pixelId / src.cols);
                         break;
                     }
                 }
@@ -1718,10 +1716,15 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         if( pt )
             *pt = badPt;
         if( !quiet )
+        {
+            cv::String value_str;
+            value_str << src(cv::Range(badPt.y, badPt.y + 1), cv::Range(badPt.x, badPt.x + 1));
             CV_Error_( CV_StsOutOfRange,
-            ("the value at (%d, %d)=%g is out of range", badPt.x, badPt.y, badValue));
+            ("the value at (%d, %d)=%s is out of range [%f, %f)", badPt.x, badPt.y, value_str.c_str(), minVal, maxVal));
+        }
+        return false;
     }
-    return badPt.x < 0;
+    return true;
 }
 
 #ifdef HAVE_OPENCL
@@ -2108,12 +2111,53 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         {
             p = roots[i];
             C num = coeffs[n], denom = coeffs[n];
+            int num_same_root = 1;
             for( j = 0; j < n; j++ )
             {
                 num = num*p + coeffs[n-j-1];
-                if( j != i ) denom = denom * (p - roots[j]);
+                if( j != i )
+                {
+                    if ( (p - roots[j]).re != 0 || (p - roots[j]).im != 0 )
+                        denom = denom * (p - roots[j]);
+                    else
+                        num_same_root++;
+                }
             }
             num /= denom;
+            if( num_same_root > 1)
+            {
+                double old_num_re = num.re;
+                double old_num_im = num.im;
+                int square_root_times = num_same_root % 2 == 0 ? num_same_root / 2 : num_same_root / 2 - 1;
+
+                for( j = 0; j < square_root_times; j++)
+                {
+                    num.re = old_num_re*old_num_re + old_num_im*old_num_im;
+                    num.re = sqrt(num.re);
+                    num.re += old_num_re;
+                    num.im = num.re - old_num_re;
+                    num.re /= 2;
+                    num.re = sqrt(num.re);
+
+                    num.im /= 2;
+                    num.im = sqrt(num.im);
+                    if( old_num_re < 0 ) num.im = -num.im;
+                }
+
+                if( num_same_root % 2 != 0){
+                    Mat cube_coefs(4, 1, CV_64FC1);
+                    Mat cube_roots(3, 1, CV_64FC2);
+                    cube_coefs.at<double>(3) = -(pow(old_num_re, 3));
+                    cube_coefs.at<double>(2) = -(15*pow(old_num_re, 2) + 27*pow(old_num_im, 2));
+                    cube_coefs.at<double>(1) = -48*old_num_re;
+                    cube_coefs.at<double>(0) = 64;
+                    solveCubic(cube_coefs, cube_roots);
+
+                    if(cube_roots.at<double>(0) >= 0) num.re = pow(cube_roots.at<double>(0), 1./3);
+                    else num.re = -pow(-cube_roots.at<double>(0), 1./3);
+                    num.im = sqrt(pow(num.re, 2) / 3 - old_num_re / (3*num.re));
+                }
+            }
             roots[i] = p - num;
             maxDiff = std::max(maxDiff, cv::abs(num));
         }

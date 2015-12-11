@@ -1232,7 +1232,6 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                     CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
 {
     const int NINTRINSIC = 16;
-    CvLevMarq solver;
     double reprojErr = 0;
 
     Matx33d A;
@@ -1254,7 +1253,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         CV_Error( CV_StsUnsupportedFormat,
             "the array of point counters must be 1-dimensional integer vector" );
     //when the thin prism model is used the distortion coefficients matrix must have 12 parameters
-    if((flags & CV_CALIB_THIN_PRISM_MODEL) && (distCoeffs->cols*distCoeffs->rows != 12))
+    if((flags & CALIB_THIN_PRISM_MODEL) && (distCoeffs->cols*distCoeffs->rows != 12))
         CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
 
     nimages = npoints->rows*npoints->cols;
@@ -1332,14 +1331,14 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     if( distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) < 8 )
     {
         if( distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) < 5 )
-            flags |= CV_CALIB_FIX_K3;
-        flags |= CV_CALIB_FIX_K4 | CV_CALIB_FIX_K5 | CV_CALIB_FIX_K6;
+            flags |= CALIB_FIX_K3;
+        flags |= CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6;
     }
     const double minValidAspectRatio = 0.01;
     const double maxValidAspectRatio = 100.0;
 
     // 1. initialize intrinsic parameters & LM solver
-    if( flags & CV_CALIB_USE_INTRINSIC_GUESS )
+    if( flags & CALIB_USE_INTRINSIC_GUESS )
     {
         cvConvert( cameraMatrix, &matA );
         if( A(0, 0) <= 0 || A(1, 1) <= 0 )
@@ -1356,7 +1355,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         A(0, 1) = A(1, 0) = A(2, 0) = A(2, 1) = 0.;
         A(2, 2) = 1.;
 
-        if( flags & CV_CALIB_FIX_ASPECT_RATIO )
+        if( flags & CALIB_FIX_ASPECT_RATIO )
         {
             aspectRatio = A(0, 0)/A(1, 1);
 
@@ -1376,7 +1375,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         for( i = 0; i < total; i++ )
             matM.at<Point3d>(i).z = 0.;
 
-        if( flags & CV_CALIB_FIX_ASPECT_RATIO )
+        if( flags & CALIB_FIX_ASPECT_RATIO )
         {
             aspectRatio = cvmGet(cameraMatrix,0,0);
             aspectRatio /= cvmGet(cameraMatrix,1,1);
@@ -1388,7 +1387,11 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         cvInitIntrinsicParams2D( &_matM, &m, npoints, imageSize, &matA, aspectRatio );
     }
 
-    solver.init( nparams, 0, termCrit );
+    CvLevMarq solver( nparams, 0, termCrit );
+
+    if(flags & CALIB_USE_LU) {
+        solver.solveMethod = DECOMP_LU;
+    }
 
     {
     double* param = solver.param->data.db;
@@ -1406,8 +1409,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         param[6] = param[7] = 0;
         mask[6] = mask[7] = 0;
     }
-    if( !(flags & CV_CALIB_RATIONAL_MODEL) )
-        flags |= CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5 + CV_CALIB_FIX_K6;
+    if( !(flags & CALIB_RATIONAL_MODEL) )
+        flags |= CALIB_FIX_K4 + CALIB_FIX_K5 + CALIB_FIX_K6;
     if( !(flags & CV_CALIB_THIN_PRISM_MODEL))
         flags |= CALIB_FIX_S1_S2_S3_S4;
 
@@ -1451,7 +1454,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         bool proceed = solver.updateAlt( _param, _JtJ, _JtErr, _errNorm );
         double *param = solver.param->data.db, *pparam = solver.prevParam->data.db;
 
-        if( flags & CV_CALIB_FIX_ASPECT_RATIO )
+        if( flags & CALIB_FIX_ASPECT_RATIO )
         {
             param[0] = param[1]*aspectRatio;
             pparam[0] = pparam[1]*aspectRatio;
@@ -1487,9 +1490,9 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
             if( solver.state == CvLevMarq::CALC_J )
             {
                  cvProjectPoints2( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
-                                  (flags & CV_CALIB_FIX_FOCAL_LENGTH) ? 0 : &_dpdf,
-                                  (flags & CV_CALIB_FIX_PRINCIPAL_POINT) ? 0 : &_dpdc, &_dpdk,
-                                  (flags & CV_CALIB_FIX_ASPECT_RATIO) ? aspectRatio : 0);
+                                  (flags & CALIB_FIX_FOCAL_LENGTH) ? 0 : &_dpdf,
+                                  (flags & CALIB_FIX_PRINCIPAL_POINT) ? 0 : &_dpdc, &_dpdk,
+                                  (flags & CALIB_FIX_ASPECT_RATIO) ? aspectRatio : 0);
             }
             else
                 cvProjectPoints2( &_Mi, &_ri, &_ti, &matA, &_k, &_mp );
@@ -1635,7 +1638,6 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
 {
     const int NINTRINSIC = 16;
     Ptr<CvMat> npoints, err, J_LR, Je, Ji, imagePoints[2], objectPoints, RT0;
-    CvLevMarq solver;
     double reprojErr = 0;
 
     double A[2][9], dk[2][12]={{0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0,0,0}}, rlr[9];
@@ -1737,7 +1739,12 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
     // storage for initial [om(R){i}|t{i}] (in order to compute the median for each component)
     RT0.reset(cvCreateMat( 6, nimages, CV_64F ));
 
-    solver.init( nparams, 0, termCrit );
+    CvLevMarq solver( nparams, 0, termCrit );
+
+    if(flags & CALIB_USE_LU) {
+        solver.solveMethod = DECOMP_LU;
+    }
+
     if( recomputeIntrinsics )
     {
         uchar* imask = solver.mask->data.ptr + nparams - NINTRINSIC*2;
@@ -3215,10 +3222,33 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
     if( !(flags & CALIB_RATIONAL_MODEL) &&(!(flags & CALIB_THIN_PRISM_MODEL)))
         distCoeffs = distCoeffs.rows == 1 ? distCoeffs.colRange(0, 5) : distCoeffs.rowRange(0, 5);
 
-    int    i;
-    size_t nimages = _objectPoints.total();
+    int nimages = int(_objectPoints.total());
     CV_Assert( nimages > 0 );
-    Mat objPt, imgPt, npoints, rvecM((int)nimages, 3, CV_64FC1), tvecM((int)nimages, 3, CV_64FC1);
+    Mat objPt, imgPt, npoints, rvecM, tvecM;
+
+    bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
+
+    bool rvecs_mat_vec = _rvecs.isMatVector();
+    bool tvecs_mat_vec = _tvecs.isMatVector();
+
+    if( rvecs_needed ) {
+        _rvecs.create(nimages, 1, CV_64FC3);
+
+        if(rvecs_mat_vec)
+            rvecM.create(nimages, 3, CV_64F);
+        else
+            rvecM = _rvecs.getMat();
+    }
+
+    if( tvecs_needed ) {
+        _tvecs.create(nimages, 1, CV_64FC3);
+
+        if(tvecs_mat_vec)
+            tvecM.create(nimages, 3, CV_64F);
+        else
+            tvecM = _tvecs.getMat();
+    }
+
     collectCalibrationData( _objectPoints, _imagePoints, noArray(),
                             objPt, imgPt, 0, npoints );
     CvMat c_objPt = objPt, c_imgPt = imgPt, c_npoints = npoints;
@@ -3226,31 +3256,27 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
     CvMat c_rvecM = rvecM, c_tvecM = tvecM;
 
     double reprojErr = cvCalibrateCamera2(&c_objPt, &c_imgPt, &c_npoints, imageSize,
-                                          &c_cameraMatrix, &c_distCoeffs, &c_rvecM,
-                                          &c_tvecM, flags, criteria );
+                                          &c_cameraMatrix, &c_distCoeffs,
+                                          rvecs_needed ? &c_rvecM : NULL,
+                                          tvecs_needed ? &c_tvecM : NULL, flags, criteria );
 
-    bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
-
-    if( rvecs_needed )
-        _rvecs.create((int)nimages, 1, CV_64FC3);
-    if( tvecs_needed )
-        _tvecs.create((int)nimages, 1, CV_64FC3);
-
-    for( i = 0; i < (int)nimages; i++ )
+    // overly complicated and inefficient rvec/ tvec handling to support vector<Mat>
+    for(int i = 0; i < nimages; i++ )
     {
-        if( rvecs_needed )
+        if( rvecs_needed && rvecs_mat_vec)
         {
             _rvecs.create(3, 1, CV_64F, i, true);
             Mat rv = _rvecs.getMat(i);
-            memcpy(rv.ptr(), rvecM.ptr<double>(i), 3*sizeof(double));
+            memcpy(rv.ptr(), rvecM.ptr(i), 3*sizeof(double));
         }
-        if( tvecs_needed )
+        if( tvecs_needed && tvecs_mat_vec)
         {
             _tvecs.create(3, 1, CV_64F, i, true);
             Mat tv = _tvecs.getMat(i);
-            memcpy(tv.ptr(), tvecM.ptr<double>(i), 3*sizeof(double));
+            memcpy(tv.ptr(), tvecM.ptr(i), 3*sizeof(double));
         }
     }
+
     cameraMatrix.copyTo(_cameraMatrix);
     distCoeffs.copyTo(_distCoeffs);
 
