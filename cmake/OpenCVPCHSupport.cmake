@@ -48,10 +48,16 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
             LIST(APPEND ${_out_compile_flags} "-fPIC")
         ENDIF()
 
+        GET_PROPERTY(_definitions DIRECTORY PROPERTY COMPILE_DEFINITIONS)
+        if(_definitions)
+          foreach(_def ${_definitions})
+            LIST(APPEND ${_out_compile_flags} "\"-D${_def}\"")
+          endforeach()
+        endif()
         GET_TARGET_PROPERTY(_target_definitions ${_PCH_current_target} COMPILE_DEFINITIONS)
         if(_target_definitions)
           foreach(_def ${_target_definitions})
-            LIST(APPEND ${_out_compile_flags} "-D${_def}")
+            LIST(APPEND ${_out_compile_flags} "\"-D${_def}\"")
           endforeach()
         endif()
 
@@ -77,11 +83,6 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         endif()
     ENDFOREACH(item)
 
-    GET_DIRECTORY_PROPERTY(_directory_flags DEFINITIONS)
-    GET_DIRECTORY_PROPERTY(_global_definitions DIRECTORY ${OpenCV_SOURCE_DIR} DEFINITIONS)
-    #MESSAGE("_directory_flags ${_directory_flags} ${_global_definitions}" )
-    LIST(APPEND ${_out_compile_flags} ${_directory_flags})
-    LIST(APPEND ${_out_compile_flags} ${_global_definitions})
     LIST(APPEND ${_out_compile_flags} ${CMAKE_CXX_FLAGS})
 
     SEPARATE_ARGUMENTS(${_out_compile_flags})
@@ -271,7 +272,7 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
 
     ADD_CUSTOM_COMMAND(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${_name}"
-      COMMAND ${CMAKE_COMMAND} -E copy  "${_input}" "${CMAKE_CURRENT_BINARY_DIR}/${_name}" # ensure same directory! Required by gcc
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_input}" "${CMAKE_CURRENT_BINARY_DIR}/${_name}" # ensure same directory! Required by gcc
       DEPENDS "${_input}"
       )
 

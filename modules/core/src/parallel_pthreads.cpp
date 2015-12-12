@@ -155,21 +155,8 @@ public:
 
     static ThreadManager& instance()
     {
-        if(!m_instance.ptr)
-        {
-            pthread_mutex_lock(&m_manager_access_mutex);
-
-            if(!m_instance.ptr)
-            {
-                m_instance.ptr = new ThreadManager();
-            }
-
-            pthread_mutex_unlock(&m_manager_access_mutex);
-        }
-
-        return *m_instance.ptr;
+        CV_SINGLETON_LAZY_INIT_REF(ThreadManager, new ThreadManager())
     }
-
 
     static void stop()
     {
@@ -194,21 +181,6 @@ public:
 
 private:
 
-    struct ptr_holder
-    {
-        ThreadManager* ptr;
-
-        ptr_holder(): ptr(NULL) { }
-
-        ~ptr_holder()
-        {
-            if(ptr)
-            {
-                delete ptr;
-            }
-        }
-    };
-
     ThreadManager();
 
     ~ThreadManager();
@@ -231,8 +203,7 @@ private:
     unsigned int m_task_position;
     unsigned int m_num_of_completed_tasks;
 
-    static pthread_mutex_t m_manager_access_mutex;
-    static ptr_holder m_instance;
+    pthread_mutex_t m_manager_access_mutex;
 
     static const char m_env_name[];
     static const unsigned int m_default_number_of_threads;
@@ -250,13 +221,6 @@ private:
     ThreadManagerPoolState m_pool_state;
 };
 
-#ifndef PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP
-#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP PTHREAD_RECURSIVE_MUTEX_INITIALIZER
-#endif
-
-pthread_mutex_t ThreadManager::m_manager_access_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-
-ThreadManager::ptr_holder ThreadManager::m_instance;
 const char ThreadManager::m_env_name[] = "OPENCV_FOR_THREADS_NUM";
 
 #ifdef ANDROID
@@ -304,14 +268,18 @@ void ForThread::stop()
 {
     if(m_state == eFTStarted)
     {
+        pthread_mutex_lock(&m_thread_mutex);
         m_state = eFTToStop;
+        pthread_mutex_unlock(&m_thread_mutex);
 
         run();
 
         pthread_join(m_posix_thread, NULL);
     }
 
+    pthread_mutex_lock(&m_thread_mutex);
     m_state = eFTStoped;
+    pthread_mutex_unlock(&m_thread_mutex);
 }
 
 void ForThread::run()
@@ -378,6 +346,12 @@ void ForThread::thread_body()
 ThreadManager::ThreadManager(): m_num_threads(0), m_task_complete(false), m_num_of_completed_tasks(0), m_pool_state(eTMNotInited)
 {
     int res = 0;
+
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    res |= pthread_mutex_init(&m_manager_access_mutex, &attr);
+    pthread_mutexattr_destroy(&attr);
 
     res |= pthread_mutex_init(&m_manager_task_mutex, NULL);
 

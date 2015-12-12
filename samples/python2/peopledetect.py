@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -27,20 +30,20 @@ if __name__ == '__main__':
     from glob import glob
     import itertools as it
 
-    print help_message
+    print(help_message)
 
     hog = cv2.HOGDescriptor()
     hog.setSVMDetector( cv2.HOGDescriptor_getDefaultPeopleDetector() )
 
     for fn in it.chain(*map(glob, sys.argv[1:])):
-        print fn, ' - ',
+        print(fn, ' - ',)
         try:
             img = cv2.imread(fn)
             if img is None:
-                print 'Failed to load image file:', fn
+                print('Failed to load image file:', fn)
                 continue
         except:
-            print 'loading error'
+            print('loading error')
             continue
 
         found, w = hog.detectMultiScale(img, winStride=(8,8), padding=(32,32), scale=1.05)
@@ -53,7 +56,7 @@ if __name__ == '__main__':
                 found_filtered.append(r)
         draw_detections(img, found)
         draw_detections(img, found_filtered, 3)
-        print '%d (%d) found' % (len(found_filtered), len(found))
+        print('%d (%d) found' % (len(found_filtered), len(found)))
         cv2.imshow('img', img)
         ch = 0xFF & cv2.waitKey()
         if ch == 27:

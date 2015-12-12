@@ -1,6 +1,7 @@
 #include "precomp.hpp"
 #include <float.h>
 #include <limits.h>
+#include "opencv2/imgproc/types_c.h"
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "tegra.hpp"
@@ -980,12 +981,12 @@ minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
         for( size_t i = 0; i < total; i++ )
         {
             _Tp val = src[i];
-            if( minval > val )
+            if( minval > val || !minpos )
             {
                 minval = val;
                 minpos = startidx + i;
             }
-            if( maxval < val )
+            if( maxval < val || !maxpos )
             {
                 maxval = val;
                 maxpos = startidx + i;
@@ -997,12 +998,12 @@ minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
         for( size_t i = 0; i < total; i++ )
         {
             _Tp val = src[i];
-            if( minval > val && mask[i] )
+            if( (minval > val || !minpos) && mask[i] )
             {
                 minval = val;
                 minpos = startidx + i;
             }
-            if( maxval < val && mask[i] )
+            if( (maxval < val || !maxpos) && mask[i] )
             {
                 maxval = val;
                 maxpos = startidx + i;
@@ -1049,8 +1050,8 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
     size_t startidx = 1, total = planes[0].total();
     size_t i, nplanes = it.nplanes;
     int depth = src.depth();
-    double maxval = depth < CV_32F ? INT_MIN : depth == CV_32F ? -FLT_MAX : -DBL_MAX;
-    double minval = depth < CV_32F ? INT_MAX : depth == CV_32F ? FLT_MAX : DBL_MAX;
+    double minval = 0;
+    double maxval = 0;
     size_t maxidx = 0, minidx = 0;
 
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
@@ -1092,9 +1093,6 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
             CV_Assert(0);
         }
     }
-
-    if( minidx == 0 )
-        minval = maxval = 0;
 
     if( _maxval )
         *_maxval = maxval;
@@ -2954,6 +2952,9 @@ MatComparator::operator()(const char* expr1, const char* expr2,
 
 void printVersionInfo(bool useStdOut)
 {
+    // Tell CTest not to discard any output
+    if(useStdOut) std::cout << "CTEST_FULL_OUTPUT" << std::endl;
+
     ::testing::Test::RecordProperty("cv_version", CV_VERSION);
     if(useStdOut) std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
@@ -3072,6 +3073,267 @@ void printVersionInfo(bool useStdOut)
     ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
     if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
 #endif
+}
+
+
+
+void threshold( const Mat& _src, Mat& _dst,
+                            double thresh, double maxval, int thresh_type )
+{
+    int i, j;
+    int depth = _src.depth(), cn = _src.channels();
+    int width_n = _src.cols*cn, height = _src.rows;
+    int ithresh = cvFloor(thresh);
+    int imaxval, ithresh2;
+
+    if( depth == CV_8U )
+    {
+        ithresh2 = saturate_cast<uchar>(ithresh);
+        imaxval = saturate_cast<uchar>(maxval);
+    }
+    else if( depth == CV_16S )
+    {
+        ithresh2 = saturate_cast<short>(ithresh);
+        imaxval = saturate_cast<short>(maxval);
+    }
+    else
+    {
+        ithresh2 = cvRound(ithresh);
+        imaxval = cvRound(maxval);
+    }
+
+    assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
+
+    switch( thresh_type )
+    {
+    case CV_THRESH_BINARY:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (uchar)(src[j] > ithresh ? imaxval : 0);
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (short)(src[j] > ithresh ? imaxval : 0);
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (float)((double)src[j] > thresh ? maxval : 0.f);
+            }
+        }
+        break;
+    case CV_THRESH_BINARY_INV:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (uchar)(src[j] > ithresh ? 0 : imaxval);
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (short)(src[j] > ithresh ? 0 : imaxval);
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (float)((double)src[j] > thresh ? 0.f : maxval);
+            }
+        }
+        break;
+    case CV_THRESH_TRUNC:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (uchar)(s > ithresh ? ithresh2 : s);
+                }
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (short)(s > ithresh ? ithresh2 : s);
+                }
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    double s = src[j];
+                    dst[j] = (float)(s > thresh ? thresh : s);
+                }
+            }
+        }
+        break;
+    case CV_THRESH_TOZERO:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (uchar)(s > ithresh ? s : 0);
+                }
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (short)(s > ithresh ? s : 0);
+                }
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    float s = src[j];
+                    dst[j] = s > thresh ? s : 0.f;
+                }
+            }
+        }
+        break;
+    case CV_THRESH_TOZERO_INV:
+        for( i = 0; i < height; i++ )
+        {
+            if( depth == CV_8U )
+            {
+                const uchar* src = _src.ptr<uchar>(i);
+                uchar* dst = _dst.ptr<uchar>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (uchar)(s > ithresh ? 0 : s);
+                }
+            }
+            else if( depth == CV_16S )
+            {
+                const short* src = _src.ptr<short>(i);
+                short* dst = _dst.ptr<short>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (short)(s > ithresh ? 0 : s);
+                }
+            }
+            else
+            {
+                const float* src = _src.ptr<float>(i);
+                float* dst = _dst.ptr<float>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    float s = src[j];
+                    dst[j] = s > thresh ? 0.f : s;
+                }
+            }
+        }
+        break;
+    default:
+        assert(0);
+    }
+}
+
+
+static void
+_minMaxIdx( const float* src, const uchar* mask, double* _minVal, double* _maxVal,
+            size_t* _minIdx, size_t* _maxIdx, int len, size_t startIdx )
+{
+    double minVal = FLT_MAX, maxVal = -FLT_MAX;
+    size_t minIdx = 0, maxIdx = 0;
+
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++ )
+        {
+            float val = src[i];
+            if( val < minVal )
+            {
+                minVal = val;
+                minIdx = startIdx + i;
+            }
+            if( val > maxVal )
+            {
+                maxVal = val;
+                maxIdx = startIdx + i;
+            }
+        }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++ )
+        {
+            float val = src[i];
+            if( mask[i] && val < minVal )
+            {
+                minVal = val;
+                minIdx = startIdx + i;
+            }
+            if( mask[i] && val > maxVal )
+            {
+                maxVal = val;
+                maxIdx = startIdx + i;
+            }
+        }
+    }
+
+    if (_minIdx)
+        *_minIdx = minIdx;
+    if (_maxIdx)
+        *_maxIdx = maxIdx;
+    if (_minVal)
+        *_minVal = minVal;
+    if (_maxVal)
+        *_maxVal = maxVal;
+}
+
+
+void minMaxIdx( InputArray _img, double* minVal, double* maxVal,
+                    Point* minLoc, Point* maxLoc, InputArray _mask )
+{
+    Mat img = _img.getMat();
+    Mat mask = _mask.getMat();
+    CV_Assert(img.dims <= 2);
+
+    _minMaxIdx((const float*)img.data, mask.data, minVal, maxVal, (size_t*)minLoc, (size_t*)maxLoc, (int)img.total(),1);
+    if( minLoc )
+        std::swap(minLoc->x, minLoc->y);
+    if( maxLoc )
+        std::swap(maxLoc->x, maxLoc->y);
 }
 
 }

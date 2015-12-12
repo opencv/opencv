@@ -10,6 +10,7 @@ ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/cpu-features")
 file(GLOB lib_srcs dec/*.c dsp/*.c enc/*.c mux/*.c utils/*.c webp/*.c)
 file(GLOB lib_hdrs dec/*.h dsp/*.h enc/*.h mux/*.h utils/*.h webp/*.h)
 
+# FIXIT
 if(ANDROID AND ARMEABI_V7A AND NOT NEON)
   foreach(file ${lib_srcs})
     if("${file}" MATCHES "_neon.c")
@@ -46,6 +47,8 @@ ocv_warnings_disable(CMAKE_C_FLAGS /wd4244 /wd4267) # vs2005
 set_target_properties(${WEBP_LIBRARY}
   PROPERTIES OUTPUT_NAME ${WEBP_LIBRARY}
   DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+  COMPILE_PDB_NAME ${WEBP_LIBRARY}
+  COMPILE_PDB_NAME_DEBUG "${WEBP_LIBRARY}${OPENCV_DEBUG_POSTFIX}"
   ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
   )
 

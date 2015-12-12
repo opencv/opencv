@@ -57,6 +57,7 @@
 
 /* DirectX */
 #cmakedefine HAVE_DIRECTX
+#cmakedefine HAVE_DIRECTX_NV12
 #cmakedefine HAVE_D3D11
 #cmakedefine HAVE_D3D10
 #cmakedefine HAVE_D3D9
@@ -187,3 +188,9 @@
 
 /* gPhoto2 library */
 #cmakedefine HAVE_GPHOTO2
+
+/* VA library (libva) */
+#cmakedefine HAVE_VA
+
+/* Intel VA-API/OpenCL */
+#cmakedefine HAVE_VA_INTEL

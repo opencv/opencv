@@ -238,7 +238,7 @@ enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
  *
 */
 static void*
-imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_denom=1 )
+imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 {
     IplImage* image = 0;
     CvMat *matrix = 0;
@@ -252,7 +252,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
         decoder = GdalDecoder().newDecoder();
     }else{
 #endif
-        decoder = findDecoder(filename);
+        decoder = findDecoder( filename );
 #ifdef HAVE_GDAL
     }
 #endif
@@ -262,11 +262,22 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
         return 0;
     }
 
+    int scale_denom = 1;
+    if( flags > IMREAD_LOAD_GDAL )
+    {
+    if( flags & IMREAD_REDUCED_GRAYSCALE_2 )
+        scale_denom = 2;
+    else if( flags & IMREAD_REDUCED_GRAYSCALE_4 )
+        scale_denom = 4;
+    else if( flags & IMREAD_REDUCED_GRAYSCALE_8 )
+        scale_denom = 8;
+    }
+
     /// set the scale_denom in the driver
     decoder->setScale( scale_denom );
 
     /// set the filename in the driver
-    decoder->setSource(filename);
+    decoder->setSource( filename );
 
    // read the header to make sure it succeeds
    if( !decoder->readHeader() )
@@ -279,7 +290,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
 
     // grab the decoded type
     int type = decoder->type();
-    if( flags != IMREAD_UNCHANGED )
+    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
         if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
@@ -296,7 +307,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
         if( hdrtype == LOAD_CVMAT )
         {
             matrix = cvCreateMat( size.height, size.width, type );
-            temp = cvarrToMat(matrix);
+            temp = cvarrToMat( matrix );
         }
         else
         {
@@ -307,7 +318,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
     else
     {
         image = cvCreateImage( size, cvIplDepth(type), CV_MAT_CN(type) );
-        temp = cvarrToMat(image);
+        temp = cvarrToMat( image );
     }
 
     // read the image data
@@ -320,10 +331,9 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0, int scale_d
         return 0;
     }
 
-    int testdecoder = decoder->setScale( scale_denom ); // if decoder is JpegDecoder then testdecoder will be 1
-    if( (scale_denom > 1 ) & ( testdecoder > 1 ) )
+    if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
     {
-        resize(*mat,*mat,Size(size.width/scale_denom,size.height/scale_denom));
+        resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ) );
     }
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
@@ -372,7 +382,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
     {
         // grab the decoded type
         int type = decoder->type();
-        if (flags != IMREAD_UNCHANGED)
+        if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
         {
             if ((flags & CV_LOAD_IMAGE_ANYDEPTH) == 0)
                 type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
@@ -416,27 +426,6 @@ Mat imread( const String& filename, int flags )
 
     /// load the data
     imread_( filename, flags, LOAD_MAT, &img );
-
-    /// return a reference to the data
-    return img;
-}
-
-/**
- * Read an image and resize it
- *
- *  This function merely calls the actual implementation above and returns itself.
- *
- * @param[in] filename File to load
- * @param[in] flags Flags you wish to set.
- * @param[in] scale_denom Scale value
-*/
-Mat imread_reduced( const String& filename, int flags, int scale_denom )
-{
-    /// create the basic container
-    Mat img;
-
-    /// load the data
-    imread_( filename, flags, LOAD_MAT, &img, scale_denom );
 
     /// return a reference to the data
     return img;
@@ -532,7 +521,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     size.height = decoder->height();
 
     int type = decoder->type();
-    if( flags != IMREAD_UNCHANGED )
+    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
         if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));

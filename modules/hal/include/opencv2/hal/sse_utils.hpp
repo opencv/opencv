@@ -46,6 +46,8 @@
 #  error sse_utils.hpp header must be compiled as C++
 #endif
 
+#include "opencv2/hal/defs.h"
+
 #if CV_SSE2
 
 inline void _mm_deinterleave_epi8(__m128i & v_r0, __m128i & v_r1, __m128i & v_g0, __m128i & v_g1)

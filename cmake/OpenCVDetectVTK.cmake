@@ -1,4 +1,4 @@
-if(NOT WITH_VTK OR ANDROID OR IOS)
+if(NOT WITH_VTK)
   return()
 endif()
 

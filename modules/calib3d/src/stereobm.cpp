@@ -86,6 +86,7 @@ struct StereoBMParams
     int dispType;
 };
 
+#ifdef HAVE_OPENCL
 static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsize, int prefilterCap)
 {
     ocl::Kernel k("prefilter_norm", ocl::calib3d::stereobm_oclsrc, cv::format("-D WSZ=%d", winsize));
@@ -99,13 +100,14 @@ static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsi
     _output.create(input.size(), input.type());
     output = _output.getUMat();
 
-    size_t globalThreads[3] = { input.cols, input.rows, 1 };
+    size_t globalThreads[3] = { (size_t)input.cols, (size_t)input.rows, 1 };
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols,
         prefilterCap, scale_g, scale_s);
 
     return k.run(2, globalThreads, NULL, false);
 }
+#endif
 
 static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uchar* buf )
 {
@@ -170,6 +172,7 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uc
     }
 }
 
+#ifdef HAVE_OPENCL
 static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int prefilterCap)
 {
     ocl::Kernel k("prefilter_xsobel", ocl::calib3d::stereobm_oclsrc);
@@ -180,12 +183,13 @@ static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int pre
     _output.create(input.size(), input.type());
     output = _output.getUMat();
 
-    size_t globalThreads[3] = { input.cols, input.rows, 1 };
+    size_t globalThreads[3] = { (size_t)input.cols, (size_t)input.rows, 1 };
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols, prefilterCap);
 
     return k.run(2, globalThreads, NULL, false);
 }
+#endif
 
 static void
 prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
@@ -849,6 +853,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     }
 }
 
+#ifdef HAVE_OPENCL
 static bool ocl_prefiltering(InputArray left0, InputArray right0, OutputArray left, OutputArray right, StereoBMParams* state)
 {
     if( state->preFilterType == StereoBM::PREFILTER_NORMALIZED_RESPONSE )
@@ -867,6 +872,7 @@ static bool ocl_prefiltering(InputArray left0, InputArray right0, OutputArray le
     }
     return true;
 }
+#endif
 
 struct PrefilterInvoker : public ParallelLoopBody
 {
@@ -896,6 +902,7 @@ struct PrefilterInvoker : public ParallelLoopBody
     StereoBMParams* state;
 };
 
+#ifdef HAVE_OPENCL
 static bool ocl_stereobm( InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
 {
@@ -927,8 +934,8 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
 
     int globalX = (disp.cols + sizeX - 1) / sizeX,
         globalY = (disp.rows + sizeY - 1) / sizeY;
-    size_t globalThreads[3] = {N, globalX, globalY};
-    size_t localThreads[3]  = {N, 1, 1};
+    size_t globalThreads[3] = {(size_t)N, (size_t)globalX, (size_t)globalY};
+    size_t localThreads[3]  = {(size_t)N, 1, 1};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
@@ -940,6 +947,7 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
     idx = k.set(idx, state->uniquenessRatio);
     return k.run(3, globalThreads, localThreads, false);
 }
+#endif
 
 struct FindStereoCorrespInvoker : public ParallelLoopBody
 {
@@ -1074,6 +1082,7 @@ public:
 
         int FILTERED = (params.minDisparity - 1) << DISPARITY_SHIFT;
 
+#ifdef HAVE_OPENCL
         if(ocl::useOpenCL() && disparr.isUMat() && params.textureThreshold == 0)
         {
             UMat left, right;
@@ -1090,6 +1099,7 @@ public:
                 }
             }
         }
+#endif
 
         Mat left0 = leftarr.getMat(), right0 = rightarr.getMat();
         disparr.create(left0.size(), dtype);

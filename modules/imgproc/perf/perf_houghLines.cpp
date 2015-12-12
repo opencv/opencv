@@ -37,7 +37,7 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
     TEST_CYCLE() HoughLines(image, lines, rhoStep, thetaStep, threshold);
 
     transpose(lines, lines);
-#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
+#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 810)
     SANITY_CHECK_NOTHING();
 #else
     SANITY_CHECK(lines);

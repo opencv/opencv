@@ -45,11 +45,15 @@
 #ifndef __OPENCV_DEF_H__
 #define __OPENCV_DEF_H__
 
+//! @addtogroup hal_utils
+//! @{
+
 #if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
 #  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
 #endif
 
 #include <limits.h>
+#include "opencv2/hal/interface.hpp"
 
 #if defined __ICL
 #  define CV_ICC   __ICL
@@ -114,8 +118,37 @@
 
 #define CV_CPU_NEON   100
 
-// when adding to this list remember to update the enum in core/utility.cpp
+// when adding to this list remember to update the following enum
 #define CV_HARDWARE_MAX_FEATURE 255
+
+/** @brief Available CPU features.
+*/
+enum CpuFeatures {
+    CPU_MMX             = 1,
+    CPU_SSE             = 2,
+    CPU_SSE2            = 3,
+    CPU_SSE3            = 4,
+    CPU_SSSE3           = 5,
+    CPU_SSE4_1          = 6,
+    CPU_SSE4_2          = 7,
+    CPU_POPCNT          = 8,
+
+    CPU_AVX             = 10,
+    CPU_AVX2            = 11,
+    CPU_FMA3            = 12,
+
+    CPU_AVX_512F        = 13,
+    CPU_AVX_512BW       = 14,
+    CPU_AVX_512CD       = 15,
+    CPU_AVX_512DQ       = 16,
+    CPU_AVX_512ER       = 17,
+    CPU_AVX_512IFMA512  = 18,
+    CPU_AVX_512PF       = 19,
+    CPU_AVX_512VBMI     = 20,
+    CPU_AVX_512VL       = 21,
+
+    CPU_NEON            = 100
+};
 
 // do not include SSE/AVX/NEON headers for NVCC compiler
 #ifndef __CUDACC__
@@ -254,49 +287,6 @@
 #  define CV_VFP 0
 #endif
 
-/* primitive types */
-/*
-  schar  - signed 1 byte integer
-  uchar  - unsigned 1 byte integer
-  short  - signed 2 byte integer
-  ushort - unsigned 2 byte integer
-  int    - signed 4 byte integer
-  uint   - unsigned 4 byte integer
-  int64  - signed 8 byte integer
-  uint64 - unsigned 8 byte integer
-*/
-
-#if !defined _MSC_VER && !defined __BORLANDC__
-#  if defined __cplusplus && __cplusplus >= 201103L
-#    include <cstdint>
-     typedef std::uint32_t uint;
-#  else
-#    include <stdint.h>
-     typedef uint32_t uint;
-#  endif
-#else
-   typedef unsigned uint;
-#endif
-
-typedef signed char schar;
-
-#ifndef __IPL_H__
-   typedef unsigned char uchar;
-   typedef unsigned short ushort;
-#endif
-
-#if defined _MSC_VER || defined __BORLANDC__
-   typedef __int64 int64;
-   typedef unsigned __int64 uint64;
-#  define CV_BIG_INT(n)   n##I64
-#  define CV_BIG_UINT(n)  n##UI64
-#else
-   typedef int64_t int64;
-   typedef uint64_t uint64;
-#  define CV_BIG_INT(n)   n##LL
-#  define CV_BIG_UINT(n)  n##ULL
-#endif
-
 /* fundamental constants */
 #define CV_PI   3.1415926535897932384626433832795
 #define CV_2PI 6.283185307179586476925286766559
@@ -318,6 +308,19 @@ typedef union Cv64suf
 }
 Cv64suf;
 
+namespace cv { namespace hal {
+
+bool checkHardwareSupport(int feature);
+void setUseOptimized(bool onoff);
+bool useOptimized();
+
+}}
+
+#define USE_SSE2  (cv::hal::checkHardwareSupport(CV_CPU_SSE))
+#define USE_SSE4_2  (cv::hal::checkHardwareSupport(CV_CPU_SSE4_2))
+#define USE_AVX  (cv::hal::checkHardwareSupport(CV_CPU_AVX))
+#define USE_AVX2  (cv::hal::checkHardwareSupport(CV_CPU_AVX2))
+
 
 /****************************************************************************************\
 *                                      fast math                                         *
@@ -334,9 +337,6 @@ Cv64suf;
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #  include "tegra_round.hpp"
 #endif
-
-//! @addtogroup core_utils
-//! @{
 
 #if CV_VFP
     // 1. general scheme
@@ -415,7 +415,7 @@ CV_INLINE int cvFloor( double value )
 #endif
 }
 
-/** @brief Rounds floating-point number to the nearest integer not larger than the original.
+/** @brief Rounds floating-point number to the nearest integer not smaller than the original.
 
  The function computes an integer i such that:
  \f[i \le \texttt{value} < i+1\f]
@@ -567,15 +567,19 @@ CV_INLINE int cvIsInf( float value )
     return (ieee754.u & 0x7fffffff) == 0x7f800000;
 }
 
+//! @}
+
 #include <algorithm>
 
 namespace cv
 {
 
+//! @addtogroup hal_utils
+//! @{
+
 /////////////// saturate_cast (used in image & signal processing) ///////////////////
 
-/**
- Template function for accurate conversion from one primitive type to another.
+/** @brief Template function for accurate conversion from one primitive type to another.
 
  The functions saturate_cast resemble the standard C++ cast operations, such as static_cast\<T\>()
  and others. They perform an efficient and accurate conversion from one primitive type to another
@@ -617,8 +621,6 @@ template<typename _Tp> static inline _Tp saturate_cast(double v)   { return _Tp(
 template<typename _Tp> static inline _Tp saturate_cast(int64 v)    { return _Tp(v); }
 /** @overload */
 template<typename _Tp> static inline _Tp saturate_cast(uint64 v)   { return _Tp(v); }
-
-//! @cond IGNORED
 
 template<> inline uchar saturate_cast<uchar>(schar v)        { return (uchar)std::max((int)v, 0); }
 template<> inline uchar saturate_cast<uchar>(ushort v)       { return (uchar)std::min((unsigned)v, (unsigned)UCHAR_MAX); }
@@ -664,12 +666,10 @@ template<> inline int saturate_cast<int>(double v)           { return cvRound(v)
 template<> inline unsigned saturate_cast<unsigned>(float v)  { return cvRound(v); }
 template<> inline unsigned saturate_cast<unsigned>(double v) { return cvRound(v); }
 
-//! @endcond
+//! @}
 
 }
 
 #endif // __cplusplus
-
-//! @} core_utils
 
 #endif //__OPENCV_HAL_H__

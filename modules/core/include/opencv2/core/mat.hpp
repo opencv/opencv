@@ -164,7 +164,8 @@ public:
         CUDA_GPU_MAT      = 9 << KIND_SHIFT,
         UMAT              =10 << KIND_SHIFT,
         STD_VECTOR_UMAT   =11 << KIND_SHIFT,
-        STD_BOOL_VECTOR   =12 << KIND_SHIFT
+        STD_BOOL_VECTOR   =12 << KIND_SHIFT,
+        STD_VECTOR_CUDA_GPU_MAT = 13 << KIND_SHIFT
     };
 
     _InputArray();
@@ -181,6 +182,7 @@ public:
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
     _InputArray(const double& val);
     _InputArray(const cuda::GpuMat& d_mat);
+    _InputArray(const std::vector<cuda::GpuMat>& d_mat_array);
     _InputArray(const ogl::Buffer& buf);
     _InputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
@@ -192,6 +194,7 @@ public:
     UMat getUMat(int idx=-1) const;
     void getMatVector(std::vector<Mat>& mv) const;
     void getUMatVector(std::vector<UMat>& umv) const;
+    void getGpuMatVector(std::vector<cuda::GpuMat>& gpumv) const;
     cuda::GpuMat getGpuMat() const;
     ogl::Buffer getOGlBuffer() const;
 
@@ -223,7 +226,7 @@ public:
     bool isUMatVector() const;
     bool isMatx() const;
     bool isVector() const;
-
+    bool isGpuMatVector() const;
     ~_InputArray();
 
 protected:
@@ -283,6 +286,7 @@ public:
     _OutputArray(Mat& m);
     _OutputArray(std::vector<Mat>& vec);
     _OutputArray(cuda::GpuMat& d_mat);
+    _OutputArray(std::vector<cuda::GpuMat>& d_mat);
     _OutputArray(ogl::Buffer& buf);
     _OutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(cudev::GpuMat_<_Tp>& m);
@@ -299,6 +303,7 @@ public:
     _OutputArray(const Mat& m);
     _OutputArray(const std::vector<Mat>& vec);
     _OutputArray(const cuda::GpuMat& d_mat);
+    _OutputArray(const std::vector<cuda::GpuMat>& d_mat);
     _OutputArray(const ogl::Buffer& buf);
     _OutputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(const cudev::GpuMat_<_Tp>& m);
@@ -317,6 +322,7 @@ public:
     Mat& getMatRef(int i=-1) const;
     UMat& getUMatRef(int i=-1) const;
     cuda::GpuMat& getGpuMatRef() const;
+    std::vector<cuda::GpuMat>& getGpuMatVecRef() const;
     ogl::Buffer& getOGlBufferRef() const;
     cuda::HostMem& getHostMemRef() const;
     void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
@@ -356,6 +362,7 @@ public:
     _InputOutputArray(const Mat& m);
     _InputOutputArray(const std::vector<Mat>& vec);
     _InputOutputArray(const cuda::GpuMat& d_mat);
+    _InputOutputArray(const std::vector<cuda::GpuMat>& d_mat);
     _InputOutputArray(const ogl::Buffer& buf);
     _InputOutputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputOutputArray(const cudev::GpuMat_<_Tp>& m);
@@ -496,6 +503,8 @@ struct CV_EXPORTS UMatData
     void* handle;
     void* userdata;
     int allocatorFlags_;
+    int mapcount;
+    UMatData* originalUMatData;
 };
 
 
@@ -1071,6 +1080,7 @@ public:
     @param m Destination matrix. If it does not have a proper size or type before the operation, it is
     reallocated.
     @param mask Operation mask. Its non-zero elements indicate which matrix elements need to be copied.
+    The mask has to be of type CV_8U and can have 1 or multiple channels.
     */
     void copyTo( OutputArray m, InputArray mask ) const;
 
@@ -1854,6 +1864,11 @@ public:
     /** @overload */
     template<typename _Tp, typename Functor> void forEach(const Functor& operation) const;
 
+#ifdef CV_CXX_MOVE_SEMANTICS
+    Mat(Mat&& m);
+    Mat& operator = (Mat&& m);
+#endif
+
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
     enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
 
@@ -1880,6 +1895,8 @@ public:
     MatAllocator* allocator;
     //! and the standard allocator
     static MatAllocator* getStdAllocator();
+    static MatAllocator* getDefaultAllocator();
+    static void setDefaultAllocator(MatAllocator* allocator);
 
     //! interaction with UMat
     UMatData* u;
@@ -2084,6 +2101,16 @@ public:
     template<int n> operator Vec<typename DataType<_Tp>::channel_type, n>() const;
     //! conversion to Matx
     template<int m, int n> operator Matx<typename DataType<_Tp>::channel_type, m, n>() const;
+
+#ifdef CV_CXX_MOVE_SEMANTICS
+    Mat_(Mat_&& m);
+    Mat_& operator = (Mat_&& m);
+
+    Mat_(Mat&& m);
+    Mat_& operator = (Mat&& m);
+
+    Mat_(MatExpr&& e);
+#endif
 };
 
 typedef Mat_<uchar> Mat1b;
@@ -2275,6 +2302,11 @@ public:
 
     //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
     int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;
+
+#ifdef CV_CXX_MOVE_SEMANTICS
+    UMat(UMat&& m);
+    UMat& operator = (UMat&& m);
+#endif
 
     void* handle(int accessFlags) const;
     void ndoffset(size_t* ofs) const;

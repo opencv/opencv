@@ -19,9 +19,10 @@ using namespace cv;
 
 static void print_help()
 {
+    printf("\nDemo stereo matching converting L and R images into disparity and point clouds\n");
     printf("\nUsage: stereo_match <left_image> <right_image> [--algorithm=bm|sgbm|hh|sgbm3way] [--blocksize=<block_size>]\n"
-           "[--max-disparity=<max_disparity>] [--scale=scale_factor>] [-i=<intrinsic_filename>] [-e=<extrinsic_filename>]\n"
-           "[--no-display] [-o=<disparity_image>] [-p=<point_cloud_file>]\n");
+           "[--max-disparity=<max_disparity>] [--scale=scale_factor>] [-i <intrinsic_filename>] [-e <extrinsic_filename>]\n"
+           "[--no-display] [-o <disparity_image>] [-p <point_cloud_file>]\n");
 }
 
 static void saveXYZ(const char* filename, const Mat& mat)
@@ -49,7 +50,7 @@ int main(int argc, char** argv)
     std::string disparity_filename = "";
     std::string point_cloud_filename = "";
 
-    enum { STEREO_BM=0, STEREO_SGBM=1, STEREO_HH=2, STEREO_VAR=3 };
+    enum { STEREO_BM=0, STEREO_SGBM=1, STEREO_HH=2, STEREO_VAR=3, STEREO_3WAY=4 };
     int alg = STEREO_SGBM;
     int SADWindowSize, numberOfDisparities;
     bool no_display;
@@ -232,7 +233,12 @@ int main(int argc, char** argv)
     sgbm->setSpeckleWindowSize(100);
     sgbm->setSpeckleRange(32);
     sgbm->setDisp12MaxDiff(1);
-    sgbm->setMode(alg == STEREO_HH ? StereoSGBM::MODE_HH : StereoSGBM::MODE_SGBM);
+    if(alg==STEREO_HH)
+        sgbm->setMode(StereoSGBM::MODE_HH);
+    else if(alg==STEREO_SGBM)
+        sgbm->setMode(StereoSGBM::MODE_SGBM);
+    else if(alg==STEREO_3WAY)
+        sgbm->setMode(StereoSGBM::MODE_SGBM_3WAY);
 
     Mat disp, disp8;
     //Mat img1p, img2p, dispp;
@@ -242,7 +248,7 @@ int main(int argc, char** argv)
     int64 t = getTickCount();
     if( alg == STEREO_BM )
         bm->compute(img1, img2, disp);
-    else if( alg == STEREO_SGBM || alg == STEREO_HH )
+    else if( alg == STEREO_SGBM || alg == STEREO_HH || alg == STEREO_3WAY )
         sgbm->compute(img1, img2, disp);
     t = getTickCount() - t;
     printf("Time elapsed: %fms\n", t*1000/getTickFrequency());

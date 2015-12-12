@@ -11,6 +11,13 @@
    Pressing any key (except ESC) will reset the tracking with a different speed.
    Pressing ESC will stop the program.
 """
+# Python 2/3 compatibility
+import sys
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    long = int
+
 import cv2
 from math import cos, sin
 import numpy as np
@@ -21,7 +28,7 @@ if __name__ == "__main__":
     img_width = 500
     kalman = cv2.KalmanFilter(2, 1, 0)
 
-    code = -1L
+    code = long(-1)
 
     cv2.namedWindow("Kalman")
 

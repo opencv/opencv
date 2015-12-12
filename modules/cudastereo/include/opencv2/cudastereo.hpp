@@ -138,7 +138,8 @@ public:
     @param data User-specified data cost, a matrix of msg_type type and
     Size(\<image columns\>\*ndisp, \<image rows\>) size.
     @param disparity Output disparity map. If disparity is empty, the output type is CV_16SC1 .
-    Otherwise, the type is retained.
+    Otherwise, the type is retained. In 16-bit signed format, the disparity values do not have
+    fractional bits.
     @param stream Stream for the asynchronous version.
      */
     virtual void compute(InputArray data, OutputArray disparity, Stream& stream = Stream::Null()) = 0;
@@ -295,7 +296,9 @@ CV_EXPORTS Ptr<cuda::DisparityBilateralFilter>
 
 /** @brief Reprojects a disparity image to 3D space.
 
-@param disp Input disparity image. CV_8U and CV_16S types are supported.
+@param disp Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit
+floating-point disparity image. If 16-bit signed format is used, the values are assumed to have no
+fractional bits.
 @param xyzw Output 3- or 4-channel floating-point image of the same size as disp . Each element of
 xyzw(x,y) contains 3D coordinates (x,y,z) or (x,y,z,1) of the point (x,y) , computed from the
 disparity map.
@@ -309,8 +312,10 @@ CV_EXPORTS void reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray
 
 /** @brief Colors a disparity image.
 
-@param src_disp Source disparity image. CV_8UC1 and CV_16SC1 types are supported.
-@param dst_disp Output disparity image. It has the same size as src_disp . The type is CV_8UC4
+@param src_disp Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit
+floating-point disparity image. If 16-bit signed format is used, the values are assumed to have no
+fractional bits.
+@param dst_disp Output disparity image. It has the same size as src_disp. The type is CV_8UC4
 in BGRA format (alpha = 255).
 @param ndisp Number of disparities.
 @param stream Stream for the asynchronous version.

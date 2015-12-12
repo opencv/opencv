@@ -1,15 +1,7 @@
 #include "opencv2/objdetect.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/core/utility.hpp"
-
-#include "opencv2/videoio/videoio_c.h"
-#include "opencv2/highgui/highgui_c.h"
-
-#include <cctype>
 #include <iostream>
-#include <iterator>
-#include <stdio.h>
 
 using namespace std;
 using namespace cv;
@@ -35,7 +27,6 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
 
 string cascadeName;
 string nestedCascadeName;
-
 
 int main( int argc, const char** argv )
 {
@@ -90,38 +81,28 @@ int main( int argc, const char** argv )
     }
     else if( inputName.size() )
     {
-        capture = cvCaptureFromAVI( inputName.c_str() );
-        if(!capture) cout << "Capture from AVI didn't work" << endl;
+        if(!capture.open( inputName ))
+            cout << "Could not read " << inputName << endl;
     }
 
-    cvNamedWindow( "result", 1 );
-
-    if( capture )
+    if( capture.isOpened() )
     {
-        cout << "In capture ..." << endl;
+        cout << "Video capturing has been started ..." << endl;
         cout << endl << "NOTE: Smile intensity will only be valid after a first smile has been detected" << endl;
 
         for(;;)
         {
-            IplImage* iplImg = cvQueryFrame( capture );
-            frame = cv::cvarrToMat(iplImg);
+            capture >> frame;
             if( frame.empty() )
                 break;
-            if( iplImg->origin == IPL_ORIGIN_TL )
-                frame.copyTo( frameCopy );
-            else
-                flip( frame, frameCopy, 0 );
 
-            detectAndDraw( frameCopy, cascade, nestedCascade, scale, tryflip );
+            Mat frame1 = frame.clone();
+            detectAndDraw( frame1, cascade, nestedCascade, scale, tryflip );
 
-            if( waitKey( 10 ) >= 0 )
-                goto _cleanup_;
+            int c = waitKey(10);
+            if( c == 27 || c == 'q' || c == 'Q' )
+                break;
         }
-
-        waitKey(0);
-
-_cleanup_:
-        cvReleaseCapture( &capture );
     }
     else
     {
@@ -130,7 +111,6 @@ _cleanup_:
         return -1;
     }
 
-    cvDestroyWindow("result");
     return 0;
 }
 
@@ -138,28 +118,31 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
                     CascadeClassifier& nestedCascade,
                     double scale, bool tryflip)
 {
-    int i = 0;
     vector<Rect> faces, faces2;
-    const static Scalar colors[] =  { CV_RGB(0,0,255),
-        CV_RGB(0,128,255),
-        CV_RGB(0,255,255),
-        CV_RGB(0,255,0),
-        CV_RGB(255,128,0),
-        CV_RGB(255,255,0),
-        CV_RGB(255,0,0),
-        CV_RGB(255,0,255)} ;
-    Mat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
+    const static Scalar colors[] =
+    {
+        Scalar(255,0,0),
+        Scalar(255,128,0),
+        Scalar(255,255,0),
+        Scalar(0,255,0),
+        Scalar(0,128,255),
+        Scalar(0,255,255),
+        Scalar(0,0,255),
+        Scalar(255,0,255)
+    };
+    Mat gray, smallImg;
 
     cvtColor( img, gray, COLOR_BGR2GRAY );
-    resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
+
+    double fx = 1 / scale;
+    resize( gray, smallImg, Size(), fx, fx, INTER_LINEAR );
     equalizeHist( smallImg, smallImg );
 
     cascade.detectMultiScale( smallImg, faces,
         1.1, 2, 0
         //|CASCADE_FIND_BIGGEST_OBJECT
         //|CASCADE_DO_ROUGH_SEARCH
-        |CASCADE_SCALE_IMAGE
-        ,
+        |CASCADE_SCALE_IMAGE,
         Size(30, 30) );
     if( tryflip )
     {
@@ -168,8 +151,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
                                  1.1, 2, 0
                                  //|CASCADE_FIND_BIGGEST_OBJECT
                                  //|CASCADE_DO_ROUGH_SEARCH
-                                 |CASCADE_SCALE_IMAGE
-                                 ,
+                                 |CASCADE_SCALE_IMAGE,
                                  Size(30, 30) );
         for( vector<Rect>::const_iterator r = faces2.begin(); r != faces2.end(); r++ )
         {
@@ -177,38 +159,38 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         }
     }
 
-    for( vector<Rect>::iterator r = faces.begin(); r != faces.end(); r++, i++ )
+    for ( size_t i = 0; i < faces.size(); i++ )
     {
+        Rect r = faces[i];
         Mat smallImgROI;
         vector<Rect> nestedObjects;
         Point center;
         Scalar color = colors[i%8];
         int radius;
 
-        double aspect_ratio = (double)r->width/r->height;
+        double aspect_ratio = (double)r.width/r.height;
         if( 0.75 < aspect_ratio && aspect_ratio < 1.3 )
         {
-            center.x = cvRound((r->x + r->width*0.5)*scale);
-            center.y = cvRound((r->y + r->height*0.5)*scale);
-            radius = cvRound((r->width + r->height)*0.25*scale);
+            center.x = cvRound((r.x + r.width*0.5)*scale);
+            center.y = cvRound((r.y + r.height*0.5)*scale);
+            radius = cvRound((r.width + r.height)*0.25*scale);
             circle( img, center, radius, color, 3, 8, 0 );
         }
         else
-            rectangle( img, cvPoint(cvRound(r->x*scale), cvRound(r->y*scale)),
-                       cvPoint(cvRound((r->x + r->width-1)*scale), cvRound((r->y + r->height-1)*scale)),
+            rectangle( img, cvPoint(cvRound(r.x*scale), cvRound(r.y*scale)),
+                       cvPoint(cvRound((r.x + r.width-1)*scale), cvRound((r.y + r.height-1)*scale)),
                        color, 3, 8, 0);
 
-        const int half_height=cvRound((float)r->height/2);
-        r->y=r->y + half_height;
-        r->height = half_height;
-        smallImgROI = smallImg(*r);
+        const int half_height=cvRound((float)r.height/2);
+        r.y=r.y + half_height;
+        r.height = half_height-1;
+        smallImgROI = smallImg( r );
         nestedCascade.detectMultiScale( smallImgROI, nestedObjects,
             1.1, 0, 0
             //|CASCADE_FIND_BIGGEST_OBJECT
             //|CASCADE_DO_ROUGH_SEARCH
             //|CASCADE_DO_CANNY_PRUNING
-            |CASCADE_SCALE_IMAGE
-            ,
+            |CASCADE_SCALE_IMAGE,
             Size(30, 30) );
 
         // The number of detected neighbors depends on image size (and also illumination, etc.). The
@@ -223,9 +205,9 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         // Draw rectangle on the left side of the image reflecting smile intensity
         float intensityZeroOne = ((float)smile_neighbors - min_neighbors) / (max_neighbors - min_neighbors + 1);
         int rect_height = cvRound((float)img.rows * intensityZeroOne);
-        CvScalar col = CV_RGB((float)255 * intensityZeroOne, 0, 0);
+        Scalar col = Scalar((float)255 * intensityZeroOne, 0, 0);
         rectangle(img, cvPoint(0, img.rows), cvPoint(img.cols/10, img.rows - rect_height), col, -1);
     }
 
-    cv::imshow( "result", img );
+    imshow( "result", img );
 }

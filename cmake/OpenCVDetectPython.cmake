@@ -85,9 +85,9 @@ function(find_python preferred_version min_version library_env include_dir_env
       # not using _version_string here, because it might not conform to the CMake version format
       if(CMAKE_CROSSCOMPILING)
         # builder version can differ from target, matching base version (e.g. 2.7)
-        find_host_package(PythonLibs "${_version_major_minor}")
+        find_package(PythonLibs "${_version_major_minor}")
       else()
-        find_host_package(PythonLibs "${_version_major_minor}.${_version_patch}" EXACT)
+        find_package(PythonLibs "${_version_major_minor}.${_version_patch}" EXACT)
       endif()
 
       if(PYTHONLIBS_FOUND)
@@ -105,7 +105,7 @@ function(find_python preferred_version min_version library_env include_dir_env
         set(_include_dir ${PYTHON_INCLUDE_DIR})
         set(_include_dir2 ${PYTHON_INCLUDE_DIR2})
 
-        # Clear find_host_package side effects
+        # Clear find_package side effects
         unset(PYTHONLIBS_FOUND)
         unset(PYTHON_LIBRARIES)
         unset(PYTHON_INCLUDE_PATH)
@@ -232,8 +232,13 @@ find_python(3.4 "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYTHON3_INCLUDE_DIR
     PYTHON3_INCLUDE_DIR PYTHON3_INCLUDE_DIR2 PYTHON3_PACKAGES_PATH
     PYTHON3_NUMPY_INCLUDE_DIRS PYTHON3_NUMPY_VERSION)
 
-# Use Python 2 as default Python interpreter
-if(PYTHON2INTERP_FOUND)
+
+if(PYTHON_DEFAULT_EXECUTABLE)
+    set(PYTHON_DEFAULT_AVAILABLE "TRUE")
+elseif(PYTHON2INTERP_FOUND) # Use Python 2 as default Python interpreter
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
     set(PYTHON_DEFAULT_EXECUTABLE "${PYTHON2_EXECUTABLE}")
+elseif(PYTHON3INTERP_FOUND) # Use Python 2 as fallback Python interpreter (if there is no Python 2)
+    set(PYTHON_DEFAULT_AVAILABLE "TRUE")
+    set(PYTHON_DEFAULT_EXECUTABLE "${PYTHON3_EXECUTABLE}")
 endif()

@@ -951,11 +951,11 @@ CUDA_TEST_P(Normalize, WithMask)
 
     cv::cuda::GpuMat dst = createMat(size, type, useRoi);
     dst.setTo(cv::Scalar::all(0));
-    cv::cuda::normalize(loadMat(src, useRoi), dst, alpha, beta, norm_type, type, loadMat(mask, useRoi));
+    cv::cuda::normalize(loadMat(src, useRoi), dst, alpha, beta, norm_type, -1, loadMat(mask, useRoi));
 
     cv::Mat dst_gold(size, type);
     dst_gold.setTo(cv::Scalar::all(0));
-    cv::normalize(src, dst_gold, alpha, beta, norm_type, type, mask);
+    cv::normalize(src, dst_gold, alpha, beta, norm_type, -1, mask);
 
     EXPECT_MAT_NEAR(dst_gold, dst, type < CV_32F ? 1.0 : 1e-4);
 }

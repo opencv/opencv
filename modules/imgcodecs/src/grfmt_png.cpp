@@ -140,7 +140,7 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, uchar* dst, size_t size )
 
 bool  PngDecoder::readHeader()
 {
-    bool result = false;
+    volatile bool result = false;
     close();
 
     png_structp png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
@@ -368,7 +368,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                 {
                     f = fopen( m_filename.c_str(), "wb" );
                     if( f )
-                        png_init_io( png_ptr, f );
+                        png_init_io( png_ptr, (png_FILE_p)f );
                 }
 
                 int compression_level = -1; // Invalid value to allow setting 0-9 as valid
@@ -437,7 +437,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     }
 
     png_destroy_write_struct( &png_ptr, &info_ptr );
-    if(f) fclose( f );
+    if(f) fclose( (FILE*)f );
 
     return result;
 }

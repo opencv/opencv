@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -41,10 +44,10 @@ if __name__ == '__main__':
     img_points = []
     h, w = 0, 0
     for fn in img_names:
-        print 'processing %s...' % fn,
+        print('processing %s...' % fn,)
         img = cv2.imread(fn, 0)
         if img is None:
-          print "Failed to load", fn
+          print("Failed to load", fn)
           continue
 
         h, w = img.shape[:2]
@@ -58,15 +61,15 @@ if __name__ == '__main__':
             path, name, ext = splitfn(fn)
             cv2.imwrite('%s/%s_chess.bmp' % (debug_dir, name), vis)
         if not found:
-            print 'chessboard not found'
+            print('chessboard not found')
             continue
         img_points.append(corners.reshape(-1, 2))
         obj_points.append(pattern_points)
 
-        print 'ok'
+        print('ok')
 
     rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h), None, None)
-    print "RMS:", rms
-    print "camera matrix:\n", camera_matrix
-    print "distortion coefficients: ", dist_coefs.ravel()
+    print("RMS:", rms)
+    print("camera matrix:\n", camera_matrix)
+    print("distortion coefficients: ", dist_coefs.ravel())
     cv2.destroyAllWindows()

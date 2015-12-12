@@ -21,7 +21,7 @@ file(GLOB_RECURSE test_files RELATIVE "${test_dir}" "${test_dir}/res/*" "${test_
 foreach(f ${test_files} ${ANDROID_MANIFEST_FILE} ".classpath" ".project")
   add_custom_command(
       OUTPUT "${opencv_test_java_bin_dir}/${f}"
-      COMMAND ${CMAKE_COMMAND} -E copy "${test_dir}/${f}" "${opencv_test_java_bin_dir}/${f}"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_dir}/${f}" "${opencv_test_java_bin_dir}/${f}"
       MAIN_DEPENDENCY "${test_dir}/${f}"
       COMMENT "Copying ${f}")
   list(APPEND opencv_test_java_file_deps "${test_dir}/${f}" "${opencv_test_java_bin_dir}/${f}")
@@ -49,8 +49,8 @@ get_filename_component(java_name "${java_location}" NAME)
 # build java part
 add_custom_command(
     OUTPUT "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk"
-    COMMAND ${CMAKE_COMMAND} -E copy "${java_location}" "${opencv_test_java_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${java_name}"
-    COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${java_location}" "${opencv_test_java_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${java_name}"
+    COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug -Djava.target=1.6 -Djava.source=1.6
     COMMAND ${CMAKE_COMMAND} -E touch "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk" # needed because ant does not update the timestamp of updated apk
     WORKING_DIRECTORY "${opencv_test_java_bin_dir}"
     MAIN_DEPENDENCY "${opencv_test_java_bin_dir}/${ANDROID_MANIFEST_FILE}"
@@ -62,7 +62,7 @@ add_dependencies(${PROJECT_NAME} opencv_java ${__android_project_chain})
 set(__android_project_chain ${PROJECT_NAME} CACHE INTERNAL "auxiliary variable used for Android progects chaining" FORCE)
 
 # put the final .apk to the OpenCV's bin folder
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk" "${OpenCV_BINARY_DIR}/bin/${PROJECT_NAME}.apk")
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk" "${OpenCV_BINARY_DIR}/bin/${PROJECT_NAME}.apk")
 
 add_dependencies(opencv_tests ${PROJECT_NAME})
 
