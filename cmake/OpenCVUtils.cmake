@@ -824,11 +824,17 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
   list(FIND ${_extra} "ippicv" ippicv_idx)
   if (${ippicv_idx} GREATER -1)
     list(REMOVE_ITEM ${_extra} "ippicv")
-    list(INSERT ${_3rdparty} 0 "ippicv")
+    if(NOT BUILD_SHARED_LIBS)
+      list(INSERT ${_3rdparty} 0 "ippicv")
+    endif()
   endif()
 
   # split 3rdparty libs and modules
   list(REMOVE_ITEM ${_modules} ${${_3rdparty}} ${${_extra}} non_empty_list)
+
+  ocv_list_filterout(${_modules} "^[\$]<")
+  ocv_list_filterout(${_3rdparty} "^[\$]<")
+  ocv_list_filterout(${_extra} "^[\$]<")
 
   # convert CMake lists to makefile literals
   foreach(lst ${_modules} ${_3rdparty} ${_extra})
