@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
         pyr = build_lappyr(frame, leveln)
         for i in xrange(leveln):
-            v = cv2.getTrackbarPos('%d'%i, 'level control') / 5
+            v = int(cv2.getTrackbarPos('%d'%i, 'level control') / 5)
             pyr[i] *= v
         res = merge_lappyr(pyr)
 

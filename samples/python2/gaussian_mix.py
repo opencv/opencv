@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    xrange = range
+
 import numpy as np
 from numpy import random
 import cv2
@@ -30,19 +38,21 @@ if __name__ == '__main__':
     cluster_n = 5
     img_size = 512
 
-    print 'press any key to update distributions, ESC - exit\n'
+    print('press any key to update distributions, ESC - exit\n')
 
     while True:
-        print 'sampling distributions...'
+        print('sampling distributions...')
         points, ref_distrs = make_gaussians(cluster_n, img_size)
 
-        print 'EM (opencv) ...'
-        em = cv2.EM(cluster_n, cv2.EM_COV_MAT_GENERIC)
-        em.train(points)
-        means = em.getMat('means')
-        covs = em.getMatVector('covs')
+        print('EM (opencv) ...')
+        em = cv2.ml.EM_create()
+        em.setClustersNumber(cluster_n)
+        em.setCovarianceMatrixType(cv2.ml.EM_COV_MAT_GENERIC)
+        em.trainEM(points)
+        means = em.getMeans()
+        covs = em.getCovs()  # Known bug: https://github.com/Itseez/opencv/pull/4232
         found_distrs = zip(means, covs)
-        print 'ready!\n'
+        print('ready!\n')
 
         img = np.zeros((img_size, img_size, 3), np.uint8)
         for x, y in np.int32(points):
