@@ -22,7 +22,8 @@ Keys
 '''
 
 
-
+# Python 2/3 compatibility
+from __future__ import print_function
 
 import numpy as np
 import cv2
@@ -44,7 +45,7 @@ class App:
         self.sketch = Sketcher('img', [self.markers_vis, self.markers], self.get_colors)
 
     def get_colors(self):
-        return map(int, self.colors[self.cur_marker]), self.cur_marker
+        return list(map(int, self.colors[self.cur_marker])), self.cur_marker
 
     def watershed(self):
         m = self.markers.copy()
@@ -60,13 +61,13 @@ class App:
                 break
             if ch >= ord('1') and ch <= ord('7'):
                 self.cur_marker = ch - ord('0')
-                print 'marker: ', self.cur_marker
+                print('marker: ', self.cur_marker)
             if ch == ord(' ') or (self.sketch.dirty and self.auto_update):
                 self.watershed()
                 self.sketch.dirty = False
             if ch in [ord('a'), ord('A')]:
                 self.auto_update = not self.auto_update
-                print 'auto_update if', ['off', 'on'][self.auto_update]
+                print('auto_update if', ['off', 'on'][self.auto_update])
             if ch in [ord('r'), ord('R')]:
                 self.markers[:] = 0
                 self.markers_vis[:] = self.img
@@ -80,5 +81,5 @@ if __name__ == '__main__':
         fn = sys.argv[1]
     except:
         fn = '../data/fruits.jpg'
-    print __doc__
+    print(__doc__)
     App(fn).run()

@@ -10,6 +10,9 @@ Keyboard shortcuts:
    space - generate new distribution
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -19,7 +22,7 @@ if __name__ == '__main__':
     cluster_n = 5
     img_size = 512
 
-    print __doc__
+    print(__doc__)
 
     # generating bright palette
     colors = np.zeros((1, cluster_n, 3), np.uint8)
@@ -28,7 +31,7 @@ if __name__ == '__main__':
     colors = cv2.cvtColor(colors, cv2.COLOR_HSV2BGR)[0]
 
     while True:
-        print 'sampling distributions...'
+        print('sampling distributions...')
         points, _ = make_gaussians(cluster_n, img_size)
 
         term_crit = (cv2.TERM_CRITERIA_EPS, 30, 0.1)
@@ -36,7 +39,8 @@ if __name__ == '__main__':
 
         img = np.zeros((img_size, img_size, 3), np.uint8)
         for (x, y), label in zip(np.int32(points), labels.ravel()):
-            c = map(int, colors[label])
+            c = list(map(int, colors[label]))
+
             cv2.circle(img, (x, y), 1, c, -1)
 
         cv2.imshow('gaussian mixture', img)

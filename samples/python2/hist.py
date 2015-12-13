@@ -15,6 +15,9 @@ Usage : python hist.py <image_file>
 Abid Rahman 3/14/12 debug Gary Bradski
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import cv2
 import numpy as np
 
@@ -38,8 +41,8 @@ def hist_curve(im):
 def hist_lines(im):
     h = np.zeros((300,256,3))
     if len(im.shape)!=2:
-        print "hist_lines applicable only for grayscale images"
-        #print "so converting image to grayscale for representation"
+        print("hist_lines applicable only for grayscale images")
+        #print("so converting image to grayscale for representation"
         im = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
     hist_item = cv2.calcHist([im],[0],None,[256],[0,256])
     cv2.normalize(hist_item,hist_item,0,255,cv2.NORM_MINMAX)
@@ -58,18 +61,18 @@ if __name__ == '__main__':
         fname = sys.argv[1]
     else :
         fname = '../data/lena.jpg'
-        print "usage : python hist.py <image_file>"
+        print("usage : python hist.py <image_file>")
 
     im = cv2.imread(fname)
 
     if im is None:
-        print 'Failed to load image file:', fname
+        print('Failed to load image file:', fname)
         sys.exit(1)
 
     gray = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
 
 
-    print ''' Histogram plotting \n
+    print(''' Histogram plotting \n
     Keymap :\n
     a - show histogram for color image in curve mode \n
     b - show histogram in bin mode \n
@@ -77,7 +80,7 @@ if __name__ == '__main__':
     d - show histogram for color image in curve mode \n
     e - show histogram for a normalized image in curve mode \n
     Esc - exit \n
-    '''
+    ''')
 
     cv2.imshow('image',im)
     while True:
@@ -86,31 +89,31 @@ if __name__ == '__main__':
             curve = hist_curve(im)
             cv2.imshow('histogram',curve)
             cv2.imshow('image',im)
-            print 'a'
+            print('a')
         elif k == ord('b'):
-            print 'b'
+            print('b')
             lines = hist_lines(im)
             cv2.imshow('histogram',lines)
             cv2.imshow('image',gray)
         elif k == ord('c'):
-            print 'c'
+            print('c')
             equ = cv2.equalizeHist(gray)
             lines = hist_lines(equ)
             cv2.imshow('histogram',lines)
             cv2.imshow('image',equ)
         elif k == ord('d'):
-            print 'd'
+            print('d')
             curve = hist_curve(gray)
             cv2.imshow('histogram',curve)
             cv2.imshow('image',gray)
         elif k == ord('e'):
-            print 'e'
-            norm = cv2.normalize(gray,alpha = 0,beta = 255,norm_type = cv2.NORM_MINMAX)
+            print('e')
+            norm = cv2.normalize(gray, gray, alpha = 0,beta = 255,norm_type = cv2.NORM_MINMAX)
             lines = hist_lines(norm)
             cv2.imshow('histogram',lines)
             cv2.imshow('image',norm)
         elif k == 27:
-            print 'ESC'
+            print('ESC')
             cv2.destroyAllWindows()
             break
     cv2.destroyAllWindows()

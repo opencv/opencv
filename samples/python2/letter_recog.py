@@ -25,6 +25,9 @@ USAGE:
   Models: RTrees, KNearest, Boost, SVM, MLP
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -58,22 +61,22 @@ class LetterStatModel(object):
 
 class RTrees(LetterStatModel):
     def __init__(self):
-        self.model = cv2.RTrees()
+        self.model = cv2.ml.RTrees_create()
 
     def train(self, samples, responses):
         sample_n, var_n = samples.shape
-        var_types = np.array([cv2.CV_VAR_NUMERICAL] * var_n + [cv2.CV_VAR_CATEGORICAL], np.uint8)
+        var_types = np.array([cv2.ml.VAR_NUMERICAL] * var_n + [cv2.ml.VAR_CATEGORICAL], np.uint8)
         #CvRTParams(10,10,0,false,15,0,true,4,100,0.01f,CV_TERMCRIT_ITER));
         params = dict(max_depth=10 )
-        self.model.train(samples, cv2.CV_ROW_SAMPLE, responses, varType = var_types, params = params)
+        self.model.train(samples, cv2.ml.ROW_SAMPLE, responses, varType = var_types, params = params)
 
     def predict(self, samples):
-        return np.float32( [self.model.predict(s) for s in samples] )
+        return [self.model.predict(s) for s in samples]
 
 
 class KNearest(LetterStatModel):
     def __init__(self):
-        self.model = cv2.KNearest()
+        self.model = cv2.ml.KNearest_create()
 
     def train(self, samples, responses):
         self.model.train(samples, responses)
@@ -85,16 +88,16 @@ class KNearest(LetterStatModel):
 
 class Boost(LetterStatModel):
     def __init__(self):
-        self.model = cv2.Boost()
+        self.model = cv2.ml.Boost_create()
 
     def train(self, samples, responses):
         sample_n, var_n = samples.shape
         new_samples = self.unroll_samples(samples)
         new_responses = self.unroll_responses(responses)
-        var_types = np.array([cv2.CV_VAR_NUMERICAL] * var_n + [cv2.CV_VAR_CATEGORICAL, cv2.CV_VAR_CATEGORICAL], np.uint8)
+        var_types = np.array([cv2.ml.VAR_NUMERICAL] * var_n + [cv2.ml.VAR_CATEGORICAL, cv2.ml.VAR_CATEGORICAL], np.uint8)
         #CvBoostParams(CvBoost::REAL, 100, 0.95, 5, false, 0 )
         params = dict(max_depth=5) #, use_surrogates=False)
-        self.model.train(new_samples, cv2.CV_ROW_SAMPLE, new_responses, varType = var_types, params=params)
+        self.model.train(new_samples, cv2.ml.ROW_SAMPLE, new_responses, varType = var_types, params=params)
 
     def predict(self, samples):
         new_samples = self.unroll_samples(samples)
@@ -105,11 +108,11 @@ class Boost(LetterStatModel):
 
 class SVM(LetterStatModel):
     def __init__(self):
-        self.model = cv2.SVM()
+        self.model = cv2.ml.SVM_create()
 
     def train(self, samples, responses):
-        params = dict( kernel_type = cv2.SVM_LINEAR,
-                       svm_type = cv2.SVM_C_SVC,
+        params = dict( kernel_type = cv2.ml.SVM_LINEAR,
+                       svm_type = cv2.ml.SVM_C_SVC,
                        C = 1 )
         self.model.train(samples, responses, params = params)
 
@@ -119,7 +122,7 @@ class SVM(LetterStatModel):
 
 class MLP(LetterStatModel):
     def __init__(self):
-        self.model = cv2.ANN_MLP()
+        self.model = cv2.ml.ANN_MLP_create()
 
     def train(self, samples, responses):
         sample_n, var_n = samples.shape
@@ -130,7 +133,7 @@ class MLP(LetterStatModel):
 
         # CvANN_MLP_TrainParams::BACKPROP,0.001
         params = dict( term_crit = (cv2.TERM_CRITERIA_COUNT, 300, 0.01),
-                       train_method = cv2.ANN_MLP_TRAIN_PARAMS_BACKPROP,
+                       train_method = cv2.ml.ANN_MLP_TRAIN_PARAMS_BACKPROP,
                        bp_dw_scale = 0.001,
                        bp_moment_scale = 0.0 )
         self.model.train(samples, np.float32(new_responses), None, params = params)
@@ -144,7 +147,7 @@ if __name__ == '__main__':
     import getopt
     import sys
 
-    print  __doc__
+    print(__doc__)
 
     models = [RTrees, KNearest, Boost, SVM, MLP] # NBayes
     models = dict( [(cls.__name__.lower(), cls) for cls in models] )
@@ -155,7 +158,7 @@ if __name__ == '__main__':
     args.setdefault('--model', 'rtrees')
     args.setdefault('--data', '../data/letter-recognition.data')
 
-    print 'loading data %s ...' % args['--data']
+    print('loading data %s ...' % args['--data'])
     samples, responses = load_base(args['--data'])
     Model = models[args['--model']]
     model = Model()
@@ -163,20 +166,20 @@ if __name__ == '__main__':
     train_n = int(len(samples)*model.train_ratio)
     if '--load' in args:
         fn = args['--load']
-        print 'loading model from %s ...' % fn
+        print('loading model from %s ...' % fn)
         model.load(fn)
     else:
-        print 'training %s ...' % Model.__name__
+        print('training %s ...' % Model.__name__)
         model.train(samples[:train_n], responses[:train_n])
 
-    print 'testing...'
+    print('testing...')
     train_rate = np.mean(model.predict(samples[:train_n]) == responses[:train_n])
     test_rate  = np.mean(model.predict(samples[train_n:]) == responses[train_n:])
 
-    print 'train rate: %f  test rate: %f' % (train_rate*100, test_rate*100)
+    print('train rate: %f  test rate: %f' % (train_rate*100, test_rate*100))
 
     if '--save' in args:
         fn = args['--save']
-        print 'saving model to %s ...' % fn
+        print('saving model to %s ...' % fn)
         model.save(fn)
     cv2.destroyAllWindows()
