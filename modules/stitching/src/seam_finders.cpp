@@ -115,7 +115,7 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
     Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
 
     Size img1 = sizes_[first], img2 = sizes_[second];
-    Mat mask1 = masks_[first].getMat(ACCESS_READ), mask2 = masks_[second].getMat(ACCESS_READ);
+    Mat mask1 = masks_[first].getMat(ACCESS_RW), mask2 = masks_[second].getMat(ACCESS_RW);
     Point tl1 = corners_[first], tl2 = corners_[second];
 
     // Cut submasks with some gap
