@@ -47,7 +47,6 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::cuda::medianFiltering(InputArray, OutputArray, int) { throw_no_cuda(); }
 void cv::cuda::medianFiltering(InputArray, OutputArray, int,int) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
@@ -59,27 +58,47 @@ namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
-        void medianFiltering_gpu(const PtrStepSzb& src, PtrStepSzb dst, int kernel, int partitions);
+        void medianFiltering_gpu(const PtrStepSzb src, PtrStepSzb dst, PtrStepSzi devHist, PtrStepSzi devCoarseHist,int kernel, int partitions);
     }
 }}}
 
-void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int kernel){
-    cv::cuda::meanShiftFiltering(_src,_dst,kernel,128);
-}
-
-void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int kernel, int partitions)
-{
-//    using namespace ::cv::cuda::device::imgproc;
-
-                //     int maxKernelSize=min(imSize,81);
-
-    // cv::cuda::GpuMat devHist(1, src.cols*histSize*partitions,CV_32SC1);
-    // cv::cuda::GpuMat devCoarseHist(1,src.cols*histCoarseSize*partitions,CV_32SC1);
-
-    // devHist.release();
-    // devCoarseHist.release();
 
 
+void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int _kernel, int _partitions){
+    using namespace cv::cuda::device::imgproc;
+
+    GpuMat src = _src.getGpuMat();
+    CV_Assert( src.type() == CV_8UC1 );
+
+    int partitions = _partitions;   
+    if (partitions>src.rows)
+        partitions=src.rows;
+
+    int kernel=_kernel;
+    if (kernel>src.rows)
+        kernel=src.rows;
+    if (kernel>src.cols)
+        kernel=src.cols;
+    if(kernel%2==0)
+        kernel--;
+    CV_Assert(kernel>=3);
+
+     _dst.create(src.rows, src.cols, src.type());
+    GpuMat dst = _dst.getGpuMat();
+    src.copyTo(dst);
+
+    // Note - these are hardcoded in the actual GPU kernel. Do not change these values.
+    int histSize=256, histCoarseSize=8;
+
+    GpuMat devHist(1, src.cols*histSize*partitions,CV_32SC1);
+    GpuMat devCoarseHist(1,src.cols*histCoarseSize*partitions,CV_32SC1);
+    devHist.setTo(0);
+    devCoarseHist.setTo(0);
+
+    medianFiltering_gpu(src,dst,devHist, devCoarseHist,kernel,partitions);
+
+    devHist.release();
+    devCoarseHist.release();
 }
 
 
