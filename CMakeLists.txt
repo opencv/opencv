@@ -207,6 +207,7 @@ OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON 
 OCV_OPTION(WITH_DIRECTX        "Include DirectX support"                     ON   IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_IPP_A          "Include Intel IPP_A support"                 OFF  IF (MSVC OR X86 OR X86_64) )
+OCV_OPTION(WITH_MATLAB         "Include Matlab support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT))
 OCV_OPTION(WITH_VA             "Include VA support"                          OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
@@ -583,7 +584,9 @@ if(WITH_DIRECTX)
 endif()
 
 # --- Matlab/Octave ---
-include(cmake/OpenCVFindMatlab.cmake)
+if(WITH_MATLAB)
+  include(cmake/OpenCVFindMatlab.cmake)
+endif()
 
 include(cmake/OpenCVDetectVTK.cmake)
 
@@ -1175,10 +1178,14 @@ status("    Java tests:"    BUILD_TESTS AND opencv_test_java_BINARY_DIR         
 
 # ========================= matlab =========================
 status("")
-status("  Matlab:")
-status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
-if (MATLAB_FOUND)
-  status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
+if(WITH_MATLAB AND MATLAB_FOUND)
+  status("  Matlab:")
+  status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
+  if (MATLAB_FOUND)
+    status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
+  endif()
+else()
+  status("  Matlab:"   WITH_MATLAB AND NOT MATLAB_FOUND THEN "Matlab not found or implicitly disabled" ELSE NO)
 endif()
 
 # ========================== documentation ==========================
