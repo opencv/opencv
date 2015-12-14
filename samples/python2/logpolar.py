@@ -1,15 +1,27 @@
 #!/usr/bin/env python
 
+'''
+plots image as logPolar and linearPolar
+
+Usage:
+    logpolar.py
+
+Keys:
+    ESC    - exit
+'''
+
 # Python 2/3 compatibility
 from __future__ import print_function
 
 import cv2
 
 if __name__ == '__main__':
+    print(__doc__)
+
     import sys
     try:
         fn = sys.argv[1]
-    except:
+    except IndexError:
         fn = '../data/fruits.jpg'
 
     img = cv2.imread(fn)

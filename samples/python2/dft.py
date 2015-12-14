@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+'''
+sample for disctrete fourier transform (dft)
+
+USAGE:
+    dft.py <image_file>
+'''
+
+
 # Python 2/3 compatibility
 from __future__ import print_function
 
@@ -56,9 +64,9 @@ def shift_dft(src, dst=None):
 
 if __name__ == "__main__":
 
-    if len(sys.argv)>1:
+    if len(sys.argv) > 1:
         im = cv2.imread(sys.argv[1])
-    else :
+    else:
         im = cv2.imread('../data/baboon.jpg')
         print("usage : python dft.py <image_file>")
 

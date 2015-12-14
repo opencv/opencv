@@ -1,11 +1,18 @@
 #!/usr/bin/env python
 
+'''
+Video histogram sample to show live histogram of video
+
+Keys:
+    ESC    - exit
+
+'''
+
 import numpy as np
 import cv2
 
 # built-in modules
 import sys
-from time import clock
 
 # local modules
 import video
@@ -22,6 +29,7 @@ if __name__ == '__main__':
 
     cv2.namedWindow('hist', 0)
     hist_scale = 10
+
     def set_scale(val):
         global hist_scale
         hist_scale = val
@@ -42,8 +50,7 @@ if __name__ == '__main__':
         hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
         dark = hsv[...,2] < 32
         hsv[dark] = 0
-        h = cv2.calcHist( [hsv], [0, 1], None, [180, 256], [0, 180, 0, 256] )
-
+        h = cv2.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
 
         h = np.clip(h*0.005*hist_scale, 0, 1)
         vis = hsv_map*h[:,:,np.newaxis] / 255.0
