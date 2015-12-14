@@ -99,7 +99,7 @@ class SVM(StatModel):
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
-        return self.model.predict(samples)[1][0].ravel()
+        return self.model.predict(samples)[1].ravel()
 
 
 def evaluate_model(model, digits, samples, labels):
