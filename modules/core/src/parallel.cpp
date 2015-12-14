@@ -238,7 +238,7 @@ public:
     }
 
     SchedPtr() : sched_(0) {}
-    ~SchedPtr() { *this = 0; }
+    ~SchedPtr() {}
 };
 static SchedPtr pplScheduler;
 

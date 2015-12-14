@@ -29,6 +29,9 @@ file(GLOB highgui_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
 
+# Removing WinRT API headers by default
+list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
+
 if(HAVE_QT5)
   set(CMAKE_AUTOMOC ON)
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -66,24 +69,39 @@ elseif(HAVE_QT)
   if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()
-elseif(WINRT AND NOT WINRT_8_0)
-  # Dependencies used by the implementation referenced
-  # below are not available on WinRT 8.0.
-  # Enabling it for WiRT 8.1+ only.
-  status("  ${name}: WinRT detected")
-  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_winrt.cpp)
+elseif(WINRT)
+  if(NOT WINRT_8_0)
+    # Dependencies used by the implementation referenced
+    # below are not available on WinRT 8.0.
+    # Enabling it for WiRT 8.1+ only.
+
+    # WinRT 8.1+ detected. Adding WinRT API header.
+    message(STATUS "  ${name}: WinRT detected. Adding WinRT API header")
+    list(APPEND highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
+
+
+    list(APPEND highgui_srcs
+      ${CMAKE_CURRENT_LIST_DIR}/src/window_winrt.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/window_winrt_bridge.cpp)
+    list(APPEND highgui_hdrs
+      ${CMAKE_CURRENT_LIST_DIR}/src/window_winrt_bridge.hpp)
+  endif()
 
   # libraries below are neither available nor required
   # on ARM devices and/or Windows Phone
   if(WINRT_PHONE OR (OpenCV_ARCH STREQUAL "ARM"))
     list(REMOVE_ITEM HIGHGUI_LIBRARIES "comctl32" "gdi32" "ole32" "setupapi")
     if(WINRT_PHONE)
-      status("  ${name}: Windows Phone detected")
+      message(STATUS "  ${name}: Windows Phone detected")
     elseif(OpenCV_ARCH STREQUAL "ARM")
-      status("  ${name}: ARM detected")
+      message(STATUS "  ${name}: ARM detected")
+      if(WINRT_STORE)
+        list(REMOVE_ITEM HIGHGUI_LIBRARIES "ws2_32")
+        message(STATUS "  ${name}:   Removing 'ws2_32.lib'")
+      endif()
     endif()
-    status("  ${name}:   Removing 'comctl32.lib, gdi32.lib, ole32.lib, setupapi.lib'")
-    status("  ${name}:   Leaving '${HIGHGUI_LIBRARIES}'")
+    message(STATUS "  ${name}:   Removing 'comctl32.lib, gdi32.lib, ole32.lib, setupapi.lib'")
+    message(STATUS "  ${name}:   Leaving '${HIGHGUI_LIBRARIES}'")
   endif()
 elseif(HAVE_WIN32UI)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_w32.cpp)

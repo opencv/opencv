@@ -499,7 +499,7 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
     int ntiles = xtiles*ytiles;
     UMat umbuf(1, ntiles*K, CV_32S);
 
-    size_t globalsize[] = {xtiles, sz.height}, localsize[] = {1, TILE_SIZE};
+    size_t globalsize[] = {(size_t)xtiles, (size_t)sz.height}, localsize[] = {1, TILE_SIZE};
     bool ok = k.args(ocl::KernelArg::ReadOnly(src),
                      ocl::KernelArg::PtrWriteOnly(umbuf),
                      xtiles).run(2, globalsize, localsize, true);
@@ -577,7 +577,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         if( cn > 1 )
             CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
 
-#if IPP_VERSION_X100 >= 801 && 0
+#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
         CV_IPP_CHECK()
         {
             if (!binary)

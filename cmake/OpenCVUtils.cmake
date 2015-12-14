@@ -503,17 +503,15 @@ endmacro()
 
 
 # convert list of paths to libraries names without lib prefix
-macro(ocv_convert_to_lib_name var)
-  set(__tmp "")
+function(ocv_convert_to_lib_name var)
+  set(tmp "")
   foreach(path ${ARGN})
-    get_filename_component(__tmp_name "${path}" NAME_WE)
-    string(REGEX REPLACE "^lib" "" __tmp_name ${__tmp_name})
-    list(APPEND __tmp "${__tmp_name}")
+    get_filename_component(tmp_name "${path}" NAME_WE)
+    string(REGEX REPLACE "^lib" "" tmp_name "${tmp_name}")
+    list(APPEND tmp "${tmp_name}")
   endforeach()
-  set(${var} ${__tmp})
-  unset(__tmp)
-  unset(__tmp_name)
-endmacro()
+  set(${var} ${tmp} PARENT_SCOPE)
+endfunction()
 
 
 # add install command
@@ -565,20 +563,22 @@ function(ocv_install_target)
 
 #      message(STATUS "Process ${__target} dst=${__dst}...")
       if(DEFINED __dst)
-        if(CMAKE_VERSION VERSION_LESS 2.8.12)
+        # If CMake version is >=3.1.0 or <2.8.12.
+        if(NOT CMAKE_VERSION VERSION_LESS 3.1.0 OR CMAKE_VERSION VERSION_LESS 2.8.12)
           get_target_property(fname ${__target} LOCATION_DEBUG)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Debug)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug)
           endif()
 
           get_target_property(fname ${__target} LOCATION_RELEASE)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Release)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release)
           endif()
         else()
-          # CMake 2.8.12 brokes PDB support in STATIC libraries for MSVS
+          # CMake 2.8.12 broke PDB support for STATIC libraries from MSVS, fix was introduced in CMake 3.1.0.
+          message(WARNING "PDB's are not supported from this version of CMake, use CMake version later then 3.1.0 or before 2.8.12.")
         endif()
       endif()
     endif()
@@ -836,3 +836,105 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
     ocv_list_reverse(${lst})
   endforeach()
 endmacro()
+
+function(ocv_download)
+  cmake_parse_arguments(DL "" "PACKAGE;HASH;URL;DESTINATION_DIR;DOWNLOAD_DIR" "" ${ARGN})
+  if(NOT DL_DOWNLOAD_DIR)
+    set(DL_DOWNLOAD_DIR "${DL_DESTINATION_DIR}/downloads")
+  endif()
+  if(DEFINED DL_DESTINATION_DIR)
+    set(DESTINATION_TARGET "${DL_DESTINATION_DIR}/${DL_PACKAGE}")
+    if(EXISTS "${DESTINATION_TARGET}")
+      file(MD5 "${DESTINATION_TARGET}" target_md5)
+      if(NOT target_md5 STREQUAL DL_HASH)
+        file(REMOVE "${DESTINATION_TARGET}")
+      else()
+        set(DOWNLOAD_PACKAGE_LOCATION "" PARENT_SCOPE)
+        unset(DOWNLOAD_PACKAGE_LOCATION)
+        return()
+      endif()
+    endif()
+  endif()
+  set(DOWNLOAD_TARGET "${DL_DOWNLOAD_DIR}/${DL_HASH}/${DL_PACKAGE}")
+  get_filename_component(DOWNLOAD_TARGET_DIR "${DOWNLOAD_TARGET}" PATH)
+  if(EXISTS "${DOWNLOAD_TARGET}")
+    file(MD5 "${DOWNLOAD_TARGET}" target_md5)
+    if(NOT target_md5 STREQUAL DL_HASH)
+      message(WARNING "Download: Local copy of ${DL_PACKAGE} has invalid MD5 hash: ${target_md5} (expected: ${DL_HASH})")
+      file(REMOVE "${DOWNLOAD_TARGET}")
+      file(REMOVE_RECURSE "${DOWNLOAD_TARGET_DIR}")
+    endif()
+  endif()
+
+  if(NOT EXISTS "${DOWNLOAD_TARGET}")
+    set(__url "")
+    foreach(__url_i ${DL_URL})
+      if(NOT ("${__url_i}" STREQUAL ""))
+        set(__url "${__url_i}")
+        break()
+      endif()
+    endforeach()
+    if("${__url}" STREQUAL "")
+      message(FATAL_ERROR "Download URL is not specified for package ${DL_PACKAGE}")
+    endif()
+
+    if(NOT EXISTS "${DOWNLOAD_TARGET_DIR}")
+      file(MAKE_DIRECTORY ${DOWNLOAD_TARGET_DIR})
+    endif()
+    message(STATUS "Downloading ${DL_PACKAGE}...")
+    #message(STATUS "    ${__url}${DL_PACKAGE}")
+    file(DOWNLOAD "${__url}${DL_PACKAGE}" "${DOWNLOAD_TARGET}"
+         TIMEOUT 600 STATUS __status
+         EXPECTED_MD5 ${DL_HASH})
+    if(NOT __status EQUAL 0)
+      message(FATAL_ERROR "Failed to download ${DL_PACKAGE}. Status=${__status}")
+    else()
+      # Don't remove this code, because EXPECTED_MD5 parameter doesn't fail "file(DOWNLOAD)" step on wrong hash
+      file(MD5 "${DOWNLOAD_TARGET}" target_md5)
+      if(NOT target_md5 STREQUAL DL_HASH)
+        message(FATAL_ERROR "Downloaded copy of ${DL_PACKAGE} has invalid MD5 hash: ${target_md5} (expected: ${DL_HASH})")
+      endif()
+    endif()
+    message(STATUS "Downloading ${DL_PACKAGE}... Done")
+  endif()
+
+  if(DEFINED DL_DESTINATION_DIR)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DOWNLOAD_TARGET}" "${DL_DESTINATION_DIR}/"
+                    RESULT_VARIABLE __result)
+
+    if(NOT __result EQUAL 0)
+      message(FATAL_ERROR "Downloader: Failed to copy package from ${DOWNLOAD_TARGET} to ${DL_DESTINATION_DIR} with error ${__result}")
+    endif()
+  endif()
+
+  set(DOWNLOAD_PACKAGE_LOCATION ${DOWNLOAD_TARGET} PARENT_SCOPE)
+endfunction()
+
+function(ocv_add_test_from_target test_name test_kind the_target)
+  if(CMAKE_VERSION VERSION_GREATER "2.8" AND NOT CMAKE_CROSSCOMPILING)
+    if(NOT "${test_kind}" MATCHES "^(Accuracy|Performance|Sanity)$")
+      message(FATAL_ERROR "Unknown test kind : ${test_kind}")
+    endif()
+    if(NOT TARGET "${the_target}")
+      message(FATAL_ERROR "${the_target} is not a CMake target")
+    endif()
+
+    string(TOLOWER "${test_kind}" test_kind_lower)
+    set(test_report_dir "${CMAKE_BINARY_DIR}/test-reports/${test_kind_lower}")
+    file(MAKE_DIRECTORY "${test_report_dir}")
+
+    add_test(NAME "${test_name}"
+      COMMAND "${the_target}"
+              "--gtest_output=xml:${the_target}.xml"
+              ${ARGN})
+
+    set_tests_properties("${test_name}" PROPERTIES
+      LABELS "${OPENCV_MODULE_${the_module}_LABEL};${test_kind}"
+      WORKING_DIRECTORY "${test_report_dir}")
+
+    if(OPENCV_TEST_DATA_PATH)
+      set_tests_properties("${test_name}" PROPERTIES
+        ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
+    endif()
+  endif()
+endfunction()

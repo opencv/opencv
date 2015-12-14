@@ -415,6 +415,7 @@ public:
     int state;
     int iters;
     bool completeSymmFlag;
+    int solveMethod;
 };
 
 #endif

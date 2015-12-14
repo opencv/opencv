@@ -22,6 +22,14 @@ Keys:
     b     - toggle back-projected probability visualization
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    xrange = range
+
 import numpy as np
 import cv2
 
@@ -46,6 +54,7 @@ class App(object):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.drag_start = (x, y)
             self.tracking_state = 0
+            return
         if self.drag_start:
             if flags & cv2.EVENT_FLAG_LBUTTON:
                 h, w = self.frame.shape[:2]
@@ -83,7 +92,7 @@ class App(object):
                 hsv_roi = hsv[y0:y1, x0:x1]
                 mask_roi = mask[y0:y1, x0:x1]
                 hist = cv2.calcHist( [hsv_roi], [0], mask_roi, [16], [0, 180] )
-                cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX);
+                cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)
                 self.hist = hist.reshape(-1)
                 self.show_hist()
 
@@ -103,7 +112,7 @@ class App(object):
                 try:
                     cv2.ellipse(vis, track_box, (0, 0, 255), 2)
                 except:
-                    print track_box
+                    print(track_box)
 
             cv2.imshow('camshift', vis)
 
@@ -121,5 +130,5 @@ if __name__ == '__main__':
         video_src = sys.argv[1]
     except:
         video_src = 0
-    print __doc__
+    print(__doc__)
     App(video_src).run()

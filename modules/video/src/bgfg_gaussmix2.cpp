@@ -142,8 +142,9 @@ public:
         fCT = defaultfCT2;
         nShadowDetection =  defaultnShadowDetection2;
         fTau = defaultfTau;
-
+#ifdef HAVE_OPENCL
         opencl_ON = true;
+#endif
     }
     //! the full constructor that takes the length of the history,
     // the number of gaussian mixtures, the background ratio parameter and the noise strength
@@ -168,8 +169,9 @@ public:
         nShadowDetection =  defaultnShadowDetection2;
         fTau = defaultfTau;
         name_ = "BackgroundSubtractor.MOG2";
-
+#ifdef HAVE_OPENCL
         opencl_ON = true;
+#endif
     }
     //! the destructor
     ~BackgroundSubtractorMOG2Impl() {}
@@ -190,6 +192,7 @@ public:
         CV_Assert( nchannels <= CV_CN_MAX );
         CV_Assert( nmixtures <= 255);
 
+#ifdef HAVE_OPENCL
         if (ocl::useOpenCL() && opencl_ON)
         {
             create_ocl_apply_kernel();
@@ -218,6 +221,7 @@ public:
             u_bgmodelUsedModes.setTo(cv::Scalar::all(0));
         }
         else
+#endif
         {
             // for each gaussian mixture of each pixel bg model we store ...
             // the mixture weight (w),
@@ -263,11 +267,13 @@ public:
         if ((bShadowDetection && detectshadows) || (!bShadowDetection && !detectshadows))
             return;
         bShadowDetection = detectshadows;
+#ifdef HAVE_OPENCL
         if (!kernel_apply.empty())
         {
             create_ocl_apply_kernel();
             CV_Assert( !kernel_apply.empty() );
         }
+#endif
     }
 
     virtual int getShadowValue() const { return nShadowDetection; }
@@ -316,6 +322,7 @@ protected:
     Mat bgmodel;
     Mat bgmodelUsedModes;//keep track of number of modes per pixel
 
+#ifdef HAVE_OPENCL
     //for OCL
 
     mutable bool opencl_ON;
@@ -327,6 +334,7 @@ protected:
 
     mutable ocl::Kernel kernel_apply;
     mutable ocl::Kernel kernel_getBg;
+#endif
 
     int nframes;
     int history;
@@ -379,9 +387,11 @@ protected:
 
     String name_;
 
+#ifdef HAVE_OPENCL
     bool ocl_getBackgroundImage(OutputArray backgroundImage) const;
     bool ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate=-1);
     void create_ocl_apply_kernel();
+#endif
 };
 
 struct GaussBGStatModel2Params
@@ -787,7 +797,7 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
     if (bShadowDetection)
         kernel_apply.set(idxArg, nShadowDetection);
 
-    size_t globalsize[] = {frame.cols, frame.rows, 1};
+    size_t globalsize[] = {(size_t)frame.cols, (size_t)frame.rows, 1};
     return kernel_apply.run(2, globalsize, NULL, true);
 }
 
@@ -805,12 +815,10 @@ bool BackgroundSubtractorMOG2Impl::ocl_getBackgroundImage(OutputArray _backgroun
     idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::WriteOnly(dst));
     kernel_getBg.set(idxArg, backgroundRatio);
 
-    size_t globalsize[2] = {u_bgmodelUsedModes.cols, u_bgmodelUsedModes.rows};
+    size_t globalsize[2] = {(size_t)u_bgmodelUsedModes.cols, (size_t)u_bgmodelUsedModes.rows};
 
     return kernel_getBg.run(2, globalsize, NULL, false);
 }
-
-#endif
 
 void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
 {
@@ -819,6 +827,8 @@ void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
     kernel_apply.create("mog2_kernel", ocl::video::bgfg_mog2_oclsrc, opts);
 }
 
+#endif
+
 void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
     bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
@@ -826,6 +836,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
     if( needToInitialize )
         initialize(_image.size(), _image.type());
 
+#ifdef HAVE_OPENCL
     if (opencl_ON)
     {
         CV_OCL_RUN(opencl_ON, ocl_apply(_image, _fgmask, learningRate))
@@ -833,6 +844,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
         opencl_ON = false;
         initialize(_image.size(), _image.type());
     }
+#endif
 
     Mat image = _image.getMat();
     _fgmask.create( image.size(), CV_8U );
@@ -856,6 +868,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 
 void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImage) const
 {
+#ifdef HAVE_OPENCL
     if (opencl_ON)
     {
         CV_OCL_RUN(opencl_ON, ocl_getBackgroundImage(backgroundImage))
@@ -863,6 +876,7 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
         opencl_ON = false;
         return;
     }
+#endif
 
     int nchannels = CV_MAT_CN(frameType);
     CV_Assert(nchannels == 1 || nchannels == 3);

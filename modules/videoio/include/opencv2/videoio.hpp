@@ -90,7 +90,10 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_INTELPERC    = 1500,  // Intel Perceptual Computing SDK
        CAP_OPENNI2      = 1600,  // OpenNI2 (for Kinect)
        CAP_OPENNI2_ASUS = 1610,  // OpenNI2 (for Asus Xtion and Occipital Structure sensors)
-       CAP_GPHOTO2      = 1700   // gPhoto2 connection
+       CAP_GPHOTO2      = 1700,  // gPhoto2 connection
+       CAP_GSTREAMER    = 1800,  // GStreamer
+       CAP_FFMPEG       = 1900,  // FFMPEG
+       CAP_IMAGES       = 2000   // OpenCV Image Sequence (e.g. img_%02d.jpg)
      };
 
 // generic properties (based on DC1394 properties)
@@ -130,7 +133,9 @@ enum { CAP_PROP_POS_MSEC       =0,
        CAP_PROP_TILT          =34,
        CAP_PROP_ROLL          =35,
        CAP_PROP_IRIS          =36,
-       CAP_PROP_SETTINGS      =37
+       CAP_PROP_SETTINGS      =37,
+       CAP_PROP_BUFFERSIZE    =38,
+       CAP_PROP_AUTOFOCUS     =39
      };
 
 
@@ -315,6 +320,7 @@ enum { CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integ
 
 enum { VIDEOWRITER_PROP_QUALITY = 1,    // Quality (0..100%) of the videostream encoded
        VIDEOWRITER_PROP_FRAMEBYTES = 2, // (Read-only): Size of just encoded video frame
+       VIDEOWRITER_PROP_NSTRIPES = 3    // Number of stripes for parallel encoding. -1 for auto detection
      };
 
 // gPhoto2 properties, if propertyId is less than 0 then work on widget with that __additive inversed__ camera setting ID
@@ -397,10 +403,19 @@ public:
     CV_WRAP VideoCapture(const String& filename);
 
     /** @overload
-    @param device id of the opened video capturing device (i.e. a camera index). If there is a single
-    camera connected, just pass 0.
+    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
+    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+
+    @param apiPreference preferred Capture API to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. CAP_FFMPEG or CAP_IMAGES
     */
-    CV_WRAP VideoCapture(int device);
+    CV_WRAP VideoCapture(const String& filename, int apiPreference);
+
+    /** @overload
+    @param index = camera_id + domain_offset (CAP_*). id of the video capturing device to open. If there is a single
+    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + CAP_MSMF
+    */
+    CV_WRAP VideoCapture(int index);
 
     virtual ~VideoCapture();
 
@@ -414,9 +429,10 @@ public:
     CV_WRAP virtual bool open(const String& filename);
 
     /** @overload
-    @param device id of the opened video capturing device (i.e. a camera index).
+    @param index = camera_id + domain_offset (CAP_*). id of the video capturing device to open. If there is a single
+    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + CAP_MSMF
     */
-    CV_WRAP virtual bool open(int device);
+    CV_WRAP virtual bool open(int index);
 
     /** @brief Returns true if video capturing has been initialized already.
 
@@ -540,6 +556,18 @@ public:
      */
     CV_WRAP virtual double get(int propId) const;
 
+    /** @overload
+
+    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
+    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+
+    @param apiPreference preferred Capture API to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. CAP_FFMPEG or CAP_IMAGES
+
+    The methods first call VideoCapture::release to close the already opened file or camera.
+     */
+    CV_WRAP virtual bool open(const String& filename, int apiPreference);
+
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
@@ -610,6 +638,7 @@ public:
 
      @param propId Property identifier. It can be one of the following:
      -   **VIDEOWRITER_PROP_QUALITY** Quality (0..100%) of the videostream encoded. Can be adjusted dynamically in some codecs.
+     -   **VIDEOWRITER_PROP_NSTRIPES** Number of stripes for parallel encoding
      @param value Value of the property.
      */
     CV_WRAP virtual bool set(int propId, double value);
@@ -619,6 +648,7 @@ public:
      @param propId Property identifier. It can be one of the following:
      -   **VIDEOWRITER_PROP_QUALITY** Current quality of the encoded videostream.
      -   **VIDEOWRITER_PROP_FRAMEBYTES** (Read-only) Size of just encoded video frame; note that the encoding order may be different from representation order.
+     -   **VIDEOWRITER_PROP_NSTRIPES** Number of stripes for parallel encoding
 
      @note When querying a property that is not supported by the backend used by the VideoWriter
      class, value 0 is returned.

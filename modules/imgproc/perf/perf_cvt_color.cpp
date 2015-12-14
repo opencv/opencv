@@ -263,6 +263,11 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
 
 #if defined(__APPLE__) && defined(HAVE_IPP)
     SANITY_CHECK(dst, _mode == CX_BGRA2HLS_FULL ? 2 : 1);
+#elif defined(_MSC_VER) && _MSC_VER >= 1900 /* MSVC 14 */
+    if (_mode == CX_Luv2BGRA)
+        SANITY_CHECK_NOTHING();
+    else
+        SANITY_CHECK(dst, 1);
 #else
     SANITY_CHECK(dst, 1);
 #endif

@@ -205,8 +205,7 @@ public:
 
 static MatOp_Initializer* getGlobalMatOpInitializer()
 {
-    static MatOp_Initializer initializer;
-    return &initializer;
+    CV_SINGLETON_LAZY_INIT(MatOp_Initializer, new MatOp_Initializer())
 }
 
 static inline bool isIdentity(const MatExpr& e) { return e.op == &g_MatOp_Identity; }
@@ -1584,12 +1583,12 @@ void MatOp_Initializer::multiply(const MatExpr& e, double s, MatExpr& res) const
 
 inline void MatOp_Initializer::makeExpr(MatExpr& res, int method, Size sz, int type, double alpha)
 {
-    res = MatExpr(getGlobalMatOpInitializer(), method, Mat(sz, type, (void*)0), Mat(), Mat(), alpha, 0);
+    res = MatExpr(getGlobalMatOpInitializer(), method, Mat(sz, type, (void*)(size_t)0xEEEEEEEE), Mat(), Mat(), alpha, 0);
 }
 
 inline void MatOp_Initializer::makeExpr(MatExpr& res, int method, int ndims, const int* sizes, int type, double alpha)
 {
-    res = MatExpr(getGlobalMatOpInitializer(), method, Mat(ndims, sizes, type, (void*)0), Mat(), Mat(), alpha, 0);
+    res = MatExpr(getGlobalMatOpInitializer(), method, Mat(ndims, sizes, type, (void*)(size_t)0xEEEEEEEE), Mat(), Mat(), alpha, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////

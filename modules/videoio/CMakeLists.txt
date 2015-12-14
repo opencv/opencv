@@ -7,7 +7,7 @@ ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java python)
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-if(WINRT_8_1)
+if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
@@ -33,16 +33,15 @@ file(GLOB videoio_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
 
 # Removing WinRT API headers by default
-status("  ${name}: Removing WinRT API headers by default")
 list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
 
 # Dependencies used by the implementation referenced
 # below are not available on WinRT 8.0.
 # Enabling it for WiRT 8.1+ only.
-if(DEFINED WINRT AND NOT DEFINED WINRT_8_0)
+if(DEFINED WINRT AND NOT DEFINED WINRT_8_0 AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
 
     # WinRT detected. Adding WinRT API header
-    status("  ${name}: WinRT detected. Adding WinRT API header")
+    message(STATUS "  ${name}: WinRT detected. Adding WinRT API header")
     list(APPEND videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
 
     # Adding WinRT internal sources and headers
@@ -93,6 +92,10 @@ if(HAVE_DC1394)
 endif(HAVE_DC1394)
 
 if(HAVE_GSTREAMER)
+  IF(WIN32)
+    INCLUDE_DIRECTORIES(${GSTREAMER_INCLUDE_DIR})
+    list(APPEND VIDEOIO_LIBRARIES ${GSTREAMER_LIBRARIES})
+  ENDIF(WIN32)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gstreamer.cpp)
 endif(HAVE_GSTREAMER)
 
@@ -102,7 +105,7 @@ endif(HAVE_UNICAP)
 
 if(HAVE_LIBV4L)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libv4l.cpp)
-elseif(HAVE_CAMV4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
+elseif(HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_v4l.cpp)
 endif()
 
@@ -127,11 +130,11 @@ if(HAVE_XIMEA)
     link_directories("${XIMEA_LIBRARY_DIR}")
   endif()
   if(WIN32 AND X86_64)
-    list(APPEND VIDEOIO_LIBRARIES m3apiX64)
+    list(APPEND VIDEOIO_LIBRARIES xiapi64)
   elseif(APPLE)
     list(APPEND VIDEOIO_LIBRARIES "-framework m3api")
   else()
-    list(APPEND VIDEOIO_LIBRARIES m3api)
+    list(APPEND VIDEOIO_LIBRARIES xiapi32)
   endif()
 endif(HAVE_XIMEA)
 
@@ -250,16 +253,16 @@ if(WIN32 AND WITH_FFMPEG)
 
   if(MSVC_IDE)
     add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name_ver}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   elseif(MSVC AND (CMAKE_GENERATOR MATCHES "Visual"))
     add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name_ver}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   else()
     add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name_ver}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   endif()
 

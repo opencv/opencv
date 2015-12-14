@@ -249,6 +249,10 @@ void cv::cuda::normalize(InputArray _src, OutputArray _dst, double a, double b, 
     CV_Assert( src.channels() == 1 );
     CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
 
+    if (dtype < 0)
+    {
+        dtype = _dst.fixedType() ? _dst.type() : src.type();
+    }
     dtype = CV_MAT_DEPTH(dtype);
 
     const int src_depth = src.depth();

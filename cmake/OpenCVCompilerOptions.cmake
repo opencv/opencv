@@ -47,6 +47,18 @@ macro(add_extra_compiler_option option)
   endif()
 endmacro()
 
+# Gets environment variable and puts its value to the corresponding preprocessor definition
+# Useful for WINRT that has no access to environment variables
+macro(add_env_definitions option)
+  set(value $ENV{${option}})
+  if("${value}" STREQUAL "")
+    message(WARNING "${option} environment variable is empty. Please set it to appropriate location to get correct results")
+  else()
+    string(REPLACE "\\" "\\\\" value ${value})
+  endif()
+  add_definitions("-D${option}=\"${value}\"")
+endmacro()
+
 # OpenCV fails some tests when 'char' is 'unsigned' by default
 add_extra_compiler_option(-fsigned-char)
 
@@ -286,6 +298,11 @@ if(MSVC12 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
   set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /FS")
 endif()
 
+# Adding additional using directory for WindowsPhone 8.0 to get Windows.winmd properly
+if(WINRT_PHONE AND WINRT_8_0)
+  set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /AI\$(WindowsSDK_MetadataPath)")
+endif()
+
 # Extra link libs if the user selects building static libs:
 if(NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX AND NOT ANDROID)
   # Android does not need these settings because they are already set by toolchain file
@@ -345,5 +362,7 @@ if(MSVC)
   if(NOT ENABLE_NOISY_WARNINGS)
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4251) # class 'std::XXX' needs to have dll-interface to be used by clients of YYY
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4324) # 'struct_name' : structure was padded due to __declspec(align())
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4275) # non dll-interface class 'std::exception' used as base for dll-interface class 'cv::Exception'
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4589) # Constructor of abstract class 'cv::ORB' ignores initializer for virtual base class 'cv::Algorithm'
   endif()
 endif()

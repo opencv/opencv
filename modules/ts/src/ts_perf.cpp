@@ -185,7 +185,11 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
         return;
     }
 
+#ifndef WINRT
     const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
+#else
+    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
+#endif
     const char *path_separator = "/";
 
     if (data_path_dir)
@@ -779,7 +783,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     ;
 
     cv::CommandLineParser args(argc, argv, command_line_keys);
-    if (args.has("help"))
+    if (args.get<bool>("help"))
     {
         args.printMessage();
         return;
@@ -787,7 +791,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 
     ::testing::AddGlobalTestEnvironment(new PerfEnvironment);
 
-    param_impl          = args.has("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
+    param_impl          = args.get<bool>("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
     std::string perf_strategy = args.get<std::string>("perf_strategy");
     if (perf_strategy == "default")
     {
@@ -812,19 +816,22 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_seed          = args.get<unsigned int>("perf_seed");
     param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
-    param_write_sanity  = args.has("perf_write_sanity");
-    param_verify_sanity = args.has("perf_verify_sanity");
-    test_ipp_check      = !args.has("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+    param_write_sanity  = args.get<bool>("perf_write_sanity");
+    param_verify_sanity = args.get<bool>("perf_verify_sanity");
+
+#ifdef HAVE_IPP
+    test_ipp_check      = !args.get<bool>("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+#endif
     param_threads       = args.get<int>("perf_threads");
 #ifdef CV_COLLECT_IMPL_DATA
-    param_collect_impl  = args.has("perf_collect_impl");
+    param_collect_impl  = args.get<bool>("perf_collect_impl");
 #endif
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
 #endif
 
-    bool param_list_impls = args.has("perf_list_impls");
+    bool param_list_impls = args.get<bool>("perf_list_impls");
 
     if (param_list_impls)
     {
@@ -852,7 +859,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 
 #ifdef HAVE_CUDA
 
-    bool printOnly        = args.has("perf_cuda_info_only");
+    bool printOnly        = args.get<bool>("perf_cuda_info_only");
 
     if (printOnly)
         exit(0);
@@ -881,7 +888,11 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #endif
 
     {
+#ifndef WINRT
         const char* path = getenv("OPENCV_PERF_VALIDATION_DIR");
+#else
+        const char* path = OPENCV_PERF_VALIDATION_DIR;
+#endif
         if (path)
             perf_validation_results_directory = path;
     }
@@ -903,7 +914,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     if (!args.check())
     {
         args.printErrors();
-        return;
+        exit(1);
     }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
@@ -1185,7 +1196,11 @@ bool TestBase::next()
                         printf("Performance is unstable, it may be a result of overheat problems\n");
                         printf("Idle delay for %d ms... \n", perf_validation_idle_delay_ms);
 #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#ifndef WINRT_8_0
                         Sleep(perf_validation_idle_delay_ms);
+#else
+                        WaitForSingleObjectEx(GetCurrentThread(), perf_validation_idle_delay_ms, FALSE);
+#endif
 #else
                         usleep(perf_validation_idle_delay_ms * 1000);
 #endif
@@ -1635,7 +1650,11 @@ std::string TestBase::getDataPath(const std::string& relativePath)
         throw PerfEarlyExitException();
     }
 
+#ifndef WINRT
     const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
+#else
+    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
+#endif
     const char *path_separator = "/";
 
     std::string path;

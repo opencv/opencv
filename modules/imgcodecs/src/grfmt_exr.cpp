@@ -381,6 +381,11 @@ bool  ExrDecoder::readData( Mat& img )
 
     close();
 
+    if( !m_native_depth || (!color && m_iscolor ))
+    {
+        delete[] buffer;
+    }
+
     return result;
 }
 

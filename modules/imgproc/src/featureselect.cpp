@@ -156,7 +156,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                    thresholdarg, (int)possibleCornersCount);
         }
 
-        size_t globalsize[2] = { eig.cols - 2, eig.rows - 2 };
+        size_t globalsize[2] = { (size_t)eig.cols - 2, (size_t)eig.rows - 2 };
         if (!k.run(2, globalsize, NULL, false))
             return false;
 
@@ -309,10 +309,17 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                 tmpCorners.push_back(eig_data + x);
         }
     }
-    std::sort( tmpCorners.begin(), tmpCorners.end(), greaterThanPtr() );
 
     std::vector<Point2f> corners;
     size_t i, j, total = tmpCorners.size(), ncorners = 0;
+
+    if (total == 0)
+    {
+        _corners.release();
+        return;
+    }
+
+    std::sort( tmpCorners.begin(), tmpCorners.end(), greaterThanPtr() );
 
     if (minDistance >= 1)
     {
@@ -351,6 +358,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             y2 = std::min(grid_height-1, y2);
 
             for( int yy = y1; yy <= y2; yy++ )
+            {
                 for( int xx = x1; xx <= x2; xx++ )
                 {
                     std::vector <Point2f> &m = grid[yy*grid_width + xx];
@@ -370,6 +378,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                         }
                     }
                 }
+            }
 
             break_out:
 

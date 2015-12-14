@@ -107,7 +107,7 @@ namespace clahe
         cv::UMat lut = _lut.getUMat();
 
         size_t localThreads[3]  = { 32, 8, 1 };
-        size_t globalThreads[3] = { src.cols, src.rows, 1 };
+        size_t globalThreads[3] = { (size_t)src.cols, (size_t)src.rows, 1 };
 
         int idx = 0;
         idx = k.set(idx, cv::ocl::KernelArg::ReadOnlyNoSize(src));
