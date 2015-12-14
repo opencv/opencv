@@ -22,6 +22,9 @@ Select a textured planar object to track by drawing a box with a mouse.
 Use 'focal' slider to adjust to camera focal length for proper video augmentation.
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 import video
@@ -97,7 +100,7 @@ class App:
 
 
 if __name__ == '__main__':
-    print __doc__
+    print(__doc__)
 
     import sys
     try:

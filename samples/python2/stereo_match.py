@@ -6,6 +6,9 @@ Simple example of stereo image matching and point cloud generation.
 Resulting .ply file cam be easily viewed using MeshLab ( http://meshlab.sourceforge.net/ )
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -25,13 +28,13 @@ def write_ply(fn, verts, colors):
     verts = verts.reshape(-1, 3)
     colors = colors.reshape(-1, 3)
     verts = np.hstack([verts, colors])
-    with open(fn, 'w') as f:
-        f.write(ply_header % dict(vert_num=len(verts)))
-        np.savetxt(f, verts, '%f %f %f %d %d %d')
+    with open(fn, 'wb') as f:
+        f.write((ply_header % dict(vert_num=len(verts))).encode('utf-8'))
+        np.savetxt(f, verts, fmt='%f %f %f %d %d %d ')
 
 
 if __name__ == '__main__':
-    print 'loading images...'
+    print('loading images...')
     imgL = cv2.pyrDown( cv2.imread('../data/aloeL.jpg') )  # downscale images for faster processing
     imgR = cv2.pyrDown( cv2.imread('../data/aloeR.jpg') )
 
@@ -50,10 +53,10 @@ if __name__ == '__main__':
         speckleRange = 32
     )
 
-    print 'computing disparity...'
+    print('computing disparity...')
     disp = stereo.compute(imgL, imgR).astype(np.float32) / 16.0
 
-    print 'generating 3d point cloud...',
+    print('generating 3d point cloud...',)
     h, w = imgL.shape[:2]
     f = 0.8*w                          # guess for focal length
     Q = np.float32([[1, 0, 0, -0.5*w],
@@ -67,7 +70,7 @@ if __name__ == '__main__':
     out_colors = colors[mask]
     out_fn = 'out.ply'
     write_ply('out.ply', out_points, out_colors)
-    print '%s saved' % 'out.ply'
+    print('%s saved' % 'out.ply')
 
     cv2.imshow('left', imgL)
     cv2.imshow('disparity', (disp-min_disp)/num_disp)

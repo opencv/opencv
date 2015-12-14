@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 '''
-mouse_and_match.py [-i path | --input path: default ./]
+mouse_and_match.py [-i path | --input path: default ../data/]
 
 Demonstrate using a mouse to interact with an image:
  Read in the images in a directory one by one
  Allow the user to select parts of an image with a mouse
  When they let go of the mouse, it correlates (using matchTemplate) that patch with the image.
+
+ SPACE for next image
  ESC to exit
 '''
 
@@ -54,8 +56,10 @@ def onmouse(event, x, y, flags, param):
             drag_start = None
 
 if __name__ == '__main__':
+    print(__doc__)
+
     parser = argparse.ArgumentParser(description='Demonstrate mouse interaction with images')
-    parser.add_argument("-i","--input", default='./', help="Input directory.")
+    parser.add_argument("-i","--input", default='../data/', help="Input directory.")
     args = parser.parse_args()
     path = args.input
 
@@ -68,7 +72,7 @@ if __name__ == '__main__':
             print(infile)
 
             img=cv2.imread(infile,1)
-            if img == None:
+            if img is None:
                 continue
             sel = (0,0,0,0)
             drag_start = None
