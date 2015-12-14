@@ -40,7 +40,6 @@
 //
 //M*/
 
-#include "cvconfig.h"
 #include "opencv2/hal.hpp"
 #include "opencv2/hal/intrin.hpp"
 #include <algorithm>
