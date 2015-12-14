@@ -2,8 +2,13 @@
 
 '''
 This example illustrates how to use cv2.HoughCircles() function.
-Usage: ./houghcircles.py [<image_name>]
-image argument defaults to ../data/board.jpg
+
+Usage:
+    houghcircles.py [<image_name>]
+    image argument defaults to ../data/board.jpg
+
+read more:
+    http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_houghcircles/py_houghcircles.html
 '''
 
 # Python 2/3 compatibility
@@ -14,11 +19,11 @@ import numpy as np
 import sys
 
 if __name__ == '__main__':
-
     print(__doc__)
+
     try:
         fn = sys.argv[1]
-    except:
+    except IndexError:
         fn = "../data/board.jpg"
 
     src = cv2.imread(fn, 1)
@@ -30,7 +35,7 @@ if __name__ == '__main__':
     a, b, c = circles.shape
     for i in range(b):
         cv2.circle(cimg, (circles[0][i][0], circles[0][i][1]), circles[0][i][2], (0, 0, 255), 3, cv2.LINE_AA)
-        cv2.circle(cimg, (circles[0][i][0], circles[0][i][1]), 2, (0, 255, 0), 3, cv2.LINE_AA) # draw center of circle
+        cv2.circle(cimg, (circles[0][i][0], circles[0][i][1]), 2, (0, 255, 0), 3, cv2.LINE_AA)  # draw center of circle
 
     cv2.imshow("source", src)
     cv2.imshow("detected circles", cimg)
