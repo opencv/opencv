@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 import video
@@ -15,7 +18,7 @@ Keys:
 
 def draw_flow(img, flow, step=16):
     h, w = img.shape[:2]
-    y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1)
+    y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2,-1).astype(int)
     fx, fy = flow[y,x].T
     lines = np.vstack([x, y, x+fx, y+fy]).T.reshape(-1, 2, 2)
     lines = np.int32(lines + 0.5)
@@ -47,7 +50,7 @@ def warp_flow(img, flow):
 
 if __name__ == '__main__':
     import sys
-    print help_message
+    print(help_message)
     try:
         fn = sys.argv[1]
     except:
@@ -78,10 +81,10 @@ if __name__ == '__main__':
             break
         if ch == ord('1'):
             show_hsv = not show_hsv
-            print 'HSV flow visualization is', ['off', 'on'][show_hsv]
+            print('HSV flow visualization is', ['off', 'on'][show_hsv])
         if ch == ord('2'):
             show_glitch = not show_glitch
             if show_glitch:
                 cur_glitch = img.copy()
-            print 'glitch is', ['off', 'on'][show_glitch]
+            print('glitch is', ['off', 'on'][show_glitch])
     cv2.destroyAllWindows()

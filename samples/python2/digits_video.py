@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -22,7 +25,7 @@ def main():
 
     classifier_fn = 'digits_svm.dat'
     if not os.path.exists(classifier_fn):
-        print '"%s" not found, run digits.py first' % classifier_fn
+        print('"%s" not found, run digits.py first' % classifier_fn)
         return
     model = SVM()
     model.load(classifier_fn)

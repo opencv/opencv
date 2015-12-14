@@ -9,6 +9,14 @@ Usage:
 A trackbar is put up which controls the contour level from -3 to 3
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    xrange = range
+
 import numpy as np
 import cv2
 
@@ -16,8 +24,8 @@ def make_image():
     img = np.zeros((500, 500), np.uint8)
     black, white = 0, 255
     for i in xrange(6):
-        dx = (i%2)*250 - 30
-        dy = (i/2)*150
+        dx = int((i%2)*250 - 30)
+        dy = int((i/2.)*150)
 
         if i == 0:
             for j in xrange(11):
@@ -41,7 +49,7 @@ def make_image():
     return img
 
 if __name__ == '__main__':
-    print __doc__
+    print(__doc__)
 
     img = make_image()
     h, w = img.shape[:2]
@@ -52,7 +60,7 @@ if __name__ == '__main__':
     def update(levels):
         vis = np.zeros((h, w, 3), np.uint8)
         levels = levels - 3
-        cv2.drawContours( vis, contours, (-1, 3)[levels <= 0], (128,255,255),
+        cv2.drawContours( vis, contours, (-1, 2)[levels <= 0], (128,255,255),
             3, cv2.LINE_AA, hierarchy, abs(levels) )
         cv2.imshow('contours', vis)
     update(3)

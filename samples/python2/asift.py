@@ -19,6 +19,9 @@ USAGE
   Press left mouse button on a feature point to see its matching point.
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2
 
@@ -96,15 +99,15 @@ def affine_detect(detector, img, mask=None, pool=None):
         ires = pool.imap(f, params)
 
     for i, (k, d) in enumerate(ires):
-        print 'affine sampling: %d / %d\r' % (i+1, len(params)),
+        print('affine sampling: %d / %d\r' % (i+1, len(params)), end='')
         keypoints.extend(k)
         descrs.extend(d)
 
-    print
+    print()
     return keypoints, np.array(descrs)
 
 if __name__ == '__main__':
-    print __doc__
+    print(__doc__)
 
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
@@ -121,23 +124,23 @@ if __name__ == '__main__':
     detector, matcher = init_feature(feature_name)
 
     if img1 is None:
-        print 'Failed to load fn1:', fn1
+        print('Failed to load fn1:', fn1)
         sys.exit(1)
 
     if img2 is None:
-        print 'Failed to load fn2:', fn2
+        print('Failed to load fn2:', fn2)
         sys.exit(1)
 
     if detector is None:
-        print 'unknown feature:', feature_name
+        print('unknown feature:', feature_name)
         sys.exit(1)
 
-    print 'using', feature_name
+    print('using', feature_name)
 
     pool=ThreadPool(processes = cv2.getNumberOfCPUs())
     kp1, desc1 = affine_detect(detector, img1, pool=pool)
     kp2, desc2 = affine_detect(detector, img2, pool=pool)
-    print 'img1 - %d features, img2 - %d features' % (len(kp1), len(kp2))
+    print('img1 - %d features, img2 - %d features' % (len(kp1), len(kp2)))
 
     def match_and_draw(win):
         with Timer('matching'):
@@ -145,12 +148,12 @@ if __name__ == '__main__':
         p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches)
         if len(p1) >= 4:
             H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
-            print '%d / %d  inliers/matched' % (np.sum(status), len(status))
+            print('%d / %d  inliers/matched' % (np.sum(status), len(status)))
             # do not draw outliers (there will be a lot of them)
             kp_pairs = [kpp for kpp, flag in zip(kp_pairs, status) if flag]
         else:
             H, status = None, None
-            print '%d matches found, not enough for homography estimation' % len(p1)
+            print('%d matches found, not enough for homography estimation' % len(p1))
 
         vis = explore_match(win, img1, img2, kp_pairs, None, H)
 

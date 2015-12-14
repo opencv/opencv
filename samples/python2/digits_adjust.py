@@ -13,6 +13,14 @@ Usage:
 
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+import sys
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    xrange = range
+
 import numpy as np
 import cv2
 from multiprocessing.pool import ThreadPool
@@ -33,10 +41,10 @@ def cross_validate(model_class, params, samples, labels, kfold = 3, pool = None)
         model.train(train_samples, train_labels)
         resp = model.predict(test_samples)
         score = (resp != test_labels).mean()
-        print ".",
+        print(".", end='')
         return score
     if pool is None:
-        scores = map(f, xrange(kfold))
+        scores = list(map(f, xrange(kfold)))
     else:
         scores = pool.map(f, xrange(kfold))
     return np.mean(scores)
@@ -50,7 +58,7 @@ class App(object):
         digits, labels = load_digits(DIGITS_FN)
         shuffle = np.random.permutation(len(digits))
         digits, labels = digits[shuffle], labels[shuffle]
-        digits2 = map(deskew, digits)
+        digits2 = list(map(deskew, digits))
         samples = preprocess_hog(digits2)
         return samples, labels
 
@@ -68,7 +76,7 @@ class App(object):
         scores = np.zeros((len(Cs), len(gammas)))
         scores[:] = np.nan
 
-        print 'adjusting SVM (may take a long time) ...'
+        print('adjusting SVM (may take a long time) ...')
         def f(job):
             i, j = job
             samples, labels = self.get_dataset()
@@ -79,20 +87,21 @@ class App(object):
         ires = self.run_jobs(f, np.ndindex(*scores.shape))
         for count, (i, j, score) in enumerate(ires):
             scores[i, j] = score
-            print '%d / %d (best error: %.2f %%, last: %.2f %%)' % (count+1, scores.size, np.nanmin(scores)*100, score*100)
-        print scores
+            print('%d / %d (best error: %.2f %%, last: %.2f %%)' %
+                  (count+1, scores.size, np.nanmin(scores)*100, score*100))
+        print(scores)
 
-        print 'writing score table to "svm_scores.npz"'
+        print('writing score table to "svm_scores.npz"')
         np.savez('svm_scores.npz', scores=scores, Cs=Cs, gammas=gammas)
 
         i, j = np.unravel_index(scores.argmin(), scores.shape)
         best_params = dict(C = Cs[i], gamma=gammas[j])
-        print 'best params:', best_params
-        print 'best error: %.2f %%' % (scores.min()*100)
+        print('best params:', best_params)
+        print('best error: %.2f %%' % (scores.min()*100))
         return best_params
 
     def adjust_KNearest(self):
-        print 'adjusting KNearest ...'
+        print('adjusting KNearest ...')
         def f(k):
             samples, labels = self.get_dataset()
             err = cross_validate(KNearest, dict(k=k), samples, labels)
@@ -101,9 +110,9 @@ class App(object):
         for k, err in self.run_jobs(f, xrange(1, 9)):
             if err < best_err:
                 best_err, best_k = err, k
-            print 'k = %d, error: %.2f %%' % (k, err*100)
+            print('k = %d, error: %.2f %%' % (k, err*100))
         best_params = dict(k=best_k)
-        print 'best params:', best_params, 'err: %.2f' % (best_err*100)
+        print('best params:', best_params, 'err: %.2f' % (best_err*100))
         return best_params
 
 
@@ -111,14 +120,14 @@ if __name__ == '__main__':
     import getopt
     import sys
 
-    print __doc__
+    print(__doc__)
 
     args, _ = getopt.getopt(sys.argv[1:], '', ['model='])
     args = dict(args)
     args.setdefault('--model', 'svm')
     args.setdefault('--env', '')
     if args['--model'] not in ['svm', 'knearest']:
-        print 'unknown model "%s"' % args['--model']
+        print('unknown model "%s"' % args['--model'])
         sys.exit(1)
 
     t = clock()
@@ -127,4 +136,4 @@ if __name__ == '__main__':
         app.adjust_KNearest()
     else:
         app.adjust_SVM()
-    print 'work time: %f s' % (clock() - t)
+    print('work time: %f s' % (clock() - t))
