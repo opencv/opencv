@@ -1,1 +1,6 @@
 *~
+# Some usually large testdata files which downloaded externally.
+# Use "force" flag for "git add" to put these files into repo.
+*.caffemodel
+*.mp4
+*.zip
