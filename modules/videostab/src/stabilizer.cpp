@@ -122,7 +122,7 @@ bool StabilizerBase::doOneIteration()
             at(curPos_, frames_) = frame;
 
             if (doDeblurring_)
-                at(curPos_, blurrinessRates_) = calcBlurriness(frame);
+                at(curPos_, blurrinessRates_) = cv::calcBlurriness(frame);
 
             at(curPos_ - 1, motions_) = estimateMotion();
 
@@ -172,7 +172,7 @@ void StabilizerBase::setUp(const Mat &firstFrame)
     if (doDeblurring_)
     {
         blurrinessRates_.resize(2*radius_ + 1);
-        float blurriness = calcBlurriness(firstFrame);
+        float blurriness = cv::calcBlurriness(firstFrame);
         for (int i  = -radius_; i <= 0; ++i)
             at(i, blurrinessRates_) = blurriness;
         deblurer_->setFrames(frames_);

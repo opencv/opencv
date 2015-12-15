@@ -1268,6 +1268,15 @@ CV_EXPORTS_W void blur( InputArray src, OutputArray dst,
                         Size ksize, Point anchor = Point(-1,-1),
                         int borderType = BORDER_DEFAULT );
 
+/** @brief Calculates blurriness of an image.
+
+The function returns a float value which represents blurriness of the image.
+
+@param src input image; it can have any number of channels.
+@param method Parameter specifying the calculation method.
+ */
+CV_EXPORTS_W float calcBlurriness( InputArray src, int method = 0 );
+
 /** @brief Convolves an image with the kernel.
 
 The function applies an arbitrary linear filter to an image. In-place operation is supported. When
