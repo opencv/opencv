@@ -72,6 +72,7 @@
 #include "precomp.hpp"
 #include <iostream>
 #include <stdarg.h>
+#include <opencv2/core/hal/hal.hpp>
 
 namespace cv
 {
@@ -302,9 +303,9 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
     len = k;
 
     // compute gradient values, orientations and the weights over the pixel neighborhood
-    hal::exp(W, W, len);
-    hal::fastAtan2(Y, X, Ori, len, true);
-    hal::magnitude(X, Y, Mag, len);
+    cv::hal::exp32f(W, W, len);
+    cv::hal::fastAtan2(Y, X, Ori, len, true);
+    cv::hal::magnitude32f(X, Y, Mag, len);
 
     for( k = 0; k < len; k++ )
     {
@@ -585,9 +586,9 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
         }
 
     len = k;
-    hal::fastAtan2(Y, X, Ori, len, true);
-    hal::magnitude(X, Y, Mag, len);
-    hal::exp(W, W, len);
+    cv::hal::fastAtan2(Y, X, Ori, len, true);
+    cv::hal::magnitude32f(X, Y, Mag, len);
+    cv::hal::exp32f(W, W, len);
 
     for( k = 0; k < len; k++ )
     {
