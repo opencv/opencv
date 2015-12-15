@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <wrl\client.h>
+#include "wrl.h"
 
 template <typename T, bool TIsNotAgile> class Agile;
 
@@ -137,13 +138,13 @@ struct UnwrapAgile<Agile<T, true>>
 
     template <
         typename T,
-        bool TIsNotAgile = (__is_win_class(typename Details::AgileTypeHelper<T>::type) && !__is_winrt_agile(typename Details::AgileTypeHelper<T>::type)) ||
-        __is_win_interface(typename Details::AgileTypeHelper<T>::type)
+        bool TIsNotAgile = (__is_win_class(typename ::Details::AgileTypeHelper<T>::type) && !__is_winrt_agile(typename ::Details::AgileTypeHelper<T>::type)) ||
+        __is_win_interface(typename ::Details::AgileTypeHelper<T>::type)
     >
     class Agile
     {
-        static_assert(__is_win_class(typename Details::AgileTypeHelper<T>::type) || __is_win_interface(typename Details::AgileTypeHelper<T>::type), "Agile can only be used with ref class or interface class types");
-        typename typedef Details::AgileTypeHelper<T>::agileMemberType TypeT;
+        static_assert(__is_win_class(typename ::Details::AgileTypeHelper<T>::type) || __is_win_interface(typename ::Details::AgileTypeHelper<T>::type), "Agile can only be used with ref class or interface class types");
+        typename typedef ::Details::AgileTypeHelper<T>::agileMemberType TypeT;
         TypeT _object;
         ::Microsoft::WRL::ComPtr<IUnknown> _contextCallback;
         ULONG_PTR _contextToken;
@@ -422,8 +423,8 @@ struct UnwrapAgile<Agile<T, true>>
     template <typename T>
     class Agile<T, false>
     {
-        static_assert(__is_win_class(typename Details::AgileTypeHelper<T>::type) || __is_win_interface(typename Details::AgileTypeHelper<T>::type), "Agile can only be used with ref class or interface class types");
-        typename typedef Details::AgileTypeHelper<T>::agileMemberType TypeT;
+        static_assert(__is_win_class(typename ::Details::AgileTypeHelper<T>::type) || __is_win_interface(typename ::Details::AgileTypeHelper<T>::type), "Agile can only be used with ref class or interface class types");
+        typename typedef ::Details::AgileTypeHelper<T>::agileMemberType TypeT;
         TypeT _object;
 
     public:

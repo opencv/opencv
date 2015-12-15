@@ -23,7 +23,11 @@
 #include <concrt.h>
 #include <ppltasks.h>
 #if _MSC_VER >= 1800
+#if _MSC_VER >= 1900
+#include <pplwin.h>
+#else
 #include <pplconcrt.h>
+#endif
 
 // Cannot build using a compiler that is older than dev10 SP1
 #ifdef _MSC_VER
@@ -40,6 +44,9 @@
 #include <exception>
 #if _MSC_VER >= 1800
 #include <algorithm>
+#if _MSC_VER >= 1900
+#include <mutex>
+#endif
 #endif
 
 #ifndef __cplusplus_winrt
@@ -108,6 +115,14 @@ namespace std
 #endif
 #endif
 
+#if _MSC_VER >= 1900
+#if _PPLTASK_ASYNC_LOGGING
+#pragma detect_mismatch("_PPLTASK_ASYNC_LOGGING", "1")
+#else
+#pragma detect_mismatch("_PPLTASK_ASYNC_LOGGING", "0")
+#endif // #if _PPLTASK_ASYNC_LOGGING
+#endif
+
 #pragma pack(push,_CRT_PACKING)
 
 #pragma warning(push)
@@ -148,11 +163,19 @@ namespace Concurrency_winrt
 #endif
 #endif
 
+#if _MSC_VER >= 1900
+#ifndef __EDG__
+#define _EXPAND_STR(x) #x
+#pragma detect_mismatch("ppltask_saved_frame_numbers", _EXPAND_STR(PPL_TASK_SAVE_FRAME_COUNT))
+#undef _EXPAND_STR
+#endif
+#endif
+
     /// <summary>
     /// Helper macro to determine how many stack frames need to be saved. When any number less or equal to 1 is specified,
     /// only one frame is captured and no stackwalk will be involved. Otherwise, the number of callstack frames will be captured.
     /// </summary>
-    /// <ramarks>
+    /// <remarks>
     /// This needs to be defined as a macro rather than a function so that if we're only gathering one frame, _ReturnAddress()
     /// will evaluate to client code, rather than a helper function inside of _TaskCreationCallstack, itself.
     /// </remarks>
@@ -162,9 +185,16 @@ namespace Concurrency_winrt
 #if PPL_TASK_SAVE_FRAME_COUNT > 1
 #if !defined(_DEBUG)
 #pragma message ("WARNING: Redefinning PPL_TASK_SAVE_FRAME_COUNT under Release build for non-desktop applications is not supported; only one frame will be captured!")
+#if _MSC_VER < 1900
 #define _CAPTURE_CALLSTACK() ::Concurrency_winrt::details::_TaskCreationCallstack::_CaptureSingleFrameCallstack(_ReturnAddress())
+#endif
 #else
+#if _MSC_VER < 1900
 #define _CAPTURE_CALLSTACK() ::Concurrency_winrt::details::_TaskCreationCallstack::_CaptureMultiFramesCallstack(PPL_TASK_SAVE_FRAME_COUNT)
+#endif
+#endif
+#if _MSC_VER >= 1900
+#define _CAPTURE_CALLSTACK() ::Concurrency_winrt::details::_TaskCreationCallstack::_CaptureMultiFramesCallstack(_ReturnAddress(), PPL_TASK_SAVE_FRAME_COUNT)
 #endif
 #else
 #define _CAPTURE_CALLSTACK() ::Concurrency_winrt::details::_TaskCreationCallstack::_CaptureSingleFrameCallstack(_ReturnAddress())
@@ -202,12 +232,12 @@ template <> class task<void>;
 /// <seealso cref="cancellation_token Class"/>
 /// <seealso cref="cancel_current_task Function"/>
 /**/
-#if _MSC_VER >= 1800
+#if _MSC_VER >= 1800 && _MSC_VER < 1900
 inline bool __cdecl is_task_cancellation_requested()
 {
     return ::Concurrency::details::_TaskCollection_t::_Is_cancellation_requested();
 }
-#else
+#elif _MSC_VER < 1900
 inline bool __cdecl is_task_cancellation_requested()
 {
     // ConcRT scheduler under the hood is using TaskCollection, which is same as task_group
@@ -237,6 +267,19 @@ inline __declspec(noreturn) void __cdecl cancel_current_task()
 
 namespace details
 {
+#if _MSC_VER >= 1900
+  struct _DefaultTaskHelper
+  {
+    /// <summary>
+    /// Helper function for throwing an error for task functions that cannot be called
+    /// from a default constructed task.
+    /// </summary>
+    static void __declspec(noreturn) __cdecl _NoCallOnDefaultTask_ErrorImpl()
+    {
+      _THROW_NCEE(Concurrency::invalid_operation, "This function cannot be called on a default constructed task");
+    }
+  };
+#endif
 #if _MSC_VER >= 1800
     /// <summary>
     ///     Callstack container, which is used to capture and preserve callstacks in ppltasks.
@@ -264,17 +307,30 @@ namespace details
             return _csc;
         }
 
-        // Capture _CaptureFrames number of callstack frames. This function only work properly for Desktop or Debug CRT.
-        __declspec(noinline)
-            static _TaskCreationCallstack _CaptureMultiFramesCallstack(size_t _CaptureFrames)
-        {
-                _TaskCreationCallstack _csc;
-                _csc._M_frames.resize(_CaptureFrames);
-                // skip 2 frames to make sure callstack starts from user code
-                _csc._M_frames.resize(::Concurrency::details::platform::CaptureCallstack(&_csc._M_frames[0], 2, _CaptureFrames));
-                return _csc;
-        }
-    };
+    // Capture _CaptureFrames number of callstack frames. This function only work properly for Desktop or Debug CRT.
+#if _MSC_VER >= 1900
+    __declspec(noinline)
+      static _TaskCreationCallstack _CaptureMultiFramesCallstack(void *_SingleFrame, size_t _CaptureFrames)
+#else
+    __declspec(noinline)
+      static _TaskCreationCallstack _CaptureMultiFramesCallstack(size_t _CaptureFrames)
+#endif
+    {
+      _TaskCreationCallstack _csc;
+#if _MSC_VER >= 1900
+      _csc._M_SingleFrame = _SingleFrame;
+      if (_CaptureFrames > 1)
+      {
+#endif
+        _csc._M_frames.resize(_CaptureFrames);
+        // skip 2 frames to make sure callstack starts from user code
+        _csc._M_frames.resize(::Concurrency::details::platform::CaptureCallstack(&_csc._M_frames[0], 2, _CaptureFrames));
+#if _MSC_VER >= 1900
+      }
+#endif
+      return _csc;
+    }
+  };
 #endif
     typedef UINT32 _Unit_type;
 
@@ -465,10 +521,30 @@ namespace details
         static const bool _IsUnwrappedTaskOrAsync = details::_IsUnwrappedAsyncSelector<_AsyncKind>::_Value;
     };
 
-    template <typename _ReturnType, typename _Function> auto _IsCallable(_Function _Func, int, int, int) -> decltype(_Func(stdx::declval<task<_ReturnType>*>()), std::true_type()) { (void)_Func; return std::true_type(); }
-    template <typename _ReturnType, typename _Function> auto _IsCallable(_Function _Func, int, int, ...) -> decltype(_Func(stdx::declval<_ReturnType*>()), std::true_type()) { (void)_Func; return std::true_type(); }
-    template <typename _ReturnType, typename _Function> auto _IsCallable(_Function _Func, int, ...) -> decltype(_Func(), std::true_type()) { (void)_Func; return std::true_type(); }
-    template <typename _ReturnType, typename _Function> std::false_type _IsCallable(_Function, ...) { return std::false_type(); }
+  template <typename _ReturnType, typename _Function> auto _IsCallable(_Function _Func, int, int, int) -> decltype(_Func(stdx::declval<task<_ReturnType>*>()), std::true_type())
+#if _MSC_VER < 1900
+    { (void)_Func; return std::true_type(); }
+#else
+    ;
+#endif
+  template <typename _ReturnType, typename _Function> auto _IsCallable(_Function _Func, int, int, ...) -> decltype(_Func(stdx::declval<_ReturnType*>()), std::true_type())
+#if _MSC_VER < 1900
+  { (void)_Func; return std::true_type(); }
+#else
+    ;
+#endif
+  template <typename _ReturnType, typename _Function> auto _IsCallable(_Function _Func, int, ...) -> decltype(_Func(), std::true_type())
+#if _MSC_VER < 1900
+  { (void)_Func; return std::true_type(); }
+#else
+    ;
+#endif
+  template <typename _ReturnType, typename _Function> std::false_type _IsCallable(_Function, ...)
+#if _MSC_VER < 1900
+    { return std::false_type(); }
+#else
+    ;
+#endif
 
     template <>
     struct _TaskTypeTraits<void>
@@ -922,6 +998,9 @@ namespace details
         typedef typename _Unhat<typename _FunctorTypeTraits<_Function>::_Argument2Type>::_Value _FuncRetType;
         static_assert(std::is_same<typename _FunctorTypeTraits<_Function>::_Argument1Type, _ExpectedParameterType>::value ||
                     std::is_same<typename _FunctorTypeTraits<_Function>::_Argument1Type, task<_ExpectedParameterType>>::value, "incorrect parameter type for the callable object in 'then'; consider _ExpectedParameterType or task<_ExpectedParameterType> (see below)");
+#if _MSC_VER >= 1900
+    typedef typename _FunctorTypeTraits<_Function>::_Argument1Type _ArgType;
+#endif
 
         typedef decltype(_VoidIsTaskHelper(stdx::declval<_FunctorTypeTraits<_Function>::_Argument1Type>(), 0)) _Takes_task;
     };
@@ -933,6 +1012,9 @@ namespace details
         typedef void _FuncRetType;
         static_assert(std::is_same<typename _FunctorTypeTraits<_Function>::_Argument1Type, _ExpectedParameterType>::value ||
                     std::is_same<typename _FunctorTypeTraits<_Function>::_Argument1Type, task<_ExpectedParameterType>>::value, "incorrect parameter type for the callable object in 'then'; consider _ExpectedParameterType or task<_ExpectedParameterType> (see below)");
+#if _MSC_VER >= 1900
+    typedef typename _FunctorTypeTraits<_Function>::_Argument1Type _ArgType;
+#endif
 
         typedef decltype(_VoidIsTaskHelper(stdx::declval<_FunctorTypeTraits<_Function>::_Argument1Type>(), 0)) _Takes_task;
     };
@@ -942,6 +1024,9 @@ namespace details
     {
         typedef void _FuncRetType;
         static_assert(std::is_same<typename _FunctorTypeTraits<_Function>::_Argument1Type, decltype(_To_task())>::value, "incorrect parameter type for the callable object in 'then'; consider _ExpectedParameterType or task<_ExpectedParameterType> (see below)");
+#if _MSC_VER >= 1900
+    typedef typename _FunctorTypeTraits<_Function>::_Argument1Type _ArgType;
+#endif
 
         typedef decltype(_VoidIsTaskHelper(stdx::declval<_FunctorTypeTraits<_Function>::_Argument1Type>(), 0)) _Takes_task;
     };
@@ -950,6 +1035,9 @@ namespace details
     struct _FunctionTypeTraits<_Function, void, false, 1>
     {
         typedef typename _Unhat<typename _FunctorTypeTraits<_Function>::_Argument1Type>::_Value _FuncRetType;
+#if _MSC_VER >= 1900
+    typedef void _ArgType;
+#endif
 
         typedef std::false_type _Takes_task;
     };
@@ -958,15 +1046,70 @@ namespace details
     struct _FunctionTypeTraits<_Function, _ExpectedParameterType, _IsVoidConversion, 0>
     {
         typedef void _FuncRetType;
+#if _MSC_VER >= 1900
+    typedef void _ArgType;
+#endif
 
         typedef std::false_type _Takes_task;
     };
 
-    template<typename _Function, typename _ReturnType>
+#if _MSC_VER >= 1900
+#ifndef _PPLTASKS_NO_STDFUNC
+  template<typename _Ty, typename _IsTaskType>
+  struct _ContinuationArgTypeHelper
+  {
+    static_assert(std::is_same<_IsTaskType, std::false_type>::value, "_IsTaskType template parameter must be std::true_type or std::false_type");
+    typedef _Ty _ArgType;
+  };
+
+  template<typename _Ty>
+  struct _ContinuationArgTypeHelper<_Ty, std::true_type>
+  {
+    typedef task<_Ty> _ArgType;
+  };
+#endif
+#endif
+
+#if _MSC_VER < 1900
+  template<typename _Function, typename _ReturnType>
+#else
+  template<typename _Function, typename _ReturnType, const bool _IsVoidReturn = std::is_void<typename _FunctionTypeTraits<_Function, _ReturnType>::_FuncRetType>::value, const bool _IsVoidArg = std::is_void<typename _FunctionTypeTraits<_Function, _ReturnType>::_ArgType>::value>
+#endif
     struct _ContinuationTypeTraits
     {
         typedef typename task<typename _TaskTypeTraits<typename _FunctionTypeTraits<_Function, _ReturnType>::_FuncRetType>::_TaskRetType_abi> _TaskOfType;
+#if _MSC_VER >= 1900
+#ifndef _PPLTASKS_NO_STDFUNC
+    typedef typename _ContinuationArgTypeHelper<_ReturnType, typename details::_FunctionTypeTraits<_Function, _ReturnType>::_Takes_task>::_ArgType _ArgTypeT;
+    typedef typename _FunctionTypeTraits<_Function, _ReturnType>::_FuncRetType _RetTypeT;
+    typedef std::function<HRESULT __cdecl(_ArgTypeT)> _StdFuncT;
+#endif
+#endif
     };
+
+#if _MSC_VER >= 1900
+#ifndef _PPLTASKS_NO_STDFUNC
+  template<typename _Function, typename _ReturnType>
+  struct _ContinuationTypeTraits<_Function, _ReturnType, false, false>
+  {
+    typedef typename task<typename _TaskTypeTraits<typename _FunctionTypeTraits<_Function, _ReturnType>::_FuncRetType>::_TaskRetType_abi> _TaskOfType;
+
+    typedef typename _ContinuationArgTypeHelper<_ReturnType, typename details::_FunctionTypeTraits<_Function, _ReturnType>::_Takes_task>::_ArgType _ArgTypeT;
+    typedef typename _FunctionTypeTraits<_Function, _ReturnType>::_FuncRetType _RetTypeT;
+    typedef std::function<HRESULT __cdecl(_ArgTypeT, _RetTypeT*)> _StdFuncT;
+  };
+
+  template<typename _Function, typename _ReturnType>
+  struct _ContinuationTypeTraits<_Function, _ReturnType, false, true>
+  {
+    typedef typename task<typename _TaskTypeTraits<typename _FunctionTypeTraits<_Function, _ReturnType>::_FuncRetType>::_TaskRetType_abi> _TaskOfType;
+
+    typedef typename _ContinuationArgTypeHelper<_ReturnType, typename details::_FunctionTypeTraits<_Function, _ReturnType>::_Takes_task>::_ArgType _ArgTypeT;
+    typedef typename _FunctionTypeTraits<_Function, _ReturnType>::_FuncRetType _RetTypeT;
+    typedef std::function<HRESULT __cdecl(_RetTypeT*)> _StdFuncT;
+  };
+#endif
+#endif
 
     // _InitFunctorTypeTraits is used to decide whether a task constructed with a lambda should be unwrapped. Depending on how the variable is
     // declared, the constructor may or may not perform unwrapping. For eg.
@@ -1118,7 +1261,7 @@ namespace details
                     {
                         _Capture();
                     }
-#if _UITHREADCTXT_SUPPORT
+#if _UITHREADCTXT_SUPPORT && _MSC_VER < 1900
                     else
                     {
                         // This method will fail if not called from the UI thread.
@@ -1133,6 +1276,7 @@ namespace details
             }
         }
 
+#if _MSC_VER < 1900
         void _Capture()
         {
             HRESULT _Hr = CoGetObjectContext(IID_IContextCallback, reinterpret_cast<void **>(&_M_context._M_pContextCallback));
@@ -1141,6 +1285,7 @@ namespace details
                 _M_context._M_pContextCallback = nullptr;
             }
         }
+#endif
 
         _ContextCallback(const _ContextCallback& _Src)
         {
@@ -1181,7 +1326,8 @@ namespace details
 
         HRESULT _CallInContext(_CallbackFunction _Func) const
         {
-            if (!_HasCapturedContext())
+#if _MSC_VER < 1900
+      if (!_HasCapturedContext())
             {
                 _Func();
             }
@@ -1198,7 +1344,13 @@ namespace details
                 }
             }
             return S_OK;
+#else
+      return _CallInContext(_Func, false);
+#endif
         }
+#if _MSC_VER >= 1900
+    HRESULT __thiscall _CallInContext(_CallbackFunction _Func, bool _IgnoreDisconnect) const;
+#endif
 
         bool operator==(const _ContextCallback& _Rhs) const
         {
@@ -1212,32 +1364,45 @@ namespace details
 
     private:
 
-        void _Reset()
-        {
-            if (_M_context._M_captureMethod != _S_captureDeferred && _M_context._M_pContextCallback != nullptr)
-            {
-                _M_context._M_pContextCallback->Release();
-            }
-        }
+    void _Reset()
+#if _MSC_VER < 1900
+    {
+      if (_M_context._M_captureMethod != _S_captureDeferred && _M_context._M_pContextCallback != nullptr)
+      {
+        _M_context._M_pContextCallback->Release();
+      }
+    }
+#else
+      ;
+#endif
 
-        void _Assign(IContextCallback *_PContextCallback)
-        {
+#if _MSC_VER < 1900
+    void _Assign(IContextCallback *_PContextCallback)
+    {
             _M_context._M_pContextCallback = _PContextCallback;
             if (_M_context._M_captureMethod != _S_captureDeferred && _M_context._M_pContextCallback != nullptr)
             {
                 _M_context._M_pContextCallback->AddRef();
             }
         }
+#else
+    void __thiscall _Assign(void *_PContextCallback);
+#endif
 
-        static HRESULT __stdcall _Bridge(ComCallData *_PParam)
+#if _MSC_VER < 1900
+    static HRESULT __stdcall _Bridge(ComCallData *_PParam)
         {
             _CallbackFunction *pFunc = reinterpret_cast<_CallbackFunction *>(_PParam->pUserDefined);
             return (*pFunc)();
         }
+#else
+    void __thiscall _Capture();
+#endif
 
         // Returns the origin information for the caller (runtime / Windows Runtime apartment as far as task continuations need know)
         static bool _IsCurrentOriginSTA()
-        {
+#if _MSC_VER < 1900
+    {
             APTTYPE _AptType;
             APTTYPEQUALIFIER _AptTypeQualifier;
 
@@ -1259,10 +1424,17 @@ namespace details
             }
             return false;
         }
+#else
+      ;
+#endif
 
         union
         {
+#if _MSC_VER < 1900
             IContextCallback *_M_pContextCallback;
+#else
+      void *_M_pContextCallback;
+#endif
             size_t _M_captureMethod;
         } _M_context;
 
@@ -1285,6 +1457,29 @@ namespace details
 
         _Type _Result;
     };
+
+#if _MSC_VER >= 1900
+  // Special implementation of vector<bool> in STL will cause
+  // race condition when multiple threads write to the result
+  template<>
+  struct _ResultHolder<std::vector<bool>>
+  {
+    void Set(const std::vector<bool>& _type)
+    {
+      _Result.resize(_type.size());
+      std::transform(_type.begin(), _type.end(), _Result.begin(), [](bool _Val) { return static_cast<char>(_Val); });
+    }
+
+    std::vector<bool> Get()
+    {
+      std::vector<bool> _Ret(_Result.size());
+      std::transform(_Result.begin(), _Result.end(), _Ret.begin(), [](char _Val) { return _Val != 0; });
+      return _Ret;
+    }
+
+    std::vector<char> _Result;
+  };
+#endif
 
     template<typename _Type>
     struct _ResultHolder<_Type*>
@@ -1583,13 +1778,17 @@ namespace details
     {
 #if _MSC_VER >= 1800
     private:
-        void ReportUnhandledError()
-        {
-            if (_M_winRTException != nullptr)
-            {
-                throw _M_winRTException.Get();
-            }
-        }
+    void ReportUnhandledError()
+#if _MSC_VER < 1900
+    {
+      if (_M_winRTException != nullptr)
+      {
+        throw _M_winRTException.Get();
+      }
+    }
+#else
+      ;
+#endif
     public:
         explicit _ExceptionHolder(const std::exception_ptr& _E, const _TaskCreationCallstack &_stackTrace) :
             _M_exceptionObserved(0), _M_stdException(_E), _M_stackTrace(_stackTrace)
@@ -1954,9 +2153,36 @@ public:
     /**/
     static task_continuation_context use_default()
     {
-        // The callback context is created with the context set to CaptureDeferred and resolved when it is used in .then()
+#if _MSC_VER < 1900
+    // The callback context is created with the context set to CaptureDeferred and resolved when it is used in .then()
         return task_continuation_context(true); // sets it to deferred, is resolved in the constructor of _ContinuationTaskHandle
+#else
+    return task_continuation_context();
+#endif
     }
+
+#if _MSC_VER >= 1900
+  /// <summary>
+  ///     Returns a task continuation context object that represents the current winrt thread context.
+  /// </summary>
+  /// <returns>
+  ///     The current winrt thread context.
+  /// </returns>
+  /// <remarks>
+  ///     This method captures the current caller's Windows Runtime thread context.
+  ///     It is very similar to what <c>task_continuation_context::use_current()</c> is doing except it is also available without C++/Cx extension support.
+  ///     Please approach this method with caution as it is designed for advanced users writing C++/Cx agnostic library code.
+  ///     <c>task_continuation_context::use_current()</c> will give you more protection from mistakes.
+  ///     <para>This method is only available to Windows Store apps.</para>
+  /// </remarks>
+  /**/
+  static task_continuation_context get_current_winrt_context()
+  {
+    task_continuation_context _Current;
+    _Current._Resolve(true);
+    return _Current;
+  }
+#endif
 
     /// <summary>
     ///     Creates a task continuation context which allows the Runtime to choose the execution context for a continuation.
@@ -1974,7 +2200,11 @@ public:
     /**/
     static task_continuation_context use_arbitrary()
     {
-        task_continuation_context _Arbitrary(true);
+#if _MSC_VER < 1900
+    task_continuation_context _Arbitrary(true);
+#else
+    task_continuation_context _Arbitrary;
+#endif
         _Arbitrary._Resolve(false);
         return _Arbitrary;
     }
@@ -1995,16 +2225,51 @@ public:
     /**/
     static task_continuation_context use_current()
     {
+#if _MSC_VER < 1900
         task_continuation_context _Current(true);
         _Current._Resolve(true);
         return _Current;
+#else
+    return get_current_winrt_context();
+#endif
     }
 
+#if _MSC_VER >= 1900
+  /// <summary>
+  ///     Returns a task continuation context object that represents the synchronous execution context.
+  /// </summary>
+  /// <returns>
+  ///     The synchronous execution context.
+  /// </returns>
+  /// <remarks>
+  ///     This method will force the continuation task synchronously running on the context causing its antecedent task's completion;
+  ///     if the antecedent task has completed when the continuation is attached, the continuation will synchronously run on the context
+  ///     that attaches the continuation.
+  /// </remarks>
+  /**/
+  static task_continuation_context use_synchronous_execution()
+  {
+    task_continuation_context _Current;
+    _Current._Resolve(false);
+    _Current._M_RunInline = true;
+    return _Current;
+  }
+
+  bool _ForceInline() const
+  {
+    return _M_RunInline;
+  }
+#endif
 private:
 
-    task_continuation_context(bool _DeferCapture = false) : details::_ContextCallback(_DeferCapture)
+#if _MSC_VER < 1900
+  task_continuation_context(bool _DeferCapture = false) : details::_ContextCallback(_DeferCapture)
     {
     }
+#else
+  __thiscall task_continuation_context();
+  bool _M_RunInline; // default, it's false
+#endif
 };
 
 #if _MSC_VER >= 1800
@@ -2219,6 +2484,38 @@ namespace details
         return options._M_InternalTaskOptions;
     }
 #endif
+#if _MSC_VER >= 1900
+  /// _ThenImplOptions contains state variables used when calling the internal _ThenImpl function.
+  /// This is a non-templated object that was introduced to reduce the generated code size of PPLTasks continuations.
+  struct _ThenImplOptions
+  {
+    _ThenImplOptions(Concurrency::details::_CancellationTokenState *_Token_state, const task_continuation_context* _Continuation_context,
+      Concurrency::scheduler_ptr _PScheduler, _TaskCreationCallstack _Creation_stack, Concurrency::details::_TaskInliningMode_t _Inlining_mode = Concurrency::details::_NoInline) :
+      _PTokenState(_Token_state), _PContinuationContext(const_cast<task_continuation_context*>(_Continuation_context)), _Scheduler(_PScheduler),
+      _CreationStack(_Creation_stack), _InliningMode(_Inlining_mode) {}
+
+    Concurrency::details::_CancellationTokenState *_PTokenState;
+    Concurrency::scheduler_ptr _Scheduler;
+    _TaskCreationCallstack _CreationStack;
+    Concurrency::details::_TaskInliningMode_t _InliningMode;
+    task_continuation_context* _PContinuationContext;
+
+    static _ThenImplOptions _CreateOptions(const task_options& _Task_Options, const task_continuation_context& _ContinuationContext,
+      const Concurrency::scheduler_ptr& impl_scheduler)
+    {
+      Concurrency::details::_CancellationTokenState *_TokenState = _Task_Options.has_cancellation_token() ?
+        _Task_Options.get_cancellation_token()._GetImplValue() : nullptr;
+      auto _Scheduler = _Task_Options.has_scheduler() ? _Task_Options.get_scheduler() : impl_scheduler;
+      auto _InliningMode = _Task_Options.get_continuation_context()._ForceInline() ? Concurrency::details::_ForceInline : Concurrency::details::_NoInline;
+
+      auto _Task_Options_Int = details::_get_internal_task_options(_Task_Options);
+      auto _CreationStack = _Task_Options_Int._M_hasPresetCreationCallstack ?
+        _Task_Options_Int._M_presetCreationCallstack : details::_TaskCreationCallstack();
+
+      return _ThenImplOptions(_TokenState, &_ContinuationContext, _Scheduler, _CreationStack, _InliningMode);
+    }
+  };
+#endif
     struct _Task_impl_base;
     template<typename _ReturnType> struct _Task_impl;
 
@@ -2235,8 +2532,13 @@ namespace details
 #if _MSC_VER >= 1800
     typedef Concurrency::details::_TaskCollection_t::_TaskProcHandle_t _UnrealizedChore_t;
     typedef _UnrealizedChore_t _UnrealizedChore;
-    typedef Concurrency::extensibility::scoped_critical_section_t scoped_lock;
-    typedef Concurrency::extensibility::critical_section_t critical_section;
+#if _MSC_VER >= 1900
+  typedef ::std::lock_guard<std::mutex> scoped_lock;
+  typedef std::mutex critical_section;
+#else
+  typedef Concurrency::extensibility::scoped_critical_section_t scoped_lock;
+  typedef Concurrency::extensibility::critical_section_t critical_section;
+#endif
     typedef Concurrency::details::atomic_size_t atomic_size_t;
 #else
     typedef Concurrency::details::_UnrealizedChore _UnrealizedChore;
@@ -2265,6 +2567,7 @@ namespace details
     };
 #if _MSC_VER >= 1800
 #if _PPLTASK_ASYNC_LOGGING
+#if _MSC_VER < 1900
     // GUID used for identifying causality logs from PPLTask
     const ::Platform::Guid _PPLTaskCausalityPlatformID(0x7A76B220, 0xA758, 0x4E6E, 0xB0, 0xE0, 0xD7, 0xC6, 0xD7, 0x4A, 0x88, 0xFE);
 
@@ -2301,6 +2604,7 @@ namespace details
         return true;
 #endif
     }
+#endif
 
     // Stateful logger rests inside task_impl_base.
     struct _TaskEventLogger
@@ -2310,20 +2614,25 @@ namespace details
         bool _M_taskPostEventStarted;
 
         // Log before scheduling task
-        void _LogScheduleTask(bool _isContinuation)
-        {
-            if (details::_IsCausalitySupported())
-            {
-                ::Windows::Foundation::Diagnostics::AsyncCausalityTracer::TraceOperationCreation(::Windows::Foundation::Diagnostics::CausalityTraceLevel::Required, ::Windows::Foundation::Diagnostics::CausalitySource::Library,
-                    _PPLTaskCausalityPlatformID, reinterpret_cast<unsigned long long>(_M_task),
-                    _isContinuation ? "Concurrency::PPLTask::ScheduleContinuationTask" : "Concurrency::PPLTask::ScheduleTask", 0);
-                _M_scheduled = true;
-            }
-        }
+    void _LogScheduleTask(bool _isContinuation)
+#if _MSC_VER < 1900
+    {
+      if (details::_IsCausalitySupported())
+      {
+        ::Windows::Foundation::Diagnostics::AsyncCausalityTracer::TraceOperationCreation(::Windows::Foundation::Diagnostics::CausalityTraceLevel::Required, ::Windows::Foundation::Diagnostics::CausalitySource::Library,
+          _PPLTaskCausalityPlatformID, reinterpret_cast<unsigned long long>(_M_task),
+          _isContinuation ? "Concurrency::PPLTask::ScheduleContinuationTask" : "Concurrency::PPLTask::ScheduleTask", 0);
+        _M_scheduled = true;
+      }
+    }
+#else
+      ;
+#endif
 
         // It will log the cancel event but not canceled state. _LogTaskCompleted will log the terminal state, which includes cancel state.
         void _LogCancelTask()
-        {
+#if _MSC_VER < 1900
+    {
             if (details::_IsCausalitySupported())
             {
                 ::Windows::Foundation::Diagnostics::AsyncCausalityTracer::TraceOperationRelation(::Windows::Foundation::Diagnostics::CausalityTraceLevel::Important, ::Windows::Foundation::Diagnostics::CausalitySource::Library,
@@ -2331,6 +2640,9 @@ namespace details
 
             }
         }
+#else
+      ;
+#endif
 
         // Log when task reaches terminal state. Note: the task can reach a terminal state (by cancellation or exception) without having run
         void _LogTaskCompleted();
@@ -2340,27 +2652,36 @@ namespace details
 
         // Log when task body finish executing
         void _LogTaskExecutionCompleted()
-        {
+#if _MSC_VER < 1900
+    {
             if (_M_taskPostEventStarted && details::_IsCausalitySupported())
             {
                 ::Windows::Foundation::Diagnostics::AsyncCausalityTracer::TraceSynchronousWorkCompletion(::Windows::Foundation::Diagnostics::CausalityTraceLevel::Required, ::Windows::Foundation::Diagnostics::CausalitySource::Library,
                     ::Windows::Foundation::Diagnostics::CausalitySynchronousWork::CompletionNotification);
             }
         }
+#else
+  ;
+#endif
 
         // Log right before user lambda being invoked
         void _LogWorkItemStarted()
-        {
+#if _MSC_VER < 1900
+    {
             if (details::_IsCausalitySupported())
             {
                 ::Windows::Foundation::Diagnostics::AsyncCausalityTracer::TraceSynchronousWorkStart(::Windows::Foundation::Diagnostics::CausalityTraceLevel::Required, ::Windows::Foundation::Diagnostics::CausalitySource::Library,
                     _PPLTaskCausalityPlatformID, reinterpret_cast<unsigned long long>(_M_task), ::Windows::Foundation::Diagnostics::CausalitySynchronousWork::Execution);
             }
         }
+#else
+      ;
+#endif
 
         // Log right after user lambda being invoked
         void _LogWorkItemCompleted()
-        {
+#if _MSC_VER < 1900
+    {
             if (details::_IsCausalitySupported())
             {
                 ::Windows::Foundation::Diagnostics::AsyncCausalityTracer::TraceSynchronousWorkCompletion(::Windows::Foundation::Diagnostics::CausalityTraceLevel::Required, ::Windows::Foundation::Diagnostics::CausalitySource::Library,
@@ -2371,6 +2692,9 @@ namespace details
                 _M_taskPostEventStarted = true;
             }
         }
+#else
+      ;
+#endif
 
         _TaskEventLogger(_Task_impl_base *_task) : _M_task(_task)
         {
@@ -3116,7 +3440,8 @@ namespace details
                 _Cur = _Next;
             }
         }
-        static bool  _IsNonBlockingThread()
+#if _MSC_VER < 1900
+    static bool  _IsNonBlockingThread()
         {
             APTTYPE _AptType;
             APTTYPEQUALIFIER _AptTypeQualifier;
@@ -3159,6 +3484,9 @@ namespace details
 
             return false;
         }
+#else
+    static bool __cdecl _IsNonBlockingThread();
+#endif
 
         template<typename _ReturnType, typename _Result, typename _OpType, typename _CompHandlerType, typename _ResultType>
         static void _AsyncInit(const typename _Task_ptr<_ReturnType>::_Type & _OuterTask,
@@ -3311,7 +3639,7 @@ namespace details
         _Task_impl_base const & operator=(_Task_impl_base const&);
     };
 
-#if _MSC_VER >= 1800
+#if _MSC_VER >= 1800 && _MSC_VER < 1900
 #if _PPLTASK_ASYNC_LOGGING
     inline void _TaskEventLogger::_LogTaskCompleted()
     {
@@ -3842,6 +4170,22 @@ public:
         return false;
     }
 
+#if _MSC_VER >= 1900
+  /// <summary>
+  ///     Internal method that observe and clear the exception stored in the task completion event.
+  ///     This is used internally by when_any.
+  /// </summary>
+  void _ClearStoredException() const
+  {
+    ::std::lock_guard<std::mutex> _LockHolder(_M_Impl->_M_taskListCritSec);
+    if (_M_Impl->_M_exceptionHolder)
+    {
+      Concurrency::details::atomic_exchange(_M_Impl->_M_exceptionHolder->_M_exceptionObserved, 1l);
+      _M_Impl->_M_exceptionHolder.reset();
+    }
+  }
+#endif
+
     /// <summary>
     ///     Tests whether current event has been either Set, or Canceled.
     /// </summary>
@@ -4044,6 +4388,17 @@ public:
         return _M_unitEvent._StoreException(_ExHolder);
     }
 
+#if _MSC_VER >= 1900
+  /// <summary>
+  ///     Internal method that observe and clear the exception stored in the task completion event.
+  ///     This is used internally by when_any.
+  /// </summary>
+  void _ClearStoredException() const
+  {
+    _M_unitEvent._ClearStoredException();
+  }
+#endif
+
     /// <summary>
     ///     Test whether current event has been either Set, or Canceled.
     /// </summary>
@@ -4192,8 +4547,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -4233,8 +4588,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -4262,7 +4617,11 @@ public:
 #else
             _SetTaskCreationAddressHint(_ReturnAddress());
 #endif
-            _TaskInitMaybeFunctor(_Param, details::_IsCallable<_ReturnType>(_Param, 0, 0, 0));
+#if _MSC_VER < 1900
+      _TaskInitMaybeFunctor(_Param, details::_IsCallable<_ReturnType>(_Param, 0, 0, 0));
+#else
+      _TaskInitMaybeFunctor(_Param, decltype(details::_IsCallable<_ReturnType>(_Param, 0, 0, 0))());
+#endif
         }
 
     /// <summary>
@@ -4291,8 +4650,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -4321,7 +4680,11 @@ public:
 #else
             _SetTaskCreationAddressHint(_ReturnAddress());
 #endif
-            _TaskInitMaybeFunctor(_Param, details::_IsCallable<_ReturnType>(_Param, 0, 0, 0));
+#if _MSC_VER < 1900
+      _TaskInitMaybeFunctor(_Param, details::_IsCallable<_ReturnType>(_Param, 0, 0, 0));
+#else
+      _TaskInitMaybeFunctor(_Param, decltype(details::_IsCallable<_ReturnType>(_Param, 0, 0, 0))());
+#endif
         }
 
     /// <summary>
@@ -4340,8 +4703,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -4367,8 +4730,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -4443,9 +4806,22 @@ public:
         auto then(const _Function& _Func) const -> typename details::_ContinuationTypeTraits<_Function, _ReturnType>::_TaskOfType
     {
 #if _MSC_VER >= 1800
-            task_options _TaskOptions;
-            details::_get_internal_task_options(_TaskOptions)._set_creation_callstack(_CAPTURE_CALLSTACK());
+    task_options _TaskOptions;
+    details::_get_internal_task_options(_TaskOptions)._set_creation_callstack(_CAPTURE_CALLSTACK());
+#if _MSC_VER < 1900
             return _ThenImpl<_ReturnType, _Function>(_Func, _TaskOptions);
+#else
+    // Note: _ThenImpl's implemenation makes a copy of the continuation_context when it schedules the continuation.  '
+    //       The Continuation Context used to create the _ThenImplOptions must still exist when _ThenImpl executes.
+    auto _ContinuationContext = _TaskOptions.get_continuation_context();
+    auto _Options = details::_ThenImplOptions::_CreateOptions(_TaskOptions, _ContinuationContext, _ThenGetImpl()->_GetScheduler());
+
+#ifndef _PPLTASKS_NO_STDFUNC
+    return _ThenImpl<_ReturnType>(typename details::_ContinuationTypeTraits<_Function, _ReturnType>::_StdFuncT(_Func), _Options);
+#else
+    return _ThenImpl<_ReturnType, _Function>(_Func, _Options);
+#endif
+#endif
 #else
             auto _ContinuationTask = _ThenImpl<_ReturnType, _Function>(_Func, nullptr, task_continuation_context::use_default());
             // Do not move the next line out of this function. It is important that _ReturnAddress() evaluate to the the call site of then.
@@ -4488,7 +4864,20 @@ public:
     {
 #if _MSC_VER >= 1800
             details::_get_internal_task_options(_TaskOptions)._set_creation_callstack(_CAPTURE_CALLSTACK());
+#if _MSC_VER < 1900
             return _ThenImpl<_ReturnType, _Function>(_Func, _TaskOptions);
+#else
+      // Note: _ThenImpl's implemenation makes a copy of the continuation_context when it schedules the continuation.  '
+      //       The Continuation Context used to create the _ThenImplOptions must still exist when _ThenImpl executes.
+      auto _ContinuationContext = _TaskOptions.get_continuation_context();
+      auto _Options = details::_ThenImplOptions::_CreateOptions(_TaskOptions, _ContinuationContext, _ThenGetImpl()->_GetScheduler());
+
+#ifndef _PPLTASKS_NO_STDFUNC
+      return _ThenImpl<_ReturnType>(typename details::_ContinuationTypeTraits<_Function, _ReturnType>::_StdFuncT(_Func), _Options);
+#else
+      return _ThenImpl<_ReturnType, _Function>(_Func, _Options);
+#endif
+#endif
 #else
         auto _ContinuationTask = _ThenImpl<_ReturnType, _Function>(_Func, _CancellationToken._GetImplValue(), task_continuation_context::use_default());
         // Do not move the next line out of this function. It is important that _ReturnAddress() evaluate to the the call site of then.
@@ -4566,7 +4955,17 @@ public:
 #if _MSC_VER >= 1800
             task_options _TaskOptions(_CancellationToken, _ContinuationContext);
             details::_get_internal_task_options(_TaskOptions)._set_creation_callstack(_CAPTURE_CALLSTACK());
-            return _ThenImpl<_ReturnType, _Function>(_Func, _TaskOptions);
+#if _MSC_VER < 1900
+      return _ThenImpl<_ReturnType, _Function>(_Func, _TaskOptions);
+#else
+      auto _Options = details::_ThenImplOptions::_CreateOptions(_TaskOptions, _ContinuationContext, _ThenGetImpl()->_GetScheduler());
+
+#ifndef _PPLTASKS_NO_STDFUNC
+      return _ThenImpl<_ReturnType>(typename details::_ContinuationTypeTraits<_Function, _ReturnType>::_StdFuncT(_Func), _Options);
+#else
+      return _ThenImpl<_ReturnType, _Function>(_Func, _Options);
+#endif
+#endif
 #else
             auto _ContinuationTask = _ThenImpl<_ReturnType, _Function>(_Func, _CancellationToken._GetImplValue(), _ContinuationContext);
             // Do not move the next line out of this function. It is important that _ReturnAddress() evaluate to the the call site of then.
@@ -4588,7 +4987,11 @@ public:
     {
         if (_M_Impl == nullptr)
         {
+#if _MSC_VER < 1900
             throw Concurrency::invalid_operation("wait() cannot be called on a default constructed task.");
+#else
+      details::_DefaultTaskHelper::_NoCallOnDefaultTask_ErrorImpl();
+#endif
         }
 
         return _M_Impl->_Wait();
@@ -4610,7 +5013,11 @@ public:
     {
         if (_M_Impl == nullptr)
         {
+#if _MSC_VER < 1900
             throw Concurrency::invalid_operation("get() cannot be called on a default constructed task.");
+#else
+      details::_DefaultTaskHelper::_NoCallOnDefaultTask_ErrorImpl();
+#endif
         }
 
         if (_M_Impl->_Wait() == Concurrency::canceled)
@@ -4634,7 +5041,11 @@ public:
     {
         if (!_M_Impl)
         {
+#if _MSC_VER < 1900
             throw Concurrency::invalid_operation("is_done() cannot be called on a default constructed task.");
+#else
+      details::_DefaultTaskHelper::_NoCallOnDefaultTask_ErrorImpl();
+#endif
         }
 
         return _M_Impl->_IsDone();
@@ -4650,7 +5061,11 @@ public:
     {
         if (!_M_Impl)
         {
+#if _MSC_VER < 1900
             throw Concurrency::invalid_operation("scheduler() cannot be called on a default constructed task.");
+#else
+      details::_DefaultTaskHelper::_NoCallOnDefaultTask_ErrorImpl();
+#endif
         }
 
         return _M_Impl->_GetScheduler();
@@ -4667,7 +5082,11 @@ public:
     {
         if (_M_Impl == nullptr)
         {
-            throw Concurrency::invalid_operation("is_apartment_aware() cannot be called on a default constructed task.");
+#if _MSC_VER < 1900
+      throw Concurrency::invalid_operation("is_apartment_aware() cannot be called on a default constructed task.");
+#else
+      details::_DefaultTaskHelper::_NoCallOnDefaultTask_ErrorImpl();
+#endif
         }
         return _M_Impl->_IsApartmentAware();
     }
@@ -4729,6 +5148,18 @@ public:
         return _M_Impl;
     }
 
+#if _MSC_VER >= 1900
+  const typename details::_Task_ptr<_ReturnType>::_Type & _ThenGetImpl() const
+  {
+    if (!_M_Impl)
+    {
+      details::_DefaultTaskHelper::_NoCallOnDefaultTask_ErrorImpl();
+    }
+
+    return _M_Impl;
+  }
+#endif
+
     /// <summary>
     ///     Set the implementation of the task to be the supplied implementaion.
     /// </summary>
@@ -4782,7 +5213,20 @@ public:
         // inherit from antecedent
         auto _Scheduler = _GetImpl()->_GetScheduler();
 
-        return _ThenImpl<_ReturnType, _Function>(_Func, _PTokenState, task_continuation_context::use_default(), _Scheduler, _CAPTURE_CALLSTACK(), _InliningMode);
+#if _MSC_VER < 1900
+    return _ThenImpl<_ReturnType, _Function>(_Func, _PTokenState, task_continuation_context::use_default(), _Scheduler, _CAPTURE_CALLSTACK(), _InliningMode);
+#else
+    // Note: _ThenImpl's implemenation makes a copy of the continuation_context when it schedules the continuation.  '
+    //       The Continuation Context used to create the _ThenImplOptions must still exist when _ThenImpl executes.
+    auto _Default_Context = task_continuation_context::use_default();
+    details::_ThenImplOptions _Options(_PTokenState, &_Default_Context, _Scheduler, _CAPTURE_CALLSTACK(), _InliningMode);
+
+#ifndef _PPLTASKS_NO_STDFUNC
+    return _ThenImpl<_ReturnType>(typename details::_ContinuationTypeTraits<_Function, _ReturnType>::_StdFuncT(_Func), _Options);
+#else
+    return _ThenImpl<_ReturnType, _Function>(_Func, _Options);
+#endif
+#endif
     }
 #else
     auto _Then(const _Function& _Func, Concurrency::details::_CancellationTokenState *_PTokenState, bool _Aggregating,
@@ -5350,9 +5794,11 @@ private:
 #if _MSC_VER < 1800
         _M_Impl->_SetScheduledEvent();
 #endif
+#if _MSC_VER < 1900
         // Mark this task as started here since we can set the state in the constructor without acquiring a lock. Once _AsyncInit
         // returns a completion could execute concurrently and the task must be fully initialized before that happens.
         _M_Impl->_M_TaskState = details::_Task_impl_base::_Started;
+#endif
         // Pass the shared pointer into _AsyncInit for storage in the Async Callback.
         details::_Task_impl_base::_AsyncInit<_ReturnType, _Result>(_M_Impl, _AsyncOp);
     }
@@ -5391,7 +5837,7 @@ private:
     {
         _TaskInitNoFunctor(_Param);
     }
-#if _MSC_VER >= 1800
+#if _MSC_VER >= 1800 && _MSC_VER < 1900
     template<typename _InternalReturnType, typename _Function>
     auto _ThenImpl(const _Function& _Func, const task_options& _TaskOptions) const -> typename details::_ContinuationTypeTraits<_Function, _InternalReturnType>::_TaskOfType
     {
@@ -5411,17 +5857,23 @@ private:
     /// </summary>
     template<typename _InternalReturnType, typename _Function>
 #if _MSC_VER >= 1800
+#if _MSC_VER < 1900
     auto _ThenImpl(const _Function& _Func, Concurrency::details::_CancellationTokenState *_PTokenState, const task_continuation_context& _ContinuationContext, Concurrency::scheduler_ptr _Scheduler, details::_TaskCreationCallstack _CreationStack,
         details::_TaskInliningMode _InliningMode = Concurrency::details::_NoInline) const -> typename details::_ContinuationTypeTraits<_Function, _InternalReturnType>::_TaskOfType
+#else
+  auto _ThenImpl(const _Function& _Func, details::_ThenImplOptions& _Options) const -> typename details::_ContinuationTypeTraits<_Function, _InternalReturnType>::_TaskOfType
+#endif
 #else
     auto _ThenImpl(const _Function& _Func, Concurrency::details::_CancellationTokenState *_PTokenState, const task_continuation_context& _ContinuationContext,
         bool _Aggregating = false, details::_TaskInliningMode _InliningMode = Concurrency::details::_NoInline) const -> typename details::_ContinuationTypeTraits<_Function, _InternalReturnType>::_TaskOfType
 #endif
     {
+#if _MSC_VER < 1900
         if (_M_Impl == nullptr)
         {
             throw Concurrency::invalid_operation("then() cannot be called on a default constructed task.");
         }
+#endif
 
         typedef details::_FunctionTypeTraits<_Function, _InternalReturnType> _Function_type_traits;
         typedef details::_TaskTypeTraits<typename _Function_type_traits::_FuncRetType> _Async_type_traits;
@@ -5432,7 +5884,11 @@ private:
         // an exception handling continuation. In that case, we break the chain with a _None. That continuation is never canceled unless the user
         // explicitly passes the same token.
         //
-        if (_PTokenState == nullptr)
+#if _MSC_VER < 1900
+    if (_PTokenState == nullptr)
+#else
+    if (_Options._PTokenState == nullptr)
+#endif
         {
 #if _MSC_VER >= 1800
             if (_Function_type_traits::_Takes_task::value)
@@ -5440,17 +5896,28 @@ private:
             if (_Function_type_traits::_Takes_task())
 #endif
             {
-                _PTokenState = Concurrency::details::_CancellationTokenState::_None();
+#if _MSC_VER < 1900
+        _PTokenState
+#else
+        _Options._PTokenState
+#endif
+          = Concurrency::details::_CancellationTokenState::_None();
             }
             else
             {
+#if _MSC_VER < 1900
                 _PTokenState = _GetImpl()->_M_pTokenState;
+#else
+        _Options._PTokenState = _GetImpl()->_M_pTokenState;
+#endif
             }
         }
 
         task<_TaskType> _ContinuationTask;
-#if _MSC_VER >= 1800
-        _ContinuationTask._CreateImpl(_PTokenState, _Scheduler);
+#if _MSC_VER >= 1800 && _MSC_VER < 1900
+    _ContinuationTask._CreateImpl(_PTokenState, _Scheduler);
+#elif _MSC_VER >= 1900
+    _ContinuationTask._CreateImpl(_Options._PTokenState, _Options._Scheduler);
 #else
         _ContinuationTask._CreateImpl(_PTokenState);
 #endif
@@ -5459,11 +5926,18 @@ private:
         _ContinuationTask._GetImpl()->_M_fRuntimeAggregate = _Aggregating;
 #endif
         _ContinuationTask._GetImpl()->_M_fUnwrappedTask = _Async_type_traits::_IsUnwrappedTaskOrAsync;
-#if _MSC_VER >= 1800
+#if _MSC_VER >= 1800 && _MSC_VER < 1900
         _ContinuationTask._SetTaskCreationCallstack(_CreationStack);
+#elif _MSC_VER >= 1900
+    _ContinuationTask._SetTaskCreationCallstack(_Options._CreationStack);
 #endif
+#if _MSC_VER < 1900
         _GetImpl()->_ScheduleContinuation(new _ContinuationTaskHandle<_InternalReturnType, _TaskType, _Function, typename _Function_type_traits::_Takes_task, typename _Async_type_traits::_AsyncKind>(
             _GetImpl(), _ContinuationTask._GetImpl(), _Func, _ContinuationContext, _InliningMode));
+#else
+    _GetImpl()->_ScheduleContinuation(new _ContinuationTaskHandle<_InternalReturnType, _TaskType, _Function, typename _Function_type_traits::_Takes_task, typename _Async_type_traits::_AsyncKind>(
+      _GetImpl(), _ContinuationTask._GetImpl(), _Func, *_Options._PContinuationContext, _Options._InliningMode));
+#endif
 
         return _ContinuationTask;
     }
@@ -5506,8 +5980,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -5543,8 +6017,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -5591,8 +6065,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -5620,7 +6094,11 @@ public:
 #else
             _M_unitTask._SetTaskCreationAddressHint(_ReturnAddress());
 #endif
+#if _MSC_VER < 1900
             _TaskInitMaybeFunctor(_Param, details::_IsCallable<void>(_Param, 0, 0, 0));
+#else
+      _TaskInitMaybeFunctor(_Param, decltype(details::_IsCallable<void>(_Param, 0, 0, 0))());
+#endif
         }
 
     /// <summary>
@@ -5639,8 +6117,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -5666,8 +6144,8 @@ public:
     ///     <c>cancellation_token_source</c> the token was obtained from. Tasks created without a cancellation token are not cancelable.</para>
     ///     <para>Tasks created from a <c>Windows::Foundation::IAsyncInfo</c> interface or a lambda that returns an <c>IAsyncInfo</c> interface
     ///     reach their terminal state when the enclosed Windows Runtime asynchronous operation or action completes. Similarly, tasks created
-    ///     from a lamda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
-    ///     and not when the lamda returns.</para>
+    ///     from a lambda that returns a <c>task&lt;result_type&gt;</c> reach their terminal state when the inner task reaches its terminal state,
+    ///     and not when the lambda returns.</para>
     ///     <para><c>task</c> behaves like a smart pointer and is safe to pass around by value. It can be accessed by multiple threads
     ///     without the need for locks.</para>
     ///     <para>The constructor overloads that take a Windows::Foundation::IAsyncInfo interface or a lambda returning such an interface, are only available
@@ -5777,7 +6255,20 @@ public:
     auto then(const _Function& _Func, task_options _TaskOptions = task_options()) const -> typename details::_ContinuationTypeTraits<_Function, void>::_TaskOfType
     {
         details::_get_internal_task_options(_TaskOptions)._set_creation_callstack(_CAPTURE_CALLSTACK());
-        return _M_unitTask._ThenImpl<void, _Function>(_Func, _TaskOptions);
+#if _MSC_VER < 1900
+    return _M_unitTask._ThenImpl<void, _Function>(_Func, _TaskOptions);
+#else
+    // Note: _ThenImpl's implemenation makes a copy of the continuation_context when it schedules the continuation.  '
+    //       The Continuation Context used to create the _ThenImplOptions must still exist when _ThenImpl executes.
+    auto _ContinuationContext = _TaskOptions.get_continuation_context();
+    auto _Options = details::_ThenImplOptions::_CreateOptions(_TaskOptions, _ContinuationContext, _ThenGetImpl()->_GetScheduler());
+
+#ifndef _PPLTASKS_NO_STDFUNC
+    return _M_unitTask._ThenImpl<void>(typename details::_ContinuationTypeTraits<_Function, void>::_StdFuncT(_Func), _Options);
+#else
+    return _M_unitTask._ThenImpl<void, _Function>(_Func, _Options);
+#endif
+#endif
     }
 #else
     auto then(const _Function& _Func, Concurrency::cancellation_token _CancellationToken) const -> typename details::_ContinuationTypeTraits<_Function, void>::_TaskOfType
@@ -5857,7 +6348,17 @@ public:
     {
         task_options _TaskOptions(_CancellationToken, _ContinuationContext);
         details::_get_internal_task_options(_TaskOptions)._set_creation_callstack(_CAPTURE_CALLSTACK());
-        return _M_unitTask._ThenImpl<void, _Function>(_Func, _TaskOptions);
+#if _MSC_VER < 1900
+    return _M_unitTask._ThenImpl<void, _Function>(_Func, _TaskOptions);
+#else
+    auto _Options = details::_ThenImplOptions::_CreateOptions(_TaskOptions, _ContinuationContext, _ThenGetImpl()->_GetScheduler());
+
+#ifndef _PPLTASKS_NO_STDFUNC
+    return _M_unitTask._ThenImpl<void>(typename details::_ContinuationTypeTraits<_Function, void>::_StdFuncT(_Func), _Options);
+#else
+    return _M_unitTask._ThenImpl<void, _Function>(_Func, _Options);
+#endif
+#endif
     }
 #else
     auto then(const _Function& _Func, Concurrency::cancellation_token _CancellationToken, task_continuation_context _ContinuationContext) const -> typename details::_ContinuationTypeTraits<_Function, void>::_TaskOfType
@@ -5982,6 +6483,18 @@ public:
         return _M_unitTask._M_Impl;
     }
 
+#if _MSC_VER >= 1900
+  const details::_Task_ptr<details::_Unit_type>::_Type & _ThenGetImpl() const
+  {
+    if (!_M_unitTask._M_Impl)
+    {
+      details::_DefaultTaskHelper::_NoCallOnDefaultTask_ErrorImpl();
+    }
+
+    return _M_unitTask._M_Impl;
+  }
+#endif
+
     /// <summary>
     ///     Set the implementation of the task to be the supplied implementaion.
     /// </summary>
@@ -6030,9 +6543,24 @@ public:
         details::_TaskInliningMode _InliningMode = Concurrency::details::_ForceInline) const -> typename details::_ContinuationTypeTraits<_Function, void>::_TaskOfType
     {
         // inherit from antecedent
-        auto _Scheduler = _GetImpl()->_GetScheduler();
+#if _MSC_VER < 1900
+    auto _Scheduler = _GetImpl()->_GetScheduler();
 
         return _M_unitTask._ThenImpl<void, _Function>(_Func, _PTokenState, task_continuation_context::use_default(), _Scheduler, _CAPTURE_CALLSTACK(), _InliningMode);
+#else
+    auto _Scheduler = _ThenGetImpl()->_GetScheduler();
+
+    // Note: _ThenImpl's implemenation makes a copy of the continuation_context when it schedules the continuation.  '
+    //       The Continuation Context used to create the _ThenImplOptions must still exist when _ThenImpl executes.
+    auto _Default_Context = task_continuation_context::use_default();
+    details::_ThenImplOptions _Options{ _PTokenState, &_Default_Context, _Scheduler, _CAPTURE_CALLSTACK(), _InliningMode };
+
+#ifndef _PPLTASKS_NO_STDFUNC
+    return _M_unitTask._ThenImpl<void>(typename details::_ContinuationTypeTraits<_Function, void>::_StdFuncT(_Func), _Options);
+#else
+    return _M_unitTask._ThenImpl<void, _Function>(_Func, _Options);
+#endif
+#endif
     }
 #else
     auto _Then(const _Function& _Func, Concurrency::details::_CancellationTokenState *_PTokenState,
@@ -6102,6 +6630,11 @@ namespace details
     template<typename _Ty>
     _Ty _GetUnwrappedType(task<_Ty>);
 
+#if _MSC_VER >= 1900
+  template<typename _Ty>
+  _Ty _GetUnwrappedType(task_completion_event<_Ty>);
+#endif
+
     // Unwrap all supported types
     template<typename _Ty>
     auto _GetUnwrappedReturnType(_Ty _Arg, int) -> decltype(_GetUnwrappedType(_Arg));
@@ -6115,9 +6648,12 @@ namespace details
     ///   It will automatically unwrap argument to get the final return type if necessary.
     /// </summary>
 
-    // Non-Callable
-    template<typename _Ty>
-    _Ty _GetTaskType(task_completion_event<_Ty>, std::false_type);
+  struct _BadArgType {};
+
+#if _MSC_VER < 1900
+  // Non-Callable
+  template<typename _Ty>
+  _Ty _GetTaskType(task_completion_event<_Ty>, std::false_type);
 
     // Non-Callable
     template<typename _Ty>
@@ -6128,11 +6664,47 @@ namespace details
     auto _GetTaskType(_Ty _Func, std::true_type) -> decltype(_GetUnwrappedReturnType(stdx::declval<_FunctionTypeTraits<_Ty, void>::_FuncRetType>(), 0));
 
     // Special callable returns void
-    void _GetTaskType(std::function<HRESULT()>, std::true_type);
-    struct _BadArgType{};
+  void _GetTaskType(std::function<HRESULT()>, std::true_type);
+#else
+
+  // Non-Callable
+  template<typename _Ty, typename _Callable>
+  struct _GetTaskType
+  {
+    typedef _BadArgType _TaskType;
+  };
+
+  template<typename _Ty>
+  struct _GetTaskType<_Ty, std::false_type>
+  {
+    typedef decltype(_GetUnwrappedType(stdx::declval<_Ty>())) _TaskType;
+  };
+
+  template<typename _Ty, const bool _IsVoidReturn = std::is_void<typename _FunctionTypeTraits<_Ty, void>::_FuncRetType>::value>
+  struct _GetTaskFuncType
+  {
+    typedef void _TaskType;
+  };
+
+  template<typename _Ty>
+  struct _GetTaskFuncType<_Ty, false>
+  {
+    typedef decltype(_GetUnwrappedReturnType(stdx::declval<_FunctionTypeTraits<_Ty, void>::_FuncRetType>(), 0)) _TaskType;
+  };
+
+  template<typename _Ty>
+  struct _GetTaskType<_Ty, std::true_type>
+  {
+    typedef typename _GetTaskFuncType<_Ty>::_TaskType _TaskType;
+  };
+#endif
 
     template<typename _ReturnType, typename _Ty>
-    auto _FilterValidTaskType(_Ty _Param, int) -> decltype(_GetTaskType(_Param, _IsCallable<_ReturnType>(_Param, 0, 0, 0)));
+#if _MSC_VER < 1900
+  auto _FilterValidTaskType(_Ty _Param, int) -> decltype(_GetTaskType(_Param, _IsCallable<_ReturnType>(_Param, 0, 0, 0)));
+#else
+  auto _FilterValidTaskType(_Ty _Param, int) -> typename _GetTaskType<decltype(_Param), decltype(_IsCallable<_ReturnType>(_Param, 0, 0, 0))>::_TaskType;
+#endif
 
     template<typename _ReturnType, typename _Ty>
     _BadArgType _FilterValidTaskType(_Ty _Param, ...);
@@ -6142,6 +6714,15 @@ namespace details
     {
         typedef decltype(_FilterValidTaskType<_ReturnType>(stdx::declval<_Ty>(), 0)) _Type;
     };
+
+#if _MSC_VER >= 1900
+  inline bool _IsHRCOMDisconnected(int __hr)
+  {
+    return __hr == 0x800706BA // HRESULT_FROM_WIN32(RPC_S_SERVER_UNAVAILABLE)
+      || __hr == 0x80010108 // RPC_E_DISCONNECTED
+      || __hr == 0x89020001; // JSCRIPT_E_CANTEXECUTE
+  }
+#endif
 }
 
 
@@ -6356,9 +6937,9 @@ public:
     }
     progress_reporter() {}
 
-private:
+  // For validation type traits
     progress_reporter(details::_ProgressReporterCtorArgType);
-
+private:
     _PtrType _M_dispatcher;
 };
 
@@ -6943,28 +7524,123 @@ namespace details
         }
     };
 
-    template<typename _Generator, bool _TakesToken, bool TakesProgress>
-    struct _TaskGenerator
+#if _MSC_VER < 1900 || defined(_PPLTASKS_NO_STDFUNC)
+  template<typename _Generator, bool _TakesToken, bool TakesProgress>
+#else
+  template<typename _Generator, bool _TakesToken, bool TakesProgress, typename _AsyncSelector>
+#endif
+  struct _TaskGenerator
+  {
+  };
+
+#if _MSC_VER >= 1900 && !defined(_PPLTASKS_NO_STDFUNC)
+  template<typename _Generator>
+  struct _TaskGenerator<_Generator, false, false, details::_TypeSelectorNoAsync>
+  {
+    template<typename _Function, typename _ClassPtr, typename _ProgressType>
+    static auto _GenerateTaskNoRet(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
+      -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _callstack))
     {
-    };
+      (void)_Ptr;
+      typedef std::function<HRESULT __cdecl()> _StdFunction;
+      return _Generator::_GenerateTask_0(_StdFunction(_Func), _Cts, _callstack);
+    }
+
+    template<typename _Function, typename _ClassPtr, typename _ProgressType, typename _ReturnType>
+    static auto _GenerateTask(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
+      -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _pRet, _callstack))
+    {
+      typedef std::function<HRESULT __cdecl(_ReturnType*)> _StdFunction;
+      return _Generator::_GenerateTask_0(_StdFunction(_Func), _Cts, _pRet, _callstack);
+    }
+  };
+
+  template<typename _Generator>
+  struct _TaskGenerator<_Generator, true, false, details::_TypeSelectorNoAsync>
+  {
+    template<typename _Function, typename _ClassPtr, typename _ProgressType>
+    static auto _GenerateTaskNoRet(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
+      -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _callstack))
+    {
+      return _Generator::_GenerateTask_1C(std::function<HRESULT __cdecl(Concurrency::cancellation_token)>(_Func), _Cts, _callstack);
+    }
+
+    template<typename _Function, typename _ClassPtr, typename _ProgressType, typename _ReturnType>
+    static auto _GenerateTask(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
+      -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _pRet, _callstack))
+    {
+      return _Generator::_GenerateTask_1C(std::function<HRESULT __cdecl(Concurrency::cancellation_token, _ReturnType*)>(_Func), _Cts, _pRet, _callstack);
+    }
+  };
+
+  template<typename _Generator>
+  struct _TaskGenerator<_Generator, false, true, details::_TypeSelectorNoAsync>
+  {
+    template<typename _Function, typename _ClassPtr, typename _ProgressType>
+    static auto _GenerateTaskNoRet(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
+      -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _callstack))
+    {
+      return _Generator::_GenerateTask_1P(std::function<HRESULT __cdecl(const progress_reporter<_ProgressType>&)>(_Func), progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _callstack);
+    }
+
+    template<typename _Function, typename _ClassPtr, typename _ProgressType, typename _ReturnType>
+    static auto _GenerateTask(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
+      -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _pRet, _callstack))
+    {
+      return _Generator::_GenerateTask_1P(std::function<HRESULT __cdecl(const progress_reporter<_ProgressType>&, _ReturnType*)>(_Func), progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _pRet, _callstack);
+    }
+  };
+
+  template<typename _Generator>
+  struct _TaskGenerator<_Generator, true, true, details::_TypeSelectorNoAsync>
+  {
+    template<typename _Function, typename _ClassPtr, typename _ProgressType>
+    static auto _GenerateTaskNoRet(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
+      -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _callstack))
+    {
+      return _Generator::_GenerateTask_2PC(std::function<HRESULT __cdecl(const progress_reporter<_ProgressType>&, Concurrency::cancellation_token)>(_Func), progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _callstack);
+    }
+
+    template<typename _Function, typename _ClassPtr, typename _ProgressType, typename _ReturnType>
+    static auto _GenerateTask(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
+      -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _pRet, _callstack))
+    {
+      return _Generator::_GenerateTask_2PC(std::function<HRESULT __cdecl(const progress_reporter<_ProgressType>&, Concurrency::cancellation_token, _ReturnType*)>(_Func), progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _pRet, _callstack);
+    }
+  };
+#endif
 
     template<typename _Generator>
-    struct _TaskGenerator<_Generator, false, false>
-    {
+#if _MSC_VER < 1900 || defined(_PPLTASKS_NO_STDFUNC)
+  struct _TaskGenerator<_Generator, false, false>
+#else
+  struct _TaskGenerator<_Generator, false, false, details::_TypeSelectorAsyncTask>
+#endif
+  {
 #if _MSC_VER >= 1800
         template<typename _Function, typename _ClassPtr, typename _ProgressType>
         static auto _GenerateTaskNoRet(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
             -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _callstack))
         {
             (void)_Ptr;
-            return _Generator::_GenerateTask_0(_Func, _Cts, _callstack);
+#if _MSC_VER >= 1900 && !defined(_PPLTASKS_NO_STDFUNC)
+      typedef std::function<HRESULT __cdecl(task<void>*)> _StdFunction;
+      return _Generator::_GenerateTask_0(_StdFunction(_Func), _Cts, _callstack);
+#else
+      return _Generator::_GenerateTask_0(_Func, _Cts, _callstack);
+#endif
         }
 
         template<typename _Function, typename _ClassPtr, typename _ProgressType, typename _ReturnType>
         static auto _GenerateTask(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
             -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _pRet, _callstack))
         {
+#if _MSC_VER >= 1900 && !defined(_PPLTASKS_NO_STDFUNC)
+      typedef std::function<HRESULT __cdecl(task<_ReturnType>*)> _StdFunction;
+      return _Generator::_GenerateTask_0(_StdFunction(_Func), _Cts, _pRet, _callstack);
+#else
             return _Generator::_GenerateTask_0(_Func, _Cts, _pRet, _callstack);
+#endif
         }
 #else
         template<typename _Function, typename _ClassPtr, typename _ProgressType>
@@ -6985,21 +7661,33 @@ namespace details
     };
 
     template<typename _Generator>
-    struct _TaskGenerator<_Generator, true, false>
+#if _MSC_VER < 1900 || defined(_PPLTASKS_NO_STDFUNC)
+  struct _TaskGenerator<_Generator, true, false>
+#else
+  struct _TaskGenerator<_Generator, true, false, details::_TypeSelectorAsyncTask>
+#endif
     {
 #if _MSC_VER >= 1800
         template<typename _Function, typename _ClassPtr, typename _ProgressType>
         static auto _GenerateTaskNoRet(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
             -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _callstack))
         {
-            return _Generator::_GenerateTask_1C(_Func, _Cts, _callstack);
+#if _MSC_VER >= 1900 && !defined(_PPLTASKS_NO_STDFUNC)
+      return _Generator::_GenerateTask_1C(std::function<HRESULT __cdecl(Concurrency::cancellation_token, task<void>*)>(_Func), _Cts, _callstack);
+#else
+      return _Generator::_GenerateTask_1C(_Func, _Cts, _callstack);
+#endif
         }
 
         template<typename _Function, typename _ClassPtr, typename _ProgressType, typename _ReturnType>
         static auto _GenerateTask(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
             -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _pRet, _callstack))
         {
-            return _Generator::_GenerateTask_1C(_Func, _Cts, _pRet, _callstack);
+#if _MSC_VER >= 1900 && !defined(_PPLTASKS_NO_STDFUNC)
+      return _Generator::_GenerateTask_1C(std::function<HRESULT __cdecl(Concurrency::cancellation_token, task<_ReturnType>*)>(_Func), _Cts, _pRet, _callstack);
+#else
+      return _Generator::_GenerateTask_1C(_Func, _Cts, _pRet, _callstack);
+#endif
         }
 #else
         template<typename _Function, typename _ClassPtr, typename _ProgressType>
@@ -7019,21 +7707,33 @@ namespace details
     };
 
     template<typename _Generator>
-    struct _TaskGenerator<_Generator, false, true>
+#if _MSC_VER < 1900 || defined(_PPLTASKS_NO_STDFUNC)
+  struct _TaskGenerator<_Generator, false, true>
+#else
+  struct _TaskGenerator<_Generator, false, true, details::_TypeSelectorAsyncTask>
+#endif
     {
 #if _MSC_VER >= 1800
         template<typename _Function, typename _ClassPtr, typename _ProgressType>
         static auto _GenerateTaskNoRet(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
             -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _callstack))
         {
-            return _Generator::_GenerateTask_1P(_Func, progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _callstack);
+#if _MSC_VER >= 1900 && !defined(_PPLTASKS_NO_STDFUNC)
+      return _Generator::_GenerateTask_1P(std::function<HRESULT __cdecl(const progress_reporter<_ProgressType>&, task<void>*)>(_Func), progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _callstack);
+#else
+      return _Generator::_GenerateTask_1P(_Func, progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _callstack);
+#endif
         }
 
         template<typename _Function, typename _ClassPtr, typename _ProgressType, typename _ReturnType>
         static auto _GenerateTask(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
             -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _pRet, _callstack))
         {
-            return _Generator::_GenerateTask_1P(_Func, progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _pRet, _callstack);
+#if _MSC_VER >= 1900 && !defined(_PPLTASKS_NO_STDFUNC)
+      return _Generator::_GenerateTask_1P(std::function<HRESULT __cdecl(const progress_reporter<_ProgressType>&, task<_ReturnType>*)>(_Func), progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _pRet, _callstack);
+#else
+      return _Generator::_GenerateTask_1P(_Func, progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _pRet, _callstack);
+#endif
         }
 #else
         template<typename _Function, typename _ClassPtr, typename _ProgressType>
@@ -7053,21 +7753,33 @@ namespace details
     };
 
     template<typename _Generator>
-    struct _TaskGenerator<_Generator, true, true>
+#if _MSC_VER < 1900 || defined(_PPLTASKS_NO_STDFUNC)
+  struct _TaskGenerator<_Generator, true, true>
+#else
+  struct _TaskGenerator<_Generator, true, true, details::_TypeSelectorAsyncTask>
+#endif
     {
 #if _MSC_VER >= 1800
         template<typename _Function, typename _ClassPtr, typename _ProgressType>
         static auto _GenerateTaskNoRet(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
             -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _callstack))
         {
-            return _Generator::_GenerateTask_2PC(_Func, progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _callstack);
+#if _MSC_VER >= 1900 && !defined(_PPLTASKS_NO_STDFUNC)
+      return _Generator::_GenerateTask_2PC(std::function<HRESULT __cdecl(const progress_reporter<_ProgressType>&, Concurrency::cancellation_token, task<void>*)>(_Func), progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _callstack);
+#else
+      return _Generator::_GenerateTask_2PC(_Func, progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _callstack);
+#endif
         }
 
         template<typename _Function, typename _ClassPtr, typename _ProgressType, typename _ReturnType>
         static auto _GenerateTask(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
             -> decltype(_Generator::_GenerateTask_0(_Func, _Cts, _pRet, _callstack))
         {
-            return _Generator::_GenerateTask_2PC(_Func, progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _pRet, _callstack);
+#if _MSC_VER >= 1900 && !defined(_PPLTASKS_NO_STDFUNC)
+      return _Generator::_GenerateTask_2PC(std::function<HRESULT __cdecl(const progress_reporter<_ProgressType>&, Concurrency::cancellation_token, task<_ReturnType>*)>(_Func), progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _pRet, _callstack);
+#else
+      return _Generator::_GenerateTask_2PC(_Func, progress_reporter<_ProgressType>::_CreateReporter(_Ptr), _Cts, _pRet, _callstack);
+#endif
         }
 #else
         template<typename _Function, typename _ClassPtr, typename _ProgressType>
@@ -7108,13 +7820,22 @@ namespace details
     // -------------------------
     //
 
-    template<typename _Function, typename _ProgressType, typename _ReturnType, typename _TaskTraits, bool _TakesToken, bool _TakesProgress>
+#if _MSC_VER < 1900
+  template<typename _Function, typename _ProgressType, typename _ReturnType, typename _TaskTraits, bool _TakesToken, bool _TakesProgress>
+#else
+  template<typename _ProgressType, typename _ReturnType, typename _TaskTraits, bool _TakesToken, bool _TakesProgress>
+#endif
     struct _AsyncAttributes
     {
     };
 
-    template<typename _Function, typename _ProgressType, typename _ReturnType, typename _TaskTraits, bool _TakesToken>
+#if _MSC_VER < 1900
+  template<typename _Function, typename _ProgressType, typename _ReturnType, typename _TaskTraits, bool _TakesToken>
     struct _AsyncAttributes<_Function, _ProgressType, _ReturnType, _TaskTraits, _TakesToken, true>
+#else
+  template<typename _ProgressType, typename _ReturnType, typename _TaskTraits, bool _TakesToken>
+  struct _AsyncAttributes<_ProgressType, _ReturnType, _TaskTraits, _TakesToken, true>
+#endif
     {
         typedef typename ABI::Windows::Foundation::IAsyncOperationWithProgress<_ReturnType, _ProgressType> _AsyncBaseType;
         typedef typename ABI::Windows::Foundation::IAsyncOperationProgressHandler<_ReturnType, _ProgressType> _ProgressDelegateType;
@@ -7125,11 +7846,16 @@ namespace details
         typedef typename ABI::Windows::Foundation::Internal::GetAbiType<decltype(_UnwrapAsyncOperationWithProgressProgressSelector(stdx::declval<_AsyncBaseType*>()))>::type _ProgressType_abi;
         typedef typename _TaskTraits::_AsyncKind _AsyncKind;
         typedef typename _SelectorTaskGenerator<_AsyncKind, _ReturnType> _SelectorTaskGenerator;
+#if _MSC_VER < 1900 || defined(_PPLTASKS_NO_STDFUNC)
         typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, true> _TaskGenerator;
+#else
+    typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, true, _AsyncKind> _TaskGenerator;
+#endif
 
         static const bool _TakesProgress = true;
         static const bool _TakesToken = _TakesToken;
 
+#if _MSC_VER < 1900
         template<typename _Function, typename _ClassPtr>
 #if _MSC_VER >= 1800
         static task<typename _TaskTraits::_TaskRetType> _Generate_Task(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
@@ -7142,24 +7868,38 @@ namespace details
             return _TaskGenerator::_GenerateTask<_Function, _ClassPtr, _ProgressType_abi, _ReturnType>(_Func, _Ptr, _Cts, _pRet);
         }
 #endif
+#endif
     };
 
+#if _MSC_VER < 1900
     template<typename _Function, typename _ProgressType, typename _ReturnType, typename _TaskTraits, bool _TakesToken>
     struct _AsyncAttributes<_Function, _ProgressType, _ReturnType, _TaskTraits, _TakesToken, false>
+#else
+  template<typename _ProgressType, typename _ReturnType, typename _TaskTraits, bool _TakesToken>
+  struct _AsyncAttributes<_ProgressType, _ReturnType, _TaskTraits, _TakesToken, false>
+#endif
     {
         typedef typename ABI::Windows::Foundation::IAsyncOperation<_ReturnType> _AsyncBaseType;
         typedef _Zip _ProgressDelegateType;
         typedef typename ABI::Windows::Foundation::IAsyncOperationCompletedHandler<_ReturnType> _CompletionDelegateType;
         typedef typename _ReturnType _ReturnType;
         typedef typename ABI::Windows::Foundation::Internal::GetAbiType<decltype(_UnwrapAsyncOperationSelector(stdx::declval<_AsyncBaseType*>()))>::type _ReturnType_abi;
+#if _MSC_VER >= 1900
+    typedef _ProgressType _ProgressType;
+#endif
         typedef typename _TaskTraits::_AsyncKind _AsyncKind;
         typedef typename _SelectorTaskGenerator<_AsyncKind, _ReturnType> _SelectorTaskGenerator;
+#if _MSC_VER < 1900 || defined(_PPLTASKS_NO_STDFUNC)
         typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, false> _TaskGenerator;
+#else
+    typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, false, _AsyncKind> _TaskGenerator;
+#endif
 
         static const bool _TakesProgress = false;
         static const bool _TakesToken = _TakesToken;
 
-        template<typename _Function, typename _ClassPtr>
+#if _MSC_VER < 1900
+    template<typename _Function, typename _ClassPtr>
 #if _MSC_VER >= 1800
         static task<typename _TaskTraits::_TaskRetType> _Generate_Task(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, _ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
         {
@@ -7171,10 +7911,16 @@ namespace details
             return _TaskGenerator::_GenerateTask<_Function, _ClassPtr, _ProgressType, _ReturnType>(_Func, _Ptr, _Cts, _pRet);
         }
 #endif
+#endif
     };
 
+#if _MSC_VER < 1900
     template<typename _Function, typename _ProgressType, typename _TaskTraits, bool _TakesToken>
     struct _AsyncAttributes<_Function, _ProgressType, void, _TaskTraits, _TakesToken, true>
+#else
+  template<typename _ProgressType, typename _TaskTraits, bool _TakesToken>
+  struct _AsyncAttributes<_ProgressType, void, _TaskTraits, _TakesToken, true>
+#endif
     {
         typedef typename ABI::Windows::Foundation::IAsyncActionWithProgress<_ProgressType> _AsyncBaseType;
         typedef typename ABI::Windows::Foundation::IAsyncActionProgressHandler<_ProgressType> _ProgressDelegateType;
@@ -7185,12 +7931,16 @@ namespace details
         typedef typename ABI::Windows::Foundation::Internal::GetAbiType<decltype(_UnwrapAsyncActionWithProgressSelector(stdx::declval<_AsyncBaseType*>()))>::type _ProgressType_abi;
         typedef typename _TaskTraits::_AsyncKind _AsyncKind;
         typedef typename _SelectorTaskGenerator<_AsyncKind, _ReturnType> _SelectorTaskGenerator;
-        typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, true> _TaskGenerator;
+#if _MSC_VER < 1900 || defined(_PPLTASKS_NO_STDFUNC)
+    typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, true> _TaskGenerator;
+#else
+    typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, true, _AsyncKind> _TaskGenerator;
+#endif
 
         static const bool _TakesProgress = true;
         static const bool _TakesToken = _TakesToken;
 
-#if _MSC_VER >= 1800
+#if _MSC_VER >= 1800 && _MSC_VER < 1900
         template<typename _Function, typename _ClassPtr>
         static task<void> _Generate_Task(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
         {
@@ -7201,7 +7951,7 @@ namespace details
         {
             return _TaskGenerator::_GenerateTask<_Function, _ClassPtr, _ProgressType_abi>(_Func, _Ptr, _Cts, _pRet, _callstack);
         }
-#else
+#elif _MSC_VER < 1800
         template<typename _Function, typename _ClassPtr>
         static task<void> _Generate_Task(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts)
         {
@@ -7215,22 +7965,34 @@ namespace details
 #endif
     };
 
+#if _MSC_VER < 1900
     template<typename _Function, typename _ProgressType, typename _TaskTraits, bool _TakesToken>
     struct _AsyncAttributes<_Function, _ProgressType, void, _TaskTraits, _TakesToken, false>
+#else
+  template<typename _ProgressType, typename _TaskTraits, bool _TakesToken>
+  struct _AsyncAttributes<_ProgressType, void, _TaskTraits, _TakesToken, false>
+#endif
     {
         typedef typename ABI::Windows::Foundation::IAsyncAction _AsyncBaseType;
         typedef _Zip _ProgressDelegateType;
         typedef typename ABI::Windows::Foundation::IAsyncActionCompletedHandler _CompletionDelegateType;
         typedef void _ReturnType;
         typedef void _ReturnType_abi;
-        typedef typename _TaskTraits::_AsyncKind _AsyncKind;
+#if _MSC_VER >= 1900
+    typedef _ProgressType _ProgressType;
+#endif
+    typedef typename _TaskTraits::_AsyncKind _AsyncKind;
         typedef typename _SelectorTaskGenerator<_AsyncKind, _ReturnType> _SelectorTaskGenerator;
-        typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, false> _TaskGenerator;
+#if _MSC_VER < 1900 || defined(_PPLTASKS_NO_STDFUNC)
+    typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, false> _TaskGenerator;
+#else
+    typedef typename _TaskGenerator<_SelectorTaskGenerator, _TakesToken, false, _AsyncKind> _TaskGenerator;
+#endif
 
         static const bool _TakesProgress = false;
         static const bool _TakesToken = _TakesToken;
 
-#if _MSC_VER >= 1800
+#if _MSC_VER >= 1800 && _MSC_VER < 1900
         template<typename _Function, typename _ClassPtr>
         static task<void> _Generate_Task(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
         {
@@ -7241,7 +8003,7 @@ namespace details
         {
             return _TaskGenerator::_GenerateTask<_Function, _ClassPtr, _ProgressType>(_Func, _Ptr, _Cts, _pRet, _callstack);
         }
-#else
+#elif _MSC_VER < 1800
         template<typename _Function, typename _ClassPtr>
         static task<void> _Generate_Task(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts)
         {
@@ -7265,9 +8027,33 @@ namespace details
         static const bool _TakesProgress = _CAFunctorOptions<_Function>::_TakesProgress;
         static const bool _TakesToken = _CAFunctorOptions<_Function>::_TakesToken;
 
-        typedef typename _TaskTypeTraits<_ReturnType> _TaskTraits;
+#if _MSC_VER < 1900
+    typedef typename _TaskTypeTraits<_ReturnType> _TaskTraits;
         typedef typename _AsyncAttributes<_Function, _ProgressType, typename _TaskTraits::_TaskRetType, _TaskTraits, _TakesToken, _TakesProgress> _AsyncAttributes;
+#else
+    typedef _TaskTypeTraits<_ReturnType> _TaskTraits;
+    typedef _AsyncAttributes<_ProgressType, typename _TaskTraits::_TaskRetType, _TaskTraits, _TakesToken, _TakesProgress> _AsyncAttributes;
+#endif
     };
+
+#if _MSC_VER >= 1900
+  struct _AsyncAttributesTaskGenerator
+  {
+    // _Generate_Task           : A function adapting the user's function into what's necessary to produce the appropriate task
+    template<typename _Function, typename _ClassPtr, typename _AsyncAttributesT>
+    static task<void> _Generate_Task(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, const _TaskCreationCallstack & _callstack)
+    {
+      return _AsyncAttributesT::_TaskGenerator::_GenerateTaskNoRet<_Function, _ClassPtr, _AsyncAttributesT::_ProgressType>(_Func, _Ptr, _Cts, _callstack);
+    }
+
+    template<typename _Function, typename _ClassPtr, typename _AsyncAttributesT>
+    static task<typename _AsyncAttributesT::_ReturnType_abi> _Generate_Task(const _Function& _Func, _ClassPtr _Ptr, Concurrency::cancellation_token_source _Cts, typename _AsyncAttributesT::_ReturnType* _pRet, const _TaskCreationCallstack & _callstack)
+    {
+      return _AsyncAttributesT::_TaskGenerator::_GenerateTask<_Function, _ClassPtr, _AsyncAttributesT::_ProgressType>(_Func, _Ptr, _Cts, _pRet, _callstack);
+    }
+  };
+#endif
+
     // ***************************************************************************
     // AsyncInfo (and completion) Layer:
     //
@@ -7459,11 +8245,27 @@ namespace details
                 hr = _M_completeDelegateContext._CallInContext([=]() -> HRESULT {
                     ABI::Windows::Foundation::AsyncStatus status;
                     HRESULT hr;
-                    if (SUCCEEDED(hr = this->get_Status(&status)))
-                        _M_completeDelegate->Invoke((_Attributes::_AsyncBaseType*)this, status);
-                    _M_completeDelegate = nullptr;
-                    return hr;
-                });
+#if _MSC_VER >= 1900
+          try {
+#endif
+            if (SUCCEEDED(hr = this->get_Status(&status)))
+              _M_completeDelegate->Invoke((_Attributes::_AsyncBaseType*)this, status);
+            _M_completeDelegate = nullptr;
+#if _MSC_VER >= 1900
+          } catch (IRestrictedErrorInfo*& _E) {
+            // Null out the delegate since something went wrong when calling it
+            _M_completeDelegate = nullptr;
+            HRESULT _hr;
+            hr = _E->GetErrorDetails(NULL, &_hr, NULL, NULL);
+            if (SUCCEEDED(hr)) hr = _hr;
+            if (!_IsHRCOMDisconnected(hr))
+            {
+              throw;
+            }
+          }
+#endif
+          return hr;
+        });
             }
             return hr;
         }
@@ -7707,8 +8509,24 @@ namespace details
             if (_M_progressDelegate != nullptr)
             {
                 _M_progressDelegateContext._CallInContext([=]() -> HRESULT {
-                    _M_progressDelegate->Invoke((_Attributes::_AsyncBaseType*)this, _ProgressValue);
-                    return S_OK;
+#if _MSC_VER >= 1900
+          try {
+#endif
+            _M_progressDelegate->Invoke((_Attributes::_AsyncBaseType*)this, _ProgressValue);
+#if _MSC_VER >= 1900
+          } catch (IRestrictedErrorInfo*& _E) {
+            // Null out the delegate since something went wrong when calling it
+            _M_progressDelegate = nullptr;
+            HRESULT _hr;
+            HRESULT hr = _E->GetErrorDetails(NULL, &_hr, NULL, NULL);
+            if (SUCCEEDED(hr)) hr = _hr;
+            if (!_IsHRCOMDisconnected(hr))
+            {
+              throw;
+            }
+          }
+#endif
+          return S_OK;
                 });
             }
         }
@@ -7719,7 +8537,8 @@ namespace details
         typename _Attributes::_ProgressDelegateType* _M_progressDelegate;
     };
 
-    template<typename _Attributes, _AsyncResultType _ResultType = SingleResult>
+#if _MSC_VER < 1900
+  template<typename _Attributes, _AsyncResultType _ResultType = SingleResult>
     class _AsyncBaseProgressLayer abstract : public _AsyncProgressBase<_Attributes, _Attributes::_TakesProgress, _ResultType>
     {
     };
@@ -7848,26 +8667,6 @@ namespace details
     };
 
     template<typename _Attributes>
-    class _AsyncTaskReturn<_Attributes, void, task<void>> abstract : public _AsyncTaskThunkBase<_Attributes, task<void>>
-    {
-    public:
-        template <typename _Function>
-#if _MSC_VER >= 1800
-        void DoCreateTask(_Function _func, const _TaskCreationCallstack & _callstack)
-        {
-            _M_task = _Attributes::_Generate_Task(_func, this, _M_cts, &_M_results, _callstack);
-        }
-#else
-        void DoCreateTask(_Function _func)
-        {
-            _M_task = _Attributes::_Generate_Task(_func, this, _M_cts, &_M_results);
-        }
-#endif
-    protected:
-        task<void> _M_results;
-    };
-
-    template<typename _Attributes>
     class _AsyncTaskThunk : public _AsyncTaskReturn<_Attributes, typename _Attributes::_ReturnType_abi, typename _Attributes::_ReturnType>
     {
     public:
@@ -7892,17 +8691,72 @@ namespace details
             _M_cts.cancel();
         }
     };
+#endif
+
+#if _MSC_VER >= 1900
+  template<typename _Attributes, typename _ReturnType, typename _Return>
+  class _AsyncTaskReturn : public _AsyncProgressBase<typename _Attributes,
+    _Attributes::_TakesProgress>
+  {
+  public:
+    virtual STDMETHODIMP GetResults(typename _Attributes::_ReturnType_abi* results)
+    {
+      HRESULT hr = _CheckValidStateForResultsCall();
+      if (FAILED(hr)) return hr;
+      _M_task.get();
+      *results = _M_results;
+      return S_OK;
+    }
+  protected:
+    template <typename _Function>
+    task<typename _Return> DoCreateTask(_Function _func, Concurrency::cancellation_token_source _cts, const _TaskCreationCallstack & _creationCallstack)
+    {
+      return _AsyncAttributesTaskGenerator::_Generate_Task<_Function, _AsyncTaskReturn<_Attributes, _ReturnType, _Return>*, _Attributes>(_func, this, _cts, &_M_results, _creationCallstack);
+    }
+    task<typename _Attributes::_ReturnType> _M_task;
+    typename _Attributes::_ReturnType _M_results;
+  };
+
+  template<typename _Attributes, typename _ReturnType>
+  class _AsyncTaskReturn<_Attributes, _ReturnType, void> : public _AsyncProgressBase<typename _Attributes,
+    _Attributes::_TakesProgress>
+  {
+  public:
+    virtual STDMETHODIMP GetResults()
+    {
+      HRESULT hr = _CheckValidStateForResultsCall();
+      if (FAILED(hr)) return hr;
+      _M_task.get();
+      return S_OK;
+    }
+  protected:
+    template <typename _Function>
+    task<void> DoCreateTask(_Function _func, Concurrency::cancellation_token_source _cts, const _TaskCreationCallstack & _creationCallstack)
+    {
+      return _AsyncAttributesTaskGenerator::_Generate_Task<_Function, _AsyncTaskReturn<_Attributes, _ReturnType, void>*, _Attributes>(_func, this, _cts, _creationCallstack);
+    }
+    task<typename _Attributes::_ReturnType> _M_task;
+  };
+
+#endif
 
     // ***************************************************************************
     // Async Creation Layer:
     //
     template<typename _Function>
-    class _AsyncTaskGeneratorThunk : public _AsyncTaskThunk<typename _AsyncLambdaTypeTraits<_Function>::_AsyncAttributes>
+    class _AsyncTaskGeneratorThunk :
+#if _MSC_VER < 1900
+    public _AsyncTaskThunk<typename _AsyncLambdaTypeTraits<_Function>::_AsyncAttributes>
+#else
+    public _AsyncTaskReturn<typename _AsyncLambdaTypeTraits<_Function>::_AsyncAttributes, typename _AsyncLambdaTypeTraits<_Function>::_AsyncAttributes::_ReturnType_abi, typename _AsyncLambdaTypeTraits<_Function>::_AsyncAttributes::_ReturnType>
+#endif
     {
     public:
 
         typedef typename _AsyncLambdaTypeTraits<_Function>::_AsyncAttributes _Attributes;
+#if _MSC_VER < 1900
         typedef typename _AsyncTaskThunk<_Attributes> _Base;
+#endif
         typedef typename _Attributes::_AsyncBaseType _AsyncBaseType;
 
 #if _MSC_VER >= 1800
@@ -7916,7 +8770,6 @@ namespace details
         }
 
     protected:
-
         //
         // The only thing we must do different from the base class is we must spin the hot task on transition from Created->Started. Otherwise,
         // let the base thunk handle everything.
@@ -7928,20 +8781,60 @@ namespace details
             // Call the appropriate task generator to actually produce a task of the expected type. This might adapt the user lambda for progress reports,
             // wrap the return result in a task, or allow for direct return of a task depending on the form of the lambda.
             //
+#if _MSC_VER < 1900
 #if _MSC_VER >= 1800
             DoCreateTask<_Function>(_M_func, _M_creationCallstack);
 #else
             DoCreateTask<_Function>(_M_func);
 #endif
             _Base::_OnStart();
+#else
+      _M_task = DoCreateTask(_M_func, _M_cts, _M_creationCallstack);
+      _M_task.then([=](task<typename _Attributes::_ReturnType> _Antecedent) -> HRESULT {
+        try
+        {
+          _Antecedent.get();
+        }
+        catch (Concurrency::task_canceled&)
+        {
+          _TryTransitionToCancelled();
+        }
+        catch (IRestrictedErrorInfo*& _Ex)
+        {
+          HRESULT hr;
+          HRESULT _hr;
+          hr = _Ex->GetErrorDetails(NULL, &_hr, NULL, NULL);
+          if (SUCCEEDED(hr)) hr = _hr;
+          _TryTransitionToError(hr);
+        }
+        catch (...)
+        {
+          _TryTransitionToError(E_FAIL);
+        }
+        return _FireCompletion();
+      });
+#endif
         }
 
         virtual void _OnCancel() override
         {
+#if _MSC_VER < 1900
             _Base::_OnCancel();
+#else
+      _M_cts.cancel();
+#endif
         }
 
+#if _MSC_VER >= 1900
+    virtual void _OnClose() override
+    {
+    }
+#endif
+
     private:
+#if _MSC_VER >= 1900
+    Concurrency::cancellation_token_source _M_cts;
+#endif
 #if _MSC_VER >= 1800
         _TaskCreationCallstack _M_creationCallstack;
 #endif
@@ -8127,7 +9020,14 @@ namespace details
             if (_Task._GetImpl()->_HasUserException())
             {
                 // _Cancel will return false if the TCE is already canceled with or without exception
-                _PParam->_M_completed._Cancel(_Task._GetImpl()->_GetExceptionHolder());
+#if _MSC_VER < 1900
+        _PParam->_M_completed._Cancel(_Task._GetImpl()->_GetExceptionHolder());
+#else
+        if (!_PParam->_M_completed._Cancel(_Task._GetImpl()->_GetExceptionHolder()))
+        {
+          Concurrency::details::atomic_exchange(_Task._GetImpl()->_GetExceptionHolder()->_M_exceptionObserved, 1l);
+        }
+#endif
             }
             else
             {
@@ -8809,8 +9709,8 @@ namespace details
     template<typename _CompletionType, typename _Function, typename _TaskType>
     void _WhenAnyContinuationWrapper(_RunAnyParam<_CompletionType> * _PParam, const _Function & _Func, task<_TaskType>& _Task)
     {
-        bool _IsTokenCancled = !_PParam->_M_fHasExplicitToken && _Task._GetImpl()->_M_pTokenState != Concurrency::details::_CancellationTokenState::_None() && _Task._GetImpl()->_M_pTokenState->_IsCanceled();
-        if (_Task._GetImpl()->_IsCompleted() && !_IsTokenCancled)
+        bool _IsTokenCanceled = !_PParam->_M_fHasExplicitToken && _Task._GetImpl()->_M_pTokenState != Concurrency::details::_CancellationTokenState::_None() && _Task._GetImpl()->_M_pTokenState->_IsCanceled();
+        if (_Task._GetImpl()->_IsCompleted() && !_IsTokenCanceled)
         {
             _Func();
 #if _MSC_VER >= 1800
@@ -8824,10 +9724,10 @@ namespace details
         }
         else
         {
-            _CONCRT_ASSERT(_Task._GetImpl()->_IsCanceled() || _IsTokenCancled);
-            if (_Task._GetImpl()->_HasUserException() && !_IsTokenCancled)
+            _CONCRT_ASSERT(_Task._GetImpl()->_IsCanceled() || _IsTokenCanceled);
+            if (_Task._GetImpl()->_HasUserException())
             {
-                if (_PParam->_M_Completed._StoreException(_Task._GetImpl()->_GetExceptionHolder()))
+                if (!_IsTokenCanceled && _PParam->_M_Completed._StoreException(_Task._GetImpl()->_GetExceptionHolder()))
                 {
                     // This can only enter once.
                     _PParam->_M_exceptionRelatedToken = _Task._GetImpl()->_M_pTokenState;
@@ -8838,6 +9738,13 @@ namespace details
                         _PParam->_M_exceptionRelatedToken->_Reference();
                     }
                 }
+#if _MSC_VER >= 1900
+        else
+        {
+          // Observe exceptions that not picked
+          Concurrency::details::atomic_exchange(_Task._GetImpl()->_GetExceptionHolder()->_M_exceptionObserved, 1l);
+        }
+#endif
             }
 
 #if _MSC_VER >= 1800
