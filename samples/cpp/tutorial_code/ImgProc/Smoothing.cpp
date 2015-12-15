@@ -3,20 +3,14 @@
  * brief Sample code for simple filters
  * author OpenCV team
  */
-#include <iostream>
-#include <vector>
-
 #include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv2/features2d/features2d.hpp"
 
-using namespace std;
 using namespace cv;
 
 /// Global Variables
-int DELAY_CAPTION = 1500;
-int DELAY_BLUR = 100;
+int DELAY_CAPTION = 2000;
+int DELAY_BLUR = 300;
 int MAX_KERNEL_LENGTH = 31;
 
 Mat src; Mat dst;
@@ -103,6 +97,10 @@ int display_caption( const char* caption )
  */
 int display_dst( int delay )
 {
+  float blurriness = calcBlurriness( dst );
+  putText( dst, format( "Blurriness : %f", blurriness ),
+           Point( 50, 50 ),
+           FONT_HERSHEY_COMPLEX, 1, Scalar(255, 255, 255) );
   imshow( window_name, dst );
   int c = waitKey ( delay );
   if( c >= 0 ) { return -1; }

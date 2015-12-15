@@ -1449,6 +1449,22 @@ void cv::blur( InputArray src, OutputArray dst,
     boxFilter( src, dst, -1, ksize, anchor, true, borderType );
 }
 
+float cv::calcBlurriness( InputArray _src, int method )
+{
+    Mat src = _src.getMat();
+
+    if( method == 0 )
+    {
+        Mat Gx, Gy;
+        Sobel( src, Gx, CV_32F, 1, 0 );
+        Sobel( src, Gy, CV_32F, 0, 1 );
+        double normGx = norm( Gx );
+        double normGy = norm( Gy );
+        double sumSq = normGx * normGx + normGy * normGy;
+        return static_cast<float>( 1. / ( sumSq / src.size().area() + 1e-6 ));
+    }
+    return 0;
+}
 
 /****************************************************************************************\
                                     Squared Box Filter
