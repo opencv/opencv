@@ -50,10 +50,10 @@
 #endif
 
 #include <climits>
+#include <algorithm>
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
-#include "opencv2/hal.hpp"
 
 namespace cv
 {
@@ -679,8 +679,11 @@ CV_EXPORTS void setUseIPP(bool flag);
 
 //! @} core_utils
 
+
+
+
 } // cv
 
-#include "opencv2/hal/neon_utils.hpp"
+#include "opencv2/core/neon_utils.hpp"
 
 #endif //__OPENCV_CORE_BASE_HPP__

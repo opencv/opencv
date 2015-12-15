@@ -58,8 +58,6 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 
-#include "opencv2/hal.hpp"
-
 #include <assert.h>
 #include <ctype.h>
 #include <float.h>
@@ -69,6 +67,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <limits>
+#include <float.h>
+#include <cstring>
+#include <cassert>
+
+#define USE_SSE2  (cv::checkHardwareSupport(CV_CPU_SSE))
+#define USE_SSE4_2  (cv::checkHardwareSupport(CV_CPU_SSE4_2))
+#define USE_AVX  (cv::checkHardwareSupport(CV_CPU_AVX))
+#define USE_AVX2  (cv::checkHardwareSupport(CV_CPU_AVX2))
+
+#include "opencv2/core/hal/hal.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/sse_utils.hpp"
+#include "opencv2/core/neon_utils.hpp"
+
+#include "arithm_core.hpp"
+#include "hal_replacement.hpp"
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/core/core_tegra.hpp"
 #else
@@ -77,6 +96,34 @@
 
 namespace cv
 {
+
+// -128.f ... 255.f
+extern const float g_8x32fTab[];
+#define CV_8TO32F(x)  cv::g_8x32fTab[(x)+128]
+
+extern const ushort g_8x16uSqrTab[];
+#define CV_SQR_8U(x)  cv::g_8x16uSqrTab[(x)+255]
+
+extern const uchar g_Saturate8u[];
+#define CV_FAST_CAST_8U(t)   (assert(-256 <= (t) && (t) <= 512), cv::g_Saturate8u[(t)+256])
+#define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
+#define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
+
+template<> inline uchar OpAdd<uchar>::operator ()(uchar a, uchar b) const
+{ return CV_FAST_CAST_8U(a + b); }
+
+template<> inline uchar OpSub<uchar>::operator ()(uchar a, uchar b) const
+{ return CV_FAST_CAST_8U(a - b); }
+
+template<> inline short OpAbsDiff<short>::operator ()(short a, short b) const
+{ return saturate_cast<short>(std::abs(a - b)); }
+
+template<> inline schar OpAbsDiff<schar>::operator ()(schar a, schar b) const
+{ return saturate_cast<schar>(std::abs(a - b)); }
+
+template<> inline uchar OpMin<uchar>::operator ()(uchar a, uchar b) const { return CV_MIN_8U(a, b); }
+
+template<> inline uchar OpMax<uchar>::operator ()(uchar a, uchar b) const { return CV_MAX_8U(a, b); }
 
 typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
                        const uchar* src2, size_t step2,
@@ -99,21 +146,6 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 
 /* maximal average node_count/hash_size ratio beyond which hash table is resized */
 #define  CV_SPARSE_HASH_RATIO    3
-
-
-
-// -128.f ... 255.f
-extern const float g_8x32fTab[];
-#define CV_8TO32F(x)  cv::g_8x32fTab[(x)+128]
-
-extern const ushort g_8x16uSqrTab[];
-#define CV_SQR_8U(x)  cv::g_8x16uSqrTab[(x)+255]
-
-extern const uchar g_Saturate8u[];
-#define CV_FAST_CAST_8U(t)   (assert(-256 <= (t) && (t) <= 512), cv::g_Saturate8u[(t)+256])
-#define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
-#define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
-
 
 #if defined WIN32 || defined _WIN32
 void deleteThreadAllocData();
@@ -281,7 +313,5 @@ cv::Mutex& getInitializationMutex();
 #define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
 }
-
-#include "opencv2/hal/intrin.hpp"
 
 #endif /*_CXCORE_INTERNAL_H_*/
