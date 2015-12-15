@@ -694,7 +694,7 @@ public:
 @param exposure_weight well-exposedness measure weight
  */
 CV_EXPORTS_W Ptr<MergeMertens>
-createMergeMertens(float contrast_weight = 1.0f, float saturation_weight = 1.0f, float exposure_weight = 0.0f);
+createMergeMertens(float contrast_weight = 1.0f, float saturation_weight = 1.0f, float exposure_weight = 1.0f);
 
 /** @brief The resulting HDR image is calculated as weighted average of the exposures considering exposure
 values and camera response.
