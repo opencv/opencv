@@ -1,6 +1,6 @@
 set(the_description "The ts module")
 
-if(IOS)
+if(NOT BUILD_opencv_ts AND NOT BUILD_TESTS AND NOT BUILD_PERF_TESTS)
   ocv_module_disable(ts)
 endif()
 
