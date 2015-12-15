@@ -829,19 +829,19 @@ otherwise, its type will be CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()).
 */
 CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, int dtype = -1);
 
-/** @brief Creates one multichannel array out of several single-channel ones.
+/** @brief Creates one multi-channel array out of several single-channel ones.
 
-The functions merge merge several arrays to make a single multi-channel array. That is, each
+The function merge merges several arrays to make a single multi-channel array. That is, each
 element of the output array will be a concatenation of the elements of the input arrays, where
 elements of i-th input array are treated as mv[i].channels()-element vectors.
 
-The function split does the reverse operation. If you need to shuffle channels in some other
-advanced way, use mixChannels .
+The function cv::split does the reverse operation. If you need to shuffle channels in some other
+advanced way, use cv::mixChannels.
 @param mv input array of matrices to be merged; all the matrices in mv must have the same
 size and the same depth.
 @param count number of input matrices when mv is a plain C array; it must be greater than zero.
 @param dst output array of the same size and the same depth as mv[0]; The number of channels will
-be the total number of channels in the matrix array.
+be equal to the parameter count.
 @sa  mixChannels, split, Mat::reshape
 */
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
