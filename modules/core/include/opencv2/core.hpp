@@ -72,6 +72,7 @@
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
+        @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
     @}
     @defgroup core_opengl OpenGL interoperability
@@ -80,6 +81,16 @@
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
     @defgroup core_opencl OpenCL support
+    @defgroup core_va_intel Intel VA-API/OpenCL (CL-VA) interoperability
+    @defgroup core_hal Hardware Acceleration Layer
+    @{
+        @defgroup core_hal_functions Functions
+        @defgroup core_hal_interface Interface
+        @defgroup core_hal_intrin Universal intrinsics
+        @{
+            @defgroup core_hal_intrin_impl Private implementation helpers
+        @}
+    @}
 @}
  */
 

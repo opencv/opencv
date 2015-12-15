@@ -52,22 +52,22 @@ namespace cv
 
 int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    return hal::LU(A, astep, m, b, bstep, n);
+    return hal::LU32f(A, astep, m, b, bstep, n);
 }
 
 int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    return hal::LU(A, astep, m, b, bstep, n);
+    return hal::LU64f(A, astep, m, b, bstep, n);
 }
 
 bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    return hal::Cholesky(A, astep, m, b, bstep, n);
+    return hal::Cholesky32f(A, astep, m, b, bstep, n);
 }
 
 bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    return hal::Cholesky(A, astep, m, b, bstep, n);
+    return hal::Cholesky64f(A, astep, m, b, bstep, n);
 }
 
 template<typename _Tp> static inline _Tp hypot(_Tp a, _Tp b)
@@ -740,7 +740,7 @@ double cv::determinant( InputArray _mat )
             Mat a(rows, rows, CV_32F, (uchar*)buffer);
             mat.copyTo(a);
 
-            result = hal::LU(a.ptr<float>(), a.step, rows, 0, 0, 0);
+            result = hal::LU32f(a.ptr<float>(), a.step, rows, 0, 0, 0);
             if( result )
             {
                 for( int i = 0; i < rows; i++ )
@@ -764,7 +764,7 @@ double cv::determinant( InputArray _mat )
             Mat a(rows, rows, CV_64F, (uchar*)buffer);
             mat.copyTo(a);
 
-            result = hal::LU(a.ptr<double>(), a.step, rows, 0, 0, 0);
+            result = hal::LU64f(a.ptr<double>(), a.step, rows, 0, 0, 0);
             if( result )
             {
                 for( int i = 0; i < rows; i++ )
@@ -1027,13 +1027,13 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
     setIdentity(dst);
 
     if( method == DECOMP_LU && type == CV_32F )
-        result = hal::LU(src1.ptr<float>(), src1.step, n, dst.ptr<float>(), dst.step, n) != 0;
+        result = hal::LU32f(src1.ptr<float>(), src1.step, n, dst.ptr<float>(), dst.step, n) != 0;
     else if( method == DECOMP_LU && type == CV_64F )
-        result = hal::LU(src1.ptr<double>(), src1.step, n, dst.ptr<double>(), dst.step, n) != 0;
+        result = hal::LU64f(src1.ptr<double>(), src1.step, n, dst.ptr<double>(), dst.step, n) != 0;
     else if( method == DECOMP_CHOLESKY && type == CV_32F )
-        result = hal::Cholesky(src1.ptr<float>(), src1.step, n, dst.ptr<float>(), dst.step, n);
+        result = hal::Cholesky32f(src1.ptr<float>(), src1.step, n, dst.ptr<float>(), dst.step, n);
     else
-        result = hal::Cholesky(src1.ptr<double>(), src1.step, n, dst.ptr<double>(), dst.step, n);
+        result = hal::Cholesky64f(src1.ptr<double>(), src1.step, n, dst.ptr<double>(), dst.step, n);
 
     if( !result )
         dst = Scalar(0);
@@ -1265,16 +1265,16 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
     if( method == DECOMP_LU )
     {
         if( type == CV_32F )
-            result = hal::LU(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb) != 0;
+            result = hal::LU32f(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb) != 0;
         else
-            result = hal::LU(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb) != 0;
+            result = hal::LU64f(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb) != 0;
     }
     else if( method == DECOMP_CHOLESKY )
     {
         if( type == CV_32F )
-            result = hal::Cholesky(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb);
+            result = hal::Cholesky32f(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb);
         else
-            result = hal::Cholesky(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb);
+            result = hal::Cholesky64f(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb);
     }
     else
     {

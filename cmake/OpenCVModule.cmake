@@ -655,6 +655,8 @@ macro(ocv_glob_module_sources)
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.h"
   )
   file(GLOB lib_hdrs_detail
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.hpp"
