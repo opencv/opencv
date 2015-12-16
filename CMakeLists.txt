@@ -1178,14 +1178,12 @@ status("    Java tests:"    BUILD_TESTS AND opencv_test_java_BINARY_DIR         
 
 # ========================= matlab =========================
 status("")
-if(WITH_MATLAB AND MATLAB_FOUND)
+if(MATLAB_FOUND)
   status("  Matlab:")
   status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
-  if (MATLAB_FOUND)
-    status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
-  endif()
+  status("    Compiler/generator:" MEX_WORKS   THEN  "Working"                ELSE "Not working (bindings will not be generated)")
 else()
-  status("  Matlab:"   WITH_MATLAB AND NOT MATLAB_FOUND THEN "Matlab not found or implicitly disabled" ELSE NO)
+  status("  Matlab:"        WITH_MATLAB AND NOT MATLAB_FOUND THEN "Matlab not found or implicitly disabled" ELSE NO)
 endif()
 
 # ========================== documentation ==========================
