@@ -35,7 +35,9 @@ if __name__ == '__main__':
     hog = cv2.HOGDescriptor()
     hog.setSVMDetector( cv2.HOGDescriptor_getDefaultPeopleDetector() )
 
-    for fn in it.chain(*map(glob, sys.argv[1:])):
+
+    default = ['../data/basketball2.png '] if len(sys.argv[1:]) == 0 else []
+    for fn in it.chain(*map(glob, default + sys.argv[1:])):
         print(fn, ' - ',)
         try:
             img = cv2.imread(fn)

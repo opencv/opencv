@@ -182,7 +182,7 @@ if __name__ == '__main__':
     if len(sources) == 0:
         sources = [ 0 ]
 
-    caps = map(create_capture, sources)
+    caps = list(map(create_capture, sources))
     shot_idx = 0
     while True:
         imgs = []

@@ -94,4 +94,6 @@ extern const float icv8x32fSqrTab[];
 #include "_geom.h"
 #include "filterengine.hpp"
 
+#include "opencv2/hal/sse_utils.hpp"
+
 #endif /*__OPENCV_CV_INTERNAL_H_*/

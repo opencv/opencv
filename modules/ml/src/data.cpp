@@ -253,7 +253,7 @@ public:
         if( !sampleIdx.empty() )
         {
             CV_Assert( (sampleIdx.checkVector(1, CV_32S, true) > 0 &&
-                       checkRange(sampleIdx, true, 0, 0, nsamples-1)) ||
+                       checkRange(sampleIdx, true, 0, 0, nsamples)) ||
                        sampleIdx.checkVector(1, CV_8U, true) == nsamples );
             if( sampleIdx.type() == CV_8U )
                 sampleIdx = convertMaskToIdx(sampleIdx);

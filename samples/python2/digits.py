@@ -23,6 +23,10 @@ Usage:
    digits.py
 '''
 
+
+# Python 2/3 compatibility
+from __future__ import print_function
+
 # built-in modules
 from multiprocessing.pool import ThreadPool
 
@@ -50,7 +54,7 @@ def split2d(img, cell_size, flatten=True):
     return cells
 
 def load_digits(fn):
-    print 'loading "%s" ...' % fn
+    print('loading "%s" ...' % fn)
     digits_img = cv2.imread(fn, 0)
     digits = split2d(digits_img, (SZ, SZ))
     labels = np.repeat(np.arange(CLASS_N), len(digits)/CLASS_N)
@@ -67,7 +71,7 @@ def deskew(img):
 
 class StatModel(object):
     def load(self, fn):
-        self.model.load(fn)
+        self.model.load(fn)  # Known bug: https://github.com/Itseez/opencv/issues/4969
     def save(self, fn):
         self.model.save(fn)
 
@@ -95,20 +99,20 @@ class SVM(StatModel):
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
-        return self.model.predict(samples)[1][0].ravel()
+        return self.model.predict(samples)[1].ravel()
 
 
 def evaluate_model(model, digits, samples, labels):
     resp = model.predict(samples)
     err = (labels != resp).mean()
-    print 'error: %.2f %%' % (err*100)
+    print('error: %.2f %%' % (err*100))
 
     confusion = np.zeros((10, 10), np.int32)
     for i, j in zip(labels, resp):
         confusion[i, j] += 1
-    print 'confusion matrix:'
-    print confusion
-    print
+    print('confusion matrix:')
+    print(confusion)
+    print()
 
     vis = []
     for img, flag in zip(digits, resp == labels):
@@ -145,17 +149,17 @@ def preprocess_hog(digits):
 
 
 if __name__ == '__main__':
-    print __doc__
+    print(__doc__)
 
     digits, labels = load_digits(DIGITS_FN)
 
-    print 'preprocessing...'
+    print('preprocessing...')
     # shuffle digits
     rand = np.random.RandomState(321)
     shuffle = rand.permutation(len(digits))
     digits, labels = digits[shuffle], labels[shuffle]
 
-    digits2 = map(deskew, digits)
+    digits2 = list(map(deskew, digits))
     samples = preprocess_hog(digits2)
 
     train_n = int(0.9*len(samples))
@@ -165,18 +169,18 @@ if __name__ == '__main__':
     labels_train, labels_test = np.split(labels, [train_n])
 
 
-    print 'training KNearest...'
+    print('training KNearest...')
     model = KNearest(k=4)
     model.train(samples_train, labels_train)
     vis = evaluate_model(model, digits_test, samples_test, labels_test)
     cv2.imshow('KNearest test', vis)
 
-    print 'training SVM...'
+    print('training SVM...')
     model = SVM(C=2.67, gamma=5.383)
     model.train(samples_train, labels_train)
     vis = evaluate_model(model, digits_test, samples_test, labels_test)
     cv2.imshow('SVM test', vis)
-    print 'saving SVM as "digits_svm.dat"...'
+    print('saving SVM as "digits_svm.dat"...')
     model.save('digits_svm.dat')
 
     cv2.waitKey(0)

@@ -14,6 +14,7 @@ Usage:
 from __future__ import print_function
 
 import cv2
+import numpy as np
 
 # relative module
 import video
@@ -45,7 +46,7 @@ if __name__ == '__main__':
         thrs2 = cv2.getTrackbarPos('thrs2', 'edge')
         edge = cv2.Canny(gray, thrs1, thrs2, apertureSize=5)
         vis = img.copy()
-        vis /= 2
+        vis = np.uint8(vis/2.)
         vis[edge != 0] = (0, 255, 0)
         cv2.imshow('edge', vis)
         ch = cv2.waitKey(5) & 0xFF
