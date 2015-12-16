@@ -3902,7 +3902,7 @@ protected:
             if (e.capacity_ >= size)
             {
                 size_t diff = e.capacity_ - size;
-                if (diff < size / 8 && (result_pos == reservedEntries_.end() || diff < minDiff))
+                if (diff < std::max((size_t)4096, size / 8) && (result_pos == reservedEntries_.end() || diff < minDiff))
                 {
                     minDiff = diff;
                     result_pos = i;
@@ -3941,12 +3941,8 @@ protected:
     inline size_t _allocationGranularity(size_t size)
     {
         // heuristic values
-        if (size < 1024)
-            return 16;
-        else if (size < 64*1024)
-            return 64;
-        else if (size < 1024*1024)
-            return 4096;
+        if (size < 1024*1024)
+            return 4096;  // don't work with buffers smaller than 4Kb (hidden allocation overhead issue)
         else if (size < 16*1024*1024)
             return 64*1024;
         else
