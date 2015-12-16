@@ -74,7 +74,7 @@ This section describes approaches based on local 2D features and used to categor
    -   A complete Bag-Of-Words sample can be found at
         opencv_source_code/samples/cpp/bagofwords_classification.cpp
     -   (Python) An example using the features2D framework to perform object categorization can be
-        found at opencv_source_code/samples/python2/find_obj.py
+        found at opencv_source_code/samples/python/find_obj.py
 
   @}
  */
@@ -331,7 +331,7 @@ than union-find method; it actually get 1.5~2m/s on my centrino L7200 1.2GHz lap
 than grey image method ( 3~4 times ); the chi_table.h file is taken directly from paper's source
 code which is distributed under GPL.
 
-- (Python) A complete example showing the use of the %MSER detector can be found at samples/python2/mser.py
+- (Python) A complete example showing the use of the %MSER detector can be found at samples/python/mser.py
 */
 class CV_EXPORTS_W MSER : public Feature2D
 {

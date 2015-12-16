@@ -380,11 +380,11 @@ class can be used: :
 -   Another basic video processing sample can be found at
     opencv_source_code/samples/cpp/video_dmtx.cpp
 -   (Python) A basic sample on using the VideoCapture interface can be found at
-    opencv_source_code/samples/python2/video.py
+    opencv_source_code/samples/python/video.py
 -   (Python) Another basic video processing sample can be found at
-    opencv_source_code/samples/python2/video_dmtx.py
+    opencv_source_code/samples/python/video_dmtx.py
 -   (Python) A multi threaded video processing sample can be found at
-    opencv_source_code/samples/python2/video_threaded.py
+    opencv_source_code/samples/python/video_threaded.py
  */
 class CV_EXPORTS_W VideoCapture
 {
