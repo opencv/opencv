@@ -91,9 +91,9 @@ if __name__ == '__main__':
     # calculate camera distortion
     rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h), None, None)
 
-    # print("RMS:", rms)
-    # print("camera matrix:\n", camera_matrix)
-    # print("distortion coefficients: ", dist_coefs.ravel())
+    print("\nRMS:", rms)
+    print("camera matrix:\n", camera_matrix)
+    print("distortion coefficients: ", dist_coefs.ravel())
 
     # undistort the image with the calibration
     print('')
