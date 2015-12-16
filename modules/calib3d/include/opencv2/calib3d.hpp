@@ -175,7 +175,7 @@ pattern (every view is described by several 3D-2D point correspondences).
     -   A calibration example on stereo matching can be found at
         opencv_source_code/samples/cpp/stereo_match.cpp
     -   (Python) A camera calibration sample can be found at
-        opencv_source_code/samples/python2/calibrate.py
+        opencv_source_code/samples/python/calibrate.py
 
   @{
     @defgroup calib3d_fisheye Fisheye camera model
@@ -553,7 +553,7 @@ projections, as well as the camera matrix and the distortion coefficients.
 
 @note
    -   An example of how to use solvePnP for planar augmented reality can be found at
-        opencv_source_code/samples/python2/plane_ar.py
+        opencv_source_code/samples/python/plane_ar.py
    -   If you are using Python:
         - Numpy array slices won't work as input because solvePnP requires contiguous
         arrays (enforced by the assertion using cv::Mat::checkVector() around line 55 of
@@ -1674,7 +1674,7 @@ check, quadratic interpolation and speckle filtering).
 
 @note
    -   (Python) An example illustrating the use of the StereoSGBM matching algorithm can be found
-        at opencv_source_code/samples/python2/stereo_match.py
+        at opencv_source_code/samples/python/stereo_match.py
  */
 class CV_EXPORTS_W StereoSGBM : public StereoMatcher
 {
