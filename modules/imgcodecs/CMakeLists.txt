@@ -83,7 +83,6 @@ file(GLOB imgcodecs_ext_hdrs
      )
 
 if(IOS)
-  add_definitions(-DHAVE_IOS=1)
   list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/ios_conversions.mm)
   list(APPEND IMGCODECS_LIBRARIES "-framework Accelerate" "-framework CoreGraphics" "-framework CoreImage" "-framework QuartzCore" "-framework AssetsLibrary")
 endif()
