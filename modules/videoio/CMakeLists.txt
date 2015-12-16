@@ -189,7 +189,6 @@ if(HAVE_GPHOTO2)
 endif(HAVE_GPHOTO2)
 
 if(IOS)
-  add_definitions(-DHAVE_IOS=1)
   list(APPEND videoio_srcs
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_abstract_camera.mm
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_photo_camera.mm
