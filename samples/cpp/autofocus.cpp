@@ -43,11 +43,11 @@ const double epsylon = 0.0005; // compression, noice, etc.
 
 struct Args_t
 {
-    const char * deviceName;
-    const char * output;
-    unsigned int fps;
-    unsigned int minimumFocusStep;
-    unsigned int breakLimit;
+    string deviceName;
+    string output;
+    int fps;
+    int minimumFocusStep;
+    int breakLimit;
     bool measure;
     bool verbose;
 } GlobalArgs;
@@ -218,12 +218,12 @@ static void showHelp(const char * pName, bool welcomeMsg)
         cout << "usage " << pName << ": [OPTIONS] DEVICE_NAME\n\n"
                 "OPTIONS:\n"
                 "\t-h\t\treturns this help message,\n"
-                "\t-o FILENAME\tsave output video in file (MJPEG only),\n"
-                "\t-f FPS\t\tframes per second in output video,\n"
+                "\t-o=<FILENAME>\tsave output video in file (MJPEG only),\n"
+                "\t-f=FPS\t\tframes per second in output video,\n"
                 "\t-m\t\tmeasure exposition\n"
                 "\t\t\t(returns rates from closest focus to INTY\n"
                 "\t\t\tfor every minimum step),\n"
-                "\t-d INT\t\tset minimum focus step,\n"
+                "\t-d=<INT>\t\tset minimum focus step,\n"
                 "\t-v\t\tverbose mode.\n\n\n"
                 "DEVICE_NAME\t\tis your digital camera model substring.\n\n\n"
                 "On runtime you can use keys to control:\n";
@@ -244,60 +244,36 @@ static void showHelp(const char * pName, bool welcomeMsg)
 
 static bool parseArguments(int argc, char ** argv)
 {
-    int index;
-    GlobalArgs.deviceName = "Nikon";
-    GlobalArgs.output = NULL;
-    GlobalArgs.fps = DEFAULT_OUTPUT_FPS;
-    GlobalArgs.minimumFocusStep = 0;
+    cv::CommandLineParser parser(argc, argv, "{h help ||}{o||}{f||}{m||}{d|0|}{v||}{@device|Nikon|}");
+    if (parser.has("help"))
+        return false;
     GlobalArgs.breakLimit = DEFAULT_BREAK_LIMIT;
-    GlobalArgs.measure = false;
-    GlobalArgs.verbose = false;
-
-    for (index = 1; index < argc; index++)
+    if (parser.has("o"))
+        GlobalArgs.output = parser.get<string>("o");
+    else
+        GlobalArgs.output = "";
+    if (parser.has("f"))
+        GlobalArgs.fps = parser.get<int>("f");
+    else
+        GlobalArgs.fps = DEFAULT_OUTPUT_FPS;
+    GlobalArgs.measure = parser.has("m");
+    GlobalArgs.verbose = parser.has("v");
+    GlobalArgs.minimumFocusStep = parser.get<int>("d");
+    GlobalArgs.deviceName = parser.get<string>("@device");
+    if (!parser.check())
     {
-        const char * arg = argv[index];
-        if (strcmp(arg, "-h") == 0)
-        {
-            return false;
-        }
-        else if (strcmp(arg, "-o") == 0)
-        {
-            GlobalArgs.output = argv[++index];
-        }
-        else if (strcmp(arg, "-f") == 0)
-        {
-            if (sscanf(argv[++index], "%u", &GlobalArgs.fps) != 1
-                    || GlobalArgs.fps <= 0)
-            {
-                cerr << "Invalid fps argument." << endl;
-                return false;
-            }
-        }
-        else if (strcmp(arg, "-m") == 0)
-        {
-            GlobalArgs.measure = true;
-        }
-        else if (strcmp(arg, "-v") == 0)
-        {
-            GlobalArgs.verbose = true;
-        }
-        else if (strcmp(arg, "-d") == 0)
-        {
-            if (sscanf(argv[++index], "%u", &GlobalArgs.minimumFocusStep) != 1
-                    || GlobalArgs.minimumFocusStep <= 0)
-            {
-                cerr << "Invalid minimum focus step argument." << endl;
-                return false;
-            }
-        }
-        else if (arg[0] != '-')
-        {
-            GlobalArgs.deviceName = arg;
-        }
-        else
-        {
-            cerr << "Unknown option " << arg << endl;
-        }
+        parser.printErrors();
+        return false;
+    }
+    if (GlobalArgs.fps < 0)
+    {
+        cerr << "Invalid fps argument." << endl;
+        return false;
+    }
+    if (GlobalArgs.minimumFocusStep < 0)
+    {
+        cerr << "Invalid minimum focus step argument." << endl;
+        return false;
     }
     return true;
 }
@@ -343,7 +319,7 @@ int main(int argc, char ** argv)
     cap.set(CAP_PROP_GPHOTO2_PREVIEW, true);
     cap.set(CAP_PROP_VIEWFINDER, true);
     cap >> frame; // To check PREVIEW output Size.
-    if (GlobalArgs.output != NULL)
+    if (!GlobalArgs.output.empty())
     {
         Size S = Size((int) cap.get(CAP_PROP_FRAME_WIDTH), (int) cap.get(CAP_PROP_FRAME_HEIGHT));
         int fourCC = CV_FOURCC('M', 'J', 'P', 'G');
@@ -375,7 +351,7 @@ int main(int argc, char ** argv)
         {
             break;
         }
-        if (GlobalArgs.output != NULL)
+        if (!GlobalArgs.output.empty())
         {
             videoWriter << frame;
         }

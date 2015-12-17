@@ -25,9 +25,14 @@ static void help()
 }
 
 
-int main(int,char**)
+int main(int argc, char** argv)
 {
-    help();
+    cv::CommandLineParser parser(argc, argv, "{help h||}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     Mat I = Mat::eye(4, 4, CV_64F);
     I.at<double>(1,1) = CV_PI;
     cout << "I = \n" << I << ";" << endl << endl;

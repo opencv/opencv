@@ -9,14 +9,14 @@
 using namespace cv;
 using namespace std;
 
-static bool g_printStreamSetting        = false;
-static int g_imageStreamProfileIdx      = -1;
-static int g_depthStreamProfileIdx      = -1;
-static bool g_irStreamShow              = false;
-static double g_imageBrightness         = -DBL_MAX;
-static double g_imageContrast           = -DBL_MAX;
-static bool g_printTiming               = false;
-static bool g_showClosedPoint           = false;
+static bool g_printStreamSetting;
+static int g_imageStreamProfileIdx;
+static int g_depthStreamProfileIdx;
+static bool g_irStreamShow;
+static double g_imageBrightness;
+static double g_imageContrast;
+static bool g_printTiming;
+static bool g_showClosedPoint;
 
 
 static int g_closedDepthPoint[2];
@@ -31,13 +31,13 @@ static void printUsage(const char *arg0)
     filename++;
 
     cout << "This program demonstrates usage of camera supported\nby Intel Perceptual computing SDK." << endl << endl;
-    cout << "usage: " << filename << "[-ps] [-isp IDX] [-dsp IDX]\n [-ir] [-imb VAL] [-imc VAL]" << endl << endl;
+    cout << "usage: " << filename << "[-ps] [-isp=IDX] [-dsp=IDX]\n [-ir] [-imb=VAL] [-imc=VAL]" << endl << endl;
     cout << "   -ps,            print streams setting and profiles" << endl;
-    cout << "   -isp IDX,       set profile index of the image stream" << endl;
-    cout << "   -dsp IDX,       set profile index of the depth stream" << endl;
+    cout << "   -isp=IDX,       set profile index of the image stream" << endl;
+    cout << "   -dsp=IDX,       set profile index of the depth stream" << endl;
     cout << "   -ir,            show data from IR stream" << endl;
-    cout << "   -imb VAL,       set brighness value for a image stream" << endl;
-    cout << "   -imc VAL,       set contrast value for a image stream" << endl;
+    cout << "   -imb=VAL,       set brighness value for a image stream" << endl;
+    cout << "   -imc=VAL,       set contrast value for a image stream" << endl;
     cout << "   -pts,           print frame index and frame time" << endl;
     cout << "   --show-closed,  print frame index and frame time" << endl;
     cout <<  endl;
@@ -45,62 +45,40 @@ static void printUsage(const char *arg0)
 
 static void parseCMDLine(int argc, char* argv[])
 {
-    if( argc == 1 )
+    cv::CommandLineParser parser(argc, argv,
+        "{ h help | | }"
+        "{ ps print-streams | | }"
+        "{ isp image-stream-prof | -1 | }"
+        "{ dsp depth-stream-prof | -1 | }"
+        "{ir||}{imb||}{imc||}{pts||}{show-closed||}");
+    if (parser.has("h"))
     {
         printUsage(argv[0]);
+        exit(0);
     }
+    g_printStreamSetting = parser.has("ps");
+    g_imageStreamProfileIdx = parser.get<int>("isp");
+    g_depthStreamProfileIdx = parser.get<int>("dsp");
+    g_irStreamShow = parser.has("ir");
+    if (parser.has("imb"))
+        g_imageBrightness = parser.get<double>("imb");
     else
+        g_imageBrightness = -DBL_MAX;
+    if (parser.has("imc"))
+        g_imageContrast = parser.get<double>("imc");
+    else
+        g_imageContrast = -DBL_MAX;
+    g_printTiming = parser.has("pts");
+    g_showClosedPoint = parser.has("show-closed");
+    if (!parser.check())
     {
-        for( int i = 1; i < argc; i++ )
-        {
-            if ((0 == strcmp(argv[i], "--help")) || (0 == strcmp( argv[i], "-h")))
-            {
-                printUsage(argv[0]);
-                exit(0);
-            }
-            else if ((0 == strcmp( argv[i], "--print-streams")) || (0 == strcmp( argv[i], "-ps")))
-            {
-                g_printStreamSetting = true;
-            }
-            else if ((0 == strcmp( argv[i], "--image-stream-prof")) || (0 == strcmp( argv[i], "-isp")))
-            {
-                g_imageStreamProfileIdx = atoi(argv[++i]);
-            }
-            else if ((0 == strcmp( argv[i], "--depth-stream-prof")) || (0 == strcmp( argv[i], "-dsp")))
-            {
-                g_depthStreamProfileIdx = atoi(argv[++i]);
-            }
-            else if (0 == strcmp( argv[i], "-ir"))
-            {
-                g_irStreamShow = true;
-            }
-            else if (0 == strcmp( argv[i], "-imb"))
-            {
-                g_imageBrightness = atof(argv[++i]);
-            }
-            else if (0 == strcmp( argv[i], "-imc"))
-            {
-                g_imageContrast = atof(argv[++i]);
-            }
-            else if (0 == strcmp(argv[i], "-pts"))
-            {
-                g_printTiming = true;
-            }
-            else if (0 == strcmp(argv[i], "--show-closed"))
-            {
-                g_showClosedPoint = true;
-            }
-            else
-            {
-                cout << "Unsupported command line argument: " << argv[i] << "." << endl;
-                exit(-1);
-            }
-        }
-        if (g_showClosedPoint && (-1 == g_depthStreamProfileIdx))
-        {
-            cerr << "For --show-closed depth profile has be selected" << endl;
-            exit(-1);
-        }
+        parser.printErrors();
+        exit(-1);
+    }
+    if (g_showClosedPoint && (-1 == g_depthStreamProfileIdx))
+    {
+        cerr << "For --show-closed depth profile has be selected" << endl;
+        exit(-1);
     }
 }
 

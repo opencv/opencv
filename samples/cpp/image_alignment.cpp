@@ -53,6 +53,7 @@ const std::string keys =
     "{m motionType   | affine        | type of motion (translation, euclidean, affine, homography) }"
     "{v verbose      | 0             | display initial and final images }"
     "{w warpedImfile | warpedECC.png | warped input image }"
+    "{h help | | print help message }"
 ;
 
 
@@ -176,12 +177,17 @@ int main (const int argc, const char * argv[])
     CommandLineParser parser(argc, argv, keys);
     parser.about("ECC demo");
 
-    if (argc<2) {
+    if (argc < 2) {
         parser.printMessage();
         help();
         return 1;
     }
-
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        help();
+        return 1;
+    }
     string imgFile = parser.get<string>(0);
     string tempImgFile = parser.get<string>(1);
     string inWarpFile = parser.get<string>(2);
@@ -192,7 +198,11 @@ int main (const int argc, const char * argv[])
     int verbose = parser.get<int>("v");
     string finalWarp = parser.get<string>("o");
     string warpedImFile = parser.get<string>("w");
-
+    if (!parser.check())
+    {
+        parser.printErrors();
+        return -1;
+    }
     if (!(warpType == "translation" || warpType == "euclidean"
         || warpType == "affine" || warpType == "homography"))
     {
