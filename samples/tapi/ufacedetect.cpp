@@ -36,56 +36,37 @@ int main( int argc, const char** argv )
     VideoCapture capture;
     UMat frame, image;
     Mat canvas;
-    const string scaleOpt = "--scale=";
-    size_t scaleOptLen = scaleOpt.length();
-    const string cascadeOpt = "--cascade=";
-    size_t cascadeOptLen = cascadeOpt.length();
-    const string nestedCascadeOpt = "--nested-cascade";
-    size_t nestedCascadeOptLen = nestedCascadeOpt.length();
-    const string tryFlipOpt = "--try-flip";
-    size_t tryFlipOptLen = tryFlipOpt.length();
-    String inputName;
-    bool tryflip = false;
 
-    help();
+    string inputName;
+    bool tryflip;
 
     CascadeClassifier cascade, nestedCascade;
-    double scale = 1;
+    double scale;
 
-    for( int i = 1; i < argc; i++ )
+    cv::CommandLineParser parser(argc, argv,
+        "{cascade|../../data/haarcascades/haarcascade_frontalface_alt.xml|}"
+        "{nested-cascade|../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|}"
+        "{help h ||}{scale|1|}{try-flip||}{@filename||}"
+    );
+    if (parser.has("help"))
     {
-        cout << "Processing " << i << " " <<  argv[i] << endl;
-        if( cascadeOpt.compare( 0, cascadeOptLen, argv[i], cascadeOptLen ) == 0 )
-        {
-            cascadeName.assign( argv[i] + cascadeOptLen );
-            cout << "  from which we have cascadeName= " << cascadeName << endl;
-        }
-        else if( nestedCascadeOpt.compare( 0, nestedCascadeOptLen, argv[i], nestedCascadeOptLen ) == 0 )
-        {
-            if( argv[i][nestedCascadeOpt.length()] == '=' )
-                nestedCascadeName.assign( argv[i] + nestedCascadeOpt.length() + 1 );
-            if( !nestedCascade.load( nestedCascadeName ) )
-                cerr << "WARNING: Could not load classifier cascade for nested objects" << endl;
-        }
-        else if( scaleOpt.compare( 0, scaleOptLen, argv[i], scaleOptLen ) == 0 )
-        {
-            if( !sscanf( argv[i] + scaleOpt.length(), "%lf", &scale ) )
-                scale = 1;
-            cout << " from which we read scale = " << scale << endl;
-        }
-        else if( tryFlipOpt.compare( 0, tryFlipOptLen, argv[i], tryFlipOptLen ) == 0 )
-        {
-            tryflip = true;
-            cout << " will try to flip image horizontally to detect assymetric objects\n";
-        }
-        else if( argv[i][0] == '-' )
-        {
-            cerr << "WARNING: Unknown option " << argv[i] << endl;
-        }
-        else
-            inputName = argv[i];
+        help();
+        return 0;
+    }
+    cascadeName = parser.get<string>("cascade");
+    nestedCascadeName = parser.get<string>("nested-cascade");
+    scale = parser.get<double>("scale");
+    tryflip = parser.has("try-flip");
+    inputName = parser.get<string>("@filename");
+    if ( !parser.check())
+    {
+        parser.printErrors();
+        help();
+        return -1;
     }
 
+    if ( !nestedCascade.load( nestedCascadeName ) )
+        cerr << "WARNING: Could not load classifier cascade for nested objects" << endl;
     if( !cascade.load( cascadeName ) )
     {
         cerr << "ERROR: Could not load classifier cascade" << endl;
@@ -95,9 +76,9 @@ int main( int argc, const char** argv )
 
     cout << "old cascade: " << (cascade.isOldFormatCascade() ? "TRUE" : "FALSE") << endl;
 
-    if( inputName.empty() || (isdigit(inputName.c_str()[0]) && inputName.c_str()[1] == '\0') )
+    if( inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1) )
     {
-        int c = inputName.empty() ? 0 : inputName.c_str()[0] - '0';
+        int c = inputName.empty() ? 0 : inputName[0] - '0';
         if(!capture.open(c))
             cout << "Capture from camera #" <<  c << " didn't work" << endl;
     }

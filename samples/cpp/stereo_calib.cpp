@@ -50,7 +50,7 @@ static int print_help()
             "         matrix separately) stereo. \n"
             " Calibrate the cameras and display the\n"
             " rectified results along with the computed disparity images.   \n" << endl;
-    cout << "Usage:\n ./stereo_calib -w board_width -h board_height [-nr /*dot not view results*/] <image list XML/YML file>\n" << endl;
+    cout << "Usage:\n ./stereo_calib -w=<board_width default=9> -h=<board_height default=6> <image list XML/YML file default=../data/stereo_calib.xml>\n" << endl;
     return 0;
 }
 
@@ -347,50 +347,19 @@ int main(int argc, char** argv)
 {
     Size boardSize;
     string imagelistfn;
-    bool showRectified = true;
-
-    for( int i = 1; i < argc; i++ )
+    bool showRectified;
+    cv::CommandLineParser parser(argc, argv, "{w|9|}{h|6|}{nr||}{help||}{@input|../data/stereo_calib.xml|}");
+    if (parser.has("help"))
+        return print_help();
+    showRectified = !parser.has("nr");
+    imagelistfn = parser.get<string>("@input");
+    boardSize.width = parser.get<int>("w");
+    boardSize.height = parser.get<int>("h");
+    if (!parser.check())
     {
-        if( string(argv[i]) == "-w" )
-        {
-            if( sscanf(argv[++i], "%d", &boardSize.width) != 1 || boardSize.width <= 0 )
-            {
-                cout << "invalid board width" << endl;
-                return print_help();
-            }
-        }
-        else if( string(argv[i]) == "-h" )
-        {
-            if( sscanf(argv[++i], "%d", &boardSize.height) != 1 || boardSize.height <= 0 )
-            {
-                cout << "invalid board height" << endl;
-                return print_help();
-            }
-        }
-        else if( string(argv[i]) == "-nr" )
-            showRectified = false;
-        else if( string(argv[i]) == "--help" )
-            return print_help();
-        else if( argv[i][0] == '-' )
-        {
-            cout << "invalid option " << argv[i] << endl;
-            return 0;
-        }
-        else
-            imagelistfn = argv[i];
+        parser.printErrors();
+        return 1;
     }
-
-    if( imagelistfn == "" )
-    {
-        imagelistfn = "../data/stereo_calib.xml";
-        boardSize = Size(9, 6);
-    }
-    else if( boardSize.width <= 0 || boardSize.height <= 0 )
-    {
-        cout << "if you specified XML file with chessboards, you should also specify the board width and height (-w and -h options)" << endl;
-        return 0;
-    }
-
     vector<string> imagelist;
     bool ok = readStringList(imagelistfn, imagelist);
     if(!ok || imagelist.empty())

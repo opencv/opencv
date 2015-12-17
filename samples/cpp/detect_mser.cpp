@@ -402,11 +402,18 @@ int main(int argc, char *argv[])
     vector<String> fileName;
     Mat imgOrig,img;
     Size blurSize(5,5);
-    if (argc==2)
+    cv::CommandLineParser parser(argc, argv, "{ help h | | }{ @input | | }");
+    if (parser.has("help"))
     {
-        fileName.push_back(argv[1]);
-        imgOrig = imread(fileName[0], IMREAD_GRAYSCALE);    blur(imgOrig, img, blurSize);
-
+        help();
+        return 0;
+    }
+    string input = parser.get<string>("@input");
+    if (!input.empty())
+    {
+        fileName.push_back(input);
+        imgOrig = imread(fileName[0], IMREAD_GRAYSCALE);
+        blur(imgOrig, img, blurSize);
     }
     else
     {
