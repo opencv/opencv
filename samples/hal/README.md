@@ -11,7 +11,7 @@ Build custom HAL replacement library
 ------------------------------------
 
 1. Create folder for build (for example `<home-dir>/my-hal-build`)
-2. Go to created folder and run cmake: `cmake <opencv-src>/samples/hal/slow_hal`
+2. Go to the created folder and run cmake: `cmake <opencv-src>/samples/hal/slow_hal`
 3. Run make
 
 After build you will find static library in the build folder: `libslow_hal.a`
@@ -20,15 +20,15 @@ Build OpenCV with HAL replacement
 ---------------------------------
 
 1. Create folder for build (for example `<home-dir>/my-opencv-build`)
-2. Go to created folder and run cmake: 
-```
-cmake \
-    -DOPENCV_HAL_HEADERS="<opencv-src>/samples/hal/slow_hal/impl.hpp" \
-    -DOPENCV_HAL_LIBS="<home-dir>/my-hal-build/libslow_hal.a" \
-    <opencv-src>
-```
+2. Go to the created folder and run cmake:
+    ```
+    cmake \
+        -DOPENCV_HAL_HEADERS="<opencv-src>/samples/hal/slow_hal/impl.hpp" \
+        -DOPENCV_HAL_LIBS="<home-dir>/my-hal-build/libslow_hal.a" \
+        <opencv-src>
+    ```
 3. Run make (or `make opencv_perf_core` to build the demonstration test executable only)
-4. After build you can run the tests and verify that some functions are slower now:
-```
-./bin/opencv_perf_core --gtest_filter=*bitwise_and*
-```
+4. After build you can run the tests and verify that some functions works slower:
+    ```
+    ./bin/opencv_perf_core --gtest_filter=*bitwise_and*
+    ```
