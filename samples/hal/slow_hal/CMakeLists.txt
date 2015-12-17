@@ -6,6 +6,6 @@ if(UNIX)
   endif()
 endif()
 
-add_library(simple_hal simple.cpp)
+add_library(slow_hal impl.cpp)
 set(OPENCV_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../..")
-target_include_directories(simple_hal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPENCV_SRC_DIR}/modules/core/include)
+target_include_directories(slow_hal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPENCV_SRC_DIR}/modules/core/include)
