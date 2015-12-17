@@ -6,6 +6,6 @@ if(UNIX)
   endif()
 endif()
 
-add_library(broken_hal broken.c)
+add_library(c_hal impl.c)
 set(OPENCV_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../..")
-target_include_directories(broken_hal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPENCV_SRC_DIR}/modules/core/include)
+target_include_directories(c_hal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPENCV_SRC_DIR}/modules/core/include)
