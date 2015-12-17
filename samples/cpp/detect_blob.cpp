@@ -69,19 +69,13 @@ int main(int argc, char *argv[])
 {
     vector<String> fileName;
     Mat img(600, 800, CV_8UC1);
-    if (argc == 1)
-    {
-        fileName.push_back("../data/detect_blob.png");
-    }
-    else if (argc == 2)
-    {
-        fileName.push_back(argv[1]);
-    }
-    else
+    cv::CommandLineParser parser(argc, argv, "{@input |../data/detect_blob.png| }{h help | | }");
+    if (parser.has("h"))
     {
         help();
-        return(0);
+        return 0;
     }
+    fileName.push_back(parser.get<string>("@input"));
     img = imread(fileName[0], IMREAD_COLOR);
     if (img.rows*img.cols <= 0)
     {

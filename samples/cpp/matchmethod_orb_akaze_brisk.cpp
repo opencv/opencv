@@ -9,7 +9,7 @@ static void help()
 {
     cout << "\n This program demonstrates how to detect compute and match ORB BRISK and AKAZE descriptors \n"
         "Usage: \n"
-        "  ./matchmethod_orb_akaze_brisk <image1(../data/basketball1.png as default)> <image2(../data/basketball2.png as default)>\n"
+        "  ./matchmethod_orb_akaze_brisk --image1=<image1(../data/basketball1.png as default)> --image2=<image2(../data/basketball2.png as default)>\n"
         "Press a key when image window is active to change algorithm or descriptor";
 }
 
@@ -20,7 +20,6 @@ int main(int argc, char *argv[])
     vector<String> typeDesc;
     vector<String> typeAlgoMatch;
     vector<String> fileName;
-    help();
     // This descriptor are going to be detect and compute
     typeDesc.push_back("AKAZE-DESCRIPTOR_KAZE_UPRIGHT");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
     typeDesc.push_back("AKAZE");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
@@ -31,21 +30,17 @@ int main(int argc, char *argv[])
     typeAlgoMatch.push_back("BruteForce-L1");
     typeAlgoMatch.push_back("BruteForce-Hamming");
     typeAlgoMatch.push_back("BruteForce-Hamming(2)");
-    if (argc==1)
-    {
-        fileName.push_back("../data/basketball1.png");
-        fileName.push_back("../data/basketball2.png");
-    }
-    else if (argc==3)
-    {
-        fileName.push_back(argv[1]);
-        fileName.push_back(argv[2]);
-    }
-    else
+    cv::CommandLineParser parser(argc, argv,
+        "{ @image1 | ../data/basketball1.png | }"
+        "{ @image2 | ../data/basketball2.png | }"
+        "{help h ||}");
+    if (parser.has("help"))
     {
         help();
-        return(0);
+        return 0;
     }
+    fileName.push_back(parser.get<string>(0));
+    fileName.push_back(parser.get<string>(1));
     Mat img1 = imread(fileName[0], IMREAD_GRAYSCALE);
     Mat img2 = imread(fileName[1], IMREAD_GRAYSCALE);
     if (img1.rows*img1.cols <= 0)
