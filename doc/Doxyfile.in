@@ -243,6 +243,7 @@ PREDEFINED             = __cplusplus=1 \
                          CV_NORETURN= \
                          CV_DEFAULT(x)=" = x" \
                          CV_NEON=1 \
+                         CV_SSE2=1 \
                          FLANN_DEPRECATED=
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES

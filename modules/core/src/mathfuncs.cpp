@@ -191,13 +191,13 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
         {
             const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
             float *mag = (float*)ptrs[2];
-            hal::magnitude( x, y, mag, len );
+            hal::magnitude32f( x, y, mag, len );
         }
         else
         {
             const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
             double *mag = (double*)ptrs[2];
-            hal::magnitude( x, y, mag, len );
+            hal::magnitude64f( x, y, mag, len );
         }
     }
 }
@@ -374,7 +374,7 @@ void cartToPolar( InputArray src1, InputArray src2,
             {
                 const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
                 float *mag = (float*)ptrs[2], *angle = (float*)ptrs[3];
-                hal::magnitude( x, y, mag, len );
+                hal::magnitude32f( x, y, mag, len );
                 hal::fastAtan2( y, x, angle, len, angleInDegrees );
             }
             else
@@ -382,7 +382,7 @@ void cartToPolar( InputArray src1, InputArray src2,
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
                 double *angle = (double*)ptrs[3];
 
-                hal::magnitude(x, y, (double*)ptrs[2], len);
+                hal::magnitude64f(x, y, (double*)ptrs[2], len);
                 k = 0;
 
 #if CV_SSE2
@@ -760,7 +760,7 @@ static void Exp_32f_ipp(const float *x, float *y, int n)
         }
         setIppErrorStatus();
     }
-    hal::exp(x, y, n);
+    hal::exp32f(x, y, n);
 }
 
 static void Exp_64f_ipp(const double *x, double *y, int n)
@@ -774,14 +774,14 @@ static void Exp_64f_ipp(const double *x, double *y, int n)
         }
         setIppErrorStatus();
     }
-    hal::exp(x, y, n);
+    hal::exp64f(x, y, n);
 }
 
 #define Exp_32f Exp_32f_ipp
 #define Exp_64f Exp_64f_ipp
 #else
-#define Exp_32f hal::exp
-#define Exp_64f hal::exp
+#define Exp_32f hal::exp32f
+#define Exp_64f hal::exp64f
 #endif
 
 
@@ -828,7 +828,7 @@ static void Log_32f_ipp(const float *x, float *y, int n)
         }
         setIppErrorStatus();
     }
-    hal::log(x, y, n);
+    hal::log32f(x, y, n);
 }
 
 static void Log_64f_ipp(const double *x, double *y, int n)
@@ -842,14 +842,14 @@ static void Log_64f_ipp(const double *x, double *y, int n)
         }
         setIppErrorStatus();
     }
-    hal::log(x, y, n);
+    hal::log64f(x, y, n);
 }
 
 #define Log_32f Log_32f_ipp
 #define Log_64f Log_64f_ipp
 #else
-#define Log_32f hal::log
-#define Log_64f hal::log
+#define Log_32f hal::log32f
+#define Log_64f hal::log64f
 #endif
 
 void log( InputArray _src, OutputArray _dst )
@@ -1356,10 +1356,10 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
 
 #endif
 
-static void InvSqrt_32f(const float* src, float* dst, int n) { hal::invSqrt(src, dst, n); }
-static void InvSqrt_64f(const double* src, double* dst, int n) { hal::invSqrt(src, dst, n); }
-static void Sqrt_32f(const float* src, float* dst, int n) { hal::sqrt(src, dst, n); }
-static void Sqrt_64f(const double* src, double* dst, int n) { hal::sqrt(src, dst, n); }
+static void InvSqrt_32f(const float* src, float* dst, int n) { hal::invSqrt32f(src, dst, n); }
+static void InvSqrt_64f(const double* src, double* dst, int n) { hal::invSqrt64f(src, dst, n); }
+static void Sqrt_32f(const float* src, float* dst, int n) { hal::sqrt32f(src, dst, n); }
+static void Sqrt_64f(const double* src, double* dst, int n) { hal::sqrt64f(src, dst, n); }
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
