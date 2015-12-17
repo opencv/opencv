@@ -44,7 +44,7 @@
 #include "cap_dshow.hpp"
 
 // All WinRT versions older than 8.0 should provide classes used for video support
-#if defined(WINRT) && !defined(WINRT_8_0)
+#if defined(WINRT) && !defined(WINRT_8_0) && defined(__cplusplus_winrt)
 #   include "cap_winrt_capture.hpp"
 #   include "cap_winrt_bridge.hpp"
 #   define WINRT_VIDEO
