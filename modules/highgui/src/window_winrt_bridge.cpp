@@ -183,7 +183,7 @@ void CvTrackbar::setMinPosition(double pos)
     if (pos < 0)
         pos = 0;
     //Min is always less than Max.
-    if ((pos > slider->Maximum)
+    if (pos > slider->Maximum)
         pos = slider->Maximum;
     slider->Minimum = pos;
 }
