@@ -1,21 +1,26 @@
 #!/usr/bin/env python
 
+'''
+example to detect upright people in images using HOG features
+
+Usage:
+    peopledetect.py <image_names>
+
+Press any key to continue, ESC to stop.
+'''
+
 # Python 2/3 compatibility
 from __future__ import print_function
 
 import numpy as np
 import cv2
 
-help_message = '''
-USAGE: peopledetect.py <image_names> ...
-
-Press any key to continue, ESC to stop.
-'''
 
 def inside(r, q):
     rx, ry, rw, rh = r
     qx, qy, qw, qh = q
     return rx > qx and ry > qy and rx + rw < qx + qw and ry + rh < qy + qh
+
 
 def draw_detections(img, rects, thickness = 1):
     for x, y, w, h in rects:
@@ -30,13 +35,13 @@ if __name__ == '__main__':
     from glob import glob
     import itertools as it
 
-    print(help_message)
+    print(__doc__)
 
     hog = cv2.HOGDescriptor()
     hog.setSVMDetector( cv2.HOGDescriptor_getDefaultPeopleDetector() )
 
-
     default = ['../data/basketball2.png '] if len(sys.argv[1:]) == 0 else []
+
     for fn in it.chain(*map(glob, default + sys.argv[1:])):
         print(fn, ' - ',)
         try:

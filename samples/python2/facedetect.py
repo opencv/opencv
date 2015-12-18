@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+'''
+face detection using haar cascades
+
+USAGE:
+    facedetect.py [--cascade <cascade_fn>] [--nested-cascade <cascade_fn>] [<video_source>]
+'''
+
 # Python 2/3 compatibility
 from __future__ import print_function
 
@@ -10,12 +17,10 @@ import cv2
 from video import create_capture
 from common import clock, draw_str
 
-help_message = '''
-USAGE: facedetect.py [--cascade <cascade_fn>] [--nested-cascade <cascade_fn>] [<video_source>]
-'''
 
 def detect(img, cascade):
-    rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30), flags = cv2.CASCADE_SCALE_IMAGE)
+    rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30),
+                                     flags=cv2.CASCADE_SCALE_IMAGE)
     if len(rects) == 0:
         return []
     rects[:,2:] += rects[:,:2]
@@ -27,7 +32,7 @@ def draw_rects(img, rects, color):
 
 if __name__ == '__main__':
     import sys, getopt
-    print(help_message)
+    print(__doc__)
 
     args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'nested-cascade='])
     try:
