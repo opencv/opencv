@@ -51,9 +51,9 @@
 #define __OPENCV_VERSION_HPP__
 
 #define CV_VERSION_MAJOR    3
-#define CV_VERSION_MINOR    0
+#define CV_VERSION_MINOR    1
 #define CV_VERSION_REVISION 0
-#define CV_VERSION_STATUS   "-dev"
+#define CV_VERSION_STATUS   ""
 
 #define CVAUX_STR_EXP(__A)  #__A
 #define CVAUX_STR(__A)      CVAUX_STR_EXP(__A)
