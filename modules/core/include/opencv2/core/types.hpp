@@ -1568,6 +1568,8 @@ Size_<_Tp>::operator Size_<_Tp2>() const
 template<typename _Tp> inline
 Size_<_Tp>& Size_<_Tp>::operator = (const Size_<_Tp>& sz)
 {
+    if (this == &sz)
+        return *this;
     width = sz.width; height = sz.height;
     return *this;
 }
