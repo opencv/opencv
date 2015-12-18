@@ -16,8 +16,7 @@ intensity value of the pixel. But in two-dimensional histograms, you consider tw
 it is used for finding color histograms where two features are Hue & Saturation values of every
 pixel.
 
-There is a [python sample in the official
-samples](https://github.com/Itseez/opencv/blob/master/samples/python2/color_histogram.py) already
+There is a python sample (samples/python/color_histogram.py) already
 for finding color histograms. We will try to understand how to create such a color histogram, and it
 will be useful in understanding further topics like Histogram Back-Projection.
 
@@ -106,10 +105,11 @@ You can verify it with any image editing tools like GIMP.
 
 ### Method 3 : OpenCV sample style !!
 
-There is a [sample code for color-histogram in OpenCV-Python2
-samples](https://github.com/Itseez/opencv/blob/master/samples/python2/color_histogram.py). If you
-run the code, you can see the histogram shows the corresponding color also. Or simply it outputs a
-color coded histogram. Its result is very good (although you need to add extra bunch of lines).
+There is a sample code for color-histogram in OpenCV-Python2 samples
+(samples/python/color_histogram.py).
+If you run the code, you can see the histogram shows the corresponding color also.
+Or simply it outputs a color coded histogram.
+Its result is very good (although you need to add extra bunch of lines).
 
 In that code, the author created a color map in HSV. Then converted it into BGR. The resulting
 histogram image is multiplied with this color map. He also uses some preprocessing steps to remove

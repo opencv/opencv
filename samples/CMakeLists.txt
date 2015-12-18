@@ -31,7 +31,7 @@ if(ANDROID AND BUILD_ANDROID_EXAMPLES)
 endif()
 
 if(INSTALL_PYTHON_EXAMPLES)
-  add_subdirectory(python2)
+  add_subdirectory(python)
 endif()
 
 #

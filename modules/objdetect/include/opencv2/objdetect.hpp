@@ -261,7 +261,7 @@ public:
 
     @note
        -   (Python) A face detection example using cascade classifiers can be found at
-            opencv_source_code/samples/python2/facedetect.py
+            opencv_source_code/samples/python/facedetect.py
     */
     CV_WRAP void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
