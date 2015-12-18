@@ -6,9 +6,6 @@ This example illustrates how to use Hough Transform to find lines
 Usage:
     houghlines.py [<image_name>]
     image argument defaults to ../data/pic1.png
-
-read more:
-    http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_houghlines/py_houghlines.html
 '''
 
 # Python 2/3 compatibility

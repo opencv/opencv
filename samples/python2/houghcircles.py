@@ -6,9 +6,6 @@ This example illustrates how to use cv2.HoughCircles() function.
 Usage:
     houghcircles.py [<image_name>]
     image argument defaults to ../data/board.jpg
-
-read more:
-    http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_houghcircles/py_houghcircles.html
 '''
 
 # Python 2/3 compatibility
