@@ -352,6 +352,7 @@ function(__ocv_sort_modules_by_deps __lst)
   ocv_list_sort(${__lst})
   set(input ${${__lst}})
   set(result "")
+  set(result_extra "")
   while(input)
     list(LENGTH input length_before)
     foreach (m ${input})
@@ -376,16 +377,27 @@ function(__ocv_sort_modules_by_deps __lst)
     list(LENGTH input length_after)
     # check for infinite loop or unresolved dependencies
     if (NOT length_after LESS length_before)
-      message(WARNING "Unresolved dependencies or loop in dependency graph (${length_after})\n"
-        "Processed ${__lst}: ${${__lst}}\n"
-        "Good modules: ${result}\n"
-        "Bad modules: ${input}"
-      )
-      list(APPEND result ${input})
-      break()
+      if(NOT BUILD_SHARED_LIBS)
+        if (";${input};" MATCHES ";opencv_world;")
+          list(REMOVE_ITEM input "opencv_world")
+          list(APPEND result_extra "opencv_world")
+        else()
+          # We can't do here something
+          list(APPEND result ${input})
+          break()
+        endif()
+      else()
+        message(FATAL_ERROR WARNING "Unresolved dependencies or loop in dependency graph (${length_after})\n"
+          "Processed ${__lst}: ${${__lst}}\n"
+          "Good modules: ${result}\n"
+          "Bad modules: ${input}"
+        )
+        list(APPEND result ${input})
+        break()
+      endif()
     endif()
   endwhile()
-  set(${__lst} "${result}" PARENT_SCOPE)
+  set(${__lst} "${result};${result_extra}" PARENT_SCOPE)
 endfunction()
 
 # resolve dependensies

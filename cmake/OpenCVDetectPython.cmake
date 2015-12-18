@@ -73,7 +73,7 @@ function(find_python preferred_version min_version library_env include_dir_env
   if(_found)
     set(_version_major_minor "${_version_major}.${_version_minor}")
 
-    if(NOT ANDROID AND NOT IOS)
+    if(NOT ANDROID AND NOT APPLE_FRAMEWORK)
       ocv_check_environment_variables(${library_env} ${include_dir_env})
       if(NOT ${${library_env}} EQUAL "")
           set(PYTHON_LIBRARY "${${library_env}}")
