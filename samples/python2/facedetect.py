@@ -5,9 +5,6 @@ face detection using haar cascades
 
 USAGE:
     facedetect.py [--cascade <cascade_fn>] [--nested-cascade <cascade_fn>] [<video_source>]
-
-read more:
-    http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_objdetect/py_face_detection/py_face_detection.html
 '''
 
 # Python 2/3 compatibility

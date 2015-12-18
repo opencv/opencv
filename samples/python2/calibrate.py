@@ -11,9 +11,6 @@ default values:
     --debug:    ./output/
     --square_size: 1.0
     <image mask> defaults to ../data/left*.jpg
-
-read more:
-    http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_calib3d/py_calibration/py_calibration.html
 '''
 
 # Python 2/3 compatibility
