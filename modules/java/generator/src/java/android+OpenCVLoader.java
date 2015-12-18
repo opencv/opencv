@@ -65,7 +65,7 @@ public class OpenCVLoader
     /**
      * OpenCV Library version 3.1.0.
      */
-    public static final String OPENCV_VERSION_3_0_0 = "3.1.0";
+    public static final String OPENCV_VERSION_3_1_0 = "3.1.0";
 
 
     /**
