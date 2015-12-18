@@ -1,5 +1,18 @@
 #!/usr/bin/env python
 
+'''
+example to show optical flow
+
+USAGE: opt_flow.py [<video_source>]
+
+Keys:
+ 1 - toggle HSV flow visualization
+ 2 - toggle glitch
+
+Keys:
+    ESC    - exit
+'''
+
 # Python 2/3 compatibility
 from __future__ import print_function
 
@@ -7,14 +20,6 @@ import numpy as np
 import cv2
 import video
 
-help_message = '''
-USAGE: opt_flow.py [<video_source>]
-
-Keys:
- 1 - toggle HSV flow visualization
- 2 - toggle glitch
-
-'''
 
 def draw_flow(img, flow, step=16):
     h, w = img.shape[:2]
@@ -28,6 +33,7 @@ def draw_flow(img, flow, step=16):
         cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
     return vis
 
+
 def draw_hsv(flow):
     h, w = flow.shape[:2]
     fx, fy = flow[:,:,0], flow[:,:,1]
@@ -40,6 +46,7 @@ def draw_hsv(flow):
     bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
     return bgr
 
+
 def warp_flow(img, flow):
     h, w = flow.shape[:2]
     flow = -flow
@@ -50,10 +57,10 @@ def warp_flow(img, flow):
 
 if __name__ == '__main__':
     import sys
-    print(help_message)
+    print(__doc__)
     try:
         fn = sys.argv[1]
-    except:
+    except IndexError:
         fn = 0
 
     cam = video.create_capture(fn)
