@@ -684,10 +684,13 @@ typedef struct _cl_buffer_region {
 
 #define CL_CALLBACK CV_STDCALL
 
-static volatile bool g_haveOpenCL = false;
-static const char* oclFuncToCheck = "clEnqueueReadBufferRect";
 
-#if defined(__APPLE__)
+#ifdef HAVE_OPENCL
+static const char* oclFuncToCheck = "clEnqueueReadBufferRect";
+static volatile bool g_haveOpenCL = false;
+#endif
+
+#if defined(__APPLE__) && defined(HAVE_OPENCL)
 #include <dlfcn.h>
 
 static void* initOpenCLAndLoad(const char* funcname)
@@ -716,7 +719,7 @@ static void* initOpenCLAndLoad(const char* funcname)
     return funcname && handle ? dlsym(handle, funcname) : 0;
 }
 
-#elif defined WIN32 || defined _WIN32
+#elif (defined WIN32 || defined _WIN32) && defined(HAVE_OPENCL)
 
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
@@ -751,7 +754,7 @@ static void* initOpenCLAndLoad(const char* funcname)
     return funcname ? (void*)GetProcAddress(handle, funcname) : 0;
 }
 
-#elif defined(__linux)
+#elif defined(__linux) && defined(HAVE_OPENCL)
 
 #include <dlfcn.h>
 #include <stdio.h>
