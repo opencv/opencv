@@ -691,6 +691,7 @@ INSTANTIATE_TEST_CASE_P(UMat, getUMat, Combine(
 
 ///////////////////////////////////////////////////////////////// OpenCL ////////////////////////////////////////////////////////////////////////////
 
+#ifdef HAVE_OPENCL
 TEST(UMat, BufferPoolGrowing)
 {
 #ifdef _DEBUG
@@ -716,6 +717,7 @@ TEST(UMat, BufferPoolGrowing)
     else
         std::cout << "Skipped, no OpenCL" << std::endl;
 }
+#endif
 
 class CV_UMatTest :
         public cvtest::BaseTest
@@ -956,6 +958,9 @@ TEST(UMat, CopyToIfDeviceCopyIsObsolete)
 
 TEST(UMat, setOpenCL)
 {
+#ifndef HAVE_OPENCL
+    return; // test skipped
+#else
     // save the current state
     bool useOCL = cv::ocl::useOpenCL();
 
@@ -993,6 +998,7 @@ TEST(UMat, setOpenCL)
 
     // reset state to the previous one
     cv::ocl::setUseOpenCL(useOCL);
+#endif
 }
 
 TEST(UMat, ReadBufferRect)
@@ -1298,7 +1304,15 @@ TEST(UMat, testTempObjects_UMat)
     ASSERT_EQ(0, countNonZero(uDiff));
 }
 
+// Disabled due to failure in VS 2015:
+//  C++11 is enabled by default ==>
+//  destructors have implicit 'noexcept(true)' specifier ==>
+//  throwing exception from destructor is not handled correctly
+#if defined(_MSC_VER) && _MSC_VER >= 1900 /* MSVC 14 */
+TEST(UMat, DISABLED_testTempObjects_Mat)
+#else
 TEST(UMat, testTempObjects_Mat)
+#endif
 {
     Mat m(10, 10, CV_8UC1, Scalar(1));
     {

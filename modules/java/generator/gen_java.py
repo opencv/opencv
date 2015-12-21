@@ -299,6 +299,13 @@ type_dict = {
                   "jn_type" : "double[]",
                   "jni_var" : "Vec3d %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2)", "jni_type" : "jdoubleArray",
                   "suffix" : "DDD"},
+    "Moments" : {
+        "j_type" : "Moments",
+        "jn_args" : (("double", ".m00"), ("double", ".m10"), ("double", ".m01"), ("double", ".m20"), ("double", ".m11"),
+                     ("double", ".m02"), ("double", ".m30"), ("double", ".m21"), ("double", ".m12"), ("double", ".m03")),
+        "jni_var" : "Moments %(n)s(%(n)s_m00, %(n)s_m10, %(n)s_m01, %(n)s_m20, %(n)s_m11, %(n)s_m02, %(n)s_m30, %(n)s_m21, %(n)s_m12, %(n)s_m03)",
+        "jni_type" : "jdoubleArray",
+        "suffix" : "DDDDDDDDDD"},
 
 }
 
@@ -1161,7 +1168,7 @@ class JavaWrapperGenerator(object):
                     ("jdoubleArray _da_retval_ = env->NewDoubleArray(%(cnt)i);  " +
                      "jdouble _tmp_retval_[%(cnt)i] = {%(args)s}; " +
                      "env->SetDoubleArrayRegion(_da_retval_, 0, %(cnt)i, _tmp_retval_);") %
-                    { "cnt" : len(fields), "args" : ", ".join(["_retval_" + f[1] for f in fields]) } )
+                    { "cnt" : len(fields), "args" : ", ".join(["(jdouble)_retval_" + f[1] for f in fields]) } )
             if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
@@ -1208,7 +1215,7 @@ class JavaWrapperGenerator(object):
                         j_prologue.append( "double[] %s_out = new double[%i];" % (a.name, len(fields)) )
                         c_epilogue.append( \
                             "jdouble tmp_%(n)s[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, %(cnt)i, tmp_%(n)s);" %
-                            { "n" : a.name, "cnt" : len(fields), "args" : ", ".join([a.name + f[1] for f in fields]) } )
+                            { "n" : a.name, "cnt" : len(fields), "args" : ", ".join(["(jdouble)" + a.name + f[1] for f in fields]) } )
                         if a.ctype in ('bool', 'int', 'long', 'float', 'double'):
                             j_epilogue.append('if(%(n)s!=null) %(n)s[0] = (%(t)s)%(n)s_out[0];' % {'n':a.name,'t':a.ctype})
                         else:

@@ -94,7 +94,7 @@ UMatData::~UMatData()
             // simulate Mat::deallocate
             if (u->mapcount != 0)
             {
-                (u->currAllocator ? u->currAllocator : /* TODO allocator ? allocator :*/ Mat::getStdAllocator())->unmap(u);
+                (u->currAllocator ? u->currAllocator : /* TODO allocator ? allocator :*/ Mat::getDefaultAllocator())->unmap(u);
             }
             else
             {
@@ -144,7 +144,7 @@ MatAllocator* UMat::getStdAllocator()
     if( ocl::haveOpenCL() && ocl::useOpenCL() )
         return ocl::getOpenCLAllocator();
 #endif
-    return Mat::getStdAllocator();
+    return Mat::getDefaultAllocator();
 }
 
 void swap( UMat& a, UMat& b )
@@ -286,7 +286,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     accessFlags |= ACCESS_RW;
     UMatData* new_u = NULL;
     {
-        MatAllocator *a = allocator, *a0 = getStdAllocator();
+        MatAllocator *a = allocator, *a0 = getDefaultAllocator();
         if(!a)
             a = a0;
         new_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
@@ -302,7 +302,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     }
     if (!allocated)
     {
-        allocated = getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
+        allocated = getDefaultAllocator()->allocate(new_u, accessFlags, usageFlags);
         CV_Assert(allocated);
     }
     if (u != NULL)
@@ -358,7 +358,7 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
         if (!a)
         {
             a = a0;
-            a0 = Mat::getStdAllocator();
+            a0 = Mat::getDefaultAllocator();
         }
         try
         {
@@ -840,7 +840,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
                    haveDstUninit ? ocl::KernelArg::WriteOnly(dst) :
                                    ocl::KernelArg::ReadWrite(dst));
 
-            size_t globalsize[2] = { cols, rows };
+            size_t globalsize[2] = { (size_t)cols, (size_t)rows };
             if (k.run(2, globalsize, NULL, false))
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
@@ -901,7 +901,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
             else
                 k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
 
-            size_t globalsize[2] = { dst.cols * cn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+            size_t globalsize[2] = { (size_t)dst.cols * cn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, false))
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
@@ -957,7 +957,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
                 setK.args(dstarg, scalararg);
             }
 
-            size_t globalsize[] = { cols * cn / kercn, (rows + rowsPerWI - 1) / rowsPerWI };
+            size_t globalsize[] = { (size_t)cols * cn / kercn, ((size_t)rows + rowsPerWI - 1) / rowsPerWI };
             if( setK.run(2, globalsize, NULL, false) )
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);

@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include <limits>
+#include <iostream>
 
 namespace cv
 {
@@ -93,7 +94,7 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
     else
         k.args(src1arg, src2arg, dstarg);
 
-    size_t globalsize[] = { src1.cols * cn / kercn, (src1.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[] = { (size_t)src1.cols * cn / kercn, ((size_t)src1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -190,13 +191,13 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
         {
             const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
             float *mag = (float*)ptrs[2];
-            hal::magnitude( x, y, mag, len );
+            hal::magnitude32f( x, y, mag, len );
         }
         else
         {
             const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
             double *mag = (double*)ptrs[2];
-            hal::magnitude( x, y, mag, len );
+            hal::magnitude64f( x, y, mag, len );
         }
     }
 }
@@ -330,7 +331,7 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
            ocl::KernelArg::WriteOnly(dst1, cn),
            ocl::KernelArg::WriteOnlyNoSize(dst2));
 
-    size_t globalsize[2] = { dst1.cols * cn, (dst1.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst1.cols * cn, ((size_t)dst1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -373,7 +374,7 @@ void cartToPolar( InputArray src1, InputArray src2,
             {
                 const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
                 float *mag = (float*)ptrs[2], *angle = (float*)ptrs[3];
-                hal::magnitude( x, y, mag, len );
+                hal::magnitude32f( x, y, mag, len );
                 hal::fastAtan2( y, x, angle, len, angleInDegrees );
             }
             else
@@ -381,7 +382,7 @@ void cartToPolar( InputArray src1, InputArray src2,
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
                 double *angle = (double*)ptrs[3];
 
-                hal::magnitude(x, y, (double*)ptrs[2], len);
+                hal::magnitude64f(x, y, (double*)ptrs[2], len);
                 k = 0;
 
 #if CV_SSE2
@@ -612,7 +613,7 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
     k.args(ocl::KernelArg::ReadOnlyNoSize(mag), ocl::KernelArg::ReadOnlyNoSize(angle),
            ocl::KernelArg::WriteOnly(dst1, cn), ocl::KernelArg::WriteOnlyNoSize(dst2));
 
-    size_t globalsize[2] = { dst1.cols * cn, (dst1.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst1.cols * cn, ((size_t)dst1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -759,7 +760,7 @@ static void Exp_32f_ipp(const float *x, float *y, int n)
         }
         setIppErrorStatus();
     }
-    hal::exp(x, y, n);
+    hal::exp32f(x, y, n);
 }
 
 static void Exp_64f_ipp(const double *x, double *y, int n)
@@ -773,14 +774,14 @@ static void Exp_64f_ipp(const double *x, double *y, int n)
         }
         setIppErrorStatus();
     }
-    hal::exp(x, y, n);
+    hal::exp64f(x, y, n);
 }
 
 #define Exp_32f Exp_32f_ipp
 #define Exp_64f Exp_64f_ipp
 #else
-#define Exp_32f hal::exp
-#define Exp_64f hal::exp
+#define Exp_32f hal::exp32f
+#define Exp_64f hal::exp64f
 #endif
 
 
@@ -827,7 +828,7 @@ static void Log_32f_ipp(const float *x, float *y, int n)
         }
         setIppErrorStatus();
     }
-    hal::log(x, y, n);
+    hal::log32f(x, y, n);
 }
 
 static void Log_64f_ipp(const double *x, double *y, int n)
@@ -841,14 +842,14 @@ static void Log_64f_ipp(const double *x, double *y, int n)
         }
         setIppErrorStatus();
     }
-    hal::log(x, y, n);
+    hal::log64f(x, y, n);
 }
 
 #define Log_32f Log_32f_ipp
 #define Log_64f Log_64f_ipp
 #else
-#define Log_32f hal::log
-#define Log_64f hal::log
+#define Log_32f hal::log32f
+#define Log_64f hal::log64f
 #endif
 
 void log( InputArray _src, OutputArray _dst )
@@ -1181,8 +1182,8 @@ iPow_i( const T* src, T* dst, int len, int power )
     {
         T tab[5] =
         {
-            power == -1 ? saturate_cast<T>(-1) : 0, (power & 1) ? -1 : 1,
-            std::numeric_limits<T>::max(), 1, power == -1 ? 1 : 0
+            saturate_cast<T>(power == -1 ? -1 : 0), saturate_cast<T>((power & 1) ? -1 : 1),
+            std::numeric_limits<T>::max(), 1, saturate_cast<T>(power == -1 ? 1 : 0)
         };
         for( int i = 0; i < len; i++ )
         {
@@ -1349,25 +1350,31 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
             k.args(srcarg, dstarg, power);
     }
 
-    size_t globalsize[2] = { dst.cols *  cn, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst.cols *  cn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
 #endif
 
-static void InvSqrt_32f(const float* src, float* dst, int n) { hal::invSqrt(src, dst, n); }
-static void InvSqrt_64f(const double* src, double* dst, int n) { hal::invSqrt(src, dst, n); }
-static void Sqrt_32f(const float* src, float* dst, int n) { hal::sqrt(src, dst, n); }
-static void Sqrt_64f(const double* src, double* dst, int n) { hal::sqrt(src, dst, n); }
+static void InvSqrt_32f(const float* src, float* dst, int n) { hal::invSqrt32f(src, dst, n); }
+static void InvSqrt_64f(const double* src, double* dst, int n) { hal::invSqrt64f(src, dst, n); }
+static void Sqrt_32f(const float* src, float* dst, int n) { hal::sqrt32f(src, dst, n); }
+static void Sqrt_64f(const double* src, double* dst, int n) { hal::sqrt64f(src, dst, n); }
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
-    bool is_ipower = fabs(ipower - power) < DBL_EPSILON,
-            useOpenCL = _dst.isUMat() && _src.dims() <= 2;
+    bool is_ipower = fabs(ipower - power) < DBL_EPSILON;
+#ifdef HAVE_OPENCL
+    bool useOpenCL = _dst.isUMat() && _src.dims() <= 2;
+#endif
 
-    if( is_ipower && !(ocl::Device::getDefault().isIntel() && useOpenCL && depth != CV_64F))
+    if( is_ipower
+#ifdef HAVE_OPENCL
+            && !(useOpenCL && ocl::Device::getDefault().isIntel() && depth != CV_64F)
+#endif
+      )
     {
         switch( ipower )
         {
@@ -1564,9 +1571,8 @@ template<> struct mat_type_assotiations<CV_32S>
     static const type max_allowable = INT_MAX;
 };
 
-// inclusive maxVal !!!
 template<int depth>
-bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value)
+static bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal)
 {
     typedef mat_type_assotiations<depth> type_ass;
 
@@ -1584,20 +1590,19 @@ bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal, doubl
     for (int j = 0; j < as_one_channel.rows; ++j)
         for (int i = 0; i < as_one_channel.cols; ++i)
         {
-            if (as_one_channel.at<typename type_ass::type>(j ,i) < minVal || as_one_channel.at<typename type_ass::type>(j ,i) > maxVal)
+            typename type_ass::type v = as_one_channel.at<typename type_ass::type>(j ,i);
+            if (v < minVal || v > maxVal)
             {
-                bad_pt.y = j ;
-                bad_pt.x = i % src.channels();
-                bad_value = as_one_channel.at<typename type_ass::type>(j ,i);
+                bad_pt.y = j;
+                bad_pt.x = i / src.channels();
                 return false;
             }
         }
-    bad_value = 0.0;
 
     return true;
 }
 
-typedef bool (*check_range_function)(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value);
+typedef bool (*check_range_function)(cv::Mat src, Point& bad_pt, int minVal, int maxVal);
 
 check_range_function check_range_functions[] =
 {
@@ -1614,15 +1619,16 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
     if ( src.dims > 2 )
     {
+        CV_Assert(pt == NULL); // no way to provide location info
+
         const Mat* arrays[] = {&src, 0};
         Mat planes[1];
         NAryMatIterator it(arrays, planes);
 
         for ( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            if (!checkRange( it.planes[0], quiet, pt, minVal, maxVal ))
+            if (!checkRange( it.planes[0], quiet, NULL, minVal, maxVal ))
             {
-                // todo: set index properly
                 return false;
             }
         }
@@ -1631,20 +1637,19 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
     int depth = src.depth();
     Point badPt(-1, -1);
-    double badValue = 0;
 
     if (depth < CV_32F)
     {
-        // see "Bug #1784"
-        int minVali = minVal<(-INT_MAX - 1) ? (-INT_MAX - 1) : cvFloor(minVal);
-        int maxVali = maxVal>INT_MAX ? INT_MAX : cvCeil(maxVal) - 1; // checkIntegerRang() use inclusive maxVal
+        int minVali = minVal <= INT_MIN ? INT_MIN : cvFloor(minVal);
+        int maxVali = maxVal > INT_MAX ? INT_MAX : cvCeil(maxVal) - 1;
 
-        (check_range_functions[depth])(src, badPt, minVali, maxVali, badValue);
+        (check_range_functions[depth])(src, badPt, minVali, maxVali);
     }
     else
     {
         int i, loc = 0;
-        Size size = getContinuousSize( src, src.channels() );
+        int cn = src.channels();
+        Size size = getContinuousSize( src, cn );
 
         if( depth == CV_32F )
         {
@@ -1668,8 +1673,8 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
                     if( val < ia || val >= ib )
                     {
-                        badPt = Point((loc + i) % src.cols, (loc + i) / src.cols);
-                        badValue = ((const float*)isrc)[i];
+                        int pixelId = (loc + i) / cn;
+                        badPt = Point(pixelId % src.cols, pixelId / src.cols);
                         break;
                     }
                 }
@@ -1697,8 +1702,8 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
                     if( val < ia || val >= ib )
                     {
-                        badPt = Point((loc + i) % src.cols, (loc + i) / src.cols);
-                        badValue = ((const double*)isrc)[i];
+                        int pixelId = (loc + i) / cn;
+                        badPt = Point(pixelId % src.cols, pixelId / src.cols);
                         break;
                     }
                 }
@@ -1711,10 +1716,15 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         if( pt )
             *pt = badPt;
         if( !quiet )
+        {
+            cv::String value_str;
+            value_str << src(cv::Range(badPt.y, badPt.y + 1), cv::Range(badPt.x, badPt.x + 1));
             CV_Error_( CV_StsOutOfRange,
-            ("the value at (%d, %d)=%g is out of range", badPt.x, badPt.y, badValue));
+            ("the value at (%d, %d)=%s is out of range [%f, %f)", badPt.x, badPt.y, value_str.c_str(), minVal, maxVal));
+        }
+        return false;
     }
-    return badPt.x < 0;
+    return true;
 }
 
 #ifdef HAVE_OPENCL
@@ -1734,7 +1744,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
     k.args(ocl::KernelArg::ReadOnlyNoSize(a),
            ocl::KernelArg::WriteOnly(a, cn), (float)value);
 
-    size_t globalsize[2] = { a.cols * cn, (a.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)a.cols * cn, ((size_t)a.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1992,10 +2002,10 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         double Qcubed = Q * Q * Q;
         double d = Qcubed - R * R;
 
-        if( d >= 0 )
+        if( d > 0 )
         {
-            double theta = acos(R / std::sqrt(Qcubed));
-            double sqrtQ = std::sqrt(Q);
+            double theta = acos(R / sqrt(Qcubed));
+            double sqrtQ = sqrt(Q);
             double t0 = -2 * sqrtQ;
             double t1 = theta * (1./3);
             double t2 = a1 * (1./3);
@@ -2004,11 +2014,27 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
             x2 = t0 * cos(t1 + (4.*CV_PI/3)) - t2;
             n = 3;
         }
+        else if( d == 0 )
+        {
+            if(R >= 0)
+            {
+                x0 = -2*pow(R, 1./3) - a1/3;
+                x1 = pow(R, 1./3) - a1/3;
+            }
+            else
+            {
+                x0 = 2*pow(-R, 1./3) - a1/3;
+                x1 = -pow(-R, 1./3) - a1/3;
+            }
+            x2 = 0;
+            n = x0 == x1 ? 1 : 2;
+            x1 = x0 == x1 ? 0 : x1;
+        }
         else
         {
             double e;
-            d = std::sqrt(-d);
-            e = std::pow(d + fabs(R), 0.333333333333);
+            d = sqrt(-d);
+            e = pow(d + fabs(R), 1./3);
             if( R > 0 )
                 e = -e;
             x0 = (e + Q / e) - a1 * (1./3);
@@ -2085,12 +2111,53 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         {
             p = roots[i];
             C num = coeffs[n], denom = coeffs[n];
+            int num_same_root = 1;
             for( j = 0; j < n; j++ )
             {
                 num = num*p + coeffs[n-j-1];
-                if( j != i ) denom = denom * (p - roots[j]);
+                if( j != i )
+                {
+                    if ( (p - roots[j]).re != 0 || (p - roots[j]).im != 0 )
+                        denom = denom * (p - roots[j]);
+                    else
+                        num_same_root++;
+                }
             }
             num /= denom;
+            if( num_same_root > 1)
+            {
+                double old_num_re = num.re;
+                double old_num_im = num.im;
+                int square_root_times = num_same_root % 2 == 0 ? num_same_root / 2 : num_same_root / 2 - 1;
+
+                for( j = 0; j < square_root_times; j++)
+                {
+                    num.re = old_num_re*old_num_re + old_num_im*old_num_im;
+                    num.re = sqrt(num.re);
+                    num.re += old_num_re;
+                    num.im = num.re - old_num_re;
+                    num.re /= 2;
+                    num.re = sqrt(num.re);
+
+                    num.im /= 2;
+                    num.im = sqrt(num.im);
+                    if( old_num_re < 0 ) num.im = -num.im;
+                }
+
+                if( num_same_root % 2 != 0){
+                    Mat cube_coefs(4, 1, CV_64FC1);
+                    Mat cube_roots(3, 1, CV_64FC2);
+                    cube_coefs.at<double>(3) = -(pow(old_num_re, 3));
+                    cube_coefs.at<double>(2) = -(15*pow(old_num_re, 2) + 27*pow(old_num_im, 2));
+                    cube_coefs.at<double>(1) = -48*old_num_re;
+                    cube_coefs.at<double>(0) = 64;
+                    solveCubic(cube_coefs, cube_roots);
+
+                    if(cube_roots.at<double>(0) >= 0) num.re = pow(cube_roots.at<double>(0), 1./3);
+                    else num.re = -pow(-cube_roots.at<double>(0), 1./3);
+                    num.im = sqrt(pow(num.re, 2) / 3 - old_num_re / (3*num.re));
+                }
+            }
             roots[i] = p - num;
             maxDiff = std::max(maxDiff, cv::abs(num));
         }

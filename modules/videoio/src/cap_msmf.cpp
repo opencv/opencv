@@ -103,163 +103,9 @@
 #ifdef HAVE_CONCURRENCY
 #include <concrt.h>
 #ifndef __cplusplus_winrt
-__declspec(noreturn) void __stdcall __abi_WinRTraiseException(long);
-
-inline void __abi_ThrowIfFailed(long __hrArg)
-{
-    if (__hrArg < 0)
-    {
-        __abi_WinRTraiseException(__hrArg);
-    }
-}
-
-struct Guid
-{
-public:
-    Guid();
-    Guid(__rcGUID_t);
-    operator ::__rcGUID_t();
-    bool Equals(Guid __guidArg);
-    bool Equals(__rcGUID_t __guidArg);
-    Guid(unsigned int __aArg, unsigned short __bArg, unsigned short __cArg, unsigned __int8 __dArg,
-        unsigned __int8 __eArg, unsigned __int8 __fArg, unsigned __int8 __gArg, unsigned __int8 __hArg,
-        unsigned __int8 __iArg, unsigned __int8 __jArg, unsigned __int8 __kArg);
-    Guid(unsigned int __aArg, unsigned short __bArg, unsigned short __cArg, const unsigned __int8* __dArg);
-private:
-    unsigned long  __a;
-    unsigned short __b;
-    unsigned short __c;
-    unsigned char __d;
-    unsigned char __e;
-    unsigned char __f;
-    unsigned char __g;
-    unsigned char __h;
-    unsigned char __i;
-    unsigned char __j;
-    unsigned char __k;
-};
-
-static_assert(sizeof(Guid) == sizeof(::_GUID), "Incorect size for Guid");
-static_assert(sizeof(__rcGUID_t) == sizeof(::_GUID), "Incorect size for __rcGUID_t");
-
-////////////////////////////////////////////////////////////////////////////////
-inline Guid::Guid() : __a(0), __b(0), __c(0), __d(0), __e(0), __f(0), __g(0), __h(0), __i(0), __j(0), __k(0)
-{
-}
-
-inline Guid::Guid(__rcGUID_t __guid) :
-__a(reinterpret_cast<const __s_GUID&>(__guid).Data1),
-__b(reinterpret_cast<const __s_GUID&>(__guid).Data2),
-__c(reinterpret_cast<const __s_GUID&>(__guid).Data3),
-__d(reinterpret_cast<const __s_GUID&>(__guid).Data4[0]),
-__e(reinterpret_cast<const __s_GUID&>(__guid).Data4[1]),
-__f(reinterpret_cast<const __s_GUID&>(__guid).Data4[2]),
-__g(reinterpret_cast<const __s_GUID&>(__guid).Data4[3]),
-__h(reinterpret_cast<const __s_GUID&>(__guid).Data4[4]),
-__i(reinterpret_cast<const __s_GUID&>(__guid).Data4[5]),
-__j(reinterpret_cast<const __s_GUID&>(__guid).Data4[6]),
-__k(reinterpret_cast<const __s_GUID&>(__guid).Data4[7])
-{
-}
-
-inline Guid::operator ::__rcGUID_t()
-{
-    return reinterpret_cast<__rcGUID_t>(*this);
-}
-
-inline bool Guid::Equals(Guid __guidArg)
-{
-    return *this == __guidArg;
-}
-
-inline bool Guid::Equals(__rcGUID_t __guidArg)
-{
-    return *this == static_cast< Guid>(__guidArg);
-}
-
-inline bool operator==(Guid __aArg, Guid __bArg)
-{
-    auto __a = reinterpret_cast<unsigned long*>(&__aArg);
-    auto __b = reinterpret_cast<unsigned long*>(&__bArg);
-
-    return (__a[0] == __b[0] && __a[1] == __b[1] && __a[2] == __b[2] && __a[3] == __b[3]);
-}
-
-inline bool operator!=(Guid __aArg, Guid __bArg)
-{
-    return !(__aArg == __bArg);
-}
-
-inline bool operator<(Guid __aArg, Guid __bArg)
-{
-    auto __a = reinterpret_cast<unsigned long*>(&__aArg);
-    auto __b = reinterpret_cast<unsigned long*>(&__bArg);
-
-    if (__a[0] != __b[0])
-    {
-        return __a[0] < __b[0];
-    }
-
-    if (__a[1] != __b[1])
-    {
-        return __a[1] < __b[1];
-    }
-
-    if (__a[2] != __b[2])
-    {
-        return __a[2] < __b[2];
-    }
-
-    if (__a[3] != __b[3])
-    {
-        return __a[3] < __b[3];
-    }
-
-    return false;
-}
-
-inline Guid::Guid(unsigned int __aArg, unsigned short __bArg, unsigned short __cArg, unsigned __int8 __dArg,
-    unsigned __int8 __eArg, unsigned __int8 __fArg, unsigned __int8 __gArg, unsigned __int8 __hArg,
-    unsigned __int8 __iArg, unsigned __int8 __jArg, unsigned __int8 __kArg) :
-    __a(__aArg), __b(__bArg), __c(__cArg), __d(__dArg), __e(__eArg), __f(__fArg), __g(__gArg), __h(__hArg), __i(__iArg), __j(__jArg), __k(__kArg)
-{
-}
-
-inline Guid::Guid(unsigned int __aArg, unsigned short __bArg, unsigned short __cArg, const unsigned __int8 __dArg[8]) :
-__a(__aArg), __b(__bArg), __c(__cArg)
-{
-    __d = __dArg[0];
-    __e = __dArg[1];
-    __f = __dArg[2];
-    __g = __dArg[3];
-    __h = __dArg[4];
-    __i = __dArg[5];
-    __j = __dArg[6];
-    __k = __dArg[7];
-}
-
-__declspec(selectany) Guid __winrt_GUID_NULL(0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
-
-//
-//// Don't want to define the real IUnknown from unknown.h here. That would means if the user has
-//// any broken code that uses it, compile errors will take the form of e.g.:
-////     predefined C++ WinRT types (compiler internal)(41) : see declaration of 'IUnknown::QueryInterface'
-//// This is not helpful. If they use IUnknown, we still need to point them to the actual unknown.h so
-//// that they can see the original definition.
-////
-//// For WinRT, we'll instead have a parallel COM interface hierarchy for basic interfaces starting with _.
-//// The type mismatch is not an issue. COM passes types through GUID / void* combos - the original type
-//// doesn't come into play unless the user static_casts an implementation type to one of these, but
-//// the WinRT implementation types are hidden.
-__interface __declspec(uuid("00000000-0000-0000-C000-000000000046")) __abi_IUnknown
-{
-public:
-    virtual long __stdcall __abi_QueryInterface(Guid&, void**) = 0;
-    virtual unsigned long __stdcall __abi_AddRef() = 0;
-    virtual unsigned long __stdcall __abi_Release() = 0;
-};
+#include "wrl.h
 #endif
-#include "ppltasks_winrt.h"
+#include "ppltasks_winrt.hpp"
 #endif
 #else
 #include <comdef.h>
@@ -4372,8 +4218,8 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
         hr = MFCopyImage(
             pData,                      // Destination buffer.
             cbWidth,                    // Destination stride.
-            (BYTE*)videoFrameBuffer,    // First row in source image.
-            cbWidth,                    // Source stride.
+            ((BYTE*)videoFrameBuffer) + (videoHeight-1)*cbWidth,    // First row in source image.
+            -cbWidth,                   // Source stride.
             cbWidth,                    // Image width in bytes.
             videoHeight                 // Image height in pixels.
             );

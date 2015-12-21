@@ -99,14 +99,50 @@ v = f_y*y' + c_y
 Real lenses usually have some distortion, mostly radial distortion and slight tangential distortion.
 So, the above model is extended as:
 
-\f[\begin{array}{l} \vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\ x' = x/z \\ y' = y/z \\ x'' = x'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\ y'' = y'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\ \text{where} \quad r^2 = x'^2 + y'^2  \\ u = f_x*x'' + c_x \\ v = f_y*y'' + c_y \end{array}\f]
+\f[\begin{array}{l}
+\vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\
+x' = x/z \\
+y' = y/z \\
+x'' = x'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\
+y'' = y'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
+\text{where} \quad r^2 = x'^2 + y'^2  \\
+u = f_x*x'' + c_x \\
+v = f_y*y'' + c_y
+\end{array}\f]
 
 \f$k_1\f$, \f$k_2\f$, \f$k_3\f$, \f$k_4\f$, \f$k_5\f$, and \f$k_6\f$ are radial distortion coefficients. \f$p_1\f$ and \f$p_2\f$ are
 tangential distortion coefficients. \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$, are the thin prism distortion
-coefficients. Higher-order coefficients are not considered in OpenCV. In the functions below the
-coefficients are passed or returned as
+coefficients. Higher-order coefficients are not considered in OpenCV.
 
-\f[(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f]
+In some cases the image sensor may be tilted in order to focus an oblique plane in front of the
+camera (Scheimpfug condition). This can be useful for particle image velocimetry (PIV) or
+triangulation with a laser fan. The tilt causes a perspective distortion of \f$x''\f$ and
+\f$y''\f$. This distortion can be modelled in the following way, see e.g. @cite Louhichi07.
+
+\f[\begin{array}{l}
+s\vecthree{x'''}{y'''}{1} =
+\vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}(\tau_x, \tau_y)}
+{0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
+{0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\\
+u = f_x*x''' + c_x \\
+v = f_y*y''' + c_y
+\end{array}\f]
+
+where the matrix \f$R(\tau_x, \tau_y)\f$ is defined by two rotations with angular parameter \f$\tau_x\f$
+and \f$\tau_y\f$, respectively,
+
+\f[
+R(\tau_x, \tau_y) =
+\vecthreethree{\cos(\tau_y)}{0}{-\sin(\tau_y)}{0}{1}{0}{\sin(\tau_y)}{0}{\cos(\tau_y)}
+\vecthreethree{1}{0}{0}{0}{\cos(\tau_x)}{\sin(\tau_x)}{0}{-\sin(\tau_x)}{\cos(\tau_x)} =
+\vecthreethree{\cos(\tau_y)}{\sin(\tau_y)\sin(\tau_x)}{-\sin(\tau_y)\cos(\tau_x)}
+{0}{\cos(\tau_x)}{\sin(\tau_x)}
+{\sin(\tau_y)}{-\cos(\tau_y)\sin(\tau_x)}{\cos(\tau_y)\cos(\tau_x)}.
+\f]
+
+In the functions below the coefficients are passed or returned as
+
+\f[(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f]
 
 vector. That is, if the vector contains four elements, it means that \f$k_3=0\f$ . The distortion
 coefficients do not depend on the scene viewed. Thus, they also belong to the intrinsic camera
@@ -139,7 +175,7 @@ pattern (every view is described by several 3D-2D point correspondences).
     -   A calibration example on stereo matching can be found at
         opencv_source_code/samples/cpp/stereo_match.cpp
     -   (Python) A camera calibration sample can be found at
-        opencv_source_code/samples/python2/calibrate.py
+        opencv_source_code/samples/python/calibrate.py
 
   @{
     @defgroup calib3d_fisheye Fisheye camera model
@@ -189,10 +225,10 @@ enum { LMEDS  = 4, //!< least-median algorithm
      };
 
 enum { SOLVEPNP_ITERATIVE = 0,
-       SOLVEPNP_EPNP      = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
-       SOLVEPNP_P3P       = 2, // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
-       SOLVEPNP_DLS       = 3, // Joel A. Hesch and Stergios I. Roumeliotis. "A Direct Least-Squares (DLS) Method for PnP"
-       SOLVEPNP_UPNP      = 4  // A.Penate-Sanchez, J.Andrade-Cetto, F.Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation"
+       SOLVEPNP_EPNP      = 1, //!< EPnP: Efficient Perspective-n-Point Camera Pose Estimation @cite lepetit2009epnp
+       SOLVEPNP_P3P       = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
+       SOLVEPNP_DLS       = 3, //!< A Direct Least-Squares (DLS) Method for PnP  @cite hesch2011direct
+       SOLVEPNP_UPNP      = 4  //!< Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation @cite penate2013exhaustive
 
 };
 
@@ -221,11 +257,14 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_RATIONAL_MODEL      = 0x04000,
        CALIB_THIN_PRISM_MODEL    = 0x08000,
        CALIB_FIX_S1_S2_S3_S4     = 0x10000,
+       CALIB_TILTED_MODEL        = 0x40000,
+       CALIB_FIX_TAUX_TAUY       = 0x80000,
        // only for stereo
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
        // for stereo rectification
-       CALIB_ZERO_DISPARITY      = 0x00400
+       CALIB_ZERO_DISPARITY      = 0x00400,
+       CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
      };
 
 //! the algorithm for finding fundamental matrix
@@ -443,8 +482,8 @@ vector\<Point3f\> ), where N is the number of points in the view.
 @param tvec Translation vector.
 @param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is empty, the zero distortion coefficients are assumed.
 @param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
 vector\<Point2f\> .
 @param jacobian Optional output 2Nx(10+\<numDistCoeffs\>) jacobian matrix of derivatives of image
@@ -482,8 +521,9 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
 where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
 @param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
@@ -513,7 +553,7 @@ projections, as well as the camera matrix and the distortion coefficients.
 
 @note
    -   An example of how to use solvePnP for planar augmented reality can be found at
-        opencv_source_code/samples/python2/plane_ar.py
+        opencv_source_code/samples/python/plane_ar.py
    -   If you are using Python:
         - Numpy array slices won't work as input because solvePnP requires contiguous
         arrays (enforced by the assertion using cv::Mat::checkVector() around line 55 of
@@ -538,8 +578,9 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
 where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
 @param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
@@ -718,7 +759,8 @@ together.
 and/or CV_CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param distCoeffs Output vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements.
 @param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view
 (e.g. std::vector<cv::Mat>>). That is, each k-th rotation vector together with the corresponding
 k-th translation vector (see the next output parameter description) brings the calibration pattern
@@ -752,6 +794,13 @@ backward compatibility, this extra flag should be explicitly specified to make t
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
 -   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
+the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+supplied distCoeffs matrix is used. Otherwise, it is set to 0.
+-   **CALIB_TILTED_MODEL** Coefficients tauX and tauY are enabled. To provide the
+backward compatibility, this extra flag should be explicitly specified to make the
+calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
+set, the function computes and returns only 5 distortion coefficients.
+-   **CALIB_FIX_TAUX_TAUY** The coefficients of the tilted sensor model are not changed during
 the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
@@ -838,8 +887,8 @@ any of CV_CALIB_USE_INTRINSIC_GUESS , CV_CALIB_FIX_ASPECT_RATIO ,
 CV_CALIB_FIX_INTRINSIC , or CV_CALIB_FIX_FOCAL_LENGTH are specified, some or all of the
 matrix components must be initialized. See the flags description for details.
 @param distCoeffs1 Input/output vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 ot 12 elements. The
-output vector length depends on the flags.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. The output vector length depends on the flags.
 @param cameraMatrix2 Input/output second camera matrix. The parameter is similar to cameraMatrix1
 @param distCoeffs2 Input/output lens distortion coefficients for the second camera. The parameter
 is similar to distCoeffs1 .
@@ -872,6 +921,13 @@ backward compatibility, this extra flag should be explicitly specified to make t
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
 -   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
+the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+supplied distCoeffs matrix is used. Otherwise, it is set to 0.
+-   **CALIB_TILTED_MODEL** Coefficients tauX and tauY are enabled. To provide the
+backward compatibility, this extra flag should be explicitly specified to make the
+calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
+set, the function computes and returns only 5 distortion coefficients.
+-   **CALIB_FIX_TAUX_TAUY** The coefficients of the tilted sensor model are not changed during
 the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
@@ -922,8 +978,8 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
 /** @brief Computes rectification transforms for each head of a calibrated stereo camera.
 
 @param cameraMatrix1 First camera matrix.
-@param cameraMatrix2 Second camera matrix.
 @param distCoeffs1 First camera distortion parameters.
+@param cameraMatrix2 Second camera matrix.
 @param distCoeffs2 Second camera distortion parameters.
 @param imageSize Size of the image used for stereo calibration.
 @param R Rotation matrix between the coordinate systems of the first and the second cameras.
@@ -1057,8 +1113,9 @@ CV_EXPORTS_W float rectify3Collinear( InputArray cameraMatrix1, InputArray distC
 
 @param cameraMatrix Input camera matrix.
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
 @param imageSize Original image size.
 @param alpha Free scaling parameter between 0 (when all the pixels in the undistorted image are
 valid) and 1 (when all the source image pixels are retained in the undistorted image). See
@@ -1182,6 +1239,39 @@ CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
 be floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
+@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+Note that this function assumes that points1 and points2 are feature points from cameras with the
+same camera matrix.
+@param method Method for computing a fundamental matrix.
+-   **RANSAC** for the RANSAC algorithm.
+-   **MEDS** for the LMedS algorithm.
+@param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
+line in pixels, beyond which the point is considered an outlier and is not used for computing the
+final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
+point localization, image resolution, and the image noise.
+@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
+confidence (probability) that the estimated matrix is correct.
+@param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
+for the other points. The array is computed only in the RANSAC and LMedS methods.
+
+This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
+@cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
+
+\f[[p_2; 1]^T K^{-T} E K^{-1} [p_1; 1] = 0\f]
+
+where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding points in the first and the
+second images, respectively. The result of this function may be passed further to
+decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
+ */
+CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
+                                 InputArray cameraMatrix, int method = RANSAC,
+                                 double prob = 0.999, double threshold = 1.0,
+                                 OutputArray mask = noArray() );
+
+/** @overload
+@param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
+be floating-point (single or double precision).
+@param points2 Array of the second image points of the same size and format as points1 .
 @param focal focal length of the camera. Note that this function assumes that points1 and points2
 are feature points from cameras with same focal length and principle point.
 @param pp principle point of the camera.
@@ -1197,19 +1287,15 @@ confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
 
-This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
-@cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
+This function differs from the one above that it computes camera matrix from focal length and
+principal point:
 
-\f[[p_2; 1]^T K^{-T} E K^{-1} [p_1; 1] = 0 \\\f]\f[K =
+\f[K =
 \begin{bmatrix}
 f & 0 & x_{pp}  \\
 0 & f & y_{pp}  \\
 0 & 0 & 1
 \end{bmatrix}\f]
-
-where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding points in the first and the
-second images, respectively. The result of this function may be passed further to
-decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
  */
 CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  double focal = 1.0, Point2d pp = Point2d(0, 0),
@@ -1237,11 +1323,11 @@ the check.
 @param points1 Array of N 2D points from the first image. The point coordinates should be
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
+@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+Note that this function assumes that points1 and points2 are feature points from cameras with the
+same camera matrix.
 @param R Recovered relative rotation.
 @param t Recoverd relative translation.
-@param focal Focal length of the camera. Note that this function assumes that points1 and points2
-are feature points from cameras with same focal length and principle point.
-@param pp Principle point of the camera.
 @param mask Input/output mask for inliers in points1 and points2.
 :   If it is not empty, then it marks inliers in points1 and points2 for then given essential
 matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
@@ -1265,19 +1351,48 @@ points1 and points2 are the same input for findEssentialMat. :
         points2[i] = ...;
     }
 
-    double focal = 1.0;
-    cv::Point2d pp(0.0, 0.0);
+    // cametra matrix with both focal lengths = 1, and principal point = (0, 0)
+    Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+
     Mat E, R, t, mask;
 
-    E = findEssentialMat(points1, points2, focal, pp, RANSAC, 0.999, 1.0, mask);
-    recoverPose(E, points1, points2, R, t, focal, pp, mask);
+    E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+    recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
 @endcode
+ */
+CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
+                            InputArray cameraMatrix, OutputArray R, OutputArray t,
+                            InputOutputArray mask = noArray() );
+
+/** @overload
+@param E The input essential matrix.
+@param points1 Array of N 2D points from the first image. The point coordinates should be
+floating-point (single or double precision).
+@param points2 Array of the second image points of the same size and format as points1 .
+@param R Recovered relative rotation.
+@param t Recoverd relative translation.
+@param focal Focal length of the camera. Note that this function assumes that points1 and points2
+are feature points from cameras with same focal length and principle point.
+@param pp Principle point of the camera.
+@param mask Input/output mask for inliers in points1 and points2.
+:   If it is not empty, then it marks inliers in points1 and points2 for then given essential
+matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
+which pass the cheirality check.
+
+This function differs from the one above that it computes camera matrix from focal length and
+principal point:
+
+\f[K =
+\begin{bmatrix}
+f & 0 & x_{pp}  \\
+0 & f & y_{pp}  \\
+0 & 0 & 1
+\end{bmatrix}\f]
  */
 CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
                             OutputArray R, OutputArray t,
                             double focal = 1.0, Point2d pp = Point2d(0, 0),
                             InputOutputArray mask = noArray() );
-
 
 /** @brief For points in an image of a stereo pair, computes the corresponding epilines in the other image.
 
@@ -1375,7 +1490,8 @@ CV_EXPORTS_W void validateDisparity( InputOutputArray disparity, InputArray cost
 /** @brief Reprojects a disparity image to 3D space.
 
 @param disparity Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit
-floating-point disparity image.
+floating-point disparity image. If 16-bit signed format is used, the values are assumed to have no
+fractional bits.
 @param _3dImage Output 3-channel floating-point image of the same size as disparity . Each
 element of _3dImage(x,y) contains 3D coordinates of the point (x,y) computed from the disparity
 map.
@@ -1401,6 +1517,17 @@ CV_EXPORTS_W void reprojectImageTo3D( InputArray disparity,
                                       OutputArray _3dImage, InputArray Q,
                                       bool handleMissingValues = false,
                                       int ddepth = -1 );
+
+/** @brief Calculates the Sampson Distance between two points.
+
+The function sampsonDistance calculates and returns the first order approximation of the geometric error as:
+\f[sd( \texttt{pt1} , \texttt{pt2} )= \frac{(\texttt{pt2}^t \cdot \texttt{F} \cdot \texttt{pt1})^2}{(\texttt{F} \cdot \texttt{pt1})(0) + (\texttt{F} \cdot \texttt{pt1})(1) + (\texttt{F}^t \cdot \texttt{pt2})(0) + (\texttt{F}^t \cdot \texttt{pt2})(1)}\f]
+The fundamental matrix may be calculated using the cv::findFundamentalMat function. See HZ 11.4.3 for details.
+@param pt1 first homogeneous 2d point
+@param pt2 second homogeneous 2d point
+@param F fundamental matrix
+*/
+CV_EXPORTS_W double sampsonDistance(InputArray pt1, InputArray pt2, InputArray F);
 
 /** @brief Computes an optimal affine transformation between two 3D point sets.
 
@@ -1547,7 +1674,7 @@ check, quadratic interpolation and speckle filtering).
 
 @note
    -   (Python) An example illustrating the use of the StereoSGBM matching algorithm can be found
-        at opencv_source_code/samples/python2/stereo_match.py
+        at opencv_source_code/samples/python/stereo_match.py
  */
 class CV_EXPORTS_W StereoSGBM : public StereoMatcher
 {

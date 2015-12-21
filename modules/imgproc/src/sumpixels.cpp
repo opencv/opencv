@@ -44,10 +44,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-static IppStatus sts = ippInit();
-#endif
-
 namespace cv
 {
 
@@ -429,7 +425,7 @@ namespace cv
 {
 static bool ipp_integral(InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth, int sqdepth)
 {
-#if !defined(HAVE_IPP_ICV_ONLY) // Disabled on ICV due invalid results
+#if !defined(HAVE_IPP_ICV_ONLY) && (IPP_VERSION_X100 != 900) // Disabled on ICV due invalid results
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( sdepth <= 0 )
         sdepth = depth == CV_8U ? CV_32S : CV_64F;

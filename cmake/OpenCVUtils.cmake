@@ -503,17 +503,15 @@ endmacro()
 
 
 # convert list of paths to libraries names without lib prefix
-macro(ocv_convert_to_lib_name var)
-  set(__tmp "")
+function(ocv_convert_to_lib_name var)
+  set(tmp "")
   foreach(path ${ARGN})
-    get_filename_component(__tmp_name "${path}" NAME_WE)
-    string(REGEX REPLACE "^lib" "" __tmp_name ${__tmp_name})
-    list(APPEND __tmp "${__tmp_name}")
+    get_filename_component(tmp_name "${path}" NAME_WE)
+    string(REGEX REPLACE "^lib" "" tmp_name "${tmp_name}")
+    list(APPEND tmp "${tmp_name}")
   endforeach()
-  set(${var} ${__tmp})
-  unset(__tmp)
-  unset(__tmp_name)
-endmacro()
+  set(${var} ${tmp} PARENT_SCOPE)
+endfunction()
 
 
 # add install command
@@ -727,6 +725,9 @@ function(ocv_target_link_libraries target)
       endif()
     endforeach()
   endif()
+  if(";${LINK_DEPS};" MATCHES ";${target};")
+    list(REMOVE_ITEM LINK_DEPS "${target}") # prevent "link to itself" warning (world problem)
+  endif()
   target_link_libraries(${target} ${LINK_DEPS})
 endfunction()
 
@@ -826,11 +827,17 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
   list(FIND ${_extra} "ippicv" ippicv_idx)
   if (${ippicv_idx} GREATER -1)
     list(REMOVE_ITEM ${_extra} "ippicv")
-    list(INSERT ${_3rdparty} 0 "ippicv")
+    if(NOT BUILD_SHARED_LIBS)
+      list(INSERT ${_3rdparty} 0 "ippicv")
+    endif()
   endif()
 
   # split 3rdparty libs and modules
   list(REMOVE_ITEM ${_modules} ${${_3rdparty}} ${${_extra}} non_empty_list)
+
+  ocv_list_filterout(${_modules} "^[\$]<")
+  ocv_list_filterout(${_3rdparty} "^[\$]<")
+  ocv_list_filterout(${_extra} "^[\$]<")
 
   # convert CMake lists to makefile literals
   foreach(lst ${_modules} ${_3rdparty} ${_extra})
@@ -910,4 +917,33 @@ function(ocv_download)
   endif()
 
   set(DOWNLOAD_PACKAGE_LOCATION ${DOWNLOAD_TARGET} PARENT_SCOPE)
+endfunction()
+
+function(ocv_add_test_from_target test_name test_kind the_target)
+  if(CMAKE_VERSION VERSION_GREATER "2.8" AND NOT CMAKE_CROSSCOMPILING)
+    if(NOT "${test_kind}" MATCHES "^(Accuracy|Performance|Sanity)$")
+      message(FATAL_ERROR "Unknown test kind : ${test_kind}")
+    endif()
+    if(NOT TARGET "${the_target}")
+      message(FATAL_ERROR "${the_target} is not a CMake target")
+    endif()
+
+    string(TOLOWER "${test_kind}" test_kind_lower)
+    set(test_report_dir "${CMAKE_BINARY_DIR}/test-reports/${test_kind_lower}")
+    file(MAKE_DIRECTORY "${test_report_dir}")
+
+    add_test(NAME "${test_name}"
+      COMMAND "${the_target}"
+              "--gtest_output=xml:${the_target}.xml"
+              ${ARGN})
+
+    set_tests_properties("${test_name}" PROPERTIES
+      LABELS "${OPENCV_MODULE_${the_module}_LABEL};${test_kind}"
+      WORKING_DIRECTORY "${test_report_dir}")
+
+    if(OPENCV_TEST_DATA_PATH)
+      set_tests_properties("${test_name}" PROPERTIES
+        ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
+    endif()
+  endif()
 endfunction()

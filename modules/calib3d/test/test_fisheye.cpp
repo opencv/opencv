@@ -101,15 +101,15 @@ TEST_F(fisheyeTest, projectPoints)
 
 TEST_F(fisheyeTest, DISABLED_undistortImage)
 {
-    cv::Matx33d K = this->K;
-    cv::Mat D = cv::Mat(this->D);
+    cv::Matx33d theK = this->K;
+    cv::Mat theD = cv::Mat(this->D);
     std::string file = combine(datasets_repository_path, "/calib-3_stereo_from_JY/left/stereo_pair_014.jpg");
-    cv::Matx33d newK = K;
+    cv::Matx33d newK = theK;
     cv::Mat distorted = cv::imread(file), undistorted;
     {
         newK(0, 0) = 100;
         newK(1, 1) = 100;
-        cv::fisheye::undistortImage(distorted, undistorted, K, D, newK);
+        cv::fisheye::undistortImage(distorted, undistorted, theK, theD, newK);
         cv::Mat correct = cv::imread(combine(datasets_repository_path, "new_f_100.png"));
         if (correct.empty())
             CV_Assert(cv::imwrite(combine(datasets_repository_path, "new_f_100.png"), undistorted));
@@ -118,8 +118,8 @@ TEST_F(fisheyeTest, DISABLED_undistortImage)
     }
     {
         double balance = 1.0;
-        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K, D, distorted.size(), cv::noArray(), newK, balance);
-        cv::fisheye::undistortImage(distorted, undistorted, K, D, newK);
+        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(theK, theD, distorted.size(), cv::noArray(), newK, balance);
+        cv::fisheye::undistortImage(distorted, undistorted, theK, theD, newK);
         cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_1.0.png"));
         if (correct.empty())
             CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_1.0.png"), undistorted));
@@ -129,8 +129,8 @@ TEST_F(fisheyeTest, DISABLED_undistortImage)
 
     {
         double balance = 0.0;
-        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K, D, distorted.size(), cv::noArray(), newK, balance);
-        cv::fisheye::undistortImage(distorted, undistorted, K, D, newK);
+        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(theK, theD, distorted.size(), cv::noArray(), newK, balance);
+        cv::fisheye::undistortImage(distorted, undistorted, theK, theD, newK);
         cv::Mat correct = cv::imread(combine(datasets_repository_path, "balance_0.0.png"));
         if (correct.empty())
             CV_Assert(cv::imwrite(combine(datasets_repository_path, "balance_0.0.png"), undistorted));
@@ -143,7 +143,7 @@ TEST_F(fisheyeTest, jacobians)
 {
     int n = 10;
     cv::Mat X(1, n, CV_64FC3);
-    cv::Mat om(3, 1, CV_64F), T(3, 1, CV_64F);
+    cv::Mat om(3, 1, CV_64F), theT(3, 1, CV_64F);
     cv::Mat f(2, 1, CV_64F), c(2, 1, CV_64F);
     cv::Mat k(4, 1, CV_64F);
     double alpha;
@@ -156,8 +156,8 @@ TEST_F(fisheyeTest, jacobians)
     r.fill(om, cv::RNG::NORMAL, 0, 1);
     om = cv::abs(om);
 
-    r.fill(T, cv::RNG::NORMAL, 0, 1);
-    T = cv::abs(T); T.at<double>(2) = 4; T *= 10;
+    r.fill(theT, cv::RNG::NORMAL, 0, 1);
+    theT = cv::abs(theT); theT.at<double>(2) = 4; theT *= 10;
 
     r.fill(f, cv::RNG::NORMAL, 0, 1);
     f = cv::abs(f) * 1000;
@@ -171,19 +171,19 @@ TEST_F(fisheyeTest, jacobians)
     alpha = 0.01*r.gaussian(1);
 
     cv::Mat x1, x2, xpred;
-    cv::Matx33d K(f.at<double>(0), alpha * f.at<double>(0), c.at<double>(0),
+    cv::Matx33d theK(f.at<double>(0), alpha * f.at<double>(0), c.at<double>(0),
                      0,            f.at<double>(1), c.at<double>(1),
                      0,            0,    1);
 
     cv::Mat jacobians;
-    cv::fisheye::projectPoints(X, x1, om, T, K, k, alpha, jacobians);
+    cv::fisheye::projectPoints(X, x1, om, theT, theK, k, alpha, jacobians);
 
     //test on T:
     cv::Mat dT(3, 1, CV_64FC1);
     r.fill(dT, cv::RNG::NORMAL, 0, 1);
-    dT *= 1e-9*cv::norm(T);
-    cv::Mat T2 = T + dT;
-    cv::fisheye::projectPoints(X, x2, om, T2, K, k, alpha, cv::noArray());
+    dT *= 1e-9*cv::norm(theT);
+    cv::Mat T2 = theT + dT;
+    cv::fisheye::projectPoints(X, x2, om, T2, theK, k, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(11,14) * dT).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -192,7 +192,7 @@ TEST_F(fisheyeTest, jacobians)
     r.fill(dom, cv::RNG::NORMAL, 0, 1);
     dom *= 1e-9*cv::norm(om);
     cv::Mat om2 = om + dom;
-    cv::fisheye::projectPoints(X, x2, om2, T, K, k, alpha, cv::noArray());
+    cv::fisheye::projectPoints(X, x2, om2, theT, theK, k, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(8,11) * dom).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -200,8 +200,8 @@ TEST_F(fisheyeTest, jacobians)
     cv::Mat df(2, 1, CV_64FC1);
     r.fill(df, cv::RNG::NORMAL, 0, 1);
     df *= 1e-9*cv::norm(f);
-    cv::Matx33d K2 = K + cv::Matx33d(df.at<double>(0), df.at<double>(0) * alpha, 0, 0, df.at<double>(1), 0, 0, 0, 0);
-    cv::fisheye::projectPoints(X, x2, om, T, K2, k, alpha, cv::noArray());
+    cv::Matx33d K2 = theK + cv::Matx33d(df.at<double>(0), df.at<double>(0) * alpha, 0, 0, df.at<double>(1), 0, 0, 0, 0);
+    cv::fisheye::projectPoints(X, x2, om, theT, K2, k, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(0,2) * df).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -209,8 +209,8 @@ TEST_F(fisheyeTest, jacobians)
     cv::Mat dc(2, 1, CV_64FC1);
     r.fill(dc, cv::RNG::NORMAL, 0, 1);
     dc *= 1e-9*cv::norm(c);
-    K2 = K + cv::Matx33d(0, 0, dc.at<double>(0), 0, 0, dc.at<double>(1), 0, 0, 0);
-    cv::fisheye::projectPoints(X, x2, om, T, K2, k, alpha, cv::noArray());
+    K2 = theK + cv::Matx33d(0, 0, dc.at<double>(0), 0, 0, dc.at<double>(1), 0, 0, 0);
+    cv::fisheye::projectPoints(X, x2, om, theT, K2, k, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(2,4) * dc).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -219,7 +219,7 @@ TEST_F(fisheyeTest, jacobians)
     r.fill(dk, cv::RNG::NORMAL, 0, 1);
     dk *= 1e-9*cv::norm(k);
     cv::Mat k2 = k + dk;
-    cv::fisheye::projectPoints(X, x2, om, T, K, k2, alpha, cv::noArray());
+    cv::fisheye::projectPoints(X, x2, om, theT, theK, k2, alpha, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.colRange(4,8) * dk).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 
@@ -228,8 +228,8 @@ TEST_F(fisheyeTest, jacobians)
     r.fill(dalpha, cv::RNG::NORMAL, 0, 1);
     dalpha *= 1e-9*cv::norm(f);
     double alpha2 = alpha + dalpha.at<double>(0);
-    K2 = K + cv::Matx33d(0, f.at<double>(0) * dalpha.at<double>(0), 0, 0, 0, 0, 0, 0, 0);
-    cv::fisheye::projectPoints(X, x2, om, T, K, k, alpha2, cv::noArray());
+    K2 = theK + cv::Matx33d(0, f.at<double>(0) * dalpha.at<double>(0), 0, 0, 0, 0, 0, 0, 0);
+    cv::fisheye::projectPoints(X, x2, om, theT, theK, k, alpha2, cv::noArray());
     xpred = x1 + cv::Mat(jacobians.col(14) * dalpha).reshape(2, 1);
     CV_Assert (cv::norm(x2 - xpred) < 1e-10);
 }
@@ -259,14 +259,14 @@ TEST_F(fisheyeTest, Calibration)
     flag |= cv::fisheye::CALIB_CHECK_COND;
     flag |= cv::fisheye::CALIB_FIX_SKEW;
 
-    cv::Matx33d K;
-    cv::Vec4d D;
+    cv::Matx33d theK;
+    cv::Vec4d theD;
 
-    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, K, D,
+    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
                            cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
 
-    EXPECT_MAT_NEAR(K, this->K, 1e-10);
-    EXPECT_MAT_NEAR(D, this->D, 1e-10);
+    EXPECT_MAT_NEAR(theK, this->K, 1e-10);
+    EXPECT_MAT_NEAR(theD, this->D, 1e-10);
 }
 
 TEST_F(fisheyeTest, Homography)
@@ -303,15 +303,15 @@ TEST_F(fisheyeTest, Homography)
     int Np = imagePointsNormalized.cols;
     cv::calcCovarMatrix(_objectPoints, covObjectPoints, objectPointsMean, cv::COVAR_NORMAL | cv::COVAR_COLS);
     cv::SVD svd(covObjectPoints);
-    cv::Mat R(svd.vt);
+    cv::Mat theR(svd.vt);
 
-    if (cv::norm(R(cv::Rect(2, 0, 1, 2))) < 1e-6)
-        R = cv::Mat::eye(3,3, CV_64FC1);
-    if (cv::determinant(R) < 0)
-        R = -R;
+    if (cv::norm(theR(cv::Rect(2, 0, 1, 2))) < 1e-6)
+        theR = cv::Mat::eye(3,3, CV_64FC1);
+    if (cv::determinant(theR) < 0)
+        theR = -theR;
 
-    cv::Mat T = -R * objectPointsMean;
-    cv::Mat X_new = R * _objectPoints + T * cv::Mat::ones(1, Np, CV_64FC1);
+    cv::Mat theT = -theR * objectPointsMean;
+    cv::Mat X_new = theR * _objectPoints + theT * cv::Mat::ones(1, Np, CV_64FC1);
     cv::Mat H = cv::internal::ComputeHomography(imagePointsNormalized, X_new.rowRange(0, 2));
 
     cv::Mat M = cv::Mat::ones(3, X_new.cols, CV_64FC1);
@@ -355,20 +355,20 @@ TEST_F(fisheyeTest, EtimateUncertainties)
     flag |= cv::fisheye::CALIB_CHECK_COND;
     flag |= cv::fisheye::CALIB_FIX_SKEW;
 
-    cv::Matx33d K;
-    cv::Vec4d D;
+    cv::Matx33d theK;
+    cv::Vec4d theD;
     std::vector<cv::Vec3d> rvec;
     std::vector<cv::Vec3d> tvec;
 
-    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, K, D,
+    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
                            rvec, tvec, flag, cv::TermCriteria(3, 20, 1e-6));
 
     cv::internal::IntrinsicParams param, errors;
     cv::Vec2d err_std;
     double thresh_cond = 1e6;
     int check_cond = 1;
-    param.Init(cv::Vec2d(K(0,0), K(1,1)), cv::Vec2d(K(0,2), K(1, 2)), D);
-    param.isEstimate = std::vector<int>(9, 1);
+    param.Init(cv::Vec2d(theK(0,0), theK(1,1)), cv::Vec2d(theK(0,2), theK(1, 2)), theD);
+    param.isEstimate = std::vector<uchar>(9, 1);
     param.isEstimate[4] = 0;
 
     errors.isEstimate = param.isEstimate;
@@ -399,12 +399,12 @@ TEST_F(fisheyeTest, rectify)
     cv::Matx33d K1 = this->K, K2 = K1;
     cv::Mat D1 = cv::Mat(this->D), D2 = D1;
 
-    cv::Vec3d T = this->T;
-    cv::Matx33d R = this->R;
+    cv::Vec3d theT = this->T;
+    cv::Matx33d theR = this->R;
 
     double balance = 0.0, fov_scale = 1.1;
     cv::Mat R1, R2, P1, P2, Q;
-    cv::fisheye::stereoRectify(K1, D1, K2, D2, calibration_size, R, T, R1, R2, P1, P2, Q,
+    cv::fisheye::stereoRectify(K1, D1, K2, D2, calibration_size, theR, theT, R1, R2, P1, P2, Q,
                       cv::CALIB_ZERO_DISPARITY, requested_size, balance, fov_scale);
 
     cv::Mat lmapx, lmapy, rmapx, rmapy;
@@ -468,8 +468,8 @@ TEST_F(fisheyeTest, stereoCalibrate)
     fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
 
-    cv::Matx33d K1, K2, R;
-    cv::Vec3d T;
+    cv::Matx33d K1, K2, theR;
+    cv::Vec3d theT;
     cv::Vec4d D1, D2;
 
     int flag = 0;
@@ -479,7 +479,7 @@ TEST_F(fisheyeTest, stereoCalibrate)
    // flag |= cv::fisheye::CALIB_FIX_INTRINSIC;
 
     cv::fisheye::stereoCalibrate(objectPoints, leftPoints, rightPoints,
-                    K1, D1, K2, D2, imageSize, R, T, flag,
+                    K1, D1, K2, D2, imageSize, theR, theT, flag,
                     cv::TermCriteria(3, 12, 0));
 
     cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,
@@ -497,8 +497,8 @@ TEST_F(fisheyeTest, stereoCalibrate)
     cv::Vec4d D1_correct (-7.44253716539556e-05, -0.00702662033932424, 0.00737569823650885, -0.00342230256441771);
     cv::Vec4d D2_correct (-0.0130785435677431, 0.0284434505383497, -0.0360333869900506, 0.0144724062347222);
 
-    EXPECT_MAT_NEAR(R, R_correct, 1e-10);
-    EXPECT_MAT_NEAR(T, T_correct, 1e-10);
+    EXPECT_MAT_NEAR(theR, R_correct, 1e-10);
+    EXPECT_MAT_NEAR(theT, T_correct, 1e-10);
 
     EXPECT_MAT_NEAR(K1, K1_correct, 1e-10);
     EXPECT_MAT_NEAR(K2, K2_correct, 1e-10);
@@ -536,8 +536,8 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
 
-    cv::Matx33d R;
-    cv::Vec3d T;
+    cv::Matx33d theR;
+    cv::Vec3d theT;
 
     int flag = 0;
     flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
@@ -557,7 +557,7 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     cv::Vec4d D2 (-0.0130785435677431, 0.0284434505383497, -0.0360333869900506, 0.0144724062347222);
 
     cv::fisheye::stereoCalibrate(objectPoints, leftPoints, rightPoints,
-                    K1, D1, K2, D2, imageSize, R, T, flag,
+                    K1, D1, K2, D2, imageSize, theR, theT, flag,
                     cv::TermCriteria(3, 12, 0));
 
     cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,
@@ -566,8 +566,8 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     cv::Vec3d T_correct(-0.099402724724121, 0.00270812139265413, 0.00129330292472699);
 
 
-    EXPECT_MAT_NEAR(R, R_correct, 1e-10);
-    EXPECT_MAT_NEAR(T, T_correct, 1e-10);
+    EXPECT_MAT_NEAR(theR, R_correct, 1e-10);
+    EXPECT_MAT_NEAR(theT, T_correct, 1e-10);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

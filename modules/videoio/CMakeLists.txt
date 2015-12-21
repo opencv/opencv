@@ -7,7 +7,7 @@ ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java python)
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-if(WINRT_8_1)
+if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
@@ -38,7 +38,7 @@ list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${n
 # Dependencies used by the implementation referenced
 # below are not available on WinRT 8.0.
 # Enabling it for WiRT 8.1+ only.
-if(DEFINED WINRT AND NOT DEFINED WINRT_8_0)
+if(DEFINED WINRT AND NOT DEFINED WINRT_8_0 AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
 
     # WinRT detected. Adding WinRT API header
     message(STATUS "  ${name}: WinRT detected. Adding WinRT API header")
@@ -92,6 +92,10 @@ if(HAVE_DC1394)
 endif(HAVE_DC1394)
 
 if(HAVE_GSTREAMER)
+  IF(WIN32)
+    INCLUDE_DIRECTORIES(${GSTREAMER_INCLUDE_DIR})
+    list(APPEND VIDEOIO_LIBRARIES ${GSTREAMER_LIBRARIES})
+  ENDIF(WIN32)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gstreamer.cpp)
 endif(HAVE_GSTREAMER)
 
@@ -101,7 +105,7 @@ endif(HAVE_UNICAP)
 
 if(HAVE_LIBV4L)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libv4l.cpp)
-elseif(HAVE_CAMV4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
+elseif(HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_v4l.cpp)
 endif()
 
@@ -126,11 +130,11 @@ if(HAVE_XIMEA)
     link_directories("${XIMEA_LIBRARY_DIR}")
   endif()
   if(WIN32 AND X86_64)
-    list(APPEND VIDEOIO_LIBRARIES m3apiX64)
+    list(APPEND VIDEOIO_LIBRARIES xiapi64)
   elseif(APPLE)
     list(APPEND VIDEOIO_LIBRARIES "-framework m3api")
   else()
-    list(APPEND VIDEOIO_LIBRARIES m3api)
+    list(APPEND VIDEOIO_LIBRARIES xiapi32)
   endif()
 endif(HAVE_XIMEA)
 
@@ -185,7 +189,6 @@ if(HAVE_GPHOTO2)
 endif(HAVE_GPHOTO2)
 
 if(IOS)
-  add_definitions(-DHAVE_IOS=1)
   list(APPEND videoio_srcs
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_abstract_camera.mm
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_photo_camera.mm
@@ -263,6 +266,11 @@ if(WIN32 AND WITH_FFMPEG)
   endif()
 
   install(FILES "${ffmpeg_path}" DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs RENAME "${ffmpeg_bare_name_ver}")
+
+  if(INSTALL_CREATE_DISTRIB)
+    install(FILES "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/opencv_ffmpeg.dll" DESTINATION "bin/" COMPONENT libs RENAME "opencv_ffmpeg${OPENCV_DLLVERSION}.dll")
+    install(FILES "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/opencv_ffmpeg_64.dll" DESTINATION "bin/" COMPONENT libs RENAME "opencv_ffmpeg${OPENCV_DLLVERSION}_64.dll")
+  endif()
 endif()
 endmacro()
 

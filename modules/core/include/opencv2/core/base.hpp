@@ -50,10 +50,10 @@
 #endif
 
 #include <climits>
+#include <algorithm>
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
-#include "opencv2/hal.hpp"
 
 namespace cv
 {
@@ -164,7 +164,25 @@ enum DecompTypes {
 \f[norm =  \forkthree{\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_INF}\) }
 { \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L1}\) }
 { \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L2}\) }\f]
-  */
+
+As example for one array consider the function \f$r(x)= \begin{pmatrix} x \\ 1-x \end{pmatrix}, x \in [-1;1]\f$.
+The \f$ L_{1}, L_{2} \f$ and \f$ L_{\infty} \f$ norm for the sample value \f$r(-1) = \begin{pmatrix} -1 \\ 2 \end{pmatrix}\f$
+is calculated as follows
+\f{align*}
+    \| r(-1) \|_{L_1} &= |-1| + |2| = 3 \\
+    \| r(-1) \|_{L_2} &= \sqrt{(-1)^{2} + (2)^{2}} = \sqrt{5} \\
+    \| r(-1) \|_{L_\infty} &= \max(|-1|,|2|) = 2
+\f}
+and for \f$r(0.5) = \begin{pmatrix} 0.5 \\ 0.5 \end{pmatrix}\f$ the calculation is
+\f{align*}
+    \| r(0.5) \|_{L_1} &= |0.5| + |0.5| = 1 \\
+    \| r(0.5) \|_{L_2} &= \sqrt{(0.5)^{2} + (0.5)^{2}} = \sqrt{0.5} \\
+    \| r(0.5) \|_{L_\infty} &= \max(|0.5|,|0.5|) = 0.5.
+\f}
+The following graphic shows all values for the three norm functions \f$\| r(x) \|_{L_1}, \| r(x) \|_{L_2}\f$ and \f$\| r(x) \|_{L_\infty}\f$.
+It is notable that the \f$ L_{1} \f$ norm forms the upper and the \f$ L_{\infty} \f$ norm forms the lower border for the example function \f$ r(x) \f$.
+![Graphs for the different norm functions from the above example](pics/NormTypes_OneArray_1-2-INF.png)
+ */
 enum NormTypes { NORM_INF       = 1,
                  NORM_L1        = 2,
                  NORM_L2        = 4,
@@ -260,6 +278,8 @@ enum BorderTypes {
 #  endif
 #  if __has_extension(cxx_static_assert)
 #    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
+#  elif __has_extension(c_static_assert)
+#    define CV_StaticAssert(condition, reason)    _Static_assert((condition), reason " " #condition)
 #  endif
 #elif defined(__GNUC__)
 #  if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L)
@@ -645,6 +665,7 @@ namespace cudev
 
 namespace ipp
 {
+CV_EXPORTS int getIppFeatures();
 CV_EXPORTS void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
                              int line = 0);
 CV_EXPORTS int getIppStatus();
@@ -658,89 +679,11 @@ CV_EXPORTS void setUseIPP(bool flag);
 
 //! @} core_utils
 
-//! @addtogroup core_utils_neon
-//! @{
 
-#if CV_NEON
 
-inline int32x2_t cv_vrnd_s32_f32(float32x2_t v)
-{
-    static int32x2_t v_sign = vdup_n_s32(1 << 31),
-        v_05 = vreinterpret_s32_f32(vdup_n_f32(0.5f));
-
-    int32x2_t v_addition = vorr_s32(v_05, vand_s32(v_sign, vreinterpret_s32_f32(v)));
-    return vcvt_s32_f32(vadd_f32(v, vreinterpret_f32_s32(v_addition)));
-}
-
-inline int32x4_t cv_vrndq_s32_f32(float32x4_t v)
-{
-    static int32x4_t v_sign = vdupq_n_s32(1 << 31),
-        v_05 = vreinterpretq_s32_f32(vdupq_n_f32(0.5f));
-
-    int32x4_t v_addition = vorrq_s32(v_05, vandq_s32(v_sign, vreinterpretq_s32_f32(v)));
-    return vcvtq_s32_f32(vaddq_f32(v, vreinterpretq_f32_s32(v_addition)));
-}
-
-inline uint32x2_t cv_vrnd_u32_f32(float32x2_t v)
-{
-    static float32x2_t v_05 = vdup_n_f32(0.5f);
-    return vcvt_u32_f32(vadd_f32(v, v_05));
-}
-
-inline uint32x4_t cv_vrndq_u32_f32(float32x4_t v)
-{
-    static float32x4_t v_05 = vdupq_n_f32(0.5f);
-    return vcvtq_u32_f32(vaddq_f32(v, v_05));
-}
-
-inline float32x4_t cv_vrecpq_f32(float32x4_t val)
-{
-    float32x4_t reciprocal = vrecpeq_f32(val);
-    reciprocal = vmulq_f32(vrecpsq_f32(val, reciprocal), reciprocal);
-    reciprocal = vmulq_f32(vrecpsq_f32(val, reciprocal), reciprocal);
-    return reciprocal;
-}
-
-inline float32x2_t cv_vrecp_f32(float32x2_t val)
-{
-    float32x2_t reciprocal = vrecpe_f32(val);
-    reciprocal = vmul_f32(vrecps_f32(val, reciprocal), reciprocal);
-    reciprocal = vmul_f32(vrecps_f32(val, reciprocal), reciprocal);
-    return reciprocal;
-}
-
-inline float32x4_t cv_vrsqrtq_f32(float32x4_t val)
-{
-    float32x4_t e = vrsqrteq_f32(val);
-    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(e, e), val), e);
-    e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(e, e), val), e);
-    return e;
-}
-
-inline float32x2_t cv_vrsqrt_f32(float32x2_t val)
-{
-    float32x2_t e = vrsqrte_f32(val);
-    e = vmul_f32(vrsqrts_f32(vmul_f32(e, e), val), e);
-    e = vmul_f32(vrsqrts_f32(vmul_f32(e, e), val), e);
-    return e;
-}
-
-inline float32x4_t cv_vsqrtq_f32(float32x4_t val)
-{
-    return cv_vrecpq_f32(cv_vrsqrtq_f32(val));
-}
-
-inline float32x2_t cv_vsqrt_f32(float32x2_t val)
-{
-    return cv_vrecp_f32(cv_vrsqrt_f32(val));
-}
-
-#endif
-
-//! @} core_utils_neon
 
 } // cv
 
-#include "sse_utils.hpp"
+#include "opencv2/core/neon_utils.hpp"
 
 #endif //__OPENCV_CORE_BASE_HPP__

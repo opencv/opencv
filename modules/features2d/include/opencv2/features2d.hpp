@@ -74,7 +74,7 @@ This section describes approaches based on local 2D features and used to categor
    -   A complete Bag-Of-Words sample can be found at
         opencv_source_code/samples/cpp/bagofwords_classification.cpp
     -   (Python) An example using the features2D framework to perform object categorization can be
-        found at opencv_source_code/samples/python2/find_obj.py
+        found at opencv_source_code/samples/python/find_obj.py
 
   @}
  */
@@ -317,25 +317,48 @@ public:
     CV_WRAP virtual int getFastThreshold() const = 0;
 };
 
-/** @brief Maximally stable extremal region extractor. :
+/** @brief Maximally stable extremal region extractor
 
-The class encapsulates all the parameters of the MSER extraction algorithm (see
-<http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions>). Also see
-<http://code.opencv.org/projects/opencv/wiki/MSER> for useful comments and parameters description.
+The class encapsulates all the parameters of the %MSER extraction algorithm (see [wiki
+article](http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions)).
 
-@note
-   -   (Python) A complete example showing the use of the MSER detector can be found at
-        opencv_source_code/samples/python2/mser.py
- */
+- there are two different implementation of %MSER: one for grey image, one for color image
+
+- the grey image algorithm is taken from: @cite nister2008linear ;  the paper claims to be faster
+than union-find method; it actually get 1.5~2m/s on my centrino L7200 1.2GHz laptop.
+
+- the color image algorithm is taken from: @cite forssen2007maximally ; it should be much slower
+than grey image method ( 3~4 times ); the chi_table.h file is taken directly from paper's source
+code which is distributed under GPL.
+
+- (Python) A complete example showing the use of the %MSER detector can be found at samples/python/mser.py
+*/
 class CV_EXPORTS_W MSER : public Feature2D
 {
 public:
-    //! the full constructor
+    /** @brief Full consturctor for %MSER detector
+
+    @param _delta it compares \f$(size_{i}-size_{i-delta})/size_{i-delta}\f$
+    @param _min_area prune the area which smaller than minArea
+    @param _max_area prune the area which bigger than maxArea
+    @param _max_variation prune the area have simliar size to its children
+    @param _min_diversity for color image, trace back to cut off mser with diversity less than min_diversity
+    @param _max_evolution  for color image, the evolution steps
+    @param _area_threshold for color image, the area threshold to cause re-initialize
+    @param _min_margin for color image, ignore too small margin
+    @param _edge_blur_size for color image, the aperture size for edge blur
+     */
     CV_WRAP static Ptr<MSER> create( int _delta=5, int _min_area=60, int _max_area=14400,
           double _max_variation=0.25, double _min_diversity=.2,
           int _max_evolution=200, double _area_threshold=1.01,
           double _min_margin=0.003, int _edge_blur_size=5 );
 
+    /** @brief Detect %MSER regions
+
+    @param image input image (8UC1, 8UC3 or 8UC4)
+    @param msers resulting list of point sets
+    @param bboxes resulting bounding boxes
+    */
     CV_WRAP virtual void detectRegions( InputArray image,
                                         CV_OUT std::vector<std::vector<Point> >& msers,
                                         std::vector<Rect>& bboxes ) = 0;
@@ -424,6 +447,9 @@ circle around this pixel.
 AgastFeatureDetector::AGAST_5_8, AgastFeatureDetector::AGAST_7_12d,
 AgastFeatureDetector::AGAST_7_12s, AgastFeatureDetector::OAST_9_16
 
+For non-Intel platforms, there is a tree optimised variant of AGAST with same numerical results.
+The 32-bit binary tree tables were generated automatically from original code using perl script.
+The perl script and examples of tree generation are placed in features2d/doc folder.
 Detects corners using the AGAST algorithm by @cite mair2010_agast .
 
  */

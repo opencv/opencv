@@ -44,7 +44,7 @@
 #include "opencl_kernels_imgproc.hpp"
 
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
 #define USE_IPP_CANNY 1
 #else
 #define USE_IPP_CANNY 0
@@ -60,10 +60,18 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
 
+#if IPP_VERSION_X100 < 900
     if (ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size) < 0)
         return false;
     if (ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
         return false;
+#else
+    if (ippiFilterSobelNegVertBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size) < 0)
+        return false;
+    if (ippiFilterSobelHorizBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size1) < 0)
+        return false;
+#endif
+
     size = std::max(size, size1);
 
     if (ippiCannyGetSize(roi, &size1) < 0)
@@ -158,8 +166,8 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
                         ocl::KernelArg::WriteOnlyNoSize(map),
                         (float) low, (float) high);
 
-        size_t globalsize[2] = { size.width, size.height },
-                localsize[2] = { lSizeX, lSizeY };
+        size_t globalsize[2] = { (size_t)size.width, (size_t)size.height },
+                localsize[2] = { (size_t)lSizeX, (size_t)lSizeY };
 
         if (!with_sobel.run(2, globalsize, localsize, false))
             return false;
@@ -187,8 +195,8 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
                            ocl::KernelArg::WriteOnly(map),
                            low, high);
 
-        size_t globalsize[2] = { size.width, size.height },
-                localsize[2] = { lSizeX, lSizeY };
+        size_t globalsize[2] = { (size_t)size.width, (size_t)size.height },
+                localsize[2] = { (size_t)lSizeX, (size_t)lSizeY };
 
         if (!without_sobel.run(2, globalsize, localsize, false))
             return false;
@@ -204,7 +212,7 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
     if (sizey == 0)
         sizey = 1;
 
-    size_t globalsize[2] = { size.width, (size.height + PIX_PER_WI - 1) / PIX_PER_WI }, localsize[2] = { lSizeX, sizey };
+    size_t globalsize[2] = { (size_t)size.width, ((size_t)size.height + PIX_PER_WI - 1) / PIX_PER_WI }, localsize[2] = { (size_t)lSizeX, (size_t)sizey };
 
     ocl::Kernel edgesHysteresis("stage2_hysteresis", ocl::imgproc::canny_oclsrc,
                                 format("-D STAGE2 -D PIX_PER_WI=%d -D LOCAL_X=%d -D LOCAL_Y=%d",

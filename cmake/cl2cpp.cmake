@@ -24,7 +24,10 @@ endif()
 set(STR_CPP "// This file is auto-generated. Do not edit!
 
 #include \"precomp.hpp\"
+#include \"cvconfig.h\"
 #include \"${OUTPUT_HPP_NAME}\"
+
+#ifdef HAVE_OPENCL
 
 namespace cv
 {
@@ -39,6 +42,8 @@ set(STR_HPP "// This file is auto-generated. Do not edit!
 #include \"opencv2/core/ocl.hpp\"
 #include \"opencv2/core/ocl_genbase.hpp\"
 #include \"opencv2/core/opencl/ocl_defs.hpp\"
+
+#ifdef HAVE_OPENCL
 
 namespace cv
 {
@@ -82,8 +87,8 @@ foreach(cl ${cl_list})
   set(STR_HPP "${STR_HPP}${STR_HPP_DECL}")
 endforeach()
 
-set(STR_CPP "${STR_CPP}}\n${nested_namespace_end}}\n")
-set(STR_HPP "${STR_HPP}}\n${nested_namespace_end}}\n")
+set(STR_CPP "${STR_CPP}}\n${nested_namespace_end}}\n#endif\n")
+set(STR_HPP "${STR_HPP}}\n${nested_namespace_end}}\n#endif\n")
 
 file(WRITE "${OUTPUT}" "${STR_CPP}")
 

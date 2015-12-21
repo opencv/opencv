@@ -206,14 +206,18 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
 }
 #endif
 
-
+#if IPP_VERSION_X100 == 901 // bug in IPP 9.0.1
+DEF_COPY_MASK(32sC3, Vec3i)
+DEF_COPY_MASK(8uC3, Vec3b)
+#else
+DEF_COPY_MASK_F(8uC3, Vec3b, 8u_C3MR, Ipp8u)
+DEF_COPY_MASK_F(32sC3, Vec3i, 32s_C3MR, Ipp32s)
+#endif
 DEF_COPY_MASK(8u, uchar)
 DEF_COPY_MASK(16u, ushort)
-DEF_COPY_MASK_F(8uC3, Vec3b, 8u_C3MR, Ipp8u)
 DEF_COPY_MASK_F(32s, int, 32s_C1MR, Ipp32s)
 DEF_COPY_MASK_F(16uC3, Vec3s, 16u_C3MR, Ipp16u)
 DEF_COPY_MASK(32sC2, Vec2i)
-DEF_COPY_MASK_F(32sC3, Vec3i, 32s_C3MR, Ipp32s)
 DEF_COPY_MASK_F(32sC4, Vec4i, 32s_C4MR, Ipp32s)
 DEF_COPY_MASK(32sC6, Vec6i)
 DEF_COPY_MASK(32sC8, Vec8i)
@@ -377,7 +381,7 @@ Mat& Mat::operator = (const Scalar& s)
 
     if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
     {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && 0
+#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
         CV_IPP_CHECK()
         {
             if (dims <= 2 || isContinuous())
@@ -692,7 +696,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     size_t maxWorkGroupSize = dev.maxWorkGroupSize();
     CV_Assert(maxWorkGroupSize % 4 == 0);
 
-    size_t globalsize[2] = { cols, (rows + pxPerWIy - 1) / pxPerWIy },
+    size_t globalsize[2] = { (size_t)cols, ((size_t)rows + pxPerWIy - 1) / pxPerWIy },
             localsize[2] = { maxWorkGroupSize / 4, 4 };
     return k.run(2, globalsize, (flipType == FLIP_COLS) && !dev.isIntel() ? localsize : NULL, false);
 }
@@ -833,7 +837,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     UMat src = _src.getUMat(), dst = _dst.getUMat();
     k.args(ocl::KernelArg::ReadOnly(src, cn, kercn), ocl::KernelArg::WriteOnlyNoSize(dst));
 
-    size_t globalsize[] = { src.cols * cn / kercn, (src.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[] = { (size_t)src.cols * cn / kercn, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1110,7 +1114,7 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
            top, left, ocl::KernelArg::Constant(Mat(1, 1, sctype, value)));
 
-    size_t globalsize[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1157,7 +1161,7 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
 
     borderType &= ~BORDER_ISOLATED;
 
-#if defined HAVE_IPP && 0
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         typedef IppStatus (CV_STDCALL * ippiCopyMakeBorder)(const void * pSrc, int srcStep, IppiSize srcRoiSize, void * pDst,

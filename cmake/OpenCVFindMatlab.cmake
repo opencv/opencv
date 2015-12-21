@@ -62,7 +62,7 @@ function(locate_matlab_root)
     # possible root locations, in order of likelihood
     set(SEARCH_DIRS_ /Applications /usr/local /opt/local /usr /opt)
     foreach (DIR_ ${SEARCH_DIRS_})
-      file(GLOB MATLAB_ROOT_DIR_ ${DIR_}/*matlab*)
+      file(GLOB MATLAB_ROOT_DIR_ ${DIR_}/MATLAB/R*)
       if (MATLAB_ROOT_DIR_)
         # sort in order from highest to lowest
         # normally it's in the format MATLAB_R[20XX][A/B]

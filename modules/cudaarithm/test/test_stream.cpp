@@ -47,6 +47,7 @@
 #include <cuda_runtime.h>
 
 #include "opencv2/core/cuda.hpp"
+#include "opencv2/core/cuda_stream_accessor.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 
 using namespace cvtest;
@@ -127,6 +128,27 @@ CUDA_TEST_P(Async, Convert)
     stream.enqueueHostCallback(checkConvert, test);
 
     stream.waitForCompletion();
+}
+
+CUDA_TEST_P(Async, WrapStream)
+{
+    cudaStream_t cuda_stream = NULL;
+    ASSERT_EQ(cudaSuccess, cudaStreamCreate(&cuda_stream));
+
+    {
+        cv::cuda::Stream stream = cv::cuda::StreamAccessor::wrapStream(cuda_stream);
+
+        d_src.upload(src, stream);
+        d_src.convertTo(d_dst, CV_32S, stream);
+        d_dst.download(dst, stream);
+
+        Async* test = this;
+        stream.enqueueHostCallback(checkConvert, test);
+
+        stream.waitForCompletion();
+    }
+
+    ASSERT_EQ(cudaSuccess, cudaStreamDestroy(cuda_stream));
 }
 
 CUDA_TEST_P(Async, HostMemAllocator)

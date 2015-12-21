@@ -1,10 +1,18 @@
 # ----------------------------------------------------------------------------
 #  CMake file for java support
 # ----------------------------------------------------------------------------
-if(IOS OR WINRT OR NOT PYTHON_DEFAULT_AVAILABLE OR NOT ANT_EXECUTABLE OR NOT (JNI_FOUND OR (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7))
+if(APPLE_FRAMEWORK OR WINRT OR NOT PYTHON_DEFAULT_AVAILABLE OR NOT ANT_EXECUTABLE
+    OR NOT (JNI_FOUND OR (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7))
     OR BUILD_opencv_world
     )
   ocv_module_disable(java)
+endif()
+
+if(EXISTS ${CMAKE_BINARY_DIR}/src)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/src")
+endif()
+if(EXISTS ${CMAKE_BINARY_DIR}/gen)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/gen")
 endif()
 
 set(the_description "The java bindings")
@@ -179,6 +187,16 @@ if(NOT ANDROID)
 else()
   file(GLOB_RECURSE handwrittren_lib_project_files_rel RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/" "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/*")
   list(REMOVE_ITEM handwrittren_lib_project_files_rel "${ANDROID_MANIFEST_FILE}")
+
+  #  calc default SDK Target
+  android_get_compatible_target(android_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET} 11)
+  string(REGEX REPLACE "android-" "" android_sdk_target_num ${android_sdk_target})
+  # filter out
+  if( (ANDROID_SDK_TARGET AND ANDROID_SDK_TARGET LESS 21) OR (android_sdk_target_num LESS 21) )
+    message(STATUS "[OpenCV for Android SDK]: A new OpenGL Camera Bridge (CameraGLSurfaceView, CameraGLRendererBase, CameraRenderer, Camera2Renderer) is disabled, because ANDROID_SDK_TARGET (${android_sdk_target_num}) < 21")
+    ocv_list_filterout(handwritten_java_sources "android\\\\+CameraGL")
+    ocv_list_filterout(handwritten_java_sources "android\\\\+Camera.?Renderer")
+  endif()
 endif()
 
 # IMPORTANT: add dependencies to cmake (we should rerun cmake if any of these files is modified)
@@ -291,7 +309,7 @@ if(ANDROID)
     # build the library project
     # normally we should do this after a native part, but for a library project we can build the java part first
     add_custom_command(OUTPUT "${JAR_FILE}" "${JAR_FILE}.dephelper"
-                       COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
+                       COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug -Djava.target=1.6 -Djava.source=1.6
                        COMMAND ${CMAKE_COMMAND} -E touch "${JAR_FILE}.dephelper" # can not rely on classes.jar because different versions of SDK update timestamp at different times
                        WORKING_DIRECTORY "${OpenCV_BINARY_DIR}"
                        DEPENDS ${step3_depends}
@@ -329,9 +347,16 @@ endif(ANDROID)
 # workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
 string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
+if(ANDROID)
+  # Android native code need to link with libopencv_java.so
+  ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
+else()
+  ocv_add_library(${the_module} MODULE ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
+                                 ${copied_files}
+                                "${JAR_FILE}" "${JAR_FILE}.dephelper")
+endif()
 
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})

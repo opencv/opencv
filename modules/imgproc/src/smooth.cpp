@@ -1057,7 +1057,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         wtype = CV_MAKE_TYPE(wdepth, cn), dtype = CV_MAKE_TYPE(ddepth, cn);
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
-    size_t globalsize[2] = { size.width, size.height };
+    size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
     size_t localsize_general[2] = { 0, 1 }, * localsize = NULL;
 
     UMat src = _src.getUMat();
@@ -1668,7 +1668,7 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 810
     int type = _src.type();
     Size size = _src.size();
 
@@ -1695,32 +1695,33 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 
             if (ippiFilterGaussianGetBufferSize(roiSize, (Ipp32u)ksize.width, dataType, cn, &specSize, &bufferSize) >= 0)
             {
-                IppFilterGaussianSpec * pSpec = (IppFilterGaussianSpec *)ippMalloc(specSize);
-                Ipp8u * pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+                IppAutoBuffer<IppFilterGaussianSpec> spec(specSize);
+                IppAutoBuffer<Ipp8u> buffer(bufferSize);
 
-                if (ippiFilterGaussianInit(roiSize, (Ipp32u)ksize.width, (Ipp32f)sigma1, ippBorder, dataType, 1, pSpec, pBuffer) >= 0)
+                if (ippiFilterGaussianInit(roiSize, (Ipp32u)ksize.width, (Ipp32f)sigma1, ippBorder, dataType, cn, spec, buffer) >= 0)
                 {
 #define IPP_FILTER_GAUSS_C1(ippfavor) \
                     { \
-                        typedef Ipp##ippfavor ippType; \
-                        ippType borderValues = 0; \
-                        status = ippiFilterGaussianBorder_##ippfavor##_C1R(src.ptr<ippType>(), (int)src.step, \
-                                dst.ptr<ippType>(), (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
+                        Ipp##ippfavor borderValues = 0; \
+                        status = ippiFilterGaussianBorder_##ippfavor##_C1R(src.ptr<Ipp##ippfavor>(), (int)src.step, \
+                                dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
                     }
 
 #define IPP_FILTER_GAUSS_CN(ippfavor, ippcn) \
                     { \
-                        typedef Ipp##ippfavor ippType; \
-                        ippType borderValues[] = { 0, 0, 0 }; \
-                        status = ippiFilterGaussianBorder_##ippfavor##_C##ippcn##R(src.ptr<ippType>(), (int)src.step, \
-                                dst.ptr<ippType>(), (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
+                        Ipp##ippfavor borderValues[] = { 0, 0, 0 }; \
+                        status = ippiFilterGaussianBorder_##ippfavor##_C##ippcn##R(src.ptr<Ipp##ippfavor>(), (int)src.step, \
+                                dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
                     }
 
                     IppStatus status = ippStsErr;
 #if !HAVE_ICV
+#if IPP_VERSION_X100 > 900 // Buffer overflow may happen in IPP 9.0.0 and less
                     if (type == CV_8UC1)
                         IPP_FILTER_GAUSS_C1(8u)
-                    else if (type == CV_8UC3)
+                    else
+#endif
+                    if (type == CV_8UC3)
                         IPP_FILTER_GAUSS_CN(8u, 3)
                     else if (type == CV_16UC1)
                         IPP_FILTER_GAUSS_C1(16u)
@@ -1736,11 +1737,6 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 #endif
                     if (type == CV_32FC1)
                         IPP_FILTER_GAUSS_C1(32f)
-
-                    if (pSpec)
-                        ippFree(pSpec);
-                    if (pBuffer)
-                        ippFree(pBuffer);
 
                     if(status >= 0)
                         return true;
@@ -1855,8 +1851,8 @@ static inline void histogram_add_simd( const HT x[16], HT y[16] )
 
 static inline void histogram_sub_simd( const HT x[16], HT y[16] )
 {
-    vst1q_u16(y, vsubq_u16(vld1q_u16(x), vld1q_u16(y)));
-    vst1q_u16(y + 8, vsubq_u16(vld1q_u16(x + 8), vld1q_u16(y + 8)));
+    vst1q_u16(y, vsubq_u16(vld1q_u16(y), vld1q_u16(x)));
+    vst1q_u16(y + 8, vsubq_u16(vld1q_u16(y + 8), vld1q_u16(x + 8)));
 }
 
 #else
@@ -2707,7 +2703,7 @@ namespace cv
 {
 static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
 {
-#if IPP_VERSION_X100 >= 801
+#if IPP_VERSION_X100 >= 810
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
@@ -2778,7 +2774,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
-    CV_IPP_RUN(IPP_VERSION_X100 >= 801 && ksize <= 5, ipp_medianFilter(_src0,_dst, ksize));
+    CV_IPP_RUN(IPP_VERSION_X100 >= 810 && ksize <= 5, ipp_medianFilter(_src0,_dst, ksize));
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra() && tegra::medianBlur(src0, dst, ksize))
@@ -2996,7 +2992,7 @@ private:
     float *space_weight, *color_weight;
 };
 
-#if defined (HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && 0
+#if defined (HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_DISABLE_BLOCK
 class IPPBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
@@ -3112,7 +3108,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
      }
      ocl::Kernel k(kernelName.c_str(), ocl::imgproc::bilateral_oclsrc,
             format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
-            " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=%f",
+            " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=(float)%f",
             radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
             ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
             ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
@@ -3132,7 +3128,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
            ocl::KernelArg::PtrReadOnly(uspace_weight),
            ocl::KernelArg::PtrReadOnly(uspace_ofs));
 
-    size_t globalsize[2] = { dst.cols / sizeDiv, dst.rows };
+    size_t globalsize[2] = { (size_t)dst.cols / sizeDiv, (size_t)dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -3166,7 +3162,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7) && 0
+#if defined HAVE_IPP && (IPP_VERSION_X100 >= 700) && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         if( cn == 1 )

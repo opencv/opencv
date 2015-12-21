@@ -250,6 +250,7 @@ struct CvCapture_FFMPEG
     double  get_duration_sec() const;
     double  get_fps() const;
     int     get_bitrate() const;
+    AVRational get_sample_aspect_ratio(AVStream *stream) const;
 
     double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
@@ -586,6 +587,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     if (err < 0)
     {
         CV_WARN("Error opening file");
+        CV_WARN(_filename);
         goto exit_func;
     }
     err =
@@ -750,9 +752,6 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     if( !video_st || !picture->data[0] )
         return false;
 
-    avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], AV_PIX_FMT_RGB24,
-                   video_st->codec->width, video_st->codec->height);
-
     if( img_convert_ctx == NULL ||
         frame.width != video_st->codec->width ||
         frame.height != video_st->codec->height )
@@ -775,7 +774,16 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
         if (img_convert_ctx == NULL)
             return false;//CV_Error(0, "Cannot initialize the conversion context!");
+
+        rgb_picture.data[0] = (uint8_t*)realloc(rgb_picture.data[0],
+                avpicture_get_size( AV_PIX_FMT_BGR24,
+                                    video_st->codec->width, video_st->codec->height ));
+        frame.data = rgb_picture.data[0];
     }
+
+    avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], AV_PIX_FMT_RGB24,
+                   video_st->codec->width, video_st->codec->height);
+    frame.step = rgb_picture.linesize[0];
 
     sws_scale(
             img_convert_ctx,
@@ -815,20 +823,17 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CV_FFMPEG_CAP_PROP_FRAME_HEIGHT:
         return (double)frame.height;
     case CV_FFMPEG_CAP_PROP_FPS:
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
-        return av_q2d(video_st->avg_frame_rate);
-#elif LIBAVCODEC_BUILD > 4753
-        return av_q2d(video_st->r_frame_rate);
-#else
-        return (double)video_st->codec.frame_rate
-                / (double)video_st->codec.frame_rate_base;
-#endif
+        return get_fps();
     case CV_FFMPEG_CAP_PROP_FOURCC:
 #if LIBAVFORMAT_BUILD > 4628
         return (double)video_st->codec->codec_tag;
 #else
         return (double)video_st->codec.codec_tag;
 #endif
+    case CV_FFMPEG_CAP_PROP_SAR_NUM:
+        return get_sample_aspect_ratio(ic->streams[video_stream]).num;
+    case CV_FFMPEG_CAP_PROP_SAR_DEN:
+        return get_sample_aspect_ratio(ic->streams[video_stream]).den;
     default:
         break;
     }
@@ -901,6 +906,28 @@ int64_t CvCapture_FFMPEG::dts_to_frame_number(int64_t dts)
 {
     double sec = dts_to_sec(dts);
     return (int64_t)(get_fps() * sec + 0.5);
+}
+
+AVRational CvCapture_FFMPEG::get_sample_aspect_ratio(AVStream *stream) const
+{
+    AVRational undef = {0, 1};
+    AVRational stream_sample_aspect_ratio = stream ? stream->sample_aspect_ratio : undef;
+    AVRational frame_sample_aspect_ratio  = stream && stream->codec ? stream->codec->sample_aspect_ratio : undef;
+
+    av_reduce(&stream_sample_aspect_ratio.num, &stream_sample_aspect_ratio.den,
+        stream_sample_aspect_ratio.num,  stream_sample_aspect_ratio.den, INT_MAX);
+    if (stream_sample_aspect_ratio.num <= 0 || stream_sample_aspect_ratio.den <= 0)
+        stream_sample_aspect_ratio = undef;
+
+    av_reduce(&frame_sample_aspect_ratio.num, &frame_sample_aspect_ratio.den,
+        frame_sample_aspect_ratio.num,  frame_sample_aspect_ratio.den, INT_MAX);
+    if (frame_sample_aspect_ratio.num <= 0 || frame_sample_aspect_ratio.den <= 0)
+        frame_sample_aspect_ratio = undef;
+
+    if (stream_sample_aspect_ratio.num)
+        return stream_sample_aspect_ratio;
+    else
+        return frame_sample_aspect_ratio;
 }
 
 double CvCapture_FFMPEG::dts_to_sec(int64_t dts)
@@ -1130,6 +1157,11 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
 #endif
     if (!picture)
         return NULL;
+
+    picture->format = pix_fmt;
+    picture->width = width;
+    picture->height = height;
+
     size = avpicture_get_size( (AVPixelFormat) pix_fmt, width, height);
     if(alloc){
         picture_buf = (uint8_t *) malloc(size);
@@ -1269,7 +1301,8 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
       c->gop_size = -1;
       c->qmin = -1;
       c->bit_rate = 0;
-      av_opt_set(c->priv_data,"crf","23", 0);
+      if (c->priv_data)
+          av_opt_set(c->priv_data,"crf","23", 0);
     }
 #endif
 

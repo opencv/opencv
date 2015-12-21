@@ -54,9 +54,9 @@
 
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/private.cuda.hpp"
+#ifdef HAVE_OPENCL
 #include "opencv2/core/ocl.hpp"
-
-#include "opencv2/hal.hpp"
+#endif
 
 #include <assert.h>
 #include <ctype.h>
@@ -67,6 +67,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <limits>
+#include <float.h>
+#include <cstring>
+#include <cassert>
+
+#define USE_SSE2  (cv::checkHardwareSupport(CV_CPU_SSE))
+#define USE_SSE4_2  (cv::checkHardwareSupport(CV_CPU_SSE4_2))
+#define USE_AVX  (cv::checkHardwareSupport(CV_CPU_AVX))
+#define USE_AVX2  (cv::checkHardwareSupport(CV_CPU_AVX2))
+
+#include "opencv2/core/hal/hal.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/sse_utils.hpp"
+#include "opencv2/core/neon_utils.hpp"
+
+#include "arithm_core.hpp"
+#include "hal_replacement.hpp"
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/core/core_tegra.hpp"
 #else
@@ -76,9 +97,42 @@
 namespace cv
 {
 
+// -128.f ... 255.f
+extern const float g_8x32fTab[];
+#define CV_8TO32F(x)  cv::g_8x32fTab[(x)+128]
+
+extern const ushort g_8x16uSqrTab[];
+#define CV_SQR_8U(x)  cv::g_8x16uSqrTab[(x)+255]
+
+extern const uchar g_Saturate8u[];
+#define CV_FAST_CAST_8U(t)   (assert(-256 <= (t) && (t) <= 512), cv::g_Saturate8u[(t)+256])
+#define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
+#define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
+
+template<> inline uchar OpAdd<uchar>::operator ()(uchar a, uchar b) const
+{ return CV_FAST_CAST_8U(a + b); }
+
+template<> inline uchar OpSub<uchar>::operator ()(uchar a, uchar b) const
+{ return CV_FAST_CAST_8U(a - b); }
+
+template<> inline short OpAbsDiff<short>::operator ()(short a, short b) const
+{ return saturate_cast<short>(std::abs(a - b)); }
+
+template<> inline schar OpAbsDiff<schar>::operator ()(schar a, schar b) const
+{ return saturate_cast<schar>(std::abs(a - b)); }
+
+template<> inline uchar OpMin<uchar>::operator ()(uchar a, uchar b) const { return CV_MIN_8U(a, b); }
+
+template<> inline uchar OpMax<uchar>::operator ()(uchar a, uchar b) const { return CV_MAX_8U(a, b); }
+
 typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
                        const uchar* src2, size_t step2,
                        uchar* dst, size_t step, Size sz,
+                       void*);
+
+typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
+                       const uchar* src2, size_t step2,
+                       uchar* dst, size_t step, int width, int height,
                        void*);
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
@@ -93,64 +147,9 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 /* maximal average node_count/hash_size ratio beyond which hash table is resized */
 #define  CV_SPARSE_HASH_RATIO    3
 
-
-
-// -128.f ... 255.f
-extern const float g_8x32fTab[];
-#define CV_8TO32F(x)  cv::g_8x32fTab[(x)+128]
-
-extern const ushort g_8x16uSqrTab[];
-#define CV_SQR_8U(x)  cv::g_8x16uSqrTab[(x)+255]
-
-extern const uchar g_Saturate8u[];
-#define CV_FAST_CAST_8U(t)   (assert(-256 <= (t) && (t) <= 512), cv::g_Saturate8u[(t)+256])
-#define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
-#define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
-
-
 #if defined WIN32 || defined _WIN32
 void deleteThreadAllocData();
 #endif
-
-template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + b); }
-};
-
-template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a - b); }
-};
-
-template<typename T1, typename T2=T1, typename T3=T1> struct OpRSub
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(b - a); }
-};
-
-template<typename T> struct OpMin
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator ()(const T a, const T b) const { return std::min(a, b); }
-};
-
-template<typename T> struct OpMax
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator ()(const T a, const T b) const { return std::max(a, b); }
-};
 
 inline Size getContinuousSize_( int flags, int cols, int rows, int widthScale )
 {
@@ -199,14 +198,9 @@ struct NoVec
     size_t operator()(const void*, const void*, void*, size_t) const { return 0; }
 };
 
-extern volatile bool USE_SSE2;
-extern volatile bool USE_SSE4_2;
-extern volatile bool USE_AVX;
-extern volatile bool USE_AVX2;
-
 enum { BLOCK_SIZE = 1024 };
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+#if defined HAVE_IPP && (IPP_VERSION_X100 >= 700)
 #define ARITHM_USE_IPP 1
 #else
 #define ARITHM_USE_IPP 0
@@ -262,7 +256,11 @@ struct ImplCollector
 
 struct CoreTLSData
 {
-    CoreTLSData() : device(0), useOpenCL(-1), useIPP(-1)
+    CoreTLSData() :
+//#ifdef HAVE_OPENCL
+        device(0), useOpenCL(-1),
+//#endif
+        useIPP(-1)
     {
 #ifdef HAVE_TEGRA_OPTIMIZATION
         useTegra = -1;
@@ -270,9 +268,11 @@ struct CoreTLSData
     }
 
     RNG rng;
+//#ifdef HAVE_OPENCL
     int device;
     ocl::Queue oclQueue;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
+//#endif
     int useIPP; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #ifdef HAVE_TEGRA_OPTIMIZATION
     int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
@@ -313,7 +313,5 @@ cv::Mutex& getInitializationMutex();
 #define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
 }
-
-#include "opencv2/hal/intrin.hpp"
 
 #endif /*_CXCORE_INTERNAL_H_*/

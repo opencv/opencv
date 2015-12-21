@@ -1141,7 +1141,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
 #ifdef HAVE_IPP
 static bool ipp_sum(Mat &src, Scalar &_res)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     int cn = src.channels();
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
@@ -1203,7 +1203,7 @@ cv::Scalar cv::sum( InputArray _src )
 #endif
 
     Mat src = _src.getMat();
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_sum(src, _res), _res);
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_sum(src, _res), _res);
 
     int k, cn = src.channels(), depth = src.depth();
     SumFunc func = getSumFunc(depth);
@@ -1645,7 +1645,7 @@ namespace cv
 {
 static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     int cn = src.channels();
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
@@ -1717,7 +1717,7 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
             ippiMeanStdDevFuncC1 ippFuncC1 =
             type == CV_8UC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_8u_C1R :
             type == CV_16UC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_16u_C1R :
-#if (IPP_VERSION_X100 >= 801)
+#if (IPP_VERSION_X100 >= 810)
             type == CV_32FC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_32f_C1R ://Aug 2013: bug in IPP 7.1, 8.0
 #endif
             0;
@@ -1761,7 +1761,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
 
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_meanStdDev(src, _mean, _sdv, mask));
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
     int k, cn = src.channels(), depth = src.depth();
 
@@ -2217,7 +2217,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 #ifdef HAVE_IPP
 static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx, int* maxIdx, Mat &mask)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
@@ -2233,7 +2233,9 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
             CV_SUPPRESS_DEPRECATED_START
             ippiMaskMinMaxIndxFuncC1 ippFuncC1 =
                 type == CV_8UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1MR : 0;
             CV_SUPPRESS_DEPRECATED_END
@@ -2270,8 +2272,12 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
 
             CV_SUPPRESS_DEPRECATED_START
             ippiMinMaxIndxFuncC1 ippFuncC1 =
+#if IPP_VERSION_X100 != 900 // bug in 9.0.0 avx2 optimization
                 depth == CV_8U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
+#endif
+#if IPP_VERSION_X100 < 900
                 depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
+#endif
                 depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
 #if !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
                 depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
@@ -2325,7 +2331,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
     MinMaxIdxFunc func = getMinmaxTab(depth);
     CV_Assert( func != 0 );
@@ -2658,7 +2664,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 #ifdef HAVE_IPP
 static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     int cn = src.channels();
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
@@ -2676,19 +2682,25 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
             ippiMaskNormFuncC1 ippFuncC1 =
                 normType == NORM_INF ?
                 (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_8s_C1MR :
+#endif
 //                type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_32f_C1MR :
                 0) :
             normType == NORM_L1 ?
                 (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_32f_C1MR :
                 0) :
             normType == NORM_L2 || normType == NORM_L2SQR ?
                 (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_32f_C1MR :
                 0) : 0;
@@ -2701,7 +2713,8 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                     return true;
                 }
             }
-            /*typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
+#if IPP_DISABLE_BLOCK
+            typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
             ippiMaskNormFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_8u_C3CMR :
@@ -2736,7 +2749,8 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                     result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
                     return true;
                 }
-            }*/
+            }
+#endif
         }
         else
         {
@@ -2762,7 +2776,7 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                 type == CV_16UC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C1R :
-#if (IPP_VERSION_X100 >= 801)
+#if (IPP_VERSION_X100 >= 810)
                 type == CV_16SC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
 #endif
@@ -2842,7 +2856,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 #endif
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_norm(src, normType, mask, _result), _result);
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(src, normType, mask, _result), _result);
 
     int depth = src.depth(), cn = src.channels();
     if( src.isContinuous() && mask.empty() )
@@ -3046,7 +3060,7 @@ namespace cv
 {
 static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask, double &result)
 {
-#if IPP_VERSION_MAJOR >= 7
+#if IPP_VERSION_X100 >= 700
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
 
     if( normType & CV_RELATIVE )
@@ -3069,23 +3083,29 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 ippiMaskNormRelFuncC1 ippFuncC1 =
                     normType == NORM_INF ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_8u_C1MR :
+#if IPP_VERSION_X100 < 900
 #ifndef __APPLE__
                     type == CV_8SC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_8s_C1MR :
+#endif
 #endif
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_32f_C1MR :
                     0) :
                     normType == NORM_L1 ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_8u_C1MR :
+#if IPP_VERSION_X100 < 900
 #ifndef __APPLE__
                     type == CV_8SC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_8s_C1MR :
+#endif
 #endif
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L1_32f_C1MR :
                     0) :
                     normType == NORM_L2 || normType == NORM_L2SQR ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                     type == CV_8SC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_8s_C1MR :
+#endif
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_32f_C1MR :
                     0) : 0;
@@ -3170,21 +3190,27 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
             ippiMaskNormDiffFuncC1 ippFuncC1 =
                 normType == NORM_INF ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_32f_C1MR :
                 0) :
                 normType == NORM_L1 ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8u_C1MR :
+#if IPP_VERSION_X100 < 900
 #ifndef __APPLE__
                 type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8s_C1MR :
+#endif
 #endif
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_32f_C1MR :
                 0) :
                 normType == NORM_L2 || normType == NORM_L2SQR ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_8u_C1MR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_8s_C1MR :
+#endif
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_32f_C1MR :
                 0) : 0;
@@ -3202,19 +3228,25 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
             ippiMaskNormDiffFuncC3 ippFuncC3 =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8u_C3CMR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8s_C3CMR :
+#endif
                 type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_32f_C3CMR :
                 0) :
                 normType == NORM_L1 ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8u_C3CMR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8s_C3CMR :
+#endif
                 type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_32f_C3CMR :
                 0) :
                 normType == NORM_L2 || normType == NORM_L2SQR ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_8u_C3CMR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_8s_C3CMR :
+#endif
                 type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_32f_C3CMR :
                 0) : 0;
@@ -3260,7 +3292,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C3R :
                 type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C4R :
                 type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C1R :
-#if (IPP_VERSION_X100 >= 801)
+#if (IPP_VERSION_X100 >= 810)
                 type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C3R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
                 type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C4R : //Aug 2013: problem in IPP 7.1, 8.0 : -32768
 #endif
@@ -3275,7 +3307,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_16UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C1R :
                 type == CV_16UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C3R :
                 type == CV_16UC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C4R :
-#if !(IPP_VERSION_X100 == 802 && (!defined(IPP_VERSION_UPDATE) || IPP_VERSION_UPDATE <= 1)) // Oct 2014: Accuracy issue with IPP 8.2 / 8.2.1
+#if !(IPP_VERSION_X100 == 820 || IPP_VERSION_X100 == 821) // Oct 2014: Accuracy issue with IPP 8.2 / 8.2.1
                 type == CV_16SC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C1R :
 #endif
                 type == CV_16SC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C3R :
@@ -3339,7 +3371,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 _result)
 #endif
 
-    CV_IPP_RUN(IPP_VERSION_MAJOR >= 7, ipp_norm(_src1, _src2, normType, _mask, _result), _result);
+    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(_src1, _src2, normType, _mask, _result), _result);
 
     if( normType & CV_RELATIVE )
     {
@@ -3964,3 +3996,266 @@ cvNorm( const void* imgA, const void* imgB, int normType, const void* maskarr )
 
     return !maskarr ? cv::norm(a, b, normType) : cv::norm(a, b, normType, mask);
 }
+
+namespace cv { namespace hal {
+
+static const uchar popCountTable[] =
+{
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
+};
+
+static const uchar popCountTable2[] =
+{
+    0, 1, 1, 1, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
+    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
+    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4
+};
+
+static const uchar popCountTable4[] =
+{
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+};
+
+int normHamming(const uchar* a, int n)
+{
+    int i = 0;
+    int result = 0;
+#if CV_NEON
+    {
+        uint32x4_t bits = vmovq_n_u32(0);
+        for (; i <= n - 16; i += 16) {
+            uint8x16_t A_vec = vld1q_u8 (a + i);
+            uint8x16_t bitsSet = vcntq_u8 (A_vec);
+            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+            bits = vaddq_u32(bits, bitSet4);
+        }
+        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+    }
+#endif
+        for( ; i <= n - 4; i += 4 )
+            result += popCountTable[a[i]] + popCountTable[a[i+1]] +
+            popCountTable[a[i+2]] + popCountTable[a[i+3]];
+    for( ; i < n; i++ )
+        result += popCountTable[a[i]];
+    return result;
+}
+
+int normHamming(const uchar* a, const uchar* b, int n)
+{
+    int i = 0;
+    int result = 0;
+#if CV_NEON
+    {
+        uint32x4_t bits = vmovq_n_u32(0);
+        for (; i <= n - 16; i += 16) {
+            uint8x16_t A_vec = vld1q_u8 (a + i);
+            uint8x16_t B_vec = vld1q_u8 (b + i);
+            uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
+            uint8x16_t bitsSet = vcntq_u8 (AxorB);
+            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+            bits = vaddq_u32(bits, bitSet4);
+        }
+        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+    }
+#endif
+        for( ; i <= n - 4; i += 4 )
+            result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
+                    popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
+    for( ; i < n; i++ )
+        result += popCountTable[a[i] ^ b[i]];
+    return result;
+}
+
+int normHamming(const uchar* a, int n, int cellSize)
+{
+    if( cellSize == 1 )
+        return normHamming(a, n);
+    const uchar* tab = 0;
+    if( cellSize == 2 )
+        tab = popCountTable2;
+    else if( cellSize == 4 )
+        tab = popCountTable4;
+    else
+        return -1;
+    int i = 0;
+    int result = 0;
+#if CV_ENABLE_UNROLLED
+    for( ; i <= n - 4; i += 4 )
+        result += tab[a[i]] + tab[a[i+1]] + tab[a[i+2]] + tab[a[i+3]];
+#endif
+    for( ; i < n; i++ )
+        result += tab[a[i]];
+    return result;
+}
+
+int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
+{
+    if( cellSize == 1 )
+        return normHamming(a, b, n);
+    const uchar* tab = 0;
+    if( cellSize == 2 )
+        tab = popCountTable2;
+    else if( cellSize == 4 )
+        tab = popCountTable4;
+    else
+        return -1;
+    int i = 0;
+    int result = 0;
+    #if CV_ENABLE_UNROLLED
+    for( ; i <= n - 4; i += 4 )
+        result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
+                tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
+    #endif
+    for( ; i < n; i++ )
+        result += tab[a[i] ^ b[i]];
+    return result;
+}
+
+float normL2Sqr_(const float* a, const float* b, int n)
+{
+    int j = 0; float d = 0.f;
+#if CV_SSE
+    float CV_DECL_ALIGNED(16) buf[4];
+    __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
+
+    for( ; j <= n - 8; j += 8 )
+    {
+        __m128 t0 = _mm_sub_ps(_mm_loadu_ps(a + j), _mm_loadu_ps(b + j));
+        __m128 t1 = _mm_sub_ps(_mm_loadu_ps(a + j + 4), _mm_loadu_ps(b + j + 4));
+        d0 = _mm_add_ps(d0, _mm_mul_ps(t0, t0));
+        d1 = _mm_add_ps(d1, _mm_mul_ps(t1, t1));
+    }
+    _mm_store_ps(buf, _mm_add_ps(d0, d1));
+    d = buf[0] + buf[1] + buf[2] + buf[3];
+#endif
+    {
+        for( ; j <= n - 4; j += 4 )
+        {
+            float t0 = a[j] - b[j], t1 = a[j+1] - b[j+1], t2 = a[j+2] - b[j+2], t3 = a[j+3] - b[j+3];
+            d += t0*t0 + t1*t1 + t2*t2 + t3*t3;
+        }
+    }
+
+    for( ; j < n; j++ )
+    {
+        float t = a[j] - b[j];
+        d += t*t;
+    }
+    return d;
+}
+
+
+float normL1_(const float* a, const float* b, int n)
+{
+    int j = 0; float d = 0.f;
+#if CV_SSE
+    float CV_DECL_ALIGNED(16) buf[4];
+    static const int CV_DECL_ALIGNED(16) absbuf[4] = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
+    __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
+    __m128 absmask = _mm_load_ps((const float*)absbuf);
+
+    for( ; j <= n - 8; j += 8 )
+    {
+        __m128 t0 = _mm_sub_ps(_mm_loadu_ps(a + j), _mm_loadu_ps(b + j));
+        __m128 t1 = _mm_sub_ps(_mm_loadu_ps(a + j + 4), _mm_loadu_ps(b + j + 4));
+        d0 = _mm_add_ps(d0, _mm_and_ps(t0, absmask));
+        d1 = _mm_add_ps(d1, _mm_and_ps(t1, absmask));
+    }
+    _mm_store_ps(buf, _mm_add_ps(d0, d1));
+    d = buf[0] + buf[1] + buf[2] + buf[3];
+#elif CV_NEON
+    float32x4_t v_sum = vdupq_n_f32(0.0f);
+    for ( ; j <= n - 4; j += 4)
+        v_sum = vaddq_f32(v_sum, vabdq_f32(vld1q_f32(a + j), vld1q_f32(b + j)));
+
+    float CV_DECL_ALIGNED(16) buf[4];
+    vst1q_f32(buf, v_sum);
+    d = buf[0] + buf[1] + buf[2] + buf[3];
+#endif
+    {
+        for( ; j <= n - 4; j += 4 )
+        {
+            d += std::abs(a[j] - b[j]) + std::abs(a[j+1] - b[j+1]) +
+            std::abs(a[j+2] - b[j+2]) + std::abs(a[j+3] - b[j+3]);
+        }
+    }
+
+    for( ; j < n; j++ )
+        d += std::abs(a[j] - b[j]);
+    return d;
+}
+
+int normL1_(const uchar* a, const uchar* b, int n)
+{
+    int j = 0, d = 0;
+#if CV_SSE
+    __m128i d0 = _mm_setzero_si128();
+
+    for( ; j <= n - 16; j += 16 )
+    {
+        __m128i t0 = _mm_loadu_si128((const __m128i*)(a + j));
+        __m128i t1 = _mm_loadu_si128((const __m128i*)(b + j));
+
+        d0 = _mm_add_epi32(d0, _mm_sad_epu8(t0, t1));
+    }
+
+    for( ; j <= n - 4; j += 4 )
+    {
+        __m128i t0 = _mm_cvtsi32_si128(*(const int*)(a + j));
+        __m128i t1 = _mm_cvtsi32_si128(*(const int*)(b + j));
+
+        d0 = _mm_add_epi32(d0, _mm_sad_epu8(t0, t1));
+    }
+    d = _mm_cvtsi128_si32(_mm_add_epi32(d0, _mm_unpackhi_epi64(d0, d0)));
+#elif CV_NEON
+    uint32x4_t v_sum = vdupq_n_u32(0.0f);
+    for ( ; j <= n - 16; j += 16)
+    {
+        uint8x16_t v_dst = vabdq_u8(vld1q_u8(a + j), vld1q_u8(b + j));
+        uint16x8_t v_low = vmovl_u8(vget_low_u8(v_dst)), v_high = vmovl_u8(vget_high_u8(v_dst));
+        v_sum = vaddq_u32(v_sum, vaddl_u16(vget_low_u16(v_low), vget_low_u16(v_high)));
+        v_sum = vaddq_u32(v_sum, vaddl_u16(vget_high_u16(v_low), vget_high_u16(v_high)));
+    }
+
+    uint CV_DECL_ALIGNED(16) buf[4];
+    vst1q_u32(buf, v_sum);
+    d = buf[0] + buf[1] + buf[2] + buf[3];
+#endif
+    {
+        for( ; j <= n - 4; j += 4 )
+        {
+            d += std::abs(a[j] - b[j]) + std::abs(a[j+1] - b[j+1]) +
+            std::abs(a[j+2] - b[j+2]) + std::abs(a[j+3] - b[j+3]);
+        }
+    }
+    for( ; j < n; j++ )
+        d += std::abs(a[j] - b[j]);
+    return d;
+}
+
+}} //cv::hal
