@@ -684,10 +684,10 @@ typedef struct _cl_buffer_region {
 
 #define CL_CALLBACK CV_STDCALL
 
-static volatile bool g_haveOpenCL = false;
 
 #ifdef HAVE_OPENCL
 static const char* oclFuncToCheck = "clEnqueueReadBufferRect";
+static volatile bool g_haveOpenCL = false;
 #endif
 
 #if defined(__APPLE__) && defined(HAVE_OPENCL)
