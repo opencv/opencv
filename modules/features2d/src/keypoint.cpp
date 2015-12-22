@@ -81,11 +81,11 @@ void KeyPointsFilter::retainBest(std::vector<KeyPoint>& keypoints, int n_points)
         //this is the boundary response, and in the case of FAST may be ambigous
         float ambiguous_response = keypoints[n_points - 1].response;
         //use std::partition to grab all of the keypoints with the boundary response.
-        std::vector<KeyPoint>::const_iterator new_end =
+        std::vector<KeyPoint>::iterator new_end =
         std::partition(keypoints.begin() + n_points, keypoints.end(),
                        KeypointResponseGreaterThanThreshold(ambiguous_response));
-        //resize the keypoints, given this new end point. nth_element and partition reordered the points inplace
-        keypoints.resize(new_end - keypoints.begin());
+        // remove the keypoints, given this new end point. nth_element and partition reordered the points inplace
+        keypoints.erase(new_end, keypoints.end());
     }
 }
 
