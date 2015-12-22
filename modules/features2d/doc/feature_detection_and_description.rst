@@ -52,13 +52,46 @@ Maximally stable extremal region extractor. ::
         void operator()( const Mat& image, vector<vector<Point> >& msers, const Mat& mask ) const;
     };
 
-The class encapsulates all the parameters of the MSER extraction algorithm (see
-http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://code.opencv.org/projects/opencv/wiki/MSER for useful comments and parameters description.
+The class encapsulates all the parameters of the MSER extraction algorithm (see [wiki]_ article).
 
 .. note::
 
-   * (Python) A complete example showing the use of the MSER detector can be found at opencv_source_code/samples/python2/mser.py
+    * there are two different implementation of MSER: one for grey image, one for color image the grey image algorithm is taken from: [nister2008linear]_ ; the paper claims to be faster than union-find method; it actually get 1.5~2m/s on my centrino L7200 1.2GHz laptop.
 
+    * the color image algorithm is taken from: [forssen2007maximally]_ ; it should be much slower than grey image method ( 3~4 times ); the chi_table.h file is taken directly from paper's source code which is distributed under GPL.
+
+    * (Python) A complete example showing the use of the MSER detector can be found at opencv_source_code/samples/python2/mser.py
+
+.. [wiki] http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions
+.. [nister2008linear] David Nistér and Henrik Stewénius. Linear time maximally stable extremal regions. In Computer Vision–ECCV 2008, pages 183–196. Springer, 2008.
+.. [forssen2007maximally] Per-Erik Forssén. Maximally stable colour regions for recognition and matching. In Computer Vision and Pattern Recognition, 2007. CVPR'07. IEEE Conference on, pages 1–8. IEEE, 2007.
+
+MSER::MSER
+----------
+The MSER constructor
+
+.. ocv:function:: MSER::MSER(int _delta=5, int _min_area=60, int _max_area=14400, double _max_variation=0.25, double _min_diversity=.2, int _max_evolution=200, double _area_threshold=1.01, double _min_margin=0.003, int _edge_blur_size=5)
+
+    :param _delta: Compares (sizei - sizei-delta)/sizei-delta
+    :param _min_area: Prune the area which smaller than minArea
+    :param _max_area: Prune the area which bigger than maxArea
+    :param _max_variation: Prune the area have simliar size to its children
+    :param _min_diversity: For color image, trace back to cut off mser with diversity less than min_diversity
+    :param _max_evolution: For color image, the evolution steps
+    :param _area_threshold: For color image, the area threshold to cause re-initialize
+    :param _min_margin: For color image, ignore too small margin
+    :param _edge_blur_size: For color image, the aperture size for edge blur
+
+MSER::operator()
+----------------
+
+Detect MSER regions
+
+.. ocv:function:: void MSER::operator()(const Mat& image, vector<vector<Point> >& msers, const Mat& mask=Mat() ) const
+
+    :param image: Input image (8UC1, 8UC3 or 8UC4)
+    :param msers: Resulting list of point sets
+    :param mask: The operation mask
 
 ORB
 ---
