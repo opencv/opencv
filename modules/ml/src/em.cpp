@@ -170,6 +170,7 @@ public:
             if( _outputs.fixedType() )
                 ptype = _outputs.type();
             _outputs.create(samples.rows, nclusters, ptype);
+            probs = _outputs.getMat();
         }
         else
             nsamples = std::min(nsamples, 1);
