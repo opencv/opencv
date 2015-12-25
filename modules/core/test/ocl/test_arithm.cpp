@@ -1885,6 +1885,22 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceMin, Combine(testing::Values(std::make
                                                        OCL_ALL_CHANNELS, testing::Values(0, 1), Bool()));
 
 
+// T-API BUG (haveOpenCL() is false): modules/core/src/matrix.cpp:212: error: (-215) u->refcount == 0 in function deallocate
+OCL_TEST(Normalize, DISABLED_regression_5876_inplace_change_type)
+{
+    double initial_values[] = {1, 2, 5, 4, 3};
+    float result_values[] = {0, 0.25, 1, 0.75, 0.5};
+    Mat m(Size(5, 1), CV_64FC1, initial_values);
+    Mat result(Size(5, 1), CV_32FC1, result_values);
+
+    UMat um; m.copyTo(um);
+    UMat uresult; result.copyTo(uresult);
+
+    OCL_ON(normalize(um, um, 1, 0, NORM_MINMAX, CV_32F));
+
+    EXPECT_EQ(0, cvtest::norm(um, uresult, NORM_INF));
+}
+
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL
