@@ -337,6 +337,3 @@ namespace cv { namespace cuda { namespace device
 #endif
 
 
-
-
-

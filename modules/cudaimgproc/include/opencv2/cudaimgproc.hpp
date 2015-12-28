@@ -599,7 +599,7 @@ as src .
 @param kernel Size of the kernerl used for the filtering.
 @param partition Specifies the parallel granularity of the workload. This parameter should be used GPU experts when optimizing performance.
 
-Outputs an image that has been filtered using median-filtering formulation. 
+Outputs an image that has been filtered using median-filtering formulation.
  */
 CV_EXPORTS void medianFiltering(InputArray src, OutputArray dst, int kernel, int partition=128);
 
