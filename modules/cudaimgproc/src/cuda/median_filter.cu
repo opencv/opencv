@@ -52,16 +52,8 @@ namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
-
-        #define max(a,b) \
-           ({ __typeof__ (a) _a = (a); \
-               __typeof__ (b) _b = (b); \
-             _a > _b ? _a : _b; })
-        #define min(a,b) \
-           ({ __typeof__ (a) _a = (a); \
-               __typeof__ (b) _b = (b); \
-             _a > _b ? _b : _a; })
-
+//        #define max(a,b) a > b ? a : b; 
+//        #define min(a,b) a > b ? b : a;
 
         __device__ void histogramAddAndSub8(int* H, const int * hist_colAdd,const int * hist_colSub){
             int tx = threadIdx.x;
@@ -69,6 +61,7 @@ namespace cv { namespace cuda { namespace device
                 H[tx]+=hist_colAdd[tx]-hist_colSub[tx];
             }
         }
+
         __device__ void histogramMultipleAdd8(int* H, const int * hist_col,int histCount){
             int tx = threadIdx.x;
             if (tx<8){
@@ -129,7 +122,7 @@ namespace cv { namespace cuda { namespace device
                 if(tx>=4)
                   Hscan[tx]+=Hscan[tx-4];
             }
-            syncthreads();
+            __syncthreads();
             if(tx<7){
                 if(Hscan[tx+1]>=medPos && Hscan[tx]<medPos){
                     foundIn=tx;
@@ -161,7 +154,7 @@ namespace cv { namespace cuda { namespace device
                 if(tx>=16)
                   Hscan[tx]+=Hscan[tx-16];
             }
-            syncthreads();
+            __syncthreads();
             if(tx<31){
                 if(Hscan[tx+1]>=medPos && Hscan[tx]<medPos){
                     foundIn=tx;
@@ -214,7 +207,7 @@ namespace cv { namespace cuda { namespace device
 
         if (blockIdx.x==(gridDim.x-1))
             stopRow=rows;
-        syncthreads();
+        __syncthreads();
         int initNeeded=0, initVal, initStartRow, initStopRow;
 
         if(blockIdx.x==0){
@@ -226,7 +219,7 @@ namespace cv { namespace cuda { namespace device
         else{
             initNeeded=0; initVal=0; initStartRow=startRow-(r+1);   initStopRow=r+startRow;
         }
-       syncthreads();
+       __syncthreads();
 
 
         // In the original algorithm an initialization phase was required as part of the window was outside the
@@ -239,7 +232,7 @@ namespace cv { namespace cuda { namespace device
                 histCoarse[j*8+(src.ptr(0)[j]>>5)]=initVal;
             }
         }
-        syncthreads();
+        __syncthreads();
 
         // Fot all remaining rows in the median filter, add the values to the the histogram
         for (int j=threadIdx.x; j<cols; j+=blockDim.x){
@@ -249,7 +242,7 @@ namespace cv { namespace cuda { namespace device
                     histCoarse[j*8+(src.ptr(pos)[j]>>5)]++;
                 }
         }
-        syncthreads();
+        __syncthreads();
          // Going through all the rows that the block is responsible for.
          int inc=blockDim.x*256;
          int incCoarse=blockDim.x*8;
@@ -279,13 +272,13 @@ namespace cv { namespace cuda { namespace device
              }
 
              histogramMultipleAdd8(HCoarse,histCoarse, 2*r+1);
-             syncthreads();
+             __syncthreads();
              int cols_m_1=cols-1;
              for(int j=r;j<cols-r;j++){
                  int possub=max(j-r,0);
                  int posadd=min(j+1+r,cols_m_1);
                 histogramMedianPar8LookupOnly(HCoarse,HCoarseScan,medPos, &firstBin,&countAtMed);
-                syncthreads();
+                __syncthreads();
 
                 if ( luc[firstBin] <= j-r )
                 {
@@ -306,7 +299,7 @@ namespace cv { namespace cuda { namespace device
                     histogramMedianPar32LookupOnly(HFine[firstBin],HCoarseScan,leftOver,&retval,&countAtMed);
                 }
                 else retval=0;
-                syncthreads();
+                __syncthreads();
 
                 if (threadIdx.x==0){
 //                    imdst[rowpos+j]=(firstBin<<5) + retval;
@@ -314,10 +307,10 @@ namespace cv { namespace cuda { namespace device
                 }
                  histogramAddAndSub8(HCoarse, histCoarse+(int)(posadd<<3),histCoarse+(int)(possub<<3));
 
-                 syncthreads();
+                 __syncthreads();
 
             }
-             syncthreads();
+             __syncthreads();
          }
     }
 
