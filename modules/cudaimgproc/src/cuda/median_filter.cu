@@ -52,8 +52,6 @@ namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
-//        #define max(a,b) a > b ? a : b; 
-//        #define min(a,b) a > b ? b : a;
 
         __device__ void histogramAddAndSub8(int* H, const int * hist_colAdd,const int * hist_colSub){
             int tx = threadIdx.x;
@@ -190,11 +188,11 @@ namespace cv { namespace cuda { namespace device
         // than other blocks. This code is responsible for doing that balancing
         if(doExtraRow){
             startRow=rowsPerBlock*blockIdx.x;
-            stopRow=min(rows, startRow+rowsPerBlock);
+            stopRow=::min(rows, startRow+rowsPerBlock);
         }
         else{
             startRow=(rowsPerBlock+1)*extraRowThread+(rowsPerBlock)*(blockIdx.x-extraRowThread);
-            stopRow=min(rows, startRow+rowsPerBlock);
+            stopRow=::min(rows, startRow+rowsPerBlock);
         }
 
         //int* tempHistPar=histPar.data;
@@ -237,7 +235,7 @@ namespace cv { namespace cuda { namespace device
         // Fot all remaining rows in the median filter, add the values to the the histogram
         for (int j=threadIdx.x; j<cols; j+=blockDim.x){
             for(int i=initStartRow; i<initStopRow; i++){
-                int pos=min(i,rows-1);
+                int pos=::min(i,rows-1);
                     hist[j*256+src.ptr(pos)[j]]++;
                     histCoarse[j*8+(src.ptr(pos)[j]>>5)]++;
                 }
@@ -252,7 +250,7 @@ namespace cv { namespace cuda { namespace device
              histogramClear8(HCoarse);
              lucClear8(luc);
              // Computing some necessary indices
-             int possub=max(0,i-r-1),posadd=min(rows-1,i+r);
+             int possub=::max(0,i-r-1),posadd=::min(rows-1,i+r);
              int histPos=threadIdx.x*256;
              int histCoarsePos=threadIdx.x*8;
              // Going through all the elements of a specific row. Foeach histogram, a value is taken out and
@@ -275,22 +273,22 @@ namespace cv { namespace cuda { namespace device
              __syncthreads();
              int cols_m_1=cols-1;
              for(int j=r;j<cols-r;j++){
-                 int possub=max(j-r,0);
-                 int posadd=min(j+1+r,cols_m_1);
+                 int possub=::max(j-r,0);
+                 int posadd=::min(j+1+r,cols_m_1);
                 histogramMedianPar8LookupOnly(HCoarse,HCoarseScan,medPos, &firstBin,&countAtMed);
                 __syncthreads();
 
                 if ( luc[firstBin] <= j-r )
                 {
                     histogramClear32(HFine[firstBin]);
-                    for ( luc[firstBin] = (j-r); luc[firstBin] < min(j+r+1,cols_m_1); luc[firstBin]++ )
+                    for ( luc[firstBin] = (j-r); luc[firstBin] < ::min(j+r+1,cols_m_1); luc[firstBin]++ )
                         histogramAdd32(HFine[firstBin], hist+(luc[firstBin]*256+(firstBin<<5) ) );
                 }
                 else{
                     for ( ; luc[firstBin] < (j+r+1);luc[firstBin]++ ) {
                         histogramAddAndSub32(HFine[firstBin],
-                        hist+(min(luc[firstBin],cols_m_1)*256+(firstBin<<5) ),
-                        hist+(max(luc[firstBin]-2*r-1,0)*256+(firstBin<<5) ) );
+                        hist+(::min(luc[firstBin],cols_m_1)*256+(firstBin<<5) ),
+                        hist+(::max(luc[firstBin]-2*r-1,0)*256+(firstBin<<5) ) );
                     }
                 }
 
