@@ -223,7 +223,12 @@ public:
      */
     CV_WRAP virtual void setTrainTestSplitRatio(double ratio, bool shuffle=true) = 0;
     CV_WRAP virtual void shuffleTrainTest() = 0;
-    CV_WRAP virtual Mat getTestSamples() const = 0;
+
+    CV_WRAP Mat getTestSamples() const {
+        Mat idx = getTestSampleIdx();
+        Mat samples = getSamples();
+        return idx.empty() ? Mat() : getSubVector(samples, idx);
+    }
 
     CV_WRAP static Mat getSubVector(const Mat& vec, const Mat& idx);
 

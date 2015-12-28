@@ -185,11 +185,6 @@ public:
         Mat idx = getTestSampleIdx();
         return idx.empty() ? Mat() : getSubVector(responses, idx);
     }
-    Mat getTestSamples() const
-    {
-        Mat idx = getTestSampleIdx();
-        return idx.empty() ? Mat() : getSubVector(samples, idx);
-    }
     Mat getTestNormCatResponses() const
     {
         Mat idx = getTestSampleIdx();
