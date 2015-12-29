@@ -70,8 +70,8 @@ void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int _kernel, i
     GpuMat src = _src.getGpuMat();
     CV_Assert( src.type() == CV_8UC1 );
 
-    int partitions = _partitions; 
-    if (partitions>src.rows)
+    int partitions = _partitions;
+	if (partitions>src.rows)
         partitions=src.rows;
 
     int kernel=_kernel;
