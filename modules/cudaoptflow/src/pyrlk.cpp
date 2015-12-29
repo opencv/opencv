@@ -56,14 +56,20 @@ Ptr<DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size, int, in
 namespace pyrlk
 {
     void loadConstants(int2 winSize, int iters, cudaStream_t stream);
+    template<typename T, int cn> struct pyrLK_caller
+    {
+        static void sparse(PtrStepSz<typename device::TypeVec<T, cn>::vec_type> I, PtrStepSz<typename device::TypeVec<T, cn>::vec_type> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+            int level, dim3 block, dim3 patch, cudaStream_t stream);
 
-    void sparse1(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
-                 int level, dim3 block, dim3 patch, cudaStream_t stream);
-    void sparse4(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
-                 int level, dim3 block, dim3 patch, cudaStream_t stream);
+        static void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
+            PtrStepSzf err, int2 winSize, cudaStream_t stream);
+    };
 
-    void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
-               PtrStepSzf err, int2 winSize, cudaStream_t stream);
+    template<typename T, int cn> void dispatcher(GpuMat I, GpuMat J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+        int level, dim3 block, dim3 patch, cudaStream_t stream)
+    {
+        pyrLK_caller<T, cn>::sparse(I, J, prevPts, nextPts, status, err, ptcount, level, block, patch, stream);
+    }
 }
 
 namespace
@@ -76,6 +82,9 @@ namespace
         void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
             GpuMat& status, GpuMat* err, Stream& stream);
 
+        void sparse(std::vector<GpuMat>& prevPyr, std::vector<GpuMat>& nextPyr, const GpuMat& prevPts, GpuMat& nextPts,
+            GpuMat& status, GpuMat* err, Stream& stream);
+
         void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, Stream& stream);
 
     protected:
@@ -83,8 +92,9 @@ namespace
         int maxLevel_;
         int iters_;
         bool useInitialFlow_;
-
+        void buildImagePyramid(const GpuMat& prevImg, std::vector<GpuMat>& prevPyr, const GpuMat& nextImg, std::vector<GpuMat>& nextPyr, Stream stream);
     private:
+        friend class SparsePyrLKOpticalFlowImpl;
         std::vector<GpuMat> prevPyr_;
         std::vector<GpuMat> nextPyr_;
     };
@@ -113,6 +123,88 @@ namespace
         block.z = patch.z = 1;
     }
 
+    void PyrLKOpticalFlowBase::buildImagePyramid(const GpuMat& prevImg, std::vector<GpuMat>& prevPyr, const GpuMat& nextImg, std::vector<GpuMat>& nextPyr, Stream stream)
+    {
+        prevPyr.resize(maxLevel_ + 1);
+        nextPyr.resize(maxLevel_ + 1);
+
+        int cn = prevImg.channels();
+
+        CV_Assert(cn == 1 || cn == 3 || cn == 4);
+
+        prevPyr[0] = prevImg;
+        nextPyr[0] = nextImg;
+
+        for (int level = 1; level <= maxLevel_; ++level)
+        {
+            cuda::pyrDown(prevPyr[level - 1], prevPyr[level], stream);
+            cuda::pyrDown(nextPyr[level - 1], nextPyr[level], stream);
+        }
+    }
+    void PyrLKOpticalFlowBase::sparse(std::vector<GpuMat>& prevPyr, std::vector<GpuMat>& nextPyr, const GpuMat& prevPts, GpuMat& nextPts,
+        GpuMat& status, GpuMat* err, Stream& stream)
+    {
+        CV_Assert(prevPyr.size() && nextPyr.size() && "Pyramid needs to at least contain the original matrix as the first element");
+        CV_Assert(prevPyr[0].size() == nextPyr[0].size());
+        CV_Assert(prevPts.rows == 1 && prevPts.type() == CV_32FC2);
+        CV_Assert(maxLevel_ >= 0);
+        CV_Assert(winSize_.width > 2 && winSize_.height > 2);
+        if (useInitialFlow_)
+            CV_Assert(nextPts.size() == prevPts.size() && nextPts.type() == prevPts.type());
+        else
+            ensureSizeIsEnough(1, prevPts.cols, prevPts.type(), nextPts);
+
+        GpuMat temp1 = (useInitialFlow_ ? nextPts : prevPts).reshape(1);
+        GpuMat temp2 = nextPts.reshape(1);
+        cuda::multiply(temp1, Scalar::all(1.0 / (1 << maxLevel_) / 2.0), temp2, 1, -1, stream);
+
+
+        ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
+        status.setTo(Scalar::all(1), stream);
+
+        if (err)
+            ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, *err);
+
+        if (prevPyr.size() != size_t(maxLevel_ + 1) || nextPyr.size() != size_t(maxLevel_ + 1))
+        {
+            buildImagePyramid(prevPyr[0], prevPyr, nextPyr[0], nextPyr, stream);
+        }
+
+        dim3 block, patch;
+        calcPatchSize(winSize_, block, patch);
+        CV_Assert(patch.x > 0 && patch.x < 6 && patch.y > 0 && patch.y < 6);
+        pyrlk::loadConstants(make_int2(winSize_.width, winSize_.height), iters_, StreamAccessor::getStream(stream));
+
+        const int cn = prevPyr[0].channels();
+        const int type = prevPyr[0].depth();
+
+        typedef void(*func_t)(GpuMat I, GpuMat J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+            int level, dim3 block, dim3 patch, cudaStream_t stream);
+
+        // Current int datatype is disabled due to pyrDown not implementing it
+        // while ushort does work, it has significantly worse performance, and thus doesn't pass accuracy tests.
+        static const func_t funcs[6][4] =
+        {
+          {   pyrlk::dispatcher<uchar, 1>     , /*pyrlk::dispatcher<uchar, 2>*/ 0, pyrlk::dispatcher<uchar, 3>     ,   pyrlk::dispatcher<uchar, 4>    },
+          { /*pyrlk::dispatcher<char, 1>*/   0, /*pyrlk::dispatcher<char, 2>*/  0, /*pyrlk::dispatcher<char, 3>*/  0, /*pyrlk::dispatcher<char, 4>*/ 0 },
+          { pyrlk::dispatcher<ushort, 1>      , /*pyrlk::dispatcher<ushort, 2>*/0, pyrlk::dispatcher<ushort, 3>     ,   pyrlk::dispatcher<ushort, 4>   },
+          { /*pyrlk::dispatcher<short, 1>*/  0, /*pyrlk::dispatcher<short, 2>*/ 0, /*pyrlk::dispatcher<short, 3>*/ 0, /*pyrlk::dispatcher<short, 4>*/0 },
+          {   pyrlk::dispatcher<int, 1>       , /*pyrlk::dispatcher<int, 2>*/   0, pyrlk::dispatcher<int, 3>        ,   pyrlk::dispatcher<int, 4>      },
+          {   pyrlk::dispatcher<float, 1>     , /*pyrlk::dispatcher<float, 2>*/ 0, pyrlk::dispatcher<float, 3>      ,   pyrlk::dispatcher<float, 4>    }
+        };
+
+        func_t func = funcs[type][cn-1];
+        CV_Assert(func != NULL && "Datatype not implemented");
+        for (int level = maxLevel_; level >= 0; level--)
+        {
+            func(prevPyr[level], nextPyr[level],
+                prevPts.ptr<float2>(), nextPts.ptr<float2>(),
+                status.ptr(), level == 0 && err ? err->ptr<float>() : 0,
+                prevPts.cols, level, block, patch,
+                StreamAccessor::getStream(stream));
+        }
+    }
+
     void PyrLKOpticalFlowBase::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err, Stream& stream)
     {
         if (prevPts.empty())
@@ -122,86 +214,14 @@ namespace
             if (err) err->release();
             return;
         }
-
-        dim3 block, patch;
-        calcPatchSize(winSize_, block, patch);
-
         CV_Assert( prevImg.channels() == 1 || prevImg.channels() == 3 || prevImg.channels() == 4 );
         CV_Assert( prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type() );
-        CV_Assert( maxLevel_ >= 0 );
-        CV_Assert( winSize_.width > 2 && winSize_.height > 2 );
-        CV_Assert( patch.x > 0 && patch.x < 6 && patch.y > 0 && patch.y < 6 );
-        CV_Assert( prevPts.rows == 1 && prevPts.type() == CV_32FC2 );
-
-        if (useInitialFlow_)
-            CV_Assert( nextPts.size() == prevPts.size() && nextPts.type() == prevPts.type() );
-        else
-            ensureSizeIsEnough(1, prevPts.cols, prevPts.type(), nextPts);
-
-        GpuMat temp1 = (useInitialFlow_ ? nextPts : prevPts).reshape(1);
-        GpuMat temp2 = nextPts.reshape(1);
-        cuda::multiply(temp1, Scalar::all(1.0 / (1 << maxLevel_) / 2.0), temp2, 1, -1, stream);
-
-        ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
-        status.setTo(Scalar::all(1), stream);
-
-        if (err)
-            ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, *err);
 
         // build the image pyramids.
+        buildImagePyramid(prevImg, prevPyr_, nextImg, nextPyr_, stream);
 
-        BufferPool pool(stream);
+        sparse(prevPyr_, nextPyr_, prevPts, nextPts, status, err, stream);
 
-        prevPyr_.resize(maxLevel_ + 1);
-        nextPyr_.resize(maxLevel_ + 1);
-
-        int cn = prevImg.channels();
-
-        if (cn == 1 || cn == 4)
-        {
-            prevImg.convertTo(prevPyr_[0], CV_32F, stream);
-            nextImg.convertTo(nextPyr_[0], CV_32F, stream);
-        }
-        else
-        {
-            GpuMat buf = pool.getBuffer(prevImg.size(), CV_MAKE_TYPE(prevImg.depth(), 4));
-
-            cuda::cvtColor(prevImg, buf, COLOR_BGR2BGRA, 0, stream);
-            buf.convertTo(prevPyr_[0], CV_32F, stream);
-
-            cuda::cvtColor(nextImg, buf, COLOR_BGR2BGRA, 0, stream);
-            buf.convertTo(nextPyr_[0], CV_32F, stream);
-        }
-
-        for (int level = 1; level <= maxLevel_; ++level)
-        {
-            cuda::pyrDown(prevPyr_[level - 1], prevPyr_[level], stream);
-            cuda::pyrDown(nextPyr_[level - 1], nextPyr_[level], stream);
-        }
-
-        pyrlk::loadConstants(make_int2(winSize_.width, winSize_.height), iters_, StreamAccessor::getStream(stream));
-
-        for (int level = maxLevel_; level >= 0; level--)
-        {
-            if (cn == 1)
-            {
-                pyrlk::sparse1(prevPyr_[level], nextPyr_[level],
-                               prevPts.ptr<float2>(), nextPts.ptr<float2>(),
-                               status.ptr(),
-                               level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
-                               level, block, patch,
-                               StreamAccessor::getStream(stream));
-            }
-            else
-            {
-                pyrlk::sparse4(prevPyr_[level], nextPyr_[level],
-                               prevPts.ptr<float2>(), nextPts.ptr<float2>(),
-                               status.ptr(),
-                               level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
-                               level, block, patch,
-                               StreamAccessor::getStream(stream));
-            }
-        }
     }
 
     void PyrLKOpticalFlowBase::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, Stream& stream)
@@ -250,7 +270,7 @@ namespace
         {
             int idx2 = (idx + 1) & 1;
 
-            pyrlk::dense(prevPyr_[level], nextPyr_[level],
+            pyrlk::pyrLK_caller<float,1>::dense(prevPyr_[level], nextPyr_[level],
                          uPyr[idx], vPyr[idx], uPyr[idx2], vPyr[idx2],
                          PtrStepSzf(), winSize2i,
                          StreamAccessor::getStream(stream));
@@ -289,14 +309,23 @@ namespace
                           OutputArray _err,
                           Stream& stream)
         {
-            const GpuMat prevImg = _prevImg.getGpuMat();
-            const GpuMat nextImg = _nextImg.getGpuMat();
             const GpuMat prevPts = _prevPts.getGpuMat();
             GpuMat& nextPts = _nextPts.getGpuMatRef();
             GpuMat& status = _status.getGpuMatRef();
             GpuMat* err = _err.needed() ? &(_err.getGpuMatRef()) : NULL;
-
-            sparse(prevImg, nextImg, prevPts, nextPts, status, err, stream);
+            if (_prevImg.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && _prevImg.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+            {
+                std::vector<GpuMat> prevPyr, nextPyr;
+                _prevImg.getGpuMatVector(prevPyr);
+                _nextImg.getGpuMatVector(nextPyr);
+                sparse(prevPyr, nextPyr, prevPts, nextPts, status, err, stream);
+            }
+            else
+            {
+                const GpuMat prevImg = _prevImg.getGpuMat();
+                const GpuMat nextImg = _nextImg.getGpuMat();
+                sparse(prevImg, nextImg, prevPts, nextPts, status, err, stream);
+            }
         }
     };
 
