@@ -1702,7 +1702,7 @@ void drawMarker(Mat& img, Point position, const Scalar& color, int markerType, i
     case MARKER_TRIANGLE_UP:
         line(img, Point(position.x-(markerSize/2), position.y+(markerSize/2)), Point(position.x+(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
         line(img, Point(position.x+(markerSize/2), position.y+(markerSize/2)), Point(position.x, position.y-(markerSize/2)), color, thickness, line_type);
-        line(img, Point(position.x, position.y-(markerSize/2)), Point(position.x-(markerSize/2), position.y-(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x, position.y-(markerSize/2)), Point(position.x-(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
         break;
 
     // The triangle down marker case
