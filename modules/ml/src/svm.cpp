@@ -2261,6 +2261,17 @@ Ptr<SVM> SVM::create()
     return makePtr<SVMImpl>();
 }
 
+Ptr<SVM> SVM::load(const String& filename)
+{
+    FileStorage fs;
+    fs.open(filename, FileStorage::READ);
+
+    Ptr<SVM> svm = makePtr<SVMImpl>();
+
+    svm->read(fs.getFirstTopLevelNode());
+    return svm;
+}
+
 Mat SVM::getUncompressedSupportVectors() const
 {
     const SVMImpl* this_ = dynamic_cast<const SVMImpl*>(this);

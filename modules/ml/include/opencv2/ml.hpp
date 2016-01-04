@@ -719,6 +719,10 @@ public:
     Use StatModel::train to train the model. Since %SVM has several parameters, you may want to
     find the best parameters for your problem, it can be done with SVM::trainAuto. */
     CV_WRAP static Ptr<SVM> create();
+
+    CV_WRAP virtual void read( const FileNode& fn ) = 0;
+
+    CV_WRAP static Ptr<SVM> load(const String& fs);
 };
 
 /****************************************************************************************\
