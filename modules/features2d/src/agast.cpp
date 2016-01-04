@@ -7961,6 +7961,7 @@ public:
             cvtColor( _image, ogray, COLOR_BGR2GRAY );
             gray = ogray;
         }
+        keypoints.clear();
         AGAST( gray, keypoints, threshold, nonmaxSuppression, type );
         KeyPointsFilter::runByPixelsMask( keypoints, mask );
     }
