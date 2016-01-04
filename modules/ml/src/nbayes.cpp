@@ -236,7 +236,7 @@ public:
             if (results_prob)
             {
                 rptype = results_prob->type();
-                rpstep = results_prob->isContinuous() ? 1 : results_prob->step/results_prob->elemSize();
+                rpstep = results_prob->isContinuous() ? results_prob->cols : results_prob->step/results_prob->elemSize();
             }
             // allocate memory and initializing headers for calculating
             cv::AutoBuffer<double> _buffer(nvars*2);
