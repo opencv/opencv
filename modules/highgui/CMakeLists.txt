@@ -7,7 +7,7 @@ ocv_add_module(highgui opencv_imgproc opencv_imgcodecs opencv_videoio WRAP pytho
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-if(WINRT_8_1)
+if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
