@@ -273,11 +273,10 @@ namespace cv { namespace cuda { namespace device
                 histCoarsePos+=incCoarse;
              }
 
-//             histogramMultipleAdd8(HCoarse,histCoarse, 2*r+1);
              histogramMultipleAdd8(HCoarse,histCoarse, r+1);
              __syncthreads();
              int cols_m_1=cols-1;
-//             for(int j=r;j<cols-r;j++){
+             
              for(int j=0;j<cols;j++){
                 int possub=::max(j-r,0);
                 int posadd=::min(j+1+r,cols_m_1);
