@@ -196,8 +196,6 @@ namespace cv { namespace cuda { namespace device
         int startRow=0, stopRow=0;
         int rowsPerBlock= rows/gridDim.x+doExtraRow;
 
-//        unsigned char* imsrc = src.data;
-//        unsigned char* imdst = dest.data;
 
         // The following code partitions the work to the blocks. Some blocks will do one row more
         // than other blocks. This code is responsible for doing that balancing
@@ -210,11 +208,6 @@ namespace cv { namespace cuda { namespace device
             stopRow=::min(rows, startRow+rowsPerBlock);
         }
 
-        //int* tempHistPar=histPar.data;
-        //int* tempCoarseHistPar=coarseHistGrid.data;
-
-        //int* hist= tempHistPar+cols*256*blockIdx.x;
-        //int* histCoarse=tempCoarseHistPar +cols*8*blockIdx.x;
         int* hist= histPar.data+cols*256*blockIdx.x;
         int* histCoarse=coarseHistGrid.data +cols*8*blockIdx.x;
 
@@ -276,10 +269,6 @@ namespace cv { namespace cuda { namespace device
                 histCoarse[histCoarsePos+ (src.ptr(possub)[j]>>5) ]--;
                 histCoarse[histCoarsePos+ (src.ptr(posadd)[j]>>5) ]++;
 
-                // hist[histPos+ imsrc[possubMcols+j] ]--;
-                // hist[histPos+ imsrc[posaddMcols+j] ]++;
-                // histCoarse[histCoarsePos+ (imsrc[possubMcols+j]>>5) ]--;
-                // histCoarse[histCoarsePos+ (imsrc[posaddMcols+j]>>5) ]++;
                 histPos+=inc;
                 histCoarsePos+=incCoarse;
              }
@@ -324,7 +313,6 @@ namespace cv { namespace cuda { namespace device
                 __syncthreads();
 
                 if (threadIdx.x==0){
-//                    imdst[rowpos+j]=(firstBin<<5) + retval;
                     dest.ptr(i)[j]=(firstBin<<5) + retval;
                 }
                 if (j<r)
