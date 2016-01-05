@@ -64,7 +64,7 @@ namespace cv { namespace cuda { namespace device
 
 
 
-void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int _kernel, int _partitions){
+void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int windowSize, int _partitions){
     using namespace cv::cuda::device::imgproc;
 
     GpuMat src = _src.getGpuMat();
@@ -74,7 +74,8 @@ void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int _kernel, i
     if (partitions>src.rows)
         partitions=src.rows;
 
-    int kernel=_kernel;
+    // Kernel needs to be half window size
+    int kernel=windowSize/2;
     if (kernel>src.rows)
         kernel=src.rows;
     if (kernel>src.cols)

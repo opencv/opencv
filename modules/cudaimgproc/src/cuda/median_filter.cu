@@ -77,6 +77,21 @@ namespace cv { namespace cuda { namespace device
             }
         }
 
+        __device__ void histogramAdd8(int* H, const int * hist_col){
+            int tx = threadIdx.x;
+            if (tx<8){
+                H[tx]+=hist_col[tx];
+            }
+        }
+
+        __device__ void histogramSub8(int* H, const int * hist_col){
+            int tx = threadIdx.x;
+            if (tx<8){
+                H[tx]-=hist_col[tx];
+            }
+        }
+
+
         __device__ void histogramAdd32(int* H, const int * hist_col){
             int tx = threadIdx.x;
             if (tx<32){
@@ -164,7 +179,7 @@ namespace cv { namespace cuda { namespace device
             }
          }
 
-    __global__ void cuMedianFilterMultiBlock(PtrStepSzb src, PtrStepSzb  dest, PtrStepSzi histPar, PtrStepSzi coarseHistGrid,int r, int medPos )
+    __global__ void cuMedianFilterMultiBlock(PtrStepSzb src, PtrStepSzb  dest, PtrStepSzi histPar, PtrStepSzi coarseHistGrid,int r, int medPos_)
     {
         __shared__ int HCoarse[8];
         __shared__ int HCoarseScan[32];
@@ -269,23 +284,32 @@ namespace cv { namespace cuda { namespace device
                 histCoarsePos+=incCoarse;
              }
 
-             histogramMultipleAdd8(HCoarse,histCoarse, 2*r+1);
+//             histogramMultipleAdd8(HCoarse,histCoarse, 2*r+1);
+             histogramMultipleAdd8(HCoarse,histCoarse, r+1);
              __syncthreads();
              int cols_m_1=cols-1;
-             for(int j=r;j<cols-r;j++){
-                 int possub=::max(j-r,0);
-                 int posadd=::min(j+1+r,cols_m_1);
+//             for(int j=r;j<cols-r;j++){
+             for(int j=0;j<cols;j++){
+                int possub=::max(j-r,0);
+                int posadd=::min(j+1+r,cols_m_1);
+                int medPos=medPos_;
+                __syncthreads();
+
+                if(j<r)
+                    medPos=(j+r+1)*(2*r+1)/2;
+                else if(j>(cols-r))
+                    medPos=(cols-j+r+1)*(2*r+1)/2;
                 histogramMedianPar8LookupOnly(HCoarse,HCoarseScan,medPos, &firstBin,&countAtMed);
                 __syncthreads();
 
-                if ( luc[firstBin] <= j-r )
+                if ( luc[firstBin] <= (j-r) || (j-r) <0)
                 {
                     histogramClear32(HFine[firstBin]);
-                    for ( luc[firstBin] = (j-r); luc[firstBin] < ::min(j+r+1,cols_m_1); luc[firstBin]++ )
+                    for ( luc[firstBin] = ::max(j-r,0); luc[firstBin] < ::min(j+r+1,cols_m_1); luc[firstBin]++ )
                         histogramAdd32(HFine[firstBin], hist+(luc[firstBin]*256+(firstBin<<5) ) );
                 }
                 else{
-                    for ( ; luc[firstBin] < (j+r+1);luc[firstBin]++ ) {
+                    for ( ; luc[firstBin] < ::min(j+r+1,cols_m_1);luc[firstBin]++ ) {
                         histogramAddAndSub32(HFine[firstBin],
                         hist+(::min(luc[firstBin],cols_m_1)*256+(firstBin<<5) ),
                         hist+(::max(luc[firstBin]-2*r-1,0)*256+(firstBin<<5) ) );
@@ -303,7 +327,12 @@ namespace cv { namespace cuda { namespace device
 //                    imdst[rowpos+j]=(firstBin<<5) + retval;
                     dest.ptr(i)[j]=(firstBin<<5) + retval;
                 }
-                 histogramAddAndSub8(HCoarse, histCoarse+(int)(posadd<<3),histCoarse+(int)(possub<<3));
+                if (j<r)
+                    histogramAdd8(HCoarse, histCoarse+(int)(posadd<<3));
+                else if(j>(cols-r))
+                    histogramSub8(HCoarse, histCoarse+(int)(possub<<3));
+                else
+                    histogramAddAndSub8(HCoarse, histCoarse+(int)(posadd<<3),histCoarse+(int)(possub<<3));
 
                  __syncthreads();
 
