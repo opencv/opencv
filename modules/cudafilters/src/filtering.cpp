@@ -1004,7 +1004,7 @@ Ptr<Filter> cv::cuda::createColumnSumFilter(int srcType, int dstType, int ksize,
 
 namespace cv { namespace cuda { namespace device
 {
-    void medianFiltering_gpu(const PtrStepSzb src, PtrStepSzb dst, PtrStepSzi devHist, 
+    void medianFiltering_gpu(const PtrStepSzb src, PtrStepSzb dst, PtrStepSzi devHist,
         PtrStepSzi devCoarseHist,int kernel, int partitions);
 }}}
 
