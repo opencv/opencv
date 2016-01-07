@@ -720,9 +720,14 @@ public:
     find the best parameters for your problem, it can be done with SVM::trainAuto. */
     CV_WRAP static Ptr<SVM> create();
 
-    CV_WRAP virtual void read( const FileNode& fn ) = 0;
-
-    CV_WRAP static Ptr<SVM> load(const String& fs);
+    /** @brief Loads and creates a serialized svm from a file
+     *
+     * Use SVM::save to serialize and store an SVM to disk.
+     * Load the SVM from this file again, by calling this function with the path to the file.
+     *
+     * @param fs Filename
+     */
+    CV_WRAP static Ptr<SVM> load(const String& filepath);
 };
 
 /****************************************************************************************\
