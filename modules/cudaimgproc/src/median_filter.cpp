@@ -75,6 +75,8 @@ void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int windowSize
         partitions=src.rows;
 
     // Kernel needs to be half window size
+    CV_Assert(windowSize>=3);
+
     int kernel=windowSize/2;
     if (kernel>src.rows)
         kernel=src.rows;
@@ -82,11 +84,10 @@ void cv::cuda::medianFiltering(InputArray _src, OutputArray _dst, int windowSize
         kernel=src.cols;
     if(kernel%2==0)
         kernel--;
-    CV_Assert(kernel>=3);
 
      _dst.create(src.rows, src.cols, src.type());
     GpuMat dst = _dst.getGpuMat();
-    src.copyTo(dst);
+//    src.copyTo(dst);
 
     // Note - these are hardcoded in the actual GPU kernel. Do not change these values.
     int histSize=256, histCoarseSize=8;
