@@ -759,14 +759,50 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                     }
                     else
                     {
-                        for( d = 0; d < D; d++ )
+                    #if CV_SSE2
+                        if( useSIMD )
                         {
-                            int Sval = Sp[d];
-                            if( Sval < minS )
-                            {
-                                minS = Sval;
-                                bestDisp = d;
-                            }
+                             __m128i _minS = _mm_set1_epi16(MAX_COST), _bestDisp = _mm_set1_epi16(-1);
+                             __m128i _d8 = _mm_setr_epi16(0, 1, 2, 3, 4, 5, 6, 7), _8 = _mm_set1_epi16(8);
+
+                             for( d = 0; d < D; d+= 8 )
+                             {
+                                 __m128i L0 = _mm_load_si128((const __m128i*)( Sp + d ));
+                                 __m128i mask = _mm_cmplt_epi16( L0, _minS );
+                                 _minS = _mm_min_epi16( L0, _minS );
+                                 _bestDisp = _mm_xor_si128(_bestDisp, _mm_and_si128(_mm_xor_si128( _bestDisp, _d8), mask));
+                                 _d8 = _mm_adds_epi16(_d8, _8 );
+                             }
+                             short CV_DECL_ALIGNED(16) bestDispBuf[8];
+                             _mm_store_si128((__m128i*)bestDispBuf, _bestDisp);
+                             short CV_DECL_ALIGNED(16) minSBuf[8];
+                             _mm_store_si128((__m128i*)minSBuf, _minS );
+
+                             for( int i = 0; i < 8; i++ )
+                             {
+                                 int Sval = minSBuf[ i ];
+                                 if( Sval <= minS )
+                                 {
+                                     if( ( Sval < minS ) || ( bestDispBuf[i] < bestDisp ) )
+                                     {
+                                         bestDisp = bestDispBuf[i];
+                                     }
+                                     minS = Sval;
+                                 }
+                             }
+                        }
+                        else
+                    #endif
+                        {
+                           for( d = 0; d < D; d++ )
+                           {
+                               int Sval = Sp[d];
+                               if( Sval < minS )
+                               {
+                                   minS = Sval;
+                                   bestDisp = d;
+                               }
+                           }
                         }
                     }
 
