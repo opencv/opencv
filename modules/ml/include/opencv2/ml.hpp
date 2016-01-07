@@ -725,7 +725,7 @@ public:
      * Use SVM::save to serialize and store an SVM to disk.
      * Load the SVM from this file again, by calling this function with the path to the file.
      *
-     * @param fs Filename
+     * @param filepath path to serialized svm
      */
     CV_WRAP static Ptr<SVM> load(const String& filepath);
 };
