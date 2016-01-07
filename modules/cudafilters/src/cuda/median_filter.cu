@@ -50,8 +50,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
-    namespace imgproc
-    {
+    // // namespace imgproc
+    // {
 
         __device__ void histogramAddAndSub8(int* H, const int * hist_colAdd,const int * hist_colSub){
             int tx = threadIdx.x;
@@ -338,7 +338,7 @@ namespace cv { namespace cuda { namespace device
 
 
 
-    }
+    // }
 }}}
 
 #endif

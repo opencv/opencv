@@ -589,21 +589,6 @@ CV_EXPORTS Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, i
 //! @} cudaimgproc_feature
 
 
-///////////////////////////// Median Filtering //////////////////////////////
-
-/** @brief Performs median filtering for each point of the source image.
-
-@param src Source image. Only CV_8UC1 images are supported for now.
-@param dst Destination image the filtered image. It has the same size and type
-as src.
-@param windowSize Size of the kernerl used for the filtering. Uses a (windowSize x windowSize) filter.
-@param partition Specifies the parallel granularity of the workload. This parameter should be used GPU experts when optimizing performance.
-
-Outputs an image that has been filtered using median-filtering formulation.
- */
-CV_EXPORTS void medianFiltering(InputArray src, OutputArray dst, int windowSize, int partition=128);
-
-
 ///////////////////////////// Mean Shift //////////////////////////////
 
 /** @brief Performs mean-shift filtering for each point of the source image.

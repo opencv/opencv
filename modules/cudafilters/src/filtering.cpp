@@ -69,6 +69,8 @@ Ptr<Filter> cv::cuda::createBoxMinFilter(int, Size, Point, int, Scalar) { throw_
 Ptr<Filter> cv::cuda::createRowSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 Ptr<Filter> cv::cuda::createColumnSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
+Ptr<Filter> cv::cuda::medianFiltering(InputArray, OutputArray, int,int) { throw_no_cuda(); }
+
 #else
 
 namespace
@@ -993,6 +995,83 @@ namespace
 Ptr<Filter> cv::cuda::createColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
     return makePtr<NppColumnSumFilter>(srcType, dstType, ksize, anchor, borderMode, borderVal);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Median Filter
+
+
+
+namespace cv { namespace cuda { namespace device
+{
+    void medianFiltering_gpu(const PtrStepSzb src, PtrStepSzb dst, PtrStepSzi devHist, 
+        PtrStepSzi devCoarseHist,int kernel, int partitions);
+}}}
+
+namespace
+{
+    class MedianFilter : public Filter
+    {
+    public:
+        MedianFilter(int srcType, int _windowSize, int _partitions=128);
+
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+    private:
+        int windowSize;
+        int partitions;
+    };
+
+    MedianFilter::MedianFilter(int srcType, int _windowSize, int _partitions) :
+        windowSize(_windowSize),partitions(_partitions)
+    {
+        CV_Assert( srcType == CV_8UC1 );
+        // Kernel needs to be half window size
+        CV_Assert(windowSize>=3);
+        CV_Assert(_partitions>=1);
+
+    }
+
+    void MedianFilter::apply(InputArray _src, OutputArray _dst, Stream& _stream)
+    {
+        using namespace cv::cuda::device;
+
+
+
+        GpuMat src = _src.getGpuMat();
+         _dst.create(src.rows, src.cols, src.type());
+        GpuMat dst = _dst.getGpuMat();
+
+        if (partitions>src.rows)
+            partitions=src.rows;
+
+        int kernel=windowSize/2;
+        if (kernel>src.rows)
+            kernel=src.rows;
+        if (kernel>src.cols)
+            kernel=src.cols;
+        if(kernel%2==0)
+            kernel--;
+
+
+        // Note - these are hardcoded in the actual GPU kernel. Do not change these values.
+        int histSize=256, histCoarseSize=8;
+
+        GpuMat devHist(1, src.cols*histSize*partitions,CV_32SC1);
+        GpuMat devCoarseHist(1,src.cols*histCoarseSize*partitions,CV_32SC1);
+        devHist.setTo(0);
+        devCoarseHist.setTo(0);
+
+        medianFiltering_gpu(src,dst,devHist, devCoarseHist,kernel,partitions);
+
+        devHist.release();
+        devCoarseHist.release();
+    }
+}
+
+Ptr<Filter> cv::cuda::createMedianFilter(int srcType, int _windowSize, int _partitions)
+{
+    return makePtr<MedianFilter>(srcType, _windowSize,_partitions);
 }
 
 #endif
