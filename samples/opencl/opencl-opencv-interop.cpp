@@ -770,7 +770,7 @@ int App::process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* mem
                 return -1;
 
             size_t origin[] = { 0, 0, 0 };
-            size_t region[] = { frame.cols, frame.rows, 1 };
+            size_t region[] = { (size_t)frame.cols, (size_t)frame.rows, 1 };
             res = clEnqueueCopyImage(m_queue, m_img_src, mem, origin, origin, region, 0, 0, &m_event);
             if (CL_SUCCESS != res)
                 return -1;
@@ -796,7 +796,7 @@ int App::process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* mem
         return -1;
 
     // process left half of frame in OpenCL
-    size_t size[] = { frame.cols / 2, frame.rows };
+    size_t size[] = { (size_t)frame.cols / 2, (size_t)frame.rows };
     res = clEnqueueNDRangeKernel(m_queue, kernel, 2, 0, size, 0, 0, 0, &m_event);
     if (CL_SUCCESS != res)
         return -1;

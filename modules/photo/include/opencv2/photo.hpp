@@ -107,7 +107,7 @@ objects from still images or video. See <http://en.wikipedia.org/wiki/Inpainting
    -   An example using the inpainting technique can be found at
         opencv_source_code/samples/cpp/inpaint.cpp
     -   (Python) An example using the inpainting technique can be found at
-        opencv_source_code/samples/python2/inpaint.py
+        opencv_source_code/samples/python/inpaint.py
  */
 CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
         OutputArray dst, double inpaintRadius, int flags );

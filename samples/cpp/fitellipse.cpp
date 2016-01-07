@@ -21,14 +21,14 @@
 using namespace cv;
 using namespace std;
 
-// static void help()
-// {
-//     cout <<
-//             "\nThis program is demonstration for ellipse fitting. The program finds\n"
-//             "contours and approximate it by ellipses.\n"
-//             "Call:\n"
-//             "./fitellipse [image_name -- Default ../data/stuff.jpg]\n" << endl;
-// }
+static void help()
+{
+    cout <<
+        "\nThis program is demonstration for ellipse fitting. The program finds\n"
+        "contours and approximate it by ellipses.\n"
+        "Call:\n"
+        "./fitellipse [image_name -- Default ../data/stuff.jpg]\n" << endl;
+}
 
 int sliderPos = 70;
 
@@ -38,11 +38,19 @@ void processImage(int, void*);
 
 int main( int argc, char** argv )
 {
-    const char* filename = argc == 2 ? argv[1] : (char*)"../data/stuff.jpg";
+    cv::CommandLineParser parser(argc, argv,
+        "{help h||}{@image|../data/stuff.jpg|}"
+    );
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string filename = parser.get<string>("@image");
     image = imread(filename, 0);
     if( image.empty() )
     {
-        cout << "Couldn't open image " << filename << "\nUsage: fitellipse <image_name>\n";
+        cout << "Couldn't open image " << filename << "\n";
         return 0;
     }
 

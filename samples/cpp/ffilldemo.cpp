@@ -73,12 +73,21 @@ static void onMouse( int event, int x, int y, int, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"../data/fruits.jpg";
+    cv::CommandLineParser parser (argc, argv,
+        "{help h | | show help message}{@image|../data/fruits.jpg| input image}"
+    );
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+    string filename = parser.get<string>("@image");
     image0 = imread(filename, 1);
 
     if( image0.empty() )
     {
-        cout << "Image empty. Usage: ffilldemo <image_name>\n";
+        cout << "Image empty\n";
+        parser.printMessage();
         return 0;
     }
     help();

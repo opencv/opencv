@@ -72,6 +72,7 @@
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
+        @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
     @}
     @defgroup core_opengl OpenGL interoperability
@@ -80,6 +81,16 @@
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
     @defgroup core_opencl OpenCL support
+    @defgroup core_va_intel Intel VA-API/OpenCL (CL-VA) interoperability
+    @defgroup core_hal Hardware Acceleration Layer
+    @{
+        @defgroup core_hal_functions Functions
+        @defgroup core_hal_interface Interface
+        @defgroup core_hal_intrin Universal intrinsics
+        @{
+            @defgroup core_hal_intrin_impl Private implementation helpers
+        @}
+    @}
 @}
  */
 
@@ -829,19 +840,19 @@ otherwise, its type will be CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()).
 */
 CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, int dtype = -1);
 
-/** @brief Creates one multichannel array out of several single-channel ones.
+/** @brief Creates one multi-channel array out of several single-channel ones.
 
-The functions merge merge several arrays to make a single multi-channel array. That is, each
+The function merge merges several arrays to make a single multi-channel array. That is, each
 element of the output array will be a concatenation of the elements of the input arrays, where
 elements of i-th input array are treated as mv[i].channels()-element vectors.
 
-The function split does the reverse operation. If you need to shuffle channels in some other
-advanced way, use mixChannels .
+The function cv::split does the reverse operation. If you need to shuffle channels in some other
+advanced way, use cv::mixChannels.
 @param mv input array of matrices to be merged; all the matrices in mv must have the same
 size and the same depth.
 @param count number of input matrices when mv is a plain C array; it must be greater than zero.
 @param dst output array of the same size and the same depth as mv[0]; The number of channels will
-be the total number of channels in the matrix array.
+be equal to the parameter count.
 @sa  mixChannels, split, Mat::reshape
 */
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
@@ -2024,9 +2035,9 @@ so you need to "flip" the second convolution operand B vertically and horizontal
 -   An example using the discrete fourier transform can be found at
     opencv_source_code/samples/cpp/dft.cpp
 -   (Python) An example using the dft functionality to perform Wiener deconvolution can be found
-    at opencv_source/samples/python2/deconvolution.py
+    at opencv_source/samples/python/deconvolution.py
 -   (Python) An example rearranging the quadrants of a Fourier image can be found at
-    opencv_source/samples/python2/dft.py
+    opencv_source/samples/python/dft.py
 @param src input array that could be real or complex.
 @param dst output array whose size and type depends on the flags .
 @param flags transformation flags, representing a combination of the cv::DftFlags
@@ -2837,7 +2848,7 @@ and groups the input samples around the clusters. As an output, \f$\texttt{label
 
 @note
 -   (Python) An example on K-means clustering can be found at
-    opencv_source_code/samples/python2/kmeans.py
+    opencv_source_code/samples/python/kmeans.py
 @param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
 Examples of this array can be:
 -   Mat points(count, 2, CV_32F);

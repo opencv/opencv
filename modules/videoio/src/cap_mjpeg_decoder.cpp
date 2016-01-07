@@ -790,7 +790,7 @@ std::vector<char> MotionJpegCapture::readFrame(frame_iterator it)
     result.reserve(chunk.m_size);
     result.resize(chunk.m_size);
 
-    m_file_stream.read(result.data(), chunk.m_size);
+    m_file_stream.read(&(result[0]), chunk.m_size); // result.data() failed with MSVS2008
 
     return result;
 }

@@ -56,7 +56,10 @@ if(WINRT)
     add_definitions(-DWINRT_STORE)
   endif()
 
-  if(CMAKE_SYSTEM_VERSION MATCHES 8.1)
+  if(CMAKE_SYSTEM_VERSION MATCHES 10)
+    set(WINRT_10 TRUE)
+    add_definitions(-DWINRT_10)
+  elseif(CMAKE_SYSTEM_VERSION MATCHES 8.1)
     set(WINRT_8_1 TRUE)
     add_definitions(-DWINRT_8_1)
   elseif(CMAKE_SYSTEM_VERSION MATCHES 8.0)
@@ -194,7 +197,7 @@ OCV_OPTION(WITH_PTHREADS_PF    "Use pthreads-based parallel_for"             ON 
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_UNICAP         "Include Unicap support (GPL)"                OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON   IF (UNIX AND NOT ANDROID) )
-OCV_OPTION(WITH_LIBV4L         "Use libv4l for Video 4 Linux support"        ON   IF (UNIX AND NOT ANDROID) )
+OCV_OPTION(WITH_LIBV4L         "Use libv4l for Video 4 Linux support"        OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_DSHOW          "Build VideoIO with DirectShow support"       ON   IF (WIN32 AND NOT ARM AND NOT WINRT) )
 OCV_OPTION(WITH_MSMF           "Build VideoIO with Media Foundation support" OFF  IF WIN32 )
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT WINRT) )
@@ -207,6 +210,7 @@ OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON 
 OCV_OPTION(WITH_DIRECTX        "Include DirectX support"                     ON   IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_IPP_A          "Include Intel IPP_A support"                 OFF  IF (MSVC OR X86 OR X86_64) )
+OCV_OPTION(WITH_MATLAB         "Include Matlab support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT))
 OCV_OPTION(WITH_VA             "Include VA support"                          OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
@@ -214,20 +218,20 @@ OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON 
 
 # OpenCV build components
 # ===================================================
-OCV_OPTION(BUILD_SHARED_LIBS        "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" NOT (ANDROID OR IOS) )
-OCV_OPTION(BUILD_opencv_apps        "Build utility applications (used for example to train classifiers)" (NOT ANDROID AND NOT WINRT) IF (NOT IOS) )
+OCV_OPTION(BUILD_SHARED_LIBS        "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" NOT (ANDROID OR APPLE_FRAMEWORK) )
+OCV_OPTION(BUILD_opencv_apps        "Build utility applications (used for example to train classifiers)" (NOT ANDROID AND NOT WINRT) IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"         ON  IF ANDROID )
-OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" ON  IF NOT WINRT)
+OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" ON  IF (NOT WINRT OR APPLE_FRAMEWORK))
 OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )
 OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"       ON  IF NOT WINRT)
-OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT IOS) )
-OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT IOS) )
+OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT APPLE_FRAMEWORK) )
+OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSCV only)" ON )
 OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for staticaly linked OpenCV" ON IF MSVC )
 OCV_OPTION(BUILD_WITH_DYNAMIC_IPP   "Enables dynamic linking of IPP (only for standalone IPP)" OFF )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
 OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID )
-OCV_OPTION(BUILD_CUDA_STUBS         "Build CUDA modules stubs when no CUDA SDK" OFF  IF (NOT IOS) )
+OCV_OPTION(BUILD_CUDA_STUBS         "Build CUDA modules stubs when no CUDA SDK" OFF  IF (NOT APPLE_FRAMEWORK) )
 
 # 3rd party libs
 OCV_OPTION(BUILD_ZLIB               "Build zlib from source"             WIN32 OR APPLE )
@@ -244,7 +248,7 @@ OCV_OPTION(INSTALL_CREATE_DISTRIB   "Change install rules to build the distribut
 OCV_OPTION(INSTALL_C_EXAMPLES       "Install C examples"        OFF )
 OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
 OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF IF ANDROID )
-OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help with side by side installs." OFF IF (UNIX AND NOT ANDROID AND NOT IOS AND BUILD_SHARED_LIBS) )
+OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help with side by side installs." OFF IF (UNIX AND NOT ANDROID AND NOT APPLE_FRAMEWORK AND BUILD_SHARED_LIBS) )
 OCV_OPTION(INSTALL_TESTS            "Install accuracy and performance test binaries and test data" OFF)
 
 # OpenCV build options
@@ -273,6 +277,9 @@ OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                
 OCV_OPTION(ANDROID_EXAMPLES_WITH_LIBS "Build binaries of Android examples with native libraries" OFF  IF ANDROID )
 OCV_OPTION(ENABLE_IMPL_COLLECTION     "Collect implementation data on function call"             OFF )
 OCV_OPTION(GENERATE_ABI_DESCRIPTOR    "Generate XML file for abi_compliance_checker tool" OFF IF UNIX)
+
+OCV_OPTION(DOWNLOAD_EXTERNAL_TEST_DATA "Download external test data (Python executable and OPENCV_TEST_DATA_PATH environment variable may be required)" OFF )
+
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
@@ -419,7 +426,7 @@ if(DEFINED CMAKE_DEBUG_POSTFIX)
   set(OPENCV_DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
 endif()
 
-if(INSTALL_CREATE_DISTRIB AND BUILD_SHARED_LIBS AND NOT DEFINED BUILD_opencv_world)
+if((INSTALL_CREATE_DISTRIB AND BUILD_SHARED_LIBS AND NOT DEFINED BUILD_opencv_world) OR APPLE_FRAMEWORK)
   set(BUILD_opencv_world ON CACHE INTERNAL "")
 endif()
 
@@ -583,14 +590,36 @@ if(WITH_DIRECTX)
 endif()
 
 # --- Matlab/Octave ---
-include(cmake/OpenCVFindMatlab.cmake)
+if(WITH_MATLAB)
+  include(cmake/OpenCVFindMatlab.cmake)
+endif()
 
 include(cmake/OpenCVDetectVTK.cmake)
 
+# -- Custom HAL replacement --
+set(_includes "")
+# assuming OPENCV_HAL_HEADERS and OPENCV_HAL_LIBS are lists of files:
+# option example: -DOPENCV_HAL_HEADERS="<some-path>/header1.h;<some-path>/header2.h"
 if (OPENCV_HAL_HEADERS AND OPENCV_HAL_LIBS)
-  get_filename_component(OPENCV_HAL_HEADERS "${OPENCV_HAL_HEADERS}" ABSOLUTE)
-  get_filename_component(OPENCV_HAL_LIBS "${OPENCV_HAL_LIBS}" ABSOLUTE)
+  foreach (h ${OPENCV_HAL_HEADERS})
+    get_filename_component(h "${h}" ABSOLUTE)
+    set(_includes "${_includes}\n#include \"${h}\"")
+  endforeach()
+  foreach (l ${OPENCV_HAL_LIBS})
+    get_filename_component(l "${l}" ABSOLUTE)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${l})
+    # TODO: install?
+    # ocv_install_target(${l} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  endforeach()
+else()
+  set(_includes "// using default HAL")
+  unset(OPENCV_HAL_HEADERS CACHE)
+  unset(OPENCV_HAL_LIBS CACHE)
 endif()
+set(OPENCV_HAL_HEADERS "${OPENCV_HAL_HEADERS}" CACHE STRING "Headers with custom HAL implementation")
+set(OPENCV_HAL_LIBS "${OPENCV_HAL_LIBS}" CACHE STRING "Libraries with custom HAL implementation")
+configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
+unset(_includes)
 
 # ----------------------------------------------------------------------------
 # Add CUDA libraries (needed for apps/tools, samples)
@@ -666,7 +695,9 @@ include(cmake/OpenCVGenAndroidMK.cmake)
 include(cmake/OpenCVGenConfig.cmake)
 
 # Generate Info.plist for the IOS framework
-include(cmake/OpenCVGenInfoPlist.cmake)
+if(APPLE_FRAMEWORK)
+  include(cmake/OpenCVGenInfoPlist.cmake)
+endif()
 
 # Generate ABI descriptor
 include(cmake/OpenCVGenABI.cmake)
@@ -832,6 +863,9 @@ status("  Windows RT support:" WINRT THEN YES ELSE NO)
     status("    Building for Microsoft platform: " ${CMAKE_SYSTEM_NAME})
     status("    Building for architectures: " ${CMAKE_VS_EFFECTIVE_PLATFORMS})
     status("    Building for version: " ${CMAKE_SYSTEM_VERSION})
+    if (DEFINED ENABLE_WINRT_MODE_NATIVE)
+      status("    Building for C++ without CX extensions")
+    endif()
   endif()
 endif(WIN32)
 
@@ -1088,6 +1122,7 @@ endif(DEFINED WITH_VA_INTEL)
 status("    Use Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 status("    Use Cuda:"       HAVE_CUDA        THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
 status("    Use OpenCL:"     HAVE_OPENCL      THEN YES ELSE NO)
+status("    Use custom HAL:" OPENCV_HAL_HEADERS AND OPENCV_HAL_LIBS THEN "YES (${OPENCV_HAL_HEADERS}; ${OPENCV_HAL_LIBS})" ELSE "NO")
 
 if(HAVE_CUDA)
   status("")
@@ -1175,10 +1210,12 @@ status("    Java tests:"    BUILD_TESTS AND opencv_test_java_BINARY_DIR         
 
 # ========================= matlab =========================
 status("")
-status("  Matlab:")
-status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
-if (MATLAB_FOUND)
-  status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
+if(MATLAB_FOUND)
+  status("  Matlab:")
+  status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
+  status("    Compiler/generator:" MEX_WORKS   THEN  "Working"                ELSE "Not working (bindings will not be generated)")
+else()
+  status("  Matlab:"        WITH_MATLAB AND NOT MATLAB_FOUND THEN "Matlab not found or implicitly disabled" ELSE NO)
 endif()
 
 # ========================== documentation ==========================

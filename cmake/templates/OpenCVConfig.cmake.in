@@ -159,6 +159,7 @@ SET(OpenCV_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
 # ====================================================================
 
 SET(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGCMAKE@)
+list(REMOVE_ITEM OpenCV_LIB_COMPONENTS opencv_hal)
 SET(OpenCV_WORLD_COMPONENTS @OPENCV_WORLD_MODULES@)
 
 # ==============================================================

@@ -99,14 +99,50 @@ v = f_y*y' + c_y
 Real lenses usually have some distortion, mostly radial distortion and slight tangential distortion.
 So, the above model is extended as:
 
-\f[\begin{array}{l} \vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\ x' = x/z \\ y' = y/z \\ x'' = x'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\ y'' = y'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\ \text{where} \quad r^2 = x'^2 + y'^2  \\ u = f_x*x'' + c_x \\ v = f_y*y'' + c_y \end{array}\f]
+\f[\begin{array}{l}
+\vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\
+x' = x/z \\
+y' = y/z \\
+x'' = x'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\
+y'' = y'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
+\text{where} \quad r^2 = x'^2 + y'^2  \\
+u = f_x*x'' + c_x \\
+v = f_y*y'' + c_y
+\end{array}\f]
 
 \f$k_1\f$, \f$k_2\f$, \f$k_3\f$, \f$k_4\f$, \f$k_5\f$, and \f$k_6\f$ are radial distortion coefficients. \f$p_1\f$ and \f$p_2\f$ are
 tangential distortion coefficients. \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$, are the thin prism distortion
-coefficients. Higher-order coefficients are not considered in OpenCV. In the functions below the
-coefficients are passed or returned as
+coefficients. Higher-order coefficients are not considered in OpenCV.
 
-\f[(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f]
+In some cases the image sensor may be tilted in order to focus an oblique plane in front of the
+camera (Scheimpfug condition). This can be useful for particle image velocimetry (PIV) or
+triangulation with a laser fan. The tilt causes a perspective distortion of \f$x''\f$ and
+\f$y''\f$. This distortion can be modelled in the following way, see e.g. @cite Louhichi07.
+
+\f[\begin{array}{l}
+s\vecthree{x'''}{y'''}{1} =
+\vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}(\tau_x, \tau_y)}
+{0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
+{0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\\
+u = f_x*x''' + c_x \\
+v = f_y*y''' + c_y
+\end{array}\f]
+
+where the matrix \f$R(\tau_x, \tau_y)\f$ is defined by two rotations with angular parameter \f$\tau_x\f$
+and \f$\tau_y\f$, respectively,
+
+\f[
+R(\tau_x, \tau_y) =
+\vecthreethree{\cos(\tau_y)}{0}{-\sin(\tau_y)}{0}{1}{0}{\sin(\tau_y)}{0}{\cos(\tau_y)}
+\vecthreethree{1}{0}{0}{0}{\cos(\tau_x)}{\sin(\tau_x)}{0}{-\sin(\tau_x)}{\cos(\tau_x)} =
+\vecthreethree{\cos(\tau_y)}{\sin(\tau_y)\sin(\tau_x)}{-\sin(\tau_y)\cos(\tau_x)}
+{0}{\cos(\tau_x)}{\sin(\tau_x)}
+{\sin(\tau_y)}{-\cos(\tau_y)\sin(\tau_x)}{\cos(\tau_y)\cos(\tau_x)}.
+\f]
+
+In the functions below the coefficients are passed or returned as
+
+\f[(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f]
 
 vector. That is, if the vector contains four elements, it means that \f$k_3=0\f$ . The distortion
 coefficients do not depend on the scene viewed. Thus, they also belong to the intrinsic camera
@@ -139,7 +175,7 @@ pattern (every view is described by several 3D-2D point correspondences).
     -   A calibration example on stereo matching can be found at
         opencv_source_code/samples/cpp/stereo_match.cpp
     -   (Python) A camera calibration sample can be found at
-        opencv_source_code/samples/python2/calibrate.py
+        opencv_source_code/samples/python/calibrate.py
 
   @{
     @defgroup calib3d_fisheye Fisheye camera model
@@ -221,6 +257,8 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_RATIONAL_MODEL      = 0x04000,
        CALIB_THIN_PRISM_MODEL    = 0x08000,
        CALIB_FIX_S1_S2_S3_S4     = 0x10000,
+       CALIB_TILTED_MODEL        = 0x40000,
+       CALIB_FIX_TAUX_TAUY       = 0x80000,
        // only for stereo
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
@@ -444,8 +482,8 @@ vector\<Point3f\> ), where N is the number of points in the view.
 @param tvec Translation vector.
 @param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is empty, the zero distortion coefficients are assumed.
 @param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
 vector\<Point2f\> .
 @param jacobian Optional output 2Nx(10+\<numDistCoeffs\>) jacobian matrix of derivatives of image
@@ -483,8 +521,9 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
 where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
 @param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
@@ -514,7 +553,7 @@ projections, as well as the camera matrix and the distortion coefficients.
 
 @note
    -   An example of how to use solvePnP for planar augmented reality can be found at
-        opencv_source_code/samples/python2/plane_ar.py
+        opencv_source_code/samples/python/plane_ar.py
    -   If you are using Python:
         - Numpy array slices won't work as input because solvePnP requires contiguous
         arrays (enforced by the assertion using cv::Mat::checkVector() around line 55 of
@@ -539,8 +578,9 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
 where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
 @param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
@@ -719,7 +759,8 @@ together.
 and/or CV_CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param distCoeffs Output vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements.
 @param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view
 (e.g. std::vector<cv::Mat>>). That is, each k-th rotation vector together with the corresponding
 k-th translation vector (see the next output parameter description) brings the calibration pattern
@@ -753,6 +794,13 @@ backward compatibility, this extra flag should be explicitly specified to make t
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
 -   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
+the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+supplied distCoeffs matrix is used. Otherwise, it is set to 0.
+-   **CALIB_TILTED_MODEL** Coefficients tauX and tauY are enabled. To provide the
+backward compatibility, this extra flag should be explicitly specified to make the
+calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
+set, the function computes and returns only 5 distortion coefficients.
+-   **CALIB_FIX_TAUX_TAUY** The coefficients of the tilted sensor model are not changed during
 the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
@@ -839,8 +887,8 @@ any of CV_CALIB_USE_INTRINSIC_GUESS , CV_CALIB_FIX_ASPECT_RATIO ,
 CV_CALIB_FIX_INTRINSIC , or CV_CALIB_FIX_FOCAL_LENGTH are specified, some or all of the
 matrix components must be initialized. See the flags description for details.
 @param distCoeffs1 Input/output vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 ot 12 elements. The
-output vector length depends on the flags.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. The output vector length depends on the flags.
 @param cameraMatrix2 Input/output second camera matrix. The parameter is similar to cameraMatrix1
 @param distCoeffs2 Input/output lens distortion coefficients for the second camera. The parameter
 is similar to distCoeffs1 .
@@ -873,6 +921,13 @@ backward compatibility, this extra flag should be explicitly specified to make t
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
 -   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
+the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+supplied distCoeffs matrix is used. Otherwise, it is set to 0.
+-   **CALIB_TILTED_MODEL** Coefficients tauX and tauY are enabled. To provide the
+backward compatibility, this extra flag should be explicitly specified to make the
+calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
+set, the function computes and returns only 5 distortion coefficients.
+-   **CALIB_FIX_TAUX_TAUY** The coefficients of the tilted sensor model are not changed during
 the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
@@ -1058,8 +1113,9 @@ CV_EXPORTS_W float rectify3Collinear( InputArray cameraMatrix1, InputArray distC
 
 @param cameraMatrix Input camera matrix.
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
 @param imageSize Original image size.
 @param alpha Free scaling parameter between 0 (when all the pixels in the undistorted image are
 valid) and 1 (when all the source image pixels are retained in the undistorted image). See
@@ -1618,7 +1674,7 @@ check, quadratic interpolation and speckle filtering).
 
 @note
    -   (Python) An example illustrating the use of the StereoSGBM matching algorithm can be found
-        at opencv_source_code/samples/python2/stereo_match.py
+        at opencv_source_code/samples/python/stereo_match.py
  */
 class CV_EXPORTS_W StereoSGBM : public StereoMatcher
 {

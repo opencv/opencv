@@ -299,6 +299,13 @@ type_dict = {
                   "jn_type" : "double[]",
                   "jni_var" : "Vec3d %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2)", "jni_type" : "jdoubleArray",
                   "suffix" : "DDD"},
+    "Moments" : {
+        "j_type" : "Moments",
+        "jn_args" : (("double", ".m00"), ("double", ".m10"), ("double", ".m01"), ("double", ".m20"), ("double", ".m11"),
+                     ("double", ".m02"), ("double", ".m30"), ("double", ".m21"), ("double", ".m12"), ("double", ".m03")),
+        "jni_var" : "Moments %(n)s(%(n)s_m00, %(n)s_m10, %(n)s_m01, %(n)s_m20, %(n)s_m11, %(n)s_m02, %(n)s_m30, %(n)s_m21, %(n)s_m12, %(n)s_m03)",
+        "jni_type" : "jdoubleArray",
+        "suffix" : "DDDDDDDDDD"},
 
 }
 
