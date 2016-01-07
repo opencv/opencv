@@ -2261,14 +2261,14 @@ Ptr<SVM> SVM::create()
     return makePtr<SVMImpl>();
 }
 
-Ptr<SVM> SVM::load(const String& filename)
+Ptr<SVM> SVM::load(const String& filepath)
 {
     FileStorage fs;
-    fs.open(filename, FileStorage::READ);
+    fs.open(filepath, FileStorage::READ);
 
     Ptr<SVM> svm = makePtr<SVMImpl>();
 
-    svm->read(fs.getFirstTopLevelNode());
+    ((SVMImpl*)svm.get())->read(fs.getFirstTopLevelNode());
     return svm;
 }
 
