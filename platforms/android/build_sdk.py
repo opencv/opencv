@@ -77,13 +77,13 @@ class ABI:
         # return self.name == "x86" or self.name == "x86_64"
 
 ABIs = [
-    ABI("2", "armeabi-v7a", "arm-linux-androideabi-4.8", cmake_name="armeabi-v7a with NEON"),
     ABI("1", "armeabi",     "arm-linux-androideabi-4.8"),
-    ABI("3", "arm64-v8a",   "aarch64-linux-android-4.9"),
-    ABI("5", "x86_64",      "x86_64-4.9"),
-    ABI("4", "x86",         "x86-4.8"),
-    ABI("7", "mips64",      "mips64el-linux-android-4.9"),
-    ABI("6", "mips",        "mipsel-linux-android-4.8")
+    ABI("2",  "armeabi-v7a", "arm-linux-androideabi-4.8", cmake_name="armeabi-v7a with NEON"),
+    ABI("3",  "arm64-v8a",   "aarch64-linux-android-4.9")
+#    ABI("5", "x86_64",      "x86_64-4.9"),
+#    ABI("4", "x86",         "x86-4.8"),
+#    ABI("7", "mips64",      "mips64el-linux-android-4.9"),
+#    ABI("6", "mips",        "mipsel-linux-android-4.8")
 ]
 
 #===================================================================================================
@@ -120,15 +120,17 @@ class Builder:
             "cmake",
             "-GNinja",
             "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
-            "-DWITH_OPENCL=OFF",
+            "-DWITH_OPENCL=ON",
+            "-DENABLE_NEON=ON",
+            "-DENABLE_VFPV3=ON",
             "-DWITH_CUDA=OFF",
             "-DWITH_IPP=%s" % ("ON" if abi.haveIPP() else "OFF"),
             "-DBUILD_EXAMPLES=OFF",
             "-DBUILD_TESTS=OFF",
             "-DBUILD_PERF_TESTS=OFF",
             "-DBUILD_DOCS=OFF",
-            "-DBUILD_ANDROID_EXAMPLES=ON",
-            "-DINSTALL_ANDROID_EXAMPLES=ON",
+            "-DBUILD_ANDROID_EXAMPLES=OFF",
+            "-DINSTALL_ANDROID_EXAMPLES=OFF",
             "-DANDROID_STL=gnustl_static",
             "-DANDROID_NATIVE_API_LEVEL=8",
             "-DANDROID_ABI='%s'" % abi.cmake_name,
@@ -157,7 +159,9 @@ class Builder:
             "-DBUILD_ANDROID_SERVICE=ON",
             "-DANDROID_PLATFORM_ID=%s" % abi.platform_id,
             "-DWITH_CUDA=OFF",
-            "-DWITH_OPENCL=OFF",
+            "-DWITH_OPENCL=ON",
+            "-DENABLE_NEON=ON",
+            "-DENABLE_VFPV3=ON",
             "-DWITH_IPP=OFF",
             self.opencvdir
         ]
@@ -184,6 +188,7 @@ class Builder:
                 ET.ElementTree(r).write(xmlname, encoding="utf-8")
 
         execute(["ninja", "opencv_engine"])
+        # TODO fix win32 security hazard
         execute(["ant", "-f", os.path.join(apkdest, "build.xml"), "debug"],
             shell=(sys.platform == 'win32'))
         # TODO: Sign apk
@@ -242,12 +247,12 @@ class Builder:
             log.info("Patch cmake config: %s (%d changes)", f.name, count)
 
         # Clean samples
-        path = os.path.join(self.resultdest, "samples")
-        for item in os.listdir(path):
-            item = os.path.join(path, item)
-            if os.path.isdir(item):
-                for name in ["build.xml", "local.properties", "proguard-project.txt"]:
-                    rm_one(os.path.join(item, name))
+#        path = os.path.join(self.resultdest, "samples")
+#        for item in os.listdir(path):
+#            item = os.path.join(path, item)
+#            if os.path.isdir(item):
+#                for name in ["build.xml", "local.properties", "proguard-project.txt"]:
+#                    rm_one(os.path.join(item, name))
 
 
 #===================================================================================================
@@ -293,7 +298,7 @@ if __name__ == "__main__":
 
     engines = []
     for i, abi in enumerate(ABIs):
-        do_install = (i == 0)
+        do_install = (i <= 3)
         engdest = check_dir(os.path.join(builder.workdir, "build_service_%s" % abi.name), create=True, clean=True)
 
         log.info("=====")
