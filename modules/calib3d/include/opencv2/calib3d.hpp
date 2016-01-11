@@ -1245,12 +1245,12 @@ same camera matrix.
 @param method Method for computing a fundamental matrix.
 -   **RANSAC** for the RANSAC algorithm.
 -   **MEDS** for the LMedS algorithm.
+@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
+confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
 point localization, image resolution, and the image noise.
-@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
-confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
 
