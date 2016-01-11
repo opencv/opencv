@@ -1,0 +1,40 @@
+language: android
+jdk: oraclejdk7
+before_install:
+  - chmod +x gradlew
+  # newest Android NDK
+  - git clone https://github.com/urho3d/android-ndk.git $HOME/android-ndk-root
+  - export ANDROID_NDK=$HOME/android-ndk-root
+
+android:
+  components:
+    # The BuildTools version used by your project
+    - build-tools-22.0.1
+    # Uncomment the lines below if you want to
+    # use the latest revision of Android SDK Tools
+    - platform-tools
+    - tools
+    - extra-android-support
+    - extra-android-m2repository
+    - android-21
+    #- android-ndk
+    # Additional components
+    #- extra-google-google_play_services
+    #- extra-google-m2repository
+    #- extra-android-m2repository
+    #- addon-google_apis-google-19
+    # Specify at least one system image,
+    # if you need to run emulator(s) during your tests
+    #- sys-img-armeabi-v7a-android-21
+    #- sys-img-x86_64-android-21
+    #- sys-img-x86-android-21
+
+install:
+  # Check install section: http://docs.travis-ci.com/user/build-configuration/#install
+  # If you'd like to skip the install stage entirely, set it to true and nothing will be run.
+  - true
+
+script:
+  # By default Travis-ci executes './gradlew build connectedCheck' if no 'script:' section found.
+  - cd platforms/android
+  - ./build_sdk build .
