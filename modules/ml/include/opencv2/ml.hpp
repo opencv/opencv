@@ -1398,6 +1398,16 @@ public:
     Note that the train method has optional flags: ANN_MLP::TrainFlags.
      */
     CV_WRAP static Ptr<ANN_MLP> create();
+
+    /** @brief Loads and creates a serialized ANN from a file
+     *
+     * Use ANN::save to serialize and store an ANN to disk.
+     * Load the ANN from this file again, by calling this function with the path to the file.
+     *
+     * @param filepath path to serialized ANN
+     */
+    CV_WRAP static Ptr<ANN_MLP> load(const String& filepath);
+
 };
 
 /****************************************************************************************\
