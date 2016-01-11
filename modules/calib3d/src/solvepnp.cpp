@@ -197,7 +197,7 @@ namespace cv
             }
 
             resultsMutex.lock();
-            if ( (localInliers.size() > inliers.size()) || (localInliers.size() == inliers.size() && curIndex > bestIndex))
+            if ( (localInliers.size() > inliers.size()) || (localInliers.size() == inliers.size() && inliers.size() > 0 && curIndex > bestIndex))
             {
                 inliers.clear();
                 inliers.resize(localInliers.size());
