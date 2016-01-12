@@ -1339,6 +1339,11 @@ Mat_<_Tp>::Mat_(int _dims, const int* _sz, const _Tp& _s)
 {}
 
 template<typename _Tp> inline
+Mat_<_Tp>::Mat_(int _dims, const int* _sz, _Tp* _data, const size_t* _steps)
+    : Mat(_dims, _sz, DataType<_Tp>::type, _data, _steps)
+{}
+
+template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const Mat_<_Tp>& m, const Range* ranges)
     : Mat(m, ranges)
 {}
