@@ -314,6 +314,43 @@ TEST(Calib3d_SolvePnPRansac, concurrency)
     EXPECT_LT(tnorm, 1e-6);
 }
 
+TEST(Calib3d_SolvePnPRansac, input_type)
+{
+    const int numPoints = 10;
+    Matx33d intrinsics(5.4794130238156129e+002, 0., 2.9835545700043139e+002, 0.,
+        5.4817724002728005e+002, 2.3062194051986233e+002, 0., 0., 1.);
+
+    std::vector<cv::Point3f> points3d;
+    std::vector<cv::Point2f> points2d;
+    for (int i = 0; i < numPoints; i++)
+    {
+        points3d.push_back(cv::Point3i(i, 0, 0));
+        points2d.push_back(cv::Point2i(i, 0));
+    }
+    Mat R1, t1, R2, t2, R3, t3, R4, t4;
+
+    ASSERT_TRUE(solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R1, t1));
+
+    Mat points3dMat(points3d);
+    Mat points2dMat(points2d);
+    ASSERT_TRUE(solvePnPRansac(points3dMat, points2dMat, intrinsics, cv::Mat(), R2, t2));
+
+    points3dMat = points3dMat.reshape(3, 1);
+    points2dMat = points2dMat.reshape(2, 1);
+    ASSERT_TRUE(solvePnPRansac(points3dMat, points2dMat, intrinsics, cv::Mat(), R3, t3));
+
+    points3dMat = points3dMat.reshape(1, numPoints);
+    points2dMat = points2dMat.reshape(1, numPoints);
+    ASSERT_TRUE(solvePnPRansac(points3dMat, points2dMat, intrinsics, cv::Mat(), R4, t4));
+
+    ASSERT_LE(norm(R1, R2, NORM_INF), 1e-6);
+    ASSERT_LE(norm(t1, t2, NORM_INF), 1e-6);
+    ASSERT_LE(norm(R1, R3, NORM_INF), 1e-6);
+    ASSERT_LE(norm(t1, t3, NORM_INF), 1e-6);
+    ASSERT_LE(norm(R1, R4, NORM_INF), 1e-6);
+    ASSERT_LE(norm(t1, t4, NORM_INF), 1e-6);
+}
+
 TEST(Calib3d_SolvePnP, double_support)
 {
     Matx33d intrinsics(5.4794130238156129e+002, 0., 2.9835545700043139e+002, 0.,
