@@ -109,9 +109,9 @@ public:
         cv::AutoBuffer<int> _idx(modelPoints);
         int* idx = _idx;
         int i = 0, j, k, iters = 0;
-        int esz1 = (int)m1.elemSize(), esz2 = (int)m2.elemSize();
         int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
         int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
+        int esz1 = (int)m1.elemSize1()*d1, esz2 = (int)m2.elemSize1()*d2;
         int count = m1.checkVector(d1), count2 = m2.checkVector(d2);
         const int *m1ptr = m1.ptr<int>(), *m2ptr = m2.ptr<int>();
 
