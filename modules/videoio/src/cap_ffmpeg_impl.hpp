@@ -174,6 +174,16 @@ extern "C" {
 #define AV_PIX_FMT_GRAY16BE PIX_FMT_GRAY16BE
 #endif
 
+#if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 \
+    ? CALC_FFMPEG_VERSION(52, 38, 100) : CALC_FFMPEG_VERSION(52, 13, 0))
+#define USE_AV_FRAME_GET_BUFFER 1
+#else
+#define USE_AV_FRAME_GET_BUFFER 0
+#ifndef AV_NUM_DATA_POINTERS // required for 0.7.x/0.8.x ffmpeg releases
+#define AV_NUM_DATA_POINTERS 4
+#endif
+#endif
+
 static int get_number_of_cpus(void)
 {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(52, 111, 0)
@@ -354,11 +364,15 @@ void CvCapture_FFMPEG::close()
         ic = NULL;
     }
 
+#if USE_AV_FRAME_GET_BUFFER
+    av_frame_unref(&rgb_picture);
+#else
     if( rgb_picture.data[0] )
     {
         free( rgb_picture.data[0] );
         rgb_picture.data[0] = 0;
     }
+#endif
 
     // free last packet if exist
     if (packet.data) {
@@ -648,17 +662,11 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             picture = avcodec_alloc_frame();
 #endif
 
-            rgb_picture.data[0] = (uint8_t*)malloc(
-                    avpicture_get_size( AV_PIX_FMT_BGR24,
-                                        enc->width, enc->height ));
-            avpicture_fill( (AVPicture*)&rgb_picture, rgb_picture.data[0],
-                            AV_PIX_FMT_BGR24, enc->width, enc->height );
-
             frame.width = enc->width;
             frame.height = enc->height;
             frame.cn = 3;
-            frame.step = rgb_picture.linesize[0];
-            frame.data = rgb_picture.data[0];
+            frame.step = 0;
+            frame.data = NULL;
             break;
         }
     }
@@ -754,19 +762,18 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
     if( img_convert_ctx == NULL ||
         frame.width != video_st->codec->width ||
-        frame.height != video_st->codec->height )
+        frame.height != video_st->codec->height ||
+        frame.data == NULL )
     {
-        if( img_convert_ctx )
-            sws_freeContext(img_convert_ctx);
-
-        frame.width = video_st->codec->width;
-        frame.height = video_st->codec->height;
+        // Some sws_scale optimizations have some assumptions about alignment of data/step/width/height
+        // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
+        int buffer_width = video_st->codec->coded_width, buffer_height = video_st->codec->coded_height;
 
         img_convert_ctx = sws_getCachedContext(
-                NULL,
-                video_st->codec->width, video_st->codec->height,
+                img_convert_ctx,
+                buffer_width, buffer_height,
                 video_st->codec->pix_fmt,
-                video_st->codec->width, video_st->codec->height,
+                buffer_width, buffer_height,
                 AV_PIX_FMT_BGR24,
                 SWS_BICUBIC,
                 NULL, NULL, NULL
@@ -775,21 +782,37 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         if (img_convert_ctx == NULL)
             return false;//CV_Error(0, "Cannot initialize the conversion context!");
 
+#if USE_AV_FRAME_GET_BUFFER
+        av_frame_unref(&rgb_picture);
+        rgb_picture.format = AV_PIX_FMT_BGR24;
+        rgb_picture.width = buffer_width;
+        rgb_picture.height = buffer_height;
+        if (0 != av_frame_get_buffer(&rgb_picture, 32))
+        {
+            CV_WARN("OutOfMemory");
+            return false;
+        }
+#else
+        int aligns[AV_NUM_DATA_POINTERS];
+        avcodec_align_dimensions2(video_st->codec, &buffer_width, &buffer_height, aligns);
         rgb_picture.data[0] = (uint8_t*)realloc(rgb_picture.data[0],
                 avpicture_get_size( AV_PIX_FMT_BGR24,
-                                    video_st->codec->width, video_st->codec->height ));
+                                    buffer_width, buffer_height ));
+        avpicture_fill( (AVPicture*)&rgb_picture, rgb_picture.data[0],
+                        AV_PIX_FMT_BGR24, buffer_width, buffer_height );
+#endif
+        frame.width = video_st->codec->width;
+        frame.height = video_st->codec->height;
+        frame.cn = 3;
         frame.data = rgb_picture.data[0];
+        frame.step = rgb_picture.linesize[0];
     }
-
-    avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], AV_PIX_FMT_RGB24,
-                   video_st->codec->width, video_st->codec->height);
-    frame.step = rgb_picture.linesize[0];
 
     sws_scale(
             img_convert_ctx,
             picture->data,
             picture->linesize,
-            0, video_st->codec->height,
+            0, video_st->codec->coded_height,
             rgb_picture.data,
             rgb_picture.linesize
             );
