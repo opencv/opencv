@@ -266,6 +266,7 @@ float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, i
     {
         temp_pred = calc_sigmoid(data_t*thetas.t());
         CV_Assert(temp_pred.cols==1);
+        pred_m = temp_pred.clone();
 
         // if greater than 0.5, predict class 0 or predict class 1
         temp_pred = (temp_pred>0.5)/255;
