@@ -12,6 +12,16 @@
 //! @}
 
 
+#define CV_HAL_DFT_INVERSE        1
+#define CV_HAL_DFT_SCALE          2
+#define CV_HAL_DFT_ROWS           4
+#define CV_HAL_DFT_COMPLEX_OUTPUT 16
+#define CV_HAL_DFT_REAL_OUTPUT    32
+#define CV_HAL_DFT_TWO_STAGE      64
+#define CV_HAL_DFT_STAGE_COLS    128
+#define CV_HAL_DFT_IS_CONTINUOUS 512
+#define CV_HAL_DFT_IS_INPLACE 1024
+
 #ifdef __cplusplus
 #include <cstddef>
 #else

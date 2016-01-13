@@ -187,6 +187,25 @@ CV_EXPORTS void addWeighted32s( const int* src1, size_t step1, const int* src2, 
 CV_EXPORTS void addWeighted32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scalars );
 
+struct DftContext
+{
+    void * impl;
+    bool useReplacement;
+    DftContext() : impl(0), useReplacement(false) {}
+};
+
+CV_EXPORTS void dftInit2D(DftContext & c, int _width, int _height, int _depth, int _src_channels, int _dst_channels, int flags, int _nonzero_rows = 0);
+CV_EXPORTS void dftRun2D(const DftContext & c, const void * src, int src_step, void * dst, int dst_step);
+CV_EXPORTS void dftFree2D(DftContext & c);
+
+CV_EXPORTS void dftInit(DftContext & c, int len, int count, int depth, int flags, bool * useBuffer = 0);
+CV_EXPORTS void dftRun(const DftContext & c, const void * src, void * dst);
+CV_EXPORTS void dftFree(DftContext & c);
+
+CV_EXPORTS void dctInit(DftContext & c, int width, int height, int depth, int flags);
+CV_EXPORTS void dctRun(const DftContext & c, const void * src, int src_step, void * dst, int dst_step);
+CV_EXPORTS void dctFree(DftContext & c);
+
 //! @} core_hal
 
 //=============================================================================
