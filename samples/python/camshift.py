@@ -46,28 +46,22 @@ class App(object):
 
         self.selection = None
         self.drag_start = None
-        self.tracking_state = 0
         self.show_backproj = False
+        self.track_window = None
 
     def onmouse(self, event, x, y, flags, param):
-        x, y = np.int16([x, y]) # BUG
         if event == cv2.EVENT_LBUTTONDOWN:
             self.drag_start = (x, y)
-            self.tracking_state = 0
-            return
+            self.track_window = None
         if self.drag_start:
-            if flags & cv2.EVENT_FLAG_LBUTTON:
-                h, w = self.frame.shape[:2]
-                xo, yo = self.drag_start
-                x0, y0 = np.maximum(0, np.minimum([xo, yo], [x, y]))
-                x1, y1 = np.minimum([w, h], np.maximum([xo, yo], [x, y]))
-                self.selection = None
-                if x1-x0 > 0 and y1-y0 > 0:
-                    self.selection = (x0, y0, x1, y1)
-            else:
-                self.drag_start = None
-                if self.selection is not None:
-                    self.tracking_state = 1
+            xmin = min(x, self.drag_start[0])
+            ymin = min(y, self.drag_start[1])
+            xmax = max(x, self.drag_start[0])
+            ymax = max(y, self.drag_start[1])
+            self.selection = (xmin, ymin, xmax, ymax)
+        if event == cv2.EVENT_LBUTTONUP:
+            self.drag_start = None
+            self.track_window = (xmin, ymin, xmax - xmin, ymax - ymin)
 
     def show_hist(self):
         bin_count = self.hist.shape[0]
@@ -88,7 +82,6 @@ class App(object):
 
             if self.selection:
                 x0, y0, x1, y1 = self.selection
-                self.track_window = (x0, y0, x1-x0, y1-y0)
                 hsv_roi = hsv[y0:y1, x0:x1]
                 mask_roi = mask[y0:y1, x0:x1]
                 hist = cv2.calcHist( [hsv_roi], [0], mask_roi, [16], [0, 180] )
@@ -100,7 +93,7 @@ class App(object):
                 cv2.bitwise_not(vis_roi, vis_roi)
                 vis[mask == 0] = 0
 
-            if self.tracking_state == 1:
+            if self.track_window and self.track_window[2] > 0 and self.track_window[3] > 0:
                 self.selection = None
                 prob = cv2.calcBackProject([hsv], [0], self.hist, [0, 180], 1)
                 prob &= mask
