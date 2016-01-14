@@ -104,7 +104,7 @@ void createConcentricSpheresTestSet( int num_samples, int num_features, int num_
         max_dst = std::max( max_dst, dis[i].d );
 
         for( ; i < num_samples && dis[i].d <= max_dst; ++i )
-            responses.at<int>(i) = cur_class;
+            responses.at<int>(dis[i].i) = cur_class;
     }
 }
 
