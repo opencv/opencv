@@ -747,20 +747,9 @@ function(ocv_add_executable target)
 endfunction()
 
 function(ocv_add_library target)
-  set(cuda_objs "")
-  if(HAVE_CUDA)
-    set(cuda_srcs "")
-
-    foreach(var ${ARGN})
-      if(var MATCHES ".cu")
-        list(APPEND cuda_srcs ${var})
-      endif()
-    endforeach()
-
-    if(cuda_srcs)
-      ocv_include_directories(${CUDA_INCLUDE_DIRS})
-      ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
-    endif()
+  if(HAVE_CUDA AND ARGN MATCHES "\\.cu")
+    ocv_include_directories(${CUDA_INCLUDE_DIRS})
+    ocv_cuda_compile(cuda_objs ${ARGN})
     set(OPENCV_MODULE_${target}_CUDA_OBJECTS ${cuda_objs} CACHE INTERNAL "Compiled CUDA object files")
   endif()
 
@@ -771,9 +760,10 @@ function(ocv_add_library target)
       AND NOT OPENCV_MODULE_${target}_CHILDREN
       AND NOT OPENCV_MODULE_${target}_CLASS STREQUAL "BINDINGS"
       AND NOT ${target} STREQUAL "opencv_ts"
+      AND (NOT BUILD_opencv_world OR NOT HAVE_CUDA)
     )
     set(sources ${ARGN})
-    ocv_list_filterout(sources "\\\\.(cl|inc)$")
+    ocv_list_filterout(sources "\\\\.(cl|inc|cu)$")
     add_library(${target}_object OBJECT ${sources})
     set_target_properties(${target}_object PROPERTIES
       EXCLUDE_FROM_ALL True
