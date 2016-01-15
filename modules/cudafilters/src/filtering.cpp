@@ -69,7 +69,7 @@ Ptr<Filter> cv::cuda::createBoxMinFilter(int, Size, Point, int, Scalar) { throw_
 Ptr<Filter> cv::cuda::createRowSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 Ptr<Filter> cv::cuda::createColumnSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::cuda::medianFiltering(InputArray, OutputArray, int,int) { throw_no_cuda(); }
+Ptr<Filter> cv::cuda::createMedianFiltering(InputArray, OutputArray, int,int) { throw_no_cuda(); return Ptr<Filter>();}
 
 #else
 
@@ -1005,7 +1005,7 @@ Ptr<Filter> cv::cuda::createColumnSumFilter(int srcType, int dstType, int ksize,
 namespace cv { namespace cuda { namespace device
 {
     void medianFiltering_gpu(const PtrStepSzb src, PtrStepSzb dst, PtrStepSzi devHist,
-        PtrStepSzi devCoarseHist,int kernel, int partitions);
+        PtrStepSzi devCoarseHist,int kernel, int partitions, cudaStream_t stream);
 }}}
 
 namespace
@@ -1057,15 +1057,15 @@ namespace
         // Note - these are hardcoded in the actual GPU kernel. Do not change these values.
         int histSize=256, histCoarseSize=8;
 
-        GpuMat devHist(1, src.cols*histSize*partitions,CV_32SC1);
-        GpuMat devCoarseHist(1,src.cols*histCoarseSize*partitions,CV_32SC1);
+        BufferPool pool(_stream);
+        GpuMat devHist = pool.getBuffer(1, src.cols*histSize*partitions,CV_32SC1);
+        GpuMat devCoarseHist = pool.getBuffer(1,src.cols*histCoarseSize*partitions,CV_32SC1);
+
         devHist.setTo(0);
         devCoarseHist.setTo(0);
 
-        medianFiltering_gpu(src,dst,devHist, devCoarseHist,kernel,partitions);
+        medianFiltering_gpu(src,dst,devHist, devCoarseHist,kernel,partitions,StreamAccessor::getStream(_stream));
 
-        devHist.release();
-        devCoarseHist.release();
     }
 }
 
