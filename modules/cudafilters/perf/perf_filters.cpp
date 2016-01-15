@@ -404,7 +404,7 @@ PERF_TEST_P(Sz_KernelSz, Median, Combine(CUDA_TYPICAL_MAT_SIZES, Values(3, 5, 7,
 
         TEST_CYCLE() median->apply(d_src, dst);
 
-        CUDA_SANITY_CHECK(dst);
+        SANITY_CHECK_NOTHING();
     }
     else
     {
@@ -412,6 +412,6 @@ PERF_TEST_P(Sz_KernelSz, Median, Combine(CUDA_TYPICAL_MAT_SIZES, Values(3, 5, 7,
 
         TEST_CYCLE() cv::medianBlur(src,dst,kernel);
 
-        CPU_SANITY_CHECK(dst);
+        SANITY_CHECK_NOTHING();
     }
 }
