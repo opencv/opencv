@@ -42,6 +42,16 @@ function(ocv_cmake_dump_vars)
   endif()
 endfunction()
 
+function(ocv_cmake_eval var_name)
+  if(DEFINED ${var_name})
+    file(WRITE "${CMAKE_BINARY_DIR}/CMakeCommand-${var_name}.cmake" ${${var_name}})
+    include("${CMAKE_BINARY_DIR}/CMakeCommand-${var_name}.cmake")
+  endif()
+  if(";${ARGN};" MATCHES ";ONCE;")
+    unset(${var_name} CACHE)
+  endif()
+endfunction()
+
 # assert macro
 # Note: it doesn't support lists in arguments
 # Usage samples:
