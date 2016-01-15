@@ -234,8 +234,6 @@ namespace cv { namespace cuda { namespace device
         }
        __syncthreads();
 
-        for (int t=0;t<8; t++)
-            histogramClear32(HFine[t]);
 
         // In the original algorithm an initialization phase was required as part of the window was outside the
         // image. In this parallel version, the initializtion is required for all thread blocks that part
