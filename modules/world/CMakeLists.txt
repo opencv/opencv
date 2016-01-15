@@ -14,6 +14,7 @@ function(include_one_module m)
 endfunction()
 
 if(NOT OPENCV_INITIAL_PASS)
+  set(ENABLE_PRECOMPILED_HEADERS OFF CACHE INTERNAL "" FORCE)
   project(opencv_world)
 
   message(STATUS "Processing WORLD modules...")
