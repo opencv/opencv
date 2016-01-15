@@ -42,6 +42,11 @@
 
 #if !defined CUDA_DISABLER
 
+#include "precomp.hpp"
+
+using namespace cv;
+using namespace cv::cuda;
+
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
 #include "opencv2/core/cuda/vec_math.hpp"
@@ -127,6 +132,7 @@ namespace cv { namespace cuda { namespace device
             if(tx<8){
                 Hscan[tx]=H[tx];
             }
+            __syncthreads();
             if(tx<8){
                 if(tx>=1 )
                   Hscan[tx]+=Hscan[tx-1];
@@ -155,6 +161,7 @@ namespace cv { namespace cuda { namespace device
             if(tx<32){
                 Hscan[tx]=H[tx];
             }
+            __syncthreads();
             if(tx<32){
                 if(tx>=1)
                   Hscan[tx]+=Hscan[tx-1];
@@ -227,6 +234,8 @@ namespace cv { namespace cuda { namespace device
         }
        __syncthreads();
 
+        for (int t=0;t<8; t++)
+            histogramClear32(HFine[t]);
 
         // In the original algorithm an initialization phase was required as part of the window was outside the
         // image. In this parallel version, the initializtion is required for all thread blocks that part
@@ -243,7 +252,7 @@ namespace cv { namespace cuda { namespace device
         // Fot all remaining rows in the median filter, add the values to the the histogram
         for (int j=threadIdx.x; j<cols; j+=blockDim.x){
             for(int i=initStartRow; i<initStopRow; i++){
-                int pos=::min(i,rows-1);
+                    int pos=::min(i,rows-1);
                     hist[j*256+src.ptr(pos)[j]]++;
                     histCoarse[j*8+(src.ptr(pos)[j]>>5)]++;
                 }
@@ -303,6 +312,7 @@ namespace cv { namespace cuda { namespace device
                         hist+(::max(luc[firstBin]-2*r-1,0)*256+(firstBin<<5) ) );
                     }
                 }
+                __syncthreads();
 
                 int leftOver=medPos-countAtMed;
                 if(leftOver>0){
@@ -328,11 +338,13 @@ namespace cv { namespace cuda { namespace device
          }
     }
 
-        void medianFiltering_gpu(const PtrStepSzb src, PtrStepSzb dst, PtrStepSzi devHist, PtrStepSzi devCoarseHist,int kernel, int partitions){
+        void medianFiltering_gpu(const PtrStepSzb src, PtrStepSzb dst, PtrStepSzi devHist, PtrStepSzi devCoarseHist,int kernel, int partitions,cudaStream_t stream){
                 int medPos=2*kernel*kernel+2*kernel;
                 dim3 gridDim; gridDim.x=partitions;
                 dim3 blockDim; blockDim.x=32;
                 cuMedianFilterMultiBlock<<<gridDim,blockDim>>>(src, dst, devHist,devCoarseHist, kernel, medPos);
+                if (!stream)
+                    cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
