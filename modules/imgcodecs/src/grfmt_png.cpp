@@ -187,15 +187,12 @@ bool  PngDecoder::readHeader()
 
                     if( bit_depth <= 8 || bit_depth == 16 )
                     {
+                        png_get_tRNS(png_ptr, info_ptr, &trans, &num_trans, &trans_values);
                         switch(color_type)
                         {
                             case PNG_COLOR_TYPE_RGB:
-                                m_type = CV_8UC3;
-                                break;
                             case PNG_COLOR_TYPE_PALETTE:
-                                png_get_tRNS( png_ptr, info_ptr, &trans, &num_trans, &trans_values);
-                                //Check if there is a transparency value in the palette
-                                if ( num_trans > 0 )
+                                if( num_trans > 0 )
                                     m_type = CV_8UC4;
                                 else
                                     m_type = CV_8UC3;
@@ -203,8 +200,14 @@ bool  PngDecoder::readHeader()
                             case PNG_COLOR_TYPE_RGB_ALPHA:
                                 m_type = CV_8UC4;
                                 break;
+                            case PNG_COLOR_TYPE_GRAY_ALPHA:
+                                m_type = CV_8UC2;
+                                break;
                             default:
-                                m_type = CV_8UC1;
+                                if( num_trans > 0 )
+                                    m_type = CV_8UC2;
+                                else
+                                    m_type = CV_8UC1;
                         }
                         if( bit_depth == 16 )
                             m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
@@ -227,7 +230,7 @@ bool  PngDecoder::readData( Mat& img )
     volatile bool result = false;
     AutoBuffer<uchar*> _buffer(m_height);
     uchar** buffer = _buffer;
-    int color = img.channels() > 1;
+    int color = img.channels() > 2;
     uchar* data = img.ptr();
     int step = (int)img.step;
 
@@ -246,7 +249,7 @@ bool  PngDecoder::readData( Mat& img )
             else if( !isBigEndian() )
                 png_set_swap( png_ptr );
 
-            if(img.channels() < 4)
+            if(img.channels() != 4 && img.channels() != 2)
             {
                 /* observation: png_read_image() writes 400 bytes beyond
                  * end of data when reading a 400x118 color png
@@ -257,12 +260,13 @@ bool  PngDecoder::readData( Mat& img )
                  * stripping alpha..  18.11.2004 Axel Walthelm
                  */
                  png_set_strip_alpha( png_ptr );
-            }
+            } else
+                png_set_tRNS_to_alpha( png_ptr );
 
             if( m_color_type == PNG_COLOR_TYPE_PALETTE )
                 png_set_palette_to_rgb( png_ptr );
 
-            if( m_color_type == PNG_COLOR_TYPE_GRAY && m_bit_depth < 8 )
+            if( (m_color_type & PNG_COLOR_MASK_COLOR) != 0 && m_bit_depth < 8 )
 #if (PNG_LIBPNG_VER_MAJOR*10000 + PNG_LIBPNG_VER_MINOR*100 + PNG_LIBPNG_VER_RELEASE >= 10209) || \
     (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR == 0 && PNG_LIBPNG_VER_RELEASE >= 18)
                 png_set_expand_gray_1_2_4_to_8( png_ptr );
@@ -270,7 +274,7 @@ bool  PngDecoder::readData( Mat& img )
                 png_set_gray_1_2_4_to_8( png_ptr );
 #endif
 
-            if( CV_MAT_CN(m_type) > 1 && color )
+            if( CV_MAT_CN(m_type) > 2 && color )
                 png_set_bgr( png_ptr ); // convert RGB to BGR
             else if( color )
                 png_set_gray_to_rgb( png_ptr ); // Gray->RGB
@@ -410,6 +414,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 
                     png_set_IHDR( png_ptr, info_ptr, width, height, depth == CV_8U ? isBilevel?1:8 : 16,
                         channels == 1 ? PNG_COLOR_TYPE_GRAY :
+                        channels == 2 ? PNG_COLOR_TYPE_GRAY_ALPHA :
                         channels == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGBA,
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                         PNG_FILTER_TYPE_DEFAULT );

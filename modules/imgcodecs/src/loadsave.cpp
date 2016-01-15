@@ -452,8 +452,6 @@ static bool imwrite_( const String& filename, const Mat& image,
     Mat temp;
     const Mat* pimage = &image;
 
-    CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
-
     ImageEncoder encoder = findEncoder( filename );
     if( !encoder )
         CV_Error( CV_StsError, "could not find a writer for the specified extension" );
@@ -589,9 +587,6 @@ bool imencode( const String& ext, InputArray _image,
                std::vector<uchar>& buf, const std::vector<int>& params )
 {
     Mat image = _image.getMat();
-
-    int channels = image.channels();
-    CV_Assert( channels == 1 || channels == 3 || channels == 4 );
 
     ImageEncoder encoder = findEncoder( ext );
     if( !encoder )
