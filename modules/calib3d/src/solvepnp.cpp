@@ -87,7 +87,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     Mat distCoeffs = Mat_<double>(distCoeffs0);
     bool result = false;
 
-    if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
+    if (flags == SOLVEPNP_EPNP)
     {
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
@@ -120,7 +120,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
         result = true;
     }
-    /*else if (flags == SOLVEPNP_DLS)
+    else if (flags == SOLVEPNP_DLS)
     {
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
@@ -141,7 +141,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         PnP.compute_pose(R, tvec);
         Rodrigues(R, rvec);
         return true;
-    }*/
+    }
     else
         CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
     return result;
