@@ -1,21 +1,21 @@
+set(OPENCL_FOUND ON CACHE BOOL "OpenCL library is found")
 if(APPLE)
-  set(OPENCL_FOUND YES)
   set(OPENCL_LIBRARY "-framework OpenCL" CACHE STRING "OpenCL library")
-  set(OPENCL_INCLUDE_DIR "" CACHE STRING "OpenCL include directory")
-  mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
-  set(HAVE_OPENCL_STATIC ON)
+  set(OPENCL_INCLUDE_DIR "" CACHE PATH "OpenCL include directory")
 else(APPLE)
-  set(OPENCL_FOUND YES)
-  set(HAVE_OPENCL_STATIC OFF)
-  set(OPENCL_INCLUDE_DIR "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/1.2")
+  set(OPENCL_LIBRARY "" CACHE STRING "OpenCL library")
+  set(OPENCL_INCLUDE_DIR "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/1.2" CACHE PATH "OpenCL include directory")
 endif(APPLE)
-
-if(WINRT)
-  set(OPENCL_FOUND NO)
-  set(HAVE_OPENCL_STATIC OFF)
-endif(WINRT)
+mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
 
 if(OPENCL_FOUND)
+  if(OPENCL_LIBRARY)
+    set(HAVE_OPENCL_STATIC ON)
+    set(OPENCL_LIBRARIES "${OPENCL_LIBRARY}")
+  else()
+    set(HAVE_OPENCL_STATIC OFF)
+  endif()
+
   if(NOT HAVE_OPENCL_STATIC)
     try_compile(__VALID_OPENCL
       "${OpenCV_BINARY_DIR}"
@@ -29,18 +29,10 @@ if(OPENCL_FOUND)
     endif()
   endif()
 
-  if(NOT WINRT)
-    set(HAVE_OPENCL 1)
-  endif()
+  set(HAVE_OPENCL 1)
 
   if(WITH_OPENCL_SVM)
     set(HAVE_OPENCL_SVM 1)
-  endif()
-
-  if(HAVE_OPENCL_STATIC)
-    set(OPENCL_LIBRARIES "${OPENCL_LIBRARY}")
-  else()
-    unset(OPENCL_LIBRARIES)
   endif()
 
   set(OPENCL_INCLUDE_DIRS ${OPENCL_INCLUDE_DIR})
