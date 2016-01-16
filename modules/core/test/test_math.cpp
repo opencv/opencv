@@ -2384,7 +2384,7 @@ TEST(Core_SolvePoly, regression_5599)
         double prec;
         prec = cv::solvePoly(coefs, r);
         EXPECT_LE(prec, 1e-6);
-        EXPECT_EQ(4, r.total());
+        EXPECT_EQ((long unsigned)4, r.total());
         //std::cout << "Preciseness = " << prec << std::endl;
         //std::cout << "roots:\n" << r << "\n" << std::endl;
         ASSERT_EQ(CV_32FC2, r.type());
