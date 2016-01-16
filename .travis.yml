@@ -5,6 +5,7 @@ before_install:
   # newest Android NDK
   - git clone https://github.com/urho3d/android-ndk.git $HOME/android-ndk-root
   - export ANDROID_NDK=$HOME/android-ndk-root
+  - ls -la
 
 android:
   components:
@@ -36,4 +37,5 @@ install:
 
 script:
   # By default Travis-ci executes './gradlew build connectedCheck' if no 'script:' section found.
+  - export ANDROID_SDK=~/android-sdk-linux
   - ./platforms/android/build_sdk.py build .
