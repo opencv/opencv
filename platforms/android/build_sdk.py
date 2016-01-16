@@ -118,7 +118,7 @@ class Builder:
     def build_library(self, abi, do_install):
         cmd = [
             "cmake",
-            "-GNinja",
+            "-GUnix Makefiles",
             "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
             "-DWITH_OPENCL=ON",
             "-DENABLE_NEON=ON",
@@ -133,6 +133,7 @@ class Builder:
             "-DINSTALL_ANDROID_EXAMPLES=OFF",
             "-DANDROID_STL=gnustl_static",
             "-DANDROID_NATIVE_API_LEVEL=8",
+            "-DANDROID_SDK_TARGET=21",
             "-DANDROID_ABI='%s'" % abi.cmake_name,
             "-DWITH_TBB=ON",
             "-DANDROID_TOOLCHAIN_NAME=%s" % abi.toolchain,
@@ -144,16 +145,16 @@ class Builder:
             cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
         execute(cmd)
         if do_install:
-            execute(["ninja"])
+            execute(["make","-j"])
             for c in ["libs", "dev", "java", "samples"]:
                 execute(["cmake", "-DCOMPONENT=%s" % c, "-P", "cmake_install.cmake"])
         else:
-            execute(["ninja", "install/strip"])
+            execute(["make ", "install/strip"])
 
     def build_engine(self, abi, engdest):
         cmd = [
             "cmake",
-            "-GNinja",
+            "-GUnix Makefiles",
             "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
             "-DANDROID_ABI='%s'" % abi.cmake_name,
             "-DBUILD_ANDROID_SERVICE=ON",
@@ -187,7 +188,9 @@ class Builder:
                 log.info("Generating XML config: %s", xmlname)
                 ET.ElementTree(r).write(xmlname, encoding="utf-8")
 
-        execute(["ninja", "opencv_engine"])
+        execute(["make", "opencv_engine"])
+        # TODO make Android Studio Library
+        # TODO make Android Studio Examples
         # TODO fix win32 security hazard
         execute(["ant", "-f", os.path.join(apkdest, "build.xml"), "debug"],
             shell=(sys.platform == 'win32'))
@@ -263,7 +266,7 @@ if __name__ == "__main__":
     parser.add_argument("opencv_dir", help="Path to OpenCV source dir")
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
-    parser.add_argument('--sign_with', help="Sertificate to sign the Manager apk")
+    parser.add_argument('--sign_with', help="Certificate to sign the Manager apk")
     parser.add_argument('--build_doc', action="store_true", help="Build javadoc")
     parser.add_argument('--no_ccache', action="store_true", help="Do not use ccache during library build")
     parser.add_argument('--extra_pack', action='append', help="provide extra OpenCV libraries for Manager apk in form <version>:<path-to-native-libs>, for example '2.4.11:unpacked/sdk/native/libs'")

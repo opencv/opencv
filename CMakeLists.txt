@@ -447,7 +447,7 @@ set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV
 find_host_package(Git QUIET)
 
 if(GIT_FOUND)
-  execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*"
+  execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --match "[0-9].[0-9].[0-9]*"
     WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
     OUTPUT_VARIABLE OPENCV_VCSVERSION
     RESULT_VARIABLE GIT_RESULT
