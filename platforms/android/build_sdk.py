@@ -77,7 +77,7 @@ class ABI:
         # return self.name == "x86" or self.name == "x86_64"
 
 ABIs = [
-    ABI("1", "armeabi",     "arm-linux-androideabi-4.8"),
+#    ABI("1", "armeabi",     "arm-linux-androideabi-4.8"),
     ABI("2",  "armeabi-v7a", "arm-linux-androideabi-4.8", cmake_name="armeabi-v7a with NEON"),
     ABI("3",  "arm64-v8a",   "aarch64-linux-android-4.9")
 #    ABI("5", "x86_64",      "x86_64-4.9"),
@@ -145,11 +145,11 @@ class Builder:
             cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
         execute(cmd)
         if do_install:
-            execute(["make","-j"])
+            execute(["make","-j8"])
             for c in ["libs", "dev", "java", "samples"]:
                 execute(["cmake", "-DCOMPONENT=%s" % c, "-P", "cmake_install.cmake"])
         else:
-            execute(["make ", "install/strip"])
+            execute(["make -j8", "install/strip"])
 
     def build_engine(self, abi, engdest):
         cmd = [
