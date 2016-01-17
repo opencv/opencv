@@ -1,11 +1,15 @@
+include(CMakeParseArguments)
+
 # Debugging function
 function(ocv_cmake_dump_vars)
+  set(VARS "")
+  get_cmake_property(_variableNames VARIABLES)
   cmake_parse_arguments(DUMP "" "TOFILE" "" ${ARGN})
   set(regex "${DUMP_UNPARSED_ARGUMENTS}")
-  get_cmake_property(_variableNames VARIABLES)
-  set(VARS "")
+  string(TOLOWER "${regex}" regex_lower)
   foreach(_variableName ${_variableNames})
-    if(_variableName MATCHES "${regex}")
+    string(TOLOWER "${_variableName}" _variableName_lower)
+    if(_variableName MATCHES "${regex}" OR _variableName_lower MATCHES "${regex_lower}")
       set(VARS "${VARS}${_variableName}=${${_variableName}}\n")
     endif()
   endforeach()
@@ -16,6 +20,15 @@ function(ocv_cmake_dump_vars)
   endif()
 endfunction()
 
+function(ocv_cmake_eval var_name)
+  if(DEFINED ${var_name})
+    file(WRITE "${CMAKE_BINARY_DIR}/CMakeCommand-${var_name}.cmake" ${${var_name}})
+    include("${CMAKE_BINARY_DIR}/CMakeCommand-${var_name}.cmake")
+  endif()
+  if(";${ARGN};" MATCHES ";ONCE;")
+    unset(${var_name} CACHE)
+  endif()
+endfunction()
 
 # Search packages for host system instead of packages for target system
 # in case of cross compilation thess macro should be defined by toolchain file
