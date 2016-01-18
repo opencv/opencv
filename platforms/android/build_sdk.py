@@ -145,11 +145,11 @@ class Builder:
             cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
         execute(cmd)
         if do_install:
-            execute(["make","-j8"])
+            execute(["make","-j2"])
             for c in ["libs", "dev", "java", "samples"]:
                 execute(["cmake", "-DCOMPONENT=%s" % c, "-P", "cmake_install.cmake"])
         else:
-            execute(["make -j8", "install/strip"])
+            execute(["make", "install/strip"])
 
     def build_engine(self, abi, engdest):
         cmd = [
