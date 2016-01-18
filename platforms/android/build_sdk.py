@@ -73,8 +73,7 @@ class ABI:
     def __str__(self):
         return "%s (%s)" % (self.name, self.toolchain)
     def haveIPP(self):
-        return False
-        # return self.name == "x86" or self.name == "x86_64"
+        return self.name == "x86" or self.name == "x86_64"
 
 ABIs = [
     ABI("2", "armeabi-v7a", "arm-linux-androideabi-4.8", cmake_name="armeabi-v7a with NEON"),
@@ -143,7 +142,7 @@ class Builder:
         cmd.append(self.opencvdir)
 
         if self.use_ccache == True:
-            cmd.extend(["-DNDK_CCACHE=ccache", "-DENABLE_PRECOMPILED_HEADERS=OFF"])
+            cmd.append("-DNDK_CCACHE=ccache")
         if do_install:
             cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
         execute(cmd)
@@ -237,15 +236,6 @@ class Builder:
         # Copy javadoc
         log.info("Copy docs: %s", self.docdest)
         shutil.copytree(self.docdest, os.path.join(self.resultdest, "sdk", "java", "javadoc"))
-
-        # Patch cmake config
-        with open(os.path.join(self.resultdest, "sdk", "native", "jni", "OpenCVConfig.cmake"), "r+t") as f:
-            contents = f.read()
-            contents, count = re.subn(r'OpenCV_ANDROID_NATIVE_API_LEVEL \d+', "OpenCV_ANDROID_NATIVE_API_LEVEL 8", contents)
-            f.seek(0)
-            f.write(contents)
-            f.truncate()
-            log.info("Patch cmake config: %s (%d changes)", f.name, count)
 
         # Clean samples
         path = os.path.join(self.resultdest, "samples")
