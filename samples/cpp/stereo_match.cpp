@@ -59,7 +59,7 @@ int main(int argc, char** argv)
     Ptr<StereoBM> bm = StereoBM::create(16,9);
     Ptr<StereoSGBM> sgbm = StereoSGBM::create(0,16,3);
     cv::CommandLineParser parser(argc, argv,
-        "{help h||}{algorithm||}{max-disparity|0|}{blocksize|0|}{no-display||}{scale|1|}{i||}{e||}{o||}{p||}");
+        "{@arg1||}{@arg2||}{help h||}{algorithm||}{max-disparity|0|}{blocksize|0|}{no-display||}{scale|1|}{i||}{e||}{o||}{p||}");
     if(parser.has("help"))
     {
         print_help();
