@@ -672,6 +672,7 @@ PARAM_TEST_CASE(Median, cv::cuda::DeviceInfo, cv::Size, MatDepth,  KernelSize, U
     }
 };
 
+
 CUDA_TEST_P(Median, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
@@ -684,7 +685,12 @@ CUDA_TEST_P(Median, Accuracy)
     cv::Mat dst_gold;
     cv::medianBlur(src,dst_gold,kernel);
 
-    EXPECT_MAT_SIMILAR(dst_gold, dst, 1.0);
+    cv::Rect rect(kernel+1,0,src.cols-(2*kernel+1),src.rows);
+    cv::Mat dst_gold_no_border = dst_gold(rect);
+    cv::cuda::GpuMat dst_no_border = cv::cuda::GpuMat(dst, rect);
+
+
+    EXPECT_MAT_SIMILAR(dst_gold_no_border, dst_no_border, 0.025);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_Filters, Median, testing::Combine(
