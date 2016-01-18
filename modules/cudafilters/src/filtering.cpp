@@ -1055,8 +1055,8 @@ namespace
         GpuMat devHist = pool.getBuffer(1, src.cols*histSize*partitions,CV_32SC1);
         GpuMat devCoarseHist = pool.getBuffer(1,src.cols*histCoarseSize*partitions,CV_32SC1);
 
-        devHist.setTo(0);
-        devCoarseHist.setTo(0);
+        devHist.setTo(0, _stream);
+        devCoarseHist.setTo(0, _stream);
 
         medianFiltering_gpu(src,dst,devHist, devCoarseHist,kernel,partitions,StreamAccessor::getStream(_stream));
     }

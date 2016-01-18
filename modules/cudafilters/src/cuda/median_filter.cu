@@ -342,7 +342,7 @@ namespace cv { namespace cuda { namespace device
         int medPos=2*kernel*kernel+2*kernel;
         dim3 gridDim; gridDim.x=partitions;
         dim3 blockDim; blockDim.x=32;
-        cuMedianFilterMultiBlock<<<gridDim,blockDim>>>(src, dst, devHist,devCoarseHist, kernel, medPos);
+        cuMedianFilterMultiBlock<<<gridDim,blockDim,0, stream>>>(src, dst, devHist,devCoarseHist, kernel, medPos);
         if (!stream)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
