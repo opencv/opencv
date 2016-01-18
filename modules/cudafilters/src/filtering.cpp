@@ -1026,7 +1026,6 @@ namespace
         windowSize(_windowSize),partitions(_partitions)
     {
         CV_Assert( srcType == CV_8UC1 );
-        // Kernel needs to be half window size
         CV_Assert(windowSize>=3);
         CV_Assert(_partitions>=1);
 
@@ -1036,8 +1035,6 @@ namespace
     {
         using namespace cv::cuda::device;
 
-
-
         GpuMat src = _src.getGpuMat();
          _dst.create(src.rows, src.cols, src.type());
         GpuMat dst = _dst.getGpuMat();
@@ -1045,14 +1042,11 @@ namespace
         if (partitions>src.rows)
             partitions=src.rows;
 
+        // Kernel needs to be half window size
         int kernel=windowSize/2;
-        if (kernel>src.rows)
-            kernel=src.rows;
-        if (kernel>src.cols)
-            kernel=src.cols;
-        if(kernel%2==0)
-            kernel--;
 
+        CV_Assert(kernel < src.rows);
+        CV_Assert(kernel < src.cols);
 
         // Note - these are hardcoded in the actual GPU kernel. Do not change these values.
         int histSize=256, histCoarseSize=8;
@@ -1065,7 +1059,6 @@ namespace
         devCoarseHist.setTo(0);
 
         medianFiltering_gpu(src,dst,devHist, devCoarseHist,kernel,partitions,StreamAccessor::getStream(_stream));
-
     }
 }
 
