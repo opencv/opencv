@@ -111,6 +111,15 @@ namespace cv { namespace cuda { namespace device
             }
         }
 
+
+        __device__ void histogramMulConstAndAdd32(int a, int* H, const int * hist_colAdd){
+            int tx = threadIdx.x;
+            if (tx<32){
+                H[tx]+=a*hist_colAdd[tx];
+            }
+        }
+
+
         __device__ void histogramClear32(int* H){
             int tx = threadIdx.x;
             if (tx<32){
@@ -127,8 +136,6 @@ namespace cv { namespace cuda { namespace device
         __device__ void histogramMedianPar8LookupOnly(int* H,int* Hscan, const int medPos,int* retval, int* countAtMed){
             int tx=threadIdx.x;
             *retval=*countAtMed=0;
-            //__shared__ int foundIn;
-            int foundIn=7;
             if(tx<8){
                 Hscan[tx]=H[tx];
             }
@@ -142,13 +149,19 @@ namespace cv { namespace cuda { namespace device
                   Hscan[tx]+=Hscan[tx-4];
             }
             __syncthreads();
+
             if(tx<7){
-                if(Hscan[tx+1]>=medPos && Hscan[tx]<medPos){
-                    foundIn=tx;
-                    if(foundIn==0&&Hscan[0]>medPos)
-                        foundIn--;
-                    *retval=foundIn+1;
-                    *countAtMed=Hscan[foundIn];
+                if(Hscan[tx+1] > medPos && Hscan[tx] < medPos){
+                    atomicAdd(retval,tx+1);
+                    atomicAdd(countAtMed,Hscan[tx]);
+                }
+                else if(Hscan[tx]==medPos){
+                    if(tx>0){
+                        if(Hscan[tx-1]<medPos){
+                            atomicAdd(retval,tx);
+                            atomicAdd(countAtMed,Hscan[tx-1]);
+                        }
+                    }
                 }
             }
         }
@@ -156,8 +169,6 @@ namespace cv { namespace cuda { namespace device
         __device__ void histogramMedianPar32LookupOnly(int* H,int* Hscan, const int medPos,int* retval, int* countAtMed){
             int tx=threadIdx.x;
             *retval=*countAtMed=0;
-            //__shared__ int foundIn;
-            int foundIn=31;
             if(tx<32){
                 Hscan[tx]=H[tx];
             }
@@ -176,12 +187,17 @@ namespace cv { namespace cuda { namespace device
             }
             __syncthreads();
             if(tx<31){
-                if(Hscan[tx+1]>=medPos && Hscan[tx]<medPos){
-                    foundIn=tx;
-                    if(foundIn==0&&Hscan[0]>medPos)
-                        foundIn--;
-                    *retval=foundIn+1;
-                    *countAtMed=Hscan[foundIn];
+                if(Hscan[tx+1] > medPos && Hscan[tx] < medPos){
+                    atomicAdd(retval,tx+1);
+                    atomicAdd(countAtMed,Hscan[tx]);
+                }
+                else if(Hscan[tx]==medPos){
+                    if(tx>0){
+                        if(Hscan[tx-1]<medPos){
+                            atomicAdd(retval,tx);
+                            atomicAdd(countAtMed,Hscan[tx-1]);
+                        }
+                    }
                 }
             }
          }
@@ -240,7 +256,7 @@ namespace cv { namespace cuda { namespace device
         // of the median filter is outside the window.
         // For all threads in the block the same code will be executed.
         if (initNeeded){
-            for (int j=threadIdx.x; j<cols; j+=blockDim.x){
+            for (int j=threadIdx.x; j<(cols); j+=blockDim.x){
                 hist[j*256+src.ptr(0)[j]]=initVal;
                 histCoarse[j*8+(src.ptr(0)[j]>>5)]=initVal;
             }
@@ -279,41 +295,47 @@ namespace cv { namespace cuda { namespace device
                 histPos+=inc;
                 histCoarsePos+=incCoarse;
              }
-
-            histogramMultipleAdd8(HCoarse,histCoarse, r+1);
             __syncthreads();
+
+            histogramMultipleAdd8(HCoarse,histCoarse, 2*r+1);
+//            __syncthreads();
             int cols_m_1=cols-1;
 
-             for(int j=0;j<cols;j++){
+             for(int j=r;j<cols-r;j++){
                 int possub=::max(j-r,0);
                 int posadd=::min(j+1+r,cols_m_1);
                 int medPos=medPos_;
                 __syncthreads();
 
-                if(j<r)
-                    medPos=(j+r+1)*(2*r+1)/2;
-                else if(j>(cols-r))
-                    medPos=(cols-j+r+1)*(2*r+1)/2;
                 histogramMedianPar8LookupOnly(HCoarse,HCoarseScan,medPos, &firstBin,&countAtMed);
                 __syncthreads();
 
-                if ( luc[firstBin] <= (j-r) || (j-r) <0)
+                if ( luc[firstBin] <= (j-r))
                 {
                     histogramClear32(HFine[firstBin]);
-                    for ( luc[firstBin] = ::max(j-r,0); luc[firstBin] < ::min(j+r+1,cols_m_1); luc[firstBin]++ )
+                    for ( luc[firstBin] = j-r; luc[firstBin] < ::min(j+r+1,cols); luc[firstBin]++ ){
                         histogramAdd32(HFine[firstBin], hist+(luc[firstBin]*256+(firstBin<<5) ) );
+                    }
+                    // if (luc[firstBin] < j+r+1){
+                    //     histogramMulConstAndAdd32( j+r+1 - (cols), HFine[firstBin], hist+((cols_m_1)*256+(firstBin<<5) ));
+                    //     luc[firstBin] = j+r+1;
+                    // }
+
                 }
                 else{
-                    for ( ; luc[firstBin] < ::min(j+r+1,cols_m_1);luc[firstBin]++ ) {
+                    // for ( ; luc[firstBin] < ::min(j+r+1,cols);luc[firstBin]++ ) {
+                    for ( ; luc[firstBin] < (j+r+1);luc[firstBin]++ ) {
                         histogramAddAndSub32(HFine[firstBin],
                         hist+(::min(luc[firstBin],cols_m_1)*256+(firstBin<<5) ),
                         hist+(::max(luc[firstBin]-2*r-1,0)*256+(firstBin<<5) ) );
+                        __syncthreads();
+
                     }
                 }
                 __syncthreads();
 
                 int leftOver=medPos-countAtMed;
-                if(leftOver>0){
+                if(leftOver>=0){
                     histogramMedianPar32LookupOnly(HFine[firstBin],HCoarseScan,leftOver,&retval,&countAtMed);
                 }
                 else retval=0;
@@ -322,15 +344,9 @@ namespace cv { namespace cuda { namespace device
                 if (threadIdx.x==0){
                     dest.ptr(i)[j]=(firstBin<<5) + retval;
                 }
-                if (j<r)
-                    histogramAdd8(HCoarse, histCoarse+(int)(posadd<<3));
-                else if(j>(cols-r))
-                    histogramSub8(HCoarse, histCoarse+(int)(possub<<3));
-                else
-                    histogramAddAndSub8(HCoarse, histCoarse+(int)(posadd<<3),histCoarse+(int)(possub<<3));
+                histogramAddAndSub8(HCoarse, histCoarse+(int)(posadd<<3),histCoarse+(int)(possub<<3));
 
-                 __syncthreads();
-
+                __syncthreads();
             }
              __syncthreads();
          }
