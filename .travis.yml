@@ -6,6 +6,7 @@ before_install:
   - git clone https://github.com/urho3d/android-ndk.git $HOME/android-ndk-root
   - export ANDROID_NDK=~/android-ndk-root
   - export ANDROID_SDK=~/android-sdk-linux
+  - ls -la
   - export
 
 android:
