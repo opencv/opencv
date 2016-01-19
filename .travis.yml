@@ -5,7 +5,8 @@ before_install:
   # newest Android NDK
   - git clone https://github.com/urho3d/android-ndk.git ~/android-ndk-root
   - export ANDROID_NDK=~/android-ndk-root
-  - export ANDROID_SDK=${ANDROID_ROOT}
+  - export ANDROID_SDK=${ANDROID_HOME}
+  - export BUILD_DEBUG=true
   - ls -la ${ANDROID_SDK}
   - ls -la
   - export
