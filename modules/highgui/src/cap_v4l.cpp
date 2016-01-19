@@ -491,8 +491,6 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
   //  0 then detected nothing
   //  1 then V4L2 device
 
-  int deviceIndex;
-
   /* Open and test V4L2 device */
   capture->deviceHandle = open (deviceName, O_RDWR /* required */ | O_NONBLOCK, 0);
   if (-1 == capture->deviceHandle)
@@ -509,28 +507,6 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
   {
 #ifndef NDEBUG
     fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_QUERYCAP \"%s\": %s\n", deviceName, strerror(errno));
-#endif
-    icvCloseCAM_V4L(capture);
-    return 0;
-  }
-
-  /* Query channels number */
-  if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_INPUT, &deviceIndex))
-  {
-#ifndef NDEBUG
-    fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_G_INPUT \"%s\": %s\n", deviceName, strerror(errno));
-#endif
-    icvCloseCAM_V4L(capture);
-    return 0;
-  }
-
-  /* Query information about current input */
-  CLEAR (capture->inp);
-  capture->inp.index = deviceIndex;
-  if (-1 == ioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
-  {
-#ifndef NDEBUG
-    fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_ENUMINPUT \"%s\": %s\n", deviceName, strerror(errno));
 #endif
     icvCloseCAM_V4L(capture);
     return 0;
@@ -833,26 +809,6 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
       icvCloseCAM_V4L(capture);
       return -1;
    }
-
-   /* The following code sets the CHANNEL_NUMBER of the video input.  Some video sources
-   have sub "Channel Numbers".  For a typical V4L TV capture card, this is usually 1.
-   I myself am using a simple NTSC video input capture card that uses the value of 1.
-   If you are not in North America or have a different video standard, you WILL have to change
-   the following settings and recompile/reinstall.  This set of settings is based on
-   the most commonly encountered input video source types (like my bttv card) */
-
-   if(capture->inp.index > 0) {
-       CLEAR (capture->inp);
-       capture->inp.index = CHANNEL_NUMBER;
-       /* Set only channel number to CHANNEL_NUMBER */
-       /* V4L2 have a status field from selected video mode */
-       if (-1 == ioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
-       {
-         fprintf (stderr, "HIGHGUI ERROR: V4L2: Aren't able to set channel number\n");
-         icvCloseCAM_V4L (capture);
-         return -1;
-       }
-   } /* End if */
 
    /* Find Window info */
    CLEAR (capture->form);
@@ -1157,6 +1113,9 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
        }
 #endif  /* HAVE_CAMV4L */
 #ifdef HAVE_CAMV4L2
+#ifndef HAVE_CAMV4L
+       return NULL;
+#endif  /* !HAVE_CAMV4L */
    } else {
        V4L2_SUPPORT = 1;
    }
