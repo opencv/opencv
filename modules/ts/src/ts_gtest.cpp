@@ -5659,7 +5659,7 @@ class TestCaseNameIs {
 
   // Returns true iff the name of test_case matches name_.
   bool operator()(const TestCase* test_case) const {
-    return test_case != NULL && strcmp(test_case->name(), name_.c_str()) == 0;
+     return test_case != NULL && strcmp(test_case->name(), name_.c_str()) == 0;
   }
 
  private:

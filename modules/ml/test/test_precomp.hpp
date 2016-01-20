@@ -13,6 +13,7 @@
 #include <map>
 #include "opencv2/ts.hpp"
 #include "opencv2/ml.hpp"
+#include "opencv2/ml/svmsgd.hpp"
 #include "opencv2/core/core_c.h"
 
 #define CV_NBAYES   "nbayes"
@@ -24,6 +25,7 @@
 #define CV_BOOST    "boost"
 #define CV_RTREES   "rtrees"
 #define CV_ERTREES  "ertrees"
+#define CV_SVMSGD   "svmsgd"
 
 enum { CV_TRAIN_ERROR=0, CV_TEST_ERROR=1 };
 
@@ -38,6 +40,7 @@ using cv::ml::ANN_MLP;
 using cv::ml::DTrees;
 using cv::ml::Boost;
 using cv::ml::RTrees;
+using cv::ml::SVMSGD;
 
 class CV_MLBaseTest : public cvtest::BaseTest
 {

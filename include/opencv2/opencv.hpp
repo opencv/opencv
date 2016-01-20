@@ -75,6 +75,7 @@
 #endif
 #ifdef HAVE_OPENCV_ML
 #include "opencv2/ml.hpp"
+#include "opencv2/ml/svmsgd.hpp"
 #endif
 
 #endif
