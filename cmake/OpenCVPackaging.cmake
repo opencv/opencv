@@ -289,6 +289,13 @@ else()
     set(TESTS_LINTIAN_OVERRIDES "empty-binary-package") # there is no tests
 endif()
 
+set(ALL_COMPONENTS "libs" "dev" "docs" "python" "java" "samples" "tests")
+
+foreach (comp ${ALL_COMPONENTS})
+    string(TOUPPER ${comp} comp_upcase)
+    list(APPEND ${comp_upcase}_LINTIAN_OVERRIDES "misplaced-extra-member-in-deb") # for signed packages
+endforeach()
+
 if(CPACK_GENERATOR STREQUAL "DEB")
   find_program(GZIP_TOOL NAMES "gzip" PATHS "/bin" "/usr/bin" "/usr/local/bin")
   if(NOT GZIP_TOOL)
@@ -300,7 +307,6 @@ if(CPACK_GENERATOR STREQUAL "DEB")
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   set(CHANGELOG_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}")
-  set(ALL_COMPONENTS "libs" "dev" "docs" "python" "java" "samples" "tests")
   foreach (comp ${ALL_COMPONENTS})
     string(TOUPPER "${comp}" comp_upcase)
 
