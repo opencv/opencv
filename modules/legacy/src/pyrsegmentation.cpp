@@ -130,8 +130,8 @@ static void icvMaxRoi1( _CvRect16u *max_rect, int x, int y );
                                        (float)fabs((a).green - (b).green),  \
                                        (float)fabs((a).blue - (b).blue))*/
 
-#define _CV_NEXT_BASE_C1(p,n) (_CvPyramid*)((char*)(p) + (n)*sizeof(_CvPyramidBase))
-#define _CV_NEXT_BASE_C3(p,n) (_CvPyramidC3*)((char*)(p) + (n)*sizeof(_CvPyramidBaseC3))
+#define _CV_NEXT_BASE_C1(p,n) ((_CvPyramid*)((char*)(p) + (n)*(ptrdiff_t)sizeof(_CvPyramidBase)))
+#define _CV_NEXT_BASE_C3(p,n) ((_CvPyramidC3*)((char*)(p) + (n)*(ptrdiff_t)sizeof(_CvPyramidBaseC3)))
 
 
 CV_INLINE float icvRGBDist_Max( const _CvRGBf& a, const _CvRGBf& b )
@@ -868,7 +868,7 @@ icvPyrSegmentation8uC3R( uchar * src_image, int src_step,
 
                     if( p_cur[size.width].a == 0 )
                     {
-                        p_cur[size.width].c = p_prev[(l != 0) - 1].c;
+                        p_cur[size.width].c = (l != 0) ? p_prev->c : _CV_NEXT_BASE_C3( p_prev, -1 )->c;
                     }
                     else
                     {
