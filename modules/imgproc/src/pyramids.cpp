@@ -349,7 +349,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
         for( ; sy <= y + 1; sy++ )
         {
             WT* row = buf + ((sy - sy0) % PU_SZ)*bufstep;
-            int _sy = borderInterpolate(sy*2, dsize.height, BORDER_REFLECT_101)/2;
+            int _sy = borderInterpolate(sy*2, ssize.height*2, BORDER_REFLECT_101)/2;
             const T* src = (const T*)(_src.data + _src.step*_sy);
 
             if( ssize.width == cn )
@@ -370,6 +370,11 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
                 t0 = src[sx - cn] + src[sx]*7;
                 t1 = src[sx]*8;
                 row[dx] = t0; row[dx + cn] = t1;
+
+                if (dsize.width > ssize.width*2)
+                {
+                    row[(_dst.cols-1) + x] = row[dx + cn];
+                }
             }
 
             for( x = cn; x < ssize.width - cn; x++ )
@@ -393,6 +398,17 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
             T t1 = castOp((row1[x] + row2[x])*4);
             T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
             dst1[x] = t1; dst0[x] = t0;
+        }
+    }
+
+    if (dsize.height > ssize.height*2)
+    {
+        T* dst0 = _dst.ptr<T>(ssize.height*2-2);
+        T* dst2 = _dst.ptr<T>(ssize.height*2);
+
+        for(x = 0; x < dsize.width ; x++ )
+        {
+            dst2[x] = dst0[x];
         }
     }
 }
