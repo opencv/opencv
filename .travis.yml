@@ -42,6 +42,7 @@ install:
 script:
   # By default Travis-ci executes './gradlew build connectedCheck' if no 'script:' section found.
   - ./platforms/android/build_sdk.py build .
+  - ls -la build
 
 notifications:
   email:
