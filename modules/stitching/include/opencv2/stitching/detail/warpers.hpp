@@ -214,8 +214,8 @@ struct CV_EXPORTS SphericalProjector : ProjectorBase
 
 /** @brief Warper that maps an image onto the unit sphere located at the origin.
 
- Projects image onto unit sphere with origin at (0, 0, 0) and radius scale, measured in pixels. 
- A 360° panorama would therefore have a resulting width of 2 * scale * PI pixels. 
+ Projects image onto unit sphere with origin at (0, 0, 0) and radius scale, measured in pixels.
+ A 360° panorama would therefore have a resulting width of 2 * scale * PI pixels.
  Poles are located at (0, -1, 0) and (0, 1, 0) points.
 */
 class CV_EXPORTS SphericalWarper : public RotationWarperBase<SphericalProjector>
@@ -224,7 +224,7 @@ public:
     /** @brief Construct an instance of the spherical warper class.
 
     @param scale Radius of the projected sphere, in pixels. An image spanning the
-                 whole sphere will have a width of 2 * scale * PI pixels.  
+                 whole sphere will have a width of 2 * scale * PI pixels.
      */
     SphericalWarper(float scale) { projector_.scale = scale; }
 
