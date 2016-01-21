@@ -34,7 +34,6 @@ add_library(opencv_info SHARED info.c)
 set_target_properties(${the_module} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-    INSTALL_NAME_DIR lib
   )
 
 get_filename_component(lib_name "libopencv_info.so" NAME)
