@@ -66,7 +66,9 @@
 #cmakedefine HAVE_DSHOW
 
 /* Eigen Matrix & Linear Algebra Library */
+#ifndef __OPENCV_ADDON_BUILD
 #cmakedefine HAVE_EIGEN
+#endif
 
 /* FFMpeg video library */
 #cmakedefine HAVE_FFMPEG
@@ -96,8 +98,10 @@
 #cmakedefine HAVE_INTELPERC
 
 /* Intel Integrated Performance Primitives */
+#ifndef __OPENCV_ADDON_BUILD
 #cmakedefine HAVE_IPP
 #cmakedefine HAVE_IPP_ICV_ONLY
+#endif
 
 /* Intel IPP Async */
 #cmakedefine HAVE_IPP_A
@@ -162,7 +166,9 @@
 #cmakedefine HAVE_QTKIT
 
 /* Intel Threading Building Blocks */
+#ifndef __OPENCV_ADDON_BUILD
 #cmakedefine HAVE_TBB
+#endif
 
 /* TIFF codec */
 #cmakedefine HAVE_TIFF

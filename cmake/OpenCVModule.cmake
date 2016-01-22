@@ -57,6 +57,8 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
   if(HAVE_${mod})
     unset(HAVE_${mod} CACHE)
   endif()
+  unset(OPENCV_MODULE_${mod}_HEADERS CACHE)
+  unset(OPENCV_MODULE_${mod}_SOURCES CACHE)
   unset(OPENCV_MODULE_${mod}_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_DEPS_EXT CACHE)
   unset(OPENCV_MODULE_${mod}_REQ_DEPS CACHE)
@@ -556,7 +558,7 @@ macro(ocv_include_modules)
       if (EXISTS "${OPENCV_MODULE_${d}_LOCATION}/include")
         ocv_include_directories("${OPENCV_MODULE_${d}_LOCATION}/include")
       endif()
-    elseif(EXISTS "${d}")
+    elseif(EXISTS "${d}" AND IS_DIRECTORY "${d}")
       ocv_include_directories("${d}")
     endif()
   endforeach()
@@ -581,7 +583,7 @@ macro(ocv_target_include_modules target)
       if (EXISTS "${OPENCV_MODULE_${d}_LOCATION}/include")
         ocv_target_include_directories(${target} "${OPENCV_MODULE_${d}_LOCATION}/include")
       endif()
-    elseif(EXISTS "${d}")
+    elseif(EXISTS "${d}" AND IS_DIRECTORY "${d}")
       ocv_target_include_directories(${target} "${d}")
     endif()
   endforeach()
@@ -597,7 +599,7 @@ macro(ocv_target_include_modules_recurse target)
       if(OPENCV_MODULE_${d}_DEPS)
         ocv_target_include_modules(${target} ${OPENCV_MODULE_${d}_DEPS})
       endif()
-    elseif(EXISTS "${d}")
+    elseif(EXISTS "${d}" AND IS_DIRECTORY "${d}")
       ocv_target_include_directories(${target} "${d}")
     endif()
   endforeach()
@@ -609,7 +611,7 @@ macro(ocv_module_include_directories)
   ocv_target_include_directories(${the_module}
       "${OPENCV_MODULE_${the_module}_LOCATION}/include"
       "${OPENCV_MODULE_${the_module}_LOCATION}/src"
-      "${CMAKE_CURRENT_BINARY_DIR}" # for precompiled headers
+      "${CMAKE_CURRENT_BINARY_DIR}" # for OpenCL kernels / precompiled headers
       )
   ocv_target_include_modules(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${ARGN})
 endmacro()
@@ -670,6 +672,11 @@ macro(ocv_glob_module_sources)
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.h"
   )
+  file(GLOB_RECURSE _lib_hdrs
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/opencl/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/opencl/*.h"
+  )
+  list(APPEND lib_hdrs ${_lib_hdrs})
   file(GLOB lib_hdrs_detail
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.h"
