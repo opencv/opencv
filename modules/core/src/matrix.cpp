@@ -49,6 +49,13 @@
 *                           [scaled] Identity matrix initialization                      *
 \****************************************************************************************/
 
+//if(_sizes == (this->size.p)){
+//	if( u && CV_XADD(&u->refcount, -1) == 1 )
+//		deallocate();
+//	u = NULL;
+//	datastart = dataend = datalimit = data = 0;
+//}else
+
 namespace cv {
 
 void MatAllocator::map(UMatData*, int) const
