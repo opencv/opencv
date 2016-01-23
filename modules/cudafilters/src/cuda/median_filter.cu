@@ -148,12 +148,10 @@ namespace cv { namespace cuda { namespace device
                     atomicAdd(countAtMed,Hscan[tx]);
                 }
                 else if(Hscan[tx]==medPos){
-                    if(tx>0){
-                        if(Hscan[tx-1]<medPos){
-                            atomicAdd(retval,tx);
-                            atomicAdd(countAtMed,Hscan[tx-1]);
-                        }
-                    }
+                  if(Hscan[tx+1]>medPos){
+                    atomicAdd(retval,tx+1);
+                    atomicAdd(countAtMed,Hscan[tx]);
+                  }
                 }
             }
         }
@@ -184,12 +182,10 @@ namespace cv { namespace cuda { namespace device
                     atomicAdd(countAtMed,Hscan[tx]);
                 }
                 else if(Hscan[tx]==medPos){
-                    if(tx>0){
-                        if(Hscan[tx-1]<medPos){
-                            atomicAdd(retval,tx);
-                            atomicAdd(countAtMed,Hscan[tx-1]);
-                        }
-                    }
+                  if(Hscan[tx+1]>medPos){
+                    atomicAdd(retval,tx+1);
+                    atomicAdd(countAtMed,Hscan[tx]);
+                  }
                 }
             }
          }
