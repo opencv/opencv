@@ -517,30 +517,32 @@ DescriptorMatcher::~DescriptorMatcher()
 
 void DescriptorMatcher::add( InputArrayOfArrays _descriptors )
 {
-    if(_descriptors.isUMatVector())
+    if( _descriptors.isUMatVector() )
     {
         std::vector<UMat> descriptors;
-        _descriptors.getUMatVector(descriptors);
+        _descriptors.getUMatVector( descriptors );
         utrainDescCollection.insert( utrainDescCollection.end(), descriptors.begin(), descriptors.end() );
     }
-    else if(_descriptors.isUMat())
+    else if( _descriptors.isUMat() )
     {
         std::vector<UMat> descriptors = std::vector<UMat>(1, _descriptors.getUMat());
         utrainDescCollection.insert( utrainDescCollection.end(), descriptors.begin(), descriptors.end() );
     }
-    else if(_descriptors.isMatVector())
+    else if( _descriptors.isMatVector() )
     {
         std::vector<Mat> descriptors;
         _descriptors.getMatVector(descriptors);
         trainDescCollection.insert( trainDescCollection.end(), descriptors.begin(), descriptors.end() );
     }
-    else if(_descriptors.isMat())
+    else if( _descriptors.isMat() )
     {
         std::vector<Mat> descriptors = std::vector<Mat>(1, _descriptors.getMat());
         trainDescCollection.insert( trainDescCollection.end(), descriptors.begin(), descriptors.end() );
     }
     else
+    {
         CV_Assert( _descriptors.isUMat() || _descriptors.isUMatVector() || _descriptors.isMat() || _descriptors.isMatVector() );
+    }
 }
 
 const std::vector<Mat>& DescriptorMatcher::getTrainDescriptors() const
