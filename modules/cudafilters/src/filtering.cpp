@@ -1040,7 +1040,7 @@ namespace
         GpuMat dst = _dst.getGpuMat();
 
         if (partitions>src.rows)
-            partitions=src.rows;
+            partitions=src.rows/2;
 
         // Kernel needs to be half window size
         int kernel=windowSize/2;
