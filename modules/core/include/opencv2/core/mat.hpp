@@ -175,6 +175,7 @@ public:
     _InputArray(const std::vector<Mat>& vec);
     template<typename _Tp> _InputArray(const Mat_<_Tp>& m);
     template<typename _Tp> _InputArray(const std::vector<_Tp>& vec);
+    template<typename _Tp, std::size_t N> _InputArray(const std::array<_Tp, N>& arr);
     _InputArray(const std::vector<bool>& vec);
     template<typename _Tp> _InputArray(const std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _InputArray(const std::vector<Mat_<_Tp> >& vec);
@@ -291,6 +292,7 @@ public:
     _OutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
+    template<typename _Tp, std::size_t N> _OutputArray(std::array<_Tp, N>& arr);
     _OutputArray(std::vector<bool>& vec);
     template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _OutputArray(std::vector<Mat_<_Tp> >& vec);
@@ -350,6 +352,7 @@ public:
     _InputOutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputOutputArray(cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _InputOutputArray(std::vector<_Tp>& vec);
+    template<typename _Tp, std::size_t N> _InputOutputArray(std::array<_Tp, N>& arr);
     _InputOutputArray(std::vector<bool>& vec);
     template<typename _Tp> _InputOutputArray(std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _InputOutputArray(std::vector<Mat_<_Tp> >& vec);
