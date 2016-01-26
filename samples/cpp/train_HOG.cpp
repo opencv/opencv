@@ -5,7 +5,12 @@
 #include <fstream>
 #include <vector>
 
-#include <time.h>
+#include <ctime>
+
+#ifdef __linux
+#include <unistd.h>
+#include <memory>
+#endif
 
 using namespace cv;
 using namespace cv::ml;
@@ -13,7 +18,8 @@ using namespace std;
 
 void get_svm_detector(const Ptr<SVM>& svm, vector< float > & hog_detector );
 void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainData );
-void load_images( const string & prefix, const string & filename, vector< Mat > & img_lst );
+void load_images(string directory, vector<Mat>& image_list);
+vector<string> files_in_directory(string directory);
 void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, const Size & size );
 Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorValues, const Size & size );
 void compute_hog( const vector< Mat > & img_lst, vector< Mat > & gradient_lst, const Size & size );
@@ -72,36 +78,63 @@ void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainD
     }
 }
 
-void load_images( const string & prefix, const string & filename, vector< Mat > & img_lst )
+void load_images(string directory, vector<Mat>& image_list) 
 {
-    string line;
-    ifstream file;
 
-    file.open( (prefix+filename).c_str() );
-    if( !file.is_open() )
-    {
-        cerr << "Unable to open the list of images from " << filename << " filename." << endl;
-        exit( -1 );
-    }
+    Mat img;
+    vector<string> files;
+    files = files_in_directory(directory);
 
-    bool end_of_parsing = false;
-    while( !end_of_parsing )
-    {
-        getline( file, line );
-        if( line.empty() ) // no more file to read
-        {
-            end_of_parsing = true;
-            break;
-        }
-        Mat img = imread( (prefix+line).c_str() ); // load the image
-        if( img.empty() ) // invalid image, just skip it.
+    for (int i = 0; i < files.size(); ++i) {
+
+        img = imread(files.at(i));
+        if (img.empty())
             continue;
 #ifdef _DEBUG
-        imshow( "image", img );
-        waitKey( 10 );
+        imshow("image", img);
+        waitKey(10);
 #endif
-        img_lst.push_back( img.clone() );
+        resize(img, img, IMAGE_SIZE);
+        image_list.push_back(img.clone());
     }
+}
+
+vector<string> files_in_directory(string directory)
+{
+    vector<string> files;
+    char buf[256];
+    string command;
+
+#ifdef __linux__ 
+    command = "ls " + directory;
+    shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pclose);
+
+    char cwd[256];
+    getcwd(cwd, sizeof(cwd));
+
+    while (!feof(pipe.get()))
+        if (fgets(buf, 256, pipe.get()) != NULL) {
+            string file(cwd);
+            file.append("/");
+            file.append(buf);
+            file.pop_back();
+            files.push_back(file);
+        }
+#else
+    command = "dir /b /s " + directory;
+    FILE* pipe = NULL;
+
+    if (pipe = _popen(command.c_str(), "rt"))
+        while (!feof(pipe))
+            if (fgets(buf, 256, pipe) != NULL) {
+                string file(buf);
+                file.pop_back();
+                files.push_back(file);
+            }
+    _pclose(pipe);
+#endif
+
+    return files;
 }
 
 void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, const Size & size )
@@ -404,7 +437,7 @@ void test_it( const Size & size )
 int main( int argc, char** argv )
 {
     cv::CommandLineParser parser(argc, argv, "{help h|| show help message}"
-            "{pd||pos_dir}{p||pos.lst}{nd||neg_dir}{n||neg.lst}");
+            "{pd||pos_dir}{nd||neg_dir}");
     if (parser.has("help"))
     {
         parser.printMessage();
@@ -416,20 +449,18 @@ int main( int argc, char** argv )
     vector< Mat > gradient_lst;
     vector< int > labels;
     string pos_dir = parser.get<string>("pd");
-    string pos = parser.get<string>("p");
     string neg_dir = parser.get<string>("nd");
-    string neg = parser.get<string>("n");
     if( pos_dir.empty() || pos.empty() || neg_dir.empty() || neg.empty() )
     {
         cout << "Wrong number of parameters." << endl
-            << "Usage: " << argv[0] << " --pd=pos_dir -p=pos.lst --nd=neg_dir -n=neg.lst" << endl
-            << "example: " << argv[0] << " --pd=/INRIA_dataset/ -p=Train/pos.lst --nd=/INRIA_dataset/ -n=Train/neg.lst" << endl;
+            << "Usage: " << argv[0] << " --pd=pos_dir --nd=neg_dir" << endl
+            << "example: " << argv[0] << " --pd=/INRIA_dataset/ --nd=/INRIA_dataset/" << endl;
         exit( -1 );
     }
-    load_images( pos_dir, pos, pos_lst );
+    load_images( pos_dir, pos_lst );
     labels.assign( pos_lst.size(), +1 );
     const unsigned int old = (unsigned int)labels.size();
-    load_images( neg_dir, neg, full_neg_lst );
+    load_images( neg_dir, full_neg_lst );
     sample_neg( full_neg_lst, neg_lst, Size( 96,160 ) );
     labels.insert( labels.end(), neg_lst.size(), -1 );
     CV_Assert( old < labels.size() );
