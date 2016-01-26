@@ -7,7 +7,7 @@
 
 #include <ctime>
 
-#ifdef __linux
+#ifdef __linux__
 #include <unistd.h>
 #include <memory>
 #endif
@@ -78,7 +78,7 @@ void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainD
     }
 }
 
-void load_images(string directory, vector<Mat>& image_list) 
+void load_images(string directory, vector<Mat>& image_list)
 {
 
     Mat img;
@@ -105,7 +105,7 @@ vector<string> files_in_directory(string directory)
     char buf[256];
     string command;
 
-#ifdef __linux__ 
+#ifdef __linux__
     command = "ls " + directory;
     shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pclose);
 
