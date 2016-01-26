@@ -2316,11 +2316,11 @@ public:
     The operator performs %PCA of the supplied dataset. It is safe to reuse
     the same PCA structure for multiple datasets. That is, if the structure
     has been previously used with another dataset, the existing internal
-    data is reclaimed and the new eigenvalues, @ref eigenvectors , and @ref
+    data is reclaimed and the new @ref eigenvalues, @ref eigenvectors and @ref
     mean are allocated and computed.
 
-    The computed eigenvalues are sorted from the largest to the smallest and
-    the corresponding eigenvectors are stored as eigenvectors rows.
+    The computed @ref eigenvalues are sorted from the largest to the smallest and
+    the corresponding @ref eigenvectors are stored as eigenvectors rows.
 
     @param data input samples stored as the matrix rows or as the matrix
     columns.
@@ -2400,11 +2400,17 @@ public:
      */
     void backProject(InputArray vec, OutputArray result) const;
 
-    /** @brief write and load PCA matrix
+    /** @brief write PCA objects
 
-*/
-    void write(FileStorage& fs ) const;
-    void read(const FileNode& fs);
+    Writes @ref eigenvalues @ref eigenvectors and @ref mean to specified FileStorage
+     */
+    void write(FileStorage& fs) const;
+
+    /** @brief load PCA objects
+
+    Loads @ref eigenvalues @ref eigenvectors and @ref mean from specified FileNode
+     */
+    void read(const FileNode& fn);
 
     Mat eigenvectors; //!< eigenvectors of the covariation matrix
     Mat eigenvalues; //!< eigenvalues of the covariation matrix
