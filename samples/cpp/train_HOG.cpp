@@ -78,7 +78,7 @@ void load_images( const string & prefix, vector< Mat > & img_lst )
 	vector<String> files;
 	glob(prefix, files);
 
-	for (int i = 0; i < files.size(); ++i) {
+	for (int i = 0; i < (int)files.size(); ++i) {
 
 		img = imread(files.at(i)); // load the image
 		if (img.empty()) // invalid image, just skip it.
