@@ -508,6 +508,46 @@ public:
 */
 CV_EXPORTS_W Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1();
 
+/** @brief Class computing a dense optical flow using the Gunnar Farneback’s algorithm.
+ */
+class CV_EXPORTS_W FarnebackOpticalFlow : public DenseOpticalFlow
+{
+public:
+    virtual int getNumLevels() const = 0;
+    virtual void setNumLevels(int numLevels) = 0;
+
+    virtual double getPyrScale() const = 0;
+    virtual void setPyrScale(double pyrScale) = 0;
+
+    virtual bool getFastPyramids() const = 0;
+    virtual void setFastPyramids(bool fastPyramids) = 0;
+
+    virtual int getWinSize() const = 0;
+    virtual void setWinSize(int winSize) = 0;
+
+    virtual int getNumIters() const = 0;
+    virtual void setNumIters(int numIters) = 0;
+
+    virtual int getPolyN() const = 0;
+    virtual void setPolyN(int polyN) = 0;
+
+    virtual double getPolySigma() const = 0;
+    virtual void setPolySigma(double polySigma) = 0;
+
+    virtual int getFlags() const = 0;
+    virtual void setFlags(int flags) = 0;
+
+    static Ptr<FarnebackOpticalFlow> create(
+            int numLevels = 5,
+            double pyrScale = 0.5,
+            bool fastPyramids = false,
+            int winSize = 13,
+            int numIters = 10,
+            int polyN = 5,
+            double polySigma = 1.1,
+            int flags = 0);
+};
+
 //! @} video_track
 
 } // cv
