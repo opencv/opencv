@@ -74,21 +74,21 @@ void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainD
 
 void load_images( const string & prefix, vector< Mat > & img_lst )
 {
-	Mat img;
-	vector<String> files;
-	glob(prefix, files);
+    Mat img;
+    vector<String> files;
+    glob(prefix, files);
 
-	for (int i = 0; i < (int)files.size(); ++i) {
+    for (int i = 0; i < (int)files.size(); ++i) {
 
-		img = imread(files.at(i)); // load the image
-		if (img.empty()) // invalid image, just skip it.
-			continue;
+        img = imread(files.at(i)); // load the image
+        if (img.empty()) // invalid image, just skip it.
+            continue;
 #ifdef _DEBUG
-		imshow("image", img);
-		waitKey(10);
+        imshow("image", img);
+        waitKey(10);
 #endif
-		img_lst.push_back(img.clone());
-	}
+        img_lst.push_back(img.clone());
+    }
 }
 
 void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, const Size & size )
