@@ -185,7 +185,7 @@ int main(int argc, const char* argv[])
     }
 
     Mat_<Point2f> flow;
-    Ptr<DenseOpticalFlow> tvl1 = createOptFlow_DualTVL1();
+    Ptr<DualTVL1OpticalFlow> tvl1 = cv::DualTVL1OpticalFlow::create();
 
     const double start = (double)getTickCount();
     tvl1->calc(frame0, frame1, flow);

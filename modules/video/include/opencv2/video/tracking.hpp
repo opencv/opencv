@@ -502,6 +502,21 @@ public:
     virtual int getMedianFiltering() const = 0;
     /** @copybrief getMedianFiltering @see getMedianFiltering */
     virtual void setMedianFiltering(int val) = 0;
+
+    /** @brief Creates instance of cv::DualTVL1OpticalFlow*/
+    static Ptr<DualTVL1OpticalFlow> create(
+                                            double tau = 0.25,
+                                            double lambda = 0.15,
+                                            double theta = 0.3,
+                                            int nscales = 5,
+                                            int warps = 5,
+                                            double epsilon = 0.01,
+                                            int innnerIterations = 30,
+                                            int outerIterations = 10,
+                                            double scaleStep = 0.8,
+                                            double gamma = 0.0,
+                                            int medianFiltering = 5,
+                                            bool useInitialFlow = false);
 };
 
 /** @brief Creates instance of cv::DenseOpticalFlow
