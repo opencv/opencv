@@ -397,6 +397,27 @@ public:
     CV_WRAP virtual void collectGarbage() = 0;
 };
 
+/** @brief Base interface for sparse optical flow algorithms.
+ */
+class CV_EXPORTS_W SparseOpticalFlow : public Algorithm
+{
+public:
+    /** @brief Calculates a sparse optical flow.
+
+    @param prevImg First input image.
+    @param nextImg Second input image of the same size and the same type as prevImg.
+    @param prevPts Vector of 2D points for which the flow needs to be found.
+    @param nextPts Output vector of 2D points containing the calculated new positions of input features in the second image.
+    @param status Output status vector. Each element of the vector is set to 1 if the
+                  flow for the corresponding features has been found. Otherwise, it is set to 0.
+    @param err Optional output vector that contains error response for each point (inverse confidence).
+     */
+    CV_WRAP virtual void calc(InputArray prevImg, InputArray nextImg,
+                      InputArray prevPts, InputOutputArray nextPts,
+                      OutputArray status,
+                      OutputArray err = cv::noArray()) = 0;
+};
+
 /** @brief "Dual TV L1" Optical Flow Algorithm.
 
 The class implements the "Dual TV L1" optical flow algorithm described in @cite Zach2007 and
@@ -562,6 +583,7 @@ public:
             double polySigma = 1.1,
             int flags = 0);
 };
+
 
 //! @} video_track
 
