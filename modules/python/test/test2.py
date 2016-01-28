@@ -2,32 +2,15 @@
 
 import unittest
 import random
-import urllib2
 import hashlib
+import os
 import numpy as np
 import cv2
 import cv2.cv as cv
 
-class NewOpenCVTests(unittest.TestCase):
-
-    def get_sample(self, filename, iscolor = cv.CV_LOAD_IMAGE_COLOR):
-        if not filename in self.image_cache:
-            filedata = urllib2.urlopen("https://raw.github.com/Itseez/opencv/2.4/" + filename).read()
-            image = cv2.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
-            self.assertFalse(image is None)
-            self.image_cache[filename] = image
-        return self.image_cache[filename]
-
-    def setUp(self):
-        self.image_cache = {}
-
-    def hashimg(self, im):
-        """ Compute a hash for an image, useful for image comparisons """
-        return hashlib.md5(im.tostring()).digest()
-
 # Tests to run first; check the handful of basic operations that the later tests rely on
 
-class Hackathon244Tests(NewOpenCVTests):
+class Hackathon244Tests(unittest.TestCase):
 
     def test_int_array(self):
         a = np.array([-1, 2, -3, 4, -5])
@@ -67,11 +50,12 @@ class Hackathon244Tests(NewOpenCVTests):
 
     def test_fast(self):
         fd = cv2.FastFeatureDetector(30, True)
-        img = self.get_sample("samples/cpp/right02.jpg", 0)
+        img = cv2.imread(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'cameracalibration', 'chess1.png'), 0)
+        self.assertFalse(img is None)
         img = cv2.medianBlur(img, 3)
         imgc = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         keypoints = fd.detect(img)
-        self.assert_(600 <= len(keypoints) <= 700)
+        self.assert_(200 <= len(keypoints) <= 300)
         for kpt in keypoints:
             self.assertNotEqual(kpt.response, 0)
 
