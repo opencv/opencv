@@ -69,7 +69,7 @@ Ptr<Filter> cv::cuda::createBoxMinFilter(int, Size, Point, int, Scalar) { throw_
 Ptr<Filter> cv::cuda::createRowSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 Ptr<Filter> cv::cuda::createColumnSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::cuda::createMedianFilter(InputArray, OutputArray, int,int) { throw_no_cuda(); return Ptr<Filter>();}
+Ptr<Filter> cv::cuda::createMedianFilter(int srcType, int _windowSize, int _partitions){ throw_no_cuda(); return Ptr<Filter>();}
 
 #else
 
