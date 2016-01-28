@@ -31,7 +31,7 @@ from tests_common import NewOpenCVTests
 class gaussian_mix_test(NewOpenCVTests):
 
     def test_gaussian_mix(self):
-        
+
         np.random.seed(10)
         cluster_n = 5
         img_size = 512
@@ -53,7 +53,7 @@ class gaussian_mix_test(NewOpenCVTests):
 
         for i in range(cluster_n):
             for j in range(cluster_n):
-                if (cv2.norm(means[i] - ref_distrs[j][0], cv2.NORM_L2) / cv2.norm(ref_distrs[j][0], cv2.NORM_L2) < meanEps and 
+                if (cv2.norm(means[i] - ref_distrs[j][0], cv2.NORM_L2) / cv2.norm(ref_distrs[j][0], cv2.NORM_L2) < meanEps and
                     cv2.norm(covs[i] - ref_distrs[j][1], cv2.NORM_L2) / cv2.norm(ref_distrs[j][1], cv2.NORM_L2) < covEps):
                     matches_count += 1
 

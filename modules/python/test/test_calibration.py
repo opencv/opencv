@@ -19,9 +19,12 @@ class calibration_test(NewOpenCVTests):
     def test_calibration(self):
 
         from glob import glob
-
-        img_mask = '../../../samples/data/left*.jpg'  # default
-        img_names = glob(img_mask)
+        img_names = []
+        for i in range(1, 15):
+            if i < 10:
+                img_names.append('samples/data/left0{}.jpg'.format(str(i)))
+            else:
+                img_names.append('samples/data/left{}.jpg'.format(str(i)))
 
         square_size = 1.0
         pattern_size = (9, 6)
@@ -34,7 +37,7 @@ class calibration_test(NewOpenCVTests):
         h, w = 0, 0
         img_names_undistort = []
         for fn in img_names:
-            img = cv2.imread(fn, 0)
+            img = self.get_sample(fn, 0)
             if img is None:
                 continue
 
