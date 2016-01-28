@@ -1548,6 +1548,7 @@ void DTreesImpl::writeTrainingParams(FileStorage& fs) const
 
 void DTreesImpl::writeParams(FileStorage& fs) const
 {
+    fs << "format" << (int) 3;
     fs << "is_classifier" << isClassifier();
     fs << "var_all" << (int)varType.size();
     fs << "var_count" << getVarCount();
