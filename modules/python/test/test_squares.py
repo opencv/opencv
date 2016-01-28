@@ -61,7 +61,7 @@ class squares_test(NewOpenCVTests):
 
     def test_squares(self):
 
-        img = cv2.imread('../../../samples/data/pic1.png')
+        img = self.get_sample('samples/data/pic1.png')
         squares = find_squares(img)
 
         testSquares = [

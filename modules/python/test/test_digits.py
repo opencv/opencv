@@ -36,7 +36,7 @@ from numpy.linalg import norm
 
 SZ = 20 # size of each digit is SZ x SZ
 CLASS_N = 10
-DIGITS_FN = '../../../samples/data/digits.png'
+DIGITS_FN = 'samples/data/digits.png'
 
 def split2d(img, cell_size, flatten=True):
     h, w = img.shape[:2]
@@ -46,12 +46,6 @@ def split2d(img, cell_size, flatten=True):
     if flatten:
         cells = cells.reshape(-1, sy, sx)
     return cells
-
-def load_digits(fn):
-    digits_img = cv2.imread(fn, 0)
-    digits = split2d(digits_img, (SZ, SZ))
-    labels = np.repeat(np.arange(CLASS_N), len(digits)/CLASS_N)
-    return digits, labels
 
 def deskew(img):
     m = cv2.moments(img)
@@ -134,9 +128,15 @@ from tests_common import NewOpenCVTests
 
 class digits_test(NewOpenCVTests):
 
+    def load_digits(self, fn):
+        digits_img = self.get_sample(fn, 0)
+        digits = split2d(digits_img, (SZ, SZ))
+        labels = np.repeat(np.arange(CLASS_N), len(digits)/CLASS_N)
+        return digits, labels
+
     def test_digits(self):
 
-        digits, labels = load_digits(DIGITS_FN)
+        digits, labels = self.load_digits(DIGITS_FN)
 
         # shuffle digits
         rand = np.random.RandomState(321)

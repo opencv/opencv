@@ -36,13 +36,13 @@ class facedetect_test(NewOpenCVTests):
     def test_facedetect(self):
         import sys, getopt
 
-        cascade_fn = "../../../data/haarcascades/haarcascade_frontalface_alt.xml"
-        nested_fn  = "../../../data/haarcascades/haarcascade_eye.xml"
+        cascade_fn = self.repoPath + '/data/haarcascades/haarcascade_frontalface_alt.xml'
+        nested_fn  = self.repoPath + '/data/haarcascades/haarcascade_eye.xml'
 
         cascade = cv2.CascadeClassifier(cascade_fn)
         nested = cv2.CascadeClassifier(nested_fn)
 
-        dirPath = '../../../samples/data/'
+        dirPath = 'samples/data/'
         samples = ['lena.jpg', 'kate.jpg']
 
         faces = []
@@ -62,7 +62,7 @@ class facedetect_test(NewOpenCVTests):
 
         for sample in samples:
 
-            img = cv2.imread(dirPath + sample)
+            img = self.get_sample(dirPath + sample)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             gray = cv2.GaussianBlur(gray, (3, 3), 1.1)
 

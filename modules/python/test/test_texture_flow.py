@@ -21,8 +21,7 @@ class texture_flow_test(NewOpenCVTests):
 
     def test_texture_flow(self):
 
-        fn = '../../../samples/data/pic6.png'
-        img = cv2.imread(fn)
+        img = self.get_sample('samples/data/pic6.png')
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         h, w = img.shape[:2]
@@ -43,7 +42,7 @@ class texture_flow_test(NewOpenCVTests):
 
         eps = 0.05
 
-        testTextureVectors = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], 
+        testTextureVectors = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0],
         [-38, 70], [-79, 3], [0, 0], [0, 0], [-39, 69], [-79, -1],
         [0, 0], [0, 0], [0, -79], [17, -78], [-48, -63], [65, -46],
         [-69, -39], [-48, -63], [-45, 66]]

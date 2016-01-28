@@ -26,9 +26,9 @@ class houghlines_test(NewOpenCVTests):
 
     def test_houghlines(self):
 
-        fn = "../../../samples/data/pic1.png"
+        fn = "/samples/data/pic1.png"
 
-        src = cv2.imread(fn)
+        src = self.get_sample(fn)
         dst = cv2.Canny(src, 50, 200)
 
         lines = cv2.HoughLinesP(dst, 1, math.pi/180.0, 40, np.array([]), 50, 10)[:,0,:]
