@@ -36,7 +36,7 @@ class texture_flow_test(NewOpenCVTests):
         points =  np.dstack( np.mgrid[d/2:w:d, d/2:h:d] ).reshape(-1, 2)
 
         textureVectors = []
-        
+
         for x, y in np.int32(points):
             textureVectors.append(np.int32(flow[y, x]*d))
 

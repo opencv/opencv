@@ -23,7 +23,7 @@ class calibration_test(NewOpenCVTests):
         for i in range(1, 15):
             if i < 10:
                 img_names.append('samples/data/left0{}.jpg'.format(str(i)))
-            else:
+            elif i != 10:
                 img_names.append('samples/data/left{}.jpg'.format(str(i)))
 
         square_size = 1.0
