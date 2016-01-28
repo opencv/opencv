@@ -6,14 +6,11 @@ import time
 import math
 import sys
 import array
-import urllib
-import tarfile
 import hashlib
 import os
 import getopt
 import operator
 import functools
-import argparse
 
 import cv2.cv as cv
 
@@ -23,13 +20,6 @@ class OpenCVTests(unittest.TestCase):
 
     # path to local repository folder containing 'samples' folder
     repoPath = None
-    # github repository url
-    repoUrl = 'https://raw.github.com/Itseez/opencv/2.4'
-    # path to local folder containing 'camera_calibration.tar.gz'
-    dataPath = None
-    # data url
-    dataUrl = 'http://docs.opencv.org/data'
-
     depths = [ cv.IPL_DEPTH_8U, cv.IPL_DEPTH_8S, cv.IPL_DEPTH_16U, cv.IPL_DEPTH_16S, cv.IPL_DEPTH_32S, cv.IPL_DEPTH_32F, cv.IPL_DEPTH_64F ]
 
     mat_types = [
@@ -81,32 +71,8 @@ class OpenCVTests(unittest.TestCase):
                  cv.IPL_DEPTH_32F : 4,
                  cv.IPL_DEPTH_64F : 8 }[d]
 
-    def get_sample(self, filename, iscolor = cv.CV_LOAD_IMAGE_COLOR):
-        if not filename in self.image_cache:
-            filedata = None
-            if OpenCVTests.repoPath is not None:
-                candidate = OpenCVTests.repoPath + '/' + filename
-                if os.path.isfile(candidate):
-                    with open(candidate, 'rb') as f:
-                        filedata = f.read()
-            if filedata is None:
-                filedata = urllib.urlopen(OpenCVTests.repoUrl + '/' + filename).read()
-            imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
-            cv.SetData(imagefiledata, filedata, len(filedata))
-            self.image_cache[filename] = cv.DecodeImageM(imagefiledata, iscolor)
-        return self.image_cache[filename]
-
-    def get_data(self, filename, urlbase):
-        if (not os.path.isfile(filename)):
-            if OpenCVTests.dataPath is not None:
-                candidate = OpenCVTests.dataPath + '/' + filename
-                if os.path.isfile(candidate):
-                    return candidate
-            urllib.urlretrieve(urlbase + '/' + filename, filename)
-        return filename
-
     def setUp(self):
-        self.image_cache = {}
+        pass
 
     def snap(self, img):
         self.snapL([img])
@@ -132,7 +98,7 @@ class PreliminaryTests(OpenCVTests):
         # If the JPEG decompressor changes, it is possible that the MD5 hash will change,
         # so the hash here will need to change.
 
-        im = self.get_sample("samples/c/lena.jpg")
+        im = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'))
         # self.snap(im)     # uncomment this line to view the image, when regilding
         self.assertEqual(hashlib.md5(im.tostring()).hexdigest(), "9dcd9247f9811c6ce86675ba7b0297b6")
 
@@ -266,8 +232,10 @@ class FunctionTests(OpenCVTests):
                 self.assert_(abs(cv.CalcEMD2(c0, c1, cv.CV_DIST_C) - cv.CalcEMD2(c0, c1, cv.CV_DIST_USER, myC)) < 1e-3)
 
     def test_CalcOpticalFlowBM(self):
-        a = self.get_sample("samples/c/lena.jpg", 0)
-        b = self.get_sample("samples/c/lena.jpg", 0)
+        a = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(a is None)
+        b = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(b is None)
         (w,h) = cv.GetSize(a)
         vel_size = (w - 8 + 1, h - 8 + 1)
         velx = cv.CreateImage(vel_size, cv.IPL_DEPTH_32F, 1)
@@ -275,7 +243,8 @@ class FunctionTests(OpenCVTests):
         cv.CalcOpticalFlowBM(a, b, (8,8), (1,1), (8,8), 0, velx, vely)
 
     def test_CalcOpticalFlowPyrLK(self):
-        a = self.get_sample("samples/c/lena.jpg", 0)
+        a = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(a is None)
         map = cv.CreateMat(2, 3, cv.CV_32FC1)
         cv.GetRotationMatrix2D((256, 256), 10, 1.0, map)
         b = cv.CloneMat(a)
@@ -344,7 +313,8 @@ class FunctionTests(OpenCVTests):
         self.assert_(cv.Sum(img)[0] > 0)
 
     def test_ConvertImage(self):
-        i1 = cv.GetImage(self.get_sample("samples/c/lena.jpg", 1))
+        i1 = cv.GetImage(cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 1))
+        self.assertFalse(i1 is None)
         i2 = cv.CloneImage(i1)
         i3 = cv.CloneImage(i1)
         cv.ConvertImage(i1, i2, cv.CV_CVTIMG_FLIP + cv.CV_CVTIMG_SWAP_RB)
@@ -423,21 +393,28 @@ class FunctionTests(OpenCVTests):
         cv.DrawChessboardCorners(im, (5, 5), [ ((i/5)*100+50,(i%5)*100+50) for i in range(5 * 5) ], 1)
 
     def test_ExtractSURF(self):
-        img = self.get_sample("samples/c/lena.jpg", 0)
-        w,h = cv.GetSize(img)
-        for hessthresh in [ 300,400,500]:
-            for dsize in [0,1]:
-                for layers in [1,3,10]:
-                    kp,desc = cv.ExtractSURF(img, None, cv.CreateMemStorage(), (dsize, hessthresh, 3, layers))
-                    self.assert_(len(kp) == len(desc))
-                    for d in desc:
-                        self.assert_(len(d) == {0:64, 1:128}[dsize])
-                    for pt,laplacian,size,dir,hessian in kp:
-                        self.assert_((0 <= pt[0]) and (pt[0] <= w))
-                        self.assert_((0 <= pt[1]) and (pt[1] <= h))
-                        self.assert_(laplacian in [-1, 0, 1])
-                        self.assert_((0 <= dir) and (dir <= 360))
-                        self.assert_(hessian >= hessthresh)
+        with_nonfree = True
+        img = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(img is None)
+        try:
+            cv.ExtractSURF(img, None, cv.CreateMemStorage())
+        except:
+            with_nonfree = False;
+        if with_nonfree:
+            w,h = cv.GetSize(img)
+            for hessthresh in [300,400,500]:
+                for dsize in [0,1]:
+                    for layers in [1,3,10]:
+                        kp,desc = cv.ExtractSURF(img, None, cv.CreateMemStorage(), (dsize, hessthresh, 3, layers))
+                        self.assert_(len(kp) == len(desc))
+                        for d in desc:
+                            self.assert_(len(d) == {0:64, 1:128}[dsize])
+                        for pt,laplacian,size,dir,hessian in kp:
+                            self.assert_((0 <= pt[0]) and (pt[0] <= w))
+                            self.assert_((0 <= pt[1]) and (pt[1] <= h))
+                            self.assert_(laplacian in [-1, 0, 1])
+                            self.assert_((0 <= dir) and (dir <= 360))
+                            self.assert_(hessian >= hessthresh)
 
     def test_FillPoly(self):
         scribble = cv.CreateImage((640,480), cv.IPL_DEPTH_8U, 1)
@@ -554,7 +531,8 @@ class FunctionTests(OpenCVTests):
             cv.Circle(original, (400, 400), 200, 255, -1)
             cv.Circle(original, (100, 100), 20, 255, -1)
         else:
-            original = self.get_sample("samples/c/lena.jpg", 0)
+            original = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+            self.assertFalse(original is None)
             cv.Threshold(original, original, 128, 255, cv.CV_THRESH_BINARY);
 
         contours = cv.FindContours(original, storage, cv.CV_RETR_CCOMP, cv.CV_CHAIN_APPROX_SIMPLE)
@@ -601,7 +579,8 @@ class FunctionTests(OpenCVTests):
         self.assert_(cv.GetSize(cv.CreateImage((7,5), cv.IPL_DEPTH_8U, 1)) == (7,5))
 
     def test_GetStarKeypoints(self):
-        src = self.get_sample("samples/c/lena.jpg", 0)
+        src = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(src is None)
         storage = cv.CreateMemStorage()
         kp = cv.GetStarKeypoints(src, storage)
         self.assert_(len(kp) > 0)
@@ -632,7 +611,8 @@ class FunctionTests(OpenCVTests):
             subs.append(sub)
         self.assert_(sys.getrefcount(data) == (start_count + iter))
 
-        src = self.get_sample("samples/c/lena.jpg", 0)
+        src = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(src is None)
         made = cv.CreateImage(cv.GetSize(src), 8, 1)
         sub = cv.CreateMat(32, 32, cv.CV_8UC1)
         for x in range(0, 512, 32):
@@ -655,7 +635,8 @@ class FunctionTests(OpenCVTests):
             self.assertEqual(aslist(m3), range(6, 8))
 
     def xtest_grabCut(self):
-        image = self.get_sample("samples/c/lena.jpg", cv.CV_LOAD_IMAGE_COLOR)
+        image = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), cv.CV_LOAD_IMAGE_COLOR)
+        self.assertFalse(image is None)
         tmp1 = cv.CreateMat(1, 13 * 5, cv.CV_32FC1)
         tmp2 = cv.CreateMat(1, 13 * 5, cv.CV_32FC1)
         mask = cv.CreateMat(image.rows, image.cols, cv.CV_8UC1)
@@ -686,7 +667,8 @@ class FunctionTests(OpenCVTests):
         self.assert_(li[0] != None)
 
     def test_InPaint(self):
-        src = self.get_sample("samples/cpp/building.jpg")
+        src = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'))
+        self.assertFalse(src is None)
         msk = cv.CreateImage(cv.GetSize(src), cv.IPL_DEPTH_8U, 1)
         damaged = cv.CloneMat(src)
         repaired = cv.CreateImage(cv.GetSize(src), cv.IPL_DEPTH_8U, 3)
@@ -750,7 +732,8 @@ class FunctionTests(OpenCVTests):
 
     def xxx_test_PyrMeanShiftFiltering(self):   # XXX - ticket #306
         if 0:
-            src = self.get_sample("samples/c/lena.jpg", cv.CV_LOAD_IMAGE_COLOR)
+            src = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), cv.CV_LOAD_IMAGE_COLOR)
+            self.assertFalse(src is None)
             dst = cv.CloneMat(src)
             cv.PyrMeanShiftFiltering(src, dst, 5, 5)
             print src, dst
@@ -814,7 +797,8 @@ class FunctionTests(OpenCVTests):
                             self.assertEqual(M[rj,cj], expected)
 
     def test_SnakeImage(self):
-        src = self.get_sample("samples/c/lena.jpg", 0)
+        src = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(src is None)
         pts = [ (512-i,i) for i in range(0, 512, 8) ]
 
         # Make sure that weight arguments get validated
@@ -873,7 +857,8 @@ class FunctionTests(OpenCVTests):
 
     def test_Threshold(self):
     #""" directed test for bug 2790622 """
-        src = self.get_sample("samples/c/lena.jpg", 0)
+        src = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(src is None)
         results = set()
         for i in range(10):
             dst = cv.CreateImage(cv.GetSize(src), cv.IPL_DEPTH_8U, 1)
@@ -883,7 +868,8 @@ class FunctionTests(OpenCVTests):
         self.assert_(len(results) == 1)
 
         # ticket #71 repro attempt
-        image = self.get_sample("samples/c/lena.jpg", 0)
+        image = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(image is None)
         red = cv.CreateImage(cv.GetSize(image), 8, 1)
         binary = cv.CreateImage(cv.GetSize(image), 8, 1)
         cv.Split(image, red, None, None, None)
@@ -893,7 +879,8 @@ class FunctionTests(OpenCVTests):
 
     def yield_line_image(self):
         """ Needed by HoughLines tests """
-        src = self.get_sample("samples/cpp/building.jpg", 0)
+        src = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'pic1.png'))
+        self.assertFalse(src is None)
         dst = cv.CreateImage(cv.GetSize(src), 8, 1)
         cv.Canny(src, dst, 50, 200, 3)
         return dst
@@ -1024,8 +1011,10 @@ class AreaTests(OpenCVTests):
         self.assertRaises(TypeError, illegal_delete)
         self.assertRaises(TypeError, illegal_assign)
 
-        left = self.get_sample("samples/c/lena.jpg", 0)
-        right = self.get_sample("samples/c/lena.jpg", 0)
+        left = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(left is None)
+        right = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(right is None)
         disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
         cv.FindStereoCorrespondenceBM(left, right, disparity, bm)
 
@@ -1045,8 +1034,10 @@ class AreaTests(OpenCVTests):
         self.assertRaises(TypeError, illegal_delete)
         self.assertRaises(TypeError, illegal_assign)
 
-        left = self.get_sample("samples/c/lena.jpg", 0)
-        right = self.get_sample("samples/c/lena.jpg", 0)
+        left = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(left is None)
+        right = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(right is None)
         disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
         cv.FindStereoCorrespondenceBM(left, right, disparity, bm)
 
@@ -1092,7 +1083,8 @@ class AreaTests(OpenCVTests):
         dims = [180]
         ranges = [(0,180)]
         a = cv.CreateHist(dims, cv.CV_HIST_ARRAY , ranges, 1)
-        src = self.get_sample("samples/c/lena.jpg", 0)
+        src = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(src is None)
         h = imh(src)
         (minv, maxv, minl, maxl) = cv.GetMinMaxHistValue(h)
         self.assert_(cv.QueryHistValue_nD(h, minl) == minv)
@@ -1180,8 +1172,10 @@ class AreaTests(OpenCVTests):
 
 
     def failing_test_cvtcolor(self):
-        src3 = self.get_sample("samples/c/lena.jpg")
-        src1 = self.get_sample("samples/c/lena.jpg", 0)
+        src3 = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'))
+        self.assertFalse(src3 is None)
+        src1 = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(src1 is None)
         dst8u = dict([(c,cv.CreateImage(cv.GetSize(src1), cv.IPL_DEPTH_8U, c)) for c in (1,2,3,4)])
         dst16u = dict([(c,cv.CreateImage(cv.GetSize(src1), cv.IPL_DEPTH_16U, c)) for c in (1,2,3,4)])
         dst32f = dict([(c,cv.CreateImage(cv.GetSize(src1), cv.IPL_DEPTH_32F, c)) for c in (1,2,3,4)])
@@ -1596,6 +1590,7 @@ class AreaTests(OpenCVTests):
 
     def xxxtest_corners(self):
         a = cv.LoadImage("foo-mono.png", 0)
+        self.assertFalse(a is None)
         cv.AdaptiveThreshold(a, a, 255, param1=5)
         scribble = cv.CreateImage(cv.GetSize(a), 8, 3)
         cv.CvtColor(a, scribble, cv.CV_GRAY2BGR)
@@ -1665,21 +1660,12 @@ class AreaTests(OpenCVTests):
                 for j in range(cvmat.cols):
                     yield cvmat[i,j]
 
-        def image_from_archive(tar, name):
-            member = tar.getmember(name)
-            filedata = tar.extractfile(member).read()
-            imagefiledata = cv.CreateMat(1, len(filedata), cv.CV_8UC1)
-            cv.SetData(imagefiledata, filedata, len(filedata))
-            return cv.DecodeImageM(imagefiledata)
-
-        filename = self.get_data("camera_calibration.tar.gz", OpenCVTests.dataUrl)
-        tf = tarfile.open(filename)
-
         num_x_ints = 8
         num_y_ints = 6
         num_pts = num_x_ints * num_y_ints
 
-        leftimages = [image_from_archive(tf, "wide/left%04d.pgm" % i) for i in range(3, 15)]
+        leftimages = [cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'],
+                     'python', 'camera_calibration', 'wide', 'left%04d.pgm' % i)) for i in range(3, 15)]
         size = cv.GetSize(leftimages[0])
 
         # Monocular test
@@ -1723,7 +1709,8 @@ class AreaTests(OpenCVTests):
                     # cv.ShowImage("snap", r)
                     # cv.WaitKey()
 
-        rightimages = [image_from_archive(tf, "wide/right%04d.pgm" % i) for i in range(3, 15)]
+                    rightimages = [cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'python',
+                                  'camera_calibration', 'wide', 'right%04d.pgm' % i)) for i in range(3, 15)]
 
         # Stereo test
 
@@ -1808,7 +1795,9 @@ class AreaTests(OpenCVTests):
         return
         integral = cv.CreateImage((641,481), cv.IPL_DEPTH_32S, 1)
         L = cv.LoadImage("f0-left.png", 0)
+        self.assertFalse(L is None)
         R = cv.LoadImage("f0-right.png", 0)
+        self.assertFalse(R is None)
         d = cv.CreateImage(cv.GetSize(L), cv.IPL_DEPTH_8U, 1)
         Rn = cv.CreateImage(cv.GetSize(L), cv.IPL_DEPTH_8U, 1)
         started = time.time()
@@ -1851,6 +1840,7 @@ class AreaTests(OpenCVTests):
         hcfile = os.environ['OPENCV_ROOT'] + '/share/opencv/haarcascades/haarcascade_frontalface_default.xml'
         hc = cv.Load(hcfile)
         img = cv.LoadImage('Stu.jpg', 0)
+        self.assertFalse(img is None)
         faces = cv.HaarDetectObjects(img, hc, cv.CreateMemStorage())
         self.assert_(len(faces) > 0)
         for (x,y,w,h),n in faces:
@@ -1879,7 +1869,8 @@ class AreaTests(OpenCVTests):
 
 
     def test_casts(self):
-        im = cv.GetImage(self.get_sample("samples/c/lena.jpg", 0))
+        im = cv.GetImage(cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0))
+        self.assertFalse(im is None)
         data = im.tostring()
         cv.SetData(im, data, cv.GetSize(im)[0])
 
@@ -1903,7 +1894,7 @@ class AreaTests(OpenCVTests):
 
     def test_morphological(self):
         im = cv.CreateImage((128, 128), cv.IPL_DEPTH_8U, 1)
-        cv.Resize(cv.GetImage(self.get_sample("samples/c/lena.jpg", 0)), im)
+        cv.Resize(cv.GetImage(cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)), im)
         dst = cv.CloneImage(im)
 
         # Check defaults by asserting that all these operations produce the same image
@@ -1957,7 +1948,8 @@ class AreaTests(OpenCVTests):
         self.assert_(cv.ClipLine((100,100), (-100,0), (-200,0)) == None)
 
     def test_smoke_image_processing(self):
-        src = self.get_sample("samples/c/lena.jpg", cv.CV_LOAD_IMAGE_GRAYSCALE)
+        src = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), cv.CV_LOAD_IMAGE_GRAYSCALE)
+        self.assertFalse(src is None)
         #dst = cv.CloneImage(src)
         for aperture_size in [1, 3, 5, 7]:
           dst_16s = cv.CreateImage(cv.GetSize(src), cv.IPL_DEPTH_16S, 1)
@@ -1977,7 +1969,8 @@ class AreaTests(OpenCVTests):
     def test_fitline(self):
         cv.FitLine([ (1,1), (10,10) ], cv.CV_DIST_L2, 0, 0.01, 0.01)
         cv.FitLine([ (1,1,1), (10,10,10) ], cv.CV_DIST_L2, 0, 0.01, 0.01)
-        a = self.get_sample("samples/c/lena.jpg", 0)
+        a = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(a is None)
         eig_image = cv.CreateImage(cv.GetSize(a), cv.IPL_DEPTH_32F, 1)
         temp_image = cv.CreateImage(cv.GetSize(a), cv.IPL_DEPTH_32F, 1)
         pts = cv.GoodFeaturesToTrack(a, eig_image, temp_image, 100, 0.04, 2, useHarris=1)
@@ -1985,7 +1978,8 @@ class AreaTests(OpenCVTests):
         cv.FitLine(hull, cv.CV_DIST_L2, 0, 0.01, 0.01)
 
     def test_moments(self):
-        im = self.get_sample("samples/c/lena.jpg", 0)
+        im = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 0)
+        self.assertFalse(im is None)
         mo = cv.Moments(im)
         for fld in ["m00", "m10", "m01", "m20", "m11", "m02", "m30", "m21", "m12", "m03", "mu20", "mu11", "mu02", "mu30", "mu21", "mu12", "mu03", "inv_sqrt_m00"]:
             self.assert_(isinstance(getattr(mo, fld), float))
@@ -2016,7 +2010,8 @@ class AreaTests(OpenCVTests):
         self.assert_(abs(hu0[i] + hu1[i]) < 1e-6)
 
     def test_encode(self):
-        im = self.get_sample("samples/c/lena.jpg", 1)
+        im = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'), 1)
+        self.assertFalse(im is None)
         jpeg = cv.EncodeImage(".jpeg", im)
 
         # Smoke jpeg compression at various qualities
@@ -2198,7 +2193,8 @@ class DocumentFragmentTests(OpenCVTests):
 
     def test_precornerdetect(self):
         from precornerdetect import precornerdetect
-        im = self.get_sample("samples/cpp/right01.jpg", 0)
+        im = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'cameracalibration', 'chess1.png'), 0)
+        self.assertFalse(im is None)
         imf = cv.CreateMat(im.rows, im.cols, cv.CV_32FC1)
         cv.ConvertScale(im, imf)
         (r0,r1) = precornerdetect(imf)
@@ -2208,7 +2204,12 @@ class DocumentFragmentTests(OpenCVTests):
 
     def test_findstereocorrespondence(self):
         from findstereocorrespondence import findstereocorrespondence
-        (l,r) = [self.get_sample("samples/cpp/tsukuba_%s.png" % c, cv.CV_LOAD_IMAGE_GRAYSCALE) for c in "lr"]
+        l = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'],
+                                       'cv', 'stereo', 'case1', 'left01.png'), cv.CV_LOAD_IMAGE_GRAYSCALE)
+        self.assertFalse(l is None)
+        r = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'],
+                                       'cv', 'stereo', 'case1', 'right01.png'), cv.CV_LOAD_IMAGE_GRAYSCALE)
+        self.assertFalse(r is None)
 
         (disparity_left, disparity_right) = findstereocorrespondence(l, r)
 
@@ -2218,8 +2219,8 @@ class DocumentFragmentTests(OpenCVTests):
 
     def test_calchist(self):
         from calchist import hs_histogram
-        i1 = self.get_sample("samples/c/lena.jpg")
-        i2 = self.get_sample("samples/cpp/building.jpg")
+        i1 = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'))
+        i2 = cv.LoadImageM(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'baboon.png'))
         i3 = cv.CloneMat(i1)
         cv.Flip(i3, i3, 1)
         h1 = hs_histogram(i1)
@@ -2229,20 +2230,9 @@ class DocumentFragmentTests(OpenCVTests):
         self.assertNotEqual(self.hashimg(h1), self.hashimg(h2))
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='run OpenCV python tests')
-    parser.add_argument('--repo', help='use sample image files from local git repository (path to folder), '
-                                       'if not set, samples will be downloaded from github.com')
-    parser.add_argument('--data', help='use data files from local folder (path to folder), '
-                                        'if not set, data files will be downloaded from docs.opencv.org')
-    args, other = parser.parse_known_args()
     print "testing", cv.__version__
-    print "Local repo path:", args.repo
-    print "Local data path:", args.data
-    OpenCVTests.repoPath = args.repo
-    OpenCVTests.dataPath = args.data
     random.seed(0)
-    unit_argv = [sys.argv[0]] + other;
-    unittest.main(argv=unit_argv)
+    unittest.main(argv=sys.argv)
 #    optlist, args = getopt.getopt(sys.argv[1:], 'l:rd')
 #    loops = 1
 #    shuffle = 0
