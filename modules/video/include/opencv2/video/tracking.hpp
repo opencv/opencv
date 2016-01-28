@@ -585,6 +585,40 @@ public:
 };
 
 
+/** @brief Class used for calculating a sparse optical flow.
+
+The class can calculate an optical flow for a sparse feature set using the
+iterative Lucas-Kanade method with pyramids.
+
+@sa calcOpticalFlowPyrLK
+
+*/
+class CV_EXPORTS SparsePyrLKOpticalFlow : public SparseOpticalFlow
+{
+public:
+    virtual Size getWinSize() const = 0;
+    virtual void setWinSize(Size winSize) = 0;
+
+    virtual int getMaxLevel() const = 0;
+    virtual void setMaxLevel(int maxLevel) = 0;
+
+    virtual TermCriteria getTermCriteria() const = 0;
+    virtual void setTermCriteria(TermCriteria& crit) = 0;
+
+    virtual int getFlags() const = 0;
+    virtual void setFlags(int flags) = 0;
+
+    virtual double getMinEigThreshold() const = 0;
+    virtual void setMinEigThreshold(double minEigThreshold) = 0;
+
+    static Ptr<SparsePyrLKOpticalFlow> create(
+            Size winSize = Size(21, 21),
+            int maxLevel = 3, TermCriteria crit =
+            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
+            int flags = 0,
+            double minEigThreshold = 1e-4);
+};
+
 //! @} video_track
 
 } // cv
