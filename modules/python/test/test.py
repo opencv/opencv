@@ -28,6 +28,7 @@ from test_houghlines import houghlines_test
 from test_gaussian_mix import gaussian_mix_test
 from test_facedetect import facedetect_test
 from test_kmeans import kmeans_test
+from test_morphology import morphology_test
 
 # Python 3 moved urlopen to urllib.requests
 try:

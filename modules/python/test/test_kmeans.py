@@ -10,9 +10,12 @@ from __future__ import print_function
 import numpy as np
 import cv2
 from numpy import random
+import sys
+PY3 = sys.version_info[0] == 3
+if PY3:
+    xrange = range
 
 from tests_common import NewOpenCVTests
-
 
 def make_gaussians(cluster_n, img_size):
     points = []
@@ -52,12 +55,6 @@ class kmeans_test(NewOpenCVTests):
 
         cluster_n = 5
         img_size = 512
-
-        # generating bright palette
-        colors = np.zeros((1, cluster_n, 3), np.uint8)
-        colors[0,:] = 255
-        colors[0,:,0] = np.arange(0, 180, 180.0/cluster_n)
-        colors = cv2.cvtColor(colors, cv2.COLOR_HSV2BGR)[0]
 
         points, _, clusterSizes = make_gaussians(cluster_n, img_size)
 
