@@ -151,7 +151,7 @@ namespace cv { namespace cuda { namespace device
                   if(Hscan[tx+1]>medPos){
                      *retval=tx+1;
                      *countAtMed=Hscan[tx];
-		  }
+                  }
                 }
             }
         }
