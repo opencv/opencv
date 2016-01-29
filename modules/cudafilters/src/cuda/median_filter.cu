@@ -145,17 +145,13 @@ namespace cv { namespace cuda { namespace device
             if(tx<7){
                 if(Hscan[tx+1] > medPos && Hscan[tx] < medPos){
                     *retval=tx+1;
-		    *countAtMed=Hscan[tx];
-//		    atomicAdd(retval,tx+1);
-//                    atomicAdd(countAtMed,Hscan[tx]);
+                    *countAtMed=Hscan[tx];
                 }
                 else if(Hscan[tx]==medPos){
                   if(Hscan[tx+1]>medPos){
-                      *retval=tx+1;
-		      *countAtMed=Hscan[tx];
-//                    atomicAdd(retval,tx+1);
-//                    atomicAdd(countAtMed,Hscan[tx]);
-                  }
+                     *retval=tx+1;
+                     *countAtMed=Hscan[tx];
+		  }
                 }
             }
         }
@@ -182,17 +178,13 @@ namespace cv { namespace cuda { namespace device
             __syncthreads();
             if(tx<31){
                 if(Hscan[tx+1] > medPos && Hscan[tx] < medPos){
-                      *retval=tx+1;
-		      *countAtMed=Hscan[tx];
-//                   atomicAdd(retval,tx+1);
-//                    atomicAdd(countAtMed,Hscan[tx]);
+                    *retval=tx+1;
+                    *countAtMed=Hscan[tx];
                 }
                 else if(Hscan[tx]==medPos){
                   if(Hscan[tx+1]>medPos){
                       *retval=tx+1;
-		      *countAtMed=Hscan[tx];
-//                   atomicAdd(retval,tx+1);
-//                    atomicAdd(countAtMed,Hscan[tx]);
+                      *countAtMed=Hscan[tx];
                   }
                 }
             }
