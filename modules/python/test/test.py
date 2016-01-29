@@ -17,19 +17,6 @@ import numpy as np
 import cv2
 import argparse
 
-# local test modules
-from test_digits import digits_test
-from test_calibration import calibration_test
-from test_squares import squares_test
-from test_texture_flow import texture_flow_test
-from test_fitline import fitline_test
-from test_houghcircles import houghcircles_test
-from test_houghlines import houghlines_test
-from test_gaussian_mix import gaussian_mix_test
-from test_facedetect import facedetect_test
-from test_kmeans import kmeans_test
-from test_morphology import morphology_test
-
 # Python 3 moved urlopen to urllib.requests
 try:
     from urllib.request import urlopen
@@ -39,6 +26,12 @@ except ImportError:
 from tests_common import NewOpenCVTests
 
 # Tests to run first; check the handful of basic operations that the later tests rely on
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+def load_tests(loader, tests, pattern):
+    tests.addTests(loader.discover(basedir, pattern='test_*.py'))
+    return tests
 
 class Hackathon244Tests(NewOpenCVTests):
 

@@ -18,14 +18,14 @@ class morphology_test(NewOpenCVTests):
 
     def test_morphology(self):
 
-        fn = 'samples/data/baboon.jpg'
+        fn = 'samples/data/rubberwhale1.png'
         img = self.get_sample(fn)
 
         modes = ['erode/dilate', 'open/close', 'blackhat/tophat', 'gradient']
         str_modes = ['ellipse', 'rect', 'cross']
 
-        referenceHashes = { modes[0]: '1bd14fc814e41b80ce7816bc04f60b65', modes[1] : '1bd14fc814e41b80ce7816bc04f60b65',
-            modes[2] : 'cb18a5d28e77522dfec6a6255bc3847e', modes[3] : '84909517e4866aa079f4b2e2906bf47b'}
+        referenceHashes = { modes[0]: '071a526425b79e45b4d0d71ef51b0562', modes[1] : '071a526425b79e45b4d0d71ef51b0562',
+            modes[2] : '427e89f581b7df1b60a831b1ed4c8618', modes[3] : '0dd8ad251088a63d0dd022bcdc57361c'}
 
         def update(cur_mode):
             cur_str_mode = str_modes[0]
