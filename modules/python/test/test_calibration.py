@@ -11,7 +11,6 @@ from __future__ import print_function
 import numpy as np
 import cv2
 
-
 from tests_common import NewOpenCVTests
 
 class calibration_test(NewOpenCVTests):
