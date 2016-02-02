@@ -54,11 +54,14 @@ if(HAVE_CUDA)
   endif()
 
   if(WITH_NVCUVID)
-    set(cuda_link_libs ${cuda_link_libs} ${CUDA_CUDA_LIBRARY} ${CUDA_nvcuvid_LIBRARY})
+    if(HAVE_NVCUVID)
+      set(cuda_link_libs ${cuda_link_libs} ${CUDA_CUDA_LIBRARY} ${CUDA_nvcuvid_LIBRARY})
+    endif()
 
     if(WIN32)
-      find_cuda_helper_libs(nvcuvenc)
-      set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
+      if(HAVE_NVCUVENC)
+        set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
+      endif()
     endif()
 
     if(WITH_FFMPEG)
