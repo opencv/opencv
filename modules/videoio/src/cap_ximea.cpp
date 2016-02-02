@@ -2,7 +2,7 @@
 #include "precomp.hpp"
 
 #ifdef WIN32
-#include "xiApi.h"
+#include <xiApi.h>
 #else
 #include <m3api/xiApi.h>
 #endif
@@ -19,7 +19,7 @@ public:
 
     virtual bool open( int index );
     virtual void close();
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -27,9 +27,9 @@ public:
 
 private:
     void init();
-    void errMsg(const char* msg, int errNum);
+    void errMsg(const char* msg, int errNum) const;
     void resetCvImage();
-    int  ocvParamtoXimeaParam(int value);
+    int  ocvParamtoXimeaParam(int value) const;
     IplImage* frame;
 
     HANDLE    hmv;
@@ -284,7 +284,7 @@ void CvCaptureCAM_XIMEA::resetCvImage()
 
 /**********************************************************************************/
 
-int CvCaptureCAM_XIMEA::ocvParamtoXimeaParam(int property_id)
+int CvCaptureCAM_XIMEA::ocvParamtoXimeaParam(int property_id) const
 {
     XI_RETURN stat = XI_OK;
     switch (property_id)
@@ -963,7 +963,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
 
 /**********************************************************************************/
 
-double CvCaptureCAM_XIMEA::getProperty( int property_id )
+double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
 {
     XI_RETURN stat = XI_OK;
     double getPropVal = 0;
@@ -1572,7 +1572,7 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id )
 
 /**********************************************************************************/
 
-void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum)
+void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
 {
     // with XI_OK there is nothing to report
     if(errNum == XI_OK) return;
