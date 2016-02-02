@@ -98,7 +98,9 @@
         #include <nvcuvid.h>
 
         #ifdef WIN32
-            #include <NVEncoderAPI.h>
+            #ifdef HAVE_NVCUVENC
+                #include <NVEncoderAPI.h>
+            #endif
         #endif
     #endif
 
