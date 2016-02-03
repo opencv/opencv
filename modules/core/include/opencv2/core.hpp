@@ -1007,24 +1007,24 @@ CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
 /** @brief Fills the output array with repeated copies of the input array.
 
-The functions repeat duplicate the input array one or more times along each of the two axes:
+The function cv::repeat duplicates the input array one or more times along each of the two axes:
 \f[\texttt{dst} _{ij}= \texttt{src} _{i\mod src.rows, \; j\mod src.cols }\f]
 The second variant of the function is more convenient to use with @ref MatrixExpressions.
 @param src input array to replicate.
-@param dst output array of the same type as src.
-@param ny Flag to specify how many times the src is repeated along the
+@param ny Flag to specify how many times the `src` is repeated along the
 vertical axis.
-@param nx Flag to specify how many times the src is repeated along the
+@param nx Flag to specify how many times the `src` is repeated along the
 horizontal axis.
-@sa reduce
+@param dst output array of the same type as `src`.
+@sa cv::reduce
 */
 CV_EXPORTS_W void repeat(InputArray src, int ny, int nx, OutputArray dst);
 
 /** @overload
 @param src input array to replicate.
-@param ny Flag to specify how many times the src is repeated along the
+@param ny Flag to specify how many times the `src` is repeated along the
 vertical axis.
-@param nx Flag to specify how many times the src is repeated along the
+@param nx Flag to specify how many times the `src` is repeated along the
 horizontal axis.
   */
 CV_EXPORTS Mat repeat(const Mat& src, int ny, int nx);
