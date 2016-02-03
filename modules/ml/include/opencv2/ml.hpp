@@ -1496,6 +1496,121 @@ public:
     CV_WRAP static Ptr<LogisticRegression> create();
 };
 
+
+/****************************************************************************************\
+*                        Stochastic Gradient Descent SVM Classifier                      *
+\****************************************************************************************/
+
+/*!
+@brief Stochastic Gradient Descent SVM classifier
+
+SVMSGD provides a fast and easy-to-use implementation of the SVM classifier using the Stochastic Gradient Descent approach, as presented in @cite bottou2010large.
+The gradient descent show amazing performance for large-scale problems, reducing the computing time.
+
+
+
+First, create the SVMSGD object. Set parametrs of model (type, lambda, gamma0, c) using the functions setType, setLambda, setGamma0 and setC or the function setOptimalParametrs.
+Recommended model type is ASGD.
+
+Then the SVM model can be trained using the train features and the correspondent labels.
+
+After that, the label of a new feature vector can be predicted using the predict function.
+
+@code
+// Initialize object
+SVMSGD SvmSgd;
+
+// Train the Stochastic Gradient Descent SVM
+SvmSgd.train(trainFeatures, labels);
+
+// Predict label for the new feature vector (1xM)
+predictedLabel = SvmSgd.predict(newFeatureVector);
+@endcode
+
+*/
+
+class CV_EXPORTS_W SVMSGD : public cv::ml::StatModel
+{
+public:
+
+    /** SVMSGD type.
+    ASGD is often the preferable choice. */
+    enum SvmsgdType
+    {
+        ILLEGAL_VALUE,
+        SGD, //!Stochastic Gradient Descent
+        ASGD //!Average Stochastic Gradient Descent
+    };
+
+    /**
+     * @return the weights of the trained model (decision function f(x) = weights * x + shift).
+    */
+    CV_WRAP virtual Mat getWeights() = 0;
+
+    /**
+     * @return the shift of the trained model (decision function f(x) = weights * x + shift).
+    */
+    CV_WRAP virtual float getShift() = 0;
+
+
+    /** Creates empty model.
+        Use StatModel::train to train the model. Since %SVMSGD has several parameters, you may want to
+        find the best parameters for your problem or use setOptimalParameters() to set some default parameters.
+    */
+    CV_WRAP static Ptr<SVMSGD> create();
+
+    /** Function sets optimal parameters values for chosen SVM SGD model.
+     * If chosen type is ASGD, function sets the following values for parameters of model:
+     * lambda = 0.00001;
+     * gamma0 = 0.05;
+     * c = 0.75;
+     * termCrit.maxCount = 100000;
+     * termCrit.epsilon = 0.00001;
+     *
+     * If SGD:
+     * lambda = 0.0001;
+     * gamma0 = 0.05;
+     * c = 1;
+     * termCrit.maxCount = 100000;
+     * termCrit.epsilon = 0.00001;
+     * @param type is the type of SVMSGD classifier. Legal values are SvmsgdType::SGD and SvmsgdType::ASGD.
+     * Recommended value is SvmsgdType::ASGD (by default).
+    */
+    CV_WRAP virtual void setOptimalParameters(int type = ASGD) = 0;
+
+    /** %Algorithm type, one of SVMSGD::SvmsgdType. */
+    /** @see setAlgorithmType */
+    CV_WRAP virtual int getType() const = 0;
+    /** @copybrief getAlgorithmType @see getAlgorithmType */
+    CV_WRAP virtual void setType(int type) = 0;
+
+    /** Parameter _Lambda_ of a %SVMSGD optimization problem. Default value is 0. */
+    /** @see setLambda */
+    CV_WRAP virtual float getLambda() const = 0;
+    /** @copybrief getLambda @see getLambda */
+    CV_WRAP virtual void setLambda(float lambda) = 0;
+
+    /** Parameter _Gamma0_ of a %SVMSGD optimization problem. Default value is 0. */
+    /** @see setGamma0 */
+    CV_WRAP virtual float getGamma0() const = 0;
+    CV_WRAP virtual void setGamma0(float gamma0) = 0;
+
+    /** Parameter _C_ of a %SVMSGD optimization problem. Default value is 0. */
+    /** @see setC */
+    CV_WRAP virtual float getC() const = 0;
+    /** @copybrief getC @see getC */
+    CV_WRAP virtual void setC(float c) = 0;
+
+    /** @brief Termination criteria of the training algorithm.
+    You can specify the maximum number of iterations (maxCount) and/or how much the error could
+    change between the iterations to make the algorithm continue (epsilon).*/
+    /** @see setTermCriteria */
+    CV_WRAP virtual TermCriteria getTermCriteria() const = 0;
+    /** @copybrief getTermCriteria @see getTermCriteria */
+    CV_WRAP virtual void setTermCriteria(const cv::TermCriteria &val) = 0;
+};
+
+
 /****************************************************************************************\
 *                           Auxilary functions declarations                              *
 \****************************************************************************************/
