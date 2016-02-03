@@ -119,7 +119,7 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
         if flags & cv2.EVENT_FLAG_LBUTTON:
             cur_vis = vis0.copy()
             r = 8
-            m = (anorm(p1 - (x, y)) < r) | (anorm(p2 - (x, y)) < r)
+            m = (anorm(np.array(p1) - (x, y)) < r) | (anorm(np.array(p2) - (x, y)) < r)
             idxs = np.where(m)[0]
             kp1s, kp2s = [], []
             for i in idxs:
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
-    feature_name = opts.get('--feature', 'sift')
+    feature_name = opts.get('--feature', 'brisk')
     try:
         fn1, fn2 = args
     except:
