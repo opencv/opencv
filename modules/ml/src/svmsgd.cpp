@@ -42,6 +42,12 @@
 
 #include "precomp.hpp"
 #include "limits"
+//#include "math.h"
+
+#include <iostream>
+
+using std::cout;
+using std::endl;
 
 /****************************************************************************************\
 *                        Stochastic Gradient Descent SVM Classifier                      *
@@ -64,7 +70,7 @@ public:
 
     virtual float predict( InputArray samples, OutputArray results=noArray(), int flags = 0 ) const;
 
-    virtual bool isClassifier() const { return params.svmsgdType == SGD || params.svmsgdType == ASGD; }
+    virtual bool isClassifier() const;
 
     virtual bool isTrained() const;
 
@@ -93,21 +99,28 @@ public:
     CV_IMPL_PROPERTY(float, C, params.c)
     CV_IMPL_PROPERTY_S(cv::TermCriteria, TermCriteria, params.termCrit)
 
-    private:
-        void updateWeights(InputArray sample, bool is_first_class, float gamma);
-    float calcShift(InputArray trainSamples, InputArray trainResponses) const;
+private:
+    void updateWeights(InputArray sample, bool isFirstClass, float gamma, Mat weights);
+
     std::pair<bool,bool> areClassesEmpty(Mat responses);
+
     void writeParams( FileStorage& fs ) const;
+
     void readParams( const FileNode& fn );
+
     static inline bool isFirstClass(float val) { return val > 0; }
+
+    static void normalizeSamples(Mat &matrix, Mat &multiplier, Mat &average);
+
+    float calcShift(InputArray _samples, InputArray _responses) const;
+
+    static void makeExtendedTrainSamples(const Mat trainSamples, Mat &extendedTrainSamples, Mat &multiplier);
+
 
 
     // Vector with SVM weights
     Mat weights_;
     float shift_;
-
-    // Random index generation
-    RNG rng_;
 
     // Parameters for learning
     struct SVMSGDParams
@@ -127,97 +140,88 @@ Ptr<SVMSGD> SVMSGD::create()
     return makePtr<SVMSGDImpl>();
 }
 
-
-bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
-{
-    clear();
-
-    Mat trainSamples = data->getTrainSamples();
-
-    // Initialize varCount
-    int trainSamplesCount_ = trainSamples.rows;
-    int varCount = trainSamples.cols;
-
-    // Initialize weights vector with zeros
-    weights_ = Mat::zeros(1, varCount, CV_32F);
-
-    Mat trainResponses = data->getTrainResponses();        // (trainSamplesCount x 1) matrix
-
-    std::pair<bool,bool> are_empty = areClassesEmpty(trainResponses);
-
-    if ( are_empty.first && are_empty.second )
-    {
-        weights_.release();
-        return false;
-    }
-    if ( are_empty.first || are_empty.second )
-    {
-        shift_ = are_empty.first ? -1 : 1;
-        return true;
-    }
-
-
-    Mat currentSample;
-    float gamma = 0;
-    Mat lastWeights = Mat::zeros(1, varCount, CV_32F);     //weights vector for calculating terminal criterion
-    Mat averageWeights;                                    //average weights vector for ASGD model
-    double err = DBL_MAX;
-    if (params.svmsgdType == ASGD)
-    {
-        averageWeights = Mat::zeros(1, varCount, CV_32F);
-    }
-
-    // Stochastic gradient descent SVM
-    for (int iter = 0; (iter < params.termCrit.maxCount)&&(err > params.termCrit.epsilon); iter++)
-    {
-        //generate sample number
-        int randomNumber = rng_.uniform(0, trainSamplesCount_);
-
-        currentSample = trainSamples.row(randomNumber);
-
-        //update gamma
-        gamma = params.gamma0 * std::pow((1 + params.lambda * params.gamma0 * (float)iter), (-params.c));
-
-        bool is_first_class = isFirstClass(trainResponses.at<float>(randomNumber));
-        updateWeights( currentSample, is_first_class, gamma );
-
-        //average weights (only for ASGD model)
-        if (params.svmsgdType == ASGD)
-        {
-            averageWeights = ((float)iter/ (1 + (float)iter)) * averageWeights  + weights_ / (1 + (float) iter);
-        }
-
-        err = norm(weights_ - lastWeights);
-        weights_.copyTo(lastWeights);
-    }
-
-    if (params.svmsgdType == ASGD)
-    {
-        weights_ = averageWeights;
-    }
-
-    shift_ = calcShift(trainSamples, trainResponses);
-
-    return true;
-}
-
 std::pair<bool,bool> SVMSGDImpl::areClassesEmpty(Mat responses)
 {
-    std::pair<bool,bool> are_classes_empty(true, true);
+    CV_Assert(responses.cols == 1);
+    std::pair<bool,bool> emptyInClasses(true, true);
     int limit_index = responses.rows;
 
     for(int index = 0; index < limit_index; index++)
     {
-        if (isFirstClass(responses.at<float>(index,0)))
-            are_classes_empty.first = false;
+        if (isFirstClass(responses.at<float>(index)))
+            emptyInClasses.first = false;
         else
-            are_classes_empty.second = false;
+            emptyInClasses.second = false;
 
-        if (!are_classes_empty.first && ! are_classes_empty.second)
+        if (!emptyInClasses.first && ! emptyInClasses.second)
             break;
     }
 
-    return are_classes_empty;
+    return emptyInClasses;
+}
+
+void SVMSGDImpl::normalizeSamples(Mat &samples, Mat &multiplier, Mat &average)
+{
+    int featuresCount = samples.cols;
+    int samplesCount = samples.rows;
+
+    average = Mat(1, featuresCount, samples.type());
+    for (int featureIndex = 0; featureIndex < featuresCount; featureIndex++)
+    {
+        average.at<float>(featureIndex) = mean(samples.col(featureIndex))[0];
+    }
+
+    for (int sampleIndex = 0; sampleIndex < samplesCount; sampleIndex++)
+    {
+        samples.row(sampleIndex) -= average;
+    }
+
+    Mat featureNorm(1, featuresCount, samples.type());
+    for (int featureIndex = 0; featureIndex < featuresCount; featureIndex++)
+    {
+        featureNorm.at<float>(featureIndex) = norm(samples.col(featureIndex));
+    }
+
+    multiplier =  sqrt(samplesCount) / featureNorm;
+    for (int sampleIndex = 0; sampleIndex < samplesCount; sampleIndex++)
+    {
+        samples.row(sampleIndex) = samples.row(sampleIndex).mul(multiplier);
+    }
+}
+
+void SVMSGDImpl::makeExtendedTrainSamples(const Mat trainSamples, Mat &extendedTrainSamples, Mat &multiplier)
+{
+    Mat normalisedTrainSamples = trainSamples.clone();
+    int samplesCount = normalisedTrainSamples.rows;
+
+    Mat average;
+
+    normalizeSamples(normalisedTrainSamples, multiplier, average);
+
+    Mat onesCol = Mat::ones(samplesCount, 1, CV_32F);
+    cv::hconcat(normalisedTrainSamples, onesCol, extendedTrainSamples);
+
+    //cout << "SVMSGDImpl::makeExtendedTrainSamples average: \n" << average << endl;
+    //cout << "SVMSGDImpl::makeExtendedTrainSamples multiplier: \n" << multiplier << endl;
+}
+
+
+void SVMSGDImpl::updateWeights(InputArray _sample, bool firstClass, float gamma, Mat weights)
+{
+    Mat sample = _sample.getMat();
+
+    int response = firstClass ? 1 : -1; // ensure that trainResponses are -1 or 1
+
+    if ( sample.dot(weights) * response > 1)
+    {
+        // Not a support vector, only apply weight decay
+        weights *= (1.f - gamma * params.lambda);
+    }
+    else
+    {
+        // It's a support vector, add it to the weights
+        weights -= (gamma * params.lambda) * weights - (gamma * response) * sample;
+    }
 }
 
 float SVMSGDImpl::calcShift(InputArray _samples, InputArray _responses) const
@@ -232,12 +236,12 @@ float SVMSGDImpl::calcShift(InputArray _samples, InputArray _responses) const
     for (int samplesIndex = 0; samplesIndex < trainSamplesCount; samplesIndex++)
     {
         Mat currentSample = trainSamples.row(samplesIndex);
-        float scalar_product = currentSample.dot(weights_);
+        float dotProduct = currentSample.dot(weights_);
 
-        bool is_first_class = isFirstClass(trainResponses.at<float>(samplesIndex));
-        int index = is_first_class ? 0:1;
-        float sign_to_mul = is_first_class ? 1 : -1;
-        float cur_distance = scalar_product * sign_to_mul ;
+        bool firstClass = isFirstClass(trainResponses.at<float>(samplesIndex));
+        int index = firstClass ? 0:1;
+        float signToMul = firstClass ? 1 : -1;
+        float cur_distance = dotProduct * signToMul;
 
         if (cur_distance < distance_to_classes[index])
         {
@@ -245,9 +249,108 @@ float SVMSGDImpl::calcShift(InputArray _samples, InputArray _responses) const
         }
     }
 
-    //todo: areClassesEmpty(); make const;
     return -(distance_to_classes[0] - distance_to_classes[1]) / 2.f;
 }
+
+bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
+{
+    //cout << "SVMSGDImpl::train begin" << endl;
+    clear();
+    CV_Assert( isClassifier() );   //toDo: consider
+
+    Mat trainSamples = data->getTrainSamples();
+
+    //cout << "SVMSGDImpl::train trainSamples: \n" << trainSamples << endl;
+
+    int featureCount = trainSamples.cols;
+    Mat trainResponses = data->getTrainResponses();        // (trainSamplesCount x 1) matrix
+
+    //cout << "SVMSGDImpl::train trainresponses: \n" << trainResponses << endl;
+
+    std::pair<bool,bool> areEmpty = areClassesEmpty(trainResponses);
+
+    //cout << "SVMSGDImpl::train areEmpty" << areEmpty.first << "," << areEmpty.second << endl;
+
+    if ( areEmpty.first && areEmpty.second )
+    {
+        return false;
+    }
+    if ( areEmpty.first || areEmpty.second )
+    {
+        weights_ = Mat::zeros(1, featureCount, CV_32F);
+        shift_ = areEmpty.first ? -1 : 1;
+        return true;
+    }    
+
+    Mat extendedTrainSamples;
+    Mat multiplier;
+    makeExtendedTrainSamples(trainSamples, extendedTrainSamples, multiplier);
+
+    //cout << "SVMSGDImpl::train extendedTrainSamples: \n" << extendedTrainSamples << endl;
+
+    int extendedTrainSamplesCount = extendedTrainSamples.rows;
+    int extendedFeatureCount = extendedTrainSamples.cols;
+
+    Mat extendedWeights = Mat::zeros(1, extendedFeatureCount, CV_32F);         // Initialize extendedWeights vector with zeros
+    Mat previousWeights = Mat::zeros(1, extendedFeatureCount, CV_32F);     //extendedWeights vector for calculating terminal criterion
+    Mat averageExtendedWeights;                                        //average extendedWeights vector for ASGD model
+    if (params.svmsgdType == ASGD)
+    {
+        averageExtendedWeights = Mat::zeros(1, extendedFeatureCount, CV_32F);
+    }
+
+    RNG rng(0);
+
+    int maxCount = (params.termCrit.type & TermCriteria::COUNT) ? params.termCrit.maxCount : INT_MAX;
+    double epsilon = (params.termCrit.type & TermCriteria::EPS) ? params.termCrit.epsilon : 0;
+
+    double err = DBL_MAX;
+    // Stochastic gradient descent SVM
+    for (int iter = 0; (iter < maxCount) && (err > epsilon); iter++)
+    {
+        int randomNumber = rng.uniform(0, extendedTrainSamplesCount);             //generate sample number
+
+        Mat currentSample = extendedTrainSamples.row(randomNumber);
+        bool firstClass = isFirstClass(trainResponses.at<float>(randomNumber));
+
+        float gamma = params.gamma0 * std::pow((1 + params.lambda * params.gamma0 * (float)iter), (-params.c));    //update gamma
+
+        updateWeights( currentSample, firstClass, gamma, extendedWeights );
+
+        //average weights (only for ASGD model)
+        if (params.svmsgdType == ASGD)
+        {
+            averageExtendedWeights = ((float)iter/ (1 + (float)iter)) * averageExtendedWeights  + extendedWeights / (1 + (float) iter);
+            err = norm(averageExtendedWeights - previousWeights);
+            averageExtendedWeights.copyTo(previousWeights);
+        }
+        else
+        {
+             err = norm(extendedWeights - previousWeights);
+             extendedWeights.copyTo(previousWeights);
+        }
+    }
+
+    if (params.svmsgdType == ASGD)
+    {
+        extendedWeights = averageExtendedWeights;
+    }
+
+    //cout << "SVMSGDImpl::train extendedWeights: \n" << extendedWeights << endl;
+
+    Rect roi(0, 0, featureCount, 1);
+    weights_ = extendedWeights(roi);
+    weights_ = weights_.mul(1/multiplier);
+
+    //cout << "SVMSGDImpl::train weights: \n" << weights_ << endl;
+
+    shift_ = calcShift(trainSamples, trainResponses);
+
+    //cout << "SVMSGDImpl::train shift = " << shift_ << endl;
+
+    return true;
+}
+
 
 float SVMSGDImpl::predict( InputArray _samples, OutputArray _results, int ) const
 {
@@ -269,37 +372,21 @@ float SVMSGDImpl::predict( InputArray _samples, OutputArray _results, int ) cons
         results = Mat(1, 1, CV_32F, &result);
     }
 
-    Mat currentSample;
-    float criterion = 0;
-
     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
     {
-        currentSample = samples.row(sampleIndex);
-        criterion = currentSample.dot(weights_) + shift_;
+        Mat currentSample = samples.row(sampleIndex);
+        float criterion = currentSample.dot(weights_) + shift_;
         results.at<float>(sampleIndex) = (criterion >= 0) ? 1 : -1;
     }
 
     return result;
 }
 
-void SVMSGDImpl::updateWeights(InputArray _sample, bool is_first_class, float gamma)
+bool SVMSGDImpl::isClassifier() const
 {
-    Mat sample = _sample.getMat();
-
-    int responce = is_first_class ? 1 : -1; // ensure that trainResponses are -1 or 1
-
-    if ( sample.dot(weights_) * responce > 1)
-    {
-        // Not a support vector, only apply weight decay
-        weights_ *= (1.f - gamma * params.lambda);
-    }
-    else
-    {
-        // It's a support vector, add it to the weights
-        weights_ -= (gamma * params.lambda) * weights_ - gamma * responce * sample;
-        //std::cout << "sample " << sample << std::endl;
-        //std::cout << "weights_ " << weights_ << std::endl;
-    }
+    return (params.svmsgdType == SGD || params.svmsgdType == ASGD)
+            &&
+            (params.lambda > 0) && (params.gamma0 > 0) && (params.c >= 0);
 }
 
 bool SVMSGDImpl::isTrained() const
@@ -314,8 +401,8 @@ void SVMSGDImpl::write(FileStorage& fs) const
 
     writeParams( fs );
 
-    fs << "shift" << shift_;
     fs << "weights" << weights_;
+    fs << "shift" << shift_;
 }
 
 void SVMSGDImpl::writeParams( FileStorage& fs ) const
@@ -359,8 +446,8 @@ void SVMSGDImpl::read(const FileNode& fn)
 
     readParams(fn);
 
-    shift_ = (float) fn["shift"];
     fn["weights"] >> weights_;
+    fn["shift"] >> shift_;
 }
 
 void SVMSGDImpl::readParams( const FileNode& fn )
@@ -393,21 +480,19 @@ void SVMSGDImpl::readParams( const FileNode& fn )
                 (params.termCrit.maxCount > 0 ? TermCriteria::COUNT : 0);
     }
     else
-        params.termCrit = TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 1000, FLT_EPSILON );
+        params.termCrit = TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 100000, FLT_EPSILON );
 
 }
 
 void SVMSGDImpl::clear()
 {
     weights_.release();
-    shift_ = 0;
 }
 
 
 SVMSGDImpl::SVMSGDImpl()
 {
     clear();
-    rng_(0);
 
     params.svmsgdType = ILLEGAL_VALUE;
 
@@ -426,20 +511,20 @@ void SVMSGDImpl::setOptimalParameters(int type)
     {
     case SGD:
         params.svmsgdType = SGD;
-        params.lambda = 0.00001;
+        params.lambda = 0.0001;
         params.gamma0 = 0.05;
         params.c = 1;
-        params.termCrit.maxCount = 50000;
-        params.termCrit.epsilon = 0.00000001;
+        params.termCrit.maxCount = 100000;
+        params.termCrit.epsilon = 0.00001;
         break;
 
     case ASGD:
         params.svmsgdType = ASGD;
         params.lambda = 0.00001;
-        params.gamma0 = 0.5;
+        params.gamma0 = 0.05;
         params.c = 0.75;
         params.termCrit.maxCount = 100000;
-        params.termCrit.epsilon = 0.000001;
+        params.termCrit.epsilon = 0.00001;
         break;
 
     default:

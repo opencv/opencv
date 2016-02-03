@@ -45,7 +45,6 @@
 #include "opencv2/ml.hpp"
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/utility.hpp"
-#include "opencv2/ml/svmsgd.hpp"
 #include "opencv2/core/private.hpp"
 
 #include <assert.h>

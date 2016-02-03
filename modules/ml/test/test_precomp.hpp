@@ -13,7 +13,6 @@
 #include <map>
 #include "opencv2/ts.hpp"
 #include "opencv2/ml.hpp"
-#include "opencv2/ml/svmsgd.hpp"
 #include "opencv2/core/core_c.h"
 
 #define CV_NBAYES   "nbayes"

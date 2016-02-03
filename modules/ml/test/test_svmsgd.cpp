@@ -52,7 +52,7 @@ using cv::ml::TrainData;
 class CV_SVMSGDTrainTest : public cvtest::BaseTest
 {
 public:
-    CV_SVMSGDTrainTest(Mat _weights, float _shift);
+    CV_SVMSGDTrainTest(Mat _weights, float shift);
 private:
     virtual void run( int start_from );
     float decisionFunction(Mat sample, Mat weights, float shift);
@@ -60,7 +60,7 @@ private:
     cv::Ptr<TrainData> data;
     cv::Mat testSamples;
     cv::Mat testResponses;
-    static const int TEST_VALUE_LIMIT = 50;
+    static const int TEST_VALUE_LIMIT = 500;
 };
 
 CV_SVMSGDTrainTest::CV_SVMSGDTrainTest(Mat weights, float shift)
@@ -81,6 +81,11 @@ CV_SVMSGDTrainTest::CV_SVMSGDTrainTest(Mat weights, float shift)
         responses.at<float>( sampleIndex ) = decisionFunction(samples.row(sampleIndex), weights, shift) > 0 ? 1 : -1;
     }
 
+
+
+    std::cout << "real weights\n" << weights/norm(weights) << "\n" << std::endl;
+    std::cout << "real shift \n" << shift/norm(weights) << "\n" << std::endl;
+
     data = TrainData::create( samples, cv::ml::ROW_SAMPLE, responses );
 
     int testSamplesCount = 100000;
@@ -100,8 +105,9 @@ void CV_SVMSGDTrainTest::run( int /*start_from*/ )
     cv::Ptr<SVMSGD> svmsgd = SVMSGD::create();
 
     svmsgd->setOptimalParameters(SVMSGD::ASGD);
+    svmsgd->setTermCriteria(TermCriteria(TermCriteria::EPS, 0, 0.00005));
 
-    svmsgd->train( data );
+    svmsgd->train(data);
 
     Mat responses;
 
@@ -115,6 +121,12 @@ void CV_SVMSGDTrainTest::run( int /*start_from*/ )
         if (responses.at<float>(i) * testResponses.at<float>(i) < 0 )
             errCount++;
     }
+
+
+    float normW = norm(svmsgd->getWeights());
+
+    std::cout << "found weights\n" << svmsgd->getWeights()/normW << "\n" << std::endl;
+    std::cout << "found shift \n" << svmsgd->getShift()/normW << "\n" << std::endl;
 
     float err = (float)errCount / testSamplesCount;
     std::cout << "err " << err << std::endl;
@@ -138,8 +150,8 @@ TEST(ML_SVMSGD, train0)
     weights.create(1, varCount, CV_32FC1);
     weights.at<float>(0) = 1;
     weights.at<float>(1) = 0;
-
-    float shift = 5;
+    cv::RNG rng(1);
+    float shift = rng.uniform(-varCount, varCount);
 
     CV_SVMSGDTrainTest test(weights, shift);
     test.safe_run();
@@ -157,7 +169,7 @@ TEST(ML_SVMSGD, train1)
     cv::RNG rng(0);
     rng.fill(weights, RNG::UNIFORM, lowerLimit, upperLimit);
 
-    float shift = rng.uniform(-5.f, 5.f);
+    float shift = rng.uniform(-varCount, varCount);
 
     CV_SVMSGDTrainTest test(weights, shift);
     test.safe_run();
@@ -175,8 +187,8 @@ TEST(ML_SVMSGD, train2)
     cv::RNG rng(0);
     rng.fill(weights, RNG::UNIFORM, lowerLimit, upperLimit);
 
-    float shift = rng.uniform(-1000.f, 1000.f);
+    float shift = rng.uniform(-varCount, varCount);
 
-    CV_SVMSGDTrainTest test(weights, shift);
+    CV_SVMSGDTrainTest test(weights,shift);
     test.safe_run();
 }
