@@ -68,7 +68,7 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     p1 = np.float32([kp.pt for kp in mkp1])
     p2 = np.float32([kp.pt for kp in mkp2])
     kp_pairs = zip(mkp1, mkp2)
-    return p1, p2, kp_pairs
+    return p1, p2, list(kp_pairs)
 
 def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
     h1, w1 = img1.shape[:2]
