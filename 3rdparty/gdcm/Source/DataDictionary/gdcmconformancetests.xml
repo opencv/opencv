@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="priv2html.xsl"?>
+<!--
+  Program: GDCM (Grassroots DICOM). A DICOM library
+
+  Copyright (c) 2006-2011 Mathieu Malaterre
+  All rights reserved.
+  See Copyright.txt or http://gdcm.sourceforge.net/Copyright.html for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+-->
+<!--
+ This dictionary is only meant to produce DICOM file to exhibit some implicit behavior
+ of the DICOM standard:
+  1. Undefined length Sequence that cannot be stored as defined length
+  2. ...
+ -->
+<dicts edition="2009" url="http://gdcm.sf.net">
+  <dict name="gdcmConformanceTests" owner="GDCM CONFORMANCE TESTS">
+    <!-- The following sequence is meant to test undefined length sequence that cannot be stored as defined length -->
+    <entry group="4d4d" element="0001" vr="SQ" vm="1" name="Array Container Sequence"/>
+    <!-- dummy 0-filled array meant to quickly reach the hardcoded implicit limit of 2Gb -->
+    <entry group="4d4d" element="0002" vr="OB" vm="1" name="0-Filled Array"/>
+    <!--entry group="4d4d" element="0003" vr="CS" vm="1" name="Initial"/-->
+  </dict>
+</dicts>

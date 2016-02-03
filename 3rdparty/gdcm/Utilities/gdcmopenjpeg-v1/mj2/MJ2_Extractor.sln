@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MJ2_Extractor", "MJ2_Extractor.vcproj", "{BCBEB12A-B691-4B14-9DC5-193BCD01183D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4F27AA53-4181-4A1A-8238-3931B0A41048} = {4F27AA53-4181-4A1A-8238-3931B0A41048}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LibOpenJPEG", "..\LibOpenJPEG.vcproj", "{4F27AA53-4181-4A1A-8238-3931B0A41048}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BCBEB12A-B691-4B14-9DC5-193BCD01183D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{BCBEB12A-B691-4B14-9DC5-193BCD01183D}.Debug|Win32.Build.0 = Debug|Win32
+		{BCBEB12A-B691-4B14-9DC5-193BCD01183D}.Release|Win32.ActiveCfg = Release|Win32
+		{BCBEB12A-B691-4B14-9DC5-193BCD01183D}.Release|Win32.Build.0 = Release|Win32
+		{4F27AA53-4181-4A1A-8238-3931B0A41048}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4F27AA53-4181-4A1A-8238-3931B0A41048}.Debug|Win32.Build.0 = Debug|Win32
+		{4F27AA53-4181-4A1A-8238-3931B0A41048}.Release|Win32.ActiveCfg = Release|Win32
+		{4F27AA53-4181-4A1A-8238-3931B0A41048}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,26 @@
+/* XPM */
+static char *OPJViewer16[] = {
+/* columns rows colors chars-per-pixel */
+"16 16 4 1",
+"  c black",
+". c #800000",
+"X c red",
+"o c None",
+/* pixels */
+"oooooooooooooooo",
+"ooo.XXXXoooooooo",
+"ooXXoo .Xooooooo",
+"o..oooo .ooooooo",
+"oX.oooo  ooooooo",
+"oX.oooo .ooooooo",
+"oXXoooo .ooooooo",
+"o.XXoo .oooooooo",
+"oo.XXXXooooooooo",
+"ooooooooo.Xo .oo",
+"ooooooooo X. ooo",
+"oooooooooo...ooo",
+"oooooooooo XXooo",
+"oooooooooo .Xooo",
+"oooooooooooooooo",
+"oooooooooooooooo"
+};

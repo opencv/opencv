@@ -1,0 +1,100 @@
+#Version 0.1 - February 9th 2007
+#Usage: OPJ_Validate OpenJPEG_command_line
+#Example: OPJ_Validate image_to_j2k.exe -i original/Bretagne1.ppm -o original/Bretagne1.j2k -r 200, 50, 10
+#Attention: don't forget the *.exe extension for the executable file, and check the paths
+
+image_to_j2k.exe -i original/Bretagne1.ppm -o temp/Bretagne1_0.j2k -r 200,50,10
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1.ppm
+image_to_j2k.exe -i original/Bretagne2.ppm -o temp/Bretagne2_0.j2k -c [128,128],[128,128],[128,128] -r 100,20,2 -t 640,480 -b 32,32
+j2k_to_image.exe -i original/Bretagne2.j2k -o temp/Bretagne2.ppm -r 2
+image_to_j2k.exe -i original/Cevennes1.bmp -o temp/Cevennes1.j2k -r 10
+j2k_to_image.exe -i original/Cevennes1.j2k -o temp/Cevennes1.bmp -l 2
+image_to_j2k.exe -i original/Cevennes2.ppm -o temp/Cevennes2.jp2 -r 50
+j2k_to_image.exe -i original/Cevennes2.jp2 -o temp/Cevennes2.ppm
+image_to_j2k.exe -i original/Rome.bmp -o temp/Rome.jp2 -q 30,35,50 -p LRCP -n 3
+j2k_to_image.exe -i original/Rome.jp2 -o temp/Rome.ppm
+image_to_j2k.exe -i original/Bretagne1.ppm -o temp/Bretagne1_1.j2k -q 30,35,40 -n 2
+image_to_j2k.exe -i original/Bretagne1.ppm -o temp/Bretagne1_2.j2k -q 30,35,40 -b 16,16 -c [101,101]
+image_to_j2k.exe -i original/Bretagne2.ppm -o temp/Bretagne2_1.j2k -t 127,127 -p PCRL
+image_to_j2k.exe -i original/X_4_2K_24_185_CBR_WB_000.tif -o temp/X_4_2K_24_185_CBR_WB_000.j2k -cinema2K 24
+image_to_j2k.exe -i original/X_5_2K_24_235_CBR_STEM24_000.tif -o temp/X_5_2K_24_235_CBR_STEM24_000.j2k -cinema2K 48
+image_to_j2k.exe -i original/X_6_2K_24_FULL_CBR_CIRCLE_000.tif -o temp/X_6_2K_24_FULL_CBR_CIRCLE_000.j2k -cinema2K 24
+#à remettre
+#image_to_j2k.exe -i original/X_16_4K_24_185_CBR_WB_000.tif -o temp/X_16_4K_24_185_CBR_WB_000.j2k -cinema4K
+j2k_to_image.exe -i original/A_4_2K_24_185_CBR_WB_000.j2k -o temp/A_4_2K_24_185_CBR_WB_000.tif
+j2k_to_image.exe -i original/B_5_2K_24_235_CBR_STEM24_000.j2k -o temp/B_5_2K_24_235_CBR_STEM24_000.tif
+j2k_to_image.exe -i original/C_6_2K_24_FULL_CBR_CIRCLE_000.j2k -o temp/C_6_2K_24_FULL_CBR_CIRCLE_000.tif
+#à remettre
+#j2k_to_image.exe -i original/C_18_4K_24_FULL_CBR_CIRCLE_000.j2k -o temp/C_18_4K_24_FULL_CBR_CIRCLE_000.tif
+j2k_to_image.exe -i original/p0_01.j2k -o temp/p0_01.tif
+j2k_to_image.exe -i original/p0_02.j2k -o temp/p0_02.tif
+j2k_to_image.exe -i original/p0_03.j2k -o temp/p0_03.tif
+j2k_to_image.exe -i original/p0_04.j2k -o temp/p0_04.tif
+#à remettre
+#j2k_to_image.exe -i original/p0_07.j2k -o temp/p0_07.tif
+j2k_to_image.exe -i original/p0_08.j2k -o temp/p0_08.tif
+j2k_to_image.exe -i original/p0_09.j2k -o temp/p0_09.tif
+j2k_to_image.exe -i original/p0_10.j2k -o temp/p0_10.tif
+j2k_to_image.exe -i original/p0_11.j2k -o temp/p0_11.tif
+j2k_to_image.exe -i original/p0_12.j2k -o temp/p0_12.tif
+j2k_to_image.exe -i original/p0_14.j2k -o temp/p0_14.tif
+j2k_to_image.exe -i original/p0_15.j2k -o temp/p0_15.tif
+j2k_to_image.exe -i original/p0_16.j2k -o temp/p0_16.tif
+j2k_to_image.exe -i original/p1_01.j2k -o temp/p1_01.tif
+j2k_to_image.exe -i original/p1_02.j2k -o temp/p1_02.tif
+j2k_to_image.exe -i original/p1_04.j2k -o temp/p1_04.tif
+j2k_to_image.exe -i original/p1_05.j2k -o temp/p1_05.tif
+j2k_to_image.exe -i original/p1_06.j2k -o temp/p1_06.tif
+image_to_j2k.exe -i original/c0p0_01.pgx -o temp/c0p0_01.j2k
+image_to_j2k.exe -i original/c0p0_02.pgx -o temp/c0p0_02.j2k
+image_to_j2k.exe -i original/c0p0_03r0.pgx -o temp/c0p0_03r0.j2k
+image_to_j2k.exe -i original/c0p0_03r1.pgx -o temp/c0p0_03r1.j2k
+image_to_j2k.exe -i original/c0p0_04.pgx -o temp/c00_p04.j2k
+image_to_j2k.exe -i original/c0p0_05.pgx -o temp/c0p0_05.j2k
+image_to_j2k.exe -i original/c0p0_06.pgx -o temp/c0p0_06.j2k
+image_to_j2k.exe -i original/c0p0_07.pgx -o temp/c0p0_07.j2k
+image_to_j2k.exe -i original/c0p0_08.pgx -o temp/c0p0_08.j2k
+image_to_j2k.exe -i original/c0p0_09.pgx -o temp/c0p0_09.j2k
+image_to_j2k.exe -i original/c0p0_10.pgx -o temp/c0p0_10.j2k
+image_to_j2k.exe -i original/c0p0_11.pgx -o temp/c0p0_11.j2k
+image_to_j2k.exe -i original/c0p0_12.pgx -o temp/c0p0_12.j2k
+image_to_j2k.exe -i original/c0p0_13.pgx -o temp/c0p0_13.j2k
+image_to_j2k.exe -i original/c0p0_14.pgx -o temp/c0p0_14.j2k
+image_to_j2k.exe -i original/c0p0_15r0.pgx -o temp/c0p0_15r0.j2k
+image_to_j2k.exe -i original/c0p0_15r1.pgx -o temp/c0p0_15r1.j2k
+image_to_j2k.exe -i original/c0p0_16.pgx -o temp/c0p0_16.j2k
+image_to_j2k.exe -i original/c0p1_04r0.pgx -o temp/c0p1_04r0.j2k
+image_to_j2k.exe -i original/c0p1_05.pgx -o temp/c0p1_05.j2k
+image_to_j2k.exe -i original/c1p0_01_0.pgx -o temp/c1p0_01_0.j2k
+image_to_j2k.exe -i original/c1p0_02_0.pgx -o temp/c1p0_02_0.j2k
+image_to_j2k.exe -i original/c1p0_03_0.pgx -o temp/c1p0_03_0.j2k
+image_to_j2k.exe -i original/c1p0_04_0.pgx -o temp/c1p0_04_0.j2k
+image_to_j2k.exe -i original/c1p0_05_0.pgx -o temp/c1p0_05_0.j2k
+image_to_j2k.exe -i original/c1p0_06_0.pgx -o temp/c1p0_06_0.j2k
+image_to_j2k.exe -i original/c1p0_07_0.pgx -o temp/c1p0_07_0.j2k
+image_to_j2k.exe -i original/c1p0_08_0.pgx -o temp/c1p0_08_0.j2k
+image_to_j2k.exe -i original/c1p0_09_0.pgx -o temp/c1p0_09_0.j2k
+image_to_j2k.exe -i original/c1p0_10_0.pgx -o temp/c1p0_10_0.j2k
+image_to_j2k.exe -i original/c1p0_11_0.pgx -o temp/c1p0_11_0.j2k
+image_to_j2k.exe -i original/c1p0_12_0.pgx -o temp/c1p0_12_0.j2k
+image_to_j2k.exe -i original/c1p0_13_0.pgx -o temp/c1p0_13_0.j2k
+image_to_j2k.exe -i original/c1p0_14_0.pgx -o temp/c1p0_14_0.j2k
+image_to_j2k.exe -i original/c1p0_15_0.pgx -o temp/c1p0_15_0.j2k
+image_to_j2k.exe -i original/c1p0_16_0.pgx -o temp/c1p0_16_0.j2k
+image_to_j2k.exe -i original/c1p1_02_0.pgx -o temp/c1p1_02_0.j2k
+image_to_j2k.exe -i original/c1p1_05_0.pgx -o temp/c1p1_05_0.j2k
+image_to_j2k.exe -i original/Bretagne2.ppm -o temp/Bretagne2_2.j2k -s 2,2 -SOP
+image_to_j2k.exe -i original/Bretagne2.ppm -o temp/Bretagne2_3.j2k -EPH -M 38
+image_to_j2k.exe -i original/Bretagne2.ppm -o temp/Bretagne2_4.j2k -d 150,300 -r 800
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1.bmp
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1r2.bmp -r 2
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1.tga
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1r2.tga -r 2
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1.pnm
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1r2.pnm -r 2
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1r2.ppm -r 2
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1.raw
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1r2.raw -r 2
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1.tif
+j2k_to_image.exe -i original/Bretagne1.j2k -o temp/Bretagne1r2.tif -r 2
+j2k_to_image.exe -i original/p0_03.j2k -o p0_03.pgx

@@ -1,0 +1,15 @@
+/**
+\mainpage GDCM Documentation
+
+This is the developpers documentation.
+
+A PDF version of this doxygen documentation can be found here:
+
+@GDCM_DOC_PDF_LINK@
+
+A tarball version of this HTML doxygen documentation can be found here:
+
+@GDCM_DOC_TARBALL_LINK@
+
+\author Mathieu Malaterre
+*/

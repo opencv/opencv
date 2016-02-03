@@ -1,0 +1,3 @@
+The source was taken from http://svn.xiph.org/trunk/theora-exp/win32/compatibility/
+
+Seems to compiles with VS 7.1 (free) and bcc 5.5.1

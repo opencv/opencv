@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="gdcm2html.xsl"?>
+<!--
+  Program: GDCM (Grassroots DICOM). A DICOM library
+
+  Copyright (c) 2006-2011 Mathieu Malaterre
+  All rights reserved.
+  See Copyright.txt or http://gdcm.sourceforge.net/Copyright.html for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+-->
+<dict edition="cp699">
+  <entry group="0028" element="0051" vr="CS" vm="1-n" retired="false" version="3">
+    <description>Corrected Image</description>
+  </entry>
+  <entry group="0028" element="005f" vr="LO" vm="1" retired="true" version="2">
+    <description>Compression Recognition Code</description>
+  </entry>
+  <entry group="0028" element="0060" vr="CS" vm="1" retired="true" version="2">
+    <description>Compression Code</description>
+  </entry>
+  <entry group="0028" element="0061" vr="SH" vm="1" retired="true" version="2">
+    <description>Compression Originator</description>
+  </entry>
+  <entry group="0028" element="0062" vr="LO" vm="1" retired="true" version="2">
+    <description>Compression Label</description>
+  </entry>
+  <entry group="0028" element="0063" vr="SH" vm="1" retired="true" version="2">
+    <description>Compression Description</description>
+  </entry>
+  <entry group="0028" element="0065" vr="CS" vm="1-n" retired="true" version="2">
+    <description>Compression Sequence</description>
+  </entry>
+  <entry group="0028" element="0066" vr="AT" vm="1-n" retired="true" version="2">
+    <description>Compression Step Pointers</description>
+  </entry>
+  <entry group="0028" element="0068" vr="US" vm="1" retired="true" version="2">
+    <description>Repeat Interval</description>
+  </entry>
+  <entry group="0028" element="0069" vr="US" vm="1" retired="true" version="2">
+    <description>Bits Grouped</description>
+  </entry>
+  <entry group="0028" element="0070" vr="US" vm="1-n" retired="true" version="2">
+    <description>Perimeter Table</description>
+  </entry>
+  <entry group="0028" element="0071" vr="US_SS" vm="1" retired="true" version="2">
+    <description>Perimeter Value</description>
+  </entry>
+  <entry group="0028" element="0080" vr="US" vm="1" retired="true" version="2">
+    <description>Predictor Rows</description>
+  </entry>
+  <entry group="0028" element="0081" vr="US" vm="1" retired="true" version="2">
+    <description>Predictor Columns</description>
+  </entry>
+  <entry group="0028" element="0082" vr="US" vm="1-n" retired="true" version="2">
+    <description>Predictor Constants</description>
+  </entry>
+  <entry group="0028" element="0090" vr="CS" vm="1" retired="true" version="2">
+    <description>Blocked Pixels</description>
+  </entry>
+  <entry group="0028" element="0091" vr="US" vm="1" retired="true" version="2">
+    <description>Block Rows</description>
+  </entry>
+  <entry group="0028" element="0092" vr="US" vm="1" retired="true" version="2">
+    <description>Block Columns</description>
+  </entry>
+  <entry group="0028" element="0093" vr="US" vm="1" retired="true" version="2">
+    <description>Row Overlap</description>
+  </entry>
+  <entry group="0028" element="0094" vr="US" vm="1" retired="true" version="2">
+    <description>Column Overlap</description>
+  </entry>
+  <entry group="0028" element="0100" vr="US" vm="1" retired="false" version="3">
+    <description>Bits Allocated</description>
+  </entry>
+  <entry group="0028" element="0301" vr="CS" vm="1" retired="false" version="3">
+    <description>Burned In Annotation</description>
+  </entry>
+  <entry group="0028" element="0400" vr="LO" vm="1" retired="true" version="2">
+    <description>Transform Label</description>
+  </entry>
+  <entry group="0028" element="0401" vr="LO" vm="1" retired="true" version="2">
+    <description>Transform Version Number</description>
+  </entry>
+  <entry group="0028" element="0402" vr="US" vm="1" retired="true" version="2">
+    <description>Number of Transform Steps</description>
+  </entry>
+  <entry group="0028" element="0403" vr="LO" vm="1-n" retired="true" version="2">
+    <description>Sequence of Compressed Data</description>
+  </entry>
+  <entry group="0028" element="0404" vr="AT" vm="1-n" retired="true" version="2">
+    <description>Details of Coefficients</description>
+  </entry>
+  <entry group="0028" element="04x0" vr="US" vm="1" retired="true" version="2">
+    <description>Rows For Nth Order Coefficients</description>
+  </entry>
+  <entry group="0028" element="04x1" vr="US" vm="1" retired="true" version="2">
+    <description>Columns For Nth Order Coefficients</description>
+  </entry>
+  <entry group="0028" element="04x2" vr="LO" vm="1-n" retired="true" version="2">
+    <description>Coefficient Coding</description>
+  </entry>
+  <entry group="0028" element="04x3" vr="AT" vm="1-n" retired="true" version="2">
+    <description>Coefficient Coding Pointers</description>
+  </entry>
+  <entry group="0028" element="0700" vr="LO" vm="1" retired="true" version="2">
+    <description>DCT Label</description>
+  </entry>
+  <entry group="0028" element="0701" vr="CS" vm="1-n" retired="true" version="2">
+    <description>Data Block Description</description>
+  </entry>
+  <entry group="0028" element="0702" vr="AT" vm="1-n" retired="true" version="2">
+    <description>Data Block</description>
+  </entry>
+  <entry group="0028" element="0710" vr="US" vm="1" retired="true" version="2">
+    <description>Normalization Factor Format</description>
+  </entry>
+  <entry group="0028" element="0720" vr="US" vm="1" retired="true" version="2">
+    <description>Zonal Map Number Format</description>
+  </entry>
+  <entry group="0028" element="0721" vr="AT" vm="1-n" retired="true" version="2">
+    <description>Zonal Map Location</description>
+  </entry>
+  <entry group="0028" element="0722" vr="US" vm="1" retired="true" version="2">
+    <description>Zonal Map Format</description>
+  </entry>
+  <entry group="0028" element="0730" vr="US" vm="1" retired="true" version="2">
+    <description>Adaptive Map Format</description>
+  </entry>
+  <entry group="0028" element="0740" vr="US" vm="1" retired="true" version="2">
+    <description>Code Number Format</description>
+  </entry>
+  <entry group="0028" element="08x0" vr="CS" vm="1-n" retired="true" version="2">
+    <description>Code Label</description>
+  </entry>
+  <entry group="0028" element="08x2" vr="US" vm="1" retired="true" version="2">
+    <description>Number of Table</description>
+  </entry>
+  <entry group="0028" element="08x3" vr="AT" vm="1-n" retired="true" version="2">
+    <description>Code Table Location</description>
+  </entry>
+  <entry group="0028" element="08x4" vr="US" vm="1" retired="true" version="2">
+    <description>Bits For Code Word</description>
+  </entry>
+  <entry group="0028" element="08x8" vr="AT" vm="1-n" retired="true" version="2">
+    <description>Image Data Location</description>
+  </entry>
+  <entry group="0028" element="0a02" vr="CS" vm="1" retired="false" version="2">
+    <description>Pixel Spacing Calibration Type</description>
+  </entry>
+  <entry group="0028" element="0a04" vr="LO" vm="1" retired="false" version="2">
+    <description>Pixel Spacing Calibration Description</description>
+  </entry>
+  <entry group="0028" element="1040" vr="CS" vm="1" retired="false" version="3">
+    <description>Pixel Intensity Relationship</description>
+  </entry>
+  <entry group="0028" element="1041" vr="SS" vm="1" retired="false" version="3">
+    <description>Pixel Intensity Relationship Sign</description>
+  </entry>
+  <entry group="1000" element="xxx0" vr="US" vm="3" retired="true" version="2">
+    <description>Escape Triplet</description>
+  </entry>
+  <entry group="1000" element="xxx1" vr="US" vm="3" retired="true" version="2">
+    <description>Run Length Triplet</description>
+  </entry>
+  <entry group="1000" element="xxx2" vr="US" vm="1" retired="true" version="2">
+    <description>Huffman Table Size</description>
+  </entry>
+  <entry group="1000" element="xxx3" vr="US" vm="3" retired="true" version="2">
+    <description>Huffman Table Triplet</description>
+  </entry>
+  <entry group="1000" element="xxx4" vr="US" vm="1" retired="true" version="2">
+    <description>Shift Table Size</description>
+  </entry>
+  <entry group="1000" element="xxx5" vr="US" vm="3" retired="true" version="2">
+    <description>Shift Table Triplet</description>
+  </entry>
+  <entry group="1010" element="xxxx" vr="US" vm="1-n" retired="true" version="2">
+    <description>Zonal Map</description>
+  </entry>
+  <entry group="60xx" element="0052" vr="US" vm="1" retired="false" version="3">
+    <description>Overlay Plane Origin</description>
+  </entry>
+  <entry group="60xx" element="0060" vr="CS" vm="1" retired="true" version="2">
+    <description>Overlay Compression Code</description>
+  </entry>
+  <entry group="60xx" element="0061" vr="SH" vm="1" retired="true" version="2">
+    <description>Overlay Compression Originator</description>
+  </entry>
+  <entry group="60xx" element="0062" vr="SH" vm="1" retired="true" version="2">
+    <description>Overlay Compression Label</description>
+  </entry>
+  <entry group="60xx" element="0063" vr="CS" vm="1" retired="true" version="2">
+    <description>Overlay Compression Description</description>
+  </entry>
+  <entry group="60xx" element="0066" vr="AT" vm="1-n" retired="true" version="2">
+    <description>Overlay Compression Step Pointers</description>
+  </entry>
+  <entry group="60xx" element="0068" vr="US" vm="1" retired="true" version="2">
+    <description>Overlay Repeat Interval</description>
+  </entry>
+  <entry group="60xx" element="0069" vr="US" vm="1" retired="true" version="2">
+    <description>Overlay Bits Grouped</description>
+  </entry>
+  <entry group="60xx" element="0100" vr="US" vm="1" retired="false" version="3">
+    <description>Overlay Bits Allocated</description>
+  </entry>
+  <entry group="60xx" element="0102" vr="US" vm="1" retired="false" version="3">
+    <description>Overlay Bit Position</description>
+  </entry>
+  <entry group="60xx" element="0110" vr="CS" vm="1" retired="true" version="2">
+    <description>Overlay Format</description>
+  </entry>
+  <entry group="60xx" element="0200" vr="US" vm="1" retired="true" version="2">
+    <description>Overlay Location</description>
+  </entry>
+  <entry group="60xx" element="0800" vr="CS" vm="1-n" retired="true" version="2">
+    <description>Overlay Code Label</description>
+  </entry>
+  <entry group="60xx" element="0802" vr="US" vm="1" retired="true" version="2">
+    <description>Overlay Number of Tables</description>
+  </entry>
+  <entry group="60xx" element="0803" vr="AT" vm="1-n" retired="true" version="2">
+    <description>Overlay Code Table Location</description>
+  </entry>
+  <entry group="60xx" element="0804" vr="US" vm="1" retired="true" version="2">
+    <description>Overlay Bits For Code Word</description>
+  </entry>
+  <entry group="60xx" element="1001" vr="CS" vm="1" retired="false" version="3">
+    <description>Overlay Activation Layer</description>
+  </entry>
+  <entry group="7fe0" element="0010" vr="OB_OW" vm="1" retired="false" version="3">
+    <description>Pixel Data</description>
+  </entry>
+  <entry group="7fe0" element="0020" vr="OW" vm="1" retired="true" version="2">
+    <description>Coefficients SDVN</description>
+  </entry>
+  <entry group="7fe0" element="0030" vr="OW" vm="1" retired="true" version="2">
+    <description>Coefficients SDHN</description>
+  </entry>
+  <entry group="7fe0" element="0040" vr="OW" vm="1" retired="true" version="2">
+    <description>Coefficients SDDN</description>
+  </entry>
+  <entry group="7fxx" element="0010" vr="OB_OW" vm="1" retired="true" version="2">
+    <description>Variable Pixel Data</description>
+  </entry>
+  <entry group="7fxx" element="0011" vr="US" vm="1" retired="true" version="2">
+    <description>Variable Next Data Group</description>
+  </entry>
+  <entry group="7fxx" element="0020" vr="OW" vm="1" retired="true" version="2">
+    <description>Variable Coefficients SDVN</description>
+  </entry>
+  <entry group="7fxx" element="0030" vr="OW" vm="1" retired="true" version="2">
+    <description>Variable Coefficients SDHN</description>
+  </entry>
+  <entry group="7fxx" element="0040" vr="OW" vm="1" retired="true" version="2">
+    <description>Variable Coefficients SDDN</description>
+  </entry>
+</dict>

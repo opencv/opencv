@@ -1,0 +1,40 @@
+How to compile the library under MS VC++ 6.0
+--------------------------------------------
+
+The library comes in two versions : 
+- a static library that can be linked against any C/C++ program
+- a Dynamic Link Library (Windows DLL) that can be used in any C/C++ program and in most interpreted languages (e.g. VB, C#, ...). 
+
+In order to compile the library version *or* the DLL version, you will have to : 
+
+1) Open the MSVC workspace named LibOpenJPEG.dsw
+2) Set the choosen target as the active project, that means : 
+ a) Go to the Menu 'Build -> Set Active Configuration'
+ b) Choose one of the following configuration : 
+ - DllOpenJPEG - Win32 Release => creates a DLL in release mode named OpenJPEG.dll
+ - DllOpenJPEG - Win32 Debug => creates a DLL in debug mode named OpenJPEGd.dll 
+ - LibOpenJPEG - Win32 Release => creates a static library in release mode named LibOpenJPEG.lib
+ - LibOpenJPEG - Win32 Debug => creates a static library in debug mode named LibOpenJPEGd.lib
+3) Build the project : Menu -> Build -> Rebuild All
+
+The build process will create a directory named 'dist' that will contain all you need in order to use the library. 
+
+Simple codec compilation
+------------------------
+
+Once you've built the library, you might want to test it with a basic codec. To do this, go to the codec directory and use one of the following projects to build an encoder and decoder respectively:
+- image_to_j2k.dsw
+- j2k_to_image.dsw
+
+IMPORTANT NOTE : 
+----------------
+
+The encoder and decoder samples are configured to use the static version of the library. A link to the LibOpenJPEG static project is included in these projects so that you can build both a codec and the library in a single pass. 
+
+However, you MUST NOTE that in order to use LibOpenJPEG as a static library in your program, you NEED to add the following compiler directive to your project : OPJ_STATIC
+Look at the menu 'Project -> Settings -> C/C++ tab -> preprocessor definition' to see how this is configured. 
+When using OpenJPEG as a DLL, this compiler directive MUST NOT be used. 
+
+
+
+

@@ -1,0 +1,76 @@
+#region License
+/*=========================================================================
+
+  BSD License [http://www.opensource.org/licenses/bsd-license.php]
+  Copyright (c) 2006-2011 Mathieu Malaterre
+  All rights reserved.
+  See Copyright.txt or http://gdcm.sourceforge.net/Copyright.html for details.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+
+ * Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+ * Neither name of Mathieu Malaterre, or CREATIS, nor the names of any
+   contributors (CNRS, INSERM, UCB, Universite Lyon I), may be used to
+   endorse or promote products derived from this software without specific
+   prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS''
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+=========================================================================*/
+#endregion License
+
+using System.Reflection;
+using System.Runtime.CompilerServices;
+
+// Information about this assembly is defined by the following
+// attributes.
+//
+// change them to the information which is associated with the assembly
+// you compile.
+
+[assembly: AssemblyTitle("GDCM Framework Binding For .NET")]
+[assembly: AssemblyDescription("GDCM Framework Binding For .NET")]
+[assembly: AssemblyConfiguration("Retail")]
+[assembly: AssemblyCompany("GDCM -- http://gdcm.sourceforge.net")]
+[assembly: AssemblyProduct("gdcm-sharp.dll")]
+[assembly: AssemblyDefaultAlias("gdcm-sharp")]
+[assembly: AssemblyCopyright("Copyright ©2006-2011 Mathieu Malaterre. All rights reserved.")]
+[assembly: AssemblyTrademark("GDCM -- http://gdcm.sourceforge.net")]
+[assembly: AssemblyCulture("")]
+
+// The assembly version has following format :
+//
+// Major.Minor.Build.Revision
+//
+// You can specify all values by your own or you can build default build and revision
+// numbers with the '*' character (the default):
+
+[assembly: AssemblyVersion("@GDCM_API_VERSION@")]
+[assembly: AssemblyFileVersion("@GDCM_API_VERSION@")]
+[assembly: AssemblyInformationalVersion("@GDCM_API_VERSION@")]
+
+// The following attributes specify the key for the sign of your assembly. See the
+// .NET Framework documentation for more information about signing.
+// This is not required, if you don't want signing let these attributes like they're.
+[assembly: AssemblyDelaySign(false)]
+// http://msdn.microsoft.com/en-us/library/6f05ezxy(VS.80).aspx
+[assembly: AssemblyKeyFile("key.snk")]
+//[assembly: AssemblyKeyFile("")]
+//[assembly: AssemblyKeyName("GDCM Key")]
+//[assembly: AssemblyKeyName("")]

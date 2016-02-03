@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="gdcm2html.xsl"
+?><!--
+  Program: GDCM (Grassroots DICOM). A DICOM library
+
+  Copyright (c) 2006-2011 Mathieu Malaterre
+  All rights reserved.
+  See Copyright.txt or http://gdcm.sourceforge.net/Copyright.html for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+-->
+<dict edition="2007" ref="http://www.agfa.com/germany/de/binaries/001126_IMPAX_6.2_Solution_tcm181-29471.pdf">
+<!-- Attribute Name DICOM Tag DICOM VR DICOM VM DICOM Private Creator -->
+  <entry group="0029" element="xx00" vr="OB" vm="1" owner="Mitra Object Document 1.0" name="IMPAX object document"/>
+  <entry group="0029" element="xx10" vr="OB" vm="1" owner="Mitra Object Document 1.0" name="IMPAX markup XML stored"/>
+  <entry group="0029" element="xx00" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup1"/>
+  <entry group="0029" element="xx01" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup2"/>
+  <entry group="0029" element="xx02" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup3"/>
+  <entry group="0029" element="xx03" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup4"/>
+  <entry group="0029" element="xx04" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup5"/>
+  <entry group="0029" element="xx05" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup6"/>
+  <entry group="0029" element="xx06" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup7"/>
+  <entry group="0029" element="xx07" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup8"/>
+  <entry group="0029" element="xx08" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup9"/>
+  <entry group="0029" element="xx09" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup10"/>
+  <entry group="0029" element="xx10" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup11"/>
+  <entry group="0029" element="xx11" vr="OB" vm="1-n" owner="Mitra Markup 1.0" name="Markup12"/>
+  <entry group="0029" element="xx12" vr="OB" vm="1" owner="Mitra Markup 1.0" name="Markup13"/>
+  <entry group="0029" element="xx13" vr="OB" vm="1" owner="Mitra Markup 1.0" name="Markup14"/>
+  <entry group="0029" element="xx14" vr="OB" vm="1" owner="Mitra Markup 1.0" name="Markup15"/>
+  <entry group="0029" element="xx00" vr="CS" vm="1" owner="Mitra Presentation 1.0" name="Mitra Rotation"/>
+  <entry group="0029" element="xx01" vr="LO" vm="1" owner="Mitra Presentation 1.0" name="Mitra Window Width"/>
+  <entry group="0029" element="xx02" vr="LO" vm="1" owner="Mitra Presentation 1.0" name="Mitra Window Centre"/>
+  <entry group="0029" element="xx03" vr="IS" vm="1" owner="Mitra Presentation 1.0" name="Mitra Invert"/>
+  <entry group="0029" element="xx04" vr="IS" vm="1" owner="Mitra Presentation 1.0" name="Mitra Has Tabstop"/>
+  <entry group="0029" element="xx05" vr="CS" vm="1" owner="Mitra Presentation 1.0" name="Smooth Rotation"/>
+</dict>

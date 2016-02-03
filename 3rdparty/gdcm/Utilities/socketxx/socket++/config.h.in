@@ -1,0 +1,135 @@
+/* socket++/config.h.in.  Generated from configure.in by autoheader.  */
+/* Define if extern "C" is needed arround include files */
+#define EXTERN_C_BEGIN @EXTERN_C_BEGIN@
+#define EXTERN_C_END @EXTERN_C_END@
+
+/* Define whether or not system has strsignal */
+#cmakedefine SOCKETXX_HAVE_STRSIGNAL
+
+#ifndef SOCKETXX_HAVE_STRSIGNAL
+/* Define either as _sys_siglist or sys_siglist */
+#define SYS_SIGLIST @SYS_SIGLIST@
+#endif
+
+/* Define the argument type for signal handler function */
+#define SIGHND_ARGTYPE @SIGHND_ARGTYPE@
+
+/* Define either as _sys_errlist or sys_errlist */
+#define SYS_ERRLIST @SYS_ERRLIST@
+
+/* Define SYS_ERRLIST_DECLARED if extern char* SYS_ERRLIST []; is found */
+#define SYS_ERRLIST_DECLARED @SYS_ERRLIST_DECLARED@
+
+/* Define SA_RESTART if it is not defined in sys/signal.h */
+#cmakedefine SA_RESTART
+
+/* Define if you have libg++ */
+#define _S_LIBGXX @_S_LIBGXX@
+
+/* Version */
+#cmakedefine SOCKET_MAJOR_VERSION
+#cmakedefine SOCKET_MINOR_VERSION
+#cmakedefine SOCKET_MICRO_VERSION
+
+/* Configuration Options */
+#cmakedefine ENABLE_DEBUG
+
+#cmakedefine GDCM_BUILD_SHARED_LIBS
+
+
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#define HAVE_DLFCN_H @HAVE_DLFCN_H@
+
+/* Define to 1 if you have the `fork' function. */
+#define HAVE_FORK @HAVE_FORK@
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#define HAVE_INTTYPES_H @HAVE_INTTYPES_H@
+
+/* Define to 1 if you have the <memory.h> header file. */
+#define HAVE_MEMORY_H @HAVE_MEMORY_H@
+
+/* Define to 1 if you have the `select' function. */
+#define HAVE_SELECT @HAVE_SELECT@
+
+/* Define to 1 if you have the <sstream> header file. */
+#define HAVE_SSTREAM @HAVE_SSTREAM@
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#define HAVE_STDINT_H @HAVE_STDINT_H@
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#define HAVE_STDLIB_H @HAVE_STDLIB_H@
+
+/* Define to 1 if you have the <string> header file. */
+#define HAVE_STRING @HAVE_STRING@
+
+/* Define to 1 if you have the <strings.h> header file. */
+#define HAVE_STRINGS_H @HAVE_STRINGS_H@
+
+/* Define to 1 if you have the <string.h> header file. */
+#define HAVE_STRING_H @HAVE_STRING_H@
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#define HAVE_SYS_STAT_H @HAVE_SYS_STAT_H@
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#define HAVE_SYS_TYPES_H @HAVE_SYS_TYPES_H@
+
+/* Define to 1 if you have <sys/wait.h> that is POSIX.1 compatible. */
+#define HAVE_SYS_WAIT_H @HAVE_SYS_WAIT_H@
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#define HAVE_UNISTD_H @HAVE_UNISTD_H@
+
+/* Define to 1 if you have the `vfork' function. */
+#define HAVE_VFORK @HAVE_VFORK@
+
+/* Define to 1 if you have the <vfork.h> header file. */
+#define HAVE_VFORK_H @HAVE_VFORK_H@
+
+/* Define to 1 if `fork' works. */
+#define HAVE_WORKING_FORK @HAVE_WORKING_FORK@
+
+/* Define to 1 if `vfork' works. */
+#define HAVE_WORKING_VFORK @HAVE_WORKING_VFORK@
+
+/* Name of package */
+#define PACKAGE "@PACKAGE@"
+
+/* Define to the address where bug reports for this package should be sent. */
+#define PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME "@PACKAGE_NAME@"
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING "@PACKAGE_STRING@"
+
+/* Define to the one symbol short name of this package. */
+#define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
+
+/* Define to the home page for this package. */
+#define PACKAGE_URL "@PACKAGE_URL@"
+
+/* Define to the version of this package. */
+#define PACKAGE_VERSION "@PACKAGE_VERSION@"
+
+/* Define as the return type of signal handlers (`int' or `void'). */
+#define RETSIGTYPE @RETSIGTYPE@
+
+/* Define to 1 if you have the ANSI C header files. */
+#ifndef STDC_HEADERS
+#define STDC_HEADERS @STDC_HEADERS@
+#endif
+
+/* Version number of package */
+#define VERSION "@VERSION@"
+
+/* Define to `int' if <sys/types.h> does not define. */
+#cmakedefine pid_t
+
+/* Define as `fork' if `vfork' does not work. */
+#cmakedefine vfork
+#include <local.h>

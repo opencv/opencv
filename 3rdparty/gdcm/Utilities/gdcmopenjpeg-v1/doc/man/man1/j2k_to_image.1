@@ -1,0 +1,109 @@
+'\" t
+'\" The line above instructs most `man' programs to invoke tbl
+'\"
+'\" Separate paragraphs; not the same as PP which resets indent level.
+.de SP
+.if t .sp .5
+.if n .sp
+..
+'\"
+'\" Replacement em-dash for nroff (default is too short).
+.ie n .ds m " -
+.el .ds m \(em
+'\"
+'\" Placeholder macro for if longer nroff arrow is needed.
+.ds RA \(->
+'\"
+'\" Decimal point set slightly raised
+.if t .ds d \v'-.15m'.\v'+.15m'
+.if n .ds d .
+'\"
+'\" Enclosure macro for examples
+.de EX
+.SP
+.nf
+.ft CW
+..
+.de EE
+.ft R
+.SP
+.fi
+..
+.TH j2k_to_image 1 "Version 1.4.0" "j2k_to_image" "converts jpeg2000 files"
+.P
+.SH NAME
+j2k_to_image - 
+This program reads in a jpeg2000 image and converts it to another 
+image type. It is part of the OpenJPEG library.
+.SP
+Valid input image extensions are
+.B .j2k, .jp2, .j2c, .jpt
+.SP
+Valid output image extensions are
+.B .bmp, .pgm, .pgx, .png, .pnm, .ppm, .raw, .tga, .tif \fR. For PNG resp. TIF it needs libpng resp. libtiff .
+.SH SYNOPSIS
+.P
+.B j2k_to_image -i \fRinfile.j2k \fB-o \fRoutfile.png
+.P
+.B j2k_to_image -ImgDir \fRimages/ \fB-OutFor \fRbmp
+.P
+.B j2k_to_image -h  \fRPrint help message and exit
+.P
+.R See JPWL OPTIONS for special options
+.SH OPTIONS
+.TP
+.B \-\^i "name"
+(jpeg2000 input file name)
+.TP
+.B \-\^l "n"
+n is the maximum number of quality layers to decode. See LAYERS below)
+.TP
+.B \-\^o "name"
+(output file name with extension)
+.TP
+.B \-\^r "n"
+(n is the highest resolution level to be discarded. See REDUCTION below)
+.TP
+.B \-\^x "name"
+(use name as index file and fill it)
+.TP
+.B \-\^ImgDir "directory_name"
+(directory containing input files)
+.TP
+.B \-\^OutFor "ext"
+(extension for output files)
+.P
+.SH JPWL OPTIONS
+Options usable only if the library has been compiled with
+.B -DUSE_JPWL
+.TP
+.B -W c\fR[=Nc] (Nc is the  number of expected components in the codestream; default:3)
+.TP
+.B -W t\fR[=Nt] (Nt is the maximum number of tiles in the codestream; default:8192)
+.TP
+.B -W c\fR[=Nc]\fB, t\fR[=Nt] \fR(same as above)
+.P
+.SH REDUCTION
+Set the number of highest resolution levels to be discarded.
+The image resolution is effectively divided by 2 to the power of the number of discarded levels. The reduce factor is limited by the smallest total number of decomposition levels among tiles.
+.SH TILES
+Set the maximum number of quality layers to decode. If there are less quality layers than the specified number, all the quality layers are decoded.
+.P
+'\".SH BUGS
+.SH AUTHORS
+Copyright (c) 2002-2007, Communications and Remote Sensing Laboratory, Universite catholique de Louvain (UCL), Belgium
+.br
+Copyright (c) 2002-2007, Professor Benoit Macq
+.br
+Copyright (c) 2001-2003, David Janssens
+.br
+Copyright (c) 2002-2003, Yannick Verschueren
+.br
+Copyright (c) 2003-2007, Francois-Olivier Devaux and Antonin Descampe
+.br
+Copyright (c) 2005, Herve Drolon, FreeImage Team
+.br
+Copyright (c) 2006-2007, Parvatha Elangovan
+.P
+.SH "SEE ALSO"
+image_to_j2k(1) j2k_dump(1)

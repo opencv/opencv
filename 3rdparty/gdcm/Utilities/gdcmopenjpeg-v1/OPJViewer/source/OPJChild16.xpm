@@ -1,0 +1,28 @@
+/* XPM */
+static char *OPJChild16[] = {
+/* columns rows colors chars-per-pixel */
+"16 16 6 1",
+"  c black",
+". c #008000",
+"X c red",
+"o c #800080",
+"O c gray100",
+"+ c None",
+/* pixels */
+"++++++++++++++++",
+"+OOOOOOOOOOOOOO+",
+"+OooooooooooooO+",
+"+OooooooooooooO+",
+"+OooOOOOOOOOOoO+",
+"+OooO.......OoO+",
+"+OooO.......OoO+",
+"+OooO..OOO..OoO+",
+"+OooO..OXO..OoO+",
+"+OooO..OOO..OoO+",
+"+OooO.......OoO+",
+"+OooO.......OoO+",
+"+OooOOOOOOOOOoO+",
+"+OooooooooooooO+",
+"+OOOOOOOOOOOOOO+",
+"++++++++++++++++"
+};

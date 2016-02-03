@@ -1,0 +1,36 @@
+See the wiki page at:
+http://gdcm.sourceforge.net/wiki/index.php/Getting_Started
+
+If you are reading this file, it certainly means you do not know how to build GDCM. See:
+http://gdcm.sourceforge.net/wiki/index.php/Configuring_and_Building
+
+On UNIX (with cmake) this is simply a matter of doing:
+ * git clone --branch release git://git.code.sf.net/p/gdcm/gdcm
+ * mkdir gdcmbin
+ * cd gdcmbin
+ * ccmake ../gdcm
+   [select your configuration]
+ * Press 'c' (configure), Press 'g' (generate)
+ * make
+The following step is not required, as gdcm will work from a build tree too:
+ * make install
+
+If you want to live on the edge, you should try the latest trunk instead:
+
+ * git clone git://git.code.sf.net/p/gdcm/gdcm
+
+If you want to retrieve the gdcmData as part of your git clone, use instead:
+
+ * git clone --recursive git://git.code.sf.net/p/gdcm/gdcm
+
+Major options explained:
+* GDCM_BUILD_SHARED_LIBS: Turn it on if you want shared libs (instead of static libs), greatly reduce executable size, allowing code reuse.
+* GDCM_WRAP_PYTHON: turn it on if you want to be able to access the GDCM API via python (required python dev files)
+* GDCM_WRAP_CSHARP: turn it on if you want to be able to access the GDCM API via C# (required mono or .NET environment)
+* GDCM_WRAP_JAVA: turn it on if you want to be able to access the GDCM API via java (required java sdk to compile)
+* GDCM_WRAP_PHP: turn it on if you want to be able to access the GDCM API via php (experimental)
+* GDCM_USE_VTK: turn if on if you want to be able to load DICOM file in VTK context (requires VTK)
+* GDCM_BUILD_APPLICATIONS: turn it on if you want the build gdcm applications (gdcmdump, gdcmconv, gdcminfo ...)
+* GDCM_BUILD_TESTING: Turn it on if you want to be able to exectute GDCM testing suite
+* GDCM_DOCUMENTATION: turn it on if you want to generate the developer documentation (require doxygen)
+* GDCM_BUILD_EXAMPLES: turn it on if you want to build simple examples that demonstrates GDCM usage.

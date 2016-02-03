@@ -1,0 +1,396 @@
+/*!
+
+\page gdcmconv Tool to convert DICOM to DICOM.
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcmconv [options] file-in file-out
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcmconv command line program takes as input a DICOM file (file-in) and
+process it to generate an output DICOM file (file-out).
+The command line option dictate the type of operation(s) gdcmconv will use to
+generate the output file.
+
+\section parameters PARAMETERS
+
+\verbatim
+file-in   DICOM input filename
+
+file-out  DICOM output filename
+\endverbatim
+
+\section options OPTIONS
+
+\subsection parameters parameters
+\verbatim
+  -i --input      DICOM filename
+  -o --output     DICOM filename
+\endverbatim
+
+\subsection options options
+\verbatim
+  -X --explicit            Change Transfer Syntax to explicit.
+  -M --implicit            Change Transfer Syntax to implicit.
+  -U --use-dict            Use dict for VR (only public by default).
+     --with-private-dict   Use private dict for VR (advanced user only).
+  -C --check-meta          Check File Meta Information (advanced user only).
+     --root-uid            Root UID.
+     --remove-gl           Remove group length (deprecated in DICOM 2008).
+     --remove-private-tags Remove private tags.
+     --remove-retired      Remove retired tags.
+\endverbatim
+
+\subsection image_options image options
+\verbatim
+  -l --apply-lut                      Apply LUT (non-standard, advanced user only).
+  -P --photometric-interpretation %s  Change Photometric Interpretation (when possible).
+  -w --raw                            Decompress image.
+  -d --deflated                       Compress using deflated (gzip).
+  -J --jpeg                           Compress image in jpeg.
+  -K --j2k                            Compress image in j2k.
+  -L --jpegls                         Compress image in jpeg-ls.
+  -R --rle                            Compress image in rle (lossless only).
+  -F --force                          Force decompression/merging before recompression/splitting.
+     --generate-icon                  Generate icon.
+     --icon-minmax %d,%d              Min/Max value for icon.
+     --icon-auto-minmax               Automatically commpute best Min/Max values for icon.
+     --compress-icon                  Decide whether icon follows main TransferSyntax or remains uncompressed.
+     --planar-configuration [01]      Change planar configuration.
+  -Y --lossy                          Use the lossy (if possible) compressor.
+  -S --split %d                       Write 2D image with multiple fragments (using max size)
+\endverbatim
+
+\subsection jpeg_options JPEG options
+\verbatim
+  -q --quality %*f           set quality.
+\endverbatim
+
+\subsection jpegls_options JPEG-LS options
+\verbatim
+  -e --lossy-error %*i       set error.
+\endverbatim
+
+\subsection j2k_options J2K options
+\verbatim
+  -r --rate    %*f           set rate.
+  -q --quality %*f           set quality.
+  -t --tile %d,%d            set tile size.
+  -n --number-resolution %d  set number of resolution.
+     --irreversible          set irreversible.
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\subsection special_options special options
+\verbatim
+  -I --ignore-errors   convert even if file is corrupted (advanced users only, see disclaimers).
+\endverbatim
+
+\subsection environment_variable environment variable
+\verbatim
+  GDCM_ROOT_UID Root UID
+\endverbatim
+
+\section simple_usage Simple usage
+\b gdcmconv is a great tool to convert broken DICOM implementation into
+properly parsable DICOM file. Usage is simply:
+
+\verbatim
+$ gdcmconv input.dcm output.dcm
+\endverbatim
+
+or if you prefer being explicit:
+
+\verbatim
+$ gdcmconv -i input.dcm -o output.dcm
+\endverbatim
+
+Even though gdcmconv can overwrite directly on the same file (input.dcm =
+output.dcm), it is recommended that user should first convert into a different
+file to make sure the bug is properly handled by GDCM.
+
+Typical cases where you would want to use gdcmconv in its simple form:
+
+\li convert non-cp246 conforming file into conforming cp246,
+\li convert implicit little endian transfer syntax file meta header into proper explicit little endian transfer syntax,
+\li convert the GE-13 bytes bug,
+\li convert dual syntax file: implicit/explicit,
+\li convert Philips dual Little Endian/Big Endian file,
+\li convert GDCM 1.2.0 broken UN-2-bytes fields,
+\li \&...
+\li All other broken files listed in the supported section.
+
+When no option other is used, only the dataset is inspected. So encapsulated
+Pixel Data, for instance, is not inspected for well known bugs.
+
+When doing this kind of work, this is usually a good idea to perform some kind
+of quality control, see gdcmconv Quality Control section (down below).
+
+\section usage Typical usage
+\subsection file_meta File Meta Header
+
+Running
+
+\verbatim
+$ gdcmconv input.dcm output.dcm
+\endverbatim
+
+Is not enough to recompute file meta header, when input file is buggy. You may
+want to use: --check-meta
+
+\verbatim
+$ gdcmconv --check-meta input.dcm output.dcm
+\endverbatim
+
+See typical cases such as: GE_DLX-8-MONO2-PrivateSyntax.dcm or
+PICKER-16-MONO2-No_DicomV3_Preamble.dcm from gdcmData.
+
+\subsection explicit Conversion to Explicit Transfer Syntax
+
+To convert a file that was written using Implicit Transfer Syntax into Explicit
+Transfer Syntax simply use:
+
+\verbatim
+$ gdcmconv --explicit uncompressed.dcm compressed.dcm
+\endverbatim
+
+\subsection lossless_jpeg Compressing to lossless JPEG
+To compress an uncompressed DICOM file to a JPEG Lossless encapsulated format:
+
+\verbatim
+$ gdcmconv --jpeg uncompressed.dcm compressed.dcm
+\endverbatim
+
+\subsection lossy_jpeg Compressing to lossy JPEG
+To compress an uncompressed DICOM file to a JPEG Lossy encapsulated format:
+
+\verbatim
+$ gdcmconv --lossy --jpeg -q 90 uncompressed.dcm compressed.dcm
+\endverbatim
+
+Note:
+
+    * -q is just one of the many way to specify lossy quality, you need to inspect the other cmd line flag to specify lossyness properties.
+
+\subsection lossless_jpegls Compressing to lossless JPEG-LS
+
+To compress an uncompressed DICOM file to a JPEG-LS Lossless encapsulated
+format:
+
+\verbatim
+$ gdcmconv --jpegls uncompressed.dcm compressed.dcm
+\endverbatim
+
+\subsection lossy_jpegls Compressing to lossy JPEG-LS
+
+To compress an uncompressed DICOM file to a JPEG-LS Lossy encapsulated format:
+
+\verbatim
+$ gdcmconv --lossy --jpegls -e 2 uncompressed.dcm lossy_compressed.dcm
+\endverbatim
+
+Note:
+
+  -e (or --lossy-error) means that the maximum tolerate error is 2 for each pixel value
+
+\subsection lossless_j2k Compressing to lossless J2K
+
+To compress an uncompressed DICOM file to a JPEG-2000 Lossless encapsulated
+format:
+
+\verbatim
+$ gdcmconv --j2k uncompressed.dcm compressed.dcm
+\endverbatim
+
+\subsection lossy_j2k Compressing to lossy J2K
+
+To compress an uncompressed DICOM file to a JPEG-2000 Lossy encapsulated
+format:
+
+\verbatim
+$ gdcmconv --lossy -q 55,50,45 --j2k uncompressed.dcm lossy_compressed.dcm
+\endverbatim
+
+Note:
+
+    * -q is just one of the many way to specify lossy quality, you need to inspect the other cmd line flag to specify lossyness properties.
+
+\subsection lossless_rle Compressing to lossless RLE
+
+To compress an uncompressed DICOM file to a RLE Lossless encapsulated format:
+
+\verbatim
+$ gdcmconv --rle uncompressed.dcm compressed.dcm
+\endverbatim
+
+There is no such thing as lossy RLE compression.
+
+\subsection split_encapsulated Split encapsulated DICOM:
+
+To split an encapsulated stream into smaller chunk (1024 bytes each):
+
+\verbatim
+$ gdcmconv --split 1024 rle.dcm rle_1024.dcm
+\endverbatim
+
+If an odd number of bytes is passed it will be rounded down to the next even
+number (eg. 1025 -> 1024) since DICOM only allow even number for Value Length.
+
+\subsection force Forcing (re)compression
+
+Sometime it is necessary to use the --force option. By default when user
+specify --j2k and input file is already in JPEG 2000 encapsulated DICOM format
+then no operation takes places. By using --force you make sure that
+(re)compression operation takes places.
+
+Real life example of why you would use --force:
+\li When Pixel Data is missing data / is padded with junk
+\li When you would like to make sure GDCM can handle decompression & recompression cycle
+
+\subsection decompress_raw Decompressing a Compressed DICOM
+
+\verbatim
+$ gdcmconv --raw compressed.dcm uncompressed.dcm
+\endverbatim
+
+\subsection compress_icon Compressing an uncompressed Icon
+
+By default when compressing a DICOM Image file, gdcmconv will not compress the
+icon.  A user option needs to be turned on to explicitly force the compression
+of the Icon Image Sequence Pixel Data
+
+For example, by default we will not compress the Icon Image Sequence Pixel Data
+attribute:
+
+\verbatim
+$ gdcmconv --jpeg gdcmData/simpleImageWithIcon.dcm uncompressed_icon.dcm
+\endverbatim
+
+In the following example we will explicitly compress the Icon Image Sequence
+Pixel Data attibute. In that case the same Transfer Syntax is being used for
+both the main Pixel Data and the Pixel Data from the Icon Image Sequence:
+
+\verbatim
+$ gdcmconv --jpeg --compress-icon gdcmData/simpleImageWithIcon.dcm compressed_icon.dcm
+\endverbatim
+
+\subsection generate_icon Generating an Icon
+
+For some application it might be necessary to produce a small preview of the main image
+to be able to quickly load that short preview instead of the main image. In that case:
+
+\verbatim
+$ gdcmconv --raw --generate-icon gdcmData/test.acr test_icon.dcm
+\endverbatim
+
+In some cases the main Pixel Data element is expressed as pixel defined on
+16bits. Since Icon can only store at most pixel of size 8bits, a rescale
+operation needs to take place.  In order to properly select a better interval
+for doing the rescale operation user can specify the min max used for the
+rescale operation:
+
+\verbatim
+$ gdcmconv --raw --generate-icon --icon-minmax 0,192 gdcmData/012345.002.050.dcm icon_minmax.dcm
+\endverbatim
+
+\subsection planar_configuration Changing the planar Configuration
+
+Often RLE files are compressed using a different Planar Configuration (RRR ...
+GGG... BBB...) instead of the usual triplet (RGB ... RGB ... RGB ). So upon
+decompression the Planar Configuration is 1. This is perfectly legal in DICOM,
+however this is unconventional, and thus it may be a good idea to also change
+the planar configuration and set it to the default :
+
+\verbatim
+$ gdcmconv --raw --planar-configuration 0 compressed.dcm uncompressed1.dcm
+\endverbatim
+
+To reinvert the planar configuration of file 'uncompressed1.dcm', simply do:
+
+\verbatim
+$ gdcmconv --raw --planar-configuration 1 uncompressed1.dcm uncompressed2.dcm
+\endverbatim
+
+\section lossless_conversion Lossless Conversion
+
+When talking about lossless conversion, there is an ambiguity that need to be
+understood. To achieve higher compression ratio, the RGB color space is usually
+not used, in favor of a YBR one. Changing from one color space to the other is
+(bit level) not lossless.
+
+For more detail, see what are the true lossless transformations as described:
+
+http://gdcm.sourceforge.net/wiki/index.php/Color_Space_Transformations
+
+\section quality_control Quality Control
+
+One important part when using gdcmconv it to have a way to quality control the
+output.
+
+You can use 3rd party tool to check the output of gdcmconv is correct.
+
+\subsection other_toolkit DCMTK / dicom3tools
+
+Using another DICOM implementation such as the one from DCMTK or dicom3tools
+can be a good process to check the output of gdcmconv.
+\li For DCMTK use: dcmdump
+\li For dicom3tools use: dcdump
+
+For reference, gdcmconv --raw will act as dcmdjpeg +cn +px, since it never
+tries to convert color space.
+
+\subsection vim VIM: vimdiff
+
+You can setup your favorite editor to compare the output, for instance in vim:
+
+\code
+autocmd BufReadPre *.dcm set ro
+autocmd BufReadPost *.dcm silent %!dcmdump -M +uc "%"
+\endcode
+
+then simply do:
+
+\code
+$ vimdiff input.dcm output.dcm
+\endcode
+
+\subsection binary_diff vbindiff
+
+On UNIX you can visually compare binary file using the vbindiff command:
+
+\code
+$ vbindiff input.dcm output.dcm
+\endcode
+
+\section see_also SEE ALSO
+
+<b>gdcmdump</b>(1), <b>gdcmraw</b>(1), <b>gdcminfo</b>(1), <b>gdcmdiff</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

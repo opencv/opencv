@@ -1,0 +1,68 @@
+/*!
+
+\page gdcmdiff dumps differences of two DICOM files
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcmdiff [options] file1 file2
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcmdiff command line program takes as input two DICOM files: file1 and
+file2.
+
+\section parameters PARAMETERS
+
+\verbatim
+file1   DICOM input filename
+
+file2   DICOM output filename
+\endverbatim
+
+\section options OPTIONS
+
+\subsection options options
+\verbatim
+  -m      --meta          Compare metainformation. Default is off.
+  -t <n>  --truncate <n>  String values trimmed to n characters.
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\section simple_usage Simple usage
+\b gdcmdiff is a great tool to produce a diff in between two DICOM files. Usage
+is simply:
+
+\verbatim
+$ gdcmdiff input1.dcm input2.dcm
+\endverbatim
+
+\section see_also SEE ALSO
+
+<b>gdcmdump</b>(1), <b>gdcminfo</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+*/

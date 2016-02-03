@@ -1,0 +1,139 @@
+{
+   <insert a suppression name here>
+   Memcheck:Param
+   write(buf)
+   fun:__write_nocancel
+   obj:/usr/X11R6/lib/libX11.so.6.2
+   fun:_X11TransWrite
+   obj:/usr/X11R6/lib/libX11.so.6.2
+}
+{
+   <insert a suppression name here>
+   Memcheck:Free
+   fun:free
+   fun:__GI__dl_deallocate_tls
+   fun:vgArch_thread_exit
+   fun:thread_exit_wrapper
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__cxa_get_globals
+   fun:_ZSt18uncaught_exceptionv
+   fun:_ZNSo6sentryD1Ev
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:XextCreateExtension
+   fun:__glXInitialize
+   fun:glXGetConfig
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:calloc
+   fun:_dlerror_run
+   fun:dlsym
+   fun:__errno_location
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:OpenDriver
+   fun:__glXRegisterExtensions
+   fun:__glXNewIndirectAPI
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_dl_map_object_internal
+   fun:openaux
+   fun:_dl_catch_error_internal
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_dl_map_object_deps_internal
+   fun:dl_open_worker
+   fun:_dl_catch_error_internal
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__glXstrdup
+   fun:OpenDriver
+   fun:__glXRegisterExtensions
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_dl_map_object_internal
+   fun:dl_open_worker
+   fun:_dl_catch_error_internal
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_dl_new_object
+   fun:_dl_map_object_from_fd
+   fun:_dl_map_object_internal
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:dl_open_worker
+   fun:_dl_catch_error_internal
+   fun:__GI__dl_open
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:calloc
+   fun:_dl_check_map_versions_internal
+   fun:dl_open_worker
+   fun:_dl_catch_error_internal
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:calloc
+   fun:_dl_new_object
+   fun:_dl_map_object_from_fd
+   fun:_dl_map_object_internal
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__glXNewIndirectAPI
+   fun:glXMakeCurrent
+   fun:_ZN22vtkXOpenGLRenderWindow11MakeCurrentEv
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__fgl_glapi_add_entrypoint
+   fun:__driRegisterExtensions
+   fun:__glXRegisterExtensions
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   obj:/lib/ld-2.3.6.so
+   obj:/lib/ld-2.3.6.so
+   obj:/lib/ld-2.3.6.so
+   obj:/lib/ld-2.3.6.so
+   obj:/lib/ld-2.3.6.so
+   obj:/lib/ld-2.3.6.so
+}

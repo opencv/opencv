@@ -1,0 +1,337 @@
+'\" t
+'\" The line above instructs most `man' programs to invoke tbl
+'\"
+'\" Separate paragraphs; not the same as PP which resets indent level.
+.de SP
+.if t .sp .5
+.if n .sp
+..
+'\"
+'\" Replacement em-dash for nroff (default is too short).
+.ie n .ds m " -
+.el .ds m \(em
+'\"
+'\" Placeholder macro for if longer nroff arrow is needed.
+.ds RA \(->
+'\"
+'\" Decimal point set slightly raised
+.if t .ds d \v'-.15m'.\v'+.15m'
+.if n .ds d .
+'\"
+'\" Enclosure macro for examples
+.de EX
+.SP
+.nf
+.ft CW
+..
+.de EE
+.ft R
+.SP
+.fi
+..
+.TH libopenjpeg 3 "Oct 2010" "Version 1.4.0" "Oct 2010"
+.P
+.SH NAME
+libopenjpeg - 
+a library for reading and writing JPEG2000 image files.
+.SP
+.SH SYNOPSIS
+.P
+.B #include <openjpeg.h>
+.P
+.SS CONVERSION FORMATS
+.B PGX: imagetopgx() \fR/\fB pgxtoimage()
+.P
+.B PXM: imagetopnm() \fR/\fB pnmtoimage()
+.P
+.B BMP: imagetobmp() \fR/\fB bmptoimage()
+.P
+.B TIF: imagetotif() \fR/\fB tiftoimage()
+.P
+.B RAW: imagetoraw() \fR/\fB rawtoimage()
+.P
+.B TGA: imagetotga() \fR/\fB tgatoimage()
+.P
+.B PNG: imagetopng() \fR/\fB pngtoimage()
+.P
+.B YUV: imagetoyuv() \fR/\fB yuvtoimage() \fR(MJ2) 
+.P
+.SS READ
+.B opj_set_default_decoder_parameters(opj_dparameters_t *\fIparams\fB);
+.P
+.B opj_dinfo_t *opj_create_decompress(OPJ_CODEC_FORMAT \fIformat\fB);
+.P
+.B opj_event_mgr_t *opj_set_event_mgr(opj_common_ptr \fIinfo\fB, opj_event_mgr_t *\fIevent_mgr\fB, void *\fIcontext\fB);
+.P
+.B void opj_setup_decoder(opj_dinfo_t *\fIdinfo\fB, opj_dparameters_t * \fIparams\fB);
+.P
+.B opj_cio_t *opj_cio_open(opj_common_ptr \fIinfo\fB, unsigned char *\fIbuf\fB, int \fIbuf_len\fB);
+.P
+.B opj_image_t *opj_decode(opj_dinfo_t *\fIdinfo\fB, opj_cio_t *\fIcio\fB);
+.P
+.B void opj_cio_close(opj_cio_t *\fIcio\fB);
+.P
+.B void opj_destroy_decompress(opj_dinfo_t *\fIdinfo\fB);
+.P
+.B void opj_image_destroy(opj_image_t *\fIimage\fB);
+.P
+.SS WRITE
+.B void opj_set_default_encoder_parameters(opj_cparameters_t *\fIparams\fB);
+.P
+/*
+.B opj_image_t *FORMATtoimage(const char *\fIfname\fB, opj_cparameters_t *\fIparams\fB);
+.P
+*/
+.br
+.B opj_cinfo_t* opj_create_compress(OPJ_CODEC_FORMAT \fIformat\fB);
+.P
+.B opj_event_mgr_t *opj_set_event_mgr(opj_common_ptr \fIinfo\fB, opj_event_mgr_t *\fIevent_mgr\fB, void *\fIcontext\fB);
+.P
+.B void opj_setup_encoder(opj_cinfo_t *\fIcinfo\fB, opj_cparameters_t *\fIparams\fB, opj_image_t *\fIimage\fB);
+.P
+.B opj_cio_t *opj_cio_open(opj_common_ptr \fIcinfo\fB, \fINULL\fB, \fI0\fB);
+.P
+.B  bool opj_encode(opj_cinfo_t *\fIcinfo\fB, opj_cio_t *\fIcio\fB, opj_image_t *\fIimage\fB, char *\fIindex\fB);
+.P
+.B void opj_cio_close(opj_cio_t *\fIcio\fB);
+.P
+.B void opj_destroy_compress(opj_cinfo_t *\fIcinfo\fB);
+.P
+.B void opj_image_destroy(opj_image_t *\fIimage\fB);
+.P
+.SS GENERAL
+.P
+.B void opj_image_create(int \fInumcmpts\fB, opj_image_cmptparm_t *\fIcmptparms\fB, OPJ_COLOR_SPACE \fIclrspc\fB);
+.P
+.B int cio_tell(opj_cio_t *\fIcio\fB);
+.P
+.B void cio_seek(opj_cio_t *\fIcio\fB, int \fIpos\fB);
+.P
+.B opj_image_t *opj_decode_with_info(opj_dinfo_t *\fIdinfo\fB, opj_cio_t *\fIcio\fB, opj_codestream_info_t *\fIcstr_info\fB);
+.P
+.B bool opj_encode_with_info(opj_cinfo_t *\fIcinfo\fB, opj_cio_t *\fIcio\fB, opj_image_t *\fIimage\fB, opj_codestream_info_t *\fIcstr_info\fB);
+.P
+.B void opj_destroy_cstr_info(opj_codestream_info_t *\fIcstr_info\fB);
+.P
+.B const char *opj_version(\fIvoid\fB);
+.P
+.SH OPJ_CODEC_FORMAT
+.P
+.B CODEC_J2K\fR or \fBCODEC_JPT\fR or \fBCODEC_JP2
+.P
+.SH OPJ_COLOR_SPACE
+.P
+.B CLRSPC_UNKNOWN\fR or \fBCLRSPC_UNSPECIFIED\fR or \fBCLRSPC_SRGB\fR or \fBCLRSPC_GRAY\fR or \fBCLRSPC_SYCC
+.P
+.SH DECOMPRESSION PARAMETERS
+.p
+typedef struct opj_dparameters 
+.br
+{
+    /*
+    Set the number of highest resolution levels to be discarded.
+    The image resolution is effectively divided by 2 to the power 
+    of the number of discarded levels.
+    The reduce factor is limited by the smallest total number of 
+    decomposition levels among tiles.
+    if != 0, then original dimension divided by 2^(reduce);
+    if == 0 or not used, image is decoded to the full resolution
+    */
+    \fBint\fR cp_reduce;
+    /*
+    Set the maximum number of quality layers to decode.
+    If there are less quality layers than the specified number, 
+    all the quality layers are decoded.
+    if != 0, then only the first "layer" layers are decoded;
+    if == 0 or not used, all the quality layers are decoded
+    */
+    \fBint\fR cp_layer;
+
+    /*command line encoder parameters (not used inside the library) */
+    /* input file name */
+    \fBchar\fR infile[OPJ_PATH_LEN];
+    /* output file name */
+    \fBchar\fR outfile[OPJ_PATH_LEN];
+    /* input file format: see OPJ_CODEC_FORMAT */
+    \fBint\fR decod_format;
+    /* output file format */
+    \fBint\fR cod_format;
+
+    /*JPWL decoding parameters */
+    /* activates the JPWL correction capabilities */
+    \fBbool\fR jpwl_correct;
+    /* expected number of components */
+    \fBint\fR jpwl_exp_comps;
+    /* maximum number of tiles */
+    \fBint\fR jpwl_max_tiles;
+
+    /*
+    Specify whether the decoding should be done on the entire 
+    codestream, or be limited to the main header
+    Limiting the decoding to the main header makes it possible 
+    to extract the characteristics of the codestream
+    if == NO_LIMITATION, the entire codestream is decoded;
+    if == LIMIT_TO_MAIN_HEADER, only the main header is decoded;
+    */
+    \fBOPJ_LIMIT_DECODING\fR cp_limit_decoding;
+.br
+} opj_dparameters_t;
+
+.SH COMPRESSION PARAMETERS
+.P
+typedef struct opj_cparameters 
+.br
+{
+    /* size of tile: tile_size_on = false (not in argument) 
+    or tile_size_on = true (in argument) */
+    \fBbool\fR tile_size_on;
+    /* XTOsiz */
+    \fBint\fR cp_tx0;
+    /* YTOsiz */
+    \fBint\fR cp_ty0;
+    /* XTsiz */
+    \fBint\fR cp_tdx;
+    /* YTsiz */
+    \fBint\fR cp_tdy;
+    /* allocation by rate/distortion */
+    \fBint\fR cp_disto_alloc;
+    /* allocation by fixed layer */
+    \fBint\fR cp_fixed_alloc;
+    /* add fixed_quality */
+    \fBint\fR cp_fixed_quality;
+    /* fixed layer */
+    \fBint *\fRcp_matrice;
+    /* comment for coding */
+    \fBchar *\fRcp_comment;
+    /* coding style */
+    \fBint\fR csty;
+    /* progression order:
+       PROG_UNKNOWN, LRCP(default), RLCP, RPCL, PCRL, CPRL */
+    \fBOPJ_PROG_ORDER\fR prog_order;
+    /* progression order changes */
+    \fBopj_poc_t\fR POC[32];
+    /* number of progression order changes (POC), default: 0 */
+    \fBint\fR numpocs;
+    /* number of layers */
+    \fBint\fR tcp_numlayers;
+    /* rates of layers */
+    \fBfloat\fR tcp_rates[100];
+    /* different psnr for successive layers */
+    \fBfloat\fR tcp_distoratio[100];
+    /* number of resolutions */
+    \fBint\fR numresolution;
+    /* initial code block width, default: 64 */
+    \fBint\fR cblockw_init;
+    /* initial code block height, default: 64 */
+    \fBint\fR cblockh_init;
+    /* mode switch (cblk_style) */
+    /* 1 : use the irreversible DWT 9-7, 
+        0 : use lossless compression (default) */
+    \fBint\fR irreversible;
+    /* region of interest: affected component in [0..3], 
+        -1 means no ROI */
+    \fBint\fR roi_compno;
+    /* region of interest: upshift value */
+    \fBint\fR roi_shift;
+    /* number of precinct size specifications */
+    \fBint\fR res_spec;
+    /* initial precinct width */
+    \fBint\fR prcw_init[J2K_MAXRLVLS];
+    /* initial precinct height */
+    \fBint\fR prch_init[J2K_MAXRLVLS];
+
+    /*command line encoder parameters (not used inside the library) */
+    /* input file name */
+    \fBchar\fR infile[OPJ_PATH_LEN];
+    /* output file name */
+    \fBchar\fR outfile[OPJ_PATH_LEN];
+    /* DEPRECATED. Index generation is now handeld with the 
+        opj_encode_with_info() function. Set to NULL */
+    \fBint\fR index_on;
+    /* DEPRECATED. Index generation is now handeld with the 
+        opj_encode_with_info() function. Set to NULL */
+    \fBchar\fR index[OPJ_PATH_LEN];
+    /* subimage encoding: origin image offset in x direction */
+    \fBint\fR image_offset_x0;
+    /* subimage encoding: origin image offset in y direction */
+    \fBint\fR image_offset_y0;
+    /* subsampling value for dx */
+    \fBint\fR subsampling_dx;
+    /* subsampling value for dy */
+    \fBint\fR subsampling_dy;
+    /* input file format */
+    \fBint\fR decod_format;
+    /* output file format: see OPJ_CODEC_FORMAT */
+    \fBint\fR cod_format;
+
+    /*JPWL encoding parameters */
+    /* enables writing of EPC in MH, thus activating JPWL */
+    \fBbool\fR jpwl_epc_on;
+    /* error protection method for MH (0,1,16,32,37-128) */
+    \fBint\fR jpwl_hprot_MH;
+    /* tile number of header protection specification (>=0) */
+    \fBint\fR jpwl_hprot_TPH_tileno[JPWL_MAX_NO_TILESPECS];
+    /* error protection methods for TPHs (0,1,16,32,37-128) */
+    \fBint\fR jpwl_hprot_TPH[JPWL_MAX_NO_TILESPECS];
+    /* tile number of packet protection specification (>=0) */
+    \fBint\fR jpwl_pprot_tileno[JPWL_MAX_NO_PACKSPECS];
+    /* packet number of packet protection specification (>=0) */
+    \fBint\fR jpwl_pprot_packno[JPWL_MAX_NO_PACKSPECS];
+    /* error protection methods for packets (0,1,16,32,37-128) */
+    \fBint\fR jpwl_pprot[JPWL_MAX_NO_PACKSPECS];
+    /* enables writing of ESD, (0=no/1/2 bytes) */
+    \fBint\fR jpwl_sens_size;
+    /* sensitivity addressing size (0=auto/2/4 bytes) */
+    \fBint\fR jpwl_sens_addr;
+    /* sensitivity range (0-3) */
+    \fBint\fR jpwl_sens_range;
+    /* sensitivity method for MH (-1=no,0-7) */
+    \fBint\fR jpwl_sens_MH;
+    /* tile number of sensitivity specification (>=0) */
+    \fBint\fR jpwl_sens_TPH_tileno[JPWL_MAX_NO_TILESPECS];
+    /* sensitivity methods for TPHs (-1=no,0-7) */
+    \fBint\fR jpwl_sens_TPH[JPWL_MAX_NO_TILESPECS];
+
+    /* Digital Cinema compliance: OFF-not compliant, 
+       CINEMA2K_24, CINEMA2K_48, CINEMA4K_24 */
+    \fBOPJ_CINEMA_MODE\fR cp_cinema;
+    /* Maximum rate for each component. 
+        If == 0, component size limitation is not considered */
+    \fBint\fR max_comp_size;
+    /* Profile name*/
+    \fBOPJ_RSIZ_CAPABILITIES\fR cp_rsiz;
+    /* Tile part generation*/
+    \fBchar\fR tp_on;
+    /* Flag for Tile part generation*/
+    \fBchar\fR tp_flag;
+    /* MCT (multiple component transform) */
+    \fBchar\fR tcp_mct;
+.br
+} opj_cparameters_t;
+
+
+'\".SH OPTIONS
+'\".SH BUGS
+.SH AUTHORS
+Copyright (c) 2002-2007, Communications and Remote Sensing Laboratory, Universite catholique de Louvain (UCL), Belgium
+
+Copyright (c) 2002-2007, Professor Benoit Macq
+
+Copyright (c) 2001-2003, David Janssens
+
+Copyright (c) 2002-2003, Yannick Verschueren
+
+Copyright (c) 2003-2007, Francois-Olivier Devaux and Antonin Descampe
+
+Copyright (c) 2005, Herve Drolon, FreeImage Team
+
+Copyright (c) 2006-2007, Parvatha Elangovan
+
+.P
+.SH "SEE ALSO"
+\fBimage_to_j2k\fR(1) \fBj2k_to_image\fR(1) \fBj2k_dump\fR(1)
+
+\fBJPWL_image_to_j2k\fR(1) \fBJPWL_j2k_to_image\fR(1)
+
+\fBextract_j2k_from_mj2\fR(1) \fBwrap_j2k_in_mj2\fR(1) 
+\fBframes_to_mj2\fR(1) \fBmj2_to_frames\fR(1)

@@ -1,0 +1,52 @@
+GDCM 2.x:
+--------
+
+           Fabrice Bellet            : Contributor (RPM)
+          Charl P. Botha             : Contributor (Python, VTK)
+             Shane Blackett          : Contributor (Win32)
+             Niels Dekker            : Contributor (C++ guru)
+        Daniele E. Domenichelli      : Contributor (C++)
+              Dean Inglis            : Contributor (Win32, VTK)
+    Paulo Henrique Junqueira Amorim  : Contributor (Python)
+            Pierre Le Duff           : Contributor (C++, VTK)
+           Mathieu Malaterre         : Project leader, main developer
+              Lars Matthaus          : Contributor (Java)
+              Sean McBride           : Contributor (C++)
+          Steve M. Robbins           : Contributor (debian)
+              Mark Roden             : Developer (C++, C#)
+             Jordi Romera            : Developer (C++, RTSTRUCT)
+       Jean-Pierre Roux              : Developer, maintain gdcmDataExtra
+         Christina Rossmanith        : Contributor (Siemens CSA)
+     Christopher W Treml             : Contributor (C#)
+              Joel Spaltenstein      : Developer (MacOSX)
+
+
+GDCM 1.x (Developpers and contributors, alphabetical order)
+--------
+              Aris Basic
+           Fabrice Bellet
+            Hugues Benoit-Cattin
+          Francois Bertel
+              Eric Boix
+          Charl P. Botha
+             Peter Cech
+   Eduardo Enrique Davila Serrano
+           Antonin Descampe
+             David Feng
+             Marco Feuerstein
+            Pierre Fillard
+   Leonardo Flores Valencia
+            Dennis Hu
+              Luis Ibanez
+            Michal Kurgan
+            Gianni Lazzarato
+            George Li
+              Sean McInemey
+             Johan Montagnat
+          Emmanuel Olart
+              Luca Picello
+         Parikshit Prasad
+            Benoit Regrain
+       Jean-Michel Rouet
+           Olivier Stern
+            Satomi Takeo

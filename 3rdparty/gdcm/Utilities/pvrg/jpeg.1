@@ -1,0 +1,229 @@
+.TH JPEG 1 "14 June 1993"
+.UC 4
+.SH NAME
+jpeg \- JPEG compression and decompression
+.SH SYNOPSIS
+.B
+jpeg -iw ImageWidth -ih ImageHeight [-JFIF] [-q(l) Q-Factor]
+.B
+     [-a] [-b] [-d] [-k predictortype] [-n] [-o] [-y] [-z]
+.B
+     [-p PrecisionValue] [-t pointtransform]
+.B
+     [-r ResyncInterval] [-s StreamName]
+.B
+     [[-ci ComponentIndex1] [-fw FrameWidth1] [-fh FrameHeight1]
+.B
+      [-hf HorizontalFrequency1] [-vf VerticalFrequency1]
+.B
+      ComponentFile1]
+.B
+     [[-ci ComponentIndex2] [-fw FrameWidth2] [-fh FrameHeight2]
+.B
+      [-hf HorizontalFrequency2] [-vf VerticalFrequency2]
+.B
+      ComponentFile2]
+.B
+     ....
+.br
+.SH DESCRIPTION
+.I jpeg
+is a still-image compression/decompression program that performs
+JPEG encoding and decoding of multiple raster-scanned files.
+.PP
+.SH OPTIONS
+.TP
+.B ImageWidth
+specifies the width of the original image. This should correspond to
+the width of the widest component and, thus, the width of the
+``original image''. All components have widths roughly corresponding
+to an integer decimation ratio from this specification.
+.br
+.TP
+.B ImageHeight
+specifies the height of the tallest component. This
+corresponds to the height of the ``original image''.
+.TP
+.B -JFIF
+specifies that a JFIF header is placed on the encoded stream.  This is
+unnecessary for decoding.
+.TP
+.B Q-Factor
+option specifies a multiplicative factor for the quantization: each
+quantization coefficient of the default matrix is scaled by
+(Q-Factor/50). A Q-Factor of 0 is the same thing as a Q-Factor of 50
+because it disables this function.
+.B -q
+specifies an 8 bit
+quantization matrix;
+.B -ql
+specifies a 16 bit quantization matrix,
+useful for 12 bit data.
+.TP
+.B -a
+enables the double-precision floating point Reference DCT.  (Default
+is Chen DCT.)
+.TP
+.B -b
+enables the Lee DCT.  (Default is Chen DCT.)
+.TP
+.B -d
+enables decoding.  See below.
+.TP
+.B -k predictortype
+The lossless predictor type, specified as an integer between 1-7.
+If specified, then lossless mode is used.
+.TP
+.B -n
+This option specifies that the files should not be transmitted in
+interleaved format.
+.TP
+.B -o
+signals that the command interpreter will read from the standard
+input.
+.TP
+.B -p
+Specifies the precision.  Normally should be between 2-16 for
+lossless; 8 or 12 for DCT.  If it is specified as a number greater
+than 8 then the input is considered to be unsigned shorts (16 bits,
+msb first). Not aggressively checked.
+.TP
+.B -t pointtransform
+Specifies the shifting (right) upon loading input and shifting (left)
+upon writing input.  Generally used by the lossless mode only.  Can
+be used by the DCT mode to add or subtract bits.
+.TP
+.B -y
+for decoding only, signals that
+.I no
+resynchronization is enabled,
+thus ignore any markers found in the data stream.
+.TP
+.B -z
+enables use of default Huffman tables. This converts the coding from a
+two-pass system using the first pass to generate custom tables to a
+one-pass system using internal default tables. With this option, the
+compression speed is nearly doubled, but because the internal tables
+are not custom to the image, the compressed file size increases
+slightly.
+.TP
+.B ResyncInterval
+specifies a resync (restart)
+interval for the input file--if set to 0 (default), resynchronization
+is disabled; otherwise it signifies the number of MDU
+between a resync marker.
+.TP
+.B StreamName
+is the place to  load(decoder)/store(encoder)
+the coded image--if unspecified it defaults to
+.B ComponentFile1.jpg.
+
+.br
+For every component in the image we have:
+
+.TP
+.B
+ComponentIndex
+describes the component index where the file data should be associated
+with.  The possible values are between 0 and 255.  As a rule Y is in
+1; U is in 2; V is in 3.  The file specfications, if left undisturbed,
+will result in component location of 1 for the first component file, 2
+for the second component file, and so on.  If
+.B -ci
+is specified for the
+previous component file, then the next component index defaults to the
+previous component index plus 1.
+.TP
+.B FrameWidth
+describes the actual width of the component. This should be
+determinable by the size of the original image (ImageHeight and
+ImageWidth) and the frequency sampling of that component.
+This program assumes that the sampling component will be round
+.I up
+to the nearest integer and other programs may not
+necessarily follow that convention, we allow precise specification of
+the FrameWidth.  The program will notify the user if the
+framewidth and frameheight specifications do not correspond to
+a logical MDU pattern and thus will refuse to take the input
+(in fact, sometimes rounding down will not result in a logical MDU pattern).
+.TP
+.B FrameHeight
+describes the actual height of the component. Multiplied together with
+FrameWidth, this should equal the file size of the component.  See the
+above discussion on the actual specification.
+.TP
+.B Hor-Frequency
+specifies the block sampling frequency of
+the component in the horizontal direction for every MDU transmitted.
+.TP
+.B
+Ver-Frequency
+specifies the block sampling frequency of
+the component in the vertical direction. When multiplied together with
+the Horizontal frequency, it corresponds to the number of blocks of
+that component in the MDU.
+.TP
+.B
+ComponentFile\fIn\fR
+represents the directory path location of the \fIn\fRth component file.
+.PP
+.SH EXAMPLES
+In order to encode a set of raster-scanned files:
+128x128 in
+.B image.Y;
+64x128 in
+.B image.U;
+and 64x128 in
+.B image.V
+into the file
+.B image.jpg,
+the command is
+
+.br
+.B
+jpeg -iw 128 -ih 128  -hf 2 image.Y image.U image.V -s image.jpg
+.br
+
+In order to decode a compressed file in
+.B image.jpg,
+type
+
+.br
+.B
+jpeg -d -s image.jpg
+.br
+
+The three output files will be in
+.B
+image.jpg.1 image.jpg.2 image.jpg.3.
+The images can be displayed by the
+.I cv
+program.
+The images can also be converted to ppm and back through
+the programs
+.I cyuv2ppm
+and
+.I ppm2cyuv
+Those utility programs available by anonymous ftp from
+.I havefun.stanford.edu:pub/cv/CVv1.2.1.tar.Z.
+.br
+There are many more options within an internal command interpreter.
+Please see the accompanying documentation in
+.I doc.ps
+for more details.
+.PP
+.SH FTP
+.I jpeg
+is available by anonymous ftp from
+.I havefun.stanford.edu:pub/jpeg/JPEGv1.2.tar.Z.
+.PP
+.SH BUGS
+Somewhat slower than many commercial implementations,
+some bugs are probably lurking around.
+Lossless coding and decoding are especially slow.
+Please inform the author at achung@cs.stanford.edu if any bugs
+are found.
+.PP
+.SH AUTHOR
+.PP
+Andy Hung

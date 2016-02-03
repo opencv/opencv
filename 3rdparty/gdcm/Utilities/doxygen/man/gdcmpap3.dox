@@ -1,0 +1,93 @@
+/*!
+
+\page gdcmpap3 Tool to convert PAPYRUS 3.0 to DICOM.
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcmconv [options] file-in file-out
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcmconv command line program takes as input a PAPYRUS 3.0 file (file-in) and
+process it to generate an output (pseudo) DICOM file (file-out).
+The command line option dictate the type of operation(s) gdcmconv will use to
+generate the output file.
+
+\section parameters PARAMETERS
+
+\verbatim
+file-in   DICOM input filename
+
+file-out  DICOM output filename
+\endverbatim
+
+\section options OPTIONS
+
+\subsection parameters parameters
+\verbatim
+  -i --input      DICOM filename
+  -o --output     DICOM filename
+\endverbatim
+
+\subsection options options
+\verbatim
+  -S --split            Split multiframes PAPYRUS 3.0 into multiples DICOM files
+     --decomp-pap3      Use PAPYRUS 3.0 for decompressing (can be combined with --split).
+     --check-iop        Check that the Image Orientation (Patient) Attribute is ok (see --split).
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\subsection environment_variable environment variable
+\verbatim
+  GDCM_ROOT_UID Root UID
+\endverbatim
+
+\section simple_usage Simple usage
+\b gdcmconv is a great tool to convert broken PAPYRUS 3.0 implementation into
+properly parsable DICOM file. Usage is simply:
+
+\verbatim
+$ gdcmconv input.pa3 output.dcm
+\endverbatim
+
+or if you prefer being explicit:
+
+\verbatim
+$ gdcmconv -i input.pa3 -o output.dcm
+\endverbatim
+
+Even though gdcmpap3 can overwrite directly on the same file (input.pa3 =
+output.dcm), it is recommended that user should first convert into a different
+file to make sure the bug is properly handled by GDCM.
+
+\section see_also SEE ALSO
+
+<b>gdcmdump</b>(1), <b>gdcmconv</b>(1), <b>gdcminfo</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

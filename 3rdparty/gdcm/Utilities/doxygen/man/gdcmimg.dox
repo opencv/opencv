@@ -1,0 +1,287 @@
+/*!
+
+\page gdcmimg Manipulate DICOM image file.
+
+gdcmimg is a low level tool to allow de-/encapsulation from/to DICOM image.
+This tool does not understand Transfer Syntax conversion. It will encapsulate
+the raw data as-is. This has some impact in some cases, see special warnings
+below.
+
+It is important to note that gdcmimg can only encapsulate proper input file,
+for instance JPG and or JP2 are accepted since an associated DICOM Transfer
+Syntax can be found. However input such as TIFF and/or PNG are not, since DICOM
+does not support those. See instead a tool such as gdcm2vtk.
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcmimg [options] file-in file-out
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcmimg command line tool can be used in two fashions:
+\li 1. Converting a recognized file format into its encapsulated DICOM counterpart,
+\li 2. Anonymizing a rectangular portion of a DICOM file.
+
+\section parameters PARAMETERS
+
+\verbatim
+file-in   input filename (non-DICOM)
+
+file-out  DICOM output filename
+\endverbatim
+
+\section options OPTIONS
+
+\subsection parameters parameters
+\verbatim
+  -i --input     Input filename
+  -o --output    Output filename
+\endverbatim
+
+\subsection options options
+\verbatim
+     --endian %s       Endianness (LSB/MSB).
+  -d --depth %d        Depth (Either 8/16/32 or BitsAllocated eg. 12 when known).
+     --sign %s         Pixel sign (0/1).
+     --spp  %d         Sample Per Pixel (1/3).
+  -s --size %d,%d      Size.
+  -C --sop-class-uid   SOP Class UID (name or value).
+  -T --study-uid       Study UID.
+  -S --series-uid      Series UID.
+     --root-uid        Root UID.
+\endverbatim
+
+\subsection fill_options fill options
+\verbatim
+  -R --region %d,%d    Region.
+  -F --fill %d         Fill with pixel value specified.
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\subsection environment_variable environment variable
+\verbatim
+  GDCM_ROOT_UID Root UID
+\endverbatim
+
+\section supported Supported File Format (appropriate file extension) gdcmimg
+will base it's conversion process based on the file extension. Follows the list
+of recognized file extension. When no extension is found, DICOM file is
+assumed.
+
+input format
+\verbatim
+  * RAW       (raw, rawl, gray, rgb)
+  * RLE       (rle)
+  * PNM       (pgm, pnm, ppm)
+  * JPEG-LS   (jls)
+  * JPEG 2000 (jp2, j2k, j2c, jpx, jpc)
+  * JPEG      (jpg, jpeg, ljpg, ljpeg)
+  * DICOM     ()
+\endverbatim
+
+output format:
+\verbatim
+  * PGM       (pgm, pnm, ppm)
+  * DICOM     ()
+\endverbatim
+
+For RAW file format, you should take special care of the --endian option.
+For the (old) JPEG file format, both the lossy and lossless format are
+supported, user should pay attention to the --sign option.
+For file format such as RLE or RAW, user is expected to fill in information
+required to find the dimension and type of input data as there is no other way
+to find this information. For all other file format, the properties are derived
+from the file format itself.
+
+PNM file are supposed to be big endian (important for depth > 8)
+
+\section usage Typical usage
+\subsection blank_out Remove a rectangular part of the image
+
+To fill the region [0,100]x[0,100] of a DICOM image simply do:
+
+\verbatim
+$ gdcmimg --fill 0 --region 0,100,0,100 -i input.dcm -o output_black.dcm
+\endverbatim
+
+Warning: if the Pixel Data is compressed, the image is first decompressed so
+that pixel can be set to 0, but it is not re-compressed.
+
+\subsection convert_raw Convert RAW to DICOM
+
+Recognized extension is .raw, .rawl, .gray or .rgb (case insensitive)
+
+\verbatim
+$ gdcmimg --size 512,512 --depth 16 -i input.raw -o output.dcm
+\endverbatim
+
+the image will be a Secondary Capture.
+
+When the input is 3 component, one need to specify explicitly the Samples Per
+Pixel:
+
+\verbatim
+$ gdcmimg --size 512,512 --spp 3  input_rgb.raw output_rgb.dcm
+\endverbatim
+
+When the filename contains .rgb as file extension output is automatically
+recognized as RGB no need to specify --spp
+
+\verbatim
+$ gdcmimg --size 512,512 input.rgb output_rgb.dcm
+\endverbatim
+
+You can use the \b dd cmd line to skip any header you would like to discard,
+for instance, if you would like to skip the first 108 bytes, simply do:
+
+\verbatim
+$ dd skip=108 bs=1 if=input.raw of=output.raw
+\endverbatim
+
+.raw and .rawl extension are equivalent. You need to explicitly specify the
+endianess manually:
+
+\verbatim
+$ gdcmimg --endian MSB --size 512,512 --depth 16 -i input.raw -o output.dcm
+\endverbatim
+
+or
+
+\verbatim
+$ gdcmimg --endian LSB --size 512,512 --depth 16 -i input.raw -o output.dcm
+\endverbatim
+
+\subsection pnm Convert PGM/PNM/PPM to DICOM
+
+Recognized extensions are .pgm, .pnm, .ppm (case insensitive)
+
+\verbatim
+$ gdcmimg -i input.pgm -o output.dcm
+\endverbatim
+
+the image will be a Secondary Capture
+
+\subsection rle Convert RLE to DICOM
+
+Recognized extension is .rle (case insensitive)
+
+\verbatim
+$ gdcmimg --size 512,512 --depth 16 -i input.rle -o output.dcm
+\endverbatim
+
+the image will be a Secondary Capture
+\subsection jpeg Convert JPEG to DICOM
+
+Recognized extensions are .jpg, .jpeg, .ljpg, .ljpeg (case insensitive)
+
+\verbatim
+$ gdcmimg -i input.ljpeg -o output.dcm
+\endverbatim
+
+the image will be a Secondary Capture
+
+\subsection j2k Convert J2K to DICOM
+
+Recognized extensions are .j2k, .jp2, .jpc, jpx, j2c (case insensitive)
+
+\verbatim
+$ gdcmimg -i input.j2k -o output.dcm
+\endverbatim
+
+the image will be a Secondary Capture.
+
+All Pixel informations (Bits Stored/Allocated...) will be derived from the
+image itself, and not from the command line options.
+
+\subsection sopclassuid Specifying a SOP Class UID
+
+Instead of the default Secondary Capture Image Storage, one may want to
+specify, say VL Photographic Image Storage.
+
+\verbatim
+$ gdcmimg --sop-class-uid 1.2.840.10008.5.1.4.1.1.77.1.4 input.jpg output.dcm
+\endverbatim
+
+\section multiple_files Multiple Files
+
+gdcmimg handle nicely a set of files (for instance jpeg):
+
+\verbatim
+$ gdcmimg 1.jpg 2.jpg 3.jpg 4.jpg output.dcm
+\endverbatim
+
+\section start_offset Start Offset
+
+In some case, one may want to create a 2D slice from an arbitrary volume (e.g
+3D). In which case --offset becomes handy:
+
+\verbatim
+$ gdcmimg --offset 4954104330 --size 1673,1673 Input3D_1673_1673_1775.raw slice_1770.dcm
+\endverbatim
+
+\section warning Warning
+
+There are a couple of issues with gdcmimg implementation:
+
+For RAW file, one should pay attention that when using --endian MSB the Pixel
+Data will be encapsulated as is (not touched by gdcmimg). Therefore the only
+possible transfer syntax available is Implicit VR Big Endian DLX (G.E Private).
+GDCM does handle this private Transfer Syntax. So if you need to convert this
+Transfer Syntax to another one (and allow Pixel Data manipulation), you can
+use:
+
+\verbatim
+$ gdcmconv --raw --force input_big_endian_dlx.raw -o output_implicit_vr_little_endian.dcm
+\endverbatim
+
+For JFIF file and JP2 file (with header) the header is copied into the Pixel
+Data element which is illegal for JP2.
+Use gdcmconv to properly re-encode a JP2/JFIF file into J2K/JPG.
+
+\verbatim
+$ gdcmimg input.jp2 output_jp2.dcm
+$ gdcmconv --j2k --force output_jp2.dcm output_j2k.dcm
+\endverbatim
+
+For RLE file, no check is done for crossing the row boundary. It is recommended
+to use gdcmconv --rle to re-encode into a proper RLE file in case of doubt.
+
+Of course if the compression is not ok with your setup, you can always
+de-encapsulated the DICOM file (typically JPEG) to a non-encapsulated form,
+using gdcmconv:
+
+\verbatim
+$ gdcmconv --raw input_jpeg.dcm output_raw.dcm
+\endverbatim
+
+\section see_also SEE ALSO
+
+<b>gdcmdump</b>(1), <b>gdcm2vtk</b>(1), <b>gdcmraw</b>(1), <b>convert</b>(1), <b>dd</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

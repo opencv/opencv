@@ -1,0 +1,239 @@
+IJG JPEG LIBRARY:  FILE LIST
+
+Copyright (C) 1994-1997, Thomas G. Lane.
+This file is part of the Independent JPEG Group's software.
+For conditions of distribution and use, see the accompanying README file.
+
+
+Here is a road map to the files in the IJG JPEG distribution.  The
+distribution includes the JPEG library proper, plus two application
+programs ("cjpeg" and "djpeg") which use the library to convert JPEG
+files to and from some other popular image formats.  A third application
+"jpegtran" uses the library to do lossless conversion between different
+variants of JPEG.  There are also two stand-alone applications,
+"rdjpgcom" and "wrjpgcom".
+
+
+THE JPEG LIBRARY
+================
+
+Include files:
+
+jpeglib.h	JPEG library's exported data and function declarations.
+jconfig.h	Configuration declarations.  Note: this file is not present
+		in the distribution; it is generated during installation.
+jmorecfg.h	Additional configuration declarations; need not be changed
+		for a standard installation.
+jerror.h	Declares JPEG library's error and trace message codes.
+jinclude.h	Central include file used by all IJG .c files to reference
+		system include files.
+jpegint.h	JPEG library's internal data structures.
+jlossls.h	JPEG library's lossless codec data structures.
+jlossy.h	JPEG library's lossy codec structures.
+jchuff.h	Private declarations for Huffman encoder modules.
+jdhuff.h	Private declarations for Huffman decoder modules.
+jdct.h		Private declarations for forward & reverse DCT subsystems.
+jmemsys.h	Private declarations for memory management subsystem.
+jversion.h	Version information.
+
+Applications using the library should include jpeglib.h (which in turn
+includes jconfig.h and jmorecfg.h).  Optionally, jerror.h may be included
+if the application needs to reference individual JPEG error codes.  The
+other include files are intended for internal use and would not normally
+be included by an application program.  (cjpeg/djpeg/etc do use jinclude.h,
+since its function is to improve portability of the whole IJG distribution.
+Most other applications will directly include the system include files they
+want, and hence won't need jinclude.h.)
+
+
+C source code files:
+
+These files contain most of the functions intended to be called directly by
+an application program:
+
+jcapimin.c	Application program interface: core routines for compression.
+jcapistd.c	Application program interface: standard compression.
+jdapimin.c	Application program interface: core routines for decompression.
+jdapistd.c	Application program interface: standard decompression.
+jcomapi.c	Application program interface routines common to compression
+		and decompression.
+jcparam.c	Compression parameter setting helper routines.
+jctrans.c	API and library routines for transcoding compression.
+jdtrans.c	API and library routines for transcoding decompression.
+
+Compression side of the library:
+
+jcinit.c	Initialization: determines which other modules to use.
+jcmaster.c	Master control: setup and inter-pass sequencing logic.
+jcmainct.c	Main buffer controller (preprocessor => JPEG compressor).
+jchuff.c	Codec-independent Huffman entropy encoding routines.
+jcprepct.c	Preprocessor buffer controller.
+jccolor.c	Color space conversion.
+jcsample.c	Downsampling.
+jcmarker.c	JPEG marker writing.
+jdatadst.c	Data destination manager for stdio output.
+
+Lossy (DCT) codec:
+
+jlossy.c	Lossy compressor proper.
+jccoefct.c	Buffer controller for DCT coefficient buffer.
+jcdctmgr.c	DCT manager (DCT implementation selection & control).
+jfdctint.c	Forward DCT using slow-but-accurate integer method.
+jfdctfst.c	Forward DCT using faster, less accurate integer method.
+jfdctflt.c	Forward DCT using floating-point arithmetic.
+jcshuff.c	Huffman entropy coding for sequential JPEG.
+jcphuff.c	Huffman entropy coding for progressive JPEG.
+
+Lossless (spatial) codec:
+
+jclossls.c	Lossless compressor proper.
+jcdiffct.c	Buffer controller for difference buffer.
+jcscale.c	Point transformation.
+jcpred.c	Sample predictor and differencer.
+jclhuff.c	Huffman entropy encoding for lossless JPEG.
+
+Decompression side of the library:
+
+jdmaster.c	Master control: determines which other modules to use.
+jdinput.c	Input controller: controls input processing modules.
+jdmainct.c	Main buffer controller (JPEG decompressor => postprocessor).
+jdhuff.c	Codec-independent Huffman entropy decoding routines.
+jdpostct.c	Postprocessor buffer controller.
+jdmarker.c	JPEG marker reading.
+jdsample.c	Upsampling.
+jdcolor.c	Color space conversion.
+jdmerge.c	Merged upsampling/color conversion (faster, lower quality).
+jquant1.c	One-pass color quantization using a fixed-spacing colormap.
+jquant2.c	Two-pass color quantization using a custom-generated colormap.
+		Also handles one-pass quantization to an externally given map.
+jdatasrc.c	Data source manager for stdio input.
+
+Lossy (DCT) codec:
+
+jdlossy.c	Lossy decompressor proper.
+jdcoefct.c	Buffer controller for DCT coefficient buffer.
+jdshuff.c	Huffman entropy decoding for sequential JPEG.
+jdphuff.c	Huffman entropy decoding for progressive JPEG.
+jddctmgr.c	IDCT manager (IDCT implementation selection & control).
+jidctint.c	Inverse DCT using slow-but-accurate integer method.
+jidctfst.c	Inverse DCT using faster, less accurate integer method.
+jidctflt.c	Inverse DCT using floating-point arithmetic.
+jidctred.c	Inverse DCTs with reduced-size outputs.
+
+Lossless (spatial) codec:
+
+jdlossls.c	Lossless decompressor proper.
+jddiffct.c	Buffer controller for difference buffers.
+jdlhuff.c	Huffman entropy decoding for lossless JPEG.
+jdpred.c	Sample predictor and undifferencer.
+jdscale.c	Point transformation, sample size scaling.
+
+Support files for both compression and decompression:
+
+jerror.c	Standard error handling routines (application replaceable).
+jmemmgr.c	System-independent (more or less) memory management code.
+jcodec.c	Codec-independent utility routines.
+jutils.c	Miscellaneous utility routines.
+
+jmemmgr.c relies on a system-dependent memory management module.  The IJG
+distribution includes the following implementations of the system-dependent
+module:
+
+jmemnobs.c	"No backing store": assumes adequate virtual memory exists.
+jmemansi.c	Makes temporary files with ANSI-standard routine tmpfile().
+jmemname.c	Makes temporary files with program-generated file names.
+jmemdos.c	Custom implementation for MS-DOS (16-bit environment only):
+		can use extended and expanded memory as well as temp files.
+jmemmac.c	Custom implementation for Apple Macintosh.
+
+Exactly one of the system-dependent modules should be configured into an
+installed JPEG library (see install.doc for hints about which one to use).
+On unusual systems you may find it worthwhile to make a special
+system-dependent memory manager.
+
+
+Non-C source code files:
+
+jmemdosa.asm	80x86 assembly code support for jmemdos.c; used only in
+		MS-DOS-specific configurations of the JPEG library.
+
+
+CJPEG/DJPEG/JPEGTRAN
+====================
+
+Include files:
+
+cdjpeg.h	Declarations shared by cjpeg/djpeg/jpegtran modules.
+cderror.h	Additional error and trace message codes for cjpeg et al.
+transupp.h	Declarations for jpegtran support routines in transupp.c.
+
+C source code files:
+
+cjpeg.c		Main program for cjpeg.
+djpeg.c		Main program for djpeg.
+jpegtran.c	Main program for jpegtran.
+cdjpeg.c	Utility routines used by all three programs.
+rdcolmap.c	Code to read a colormap file for djpeg's "-map" switch.
+rdswitch.c	Code to process some of cjpeg's more complex switches.
+		Also used by jpegtran.
+transupp.c	Support code for jpegtran: lossless image manipulations.
+
+Image file reader modules for cjpeg:
+
+rdbmp.c		BMP file input.
+rdgif.c		GIF file input (now just a stub).
+rdppm.c		PPM/PGM file input.
+rdrle.c		Utah RLE file input.
+rdtarga.c	Targa file input.
+
+Image file writer modules for djpeg:
+
+wrbmp.c		BMP file output.
+wrgif.c		GIF file output (a mere shadow of its former self).
+wrppm.c		PPM/PGM file output.
+wrrle.c		Utah RLE file output.
+wrtarga.c	Targa file output.
+
+
+RDJPGCOM/WRJPGCOM
+=================
+
+C source code files:
+
+rdjpgcom.c	Stand-alone rdjpgcom application.
+wrjpgcom.c	Stand-alone wrjpgcom application.
+
+These programs do not depend on the IJG library.  They do use
+jconfig.h and jinclude.h, only to improve portability.
+
+
+ADDITIONAL FILES
+================
+
+Documentation (see README for a guide to the documentation files):
+
+README		Master documentation file.
+*.doc		Other documentation files.
+*.1		Documentation in Unix man page format.
+change.log	Version-to-version change highlights.
+example.c	Sample code for calling JPEG library.
+
+Configuration/installation files and programs (see install.doc for more info):
+
+configure	Unix shell script to perform automatic configuration.
+ltconfig	Support scripts for configure (from GNU libtool).
+ltmain.sh
+config.guess
+config.sub
+install-sh	Install shell script for those Unix systems lacking one.
+ckconfig.c	Program to generate jconfig.h on non-Unix systems.
+jconfig.doc	Template for making jconfig.h by hand.
+makefile.*	Sample makefiles for particular systems.
+jconfig.*	Sample jconfig.h for particular systems.
+ansi2knr.c	De-ANSIfier for pre-ANSI C compilers (courtesy of
+		L. Peter Deutsch and Aladdin Enterprises).
+
+Test files (see install.doc for test procedure):
+
+test*.*		Source and comparison files for confidence test.
+		These are binary image files, NOT text files.

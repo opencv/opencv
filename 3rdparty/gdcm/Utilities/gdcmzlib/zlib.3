@@ -1,0 +1,159 @@
+.TH ZLIB 3 "18 July 2005"
+.SH NAME
+zlib \- compression/decompression library
+.SH SYNOPSIS
+[see
+.I zlib.h
+for full description]
+.SH DESCRIPTION
+The
+.I zlib
+library is a general purpose data compression library.
+The code is thread safe.
+It provides in-memory compression and decompression functions,
+including integrity checks of the uncompressed data.
+This version of the library supports only one compression method (deflation)
+but other algorithms will be added later
+and will have the same stream interface.
+.LP
+Compression can be done in a single step if the buffers are large enough
+(for example if an input file is mmap'ed),
+or can be done by repeated calls of the compression function.
+In the latter case,
+the application must provide more input and/or consume the output
+(providing more output space) before each call.
+.LP
+The library also supports reading and writing files in
+.IR gzip (1)
+(.gz) format
+with an interface similar to that of stdio.
+.LP
+The library does not install any signal handler.
+The decoder checks the consistency of the compressed data,
+so the library should never crash even in case of corrupted input.
+.LP
+All functions of the compression library are documented in the file
+.IR zlib.h .
+The distribution source includes examples of use of the library
+in the files
+.I example.c
+and
+.IR minigzip.c .
+.LP
+Changes to this version are documented in the file
+.I ChangeLog
+that accompanies the source,
+and are concerned primarily with bug fixes and portability enhancements.
+.LP
+A Java implementation of
+.I zlib
+is available in the Java Development Kit 1.1:
+.IP
+http://www.javasoft.com/products/JDK/1.1/docs/api/Package-java.util.zip.html
+.LP
+A Perl interface to
+.IR zlib ,
+written by Paul Marquess (pmqs@cpan.org),
+is available at CPAN (Comprehensive Perl Archive Network) sites,
+including:
+.IP
+http://www.cpan.org/modules/by-module/Compress/
+.LP
+A Python interface to
+.IR zlib ,
+written by A.M. Kuchling (amk@magnet.com),
+is available in Python 1.5 and later versions:
+.IP
+http://www.python.org/doc/lib/module-zlib.html
+.LP
+A
+.I zlib
+binding for
+.IR tcl (1),
+written by Andreas Kupries (a.kupries@westend.com),
+is availlable at:
+.IP
+http://www.westend.com/~kupries/doc/trf/man/man.html
+.LP
+An experimental package to read and write files in .zip format,
+written on top of
+.I zlib
+by Gilles Vollant (info@winimage.com),
+is available at:
+.IP
+http://www.winimage.com/zLibDll/unzip.html
+and also in the
+.I contrib/minizip
+directory of the main
+.I zlib
+web site.
+.SH "SEE ALSO"
+The
+.I zlib
+web site can be found at either of these locations:
+.IP
+http://www.zlib.org
+.br
+http://www.gzip.org/zlib/
+.LP
+The data format used by the zlib library is described by RFC
+(Request for Comments) 1950 to 1952 in the files:
+.IP
+http://www.ietf.org/rfc/rfc1950.txt (concerning zlib format)
+.br
+http://www.ietf.org/rfc/rfc1951.txt (concerning deflate format)
+.br
+http://www.ietf.org/rfc/rfc1952.txt (concerning gzip format)
+.LP
+These documents are also available in other formats from:
+.IP
+ftp://ftp.uu.net/graphics/png/documents/zlib/zdoc-index.html
+.LP
+Mark Nelson (markn@ieee.org) wrote an article about
+.I zlib
+for the Jan. 1997 issue of  Dr. Dobb's Journal;
+a copy of the article is available at:
+.IP
+http://dogma.net/markn/articles/zlibtool/zlibtool.htm
+.SH "REPORTING PROBLEMS"
+Before reporting a problem,
+please check the
+.I zlib
+web site to verify that you have the latest version of
+.IR zlib ;
+otherwise,
+obtain the latest version and see if the problem still exists.
+Please read the
+.I zlib
+FAQ at:
+.IP
+http://www.gzip.org/zlib/zlib_faq.html
+.LP
+before asking for help.
+Send questions and/or comments to zlib@gzip.org,
+or (for the Windows DLL version) to Gilles Vollant (info@winimage.com).
+.SH AUTHORS
+Version 1.2.3
+Copyright (C) 1995-2005 Jean-loup Gailly (jloup@gzip.org)
+and Mark Adler (madler@alumni.caltech.edu).
+.LP
+This software is provided "as-is,"
+without any express or implied warranty.
+In no event will the authors be held liable for any damages
+arising from the use of this software.
+See the distribution directory with respect to requirements
+governing redistribution.
+The deflate format used by
+.I zlib
+was defined by Phil Katz.
+The deflate and
+.I zlib
+specifications were written by L. Peter Deutsch.
+Thanks to all the people who reported problems and suggested various
+improvements in
+.IR zlib ;
+who are too numerous to cite here.
+.LP
+UNIX manual page by R. P. C. Rodgers,
+U.S. National Library of Medicine (rodgers@nlm.nih.gov).
+.\" end of man page

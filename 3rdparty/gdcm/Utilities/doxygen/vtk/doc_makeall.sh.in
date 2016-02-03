@@ -1,0 +1,318 @@
+# -------------------------------------------------------------------------
+# Doxygen documentation batch
+# modified by S. Barre (Time-stamp: <2005-06-17 15:12:59 barre>
+# -------------------------------------------------------------------------
+
+# Path to several tools (_PROG to avoid the typical GZIP env var pb)
+# Example:
+#   DOXYGEN_PROG=@DOXYGEN@        (INCLUDE(FindDoxygen.cmake))
+#   GZIP_PROG=@GZIP@              (INCLUDE(FindCygwin.cmake))
+#   HHC_PROG=@HTML_HELP_COMPILER@ (INCLUDE(FindHTMLHelp.cmake))
+#   MV_PROG=@MV@                  (INCLUDE(FindCygwin.cmake))
+#   PERL_PROG=@PERL@              (INCLUDE(FindPerl.cmake))
+#   RM_PROG=@RM@                  (INCLUDE(FindCygwin.cmake))
+#   TAR_PROG=@TAR@                (INCLUDE(FindCygwin.cmake))
+#   WGET_PROG=@WGET@              (INCLUDE(FindWget.cmake))
+#
+export DOXYGEN_PROG="@DOXYGEN@"        # Doxygen
+export GZIP_PROG="@GZIP@"              # gzip (Unix-like 'gzip compressor')
+export GNUPLOT_PROG="@GNUPLOT@"        # gnuplot (data plotting program)
+export HHC_PROG="@HTML_HELP_COMPILER@" # HTML Help Compiler
+export MV_PROG="@MV@"                  # mv (Unix-like 'move/rename files')
+export CP_PROG="@CP@"                  # mv (Unix-like 'move/rename files')
+export PERL_PROG="@PERL@"              # Perl
+export RM_PROG="@RM@"                  # rm (Unix-like 'remove files')
+export TAR_PROG="@TAR@"                # tar (Unix-like 'archiver')
+export WGET_PROG="@WGET@"              # wget (remote file retrieval)
+
+# PROJECT_NAME:
+# Documentation/project name. Used in some of the resulting file names and
+# xrefs to uniquify two or more projects linked together through their
+# Doxygen's tag files. Mandatory for each documentation set.
+# Note: might be the same as the doxyfile's PROJECT_NAME
+# Example:
+#   PROJECT_NAME=VTK
+#
+export PROJECT_NAME=@DOXYGEN_PROJECT_NAME@
+
+# PATH_TO_VTK_DOX_SCRIPTS:
+# Path to the directory holding the Perl scripts used to produce the VTK doc
+# in Doxygen format. You need the VTK source files or a local copy of
+# these scripts.
+# Example:
+#   PATH_TO_VTK_DOX_SCRIPTS=@CMAKE_CURRENT_SOURCE_DIR@
+#
+export PATH_TO_VTK_DOX_SCRIPTS="@DOXYGEN_SOURCE_DIR@"
+
+export PATH_TO_VTKGDCM_FINAL_PATH="@VTKGDCM_FINAL_PATH@"
+
+# SOURCE_DIR:
+# Source directory. The top directory of the source files.
+# Example:
+#   SOURCE_DIR=@DOXYGEN_PROJECT_SOURCE_DIR@
+#
+export SOURCE_DIR="@DOXYGEN_PROJECT_SOURCE_DIR@"
+
+# REL_PATH_TO_TOP:
+# Relative path from the top directory of the source files to the directory
+# (or top directory) holding the files to document. Useful if several parts
+# of the same source directory should be documented separately.
+# Example:
+#   REL_PATH_TO_TOP=.
+#   REL_PATH_TO_TOP=framework/src
+#
+export REL_PATH_TO_TOP=.
+
+# INTERMEDIATE_DOX_DIR:
+# Directory where the intermediate Doxygen files should be stored (mainly
+# these headers files converted from the VTK format to the Doxygen format).
+# This directory is erased at the end of this script, unless you comment
+# the corresponding line.
+# DOXTEMP might be used to simplify the syntax.
+# Example:
+#   DOXTEMP=DOXTEMP=@CMAKE_CURRENT_BINARY_DIR@
+#   INTERMEDIATE_DOX_DIR=$DOXTEMP/dox
+#
+export DOXTEMP="@CMAKE_CURRENT_BINARY_DIR@"
+export INTERMEDIATE_DOX_DIR="$DOXTEMP/dox"
+
+# CVSWEB_CHECKOUT, CVSWEB_CHECKOUT_SUFFIX:
+# URL to the CVSWeb of the project, in checkout mode (i.e. appending a file
+# name to this URL will retrieve the contents of the file). In the same way
+# CVSWEB_CHECKOUT_SUFFIX is appended to the result.
+# Example:
+#   CVSWEB_CHECKOUT=http://public.kitware.com/cgi-bin/cvsweb.cgi/~checkout~/VTK
+#   CVSWEB_CHECKOUT_SUFFIX=?cvsroot=CMake
+#
+export CVSWEB_CHECKOUT="@DOXYGEN_CVSWEB_CHECKOUT@"
+export CVSWEB_CHECKOUT_SUFFIX="@DOXYGEN_CVSWEB_CHECKOUT_SUFFIX@"
+
+# DOXYFILE:
+# Path to the Doxygen configuration file (i.e. doxyfile).
+# Example:
+#   DOXYFILE=$DOXTEMP/doxyfile
+#
+export DOXYFILE="$DOXTEMP/doxyfile"
+
+# OUTPUT_DIRECTORY ALLOW_ERASE_OUTPUT_DIRECTORY:
+# Path to the Doxygen output directory (where the resulting doc is stored).
+# Note: should be the same as your doxyfile's OUTPUT_DIRECTORY
+# If ON, allows the output directory to be erased when some advanced output
+# file have been produced (HTML Help, or TAR archive for example).
+# Example:
+#   OUTPUT_DIRECTORY=$DOXTEMP/doc
+#   ALLOW_ERASE_OUTPUT_DIRECTORY=ON
+#
+export OUTPUT_DIRECTORY="$DOXTEMP/doc"
+export ALLOW_ERASE_OUTPUT_DIRECTORY=ON
+
+# COMPILE_HTML_HELP RESULTING_HTML_HELP_FILE:
+# Compile the CHM (Compressed HTML) HTML Help file, name of the resulting
+# file. If set to ON and name is non-empty these options will actually
+# trigger the HTML-Help compiler to create the CHM. The resulting
+# file (usually index.chm) will be renamed to this name.
+# Note: if ON, the whole $OUTPUT_DIRECTORY will be erased at the end of
+#       this script, since this file is considered to be one of the
+#       advanced final output, unless ALLOW_ERASE_OUTPUT_DIRECTORY is OFF
+# Note: your doxyfile should be configured to enable HTML Help creation
+#       (using GENERATE_HTML = YES, GENERATE_HTMLHELP = YES)
+# Example:
+#   COMPILE_HTML_HELP=ON
+#   COMPILE_HTML_HELP=@DOCUMENTATION_HTML_HELP@
+#   RESULTING_HTML_HELP_FILE=$DOXTEMP/vtk4.chm
+#
+export COMPILE_HTML_HELP=@DOCUMENTATION_HTML_HELP@
+export RESULTING_HTML_HELP_FILE="$DOXTEMP/$PROJECT_NAME.chm"
+
+# CREATE_HTML_TARZ_ARCHIVE RESULTING_HTML_TARZ_ARCHIVE_FILE:
+# Create a compressed (gzip) tar archive of the html directory (located
+# under the OUTPUT_DIRECTORY), and name of the resulting archive file.
+# Note: your doxyfile should be configured to enable HTML creation
+#       (using GENERATE_HTML = YES)
+# Example:
+#   CREATE_HTML_TARZ_ARCHIVE=ON
+#   CREATE_HTML_TARZ_ARCHIVE=@DOCUMENTATION_HTML_TARZ@
+#   RESULTING_HTML_TARZ_ARCHIVE_FILE=$DOXTEMP/vtk4-html.tar.gz
+#
+export CREATE_HTML_TARZ_ARCHIVE=@DOCUMENTATION_HTML_TARZ@
+export RESULTING_HTML_TARZ_ARCHIVE_FILE="$DOXTEMP/$PROJECT_NAME-html.tar.gz"
+
+# DOWNLOAD_VTK_TAGFILE VTK_TAGFILE VTK_TAGFILE_REMOTE_DIR VTK_TAGFILE_DEST_DIR:
+# Download the VTK tag file, name, remote location and destination dir of this
+# tag file. If set to ON, the tag file is retrieved from its remote location
+# using wget and stored in the destination dir.
+# The tag file is expected to be compressed using gzip, but DO NOT include
+# the .gz extension in VTK_TAGFILE.
+# Note: your doxyfile must be tailored to make use-of or create this tag file.
+#    (using TAGFILES = vtk4-nightly.tag=http://www.vtk.org/doc/nightly/html
+#        or GENERATE_TAGFILE = "@FOO_BINARY_DIR@/Utilities/Doxygen/vtk4.tag")
+# Example:
+#   DOWNLOAD_VTK_TAGFILE=OFF
+#   VTK_TAGFILE=vtk4-nightly.tag
+#   VTK_TAGFILE_REMOTE_DIR=http://www.vtk.org/doc/nightly/html
+#   VTK_TAGFILE_DEST_DIR=$DOXTEMP
+#
+export DOWNLOAD_VTK_TAGFILE=@DOCUMENTATION_DOWNLOAD_VTK_TAGFILE@
+export VTK_TAGFILE=vtkNightlyDoc.tag
+export VTK_TAGFILE_REMOTE_DIR="http://www.vtk.org/files/nightly"
+export VTK_TAGFILE_DEST_DIR="$DOXTEMP"
+
+echoexit()
+{
+  echo "$1"
+  exit 1
+}
+
+cd "${DOXTEMP}" || echoexit "Cannot find Doxygen output directory: ${DOXTEMP}"
+
+# ----------------------------------------------------------------------------
+# Convert the VTK headers to the Doxygen format.
+echo "Convert the VTK headers to the Doxygen format."
+if test "x$PERL_PROG" != "xNOTFOUND" ; then
+    $PERL_PROG "$PATH_TO_VTK_DOX_SCRIPTS/doc_header2doxygen.pl" \
+        --to "$INTERMEDIATE_DOX_DIR" \
+        --relativeto "@DOXYGEN_SOURCE_LOCATIONS_DIR@" \
+        @DOXYGEN_SOURCE_LOCATIONS@ || echoexit "Problem converting VTK headers"
+    if test "x@DOXYGEN_BINARY_LOCATIONS_DIR@" != "x"; then
+      $PERL_PROG "$PATH_TO_VTK_DOX_SCRIPTS/doc_header2doxygen.pl" \
+        --to "$INTERMEDIATE_DOX_DIR" \
+        --relativeto "@DOXYGEN_BINARY_LOCATIONS_DIR@" \
+        @DOXYGEN_BINARY_LOCATIONS@ || echoexit "Problem converting VTK headers"
+    fi
+fi
+echo "Convert the VTK headers to the Doxygen format - done"
+
+# ----------------------------------------------------------------------------
+# Build the full-text index.
+echo "Build the full-text index."
+if test "x$PERL_PROG" != "xNOTFOUND" ; then
+    $PERL_PROG "$PATH_TO_VTK_DOX_SCRIPTS/doc_index.pl" \
+        --project "$PROJECT_NAME" \
+        --stop  "$PATH_TO_VTK_DOX_SCRIPTS/doc_index.stop" \
+        --store "doc_""$PROJECT_NAME""_index.dox" \
+        --to "$INTERMEDIATE_DOX_DIR" \
+        @DOXYGEN_SOURCE_LOCATIONS@ \
+        @DOXYGEN_BINARY_LOCATIONS@ || echoexit "Problem building full-text index"
+fi
+echo "Build the full-text index - done"
+
+#  # ----------------------------------------------------------------------------
+#  # Generate the 'Class to Demos' page cross-linking each class to these
+#  # demos that use that class.
+
+#  if test "x$PERL_PROG" != "xNOTFOUND" ; then
+#      $PERL_PROG $PATH_TO_VTK_DOX_SCRIPTS/doc_class2example.pl \
+#          --datamatch "\W((VTK|ParaView)_DATA_ROOT|(VTK|MedVIP)Data|(vtk)?GetDataRoot|ExpandDataFileName)\W" \
+#          --dataicon "paper-clip.gif" \
+#          --dirmatch "^demos$" \
+#          --label "Demos" \
+#          --project "$PROJECT_NAME" \
+#          --store "doc_""$PROJECT_NAME""_class2demos.dox" \
+#          --title "Class To Demos" \
+#          --to "$INTERMEDIATE_DOX_DIR" \
+#          --unique "d" \
+#          "$SOURCE_DIR/framework/demos"
+#  fi
+
+# ----------------------------------------------------------------------------
+# Retrieve the (gziped) VTK 4 tag file and decompress it
+
+if test "x$DOWNLOAD_VTK_TAGFILE" == "xON" ; then
+    if test "x$VTK_TAGFILE" != "x" ; then
+        if test "x$WGET_PROG" != "xNOTFOUND" ; then
+            $WGET_PROG -nd -nH \
+                "$VTK_TAGFILE_REMOTE_DIR/$VTK_TAGFILE.gz" \
+                -O "$VTK_TAGFILE_DEST_DIR/$VTK_TAGFILE.gz"
+            if test "x$GZIP_PROG" != "xNOTFOUND" ; then
+                $GZIP_PROG -f -d "$VTK_TAGFILE_DEST_DIR/$VTK_TAGFILE.gz"
+            fi
+        fi
+    fi
+fi
+
+# ----------------------------------------------------------------------------
+# Create the Doxygen doc.
+
+if test "x$DOXYGEN_PROG" != "xNOTFOUND" ; then
+
+    if test "x$RM_PROG" != "xNOTFOUND" ; then
+        $RM_PROG -fr "$OUTPUT_DIRECTORY"
+    fi
+
+    $DOXYGEN_PROG "$DOXYFILE" || echoexit "Problem running doxygen"
+fi
+
+# ----------------------------------------------------------------------------
+# Clean the HTML pages to remove the path to the intermediate Doxygen dir.
+
+if test "x$PERL_PROG" != "xNOTFOUND" ; then
+    $PERL_PROG "$PATH_TO_VTK_DOX_SCRIPTS/doc_rmpath.pl" \
+        --to "$INTERMEDIATE_DOX_DIR" \
+        --html "$OUTPUT_DIRECTORY/html" || echoexit "Problem cleaning HTML pages"
+fi
+
+# ----------------------------------------------------------------------------
+# Create the CHM HTML HELP doc.
+
+if test "x$COMPILE_HTML_HELP" == "xON" ; then
+    if test "x$RESULTING_HTML_HELP_FILE" != "x" ; then
+        cd "$OUTPUT_DIRECTORY/html"
+        if test "x$HHC_PROG" != "xNOTFOUND" ; then
+            $HHC_PROG index.hhp || echoexit "Problem generating CHM"
+            if test "x$MV_PROG" != "xNOTFOUND" ; then
+                $MV_PROG -f index.chm "$RESULTING_HTML_HELP_FILE"
+            fi
+       fi
+   fi
+fi
+
+# ----------------------------------------------------------------------------
+# Create the compressed tar archive.
+
+if test "x$CREATE_HTML_TARZ_ARCHIVE" == "xON" ; then
+    if test "x$RESULTING_HTML_TARZ_ARCHIVE_FILE" != "x" ; then
+        cd "$OUTPUT_DIRECTORY"
+        if test "x$TAR_PROG" != "xNOTFOUND" ; then
+            if test "x$RM_PROG" != "xNOTFOUND" ; then
+                $RM_PROG -f html.tar
+            fi
+            $TAR_PROG -cf html.tar html
+            if test "x$GZIP_PROG" != "xNOTFOUND" ; then
+                if test "x$RM_PROG" != "xNOTFOUND" ; then
+                    $RM_PROG -f html.tar.gz
+                fi
+                $GZIP_PROG html.tar
+                $MV_PROG -f html.tar.gz "$RESULTING_HTML_TARZ_ARCHIVE_FILE"
+            fi
+       fi
+   fi
+fi
+
+# ----------------------------------------------------------------------------
+# Let's overwrite any *vtk* file produce by our custom vtk/doxygen tool
+# on top of the existing doxygen one.
+
+if test "x$CP_PROG" != "xNOTFOUND" ; then
+  $CP_PROG "$OUTPUT_DIRECTORY/html/"*vtk* "$PATH_TO_VTKGDCM_FINAL_PATH"
+fi
+
+# ----------------------------------------------------------------------------
+# Clean-up.
+
+if test "x$RM_PROG" != "xNOTFOUND" ; then
+    $RM_PROG -fr "$INTERMEDIATE_DOX_DIR"
+
+    if test "x$DOWNLOAD_VTK_TAGFILE" == "xON" ; then
+        if test "x$VTK_TAGFILE" != "x" ; then
+            $RM_PROG -f "$VTK_TAGFILE_DEST_DIR/$VTK_TAGFILE"
+        fi
+    fi
+
+    if test "x$COMPILE_HTML_HELP" == "xON" ; then
+        if test "x$RESULTING_HTML_HELP_FILE" != "x" ; then
+            if test "x$ALLOW_ERASE_OUTPUT_DIRECTORY" == "xON" ; then
+                $RM_PROG -fr "$OUTPUT_DIRECTORY"
+            fi
+        fi
+    fi
+fi

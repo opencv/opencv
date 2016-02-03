@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<Description>
+<LineLength>81</LineLength>
+<!--
+<Header>@GDCM_SOURCE_DIR@/Utilities/KWStyle/GDCMHeader.h,false,true</Header>
+<Functions>
+<regex>[A-Z]</regex>
+<length>100</length>
+</Functions>
+-->
+</Description>

@@ -1,0 +1,48 @@
+#-----------------------------------------------------------------------------
+#
+# OPENJPEGConfig.cmake - CMake configuration file for external projects.
+#
+# This file is configured by OPENJPEG and used by the UseOPENJPEG.cmake
+# module to load OPENJPEG's settings for an external project.
+@OPENJPEG_CONFIG_INSTALL_ONLY@
+# The OPENJPEG version number.
+set(OPENJPEG_MAJOR_VERSION "@OPENJPEG_VERSION_MAJOR@")
+set(OPENJPEG_MINOR_VERSION "@OPENJPEG_VERSION_MINOR@")
+set(OPENJPEG_BUILD_VERSION "@OPENJPEG_VERSION_BUILD@")
+
+# The libraries.
+set(OPENJPEG_LIBRARIES "@OPENJPEG_LIBRARIES@")
+
+# The CMake macros dir.
+set(OPENJPEG_CMAKE_DIR "@OPENJPEG_CMAKE_DIR_CONFIG@")
+
+# The configuration options.
+set(OPENJPEG_BUILD_SHARED_LIBS "@OPENJPEG_BUILD_SHARED_LIBS@")
+
+# The "use" file.
+set(OPENJPEG_USE_FILE "@OPENJPEG_USE_FILE_CONFIG@")
+
+get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+if(EXISTS ${SELF_DIR}/OpenJPEGTargets.cmake)
+  # This is an install tree
+  include(${SELF_DIR}/OpenJPEGTargets.cmake)
+  get_filename_component(OPENJPEG_INCLUDE_ROOT "${SELF_DIR}/../../@OPENJPEG_INSTALL_INCLUDE_DIR@" ABSOLUTE)
+  set(OPENJPEG_INCLUDE_DIRS ${OPENJPEG_INCLUDE_ROOT})
+  set(OPENJPEG_LIBRARIES openjpeg)
+
+else()
+  if(EXISTS ${SELF_DIR}/OpenJPEGExports.cmake)
+    # This is a build tree
+    set( OPENJPEG_INCLUDE_DIRS @OPENJPEG_INCLUDE_PATH@)
+
+    include(${SELF_DIR}/OpenJPEGExports.cmake)
+
+  else()
+    message(FATAL_ERROR "ooops")
+  endif()
+endif()
+
+set(OPENJPEG_USE_FILE ${SELF_DIR}/UseOPENJPEG.cmake)
+
+# Backward compatible part:
+set(OPENJPEG_FOUND       TRUE)

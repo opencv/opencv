@@ -1,0 +1,77 @@
+/*!
+
+\page gdcmxml provides a tool to convert a DICOM file into a XML infoset and vice-versa.
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcmxml [options] file-in[DICOM or XML] file-out[XML or DICOM]
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcmxml command line program converts a DICOM file (DataSet) into an XML
+file (according to the Native DICOM Model) or vice-versa.  For those familiar
+with DCMTK, this provides binary capabilities (i.e. functionality of both
+dcm2xml and xml2dcm).
+
+The XML infoset which is from the DICOM file gdcmXMLPrintet Class. This is in
+strict compliance with the Native DICOM Model as given in Supp 118.
+
+\section parameters PARAMETERS
+
+\verbatim
+file-in   DICOM or XML input filename ( cannot be absent)
+
+file-out  output filename (can be absent)
+\endverbatim
+
+\section options OPTIONS
+
+\subsection parameters parameters
+\verbatim
+  -i --input      DICOM filename
+  -o --output     DICOM filename
+\endverbatim
+
+\subsection options_dicom2xml Options for DICOM to XML:
+\verbatim
+  -B --loadBulkData   Loads bulk data into a binary file named "UUID" (by default UUID are written).
+\endverbatim
+
+\subsection options_xml2dicom Options for XML to DICOM:
+\verbatim
+  -B --loadBulkData   Loads bulk data from a binary file named as the "UUID" in XML file (by default UUID are written).
+  -T --TransferSyntax Loads transfer syntax from file (default is LittleEndianImplicit)
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\section see_also SEE ALSO
+
+<b>gdcmdump</b>(1), <b>gdcmconv</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

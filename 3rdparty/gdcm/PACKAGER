@@ -1,0 +1,50 @@
+Info for packagers:
+
+At a minimum you should consider the following cmake options:
+
+CMAKE_SKIP_RPATH:BOOL=YES
+CMAKE_INSTALL_PREFIX:PATH=/usr
+To build the cmd line applications:
+GDCM_BUILD_APPLICATIONS:BOOL=ON
+To build shared libs:
+GDCM_BUILD_SHARED_LIBS:BOOL=ON
+To build the documentation (need doxygen >= 1.6.1)
+GDCM_DOCUMENTATION:BOOL=ON
+
+You should really consider:
+GDCM_BUILD_TESTING:BOOL=OFF
+Otherwise it build extra code only needed to run the unit test of gdcm...
+
+unless you have some specific compiler optimization technique you should use the cmake default one:
+CMAKE_BUILD_TYPE:STRING=Release
+
+By default this will build pdf doc if you have all the required package, if you do not want the pdf:
+GDCM_PDF_DOCUMENTATION:BOOL=ON
+
+Wrapping:
+GDCM support the following wrapped language
+GDCM_WRAP_PYTHON:BOOL=ON
+GDCM_WRAP_CSHARP:BOOL=ON
+GDCM_WRAP_JAVA:BOOL=ON
+
+There is an ongoing effort to make PHP another supported language (very experimental ATM)
+GDCM_WRAP_PHP:BOOL=ON
+
+For VTK user:
+GDCM_USE_VTK:BOOL=ON
+
+System libs:
+- By default gdcm ships with system libs for ease of compilation on win32 system. So for most *nix system you may want:
+GDCM_USE_SYSTEM_EXPAT:BOOL=ON
+GDCM_USE_SYSTEM_ZLIB:BOOL=ON
+GDCM_USE_SYSTEM_UUID:BOOL=ON
+GDCM_USE_SYSTEM_OPENJPEG:BOOL=ON
+
+OpenSSL option is slightly different as not 'convenient' openssl is shipped within GDCM, so the only
+way to access the openssl functionalities is to have openssl installed in the target system.
+GDCM_USE_SYSTEM_OPENSSL:BOOL=ON
+
+Examples:
+GDCM comes with some examples for user, but setting the following:
+GDCM_BUILD_EXAMPLES:BOOL=ON
+will not do anything since there is no install rule for examples...

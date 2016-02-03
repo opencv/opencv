@@ -1,0 +1,140 @@
+0009 0010 LO 1 Private Creator
+0009 0011 LO 1 Private Creator
+0009 0012 LO 1 Private Creator
+0009 0013 LO 1 Private Creator
+0009 0015 LO 1 UID
+0009 0020 LO 1 Private Creator
+0009 0030 LO 1 Private Creator
+0009 0031 SH 1 Unknown (SIENET)
+0009 0040 US 1 Data Object Type
+0009 0041 SH 1 Data Object Subtype
+0009 1010 LO 1 Comments
+0009 1015 LO 1 SPI Image UID
+0009 1040 US 1 Data Object Type
+0009 1041 LO 1 Data Object Subtype
+0009 1110 LO 1 Recognition Code
+0009 1130 US 1 Byte Offset Of Original Header
+0009 1131 US 1 Length Of Original Header
+0009 1140 US 1 Byte Offset Of Pixelmatrix
+0009 1141 UL 1 Length Of Pixelmatrix In Bytes
+0009 1210 CS 1 Storage Mode
+0009 1212 UL 1 Evaluation Mask Image
+0009 1213 UN 1 TODO
+0009 1214 UN 1 TODO
+0009 1226 DA 1 Last Move Date
+0009 1227 TM 1 Last Move Time
+0009 1310 LO 1 Generator Identification Label
+0009 1311 LO 1 Gantry Identification Label
+0009 1314 LO 1 DAS Identification Label
+0009 1315 LO 1 SMI Identification Label
+0009 1316 LO 1 CPU Identification Label
+0009 1320 SH 1 Header Version
+0009 2010 LO 1 Private Creator
+0009 2030 CS 1 Unknown (IMA)
+0009 2031 SH 1 Unknown (TOPO)
+0009 2032 SH 1 Unknown (NONE)
+0009 2040 LO 1 Unknown (TOPO)
+0009 2042 LO 1 Unknown (2.9)
+0009 2050 DA 1 Unknown
+0009 2051 TM 1 Unknown (093757.981000)
+0009 3172 LO 1 Unknown 001S00OT002001082217540946
+0009 3175 LO 1 Unknown 001S60CT012001082209470996
+0011 0010 LO 1 Organ
+0011 0011 LO 1 PrivateCreator
+0011 0015 LO 1 Allergy Indication
+0011 0020 LO 1 Pregnancy
+0011 1010 LO 1 Organ
+0011 1110 DA 1 Registration Date
+0011 1111 TM 1 Registration Time
+0011 1123 DS 1 Used Patient Weight
+0019 0010 LO 1 PrivateCreator
+0019 0012 LO 1 PrivateCreator
+0019 0014 LO 1 PrivateCreator
+0019 0015 LO 1 PrivateCreator
+0019 1010 IS 1 Net Frequency
+0019 1020 CS 1 Measurement Mode
+0019 1030 CS 1 Calculation Mode
+0019 1050 IS 1 Noise Level
+0019 1060 IS 1 Number of Data Bytes
+0019 1210 DS 1 Total Measurement Time Nominal
+0019 1211 DS 1 Total Measurement Time Current
+0019 1212 DS 1 Start Delay Time
+0019 1213 DS 1 Dwell Time
+0019 1214 IS 1 Number of Phases
+0019 1216 UL 2 Sequence Control Mask
+0019 1218 UL 1 Measurement Status Mask
+0019 1220 IS 1 Number of Fourier Lines Nominal
+0019 1221 IS 1 Number of Fourier Lines Current
+0019 1226 IS 1 Number of Fourier Lines after Zero
+0019 1228 IS 1 First Measured Fourier Line
+0019 1230 IS 1 Acquisition Columns
+0019 1231 IS 1 Reconstruction Columns
+0019 1240 IS 1 Array Coil Element Number
+0019 1241 UL 1 Array Coil Element Select Mask
+0019 1242 UL 1 Array Coil Element Data Mask
+0019 1245 IS 1 Array Coil ADC Pair Number
+0019 1246 UL 1 Array Coil Combination Mask
+0019 1250 IS 1 Number of Averages Current
+0019 1260 DS 1 Flip Angle
+0019 1270 IS 1 Number of Prescans
+0019 1281 CS 1 Filter Type for Raw Data
+0019 1283 CS 1 Filter Type for Image Data
+0019 1285 CS 1 Filter Type for Phase Correction
+0019 1287 CS 1 Normalization Filter Type for Image Data
+0019 1290 IS 1 Number of Saturation Regions
+0019 1294 DS 1 Image Rotation Angle
+0019 1296 UL 3 Coil ID Mask
+0019 1297 UL 2 Coil Class Mask
+0019 1298 DS 3 Coil Position
+0019 1412 DS 1 Magnetic Field Strength
+0019 1414 DS 1 ADC Voltage
+0019 1416 DS 1 ADC Offset
+0019 1420 DS 1 Transmitter Amplitude
+0019 1421 IS 1 Number of Transmitter Amplitudes
+0019 1422 DS 1 Transmitter Attenuator
+0019 1424 DS 1 Transmitter Calibration
+0019 1426 DS 1 Transmitter Reference
+0019 1450 DS 1 Receiver Total Gain
+0019 1451 DS 1 Receiver Amplifier Gain
+0019 1452 DS 1 Receiver Preamplifier Gain
+0019 1454 DS 1 Receiver Cable Attenuation
+0019 1455 DS 1 Receiver Reference Gain
+0019 1456 DS 1 Receiver Filter Frequency
+0019 1460 DS 1 Reconstruction Scale Factor
+0019 1462 DS 1 Reference Scale Factor
+0019 1470 DS 1 Phase Gradient Amplitude
+0019 1471 DS 1 Readout Gradient Amplitude
+0019 1472 DS 1 Selection Gradient Amplitude
+0019 1480 DS 1 Gradient Delay Time
+0019 1482 DS 1 Total Gradient Delay Time
+0019 1490 LO 1 Sensitivity Correction Label
+0019 14a0 IS 1 RF Watchdog Mask
+0019 14a2 DS 1 RF Power Error Indicator
+0019 14a5 DS 1 Specific Absorption Rate Whole Body
+0019 14a6 DS 1 Specific Energy Dose
+0019 14b0 UL 1 Adjustment Status Mask
+0019 14d1 DS 1 Flow Sensitivity
+0019 14d2 CS 1 Calculation Submode
+0019 14d3 DS 1 Field of View Ratio
+0019 14d4 IS 1 Base Raw Matrix Size
+0019 14d5 IS 1 2D Oversampling Lines
+0019 14d6 IS 1 3D Phase Oversampling Partitions
+0019 14d7 IS 1 Echo Line Position
+0019 14d8 IS 1 Echo Column Position
+0019 14d9 IS 1 Lines Per Segment
+0019 14da CS 1 Phase Coding Direction
+0019 1510 LO 1 Parameter File Name
+0019 1511 LO 1 Sequence File Name
+0019 1512 LO 1 Sequence File Owner
+0019 1513 LO 1 Sequence Description
+0021 0010 LO 1 PrivateCreator
+0021 1010 DS 1 Zoom
+0021 1011 DS 1 Target
+0021 1020 US 1 ROI Mask
+0029 0060 LO 1 Compression Algorithm
+7001 0010 LO 1 PrivateCreator
+7001 1010 LO 1 Dummy
+7003 0010 LO 1 PrivateCreator
+7003 1010 LO 1 Header
+7005 0010 LO 1 PrivateCreator
+7005 1010 LO 1 Dummy

@@ -1,0 +1,31 @@
+/* create config.h for CMake */
+/*
+ * here is where system comupted values get stored these values should only
+ * change when the target compile platform changes
+ */
+
+/* what byte order */
+#ifndef __OPJ_CONFIGURE_H
+#define __OPJ_CONFIGURE_H
+
+#cmakedefine CMAKE_WORDS_BIGENDIAN
+#ifdef CMAKE_WORDS_BIGENDIAN
+        #define OPJ_BIG_ENDIAN
+#else
+        #define OPJ_LITTLE_ENDIAN
+#endif
+
+#define PACKAGE_VERSION "@PACKAGE_VERSION@"
+
+#cmakedefine HAVE_INTTYPES_H
+#cmakedefine HAVE_MEMORY_H
+#cmakedefine HAVE_STDINT_H
+#cmakedefine HAVE_STDLIB_H
+#cmakedefine HAVE_STRINGS_H
+#cmakedefine HAVE_STRING_H
+#cmakedefine HAVE_SYS_STAT_H
+#cmakedefine HAVE_SYS_TYPES_H
+#cmakedefine HAVE_UNISTD_H
+
+
+#endif /* __OPJ_CONFIGURE_H */

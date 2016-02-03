@@ -1,0 +1,33 @@
+Release Notes
+--------------
+This version of the library has been tested under the following OS:
+- RedHat Linux 9.0
+
+You should be able to link progams with the -lopenjpeg option after the library is compiled and installed.
+You can also statically link with libopenjpeg.a.
+If you use a really old version of gcc and it chokes on the CRs in the file, you can type 'make dos2unix'
+to run all of the files through dos2unix which converts CRLF to LF.  This no longer appears to be required
+for RedHat 7.3 or 9.
+
+Please let us know how this works for you under other Linux distributions or any other *nix.
+
+Installation
+------------
+Note: You will need to have root privileges in order to install the library in
+/usr/include and /usr/lib directories.
+The installation process is as simple as this :
+1) Enter the OpenJPEG directory
+2) Build the distribution :
+make
+make install
+3) Clean all files produced during the build process
+make clean
+
+Simple codec compilation
+------------------------
+Once you've built the library, you might want to test it with a basic codec. To do this, go to the codec directory and use one of the following commands to build an encoder and decoder respectively:
+
+gcc convert.c image_to_j2k.c -o image_to_j2k -lopenjpeg -I ../libopenjpeg/ -lm -ltiff
+gcc convert.c j2k_to_image.c -o j2k_to_image -lopenjpeg -I ../libopenjpeg/ -lm -ltiff
+
+You should add '-L..' to those lines if you did not use the 'install' target (and the 'clean' target neither...).

@@ -1,0 +1,71 @@
+/*!
+
+\page gdcm2pnm off-screen rendering of DICOM images
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcm2pnm [options] file-in bitmap-out
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcm2pnm command line program takes as input a DICOM file and produces
+a rendered bitmap file.
+
+\section parameters PARAMETERS
+
+\verbatim
+file-in   DICOM input filename
+
+bitmap-out  Bitmap output filename
+\endverbatim
+
+\section options OPTIONS
+
+\subsection options options
+\verbatim
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\section simple_usage Simple usage
+\b gdcm2pnm will take as input DICOM and render it into a bitmap file using the
+window/level attributes value.
+
+\verbatim
+$ gdcm2pnm input.dcm output.png
+\endverbatim
+
+It is much different from the gdcmraw or gdcmimg command line tool as it will
+render a DICOM image. This means that the output will be rendered in 8bits
+ready for display.
+
+\section see_also SEE ALSO
+
+<b>gdcm2vtk</b>(1), <b>gdcmimg</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

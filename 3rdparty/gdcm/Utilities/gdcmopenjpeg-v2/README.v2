@@ -1,0 +1,25 @@
+Preliminary notes
+-----------------
+
+The Version 2 of openjpeg has been currently added as a branch on the repository.
+
+All the trunk has been copied and files that needed to change have been patched. In comparison with the trunk, the 'jp3d' directory has been removed because it's based on a modified version of libopenjpeg version 1 and there is no plan to make it reach the version 2 status. Idem with the 'indexer_JPIP', which is obsolete and should be rewritten from scratch.
+
+At the time of the branch creation, the following files and directories have been updated (or added) for version 2 :
+* libopenjpeg/
+* codec/
+* test_Free_image_V2_tile_handling/ : a test program that uses libopenjpeg v2 and libfreeimage (see libs) to implement a basic codec.
+* test_V2_tile_handling/ : a test program that generates a random image and (de)compresses it with libopenjpeg v2.
+* CMakeLists.txt
+* Free_CMakeImport.cmake
+* opj_configure.h.in
+
+Other files and directories from the trunk (project files, jpwl/, OPJViewer/, ...) have also been copied in the branch and should be modified progressively to comply with v2. Check the Changelog for updates on this topic.
+
+Enjoy v2 and feel free to contribute !
+
+
+Instructions to compile v2
+--------------------------
+
+to be added.

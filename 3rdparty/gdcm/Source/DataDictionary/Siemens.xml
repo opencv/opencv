@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="priv2html.xsl"?><!-- The whole file was generated using :
+
+ $ find /path/to/dicom/files -type f -exec gdcmdump {} -d \; > dict.xml
+
+-->
+<!--
+  Program: GDCM (Grassroots DICOM). A DICOM library
+
+  Copyright (c) 2006-2011 Mathieu Malaterre
+  All rights reserved.
+  See Copyright.txt or http://gdcm.sourceforge.net/Copyright.html for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+-->
+<dict edition="2007" ref="http://www.medical.siemens.com/siemens/sv_SE/rg_marcom_FBAs/files/brochures/DICOM/ct/C2-028.610.04.01.02_DICOM_VA11.pdf">
+<!--Tag                 Private Owner Code                     Name                      VR         VM-->
+
+<entry group="0029" element="xx08" owner="SIEMENS CSA HEADER" vr="CS" vm="1" name="CSA Image Header Type"/>
+<entry group="0029" element="xx09" owner="SIEMENS CSA HEADER" vr="LO" vm="1" name="CSA Image Header Version"/>
+<entry group="0029" element="xx10" owner="SIEMENS CSA HEADER" vr="OB" vm="1" name="CSA Image Header Info"/>
+<entry group="0029" element="xx18" owner="SIEMENS CSA HEADER" vr="CS" vm="1" name="CSA Series Header Type"/>
+<entry group="0029" element="xx19" owner="SIEMENS CSA HEADER" vr="LO" vm="1" name="CSA Series Header Version"/>
+<entry group="0029" element="xx20" owner="SIEMENS CSA HEADER" vr="OB" vm="1" name="CSA Series Header Info"/>
+<entry group="0029" element="xx08" owner="SIEMENS CSA NON-IMAGE" vr="CS" vm="1" name="CSA Data Type"/>
+<entry group="0029" element="xx09" owner="SIEMENS CSA NON-IMAGE" vr="LO" vm="1" name="CSA Data Version"/>
+<entry group="0029" element="xx10" owner="SIEMENS CSA NON-IMAGE" vr="OB" vm="1" name="CSA Data Info"/>
+<entry group="0029" element="xx08" owner="SIEMENS CSA REPORT" vr="CS" vm="1" name="syngo Report Type"/>
+<entry group="0029" element="xx09" owner="SIEMENS CSA REPORT" vr="LO" vm="1" name="syngo Report"/>
+<entry group="0029" element="xx15" owner="SIEMENS CSA REPORT" vr="US" vm="1" name="SR Variant"/>
+<entry group="0029" element="xx17" owner="SIEMENS CSA REPORT" vr="UI" vm="1" name="SC SOP Instance UID"/>
+<entry group="0029" element="xx10" owner="SIEMENS CSA ENVELOPE" vr="OB" vm="1" name="syngo Report Data"/>
+<entry group="0029" element="xx11" owner="SIEMENS CSA ENVELOPE" vr="OB" vm="1" name="syngo Report Presentation"/>
+<entry group="0029" element="xx08" owner="SIEMENS MEDCOM HEADER" vr="CS" vm="1" name="MedCom Header Type"/>
+<entry group="0029" element="xx09" owner="SIEMENS MEDCOM HEADER" vr="LO" vm="1" name="MedCom Header Version"/>
+<entry group="0029" element="xx10" owner="SIEMENS MEDCOM HEADER" vr="OB" vm="1" name="MedCom Header Info"/>
+<entry group="0029" element="xx20" owner="SIEMENS MEDCOM HEADER" vr="OB" vm="1" name="MedCom History Information"/>
+<entry group="0029" element="xx31" owner="SIEMENS MEDCOM HEADER" vr="LO" vm="1" name="PMTF Information 1"/>
+<entry group="0029" element="xx32" owner="SIEMENS MEDCOM HEADER" vr="UL" vm="1" name="PMTF Information 2"/>
+<entry group="0029" element="xx33" owner="SIEMENS MEDCOM HEADER" vr="UL" vm="1" name="PMTF Information 3"/>
+<entry group="0029" element="xx34" owner="SIEMENS MEDCOM HEADER" vr="CS" vm="1" name="PMTF Information 4"/>
+<entry group="0029" element="xx35" owner="SIEMENS MEDCOM HEADER" vr="UL" vm="1" name="PMTF Information 5"/>
+<entry group="0029" element="xx40" owner="SIEMENS MEDCOM HEADER" vr="SQ" vm="1" name="Application Header Sequence"/>
+<entry group="0029" element="xx41" owner="SIEMENS MEDCOM HEADER" vr="CS" vm="1" name="Application Header Type"/>
+<entry group="0029" element="xx42" owner="SIEMENS MEDCOM HEADER" vr="LO" vm="1" name="Application Header ID"/>
+<entry group="0029" element="xx43" owner="SIEMENS MEDCOM HEADER" vr="LO" vm="1" name="Application Header Version"/>
+<entry group="0029" element="xx44" owner="SIEMENS MEDCOM HEADER" vr="OB" vm="1" name="Application Header Info"/>
+<entry group="0029" element="xx50" owner="SIEMENS MEDCOM HEADER" vr="LO" vm="8" name="Workflow Control Flags"/>
+<entry group="0029" element="xx51" owner="SIEMENS MEDCOM HEADER" vr="CS" vm="1" name="Archive Management Flag Keep Online"/>
+<entry group="0029" element="xx52" owner="SIEMENS MEDCOM HEADER" vr="CS" vm="1" name="Archive Management Flag Do Not Archive"/>
+<entry group="0029" element="xx53" owner="SIEMENS MEDCOM HEADER" vr="CS" vm="1" name="Image Location Status"/>
+<entry group="0029" element="xx54" owner="SIEMENS MEDCOM HEADER" vr="DS" vm="1" name="Estimated Retrieve Time"/>
+<entry group="0029" element="xx55" owner="SIEMENS MEDCOM HEADER" vr="DS" vm="1" name="Data Size of Retrieved Images"/>
+<entry group="0029" element="xx70" owner="SIEMENS MEDCOM HEADER" vr="SQ" vm="1" name="Siemens Link Sequence"/>
+<entry group="0029" element="xx71" owner="SIEMENS MEDCOM HEADER" vr="AT" vm="1" name="Referenced Tag"/>
+<entry group="0029" element="xx72" owner="SIEMENS MEDCOM HEADER" vr="CS" vm="1" name="Referenced Tag Type"/>
+<entry group="0029" element="xx73" owner="SIEMENS MEDCOM HEADER" vr="UL" vm="1" name="Referenced Value Length"/>
+<entry group="0029" element="xx74" owner="SIEMENS MEDCOM HEADER" vr="CS" vm="1" name="Referenced Object Device Type"/>
+<entry group="0029" element="xx75" owner="SIEMENS MEDCOM HEADER" vr="OB" vm="1" name="Referenced Object Device Location"/>
+<entry group="0029" element="xx76" owner="SIEMENS MEDCOM HEADER" vr="OB" vm="1" name="Referenced Object ID"/>
+<entry group="0029" element="xx60" owner="SIEMENS MEDCOM HEADER2" vr="LO" vm="1" name="Series Work Flow Status"/>
+<entry group="0029" element="xx08" owner="SIEMENS MEDCOM OOG" vr="CS" vm="1" name="MEDCOM OOG Type"/>
+<entry group="0029" element="xx09" owner="SIEMENS MEDCOM OOG" vr="LO" vm="1" name="MEDCOM OOG Version"/>
+<entry group="0029" element="xx10" owner="SIEMENS MEDCOM OOG" vr="OB" vm="1" name="MEDCOM OOG Info"/>
+<entry group="7fe1" element="xx10" owner="SIEMENS CSA NON-IMAGE" vr="OB" vm="1" name="CSA Data"/>
+</dict>

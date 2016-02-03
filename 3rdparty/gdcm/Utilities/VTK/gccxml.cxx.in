@@ -1,0 +1,16 @@
+#include "@header@"
+
+#ifdef CABLE_CONFIGURATION
+namespace _cable_
+{
+  const char* const package = "Kitware.VTK.GDCM";
+  const char* const package_version = "@VTK_MAJOR_VERSION@.@VTK_MINOR_VERSION@.@VTK_BUILD_VERSION@";
+  const char* const group = "vtk@kit@";
+
+  namespace wrappers
+  {
+    typedef @cxxclass@ @cxxclass@_W;
+  }
+
+}
+#endif

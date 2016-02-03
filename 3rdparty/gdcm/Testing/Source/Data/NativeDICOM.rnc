@@ -1,0 +1,60 @@
+# PS 3.19-2011
+# A.1.6          Schema
+# The Normative version of the XML Schema for the Native DICOM Model follows:
+default namespace="http://dicom.nema.org/PS3.19/models/NativeDICOM"
+
+# This schema was created as an intermediary, a means of describing
+# native binary encoded DICOM objects as XML Infosets, thus allowing
+# one to manipulate binary DICOM objects using familiar XML tools.
+# As such, the schema is designed to facilitate a simple, mechanical,
+# bi-directional translation between binary encoded DICOM and XML-like
+# constructs without constraints, and to simplify identifying portions
+# of a DICOM object using XPath statements.
+#
+# Since this schema has minimal type checking, it is neither intended
+# to be used for any operation that involves hand coding, nor to
+# describe a definitive, fully validating encoding of DICOM concepts
+# into XML, as what one might use, for example, in a robust XML
+# database system or in XML-based forms, though it may be used
+# as a means for translating binary DICOM Objects into such a form
+# (e.g. through an XSLT script).
+
+start = element NativeDicomModel { DicomDataSet }
+
+# A DICOM Data Set is as defined in PS3.5. It does not appear
+# as an XML Element, since it does not appear in the binary encoded
+# DICOM objects. It exists here merely as a documentation aid.
+DicomDataSet = DicomAttribute*
+
+DicomAttribute = element DicomAttribute {
+  Tag, VR, Keyword?, PrivateCreator?,
+  ( BulkData | Value+ | Item+ | PersonName+ )?
+}
+BulkData = element BulkData{ UUID }
+Value = element Value { Number, xsd:string }
+Item = element Item { Number, DicomDataSet }
+PersonName = element PersonName {
+  Number,
+  element SingleByte  { NameComponents }?,
+  element Ideographic { NameComponents }?,
+  element Phonetic    { NameComponents }?
+}
+
+NameComponents =
+  element FamilyName {xsd:string}?,
+  element GivenName  {xsd:string}?,
+  element MiddleName {xsd:string}?,
+  element NamePrefix {xsd:string}?,
+  element NameSuffix {xsd:string}?
+
+# keyword is the attribute tag from PS3.6
+# (derived from the DICOM Attribute's name)
+Keyword = attribute keyword { xsd:token }
+# canonical XML definition of Hex, with lowercase letters disallowed
+Tag = attribute tag { xsd:string{ minLength="8" maxLength="8" pattern="[0-9A-F]{8}" } }
+VR = attribute vr { "AE" | "AS" | "AT" | "CS" | "DA" | "DS" | "DT" | "FL" | "FD"
+                  | "IS" | "LO" | "LT" | "OB" | "OF" | "OW" | "PN" | "SH" | "SL"
+                  | "SQ" | "SS" | "ST" | "TM" | "UI" | "UL" | "UN" | "US" | "UT" }
+PrivateCreator = attribute privateCreator{ xsd:string }
+UUID = attribute uuid { xsd:string }
+Number = attribute number { xsd:positiveInteger }

@@ -1,0 +1,289 @@
+// The following example is a QIDO-RS SearchForStudies response consisting
+// of two matching studies, corresponding to the example QIDO-RS request:
+// GET http://qido.nema.org/studies?PatientID=12345&includefield=all&limit=2
+[
+{    // Result 1
+  "SpecificCharacterSet": {
+    "Tag": "00080005",
+      "VR": "CS",
+      "Value": [ "ISO_IR192" ]
+  },
+    "StudyDate": {
+      "Tag": "00080020",
+      "VR": "DT",
+      "Value": [ "20130409" ]
+    },
+    "StudyTime": {
+      "Tag": "00080030",
+      "VR": "TM",
+      "Value": [ "131600.0000" ]
+    },
+    "AccessionNumber": {
+      "Tag": "00080050",
+      "VR": "SH",
+      "Value": [ "11235813" ]
+    },
+    "InstanceAvailability": {
+      "Tag": "00080056",
+      "VR": "CS",
+      "Value": [ "ONLINE" ]
+    },
+    "ModalitiesInStudy": {
+      "Tag": "00080061",
+      "VR": "CS",
+      "Value": [
+        "CT",
+      "PET"
+        ]
+    },
+    "ReferringPhysiciansName": {
+      "Tag": "00080090",
+      "VR": "PN",
+      "PersonName": [
+        {
+        "SingleByte": "^Bob^^Dr."
+        }
+      ]
+    },
+    "00090010": {
+      "Tag": "00090010",
+      "VR": "LO",
+      "Value": [ "Vendor A" ]
+    },
+    "00091002": {
+      "Tag": "00091002",
+      "VR": "UN",
+      "PrivateCreator": "Vendor A",
+      "Value": [ "z0x9c8v7" ]
+    },
+    "PatientName": {
+      "Tag": "00100010",
+      "VR": "PN",
+      "PersonName": [
+        {
+        "SingleByte": "Wang^XiaoDong",
+        "Ideographic": "王^小東"
+        }
+      ]
+    },
+    "PatientID": {
+      "Tag": "00100020",
+      "VR": "LO",
+      "Value": [ "12345" ]
+    },
+    "IssuerOfPatientID": {
+      "Tag": "00100021",
+      "VR": "LO",
+      "Value": [ "Hospital A" ]
+    },
+    "PatientsBirthDate": {
+      "Tag": "00100030",
+      "VR": "DT",
+      "Value": [ "19670701" ]
+    },
+    "PatientsSex": {
+      "Tag": "00100040",
+      "VR": "CS",
+      "Value": [ "M" ]
+    },
+    "OtherPatientIDsSequence": {
+      "Tag": "00101002",
+      "VR": "SQ",
+      "Sequence": [
+        {
+        "PatientID": {
+          "Tag": "00100020",
+          "VR": "LO",
+          "Value": [ "54321" ]
+        },
+        "IssuerOfPatientID": {
+          "Tag": "00100021",
+          "VR": "LO",
+          "Value": [ "Hospital B" ]
+        }
+        },
+        {
+        "PatientID": {
+          "Tag": "00100020",
+          "VR": "LO",
+          "Value": [ "24680" ]
+        },
+        "IssuerOfPatientID": {
+          "Tag": "00100021",
+          "VR": "LO",
+          "Value": [ "Hospital C" ]
+        }
+        }
+      ]
+    },
+    "StudyID": {
+      "Tag": "00200010",
+      "VR": "SH",
+      "Value": [ "11235813" ]
+    },
+    "StudyInstanceUID": {
+      "Tag": "0020000D",
+      "VR": "UI",
+      "Value": [
+        "1.2.392.200036.9116.2.2.2.1762893313.1029997326.945873" ]
+    },
+    "NumberOfStudyRelatedSeries": {
+      "Tag": "00201206",
+      "VR": "IS",
+      "Value": [ "4" ]
+    },
+    "NumberOfStudyRelatedInstances": {
+      "Tag": "00201208",
+      "VR": "IS",
+      "Value": [ "942" ]
+    },
+    "RetrieveURL": {
+      "Tag": "00081190",
+      "VR": "UT",
+      "Value": [
+        "http://wado.nema.org/studies/1.2.392.200036.9116.2.2.2.1762893313.1029997326.945873" ]
+    }
+},
+{   // Result 2
+  "SpecificCharacterSet": {
+    "Tag": "00080005",
+    "VR": "CS",
+    "Value": [ "ISO_IR192" ]
+  },
+  "StudyDate": {
+    "Tag": "00080020",
+    "VR": "DT",
+    "Value": [ "20130309" ]
+  },
+  "StudyTime": {
+    "Tag": "00080030",
+    "VR": "TM",
+    "Value": [ "111900.0000" ]
+  },
+  "AccessionNumber": {
+    "Tag": "00080050",
+    "VR": "SH",
+    "Value": [ "11235821" ]
+  },
+  "InstanceAvailability": {
+    "Tag": "00080056",
+    "VR": "CS",
+    "Value": [ "ONLINE" ]
+  },
+  "ModalitiesInStudy": {
+    "Tag": "00080061",
+    "VR": "CS",
+    "Value": [
+      "CT",
+    "PET"
+      ]
+  },
+  "ReferringPhysiciansName": {
+    "Tag": "00080090",
+    "VR": "PN",
+    "PersonName": [
+      {
+      "SingleByte": "^Bob^^Dr."
+      }
+    ]
+  },
+  "00090010": {
+    "Tag": "00090010",
+    "VR": "LO",
+    "Value": [ "Vendor A" ]
+  },
+  "00091002": {
+    "Tag": "00091002",
+    "VR": "UN",
+    "PrivateCreator": "Modality Vendor A",
+    "Value": [ "z0x9c8v7" ]
+  },
+  "PatientName": {
+    "Tag": "00100010",
+    "VR": "PN",
+    "PersonName": [
+      {
+      "SingleByte": "Wang^XiaoDong",
+      "Ideographic": "王^小東"
+      }
+    ]
+  },
+  "PatientID": {
+    "Tag": "00100020",
+    "VR": "LO",
+    "Value": [ "12345" ]
+  },
+  "IssuerOfPatientID": {
+    "Tag": "00100021",
+    "VR": "LO",
+    "Value": [ "Hospital A" ]
+  },
+  "PatientsBirthDate": {
+    "Tag": "00100030",
+    "VR": "DT",
+    "Value": [ "19670701" ]
+  },
+  "PatientsSex": {
+    "Tag": "00100040",
+    "VR": "CS",
+    "Value": [ "M" ]
+  },
+  "OtherPatientIDsSequence": {
+    "Tag": "00101002",
+    "VR": "SQ",
+    "Sequence": [
+      {
+      "PatientID": {
+        "Tag": "00100020",
+        "VR": "LO",
+        "Value": [ "54321" ]
+      },
+      "IssuerOfPatientID": {
+        "Tag": "00100021",
+        "VR": "LO",
+        "Value": [ "Hospital B" ]
+      }
+      },
+      {
+      "PatientID": {
+        "Tag": "00100020",
+        "VR": "LO",
+        "Value": [ "24680" ]
+      },
+      "IssuerOfPatientID": {
+        "Tag": "00100021",
+        "VR": "LO",
+        "Value": [ "Hospital C" ]
+      }
+      }
+    ]
+  },
+  "StudyID": {
+    "Tag": "00200010",
+    "VR": "SH",
+    "Value": [ "11235821" ]
+  },
+  "StudyInstanceUID": {
+    "Tag": "0020000D",
+    "VR": "UI",
+    "Value": [
+      "1.2.392.200036.9116.2.2.2.2162893313.1029997326.945876" ]
+  },
+  "NumberOfStudyRelatedSeries": {
+    "Tag": "00201206",
+    "VR": "IS",
+    "Value": [ "5" ]
+  },
+  "NumberOfStudyRelatedInstances": {
+    "Tag": "00201208",
+    "VR": "IS",
+    "Value": [ "1123" ]
+  },
+  "RetrieveURL": {
+    "Tag": "00081190",
+    "VR": "UT",
+    "Value": [
+      "http://wado.nema.org/studies/1.2.392.200036.9116.2.2.2.2162893313.1029997326.945876" ]
+  }
+}
+]

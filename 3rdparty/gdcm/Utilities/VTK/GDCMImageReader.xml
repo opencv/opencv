@@ -1,0 +1,43 @@
+<!--
+  Program: GDCM (Grassroots DICOM). A DICOM library
+
+  Copyright (c) 2006-2011 Mathieu Malaterre
+  All rights reserved.
+  See Copyright.txt or http://gdcm.sourceforge.net/Copyright.html for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+-->
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+
+  <SourceProxy name="GDCMImageReader"
+                   class="vtkGDCMImageReader"
+                   label="GDCM Image reader">
+      <Documentation
+       short_help="Read GDCM Volume data files."
+       long_help="Read GDCM Volume NII image data files">
+       The GDCM Image reader reads DICOM files containing image data. The expected file extensions are .dcm.
+     </Documentation>
+     <StringVectorProperty
+         name="FileName"
+         animateable="0"
+         command="SetFileName"
+         number_of_elements="1">
+        <FileListDomain name="files"/>
+        <Documentation>
+          This property specifies the file name for the GDCM Image reader.
+        </Documentation>
+      </StringVectorProperty>
+      <Hints>
+        <ReaderFactory extensions="dcm"
+                       file_description="DICOM File Format" />
+     </Hints>
+
+      <!-- End GDCMReader -->
+   </SourceProxy>
+
+  </ProxyGroup>
+
+</ServerManagerConfiguration>

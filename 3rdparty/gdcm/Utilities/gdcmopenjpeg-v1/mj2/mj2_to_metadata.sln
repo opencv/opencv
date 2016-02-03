@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mj2_to_metadata", "mj2_to_metadata.vcproj", "{69BE42AB-E7CE-4DA1-BBD2-39FEA2C91E0B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0B1B7713-35B6-40A7-9BFF-A7D0EB06A8BD} = {0B1B7713-35B6-40A7-9BFF-A7D0EB06A8BD}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LibOpenJPEG", "..\LibOpenJPEG.vcproj", "{0B1B7713-35B6-40A7-9BFF-A7D0EB06A8BD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{69BE42AB-E7CE-4DA1-BBD2-39FEA2C91E0B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{69BE42AB-E7CE-4DA1-BBD2-39FEA2C91E0B}.Debug|Win32.Build.0 = Debug|Win32
+		{69BE42AB-E7CE-4DA1-BBD2-39FEA2C91E0B}.Release|Win32.ActiveCfg = Release|Win32
+		{69BE42AB-E7CE-4DA1-BBD2-39FEA2C91E0B}.Release|Win32.Build.0 = Release|Win32
+		{0B1B7713-35B6-40A7-9BFF-A7D0EB06A8BD}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0B1B7713-35B6-40A7-9BFF-A7D0EB06A8BD}.Debug|Win32.Build.0 = Debug|Win32
+		{0B1B7713-35B6-40A7-9BFF-A7D0EB06A8BD}.Release|Win32.ActiveCfg = Release|Win32
+		{0B1B7713-35B6-40A7-9BFF-A7D0EB06A8BD}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

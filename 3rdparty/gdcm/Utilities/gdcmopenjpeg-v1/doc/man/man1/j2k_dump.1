@@ -1,0 +1,62 @@
+'\" t
+'\" The line above instructs most `man' programs to invoke tbl
+'\"
+'\" Separate paragraphs; not the same as PP which resets indent level.
+.de SP
+.if t .sp .5
+.if n .sp
+..
+'\"
+'\" Replacement em-dash for nroff (default is too short).
+.ie n .ds m " -
+.el .ds m \(em
+'\"
+'\" Placeholder macro for if longer nroff arrow is needed.
+.ds RA \(->
+'\"
+'\" Decimal point set slightly raised
+.if t .ds d \v'-.15m'.\v'+.15m'
+.if n .ds d .
+'\"
+'\" Enclosure macro for examples
+.de EX
+.SP
+.nf
+.ft CW
+..
+.de EE
+.ft R
+.SP
+.fi
+..
+.TH j2k_dump 1 "Version 1.4.0" "j2k_dump" "dumps jpeg2000 files"
+.P
+.SH NAME
+j2k_dump - 
+This program reads in a jpeg2000 image and dumps the contents to stdout. It is part of the OpenJPEG library.
+.SP
+Valid input image extensions are
+.B .j2k, .jp2, .jpt
+.SP
+.SH SYNOPSIS
+.P
+.B j2k_dump -i \fRinfile.j2k 
+.P
+.B j2k_dump -ImgDir \fRimages/ \fRDump all files in images/
+.P
+.B j2k_dump -h  \fRPrint help message and exit
+.P
+.SH OPTIONS
+.TP
+.B \-\^i "name"
+(jpeg2000 input file name)
+.TP
+.B \-\^ImgDir "directory_name"
+(directory containing jpeg2000 input files)
+.P
+'\".SH BUGS
+.SH AUTHORS
+Copyright (c) 20010, Mathieu Malaterre
+.P
+.SH "SEE ALSO"
+image_to_j2k(1) j2k_to_image(1)

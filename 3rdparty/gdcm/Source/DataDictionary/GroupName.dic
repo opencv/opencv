@@ -1,0 +1,72 @@
+0000 CMD Command
+0002 META Meta Element
+0004 DIR Directory
+0004 FST File Set
+0008 ID Identifying
+0009 SPII SPI Identifying
+0010 PAT Patient
+0012 CLI Clinical Trial
+0018 ACQ Acquisition
+0019 SPIA SPI Acquisition
+0020 IMG Image
+0021 SPIIM SPI Image
+0022 OPHY Ophtalmology
+0028 IMGP Image Presentation
+0032 SDY Study
+0038 VIS Visit
+003a WAV Waveform
+0040 PRC Procedure
+0040 MOD Modality Worklist
+0042 EDOC Encapsulated Document
+0050 XAD XRay Angio Device
+0050 DEV Device Informations
+0054 NMI Nuclear Medicine
+0060 HIS Histogram
+0070 PRS Presentation State
+0072 HST Hanging Protocol
+0088 STO Storage
+0088 MED  Medicine
+0100 AUTH Authorization
+0400 DSIG Digital Signature
+1000 COT  Code Table
+1010 ZMAP Zonal Map
+2000 BFS Film Session
+2010 BFB Film Box
+2020 BIB Image Box
+2030 BAB Annotation
+2040 IOB Overlay Box
+2050 PLUT Presentation LUT
+2100 PJ   Print Job
+2110 PRINTER Printer
+2120 QUE Queue
+2130 PCT Print Content
+2200 MEDIAC Media Creation
+3002 RTI RT Image
+3004 RTD RT Dose
+3006 SSET RT StructureSet
+3008 RTT RT Treatment
+300A RTP RT Plan
+300C RTR RT Relationship
+300E RTA RT Approval
+4000 TXT Text
+4008 RES Results
+4ffe MAC MAC Parameters
+5000 CRV Curve
+5002 CRV Curve
+5004 CRV Curve
+5006 CRV Curve
+5008 CRV Curve
+500a CRV Curve
+500c CRV Curve
+500e CRV Curve
+5400 WFM Waveform Data
+6000 OLY Overlays
+6002 OLY Overlays
+6004 OLY Overlays
+6008 OLY Overlays
+600a OLY Overlays
+600c OLY Overlays
+600e OLY Overlays
+fffc GEN Generic
+7fe0 PXL Pixel Data
+ffff UNK Unknown

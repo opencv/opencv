@@ -1,0 +1,88 @@
+/*!
+
+\page gdcmviewer Simple DICOM viewer.
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcmviewer [options] file-in
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcmviewer is a simple tool that show how to use vtkGDCMImageReader.
+The class that use gdcm to make a layer to VTK. \b gdcmviewer is basically only
+just a wrapper around VTK/GDCM.
+
+This tool is meant for testing integration of GDCM in VTK. You should see it as
+a demo tool. It does compile with VTK ranging from 4.2 to 5.10, but only with
+VTK 5.2 (or above) can play with the widgets (as described below).
+
+\section parameters PARAMETERS
+
+\verbatim
+file-in   DICOM input filename
+\endverbatim
+
+\section options OPTIONS
+
+\subsection options options
+\verbatim
+     --force-rescale    force rescale (advanced users)
+     --force-spacing    force spacing (advanced users)
+  -r --recursive        Recusively descend directory
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\section usage Typical usage
+\section simple_usage Simple usage
+
+For now gdcmviewer should be started from a command line prompt. The next
+argument should be the name of the DICOM file you wish to read. For instance:
+
+\verbatim
+$ gdcmviewer -V 012345.002.050.dcm
+\endverbatim
+
+gdcmviewer will try to read your file, and then print the vtk information
+associated with this file. Basically what kind of image you are looking at.
+
+\li ScalarType is the DICOM Real World Value type
+\li Dimensions is the dimension of the image
+\li Spacing is the spacing of the image
+\li NumberOfScalarComponents should be 1 for grayscale & PALETTE COLOR and 3 for RGB, YBR data.
+
+\section wiki_link Wiki Link
+
+The wiki page, with color pictures can be found at:
+http://gdcm.sourceforge.net/wiki/index.php/Gdcmviewer
+
+\section see_also SEE ALSO
+
+<b>gdcmdump</b>(1), <b>gdcm2vtk</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

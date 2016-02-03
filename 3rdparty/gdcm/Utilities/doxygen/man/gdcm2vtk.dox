@@ -1,0 +1,187 @@
+/*!
+
+\page gdcm2vtk Convert a file supported by VTK into DICOM.
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcm2vtk [options] file-in file-out
+\endverbatim
+
+\section description DESCRIPTION
+
+The \b gdcm2vtk takes as input any file supported by VTK (including DICOM file) and will generate as output
+a DICOM file.
+
+\section parameters PARAMETERS
+
+\verbatim
+file-in   input filename (DICOM or VTK supported)
+
+file-out  output filename (DICOM or VTK supported)
+\endverbatim
+
+\section options OPTIONS
+
+\subsection options options
+\verbatim
+     --force-rescale    force rescale.
+     --force-spacing    force spacing.
+     --palette-color    when supported generate a PALETTE COLOR file.
+     --argb             when supported generate a ARGB file.
+     --compress         when supported generate a compressed file.
+     --use-vtkdicom     Use vtkDICOMImageReader (instead of GDCM).
+     --modality         set Modality.
+     --lower-left       set lower left.
+     --shift            set shift.
+     --scale            set scale.
+     --compress         set compression (MetaIO).
+  -T --study-uid        Study UID.
+  -S --series-uid       Series UID.
+     --root-uid         Root UID.
+\endverbatim
+
+\subsection compression_options compression options
+\verbatim
+  -J --jpeg             Compress image in jpeg.
+  -K --j2k              Compress image in j2k.
+  -L --jpegls           Compress image in jpeg-ls.
+  -R --rle              Compress image in rle (lossless only).
+\endverbatim
+
+\subsection general_options general options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\subsection environment_variable environment variable
+\verbatim
+  GDCM_ROOT_UID Root UID
+\endverbatim
+
+\section description DESCRIPTION
+Convert a file supported by VTK into DICOM.
+
+Typical usage is:
+
+\verbatim
+$ gdcm2vtk inputfile output.dcm
+\endverbatim
+
+It uses the internal factory mechanism of VTK to recognize a file (CanRead function). See VTK supported file here:
+
+    * What image file formats can VTK read and write? http://www.vtk.org/Wiki/VTK_FAQ#What_image_file_formats_can_VTK_read_and_write.3F
+
+If your input file has 4 components, the 4th comp (alpha) will be removed from the output file as DICOM does not support alpha component anymore (see --argb option).
+
+Special care was taken for the following file format:
+
+\verbatim
+   1. DICOM: Direction Cosines and vtkMedicalImageInformation are passed to the output
+   2. BMP: The file can be saved with a Lookup Table (see --palette-color)
+   3. GE Signa: vtkMedicalImageProperties is passed to the output
+   4. MINC: Direction Cosines is passed to the output
+   5. TIFF: vtkTIFFReader is currently in bad shape in VTK (different behavior in VTK 5.2 and git/master). Only use it, if you know what you are doing.
+\endverbatim
+
+\subsection convert_meta CONVERT MetaImage (mhd, mha)
+
+\verbatim
+$ gdcm2vtk inputfile output.mha
+\endverbatim
+
+This command will convert the input DICOM file: inputfile into a MetaImage .mha file. Same goes for .mhd file.
+
+\subsection convert_mha CONVERT MHA/MHD
+
+\verbatim
+$ gdcm2vtk inputfile output.mha
+\endverbatim
+or
+\verbatim
+$ gdcm2vtk inputfile output.mhd
+\endverbatim
+
+This command will convert the input DICOM file: inputfile into a MetaImageData .mha/.mhd file.
+
+\subsection convert_vti CONVERT VTI
+
+\verbatim
+$ gdcm2vtk inputfile output.vti
+\endverbatim
+
+This command will convert the input DICOM file: inputfile into a XML VTK ImageData .vti file.
+
+\subsection convert_vtk CONVERT VTK
+
+\verbatim
+$ gdcm2vtk inputfile output.vtk
+\endverbatim
+
+This command will convert the input DICOM file: inputfile into an old VTK Structured PointSets .vtk file.
+
+\section convert_dicom CONVERT DICOM
+
+\verbatim
+$ gdcm2vtk input.dcm output.dcm
+\endverbatim
+
+vtkGDCMImageReader will be used to read in a DICOM file, not the default vtkDICOMImageReader.
+See option --use-vtkdicom to use vtkDICOMImageReader.
+
+\section round_tripmhd RoundTrip DICOM to MHD to DICOM
+
+\verbatim
+$ gdcm2vtk input_ybr.dcm output.mhd
+$ gdcm2vtk --modality US --imageformat 7 output.mhd output.dcm
+\endverbatim
+
+The above section shows how to convert a DICOM using the Photometric Interpretation of YBR_FULL
+(or even YBR_FULL_422 is lossy) into another file format: MetaImage (mhd). Since this
+file format does not handle color space, we have to explicitly set it using the --imageformat
+command line option.
+The --modality command line option is required in this case since the default Secondary Capture
+Image Storage Class family does not allow for YBR Photometric Interpretation.
+
+\section gdcm2vtk_notes gdcm2vtk notes
+
+IMPORTANT NOTE: The internal VTK structured will be filled from the input
+DICOM, and then pass to the output DICOM writer. Some information might be lost
+during the conversion DICOM to VTK to DICOM. This option is mostly used to test
+the vtkGDCMImageReader/vtkGDCMImageWriter combination.
+
+IMPORTANT NOTE: When converting from a lossy format such as JPEG, the
+information of lossiness is important. The output DICOM will contains the
+required Lossy Image Compression attribute that indicates that image was
+lossy-compressed somewhere along the pipeline. See also gdcmimg (better
+handling of JPEG in general).
+
+IMPORTANT NOTE: When using --use-vtkdicom the output DICOM file will always be
+written as MR Image Storage as this information is not available from the
+reader itself. This allow setting the Image Orientation (Patient) properly.
+
+\section see_also SEE ALSO
+
+<b>gdcmdump</b>(1), <b>gdcmviewer</b>(1), <b>gdcmimg</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

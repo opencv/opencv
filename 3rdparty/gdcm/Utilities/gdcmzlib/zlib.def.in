@@ -1,0 +1,92 @@
+
+VERSION		1.23
+
+HEAPSIZE	1048576,8192
+
+EXPORTS
+        adler32                                  @1
+        compress                                 @2
+        crc32                                    @3
+        deflate                                  @4
+        deflateCopy                              @5
+        deflateEnd                               @6
+        deflateInit2_                            @7
+        deflateInit_                             @8
+        deflateParams                            @9
+        deflateReset                             @10
+        deflateSetDictionary                     @11
+        gzclose                                  @12
+        gzdopen                                  @13
+        gzerror                                  @14
+        gzflush                                  @15
+        gzopen                                   @16
+        gzread                                   @17
+        gzwrite                                  @18
+        inflate                                  @19
+        inflateEnd                               @20
+        inflateInit2_                            @21
+        inflateInit_                             @22
+        inflateReset                             @23
+        inflateSetDictionary                     @24
+        inflateSync                              @25
+        uncompress                               @26
+        zlibVersion                              @27
+        gzprintf                                 @28
+        gzputc                                   @29
+        gzgetc                                   @30
+        gzseek                                   @31
+        gzrewind                                 @32
+        gztell                                   @33
+        gzeof                                    @34
+        gzsetparams                              @35
+        zError                                   @36
+        inflateSyncPoint                         @37
+        get_crc_table                            @38
+        compress2                                @39
+        gzputs                                   @40
+        gzgets                                   @41
+        inflateCopy                              @42
+        inflateBackInit_                         @43
+        inflateBack                              @44
+        inflateBackEnd                           @45
+        compressBound                            @46
+        deflateBound                             @47
+        gzclearerr                               @48
+        gzungetc                                 @49
+        zlibCompileFlags                         @50
+        deflatePrime                             @51
+
+        unzOpen                                  @61
+        unzClose                                 @62
+        unzGetGlobalInfo                         @63
+        unzGetCurrentFileInfo                    @64
+        unzGoToFirstFile                         @65
+        unzGoToNextFile                          @66
+        unzOpenCurrentFile                       @67
+        unzReadCurrentFile                       @68
+        unzOpenCurrentFile3                      @69
+        unztell                                  @70
+        unzeof                                   @71
+        unzCloseCurrentFile                      @72
+        unzGetGlobalComment                      @73
+        unzStringFileNameCompare                 @74
+        unzLocateFile                            @75
+        unzGetLocalExtrafield                    @76
+        unzOpen2                                 @77
+        unzOpenCurrentFile2                      @78
+        unzOpenCurrentFilePassword               @79
+
+        zipOpen                                  @80
+        zipOpenNewFileInZip                      @81
+        zipWriteInFileInZip                      @82
+        zipCloseFileInZip                        @83
+        zipClose                                 @84
+        zipOpenNewFileInZip2                     @86
+        zipCloseFileInZipRaw                     @87
+        zipOpen2                                 @88
+        zipOpenNewFileInZip3                     @89
+
+        unzGetFilePos                            @100
+        unzGoToFilePos                           @101
+
+        fill_win32_filefunc                      @110

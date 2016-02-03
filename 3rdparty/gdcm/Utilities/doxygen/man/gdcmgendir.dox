@@ -1,0 +1,92 @@
+/*!
+
+\page gdcmgendir Tool to generate a DICOMDIR file from a File-Set.
+
+\section synopsis SYNOPSIS
+
+\verbatim
+gdcmgendir [options] file-in file-out
+\endverbatim
+
+\section description DESCRIPTION
+
+
+\section parameters PARAMETERS
+
+\verbatim
+file-in   DICOM input filename
+
+file-out  DICOM output filename
+\endverbatim
+
+\section options OPTIONS
+
+\subsection params Parameters
+\verbatim
+\endverbatim
+
+\subsection options Options
+\verbatim
+  -i --input              DICOM filename or directory
+  -o --output             DICOM filename or directory
+  -r --recursive          recursive.
+     --descriptor         descriptor.
+     --root-uid           Root UID.
+\endverbatim
+
+\subsection general_options General Options
+\verbatim
+  -h   --help
+         print this help text and exit
+
+  -v   --version
+         print version information and exit
+
+  -V   --verbose
+         verbose mode (warning+error).
+
+  -W   --warning
+         warning mode, print warning information
+
+  -E   --error
+         error mode, print error information
+
+  -D   --debug
+         debug mode, print debug information
+\endverbatim
+
+\subsection environment_variable environment variable
+\verbatim
+  GDCM_ROOT_UID Root UID
+\endverbatim
+
+\section usage Typical usage
+
+\section note NOTE
+One may have to run some preliminary steps in order to get gdcmgendir to
+generate the DICOMDIR file. Namely two steps:
+\li Batch renaming of the DICOM filename into something compatible with ISO 9660 filename convention
+\li Convert all DICOM file into the Explicit VR Little Endian Uncompressed (1.2.840.10008.1.2.1)
+
+Step 1. can be solved in a numerous way. Eg. on UNIX environment this could
+either be solved using the mkisofs command line tool. Filenames should not
+contains any extension since the VR CS does not allow for the '.' character.
+Only upper case, digit 0-9, the space ' ' and the underscore '_' character are
+valid in VR CS, with a maximum of 8 bytes. Another simple tool that can be
+handy is 'rename' in conjunction with 'basename'.
+
+Step 2. can simply be achieved using the gdcmconv command line tool:
+
+\verbatim
+  $ for i in `ls IMG*`; do gdcmconv --raw --force $i /tmp/out/$i; done
+\endverbatim
+
+\section see_also SEE ALSO
+
+<b>gdcmconv</b>(1), <b>gdcmanon</b>(1), <b>rename</b>(1), <b>mkisofs</b>(1)
+
+\section copyright COPYRIGHT
+
+Copyright (c) 2006-2011 Mathieu Malaterre
+
+*/

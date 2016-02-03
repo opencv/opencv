@@ -1,0 +1,63 @@
+2/24/93 (JPEG Version 1.1)
+
+BUG FIXES:
+
+Changed the fill marker handling.  On early JPEG revisions, one
+interpretation is that fill markers came in pairs of 0xff 0xff, but
+now it can be an arbitrary number of 0xff bytes.  A one line fix in
+stream.c handles this.
+
+The arbitrary frame width and frame height is handled much more
+robustly.  Decimated frames default frame size is handled with
+rounding up rather than rounding down to keep compatiblity with the
+JPEG CD.  This has changes in marker.c and jpeg.c and io.c.
+
+CODE:
+
+(marker.c) (io.c) (jpeg.c) Setting the Framewidth and Frameheight that
+violate logical MDU blocks will flag warnings.  The frame rounding has
+been changed from rounding down to rounding up. Rounding up preserves
+MDU properties and is consistent with the CD specs.  (We do not round
+down anymore).  The previous Framewidth and Frameheight does not work
+with values that cross MDU boundaries; It now works arbitrarily.
+
+  1) In decoding, if any space is created, the space is set to "zero" bytes
+  (depending on the implementation of disk file "holes").
+
+  2) In encoding, if any space is required, the space is set to pel
+  replication of the boundaries.
+
+(jpeg.c) The default filename is now componentfile0.jpg rather than
+componentfile0.J.
+
+DOCUMENTATION:
+
+The colorspace section was edited to include more precise matrices and
+a description of CCIR-601 versus JFIF style YUV->RGB conversion.
+
+Some printers (non-laserwriters) have been unable to cope with the
+doc.ps files, specifically problems occurred in the postscript include
+files.  For some reason, Apple laserwriters and ghostscript do not
+seem to be afflicted by the above problem.  We have found a change in
+the dvi2ps postscript header that seems to fix this problem for Sun
+newsprint (and probably other) printers as well.  If this still is a
+problem, the raw tex and .ps files are available in the file
+JPEGDOCv1.1.tar.Z.  Caution: the special scaling command has different
+relative scales for different dvi2ps, dvips programs - can be a factor
+of 100 off depending on the version of the header file.
+
+6/14/93
+
+Changed a few things in the documentation to reflect the YCbCr
+terminology.  Other than that, essentially the same.  Added some
+declaration for SYSTEM V libraries and libraries without ftruncate().
+
+Version(1.2)
+
+7/28/93
+
+Changed the lossless predictor encoding functions so that 16 bit
+accuracy is attained.  Some problems occurred with improper modulo
+arithmetic when full 16 bits were used with certain predictors.  The
+changes were in codec.c Lossless*() and a couple of lines in jpeg.c
+which used &0xffff to properly trim the values.
