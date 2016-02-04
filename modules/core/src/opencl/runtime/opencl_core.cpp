@@ -58,11 +58,11 @@ static void* AppleCLGetProcAddress(const char* name)
 {
     static bool initialized = false;
     static void* handle = NULL;
-    if (!handle)
+    if (!handle && !initialized)
     {
-        if(!initialized)
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (!initialized)
         {
-            initialized = true;
             const char* path = "/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL";
             const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
             if (envPath)
@@ -78,10 +78,11 @@ static void* AppleCLGetProcAddress(const char* name)
                 fprintf(stderr, ERROR_MSG_INVALID_VERSION);
                 handle = NULL;
             }
+            initialized = true;
         }
-        if (!handle)
-            return NULL;
     }
+    if (!handle)
+        return NULL;
     return dlsym(handle, name);
 }
 #define CV_CL_GET_PROC_ADDRESS(name) AppleCLGetProcAddress(name)
@@ -94,11 +95,11 @@ static void* WinGetProcAddress(const char* name)
 {
     static bool initialized = false;
     static HMODULE handle = NULL;
-    if (!handle)
+    if (!handle && !initialized)
     {
-        if(!initialized)
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (!initialized)
         {
-            initialized = true;
             handle = GetModuleHandleA("OpenCL.dll");
             if (!handle)
             {
@@ -118,10 +119,11 @@ static void* WinGetProcAddress(const char* name)
                     handle = NULL;
                 }
             }
+            initialized = true;
         }
-        if (!handle)
-            return NULL;
     }
+    if (!handle)
+        return NULL;
     return (void*)GetProcAddress(handle, name);
 }
 #define CV_CL_GET_PROC_ADDRESS(name) WinGetProcAddress(name)
@@ -135,11 +137,11 @@ static void* GetProcAddress(const char* name)
 {
     static bool initialized = false;
     static void* handle = NULL;
-    if (!handle)
+    if (!handle && !initialized)
     {
-        if(!initialized)
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (!initialized)
         {
-            initialized = true;
             const char* path = "libOpenCL.so";
             const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
             if (envPath)
@@ -155,10 +157,11 @@ static void* GetProcAddress(const char* name)
                 fprintf(stderr, ERROR_MSG_INVALID_VERSION);
                 handle = NULL;
             }
+            initialized = true;
         }
-        if (!handle)
-            return NULL;
     }
+    if (!handle)
+        return NULL;
     return dlsym(handle, name);
 }
 #define CV_CL_GET_PROC_ADDRESS(name) GetProcAddress(name)
