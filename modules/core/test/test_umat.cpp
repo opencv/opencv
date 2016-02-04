@@ -1343,4 +1343,15 @@ TEST(UMat, testWrongLifetime_Mat)
     }
 }
 
+TEST(UMat, DISABLED_regression_5991)
+{
+    int sz[] = {2,3,2};
+    UMat mat(3, sz, CV_32F, Scalar(1));
+    ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
+    EXPECT_EQ(sz[0], mat.size[0]);
+    EXPECT_EQ(sz[1], mat.size[1]);
+    EXPECT_EQ(sz[2], mat.size[2]);
+    EXPECT_EQ(0, cvtest::norm(mat.getMat(ACCESS_READ), Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
+}
+
 } } // namespace cvtest::ocl
