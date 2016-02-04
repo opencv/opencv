@@ -49,7 +49,6 @@ class camshift_test(NewOpenCVTests):
 
     def prepareRender(self):
 
-        cv2.namedWindow('camshift')
         self.render = TestSceneRender(self.get_sample('samples/data/pca_test1.jpg'))
 
     def runTracker(self):
@@ -95,13 +94,10 @@ class camshift_test(NewOpenCVTests):
                 if self.show_backproj:
                     vis[:] = prob[...,np.newaxis]
 
-                cv2.rectangle(vis, (self.track_window[0], self.track_window[1]), (self.track_window[0] + self.track_window[2], self.track_window[1] + self.track_window[3]), (0, 255, 0), 2)
-
             trackingRect = np.array(self.track_window)
             trackingRect[2] += trackingRect[0]
             trackingRect[3] += trackingRect[1]
 
-            print(intersectionRate((self.render.getCurrentRect()), trackingRect))
             self.assertGreater(intersectionRate((self.render.getCurrentRect()), trackingRect), 0.5)
 
             if framesCounter > 300:
