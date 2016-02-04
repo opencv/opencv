@@ -747,15 +747,11 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     }
     borderType |= BORDER_ISOLATED;
 
-    bool useHalDft = tileCount > 1;
     hal::DftContext cF, cR;
-    if (useHalDft)
-    {
-        int f = CV_HAL_DFT_IS_INPLACE;
-        int f_inv = f | CV_HAL_DFT_INVERSE | CV_HAL_DFT_SCALE;
-        hal::dftInit2D(cF, dftsize.width, dftsize.height, maxDepth, 1, 1, f, blocksize.height + templ.rows - 1);
-        hal::dftInit2D(cR, dftsize.width, dftsize.height, maxDepth, 1, 1, f_inv, blocksize.height);
-    }
+    int f = CV_HAL_DFT_IS_INPLACE;
+    int f_inv = f | CV_HAL_DFT_INVERSE | CV_HAL_DFT_SCALE;
+    hal::dftInit2D(cF, dftsize.width, dftsize.height, maxDepth, 1, 1, f, blocksize.height + templ.rows - 1);
+    hal::dftInit2D(cR, dftsize.width, dftsize.height, maxDepth, 1, 1, f_inv, blocksize.height);
 
     // calculate correlation by blocks
     for( i = 0; i < tileCount; i++ )
@@ -794,7 +790,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 copyMakeBorder(dst1, dst, y1-y0, dst.rows-dst1.rows-(y1-y0),
                                x1-x0, dst.cols-dst1.cols-(x1-x0), borderType);
 
-            if (useHalDft && bsz.height == blocksize.height)
+            if (bsz.height == blocksize.height)
                 hal::dftRun2D(cF, dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
             else
                 dft( dftImg, dftImg, 0, dsz.height );
@@ -803,7 +799,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                                          dftsize.width, dftsize.height));
             mulSpectrums(dftImg, dftTempl1, dftImg, 0, true);
 
-            if (useHalDft && bsz.height == blocksize.height)
+            if (bsz.height == blocksize.height)
                 hal::dftRun2D(cR, dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
             else
                 dft( dftImg, dftImg, DFT_INVERSE + DFT_SCALE, bsz.height );
@@ -838,11 +834,8 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             }
         }
     }
-    if (useHalDft)
-    {
-        hal::dftFree2D(cF);
-        hal::dftFree2D(cR);
-    }
+    hal::dftFree2D(cF);
+    hal::dftFree2D(cR);
 }
 
 static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
