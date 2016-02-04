@@ -1,0 +1,53 @@
+#ifndef CV_IMGPROC_HAL_HPP
+#define CV_IMGPROC_HAL_HPP
+
+#include "opencv2/core/cvdef.h"
+#include "opencv2/core/hal/interface.h"
+
+namespace cv { namespace hal {
+
+//! @addtogroup core_hal_functions
+//! @{
+
+struct FilterContext
+{
+    void * impl;
+    FilterContext() : impl(0) {}
+};
+
+
+CV_EXPORTS
+void init_filter2d(FilterContext &c,
+                   uchar * kernel_data, size_t kernel_step, int kernel_type,
+                   int kernel_width, int kernel_height,
+                   int max_width, int max_height,
+                   int stype, int dtype,
+                   int borderType, double delta, int anchor_x, int anchor_y, bool isSubmatrix, bool isInplace);
+
+CV_EXPORTS
+void filter2d(FilterContext & c, uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
+              int width, int height, int full_width, int full_height, int offset_x, int offset_y);
+
+CV_EXPORTS
+void free_filter2d(FilterContext & c);
+
+
+CV_EXPORTS
+void init_sepFilter2d(FilterContext & c, int stype, int dtype, int ktype,
+                      uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
+                      uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+                      int anchor_x, int anchor_y, double delta, int borderType);
+
+CV_EXPORTS
+void sepFilter2d(FilterContext & c, uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                 int width, int height, int full_width, int full_height,
+                 int offset_x, int offset_y);
+
+CV_EXPORTS
+void free_sepFilter2d(FilterContext & c);
+
+//! @}
+
+}}
+
+#endif // CV_IMGPROC_HAL_HPP
