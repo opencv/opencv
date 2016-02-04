@@ -1472,3 +1472,14 @@ TEST(Core_Mat_vector, copyTo_roi_row)
     EXPECT_EQ(4, (int)dst2[3]);
     EXPECT_EQ(5, (int)dst2[4]);
 }
+
+TEST(Mat, regression_5991)
+{
+    int sz[] = {2,3,2};
+    Mat mat(3, sz, CV_32F, Scalar(1));
+    ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
+    EXPECT_EQ(sz[0], mat.size[0]);
+    EXPECT_EQ(sz[1], mat.size[1]);
+    EXPECT_EQ(sz[2], mat.size[2]);
+    EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
+}
