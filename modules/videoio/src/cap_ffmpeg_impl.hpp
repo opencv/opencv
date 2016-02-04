@@ -129,12 +129,22 @@ extern "C" {
 
 #if defined WIN32 || defined _WIN32
     #include <windows.h>
+    #if defined _MSC_VER && _MSC_VER < 1900
+    struct timespec
+    {
+        time_t tv_sec;
+        long   tv_nsec;
+    };
+  #endif
 #elif defined __linux__ || defined __APPLE__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
+    #include <sys/time.h>
 #if defined __APPLE__
     #include <sys/sysctl.h>
+    #include <mach/clock.h>
+    #include <mach/mach.h>
 #endif
 #endif
 
@@ -183,6 +193,116 @@ extern "C" {
 #define AV_NUM_DATA_POINTERS 4
 #endif
 #endif
+
+
+#define LIBAVFORMAT_INTERRUPT_TIMEOUT_MS 30000
+
+#ifdef WIN32
+// http://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
+
+inline LARGE_INTEGER get_filetime_offset()
+{
+    SYSTEMTIME s;
+    FILETIME f;
+    LARGE_INTEGER t;
+
+    s.wYear = 1970;
+    s.wMonth = 1;
+    s.wDay = 1;
+    s.wHour = 0;
+    s.wMinute = 0;
+    s.wSecond = 0;
+    s.wMilliseconds = 0;
+    SystemTimeToFileTime(&s, &f);
+    t.QuadPart = f.dwHighDateTime;
+    t.QuadPart <<= 32;
+    t.QuadPart |= f.dwLowDateTime;
+    return t;
+}
+
+inline void get_monotonic_time(timespec *tv)
+{
+    LARGE_INTEGER           t;
+    FILETIME				f;
+    double                  microseconds;
+    static LARGE_INTEGER    offset;
+    static double           frequencyToMicroseconds;
+    static int              initialized = 0;
+    static BOOL             usePerformanceCounter = 0;
+
+    if (!initialized)
+    {
+        LARGE_INTEGER performanceFrequency;
+        initialized = 1;
+        usePerformanceCounter = QueryPerformanceFrequency(&performanceFrequency);
+        if (usePerformanceCounter)
+        {
+            QueryPerformanceCounter(&offset);
+            frequencyToMicroseconds = (double)performanceFrequency.QuadPart / 1000000.;
+        }
+        else
+        {
+            offset = get_filetime_offset();
+            frequencyToMicroseconds = 10.;
+        }
+    }
+
+    if (usePerformanceCounter)
+    {
+        QueryPerformanceCounter(&t);
+    } else {
+        GetSystemTimeAsFileTime(&f);
+        t.QuadPart = f.dwHighDateTime;
+        t.QuadPart <<= 32;
+        t.QuadPart |= f.dwLowDateTime;
+    }
+
+    t.QuadPart -= offset.QuadPart;
+    microseconds = (double)t.QuadPart / frequencyToMicroseconds;
+    t.QuadPart = microseconds;
+    tv->tv_sec = t.QuadPart / 1000000;
+    tv->tv_nsec = (t.QuadPart % 1000000) * 1000;
+}
+#else
+inline void get_monotonic_time(timespec *time)
+{
+#if defined(__APPLE__) && defined(__MACH__)
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    clock_get_time(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+    time->tv_sec = mts.tv_sec;
+    time->tv_nsec = mts.tv_nsec;
+#else
+    clock_gettime(CLOCK_MONOTONIC, time);
+#endif
+}
+#endif
+
+inline timespec get_monotonic_time_diff(timespec start, timespec end)
+{
+    timespec temp;
+    if (end.tv_nsec - start.tv_nsec < 0)
+    {
+        temp.tv_sec = end.tv_sec - start.tv_sec - 1;
+        temp.tv_nsec = 1000000000 + end.tv_nsec - start.tv_nsec;
+    }
+    else
+    {
+        temp.tv_sec = end.tv_sec - start.tv_sec;
+        temp.tv_nsec = end.tv_nsec - start.tv_nsec;
+    }
+    return temp;
+}
+
+inline double get_monotonic_time_diff_ms(timespec time1, timespec time2)
+{
+    timespec delta = get_monotonic_time_diff(time1, time2);
+    double milliseconds = delta.tv_sec * 1000 + (double)delta.tv_nsec / 1000000.0;
+
+    return milliseconds;
+}
 
 static int get_number_of_cpus(void)
 {
@@ -233,10 +353,32 @@ struct Image_FFMPEG
 };
 
 
+struct AVInterruptCallbackMetadata
+{
+    timespec value;
+    unsigned int timeout_after_ms;
+    int timeout;
+};
+
+
 inline void _opencv_ffmpeg_free(void** ptr)
 {
     if(*ptr) free(*ptr);
     *ptr = 0;
+}
+
+
+inline int _opencv_ffmpeg_interrupt_callback(void *ptr)
+{
+    AVInterruptCallbackMetadata* metadata = (AVInterruptCallbackMetadata*)ptr;
+    assert(metadata);
+
+    timespec now;
+    get_monotonic_time(&now);
+
+    metadata->timeout = get_monotonic_time_diff_ms(metadata->value, now) > metadata->timeout_after_ms;
+
+    return metadata->timeout ? -1 : 0;
 }
 
 
@@ -293,6 +435,8 @@ struct CvCapture_FFMPEG
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     AVDictionary *dict;
 #endif
+
+    AVInterruptCallbackMetadata interrupt_metadata;
 };
 
 void CvCapture_FFMPEG::init()
@@ -591,6 +735,14 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
     close();
 
+    /* interrupt callback */
+    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_TIMEOUT_MS;
+    get_monotonic_time(&interrupt_metadata.value);
+
+    ic = avformat_alloc_context();
+    ic->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
+    ic->interrupt_callback.opaque = &interrupt_metadata;
+
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
     int err = avformat_open_input(&ic, _filename, NULL, &dict);
@@ -703,6 +855,13 @@ bool CvCapture_FFMPEG::grabFrame()
     {
 
         av_free_packet (&packet);
+
+        if (interrupt_metadata.timeout)
+        {
+            valid = false;
+            break;
+        }
+
         int ret = av_read_frame(ic, &packet);
         if (ret == AVERROR(EAGAIN)) continue;
 
@@ -738,6 +897,9 @@ bool CvCapture_FFMPEG::grabFrame()
                 picture_pts = packet.pts != AV_NOPTS_VALUE_ && packet.pts != 0 ? packet.pts : packet.dts;
             frame_number++;
             valid = true;
+
+            // update interrupt value
+            get_monotonic_time(&interrupt_metadata.value);
         }
         else
         {
@@ -2323,6 +2485,8 @@ private:
     AVFormatContext* ctx_;
     int video_stream_id_;
     AVPacket pkt_;
+
+    AVInterruptCallbackMetadata interrupt_metadata;
 };
 
 bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma_format, int* width, int* height)
@@ -2332,6 +2496,14 @@ bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma
     ctx_ = 0;
     video_stream_id_ = -1;
     memset(&pkt_, 0, sizeof(AVPacket));
+
+    /* interrupt callback */
+    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_TIMEOUT_MS;
+    get_monotonic_time(&interrupt_metadata.value);
+
+    ctx_ = avformat_alloc_context();
+    ctx_->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
+    ctx_->interrupt_callback.opaque = &interrupt_metadata;
 
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
         avformat_network_init();
@@ -2449,10 +2621,18 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
     // get the next frame
     for (;;)
     {
+        if(interrupt_metadata.timeout)
+        {
+            break;
+        }
+
         int ret = av_read_frame(ctx_, &pkt_);
 
         if (ret == AVERROR(EAGAIN))
             continue;
+
+        // update interrupt value
+        get_monotonic_time(&interrupt_metadata.value);
 
         if (ret < 0)
         {
