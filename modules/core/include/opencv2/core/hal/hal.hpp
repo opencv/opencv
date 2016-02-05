@@ -195,16 +195,16 @@ struct DftContext
 };
 
 CV_EXPORTS void dftInit2D(DftContext & c, int _width, int _height, int _depth, int _src_channels, int _dst_channels, int flags, int _nonzero_rows = 0);
-CV_EXPORTS void dftRun2D(const DftContext & c, const void * src, int src_step, void * dst, int dst_step);
+CV_EXPORTS void dft2D(const DftContext & c, const void * src, int src_step, void * dst, int dst_step);
 CV_EXPORTS void dftFree2D(DftContext & c);
 
-CV_EXPORTS void dftInit(DftContext & c, int len, int count, int depth, int flags, bool * useBuffer = 0);
-CV_EXPORTS void dftRun(const DftContext & c, const void * src, void * dst);
-CV_EXPORTS void dftFree(DftContext & c);
+CV_EXPORTS void dftInit1D(DftContext & c, int len, int count, int depth, int flags, bool * useBuffer = 0);
+CV_EXPORTS void dft1D(const DftContext & c, const void * src, void * dst);
+CV_EXPORTS void dftFree1D(DftContext & c);
 
-CV_EXPORTS void dctInit(DftContext & c, int width, int height, int depth, int flags);
-CV_EXPORTS void dctRun(const DftContext & c, const void * src, int src_step, void * dst, int dst_step);
-CV_EXPORTS void dctFree(DftContext & c);
+CV_EXPORTS void dctInit2D(DftContext & c, int width, int height, int depth, int flags);
+CV_EXPORTS void dct2D(const DftContext & c, const void * src, int src_step, void * dst, int dst_step);
+CV_EXPORTS void dctFree2D(DftContext & c);
 
 //! @} core_hal
 
