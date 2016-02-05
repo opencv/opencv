@@ -13,9 +13,10 @@ defaultSize = 512
 
 class TestSceneRender():
 
-    def __init__(self, bgImg = None, **params):
+    def __init__(self, bgImg = None, deformation = False, **params):
         self.time = 0.0
         self.timeStep = 1.0 / 30.0
+        self.deformation = deformation
 
         if bgImg != None:
             self.sceneBg = bgImg.copy()
@@ -26,7 +27,7 @@ class TestSceneRender():
         self.h = self.sceneBg.shape[1]
 
         self.initialRect = np.array([ (self.h/2, self.w/2), (self.h/2, self.w/2 + self.w/10),
-         (self.h/2 + self.h/10, self.w/2 + self.w/10), (self.h/2 + self.h/10, self.w/2)])
+         (self.h/2 + self.h/10, self.w/2 + self.w/10), (self.h/2 + self.h/10, self.w/2)]).astype(int)
         self.currentRect = self.initialRect
 
     def setInitialRect(self, rect):
@@ -42,6 +43,9 @@ class TestSceneRender():
         img = self.sceneBg.copy()
 
         self.currentRect = self.initialRect + np.int( 30*cos(self.time) + 50*sin(self.time/3))
+        if(self.deformation):
+            self.currentRect[1:3] += np.int(self.h/20*cos(self.time))
+
         cv2.fillConvexPoly(img, self.currentRect, (0, 0, 255))
 
         return img

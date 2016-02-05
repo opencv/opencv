@@ -16,18 +16,7 @@ def inside(r, q):
     qx, qy, qw, qh = q
     return rx > qx and ry > qy and rx + rw < qx + qw and ry + rh < qy + qh
 
-def intersectionRate(s1, s2):
-
-    x1, y1, x2, y2 = s1
-    s1 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
-
-    x1, y1, x2, y2 = s2
-    s2 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
-    area, intersection = cv2.intersectConvexConvex(np.array(s1), np.array(s2))
-
-    return 2 * area / (cv2.contourArea(np.array(s1)) + cv2.contourArea(np.array(s2)))
-
-from tests_common import NewOpenCVTests
+from tests_common import NewOpenCVTests, intersectionRate
 
 class peopledetect_test(NewOpenCVTests):
     def test_peopledetect(self):
