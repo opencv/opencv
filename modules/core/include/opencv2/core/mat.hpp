@@ -1702,6 +1702,14 @@ public:
             for(int j = 0; j < H.cols; j++)
                 H.at<double>(i,j)=1./(i+j+1);
     @endcode
+
+    Keep in mind that the size identifier used in the at operator cannot be chosen at random. It depends
+    on the image from which you are trying to retrieve the data. The table below gives a better insight in this:
+     - If matrix is of type `CV_8U` or `CV_8S` then use `Mat.at<uchar>(y,x)`.
+     - If matrix is of type `CV_16U` or `CV_16S` then use `Mat.at<ushort>(y,x)`.
+     - If matrix is of type `CV_32S`  or `CV_32F` then use `Mat.at<float>(y,x)`.
+     - If matrix is of type `CV_64FU` then use `Mat.at<double>(y,x)`.
+
     @param i0 Index along the dimension 0
      */
     template<typename _Tp> _Tp& at(int i0=0);
