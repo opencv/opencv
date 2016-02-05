@@ -19,6 +19,7 @@ class NewOpenCVTests(unittest.TestCase):
 
     # path to local repository folder containing 'samples' folder
     repoPath = None
+    extraTestDataPath = None
     # github repository url
     repoUrl = 'https://raw.github.com/Itseez/opencv/master'
 
@@ -27,6 +28,11 @@ class NewOpenCVTests(unittest.TestCase):
             filedata = None
             if NewOpenCVTests.repoPath is not None:
                 candidate = NewOpenCVTests.repoPath + '/' + filename
+                if os.path.isfile(candidate):
+                    with open(candidate, 'rb') as f:
+                        filedata = f.read()
+            if NewOpenCVTests.extraTestDataPath is not None:
+                candidate = NewOpenCVTests.extraTestDataPath + '/' + filename
                 if os.path.isfile(candidate):
                     with open(candidate, 'rb') as f:
                         filedata = f.read()
