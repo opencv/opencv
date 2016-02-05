@@ -31,8 +31,7 @@ class facedetect_test(NewOpenCVTests):
         cascade = cv2.CascadeClassifier(cascade_fn)
         nested = cv2.CascadeClassifier(nested_fn)
 
-        dirPath = 'samples/data/'
-        samples = ['lena.jpg', 'kate.jpg']
+        samples = ['samples/data/lena.jpg', 'cv/cascadeandhog/images/mona-lisa.png']
 
         faces = []
         eyes = []
@@ -43,17 +42,17 @@ class facedetect_test(NewOpenCVTests):
         [ 244, 240, 294, 290],
         [ 309, 246, 352, 289]],
 
-        #kate
-        [[207,  89, 436, 318],
-        [245, 161, 294, 210],
-        [343, 139, 389, 185]]
+        #lisa
+        [[167, 119, 307, 259],
+        [188, 153, 229, 194],
+        [236, 153, 277, 194]]
         ]
 
         for sample in samples:
 
-            img = self.get_sample(dirPath + sample)
+            img = self.get_sample(  sample)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            gray = cv2.GaussianBlur(gray, (3, 3), 1.1)
+            gray = cv2.GaussianBlur(gray, (5, 5), 5.1)
 
             rects = detect(gray, cascade)
             faces.append(rects)

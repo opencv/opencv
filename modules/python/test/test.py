@@ -133,6 +133,10 @@ if __name__ == '__main__':
     print("Testing OpenCV", cv2.__version__)
     print("Local repo path:", args.repo)
     NewOpenCVTests.repoPath = args.repo
+    try:
+        NewOpenCVTests.extraTestDataPath = os.environ['OPENCV_TEST_DATA_PATH']
+    except KeyError:
+        pass
     random.seed(0)
     unit_argv = [sys.argv[0]] + other;
     unittest.main(argv=unit_argv)
