@@ -24,32 +24,22 @@ import numpy as np
 import cv2
 from tst_scene_render import TestSceneRender
 
-def intersectionRate(s1, s2):
-
-    x1, y1, x2, y2 = s1
-    s1 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
-
-    x1, y1, x2, y2 = s2
-    s2 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
-
-    area, intersection = cv2.intersectConvexConvex(np.array(s1), np.array(s2))
-    return 2 * area / (cv2.contourArea(np.array(s1)) + cv2.contourArea(np.array(s2)))
-
-
-from tests_common import NewOpenCVTests
+from tests_common import NewOpenCVTests, intersectionRate
 
 class camshift_test(NewOpenCVTests):
 
+    framesNum = 300
     frame = None
     selection = None
     drag_start = None
     show_backproj = False
     track_window = None
     render = None
+    errors = 0
 
     def prepareRender(self):
 
-        self.render = TestSceneRender(self.get_sample('samples/data/pca_test1.jpg'))
+        self.render = TestSceneRender(self.get_sample('samples/data/pca_test1.jpg'), True)
 
     def runTracker(self):
 
@@ -93,15 +83,17 @@ class camshift_test(NewOpenCVTests):
 
                 if self.show_backproj:
                     vis[:] = prob[...,np.newaxis]
-
             trackingRect = np.array(self.track_window)
             trackingRect[2] += trackingRect[0]
             trackingRect[3] += trackingRect[1]
 
-            self.assertGreater(intersectionRate((self.render.getCurrentRect()), trackingRect), 0.5)
+            if intersectionRate(self.render.getCurrentRect(), trackingRect) < 0.4:
+                self.errors += 1
 
-            if framesCounter > 300:
+            if framesCounter > self.framesNum:
                 break
+
+        self.assertLess(float(self.errors) / self.framesNum, 0.4)
 
     def test_camshift(self):
         self.prepareRender()

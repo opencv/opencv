@@ -10,17 +10,6 @@ from __future__ import print_function
 import numpy as np
 import cv2
 
-def intersectionRate(s1, s2):
-
-    x1, y1, x2, y2 = s1
-    s1 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
-
-    x1, y1, x2, y2 = s2
-    s2 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
-
-    area, intersection = cv2.intersectConvexConvex(np.array(s1), np.array(s2))
-    return 2 * area / (cv2.contourArea(np.array(s1)) + cv2.contourArea(np.array(s2)))
-
 def detect(img, cascade):
     rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30),
                                      flags=cv2.CASCADE_SCALE_IMAGE)
@@ -29,7 +18,7 @@ def detect(img, cascade):
     rects[:,2:] += rects[:,:2]
     return rects
 
-from tests_common import NewOpenCVTests
+from tests_common import NewOpenCVTests, intersectionRate
 
 class facedetect_test(NewOpenCVTests):
 

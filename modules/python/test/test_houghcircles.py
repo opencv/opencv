@@ -10,8 +10,30 @@ from __future__ import print_function
 import cv2
 import numpy as np
 import sys
+from numpy import pi, sin, cos
 
 from tests_common import NewOpenCVTests
+
+def circleApproximation(circle):
+
+    nPoints = 30
+    phi = 0
+    dPhi = 2*pi / nPoints
+    contour = []
+    for i in range(nPoints):
+        contour.append(([circle[0] + circle[2]*cos(i*dPhi),
+            circle[1] + circle[2]*sin(i*dPhi)]))
+
+    return np.array(contour).astype(int)
+
+def convContoursIntersectiponRate(c1, c2):
+
+    s1 = cv2.contourArea(c1)
+    s2 = cv2.contourArea(c2)
+
+    s, _ = cv2.intersectConvexConvex(c1, c2)
+
+    return 2*s/(s1+s2)
 
 class houghcircles_test(NewOpenCVTests):
 
@@ -45,13 +67,15 @@ class houghcircles_test(NewOpenCVTests):
         [448.4, 121.3, 9.12],
         [384.6, 128.9, 8.62]]
 
-        eps = 7
         matches_counter = 0
 
         for i in range(len(testCircles)):
             for j in range(len(circles)):
-                if cv2.norm(testCircles[i] - circles[j], cv2.NORM_L2) < eps:
+
+                tstCircle = circleApproximation(testCircles[i])
+                circle = circleApproximation(circles[j])
+                if convContoursIntersectiponRate(tstCircle, circle) > 0.6:
                     matches_counter += 1
 
         self.assertGreater(float(matches_counter) / len(testCircles), .5)
-        self.assertLess(float(len(circles) - matches_counter) / len(circles), .7)
+        self.assertLess(float(len(circles) - matches_counter) / len(circles), .75)

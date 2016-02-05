@@ -54,3 +54,14 @@ class NewOpenCVTests(unittest.TestCase):
         def assertGreater(self, a, b, msg=None):
             if not a > b:
                 self.fail('%s not greater than %s' % (repr(a), repr(b)))
+
+def intersectionRate(s1, s2):
+
+    x1, y1, x2, y2 = s1
+    s1 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
+
+    x1, y1, x2, y2 = s2
+    s2 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
+    #print(np.array(s2))
+    area, intersection = cv2.intersectConvexConvex(np.array(s1), np.array(s2))
+    return 2 * area / (cv2.contourArea(np.array(s1)) + cv2.contourArea(np.array(s2)))
