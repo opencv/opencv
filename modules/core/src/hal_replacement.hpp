@@ -384,30 +384,30 @@ inline int hal_ni_merge64s(const int64 **src_data, int64 *dst_data, int len, int
 #  pragma warning( pop )
 #endif
 
-inline int hal_ni_dftInit(void**, int, int, int, int, bool*) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dftRun(const void*, const void*, void*) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dftFree(void*) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dftInit1D(void**, int, int, int, int, bool*) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dft1D(const void*, const void*, void*) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dftFree1D(void*) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
-#define cv_hal_dftInit hal_ni_dftInit
-#define cv_hal_dftRun hal_ni_dftRun
-#define cv_hal_dftFree hal_ni_dftFree
+#define cv_hal_dftInit1D hal_ni_dftInit1D
+#define cv_hal_dft1D hal_ni_dft1D
+#define cv_hal_dftFree1D hal_ni_dftFree1D
 
 inline int hal_ni_dftInit2D(void **, int, int, int, int, int, int, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dftRun2D(const void *, const void *, int, void *, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dft2D(const void *, const void *, int, void *, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_dftFree2D(void *) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 #define cv_hal_dftInit2D hal_ni_dftInit2D
-#define cv_hal_dftRun2D hal_ni_dftRun2D
+#define cv_hal_dft2D hal_ni_dft2D
 #define cv_hal_dftFree2D hal_ni_dftFree2D
 
 
-inline int hal_ni_dctInit(void **, int, int, int, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dctRun(const void *, const void *, int, void *, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dctFree(void *) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dctInit2D(void **, int, int, int, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dct2D(const void *, const void *, int, void *, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dctFree2D(void *) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
-#define cv_hal_dctInit hal_ni_dctInit
-#define cv_hal_dctRun hal_ni_dctRun
-#define cv_hal_dctFree hal_ni_dctFree
+#define cv_hal_dctInit2D hal_ni_dctInit2D
+#define cv_hal_dct2D hal_ni_dct2D
+#define cv_hal_dctFree2D hal_ni_dctFree2D
 
 #include "custom_hal.hpp"
 

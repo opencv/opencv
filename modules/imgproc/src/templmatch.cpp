@@ -726,7 +726,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             Mat part(dst, Range(0, templ.rows), Range(templ.cols, dst.cols));
             part = Scalar::all(0);
         }
-        hal::dftRun2D(c, dst.data, (int)dst.step, dst.data, (int)dst.step);
+        hal::dft2D(c, dst.data, (int)dst.step, dst.data, (int)dst.step);
     }
 
     hal::dftFree2D(c);
@@ -791,7 +791,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                                x1-x0, dst.cols-dst1.cols-(x1-x0), borderType);
 
             if (bsz.height == blocksize.height)
-                hal::dftRun2D(cF, dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+                hal::dft2D(cF, dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
             else
                 dft( dftImg, dftImg, 0, dsz.height );
 
@@ -800,7 +800,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             mulSpectrums(dftImg, dftTempl1, dftImg, 0, true);
 
             if (bsz.height == blocksize.height)
-                hal::dftRun2D(cR, dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+                hal::dft2D(cR, dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
             else
                 dft( dftImg, dftImg, DFT_INVERSE + DFT_SCALE, bsz.height );
 

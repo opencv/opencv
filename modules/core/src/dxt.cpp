@@ -2763,7 +2763,7 @@ public:
                     count = height;
                 }
                 needBufferA = isInplace;
-                hal::dftInit(contextA, len, count, depth, f, &needBufferA);
+                hal::dftInit1D(contextA, len, count, depth, f, &needBufferA);
                 if (needBufferA)
                     tmp_bufA.allocate(len * complex_elem_size);
             }
@@ -2773,7 +2773,7 @@ public:
                 count = width;
                 f |= CV_HAL_DFT_STAGE_COLS;
                 needBufferB = isInplace;
-                hal::dftInit(contextB, len, count, depth, f, &needBufferB);
+                hal::dftInit1D(contextB, len, count, depth, f, &needBufferB);
                 if (needBufferB)
                     tmp_bufB.allocate(len * complex_elem_size);
 
@@ -2864,8 +2864,8 @@ public:
     {
         if (useIpp)
             return;
-        hal::dftFree(contextA);
-        hal::dftFree(contextB);
+        hal::dftFree1D(contextA);
+        hal::dftFree1D(contextB);
     }
 
 protected:
@@ -2909,7 +2909,7 @@ protected:
             if( needBufferA )
                 dptr = tmp_bufA;
 
-            hal::dftRun(contextA, sptr, dptr);
+            hal::dft1D(contextA, sptr, dptr);
 
             if( needBufferA )
                 memcpy( dptr0, dptr + dptr_offset, dst_full_len );
@@ -2983,8 +2983,8 @@ protected:
             }
 
             if( even )
-                hal::dftRun(contextB, buf1, dbuf1);
-            hal::dftRun(contextB, buf0, dbuf0);
+                hal::dft1D(contextB, buf1, dbuf1);
+            hal::dft1D(contextB, buf0, dbuf0);
 
             if( stage_dst_channels == 1 )
             {
@@ -3032,12 +3032,12 @@ protected:
             if( i+1 < b )
             {
                 CopyFrom2Columns( sptr0, src_step, buf0, buf1, len, complex_elem_size );
-                hal::dftRun(contextB, buf1, dbuf1);
+                hal::dft1D(contextB, buf1, dbuf1);
             }
             else
                 CopyColumn( sptr0, src_step, buf0, complex_elem_size, len, complex_elem_size );
 
-            hal::dftRun(contextB, buf0, dbuf0);
+            hal::dft1D(contextB, buf0, dbuf0);
 
             if( i+1 < b )
                 CopyTo2Columns( dbuf0, dbuf1, dptr0, dst_step, len, complex_elem_size );
@@ -3223,9 +3223,9 @@ namespace hal {
 
 //================== 1D ======================
 
-void dftInit(DftContext & context, int len, int count, int depth, int flags, bool *needBuffer)
+void dftInit1D(DftContext & context, int len, int count, int depth, int flags, bool *needBuffer)
 {
-    int res = cv_hal_dftInit(&context.impl, len, count, depth, flags, needBuffer);
+    int res = cv_hal_dftInit1D(&context.impl, len, count, depth, flags, needBuffer);
     if (res == CV_HAL_ERROR_OK)
     {
         context.useReplacement = true;
@@ -3242,11 +3242,11 @@ void dftInit(DftContext & context, int len, int count, int depth, int flags, boo
     c->init(len, count, depth, flags, needBuffer);
 }
 
-void dftRun(const DftContext & context, const void * src, void * dst)
+void dft1D(const DftContext & context, const void * src, void * dst)
 {
     if (context.useReplacement)
     {
-        int res = cv_hal_dftRun(context.impl, src, dst);
+        int res = cv_hal_dft1D(context.impl, src, dst);
         if (res != CV_HAL_ERROR_OK)
         {
             CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dftRun");
@@ -3257,11 +3257,11 @@ void dftRun(const DftContext & context, const void * src, void * dst)
     c->run(src, dst);
 }
 
-void dftFree(DftContext & context)
+void dftFree1D(DftContext & context)
 {
     if (context.useReplacement)
     {
-        int res = cv_hal_dftFree(context.impl);
+        int res = cv_hal_dftFree1D(context.impl);
         if (res != CV_HAL_ERROR_OK)
         {
             CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dftFree");
@@ -3282,9 +3282,9 @@ void dftFree(DftContext & context)
 //================== 2D ======================
 
 void dftInit2D(DftContext & c,
-               int _width, int _height, int _depth, int _src_channels, int _dst_channels,
-               int flags,
-               int _nonzero_rows)
+             int _width, int _height, int _depth, int _src_channels, int _dst_channels,
+             int flags,
+             int _nonzero_rows)
 {
     int res = cv_hal_dftInit2D(&c.impl, _width, _height, _depth, _src_channels, _dst_channels, flags, _nonzero_rows);
     if (res == CV_HAL_ERROR_OK)
@@ -3304,12 +3304,12 @@ void dftInit2D(DftContext & c,
     c.impl = (void*)d;
 }
 
-void dftRun2D(const DftContext & c,
-              const void * src, int src_step, void * dst, int dst_step)
+void dft2D(const DftContext & c,
+         const void * src, int src_step, void * dst, int dst_step)
 {
     if (c.useReplacement)
     {
-        int res = cv_hal_dftRun2D(c.impl, (uchar*)src, src_step, (uchar*)dst, dst_step);
+        int res = cv_hal_dft2D(c.impl, (uchar*)src, src_step, (uchar*)dst, dst_step);
         if (res != CV_HAL_ERROR_OK)
         {
             CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dftRun2D");
@@ -3384,7 +3384,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         f |= CV_HAL_DFT_IS_INPLACE;
     hal::DftContext c;
     hal::dftInit2D(c, src.cols, src.rows, depth, src.channels(), dst.channels(), f, nonzero_rows);
-    hal::dftRun2D(c, src.data, (int)src.step, dst.data, (int)dst.step);
+    hal::dft2D(c, src.data, (int)src.step, dst.data, (int)dst.step);
     hal::dftFree2D(c);
 }
 
@@ -4198,9 +4198,9 @@ public:
 
 namespace hal {
 
-void dctInit(DftContext & c, int width, int height, int depth, int flags)
+void dctInit2D(DftContext & c, int width, int height, int depth, int flags)
 {
-    int res = cv_hal_dctInit(&c.impl, width, height, depth, flags);
+    int res = cv_hal_dctInit2D(&c.impl, width, height, depth, flags);
     if (res == CV_HAL_ERROR_OK)
     {
         c.useReplacement = true;
@@ -4212,11 +4212,11 @@ void dctInit(DftContext & c, int width, int height, int depth, int flags)
     c.impl = impl;
 }
 
-void dctRun(const DftContext & c, const void * src, int src_step, void * dst, int dst_step)
+void dct2D(const DftContext & c, const void * src, int src_step, void * dst, int dst_step)
 {
     if (c.useReplacement)
     {
-        int res = cv_hal_dctRun(c.impl, src, src_step, dst, dst_step);
+        int res = cv_hal_dct2D(c.impl, src, src_step, dst, dst_step);
         if (res != CV_HAL_ERROR_OK)
         {
             CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dctRun");
@@ -4227,11 +4227,11 @@ void dctRun(const DftContext & c, const void * src, int src_step, void * dst, in
     impl->run((uchar*)src, src_step, (uchar*)dst, dst_step);
 }
 
-void dctFree(DftContext & c)
+void dctFree2D(DftContext & c)
 {
     if (c.useReplacement)
     {
-        int res = cv_hal_dctFree(c.impl);
+        int res = cv_hal_dctFree2D(c.impl);
         if (res != CV_HAL_ERROR_OK)
         {
             CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dctFree");
@@ -4266,9 +4266,9 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
         f |= CV_HAL_DFT_IS_CONTINUOUS;
 
     hal::DftContext c;
-    hal::dctInit(c, src.cols, src.rows, depth, f);
-    hal::dctRun(c, (void*)src.data, (int)src.step, (void*)dst.data, (int)dst.step);
-    hal::dctFree(c);
+    hal::dctInit2D(c, src.cols, src.rows, depth, f);
+    hal::dct2D(c, (void*)src.data, (int)src.step, (void*)dst.data, (int)dst.step);
+    hal::dctFree2D(c);
 }
 
 
