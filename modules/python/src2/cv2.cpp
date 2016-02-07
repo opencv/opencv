@@ -101,6 +101,7 @@ typedef std::vector<Rect> vector_Rect;
 typedef std::vector<Rect2d> vector_Rect2d;
 typedef std::vector<KeyPoint> vector_KeyPoint;
 typedef std::vector<Mat> vector_Mat;
+typedef std::vector<UMat> vector_UMat;
 typedef std::vector<DMatch> vector_DMatch;
 typedef std::vector<String> vector_String;
 typedef std::vector<Scalar> vector_Scalar;
@@ -419,6 +420,152 @@ PyObject* pyopencv_from(const Mat& m)
     }
     PyObject* o = (PyObject*)p->u->userdata;
     Py_INCREF(o);
+    return o;
+}
+
+
+typedef struct {
+    PyObject_HEAD
+    UMat* um;
+} cv2_UMatWrapperObject;
+
+// UMatWrapper init - takes one optional argument, that converts to Mat, that converts to UMat and stored inside.
+// If no argument given - empty UMat created.
+static int UMatWrapper_init(cv2_UMatWrapperObject *self, PyObject *args, PyObject *kwds)
+{
+    self->um = new UMat();
+
+    PyObject *np_mat = NULL;
+
+    static char *kwlist[] = {new char[3], NULL};
+    strcpy(kwlist[0], "mat");
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &np_mat))
+        return -1;
+
+    if (np_mat) {
+        Mat m;
+        if (!pyopencv_to(np_mat, m, ArgInfo("UMatWrapper.np_mat", 0)))
+            return -1;
+
+        m.copyTo(*self->um);
+    }
+
+    return 0;
+}
+
+static void UMatWrapper_dealloc(cv2_UMatWrapperObject* self)
+{
+    delete self->um;
+#if PY_MAJOR_VERSION >= 3
+    Py_TYPE(self)->tp_free((PyObject*)self);
+#else
+    self->ob_type->tp_free((PyObject*)self);
+#endif
+}
+
+// UMatWrapper.get() - returns numpy array by transferring UMat data to Mat and than wrapping it to numpy array
+// (using numpy allocator - and so without unnecessary copy)
+static PyObject * UMatWrapper_get(cv2_UMatWrapperObject* self)
+{
+    Mat m;
+    m.allocator = &g_numpyAllocator;
+    self->um->copyTo(m);
+
+    return pyopencv_from(m);
+}
+
+static PyMethodDef UMatWrapper_methods[] = {
+        {"get", (PyCFunction)UMatWrapper_get, METH_NOARGS,
+                "Returns numpy array"
+        },
+        {NULL, NULL, 0, NULL}  /* Sentinel */
+};
+
+
+static PyTypeObject cv2_UMatWrapperType = {
+#if PY_MAJOR_VERSION >= 3
+        PyVarObject_HEAD_INIT(NULL, 0)
+#else
+        PyObject_HEAD_INIT(NULL)
+        0,                             /*ob_size*/
+#endif
+        "cv2.UMat",                    /* tp_name */
+        sizeof(cv2_UMatWrapperObject), /* tp_basicsize */
+        0,                             /* tp_itemsize */
+      (destructor)UMatWrapper_dealloc, /* tp_dealloc */
+        0,                             /* tp_print */
+        0,                             /* tp_getattr */
+        0,                             /* tp_setattr */
+        0,                             /* tp_reserved */
+        0,                             /* tp_repr */
+        0,                             /* tp_as_number */
+        0,                             /* tp_as_sequence */
+        0,                             /* tp_as_mapping */
+        0,                             /* tp_hash  */
+        0,                             /* tp_call */
+        0,                             /* tp_str */
+        0,                             /* tp_getattro */
+        0,                             /* tp_setattro */
+        0,                             /* tp_as_buffer */
+        Py_TPFLAGS_DEFAULT,            /* tp_flags */
+        "OpenCV 3 UMat wrapper. Used for T-API support.", /* tp_doc */
+        0,                             /* tp_traverse */
+        0,                             /* tp_clear */
+        0,                             /* tp_richcompare */
+        0,                             /* tp_weaklistoffset */
+        0,                             /* tp_iter */
+        0,                             /* tp_iternext */
+        UMatWrapper_methods,           /* tp_methods */
+        0,                             /* tp_members */
+        0,                             /* tp_getset */
+        0,                             /* tp_base */
+        0,                             /* tp_dict */
+        0,                             /* tp_descr_get */
+        0,                             /* tp_descr_set */
+        0,                             /* tp_dictoffset */
+        (initproc)UMatWrapper_init,    /* tp_init */
+        0,                             /* tp_alloc */
+        PyType_GenericNew,             /* tp_new */
+        0,                             /* tp_free */
+        0,                             /* tp_is_gc */
+        0,                             /* tp_bases */
+        0,                             /* tp_mro */
+        0,                             /* tp_cache */
+        0,                             /* tp_subclasses */
+        0,                             /* tp_weaklist */
+        0,                             /* tp_del */
+        0,                             /* tp_version_tag */
+#if PY_MAJOR_VERSION >= 3
+        0,                             /* tp_finalize */
+#endif
+};
+
+static bool pyopencv_to(PyObject* o, UMat& um, const ArgInfo info) {
+    if (o != NULL && PyObject_TypeCheck(o, &cv2_UMatWrapperType) ) {
+        um = *((cv2_UMatWrapperObject *) o)->um;
+        return true;
+    }
+
+    Mat m;
+    if (!pyopencv_to(o, m, info)) {
+        return false;
+    }
+
+    m.copyTo(um);
+    return true;
+}
+
+template<>
+bool pyopencv_to(PyObject* o, UMat& um, const char* name)
+{
+    return pyopencv_to(o, um, ArgInfo(name, 0));
+}
+
+template<>
+PyObject* pyopencv_from(const UMat& m) {
+    PyObject *o = PyObject_CallObject((PyObject *) &cv2_UMatWrapperType, NULL);
+    *((cv2_UMatWrapperObject *) o)->um = m;
     return o;
 }
 
@@ -1384,6 +1531,23 @@ void initcv2()
 
   opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
   PyDict_SetItemString(d, "error", opencv_error);
+
+//Registering UMatWrapper python class in cv2 module:
+  if (PyType_Ready(&cv2_UMatWrapperType) < 0)
+#if PY_MAJOR_VERSION >= 3
+    return NULL;
+#else
+    return;
+#endif
+
+#if PY_MAJOR_VERSION >= 3
+  Py_INCREF(&cv2_UMatWrapperType);
+#else
+  // Unrolled Py_INCREF(&cv2_UMatWrapperType) without (PyObject*) cast
+  // due to "warning: dereferencing type-punned pointer will break strict-aliasing rules"
+  _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&cv2_UMatWrapperType)->ob_refcnt++;
+#endif
+  PyModule_AddObject(m, "UMat", (PyObject *)&cv2_UMatWrapperType);
 
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
 //#define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))

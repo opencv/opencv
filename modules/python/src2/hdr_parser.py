@@ -17,7 +17,7 @@ opencv_hdr_list = [
 "../../objdetect/include/opencv2/objdetect.hpp",
 "../../imgcodecs/include/opencv2/imgcodecs.hpp",
 "../../videoio/include/opencv2/videoio.hpp",
-"../../highgui/include/opencv2/highgui.hpp"
+"../../highgui/include/opencv2/highgui.hpp",
 ]
 
 """
@@ -31,7 +31,9 @@ where the list of modifiers is yet another nested list of strings
 
 class CppHeaderParser(object):
 
-    def __init__(self):
+    def __init__(self, generate_umat_decls=False):
+        self._generate_umat_decls = generate_umat_decls
+
         self.BLOCK_TYPE = 0
         self.BLOCK_NAME = 1
         self.PROCESS_FLAG = 2
@@ -368,7 +370,7 @@ class CppHeaderParser(object):
             print(decl_str)
         return decl
 
-    def parse_func_decl(self, decl_str):
+    def parse_func_decl(self, decl_str, use_umat=False):
         """
         Parses the function or method declaration in the form:
         [([CV_EXPORTS] <rettype>) | CVAPI(rettype)]
@@ -537,28 +539,34 @@ class CppHeaderParser(object):
                         a = a[:eqpos].strip()
                     arg_type, arg_name, modlist, argno = self.parse_arg(a, argno)
                     if self.wrap_mode:
+                        mat = "UMat" if use_umat else "Mat"
+
+                        # TODO: Vectors should contain UMat, but this is not very easy to support and not very needed
+                        vector_mat = "vector_{}".format("Mat")
+                        vector_mat_template = "vector<{}>".format("Mat")
+
                         if arg_type == "InputArray":
-                            arg_type = "Mat"
+                            arg_type = mat
                         elif arg_type == "InputOutputArray":
-                            arg_type = "Mat"
+                            arg_type = mat
                             modlist.append("/IO")
                         elif arg_type == "OutputArray":
-                            arg_type = "Mat"
+                            arg_type = mat
                             modlist.append("/O")
                         elif arg_type == "InputArrayOfArrays":
-                            arg_type = "vector_Mat"
+                            arg_type = vector_mat
                         elif arg_type == "InputOutputArrayOfArrays":
-                            arg_type = "vector_Mat"
+                            arg_type = vector_mat
                             modlist.append("/IO")
                         elif arg_type == "OutputArrayOfArrays":
-                            arg_type = "vector_Mat"
+                            arg_type = vector_mat
                             modlist.append("/O")
-                        defval = self.batch_replace(defval, [("InputArrayOfArrays", "vector<Mat>"),
-                                                             ("InputOutputArrayOfArrays", "vector<Mat>"),
-                                                             ("OutputArrayOfArrays", "vector<Mat>"),
-                                                             ("InputArray", "Mat"),
-                                                             ("InputOutputArray", "Mat"),
-                                                             ("OutputArray", "Mat"),
+                        defval = self.batch_replace(defval, [("InputArrayOfArrays", vector_mat_template),
+                                                             ("InputOutputArrayOfArrays", vector_mat_template),
+                                                             ("OutputArrayOfArrays", vector_mat_template),
+                                                             ("InputArray", mat),
+                                                             ("InputOutputArray", mat),
+                                                             ("OutputArray", mat),
                                                              ("noArray", arg_type)]).strip()
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
@@ -604,7 +612,7 @@ class CppHeaderParser(object):
             n = "cv.Algorithm"
         return n
 
-    def parse_stmt(self, stmt, end_token):
+    def parse_stmt(self, stmt, end_token, use_umat=False):
         """
         parses the statement (ending with ';' or '}') or a block head (ending with '{')
 
@@ -696,7 +704,7 @@ class CppHeaderParser(object):
             # since we filtered off the other places where '(' can normally occur:
             #   - code blocks
             #   - function pointer typedef's
-            decl = self.parse_func_decl(stmt)
+            decl = self.parse_func_decl(stmt, use_umat=use_umat)
             # we return parse_flag == False to prevent the parser to look inside function/method bodies
             # (except for tracking the nested blocks)
             return stmt_type, "", False, decl
@@ -839,6 +847,15 @@ class CppHeaderParser(object):
                                 decls.append(d)
                         else:
                             decls.append(decl)
+
+                            if self._generate_umat_decls:
+                                # If function takes as one of arguments Mat or vector<Mat> - we want to create the
+                                # same declaration working with UMat (this is important for T-Api access)
+                                args = decl[3]
+                                has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
+                                if has_mat:
+                                    _, _, _, umat_decl = self.parse_stmt(stmt, token, use_umat=True)
+                                    decls.append(umat_decl)
                     if stmt_type == "namespace":
                         chunks = [block[1] for block in self.block_stack if block[0] == 'namespace'] + [name]
                         self.namespaces.add('.'.join(chunks))
@@ -878,7 +895,7 @@ class CppHeaderParser(object):
                     print()
 
 if __name__ == '__main__':
-    parser = CppHeaderParser()
+    parser = CppHeaderParser(generate_umat_decls=True)
     decls = []
     for hname in opencv_hdr_list:
         decls += parser.parse(hname)
