@@ -16,6 +16,7 @@
 # OPENCV_MODULE_${the_module}_OPT_DEPS
 # OPENCV_MODULE_${the_module}_PRIVATE_REQ_DEPS
 # OPENCV_MODULE_${the_module}_PRIVATE_OPT_DEPS
+# OPENCV_MODULE_${the_module}_INTERFACE_DEFS
 # HAVE_${the_module} - for fast check of module availability
 
 # To control the setup of the module you could also set:
@@ -55,6 +56,7 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
   unset(OPENCV_MODULE_${mod}_OPT_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_PRIVATE_REQ_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_PRIVATE_OPT_DEPS CACHE)
+  unset(OPENCV_MODULE_${the_module}_INTERFACE_DEFS CACHE)
 endforeach()
 
 # clean modules info which needs to be recalculated
@@ -572,6 +574,10 @@ macro(ocv_create_module)
   add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES}
     "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp"
     ${${the_module}_pch})
+
+  set(OPENCV_MODULE_${the_module}_INTERFACE_DEFS ${OPENCV_MODULE_${the_module}_INTERFACE_DEFS}
+    CACHE INTERNAL "Public compile definitions of ${full_modname} module")
+  target_compile_definitions("${the_module}" PUBLIC ${OPENCV_MODULE_${the_module}_INTERFACE_DEFS})
 
   if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
     target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
