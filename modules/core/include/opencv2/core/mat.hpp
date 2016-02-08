@@ -1705,7 +1705,7 @@ public:
 
     Keep in mind that the size identifier used in the at operator cannot be chosen at random. It depends
     on the image from which you are trying to retrieve the data. The table below gives a better insight in this:
-     - If matrix is of type `CV_8U` or `CV_8S` then use `Mat.at<uchar>(y,x)`.
+     - If matrix is of type `CV_8U` then use `Mat.at<uchar>(y,x)`.
      - If matrix is of type `CV_8S` then use `Mat.at<schar>(y,x)`.
      - If matrix is of type `CV_16U` then use `Mat.at<ushort>(y,x)`.
      - If matrix is of type `CV_16S` then use `Mat.at<short>(y,x)`.
