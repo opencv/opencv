@@ -245,7 +245,10 @@ void ExifReader::parseExif()
  */
 Endianess_t ExifReader::getFormat() const
 {
-    if( m_data[0] != m_data[1] )
+    if (m_data.size() < 1)
+        return NONE;
+
+    if( m_data.size() > 1 && m_data[0] != m_data[1] )
     {
         return NONE;
     }
