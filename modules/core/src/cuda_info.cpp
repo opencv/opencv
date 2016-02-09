@@ -70,8 +70,8 @@ void cv::cuda::setDevice(int device)
     (void) device;
     throw_no_cuda();
 #else
-    cudaFree(0);
     cudaSafeCall( cudaSetDevice(device) );
+    cudaSafeCall( cudaFree(0) );
 #endif
 }
 
