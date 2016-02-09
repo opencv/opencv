@@ -693,7 +693,7 @@ include(cmake/OpenCVGenPkgconfig.cmake)
 # Generate OpenCV.mk for ndk-build (Android build tool)
 include(cmake/OpenCVGenAndroidMK.cmake)
 
-# Generate OpenCVСonfig.cmake and OpenCVConfig-version.cmake for cmake projects
+# Generate OpenCVConfig.cmake and OpenCVConfig-version.cmake for cmake projects
 include(cmake/OpenCVGenConfig.cmake)
 
 # Generate Info.plist for the IOS framework
