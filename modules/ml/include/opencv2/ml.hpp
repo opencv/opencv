@@ -1504,27 +1504,78 @@ public:
 /*!
 @brief Stochastic Gradient Descent SVM classifier
 
-SVMSGD provides a fast and easy-to-use implementation of the SVM classifier using the Stochastic Gradient Descent approach, as presented in @cite bottou2010large.
+SVMSGD provides a fast and easy-to-use implementation of the SVM classifier using the Stochastic Gradient Descent approach,
+as presented in @cite bottou2010large.
 The gradient descent show amazing performance for large-scale problems, reducing the computing time.
 
+The classifier has 5 parameters. These are
+- model type,
+- margin type,
+- \f$\lambda\f$ (strength of restrictions on outliers),
+- \f$\gamma_0\f$ (initial step size),
+- \f$c\f$ (power coefficient for decreasing of step size),
+- and termination criteria.
 
+The model type may have one of the following values: \ref SGD and \ref ASGD.
 
-First, create the SVMSGD object. Set parametrs of model (type, lambda, gamma0, c) using the functions setType, setLambda, setGamma0 and setC or the function setOptimalParametrs.
-Recommended model type is ASGD.
+- \ref SGD is the classic version of SVMSGD classifier: every next step is calculated by the formula
+  \f[w_{t+1} = w_t - \gamma(t) \frac{dQ_i}{dw} |_{w = w_t}\f]
+  where
+  - \f$w_t\f$ is the weights vector for decision function at step \f$t\f$,
+  - \f$\gamma(t)\f$ is the step size of model parameters at the iteration \f$t\f$, it is decreased on each step by the formula
+    \f$\gamma(t) = \gamma_0  (1 + \lambda  \gamma_0 t) ^ {-c}\f$
+  - \f$Q_i\f$ is the target functional from SVM task for sample with number \f$i\f$, this sample is chosen stochastically on each step of the algorithm.
 
-Then the SVM model can be trained using the train features and the correspondent labels.
+- \ref ASGD is Average Stochastic Gradient Descent SVM Classifier. ASGD classifier averages weights vector on each step of algorithm by the formula
+\f$\widehat{w}_{t+1} = \frac{t}{1+t}\widehat{w}_{t} + \frac{1}{1+t}w_{t+1}\f$
 
-After that, the label of a new feature vector can be predicted using the predict function.
+The recommended model type is ASGD (following @cite bottou2010large).
+
+The margin type may have one of the following values: \ref SOFT_MARGIN or \ref HARD_MARGIN.
+
+- You should use \ref HARD_MARGIN type, if you have linearly separable sets.
+- You should use \ref SOFT_MARGIN type, if you have non-linearly separable sets or sets with outliers.
+- In the general case (if you know nothing about linearly separability of your sets), use SOFT_MARGIN.
+
+The other parameters may be described as follows:
+- \f$\lambda\f$ parameter is responsible for weights decreasing at each step and for the strength of restrictions on outliers
+  (the less the parameter, the less probability that an outlier will be ignored).
+  Recommended value for SGD model is 0.0001, for ASGD model is 0.00001.
+
+- \f$\gamma_0\f$ parameter is the initial value for the step size \f$\gamma(t)\f$.
+  You will have to find the best \f$\gamma_0\f$ for your problem.
+
+- \f$c\f$ is the power parameter for \f$\gamma(t)\f$ decreasing by the formula, mentioned above.
+  Recommended value for SGD model is 1, for ASGD model is 0.75.
+
+- Termination criteria can be TermCriteria::COUNT, TermCriteria::EPS or TermCriteria::COUNT + TermCriteria::EPS.
+  You will have to find the best termination criteria for your problem.
+
+Note that the parameters \f$\lambda\f$, \f$\gamma_0\f$, and \f$c\f$ should be positive.
+
+To use SVMSGD algorithm do as follows:
+
+- first, create the SVMSGD object.
+
+- then set parameters  (model type, margin type, \f$\lambda\f$, \f$\gamma_0\f$, \f$c\f$) using the functions
+  setSvmsgdType(), setMarginType(), setLambda(), setGamma0(), and setC(), or the function setOptimalParameters().
+
+- then the SVM model can be trained using the train features and the correspondent labels by the method train().
+
+- after that, the label of a new feature vector can be predicted using the method predict().
 
 @code
-// Initialize object
-SVMSGD SvmSgd;
+// Create empty object
+cv::Ptr<SVMSGD> svmsgd = SVMSGD::create();
+
+// Set parameters
+svmsgd->setOptimalParameters();
 
 // Train the Stochastic Gradient Descent SVM
-SvmSgd.train(trainFeatures, labels);
+SvmSgd->train(trainData);
 
-// Predict label for the new feature vector (1xM)
-predictedLabel = SvmSgd.predict(newFeatureVector);
+// Predict labels for the new samples
+svmsgd->predict(samples, responses);
 @endcode
 
 */
@@ -1537,9 +1588,17 @@ public:
     ASGD is often the preferable choice. */
     enum SvmsgdType
     {
-        ILLEGAL_VALUE,
-        SGD, //!Stochastic Gradient Descent
-        ASGD //!Average Stochastic Gradient Descent
+        ILLEGAL_SVMSGD_TYPE,
+        SGD, //!< Stochastic Gradient Descent
+        ASGD //!< Average Stochastic Gradient Descent
+    };
+
+    /** Margin type.*/
+    enum MarginType
+    {
+        ILLEGAL_MARGIN_TYPE,
+        SOFT_MARGIN, //!< General case, suits to the case of non-linearly separable sets, allows outliers.
+        HARD_MARGIN  //!< More accurate for the case of linearly separable sets.
     };
 
     /**
@@ -1553,49 +1612,59 @@ public:
     CV_WRAP virtual float getShift() = 0;
 
 
-    /** Creates empty model.
+    /** @brief Creates empty model.
         Use StatModel::train to train the model. Since %SVMSGD has several parameters, you may want to
         find the best parameters for your problem or use setOptimalParameters() to set some default parameters.
     */
     CV_WRAP static Ptr<SVMSGD> create();
 
-    /** Function sets optimal parameters values for chosen SVM SGD model.
+    /** @brief Function sets optimal parameters values for chosen SVM SGD model.
      * If chosen type is ASGD, function sets the following values for parameters of model:
-     * lambda = 0.00001;
-     * gamma0 = 0.05;
-     * c = 0.75;
+     * \f$\lambda = 0.00001\f$;
+     * \f$\gamma_0 = 0.05\f$;
+     * \f$c = 0.75\f$;
      * termCrit.maxCount = 100000;
      * termCrit.epsilon = 0.00001;
      *
      * If SGD:
-     * lambda = 0.0001;
-     * gamma0 = 0.05;
-     * c = 1;
+     * \f$\lambda = 0.0001\f$;
+     * \f$\gamma_0 = 0.05\f$;
+     * \f$c = 1\f$;
      * termCrit.maxCount = 100000;
      * termCrit.epsilon = 0.00001;
-     * @param type is the type of SVMSGD classifier. Legal values are SvmsgdType::SGD and SvmsgdType::ASGD.
+     * @param svmsgdType is the type of SVMSGD classifier. Legal values are SvmsgdType::SGD and SvmsgdType::ASGD.
      * Recommended value is SvmsgdType::ASGD (by default).
+     * @param marginType is the type of margin constraint. Legal values are MarginType::SOFT_MARGIN and MarginType::HARD_MARGIN.
+     * Default value is MarginType::SOFT_MARGIN.
     */
-    CV_WRAP virtual void setOptimalParameters(int type = ASGD) = 0;
+    CV_WRAP virtual void setOptimalParameters(int svmsgdType = ASGD, int marginType = SOFT_MARGIN) = 0;
 
-    /** %Algorithm type, one of SVMSGD::SvmsgdType. */
+    /** @brief %Algorithm type, one of SVMSGD::SvmsgdType. */
     /** @see setAlgorithmType */
-    CV_WRAP virtual int getType() const = 0;
+    CV_WRAP virtual int getSvmsgdType() const = 0;
     /** @copybrief getAlgorithmType @see getAlgorithmType */
-    CV_WRAP virtual void setType(int type) = 0;
+    CV_WRAP virtual void setSvmsgdType(int svmsgdType) = 0;
 
-    /** Parameter _Lambda_ of a %SVMSGD optimization problem. Default value is 0. */
+    /** @brief %Margin type, one of SVMSGD::MarginType. */
+    /** @see setMarginType */
+    CV_WRAP virtual int getMarginType() const = 0;
+    /** @copybrief getMarginType @see getMarginType */
+    CV_WRAP virtual void setMarginType(int marginType) = 0;
+
+
+    /** @brief Parameter \f$\lambda\f$ of a %SVMSGD optimization problem. Default value is 0. */
     /** @see setLambda */
     CV_WRAP virtual float getLambda() const = 0;
     /** @copybrief getLambda @see getLambda */
     CV_WRAP virtual void setLambda(float lambda) = 0;
 
-    /** Parameter _Gamma0_ of a %SVMSGD optimization problem. Default value is 0. */
+    /** @brief Parameter \f$\gamma_0\f$ of a %SVMSGD optimization problem. Default value is 0. */
     /** @see setGamma0 */
     CV_WRAP virtual float getGamma0() const = 0;
+    /** @copybrief getGamma0 @see getGamma0 */
     CV_WRAP virtual void setGamma0(float gamma0) = 0;
 
-    /** Parameter _C_ of a %SVMSGD optimization problem. Default value is 0. */
+    /** @brief Parameter \f$c\f$ of a %SVMSGD optimization problem. Default value is 0. */
     /** @see setC */
     CV_WRAP virtual float getC() const = 0;
     /** @copybrief getC @see getC */

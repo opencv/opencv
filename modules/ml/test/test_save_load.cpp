@@ -270,11 +270,7 @@ TEST(ML_DTree, legacy_load) { CV_LegacyTest test(CV_DTREE, "_abalone.xml;_mushro
 TEST(ML_NBayes, legacy_load) { CV_LegacyTest test(CV_NBAYES, "_waveform.xml"); test.safe_run(); }
 TEST(ML_SVM, legacy_load) { CV_LegacyTest test(CV_SVM, "_poletelecomm.xml;_waveform.xml"); test.safe_run(); }
 TEST(ML_RTrees, legacy_load) { CV_LegacyTest test(CV_RTREES, "_waveform.xml"); test.safe_run(); }
-TEST(ML_SVMSGD, legacy_load)
-{
-    CV_LegacyTest test(CV_SVMSGD, "_waveform.xml");
-    test.safe_run();
-}
+TEST(ML_SVMSGD, legacy_load) { CV_LegacyTest test(CV_SVMSGD, "_waveform.xml"); test.safe_run(); }
 
 /*TEST(ML_SVM, throw_exception_when_save_untrained_model)
 {
