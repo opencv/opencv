@@ -502,6 +502,7 @@ void SVMSGDImpl::readParams( const FileNode& fn )
 void SVMSGDImpl::clear()
 {
     weights_.release();
+    shift_ = 0;
 }
 
 
