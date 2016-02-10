@@ -1697,7 +1697,6 @@ CV_EXPORTS void randMVNormal( InputArray mean, InputArray cov, int nsamples, Out
 CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int nclasses,
                                                 OutputArray samples, OutputArray responses);
 
-
 //! @} ml
 
 }
