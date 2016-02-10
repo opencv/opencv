@@ -267,9 +267,7 @@ void CV_MLBaseTest::run( int )
 {
     string filename = ts->get_data_path();
     filename += get_validation_filename();
-
     validationFS.open( filename, FileStorage::READ );
-
     read_params( *validationFS );
 
     int code = cvtest::TS::OK;
