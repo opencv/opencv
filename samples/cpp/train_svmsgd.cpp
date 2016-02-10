@@ -97,7 +97,7 @@ bool findCrossPointWithBorders(const Mat &weights, float shift, const std::pair<
     if (xMin == xMax && weights.at<float>(1) != 0)
     {
         x = xMin;
-        y = std::floor( - (weights.at<float>(0) * x + shift) / weights.at<float>(1));
+        y = static_cast<int>(std::floor( - (weights.at<float>(0) * x + shift) / weights.at<float>(1)));
         if (y >= yMin && y <= yMax)
         {
             crossPoint.x = x;
@@ -108,7 +108,7 @@ bool findCrossPointWithBorders(const Mat &weights, float shift, const std::pair<
     else if (yMin == yMax && weights.at<float>(0) != 0)
     {
         y = yMin;
-        x = std::floor( - (weights.at<float>(1) * y + shift) / weights.at<float>(0));
+        x = static_cast<int>(std::floor( - (weights.at<float>(1) * y + shift) / weights.at<float>(0)));
         if (x >= xMin && x <= xMax)
         {
             crossPoint.x = x;
@@ -149,8 +149,8 @@ void redraw(Data data, const Point points[2])
     Scalar color;
     for (int i = 0; i < data.samples.rows; i++)
     {
-        center.x = data.samples.at<float>(i,0);
-        center.y = data.samples.at<float>(i,1);
+        center.x = static_cast<int>(data.samples.at<float>(i,0));
+        center.y = static_cast<int>(data.samples.at<float>(i,1));
         color = (data.responses.at<float>(i) > 0) ? Scalar(128,128,0) : Scalar(0,128,128);
         circle(data.img, center, radius, color, 5);
     }
@@ -163,8 +163,8 @@ void addPointRetrainAndRedraw(Data &data, int x, int y, int response)
 {
     Mat currentSample(1, 2, CV_32F);
 
-    currentSample.at<float>(0,0) = x;
-    currentSample.at<float>(0,1) = y;
+    currentSample.at<float>(0,0) = (float)x;
+    currentSample.at<float>(0,1) = (float)y;
     data.samples.push_back(currentSample);
     data.responses.push_back(response);
 

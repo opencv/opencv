@@ -124,7 +124,7 @@ void CV_SVMSGDTrainTest::makeTrainData(Mat weights, float shift)
     cv::Mat responses = cv::Mat::zeros(datasize, 1, CV_32FC1);
     for (int sampleIndex = 0; sampleIndex < datasize; sampleIndex++)
     {
-        responses.at<float>(sampleIndex) = decisionFunction(samples.row(sampleIndex), weights, shift) > 0 ? 1 : -1;
+        responses.at<float>(sampleIndex) = decisionFunction(samples.row(sampleIndex), weights, shift) > 0 ? 1.f : -1.f;
     }
 
     data = TrainData::create(samples, cv::ml::ROW_SAMPLE, responses);
@@ -146,7 +146,7 @@ void CV_SVMSGDTrainTest::makeTestData(Mat weights, float shift)
 
     for (int i = 0 ; i < testSamplesCount; i++)
     {
-        testResponses.at<float>(i) = decisionFunction(testSamples.row(i), weights, shift) > 0 ? 1 : -1;
+        testResponses.at<float>(i) = decisionFunction(testSamples.row(i), weights, shift) > 0 ? 1.f : -1.f;
     }
 }
 
@@ -175,7 +175,7 @@ CV_SVMSGDTrainTest::CV_SVMSGDTrainTest(const Mat &weights, float shift, TrainDat
 
 float CV_SVMSGDTrainTest::decisionFunction(const Mat &sample, const Mat &weights, float shift)
 {
-    return sample.dot(weights) + shift;
+    return static_cast<float>(sample.dot(weights)) + shift;
 }
 
 void CV_SVMSGDTrainTest::run( int /*start_from*/ )
@@ -217,7 +217,7 @@ void makeWeightsAndShift(int featureCount, Mat &weights, float &shift)
     double upperLimit = 1;
 
     rng.fill(weights, RNG::UNIFORM, lowerLimit, upperLimit);
-    shift = rng.uniform(-featureCount, featureCount);
+    shift = static_cast<float>(rng.uniform(-featureCount, featureCount));
 }
 
 
@@ -319,7 +319,7 @@ TEST(ML_SVMSGD, twoPoints)
 
     float realShift = -500000.5;
 
-    float normRealWeights = norm(realWeights);
+    float normRealWeights = static_cast<float>(norm(realWeights));
     realWeights /= normRealWeights;
     realShift /= normRealWeights;
 
@@ -330,7 +330,7 @@ TEST(ML_SVMSGD, twoPoints)
     Mat foundWeights = svmsgd->getWeights();
     float foundShift = svmsgd->getShift();
 
-    float normFoundWeights = norm(foundWeights);
+    float normFoundWeights = static_cast<float>(norm(foundWeights));
     foundWeights /= normFoundWeights;
     foundShift /= normFoundWeights;
     CV_Assert((norm(foundWeights - realWeights) < 0.001) && (abs((foundShift - realShift) / realShift) < 0.05));

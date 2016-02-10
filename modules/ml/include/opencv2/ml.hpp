@@ -1640,9 +1640,9 @@ public:
     CV_WRAP virtual void setOptimalParameters(int svmsgdType = SVMSGD::ASGD, int marginType = SVMSGD::SOFT_MARGIN) = 0;
 
     /** @brief %Algorithm type, one of SVMSGD::SvmsgdType. */
-    /** @see setAlgorithmType */
+    /** @see setSvmsgdType */
     CV_WRAP virtual int getSvmsgdType() const = 0;
-    /** @copybrief getAlgorithmType @see getAlgorithmType */
+    /** @copybrief getSvmsgdType @see getSvmsgdType */
     CV_WRAP virtual void setSvmsgdType(int svmsgdType) = 0;
 
     /** @brief %Margin type, one of SVMSGD::MarginType. */
