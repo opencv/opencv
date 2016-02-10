@@ -160,10 +160,7 @@ TEST(ML_DTree, save_load) { CV_SLMLTest test( CV_DTREE ); test.safe_run(); }
 TEST(ML_Boost, save_load) { CV_SLMLTest test( CV_BOOST ); test.safe_run(); }
 TEST(ML_RTrees, save_load) { CV_SLMLTest test( CV_RTREES ); test.safe_run(); }
 TEST(DISABLED_ML_ERTrees, save_load) { CV_SLMLTest test( CV_ERTREES ); test.safe_run(); }
-TEST(MV_SVMSGD, save_load){
-    CV_SLMLTest test( CV_SVMSGD );
-    test.safe_run();
-}
+TEST(MV_SVMSGD, save_load){ CV_SLMLTest test( CV_SVMSGD ); test.safe_run(); }
 
 class CV_LegacyTest : public cvtest::BaseTest
 {

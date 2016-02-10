@@ -58,39 +58,40 @@ public:
         UNIFORM_DIFFERENT_SCALES
     };
 
-    CV_SVMSGDTrainTest(Mat _weights, float shift, TrainDataType type, double precision = 0.01);
+    CV_SVMSGDTrainTest(const Mat &_weights, float shift, TrainDataType type, double precision = 0.01);
 private:
     virtual void run( int start_from );
     static float decisionFunction(const Mat &sample, const Mat &weights, float shift);
     void makeTrainData(Mat weights, float shift);
     void makeTestData(Mat weights, float shift);
-    void generateSameScaleData(Mat &samples);
-    void generateDifferentScalesData(Mat &samples, float shift);
+    void generateSameBorders(int featureCount);
+    void generateDifferentBorders(int featureCount);
 
     TrainDataType type;
     double precision;
+    std::vector<std::pair<float,float> > borders;
     cv::Ptr<TrainData> data;
     cv::Mat testSamples;
     cv::Mat testResponses;
     static const int TEST_VALUE_LIMIT = 500;
 };
 
-void CV_SVMSGDTrainTest::generateSameScaleData(Mat &samples)
+void CV_SVMSGDTrainTest::generateSameBorders(int featureCount)
+{
+    float lowerLimit = -TEST_VALUE_LIMIT;
+    float upperLimit = TEST_VALUE_LIMIT;
+
+    for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
+    {
+        borders.push_back(std::pair<float,float>(lowerLimit, upperLimit));
+    }
+}
+
+void CV_SVMSGDTrainTest::generateDifferentBorders(int featureCount)
 {
     float lowerLimit = -TEST_VALUE_LIMIT;
     float upperLimit = TEST_VALUE_LIMIT;
     cv::RNG rng(0);
-    rng.fill(samples, RNG::UNIFORM, lowerLimit, upperLimit);
-}
-
-void CV_SVMSGDTrainTest::generateDifferentScalesData(Mat &samples, float shift)
-{
-    int featureCount = samples.cols;
-
-    float lowerLimit = -TEST_VALUE_LIMIT;
-    float upperLimit = TEST_VALUE_LIMIT;
-    cv::RNG rng(10);
-
 
     for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
     {
@@ -98,11 +99,11 @@ void CV_SVMSGDTrainTest::generateDifferentScalesData(Mat &samples, float shift)
 
         if (crit > 0)
         {
-            rng.fill(samples.col(featureIndex), RNG::UNIFORM, lowerLimit - shift, upperLimit - shift);
+            borders.push_back(std::pair<float,float>(lowerLimit, upperLimit));
         }
         else
         {
-            rng.fill(samples.col(featureIndex), RNG::UNIFORM, lowerLimit/10, upperLimit/10);
+            borders.push_back(std::pair<float,float>(lowerLimit/1000, upperLimit/1000));
         }
     }
 }
@@ -111,21 +112,16 @@ void CV_SVMSGDTrainTest::makeTrainData(Mat weights, float shift)
 {
     int datasize = 100000;
     int featureCount = weights.cols;
-    cv::Mat samples = cv::Mat::zeros(datasize, featureCount, CV_32FC1);
-    cv::Mat responses = cv::Mat::zeros(datasize, 1, CV_32FC1);
+    RNG rng(0);
 
-    switch(type)
+    cv::Mat samples = cv::Mat::zeros(datasize, featureCount, CV_32FC1);
+
+    for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
     {
-        case UNIFORM_SAME_SCALE:
-            generateSameScaleData(samples);
-            break;
-        case UNIFORM_DIFFERENT_SCALES:
-            generateDifferentScalesData(samples, shift);
-            break;
-        default:
-            CV_Error(CV_StsBadArg, "Unknown train data type");
+        rng.fill(samples.col(featureIndex), RNG::UNIFORM, borders[featureIndex].first, borders[featureIndex].second);
     }
 
+    cv::Mat responses = cv::Mat::zeros(datasize, 1, CV_32FC1);
     for (int sampleIndex = 0; sampleIndex < datasize; sampleIndex++)
     {
         responses.at<float>(sampleIndex) = decisionFunction(samples.row(sampleIndex), weights, shift) > 0 ? 1 : -1;
@@ -138,14 +134,14 @@ void CV_SVMSGDTrainTest::makeTestData(Mat weights, float shift)
 {
     int testSamplesCount = 100000;
     int featureCount = weights.cols;
-
-    float lowerLimit = -TEST_VALUE_LIMIT;
-    float upperLimit = TEST_VALUE_LIMIT;
-
     cv::RNG rng(0);
 
     testSamples.create(testSamplesCount, featureCount, CV_32FC1);
-    rng.fill(testSamples, RNG::UNIFORM, lowerLimit, upperLimit);
+    for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
+    {
+        rng.fill(testSamples.col(featureIndex), RNG::UNIFORM, borders[featureIndex].first, borders[featureIndex].second);
+    }
+
     testResponses.create(testSamplesCount, 1, CV_32FC1);
 
     for (int i = 0 ; i < testSamplesCount; i++)
@@ -154,10 +150,25 @@ void CV_SVMSGDTrainTest::makeTestData(Mat weights, float shift)
     }
 }
 
-CV_SVMSGDTrainTest::CV_SVMSGDTrainTest(Mat weights, float shift, TrainDataType _type, double _precision)
+CV_SVMSGDTrainTest::CV_SVMSGDTrainTest(const Mat &weights, float shift, TrainDataType _type, double _precision)
 {
     type = _type;
     precision = _precision;
+
+    int featureCount = weights.cols;
+
+    switch(type)
+    {
+    case UNIFORM_SAME_SCALE:
+        generateSameBorders(featureCount);
+        break;
+    case UNIFORM_DIFFERENT_SCALES:
+        generateDifferentBorders(featureCount);
+        break;
+    default:
+        CV_Error(CV_StsBadArg, "Unknown train data type");
+    }
+
     makeTrainData(weights, shift);
     makeTestData(weights, shift);
 }
@@ -271,7 +282,7 @@ TEST(ML_SVMSGD, trainDifferentScales5)
     float shift = 0;
     makeWeightsAndShift(featureCount, weights, shift);
 
-    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_DIFFERENT_SCALES, 0.05);
+    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_DIFFERENT_SCALES, 0.01);
     test.safe_run();
 }
 
@@ -284,6 +295,44 @@ TEST(ML_SVMSGD, trainDifferentScales100)
     float shift = 0;
     makeWeightsAndShift(featureCount, weights, shift);
 
-    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_DIFFERENT_SCALES, 0.10);
+    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_DIFFERENT_SCALES, 0.01);
     test.safe_run();
 }
+
+TEST(ML_SVMSGD, twoPoints)
+{
+    Mat samples(2, 2, CV_32FC1);
+    samples.at<float>(0,0) = 0;
+    samples.at<float>(0,1) = 0;
+    samples.at<float>(1,0) = 1000;
+    samples.at<float>(1,1) = 1;
+
+    Mat responses(2, 1, CV_32FC1);
+    responses.at<float>(0) = -1;
+    responses.at<float>(1) = 1;
+
+    cv::Ptr<TrainData> trainData = TrainData::create(samples, cv::ml::ROW_SAMPLE, responses);
+
+    Mat realWeights(1, 2, CV_32FC1);
+    realWeights.at<float>(0) = 1000;
+    realWeights.at<float>(1) = 1;
+
+    float realShift = -500000.5;
+
+    float normRealWeights = norm(realWeights);
+    realWeights /= normRealWeights;
+    realShift /= normRealWeights;
+
+    cv::Ptr<SVMSGD> svmsgd = SVMSGD::create();
+    svmsgd->setOptimalParameters();
+    svmsgd->train( trainData );
+
+    Mat foundWeights = svmsgd->getWeights();
+    float foundShift = svmsgd->getShift();
+
+    float normFoundWeights = norm(foundWeights);
+    foundWeights /= normFoundWeights;
+    foundShift /= normFoundWeights;
+    CV_Assert((norm(foundWeights - realWeights) < 0.001) && (abs((foundShift - realShift) / realShift) < 0.05));
+}
+
