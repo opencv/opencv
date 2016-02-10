@@ -146,7 +146,7 @@ Ptr<SVMSGD> SVMSGD::create()
 
 std::pair<bool,bool> SVMSGDImpl::areClassesEmpty(Mat responses)
 {
-    CV_Assert(responses.cols == 1);
+    CV_Assert(responses.cols == 1 || responses.rows == 1);
     std::pair<bool,bool> emptyInClasses(true, true);
     int limit_index = responses.rows;
 
