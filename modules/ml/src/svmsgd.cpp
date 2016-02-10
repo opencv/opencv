@@ -140,7 +140,7 @@ private:
 };
 
 Ptr<SVMSGD> SVMSGD::create()
-{    
+{
     return makePtr<SVMSGDImpl>();
 }
 
@@ -265,7 +265,7 @@ bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
         weights_ = Mat::zeros(1, featureCount, CV_32F);
         shift_ = areEmpty.first ? -1 : 1;
         return true;
-    }    
+    }
 
     Mat extendedTrainSamples;
     Mat average;
