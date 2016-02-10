@@ -1637,7 +1637,7 @@ public:
      * @param marginType is the type of margin constraint. Legal values are MarginType::SOFT_MARGIN and MarginType::HARD_MARGIN.
      * Default value is MarginType::SOFT_MARGIN.
     */
-    CV_WRAP virtual void setOptimalParameters(int svmsgdType = ASGD, int marginType = SOFT_MARGIN) = 0;
+    CV_WRAP virtual void setOptimalParameters(int svmsgdType = SVMSGD::ASGD, int marginType = SVMSGD::SOFT_MARGIN) = 0;
 
     /** @brief %Algorithm type, one of SVMSGD::SvmsgdType. */
     /** @see setAlgorithmType */
