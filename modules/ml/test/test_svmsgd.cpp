@@ -335,4 +335,3 @@ TEST(ML_SVMSGD, twoPoints)
     foundShift /= normFoundWeights;
     CV_Assert((norm(foundWeights - realWeights) < 0.001) && (abs((foundShift - realShift) / realShift) < 0.05));
 }
-
