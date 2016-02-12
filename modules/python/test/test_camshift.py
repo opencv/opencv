@@ -39,7 +39,7 @@ class camshift_test(NewOpenCVTests):
 
     def prepareRender(self):
 
-        self.render = TestSceneRender(self.get_sample('samples/data/pca_test1.jpg'), True)
+        self.render = TestSceneRender(self.get_sample('samples/data/pca_test1.jpg'), deformation = True)
 
     def runTracker(self):
 
@@ -53,7 +53,6 @@ class camshift_test(NewOpenCVTests):
         while True:
             framesCounter += 1
             self.frame = self.render.getNextFrame()
-            vis = self.frame.copy()
             hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
             mask = cv2.inRange(hsv, np.array((0., 60., 32.)), np.array((180., 255., 255.)))
 
@@ -67,11 +66,6 @@ class camshift_test(NewOpenCVTests):
                 hist = cv2.calcHist( [hsv_roi], [0], mask_roi, [16], [0, 180] )
                 cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)
                 self.hist = hist.reshape(-1)
-
-                vis_roi = vis[y0:y1, x0:x1]
-                cv2.bitwise_not(vis_roi, vis_roi)
-                vis[mask == 0] = 0
-
                 self.selection = False
 
             if self.track_window and self.track_window[2] > 0 and self.track_window[3] > 0:
@@ -81,8 +75,6 @@ class camshift_test(NewOpenCVTests):
                 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
 
-                if self.show_backproj:
-                    vis[:] = prob[...,np.newaxis]
             trackingRect = np.array(self.track_window)
             trackingRect[2] += trackingRect[0]
             trackingRect[3] += trackingRect[1]

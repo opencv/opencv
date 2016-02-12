@@ -37,7 +37,7 @@ class NewOpenCVTests(unittest.TestCase):
                     with open(candidate, 'rb') as f:
                         filedata = f.read()
             if filedata is None:
-                filedata = urlopen(NewOpenCVTests.repoUrl + '/' + filename).read()
+                return None#filedata = urlopen(NewOpenCVTests.repoUrl + '/' + filename).read()
             self.image_cache[filename] = cv2.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
         return self.image_cache[filename]
 
@@ -64,10 +64,16 @@ class NewOpenCVTests(unittest.TestCase):
 def intersectionRate(s1, s2):
 
     x1, y1, x2, y2 = s1
-    s1 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
+    s1 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
 
     x1, y1, x2, y2 = s2
-    s2 = [[x1, y1], [x2,y1], [x2, y2], [x1, y2] ]
-    #print(np.array(s2))
-    area, intersection = cv2.intersectConvexConvex(np.array(s1), np.array(s2))
-    return 2 * area / (cv2.contourArea(np.array(s1)) + cv2.contourArea(np.array(s2)))
+    s2 = np.array([[x1, y1], [x2,y1], [x2, y2], [x1, y2]])
+
+    area, intersection = cv2.intersectConvexConvex(s1, s2)
+    return 2 * area / (cv2.contourArea(s1) + cv2.contourArea(s2))
+
+def isPointInRect(p, rect):
+    if rect[0] <= p[0] and rect[1] <=p[1] and p[0] <= rect[2] and p[1] <= rect[3]:
+        return True
+    else:
+        return False
