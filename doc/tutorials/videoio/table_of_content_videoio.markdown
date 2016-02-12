@@ -17,3 +17,7 @@ This section contains tutorials about how to read/save your video files.
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Bernát Gábor
+
+-   @subpage tutorial_kinect_openni
+
+-   @subpage tutorial_intelperc
