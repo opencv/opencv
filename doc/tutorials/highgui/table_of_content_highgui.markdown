@@ -12,24 +12,6 @@ use the built-in graphical user interface of the library.
 
     We will learn how to add a Trackbar to our applications
 
--   @subpage tutorial_video_input_psnr_ssim
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Bernát Gábor
-
-    You will learn how to read video streams, and how to calculate similarity values such as PSNR
-    or SSIM.
-
--   @subpage tutorial_video_write
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Bernát Gábor
-
-    Whenever you work with video feeds you may eventually want to save your image processing
-    result in a form of a new video file. Here's how to do it.
-
 -   @subpage tutorial_raster_io_gdal
 
     *Compatibility:* \> OpenCV 2.0
