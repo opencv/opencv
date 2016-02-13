@@ -124,9 +124,12 @@ void radonTransform(InputArray src, OutputArray dst, float accuracy) {
    */
   // Asserting accuracy to be positive
   CV_Assert(accuracy > 0);
-  CV_Assert(src.type() == CV_32F);
 
-  Mat srcMat = src.getMat();
+  Mat srcMat_ = src.getMat(), srcMat;
+  CV_Assert(srcMat_.type() == CV_8UC1);
+
+  srcMat_.convertTo(srcMat, CV_32F, 1.0/255);
+
   int rows = srcMat.rows, cols = srcMat.cols;
   float diag = (float)std::sqrt(rows*rows + cols*cols);
 

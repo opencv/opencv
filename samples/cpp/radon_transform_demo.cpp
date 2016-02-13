@@ -19,9 +19,9 @@ int main(int argc, char ** argv) {
   Mat img = imread(argv[1], 0), img2, rt;
   Mat img_clr = imread(argv[1]);
 
-  img.convertTo(img2, CV_32F, 1.0/255);
+  // img.convertTo(img2, CV_32F, 1.0/255);
 
-  radonTransform(img2, rt);
+  radonTransform(img, rt);
   Mat rt_disp(rt.size(), CV_8UC1);
   for(int ii=0; ii<rt.rows; ++ii) {
     for(int jj=0; jj<rt.cols; ++jj) {
