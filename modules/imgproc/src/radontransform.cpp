@@ -49,14 +49,13 @@
 
 // Necessary headers
 
-#include <precomp.hpp>
+#include "precomp.hpp"
+
 #include <math.h>
 #include <stdlib.h>
 #include <string>
 #include <iostream>
 
-#include "opencv2/core/utility.hpp"
-#include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 
 #ifdef __cplusplus
