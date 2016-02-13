@@ -4212,6 +4212,15 @@ CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
 
+/**
+ * [radonTransform Computes the Radon Transform of the given input array]
+ * @param src      [Input image]
+ * @param dst      [Output sinogram, referenced]
+ * @param accuracy [Minimum accuracy for angles ( IN DEGREES ), defaults to 1 degree]
+ */
+CV_EXPORTS_W void radonTransform(InputArray src, OutputArray dst,
+                            float accuracy = 1);
+
 /** @brief Line iterator
 
 The class is used to iterate over all the pixels on the raster line
@@ -4244,6 +4253,7 @@ for(int i = 0; i < it2.count; i++, ++it2)
 }
 @endcode
 */
+
 class CV_EXPORTS LineIterator
 {
 public:
