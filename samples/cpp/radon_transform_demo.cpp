@@ -12,6 +12,10 @@ using namespace cv;
 using namespace std;
 
 int main(int argc, char ** argv) {
+  if(argc != 2) {
+    cout<<"Usage: "<<argv[0]<<" </path/to/image>"<<endl;
+    exit(1);
+  }
   Mat img = imread(argv[1], 0), img2, rt;
   Mat img_clr = imread(argv[1]);
 
