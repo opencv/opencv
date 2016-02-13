@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
   Mat rt_disp(rt.size(), CV_8UC1);
   for(int ii=0; ii<rt.rows; ++ii) {
     for(int jj=0; jj<rt.cols; ++jj) {
-      rt_disp.at<uchar>(ii, jj) = (int)(255*rt.at<float>(ii, jj));
+      rt_disp.at<uchar>(ii, jj) = static_cast<uchar>(255*rt.at<float>(ii, jj));
     }
   }
   imshow("img", img_clr);

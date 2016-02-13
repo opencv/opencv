@@ -75,7 +75,7 @@ static inline std::vector<float> linspace(float start, float end, int n) {
    */
 
   // Finding diff
-  float diff = (end - start)*1.0/(n-1);
+  float diff = (end - start)*1.0f/(n-1);
   std::vector<float> vec(n);
   float val = start;
 
@@ -100,8 +100,8 @@ static inline void meshgrid(const Mat &matX, const Mat &matY, Mat &X, Mat &Y) {
   /**
    * A utitlity function to compute the meshgrid matrices for given input vectors.
    */
-  repeat(matX.reshape(1,1), matY.total(), 1, X);
-  repeat(matY.reshape(1,1).t(), 1, matX.total(), Y);
+  repeat(matX.reshape(1,1), static_cast<int>(matY.total()), 1, X);
+  repeat(matY.reshape(1,1).t(), 1, static_cast<int>(matX.total()), Y);
 }
 
 /**
@@ -128,16 +128,16 @@ void radonTransform(InputArray src, OutputArray dst, float accuracy) {
 
   Mat srcMat = src.getMat();
   int rows = srcMat.rows, cols = srcMat.cols;
-  float diag = std::sqrt(rows*rows + cols*cols);
+  float diag = (float)std::sqrt(rows*rows + cols*cols);
 
   Mat srcMatPadded;
-  int padWidth = (std::ceil(diag - cols) + 2)/2;
-  int padHeight = (std::ceil(diag - rows) + 2)/2;
+  int padWidth = (int)((std::ceil(diag - cols) + 2)/2);
+  int padHeight = (int)((std::ceil(diag - rows) + 2)/2);
   copyMakeBorder(srcMat, srcMatPadded, padWidth, padHeight, padWidth, padHeight, BORDER_CONSTANT, 0);
 
-  int n = 180/accuracy + 1;
+  int n = (int)(180/accuracy) + 1;
   std::vector<float> vecTheta = linspace(0, 180, n);
-  int dstCols = vecTheta.size(), dstRows = srcMatPadded.rows;
+  int dstCols = static_cast<int>(vecTheta.size()), dstRows = srcMatPadded.rows;
 
   dst.create(Size(dstCols, dstRows), CV_32F);
   Mat dstMat = dst.getMat();
@@ -149,7 +149,7 @@ void radonTransform(InputArray src, OutputArray dst, float accuracy) {
   meshgrid(Mat(vecVal), Mat(vecVal), meshX, meshY);
 
   for(int i = 0; i < dstCols; ++i) {
-    float theta = (90 - vecTheta[i])*CV_PI/180.0;
+    float theta = (90 - vecTheta[i])*static_cast<float>(CV_PI)/180.0f;
     float cosTh = std::cos(theta), sinTh = std::sin(theta);
 
     Mat temp(srcMatPadded.size(), CV_32F);
