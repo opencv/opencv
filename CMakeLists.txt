@@ -693,7 +693,7 @@ include(cmake/OpenCVGenPkgconfig.cmake)
 # Generate OpenCV.mk for ndk-build (Android build tool)
 include(cmake/OpenCVGenAndroidMK.cmake)
 
-# Generate OpenCVСonfig.cmake and OpenCVConfig-version.cmake for cmake projects
+# Generate OpenCVConfig.cmake and OpenCVConfig-version.cmake for cmake projects
 include(cmake/OpenCVGenConfig.cmake)
 
 # Generate Info.plist for the IOS framework
@@ -755,10 +755,46 @@ status("General configuration for OpenCV ${OPENCV_VERSION} =====================
 if(OPENCV_VCSVERSION)
   status("  Version control:" ${OPENCV_VCSVERSION})
 endif()
+if(OPENCV_EXTRA_MODULES_PATH AND NOT BUILD_INFO_SKIP_EXTRA_MODULES)
+  set(__dump_extra_header OFF)
+  foreach(p ${OPENCV_EXTRA_MODULES_PATH})
+    if(EXISTS ${p})
+      if(NOT __dump_extra_header)
+        set(__dump_extra_header ON)
+        status("")
+        status("  Extra modules:")
+      else()
+        status("")
+      endif()
+      set(EXTRA_MODULES_VCSVERSION "unknown")
+      if(GIT_FOUND)
+        execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*"
+          WORKING_DIRECTORY "${p}"
+          OUTPUT_VARIABLE EXTRA_MODULES_VCSVERSION
+          RESULT_VARIABLE GIT_RESULT
+          ERROR_QUIET
+          OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if(NOT GIT_RESULT EQUAL 0)
+          set(EXTRA_MODULES_VCSVERSION "unknown")
+        endif()
+      endif()
+      status("    Location (extra):" ${p})
+      status("    Version control (extra):" ${EXTRA_MODULES_VCSVERSION})
+    endif()
+  endforeach()
+  unset(__dump_extra_header)
+endif()
 
 # ========================== build platform ==========================
 status("")
 status("  Platform:")
+if(NOT CMAKE_VERSION VERSION_LESS 2.8.11 AND NOT BUILD_INFO_SKIP_TIMESTAMP)
+  string(TIMESTAMP TIMESTAMP "" UTC)
+  if(TIMESTAMP)
+    status("    Timestamp:"    ${TIMESTAMP})
+  endif()
+endif()
 status("    Host:"             ${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_VERSION} ${CMAKE_HOST_SYSTEM_PROCESSOR})
 if(CMAKE_CROSSCOMPILING)
   status("    Target:"         ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION} ${CMAKE_SYSTEM_PROCESSOR})
