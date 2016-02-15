@@ -2,10 +2,10 @@
 // It loads several images sequentially and tries to find squares in
 // each image
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <iostream>
 #include <math.h>
@@ -23,8 +23,8 @@ static void help()
     "Returns sequence of squares detected on the image.\n"
     "the sequence is stored in the specified memory storage\n"
     "Call:\n"
-    "./squares\n"
-    "Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
+    "./squares [file_name (optional)]\n"
+    "Using OpenCV version " << CV_VERSION << "\n" << endl;
 }
 
 
@@ -140,11 +140,18 @@ static void drawSquares( Mat& image, const vector<vector<Point> >& squares )
 }
 
 
-int main(int /*argc*/, char** /*argv*/)
+int main(int argc, char** argv)
 {
     static const char* names[] = { "../data/pic1.png", "../data/pic2.png", "../data/pic3.png",
         "../data/pic4.png", "../data/pic5.png", "../data/pic6.png", 0 };
     help();
+
+    if( argc > 1)
+    {
+     names[0] =  argv[1];
+     names[1] =  "0";
+    }
+
     namedWindow( wndname, 1 );
     vector<vector<Point> > squares;
 

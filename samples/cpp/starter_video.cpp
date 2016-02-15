@@ -12,8 +12,8 @@
 */
 
 #include <opencv2/imgcodecs.hpp>
-#include <opencv2/videoio/videoio.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
 
 #include <iostream>
 #include <stdio.h>

@@ -21,7 +21,7 @@ using namespace std;
 static void help()
 {
     cout <<  "This is a camera calibration sample." << endl
-         <<  "Usage: calibration configurationFile"  << endl
+         <<  "Usage: camera_calibration [configuration_file -- default ./default.xml]"  << endl
          <<  "Near the sample file you'll find the configuration file, which has detailed help of "
              "how to edit it.  It may be any OpenCV supported file format XML/YAML." << endl;
 }
@@ -415,7 +415,7 @@ int main(int argc, char* argv[])
 
         for(size_t i = 0; i < s.imageList.size(); i++ )
         {
-            view = imread(s.imageList[i], 1);
+            view = imread(s.imageList[i], IMREAD_COLOR);
             if(view.empty())
                 continue;
             remap(view, rview, map1, map2, INTER_LINEAR);
