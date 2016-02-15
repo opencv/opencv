@@ -27,13 +27,13 @@ using namespace cv;
 int main(int argc, char *argv[])
 {
     CV_Assert(argc == 2);
-    Mat I;
-    I = imread(argv[1]);
+    Mat src;
+    src = imread(argv[1], IMREAD_COLOR);
 
-    Mat gray = Mat(I.size(),CV_8UC1);
-    Mat color_boost = Mat(I.size(),CV_8UC3);
+    Mat gray = Mat(src.size(),CV_8UC1);
+    Mat color_boost = Mat(src.size(),CV_8UC3);
 
-    decolor(I,gray,color_boost);
+    decolor(src,gray,color_boost);
     imshow("grayscale",gray);
     imshow("color_boost",color_boost);
     waitKey(0);

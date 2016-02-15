@@ -1,12 +1,9 @@
 //! [head]
-#include <stdio.h>
 #include <iostream>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
 #include "opencv2/imgcodecs.hpp"
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/core/utility.hpp>
+#include <opencv2/highgui.hpp>
 
 using namespace cv;  // The new C++ interface API is inside this namespace. Import it.
 using namespace std;

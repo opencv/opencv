@@ -4,11 +4,9 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
@@ -35,10 +33,13 @@ void Threshold_Demo( int, void* );
 int main( int, char** argv )
 {
   /// Load an image
-  src = imread( argv[1], 1 );
+  src = imread( argv[1], IMREAD_COLOR );
+
+  if( src.empty() )
+    { return -1; }
 
   /// Convert the image to Gray
-  cvtColor( src, src_gray, COLOR_RGB2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create a window to display results
   namedWindow( window_name, WINDOW_AUTOSIZE );

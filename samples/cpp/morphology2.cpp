@@ -1,6 +1,6 @@
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
@@ -66,7 +66,7 @@ int main( int argc, char** argv )
         return 0;
     }
     std::string filename = parser.get<std::string>("@image");
-    if( (src = imread(filename,1)).empty() )
+    if( (src = imread(filename,IMREAD_COLOR)).empty() )
     {
         help();
         return -1;

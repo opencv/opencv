@@ -4,11 +4,9 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
@@ -28,7 +26,7 @@ int main( int, char** argv )
   int c;
 
   /// Load an image
-  src = imread( argv[1] );
+  src = imread( argv[1], IMREAD_COLOR );
 
   if( src.empty() )
     {

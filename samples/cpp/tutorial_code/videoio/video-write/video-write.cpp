@@ -1,8 +1,8 @@
 #include <iostream>	// for standard I/O
 #include <string>   // for strings
 
-#include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat)
-#include <opencv2/videoio/videoio.hpp>  // Video write
+#include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat)
+#include <opencv2/videoio.hpp>  // Video write
 
 using namespace std;
 using namespace cv;
@@ -14,7 +14,7 @@ static void help()
         << "This program shows how to write video files."                                   << endl
         << "You can extract the R or G or B color channel of the input video."              << endl
         << "Usage:"                                                                         << endl
-        << "./video-write inputvideoName [ R | G | B] [Y | N]"                              << endl
+        << "./video-write <input_video_name> [ R | G | B] [Y | N]"                          << endl
         << "------------------------------------------------------------------------------" << endl
         << endl;
 }

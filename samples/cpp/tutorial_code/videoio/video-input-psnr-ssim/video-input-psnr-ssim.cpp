@@ -3,10 +3,10 @@
 #include <iomanip>  // for controlling float print precision
 #include <sstream>  // string to number conversion
 
-#include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat, Scalar)
-#include <opencv2/imgproc/imgproc.hpp>  // Gaussian Blur
-#include <opencv2/videoio/videoio.hpp>
-#include <opencv2/highgui/highgui.hpp>  // OpenCV window I/O
+#include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
+#include <opencv2/imgproc.hpp>  // Gaussian Blur
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>  // OpenCV window I/O
 
 using namespace std;
 using namespace cv;
@@ -22,7 +22,7 @@ static void help()
         << "tests the similarity of two input videos first with PSNR, and for the frames "
         << "below a PSNR trigger value, also with MSSIM."                                   << endl
         << "Usage:"                                                                         << endl
-        << "./video-source referenceVideo useCaseTestVideo PSNR_Trigger_Value Wait_Between_Frames " << endl
+        << "./video-input-psnr-ssim <referenceVideo> <useCaseTestVideo> <PSNR_Trigger_Value> <Wait_Between_Frames> " << endl
         << "--------------------------------------------------------------------------"     << endl
         << endl;
 }

@@ -9,8 +9,8 @@
 
 #include <iostream>
 #include "opencv2/cvconfig.h"
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/cudastereo.hpp"
 
 #ifdef HAVE_TBB
