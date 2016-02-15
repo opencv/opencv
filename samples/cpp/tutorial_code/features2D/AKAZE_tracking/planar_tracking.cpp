@@ -140,7 +140,6 @@ int main(int argc, char **argv)
     Ptr<AKAZE> akaze = AKAZE::create();
     akaze->setThreshold(akaze_thresh);
     Ptr<ORB> orb = ORB::create();
-    orb->setMaxFeatures(stats.keypoints);
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
     Tracker akaze_tracker(akaze, matcher);
     Tracker orb_tracker(orb, matcher);
