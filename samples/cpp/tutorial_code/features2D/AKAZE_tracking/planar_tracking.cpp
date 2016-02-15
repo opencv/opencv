@@ -47,8 +47,8 @@ void Tracker::setFirstFrame(const Mat frame, vector<Point2f> bb, string title, S
     const Point* ptContain = { &ptMask[0] };
     int iSize = static_cast<int>(bb.size());
     for (size_t i=0; i<bb.size(); i++) {
-        ptMask[i].x = bb[i].x;
-        ptMask[i].y = bb[i].y;
+        ptMask[i].x = static_cast<int>(bb[i].x);
+        ptMask[i].y = static_cast<int>(bb[i].y);
     }
     first_frame = frame.clone();
     cv::Mat matMask = cv::Mat::zeros(frame.size(), CV_8UC1);
@@ -172,10 +172,10 @@ int main(int argc, char **argv)
     vector<Point2f> bb;
     if (argc < 4) {             //attempt to alow GUI selection
         cv::Rect2d uBox = selectROI(video_name, frame);
-        bb.push_back(cv::Point2f(uBox.x, uBox.y));
-        bb.push_back(cv::Point2f(uBox.x+uBox.width, uBox.y));
-        bb.push_back(cv::Point2f(uBox.x+uBox.width, uBox.y+uBox.height));
-        bb.push_back(cv::Point2f(uBox.x, uBox.y+uBox.height));
+        bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y)));
+        bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y)));
+        bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y+uBox.height)));
+        bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y+uBox.height)));
     }
     else {
         FileStorage fs(argv[3], FileStorage::READ);
