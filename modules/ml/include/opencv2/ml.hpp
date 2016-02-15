@@ -1535,7 +1535,7 @@ The margin type may have one of the following values: \ref SOFT_MARGIN or \ref H
 
 - You should use \ref HARD_MARGIN type, if you have linearly separable sets.
 - You should use \ref SOFT_MARGIN type, if you have non-linearly separable sets or sets with outliers.
-- In the general case (if you know nothing about linearly separability of your sets), use SOFT_MARGIN.
+- In the general case (if you know nothing about linear separability of your sets), use SOFT_MARGIN.
 
 The other parameters may be described as follows:
 - \f$\lambda\f$ parameter is responsible for weights decreasing at each step and for the strength of restrictions on outliers

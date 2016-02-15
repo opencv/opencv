@@ -134,7 +134,7 @@ void CV_SVMSGDTrainTest::makeTestData(Mat weights, float shift)
 {
     int testSamplesCount = 100000;
     int featureCount = weights.cols;
-    cv::RNG rng(0);
+    cv::RNG rng(42);
 
     testSamples.create(testSamplesCount, featureCount, CV_32FC1);
     for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)

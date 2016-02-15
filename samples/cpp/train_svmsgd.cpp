@@ -6,8 +6,6 @@
 using namespace cv;
 using namespace cv::ml;
 
-#define WIDTH 841
-#define HEIGHT 594
 
 struct Data
 {
@@ -17,6 +15,8 @@ struct Data
 
     Data()
     {
+        const int WIDTH = 841;
+        const int HEIGHT = 594;
         img = Mat::zeros(HEIGHT, WIDTH, CV_8UC3);
         imshow("Train svmsgd", img);
     }
