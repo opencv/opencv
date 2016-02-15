@@ -1588,7 +1588,6 @@ public:
     ASGD is often the preferable choice. */
     enum SvmsgdType
     {
-        ILLEGAL_SVMSGD_TYPE,
         SGD, //!< Stochastic Gradient Descent
         ASGD //!< Average Stochastic Gradient Descent
     };
@@ -1596,7 +1595,6 @@ public:
     /** Margin type.*/
     enum MarginType
     {
-        ILLEGAL_MARGIN_TYPE,
         SOFT_MARGIN, //!< General case, suits to the case of non-linearly separable sets, allows outliers.
         HARD_MARGIN  //!< More accurate for the case of linearly separable sets.
     };
