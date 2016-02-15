@@ -122,7 +122,7 @@ Mat Tracker::process(const Mat frame, Stats& stats)
 int main(int argc, char **argv)
 {
     if(argc < 3) {
-        cerr << "Usage: " << endl 
+        cerr << "Usage: " << endl
              << "akaze_track input_path output_path [bounding_box_path]" << endl
              << "  (for camera input_path=N for camera N)" << endl;
         return 1;
