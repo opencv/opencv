@@ -224,11 +224,7 @@ if(WITH_FFMPEG)
 
     if(HAVE_FFMPEG)
       # Find the bzip2 library because it is required on some systems
-      FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2)
-      if(NOT BZIP2_LIBRARIES)
-        # Do an other trial
-        FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
-      endif()
+      FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2 libbz2.so.1)
     else()
       find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h"
                 PATHS /usr/local /usr /opt
