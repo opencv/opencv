@@ -1580,6 +1580,11 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
 
 #ifdef HAVE_OPENCL
 #  include "opencv2/core/opencl/runtime/opencl_gl.hpp"
+#  ifdef cl_khr_gl_sharing
+#    define HAVE_OPENCL_OPENGL_SHARING
+#  else
+#    define NO_OPENCL_SHARING_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenCL/OpenGL sharing support")
+#  endif
 #else // HAVE_OPENCL
 #  define NO_OPENCL_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
 #endif // HAVE_OPENCL
@@ -1602,6 +1607,8 @@ Context& initializeContextFromGL()
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     cl_uint numPlatforms;
     cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
@@ -1701,6 +1708,8 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     Size srcSize = src.size();
     CV_Assert(srcSize.width == (int)texture.cols() && srcSize.height == (int)texture.rows());
@@ -1753,6 +1762,8 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     // check texture format
     const int dtype = CV_8UC4;
@@ -1812,6 +1823,8 @@ UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     using namespace cv::ocl;
     Context& ctx = Context::getDefault();
@@ -1862,6 +1875,8 @@ void unmapGLBuffer(UMat& u)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL_OPENGL_SHARING)
+    NO_OPENCL_SHARING_ERROR;
 #else
     using namespace cv::ocl;
     cl_command_queue clQueue = (cl_command_queue)Queue::getDefault().ptr();
