@@ -318,6 +318,7 @@ enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, // Change
        CAP_PROP_XI_CHIP_TEMP                                    = 468, // Camera sensor temperature
        CAP_PROP_XI_HOUS_TEMP                                    = 469, // Camera housing tepmerature
        CAP_PROP_XI_HOUS_BACK_SIDE_TEMP                          = 590, // Camera housing back side tepmerature
+       CAP_PROP_XI_SENSOR_BOARD_TEMP                            = 596, // Camera sensor board temperature
        CAP_PROP_XI_CMS                                          = 470, // Mode of color management system.
        CAP_PROP_XI_APPLY_CMS                                    = 471, // Enable applying of CMS profiles to xiGetImage (see XI_PRM_INPUT_CMS_PROFILE, XI_PRM_OUTPUT_CMS_PROFILE).
        CAP_PROP_XI_IMAGE_IS_COLOR                               = 474, // Returns 1 for color cameras.
