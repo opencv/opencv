@@ -568,6 +568,10 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
         ximea_param = "hous_back_side_temp";
         value_type = xiTypeFloat;
         break;
+    case CV_CAP_PROP_XI_SENSOR_BOARD_TEMP:
+        ximea_param = "sensor_board_temp";
+        value_type = xiTypeFloat;
+        break;
     case CV_CAP_PROP_XI_CMS:
         ximea_param = "cms";
         value_type = xiTypeEnum;
@@ -676,6 +680,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_TRG_SELECTOR:
         ximea_param = "trigger_selector";
         value_type = xiTypeEnum;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_ACQ_FRAME_BURST_COUNT:
         ximea_param = "acq_frame_burst_count";
@@ -780,14 +785,17 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_SENSOR_CLOCK_FREQ_HZ:
         ximea_param = "sensor_clock_freq_hz";
         value_type = xiTypeFloat;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_SENSOR_CLOCK_FREQ_INDEX:
         ximea_param = "sensor_clock_freq_index";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_SENSOR_OUTPUT_CHANNEL_COUNT:
         ximea_param = "sensor_output_channel_count";
         value_type = xiTypeEnum;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_FRAMERATE:
         ximea_param = "framerate";
@@ -808,6 +816,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_AVAILABLE_BANDWIDTH:
         ximea_param = "available_bandwidth";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_BUFFER_POLICY:
         ximea_param = "buffer_policy";
@@ -816,14 +825,17 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_LUT_EN:
         ximea_param = "LUTEnable";
         value_type = xiTypeBoolean;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_LUT_INDEX:
         ximea_param = "LUTIndex";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_LUT_VALUE:
         ximea_param = "LUTValue";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_TRG_DELAY:
         ximea_param = "trigger_delay";
@@ -886,6 +898,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_SENSOR_MODE:
         ximea_param = "sensor_mode";
         value_type = xiTypeEnum;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_HDR:
         ximea_param = "hdr";
@@ -1233,6 +1246,10 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
         break;
     case CV_CAP_PROP_XI_HOUS_BACK_SIDE_TEMP:
         ximea_param = "hous_back_side_temp";
+        value_type = xiTypeFloat;
+        break;
+    case CV_CAP_PROP_XI_SENSOR_BOARD_TEMP:
+        ximea_param = "sensor_board_temp";
         value_type = xiTypeFloat;
         break;
     case CV_CAP_PROP_XI_CMS:
