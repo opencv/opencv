@@ -311,7 +311,14 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
     else
         grayscaleImage = image.getMat();
 
+<<<<<<< HEAD
     std::vector < std::vector<Center> > centers;
+=======
+    if (grayscaleImage.type() != CV_8UC1){
+        CV_Error(CV_StsUnsupportedFormat, "Blob detector only supports 8-bit images!");
+    }
+    vector < vector<Center> > centers;
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
     for (double thresh = params.minThreshold; thresh < params.maxThreshold; thresh += params.thresholdStep)
     {
         Mat binarizedImage;

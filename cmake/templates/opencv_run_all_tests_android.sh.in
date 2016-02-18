@@ -18,11 +18,14 @@ if [ -z `which adb` ]; then
   return 1
 fi
 
+accuracy=`find "$OPENCV_TEST_PATH/$TARGET_ARCH" -maxdepth 1 -executable -name "opencv_test_*" -not -name opencv_test_ocl`
+performance=`find "$OPENCV_TEST_PATH/$TARGET_ARCH" -maxdepth 1 -executable -name "opencv_perf_*" -not -name opencv_perf_ocl`
+
 adb push $OPENCV_TEST_DATA_PATH /sdcard/opencv_testdata
 
 adb shell "mkdir -p /data/local/tmp/opencv_test"
 SUMMARY_STATUS=0
-for t in "$OPENCV_TEST_PATH/$TARGET_ARCH/"opencv_test_* "$OPENCV_TEST_PATH/$TARGET_ARCH/"opencv_perf_*;
+for t in $accuracy $performance;
 do
   test_name=`basename "$t"`
   report="$test_name-`date --rfc-3339=date`.xml"

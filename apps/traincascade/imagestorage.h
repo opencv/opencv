@@ -1,6 +1,13 @@
 #ifndef _OPENCV_IMAGESTORAGE_H_
 #define _OPENCV_IMAGESTORAGE_H_
 
+<<<<<<< HEAD
+=======
+#include <stdio.h>
+#include <string>
+#include <vector>
+#include "highgui.h"
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 
 class CvCascadeImageReader
 {

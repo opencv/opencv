@@ -142,9 +142,52 @@ public:
     {
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
 
+<<<<<<< HEAD
 
         bool correspondence = cv::solvePnP( _m1, _m2, cameraMatrix, distCoeffs,
                                             rvec, tvec, useExtrinsicGuess, flags );
+=======
+        struct Parameters
+        {
+            int iterationsCount;
+            float reprojectionError;
+            int minInliersCount;
+            bool useExtrinsicGuess;
+            int flags;
+            CameraParameters camera;
+        };
+
+        template <typename OpointType, typename IpointType>
+        static void pnpTask(const vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
+                     const Parameters& params, vector<int>& inliers, Mat& rvec, Mat& tvec,
+                     const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
+        {
+            Mat modelObjectPoints(1, MIN_POINTS_COUNT, CV_MAKETYPE(DataDepth<OpointType>::value, 3));
+            Mat modelImagePoints(1, MIN_POINTS_COUNT, CV_MAKETYPE(DataDepth<IpointType>::value, 2));
+            for (int i = 0, colIndex = 0; i < (int)pointsMask.size(); i++)
+            {
+                if (pointsMask[i])
+                {
+                    Mat colModelImagePoints = modelImagePoints(Rect(colIndex, 0, 1, 1));
+                    imagePoints.col(i).copyTo(colModelImagePoints);
+                    Mat colModelObjectPoints = modelObjectPoints(Rect(colIndex, 0, 1, 1));
+                    objectPoints.col(i).copyTo(colModelObjectPoints);
+                    colIndex = colIndex+1;
+                }
+            }
+
+            //filter same 3d points, hang in solvePnP
+            double eps = 1e-10;
+            int num_same_points = 0;
+            for (int i = 0; i < MIN_POINTS_COUNT; i++)
+                for (int j = i + 1; j < MIN_POINTS_COUNT; j++)
+                {
+                    if (norm(modelObjectPoints.at<Vec<OpointType,3> >(0, i) - modelObjectPoints.at<Vec<OpointType,3> >(0, j)) < eps)
+                        num_same_points++;
+                }
+            if (num_same_points > 0)
+                return;
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 
         Mat _local_model;
         cv::hconcat(rvec, tvec, _local_model);
@@ -158,12 +201,33 @@ public:
     void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
     {
 
+<<<<<<< HEAD
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat(), model = _model.getMat();
+=======
+            vector<Point_<OpointType> > projected_points;
+            projected_points.resize(objectPoints.cols);
+            projectPoints(objectPoints, localRvec, localTvec, params.camera.intrinsics, params.camera.distortion, projected_points);
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 
         int i, count = opoints.cols;
         Mat _rvec = model.col(0);
         Mat _tvec = model.col(1);
 
+<<<<<<< HEAD
+=======
+            vector<int> localInliers;
+            for (int i = 0; i < objectPoints.cols; i++)
+            {
+                //Although p is a 2D point it needs the same type as the object points to enable the norm calculation
+                Point_<OpointType> p((OpointType)imagePoints.at<Vec<IpointType,2> >(0, i)[0],
+                                     (OpointType)imagePoints.at<Vec<IpointType,2> >(0, i)[1]);
+                if ((norm(p - projected_points[i]) < params.reprojectionError)
+                    && (rotatedPoints.at<Vec<OpointType,3> >(0, i)[2] > 0)) //hack
+                {
+                    localInliers.push_back(i);
+                }
+            }
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 
         Mat projpoints(count, 2, CV_32FC1);
         cv::projectPoints(opoints, _rvec, _tvec, cameraMatrix, distCoeffs, projpoints);
@@ -174,8 +238,76 @@ public:
         _err.create(count, 1, CV_32FC1);
         float* err = _err.getMat().ptr<float>();
 
+<<<<<<< HEAD
         for ( i = 0; i < count; ++i)
             err[i] = (float)cv::norm( ipoints_ptr[i] - projpoints_ptr[i] );
+=======
+        static void pnpTask(const vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
+            const Parameters& params, vector<int>& inliers, Mat& rvec, Mat& tvec,
+            const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
+        {
+            CV_Assert(objectPoints.depth() == CV_64F ||  objectPoints.depth() == CV_32F);
+            CV_Assert(imagePoints.depth() == CV_64F ||  imagePoints.depth() == CV_32F);
+            const bool objectDoublePrecision = objectPoints.depth() == CV_64F;
+            const bool imageDoublePrecision = imagePoints.depth() == CV_64F;
+            if(objectDoublePrecision)
+            {
+                if(imageDoublePrecision)
+                    pnpTask<double, double>(pointsMask, objectPoints, imagePoints, params, inliers, rvec, tvec, rvecInit, tvecInit, resultsMutex);
+                else
+                    pnpTask<double, float>(pointsMask, objectPoints, imagePoints, params, inliers, rvec, tvec, rvecInit, tvecInit, resultsMutex);
+            }
+            else
+            {
+                if(imageDoublePrecision)
+                    pnpTask<float, double>(pointsMask, objectPoints, imagePoints, params, inliers, rvec, tvec, rvecInit, tvecInit, resultsMutex);
+                else
+                    pnpTask<float, float>(pointsMask, objectPoints, imagePoints, params, inliers, rvec, tvec, rvecInit, tvecInit, resultsMutex);
+            }
+        }
+
+        class PnPSolver
+        {
+        public:
+            void operator()( const BlockedRange& r ) const
+            {
+                vector<char> pointsMask(objectPoints.cols, 0);
+                memset(&pointsMask[0], 1, MIN_POINTS_COUNT );
+                for( int i=r.begin(); i!=r.end(); ++i )
+                {
+                    generateVar(pointsMask);
+                    pnpTask(pointsMask, objectPoints, imagePoints, parameters,
+                            inliers, rvec, tvec, initRvec, initTvec, syncMutex);
+                    if ((int)inliers.size() >= parameters.minInliersCount)
+                    {
+#ifdef HAVE_TBB
+                        tbb::task::self().cancel_group_execution();
+#else
+                        break;
+#endif
+                    }
+                }
+            }
+            PnPSolver(const Mat& _objectPoints, const Mat& _imagePoints, const Parameters& _parameters,
+                      Mat& _rvec, Mat& _tvec, vector<int>& _inliers):
+            objectPoints(_objectPoints), imagePoints(_imagePoints), parameters(_parameters),
+            rvec(_rvec), tvec(_tvec), inliers(_inliers)
+            {
+                rvec.copyTo(initRvec);
+                tvec.copyTo(initTvec);
+
+                generator.state = theRNG().state; //to control it somehow...
+            }
+        private:
+            PnPSolver& operator=(const PnPSolver&);
+
+            const Mat& objectPoints;
+            const Mat& imagePoints;
+            const Parameters& parameters;
+            Mat &rvec, &tvec;
+            vector<int>& inliers;
+            Mat initRvec, initTvec;
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 
     }
 
@@ -254,7 +386,13 @@ bool cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         int count = 0;
         for (int i = 0; i < _mask_local_inliers.rows; ++i)
         {
+<<<<<<< HEAD
             if((int)_mask_local_inliers.at<uchar>(i) == 1) // inliers mask
+=======
+            int i, pointsCount = (int)localInliers.size();
+            Mat inlierObjectPoints(1, pointsCount, CV_MAKE_TYPE(opoints.depth(), 3)), inlierImagePoints(1, pointsCount, CV_MAKE_TYPE(ipoints.depth(), 2));
+            for (i = 0; i < pointsCount; i++)
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
             {
                 _local_inliers.push_back(count);    // output inliers vector
                 count++;

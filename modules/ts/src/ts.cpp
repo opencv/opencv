@@ -62,6 +62,8 @@
 
 #else
 #include <unistd.h>
+#include <signal.h>
+#include <setjmp.h>
 #endif
 
 namespace cvtest
@@ -111,9 +113,6 @@ static void SEHTranslator( unsigned int /*u*/, EXCEPTION_POINTERS* pExp )
 #endif
 
 #else
-
-#include <signal.h>
-#include <setjmp.h>
 
 static const int tsSigId[] = { SIGSEGV, SIGBUS, SIGFPE, SIGILL, SIGABRT, -1 };
 

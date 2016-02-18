@@ -20,6 +20,7 @@ if(HAVE_DOC_GENERATOR)
   endforeach()
   ocv_list_sort(BASE_MODULES)
   ocv_list_sort(EXTRA_MODULES)
+<<<<<<< HEAD
   set(FIXED_ORDER_MODULES core imgproc imgcodecs videoio highgui video calib3d features2d objdetect ml flann photo stitching)
   list(REMOVE_ITEM BASE_MODULES ${FIXED_ORDER_MODULES})
   set(BASE_MODULES ${FIXED_ORDER_MODULES} ${BASE_MODULES})
@@ -40,6 +41,28 @@ if(BUILD_DOCS AND HAVE_SPHINX)
     list(APPEND DOC_LIST "${OpenCV_SOURCE_DIR}/doc/haartraining.htm")
   endif()
 
+=======
+  set(FIXED_ORDER_MODULES core imgproc highgui video calib3d features2d objdetect ml flann gpu photo stitching nonfree contrib legacy)
+  list(REMOVE_ITEM BASE_MODULES ${FIXED_ORDER_MODULES})
+  set(BASE_MODULES ${FIXED_ORDER_MODULES} ${BASE_MODULES})
+
+  set(DOC_LIST
+      "${OpenCV_SOURCE_DIR}/doc/opencv-logo.png"
+      "${OpenCV_SOURCE_DIR}/doc/opencv-logo2.png"
+      "${OpenCV_SOURCE_DIR}/doc/opencv-logo-white.png"
+      "${OpenCV_SOURCE_DIR}/doc/opencv.ico"
+      "${OpenCV_SOURCE_DIR}/doc/pattern.png"
+      "${OpenCV_SOURCE_DIR}/doc/acircles_pattern.png")
+  set(OPTIONAL_DOC_LIST "")
+endif(HAVE_DOC_GENERATOR)
+
+# ========= Sphinx docs =========
+if(BUILD_DOCS AND HAVE_SPHINX)
+  if(NOT INSTALL_CREATE_DISTRIB)
+    list(APPEND DOC_LIST "${OpenCV_SOURCE_DIR}/doc/haartraining.htm")
+  endif()
+
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
   # build lists of documentation files and generate table of contents for reference manual
   set(DOC_FAKE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/fake-root")
   set(DOC_FAKE_ROOT_FILES "")
@@ -99,7 +122,11 @@ if(BUILD_DOCS AND HAVE_SPHINX)
 
   if(PDFLATEX_COMPILER)
     add_custom_target(docs
+<<<<<<< HEAD
       COMMAND ${SPHINX_BUILD} ${BUILD_PLANTUML} -b latex -c "${CMAKE_CURRENT_SOURCE_DIR}" "${DOC_FAKE_ROOT}" .
+=======
+      COMMAND ${SPHINX_BUILD} -b latex -c "${CMAKE_CURRENT_SOURCE_DIR}" "${DOC_FAKE_ROOT}" .
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
       COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
       COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2manager.tex

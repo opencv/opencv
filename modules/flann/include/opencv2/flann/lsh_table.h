@@ -152,11 +152,20 @@ public:
      * Create the mask and allocate the memory
      * @param feature_size is the size of the feature (considered as a ElementType[])
      * @param key_size is the number of bits that are turned on in the feature
+     * @param indices
      */
+<<<<<<< HEAD
     LshTable(unsigned int feature_size, unsigned int key_size)
     {
         (void)feature_size;
         (void)key_size;
+=======
+    LshTable(unsigned int feature_size, unsigned int key_size, std::vector<size_t> & indices)
+    {
+        (void)feature_size;
+        (void)key_size;
+        (void)indices;
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
         std::cerr << "LSH is not implemented for that type" << std::endl;
         assert(0);
     }

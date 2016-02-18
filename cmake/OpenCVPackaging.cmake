@@ -1,3 +1,6 @@
+# Use patched version of CPACK to build accurate set of Debian packages
+# https://github.com/asmorkalov/CMake/tree/deb_generator_improvement
+
 if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
 set(CPACK_set_DESTDIR "on")
 
@@ -17,6 +20,8 @@ OpenCV makes it easy for businesses to utilize and modify the code.")
   set(CPACK_PACKAGE_VERSION_PATCH "${OPENCV_VERSION_PATCH}")
   set(CPACK_PACKAGE_VERSION "${OPENCV_VCSVERSION}")
 endif(NOT OPENCV_CUSTOM_PACKAGE_INFO)
+
+set(CPACK_STRIP_FILES 1)
 
 #arch
 if(X86)
@@ -64,36 +69,61 @@ set(CPACK_COMPONENT_dev_DEPENDS libs)
 set(CPACK_COMPONENT_docs_DEPENDS libs)
 set(CPACK_COMPONENT_java_DEPENDS libs)
 set(CPACK_COMPONENT_python_DEPENDS libs)
+set(CPACK_DEB_python_PACKAGE_DEPENDS "python${PYTHON_VERSION_MAJOR_MINOR}")
 set(CPACK_COMPONENT_tests_DEPENDS libs)
+if (HAVE_opencv_python)
+  set(CPACK_DEB_tests_PACKAGE_DEPENDS "python${PYTHON_VERSION_MAJOR_MINOR}, python-py | python-pytest")
+endif()
 
 if(HAVE_CUDA)
   string(REPLACE "." "-" cuda_version_suffix ${CUDA_VERSION})
-  set(CPACK_DEB_libs_PACKAGE_DEPENDS "cuda-core-libs-${cuda_version_suffix}, cuda-extra-libs-${cuda_version_suffix}")
+  if(CUDA_VERSION VERSION_LESS "6.5")
+    set(CPACK_DEB_libs_PACKAGE_DEPENDS "cuda-core-libs-${cuda_version_suffix}, cuda-extra-libs-${cuda_version_suffix}")
+    set(CPACK_DEB_dev_PACKAGE_DEPENDS "cuda-headers-${cuda_version_suffix}")
+  else()
+    set(CPACK_DEB_libs_PACKAGE_DEPENDS "cuda-cudart-${cuda_version_suffix}, cuda-npp-${cuda_version_suffix}")
+    set(CPACK_DEB_dev_PACKAGE_DEPENDS "cuda-cudart-dev-${cuda_version_suffix}, cuda-npp-dev-${cuda_version_suffix}")
+    if(HAVE_CUFFT)
+      set(CPACK_DEB_libs_PACKAGE_DEPENDS "${CPACK_DEB_libs_PACKAGE_DEPENDS}, cuda-cufft-${cuda_version_suffix}")
+      set(CPACK_DEB_dev_PACKAGE_DEPENDS "${CPACK_DEB_dev_PACKAGE_DEPENDS}, cuda-cufft-dev-${cuda_version_suffix}")
+    endif()
+    if(HAVE_HAVE_CUBLAS)
+      set(CPACK_DEB_libs_PACKAGE_DEPENDS "${CPACK_DEB_libs_PACKAGE_DEPENDS}, cuda-cublas-${cuda_version_suffix}")
+      set(CPACK_DEB_dev_PACKAGE_DEPENDS "${CPACK_DEB_dev_PACKAGE_DEPENDS}, cuda-cublas-dev-${cuda_version_suffix}")
+    endif()
+  endif()
+
   set(CPACK_COMPONENT_dev_DEPENDS libs)
-  set(CPACK_DEB_dev_PACKAGE_DEPENDS "cuda-headers-${cuda_version_suffix}")
 endif()
 
 if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
   set(CPACK_COMPONENT_libs_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}")
   set(CPACK_COMPONENT_libs_DESCRIPTION "Open Computer Vision Library")
+  set(CPACK_COMPONENT_libs_SECTION "libs")
 
   set(CPACK_COMPONENT_python_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-python")
   set(CPACK_COMPONENT_python_DESCRIPTION "Python bindings for Open Source Computer Vision Library")
+  set(CPACK_COMPONENT_python_SECTION "python")
 
   set(CPACK_COMPONENT_java_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-java")
   set(CPACK_COMPONENT_java_DESCRIPTION "Java bindings for Open Source Computer Vision Library")
+  set(CPACK_COMPONENT_java_SECTION "java")
 
   set(CPACK_COMPONENT_dev_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-dev")
   set(CPACK_COMPONENT_dev_DESCRIPTION "Development files for Open Source Computer Vision Library")
+  set(CPACK_COMPONENT_dev_SECTION "libdevel")
 
   set(CPACK_COMPONENT_docs_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-docs")
   set(CPACK_COMPONENT_docs_DESCRIPTION "Documentation for Open Source Computer Vision Library")
+  set(CPACK_COMPONENT_docs_SECTION "doc")
 
   set(CPACK_COMPONENT_samples_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-samples")
   set(CPACK_COMPONENT_samples_DESCRIPTION "Samples for Open Source Computer Vision Library")
+  set(CPACK_COMPONENT_samples_SECTION "devel")
 
   set(CPACK_COMPONENT_tests_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-tests")
   set(CPACK_COMPONENT_tests_DESCRIPTION "Accuracy and performance tests for Open Source Computer Vision Library")
+  set(CPACK_COMPONENT_tests_SECTION "misc")
 endif(NOT OPENCV_CUSTOM_PACKAGE_INFO)
 
 if(NOT OPENCV_CUSTOM_PACKAGE_LAYOUT)

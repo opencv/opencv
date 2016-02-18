@@ -25,6 +25,7 @@
 #elif defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
 # include <gui/IGraphicBufferProducer.h>
 # include <gui/BufferQueue.h>
+# include <ui/GraphicBuffer.h>
 #else
 # include <surfaceflinger/ISurface.h>
 #endif
@@ -681,6 +682,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 # elif defined(ANDROID_r4_4_0)
     void* buffer_queue_obj = operator new(sizeof(BufferQueue) + MAGIC_TAIL);
     handler->queue = new(buffer_queue_obj) BufferQueue();
+    handler->queue->setConsumerUsageBits(GraphicBuffer::USAGE_HW_TEXTURE);
     void* consumer_listener_obj = operator new(sizeof(ConsumerListenerStub) + MAGIC_TAIL);
     handler->listener = new(consumer_listener_obj) ConsumerListenerStub();
     handler->queue->consumerConnect(handler->listener, true);
@@ -1085,6 +1087,7 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
 # elif defined(ANDROID_r4_4_0)
     void* buffer_queue_obj = operator new(sizeof(BufferQueue) + MAGIC_TAIL);
     handler->queue = new(buffer_queue_obj) BufferQueue();
+    handler->queue->setConsumerUsageBits(GraphicBuffer::USAGE_HW_TEXTURE);
     handler->queue->consumerConnect(handler->listener, true);
     bufferStatus = handler->camera->setPreviewTarget(handler->queue);
     if (bufferStatus != 0)

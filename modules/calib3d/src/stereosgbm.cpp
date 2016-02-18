@@ -1029,11 +1029,19 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
                         T dp = *dpp;
                         int* lpp = labels + width*p.y + p.x;
 
+<<<<<<< HEAD
                         if( p.y < height-1 && !lpp[+width] && dpp[+dstep] != newVal && std::abs(dp - dpp[+dstep]) <= maxDiff )
                         {
                             lpp[+width] = curlabel;
                             *ws++ = Point2s(p.x, p.y+1);
                         }
+=======
+                            if( p.y < height-1 && !lpp[+width] && dpp[+dstep] != newVal && std::abs(dp - dpp[+dstep]) <= maxDiff )
+                            {
+                                lpp[+width] = curlabel;
+                                *ws++ = Point2s(p.x, p.y+1);
+                            }
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 
                         if( p.y > 0 && !lpp[-width] && dpp[-dstep] != newVal && std::abs(dp - dpp[-dstep]) <= maxDiff )
                         {
@@ -1041,10 +1049,28 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
                             *ws++ = Point2s(p.x, p.y-1);
                         }
 
+<<<<<<< HEAD
                         if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
                         {
                             lpp[+1] = curlabel;
                             *ws++ = Point2s(p.x+1, p.y);
+=======
+                            if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
+                            {
+                                lpp[+1] = curlabel;
+                                *ws++ = Point2s(p.x+1, p.y);
+                            }
+
+                            if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )
+                            {
+                                lpp[-1] = curlabel;
+                                *ws++ = Point2s(p.x-1, p.y);
+                            }
+
+                            // pop most recent and propagate
+                            // NB: could try least recent, maybe better convergence
+                            p = *--ws;
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
                         }
 
                         if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )

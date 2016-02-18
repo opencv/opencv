@@ -1015,8 +1015,12 @@ public:
             for( int i = 0; i < sample_count; i++ )
                 _alpha[i] *= _y[i];
 
+<<<<<<< HEAD
             return true;
         }
+=======
+    ok = true; // model has been trained successfully
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 
 
         static bool solve_nu_svc( const Mat& _samples, const vector<schar>& _y,

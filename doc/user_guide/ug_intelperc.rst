@@ -1,6 +1,6 @@
-*******
-HighGUI
-*******
+*****************************************
+Senz3D and Intel Perceptual Computing SDK
+*****************************************
 
 .. highlight:: cpp
 

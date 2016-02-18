@@ -50,6 +50,8 @@
 
 /*! @file */
 
+/*! @file */
+
 namespace cv
 {
     template<typename T>

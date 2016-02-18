@@ -770,4 +770,13 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_CUDA()
     return makePtr<DualTVL1_CUDA>();
 }
 
+<<<<<<< HEAD
 #endif // HAVE_OPENCV_CUDAOPTFLOW
+=======
+#endif
+
+// Suppress specific warnings during cross-compilation for ARM
+#if defined(__arm__) && defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd

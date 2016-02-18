@@ -4170,8 +4170,554 @@ struct Luv2RGB_b
             int dn = std::min(n - i, (int)BLOCK_SIZE);
             j = 0;
 
+<<<<<<< HEAD
             #if CV_NEON
             for ( ; j <= (dn - 8) * 3; j += 24)
+=======
+            for( j = 0; j < dn*3; j += 3 )
+            {
+                buf[j] = src[j]*(100.f/255.f);
+                buf[j+1] = (float)(src[j+1]*1.388235294117647f - 134.f);
+                buf[j+2] = (float)(src[j+2]*1.027450980392157f - 140.f);
+            }
+            cvt(buf, buf, dn);
+
+            for( j = 0; j < dn*3; j += 3, dst += dcn )
+            {
+                dst[0] = saturate_cast<uchar>(buf[j]*255.f);
+                dst[1] = saturate_cast<uchar>(buf[j+1]*255.f);
+                dst[2] = saturate_cast<uchar>(buf[j+2]*255.f);
+                if( dcn == 4 )
+                    dst[3] = alpha;
+            }
+        }
+    }
+
+    int dstcn;
+    Luv2RGB_f cvt;
+};
+
+
+//////////////////////////// Bayer Pattern -> RGB conversion /////////////////////////////
+
+template<typename T>
+class SIMDBayerStubInterpolator_
+{
+public:
+    int bayer2Gray(const T*, int, T*, int, int, int, int) const
+    {
+        return 0;
+    }
+
+    int bayer2RGB(const T*, int, T*, int, int) const
+    {
+        return 0;
+    }
+};
+
+#if CV_SSE2
+class SIMDBayerInterpolator_8u
+{
+public:
+    SIMDBayerInterpolator_8u()
+    {
+        use_simd = checkHardwareSupport(CV_CPU_SSE2);
+    }
+
+    int bayer2Gray(const uchar* bayer, int bayer_step, uchar* dst,
+                   int width, int bcoeff, int gcoeff, int rcoeff) const
+    {
+        if( !use_simd )
+            return 0;
+
+        __m128i _b2y = _mm_set1_epi16((short)(rcoeff*2));
+        __m128i _g2y = _mm_set1_epi16((short)(gcoeff*2));
+        __m128i _r2y = _mm_set1_epi16((short)(bcoeff*2));
+        const uchar* bayer_end = bayer + width;
+
+        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 14 )
+        {
+            __m128i r0 = _mm_loadu_si128((const __m128i*)bayer);
+            __m128i r1 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step));
+            __m128i r2 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step*2));
+
+            __m128i b1 = _mm_add_epi16(_mm_srli_epi16(_mm_slli_epi16(r0, 8), 7),
+                                       _mm_srli_epi16(_mm_slli_epi16(r2, 8), 7));
+            __m128i b0 = _mm_add_epi16(b1, _mm_srli_si128(b1, 2));
+            b1 = _mm_slli_epi16(_mm_srli_si128(b1, 2), 1);
+
+            __m128i g0 = _mm_add_epi16(_mm_srli_epi16(r0, 7), _mm_srli_epi16(r2, 7));
+            __m128i g1 = _mm_srli_epi16(_mm_slli_epi16(r1, 8), 7);
+            g0 = _mm_add_epi16(g0, _mm_add_epi16(g1, _mm_srli_si128(g1, 2)));
+            g1 = _mm_slli_epi16(_mm_srli_si128(g1, 2), 2);
+
+            r0 = _mm_srli_epi16(r1, 8);
+            r1 = _mm_slli_epi16(_mm_add_epi16(r0, _mm_srli_si128(r0, 2)), 2);
+            r0 = _mm_slli_epi16(r0, 3);
+
+            g0 = _mm_add_epi16(_mm_mulhi_epi16(b0, _b2y), _mm_mulhi_epi16(g0, _g2y));
+            g1 = _mm_add_epi16(_mm_mulhi_epi16(b1, _b2y), _mm_mulhi_epi16(g1, _g2y));
+            g0 = _mm_add_epi16(g0, _mm_mulhi_epi16(r0, _r2y));
+            g1 = _mm_add_epi16(g1, _mm_mulhi_epi16(r1, _r2y));
+            g0 = _mm_srli_epi16(g0, 2);
+            g1 = _mm_srli_epi16(g1, 2);
+            g0 = _mm_packus_epi16(g0, g0);
+            g1 = _mm_packus_epi16(g1, g1);
+            g0 = _mm_unpacklo_epi8(g0, g1);
+            _mm_storeu_si128((__m128i*)dst, g0);
+        }
+
+        return (int)(bayer - (bayer_end - width));
+    }
+
+    int bayer2RGB(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
+    {
+        if( !use_simd )
+            return 0;
+        /*
+         B G B G | B G B G | B G B G | B G B G
+         G R G R | G R G R | G R G R | G R G R
+         B G B G | B G B G | B G B G | B G B G
+         */
+        __m128i delta1 = _mm_set1_epi16(1), delta2 = _mm_set1_epi16(2);
+        __m128i mask = _mm_set1_epi16(blue < 0 ? -1 : 0), z = _mm_setzero_si128();
+        __m128i masklo = _mm_set1_epi16(0x00ff);
+        const uchar* bayer_end = bayer + width;
+
+        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 42 )
+        {
+            __m128i r0 = _mm_loadu_si128((const __m128i*)bayer);
+            __m128i r1 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step));
+            __m128i r2 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step*2));
+
+            __m128i b1 = _mm_add_epi16(_mm_and_si128(r0, masklo), _mm_and_si128(r2, masklo));
+            __m128i b0 = _mm_add_epi16(b1, _mm_srli_si128(b1, 2));
+            b1 = _mm_srli_si128(b1, 2);
+            b1 = _mm_srli_epi16(_mm_add_epi16(b1, delta1), 1);
+            b0 = _mm_srli_epi16(_mm_add_epi16(b0, delta2), 2);
+            b0 = _mm_packus_epi16(b0, b1);
+
+            __m128i g0 = _mm_add_epi16(_mm_srli_epi16(r0, 8), _mm_srli_epi16(r2, 8));
+            __m128i g1 = _mm_and_si128(r1, masklo);
+            g0 = _mm_add_epi16(g0, _mm_add_epi16(g1, _mm_srli_si128(g1, 2)));
+            g1 = _mm_srli_si128(g1, 2);
+            g0 = _mm_srli_epi16(_mm_add_epi16(g0, delta2), 2);
+            g0 = _mm_packus_epi16(g0, g1);
+
+            r0 = _mm_srli_epi16(r1, 8);
+            r1 = _mm_add_epi16(r0, _mm_srli_si128(r0, 2));
+            r1 = _mm_srli_epi16(_mm_add_epi16(r1, delta1), 1);
+            r0 = _mm_packus_epi16(r0, r1);
+
+            b1 = _mm_and_si128(_mm_xor_si128(b0, r0), mask);
+            b0 = _mm_xor_si128(b0, b1);
+            r0 = _mm_xor_si128(r0, b1);
+
+            // b1 g1 b1 g1 ...
+            b1 = _mm_unpackhi_epi8(b0, g0);
+            // b0 g0 b2 g2 b4 g4 ....
+            b0 = _mm_unpacklo_epi8(b0, g0);
+
+            // r1 0 r3 0 ...
+            r1 = _mm_unpackhi_epi8(r0, z);
+            // r0 0 r2 0 r4 0 ...
+            r0 = _mm_unpacklo_epi8(r0, z);
+
+            // 0 b0 g0 r0 0 b2 g2 r2 0 ...
+            g0 = _mm_slli_si128(_mm_unpacklo_epi16(b0, r0), 1);
+            // 0 b8 g8 r8 0 b10 g10 r10 0 ...
+            g1 = _mm_slli_si128(_mm_unpackhi_epi16(b0, r0), 1);
+
+            // b1 g1 r1 0 b3 g3 r3 ....
+            r0 = _mm_unpacklo_epi16(b1, r1);
+            // b9 g9 r9 0 ...
+            r1 = _mm_unpackhi_epi16(b1, r1);
+
+            b0 = _mm_srli_si128(_mm_unpacklo_epi32(g0, r0), 1);
+            b1 = _mm_srli_si128(_mm_unpackhi_epi32(g0, r0), 1);
+
+            _mm_storel_epi64((__m128i*)(dst-1+0), b0);
+            _mm_storel_epi64((__m128i*)(dst-1+6*1), _mm_srli_si128(b0, 8));
+            _mm_storel_epi64((__m128i*)(dst-1+6*2), b1);
+            _mm_storel_epi64((__m128i*)(dst-1+6*3), _mm_srli_si128(b1, 8));
+
+            g0 = _mm_srli_si128(_mm_unpacklo_epi32(g1, r1), 1);
+            g1 = _mm_srli_si128(_mm_unpackhi_epi32(g1, r1), 1);
+
+            _mm_storel_epi64((__m128i*)(dst-1+6*4), g0);
+            _mm_storel_epi64((__m128i*)(dst-1+6*5), _mm_srli_si128(g0, 8));
+
+            _mm_storel_epi64((__m128i*)(dst-1+6*6), g1);
+        }
+
+        return (int)(bayer - (bayer_end - width));
+    }
+
+    bool use_simd;
+};
+#else
+typedef SIMDBayerStubInterpolator_<uchar> SIMDBayerInterpolator_8u;
+#endif
+
+template<typename T, class SIMDInterpolator>
+static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
+{
+    SIMDInterpolator vecOp;
+    const int R2Y = 4899;
+    const int G2Y = 9617;
+    const int B2Y = 1868;
+    const int SHIFT = 14;
+
+    const T* bayer0 = (const T*)srcmat.data;
+    int bayer_step = (int)(srcmat.step/sizeof(T));
+    T* dst0 = (T*)dstmat.data;
+    int dst_step = (int)(dstmat.step/sizeof(T));
+    Size size = srcmat.size();
+    int bcoeff = B2Y, rcoeff = R2Y;
+    int start_with_green = code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY;
+    bool brow = true;
+
+    if( code != CV_BayerBG2GRAY && code != CV_BayerGB2GRAY )
+    {
+        brow = false;
+        std::swap(bcoeff, rcoeff);
+    }
+
+    dst0 += dst_step + 1;
+    size.height -= 2;
+    size.width -= 2;
+
+    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
+    {
+        unsigned t0, t1, t2;
+        const T* bayer = bayer0;
+        T* dst = dst0;
+        const T* bayer_end = bayer + size.width;
+
+        if( size.width <= 0 )
+        {
+            dst[-1] = dst[size.width] = 0;
+            continue;
+        }
+
+        if( start_with_green )
+        {
+            t0 = (bayer[1] + bayer[bayer_step*2+1])*rcoeff;
+            t1 = (bayer[bayer_step] + bayer[bayer_step+2])*bcoeff;
+            t2 = bayer[bayer_step+1]*(2*G2Y);
+
+            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
+            bayer++;
+            dst++;
+        }
+
+        int delta = vecOp.bayer2Gray(bayer, bayer_step, dst, size.width, bcoeff, G2Y, rcoeff);
+        bayer += delta;
+        dst += delta;
+
+        for( ; bayer <= bayer_end - 2; bayer += 2, dst += 2 )
+        {
+            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
+            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
+            t2 = bayer[bayer_step+1]*(4*bcoeff);
+            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
+
+            t0 = (bayer[2] + bayer[bayer_step*2+2])*rcoeff;
+            t1 = (bayer[bayer_step+1] + bayer[bayer_step+3])*bcoeff;
+            t2 = bayer[bayer_step+2]*(2*G2Y);
+            dst[1] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
+        }
+
+        if( bayer < bayer_end )
+        {
+            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
+            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
+            t2 = bayer[bayer_step+1]*(4*bcoeff);
+            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
+            bayer++;
+            dst++;
+        }
+
+        dst0[-1] = dst0[0];
+        dst0[size.width] = dst0[size.width-1];
+
+        brow = !brow;
+        std::swap(bcoeff, rcoeff);
+        start_with_green = !start_with_green;
+    }
+
+    size = dstmat.size();
+    dst0 = (T*)dstmat.data;
+    if( size.height > 2 )
+        for( int i = 0; i < size.width; i++ )
+        {
+            dst0[i] = dst0[i + dst_step];
+            dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
+        }
+    else
+        for( int i = 0; i < size.width; i++ )
+        {
+            dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
+        }
+}
+
+template<typename T, class SIMDInterpolator>
+static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
+{
+    SIMDInterpolator vecOp;
+    const T* bayer0 = (const T*)srcmat.data;
+    int bayer_step = (int)(srcmat.step/sizeof(T));
+    T* dst0 = (T*)dstmat.data;
+    int dst_step = (int)(dstmat.step/sizeof(T));
+    Size size = srcmat.size();
+    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
+    int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
+
+    dst0 += dst_step + 3 + 1;
+    size.height -= 2;
+    size.width -= 2;
+
+    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
+    {
+        int t0, t1;
+        const T* bayer = bayer0;
+        T* dst = dst0;
+        const T* bayer_end = bayer + size.width;
+
+        if( size.width <= 0 )
+        {
+            dst[-4] = dst[-3] = dst[-2] = dst[size.width*3-1] =
+            dst[size.width*3] = dst[size.width*3+1] = 0;
+            continue;
+        }
+
+        if( start_with_green )
+        {
+            t0 = (bayer[1] + bayer[bayer_step*2+1] + 1) >> 1;
+            t1 = (bayer[bayer_step] + bayer[bayer_step+2] + 1) >> 1;
+            dst[-blue] = (T)t0;
+            dst[0] = bayer[bayer_step+1];
+            dst[blue] = (T)t1;
+            bayer++;
+            dst += 3;
+        }
+
+        int delta = vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
+        bayer += delta;
+        dst += delta*3;
+
+        if( blue > 0 )
+        {
+            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
+            {
+                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
+                      bayer[bayer_step*2+2] + 2) >> 2;
+                t1 = (bayer[1] + bayer[bayer_step] +
+                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
+                dst[-1] = (T)t0;
+                dst[0] = (T)t1;
+                dst[1] = bayer[bayer_step+1];
+
+                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
+                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
+                dst[2] = (T)t0;
+                dst[3] = bayer[bayer_step+2];
+                dst[4] = (T)t1;
+            }
+        }
+        else
+        {
+            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
+            {
+                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
+                      bayer[bayer_step*2+2] + 2) >> 2;
+                t1 = (bayer[1] + bayer[bayer_step] +
+                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
+                dst[1] = (T)t0;
+                dst[0] = (T)t1;
+                dst[-1] = bayer[bayer_step+1];
+
+                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
+                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
+                dst[4] = (T)t0;
+                dst[3] = bayer[bayer_step+2];
+                dst[2] = (T)t1;
+            }
+        }
+
+        if( bayer < bayer_end )
+        {
+            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
+                  bayer[bayer_step*2+2] + 2) >> 2;
+            t1 = (bayer[1] + bayer[bayer_step] +
+                  bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
+            dst[-blue] = (T)t0;
+            dst[0] = (T)t1;
+            dst[blue] = bayer[bayer_step+1];
+            bayer++;
+            dst += 3;
+        }
+
+        dst0[-4] = dst0[-1];
+        dst0[-3] = dst0[0];
+        dst0[-2] = dst0[1];
+        dst0[size.width*3-1] = dst0[size.width*3-4];
+        dst0[size.width*3] = dst0[size.width*3-3];
+        dst0[size.width*3+1] = dst0[size.width*3-2];
+
+        blue = -blue;
+        start_with_green = !start_with_green;
+    }
+
+    size = dstmat.size();
+    dst0 = (T*)dstmat.data;
+    if( size.height > 2 )
+        for( int i = 0; i < size.width*3; i++ )
+        {
+            dst0[i] = dst0[i + dst_step];
+            dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
+        }
+    else
+        for( int i = 0; i < size.width*3; i++ )
+        {
+            dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
+        }
+}
+
+
+/////////////////// Demosaicing using Variable Number of Gradients ///////////////////////
+
+static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
+{
+    const uchar* bayer = srcmat.data;
+    int bstep = (int)srcmat.step;
+    uchar* dst = dstmat.data;
+    int dststep = (int)dstmat.step;
+    Size size = srcmat.size();
+
+    int blueIdx = code == CV_BayerBG2BGR_VNG || code == CV_BayerGB2BGR_VNG ? 0 : 2;
+    bool greenCell0 = code != CV_BayerBG2BGR_VNG && code != CV_BayerRG2BGR_VNG;
+
+    // for too small images use the simple interpolation algorithm
+    if( MIN(size.width, size.height) < 8 )
+    {
+        Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>( srcmat, dstmat, code );
+        return;
+    }
+
+    const int brows = 3, bcn = 7;
+    int N = size.width, N2 = N*2, N3 = N*3, N4 = N*4, N5 = N*5, N6 = N*6, N7 = N*7;
+    int i, bufstep = N7*bcn;
+    cv::AutoBuffer<ushort> _buf(bufstep*brows);
+    ushort* buf = (ushort*)_buf;
+
+    bayer += bstep*2;
+
+#if CV_SSE2
+    bool haveSSE = cv::checkHardwareSupport(CV_CPU_SSE2);
+    #define _mm_absdiff_epu16(a,b) _mm_adds_epu16(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a))
+#endif
+
+    for( int y = 2; y < size.height - 4; y++ )
+    {
+        uchar* dstrow = dst + dststep*y + 6;
+        const uchar* srow;
+
+        for( int dy = (y == 2 ? -1 : 1); dy <= 1; dy++ )
+        {
+            ushort* brow = buf + ((y + dy - 1)%brows)*bufstep + 1;
+            srow = bayer + (y+dy)*bstep + 1;
+
+            for( i = 0; i < bcn; i++ )
+                brow[N*i-1] = brow[(N-2) + N*i] = 0;
+
+            i = 1;
+
+#if CV_SSE2
+            if( haveSSE )
+            {
+                __m128i z = _mm_setzero_si128();
+                for( ; i <= N-9; i += 8, srow += 8, brow += 8 )
+                {
+                    __m128i s1, s2, s3, s4, s6, s7, s8, s9;
+
+                    s1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1-bstep)),z);
+                    s2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep)),z);
+                    s3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1-bstep)),z);
+
+                    s4 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1)),z);
+                    s6 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1)),z);
+
+                    s7 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1+bstep)),z);
+                    s8 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep)),z);
+                    s9 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1+bstep)),z);
+
+                    __m128i b0, b1, b2, b3, b4, b5, b6;
+
+                    b0 = _mm_adds_epu16(_mm_slli_epi16(_mm_absdiff_epu16(s2,s8),1),
+                                        _mm_adds_epu16(_mm_absdiff_epu16(s1, s7),
+                                                       _mm_absdiff_epu16(s3, s9)));
+                    b1 = _mm_adds_epu16(_mm_slli_epi16(_mm_absdiff_epu16(s4,s6),1),
+                                        _mm_adds_epu16(_mm_absdiff_epu16(s1, s3),
+                                                       _mm_absdiff_epu16(s7, s9)));
+                    b2 = _mm_slli_epi16(_mm_absdiff_epu16(s3,s7),1);
+                    b3 = _mm_slli_epi16(_mm_absdiff_epu16(s1,s9),1);
+
+                    _mm_storeu_si128((__m128i*)brow, b0);
+                    _mm_storeu_si128((__m128i*)(brow + N), b1);
+                    _mm_storeu_si128((__m128i*)(brow + N2), b2);
+                    _mm_storeu_si128((__m128i*)(brow + N3), b3);
+
+                    b4 = _mm_adds_epu16(b2,_mm_adds_epu16(_mm_absdiff_epu16(s2, s4),
+                                                          _mm_absdiff_epu16(s6, s8)));
+                    b5 = _mm_adds_epu16(b3,_mm_adds_epu16(_mm_absdiff_epu16(s2, s6),
+                                                          _mm_absdiff_epu16(s4, s8)));
+                    b6 = _mm_adds_epu16(_mm_adds_epu16(s2, s4), _mm_adds_epu16(s6, s8));
+                    b6 = _mm_srli_epi16(b6, 1);
+
+                    _mm_storeu_si128((__m128i*)(brow + N4), b4);
+                    _mm_storeu_si128((__m128i*)(brow + N5), b5);
+                    _mm_storeu_si128((__m128i*)(brow + N6), b6);
+                }
+            }
+#endif
+
+            for( ; i < N-1; i++, srow++, brow++ )
+            {
+                brow[0] = (ushort)(std::abs(srow[-1-bstep] - srow[-1+bstep]) +
+                                   std::abs(srow[-bstep] - srow[+bstep])*2 +
+                                   std::abs(srow[1-bstep] - srow[1+bstep]));
+                brow[N] = (ushort)(std::abs(srow[-1-bstep] - srow[1-bstep]) +
+                                   std::abs(srow[-1] - srow[1])*2 +
+                                   std::abs(srow[-1+bstep] - srow[1+bstep]));
+                brow[N2] = (ushort)(std::abs(srow[+1-bstep] - srow[-1+bstep])*2);
+                brow[N3] = (ushort)(std::abs(srow[-1-bstep] - srow[1+bstep])*2);
+                brow[N4] = (ushort)(brow[N2] + std::abs(srow[-bstep] - srow[-1]) +
+                                    std::abs(srow[+bstep] - srow[1]));
+                brow[N5] = (ushort)(brow[N3] + std::abs(srow[-bstep] - srow[1]) +
+                                    std::abs(srow[+bstep] - srow[-1]));
+                brow[N6] = (ushort)((srow[-bstep] + srow[-1] + srow[1] + srow[+bstep])>>1);
+            }
+        }
+
+        const ushort* brow0 = buf + ((y - 2) % brows)*bufstep + 2;
+        const ushort* brow1 = buf + ((y - 1) % brows)*bufstep + 2;
+        const ushort* brow2 = buf + (y % brows)*bufstep + 2;
+        static const float scale[] = { 0.f, 0.5f, 0.25f, 0.1666666666667f, 0.125f, 0.1f, 0.08333333333f, 0.0714286f, 0.0625f };
+        srow = bayer + y*bstep + 2;
+        bool greenCell = greenCell0;
+
+        i = 2;
+#if CV_SSE2
+        int limit = !haveSSE ? N-2 : greenCell ? std::min(3, N-2) : 2;
+#else
+        int limit = N - 2;
+#endif
+
+        do
+        {
+            for( ; i < limit; i++, srow++, brow0++, brow1++, brow2++, dstrow += 3 )
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
             {
                 uint8x8x3_t v_src = vld3_u8(src + j);
                 uint16x8_t v_t0 = vmovl_u8(v_src.val[0]),

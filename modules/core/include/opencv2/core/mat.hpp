@@ -1156,10 +1156,38 @@ typedef Mat_<Vec2f> Mat2f;
 typedef Mat_<Vec3f> Mat3f;
 typedef Mat_<Vec4f> Mat4f;
 
+<<<<<<< HEAD
 typedef Mat_<double> Mat1d;
 typedef Mat_<Vec2d> Mat2d;
 typedef Mat_<Vec3d> Mat3d;
 typedef Mat_<Vec4d> Mat4d;
+=======
+template<typename _Tp> inline void Mat::push_back(const _Tp& elem)
+{
+    if( !data )
+    {
+        CV_Assert((type()==0) || (DataType<_Tp>::type == type()));
+
+        *this = Mat(1, 1, DataType<_Tp>::type, (void*)&elem).clone();
+        return;
+    }
+    CV_Assert(DataType<_Tp>::type == type() && cols == 1
+              /* && dims == 2 (cols == 1 implies dims == 2) */);
+    uchar* tmp = dataend + step[0];
+    if( !isSubmatrix() && isContinuous() && tmp <= datalimit )
+    {
+        *(_Tp*)(data + (size.p[0]++)*step.p[0]) = elem;
+        dataend = tmp;
+    }
+    else
+        push_back_(&elem);
+}
+
+template<typename _Tp> inline void Mat::push_back(const Mat_<_Tp>& m)
+{
+    push_back((const Mat&)m);
+}
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 
 class CV_EXPORTS UMat
 {

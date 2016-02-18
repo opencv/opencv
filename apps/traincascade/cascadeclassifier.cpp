@@ -197,7 +197,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
         cout << endl << "===== TRAINING " << i << "-stage =====" << endl;
         cout << "<BEGIN" << endl;
 
-        if ( !updateTrainingSet( tempLeafFARate ) )
+        if ( !updateTrainingSet( requiredLeafFARate, tempLeafFARate ) )
         {
             cout << "Train dataset for temp stage can not be filled. "
                 "Branch training terminated." << endl;
@@ -283,17 +283,17 @@ int CvCascadeClassifier::predict( int sampleIdx )
     return 1;
 }
 
-bool CvCascadeClassifier::updateTrainingSet( double& acceptanceRatio)
+bool CvCascadeClassifier::updateTrainingSet( double minimumAcceptanceRatio, double& acceptanceRatio)
 {
     int64 posConsumed = 0, negConsumed = 0;
     imgReader.restart();
-    int posCount = fillPassedSamples( 0, numPos, true, posConsumed );
+    int posCount = fillPassedSamples( 0, numPos, true, 0, posConsumed );
     if( !posCount )
         return false;
     cout << "POS count : consumed   " << posCount << " : " << (int)posConsumed << endl;
 
     int proNumNeg = cvRound( ( ((double)numNeg) * ((double)posCount) ) / numPos ); // apply only a fraction of negative samples. double is required since overflow is possible
-    int negCount = fillPassedSamples( posCount, proNumNeg, false, negConsumed );
+    int negCount = fillPassedSamples( posCount, proNumNeg, false, minimumAcceptanceRatio, negConsumed );
     if ( !negCount )
         return false;
 
@@ -303,7 +303,7 @@ bool CvCascadeClassifier::updateTrainingSet( double& acceptanceRatio)
     return true;
 }
 
-int CvCascadeClassifier::fillPassedSamples( int first, int count, bool isPositive, int64& consumed )
+int CvCascadeClassifier::fillPassedSamples( int first, int count, bool isPositive, double minimumAcceptanceRatio, int64& consumed )
 {
     int getcount = 0;
     Mat img(cascadeParams.winSize, CV_8UC1);
@@ -311,6 +311,9 @@ int CvCascadeClassifier::fillPassedSamples( int first, int count, bool isPositiv
     {
         for( ; ; )
         {
+            if( consumed != 0 && ((double)getcount+1)/(double)(int64)consumed <= minimumAcceptanceRatio )
+                return getcount;
+
             bool isGetImg = isPositive ? imgReader.getPos( img ) :
                                            imgReader.getNeg( img );
             if( !isGetImg )
@@ -502,6 +505,8 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
 
 bool CvCascadeClassifier::load( const string cascadeDirName )
 {
+    cout << "Training parameters are loaded from the parameter file in data folder!" << endl;
+    cout << "Please empty the data folder if you want to use your own set of parameters." << endl;
     FileStorage fs( cascadeDirName + CC_PARAMS_FILENAME, FileStorage::READ );
     if ( !fs.isOpened() )
         return false;

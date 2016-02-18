@@ -130,6 +130,7 @@ CV_EXPORTS_W Ptr<BackgroundSubtractorMOG2>
 class CV_EXPORTS_W BackgroundSubtractorKNN : public BackgroundSubtractor
 {
 public:
+<<<<<<< HEAD
     CV_WRAP virtual int getHistory() const = 0;
     CV_WRAP virtual void setHistory(int history) = 0;
 
@@ -150,6 +151,64 @@ public:
 
     CV_WRAP virtual double getShadowThreshold() const = 0;
     CV_WRAP virtual void setShadowThreshold(double threshold) = 0;
+=======
+    BackgroundSubtractorGMG();
+    virtual ~BackgroundSubtractorGMG();
+    virtual AlgorithmInfo* info() const;
+
+    /**
+     * Validate parameters and set up data structures for appropriate image size.
+     * Must call before running on data.
+     * @param frameSize input frame size
+     * @param min       minimum value taken on by pixels in image sequence. Usually 0
+     * @param max       maximum value taken on by pixels in image sequence. e.g. 1.0 or 255
+     */
+    void initialize(cv::Size frameSize, double min, double max);
+
+    /**
+     * Performs single-frame background subtraction and builds up a statistical background image
+     * model.
+     * @param image Input image
+     * @param fgmask Output mask image representing foreground and background pixels
+     * @param learningRate Determines how quickly features are "forgotten" from histograms
+     */
+    virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=-1.0);
+
+    /**
+     * Releases all inner buffers.
+     */
+    void release();
+
+    //! Total number of distinct colors to maintain in histogram.
+    int     maxFeatures;
+    //! Set between 0.0 and 1.0, determines how quickly features are "forgotten" from histograms.
+    double  learningRate;
+    //! Number of frames of video to use to initialize histograms.
+    int     numInitializationFrames;
+    //! Number of discrete levels in each channel to be used in histograms.
+    int     quantizationLevels;
+    //! Prior probability that any given pixel is a background pixel. A sensitivity parameter.
+    double  backgroundPrior;
+    //! Value above which pixel is determined to be FG.
+    double  decisionThreshold;
+    //! Smoothing radius, in pixels, for cleaning up FG image.
+    int     smoothingRadius;
+    //! Perform background model update
+    bool updateBackgroundModel;
+
+private:
+    double maxVal_;
+    double minVal_;
+
+    cv::Size frameSize_;
+    int frameNum_;
+
+    cv::Mat_<int> nfeatures_;
+    cv::Mat_<unsigned int> colors_;
+    cv::Mat_<float> weights_;
+
+    cv::Mat buf_;
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 };
 
 CV_EXPORTS_W Ptr<BackgroundSubtractorKNN>

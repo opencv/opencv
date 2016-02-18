@@ -1299,8 +1299,13 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
             buf.allocate(tmat_size);
             tmat = Mat(d_size.height, d_size.width, type, (uchar*)buf );
         }
+<<<<<<< HEAD
         singleMulFunc( A.ptr(), A.step, B.ptr(), b_step, Cdata, Cstep,
                        matD->ptr(), matD->step, a_size, d_size, alpha, beta, flags );
+=======
+        singleMulFunc( A.data, A.step, B.data, b_step, Cdata, Cstep,
+                       matD->data, matD->step, a_size, d_size, alpha, beta, flags );
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
     }
     else
     {

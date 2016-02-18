@@ -47,9 +47,25 @@ function(find_python preferred_version min_version library_env include_dir_env
     endforeach()
   endif()
 
+<<<<<<< HEAD
   find_host_package(PythonInterp "${preferred_version}")
   if(NOT PYTHONINTERP_FOUND)
     find_host_package(PythonInterp "${min_version}")
+=======
+  if(NOT ANDROID AND NOT IOS)
+    ocv_check_environment_variables(PYTHON_LIBRARY PYTHON_INCLUDE_DIR)
+    if(CMAKE_CROSSCOMPILING)
+      find_host_package(PythonLibs ${PYTHON_VERSION_MAJOR_MINOR})
+    elseif(CMAKE_VERSION VERSION_GREATER 2.8.8 AND PYTHON_VERSION_FULL)
+      find_host_package(PythonLibs ${PYTHON_VERSION_FULL} EXACT)
+    else()
+      find_host_package(PythonLibs ${PYTHON_VERSION_FULL})
+    endif()
+    # cmake 2.4 (at least on Ubuntu 8.04 (hardy)) don't define PYTHONLIBS_FOUND
+    if(NOT PYTHONLIBS_FOUND AND PYTHON_INCLUDE_PATH)
+      set(PYTHONLIBS_FOUND ON)
+    endif()
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
   endif()
 
   if(PYTHONINTERP_FOUND)

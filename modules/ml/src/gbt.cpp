@@ -7,6 +7,24 @@
 #define pCvSeq CvSeq*
 #define pCvDTreeNode CvDTreeNode*
 
+<<<<<<< HEAD
+=======
+#define CV_CMP_FLOAT(a,b) ((a) < (b))
+static CV_IMPLEMENT_QSORT_EX( icvSortFloat, float, CV_CMP_FLOAT, float)
+#define CV_CMP_INT(a,b) ((a) < (b))
+static CV_IMPLEMENT_QSORT_EX( icvSortInt, int, CV_CMP_INT, int)
+
+//===========================================================================
+static string ToString(int i)
+{
+    stringstream tmp;
+    tmp << i;
+
+    return tmp.str();
+}
+
+
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 //===========================================================================
 //----------------------------- CvGBTreesParams -----------------------------
 //===========================================================================
@@ -268,7 +286,11 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
                 sample_idx = cvCreateMat( 1, sample_idx_len, CV_32S );
                 for (int i=0; i<sample_idx_len; ++i)
                     sample_idx->data.i[i] = _sample_idx->data.i[i];
+<<<<<<< HEAD
                 std::sort(sample_idx->data.i, sample_idx->data.i + sample_idx_len);
+=======
+                icvSortInt(sample_idx->data.i, sample_idx_len, 0);
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
             } break;
             case CV_8S:
             case CV_8U:

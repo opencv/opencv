@@ -1507,6 +1507,22 @@ CVAPI(double) cvGetTickFrequency( void );
 
 /*********************************** CPU capabilities ***********************************/
 
+<<<<<<< HEAD
+=======
+#define CV_CPU_NONE    0
+#define CV_CPU_MMX     1
+#define CV_CPU_SSE     2
+#define CV_CPU_SSE2    3
+#define CV_CPU_SSE3    4
+#define CV_CPU_SSSE3   5
+#define CV_CPU_SSE4_1  6
+#define CV_CPU_SSE4_2  7
+#define CV_CPU_POPCNT  8
+#define CV_CPU_AVX    10
+#define CV_CPU_AVX2   11
+#define CV_HARDWARE_MAX_FEATURE 255
+
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
 CVAPI(int) cvCheckHardwareSupport(int feature);
 
 /*********************************** Multi-Threading ************************************/

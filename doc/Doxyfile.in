@@ -223,6 +223,10 @@ SEARCH_INCLUDES        = YES
 INCLUDE_PATH           =
 INCLUDE_FILE_PATTERNS  =
 PREDEFINED             = CV_WRAP= \
+<<<<<<< HEAD
+=======
+                         CV_WRAP_AS(x)= \
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
                          __cplusplus=1 \
                          CVAPI(x)=x \
                          CV_PROP_RW= \

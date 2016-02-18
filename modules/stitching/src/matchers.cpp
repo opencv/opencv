@@ -220,7 +220,15 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     descriptors1_.upload(features1.descriptors);
     descriptors2_.upload(features2.descriptors);
 
+<<<<<<< HEAD
     BFMatcher_CUDA matcher(NORM_L2);
+=======
+    //TODO: NORM_L1 allows to avoid matcher crashes for ORB features, but is not absolutely correct for them.
+    //      The best choice for ORB features is NORM_HAMMING, but it is incorrect for SURF features.
+    //      More accurate fix in this place should be done in the future -- the type of the norm
+    //      should be either a parameter of this method, or a field of the class.
+    BFMatcher_GPU matcher(NORM_L1);
+>>>>>>> a28cde9c3bf69e7839971c29900fbbd4963998bd
     MatchesSet matches;
 
     // Find 1->2 matches
