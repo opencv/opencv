@@ -860,8 +860,8 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         fps = (double)num/(double)denom;
 
          // GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline")
-
-        stopPipeline();
+        if (file)
+            stopPipeline();
     }
 
     __END__;
