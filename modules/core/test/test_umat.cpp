@@ -1035,7 +1035,7 @@ TEST(UMat, synchronization_map_unmap)
     };
     try
     {
-        UMat u(1000, 1000, CV_32FC1);
+        UMat u(1000, 1000, CV_32FC1, Scalar::all(0));
         parallel_for_(cv::Range(0, 2), TestParallelLoopBody(u));
     }
     catch (const cv::Exception& e)
@@ -1056,7 +1056,7 @@ TEST(UMat, async_unmap)
     {
         try
         {
-            Mat m = Mat(1000, 1000, CV_8UC1);
+            Mat m = Mat(1000, 1000, CV_8UC1, Scalar::all(0));
             UMat u = m.getUMat(ACCESS_READ);
             UMat dst;
             add(u, Scalar::all(0), dst); // start async operation
@@ -1101,7 +1101,7 @@ TEST(UMat, unmap_in_class)
     };
     try
     {
-        Mat m = Mat(1000, 1000, CV_8UC1);
+        Mat m = Mat(1000, 1000, CV_8UC1, Scalar::all(0));
         Logic l;
         l.processData(m);
         UMat result = l.getResult();
@@ -1127,7 +1127,7 @@ TEST(UMat, map_unmap_counting)
         return;
     }
     std::cout << "Host memory: " << cv::ocl::Device::getDefault().hostUnifiedMemory() << std::endl;
-    Mat m(Size(10, 10), CV_8UC1);
+    Mat m(Size(10, 10), CV_8UC1, Scalar::all(0));
     UMat um = m.getUMat(ACCESS_RW);
     {
         Mat d1 = um.getMat(ACCESS_RW);
@@ -1156,7 +1156,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
         const int type = CV_8UC1;
         const int dtype = CV_16UC1;
 
-        Mat src(srcSize, type);
+        Mat src(srcSize, type, Scalar::all(0));
         Mat dst_ref(srcSize, dtype);
 
         // Generate reference data as additional check
@@ -1198,7 +1198,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
         // Use multiple iterations to increase chance of data race catching
         for(int k = 0; k < 10000; k++)
         {
-            Mat src(srcSize, type); // Declare src inside loop now to catch its destruction on stack
+            Mat src(srcSize, type, Scalar::all(0)); // Declare src inside loop now to catch its destruction on stack
             {
                 UMat tmpUMat = src.getUMat(ACCESS_RW);
                 tmpUMat.convertTo(dst, dtype);
@@ -1216,7 +1216,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_read_and_read)
     bool exceptionDetected = false;
     try
     {
-        UMat u(Size(10, 10), CV_8UC1);
+        UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_READ);
         UMat dst;
         add(u, Scalar::all(1), dst);
@@ -1234,7 +1234,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_read_and_write)
     bool exceptionDetected = false;
     try
     {
-        UMat u(Size(10, 10), CV_8UC1);
+        UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_READ);
         add(u, Scalar::all(1), u);
     }
@@ -1250,7 +1250,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_read)
     bool exceptionDetected = false;
     try
     {
-        UMat u(Size(10, 10), CV_8UC1);
+        UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_WRITE);
         UMat dst;
         add(u, Scalar::all(1), dst);
@@ -1267,7 +1267,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
     bool exceptionDetected = false;
     try
     {
-        UMat u(Size(10, 10), CV_8UC1);
+        UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_WRITE);
         add(u, Scalar::all(1), u);
     }
@@ -1341,6 +1341,17 @@ TEST(UMat, testWrongLifetime_Mat)
         m2.release(); // map of derived object
         u.release(); // derived object, should show warning message
     }
+}
+
+TEST(UMat, DISABLED_regression_5991)
+{
+    int sz[] = {2,3,2};
+    UMat mat(3, sz, CV_32F, Scalar(1));
+    ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
+    EXPECT_EQ(sz[0], mat.size[0]);
+    EXPECT_EQ(sz[1], mat.size[1]);
+    EXPECT_EQ(sz[2], mat.size[2]);
+    EXPECT_EQ(0, cvtest::norm(mat.getMat(ACCESS_READ), Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
 }
 
 } } // namespace cvtest::ocl

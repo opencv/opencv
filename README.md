@@ -1,7 +1,5 @@
 ### OpenCV: Open Source Computer Vision Library
 
-[![Gittip](http://img.shields.io/gittip/OpenCV.png)](https://www.gittip.com/OpenCV/)
-
 #### Resources
 
 * Homepage: <http://opencv.org>

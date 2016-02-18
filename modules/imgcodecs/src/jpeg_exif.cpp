@@ -128,6 +128,11 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
 
     size_t count;
 
+    if (m_filename.size() == 0)
+    {
+        return m_exif;
+    }
+
     FILE* f = fopen( m_filename.c_str(), "rb" );
 
     if( !f )
@@ -245,7 +250,10 @@ void ExifReader::parseExif()
  */
 Endianess_t ExifReader::getFormat() const
 {
-    if( m_data[0] != m_data[1] )
+    if (m_data.size() < 1)
+        return NONE;
+
+    if( m_data.size() > 1 && m_data[0] != m_data[1] )
     {
         return NONE;
     }

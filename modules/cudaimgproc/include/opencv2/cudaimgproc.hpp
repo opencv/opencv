@@ -588,6 +588,7 @@ CV_EXPORTS Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, i
 
 //! @} cudaimgproc_feature
 
+
 ///////////////////////////// Mean Shift //////////////////////////////
 
 /** @brief Performs mean-shift filtering for each point of the source image.

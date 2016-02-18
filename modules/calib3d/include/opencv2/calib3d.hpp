@@ -205,7 +205,7 @@ pattern (every view is described by several 3D-2D point correspondences).
     Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
 
     \f[u = f_x (x' + \alpha y') + c_x \\
-    v = f_y yy + c_y\f]
+    v = f_y y' + c_y\f]
 
     @defgroup calib3d_c C API
 

@@ -224,6 +224,9 @@ public:
     CV_WRAP virtual void setTrainTestSplitRatio(double ratio, bool shuffle=true) = 0;
     CV_WRAP virtual void shuffleTrainTest() = 0;
 
+    /** @brief Returns matrix of test samples */
+    CV_WRAP Mat getTestSamples() const;
+
     CV_WRAP static Mat getSubVector(const Mat& vec, const Mat& idx);
 
     /** @brief Reads the dataset from a .csv file and returns the ready-to-use training data.
@@ -719,6 +722,15 @@ public:
     Use StatModel::train to train the model. Since %SVM has several parameters, you may want to
     find the best parameters for your problem, it can be done with SVM::trainAuto. */
     CV_WRAP static Ptr<SVM> create();
+
+    /** @brief Loads and creates a serialized svm from a file
+     *
+     * Use SVM::save to serialize and store an SVM to disk.
+     * Load the SVM from this file again, by calling this function with the path to the file.
+     *
+     * @param filepath path to serialized svm
+     */
+    CV_WRAP static Ptr<SVM> load(const String& filepath);
 };
 
 /****************************************************************************************\
@@ -1389,6 +1401,16 @@ public:
     Note that the train method has optional flags: ANN_MLP::TrainFlags.
      */
     CV_WRAP static Ptr<ANN_MLP> create();
+
+    /** @brief Loads and creates a serialized ANN from a file
+     *
+     * Use ANN::save to serialize and store an ANN to disk.
+     * Load the ANN from this file again, by calling this function with the path to the file.
+     *
+     * @param filepath path to serialized ANN
+     */
+    CV_WRAP static Ptr<ANN_MLP> load(const String& filepath);
+
 };
 
 /****************************************************************************************\
