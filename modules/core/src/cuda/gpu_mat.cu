@@ -71,7 +71,7 @@ namespace
             return NULL;
 #endif
         }
-        __device__ __host__ void free(uchar* ptr)
+        __device__ __host__ void deallocate(uchar* ptr, size_t numBytes)
         {
 #ifndef __CUDA_ARCH__
             CV_CUDEV_SAFE_CALL(cudaFree(ptr));

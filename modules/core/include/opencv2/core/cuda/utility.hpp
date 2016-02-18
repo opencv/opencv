@@ -59,7 +59,7 @@ namespace cv { namespace cuda { namespace device
         typedef uchar value_type;
 
         virtual __device__ __host__ uchar* allocate(size_t numBytes) = 0;
-        virtual __device__ __host__ void free(uchar* ptr) = 0;
+        virtual __device__ __host__ void deallocate(uchar* ptr, size_t numBytes) = 0;
         static ThrustAllocator& getAllocator();
         static void setAllocator(ThrustAllocator* allocator);
     };
