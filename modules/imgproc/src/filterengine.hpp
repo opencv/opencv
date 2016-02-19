@@ -37,6 +37,8 @@ the use of this software, even if advised of the possibility of such damage.
 #ifndef __OPENCV_IMGPROC_FILTERENGINE_HPP__
 #define __OPENCV_IMGPROC_FILTERENGINE_HPP__
 
+#include "opencv2/imgproc.hpp"
+
 namespace cv
 {
 
