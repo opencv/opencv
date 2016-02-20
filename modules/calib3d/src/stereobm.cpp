@@ -385,7 +385,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
         hsad = hsad0 - dy0*ndisp;
         lptr_sub = lptr0 + MIN(MAX(x0, -lofs), width-1-lofs) - dy0*sstep;
         lptr = lptr0 + MIN(MAX(x1, -lofs), width-1-lofs) - dy0*sstep;
-        rptr = rptr0 + MIN(MAX(x1, -rofs), width-1-rofs) - dy0*sstep;
+        rptr = rptr0 + MIN(MAX(x1, -rofs), width1-1) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, cbuf += ndisp, cbuf_sub += ndisp,
              hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
@@ -661,7 +661,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         hsad = hsad0 - dy0*ndisp;
         lptr_sub = lptr0 + MIN(MAX(x0, -lofs), width-1-lofs) - dy0*sstep;
         lptr = lptr0 + MIN(MAX(x1, -lofs), width-1-lofs) - dy0*sstep;
-        rptr = rptr0 + MIN(MAX(x1, -rofs), width-1-rofs) - dy0*sstep;
+        rptr = rptr0 + MIN(MAX(x1, -rofs), width1-1) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, cbuf += ndisp, cbuf_sub += ndisp,
              hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
