@@ -29,12 +29,12 @@
 
 cv::BFileStorage::BFileStorage(const std::string &filename, int flags): _mode(flags)
 {
-    if (flags == Mode::READ)
+    if (flags == BFileStorage::READ)
     {
         _fin.open(filename, std::ios::in | std::ios::binary);
         _status = _fin.is_open();
     }
-    if (flags == Mode::WRITE)
+    if (flags == BFileStorage::WRITE)
     {
         _fout.open(filename, std::ios::out | std::ios::binary);
         _status = _fout.is_open();
@@ -52,8 +52,8 @@ void cv::BFileStorage::release()
 {
     if (!isOpened())
         return;
-    if (_mode == Mode::READ)
+    if (_mode == BFileStorage::READ)
         _fin.close();
-    else if (_mode == Mode::WRITE)
+    else if (_mode == BFileStorage::WRITE)
         _fout.close();
 }

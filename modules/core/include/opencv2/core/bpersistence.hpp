@@ -109,12 +109,12 @@ int main(int , char**)
     string filename = "file.bin";
     B writeExample;
 
-    BFileStorage bfs(filename, BFileStorage::Mode::WRITE);
+    BFileStorage bfs(filename, BFileStorage::WRITE);
     bfs << writeExample;
     bfs.release();
 
     B readExample;
-    BFileStorage bfs2(filename, BFileStorage::Mode::READ);
+    BFileStorage bfs2(filename, BFileStorage::READ);
     bfs2 >> readExample;
     bfs2.release();
 }
@@ -468,7 +468,7 @@ namespace cv
     template<typename _Tp>
     BFileStorage& operator << (BFileStorage& fs, const _Tp& value)
     {
-        if (fs.isOpened() && fs._mode == cv::BFileStorage::Mode::WRITE)
+        if (fs.isOpened() && fs._mode == cv::BFileStorage::WRITE)
             writeB(fs._fout, value);
         return fs;
     }
@@ -476,7 +476,7 @@ namespace cv
     template<typename _Tp>
     BFileStorage& operator >> (BFileStorage& fs, _Tp& value)
     {
-        if (fs.isOpened() && fs._mode == cv::BFileStorage::Mode::READ)
+        if (fs.isOpened() && fs._mode == cv::BFileStorage::READ)
             readB(fs._fin, value);
         return fs;
     }
