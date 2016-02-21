@@ -137,13 +137,13 @@ namespace cv
     {
 
     public:
-        enum class Mode { READ, WRITE };
+        enum Mode { READ, WRITE };
         enum { UNDEFINED = 0, OPENED = 1};
 
         BFileStorage(BFileStorage&)   = delete;
         void operator=(BFileStorage&) = delete;
         virtual ~BFileStorage();
-        BFileStorage(const std::string &filename, Mode flags);
+        BFileStorage(const std::string &filename, int flags);
         bool isOpened();
         void release();
 
@@ -155,7 +155,7 @@ namespace cv
     private:
         std::ifstream _fin;
         std::ofstream _fout;
-        Mode _mode;
+        int _mode;
         int _status;
 
     };
@@ -468,7 +468,7 @@ namespace cv
     template<typename _Tp>
     BFileStorage& operator << (BFileStorage& fs, const _Tp& value)
     {
-        if (fs.isOpened() && fs._mode == BFileStorage::Mode::WRITE)
+        if (fs.isOpened() && fs._mode == cv::BFileStorage::Mode::WRITE)
             writeB(fs._fout, value);
         return fs;
     }
@@ -476,7 +476,7 @@ namespace cv
     template<typename _Tp>
     BFileStorage& operator >> (BFileStorage& fs, _Tp& value)
     {
-        if (fs.isOpened() && fs._mode == BFileStorage::Mode::READ)
+        if (fs.isOpened() && fs._mode == cv::BFileStorage::Mode::READ)
             readB(fs._fin, value);
         return fs;
     }

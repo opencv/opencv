@@ -27,7 +27,7 @@
 
 #include "precomp.hpp"
 
-cv::BFileStorage::BFileStorage(const std::string &filename, Mode flags): _mode(flags)
+cv::BFileStorage::BFileStorage(const std::string &filename, int flags): _mode(flags)
 {
     if (flags == Mode::READ)
     {
