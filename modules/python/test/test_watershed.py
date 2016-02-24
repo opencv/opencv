@@ -1,26 +1,8 @@
 #!/usr/bin/env python
 
 '''
-Watershed segmentation
-=========
-
-This program demonstrates the watershed segmentation algorithm
-in OpenCV: watershed().
-
-Usage
------
-watershed.py [image filename]
-
-Keys
-----
-  1-7   - switch marker color
-  SPACE - update segmentation
-  r     - reset
-  a     - toggle autoupdate
-  ESC   - exit
-
+Watershed segmentation test
 '''
-
 
 # Python 2/3 compatibility
 from __future__ import print_function
@@ -37,14 +19,14 @@ class watershed_test(NewOpenCVTests):
         markers = self.get_sample('cv/watershed/wshed_exp.png', 0)
         refSegments = self.get_sample('cv/watershed/wshed_segments.png')
 
-        if img == None or markers == None:
+        if img is None or markers is None:
             self.assertEqual(0, 1, 'Missing test data')
 
         colors = np.int32( list(np.ndindex(3, 3, 3)) ) * 122
         cv2.watershed(img, np.int32(markers))
         segments = colors[np.maximum(markers, 0)]
 
-        if refSegments == None:
+        if refSegments is None:
             refSegments = segments.copy()
             cv2.imwrite(self.extraTestDataPath + '/cv/watershed/wshed_segments.png', refSegments)
 
