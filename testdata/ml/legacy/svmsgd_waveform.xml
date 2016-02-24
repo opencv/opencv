@@ -3,9 +3,9 @@
 <my_svmsgd type_id="opencv-ml-svmsgd">
   <svmsgdType>ASGD</svmsgdType>
   <marginType>SOFT_MARGIN</marginType>
-  <lambda>9.9999997473787516e-06</lambda>
-  <gamma0>1.0000000149011612e-01</gamma0>
-  <c>7.5000000000000000e-01</c>
+  <marginRegularization>9.9999997473787516e-06</marginRegularization>
+  <initialStepSize>1.0000000149011612e-01</initialStepSize>
+  <stepDecreasingPower>7.5000000000000000e-01</stepDecreasingPower>
   <term_criteria><epsilon>1.0000000000000001e-05</epsilon>
     <iterations>10000</iterations></term_criteria>
   <varCount>21</varCount>
