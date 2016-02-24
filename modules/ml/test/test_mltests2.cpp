@@ -469,9 +469,9 @@ int CV_MLBaseTest::train( int testCaseIdx )
         int marginType = str_to_margin_type( marginTypeStr );
         m->setMarginType(marginType);
 
-        m->setLambda(modelParamsNode["lambda"]);
-        m->setGamma0(modelParamsNode["gamma0"]);
-        m->setC(modelParamsNode["c"]);
+        m->setMarginRegularization(modelParamsNode["marginRegularization"]);
+        m->setInitialStepSize(modelParamsNode["initialStepSize"]);
+        m->setStepDecreasingPower(modelParamsNode["stepDecreasingPower"]);
         m->setTermCriteria(TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10000, 0.00001));
         model = m;
     }
