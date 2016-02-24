@@ -122,6 +122,15 @@ class OpenCVTests(unittest.TestCase):
         """ Compute a hash for an image, useful for image comparisons """
         return hashlib.md5(im.tostring()).digest()
 
+#import new OpenCV tests(do we really need old ones in this case)
+from tests_common import NewOpenCVTests
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+def load_tests(loader, tests, pattern):
+    tests.addTests(loader.discover(basedir, pattern='test_*.py'))
+    return tests
+
 # Tests to run first; check the handful of basic operations that the later tests rely on
 
 class PreliminaryTests(OpenCVTests):
@@ -2239,36 +2248,15 @@ if __name__ == '__main__':
     print "Local repo path:", args.repo
     print "Local data path:", args.data
     OpenCVTests.repoPath = args.repo
-    OpenCVTests.dataPath = args.data
+    NewOpenCVTests.repoPath = args.repo
+    try:
+        OpenCVTests.dataPath = os.environ['OPENCV_TEST_DATA_PATH']
+        NewOpenCVTests.extraTestDataPath = OpenCVTests.dataPath
+    except KeyError:
+        OpenCVTests.dataPath = args.data
+        NewOpenCVTests.extraTestDataPath = args.data
+        if args.data is None:
+            print('Missing opencv extra repository. Some of tests may fail.')
     random.seed(0)
     unit_argv = [sys.argv[0]] + other;
     unittest.main(argv=unit_argv)
-#    optlist, args = getopt.getopt(sys.argv[1:], 'l:rd')
-#    loops = 1
-#    shuffle = 0
-#    doc_frags = False
-#    for o,a in optlist:
-#        if o == '-l':
-#            loops = int(a)
-#        if o == '-r':
-#            shuffle = 1
-#        if o == '-d':
-#            doc_frags = True
-#
-#    cases = [PreliminaryTests, FunctionTests, AreaTests]
-#    if doc_frags:
-#        cases += [DocumentFragmentTests]
-#    everything = [(tc, t) for tc in cases for t in unittest.TestLoader().getTestCaseNames(tc) ]
-#    if len(args) == 0:
-#        # cases = [NewTests]
-#        args = everything
-#    else:
-#        args = [(tc, t) for (tc, t) in everything if t in args]
-#
-#    suite = unittest.TestSuite()
-#    for l in range(loops):
-#        if shuffle:
-#            random.shuffle(args)
-#        for tc,t in args:
-#            suite.addTest(tc(t))
-#	    unittest.TextTestRunner(verbosity=2).run(suite)
