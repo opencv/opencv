@@ -1511,9 +1511,9 @@ The gradient descent show amazing performance for large-scale problems, reducing
 The classifier has 5 parameters. These are
 - model type,
 - margin type,
-- marginRegularization (\f$\lambda\f$),
-- initialStepSize (\f$\gamma_0\f$),
-- stepDecreasingPower (\f$c\f$),
+- margin regularization (\f$\lambda\f$),
+- initial step size (\f$\gamma_0\f$),
+- step decreasing power (\f$c\f$),
 - and termination criteria.
 
 The model type may have one of the following values: \ref SGD and \ref ASGD.
@@ -1538,26 +1538,26 @@ The margin type may have one of the following values: \ref SOFT_MARGIN or \ref H
 - In the general case (if you know nothing about linear separability of your sets), use SOFT_MARGIN.
 
 The other parameters may be described as follows:
-- marginRegularization parameter is responsible for weights decreasing at each step and for the strength of restrictions on outliers
+- Margin regularization parameter is responsible for weights decreasing at each step and for the strength of restrictions on outliers
   (the less the parameter, the less probability that an outlier will be ignored).
   Recommended value for SGD model is 0.0001, for ASGD model is 0.00001.
 
-- initialStepSize parameter is the initial value for the step size \f$\gamma(t)\f$.
+- Initial step size parameter is the initial value for the step size \f$\gamma(t)\f$.
   You will have to find the best \f$\gamma_0\f$ for your problem.
 
-- stepDecreasingPower is the power parameter for \f$\gamma(t)\f$ decreasing by the formula, mentioned above.
+- Step decreasing power is the power parameter for \f$\gamma(t)\f$ decreasing by the formula, mentioned above.
   Recommended value for SGD model is 1, for ASGD model is 0.75.
 
 - Termination criteria can be TermCriteria::COUNT, TermCriteria::EPS or TermCriteria::COUNT + TermCriteria::EPS.
   You will have to find the best termination criteria for your problem.
 
-Note that the parameters marginRegularization, initialStepSize, and stepDecreasingPower should be positive.
+Note that the parameters margin regularization, initial step size, and step decreasing power should be positive.
 
 To use SVMSGD algorithm do as follows:
 
 - first, create the SVMSGD object.
 
-- then set parameters  (model type, margin type, marginRegularization, initialStepSize, stepDecreasingPower) using the functions
+- then set parameters  (model type, margin type, margin regularization, initial step size, step decreasing power) using the functions
   setSvmsgdType(), setMarginType(), setMarginRegularization(), setInitialStepSize(), and setStepDecreasingPower(), or the function setOptimalParameters().
 
 - then the SVM model can be trained using the train features and the correspondent labels by the method train().
@@ -1656,7 +1656,7 @@ public:
     /** @copybrief getMarginRegularization @see getMarginRegularization */
     CV_WRAP virtual void setMarginRegularization(float marginRegularization) = 0;
 
-    /** @brief Parameter \f$\gamma_0\f$ of a %SVMSGD optimization problem. Default value is 0. */
+    /** @brief Parameter initialStepSize of a %SVMSGD optimization problem. Default value is 0. */
     /** @see setInitialStepSize */
     CV_WRAP virtual float getInitialStepSize() const = 0;
     /** @copybrief getInitialStepSize @see getInitialStepSize */
