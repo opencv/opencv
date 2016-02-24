@@ -4709,6 +4709,7 @@ struct IppFilter : public HalFilterImpl
 #else
             kernelBuffer.Alloc(good_kernel_step * kernelSize.height);
             Mat kerFlip(Size(kernelSize.width, kernelSize.height), trait::kernel_type_id, kernelBuffer, (int)good_kernel_step);
+            Mat kernel(Size(kernel_width, kernel_height), trait::kernel_type_id, kernel_data, kernel_step);
             flip(kernel, kerFlip, -1);
             pKerBuffer = kernelBuffer;
 #endif
