@@ -1506,7 +1506,6 @@ public:
 
 SVMSGD provides a fast and easy-to-use implementation of the SVM classifier using the Stochastic Gradient Descent approach,
 as presented in @cite bottou2010large.
-The gradient descent show amazing performance for large-scale problems, reducing the computing time.
 
 The classifier has 5 parameters. These are
 - model type,
