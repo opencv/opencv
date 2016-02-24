@@ -35,8 +35,8 @@ class grabcut_test(NewOpenCVTests):
         exp_mask1 = self.get_sample("cv/grabcut/exp_mask1py.png", 0)
         exp_mask2 = self.get_sample("cv/grabcut/exp_mask2py.png", 0)
 
-        if img == None:
-            self.assertEqual(0, 1, 'Missing test data')
+        if img is None:
+            self.assertTrue(False, 'Missing test data')
 
         rect = (24, 126, 459, 168)
         mask = np.zeros(img.shape[:2], dtype = np.uint8)
@@ -45,10 +45,10 @@ class grabcut_test(NewOpenCVTests):
         cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 0, cv2.GC_INIT_WITH_RECT)
         cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 2, cv2.GC_EVAL)
 
-        if mask_prob == None:
+        if mask_prob is None:
             mask_prob = mask.copy()
             cv2.imwrite(self.extraTestDataPath + '/cv/grabcut/mask_probpy.png', mask_prob)
-        if exp_mask1 == None:
+        if exp_mask1 is None:
             exp_mask1 = self.scaleMask(mask)
             cv2.imwrite(self.extraTestDataPath + '/cv/grabcut/exp_mask1py.png', exp_mask1)
 
@@ -60,7 +60,7 @@ class grabcut_test(NewOpenCVTests):
         cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 0, cv2.GC_INIT_WITH_MASK)
         cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 1, cv2.GC_EVAL)
 
-        if exp_mask2 == None:
+        if exp_mask2 is None:
             exp_mask2 = self.scaleMask(mask)
             cv2.imwrite(self.extraTestDataPath + '/cv/grabcut/exp_mask2py.png', exp_mask2)
 

@@ -136,7 +136,7 @@ if __name__ == '__main__':
     try:
         NewOpenCVTests.extraTestDataPath = os.environ['OPENCV_TEST_DATA_PATH']
     except KeyError:
-        pass
+        print('Missing opencv extra repository. Some of tests may fail.')
     random.seed(0)
     unit_argv = [sys.argv[0]] + other;
     unittest.main(argv=unit_argv)
