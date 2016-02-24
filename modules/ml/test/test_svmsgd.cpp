@@ -200,7 +200,6 @@ void CV_SVMSGDTrainTest::run( int /*start_from*/ )
     }
 
     float err = (float)errCount / testSamplesCount;
-    std::cout << "err " << err << std::endl;
 
     if ( err > precision )
     {

@@ -1511,9 +1511,9 @@ The gradient descent show amazing performance for large-scale problems, reducing
 The classifier has 5 parameters. These are
 - model type,
 - margin type,
-- \f$\lambda\f$ (strength of restrictions on outliers),
-- \f$\gamma_0\f$ (initial step size),
-- \f$c\f$ (power coefficient for decreasing of step size),
+- marginRegularization (\f$\lambda\f$),
+- initialStepSize (\f$\gamma_0\f$),
+- stepDecreasingPower (\f$c\f$),
 - and termination criteria.
 
 The model type may have one of the following values: \ref SGD and \ref ASGD.
@@ -1538,27 +1538,27 @@ The margin type may have one of the following values: \ref SOFT_MARGIN or \ref H
 - In the general case (if you know nothing about linear separability of your sets), use SOFT_MARGIN.
 
 The other parameters may be described as follows:
-- \f$\lambda\f$ parameter is responsible for weights decreasing at each step and for the strength of restrictions on outliers
+- marginRegularization parameter is responsible for weights decreasing at each step and for the strength of restrictions on outliers
   (the less the parameter, the less probability that an outlier will be ignored).
   Recommended value for SGD model is 0.0001, for ASGD model is 0.00001.
 
-- \f$\gamma_0\f$ parameter is the initial value for the step size \f$\gamma(t)\f$.
+- initialStepSize parameter is the initial value for the step size \f$\gamma(t)\f$.
   You will have to find the best \f$\gamma_0\f$ for your problem.
 
-- \f$c\f$ is the power parameter for \f$\gamma(t)\f$ decreasing by the formula, mentioned above.
+- stepDecreasingPower is the power parameter for \f$\gamma(t)\f$ decreasing by the formula, mentioned above.
   Recommended value for SGD model is 1, for ASGD model is 0.75.
 
 - Termination criteria can be TermCriteria::COUNT, TermCriteria::EPS or TermCriteria::COUNT + TermCriteria::EPS.
   You will have to find the best termination criteria for your problem.
 
-Note that the parameters \f$\lambda\f$, \f$\gamma_0\f$, and \f$c\f$ should be positive.
+Note that the parameters marginRegularization, initialStepSize, and stepDecreasingPower should be positive.
 
 To use SVMSGD algorithm do as follows:
 
 - first, create the SVMSGD object.
 
-- then set parameters  (model type, margin type, \f$\lambda\f$, \f$\gamma_0\f$, \f$c\f$) using the functions
-  setSvmsgdType(), setMarginType(), setLambda(), setGamma0(), and setC(), or the function setOptimalParameters().
+- then set parameters  (model type, margin type, marginRegularization, initialStepSize, stepDecreasingPower) using the functions
+  setSvmsgdType(), setMarginType(), setMarginRegularization(), setInitialStepSize(), and setStepDecreasingPower(), or the function setOptimalParameters().
 
 - then the SVM model can be trained using the train features and the correspondent labels by the method train().
 
@@ -1618,16 +1618,16 @@ public:
 
     /** @brief Function sets optimal parameters values for chosen SVM SGD model.
      * If chosen type is ASGD, function sets the following values for parameters of model:
-     * \f$\lambda = 0.00001\f$;
-     * \f$\gamma_0 = 0.05\f$;
-     * \f$c = 0.75\f$;
+     * marginRegularization = 0.00001;
+     * initialStepSize = 0.05;
+     * stepDecreasingPower = 0.75;
      * termCrit.maxCount = 100000;
      * termCrit.epsilon = 0.00001;
      *
      * If SGD:
-     * \f$\lambda = 0.0001\f$;
-     * \f$\gamma_0 = 0.05\f$;
-     * \f$c = 1\f$;
+     * marginRegularization = 0.0001;
+     * initialStepSize = 0.05;
+     * stepDecreasingPower = 1;
      * termCrit.maxCount = 100000;
      * termCrit.epsilon = 0.00001;
      * @param svmsgdType is the type of SVMSGD classifier. Legal values are SvmsgdType::SGD and SvmsgdType::ASGD.
@@ -1650,23 +1650,23 @@ public:
     CV_WRAP virtual void setMarginType(int marginType) = 0;
 
 
-    /** @brief Parameter \f$\lambda\f$ of a %SVMSGD optimization problem. Default value is 0. */
-    /** @see setLambda */
-    CV_WRAP virtual float getLambda() const = 0;
-    /** @copybrief getLambda @see getLambda */
-    CV_WRAP virtual void setLambda(float lambda) = 0;
+    /** @brief Parameter marginRegularization of a %SVMSGD optimization problem. Default value is 0. */
+    /** @see setMarginRegularization */
+    CV_WRAP virtual float getMarginRegularization() const = 0;
+    /** @copybrief getMarginRegularization @see getMarginRegularization */
+    CV_WRAP virtual void setMarginRegularization(float marginRegularization) = 0;
 
     /** @brief Parameter \f$\gamma_0\f$ of a %SVMSGD optimization problem. Default value is 0. */
-    /** @see setGamma0 */
-    CV_WRAP virtual float getGamma0() const = 0;
-    /** @copybrief getGamma0 @see getGamma0 */
-    CV_WRAP virtual void setGamma0(float gamma0) = 0;
+    /** @see setInitialStepSize */
+    CV_WRAP virtual float getInitialStepSize() const = 0;
+    /** @copybrief getInitialStepSize @see getInitialStepSize */
+    CV_WRAP virtual void setInitialStepSize(float InitialStepSize) = 0;
 
-    /** @brief Parameter \f$c\f$ of a %SVMSGD optimization problem. Default value is 0. */
-    /** @see setC */
-    CV_WRAP virtual float getC() const = 0;
-    /** @copybrief getC @see getC */
-    CV_WRAP virtual void setC(float c) = 0;
+    /** @brief Parameter stepDecreasingPower of a %SVMSGD optimization problem. Default value is 0. */
+    /** @see setStepDecreasingPower */
+    CV_WRAP virtual float getStepDecreasingPower() const = 0;
+    /** @copybrief getStepDecreasingPower @see getStepDecreasingPower */
+    CV_WRAP virtual void setStepDecreasingPower(float stepDecreasingPower) = 0;
 
     /** @brief Termination criteria of the training algorithm.
     You can specify the maximum number of iterations (maxCount) and/or how much the error could

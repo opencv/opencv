@@ -91,13 +91,13 @@ public:
 
     CV_IMPL_PROPERTY(int, SvmsgdType, params.svmsgdType)
     CV_IMPL_PROPERTY(int, MarginType, params.marginType)
-    CV_IMPL_PROPERTY(float, Lambda, params.lambda)
-    CV_IMPL_PROPERTY(float, Gamma0, params.gamma0)
-    CV_IMPL_PROPERTY(float, C, params.c)
+    CV_IMPL_PROPERTY(float, MarginRegularization, params.marginRegularization)
+    CV_IMPL_PROPERTY(float, InitialStepSize, params.initialStepSize)
+    CV_IMPL_PROPERTY(float, StepDecreasingPower, params.stepDecreasingPower)
     CV_IMPL_PROPERTY_S(cv::TermCriteria, TermCriteria, params.termCrit)
 
 private:
-    void updateWeights(InputArray sample, bool isPositive, float gamma, Mat &weights);
+    void updateWeights(InputArray sample, bool isPositive, float stepSize, Mat &weights);
 
     std::pair<bool,bool> areClassesEmpty(Mat responses);
 
@@ -122,9 +122,9 @@ private:
     // Parameters for learning
     struct SVMSGDParams
     {
-        float lambda;                             //regularization
-        float gamma0;                             //learning rate
-        float c;
+        float marginRegularization;
+        float initialStepSize;
+        float stepDecreasingPower;
         TermCriteria termCrit;
         int svmsgdType;
         int marginType;
@@ -166,8 +166,7 @@ void SVMSGDImpl::normalizeSamples(Mat &samples, Mat &average, float &multiplier)
     average = Mat(1, featuresCount, samples.type());
     for (int featureIndex = 0; featureIndex < featuresCount; featureIndex++)
     {
-        Scalar scalAverage = mean(samples.col(featureIndex));
-        average.at<float>(featureIndex) = static_cast<float>(scalAverage[0]);
+        average.at<float>(featureIndex) = static_cast<float>(mean(samples.col(featureIndex))[0]);
     }
 
     for (int sampleIndex = 0; sampleIndex < samplesCount; sampleIndex++)
@@ -193,7 +192,7 @@ void SVMSGDImpl::makeExtendedTrainSamples(const Mat &trainSamples, Mat &extended
     cv::hconcat(normalizedTrainSamples, onesCol, extendedTrainSamples);
 }
 
-void SVMSGDImpl::updateWeights(InputArray _sample, bool firstClass, float gamma, Mat& weights)
+void SVMSGDImpl::updateWeights(InputArray _sample, bool firstClass, float stepSize, Mat& weights)
 {
     Mat sample = _sample.getMat();
 
@@ -202,18 +201,18 @@ void SVMSGDImpl::updateWeights(InputArray _sample, bool firstClass, float gamma,
     if ( sample.dot(weights) * response > 1)
     {
         // Not a support vector, only apply weight decay
-        weights *= (1.f - gamma * params.lambda);
+        weights *= (1.f - stepSize * params.marginRegularization);
     }
     else
     {
         // It's a support vector, add it to the weights
-        weights -= (gamma * params.lambda) * weights - (gamma * response) * sample;
+        weights -= (stepSize * params.marginRegularization) * weights - (stepSize * response) * sample;
     }
 }
 
 float SVMSGDImpl::calcShift(InputArray _samples, InputArray _responses) const
 {
-    float distanceToClasses[2] = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+    float margin[2] = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
 
     Mat trainSamples = _samples.getMat();
     int trainSamplesCount = trainSamples.rows;
@@ -225,18 +224,18 @@ float SVMSGDImpl::calcShift(InputArray _samples, InputArray _responses) const
         Mat currentSample = trainSamples.row(samplesIndex);
         float dotProduct = static_cast<float>(currentSample.dot(weights_));
 
-        bool firstClass = isPositive(trainResponses.at<float>(samplesIndex));
-        int index = firstClass ? 0 : 1;
-        float signToMul = firstClass ? 1.f : -1.f;
-        float curDistance = dotProduct * signToMul;
+        bool positive = isPositive(trainResponses.at<float>(samplesIndex));
+        int index = positive ? 0 : 1;
+        float signToMul = positive ? 1.f : -1.f;
+        float curMargin = dotProduct * signToMul;
 
-        if (curDistance < distanceToClasses[index])
+        if (curMargin < margin[index])
         {
-            distanceToClasses[index] = curDistance;
+            margin[index] = curMargin;
         }
     }
 
-    return -(distanceToClasses[0] - distanceToClasses[1]) / 2.f;
+    return -(margin[0] - margin[1]) / 2.f;
 }
 
 bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
@@ -292,9 +291,9 @@ bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
 
         Mat currentSample = extendedTrainSamples.row(randomNumber);
 
-        float gamma = params.gamma0 * std::pow((1 + params.lambda * params.gamma0 * (float)iter), (-params.c));    //update gamma
+        float stepSize = params.initialStepSize * std::pow((1 + params.marginRegularization * params.initialStepSize * (float)iter), (-params.stepDecreasingPower));    //update stepSize
 
-        updateWeights( currentSample, isPositive(trainResponses.at<float>(randomNumber)), gamma, extendedWeights );
+        updateWeights( currentSample, isPositive(trainResponses.at<float>(randomNumber)), stepSize, extendedWeights );
 
         //average weights (only for ASGD model)
         if (params.svmsgdType == ASGD)
@@ -370,7 +369,7 @@ bool SVMSGDImpl::isClassifier() const
             &&
             (params.marginType == SOFT_MARGIN || params.marginType == HARD_MARGIN)
             &&
-            (params.lambda > 0) && (params.gamma0 > 0) && (params.c >= 0);
+            (params.marginRegularization > 0) && (params.initialStepSize > 0) && (params.stepDecreasingPower >= 0);
 }
 
 bool SVMSGDImpl::isTrained() const
@@ -423,9 +422,9 @@ void SVMSGDImpl::writeParams( FileStorage& fs ) const
 
     fs << "marginType" << marginTypeStr;
 
-    fs << "lambda" << params.lambda;
-    fs << "gamma0" << params.gamma0;
-    fs << "c" << params.c;
+    fs << "marginRegularization" << params.marginRegularization;
+    fs << "initialStepSize" << params.initialStepSize;
+    fs << "stepDecreasingPower" << params.stepDecreasingPower;
 
     fs << "term_criteria" << "{:";
     if( params.termCrit.type & TermCriteria::EPS )
@@ -467,14 +466,14 @@ void SVMSGDImpl::readParams( const FileNode& fn )
 
     params.marginType = marginType;
 
-    CV_Assert ( fn["lambda"].isReal() );
-    params.lambda = (float)fn["lambda"];
+    CV_Assert ( fn["marginRegularization"].isReal() );
+    params.marginRegularization = (float)fn["marginRegularization"];
 
-    CV_Assert ( fn["gamma0"].isReal() );
-    params.gamma0 = (float)fn["gamma0"];
+    CV_Assert ( fn["initialStepSize"].isReal() );
+    params.initialStepSize = (float)fn["initialStepSize"];
 
-    CV_Assert ( fn["c"].isReal() );
-    params.c = (float)fn["c"];
+    CV_Assert ( fn["stepDecreasingPower"].isReal() );
+    params.stepDecreasingPower = (float)fn["stepDecreasingPower"];
 
     FileNode tcnode = fn["term_criteria"];
     if( !tcnode.empty() )
@@ -504,9 +503,9 @@ SVMSGDImpl::SVMSGDImpl()
     params.marginType = -1;
 
     // Parameters for learning
-    params.lambda = 0;                              // regularization
-    params.gamma0 = 0;                        // learning rate (ideally should be large at beginning and decay each iteration)
-    params.c = 0;
+    params.marginRegularization = 0;                              // regularization
+    params.initialStepSize = 0;                        // learning rate (ideally should be large at beginning and decay each iteration)
+    params.stepDecreasingPower = 0;
 
     TermCriteria _termCrit(TermCriteria::COUNT + TermCriteria::EPS, 0, 0);
     params.termCrit = _termCrit;
@@ -520,9 +519,9 @@ void SVMSGDImpl::setOptimalParameters(int svmsgdType, int marginType)
         params.svmsgdType = SGD;
         params.marginType = (marginType == SOFT_MARGIN) ? SOFT_MARGIN :
                             (marginType == HARD_MARGIN) ? HARD_MARGIN : -1;
-        params.lambda = 0.0001f;
-        params.gamma0 = 0.05f;
-        params.c = 1.f;
+        params.marginRegularization = 0.0001f;
+        params.initialStepSize = 0.05f;
+        params.stepDecreasingPower = 1.f;
         params.termCrit = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100000, 0.00001);
         break;
 
@@ -530,9 +529,9 @@ void SVMSGDImpl::setOptimalParameters(int svmsgdType, int marginType)
         params.svmsgdType = ASGD;
         params.marginType = (marginType == SOFT_MARGIN) ? SOFT_MARGIN :
                             (marginType == HARD_MARGIN) ? HARD_MARGIN : -1;
-        params.lambda = 0.00001f;
-        params.gamma0 = 0.05f;
-        params.c = 0.75f;
+        params.marginRegularization = 0.00001f;
+        params.initialStepSize = 0.05f;
+        params.stepDecreasingPower = 0.75f;
         params.termCrit = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100000, 0.00001);
         break;
 
