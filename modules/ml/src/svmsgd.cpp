@@ -142,6 +142,7 @@ void SVMSGDImpl::normalizeSamples(Mat &samples, Mat &average, float &multiplier)
     int samplesCount = samples.rows;
 
     average = Mat(1, featuresCount, samples.type());
+    CV_Assert(average.type() ==  CV_32FC1);
     for (int featureIndex = 0; featureIndex < featuresCount; featureIndex++)
     {
         average.at<float>(featureIndex) = static_cast<float>(mean(samples.col(featureIndex))[0]);
@@ -170,11 +171,11 @@ void SVMSGDImpl::makeExtendedTrainSamples(const Mat &trainSamples, Mat &extended
     cv::hconcat(normalizedTrainSamples, onesCol, extendedTrainSamples);
 }
 
-void SVMSGDImpl::updateWeights(InputArray _sample, bool firstClass, float stepSize, Mat& weights)
+void SVMSGDImpl::updateWeights(InputArray _sample, bool positive, float stepSize, Mat& weights)
 {
     Mat sample = _sample.getMat();
 
-    int response = firstClass ? 1 : -1; // ensure that trainResponses are -1 or 1
+    int response = positive ? 1 : -1; // ensure that trainResponses are -1 or 1
 
     if ( sample.dot(weights) * response > 1)
     {
@@ -197,6 +198,7 @@ float SVMSGDImpl::calcShift(InputArray _samples, InputArray _responses) const
 
     Mat trainResponses = _responses.getMat();
 
+    CV_Assert(trainResponses.type() ==  CV_32FC1);
     for (int samplesIndex = 0; samplesIndex < trainSamplesCount; samplesIndex++)
     {
         Mat currentSample = trainSamples.row(samplesIndex);
@@ -261,7 +263,7 @@ bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
 
     RNG rng(0);
 
-    CV_Assert (params.termCrit.type & TermCriteria::COUNT || params.termCrit.type & TermCriteria::EPS);
+    CV_Assert ((params.termCrit.type & TermCriteria::COUNT || params.termCrit.type & TermCriteria::EPS) && (trainResponses.type() == CV_32FC1));
     int maxCount = (params.termCrit.type & TermCriteria::COUNT) ? params.termCrit.maxCount : INT_MAX;
     double epsilon = (params.termCrit.type & TermCriteria::EPS) ? params.termCrit.epsilon : 0;
 
@@ -300,7 +302,7 @@ bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
     weights_ = extendedWeights(roi);
     weights_ *= multiplier;
 
-    CV_Assert(params.marginType == SOFT_MARGIN || params.marginType == HARD_MARGIN);
+    CV_Assert((params.marginType == SOFT_MARGIN || params.marginType == HARD_MARGIN) && (extendedWeights.type() ==  CV_32FC1));
 
     if (params.marginType == SOFT_MARGIN)
     {
@@ -332,7 +334,7 @@ float SVMSGDImpl::predict( InputArray _samples, OutputArray _results, int ) cons
     else
     {
         CV_Assert( nSamples == 1 );
-        results = Mat(1, 1, CV_32F, &result);
+        results = Mat(1, 1, CV_32FC1, &result);
     }
 
     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
