@@ -182,8 +182,6 @@ void CV_SVMSGDTrainTest::run( int /*start_from*/ )
 {
     cv::Ptr<SVMSGD> svmsgd = SVMSGD::create();
 
-    svmsgd->setOptimalParameters();
-
     svmsgd->train(data);
 
     Mat responses;

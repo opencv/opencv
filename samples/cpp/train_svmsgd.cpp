@@ -46,7 +46,6 @@ void addPointRetrainAndRedraw(Data &data, int x, int y, int response);
 bool doTrain( const Mat samples, const Mat responses, Mat &weights, float &shift)
 {
     cv::Ptr<SVMSGD> svmsgd = SVMSGD::create();
-    svmsgd->setOptimalParameters();
 
     cv::Ptr<TrainData> trainData = TrainData::create(samples, cv::ml::ROW_SAMPLE, responses);
     svmsgd->train( trainData );
