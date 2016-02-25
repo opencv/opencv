@@ -1507,7 +1507,7 @@ public:
 SVMSGD provides a fast and easy-to-use implementation of the SVM classifier using the Stochastic Gradient Descent approach,
 as presented in @cite bottou2010large.
 
-The classifier has 5 parameters. These are
+The classifier has following parameters:
 - model type,
 - margin type,
 - margin regularization (\f$\lambda\f$),
@@ -1567,11 +1567,8 @@ To use SVMSGD algorithm do as follows:
 // Create empty object
 cv::Ptr<SVMSGD> svmsgd = SVMSGD::create();
 
-// Set parameters
-svmsgd->setOptimalParameters();
-
 // Train the Stochastic Gradient Descent SVM
-SvmSgd->train(trainData);
+svmsgd->train(trainData);
 
 // Predict labels for the new samples
 svmsgd->predict(samples, responses);
