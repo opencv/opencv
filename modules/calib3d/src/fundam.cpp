@@ -411,7 +411,13 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             tempMask.copyTo(_mask);
     }
     else
+    {
         H.release();
+        if(_mask.needed() ) {
+            tempMask = Mat::zeros(npoints >= 0 ? npoints : 0, 1, CV_8U);
+            tempMask.copyTo(_mask);
+        }
+    }
 
     return H;
 }
