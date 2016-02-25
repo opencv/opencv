@@ -49,6 +49,10 @@
 #  error utility.hpp header must be compiled as C++
 #endif
 
+#if defined(check)
+#  warning Detected Apple 'check' macro definition, it can cause build conflicts. Please, include this header before any Apple headers.
+#endif
+
 #include "opencv2/core.hpp"
 
 namespace cv
