@@ -497,7 +497,6 @@ namespace colormap
         if(_lut.total() != 256)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
         Mat src = _src.getMat();
-        // Return original matrix if wrong type is given (is fail loud better here?)
         if(src.type() != CV_8UC1  &&  src.type() != CV_8UC3)
             CV_Error(Error::StsBadArg, "cv::ColorMap only supports source images of type CV_8UC1 or CV_8UC3");
         // Turn into a BGR matrix into its grayscale representation.
