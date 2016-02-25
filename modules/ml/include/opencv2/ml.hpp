@@ -1626,10 +1626,10 @@ public:
      * stepDecreasingPower = 1;
      * termCrit.maxCount = 100000;
      * termCrit.epsilon = 0.00001;
-     * @param svmsgdType is the type of SVMSGD classifier. Legal values are SvmsgdType::SGD and SvmsgdType::ASGD.
-     * Recommended value is SvmsgdType::ASGD (by default).
-     * @param marginType is the type of margin constraint. Legal values are MarginType::SOFT_MARGIN and MarginType::HARD_MARGIN.
-     * Default value is MarginType::SOFT_MARGIN.
+     * @param svmsgdType is the type of SVMSGD classifier. Legal values are SVMSGD::SvmsgdType::SGD and SVMSGD::SvmsgdType::ASGD.
+     * Recommended value is SVMSGD::SvmsgdType::ASGD (by default).
+     * @param marginType is the type of margin constraint. Legal values are SVMSGD::MarginType::SOFT_MARGIN and SVMSGD::MarginType::HARD_MARGIN.
+     * Default value is SVMSGD::MarginType::SOFT_MARGIN.
     */
     CV_WRAP virtual void setOptimalParameters(int svmsgdType = SVMSGD::ASGD, int marginType = SVMSGD::SOFT_MARGIN) = 0;
 

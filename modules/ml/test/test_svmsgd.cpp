@@ -62,8 +62,7 @@ public:
 private:
     virtual void run( int start_from );
     static float decisionFunction(const Mat &sample, const Mat &weights, float shift);
-    void makeTrainData(Mat weights, float shift);
-    void makeTestData(Mat weights, float shift);
+    void makeData(int samplesCount, Mat weights, float shift, RNG rng, Mat &samples, Mat & responses);
     void generateSameBorders(int featureCount);
     void generateDifferentBorders(int featureCount);
 
@@ -108,46 +107,28 @@ void CV_SVMSGDTrainTest::generateDifferentBorders(int featureCount)
     }
 }
 
-void CV_SVMSGDTrainTest::makeTrainData(Mat weights, float shift)
+float CV_SVMSGDTrainTest::decisionFunction(const Mat &sample, const Mat &weights, float shift)
 {
-    int datasize = 100000;
+    return static_cast<float>(sample.dot(weights)) + shift;
+}
+
+void CV_SVMSGDTrainTest::makeData(int samplesCount, Mat weights, float shift, RNG rng, Mat &samples, Mat & responses)
+{
     int featureCount = weights.cols;
-    RNG rng(0);
 
-    cv::Mat samples = cv::Mat::zeros(datasize, featureCount, CV_32FC1);
-
+    samples.create(samplesCount, featureCount, CV_32FC1);
     for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
     {
         rng.fill(samples.col(featureIndex), RNG::UNIFORM, borders[featureIndex].first, borders[featureIndex].second);
     }
 
-    cv::Mat responses = cv::Mat::zeros(datasize, 1, CV_32FC1);
-    for (int sampleIndex = 0; sampleIndex < datasize; sampleIndex++)
+    responses.create(samplesCount, 1, CV_32FC1);
+
+    for (int i = 0 ; i < samplesCount; i++)
     {
-        responses.at<float>(sampleIndex) = decisionFunction(samples.row(sampleIndex), weights, shift) > 0 ? 1.f : -1.f;
+        responses.at<float>(i) = decisionFunction(samples.row(i), weights, shift) > 0 ? 1.f : -1.f;
     }
 
-    data = TrainData::create(samples, cv::ml::ROW_SAMPLE, responses);
-}
-
-void CV_SVMSGDTrainTest::makeTestData(Mat weights, float shift)
-{
-    int testSamplesCount = 100000;
-    int featureCount = weights.cols;
-    cv::RNG rng(42);
-
-    testSamples.create(testSamplesCount, featureCount, CV_32FC1);
-    for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
-    {
-        rng.fill(testSamples.col(featureIndex), RNG::UNIFORM, borders[featureIndex].first, borders[featureIndex].second);
-    }
-
-    testResponses.create(testSamplesCount, 1, CV_32FC1);
-
-    for (int i = 0 ; i < testSamplesCount; i++)
-    {
-        testResponses.at<float>(i) = decisionFunction(testSamples.row(i), weights, shift) > 0 ? 1.f : -1.f;
-    }
 }
 
 CV_SVMSGDTrainTest::CV_SVMSGDTrainTest(const Mat &weights, float shift, TrainDataType _type, double _precision)
@@ -169,13 +150,16 @@ CV_SVMSGDTrainTest::CV_SVMSGDTrainTest(const Mat &weights, float shift, TrainDat
         CV_Error(CV_StsBadArg, "Unknown train data type");
     }
 
-    makeTrainData(weights, shift);
-    makeTestData(weights, shift);
-}
+    RNG rng(0);
 
-float CV_SVMSGDTrainTest::decisionFunction(const Mat &sample, const Mat &weights, float shift)
-{
-    return static_cast<float>(sample.dot(weights)) + shift;
+    Mat trainSamples;
+    Mat trainResponses;
+    int trainSamplesCount = 10000;
+    makeData(trainSamplesCount, weights, shift, rng, trainSamples, trainResponses);
+    data = TrainData::create(trainSamples, cv::ml::ROW_SAMPLE, trainResponses);
+
+    int testSamplesCount = 100000;
+    makeData(testSamplesCount, weights, shift, rng, testSamples, testResponses);
 }
 
 void CV_SVMSGDTrainTest::run( int /*start_from*/ )
@@ -204,7 +188,6 @@ void CV_SVMSGDTrainTest::run( int /*start_from*/ )
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
     }
 }
-
 
 void makeWeightsAndShift(int featureCount, Mat &weights, float &shift)
 {
@@ -253,7 +236,7 @@ TEST(ML_SVMSGD, trainSameScale100)
     float shift = 0;
     makeWeightsAndShift(featureCount, weights, shift);
 
-    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_SAME_SCALE);
+    CV_SVMSGDTrainTest test(weights, shift, CV_SVMSGDTrainTest::UNIFORM_SAME_SCALE, 0.02);
     test.safe_run();
 }
 
