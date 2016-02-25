@@ -62,7 +62,7 @@ public:
 private:
     virtual void run( int start_from );
     static float decisionFunction(const Mat &sample, const Mat &weights, float shift);
-    void makeData(int samplesCount, Mat weights, float shift, RNG rng, Mat &samples, Mat & responses);
+    void makeData(int samplesCount, const Mat &weights, float shift, RNG &rng, Mat &samples, Mat & responses);
     void generateSameBorders(int featureCount);
     void generateDifferentBorders(int featureCount);
 
@@ -112,7 +112,7 @@ float CV_SVMSGDTrainTest::decisionFunction(const Mat &sample, const Mat &weights
     return static_cast<float>(sample.dot(weights)) + shift;
 }
 
-void CV_SVMSGDTrainTest::makeData(int samplesCount, Mat weights, float shift, RNG rng, Mat &samples, Mat & responses)
+void CV_SVMSGDTrainTest::makeData(int samplesCount, const Mat &weights, float shift, RNG &rng, Mat &samples, Mat & responses)
 {
     int featureCount = weights.cols;
 
@@ -175,6 +175,7 @@ void CV_SVMSGDTrainTest::run( int /*start_from*/ )
     int errCount = 0;
     int testSamplesCount = testSamples.rows;
 
+    CV_Assert((responses.type() == CV_32FC1) && (testResponses.type() == CV_32FC1));
     for (int i = 0; i < testSamplesCount; i++)
     {
         if (responses.at<float>(i) * testResponses.at<float>(i) < 0)

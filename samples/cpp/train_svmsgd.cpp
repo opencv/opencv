@@ -91,6 +91,7 @@ bool findCrossPointWithBorders(const Mat &weights, float shift, const std::pair<
     int yMin = std::min(segment.first.y, segment.second.y);
     int yMax = std::max(segment.first.y, segment.second.y);
 
+    CV_Assert(weights.type() == CV_32FC1);
     CV_Assert(xMin == xMax || yMin == yMax);
 
     if (xMin == xMax && weights.at<float>(1) != 0)
@@ -146,6 +147,7 @@ void redraw(Data data, const Point points[2])
     Point center;
     int radius = 3;
     Scalar color;
+    CV_Assert((data.samples.type() == CV_32FC1) && (data.responses.type() == CV_32FC1));
     for (int i = 0; i < data.samples.rows; i++)
     {
         center.x = static_cast<int>(data.samples.at<float>(i,0));
@@ -160,14 +162,14 @@ void redraw(Data data, const Point points[2])
 
 void addPointRetrainAndRedraw(Data &data, int x, int y, int response)
 {
-    Mat currentSample(1, 2, CV_32F);
+    Mat currentSample(1, 2, CV_32FC1);
 
     currentSample.at<float>(0,0) = (float)x;
     currentSample.at<float>(0,1) = (float)y;
     data.samples.push_back(currentSample);
     data.responses.push_back(response);
 
-    Mat weights(1, 2, CV_32F);
+    Mat weights(1, 2, CV_32FC1);
     float shift = 0;
 
     if (doTrain(data.samples, data.responses, weights, shift))
