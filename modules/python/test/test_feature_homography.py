@@ -43,7 +43,7 @@ class feature_homography_test(NewOpenCVTests):
     def test_feature_homography(self):
 
         self.render = TestSceneRender(self.get_sample('samples/data/graf1.png'),
-            self.get_sample('samples/data/box.png'), noise = 0.5, speed = 0.5)
+            self.get_sample('samples/data/box.png'), noise = 0.4, speed = 0.5)
         self.frame = self.render.getNextFrame()
         self.tracker = PlaneTracker()
         self.tracker.clear()

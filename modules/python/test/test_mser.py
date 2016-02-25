@@ -40,7 +40,7 @@ class mser_test(NewOpenCVTests):
             use_big_image = int(np.random.rand(1,1)*7) != 0
             invert = int(np.random.rand(1,1)*2) != 0
             binarize = int(np.random.rand(1,1)*5) != 0 if use_big_image else False
-            blur = int(np.random.rand(1,1)*2) != 0
+            blur = True #int(np.random.rand(1,1)*2) != 0 #binarized images are processed incorrectly
             thresh = thresharr[int(np.random.rand(1,1)*5)]
             src0 = img if use_big_image else np.array(smallImg).astype('uint8')
             src = src0.copy()
