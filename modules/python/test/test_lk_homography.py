@@ -44,8 +44,8 @@ class lk_homography_test(NewOpenCVTests):
     numFeaturesInRectOnStart = 0
 
     def test_lk_homography(self):
-        self.render = TestSceneRender(self.get_sample('samples/data/graf1.png'),
-            self.get_sample('samples/data/box.png'), noise = 0.1, speed = 1.0)
+        self.render = TestSceneRender(self.get_sample('samples/python2/data/graf1.png'),
+            self.get_sample('samples/c/box.png'), noise = 0.1, speed = 1.0)
 
         frame = self.render.getNextFrame()
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

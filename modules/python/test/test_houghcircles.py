@@ -39,7 +39,7 @@ class houghcircles_test(NewOpenCVTests):
 
     def test_houghcircles(self):
 
-        fn = "samples/data/board.jpg"
+        fn = "samples/cpp/board.jpg"
 
         src = self.get_sample(fn, 1)
         img = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)

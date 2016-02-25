@@ -39,7 +39,7 @@ class camshift_test(NewOpenCVTests):
 
     def prepareRender(self):
 
-        self.render = TestSceneRender(self.get_sample('samples/data/pca_test1.jpg'), deformation = True)
+        self.render = TestSceneRender(self.get_sample('samples/python2/data/pca_test1.jpg'), deformation = True)
 
     def runTracker(self):
 

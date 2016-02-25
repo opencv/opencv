@@ -31,7 +31,7 @@ class facedetect_test(NewOpenCVTests):
         cascade = cv2.CascadeClassifier(cascade_fn)
         nested = cv2.CascadeClassifier(nested_fn)
 
-        samples = ['samples/data/lena.jpg', 'cv/cascadeandhog/images/mona-lisa.png']
+        samples = ['samples/c/lena.jpg', 'cv/cascadeandhog/images/mona-lisa.png']
 
         faces = []
         eyes = []

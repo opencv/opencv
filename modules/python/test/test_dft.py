@@ -16,7 +16,7 @@ from tests_common import NewOpenCVTests
 class dft_test(NewOpenCVTests):
     def test_dft(self):
 
-        img = self.get_sample('samples/data/rubberwhale1.png', 0)
+        img = self.get_sample('samples/gpu/rubberwhale1.png', 0)
         eps = 0.001
 
         #test direct transform
