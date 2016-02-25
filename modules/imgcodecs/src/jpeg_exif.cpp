@@ -170,6 +170,7 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
             case APP1: //actual Exif Marker
                 exifSize = getFieldSize(f);
                 if (exifSize <= offsetToTiffHeader) {
+                    fclose(f);
                     throw ExifParsingError();
                 }
                 m_data.resize( exifSize - offsetToTiffHeader );
