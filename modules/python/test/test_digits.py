@@ -36,7 +36,7 @@ from numpy.linalg import norm
 
 SZ = 20 # size of each digit is SZ x SZ
 CLASS_N = 10
-DIGITS_FN = 'samples/data/digits.png'
+DIGITS_FN = 'samples/python2/data/digits.png'
 
 def split2d(img, cell_size, flatten=True):
     h, w = img.shape[:2]

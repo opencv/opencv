@@ -21,7 +21,7 @@ class texture_flow_test(NewOpenCVTests):
 
     def test_texture_flow(self):
 
-        img = self.get_sample('samples/data/pic6.png')
+        img = self.get_sample('samples/cpp/pic6.png')
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         h, w = img.shape[:2]

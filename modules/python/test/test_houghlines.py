@@ -26,7 +26,7 @@ class houghlines_test(NewOpenCVTests):
 
     def test_houghlines(self):
 
-        fn = "/samples/data/pic1.png"
+        fn = "/samples/cpp/pic1.png"
 
         src = self.get_sample(fn)
         dst = cv2.Canny(src, 50, 200)

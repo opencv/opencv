@@ -18,7 +18,7 @@ class morphology_test(NewOpenCVTests):
 
     def test_morphology(self):
 
-        fn = 'samples/data/rubberwhale1.png'
+        fn = 'samples/gpu/rubberwhale1.png'
         img = self.get_sample(fn)
 
         modes = ['erode/dilate', 'open/close', 'blackhat/tophat', 'gradient']

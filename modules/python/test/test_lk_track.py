@@ -50,7 +50,7 @@ class lk_track_test(NewOpenCVTests):
 
     def test_lk_track(self):
 
-        self.render = TestSceneRender(self.get_sample('samples/data/graf1.png'), self.get_sample('samples/data/box.png'))
+        self.render = TestSceneRender(self.get_sample('samples/python2/data/graf1.png'), self.get_sample('samples/c/box.png'))
         self.runTracker()
 
     def runTracker(self):

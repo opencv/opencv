@@ -150,7 +150,7 @@ class letter_recog_test(NewOpenCVTests):
             Model = models[model]
             classifier = Model()
 
-            samples, responses = load_base(self.repoPath + '/samples/data/letter-recognition.data')
+            samples, responses = load_base(self.repoPath + '/samples/cpp/letter-recognition.data')
             train_n = int(len(samples)*classifier.train_ratio)
 
             classifier.train(samples[:train_n], responses[:train_n])
