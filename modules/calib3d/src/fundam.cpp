@@ -405,14 +405,14 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
         }
     }
 
-    if( result )
+    //Copy empty to mask even if H is empty.
+    if ( _mask.needed() )
+    	tempMask.copyTo(_mask);
+    if ( !result )
     {
-        if( _mask.needed() )
-            tempMask.copyTo(_mask);
+    	H.release();
+	_mask.clear();
     }
-    else
-        H.release();
-
     return H;
 }
 
