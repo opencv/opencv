@@ -1542,7 +1542,7 @@ The other parameters may be described as follows:
   Recommended value for SGD model is 0.0001, for ASGD model is 0.00001.
 
 - Initial step size parameter is the initial value for the step size \f$\gamma(t)\f$.
-  You will have to find the best \f$\gamma_0\f$ for your problem.
+  You will have to find the best initial step for your problem.
 
 - Step decreasing power is the power parameter for \f$\gamma(t)\f$ decreasing by the formula, mentioned above.
   Recommended value for SGD model is 1, for ASGD model is 0.75.
@@ -1605,31 +1605,15 @@ public:
     */
     CV_WRAP virtual float getShift() = 0;
 
-
     /** @brief Creates empty model.
-        Use StatModel::train to train the model. Since %SVMSGD has several parameters, you may want to
-        find the best parameters for your problem or use setOptimalParameters() to set some default parameters.
+     * Use StatModel::train to train the model. Since %SVMSGD has several parameters, you may want to
+     * find the best parameters for your problem or use setOptimalParameters() to set some default parameters.
     */
     CV_WRAP static Ptr<SVMSGD> create();
 
     /** @brief Function sets optimal parameters values for chosen SVM SGD model.
-     * If chosen type is ASGD, function sets the following values for parameters of model:
-     * marginRegularization = 0.00001;
-     * initialStepSize = 0.05;
-     * stepDecreasingPower = 0.75;
-     * termCrit.maxCount = 100000;
-     * termCrit.epsilon = 0.00001;
-     *
-     * If SGD:
-     * marginRegularization = 0.0001;
-     * initialStepSize = 0.05;
-     * stepDecreasingPower = 1;
-     * termCrit.maxCount = 100000;
-     * termCrit.epsilon = 0.00001;
-     * @param svmsgdType is the type of SVMSGD classifier. Legal values are SVMSGD::SvmsgdType::SGD and SVMSGD::SvmsgdType::ASGD.
-     * Recommended value is SVMSGD::SvmsgdType::ASGD (by default).
-     * @param marginType is the type of margin constraint. Legal values are SVMSGD::MarginType::SOFT_MARGIN and SVMSGD::MarginType::HARD_MARGIN.
-     * Default value is SVMSGD::MarginType::SOFT_MARGIN.
+     * @param svmsgdType is the type of SVMSGD classifier.
+     * @param marginType is the type of margin constraint.
     */
     CV_WRAP virtual void setOptimalParameters(int svmsgdType = SVMSGD::ASGD, int marginType = SVMSGD::SOFT_MARGIN) = 0;
 
@@ -1645,20 +1629,19 @@ public:
     /** @copybrief getMarginType @see getMarginType */
     CV_WRAP virtual void setMarginType(int marginType) = 0;
 
-
-    /** @brief Parameter marginRegularization of a %SVMSGD optimization problem. Default value is 0. */
+    /** @brief Parameter marginRegularization of a %SVMSGD optimization problem. */
     /** @see setMarginRegularization */
     CV_WRAP virtual float getMarginRegularization() const = 0;
     /** @copybrief getMarginRegularization @see getMarginRegularization */
     CV_WRAP virtual void setMarginRegularization(float marginRegularization) = 0;
 
-    /** @brief Parameter initialStepSize of a %SVMSGD optimization problem. Default value is 0. */
+    /** @brief Parameter initialStepSize of a %SVMSGD optimization problem. */
     /** @see setInitialStepSize */
     CV_WRAP virtual float getInitialStepSize() const = 0;
     /** @copybrief getInitialStepSize @see getInitialStepSize */
     CV_WRAP virtual void setInitialStepSize(float InitialStepSize) = 0;
 
-    /** @brief Parameter stepDecreasingPower of a %SVMSGD optimization problem. Default value is 0. */
+    /** @brief Parameter stepDecreasingPower of a %SVMSGD optimization problem. */
     /** @see setStepDecreasingPower */
     CV_WRAP virtual float getStepDecreasingPower() const = 0;
     /** @copybrief getStepDecreasingPower @see getStepDecreasingPower */
