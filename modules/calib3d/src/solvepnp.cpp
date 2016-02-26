@@ -173,10 +173,94 @@ public:
         return correspondence;
     }
 
+<<<<<<< HEAD
     /* Pre: True */
     /* Post: fill _err with projection errors */
     void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
     {
+=======
+        struct Parameters
+        {
+            int iterationsCount;
+            float reprojectionError;
+            int minInliersCount;
+            bool useExtrinsicGuess;
+            int flags;
+            CameraParameters camera;
+        };
+
+        template <typename OpointType, typename IpointType>
+        static void pnpTask(const int curIndex, const vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
+                     const Parameters& params, vector<int>& inliers, int& bestIndex, Mat& rvec, Mat& tvec,
+                     const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
+        {
+            Mat modelObjectPoints(1, MIN_POINTS_COUNT, CV_MAKETYPE(DataDepth<OpointType>::value, 3));
+            Mat modelImagePoints(1, MIN_POINTS_COUNT, CV_MAKETYPE(DataDepth<IpointType>::value, 2));
+            for (int i = 0, colIndex = 0; i < (int)pointsMask.size(); i++)
+            {
+                if (pointsMask[i])
+                {
+                    Mat colModelImagePoints = modelImagePoints(Rect(colIndex, 0, 1, 1));
+                    imagePoints.col(i).copyTo(colModelImagePoints);
+                    Mat colModelObjectPoints = modelObjectPoints(Rect(colIndex, 0, 1, 1));
+                    objectPoints.col(i).copyTo(colModelObjectPoints);
+                    colIndex = colIndex+1;
+                }
+            }
+
+            //filter same 3d points, hang in solvePnP
+            double eps = 1e-10;
+            int num_same_points = 0;
+            for (int i = 0; i < MIN_POINTS_COUNT; i++)
+                for (int j = i + 1; j < MIN_POINTS_COUNT; j++)
+                {
+                    if (norm(modelObjectPoints.at<Vec<OpointType,3> >(0, i) - modelObjectPoints.at<Vec<OpointType,3> >(0, j)) < eps)
+                        num_same_points++;
+                }
+            if (num_same_points > 0)
+                return;
+
+            Mat localRvec, localTvec;
+            rvecInit.copyTo(localRvec);
+            tvecInit.copyTo(localTvec);
+
+            solvePnP(modelObjectPoints, modelImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec,
+                     params.useExtrinsicGuess, params.flags);
+
+
+            vector<Point_<OpointType> > projected_points;
+            projected_points.resize(objectPoints.cols);
+            projectPoints(objectPoints, localRvec, localTvec, params.camera.intrinsics, params.camera.distortion, projected_points);
+
+            Mat rotatedPoints;
+            project3dPoints(objectPoints, localRvec, localTvec, rotatedPoints);
+
+            vector<int> localInliers;
+            for (int i = 0; i < objectPoints.cols; i++)
+            {
+                //Although p is a 2D point it needs the same type as the object points to enable the norm calculation
+                Point_<OpointType> p((OpointType)imagePoints.at<Vec<IpointType,2> >(0, i)[0],
+                                     (OpointType)imagePoints.at<Vec<IpointType,2> >(0, i)[1]);
+                if ((norm(p - projected_points[i]) < params.reprojectionError)
+                    && (rotatedPoints.at<Vec<OpointType,3> >(0, i)[2] > 0)) //hack
+                {
+                    localInliers.push_back(i);
+                }
+            }
+
+            resultsMutex.lock();
+            if ( (localInliers.size() > inliers.size()) || (localInliers.size() == inliers.size() && inliers.size() > 0 && curIndex > bestIndex))
+            {
+                inliers.clear();
+                inliers.resize(localInliers.size());
+                memcpy(&inliers[0], &localInliers[0], sizeof(int) * localInliers.size());
+                localRvec.copyTo(rvec);
+                localTvec.copyTo(tvec);
+                bestIndex = curIndex;
+            }
+            resultsMutex.unlock();
+        }
+>>>>>>> 8a09d95eab3fdb06bd9f402be1e59cf7d8b932b1
 
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat(), model = _model.getMat();
 
