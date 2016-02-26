@@ -45,6 +45,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
+<<<<<<< HEAD
 #include "opencv2/core.hpp"
 #ifdef HAVE_OPENCV_IMGPROC
 #include "opencv2/imgproc.hpp"
@@ -75,6 +76,41 @@
 #endif
 #ifdef HAVE_OPENCV_ML
 #include "opencv2/ml.hpp"
+=======
+#include "opencv2/core/core_c.h"
+#include "opencv2/core/core.hpp"
+#ifdef HAVE_OPENCV_FLANN
+#include "opencv2/flann/miniflann.hpp"
+#endif
+#ifdef HAVE_OPENCV_IMGPROC
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/imgproc/imgproc.hpp"
+#endif
+#ifdef HAVE_OPENCV_PHOTO
+#include "opencv2/photo/photo.hpp"
+#endif
+#ifdef HAVE_OPENCV_VIDEO
+#include "opencv2/video/video.hpp"
+#endif
+#ifdef HAVE_OPENCV_FEATURES2D
+#include "opencv2/features2d/features2d.hpp"
+#endif
+#ifdef HAVE_OPENCV_OBJDETECT
+#include "opencv2/objdetect/objdetect.hpp"
+#endif
+#ifdef HAVE_OPENCV_CALIB3D
+#include "opencv2/calib3d/calib3d.hpp"
+#endif
+#ifdef HAVE_OPENCV_ML
+#include "opencv2/ml/ml.hpp"
+#endif
+#ifdef HAVE_OPENCV_HIGHGUI
+#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/highgui/highgui.hpp"
+#endif
+#ifdef HAVE_OPENCV_CONTRIB
+#include "opencv2/contrib/contrib.hpp"
+>>>>>>> 8a09d95eab3fdb06bd9f402be1e59cf7d8b932b1
 #endif
 
 #endif

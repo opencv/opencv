@@ -2442,7 +2442,15 @@ public:
     typedef SparseMatIterator iterator;
     typedef SparseMatConstIterator const_iterator;
 
+<<<<<<< HEAD
     enum { MAGIC_VAL=0x42FD0000, MAX_DIM=32, HASH_SCALE=0x5bd1e995, HASH_BIT=0x80000000 };
+=======
+template<typename _Tp> inline Mat_<_Tp>::Mat_(int _dims, const int* _sz, _Tp* _data, const size_t* _steps)
+    : Mat(_dims, _sz, DataType<_Tp>::type, _data, _steps) {}
+
+template<typename _Tp> inline Mat_<_Tp>::Mat_(const Mat_<_Tp>& m, const Range* ranges)
+    : Mat(m, ranges) {}
+>>>>>>> 8a09d95eab3fdb06bd9f402be1e59cf7d8b932b1
 
     //! the sparse matrix header
     struct CV_EXPORTS Hdr

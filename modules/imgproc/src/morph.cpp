@@ -584,19 +584,11 @@ typedef MorphFVec<VMax32f> DilateVec32f;
 
 #else
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-using tegra::ErodeRowVec8u;
-using tegra::DilateRowVec8u;
-
-using tegra::ErodeColumnVec8u;
-using tegra::DilateColumnVec8u;
-#else
 typedef MorphRowNoVec ErodeRowVec8u;
 typedef MorphRowNoVec DilateRowVec8u;
 
 typedef MorphColumnNoVec ErodeColumnVec8u;
 typedef MorphColumnNoVec DilateColumnVec8u;
-#endif
 
 typedef MorphRowNoVec ErodeRowVec16u;
 typedef MorphRowNoVec DilateRowVec16u;
@@ -1113,6 +1105,17 @@ public:
 
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
+
+
+#if defined HAVE_TEGRA_OPTIMIZATION
+        //Iterative separable filters are converted to single iteration filters
+        //But anyway check that we really get 1 iteration prior to processing
+        if( countNonZero(kernel) == kernel.rows*kernel.cols && iterations == 1 &&
+            src.depth() == CV_8U && ( op == MORPH_ERODE || op == MORPH_DILATE ) &&
+            tegra::morphology(srcStripe, dstStripe, op, kernel, anchor,
+                              rowBorderType, columnBorderType, borderValue) )
+            return;
+#endif
 
         Ptr<FilterEngine> f = createMorphologyFilter(op, src.type(), kernel, anchor,
                                                      rowBorderType, columnBorderType, borderValue );

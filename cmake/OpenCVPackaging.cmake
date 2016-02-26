@@ -162,6 +162,177 @@ if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
   set(CPACK_DEBIAN_COMPONENT_TESTS_NAME "lib${CMAKE_PROJECT_NAME}-tests")
 endif(NOT OPENCV_CUSTOM_PACKAGE_INFO)
 
+<<<<<<< HEAD
+=======
+set(CPACK_DEBIAN_COMPONENT_DOCS_ARCHITECTURE "all")
+
+# lintian stuff
+
+#
+# ocv_generate_lintian_overrides_file: generates lintian overrides file for
+#   the specified component (deb-package). It's assumed that <comp>_LINTIAN_OVERRIDES
+#   variable with suppressed tags is defined.
+#
+# Usage: ocv_generate_lintian_overrides_file(<component name>)
+#
+
+function(ocv_generate_lintian_overrides_file comp)
+    string(TOUPPER ${comp} comp_upcase)
+
+    set(package_name ${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME})
+    set(suppressions ${${comp_upcase}_LINTIAN_OVERRIDES})
+
+    if(suppressions)
+        if(NOT package_name)
+            message(FATAL_ERROR "Package name for the ${comp} component is not defined")
+        endif()
+
+        # generate content of lintian overrides file
+
+        foreach(suppression ${suppressions})
+            set(line "${package_name}: ${suppression}")
+            if(content)
+                set(content "${content}\n${line}")
+            else()
+                set(content "${line}")
+            endif()
+        endforeach()
+
+        # create file and install it
+        set(cpack_tmp_dir "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}")
+        set(overrides_filename "${cpack_tmp_dir}/${package_name}")
+
+        file(WRITE "${overrides_filename}" "${content}")
+
+        # install generated file
+        install(FILES "${overrides_filename}"
+            DESTINATION share/lintian/overrides/
+            COMPONENT ${comp})
+
+        unset(content)
+    endif()
+endfunction()
+
+function(ocv_get_lintian_version version)
+    find_program(LINTIAN_EXECUTABLE lintian)
+
+    if(NOT LINTIAN_EXECUTABLE)
+        return()
+    endif()
+
+    execute_process(COMMAND ${LINTIAN_EXECUTABLE} --version
+              WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+              RESULT_VARIABLE LINTIAN_EXITCODE
+              OUTPUT_VARIABLE LINTIAN_VERSION
+              ERROR_QUIET)
+
+    if(NOT LINTIAN_EXITCODE EQUAL 0)
+        return()
+    endif()
+
+    if(LINTIAN_VERSION MATCHES "([0-9]+\\.[0-9]+\\.[0-9]+)")
+        set(LINTIAN_VERSION "${CMAKE_MATCH_1}" CACHE INTERNAL "Lintian version")
+    endif()
+
+    set("${version}" "${LINTIAN_VERSION}" PARENT_SCOPE)
+endfunction()
+
+ocv_get_lintian_version(LINTIAN_VERSION)
+
+set(LIBS_LINTIAN_OVERRIDES "binary-or-shlib-defines-rpath" # usr/lib/libopencv_core.so.2.4.12
+                           "package-name-doesnt-match-sonames") # libopencv-calib3d2.4 libopencv-contrib2.4
+
+if(HAVE_opencv_python)
+    set(PYTHON_LINTIAN_OVERRIDES "binary-or-shlib-defines-rpath" # usr/lib/python2.7/dist-packages/cv2.so
+                                 "missing-dependency-on-numpy-abi")
+else()
+    set(PYTHON_LINTIAN_OVERRIDES "empty-binary-package") # python module is off
+endif()
+
+if(NOT HAVE_opencv_java)
+    set(JAVA_LINTIAN_OVERRIDES "empty-binary-package") # Java is off
+else()
+    # TODO: add smht here
+endif()
+
+set(DEV_LINTIAN_OVERRIDES "binary-or-shlib-defines-rpath" # usr/bin/opencv_traincascade
+                          "binary-without-manpage") # usr/bin/opencv_traincascade
+
+if(LINTIAN_VERSION VERSION_GREATER "2.5.30" OR
+    LINTIAN_VERSION VERSION_EQUAL "2.5.30")
+    list(APPEND DEV_LINTIAN_OVERRIDES "pkg-config-bad-directive") # usr/lib/pkgconfig/opencv.pc -L/usr/local/cuda-7.0/lib64
+endif()
+
+if(NOT INSTALL_C_EXAMPLES)
+    set(SAMPLES_LINTIAN_OVERRIDES "empty-binary-package") # samples are not installed
+endif()
+
+if(INSTALL_TESTS)
+    set(TESTS_LINTIAN_OVERRIDES "arch-dependent-file-in-usr-share" # usr/share/OpenCV/bin/opencv_test_ml
+                                "binary-or-shlib-defines-rpath" # usr/share/OpenCV/bin/opencv_test_ml
+                                "python-script-but-no-python-dep") # usr/share/OpenCV/bin/calchist.py
+else()
+    set(TESTS_LINTIAN_OVERRIDES "empty-binary-package") # there is no tests
+endif()
+
+set(ALL_COMPONENTS "libs" "dev" "docs" "python" "java" "samples" "tests")
+
+foreach (comp ${ALL_COMPONENTS})
+    string(TOUPPER ${comp} comp_upcase)
+    list(APPEND ${comp_upcase}_LINTIAN_OVERRIDES "misplaced-extra-member-in-deb") # for signed packages
+endforeach()
+
+if(CPACK_GENERATOR STREQUAL "DEB")
+  find_program(GZIP_TOOL NAMES "gzip" PATHS "/bin" "/usr/bin" "/usr/local/bin")
+  if(NOT GZIP_TOOL)
+    message(FATAL_ERROR "Unable to find 'gzip' program")
+  endif()
+
+  execute_process(COMMAND "date" "-R"
+                  OUTPUT_VARIABLE CHANGELOG_PACKAGE_DATE
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  set(CHANGELOG_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}")
+  foreach (comp ${ALL_COMPONENTS})
+    string(TOUPPER "${comp}" comp_upcase)
+
+    set(DEBIAN_CHANGELOG_OUT_FILE    "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian")
+    set(DEBIAN_CHANGELOG_OUT_FILE_GZ "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.Debian.gz")
+    set(CHANGELOG_PACKAGE_NAME "${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}")
+    configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/changelog.Debian.in" "${DEBIAN_CHANGELOG_OUT_FILE}" @ONLY)
+
+    execute_process(COMMAND "${GZIP_TOOL}" "-cf9" "${DEBIAN_CHANGELOG_OUT_FILE}"
+                    OUTPUT_FILE "${DEBIAN_CHANGELOG_OUT_FILE_GZ}"
+                    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+    install(FILES "${DEBIAN_CHANGELOG_OUT_FILE_GZ}"
+            DESTINATION "share/doc/${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}"
+            COMPONENT "${comp}")
+
+    set(CHANGELOG_OUT_FILE "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog")
+    set(CHANGELOG_OUT_FILE_GZ "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.gz")
+    file(WRITE ${CHANGELOG_OUT_FILE} "Upstream changelog stub. See https://github.com/Itseez/opencv/wiki/ChangeLog")
+
+    execute_process(COMMAND "${GZIP_TOOL}" "-cf9" "${CHANGELOG_OUT_FILE}"
+                    OUTPUT_FILE "${CHANGELOG_OUT_FILE_GZ}"
+                    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+    install(FILES "${CHANGELOG_OUT_FILE_GZ}"
+            DESTINATION "share/doc/${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}"
+            COMPONENT "${comp}")
+
+    if(OPENCV_DEBIAN_COPYRIGHT_FILE)
+        install(FILES "${OPENCV_DEBIAN_COPYRIGHT_FILE}"
+                DESTINATION "share/doc/${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}"
+                COMPONENT "${comp}")
+    endif()
+
+    ocv_generate_lintian_overrides_file("${comp}")
+
+  endforeach()
+endif()
+
+>>>>>>> 8a09d95eab3fdb06bd9f402be1e59cf7d8b932b1
 include(CPack)
 
 ENDif(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
