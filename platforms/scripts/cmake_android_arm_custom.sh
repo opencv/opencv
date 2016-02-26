@@ -1,26 +1,58 @@
 #!/bin/sh
 cd `dirname $0`/..
 
-if [ -d build_android_arm_neon ]; then
-        rm -rf build_android_arm_neon
+if [ -d build_android_arm_neon_debug ]; then
+        rm -rf build_android_arm_neon_debug
 fi
-mkdir -p build_android_arm_neon
-pushd build_android_arm_neon
-cmake -DANDROID_ABI="armeabi-v7a-hard with NEON" -DINSTALL_ANDROID_EXAMPLES=OFF -DENABLE_NEON=ON -DENABLE_VFPV3=ON \
-        -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_OPENCL=OFF -DWITH_CUDA=OFF -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF \
-                -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
+mkdir -p build_android_arm_neon_debug
+pushd build_android_arm_neon_debug
+cmake -DANDROID_ABI="armeabi-v7a-hard with NEON" -DENABLE_NEON=ON -DENABLE_VFPV3=ON -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_OPENCL=OFF \
+  -DWITH_CUDA=OFF -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DCMAKE_BUILD_TYPE=Debug \
+  -DBUILD_ANDROID_EXAMPLES=OFF -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF \
+  -DANDROID_STL=gnustl_static -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 \
+  -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
 make -j8
 make install
 popd
 
-if [ -d build_android_arm64 ]; then
-        rm -rf build_android_arm64
+if [ -d build_android_arm64_debug ]; then
+        rm -rf build_android_arm64_debug
 fi
-mkdir -p build_android_arm64
-pushd build_android_arm64
-cmake -DANDROID_ABI="arm64-v8a" -DINSTALL_ANDROID_EXAMPLES=OFF -DENABLE_NEON=ON -DENABLE_VFPV3=ON -DWITH_TBB=ON \
-        -DBUILD_TBB=ON -DWITH_OPENCL=ON -DWITH_CUDA=OFF -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF \
-                -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
+mkdir -p build_android_arm64_debug
+pushd build_android_arm64_debug
+cmake -DANDROID_ABI="arm64-v8a" -DENABLE_NEON=ON -DENABLE_VFPV3=ON -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_OPENCL=OFF \
+  -DWITH_CUDA=OFF -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DCMAKE_BUILD_TYPE=Debug \
+  -DBUILD_ANDROID_EXAMPLES=OFF -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF \
+  -DANDROID_STL=gnustl_static -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 \
+  -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
 make -j8
 make install
+popd
+
+if [ -d build_android_arm_neon_release ]; then
+        rm -rf build_android_arm_neon_release
+fi
+mkdir -p build_android_arm_neon_release
+pushd build_android_arm_neon_release
+cmake -DANDROID_ABI="armeabi-v7a-hard with NEON" -DENABLE_NEON=ON -DENABLE_VFPV3=ON -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_OPENCL=ON \
+  -DWITH_CUDA=OFF -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_ANDROID_EXAMPLES=OFF -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF \
+  -DANDROID_STL=gnustl_static -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 \
+  -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
+make -j8
+make install/strip
+popd
+
+if [ -d build_android_arm64_release ]; then
+        rm -rf build_android_arm64_release
+fi
+mkdir -p build_android_arm64_release
+pushd build_android_arm64_release
+cmake -DANDROID_ABI="arm64-v8a" -DENABLE_NEON=ON -DENABLE_VFPV3=ON -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_OPENCL=ON \
+  -DWITH_CUDA=OFF -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_ANDROID_EXAMPLES=OFF -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF \
+  -DANDROID_STL=gnustl_static -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 \
+  -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
+make -j8
+make install/strip
 popd
