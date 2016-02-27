@@ -21,8 +21,19 @@ The packages can be installed using a terminal and the following commands or by 
 Manager:
 @code{.bash}
 [compiler] sudo apt-get install build-essential
-[required] sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+[required] sudo apt-get install cmake git libgtk2.0-dev pkg-config 
 [optional] sudo apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
+@endcode
+Either the libav packages or ffmpeg must be installed, choose either one.
+To use the libav development packages:
+@code{.bash}
+sudo apt-get install libavcodec-dev libavformat-dev libswscale-dev
+@endcode
+To use ffmpeg:
+@code{.bash}
+sudo add-apt-repository ppa:mc3man/trusty-media
+sudo apt-get update
+sudo apt-get install libvpx-dev ffmpeg
 @endcode
 Getting OpenCV Source Code
 --------------------------
