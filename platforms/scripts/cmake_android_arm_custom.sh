@@ -1,6 +1,10 @@
 #!/bin/sh
 cd `dirname $0`/..
 
+[ -d build_product_debug ] && rm -rf build_product_debug
+[ -d build_product_release ] && rm -rf build_product_release
+mkdir -p build_product/opencv/src/main/jniLibs
+
 if [ -d build_android_arm_neon_debug ]; then
         rm -rf build_android_arm_neon_debug
 fi
@@ -13,6 +17,9 @@ cmake -DANDROID_ABI="armeabi-v7a-hard with NEON" -DENABLE_NEON=ON -DENABLE_VFPV3
   -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
 make -j8
 make install
+cp -av install/sdk/native/3rdparty/libs/* ../build_product_debug/opencv/src/main/jniLibs
+cp -av install/sdk/native/libs/* ../build_product_debug/opencv/src/main/jniLibs
+cp -av install/sdk/native/jni ../build_product_debug/opencv/src/main
 popd
 
 if [ -d build_android_arm64_debug ]; then
@@ -27,6 +34,9 @@ cmake -DANDROID_ABI="arm64-v8a" -DENABLE_NEON=ON -DENABLE_VFPV3=ON -DWITH_TBB=ON
   -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
 make -j8
 make install
+cp -av install/sdk/native/3rdparty/libs/* ../build_product_debug/opencv/src/main/jniLibs
+cp -av install/sdk/native/libs/* ../build_product_debug/opencv/src/main/jniLibs
+cp -av install/sdk/native/jni ../build_product_debug/opencv/src/main
 popd
 
 if [ -d build_android_arm_neon_release ]; then
@@ -41,6 +51,9 @@ cmake -DANDROID_ABI="armeabi-v7a-hard with NEON" -DENABLE_NEON=ON -DENABLE_VFPV3
   -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
 make -j8
 make install/strip
+cp -av install/sdk/native/3rdparty/libs/* ../build_product_release/opencv/src/main/jniLibs
+cp -av install/sdk/native/libs/* ../build_product_release/opencv/src/main/jniLibs
+cp -av install/sdk/native/jni ../build_product_release/opencv/src/main
 popd
 
 if [ -d build_android_arm64_release ]; then
@@ -55,4 +68,7 @@ cmake -DANDROID_ABI="arm64-v8a" -DENABLE_NEON=ON -DENABLE_VFPV3=ON -DWITH_TBB=ON
   -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake $@ ../..
 make -j8
 make install/strip
+cp -av install/sdk/native/3rdparty/libs/* ../build_product_release/opencv/src/main/jniLibs
+cp -av install/sdk/native/libs/* ../build_product_release/opencv/src/main/jniLibs
+cp -av install/sdk/native/jni ../build_product_release/opencv/src/main
 popd
