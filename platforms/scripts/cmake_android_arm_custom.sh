@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 cd `dirname $0`/..
 
 [ -d build_product_debug ] && rm -rf build_product_debug
