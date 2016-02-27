@@ -3,7 +3,8 @@ cd `dirname $0`/..
 
 [ -d build_product_debug ] && rm -rf build_product_debug
 [ -d build_product_release ] && rm -rf build_product_release
-mkdir -p build_product/opencv/src/main/jniLibs
+mkdir -p build_product_debug/opencv/src/main/jniLibs
+mkdir -p build_product_release/opencv/src/main/jniLibs
 
 if [ -d build_android_arm_neon_debug ]; then
         rm -rf build_android_arm_neon_debug
