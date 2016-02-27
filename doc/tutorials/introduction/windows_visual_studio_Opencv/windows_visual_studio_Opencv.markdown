@@ -73,8 +73,7 @@ also require different rules to use during build. Therefore, there exist differe
 each of your build modes. These rule packages are called inside the IDE as *project properties* and
 you can view and modify them by using the *Property Manager*. You can bring this up with
 View --\> Property Pages (For Visual Studio 2013 onwards, go to View --\> Other Windows --\> Property Manager).
-Expand it and you can see the existing rule packages (called *Proporty
-Sheets*).
+Expand it and you can see the existing rule packages (called *Property Sheets*).
 
 ![](images/PropertyPageExample.jpg)
 
