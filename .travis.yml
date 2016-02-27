@@ -41,7 +41,8 @@ install:
 
 script:
   # By default Travis-ci executes './gradlew build connectedCheck' if no 'script:' section found.
-  - ./platforms/android/build_sdk.py build .
+  #- ./platforms/android/build_sdk.py build .
+  - ./platforms/scripts/cmake_android_arm_custom.sh
   - ls -la build
 
 notifications:
