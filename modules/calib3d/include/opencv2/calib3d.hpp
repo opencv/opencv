@@ -200,12 +200,12 @@ pattern (every view is described by several 3D-2D point correspondences).
 
     The distorted point coordinates are [x'; y'] where
 
-    \f[x' = (\theta_d / r) x \\ y' = (\theta_d / r) y \f]
+    \f[x' = (\theta_d / r) a \\ y' = (\theta_d / r) b \f]
 
     Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
 
     \f[u = f_x (x' + \alpha y') + c_x \\
-    v = f_y yy + c_y\f]
+    v = f_y y' + c_y\f]
 
     @defgroup calib3d_c C API
 
@@ -515,9 +515,9 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
 
 /** @brief Finds an object pose from 3D-2D point correspondences.
 
-@param objectPoints Array of object points in the object coordinate space, 3xN/Nx3 1-channel or
+@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
 1xN/Nx1 3-channel, where N is the number of points. vector\<Point3f\> can be also passed here.
-@param imagePoints Array of corresponding image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel,
+@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
 where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
@@ -572,9 +572,9 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
 
 /** @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
-@param objectPoints Array of object points in the object coordinate space, 3xN/Nx3 1-channel or
+@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
 1xN/Nx1 3-channel, where N is the number of points. vector\<Point3f\> can be also passed here.
-@param imagePoints Array of corresponding image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel,
+@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
 where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
@@ -1245,12 +1245,12 @@ same camera matrix.
 @param method Method for computing a fundamental matrix.
 -   **RANSAC** for the RANSAC algorithm.
 -   **MEDS** for the LMedS algorithm.
+@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
+confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
 point localization, image resolution, and the image noise.
-@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
-confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
 

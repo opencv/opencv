@@ -97,7 +97,7 @@ endif()
 if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   if(NOT WITH_OPENGL)
-    list(REMOVE_ITEM all_samples "opengl.cpp")
+    list(REMOVE_ITEM install_list "opengl.cpp")
   endif(NOT WITH_OPENGL)
   install(FILES ${install_list}
           DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu

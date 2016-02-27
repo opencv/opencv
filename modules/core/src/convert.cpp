@@ -5352,22 +5352,21 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
     if( rtype < 0 )
         rtype = _dst.fixedType() ? _dst.depth() : depth;
-    _dst.createSameSize(_src, CV_MAKETYPE(rtype, cn));
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
 
-    Mat src = _src.getMat(), dst = _dst.getMat();
+    Mat src = _src.getMat();
     if( _mask.empty() )
-        src.convertTo( dst, rtype, scale, shift );
+        src.convertTo( _dst, rtype, scale, shift );
     else
     {
         Mat temp;
         src.convertTo( temp, rtype, scale, shift );
-        temp.copyTo( dst, _mask );
+        temp.copyTo( _dst, _mask );
     }
 }
 

@@ -314,6 +314,43 @@ TEST(Calib3d_SolvePnPRansac, concurrency)
     EXPECT_LT(tnorm, 1e-6);
 }
 
+TEST(Calib3d_SolvePnPRansac, input_type)
+{
+    const int numPoints = 10;
+    Matx33d intrinsics(5.4794130238156129e+002, 0., 2.9835545700043139e+002, 0.,
+        5.4817724002728005e+002, 2.3062194051986233e+002, 0., 0., 1.);
+
+    std::vector<cv::Point3f> points3d;
+    std::vector<cv::Point2f> points2d;
+    for (int i = 0; i < numPoints; i++)
+    {
+        points3d.push_back(cv::Point3i(i, 0, 0));
+        points2d.push_back(cv::Point2i(i, 0));
+    }
+    Mat R1, t1, R2, t2, R3, t3, R4, t4;
+
+    EXPECT_TRUE(solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R1, t1));
+
+    Mat points3dMat(points3d);
+    Mat points2dMat(points2d);
+    EXPECT_TRUE(solvePnPRansac(points3dMat, points2dMat, intrinsics, cv::Mat(), R2, t2));
+
+    points3dMat = points3dMat.reshape(3, 1);
+    points2dMat = points2dMat.reshape(2, 1);
+    EXPECT_TRUE(solvePnPRansac(points3dMat, points2dMat, intrinsics, cv::Mat(), R3, t3));
+
+    points3dMat = points3dMat.reshape(1, numPoints);
+    points2dMat = points2dMat.reshape(1, numPoints);
+    EXPECT_TRUE(solvePnPRansac(points3dMat, points2dMat, intrinsics, cv::Mat(), R4, t4));
+
+    EXPECT_LE(norm(R1, R2, NORM_INF), 1e-6);
+    EXPECT_LE(norm(t1, t2, NORM_INF), 1e-6);
+    EXPECT_LE(norm(R1, R3, NORM_INF), 1e-6);
+    EXPECT_LE(norm(t1, t3, NORM_INF), 1e-6);
+    EXPECT_LE(norm(R1, R4, NORM_INF), 1e-6);
+    EXPECT_LE(norm(t1, t4, NORM_INF), 1e-6);
+}
+
 TEST(Calib3d_SolvePnP, double_support)
 {
     Matx33d intrinsics(5.4794130238156129e+002, 0., 2.9835545700043139e+002, 0.,
@@ -335,8 +372,8 @@ TEST(Calib3d_SolvePnP, double_support)
     solvePnPRansac(points3dF, points2dF, intrinsics, cv::Mat(), RF, tF, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
     solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R, t, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
 
-    ASSERT_LE(norm(R, Mat_<double>(RF), NORM_INF), 1e-3);
-    ASSERT_LE(norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
+    EXPECT_LE(norm(R, Mat_<double>(RF), NORM_INF), 1e-3);
+    EXPECT_LE(norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
 }
 
 TEST(Calib3d_SolvePnP, translation)
@@ -365,16 +402,16 @@ TEST(Calib3d_SolvePnP, translation)
     tvec = (Mat_<float>(3,1) << 100, 100, 0);
 
     solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, true);
-    ASSERT_TRUE(checkRange(rvec));
-    ASSERT_TRUE(checkRange(tvec));
+    EXPECT_TRUE(checkRange(rvec));
+    EXPECT_TRUE(checkRange(tvec));
 
     rvec =(Mat_<double>(3,1) << 0, 0, 0);
     tvec = (Mat_<double>(3,1) << 100, 100, 0);
     solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, true);
-    ASSERT_TRUE(checkRange(rvec));
-    ASSERT_TRUE(checkRange(tvec));
+    EXPECT_TRUE(checkRange(rvec));
+    EXPECT_TRUE(checkRange(tvec));
 
     solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, false);
-    ASSERT_TRUE(checkRange(rvec));
-    ASSERT_TRUE(checkRange(tvec));
+    EXPECT_TRUE(checkRange(rvec));
+    EXPECT_TRUE(checkRange(tvec));
 }
