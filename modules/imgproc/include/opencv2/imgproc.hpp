@@ -3947,8 +3947,8 @@ marker types are supported, see cv::MarkerTypes for more information.
 
 @param img Image.
 @param position The point where the crosshair is positioned.
-@param markerType The specific type of marker you want to use, see cv::MarkerTypes
 @param color Line color.
+@param markerType The specific type of marker you want to use, see cv::MarkerTypes
 @param thickness Line thickness.
 @param line_type Type of the line, see cv::LineTypes
 @param markerSize The length of the marker axis [default = 20 pixels]

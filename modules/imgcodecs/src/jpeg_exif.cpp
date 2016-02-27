@@ -128,6 +128,11 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
 
     size_t count;
 
+    if (m_filename.size() == 0)
+    {
+        return m_exif;
+    }
+
     FILE* f = fopen( m_filename.c_str(), "rb" );
 
     if( !f )
@@ -165,6 +170,7 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
             case APP1: //actual Exif Marker
                 exifSize = getFieldSize(f);
                 if (exifSize <= offsetToTiffHeader) {
+                    fclose(f);
                     throw ExifParsingError();
                 }
                 m_data.resize( exifSize - offsetToTiffHeader );

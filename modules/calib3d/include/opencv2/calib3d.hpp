@@ -200,7 +200,7 @@ pattern (every view is described by several 3D-2D point correspondences).
 
     The distorted point coordinates are [x'; y'] where
 
-    \f[x' = (\theta_d / r) x \\ y' = (\theta_d / r) y \f]
+    \f[x' = (\theta_d / r) a \\ y' = (\theta_d / r) b \f]
 
     Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
 

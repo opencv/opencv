@@ -224,6 +224,9 @@ public:
     CV_WRAP virtual void setTrainTestSplitRatio(double ratio, bool shuffle=true) = 0;
     CV_WRAP virtual void shuffleTrainTest() = 0;
 
+    /** @brief Returns matrix of test samples */
+    CV_WRAP Mat getTestSamples() const;
+
     CV_WRAP static Mat getSubVector(const Mat& vec, const Mat& idx);
 
     /** @brief Reads the dataset from a .csv file and returns the ready-to-use training data.
