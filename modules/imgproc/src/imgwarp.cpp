@@ -6645,7 +6645,7 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
     {
         int x, y;
         CvMat bufx, bufy, bufp, bufa;
-        const double ascale = ssize.height/(2*CV_PI);
+        const double ascale = (ssize.height-1)/(2*CV_PI);
         const double pscale = ssize.width/maxRadius;
 
         cv::AutoBuffer<float> _buf(4*dsize.width);
