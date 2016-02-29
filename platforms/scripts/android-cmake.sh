@@ -32,10 +32,10 @@ function copy_android_library ()
   cp -av install/sdk/native/3rdparty/libs/* ../opencv/src/main/jniLibs
   cp -av install/sdk/native/libs/* ../opencv/src/main/jniLibs
   cp -av install/sdk/native/jni ../opencv/src/main
-#  cp -av install/sdk/java ../opencv/src/main
+  cp -av install/sdk/java ../opencv/src/main
 
-#  mkdir -p ../../opencv/src/main/$2/jniLibs
-#  cp -av ../opencv/src/main/jniLibs/* ../../opencv/src/main/$2/jniLibs
+  mkdir -p ../../opencv/src/main/$2/jniLibs
+  cp -av ../opencv/src/main/jniLibs/* ../../opencv/src/main/$2/jniLibs
 }
 
 function build_target ()
@@ -58,9 +58,9 @@ function build_target ()
     cmake '-GUnix Makefiles' -DCMAKE_BUILD_TYPE=$2 -DANDROID_ABI="$TARGET_ABI" $EXTRA_OPTIONS $COMMON_OPTIONS ../../../../..
   fi
   make -j8
-  cmake -DCOMPONENT=libs -P cmake_install.cmake
-  cmake -DCOMPONENT=dev -P cmake_install.cmake
-  cmake -DCOMPONENT=java -P cmake_install.cmake
+  #cmake -DCOMPONENT=libs -P cmake_install.cmake
+  #cmake -DCOMPONENT=dev -P cmake_install.cmake
+  #cmake -DCOMPONENT=java -P cmake_install.cmake
   #cmake -DCOMPONENT=samples -P cmake_install.cmake
   if [ "$2" == "Debug" ] ; then
     make install
