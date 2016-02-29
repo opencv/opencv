@@ -58,8 +58,8 @@ function build_target ()
     cmake '-GUnix Makefiles' -DCMAKE_BUILD_TYPE=$2 -DANDROID_ABI="$TARGET_ABI" $EXTRA_OPTIONS $COMMON_OPTIONS ../../../../..
   fi
   make -j8
-  #cmake -DCOMPONENT=libs -P cmake_install.cmake
-  #cmake -DCOMPONENT=dev -P cmake_install.cmake
+  cmake -DCOMPONENT=libs -P cmake_install.cmake
+  cmake -DCOMPONENT=dev -P cmake_install.cmake
   cmake -DCOMPONENT=java -P cmake_install.cmake
   #cmake -DCOMPONENT=samples -P cmake_install.cmake
   if [ "$2" == "Debug" ] ; then
