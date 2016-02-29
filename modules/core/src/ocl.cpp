@@ -684,10 +684,13 @@ typedef struct _cl_buffer_region {
 
 #define CL_CALLBACK CV_STDCALL
 
-static volatile bool g_haveOpenCL = false;
-static const char* oclFuncToCheck = "clEnqueueReadBufferRect";
 
-#if defined(__APPLE__)
+#ifdef HAVE_OPENCL
+static const char* oclFuncToCheck = "clEnqueueReadBufferRect";
+static volatile bool g_haveOpenCL = false;
+#endif
+
+#if defined(__APPLE__) && defined(HAVE_OPENCL)
 #include <dlfcn.h>
 
 static void* initOpenCLAndLoad(const char* funcname)
@@ -716,7 +719,7 @@ static void* initOpenCLAndLoad(const char* funcname)
     return funcname && handle ? dlsym(handle, funcname) : 0;
 }
 
-#elif defined WIN32 || defined _WIN32
+#elif (defined WIN32 || defined _WIN32) && defined(HAVE_OPENCL)
 
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
@@ -751,7 +754,7 @@ static void* initOpenCLAndLoad(const char* funcname)
     return funcname ? (void*)GetProcAddress(handle, funcname) : 0;
 }
 
-#elif defined(__linux)
+#elif defined(__linux) && defined(HAVE_OPENCL)
 
 #include <dlfcn.h>
 #include <stdio.h>
@@ -3902,7 +3905,7 @@ protected:
             if (e.capacity_ >= size)
             {
                 size_t diff = e.capacity_ - size;
-                if (diff < size / 8 && (result_pos == reservedEntries_.end() || diff < minDiff))
+                if (diff < std::max((size_t)4096, size / 8) && (result_pos == reservedEntries_.end() || diff < minDiff))
                 {
                     minDiff = diff;
                     result_pos = i;
@@ -3941,12 +3944,8 @@ protected:
     inline size_t _allocationGranularity(size_t size)
     {
         // heuristic values
-        if (size < 1024)
-            return 16;
-        else if (size < 64*1024)
-            return 64;
-        else if (size < 1024*1024)
-            return 4096;
+        if (size < 1024*1024)
+            return 4096;  // don't work with buffers smaller than 4Kb (hidden allocation overhead issue)
         else if (size < 16*1024*1024)
             return 64*1024;
         else
@@ -4292,7 +4291,7 @@ public:
         bufferPoolSVM.setMaxReservedSize(poolSize);
 #endif
 
-        matStdAllocator = Mat::getStdAllocator();
+        matStdAllocator = Mat::getDefaultAllocator();
     }
 
     UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step,
@@ -4918,7 +4917,7 @@ public:
 
         if( u->data && !u->hostCopyObsolete() )
         {
-            Mat::getStdAllocator()->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
+            Mat::getDefaultAllocator()->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
             return;
         }
         CV_Assert( u->handle != 0 );
@@ -5042,7 +5041,7 @@ public:
         //    2. we overwrite part of the matrix, but the GPU copy is out-of-date
         if( u->data && (u->hostCopyObsolete() < u->deviceCopyObsolete() || total == u->size))
         {
-            Mat::getStdAllocator()->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
+            Mat::getDefaultAllocator()->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
             u->markHostCopyObsolete(false);
             u->markDeviceCopyObsolete(true);
             return;

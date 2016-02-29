@@ -3,6 +3,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string>
 
 using namespace cv;
 
@@ -58,11 +59,18 @@ static void ErodeDilate(int, void*)
 
 int main( int argc, char** argv )
 {
-    char* filename = argc == 2 ? argv[1] : (char*)"../data/baboon.jpg";
+    cv::CommandLineParser parser(argc, argv, "{help h||}{ @image | ../data/baboon.jpg | }");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    std::string filename = parser.get<std::string>("@image");
     if( (src = imread(filename,1)).empty() )
+    {
+        help();
         return -1;
-
-    help();
+    }
 
     //create windows for output images
     namedWindow("Open/Close",1);

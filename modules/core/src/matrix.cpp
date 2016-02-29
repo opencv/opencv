@@ -218,7 +218,24 @@ public:
         delete u;
     }
 };
+namespace
+{
+    MatAllocator* g_matAllocator = NULL;
+}
 
+
+MatAllocator* Mat::getDefaultAllocator()
+{
+    if (g_matAllocator == NULL)
+    {
+        g_matAllocator = getStdAllocator();
+    }
+    return g_matAllocator;
+}
+void Mat::setDefaultAllocator(MatAllocator* allocator)
+{
+    g_matAllocator = allocator;
+}
 MatAllocator* Mat::getStdAllocator()
 {
     CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
@@ -380,6 +397,14 @@ void Mat::create(int d, const int* _sizes, int _type)
             return;
     }
 
+    int _sizes_backup[CV_MAX_DIM]; // #5991
+    if (_sizes == (this->size.p))
+    {
+        for(i = 0; i < d; i++ )
+            _sizes_backup[i] = _sizes[i];
+        _sizes = _sizes_backup;
+    }
+
     release();
     if( d == 0 )
         return;
@@ -388,7 +413,7 @@ void Mat::create(int d, const int* _sizes, int _type)
 
     if( total() > 0 )
     {
-        MatAllocator *a = allocator, *a0 = getStdAllocator();
+        MatAllocator *a = allocator, *a0 = getDefaultAllocator();
 #ifdef HAVE_TGPU
         if( !a || a == tegra::getAllocator() )
             a = tegra::getAllocator(d, _sizes, _type);
@@ -426,7 +451,7 @@ void Mat::copySize(const Mat& m)
 void Mat::deallocate()
 {
     if(u)
-        (u->currAllocator ? u->currAllocator : allocator ? allocator : getStdAllocator())->unmap(u);
+        (u->currAllocator ? u->currAllocator : allocator ? allocator : getDefaultAllocator())->unmap(u);
     u = NULL;
 }
 
@@ -4881,6 +4906,13 @@ void SparseMat::create(int d, const int* _sizes, int _type)
             clear();
             return;
         }
+    }
+    int _sizes_backup[CV_MAX_DIM]; // #5991
+    if (_sizes == hdr->size)
+    {
+        for(i = 0; i < d; i++ )
+            _sizes_backup[i] = _sizes[i];
+        _sizes = _sizes_backup;
     }
     release();
     flags = MAGIC_VAL | _type;

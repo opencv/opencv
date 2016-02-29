@@ -1851,8 +1851,8 @@ static inline void histogram_add_simd( const HT x[16], HT y[16] )
 
 static inline void histogram_sub_simd( const HT x[16], HT y[16] )
 {
-    vst1q_u16(y, vsubq_u16(vld1q_u16(x), vld1q_u16(y)));
-    vst1q_u16(y + 8, vsubq_u16(vld1q_u16(x + 8), vld1q_u16(y + 8)));
+    vst1q_u16(y, vsubq_u16(vld1q_u16(y), vld1q_u16(x)));
+    vst1q_u16(y + 8, vsubq_u16(vld1q_u16(y + 8), vld1q_u16(x + 8)));
 }
 
 #else

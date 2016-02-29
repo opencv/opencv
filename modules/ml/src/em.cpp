@@ -161,7 +161,7 @@ public:
     {
         bool needprobs = _outputs.needed();
         Mat samples = _inputs.getMat(), probs, probsrow;
-        int ptype = CV_32F;
+        int ptype = CV_64F;
         float firstres = 0.f;
         int i, nsamples = samples.rows;
 
@@ -170,6 +170,7 @@ public:
             if( _outputs.fixedType() )
                 ptype = _outputs.type();
             _outputs.create(samples.rows, nclusters, ptype);
+            probs = _outputs.getMat();
         }
         else
             nsamples = std::min(nsamples, 1);
@@ -187,7 +188,7 @@ public:
 
     Vec2d predict2(InputArray _sample, OutputArray _probs) const
     {
-        int ptype = CV_32F;
+        int ptype = CV_64F;
         Mat sample = _sample.getMat();
         CV_Assert(isTrained());
 
@@ -198,7 +199,7 @@ public:
             sample.convertTo(tmp, CV_64FC1);
             sample = tmp;
         }
-        sample.reshape(1, 1);
+        sample = sample.reshape(1, 1);
 
         Mat probs;
         if( _probs.needed() )
@@ -342,7 +343,7 @@ public:
         if(weights0 && (startStep == START_E_STEP && covs0))
         {
             weights0->convertTo(weights, CV_64FC1);
-            weights.reshape(1,1);
+            weights = weights.reshape(1,1);
             preprocessProbability(weights);
         }
 

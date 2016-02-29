@@ -191,7 +191,7 @@ public:
 
     for (int i = range.start; i < range.end; i++)
     {
-        float ratio = (float)fastpow(2, evolution[i].octave);
+      float ratio = (float)fastpow(2, evolution[i].octave);
       int sigma_size_ = fRound(evolution[i].esigma * options_.derivative_factor / ratio);
 
       compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Lx, 1, 0, sigma_size_);
@@ -839,7 +839,7 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
     if (sumX*sumX + sumY*sumY > max) {
       // store largest orientation
       max = sumX*sumX + sumY*sumY;
-      kpt.angle = getAngle(sumX, sumY);
+      kpt.angle = getAngle(sumX, sumY) * 180.f / static_cast<float>(CV_PI);
     }
   }
 }
@@ -1000,7 +1000,7 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
   scale = fRound(0.5f*kpt.size / ratio);
-  angle = kpt.angle;
+  angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
   level = kpt.class_id;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
@@ -1406,8 +1406,9 @@ void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt,
   float scale = (float)fRound(0.5f*kpt.size / ratio);
   float xf = kpt.pt.x / ratio;
   float yf = kpt.pt.y / ratio;
-  float co = cos(kpt.angle);
-  float si = sin(kpt.angle);
+  float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+  float co = cos(angle);
+  float si = sin(angle);
   int pattern_size = options_->descriptor_pattern_size;
 
   int dpos = 0;
@@ -1441,7 +1442,7 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   // Get the information from the keypoint
   float ratio = (float)(1 << kpt.octave);
   int scale = fRound(0.5f*kpt.size / ratio);
-  float angle = kpt.angle;
+  float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
   int level = kpt.class_id;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;

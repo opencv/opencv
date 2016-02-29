@@ -1833,3 +1833,14 @@ TEST(MinMaxLoc, Mat_IntMax_Without_Mask)
     ASSERT_EQ(Point(0, 0), minLoc);
     ASSERT_EQ(Point(0, 0), maxLoc);
 }
+
+TEST(Normalize, regression_5876_inplace_change_type)
+{
+    double initial_values[] = {1, 2, 5, 4, 3};
+    float result_values[] = {0, 0.25, 1, 0.75, 0.5};
+    Mat m(Size(5, 1), CV_64FC1, initial_values);
+    Mat result(Size(5, 1), CV_32FC1, result_values);
+
+    normalize(m, m, 1, 0, NORM_MINMAX, CV_32F);
+    EXPECT_EQ(0, cvtest::norm(m, result, NORM_INF));
+}

@@ -19,16 +19,20 @@ static void help()
 
 const char* keys =
 {
-    "{@image|../data/lena.jpg|input image file}"
+    "{help h||}{@image|../data/lena.jpg|input image file}"
 };
 
 int main(int argc, const char ** argv)
 {
     help();
     CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     string filename = parser.get<string>(0);
-
-    Mat img = imread(filename.c_str(), IMREAD_GRAYSCALE);
+    Mat img = imread(filename, IMREAD_GRAYSCALE);
     if( img.empty() )
     {
         help();

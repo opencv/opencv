@@ -52,10 +52,16 @@ namespace {
 namespace cv
 {
 
+ExifEntry_t::ExifEntry_t() :
+    field_float(0), field_double(0), field_u32(0), field_s32(0),
+    tag(INVALID_TAG), field_u16(0), field_s16(0), field_u8(0), field_s8(0)
+{
+}
+
 /**
  * @brief ExifReader constructor
  */
-ExifReader::ExifReader(std::string filename) : m_filename(filename)
+ExifReader::ExifReader(std::string filename) : m_filename(filename), m_format(NONE)
 {
 }
 
@@ -122,6 +128,11 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
 
     size_t count;
 
+    if (m_filename.size() == 0)
+    {
+        return m_exif;
+    }
+
     FILE* f = fopen( m_filename.c_str(), "rb" );
 
     if( !f )
@@ -159,6 +170,7 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
             case APP1: //actual Exif Marker
                 exifSize = getFieldSize(f);
                 if (exifSize <= offsetToTiffHeader) {
+                    fclose(f);
                     throw ExifParsingError();
                 }
                 m_data.resize( exifSize - offsetToTiffHeader );
@@ -239,7 +251,10 @@ void ExifReader::parseExif()
  */
 Endianess_t ExifReader::getFormat() const
 {
-    if( m_data[0] != m_data[1] )
+    if (m_data.size() < 1)
+        return NONE;
+
+    if( m_data.size() > 1 && m_data[0] != m_data[1] )
     {
         return NONE;
     }

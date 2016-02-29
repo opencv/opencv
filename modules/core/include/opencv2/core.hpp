@@ -72,6 +72,7 @@
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
+        @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
     @}
     @defgroup core_opengl OpenGL interoperability
@@ -80,6 +81,16 @@
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
     @defgroup core_opencl OpenCL support
+    @defgroup core_va_intel Intel VA-API/OpenCL (CL-VA) interoperability
+    @defgroup core_hal Hardware Acceleration Layer
+    @{
+        @defgroup core_hal_functions Functions
+        @defgroup core_hal_interface Interface
+        @defgroup core_hal_intrin Universal intrinsics
+        @{
+            @defgroup core_hal_intrin_impl Private implementation helpers
+        @}
+    @}
 @}
  */
 
@@ -829,19 +840,19 @@ otherwise, its type will be CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()).
 */
 CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, int dtype = -1);
 
-/** @brief Creates one multichannel array out of several single-channel ones.
+/** @brief Creates one multi-channel array out of several single-channel ones.
 
-The functions merge merge several arrays to make a single multi-channel array. That is, each
+The function merge merges several arrays to make a single multi-channel array. That is, each
 element of the output array will be a concatenation of the elements of the input arrays, where
 elements of i-th input array are treated as mv[i].channels()-element vectors.
 
-The function split does the reverse operation. If you need to shuffle channels in some other
-advanced way, use mixChannels .
+The function cv::split does the reverse operation. If you need to shuffle channels in some other
+advanced way, use cv::mixChannels.
 @param mv input array of matrices to be merged; all the matrices in mv must have the same
 size and the same depth.
 @param count number of input matrices when mv is a plain C array; it must be greater than zero.
 @param dst output array of the same size and the same depth as mv[0]; The number of channels will
-be the total number of channels in the matrix array.
+be equal to the parameter count.
 @sa  mixChannels, split, Mat::reshape
 */
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
@@ -996,24 +1007,24 @@ CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
 /** @brief Fills the output array with repeated copies of the input array.
 
-The functions repeat duplicate the input array one or more times along each of the two axes:
+The function cv::repeat duplicates the input array one or more times along each of the two axes:
 \f[\texttt{dst} _{ij}= \texttt{src} _{i\mod src.rows, \; j\mod src.cols }\f]
 The second variant of the function is more convenient to use with @ref MatrixExpressions.
 @param src input array to replicate.
-@param dst output array of the same type as src.
-@param ny Flag to specify how many times the src is repeated along the
+@param ny Flag to specify how many times the `src` is repeated along the
 vertical axis.
-@param nx Flag to specify how many times the src is repeated along the
+@param nx Flag to specify how many times the `src` is repeated along the
 horizontal axis.
-@sa reduce
+@param dst output array of the same type as `src`.
+@sa cv::reduce
 */
 CV_EXPORTS_W void repeat(InputArray src, int ny, int nx, OutputArray dst);
 
 /** @overload
 @param src input array to replicate.
-@param ny Flag to specify how many times the src is repeated along the
+@param ny Flag to specify how many times the `src` is repeated along the
 vertical axis.
-@param nx Flag to specify how many times the src is repeated along the
+@param nx Flag to specify how many times the `src` is repeated along the
 horizontal axis.
   */
 CV_EXPORTS Mat repeat(const Mat& src, int ny, int nx);
@@ -1509,7 +1520,7 @@ CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
 
 /** @brief Checks every element of an input array for invalid values.
 
-The functions checkRange check that every array element is neither NaN nor infinite. When minVal \<
+The functions checkRange check that every array element is neither NaN nor infinite. When minVal \>
 -DBL_MAX and maxVal \< DBL_MAX, the functions also check that each value is between minVal and
 maxVal. In case of multi-channel arrays, each channel is processed independently. If some values
 are out of range, position of the first outlier is stored in pos (when pos != NULL). Then, the
@@ -2024,9 +2035,9 @@ so you need to "flip" the second convolution operand B vertically and horizontal
 -   An example using the discrete fourier transform can be found at
     opencv_source_code/samples/cpp/dft.cpp
 -   (Python) An example using the dft functionality to perform Wiener deconvolution can be found
-    at opencv_source/samples/python2/deconvolution.py
+    at opencv_source/samples/python/deconvolution.py
 -   (Python) An example rearranging the quadrants of a Fourier image can be found at
-    opencv_source/samples/python2/dft.py
+    opencv_source/samples/python/dft.py
 @param src input array that could be real or complex.
 @param dst output array whose size and type depends on the flags .
 @param flags transformation flags, representing a combination of the cv::DftFlags
@@ -2837,7 +2848,7 @@ and groups the input samples around the clusters. As an output, \f$\texttt{label
 
 @note
 -   (Python) An example on K-means clustering can be found at
-    opencv_source_code/samples/python2/kmeans.py
+    opencv_source_code/samples/python/kmeans.py
 @param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
 Examples of this array can be:
 -   Mat points(count, 2, CV_32F);
@@ -2905,6 +2916,21 @@ public:
     static Ptr<Formatter> get(int fmt = FMT_DEFAULT);
 
 };
+
+static inline
+String& operator << (String& out, Ptr<Formatted> fmtd)
+{
+    fmtd->reset();
+    for(const char* str = fmtd->next(); str; str = fmtd->next())
+        out += cv::String(str);
+    return out;
+}
+
+static inline
+String& operator << (String& out, const Mat& mtx)
+{
+    return out << Formatter::get()->format(mtx);
+}
 
 //////////////////////////////////////// Algorithm ////////////////////////////////////
 

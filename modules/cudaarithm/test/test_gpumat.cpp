@@ -361,4 +361,51 @@ CUDA_TEST_P(EnsureSizeIsEnough, BufferReuse)
 
 INSTANTIATE_TEST_CASE_P(CUDA, EnsureSizeIsEnough, ALL_DEVICES);
 
+////////////////////////////////////////////////////////////////////////////////
+// createContinuous
+
+struct CreateContinuous : testing::TestWithParam<cv::cuda::DeviceInfo>
+{
+    virtual void SetUp()
+    {
+        cv::cuda::DeviceInfo devInfo = GetParam();
+        cv::cuda::setDevice(devInfo.deviceID());
+    }
+};
+
+CUDA_TEST_P(CreateContinuous, BufferReuse)
+{
+    cv::cuda::GpuMat buffer;
+
+    cv::cuda::createContinuous(100, 100, CV_8UC1, buffer);
+    EXPECT_EQ(100, buffer.rows);
+    EXPECT_EQ(100, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_TRUE(buffer.isContinuous());
+    EXPECT_EQ(buffer.cols * sizeof(uchar), buffer.step);
+
+    cv::cuda::createContinuous(10, 1000, CV_8UC1, buffer);
+    EXPECT_EQ(10, buffer.rows);
+    EXPECT_EQ(1000, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_TRUE(buffer.isContinuous());
+    EXPECT_EQ(buffer.cols * sizeof(uchar), buffer.step);
+
+    cv::cuda::createContinuous(10, 10, CV_8UC1, buffer);
+    EXPECT_EQ(10, buffer.rows);
+    EXPECT_EQ(10, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_TRUE(buffer.isContinuous());
+    EXPECT_EQ(buffer.cols * sizeof(uchar), buffer.step);
+
+    cv::cuda::createContinuous(100, 100, CV_8UC1, buffer);
+    EXPECT_EQ(100, buffer.rows);
+    EXPECT_EQ(100, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_TRUE(buffer.isContinuous());
+    EXPECT_EQ(buffer.cols * sizeof(uchar), buffer.step);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA, CreateContinuous, ALL_DEVICES);
+
 #endif // HAVE_CUDA

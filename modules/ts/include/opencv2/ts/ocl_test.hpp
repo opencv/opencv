@@ -324,9 +324,8 @@ struct CV_EXPORTS TSTestWithParam : public TestUtils, public ::testing::TestWith
 
 };
 
+#undef PARAM_TEST_CASE
 #define PARAM_TEST_CASE(name, ...) struct name : public TSTestWithParam< std::tr1::tuple< __VA_ARGS__ > >
-
-#define GET_PARAM(k) std::tr1::get< k >(GetParam())
 
 #ifndef IMPLEMENT_PARAM_CLASS
 #define IMPLEMENT_PARAM_CLASS(name, type) \

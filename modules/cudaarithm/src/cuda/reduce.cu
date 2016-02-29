@@ -137,7 +137,7 @@ void cv::cuda::reduce(InputArray _src, OutputArray _dst, int dim, int reduceOp, 
     if (dtype < 0)
         dtype = src.depth();
 
-    GpuMat dst = getOutputMat(_dst, 1, dim == 0 ? src.cols : src.rows, CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()), stream);
+    GpuMat dst = getOutputMat(_dst, dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()), stream);
 
     if (dim == 0)
     {

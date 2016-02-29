@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/detail/distortion_model.hpp"
 
 cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
@@ -94,7 +95,7 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
         distCoeffs = Mat_<double>(distCoeffs);
     else
     {
-        distCoeffs.create(12, 1, CV_64F);
+        distCoeffs.create(14, 1, CV_64F);
         distCoeffs = 0.;
     }
 
@@ -109,7 +110,8 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     CV_Assert( distCoeffs.size() == Size(1, 4) || distCoeffs.size() == Size(4, 1) ||
                distCoeffs.size() == Size(1, 5) || distCoeffs.size() == Size(5, 1) ||
                distCoeffs.size() == Size(1, 8) || distCoeffs.size() == Size(8, 1) ||
-               distCoeffs.size() == Size(1, 12) || distCoeffs.size() == Size(12, 1));
+               distCoeffs.size() == Size(1, 12) || distCoeffs.size() == Size(12, 1) ||
+               distCoeffs.size() == Size(1, 14) || distCoeffs.size() == Size(14, 1));
 
     if( distCoeffs.rows != 1 && !distCoeffs.isContinuous() )
         distCoeffs = distCoeffs.t();
@@ -127,6 +129,12 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     double s2 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? distPtr[9] : 0.;
     double s3 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? distPtr[10] : 0.;
     double s4 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? distPtr[11] : 0.;
+    double tauX = distCoeffs.cols + distCoeffs.rows - 1 >= 14 ? distPtr[12] : 0.;
+    double tauY = distCoeffs.cols + distCoeffs.rows - 1 >= 14 ? distPtr[13] : 0.;
+
+    // Matrix for trapezoidal distortion of tilted image sensor
+    cv::Matx33d matTilt = cv::Matx33d::eye();
+    cv::detail::computeTiltProjectionMatrix(tauX, tauY, &matTilt);
 
     for( int i = 0; i < size.height; i++ )
     {
@@ -142,8 +150,12 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
             double x2 = x*x, y2 = y*y;
             double r2 = x2 + y2, _2xy = 2*x*y;
             double kr = (1 + ((k3*r2 + k2)*r2 + k1)*r2)/(1 + ((k6*r2 + k5)*r2 + k4)*r2);
-            double u = fx*(x*kr + p1*_2xy + p2*(r2 + 2*x2) + s1*r2+s2*r2*r2) + u0;
-            double v = fy*(y*kr + p1*(r2 + 2*y2) + p2*_2xy + s3*r2+s4*r2*r2) + v0;
+            double xd = (x*kr + p1*_2xy + p2*(r2 + 2*x2) + s1*r2+s2*r2*r2);
+            double yd = (y*kr + p1*(r2 + 2*y2) + p2*_2xy + s3*r2+s4*r2*r2);
+            cv::Vec3d vecTilt = matTilt*cv::Vec3d(xd, yd, 1);
+            double invProj = vecTilt(2) ? 1./vecTilt(2) : 1;
+            double u = fx*invProj*vecTilt(0) + u0;
+            double v = fy*invProj*vecTilt(1) + v0;
             if( m1type == CV_16SC2 )
             {
                 int iu = saturate_cast<int>(u*INTER_TAB_SIZE);
@@ -266,7 +278,7 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
                    const CvMat* _distCoeffs,
                    const CvMat* matR, const CvMat* matP )
 {
-    double A[3][3], RR[3][3], k[12]={0,0,0,0,0,0,0,0,0,0,0}, fx, fy, ifx, ify, cx, cy;
+    double A[3][3], RR[3][3], k[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0}, fx, fy, ifx, ify, cx, cy;
     CvMat matA=cvMat(3, 3, CV_64F, A), _Dk;
     CvMat _RR=cvMat(3, 3, CV_64F, RR);
     const CvPoint2D32f* srcf;
@@ -276,6 +288,7 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
     int stype, dtype;
     int sstep, dstep;
     int i, j, n, iters = 1;
+    cv::Matx33d invMatTilt = cv::Matx33d::eye();
 
     CV_Assert( CV_IS_MAT(_src) && CV_IS_MAT(_dst) &&
         (_src->rows == 1 || _src->cols == 1) &&
@@ -296,13 +309,16 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
             (_distCoeffs->rows*_distCoeffs->cols == 4 ||
              _distCoeffs->rows*_distCoeffs->cols == 5 ||
              _distCoeffs->rows*_distCoeffs->cols == 8 ||
-             _distCoeffs->rows*_distCoeffs->cols == 12));
+             _distCoeffs->rows*_distCoeffs->cols == 12 ||
+             _distCoeffs->rows*_distCoeffs->cols == 14));
 
         _Dk = cvMat( _distCoeffs->rows, _distCoeffs->cols,
             CV_MAKETYPE(CV_64F,CV_MAT_CN(_distCoeffs->type)), k);
 
         cvConvert( _distCoeffs, &_Dk );
         iters = 5;
+        if (k[12] != 0 || k[13] != 0)
+            cv::detail::computeTiltProjectionMatrix<double>(k[12], k[13], NULL, NULL, NULL, &invMatTilt);
     }
 
     if( matR )
@@ -354,8 +370,14 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
             y = srcd[i*sstep].y;
         }
 
-        x0 = x = (x - cx)*ifx;
-        y0 = y = (y - cy)*ify;
+        x = (x - cx)*ifx;
+        y = (y - cy)*ify;
+
+        // compensate tilt distortion
+        cv::Vec3d vecUntilt = invMatTilt * cv::Vec3d(x, y, 1);
+        double invProj = vecUntilt(2) ? 1./vecUntilt(2) : 1;
+        x0 = x = invProj * vecUntilt(0);
+        y0 = y = invProj * vecUntilt(1);
 
         // compensate distortion iteratively
         for( j = 0; j < iters; j++ )
@@ -500,7 +522,7 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
                             OutputArray _map1, OutputArray _map2, int projType, double _alpha )
 {
     Mat cameraMatrix0 = _cameraMatrix0.getMat(), distCoeffs0 = _distCoeffs0.getMat();
-    double k[12] = {0,0,0,0,0,0,0,0,0,0,0}, M[9]={0,0,0,0,0,0,0,0,0};
+    double k[14] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0}, M[9]={0,0,0,0,0,0,0,0,0};
     Mat distCoeffs(distCoeffs0.rows, distCoeffs0.cols, CV_MAKETYPE(CV_64F,distCoeffs0.channels()), k);
     Mat cameraMatrix(3,3,CV_64F,M);
     Point2f scenter((float)cameraMatrix.at<double>(0,2), (float)cameraMatrix.at<double>(1,2));
@@ -513,7 +535,7 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
 
     int ndcoeffs = distCoeffs0.cols*distCoeffs0.rows*distCoeffs0.channels();
     CV_Assert((distCoeffs0.cols == 1 || distCoeffs0.rows == 1) &&
-              (ndcoeffs == 4 || ndcoeffs == 5 || ndcoeffs == 8));
+              (ndcoeffs == 4 || ndcoeffs == 5 || ndcoeffs == 8 || ndcoeffs == 12 || ndcoeffs == 14));
     CV_Assert(cameraMatrix0.size() == Size(3,3));
     distCoeffs0.convertTo(distCoeffs,CV_64F);
     cameraMatrix0.convertTo(cameraMatrix,CV_64F);
@@ -540,6 +562,8 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
     Mat mapxy(dsize, CV_32FC2);
     double k1 = k[0], k2 = k[1], k3 = k[2], p1 = k[3], p2 = k[4], k4 = k[5], k5 = k[6], k6 = k[7], s1 = k[8], s2 = k[9], s3 = k[10], s4 = k[11];
     double fx = cameraMatrix.at<double>(0,0), fy = cameraMatrix.at<double>(1,1), cx = scenter.x, cy = scenter.y;
+    cv::Matx33d matTilt;
+    cv::detail::computeTiltProjectionMatrix(k[12], k[13], &matTilt);
 
     for( int y = 0; y < dsize.height; y++ )
     {
@@ -556,8 +580,12 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
             double x2 = q.x*q.x, y2 = q.y*q.y;
             double r2 = x2 + y2, _2xy = 2*q.x*q.y;
             double kr = 1 + ((k3*r2 + k2)*r2 + k1)*r2/(1 + ((k6*r2 + k5)*r2 + k4)*r2);
-            double u = fx*(q.x*kr + p1*_2xy + p2*(r2 + 2*x2) + s1*r2+ s2*r2*r2) + cx;
-            double v = fy*(q.y*kr + p1*(r2 + 2*y2) + p2*_2xy + s3*r2+ s4*r2*r2) + cy;
+            double xd = (q.x*kr + p1*_2xy + p2*(r2 + 2*x2) + s1*r2+ s2*r2*r2);
+            double yd = (q.y*kr + p1*(r2 + 2*y2) + p2*_2xy + s3*r2+ s4*r2*r2);
+            cv::Vec3d vecTilt = matTilt*cv::Vec3d(xd, yd, 1);
+            double invProj = vecTilt(2) ? 1./vecTilt(2) : 1;
+            double u = fx*invProj*vecTilt(0) + cx;
+            double v = fy*invProj*vecTilt(1) + cy;
 
             mxy[x] = Point2f((float)u, (float)v);
         }

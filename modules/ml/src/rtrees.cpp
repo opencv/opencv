@@ -187,7 +187,7 @@ public:
                 oobidx.clear();
                 for( i = 0; i < n; i++ )
                 {
-                    if( !oobmask[i] )
+                    if( oobmask[i] )
                         oobidx.push_back(i);
                 }
                 int n_oob = (int)oobidx.size();
@@ -217,6 +217,7 @@ public:
                     else
                     {
                         int ival = cvRound(val);
+                        //Voting scheme to combine OOB errors of each tree
                         int* votes = &oobvotes[j*nclasses];
                         votes[ival]++;
                         int best_class = 0;
@@ -232,38 +233,39 @@ public:
                 oobError /= n_oob;
                 if( rparams.calcVarImportance && n_oob > 1 )
                 {
+                    Mat sample_clone;
                     oobperm.resize(n_oob);
                     for( i = 0; i < n_oob; i++ )
                         oobperm[i] = oobidx[i];
+                    for (i = n_oob - 1; i > 0; --i)  //Randomly shuffle indices so we can permute features
+                    {
+                        int r_i = rng.uniform(0, n_oob);
+                        std::swap(oobperm[i], oobperm[r_i]);
+                    }
 
                     for( vi_ = 0; vi_ < nvars; vi_++ )
                     {
-                        vi = vidx ? vidx[vi_] : vi_;
+                        vi = vidx ? vidx[vi_] : vi_; //Ensure that only the user specified predictors are used for training
                         double ncorrect_responses_permuted = 0;
-                        for( i = 0; i < n_oob; i++ )
-                        {
-                            int i1 = rng.uniform(0, n_oob);
-                            int i2 = rng.uniform(0, n_oob);
-                            std::swap(i1, i2);
-                        }
 
                         for( i = 0; i < n_oob; i++ )
                         {
                             j = oobidx[i];
                             int vj = oobperm[i];
                             sample0 = Mat( nallvars, 1, CV_32F, psamples + sstep0*w->sidx[j], sstep1*sizeof(psamples[0]) );
-                            for( k = 0; k < nallvars; k++ )
-                                sample.at<float>(k) = sample0.at<float>(k);
-                            sample.at<float>(vi) = psamples[sstep0*w->sidx[vj] + sstep1*vi];
+                            sample0.copyTo(sample_clone); //create a copy so we don't mess up the original data
+                            sample_clone.at<float>(vi) = psamples[sstep0*w->sidx[vj] + sstep1*vi];
 
-                            double val = predictTrees(Range(treeidx, treeidx+1), sample, predictFlags);
+                            double val = predictTrees(Range(treeidx, treeidx+1), sample_clone, predictFlags);
                             if( !_isClassifier )
                             {
                                 val = (val - w->ord_responses[w->sidx[j]])/max_response;
                                 ncorrect_responses_permuted += exp( -val*val );
                             }
                             else
+                            {
                                 ncorrect_responses_permuted += cvRound(val) == w->cat_responses[w->sidx[j]];
+                            }
                         }
                         varImportance[vi] += (float)(ncorrect_responses - ncorrect_responses_permuted);
                     }

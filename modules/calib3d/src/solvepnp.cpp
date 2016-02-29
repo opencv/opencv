@@ -270,6 +270,8 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     {
         vector<Point3d> opoints_inliers;
         vector<Point2d> ipoints_inliers;
+        opoints = opoints.reshape(3);
+        ipoints = ipoints.reshape(2);
         opoints.convertTo(opoints_inliers, CV_64F);
         ipoints.convertTo(ipoints_inliers, CV_64F);
 

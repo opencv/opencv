@@ -94,7 +94,7 @@ UMatData::~UMatData()
             // simulate Mat::deallocate
             if (u->mapcount != 0)
             {
-                (u->currAllocator ? u->currAllocator : /* TODO allocator ? allocator :*/ Mat::getStdAllocator())->unmap(u);
+                (u->currAllocator ? u->currAllocator : /* TODO allocator ? allocator :*/ Mat::getDefaultAllocator())->unmap(u);
             }
             else
             {
@@ -144,7 +144,7 @@ MatAllocator* UMat::getStdAllocator()
     if( ocl::haveOpenCL() && ocl::useOpenCL() )
         return ocl::getOpenCLAllocator();
 #endif
-    return Mat::getStdAllocator();
+    return Mat::getDefaultAllocator();
 }
 
 void swap( UMat& a, UMat& b )
@@ -286,7 +286,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     accessFlags |= ACCESS_RW;
     UMatData* new_u = NULL;
     {
-        MatAllocator *a = allocator, *a0 = getStdAllocator();
+        MatAllocator *a = allocator, *a0 = getDefaultAllocator();
         if(!a)
             a = a0;
         new_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
@@ -302,7 +302,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     }
     if (!allocated)
     {
-        allocated = getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
+        allocated = getDefaultAllocator()->allocate(new_u, accessFlags, usageFlags);
         CV_Assert(allocated);
     }
     if (u != NULL)
@@ -345,6 +345,14 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
             return;
     }
 
+    int _sizes_backup[CV_MAX_DIM]; // #5991
+    if (_sizes == (this->size.p))
+    {
+        for(i = 0; i < d; i++ )
+            _sizes_backup[i] = _sizes[i];
+        _sizes = _sizes_backup;
+    }
+
     release();
     if( d == 0 )
         return;
@@ -358,7 +366,7 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
         if (!a)
         {
             a = a0;
-            a0 = Mat::getStdAllocator();
+            a0 = Mat::getDefaultAllocator();
         }
         try
         {
