@@ -118,3 +118,51 @@ TEST(ML_SVM, trainAuto_regression_5369)
     EXPECT_EQ(0., result0);
     EXPECT_EQ(1., result1);
 }
+
+class CV_SVMGetSupportVectorsTest : public cvtest::BaseTest {
+public:
+    CV_SVMGetSupportVectorsTest() {}
+protected:
+    virtual void run( int startFrom );
+};
+void CV_SVMGetSupportVectorsTest::run(int /*startFrom*/ )
+{
+    int code = cvtest::TS::OK;
+
+    // Set up training data
+    int labels[4] = {1, -1, -1, -1};
+    float trainingData[4][2] = { {501, 10}, {255, 10}, {501, 255}, {10, 501} };
+    Mat trainingDataMat(4, 2, CV_32FC1, trainingData);
+    Mat labelsMat(4, 1, CV_32SC1, labels);
+
+    Ptr<SVM> svm = SVM::create();
+    svm->setType(SVM::C_SVC);
+    svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6));
+
+
+    // Test retrieval of SVs and compressed SVs on linear SVM
+    svm->setKernel(SVM::LINEAR);
+    svm->train(trainingDataMat, cv::ml::ROW_SAMPLE, labelsMat);
+
+    Mat sv = svm->getSupportVectors();
+    CV_Assert(sv.rows == 1);    // by default compressed SV returned
+    sv = svm->getUncompressedSupportVectors();
+    CV_Assert(sv.rows == 3);
+
+
+    // Test retrieval of SVs and compressed SVs on non-linear SVM
+    svm->setKernel(SVM::POLY);
+    svm->setDegree(2);
+    svm->train(trainingDataMat, cv::ml::ROW_SAMPLE, labelsMat);
+
+    sv = svm->getSupportVectors();
+    CV_Assert(sv.rows == 3);
+    sv = svm->getUncompressedSupportVectors();
+    CV_Assert(sv.rows == 0);    // inapplicable for non-linear SVMs
+
+
+    ts->set_failed_test_info(code);
+}
+
+
+TEST(ML_SVM, getSupportVectors) { CV_SVMGetSupportVectorsTest test; test.safe_run(); }

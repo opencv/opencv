@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/hal/intrin.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #include <iostream>
 namespace cv

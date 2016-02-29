@@ -62,6 +62,11 @@ public class OpenCVLoader
      */
     public static final String OPENCV_VERSION_3_0_0 = "3.0.0";
 
+    /**
+     * OpenCV Library version 3.1.0.
+     */
+    public static final String OPENCV_VERSION_3_1_0 = "3.1.0";
+
 
     /**
      * Loads and initializes OpenCV library from current application package. Roughly, it's an analog of system.loadLibrary("opencv_java").

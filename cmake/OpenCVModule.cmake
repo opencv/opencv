@@ -305,9 +305,10 @@ macro(ocv_glob_modules)
   set(OPENCV_INITIAL_PASS OFF PARENT_SCOPE)
   set(OPENCV_INITIAL_PASS OFF)
   if(${BUILD_opencv_world})
-    add_subdirectory("${OPENCV_MODULE_opencv_world_LOCATION}" "${CMAKE_CURRENT_BINARY_DIR}/world")
     foreach(m ${OPENCV_MODULES_BUILD})
-      if(NOT OPENCV_MODULE_${m}_IS_PART_OF_WORLD AND NOT ${m} STREQUAL opencv_world)
+      if("${m}" STREQUAL opencv_world)
+        add_subdirectory("${OPENCV_MODULE_opencv_world_LOCATION}" "${CMAKE_CURRENT_BINARY_DIR}/world")
+      elseif(NOT OPENCV_MODULE_${m}_IS_PART_OF_WORLD AND NOT ${m} STREQUAL opencv_world)
         message(STATUS "Processing module ${m}...")
         if(m MATCHES "^opencv_")
           string(REGEX REPLACE "^opencv_" "" __shortname "${m}")
@@ -351,6 +352,7 @@ function(__ocv_sort_modules_by_deps __lst)
   ocv_list_sort(${__lst})
   set(input ${${__lst}})
   set(result "")
+  set(result_extra "")
   while(input)
     list(LENGTH input length_before)
     foreach (m ${input})
@@ -375,16 +377,27 @@ function(__ocv_sort_modules_by_deps __lst)
     list(LENGTH input length_after)
     # check for infinite loop or unresolved dependencies
     if (NOT length_after LESS length_before)
-      message(WARNING "Unresolved dependencies or loop in dependency graph (${length_after})\n"
-        "Processed ${__lst}: ${${__lst}}\n"
-        "Good modules: ${result}\n"
-        "Bad modules: ${input}"
-      )
-      list(APPEND result ${input})
-      break()
+      if(NOT BUILD_SHARED_LIBS)
+        if (";${input};" MATCHES ";opencv_world;")
+          list(REMOVE_ITEM input "opencv_world")
+          list(APPEND result_extra "opencv_world")
+        else()
+          # We can't do here something
+          list(APPEND result ${input})
+          break()
+        endif()
+      else()
+        message(FATAL_ERROR WARNING "Unresolved dependencies or loop in dependency graph (${length_after})\n"
+          "Processed ${__lst}: ${${__lst}}\n"
+          "Good modules: ${result}\n"
+          "Bad modules: ${input}"
+        )
+        list(APPEND result ${input})
+        break()
+      endif()
     endif()
   endwhile()
-  set(${__lst} "${result}" PARENT_SCOPE)
+  set(${__lst} "${result};${result_extra}" PARENT_SCOPE)
 endfunction()
 
 # resolve dependensies
@@ -445,6 +458,17 @@ function(__ocv_resolve_dependencies)
 #              message(STATUS "  Transfer dependency ${d} from ${m2} to ${m}")
               list(APPEND deps_${m} ${d})
               set(has_changes ON)
+            endif()
+            if(BUILD_opencv_world
+                AND NOT "${m}" STREQUAL "opencv_world"
+                AND NOT "${m2}" STREQUAL "opencv_world"
+                AND OPENCV_MODULE_${m2}_IS_PART_OF_WORLD
+                AND NOT OPENCV_MODULE_${m}_IS_PART_OF_WORLD)
+              if(NOT (";${deps_${m}};" MATCHES ";opencv_world;"))
+#                message(STATUS "  Transfer dependency opencv_world alias ${m2} to ${m}")
+                list(APPEND deps_${m} opencv_world)
+                set(has_changes ON)
+              endif()
             endif()
           endforeach()
         endif()
@@ -643,6 +667,8 @@ macro(ocv_glob_module_sources)
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.h"
   )
   file(GLOB lib_hdrs_detail
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.hpp"
@@ -675,7 +701,6 @@ macro(ocv_glob_module_sources)
   )
   if(cl_kernels)
     set(OCL_NAME opencl_kernels_${name})
-    ocv_include_directories(${OPENCL_INCLUDE_DIRS})
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp" "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.hpp"
       COMMAND ${CMAKE_COMMAND} "-DMODULE_NAME=${name}" "-DCL_DIR=${CMAKE_CURRENT_LIST_DIR}/src/opencl" "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
@@ -777,11 +802,20 @@ macro(_ocv_create_module)
   set_source_files_properties(${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES} ${${the_module}_pch}
     PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
 
-  ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
-  ocv_target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
-  ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
-  if (HAVE_CUDA)
-    ocv_target_link_libraries(${the_module} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  if(NOT BUILD_SHARED_LIBS OR NOT INSTALL_CREATE_DISTRIB)
+    ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
+    ocv_target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
+    ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+    if (HAVE_CUDA)
+      ocv_target_link_libraries(${the_module} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+    endif()
+  else()
+    ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
+    ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_MODULE_${the_module}_DEPS_TO_LINK})
+    ocv_target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+    if (HAVE_CUDA)
+      ocv_target_link_libraries(${the_module} LINK_PRIVATE ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+    endif()
   endif()
 
   add_dependencies(opencv_modules ${the_module})
@@ -825,12 +859,14 @@ macro(_ocv_create_module)
     set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:libc /DEBUG")
   endif()
 
-  ocv_install_target(${the_module} EXPORT OpenCVModules OPTIONAL
-    RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs
-    LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs NAMELINK_SKIP
-    ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT dev
-    )
   get_target_property(_target_type ${the_module} TYPE)
+  if("${_target_type}" STREQUAL "SHARED_LIBRARY" OR (NOT BUILD_SHARED_LIBS OR NOT INSTALL_CREATE_DISTRIB))
+    ocv_install_target(${the_module} EXPORT OpenCVModules OPTIONAL
+      RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs
+      LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs NAMELINK_SKIP
+      ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT dev
+      )
+  endif()
   if("${_target_type}" STREQUAL "SHARED_LIBRARY")
     install(TARGETS ${the_module}
       LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT dev NAMELINK_ONLY)

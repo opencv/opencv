@@ -18,13 +18,20 @@ static void help(char** argv)
 
 int main(int argc, char** argv)
 {
-    if(argc != 2)
+    cv::CommandLineParser parser(argc, argv, "{help h||}{@image||}");
+    if (parser.has("help"))
+    {
+        help(argv);
+        return 0;
+    }
+    string first_file = parser.get<string>("@image");
+
+    if(first_file.empty())
     {
         help(argv);
         return 1;
     }
 
-    string first_file = argv[1];
     VideoCapture sequence(first_file);
 
     if (!sequence.isOpened())

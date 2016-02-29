@@ -35,6 +35,9 @@
 #  define GTEST_USES_POSIX_RE 0
 #endif
 
+#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+#define GET_PARAM(k) std::tr1::get< k >(GetParam())
+
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 
@@ -161,8 +164,11 @@ CV_EXPORTS void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop);
 CV_EXPORTS void compare(const Mat& src, double s, Mat& dst, int cmpop);
 CV_EXPORTS void gemm(const Mat& src1, const Mat& src2, double alpha,
                      const Mat& src3, double beta, Mat& dst, int flags);
-    CV_EXPORTS void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& shift );
+CV_EXPORTS void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& shift );
 CV_EXPORTS double crossCorr(const Mat& src1, const Mat& src2);
+CV_EXPORTS void threshold( const Mat& src, Mat& dst, double thresh, double maxval, int thresh_type );
+CV_EXPORTS void minMaxIdx( InputArray _img, double* minVal, double* maxVal,
+                    Point* minLoc, Point* maxLoc, InputArray _mask );
 
 struct CV_EXPORTS MatInfo
 {

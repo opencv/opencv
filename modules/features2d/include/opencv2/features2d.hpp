@@ -74,7 +74,7 @@ This section describes approaches based on local 2D features and used to categor
    -   A complete Bag-Of-Words sample can be found at
         opencv_source_code/samples/cpp/bagofwords_classification.cpp
     -   (Python) An example using the features2D framework to perform object categorization can be
-        found at opencv_source_code/samples/python2/find_obj.py
+        found at opencv_source_code/samples/python/find_obj.py
 
   @}
  */
@@ -331,7 +331,7 @@ than union-find method; it actually get 1.5~2m/s on my centrino L7200 1.2GHz lap
 than grey image method ( 3~4 times ); the chi_table.h file is taken directly from paper's source
 code which is distributed under GPL.
 
-- (Python) A complete example showing the use of the %MSER detector can be found at samples/python2/mser.py
+- (Python) A complete example showing the use of the %MSER detector can be found at samples/python/mser.py
 */
 class CV_EXPORTS_W MSER : public Feature2D
 {
@@ -447,6 +447,9 @@ circle around this pixel.
 AgastFeatureDetector::AGAST_5_8, AgastFeatureDetector::AGAST_7_12d,
 AgastFeatureDetector::AGAST_7_12s, AgastFeatureDetector::OAST_9_16
 
+For non-Intel platforms, there is a tree optimised variant of AGAST with same numerical results.
+The 32-bit binary tree tables were generated automatically from original code using perl script.
+The perl script and examples of tree generation are placed in features2d/doc folder.
 Detects corners using the AGAST algorithm by @cite mair2010_agast .
 
  */

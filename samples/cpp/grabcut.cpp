@@ -276,15 +276,16 @@ static void on_mouse( int event, int x, int y, int flags, void* param )
 
 int main( int argc, char** argv )
 {
-    if( argc!=2 )
+    cv::CommandLineParser parser(argc, argv, "{help h||}{@input||}");
+    if (parser.has("help"))
     {
         help();
-        return 1;
+        return 0;
     }
-    string filename = argv[1];
+    string filename = parser.get<string>("@input");
     if( filename.empty() )
     {
-        cout << "\nDurn, couldn't read in " << argv[1] << endl;
+        cout << "\nDurn, empty filename" << endl;
         return 1;
     }
     Mat image = imread( filename, 1 );

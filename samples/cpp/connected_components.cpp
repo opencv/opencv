@@ -43,13 +43,17 @@ static void help()
 
 const char* keys =
 {
-    "{@image|../data/stuff.jpg|image for converting to a grayscale}"
+    "{help h||}{@image|../data/stuff.jpg|image for converting to a grayscale}"
 };
 
 int main( int argc, const char** argv )
 {
-    help();
     CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     string inputImage = parser.get<string>(0);
     img = imread(inputImage.c_str(), 0);
 

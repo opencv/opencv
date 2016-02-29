@@ -57,7 +57,7 @@ def determine_opencv_version(version_hpp_path):
         major = re.search(r'^#define\W+CV_VERSION_MAJOR\W+(\d+)$', data, re.MULTILINE).group(1)
         minor = re.search(r'^#define\W+CV_VERSION_MINOR\W+(\d+)$', data, re.MULTILINE).group(1)
         revision = re.search(r'^#define\W+CV_VERSION_REVISION\W+(\d+)$', data, re.MULTILINE).group(1)
-        version_status = re.search(r'^#define\W+CV_VERSION_STATUS\W+"([^"]*)"', data, re.MULTILINE).group(1)
+        version_status = re.search(r'^#define\W+CV_VERSION_STATUS\W+"([^"]*)"$', data, re.MULTILINE).group(1)
         return "%(major)s.%(minor)s.%(revision)s%(version_status)s" % locals()
 
 #===================================================================================================
@@ -166,7 +166,7 @@ class Builder:
         # Add extra data
         apkxmldest = check_dir(os.path.join(apkdest, "res", "xml"), create=True)
         apklibdest = check_dir(os.path.join(apkdest, "libs", abi.name), create=True)
-        for ver, d in self.extra_packs + [("3.0.0", os.path.join(self.libdest, "lib"))]:
+        for ver, d in self.extra_packs + [("3.1.0", os.path.join(self.libdest, "lib"))]:
             r = ET.Element("library", attrib={"version": ver})
             log.info("Adding libraries from %s", d)
 

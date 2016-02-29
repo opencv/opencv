@@ -51,6 +51,7 @@
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/base.hpp"
 #include "opencv2/core/traits.hpp"
+#include "opencv2/core/saturate.hpp"
 
 namespace cv
 {
@@ -114,6 +115,10 @@ public:
     Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
          _Tp v4, _Tp v5, _Tp v6, _Tp v7,
          _Tp v8, _Tp v9, _Tp v10, _Tp v11); //!< 1x12, 2x6, 3x4, 4x3, 6x2 or 12x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+         _Tp v4, _Tp v5, _Tp v6, _Tp v7,
+         _Tp v8, _Tp v9, _Tp v10, _Tp v11,
+         _Tp v12, _Tp v13); //!< 1x14, 2x7, 7x2 or 14x1 matrix
     Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
          _Tp v4, _Tp v5, _Tp v6, _Tp v7,
          _Tp v8, _Tp v9, _Tp v10, _Tp v11,
@@ -319,6 +324,7 @@ public:
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7); //!< 8-element vector constructor
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8); //!< 9-element vector constructor
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9); //!< 10-element vector constructor
+    Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13); //!< 14-element vector constructor
     explicit Vec(const _Tp* values);
 
     Vec(const Vec<_Tp, cn>& v);
@@ -580,6 +586,17 @@ Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp 
     val[8] = v8; val[9] = v9; val[10] = v10; val[11] = v11;
     for(int i = 12; i < channels; i++) val[i] = _Tp(0);
 }
+
+template<typename _Tp, int m, int n> inline
+Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13)
+{
+    CV_StaticAssert(channels == 14, "Matx should have at least 14 elements.");
+    val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
+    val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
+    val[8] = v8; val[9] = v9; val[10] = v10; val[11] = v11;
+    val[12] = v12; val[13] = v13;
+}
+
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13, _Tp v14, _Tp v15)
@@ -930,6 +947,10 @@ Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9)
     : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9) {}
+
+template<typename _Tp, int cn> inline
+Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13)
+    : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13) {}
 
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(const _Tp* values)

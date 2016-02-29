@@ -12,23 +12,36 @@ endif(WITH_VFW)
 
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
-# try to find gstreamer 1.x first
+# try to find gstreamer 1.x first if 0.10 was not requested
 if(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
-  CHECK_MODULE(gstreamer-base-1.0 HAVE_GSTREAMER_BASE)
-  CHECK_MODULE(gstreamer-video-1.0 HAVE_GSTREAMER_VIDEO)
-  CHECK_MODULE(gstreamer-app-1.0 HAVE_GSTREAMER_APP)
-  CHECK_MODULE(gstreamer-riff-1.0 HAVE_GSTREAMER_RIFF)
-  CHECK_MODULE(gstreamer-pbutils-1.0 HAVE_GSTREAMER_PBUTILS)
+  if(WIN32)
+    SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_LIST_DIR}")
+    FIND_PACKAGE(GstreamerWindows)
+    IF(GSTREAMER_gstbase_LIBRARY AND GSTREAMER_gstvideo_LIBRARY AND GSTREAMER_gstapp_LIBRARY AND GSTREAMER_gstpbutils_LIBRARY AND GSTREAMER_gstriff_LIBRARY)
+      set(HAVE_GSTREAMER TRUE)
+      set(GSTREAMER_BASE_VERSION 1.0)
+      set(GSTREAMER_VIDEO_VERSION 1.0)
+      set(GSTREAMER_APP_VERSION 1.0)
+      set(GSTREAMER_RIFF_VERSION 1.0)
+      set(GSTREAMER_PBUTILS_VERSION 1.0)
+    ENDIF(GSTREAMER_gstbase_LIBRARY AND GSTREAMER_gstvideo_LIBRARY AND GSTREAMER_gstapp_LIBRARY AND GSTREAMER_gstpbutils_LIBRARY AND GSTREAMER_gstriff_LIBRARY)
 
-  if(HAVE_GSTREAMER_BASE AND HAVE_GSTREAMER_VIDEO AND HAVE_GSTREAMER_APP AND HAVE_GSTREAMER_RIFF AND HAVE_GSTREAMER_PBUTILS)
+  else(WIN32)
+    CHECK_MODULE(gstreamer-base-1.0 HAVE_GSTREAMER_BASE)
+    CHECK_MODULE(gstreamer-video-1.0 HAVE_GSTREAMER_VIDEO)
+    CHECK_MODULE(gstreamer-app-1.0 HAVE_GSTREAMER_APP)
+    CHECK_MODULE(gstreamer-riff-1.0 HAVE_GSTREAMER_RIFF)
+    CHECK_MODULE(gstreamer-pbutils-1.0 HAVE_GSTREAMER_PBUTILS)
+
+    if(HAVE_GSTREAMER_BASE AND HAVE_GSTREAMER_VIDEO AND HAVE_GSTREAMER_APP AND HAVE_GSTREAMER_RIFF AND HAVE_GSTREAMER_PBUTILS)
       set(HAVE_GSTREAMER TRUE)
       set(GSTREAMER_BASE_VERSION ${ALIASOF_gstreamer-base-1.0_VERSION})
       set(GSTREAMER_VIDEO_VERSION ${ALIASOF_gstreamer-video-1.0_VERSION})
       set(GSTREAMER_APP_VERSION ${ALIASOF_gstreamer-app-1.0_VERSION})
       set(GSTREAMER_RIFF_VERSION ${ALIASOF_gstreamer-riff-1.0_VERSION})
       set(GSTREAMER_PBUTILS_VERSION ${ALIASOF_gstreamer-pbutils-1.0_VERSION})
-  endif()
-
+    endif()
+  endif(WIN32)
 endif(WITH_GSTREAMER AND NOT WITH_GSTREAMER_0_10)
 
 # if gstreamer 1.x was not found, or we specified we wanted 0.10, try to find it
@@ -201,7 +214,7 @@ if(WITH_FFMPEG)
     CHECK_INCLUDE_FILE(libavformat/avformat.h HAVE_GENTOO_FFMPEG)
     CHECK_INCLUDE_FILE(ffmpeg/avformat.h HAVE_FFMPEG_FFMPEG)
     if(NOT HAVE_GENTOO_FFMPEG AND NOT HAVE_FFMPEG_FFMPEG)
-      if(EXISTS /usr/include/ffmpeg/libavformat/avformat.h OR HAVE_FFMPEG_SWSCALE)
+      if((NOT CMAKE_CROSSCOMPILING AND EXISTS /usr/include/ffmpeg/libavformat/avformat.h) OR HAVE_FFMPEG_SWSCALE)
         set(HAVE_GENTOO_FFMPEG TRUE)
       endif()
     endif()
@@ -211,11 +224,7 @@ if(WITH_FFMPEG)
 
     if(HAVE_FFMPEG)
       # Find the bzip2 library because it is required on some systems
-      FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2)
-      if(NOT BZIP2_LIBRARIES)
-        # Do an other trial
-        FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
-      endif()
+      FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2 libbz2.so.1)
     else()
       find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h"
                 PATHS /usr/local /usr /opt

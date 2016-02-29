@@ -24,6 +24,7 @@ endif()
 set(STR_CPP "// This file is auto-generated. Do not edit!
 
 #include \"precomp.hpp\"
+#include \"cvconfig.h\"
 #include \"${OUTPUT_HPP_NAME}\"
 
 #ifdef HAVE_OPENCL

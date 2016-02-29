@@ -109,9 +109,9 @@ public:
         cv::AutoBuffer<int> _idx(modelPoints);
         int* idx = _idx;
         int i = 0, j, k, iters = 0;
-        int esz1 = (int)m1.elemSize(), esz2 = (int)m2.elemSize();
         int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
         int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
+        int esz1 = (int)m1.elemSize1()*d1, esz2 = (int)m2.elemSize1()*d2;
         int count = m1.checkVector(d1), count2 = m2.checkVector(d2);
         const int *m1ptr = m1.ptr<int>(), *m2ptr = m2.ptr<int>();
 
@@ -206,7 +206,7 @@ public:
 
         for( iter = 0; iter < niters; iter++ )
         {
-            int i, goodCount, nmodels;
+            int i, nmodels;
             if( count > modelPoints )
             {
                 bool found = getSubset( m1, m2, ms1, ms2, rng, 10000 );
@@ -227,7 +227,7 @@ public:
             for( i = 0; i < nmodels; i++ )
             {
                 Mat model_i = model.rowRange( i*modelSize.height, (i+1)*modelSize.height );
-                goodCount = findInliers( m1, m2, model_i, err, mask, threshold );
+                int goodCount = findInliers( m1, m2, model_i, err, mask, threshold );
 
                 if( goodCount > MAX(maxGoodCount, modelPoints-1) )
                 {
@@ -284,7 +284,7 @@ public:
         int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
         int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
         int count = m1.checkVector(d1), count2 = m2.checkVector(d2);
-        double minMedian = DBL_MAX, sigma;
+        double minMedian = DBL_MAX;
 
         RNG rng((uint64)-1);
 
@@ -359,7 +359,7 @@ public:
 
         if( minMedian < DBL_MAX )
         {
-            sigma = 2.5*1.4826*(1 + 5./(count - modelPoints))*std::sqrt(minMedian);
+            double sigma = 2.5*1.4826*(1 + 5./(count - modelPoints))*std::sqrt(minMedian);
             sigma = MAX( sigma, 0.001 );
 
             count = findInliers( m1, m2, bestModel, err, mask, sigma );

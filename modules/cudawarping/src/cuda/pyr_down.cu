@@ -212,10 +212,10 @@ namespace cv { namespace cuda { namespace device
         template void pyrDown_gpu<short3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         template void pyrDown_gpu<short4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        //template void pyrDown_gpu<int>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrDown_gpu<int>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         //template void pyrDown_gpu<int2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        //template void pyrDown_gpu<int3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        //template void pyrDown_gpu<int4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrDown_gpu<int3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrDown_gpu<int4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
         template void pyrDown_gpu<float>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         //template void pyrDown_gpu<float2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);

@@ -28,7 +28,7 @@ CvCascadeImageReader::NegReader::NegReader()
 
 bool CvCascadeImageReader::NegReader::create( const string _filename, Size _winSize )
 {
-    string dirname, str;
+    string str;
     std::ifstream file(_filename.c_str());
     if ( !file.is_open() )
         return false;

@@ -58,6 +58,7 @@ CvLevMarq::CvLevMarq()
     iters = 0;
     completeSymmFlag = false;
     errNorm = prevErrNorm = DBL_MAX;
+    solveMethod = cv::DECOMP_SVD;
 }
 
 CvLevMarq::CvLevMarq( int nparams, int nerrs, CvTermCriteria criteria0, bool _completeSymmFlag )
@@ -93,9 +94,6 @@ void CvLevMarq::init( int nparams, int nerrs, CvTermCriteria criteria0, bool _co
     prevParam.reset(cvCreateMat( nparams, 1, CV_64F ));
     param.reset(cvCreateMat( nparams, 1, CV_64F ));
     JtJ.reset(cvCreateMat( nparams, nparams, CV_64F ));
-    JtJN.reset(cvCreateMat( nparams, nparams, CV_64F ));
-    JtJV.reset(cvCreateMat( nparams, nparams, CV_64F ));
-    JtJW.reset(cvCreateMat( nparams, 1, CV_64F ));
     JtErr.reset(cvCreateMat( nparams, 1, CV_64F ));
     if( nerrs > 0 )
     {
@@ -116,6 +114,7 @@ void CvLevMarq::init( int nparams, int nerrs, CvTermCriteria criteria0, bool _co
     state = STARTED;
     iters = 0;
     completeSymmFlag = _completeSymmFlag;
+    solveMethod = cv::DECOMP_SVD;
 }
 
 bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
@@ -256,6 +255,34 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
     return true;
 }
 
+namespace {
+static void subMatrix(const cv::Mat& src, cv::Mat& dst, const std::vector<uchar>& cols,
+                      const std::vector<uchar>& rows) {
+    int nonzeros_cols = cv::countNonZero(cols);
+    cv::Mat tmp(src.rows, nonzeros_cols, CV_64FC1);
+
+    for (int i = 0, j = 0; i < (int)cols.size(); i++)
+    {
+        if (cols[i])
+        {
+            src.col(i).copyTo(tmp.col(j++));
+        }
+    }
+
+    int nonzeros_rows  = cv::countNonZero(rows);
+    dst.create(nonzeros_rows, nonzeros_cols, CV_64FC1);
+    for (int i = 0, j = 0; i < (int)rows.size(); i++)
+    {
+        if (rows[i])
+        {
+            tmp.row(i).copyTo(dst.row(j++));
+        }
+    }
+}
+
+}
+
+
 void CvLevMarq::step()
 {
     using namespace cv;
@@ -264,33 +291,36 @@ void CvLevMarq::step()
     int nparams = param->rows;
 
     Mat _JtJ = cvarrToMat(JtJ);
-    Mat _JtJN = cvarrToMat(JtJN);
-    Mat _JtJW = cvarrToMat(JtJW);
-    Mat _JtJV = cvarrToMat(JtJV);
+    Mat _mask = cvarrToMat(mask);
 
-    for( int i = 0; i < nparams; i++ )
-        if( mask->data.ptr[i] == 0 )
-        {
-            _JtJ.row(i) = 0;
-            _JtJ.col(i) = 0;
-            JtErr->data.db[i] = 0;
-        }
+    int nparams_nz = countNonZero(_mask);
+    if(!JtJN || JtJN->rows != nparams_nz) {
+        // prevent re-allocation in every step
+        JtJN.reset(cvCreateMat( nparams_nz, nparams_nz, CV_64F ));
+        JtJV.reset(cvCreateMat( nparams_nz, 1, CV_64F ));
+        JtJW.reset(cvCreateMat( nparams_nz, 1, CV_64F ));
+    }
+
+    Mat _JtJN = cvarrToMat(JtJN);
+    Mat _JtErr = cvarrToMat(JtJV);
+    Mat_<double> nonzero_param = cvarrToMat(JtJW);
+
+    subMatrix(cvarrToMat(JtErr), _JtErr, std::vector<uchar>(1, 1), _mask);
+    subMatrix(_JtJ, _JtJN, _mask, _mask);
 
     if( !err )
-        completeSymm( _JtJ, completeSymmFlag );
+        completeSymm( _JtJN, completeSymmFlag );
 
-    _JtJ.copyTo(_JtJN);
 #if 1
     _JtJN.diag() *= 1. + lambda;
 #else
     _JtJN.diag() += lambda;
 #endif
-    // solve(JtJN, JtErr, param, DECOMP_SVD);
-    SVD::compute(_JtJN, _JtJW, noArray(), _JtJV, SVD::MODIFY_A);
-    SVD::backSubst(_JtJW, _JtJV.t(), _JtJV, cvarrToMat(JtErr), cvarrToMat(param));
+    solve(_JtJN, _JtErr, nonzero_param, solveMethod);
 
+    int j = 0;
     for( int i = 0; i < nparams; i++ )
-        param->data.db[i] = prevParam->data.db[i] - (mask->data.ptr[i] ? param->data.db[i] : 0);
+        param->data.db[i] = prevParam->data.db[i] - (mask->data.ptr[i] ? nonzero_param(j++) : 0);
 }
 
 

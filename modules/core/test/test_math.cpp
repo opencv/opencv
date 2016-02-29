@@ -2502,40 +2502,25 @@ protected:
     }
 };
 
-class Core_CheckRange_Empty : public cvtest::BaseTest
-{
-public:
-    Core_CheckRange_Empty(){}
-    ~Core_CheckRange_Empty(){}
-protected:
-    virtual void run( int start_from );
-};
-
-void Core_CheckRange_Empty::run( int )
+TEST(Core_CheckRange_Empty, accuracy)
 {
     cv::Mat m;
     ASSERT_TRUE( cv::checkRange(m) );
 }
 
-TEST(Core_CheckRange_Empty, accuracy) { Core_CheckRange_Empty test; test.safe_run(); }
-
-class Core_CheckRange_INT_MAX : public cvtest::BaseTest
-{
-public:
-    Core_CheckRange_INT_MAX(){}
-    ~Core_CheckRange_INT_MAX(){}
-protected:
-    virtual void run( int start_from );
-};
-
-void Core_CheckRange_INT_MAX::run( int )
+TEST(Core_CheckRange_INT_MAX, accuracy)
 {
     cv::Mat m(3, 3, CV_32SC1, cv::Scalar(INT_MAX));
     ASSERT_FALSE( cv::checkRange(m, true, 0, 0, INT_MAX) );
     ASSERT_TRUE( cv::checkRange(m) );
 }
 
-TEST(Core_CheckRange_INT_MAX, accuracy) { Core_CheckRange_INT_MAX test; test.safe_run(); }
+TEST(Core_CheckRange_INT_MAX1, accuracy)
+{
+    cv::Mat m(3, 3, CV_32SC1, cv::Scalar(INT_MAX));
+    ASSERT_TRUE( cv::checkRange(m, true, 0, 0, INT_MAX+1.0f) );
+    ASSERT_TRUE( cv::checkRange(m) );
+}
 
 template <typename T> class Core_CheckRange : public testing::Test {};
 
@@ -2546,13 +2531,30 @@ TYPED_TEST_P(Core_CheckRange, Negative)
     double min_bound = 4.5;
     double max_bound = 16.0;
 
-    TypeParam data[] = {5, 10, 15, 4, 10, 2, 8, 12, 14};
+    TypeParam data[] = {5, 10, 15, 10, 10, 2, 8, 12, 14};
     cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
     cv::Point bad_pt(0, 0);
 
     ASSERT_FALSE(checkRange(src, true, &bad_pt, min_bound, max_bound));
-    ASSERT_EQ(bad_pt.x, 0);
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+TYPED_TEST_P(Core_CheckRange, Negative3CN)
+{
+    double min_bound = 4.5;
+    double max_bound = 16.0;
+
+    TypeParam data[] = { 5,  6,  7,   10, 11, 12,   13, 14, 15,
+                        10, 11, 12,   10, 11, 12,    2,  5,  6,
+                         8,  8,  8,   12, 12, 12,   14, 14, 14};
+    cv::Mat src = cv::Mat(3,3, CV_MAKETYPE(cv::DataDepth<TypeParam>::value, 3), data);
+
+    cv::Point bad_pt(0, 0);
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt, min_bound, max_bound));
+    ASSERT_EQ(bad_pt.x, 2);
     ASSERT_EQ(bad_pt.y, 1);
 }
 
@@ -2614,7 +2616,49 @@ TYPED_TEST_P(Core_CheckRange, One)
     ASSERT_TRUE( checkRange(src2, true, NULL, min_bound, max_bound) );
 }
 
-REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds, Zero, One);
+TEST(Core_CheckRange, NaN)
+{
+    float data[] = { 5,  6,  7,   10, 11, 12,   13, 14, 15,
+                    10, 11, 12,   10, 11, 12,   5,  5,  std::numeric_limits<float>::quiet_NaN(),
+                     8,  8,  8,   12, 12, 12,   14, 14, 14};
+    cv::Mat src = cv::Mat(3,3, CV_32FC3, data);
+
+    cv::Point bad_pt(0, 0);
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+TEST(Core_CheckRange, Inf)
+{
+    float data[] = { 5,  6,  7,   10, 11, 12,   13, 14, 15,
+                    10, 11, 12,   10, 11, 12,   5,  5,  std::numeric_limits<float>::infinity(),
+                     8,  8,  8,   12, 12, 12,   14, 14, 14};
+    cv::Mat src = cv::Mat(3,3, CV_32FC3, data);
+
+    cv::Point bad_pt(0, 0);
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+TEST(Core_CheckRange, Inf_Minus)
+{
+    float data[] = { 5,  6,  7,   10, 11, 12,   13, 14, 15,
+                    10, 11, 12,   10, 11, 12,   5,  5,  -std::numeric_limits<float>::infinity(),
+                     8,  8,  8,   12, 12, 12,   14, 14, 14};
+    cv::Mat src = cv::Mat(3,3, CV_32FC3, data);
+
+    cv::Point bad_pt(0, 0);
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);

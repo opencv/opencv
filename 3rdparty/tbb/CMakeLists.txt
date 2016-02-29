@@ -5,21 +5,26 @@ if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-if (WIN32 AND ARM)
-  # 4.1 update 4 - The first release that supports Windows RT. Hangs on some Android devices
-  set(tbb_ver "tbb41_20130613oss")
-  set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130613oss_src.tgz")
-  set(tbb_md5 "108c8c1e481b0aaea61878289eb28b6a")
-  set(tbb_version_file "version_string.ver")
-  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)
-else()
-  # 4.1 update 2 - works fine
-  set(tbb_ver "tbb41_20130116oss")
-  set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130116oss_src.tgz")
-  set(tbb_md5 "3809790e1001a1b32d59c9fee590ee85")
-  set(tbb_version_file "version_string.ver")
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
-endif()
+set(tbb_ver "tbb43_20141204oss")
+set(tbb_url "http://www.threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb43_20141204oss_src.tgz")
+set(tbb_md5 "e903dd92d9433701f097fa7ca29a3c1f")
+set(tbb_version_file "version_string.ver")
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
+
+# 4.1 update 4 - The first release that supports Windows RT. Hangs on some Android devices
+#set(tbb_ver "tbb41_20130613oss")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130613oss_src.tgz")
+#set(tbb_md5 "108c8c1e481b0aaea61878289eb28b6a")
+#set(tbb_version_file "version_string.ver")
+#ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)
+
+# 4.1 update 2 - works fine
+#set(tbb_ver "tbb41_20130116oss")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130116oss_src.tgz")
+#set(tbb_md5 "3809790e1001a1b32d59c9fee590ee85")
+#set(tbb_version_file "version_string.ver")
+#ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
 
 # 4.1 update 3 dev - Hangs on some Android devices
 #set(tbb_ver "tbb41_20130401oss")
@@ -97,7 +102,7 @@ if(NOT EXISTS "${tbb_tarball}")
   message(STATUS "Downloading ${tbb_ver}_src.tgz")
   file(DOWNLOAD "${tbb_url}" "${tbb_tarball}" TIMEOUT 600 STATUS __statvar)
   if(NOT __statvar EQUAL 0)
-    message(FATAL_ERROR "Failed to download TBB sources: ${tbb_url}")
+    message(FATAL_ERROR "Failed to download TBB sources (${__statvar}): ${tbb_url}")
   endif()
   file(MD5 "${tbb_tarball}" tbb_local_md5)
   if(NOT tbb_local_md5 STREQUAL tbb_md5)
@@ -153,6 +158,7 @@ if (WIN32)
 set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /APPCONTAINER")
 else()
   add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
+                  -D__TBB_WEAK_SYMBOLS_PRESENT=0         #required for 4.3
                   -D__TBB_BUILD=1                        #required
                   -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk support
                   -DTBB_USE_DEBUG=0                      #just to be sure

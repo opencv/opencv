@@ -1,11 +1,15 @@
+include(CMakeParseArguments)
+
 # Debugging function
 function(ocv_cmake_dump_vars)
+  set(VARS "")
+  get_cmake_property(_variableNames VARIABLES)
   cmake_parse_arguments(DUMP "" "TOFILE" "" ${ARGN})
   set(regex "${DUMP_UNPARSED_ARGUMENTS}")
-  get_cmake_property(_variableNames VARIABLES)
-  set(VARS "")
+  string(TOLOWER "${regex}" regex_lower)
   foreach(_variableName ${_variableNames})
-    if(_variableName MATCHES "${regex}")
+    string(TOLOWER "${_variableName}" _variableName_lower)
+    if(_variableName MATCHES "${regex}" OR _variableName_lower MATCHES "${regex_lower}")
       set(VARS "${VARS}${_variableName}=${${_variableName}}\n")
     endif()
   endforeach()
@@ -16,6 +20,15 @@ function(ocv_cmake_dump_vars)
   endif()
 endfunction()
 
+function(ocv_cmake_eval var_name)
+  if(DEFINED ${var_name})
+    file(WRITE "${CMAKE_BINARY_DIR}/CMakeCommand-${var_name}.cmake" ${${var_name}})
+    include("${CMAKE_BINARY_DIR}/CMakeCommand-${var_name}.cmake")
+  endif()
+  if(";${ARGN};" MATCHES ";ONCE;")
+    unset(${var_name} CACHE)
+  endif()
+endfunction()
 
 # Search packages for host system instead of packages for target system
 # in case of cross compilation thess macro should be defined by toolchain file
@@ -503,17 +516,15 @@ endmacro()
 
 
 # convert list of paths to libraries names without lib prefix
-macro(ocv_convert_to_lib_name var)
-  set(__tmp "")
+function(ocv_convert_to_lib_name var)
+  set(tmp "")
   foreach(path ${ARGN})
-    get_filename_component(__tmp_name "${path}" NAME_WE)
-    string(REGEX REPLACE "^lib" "" __tmp_name ${__tmp_name})
-    list(APPEND __tmp "${__tmp_name}")
+    get_filename_component(tmp_name "${path}" NAME_WE)
+    string(REGEX REPLACE "^lib" "" tmp_name "${tmp_name}")
+    list(APPEND tmp "${tmp_name}")
   endforeach()
-  set(${var} ${__tmp})
-  unset(__tmp)
-  unset(__tmp_name)
-endmacro()
+  set(${var} ${tmp} PARENT_SCOPE)
+endfunction()
 
 
 # add install command
@@ -727,6 +738,9 @@ function(ocv_target_link_libraries target)
       endif()
     endforeach()
   endif()
+  if(";${LINK_DEPS};" MATCHES ";${target};")
+    list(REMOVE_ITEM LINK_DEPS "${target}") # prevent "link to itself" warning (world problem)
+  endif()
   target_link_libraries(${target} ${LINK_DEPS})
 endfunction()
 
@@ -746,20 +760,9 @@ function(ocv_add_executable target)
 endfunction()
 
 function(ocv_add_library target)
-  set(cuda_objs "")
-  if(HAVE_CUDA)
-    set(cuda_srcs "")
-
-    foreach(var ${ARGN})
-      if(var MATCHES ".cu")
-        list(APPEND cuda_srcs ${var})
-      endif()
-    endforeach()
-
-    if(cuda_srcs)
-      ocv_include_directories(${CUDA_INCLUDE_DIRS})
-      ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
-    endif()
+  if(HAVE_CUDA AND ARGN MATCHES "\\.cu")
+    ocv_include_directories(${CUDA_INCLUDE_DIRS})
+    ocv_cuda_compile(cuda_objs ${ARGN})
     set(OPENCV_MODULE_${target}_CUDA_OBJECTS ${cuda_objs} CACHE INTERNAL "Compiled CUDA object files")
   endif()
 
@@ -770,9 +773,10 @@ function(ocv_add_library target)
       AND NOT OPENCV_MODULE_${target}_CHILDREN
       AND NOT OPENCV_MODULE_${target}_CLASS STREQUAL "BINDINGS"
       AND NOT ${target} STREQUAL "opencv_ts"
+      AND (NOT BUILD_opencv_world OR NOT HAVE_CUDA)
     )
     set(sources ${ARGN})
-    ocv_list_filterout(sources "\\\\.(cl|inc)$")
+    ocv_list_filterout(sources "\\\\.(cl|inc|cu)$")
     add_library(${target}_object OBJECT ${sources})
     set_target_properties(${target}_object PROPERTIES
       EXCLUDE_FROM_ALL True
@@ -805,7 +809,13 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
     else()
       set(deps "")
     endif()
-    list(INSERT ${_modules} 0 ${deps} ${m})
+    set(_rev_deps "${deps};${m}")
+    ocv_list_reverse(_rev_deps)
+    foreach (dep ${_rev_deps})
+      if(DEFINED OPENCV_MODULE_${dep}_LOCATION)
+        list(INSERT ${_modules} 0 ${dep})
+      endif()
+    endforeach()
     foreach (dep ${deps} ${OPENCV_LINKER_LIBS})
       if (NOT DEFINED OPENCV_MODULE_${dep}_LOCATION)
         if (TARGET ${dep})
@@ -826,11 +836,14 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
   list(FIND ${_extra} "ippicv" ippicv_idx)
   if (${ippicv_idx} GREATER -1)
     list(REMOVE_ITEM ${_extra} "ippicv")
-    list(INSERT ${_3rdparty} 0 "ippicv")
+    if(NOT BUILD_SHARED_LIBS)
+      list(INSERT ${_3rdparty} 0 "ippicv")
+    endif()
   endif()
 
-  # split 3rdparty libs and modules
-  list(REMOVE_ITEM ${_modules} ${${_3rdparty}} ${${_extra}} non_empty_list)
+  ocv_list_filterout(${_modules} "^[\$]<")
+  ocv_list_filterout(${_3rdparty} "^[\$]<")
+  ocv_list_filterout(${_extra} "^[\$]<")
 
   # convert CMake lists to makefile literals
   foreach(lst ${_modules} ${_3rdparty} ${_extra})

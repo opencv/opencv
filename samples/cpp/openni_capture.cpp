@@ -87,90 +87,49 @@ static float getMaxDisparity( VideoCapture& capture )
 
 static void printCommandLineParams()
 {
-    cout << "-cd       Colorized disparity? (0 or 1; 1 by default) Ignored if disparity map is not selected to show." << endl;
-    cout << "-fmd      Fixed max disparity? (0 or 1; 0 by default) Ignored if disparity map is not colorized (-cd 0)." << endl;
-    cout << "-mode     image mode: resolution and fps, supported three values:  0 - CAP_OPENNI_VGA_30HZ, 1 - CAP_OPENNI_SXGA_15HZ," << endl;
+    cout << "-cd=       Colorized disparity? (0 or 1; 1 by default) Ignored if disparity map is not selected to show." << endl;
+    cout << "-fmd=      Fixed max disparity? (0 or 1; 0 by default) Ignored if disparity map is not colorized (-cd 0)." << endl;
+    cout << "-mode=     image mode: resolution and fps, supported three values:  0 - CAP_OPENNI_VGA_30HZ, 1 - CAP_OPENNI_SXGA_15HZ," << endl;
     cout << "          2 - CAP_OPENNI_SXGA_30HZ (0 by default). Ignored if rgb image or gray image are not selected to show." << endl;
-    cout << "-m        Mask to set which output images are need. It is a string of size 5. Each element of this is '0' or '1' and" << endl;
+    cout << "-m=        Mask to set which output images are need. It is a string of size 5. Each element of this is '0' or '1' and" << endl;
     cout << "          determine: is depth map, disparity map, valid pixels mask, rgb image, gray image need or not (correspondently)?" << endl ;
-    cout << "          By default -m 01010 i.e. disparity map and rgb image will be shown." << endl ;
-    cout << "-r        Filename of .oni video file. The data will grabbed from it." << endl ;
+    cout << "          By default -m=01010 i.e. disparity map and rgb image will be shown." << endl ;
+    cout << "-r=        Filename of .oni video file. The data will grabbed from it." << endl ;
 }
 
 static void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFixedMaxDisp, int& imageMode, bool retrievedImageFlags[],
                        string& filename, bool& isFileReading )
 {
-    // set defaut values
-    isColorizeDisp = true;
-    isFixedMaxDisp = false;
-    imageMode = 0;
-
-    retrievedImageFlags[0] = false;
-    retrievedImageFlags[1] = true;
-    retrievedImageFlags[2] = false;
-    retrievedImageFlags[3] = true;
-    retrievedImageFlags[4] = false;
-
     filename.clear();
-    isFileReading = false;
-
-    if( argc == 1 )
+    cv::CommandLineParser parser(argc, argv, "{h help||}{cd|1|}{fmd|0|}{mode|0|}{m|01010|}{r||}");
+    if (parser.has("h"))
     {
         help();
+        printCommandLineParams();
+        exit(0);
     }
-    else
+    isColorizeDisp = (parser.get<int>("cd") != 0);
+    isFixedMaxDisp = (parser.get<int>("fmd") != 0);
+    imageMode = parser.get<int>("mode");
+    int flags = parser.get<int>("m");
+    isFileReading = parser.has("r");
+    if (isFileReading)
+        filename = parser.get<string>("r");
+    if (!parser.check())
     {
-        for( int i = 1; i < argc; i++ )
-        {
-            if( !strcmp( argv[i], "--help" ) || !strcmp( argv[i], "-h" ) )
-            {
-                printCommandLineParams();
-                exit(0);
-            }
-            else if( !strcmp( argv[i], "-cd" ) )
-            {
-                isColorizeDisp = atoi(argv[++i]) == 0 ? false : true;
-            }
-            else if( !strcmp( argv[i], "-fmd" ) )
-            {
-                isFixedMaxDisp = atoi(argv[++i]) == 0 ? false : true;
-            }
-            else if( !strcmp( argv[i], "-mode" ) )
-            {
-                imageMode = atoi(argv[++i]);
-            }
-            else if( !strcmp( argv[i], "-m" ) )
-            {
-                string mask( argv[++i] );
-                if( mask.size() != 5)
-                    CV_Error( Error::StsBadArg, "Incorrect length of -m argument string" );
-                int val = atoi(mask.c_str());
-
-                int l = 100000, r = 10000, sum = 0;
-                for( int j = 0; j < 5; j++ )
-                {
-                    retrievedImageFlags[j] = ((val % l) / r ) == 0 ? false : true;
-                    l /= 10; r /= 10;
-                    if( retrievedImageFlags[j] ) sum++;
-                }
-
-                if( sum == 0 )
-                {
-                    cout << "No one output image is selected." << endl;
-                    exit(0);
-                }
-            }
-            else if( !strcmp( argv[i], "-r" ) )
-            {
-                filename = argv[++i];
-                isFileReading = true;
-            }
-            else
-            {
-                cout << "Unsupported command line argument: " << argv[i] << "." << endl;
-                exit(-1);
-            }
-        }
+        parser.printErrors();
+        help();
+        exit(-1);
+    }
+    if (flags % 100000 == 0)
+    {
+        cout << "No one output image is selected." << endl;
+        exit(0);
+    }
+    for (int i = 0; i < 5; i++)
+    {
+        retrievedImageFlags[4 - i] = (flags % 10 != 0);
+        flags /= 10;
     }
 }
 
