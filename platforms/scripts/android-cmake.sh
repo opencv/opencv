@@ -8,7 +8,7 @@ case $i in
     rm -rf build
     shift
     ;;
-    -a=*|--abi=*)
+    -t=*|--targets=*)
     BUILD_ABIS="${i#*=}"
     shift
     ;;
@@ -23,17 +23,39 @@ case $i in
 esac
 done
 
+function copy_android_library ()
+# $1 = target build directory
+# $2 = debug/release variant
+{
+  pwd
+  mkdir -p ../opencv/src/main/jniLibs
+  cp -av install/sdk/native/3rdparty/libs/* ../opencv/src/main/jniLibs
+  cp -av install/sdk/native/libs/* ../opencv/src/main/jniLibs
+  cp -av install/sdk/native/jni ../opencv/src/main
+  cp -av install/sdk/java ../opencv/src/main
+  
+  mkdir -p ../../opencv/src/main/$2/jniLibs
+  cp -av ../opencv/src/main/jniLibs/* ../../opencv/src/main/$2/jniLibs
+}
+
 function build_target ()
 # $1 = target cmake directory
 # $2 = cmake build type
+# $3 = target ABI
+# $4 = target platform
 {
+  local TARGET_DIR=${1}
+  local TARGET_CMAKE_TYPE=${2}
+  local TARGET_ABI=${3}
+  local TARGET_PLATFORM=${4}
   local REBUILD_CMAKE=
-  [ "$3" == "arm7" ] && TARGET_ABI="armeabi-v7a-hard with NEON"
-  [ "$3" == "arm8" ] && TARGET_ABI="arm64-v8a"
-  [ ! -d "$1" ] && mkdir -p "$1" && REBUILD_CMAKE=true
-  pushd "$1"
+  [ "$TARGET_ABI" == "arm7" ] && TARGET_ABI="armeabi-v7a-hard with NEON"
+  [ "$TARGET_ABI" == "arm8" ] && TARGET_ABI="arm64-v8a"
+  [ "$TARGET_PLATFORM" == "osx" ] && TARGET_ABI="x86_64"
+  [ ! -d "$TARGET_DIR" ] && mkdir -p "$TARGET_DIR" && REBUILD_CMAKE=true
+  pushd "$TARGET_DIR"
   if [ -n "$REBUILD_CMAKE" ] ; then
-    cmake '-GUnix Makefiles' -DCMAKE_BUILD_TYPE=$2 -DANDROID_ABI="$TARGET_ABI" $EXTRA_OPTIONS $COMMON_OPTIONS ../../../../../..
+    cmake '-GUnix Makefiles' -DCMAKE_BUILD_TYPE=$2 -DANDROID_ABI="$TARGET_ABI" $EXTRA_OPTIONS $COMMON_OPTIONS ../../../../..
   fi
   make -j8
   #cmake -DCOMPONENT=libs -P cmake_install.cmake
@@ -42,53 +64,59 @@ function build_target ()
   #cmake -DCOMPONENT=samples -P cmake_install.cmake
   if [ "$2" == "Debug" ] ; then
     make install
+    [ "$TARGET_PLATFORM" == "android" ] && copy_android_library $TARGET_DIR debug
   else
     make install/strip
+    [ "$TARGET_PLATFORM" == "android" ] && copy_android_library $TARGET_DIR release
   fi
   popd
-  #cp -av install/sdk/native/3rdparty/libs/* ../build_product_release/opencv/src/main/jniLibs
-  #cp -av install/sdk/native/libs/* ../build_product_release/opencv/src/main/jniLibs
-  #cp -av install/sdk/native/jni ../build_product_release/opencv/src/main
 }
 
 # valid ABIs = arm7,arm8
-function build_abi ()
+function build_platform ()
 {
   for i in "$@"
   do
+    local TARGET_ABI=${i%-*}
+    local TARGET_PLATFORM=${i#*-}
+    echo "Building $1"
   case $i in
-    arm7)
+    arm7-android)
+    COMMON_OPTIONS="-DENABLE_NEON=ON -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_CUDA=OFF\
+     -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DBUILD_ANDROID_EXAMPLES=OFF\
+     -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
+     -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
+     -DCMAKE_TOOLCHAIN_FILE=../../../../android/android.toolchain.cmake"
     EXTRA_OPTIONS="-DWITH_OPENCL=OFF -DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9"
-    build_target "build/android/debug/arm7/opencv-library" Debug $i
-
+    build_target "build/android/debug/arm7" Debug $TARGET_ABI $TARGET_PLATFORM
     EXTRA_OPTIONS="-DWITH_OPENCL=OFF -DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9"
-    build_target "build/android/release/arm7/opencv-library" Release $i
+    build_target "build/android/release/arm7" Release $TARGET_ABI $TARGET_PLATFORM
     shift
     ;;
-    arm8)
+    arm8-android)
+    COMMON_OPTIONS="-DENABLE_NEON=ON -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_CUDA=OFF\
+     -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DBUILD_ANDROID_EXAMPLES=OFF\
+     -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
+     -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
+     -DCMAKE_TOOLCHAIN_FILE=../../../../android/android.toolchain.cmake"
     EXTRA_OPTIONS="-DWITH_OPENCL=ON -DANDROID_TOOLCHAIN_NAME=aarch64-linux-android-4.9"
-    build_target "build/android/debug/arm8/opencv-library" Debug $i
-
+    build_target "build/android/debug/arm8" Debug $TARGET_ABI $TARGET_PLATFORM
     EXTRA_OPTIONS="-DWITH_OPENCL=ON -DANDROID_TOOLCHAIN_NAME=aarch64-linux-android-4.9"
-    build_target "build/android/release/arm8/opencv-library" Release $i
+    build_target "build/android/release/arm8" Release $TARGET_ABI $TARGET_PLATFORM
+    shift
+    ;;
+    x86_64-osx)
+    COMMON_OPTIONS="-DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_CUDA=OFF\
+     -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF\
+     -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF"
+    EXTRA_OPTIONS="-DWITH_OPENCL=ON"
+    build_target "build/osx/debug/x86_64/opencv" Debug $TARGET_ABI $TARGET_PLATFORM
+    EXTRA_OPTIONS="-DWITH_OPENCL=ON"
+    build_target "build/osx/release/x86_64/opencv" Release $TARGET_ABI $TARGET_PLATFORM
     shift
     ;;
   esac
 done
 }
 
-#    ABI("1", "armeabi",     "arm-linux-androideabi-4.8"),
-#    ABI("2",  "armeabi-v7a", "arm-linux-androideabi-4.8", cmake_name="armeabi-v7a with NEON"),
-#    ABI("3",  "arm64-v8a",   "aarch64-linux-android-4.9")
-#    ABI("5", "x86_64",      "x86_64-4.9"),
-#    ABI("4", "x86",         "x86-4.8"),
-#    ABI("7", "mips64",      "mips64el-linux-android-4.9"),
-#    ABI("6", "mips",        "mipsel-linux-android-4.8")
-
-COMMON_OPTIONS="-DENABLE_NEON=ON -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_CUDA=OFF\
- -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DBUILD_ANDROID_EXAMPLES=OFF\
- -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
- -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
- -DCMAKE_TOOLCHAIN_FILE=../../../../../android/android.toolchain.cmake"
-
-build_abi arm7 arm8
+build_platform arm7-android arm8-android
