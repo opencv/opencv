@@ -60,7 +60,7 @@ function build_target ()
   make -j8
   #cmake -DCOMPONENT=libs -P cmake_install.cmake
   #cmake -DCOMPONENT=dev -P cmake_install.cmake
-  #cmake -DCOMPONENT=java -P cmake_install.cmake
+  cmake -DCOMPONENT=java -P cmake_install.cmake
   #cmake -DCOMPONENT=samples -P cmake_install.cmake
   if [ "$2" == "Debug" ] ; then
     make install
