@@ -608,7 +608,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         struct stat buf;
         if (pathSize == 0 || stat(uri, &buf) != 0)
         {
-            delete uri;
+            delete[] uri;
             uri = NULL;
         }
 #else
