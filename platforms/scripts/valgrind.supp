@@ -4,3 +4,29 @@
    fun:ippicvGetCpuFeatures
    fun:ippicvStaticInit
 }
+
+
+{
+   TBB - allocate_via_handler_v3 issue
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN3tbb8internal23allocate_via_handler_v3Em
+}
+
+
+{
+   TBB - allocate_via_handler_v4 issue
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:_Znam
+   obj:/usr/lib/libtbb.so.2
+   obj:/usr/lib/libtbb.so.2
+   obj:/usr/lib/libtbb.so.2
+   obj:/usr/lib/libtbb.so.2
+   fun:_ZNK3tbb8internal32allocate_root_with_context_proxy8allocateEm
+   fun:_ZN2cv13parallel_for_ERKNS_5RangeERKNS_16ParallelLoopBodyEd
+   fun:_ZN2cv12CvtColorLoopINS_8RGB2GrayIhEEEEvRKNS_3MatERS3_RKT_
+   fun:_ZN2cv8cvtColorERKNS_11_InputArrayERKNS_12_OutputArrayEii
+   fun:main
+}
+
