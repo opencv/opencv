@@ -4535,42 +4535,37 @@ cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
 
 using namespace cv;
 
-class HalFilterImpl
+struct ReplacementFilter : public hal::Filter2D
 {
-public:
-    virtual ~HalFilterImpl() {}
-    virtual bool init(uchar* kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
-                      int max_width, int max_height, int stype, int dtype,
-                      int borderType, double delta, int anchor_x, int anchor_y, bool isSubmatrix, bool isInplace) = 0;
-    virtual void run(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y) = 0;
-    virtual void free() {}
-};
-
-struct ReplacementFilter : public HalFilterImpl
-{
-    void* ctx;
-    ReplacementFilter() : ctx(0) { }
+    cvhalFilter2D* ctx;
+    bool isInitialized;
+    ReplacementFilter() : ctx(0), isInitialized(false) { }
     bool init(uchar* kernel_data, size_t kernel_step, int kernel_type, int kernel_width,
               int kernel_height, int max_width, int max_height, int stype, int dtype, int borderType, double delta,
               int anchor_x, int anchor_y, bool isSubmatrix, bool isInplace)
     {
         int res = cv_hal_filterInit(&ctx, kernel_data, kernel_step, kernel_type, kernel_width, kernel_height, max_width, max_height,
                                     stype, dtype, borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace);
-        if (res == CV_HAL_ERROR_OK)
-            return true;
-        return false;
+        isInitialized = (res == CV_HAL_ERROR_OK);
+        return isInitialized;
     }
-    void run(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
+    void apply(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
     {
-        int res = cv_hal_filter(ctx, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
-        if (res != CV_HAL_ERROR_OK)
-            CV_Error(Error::StsNotImplemented, "HAL Filter returned an error");
+        if (isInitialized)
+        {
+            int res = cv_hal_filter(ctx, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+            if (res != CV_HAL_ERROR_OK)
+                CV_Error(Error::StsNotImplemented, "HAL Filter returned an error");
+        }
     }
-    void free()
+    ~ReplacementFilter()
     {
-        int res = cv_hal_filterFree(ctx);
-        if (res != CV_HAL_ERROR_OK)
-            CV_Error(Error::StsNotImplemented, "HAL Filter Free returned an error");
+        if (isInitialized)
+        {
+            int res = cv_hal_filterFree(ctx);
+            if (res != CV_HAL_ERROR_OK)
+                CV_Error(Error::StsNotImplemented, "HAL Filter Free returned an error");
+        }
     }
 };
 
@@ -4645,7 +4640,7 @@ struct IppFilterTrait<CV_32F>
 };
 
 template <int kdepth>
-struct IppFilter : public HalFilterImpl
+struct IppFilter : public hal::Filter2D
 {
     typedef IppFilterTrait<kdepth> trait;
     typedef typename trait::kernel_type kernel_type;
@@ -4723,7 +4718,7 @@ struct IppFilter : public HalFilterImpl
         return false;
     }
 
-    void run(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int, int, int, int)
+    void apply(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int, int, int, int)
     {
         if (dst_data == src_data)
             CV_Error(Error::StsBadArg, "Inplace IPP Filter2D is not supported");
@@ -4739,7 +4734,7 @@ struct IppFilter : public HalFilterImpl
 #endif
 #endif
 
-struct DftFilter : public HalFilterImpl
+struct DftFilter : public hal::Filter2D
 {
     int src_type;
     int dst_type;
@@ -4777,7 +4772,7 @@ struct DftFilter : public HalFilterImpl
         return false;
     }
 
-    void run(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int, int, int, int)
+    void apply(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int, int, int, int)
     {
         Mat src(Size(width, height), src_type, src_data, src_step);
         Mat dst(Size(width, height), dst_type, dst_data, dst_step);
@@ -4819,7 +4814,7 @@ struct DftFilter : public HalFilterImpl
     }
 };
 
-struct OcvFilter : public HalFilterImpl
+struct OcvFilter : public hal::Filter2D
 {
     Ptr<FilterEngine> f;
     int src_type;
@@ -4839,7 +4834,7 @@ struct OcvFilter : public HalFilterImpl
                                borderTypeValue);
         return true;
     }
-    void run(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
+    void apply(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
     {
         Mat src(Size(width, height), src_type, src_data, src_step);
         Mat dst(Size(width, height), dst_type, dst_data, dst_step);
@@ -4847,56 +4842,47 @@ struct OcvFilter : public HalFilterImpl
     }
 };
 
-class HalSepFilterImpl
-{
-public:
-    virtual ~HalSepFilterImpl() {}
-    virtual bool init(int stype, int dtype, int ktype,
-                      uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-                      uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
-                      int anchor_x, int anchor_y, double delta, int borderType) = 0;
-    virtual void run(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                     int width, int height, int full_width, int full_height,
-                     int offset_x, int offset_y) = 0;
-    virtual void free() {}
-};
 
-struct ReplacementSepFilter : public HalSepFilterImpl
+struct ReplacementSepFilter : public hal::Filter2D
 {
-    void * ctx;
-    ReplacementSepFilter() : ctx(0) {}
+    cvhalFilter2D *ctx;
+    bool isInitialized;
+    ReplacementSepFilter() : ctx(0), isInitialized(false) {}
     bool init(int stype, int dtype, int ktype,
               uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
               uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
               int anchor_x, int anchor_y, double delta, int borderType)
     {
         int res = cv_hal_sepFilterInit(&ctx, stype, dtype, ktype,
-                                         kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                                         kernely_data, kernely_step, kernely_width, kernely_height,
-                                         anchor_x, anchor_y, delta, borderType);
-        if (res == CV_HAL_ERROR_OK)
-        {
-            return true;
-        }
-        return false;
+                                       kernelx_data, kernelx_step, kernelx_width, kernelx_height,
+                                       kernely_data, kernely_step, kernely_width, kernely_height,
+                                       anchor_x, anchor_y, delta, borderType);
+        isInitialized = (res == CV_HAL_ERROR_OK);
+        return isInitialized;
     }
-    void run(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+    void apply(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
              int width, int height, int full_width, int full_height,
              int offset_x, int offset_y)
     {
-        int res = cv_hal_sepFilter(ctx, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
-        if (res != CV_HAL_ERROR_OK)
-            CV_Error(Error::StsNotImplemented, "Failed to run HAL sepFilter implementation");
+        if (isInitialized)
+        {
+            int res = cv_hal_sepFilter(ctx, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+            if (res != CV_HAL_ERROR_OK)
+                CV_Error(Error::StsNotImplemented, "Failed to run HAL sepFilter implementation");
+        }
     }
-    void free()
+    ~ReplacementSepFilter()
     {
-        int res = cv_hal_sepFilterFree(ctx);
-        if (res != CV_HAL_ERROR_OK)
-            CV_Error(Error::StsNotImplemented, "Failed to run HAL sepFilter implementation");
+        if (isInitialized)
+        {
+            int res = cv_hal_sepFilterFree(ctx);
+            if (res != CV_HAL_ERROR_OK)
+                CV_Error(Error::StsNotImplemented, "Failed to run HAL sepFilter implementation");
+        }
     }
 };
 
-struct OcvSepFilter : public HalSepFilterImpl
+struct OcvSepFilter : public hal::Filter2D
 {
     Ptr<FilterEngine> f;
     int src_type;
@@ -4916,7 +4902,7 @@ struct OcvSepFilter : public HalSepFilterImpl
                                          delta, borderType & ~BORDER_ISOLATED );
         return true;
     }
-    void run(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+    void apply(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
              int width, int height, int full_width, int full_height,
              int offset_x, int offset_y)
     {
@@ -4933,12 +4919,11 @@ struct OcvSepFilter : public HalSepFilterImpl
 namespace cv {
 namespace hal {
 
-void init_filter2d(FilterContext& c,
-                   uchar* kernel_data, size_t kernel_step, int kernel_type,
-                   int kernel_width, int kernel_height,
-                   int max_width, int max_height,
-                   int stype, int dtype,
-                   int borderType, double delta, int anchor_x, int anchor_y, bool isSubmatrix, bool isInplace)
+Ptr<hal::Filter2D> Filter2D::createFilter2D(uchar* kernel_data, size_t kernel_step, int kernel_type,
+                                   int kernel_width, int kernel_height,
+                                   int max_width, int max_height,
+                                   int stype, int dtype,
+                                   int borderType, double delta, int anchor_x, int anchor_y, bool isSubmatrix, bool isInplace)
 {
     {
         ReplacementFilter* impl = new ReplacementFilter();
@@ -4946,8 +4931,7 @@ void init_filter2d(FilterContext& c,
                        max_width, max_height, stype, dtype,
                        borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
         {
-            c.impl = static_cast<void*>(impl);
-            return;
+            return Ptr<hal::Filter2D>(impl);
         }
         delete impl;
     }
@@ -4960,8 +4944,7 @@ void init_filter2d(FilterContext& c,
                        max_width, max_height, stype, dtype,
                        borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
         {
-            c.impl = static_cast<void*>(impl);
-            return;
+            return Ptr<hal::Filter2D>(impl);
         }
         delete impl;
     }
@@ -4972,8 +4955,7 @@ void init_filter2d(FilterContext& c,
                        max_width, max_height, stype, dtype,
                        borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
         {
-            c.impl = static_cast<void*>(impl);
-            return;
+            return Ptr<hal::Filter2D>(impl);
         }
         delete impl;
     }
@@ -4987,8 +4969,7 @@ void init_filter2d(FilterContext& c,
                        max_width, max_height, stype, dtype,
                        borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
         {
-            c.impl = static_cast<void*>(impl);
-            return;
+            return Ptr<hal::Filter2D>(impl);
         }
         delete impl;
     }
@@ -4998,30 +4979,16 @@ void init_filter2d(FilterContext& c,
         impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
                    max_width, max_height, stype, dtype,
                    borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace);
-        c.impl = static_cast<void*>(impl);
+        return Ptr<hal::Filter2D>(impl);
     }
-}
-
-void filter2d(FilterContext& c, uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
-{
-    HalFilterImpl* impl = static_cast<HalFilterImpl*>(c.impl);
-    impl->run(src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
-}
-
-void free_filter2d(FilterContext& c)
-{
-    HalFilterImpl* impl = static_cast<HalFilterImpl*>(c.impl);
-    impl->free();
-    delete impl;
-    c.impl = 0;
 }
 
 //---------------------------------------------------------------
 
-void init_sepFilter2d(FilterContext & c, int stype, int dtype, int ktype,
-                      uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-                      uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
-                      int anchor_x, int anchor_y, double delta, int borderType)
+Ptr<Filter2D> Filter2D::createSepFilter2D(int stype, int dtype, int ktype,
+                                                    uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
+                                                    uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+                                                    int anchor_x, int anchor_y, double delta, int borderType)
 {
     {
         ReplacementSepFilter * impl = new ReplacementSepFilter();
@@ -5030,8 +4997,7 @@ void init_sepFilter2d(FilterContext & c, int stype, int dtype, int ktype,
                        kernely_data, kernely_step, kernely_width, kernely_height,
                        anchor_x, anchor_y, delta, borderType))
         {
-            c.impl = impl;
-            return;
+            return Ptr<hal::Filter2D>(impl);
         }
         delete impl;
     }
@@ -5041,26 +5007,8 @@ void init_sepFilter2d(FilterContext & c, int stype, int dtype, int ktype,
                    kernelx_data, kernelx_step, kernelx_width, kernelx_height,
                    kernely_data, kernely_step, kernely_width, kernely_height,
                    anchor_x, anchor_y, delta, borderType);
-        c.impl = impl;
+        return Ptr<hal::Filter2D>(impl);
     }
-}
-
-void sepFilter2d(FilterContext & c, uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                 int width, int height, int full_width, int full_height,
-                 int offset_x, int offset_y)
-{
-    HalSepFilterImpl * impl = static_cast<HalSepFilterImpl*>(c.impl);
-    impl->run(src_data, src_step, dst_data, dst_step,
-              width, height, full_width, full_height,
-              offset_x, offset_y);
-}
-
-void free_sepFilter2d(FilterContext & c)
-{
-    HalSepFilterImpl * impl = static_cast<HalSepFilterImpl*>(c.impl);
-    impl->free();
-    delete impl;
-    c.impl = 0;
 }
 
 } // cv::hal::
@@ -5091,13 +5039,10 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
     if( (borderType & BORDER_ISOLATED) == 0 )
         src.locateROI( wsz, ofs );
 
-    hal::FilterContext c;
-    hal::init_filter2d(c,
-                       kernel.data, kernel.step, kernel.type(), kernel.cols, kernel.rows,
-                       dst.cols, dst.rows, src.type(), dst.type(),
-                       borderType, delta, anchor.x, anchor.y, src.isSubmatrix(), src.data == dst.data);
-    hal::filter2d(c, src.data, src.step, dst.data, dst.step, dst.cols, dst.rows, wsz.width, wsz.height, ofs.x, ofs.y);
-    hal::free_filter2d(c);
+    Ptr<hal::Filter2D> c = hal::Filter2D::createFilter2D(kernel.data, kernel.step, kernel.type(), kernel.cols, kernel.rows,
+                                                         dst.cols, dst.rows, src.type(), dst.type(),
+                                                         borderType, delta, anchor.x, anchor.y, src.isSubmatrix(), src.data == dst.data);
+    c->apply(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows, wsz.width, wsz.height, ofs.x, ofs.y);
 }
 
 void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
@@ -5122,13 +5067,11 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     CV_Assert(kernelX.type() == kernelY.type());
 
-    hal::FilterContext c;
-    hal::init_sepFilter2d(c, src.type(), dst.type(), kernelX.type(),
-                          kernelX.data, kernelX.step, kernelX.cols, kernelX.rows,
-                          kernelY.data, kernelY.step, kernelY.cols, kernelY.rows,
-                          anchor.x, anchor.y, delta, borderType & ~BORDER_ISOLATED);
-    hal::sepFilter2d(c, src.data, src.step, dst.data, dst.step, dst.cols, dst.rows, wsz.width, wsz.height, ofs.x, ofs.y);
-    hal::free_sepFilter2d(c);
+    Ptr<hal::Filter2D> c = hal::Filter2D::createSepFilter2D(src.type(), dst.type(), kernelX.type(),
+                                                            kernelX.data, kernelX.step, kernelX.cols, kernelX.rows,
+                                                            kernelY.data, kernelY.step, kernelY.cols, kernelY.rows,
+                                                            anchor.x, anchor.y, delta, borderType & ~BORDER_ISOLATED);
+    c->apply(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows, wsz.width, wsz.height, ofs.x, ofs.y);
 }
 
 
