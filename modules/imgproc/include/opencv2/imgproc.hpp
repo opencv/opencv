@@ -1022,6 +1022,7 @@ public:
     /** @brief Returns vertex location from vertex ID.
 
     @param vertex – vertex ID.
+    @param firstEdge – Optional. The first edge ID which is connected to the vertex.
     @returns vertex (x,y)
 
      */
