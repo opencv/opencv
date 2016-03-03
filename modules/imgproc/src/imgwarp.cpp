@@ -6500,7 +6500,7 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
         double* exp_tab = _exp_tab;
 
         for( rho = 0; rho < dst->width; rho++ )
-            exp_tab[rho] = std::exp(rho/M);
+            exp_tab[rho] = std::exp(rho/M) - 1.0;
 
         for( phi = 0; phi < dsize.height; phi++ )
         {
@@ -6632,7 +6632,7 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
 
             for( rho = 0; rho < dsize.width; rho++ )
             {
-                double r = maxRadius*(rho+1)/dsize.width;
+                double r = maxRadius*rho/dsize.width;
                 double x = r*cp + center.x;
                 double y = r*sp + center.y;
 
@@ -6668,9 +6668,6 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
                 bufy.data.fl[x] = (float)y - center.y;
 
             cvCartToPolar( &bufx, &bufy, &bufp, &bufa, 0 );
-
-            for( x = 0; x < dsize.width; x++ )
-                bufp.data.fl[x] += 1.f;
 
             for( x = 0; x < dsize.width; x++ )
             {
