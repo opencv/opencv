@@ -4843,7 +4843,7 @@ struct OcvFilter : public hal::Filter2D
 };
 
 
-struct ReplacementSepFilter : public hal::Filter2D
+struct ReplacementSepFilter : public hal::SepFilter2D
 {
     cvhalFilter2D *ctx;
     bool isInitialized;
@@ -4882,7 +4882,7 @@ struct ReplacementSepFilter : public hal::Filter2D
     }
 };
 
-struct OcvSepFilter : public hal::Filter2D
+struct OcvSepFilter : public hal::SepFilter2D
 {
     Ptr<FilterEngine> f;
     int src_type;
@@ -4919,7 +4919,7 @@ struct OcvSepFilter : public hal::Filter2D
 namespace cv {
 namespace hal {
 
-Ptr<hal::Filter2D> Filter2D::createFilter2D(uchar* kernel_data, size_t kernel_step, int kernel_type,
+Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int kernel_type,
                                    int kernel_width, int kernel_height,
                                    int max_width, int max_height,
                                    int stype, int dtype,
@@ -4985,10 +4985,10 @@ Ptr<hal::Filter2D> Filter2D::createFilter2D(uchar* kernel_data, size_t kernel_st
 
 //---------------------------------------------------------------
 
-Ptr<Filter2D> Filter2D::createSepFilter2D(int stype, int dtype, int ktype,
-                                                    uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-                                                    uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
-                                                    int anchor_x, int anchor_y, double delta, int borderType)
+Ptr<SepFilter2D> SepFilter2D::create(int stype, int dtype, int ktype,
+                                     uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
+                                     uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+                                     int anchor_x, int anchor_y, double delta, int borderType)
 {
     {
         ReplacementSepFilter * impl = new ReplacementSepFilter();
@@ -4997,7 +4997,7 @@ Ptr<Filter2D> Filter2D::createSepFilter2D(int stype, int dtype, int ktype,
                        kernely_data, kernely_step, kernely_width, kernely_height,
                        anchor_x, anchor_y, delta, borderType))
         {
-            return Ptr<hal::Filter2D>(impl);
+            return Ptr<hal::SepFilter2D>(impl);
         }
         delete impl;
     }
@@ -5007,7 +5007,7 @@ Ptr<Filter2D> Filter2D::createSepFilter2D(int stype, int dtype, int ktype,
                    kernelx_data, kernelx_step, kernelx_width, kernelx_height,
                    kernely_data, kernely_step, kernely_width, kernely_height,
                    anchor_x, anchor_y, delta, borderType);
-        return Ptr<hal::Filter2D>(impl);
+        return Ptr<hal::SepFilter2D>(impl);
     }
 }
 
@@ -5039,9 +5039,9 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
     if( (borderType & BORDER_ISOLATED) == 0 )
         src.locateROI( wsz, ofs );
 
-    Ptr<hal::Filter2D> c = hal::Filter2D::createFilter2D(kernel.data, kernel.step, kernel.type(), kernel.cols, kernel.rows,
-                                                         dst.cols, dst.rows, src.type(), dst.type(),
-                                                         borderType, delta, anchor.x, anchor.y, src.isSubmatrix(), src.data == dst.data);
+    Ptr<hal::Filter2D> c = hal::Filter2D::create(kernel.data, kernel.step, kernel.type(), kernel.cols, kernel.rows,
+                                                 dst.cols, dst.rows, src.type(), dst.type(),
+                                                 borderType, delta, anchor.x, anchor.y, src.isSubmatrix(), src.data == dst.data);
     c->apply(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows, wsz.width, wsz.height, ofs.x, ofs.y);
 }
 
@@ -5067,10 +5067,10 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     CV_Assert(kernelX.type() == kernelY.type());
 
-    Ptr<hal::Filter2D> c = hal::Filter2D::createSepFilter2D(src.type(), dst.type(), kernelX.type(),
-                                                            kernelX.data, kernelX.step, kernelX.cols, kernelX.rows,
-                                                            kernelY.data, kernelY.step, kernelY.cols, kernelY.rows,
-                                                            anchor.x, anchor.y, delta, borderType & ~BORDER_ISOLATED);
+    Ptr<hal::SepFilter2D> c = hal::SepFilter2D::create(src.type(), dst.type(), kernelX.type(),
+                                                       kernelX.data, kernelX.step, kernelX.cols, kernelX.rows,
+                                                       kernelY.data, kernelY.step, kernelY.cols, kernelY.rows,
+                                                       anchor.x, anchor.y, delta, borderType & ~BORDER_ISOLATED);
     c->apply(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows, wsz.width, wsz.height, ofs.x, ofs.y);
 }
 
