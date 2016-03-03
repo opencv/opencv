@@ -1,4 +1,7 @@
 This is a template helping you to create an issue which can be processes as quickly as possible. Feel free to add additional information or remove not relevant points if you do not need them.
+
+If you have a question rather than reporting a bug please go to http://answers.opencv.org where you get much faster responses.
+
 ### Please state the information for your system
 - OpenCV version: 2.4 / 3.x
 - Host OS: Linux (Ubuntu 14.04)  / Mac OS X 10.11.3 / Windows 10
