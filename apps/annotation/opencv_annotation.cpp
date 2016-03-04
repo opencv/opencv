@@ -152,6 +152,7 @@ void get_annotations(Mat input_image, stringstream* output_stream)
         case 27:
                 destroyWindow(window_name);
                 stop = true;
+                break;
         case 99:
                 // Add a rectangle to the list
                 num_of_rec++;
