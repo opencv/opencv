@@ -603,14 +603,14 @@ public:
                 continue;
             }
 
-            if (!m[-1])         CANNY_PUSH(m - 1);
-            if (!m[1])          CANNY_PUSH(m + 1);
-            if (!m[-mapstep - 1]) CANNY_PUSH(m - mapstep - 1);
-            if (!m[-mapstep])   CANNY_PUSH(m - mapstep);
-            if (!m[-mapstep + 1]) CANNY_PUSH(m - mapstep + 1);
-            if (!m[mapstep - 1])  CANNY_PUSH(m + mapstep - 1);
-            if (!m[mapstep])    CANNY_PUSH(m + mapstep);
-            if (!m[mapstep + 1])  CANNY_PUSH(m + mapstep + 1);
+            if (!m[-1])             CANNY_PUSH(m - 1);
+            if (!m[1])              CANNY_PUSH(m + 1);
+            if (!m[-mapstep - 1])   CANNY_PUSH(m - mapstep - 1);
+            if (!m[-mapstep])       CANNY_PUSH(m - mapstep);
+            if (!m[-mapstep + 1])   CANNY_PUSH(m - mapstep + 1);
+            if (!m[mapstep - 1])    CANNY_PUSH(m + mapstep - 1);
+            if (!m[mapstep])        CANNY_PUSH(m + mapstep);
+            if (!m[mapstep + 1])    CANNY_PUSH(m + mapstep + 1);
         }
 
         // Higher threads have to wait, no Sleep() because waiting time should be short and sleep overhead is huge in this case
@@ -634,128 +634,128 @@ private:
     bool L2gradient;
 };
 
-class finalPass : public ParallelLoopBody
-{
+//class finalPass : public ParallelLoopBody
+//{
 
-public:
-    finalPass(const Mat & _src, Mat &_dst, uchar *_map, ptrdiff_t _mapstep) :
-        src(_src), dst(_dst), map(_map), mapstep(_mapstep) {}
+//public:
+//    finalPass(const Mat & _src, Mat &_dst, uchar *_map, ptrdiff_t _mapstep) :
+//        src(_src), dst(_dst), map(_map), mapstep(_mapstep) {}
 
-    ~finalPass() {}
+//    ~finalPass() {}
 
-    finalPass& operator=(const finalPass&) {return *this;}
+//    finalPass& operator=(const finalPass&) {return *this;}
 
-    void operator()(const Range &boundaries) const
-    {
-        // the final pass, form the final image
-        const uchar* pmap = map + mapstep + 1 + (ptrdiff_t)(mapstep * boundaries.start);
-        uchar* pdst = dst.ptr() + (ptrdiff_t)(dst.step * boundaries.start);
+//    void operator()(const Range &boundaries) const
+//    {
+//        // the final pass, form the final image
+//        const uchar* pmap = map + mapstep + 1 + (ptrdiff_t)(mapstep * boundaries.start);
+//        uchar* pdst = dst.ptr() + (ptrdiff_t)(dst.step * boundaries.start);
 
-        for (int i = boundaries.start; i < boundaries.end; i++, pmap += mapstep, pdst += dst.step)
-        {
-            int j = 0;
-#if CV_AVX2
-            if(checkHardwareSupport(CV_CPU_AVX2)) {
-                __m256i v_zero = _mm256_setzero_si256();
+//        for (int i = boundaries.start; i < boundaries.end; i++, pmap += mapstep, pdst += dst.step)
+//        {
+//            int j = 0;
+//#if CV_AVX2
+//            if(checkHardwareSupport(CV_CPU_AVX2)) {
+//                __m256i v_zero = _mm256_setzero_si256();
 
-                for(; j <= src.cols - 64; j += 64) {
-                    __m256i v_pmap1 = _mm256_loadu_si256((const __m256i*)(pmap + j));
-                    __m256i v_pmap2 = _mm256_loadu_si256((const __m256i*)(pmap + j + 32));
+//                for(; j <= src.cols - 64; j += 64) {
+//                    __m256i v_pmap1 = _mm256_loadu_si256((const __m256i*)(pmap + j));
+//                    __m256i v_pmap2 = _mm256_loadu_si256((const __m256i*)(pmap + j + 32));
 
-                    __m256i v_pmaplo1 = _mm256_unpacklo_epi8(v_pmap1, v_zero);
-                    __m256i v_pmaphi1 = _mm256_unpackhi_epi8(v_pmap1, v_zero);
-                    __m256i v_pmaplo2 = _mm256_unpacklo_epi8(v_pmap2, v_zero);
-                    __m256i v_pmaphi2 = _mm256_unpackhi_epi8(v_pmap2, v_zero);
+//                    __m256i v_pmaplo1 = _mm256_unpacklo_epi8(v_pmap1, v_zero);
+//                    __m256i v_pmaphi1 = _mm256_unpackhi_epi8(v_pmap1, v_zero);
+//                    __m256i v_pmaplo2 = _mm256_unpacklo_epi8(v_pmap2, v_zero);
+//                    __m256i v_pmaphi2 = _mm256_unpackhi_epi8(v_pmap2, v_zero);
 
-                    v_pmaplo1 = _mm256_srli_epi16(v_pmaplo1, 1);
-                    v_pmaphi1 = _mm256_srli_epi16(v_pmaphi1, 1);
-                    v_pmaplo2 = _mm256_srli_epi16(v_pmaplo2, 1);
-                    v_pmaphi2 = _mm256_srli_epi16(v_pmaphi2, 1);
+//                    v_pmaplo1 = _mm256_srli_epi16(v_pmaplo1, 1);
+//                    v_pmaphi1 = _mm256_srli_epi16(v_pmaphi1, 1);
+//                    v_pmaplo2 = _mm256_srli_epi16(v_pmaplo2, 1);
+//                    v_pmaphi2 = _mm256_srli_epi16(v_pmaphi2, 1);
 
-                    v_pmap1 = _mm256_packus_epi16(v_pmaplo1, v_pmaphi1);
-                    v_pmap2 = _mm256_packus_epi16(v_pmaplo2, v_pmaphi2);
+//                    v_pmap1 = _mm256_packus_epi16(v_pmaplo1, v_pmaphi1);
+//                    v_pmap2 = _mm256_packus_epi16(v_pmaplo2, v_pmaphi2);
 
-                    v_pmap1 = _mm256_sub_epi8(v_zero, v_pmap1);
-                    v_pmap2 = _mm256_sub_epi8(v_zero, v_pmap2);
+//                    v_pmap1 = _mm256_sub_epi8(v_zero, v_pmap1);
+//                    v_pmap2 = _mm256_sub_epi8(v_zero, v_pmap2);
 
-                    _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap1);
-                    _mm256_storeu_si256((__m256i*)(pdst + j + 32), v_pmap2);
-                }
+//                    _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap1);
+//                    _mm256_storeu_si256((__m256i*)(pdst + j + 32), v_pmap2);
+//                }
 
-                //            for(; j <= _src.cols - 32; j += 32) {
-                //                __m256i v_pmap = _mm256_loadu_si256((const __m256i*)(pmap + j));
+//                //            for(; j <= _src.cols - 32; j += 32) {
+//                //                __m256i v_pmap = _mm256_loadu_si256((const __m256i*)(pmap + j));
 
-                //                __m256i v_pmaplo = _mm256_unpacklo_epi8(v_pmap, v_zero);
-                //                __m256i v_pmaphi = _mm256_unpackhi_epi8(v_pmap, v_zero);
+//                //                __m256i v_pmaplo = _mm256_unpacklo_epi8(v_pmap, v_zero);
+//                //                __m256i v_pmaphi = _mm256_unpackhi_epi8(v_pmap, v_zero);
 
-                //                v_pmaplo = _mm256_srli_epi16(v_pmaplo, 1);
-                //                v_pmaphi = _mm256_srli_epi16(v_pmaphi, 1);
+//                //                v_pmaplo = _mm256_srli_epi16(v_pmaplo, 1);
+//                //                v_pmaphi = _mm256_srli_epi16(v_pmaphi, 1);
 
-                //                v_pmap = _mm256_packus_epi16(v_pmaplo, v_pmaphi);
-                //                v_pmap = _mm256_sub_epi8(v_zero, v_pmap);
+//                //                v_pmap = _mm256_packus_epi16(v_pmaplo, v_pmaphi);
+//                //                v_pmap = _mm256_sub_epi8(v_zero, v_pmap);
 
-                //                _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap);
-                //            }
-                _mm256_zeroupper();
-            }
-#endif
+//                //                _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap);
+//                //            }
+//                _mm256_zeroupper();
+//            }
+//#endif
 
-#if CV_SSE2
-            if(checkHardwareSupport(CV_CPU_SSE2)) {
-                __m128i v_zero = _mm_setzero_si128();
+//#if CV_SSE2
+//            if(checkHardwareSupport(CV_CPU_SSE2)) {
+//                __m128i v_zero = _mm_setzero_si128();
 
-                for(; j <= src.cols - 32; j += 32) {
-                    __m128i v_pmap1 = _mm_loadu_si128((const __m128i*)(pmap + j));
-                    __m128i v_pmap2 = _mm_loadu_si128((const __m128i*)(pmap + j + 16));
+//                for(; j <= src.cols - 32; j += 32) {
+//                    __m128i v_pmap1 = _mm_loadu_si128((const __m128i*)(pmap + j));
+//                    __m128i v_pmap2 = _mm_loadu_si128((const __m128i*)(pmap + j + 16));
 
-                    __m128i v_pmaplo1 = _mm_unpacklo_epi8(v_pmap1, v_zero);
-                    __m128i v_pmaphi1 = _mm_unpackhi_epi8(v_pmap1, v_zero);
-                    __m128i v_pmaplo2 = _mm_unpacklo_epi8(v_pmap2, v_zero);
-                    __m128i v_pmaphi2 = _mm_unpackhi_epi8(v_pmap2, v_zero);
+//                    __m128i v_pmaplo1 = _mm_unpacklo_epi8(v_pmap1, v_zero);
+//                    __m128i v_pmaphi1 = _mm_unpackhi_epi8(v_pmap1, v_zero);
+//                    __m128i v_pmaplo2 = _mm_unpacklo_epi8(v_pmap2, v_zero);
+//                    __m128i v_pmaphi2 = _mm_unpackhi_epi8(v_pmap2, v_zero);
 
-                    v_pmaplo1 = _mm_srli_epi16(v_pmaplo1, 1);
-                    v_pmaphi1 = _mm_srli_epi16(v_pmaphi1, 1);
-                    v_pmaplo2 = _mm_srli_epi16(v_pmaplo2, 1);
-                    v_pmaphi2 = _mm_srli_epi16(v_pmaphi2, 1);
+//                    v_pmaplo1 = _mm_srli_epi16(v_pmaplo1, 1);
+//                    v_pmaphi1 = _mm_srli_epi16(v_pmaphi1, 1);
+//                    v_pmaplo2 = _mm_srli_epi16(v_pmaplo2, 1);
+//                    v_pmaphi2 = _mm_srli_epi16(v_pmaphi2, 1);
 
-                    v_pmap1 = _mm_packus_epi16(v_pmaplo1, v_pmaphi1);
-                    v_pmap2 = _mm_packus_epi16(v_pmaplo2, v_pmaphi2);
+//                    v_pmap1 = _mm_packus_epi16(v_pmaplo1, v_pmaphi1);
+//                    v_pmap2 = _mm_packus_epi16(v_pmaplo2, v_pmaphi2);
 
-                    v_pmap1 = _mm_sub_epi8(v_zero, v_pmap1);
-                    v_pmap2 = _mm_sub_epi8(v_zero, v_pmap2);
+//                    v_pmap1 = _mm_sub_epi8(v_zero, v_pmap1);
+//                    v_pmap2 = _mm_sub_epi8(v_zero, v_pmap2);
 
-                    _mm_storeu_si128((__m128i*)(pdst + j), v_pmap1);
-                    _mm_storeu_si128((__m128i*)(pdst + j + 16), v_pmap2);
-                }
+//                    _mm_storeu_si128((__m128i*)(pdst + j), v_pmap1);
+//                    _mm_storeu_si128((__m128i*)(pdst + j + 16), v_pmap2);
+//                }
 
-                for(; j <= src.cols - 16; j += 16) {
-                    __m128i v_pmap = _mm_loadu_si128((const __m128i*)(pmap + j));
+//                for(; j <= src.cols - 16; j += 16) {
+//                    __m128i v_pmap = _mm_loadu_si128((const __m128i*)(pmap + j));
 
-                    __m128i v_pmaplo = _mm_unpacklo_epi8(v_pmap, v_zero);
-                    __m128i v_pmaphi = _mm_unpackhi_epi8(v_pmap, v_zero);
+//                    __m128i v_pmaplo = _mm_unpacklo_epi8(v_pmap, v_zero);
+//                    __m128i v_pmaphi = _mm_unpackhi_epi8(v_pmap, v_zero);
 
-                    v_pmaplo = _mm_srli_epi16(v_pmaplo, 1);
-                    v_pmaphi = _mm_srli_epi16(v_pmaphi, 1);
+//                    v_pmaplo = _mm_srli_epi16(v_pmaplo, 1);
+//                    v_pmaphi = _mm_srli_epi16(v_pmaphi, 1);
 
-                    v_pmap = _mm_packus_epi16(v_pmaplo, v_pmaphi);
-                    v_pmap = _mm_sub_epi8(v_zero, v_pmap);
+//                    v_pmap = _mm_packus_epi16(v_pmaplo, v_pmaphi);
+//                    v_pmap = _mm_sub_epi8(v_zero, v_pmap);
 
-                    _mm_storeu_si128((__m128i*)(pdst + j), v_pmap);
-                }
-            }
-#endif
+//                    _mm_storeu_si128((__m128i*)(pdst + j), v_pmap);
+//                }
+//            }
+//#endif
 
-            for (; j < src.cols; j++)
-                pdst[j] = (uchar)-(pmap[j] >> 1);
-        }
-    }
+//            for (; j < src.cols; j++)
+//                pdst[j] = (uchar)-(pmap[j] >> 1);
+//        }
+//    }
 
-private:
-    const Mat &src;
-    Mat &dst;
-    uchar *map;
-    ptrdiff_t mapstep;
-};
+//private:
+//    const Mat &src;
+//    Mat &dst;
+//    uchar *map;
+//    ptrdiff_t mapstep;
+//};
 
 } // namespace cv
 
@@ -785,7 +785,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     CV_OCL_RUN(_dst.isUMat() && (cn == 1 || cn == 3),
                ocl_Canny(_src, _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
 
-            Mat src = _src.getMat(), dst = _dst.getMat();
+    Mat src = _src.getMat(), dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra() && tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
@@ -831,7 +831,18 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     memset(map, 1, mapstep);
     memset(map + mapstep*(src.rows + 1), 1, mapstep);
 
-    int numOfThreads = getNumThreads();
+    int numOfThreads = min(getNumThreads(), getNumberOfCPUs());
+
+    // Make a fallback for pictures with too few rows.
+    int grainSize = src.rows / numOfThreads;
+    uchar ksize2 = aperture_size / 2;
+    int minGrainSize = 1 + ksize2;
+    int maxGrainSize = src.rows - 2 - 2*ksize2;
+    if ( !( minGrainSize <= grainSize && grainSize <= maxGrainSize ) )
+    {
+        numOfThreads = 1;
+    }
+
     if (numOfThreads > 1) {
 
         std::queue<uchar*> borderPeaksParallel;
@@ -845,8 +856,8 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         {
             m = borderPeaksParallel.front();
             borderPeaksParallel.pop();
-            if (!m[-1])				CANNY_PUSH_SERIAL(m - 1);
-            if (!m[1])				CANNY_PUSH_SERIAL(m + 1);
+            if (!m[-1])                 CANNY_PUSH_SERIAL(m - 1);
+            if (!m[1])			CANNY_PUSH_SERIAL(m + 1);
             if (!m[-mapstep - 1])	CANNY_PUSH_SERIAL(m - mapstep - 1);
             if (!m[-mapstep])		CANNY_PUSH_SERIAL(m - mapstep);
             if (!m[-mapstep + 1])	CANNY_PUSH_SERIAL(m - mapstep + 1);
@@ -873,16 +884,16 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         uchar **stack_bottom = &stack[0];
 
         /* sector numbers
-                (Top-Left Origin)
+        (Top-Left Origin)
 
-                1   2   3
-                *  *  *
-                * * *
-                0*******0
-                * * *
-                *  *  *
-                3   2   1
-                */
+        1   2   3
+        *  *  *
+        * * *
+        0*******0
+        * * *
+        *  *  *
+        3   2   1
+        */
 
 #define CANNY_PUSH(d)    *(d) = uchar(2), *stack_top++ = (d)
 #define CANNY_POP(d)     (d) = *--stack_top
