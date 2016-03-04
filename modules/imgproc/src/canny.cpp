@@ -629,9 +629,9 @@ private:
     const Mat& src;
     uchar* map;
     int low, high, aperture_size;
-    volatile int *actualRow;
-    std::queue<uchar*> *_borderPeaksParallel;
     bool L2gradient;
+    std::queue<uchar*> *_borderPeaksParallel;
+    volatile int *actualRow;
 };
 
 //class finalPass : public ParallelLoopBody
