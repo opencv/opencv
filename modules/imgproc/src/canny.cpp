@@ -55,7 +55,7 @@
 namespace cv
 {
 #ifdef HAVE_IPP
-static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
+static bool ippCanny(const Mat& _src, Mat& _dst, float low, float high)
 {
 #if USE_IPP_CANNY
     int size = 0, size1 = 0;
@@ -83,20 +83,20 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
     uchar* buffer = alignPtr((uchar*)buf, 32);
 
     Mat _dx(_src.rows, _src.cols, CV_16S);
-    if( ippiFilterSobelNegVertBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
-                    _dx.ptr<short>(), (int)_dx.step, roi,
-                    ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
+    if (ippiFilterSobelNegVertBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
+                                               _dx.ptr<short>(), (int)_dx.step, roi,
+                                               ippMskSize3x3, ippBorderRepl, 0, buffer) < 0)
         return false;
 
     Mat _dy(_src.rows, _src.cols, CV_16S);
-    if( ippiFilterSobelHorizBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
-                    _dy.ptr<short>(), (int)_dy.step, roi,
-                    ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
+    if (ippiFilterSobelHorizBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
+                                             _dy.ptr<short>(), (int)_dy.step, roi,
+                                             ippMskSize3x3, ippBorderRepl, 0, buffer) < 0)
         return false;
 
-    if( ippiCanny_16s8u_C1R(_dx.ptr<short>(), (int)_dx.step,
-                               _dy.ptr<short>(), (int)_dy.step,
-                              _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0 )
+    if (ippiCanny_16s8u_C1R(_dx.ptr<short>(), (int)_dx.step,
+                            _dy.ptr<short>(), (int)_dy.step,
+                            _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0)
         return false;
     return true;
 #else
@@ -243,23 +243,18 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
 
 #endif
 
-std::queue<uchar*> borderPeaksParallel;
-volatile int actualRow = 0;
-
 class parallelCanny : public ParallelLoopBody
 {
 
 public:
-    parallelCanny(const Mat& _src, uchar* _map, int _low, int _high, int _aperture_size, bool _L2gradient) :
-        src(_src), map(_map), low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient)
+    parallelCanny(const Mat& _src, uchar* _map, int _low, int _high, int _aperture_size, bool _L2gradient, std::queue<uchar*> *borderPeaksParallel) :
+        src(_src), map(_map), low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient), _borderPeaksParallel(borderPeaksParallel)
     {
-        borderPeakLock = new cv::Mutex();
-        actualRow = 0;
+        actualRow = new int(0);
     }
 
     ~parallelCanny() {
-        delete borderPeakLock;
-        borderPeakLock = NULL;
+        delete actualRow;
     }
 
     parallelCanny& operator=(const parallelCanny&) { return *this; }
@@ -618,28 +613,24 @@ public:
             if (!m[mapstep + 1])  CANNY_PUSH(m + mapstep + 1);
         }
 
-        // Higher threads have to wait
-        while (boundaries.start > actualRow)
+        // Higher threads have to wait, no Sleep() because waiting time should be short and sleep overhead is huge in this case
+        while (boundaries.start > *actualRow)
             ;
 
-        borderPeakLock->trylock();
         while (!borderPeaksLocal.empty()) {
-            borderPeaksParallel.push(borderPeaksLocal.front());
+            _borderPeaksParallel->push(borderPeaksLocal.front());
             borderPeaksLocal.pop();
         }
 
-        if ((actualRow = boundaries.end) == src.rows)
-            actualRow = 0;
-        borderPeakLock->unlock();
+        *actualRow = boundaries.end;
     }
 
 private:
-    cv::Mutex *borderPeakLock;
     const Mat& src;
     uchar* map;
-    int low;
-    int high;
-    int aperture_size;
+    int low, high, aperture_size;
+    volatile int *actualRow;
+    std::queue<uchar*> *_borderPeaksParallel;
     bool L2gradient;
 };
 
@@ -667,20 +658,44 @@ public:
             if(checkHardwareSupport(CV_CPU_AVX2)) {
                 __m256i v_zero = _mm256_setzero_si256();
 
-                for(; j <= _src.cols - 32; j += 32) {
-                    __m256i v_pmap = _mm256_loadu_si256((const __m256i*)(pmap + j));
+                for(; j <= src.cols - 64; j += 64) {
+                    __m256i v_pmap1 = _mm256_loadu_si256((const __m256i*)(pmap + j));
+                    __m256i v_pmap2 = _mm256_loadu_si256((const __m256i*)(pmap + j + 32));
 
-                    __m256i v_pmaplo = _mm256_unpacklo_epi8(v_pmap, v_zero);
-                    __m256i v_pmaphi = _mm256_unpackhi_epi8(v_pmap, v_zero);
+                    __m256i v_pmaplo1 = _mm256_unpacklo_epi8(v_pmap1, v_zero);
+                    __m256i v_pmaphi1 = _mm256_unpackhi_epi8(v_pmap1, v_zero);
+                    __m256i v_pmaplo2 = _mm256_unpacklo_epi8(v_pmap2, v_zero);
+                    __m256i v_pmaphi2 = _mm256_unpackhi_epi8(v_pmap2, v_zero);
 
-                    v_pmaplo = _mm256_srli_epi16(v_pmaplo, 1);
-                    v_pmaphi = _mm256_srli_epi16(v_pmaphi, 1);
+                    v_pmaplo1 = _mm256_srli_epi16(v_pmaplo1, 1);
+                    v_pmaphi1 = _mm256_srli_epi16(v_pmaphi1, 1);
+                    v_pmaplo2 = _mm256_srli_epi16(v_pmaplo2, 1);
+                    v_pmaphi2 = _mm256_srli_epi16(v_pmaphi2, 1);
 
-                    v_pmap = _mm256_packus_epi16(v_pmaplo, v_pmaphi);
-                    v_pmap = _mm256_sub_epi8(v_zero, v_pmap);
+                    v_pmap1 = _mm256_packus_epi16(v_pmaplo1, v_pmaphi1);
+                    v_pmap2 = _mm256_packus_epi16(v_pmaplo2, v_pmaphi2);
 
-                    _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap);
+                    v_pmap1 = _mm256_sub_epi8(v_zero, v_pmap1);
+                    v_pmap2 = _mm256_sub_epi8(v_zero, v_pmap2);
+
+                    _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap1);
+                    _mm256_storeu_si256((__m256i*)(pdst + j + 32), v_pmap2);
                 }
+
+                //            for(; j <= _src.cols - 32; j += 32) {
+                //                __m256i v_pmap = _mm256_loadu_si256((const __m256i*)(pmap + j));
+
+                //                __m256i v_pmaplo = _mm256_unpacklo_epi8(v_pmap, v_zero);
+                //                __m256i v_pmaphi = _mm256_unpackhi_epi8(v_pmap, v_zero);
+
+                //                v_pmaplo = _mm256_srli_epi16(v_pmaplo, 1);
+                //                v_pmaphi = _mm256_srli_epi16(v_pmaphi, 1);
+
+                //                v_pmap = _mm256_packus_epi16(v_pmaplo, v_pmaphi);
+                //                v_pmap = _mm256_sub_epi8(v_zero, v_pmap);
+
+                //                _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap);
+                //            }
                 _mm256_zeroupper();
             }
 #endif
@@ -688,6 +703,30 @@ public:
 #if CV_SSE2
             if(checkHardwareSupport(CV_CPU_SSE2)) {
                 __m128i v_zero = _mm_setzero_si128();
+
+                for(; j <= src.cols - 32; j += 32) {
+                    __m128i v_pmap1 = _mm_loadu_si128((const __m128i*)(pmap + j));
+                    __m128i v_pmap2 = _mm_loadu_si128((const __m128i*)(pmap + j + 16));
+
+                    __m128i v_pmaplo1 = _mm_unpacklo_epi8(v_pmap1, v_zero);
+                    __m128i v_pmaphi1 = _mm_unpackhi_epi8(v_pmap1, v_zero);
+                    __m128i v_pmaplo2 = _mm_unpacklo_epi8(v_pmap2, v_zero);
+                    __m128i v_pmaphi2 = _mm_unpackhi_epi8(v_pmap2, v_zero);
+
+                    v_pmaplo1 = _mm_srli_epi16(v_pmaplo1, 1);
+                    v_pmaphi1 = _mm_srli_epi16(v_pmaphi1, 1);
+                    v_pmaplo2 = _mm_srli_epi16(v_pmaplo2, 1);
+                    v_pmaphi2 = _mm_srli_epi16(v_pmaphi2, 1);
+
+                    v_pmap1 = _mm_packus_epi16(v_pmaplo1, v_pmaphi1);
+                    v_pmap2 = _mm_packus_epi16(v_pmaplo2, v_pmaphi2);
+
+                    v_pmap1 = _mm_sub_epi8(v_zero, v_pmap1);
+                    v_pmap2 = _mm_sub_epi8(v_zero, v_pmap2);
+
+                    _mm_storeu_si128((__m128i*)(pdst + j), v_pmap1);
+                    _mm_storeu_si128((__m128i*)(pdst + j + 16), v_pmap2);
+                }
 
                 for(; j <= src.cols - 16; j += 16) {
                     __m128i v_pmap = _mm_loadu_si128((const __m128i*)(pmap + j));
@@ -705,6 +744,7 @@ public:
                 }
             }
 #endif
+
             for (; j < src.cols; j++)
                 pdst[j] = (uchar)-(pmap[j] >> 1);
         }
@@ -779,7 +819,6 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     int high = cvFloor(high_thresh);
 
     ptrdiff_t mapstep = src.cols + 2;
-
     AutoBuffer<uchar> buffer((src.cols+2)*(src.rows+2) + cn * mapstep * 3 * sizeof(int));
 
     int* mag_buf[3];
@@ -788,13 +827,15 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     mag_buf[2] = mag_buf[1] + mapstep*cn;
     memset(mag_buf[0], 0, /* cn* */mapstep*sizeof(int));
 
-    uchar *map = (uchar*)(mag_buf[2] + mapstep*cn);
+    uchar* map = (uchar*)(mag_buf[2] + mapstep*cn);
     memset(map, 1, mapstep);
     memset(map + mapstep*(src.rows + 1), 1, mapstep);
 
-    int numOfCPUs = getNumberOfCPUs();
-    if (numOfCPUs > 1) {
-        parallel_for_(Range(0, src.rows), parallelCanny(src, map, low, high, aperture_size, L2gradient), numOfCPUs);
+    int numOfThreads = getNumThreads();
+    if (numOfThreads > 1) {
+
+        std::queue<uchar*> borderPeaksParallel;
+        parallel_for_(Range(0, src.rows), parallelCanny(src, map, low, high, aperture_size, L2gradient, &borderPeaksParallel), numOfThreads);
 
 #define CANNY_PUSH_SERIAL(d)    *(d) = uchar(2), borderPeaksParallel.push(d)
 
@@ -804,8 +845,8 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         {
             m = borderPeaksParallel.front();
             borderPeaksParallel.pop();
-            if (!m[-1])                 CANNY_PUSH_SERIAL(m - 1);
-            if (!m[1])                  CANNY_PUSH_SERIAL(m + 1);
+            if (!m[-1])				CANNY_PUSH_SERIAL(m - 1);
+            if (!m[1])				CANNY_PUSH_SERIAL(m + 1);
             if (!m[-mapstep - 1])	CANNY_PUSH_SERIAL(m - mapstep - 1);
             if (!m[-mapstep])		CANNY_PUSH_SERIAL(m - mapstep);
             if (!m[-mapstep + 1])	CANNY_PUSH_SERIAL(m - mapstep + 1);
@@ -814,12 +855,11 @@ void cv::Canny( InputArray _src, OutputArray _dst,
             if (!m[mapstep + 1])	CANNY_PUSH_SERIAL(m + mapstep + 1);
         }
 
-        //          finalPass finPass(src, dst, map, mapstep);
-        //          parallel_for_(Range(0, src.rows), finPass, numOfCPUs);
-        //          return;
+        //parallel_for_(Range(0, src.rows), finalPass(src, dst, map, mapstep), numOfThreads);
+        //return;
     } else {
 
-        ////////////////// serial way //////////////////////////////////////////
+        ////////////////// Serielle Methode //////////////////////////////////////////
 
         Mat dx(src.rows, src.cols, CV_16SC(cn));
         Mat dy(src.rows, src.cols, CV_16SC(cn));
@@ -833,16 +873,16 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         uchar **stack_bottom = &stack[0];
 
         /* sector numbers
-        (Top-Left Origin)
+                (Top-Left Origin)
 
-        1   2   3
-        *  *  *
-        * * *
-        0*******0
-        * * *
-        *  *  *
-        3   2   1
-        */
+                1   2   3
+                *  *  *
+                * * *
+                0*******0
+                * * *
+                *  *  *
+                3   2   1
+                */
 
 #define CANNY_PUSH(d)    *(d) = uchar(2), *stack_top++ = (d)
 #define CANNY_POP(d)     (d) = *--stack_top
@@ -1117,20 +1157,44 @@ __ocv_canny_push:
         if (checkHardwareSupport(CV_CPU_AVX2)) {
             __m256i v_zero = _mm256_setzero_si256();
 
-            for(; j <= src.cols - 32; j += 32) {
-                __m256i v_pmap = _mm256_loadu_si256((const __m256i*)(pmap + j));
+            for (; j <= src.cols - 64; j += 64) {
+                __m256i v_pmap1 = _mm256_loadu_si256((const __m256i*)(pmap + j));
+                __m256i v_pmap2 = _mm256_loadu_si256((const __m256i*)(pmap + j + 32));
 
-                __m256i v_pmaplo = _mm256_unpacklo_epi8(v_pmap, v_zero);
-                __m256i v_pmaphi = _mm256_unpackhi_epi8(v_pmap, v_zero);
+                __m256i v_pmaplo1 = _mm256_unpacklo_epi8(v_pmap1, v_zero);
+                __m256i v_pmaphi1 = _mm256_unpackhi_epi8(v_pmap1, v_zero);
+                __m256i v_pmaplo2 = _mm256_unpacklo_epi8(v_pmap2, v_zero);
+                __m256i v_pmaphi2 = _mm256_unpackhi_epi8(v_pmap2, v_zero);
 
-                v_pmaplo = _mm256_srli_epi16(v_pmaplo, 1);
-                v_pmaphi = _mm256_srli_epi16(v_pmaphi, 1);
+                v_pmaplo1 = _mm256_srli_epi16(v_pmaplo1, 1);
+                v_pmaphi1 = _mm256_srli_epi16(v_pmaphi1, 1);
+                v_pmaplo2 = _mm256_srli_epi16(v_pmaplo2, 1);
+                v_pmaphi2 = _mm256_srli_epi16(v_pmaphi2, 1);
 
-                v_pmap = _mm256_packus_epi16(v_pmaplo, v_pmaphi);
-                v_pmap = _mm256_sub_epi8(v_zero, v_pmap);
+                v_pmap1 = _mm256_packus_epi16(v_pmaplo1, v_pmaphi1);
+                v_pmap2 = _mm256_packus_epi16(v_pmaplo2, v_pmaphi2);
 
-                _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap);
+                v_pmap1 = _mm256_sub_epi8(v_zero, v_pmap1);
+                v_pmap2 = _mm256_sub_epi8(v_zero, v_pmap2);
+
+                _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap1);
+                _mm256_storeu_si256((__m256i*)(pdst + j + 32), v_pmap2);
             }
+
+            //            for(; j <= src.cols - 32; j += 32) {
+            //                __m256i v_pmap = _mm256_loadu_si256((const __m256i*)(pmap + j));
+
+            //                __m256i v_pmaplo = _mm256_unpacklo_epi8(v_pmap, v_zero);
+            //                __m256i v_pmaphi = _mm256_unpackhi_epi8(v_pmap, v_zero);
+
+            //                v_pmaplo = _mm256_srli_epi16(v_pmaplo, 1);
+            //                v_pmaphi = _mm256_srli_epi16(v_pmaphi, 1);
+
+            //                v_pmap = _mm256_packus_epi16(v_pmaplo, v_pmaphi);
+            //                v_pmap = _mm256_sub_epi8(v_zero, v_pmap);
+
+            //                _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap);
+            //            }
             _mm256_zeroupper();
         }
 #endif
@@ -1138,6 +1202,30 @@ __ocv_canny_push:
 #if CV_SSE2
         if (checkHardwareSupport(CV_CPU_SSE2)) {
             __m128i v_zero = _mm_setzero_si128();
+
+            for (; j <= src.cols - 32; j += 32) {
+                __m128i v_pmap1 = _mm_loadu_si128((const __m128i*)(pmap + j));
+                __m128i v_pmap2 = _mm_loadu_si128((const __m128i*)(pmap + j + 16));
+
+                __m128i v_pmaplo1 = _mm_unpacklo_epi8(v_pmap1, v_zero);
+                __m128i v_pmaphi1 = _mm_unpackhi_epi8(v_pmap1, v_zero);
+                __m128i v_pmaplo2 = _mm_unpacklo_epi8(v_pmap2, v_zero);
+                __m128i v_pmaphi2 = _mm_unpackhi_epi8(v_pmap2, v_zero);
+
+                v_pmaplo1 = _mm_srli_epi16(v_pmaplo1, 1);
+                v_pmaphi1 = _mm_srli_epi16(v_pmaphi1, 1);
+                v_pmaplo2 = _mm_srli_epi16(v_pmaplo2, 1);
+                v_pmaphi2 = _mm_srli_epi16(v_pmaphi2, 1);
+
+                v_pmap1 = _mm_packus_epi16(v_pmaplo1, v_pmaphi1);
+                v_pmap2 = _mm_packus_epi16(v_pmaplo2, v_pmaphi2);
+
+                v_pmap1 = _mm_sub_epi8(v_zero, v_pmap1);
+                v_pmap2 = _mm_sub_epi8(v_zero, v_pmap2);
+
+                _mm_storeu_si128((__m128i*)(pdst + j), v_pmap1);
+                _mm_storeu_si128((__m128i*)(pdst + j + 16), v_pmap2);
+            }
 
             for (; j <= src.cols - 16; j += 16) {
                 __m128i v_pmap = _mm_loadu_si128((const __m128i*)(pmap + j));
