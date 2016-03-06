@@ -835,17 +835,11 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         ksize2 = 1;
     }
 
-    int minGrainSize = 2 * (ksize2 + 1);
+    int minGrainSize = 2*(ksize2 + 1);
     if (grainSize < minGrainSize)
     {
         numOfThreads = std::max(1, src.rows / minGrainSize);
     }
-
-//    // Perhabs there remains a last thread with less than minGrainSize
-//    while((src.rows % grainSize < minGrainSize) && (numOfThreads > 1))
-//    {
-//        --numOfThreads;
-//    }
 
     std::queue<uchar*> borderPeaksParallel;
     parallel_for_(Range(0, src.rows), parallelCanny(src, map, low, high, aperture_size, L2gradient, &borderPeaksParallel), numOfThreads);
