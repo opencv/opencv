@@ -823,22 +823,22 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     memset(map, 1, mapstep);
     memset(map + mapstep*(src.rows + 1), 1, mapstep);
 
-    //
-    int numOfThreads = max(1, min(getNumThreads(), getNumberOfCPUs()));
+    // Minimum number of threads should be 1, maximum should not exceed number of CPU's, because of overhead
+    int numOfThreads = std::max(1, std::min(getNumThreads(), getNumberOfCPUs()));
 
     // Make a fallback for pictures with too few rows.
     int grainSize = src.rows / numOfThreads;
     int ksize2 = aperture_size / 2;
-    // if Scharr filter: aperture size is 3
+    // If Scharr filter: aperture size is 3, ksize2 is 1
     if(aperture_size == -1)
     {
         ksize2 = 1;
     }
 
-    int minGrainSize = ksize2 + 2;
+    int minGrainSize = 2 * (ksize2 + 1);
     if (grainSize < minGrainSize)
     {
-        numOfThreads = max(1, src.rows / minGrainSize);
+        numOfThreads = std::max(1, src.rows / minGrainSize);
     }
 
 //    // Perhabs there remains a last thread with less than minGrainSize
