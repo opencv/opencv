@@ -280,7 +280,10 @@ public:
         // In sobel transform we calculate ksize2 extra lines for the first and last rows of each slice
         // because IPPDerivSobel expects only isolated ROIs, in contrast with the opencv version which
         // uses the pixels outside of the ROI to form a border.
-        uchar ksize2 = (uchar)(aperture_size / 2);
+        int ksize2 = aperture_size / 2;
+        // If Scharr filter: aperture_size is 3
+        if(aperture_size == -1)
+            ksize2 = 3;
 
         if (boundaries.start == 0 && boundaries.end == src.rows)
         {
@@ -822,9 +825,13 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 
     // Make a fallback for pictures with too few rows.
     int grainSize = src.rows / numOfThreads;
-    uchar ksize2 = (uchar)(aperture_size / 2);
+    int ksize2 = aperture_size / 2;
+    // if Scharr filter: aperture size is 3
+    if(aperture_size == -1)
+        ksize2 = 3;
+
     int minGrainSize = 1 + ksize2;
-    int maxGrainSize = src.rows - 2 - 2*ksize2;
+    int maxGrainSize = src.rows - 2 - 2 * ksize2;
     if ( !( minGrainSize <= grainSize && grainSize <= maxGrainSize ) )
     {
         numOfThreads = 1;
