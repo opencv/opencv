@@ -281,9 +281,11 @@ public:
         // because IPPDerivSobel expects only isolated ROIs, in contrast with the opencv version which
         // uses the pixels outside of the ROI to form a border.
         int ksize2 = aperture_size / 2;
-        // If Scharr filter: aperture_size is 3
+        // If Scharr filter: aperture_size is 3 and ksize2 is 1
         if(aperture_size == -1)
-            ksize2 = 3;
+        {
+            ksize2 = 1;
+        }
 
         if (boundaries.start == 0 && boundaries.end == src.rows)
         {
@@ -821,21 +823,29 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     memset(map, 1, mapstep);
     memset(map + mapstep*(src.rows + 1), 1, mapstep);
 
-    int numOfThreads = min(getNumThreads(), getNumberOfCPUs());
+    //
+    int numOfThreads = max(1, min(getNumThreads(), getNumberOfCPUs()));
 
     // Make a fallback for pictures with too few rows.
     int grainSize = src.rows / numOfThreads;
     int ksize2 = aperture_size / 2;
     // if Scharr filter: aperture size is 3
     if(aperture_size == -1)
-        ksize2 = 3;
-
-    int minGrainSize = 1 + ksize2;
-    int maxGrainSize = src.rows - 2 - 2 * ksize2;
-    if ( !( minGrainSize <= grainSize && grainSize <= maxGrainSize ) )
     {
-        numOfThreads = 1;
+        ksize2 = 1;
     }
+
+    int minGrainSize = ksize2 + 2;
+    if (grainSize < minGrainSize)
+    {
+        numOfThreads = max(1, src.rows / minGrainSize);
+    }
+
+//    // Perhabs there remains a last thread with less than minGrainSize
+//    while((src.rows % grainSize < minGrainSize) && (numOfThreads > 1))
+//    {
+//        --numOfThreads;
+//    }
 
     std::queue<uchar*> borderPeaksParallel;
     parallel_for_(Range(0, src.rows), parallelCanny(src, map, low, high, aperture_size, L2gradient, &borderPeaksParallel), numOfThreads);
