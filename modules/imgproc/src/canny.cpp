@@ -835,7 +835,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         ksize2 = 1;
     }
 
-    int minGrainSize = 2*(ksize2 + 1);
+    int minGrainSize = 2 * (ksize2 + 1);
     if (grainSize < minGrainSize)
     {
         numOfThreads = std::max(1, src.rows / minGrainSize);
