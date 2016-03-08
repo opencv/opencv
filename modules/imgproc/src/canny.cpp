@@ -261,15 +261,6 @@ public:
 
     void operator()(const Range &boundaries) const
     {
-
-#if CV_AVX2
-        bool haveAVX2 = checkHardwareSupport(CV_CPU_AVX2);
-#endif
-
-#if CV_SSE2
-        bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-#endif
-
         const int type = src.type(), cn = CV_MAT_CN(type);
 
         Mat dx, dy;
@@ -374,10 +365,11 @@ public:
             {
                 int j = 0, width = src.cols * cn;
 #if CV_AVX2
-                if (haveAVX2)
+                if (checkHardwareSupport(CV_CPU_AVX2))
                 {
+                    const int size = width - 16;
                     __m256i v_zero = _mm256_setzero_si256();
-                    for (; j <= width - 16; j += 16)
+                    for (; j <= size; j += 16)
                     {
                         __m256i v_dx = _mm256_loadu_si256((const __m256i *)(_dx + j));
                         __m256i v_dy = _mm256_loadu_si256((const __m256i *)(_dy + j));
@@ -391,13 +383,14 @@ public:
                         _mm256_storeu_si256((__m256i *)(_norm + j + 8), v_norm);
                     }
                     _mm256_zeroupper();
-                } //else // if CV_AVX2 then always CV_SSE2
+                }
 #endif
 #if CV_SSE2
-                if (haveSSE2)
+                if (checkHardwareSupport(CV_CPU_SSE2))
                 {
+                    const int size = width - 8;
                     __m128i v_zero = _mm_setzero_si128();
-                    for (; j <= width - 8; j += 8)
+                    for (; j <= size; j += 8)
                     {
                         __m128i v_dx = _mm_loadu_si128((const __m128i *)(_dx + j));
                         __m128i v_dy = _mm_loadu_si128((const __m128i *)(_dy + j));
@@ -427,9 +420,10 @@ public:
             {
                 int j = 0, width = src.cols * cn;
 #if CV_AVX2
-                if (haveAVX2)
+                if (checkHardwareSupport(CV_CPU_AVX2))
                 {
-                    for (; j <= width - 16; j += 16)
+                    const int size = width - 16;
+                    for (; j <= size; j += 16)
                     {
                         __m256i v_dx = _mm256_loadu_si256((const __m256i *)(_dx + j));
                         __m256i v_dy = _mm256_loadu_si256((const __m256i *)(_dy + j));
@@ -446,12 +440,13 @@ public:
                         _mm256_storeu_si256((__m256i *)(_norm + j + 8), v_norm);
                     }
                     _mm256_zeroupper();
-                } //else // if CV_AVX2 then always CV_SSE2
+                }
 #endif
 #if CV_SSE2
-                if (haveSSE2)
+                if (checkHardwareSupport(CV_CPU_SSE2))
                 {
-                    for (; j <= width - 8; j += 8)
+                    const int size = width - 8;
+                    for (; j <= size; j += 8)
                     {
                         __m128i v_dx = _mm_loadu_si128((const __m128i *)(_dx + j));
                         __m128i v_dy = _mm_loadu_si128((const __m128i *)(_dy + j));
@@ -663,7 +658,8 @@ public:
             if(checkHardwareSupport(CV_CPU_AVX2)) {
                 __m256i v_zero = _mm256_setzero_si256();
 
-                for(; j <= src.cols - 64; j += 64) {
+                const int size = src.cols - 64;
+                for(; j <= size; j += 64) {
                     __m256i v_pmap1 = _mm256_loadu_si256((const __m256i*)(pmap + j));
                     __m256i v_pmap2 = _mm256_loadu_si256((const __m256i*)(pmap + j + 32));
 
@@ -686,21 +682,6 @@ public:
                     _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap1);
                     _mm256_storeu_si256((__m256i*)(pdst + j + 32), v_pmap2);
                 }
-
-//                for(; j <= _src.cols - 32; j += 32) {
-//                    __m256i v_pmap = _mm256_loadu_si256((const __m256i*)(pmap + j));
-
-//                    __m256i v_pmaplo = _mm256_unpacklo_epi8(v_pmap, v_zero);
-//                    __m256i v_pmaphi = _mm256_unpackhi_epi8(v_pmap, v_zero);
-
-//                    v_pmaplo = _mm256_srli_epi16(v_pmaplo, 1);
-//                    v_pmaphi = _mm256_srli_epi16(v_pmaphi, 1);
-
-//                    v_pmap = _mm256_packus_epi16(v_pmaplo, v_pmaphi);
-//                    v_pmap = _mm256_sub_epi8(v_zero, v_pmap);
-
-//                    _mm256_storeu_si256((__m256i*)(pdst + j), v_pmap);
-//                }
                 _mm256_zeroupper();
             }
 #endif
@@ -709,7 +690,8 @@ public:
             if(checkHardwareSupport(CV_CPU_SSE2)) {
                 __m128i v_zero = _mm_setzero_si128();
 
-                for(; j <= src.cols - 32; j += 32) {
+                const int size = src.cols - 32;
+                for(; j <= size; j += 32) {
                     __m128i v_pmap1 = _mm_loadu_si128((const __m128i*)(pmap + j));
                     __m128i v_pmap2 = _mm_loadu_si128((const __m128i*)(pmap + j + 16));
 
@@ -862,7 +844,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         if (!m[mapstep + 1])	CANNY_PUSH_SERIAL(m + mapstep + 1);
     }
 
-    parallel_for_(Range(0, src.rows), finalPass(src, dst, map, mapstep), numOfThreads);
+    parallel_for_(Range(0, src.rows), finalPass(src, dst, map, mapstep));
     return;
 }
 
