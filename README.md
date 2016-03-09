@@ -6,6 +6,7 @@
 * Docs: <http://docs.opencv.org/master/>
 * Q&A forum: <http://answers.opencv.org>
 * Issue tracking: <https://github.com/Itseez/opencv/issues>
+* Mailing List  : <https://groups.google.com/forum/?utm_source=digest&utm_medium=email#!forum/opencv-gsoc-2016>
 
 #### Contributing
 
