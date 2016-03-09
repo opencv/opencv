@@ -1,17 +1,21 @@
 #!/usr/bin/env python
 
-import urllib
+import os
 import cv2.cv as cv
 import Image
 import unittest
 
 class TestLoadImage(unittest.TestCase):
     def setUp(self):
-        open("large.jpg", "w").write(urllib.urlopen("http://www.cs.ubc.ca/labs/lci/curious_george/img/ROS_bug_imgs/IMG_3560.jpg").read())
+        pass
 
     def test_load(self):
-        pilim = Image.open("large.jpg")
-        cvim = cv.LoadImage("large.jpg")
+        pilim = Image.open(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'))
+        self.assertFalse(pilim is None)
+        print pilim
+        cvim = cv.LoadImage(os.path.join(os.environ['OPENCV_TEST_DATA_PATH'], 'cv', 'shared', 'lena.png'))
+        self.assertFalse(cvim is None)
+        print cvim
         self.assert_(len(pilim.tostring()) == len(cvim.tostring()))
 
 class Creating(unittest.TestCase):
