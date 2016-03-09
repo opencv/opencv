@@ -92,7 +92,7 @@ TrackedTarget = namedtuple('TrackedTarget', 'target, p0, p1, H, quad')
 
 class PlaneTracker:
     def __init__(self):
-        self.detector = cv2.ORB_create( nfeatures = 1000 )
+        self.detector = cv2.AKAZE_create(threshold = 0.003)
         self.matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
         self.targets = []
         self.frame_points = []
@@ -155,6 +155,6 @@ class PlaneTracker:
     def detect_features(self, frame):
         '''detect_features(self, frame) -> keypoints, descrs'''
         keypoints, descrs = self.detector.detectAndCompute(frame, None)
-        if descrs is None:  # detectAndCompute returns descs=None if not keypoints found
+        if descrs is None:  # detectAndCompute returns descs=None if no keypoints found
             descrs = []
         return keypoints, descrs
