@@ -8097,19 +8097,19 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
                     && (kpts[lastRowCorner_ind].pt.y == lastRow) )
                     lastRowCorner_ind++;
 
-                    if( (kpts[lastRowCorner_ind].pt.x == currCorner->pt.x)
-                     && (lastRowCorner_ind != curr_idx) )
-                    {
-                        size_t w = lastRowCorner_ind;
-                        // find the maximum in this block
-                        while(nmsFlags[w] != -1)
-                            w = nmsFlags[w];
+                if( (kpts[lastRowCorner_ind].pt.x == currCorner->pt.x)
+                 && (lastRowCorner_ind != curr_idx) )
+                {
+                    size_t w = lastRowCorner_ind;
+                    // find the maximum in this block
+                    while(nmsFlags[w] != -1)
+                        w = nmsFlags[w];
 
-                        if(kpts[curr_idx].response < kpts[w].response)
-                            nmsFlags[curr_idx] = (int)w;
-                        else
-                            nmsFlags[w] = (int)curr_idx;
-                    }
+                    if(kpts[curr_idx].response < kpts[w].response)
+                        nmsFlags[curr_idx] = (int)w;
+                    else
+                        nmsFlags[w] = (int)curr_idx;
+                }
             }
 
             // check left
