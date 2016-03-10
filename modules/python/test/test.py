@@ -128,6 +128,7 @@ from tests_common import NewOpenCVTests
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 def load_tests(loader, tests, pattern):
+    tests.addTests(loader.discover(basedir, pattern='nonfree_*.py'))
     tests.addTests(loader.discover(basedir, pattern='test_*.py'))
     return tests
 
@@ -430,23 +431,6 @@ class FunctionTests(OpenCVTests):
         im = cv.CreateImage((512,512), cv.IPL_DEPTH_8U, 3)
         cv.SetZero(im)
         cv.DrawChessboardCorners(im, (5, 5), [ ((i/5)*100+50,(i%5)*100+50) for i in range(5 * 5) ], 1)
-
-    def test_ExtractSURF(self):
-        img = self.get_sample("samples/c/lena.jpg", 0)
-        w,h = cv.GetSize(img)
-        for hessthresh in [ 300,400,500]:
-            for dsize in [0,1]:
-                for layers in [1,3,10]:
-                    kp,desc = cv.ExtractSURF(img, None, cv.CreateMemStorage(), (dsize, hessthresh, 3, layers))
-                    self.assert_(len(kp) == len(desc))
-                    for d in desc:
-                        self.assert_(len(d) == {0:64, 1:128}[dsize])
-                    for pt,laplacian,size,dir,hessian in kp:
-                        self.assert_((0 <= pt[0]) and (pt[0] <= w))
-                        self.assert_((0 <= pt[1]) and (pt[1] <= h))
-                        self.assert_(laplacian in [-1, 0, 1])
-                        self.assert_((0 <= dir) and (dir <= 360))
-                        self.assert_(hessian >= hessthresh)
 
     def test_FillPoly(self):
         scribble = cv.CreateImage((640,480), cv.IPL_DEPTH_8U, 1)
@@ -2249,6 +2233,12 @@ if __name__ == '__main__':
     print "Local data path:", args.data
     OpenCVTests.repoPath = args.repo
     NewOpenCVTests.repoPath = args.repo
+    if args.repo is None:
+        try:
+            OpenCVTests.repoPath = os.environ['OPENCV_TEST_DATA_PATH']
+            NewOpenCVTests.repoPath = OpenCVTests.repoPath
+        except KeyError:
+            print('Missing opencv samples data. Some of tests may fail.')
     try:
         OpenCVTests.dataPath = os.environ['OPENCV_TEST_DATA_PATH']
         NewOpenCVTests.extraTestDataPath = OpenCVTests.dataPath
