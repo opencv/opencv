@@ -1117,9 +1117,22 @@ public:
         Ptr<FilterEngine> f = createMorphologyFilter(op, src.type(), kernel, anchor,
                                                      rowBorderType, columnBorderType, borderValue );
 
-        f->apply( srcStripe, dstStripe );
-        for( int i = 1; i < iterations; i++ )
-            f->apply( dstStripe, dstStripe );
+        {
+            Point ofs;
+            Size wsz(srcStripe.cols, srcStripe.rows);
+            srcStripe.locateROI( wsz, ofs );
+
+            f->apply( srcStripe, dstStripe, wsz, ofs );
+        }
+
+        {
+            Point ofs;
+            Size wsz(dstStripe.cols, dstStripe.rows);
+            dstStripe.locateROI( wsz, ofs );
+
+            for( int i = 1; i < iterations; i++ )
+                f->apply( dstStripe, dstStripe, wsz, ofs );
+        }
     }
 
 private:
