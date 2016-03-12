@@ -114,9 +114,9 @@ So let's see how it works. New comer is marked in green color.
 newcomer = np.random.randint(0,100,(1,2)).astype(np.float32)
 plt.scatter(newcomer[:,0],newcomer[:,1],80,'g','o')
 
-knn = cv2.KNearest()
-knn.train(trainData,responses)
-ret, results, neighbours ,dist = knn.find_nearest(newcomer, 3)
+knn = cv2.ml.KNearest_create()
+knn.train(trainData, cv2.ml.ROW_SAMPLE, responses)
+ret, results, neighbours ,dist = knn.findNearest(newcomer, 3)
 
 print "result: ", results,"\n"
 print "neighbours: ", neighbours,"\n"
@@ -140,7 +140,7 @@ obtained as arrays.
 @code{.py}
 # 10 new comers
 newcomers = np.random.randint(0,100,(10,2)).astype(np.float32)
-ret, results,neighbours,dist = knn.find_nearest(newcomer, 3)
+ret, results,neighbours,dist = knn.findNearest(newcomer, 3)
 # The results also will contain 10 labels.
 @endcode
 Additional Resources

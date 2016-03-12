@@ -368,6 +368,8 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Reduce,
 
         TEST_CYCLE() cv::cuda::reduce(d_src, dst, dim, reduceOp, CV_32F);
 
+        dst = dst.reshape(dst.channels(), 1);
+
         CUDA_SANITY_CHECK(dst);
     }
     else

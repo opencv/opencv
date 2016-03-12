@@ -1802,6 +1802,10 @@ namespace fisheye
     @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
     @param alpha The skew coefficient.
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+
+    Note that the function assumes the camera matrix of the undistorted points to be indentity.
+    This means if you want to transform back points undistorted with undistortPoints() you have to
+    multiply them with \f$P^{-1}\f$.
      */
     CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
 

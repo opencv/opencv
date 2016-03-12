@@ -371,8 +371,8 @@ static void icvInitCapture_V4L() {
     }
     if (deviceHandle != -1)
       close(deviceHandle);
-      /* Set up to test the next /dev/video source in line */
-      CameraNumber++;
+    /* Set up to test the next /dev/video source in line */
+    CameraNumber++;
    } /* End while */
 
 }; /* End icvInitCapture_V4L */
