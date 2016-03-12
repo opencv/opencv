@@ -17,11 +17,6 @@ responses - capital latin letters A..Z.
 The first 10000 samples are used for training
 and the remaining 10000 - to test the classifier.
 ======================================================
-USAGE:
-  letter_recog.py [--model <model>]
-                  [--data <data fn>]
-                  [--load <model fn>] [--save <model fn>]
-
   Models: RTrees, KNearest, Boost, SVM, MLP
 '''
 
@@ -133,7 +128,7 @@ class MLP(LetterStatModel):
 
         self.model.setLayerSizes(layer_sizes)
         self.model.setTrainMethod(cv2.ml.ANN_MLP_BACKPROP)
-        self.model.setBackpropMomentumScale(0.0)
+        self.model.setBackpropMomentumScale(0)
         self.model.setBackpropWeightScale(0.001)
         self.model.setTermCriteria((cv2.TERM_CRITERIA_COUNT, 20, 0.01))
         self.model.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM, 2, 1)
@@ -144,45 +139,29 @@ class MLP(LetterStatModel):
         ret, resp = self.model.predict(samples)
         return resp.argmax(-1)
 
+from tests_common import NewOpenCVTests
 
+class letter_recog_test(NewOpenCVTests):
 
-if __name__ == '__main__':
-    import getopt
-    import sys
+    def test_letter_recog(self):
 
-    print(__doc__)
+        eps = 0.01
 
-    models = [RTrees, KNearest, Boost, SVM, MLP] # NBayes
-    models = dict( [(cls.__name__.lower(), cls) for cls in models] )
+        models = [RTrees, KNearest, Boost, SVM, MLP]
+        models = dict( [(cls.__name__.lower(), cls) for cls in models] )
+        testErrors = {RTrees: (98.930000, 92.390000), KNearest: (94.960000, 92.010000),
+         Boost: (85.970000, 74.920000), SVM: (99.780000, 95.680000), MLP: (90.060000, 87.410000)}
 
+        for model in models:
+            Model = models[model]
+            classifier = Model()
 
-    args, dummy = getopt.getopt(sys.argv[1:], '', ['model=', 'data=', 'load=', 'save='])
-    args = dict(args)
-    args.setdefault('--model', 'svm')
-    args.setdefault('--data', '../data/letter-recognition.data')
+            samples, responses = load_base(self.repoPath + '/samples/data/letter-recognition.data')
+            train_n = int(len(samples)*classifier.train_ratio)
 
-    print('loading data %s ...' % args['--data'])
-    samples, responses = load_base(args['--data'])
-    Model = models[args['--model']]
-    model = Model()
+            classifier.train(samples[:train_n], responses[:train_n])
+            train_rate = np.mean(classifier.predict(samples[:train_n]) == responses[:train_n].astype(int))
+            test_rate  = np.mean(classifier.predict(samples[train_n:]) == responses[train_n:].astype(int))
 
-    train_n = int(len(samples)*model.train_ratio)
-    if '--load' in args:
-        fn = args['--load']
-        print('loading model from %s ...' % fn)
-        model.load(fn)
-    else:
-        print('training %s ...' % Model.__name__)
-        model.train(samples[:train_n], responses[:train_n])
-
-    print('testing...')
-    train_rate = np.mean(model.predict(samples[:train_n]) == responses[:train_n].astype(int))
-    test_rate  = np.mean(model.predict(samples[train_n:]) == responses[train_n:].astype(int))
-
-    print('train rate: %f  test rate: %f' % (train_rate*100, test_rate*100))
-
-    if '--save' in args:
-        fn = args['--save']
-        print('saving model to %s ...' % fn)
-        model.save(fn)
-    cv2.destroyAllWindows()
+            self.assertLess(train_rate - testErrors[Model][0], eps)
+            self.assertLess(test_rate - testErrors[Model][1], eps)
