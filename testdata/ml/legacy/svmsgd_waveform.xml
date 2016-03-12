@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<my_svmsgd type_id="opencv-ml-svmsgd">
+  <svmsgdType>ASGD</svmsgdType>
+  <marginType>SOFT_MARGIN</marginType>
+  <marginRegularization>9.9999997473787516e-06</marginRegularization>
+  <initialStepSize>1.0000000149011612e-01</initialStepSize>
+  <stepDecreasingPower>7.5000000000000000e-01</stepDecreasingPower>
+  <term_criteria><epsilon>1.0000000000000001e-05</epsilon>
+    <iterations>10000</iterations></term_criteria>
+  <varCount>21</varCount>
+  <shift>-8.3686513900756836e+00</shift>
+  <weights type_id="opencv-matrix">
+    <rows>1</rows>
+    <cols>21</cols>
+    <dt>f</dt>
+    <data>
+      -6.39999360e-02 -1.37999862e-01 -2.44999766e-01 -1.47999853e-01 -2.49999762e-02 -5.39999492e-02 2.95999706e-01 2.66999751e-01 2.74999738e-01 3.01999718e-01 5.11999488e-01 2.96999723e-01 4.21999574e-01 3.56999636e-01 4.53999549e-01 2.70999730e-01 1.45999864e-01 1.29999863e-02 8.69999155e-02 -5.59999458e-02 3.99999619e-02</data></weights></my_svmsgd>
+</opencv_storage>

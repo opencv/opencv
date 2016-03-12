@@ -23,7 +23,9 @@
 			<_> abalone </_></rtrees>
 		<ertrees type_id="seq">
 			<_> waveform </_>
-			<_> abalone </_></ertrees></run_params>        
+            <_> abalone </_></ertrees>
+        <svmsgd type_id="seq">
+            <_> waveform </_></svmsgd></run_params>
 	<validation>
 		<nbayes>
 			<waveform>
@@ -199,6 +201,18 @@
 				<data_params>
 					<LS> 3133 </LS>
 					<resp_idx> 8 </resp_idx>
-					<types> ord[1-8],cat[0] </types></data_params></abalone></ertrees></validation>
+                    <types> ord[1-8],cat[0] </types></data_params></abalone></ertrees>
+		<svmsgd>
+			<waveform>
+				<model_params>
+					<svmsgdType> ASGD </svmsgdType>
+					<marginType> SOFT_MARGIN </marginType>
+					<marginRegularization> 0.00001 </marginRegularization>
+					<initialStepSize> 0.1 </initialStepSize>
+					<stepDecreasingPower> 0.75 </stepDecreasingPower></model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 21 </resp_idx>
+					<types> ord[0-20],cat[21] </types></data_params></waveform></svmsgd></validation>
 </mltest>
 </opencv_storage>
