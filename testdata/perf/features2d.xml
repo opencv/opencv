@@ -3385,31 +3385,30 @@
       <val>429.</val></last>
     <rng1>
       <x>0</x>
-      <y>139</y>
+      <y>72</y>
       <cn>1</cn>
-      <val>141.</val></rng1>
+      <val>84.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>29</y>
-      <cn>1</cn>
-      <val>54.</val></rng2></points-pt>
+      <y>120</y>
+      <val>247.</val></rng2></points-pt>
   <points-size>
     <kind>65536</kind>
     <type>5</type>
-    <min>1.</min>
-    <max>1.</max>
+    <min>7.</min>
+    <max>7.</max>
     <last>
       <x>0</x>
       <y>228</y>
-      <val>1.</val></last>
+      <val>7.</val></last>
     <rng1>
       <x>0</x>
-      <y>143</y>
-      <val>1.</val></rng1>
+      <y>146</y>
+      <val>7.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>132</y>
-      <val>1.</val></rng2></points-size>
+      <y>211</y>
+      <val>7.</val></rng2></points-size>
   <points-angle>
     <kind>65536</kind>
     <type>5</type>
@@ -3421,11 +3420,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>106</y>
+      <y>84</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>224</y>
+      <y>151</y>
       <val>-1.</val></rng2></points-angle>
   <points-response>
     <kind>65536</kind>
@@ -3438,12 +3437,12 @@
       <val>78.</val></last>
     <rng1>
       <x>0</x>
-      <y>86</y>
-      <val>106.</val></rng1>
+      <y>23</y>
+      <val>87.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>228</y>
-      <val>78.</val></rng2></points-response>
+      <y>193</y>
+      <val>87.</val></rng2></points-response>
   <points-octave>
     <kind>65536</kind>
     <type>4</type>
@@ -3455,11 +3454,11 @@
       <val>0.</val></last>
     <rng1>
       <x>0</x>
-      <y>181</y>
+      <y>111</y>
       <val>0.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>210</y>
+      <y>2</y>
       <val>0.</val></rng2></points-octave>
   <points-class_id>
     <kind>65536</kind>
@@ -3472,11 +3471,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>185</y>
+      <y>128</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>29</y>
+      <y>138</y>
       <val>-1.</val></rng2></points-class_id></agast_detect--detect----cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png---AGAST_5_8->
 <agast_detect--detect----cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png---AGAST_7_12d->
   <points-pt>
@@ -3490,30 +3489,29 @@
       <val>541.</val></last>
     <rng1>
       <x>0</x>
-      <y>64</y>
-      <cn>1</cn>
-      <val>42.</val></rng1>
+      <y>384</y>
+      <val>645.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>189</y>
-      <val>115.</val></rng2></points-pt>
+      <y>542</y>
+      <val>848.</val></rng2></points-pt>
   <points-size>
     <kind>65536</kind>
     <type>5</type>
-    <min>1.</min>
-    <max>1.</max>
+    <min>7.</min>
+    <max>7.</max>
     <last>
       <x>0</x>
       <y>651</y>
-      <val>1.</val></last>
+      <val>7.</val></last>
     <rng1>
       <x>0</x>
-      <y>331</y>
-      <val>1.</val></rng1>
+      <y>390</y>
+      <val>7.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>328</y>
-      <val>1.</val></rng2></points-size>
+      <y>505</y>
+      <val>7.</val></rng2></points-size>
   <points-angle>
     <kind>65536</kind>
     <type>5</type>
@@ -3525,11 +3523,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>635</y>
+      <y>372</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>255</y>
+      <y>288</y>
       <val>-1.</val></rng2></points-angle>
   <points-response>
     <kind>65536</kind>
@@ -3542,12 +3540,12 @@
       <val>70.</val></last>
     <rng1>
       <x>0</x>
-      <y>250</y>
-      <val>76.</val></rng1>
+      <y>572</y>
+      <val>85.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>566</y>
-      <val>77.</val></rng2></points-response>
+      <y>170</y>
+      <val>76.</val></rng2></points-response>
   <points-octave>
     <kind>65536</kind>
     <type>4</type>
@@ -3559,11 +3557,11 @@
       <val>0.</val></last>
     <rng1>
       <x>0</x>
-      <y>65</y>
+      <y>643</y>
       <val>0.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>610</y>
+      <y>26</y>
       <val>0.</val></rng2></points-octave>
   <points-class_id>
     <kind>65536</kind>
@@ -3576,11 +3574,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>580</y>
+      <y>132</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>433</y>
+      <y>233</y>
       <val>-1.</val></rng2></points-class_id></agast_detect--detect----cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png---AGAST_7_12d->
 <agast_detect--detect----cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png---AGAST_7_12s->
   <points-pt>
@@ -3594,29 +3592,31 @@
       <val>541.</val></last>
     <rng1>
       <x>0</x>
-      <y>514</y>
-      <val>55.</val></rng1>
+      <y>656</y>
+      <cn>1</cn>
+      <val>373.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>616</y>
-      <val>489.</val></rng2></points-pt>
+      <y>622</y>
+      <cn>1</cn>
+      <val>354.</val></rng2></points-pt>
   <points-size>
     <kind>65536</kind>
     <type>5</type>
-    <min>1.</min>
-    <max>1.</max>
+    <min>7.</min>
+    <max>7.</max>
     <last>
       <x>0</x>
       <y>705</y>
-      <val>1.</val></last>
+      <val>7.</val></last>
     <rng1>
       <x>0</x>
-      <y>619</y>
-      <val>1.</val></rng1>
+      <y>447</y>
+      <val>7.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>657</y>
-      <val>1.</val></rng2></points-size>
+      <y>492</y>
+      <val>7.</val></rng2></points-size>
   <points-angle>
     <kind>65536</kind>
     <type>5</type>
@@ -3628,11 +3628,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>611</y>
+      <y>695</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>448</y>
+      <y>557</y>
       <val>-1.</val></rng2></points-angle>
   <points-response>
     <kind>65536</kind>
@@ -3645,12 +3645,12 @@
       <val>70.</val></last>
     <rng1>
       <x>0</x>
-      <y>399</y>
-      <val>105.</val></rng1>
+      <y>349</y>
+      <val>140.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>517</y>
-      <val>106.</val></rng2></points-response>
+      <y>450</y>
+      <val>70.</val></rng2></points-response>
   <points-octave>
     <kind>65536</kind>
     <type>4</type>
@@ -3662,11 +3662,11 @@
       <val>0.</val></last>
     <rng1>
       <x>0</x>
-      <y>460</y>
+      <y>525</y>
       <val>0.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>434</y>
+      <y>318</y>
       <val>0.</val></rng2></points-octave>
   <points-class_id>
     <kind>65536</kind>
@@ -3679,11 +3679,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>248</y>
+      <y>691</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>225</y>
+      <y>421</y>
       <val>-1.</val></rng2></points-class_id></agast_detect--detect----cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png---AGAST_7_12s->
 <agast_detect--detect----cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png---OAST_9_16->
   <points-pt>
@@ -3697,30 +3697,31 @@
       <val>486.</val></last>
     <rng1>
       <x>0</x>
-      <y>513</y>
+      <y>530</y>
       <cn>1</cn>
-      <val>319.</val></rng1>
+      <val>330.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>619</y>
-      <val>783.</val></rng2></points-pt>
+      <y>284</y>
+      <cn>1</cn>
+      <val>136.</val></rng2></points-pt>
   <points-size>
     <kind>65536</kind>
     <type>5</type>
-    <min>1.</min>
-    <max>1.</max>
+    <min>7.</min>
+    <max>7.</max>
     <last>
       <x>0</x>
       <y>648</y>
-      <val>1.</val></last>
+      <val>7.</val></last>
     <rng1>
       <x>0</x>
-      <y>636</y>
-      <val>1.</val></rng1>
+      <y>574</y>
+      <val>7.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>167</y>
-      <val>1.</val></rng2></points-size>
+      <y>60</y>
+      <val>7.</val></rng2></points-size>
   <points-angle>
     <kind>65536</kind>
     <type>5</type>
@@ -3732,11 +3733,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>119</y>
+      <y>152</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>247</y>
+      <y>112</y>
       <val>-1.</val></rng2></points-angle>
   <points-response>
     <kind>65536</kind>
@@ -3749,12 +3750,12 @@
       <val>88.</val></last>
     <rng1>
       <x>0</x>
-      <y>646</y>
-      <val>94.</val></rng1>
+      <y>286</y>
+      <val>88.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>2</y>
-      <val>76.</val></rng2></points-response>
+      <y>261</y>
+      <val>71.</val></rng2></points-response>
   <points-octave>
     <kind>65536</kind>
     <type>4</type>
@@ -3766,11 +3767,11 @@
       <val>0.</val></last>
     <rng1>
       <x>0</x>
-      <y>66</y>
+      <y>42</y>
       <val>0.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>595</y>
+      <y>142</y>
       <val>0.</val></rng2></points-octave>
   <points-class_id>
     <kind>65536</kind>
@@ -3783,11 +3784,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>68</y>
+      <y>577</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>539</y>
+      <y>483</y>
       <val>-1.</val></rng2></points-class_id></agast_detect--detect----cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png---OAST_9_16->
 <agast_detect--detect----stitching-a3-png---AGAST_5_8->
   <points-pt>
@@ -3801,29 +3802,31 @@
       <val>649.</val></last>
     <rng1>
       <x>0</x>
-      <y>31</y>
-      <val>590.</val></rng1>
+      <y>73</y>
+      <cn>1</cn>
+      <val>451.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>19</y>
-      <val>152.</val></rng2></points-pt>
+      <y>11</y>
+      <cn>1</cn>
+      <val>331.</val></rng2></points-pt>
   <points-size>
     <kind>65536</kind>
     <type>5</type>
-    <min>1.</min>
-    <max>1.</max>
+    <min>7.</min>
+    <max>7.</max>
     <last>
       <x>0</x>
       <y>89</y>
-      <val>1.</val></last>
+      <val>7.</val></last>
     <rng1>
       <x>0</x>
-      <y>83</y>
-      <val>1.</val></rng1>
+      <y>79</y>
+      <val>7.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>0</y>
-      <val>1.</val></rng2></points-size>
+      <y>7</y>
+      <val>7.</val></rng2></points-size>
   <points-angle>
     <kind>65536</kind>
     <type>5</type>
@@ -3835,11 +3838,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>21</y>
+      <y>18</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>66</y>
+      <y>2</y>
       <val>-1.</val></rng2></points-angle>
   <points-response>
     <kind>65536</kind>
@@ -3852,12 +3855,12 @@
       <val>90.</val></last>
     <rng1>
       <x>0</x>
-      <y>61</y>
-      <val>75.</val></rng1>
+      <y>81</y>
+      <val>76.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>75</y>
-      <val>85.</val></rng2></points-response>
+      <y>79</y>
+      <val>72.</val></rng2></points-response>
   <points-octave>
     <kind>65536</kind>
     <type>4</type>
@@ -3869,11 +3872,11 @@
       <val>0.</val></last>
     <rng1>
       <x>0</x>
-      <y>86</y>
+      <y>71</y>
       <val>0.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>35</y>
+      <y>68</y>
       <val>0.</val></rng2></points-octave>
   <points-class_id>
     <kind>65536</kind>
@@ -3886,11 +3889,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>47</y>
+      <y>1</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>14</y>
+      <y>45</y>
       <val>-1.</val></rng2></points-class_id></agast_detect--detect----stitching-a3-png---AGAST_5_8->
 <agast_detect--detect----stitching-a3-png---AGAST_7_12d->
   <points-pt>
@@ -3904,31 +3907,31 @@
       <val>663.</val></last>
     <rng1>
       <x>0</x>
-      <y>100</y>
+      <y>54</y>
       <cn>1</cn>
-      <val>315.</val></rng1>
+      <val>303.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>357</y>
+      <y>66</y>
       <cn>1</cn>
-      <val>370.</val></rng2></points-pt>
+      <val>304.</val></rng2></points-pt>
   <points-size>
     <kind>65536</kind>
     <type>5</type>
-    <min>1.</min>
-    <max>1.</max>
+    <min>7.</min>
+    <max>7.</max>
     <last>
       <x>0</x>
       <y>870</y>
-      <val>1.</val></last>
+      <val>7.</val></last>
     <rng1>
       <x>0</x>
-      <y>220</y>
-      <val>1.</val></rng1>
+      <y>406</y>
+      <val>7.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>307</y>
-      <val>1.</val></rng2></points-size>
+      <y>715</y>
+      <val>7.</val></rng2></points-size>
   <points-angle>
     <kind>65536</kind>
     <type>5</type>
@@ -3940,11 +3943,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>713</y>
+      <y>472</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>593</y>
+      <y>152</y>
       <val>-1.</val></rng2></points-angle>
   <points-response>
     <kind>65536</kind>
@@ -3957,12 +3960,12 @@
       <val>98.</val></last>
     <rng1>
       <x>0</x>
-      <y>446</y>
-      <val>118.</val></rng1>
+      <y>811</y>
+      <val>151.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>779</y>
-      <val>88.</val></rng2></points-response>
+      <y>264</y>
+      <val>71.</val></rng2></points-response>
   <points-octave>
     <kind>65536</kind>
     <type>4</type>
@@ -3974,11 +3977,11 @@
       <val>0.</val></last>
     <rng1>
       <x>0</x>
-      <y>70</y>
+      <y>147</y>
       <val>0.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>620</y>
+      <y>76</y>
       <val>0.</val></rng2></points-octave>
   <points-class_id>
     <kind>65536</kind>
@@ -3991,11 +3994,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>580</y>
+      <y>568</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>240</y>
+      <y>434</y>
       <val>-1.</val></rng2></points-class_id></agast_detect--detect----stitching-a3-png---AGAST_7_12d->
 <agast_detect--detect----stitching-a3-png---AGAST_7_12s->
   <points-pt>
@@ -4009,29 +4012,30 @@
       <val>663.</val></last>
     <rng1>
       <x>0</x>
-      <y>258</y>
-      <val>165.</val></rng1>
+      <y>406</y>
+      <cn>1</cn>
+      <val>384.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>11</y>
-      <val>561.</val></rng2></points-pt>
+      <y>832</y>
+      <val>100.</val></rng2></points-pt>
   <points-size>
     <kind>65536</kind>
     <type>5</type>
-    <min>1.</min>
-    <max>1.</max>
+    <min>7.</min>
+    <max>7.</max>
     <last>
       <x>0</x>
       <y>850</y>
-      <val>1.</val></last>
+      <val>7.</val></last>
     <rng1>
       <x>0</x>
-      <y>738</y>
-      <val>1.</val></rng1>
+      <y>827</y>
+      <val>7.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>682</y>
-      <val>1.</val></rng2></points-size>
+      <y>198</y>
+      <val>7.</val></rng2></points-size>
   <points-angle>
     <kind>65536</kind>
     <type>5</type>
@@ -4043,11 +4047,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>371</y>
+      <y>315</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>131</y>
+      <y>743</y>
       <val>-1.</val></rng2></points-angle>
   <points-response>
     <kind>65536</kind>
@@ -4060,12 +4064,12 @@
       <val>98.</val></last>
     <rng1>
       <x>0</x>
-      <y>780</y>
-      <val>78.</val></rng1>
+      <y>169</y>
+      <val>83.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>131</y>
-      <val>87.</val></rng2></points-response>
+      <y>21</y>
+      <val>119.</val></rng2></points-response>
   <points-octave>
     <kind>65536</kind>
     <type>4</type>
@@ -4077,11 +4081,11 @@
       <val>0.</val></last>
     <rng1>
       <x>0</x>
-      <y>390</y>
+      <y>406</y>
       <val>0.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>782</y>
+      <y>281</y>
       <val>0.</val></rng2></points-octave>
   <points-class_id>
     <kind>65536</kind>
@@ -4094,11 +4098,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>810</y>
+      <y>733</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>188</y>
+      <y>493</y>
       <val>-1.</val></rng2></points-class_id></agast_detect--detect----stitching-a3-png---AGAST_7_12s->
 <agast_detect--detect----stitching-a3-png---OAST_9_16->
   <points-pt>
@@ -4112,30 +4116,30 @@
       <val>663.</val></last>
     <rng1>
       <x>0</x>
-      <y>419</y>
-      <val>560.</val></rng1>
+      <y>483</y>
+      <cn>1</cn>
+      <val>399.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>618</y>
-      <cn>1</cn>
-      <val>433.</val></rng2></points-pt>
+      <y>122</y>
+      <val>133.</val></rng2></points-pt>
   <points-size>
     <kind>65536</kind>
     <type>5</type>
-    <min>1.</min>
-    <max>1.</max>
+    <min>7.</min>
+    <max>7.</max>
     <last>
       <x>0</x>
       <y>894</y>
-      <val>1.</val></last>
+      <val>7.</val></last>
     <rng1>
       <x>0</x>
-      <y>544</y>
-      <val>1.</val></rng1>
+      <y>800</y>
+      <val>7.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>867</y>
-      <val>1.</val></rng2></points-size>
+      <y>368</y>
+      <val>7.</val></rng2></points-size>
   <points-angle>
     <kind>65536</kind>
     <type>5</type>
@@ -4147,11 +4151,11 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>390</y>
+      <y>329</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>525</y>
+      <y>70</y>
       <val>-1.</val></rng2></points-angle>
   <points-response>
     <kind>65536</kind>
@@ -4164,12 +4168,12 @@
       <val>114.</val></last>
     <rng1>
       <x>0</x>
-      <y>630</y>
-      <val>160.</val></rng1>
+      <y>771</y>
+      <val>170.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>866</y>
-      <val>128.</val></rng2></points-response>
+      <y>721</y>
+      <val>71.</val></rng2></points-response>
   <points-octave>
     <kind>65536</kind>
     <type>4</type>
@@ -4181,11 +4185,11 @@
       <val>0.</val></last>
     <rng1>
       <x>0</x>
-      <y>197</y>
+      <y>307</y>
       <val>0.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>772</y>
+      <y>186</y>
       <val>0.</val></rng2></points-octave>
   <points-class_id>
     <kind>65536</kind>
@@ -4198,10 +4202,10 @@
       <val>-1.</val></last>
     <rng1>
       <x>0</x>
-      <y>163</y>
+      <y>650</y>
       <val>-1.</val></rng1>
     <rng2>
       <x>0</x>
-      <y>869</y>
+      <y>845</y>
       <val>-1.</val></rng2></points-class_id></agast_detect--detect----stitching-a3-png---OAST_9_16->
 </opencv_storage>
