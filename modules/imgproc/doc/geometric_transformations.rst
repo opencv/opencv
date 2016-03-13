@@ -721,7 +721,10 @@ Computes the ideal point coordinates from the observed point coordinates.
 
 .. ocv:function:: void undistortPoints( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray R=noArray(), InputArray P=noArray())
 
+.. ocv:pyfunction:: cv2.undistortPoints(src, cameraMatrix, distCoeffs[, dst[, R[, P]]]) -> dst
+
 .. ocv:cfunction:: void cvUndistortPoints( const CvMat* src, CvMat* dst, const CvMat* camera_matrix, const CvMat* dist_coeffs, const CvMat* R=0, const CvMat* P=0 )
+
 .. ocv:pyoldfunction:: cv.UndistortPoints(src, dst, cameraMatrix, distCoeffs, R=None, P=None)-> None
 
     :param src: Observed point coordinates, 1xN or Nx1 2-channel (CV_32FC2 or CV_64FC2).
