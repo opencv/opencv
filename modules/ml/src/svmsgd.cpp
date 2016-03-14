@@ -153,7 +153,7 @@ void SVMSGDImpl::normalizeSamples(Mat &samples, Mat &average, float &multiplier)
 
     double normValue = norm(samples);
 
-    multiplier = static_cast<float>(sqrt(samples.total()) / normValue);
+    multiplier = static_cast<float>(sqrt(static_cast<double>(samples.total())) / normValue);
 
     samples *= multiplier;
 }
