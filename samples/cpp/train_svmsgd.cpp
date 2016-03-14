@@ -167,7 +167,7 @@ void addPointRetrainAndRedraw(Data &data, int x, int y, int response)
     currentSample.at<float>(0,0) = (float)x;
     currentSample.at<float>(0,1) = (float)y;
     data.samples.push_back(currentSample);
-    data.responses.push_back(response);
+    data.responses.push_back(static_cast<float>(response));
 
     Mat weights(1, 2, CV_32FC1);
     float shift = 0;
