@@ -34,8 +34,8 @@ int main( int argc, char** argv )
         for( i = 0; i < count; i++ )
         {
             Point pt;
-            pt.x = rng.uniform(img.cols/4, img.cols*3/4);
-            pt.y = rng.uniform(img.rows/4, img.rows*3/4);
+            pt.x = rng.uniform(img.cols/4, img.cols*4/3);
+            pt.y = rng.uniform(img.rows/4, img.rows*4/3);
 
             points.push_back(pt);
         }
