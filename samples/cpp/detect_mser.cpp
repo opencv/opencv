@@ -282,7 +282,6 @@ static void DrawOpenGLMSER(Mat img, Mat result)
             break;
         if (key == 0x20)
             rotateEnable = !rotateEnable;
-        float	pi = (float)acos(-1);
 
         switch (key) {
             case '5':
@@ -309,16 +308,16 @@ static void DrawOpenGLMSER(Mat img, Mat result)
                 rObs += (float).1;
                 break;
         }
-        if (thetaObs>pi)
+        if (thetaObs>CV_PI)
         {
-            thetaObs = -2 * pi + thetaObs;
+            thetaObs = -2 * CV_PI + thetaObs;
         }
-        if (thetaObs<-pi)
-            thetaObs = 2 * pi + thetaObs;
-        if (phiObs>pi / 2)
-            phiObs = pi / 2 - (float)0.0001;
-        if (phiObs<-pi / 2)
-            phiObs = -pi / 2 + (float)0.00001;
+        if (thetaObs<-CV_PI)
+            thetaObs = 2 * CV_PI + thetaObs;
+        if (phiObs > CV_PI / 2)
+            phiObs = CV_PI / 2 - (float)0.0001;
+        if (phiObs < -CV_PI / 2)
+            phiObs = -CV_PI / 2 + (float)0.00001;
         if (rObs<0)
             rObs = 0;
         obsX = rObs*cos(thetaObs)*cos(phiObs);
