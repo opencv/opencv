@@ -1552,7 +1552,20 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 /// write a frame with FFMPEG
 bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin )
 {
-    bool ret = false;
+    // check parameters
+    if (input_pix_fmt == AV_PIX_FMT_BGR24) {
+        if (cn != 3) {
+            return false;
+        }
+    }
+    else if (input_pix_fmt == AV_PIX_FMT_GRAY8) {
+        if (cn != 1) {
+            return false;
+        }
+    }
+    else {
+        assert(false);
+    }
 
     if( (width & -2) != frame_width || (height & -2) != frame_height || !data )
         return false;
@@ -1605,20 +1618,6 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     }
 #endif
 
-    // check parameters
-    if (input_pix_fmt == AV_PIX_FMT_BGR24) {
-        if (cn != 3) {
-            return false;
-        }
-    }
-    else if (input_pix_fmt == AV_PIX_FMT_GRAY8) {
-        if (cn != 1) {
-            return false;
-        }
-    }
-    else {
-        assert(false);
-    }
 
     if ( c->pix_fmt != input_pix_fmt ) {
         assert( input_picture );
@@ -1652,7 +1651,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     }
 
     picture->pts = frame_idx;
-    ret = icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, picture) >= 0;
+    bool ret = icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, picture) >= 0;
     frame_idx++;
 
     return ret;
