@@ -148,6 +148,7 @@ private:
     size_t          m_id;
 };
 
+
 class ThreadManager
 {
 public:
@@ -219,6 +220,8 @@ private:
     cv::TLSData<work_thread_t> m_is_work_thread;
 
     ThreadManagerPoolState m_pool_state;
+
+    static void onProcessForked();
 };
 
 const char ThreadManager::m_env_name[] = "OPENCV_FOR_THREADS_NUM";
@@ -359,6 +362,11 @@ ThreadManager::ThreadManager(): m_num_threads(0), m_task_complete(false), m_num_
 
     if(!res)
     {
+        //register handler to reset thread pool after forking the process
+        res |= pthread_atfork(NULL, NULL, &onProcessForked);
+    }
+
+    if (!res) {
         setNumOfThreads(defaultNumberOfThreads());
 
         m_task_position = 0;
@@ -382,6 +390,17 @@ ThreadManager::~ThreadManager()
     pthread_cond_destroy(&m_cond_thread_task_complete);
 
     pthread_mutex_destroy(&m_manager_access_mutex);
+}
+
+void ThreadManager::onProcessForked() {
+    ThreadManager& manager = instance();
+
+    // reset state
+    manager.m_pool_state = eTMNotInited;
+    manager.m_num_threads = 0;
+    manager.m_threads.clear();
+
+    // mutexes are duplicated by fork, no need to (re)create them
 }
 
 void ThreadManager::run(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
