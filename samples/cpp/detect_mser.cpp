@@ -187,7 +187,7 @@ static void onMouse(int event, int x, int y, int flags, void*)
         else
             rObs -= (float)0.1;
     }
-    float pi = (float)acos(-1.0);
+    float pi = static_cast<float>(CV_PI);
     if (thetaObs>pi)
     {
         thetaObs = -2 * pi + thetaObs;
@@ -282,7 +282,7 @@ static void DrawOpenGLMSER(Mat img, Mat result)
             break;
         if (key == 0x20)
             rotateEnable = !rotateEnable;
-        float	pi = (float)acos(-1);
+        float pi = static_cast<float>(CV_PI);
 
         switch (key) {
             case '5':
