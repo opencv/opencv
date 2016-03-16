@@ -1229,7 +1229,7 @@ struct CvVideoWriter_FFMPEG
     uint8_t         * picbuf;
     AVStream        * video_st;
     int               input_pix_fmt;
-    Image_FFMPEG      temp_image;
+    unsigned char   * aligned_input;
     int               frame_width, frame_height;
     int               frame_idx;
     bool              ok;
@@ -1306,7 +1306,7 @@ void CvVideoWriter_FFMPEG::init()
     picbuf = 0;
     video_st = 0;
     input_pix_fmt = 0;
-    memset(&temp_image, 0, sizeof(temp_image));
+    aligned_input = NULL;
     img_convert_ctx = 0;
     frame_width = frame_height = 0;
     frame_idx = 0;
@@ -1579,51 +1579,37 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     AVCodecContext *c = &(video_st->codec);
 #endif
 
-#if LIBAVFORMAT_BUILD < 5231
-    // It is not needed in the latest versions of the ffmpeg
-    if( c->codec_id == CV_CODEC(CODEC_ID_RAWVIDEO) && origin != 1 )
+    // FFmpeg contains SIMD optimizations which can sometimes read data past
+    // the supplied input buffer. To ensure that doesn't happen, we pad the
+    // step to a multiple of 32 (that's the minimal alignment for which Valgrind
+    // doesn't raise any warnings).
+    const int STEP_ALIGNMENT = 32;
+    if( step % STEP_ALIGNMENT != 0 )
     {
-        if( !temp_image.data )
+        int aligned_step = (step + STEP_ALIGNMENT - 1) & -STEP_ALIGNMENT;
+
+        if( !aligned_input )
         {
-            temp_image.step = (width*cn + 3) & -4;
-            temp_image.width = width;
-            temp_image.height = height;
-            temp_image.cn = cn;
-            temp_image.data = (unsigned char*)malloc(temp_image.step*temp_image.height);
+            aligned_input = (unsigned char*)av_mallocz(aligned_step * height);
         }
-        for( int y = 0; y < height; y++ )
-            memcpy(temp_image.data + y*temp_image.step, data + (height-1-y)*step, width*cn);
-        data = temp_image.data;
-        step = temp_image.step;
-    }
-#else
-    if( width*cn != step )
-    {
-        if( !temp_image.data )
-        {
-            temp_image.step = width*cn;
-            temp_image.width = width;
-            temp_image.height = height;
-            temp_image.cn = cn;
-            temp_image.data = (unsigned char*)malloc(temp_image.step*temp_image.height);
-        }
+
         if (origin == 1)
             for( int y = 0; y < height; y++ )
-                memcpy(temp_image.data + y*temp_image.step, data + (height-1-y)*step, temp_image.step);
+                memcpy(aligned_input + y*aligned_step, data + (height-1-y)*step, step);
         else
             for( int y = 0; y < height; y++ )
-                memcpy(temp_image.data + y*temp_image.step, data + y*step, temp_image.step);
-        data = temp_image.data;
-        step = temp_image.step;
-    }
-#endif
+                memcpy(aligned_input + y*aligned_step, data + y*step, step);
 
+        data = aligned_input;
+        step = aligned_step;
+    }
 
     if ( c->pix_fmt != input_pix_fmt ) {
         assert( input_picture );
         // let input_picture point to the raw data buffer of 'image'
         avpicture_fill((AVPicture *)input_picture, (uint8_t *) data,
                        (AVPixelFormat)input_pix_fmt, width, height);
+        input_picture->linesize[0] = step;
 
         if( !img_convert_ctx )
         {
@@ -1648,6 +1634,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     else{
         avpicture_fill((AVPicture *)picture, (uint8_t *) data,
                        (AVPixelFormat)input_pix_fmt, width, height);
+        picture->linesize[0] = step;
     }
 
     picture->pts = frame_idx;
@@ -1734,11 +1721,7 @@ void CvVideoWriter_FFMPEG::close()
     /* free the stream */
     avformat_free_context(oc);
 
-    if( temp_image.data )
-    {
-        free(temp_image.data);
-        temp_image.data = 0;
-    }
+    av_freep(&aligned_input);
 
     init();
 }
