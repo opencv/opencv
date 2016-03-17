@@ -82,7 +82,7 @@ bool CV_ECC_BaseTest::isMapCorrect(const Mat& map)
             tr = tr & (!cvIsNaN(mapVal) && (fabs(mapVal) < 1e9));
         }
 
-        return tr;
+    return tr;
 }
 
 double CV_ECC_BaseTest::computeRMS(const Mat& mat1, const Mat& mat2){

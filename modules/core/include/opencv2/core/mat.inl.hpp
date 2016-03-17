@@ -1165,6 +1165,9 @@ Mat::Mat(Mat&& m)
 inline
 Mat& Mat::operator = (Mat&& m)
 {
+    if (this == &m)
+      return *this;
+
     release();
     flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols; data = m.data;
     datastart = m.datastart; dataend = m.dataend; datalimit = m.datalimit; allocator = m.allocator;
@@ -2474,7 +2477,7 @@ ptrdiff_t operator - (const MatConstIterator& b, const MatConstIterator& a)
     if( a.m != b.m )
         return ((size_t)(-1) >> 1);
     if( a.sliceEnd == b.sliceEnd )
-        return (b.ptr - a.ptr)/b.elemSize;
+        return (b.ptr - a.ptr)/static_cast<ptrdiff_t>(b.elemSize);
 
     return b.lpos() - a.lpos();
 }
@@ -3599,6 +3602,8 @@ UMat::UMat(UMat&& m)
 inline
 UMat& UMat::operator = (UMat&& m)
 {
+    if (this == &m)
+      return *this;
     release();
     flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols;
     allocator = m.allocator; usageFlags = m.usageFlags;

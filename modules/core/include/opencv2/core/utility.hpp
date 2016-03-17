@@ -363,7 +363,7 @@ CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, 
 template<typename _Tp, typename Functor> inline
 void Mat::forEach_impl(const Functor& operation) {
     if (false) {
-        operation(*reinterpret_cast<_Tp*>(0), reinterpret_cast<int*>(NULL));
+        operation(*reinterpret_cast<_Tp*>(0), reinterpret_cast<int*>(0));
         // If your compiler fail in this line.
         // Please check that your functor signature is
         //     (_Tp&, const int*)   <- multidimential

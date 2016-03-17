@@ -43,9 +43,7 @@
 #include "precomp.hpp"
 #include "rgbe.hpp"
 #include <math.h>
-#if !defined(__APPLE__)
-#include <malloc.h>
-#endif
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
