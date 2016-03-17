@@ -43,8 +43,6 @@
 
 #include <vfw.h>
 
-#include <cstdio>
-
 #ifdef __GNUC__
 #define WM_CAP_FIRSTA              (WM_USER)
 #define capSendMessage(hwnd,m,w,l) (IsWindow(hwnd)?SendMessage(hwnd,m,w,l):0)
