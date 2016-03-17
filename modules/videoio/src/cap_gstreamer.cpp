@@ -815,7 +815,8 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 #endif
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
     gst_caps_unref(caps);
-
+    if(file)
+    	stopPipeline();
     {
         status = gst_element_set_state(GST_ELEMENT(pipeline),
                                        file ? GST_STATE_PAUSED : GST_STATE_PLAYING);
