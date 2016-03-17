@@ -107,7 +107,7 @@ for t in $OPENCV_PYTHON_TESTS;
 do
     test_name=`basename "$t"`
 
-    cmd="py.test --junitxml $test_name.xml \"$OPENCV_TEST_PATH\"/$t"
+    cmd="python \"$OPENCV_TEST_PATH\"/$t -v"
 
     seg_reg="s/^/${TEXT_CYAN}[$test_name]${TEXT_RESET} /"                 # append test name
 
