@@ -216,7 +216,7 @@ int main( int argc, const char** argv )
     // Read in the input arguments
     string image_folder;
     string annotations;
-    for(int i = 1; i < argc; ++i )
+    for(int i = 1; i < argc; )
     {
         if( !strcmp( argv[i], "-images" ) )
         {
@@ -225,6 +225,10 @@ int main( int argc, const char** argv )
         else if( !strcmp( argv[i], "-annotations" ) )
         {
             annotations = argv[++i];
+        }
+        else
+        {
+            i++;
         }
     }
 
