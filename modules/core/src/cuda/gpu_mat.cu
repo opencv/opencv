@@ -50,10 +50,55 @@
 
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/cuda/utility.hpp"
 
 using namespace cv;
 using namespace cv::cuda;
 using namespace cv::cudev;
+
+device::ThrustAllocator::~ThrustAllocator()
+{
+}
+namespace
+{
+    class DefaultThrustAllocator: public cv::cuda::device::ThrustAllocator
+    {
+    public:
+        __device__ __host__ uchar* allocate(size_t numBytes)
+        {
+#ifndef __CUDA_ARCH__
+            uchar* ptr;
+            CV_CUDEV_SAFE_CALL(cudaMalloc(&ptr, numBytes));
+            return ptr;
+#else
+            return NULL;
+#endif
+        }
+        __device__ __host__ void deallocate(uchar* ptr, size_t numBytes)
+        {
+            (void)numBytes;
+#ifndef __CUDA_ARCH__
+            CV_CUDEV_SAFE_CALL(cudaFree(ptr));
+#endif
+        }
+    };
+    DefaultThrustAllocator defaultThrustAllocator;
+    cv::cuda::device::ThrustAllocator* g_thrustAllocator = &defaultThrustAllocator;
+}
+
+
+cv::cuda::device::ThrustAllocator& cv::cuda::device::ThrustAllocator::getAllocator()
+{
+    return *g_thrustAllocator;
+}
+
+void cv::cuda::device::ThrustAllocator::setAllocator(cv::cuda::device::ThrustAllocator* allocator)
+{
+    if(allocator == NULL)
+        g_thrustAllocator = &defaultThrustAllocator;
+    else
+        g_thrustAllocator = allocator;
+}
 
 namespace
 {

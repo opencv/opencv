@@ -347,16 +347,9 @@ endif(ANDROID)
 # workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
 string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-if(ANDROID)
-  # Android native code need to link with libopencv_java.so
-  ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
+ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
-else()
-  ocv_add_library(${the_module} MODULE ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
-                                 ${copied_files}
-                                "${JAR_FILE}" "${JAR_FILE}.dephelper")
-endif()
 
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
