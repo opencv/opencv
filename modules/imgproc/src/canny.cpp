@@ -844,7 +844,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         if (!m[mapstep + 1])	CANNY_PUSH_SERIAL(m + mapstep + 1);
     }
 
-    if(src.isContinuous())
+    if (src.isContinuous())
     {
       src.reshape(cn, numOfThreads);
     }
