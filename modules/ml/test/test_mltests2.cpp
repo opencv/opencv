@@ -193,6 +193,25 @@ int str_to_boost_type( String& str )
 // 8. rtrees
 // 9. ertrees
 
+int str_to_svmsgd_type( String& str )
+{
+    if ( !str.compare("SGD") )
+        return SVMSGD::SGD;
+    if ( !str.compare("ASGD") )
+        return SVMSGD::ASGD;
+    CV_Error( CV_StsBadArg, "incorrect svmsgd type string" );
+    return -1;
+}
+
+int str_to_margin_type( String& str )
+{
+    if ( !str.compare("SOFT_MARGIN") )
+        return SVMSGD::SOFT_MARGIN;
+    if ( !str.compare("HARD_MARGIN") )
+        return SVMSGD::HARD_MARGIN;
+    CV_Error( CV_StsBadArg, "incorrect svmsgd margin type string" );
+    return -1;
+}
 // ---------------------------------- MLBaseTest ---------------------------------------------------
 
 CV_MLBaseTest::CV_MLBaseTest(const char* _modelName)
@@ -436,6 +455,27 @@ int CV_MLBaseTest::train( int testCaseIdx )
         model = m;
     }
 
+    else if( modelName == CV_SVMSGD )
+    {
+        String svmsgdTypeStr;
+        modelParamsNode["svmsgdType"] >> svmsgdTypeStr;
+
+        Ptr<SVMSGD> m = SVMSGD::create();
+        int svmsgdType = str_to_svmsgd_type( svmsgdTypeStr );
+        m->setSvmsgdType(svmsgdType);
+
+        String marginTypeStr;
+        modelParamsNode["marginType"] >> marginTypeStr;
+        int marginType = str_to_margin_type( marginTypeStr );
+        m->setMarginType(marginType);
+
+        m->setMarginRegularization(modelParamsNode["marginRegularization"]);
+        m->setInitialStepSize(modelParamsNode["initialStepSize"]);
+        m->setStepDecreasingPower(modelParamsNode["stepDecreasingPower"]);
+        m->setTermCriteria(TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10000, 0.00001));
+        model = m;
+    }
+
     if( !model.empty() )
         is_trained = model->train(data, 0);
 
@@ -457,7 +497,7 @@ float CV_MLBaseTest::get_test_error( int /*testCaseIdx*/, vector<float> *resp )
     else if( modelName == CV_ANN )
         err = ann_calc_error( model, data, cls_map, type, resp );
     else if( modelName == CV_DTREE || modelName == CV_BOOST || modelName == CV_RTREES ||
-             modelName == CV_SVM || modelName == CV_NBAYES || modelName == CV_KNEAREST )
+             modelName == CV_SVM || modelName == CV_NBAYES || modelName == CV_KNEAREST || modelName == CV_SVMSGD )
         err = model->calcError( data, true, _resp );
     if( !_resp.empty() && resp )
         _resp.convertTo(*resp, CV_32F);
@@ -485,6 +525,8 @@ void CV_MLBaseTest::load( const char* filename )
         model = Algorithm::load<Boost>( filename );
     else if( modelName == CV_RTREES )
         model = Algorithm::load<RTrees>( filename );
+    else if( modelName == CV_SVMSGD )
+        model = Algorithm::load<SVMSGD>( filename );
     else
         CV_Error( CV_StsNotImplemented, "invalid stat model name");
 }

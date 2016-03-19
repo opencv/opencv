@@ -361,7 +361,7 @@ public:
     */
     CV_WRAP virtual void detectRegions( InputArray image,
                                         CV_OUT std::vector<std::vector<Point> >& msers,
-                                        std::vector<Rect>& bboxes ) = 0;
+                                        CV_OUT std::vector<Rect>& bboxes ) = 0;
 
     CV_WRAP virtual void setDelta(int delta) = 0;
     CV_WRAP virtual int getDelta() const = 0;

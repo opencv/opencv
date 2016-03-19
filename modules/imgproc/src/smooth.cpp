@@ -1439,7 +1439,11 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
                         ksize, anchor, normalize, borderType );
-    f->apply( src, dst );
+    Point ofs;
+    Size wsz(src.cols, src.rows);
+    src.locateROI( wsz, ofs );
+
+    f->apply( src, dst, wsz, ofs );
 }
 
 
@@ -1561,7 +1565,11 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     Ptr<FilterEngine> f = makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter,
                                                 srcType, dstType, sumType, borderType );
-    f->apply( src, dst );
+    Point ofs;
+    Size wsz(src.cols, src.rows);
+    src.locateROI( wsz, ofs );
+
+    f->apply( src, dst, wsz, ofs );
 }
 
 
