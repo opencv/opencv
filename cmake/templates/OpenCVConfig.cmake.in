@@ -327,3 +327,7 @@ endif()
 if("@PNG_FOUND@")
   find_dependency(PNG CONFIG)
 endif()
+
+if("@JPEG_FOUND@")
+  find_dependency(JPEG CONFIG)
+endif()
