@@ -653,79 +653,6 @@ __global__ void initializeMaskVector(Ncv32u *d_inMask, Ncv32u *d_outMask,
 }
 
 
-struct applyHaarClassifierAnchorParallelFunctor
-{
-    dim3 gridConf, blockConf;
-    cudaStream_t cuStream;
-
-    //Kernel arguments are stored as members;
-    Ncv32u *d_IImg;
-    Ncv32u IImgStride;
-    Ncv32f *d_weights;
-    Ncv32u weightsStride;
-    HaarFeature64 *d_Features;
-    HaarClassifierNode128 *d_ClassifierNodes;
-    HaarStage64 *d_Stages;
-    Ncv32u *d_inMask;
-    Ncv32u *d_outMask;
-    Ncv32u mask1Dlen;
-    Ncv32u mask2Dstride;
-    NcvSize32u anchorsRoi;
-    Ncv32u startStageInc;
-    Ncv32u endStageExc;
-    Ncv32f scaleArea;
-
-    //Arguments are passed through the constructor
-    applyHaarClassifierAnchorParallelFunctor(dim3 _gridConf, dim3 _blockConf, cudaStream_t _cuStream,
-                                             Ncv32u *_d_IImg, Ncv32u _IImgStride,
-                                             Ncv32f *_d_weights, Ncv32u _weightsStride,
-                                             HaarFeature64 *_d_Features, HaarClassifierNode128 *_d_ClassifierNodes, HaarStage64 *_d_Stages,
-                                             Ncv32u *_d_inMask, Ncv32u *_d_outMask,
-                                             Ncv32u _mask1Dlen, Ncv32u _mask2Dstride,
-                                             NcvSize32u _anchorsRoi, Ncv32u _startStageInc,
-                                             Ncv32u _endStageExc, Ncv32f _scaleArea) :
-    gridConf(_gridConf),
-    blockConf(_blockConf),
-    cuStream(_cuStream),
-    d_IImg(_d_IImg),
-    IImgStride(_IImgStride),
-    d_weights(_d_weights),
-    weightsStride(_weightsStride),
-    d_Features(_d_Features),
-    d_ClassifierNodes(_d_ClassifierNodes),
-    d_Stages(_d_Stages),
-    d_inMask(_d_inMask),
-    d_outMask(_d_outMask),
-    mask1Dlen(_mask1Dlen),
-    mask2Dstride(_mask2Dstride),
-    anchorsRoi(_anchorsRoi),
-    startStageInc(_startStageInc),
-    endStageExc(_endStageExc),
-    scaleArea(_scaleArea)
-    {}
-
-    template<class TList>
-    void call(TList tl)
-    {
-        (void)tl;
-        applyHaarClassifierAnchorParallel <
-            Loki::TL::TypeAt<TList, 0>::Result::value,
-            Loki::TL::TypeAt<TList, 1>::Result::value,
-            Loki::TL::TypeAt<TList, 2>::Result::value,
-            Loki::TL::TypeAt<TList, 3>::Result::value,
-            Loki::TL::TypeAt<TList, 4>::Result::value >
-            <<<gridConf, blockConf, 0, cuStream>>>
-            (d_IImg, IImgStride,
-            d_weights, weightsStride,
-            d_Features, d_ClassifierNodes, d_Stages,
-            d_inMask, d_outMask,
-            mask1Dlen, mask2Dstride,
-            anchorsRoi, startStageInc,
-            endStageExc, scaleArea);
-    }
-};
-
-
 void applyHaarClassifierAnchorParallelDynTemplate(NcvBool tbInitMaskPositively,
                                                   NcvBool tbCacheTextureIImg,
                                                   NcvBool tbCacheTextureCascade,
@@ -742,96 +669,225 @@ void applyHaarClassifierAnchorParallelDynTemplate(NcvBool tbInitMaskPositively,
                                                   NcvSize32u anchorsRoi, Ncv32u startStageInc,
                                                   Ncv32u endStageExc, Ncv32f scaleArea)
 {
-
-    applyHaarClassifierAnchorParallelFunctor functor(gridConf, blockConf, cuStream,
-                                                     d_IImg, IImgStride,
-                                                     d_weights, weightsStride,
-                                                     d_Features, d_ClassifierNodes, d_Stages,
-                                                     d_inMask, d_outMask,
-                                                     mask1Dlen, mask2Dstride,
-                                                     anchorsRoi, startStageInc,
-                                                     endStageExc, scaleArea);
-
-    //Second parameter is the number of "dynamic" template parameters
-    NCVRuntimeTemplateBool::KernelCaller<Loki::NullType, 5, applyHaarClassifierAnchorParallelFunctor>
-        ::call( &functor,
-                tbInitMaskPositively,
-                tbCacheTextureIImg,
-                tbCacheTextureCascade,
-                tbReadPixelIndexFromVector,
-                tbDoAtomicCompaction);
-}
-
-
-struct applyHaarClassifierClassifierParallelFunctor
-{
-    dim3 gridConf, blockConf;
-    cudaStream_t cuStream;
-
-    //Kernel arguments are stored as members;
-    Ncv32u *d_IImg;
-    Ncv32u IImgStride;
-    Ncv32f *d_weights;
-    Ncv32u weightsStride;
-    HaarFeature64 *d_Features;
-    HaarClassifierNode128 *d_ClassifierNodes;
-    HaarStage64 *d_Stages;
-    Ncv32u *d_inMask;
-    Ncv32u *d_outMask;
-    Ncv32u mask1Dlen;
-    Ncv32u mask2Dstride;
-    NcvSize32u anchorsRoi;
-    Ncv32u startStageInc;
-    Ncv32u endStageExc;
-    Ncv32f scaleArea;
-
-    //Arguments are passed through the constructor
-    applyHaarClassifierClassifierParallelFunctor(dim3 _gridConf, dim3 _blockConf, cudaStream_t _cuStream,
-                                                 Ncv32u *_d_IImg, Ncv32u _IImgStride,
-                                                 Ncv32f *_d_weights, Ncv32u _weightsStride,
-                                                 HaarFeature64 *_d_Features, HaarClassifierNode128 *_d_ClassifierNodes, HaarStage64 *_d_Stages,
-                                                 Ncv32u *_d_inMask, Ncv32u *_d_outMask,
-                                                 Ncv32u _mask1Dlen, Ncv32u _mask2Dstride,
-                                                 NcvSize32u _anchorsRoi, Ncv32u _startStageInc,
-                                                 Ncv32u _endStageExc, Ncv32f _scaleArea) :
-    gridConf(_gridConf),
-    blockConf(_blockConf),
-    cuStream(_cuStream),
-    d_IImg(_d_IImg),
-    IImgStride(_IImgStride),
-    d_weights(_d_weights),
-    weightsStride(_weightsStride),
-    d_Features(_d_Features),
-    d_ClassifierNodes(_d_ClassifierNodes),
-    d_Stages(_d_Stages),
-    d_inMask(_d_inMask),
-    d_outMask(_d_outMask),
-    mask1Dlen(_mask1Dlen),
-    mask2Dstride(_mask2Dstride),
-    anchorsRoi(_anchorsRoi),
-    startStageInc(_startStageInc),
-    endStageExc(_endStageExc),
-    scaleArea(_scaleArea)
-    {}
-
-    template<class TList>
-    void call(TList tl)
+    if (tbInitMaskPositively)
     {
-        (void)tl;
-        applyHaarClassifierClassifierParallel <
-            Loki::TL::TypeAt<TList, 0>::Result::value,
-            Loki::TL::TypeAt<TList, 1>::Result::value,
-            Loki::TL::TypeAt<TList, 2>::Result::value >
-            <<<gridConf, blockConf, 0, cuStream>>>
-            (d_IImg, IImgStride,
-            d_weights, weightsStride,
-            d_Features, d_ClassifierNodes, d_Stages,
-            d_inMask, d_outMask,
-            mask1Dlen, mask2Dstride,
-            anchorsRoi, startStageInc,
-            endStageExc, scaleArea);
+        if (tbCacheTextureIImg)
+        {
+            if (tbCacheTextureCascade)
+            {
+                if (tbReadPixelIndexFromVector)
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<true, true, true, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<true, true, true, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+                else
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<true, true, true, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<true, true, true, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+            }
+            else
+            {
+                if (tbReadPixelIndexFromVector)
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<true, true, false, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<true, true, false, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+                else
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<true, true, false, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<true, true, false, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (tbCacheTextureCascade)
+            {
+                if (tbReadPixelIndexFromVector)
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<true, false, true, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<true, false, true, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+                else
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<true, false, true, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<true, false, true, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+            }
+            else
+            {
+                if (tbReadPixelIndexFromVector)
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<true, false, false, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<true, false, false, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+                else
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<true, false, false, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<true, false, false, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+            }
+        }
     }
-};
+    else
+    {
+        if (tbCacheTextureIImg)
+        {
+            if (tbCacheTextureCascade)
+            {
+                if (tbReadPixelIndexFromVector)
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<false, true, true, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<false, true, true, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+                else
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<false, true, true, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<false, true, true, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+            }
+            else
+            {
+                if (tbReadPixelIndexFromVector)
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<false, true, false, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<false, true, false, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+                else
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<false, true, false, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<false, true, false, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (tbCacheTextureCascade)
+            {
+                if (tbReadPixelIndexFromVector)
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<false, false, true, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<false, false, true, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+                else
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<false, false, true, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<false, false, true, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+            }
+            else
+            {
+                if (tbReadPixelIndexFromVector)
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<false, false, false, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<false, false, false, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+                else
+                {
+                    if (tbDoAtomicCompaction)
+                    {
+                        applyHaarClassifierAnchorParallel<false, false, false, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                    else
+                    {
+                        applyHaarClassifierAnchorParallel<false, false, false, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+                    }
+                }
+            }
+        }
+    }
+}
 
 
 void applyHaarClassifierClassifierParallelDynTemplate(NcvBool tbCacheTextureIImg,
@@ -848,66 +904,57 @@ void applyHaarClassifierClassifierParallelDynTemplate(NcvBool tbCacheTextureIImg
                                                       NcvSize32u anchorsRoi, Ncv32u startStageInc,
                                                       Ncv32u endStageExc, Ncv32f scaleArea)
 {
-    applyHaarClassifierClassifierParallelFunctor functor(gridConf, blockConf, cuStream,
-                                                         d_IImg, IImgStride,
-                                                         d_weights, weightsStride,
-                                                         d_Features, d_ClassifierNodes, d_Stages,
-                                                         d_inMask, d_outMask,
-                                                         mask1Dlen, mask2Dstride,
-                                                         anchorsRoi, startStageInc,
-                                                         endStageExc, scaleArea);
-
-    //Second parameter is the number of "dynamic" template parameters
-    NCVRuntimeTemplateBool::KernelCaller<Loki::NullType, 3, applyHaarClassifierClassifierParallelFunctor>
-        ::call( &functor,
-                tbCacheTextureIImg,
-                tbCacheTextureCascade,
-                tbDoAtomicCompaction);
-}
-
-
-struct initializeMaskVectorFunctor
-{
-    dim3 gridConf, blockConf;
-    cudaStream_t cuStream;
-
-    //Kernel arguments are stored as members;
-    Ncv32u *d_inMask;
-    Ncv32u *d_outMask;
-    Ncv32u mask1Dlen;
-    Ncv32u mask2Dstride;
-    NcvSize32u anchorsRoi;
-    Ncv32u step;
-
-    //Arguments are passed through the constructor
-    initializeMaskVectorFunctor(dim3 _gridConf, dim3 _blockConf, cudaStream_t _cuStream,
-                                Ncv32u *_d_inMask, Ncv32u *_d_outMask,
-                                Ncv32u _mask1Dlen, Ncv32u _mask2Dstride,
-                                NcvSize32u _anchorsRoi, Ncv32u _step) :
-    gridConf(_gridConf),
-    blockConf(_blockConf),
-    cuStream(_cuStream),
-    d_inMask(_d_inMask),
-    d_outMask(_d_outMask),
-    mask1Dlen(_mask1Dlen),
-    mask2Dstride(_mask2Dstride),
-    anchorsRoi(_anchorsRoi),
-    step(_step)
-    {}
-
-    template<class TList>
-    void call(TList tl)
+    if (tbCacheTextureIImg)
     {
-        (void)tl;
-        initializeMaskVector <
-            Loki::TL::TypeAt<TList, 0>::Result::value,
-            Loki::TL::TypeAt<TList, 1>::Result::value >
-            <<<gridConf, blockConf, 0, cuStream>>>
-            (d_inMask, d_outMask,
-             mask1Dlen, mask2Dstride,
-             anchorsRoi, step);
+        if (tbCacheTextureCascade)
+        {
+            if (tbDoAtomicCompaction)
+            {
+                applyHaarClassifierClassifierParallel<true, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+            }
+            else
+            {
+                applyHaarClassifierClassifierParallel<true, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+            }
+        }
+        else
+        {
+            if (tbDoAtomicCompaction)
+            {
+                applyHaarClassifierClassifierParallel<true, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+            }
+            else
+            {
+                applyHaarClassifierClassifierParallel<true, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+            }
+        }
     }
-};
+    else
+    {
+        if (tbCacheTextureCascade)
+        {
+            if (tbDoAtomicCompaction)
+            {
+                applyHaarClassifierClassifierParallel<false, true, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+            }
+            else
+            {
+                applyHaarClassifierClassifierParallel<false, true, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+            }
+        }
+        else
+        {
+            if (tbDoAtomicCompaction)
+            {
+                applyHaarClassifierClassifierParallel<false, false, true><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+            }
+            else
+            {
+                applyHaarClassifierClassifierParallel<false, false, false><<<gridConf, blockConf, 0, cuStream>>>(d_IImg, IImgStride, d_weights, weightsStride, d_Features, d_ClassifierNodes, d_Stages, d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, startStageInc, endStageExc, scaleArea);
+            }
+        }
+    }
+}
 
 
 void initializeMaskVectorDynTemplate(NcvBool tbMaskByInmask,
@@ -919,16 +966,28 @@ void initializeMaskVectorDynTemplate(NcvBool tbMaskByInmask,
                                      Ncv32u mask1Dlen, Ncv32u mask2Dstride,
                                      NcvSize32u anchorsRoi, Ncv32u step)
 {
-    initializeMaskVectorFunctor functor(gridConf, blockConf, cuStream,
-                                        d_inMask, d_outMask,
-                                        mask1Dlen, mask2Dstride,
-                                        anchorsRoi, step);
-
-    //Second parameter is the number of "dynamic" template parameters
-    NCVRuntimeTemplateBool::KernelCaller<Loki::NullType, 2, initializeMaskVectorFunctor>
-        ::call( &functor,
-                tbMaskByInmask,
-                tbDoAtomicCompaction);
+    if (tbMaskByInmask)
+    {
+        if (tbDoAtomicCompaction)
+        {
+            initializeMaskVector<true, true><<<gridConf, blockConf, 0, cuStream>>>(d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, step);
+        }
+        else
+        {
+            initializeMaskVector<true, false><<<gridConf, blockConf, 0, cuStream>>>(d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, step);
+        }
+    }
+    else
+    {
+        if (tbDoAtomicCompaction)
+        {
+            initializeMaskVector<false, true><<<gridConf, blockConf, 0, cuStream>>>(d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, step);
+        }
+        else
+        {
+            initializeMaskVector<false, false><<<gridConf, blockConf, 0, cuStream>>>(d_inMask, d_outMask, mask1Dlen, mask2Dstride, anchorsRoi, step);
+        }
+    }
 }
 
 
