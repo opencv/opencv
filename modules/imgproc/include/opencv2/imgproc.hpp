@@ -3975,7 +3975,7 @@ enum ColormapTypes
 
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
-@param src The source image, grayscale or colored does not matter.
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
 @param dst The result is the colormapped source image. Note: Mat::create is called on dst.
 @param colormap The colormap to apply, see cv::ColormapTypes
  */
