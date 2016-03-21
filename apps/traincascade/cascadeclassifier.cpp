@@ -190,6 +190,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
     cascadeParams.printAttrs();
     stageParams->printAttrs();
     featureParams->printAttrs();
+    cout << "Number of unique features given windowSize [" << _cascadeParams.winSize.width << "," << _cascadeParams.winSize.height << "] : " << featureEvaluator->getNumFeatures() << "" << endl;
 
     int startNumStages = (int)stageClassifiers.size();
     if ( startNumStages > 1 )
