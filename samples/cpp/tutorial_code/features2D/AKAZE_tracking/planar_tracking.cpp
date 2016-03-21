@@ -1,7 +1,6 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/opencv.hpp>
-#include <opencv2/tracking.hpp>     //for ROI
 #include <opencv2/highgui.hpp>      //for imshow
 #include <vector>
 #include <iostream>
@@ -121,41 +120,27 @@ Mat Tracker::process(const Mat frame, Stats& stats)
 
 int main(int argc, char **argv)
 {
-    if(argc < 3) {
+    if(argc < 2) {
         cerr << "Usage: " << endl
-             << "akaze_track input_path output_path [bounding_box_path]" << endl
-             << "  (for camera input_path=N for camera N)" << endl;
+             << "akaze_track input_path" << endl
+             << "  (input_path can be a camera id, like 0,1,2 or a video filename)" << endl;
         return 1;
     }
 
     std::string video_name = argv[1];
     std::stringstream ssFormat;
     ssFormat << atoi(argv[1]);
+
     VideoCapture video_in;
-    int iFourCC = 0, frame_count = 0;
-    if (video_name.compare(ssFormat.str())==0) {      //test str==str(num)
+    if (video_name.compare(ssFormat.str())==0) {    //test str==str(num)
         video_in.open(atoi(argv[1]));
-        cerr << "Capturing for 10 seconds from camera..." << endl;
-        iFourCC = CV_FOURCC('D', 'I', 'V', 'X');    //default to mp4 (sample)
-        frame_count = 10*static_cast<int>(video_in.get(CAP_PROP_FPS));
     }
     else {
         video_in.open(video_name);
-        iFourCC = static_cast<int>(video_in.get(CAP_PROP_FOURCC));
-        frame_count = static_cast<int>(video_in.get(CAP_PROP_FRAME_COUNT));
     }
-
-    VideoWriter  video_out(argv[2], iFourCC,
-                           (int)video_in.get(CAP_PROP_FPS),
-                           Size(2 * (int)video_in.get(CAP_PROP_FRAME_WIDTH),
-                                2 * (int)video_in.get(CAP_PROP_FRAME_HEIGHT)));
 
     if(!video_in.isOpened()) {
         cerr << "Couldn't open " << argv[1] << endl;
-        return 1;
-    }
-    if(!video_out.isOpened()) {
-        cerr << "Couldn't open " << argv[2] << endl;
         return 1;
     }
 
@@ -169,33 +154,29 @@ int main(int argc, char **argv)
 
     Mat frame;
     video_in >> frame;
+    namedWindow(video_name, WINDOW_NORMAL);
+    cv::resizeWindow(video_name, frame.cols, frame.rows);
+
+    cout << "Please select a bounding box, and press any key to continue." << endl;
     vector<Point2f> bb;
-    if (argc < 4) {             //attempt to alow GUI selection
-        cv::Rect2d uBox = selectROI(video_name, frame);
-        bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y)));
-        bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y)));
-        bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y+uBox.height)));
-        bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y+uBox.height)));
-    }
-    else {
-        FileStorage fs(argv[3], FileStorage::READ);
-        if(fs["bounding_box"].empty()) {
-            cerr << "Couldn't read bounding_box from " << argv[3] << endl;
-            return 1;
-        }
-        fs["bounding_box"] >> bb;
-    }
+    cv::Rect2d uBox = selectROI(video_name, frame);
+    bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y)));
+    bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y)));
+    bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y+uBox.height)));
+    bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y+uBox.height)));
+
     akaze_tracker.setFirstFrame(frame, bb, "AKAZE", stats);
     orb_tracker.setFirstFrame(frame, bb, "ORB", stats);
 
     Stats akaze_draw_stats, orb_draw_stats;
     Mat akaze_res, orb_res, res_frame;
-    int i = 1;
-    for(i = 1; i < frame_count; i++) {
+    int i = 0;
+    for(;;) {
+        i++;
         bool update_stats = (i % stats_update_period == 0);
         video_in >> frame;
         // stop the program if no more images
-        if(frame.rows==0 || frame.cols==0) break;
+        if(frame.empty()) break;
 
         akaze_res = akaze_tracker.process(frame, stats);
         akaze_stats += stats;
@@ -213,12 +194,8 @@ int main(int argc, char **argv)
         drawStatistics(akaze_res, akaze_draw_stats);
         drawStatistics(orb_res, orb_draw_stats);
         vconcat(akaze_res, orb_res, res_frame);
-        video_out << res_frame;
         cv::imshow(video_name, res_frame);
-        if (i==1)                  //resize for easier display
-            cv::resizeWindow(video_name, frame.cols, frame.rows);
-        if(cv::waitKey(1)==27)break; //quit on ESC button
-        cout << i << "/" << frame_count - 1 << endl;
+        if(cv::waitKey(1)==27) break; //quit on ESC button
     }
     akaze_stats /= i - 1;
     orb_stats /= i - 1;
