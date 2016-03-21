@@ -13,6 +13,8 @@ else:
 class_ignore_list = (
     #core
     "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
+    #features2d
+    "SimpleBlobDetector", "FlannBasedMatcher", "DescriptorMatcher"
 )
 
 const_ignore_list = (
