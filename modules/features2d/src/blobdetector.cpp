@@ -184,6 +184,7 @@ void SimpleBlobDetectorImpl::read( const cv::FileNode& fn )
 
 void SimpleBlobDetectorImpl::write( cv::FileStorage& fs ) const
 {
+    writeFormat(fs);
     params.write(fs);
 }
 

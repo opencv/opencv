@@ -770,6 +770,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "training_params" << "{";
         write_params(fs);
         fs << "}";

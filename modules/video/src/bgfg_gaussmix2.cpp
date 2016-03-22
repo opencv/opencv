@@ -286,6 +286,7 @@ public:
 
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
         << "history" << history
         << "nmixtures" << nmixtures

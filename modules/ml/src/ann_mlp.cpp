@@ -1151,6 +1151,7 @@ public:
             return;
         int i, l_count = layer_count();
 
+        writeFormat(fs);
         fs << "layer_sizes" << layer_sizes;
 
         write_params( fs );
