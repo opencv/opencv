@@ -3067,6 +3067,9 @@ public:
     /** Returns the algorithm string identifier.
      This string is used as top level xml/yml node tag when the object is saved to a file or string. */
     CV_WRAP virtual String getDefaultName() const;
+
+protected:
+    void writeFormat(FileStorage& fs) const;
 };
 
 struct Param {

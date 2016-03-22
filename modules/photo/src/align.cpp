@@ -184,6 +184,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "max_bits" << max_bits
            << "exclude_range" << exclude_range

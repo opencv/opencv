@@ -99,6 +99,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
+            writeFormat(fs);
             fs << "name" << "HoughCirclesDetector_CUDA"
             << "dp" << dp_
             << "minDist" << minDist_
