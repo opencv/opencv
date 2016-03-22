@@ -42,6 +42,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(paths_bib)
   set(paths_sample)
   set(paths_tutorial)
+  set(paths_hal_interface)
   set(refs_main)
   set(refs_extra)
   set(deps)
@@ -87,6 +88,11 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
           file(APPEND "${tutorial_contrib_root}" "- ${m}. @subpage ${tutorial_id}\n")
         endforeach()
       endif()
+      # HAL replacement file
+      set(replacement_header "${OPENCV_MODULE_opencv_${m}_LOCATION}/src/hal_replacement.hpp")
+      if(EXISTS "${replacement_header}")
+        list(APPEND paths_hal_interface "${replacement_header}")
+      endif()
 
       # BiBTeX file
       set(bib_file "${docs_dir}/${m}.bib")
@@ -131,7 +137,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(example_path "${CMAKE_SOURCE_DIR}/samples")
 
   # set export variables
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_hal_interface} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial}")
   # TODO: remove paths_doc from EXAMPLE_PATH after face module tutorials/samples moved to separate folders
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${example_path} ; ${paths_doc} ; ${paths_sample}")
