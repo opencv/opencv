@@ -1079,7 +1079,7 @@ namespace cv
 
 // ===== 1. replacement implementation
 
-struct ReplacementMorphImpl : public hal::MorphContext
+struct ReplacementMorphImpl : public hal::Morph
 {
     cvhalFilter2D * ctx;
     bool isInitialized;
@@ -1184,7 +1184,7 @@ INIT_TRAIT(CV_32FC4, 32f, 32f_C4R, 4, zero[4] = {0})
 
 //--------------------------------------
 
-struct IppMorphBaseImpl : public hal::MorphContext
+struct IppMorphBaseImpl : public hal::Morph
 {
     virtual bool init(int _op, int _src_type, int dst_type, int max_width, int max_height,
               int kernel_type, uchar * kernel_data, size_t kernel_step, int kernel_width, int kernel_height,
@@ -1379,7 +1379,7 @@ static IppMorphBaseImpl * createIppImpl(int type)
 
 // ===== 3. Fallback implementation
 
-struct OcvMorphImpl : public hal::MorphContext
+struct OcvMorphImpl : public hal::Morph
 {
     Ptr<FilterEngine> f;
     int iterations;
@@ -1425,7 +1425,7 @@ struct OcvMorphImpl : public hal::MorphContext
 
 namespace hal {
 
-Ptr<MorphContext> MorphContext ::create(int op, int src_type, int dst_type, int max_width, int max_height,
+Ptr<Morph> Morph ::create(int op, int src_type, int dst_type, int max_width, int max_height,
                                         int kernel_type, uchar * kernel_data, size_t kernel_step, int kernel_width, int kernel_height,
                                         int anchor_x, int anchor_y,
                                         int borderType, const double borderValue[4],
@@ -1438,7 +1438,7 @@ Ptr<MorphContext> MorphContext ::create(int op, int src_type, int dst_type, int 
                        anchor_x, anchor_y,
                        borderType, borderValue, iterations, isSubmatrix, allowInplace))
         {
-            return Ptr<MorphContext>(impl);
+            return Ptr<Morph>(impl);
         }
         delete impl;
     }
@@ -1453,7 +1453,7 @@ Ptr<MorphContext> MorphContext ::create(int op, int src_type, int dst_type, int 
                         anchor_x, anchor_y,
                         borderType, borderValue, iterations, isSubmatrix, allowInplace))
             {
-                return Ptr<MorphContext>(impl);
+                return Ptr<Morph>(impl);
             }
             delete impl;
         }
@@ -1465,7 +1465,7 @@ Ptr<MorphContext> MorphContext ::create(int op, int src_type, int dst_type, int 
                 kernel_type, kernel_data, kernel_step, kernel_width, kernel_height,
                 anchor_x, anchor_y,
                 borderType, borderValue, iterations, isSubmatrix, allowInplace);
-        return Ptr<MorphContext>(impl);
+        return Ptr<Morph>(impl);
     }
 }
 
@@ -1858,7 +1858,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
     Size d_wsz(dst.cols, dst.rows);
     dst.locateROI(d_wsz, d_ofs);
 
-    Ptr<hal::MorphContext> ctx = hal::MorphContext::create(op, src.type(), dst.type(), src.cols, src.rows,
+    Ptr<hal::Morph> ctx = hal::Morph::create(op, src.type(), dst.type(), src.cols, src.rows,
                                                            kernel.type(), kernel.data, kernel.step, kernel.cols, kernel.rows,
                                                            anchor.x, anchor.y, borderType, borderValue.val, iterations,
                                                            src.isSubmatrix(), src.data == dst.data);
