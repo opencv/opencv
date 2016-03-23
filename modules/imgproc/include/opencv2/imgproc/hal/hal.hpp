@@ -44,6 +44,22 @@ struct CV_EXPORTS SepFilter2D
     virtual ~SepFilter2D() {}
 };
 
+
+struct  CV_EXPORTS MorphContext
+{
+    static Ptr<MorphContext> create(int op, int src_type, int dst_type, int max_width, int max_height,
+                                    int kernel_type, uchar * kernel_data, size_t kernel_step,
+                                    int kernel_width, int kernel_height,
+                                    int anchor_x, int anchor_y,
+                                    int borderType, const double borderValue[4],
+                                    int iterations, bool isSubmatrix, bool allowInplace);
+    virtual void apply(uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height,
+                       int roi_width, int roi_height, int roi_x, int roi_y,
+                       int roi_width2, int roi_height2, int roi_x2, int roi_y2) = 0;
+    virtual ~MorphContext() {}
+};
+
+
 //! @}
 
 }}
