@@ -847,7 +847,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             duration = -1;
         }
 
-        GstPad* pad = gst_element_get_static_pad(color, "src");
+        GstPad* pad = gst_element_get_static_pad(sink, "sink");
 #if GST_VERSION_MAJOR == 0
         GstCaps* buffer_caps = gst_pad_get_caps(pad);
 #else
