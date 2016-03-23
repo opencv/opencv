@@ -45,7 +45,7 @@ class texture_flow_test(NewOpenCVTests):
         testTextureVectors = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0],
         [-38, 70], [-79, 3], [0, 0], [0, 0], [-39, 69], [-79, -1],
         [0, 0], [0, 0], [0, -79], [17, -78], [-48, -63], [65, -46],
-        [-69, -39], [-48, -63], [-45, 66]]
+        [-69, -39], [-48, -63]]
 
-        for i in range(len(textureVectors)):
+        for i in range(len(testTextureVectors)):
             self.assertLessEqual(cv2.norm(textureVectors[i] - testTextureVectors[i], cv2.NORM_L2), eps)
