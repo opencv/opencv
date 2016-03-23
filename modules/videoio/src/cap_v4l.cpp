@@ -887,7 +887,7 @@ static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
             }
 
             int returnCode = read_frame_v4l2 (capture);
-            if(returnCode == -1) 
+            if(returnCode == -1)
                 return -1;
             if(returnCode == 1)
                 break;
