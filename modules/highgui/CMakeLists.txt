@@ -55,6 +55,17 @@ if(HAVE_QT5)
        ${_MOC_OUTFILES}
        ${_RCC_OUTFILES})
 
+  # Hunter patch to load qt resources when static linking
+  # Hunter has only Qt5, so its guarded by if(HAVE_QT5)
+  if(NOT BUILD_SHARED_LIBS)
+    install(
+        FILES
+          ${CMAKE_CURRENT_LIST_DIR}/static_opencv_qt_resources.cpp
+        DESTINATION
+          "src/qt/plugins"
+    )
+  endif()
+
   foreach(dt5_dep Core Gui Widgets Test Concurrent)
     add_definitions(${Qt5${dt5_dep}_DEFINITIONS})
     include_directories(${Qt5${dt5_dep}_INCLUDE_DIRS})

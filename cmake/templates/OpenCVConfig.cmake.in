@@ -331,3 +331,36 @@ endif()
 if("@JPEG_FOUND@")
   find_dependency(JPEG CONFIG)
 endif()
+
+# AWP: Qt5 dependencies -- start
+if("@Qt5Core_FOUND@")
+  find_dependency(Qt5Core)
+endif()
+
+if("@Qt5Gui_FOUND@")
+  find_dependency(Qt5Gui)
+endif()
+
+if("@Qt5Widgets_FOUND@")
+  find_dependency(Qt5Widgets)
+  if(NOT "@BUILD_SHARED_LIBS@")
+    # function from Hunter's QtCMakeExtra project
+    _qt_cmake_extra_helpers_add_source(
+        opencv_highgui "static_opencv_qt_resources.cpp"
+    )
+  endif()
+endif()
+
+if("@Qt5Test_FOUND@")
+  find_dependency(Qt5Test)
+endif()
+
+if("@Qt5Concurrent_FOUND@")
+  find_dependency(Qt5Concurrent)
+endif()
+
+if("@Qt5OpenGL_FOUND@")
+  find_dependency(Qt5OpenGL)
+endif()
+# AWP: Qt5 dependencies -- end
+
