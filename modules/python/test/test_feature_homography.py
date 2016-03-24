@@ -13,6 +13,7 @@ PlaneTracker class in plane_tracker.py
 from __future__ import print_function
 
 import numpy as np
+import random
 import cv2
 import sys
 PY3 = sys.version_info[0] == 3
@@ -42,6 +43,7 @@ class feature_homography_test(NewOpenCVTests):
 
     def test_feature_homography(self):
 
+        random.seed(0)
         self.render = TestSceneRender(self.get_sample('samples/python2/data/graf1.png'),
             self.get_sample('samples/c/box.png'), noise = 0.4, speed = 0.5)
         self.frame = self.render.getNextFrame()
