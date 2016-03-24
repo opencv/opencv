@@ -606,6 +606,7 @@ include(cmake/OpenCVDetectVTK.cmake)
 # Package config in: OpenCV_HALConfig.cmake or opencv_hal-config.cmake
 # Use variables: OpenCV_HAL_LIBRARIES, OpenCV_HAL_HEADERS and OpenCV_HAL_INCLUDE_DIRS variables
 find_package(OpenCV_HAL CONFIG QUIET)
+set(_includes "")
 if (OpenCV_HAL_FOUND)
   # 1. libraries
   foreach (l ${OpenCV_HAL_LIBRARIES})
@@ -613,15 +614,14 @@ if (OpenCV_HAL_FOUND)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${l})
   endforeach()
   # 2. headers
-  set(_includes "")
   foreach (h ${OpenCV_HAL_HEADERS})
     set(_includes "${_includes}\n#include \"${h}\"")
   endforeach()
-  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
-  unset(_includes)
   # 3. include paths
   ocv_include_directories(${OpenCV_HAL_INCLUDE_DIRS})
 endif()
+configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
+unset(_includes)
 
 # ----------------------------------------------------------------------------
 # Add CUDA libraries (needed for apps/tools, samples)
