@@ -76,7 +76,7 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
 flags = cv2.KMEANS_RANDOM_CENTERS
 
 # Apply KMeans
-compactness,labels,centers = cv2.kmeans(z,2,None,criteria,10,flags)
+compactness,labels,centers = cv2.kmeans(z,2,criteria,10,flags)
 @endcode
 This gives us the compactness, labels and centers. In this case, I got centers as 60 and 207. Labels
 will have the same size as that of test data where each data will be labelled as '0','1','2' etc.
