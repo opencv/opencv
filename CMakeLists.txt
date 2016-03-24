@@ -603,29 +603,25 @@ endif()
 include(cmake/OpenCVDetectVTK.cmake)
 
 # -- Custom HAL replacement --
-set(_includes "")
-# assuming OPENCV_HAL_HEADERS and OPENCV_HAL_LIBS are lists of files:
-# option example: -DOPENCV_HAL_HEADERS="<some-path>/header1.h;<some-path>/header2.h"
-if (OPENCV_HAL_HEADERS AND OPENCV_HAL_LIBS)
-  foreach (h ${OPENCV_HAL_HEADERS})
-    get_filename_component(h "${h}" ABSOLUTE)
-    set(_includes "${_includes}\n#include \"${h}\"")
-  endforeach()
-  foreach (l ${OPENCV_HAL_LIBS})
+# Package config in: OpenCV_HALConfig.cmake or opencv_hal-config.cmake
+# Use variables: OpenCV_HAL_LIBRARIES, OpenCV_HAL_HEADERS and OpenCV_HAL_INCLUDE_DIRS variables
+find_package(OpenCV_HAL CONFIG QUIET)
+if (OpenCV_HAL_FOUND)
+  # 1. libraries
+  foreach (l ${OpenCV_HAL_LIBRARIES})
     get_filename_component(l "${l}" ABSOLUTE)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${l})
-    # TODO: install?
-    # ocv_install_target(${l} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
   endforeach()
-else()
-  set(_includes "// using default HAL")
-  unset(OPENCV_HAL_HEADERS CACHE)
-  unset(OPENCV_HAL_LIBS CACHE)
+  # 2. headers
+  set(_includes "")
+  foreach (h ${OpenCV_HAL_HEADERS})
+    set(_includes "${_includes}\n#include \"${h}\"")
+  endforeach()
+  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
+  unset(_includes)
+  # 3. include paths
+  ocv_include_directories(${OpenCV_HAL_INCLUDE_DIRS})
 endif()
-set(OPENCV_HAL_HEADERS "${OPENCV_HAL_HEADERS}" CACHE STRING "Headers with custom HAL implementation")
-set(OPENCV_HAL_LIBS "${OPENCV_HAL_LIBS}" CACHE STRING "Libraries with custom HAL implementation")
-configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
-unset(_includes)
 
 # ----------------------------------------------------------------------------
 # Add CUDA libraries (needed for apps/tools, samples)
@@ -1164,7 +1160,7 @@ endif(DEFINED WITH_VA_INTEL)
 status("    Use Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 status("    Use Cuda:"       HAVE_CUDA        THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
 status("    Use OpenCL:"     HAVE_OPENCL      THEN YES ELSE NO)
-status("    Use custom HAL:" OPENCV_HAL_HEADERS AND OPENCV_HAL_LIBS THEN "YES (${OPENCV_HAL_HEADERS}; ${OPENCV_HAL_LIBS})" ELSE "NO")
+status("    Use custom HAL:" OpenCV_HAL_FOUND THEN "YES (ver ${OpenCV_HAL_VERSION}, ${OpenCV_HAL_CONFIG})" ELSE "NO")
 
 if(HAVE_CUDA)
   status("")
