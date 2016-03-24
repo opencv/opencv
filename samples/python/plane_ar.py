@@ -30,7 +30,7 @@ import cv2
 import video
 import common
 from plane_tracker import PlaneTracker
-
+from video import presets
 
 ar_verts = np.float32([[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0],
                        [0, 0, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1],
@@ -42,7 +42,7 @@ ar_edges = [(0, 1), (1, 2), (2, 3), (3, 0),
 
 class App:
     def __init__(self, src):
-        self.cap = video.create_capture(src)
+        self.cap = video.create_capture(src, presets['book'])
         self.frame = None
         self.paused = False
         self.tracker = PlaneTracker()
