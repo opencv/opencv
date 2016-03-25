@@ -2173,7 +2173,7 @@ CV_EXPORTS RNG& theRNG();
 /** @brief Sets state of default random number generator.
 
 The function sets state of default random number generator to custom value.
-@param new state for default random number generator
+@param seed new state for default random number generator
 @sa RNG, randu, randn
 */
 CV_EXPORTS_W void setRNGSeed(int seed);
