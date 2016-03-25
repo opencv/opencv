@@ -42,6 +42,7 @@ class NewOpenCVTests(unittest.TestCase):
         return self.image_cache[filename]
 
     def setUp(self):
+        cv2.setRNGSeed(10)
         self.image_cache = {}
 
     def hashimg(self, im):
