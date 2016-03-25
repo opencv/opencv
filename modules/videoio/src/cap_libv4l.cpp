@@ -1113,7 +1113,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
         default:
             /* display the error and stop processing */
             perror ("VIDIOC_DQBUF");
-            return 1;
+            return -1;
         }
    }
 
@@ -1141,7 +1141,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
    return 1;
 }
 
-static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
+static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
     unsigned int count;
 
     count = 1;
@@ -1175,10 +1175,14 @@ static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
                 break;
             }
 
-            if (read_frame_v4l2 (capture))
-                break;
+            int returnCode=read_frame_v4l2(capture);
+            if (returnCode == -1)
+                return -1;
+            if (returnCode == 1)
+                return 0;
         }
     }
+    return 0;
 }
 
 static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
@@ -1246,7 +1250,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
    if (capture->is_v4l2_device == 1)
    {
 
-     mainloop_v4l2(capture);
+     if(mainloop_v4l2(capture) == -1) return 0;
 
    } else
    {

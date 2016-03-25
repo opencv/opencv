@@ -830,7 +830,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
         default:
             /* display the error and stop processing */
             perror ("VIDIOC_DQBUF");
-            return 1;
+            return -1;
         }
    }
 
@@ -852,7 +852,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
    return 1;
 }
 
-static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
+static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
     unsigned int count;
 
     count = 1;
@@ -886,10 +886,14 @@ static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
                 break;
             }
 
-            if (read_frame_v4l2 (capture))
+            int returnCode = read_frame_v4l2 (capture);
+            if(returnCode == -1)
+                return -1;
+            if(returnCode == 1)
                 break;
         }
     }
+    return 0;
 }
 
 static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
@@ -931,14 +935,15 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 #if defined(V4L_ABORT_BADJPEG)
         // skip first frame. it is often bad -- this is unnotied in traditional apps,
         //  but could be fatal if bad jpeg is enabled
-        mainloop_v4l2(capture);
+        if(mainloop_v4l2(capture) == -1)
+                return false;
 #endif
 
       /* preparation is ok */
       capture->FirstCapture = 0;
    }
 
-   mainloop_v4l2(capture);
+   if(mainloop_v4l2(capture) == -1) return false;
 
    return true;
 }
