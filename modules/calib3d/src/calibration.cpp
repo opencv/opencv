@@ -2289,8 +2289,8 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
         for( i = 0; i < 4; i++ )
         {
             int j = (i<2) ? 0 : 1;
-            _pts[i].x = (float)((i % 2)*(nx-1));
-            _pts[i].y = (float)(j*(ny-1));
+            _pts[i].x = (float)((i % 2)*(nx));
+            _pts[i].y = (float)(j*(ny));
         }
         cvUndistortPoints( &pts, &pts, A, Dk, 0, 0 );
         cvConvertPointsHomogeneous( &pts, &pts_3 );
@@ -2304,8 +2304,8 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
         _a_tmp[1][2]=0.0;
         cvProjectPoints2( &pts_3, k == 0 ? _R1 : _R2, &Z, &A_tmp, 0, &pts );
         CvScalar avg = cvAvg(&pts);
-        cc_new[k].x = (nx-1)/2 - avg.val[0];
-        cc_new[k].y = (ny-1)/2 - avg.val[1];
+        cc_new[k].x = (nx)/2 - avg.val[0];
+        cc_new[k].y = (ny)/2 - avg.val[1];
     }
 
     // vertical focal length must be the same for both images to keep the epipolar constraint
