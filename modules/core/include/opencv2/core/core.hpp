@@ -2593,6 +2593,9 @@ CV_EXPORTS_W double kmeans( InputArray data, int K, CV_OUT InputOutputArray best
 //! returns the thread-local Random number generator
 CV_EXPORTS RNG& theRNG();
 
+//! sets state of the thread-local Random number generator
+CV_EXPORTS_W void setRNGSeed(int seed);
+
 //! returns the next unifomly-distributed random number of the specified type
 template<typename _Tp> static inline _Tp randu() { return (_Tp)theRNG(); }
 
