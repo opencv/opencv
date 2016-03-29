@@ -736,7 +736,7 @@ cv::RNG& cv::theRNG()
 
 void cv::setRNGSeed(int seed)
 {
-    getCoreTlsData().get()->rng.state = static_cast<uint64>(seed);
+    theRNG() = RNG(static_cast<uint64>(seed));
 }
 
 
