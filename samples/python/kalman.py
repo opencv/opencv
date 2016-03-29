@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """
    Tracking of rotating point.
    Rotation speed is constant.
@@ -90,7 +90,7 @@ if __name__ == "__main__":
             if code != -1:
                 break
 
-        if code in [27, ord('q'), ord('Q')]:
+        if (code % 0x100) in [27, ord('q'), ord('Q')]:
             break
 
     cv2.destroyWindow("Kalman")
