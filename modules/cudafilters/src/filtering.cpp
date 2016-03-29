@@ -152,11 +152,11 @@ namespace
         oAnchor.x = anchor_.x;
         oAnchor.y = anchor_.y;
 
-       const int depth = CV_MAT_DEPTH(type_);
-       const int cn = CV_MAT_CN(type_);
+        const int depth = CV_MAT_DEPTH(type_);
+        const int cn = CV_MAT_CN(type_);
 
-       switch (depth)
-       {
+        switch (depth)
+        {
         case CV_8U:
         {
             static const nppFilterBox8U_t funcs8U[] = { 0, nppiFilterBox_8u_C1R, 0, 0, nppiFilterBox_8u_C4R };
