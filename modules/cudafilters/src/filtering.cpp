@@ -103,13 +103,14 @@ namespace
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
     private:
-        typedef NppStatus (*nppFilterBox_t)(const Npp8u* pSrc, Npp32s nSrcStep, Npp8u* pDst, Npp32s nDstStep,
+        typedef NppStatus (*nppFilterBox8U_t)(const Npp8u* pSrc, Npp32s nSrcStep, Npp8u* pDst, Npp32s nDstStep,
+                                            NppiSize oSizeROI, NppiSize oMaskSize, NppiPoint oAnchor);
+        typedef NppStatus (*nppFilterBox32F_t)(const Npp32f* pSrc, Npp32s nSrcStep, Npp32f* pDst, Npp32s nDstStep,
                                             NppiSize oSizeROI, NppiSize oMaskSize, NppiPoint oAnchor);
 
         Size ksize_;
         Point anchor_;
         int type_;
-        nppFilterBox_t func_;
         int borderMode_;
         Scalar borderVal_;
         GpuMat srcBorder_;
@@ -118,14 +119,10 @@ namespace
     NPPBoxFilter::NPPBoxFilter(int srcType, int dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal) :
         ksize_(ksize), anchor_(anchor), type_(srcType), borderMode_(borderMode), borderVal_(borderVal)
     {
-        static const nppFilterBox_t funcs[] = {0, nppiFilterBox_8u_C1R, 0, 0, nppiFilterBox_8u_C4R};
-
-        CV_Assert( srcType == CV_8UC1 || srcType == CV_8UC4 );
+        CV_Assert( srcType == CV_8UC1 || srcType == CV_8UC4 || srcType == CV_32FC1);
         CV_Assert( dstType == srcType );
 
         normalizeAnchor(anchor_, ksize);
-
-        func_ = funcs[CV_MAT_CN(srcType)];
     }
 
     void NPPBoxFilter::apply(InputArray _src, OutputArray _dst, Stream& _stream)
@@ -155,10 +152,30 @@ namespace
         oAnchor.x = anchor_.x;
         oAnchor.y = anchor_.y;
 
-        nppSafeCall( func_(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step),
-                           dst.ptr<Npp8u>(), static_cast<int>(dst.step),
-                           oSizeROI, oMaskSize, oAnchor) );
+        const int depth = CV_MAT_DEPTH(type_);
+        const int cn = CV_MAT_CN(type_);
 
+        switch (depth)
+        {
+        case CV_8U:
+        {
+            static const nppFilterBox8U_t funcs8U[] = { 0, nppiFilterBox_8u_C1R, 0, 0, nppiFilterBox_8u_C4R };
+            const nppFilterBox8U_t func8U = funcs8U[cn];
+            nppSafeCall(func8U(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step),
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step),
+                oSizeROI, oMaskSize, oAnchor));
+        }
+            break;
+        case CV_32F:
+        {
+            static const nppFilterBox32F_t funcs32F[] = { 0, nppiFilterBox_32f_C1R, 0, 0, 0 };
+            const nppFilterBox32F_t func32F = funcs32F[cn];
+            nppSafeCall(func32F(srcRoi.ptr<Npp32f>(), static_cast<int>(srcRoi.step),
+                dst.ptr<Npp32f>(), static_cast<int>(dst.step),
+                oSizeROI, oMaskSize, oAnchor));
+        }
+            break;
+        }
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
