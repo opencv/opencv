@@ -89,7 +89,7 @@ public:
 
 /** @brief Creates a normalized 2D box filter.
 
-@param srcType Input image type. Only CV_8UC1 and CV_8UC4 are supported for now.
+@param srcType Input image type. Only CV_8UC1, CV_8UC4 and CV_32FC1 are supported for now.
 @param dstType Output image type. Only the same type as src is supported for now.
 @param ksize Kernel size.
 @param anchor Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel
