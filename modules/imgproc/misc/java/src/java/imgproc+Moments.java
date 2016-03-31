@@ -67,16 +67,16 @@ public class Moments {
 
     public void set(double[] vals) {
         if (vals != null) {
-            m00 = vals.length > 0 ? (int) vals[0] : 0;
-            m10 = vals.length > 1 ? (int) vals[1] : 0;
-            m01 = vals.length > 2 ? (int) vals[2] : 0;
-            m20 = vals.length > 3 ? (int) vals[3] : 0;
-            m11 = vals.length > 4 ? (int) vals[4] : 0;
-            m02 = vals.length > 5 ? (int) vals[5] : 0;
-            m30 = vals.length > 6 ? (int) vals[6] : 0;
-            m21 = vals.length > 7 ? (int) vals[7] : 0;
-            m12 = vals.length > 8 ? (int) vals[8] : 0;
-            m03 = vals.length > 9 ? (int) vals[9] : 0;
+            m00 = vals.length > 0 ? vals[0] : 0;
+            m10 = vals.length > 1 ? vals[1] : 0;
+            m01 = vals.length > 2 ? vals[2] : 0;
+            m20 = vals.length > 3 ? vals[3] : 0;
+            m11 = vals.length > 4 ? vals[4] : 0;
+            m02 = vals.length > 5 ? vals[5] : 0;
+            m30 = vals.length > 6 ? vals[6] : 0;
+            m21 = vals.length > 7 ? vals[7] : 0;
+            m12 = vals.length > 8 ? vals[8] : 0;
+            m03 = vals.length > 9 ? vals[9] : 0;
             this.completeState();
         } else {
             m00 = 0;
