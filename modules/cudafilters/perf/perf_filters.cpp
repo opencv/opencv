@@ -53,7 +53,7 @@ DEF_PARAM_TEST(Sz_Type_KernelSz, cv::Size, MatType, int);
 
 PERF_TEST_P(Sz_Type_KernelSz, Blur,
             Combine(CUDA_TYPICAL_MAT_SIZES,
-                    Values(CV_8UC1, CV_8UC4),
+                    Values(CV_8UC1, CV_8UC4, CV_32FC1),
                     Values(3, 5, 7)))
 {
     declare.time(20.0);
