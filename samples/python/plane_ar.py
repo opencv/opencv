@@ -32,6 +32,7 @@ import common
 from plane_tracker import PlaneTracker
 from video import presets
 
+# Simple model of a house - cube with a triangular prism "roof"
 ar_verts = np.float32([[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0],
                        [0, 0, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1],
                        [0, 0.5, 2], [1, 0.5, 2]])
