@@ -209,7 +209,8 @@ extern "C" {
 #endif
 
 #if USE_AV_INTERRUPT_CALLBACK
-#define LIBAVFORMAT_INTERRUPT_TIMEOUT_MS 30000
+#define LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS 30000
+#define LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS 30000
 
 #ifdef WIN32
 // http://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
@@ -393,6 +394,11 @@ inline int _opencv_ffmpeg_interrupt_callback(void *ptr)
 {
     AVInterruptCallbackMetadata* metadata = (AVInterruptCallbackMetadata*)ptr;
     assert(metadata);
+
+    if (metadata->timeout_after_ms == 0)
+    {
+        return 0; // timeout is disabled
+    }
 
     timespec now;
     get_monotonic_time(&now);
@@ -793,7 +799,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
 #if USE_AV_INTERRUPT_CALLBACK
     /* interrupt callback */
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS;
     get_monotonic_time(&interrupt_metadata.value);
 
     ic = avformat_alloc_context();
@@ -885,6 +891,11 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
 exit_func:
 
+#if USE_AV_INTERRUPT_CALLBACK
+    // deactivate interrupt callback
+    interrupt_metadata.timeout_after_ms = 0;
+#endif
+
     if( !valid )
         close();
 
@@ -907,6 +918,12 @@ bool CvCapture_FFMPEG::grabFrame()
         return false;
 
     picture_pts = AV_NOPTS_VALUE_;
+
+#if USE_AV_INTERRUPT_CALLBACK
+    // activate interrupt callback
+    get_monotonic_time(&interrupt_metadata.value);
+    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS;
+#endif
 
     // get the next frame
     while (!valid)
@@ -957,11 +974,6 @@ bool CvCapture_FFMPEG::grabFrame()
                 picture_pts = packet.pts != AV_NOPTS_VALUE_ && packet.pts != 0 ? packet.pts : packet.dts;
             frame_number++;
             valid = true;
-
-#if USE_AV_INTERRUPT_CALLBACK
-            // update interrupt value
-            get_monotonic_time(&interrupt_metadata.value);
-#endif
         }
         else
         {
@@ -973,6 +985,11 @@ bool CvCapture_FFMPEG::grabFrame()
 
     if( valid && first_frame_number < 0 )
         first_frame_number = dts_to_frame_number(picture_pts);
+
+#if USE_AV_INTERRUPT_CALLBACK
+    // deactivate interrupt callback
+    interrupt_metadata.timeout_after_ms = 0;
+#endif
 
     // return if we have a new picture or not
     return valid;
@@ -2563,7 +2580,7 @@ bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma
 
 #if USE_AV_INTERRUPT_CALLBACK
     /* interrupt callback */
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS;
     get_monotonic_time(&interrupt_metadata.value);
 
     ctx_ = avformat_alloc_context();
@@ -2659,6 +2676,11 @@ bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma
 
     av_init_packet(&pkt_);
 
+#if USE_AV_INTERRUPT_CALLBACK
+    // deactivate interrupt callback
+    interrupt_metadata.timeout_after_ms = 0;
+#endif
+
     return true;
 }
 
@@ -2680,6 +2702,14 @@ void InputMediaStream_FFMPEG::close()
 
 bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFile)
 {
+    bool result = false;
+
+#if USE_AV_INTERRUPT_CALLBACK
+    // activate interrupt callback
+    get_monotonic_time(&interrupt_metadata.value);
+    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS;
+#endif
+
     // free last packet if exist
     if (pkt_.data)
         _opencv_ffmpeg_av_packet_unref(&pkt_);
@@ -2699,16 +2729,11 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
         if (ret == AVERROR(EAGAIN))
             continue;
 
-#if USE_AV_INTERRUPT_CALLBACK
-        // update interrupt value
-        get_monotonic_time(&interrupt_metadata.value);
-#endif
-
         if (ret < 0)
         {
             if (ret == (int)AVERROR_EOF)
                 *endOfFile = true;
-            return false;
+            break;
         }
 
         if (pkt_.stream_index != video_stream_id_)
@@ -2717,14 +2742,23 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
             continue;
         }
 
+        result = true;
         break;
     }
 
-    *data = pkt_.data;
-    *size = pkt_.size;
-    *endOfFile = false;
+#if USE_AV_INTERRUPT_CALLBACK
+    // deactivate interrupt callback
+    interrupt_metadata.timeout_after_ms = 0;
+#endif
 
-    return true;
+    if (result)
+    {
+        *data = pkt_.data;
+        *size = pkt_.size;
+        *endOfFile = false;
+    }
+
+    return result;
 }
 
 InputMediaStream_FFMPEG* create_InputMediaStream_FFMPEG(const char* fileName, int* codec, int* chroma_format, int* width, int* height)
