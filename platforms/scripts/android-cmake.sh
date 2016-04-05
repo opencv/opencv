@@ -1,41 +1,74 @@
 #!/bin/bash -ex
-cd `dirname $0`/..
 
-for i in "$@"
-do
-case $i in
-    clean)
-    rm -rf build
-    shift
-    ;;
-    -t=*|--targets=*)
-    BUILD_ABIS="${i#*=}"
-    shift
-    ;;
-    -l=*|--lib=*)
-    LIBPATH="${i#*=}"
-    shift
-    ;;
-    -h|--help|*)
-    echo "`basename $0` - [clean] remake cmake files [-a=,--abi=] x68,arm7,arm7h,arm8,mips"
-    exit 0
-    ;;
-esac
-done
+function main ()
+{
+  SCRIPT_FILEPATH="$(cd "$(dirname "$0")"; pwd)/$(basename "$0")"
+  SCRIPT_PATH=`dirname $SCRIPT_FILEPATH`
+  OPENCV_PATH=${SCRIPT_PATH%%\/platforms\/scripts}
+  # defaults
+  BUILD_ABIS="arm7-android arm8-android"
+  BUILD_ROOT=$OPENCV_PATH
+  INSTALL_PATH=$OPENCV_PATH
+  pushd $BUILD_ROOT
 
-function copy_android_library ()
-# $1 = target build directory
-# $2 = debug/release variant
+  # number of parallel jobs
+  if [ "${TRAVIS}" == "true" -a "${CI}" == "true" ] ; then
+    export BUILD_NUM_CORES=1
+  else
+    if [[ "$OSTYPE" == *darwin* ]] ; then
+      export BUILD_NUM_CORES=`sysctl -n hw.ncpu`
+    elif [[ "$OSTYPE" == *linux* ]] ; then
+      export BUILD_NUM_CORES=`nproc`
+    else
+      export BUILD_NUM_CORES=1
+    fi
+  fi
+
+  for i in "$@"
+  do
+  case $i in
+      clean)
+      rm -rf build
+      shift
+      ;;
+      -t=*|--targets=*)
+      BUILD_ABIS="${i#*=}"
+      shift
+      ;;
+      -l=*|--lib=*)
+      LIBPATH="${i#*=}"
+      shift
+      ;;
+      -i=*)
+      INSTALL_PATH="${i#*=}"
+      shift
+      ;;
+      -h|--help|*)
+      echo "`basename $0` [clean] remake cmake files [-t=,--targets=] x64-osx,arm7-android,arm8-android [-i=] install path"
+      exit 0
+      ;;
+  esac
+  done
+
+  [[ -n "${BUILD_ABIS}" ]] && build_platform ${BUILD_ABIS}
+  popd
+}
+
+function install_android_library ()
+# $1 install path
 {
   pwd
-  mkdir -p ../opencv/src/main/jniLibs
-  cp -av install/sdk/native/3rdparty/libs/* ../opencv/src/main/jniLibs
-  cp -av install/sdk/native/libs/* ../opencv/src/main/jniLibs
-  cp -av install/sdk/native/jni ../opencv/src/main
-  cp -av install/sdk/java ../opencv/src/main
-
-  mkdir -p ../../opencv/src/main/$2/jniLibs
-  cp -av ../opencv/src/main/jniLibs/* ../../opencv/src/main/$2/jniLibs
+  cp -av $BUILD_ROOT/platforms/android/template/opencv-lib/* $1
+  cp -av lint.xml $1
+  cp -av bin/aidl $1/src/main
+  cp -av bin/AndroidManifest.xml $1/src/main
+  cp -av install/sdk/native/3rdparty/libs/* $1/src/main/jniLibs
+  cp -av install/sdk/native/libs/* $1/src/main/jniLibs
+  cp -av install/sdk/native/jni $1/src/main
+  cp -av install/sdk/java/src/* $1/src/main/java
+  cp -av install/sdk/java/res $1/src/main
+  cp -av install/sdk/java/AndroidManifest.xml $1/src/main
+  cp -av install/sdk/java/lint.xml $1
 }
 
 function build_target ()
@@ -55,20 +88,19 @@ function build_target ()
   [ ! -d "$TARGET_DIR" ] && mkdir -p "$TARGET_DIR" && REBUILD_CMAKE=true
   pushd "$TARGET_DIR"
   if [ -n "$REBUILD_CMAKE" ] ; then
-    cmake '-GUnix Makefiles' -DCMAKE_BUILD_TYPE=$2 -DANDROID_ABI="$TARGET_ABI" $EXTRA_OPTIONS $COMMON_OPTIONS ../../../../..
+    cmake '-GUnix Makefiles' -DCMAKE_BUILD_TYPE=$2 -DANDROID_ABI="$TARGET_ABI" $EXTRA_OPTIONS $COMMON_OPTIONS ${BUILD_ROOT}
   fi
-  make -j8
+  make -j${BUILD_NUM_CORES}
   #cmake -DCOMPONENT=libs -P cmake_install.cmake
   #cmake -DCOMPONENT=dev -P cmake_install.cmake
   #cmake -DCOMPONENT=java -P cmake_install.cmake
   #cmake -DCOMPONENT=samples -P cmake_install.cmake
   if [ "$2" == "Debug" ] ; then
     make install
-    [ "$TARGET_PLATFORM" == "android" ] && copy_android_library $TARGET_DIR debug
   else
     make install/strip
-    [ "$TARGET_PLATFORM" == "android" ] && copy_android_library $TARGET_DIR release
   fi
+  [ "$TARGET_PLATFORM" == "android" ] && install_android_library $INSTALL_PATH
   popd
 }
 
@@ -86,10 +118,9 @@ function build_platform ()
      -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DBUILD_ANDROID_EXAMPLES=OFF\
      -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
      -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
-     -DCMAKE_TOOLCHAIN_FILE=../../../../android/android.toolchain.cmake"
+     -DCMAKE_TOOLCHAIN_FILE=${BUILD_ROOT}/platforms/android/android.toolchain.cmake"
     EXTRA_OPTIONS="-DWITH_OPENCL=OFF -DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9"
     build_target "build/android/debug/arm7" Debug $TARGET_ABI $TARGET_PLATFORM
-    EXTRA_OPTIONS="-DWITH_OPENCL=OFF -DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9"
     build_target "build/android/release/arm7" Release $TARGET_ABI $TARGET_PLATFORM
     shift
     ;;
@@ -98,10 +129,9 @@ function build_platform ()
      -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DBUILD_ANDROID_EXAMPLES=OFF\
      -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
      -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
-     -DCMAKE_TOOLCHAIN_FILE=../../../../android/android.toolchain.cmake"
+     -DCMAKE_TOOLCHAIN_FILE=${BUILD_ROOT}/platforms/android/android.toolchain.cmake"
     EXTRA_OPTIONS="-DWITH_OPENCL=ON -DANDROID_TOOLCHAIN_NAME=aarch64-linux-android-4.9"
     build_target "build/android/debug/arm8" Debug $TARGET_ABI $TARGET_PLATFORM
-    EXTRA_OPTIONS="-DWITH_OPENCL=ON -DANDROID_TOOLCHAIN_NAME=aarch64-linux-android-4.9"
     build_target "build/android/release/arm8" Release $TARGET_ABI $TARGET_PLATFORM
     shift
     ;;
@@ -109,14 +139,13 @@ function build_platform ()
     COMMON_OPTIONS="-DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_CUDA=OFF\
      -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF\
      -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF"
-    EXTRA_OPTIONS="-DWITH_OPENCL=ON"
+    EXTRA_OPTIONS="-DWITH_OPENCL=OFF"
     build_target "build/osx/debug/x86_64/opencv" Debug $TARGET_ABI $TARGET_PLATFORM
-    EXTRA_OPTIONS="-DWITH_OPENCL=ON"
     build_target "build/osx/release/x86_64/opencv" Release $TARGET_ABI $TARGET_PLATFORM
     shift
     ;;
   esac
-done
+  done
 }
 
-build_platform arm7-android arm8-android
+main "$@"
