@@ -103,7 +103,7 @@
 #ifdef HAVE_CONCURRENCY
 #include <concrt.h>
 #ifndef __cplusplus_winrt
-#include "wrl.h
+#include "wrl.h"
 #endif
 #include "ppltasks_winrt.hpp"
 #endif
