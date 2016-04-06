@@ -1093,7 +1093,7 @@ function(ocv_add_accuracy_tests)
 
       ocv_add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch})
       ocv_target_include_modules(${the_target} ${test_deps} "${test_path}")
-      ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+      ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_LINK_DEPS} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
 
       set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};AccuracyTest")
