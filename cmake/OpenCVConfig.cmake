@@ -109,7 +109,12 @@ if(NOT OpenCV_FIND_QUIETLY)
   message(STATUS "OpenCV STATIC: ${OpenCV_STATIC}")
 endif()
 
-get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH CACHE)
+if(CMAKE_VERSION VERSION_LESS "2.8.12")
+  get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH CACHE)
+else()
+  get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY CACHE)
+endif()
+
 if(OpenCV_RUNTIME AND OpenCV_ARCH)
   if(OpenCV_STATIC AND EXISTS "${OpenCV_CONFIG_PATH}/${OpenCV_ARCH}/${OpenCV_RUNTIME}/staticlib/OpenCVConfig.cmake")
     if(OpenCV_CUDA AND EXISTS "${OpenCV_CONFIG_PATH}/gpu/${OpenCV_ARCH}/${OpenCV_RUNTIME}/staticlib/OpenCVConfig.cmake")
