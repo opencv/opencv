@@ -700,8 +700,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
     buf.resize(bufSize);
 
-    hal::DftContext c;
-    hal::dftInit2D(c, dftsize.width, dftsize.height, dftTempl.depth(), 1, 1, CV_HAL_DFT_IS_INPLACE, templ.rows);
+    Ptr<hal::DFT2D> c = hal::DFT2D::create(dftsize.width, dftsize.height, dftTempl.depth(), 1, 1, CV_HAL_DFT_IS_INPLACE, templ.rows);
 
     // compute DFT of each template plane
     for( k = 0; k < tcn; k++ )
@@ -726,10 +725,8 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             Mat part(dst, Range(0, templ.rows), Range(templ.cols, dst.cols));
             part = Scalar::all(0);
         }
-        hal::dft2D(c, dst.data, (int)dst.step, dst.data, (int)dst.step);
+        c->apply(dst.data, (int)dst.step, dst.data, (int)dst.step);
     }
-
-    hal::dftFree2D(c);
 
     int tileCountX = (corr.cols + blocksize.width - 1)/blocksize.width;
     int tileCountY = (corr.rows + blocksize.height - 1)/blocksize.height;
@@ -747,11 +744,11 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     }
     borderType |= BORDER_ISOLATED;
 
-    hal::DftContext cF, cR;
+    Ptr<hal::DFT2D> cF, cR;
     int f = CV_HAL_DFT_IS_INPLACE;
     int f_inv = f | CV_HAL_DFT_INVERSE | CV_HAL_DFT_SCALE;
-    hal::dftInit2D(cF, dftsize.width, dftsize.height, maxDepth, 1, 1, f, blocksize.height + templ.rows - 1);
-    hal::dftInit2D(cR, dftsize.width, dftsize.height, maxDepth, 1, 1, f_inv, blocksize.height);
+    cF = hal::DFT2D::create(dftsize.width, dftsize.height, maxDepth, 1, 1, f, blocksize.height + templ.rows - 1);
+    cR = hal::DFT2D::create(dftsize.width, dftsize.height, maxDepth, 1, 1, f_inv, blocksize.height);
 
     // calculate correlation by blocks
     for( i = 0; i < tileCount; i++ )
@@ -791,7 +788,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                                x1-x0, dst.cols-dst1.cols-(x1-x0), borderType);
 
             if (bsz.height == blocksize.height)
-                hal::dft2D(cF, dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+                cF->apply(dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
             else
                 dft( dftImg, dftImg, 0, dsz.height );
 
@@ -800,7 +797,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             mulSpectrums(dftImg, dftTempl1, dftImg, 0, true);
 
             if (bsz.height == blocksize.height)
-                hal::dft2D(cR, dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+                cR->apply(dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
             else
                 dft( dftImg, dftImg, DFT_INVERSE + DFT_SCALE, bsz.height );
 
@@ -834,8 +831,6 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             }
         }
     }
-    hal::dftFree2D(cF);
-    hal::dftFree2D(cR);
 }
 
 static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
