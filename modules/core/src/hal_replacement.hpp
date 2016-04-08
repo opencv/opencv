@@ -376,6 +376,102 @@ inline int hal_ni_merge64s(const int64 **src_data, int64 *dst_data, int len, int
 #define cv_hal_merge64s hal_ni_merge64s
 //! @endcond
 
+/**
+@brief Dummy structure storing DFT/DCT context
+
+Users can convert this pointer to any type they want. Initialisation and destruction should be made in Init and Free function implementations correspondingly.
+Example:
+@code{.cpp}
+int my_hal_dftInit2D(cvhalDFT **context, ...) {
+    *context = static_cast<cvhalDFT*>(new MyFilterData());
+    //... init
+}
+
+int my_hal_dftFree2D(cvhalDFT *context) {
+    MyFilterData *c = static_cast<MyFilterData*>(context);
+    delete c;
+}
+@endcode
+ */
+struct cvhalDFT {};
+
+/**
+@param context double pointer to context storing all necessary data
+@param len transformed array length
+@param count estimated transformation count
+@param depth array type (CV_32F or CV_64F)
+@param flags algorithm options (combination of CV_HAL_DFT_INVERSE, CV_HAL_DFT_SCALE, ...)
+@param needBuffer pointer to boolean variable, if valid pointer provided, then variable value should be set to true to signal that additional memory buffer is needed for operations
+ */
+inline int hal_ni_dftInit1D(cvhalDFT **context, int len, int count, int depth, int flags, bool *needBuffer) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+@param context pointer to context storing all necessary data
+@param src source data
+@param dst destination data
+ */
+inline int hal_ni_dft1D(cvhalDFT *context, const uchar *src, uchar *dst) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+@param context pointer to context storing all necessary data
+ */
+inline int hal_ni_dftFree1D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_dftInit1D hal_ni_dftInit1D
+#define cv_hal_dft1D hal_ni_dft1D
+#define cv_hal_dftFree1D hal_ni_dftFree1D
+//! @endcond
+
+/**
+@param context double pointer to context storing all necessary data
+@param width,height image dimensions
+@param depth image type (CV_32F or CV64F)
+@param src_channels number of channels in input image
+@param dst_channels number of channels in output image
+@param flags algorithm options (combination of CV_HAL_DFT_INVERSE, ...)
+@param nonzero_rows number of nonzero rows in image, can be used for optimization
+ */
+inline int hal_ni_dftInit2D(cvhalDFT **context, int width, int height, int depth, int src_channels, int dst_channels, int flags, int nonzero_rows) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+@param context pointer to context storing all necessary data
+@param src_data,src_step source image data and step
+@param dst_data,dst_step destination image data and step
+ */
+inline int hal_ni_dft2D(cvhalDFT *context, const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+@param context pointer to context storing all necessary data
+ */
+inline int hal_ni_dftFree2D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_dftInit2D hal_ni_dftInit2D
+#define cv_hal_dft2D hal_ni_dft2D
+#define cv_hal_dftFree2D hal_ni_dftFree2D
+//! @endcond
+
+/**
+@param context double pointer to context storing all necessary data
+@param width,height image dimensions
+@param depth image type (CV_32F or CV64F)
+@param flags algorithm options (combination of CV_HAL_DFT_INVERSE, ...)
+ */
+inline int hal_ni_dctInit2D(cvhalDFT **context, int width, int height, int depth, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+@param context pointer to context storing all necessary data
+@param src_data,src_step source image data and step
+@param dst_data,dst_step destination image data and step
+ */
+inline int hal_ni_dct2D(cvhalDFT *context, const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+@param context pointer to context storing all necessary data
+ */
+inline int hal_ni_dctFree2D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_dctInit2D hal_ni_dctInit2D
+#define cv_hal_dct2D hal_ni_dct2D
+#define cv_hal_dctFree2D hal_ni_dctFree2D
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__
@@ -383,31 +479,6 @@ inline int hal_ni_merge64s(const int64 **src_data, int64 *dst_data, int len, int
 #elif defined _MSC_VER
 #  pragma warning( pop )
 #endif
-
-inline int hal_ni_dftInit1D(void**, int, int, int, int, bool*) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dft1D(const void*, const void*, void*) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dftFree1D(void*) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-
-#define cv_hal_dftInit1D hal_ni_dftInit1D
-#define cv_hal_dft1D hal_ni_dft1D
-#define cv_hal_dftFree1D hal_ni_dftFree1D
-
-inline int hal_ni_dftInit2D(void **, int, int, int, int, int, int, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dft2D(const void *, const void *, int, void *, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dftFree2D(void *) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-
-#define cv_hal_dftInit2D hal_ni_dftInit2D
-#define cv_hal_dft2D hal_ni_dft2D
-#define cv_hal_dftFree2D hal_ni_dftFree2D
-
-
-inline int hal_ni_dctInit2D(void **, int, int, int, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dct2D(const void *, const void *, int, void *, int) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_dctFree2D(void *) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-
-#define cv_hal_dctInit2D hal_ni_dctInit2D
-#define cv_hal_dct2D hal_ni_dct2D
-#define cv_hal_dctFree2D hal_ni_dctFree2D
 
 #include "custom_hal.hpp"
 

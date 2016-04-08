@@ -1553,7 +1553,7 @@ class Dft_C_IPPLoop_Invoker : public ParallelLoopBody
 {
 public:
 
-    Dft_C_IPPLoop_Invoker(uchar * _src, int _src_step, uchar * _dst, int _dst_step, int _width,
+    Dft_C_IPPLoop_Invoker(const uchar * _src, int _src_step, uchar * _dst, int _dst_step, int _width,
                           const Dft& _ippidft, int _norm_flag, bool *_ok) :
         ParallelLoopBody(),
         src(_src), src_step(_src_step), dst(_dst), dst_step(_dst_step), width(_width),
@@ -1617,7 +1617,7 @@ public:
     }
 
 private:
-    uchar * src;
+    const uchar * src;
     int src_step;
     uchar * dst;
     int dst_step;
@@ -1634,7 +1634,7 @@ class Dft_R_IPPLoop_Invoker : public ParallelLoopBody
 {
 public:
 
-    Dft_R_IPPLoop_Invoker(uchar * _src, int _src_step, uchar * _dst, int _dst_step, int _width,
+    Dft_R_IPPLoop_Invoker(const uchar * _src, int _src_step, uchar * _dst, int _dst_step, int _width,
                           const Dft& _ippidft, int _norm_flag, bool *_ok) :
         ParallelLoopBody(),
         src(_src), src_step(_src_step), dst(_dst), dst_step(_dst_step), width(_width),
@@ -1698,7 +1698,7 @@ public:
     }
 
 private:
-    uchar * src;
+    const uchar * src;
     int src_step;
     uchar * dst;
     int dst_step;
@@ -1711,7 +1711,7 @@ private:
 };
 
 template <typename Dft>
-bool Dft_C_IPPLoop(uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, const Dft& ippidft, int norm_flag)
+bool Dft_C_IPPLoop(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, const Dft& ippidft, int norm_flag)
 {
     bool ok;
     parallel_for_(Range(0, height), Dft_C_IPPLoop_Invoker<Dft>(src, src_step, dst, dst_step, width, ippidft, norm_flag, &ok), (width * height)/(double)(1<<16) );
@@ -1719,7 +1719,7 @@ bool Dft_C_IPPLoop(uchar * src, int src_step, uchar * dst, int dst_step, int wid
 }
 
 template <typename Dft>
-bool Dft_R_IPPLoop(uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, const Dft& ippidft, int norm_flag)
+bool Dft_R_IPPLoop(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, const Dft& ippidft, int norm_flag)
 {
     bool ok;
     parallel_for_(Range(0, height), Dft_R_IPPLoop_Invoker<Dft>(src, src_step, dst, dst_step, width, ippidft, norm_flag, &ok), (width * height)/(double)(1<<16) );
@@ -1750,7 +1750,7 @@ private:
     ippiDFT_R_Func func;
 };
 
-static bool ippi_DFT_C_32F(uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, bool inv, int norm_flag)
+static bool ippi_DFT_C_32F(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, bool inv, int norm_flag)
 {
     IppStatus status;
     Ipp8u* pBuffer = 0;
@@ -1804,7 +1804,7 @@ static bool ippi_DFT_C_32F(uchar * src, int src_step, uchar * dst, int dst_step,
     return false;
 }
 
-static bool ippi_DFT_R_32F(uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, bool inv, int norm_flag)
+static bool ippi_DFT_R_32F(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, bool inv, int norm_flag)
 {
     IppStatus status;
     Ipp8u* pBuffer = 0;
@@ -2611,11 +2611,11 @@ inline DftDims determineDims(int rows, int cols, bool isRowWise, bool isContinuo
     return InvalidDim;
 }
 
-class OcvDftImpl
+class OcvDftImpl : public hal::DFT2D
 {
 protected:
-    hal::DftContext contextA;
-    hal::DftContext contextB;
+    Ptr<hal::DFT1D> contextA;
+    Ptr<hal::DFT1D> contextB;
     bool needBufferA;
     bool needBufferB;
     bool inv;
@@ -2763,7 +2763,7 @@ public:
                     count = height;
                 }
                 needBufferA = isInplace;
-                hal::dftInit1D(contextA, len, count, depth, f, &needBufferA);
+                contextA = hal::DFT1D::create(len, count, depth, f, &needBufferA);
                 if (needBufferA)
                     tmp_bufA.allocate(len * complex_elem_size);
             }
@@ -2773,7 +2773,7 @@ public:
                 count = width;
                 f |= CV_HAL_DFT_STAGE_COLS;
                 needBufferB = isInplace;
-                hal::dftInit1D(contextB, len, count, depth, f, &needBufferB);
+                contextB = hal::DFT1D::create(len, count, depth, f, &needBufferB);
                 if (needBufferB)
                     tmp_bufB.allocate(len * complex_elem_size);
 
@@ -2783,7 +2783,7 @@ public:
         }
     }
 
-    void run(uchar * src, int src_step, uchar * dst, int dst_step)
+    void apply(const uchar * src, size_t src_step, uchar * dst, size_t dst_step)
     {
 #if defined USE_IPP_DFT
         if (useIpp)
@@ -2860,17 +2860,9 @@ public:
         }
     }
 
-    void free()
-    {
-        if (useIpp)
-            return;
-        hal::dftFree1D(contextA);
-        hal::dftFree1D(contextB);
-    }
-
 protected:
 
-    void rowDft(uchar* src_data, int src_step, uchar* dst_data, int dst_step, bool isComplex, bool isLastStage)
+    void rowDft(const uchar* src_data, int src_step, uchar* dst_data, int dst_step, bool isComplex, bool isLastStage)
     {
         int len, count;
         if (width == 1 && !isRowTransform )
@@ -2909,7 +2901,7 @@ protected:
             if( needBufferA )
                 dptr = tmp_bufA;
 
-            hal::dft1D(contextA, sptr, dptr);
+            contextA->apply(sptr, dptr);
 
             if( needBufferA )
                 memcpy( dptr0, dptr + dptr_offset, dst_full_len );
@@ -2924,7 +2916,7 @@ protected:
             complementComplexOutput(depth, dst_data, dst_step, len, nz, 1);
     }
 
-    void colDft(uchar* src_data, int src_step, uchar* dst_data, int dst_step, int stage_src_channels, int stage_dst_channels, bool isLastStage)
+    void colDft(const uchar* src_data, int src_step, uchar* dst_data, int dst_step, int stage_src_channels, int stage_dst_channels, bool isLastStage)
     {
         int len = height;
         int count = width;
@@ -2983,8 +2975,8 @@ protected:
             }
 
             if( even )
-                hal::dft1D(contextB, buf1, dbuf1);
-            hal::dft1D(contextB, buf0, dbuf0);
+                contextB->apply(buf1, dbuf1);
+            contextB->apply(buf0, dbuf0);
 
             if( stage_dst_channels == 1 )
             {
@@ -3032,12 +3024,12 @@ protected:
             if( i+1 < b )
             {
                 CopyFrom2Columns( sptr0, src_step, buf0, buf1, len, complex_elem_size );
-                hal::dft1D(contextB, buf1, dbuf1);
+                contextB->apply(buf1, dbuf1);
             }
             else
                 CopyColumn( sptr0, src_step, buf0, complex_elem_size, len, complex_elem_size );
 
-            hal::dft1D(contextB, buf0, dbuf0);
+            contextB->apply(buf0, dbuf0);
 
             if( i+1 < b )
                 CopyTo2Columns( dbuf0, dbuf1, dptr0, dst_step, len, complex_elem_size );
@@ -3051,7 +3043,7 @@ protected:
     }
 };
 
-class OcvDftBasicImpl
+class OcvDftBasicImpl : public hal::DFT1D
 {
 public:
     OcvDftOptions opt;
@@ -3067,11 +3059,6 @@ public:
     OcvDftBasicImpl()
     {
         opt.factors = _factors;
-    }
-    OcvDftBasicImpl & operator=(const OcvDftBasicImpl & other)
-    {
-        this->opt = other.opt;
-        return *this;
     }
     void init(int len, int count, int depth, int flags, bool *needBuffer)
     {
@@ -3211,7 +3198,7 @@ public:
         }
     }
 
-    void run(const void * src, void * dst)
+    void apply(const uchar *src, uchar *dst)
     {
         opt.dft_func(opt, src, dst);
     }
@@ -3219,126 +3206,113 @@ public:
     void free() {}
 };
 
+struct ReplacementDFT1D : public hal::DFT1D
+{
+    cvhalDFT *context;
+    bool isInitialized;
+
+    ReplacementDFT1D() : context(0), isInitialized(false) {}
+    bool init(int len, int count, int depth, int flags, bool *needBuffer)
+    {
+        int res = cv_hal_dftInit1D(&context, len, count, depth, flags, needBuffer);
+        isInitialized = (res == CV_HAL_ERROR_OK);
+        return isInitialized;
+    }
+    void apply(const uchar *src, uchar *dst)
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dft1D, cv_hal_dft1D, context, src, dst);
+        }
+    }
+    ~ReplacementDFT1D()
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dftFree1D, cv_hal_dftFree1D, context);
+        }
+    }
+};
+
+struct ReplacementDFT2D : public hal::DFT2D
+{
+    cvhalDFT *context;
+    bool isInitialized;
+
+    ReplacementDFT2D() : context(0), isInitialized(false) {}
+    bool init(int width, int height, int depth,
+              int src_channels, int dst_channels,
+              int flags, int nonzero_rows)
+    {
+        int res = cv_hal_dftInit2D(&context, width, height, depth, src_channels, dst_channels, flags, nonzero_rows);
+        isInitialized = (res == CV_HAL_ERROR_OK);
+        return isInitialized;
+    }
+    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step)
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dft2D, cv_hal_dft2D, context, src, src_step, dst, dst_step);
+        }
+    }
+    ~ReplacementDFT2D()
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dftFree2D, cv_hal_dftFree1D, context);
+        }
+    }
+};
+
 namespace hal {
 
 //================== 1D ======================
 
-void dftInit1D(DftContext & context, int len, int count, int depth, int flags, bool *needBuffer)
+Ptr<DFT1D> DFT1D::create(int len, int count, int depth, int flags, bool *needBuffer)
 {
-    int res = cv_hal_dftInit1D(&context.impl, len, count, depth, flags, needBuffer);
-    if (res == CV_HAL_ERROR_OK)
     {
-        context.useReplacement = true;
-        return;
-    }
-
-    context.useReplacement = false;
-    OcvDftBasicImpl * c = (OcvDftBasicImpl*)context.impl;
-    if (!c)
-    {
-        c = new OcvDftBasicImpl();
-        context.impl = (void*)c;
-    }
-    c->init(len, count, depth, flags, needBuffer);
-}
-
-void dft1D(const DftContext & context, const void * src, void * dst)
-{
-    if (context.useReplacement)
-    {
-        int res = cv_hal_dft1D(context.impl, src, dst);
-        if (res != CV_HAL_ERROR_OK)
+        ReplacementDFT1D *impl = new ReplacementDFT1D();
+        if (impl->init(len, count, depth, flags, needBuffer))
         {
-            CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dftRun");
+            return Ptr<DFT1D>(impl);
         }
-        return;
+        delete impl;
     }
-    OcvDftBasicImpl * c = (OcvDftBasicImpl*)context.impl;
-    c->run(src, dst);
-}
-
-void dftFree1D(DftContext & context)
-{
-    if (context.useReplacement)
     {
-        int res = cv_hal_dftFree1D(context.impl);
-        if (res != CV_HAL_ERROR_OK)
-        {
-            CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dftFree");
-        }
-        return;
-    }
-
-    OcvDftBasicImpl * c = (OcvDftBasicImpl*)context.impl;
-    if (c)
-    {
-        c->free();
-        delete c;
-        context.impl = 0;
+        OcvDftBasicImpl *impl = new OcvDftBasicImpl();
+        impl->init(len, count, depth, flags, needBuffer);
+        return Ptr<DFT1D>(impl);
     }
 }
-
 
 //================== 2D ======================
 
-void dftInit2D(DftContext & c,
-             int _width, int _height, int _depth, int _src_channels, int _dst_channels,
-             int flags,
-             int _nonzero_rows)
+Ptr<DFT2D> DFT2D::create(int width, int height, int depth,
+                         int src_channels, int dst_channels,
+                         int flags, int nonzero_rows)
 {
-    int res = cv_hal_dftInit2D(&c.impl, _width, _height, _depth, _src_channels, _dst_channels, flags, _nonzero_rows);
-    if (res == CV_HAL_ERROR_OK)
     {
-        c.useReplacement = true;
-        return;
-    }
-    c.useReplacement = false;
-
-    if( _width == 1 && _nonzero_rows > 0 )
-        CV_Error( CV_StsNotImplemented,
-        "This mode (using nonzero_rows with a single-column matrix) breaks the function's logic, so it is prohibited.\n"
-        "For fast convolution/correlation use 2-column matrix or single-row matrix instead" );
-
-    OcvDftImpl * d = new OcvDftImpl();
-    d->init(_width, _height, _depth, _src_channels, _dst_channels, flags, _nonzero_rows);
-    c.impl = (void*)d;
-}
-
-void dft2D(const DftContext & c,
-         const void * src, int src_step, void * dst, int dst_step)
-{
-    if (c.useReplacement)
-    {
-        int res = cv_hal_dft2D(c.impl, (uchar*)src, src_step, (uchar*)dst, dst_step);
-        if (res != CV_HAL_ERROR_OK)
+        ReplacementDFT2D *impl = new ReplacementDFT2D();
+        if (impl->init(width, height, depth, src_channels, dst_channels, flags, nonzero_rows))
         {
-            CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dftRun2D");
+            return Ptr<DFT2D>(impl);
         }
-        return;
+        delete impl;
     }
-    OcvDftImpl * d = (OcvDftImpl*)c.impl;
-    d->run((uchar*)src, src_step, (uchar*)dst, dst_step);
-}
-
-void dftFree2D(DftContext & c)
-{
-    if (c.useReplacement)
     {
-        int res = cv_hal_dftFree2D(c.impl);
-        if (res != CV_HAL_ERROR_OK)
+        if(width == 1 && nonzero_rows > 0 )
         {
-            CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dftFree2D");
+            CV_Error( CV_StsNotImplemented,
+            "This mode (using nonzero_rows with a single-column matrix) breaks the function's logic, so it is prohibited.\n"
+            "For fast convolution/correlation use 2-column matrix or single-row matrix instead" );
         }
-        return;
+        OcvDftImpl *impl = new OcvDftImpl();
+        impl->init(width, height, depth, src_channels, dst_channels, flags, nonzero_rows);
+        return Ptr<DFT2D>(impl);
     }
-    OcvDftImpl * d = (OcvDftImpl*)c.impl;
-    d->free();
-    delete d;
-    c.impl = 0;
 }
 
 } // cv::hal::
-
 } // cv::
 
 
@@ -3382,10 +3356,8 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         f |= CV_HAL_DFT_SCALE;
     if (src.data == dst.data)
         f |= CV_HAL_DFT_IS_INPLACE;
-    hal::DftContext c;
-    hal::dftInit2D(c, src.cols, src.rows, depth, src.channels(), dst.channels(), f, nonzero_rows);
-    hal::dft2D(c, src.data, (int)src.step, dst.data, (int)dst.step);
-    hal::dftFree2D(c);
+    Ptr<hal::DFT2D> c = hal::DFT2D::create(src.cols, src.rows, depth, src.channels(), dst.channels(), f, nonzero_rows);
+    c->apply(src.data, src.step, dst.data, dst.step);
 }
 
 
@@ -3607,7 +3579,7 @@ namespace cv
    http://www.ece.utexas.edu/~bevans/courses/ee381k/lectures/09_DCT/lecture9/:
 */
 template<typename T> static void
-DCT( const OcvDftOptions & c, const T* src, int src_step, T* dft_src, T* dft_dst, T* dst, int dst_step,
+DCT( const OcvDftOptions & c, const T* src, size_t src_step, T* dft_src, T* dft_dst, T* dst, size_t dst_step,
      const Complex<T>* dct_wave )
 {
     static const T sin_45 = (T)0.70710678118654752440084436210485;
@@ -3650,7 +3622,7 @@ DCT( const OcvDftOptions & c, const T* src, int src_step, T* dft_src, T* dft_dst
 
 
 template<typename T> static void
-IDCT( const OcvDftOptions & c, const T* src, int src_step, T* dft_src, T* dft_dst, T* dst, int dst_step,
+IDCT( const OcvDftOptions & c, const T* src, size_t src_step, T* dft_src, T* dft_dst, T* dst, size_t dst_step,
       const Complex<T>* dct_wave)
 {
     static const T sin_45 = (T)0.70710678118654752440084436210485;
@@ -3768,29 +3740,29 @@ DCTInit( int n, int elem_size, void* _wave, int inv )
 }
 
 
-typedef void (*DCTFunc)(const OcvDftOptions & c, const void* src, int src_step, void* dft_src,
-                        void* dft_dst, void* dst, int dst_step, const void* dct_wave);
+typedef void (*DCTFunc)(const OcvDftOptions & c, const void* src, size_t src_step, void* dft_src,
+                        void* dft_dst, void* dst, size_t dst_step, const void* dct_wave);
 
-static void DCT_32f(const OcvDftOptions & c, const float* src, int src_step, float* dft_src, float* dft_dst,
-                    float* dst, int dst_step, const Complexf* dct_wave)
+static void DCT_32f(const OcvDftOptions & c, const float* src, size_t src_step, float* dft_src, float* dft_dst,
+                    float* dst, size_t dst_step, const Complexf* dct_wave)
 {
     DCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
 }
 
-static void IDCT_32f(const OcvDftOptions & c, const float* src, int src_step, float* dft_src, float* dft_dst,
-                    float* dst, int dst_step, const Complexf* dct_wave)
+static void IDCT_32f(const OcvDftOptions & c, const float* src, size_t src_step, float* dft_src, float* dft_dst,
+                    float* dst, size_t dst_step, const Complexf* dct_wave)
 {
     IDCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
 }
 
-static void DCT_64f(const OcvDftOptions & c, const double* src, int src_step, double* dft_src, double* dft_dst,
-                    double* dst, int dst_step, const Complexd* dct_wave)
+static void DCT_64f(const OcvDftOptions & c, const double* src, size_t src_step, double* dft_src, double* dft_dst,
+                    double* dst, size_t dst_step, const Complexd* dct_wave)
 {
     DCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
 }
 
-static void IDCT_64f(const OcvDftOptions & c, const double* src, int src_step, double* dft_src, double* dft_dst,
-                     double* dst, int dst_step, const Complexd* dct_wave)
+static void IDCT_64f(const OcvDftOptions & c, const double* src, size_t src_step, double* dft_src, double* dft_dst,
+                     double* dst, size_t dst_step, const Complexd* dct_wave)
 {
     IDCT(c, src, src_step, dft_src, dft_dst, dst, dst_step, dct_wave);
 }
@@ -4058,7 +4030,7 @@ static bool ippi_DCT_32f(const uchar * src, int src_step, uchar * dst, int dst_s
 
 namespace cv {
 
-class OcvDctImpl
+class OcvDctImpl : public hal::DCT2D
 {
 public:
     OcvDftOptions opt;
@@ -4110,7 +4082,7 @@ public:
             end_stage = 1;
         }
     }
-    void run(uchar * src, int src_step, uchar * dst, int dst_step)
+    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step)
     {
         CV_IPP_RUN(IPP_VERSION_X100 >= 700 && depth == CV_32F, ippi_DCT_32f(src, src_step, dst, dst_step, width, height, isInverse, isRowTransform))
 
@@ -4183,69 +4155,65 @@ public:
                 prev_len = len;
             }
             // otherwise reuse the tables calculated on the previous stage
-            for(int i = 0; i < count; i++ )
+            for(unsigned i = 0; i < static_cast<unsigned>(count); i++ )
             {
-                dct_func( opt, sptr + i*sstep0, (int)sstep1, src_dft_buf, dst_dft_buf,
-                          dptr + i*dstep0, (int)dstep1, dct_wave);
+                dct_func( opt, sptr + i*sstep0, sstep1, src_dft_buf, dst_dft_buf,
+                          dptr + i*dstep0, dstep1, dct_wave);
             }
             src = dst;
             src_step = dst_step;
         }
-
     }
-    void free() {}
+};
+
+struct ReplacementDCT2D : public hal::DCT2D
+{
+    cvhalDFT *context;
+    bool isInitialized;
+
+    ReplacementDCT2D() : context(0), isInitialized(false) {}
+    bool init(int width, int height, int depth, int flags)
+    {
+        int res = hal_ni_dctInit2D(&context, width, height, depth, flags);
+        isInitialized = (res == CV_HAL_ERROR_OK);
+        return isInitialized;
+    }
+    void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step)
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dct2D, cv_hal_dct2D, context, src_data, src_step, dst_data, dst_step);
+        }
+    }
+    ~ReplacementDCT2D()
+    {
+        if (isInitialized)
+        {
+            CALL_HAL(dctFree2D, cv_hal_dctFree2D, context);
+        }
+    }
 };
 
 namespace hal {
 
-void dctInit2D(DftContext & c, int width, int height, int depth, int flags)
+Ptr<DCT2D> DCT2D::create(int width, int height, int depth, int flags)
 {
-    int res = cv_hal_dctInit2D(&c.impl, width, height, depth, flags);
-    if (res == CV_HAL_ERROR_OK)
     {
-        c.useReplacement = true;
-        return;
-    }
-    c.useReplacement = false;
-    OcvDctImpl * impl = new OcvDctImpl();
-    impl->init(width, height, depth, flags);
-    c.impl = impl;
-}
-
-void dct2D(const DftContext & c, const void * src, int src_step, void * dst, int dst_step)
-{
-    if (c.useReplacement)
-    {
-        int res = cv_hal_dct2D(c.impl, src, src_step, dst, dst_step);
-        if (res != CV_HAL_ERROR_OK)
+        ReplacementDCT2D *impl = new ReplacementDCT2D();
+        if (impl->init(width, height, depth, flags))
         {
-            CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dctRun");
+            return Ptr<DCT2D>(impl);
         }
-        return;
+        delete impl;
     }
-    OcvDctImpl * impl = (OcvDctImpl*)c.impl;
-    impl->run((uchar*)src, src_step, (uchar*)dst, dst_step);
-}
-
-void dctFree2D(DftContext & c)
-{
-    if (c.useReplacement)
     {
-        int res = cv_hal_dctFree2D(c.impl);
-        if (res != CV_HAL_ERROR_OK)
-        {
-            CV_Error( CV_StsNotImplemented, "Custom HAL implementation failed to call dctFree");
-        }
-        return;
+        OcvDctImpl *impl = new OcvDctImpl();
+        impl->init(width, height, depth, flags);
+        return Ptr<DCT2D>(impl);
     }
-    OcvDctImpl * impl = (OcvDctImpl*)c.impl;
-    impl->free();
-    delete impl;
-    c.impl = 0;
 }
 
 } // cv::hal::
-
 } // cv::
 
 void cv::dct( InputArray _src0, OutputArray _dst, int flags )
@@ -4265,10 +4233,8 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     if (src.isContinuous() && dst.isContinuous())
         f |= CV_HAL_DFT_IS_CONTINUOUS;
 
-    hal::DftContext c;
-    hal::dctInit2D(c, src.cols, src.rows, depth, f);
-    hal::dct2D(c, (void*)src.data, (int)src.step, (void*)dst.data, (int)dst.step);
-    hal::dctFree2D(c);
+    Ptr<hal::DCT2D> c = hal::DCT2D::create(src.cols, src.rows, depth, f);
+    c->apply(src.data, src.step, dst.data, dst.step);
 }
 
 
