@@ -1130,6 +1130,23 @@ void operator >> (const FileNode& n, std::vector<_Tp>& vec)
     it >> vec;
 }
 
+/** @brief Reads KeyPoint from a file storage.
+*/
+//It needs special handling because it contains two types of fields, int & float.
+static inline
+void operator >> (const FileNode& n, std::vector<KeyPoint>& vec)
+{
+    read(n, vec);
+}
+/** @brief Reads DMatch from a file storage.
+*/
+//It needs special handling because it contains two types of fields, int & float.
+static inline
+void operator >> (const FileNode& n, std::vector<DMatch>& vec)
+{
+    read(n, vec);
+}
+
 //! @} FileNode
 
 //! @relates cv::FileNodeIterator
