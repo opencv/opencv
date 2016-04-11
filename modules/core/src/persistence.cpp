@@ -5217,7 +5217,7 @@ FileStorage& operator << (FileStorage& fs, const String& str)
     }
     else if( fs.state == NAME_EXPECTED + INSIDE_MAP )
     {
-        if( !cv_isalpha(*_str) )
+        if (!cv_isalpha(*_str) && *_str != '_')
             CV_Error_( CV_StsError, ("Incorrect element name %s", _str) );
         fs.elname = str;
         fs.state = VALUE_EXPECTED + INSIDE_MAP;
