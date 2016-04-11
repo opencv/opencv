@@ -566,3 +566,14 @@ TEST(Core_InputOutput, FileStorage)
     sprintf(arr, "sprintf is hell %d", 666);
     EXPECT_NO_THROW(f << arr);
 }
+
+TEST(Core_InputOutput, FileStorageKey)
+{
+    cv::FileStorage f("dummy.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+
+    EXPECT_NO_THROW(f << "key1" << "value1");
+    EXPECT_NO_THROW(f << "_key2" << "value2");
+    EXPECT_NO_THROW(f << "key_3" << "value3");
+    const std::string expected = "%YAML:1.0\nkey1: value1\n_key2: value2\nkey_3: value3\n";
+    ASSERT_STREQ(f.releaseAndGetString().c_str(), expected.c_str());
+}
