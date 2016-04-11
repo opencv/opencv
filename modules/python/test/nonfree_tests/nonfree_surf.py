@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 import cv2.cv as cv
 
-from test import OpenCVTests
+from tests_common import OpenCVTests
 
 class NonFreeFunctionTests(OpenCVTests):
 
