@@ -270,12 +270,12 @@ struct CvCaptureCAM_V4L : public CvCapture
     int deviceHandle;
     int bufferIndex;
     int FirstCapture;
+    String deviceName;
 
     char *memoryMap;
     IplImage frame;
 
    __u32 palette;
-   int index;
    int width, height;
    __u32 fps;
    bool convert_rgb;
@@ -298,6 +298,7 @@ struct CvCaptureCAM_V4L : public CvCapture
    Range focus, brightness, contrast, saturation, hue, gain, exposure;
 
    bool open(int _index);
+   bool open(const char* deviceName);
 
    virtual double getProperty(int) const;
    virtual bool setProperty(int, double);
@@ -392,7 +393,7 @@ static bool try_palette_v4l2(CvCaptureCAM_V4L* capture)
   return capture->palette == capture->form.fmt.pix.pixelformat;
 }
 
-static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
+static int try_init_v4l2(CvCaptureCAM_V4L* capture, const char *deviceName)
 {
   // Test device for V4L2 compability
   // Return value:
@@ -600,10 +601,7 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
 
 static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
 {
-   char deviceName[MAX_DEVICE_DRIVER_NAME];
-   /* Print the CameraNumber at the end of the string with a width of one character */
-   sprintf(deviceName, "/dev/video%1d", capture->index);
-
+   const char* deviceName = capture->deviceName.c_str();
    if (try_init_v4l2(capture, deviceName) != 1) {
        /* init of the v4l2 device is not OK */
        return -1;
@@ -761,17 +759,16 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
  * this also causes buffers to be reallocated if the frame size was changed.
  */
 static bool v4l2_reset( CvCaptureCAM_V4L* capture) {
-    int index = capture->index;
+    String deviceName = capture->deviceName;
     icvCloseCAM_V4L(capture);
-    capture->index = index;
+    capture->deviceName = deviceName;
     return _capture_V4L2(capture) == 1;
 }
 
 bool CvCaptureCAM_V4L::open(int _index)
 {
    int autoindex = 0;
-
-   index = -1; // set the capture to closed state
+   char _deviceName[MAX_DEVICE_DRIVER_NAME];
 
    if (!numCameras)
       icvInitCapture_V4L(); /* Havent called icvInitCapture yet - do it now! */
@@ -796,14 +793,21 @@ bool CvCaptureCAM_V4L::open(int _index)
      autoindex++;// i can recall icvOpenCAM_V4l with index=-1 for next camera
    }
 
-   index = _index;
-   FirstCapture = 1;
-   width = DEFAULT_V4L_WIDTH;
-   height = DEFAULT_V4L_HEIGHT;
-   fps = DEFAULT_V4L_FPS;
-   convert_rgb = true;
+   /* Print the CameraNumber at the end of the string with a width of one character */
+   sprintf(_deviceName, "/dev/video%1d", _index);
+   return open(_deviceName);
+}
 
-   return _capture_V4L2(this) == 1;
+bool CvCaptureCAM_V4L::open(const char* _deviceName)
+{
+    FirstCapture = 1;
+    width = DEFAULT_V4L_WIDTH;
+    height = DEFAULT_V4L_HEIGHT;
+    fps = DEFAULT_V4L_FPS;
+    convert_rgb = true;
+    deviceName = _deviceName;
+
+    return _capture_V4L2(this) == 1;
 }
 
 static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
@@ -1758,7 +1762,7 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
    /* Deallocate space - Hopefully, no leaks */
 
-   if (capture->index > -1)
+   if (!capture->deviceName.empty())
    {
        if (capture->deviceHandle != -1)
        {
@@ -1787,7 +1791,7 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
      if (capture->frame.imageData)
          cvFree(&capture->frame.imageData);
 
-     capture->index = -1; // flag that the capture is closed
+     capture->deviceName.clear(); // flag that the capture is closed
    }
 };
 
@@ -1818,6 +1822,17 @@ CvCapture* cvCreateCameraCapture_V4L( int index )
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
     if(capture->open(index))
+        return capture;
+
+    delete capture;
+    return NULL;
+}
+
+CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
+{
+    cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
+
+    if(capture->open( deviceName ))
         return capture;
 
     delete capture;
