@@ -2037,6 +2037,7 @@ public:
         if( !isTrained() )
             CV_Error( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
+        writeFormat(fs);
         write_params( fs );
 
         fs << "var_count" << var_count;

@@ -364,6 +364,7 @@ void SVMSGDImpl::write(FileStorage& fs) const
     if( !isTrained() )
         CV_Error( CV_StsParseError, "SVMSGD model data is invalid, it hasn't been trained" );
 
+    writeFormat(fs);
     writeParams( fs );
 
     fs << "weights" << weights_;
