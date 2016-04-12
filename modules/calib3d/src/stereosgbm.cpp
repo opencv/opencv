@@ -99,7 +99,7 @@ StereoSGBM::~StereoSGBM()
 }
 
 /*
- For each pixel row1[x], max(-maxD, 0) <= minX <= x < maxX <= width - max(0, -minD),
+ For each pixel row1[x], max(-maxD, 0) <= minX <= x < maxX <= width - max(0, minD),
  and for each disparity minD<=d<maxD the function
  computes the cost (cost[(x-minX)*(maxD - minD) + (d - minD)]), depending on the difference between
  row1[x] and row2[x-d]. The subpixel algorithm from
