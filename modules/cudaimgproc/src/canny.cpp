@@ -93,6 +93,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
+            writeFormat(fs);
             fs << "name" << "Canny_CUDA"
             << "low_thresh" << low_thresh_
             << "high_thresh" << high_thresh_
