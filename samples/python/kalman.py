@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """
    Tracking of rotating point.
    Rotation speed is constant.
@@ -19,7 +19,7 @@ if PY3:
     long = int
 
 import cv2
-from math import cos, sin
+from math import cos, sin, sqrt
 import numpy as np
 
 if __name__ == "__main__":
@@ -81,16 +81,16 @@ if __name__ == "__main__":
 
             kalman.correct(measurement)
 
-            process_noise = kalman.processNoiseCov * np.random.randn(2, 1)
+            process_noise = sqrt(kalman.processNoiseCov[0,0]) * np.random.randn(2, 1)
             state = np.dot(kalman.transitionMatrix, state) + process_noise
 
             cv2.imshow("Kalman", img)
 
-            code = cv2.waitKey(100) % 0x100
+            code = cv2.waitKey(100)
             if code != -1:
                 break
 
-        if code in [27, ord('q'), ord('Q')]:
+        if (code % 0x100) in [27, ord('q'), ord('Q')]:
             break
 
     cv2.destroyWindow("Kalman")
