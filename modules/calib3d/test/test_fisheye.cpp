@@ -570,6 +570,48 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     EXPECT_MAT_NEAR(theT, T_correct, 1e-10);
 }
 
+TEST_F(fisheyeTest, CalibrationWithDifferentPointsNumber)
+{
+  const int n_images = 2;
+
+  std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
+  std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
+
+  std::vector<cv::Point2d> imgPoints1(10);
+  std::vector<cv::Point2d> imgPoints2(15);
+
+  std::vector<cv::Point3d> objectPoints1(imgPoints1.size());
+  std::vector<cv::Point3d> objectPoints2(imgPoints2.size());
+
+  for (size_t i = 0; i < imgPoints1.size(); i++)
+  {
+    imgPoints1[i] = cv::Point2d((double)i, (double)i);
+    objectPoints1[i] = cv::Point3d((double)i, (double)i, 10.0);
+  }
+
+  for (size_t i = 0; i < imgPoints2.size(); i++)
+  {
+    imgPoints2[i] = cv::Point2d(i + 0.5, i + 0.5);
+    objectPoints2[i] = cv::Point3d(i + 0.5, i + 0.5, 10.0);
+  }
+
+  imagePoints[0] = imgPoints1;
+  imagePoints[1] = imgPoints2;
+  objectPoints[0] = objectPoints1;
+  objectPoints[1] = objectPoints2;
+
+  cv::Matx33d theK = cv::Matx33d::eye();
+  cv::Vec4d theD;
+
+  int flag = 0;
+  flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
+  flag |= cv::fisheye::CALIB_USE_INTRINSIC_GUESS;
+  flag |= cv::fisheye::CALIB_FIX_SKEW;
+
+  cv::fisheye::calibrate(objectPoints, imagePoints, cv::Size(100, 100), theK, theD,
+    cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///  fisheyeTest::
 
