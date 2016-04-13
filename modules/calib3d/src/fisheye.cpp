@@ -1455,7 +1455,7 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     int total_ex = 0;
     for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
     {
-        total_ex += objectPoints.getMat(image_idx).total();
+        total_ex += (int)objectPoints.getMat(image_idx).total();
     }
     Mat ex(total_ex, 1, CV_64FC2);
     int insert_idx = 0;
