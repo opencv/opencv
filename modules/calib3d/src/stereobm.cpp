@@ -344,7 +344,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     {
         hsad = hsad0 - dy0*ndisp; cbuf = cbuf0 + (x + wsz2 + 1)*cstep - dy0*ndisp;
         lptr = lptr0 + MIN(MAX(x, -lofs), width-lofs-1) - dy0*sstep;
-        rptr = rptr0 + MIN(MAX(x, -rofs), width-rofs-1) - dy0*sstep;
+        rptr = rptr0 + MIN(MAX(x, -rofs), width-rofs-ndisp) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, hsad += ndisp, cbuf += ndisp, lptr += sstep, rptr += sstep )
         {
@@ -385,7 +385,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
         hsad = hsad0 - dy0*ndisp;
         lptr_sub = lptr0 + MIN(MAX(x0, -lofs), width-1-lofs) - dy0*sstep;
         lptr = lptr0 + MIN(MAX(x1, -lofs), width-1-lofs) - dy0*sstep;
-        rptr = rptr0 + MIN(MAX(x1, -rofs), width-1-rofs) - dy0*sstep;
+        rptr = rptr0 + MIN(MAX(x1, -rofs), width-ndisp-rofs) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, cbuf += ndisp, cbuf_sub += ndisp,
              hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
@@ -610,7 +610,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     {
         hsad = hsad0 - dy0*ndisp; cbuf = cbuf0 + (x + wsz2 + 1)*cstep - dy0*ndisp;
         lptr = lptr0 + std::min(std::max(x, -lofs), width-lofs-1) - dy0*sstep;
-        rptr = rptr0 + std::min(std::max(x, -rofs), width-rofs-1) - dy0*sstep;
+        rptr = rptr0 + std::min(std::max(x, -rofs), width-rofs-ndisp) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, hsad += ndisp, cbuf += ndisp, lptr += sstep, rptr += sstep )
         {
@@ -661,7 +661,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         hsad = hsad0 - dy0*ndisp;
         lptr_sub = lptr0 + MIN(MAX(x0, -lofs), width-1-lofs) - dy0*sstep;
         lptr = lptr0 + MIN(MAX(x1, -lofs), width-1-lofs) - dy0*sstep;
-        rptr = rptr0 + MIN(MAX(x1, -rofs), width-1-rofs) - dy0*sstep;
+        rptr = rptr0 + MIN(MAX(x1, -rofs), width-ndisp-rofs) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, cbuf += ndisp, cbuf_sub += ndisp,
              hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
