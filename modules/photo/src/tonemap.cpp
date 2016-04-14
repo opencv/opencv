@@ -83,6 +83,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma;
     }
@@ -161,6 +162,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "bias" << bias
@@ -242,6 +244,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "contrast" << contrast
@@ -339,6 +342,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "intensity" << intensity
@@ -446,6 +450,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "scale" << scale

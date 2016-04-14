@@ -847,7 +847,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             duration = -1;
         }
 
-        GstPad* pad = gst_element_get_static_pad(color, "src");
+        GstPad* pad = gst_element_get_static_pad(sink, "sink");
 #if GST_VERSION_MAJOR == 0
         GstCaps* buffer_caps = gst_pad_get_caps(pad);
 #else
@@ -1414,7 +1414,19 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         g_object_set(G_OBJECT(file), "location", filename, NULL);
     }
 
-    if (is_color)
+    if (fourcc == CV_FOURCC('M','J','P','G') && frameSize.height == 1)
+    {
+        input_pix_fmt = GST_VIDEO_FORMAT_ENCODED;
+#if GST_VERSION_MAJOR > 0
+        caps = gst_caps_new_simple("image/jpeg",
+                                   "framerate", GST_TYPE_FRACTION, int(fps), 1,
+                                   NULL);
+        caps = gst_caps_fixate(caps);
+#else
+        CV_ERROR( CV_StsUnsupportedFormat, "Gstreamer 0.10 Opencv backend does not support writing encoded MJPEG data.");
+#endif
+    }
+    else if(is_color)
     {
         input_pix_fmt = GST_VIDEO_FORMAT_BGR;
         bufsize = frameSize.width * frameSize.height * 3;
@@ -1575,7 +1587,12 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
 
     handleMessage(pipeline);
 
-    if (input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
+    if (input_pix_fmt == GST_VIDEO_FORMAT_ENCODED) {
+        if (image->nChannels != 1 || image->depth != IPL_DEPTH_8U || image->height != 1) {
+            CV_ERROR(CV_StsUnsupportedFormat, "cvWriteFrame() needs images with depth = IPL_DEPTH_8U, nChannels = 1 and height = 1.");
+        }
+    }
+    else if(input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
         if (image->nChannels != 3 || image->depth != IPL_DEPTH_8U) {
             CV_ERROR(CV_StsUnsupportedFormat, "cvWriteFrame() needs images with depth = IPL_DEPTH_8U and nChannels = 3.");
         }

@@ -350,6 +350,7 @@ typedef struct CvCaptureCAM_V4L
 }
 CvCaptureCAM_V4L;
 
+static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (const char* deviceName);
 static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture );
 
 static int icvGrabFrameCAM_V4L( CvCaptureCAM_V4L* capture );
@@ -416,7 +417,7 @@ static void icvInitCapture_V4L() {
 }; /* End icvInitCapture_V4L */
 
 
-static int try_init_v4l(CvCaptureCAM_V4L* capture, char *deviceName)
+static int try_init_v4l(CvCaptureCAM_V4L* capture, const char *deviceName)
 
 {
 
@@ -460,7 +461,7 @@ static int try_init_v4l(CvCaptureCAM_V4L* capture, char *deviceName)
 }
 
 
-static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
+static int try_init_v4l2(CvCaptureCAM_V4L* capture, const char *deviceName)
 {
 
   // if detect = -1 then unable to open device
@@ -662,7 +663,7 @@ static inline int channels_for_mode(int mode)
     }
 }
 
-static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
+static int _capture_V4L2 (CvCaptureCAM_V4L *capture, const char *deviceName)
 {
    int detect_v4l2 = 0;
 
@@ -870,7 +871,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
 }; /* End _capture_V4L2 */
 
 
-static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
+static int _capture_V4L (CvCaptureCAM_V4L *capture, const char *deviceName)
 {
    int detect_v4l = 0;
 
@@ -1041,17 +1042,6 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
      fprintf( stderr, "VIDEOIO ERROR: V4L: index %d is not correct!\n",index);
      return NULL; /* Did someone ask for not correct video source number? */
    }
-   /* Allocate memory for this humongus CvCaptureCAM_V4L structure that contains ALL
-      the handles for V4L processing */
-   CvCaptureCAM_V4L * capture = (CvCaptureCAM_V4L*)cvAlloc(sizeof(CvCaptureCAM_V4L));
-   if (!capture) {
-      fprintf( stderr, "VIDEOIO ERROR: V4L: Could not allocate memory for capture process.\n");
-      return NULL;
-   }
-
-#ifdef USE_TEMP_BUFFER
-   capture->buffers[MAX_V4L_BUFFERS].start = NULL;
-#endif
 
    /* Select camera, or rather, V4L video source */
    if (index<0) { // Asking for the first device available
@@ -1065,9 +1055,26 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
    }
    /* Print the CameraNumber at the end of the string with a width of one character */
    sprintf(deviceName, "/dev/video%1d", index);
+   return icvCaptureFromCAM_V4L(deviceName);
+}
+
+static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (const char* deviceName)
+{
+   /* Allocate memory for this humongus CvCaptureCAM_V4L structure that contains ALL
+      the handles for V4L processing */
+   CvCaptureCAM_V4L * capture = (CvCaptureCAM_V4L*)cvAlloc(sizeof(CvCaptureCAM_V4L));
+   if (!capture) {
+      fprintf( stderr, "VIDEOIO ERROR: V4L: Could not allocate memory for capture process.\n");
+      return NULL;
+   }
+
+#ifdef USE_TEMP_BUFFER
+   capture->buffers[MAX_V4L_BUFFERS].start = NULL;
+#endif
 
    /* w/o memset some parts  arent initialized - AKA: Fill it with zeros so it is clean */
    memset(capture,0,sizeof(CvCaptureCAM_V4L));
+
    /* Present the routines needed for V4L funtionality.  They are inserted as part of
       the standard set of cv calls promoting transparency.  "Vector Table" insertion. */
    capture->FirstCapture = 1;
@@ -1909,6 +1916,7 @@ public:
     virtual ~CvCaptureCAM_V4L_CPP() { close(); }
 
     virtual bool open( int index );
+    virtual bool open( const char* deviceName );
     virtual void close();
 
     virtual double getProperty(int) const;
@@ -1924,6 +1932,13 @@ bool CvCaptureCAM_V4L_CPP::open( int index )
 {
     close();
     captureV4L = icvCaptureFromCAM_V4L(index);
+    return captureV4L != 0;
+}
+
+bool CvCaptureCAM_V4L_CPP::open( const char* deviceName )
+{
+    close();
+    captureV4L = icvCaptureFromCAM_V4L(deviceName);
     return captureV4L != 0;
 }
 
@@ -1961,6 +1976,17 @@ CvCapture* cvCreateCameraCapture_V4L( int index )
     CvCaptureCAM_V4L_CPP* capture = new CvCaptureCAM_V4L_CPP;
 
     if( capture->open( index ))
+        return (CvCapture*)capture;
+
+    delete capture;
+    return 0;
+}
+
+CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
+{
+    CvCaptureCAM_V4L_CPP* capture = new CvCaptureCAM_V4L_CPP;
+
+    if( capture->open( deviceName ))
         return (CvCapture*)capture;
 
     delete capture;

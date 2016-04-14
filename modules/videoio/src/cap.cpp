@@ -292,6 +292,11 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
             result = cvCreateFileCapture_VFW (filename);
         if (apiPreference) break;
 #endif
+#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+        if (!result)
+            result = cvCreateCameraCapture_V4L(filename);
+        if (apiPreference) break;
+#endif
 
     case CV_CAP_MSMF:
 #ifdef HAVE_MSMF

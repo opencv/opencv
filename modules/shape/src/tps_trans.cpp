@@ -81,6 +81,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "regularization" << regularizationParameter;
     }

@@ -159,6 +159,7 @@ namespace cv
 
         void write(FileStorage& fs) const
         {
+            writeFormat(fs);
             fs << "extended" << (int)extended;
             fs << "upright" << (int)upright;
             fs << "threshold" << threshold;

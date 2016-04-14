@@ -432,8 +432,15 @@ public:
                     double* data = sums.ptr<double>(i);
                     for( j = 0; j < cols; j++ )
                     {
-                        double t = scale2*(1. - data[j])/(1. + data[j]);
-                        data[j] = t;
+                        if(!cvIsInf(data[j]))
+                        {
+                            double t = scale2*(1. - data[j])/(1. + data[j]);
+                            data[j] = t;
+                        }
+                        else
+                        {
+                            data[j] = -scale2;
+                        }
                     }
                 }
                 break;
@@ -1151,6 +1158,7 @@ public:
             return;
         int i, l_count = layer_count();
 
+        writeFormat(fs);
         fs << "layer_sizes" << layer_sizes;
 
         write_params( fs );
