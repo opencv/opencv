@@ -86,7 +86,9 @@ function(ocv_include_directories)
   set(__add_before "")
   foreach(dir ${ARGN})
     get_filename_component(__abs_dir "${dir}" ABSOLUTE)
-    if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}" OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}")
+    if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}"
+        OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}"
+        OR (OPENCV_EXTRA_MODULES_PATH AND "${__abs_dir}" MATCHES "^${OPENCV_EXTRA_MODULES_PATH}"))
       list(APPEND __add_before "${dir}")
     else()
       include_directories(AFTER SYSTEM "${dir}")
@@ -101,7 +103,9 @@ function(ocv_target_include_directories target)
   set(__params "")
   foreach(dir ${ARGN})
     get_filename_component(__abs_dir "${dir}" ABSOLUTE)
-    if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}" OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}")
+    if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}"
+        OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}"
+        OR (OPENCV_EXTRA_MODULES_PATH AND "${__abs_dir}" MATCHES "^${OPENCV_EXTRA_MODULES_PATH}"))
       list(APPEND __params "${__abs_dir}")
     else()
       list(APPEND __params "${dir}")
