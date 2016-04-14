@@ -1416,8 +1416,8 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
 
     if (fourcc == CV_FOURCC('M','J','P','G') && frameSize.height == 1)
     {
-        input_pix_fmt = GST_VIDEO_FORMAT_ENCODED;
 #if GST_VERSION_MAJOR > 0
+        input_pix_fmt = GST_VIDEO_FORMAT_ENCODED;
         caps = gst_caps_new_simple("image/jpeg",
                                    "framerate", GST_TYPE_FRACTION, int(fps), 1,
                                    NULL);
@@ -1587,12 +1587,15 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
 
     handleMessage(pipeline);
 
+#if GST_VERSION_MAJOR > 0
     if (input_pix_fmt == GST_VIDEO_FORMAT_ENCODED) {
         if (image->nChannels != 1 || image->depth != IPL_DEPTH_8U || image->height != 1) {
             CV_ERROR(CV_StsUnsupportedFormat, "cvWriteFrame() needs images with depth = IPL_DEPTH_8U, nChannels = 1 and height = 1.");
         }
     }
-    else if(input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
+    else
+#endif
+    if(input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
         if (image->nChannels != 3 || image->depth != IPL_DEPTH_8U) {
             CV_ERROR(CV_StsUnsupportedFormat, "cvWriteFrame() needs images with depth = IPL_DEPTH_8U and nChannels = 3.");
         }
