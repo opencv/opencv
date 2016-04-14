@@ -300,7 +300,7 @@ typedef struct ImplData
     {
         std::vector<cv::String> out;
 
-        for(int i = 0; i < implCode.size(); i++)
+        for(int i = 0; i < (int)implCode.size(); i++)
         {
             if(impl == implCode[i])
                 out.push_back(funName[i]);
@@ -314,10 +314,10 @@ typedef struct ImplData
         std::vector<int> savedCode;
         std::vector<cv::String> savedName;
 
-        for(int i = 0; i < implCode.size(); i++)
+        for(int i = 0; i < (int)implCode.size(); i++)
         {
             bool match = false;
-            for(int j = 0; j < savedCode.size(); j++)
+            for(int j = 0; j < (int)savedCode.size(); j++)
             {
                 if(implCode[i] == savedCode[j] && !funName[i].compare(savedName[j]))
                 {
