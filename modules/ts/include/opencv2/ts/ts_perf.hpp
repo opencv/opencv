@@ -369,7 +369,12 @@ public:
     static enum PERF_STRATEGY getCurrentModulePerformanceStrategy();
     static enum PERF_STRATEGY setModulePerformanceStrategy(enum PERF_STRATEGY strategy);
 
-    class PerfSkipTestException: public cv::Exception {};
+    class PerfSkipTestException: public cv::Exception
+    {
+        int dummy; // workaround for MacOSX Xcode 7.3 bug (don't make class "empty")
+    public:
+        PerfSkipTestException() : dummy(0) {}
+    };
 
 protected:
     virtual void PerfTestBody() = 0;
