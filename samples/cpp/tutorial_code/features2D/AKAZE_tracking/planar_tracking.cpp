@@ -57,7 +57,7 @@ void Tracker::setFirstFrame(const Mat frame, vector<Point2f> bb, string title, S
     drawBoundingBox(first_frame, bb);
     putText(first_frame, title, Point(0, 60), FONT_HERSHEY_PLAIN, 5, Scalar::all(0), 4);
     object_bb = bb;
-    delete ptMask;
+    delete[] ptMask;
 }
 
 Mat Tracker::process(const Mat frame, Stats& stats)
