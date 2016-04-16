@@ -502,7 +502,7 @@ bool  Jpeg2KEncoder::writeComponent16u( void *__img, const Mat& _img )
 
     for( int y = 0; y < h; y++ )
     {
-        uchar* data = _img.data + _img.step*y;
+        const ushort* data = _img.ptr<ushort>(y);
         for( int i = 0; i < ncmpts; i++ )
         {
             for( int x = 0; x < w; x++)
