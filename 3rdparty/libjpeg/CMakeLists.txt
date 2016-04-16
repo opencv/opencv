@@ -26,7 +26,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align -Wshadow -Wunused)
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
+ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wshift-negative-value) # clang
 
 set_target_properties(${JPEG_LIBRARY}
   PROPERTIES OUTPUT_NAME ${JPEG_LIBRARY}
