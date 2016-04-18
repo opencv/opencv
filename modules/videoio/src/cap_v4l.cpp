@@ -323,6 +323,8 @@ struct CvCaptureCAM_V4L : public CvCapture
            return focus;
        case CV_CAP_PROP_AUTOFOCUS:
            return Range(0, 1);
+       case CV_CAP_PROP_AUTO_EXPOSURE:
+           return Range(0, 4);
        default:
            return Range(0, 255);
        }
@@ -513,7 +515,7 @@ static void v4l2_control_range(CvCaptureCAM_V4L* cap, __u32 id)
     case V4L2_CID_GAIN:
         cap->gain = range;
         break;
-    case V4L2_CID_EXPOSURE:
+    case V4L2_CID_EXPOSURE_ABSOLUTE:
         cap->exposure = range;
         break;
     case V4L2_CID_FOCUS_ABSOLUTE:
@@ -1561,8 +1563,10 @@ static inline __u32 capPropertyToV4L2(int prop) {
         return V4L2_CID_HUE;
     case CV_CAP_PROP_GAIN:
         return V4L2_CID_GAIN;
+    case CV_CAP_PROP_AUTO_EXPOSURE:
+        return V4L2_CID_EXPOSURE_AUTO;
     case CV_CAP_PROP_EXPOSURE:
-        return V4L2_CID_EXPOSURE;
+        return V4L2_CID_EXPOSURE_ABSOLUTE;
     case CV_CAP_PROP_AUTOFOCUS:
         return V4L2_CID_FOCUS_AUTO;
     case CV_CAP_PROP_FOCUS:
@@ -1649,6 +1653,9 @@ static double icvGetPropertyCAM_V4L (const CvCaptureCAM_V4L* capture,
           case CV_CAP_PROP_GAIN:
               fprintf (stderr, "Gain");
               break;
+          case CV_CAP_PROP_AUTO_EXPOSURE:
+              fprintf (stderr, "Auto Exposure");
+              break;
           case CV_CAP_PROP_EXPOSURE:
               fprintf (stderr, "Exposure");
               break;
@@ -1706,6 +1713,13 @@ static bool icvSetControl (CvCaptureCAM_V4L* capture,
     if (-1 == ioctl(capture->deviceHandle, VIDIOC_S_CTRL, &control) && errno != ERANGE) {
         perror ("VIDIOC_S_CTRL");
         return false;
+    }
+
+    if(control.id == V4L2_CID_EXPOSURE_AUTO && control.value == V4L2_EXPOSURE_MANUAL) {
+        // update the control range for expose after disabling autoexposure
+        // as it is not read correctly at startup
+        // TODO check this again as it might be fixed with Linux 4.5
+        v4l2_control_range(capture, V4L2_CID_EXPOSURE_ABSOLUTE);
     }
 
     /* all was OK */
