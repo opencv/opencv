@@ -6595,10 +6595,111 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
 void cv::logPolar( InputArray _src, OutputArray _dst,
                    Point2f center, double M, int flags )
 {
-    Mat src = _src.getMat();
-    _dst.create( src.size(), src.type() );
-    CvMat c_src = src, c_dst = _dst.getMat();
-    cvLogPolar( &c_src, &c_dst, center, M, flags );
+    Mat src_with_border; // don't scope this variable (it holds image data)
+
+    Mat mapx, mapy;
+
+    Mat srcstub, src = _src.getMat();
+    _dst.create(src.size(), src.type());
+    Size dsize = src.size();
+
+    if (M <= 0)
+        CV_Error(CV_StsOutOfRange, "M should be >0");
+
+
+    mapx.create(dsize, CV_32F);
+    mapy.create(dsize, CV_32F);
+
+    if (!(flags & CV_WARP_INVERSE_MAP))
+    {
+        int phi, rho;
+        cv::AutoBuffer<double> _exp_tab(dsize.width);
+        double* exp_tab = _exp_tab;
+
+        for (rho = 0; rho < dsize.width; rho++)
+            exp_tab[rho] = std::exp(rho / M) - 1.0;
+
+        for (phi = 0; phi < dsize.height; phi++)
+        {
+            double cp = cos(phi * 2 * CV_PI / dsize.height);
+            double sp = sin(phi * 2 * CV_PI / dsize.height);
+            float* mx = (float*)(mapx.data + phi*mapx.step);
+            float* my = (float*)(mapy.data + phi*mapy.step);
+
+            for (rho = 0; rho < dsize.width; rho++)
+            {
+                double r = exp_tab[rho];
+                double x = r*cp + center.x;
+                double y = r*sp + center.y;
+
+                mx[rho] = (float)x;
+                my[rho] = (float)y;
+            }
+        }
+    }
+    else
+    {
+        const int ANGLE_BORDER = 1;
+        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        srcstub = src_with_border; src = srcstub;
+        Size ssize = src.size();
+        ssize.height -= 2 * ANGLE_BORDER;
+
+        int x, y;
+        Mat bufx, bufy, bufp, bufa;
+        double ascale = ssize.height / (2 * CV_PI);
+
+        bufx = Mat(1, dsize.width, CV_32F);
+        bufy = Mat(1, dsize.width, CV_32F);
+        bufp = Mat(1, dsize.width, CV_32F);
+        bufa = Mat(1, dsize.width, CV_32F);
+
+        for (x = 0; x < dsize.width; x++)
+            bufx.at<float>(0, x) = (float)x - center.x;
+
+        for (y = 0; y < dsize.height; y++)
+        {
+            float* mx = (float*)(mapx.data + y*mapx.step);
+            float* my = (float*)(mapy.data + y*mapy.step);
+
+            for (x = 0; x < dsize.width; x++)
+                bufy.at<float>(0, x) = (float)y - center.y;
+
+#if 1
+            cartToPolar(bufx, bufy, bufp, bufa);
+
+            for (x = 0; x < dsize.width; x++)
+                bufp.at<float>(0, x) += 1.f;
+
+            log(bufp, bufp);
+
+            for (x = 0; x < dsize.width; x++)
+            {
+                double rho = bufp.at<float>(0, x) * M;
+                double phi = bufa.at<float>(0, x) * ascale;
+
+                mx[x] = (float)rho;
+                my[x] = (float)phi + ANGLE_BORDER;
+            }
+#else
+            for (x = 0; x < dsize.width; x++)
+            {
+                double xx = bufx.at<float>(0, x);
+                double yy = bufy.at<float>(0, x);
+                double p = log(std::sqrt(xx*xx + yy*yy) + 1.)*M;
+                double a = atan2(yy, xx);
+                if (a < 0)
+                    a = 2 * CV_PI + a;
+                a *= ascale;
+                mx[x] = (float)p;
+                my[x] = (float)a;
+            }
+#endif
+        }
+    }
+
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
+        (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
 }
 
 /****************************************************************************************
@@ -6701,10 +6802,84 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
 void cv::linearPolar( InputArray _src, OutputArray _dst,
                       Point2f center, double maxRadius, int flags )
 {
-    Mat src = _src.getMat();
-    _dst.create( src.size(), src.type() );
-    CvMat c_src = src, c_dst = _dst.getMat();
-    cvLinearPolar( &c_src, &c_dst, center, maxRadius, flags );
+    Mat src_with_border; // don't scope this variable (it holds image data)
+
+    Mat mapx, mapy;
+    Mat srcstub, src = _src.getMat();
+    _dst.create(src.size(), src.type());
+    Size dsize = src.size();
+
+
+    mapx.create(dsize, CV_32F);
+    mapy.create(dsize, CV_32F);
+
+    if (!(flags & CV_WARP_INVERSE_MAP))
+    {
+        int phi, rho;
+
+        for (phi = 0; phi < dsize.height; phi++)
+        {
+            double cp = cos(phi * 2 * CV_PI / dsize.height);
+            double sp = sin(phi * 2 * CV_PI / dsize.height);
+            float* mx = (float*)(mapx.data + phi*mapx.step);
+            float* my = (float*)(mapy.data + phi*mapy.step);
+
+            for (rho = 0; rho < dsize.width; rho++)
+            {
+                double r = maxRadius*rho / dsize.width;
+                double x = r*cp + center.x;
+                double y = r*sp + center.y;
+
+                mx[rho] = (float)x;
+                my[rho] = (float)y;
+            }
+        }
+    }
+    else
+    {
+        const int ANGLE_BORDER = 1;
+
+        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        src = src_with_border;
+        Size ssize = src_with_border.size();
+        ssize.height -= 2 * ANGLE_BORDER;
+
+        int x, y;
+        Mat bufx, bufy, bufp, bufa;
+        const double ascale = ssize.height / (2 * CV_PI);
+        const double pscale = ssize.width / maxRadius;
+
+
+
+        bufx = Mat(1, dsize.width, CV_32F);
+        bufy = Mat(1, dsize.width, CV_32F);
+        bufp = Mat(1, dsize.width, CV_32F);
+        bufa = Mat(1, dsize.width, CV_32F);
+
+        for (x = 0; x < dsize.width; x++)
+            bufx.at<float>(0, x) = (float)x - center.x;
+
+        for (y = 0; y < dsize.height; y++)
+        {
+            float* mx = (float*)(mapx.data + y*mapx.step);
+            float* my = (float*)(mapy.data + y*mapy.step);
+
+            for (x = 0; x < dsize.width; x++)
+                bufy.at<float>(0, x) = (float)y - center.y;
+
+            cartToPolar(bufx, bufy, bufp, bufa, 0);
+
+            for (x = 0; x < dsize.width; x++)
+            {
+                double rho = bufp.at<float>(0, x) * pscale;
+                double phi = bufa.at<float>(0, x) * ascale;
+                mx[x] = (float)rho;
+                my[x] = (float)phi + ANGLE_BORDER;
+            }
+        }
+    }
+
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
 }
 
 /* End of file. */
