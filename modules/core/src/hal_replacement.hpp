@@ -703,21 +703,25 @@ inline int hal_ni_gemm64fc(const double* src1, size_t src1_step, const double* s
 
 //! @cond IGNORED
 #define CALL_HAL_RET(name, fun, retval, ...) \
+{ \
     int res = fun(__VA_ARGS__, &retval); \
     if (res == CV_HAL_ERROR_OK) \
         return retval; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
         CV_Error_(cv::Error::StsInternal, \
-            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res));
+            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res)); \
+}
 
 
 #define CALL_HAL(name, fun, ...) \
+{ \
     int res = fun(__VA_ARGS__); \
     if (res == CV_HAL_ERROR_OK) \
         return; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
         CV_Error_(cv::Error::StsInternal, \
-            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res));
+            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res)); \
+}
 //! @endcond
 
 #endif
