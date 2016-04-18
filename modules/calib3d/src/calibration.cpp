@@ -1302,15 +1302,13 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     if(flags & CV_CALIB_TILTED_MODEL)
     {
         //when the tilted sensor model is used the distortion coefficients matrix must have 14 parameters
-        if (distCoeffs->cols*distCoeffs->rows != 14)
-            CV_Error( CV_StsBadArg, "The tilted sensor model must have 14 parameters in the distortion matrix" );
-    }
-    else
-    {
+        if (distCoeffs->cols*distCoeffs->rows < 14)
+            CV_Error( CV_StsBadArg, "The tilted sensor model must have at least 14 parameters in the distortion matrix" );
+    } else {
         //when the thin prism model is used the distortion coefficients matrix must have 12 parameters
         if(flags & CV_CALIB_THIN_PRISM_MODEL)
-            if (distCoeffs->cols*distCoeffs->rows != 12)
-                CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
+            if (distCoeffs->cols*distCoeffs->rows < 12)
+                CV_Error( CV_StsBadArg, "Thin prism model must have at least 12 parameters in the distortion matrix" );
     }
 
     nimages = npoints->rows*npoints->cols;
