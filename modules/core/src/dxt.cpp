@@ -1553,7 +1553,7 @@ class Dft_C_IPPLoop_Invoker : public ParallelLoopBody
 {
 public:
 
-    Dft_C_IPPLoop_Invoker(const uchar * _src, int _src_step, uchar * _dst, int _dst_step, int _width,
+    Dft_C_IPPLoop_Invoker(const uchar * _src, size_t _src_step, uchar * _dst, size_t _dst_step, int _width,
                           const Dft& _ippidft, int _norm_flag, bool *_ok) :
         ParallelLoopBody(),
         src(_src), src_step(_src_step), dst(_dst), dst_step(_dst_step), width(_width),
@@ -1618,9 +1618,9 @@ public:
 
 private:
     const uchar * src;
-    int src_step;
+    size_t src_step;
     uchar * dst;
-    int dst_step;
+    size_t dst_step;
     int width;
     const Dft& ippidft;
     int norm_flag;
@@ -1634,7 +1634,7 @@ class Dft_R_IPPLoop_Invoker : public ParallelLoopBody
 {
 public:
 
-    Dft_R_IPPLoop_Invoker(const uchar * _src, int _src_step, uchar * _dst, int _dst_step, int _width,
+    Dft_R_IPPLoop_Invoker(const uchar * _src, size_t _src_step, uchar * _dst, size_t _dst_step, int _width,
                           const Dft& _ippidft, int _norm_flag, bool *_ok) :
         ParallelLoopBody(),
         src(_src), src_step(_src_step), dst(_dst), dst_step(_dst_step), width(_width),
@@ -1699,9 +1699,9 @@ public:
 
 private:
     const uchar * src;
-    int src_step;
+    size_t src_step;
     uchar * dst;
-    int dst_step;
+    size_t dst_step;
     int width;
     const Dft& ippidft;
     int norm_flag;
@@ -1711,7 +1711,7 @@ private:
 };
 
 template <typename Dft>
-bool Dft_C_IPPLoop(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, const Dft& ippidft, int norm_flag)
+bool Dft_C_IPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, const Dft& ippidft, int norm_flag)
 {
     bool ok;
     parallel_for_(Range(0, height), Dft_C_IPPLoop_Invoker<Dft>(src, src_step, dst, dst_step, width, ippidft, norm_flag, &ok), (width * height)/(double)(1<<16) );
@@ -1719,7 +1719,7 @@ bool Dft_C_IPPLoop(const uchar * src, int src_step, uchar * dst, int dst_step, i
 }
 
 template <typename Dft>
-bool Dft_R_IPPLoop(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, const Dft& ippidft, int norm_flag)
+bool Dft_R_IPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, const Dft& ippidft, int norm_flag)
 {
     bool ok;
     parallel_for_(Range(0, height), Dft_R_IPPLoop_Invoker<Dft>(src, src_step, dst, dst_step, width, ippidft, norm_flag, &ok), (width * height)/(double)(1<<16) );
@@ -1730,9 +1730,9 @@ struct IPPDFT_C_Functor
 {
     IPPDFT_C_Functor(ippiDFT_C_Func _func) : func(_func){}
 
-    bool operator()(const Ipp32fc* src, int srcStep, Ipp32fc* dst, int dstStep, const IppiDFTSpec_C_32fc* pDFTSpec, Ipp8u* pBuffer) const
+    bool operator()(const Ipp32fc* src, size_t srcStep, Ipp32fc* dst, size_t dstStep, const IppiDFTSpec_C_32fc* pDFTSpec, Ipp8u* pBuffer) const
     {
-        return func ? func(src, srcStep, dst, dstStep, pDFTSpec, pBuffer) >= 0 : false;
+        return func ? func(src, static_cast<int>(srcStep), dst, static_cast<int>(dstStep), pDFTSpec, pBuffer) >= 0 : false;
     }
 private:
     ippiDFT_C_Func func;
@@ -1742,15 +1742,15 @@ struct IPPDFT_R_Functor
 {
     IPPDFT_R_Functor(ippiDFT_R_Func _func) : func(_func){}
 
-    bool operator()(const Ipp32f* src, int srcStep, Ipp32f* dst, int dstStep, const IppiDFTSpec_R_32f* pDFTSpec, Ipp8u* pBuffer) const
+    bool operator()(const Ipp32f* src, size_t srcStep, Ipp32f* dst, size_t dstStep, const IppiDFTSpec_R_32f* pDFTSpec, Ipp8u* pBuffer) const
     {
-        return func ? func(src, srcStep, dst, dstStep, pDFTSpec, pBuffer) >= 0 : false;
+        return func ? func(src, static_cast<int>(srcStep), dst, static_cast<int>(dstStep), pDFTSpec, pBuffer) >= 0 : false;
     }
 private:
     ippiDFT_R_Func func;
 };
 
-static bool ippi_DFT_C_32F(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, bool inv, int norm_flag)
+static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
     IppStatus status;
     Ipp8u* pBuffer = 0;
@@ -1787,9 +1787,9 @@ static bool ippi_DFT_C_32F(const uchar * src, int src_step, uchar * dst, int dst
     }
 
     if (!inv)
-        status = ippiDFTFwd_CToC_32fc_C1R( (Ipp32fc*)src, src_step, (Ipp32fc*)dst, dst_step, pDFTSpec, pBuffer );
+        status = ippiDFTFwd_CToC_32fc_C1R( (Ipp32fc*)src, static_cast<int>(src_step), (Ipp32fc*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer );
     else
-        status = ippiDFTInv_CToC_32fc_C1R( (Ipp32fc*)src, src_step, (Ipp32fc*)dst, dst_step, pDFTSpec, pBuffer );
+        status = ippiDFTInv_CToC_32fc_C1R( (Ipp32fc*)src, static_cast<int>(src_step), (Ipp32fc*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer );
 
     if ( sizeBuffer > 0 )
         ippFree( pBuffer );
@@ -1804,7 +1804,7 @@ static bool ippi_DFT_C_32F(const uchar * src, int src_step, uchar * dst, int dst
     return false;
 }
 
-static bool ippi_DFT_R_32F(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, bool inv, int norm_flag)
+static bool ippi_DFT_R_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
     IppStatus status;
     Ipp8u* pBuffer = 0;
@@ -1841,9 +1841,9 @@ static bool ippi_DFT_R_32F(const uchar * src, int src_step, uchar * dst, int dst
     }
 
     if (!inv)
-        status = ippiDFTFwd_RToPack_32f_C1R( (float*)src, src_step, (float*)dst, dst_step, pDFTSpec, pBuffer );
+        status = ippiDFTFwd_RToPack_32f_C1R( (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer );
     else
-        status = ippiDFTInv_PackToR_32f_C1R( (float*)src, src_step, (float*)dst, dst_step, pDFTSpec, pBuffer );
+        status = ippiDFTInv_PackToR_32f_C1R( (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer );
 
     if ( sizeBuffer > 0 )
         ippFree( pBuffer );
@@ -2487,7 +2487,7 @@ namespace cv
 {
 
 template <typename T>
-static void complementComplex(T * ptr, int step, int n, int len, int dft_dims)
+static void complementComplex(T * ptr, size_t step, int n, int len, int dft_dims)
 {
     T* p0 = (T*)ptr;
     size_t dstep = step/sizeof(p0[0]);
@@ -2504,7 +2504,7 @@ static void complementComplex(T * ptr, int step, int n, int len, int dft_dims)
     }
 }
 
-static void complementComplexOutput(int depth, uchar * ptr, int step, int count, int len, int dft_dims)
+static void complementComplexOutput(int depth, uchar * ptr, size_t step, int count, int len, int dft_dims)
 {
     if( depth == CV_32F )
         complementComplex((float*)ptr, step, count, len, dft_dims);
@@ -2862,7 +2862,7 @@ public:
 
 protected:
 
-    void rowDft(const uchar* src_data, int src_step, uchar* dst_data, int dst_step, bool isComplex, bool isLastStage)
+    void rowDft(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, bool isComplex, bool isLastStage)
     {
         int len, count;
         if (width == 1 && !isRowTransform )
@@ -2916,7 +2916,7 @@ protected:
             complementComplexOutput(depth, dst_data, dst_step, len, nz, 1);
     }
 
-    void colDft(const uchar* src_data, int src_step, uchar* dst_data, int dst_step, int stage_src_channels, int stage_dst_channels, bool isLastStage)
+    void colDft(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int stage_src_channels, int stage_dst_channels, bool isLastStage)
     {
         int len = height;
         int count = width;

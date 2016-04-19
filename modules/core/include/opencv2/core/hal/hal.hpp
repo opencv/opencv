@@ -46,6 +46,7 @@
 #define __OPENCV_HAL_HPP__
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/hal/interface.h"
 
 //! @cond IGNORED
