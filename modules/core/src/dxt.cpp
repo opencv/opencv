@@ -3787,7 +3787,7 @@ typedef IppStatus (CV_STDCALL * ippiDCTGetBufSize)(const void*, int*);
 class DctIPPLoop_Invoker : public ParallelLoopBody
 {
 public:
-    DctIPPLoop_Invoker(const uchar * _src, int _src_step, uchar * _dst, int _dst_step, int _width, bool _inv, bool *_ok) :
+    DctIPPLoop_Invoker(const uchar * _src, size_t _src_step, uchar * _dst, size_t _dst_step, int _width, bool _inv, bool *_ok) :
         ParallelLoopBody(), src(_src), src_step(_src_step), dst(_dst), dst_step(_dst_step), width(_width), inv(_inv), ok(_ok)
     {
         *ok = true;
@@ -3856,7 +3856,7 @@ public:
 
         for(int i = range.start; i < range.end; ++i)
         {
-            if(ippDctFun((float*)(src + src_step * i), src_step, (float*)(dst + dst_step * i), dst_step, pDCTSpec, pBuffer) < 0)
+            if(ippDctFun((float*)(src + src_step * i), static_cast<int>(src_step), (float*)(dst + dst_step * i), static_cast<int>(dst_step), pDCTSpec, pBuffer) < 0)
             {
                 *ok = false;
                 IPP_RETURN
@@ -3886,7 +3886,7 @@ public:
 
             for( int i = range.start; i < range.end; ++i)
             {
-                if(ippDctFun((float*)(src + src_step * i), src_step, (float*)(dst + dst_step * i), dst_step, pDCTSpec, (Ipp8u*)pBuffer) < 0)
+                if(ippDctFun((float*)(src + src_step * i), static_cast<int>(src_step), (float*)(dst + dst_step * i), static_cast<int>(dst_step), pDCTSpec, (Ipp8u*)pBuffer) < 0)
                 {
                     *ok = false;
                     break;
@@ -3908,22 +3908,22 @@ public:
 
 private:
     const uchar * src;
-    int src_step;
+    size_t src_step;
     uchar * dst;
-    int dst_step;
+    size_t dst_step;
     int width;
     bool inv;
     bool *ok;
 };
 
-static bool DctIPPLoop(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, bool inv)
+static bool DctIPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv)
 {
     bool ok;
     parallel_for_(Range(0, height), DctIPPLoop_Invoker(src, src_step, dst, dst_step, width, inv, &ok), height/(double)(1<<4) );
     return ok;
 }
 
-static bool ippi_DCT_32f(const uchar * src, int src_step, uchar * dst, int dst_step, int width, int height, bool inv, bool row)
+static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, bool row)
 {
     if(row)
         return DctIPPLoop(src, src_step, dst, dst_step, width, height, inv);
@@ -3978,7 +3978,7 @@ static bool ippi_DCT_32f(const uchar * src, int src_step, uchar * dst, int dst_s
             return false;
         }
 
-        if(ippDctFun((float*)src, src_step, (float*)dst, dst_step, pDCTSpec, pBuffer) < 0)
+        if(ippDctFun((float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDCTSpec, pBuffer) < 0)
         {
             IPP_RELEASE
             return false;
@@ -4010,7 +4010,7 @@ static bool ippi_DCT_32f(const uchar * src, int src_step, uchar * dst, int dst_s
             buf.allocate( bufSize );
             pBuffer = (uchar*)buf;
 
-            status = ippDctFun((float*)src, src_step, (float*)dst, dst_step, pDCTSpec, (Ipp8u*)pBuffer);
+            status = ippDctFun((float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDCTSpec, (Ipp8u*)pBuffer);
         }
 
         if (pDCTSpec)
