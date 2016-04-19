@@ -228,8 +228,6 @@ bool  PngDecoder::readData( Mat& img )
     AutoBuffer<uchar*> _buffer(m_height);
     uchar** buffer = _buffer;
     int color = img.channels() > 1;
-    uchar* data = img.data;
-    int step = (int)img.step;
 
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
     {
@@ -281,7 +279,7 @@ bool  PngDecoder::readData( Mat& img )
             png_read_update_info( png_ptr, info_ptr );
 
             for( y = 0; y < m_height; y++ )
-                buffer[y] = data + y*step;
+                buffer[y] = img.data + y*img.step;
 
             png_read_image( png_ptr, buffer );
             png_read_end( png_ptr, end_info );
