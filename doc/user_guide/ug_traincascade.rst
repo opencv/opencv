@@ -326,7 +326,13 @@ Command line arguments of ``opencv_traincascade`` application grouped by purpose
 
     * ``-minHitRate <min_hit_rate>``
 
-        Minimal desired hit rate for each stage of the classifier. Overall hit rate may be estimated as (min_hit_rate^number_of_stages).
+        Minimal desired hit rate for each stage of the classifier. The overal hit rate can be calculated as follows.
+
+        overall_hit_rate = 1.0 - overall_fail_rate
+        overall_fail_rate  = max_fail_rate ^ number_of_stages
+        max_fail_rate = 1.0 - min_hit_rate
+
+        and thus overall_hit_rate = ( 1.0 - ( 1.0 - min_hit_rate ) ^ number_of_stages )
 
     * ``-maxFalseAlarmRate <max_false_alarm_rate>``
 
