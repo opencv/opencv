@@ -208,6 +208,16 @@ void CvCapture_GStreamer::close()
         pipeline = NULL;
     }
 
+    if(buffer) {
+        gst_buffer_unref(buffer);
+        buffer = NULL;
+    }
+
+    if(frame) {
+        cvReleaseImageHeader(&frame);
+        frame = NULL;
+    }
+
     duration = -1;
     width = -1;
     height = -1;
@@ -235,7 +245,10 @@ bool CvCapture_GStreamer::grabFrame()
 
 #if GST_VERSION_MAJOR == 0
     if(buffer)
+    {
         gst_buffer_unref(buffer);
+        buffer = NULL;
+    }
 
     buffer = gst_app_sink_pull_buffer(GST_APP_SINK(sink));
 #else
