@@ -1816,12 +1816,11 @@ public:
     template<typename _Tp> MatIterator_<_Tp> end();
     template<typename _Tp> MatConstIterator_<_Tp> end() const;
 
-    /** @brief Invoke with arguments functor, and runs the functor over all matrix element.
+    /** @brief Runs the given functor over all matrix elements in parallel.
 
-    The methods runs operation in parallel. Operation is passed by arguments. Operation have to be a
-    function pointer, a function object or a lambda(C++11).
+    The operation passed as argument has to be a function pointer, a function object or a lambda(C++11).
 
-    All of below operation is equal. Put 0xFF to first channel of all matrix elements:
+    Example 1. All of the operations below put 0xFF the first channel of all matrix elements:
     @code
         Mat image(1920, 1080, CV_8UC3);
         typedef cv::Point3_<uint8_t> Pixel;
@@ -1853,18 +1852,18 @@ public:
             p.x = 255;
         });
     @endcode
-    position parameter is index of current pixel:
+    Example 2. Using the pixel's position:
     @code
-        // Creating 3D matrix (255 x 255 x 255) typed uint8_t,
-        //  and initialize all elements by the value which equals elements position.
-        //  i.e. pixels (x,y,z) = (1,2,3) is (b,g,r) = (1,2,3).
+        // Creating 3D matrix (255 x 255 x 255) typed uint8_t
+        // and initialize all elements by the value which equals elements position.
+        // i.e. pixels (x,y,z) = (1,2,3) is (b,g,r) = (1,2,3).
 
         int sizes[] = { 255, 255, 255 };
         typedef cv::Point3_<uint8_t> Pixel;
 
         Mat_<Pixel> image = Mat::zeros(3, sizes, CV_8UC3);
 
-        image.forEachWithPosition([&](Pixel& pixel, const int position[]) -> void{
+        image.forEach<Pixel>([&](Pixel& pixel, const int position[]) -> void {
             pixel.x = position[0];
             pixel.y = position[1];
             pixel.z = position[2];
