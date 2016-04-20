@@ -244,8 +244,7 @@ bool CvCapture_GStreamer::grabFrame()
         return false;
 
 #if GST_VERSION_MAJOR == 0
-    if(buffer)
-    {
+    if(buffer) {
         gst_buffer_unref(buffer);
         buffer = NULL;
     }
