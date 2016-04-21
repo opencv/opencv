@@ -76,6 +76,7 @@ int main( int argc, char* argv[] )
     double scale = 4.0;
     int width  = 24;
     int height = 24;
+    double maxscale = -1.0;
 
     srand((unsigned int)time(0));
 
@@ -92,9 +93,10 @@ int main( int argc, char* argv[] )
                 "  [-maxyangle <max_y_rotation_angle = %f>]\n"
                 "  [-maxzangle <max_z_rotation_angle = %f>]\n"
                 "  [-show [<scale = %f>]]\n"
-                "  [-w <sample_width = %d>]\n  [-h <sample_height = %d>]\n",
+                "  [-w <sample_width = %d>]\n  [-h <sample_height = %d>]\n"
+                "  [-maxscale <max sample scale = %f>]\n",
                 argv[0], num, bgcolor, bgthreshold, maxintensitydev,
-                maxxangle, maxyangle, maxzangle, scale, width, height );
+                maxxangle, maxyangle, maxzangle, scale, width, height, maxscale );
 
         return 0;
     }
@@ -172,6 +174,10 @@ int main( int argc, char* argv[] )
         {
             height = atoi( argv[++i] );
         }
+        else if( !strcmp( argv[i], "-maxscale" ) )
+        {
+            maxscale = atof( argv[++i] );
+        }
     }
 
     printf( "Info file name: %s\n", ((infoname == NULL) ?   nullname : infoname ) );
@@ -194,6 +200,7 @@ int main( int argc, char* argv[] )
     }
     printf( "Width: %d\n", width );
     printf( "Height: %d\n", height );
+    printf( "Max Scale: %g\n", maxscale);
 
     /* determine action */
     if( imagename && vecname )
@@ -213,7 +220,7 @@ int main( int argc, char* argv[] )
 
         cvCreateTestSamples( infoname, imagename, bgcolor, bgthreshold, bgfilename, num,
             invert, maxintensitydev,
-            maxxangle, maxyangle, maxzangle, showsamples, width, height );
+            maxxangle, maxyangle, maxzangle, showsamples, width, height, maxscale);
 
         printf( "Done\n" );
     }
