@@ -1372,7 +1372,7 @@ void cvCreateTestSamples( const char* infoname,
 
                 if( maxscale < 1.0F ) continue;
 
-                scale = (maxscale - 1.0F) * rand() / RAND_MAX + 1.0F;
+                scale = ((float)maxscale - 1.0F) * rand() / RAND_MAX + 1.0F;
 
                 width = (int) (scale * winwidth);
                 height = (int) (scale * winheight);
