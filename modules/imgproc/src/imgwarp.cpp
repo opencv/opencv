@@ -4578,6 +4578,144 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     return k.run(2, globalThreads, NULL, false);
 }
 
+static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
+    Point2f center, double maxRadius, int flags)
+{
+    UMat src_with_border; // don't scope this variable (it holds image data)
+
+    UMat mapx, mapy, r, cp_sp;
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), src.type());
+    Size dsize = src.size();
+    r.create(Size(1, dsize.width), CV_32F);
+    cp_sp.create(Size(1, dsize.height), CV_32FC2);
+
+    mapx.create(dsize, CV_32F);
+    mapy.create(dsize, CV_32F);
+    size_t w = dsize.width;
+    size_t h = dsize.height;
+    String buildOptions;
+    unsigned mem_szie = 32;
+    if (flags & CV_WARP_INVERSE_MAP)
+    {
+        buildOptions = "-D InverseMap";
+    }
+    else
+    {
+        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_szie);
+    }
+    String retval;
+    ocl::Program p(ocl::imgproc::linearPolar_oclsrc, buildOptions, retval);
+    ocl::Kernel k("linearPolar", p);
+    ocl::KernelArg ocl_mapx = ocl::KernelArg::PtrReadWrite(mapx), ocl_mapy = ocl::KernelArg::PtrReadWrite(mapy);
+    ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
+    ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
+
+    if (!(flags & CV_WARP_INVERSE_MAP))
+    {
+
+
+
+        ocl::Kernel computeAngleRadius_Kernel("computeAngleRadius", p);
+        float PI2_height = (float) CV_2PI / dsize.height;
+        float maxRadius_width = (float) maxRadius / dsize.width;
+        computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, maxRadius_width, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
+        size_t max_dim = max(h, w);
+        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
+        k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
+    }
+    else
+    {
+        const int ANGLE_BORDER = 1;
+
+        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        src = src_with_border;
+        Size ssize = src_with_border.size();
+        ssize.height -= 2 * ANGLE_BORDER;
+        float ascale =  ssize.height / ((float)CV_2PI);
+        float pscale =  ssize.width / ((float) maxRadius);
+
+        k.args(ocl_mapx, ocl_mapy, ascale, pscale, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
+
+
+    }
+    size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
+    size_t localThreads[2] = { mem_szie , mem_szie };
+    k.run(2, globalThreads, localThreads, false);
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    return true;
+}
+static bool ocl_logPolar(InputArray _src, OutputArray _dst,
+    Point2f center, double M, int flags)
+{
+    if (M <= 0)
+        CV_Error(CV_StsOutOfRange, "M should be >0");
+    UMat src_with_border; // don't scope this variable (it holds image data)
+
+    UMat mapx, mapy, r, cp_sp;
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), src.type());
+    Size dsize = src.size();
+    r.create(Size(1, dsize.width), CV_32F);
+    cp_sp.create(Size(1, dsize.height), CV_32FC2);
+
+    mapx.create(dsize, CV_32F);
+    mapy.create(dsize, CV_32F);
+    size_t w = dsize.width;
+    size_t h = dsize.height;
+    String buildOptions;
+    unsigned mem_szie = 32;
+    if (flags & CV_WARP_INVERSE_MAP)
+    {
+        buildOptions = "-D InverseMap";
+    }
+    else
+    {
+        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_szie);
+    }
+    String retval;
+    ocl::Program p(ocl::imgproc::logPolar_oclsrc, buildOptions, retval);
+    //ocl::Program p(ocl::imgproc::my_linearPolar_oclsrc, buildOptions, retval);
+    //printf("%s\n", retval);
+    ocl::Kernel k("logPolar", p);
+    ocl::KernelArg ocl_mapx = ocl::KernelArg::PtrReadWrite(mapx), ocl_mapy = ocl::KernelArg::PtrReadWrite(mapy);
+    ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
+    ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
+
+    if (!(flags & CV_WARP_INVERSE_MAP))
+    {
+
+
+
+        ocl::Kernel computeAngleRadius_Kernel("computeAngleRadius", p);
+        float PI2_height = (float) CV_2PI / dsize.height;
+
+        computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, (float)M, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
+        size_t max_dim = max(h, w);
+        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
+        k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
+    }
+    else
+    {
+        const int ANGLE_BORDER = 1;
+
+        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        src = src_with_border;
+        Size ssize = src_with_border.size();
+        ssize.height -= 2 * ANGLE_BORDER;
+        float ascale =  ssize.height / ((float)CV_2PI);
+
+
+        k.args(ocl_mapx, ocl_mapy, ascale, (float)M, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
+
+
+}
+    size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
+    size_t localThreads[2] = { mem_szie , mem_szie };
+    k.run(2, globalThreads, localThreads, false);
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    return true;
+}
 #endif
 
 #if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
@@ -6595,6 +6733,8 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
 void cv::logPolar( InputArray _src, OutputArray _dst,
                    Point2f center, double M, int flags )
 {
+    CV_OCL_RUN(_src.isUMat() && _dst.isUMat(),
+        ocl_logPolar(_src, _dst, center, M, flags));
     Mat src_with_border; // don't scope this variable (it holds image data)
 
     Mat mapx, mapy;
@@ -6802,6 +6942,8 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
 void cv::linearPolar( InputArray _src, OutputArray _dst,
                       Point2f center, double maxRadius, int flags )
 {
+    CV_OCL_RUN(_src.isUMat() && _dst.isUMat(),
+        ocl_linearPolar(_src, _dst, center, maxRadius, flags));
     Mat src_with_border; // don't scope this variable (it holds image data)
 
     Mat mapx, mapy;
