@@ -126,7 +126,7 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
         d[k] = (short)(v - ptr[pixel[k]]);
 
 #if CV_SSSE3
-    __m128i q0 = _mm_set1_epi16(threshold), q1 = _mm_set1_epi16(-threshold);
+    __m128i q0 = _mm_set1_epi16((short)threshold), q1 = _mm_set1_epi16((short)-threshold);
     for( k = 0; k < 14; k += 7 )
     {
         __m128i v_base0 = _mm_lddqu_si128((__m128i*)(d+k));
@@ -164,7 +164,7 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
     q0 = _mm_max_epi16(q0, _mm_srli_si128(q0, 2));
     threshold = (short)_mm_cvtsi128_si32(q0) - 1;
 #elif CV_SSE2
-    __m128i q0 = _mm_set1_epi16(threshold), q1 = _mm_set1_epi16(-threshold);
+    __m128i q0 = _mm_set1_epi16((short)threshold), q1 = _mm_set1_epi16((short)-threshold);
     for( k = 0; k < 14; k += 7 )
     {
         __m128i v0 = _mm_loadu_si128((__m128i*)(d+k+1));
@@ -254,7 +254,7 @@ int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
         d[k] = (short)(v - ptr[pixel[k]]);
 
 #if CV_SSSE3
-    __m128i q0 = _mm_set1_epi16(threshold), q1 = _mm_set1_epi16(-threshold);
+    __m128i q0 = _mm_set1_epi16((short)threshold), q1 = _mm_set1_epi16((short)-threshold);
     for( k = 0; k < 6; k += 3 )
     {
         __m128i v0 = _mm_loadu_si128((__m128i*)(d+k+1));
@@ -286,7 +286,7 @@ int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
     q0 = _mm_max_epi16(q0, _mm_srli_si128(q0, 2));
     threshold = (short)_mm_cvtsi128_si32(q0) - 1;
 #elif CV_SSE2
-    __m128i q0 = _mm_set1_epi16(threshold), q1 = _mm_set1_epi16(-threshold);
+    __m128i q0 = _mm_set1_epi16((short)threshold), q1 = _mm_set1_epi16((short)-threshold);
     for( k = 0; k < 6; k += 3 )
     {
         __m128i v0 = _mm_loadu_si128((__m128i*)(d+k+1));
@@ -384,8 +384,8 @@ int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
     v0 = _mm_alignr_epi8(v_base1, v_base0, 8);
     a = _mm_min_epi16(a, v0);
     b = _mm_max_epi16(b, v0);
-    __m128i q0 = _mm_set1_epi16(threshold);
-    __m128i q1 = _mm_set1_epi16(-threshold);
+    __m128i q0 = _mm_set1_epi16((short)threshold);
+    __m128i q1 = _mm_set1_epi16((short)-threshold);
     q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v_base0));
     q1 = _mm_min_epi16(q1, _mm_max_epi16(b, v_base0));
     v0 = _mm_alignr_epi8(v_base1, v_base0, 10);
@@ -409,8 +409,8 @@ int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
     a = _mm_min_epi16(a, v0);
     b = _mm_max_epi16(b, v0);
     v0 = _mm_loadu_si128((__m128i*)(d));
-    __m128i q0 = _mm_set1_epi16(threshold);
-    __m128i q1 = _mm_set1_epi16(-threshold);
+    __m128i q0 = _mm_set1_epi16((short)threshold);
+    __m128i q1 = _mm_set1_epi16((short)-threshold);
     q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v0));
     q1 = _mm_min_epi16(q1, _mm_max_epi16(b, v0));
     v0 = _mm_loadu_si128((__m128i*)(d+5));
