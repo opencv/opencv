@@ -212,7 +212,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize,bool displayCorners 
     cout << "average epipolar err = " <<  err/npoints << endl;
 
     // save intrinsic parameters
-    FileStorage fs("../data/intrinsics.yml", FileStorage::WRITE);
+    FileStorage fs("intrinsics.yml", FileStorage::WRITE);
     if( fs.isOpened() )
     {
         fs << "M1" << cameraMatrix[0] << "D1" << distCoeffs[0] <<
