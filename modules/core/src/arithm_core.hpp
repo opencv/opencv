@@ -528,7 +528,7 @@ div_f( const T* src1, size_t step1, const T* src2, size_t step2,
 }
 
 template<typename T> static void
-recip_i( const T*, size_t, const T* src2, size_t step2,
+recip_i( const T* src2, size_t step2,
          T* dst, size_t step, int width, int height, double scale )
 {
     step2 /= sizeof(src2[0]);
@@ -549,7 +549,7 @@ recip_i( const T*, size_t, const T* src2, size_t step2,
 }
 
 template<typename T> static void
-recip_f( const T*, size_t, const T* src2, size_t step2,
+recip_f( const T* src2, size_t step2,
          T* dst, size_t step, int width, int height, double scale )
 {
     T scale_f = (T)scale;

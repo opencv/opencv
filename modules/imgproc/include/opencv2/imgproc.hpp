@@ -213,6 +213,11 @@ location of points on the plane, building special graphs (such as NNG,RNG), and 
     @defgroup imgproc_feature Feature Detection
     @defgroup imgproc_object Object Detection
     @defgroup imgproc_c C API
+    @defgroup imgproc_hal Hardware Acceleration Layer
+    @{
+        @defgroup imgproc_hal_functions Functions
+        @defgroup imgproc_hal_interface Interface
+    @}
   @}
 */
 

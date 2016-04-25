@@ -7,7 +7,7 @@
 
 namespace cv { namespace hal {
 
-//! @addtogroup core_hal_functions
+//! @addtogroup imgproc_hal_functions
 //! @{
 
 struct CV_EXPORTS Filter2D
@@ -45,9 +45,9 @@ struct CV_EXPORTS SepFilter2D
 };
 
 
-struct  CV_EXPORTS MorphContext
+struct  CV_EXPORTS Morph
 {
-    static Ptr<MorphContext> create(int op, int src_type, int dst_type, int max_width, int max_height,
+    static Ptr<Morph> create(int op, int src_type, int dst_type, int max_width, int max_height,
                                     int kernel_type, uchar * kernel_data, size_t kernel_step,
                                     int kernel_width, int kernel_height,
                                     int anchor_x, int anchor_y,
@@ -56,9 +56,24 @@ struct  CV_EXPORTS MorphContext
     virtual void apply(uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height,
                        int roi_width, int roi_height, int roi_x, int roi_y,
                        int roi_width2, int roi_height2, int roi_x2, int roi_y2) = 0;
-    virtual ~MorphContext() {}
+    virtual ~Morph() {}
 };
 
+
+CV_EXPORTS void resize(int src_type,
+                       const uchar * src_data, size_t src_step, int src_width, int src_height,
+                       uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                       double inv_scale_x, double inv_scale_y, int interpolation);
+
+CV_EXPORTS void warpAffine(int src_type,
+                           const uchar * src_data, size_t src_step, int src_width, int src_height,
+                           uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                           const double M[6], int interpolation, int borderType, const double borderValue[4]);
+
+CV_EXPORTS void warpPerspectve(int src_type,
+                               const uchar * src_data, size_t src_step, int src_width, int src_height,
+                               uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                               const double M[9], int interpolation, int borderType, const double borderValue[4]);
 
 //! @}
 

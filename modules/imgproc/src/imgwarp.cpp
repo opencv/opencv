@@ -49,6 +49,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "hal_replacement.hpp"
 
 using namespace cv;
 
@@ -3091,8 +3092,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 #endif
 
 #if IPP_VERSION_X100 >= 710
-static bool ipp_resize_mt(    Mat src, Mat dst,
-                        double inv_scale_x, double inv_scale_y, int interpolation)
+static bool ipp_resize_mt(Mat & src, Mat & dst,
+                          double inv_scale_x, double inv_scale_y, int interpolation)
 {
     int mode = -1;
     if (interpolation == INTER_LINEAR && src.rows >= 2 && src.cols >= 2)
@@ -3113,15 +3114,24 @@ static bool ipp_resize_mt(    Mat src, Mat dst,
 }
 #endif
 
-}
+//==================================================================================================
 
+namespace hal {
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-
-void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
-                 double inv_scale_x, double inv_scale_y, int interpolation )
+void resize(int src_type,
+            const uchar * src_data, size_t src_step, int src_width, int src_height,
+            uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+            double inv_scale_x, double inv_scale_y, int interpolation)
 {
+    CV_Assert((dst_width * dst_height > 0) || (inv_scale_x > 0 && inv_scale_y > 0));
+    if (inv_scale_x < DBL_EPSILON || inv_scale_y < DBL_EPSILON)
+    {
+        inv_scale_x = static_cast<double>(dst_width) / src_width;
+        inv_scale_y = static_cast<double>(dst_height) / src_height;
+    }
+
+    CALL_HAL(resize, cv_hal_resize, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
+
     static ResizeFunc linear_tab[] =
     {
         resizeGeneric_<
@@ -3226,24 +3236,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         resizeArea_<double, double>, 0
     };
 
-    Size ssize = _src.size();
-
-    CV_Assert( ssize.area() > 0 );
-    CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
-    if( dsize.area() == 0 )
-    {
-        dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
-                     saturate_cast<int>(ssize.height*inv_scale_y));
-        CV_Assert( dsize.area() > 0 );
-    }
-    else
-    {
-        inv_scale_x = (double)dsize.width/ssize.width;
-        inv_scale_y = (double)dsize.height/ssize.height;
-    }
-
-
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int depth = CV_MAT_DEPTH(src_type), cn = CV_MAT_CN(src_type);
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
 
     int iscale_x = saturate_cast<int>(scale_x);
@@ -3252,42 +3245,30 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     bool is_area_fast = std::abs(scale_x - iscale_x) < DBL_EPSILON &&
             std::abs(scale_y - iscale_y) < DBL_EPSILON;
 
+    Size dsize = Size(saturate_cast<int>(src_width*inv_scale_x),
+                      saturate_cast<int>(src_height*inv_scale_y));
+    CV_Assert( dsize.area() > 0 );
 
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
-               ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
-
-    Mat src = _src.getMat();
-    _dst.create(dsize, src.type());
-    Mat dst = _dst.getMat();
-
-    if (dsize == ssize) {
-      // Source and destination are of same size. Use simple copy.
-      src.copyTo(dst);
-      return;
-    }
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::resize(src, dst, (float)inv_scale_x, (float)inv_scale_y, interpolation))
-        return;
-#endif
+    Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
+    Mat dst(dsize, src_type, dst_data, dst_step);
 
 #ifdef HAVE_IPP
     int mode = -1;
-    if (interpolation == INTER_LINEAR && _src.rows() >= 2 && _src.cols() >= 2)
+    if (interpolation == INTER_LINEAR && src_height >= 2 && src_width >= 2)
         mode = INTER_LINEAR;
-    else if (interpolation == INTER_CUBIC && _src.rows() >= 4 && _src.cols() >= 4)
+    else if (interpolation == INTER_CUBIC && src_height >= 4 && src_width >= 4)
         mode = INTER_CUBIC;
 
     const double IPP_RESIZE_EPS = 1e-10;
-    double ex = fabs((double)dsize.width / _src.cols()  - inv_scale_x) / inv_scale_x;
-    double ey = fabs((double)dsize.height / _src.rows() - inv_scale_y) / inv_scale_y;
+    double ex = fabs((double)dsize.width / src_width  - inv_scale_x) / inv_scale_x;
+    double ey = fabs((double)dsize.height / src_height - inv_scale_y) / inv_scale_y;
 #endif
     CV_IPP_RUN(IPP_VERSION_X100 >= 710 && ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) || (ex == 0 && ey == 0 && depth == CV_64F)) &&
         (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
         !(interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 && depth == CV_8U) &&
         mode >= 0 && (cn == 1 || cn == 3 || cn == 4) && (depth == CV_16U || depth == CV_16S || depth == CV_32F ||
-        (depth == CV_64F && mode == INTER_LINEAR)), ipp_resize_mt(src, dst, inv_scale_x, inv_scale_y, interpolation))
-
+        (depth == CV_64F && mode == INTER_LINEAR)),
+        ipp_resize_mt(src, dst, inv_scale_x, inv_scale_y, interpolation))
 
     if( interpolation == INTER_NEAREST )
     {
@@ -3311,7 +3292,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             if( is_area_fast )
             {
                 int area = iscale_x*iscale_y;
-                size_t srcstep = src.step / src.elemSize1();
+                size_t srcstep = src_step / src.elemSize1();
                 AutoBuffer<int> _ofs(area + dsize.width*cn);
                 int* ofs = _ofs;
                 int* xofs = ofs + area;
@@ -3337,11 +3318,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             ResizeAreaFunc func = area_tab[depth];
             CV_Assert( func != 0 && cn <= 4 );
 
-            AutoBuffer<DecimateAlpha> _xytab((ssize.width + ssize.height)*2);
-            DecimateAlpha* xtab = _xytab, *ytab = xtab + ssize.width*2;
+            AutoBuffer<DecimateAlpha> _xytab((src_width + src_height)*2);
+            DecimateAlpha* xtab = _xytab, *ytab = xtab + src_width*2;
 
-            int xtab_size = computeResizeAreaTab(ssize.width, dsize.width, cn, scale_x, xtab);
-            int ytab_size = computeResizeAreaTab(ssize.height, dsize.height, 1, scale_y, ytab);
+            int xtab_size = computeResizeAreaTab(src_width, dsize.width, cn, scale_x, xtab);
+            int ytab_size = computeResizeAreaTab(src_height, dsize.height, 1, scale_y, ytab);
 
             AutoBuffer<int> _tabofs(dsize.height + 1);
             int* tabofs = _tabofs;
@@ -3409,11 +3390,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                 fx = 0, sx = 0;
         }
 
-        if( sx + ksize2 >= ssize.width )
+        if( sx + ksize2 >= src_width )
         {
             xmax = std::min( xmax, dx );
-            if( sx >= ssize.width-1 && (interpolation != INTER_CUBIC && interpolation != INTER_LANCZOS4))
-                fx = 0, sx = ssize.width-1;
+            if( sx >= src_width-1 && (interpolation != INTER_CUBIC && interpolation != INTER_LANCZOS4))
+                fx = 0, sx = src_width-1;
         }
 
         for( k = 0, sx *= cn; k < cn; k++ )
@@ -3484,6 +3465,46 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     func( src, dst, xofs, fixpt ? (void*)ialpha : (void*)alpha, yofs,
           fixpt ? (void*)ibeta : (void*)beta, xmin, xmax, ksize );
+}
+
+} // cv::hal::
+} // cv::
+
+//==================================================================================================
+
+void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
+                 double inv_scale_x, double inv_scale_y, int interpolation )
+{
+    Size ssize = _src.size();
+
+    CV_Assert( ssize.area() > 0 );
+    CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
+    if( dsize.area() == 0 )
+    {
+        dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
+                     saturate_cast<int>(ssize.height*inv_scale_y));
+        CV_Assert( dsize.area() > 0 );
+    }
+    else
+    {
+        inv_scale_x = (double)dsize.width/ssize.width;
+        inv_scale_y = (double)dsize.height/ssize.height;
+    }
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
+               ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
+
+    Mat src = _src.getMat();
+    _dst.create(dsize, src.type());
+    Mat dst = _dst.getMat();
+
+    if (dsize == ssize) {
+      // Source and destination are of same size. Use simple copy.
+      src.copyTo(dst);
+      return;
+    }
+
+    hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
 }
 
 
@@ -5232,7 +5253,7 @@ class WarpAffineInvoker :
 {
 public:
     WarpAffineInvoker(const Mat &_src, Mat &_dst, int _interpolation, int _borderType,
-                      const Scalar &_borderValue, int *_adelta, int *_bdelta, double *_M) :
+                      const Scalar &_borderValue, int *_adelta, int *_bdelta, const double *_M) :
         ParallelLoopBody(), src(_src), dst(_dst), interpolation(_interpolation),
         borderType(_borderType), borderValue(_borderValue), adelta(_adelta), bdelta(_bdelta),
         M(_M)
@@ -5410,7 +5431,7 @@ private:
     int interpolation, borderType;
     Scalar borderValue;
     int *adelta, *bdelta;
-    double *M;
+    const double *M;
 };
 
 
@@ -5569,7 +5590,39 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
 #endif
 
+namespace hal {
+
+void warpAffine(int src_type,
+                const uchar * src_data, size_t src_step, int src_width, int src_height,
+                uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                const double M[6], int interpolation, int borderType, const double borderValue[4])
+{
+    CALL_HAL(warpAffine, cv_hal_warpAffine, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+
+    Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
+    Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
+
+    int x;
+    AutoBuffer<int> _abdelta(dst.cols*2);
+    int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
+    const int AB_BITS = MAX(10, (int)INTER_BITS);
+    const int AB_SCALE = 1 << AB_BITS;
+
+    for( x = 0; x < dst.cols; x++ )
+    {
+        adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
+        bdelta[x] = saturate_cast<int>(M[3]*x*AB_SCALE);
+    }
+
+    Range range(0, dst.rows);
+    WarpAffineInvoker invoker(src, dst, interpolation, borderType,
+                              Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]),
+                              adelta, bdelta, M);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
+
+} // hal::
+} // cv::
 
 
 void cv::warpAffine( InputArray _src, OutputArray _dst,
@@ -5596,11 +5649,6 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if( tegra::useTegra() && tegra::warpAffine(src, dst, M, flags, borderType, borderValue) )
-        return;
-#endif
-
     if( !(flags & WARP_INVERSE_MAP) )
     {
         double D = M[0]*M[4] - M[1]*M[3];
@@ -5612,12 +5660,6 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         double b2 = -M[3]*M[2] - M[4]*M[5];
         M[2] = b1; M[5] = b2;
     }
-
-    int x;
-    AutoBuffer<int> _abdelta(dst.cols*2);
-    int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
-    const int AB_SCALE = 1 << AB_BITS;
 
 #if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
@@ -5683,16 +5725,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     }
 #endif
 
-    for( x = 0; x < dst.cols; x++ )
-    {
-        adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
-        bdelta[x] = saturate_cast<int>(M[3]*x*AB_SCALE);
-    }
-
-    Range range(0, dst.rows);
-    WarpAffineInvoker invoker(src, dst, interpolation, borderType,
-                              borderValue, adelta, bdelta, M);
-    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+    hal::warpAffine(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+                    M, interpolation, borderType, borderValue.val);
 }
 
 
@@ -5703,7 +5737,7 @@ class WarpPerspectiveInvoker :
     public ParallelLoopBody
 {
 public:
-    WarpPerspectiveInvoker(const Mat &_src, Mat &_dst, double *_M, int _interpolation,
+    WarpPerspectiveInvoker(const Mat &_src, Mat &_dst, const double *_M, int _interpolation,
                            int _borderType, const Scalar &_borderValue) :
         ParallelLoopBody(), src(_src), dst(_dst), M(_M), interpolation(_interpolation),
         borderType(_borderType), borderValue(_borderValue)
@@ -6037,11 +6071,10 @@ public:
 private:
     Mat src;
     Mat dst;
-    double* M;
+    const double* M;
     int interpolation, borderType;
     Scalar borderValue;
 };
-
 
 #if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
 class IPPWarpPerspectiveInvoker :
@@ -6095,7 +6128,25 @@ private:
     const IPPWarpPerspectiveInvoker& operator= (const IPPWarpPerspectiveInvoker&);
 };
 #endif
+
+namespace hal {
+
+void warpPerspectve(int src_type,
+                    const uchar * src_data, size_t src_step, int src_width, int src_height,
+                    uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                    const double M[9], int interpolation, int borderType, const double borderValue[4])
+{
+    CALL_HAL(warpPerspective, cv_hal_warpPerspective, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+    Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
+    Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
+
+    Range range(0, dst.rows);
+    WarpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]));
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
+
+} // hal::
+} // cv::
 
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                           Size dsize, int flags, int borderType, const Scalar& borderValue )
@@ -6121,12 +6172,6 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 3 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if( tegra::useTegra() && tegra::warpPerspective(src, dst, M, flags, borderType, borderValue) )
-        return;
-#endif
-
 
 #if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
@@ -6190,9 +6235,8 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     if( !(flags & WARP_INVERSE_MAP) )
         invert(matM, matM);
 
-    Range range(0, dst.rows);
-    WarpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, borderValue);
-    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+    hal::warpPerspectve(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+                        matM.ptr<double>(), interpolation, borderType, borderValue.val);
 }
 
 
