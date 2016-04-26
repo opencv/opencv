@@ -1626,58 +1626,24 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
     double apertureWidth, double apertureHeight, double *fovx, double *fovy,
     double *focalLength, CvPoint2D64f *principalPoint, double *pasp )
 {
-    double alphax, alphay, mx, my;
-    int imgWidth = imgSize.width, imgHeight = imgSize.height;
-
     /* Validate parameters. */
-
     if(calibMatr == 0)
         CV_Error(CV_StsNullPtr, "Some of parameters is a NULL pointer!");
 
     if(!CV_IS_MAT(calibMatr))
         CV_Error(CV_StsUnsupportedFormat, "Input parameters must be a matrices!");
 
-    if(calibMatr->cols != 3 || calibMatr->rows != 3)
-        CV_Error(CV_StsUnmatchedSizes, "Size of matrices must be 3x3!");
-
-    alphax = cvmGet(calibMatr, 0, 0);
-    alphay = cvmGet(calibMatr, 1, 1);
-    assert(imgWidth != 0 && imgHeight != 0 && alphax != 0.0 && alphay != 0.0);
-
-    /* Calculate pixel aspect ratio. */
-    if(pasp)
-        *pasp = alphay / alphax;
-
-    /* Calculate number of pixel per realworld unit. */
-
-    if(apertureWidth != 0.0 && apertureHeight != 0.0) {
-        mx = imgWidth / apertureWidth;
-        my = imgHeight / apertureHeight;
-    } else {
-        mx = 1.0;
-        if(pasp)
-            my = *pasp;
-        else
-            my = 1.0;
-    }
-
-    /* Calculate fovx and fovy. */
-
-    if(fovx)
-        *fovx = 2 * atan(imgWidth / (2 * alphax)) * 180.0 / CV_PI;
-
-    if(fovy)
-        *fovy = 2 * atan(imgHeight / (2 * alphay)) * 180.0 / CV_PI;
-
-    /* Calculate focal length. */
-
-    if(focalLength)
-        *focalLength = alphax / mx;
-
-    /* Calculate principle point. */
+    double dummy;
+    Point2d pp;
+    cv::calibrationMatrixValues(cvarrToMat(calibMatr), imgSize, apertureWidth, apertureHeight,
+            fovx ? *fovx : dummy,
+            fovy ? *fovy : dummy,
+            focalLength ? *focalLength : dummy,
+            pp,
+            pasp ? *pasp : dummy);
 
     if(principalPoint)
-        *principalPoint = cvPoint2D64f(cvmGet(calibMatr, 0, 2) / mx, cvmGet(calibMatr, 1, 2) / my);
+        *principalPoint = cvPoint2D64f(pp.x, pp.y);
 }
 
 
@@ -3369,10 +3335,35 @@ void cv::calibrationMatrixValues( InputArray _cameraMatrix, Size imageSize,
                                   double& fovx, double& fovy, double& focalLength,
                                   Point2d& principalPoint, double& aspectRatio )
 {
-    Mat cameraMatrix = _cameraMatrix.getMat();
-    CvMat c_cameraMatrix = cameraMatrix;
-    cvCalibrationMatrixValues( &c_cameraMatrix, imageSize, apertureWidth, apertureHeight,
-        &fovx, &fovy, &focalLength, (CvPoint2D64f*)&principalPoint, &aspectRatio );
+    if(_cameraMatrix.size() != Size(3, 3))
+        CV_Error(CV_StsUnmatchedSizes, "Size of cameraMatrix must be 3x3!");
+
+    Matx33d K = _cameraMatrix.getMat();
+
+    CV_DbgAssert(imageSize.width != 0 && imageSize.height != 0 && K(0, 0) != 0.0 && K(1, 1) != 0.0);
+
+    /* Calculate pixel aspect ratio. */
+    aspectRatio = K(1, 1) / K(0, 0);
+
+    /* Calculate number of pixel per realworld unit. */
+    double mx, my;
+    if(apertureWidth != 0.0 && apertureHeight != 0.0) {
+        mx = imageSize.width / apertureWidth;
+        my = imageSize.height / apertureHeight;
+    } else {
+        mx = 1.0;
+        my = aspectRatio;
+    }
+
+    /* Calculate fovx and fovy. */
+    fovx = 2 * atan(imageSize.width / (2 * K(0, 0))) * 180.0 / CV_PI;
+    fovy = 2 * atan(imageSize.height / (2 * K(1, 1))) * 180.0 / CV_PI;
+
+    /* Calculate focal length. */
+    focalLength = K(0, 0) / mx;
+
+    /* Calculate principle point. */
+    principalPoint = Point2d(K(0, 2) / mx, K(1, 2) / my);
 }
 
 double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
