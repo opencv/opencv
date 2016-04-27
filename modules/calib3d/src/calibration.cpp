@@ -3356,8 +3356,10 @@ void cv::calibrationMatrixValues( InputArray _cameraMatrix, Size imageSize,
     }
 
     /* Calculate fovx and fovy. */
-    fovx = 2 * atan(imageSize.width / (2 * K(0, 0))) * 180.0 / CV_PI;
-    fovy = 2 * atan(imageSize.height / (2 * K(1, 1))) * 180.0 / CV_PI;
+    fovx = atan2(K(0, 2), K(0, 0)) + atan2(imageSize.width  - K(0, 2), K(0, 0));
+    fovy = atan2(K(1, 2), K(1, 1)) + atan2(imageSize.height - K(1, 2), K(1, 1));
+    fovx *= 180.0 / CV_PI;
+    fovy *= 180.0 / CV_PI;
 
     /* Calculate focal length. */
     focalLength = K(0, 0) / mx;
