@@ -372,7 +372,7 @@ int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
     for( k = 0; k < N; k++ )
         d[k] = (short)(v - ptr[pixel[k]]);
 
-#if CV_SSSE3_
+#if CV_SSSE3
     __m128i v_base0 = _mm_lddqu_si128((__m128i*)(d));
     __m128i v_base1 = _mm_lddqu_si128((__m128i*)(d+5));
     v_base1 = _mm_shuffle_epi8(v_base1, _mm_set_epi8(15,14,15,14,15,14,15,14,13,12,11,10,9,8,7,6));
