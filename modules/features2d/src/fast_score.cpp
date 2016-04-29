@@ -127,7 +127,7 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 
 #if CV_SSSE3
     __m128i q0 = _mm_set1_epi16(-1000), q1 = _mm_set1_epi16(1000);
-    for( k = 0; k < 14; k += 7 )
+    for( k = 0; k < 16; k += 8 )
     {
         __m128i v_base0 = _mm_lddqu_si128((__m128i*)(d+k));
         __m128i v_base1 = _mm_lddqu_si128((__m128i*)(d+k+8));
