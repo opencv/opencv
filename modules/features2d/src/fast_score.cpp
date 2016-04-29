@@ -282,8 +282,6 @@ int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
         q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v_base0));
         q1 = _mm_min_epi16(q1, _mm_max_epi16(b, v_base0));
         v0 = _mm_alignr_epi8(v_base1, v_base0, 14);
-        a = _mm_min_epi16(a, v0);
-        b = _mm_max_epi16(b, v0);
         q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v0));
         q1 = _mm_min_epi16(q1, _mm_max_epi16(b, v0));
     }
