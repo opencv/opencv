@@ -119,7 +119,7 @@ static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int th
 template<>
 int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 {
-    const int K = 8, N = K*3 + 1;
+    const int K = 8, N = K*3;
     int k, v = ptr[0];
     short d[N];
     for( k = 0; k < N; k++ )
@@ -127,7 +127,7 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 
 #if CV_SSSE3
     __m128i q0 = _mm_set1_epi16(-1000), q1 = _mm_set1_epi16(1000);
-    for( k = 0; k < 16; k += 8 )
+    for( k = 0; k < 14; k += 7 )
     {
         __m128i v_base0 = _mm_lddqu_si128((__m128i*)(d+k));
         __m128i v_base1 = _mm_lddqu_si128((__m128i*)(d+k+8));
