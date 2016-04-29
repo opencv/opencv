@@ -164,9 +164,6 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
     q0 = _mm_max_epi16(q0, _mm_srli_si128(q0, 2));
     threshold = (short)_mm_cvtsi128_si32(q0) - 1;
 #elif CV_SSE2
-    if (threshold < 0) {
-        threshold = -threshold;
-    }
     __m128i q0 = _mm_set1_epi16(-1000), q1 = _mm_set1_epi16(1000);
     for( k = 0; k < 16; k += 8 )
     {
