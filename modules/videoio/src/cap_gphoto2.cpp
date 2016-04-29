@@ -981,7 +981,7 @@ CameraWidget * DigitalCameraCapture::findWidgetByName(
                 CR(gp_widget_get_name(it->second, &name));
                 if (strstr(name, subName))
                     break;
-                it++;
+                ++it;
             }
             return (it != end) ? it->second : NULL;
         }
