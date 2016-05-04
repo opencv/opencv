@@ -119,7 +119,7 @@ static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int th
 template<>
 int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 {
-    const int K = 8, N = K*3;
+    const int K = 8, N = K*3 + 1;
     int k, v = ptr[0];
     short d[N];
     for( k = 0; k < N; k++ )
@@ -127,29 +127,29 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 
 #if CV_SSSE3
     __m128i q0 = _mm_set1_epi16(-1000), q1 = _mm_set1_epi16(1000);
-    for( k = 0; k < 14; k += 7 )
+    for( k = 0; k < 16; k += 8 )
     {
         __m128i v_base0 = _mm_lddqu_si128((__m128i*)(d+k));
         __m128i v_base1 = _mm_lddqu_si128((__m128i*)(d+k+8));
-        __m128i v0 = _mm_alignr_epi8(v_base0, v_base1, 2);
+        __m128i v0 = _mm_alignr_epi8(v_base1, v_base0, 2);
         __m128i a = _mm_min_epi16(v0, v_base1);
         __m128i b = _mm_max_epi16(v0, v_base1);
-        v0 = _mm_alignr_epi8(v_base0, v_base1, 4);
+        v0 = _mm_alignr_epi8(v_base1, v_base0, 4);
         a = _mm_min_epi16(a, v0);
         b = _mm_max_epi16(b, v0);
-        v0 = _mm_alignr_epi8(v_base0, v_base1, 6);
+        v0 = _mm_alignr_epi8(v_base1, v_base0, 6);
         a = _mm_min_epi16(a, v0);
         b = _mm_max_epi16(b, v0);
-        v0 = _mm_alignr_epi8(v_base0, v_base1, 8);
+        v0 = _mm_alignr_epi8(v_base1, v_base0, 8);
         a = _mm_min_epi16(a, v0);
         b = _mm_max_epi16(b, v0);
-        v0 = _mm_alignr_epi8(v_base0, v_base1, 10);
+        v0 = _mm_alignr_epi8(v_base1, v_base0, 10);
         a = _mm_min_epi16(a, v0);
         b = _mm_max_epi16(b, v0);
-        v0 = _mm_alignr_epi8(v_base0, v_base1, 12);
+        v0 = _mm_alignr_epi8(v_base1, v_base0, 12);
         a = _mm_min_epi16(a, v0);
         b = _mm_max_epi16(b, v0);
-        v0 = _mm_alignr_epi8(v_base0, v_base1, 14);
+        v0 = _mm_alignr_epi8(v_base1, v_base0, 14);
         a = _mm_min_epi16(a, v0);
         b = _mm_max_epi16(b, v0);
         q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v_base0));
