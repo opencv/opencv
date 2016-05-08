@@ -302,17 +302,24 @@ if(WIN32)
   endif()
 endif(WIN32)
 
-# --- Apple AV Foundation ---
+# --- Apple AV Foundation (iOS) ---
 if(WITH_AVFOUNDATION)
   set(HAVE_AVFOUNDATION YES)
 endif()
 
-# --- QuickTime ---
+# --- Apple AV Foundation (Mac) ---
+if(WITH_AVFOUNDATION_MAC)
+  set(HAVE_AVFOUNDATION_MAC YES)
+endif()
+
+# --- QuickTime, Apple AV Foundation (Mac) ---
 if (NOT IOS)
   if(WITH_QUICKTIME)
     set(HAVE_QUICKTIME YES)
-  elseif(APPLE AND CMAKE_COMPILER_IS_CLANGCXX)
+  elseif(WITH_QTKIT)
     set(HAVE_QTKIT YES)
+  elseif(APPLE AND CMAKE_COMPILER_IS_CLANGCXX)
+    set(HAVE_AVFOUNDATION_MAC YES)
   endif()
 endif()
 
