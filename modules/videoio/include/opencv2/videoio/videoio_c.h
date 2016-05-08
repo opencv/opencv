@@ -108,6 +108,7 @@ enum
     CV_CAP_XIAPI    =1100,   // XIMEA Camera API
 
     CV_CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
+    CV_CAP_AVFOUNDATION_MAC = 1210,  // AVFoundation framework for Mac
 
     CV_CAP_GIGANETIX = 1300,  // Smartek Giganetix GigEVisionSDK
 
