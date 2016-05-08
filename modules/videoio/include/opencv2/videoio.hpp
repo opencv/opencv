@@ -84,6 +84,7 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_ANDROID      = 1000,  // Android - not used
        CAP_XIAPI        = 1100,  // XIMEA Camera API
        CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
+       CAP_AVFOUNDATION_MAC = 1210,  // AVFoundation framework for Mac
        CAP_GIGANETIX    = 1300,  // Smartek Giganetix GigEVisionSDK
        CAP_MSMF         = 1400,  // Microsoft Media Foundation (via videoInput)
        CAP_WINRT        = 1410,  // Microsoft Windows Runtime using Media Foundation

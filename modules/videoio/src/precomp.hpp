@@ -127,6 +127,7 @@ CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
 CvCapture* cvCreateCameraCapture_Android( int index );
 CvCapture* cvCreateCameraCapture_XIMEA( int index );
 CvCapture* cvCreateCameraCapture_AVFoundation(int index);
+CvCapture* cvCreateCameraCapture_AVFoundation_Mac(int index);
 
 CvCapture* cvCreateFileCapture_Images(const char* filename);
 CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
@@ -155,6 +156,9 @@ CvVideoWriter* cvCreateVideoWriter_QT ( const char* filename, int fourcc,
 CvCapture* cvCreateFileCapture_AVFoundation (const char * filename);
 CvVideoWriter* cvCreateVideoWriter_AVFoundation( const char* filename, int fourcc,
                                                 double fps, CvSize frameSize, int is_color );
+CvCapture* cvCreateFileCapture_AVFoundation_Mac(const char * filename);
+CvVideoWriter* cvCreateVideoWriter_AVFoundation_Mac( const char* filename, int fourcc,
+                                                     double fps, CvSize frameSize, int is_color );
 
 
 CvCapture * cvCreateCameraCapture_Unicap  (const int     index);
