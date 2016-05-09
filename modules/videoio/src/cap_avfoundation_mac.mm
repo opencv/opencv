@@ -398,7 +398,7 @@ void CvCaptureCAM::setWidthHeight() {
         // fit my options to matched size
         width = deviceSize.width;
         height = deviceSize.height;
-    } 
+    }
 
     // flush old size image
     grabFrame(1);
@@ -759,7 +759,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     [mAssetReader addOutput: mTrackOutput];
     [mAssetReader startReading];
 
-    return true; 
+    return true;
 }
 
 int CvCaptureFile::didStart() {
