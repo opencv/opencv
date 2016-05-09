@@ -59,13 +59,14 @@
 #include "cvconfig.h"
 #include "../src/input_array_utility.hpp"
 
-#if defined(HAVE_XINE)         || \
-    defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
-    defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_FFMPEG)       || \
-    defined(HAVE_MSMF)         || \
+#if defined(HAVE_XINE)             || \
+    defined(HAVE_GSTREAMER)        || \
+    defined(HAVE_QUICKTIME)        || \
+    defined(HAVE_QTKIT)            || \
+    defined(HAVE_AVFOUNDATION)     || \
+    defined(HAVE_AVFOUNDATION_MAC) || \
+    defined(HAVE_FFMPEG)           || \
+    defined(HAVE_MSMF)             || \
     defined(HAVE_VFW)
 # define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
 #else
