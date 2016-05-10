@@ -1387,6 +1387,54 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
     }
 }
 
+void CascadeClassifierImpl::detectSingleScale( InputArray _image, std::vector<Rect>& objects,
+                                          std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
+                                          Size desiredScale, int minNeighbors, bool outputRejectLevels)
+{
+    CV_Assert( _image.depth() == CV_8U );
+
+    if( empty() )
+        return;
+
+    // We do not need to keep support for OLD haar models here, since OpenCV3.x doesn't even provide training those anymore
+    detectMultiScaleNoGrouping( _image, objects, rejectLevels, levelWeights, 1.05, desiredScale, desiredScale, outputRejectLevels );
+    const double GROUP_EPS = 0.2;
+    if( outputRejectLevels )
+    {
+        groupRectangles( objects, rejectLevels, levelWeights, minNeighbors, GROUP_EPS );
+    }
+    else
+    {
+        groupRectangles( objects, minNeighbors, GROUP_EPS );
+    }
+}
+
+void CascadeClassifierImpl::detectSingleScale( InputArray _image, std::vector<Rect>& objects, Size desiredScale, int minNeighbors )
+{
+    std::vector<int> fakeLevels;
+    std::vector<double> fakeWeights;
+    bool fakeOutputRejectLevels = false;
+    detectSingleScale( _image, objects, fakeLevels, fakeWeights, desiredScale, minNeighbors, fakeOutputRejectLevels );
+}
+
+void CascadeClassifierImpl::detectSingleScale( InputArray _image, std::vector<Rect>& objects, std::vector<int>& numDetections,
+                                          Size desiredScale, int minNeighbors )
+{
+    Mat image = _image.getMat();
+    CV_Assert( image.depth() == CV_8U );
+
+    if( empty() )
+        return;
+
+    std::vector<int> fakeLevels;
+    std::vector<double> fakeWeights;
+    bool fakeOutputRejectLevels = false;
+
+    // We do not need to keep support for OLD haar models here, since OpenCV3.x doesn't even provide training those anymore
+    detectMultiScaleNoGrouping( image, objects, fakeLevels, fakeWeights, 1.05, desiredScale, desiredScale, fakeOutputRejectLevels);
+    const double GROUP_EPS = 0.2;
+    groupRectangles( objects, numDetections, minNeighbors, GROUP_EPS );
+}
 
 CascadeClassifierImpl::Data::Data()
 {
@@ -1667,6 +1715,50 @@ void CascadeClassifier::detectMultiScale( InputArray image,
     cc->detectMultiScale(image, objects, rejectLevels, levelWeights,
                          scaleFactor, minNeighbors, flags,
                          minSize, maxSize, outputRejectLevels);
+    clipObjects(image.size(), objects, &rejectLevels, &levelWeights);
+}
+
+void CascadeClassifier::detectSingleScale( InputArray image,
+                      CV_OUT std::vector<Rect>& objects,
+                      Size desiredScale,
+                      int minNeighbors)
+{
+    CV_Assert(!empty());
+    BaseCascadeClassifier2* cc2 = dynamic_cast<BaseCascadeClassifier2*>(cc.get());
+    if (!cc2)
+        CV_ErrorNoReturn(Error::StsNotImplemented, "BaseCascadeClassifier2 is expected");
+    cc2->detectSingleScale(image, objects, desiredScale, minNeighbors);
+    clipObjects(image.size(), objects, 0, 0);
+}
+
+void CascadeClassifier::detectSingleScale( InputArray image,
+                      CV_OUT std::vector<Rect>& objects,
+                      CV_OUT std::vector<int>& numDetections,
+                      Size desiredScale,
+                      int minNeighbors )
+{
+    CV_Assert(!empty());
+    BaseCascadeClassifier2* cc2 = dynamic_cast<BaseCascadeClassifier2*>(cc.get());
+    if (!cc2)
+        CV_ErrorNoReturn(Error::StsNotImplemented, "BaseCascadeClassifier2 is expected");
+    cc2->detectSingleScale(image, objects, numDetections,
+                         desiredScale, minNeighbors);
+    clipObjects(image.size(), objects, &numDetections, 0);
+}
+
+void CascadeClassifier::detectSingleScale( InputArray image,
+                      CV_OUT std::vector<Rect>& objects,
+                      CV_OUT std::vector<int>& rejectLevels,
+                      CV_OUT std::vector<double>& levelWeights,
+                      Size desiredScale,
+                      int minNeighbors, bool outputRejectLevels )
+{
+    CV_Assert(!empty());
+    BaseCascadeClassifier2* cc2 = dynamic_cast<BaseCascadeClassifier2*>(cc.get());
+    if (!cc2)
+        CV_ErrorNoReturn(Error::StsNotImplemented, "BaseCascadeClassifier2 is expected");
+    cc2->detectSingleScale(image, objects, rejectLevels, levelWeights,
+                         desiredScale, minNeighbors, outputRejectLevels);
     clipObjects(image.size(), objects, &rejectLevels, &levelWeights);
 }
 
