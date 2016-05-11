@@ -76,10 +76,8 @@ int main(int argc, char** argv)
         "{ s scale     | 1.0            | resize the image before detect}"
         "{ o output    |                | specify output path when input is images}";
     CommandLineParser cmd(argc, argv, keys);
-    if (cmd.has("help"))
+    if (cmd.get<bool>("help"))
     {
-        cout << "Usage : hog [options]" << endl;
-        cout << "Available options:" << endl;
         cmd.printMessage();
         return EXIT_SUCCESS;
     }
@@ -117,7 +115,7 @@ App::App(CommandLineParser& cmd)
          << "\t4/r - increase/decrease hit threshold\n"
          << endl;
 
-    make_gray = cmd.has("gray");
+    make_gray = cmd.get<bool>("gray");
     resize_scale = cmd.get<double>("s");
     vdo_source = cmd.get<string>("v");
     img_source = cmd.get<string>("i");
