@@ -3,9 +3,28 @@
 
 using namespace cv;
 
+namespace cvtest { namespace hal {
+
+template<typename T> static inline void EXPECT_COMPARE_EQ_(const T a, const T b);
+template<> inline void EXPECT_COMPARE_EQ_<float>(const float a, const float b)
+{
+    EXPECT_FLOAT_EQ( a, b );
+}
+
+template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b)
+{
+    EXPECT_DOUBLE_EQ( a, b );
+}
+
 template<typename R> struct TheTest
 {
     typedef typename R::lane_type LaneType;
+
+    template <typename T1, typename T2>
+    static inline void EXPECT_COMPARE_EQ(const T1 a, const T2 b)
+    {
+        EXPECT_COMPARE_EQ_<LaneType>((LaneType)a, (LaneType)b);
+    }
 
     TheTest & test_loadstore()
     {
@@ -316,9 +335,9 @@ template<typename R> struct TheTest
         Data<R> resB = v_sqrt(a), resC = v_invsqrt(a), resE = v_abs(d);
         for (int i = 0; i < R::nlanes; ++i)
         {
-            EXPECT_FLOAT_EQ((float)std::sqrt(dataA[i]), (float)resB[i]);
-            EXPECT_FLOAT_EQ(1/(float)std::sqrt(dataA[i]), (float)resC[i]);
-            EXPECT_FLOAT_EQ((float)abs(dataA[i]), (float)resE[i]);
+            EXPECT_COMPARE_EQ((float)std::sqrt(dataA[i]), (float)resB[i]);
+            EXPECT_COMPARE_EQ(1/(float)std::sqrt(dataA[i]), (float)resC[i]);
+            EXPECT_COMPARE_EQ((float)abs(dataA[i]), (float)resE[i]);
         }
 
         return *this;
@@ -575,9 +594,9 @@ template<typename R> struct TheTest
             EXPECT_EQ(cvFloor(data1[i]), resD[i]);
             EXPECT_EQ(cvCeil(data1[i]), resE[i]);
 
-            EXPECT_DOUBLE_EQ(std::sqrt(data1[i]*data1[i] + data2[i]*data2[i]), resF[i]);
-            EXPECT_DOUBLE_EQ(data1[i]*data1[i] + data2[i]*data2[i], resG[i]);
-            EXPECT_DOUBLE_EQ(data1[i]*data2[i] + data3[i], resH[i]);
+            EXPECT_COMPARE_EQ(std::sqrt(data1[i]*data1[i] + data2[i]*data2[i]), resF[i]);
+            EXPECT_COMPARE_EQ(data1[i]*data1[i] + data2[i]*data2[i], resG[i]);
+            EXPECT_COMPARE_EQ(data1[i]*data2[i] + data3[i], resH[i]);
         }
 
         return *this;
@@ -862,3 +881,7 @@ TEST(hal_intrin, float64x2) {
         ;
 }
 #endif
+
+};
+
+};
