@@ -231,6 +231,14 @@ CvCapture_OpenNI2::CvCapture_OpenNI2( int index )
         return;
     }
 
+    // find appropriate device URI
+    openni::Array<openni::DeviceInfo> ldevs;
+    if (index > 0)
+    {
+        openni::OpenNI::enumerateDevices(&ldevs);
+        deviceURI = ldevs[index].getUri();
+    }
+
     status = device.open(deviceURI);
     if( status != openni::STATUS_OK )
     {
