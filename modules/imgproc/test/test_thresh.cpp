@@ -170,7 +170,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                 const float* src = _src.ptr<float>(i);
                 float* dst = _dst.ptr<float>(i);
                 for( j = 0; j < width_n; j++ )
-                    dst[j] = src[j] > thresh ? maxval : 0.f;
+                    dst[j] = (float)(src[j] > thresh ? maxval : 0.f);
             }
             else
             {
@@ -203,7 +203,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                 const float* src = _src.ptr<float>(i);
                 float* dst = _dst.ptr<float>(i);
                 for( j = 0; j < width_n; j++ )
-                    dst[j] = src[j] > thresh ? 0.f : maxval;
+                    dst[j] = (float)(src[j] > thresh ? 0.f : maxval);
             }
             else
             {
@@ -244,7 +244,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                 for( j = 0; j < width_n; j++ )
                 {
                     float s = src[j];
-                    dst[j] = s > thresh ? thresh : s;
+                    dst[j] = (float)(s > thresh ? thresh : s);
                 }
             }
             else
