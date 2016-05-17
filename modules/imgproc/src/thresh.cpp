@@ -1210,7 +1210,7 @@ public:
         }
         else if( srcStripe.depth() == CV_64F )
         {
-            thresh_64f(srcStripe, dstStripe, (double)thresh, (double)maxval, thresholdType);
+            thresh_64f(srcStripe, dstStripe, thresh, maxval, thresholdType);
         }
     }
 
