@@ -64,9 +64,6 @@ import numpy as np
 SZ=20
 bin_n = 16 # Number of bins
 
-svm_params = dict( kernel_type = cv2.SVM_LINEAR,
-                    svm_type = cv2.SVM_C_SVC,
-                    C=2.67, gamma=5.383 )
 
 affine_flags = cv2.WARP_INVERSE_MAP|cv2.INTER_LINEAR
 
@@ -105,8 +102,13 @@ hogdata = [map(hog,row) for row in deskewed]
 trainData = np.float32(hogdata).reshape(-1,64)
 responses = np.float32(np.repeat(np.arange(10),250)[:,np.newaxis])
 
-svm = cv2.SVM()
-svm.train(trainData,responses, params=svm_params)
+svm = cv2.ml.SVM_create()
+svm.setKernel(cv2.ml.SVM_LINEAR)
+svm.setType(cv2.ml.SVM_C_SVC)
+svm.setC(2.67)
+svm.setGamma(5.383)
+
+svm.train(trainData, cv2.ml.ROW_SAMPLE, responses)
 svm.save('svm_data.dat')
 
 ######     Now testing      ########################
@@ -114,7 +116,7 @@ svm.save('svm_data.dat')
 deskewed = [map(deskew,row) for row in test_cells]
 hogdata = [map(hog,row) for row in deskewed]
 testData = np.float32(hogdata).reshape(-1,bin_n*4)
-result = svm.predict_all(testData)
+result = svm.predict(testData)
 
 #######   Check Accuracy   ########################
 mask = result==responses

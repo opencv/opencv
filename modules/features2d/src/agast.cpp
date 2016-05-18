@@ -793,7 +793,7 @@ static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
                     keypoints.reserve(nExpectedCorners);
                 }
             }
-            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 1.0f));
+            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 7.0f));
             total++;
             goto homogeneous;
             success_structured:
@@ -810,7 +810,7 @@ static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
                     keypoints.reserve(nExpectedCorners);
                 }
             }
-            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 1.0f));
+            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 7.0f));
             total++;
             goto structured;
         }
@@ -3237,7 +3237,7 @@ static void AGAST_7_12d(InputArray _img, std::vector<KeyPoint>& keypoints, int t
                     keypoints.reserve(nExpectedCorners);
                 }
             }
-            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 1.0f));
+            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 7.0f));
             total++;
             goto homogeneous;
           success_structured:
@@ -3254,7 +3254,7 @@ static void AGAST_7_12d(InputArray _img, std::vector<KeyPoint>& keypoints, int t
                     keypoints.reserve(nExpectedCorners);
                 }
             }
-            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 1.0f));
+            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 7.0f));
             total++;
             goto structured;
         }
@@ -5319,7 +5319,7 @@ static void AGAST_7_12s(InputArray _img, std::vector<KeyPoint>& keypoints, int t
                     keypoints.reserve(nExpectedCorners);
                 }
             }
-            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 1.0f));
+            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 7.0f));
             total++;
             goto homogeneous;
           success_structured:
@@ -5336,7 +5336,7 @@ static void AGAST_7_12s(InputArray _img, std::vector<KeyPoint>& keypoints, int t
                     keypoints.reserve(nExpectedCorners);
                 }
             }
-            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 1.0f));
+            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 7.0f));
             total++;
             goto structured;
         }
@@ -7440,7 +7440,7 @@ static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
                     keypoints.reserve(nExpectedCorners);
                 }
             }
-            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 1.0f));
+            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 7.0f));
             total++;
         }
     }
@@ -7892,7 +7892,7 @@ static void AGAST_ALL(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
                     keypoints.reserve(nExpectedCorners);
                 }
             }
-            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 1.0f));
+            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 7.0f));
             total++;
             goto homogeneous;
             success_structured:
@@ -7909,7 +7909,7 @@ static void AGAST_ALL(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
                     keypoints.reserve(nExpectedCorners);
                 }
             }
-            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 1.0f));
+            keypoints.push_back(KeyPoint(Point2f((float)x, (float)y), 7.0f));
             total++;
             goto structured;
         }
@@ -8033,7 +8033,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
     makeAgastOffsets(pixel_, (int)img.step, type);
 
     std::vector<KeyPoint>::iterator kpt;
-    for(kpt = kpts.begin(); kpt != kpts.end(); kpt++)
+    for(kpt = kpts.begin(); kpt != kpts.end(); ++kpt)
     {
         switch(type) {
           case AgastFeatureDetector::AGAST_5_8:
@@ -8097,19 +8097,19 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
                     && (kpts[lastRowCorner_ind].pt.y == lastRow) )
                     lastRowCorner_ind++;
 
-                    if( (kpts[lastRowCorner_ind].pt.x == currCorner->pt.x)
-                     && (lastRowCorner_ind != curr_idx) )
-                    {
-                        size_t w = lastRowCorner_ind;
-                        // find the maximum in this block
-                        while(nmsFlags[w] != -1)
-                            w = nmsFlags[w];
+                if( (kpts[lastRowCorner_ind].pt.x == currCorner->pt.x)
+                 && (lastRowCorner_ind != curr_idx) )
+                {
+                    size_t w = lastRowCorner_ind;
+                    // find the maximum in this block
+                    while(nmsFlags[w] != -1)
+                        w = nmsFlags[w];
 
-                        if(kpts[curr_idx].response < kpts[w].response)
-                            nmsFlags[curr_idx] = (int)w;
-                        else
-                            nmsFlags[w] = (int)curr_idx;
-                    }
+                    if(kpts[curr_idx].response < kpts[w].response)
+                        nmsFlags[curr_idx] = (int)w;
+                    else
+                        nmsFlags[w] = (int)curr_idx;
+                }
             }
 
             // check left
@@ -8149,7 +8149,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
                     }
                 }
             }
-            currCorner++;
+            ++currCorner;
         }
 
         // collecting maximum corners

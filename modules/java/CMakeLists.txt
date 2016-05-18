@@ -287,9 +287,12 @@ if(ANDROID AND ANDROID_EXECUTABLE)
 
   install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT java)
   install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT java)
+
   # creating empty 'gen' and 'res' folders
-  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/gen\")" COMPONENT java)
-  install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT}/res\")" COMPONENT java)
+  file(MAKE_DIRECTORY ${OpenCV_BINARY_DIR}/sdk/java/gen ${OpenCV_BINARY_DIR}/sdk/java/res )
+
+  install(DIRECTORY ${OpenCV_BINARY_DIR}/sdk/java/gen DESTINATION ${JAVA_INSTALL_ROOT}/ COMPONENT java)
+  install(DIRECTORY ${OpenCV_BINARY_DIR}/sdk/java/res DESTINATION ${JAVA_INSTALL_ROOT}/ COMPONENT java)
 endif(ANDROID AND ANDROID_EXECUTABLE)
 
 set(step3_depends ${step2_depends} ${step3_input_files} ${copied_files})
@@ -347,16 +350,9 @@ endif(ANDROID)
 # workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
 string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-if(ANDROID)
-  # Android native code need to link with libopencv_java.so
-  ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
+ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
-else()
-  ocv_add_library(${the_module} MODULE ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
-                                 ${copied_files}
-                                "${JAR_FILE}" "${JAR_FILE}.dephelper")
-endif()
 
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
@@ -390,7 +386,6 @@ set_target_properties(${the_module} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-    INSTALL_NAME_DIR ${OPENCV_LIB_INSTALL_PATH}
     LINK_INTERFACE_LIBRARIES ""
     )
 

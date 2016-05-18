@@ -49,6 +49,10 @@
 #  error utility.hpp header must be compiled as C++
 #endif
 
+#if defined(check)
+#  warning Detected Apple 'check' macro definition, it can cause build conflicts. Please, include this header before any Apple headers.
+#endif
+
 #include "opencv2/core.hpp"
 
 namespace cv
@@ -359,7 +363,7 @@ CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, 
 template<typename _Tp, typename Functor> inline
 void Mat::forEach_impl(const Functor& operation) {
     if (false) {
-        operation(*reinterpret_cast<_Tp*>(0), reinterpret_cast<int*>(NULL));
+        operation(*reinterpret_cast<_Tp*>(0), reinterpret_cast<int*>(0));
         // If your compiler fail in this line.
         // Please check that your functor signature is
         //     (_Tp&, const int*)   <- multidimential

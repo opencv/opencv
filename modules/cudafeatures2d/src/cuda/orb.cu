@@ -44,11 +44,14 @@
 
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
+#include <thrust/system/cuda/execution_policy.h>
+#include <thrust/version.h>
+
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/functional.hpp"
-
+#include "opencv2/core/cuda/utility.hpp"
 namespace cv { namespace cuda { namespace device
 {
     namespace orb
@@ -56,13 +59,32 @@ namespace cv { namespace cuda { namespace device
         ////////////////////////////////////////////////////////////////////////////////////////////////////////
         // cull
 
-        int cull_gpu(int* loc, float* response, int size, int n_points)
+        int cull_gpu(int* loc, float* response, int size, int n_points, cudaStream_t stream)
         {
             thrust::device_ptr<int> loc_ptr(loc);
             thrust::device_ptr<float> response_ptr(response);
-
+#if THRUST_VERSION >= 100800
+#if THRUST_VERSION >= 100802
+            if (stream)
+            {
+                thrust::sort_by_key(thrust::cuda::par(ThrustAllocator::getAllocator()).on(stream), response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
+            }
+            else
+            {
+                thrust::sort_by_key(thrust::cuda::par(ThrustAllocator::getAllocator()), response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
+            }
+#else
+            if(stream)
+            {
+                thrust::sort_by_key(thrust::cuda::par.on(stream), response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
+            }else
+            {
+                thrust::sort_by_key(response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
+            }
+#endif
+#else
             thrust::sort_by_key(response_ptr, response_ptr + size, loc_ptr, thrust::greater<float>());
-
+#endif
             return n_points;
         }
 

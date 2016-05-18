@@ -264,6 +264,9 @@ Ptr<T>::Ptr(Ptr&& o) : owner(o.owner), stored(o.stored)
 template<typename T>
 Ptr<T>& Ptr<T>::operator = (Ptr<T>&& o)
 {
+    if (this == &o)
+        return *this;
+
     release();
     owner = o.owner;
     stored = o.stored;

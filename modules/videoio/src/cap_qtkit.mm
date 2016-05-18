@@ -93,6 +93,8 @@ didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
 - (int)updateImage;
 - (IplImage*)getOutput;
 
+- (void)doFireTimer:(NSTimer *)timer;
+
 @end
 
 /*****************************************************************************
@@ -620,6 +622,11 @@ didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
     CVBufferRelease(pixels);
 
     return 1;
+}
+
+- (void)doFireTimer:(NSTimer *)timer {
+    (void)timer;
+    // dummy
 }
 
 @end

@@ -2037,6 +2037,7 @@ public:
         if( !isTrained() )
             CV_Error( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
+        writeFormat(fs);
         write_params( fs );
 
         fs << "var_count" << var_count;
@@ -2092,7 +2093,7 @@ public:
                << "alpha" << "[:";
             fs.writeRaw("d", (const uchar*)&df_alpha[df.ofs], sv_count*sizeof(df_alpha[0]));
             fs << "]";
-            if( class_count > 2 )
+            if( class_count >= 2 )
             {
                 fs << "index" << "[:";
                 fs.writeRaw("i", (const uchar*)&df_index[df.ofs], sv_count*sizeof(df_index[0]));
@@ -2234,11 +2235,11 @@ public:
             df_index.resize(ofs + sv_count);
             df_alpha.resize(ofs + sv_count);
             dfi["alpha"].readRaw("d", (uchar*)&df_alpha[ofs], sv_count*sizeof(df_alpha[0]));
-            if( class_count > 2 )
+            if( class_count >= 2 )
                 dfi["index"].readRaw("i", (uchar*)&df_index[ofs], sv_count*sizeof(df_index[0]));
             decision_func.push_back(df);
         }
-        if( class_count <= 2 )
+        if( class_count < 2 )
             setRangeVector(df_index, sv_total);
         if( (int)fn["optimize_linear"] != 0 )
             optimize_linear_svm();
@@ -2259,6 +2260,17 @@ public:
 Ptr<SVM> SVM::create()
 {
     return makePtr<SVMImpl>();
+}
+
+Ptr<SVM> SVM::load(const String& filepath)
+{
+    FileStorage fs;
+    fs.open(filepath, FileStorage::READ);
+
+    Ptr<SVM> svm = makePtr<SVMImpl>();
+
+    ((SVMImpl*)svm.get())->read(fs.getFirstTopLevelNode());
+    return svm;
 }
 
 Mat SVM::getUncompressedSupportVectors() const

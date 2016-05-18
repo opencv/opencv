@@ -387,6 +387,7 @@ public:
         if( roots.empty() )
             CV_Error( CV_StsBadArg, "RTrees have not been trained" );
 
+        writeFormat(fs);
         writeParams(fs);
 
         int k, ntrees = (int)roots.size();

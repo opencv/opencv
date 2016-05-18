@@ -37,6 +37,8 @@ the use of this software, even if advised of the possibility of such damage.
 #ifndef __OPENCV_IMGPROC_FILTERENGINE_HPP__
 #define __OPENCV_IMGPROC_FILTERENGINE_HPP__
 
+#include "opencv2/imgproc.hpp"
+
 namespace cv
 {
 
@@ -228,19 +230,17 @@ public:
               int _rowBorderType = BORDER_REPLICATE,
               int _columnBorderType = -1,
               const Scalar& _borderValue = Scalar());
+
     //! starts filtering of the specified ROI of an image of size wholeSize.
-    virtual int start(Size wholeSize, Rect roi, int maxBufRows = -1);
+    virtual int start(const cv::Size &wholeSize, const cv::Size &sz, const cv::Point &ofs);
     //! starts filtering of the specified ROI of the specified image.
-    virtual int start(const Mat& src, const Rect& srcRoi = Rect(0,0,-1,-1),
-                      bool isolated = false, int maxBufRows = -1);
+    virtual int start(const Mat& src, const cv::Size &wsz, const cv::Point &ofs);
     //! processes the next srcCount rows of the image.
     virtual int proceed(const uchar* src, int srcStep, int srcCount,
                         uchar* dst, int dstStep);
     //! applies filter to the specified ROI of the image. if srcRoi=(0,0,-1,-1), the whole image is filtered.
-    virtual void apply( const Mat& src, Mat& dst,
-                        const Rect& srcRoi = Rect(0,0,-1,-1),
-                        Point dstOfs = Point(0,0),
-                        bool isolated = false);
+    virtual void apply(const Mat& src, Mat& dst, const cv::Size &wsz, const cv::Point &ofs);
+
     //! returns true if the filter is separable
     bool isSeparable() const { return !filter2D; }
     //! returns the number

@@ -156,6 +156,7 @@ TEST(ML_DTree, save_load) { CV_SLMLTest test( CV_DTREE ); test.safe_run(); }
 TEST(ML_Boost, save_load) { CV_SLMLTest test( CV_BOOST ); test.safe_run(); }
 TEST(ML_RTrees, save_load) { CV_SLMLTest test( CV_RTREES ); test.safe_run(); }
 TEST(DISABLED_ML_ERTrees, save_load) { CV_SLMLTest test( CV_ERTREES ); test.safe_run(); }
+TEST(MV_SVMSGD, save_load){ CV_SLMLTest test( CV_SVMSGD ); test.safe_run(); }
 
 class CV_LegacyTest : public cvtest::BaseTest
 {
@@ -201,6 +202,8 @@ protected:
             model = Algorithm::load<SVM>(filename);
         else if (modelName == CV_RTREES)
             model = Algorithm::load<RTrees>(filename);
+        else if (modelName == CV_SVMSGD)
+            model = Algorithm::load<SVMSGD>(filename);
         if (!model)
         {
             code = cvtest::TS::FAIL_INVALID_TEST_DATA;
@@ -260,6 +263,7 @@ TEST(ML_DTree, legacy_load) { CV_LegacyTest test(CV_DTREE, "_abalone.xml;_mushro
 TEST(ML_NBayes, legacy_load) { CV_LegacyTest test(CV_NBAYES, "_waveform.xml"); test.safe_run(); }
 TEST(ML_SVM, legacy_load) { CV_LegacyTest test(CV_SVM, "_poletelecomm.xml;_waveform.xml"); test.safe_run(); }
 TEST(ML_RTrees, legacy_load) { CV_LegacyTest test(CV_RTREES, "_waveform.xml"); test.safe_run(); }
+TEST(ML_SVMSGD, legacy_load) { CV_LegacyTest test(CV_SVMSGD, "_waveform.xml"); test.safe_run(); }
 
 /*TEST(ML_SVM, throw_exception_when_save_untrained_model)
 {

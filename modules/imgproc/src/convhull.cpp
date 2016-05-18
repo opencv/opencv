@@ -302,7 +302,7 @@ void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defect
         int defect_deepest_point = -1;
         double defect_depth = 0;
         bool is_defect = false;
-
+        j=hcurr;
         for(;;)
         {
             // go through points to achieve next hull point

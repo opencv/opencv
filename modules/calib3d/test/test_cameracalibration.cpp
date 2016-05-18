@@ -1349,27 +1349,27 @@ bool CV_StereoCalibrationTest::checkPandROI( int test_case_idx, const Mat& M, co
             return false;
         }
 
-        // step 2. check that all the points inside ROI belong to the original source image
-        Mat temp(imgsize, CV_8U), utemp, map1, map2;
-        temp = Scalar::all(1);
-        initUndistortRectifyMap(M, D, R, P, imgsize, CV_16SC2, map1, map2);
-        remap(temp, utemp, map1, map2, INTER_LINEAR);
+    // step 2. check that all the points inside ROI belong to the original source image
+    Mat temp(imgsize, CV_8U), utemp, map1, map2;
+    temp = Scalar::all(1);
+    initUndistortRectifyMap(M, D, R, P, imgsize, CV_16SC2, map1, map2);
+    remap(temp, utemp, map1, map2, INTER_LINEAR);
 
-        if(roi.x < 0 || roi.y < 0 || roi.x + roi.width > imgsize.width || roi.y + roi.height > imgsize.height)
-        {
+    if(roi.x < 0 || roi.y < 0 || roi.x + roi.width > imgsize.width || roi.y + roi.height > imgsize.height)
+    {
             ts->printf(cvtest::TS::LOG, "Test #%d. The ROI=(%d, %d, %d, %d) is outside of the imge rectangle\n",
-                test_case_idx, roi.x, roi.y, roi.width, roi.height);
+                            test_case_idx, roi.x, roi.y, roi.width, roi.height);
             return false;
-        }
-        double s = sum(utemp(roi))[0];
-        if( s > roi.area() || roi.area() - s > roi.area()*(1-eps) )
-        {
+    }
+    double s = sum(utemp(roi))[0];
+    if( s > roi.area() || roi.area() - s > roi.area()*(1-eps) )
+    {
             ts->printf(cvtest::TS::LOG, "Test #%d. The ratio of black pixels inside the valid ROI (~%g%%) is too large\n",
-                test_case_idx, s*100./roi.area());
+                            test_case_idx, s*100./roi.area());
             return false;
-        }
+    }
 
-        return true;
+    return true;
 }
 
 void CV_StereoCalibrationTest::run( int )

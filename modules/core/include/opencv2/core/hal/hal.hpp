@@ -46,6 +46,7 @@
 #define __OPENCV_HAL_HPP__
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/hal/interface.h"
 
 //! @cond IGNORED
@@ -171,13 +172,13 @@ CV_EXPORTS void div32s( const int* src1, size_t step1, const int* src2, size_t s
 CV_EXPORTS void div32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
 CV_EXPORTS void div64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
 
-CV_EXPORTS void recip8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2, ushort* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip16s( const short* src1, size_t step1, const short* src2, size_t step2, short* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
-CV_EXPORTS void recip64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip8u( const uchar *, size_t, const uchar * src2, size_t step2, uchar* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip8s( const schar *, size_t, const schar * src2, size_t step2, schar* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip16u( const ushort *, size_t, const ushort * src2, size_t step2, ushort* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip16s( const short *, size_t, const short * src2, size_t step2, short* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip32s( const int *, size_t, const int * src2, size_t step2, int* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip32f( const float *, size_t, const float * src2, size_t step2, float* dst, size_t step, int width, int height, void* scale);
+CV_EXPORTS void recip64f( const double *, size_t, const double * src2, size_t step2, double* dst, size_t step, int width, int height, void* scale);
 
 CV_EXPORTS void addWeighted8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2, uchar* dst, size_t step, int width, int height, void* _scalars );
 CV_EXPORTS void addWeighted8s( const schar* src1, size_t step1, const schar* src2, size_t step2, schar* dst, size_t step, int width, int height, void* scalars );
@@ -186,6 +187,29 @@ CV_EXPORTS void addWeighted16s( const short* src1, size_t step1, const short* sr
 CV_EXPORTS void addWeighted32s( const int* src1, size_t step1, const int* src2, size_t step2, int* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scalars );
+
+struct CV_EXPORTS DFT1D
+{
+    static Ptr<DFT1D> create(int len, int count, int depth, int flags, bool * useBuffer = 0);
+    virtual void apply(const uchar *src, uchar *dst) = 0;
+    virtual ~DFT1D() {}
+};
+
+struct CV_EXPORTS DFT2D
+{
+    static Ptr<DFT2D> create(int width, int height, int depth,
+                             int src_channels, int dst_channels,
+                             int flags, int nonzero_rows = 0);
+    virtual void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) = 0;
+    virtual ~DFT2D() {}
+};
+
+struct CV_EXPORTS DCT2D
+{
+    static Ptr<DCT2D> create(int width, int height, int depth, int flags);
+    virtual void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) = 0;
+    virtual ~DCT2D() {}
+};
 
 //! @} core_hal
 

@@ -3,7 +3,14 @@ if(NOT WITH_VTK)
 endif()
 
 # VTK 6.x components
-find_package(VTK QUIET COMPONENTS vtkRenderingOpenGL vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
+find_package(VTK QUIET COMPONENTS vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
+IF(VTK_FOUND)
+  IF(VTK_RENDERING_BACKEND) #in vtk 7, the rendering backend is exported as a var.
+      find_package(VTK QUIET COMPONENTS vtkRendering${VTK_RENDERING_BACKEND} vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
+  ELSE(VTK_RENDERING_BACKEND)
+      find_package(VTK QUIET COMPONENTS vtkRenderingOpenGL vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
+  ENDIF(VTK_RENDERING_BACKEND)
+ENDIF(VTK_FOUND)
 
 # VTK 5.x components
 if(NOT VTK_FOUND)

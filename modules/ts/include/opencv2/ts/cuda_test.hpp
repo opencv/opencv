@@ -208,9 +208,6 @@ namespace cvtest
       } \
       void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::UnsafeTestBody()
 
-    #define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
-    #define GET_PARAM(k) std::tr1::get< k >(GetParam())
-
     #define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
 
     // Depth
