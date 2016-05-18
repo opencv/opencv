@@ -7,7 +7,7 @@ Required Packages
 -----------------
 
 -   GCC 4.4.x or later
--   CMake 2.8.7 or higher
+-   CMake 2.8.8 or higher
 -   Git
 -   GTK+2.x or higher, including headers (libgtk2.0-dev)
 -   pkg-config
