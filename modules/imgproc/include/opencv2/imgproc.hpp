@@ -413,6 +413,13 @@ enum ConnectedComponentsTypes {
     CC_STAT_MAX    = 5
 };
 
+//! connected components algorithm
+enum ConnectedComponentsAlgorithmsTypes {
+    CCL_WU      = 0,  //!< SAUF algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
+    CCL_DEFAULT = -1, //!< BBDT algortihm for 8-way connectivity, SAUF algorithm for 4-way connectivity
+    CCL_GRANA   = 1   //!< BBDT algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
+};
+
 //! mode of the contour retrieval algorithm
 enum RetrievalModes {
     /** retrieves only the extreme outer contours. It sets `hierarchy[i][2]=hierarchy[i][3]=-1` for
@@ -3595,15 +3602,18 @@ CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
 image with 4 or 8 way connectivity - returns N, the total number of labels [0, N-1] where 0
 represents the background label. ltype specifies the output label image type, an important
 consideration based on the total number of labels or alternatively the total number of pixels in
-the source image.
+the source image. ccltype specifies the connected components labeling algorithm to use, currently
+Grana's (BBDT) and Wu's (SAUF) algorithms are supported, see the cv::ConnectedComponentsAlgorithmsTypes
+for details
 
 @param image the 8-bit single-channel image to be labeled
 @param labels destination labeled image
 @param connectivity 8 or 4 for 8-way or 4-way connectivity respectively
 @param ltype output image label type. Currently CV_32S and CV_16U are supported.
- */
+@param ccltype connected components algorithm type (see the cv::ConnectedComponentsAlgorithmsTypes).
+*/
 CV_EXPORTS_W int connectedComponents(InputArray image, OutputArray labels,
-                                     int connectivity = 8, int ltype = CV_32S);
+                                     int connectivity = 8, int ltype = CV_32S, int ccltype = CCL_DEFAULT);
 
 /** @overload
 @param image the 8-bit single-channel image to be labeled
@@ -3615,11 +3625,11 @@ cv::ConnectedComponentsTypes. The data type is CV_32S.
 accessed via centroids(label, 0) for x and centroids(label, 1) for y. The data type CV_64F.
 @param connectivity 8 or 4 for 8-way or 4-way connectivity respectively
 @param ltype output image label type. Currently CV_32S and CV_16U are supported.
+@param ccltype connected components algorithm type (see the cv::ConnectedComponentsAlgorithmsTypes).
 */
 CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labels,
                                               OutputArray stats, OutputArray centroids,
-                                              int connectivity = 8, int ltype = CV_32S);
-
+                                              int connectivity = 8, int ltype = CV_32S, int ccltype = CCL_DEFAULT);
 
 /** @brief Finds contours in a binary image.
 
