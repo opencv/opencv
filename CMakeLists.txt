@@ -605,7 +605,7 @@ include(cmake/OpenCVDetectVTK.cmake)
 # -- Custom HAL replacement --
 # Package config in: OpenCV_HALConfig.cmake or opencv_hal-config.cmake
 # Use variables: OpenCV_HAL_LIBRARIES, OpenCV_HAL_HEADERS and OpenCV_HAL_INCLUDE_DIRS variables
-find_package(OpenCV_HAL CONFIG QUIET)
+find_package(OpenCV_HAL NO_MODULE QUIET)
 set(_includes "")
 if (OpenCV_HAL_FOUND)
   # 1. libraries
