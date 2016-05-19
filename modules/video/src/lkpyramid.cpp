@@ -1351,7 +1351,7 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
 }
 
-cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
+cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArray _inliers_mask, bool fullAffine )
 {
     Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
 
@@ -1364,6 +1364,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
     std::vector<Point2f> pA, pB;
     std::vector<int> good_idx;
     std::vector<uchar> status;
+    Mat inliers_mask;
 
     double scale = 1.;
     int i, j, k, k1;
@@ -1458,6 +1459,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         CV_Error( Error::StsUnsupportedFormat, "Both input images must have either 8uC1 or 8uC3 type" );
 
     good_idx.resize(count);
+    inliers_mask = Mat::zeros(count, 1, CV_8U);
 
     if( count < RANSAC_SIZE0 )
         return Mat();
@@ -1534,7 +1536,10 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         {
             if( std::abs( m[0]*pA[i].x + m[1]*pA[i].y + m[2] - pB[i].x ) +
                 std::abs( m[3]*pA[i].x + m[4]*pA[i].y + m[5] - pB[i].y ) < std::max(brect.width,brect.height)*0.05 )
+            {
                 good_idx[good_count++] = i;
+                inliers_mask.data[i] = true;
+            }
         }
 
         if( good_count >= count*RANSAC_GOOD_RATIO )
@@ -1558,7 +1563,18 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
     M.at<double>(0, 2) /= scale;
     M.at<double>(1, 2) /= scale;
 
+    // return inliers mask
+    if ( _inliers_mask.needed() )
+    {
+        inliers_mask.copyTo( _inliers_mask );
+    }
+
     return M;
+}
+
+cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
+{
+    return estimateRigidTransform( src1, src2, noArray(), fullAffine );
 }
 
 /* End of file. */

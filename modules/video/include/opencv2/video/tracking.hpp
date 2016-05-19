@@ -224,6 +224,8 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, In
 
 @param src First input 2D point set stored in std::vector or Mat, or an image stored in Mat.
 @param dst Second input 2D point set of the same size and the same type as A, or another image.
+@param inliers_mask Output mask of good points (inliers) set by a robust method (RANSAC). Note that
+the input mask values are ignored.
 @param fullAffine If true, the function finds an optimal affine transformation with no additional
 restrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is
 limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
@@ -247,8 +249,11 @@ when fullAffine=false.
 @sa
 getAffineTransform, getPerspectiveTransform, findHomography
  */
-CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
+CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, OutputArray inliers_mask,
+                                         bool fullAffine );
 
+/** @overload */
+CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
 enum
 {
