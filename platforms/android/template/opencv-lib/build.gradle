@@ -40,6 +40,16 @@ model {
         quiet = false
         showAll = true
     }
+    android.ndk {
+        moduleName "CVnative"
+        abiFilters.addAll(['armeabi-v7a', 'arm64-v8a'])
+        CFlags.add("-v")
+        cppFlags.add("-v")
+        cppFlags.add("-I" + file("src/main/jni/include").absolutePath)
+        cppFlags.addAll(["-frtti","-fexceptions"])
+        ldFlags.add("--verbose")
+        stl = "gnustl_static"
+    }
     repositories {
         libs(PrebuiltLibraries) {
             opencv_java3 {
