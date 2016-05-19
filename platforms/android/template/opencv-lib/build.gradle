@@ -1,64 +1,54 @@
-apply plugin: 'com.android.library'
+apply plugin: 'com.android.model.library'
 
-buildscript {
-    repositories {
-        mavenCentral()
+model {
+    android {
+        compileSdkVersion = 21
+        buildToolsVersion = "21.1.2"
+        defaultConfig {
+            minSdkVersion.apiLevel = 21
+            targetSdkVersion.apiLevel = 21
+            versionCode 3100
+            versionName "3.1.0"
+        }
     }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:1.5.0'
+    android.abis {
+        create("arm64-v8a") {
+            ldFlags.add("-Wl,--no-warn-mismatch")
+        }
+        create("armeabi-v7a") {
+            cppFlags.addAll(["-mhard-float", "-D_NDK_MATH_NO_SOFTFP=1", "-mfloat-abi=hard"])
+            ldLibs.add("m_hard")
+            ldFlags.add("-Wl,--no-warn-mismatch")
+        }
     }
-}
-
-android {
-    compileSdkVersion 21
-    buildToolsVersion "21.1.2"
-    defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 21
-        versionCode 3100
-        versionName "3.1.0"
-    }
-    buildTypes {
+    android.buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            minifyEnabled = false
+            proguardFiles.add(file('proguard-rules.txt'))
         }
         debug {
-            debuggable true
-            jniDebuggable true
-            renderscriptDebuggable true
+            debuggable = true
+            ndk {
+                debuggable = true
+            }
+            renderscriptDebuggable = true
         }
     }
-    sourceSets {
-        main {
-            jni.srcDirs = []
+    android.lintOptions {
+        abortOnError = false
+        xmlReport = false
+        quiet = false
+        showAll = true
+    }
+    repositories {
+        libs(PrebuiltLibraries) {
+            opencv_java3 {
+                headers.srcDir "src/main/jni/include"
+                binaries.withType(SharedLibraryBinary) {
+                    sharedLibraryFile = file("src/main/jniLibs/${targetPlatform.getName()}/libopencv_java3.so")
+                }
+            }
         }
-    }
-    productFlavors {
-    }
-    lintOptions {
-        abortOnError false
-    }
-    task buildNative(type: Exec, description: 'Compile JNI source via NDK') {
-        def ndkDir = android.ndkDirectory
-        commandLine "$ndkDir/ndk-build",
-                '-C', file('src/main/jni').absolutePath, // Change src/main/jni the relative path to your jni source
-                '-j', Runtime.runtime.availableProcessors(),
-                'all',
-                'NDK_DEBUG=1'
-    }
-
-    task cleanNative(type: Exec, description: 'Clean JNI object files') {
-        def ndkDir = android.ndkDirectory
-        commandLine "$ndkDir/ndk-build",
-                '-C', file('src/main/jni').absolutePath, // Change src/main/jni the relative path to your jni source
-                'clean'
-    }
-
-    clean.dependsOn 'cleanNative'
-
-    tasks.withType(JavaCompile) {
-        compileTask -> compileTask.dependsOn buildNative
     }
 }
 

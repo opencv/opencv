@@ -57,6 +57,7 @@ function main ()
 function install_android_library ()
 # $1 install path
 {
+  set +e
   pwd
   cp -av $BUILD_ROOT/platforms/android/template/opencv-lib/* $1
   cp -av lint.xml $1
@@ -69,6 +70,7 @@ function install_android_library ()
   cp -av install/sdk/java/res $1/src/main
   cp -av install/sdk/java/AndroidManifest.xml $1/src/main
   cp -av install/sdk/java/lint.xml $1
+  set -e
 }
 
 function build_target ()
@@ -119,7 +121,7 @@ function build_platform ()
      -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
      -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
      -DCMAKE_TOOLCHAIN_FILE=${BUILD_ROOT}/platforms/android/android.toolchain.cmake"
-    EXTRA_OPTIONS="-DWITH_OPENCL=OFF -DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9"
+    EXTRA_OPTIONS="-DWITH_OPENCL=ON -DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9"
     build_target "build/android/debug/arm7" Debug $TARGET_ABI $TARGET_PLATFORM
     build_target "build/android/release/arm7" Release $TARGET_ABI $TARGET_PLATFORM
     shift
