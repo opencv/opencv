@@ -2941,7 +2941,7 @@ An example for creating histograms of an image
 
 /** @brief Calculates a histogram of a set of arrays.
 
-The functions calcHist calculate the histogram of one or more arrays. The elements of a tuple used
+The function cv::calcHist calculates the histogram of one or more arrays. The elements of a tuple used
 to increment a histogram bin are taken from the corresponding input arrays at the same location. The
 sample below shows how to compute a 2D Hue-Saturation histogram for a color image. :
 @code
@@ -3002,7 +3002,7 @@ sample below shows how to compute a 2D Hue-Saturation histogram for a color imag
     }
 @endcode
 
-@param images Source arrays. They all should have the same depth, CV_8U or CV_32F , and the same
+@param images Source arrays. They all should have the same depth, CV_8U, CV_16U or CV_32F , and the same
 size. Each of them can have an arbitrary number of channels.
 @param nimages Number of source images.
 @param channels List of the dims channels used to compute the histogram. The first array channels
@@ -3053,7 +3053,7 @@ CV_EXPORTS_W void calcHist( InputArrayOfArrays images,
 
 /** @brief Calculates the back projection of a histogram.
 
-The functions calcBackProject calculate the back project of the histogram. That is, similarly to
+The function cv::calcBackProject calculates the back project of the histogram. That is, similarly to
 cv::calcHist , at each location (x, y) the function collects the values from the selected channels
 in the input images and finds the corresponding histogram bin. But instead of incrementing it, the
 function reads the bin value, scales it by scale , and stores in backProject(x,y) . In terms of
@@ -3074,7 +3074,7 @@ component.
 
 This is an approximate algorithm of the CamShift color object tracker.
 
-@param images Source arrays. They all should have the same depth, CV_8U or CV_32F , and the same
+@param images Source arrays. They all should have the same depth, CV_8U, CV_16U or CV_32F , and the same
 size. Each of them can have an arbitrary number of channels.
 @param nimages Number of source images.
 @param channels The list of channels used to compute the back projection. The number of channels
@@ -3084,7 +3084,7 @@ images[0].channels() + images[1].channels()-1, and so on.
 @param hist Input histogram that can be dense or sparse.
 @param backProject Destination back projection array that is a single-channel array of the same
 size and depth as images[0] .
-@param ranges Array of arrays of the histogram bin boundaries in each dimension. See calcHist .
+@param ranges Array of arrays of the histogram bin boundaries in each dimension. See cv::calcHist .
 @param scale Optional scale factor for the output back projection.
 @param uniform Flag indicating whether the histogram is uniform or not (see above).
 
@@ -3109,7 +3109,7 @@ CV_EXPORTS_W void calcBackProject( InputArrayOfArrays images, const std::vector<
 
 /** @brief Compares two histograms.
 
-The function compare two dense or two sparse histograms using the specified method.
+The function cv::compareHist compares two dense or two sparse histograms using the specified method.
 
 The function returns \f$d(H_1, H_2)\f$ .
 
