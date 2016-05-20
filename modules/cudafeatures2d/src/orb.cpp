@@ -570,30 +570,92 @@ namespace
         blurFilter_ = cuda::createGaussianFilter(CV_8UC1, -1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
     }
 
+    static float getScale(float scaleFactor, int firstLevel, int level)
+    {
+        return pow(scaleFactor, level - firstLevel);
+    }
+
     void ORB_Impl::detectAndCompute(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints, OutputArray _descriptors, bool useProvidedKeypoints)
     {
-        CV_Assert( useProvidedKeypoints == false );
+        using namespace cv::cuda::device::orb;
+        if (useProvidedKeypoints)
+        {
+            d_keypoints_.release();
+            keyPointsPyr_.clear();
 
-        detectAndComputeAsync(_image, _mask, d_keypoints_, _descriptors, false, Stream::Null());
-        convert(d_keypoints_, keypoints);
+            int j, level, nkeypoints = (int)keypoints.size();
+            nLevels_ = 0;
+            for( j = 0; j < nkeypoints; j++ )
+            {
+                level = keypoints[j].octave;
+                CV_Assert(level >= 0);
+                nLevels_ = std::max(nLevels_, level);
+            }
+            nLevels_ ++;
+            std::vector<std::vector<KeyPoint> > oKeypoints(nLevels_);
+            for( j = 0; j < nkeypoints; j++ )
+            {
+                level = keypoints[j].octave;
+                oKeypoints[level].push_back(keypoints[j]);
+            }
+            if (!keypoints.empty())
+            {
+                keyPointsPyr_.resize(nLevels_);
+                keyPointsCount_.resize(nLevels_);
+                int t;
+                for(t = 0; t < nLevels_; t++) {
+                    const std::vector<KeyPoint>& ks = oKeypoints[t];
+                    if (!ks.empty()){
+
+                        Mat h_keypoints(ROWS_COUNT, static_cast<int>(ks.size()), CV_32FC1);
+
+                        float sf = getScale(scaleFactor_, firstLevel_, t);
+                        float locScale = t != firstLevel_ ? sf : 1.0f;
+                        float scale = 1.f/locScale;
+
+                        short2* x_loc_row = h_keypoints.ptr<short2>(0);
+                        float* x_kp_hessian = h_keypoints.ptr<float>(1);
+                        float* x_kp_dir = h_keypoints.ptr<float>(2);
+
+                        for (size_t i = 0, size = ks.size(); i < size; ++i)
+                        {
+                            const KeyPoint& kp = ks[i];
+                            x_kp_hessian[i] = kp.response;
+                            x_loc_row[i].x = cvRound(kp.pt.x * scale);
+                            x_loc_row[i].y = cvRound(kp.pt.y * scale);
+                            x_kp_dir[i] = kp.angle;
+
+                        }
+
+                        keyPointsPyr_[t].upload(h_keypoints.rowRange(0,3));
+                        keyPointsCount_[t] = h_keypoints.cols;
+                    }
+                }
+            }
+        }
+
+        detectAndComputeAsync(_image, _mask, d_keypoints_, _descriptors, useProvidedKeypoints, Stream::Null());
+
+        if (!useProvidedKeypoints) {
+            convert(d_keypoints_, keypoints);
+        }
     }
 
     void ORB_Impl::detectAndComputeAsync(InputArray _image, InputArray _mask, OutputArray _keypoints, OutputArray _descriptors, bool useProvidedKeypoints, Stream& stream)
     {
-        CV_Assert( useProvidedKeypoints == false );
-
         buildScalePyramids(_image, _mask, stream);
-        computeKeyPointsPyramid(stream);
+        if (!useProvidedKeypoints)
+        {
+           computeKeyPointsPyramid(stream);
+        }
         if (_descriptors.needed())
         {
             computeDescriptors(_descriptors, stream);
         }
-        mergeKeyPoints(_keypoints, stream);
-    }
-
-    static float getScale(float scaleFactor, int firstLevel, int level)
-    {
-        return pow(scaleFactor, level - firstLevel);
+        if (!useProvidedKeypoints)
+        {
+            mergeKeyPoints(_keypoints, stream);
+        }
     }
 
     void ORB_Impl::buildScalePyramids(InputArray _image, InputArray _mask, Stream& stream)
