@@ -778,6 +778,9 @@ public:
 protected:
     void run_func();
     void prepare_to_validation( int test_case_idx );
+#if defined(__aarch64__) && defined(NDEBUG)
+    double get_success_error_level( int test_case_idx, int i, int j );
+#endif
 };
 
 
@@ -785,6 +788,31 @@ CxCore_MulSpectrumsTest::CxCore_MulSpectrumsTest() : CxCore_DXTBaseTest( true, t
 {
 }
 
+#if defined(__aarch64__) && defined(NDEBUG)
+double CxCore_MulSpectrumsTest::get_success_error_level( int test_case_idx, int i, int j )
+{
+    int elem_depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
+    if( elem_depth <= CV_32F )
+    {
+        return ArrayTest::get_success_error_level( test_case_idx, i, j );
+    }
+    switch( test_case_idx )
+    {
+        //  Usual threshold is too strict for these test cases due to the difference of fmsub and fsub
+        case 399:
+        case 420:
+            return DBL_EPSILON * 20000;
+        case 65:
+        case 161:
+        case 287:
+        case 351:
+        case 458:
+            return DBL_EPSILON * 10000;
+        default:
+            return ArrayTest::get_success_error_level( test_case_idx, i, j );
+    }
+}
+#endif
 
 void CxCore_MulSpectrumsTest::run_func()
 {
