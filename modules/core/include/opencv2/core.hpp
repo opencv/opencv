@@ -3036,6 +3036,7 @@ public:
     {
         FileStorage fs(filename, FileStorage::READ);
         FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
+        if (fn.empty()) return Ptr<_Tp>();
         Ptr<_Tp> obj = _Tp::create();
         obj->read(fn);
         return !obj->empty() ? obj : Ptr<_Tp>();
