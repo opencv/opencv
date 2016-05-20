@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         "{ i input    |                    | specify input image }"
         "{ c camera   |  0                 | specify camera id   }"
         "{ o output   | clahe_output.jpg   | specify output save path}"
-        "{ h help     | false              | print help message }";
+        "{ h help     |                    | print help message }";
 
     cv::CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help"))

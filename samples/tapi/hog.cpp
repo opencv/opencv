@@ -68,15 +68,15 @@ private:
 int main(int argc, char** argv)
 {
     const char* keys =
-        "{ h help      | false          | print help message }"
+        "{ h help      |                | print help message }"
         "{ i input     |                | specify input image}"
         "{ c camera    | -1             | enable camera capturing }"
         "{ v video     | ../data/768x576.avi | use video as input }"
-        "{ g gray      | false          | convert image to gray one or not}"
+        "{ g gray      |                | convert image to gray one or not}"
         "{ s scale     | 1.0            | resize the image before detect}"
         "{ o output    |                | specify output path when input is images}";
     CommandLineParser cmd(argc, argv, keys);
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
         cmd.printMessage();
         return EXIT_SUCCESS;
@@ -115,7 +115,7 @@ App::App(CommandLineParser& cmd)
          << "\t4/r - increase/decrease hit threshold\n"
          << endl;
 
-    make_gray = cmd.get<bool>("gray");
+    make_gray = cmd.has("gray");
     resize_scale = cmd.get<double>("s");
     vdo_source = cmd.get<string>("v");
     img_source = cmd.get<string>("i");
