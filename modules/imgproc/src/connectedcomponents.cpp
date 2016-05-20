@@ -11,7 +11,6 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
-// Copyright (C) 2016, Costantino Grana, Federico Bolelli, Lorenzo Baraldi, Roberto Vezzani, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1702,19 +1701,33 @@ int connectedComponents_sub1(const cv::Mat &I, cv::Mat &L, int connectivity, int
 
 }
 
+// Simple wrapper to ensure binary and source compatibility (ABI)
+int cv::connectedComponents(InputArray _img, OutputArray _labels, int connectivity, int ltype){
+    return cv::connectedComponents(_img, _labels, connectivity, ltype, CCL_DEFAULT);
+}
+
 int cv::connectedComponents(InputArray _img, OutputArray _labels, int connectivity, int ltype, int ccltype){
     const cv::Mat img = _img.getMat();
     _labels.create(img.size(), CV_MAT_DEPTH(ltype));
     cv::Mat labels = _labels.getMat();
     connectedcomponents::NoOp sop;
-    if(ltype == CV_16U){
+    if (ltype == CV_16U){
         return connectedComponents_sub1(img, labels, connectivity, ccltype, sop);
-    }else if(ltype == CV_32S){
+    }
+    else if (ltype == CV_32S){
         return connectedComponents_sub1(img, labels, connectivity, ccltype, sop);
-    }else{
+    }
+    else{
         CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
         return 0;
     }
+}
+
+// Simple wrapper to ensure binary and source compatibility (ABI)
+int cv::connectedComponentsWithStats(InputArray _img, OutputArray _labels, OutputArray statsv,
+                                     OutputArray centroids, int connectivity, int ltype)
+{
+    return cv::connectedComponentsWithStats(_img, _labels, statsv, centroids, connectivity, ltype, CCL_DEFAULT);
 }
 
 int cv::connectedComponentsWithStats(InputArray _img, OutputArray _labels, OutputArray statsv,
@@ -1724,11 +1737,13 @@ int cv::connectedComponentsWithStats(InputArray _img, OutputArray _labels, Outpu
     _labels.create(img.size(), CV_MAT_DEPTH(ltype));
     cv::Mat labels = _labels.getMat();
     connectedcomponents::CCStatsOp sop(statsv, centroids);
-    if(ltype == CV_16U){
+    if (ltype == CV_16U){
         return connectedComponents_sub1(img, labels, connectivity, ccltype, sop);
-    }else if(ltype == CV_32S){
+    }
+    else if (ltype == CV_32S){
         return connectedComponents_sub1(img, labels, connectivity, ccltype, sop);
-    }else{
+    }
+    else{
         CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
         return 0;
     }
