@@ -291,6 +291,7 @@ struct HWFeatures
             f.have[CV_CPU_SSE4_2] = (cpuid_data[2] & (1<<20)) != 0;
             f.have[CV_CPU_POPCNT] = (cpuid_data[2] & (1<<23)) != 0;
             f.have[CV_CPU_AVX]    = (((cpuid_data[2] & (1<<28)) != 0)&&((cpuid_data[2] & (1<<27)) != 0));//OS uses XSAVE_XRSTORE and CPU support AVX
+            f.have[CV_CPU_FP16]   = (cpuid_data[2] & (1<<29)) != 0;
 
             // make the second call to the cpuid command in order to get
             // information about extended features like AVX2
@@ -338,7 +339,8 @@ struct HWFeatures
     #if defined ANDROID || defined __linux__
     #ifdef __aarch64__
         f.have[CV_CPU_NEON] = true;
-    #else
+        f.have[CV_CPU_FP16] = true;
+    #elif defined __arm__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
@@ -351,6 +353,7 @@ struct HWFeatures
                 if (auxv.a_type == AT_HWCAP)
                 {
                     f.have[CV_CPU_NEON] = (auxv.a_un.a_val & 4096) != 0;
+                    f.have[CV_CPU_FP16] = (auxv.a_un.a_val & 2) != 0;
                     break;
                 }
             }
@@ -358,8 +361,13 @@ struct HWFeatures
             close(cpufile);
         }
     #endif
-    #elif (defined __clang__ || defined __APPLE__) && (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
+    #elif (defined __clang__ || defined __APPLE__)
+    #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
         f.have[CV_CPU_NEON] = true;
+    #endif
+    #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
+        f.have[CV_CPU_FP16] = true;
+    #endif
     #endif
 
         return f;

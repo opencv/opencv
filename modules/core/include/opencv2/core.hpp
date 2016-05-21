@@ -524,6 +524,17 @@ For example:
 CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
                                   double alpha = 1, double beta = 0);
 
+/** @brief Converts an array to half precision floating number.
+
+convertFp16 converts FP32 to FP16 or FP16 to FP32.  The input array has to have type of CV_32F or
+CV_16S to represent the bit depth.  If the input array is neither of them, it'll do nothing.
+
+@param src input array.
+@param dst output array.
+@param useHW if possible use HW SIMD instruction to convert
+*/
+CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst, bool useHW = true);
+
 /** @brief Performs a look-up table transform of an array.
 
 The function LUT fills the output array with values from the look-up table. Indices of the entries

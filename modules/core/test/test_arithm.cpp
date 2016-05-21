@@ -737,6 +737,60 @@ struct ConvertScaleOp : public BaseElemWiseOp
     int ddepth;
 };
 
+struct ConvertScaleFp16Op : public BaseElemWiseOp
+{
+    ConvertScaleFp16Op() : BaseElemWiseOp(1, FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)), nextRange(0) { }
+    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        convertFp16(src[0], dst, true);
+    }
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        convertFp16(src[0], dst, false);
+    }
+    int getRandomType(RNG&)
+    {
+        // 0: FP32 -> FP16
+        // 1: FP16 -> FP32
+        int srctype = (nextRange & 1) == 0 ? CV_32F : CV_16S;
+        return srctype;
+    }
+    void getValueRange(int, double& minval, double& maxval)
+    {
+        // 0: FP32 -> FP16
+        // 1: FP16 -> FP32
+        if( (nextRange & 1) == 0 )
+        {
+            // largest integer number that fp16 can express
+            maxval = 65504.f;
+            minval = -maxval;
+        }
+        else
+        {
+            // 0: positive number range
+            // 1: negative number range
+            if( (nextRange & 2) == 0 )
+            {
+                minval = 0;      // 0x0000 +0
+                maxval = 31744;  // 0x7C00 +Inf
+            }
+            else
+            {
+                minval = -32768; // 0x8000 -0
+                maxval = -1024;  // 0xFC00 -Inf
+            }
+        }
+    }
+    double getMaxErr(int)
+    {
+        return 0.5f;
+    }
+    void generateScalars(int, RNG& rng)
+    {
+        nextRange = rng.next();
+    }
+    int nextRange;
+};
 
 struct ConvertScaleAbsOp : public BaseElemWiseOp
 {
@@ -1371,6 +1425,7 @@ INSTANTIATE_TEST_CASE_P(Core_Copy, ElemWiseTest, ::testing::Values(ElemWiseOpPtr
 INSTANTIATE_TEST_CASE_P(Core_Set, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::SetOp)));
 INSTANTIATE_TEST_CASE_P(Core_SetZero, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::SetZeroOp)));
 INSTANTIATE_TEST_CASE_P(Core_ConvertScale, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::ConvertScaleOp)));
+INSTANTIATE_TEST_CASE_P(Core_ConvertScaleFp16, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::ConvertScaleFp16Op)));
 INSTANTIATE_TEST_CASE_P(Core_ConvertScaleAbs, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::ConvertScaleAbsOp)));
 
 INSTANTIATE_TEST_CASE_P(Core_Add, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::AddOp)));
