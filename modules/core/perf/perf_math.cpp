@@ -25,6 +25,20 @@ PERF_TEST_P(VectorLength, phase32f, testing::Values(128, 1000, 128*1024, 512*102
     SANITY_CHECK(angle, 5e-5);
 }
 
+PERF_TEST_P(VectorLength, phase64f, testing::Values(128, 1000, 128*1024, 512*1024, 1024*1024))
+{
+    size_t length = GetParam();
+    vector<double> X(length);
+    vector<double> Y(length);
+    vector<double> angle(length);
+
+    declare.in(X, Y, WARMUP_RNG).out(angle);
+
+    TEST_CYCLE_N(200) cv::phase(X, Y, angle, true);
+
+    SANITY_CHECK(angle, 5e-5);
+}
+
 PERF_TEST_P( MaxDim_MaxPoints, kmeans,
              testing::Combine( testing::Values( 16, 32, 64 ),
                                testing::Values( 300, 400, 500) ) )
