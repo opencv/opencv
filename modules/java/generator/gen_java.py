@@ -1428,7 +1428,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 
 """ ).substitute( \
         rtype = rtype, \
-        module = self.module, \
+        module = self.module.replace('_', '_1'), \
         clazz = clazz.replace('_', '_1'), \
         fname = (fi.jname + '_' + str(suffix_counter)).replace('_', '_1'), \
         args  = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
@@ -1521,7 +1521,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
     delete (%(cls)s*) self;
 }
 
-""" % {"module" : module, "cls" : self.smartWrap(ci.name, ci.fullName(isCPP=True)), "j_cls" : ci.jname.replace('_', '_1')}
+""" % {"module" : module.replace('_', '_1'), "cls" : self.smartWrap(ci.name, ci.fullName(isCPP=True)), "j_cls" : ci.jname.replace('_', '_1')}
             )
 
     def getClass(self, classname):
