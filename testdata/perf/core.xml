@@ -71543,4 +71543,96 @@
       <x>420</x>
       <y>1107</y>
       <val>-5.1237159729003906e+01</val></rng2></dst></OCL_DftFixture_Dft--Dft---2--2048x2048--5->
+ <!-- resumed -->
+
+<VectorLength_phase64f--phase64f--128>
+  <angle>
+    <kind>196608</kind>
+    <type>6</type>
+    <min>1.2744828084794532e+01</min>
+    <max>3.4911462142789094e+02</max>
+    <last>
+      <x>127</x>
+      <y>0</y>
+      <val>7.1029418221177764e+01</val></last>
+    <rng1>
+      <x>104</x>
+      <y>0</y>
+      <val>1.4448682305406498e+02</val></rng1>
+    <rng2>
+      <x>20</x>
+      <y>0</y>
+      <val>5.2119034466810426e+01</val></rng2></angle></VectorLength_phase64f--phase64f--128>
+<VectorLength_phase64f--phase64f--1000>
+  <angle>
+    <kind>196608</kind>
+    <type>6</type>
+    <min>6.6812266769646600e-01</min>
+    <max>3.5891187623844843e+02</max>
+    <last>
+      <x>999</x>
+      <y>0</y>
+      <val>1.8089331302429759e+01</val></last>
+    <rng1>
+      <x>39</x>
+      <y>0</y>
+      <val>1.3160677292623353e+02</val></rng1>
+    <rng2>
+      <x>497</x>
+      <y>0</y>
+      <val>3.5323150002684616e+02</val></rng2></angle></VectorLength_phase64f--phase64f--1000>
+<VectorLength_phase64f--phase64f--131072>
+  <angle>
+    <kind>196608</kind>
+    <type>6</type>
+    <min>3.5934930194047843e-03</min>
+    <max>3.5999252897588440e+02</max>
+    <last>
+      <x>131071</x>
+      <y>0</y>
+      <val>3.1439064425307618e+02</val></last>
+    <rng1>
+      <x>26976</x>
+      <y>0</y>
+      <val>1.9209825728034435e+01</val></rng1>
+    <rng2>
+      <x>18550</x>
+      <y>0</y>
+      <val>2.3299888153409614e+02</val></rng2></angle></VectorLength_phase64f--phase64f--131072>
+<VectorLength_phase64f--phase64f--524288>
+  <angle>
+    <kind>196608</kind>
+    <type>6</type>
+    <min>3.1366812181760317e-04</min>
+    <max>3.5999928843703890e+02</max>
+    <last>
+      <x>524287</x>
+      <y>0</y>
+      <val>2.2285191484786915e+02</val></last>
+    <rng1>
+      <x>74649</x>
+      <y>0</y>
+      <val>2.1403358068689755e+02</val></rng1>
+    <rng2>
+      <x>336790</x>
+      <y>0</y>
+      <val>2.6422183822696798e+02</val></rng2></angle></VectorLength_phase64f--phase64f--524288>
+<VectorLength_phase64f--phase64f--1048576>
+  <angle>
+    <kind>196608</kind>
+    <type>6</type>
+    <min>2.0394461867676722e-04</min>
+    <max>3.5999905511188155e+02</max>
+    <last>
+      <x>1048575</x>
+      <y>0</y>
+      <val>1.1095233741958597e+02</val></last>
+    <rng1>
+      <x>705306</x>
+      <y>0</y>
+      <val>6.9222315169828676e+01</val></rng1>
+    <rng2>
+      <x>817257</x>
+      <y>0</y>
+      <val>2.2593464519098896e+02</val></rng2></angle></VectorLength_phase64f--phase64f--1048576>
 </opencv_storage>
