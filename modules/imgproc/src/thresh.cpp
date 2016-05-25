@@ -904,6 +904,85 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     }
 }
 
+static void
+thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
+{
+    int i, j;
+    Size roi = _src.size();
+    roi.width *= _src.channels();
+    const double* src = _src.ptr<double>();
+    double* dst = _dst.ptr<double>();
+    size_t src_step = _src.step / sizeof(src[0]);
+    size_t dst_step = _dst.step / sizeof(dst[0]);
+
+    if (_src.isContinuous() && _dst.isContinuous())
+    {
+        roi.width *= roi.height;
+        roi.height = 1;
+    }
+
+    switch (type)
+    {
+    case THRESH_BINARY:
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        {
+            j = 0;
+
+            for (; j < roi.width; j++)
+                dst[j] = src[j] > thresh ? maxval : 0;
+        }
+        break;
+
+    case THRESH_BINARY_INV:
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        {
+            j = 0;
+
+            for (; j < roi.width; j++)
+                dst[j] = src[j] <= thresh ? maxval : 0;
+        }
+        break;
+
+    case THRESH_TRUNC:
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        {
+            j = 0;
+
+            for (; j < roi.width; j++)
+                dst[j] = std::min(src[j], thresh);
+        }
+        break;
+
+    case THRESH_TOZERO:
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        {
+            j = 0;
+
+            for (; j < roi.width; j++)
+            {
+                double v = src[j];
+                dst[j] = v > thresh ? v : 0;
+            }
+        }
+        break;
+
+    case THRESH_TOZERO_INV:
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        {
+            j = 0;
+
+            for (; j < roi.width; j++)
+            {
+                double v = src[j];
+                dst[j] = v <= thresh ? v : 0;
+            }
+        }
+        break;
+    default:
+        return CV_Error(CV_StsBadArg, "");
+    }
+}
+
 #ifdef HAVE_IPP
 static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size size, unsigned char &thresh)
 {
@@ -1129,6 +1208,10 @@ public:
         {
             thresh_32f( srcStripe, dstStripe, (float)thresh, (float)maxval, thresholdType );
         }
+        else if( srcStripe.depth() == CV_64F )
+        {
+            thresh_64f(srcStripe, dstStripe, thresh, maxval, thresholdType);
+        }
     }
 
 private:
@@ -1268,6 +1351,8 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         maxval = imaxval;
     }
     else if( src.depth() == CV_32F )
+        ;
+    else if( src.depth() == CV_64F )
         ;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
