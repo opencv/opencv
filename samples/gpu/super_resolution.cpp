@@ -11,8 +11,6 @@
 #include "opencv2/superres/optical_flow.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-#include "tick_meter.hpp"
-
 using namespace std;
 using namespace cv;
 using namespace cv::superres;
