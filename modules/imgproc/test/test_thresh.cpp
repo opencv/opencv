@@ -75,33 +75,33 @@ void CV_ThreshTest::get_test_array_types_and_sizes( int test_case_idx,
                                                 vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng) % 3, cn = cvtest::randInt(rng) % 4 + 1;
+    int depth = cvtest::randInt(rng) % 4, cn = cvtest::randInt(rng) % 4 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16S : CV_32F;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16S : depth == 2 ? CV_32F : CV_64F;
 
     types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth,cn);
     thresh_type = cvtest::randInt(rng) % 5;
 
     if( depth == CV_8U )
     {
-        thresh_val = (float)(cvtest::randReal(rng)*350. - 50.);
-        max_val = (float)(cvtest::randReal(rng)*350. - 50.);
+        thresh_val = (cvtest::randReal(rng)*350. - 50.);
+        max_val = (cvtest::randReal(rng)*350. - 50.);
         if( cvtest::randInt(rng)%4 == 0 )
             max_val = 255.f;
     }
     else if( depth == CV_16S )
     {
-        float min_val = SHRT_MIN-100.f;
+        double min_val = SHRT_MIN-100.f;
         max_val = SHRT_MAX+100.f;
-        thresh_val = (float)(cvtest::randReal(rng)*(max_val - min_val) + min_val);
-        max_val = (float)(cvtest::randReal(rng)*(max_val - min_val) + min_val);
+        thresh_val = (cvtest::randReal(rng)*(max_val - min_val) + min_val);
+        max_val = (cvtest::randReal(rng)*(max_val - min_val) + min_val);
         if( cvtest::randInt(rng)%4 == 0 )
-            max_val = (float)SHRT_MAX;
+            max_val = (double)SHRT_MAX;
     }
     else
     {
-        thresh_val = (float)(cvtest::randReal(rng)*1000. - 500.);
-        max_val = (float)(cvtest::randReal(rng)*1000. - 500.);
+        thresh_val = (cvtest::randReal(rng)*1000. - 500.);
+        max_val = (cvtest::randReal(rng)*1000. - 500.);
     }
 }
 
