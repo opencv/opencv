@@ -138,6 +138,7 @@ if(CUDA_FOUND)
       set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
     endif()
   endforeach()
+  set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -D_FORCE_INLINES)
 
   # Tell NVCC to add PTX intermediate code for the specified architectures
   string(REGEX MATCHALL "[0-9]+" ARCH_LIST "${ARCH_PTX_NO_POINTS}")
