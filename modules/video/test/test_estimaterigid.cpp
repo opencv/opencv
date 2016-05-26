@@ -48,7 +48,6 @@
 #include <iterator>
 #include <limits>
 #include <numeric>
-#include <vector>
 
 using namespace cv;
 using namespace std;
@@ -108,7 +107,6 @@ bool CV_RigidTransform_Test::testNPoints(int from)
         rng.fill(noise, RNG::NORMAL, Scalar::all(0), Scalar::all(0.001*(n<=7 ? 0 : n <= 30 ? 1 : 10)));
         tpts += noise;
 
-        // test overload
         Mat aff_est = estimateRigidTransform(fpts, tpts, true);
 
         double thres = 0.1*cvtest::norm(aff, NORM_L2);
@@ -153,8 +151,7 @@ bool CV_RigidTransform_Test::testImage()
     Mat rotated;
     warpAffine(img, rotated, aff, img.size());
 
-    std::vector<uchar> inliers_mask;
-    Mat aff_est = estimateRigidTransform(img, rotated, inliers_mask, true);
+    Mat aff_est = estimateRigidTransform(img, rotated, true);
 
     const double thres = 0.033;
     if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
@@ -162,35 +159,6 @@ bool CV_RigidTransform_Test::testImage()
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         ts->printf( cvtest::TS::LOG, "Threshold = %f, norm of difference = %f", thres,
             cvtest::norm(aff_est, aff, NORM_INF) );
-        return false;
-    }
-
-    /* test inliers exporting */
-    if (inliers_mask.empty())
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-        ts->printf( cvtest::TS::LOG, "inliers mask is empty" );
-        return false;
-    }
-
-    // count inliers
-    size_t num_inliers = 0;
-    for (size_t i = 0; i < inliers_mask.size(); ++i)
-    {
-        if (!(inliers_mask[i] == 1 || inliers_mask[i] == 0))
-        {
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-            ts->printf( cvtest::TS::LOG, "inliers mask contains invalid value %d", (int)inliers_mask[i] );
-            return false;
-        }
-        if (inliers_mask[i])
-            ++num_inliers;
-    }
-
-    if(num_inliers < 200)
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-        ts->printf( cvtest::TS::LOG, "low number of inliers (expected 200), have %zu", num_inliers );
         return false;
     }
 

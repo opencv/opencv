@@ -1351,26 +1351,18 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
 }
 
-cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArray _inliers_mask, bool fullAffine )
+cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
 {
-    Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
+    Mat A = src1.getMat(), B = src2.getMat();
 
     const int COUNT = 15;
     const int WIDTH = 160, HEIGHT = 120;
-    const int RANSAC_MAX_ITERS = 500;
-    const int RANSAC_SIZE0 = 3;
-    const double RANSAC_GOOD_RATIO = 0.5;
 
     std::vector<Point2f> pA, pB;
-    std::vector<int> good_idx;
     std::vector<uchar> status;
-    Mat inliers_mask;
 
     double scale = 1.;
-    int i, j, k, k1;
-
-    RNG rng((uint64)-1);
-    int good_count = 0;
+    int i, j, k;
 
     if( A.size() != B.size() )
         CV_Error( Error::StsUnmatchedSizes, "Both input images must have the same size" );
@@ -1382,8 +1374,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArra
 
     if( count > 0 )
     {
-        A.reshape(2, count).convertTo(pA, CV_32F);
-        B.reshape(2, count).convertTo(pB, CV_32F);
+        return findAffineTransform(src1, src2, noArray(), fullAffine);
     }
     else if( A.depth() == CV_8U )
     {
@@ -1454,10 +1445,50 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArra
         count = k;
         pA.resize(count);
         pB.resize(count);
+
+        return findAffineTransform(pA, pB, noArray(), fullAffine);
     }
     else
+    {
         CV_Error( Error::StsUnsupportedFormat, "Both input images must have either 8uC1 or 8uC3 type" );
+        return Mat();
+    }
+}
 
+cv::Mat cv::findAffineTransform( InputArray src1, InputArray src2,
+                                 OutputArray _inliers_mask,
+                                 bool fullAffine,
+                                 double inlierThreshold,
+                                 int maxIters )
+{
+    Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
+
+    const int RANSAC_SIZE0 = 3;
+    const double RANSAC_GOOD_RATIO = 0.5;
+
+    std::vector<Point2f> pA, pB;
+    std::vector<int> good_idx;
+    Mat inliers_mask;
+
+    double scale = 1.;
+    int i, j, k, k1;
+
+    RNG rng((uint64)-1);
+    int good_count = 0;
+
+    if( A.size() != B.size() )
+        CV_Error( Error::StsUnmatchedSizes, "Both input images must have the same size" );
+
+    if( A.type() != B.type() )
+        CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );
+
+    int count = A.checkVector(2);
+
+    if ( count < 0 )
+        CV_Error(Error::StsBadArg, "The input arrays should be 2D point sets");
+
+    A.reshape(2, count).convertTo(pA, CV_32F);
+    B.reshape(2, count).convertTo(pB, CV_32F);
     good_idx.resize(count);
     inliers_mask = Mat::zeros(count, 1, CV_8U);
 
@@ -1468,7 +1499,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArra
 
     // RANSAC stuff:
     // 1. find the consensus
-    for( k = 0; k < RANSAC_MAX_ITERS; k++ )
+    for( k = 0; k < maxIters; k++ )
     {
         int idx[RANSAC_SIZE0];
         Point2f a[RANSAC_SIZE0];
@@ -1477,7 +1508,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArra
         // choose random 3 non-complanar points from A & B
         for( i = 0; i < RANSAC_SIZE0; i++ )
         {
-            for( k1 = 0; k1 < RANSAC_MAX_ITERS; k1++ )
+            for( k1 = 0; k1 < maxIters; k1++ )
             {
                 idx[i] = rng.uniform(0, count);
 
@@ -1521,7 +1552,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArra
                 break;
             }
 
-            if( k1 >= RANSAC_MAX_ITERS )
+            if( k1 >= maxIters )
                 break;
         }
 
@@ -1535,7 +1566,8 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArra
         for( i = 0, good_count = 0; i < count; i++ )
         {
             if( std::abs( m[0]*pA[i].x + m[1]*pA[i].y + m[2] - pB[i].x ) +
-                std::abs( m[3]*pA[i].x + m[4]*pA[i].y + m[5] - pB[i].y ) < std::max(brect.width,brect.height)*0.05 )
+                std::abs( m[3]*pA[i].x + m[4]*pA[i].y + m[5] - pB[i].y ) <
+                std::max(brect.width,brect.height)*inlierThreshold )
             {
                 good_idx[good_count++] = i;
                 inliers_mask.data[i] = true;
@@ -1546,7 +1578,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArra
             break;
     }
 
-    if( k >= RANSAC_MAX_ITERS )
+    if( k >= maxIters )
         return Mat();
 
     if( good_count < count )
@@ -1570,11 +1602,6 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, OutputArra
     }
 
     return M;
-}
-
-cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
-{
-    return estimateRigidTransform( src1, src2, noArray(), fullAffine );
 }
 
 /* End of file. */
