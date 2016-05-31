@@ -889,7 +889,7 @@ output arrays.
 
 The function cv::mixChannels provides an advanced mechanism for shuffling image channels.
 
-cv::split and cv::merge and some forms of cv::cvtColor are partial cases of cv::mixChannels .
+cv::split,cv::merge,cv::extractChannel,cv::insertChannel and some forms of cv::cvtColor are partial cases of cv::mixChannels.
 
 In the example below, the code splits a 4-channel BGRA image into a 3-channel BGR (with B and R
 channels swapped) and a separate alpha-channel image:
@@ -923,7 +923,7 @@ src[0].channels() + src[1].channels()-1, and so on, the same scheme is used for 
 channels; as a special case, when fromTo[k\*2] is negative, the corresponding output channel is
 filled with zero .
 @param npairs number of index pairs in `fromTo`.
-@sa cv::split, cv::merge, cv::cvtColor
+@sa split, merge, extractChannel, insertChannel, cvtColor
 */
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
@@ -961,13 +961,19 @@ filled with zero .
 CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                               const std::vector<int>& fromTo);
 
-/** @brief extracts a single channel from src (coi is 0-based index)
-@todo document
+/** @brief Extracts a single channel from src (coi is 0-based index)
+@param src input array
+@param dst output array
+@param coi index of channel to extract
+@sa mixChannels, split
 */
 CV_EXPORTS_W void extractChannel(InputArray src, OutputArray dst, int coi);
 
-/** @brief inserts a single channel to dst (coi is 0-based index)
-@todo document
+/** @brief Inserts a single channel to dst (coi is 0-based index)
+@param src input array
+@param dst output array
+@param coi index of channel for insertion
+@sa mixChannels, merge
 */
 CV_EXPORTS_W void insertChannel(InputArray src, InputOutputArray dst, int coi);
 
