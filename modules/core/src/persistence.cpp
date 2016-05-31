@@ -5271,6 +5271,25 @@ void FileStorage::writeObj( const String& name, const void* obj )
     cvWrite( fs, name.size() > 0 ? name.c_str() : 0, obj );
 }
 
+void FileStorage::write( const String& name, double val )
+{
+    *this << name << val;
+}
+
+void FileStorage::write( const String& name, const String& val )
+{
+    *this << name << val;
+}
+
+void FileStorage::write( const String& name, InputArray val )
+{
+    *this << name << val.getMat();
+}
+
+void FileStorage::writeComment( const String& comment, bool append )
+{
+    cvWriteComment(fs, comment.c_str(), append ? 1 : 0);
+}
 
 FileNode FileStorage::operator[](const String& nodename) const
 {
