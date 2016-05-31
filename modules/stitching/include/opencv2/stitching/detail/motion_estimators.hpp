@@ -109,6 +109,21 @@ private:
     bool is_focals_estimated_;
 };
 
+/** @brief Affine transformation based estimator.
+
+This estimator uses pairwise tranformations estimated by matcher to estimate
+final transformation for each camera.
+
+@sa cv::detail::HomographyBasedEstimator
+ */
+class CV_EXPORTS AffineBasedEstimator : public Estimator
+{
+private:
+    virtual bool estimate(const std::vector<ImageFeatures> &features,
+                          const std::vector<MatchesInfo> &pairwise_matches,
+                          std::vector<CameraParams> &cameras);
+};
+
 /** @brief Base class for all camera parameters refinement methods.
  */
 class CV_EXPORTS BundleAdjusterBase : public Estimator
