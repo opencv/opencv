@@ -156,7 +156,10 @@ private:
 
 /** @brief Structure containing information about matches between two images.
 
-It's assumed that there is a homography between those images.
+It's assumed that there is a transformation between those images. Transformation may be
+homography or affine transformation based on selected matcher.
+
+@sa detail::FeaturesMatcher
 */
 struct CV_EXPORTS MatchesInfo
 {
@@ -168,7 +171,7 @@ struct CV_EXPORTS MatchesInfo
     std::vector<DMatch> matches;
     std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
     int num_inliers;                    //!< Number of geometrically consistent matches
-    Mat H;                              //!< Estimated homography
+    Mat H;                              //!< Estimated transformation
     double confidence;                  //!< Confidence two images are from the same panorama
 };
 
@@ -265,6 +268,23 @@ public:
 
 protected:
     int range_width_;
+};
+
+/** @brief Features matcher similar to cv::detail::BestOf2NearestMatcher which
+finds two best matches for each feature and leaves the best one only if the
+ratio between descriptor distances is greater than the threshold match_conf.
+
+Unlike cv::detail::BestOf2NearestMatcher this matcher uses affine
+transformation (affine trasformation estimate will be placed in matches_info).
+
+@sa cv::detail::FeaturesMatcher cv::detail::BestOf2NearestMatcher
+ */
+class CV_EXPORTS AffineBestOf2NearestMatcher : public BestOf2NearestMatcher
+{
+protected:
+    void match(const cv::detail::ImageFeatures &features1,
+               const cv::detail::ImageFeatures &features2,
+               cv::detail::MatchesInfo &matches_info);
 };
 
 //! @} stitching_match
