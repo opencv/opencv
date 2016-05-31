@@ -2369,15 +2369,16 @@ Elements can be accessed using the following methods:
     SparseMat::find), for example:
     @code
         const int dims = 5;
-        int size[] = {10, 10, 10, 10, 10};
+        int size[5] = {10, 10, 10, 10, 10};
         SparseMat sparse_mat(dims, size, CV_32F);
         for(int i = 0; i < 1000; i++)
         {
             int idx[dims];
             for(int k = 0; k < dims; k++)
-                idx[k] = rand()
+                idx[k] = rand() % size[k];
             sparse_mat.ref<float>(idx) += 1.f;
         }
+        cout << "nnz = " << sparse_mat.nzcount() << endl;
     @endcode
 -   Sparse matrix iterators. They are similar to MatIterator but different from NAryMatIterator.
     That is, the iteration loop is familiar to STL users:
