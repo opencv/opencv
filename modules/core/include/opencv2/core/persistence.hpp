@@ -398,7 +398,7 @@ public:
     FileNode operator[](const String& nodename) const;
 
     /** @overload */
-    CV_WRAP FileNode operator[](const char* nodename) const;
+    CV_WRAP_AS(getNode) FileNode operator[](const char* nodename) const;
 
     /** @brief Returns the obsolete C FileStorage structure.
     @returns Pointer to the underlying C FileStorage structure
@@ -424,6 +424,27 @@ public:
     @see ocvWrite for details.
      */
     void writeObj( const String& name, const void* obj );
+
+    /**
+     * @brief Simplified writing API to use with bindings.
+     * @param name Name of the written object
+     * @param val Value of the written object
+     */
+    CV_WRAP void write(const String& name, double val);
+    /// @overload
+    CV_WRAP void write(const String& name, const String& val);
+    /// @overload
+    CV_WRAP void write(const String& name, InputArray val);
+
+    /** @brief Writes a comment.
+
+    The function writes a comment into file storage. The comments are skipped when the storage is read.
+    @param comment The written comment, single-line or multi-line
+    @param append If true, the function tries to put the comment at the end of current line.
+    Else if the comment is multi-line, or if it does not fit at the end of the current
+    line, the comment starts a new line.
+     */
+    CV_WRAP void writeComment(const String& comment, bool append = false);
 
     /** @brief Returns the normalized object name for the specified name of a file.
     @param filename Name of a file
@@ -499,12 +520,12 @@ public:
     /** @overload
     @param nodename Name of an element in the mapping node.
     */
-    CV_WRAP FileNode operator[](const char* nodename) const;
+    CV_WRAP_AS(getNode) FileNode operator[](const char* nodename) const;
 
     /** @overload
     @param i Index of an element in the sequence node.
     */
-    CV_WRAP FileNode operator[](int i) const;
+    CV_WRAP_AS(at) FileNode operator[](int i) const;
 
     /** @brief Returns type of the node.
     @returns Type of the node. See FileNode::Type
@@ -565,6 +586,13 @@ public:
 
     //! reads the registered object and returns pointer to it
     void* readObj() const;
+
+    //! Simplified reading API to use with bindings.
+    CV_WRAP double real() const;
+    //! Simplified reading API to use with bindings.
+    CV_WRAP String string() const;
+    //! Simplified reading API to use with bindings.
+    CV_WRAP Mat mat() const;
 
     // do not use wrapper pointer classes for better efficiency
     const CvFileStorage* fs;
@@ -1198,6 +1226,9 @@ inline FileNode::operator int() const    { int value;    read(*this, value, 0); 
 inline FileNode::operator float() const  { float value;  read(*this, value, 0.f);   return value; }
 inline FileNode::operator double() const { double value; read(*this, value, 0.);    return value; }
 inline FileNode::operator String() const { String value; read(*this, value, value); return value; }
+inline double FileNode::real() const  { return double(*this); }
+inline String FileNode::string() const { return String(*this); }
+inline Mat FileNode::mat() const { Mat value; read(*this, value, value);    return value; }
 inline FileNodeIterator FileNode::begin() const { return FileNodeIterator(fs, node); }
 inline FileNodeIterator FileNode::end() const   { return FileNodeIterator(fs, node, size()); }
 inline void FileNode::readRaw( const String& fmt, uchar* vec, size_t len ) const { begin().readRaw( fmt, vec, len ); }
