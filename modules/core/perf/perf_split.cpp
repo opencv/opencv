@@ -29,5 +29,9 @@ PERF_TEST_P( Size_Depth_Channels, split,
     int runs = (sz.width <= 640) ? 8 : 1;
     TEST_CYCLE_MULTIRUN(runs) split(m, (vector<Mat>&)mv);
 
+#if defined (__aarch64__)
+    SANITY_CHECK(mv, 2e-5);
+#else
     SANITY_CHECK(mv, 1e-12);
+#endif
 }
