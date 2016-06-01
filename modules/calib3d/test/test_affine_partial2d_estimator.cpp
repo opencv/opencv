@@ -51,27 +51,39 @@ using namespace std;
 #include <iterator>
 #include <limits>
 #include <numeric>
+#include <cmath>
 
-class CV_Affine2D_EstTest : public cvtest::BaseTest
+class CV_AffinePartial2D_EstTest : public cvtest::BaseTest
 {
 public:
-    CV_Affine2D_EstTest();
-    ~CV_Affine2D_EstTest();
+    CV_AffinePartial2D_EstTest();
+    ~CV_AffinePartial2D_EstTest();
 protected:
     void run(int);
 
-    bool test3Points();
+    bool test2Points();
     bool testNPoints();
 };
 
-CV_Affine2D_EstTest::CV_Affine2D_EstTest()
+CV_AffinePartial2D_EstTest::CV_AffinePartial2D_EstTest()
 {
 }
-CV_Affine2D_EstTest::~CV_Affine2D_EstTest() {}
+CV_AffinePartial2D_EstTest::~CV_AffinePartial2D_EstTest() {}
 
 
 static float rngIn(float from, float to) { return from + (to-from) * (float)theRNG(); }
 
+// get random matrix of affine transformation limited to combinations of translation,
+// rotation, and uniform scaling
+static Mat rngPartialAffMat() {
+    double theta = rngIn(0, (float)CV_PI*2.f);
+    double scale = rngIn(0, 3);
+    double tx = rngIn(-2, 2);
+    double ty = rngIn(-2, 2);
+    double aff[2*3] = { std::cos(theta) * scale, -std::sin(theta) * scale, tx,
+                        std::sin(theta) * scale,  std::cos(theta) * scale, ty };
+    return Mat(2, 3, CV_64F, aff).clone();
+}
 
 struct WrapAff2D
 {
@@ -84,24 +96,22 @@ struct WrapAff2D
     }
 };
 
-bool CV_Affine2D_EstTest::test3Points()
+bool CV_AffinePartial2D_EstTest::test2Points()
 {
-    Mat aff(2, 3, CV_64F);
-    cv::randu(aff, Scalar(1), Scalar(3));
+    Mat aff = rngPartialAffMat();
 
     // setting points that are no in the same line
-    Mat fpts(1, 3, CV_32FC2);
-    Mat tpts(1, 3, CV_32FC2);
+    Mat fpts(1, 2, CV_32FC2);
+    Mat tpts(1, 2, CV_32FC2);
 
     fpts.ptr<Point2f>()[0] = Point2f( rngIn(1,2), rngIn(5,6) );
     fpts.ptr<Point2f>()[1] = Point2f( rngIn(3,4), rngIn(3,4) );
-    fpts.ptr<Point2f>()[2] = Point2f( rngIn(1,2), rngIn(3,4) );
 
     transform(fpts.begin<Point2f>(), fpts.end<Point2f>(), tpts.begin<Point2f>(), WrapAff2D(aff));
 
     Mat aff_est;
     vector<uchar> inliers;
-    estimateAffine2D(fpts, tpts, aff_est, inliers);
+    estimateAffinePartial2D(fpts, tpts, aff_est, inliers);
 
     const double thres = 1e-3;
     if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
@@ -126,10 +136,9 @@ struct Noise
     }
 };
 
-bool CV_Affine2D_EstTest::testNPoints()
+bool CV_AffinePartial2D_EstTest::testNPoints()
 {
-    Mat aff(2, 3, CV_64F);
-    cv::randu(aff, Scalar(-2), Scalar(2));
+    Mat aff = rngPartialAffMat();
 
     // setting points that are no in the same line
     const int n = 100;
@@ -149,7 +158,7 @@ bool CV_Affine2D_EstTest::testNPoints()
 
     Mat aff_est;
     vector<uchar> outl;
-    int res = estimateAffine2D(fpts, tpts, aff_est, outl);
+    int res = estimateAffinePartial2D(fpts, tpts, aff_est, outl);
 
     if (!res)
     {
@@ -179,11 +188,11 @@ bool CV_Affine2D_EstTest::testNPoints()
 }
 
 
-void CV_Affine2D_EstTest::run( int /* start_from */)
+void CV_AffinePartial2D_EstTest::run( int /* start_from */)
 {
     cvtest::DefaultRngAuto dra;
 
-    if (!test3Points())
+    if (!test2Points())
         return;
 
     if (!testNPoints())
@@ -192,4 +201,4 @@ void CV_Affine2D_EstTest::run( int /* start_from */)
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
-TEST(Calib3d_EstimateAffine2D, accuracy) { CV_Affine2D_EstTest test; test.safe_run(); }
+TEST(Calib3d_EstimateAffinePartial2D, accuracy) { CV_AffinePartial2D_EstTest test; test.safe_run(); }

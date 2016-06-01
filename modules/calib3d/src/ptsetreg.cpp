@@ -510,6 +510,7 @@ public:
         const Point2f* from = m1.ptr<Point2f>();
         const Point2f* to   = m2.ptr<Point2f>();
 
+        // we need 3 points to estimate affine transform
         const int N = 6;
         double buf[N*N + N + N];
         Mat A(N, N, CV_64F, &buf[0]);
@@ -600,6 +601,55 @@ public:
     }
 };
 
+class AffinePartial2DEstimatorCallback : public Affine2DEstimatorCallback
+{
+public:
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat();
+        const Point2f* from = m1.ptr<Point2f>();
+        const Point2f* to   = m2.ptr<Point2f>();
+
+        // for partial affine trasform we need only 2 points
+        const int N = 4;
+        double buf[N*N + N + N + 2*3];
+        Mat A(N, N, CV_64F, buf);
+        Mat B(N, 1, CV_64F, buf + N*N);
+        Mat X(N, 1, CV_64F, buf + N*N + N);
+        Mat M(2, 3, CV_64F, buf + N*N + N + N);
+        double* Adata = A.ptr<double>();
+        double* Bdata = B.ptr<double>();
+        double* Xdata = X.ptr<double>();
+        double* Mdata = M.ptr<double>();
+        A = Scalar::all(0);
+
+        for( int i = 0; i < (N/2); i++ )
+        {
+            Bdata[i*2] = to[i].x;
+            Bdata[i*2+1] = to[i].y;
+
+            double *aptr = Adata + i*2*N;
+            aptr[0] = from[i].x;
+            aptr[1] = -from[i].y;
+            aptr[2] = 1.0;
+            aptr[4] = from[i].y;
+            aptr[5] = from[i].x;
+            aptr[7] = 1.0;
+        }
+
+        solve(A, B, X, DECOMP_SVD);
+
+        // set model, rotation part is antisymmetric
+        Mdata[0] = Mdata[4] = Xdata[0];
+        Mdata[1] = -Xdata[1];
+        Mdata[2] = Xdata[2];
+        Mdata[3] = Xdata[1];
+        Mdata[5] = Xdata[3];
+        M.copyTo(_model);
+        return 1;
+    }
+};
+
 }
 
 int cv::estimateAffine3D(InputArray _from, InputArray _to,
@@ -644,4 +694,26 @@ int cv::estimateAffine2D(InputArray _from, InputArray _to,
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
 
     return createRANSACPointSetRegistrator(makePtr<Affine2DEstimatorCallback>(), 3, param1, param2)->run(dFrom, dTo, _out, _inliers);
+}
+
+int cv::estimateAffinePartial2D(InputArray _from, InputArray _to,
+                         OutputArray _out, OutputArray _inliers,
+                         double param1, double param2)
+{
+    Mat from = _from.getMat(), to = _to.getMat();
+    int count = from.checkVector(2);
+
+    CV_Assert( count >= 0 && to.checkVector(2) == count );
+
+    Mat dFrom, dTo;
+    from.convertTo(dFrom, CV_32F);
+    to.convertTo(dTo, CV_32F);
+    dFrom = dFrom.reshape(2, count);
+    dTo = dTo.reshape(2, count);
+
+    const double epsilon = DBL_EPSILON;
+    param1 = param1 <= 0 ? 3 : param1;
+    param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
+
+    return createRANSACPointSetRegistrator(makePtr<AffinePartial2DEstimatorCallback>(), 2, param1, param2)->run(dFrom, dTo, _out, _inliers);
 }

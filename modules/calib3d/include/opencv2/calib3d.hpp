@@ -1593,6 +1593,34 @@ CV_EXPORTS_W int estimateAffine2D(InputArray src, InputArray dst,
                                   OutputArray out, OutputArray inliers,
                                   double ransacThreshold = 3, double confidence = 0.99);
 
+/** @brief Computes an optimal limited affine transformation with 4 degrees of freedom between
+two 2D point sets.
+
+@param src First input 2D point set.
+@param dst Second input 2D point set.
+@param out Output 2D affine transformation (4 degrees of freedom) matrix \f$2 \times 3\f$ .
+@param inliers Output vector indicating which points are inliers.
+@param ransacThreshold Maximum reprojection error in the RANSAC algorithm to consider a point as
+an inlier.
+@param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
+between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
+significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
+
+The function estimates an optimal 2D affine transformation with 4 degrees of freedom limited to
+combinations of translation, rotation, and uniform scaling. Uses the RANSAC algorithm for robust
+estimation.
+
+Estimated transformation matrix is:
+\f[ \begin{bmatrix} \cos(\theta)s & -\sin(\theta)s & tx \\
+                \sin(\theta)s & \cos(\theta)s & ty
+\end{bmatrix} \f]
+Where \f$ \theta \f$ is the rotation angle, \f$ s \f$ the scaling factor and \f$ tx, ty \f$ are
+translations in \f$ x, y \f$ axes respectively.
+*/
+CV_EXPORTS_W int estimateAffinePartial2D(InputArray src, InputArray dst,
+                                         OutputArray out, OutputArray inliers,
+                                         double ransacThreshold = 3, double confidence = 0.99);
+
 /** @brief Decompose a homography matrix to rotation(s), translation(s) and plane normal(s).
 
 @param H The input homography matrix between two images.
