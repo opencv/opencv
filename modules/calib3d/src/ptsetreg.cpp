@@ -501,6 +501,105 @@ public:
     }
 };
 
+class Affine2DEstimatorCallback : public PointSetRegistrator::Callback
+{
+public:
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat();
+        const Point2f* from = m1.ptr<Point2f>();
+        const Point2f* to   = m2.ptr<Point2f>();
+
+        const int N = 6;
+        double buf[N*N + N + N];
+        Mat A(N, N, CV_64F, &buf[0]);
+        Mat B(N, 1, CV_64F, &buf[0] + N*N);
+        Mat X(N, 1, CV_64F, &buf[0] + N*N + N);
+        double* Adata = A.ptr<double>();
+        double* Bdata = B.ptr<double>();
+        A = Scalar::all(0);
+
+        for( int i = 0; i < (N/2); i++ )
+        {
+            Bdata[i*2] = to[i].x;
+            Bdata[i*2+1] = to[i].y;
+
+            double *aptr = Adata + i*2*N;
+            for(int k = 0; k < 2; ++k)
+            {
+                aptr[0] = from[i].x;
+                aptr[1] = from[i].y;
+                aptr[2] = 1.0;
+                aptr += N+3;
+            }
+        }
+
+        solve(A, B, X, DECOMP_SVD);
+        X.reshape(1, 2).copyTo(_model);
+        return 1;
+    }
+
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
+        const Point2f* from = m1.ptr<Point2f>();
+        const Point2f* to   = m2.ptr<Point2f>();
+        const double* F = model.ptr<double>();
+
+        int count = m1.checkVector(2);
+        CV_Assert( count > 0 );
+
+        _err.create(count, 1, CV_32F);
+        Mat err = _err.getMat();
+        float* errptr = err.ptr<float>();
+
+        for(int i = 0; i < count; i++ )
+        {
+            const Point2f& f = from[i];
+            const Point2f& t = to[i];
+
+            double a = F[0]*f.x + F[1]*f.y + F[2] - t.x;
+            double b = F[3]*f.x + F[4]*f.y + F[5] - t.y;
+
+            errptr[i] = (float)std::sqrt(a*a + b*b);
+        }
+    }
+
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
+    {
+        const float threshold = 0.996f;
+        Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
+
+        for( int inp = 1; inp <= 2; inp++ )
+        {
+            int j, k, i = count - 1;
+            const Mat* msi = inp == 1 ? &ms1 : &ms2;
+            const Point2f* ptr = msi->ptr<Point2f>();
+
+            CV_Assert( count <= msi->rows );
+
+            // check that the i-th selected point does not belong
+            // to a line connecting some previously selected points
+            for(j = 0; j < i; ++j)
+            {
+                Point2f d1 = ptr[j] - ptr[i];
+                float n1 = d1.x*d1.x + d1.y*d1.y;
+
+                for(k = 0; k < j; ++k)
+                {
+                    Point2f d2 = ptr[k] - ptr[i];
+                    float denom = (d2.x*d2.x + d2.y*d2.y)*n1;
+                    float num = d1.x*d2.x + d1.y*d2.y;
+
+                    if( num*num > threshold*threshold*denom )
+                        return false;
+                }
+            }
+        }
+        return true;
+    }
+};
+
 }
 
 int cv::estimateAffine3D(InputArray _from, InputArray _to,
@@ -523,4 +622,26 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
 
     return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
+}
+
+int cv::estimateAffine2D(InputArray _from, InputArray _to,
+                         OutputArray _out, OutputArray _inliers,
+                         double param1, double param2)
+{
+    Mat from = _from.getMat(), to = _to.getMat();
+    int count = from.checkVector(2);
+
+    CV_Assert( count >= 0 && to.checkVector(2) == count );
+
+    Mat dFrom, dTo;
+    from.convertTo(dFrom, CV_32F);
+    to.convertTo(dTo, CV_32F);
+    dFrom = dFrom.reshape(2, count);
+    dTo = dTo.reshape(2, count);
+
+    const double epsilon = DBL_EPSILON;
+    param1 = param1 <= 0 ? 3 : param1;
+    param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
+
+    return createRANSACPointSetRegistrator(makePtr<Affine2DEstimatorCallback>(), 3, param1, param2)->run(dFrom, dTo, _out, _inliers);
 }
