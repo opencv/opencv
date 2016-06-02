@@ -852,8 +852,8 @@ const float* HOGCacheTester::getBlock(Point pt, float* buf)
     }
 
     int k, C1 = count1, C2 = count2, C4 = count4;
-    const float* gradPtr = (const float*)(grad.data + grad.step*pt.y) + pt.x*2;
-    const uchar* qanglePtr = qangle.data + qangle.step*pt.y + pt.x*2;
+    const float* gradPtr = grad.ptr<float>(pt.y) + pt.x*2;
+    const uchar* qanglePtr = qangle.ptr(pt.y) + pt.x*2;
 
     CV_Assert( blockHist != 0 );
     for( k = 0; k < blockHistogramSize; k++ )
@@ -1234,9 +1234,9 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     float angleScale = (float)(_nbins/CV_PI);
     for( y = 0; y < gradsize.height; y++ )
     {
-       const uchar* imgPtr  = img.data + img.step*ymap[y];
-       const uchar* prevPtr = img.data + img.step*ymap[y-1];
-       const uchar* nextPtr = img.data + img.step*ymap[y+1];
+       const uchar* imgPtr  = img.ptr(ymap[y]);
+       const uchar* prevPtr = img.ptr(ymap[y-1]);
+       const uchar* nextPtr = img.ptr(ymap[y+1]);
        float* gradPtr = (float*)grad.ptr(y);
        uchar* qanglePtr = (uchar*)qangle.ptr(y);
 
@@ -1360,4 +1360,32 @@ TEST(Objdetect_HOGDetector_Strict, accuracy)
         std::vector<float> descriptors;
         reference_hog.compute(image, descriptors);
     }
- }
+}
+
+TEST(Objdetect_CascadeDetector, small_img)
+{
+    String root = cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/";
+    String cascades[] =
+    {
+        root + "haarcascade_frontalface_alt.xml",
+        root + "lbpcascade_frontalface.xml",
+        String()
+    };
+
+    vector<Rect> objects;
+    RNG rng((uint64)-1);
+
+    for( int i = 0; !cascades[i].empty(); i++ )
+    {
+        printf("%d. %s\n", i, cascades[i].c_str());
+        CascadeClassifier cascade(cascades[i]);
+        for( int j = 0; j < 100; j++ )
+        {
+            int width = rng.uniform(1, 100);
+            int height = rng.uniform(1, 100);
+            Mat img(height, width, CV_8U);
+            randu(img, 0, 256);
+            cascade.detectMultiScale(img, objects);
+        }
+    }
+}

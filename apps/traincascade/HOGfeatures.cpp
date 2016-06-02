@@ -187,11 +187,11 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
 
     for( y = 0; y < gradSize.height; y++ )
     {
-        const uchar* currPtr = img.data + img.step*ymap[y];
-        const uchar* prevPtr = img.data + img.step*ymap[y-1];
-        const uchar* nextPtr = img.data + img.step*ymap[y+1];
-        float* gradPtr = (float*)grad.ptr(y);
-        uchar* qanglePtr = (uchar*)qangle.ptr(y);
+        const uchar* currPtr = img.ptr(ymap[y]);
+        const uchar* prevPtr = img.ptr(ymap[y-1]);
+        const uchar* nextPtr = img.ptr(ymap[y+1]);
+        float* gradPtr = grad.ptr<float>(y);
+        uchar* qanglePtr = qangle.ptr(y);
 
         for( x = 0; x < width; x++ )
         {
@@ -226,9 +226,9 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
     int magStep = (int)( grad.step / sizeof(float) );
     for( binIdx = 0; binIdx < nbins; binIdx++ )
     {
-        histBuf = (float*)histogram[binIdx].data;
-        magBuf = (const float*)grad.data;
-        binsBuf = (const uchar*)qangle.data;
+        histBuf = histogram[binIdx].ptr<float>();
+        magBuf = grad.ptr<float>();
+        binsBuf = qangle.ptr();
 
         memset( histBuf, 0, histSize.width * sizeof(histBuf[0]) );
         histBuf += histStep + 1;

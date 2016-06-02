@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class Op, int n> struct UnaryTupleAdapter
 {
     typedef typename Op::result_type result_type;
@@ -92,6 +95,8 @@ __host__ __device__ BinaryTupleAdapter<Op, n0, n1> binaryTupleAdapter(const Op& 
     a.op = op;
     return a;
 }
+
+//! @}
 
 }}
 

@@ -40,7 +40,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -532,12 +531,24 @@ void CV_DescriptorMatcherTest::run( int )
 
 TEST( Features2d_DescriptorMatcher_BruteForce, regression )
 {
-    CV_DescriptorMatcherTest test( "descriptor-matcher-brute-force", Algorithm::create<DescriptorMatcher>("DescriptorMatcher.BFMatcher"), 0.01f );
+    CV_DescriptorMatcherTest test( "descriptor-matcher-brute-force",
+                                  DescriptorMatcher::create("BruteForce"), 0.01f );
     test.safe_run();
 }
 
 TEST( Features2d_DescriptorMatcher_FlannBased, regression )
 {
-    CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based", Algorithm::create<DescriptorMatcher>("DescriptorMatcher.FlannBasedMatcher"), 0.04f );
+    CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based",
+                                  DescriptorMatcher::create("FlannBased"), 0.04f );
     test.safe_run();
+}
+
+TEST( Features2d_DMatch, read_write )
+{
+    FileStorage fs(".xml", FileStorage::WRITE + FileStorage::MEMORY);
+    vector<DMatch> matches;
+    matches.push_back(DMatch(1,2,3,4.5f));
+    fs << "Match" << matches;
+    String str = fs.releaseAndGetString();
+    ASSERT_NE( strstr(str.c_str(), "4.5"), (char*)0 );
 }

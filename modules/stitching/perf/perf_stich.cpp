@@ -1,5 +1,5 @@
 #include "perf_precomp.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/flann.hpp"
 #include "opencv2/opencv_modules.hpp"
 
@@ -18,7 +18,7 @@ typedef TestBaseWithParam<string> match;
 typedef std::tr1::tuple<string, int> matchVector_t;
 typedef TestBaseWithParam<matchVector_t> matchVector;
 
-#ifdef HAVE_OPENCV_NONFREE_TODO_FIND_WHY_SURF_IS_NOT_ABLE_TO_STITCH_PANOS
+#ifdef HAVE_OPENCV_XFEATURES2D_TODO_FIND_WHY_SURF_IS_NOT_ABLE_TO_STITCH_PANOS
 #define TEST_DETECTORS testing::Values("surf", "orb")
 #else
 #define TEST_DETECTORS testing::Values<string>("orb")
@@ -56,11 +56,10 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
         stopTimer();
     }
 
-    Mat pano_small;
-    if (!pano.empty())
-        resize(pano, pano_small, Size(320, 240), 0, 0, INTER_AREA);
+    EXPECT_NEAR(pano.size().width, 1182, 50);
+    EXPECT_NEAR(pano.size().height, 682, 30);
 
-    SANITY_CHECK(pano_small, 5);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(stitch, b12, TEST_DETECTORS)

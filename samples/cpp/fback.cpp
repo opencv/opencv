@@ -1,5 +1,6 @@
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #include <iostream>
@@ -29,14 +30,21 @@ static void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
         }
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
+    cv::CommandLineParser parser(argc, argv, "{help h||}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     VideoCapture cap(0);
     help();
     if( !cap.isOpened() )
         return -1;
 
-    Mat prevgray, gray, flow, cflow, frame;
+    Mat flow, cflow, frame;
+    UMat gray, prevgray, uflow;
     namedWindow("flow", 1);
 
     for(;;)
@@ -44,10 +52,11 @@ int main(int, char**)
         cap >> frame;
         cvtColor(frame, gray, COLOR_BGR2GRAY);
 
-        if( prevgray.data )
+        if( !prevgray.empty() )
         {
-            calcOpticalFlowFarneback(prevgray, gray, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
+            calcOpticalFlowFarneback(prevgray, gray, uflow, 0.5, 3, 15, 3, 5, 1.2, 0);
             cvtColor(prevgray, cflow, COLOR_GRAY2BGR);
+            uflow.copyTo(flow);
             drawOptFlowMap(flow, cflow, 16, 1.5, Scalar(0, 255, 0));
             imshow("flow", cflow);
         }

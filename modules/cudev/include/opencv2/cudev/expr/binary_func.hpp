@@ -55,6 +55,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 #define CV_CUDEV_EXPR_BINARY_FUNC(name) \
     template <class SrcPtr1, class SrcPtr2> \
     __host__ Expr<BinaryTransformPtrSz<typename PtrTraits<SrcPtr1>::ptr_type, typename PtrTraits<SrcPtr2>::ptr_type, name ## _func<typename LargerType<typename PtrTraits<SrcPtr1>::value_type, typename PtrTraits<SrcPtr2>::value_type>::type> > > \
@@ -69,6 +72,8 @@ CV_CUDEV_EXPR_BINARY_FUNC(atan2)
 CV_CUDEV_EXPR_BINARY_FUNC(absdiff)
 
 #undef CV_CUDEV_EXPR_BINARY_FUNC
+
+//! @}
 
 }}
 

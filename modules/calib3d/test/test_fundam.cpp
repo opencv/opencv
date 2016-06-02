@@ -973,26 +973,12 @@ int CV_FundamentalMatTest::prepare_test_case( int test_case_idx )
     return code;
 }
 
-
 void CV_FundamentalMatTest::run_func()
 {
-    //if(!test_cpp)
-    {
-        CvMat _input0 = test_mat[INPUT][0], _input1 = test_mat[INPUT][1];
-        CvMat F = test_mat[TEMP][0], mask = test_mat[TEMP][1];
-        f_result = cvFindFundamentalMat( &_input0, &_input1, &F, method, MAX(sigma*3, 0.01), 0, &mask );
-    }
-    /*else
-    {
-        cv::findFundamentalMat(const Mat& points1, const Mat& points2,
-        vector<uchar>& mask, int method=FM_RANSAC,
-        double param1=3., double param2=0.99 );
-
-        CV_EXPORTS Mat findFundamentalMat( const Mat& points1, const Mat& points2,
-                                          int method=FM_RANSAC,
-                                          double param1=3., double param2=0.99 );
-    }*/
-
+    // cvFindFundamentalMat calls cv::findFundamentalMat
+    CvMat _input0 = test_mat[INPUT][0], _input1 = test_mat[INPUT][1];
+    CvMat F = test_mat[TEMP][0], mask = test_mat[TEMP][1];
+    f_result = cvFindFundamentalMat( &_input0, &_input1, &F, method, MAX(sigma*3, 0.01), 0, &mask );
 }
 
 
@@ -1021,12 +1007,12 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
     cv::gemm( T, invA2, 1, Mat(), 0, F0 );
     F0 *= 1./f0[8];
 
-    uchar* status = test_mat[TEMP][1].data;
-    double err_level = method <= CV_FM_8POINT ? 1 : get_success_error_level( test_case_idx, OUTPUT, 1 );
-    uchar* mtfm1 = test_mat[REF_OUTPUT][1].data;
-    uchar* mtfm2 = test_mat[OUTPUT][1].data;
-    double* f_prop1 = (double*)test_mat[REF_OUTPUT][0].data;
-    double* f_prop2 = (double*)test_mat[OUTPUT][0].data;
+    uchar* status = test_mat[TEMP][1].ptr();
+    double err_level = get_success_error_level( test_case_idx, OUTPUT, 1 );
+    uchar* mtfm1 = test_mat[REF_OUTPUT][1].ptr();
+    uchar* mtfm2 = test_mat[OUTPUT][1].ptr();
+    double* f_prop1 = test_mat[REF_OUTPUT][0].ptr<double>();
+    double* f_prop2 = test_mat[OUTPUT][0].ptr<double>();
 
     int i, pt_count = test_mat[INPUT][2].cols;
     Mat p1( 1, pt_count, CV_64FC2 );
@@ -1357,12 +1343,12 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     cv::gemm( T1, T2, 1, Mat(), 0, F0 );
     F0 *= 1./f0[8];
 
-    uchar* status = test_mat[TEMP][1].data;
+    uchar* status = test_mat[TEMP][1].ptr();
     double err_level = get_success_error_level( test_case_idx, OUTPUT, 1 );
-    uchar* mtfm1 = test_mat[REF_OUTPUT][1].data;
-    uchar* mtfm2 = test_mat[OUTPUT][1].data;
-    double* e_prop1 = (double*)test_mat[REF_OUTPUT][0].data;
-    double* e_prop2 = (double*)test_mat[OUTPUT][0].data;
+    uchar* mtfm1 = test_mat[REF_OUTPUT][1].ptr();
+    uchar* mtfm2 = test_mat[OUTPUT][1].ptr();
+    double* e_prop1 = test_mat[REF_OUTPUT][0].ptr<double>();
+    double* e_prop2 = test_mat[OUTPUT][0].ptr<double>();
     Mat E_prop2 = Mat(3, 1, CV_64F, e_prop2);
 
     int i, pt_count = test_mat[INPUT][2].cols;
@@ -1407,8 +1393,8 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
 
 
 
-    double* pose_prop1 = (double*)test_mat[REF_OUTPUT][2].data;
-    double* pose_prop2 = (double*)test_mat[OUTPUT][2].data;
+    double* pose_prop1 = test_mat[REF_OUTPUT][2].ptr<double>();
+    double* pose_prop2 = test_mat[OUTPUT][2].ptr<double>();
     double terr1 = cvtest::norm(Rt0.col(3) / norm(Rt0.col(3)) + test_mat[TEMP][3], NORM_L2);
     double terr2 = cvtest::norm(Rt0.col(3) / norm(Rt0.col(3)) - test_mat[TEMP][3], NORM_L2);
     Mat rvec;
@@ -1722,5 +1708,22 @@ TEST(Calib3d_FindFundamentalMat, accuracy) { CV_FundamentalMatTest test; test.sa
 TEST(Calib3d_ConvertHomogeneoous, accuracy) { CV_ConvertHomogeneousTest test; test.safe_run(); }
 TEST(Calib3d_ComputeEpilines, accuracy) { CV_ComputeEpilinesTest test; test.safe_run(); }
 TEST(Calib3d_FindEssentialMat, accuracy) { CV_EssentialMatTest test; test.safe_run(); }
+
+TEST(Calib3d_FindFundamentalMat, correctMatches)
+{
+    double fdata[] = {0, 0, 0, 0, 0, -1, 0, 1, 0};
+    double p1data[] = {200, 0, 1};
+    double p2data[] = {170, 0, 1};
+
+    Mat F(3, 3, CV_64F, fdata);
+    Mat p1(1, 1, CV_64FC2, p1data);
+    Mat p2(1, 1, CV_64FC2, p2data);
+    Mat np1, np2;
+
+    correctMatches(F, p1, p2, np1, np2);
+
+    cout << np1 << endl;
+    cout << np2 << endl;
+}
 
 /* End of file. */

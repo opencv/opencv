@@ -99,18 +99,22 @@ public:
      */
     virtual void buildIndex()
     {
+        std::ostringstream stream;
         bestParams_ = estimateBuildParams();
+        print_params(bestParams_, stream);
         Logger::info("----------------------------------------------------\n");
         Logger::info("Autotuned parameters:\n");
-        print_params(bestParams_);
+        Logger::info("%s", stream.str().c_str());
         Logger::info("----------------------------------------------------\n");
 
         bestIndex_ = create_index_by_type(dataset_, bestParams_, distance_);
         bestIndex_->buildIndex();
         speedup_ = estimateSearchParams(bestSearchParams_);
+        stream.str(std::string());
+        print_params(bestSearchParams_, stream);
         Logger::info("----------------------------------------------------\n");
         Logger::info("Search parameters:\n");
-        print_params(bestSearchParams_);
+        Logger::info("%s", stream.str().c_str());
         Logger::info("----------------------------------------------------\n");
     }
 
@@ -373,6 +377,7 @@ private:
         // evaluate kdtree for all parameter combinations
         for (size_t i = 0; i < FLANN_ARRAY_LEN(testTrees); ++i) {
             CostData cost;
+            cost.params["algorithm"] = FLANN_INDEX_KDTREE;
             cost.params["trees"] = testTrees[i];
 
             evaluate_kdtree(cost);

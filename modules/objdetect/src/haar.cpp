@@ -159,13 +159,17 @@ icvReleaseHidHaarClassifierCascade( CvHidHaarClassifierCascade** _cascade )
     {
 #ifdef HAVE_IPP
         CvHidHaarClassifierCascade* cascade = *_cascade;
-        if( cascade->ipp_stages )
+        if( CV_IPP_CHECK_COND && cascade->ipp_stages )
         {
             int i;
             for( i = 0; i < cascade->count; i++ )
             {
                 if( cascade->ipp_stages[i] )
+#if IPP_VERSION_X100 < 900
                     ippiHaarClassifierFree_32f( (IppiHaarClassifier_32f*)cascade->ipp_stages[i] );
+#else
+                    cvFree(&cascade->ipp_stages[i]);
+#endif
             }
         }
         cvFree( &cascade->ipp_stages );
@@ -338,7 +342,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
     }
 /*
 #ifdef HAVE_IPP
-    int can_use_ipp = !out->has_tilted_features && !out->is_tree && out->isStumpBased;
+    int can_use_ipp = CV_IPP_CHECK_COND && (!out->has_tilted_features && !out->is_tree && out->isStumpBased);
 
     if( can_use_ipp )
     {
@@ -1315,7 +1319,7 @@ public:
         int x, y, ystep = factor > 2 ? 1 : 2;
 
 #ifdef HAVE_IPP
-        if( cascade->hid_cascade->ipp_stages )
+        if(CV_IPP_CHECK_COND && cascade->hid_cascade->ipp_stages )
         {
             IppiRect iequRect = {equRect.x, equRect.y, equRect.width, equRect.height};
             ippiRectStdDev_32f_C1R(sum1.ptr<float>(y1), (int)sum1.step,
@@ -1351,6 +1355,7 @@ public:
                 if( positive <= 0 )
                     break;
             }
+            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
 
             if( positive > 0 )
                 for( y = y1; y < y2; y += ystep )
@@ -1561,7 +1566,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
     {
         CvSize winSize0 = cascade->orig_window_size;
 #ifdef HAVE_IPP
-        int use_ipp = cascade->hid_cascade->ipp_stages != 0;
+        int use_ipp = CV_IPP_CHECK_COND && (cascade->hid_cascade->ipp_stages != 0);
 
         if( use_ipp )
             normImg.reset(cvCreateMat( img->rows, img->cols, CV_32FC1));
@@ -1978,7 +1983,7 @@ cvLoadHaarClassifierCascade( const char* directory, CvSize orig_window_size )
         if( !f )
             CV_Error( CV_StsError, "" );
         fseek( f, 0, SEEK_END );
-        size = ftell( f );
+        size = (int)ftell( f );
         fseek( f, 0, SEEK_SET );
         size_t elements_read = fread( ptr, 1, size, f );
         CV_Assert(elements_read == (size_t)(size));

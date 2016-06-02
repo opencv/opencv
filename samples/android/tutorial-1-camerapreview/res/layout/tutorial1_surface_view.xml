@@ -12,12 +12,4 @@
         opencv:show_fps="true"
         opencv:camera_id="any" />
 
-    <org.opencv.android.NativeCameraView
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:visibility="gone"
-        android:id="@+id/tutorial1_activity_native_surface_view"
-        opencv:show_fps="true"
-        opencv:camera_id="any" />
-
 </FrameLayout>

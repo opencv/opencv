@@ -57,6 +57,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class Policy, class SrcPtrTuple, typename DstType, class MaskPtr>
 __host__ void gridMerge_(const SrcPtrTuple& src, GpuMat_<DstType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
 {
@@ -578,6 +581,8 @@ __host__ void gridSplit(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[COUNT], Str
 {
     gridSplit_<DefaultSplitMergePolicy>(src, dst, stream);
 }
+
+//! @}
 
 }}
 

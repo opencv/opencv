@@ -117,7 +117,7 @@ namespace cv { namespace cuda { namespace device
                     if (dir.x < 0)
                         dir = -dir;
                 }
-                else if (pb[1].x == cols - 1 && (pb[0].y >= 0 && pb[0].y < rows))
+                else if (pb[1].x == cols - 1 && (pb[1].y >= 0 && pb[1].y < rows))
                 {
                     p0 = pb[1];
                     if (dir.x > 0)

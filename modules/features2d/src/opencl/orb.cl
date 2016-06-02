@@ -148,8 +148,8 @@ ORB_computeDescriptor(__global const uchar* imgbuf, int imgstep, int imgoffset0,
         float angle = as_float(kpt[KEYPOINT_ANGLE]);
         angle *= 0.01745329251994329547f;
 
-        float sina = sin(angle);
-        float cosa = cos(angle);
+        float cosa;
+        float sina = sincos(angle, &cosa);
 
         __global uchar* desc = _desc + idx*dsize;
 
@@ -207,7 +207,7 @@ ORB_computeDescriptor(__global const uchar* imgbuf, int imgstep, int imgoffset0,
             pattern += 12*2;
 
         #elif WTA_K == 4
-            int t0, t1, t2, t3, k, val;
+            int t0, t1, t2, t3, k;
             int a, b;
 
             t0 = GET_VALUE(0); t1 = GET_VALUE(1);

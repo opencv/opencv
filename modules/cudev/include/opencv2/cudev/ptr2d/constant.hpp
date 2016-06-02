@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <typename T> struct ConstantPtr
 {
     typedef T   value_type;
@@ -87,6 +90,8 @@ __host__ constantPtr(T value, int rows, int cols)
 template <typename T> struct PtrTraits< ConstantPtrSz<T> > : PtrTraitsBase< ConstantPtrSz<T>, ConstantPtr<T> >
 {
 };
+
+//! @}
 
 }}
 

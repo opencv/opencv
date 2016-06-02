@@ -77,50 +77,12 @@ template <typename T> inline T mapValue(T x, T a, T b, T c, T d)
     return c + (d - c) * (x - a) / (b - a);
 }
 
-static void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
-{
-    float maxDisplacement = 1.0f;
-
-    for (int i = 0; i < u.rows; ++i)
-    {
-        const float* ptr_u = u.ptr<float>(i);
-        const float* ptr_v = v.ptr<float>(i);
-
-        for (int j = 0; j < u.cols; ++j)
-        {
-            float d = max(fabsf(ptr_u[j]), fabsf(ptr_v[j]));
-
-            if (d > maxDisplacement)
-                maxDisplacement = d;
-        }
-    }
-
-    flowField.create(u.size(), CV_8UC4);
-
-    for (int i = 0; i < flowField.rows; ++i)
-    {
-        const float* ptr_u = u.ptr<float>(i);
-        const float* ptr_v = v.ptr<float>(i);
-
-
-        Vec4b* row = flowField.ptr<Vec4b>(i);
-
-        for (int j = 0; j < flowField.cols; ++j)
-        {
-            row[j][0] = 0;
-            row[j][1] = static_cast<unsigned char> (mapValue (-ptr_v[j], -maxDisplacement, maxDisplacement, 0.0f, 255.0f));
-            row[j][2] = static_cast<unsigned char> (mapValue ( ptr_u[j], -maxDisplacement, maxDisplacement, 0.0f, 255.0f));
-            row[j][3] = 255;
-        }
-    }
-}
-
 int main(int argc, const char* argv[])
 {
     const char* keys =
         "{ h             help   |       | print help message }"
-        "{ l             left   |       | specify left image }"
-        "{ r             right  |       | specify right image }"
+        "{ l             left   | ../data/pic1.png       | specify left image }"
+        "{ r             right  | ../data/pic2.png       | specify right image }"
         "{ gray                 |       | use grayscale sources [PyrLK Sparse] }"
         "{ win_size             | 21    | specify windows size [PyrLK] }"
         "{ max_level            | 3     | specify max level [PyrLK] }"
@@ -186,12 +148,8 @@ int main(int argc, const char* argv[])
 
     // Sparse
 
-    PyrLKOpticalFlow d_pyrLK;
-
-    d_pyrLK.winSize.width = winSize;
-    d_pyrLK.winSize.height = winSize;
-    d_pyrLK.maxLevel = maxLevel;
-    d_pyrLK.iters = iters;
+    Ptr<cuda::SparsePyrLKOpticalFlow> d_pyrLK = cuda::SparsePyrLKOpticalFlow::create(
+                Size(winSize, winSize), maxLevel, iters);
 
     GpuMat d_frame0(frame0);
     GpuMat d_frame1(frame1);
@@ -199,7 +157,7 @@ int main(int argc, const char* argv[])
     GpuMat d_nextPts;
     GpuMat d_status;
 
-    d_pyrLK.sparse(useGray ? d_frame0Gray : d_frame0, useGray ? d_frame1Gray : d_frame1, d_prevPts, d_nextPts, d_status);
+    d_pyrLK->calc(useGray ? d_frame0Gray : d_frame0, useGray ? d_frame1Gray : d_frame1, d_prevPts, d_nextPts, d_status);
 
     // Draw arrows
 
@@ -215,20 +173,6 @@ int main(int argc, const char* argv[])
     drawArrows(frame0, prevPts, nextPts, status, Scalar(255, 0, 0));
 
     imshow("PyrLK [Sparse]", frame0);
-
-    // Dense
-
-    GpuMat d_u;
-    GpuMat d_v;
-
-    d_pyrLK.dense(d_frame0Gray, d_frame1Gray, d_u, d_v);
-
-    // Draw flow field
-
-    Mat flowField;
-    getFlowField(Mat(d_u), Mat(d_v), flowField);
-
-    imshow("PyrLK [Dense] Flow Field", flowField);
 
     waitKey();
 

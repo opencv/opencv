@@ -52,6 +52,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 using namespace cv::cuda;
 
 // CV_CUDEV_ARCH
@@ -83,6 +86,8 @@ __host__ __device__ __forceinline__ int divUp(int total, int grain)
 
 #define CV_PI_F   ((float)CV_PI)
 #define CV_LOG2_F ((float)CV_LOG2)
+
+//! @}
 
 }}
 

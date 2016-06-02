@@ -19,7 +19,7 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
         ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
         OUTPUT_VARIABLE gcc_compiler_version)
     #MESSAGE("GCC Version: ${gcc_compiler_version}")
-    IF(gcc_compiler_version VERSION_GREATER "4.2.-1")
+    IF(gcc_compiler_version VERSION_GREATER "4.2.-1" AND gcc_compiler_version VERSION_LESS "6.0.0")
         SET(PCHSupport_FOUND TRUE)
     ENDIF()
 
@@ -48,10 +48,16 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
             LIST(APPEND ${_out_compile_flags} "-fPIC")
         ENDIF()
 
+        GET_PROPERTY(_definitions DIRECTORY PROPERTY COMPILE_DEFINITIONS)
+        if(_definitions)
+          foreach(_def ${_definitions})
+            LIST(APPEND ${_out_compile_flags} "\"-D${_def}\"")
+          endforeach()
+        endif()
         GET_TARGET_PROPERTY(_target_definitions ${_PCH_current_target} COMPILE_DEFINITIONS)
         if(_target_definitions)
           foreach(_def ${_target_definitions})
-            LIST(APPEND ${_out_compile_flags} "-D${_def}")
+            LIST(APPEND ${_out_compile_flags} "\"-D${_def}\"")
           endforeach()
         endif()
 
@@ -68,11 +74,15 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         endif()
     ENDFOREACH(item)
 
-    GET_DIRECTORY_PROPERTY(_directory_flags DEFINITIONS)
-    GET_DIRECTORY_PROPERTY(_global_definitions DIRECTORY ${OpenCV_SOURCE_DIR} DEFINITIONS)
-    #MESSAGE("_directory_flags ${_directory_flags} ${_global_definitions}" )
-    LIST(APPEND ${_out_compile_flags} ${_directory_flags})
-    LIST(APPEND ${_out_compile_flags} ${_global_definitions})
+    get_target_property(DIRINC ${_PCH_current_target} INCLUDE_DIRECTORIES )
+    FOREACH(item ${DIRINC})
+        if(item MATCHES "^${OpenCV_SOURCE_DIR}/modules/")
+          LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
+        else()
+          LIST(APPEND ${_out_compile_flags} "${_PCH_isystem_prefix}\"${item}\"")
+        endif()
+    ENDFOREACH(item)
+
     LIST(APPEND ${_out_compile_flags} ${CMAKE_CXX_FLAGS})
 
     SEPARATE_ARGUMENTS(${_out_compile_flags})
@@ -154,9 +164,9 @@ MACRO(_PCH_GET_TARGET_COMPILE_FLAGS _cflags  _header_name _pch_path _dowarn )
         # if you have different versions of the headers for different build types
         # you may set _pch_dowarn
         IF (_dowarn)
-            SET(${_cflags} "${PCH_ADDITIONAL_COMPILER_FLAGS} -include \"${CMAKE_CURRENT_BINARY_DIR}/${_header_name}\" -Winvalid-pch " )
+            SET(${_cflags} "${PCH_ADDITIONAL_COMPILER_FLAGS} -Winvalid-pch " )
         ELSE (_dowarn)
-            SET(${_cflags} "${PCH_ADDITIONAL_COMPILER_FLAGS} -include \"${CMAKE_CURRENT_BINARY_DIR}/${_header_name}\" " )
+            SET(${_cflags} "${PCH_ADDITIONAL_COMPILER_FLAGS} " )
         ENDIF (_dowarn)
 
     ELSE(CMAKE_COMPILER_IS_GNUCXX)
@@ -254,12 +264,15 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
         endif()
     endif()
 
+    get_target_property(DIRINC ${_targetName} INCLUDE_DIRECTORIES)
+    set_target_properties(${_targetName}_pch_dephelp PROPERTIES INCLUDE_DIRECTORIES "${DIRINC}")
+
     #MESSAGE("_compile_FLAGS: ${_compile_FLAGS}")
     #message("COMMAND ${CMAKE_CXX_COMPILER}	${_compile_FLAGS} -x c++-header -o ${_output} ${_input}")
 
     ADD_CUSTOM_COMMAND(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${_name}"
-      COMMAND ${CMAKE_COMMAND} -E copy  "${_input}" "${CMAKE_CURRENT_BINARY_DIR}/${_name}" # ensure same directory! Required by gcc
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_input}" "${CMAKE_CURRENT_BINARY_DIR}/${_name}" # ensure same directory! Required by gcc
       DEPENDS "${_input}"
       )
 

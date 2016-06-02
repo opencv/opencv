@@ -44,6 +44,8 @@
 
 #include <algorithm>
 
+//! @cond IGNORED
+
 namespace cv {
 
 template<typename Y>
@@ -250,6 +252,32 @@ Ptr<Y> Ptr<T>::dynamicCast() const
     return Ptr<Y>(*this, dynamic_cast<Y*>(stored));
 }
 
+#ifdef CV_CXX_MOVE_SEMANTICS
+
+template<typename T>
+Ptr<T>::Ptr(Ptr&& o) : owner(o.owner), stored(o.stored)
+{
+    o.owner = NULL;
+    o.stored = NULL;
+}
+
+template<typename T>
+Ptr<T>& Ptr<T>::operator = (Ptr<T>&& o)
+{
+    if (this == &o)
+        return *this;
+
+    release();
+    owner = o.owner;
+    stored = o.stored;
+    o.owner = NULL;
+    o.stored = NULL;
+    return *this;
+}
+
+#endif
+
+
 template<typename T>
 void swap(Ptr<T>& ptr1, Ptr<T>& ptr2){
     ptr1.swap(ptr2);
@@ -334,5 +362,7 @@ Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5&
 }
 
 } // namespace cv
+
+//! @endcond
 
 #endif // __OPENCV_CORE_PTR_INL_HPP__

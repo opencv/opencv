@@ -79,8 +79,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual float computeDistance(InputArray contour1, InputArray contour2);
 
@@ -126,10 +124,8 @@ public:
     virtual void getImages(OutputArray _image1, OutputArray _image2) const
     {
         CV_Assert((!image1.empty()) && (!image2.empty()));
-        _image1.create(image1.size(), image1.type());
-        _image2.create(image2.size(), image2.type());
-        _image1.getMat()=image1;
-        _image2.getMat()=image2;
+        image1.copyTo(_image1);
+        image2.copyTo(_image2);
     }
 
     virtual void setIterations(int _iterations) {CV_Assert(_iterations>0); iterations=_iterations;}
@@ -141,6 +137,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "nRads" << nRadialBins
            << "nAngs" << nAngularBins
@@ -199,7 +196,7 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
     if (set2.type() != CV_32F)
         sset2.convertTo(set2, CV_32F);
     else
-        sset1.copyTo(set2);
+        sset2.copyTo(set2);
 
     CV_Assert((set1.channels()==2) && (set1.cols>0));
     CV_Assert((set2.channels()==2) && (set2.cols>0));

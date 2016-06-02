@@ -46,12 +46,17 @@
 
 namespace cv { namespace ocl {
 
-CV_EXPORTS bool haveOpenCL();
-CV_EXPORTS bool useOpenCL();
-CV_EXPORTS bool haveAmdBlas();
-CV_EXPORTS bool haveAmdFft();
-CV_EXPORTS void setUseOpenCL(bool flag);
-CV_EXPORTS void finish();
+//! @addtogroup core_opencl
+//! @{
+
+CV_EXPORTS_W bool haveOpenCL();
+CV_EXPORTS_W bool useOpenCL();
+CV_EXPORTS_W bool haveAmdBlas();
+CV_EXPORTS_W bool haveAmdFft();
+CV_EXPORTS_W void setUseOpenCL(bool flag);
+CV_EXPORTS_W void finish();
+
+CV_EXPORTS bool haveSVM();
 
 class CV_EXPORTS Context;
 class CV_EXPORTS Device;
@@ -179,6 +184,7 @@ public:
     // After fix restore code in arithm.cpp: ocl_compare()
     inline bool isAMD() const { return vendorID() == VENDOR_AMD; }
     inline bool isIntel() const { return vendorID() == VENDOR_INTEL; }
+    inline bool isNVidia() const { return vendorID() == VENDOR_NVIDIA; }
 
     int maxClockFrequency() const;
     int maxComputeUnits() const;
@@ -245,7 +251,10 @@ public:
     void* ptr() const;
 
     friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
-protected:
+
+    bool useSVM() const;
+    void setUseSVM(bool enabled);
+
     struct Impl;
     Impl* p;
 };
@@ -266,6 +275,58 @@ protected:
     struct Impl;
     Impl* p;
 };
+
+/*
+//! @brief Attaches OpenCL context to OpenCV
+//
+//! @note Note:
+//    OpenCV will check if available OpenCL platform has platformName name,
+//    then assign context to OpenCV and call clRetainContext function.
+//    The deviceID device will be used as target device and new command queue
+//    will be created.
+//
+// Params:
+//! @param platformName - name of OpenCL platform to attach,
+//!                       this string is used to check if platform is available
+//!                       to OpenCV at runtime
+//! @param platfromID   - ID of platform attached context was created for
+//! @param context      - OpenCL context to be attached to OpenCV
+//! @param deviceID     - ID of device, must be created from attached context
+*/
+CV_EXPORTS void attachContext(const String& platformName, void* platformID, void* context, void* deviceID);
+
+/*
+//! @brief Convert OpenCL buffer to UMat
+//
+//! @note Note:
+//   OpenCL buffer (cl_mem_buffer) should contain 2D image data, compatible with OpenCV.
+//   Memory content is not copied from clBuffer to UMat. Instead, buffer handle assigned
+//   to UMat and clRetainMemObject is called.
+//
+// Params:
+//! @param  cl_mem_buffer - source clBuffer handle
+//! @param  step          - num of bytes in single row
+//! @param  rows          - number of rows
+//! @param  cols          - number of cols
+//! @param  type          - OpenCV type of image
+//! @param  dst           - destination UMat
+*/
+CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst);
+
+/*
+//! @brief Convert OpenCL image2d_t to UMat
+//
+//! @note Note:
+//   OpenCL image2d_t (cl_mem_image), should be compatible with OpenCV
+//   UMat formats.
+//   Memory content is copied from image to UMat with
+//   clEnqueueCopyImageToBuffer function.
+//
+// Params:
+//! @param  cl_mem_image - source image2d_t handle
+//! @param  dst          - destination UMat
+*/
+CV_EXPORTS void convertFromImage(void* cl_mem_image, UMat& dst);
 
 // TODO Move to internal header
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
@@ -506,7 +567,18 @@ public:
         i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
         i = set(i, a12); i = set(i, a13); i = set(i, a14); set(i, a15); return *this;
     }
-
+    /*
+    Run the OpenCL kernel.
+    @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
+    @param globalsize work items for each dimension.
+    It is not the final globalsize passed to OpenCL.
+    Each dimension will be adjusted to the nearest integer divisible by the corresponding value in localsize.
+    If localsize is NULL, it will still be adjusted depending on dims.
+    The adjusted values are greater than or equal to the original values.
+    @param localsize work-group size for each dimension.
+    @param sync specify whether to wait for OpenCL computation to finish before return.
+    @param q command queue
+    */
     bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
     bool runTask(bool sync, const Queue& q=Queue());
@@ -596,11 +668,38 @@ protected:
 CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
+CV_EXPORTS const char* vecopTypeToStr(int t);
 CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1, const char * name = NULL);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
+
+
+enum OclVectorStrategy
+{
+    // all matrices have its own vector width
+    OCL_VECTOR_OWN = 0,
+    // all matrices have maximal vector width among all matrices
+    // (useful for cases when matrices have different data types)
+    OCL_VECTOR_MAX = 1,
+
+    // default strategy
+    OCL_VECTOR_DEFAULT = OCL_VECTOR_OWN
+};
+
 CV_EXPORTS int predictOptimalVectorWidth(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
                                          InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
-                                         InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray());
+                                         InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray(),
+                                         OclVectorStrategy strat = OCL_VECTOR_DEFAULT);
+
+CV_EXPORTS int checkOptimalVectorWidth(const int *vectorWidths,
+                                       InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                       InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                       InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray(),
+                                       OclVectorStrategy strat = OCL_VECTOR_DEFAULT);
+
+// with OCL_VECTOR_MAX strategy
+CV_EXPORTS int predictOptimalVectorWidthMax(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                            InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                            InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray());
 
 CV_EXPORTS void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, InputArray _m);
 
@@ -635,6 +734,20 @@ protected:
 
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
+
+
+#ifdef __OPENCV_BUILD
+namespace internal {
+
+CV_EXPORTS bool isPerformanceCheckBypassed();
+#define OCL_PERFORMANCE_CHECK(condition) (cv::ocl::internal::isPerformanceCheckBypassed() || (condition))
+
+CV_EXPORTS bool isCLBuffer(UMat& u);
+
+} // namespace internal
+#endif
+
+//! @}
 
 }}
 

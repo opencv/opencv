@@ -25,7 +25,7 @@ int main(int argc, const char* argv[])
     }
     else
     {
-        std::cout << "OpenCV " << CV_VERSION << std::endl;
+        std::cout << "Welcome to OpenCV " << CV_VERSION << std::endl;
     }
 
     return 0;

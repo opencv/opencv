@@ -16,7 +16,7 @@ public:
 
 protected:
     Mat test_image;
-    vector<Vec4i> lines;
+    vector<Vec4f> lines;
     RNG rng;
     int passedtests;
 

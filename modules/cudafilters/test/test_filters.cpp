@@ -53,6 +53,7 @@ namespace
     IMPLEMENT_PARAM_CLASS(Deriv_X, int)
     IMPLEMENT_PARAM_CLASS(Deriv_Y, int)
     IMPLEMENT_PARAM_CLASS(Iterations, int)
+    IMPLEMENT_PARAM_CLASS(KernelSize, int)
 
     cv::Mat getInnerROI(cv::InputArray m_, cv::Size ksize)
     {
@@ -112,7 +113,7 @@ CUDA_TEST_P(Blur, Accuracy)
 INSTANTIATE_TEST_CASE_P(CUDA_Filters, Blur, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1)),
     testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7))),
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
     testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT)),
@@ -646,5 +647,65 @@ INSTANTIATE_TEST_CASE_P(CUDA_Filters, MorphEx, testing::Combine(
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
     testing::Values(Iterations(1), Iterations(2), Iterations(3)),
     WHOLE_SUBMAT));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Median
+
+
+PARAM_TEST_CASE(Median, cv::cuda::DeviceInfo, cv::Size, MatDepth,  KernelSize, UseRoi)
+{
+    cv::cuda::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    int kernel;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        kernel = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+
+        cv::cuda::setDevice(devInfo.deviceID());
+    }
+};
+
+
+
+CUDA_TEST_P(Median, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+
+    cv::Ptr<cv::cuda::Filter> median = cv::cuda::createMedianFilter(src.type(), kernel);
+
+    cv::cuda::GpuMat dst = createMat(size, type, useRoi);
+    median->apply(loadMat(src, useRoi), dst);
+
+    cv::Mat dst_gold;
+    cv::medianBlur(src,dst_gold,kernel);
+
+    cv::Rect rect(kernel+1,0,src.cols-(2*kernel+1),src.rows);
+    cv::Mat dst_gold_no_border = dst_gold(rect);
+    cv::cuda::GpuMat dst_no_border = cv::cuda::GpuMat(dst, rect);
+
+    EXPECT_MAT_NEAR(dst_gold_no_border, dst_no_border, 1);
+
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, Median, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatDepth(CV_8U)),
+    testing::Values(KernelSize(3),
+                    KernelSize(5),
+                    KernelSize(7),
+                    KernelSize(9),
+                    KernelSize(11),
+                    KernelSize(13),
+                    KernelSize(15)),
+    WHOLE_SUBMAT)
+    );
 
 #endif // HAVE_CUDA

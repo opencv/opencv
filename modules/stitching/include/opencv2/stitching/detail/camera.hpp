@@ -48,6 +48,13 @@
 namespace cv {
 namespace detail {
 
+//! @addtogroup stitching
+//! @{
+
+/** @brief Describes camera parameters.
+
+@note Translation is assumed to be zero during the whole stitching pipeline. :
+ */
 struct CV_EXPORTS CameraParams
 {
     CameraParams();
@@ -62,6 +69,8 @@ struct CV_EXPORTS CameraParams
     Mat R; // Rotation
     Mat t; // Translation
 };
+
+//! @}
 
 } // namespace detail
 } // namespace cv

@@ -47,6 +47,8 @@
 #include "../warp.hpp"
 #include "../warp_shuffle.hpp"
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     namespace reduce_key_val_detail
@@ -494,5 +496,7 @@ namespace cv { namespace cuda { namespace device
         };
     }
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP__

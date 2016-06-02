@@ -562,10 +562,10 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        const uchar* aptr = planes[1].data;
-        const uchar* bptr = planes[2].data;
-        uchar* dptr = planes[3].data;
+        const uchar* sptr = planes[0].ptr();
+        const uchar* aptr = planes[1].ptr();
+        const uchar* bptr = planes[2].ptr();
+        uchar* dptr = planes[3].ptr();
 
         switch( depth )
         {
@@ -614,8 +614,8 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         switch( depth )
         {
@@ -905,8 +905,8 @@ static void exp(const Mat& src, Mat& dst)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         if( depth == CV_32F )
         {
@@ -934,8 +934,8 @@ static void log(const Mat& src, Mat& dst)
 
     for( i = 0; i < nplanes; i++, ++it )
     {
-        const uchar* sptr = planes[0].data;
-        uchar* dptr = planes[1].data;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
         if( depth == CV_32F )
         {
@@ -1027,10 +1027,10 @@ static void cartToPolar(const Mat& mx, const Mat& my, Mat& mmag, Mat& mangle, bo
     {
         if( depth == CV_32F )
         {
-            const float* xptr = (const float*)planes[0].data;
-            const float* yptr = (const float*)planes[1].data;
-            float* mptr = (float*)planes[2].data;
-            float* aptr = (float*)planes[3].data;
+            const float* xptr = planes[0].ptr<float>();
+            const float* yptr = planes[1].ptr<float>();
+            float* mptr = planes[2].ptr<float>();
+            float* aptr = planes[3].ptr<float>();
 
             for( j = 0; j < total; j++ )
             {
@@ -1042,10 +1042,10 @@ static void cartToPolar(const Mat& mx, const Mat& my, Mat& mmag, Mat& mangle, bo
         }
         else
         {
-            const double* xptr = (const double*)planes[0].data;
-            const double* yptr = (const double*)planes[1].data;
-            double* mptr = (double*)planes[2].data;
-            double* aptr = (double*)planes[3].data;
+            const double* xptr = planes[0].ptr<double>();
+            const double* yptr = planes[1].ptr<double>();
+            double* mptr = planes[2].ptr<double>();
+            double* aptr = planes[3].ptr<double>();
 
             for( j = 0; j < total; j++ )
             {
@@ -1578,3 +1578,269 @@ TEST_P(Mul1, One)
 }
 
 INSTANTIATE_TEST_CASE_P(Arithm, Mul1, testing::Values(Size(2, 2), Size(1, 1)));
+
+class SubtractOutputMatNotEmpty : public testing::TestWithParam< std::tr1::tuple<cv::Size, perf::MatType, perf::MatDepth, bool> >
+{
+public:
+    cv::Size size;
+    int src_type;
+    int dst_depth;
+    bool fixed;
+
+    void SetUp()
+    {
+        size = std::tr1::get<0>(GetParam());
+        src_type = std::tr1::get<1>(GetParam());
+        dst_depth = std::tr1::get<2>(GetParam());
+        fixed = std::tr1::get<3>(GetParam());
+    }
+};
+
+TEST_P(SubtractOutputMatNotEmpty, Mat_Mat)
+{
+    cv::Mat src1(size, src_type, cv::Scalar::all(16));
+    cv::Mat src2(size, src_type, cv::Scalar::all(16));
+
+    cv::Mat dst;
+
+    if (!fixed)
+    {
+        cv::subtract(src1, src2, dst, cv::noArray(), dst_depth);
+    }
+    else
+    {
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src1.channels()));
+        cv::subtract(src1, src2, fixed_dst, cv::noArray(), dst_depth);
+        dst = fixed_dst;
+        dst_depth = fixed_dst.depth();
+    }
+
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(src1.size(), dst.size());
+    ASSERT_EQ(dst_depth > 0 ? dst_depth : src1.depth(), dst.depth());
+    ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
+}
+
+TEST_P(SubtractOutputMatNotEmpty, Mat_Mat_WithMask)
+{
+    cv::Mat src1(size, src_type, cv::Scalar::all(16));
+    cv::Mat src2(size, src_type, cv::Scalar::all(16));
+    cv::Mat mask(size, CV_8UC1, cv::Scalar::all(255));
+
+    cv::Mat dst;
+
+    if (!fixed)
+    {
+        cv::subtract(src1, src2, dst, mask, dst_depth);
+    }
+    else
+    {
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src1.channels()));
+        cv::subtract(src1, src2, fixed_dst, mask, dst_depth);
+        dst = fixed_dst;
+        dst_depth = fixed_dst.depth();
+    }
+
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(src1.size(), dst.size());
+    ASSERT_EQ(dst_depth > 0 ? dst_depth : src1.depth(), dst.depth());
+    ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
+}
+
+TEST_P(SubtractOutputMatNotEmpty, Mat_Mat_Expr)
+{
+    cv::Mat src1(size, src_type, cv::Scalar::all(16));
+    cv::Mat src2(size, src_type, cv::Scalar::all(16));
+
+    cv::Mat dst = src1 - src2;
+
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(src1.size(), dst.size());
+    ASSERT_EQ(src1.depth(), dst.depth());
+    ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
+}
+
+TEST_P(SubtractOutputMatNotEmpty, Mat_Scalar)
+{
+    cv::Mat src(size, src_type, cv::Scalar::all(16));
+
+    cv::Mat dst;
+
+    if (!fixed)
+    {
+        cv::subtract(src, cv::Scalar::all(16), dst, cv::noArray(), dst_depth);
+    }
+    else
+    {
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src.channels()));
+        cv::subtract(src, cv::Scalar::all(16), fixed_dst, cv::noArray(), dst_depth);
+        dst = fixed_dst;
+        dst_depth = fixed_dst.depth();
+    }
+
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(dst_depth > 0 ? dst_depth : src.depth(), dst.depth());
+    ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
+}
+
+TEST_P(SubtractOutputMatNotEmpty, Mat_Scalar_WithMask)
+{
+    cv::Mat src(size, src_type, cv::Scalar::all(16));
+    cv::Mat mask(size, CV_8UC1, cv::Scalar::all(255));
+
+    cv::Mat dst;
+
+    if (!fixed)
+    {
+        cv::subtract(src, cv::Scalar::all(16), dst, mask, dst_depth);
+    }
+    else
+    {
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src.channels()));
+        cv::subtract(src, cv::Scalar::all(16), fixed_dst, mask, dst_depth);
+        dst = fixed_dst;
+        dst_depth = fixed_dst.depth();
+    }
+
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(dst_depth > 0 ? dst_depth : src.depth(), dst.depth());
+    ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
+}
+
+TEST_P(SubtractOutputMatNotEmpty, Scalar_Mat)
+{
+    cv::Mat src(size, src_type, cv::Scalar::all(16));
+
+    cv::Mat dst;
+
+    if (!fixed)
+    {
+        cv::subtract(cv::Scalar::all(16), src, dst, cv::noArray(), dst_depth);
+    }
+    else
+    {
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src.channels()));
+        cv::subtract(cv::Scalar::all(16), src, fixed_dst, cv::noArray(), dst_depth);
+        dst = fixed_dst;
+        dst_depth = fixed_dst.depth();
+    }
+
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(dst_depth > 0 ? dst_depth : src.depth(), dst.depth());
+    ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
+}
+
+TEST_P(SubtractOutputMatNotEmpty, Scalar_Mat_WithMask)
+{
+    cv::Mat src(size, src_type, cv::Scalar::all(16));
+    cv::Mat mask(size, CV_8UC1, cv::Scalar::all(255));
+
+    cv::Mat dst;
+
+    if (!fixed)
+    {
+        cv::subtract(cv::Scalar::all(16), src, dst, mask, dst_depth);
+    }
+    else
+    {
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src.channels()));
+        cv::subtract(cv::Scalar::all(16), src, fixed_dst, mask, dst_depth);
+        dst = fixed_dst;
+        dst_depth = fixed_dst.depth();
+    }
+
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(dst_depth > 0 ? dst_depth : src.depth(), dst.depth());
+    ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
+}
+
+TEST_P(SubtractOutputMatNotEmpty, Mat_Mat_3d)
+{
+    int dims[] = {5, size.height, size.width};
+
+    cv::Mat src1(3, dims, src_type, cv::Scalar::all(16));
+    cv::Mat src2(3, dims, src_type, cv::Scalar::all(16));
+
+    cv::Mat dst;
+
+    if (!fixed)
+    {
+        cv::subtract(src1, src2, dst, cv::noArray(), dst_depth);
+    }
+    else
+    {
+        const cv::Mat fixed_dst(3, dims, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src1.channels()));
+        cv::subtract(src1, src2, fixed_dst, cv::noArray(), dst_depth);
+        dst = fixed_dst;
+        dst_depth = fixed_dst.depth();
+    }
+
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(src1.dims, dst.dims);
+    ASSERT_EQ(src1.size, dst.size);
+    ASSERT_EQ(dst_depth > 0 ? dst_depth : src1.depth(), dst.depth());
+    ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, SubtractOutputMatNotEmpty, testing::Combine(
+    testing::Values(cv::Size(16, 16), cv::Size(13, 13), cv::Size(16, 13), cv::Size(13, 16)),
+    testing::Values(perf::MatType(CV_8UC1), CV_8UC3, CV_8UC4, CV_16SC1, CV_16SC3),
+    testing::Values(-1, CV_16S, CV_32S, CV_32F),
+    testing::Bool()));
+
+TEST(Core_FindNonZero, singular)
+{
+    Mat img(10, 10, CV_8U, Scalar::all(0));
+    vector<Point> pts, pts2(10);
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
+}
+
+TEST(Core_BoolVector, support)
+{
+    std::vector<bool> test;
+    int i, n = 205;
+    int nz = 0;
+    test.resize(n);
+    for( i = 0; i < n; i++ )
+    {
+        test[i] = theRNG().uniform(0, 2) != 0;
+        nz += (int)test[i];
+    }
+    ASSERT_EQ( nz, countNonZero(test) );
+    ASSERT_FLOAT_EQ((float)nz/n, (float)(mean(test)[0]));
+}
+
+TEST(MinMaxLoc, Mat_IntMax_Without_Mask)
+{
+    Mat_<int> mat(50, 50);
+    int iMaxVal = numeric_limits<int>::max();
+    mat.setTo(iMaxVal);
+
+    double min, max;
+    Point minLoc, maxLoc;
+
+    minMaxLoc(mat, &min, &max, &minLoc, &maxLoc, Mat());
+
+    ASSERT_EQ(iMaxVal, min);
+    ASSERT_EQ(iMaxVal, max);
+
+    ASSERT_EQ(Point(0, 0), minLoc);
+    ASSERT_EQ(Point(0, 0), maxLoc);
+}
+
+TEST(Normalize, regression_5876_inplace_change_type)
+{
+    double initial_values[] = {1, 2, 5, 4, 3};
+    float result_values[] = {0, 0.25, 1, 0.75, 0.5};
+    Mat m(Size(5, 1), CV_64FC1, initial_values);
+    Mat result(Size(5, 1), CV_32FC1, result_values);
+
+    normalize(m, m, 1, 0, NORM_MINMAX, CV_32F);
+    EXPECT_EQ(0, cvtest::norm(m, result, NORM_INF));
+}

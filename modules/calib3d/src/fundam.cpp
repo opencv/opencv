@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "rho.h"
 #include <iostream>
 
 namespace cv
@@ -66,20 +67,6 @@ static bool haveCollinearPoints( const Mat& m, int count )
         }
     }
     return false;
-}
-
-
-template<typename T> int compressPoints( T* ptr, const uchar* mask, int mstep, int count )
-{
-    int i, j;
-    for( i = j = 0; i < count; i++ )
-        if( mask[i*mstep] )
-        {
-            if( i > j )
-                ptr[j] = ptr[i];
-            j++;
-        }
-    return j;
 }
 
 
@@ -273,11 +260,89 @@ public:
 }
 
 
+
+namespace cv{
+static bool createAndRunRHORegistrator(double confidence,
+                                       int    maxIters,
+                                       double ransacReprojThreshold,
+                                       int    npoints,
+                                       InputArray  _src,
+                                       InputArray  _dst,
+                                       OutputArray _H,
+                                       OutputArray _tempMask){
+    Mat    src = _src.getMat();
+    Mat    dst = _dst.getMat();
+    Mat    tempMask;
+    bool   result;
+    double beta = 0.35;/* 0.35 is a value that often works. */
+
+    /* Create temporary output matrix (RHO outputs a single-precision H only). */
+    Mat tmpH = Mat(3, 3, CV_32FC1);
+
+    /* Create output mask. */
+    tempMask = Mat(npoints, 1, CV_8U);
+
+    /**
+     * Make use of the RHO estimator API.
+     *
+     * This is where the math happens. A homography estimation context is
+     * initialized, used, then finalized.
+     */
+
+    Ptr<RHO_HEST> p = rhoInit();
+
+    /**
+     * Optional. Ideally, the context would survive across calls to
+     * findHomography(), but no clean way appears to exit to do so. The price
+     * to pay is marginally more computational work than strictly needed.
+     */
+
+    rhoEnsureCapacity(p, npoints, beta);
+
+    /**
+     * The critical call. All parameters are heavily documented in rhorefc.h.
+     *
+     * Currently, NR (Non-Randomness criterion) and Final Refinement (with
+     * internal, optimized Levenberg-Marquardt method) are enabled. However,
+     * while refinement seems to correctly smooth jitter most of the time, when
+     * refinement fails it tends to make the estimate visually very much worse.
+     * It may be necessary to remove the refinement flags in a future commit if
+     * this behaviour is too problematic.
+     */
+
+    result = !!rhoHest(p,
+                      (const float*)src.data,
+                      (const float*)dst.data,
+                      (char*)       tempMask.data,
+                      (unsigned)    npoints,
+                      (float)       ransacReprojThreshold,
+                      (unsigned)    maxIters,
+                      (unsigned)    maxIters,
+                      confidence,
+                      4U,
+                      beta,
+                      RHO_FLAG_ENABLE_NR | RHO_FLAG_ENABLE_FINAL_REFINEMENT,
+                      NULL,
+                      (float*)tmpH.data);
+
+    /* Convert float homography to double precision. */
+    tmpH.convertTo(_H, CV_64FC1);
+
+    /* Maps non-zero mask elems to 1, for the sake of the testcase. */
+    for(int k=0;k<npoints;k++){
+        tempMask.data[k] = !!tempMask.data[k];
+    }
+    tempMask.copyTo(_tempMask);
+
+    return result;
+}
+}
+
+
 cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
-                            int method, double ransacReprojThreshold, OutputArray _mask )
+                            int method, double ransacReprojThreshold, OutputArray _mask,
+                            const int maxIters, const double confidence)
 {
-    const double confidence = 0.995;
-    const int maxIters = 2000;
     const double defaultRANSACReprojThreshold = 3;
     bool result = false;
 
@@ -318,13 +383,15 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
         result = createRANSACPointSetRegistrator(cb, 4, ransacReprojThreshold, confidence, maxIters)->run(src, dst, H, tempMask);
     else if( method == LMEDS )
         result = createLMeDSPointSetRegistrator(cb, 4, confidence, maxIters)->run(src, dst, H, tempMask);
+    else if( method == RHO )
+        result = createAndRunRHORegistrator(confidence, maxIters, ransacReprojThreshold, npoints, src, dst, H, tempMask);
     else
         CV_Error(Error::StsBadArg, "Unknown estimation method");
 
-    if( result && npoints > 4 )
+    if( result && npoints > 4 && method != RHO)
     {
-        compressPoints( src.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
-        npoints = compressPoints( dst.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
+        compressElems( src.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
+        npoints = compressElems( dst.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         if( npoints > 0 )
         {
             Mat src1 = src.rowRange(0, npoints);
@@ -344,7 +411,13 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             tempMask.copyTo(_mask);
     }
     else
+    {
         H.release();
+        if(_mask.needed() ) {
+            tempMask = Mat::zeros(npoints >= 0 ? npoints : 0, 1, CV_8U);
+            tempMask.copyTo(_mask);
+        }
+    }
 
     return H;
 }
@@ -480,45 +553,32 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 
 static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 {
-    double a[9*9], w[9], v[9*9];
-    Mat W( 9, 1, CV_64F, w );
-    Mat V( 9, 9, CV_64F, v );
-    Mat A( 9, 9, CV_64F, a );
-    Mat U, F0, TF;
-
     Point2d m1c(0,0), m2c(0,0);
     double t, scale1 = 0, scale2 = 0;
 
     const Point2f* m1 = _m1.ptr<Point2f>();
     const Point2f* m2 = _m2.ptr<Point2f>();
-    double* fmatrix = _fmatrix.ptr<double>();
     CV_Assert( (_m1.cols == 1 || _m1.rows == 1) && _m1.size() == _m2.size());
-    int i, j, k, count = _m1.checkVector(2);
+    int i, count = _m1.checkVector(2);
 
     // compute centers and average distances for each of the two point sets
     for( i = 0; i < count; i++ )
     {
-        double x = m1[i].x, y = m1[i].y;
-        m1c.x += x; m1c.y += y;
-
-        x = m2[i].x, y = m2[i].y;
-        m2c.x += x; m2c.y += y;
+        m1c += Point2d(m1[i]);
+        m2c += Point2d(m2[i]);
     }
 
     // calculate the normalizing transformations for each of the point sets:
     // after the transformation each set will have the mass center at the coordinate origin
     // and the average distance from the origin will be ~sqrt(2).
     t = 1./count;
-    m1c.x *= t; m1c.y *= t;
-    m2c.x *= t; m2c.y *= t;
+    m1c *= t;
+    m2c *= t;
 
     for( i = 0; i < count; i++ )
     {
-        double x = m1[i].x - m1c.x, y = m1[i].y - m1c.y;
-        scale1 += std::sqrt(x*x + y*y);
-
-        x = m2[i].x - m2c.x, y = m2[i].y - m2c.y;
-        scale2 += std::sqrt(x*x + y*y);
+        scale1 += norm(Point2d(m1[i].x - m1c.x, m1[i].y - m1c.y));
+        scale2 += norm(Point2d(m2[i].x - m2c.x, m2[i].y - m2c.y));
     }
 
     scale1 *= t;
@@ -530,7 +590,7 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     scale1 = std::sqrt(2.)/scale1;
     scale2 = std::sqrt(2.)/scale2;
 
-    A.setTo(Scalar::all(0));
+    Matx<double, 9, 9> A;
 
     // form a linear system Ax=0: for each selected pair of points m1 & m2,
     // the row of A(=a) represents the coefficients of equation: (m2, 1)'*F*(m1, 1) = 0
@@ -541,56 +601,50 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
         double y1 = (m1[i].y - m1c.y)*scale1;
         double x2 = (m2[i].x - m2c.x)*scale2;
         double y2 = (m2[i].y - m2c.y)*scale2;
-        double r[9] = { x2*x1, x2*y1, x2, y2*x1, y2*y1, y2, x1, y1, 1 };
-        for( j = 0; j < 9; j++ )
-            for( k = 0; k < 9; k++ )
-                a[j*9+k] += r[j]*r[k];
+        Vec<double, 9> r( x2*x1, x2*y1, x2, y2*x1, y2*y1, y2, x1, y1, 1 );
+        A += r*r.t();
     }
+
+    Vec<double, 9> W;
+    Matx<double, 9, 9> V;
 
     eigen(A, W, V);
 
     for( i = 0; i < 9; i++ )
     {
-        if( fabs(w[i]) < DBL_EPSILON )
+        if( fabs(W[i]) < DBL_EPSILON )
             break;
     }
 
     if( i < 8 )
         return 0;
 
-    F0 = Mat( 3, 3, CV_64F, v + 9*8 ); // take the last column of v as a solution of Af = 0
+    Matx33d F0( V.val + 9*8 ); // take the last column of v as a solution of Af = 0
 
     // make F0 singular (of rank 2) by decomposing it with SVD,
     // zeroing the last diagonal element of W and then composing the matrices back.
 
-    // use v as a temporary storage for different 3x3 matrices
-    W = U = V = TF = F0;
-    W = Mat(3, 1, CV_64F, v);
-    U = Mat(3, 3, CV_64F, v + 9);
-    V = Mat(3, 3, CV_64F, v + 18);
-    TF = Mat(3, 3, CV_64F, v + 27);
+    Vec3d w;
+    Matx33d U;
+    Matx33d Vt;
 
-    SVDecomp( F0, W, U, V, SVD::MODIFY_A );
-    W.at<double>(2) = 0.;
+    SVD::compute( F0, w, U, Vt);
+    w[2] = 0.;
 
-    // F0 <- U*diag([W(1), W(2), 0])*V'
-    gemm( U, Mat::diag(W), 1., 0, 0., TF, GEMM_1_T );
-    gemm( TF, V, 1., 0, 0., F0, 0/*CV_GEMM_B_T*/ );
+    F0 = U*Matx33d::diag(w)*Vt;
 
     // apply the transformation that is inverse
     // to what we used to normalize the point coordinates
-    double tt1[] = { scale1, 0, -scale1*m1c.x, 0, scale1, -scale1*m1c.y, 0, 0, 1 };
-    double tt2[] = { scale2, 0, -scale2*m2c.x, 0, scale2, -scale2*m2c.y, 0, 0, 1 };
-    Mat T1(3, 3, CV_64F, tt1), T2(3, 3, CV_64F, tt2);
+    Matx33d T1( scale1, 0, -scale1*m1c.x, 0, scale1, -scale1*m1c.y, 0, 0, 1 );
+    Matx33d T2( scale2, 0, -scale2*m2c.x, 0, scale2, -scale2*m2c.y, 0, 0, 1 );
 
-    // F0 <- T2'*F0*T1
-    gemm( T2, F0, 1., 0, 0., TF, GEMM_1_T );
-    F0 = Mat(3, 3, CV_64F, fmatrix);
-    gemm( TF, T1, 1., 0, 0., F0, 0 );
+    F0 = T2.t()*F0*T1;
 
     // make F(3,3) = 1
-    if( fabs(F0.at<double>(2,2)) > FLT_EPSILON )
-        F0 *= 1./F0.at<double>(2,2);
+    if( fabs(F0(2,2)) > FLT_EPSILON )
+        F0 *= 1./F0(2,2);
+
+    Mat(F0).copyTo(_fmatrix);
 
     return 1;
 }
@@ -767,8 +821,8 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
 
     if( depth == CV_32S || depth == CV_32F )
     {
-        const Point* ptsi = (const Point*)points.data;
-        const Point2f* ptsf = (const Point2f*)points.data;
+        const Point* ptsi = points.ptr<Point>();
+        const Point2f* ptsf = points.ptr<Point2f>();
         Point3f* dstf = lines.ptr<Point3f>();
         for( int i = 0; i < npoints; i++ )
         {
@@ -784,7 +838,7 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
     }
     else
     {
-        const Point2d* ptsd = (const Point2d*)points.data;
+        const Point2d* ptsd = points.ptr<Point2d>();
         Point3d* dstd = lines.ptr<Point3d>();
         for( int i = 0; i < npoints; i++ )
         {
@@ -829,8 +883,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 3 )
         {
-            const Point3i* sptr = (const Point3i*)src.data;
-            Point2f* dptr = (Point2f*)dst.data;
+            const Point3i* sptr = src.ptr<Point3i>();
+            Point2f* dptr = dst.ptr<Point2f>();
             for( i = 0; i < npoints; i++ )
             {
                 float scale = sptr[i].z != 0 ? 1.f/sptr[i].z : 1.f;
@@ -839,8 +893,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
         }
         else
         {
-            const Vec4i* sptr = (const Vec4i*)src.data;
-            Point3f* dptr = (Point3f*)dst.data;
+            const Vec4i* sptr = src.ptr<Vec4i>();
+            Point3f* dptr = dst.ptr<Point3f>();
             for( i = 0; i < npoints; i++ )
             {
                 float scale = sptr[i][3] != 0 ? 1.f/sptr[i][3] : 1.f;
@@ -852,8 +906,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 3 )
         {
-            const Point3f* sptr = (const Point3f*)src.data;
-            Point2f* dptr = (Point2f*)dst.data;
+            const Point3f* sptr = src.ptr<Point3f>();
+            Point2f* dptr = dst.ptr<Point2f>();
             for( i = 0; i < npoints; i++ )
             {
                 float scale = sptr[i].z != 0.f ? 1.f/sptr[i].z : 1.f;
@@ -862,8 +916,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
         }
         else
         {
-            const Vec4f* sptr = (const Vec4f*)src.data;
-            Point3f* dptr = (Point3f*)dst.data;
+            const Vec4f* sptr = src.ptr<Vec4f>();
+            Point3f* dptr = dst.ptr<Point3f>();
             for( i = 0; i < npoints; i++ )
             {
                 float scale = sptr[i][3] != 0.f ? 1.f/sptr[i][3] : 1.f;
@@ -875,8 +929,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 3 )
         {
-            const Point3d* sptr = (const Point3d*)src.data;
-            Point2d* dptr = (Point2d*)dst.data;
+            const Point3d* sptr = src.ptr<Point3d>();
+            Point2d* dptr = dst.ptr<Point2d>();
             for( i = 0; i < npoints; i++ )
             {
                 double scale = sptr[i].z != 0. ? 1./sptr[i].z : 1.;
@@ -885,8 +939,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
         }
         else
         {
-            const Vec4d* sptr = (const Vec4d*)src.data;
-            Point3d* dptr = (Point3d*)dst.data;
+            const Vec4d* sptr = src.ptr<Vec4d>();
+            Point3d* dptr = dst.ptr<Point3d>();
             for( i = 0; i < npoints; i++ )
             {
                 double scale = sptr[i][3] != 0.f ? 1./sptr[i][3] : 1.;
@@ -928,15 +982,15 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 2 )
         {
-            const Point2i* sptr = (const Point2i*)src.data;
-            Point3i* dptr = (Point3i*)dst.data;
+            const Point2i* sptr = src.ptr<Point2i>();
+            Point3i* dptr = dst.ptr<Point3i>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Point3i(sptr[i].x, sptr[i].y, 1);
         }
         else
         {
-            const Point3i* sptr = (const Point3i*)src.data;
-            Vec4i* dptr = (Vec4i*)dst.data;
+            const Point3i* sptr = src.ptr<Point3i>();
+            Vec4i* dptr = dst.ptr<Vec4i>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Vec4i(sptr[i].x, sptr[i].y, sptr[i].z, 1);
         }
@@ -945,15 +999,15 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 2 )
         {
-            const Point2f* sptr = (const Point2f*)src.data;
-            Point3f* dptr = (Point3f*)dst.data;
+            const Point2f* sptr = src.ptr<Point2f>();
+            Point3f* dptr = dst.ptr<Point3f>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Point3f(sptr[i].x, sptr[i].y, 1.f);
         }
         else
         {
-            const Point3f* sptr = (const Point3f*)src.data;
-            Vec4f* dptr = (Vec4f*)dst.data;
+            const Point3f* sptr = src.ptr<Point3f>();
+            Vec4f* dptr = dst.ptr<Vec4f>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Vec4f(sptr[i].x, sptr[i].y, sptr[i].z, 1.f);
         }
@@ -962,15 +1016,15 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     {
         if( cn == 2 )
         {
-            const Point2d* sptr = (const Point2d*)src.data;
-            Point3d* dptr = (Point3d*)dst.data;
+            const Point2d* sptr = src.ptr<Point2d>();
+            Point3d* dptr = dst.ptr<Point3d>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Point3d(sptr[i].x, sptr[i].y, 1.);
         }
         else
         {
-            const Point3d* sptr = (const Point3d*)src.data;
-            Vec4d* dptr = (Vec4d*)dst.data;
+            const Point3d* sptr = src.ptr<Point3d>();
+            Vec4d* dptr = dst.ptr<Vec4d>();
             for( i = 0; i < npoints; i++ )
                 dptr[i] = Vec4d(sptr[i].x, sptr[i].y, sptr[i].z, 1.);
         }
@@ -989,6 +1043,26 @@ void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
         convertPointsFromHomogeneous(_src, _dst);
     else
         convertPointsToHomogeneous(_src, _dst);
+}
+
+double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F) {
+    CV_Assert(_pt1.type() == CV_64F && _pt2.type() == CV_64F && _F.type() == CV_64F);
+    CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
+
+    Mat pt1(_pt1.getMat());
+    Mat pt2(_pt2.getMat());
+    Mat F(_F.getMat());
+
+    Vec3d F_pt1 = *F.ptr<Matx33d>() * *pt1.ptr<Vec3d>();
+    Vec3d Ft_pt2 = F.ptr<Matx33d>()->t() * *pt2.ptr<Vec3d>();
+
+    double v = pt2.ptr<Vec3d>()->dot(F_pt1);
+
+    // square
+    Ft_pt2 = Ft_pt2.mul(Ft_pt2);
+    F_pt1 = F_pt1.mul(F_pt1);
+
+    return v*v / (F_pt1[0] + F_pt1[1] + Ft_pt2[0] + Ft_pt2[1]);
 }
 
 /* End of file. */

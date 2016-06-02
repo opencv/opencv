@@ -54,9 +54,11 @@
 #error "cn should be <= 4"
 #endif
 
+//Read pixels as integers
+// Intel Device - Read Pixels as floats
 __kernel void bilateral(__global const uchar * src, int src_step, int src_offset,
                         __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                        __constant float * color_weight, __constant float * space_weight, __constant int * space_ofs)
+                        __constant float * space_weight, __constant int * space_ofs)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -68,18 +70,55 @@ __kernel void bilateral(__global const uchar * src, int src_step, int src_offset
 
         float_t sum = (float_t)(0.0f);
         float wsum = 0.0f;
+        #ifdef INTEL_DEVICE
+        float_t val0 = convert_float_t(loadpix(src + src_index));
+        #else
         int_t val0 = convert_int_t(loadpix(src + src_index));
-
+        #endif
         #pragma unroll
         for (int k = 0; k < maxk; k++ )
         {
+            #ifdef INTEL_DEVICE
+            float_t val = convert_float_t(loadpix(src + src_index + space_ofs[k]));
+            float diff = SUM(fabs(val - val0));
+            #else
             int_t val = convert_int_t(loadpix(src + src_index + space_ofs[k]));
-            uint_t diff = abs(val - val0);
-            float w = space_weight[k] * color_weight[SUM(diff)];
+            int diff = SUM(abs(val - val0));
+            #endif
+            float w = space_weight[k] * native_exp((float)(diff * diff * gauss_color_coeff));
             sum += convert_float_t(val) * (float_t)(w);
             wsum += w;
         }
-
         storepix(convert_uchar_t(sum / (float_t)(wsum)), dst + dst_index);
     }
 }
+
+#ifdef INTEL_DEVICE
+#if cn == 1
+//for single channgel x4 sized images.
+__kernel void bilateral_float4(__global const uchar * src, int src_step, int src_offset,
+                               __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                               __constant float * space_weight, __constant int * space_ofs)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if (y < dst_rows && x < dst_cols / 4 )
+    {
+        int src_index = ((y + radius) * src_step) + x * 4  + (radius + src_offset);
+        int dst_index = (y  * dst_step) +  x * 4 + dst_offset ;
+        float4 sum = 0.f, wsum = 0.f;
+        float4 val0 = convert_float4(vload4(0, src + src_index));
+        #pragma unroll
+        for (int k = 0; k < maxk; k++ )
+        {
+            float4 val = convert_float4(vload4(0, src + src_index + space_ofs[k]));
+            float4 w = space_weight[k] * native_exp((val - val0) * (val - val0) * gauss_color_coeff);
+            sum += val * w;
+            wsum += w;
+        }
+        sum = sum / wsum + .5f;
+        vstore4(convert_uchar4_rtz(sum), 0, dst + dst_index);
+    }
+}
+#endif
+#endif

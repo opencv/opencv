@@ -180,8 +180,8 @@ namespace cvtest
 
         for( i = 0; i < size.height; i++ )
         {
-            const float* sptr = (const float*)(temp.data + (i+radius)*temp.step) + radius*cn;
-            float* dptr = (float*)(dst.data + i*dst.step);
+            const float* sptr = temp.ptr<float>(i+radius) + radius*cn;
+            float* dptr = dst.ptr<float>(i);
 
             if( cn == 1 )
             {

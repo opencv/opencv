@@ -3,6 +3,7 @@
 
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
+#include "ts_ext.hpp"
 
 #include <functional>
 
@@ -264,6 +265,95 @@ enum PERF_STRATEGY
 /*****************************************************************************************\
 *                           Base fixture for performance tests                            *
 \*****************************************************************************************/
+#ifdef CV_COLLECT_IMPL_DATA
+// Implementation collection processing class.
+// Accumulates and shapes implementation data.
+typedef struct ImplData
+{
+    bool ipp;
+    bool icv;
+    bool ipp_mt;
+    bool ocl;
+    bool plain;
+    std::vector<int> implCode;
+    std::vector<cv::String> funName;
+
+    ImplData()
+    {
+        Reset();
+    }
+
+    void Reset()
+    {
+        cv::setImpl(0);
+        ipp = icv = ocl = ipp_mt = false;
+        implCode.clear();
+        funName.clear();
+    }
+
+    void GetImpl()
+    {
+        flagsToVars(cv::getImpl(implCode, funName));
+    }
+
+    std::vector<cv::String> GetCallsForImpl(int impl)
+    {
+        std::vector<cv::String> out;
+
+        for(int i = 0; i < (int)implCode.size(); i++)
+        {
+            if(impl == implCode[i])
+                out.push_back(funName[i]);
+        }
+        return out;
+    }
+
+    // Remove duplicate entries
+    void ShapeUp()
+    {
+        std::vector<int> savedCode;
+        std::vector<cv::String> savedName;
+
+        for(int i = 0; i < (int)implCode.size(); i++)
+        {
+            bool match = false;
+            for(int j = 0; j < (int)savedCode.size(); j++)
+            {
+                if(implCode[i] == savedCode[j] && !funName[i].compare(savedName[j]))
+                {
+                    match = true;
+                    break;
+                }
+            }
+            if(!match)
+            {
+                savedCode.push_back(implCode[i]);
+                savedName.push_back(funName[i]);
+            }
+        }
+
+        implCode = savedCode;
+        funName = savedName;
+    }
+
+    // convert flags register to more handy variables
+    void flagsToVars(int flags)
+    {
+#if defined(HAVE_IPP_ICV_ONLY)
+        ipp    = 0;
+        icv    = ((flags&CV_IMPL_IPP) > 0);
+#else
+        ipp    = ((flags&CV_IMPL_IPP) > 0);
+        icv    = 0;
+#endif
+        ipp_mt = ((flags&CV_IMPL_MT) > 0);
+        ocl    = ((flags&CV_IMPL_OCL) > 0);
+        plain  = (flags == 0);
+    }
+
+} ImplData;
+#endif
+
 class CV_EXPORTS TestBase: public ::testing::Test
 {
 public:
@@ -279,7 +369,12 @@ public:
     static enum PERF_STRATEGY getCurrentModulePerformanceStrategy();
     static enum PERF_STRATEGY setModulePerformanceStrategy(enum PERF_STRATEGY strategy);
 
-    class PerfSkipTestException: public cv::Exception {};
+    class PerfSkipTestException: public cv::Exception
+    {
+        int dummy; // workaround for MacOSX Xcode 7.3 bug (don't make class "empty")
+    public:
+        PerfSkipTestException() : dummy(0) {}
+    };
 
 protected:
     virtual void PerfTestBody() = 0;
@@ -307,6 +402,10 @@ protected:
     performance_metrics& calcMetrics();
 
     void RunPerfTestBody();
+
+#ifdef CV_COLLECT_IMPL_DATA
+    ImplData implConf;
+#endif
 private:
     typedef std::vector<std::pair<int, cv::Size> > SizeVector;
     typedef std::vector<int64> TimeVector;
@@ -325,9 +424,11 @@ private:
     static int64 timeLimitDefault;
     static unsigned int iterationsLimitDefault;
 
+    unsigned int minIters;
     unsigned int nIters;
     unsigned int currentIter;
     unsigned int runsPerIteration;
+    unsigned int perfValidationStage;
 
     performance_metrics metrics;
     void validateMetrics();
@@ -380,9 +481,6 @@ template<typename T> class TestBaseWithParam: public TestBase, public ::testing:
 
 typedef std::tr1::tuple<cv::Size, MatType> Size_MatType_t;
 typedef TestBaseWithParam<Size_MatType_t> Size_MatType;
-
-typedef std::tr1::tuple<cv::Size, MatDepth> Size_MatDepth_t;
-typedef TestBaseWithParam<Size_MatDepth_t> Size_MatDepth;
 
 /*****************************************************************************************\
 *                              Print functions for googletest                             *
@@ -512,7 +610,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 #endif
 #endif
 
-#if defined(HAVE_OPENCL) && !defined(CV_BUILD_OCL_MODULE)
+#ifdef HAVE_OPENCL
 namespace cvtest { namespace ocl {
 void dumpOpenCLDevice();
 }}

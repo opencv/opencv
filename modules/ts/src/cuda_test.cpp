@@ -190,6 +190,33 @@ namespace cvtest
         }
     }
 
+    void parseCudaDeviceOptions(int argc, char **argv)
+    {
+        cv::CommandLineParser cmd(argc, argv,
+            "{ cuda_device | -1    | CUDA device on which tests will be executed (-1 means all devices) }"
+            "{ h help      | false | Print help info                                                    }"
+        );
+
+        if (cmd.has("help"))
+        {
+            std::cout << "\nAvailable options besides google test option: \n";
+            cmd.printMessage();
+        }
+
+        int device = cmd.get<int>("cuda_device");
+        if (device < 0)
+        {
+            cvtest::DeviceManager::instance().loadAll();
+            std::cout << "Run tests on all supported CUDA devices \n" << std::endl;
+        }
+        else
+        {
+            cvtest::DeviceManager::instance().load(device);
+            cv::cuda::DeviceInfo info(device);
+            std::cout << "Run tests on CUDA device " << device << " [" << info.name() << "] \n" << std::endl;
+        }
+    }
+
     //////////////////////////////////////////////////////////////////////
     // Additional assertion
 
@@ -278,7 +305,7 @@ namespace cvtest
 
     Mat getMat(InputArray arr)
     {
-        if (arr.kind() == _InputArray::GPU_MAT)
+        if (arr.kind() == _InputArray::CUDA_GPU_MAT)
         {
             Mat m;
             arr.getGpuMat().download(m);

@@ -1,2 +1,0 @@
-one_way_train_0000.jpg
-one_way_train_0001.jpg

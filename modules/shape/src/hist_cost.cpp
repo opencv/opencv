@@ -62,8 +62,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual void buildCostMatrix(InputArray descriptors1, InputArray descriptors2, OutputArray costMatrix);
 
@@ -101,6 +99,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "flag" << flag
            << "dummies" << nDummies
@@ -189,8 +188,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual void buildCostMatrix(InputArray descriptors1, InputArray descriptors2, OutputArray costMatrix);
 
@@ -228,6 +225,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "flag" << flag
            << "dummies" << nDummies
@@ -327,8 +325,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual void buildCostMatrix(InputArray descriptors1, InputArray descriptors2, OutputArray costMatrix);
 
@@ -356,6 +352,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "dummies" << nDummies
            << "default" << defaultCost;
@@ -445,8 +442,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual void buildCostMatrix(InputArray descriptors1, InputArray descriptors2, OutputArray costMatrix);
 
@@ -474,6 +469,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "dummies" << nDummies
            << "default" << defaultCost;

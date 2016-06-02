@@ -1,24 +1,28 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest">
-  <Identity Name="Microsoft.SDKSamples.MediaCapture.CPP" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" Version="1.0.0.0" />
+<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest">
+  <Identity Name="Microsoft.SDKSamples.MediaCapture.CPP" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" Version="1.1.0.6" />
   <Properties>
     <DisplayName>MediaCapture CPP sample</DisplayName>
     <PublisherDisplayName>Microsoft Corporation</PublisherDisplayName>
-    <Logo>Assets\storeLogo-sdk.png</Logo>
+    <Logo>Assets\windows-sdk.png</Logo>
   </Properties>
   <Prerequisites>
-    <OSMinVersion>6.2.1</OSMinVersion>
-    <OSMaxVersionTested>6.2.1</OSMaxVersionTested>
+    <OSMinVersion>6.3</OSMinVersion>
+    <OSMaxVersionTested>6.3</OSMaxVersionTested>
   </Prerequisites>
   <Resources>
     <Resource Language="x-generate" />
   </Resources>
   <Applications>
     <Application Id="MediaCapture.App" Executable="$targetnametoken$.exe" EntryPoint="MediaCapture.App">
-      <VisualElements DisplayName="OCV Image Manipulations" Logo="assets\opencv-logo-150.png" SmallLogo="assets\opencv-logo-30.png" Description="OpenCV Image Manipulations sample" ForegroundText="light" BackgroundColor="#00b2f0">
-        <DefaultTile ShortName="Ocv ImageManipulations" ShowName="allLogos" />
-        <SplashScreen Image="Assets\splash-sdk.png" BackgroundColor="#00b2f0" />
-      </VisualElements>
+      <m2:VisualElements DisplayName="OCV Image Manipulations" Description="OpenCV Image Manipulations sample" BackgroundColor="#00b2f0" ForegroundText="light" Square150x150Logo="Assets\opencv-logo-150.png" Square30x30Logo="Assets\opencv-logo-30.png">
+        <m2:DefaultTile ShortName="Ocv ImageManipulations">
+          <m2:ShowNameOnTiles>
+            <m2:ShowOn Tile="square150x150Logo" />
+          </m2:ShowNameOnTiles>
+        </m2:DefaultTile>
+        <m2:SplashScreen BackgroundColor="#00b2f0" Image="Assets\splash-sdk.png" />
+      </m2:VisualElements>
     </Application>
   </Applications>
   <Capabilities>

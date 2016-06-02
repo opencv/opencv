@@ -39,6 +39,11 @@ namespace OcvImageProcessing
         cv::Mat ApplySepiaFilter(const cv::Mat& image);
 
         void UpdateImage(const cv::Mat& image);
+        std::string CreateTempFile(const std::string &suffix);
+        bool SaveImage(cv::Mat image);
+
+        std::string StrToWStr(const std::wstring &wstr);
+        cv::String ConvertPath(Platform::String^ path);
 
         cv::Mat Lena;
         unsigned int frameWidth, frameHeight;

@@ -49,16 +49,59 @@
 namespace cv
 {
 
-/*!
-   Informative template class for OpenCV "scalars".
+//! @addtogroup core_basic
+//! @{
 
-   The class is specialized for each primitive numerical type supported by OpenCV (such as unsigned char or float),
-   as well as for more complex types, like cv::Complex<>, std::complex<>, cv::Vec<> etc.
-   The common property of all such types (called "scalars", do not confuse it with cv::Scalar_)
-   is that each of them is basically a tuple of numbers of the same type. Each "scalar" can be represented
-   by the depth id (CV_8U ... CV_64F) and the number of channels.
-   OpenCV matrices, 2D or nD, dense or sparse, can store "scalars",
-   as long as the number of channels does not exceed CV_CN_MAX.
+/** @brief Template "trait" class for OpenCV primitive data types.
+
+A primitive OpenCV data type is one of unsigned char, bool, signed char, unsigned short, signed
+short, int, float, double, or a tuple of values of one of these types, where all the values in the
+tuple have the same type. Any primitive type from the list can be defined by an identifier in the
+form CV_\<bit-depth\>{U|S|F}C(\<number_of_channels\>), for example: uchar \~ CV_8UC1, 3-element
+floating-point tuple \~ CV_32FC3, and so on. A universal OpenCV structure that is able to store a
+single instance of such a primitive data type is Vec. Multiple instances of such a type can be
+stored in a std::vector, Mat, Mat_, SparseMat, SparseMat_, or any other container that is able to
+store Vec instances.
+
+The DataType class is basically used to provide a description of such primitive data types without
+adding any fields or methods to the corresponding classes (and it is actually impossible to add
+anything to primitive C/C++ data types). This technique is known in C++ as class traits. It is not
+DataType itself that is used but its specialized versions, such as:
+@code
+    template<> class DataType<uchar>
+    {
+        typedef uchar value_type;
+        typedef int work_type;
+        typedef uchar channel_type;
+        enum { channel_type = CV_8U, channels = 1, fmt='u', type = CV_8U };
+    };
+    ...
+    template<typename _Tp> DataType<std::complex<_Tp> >
+    {
+        typedef std::complex<_Tp> value_type;
+        typedef std::complex<_Tp> work_type;
+        typedef _Tp channel_type;
+        // DataDepth is another helper trait class
+        enum { depth = DataDepth<_Tp>::value, channels=2,
+            fmt=(channels-1)*256+DataDepth<_Tp>::fmt,
+            type=CV_MAKETYPE(depth, channels) };
+    };
+    ...
+@endcode
+The main purpose of this class is to convert compilation-time type information to an
+OpenCV-compatible data type identifier, for example:
+@code
+    // allocates a 30x40 floating-point matrix
+    Mat A(30, 40, DataType<float>::type);
+
+    Mat B = Mat_<std::complex<double> >(3, 3);
+    // the statement below will print 6, 2 , that is depth == CV_64F, channels == 2
+    cout << B.depth() << ", " << B.channels() << endl;
+@endcode
+So, such traits are used to tell OpenCV which data type you are working with, even if such a type is
+not native to OpenCV. For example, the matrix B initialization above is compiled because OpenCV
+defines the proper specialized template class DataType\<complex\<_Tp\> \> . This mechanism is also
+useful (and used in OpenCV this way) for generic algorithms implementations.
 */
 template<typename _Tp> class DataType
 {
@@ -211,11 +254,10 @@ public:
 };
 
 
-/*!
-  A helper class for cv::DataType
+/** @brief A helper class for cv::DataType
 
-  The class is specialized for each fundamental numerical data type supported by OpenCV.
-  It provides DataDepth<T>::value constant.
+The class is specialized for each fundamental numerical data type supported by OpenCV. It provides
+DataDepth<T>::value constant.
 */
 template<typename _Tp> class DataDepth
 {
@@ -276,6 +318,8 @@ template<> class TypeDepth<CV_64F>
     enum { depth = CV_64F };
     typedef double value_type;
 };
+
+//! @}
 
 } // cv
 

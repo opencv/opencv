@@ -8,7 +8,8 @@ if(BUILD_ZLIB)
 else()
   find_package(ZLIB "${MIN_VER_ZLIB}")
   if(ZLIB_FOUND AND ANDROID)
-    if(ZLIB_LIBRARIES STREQUAL "${ANDROID_SYSROOT}/usr/lib/libz.so")
+    if(ZLIB_LIBRARIES STREQUAL "${ANDROID_SYSROOT}/usr/lib/libz.so" OR
+        ZLIB_LIBRARIES STREQUAL "${ANDROID_SYSROOT}/usr/lib64/libz.so")
       set(ZLIB_LIBRARIES z)
     endif()
   endif()
@@ -197,4 +198,17 @@ if(WITH_OPENEXR)
   endif()
 
   set(HAVE_OPENEXR YES)
+endif()
+
+# --- GDAL (optional) ---
+if(WITH_GDAL)
+    find_package(GDAL)
+
+    if(NOT GDAL_FOUND)
+        ocv_clear_vars(GDAL_LIBRARY GDAL_INCLUDE_DIR)
+        set(HAVE_GDAL NO)
+    else()
+        set(HAVE_GDAL YES)
+        ocv_include_directories(${GDAL_INCLUDE_DIR})
+    endif()
 endif()

@@ -90,7 +90,18 @@ CUDA_TEST_P(MatchTemplate8U, Accuracy)
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, templ_size.area() * 1e-1);
+    cv::Mat h_dst(dst);
+    ASSERT_EQ(dst_gold.size(), h_dst.size());
+    ASSERT_EQ(dst_gold.type(), h_dst.type());
+    for (int y = 0; y < h_dst.rows; ++y)
+    {
+        for (int x = 0; x < h_dst.cols; ++x)
+        {
+            float gold_val = dst_gold.at<float>(y, x);
+            float actual_val = dst_gold.at<float>(y, x);
+            ASSERT_FLOAT_EQ(gold_val, actual_val) << y << ", " << x;
+        }
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, MatchTemplate8U, testing::Combine(
@@ -138,7 +149,18 @@ CUDA_TEST_P(MatchTemplate32F, Regression)
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, templ_size.area() * 1e-1);
+    cv::Mat h_dst(dst);
+    ASSERT_EQ(dst_gold.size(), h_dst.size());
+    ASSERT_EQ(dst_gold.type(), h_dst.type());
+    for (int y = 0; y < h_dst.rows; ++y)
+    {
+        for (int x = 0; x < h_dst.cols; ++x)
+        {
+            float gold_val = dst_gold.at<float>(y, x);
+            float actual_val = dst_gold.at<float>(y, x);
+            ASSERT_FLOAT_EQ(gold_val, actual_val) << y << ", " << x;
+        }
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, MatchTemplate32F, testing::Combine(

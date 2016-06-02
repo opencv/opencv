@@ -48,6 +48,12 @@
 #include "opencv2/core/cuda/warp.hpp"
 #include "opencv2/core/cuda/warp_shuffle.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     enum ScanKind { EXCLUSIVE = 0,  INCLUSIVE = 1 };
@@ -246,5 +252,7 @@ namespace cv { namespace cuda { namespace device
         }
     }
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_SCAN_HPP__

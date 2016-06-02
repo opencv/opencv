@@ -97,15 +97,19 @@ __kernel void col_filter(__global const uchar * src, int src_step, int src_offse
     {
         temp[0] = LDS_DAT[l_y + RADIUSY - i][l_x];
         temp[1] = LDS_DAT[l_y + RADIUSY + i][l_x];
-#ifndef INTEGER_ARITHMETIC
-        sum += mad(temp[0], mat_kernel[RADIUSY - i], temp[1] * mat_kernel[RADIUSY + i]);
-#else
+#if (defined(INTEGER_ARITHMETIC) && !INTEL_DEVICE)
         sum += mad24(temp[0],mat_kernel[RADIUSY - i], temp[1] * mat_kernel[RADIUSY + i]);
+#else
+        sum += mad(temp[0], mat_kernel[RADIUSY - i], temp[1] * mat_kernel[RADIUSY + i]);
 #endif
     }
 
 #ifdef INTEGER_ARITHMETIC
+#ifdef INTEL_DEVICE
+    sum = (sum + (1 << (SHIFT_BITS-1))) / (1 << SHIFT_BITS);
+#else
     sum = (sum + (1 << (SHIFT_BITS-1))) >> SHIFT_BITS;
+#endif
 #endif
 
     // write the result to dst

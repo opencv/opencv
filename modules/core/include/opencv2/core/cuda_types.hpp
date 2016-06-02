@@ -47,6 +47,12 @@
 #  error cuda_types.hpp header must be compiled as C++
 #endif
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 #ifdef __CUDACC__
     #define __CV_CUDA_HOST_DEVICE__ __host__ __device__ __forceinline__
 #else
@@ -57,6 +63,7 @@ namespace cv
 {
     namespace cuda
     {
+
         // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
@@ -90,7 +97,6 @@ namespace cv
             __CV_CUDA_HOST_DEVICE__ PtrStep() : step(0) {}
             __CV_CUDA_HOST_DEVICE__ PtrStep(T* data_, size_t step_) : DevPtr<T>(data_), step(step_) {}
 
-            //! stride between two consecutive rows in bytes. Step is stored always and everywhere in bytes!!!
             size_t step;
 
             __CV_CUDA_HOST_DEVICE__       T* ptr(int y = 0)       { return (      T*)( (      char*)DevPtr<T>::data + y * step); }
@@ -120,7 +126,10 @@ namespace cv
         typedef PtrStep<unsigned char> PtrStepb;
         typedef PtrStep<float> PtrStepf;
         typedef PtrStep<int> PtrStepi;
+
     }
 }
+
+//! @endcond
 
 #endif /* __OPENCV_CORE_CUDA_TYPES_HPP__ */

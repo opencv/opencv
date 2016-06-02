@@ -4,7 +4,7 @@
 //
 // Copyright (C) 2014, Itseez, Inc, all rights reserved.
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 using namespace cv;

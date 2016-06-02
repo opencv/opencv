@@ -39,6 +39,9 @@
 
 #define OUT_OF_RANGE -1
 
+// for identical rounding after dividing on different platforms
+#define ROUNDING_EPS 0.000001f
+
 #if histdims == 1
 
 __kernel void calcLUT(__global const uchar * histptr, int hist_step, int hist_offset, int hist_bins,
@@ -53,7 +56,7 @@ __kernel void calcLUT(__global const uchar * histptr, int hist_step, int hist_of
     {
         float lb = ranges[0], ub = ranges[1], gap = (ub - lb) / hist_bins;
         value -= lb;
-        int bin = convert_int_sat_rtn(value / gap);
+        int bin = convert_int_sat_rtn(value / gap + ROUNDING_EPS);
 
         if (bin >= hist_bins)
             lut[x] = OUT_OF_RANGE;
@@ -101,7 +104,7 @@ __kernel void calcLUT(int hist_bins, __global int * lut, int lut_offset,
     {
         float lb = ranges[0], ub = ranges[1], gap = (ub - lb) / hist_bins;
         value -= lb;
-        int bin = convert_int_sat_rtn(value / gap);
+        int bin = convert_int_sat_rtn(value / gap + ROUNDING_EPS);
 
         lut[x] = bin >= hist_bins ? OUT_OF_RANGE : bin;
     }

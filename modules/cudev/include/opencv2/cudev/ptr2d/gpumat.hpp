@@ -53,6 +53,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <typename T>
 class GpuMat_ : public GpuMat
 {
@@ -60,21 +63,21 @@ public:
     typedef T value_type;
 
     //! default constructor
-    __host__ GpuMat_();
+    __host__ GpuMat_(Allocator* allocator = defaultAllocator());
 
     //! constructs GpuMat of the specified size
-    __host__ GpuMat_(int arows, int acols);
-    __host__ explicit GpuMat_(Size asize);
+    __host__ GpuMat_(int arows, int acols, Allocator* allocator = defaultAllocator());
+    __host__ explicit GpuMat_(Size asize, Allocator* allocator = defaultAllocator());
 
     //! constucts GpuMat and fills it with the specified value
-    __host__ GpuMat_(int arows, int acols, Scalar val);
-    __host__ GpuMat_(Size asize, Scalar val);
+    __host__ GpuMat_(int arows, int acols, Scalar val, Allocator* allocator = defaultAllocator());
+    __host__ GpuMat_(Size asize, Scalar val, Allocator* allocator = defaultAllocator());
 
     //! copy constructor
     __host__ GpuMat_(const GpuMat_& m);
 
     //! copy/conversion contructor. If m is of different type, it's converted
-    __host__ explicit GpuMat_(const GpuMat& m);
+    __host__ explicit GpuMat_(const GpuMat& m, Allocator* allocator = defaultAllocator());
 
     //! constructs a matrix on top of user-allocated data. step is in bytes(!!!), regardless of the type
     __host__ GpuMat_(int arows, int acols, T* adata, size_t astep = Mat::AUTO_STEP);
@@ -85,7 +88,7 @@ public:
     __host__ GpuMat_(const GpuMat_& m, Rect roi);
 
     //! builds GpuMat from host memory (Blocking call)
-    __host__ explicit GpuMat_(InputArray arr);
+    __host__ explicit GpuMat_(InputArray arr, Allocator* allocator = defaultAllocator());
 
     //! assignment operators
     __host__ GpuMat_& operator =(const GpuMat_& m);
@@ -153,6 +156,8 @@ reshape_(const GpuMat_<T>& mat, int rows = 0)
 template <typename T> struct PtrTraits< GpuMat_<T> > : PtrTraitsBase<GpuMat_<T>, GlobPtr<T> >
 {
 };
+
+//! @}
 
 }}
 

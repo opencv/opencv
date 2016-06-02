@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_stitching.hpp"
 
 namespace cv {
 namespace detail {
@@ -267,7 +267,7 @@ static bool ocl_MultiBandBlender_feed(InputArray _src, InputArray _weight,
            ocl::KernelArg::ReadWrite(_dst_weight.getUMat())
            );
 
-    size_t globalsize[2] = {src.cols, src.rows };
+    size_t globalsize[2] = {(size_t)src.cols, (size_t)src.rows };
     return k.run(2, globalsize, NULL, false);
 }
 #endif
@@ -414,6 +414,12 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
                 }
             }
         }
+#ifdef HAVE_OPENCL
+        else
+        {
+            CV_IMPL_ADD(CV_IMPL_OCL);
+        }
+#endif
 
         x_tl /= 2; y_tl /= 2;
         x_br /= 2; y_br /= 2;
@@ -463,29 +469,33 @@ static bool ocl_normalizeUsingWeightMap(InputArray _weight, InputOutputArray _ma
            ocl::KernelArg::ReadOnly(_weight.getUMat())
            );
 
-    size_t globalsize[2] = {mat.cols, mat.rows };
+    size_t globalsize[2] = {(size_t)mat.cols, (size_t)mat.rows };
     return k.run(2, globalsize, NULL, false);
 }
 #endif
 
 void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 {
+    Mat src;
+    Mat weight;
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::normalizeUsingWeightMap(weight, src))
+    src = _src.getMat();
+    weight = _weight.getMat();
+    if(tegra::useTegra() && tegra::normalizeUsingWeightMap(weight, src))
         return;
 #endif
 
 #ifdef HAVE_OPENCL
-        if ( !cv::ocl::useOpenCL() ||
-             !ocl_normalizeUsingWeightMap(_weight, _src) )
+    if ( !cv::ocl::useOpenCL() ||
+            !ocl_normalizeUsingWeightMap(_weight, _src) )
 #endif
     {
-        Mat weight = _weight.getMat();
-        Mat src = _src.getMat();
+        src = _src.getMat();
+        weight = _weight.getMat();
 
         CV_Assert(src.type() == CV_16SC3);
 
-        if(weight.type() == CV_32FC1)
+        if (weight.type() == CV_32FC1)
         {
             for (int y = 0; y < src.rows; ++y)
             {
@@ -519,6 +529,12 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
             }
         }
     }
+#ifdef HAVE_OPENCL
+    else
+    {
+        CV_IMPL_ADD(CV_IMPL_OCL);
+    }
+#endif
 }
 
 
@@ -535,7 +551,8 @@ void createWeightMap(InputArray mask, float sharpness, InputOutputArray weight)
 void createLaplacePyr(InputArray img, int num_levels, std::vector<UMat> &pyr)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::createLaplacePyr(img, num_levels, pyr))
+    cv::Mat imgMat = img.getMat();
+    if(tegra::useTegra() && tegra::createLaplacePyr(imgMat, num_levels, pyr))
         return;
 #endif
 

@@ -10,7 +10,7 @@
 #define __OPENCV_PERF_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/features2d.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY

@@ -12,6 +12,8 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -48,6 +50,8 @@
 #endif
 
 #include <cstdio>
+
+//! @cond IGNORED
 
 namespace cv
 {
@@ -191,7 +195,7 @@ Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
     Matx<_Tp, n, m> b;
     bool ok;
     if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
-        ok = internal::Matx_FastInvOp<_Tp, m>()(*this, b, method);
+        ok = cv::internal::Matx_FastInvOp<_Tp, m>()(*this, b, method);
     else
     {
         Mat A(*this, false), B(b, false);
@@ -207,7 +211,7 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
     Matx<_Tp, n, l> x;
     bool ok;
     if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
-        ok = internal::Matx_FastSolveOp<_Tp, m, l>()(*this, rhs, x, method);
+        ok = cv::internal::Matx_FastSolveOp<_Tp, m, l>()(*this, rhs, x, method);
     else
     {
         Mat A(*this, false), B(rhs, false), X(x, false);
@@ -351,43 +355,6 @@ inline unsigned RNG::next()
     return (unsigned)state;
 }
 
-
-
-///////////////////////////////////////// LineIterator ////////////////////////////////////////
-
-inline
-uchar* LineIterator::operator *()
-{
-    return ptr;
-}
-
-inline
-LineIterator& LineIterator::operator ++()
-{
-    int mask = err < 0 ? -1 : 0;
-    err += minusDelta + (plusDelta & mask);
-    ptr += minusStep + (plusStep & mask);
-    return *this;
-}
-
-inline
-LineIterator LineIterator::operator ++(int)
-{
-    LineIterator it = *this;
-    ++(*this);
-    return it;
-}
-
-inline
-Point LineIterator::pos() const
-{
-    Point p;
-    p.y = (int)((ptr - ptr0)/step);
-    p.x = (int)(((ptr - ptr0) - p.y*step)/elemSize);
-    return p;
-}
-
-
 //! returns the next unifomly-distributed random number of the specified type
 template<typename _Tp> static inline _Tp randu()
 {
@@ -447,85 +414,116 @@ int print(const Matx<_Tp, m, n>& matx, FILE* stream = stdout)
     return print(Formatter::get()->format(cv::Mat(matx)), stream);
 }
 
+//! @endcond
 
+/****************************************************************************************\
+*                                  Auxiliary algorithms                                  *
+\****************************************************************************************/
 
-////////////////////////////////////////// Algorithm //////////////////////////////////////////
+/** @brief Splits an element set into equivalency classes.
 
-template<typename _Tp> inline
-Ptr<_Tp> Algorithm::create(const String& name)
+The generic function partition implements an \f$O(N^2)\f$ algorithm for splitting a set of \f$N\f$ elements
+into one or more equivalency classes, as described in
+<http://en.wikipedia.org/wiki/Disjoint-set_data_structure> . The function returns the number of
+equivalency classes.
+@param _vec Set of elements stored as a vector.
+@param labels Output vector of labels. It contains as many elements as vec. Each label labels[i] is
+a 0-based cluster index of `vec[i]`.
+@param predicate Equivalence predicate (pointer to a boolean function of two arguments or an
+instance of the class that has the method bool operator()(const _Tp& a, const _Tp& b) ). The
+predicate returns true when the elements are certainly in the same class, and returns false if they
+may or may not be in the same class.
+@ingroup core_cluster
+*/
+template<typename _Tp, class _EqPredicate> int
+partition( const std::vector<_Tp>& _vec, std::vector<int>& labels,
+          _EqPredicate predicate=_EqPredicate())
 {
-    return _create(name).dynamicCast<_Tp>();
-}
+    int i, j, N = (int)_vec.size();
+    const _Tp* vec = &_vec[0];
 
-template<typename _Tp> inline
-void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
-{
-    Ptr<Algorithm> algo_ptr = value. template dynamicCast<cv::Algorithm>();
-    if (!algo_ptr) {
-        CV_Error( Error::StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
+    const int PARENT=0;
+    const int RANK=1;
+
+    std::vector<int> _nodes(N*2);
+    int (*nodes)[2] = (int(*)[2])&_nodes[0];
+
+    // The first O(N) pass: create N single-vertex trees
+    for(i = 0; i < N; i++)
+    {
+        nodes[i][PARENT]=-1;
+        nodes[i][RANK] = 0;
     }
-    info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
-}
 
-template<typename _Tp> inline
-void Algorithm::set(const String& _name, const Ptr<_Tp>& value)
-{
-    this->set<_Tp>(_name.c_str(), value);
-}
+    // The main O(N^2) pass: merge connected components
+    for( i = 0; i < N; i++ )
+    {
+        int root = i;
 
-template<typename _Tp> inline
-void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
-{
-    Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
-    if (!algo_ptr) {
-        CV_Error( Error::StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
+        // find root
+        while( nodes[root][PARENT] >= 0 )
+            root = nodes[root][PARENT];
+
+        for( j = 0; j < N; j++ )
+        {
+            if( i == j || !predicate(vec[i], vec[j]))
+                continue;
+            int root2 = j;
+
+            while( nodes[root2][PARENT] >= 0 )
+                root2 = nodes[root2][PARENT];
+
+            if( root2 != root )
+            {
+                // unite both trees
+                int rank = nodes[root][RANK], rank2 = nodes[root2][RANK];
+                if( rank > rank2 )
+                    nodes[root2][PARENT] = root;
+                else
+                {
+                    nodes[root][PARENT] = root2;
+                    nodes[root2][RANK] += rank == rank2;
+                    root = root2;
+                }
+                CV_Assert( nodes[root][PARENT] < 0 );
+
+                int k = j, parent;
+
+                // compress the path from node2 to root
+                while( (parent = nodes[k][PARENT]) >= 0 )
+                {
+                    nodes[k][PARENT] = root;
+                    k = parent;
+                }
+
+                // compress the path from node to root
+                k = i;
+                while( (parent = nodes[k][PARENT]) >= 0 )
+                {
+                    nodes[k][PARENT] = root;
+                    k = parent;
+                }
+            }
+        }
     }
-    info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
+
+    // Final O(N) pass: enumerate classes
+    labels.resize(N);
+    int nclasses = 0;
+
+    for( i = 0; i < N; i++ )
+    {
+        int root = i;
+        while( nodes[root][PARENT] >= 0 )
+            root = nodes[root][PARENT];
+        // re-use the rank as the class label
+        if( nodes[root][RANK] >= 0 )
+            nodes[root][RANK] = ~nclasses++;
+        labels[i] = ~nodes[root][RANK];
+    }
+
+    return nclasses;
 }
-
-template<typename _Tp> inline
-void Algorithm::setAlgorithm(const String& _name, const Ptr<_Tp>& value)
-{
-    this->set<_Tp>(_name.c_str(), value);
-}
-
-template<typename _Tp> inline
-typename ParamType<_Tp>::member_type Algorithm::get(const String& _name) const
-{
-    typename ParamType<_Tp>::member_type value;
-    info()->get(this, _name.c_str(), ParamType<_Tp>::type, &value);
-    return value;
-}
-
-template<typename _Tp> inline
-typename ParamType<_Tp>::member_type Algorithm::get(const char* _name) const
-{
-    typename ParamType<_Tp>::member_type value;
-    info()->get(this, _name, ParamType<_Tp>::type, &value);
-    return value;
-}
-
-template<typename _Tp, typename _Base> inline
-void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter, Ptr<_Tp>& value, bool readOnly,
-                             Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                             const String& help)
-{
-    //TODO: static assert: _Tp inherits from _Base
-    addParam_(algo, parameter, ParamType<_Base>::type, &value, readOnly,
-              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
-}
-
-template<typename _Tp> inline
-void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter, Ptr<_Tp>& value, bool readOnly,
-                             Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                             const String& help)
-{
-    //TODO: static assert: _Tp inherits from Algorithm
-    addParam_(algo, parameter, ParamType<Algorithm>::type, &value, readOnly,
-              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
-}
-
-
 
 } // cv
 

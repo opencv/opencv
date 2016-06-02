@@ -333,7 +333,7 @@ static void checkMask( const Mat& img, const Mat& mask )
         {
             uchar val = mask.at<uchar>(y,x);
             if( val!=GC_BGD && val!=GC_FGD && val!=GC_PR_BGD && val!=GC_PR_FGD )
-                CV_Error( CV_StsBadArg, "mask element value must be equel"
+                CV_Error( CV_StsBadArg, "mask element value must be equal "
                     "GC_BGD or GC_FGD or GC_PR_BGD or GC_PR_FGD" );
         }
     }
@@ -537,7 +537,7 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
     if( img.empty() )
         CV_Error( CV_StsBadArg, "image is empty" );
     if( img.type() != CV_8UC3 )
-        CV_Error( CV_StsBadArg, "image mush have CV_8UC3 type" );
+        CV_Error( CV_StsBadArg, "image must have CV_8UC3 type" );
 
     GMM bgdGMM( bgdModel ), fgdGMM( fgdModel );
     Mat compIdxs( img.size(), CV_32SC1 );

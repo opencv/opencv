@@ -120,7 +120,7 @@ namespace canny
         mag(y, x) = norm(dxVal, dyVal);
     }
 
-    void calcMagnitude(PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad)
+    void calcMagnitude(PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad, cudaStream_t stream)
     {
         const dim3 block(16, 16);
         const dim3 grid(divUp(mag.cols, block.x), divUp(mag.rows, block.y));
@@ -131,30 +131,31 @@ namespace canny
         if (L2Grad)
         {
             L2 norm;
-            calcMagnitudeKernel<<<grid, block>>>(src, dx, dy, mag, norm);
+            calcMagnitudeKernel<<<grid, block, 0, stream>>>(src, dx, dy, mag, norm);
         }
         else
         {
             L1 norm;
-            calcMagnitudeKernel<<<grid, block>>>(src, dx, dy, mag, norm);
+            calcMagnitudeKernel<<<grid, block, 0, stream>>>(src, dx, dy, mag, norm);
         }
 
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        if (stream == NULL)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    void calcMagnitude(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad)
+    void calcMagnitude(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad, cudaStream_t stream)
     {
         if (L2Grad)
         {
             L2 norm;
-            transform(dx, dy, mag, norm, WithOutMask(), 0);
+            transform(dx, dy, mag, norm, WithOutMask(), stream);
         }
         else
         {
             L1 norm;
-            transform(dx, dy, mag, norm, WithOutMask(), 0);
+            transform(dx, dy, mag, norm, WithOutMask(), stream);
         }
     }
 }
@@ -217,17 +218,18 @@ namespace canny
         map(y, x) = edge_type;
     }
 
-    void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh)
+    void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh, cudaStream_t stream)
     {
         const dim3 block(16, 16);
         const dim3 grid(divUp(dx.cols, block.x), divUp(dx.rows, block.y));
 
         bindTexture(&tex_mag, mag);
 
-        calcMapKernel<<<grid, block>>>(dx, dy, map, low_thresh, high_thresh);
+        calcMapKernel<<<grid, block, 0, stream>>>(dx, dy, map, low_thresh, high_thresh);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream == NULL)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -328,20 +330,21 @@ namespace canny
         }
     }
 
-    void edgesHysteresisLocal(PtrStepSzi map, short2* st1)
+    void edgesHysteresisLocal(PtrStepSzi map, short2* st1, cudaStream_t stream)
     {
         void* counter_ptr;
         cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, counter) );
 
-        cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
+        cudaSafeCall( cudaMemsetAsync(counter_ptr, 0, sizeof(int), stream) );
 
         const dim3 block(16, 16);
         const dim3 grid(divUp(map.cols, block.x), divUp(map.rows, block.y));
 
-        edgesHysteresisLocalKernel<<<grid, block>>>(map, st1);
+        edgesHysteresisLocalKernel<<<grid, block, 0, stream>>>(map, st1);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream == NULL)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -441,27 +444,30 @@ namespace canny
         }
     }
 
-    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2)
+    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2, cudaStream_t stream)
     {
         void* counter_ptr;
         cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, canny::counter) );
 
         int count;
-        cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpyAsync(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost, stream) );
+        cudaSafeCall( cudaStreamSynchronize(stream) );
 
         while (count > 0)
         {
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
+            cudaSafeCall( cudaMemsetAsync(counter_ptr, 0, sizeof(int), stream) );
 
             const dim3 block(128);
             const dim3 grid(::min(count, 65535u), divUp(count, 65535), 1);
 
-            edgesHysteresisGlobalKernel<<<grid, block>>>(map, st1, st2, count);
+            edgesHysteresisGlobalKernel<<<grid, block, 0, stream>>>(map, st1, st2, count);
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            if (stream == NULL)
+                cudaSafeCall( cudaDeviceSynchronize() );
 
-            cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpyAsync(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost, stream) );
+            cudaSafeCall( cudaStreamSynchronize(stream) );
 
             count = min(count, map.cols * map.rows);
 
@@ -499,9 +505,9 @@ namespace cv { namespace cuda { namespace device
 
 namespace canny
 {
-    void getEdges(PtrStepSzi map, PtrStepSzb dst)
+    void getEdges(PtrStepSzi map, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform(map, dst, GetEdges(), WithOutMask(), 0);
+        transform(map, dst, GetEdges(), WithOutMask(), stream);
     }
 }
 

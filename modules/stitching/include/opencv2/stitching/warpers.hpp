@@ -47,6 +47,11 @@
 
 namespace cv {
 
+//! @addtogroup stitching_warp
+//! @{
+
+/** @brief Image warper factories base class.
+ */
 class WarperCreator
 {
 public:
@@ -54,21 +59,25 @@ public:
     virtual Ptr<detail::RotationWarper> create(float scale) const = 0;
 };
 
-
+/** @brief Plane warper factory class.
+  @sa detail::PlaneWarper
+ */
 class PlaneWarper : public WarperCreator
 {
 public:
     Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PlaneWarper>(scale); }
 };
 
-
+/** @brief Cylindrical warper factory class.
+@sa detail::CylindricalWarper
+*/
 class CylindricalWarper: public WarperCreator
 {
 public:
     Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CylindricalWarper>(scale); }
 };
 
-
+/** @brief Spherical warper factory class */
 class SphericalWarper: public WarperCreator
 {
 public:
@@ -166,6 +175,8 @@ public:
     Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::SphericalWarperGpu>(scale); }
 };
 #endif
+
+//! @} stitching_warp
 
 } // namespace cv
 

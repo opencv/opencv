@@ -56,6 +56,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // sum
 
 template <class SrcPtr> struct SumExprBody
@@ -253,6 +256,8 @@ integral_(const SrcPtr& src)
     body.src = src;
     return makeExpr(body);
 }
+
+//! @}
 
 }}
 

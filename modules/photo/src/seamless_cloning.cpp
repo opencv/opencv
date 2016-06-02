@@ -41,7 +41,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include <stdlib.h>
 
 #include "seamless_cloning.hpp"
 
@@ -50,9 +49,9 @@ using namespace cv;
 
 void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
-    Mat src  = _src.getMat();
-    Mat dest = _dst.getMat();
-    Mat mask = _mask.getMat();
+    const Mat src  = _src.getMat();
+    const Mat dest = _dst.getMat();
+    const Mat mask = _mask.getMat();
     _blend.create(dest.size(), CV_8UC3);
     Mat blend = _blend.getMat();
 
@@ -87,6 +86,8 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     int lenx = maxx - minx;
     int leny = maxy - miny;
 
+    Mat patch = Mat::zeros(Size(leny, lenx), CV_8UC3);
+
     int minxd = p.y - lenx/2;
     int maxxd = p.y + lenx/2;
     int minyd = p.x - leny/2;
@@ -102,12 +103,15 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
 
     gray(roi_s).copyTo(destinationROI);
     src(roi_s).copyTo(sourceROI,gray(roi_s));
+    src(roi_s).copyTo(patch, gray(roi_s));
 
     destinationROI = cd_mask(roi_d);
     cs_mask(roi_s).copyTo(destinationROI);
 
+
     Cloning obj;
-    obj.normal_clone(dest,cd_mask,dst_mask,blend,flags);
+    obj.normalClone(dest,cd_mask,dst_mask,blend,flags);
+
 }
 
 void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float r, float g, float b)
@@ -133,9 +137,8 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
     src.copyTo(cs_mask,gray);
 
     Cloning obj;
-    obj.local_color_change(src,cs_mask,gray,blend,red,green,blue);
+    obj.localColorChange(src,cs_mask,gray,blend,red,green,blue);
 }
-
 
 void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst, float a, float b)
 {
@@ -159,12 +162,12 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
     src.copyTo(cs_mask,gray);
 
     Cloning obj;
-    obj.illum_change(src,cs_mask,gray,blend,alpha,beta);
+    obj.illuminationChange(src,cs_mask,gray,blend,alpha,beta);
 
 }
 
 void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
-                           double low_threshold, double high_threshold, int kernel_size)
+                           float low_threshold, float high_threshold, int kernel_size)
 {
 
     Mat src  = _src.getMat();
@@ -184,5 +187,5 @@ void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
     src.copyTo(cs_mask,gray);
 
     Cloning obj;
-    obj.texture_flatten(src,cs_mask,gray,low_threshold,high_threshold,kernel_size,blend);
+    obj.textureFlatten(src,cs_mask,gray,low_threshold,high_threshold,kernel_size,blend);
 }

@@ -50,6 +50,7 @@ using namespace cv;
 
 int test_loop_times = 1; // TODO Read from command line / environment
 
+#ifdef HAVE_OPENCL
 
 #define DUMP_PROPERTY_XML(propertyName, propertyValue) \
     do { \
@@ -97,6 +98,13 @@ void dumpOpenCLDevice()
 
     try
     {
+        if (!useOpenCL())
+        {
+            DUMP_MESSAGE_STDOUT("OpenCL is disabled");
+            DUMP_PROPERTY_XML("cv_ocl", "disabled");
+            return;
+        }
+
         std::vector<PlatformInfo> platforms;
         cv::ocl::getPlatfomsInfo(platforms);
         if (platforms.size() > 0)
@@ -127,6 +135,9 @@ void dumpOpenCLDevice()
         }
 
         const Device& device = Device::getDefault();
+        if (!device.available())
+            CV_ErrorNoReturn(CV_OpenCLInitError, "OpenCL device is not available");
+
         DUMP_MESSAGE_STDOUT("Current OpenCL device: ");
 
 #if 0
@@ -204,6 +215,7 @@ void dumpOpenCLDevice()
 #undef DUMP_MESSAGE_STDOUT
 #undef DUMP_PROPERTY_XML
 
+#endif
 
 Mat TestUtils::readImage(const String &fileName, int flags)
 {
@@ -255,7 +267,7 @@ double TestUtils::checkRectSimilarity(const Size & sz, std::vector<Rect>& ob1, s
         cv::Mat cpu_result(sz, CV_8UC1);
         cpu_result.setTo(0);
 
-        for (vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); r++)
+        for (vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); ++r)
         {
             cv::Mat cpu_result_roi(cpu_result, *r);
             cpu_result_roi.setTo(1);
@@ -265,7 +277,7 @@ double TestUtils::checkRectSimilarity(const Size & sz, std::vector<Rect>& ob1, s
 
         cv::Mat gpu_result(sz, CV_8UC1);
         gpu_result.setTo(0);
-        for(vector<Rect>::const_iterator r2 = ob2.begin(); r2 != ob2.end(); r2++)
+        for(vector<Rect>::const_iterator r2 = ob2.begin(); r2 != ob2.end(); ++r2)
         {
             cv::Mat gpu_result_roi(gpu_result, *r2);
             gpu_result_roi.setTo(1);

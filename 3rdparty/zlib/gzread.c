@@ -27,7 +27,7 @@ local int gz_load(state, buf, len, have)
 
     *have = 0;
     do {
-        ret = read(state->fd, buf + *have, len - *have);
+        ret = (int) read(state->fd, buf + *have, len - *have);
         if (ret <= 0)
             break;
         *have += ret;

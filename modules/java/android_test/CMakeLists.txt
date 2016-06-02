@@ -1,26 +1,30 @@
-ocv_check_dependencies(opencv_java ${OPENCV_MODULE_opencv_java_OPT_DEPS} ${OPENCV_MODULE_opencv_java_REQ_DEPS})
-
-if(NOT OCV_DEPENDENCIES_FOUND OR NOT ANT_EXECUTABLE OR NOT ANDROID_EXECUTABLE OR NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
+if(NOT ANT_EXECUTABLE OR NOT ANDROID_EXECUTABLE OR NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
   return()
 endif()
 
 project(opencv_test_java)
 
 set(opencv_test_java_bin_dir "${CMAKE_CURRENT_BINARY_DIR}/.build")
+set(test_dir "${CMAKE_CURRENT_SOURCE_DIR}")
+set(test_common_dir "${CMAKE_CURRENT_SOURCE_DIR}/../common_test")
 
-# get project sources
-file(GLOB_RECURSE opencv_test_java_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/res/*" "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
-ocv_list_filterout(opencv_test_java_files ".svn")
-
-# copy sources out from the build tree
 set(opencv_test_java_file_deps "")
-foreach(f ${opencv_test_java_files} ${ANDROID_MANIFEST_FILE} ".classpath" ".project")
+
+# 1. gather and copy common test files (resources, utils, etc.)
+copy_common_tests(test_common_dir opencv_test_java_bin_dir opencv_test_java_file_deps)
+
+# 2. gather and copy tests from each module
+copy_modules_tests(OPENCV_JAVA_MODULES opencv_test_java_bin_dir opencv_test_java_file_deps)
+
+# 3. gather and copy specific files for Android
+file(GLOB_RECURSE test_files RELATIVE "${test_dir}" "${test_dir}/res/*" "${test_dir}/src/*")
+foreach(f ${test_files} ${ANDROID_MANIFEST_FILE} ".classpath" ".project")
   add_custom_command(
       OUTPUT "${opencv_test_java_bin_dir}/${f}"
-      COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${f}" "${opencv_test_java_bin_dir}/${f}"
-      MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${f}"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_dir}/${f}" "${opencv_test_java_bin_dir}/${f}"
+      MAIN_DEPENDENCY "${test_dir}/${f}"
       COMMENT "Copying ${f}")
-  list(APPEND opencv_test_java_file_deps "${CMAKE_CURRENT_SOURCE_DIR}/${f}" "${opencv_test_java_bin_dir}/${f}")
+  list(APPEND opencv_test_java_file_deps "${test_dir}/${f}" "${opencv_test_java_bin_dir}/${f}")
 endforeach()
 
 # fix Android project
@@ -39,11 +43,14 @@ add_custom_command(
 
 list(APPEND opencv_test_java_file_deps ${android_proj_target_files})
 
+get_target_property(java_location opencv_java LOCATION)
+get_filename_component(java_name "${java_location}" NAME)
+
 # build java part
 add_custom_command(
     OUTPUT "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk"
-    COMMAND ${CMAKE_COMMAND} -E copy "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}/libopencv_java.so" "${opencv_test_java_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/libopencv_java.so"
-    COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${java_location}" "${opencv_test_java_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${java_name}"
+    COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug -Djava.target=1.6 -Djava.source=1.6
     COMMAND ${CMAKE_COMMAND} -E touch "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk" # needed because ant does not update the timestamp of updated apk
     WORKING_DIRECTORY "${opencv_test_java_bin_dir}"
     MAIN_DEPENDENCY "${opencv_test_java_bin_dir}/${ANDROID_MANIFEST_FILE}"
@@ -55,13 +62,13 @@ add_dependencies(${PROJECT_NAME} opencv_java ${__android_project_chain})
 set(__android_project_chain ${PROJECT_NAME} CACHE INTERNAL "auxiliary variable used for Android progects chaining" FORCE)
 
 # put the final .apk to the OpenCV's bin folder
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk" "${OpenCV_BINARY_DIR}/bin/${PROJECT_NAME}.apk")
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk" "${OpenCV_BINARY_DIR}/bin/${PROJECT_NAME}.apk")
 
 add_dependencies(opencv_tests ${PROJECT_NAME})
 
-if(PYTHON_EXECUTABLE)
+if(PYTHON_DEFAULT_AVAILABLE)
   set(CHECK_TEST_COVERAGE "${OPENCV_MODULE_opencv_java_LOCATION}/check-tests.py")
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-      COMMAND ${PYTHON_EXECUTABLE} ${CHECK_TEST_COVERAGE} "${CMAKE_CURRENT_SOURCE_DIR}/src" "${OpenCV_BINARY_DIR}/src" > "${CMAKE_CURRENT_BINARY_DIR}/tests_coverage.log"
+      COMMAND ${PYTHON_DEFAULT_EXECUTABLE} ${CHECK_TEST_COVERAGE} "${CMAKE_CURRENT_SOURCE_DIR}/src" "${OpenCV_BINARY_DIR}/src" > "${CMAKE_CURRENT_BINARY_DIR}/tests_coverage.log"
       )
 endif()

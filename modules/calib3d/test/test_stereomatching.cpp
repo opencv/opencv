@@ -717,7 +717,7 @@ protected:
         Mat leftImg; cvtColor( _leftImg, leftImg, COLOR_BGR2GRAY );
         Mat rightImg; cvtColor( _rightImg, rightImg, COLOR_BGR2GRAY );
 
-        Ptr<StereoBM> bm = createStereoBM( params.ndisp, params.winSize );
+        Ptr<StereoBM> bm = StereoBM::create( params.ndisp, params.winSize );
         Mat tempDisp;
         bm->compute( leftImg, rightImg, tempDisp );
         tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
@@ -742,7 +742,7 @@ protected:
     {
         int ndisp;
         int winSize;
-        bool fullDP;
+        int mode;
     };
     vector<RunParams> caseRunParams;
 
@@ -757,7 +757,7 @@ protected:
             RunParams params;
             String ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
             String winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
-            String fullDP = fn[i+4]; params.fullDP = atoi(fullDP.c_str()) == 0 ? false : true;
+            String mode = fn[i+4]; params.mode = atoi(mode.c_str());
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );
@@ -770,11 +770,10 @@ protected:
     {
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );
-        Ptr<StereoSGBM> sgbm = createStereoSGBM( 0, params.ndisp, params.winSize,
+        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, params.ndisp, params.winSize,
                                                  10*params.winSize*params.winSize,
                                                  40*params.winSize*params.winSize,
-                                                 1, 63, 10, 100, 32, params.fullDP ?
-                                                 StereoSGBM::MODE_HH : StereoSGBM::MODE_SGBM );
+                                                 1, 63, 10, 100, 32, params.mode );
         sgbm->compute( leftImg, rightImg, leftDisp );
         CV_Assert( leftDisp.type() == CV_16SC1 );
         leftDisp/=16;

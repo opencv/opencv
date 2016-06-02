@@ -116,9 +116,8 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
 {
     int i, j, k;
     int count = 0, converged = 0;
-    float inorm, jnorm, invInorm, invJnorm, invScale, scale = 0, inv_Z = 0;
+    float scale = 0, inv_Z = 0;
     float diff = (float)criteria.epsilon;
-    float inv_focalLength = 1 / focalLength;
 
     /* Check bad arguments */
     if( imagePoints == NULL )
@@ -139,6 +138,7 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         return CV_BADFACTOR_ERR;
 
     /* init variables */
+    float inv_focalLength = 1 / focalLength;
     int N = pObject->N;
     float *objectVectors = pObject->obj_vecs;
     float *invMatrix = pObject->inv_matr;
@@ -195,16 +195,18 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
             }
         }
 
-        inorm = rotation[0] /*[0][0]*/ * rotation[0] /*[0][0]*/ +
+        float inorm =
+                rotation[0] /*[0][0]*/ * rotation[0] /*[0][0]*/ +
                 rotation[1] /*[0][1]*/ * rotation[1] /*[0][1]*/ +
                 rotation[2] /*[0][2]*/ * rotation[2] /*[0][2]*/;
 
-        jnorm = rotation[3] /*[1][0]*/ * rotation[3] /*[1][0]*/ +
+        float jnorm =
+                rotation[3] /*[1][0]*/ * rotation[3] /*[1][0]*/ +
                 rotation[4] /*[1][1]*/ * rotation[4] /*[1][1]*/ +
                 rotation[5] /*[1][2]*/ * rotation[5] /*[1][2]*/;
 
-        invInorm = cvInvSqrt( inorm );
-        invJnorm = cvInvSqrt( jnorm );
+        const float invInorm = cvInvSqrt( inorm );
+        const float invJnorm = cvInvSqrt( jnorm );
 
         inorm *= invInorm;
         jnorm *= invJnorm;
@@ -234,7 +236,7 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         converged = ((criteria.type & CV_TERMCRIT_EPS) && (diff < criteria.epsilon));
         converged |= ((criteria.type & CV_TERMCRIT_ITER) && (count == criteria.max_iter));
     }
-    invScale = 1 / scale;
+    const float invScale = 1 / scale;
     translation[0] = imagePoints[0].x * invScale;
     translation[1] = imagePoints[0].y * invScale;
     translation[2] = 1 / inv_Z;
@@ -266,8 +268,6 @@ static  CvStatus  icvReleasePOSITObject( CvPOSITObject ** ppObject )
 void
 icvPseudoInverse3D( float *a, float *b, int n, int method )
 {
-    int k;
-
     if( method == 0 )
     {
         float ata00 = 0;
@@ -276,8 +276,8 @@ icvPseudoInverse3D( float *a, float *b, int n, int method )
         float ata01 = 0;
         float ata02 = 0;
         float ata12 = 0;
-        float det = 0;
 
+        int k;
         /* compute matrix ata = transpose(a) * a  */
         for( k = 0; k < n; k++ )
         {
@@ -295,7 +295,6 @@ icvPseudoInverse3D( float *a, float *b, int n, int method )
         }
         /* inverse matrix ata */
         {
-            float inv_det;
             float p00 = ata11 * ata22 - ata12 * ata12;
             float p01 = -(ata01 * ata22 - ata12 * ata02);
             float p02 = ata12 * ata01 - ata11 * ata02;
@@ -304,11 +303,12 @@ icvPseudoInverse3D( float *a, float *b, int n, int method )
             float p12 = -(ata00 * ata12 - ata01 * ata02);
             float p22 = ata00 * ata11 - ata01 * ata01;
 
+            float det = 0;
             det += ata00 * p00;
             det += ata01 * p01;
             det += ata02 * p02;
 
-            inv_det = 1 / det;
+            const float inv_det = 1 / det;
 
             /* compute resultant matrix */
             for( k = 0; k < n; k++ )

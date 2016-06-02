@@ -47,37 +47,64 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::cuda::PyrLKOpticalFlow::PyrLKOpticalFlow() { throw_no_cuda(); }
-void cv::cuda::PyrLKOpticalFlow::sparse(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_no_cuda(); }
-void cv::cuda::PyrLKOpticalFlow::dense(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_no_cuda(); }
-void cv::cuda::PyrLKOpticalFlow::releaseMemory() {}
+Ptr<SparsePyrLKOpticalFlow> cv::cuda::SparsePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<SparsePyrLKOpticalFlow>(); }
+
+Ptr<DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<DensePyrLKOpticalFlow>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
 namespace pyrlk
 {
-    void loadConstants(int2 winSize, int iters);
+    void loadConstants(int2 winSize, int iters, cudaStream_t stream);
+    template<typename T, int cn> struct pyrLK_caller
+    {
+        static void sparse(PtrStepSz<typename device::TypeVec<T, cn>::vec_type> I, PtrStepSz<typename device::TypeVec<T, cn>::vec_type> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+            int level, dim3 block, dim3 patch, cudaStream_t stream);
 
-    void sparse1(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
-                 int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
-    void sparse4(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
-                 int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
+        static void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
+            PtrStepSzf err, int2 winSize, cudaStream_t stream);
+    };
 
-    void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
-               PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
-}
-
-cv::cuda::PyrLKOpticalFlow::PyrLKOpticalFlow()
-{
-    winSize = Size(21, 21);
-    maxLevel = 3;
-    iters = 30;
-    useInitialFlow = false;
+    template<typename T, int cn> void dispatcher(GpuMat I, GpuMat J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+        int level, dim3 block, dim3 patch, cudaStream_t stream)
+    {
+        pyrLK_caller<T, cn>::sparse(I, J, prevPts, nextPts, status, err, ptcount, level, block, patch, stream);
+    }
 }
 
 namespace
 {
-    void calcPatchSize(cv::Size winSize, dim3& block, dim3& patch)
+    class PyrLKOpticalFlowBase
+    {
+    public:
+        PyrLKOpticalFlowBase(Size winSize, int maxLevel, int iters, bool useInitialFlow);
+
+        void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
+            GpuMat& status, GpuMat* err, Stream& stream);
+
+        void sparse(std::vector<GpuMat>& prevPyr, std::vector<GpuMat>& nextPyr, const GpuMat& prevPts, GpuMat& nextPts,
+            GpuMat& status, GpuMat* err, Stream& stream);
+
+        void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, Stream& stream);
+
+    protected:
+        Size winSize_;
+        int maxLevel_;
+        int iters_;
+        bool useInitialFlow_;
+        void buildImagePyramid(const GpuMat& prevImg, std::vector<GpuMat>& prevPyr, const GpuMat& nextImg, std::vector<GpuMat>& nextPyr, Stream stream);
+    private:
+        friend class SparsePyrLKOpticalFlowImpl;
+        std::vector<GpuMat> prevPyr_;
+        std::vector<GpuMat> nextPyr_;
+    };
+
+    PyrLKOpticalFlowBase::PyrLKOpticalFlowBase(Size winSize, int maxLevel, int iters, bool useInitialFlow) :
+        winSize_(winSize), maxLevel_(maxLevel), iters_(iters), useInitialFlow_(useInitialFlow)
+    {
+    }
+
+    void calcPatchSize(Size winSize, dim3& block, dim3& patch)
     {
         if (winSize.width > 32 && winSize.width > 2 * winSize.height)
         {
@@ -95,156 +122,258 @@ namespace
 
         block.z = patch.z = 1;
     }
-}
 
-void cv::cuda::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err)
-{
-    if (prevPts.empty())
+    void PyrLKOpticalFlowBase::buildImagePyramid(const GpuMat& prevImg, std::vector<GpuMat>& prevPyr, const GpuMat& nextImg, std::vector<GpuMat>& nextPyr, Stream stream)
     {
-        nextPts.release();
-        status.release();
-        if (err) err->release();
-        return;
-    }
+        prevPyr.resize(maxLevel_ + 1);
+        nextPyr.resize(maxLevel_ + 1);
 
-    dim3 block, patch;
-    calcPatchSize(winSize, block, patch);
+        int cn = prevImg.channels();
 
-    CV_Assert(prevImg.channels() == 1 || prevImg.channels() == 3 || prevImg.channels() == 4);
-    CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
-    CV_Assert(maxLevel >= 0);
-    CV_Assert(winSize.width > 2 && winSize.height > 2);
-    CV_Assert(patch.x > 0 && patch.x < 6 && patch.y > 0 && patch.y < 6);
-    CV_Assert(prevPts.rows == 1 && prevPts.type() == CV_32FC2);
+        CV_Assert(cn == 1 || cn == 3 || cn == 4);
 
-    if (useInitialFlow)
-        CV_Assert(nextPts.size() == prevPts.size() && nextPts.type() == CV_32FC2);
-    else
-        ensureSizeIsEnough(1, prevPts.cols, prevPts.type(), nextPts);
+        prevPyr[0] = prevImg;
+        nextPyr[0] = nextImg;
 
-    GpuMat temp1 = (useInitialFlow ? nextPts : prevPts).reshape(1);
-    GpuMat temp2 = nextPts.reshape(1);
-    cuda::multiply(temp1, Scalar::all(1.0 / (1 << maxLevel) / 2.0), temp2);
-
-    ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
-    status.setTo(Scalar::all(1));
-
-    if (err)
-        ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, *err);
-
-    // build the image pyramids.
-
-    prevPyr_.resize(maxLevel + 1);
-    nextPyr_.resize(maxLevel + 1);
-
-    int cn = prevImg.channels();
-
-    if (cn == 1 || cn == 4)
-    {
-        prevImg.convertTo(prevPyr_[0], CV_32F);
-        nextImg.convertTo(nextPyr_[0], CV_32F);
-    }
-    else
-    {
-        cuda::cvtColor(prevImg, buf_, COLOR_BGR2BGRA);
-        buf_.convertTo(prevPyr_[0], CV_32F);
-
-        cuda::cvtColor(nextImg, buf_, COLOR_BGR2BGRA);
-        buf_.convertTo(nextPyr_[0], CV_32F);
-    }
-
-    for (int level = 1; level <= maxLevel; ++level)
-    {
-        cuda::pyrDown(prevPyr_[level - 1], prevPyr_[level]);
-        cuda::pyrDown(nextPyr_[level - 1], nextPyr_[level]);
-    }
-
-    pyrlk::loadConstants(make_int2(winSize.width, winSize.height), iters);
-
-    for (int level = maxLevel; level >= 0; level--)
-    {
-        if (cn == 1)
+        for (int level = 1; level <= maxLevel_; ++level)
         {
-            pyrlk::sparse1(prevPyr_[level], nextPyr_[level],
-                prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
-                level, block, patch);
+            cuda::pyrDown(prevPyr[level - 1], prevPyr[level], stream);
+            cuda::pyrDown(nextPyr[level - 1], nextPyr[level], stream);
         }
+    }
+    void PyrLKOpticalFlowBase::sparse(std::vector<GpuMat>& prevPyr, std::vector<GpuMat>& nextPyr, const GpuMat& prevPts, GpuMat& nextPts,
+        GpuMat& status, GpuMat* err, Stream& stream)
+    {
+        CV_Assert(prevPyr.size() && nextPyr.size() && "Pyramid needs to at least contain the original matrix as the first element");
+        CV_Assert(prevPyr[0].size() == nextPyr[0].size());
+        CV_Assert(prevPts.rows == 1 && prevPts.type() == CV_32FC2);
+        CV_Assert(maxLevel_ >= 0);
+        CV_Assert(winSize_.width > 2 && winSize_.height > 2);
+        if (useInitialFlow_)
+            CV_Assert(nextPts.size() == prevPts.size() && nextPts.type() == prevPts.type());
         else
+            ensureSizeIsEnough(1, prevPts.cols, prevPts.type(), nextPts);
+
+        GpuMat temp1 = (useInitialFlow_ ? nextPts : prevPts).reshape(1);
+        GpuMat temp2 = nextPts.reshape(1);
+        cuda::multiply(temp1, Scalar::all(1.0 / (1 << maxLevel_) / 2.0), temp2, 1, -1, stream);
+
+
+        ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
+        status.setTo(Scalar::all(1), stream);
+
+        if (err)
+            ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, *err);
+
+        if (prevPyr.size() != size_t(maxLevel_ + 1) || nextPyr.size() != size_t(maxLevel_ + 1))
         {
-            pyrlk::sparse4(prevPyr_[level], nextPyr_[level],
-                prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
-                level, block, patch);
+            buildImagePyramid(prevPyr[0], prevPyr, nextPyr[0], nextPyr, stream);
+        }
+
+        dim3 block, patch;
+        calcPatchSize(winSize_, block, patch);
+        CV_Assert(patch.x > 0 && patch.x < 6 && patch.y > 0 && patch.y < 6);
+        pyrlk::loadConstants(make_int2(winSize_.width, winSize_.height), iters_, StreamAccessor::getStream(stream));
+
+        const int cn = prevPyr[0].channels();
+        const int type = prevPyr[0].depth();
+
+        typedef void(*func_t)(GpuMat I, GpuMat J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+            int level, dim3 block, dim3 patch, cudaStream_t stream);
+
+        // Current int datatype is disabled due to pyrDown not implementing it
+        // while ushort does work, it has significantly worse performance, and thus doesn't pass accuracy tests.
+        static const func_t funcs[6][4] =
+        {
+          {   pyrlk::dispatcher<uchar, 1>     , /*pyrlk::dispatcher<uchar, 2>*/ 0, pyrlk::dispatcher<uchar, 3>     ,   pyrlk::dispatcher<uchar, 4>    },
+          { /*pyrlk::dispatcher<char, 1>*/   0, /*pyrlk::dispatcher<char, 2>*/  0, /*pyrlk::dispatcher<char, 3>*/  0, /*pyrlk::dispatcher<char, 4>*/ 0 },
+          { pyrlk::dispatcher<ushort, 1>      , /*pyrlk::dispatcher<ushort, 2>*/0, pyrlk::dispatcher<ushort, 3>     ,   pyrlk::dispatcher<ushort, 4>   },
+          { /*pyrlk::dispatcher<short, 1>*/  0, /*pyrlk::dispatcher<short, 2>*/ 0, /*pyrlk::dispatcher<short, 3>*/ 0, /*pyrlk::dispatcher<short, 4>*/0 },
+          {   pyrlk::dispatcher<int, 1>       , /*pyrlk::dispatcher<int, 2>*/   0, pyrlk::dispatcher<int, 3>        ,   pyrlk::dispatcher<int, 4>      },
+          {   pyrlk::dispatcher<float, 1>     , /*pyrlk::dispatcher<float, 2>*/ 0, pyrlk::dispatcher<float, 3>      ,   pyrlk::dispatcher<float, 4>    }
+        };
+
+        func_t func = funcs[type][cn-1];
+        CV_Assert(func != NULL && "Datatype not implemented");
+        for (int level = maxLevel_; level >= 0; level--)
+        {
+            func(prevPyr[level], nextPyr[level],
+                prevPts.ptr<float2>(), nextPts.ptr<float2>(),
+                status.ptr(), level == 0 && err ? err->ptr<float>() : 0,
+                prevPts.cols, level, block, patch,
+                StreamAccessor::getStream(stream));
         }
     }
-}
 
-void cv::cuda::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err)
-{
-    CV_Assert(prevImg.type() == CV_8UC1);
-    CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
-    CV_Assert(maxLevel >= 0);
-    CV_Assert(winSize.width > 2 && winSize.height > 2);
-
-    if (err)
-        err->create(prevImg.size(), CV_32FC1);
-
-    // build the image pyramids.
-
-    prevPyr_.resize(maxLevel + 1);
-    nextPyr_.resize(maxLevel + 1);
-
-    prevPyr_[0] = prevImg;
-    nextImg.convertTo(nextPyr_[0], CV_32F);
-
-    for (int level = 1; level <= maxLevel; ++level)
+    void PyrLKOpticalFlowBase::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err, Stream& stream)
     {
-        cuda::pyrDown(prevPyr_[level - 1], prevPyr_[level]);
-        cuda::pyrDown(nextPyr_[level - 1], nextPyr_[level]);
+        if (prevPts.empty())
+        {
+            nextPts.release();
+            status.release();
+            if (err) err->release();
+            return;
+        }
+        CV_Assert( prevImg.channels() == 1 || prevImg.channels() == 3 || prevImg.channels() == 4 );
+        CV_Assert( prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type() );
+
+        // build the image pyramids.
+        buildImagePyramid(prevImg, prevPyr_, nextImg, nextPyr_, stream);
+
+        sparse(prevPyr_, nextPyr_, prevPts, nextPts, status, err, stream);
+
     }
 
-    ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[0]);
-    ensureSizeIsEnough(prevImg.size(), CV_32FC1, vPyr_[0]);
-    ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[1]);
-    ensureSizeIsEnough(prevImg.size(), CV_32FC1, vPyr_[1]);
-    uPyr_[0].setTo(Scalar::all(0));
-    vPyr_[0].setTo(Scalar::all(0));
-    uPyr_[1].setTo(Scalar::all(0));
-    vPyr_[1].setTo(Scalar::all(0));
-
-    int2 winSize2i = make_int2(winSize.width, winSize.height);
-    pyrlk::loadConstants(winSize2i, iters);
-
-    PtrStepSzf derr = err ? *err : PtrStepSzf();
-
-    int idx = 0;
-
-    for (int level = maxLevel; level >= 0; level--)
+    void PyrLKOpticalFlowBase::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, Stream& stream)
     {
-        int idx2 = (idx + 1) & 1;
+        CV_Assert( prevImg.type() == CV_8UC1 );
+        CV_Assert( prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type() );
+        CV_Assert( maxLevel_ >= 0 );
+        CV_Assert( winSize_.width > 2 && winSize_.height > 2 );
 
-        pyrlk::dense(prevPyr_[level], nextPyr_[level], uPyr_[idx], vPyr_[idx], uPyr_[idx2], vPyr_[idx2],
-            level == 0 ? derr : PtrStepSzf(), winSize2i);
+        // build the image pyramids.
 
-        if (level > 0)
-            idx = idx2;
+        prevPyr_.resize(maxLevel_ + 1);
+        nextPyr_.resize(maxLevel_ + 1);
+
+        prevPyr_[0] = prevImg;
+        nextImg.convertTo(nextPyr_[0], CV_32F, stream);
+
+        for (int level = 1; level <= maxLevel_; ++level)
+        {
+            cuda::pyrDown(prevPyr_[level - 1], prevPyr_[level], stream);
+            cuda::pyrDown(nextPyr_[level - 1], nextPyr_[level], stream);
+        }
+
+        BufferPool pool(stream);
+
+        GpuMat uPyr[] = {
+            pool.getBuffer(prevImg.size(), CV_32FC1),
+            pool.getBuffer(prevImg.size(), CV_32FC1),
+        };
+        GpuMat vPyr[] = {
+            pool.getBuffer(prevImg.size(), CV_32FC1),
+            pool.getBuffer(prevImg.size(), CV_32FC1),
+        };
+
+        uPyr[0].setTo(Scalar::all(0), stream);
+        vPyr[0].setTo(Scalar::all(0), stream);
+        uPyr[1].setTo(Scalar::all(0), stream);
+        vPyr[1].setTo(Scalar::all(0), stream);
+
+        int2 winSize2i = make_int2(winSize_.width, winSize_.height);
+        pyrlk::loadConstants(winSize2i, iters_, StreamAccessor::getStream(stream));
+
+        int idx = 0;
+
+        for (int level = maxLevel_; level >= 0; level--)
+        {
+            int idx2 = (idx + 1) & 1;
+
+            pyrlk::pyrLK_caller<float,1>::dense(prevPyr_[level], nextPyr_[level],
+                         uPyr[idx], vPyr[idx], uPyr[idx2], vPyr[idx2],
+                         PtrStepSzf(), winSize2i,
+                         StreamAccessor::getStream(stream));
+
+            if (level > 0)
+                idx = idx2;
+        }
+
+        uPyr[idx].copyTo(u, stream);
+        vPyr[idx].copyTo(v, stream);
     }
 
-    uPyr_[idx].copyTo(u);
-    vPyr_[idx].copyTo(v);
+    class SparsePyrLKOpticalFlowImpl : public SparsePyrLKOpticalFlow, private PyrLKOpticalFlowBase
+    {
+    public:
+        SparsePyrLKOpticalFlowImpl(Size winSize, int maxLevel, int iters, bool useInitialFlow) :
+            PyrLKOpticalFlowBase(winSize, maxLevel, iters, useInitialFlow)
+        {
+        }
+
+        virtual Size getWinSize() const { return winSize_; }
+        virtual void setWinSize(Size winSize) { winSize_ = winSize; }
+
+        virtual int getMaxLevel() const { return maxLevel_; }
+        virtual void setMaxLevel(int maxLevel) { maxLevel_ = maxLevel; }
+
+        virtual int getNumIters() const { return iters_; }
+        virtual void setNumIters(int iters) { iters_ = iters; }
+
+        virtual bool getUseInitialFlow() const { return useInitialFlow_; }
+        virtual void setUseInitialFlow(bool useInitialFlow) { useInitialFlow_ = useInitialFlow; }
+
+        virtual void calc(InputArray _prevImg, InputArray _nextImg,
+                          InputArray _prevPts, InputOutputArray _nextPts,
+                          OutputArray _status,
+                          OutputArray _err,
+                          Stream& stream)
+        {
+            const GpuMat prevPts = _prevPts.getGpuMat();
+            GpuMat& nextPts = _nextPts.getGpuMatRef();
+            GpuMat& status = _status.getGpuMatRef();
+            GpuMat* err = _err.needed() ? &(_err.getGpuMatRef()) : NULL;
+            if (_prevImg.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && _prevImg.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+            {
+                std::vector<GpuMat> prevPyr, nextPyr;
+                _prevImg.getGpuMatVector(prevPyr);
+                _nextImg.getGpuMatVector(nextPyr);
+                sparse(prevPyr, nextPyr, prevPts, nextPts, status, err, stream);
+            }
+            else
+            {
+                const GpuMat prevImg = _prevImg.getGpuMat();
+                const GpuMat nextImg = _nextImg.getGpuMat();
+                sparse(prevImg, nextImg, prevPts, nextPts, status, err, stream);
+            }
+        }
+    };
+
+    class DensePyrLKOpticalFlowImpl : public DensePyrLKOpticalFlow, private PyrLKOpticalFlowBase
+    {
+    public:
+        DensePyrLKOpticalFlowImpl(Size winSize, int maxLevel, int iters, bool useInitialFlow) :
+            PyrLKOpticalFlowBase(winSize, maxLevel, iters, useInitialFlow)
+        {
+        }
+
+        virtual Size getWinSize() const { return winSize_; }
+        virtual void setWinSize(Size winSize) { winSize_ = winSize; }
+
+        virtual int getMaxLevel() const { return maxLevel_; }
+        virtual void setMaxLevel(int maxLevel) { maxLevel_ = maxLevel; }
+
+        virtual int getNumIters() const { return iters_; }
+        virtual void setNumIters(int iters) { iters_ = iters; }
+
+        virtual bool getUseInitialFlow() const { return useInitialFlow_; }
+        virtual void setUseInitialFlow(bool useInitialFlow) { useInitialFlow_ = useInitialFlow; }
+
+        virtual void calc(InputArray _prevImg, InputArray _nextImg, InputOutputArray _flow, Stream& stream)
+        {
+            const GpuMat prevImg = _prevImg.getGpuMat();
+            const GpuMat nextImg = _nextImg.getGpuMat();
+
+            BufferPool pool(stream);
+            GpuMat u = pool.getBuffer(prevImg.size(), CV_32FC1);
+            GpuMat v = pool.getBuffer(prevImg.size(), CV_32FC1);
+
+            dense(prevImg, nextImg, u, v, stream);
+
+            GpuMat flows[] = {u, v};
+            cuda::merge(flows, 2, _flow, stream);
+        }
+    };
 }
 
-void cv::cuda::PyrLKOpticalFlow::releaseMemory()
+Ptr<SparsePyrLKOpticalFlow> cv::cuda::SparsePyrLKOpticalFlow::create(Size winSize, int maxLevel, int iters, bool useInitialFlow)
 {
-    prevPyr_.clear();
-    nextPyr_.clear();
+    return makePtr<SparsePyrLKOpticalFlowImpl>(winSize, maxLevel, iters, useInitialFlow);
+}
 
-    buf_.release();
-
-    uPyr_[0].release();
-    vPyr_[0].release();
-
-    uPyr_[1].release();
-    vPyr_[1].release();
+Ptr<DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size winSize, int maxLevel, int iters, bool useInitialFlow)
+{
+    return makePtr<DensePyrLKOpticalFlowImpl>(winSize, maxLevel, iters, useInitialFlow);
 }
 
 #endif /* !defined (HAVE_CUDA) */

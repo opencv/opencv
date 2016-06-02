@@ -89,7 +89,7 @@ protected:
 
     Size randSize(RNG& rng) const;
 
-    const char* interpolation_to_string(int inter_type) const;
+    String interpolation_to_string(int inter_type) const;
 
     int interpolation;
     Mat src;
@@ -109,21 +109,29 @@ CV_ImageWarpBaseTest::~CV_ImageWarpBaseTest()
 {
 }
 
-const char* CV_ImageWarpBaseTest::interpolation_to_string(int inter) const
+String CV_ImageWarpBaseTest::interpolation_to_string(int inter) const
 {
+    bool inverse = (inter & WARP_INVERSE_MAP) != 0;
+    inter &= ~WARP_INVERSE_MAP;
+    String str;
+
     if (inter == INTER_NEAREST)
-        return "INTER_NEAREST";
-    if (inter == INTER_LINEAR)
-        return "INTER_LINEAR";
-    if (inter == INTER_AREA)
-        return "INTER_AREA";
-    if (inter == INTER_CUBIC)
-        return "INTER_CUBIC";
-    if (inter == INTER_LANCZOS4)
-        return "INTER_LANCZOS4";
-    if (inter == INTER_LANCZOS4 + 1)
-        return "INTER_AREA_FAST";
-    return "Unsupported/Unkown interpolation type";
+        str = "INTER_NEAREST";
+    else if (inter == INTER_LINEAR)
+        str = "INTER_LINEAR";
+    else if (inter == INTER_AREA)
+        str = "INTER_AREA";
+    else if (inter == INTER_CUBIC)
+        str = "INTER_CUBIC";
+    else if (inter == INTER_LANCZOS4)
+        str = "INTER_LANCZOS4";
+    else if (inter == INTER_LANCZOS4 + 1)
+        str = "INTER_AREA_FAST";
+
+    if (inverse)
+        str += " | WARP_INVERSE_MAP";
+
+    return str.empty() ? "Unsupported/Unkown interpolation type" : str;
 }
 
 Size CV_ImageWarpBaseTest::randSize(RNG& rng) const
@@ -271,7 +279,7 @@ void CV_ImageWarpBaseTest::validate_results() const
                     scale_x = cvRound(scale_x);
                 }
 
-                PRINT_TO_LOG("Interpolation: %s\n", interpolation_to_string(area_fast ? INTER_LANCZOS4 + 1 : interpolation));
+                PRINT_TO_LOG("Interpolation: %s\n", interpolation_to_string(area_fast ? INTER_LANCZOS4 + 1 : interpolation).c_str());
                 PRINT_TO_LOG("Scale (x, y): (%lf, %lf)\n", scale_x, scale_y);
                 PRINT_TO_LOG("Elemsize: %d\n", src.elemSize1());
                 PRINT_TO_LOG("Channels: %d\n", cn);
@@ -532,12 +540,12 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
             ofs = 3, ksize = 8;
 
         Mat _extended_src_row(1, _src.cols + ksize * 2, _src.type());
-        uchar* srow = _src.data + dy * _src.step;
-        memcpy(_extended_src_row.data + elemsize * ksize, srow, _src.step);
+        const uchar* srow = _src.ptr(dy);
+        memcpy(_extended_src_row.ptr() + elemsize * ksize, srow, _src.step);
         for (int k = 0; k < ksize; ++k)
         {
-            memcpy(_extended_src_row.data + k * elemsize, srow, elemsize);
-            memcpy(_extended_src_row.data + (ksize + k) * elemsize + _src.step, srow + _src.step - elemsize, elemsize);
+            memcpy(_extended_src_row.ptr() + k * elemsize, srow, elemsize);
+            memcpy(_extended_src_row.ptr() + (ksize + k) * elemsize + _src.step, srow + _src.step - elemsize, elemsize);
         }
 
         for (int dx = 0; dx < dsize.width; ++dx)
@@ -556,7 +564,6 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
                 xyD[r] = 0;
                 for (int k = 0; k < ksize; ++k)
                     xyD[r] += w[k] * xyS[k * cn + r];
-                xyD[r] = xyD[r];
             }
         }
     }
@@ -644,8 +651,7 @@ private:
 };
 
 CV_Remap_Test::CV_Remap_Test() :
-    CV_ImageWarpBaseTest(), mapx(), mapy(),
-    borderType(-1), borderValue()
+    CV_ImageWarpBaseTest(), borderType(-1)
 {
     funcs[0] = &CV_Remap_Test::remap_nearest;
     funcs[1] = &CV_Remap_Test::remap_generic;
@@ -666,7 +672,7 @@ void CV_Remap_Test::generate_test_data()
     // generating the mapx, mapy matrices
     static const int mapx_types[] = { CV_16SC2, CV_32FC1, CV_32FC2 };
     mapx.create(dst.size(), mapx_types[rng.uniform(0, sizeof(mapx_types) / sizeof(int))]);
-    mapy = Mat();
+    mapy.release();
 
     const int n = std::min(std::min(src.cols, src.rows) / 10 + 1, 2);
     float _n = 0; //static_cast<float>(-n);
@@ -693,7 +699,7 @@ void CV_Remap_Test::generate_test_data()
                     {
                         MatIterator_<ushort> begin_y = mapy.begin<ushort>(), end_y = mapy.end<ushort>();
                         for ( ; begin_y != end_y; ++begin_y)
-                            begin_y[0] = static_cast<short>(rng.uniform(0, 1024));
+                            *begin_y = static_cast<ushort>(rng.uniform(0, 1024));
                     }
                     break;
 
@@ -701,7 +707,7 @@ void CV_Remap_Test::generate_test_data()
                     {
                         MatIterator_<short> begin_y = mapy.begin<short>(), end_y = mapy.end<short>();
                         for ( ; begin_y != end_y; ++begin_y)
-                            begin_y[0] = static_cast<short>(rng.uniform(0, 1024));
+                            *begin_y = static_cast<short>(rng.uniform(0, 1024));
                     }
                     break;
                 }
@@ -718,27 +724,33 @@ void CV_Remap_Test::generate_test_data()
             MatIterator_<float> begin_y = mapy.begin<float>();
             for ( ; begin_x != end_x; ++begin_x, ++begin_y)
             {
-                begin_x[0] = rng.uniform(_n, fscols);
-                begin_y[0] = rng.uniform(_n, fsrows);
+                *begin_x = rng.uniform(_n, fscols);
+                *begin_y = rng.uniform(_n, fsrows);
             }
         }
         break;
 
         case CV_32FC2:
         {
-            MatIterator_<Vec2f> begin_x = mapx.begin<Vec2f>(), end_x = mapx.end<Vec2f>();
             float fscols = static_cast<float>(std::max(src.cols - 1 + n, 0)),
                     fsrows = static_cast<float>(std::max(src.rows - 1 + n, 0));
-            for ( ; begin_x != end_x; ++begin_x)
+            int width = mapx.cols << 1;
+
+            for (int y = 0; y < mapx.rows; ++y)
             {
-                begin_x[0] = rng.uniform(_n, fscols);
-                begin_x[1] = rng.uniform(_n, fsrows);
+                float * ptr = mapx.ptr<float>(y);
+
+                for (int x = 0; x < width; x += 2)
+                {
+                    ptr[x] = rng.uniform(_n, fscols);
+                    ptr[x + 1] = rng.uniform(_n, fsrows);
+                }
             }
         }
         break;
 
         default:
-            assert(0);
+            CV_Assert(0);
         break;
     }
 }
@@ -758,7 +770,7 @@ void CV_Remap_Test::convert_maps()
 
     if (interpolation == INTER_NEAREST)
         mapy = Mat();
-    CV_Assert(((interpolation == INTER_NEAREST && !mapy.data) || mapy.type() == CV_16UC1 ||
+    CV_Assert(((interpolation == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16UC1 ||
                mapy.type() == CV_16SC1) && mapx.type() == CV_16SC2);
 }
 
@@ -770,6 +782,10 @@ const char* CV_Remap_Test::borderType_to_string() const
         return "BORDER_REPLICATE";
     if (borderType == BORDER_REFLECT)
         return "BORDER_REFLECT";
+    if (borderType == BORDER_WRAP)
+        return "BORDER_WRAP";
+    if (borderType == BORDER_REFLECT_101)
+        return "BORDER_REFLECT_101";
     return "Unsupported/Unkown border type";
 }
 
@@ -777,23 +793,6 @@ void CV_Remap_Test::prepare_test_data_for_reference_func()
 {
     CV_ImageWarpBaseTest::prepare_test_data_for_reference_func();
     convert_maps();
-/*
-    const int ksize = 3;
-    Mat kernel = getStructuringElement(CV_MOP_ERODE, Size(ksize, ksize));
-    Mat mask(src.size(), CV_8UC1, Scalar::all(255)), dst_mask;
-    cv::erode(src, erode_src, kernel);
-    cv::erode(mask, dst_mask, kernel, Point(-1, -1), 1, BORDER_CONSTANT, Scalar::all(0));
-    bitwise_not(dst_mask, mask);
-    src.copyTo(erode_src, mask);
-    dst_mask.release();
-
-    mask = Scalar::all(0);
-    kernel = getStructuringElement(CV_MOP_DILATE, kernel.size());
-    cv::dilate(src, dilate_src, kernel);
-    cv::dilate(mask, dst_mask, kernel, Point(-1, -1), 1, BORDER_CONSTANT, Scalar::all(255));
-    src.copyTo(dilate_src, dst_mask);
-    dst_mask.release();
-*/
 }
 
 void CV_Remap_Test::run_reference_func()
@@ -810,7 +809,7 @@ void CV_Remap_Test::run_reference_func()
 void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
 {
     CV_Assert(_src.depth() == CV_32F && _dst.type() == _src.type());
-    CV_Assert(mapx.type() == CV_16SC2 && !mapy.data);
+    CV_Assert(mapx.type() == CV_16SC2 && mapy.empty());
 
     Size ssize = _src.size(), dsize = _dst.size();
     CV_Assert(ssize.area() > 0 && dsize.area() > 0);
@@ -1080,7 +1079,7 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
         }
     }
 
-    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && !mapy.data) || mapy.type() == CV_16SC1));
+    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
     cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
 }
 
@@ -1207,7 +1206,7 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
         }
     }
 
-    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && !mapy.data) || mapy.type() == CV_16SC1));
+    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
     cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
 }
 

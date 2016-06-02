@@ -59,10 +59,12 @@
 namespace cv
 {
 
+//! @addtogroup core_basic
+//! @{
+
 //////////////////////////////// Complex //////////////////////////////
 
-/*!
-  A complex number class.
+/** @brief  A complex number class.
 
   The template class is similar and compatible with std::complex, however it provides slightly
   more convenient access to the real and imaginary parts using through the simple field access, as opposite
@@ -84,15 +86,9 @@ public:
     _Tp re, im; //< the real and the imaginary parts
 };
 
-/*!
-  \typedef
-*/
 typedef Complex<float> Complexf;
 typedef Complex<double> Complexd;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Complex<_Tp> >
 {
 public:
@@ -113,12 +109,40 @@ public:
 
 //////////////////////////////// Point_ ////////////////////////////////
 
-/*!
-  template 2D point class.
+/** @brief Template class for 2D points specified by its coordinates `x` and `y`.
 
-  The class defines a point in 2D space. Data type of the point coordinates is specified
-  as a template parameter. There are a few shorter aliases available for user convenience.
-  See cv::Point, cv::Point2i, cv::Point2f and cv::Point2d.
+An instance of the class is interchangeable with C structures, CvPoint and CvPoint2D32f . There is
+also a cast operator to convert point coordinates to the specified type. The conversion from
+floating-point coordinates to integer coordinates is done by rounding. Commonly, the conversion
+uses this operation for each of the coordinates. Besides the class members listed in the
+declaration above, the following operations on points are implemented:
+@code
+    pt1 = pt2 + pt3;
+    pt1 = pt2 - pt3;
+    pt1 = pt2 * a;
+    pt1 = a * pt2;
+    pt1 = pt2 / a;
+    pt1 += pt2;
+    pt1 -= pt2;
+    pt1 *= a;
+    pt1 /= a;
+    double value = norm(pt); // L2 norm
+    pt1 == pt2;
+    pt1 != pt2;
+@endcode
+For your convenience, the following type aliases are defined:
+@code
+    typedef Point_<int> Point2i;
+    typedef Point2i Point;
+    typedef Point_<float> Point2f;
+    typedef Point_<double> Point2d;
+@endcode
+Example:
+@code
+    Point2f a(0.3f, 0.f), b(0.f, 0.4f);
+    Point pt = (a + b)*10.f;
+    cout << pt.x << ", " << pt.y << endl;
+@endcode
 */
 template<typename _Tp> class Point_
 {
@@ -151,17 +175,11 @@ public:
     _Tp x, y; //< the point coordinates
 };
 
-/*!
-  \typedef
-*/
 typedef Point_<int> Point2i;
 typedef Point_<float> Point2f;
 typedef Point_<double> Point2d;
 typedef Point2i Point;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Point_<_Tp> >
 {
 public:
@@ -183,13 +201,19 @@ public:
 
 //////////////////////////////// Point3_ ////////////////////////////////
 
-/*!
-  template 3D point class.
+/** @brief Template class for 3D points specified by its coordinates `x`, `y` and `z`.
 
-  The class defines a point in 3D space. Data type of the point coordinates is specified
-  as a template parameter.
+An instance of the class is interchangeable with the C structure CvPoint2D32f . Similarly to
+Point_ , the coordinates of 3D points can be converted to another type. The vector arithmetic and
+comparison operations are also supported.
 
-  \see cv::Point3i, cv::Point3f and cv::Point3d
+The following Point3_\<\> aliases are available:
+@code
+    typedef Point3_<int> Point3i;
+    typedef Point3_<float> Point3f;
+    typedef Point3_<double> Point3d;
+@endcode
+@see cv::Point3i, cv::Point3f and cv::Point3d
 */
 template<typename _Tp> class Point3_
 {
@@ -219,16 +243,10 @@ public:
     _Tp x, y, z; //< the point coordinates
 };
 
-/*!
-  \typedef
-*/
 typedef Point3_<int> Point3i;
 typedef Point3_<float> Point3f;
 typedef Point3_<double> Point3d;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Point3_<_Tp> >
 {
 public:
@@ -250,11 +268,18 @@ public:
 
 //////////////////////////////// Size_ ////////////////////////////////
 
-/*!
-  The 2D size class
+/** @brief Template class for specifying the size of an image or rectangle.
 
-  The class represents the size of a 2D rectangle, image size, matrix size etc.
-  Normally, cv::Size ~ cv::Size_<int> is used.
+The class includes two members called width and height. The structure can be converted to and from
+the old OpenCV structures CvSize and CvSize2D32f . The same set of arithmetic and comparison
+operations as for Point_ is available.
+
+OpenCV defines the following Size_\<\> aliases:
+@code
+    typedef Size_<int> Size2i;
+    typedef Size2i Size;
+    typedef Size_<float> Size2f;
+@endcode
 */
 template<typename _Tp> class Size_
 {
@@ -277,17 +302,11 @@ public:
     _Tp width, height; // the width and the height
 };
 
-/*!
-  \typedef
-*/
 typedef Size_<int> Size2i;
 typedef Size_<float> Size2f;
 typedef Size_<double> Size2d;
 typedef Size2i Size;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Size_<_Tp> >
 {
 public:
@@ -309,11 +328,48 @@ public:
 
 //////////////////////////////// Rect_ ////////////////////////////////
 
-/*!
-  The 2D up-right rectangle class
+/** @brief Template class for 2D rectangles
 
-  The class represents a 2D rectangle with coordinates of the specified data type.
-  Normally, cv::Rect ~ cv::Rect_<int> is used.
+described by the following parameters:
+-   Coordinates of the top-left corner. This is a default interpretation of Rect_::x and Rect_::y
+    in OpenCV. Though, in your algorithms you may count x and y from the bottom-left corner.
+-   Rectangle width and height.
+
+OpenCV typically assumes that the top and left boundary of the rectangle are inclusive, while the
+right and bottom boundaries are not. For example, the method Rect_::contains returns true if
+
+\f[x  \leq pt.x < x+width,
+      y  \leq pt.y < y+height\f]
+
+Virtually every loop over an image ROI in OpenCV (where ROI is specified by Rect_\<int\> ) is
+implemented as:
+@code
+    for(int y = roi.y; y < roi.y + roi.height; y++)
+        for(int x = roi.x; x < roi.x + roi.width; x++)
+        {
+            // ...
+        }
+@endcode
+In addition to the class members, the following operations on rectangles are implemented:
+-   \f$\texttt{rect} = \texttt{rect} \pm \texttt{point}\f$ (shifting a rectangle by a certain offset)
+-   \f$\texttt{rect} = \texttt{rect} \pm \texttt{size}\f$ (expanding or shrinking a rectangle by a
+    certain amount)
+-   rect += point, rect -= point, rect += size, rect -= size (augmenting operations)
+-   rect = rect1 & rect2 (rectangle intersection)
+-   rect = rect1 | rect2 (minimum area rectangle containing rect1 and rect2 )
+-   rect &= rect1, rect |= rect1 (and the corresponding augmenting operations)
+-   rect == rect1, rect != rect1 (rectangle comparison)
+
+This is an example how the partial ordering on rectangles can be established (rect1 \f$\subseteq\f$
+rect2):
+@code
+    template<typename _Tp> inline bool
+    operator <= (const Rect_<_Tp>& r1, const Rect_<_Tp>& r2)
+    {
+        return (r1 & r2) == r1;
+    }
+@endcode
+For your convenience, the Rect_\<\> alias is available: cv::Rect
 */
 template<typename _Tp> class Rect_
 {
@@ -347,17 +403,11 @@ public:
     _Tp x, y, width, height; //< the top-left corner, as well as width and height of the rectangle
 };
 
-/*!
-  \typedef
-*/
 typedef Rect_<int> Rect2i;
 typedef Rect_<float> Rect2f;
 typedef Rect_<double> Rect2d;
 typedef Rect2i Rect;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Rect_<_Tp> >
 {
 public:
@@ -379,22 +429,52 @@ public:
 
 ///////////////////////////// RotatedRect /////////////////////////////
 
-/*!
-  The rotated 2D rectangle.
+/** @brief The class represents rotated (i.e. not up-right) rectangles on a plane.
 
-  The class represents rotated (i.e. not up-right) rectangles on a plane.
-  Each rectangle is described by the center point (mass center), length of each side
-  (represented by cv::Size2f structure) and the rotation angle in degrees.
+Each rectangle is specified by the center point (mass center), length of each side (represented by
+cv::Size2f structure) and the rotation angle in degrees.
+
+The sample below demonstrates how to use RotatedRect:
+@code
+    Mat image(200, 200, CV_8UC3, Scalar(0));
+    RotatedRect rRect = RotatedRect(Point2f(100,100), Size2f(100,50), 30);
+
+    Point2f vertices[4];
+    rRect.points(vertices);
+    for (int i = 0; i < 4; i++)
+        line(image, vertices[i], vertices[(i+1)%4], Scalar(0,255,0));
+
+    Rect brect = rRect.boundingRect();
+    rectangle(image, brect, Scalar(255,0,0));
+
+    imshow("rectangles", image);
+    waitKey(0);
+@endcode
+![image](pics/rotatedrect.png)
+
+@sa CamShift, fitEllipse, minAreaRect, CvBox2D
 */
 class CV_EXPORTS RotatedRect
 {
 public:
     //! various constructors
     RotatedRect();
+    /**
+    @param center The rectangle mass center.
+    @param size Width and height of the rectangle.
+    @param angle The rotation angle in a clockwise direction. When the angle is 0, 90, 180, 270 etc.,
+    the rectangle becomes an up-right rectangle.
+    */
     RotatedRect(const Point2f& center, const Size2f& size, float angle);
+    /**
+    Any 3 end points of the RotatedRect. They must be given in order (either clockwise or
+    anticlockwise).
+     */
     RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3);
 
-    //! returns 4 vertices of the rectangle
+    /** returns 4 vertices of the rectangle
+    @param pts The points array for storing rectangle vertices.
+    */
     void points(Point2f pts[]) const;
     //! returns the minimal up-right rectangle containing the rotated rectangle
     Rect boundingRect() const;
@@ -404,9 +484,6 @@ public:
     float angle;    //< the rotation angle. When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
 };
 
-/*!
-  traits
-*/
 template<> class DataType< RotatedRect >
 {
 public:
@@ -428,10 +505,28 @@ public:
 
 //////////////////////////////// Range /////////////////////////////////
 
-/*!
-   The 2D range class
+/** @brief Template class specifying a continuous subsequence (slice) of a sequence.
 
-   This is the class used to specify a continuous subsequence, i.e. part of a contour, or a column span in a matrix.
+The class is used to specify a row or a column span in a matrix ( Mat ) and for many other purposes.
+Range(a,b) is basically the same as a:b in Matlab or a..b in Python. As in Python, start is an
+inclusive left boundary of the range and end is an exclusive right boundary of the range. Such a
+half-opened interval is usually denoted as \f$[start,end)\f$ .
+
+The static method Range::all() returns a special variable that means "the whole sequence" or "the
+whole range", just like " : " in Matlab or " ... " in Python. All the methods and functions in
+OpenCV that take Range support this special Range::all() value. But, of course, in case of your own
+custom processing, you will probably have to check and handle it explicitly:
+@code
+    void my_function(..., const Range& r, ....)
+    {
+        if(r == Range::all()) {
+            // process all the data
+        }
+        else {
+            // process [r.start, r.end)
+        }
+    }
+@endcode
 */
 class CV_EXPORTS Range
 {
@@ -445,9 +540,6 @@ public:
     int start, end;
 };
 
-/*!
-  traits
-*/
 template<> class DataType<Range>
 {
 public:
@@ -469,11 +561,11 @@ public:
 
 //////////////////////////////// Scalar_ ///////////////////////////////
 
-/*!
-   The template scalar class.
+/** @brief Template class for a 4-element vector derived from Vec.
 
-   This is partially specialized cv::Vec class with the number of elements = 4, i.e. a short vector of four elements.
-   Normally, cv::Scalar ~ cv::Scalar_<double> is used.
+Being derived from Vec\<_Tp, 4\> , Scalar_ and Scalar can be used just as typical 4-element
+vectors. In addition, they can be converted to/from CvScalar . The type Scalar is widely used in
+OpenCV to pass pixel values.
 */
 template<typename _Tp> class Scalar_ : public Vec<_Tp, 4>
 {
@@ -493,7 +585,7 @@ public:
     template<typename T2> operator Scalar_<T2>() const;
 
     //! per-element product
-    Scalar_<_Tp> mul(const Scalar_<_Tp>& t, double scale=1 ) const;
+    Scalar_<_Tp> mul(const Scalar_<_Tp>& a, double scale=1 ) const;
 
     // returns (v0, -v1, -v2, -v3)
     Scalar_<_Tp> conj() const;
@@ -502,14 +594,8 @@ public:
     bool isReal() const;
 };
 
-/*!
-  \typedef
-*/
 typedef Scalar_<double> Scalar;
 
-/*!
-  traits
-*/
 template<typename _Tp> class DataType< Scalar_<_Tp> >
 {
 public:
@@ -531,42 +617,76 @@ public:
 
 /////////////////////////////// KeyPoint ////////////////////////////////
 
-/*!
- The Keypoint Class
+/** @brief Data structure for salient point detectors.
 
- The class instance stores a keypoint, i.e. a point feature found by one of many available keypoint detectors, such as
- Harris corner detector, cv::FAST, cv::StarDetector, cv::SURF, cv::SIFT, cv::LDetector etc.
+The class instance stores a keypoint, i.e. a point feature found by one of many available keypoint
+detectors, such as Harris corner detector, cv::FAST, cv::StarDetector, cv::SURF, cv::SIFT,
+cv::LDetector etc.
 
- The keypoint is characterized by the 2D position, scale
- (proportional to the diameter of the neighborhood that needs to be taken into account),
- orientation and some other parameters. The keypoint neighborhood is then analyzed by another algorithm that builds a descriptor
- (usually represented as a feature vector). The keypoints representing the same object in different images can then be matched using
- cv::KDTree or another method.
+The keypoint is characterized by the 2D position, scale (proportional to the diameter of the
+neighborhood that needs to be taken into account), orientation and some other parameters. The
+keypoint neighborhood is then analyzed by another algorithm that builds a descriptor (usually
+represented as a feature vector). The keypoints representing the same object in different images
+can then be matched using cv::KDTree or another method.
 */
 class CV_EXPORTS_W_SIMPLE KeyPoint
 {
 public:
     //! the default constructor
     CV_WRAP KeyPoint();
-    //! the full constructor
+    /**
+    @param _pt x & y coordinates of the keypoint
+    @param _size keypoint diameter
+    @param _angle keypoint orientation
+    @param _response keypoint detector response on the keypoint (that is, strength of the keypoint)
+    @param _octave pyramid octave in which the keypoint has been detected
+    @param _class_id object id
+     */
     KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1);
-    //! another form of the full constructor
+    /**
+    @param x x-coordinate of the keypoint
+    @param y y-coordinate of the keypoint
+    @param _size keypoint diameter
+    @param _angle keypoint orientation
+    @param _response keypoint detector response on the keypoint (that is, strength of the keypoint)
+    @param _octave pyramid octave in which the keypoint has been detected
+    @param _class_id object id
+     */
     CV_WRAP KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1);
 
     size_t hash() const;
 
-    //! converts vector of keypoints to vector of points
+    /**
+    This method converts vector of keypoints to vector of points or the reverse, where each keypoint is
+    assigned the same size and the same orientation.
+
+    @param keypoints Keypoints obtained from any feature detection algorithm like SIFT/SURF/ORB
+    @param points2f Array of (x,y) coordinates of each keypoint
+    @param keypointIndexes Array of indexes of keypoints to be converted to points. (Acts like a mask to
+    convert only specified keypoints)
+    */
     CV_WRAP static void convert(const std::vector<KeyPoint>& keypoints,
                                 CV_OUT std::vector<Point2f>& points2f,
                                 const std::vector<int>& keypointIndexes=std::vector<int>());
-    //! converts vector of points to the vector of keypoints, where each keypoint is assigned the same size and the same orientation
+    /** @overload
+    @param points2f Array of (x,y) coordinates of each keypoint
+    @param keypoints Keypoints obtained from any feature detection algorithm like SIFT/SURF/ORB
+    @param size keypoint diameter
+    @param response keypoint detector response on the keypoint (that is, strength of the keypoint)
+    @param octave pyramid octave in which the keypoint has been detected
+    @param class_id object id
+    */
     CV_WRAP static void convert(const std::vector<Point2f>& points2f,
                                 CV_OUT std::vector<KeyPoint>& keypoints,
                                 float size=1, float response=1, int octave=0, int class_id=-1);
 
-    //! computes overlap for pair of keypoints;
-    //! overlap is a ratio between area of keypoint regions intersection and
-    //! area of keypoint regions union (now keypoint region is circle)
+    /**
+    This method computes overlap for pair of keypoints. Overlap is the ratio between area of keypoint
+    regions' intersection and area of keypoint regions' union (considering keypoint region as circle).
+    If they don't overlap, we get zero. If they coincide at same location with same size, we get 1.
+    @param kp1 First keypoint
+    @param kp2 Second keypoint
+    */
     CV_WRAP static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
 
     CV_PROP_RW Point2f pt; //!< coordinates of the keypoints
@@ -579,9 +699,6 @@ public:
     CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
 };
 
-/*!
-  traits
-*/
 template<> class DataType<KeyPoint>
 {
 public:
@@ -603,9 +720,11 @@ public:
 
 //////////////////////////////// DMatch /////////////////////////////////
 
-/*
- * Struct for matching: query descriptor index, train descriptor index, train image index and distance between descriptors.
- */
+/** @brief Class for matching keypoint descriptors
+
+query descriptor index, train descriptor index, train image index, and distance between
+descriptors.
+*/
 class CV_EXPORTS_W_SIMPLE DMatch
 {
 public:
@@ -623,9 +742,6 @@ public:
     bool operator<(const DMatch &m) const;
 };
 
-/*!
-  traits
-*/
 template<> class DataType<DMatch>
 {
 public:
@@ -647,13 +763,18 @@ public:
 
 ///////////////////////////// TermCriteria //////////////////////////////
 
-/*!
- Termination criteria in iterative algorithms
- */
+/** @brief The class defining termination criteria for iterative algorithms.
+
+You can initialize it by default constructor and then override any parameters, or the structure may
+be fully initialized using the advanced variant of the constructor.
+*/
 class CV_EXPORTS TermCriteria
 {
 public:
-    enum
+    /**
+      Criteria type, can be one of: COUNT, EPS or COUNT + EPS
+    */
+    enum Type
     {
         COUNT=1, //!< the maximum number of iterations or elements to compute
         MAX_ITER=COUNT, //!< ditto
@@ -662,7 +783,11 @@ public:
 
     //! default constructor
     TermCriteria();
-    //! full constructor
+    /**
+    @param type The type of termination criteria, one of TermCriteria::Type
+    @param maxCount The maximum number of iterations or elements to compute.
+    @param epsilon The desired accuracy or change in parameters at which the iterative algorithm stops.
+    */
     TermCriteria(int type, int maxCount, double epsilon);
 
     int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
@@ -671,9 +796,45 @@ public:
 };
 
 
+//! @} core_basic
 
 ///////////////////////// raster image moments //////////////////////////
 
+//! @addtogroup imgproc_shape
+//! @{
+
+/** @brief struct returned by cv::moments
+
+The spatial moments \f$\texttt{Moments::m}_{ji}\f$ are computed as:
+
+\f[\texttt{m} _{ji}= \sum _{x,y}  \left ( \texttt{array} (x,y)  \cdot x^j  \cdot y^i \right )\f]
+
+The central moments \f$\texttt{Moments::mu}_{ji}\f$ are computed as:
+
+\f[\texttt{mu} _{ji}= \sum _{x,y}  \left ( \texttt{array} (x,y)  \cdot (x -  \bar{x} )^j  \cdot (y -  \bar{y} )^i \right )\f]
+
+where \f$(\bar{x}, \bar{y})\f$ is the mass center:
+
+\f[\bar{x} = \frac{\texttt{m}_{10}}{\texttt{m}_{00}} , \; \bar{y} = \frac{\texttt{m}_{01}}{\texttt{m}_{00}}\f]
+
+The normalized central moments \f$\texttt{Moments::nu}_{ij}\f$ are computed as:
+
+\f[\texttt{nu} _{ji}= \frac{\texttt{mu}_{ji}}{\texttt{m}_{00}^{(i+j)/2+1}} .\f]
+
+@note
+\f$\texttt{mu}_{00}=\texttt{m}_{00}\f$, \f$\texttt{nu}_{00}=1\f$
+\f$\texttt{nu}_{10}=\texttt{mu}_{10}=\texttt{mu}_{01}=\texttt{mu}_{10}=0\f$ , hence the values are not
+stored.
+
+The moments of a contour are defined in the same way but computed using the Green's formula (see
+<http://en.wikipedia.org/wiki/Green_theorem>). So, due to a limited raster resolution, the moments
+computed for a contour are slightly different from the moments computed for the same rasterized
+contour.
+
+@note
+Since the contour moments are computed using Green formula, you may get seemingly odd results for
+contours with self-intersections, e.g. a zero area (m00) for butterfly-shaped contours.
+ */
 class CV_EXPORTS_W_MAP Moments
 {
 public:
@@ -687,17 +848,22 @@ public:
     ////! the conversion to CvMoments
     //operator CvMoments() const;
 
-    //! spatial moments
+    //! @name spatial moments
+    //! @{
     CV_PROP_RW double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03;
-    //! central moments
+    //! @}
+
+    //! @name central moments
+    //! @{
     CV_PROP_RW double  mu20, mu11, mu02, mu30, mu21, mu12, mu03;
-    //! central normalized moments
+    //! @}
+
+    //! @name central normalized moments
+    //! @{
     CV_PROP_RW double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
+    //! @}
 };
 
-/*!
-  traits
-*/
 template<> class DataType<Moments>
 {
 public:
@@ -715,7 +881,9 @@ public:
     typedef Vec<channel_type, channels> vec_type;
 };
 
+//! @} imgproc_shape
 
+//! @cond IGNORED
 
 /////////////////////////////////////////////////////////////////////////
 ///////////////////////////// Implementation ////////////////////////////
@@ -995,6 +1163,30 @@ Point_<_Tp>& operator *= (Point_<_Tp>& a, double b)
 }
 
 template<typename _Tp> static inline
+Point_<_Tp>& operator /= (Point_<_Tp>& a, int b)
+{
+    a.x = saturate_cast<_Tp>(a.x / b);
+    a.y = saturate_cast<_Tp>(a.y / b);
+    return a;
+}
+
+template<typename _Tp> static inline
+Point_<_Tp>& operator /= (Point_<_Tp>& a, float b)
+{
+    a.x = saturate_cast<_Tp>(a.x / b);
+    a.y = saturate_cast<_Tp>(a.y / b);
+    return a;
+}
+
+template<typename _Tp> static inline
+Point_<_Tp>& operator /= (Point_<_Tp>& a, double b)
+{
+    a.x = saturate_cast<_Tp>(a.x / b);
+    a.y = saturate_cast<_Tp>(a.y / b);
+    return a;
+}
+
+template<typename _Tp> static inline
 double norm(const Point_<_Tp>& pt)
 {
     return std::sqrt((double)pt.x*pt.x + (double)pt.y*pt.y);
@@ -1078,6 +1270,30 @@ Point3_<_Tp> operator * (const Matx<_Tp, 3, 3>& a, const Point_<_Tp>& b)
 {
     Matx<_Tp, 3, 1> tmp = a * Vec<_Tp,3>(b.x, b.y, 1);
     return Point3_<_Tp>(tmp.val[0], tmp.val[1], tmp.val[2]);
+}
+
+template<typename _Tp> static inline
+Point_<_Tp> operator / (const Point_<_Tp>& a, int b)
+{
+    Point_<_Tp> tmp(a);
+    tmp /= b;
+    return tmp;
+}
+
+template<typename _Tp> static inline
+Point_<_Tp> operator / (const Point_<_Tp>& a, float b)
+{
+    Point_<_Tp> tmp(a);
+    tmp /= b;
+    return tmp;
+}
+
+template<typename _Tp> static inline
+Point_<_Tp> operator / (const Point_<_Tp>& a, double b)
+{
+    Point_<_Tp> tmp(a);
+    tmp /= b;
+    return tmp;
 }
 
 
@@ -1188,6 +1404,33 @@ Point3_<_Tp>& operator *= (Point3_<_Tp>& a, double b)
 }
 
 template<typename _Tp> static inline
+Point3_<_Tp>& operator /= (Point3_<_Tp>& a, int b)
+{
+    a.x = saturate_cast<_Tp>(a.x / b);
+    a.y = saturate_cast<_Tp>(a.y / b);
+    a.z = saturate_cast<_Tp>(a.z / b);
+    return a;
+}
+
+template<typename _Tp> static inline
+Point3_<_Tp>& operator /= (Point3_<_Tp>& a, float b)
+{
+    a.x = saturate_cast<_Tp>(a.x / b);
+    a.y = saturate_cast<_Tp>(a.y / b);
+    a.z = saturate_cast<_Tp>(a.z / b);
+    return a;
+}
+
+template<typename _Tp> static inline
+Point3_<_Tp>& operator /= (Point3_<_Tp>& a, double b)
+{
+    a.x = saturate_cast<_Tp>(a.x / b);
+    a.y = saturate_cast<_Tp>(a.y / b);
+    a.z = saturate_cast<_Tp>(a.z / b);
+    return a;
+}
+
+template<typename _Tp> static inline
 double norm(const Point3_<_Tp>& pt)
 {
     return std::sqrt((double)pt.x*pt.x + (double)pt.y*pt.y + (double)pt.z*pt.z);
@@ -1272,6 +1515,30 @@ Matx<_Tp, 4, 1> operator * (const Matx<_Tp, 4, 4>& a, const Point3_<_Tp>& b)
     return a * Matx<_Tp, 4, 1>(b.x, b.y, b.z, 1);
 }
 
+template<typename _Tp> static inline
+Point3_<_Tp> operator / (const Point3_<_Tp>& a, int b)
+{
+    Point3_<_Tp> tmp(a);
+    tmp /= b;
+    return tmp;
+}
+
+template<typename _Tp> static inline
+Point3_<_Tp> operator / (const Point3_<_Tp>& a, float b)
+{
+    Point3_<_Tp> tmp(a);
+    tmp /= b;
+    return tmp;
+}
+
+template<typename _Tp> static inline
+Point3_<_Tp> operator / (const Point3_<_Tp>& a, double b)
+{
+    Point3_<_Tp> tmp(a);
+    tmp /= b;
+    return tmp;
+}
+
 
 
 ////////////////////////////////// Size /////////////////////////////////
@@ -1311,23 +1578,36 @@ _Tp Size_<_Tp>::area() const
     return width * height;
 }
 
+template<typename _Tp> static inline
+Size_<_Tp>& operator *= (Size_<_Tp>& a, _Tp b)
+{
+    a.width *= b;
+    a.height *= b;
+    return a;
+}
 
 template<typename _Tp> static inline
 Size_<_Tp> operator * (const Size_<_Tp>& a, _Tp b)
 {
-    return Size_<_Tp>(a.width * b, a.height * b);
+    Size_<_Tp> tmp(a);
+    tmp *= b;
+    return tmp;
 }
 
 template<typename _Tp> static inline
-Size_<_Tp> operator + (const Size_<_Tp>& a, const Size_<_Tp>& b)
+Size_<_Tp>& operator /= (Size_<_Tp>& a, _Tp b)
 {
-    return Size_<_Tp>(a.width + b.width, a.height + b.height);
+    a.width /= b;
+    a.height /= b;
+    return a;
 }
 
 template<typename _Tp> static inline
-Size_<_Tp> operator - (const Size_<_Tp>& a, const Size_<_Tp>& b)
+Size_<_Tp> operator / (const Size_<_Tp>& a, _Tp b)
 {
-    return Size_<_Tp>(a.width - b.width, a.height - b.height);
+    Size_<_Tp> tmp(a);
+    tmp /= b;
+    return tmp;
 }
 
 template<typename _Tp> static inline
@@ -1339,11 +1619,27 @@ Size_<_Tp>& operator += (Size_<_Tp>& a, const Size_<_Tp>& b)
 }
 
 template<typename _Tp> static inline
+Size_<_Tp> operator + (const Size_<_Tp>& a, const Size_<_Tp>& b)
+{
+    Size_<_Tp> tmp(a);
+    tmp += b;
+    return tmp;
+}
+
+template<typename _Tp> static inline
 Size_<_Tp>& operator -= (Size_<_Tp>& a, const Size_<_Tp>& b)
 {
     a.width -= b.width;
     a.height -= b.height;
     return a;
+}
+
+template<typename _Tp> static inline
+Size_<_Tp> operator - (const Size_<_Tp>& a, const Size_<_Tp>& b)
+{
+    Size_<_Tp> tmp(a);
+    tmp -= b;
+    return tmp;
 }
 
 template<typename _Tp> static inline
@@ -1355,7 +1651,7 @@ bool operator == (const Size_<_Tp>& a, const Size_<_Tp>& b)
 template<typename _Tp> static inline
 bool operator != (const Size_<_Tp>& a, const Size_<_Tp>& b)
 {
-    return a.width != b.width || a.height != b.height;
+    return !(a == b);
 }
 
 
@@ -1674,12 +1970,12 @@ Scalar_<_Tp> Scalar_<_Tp>::all(_Tp v0)
 
 
 template<typename _Tp> inline
-Scalar_<_Tp> Scalar_<_Tp>::mul(const Scalar_<_Tp>& t, double scale ) const
+Scalar_<_Tp> Scalar_<_Tp>::mul(const Scalar_<_Tp>& a, double scale ) const
 {
-    return Scalar_<_Tp>(saturate_cast<_Tp>(this->val[0] * t.val[0] * scale),
-                        saturate_cast<_Tp>(this->val[1] * t.val[1] * scale),
-                        saturate_cast<_Tp>(this->val[2] * t.val[2] * scale),
-                        saturate_cast<_Tp>(this->val[3] * t.val[3] * scale));
+    return Scalar_<_Tp>(saturate_cast<_Tp>(this->val[0] * a.val[0] * scale),
+                        saturate_cast<_Tp>(this->val[1] * a.val[1] * scale),
+                        saturate_cast<_Tp>(this->val[2] * a.val[2] * scale),
+                        saturate_cast<_Tp>(this->val[3] * a.val[3] * scale));
 }
 
 template<typename _Tp> inline
@@ -1924,6 +2220,8 @@ TermCriteria::TermCriteria()
 inline
 TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
     : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
+
+//! @endcond
 
 } // cv
 

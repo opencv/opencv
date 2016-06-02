@@ -51,12 +51,6 @@
 #include "opencv2/photo/photo_c.h"
 #include "opencv2/video/tracking_c.h"
 #include "opencv2/objdetect/objdetect_c.h"
-#include "opencv2/contrib/compat.hpp"
-
-#include "opencv2/legacy.hpp"
-#include "opencv2/legacy/compat.hpp"
-#include "opencv2/legacy/blobtrack.hpp"
-
 
 #endif
 

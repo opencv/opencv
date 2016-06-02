@@ -51,13 +51,48 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda_types.hpp"
 
+/**
+  @defgroup cuda CUDA-accelerated Computer Vision
+  @{
+    @defgroup cudacore Core part
+    @{
+      @defgroup cudacore_init Initalization and Information
+      @defgroup cudacore_struct Data Structures
+    @}
+  @}
+ */
+
 namespace cv { namespace cuda {
 
-//////////////////////////////// GpuMat ///////////////////////////////
+//! @addtogroup cudacore_struct
+//! @{
 
-// Smart pointer for GPU memory with reference counting.
-// Its interface is mostly similar with cv::Mat.
+//===================================================================================
+// GpuMat
+//===================================================================================
 
+/** @brief Base storage class for GPU memory with reference counting.
+
+Its interface matches the Mat interface with the following limitations:
+
+-   no arbitrary dimensions support (only 2D)
+-   no functions that return references to their data (because references on GPU are not valid for
+    CPU)
+-   no expression templates technique support
+
+Beware that the latter limitation may lead to overloaded matrix operators that cause memory
+allocations. The GpuMat class is convertible to cuda::PtrStepSz and cuda::PtrStep so it can be
+passed directly to the kernel.
+
+@note In contrast with Mat, in most cases GpuMat::isContinuous() == false . This means that rows are
+aligned to a size depending on the hardware. Single-row GpuMat is always a continuous matrix.
+
+@note You are not recommended to leave static or global GpuMat variables allocated, that is, to rely
+on its destructor. The destruction order of such variables and CUDA context is undefined. GPU memory
+release function returns error if the CUDA context has been destroyed before.
+
+@sa Mat
+ */
 class CV_EXPORTS GpuMat
 {
 public:
@@ -262,72 +297,107 @@ public:
 
     //! helper fields used in locateROI and adjustROI
     uchar* datastart;
-    uchar* dataend;
+    const uchar* dataend;
 
     //! allocator
     Allocator* allocator;
 };
 
-//! creates continuous matrix
+/** @brief Creates a continuous matrix.
+
+@param rows Row count.
+@param cols Column count.
+@param type Type of the matrix.
+@param arr Destination matrix. This parameter changes only if it has a proper type and area (
+\f$\texttt{rows} \times \texttt{cols}\f$ ).
+
+Matrix is called continuous if its elements are stored continuously, that is, without gaps at the
+end of each row.
+ */
 CV_EXPORTS void createContinuous(int rows, int cols, int type, OutputArray arr);
 
-//! ensures that size of the given matrix is not less than (rows, cols) size
-//! and matrix type is match specified one too
-CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
+/** @brief Ensures that the size of a matrix is big enough and the matrix has a proper type.
 
-CV_EXPORTS GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat& mat);
+@param rows Minimum desired number of rows.
+@param cols Minimum desired number of columns.
+@param type Desired matrix type.
+@param arr Destination matrix.
+
+The function does not reallocate memory if the matrix has proper attributes already.
+ */
+CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
 
 //! BufferPool management (must be called before Stream creation)
 CV_EXPORTS void setBufferPoolUsage(bool on);
 CV_EXPORTS void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount);
 
-//////////////////////////////// CudaMem ////////////////////////////////
+//===================================================================================
+// HostMem
+//===================================================================================
 
-// CudaMem is limited cv::Mat with page locked memory allocation.
-// Page locked memory is only needed for async and faster coping to GPU.
-// It is convertable to cv::Mat header without reference counting
-// so you can use it with other opencv functions.
+/** @brief Class with reference counting wrapping special memory type allocation functions from CUDA.
 
-class CV_EXPORTS CudaMem
+Its interface is also Mat-like but with additional memory type parameters.
+
+-   **PAGE_LOCKED** sets a page locked memory type used commonly for fast and asynchronous
+    uploading/downloading data from/to GPU.
+-   **SHARED** specifies a zero copy memory allocation that enables mapping the host memory to GPU
+    address space, if supported.
+-   **WRITE_COMBINED** sets the write combined buffer that is not cached by CPU. Such buffers are
+    used to supply GPU with data when GPU only reads it. The advantage is a better CPU cache
+    utilization.
+
+@note Allocation size of such memory types is usually limited. For more details, see *CUDA 2.2
+Pinned Memory APIs* document or *CUDA C Programming Guide*.
+ */
+class CV_EXPORTS HostMem
 {
 public:
     enum AllocType { PAGE_LOCKED = 1, SHARED = 2, WRITE_COMBINED = 4 };
 
-    explicit CudaMem(AllocType alloc_type = PAGE_LOCKED);
+    static MatAllocator* getAllocator(AllocType alloc_type = PAGE_LOCKED);
 
-    CudaMem(const CudaMem& m);
+    explicit HostMem(AllocType alloc_type = PAGE_LOCKED);
 
-    CudaMem(int rows, int cols, int type, AllocType alloc_type = PAGE_LOCKED);
-    CudaMem(Size size, int type, AllocType alloc_type = PAGE_LOCKED);
+    HostMem(const HostMem& m);
+
+    HostMem(int rows, int cols, int type, AllocType alloc_type = PAGE_LOCKED);
+    HostMem(Size size, int type, AllocType alloc_type = PAGE_LOCKED);
 
     //! creates from host memory with coping data
-    explicit CudaMem(InputArray arr, AllocType alloc_type = PAGE_LOCKED);
+    explicit HostMem(InputArray arr, AllocType alloc_type = PAGE_LOCKED);
 
-    ~CudaMem();
+    ~HostMem();
 
-    CudaMem& operator =(const CudaMem& m);
+    HostMem& operator =(const HostMem& m);
 
     //! swaps with other smart pointer
-    void swap(CudaMem& b);
+    void swap(HostMem& b);
 
     //! returns deep copy of the matrix, i.e. the data is copied
-    CudaMem clone() const;
+    HostMem clone() const;
 
     //! allocates new matrix data unless the matrix already has specified size and type.
     void create(int rows, int cols, int type);
     void create(Size size, int type);
 
-    //! creates alternative CudaMem header for the same data, with different
+    //! creates alternative HostMem header for the same data, with different
     //! number of channels and/or different number of rows
-    CudaMem reshape(int cn, int rows = 0) const;
+    HostMem reshape(int cn, int rows = 0) const;
 
     //! decrements reference counter and released memory if needed.
     void release();
 
-    //! returns matrix header with disabled reference counting for CudaMem data.
+    //! returns matrix header with disabled reference counting for HostMem data.
     Mat createMatHeader() const;
 
-    //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.
+    /** @brief Maps CPU memory to GPU address space and creates the cuda::GpuMat header without reference counting
+    for it.
+
+    This can be done only if memory was allocated with the SHARED flag and if it is supported by the
+    hardware. Laptops often share video and CPU memory, so address spaces can be mapped, which
+    eliminates an extra copy.
+     */
     GpuMat createGpuMatHeader() const;
 
     // Please see cv::Mat for descriptions
@@ -350,23 +420,35 @@ public:
     int* refcount;
 
     uchar* datastart;
-    uchar* dataend;
+    const uchar* dataend;
 
     AllocType alloc_type;
 };
 
-//! page-locks the matrix m memory and maps it for the device(s)
+/** @brief Page-locks the memory of matrix and maps it for the device(s).
+
+@param m Input matrix.
+ */
 CV_EXPORTS void registerPageLocked(Mat& m);
 
-//! unmaps the memory of matrix m, and makes it pageable again
+/** @brief Unmaps the memory of matrix and makes it pageable again.
+
+@param m Input matrix.
+ */
 CV_EXPORTS void unregisterPageLocked(Mat& m);
 
-///////////////////////////////// Stream //////////////////////////////////
+//===================================================================================
+// Stream
+//===================================================================================
 
-// Encapculates Cuda Stream. Provides interface for async coping.
-// Passed to each function that supports async kernel execution.
-// Reference counting is enabled.
+/** @brief This class encapsulates a queue of asynchronous calls.
 
+@note Currently, you may face problems if an operation is enqueued twice with different data. Some
+functions use the constant GPU memory, and next call may update the memory before the previous one
+has been finished. But calling different operations asynchronously is safe because each operation
+has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are
+also safe. :
+ */
 class CV_EXPORTS Stream
 {
     typedef void (Stream::*bool_type)() const;
@@ -378,16 +460,26 @@ public:
     //! creates a new asynchronous stream
     Stream();
 
-    //! queries an asynchronous stream for completion status
+    /** @brief Returns true if the current stream queue is finished. Otherwise, it returns false.
+    */
     bool queryIfComplete() const;
 
-    //! waits for stream tasks to complete
+    /** @brief Blocks the current CPU thread until all operations in the stream are complete.
+    */
     void waitForCompletion();
 
-    //! makes a compute stream wait on an event
+    /** @brief Makes a compute stream wait on an event.
+    */
     void waitEvent(const Event& event);
 
-    //! adds a callback to be called on the host after all currently enqueued items in the stream have completed
+    /** @brief Adds a callback to be called on the host after all currently enqueued items in the stream have
+    completed.
+
+    @note Callbacks must not make any CUDA API calls. Callbacks must not perform any synchronization
+    that may depend on outstanding device work or other callbacks that are not mandated to run earlier.
+    Callbacks without a mandated order (in independent streams) execute in undefined order and may be
+    serialized.
+     */
     void enqueueHostCallback(StreamCallback callback, void* userData);
 
     //! return Stream object for default CUDA stream
@@ -404,6 +496,7 @@ private:
 
     friend struct StreamAccessor;
     friend class BufferPool;
+    friend class DefaultDeviceInitializer;
 };
 
 class CV_EXPORTS Event
@@ -435,25 +528,48 @@ public:
 
 private:
     Ptr<Impl> impl_;
+    Event(const Ptr<Impl>& impl);
 
     friend struct EventAccessor;
 };
 
-//////////////////////////////// Initialization & Info ////////////////////////
+//! @} cudacore_struct
 
-//! this is the only function that do not throw exceptions if the library is compiled without CUDA
+//===================================================================================
+// Initialization & Info
+//===================================================================================
+
+//! @addtogroup cudacore_init
+//! @{
+
+/** @brief Returns the number of installed CUDA-enabled devices.
+
+Use this function before any other CUDA functions calls. If OpenCV is compiled without CUDA support,
+this function returns 0.
+ */
 CV_EXPORTS int getCudaEnabledDeviceCount();
 
-//! set device to be used for GPU executions for the calling host thread
+/** @brief Sets a device and initializes it for the current thread.
+
+@param device System index of a CUDA device starting with 0.
+
+If the call of this function is omitted, a default device is initialized at the fist CUDA usage.
+ */
 CV_EXPORTS void setDevice(int device);
 
-//! returns which device is currently being used for the calling host thread
+/** @brief Returns the current device index set by cuda::setDevice or initialized by default.
+ */
 CV_EXPORTS int getDevice();
 
-//! explicitly destroys and cleans up all resources associated with the current device in the current process
-//! any subsequent API call to this device will reinitialize the device
+/** @brief Explicitly destroys and cleans up all resources associated with the current device in the current
+process.
+
+Any subsequent API call to this device will reinitialize the device.
+ */
 CV_EXPORTS void resetDevice();
 
+/** @brief Enumeration providing CUDA computing features.
+ */
 enum FeatureSet
 {
     FEATURE_SET_COMPUTE_10 = 10,
@@ -463,7 +579,9 @@ enum FeatureSet
     FEATURE_SET_COMPUTE_20 = 20,
     FEATURE_SET_COMPUTE_21 = 21,
     FEATURE_SET_COMPUTE_30 = 30,
+    FEATURE_SET_COMPUTE_32 = 32,
     FEATURE_SET_COMPUTE_35 = 35,
+    FEATURE_SET_COMPUTE_50 = 50,
 
     GLOBAL_ATOMICS = FEATURE_SET_COMPUTE_11,
     SHARED_ATOMICS = FEATURE_SET_COMPUTE_12,
@@ -475,12 +593,27 @@ enum FeatureSet
 //! checks whether current device supports the given feature
 CV_EXPORTS bool deviceSupports(FeatureSet feature_set);
 
-//! information about what GPU archs this OpenCV CUDA module was compiled for
+/** @brief Class providing a set of static methods to check what NVIDIA\* card architecture the CUDA module was
+built for.
+
+According to the CUDA C Programming Guide Version 3.2: "PTX code produced for some specific compute
+capability can always be compiled to binary code of greater or equal compute capability".
+ */
 class CV_EXPORTS TargetArchs
 {
 public:
+    /** @brief The following method checks whether the module was built with the support of the given feature:
+
+    @param feature_set Features to be checked. See :ocvcuda::FeatureSet.
+     */
     static bool builtWith(FeatureSet feature_set);
 
+    /** @brief There is a set of methods to check whether the module contains intermediate (PTX) or binary CUDA
+    code for the given architecture(s):
+
+    @param major Major compute capability version.
+    @param minor Minor compute capability version.
+     */
     static bool has(int major, int minor);
     static bool hasPtx(int major, int minor);
     static bool hasBin(int major, int minor);
@@ -491,17 +624,25 @@ public:
     static bool hasEqualOrGreaterBin(int major, int minor);
 };
 
-//! information about the given GPU.
+/** @brief Class providing functionality for querying the specified GPU properties.
+ */
 class CV_EXPORTS DeviceInfo
 {
 public:
     //! creates DeviceInfo object for the current GPU
     DeviceInfo();
 
-    //! creates DeviceInfo object for the given GPU
+    /** @brief The constructors.
+
+    @param device_id System index of the CUDA device starting with 0.
+
+    Constructs the DeviceInfo object for the specified device. If device_id parameter is missed, it
+    constructs an object for the current device.
+     */
     DeviceInfo(int device_id);
 
-    //! device number.
+    /** @brief Returns system index of the CUDA device starting with 0.
+    */
     int deviceID() const;
 
     //! ASCII string identifying device
@@ -563,10 +704,10 @@ public:
 
     enum ComputeMode
     {
-        ComputeModeDefault,         /**< default compute mode (Multiple threads can use ::cudaSetDevice() with this device) */
-        ComputeModeExclusive,       /**< compute-exclusive-thread mode (Only one thread in one process will be able to use ::cudaSetDevice() with this device) */
-        ComputeModeProhibited,      /**< compute-prohibited mode (No threads can use ::cudaSetDevice() with this device) */
-        ComputeModeExclusiveProcess /**< compute-exclusive-process mode (Many threads in one process will be able to use ::cudaSetDevice() with this device) */
+        ComputeModeDefault,         /**< default compute mode (Multiple threads can use cudaSetDevice with this device) */
+        ComputeModeExclusive,       /**< compute-exclusive-thread mode (Only one thread in one process will be able to use cudaSetDevice with this device) */
+        ComputeModeProhibited,      /**< compute-prohibited mode (No threads can use cudaSetDevice with this device) */
+        ComputeModeExclusiveProcess /**< compute-exclusive-process mode (Many threads in one process will be able to use cudaSetDevice with this device) */
     };
 
     //! compute mode
@@ -673,10 +814,19 @@ public:
     size_t freeMemory() const;
     size_t totalMemory() const;
 
-    //! checks whether device supports the given feature
+    /** @brief Provides information on CUDA feature support.
+
+    @param feature_set Features to be checked. See cuda::FeatureSet.
+
+    This function returns true if the device has the specified CUDA feature. Otherwise, it returns false
+     */
     bool supports(FeatureSet feature_set) const;
 
-    //! checks whether the CUDA module can be run on the given device
+    /** @brief Checks the CUDA module and device compatibility.
+
+    This function returns true if the CUDA module can be run on the specified device. Otherwise, it
+    returns false .
+     */
     bool isCompatible() const;
 
 private:
@@ -685,6 +835,8 @@ private:
 
 CV_EXPORTS void printCudaDeviceInfo(int device);
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
+
+//! @} cudacore_init
 
 }} // namespace cv { namespace cuda {
 

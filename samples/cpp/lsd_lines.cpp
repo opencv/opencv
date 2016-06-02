@@ -4,6 +4,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 using namespace std;
@@ -12,15 +13,13 @@ using namespace cv;
 int main(int argc, char** argv)
 {
     std::string in;
-    if (argc != 2)
+    cv::CommandLineParser parser(argc, argv, "{@input|../data/building.jpg|input image}{help h||show help message}");
+    if (parser.has("help"))
     {
-        std::cout << "Usage: lsd_lines [input image]. Now loading building.jpg" << std::endl;
-        in = "building.jpg";
+        parser.printMessage();
+        return 0;
     }
-    else
-    {
-        in = argv[1];
-    }
+    in = parser.get<string>("@input");
 
     Mat image = imread(in, IMREAD_GRAYSCALE);
 
@@ -36,7 +35,7 @@ int main(int argc, char** argv)
 #endif
 
     double start = double(getTickCount());
-    vector<Vec4i> lines_std;
+    vector<Vec4f> lines_std;
 
     // Detect the lines
     ls->detect(image, lines_std);

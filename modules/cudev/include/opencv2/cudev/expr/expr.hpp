@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class Body> struct Expr
 {
     Body body;
@@ -86,6 +89,8 @@ template <class Body> struct PtrTraits< Expr<Body> >
         return PtrTraits<Body>::getCols(expr.body);
     }
 };
+
+//! @}
 
 }}
 

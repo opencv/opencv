@@ -2,7 +2,7 @@
 #define _OPENCV_BOOST_H_
 
 #include "traincascade_features.h"
-#include "ml.h"
+#include "old_ml.hpp"
 
 struct CvCascadeBoostParams : CvBoostParams
 {

@@ -47,30 +47,39 @@
 #  error cuda_stream_accessor.hpp header must be compiled as C++
 #endif
 
-// This is only header file that depends on Cuda. All other headers are independent.
-// So if you use OpenCV binaries you do noot need to install Cuda Toolkit.
-// But of you wanna use CUDA by yourself, may get cuda stream instance using the class below.
-// In this case you have to install Cuda Toolkit.
+/** @file cuda_stream_accessor.hpp
+ * This is only header file that depends on CUDA Runtime API. All other headers are independent.
+ */
 
 #include <cuda_runtime.h>
-#include "opencv2/core/cvdef.h"
+#include "opencv2/core/cuda.hpp"
 
 namespace cv
 {
     namespace cuda
     {
-        class Stream;
-        class Event;
 
+//! @addtogroup cudacore_struct
+//! @{
+
+        /** @brief Class that enables getting cudaStream_t from cuda::Stream
+         */
         struct StreamAccessor
         {
             CV_EXPORTS static cudaStream_t getStream(const Stream& stream);
+            CV_EXPORTS static Stream wrapStream(cudaStream_t stream);
         };
 
+        /** @brief Class that enables getting cudaEvent_t from cuda::Event
+         */
         struct EventAccessor
         {
             CV_EXPORTS static cudaEvent_t getEvent(const Event& event);
+            CV_EXPORTS static Event wrapEvent(cudaEvent_t event);
         };
+
+//! @}
+
     }
 }
 

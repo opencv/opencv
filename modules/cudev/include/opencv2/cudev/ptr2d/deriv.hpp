@@ -53,6 +53,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // derivX
 
 template <class SrcPtr> struct DerivXPtr
@@ -387,6 +390,8 @@ __host__ LaplacianPtrSz<ksize, typename PtrTraits<SrcPtr>::ptr_type> laplacianPt
 template <int ksize, class SrcPtr> struct PtrTraits< LaplacianPtrSz<ksize, SrcPtr> > : PtrTraitsBase<LaplacianPtrSz<ksize, SrcPtr>, LaplacianPtr<ksize, SrcPtr> >
 {
 };
+
+//! @}
 
 }}
 

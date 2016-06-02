@@ -4,6 +4,7 @@
  * @author OpenCV team
  */
 
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
@@ -25,7 +26,7 @@ int main( int, char** argv )
   /// Load image
   src = imread( argv[1], 1 );
 
-  if( !src.data )
+  if( src.empty() )
     { cout<<"Usage: ./Histogram_Demo <path_to_image>"<<endl;
       return -1;
     }

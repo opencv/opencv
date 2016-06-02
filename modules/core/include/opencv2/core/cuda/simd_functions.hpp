@@ -75,53 +75,11 @@
 
 #include "common.hpp"
 
-/*
-  This header file contains inline functions that implement intra-word SIMD
-  operations, that are hardware accelerated on sm_3x (Kepler) GPUs. Efficient
-  emulation code paths are provided for earlier architectures (sm_1x, sm_2x)
-  to make the code portable across all GPUs supported by CUDA. The following
-  functions are currently implemented:
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
 
-  vadd2(a,b)      per-halfword unsigned addition, with wrap-around: a + b
-  vsub2(a,b)      per-halfword unsigned subtraction, with wrap-around: a - b
-  vabsdiff2(a,b)  per-halfword unsigned absolute difference: |a - b|
-  vavg2(a,b)      per-halfword unsigned average: (a + b) / 2
-  vavrg2(a,b)     per-halfword unsigned rounded average: (a + b + 1) / 2
-  vseteq2(a,b)    per-halfword unsigned comparison: a == b ? 1 : 0
-  vcmpeq2(a,b)    per-halfword unsigned comparison: a == b ? 0xffff : 0
-  vsetge2(a,b)    per-halfword unsigned comparison: a >= b ? 1 : 0
-  vcmpge2(a,b)    per-halfword unsigned comparison: a >= b ? 0xffff : 0
-  vsetgt2(a,b)    per-halfword unsigned comparison: a > b ? 1 : 0
-  vcmpgt2(a,b)    per-halfword unsigned comparison: a > b ? 0xffff : 0
-  vsetle2(a,b)    per-halfword unsigned comparison: a <= b ? 1 : 0
-  vcmple2(a,b)    per-halfword unsigned comparison: a <= b ? 0xffff : 0
-  vsetlt2(a,b)    per-halfword unsigned comparison: a < b ? 1 : 0
-  vcmplt2(a,b)    per-halfword unsigned comparison: a < b ? 0xffff : 0
-  vsetne2(a,b)    per-halfword unsigned comparison: a != b ? 1 : 0
-  vcmpne2(a,b)    per-halfword unsigned comparison: a != b ? 0xffff : 0
-  vmax2(a,b)      per-halfword unsigned maximum: max(a, b)
-  vmin2(a,b)      per-halfword unsigned minimum: min(a, b)
-
-  vadd4(a,b)      per-byte unsigned addition, with wrap-around: a + b
-  vsub4(a,b)      per-byte unsigned subtraction, with wrap-around: a - b
-  vabsdiff4(a,b)  per-byte unsigned absolute difference: |a - b|
-  vavg4(a,b)      per-byte unsigned average: (a + b) / 2
-  vavrg4(a,b)     per-byte unsigned rounded average: (a + b + 1) / 2
-  vseteq4(a,b)    per-byte unsigned comparison: a == b ? 1 : 0
-  vcmpeq4(a,b)    per-byte unsigned comparison: a == b ? 0xff : 0
-  vsetge4(a,b)    per-byte unsigned comparison: a >= b ? 1 : 0
-  vcmpge4(a,b)    per-byte unsigned comparison: a >= b ? 0xff : 0
-  vsetgt4(a,b)    per-byte unsigned comparison: a > b ? 1 : 0
-  vcmpgt4(a,b)    per-byte unsigned comparison: a > b ? 0xff : 0
-  vsetle4(a,b)    per-byte unsigned comparison: a <= b ? 1 : 0
-  vcmple4(a,b)    per-byte unsigned comparison: a <= b ? 0xff : 0
-  vsetlt4(a,b)    per-byte unsigned comparison: a < b ? 1 : 0
-  vcmplt4(a,b)    per-byte unsigned comparison: a < b ? 0xff : 0
-  vsetne4(a,b)    per-byte unsigned comparison: a != b ? 1: 0
-  vcmpne4(a,b)    per-byte unsigned comparison: a != b ? 0xff: 0
-  vmax4(a,b)      per-byte unsigned maximum: max(a, b)
-  vmin4(a,b)      per-byte unsigned minimum: min(a, b)
-*/
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
@@ -905,5 +863,7 @@ namespace cv { namespace cuda { namespace device
         return r;
     }
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_SIMD_FUNCTIONS_HPP__

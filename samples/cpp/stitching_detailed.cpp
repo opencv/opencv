@@ -46,9 +46,11 @@
 #include <string>
 #include "opencv2/opencv_modules.hpp"
 #include <opencv2/core/utility.hpp>
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
+#include "opencv2/stitching/detail/timelapsers.hpp"
 #include "opencv2/stitching/detail/camera.hpp"
 #include "opencv2/stitching/detail/exposure_compensate.hpp"
 #include "opencv2/stitching/detail/matchers.hpp"
@@ -116,7 +118,11 @@ static void printUsage()
         "  --blend_strength <float>\n"
         "      Blending strength from [0,100] range. The default is 5.\n"
         "  --output <result_img>\n"
-        "      The default is 'result.jpg'.\n";
+        "      The default is 'result.jpg'.\n"
+        "  --timelapse (as_is|crop) \n"
+        "      Output warped images separately as frames of a time lapse movie, with 'fixed_' prepended to input file names.\n"
+        "  --rangewidth <int>\n"
+        "      uses range_width to limit number of images to match with.\n";
 }
 
 
@@ -140,8 +146,12 @@ int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
 float match_conf = 0.3f;
 string seam_find_type = "gc_color";
 int blend_type = Blender::MULTI_BAND;
+int timelapse_type = Timelapser::AS_IS;
 float blend_strength = 5;
 string result_name = "result.jpg";
+bool timelapse = false;
+int range_width = -1;
+
 
 static int parseCmdArgs(int argc, char** argv)
 {
@@ -304,6 +314,26 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        else if (string(argv[i]) == "--timelapse")
+        {
+            timelapse = true;
+
+            if (string(argv[i + 1]) == "as_is")
+                timelapse_type = Timelapser::AS_IS;
+            else if (string(argv[i + 1]) == "crop")
+                timelapse_type = Timelapser::CROP;
+            else
+            {
+                cout << "Bad timelapse method\n";
+                return -1;
+            }
+            i++;
+        }
+        else if (string(argv[i]) == "--rangewidth")
+        {
+            range_width = atoi(argv[i + 1]);
+            i++;
+        }
         else if (string(argv[i]) == "--blend_strength")
         {
             blend_strength = static_cast<float>(atof(argv[i + 1]));
@@ -358,7 +388,7 @@ int main(int argc, char* argv[])
     Ptr<FeaturesFinder> finder;
     if (features_type == "surf")
     {
-#ifdef HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_XFEATURES2D
         if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
             finder = makePtr<SurfFeaturesFinderGpu>();
         else
@@ -432,9 +462,19 @@ int main(int argc, char* argv[])
     t = getTickCount();
 #endif
     vector<MatchesInfo> pairwise_matches;
-    BestOf2NearestMatcher matcher(try_cuda, match_conf);
-    matcher(features, pairwise_matches);
-    matcher.collectGarbage();
+    if (range_width==-1)
+    {
+        BestOf2NearestMatcher matcher(try_cuda, match_conf);
+        matcher(features, pairwise_matches);
+        matcher.collectGarbage();
+    }
+    else
+    {
+        BestOf2NearestRangeMatcher matcher(range_width, try_cuda, match_conf);
+        matcher(features, pairwise_matches);
+        matcher.collectGarbage();
+    }
+
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Check if we should save matches graph
@@ -527,7 +567,7 @@ int main(int argc, char* argv[])
     {
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras.size(); ++i)
-            rmats.push_back(cameras[i].R);
+            rmats.push_back(cameras[i].R.clone());
         waveCorrect(rmats, wave_correct);
         for (size_t i = 0; i < cameras.size(); ++i)
             cameras[i].R = rmats[i];
@@ -637,7 +677,7 @@ int main(int argc, char* argv[])
         seam_finder = makePtr<detail::VoronoiSeamFinder>();
     else if (seam_find_type == "gc_color")
     {
-#ifdef HAVE_OPENCV_CUDA
+#ifdef HAVE_OPENCV_CUDALEGACY
         if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR);
         else
@@ -646,7 +686,7 @@ int main(int argc, char* argv[])
     }
     else if (seam_find_type == "gc_colorgrad")
     {
-#ifdef HAVE_OPENCV_CUDA
+#ifdef HAVE_OPENCV_CUDALEGACY
         if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR_GRAD);
         else
@@ -679,6 +719,7 @@ int main(int argc, char* argv[])
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
     Ptr<Blender> blender;
+    Ptr<Timelapser> timelapser;
     //double compose_seam_aspect = 1;
     double compose_work_aspect = 1;
 
@@ -755,7 +796,7 @@ int main(int argc, char* argv[])
         resize(dilated_mask, seam_mask, mask_warped.size());
         mask_warped = seam_mask & mask_warped;
 
-        if (!blender)
+        if (!blender && !timelapse)
         {
             blender = Blender::createDefault(blend_type, try_cuda);
             Size dst_sz = resultRoi(corners, sizes).size();
@@ -776,17 +817,43 @@ int main(int argc, char* argv[])
             }
             blender->prepare(corners, sizes);
         }
+        else if (!timelapser && timelapse)
+        {
+            timelapser = Timelapser::createDefault(timelapse_type);
+            timelapser->initialize(corners, sizes);
+        }
 
         // Blend the current image
-        blender->feed(img_warped_s, mask_warped, corners[img_idx]);
+        if (timelapse)
+        {
+            timelapser->process(img_warped_s, Mat::ones(img_warped_s.size(), CV_8UC1), corners[img_idx]);
+            String fixedFileName;
+            size_t pos_s = String(img_names[img_idx]).find_last_of("/\\");
+            if (pos_s == String::npos)
+            {
+                fixedFileName = "fixed_" + img_names[img_idx];
+            }
+            else
+            {
+                fixedFileName = "fixed_" + String(img_names[img_idx]).substr(pos_s + 1, String(img_names[img_idx]).length() - pos_s);
+            }
+            imwrite(fixedFileName, timelapser->getDst());
+        }
+        else
+        {
+            blender->feed(img_warped_s, mask_warped, corners[img_idx]);
+        }
     }
 
-    Mat result, result_mask;
-    blender->blend(result, result_mask);
+    if (!timelapse)
+    {
+        Mat result, result_mask;
+        blender->blend(result, result_mask);
 
-    LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+        LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    imwrite(result_name, result);
+        imwrite(result_name, result);
+    }
 
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return 0;

@@ -80,11 +80,11 @@ class ComparisonFrameRender extends FrameRender {
         final int shift = (int)(mWidth * 0.005);
         border.add(new MatOfPoint(new Point(mWidth / 2 - shift, 0), new Point(mWidth / 2 + shift, 0),
                 new Point(mWidth / 2 + shift, mHeight), new Point(mWidth / 2 - shift, mHeight)));
-        Core.fillPoly(comparisonFrame, border, new Scalar(255, 255, 255));
+        Imgproc.fillPoly(comparisonFrame, border, new Scalar(255, 255, 255));
 
-        Core.putText(comparisonFrame, mResources.getString(R.string.original), new Point(mWidth * 0.1, mHeight * 0.1),
+        Imgproc.putText(comparisonFrame, mResources.getString(R.string.original), new Point(mWidth * 0.1, mHeight * 0.1),
                 Core.FONT_HERSHEY_SIMPLEX, 1.0, new Scalar(255, 255, 0));
-        Core.putText(comparisonFrame, mResources.getString(R.string.undistorted), new Point(mWidth * 0.6, mHeight * 0.1),
+        Imgproc.putText(comparisonFrame, mResources.getString(R.string.undistorted), new Point(mWidth * 0.6, mHeight * 0.1),
                 Core.FONT_HERSHEY_SIMPLEX, 1.0, new Scalar(255, 255, 0));
 
         return comparisonFrame;

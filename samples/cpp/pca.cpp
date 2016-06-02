@@ -43,6 +43,7 @@
 #include <sstream>
 
 #include <opencv2/core/core.hpp>
+#include "opencv2/imgcodecs.hpp"
 #include <opencv2/highgui/highgui.hpp>
 
 using namespace cv;
@@ -120,13 +121,19 @@ static void onTrackbar(int pos, void* ptr)
 // Main
 int main(int argc, char** argv)
 {
-    if (argc != 2) {
-        cout << "usage: " << argv[0] << " <image_list.txt>" << endl;
+    cv::CommandLineParser parser(argc, argv, "{@input||image list}{help h||show help message}");
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        exit(0);
+    }
+    // Get the path to your CSV.
+    string imgList = parser.get<string>("@input");
+    if (imgList.empty())
+    {
+        parser.printMessage();
         exit(1);
     }
-
-    // Get the path to your CSV.
-    string imgList = string(argv[1]);
 
     // vector to hold the images
     vector<Mat> images;

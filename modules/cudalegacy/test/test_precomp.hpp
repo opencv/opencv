@@ -51,7 +51,7 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
+#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) && !defined(__aarch64__)
     #include <fpu_control.h>
 #endif
 
@@ -73,6 +73,8 @@
 #include "opencv2/highgui.hpp"
 
 #include "opencv2/core/private.cuda.hpp"
+
+#include "opencv2/opencv_modules.hpp"
 
 #include "cvconfig.h"
 

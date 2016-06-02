@@ -62,10 +62,10 @@ public:
     squareSize = 1.0f;
     maxRectifiedDistance = (float)(squareSize / 2.0);
   }
-  void findGrid(const std::vector<cv::Point2f> points, cv::Size patternSize, std::vector<cv::Point2f>& centers);
+  void findGrid(const std::vector<cv::Point2f> &points, cv::Size patternSize, std::vector<cv::Point2f>& centers);
 
   //cluster 2d points by geometric coordinates
-  void hierarchicalClustering(const std::vector<cv::Point2f> points, const cv::Size &patternSize, std::vector<cv::Point2f> &patternPoints);
+  void hierarchicalClustering(const std::vector<cv::Point2f> &points, const cv::Size &patternSize, std::vector<cv::Point2f> &patternPoints);
 private:
   void findCorners(const std::vector<cv::Point2f> &hull2f, std::vector<cv::Point2f> &corners);
   void findOutsideCorners(const std::vector<cv::Point2f> &corners, std::vector<cv::Point2f> &outsideCorners);

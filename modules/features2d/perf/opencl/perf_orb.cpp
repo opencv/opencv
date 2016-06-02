@@ -1,4 +1,4 @@
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
@@ -22,10 +22,10 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Detect, ORB_IMAGES)
     mframe.copyTo(frame);
 
     declare.in(frame);
-    ORB detector(1500, 1.3f, 1);
+    Ptr<ORB> detector = ORB::create(1500, 1.3f, 1);
     vector<KeyPoint> points;
 
-    OCL_TEST_CYCLE() detector(frame, mask, points);
+    OCL_TEST_CYCLE() detector->detect(frame, points, mask);
 
     std::sort(points.begin(), points.end(), comparators::KeypointGreater());
     SANITY_CHECK_KEYPOINTS(points, 1e-5);
@@ -44,14 +44,14 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Extract, ORB_IMAGES)
 
     declare.in(frame);
 
-    ORB detector(1500, 1.3f, 1);
+    Ptr<ORB> detector = ORB::create(1500, 1.3f, 1);
     vector<KeyPoint> points;
-    detector(frame, mask, points);
+    detector->detect(frame, points, mask);
     std::sort(points.begin(), points.end(), comparators::KeypointGreater());
 
     UMat descriptors;
 
-    OCL_TEST_CYCLE() detector(frame, mask, points, descriptors, true);
+    OCL_TEST_CYCLE() detector->compute(frame, points, descriptors);
 
     SANITY_CHECK(descriptors);
 }
@@ -61,6 +61,12 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Full, ORB_IMAGES)
     string filename = getDataPath(GetParam());
     Mat mframe = imread(filename, IMREAD_GRAYSCALE);
 
+    double desc_eps = 1e-6;
+#ifdef ANDROID
+    if (cv::ocl::Device::getDefault().isNVidia())
+        desc_eps = 2;
+#endif
+
     if (mframe.empty())
         FAIL() << "Unable to load source image " << filename;
 
@@ -68,16 +74,16 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Full, ORB_IMAGES)
     mframe.copyTo(frame);
 
     declare.in(frame);
-    ORB detector(1500, 1.3f, 1);
+    Ptr<ORB> detector = ORB::create(1500, 1.3f, 1);
 
     vector<KeyPoint> points;
     UMat descriptors;
 
-    OCL_TEST_CYCLE() detector(frame, mask, points, descriptors, false);
+    OCL_TEST_CYCLE() detector->detectAndCompute(frame, mask, points, descriptors, false);
 
     ::perf::sort(points, descriptors);
     SANITY_CHECK_KEYPOINTS(points, 1e-5);
-    SANITY_CHECK(descriptors);
+    SANITY_CHECK(descriptors, desc_eps);
 }
 
 } // ocl

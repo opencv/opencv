@@ -44,549 +44,713 @@
 #define __OPENCV_HIGHGUI_HPP__
 
 #include "opencv2/core.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/videoio.hpp"
 
+/**
+@defgroup highgui High-level GUI
+
+While OpenCV was designed for use in full-scale applications and can be used within functionally
+rich UI frameworks (such as Qt\*, WinForms\*, or Cocoa\*) or without any UI at all, sometimes there
+it is required to try functionality quickly and visualize the results. This is what the HighGUI
+module has been designed for.
+
+It provides easy interface to:
+
+-   Create and manipulate windows that can display images and "remember" their content (no need to
+    handle repaint events from OS).
+-   Add trackbars to the windows, handle simple mouse events as well as keyboard commands.
+
+@{
+    @defgroup highgui_opengl OpenGL support
+    @defgroup highgui_qt Qt New Functions
+
+    ![image](pics/qtgui.png)
+
+    This figure explains new functionality implemented with Qt\* GUI. The new GUI provides a statusbar,
+    a toolbar, and a control panel. The control panel can have trackbars and buttonbars attached to it.
+    If you cannot see the control panel, press Ctrl+P or right-click any Qt window and select **Display
+    properties window**.
+
+    -   To attach a trackbar, the window name parameter must be NULL.
+
+    -   To attach a buttonbar, a button must be created. If the last bar attached to the control panel
+        is a buttonbar, the new button is added to the right of the last button. If the last bar
+        attached to the control panel is a trackbar, or the control panel is empty, a new buttonbar is
+        created. Then, a new button is attached to it.
+
+    See below the example used to generate the figure:
+    @code
+        int main(int argc, char *argv[])
+        {
+
+            int value = 50;
+            int value2 = 0;
+
+
+            namedWindow("main1",WINDOW_NORMAL);
+            namedWindow("main2",WINDOW_AUTOSIZE | CV_GUI_NORMAL);
+            createTrackbar( "track1", "main1", &value, 255,  NULL);
+
+            String nameb1 = "button1";
+            String nameb2 = "button2";
+
+            createButton(nameb1,callbackButton,&nameb1,QT_CHECKBOX,1);
+            createButton(nameb2,callbackButton,NULL,QT_CHECKBOX,0);
+            createTrackbar( "track2", NULL, &value2, 255, NULL);
+            createButton("button5",callbackButton1,NULL,QT_RADIOBOX,0);
+            createButton("button6",callbackButton2,NULL,QT_RADIOBOX,1);
+
+            setMouseCallback( "main2",on_mouse,NULL );
+
+            Mat img1 = imread("files/flower.jpg");
+            VideoCapture video;
+            video.open("files/hockey.avi");
+
+            Mat img2,img3;
+
+            while( waitKey(33) != 27 )
+            {
+                img1.convertTo(img2,-1,1,value);
+                video >> img3;
+
+                imshow("main1",img2);
+                imshow("main2",img3);
+            }
+
+            destroyAllWindows();
+
+            return 0;
+        }
+    @endcode
+
+
+    @defgroup highgui_winrt WinRT support
+
+    This figure explains new functionality implemented with WinRT GUI. The new GUI provides an Image control,
+    and a slider panel. Slider panel holds trackbars attached to it.
+
+    Sliders are attached below the image control. Every new slider is added below the previous one.
+
+    See below the example used to generate the figure:
+    @code
+        void sample_app::MainPage::ShowWindow()
+        {
+            static cv::String windowName("sample");
+            cv::winrt_initContainer(this->cvContainer);
+            cv::namedWindow(windowName); // not required
+
+            cv::Mat image = cv::imread("Assets/sample.jpg");
+            cv::Mat converted = cv::Mat(image.rows, image.cols, CV_8UC4);
+            cv::cvtColor(image, converted, COLOR_BGR2BGRA);
+            cv::imshow(windowName, converted); // this will create window if it hasn't been created before
+
+            int state = 42;
+            cv::TrackbarCallback callback = [](int pos, void* userdata)
+            {
+                if (pos == 0) {
+                    cv::destroyWindow(windowName);
+                }
+            };
+            cv::TrackbarCallback callbackTwin = [](int pos, void* userdata)
+            {
+                if (pos >= 70) {
+                    cv::destroyAllWindows();
+                }
+            };
+            cv::createTrackbar("Sample trackbar", windowName, &state, 100, callback);
+            cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
+        }
+    @endcode
+
+    @defgroup highgui_c C API
+@}
+*/
 
 ///////////////////////// graphical user interface //////////////////////////
 namespace cv
 {
 
-// Flags for namedWindow
-enum { WINDOW_NORMAL     = 0x00000000, // the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size
-       WINDOW_AUTOSIZE   = 0x00000001, // the user cannot resize the window, the size is constrainted by the image displayed
-       WINDOW_OPENGL     = 0x00001000, // window with opengl support
+//! @addtogroup highgui
+//! @{
 
-       WINDOW_FULLSCREEN = 1,          // change the window to fullscreen
-       WINDOW_FREERATIO  = 0x00000100, // the image expends as much as it can (no ratio constraint)
-       WINDOW_KEEPRATIO  = 0x00000000  // the ratio of the image is respected
+//! Flags for cv::namedWindow
+enum WindowFlags {
+       WINDOW_NORMAL     = 0x00000000, //!< the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size.
+       WINDOW_AUTOSIZE   = 0x00000001, //!< the user cannot resize the window, the size is constrainted by the image displayed.
+       WINDOW_OPENGL     = 0x00001000, //!< window with opengl support.
+
+       WINDOW_FULLSCREEN = 1,          //!< change the window to fullscreen.
+       WINDOW_FREERATIO  = 0x00000100, //!< the image expends as much as it can (no ratio constraint).
+       WINDOW_KEEPRATIO  = 0x00000000, //!< the ratio of the image is respected.
+       WINDOW_GUI_EXPANDED=0x00000000, //!< status bar and tool bar
+       WINDOW_GUI_NORMAL = 0x00000010, //!< old fashious way
+    };
+
+//! Flags for cv::setWindowProperty / cv::getWindowProperty
+enum WindowPropertyFlags {
+       WND_PROP_FULLSCREEN   = 0, //!< fullscreen property    (can be WINDOW_NORMAL or WINDOW_FULLSCREEN).
+       WND_PROP_AUTOSIZE     = 1, //!< autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE).
+       WND_PROP_ASPECT_RATIO = 2, //!< window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO).
+       WND_PROP_OPENGL       = 3  //!< opengl support.
      };
 
-// Flags for set / getWindowProperty
-enum { WND_PROP_FULLSCREEN   = 0, // fullscreen property    (can be WINDOW_NORMAL or WINDOW_FULLSCREEN)
-       WND_PROP_AUTOSIZE     = 1, // autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE)
-       WND_PROP_ASPECT_RATIO = 2, // window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO);
-       WND_PROP_OPENGL       = 3  // opengl support
+//! Mouse Events see cv::MouseCallback
+enum MouseEventTypes {
+       EVENT_MOUSEMOVE      = 0, //!< indicates that the mouse pointer has moved over the window.
+       EVENT_LBUTTONDOWN    = 1, //!< indicates that the left mouse button is pressed.
+       EVENT_RBUTTONDOWN    = 2, //!< indicates that the right mouse button is pressed.
+       EVENT_MBUTTONDOWN    = 3, //!< indicates that the middle mouse button is pressed.
+       EVENT_LBUTTONUP      = 4, //!< indicates that left mouse button is released.
+       EVENT_RBUTTONUP      = 5, //!< indicates that right mouse button is released.
+       EVENT_MBUTTONUP      = 6, //!< indicates that middle mouse button is released.
+       EVENT_LBUTTONDBLCLK  = 7, //!< indicates that left mouse button is double clicked.
+       EVENT_RBUTTONDBLCLK  = 8, //!< indicates that right mouse button is double clicked.
+       EVENT_MBUTTONDBLCLK  = 9, //!< indicates that middle mouse button is double clicked.
+       EVENT_MOUSEWHEEL     = 10,//!< positive and negative values mean forward and backward scrolling, respectively.
+       EVENT_MOUSEHWHEEL    = 11 //!< positive and negative values mean right and left scrolling, respectively.
      };
 
-enum { EVENT_MOUSEMOVE      = 0,
-       EVENT_LBUTTONDOWN    = 1,
-       EVENT_RBUTTONDOWN    = 2,
-       EVENT_MBUTTONDOWN    = 3,
-       EVENT_LBUTTONUP      = 4,
-       EVENT_RBUTTONUP      = 5,
-       EVENT_MBUTTONUP      = 6,
-       EVENT_LBUTTONDBLCLK  = 7,
-       EVENT_RBUTTONDBLCLK  = 8,
-       EVENT_MBUTTONDBLCLK  = 9,
-       EVENT_MOUSEWHEEL     = 10,
-       EVENT_MOUSEHWHEEL    = 11
+//! Mouse Event Flags see cv::MouseCallback
+enum MouseEventFlags {
+       EVENT_FLAG_LBUTTON   = 1, //!< indicates that the left mouse button is down.
+       EVENT_FLAG_RBUTTON   = 2, //!< indicates that the right mouse button is down.
+       EVENT_FLAG_MBUTTON   = 4, //!< indicates that the middle mouse button is down.
+       EVENT_FLAG_CTRLKEY   = 8, //!< indicates that CTRL Key is pressed.
+       EVENT_FLAG_SHIFTKEY  = 16,//!< indicates that SHIFT Key is pressed.
+       EVENT_FLAG_ALTKEY    = 32 //!< indicates that ALT Key is pressed.
      };
 
-enum { EVENT_FLAG_LBUTTON   = 1,
-       EVENT_FLAG_RBUTTON   = 2,
-       EVENT_FLAG_MBUTTON   = 4,
-       EVENT_FLAG_CTRLKEY   = 8,
-       EVENT_FLAG_SHIFTKEY  = 16,
-       EVENT_FLAG_ALTKEY    = 32
+//! Qt font weight
+enum QtFontWeights {
+        QT_FONT_LIGHT           = 25, //!< Weight of 25
+        QT_FONT_NORMAL          = 50, //!< Weight of 50
+        QT_FONT_DEMIBOLD        = 63, //!< Weight of 63
+        QT_FONT_BOLD            = 75, //!< Weight of 75
+        QT_FONT_BLACK           = 87  //!< Weight of 87
      };
 
-// Qt font
-enum {  QT_FONT_LIGHT           = 25, //QFont::Light,
-        QT_FONT_NORMAL          = 50, //QFont::Normal,
-        QT_FONT_DEMIBOLD        = 63, //QFont::DemiBold,
-        QT_FONT_BOLD            = 75, //QFont::Bold,
-        QT_FONT_BLACK           = 87  //QFont::Black
+//! Qt font style
+enum QtFontStyles {
+        QT_STYLE_NORMAL         = 0, //!< Normal font.
+        QT_STYLE_ITALIC         = 1, //!< Italic font.
+        QT_STYLE_OBLIQUE        = 2  //!< Oblique font.
      };
 
-// Qt font style
-enum {  QT_STYLE_NORMAL         = 0, //QFont::StyleNormal,
-        QT_STYLE_ITALIC         = 1, //QFont::StyleItalic,
-        QT_STYLE_OBLIQUE        = 2  //QFont::StyleOblique
+//! Qt "button" type
+enum QtButtonTypes {
+       QT_PUSH_BUTTON = 0, //!< Push button.
+       QT_CHECKBOX    = 1, //!< Checkbox button.
+       QT_RADIOBOX    = 2  //!< Radiobox button.
      };
 
-// Qt "button" type
-enum { QT_PUSH_BUTTON = 0,
-       QT_CHECKBOX    = 1,
-       QT_RADIOBOX    = 2
-     };
-
-
+/** @brief Callback function for mouse events. see cv::setMouseCallback
+@param event one of the cv::MouseEventTypes constants.
+@param x The x-coordinate of the mouse event.
+@param y The y-coordinate of the mouse event.
+@param flags one of the cv::MouseEventFlags constants.
+@param userdata The optional parameter.
+ */
 typedef void (*MouseCallback)(int event, int x, int y, int flags, void* userdata);
+
+/** @brief Callback function for Trackbar see cv::createTrackbar
+@param pos current position of the specified trackbar.
+@param userdata The optional parameter.
+ */
 typedef void (*TrackbarCallback)(int pos, void* userdata);
+
+/** @brief Callback function defined to be called every frame. See cv::setOpenGlDrawCallback
+@param userdata The optional parameter.
+ */
 typedef void (*OpenGlDrawCallback)(void* userdata);
+
+/** @brief Callback function for a button created by cv::createButton
+@param state current state of the button. It could be -1 for a push button, 0 or 1 for a check/radio box button.
+@param userdata The optional parameter.
+ */
 typedef void (*ButtonCallback)(int state, void* userdata);
 
+/** @brief Creates a window.
 
+The function namedWindow creates a window that can be used as a placeholder for images and
+trackbars. Created windows are referred to by their names.
+
+If a window with the same name already exists, the function does nothing.
+
+You can call cv::destroyWindow or cv::destroyAllWindows to close the window and de-allocate any associated
+memory usage. For a simple program, you do not really have to call these functions because all the
+resources and windows of the application are closed automatically by the operating system upon exit.
+
+@note
+
+Qt backend supports additional flags:
+ -   **WINDOW_NORMAL or WINDOW_AUTOSIZE:** WINDOW_NORMAL enables you to resize the
+     window, whereas WINDOW_AUTOSIZE adjusts automatically the window size to fit the
+     displayed image (see imshow ), and you cannot change the window size manually.
+ -   **WINDOW_FREERATIO or WINDOW_KEEPRATIO:** WINDOW_FREERATIO adjusts the image
+     with no respect to its ratio, whereas WINDOW_KEEPRATIO keeps the image ratio.
+ -   **WINDOW_GUI_NORMAL or WINDOW_GUI_EXPANDED:** WINDOW_GUI_NORMAL is the old way to draw the window
+     without statusbar and toolbar, whereas WINDOW_GUI_EXPANDED is a new enhanced GUI.
+By default, flags == WINDOW_AUTOSIZE | WINDOW_KEEPRATIO | WINDOW_GUI_EXPANDED
+
+@param winname Name of the window in the window caption that may be used as a window identifier.
+@param flags Flags of the window. The supported flags are: (cv::WindowFlags)
+ */
 CV_EXPORTS_W void namedWindow(const String& winname, int flags = WINDOW_AUTOSIZE);
 
+/** @brief Destroys the specified window.
+
+The function destroyWindow destroys the window with the given name.
+
+@param winname Name of the window to be destroyed.
+ */
 CV_EXPORTS_W void destroyWindow(const String& winname);
 
+/** @brief Destroys all of the HighGUI windows.
+
+The function destroyAllWindows destroys all of the opened HighGUI windows.
+ */
 CV_EXPORTS_W void destroyAllWindows();
 
 CV_EXPORTS_W int startWindowThread();
 
+/** @brief Waits for a pressed key.
+
+The function waitKey waits for a key event infinitely (when \f$\texttt{delay}\leq 0\f$ ) or for delay
+milliseconds, when it is positive. Since the OS has a minimum time between switching threads, the
+function will not wait exactly delay ms, it will wait at least delay ms, depending on what else is
+running on your computer at that time. It returns the code of the pressed key or -1 if no key was
+pressed before the specified time had elapsed.
+
+@note
+
+This function is the only method in HighGUI that can fetch and handle events, so it needs to be
+called periodically for normal event processing unless HighGUI is used within an environment that
+takes care of event processing.
+
+@note
+
+The function only works if there is at least one HighGUI window created and the window is active.
+If there are several HighGUI windows, any of them can be active.
+
+@param delay Delay in milliseconds. 0 is the special value that means "forever".
+ */
 CV_EXPORTS_W int waitKey(int delay = 0);
 
+/** @brief Displays an image in the specified window.
+
+The function imshow displays an image in the specified window. If the window was created with the
+cv::WINDOW_AUTOSIZE flag, the image is shown with its original size, however it is still limited by the screen resolution.
+Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
+
+-   If the image is 8-bit unsigned, it is displayed as is.
+-   If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the
+    value range [0,255\*256] is mapped to [0,255].
+-   If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the
+    value range [0,1] is mapped to [0,255].
+
+If window was created with OpenGL support, cv::imshow also support ogl::Buffer , ogl::Texture2D and
+cuda::GpuMat as input.
+
+If the window was not created before this function, it is assumed creating a window with cv::WINDOW_AUTOSIZE.
+
+If you need to show an image that is bigger than the screen resolution, you will need to call namedWindow("", WINDOW_NORMAL) before the imshow.
+
+@note This function should be followed by cv::waitKey function which displays the image for specified
+milliseconds. Otherwise, it won't display the image. For example, **waitKey(0)** will display the window
+infinitely until any keypress (it is suitable for image display). **waitKey(25)** will display a frame
+for 25 ms, after which display will be automatically closed. (If you put it in a loop to read
+videos, it will display the video frame-by-frame)
+
+@note
+
+[__Windows Backend Only__] Pressing Ctrl+C will copy the image to the clipboard.
+
+[__Windows Backend Only__] Pressing Ctrl+S will show a dialog to save the image.
+
+@param winname Name of the window.
+@param mat Image to be shown.
+ */
 CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
 
+/** @brief Resizes window to the specified size
+
+@note
+
+-   The specified window size is for the image area. Toolbars are not counted.
+-   Only windows created without cv::WINDOW_AUTOSIZE flag can be resized.
+
+@param winname Window name.
+@param width The new window width.
+@param height The new window height.
+ */
 CV_EXPORTS_W void resizeWindow(const String& winname, int width, int height);
 
+/** @brief Moves window to the specified position
+
+@param winname Name of the window.
+@param x The new x-coordinate of the window.
+@param y The new y-coordinate of the window.
+ */
 CV_EXPORTS_W void moveWindow(const String& winname, int x, int y);
 
+/** @brief Changes parameters of a window dynamically.
+
+The function setWindowProperty enables changing properties of a window.
+
+@param winname Name of the window.
+@param prop_id Window property to edit. The supported operation flags are: (cv::WindowPropertyFlags)
+@param prop_value New value of the window property. The supported flags are: (cv::WindowFlags)
+ */
 CV_EXPORTS_W void setWindowProperty(const String& winname, int prop_id, double prop_value);
 
+/** @brief Updates window title
+@param winname Name of the window.
+@param title New title.
+*/
+CV_EXPORTS_W void setWindowTitle(const String& winname, const String& title);
+
+/** @brief Provides parameters of a window.
+
+The function getWindowProperty returns properties of a window.
+
+@param winname Name of the window.
+@param prop_id Window property to retrieve. The following operation flags are available: (cv::WindowPropertyFlags)
+
+@sa setWindowProperty
+ */
 CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
-//! assigns callback for mouse events
+/** @brief Sets mouse handler for the specified window
+
+@param winname Name of the window.
+@param onMouse Mouse callback. See OpenCV samples, such as
+<https://github.com/Itseez/opencv/tree/master/samples/cpp/ffilldemo.cpp>, on how to specify and
+use the callback.
+@param userdata The optional parameter passed to the callback.
+ */
 CV_EXPORTS void setMouseCallback(const String& winname, MouseCallback onMouse, void* userdata = 0);
 
+/** @brief Gets the mouse-wheel motion delta, when handling mouse-wheel events cv::EVENT_MOUSEWHEEL and
+cv::EVENT_MOUSEHWHEEL.
+
+For regular mice with a scroll-wheel, delta will be a multiple of 120. The value 120 corresponds to
+a one notch rotation of the wheel or the threshold for action to be taken and one such action should
+occur for each delta. Some high-precision mice with higher-resolution freely-rotating wheels may
+generate smaller values.
+
+For cv::EVENT_MOUSEWHEEL positive and negative values mean forward and backward scrolling,
+respectively. For cv::EVENT_MOUSEHWHEEL, where available, positive and negative values mean right and
+left scrolling, respectively.
+
+With the C API, the macro CV_GET_WHEEL_DELTA(flags) can be used alternatively.
+
+@note
+
+Mouse-wheel events are currently supported only on Windows.
+
+@param flags The mouse callback flags parameter.
+ */
 CV_EXPORTS int getMouseWheelDelta(int flags);
 
+/** @brief Creates a trackbar and attaches it to the specified window.
+
+The function createTrackbar creates a trackbar (a slider or range control) with the specified name
+and range, assigns a variable value to be a position synchronized with the trackbar and specifies
+the callback function onChange to be called on the trackbar position change. The created trackbar is
+displayed in the specified window winname.
+
+@note
+
+[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar should be attached to the
+control panel.
+
+Clicking the label of each trackbar enables editing the trackbar values manually.
+
+@param trackbarname Name of the created trackbar.
+@param winname Name of the window that will be used as a parent of the created trackbar.
+@param value Optional pointer to an integer variable whose value reflects the position of the
+slider. Upon creation, the slider position is defined by this variable.
+@param count Maximal position of the slider. The minimal position is always 0.
+@param onChange Pointer to the function to be called every time the slider changes position. This
+function should be prototyped as void Foo(int,void\*); , where the first parameter is the trackbar
+position and the second parameter is the user data (see the next parameter). If the callback is
+the NULL pointer, no callbacks are called, but only value is updated.
+@param userdata User data that is passed as is to the callback. It can be used to handle trackbar
+events without using global variables.
+ */
 CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
                               int* value, int count,
                               TrackbarCallback onChange = 0,
                               void* userdata = 0);
 
+/** @brief Returns the trackbar position.
+
+The function returns the current position of the specified trackbar.
+
+@note
+
+[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+panel.
+
+@param trackbarname Name of the trackbar.
+@param winname Name of the window that is the parent of the trackbar.
+ */
 CV_EXPORTS_W int getTrackbarPos(const String& trackbarname, const String& winname);
 
+/** @brief Sets the trackbar position.
+
+The function sets the position of the specified trackbar in the specified window.
+
+@note
+
+[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+panel.
+
+@param trackbarname Name of the trackbar.
+@param winname Name of the window that is the parent of trackbar.
+@param pos New position.
+ */
 CV_EXPORTS_W void setTrackbarPos(const String& trackbarname, const String& winname, int pos);
 
+/** @brief Sets the trackbar maximum position.
 
-// OpenGL support
+The function sets the maximum position of the specified trackbar in the specified window.
+
+@note
+
+[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+panel.
+
+@param trackbarname Name of the trackbar.
+@param winname Name of the window that is the parent of trackbar.
+@param maxval New maximum position.
+ */
+CV_EXPORTS_W void setTrackbarMax(const String& trackbarname, const String& winname, int maxval);
+
+/** @brief Sets the trackbar minimum position.
+
+The function sets the minimum position of the specified trackbar in the specified window.
+
+@note
+
+[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+panel.
+
+@param trackbarname Name of the trackbar.
+@param winname Name of the window that is the parent of trackbar.
+@param minval New maximum position.
+ */
+CV_EXPORTS_W void setTrackbarMin(const String& trackbarname, const String& winname, int minval);
+
+//! @addtogroup highgui_opengl OpenGL support
+//! @{
+
+/** @brief Displays OpenGL 2D texture in the specified window.
+
+@param winname Name of the window.
+@param tex OpenGL 2D texture data.
+ */
 CV_EXPORTS void imshow(const String& winname, const ogl::Texture2D& tex);
 
+/** @brief Sets a callback function to be called to draw on top of displayed image.
+
+The function setOpenGlDrawCallback can be used to draw 3D data on the window. See the example of
+callback function below:
+@code
+    void on_opengl(void* param)
+    {
+        glLoadIdentity();
+
+        glTranslated(0.0, 0.0, -1.0);
+
+        glRotatef( 55, 1, 0, 0 );
+        glRotatef( 45, 0, 1, 0 );
+        glRotatef( 0, 0, 0, 1 );
+
+        static const int coords[6][4][3] = {
+            { { +1, -1, -1 }, { -1, -1, -1 }, { -1, +1, -1 }, { +1, +1, -1 } },
+            { { +1, +1, -1 }, { -1, +1, -1 }, { -1, +1, +1 }, { +1, +1, +1 } },
+            { { +1, -1, +1 }, { +1, -1, -1 }, { +1, +1, -1 }, { +1, +1, +1 } },
+            { { -1, -1, -1 }, { -1, -1, +1 }, { -1, +1, +1 }, { -1, +1, -1 } },
+            { { +1, -1, +1 }, { -1, -1, +1 }, { -1, -1, -1 }, { +1, -1, -1 } },
+            { { -1, -1, +1 }, { +1, -1, +1 }, { +1, +1, +1 }, { -1, +1, +1 } }
+        };
+
+        for (int i = 0; i < 6; ++i) {
+                    glColor3ub( i*20, 100+i*10, i*42 );
+                    glBegin(GL_QUADS);
+                    for (int j = 0; j < 4; ++j) {
+                            glVertex3d(0.2 * coords[i][j][0], 0.2 * coords[i][j][1], 0.2 * coords[i][j][2]);
+                    }
+                    glEnd();
+        }
+    }
+@endcode
+
+@param winname Name of the window.
+@param onOpenGlDraw Pointer to the function to be called every frame. This function should be
+prototyped as void Foo(void\*) .
+@param userdata Pointer passed to the callback function.(__Optional__)
+ */
 CV_EXPORTS void setOpenGlDrawCallback(const String& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0);
 
+/** @brief Sets the specified window as current OpenGL context.
+
+@param winname Name of the window.
+ */
 CV_EXPORTS void setOpenGlContext(const String& winname);
 
+/** @brief Force window to redraw its context and call draw callback ( See cv::setOpenGlDrawCallback ).
+
+@param winname Name of the window.
+ */
 CV_EXPORTS void updateWindow(const String& winname);
 
+//! @} highgui_opengl
 
-// Only for Qt
+//! @addtogroup highgui_qt
+//! @{
 
+/** @brief QtFont available only for Qt. See cv::fontQt
+ */
 struct QtFont
 {
-    const char* nameFont;  // Qt: nameFont
-    Scalar      color;     // Qt: ColorFont -> cvScalar(blue_component, green_component, red\_component[, alpha_component])
-    int         font_face; // Qt: bool italic
-    const int*  ascii;     // font data and metrics
+    const char* nameFont;  //!< Name of the font
+    Scalar      color;     //!< Color of the font. Scalar(blue_component, green_component, red_component[, alpha_component])
+    int         font_face; //!< See cv::QtFontStyles
+    const int*  ascii;     //!< font data and metrics
     const int*  greek;
     const int*  cyrillic;
     float       hscale, vscale;
-    float       shear;     // slope coefficient: 0 - normal, >0 - italic
-    int         thickness; // Qt: weight
-    float       dx;        // horizontal interval between letters
-    int         line_type; // Qt: PointSize
+    float       shear;     //!< slope coefficient: 0 - normal, >0 - italic
+    int         thickness; //!< See cv::QtFontWeights
+    float       dx;        //!< horizontal interval between letters
+    int         line_type; //!< PointSize
 };
 
+/** @brief Creates the font to draw a text on an image.
+
+The function fontQt creates a cv::QtFont object. This cv::QtFont is not compatible with putText .
+
+A basic usage of this function is the following: :
+@code
+    QtFont font = fontQt("Times");
+    addText( img1, "Hello World !", Point(50,50), font);
+@endcode
+
+@param nameFont Name of the font. The name should match the name of a system font (such as
+*Times*). If the font is not found, a default one is used.
+@param pointSize Size of the font. If not specified, equal zero or negative, the point size of the
+font is set to a system-dependent default value. Generally, this is 12 points.
+@param color Color of the font in BGRA where A = 255 is fully transparent. Use the macro CV_RGB
+for simplicity.
+@param weight Font weight. Available operation flags are : cv::QtFontWeights You can also specify a positive integer for better control.
+@param style Font style. Available operation flags are : cv::QtFontStyles
+@param spacing Spacing between characters. It can be negative or positive.
+ */
 CV_EXPORTS QtFont fontQt(const String& nameFont, int pointSize = -1,
                          Scalar color = Scalar::all(0), int weight = QT_FONT_NORMAL,
                          int style = QT_STYLE_NORMAL, int spacing = 0);
 
+/** @brief Draws a text on the image.
+
+The function addText draws *text* on the image *img* using a specific font *font* (see example cv::fontQt
+)
+
+@param img 8-bit 3-channel image where the text should be drawn.
+@param text Text to write on an image.
+@param org Point(x,y) where the text should start on an image.
+@param font Font to use to draw a text.
+ */
 CV_EXPORTS void addText( const Mat& img, const String& text, Point org, const QtFont& font);
 
-CV_EXPORTS void displayOverlay(const String& winname, const String& text, int delayms = 0);
+/** @brief Displays a text on a window image as an overlay for a specified duration.
 
-CV_EXPORTS void displayStatusBar(const String& winname, const String& text, int delayms = 0);
+The function displayOverlay displays useful information/tips on top of the window for a certain
+amount of time *delayms*. The function does not modify the image, displayed in the window, that is,
+after the specified delay the original content of the window is restored.
 
+@param winname Name of the window.
+@param text Overlay text to write on a window image.
+@param delayms The period (in milliseconds), during which the overlay text is displayed. If this
+function is called before the previous overlay text timed out, the timer is restarted and the text
+is updated. If this value is zero, the text never disappears.
+ */
+CV_EXPORTS_W void displayOverlay(const String& winname, const String& text, int delayms = 0);
+
+/** @brief Displays a text on the window statusbar during the specified period of time.
+
+The function displayStatusBar displays useful information/tips on top of the window for a certain
+amount of time *delayms* . This information is displayed on the window statusbar (the window must be
+created with the CV_GUI_EXPANDED flags).
+
+@param winname Name of the window.
+@param text Text to write on the window statusbar.
+@param delayms Duration (in milliseconds) to display the text. If this function is called before
+the previous text timed out, the timer is restarted and the text is updated. If this value is
+zero, the text never disappears.
+ */
+CV_EXPORTS_W void displayStatusBar(const String& winname, const String& text, int delayms = 0);
+
+/** @brief Saves parameters of the specified window.
+
+The function saveWindowParameters saves size, location, flags, trackbars value, zoom and panning
+location of the window windowName.
+
+@param windowName Name of the window.
+ */
 CV_EXPORTS void saveWindowParameters(const String& windowName);
 
+/** @brief Loads parameters of the specified window.
+
+The function loadWindowParameters loads size, location, flags, trackbars value, zoom and panning
+location of the window windowName.
+
+@param windowName Name of the window.
+ */
 CV_EXPORTS void loadWindowParameters(const String& windowName);
 
 CV_EXPORTS  int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
 
 CV_EXPORTS  void stopLoop();
 
+/** @brief Attaches a button to the control panel.
+
+The function createButton attaches a button to the control panel. Each button is added to a
+buttonbar to the right of the last button. A new buttonbar is created if nothing was attached to the
+control panel before, or if the last element attached to the control panel was a trackbar.
+
+See below various examples of the cv::createButton function call: :
+@code
+    createButton(NULL,callbackButton);//create a push button "button 0", that will call callbackButton.
+    createButton("button2",callbackButton,NULL,QT_CHECKBOX,0);
+    createButton("button3",callbackButton,&value);
+    createButton("button5",callbackButton1,NULL,QT_RADIOBOX);
+    createButton("button6",callbackButton2,NULL,QT_PUSH_BUTTON,1);
+@endcode
+
+@param  bar_name Name of the button.
+@param on_change Pointer to the function to be called every time the button changes its state.
+This function should be prototyped as void Foo(int state,\*void); . *state* is the current state
+of the button. It could be -1 for a push button, 0 or 1 for a check/radio box button.
+@param userdata Pointer passed to the callback function.
+@param type Optional type of the button. Available types are: (cv::QtButtonTypes)
+@param initial_button_state Default state of the button. Use for checkbox and radiobox. Its
+value could be 0 or 1. (__Optional__)
+*/
 CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
                              void* userdata = 0, int type = QT_PUSH_BUTTON,
                              bool initial_button_state = false);
 
-} // cv
+//! @} highgui_qt
 
-
-
-//////////////////////////////// image codec ////////////////////////////////
-namespace cv
-{
-
-enum { IMREAD_UNCHANGED  = -1, // 8bit, color or not
-       IMREAD_GRAYSCALE  = 0,  // 8bit, gray
-       IMREAD_COLOR      = 1,  // ?, color
-       IMREAD_ANYDEPTH   = 2,  // any depth, ?
-       IMREAD_ANYCOLOR   = 4   // ?, any color
-     };
-
-enum { IMWRITE_JPEG_QUALITY     = 1,
-       IMWRITE_JPEG_PROGRESSIVE = 2,
-       IMWRITE_JPEG_OPTIMIZE    = 3,
-       IMWRITE_PNG_COMPRESSION  = 16,
-       IMWRITE_PNG_STRATEGY     = 17,
-       IMWRITE_PNG_BILEVEL      = 18,
-       IMWRITE_PXM_BINARY       = 32,
-       IMWRITE_WEBP_QUALITY     = 64
-     };
-
-enum { IMWRITE_PNG_STRATEGY_DEFAULT      = 0,
-       IMWRITE_PNG_STRATEGY_FILTERED     = 1,
-       IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY = 2,
-       IMWRITE_PNG_STRATEGY_RLE          = 3,
-       IMWRITE_PNG_STRATEGY_FIXED        = 4
-     };
-
-CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
-
-CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
-              const std::vector<int>& params = std::vector<int>());
-
-CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
-
-CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
-
-CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
-                            CV_OUT std::vector<uchar>& buf,
-                            const std::vector<int>& params = std::vector<int>());
+//! @} highgui
 
 } // cv
 
-
-
-////////////////////////////////// video io /////////////////////////////////
-
-typedef struct CvCapture CvCapture;
-typedef struct CvVideoWriter CvVideoWriter;
-
-namespace cv
-{
-
-// Camera API
-enum { CAP_ANY          = 0,     // autodetect
-       CAP_VFW          = 200,   // platform native
-       CAP_V4L          = 200,
-       CAP_V4L2         = CAP_V4L,
-       CAP_FIREWARE     = 300,   // IEEE 1394 drivers
-       CAP_FIREWIRE     = CAP_FIREWARE,
-       CAP_IEEE1394     = CAP_FIREWARE,
-       CAP_DC1394       = CAP_FIREWARE,
-       CAP_CMU1394      = CAP_FIREWARE,
-       CAP_QT           = 500,   // QuickTime
-       CAP_UNICAP       = 600,   // Unicap drivers
-       CAP_DSHOW        = 700,   // DirectShow (via videoInput)
-       CAP_PVAPI        = 800,   // PvAPI, Prosilica GigE SDK
-       CAP_OPENNI       = 900,   // OpenNI (for Kinect)
-       CAP_OPENNI_ASUS  = 910,   // OpenNI (for Asus Xtion)
-       CAP_ANDROID      = 1000,  // Android
-       CAP_XIAPI        = 1100,  // XIMEA Camera API
-       CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
-       CAP_GIGANETIX    = 1300,  // Smartek Giganetix GigEVisionSDK
-       CAP_MSMF         = 1400,  // Microsoft Media Foundation (via videoInput)
-       CAP_INTELPERC    = 1500   // Intel Perceptual Computing SDK
-     };
-
-// generic properties (based on DC1394 properties)
-enum { CAP_PROP_POS_MSEC       =0,
-       CAP_PROP_POS_FRAMES     =1,
-       CAP_PROP_POS_AVI_RATIO  =2,
-       CAP_PROP_FRAME_WIDTH    =3,
-       CAP_PROP_FRAME_HEIGHT   =4,
-       CAP_PROP_FPS            =5,
-       CAP_PROP_FOURCC         =6,
-       CAP_PROP_FRAME_COUNT    =7,
-       CAP_PROP_FORMAT         =8,
-       CAP_PROP_MODE           =9,
-       CAP_PROP_BRIGHTNESS    =10,
-       CAP_PROP_CONTRAST      =11,
-       CAP_PROP_SATURATION    =12,
-       CAP_PROP_HUE           =13,
-       CAP_PROP_GAIN          =14,
-       CAP_PROP_EXPOSURE      =15,
-       CAP_PROP_CONVERT_RGB   =16,
-       CAP_PROP_WHITE_BALANCE_BLUE_U =17,
-       CAP_PROP_RECTIFICATION =18,
-       CAP_PROP_MONOCROME     =19,
-       CAP_PROP_SHARPNESS     =20,
-       CAP_PROP_AUTO_EXPOSURE =21, // DC1394: exposure control done by camera, user can adjust refernce level using this feature
-       CAP_PROP_GAMMA         =22,
-       CAP_PROP_TEMPERATURE   =23,
-       CAP_PROP_TRIGGER       =24,
-       CAP_PROP_TRIGGER_DELAY =25,
-       CAP_PROP_WHITE_BALANCE_RED_V =26,
-       CAP_PROP_ZOOM          =27,
-       CAP_PROP_FOCUS         =28,
-       CAP_PROP_GUID          =29,
-       CAP_PROP_ISO_SPEED     =30,
-       CAP_PROP_BACKLIGHT     =32,
-       CAP_PROP_PAN           =33,
-       CAP_PROP_TILT          =34,
-       CAP_PROP_ROLL          =35,
-       CAP_PROP_IRIS          =36,
-       CAP_PROP_SETTINGS      =37
-     };
-
-
-// DC1394 only
-// modes of the controlling registers (can be: auto, manual, auto single push, absolute Latter allowed with any other mode)
-// every feature can have only one mode turned on at a time
-enum { CAP_PROP_DC1394_OFF                = -4, //turn the feature off (not controlled manually nor automatically)
-       CAP_PROP_DC1394_MODE_MANUAL        = -3, //set automatically when a value of the feature is set by the user
-       CAP_PROP_DC1394_MODE_AUTO          = -2,
-       CAP_PROP_DC1394_MODE_ONE_PUSH_AUTO = -1,
-       CAP_PROP_DC1394_MAX                = 31
-     };
-
-
-// OpenNI map generators
-enum { CAP_OPENNI_DEPTH_GENERATOR = 1 << 31,
-       CAP_OPENNI_IMAGE_GENERATOR = 1 << 30,
-       CAP_OPENNI_GENERATORS_MASK = CAP_OPENNI_DEPTH_GENERATOR + CAP_OPENNI_IMAGE_GENERATOR
-     };
-
-// Properties of cameras available through OpenNI interfaces
-enum { CAP_PROP_OPENNI_OUTPUT_MODE       = 100,
-       CAP_PROP_OPENNI_FRAME_MAX_DEPTH   = 101, // in mm
-       CAP_PROP_OPENNI_BASELINE          = 102, // in mm
-       CAP_PROP_OPENNI_FOCAL_LENGTH      = 103, // in pixels
-       CAP_PROP_OPENNI_REGISTRATION      = 104, // flag that synchronizes the remapping depth map to image map
-                                                // by changing depth generator's view point (if the flag is "on") or
-                                                // sets this view point to its normal one (if the flag is "off").
-       CAP_PROP_OPENNI_REGISTRATION_ON   = CAP_PROP_OPENNI_REGISTRATION,
-       CAP_PROP_OPENNI_APPROX_FRAME_SYNC = 105,
-       CAP_PROP_OPENNI_MAX_BUFFER_SIZE   = 106,
-       CAP_PROP_OPENNI_CIRCLE_BUFFER     = 107,
-       CAP_PROP_OPENNI_MAX_TIME_DURATION = 108,
-       CAP_PROP_OPENNI_GENERATOR_PRESENT = 109
-     };
-
-// OpenNI shortcats
-enum { CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_GENERATOR_PRESENT,
-       CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE     = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_OUTPUT_MODE,
-       CAP_OPENNI_DEPTH_GENERATOR_BASELINE        = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_BASELINE,
-       CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH    = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_FOCAL_LENGTH,
-       CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION    = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_REGISTRATION,
-       CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION_ON = CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION
-     };
-
-// OpenNI data given from depth generator
-enum { CAP_OPENNI_DEPTH_MAP         = 0, // Depth values in mm (CV_16UC1)
-       CAP_OPENNI_POINT_CLOUD_MAP   = 1, // XYZ in meters (CV_32FC3)
-       CAP_OPENNI_DISPARITY_MAP     = 2, // Disparity in pixels (CV_8UC1)
-       CAP_OPENNI_DISPARITY_MAP_32F = 3, // Disparity in pixels (CV_32FC1)
-       CAP_OPENNI_VALID_DEPTH_MASK  = 4, // CV_8UC1
-
-       // Data given from RGB image generator
-       CAP_OPENNI_BGR_IMAGE         = 5,
-       CAP_OPENNI_GRAY_IMAGE        = 6
-     };
-
-// Supported output modes of OpenNI image generator
-enum { CAP_OPENNI_VGA_30HZ  = 0,
-       CAP_OPENNI_SXGA_15HZ = 1,
-       CAP_OPENNI_SXGA_30HZ = 2,
-       CAP_OPENNI_QVGA_30HZ = 3,
-       CAP_OPENNI_QVGA_60HZ = 4
-     };
-
-
-// GStreamer
-enum { CAP_PROP_GSTREAMER_QUEUE_LENGTH = 200 // default is 1
-     };
-
-
-// PVAPI
-enum { CAP_PROP_PVAPI_MULTICASTIP               = 300, // ip for anable multicast master mode. 0 for disable multicast
-       CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE     = 301  // FrameStartTriggerMode: Determines how a frame is initiated
-     };
-
-// PVAPI: FrameStartTriggerMode
-enum { CAP_PVAPI_FSTRIGMODE_FREERUN     = 0,    // Freerun
-       CAP_PVAPI_FSTRIGMODE_SYNCIN1     = 1,    // SyncIn1
-       CAP_PVAPI_FSTRIGMODE_SYNCIN2     = 2,    // SyncIn2
-       CAP_PVAPI_FSTRIGMODE_FIXEDRATE   = 3,    // FixedRate
-       CAP_PVAPI_FSTRIGMODE_SOFTWARE    = 4     // Software
-     };
-
-// Properties of cameras available through XIMEA SDK interface
-enum { CAP_PROP_XI_DOWNSAMPLING  = 400, // Change image resolution by binning or skipping.
-       CAP_PROP_XI_DATA_FORMAT   = 401, // Output data format.
-       CAP_PROP_XI_OFFSET_X      = 402, // Horizontal offset from the origin to the area of interest (in pixels).
-       CAP_PROP_XI_OFFSET_Y      = 403, // Vertical offset from the origin to the area of interest (in pixels).
-       CAP_PROP_XI_TRG_SOURCE    = 404, // Defines source of trigger.
-       CAP_PROP_XI_TRG_SOFTWARE  = 405, // Generates an internal trigger. PRM_TRG_SOURCE must be set to TRG_SOFTWARE.
-       CAP_PROP_XI_GPI_SELECTOR  = 406, // Selects general purpose input
-       CAP_PROP_XI_GPI_MODE      = 407, // Set general purpose input mode
-       CAP_PROP_XI_GPI_LEVEL     = 408, // Get general purpose level
-       CAP_PROP_XI_GPO_SELECTOR  = 409, // Selects general purpose output
-       CAP_PROP_XI_GPO_MODE      = 410, // Set general purpose output mode
-       CAP_PROP_XI_LED_SELECTOR  = 411, // Selects camera signalling LED
-       CAP_PROP_XI_LED_MODE      = 412, // Define camera signalling LED functionality
-       CAP_PROP_XI_MANUAL_WB     = 413, // Calculates White Balance(must be called during acquisition)
-       CAP_PROP_XI_AUTO_WB       = 414, // Automatic white balance
-       CAP_PROP_XI_AEAG          = 415, // Automatic exposure/gain
-       CAP_PROP_XI_EXP_PRIORITY  = 416, // Exposure priority (0.5 - exposure 50%, gain 50%).
-       CAP_PROP_XI_AE_MAX_LIMIT  = 417, // Maximum limit of exposure in AEAG procedure
-       CAP_PROP_XI_AG_MAX_LIMIT  = 418, // Maximum limit of gain in AEAG procedure
-       CAP_PROP_XI_AEAG_LEVEL    = 419, // Average intensity of output signal AEAG should achieve(in %)
-       CAP_PROP_XI_TIMEOUT       = 420  // Image capture timeout in milliseconds
-     };
-
-
-// Properties for Android cameras
-enum { CAP_PROP_ANDROID_AUTOGRAB               = 1024,
-       CAP_PROP_ANDROID_PREVIEW_SIZES_STRING   = 1025, // readonly, tricky property, returns const char* indeed
-       CAP_PROP_ANDROID_PREVIEW_FORMAT         = 1026, // readonly, tricky property, returns const char* indeed
-       CAP_PROP_ANDROID_FLASH_MODE             = 8001,
-       CAP_PROP_ANDROID_FOCUS_MODE             = 8002,
-       CAP_PROP_ANDROID_WHITE_BALANCE          = 8003,
-       CAP_PROP_ANDROID_ANTIBANDING            = 8004,
-       CAP_PROP_ANDROID_FOCAL_LENGTH           = 8005,
-       CAP_PROP_ANDROID_FOCUS_DISTANCE_NEAR    = 8006,
-       CAP_PROP_ANDROID_FOCUS_DISTANCE_OPTIMAL = 8007,
-       CAP_PROP_ANDROID_FOCUS_DISTANCE_FAR     = 8008
-     };
-
-
-// Android camera output formats
-enum { CAP_ANDROID_COLOR_FRAME_BGR  = 0, //BGR
-       CAP_ANDROID_COLOR_FRAME      = CAP_ANDROID_COLOR_FRAME_BGR,
-       CAP_ANDROID_GREY_FRAME       = 1,  //Y
-       CAP_ANDROID_COLOR_FRAME_RGB  = 2,
-       CAP_ANDROID_COLOR_FRAME_BGRA = 3,
-       CAP_ANDROID_COLOR_FRAME_RGBA = 4
-     };
-
-
-// Android camera flash modes
-enum { CAP_ANDROID_FLASH_MODE_AUTO     = 0,
-       CAP_ANDROID_FLASH_MODE_OFF      = 1,
-       CAP_ANDROID_FLASH_MODE_ON       = 2,
-       CAP_ANDROID_FLASH_MODE_RED_EYE  = 3,
-       CAP_ANDROID_FLASH_MODE_TORCH    = 4
-     };
-
-
-// Android camera focus modes
-enum { CAP_ANDROID_FOCUS_MODE_AUTO             = 0,
-       CAP_ANDROID_FOCUS_MODE_CONTINUOUS_VIDEO = 1,
-       CAP_ANDROID_FOCUS_MODE_EDOF             = 2,
-       CAP_ANDROID_FOCUS_MODE_FIXED            = 3,
-       CAP_ANDROID_FOCUS_MODE_INFINITY         = 4,
-       CAP_ANDROID_FOCUS_MODE_MACRO            = 5
-     };
-
-
-// Android camera white balance modes
-enum { CAP_ANDROID_WHITE_BALANCE_AUTO             = 0,
-       CAP_ANDROID_WHITE_BALANCE_CLOUDY_DAYLIGHT  = 1,
-       CAP_ANDROID_WHITE_BALANCE_DAYLIGHT         = 2,
-       CAP_ANDROID_WHITE_BALANCE_FLUORESCENT      = 3,
-       CAP_ANDROID_WHITE_BALANCE_INCANDESCENT     = 4,
-       CAP_ANDROID_WHITE_BALANCE_SHADE            = 5,
-       CAP_ANDROID_WHITE_BALANCE_TWILIGHT         = 6,
-       CAP_ANDROID_WHITE_BALANCE_WARM_FLUORESCENT = 7
-     };
-
-
-// Android camera antibanding modes
-enum { CAP_ANDROID_ANTIBANDING_50HZ = 0,
-       CAP_ANDROID_ANTIBANDING_60HZ = 1,
-       CAP_ANDROID_ANTIBANDING_AUTO = 2,
-       CAP_ANDROID_ANTIBANDING_OFF  = 3
-     };
-
-
-// Properties of cameras available through AVFOUNDATION interface
-enum { CAP_PROP_IOS_DEVICE_FOCUS        = 9001,
-       CAP_PROP_IOS_DEVICE_EXPOSURE     = 9002,
-       CAP_PROP_IOS_DEVICE_FLASH        = 9003,
-       CAP_PROP_IOS_DEVICE_WHITEBALANCE = 9004,
-       CAP_PROP_IOS_DEVICE_TORCH        = 9005
-     };
-
-
-// Properties of cameras available through Smartek Giganetix Ethernet Vision interface
-/* --- Vladimir Litvinenko (litvinenko.vladimir@gmail.com) --- */
-enum { CAP_PROP_GIGA_FRAME_OFFSET_X   = 10001,
-       CAP_PROP_GIGA_FRAME_OFFSET_Y   = 10002,
-       CAP_PROP_GIGA_FRAME_WIDTH_MAX  = 10003,
-       CAP_PROP_GIGA_FRAME_HEIGH_MAX  = 10004,
-       CAP_PROP_GIGA_FRAME_SENS_WIDTH = 10005,
-       CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
-     };
-
-enum { CAP_PROP_INTELPERC_PROFILE_COUNT               = 11001,
-       CAP_PROP_INTELPERC_PROFILE_IDX                 = 11002,
-       CAP_PROP_INTELPERC_DEPTH_LOW_CONFIDENCE_VALUE  = 11003,
-       CAP_PROP_INTELPERC_DEPTH_SATURATION_VALUE      = 11004,
-       CAP_PROP_INTELPERC_DEPTH_CONFIDENCE_THRESHOLD  = 11005,
-       CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_HORZ     = 11006,
-       CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_VERT     = 11007
-     };
-
-// Intel PerC streams
-enum { CAP_INTELPERC_DEPTH_GENERATOR = 1 << 29,
-       CAP_INTELPERC_IMAGE_GENERATOR = 1 << 28,
-       CAP_INTELPERC_GENERATORS_MASK = CAP_INTELPERC_DEPTH_GENERATOR + CAP_INTELPERC_IMAGE_GENERATOR
-     };
-
-enum { CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integer. The value indicates the distance from an object to the camera's XY plane or the Cartesian depth.
-       CAP_INTELPERC_UVDEPTH_MAP            = 1, // Each pixel contains two 32-bit floating point values in the range of 0-1, representing the mapping of depth coordinates to the color coordinates.
-       CAP_INTELPERC_IR_MAP                 = 2, // Each pixel is a 16-bit integer. The value indicates the intensity of the reflected laser beam.
-       CAP_INTELPERC_IMAGE                  = 3
-     };
-
-
-class IVideoCapture;
-class CV_EXPORTS_W VideoCapture
-{
-public:
-    CV_WRAP VideoCapture();
-    CV_WRAP VideoCapture(const String& filename);
-    CV_WRAP VideoCapture(int device);
-
-    virtual ~VideoCapture();
-    CV_WRAP virtual bool open(const String& filename);
-    CV_WRAP virtual bool open(int device);
-    CV_WRAP virtual bool isOpened() const;
-    CV_WRAP virtual void release();
-
-    CV_WRAP virtual bool grab();
-    CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
-    virtual VideoCapture& operator >> (CV_OUT Mat& image);
-    virtual VideoCapture& operator >> (CV_OUT UMat& image);
-    CV_WRAP virtual bool read(OutputArray image);
-
-    CV_WRAP virtual bool set(int propId, double value);
-    CV_WRAP virtual double get(int propId);
-
-protected:
-    Ptr<CvCapture> cap;
-    Ptr<IVideoCapture> icap;
-private:
-    static Ptr<IVideoCapture> createCameraCapture(int index);
-};
-
-class CV_EXPORTS_W VideoWriter
-{
-public:
-    CV_WRAP VideoWriter();
-    CV_WRAP VideoWriter(const String& filename, int fourcc, double fps,
-                Size frameSize, bool isColor = true);
-
-    virtual ~VideoWriter();
-    CV_WRAP virtual bool open(const String& filename, int fourcc, double fps,
-                      Size frameSize, bool isColor = true);
-    CV_WRAP virtual bool isOpened() const;
-    CV_WRAP virtual void release();
-    virtual VideoWriter& operator << (const Mat& image);
-    CV_WRAP virtual void write(const Mat& image);
-
-    CV_WRAP static int fourcc(char c1, char c2, char c3, char c4);
-
-protected:
-    Ptr<CvVideoWriter> writer;
-};
-
-template<> CV_EXPORTS void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const;
-
-} // cv
+#ifndef DISABLE_OPENCV_24_COMPATIBILITY
+#include "opencv2/highgui/highgui_c.h"
+#endif
 
 #endif

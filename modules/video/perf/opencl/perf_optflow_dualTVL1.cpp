@@ -44,7 +44,7 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 using std::tr1::make_tuple;
@@ -87,11 +87,11 @@ OCL_PERF_TEST_P(OpticalFlowDualTVL1Fixture, OpticalFlowDualTVL1,
         declare.in(uFrame0, uFrame1, WARMUP_READ).out(uFlow, WARMUP_READ);
 
         //create algorithm
-        cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
+        cv::Ptr<cv::DualTVL1OpticalFlow> alg = cv::createOptFlow_DualTVL1();
 
         //set parameters
-        alg->set("scaleStep", scaleStep);
-        alg->setInt("medianFiltering", medianFiltering);
+        alg->setScaleStep(scaleStep);
+        alg->setMedianFiltering(medianFiltering);
 
         if (useInitFlow)
         {
@@ -100,7 +100,7 @@ OCL_PERF_TEST_P(OpticalFlowDualTVL1Fixture, OpticalFlowDualTVL1,
         }
 
         //set flag to use initial flow
-        alg->setBool("useInitialFlow", useInitFlow);
+        alg->setUseInitialFlow(useInitFlow);
         OCL_TEST_CYCLE()
             alg->calc(uFrame0, uFrame1, uFlow);
 

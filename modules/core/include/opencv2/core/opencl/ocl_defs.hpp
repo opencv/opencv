@@ -5,6 +5,7 @@
 // Copyright (C) 2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
+#include "opencv2/core/utility.hpp"
 //#define CV_OPENCL_RUN_ASSERT
 
 #ifdef HAVE_OPENCL
@@ -16,6 +17,7 @@
         {                                                                   \
             printf("%s: OpenCL implementation is running\n", CV_Func);      \
             fflush(stdout);                                                 \
+            CV_IMPL_ADD(CV_IMPL_OCL);                                       \
             return __VA_ARGS__;                                             \
         }                                                                   \
         else                                                                \
@@ -29,14 +31,24 @@
     {                                                                       \
         if (cv::ocl::useOpenCL() && (condition))                            \
         {                                                                   \
-            CV_Assert(func);                                                \
+            if(func)                                                        \
+            {                                                               \
+                CV_IMPL_ADD(CV_IMPL_OCL);                                   \
+            }                                                               \
+            else                                                            \
+            {                                                               \
+                CV_Error(cv::Error::StsAssert, #func);                      \
+            }                                                               \
             return __VA_ARGS__;                                             \
         }                                                                   \
     }
 #else
 #define CV_OCL_RUN_(condition, func, ...)                                   \
     if (cv::ocl::useOpenCL() && (condition) && func)                        \
-        return __VA_ARGS__;
+    {                                                                       \
+        CV_IMPL_ADD(CV_IMPL_OCL);                                           \
+        return __VA_ARGS__;                                                 \
+    }
 #endif
 
 #else

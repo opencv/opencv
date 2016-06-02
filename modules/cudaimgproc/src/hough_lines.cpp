@@ -75,8 +75,8 @@ namespace
         {
         }
 
-        void detect(InputArray src, OutputArray lines);
-        void downloadResults(InputArray d_lines, OutputArray h_lines, OutputArray h_votes = noArray());
+        void detect(InputArray src, OutputArray lines, Stream& stream);
+        void downloadResults(InputArray d_lines, OutputArray h_lines, OutputArray h_votes, Stream& stream);
 
         void setRho(float rho) { rho_ = rho; }
         float getRho() const { return rho_; }
@@ -95,6 +95,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
+            writeFormat(fs);
             fs << "name" << "HoughLinesDetector_CUDA"
             << "rho" << rho_
             << "theta" << theta_
@@ -125,8 +126,11 @@ namespace
         GpuMat result_;
     };
 
-    void HoughLinesDetectorImpl::detect(InputArray _src, OutputArray lines)
+    void HoughLinesDetectorImpl::detect(InputArray _src, OutputArray lines, Stream& stream)
     {
+        // TODO : implement async version
+        (void) stream;
+
         using namespace cv::cuda::device::hough;
         using namespace cv::cuda::device::hough_lines;
 
@@ -170,7 +174,7 @@ namespace
         result_.copyTo(lines);
     }
 
-    void HoughLinesDetectorImpl::downloadResults(InputArray _d_lines, OutputArray h_lines, OutputArray h_votes)
+    void HoughLinesDetectorImpl::downloadResults(InputArray _d_lines, OutputArray h_lines, OutputArray h_votes, Stream& stream)
     {
         GpuMat d_lines = _d_lines.getGpuMat();
 
@@ -184,12 +188,18 @@ namespace
 
         CV_Assert( d_lines.rows == 2 && d_lines.type() == CV_32FC2 );
 
-        d_lines.row(0).download(h_lines);
+        if (stream)
+            d_lines.row(0).download(h_lines, stream);
+        else
+            d_lines.row(0).download(h_lines);
 
         if (h_votes.needed())
         {
             GpuMat d_votes(1, d_lines.cols, CV_32SC1, d_lines.ptr<int>(1));
-            d_votes.download(h_votes);
+            if (stream)
+                d_votes.download(h_votes, stream);
+            else
+                d_votes.download(h_votes);
         }
     }
 }

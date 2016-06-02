@@ -842,7 +842,6 @@ static int jas_cmshapmat_apply(jas_cmpxform_t *pxform, jas_cmreal_t *in,
                 *dst++ = a2;
             }
         } else {
-assert(0);
             while (--cnt >= 0) {
                 a0 = *src++;
                 src++;

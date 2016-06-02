@@ -6,7 +6,7 @@ import android.graphics.Bitmap;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.highgui.Highgui;
+import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -67,7 +67,7 @@ public class Utils {
         encoded.put(0, 0, os.toByteArray());
         os.close();
 
-        Mat decoded = Highgui.imdecode(encoded, flags);
+        Mat decoded = Imgcodecs.imdecode(encoded, flags);
         encoded.release();
 
         return decoded;

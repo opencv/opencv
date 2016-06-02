@@ -1,0 +1,37 @@
+/* The standard CSS for doxygen 1.8.6 */
+
+body, table, div, p, dl {
+    font: 400 14px/22px Helvetica, 'Segoe UI', Arial, freesans, sans-serif;
+    word-wrap: break-word;
+}
+
+code {
+    font: 12px Consolas, "Liberation Mono", Courier, monospace;
+    font-size: 85%;
+    white-space: pre-wrap;
+    padding: 1px 5px;
+    padding: 0;
+    background-color: #ddd;
+    vertical-align: baseline;
+}
+
+body {
+    background-image: url(bodybg.png);
+    margin: 0 auto;
+}
+
+div.contents {
+    width: 980px;
+    margin: 0 auto;
+    padding: 15px 15px;
+    border: 1px solid rgb(10, 80, 122);
+    background-color: #fff;
+}
+
+span.arrow {
+    height: 13px;
+}
+
+div.image img{
+    max-width: 900px;
+}

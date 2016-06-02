@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/core/core_c.h"
 
 using namespace std;
 using namespace cv;
@@ -61,7 +61,6 @@ public:
 protected:
     virtual void run(int)
     {
-        cv::initModule_features2d();
         CV_Assert(detector);
         string imgFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
 
@@ -121,48 +120,60 @@ protected:
 
 TEST(Features2d_Detector_Keypoints_BRISK, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"));
+    CV_FeatureDetectorKeypointsTest test(BRISK::create());
     test.safe_run();
 }
 
 TEST(Features2d_Detector_Keypoints_FAST, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.FAST"));
+    CV_FeatureDetectorKeypointsTest test(FastFeatureDetector::create());
+    test.safe_run();
+}
+
+TEST(Features2d_Detector_Keypoints_AGAST, validation)
+{
+    CV_FeatureDetectorKeypointsTest test(AgastFeatureDetector::create());
     test.safe_run();
 }
 
 TEST(Features2d_Detector_Keypoints_HARRIS, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.HARRIS"));
+
+    CV_FeatureDetectorKeypointsTest test(GFTTDetector::create(1000, 0.01, 1, 3, true, 0.04));
     test.safe_run();
 }
 
 TEST(Features2d_Detector_Keypoints_GFTT, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.GFTT"));
+    Ptr<GFTTDetector> gftt = GFTTDetector::create();
+    gftt->setHarrisDetector(true);
+    CV_FeatureDetectorKeypointsTest test(gftt);
     test.safe_run();
 }
 
 TEST(Features2d_Detector_Keypoints_MSER, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.MSER"));
+    CV_FeatureDetectorKeypointsTest test(MSER::create());
     test.safe_run();
 }
 
 TEST(Features2d_Detector_Keypoints_ORB, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"));
+    CV_FeatureDetectorKeypointsTest test(ORB::create());
     test.safe_run();
 }
 
-TEST(Features2d_Detector_Keypoints_Star, validation)
+TEST(Features2d_Detector_Keypoints_KAZE, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.STAR"));
+    CV_FeatureDetectorKeypointsTest test(KAZE::create());
     test.safe_run();
 }
 
-TEST(Features2d_Detector_Keypoints_Dense, validation)
+TEST(Features2d_Detector_Keypoints_AKAZE, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.Dense"));
-    test.safe_run();
+    CV_FeatureDetectorKeypointsTest test_kaze(AKAZE::create(AKAZE::DESCRIPTOR_KAZE));
+    test_kaze.safe_run();
+
+    CV_FeatureDetectorKeypointsTest test_mldb(AKAZE::create(AKAZE::DESCRIPTOR_MLDB));
+    test_mldb.safe_run();
 }

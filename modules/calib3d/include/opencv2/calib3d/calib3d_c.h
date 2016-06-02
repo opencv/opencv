@@ -50,6 +50,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup calib3d_c
+  @{
+  */
+
 /****************************************************************************************\
 *                      Camera Calibration, Pose Estimation and Stereo                    *
 \****************************************************************************************/
@@ -91,7 +95,8 @@ enum
 {
     CV_ITERATIVE = 0,
     CV_EPNP = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
-    CV_P3P = 2 // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
+    CV_P3P = 2, // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
+    CV_DLS = 3 // Joel A. Hesch and Stergios I. Roumeliotis. "A Direct Least-Squares (DLS) Method for PnP"
 };
 
 CVAPI(int) cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
@@ -140,7 +145,9 @@ CVAPI(int) cvFindHomography( const CvMat* src_points,
                              CvMat* homography,
                              int method CV_DEFAULT(0),
                              double ransacReprojThreshold CV_DEFAULT(3),
-                             CvMat* mask CV_DEFAULT(0));
+                             CvMat* mask CV_DEFAULT(0),
+                             int maxIters CV_DEFAULT(2000),
+                             double confidence CV_DEFAULT(0.995));
 
 /* Computes RQ decomposition for 3x3 matrices */
 CVAPI(void) cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
@@ -236,6 +243,8 @@ CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
 #define CV_CALIB_RATIONAL_MODEL 16384
 #define CV_CALIB_THIN_PRISM_MODEL 32768
 #define CV_CALIB_FIX_S1_S2_S3_S4  65536
+#define CV_CALIB_TILTED_MODEL  262144
+#define CV_CALIB_FIX_TAUX_TAUY  524288
 
 
 /* Finds intrinsic and extrinsic camera parameters
@@ -368,6 +377,8 @@ CVAPI(void)  cvReprojectImageTo3D( const CvArr* disparityImage,
                                    CvArr* _3dImage, const CvMat* Q,
                                    int handleMissingValues CV_DEFAULT(0) );
 
+/** @} calib3d_c */
+
 #ifdef __cplusplus
 } // extern "C"
 
@@ -406,6 +417,7 @@ public:
     int state;
     int iters;
     bool completeSymmFlag;
+    int solveMethod;
 };
 
 #endif

@@ -3,9 +3,10 @@
 #
 # ----------------------------------------------------------------------------
 
-SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc
-    opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo opencv_nonfree opencv_softcascade
-    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib opencv_stitching opencv_videostab opencv_shape)
+SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_flann
+    opencv_imgcodecs opencv_videoio opencv_highgui opencv_ml opencv_video
+    opencv_objdetect opencv_photo opencv_features2d opencv_calib3d
+    opencv_stitching opencv_videostab opencv_shape ${OPENCV_MODULES_PUBLIC} ${OpenCV_LIB_COMPONENTS})
 
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
@@ -14,7 +15,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   project(cpp_samples)
 
   ocv_include_directories("${OpenCV_SOURCE_DIR}/include")#for opencv.hpp
-  ocv_include_modules(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules_recurse(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
   if(HAVE_opencv_cudaoptflow)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudaoptflow/include")
@@ -27,10 +28,6 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   endif()
   if(HAVE_opencv_cudafilters)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudafilters/include")
-  endif()
-
-  if(HAVE_opencv_ocl)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/ocl/include")
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
@@ -54,14 +51,14 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
     set(the_target "${sample_kind}_${name}")
     add_executable(${the_target} ${srcs})
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
+    ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
     if("${srcs}" MATCHES "gpu/")
-      target_link_libraries(${the_target} opencv_cudaarithm opencv_cudafilters)
+      ocv_target_link_libraries(${the_target} opencv_cudaarithm opencv_cudafilters)
     endif()
 
     if(HAVE_opencv_ocl)
-      target_link_libraries(${the_target} opencv_ocl)
+      ocv_target_link_libraries(${the_target} opencv_ocl)
     endif()
 
     set_target_properties(${the_target} PROPERTIES
@@ -98,9 +95,13 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   endif()
 
   foreach(sample_filename ${cpp_samples})
-    get_filename_component(sample ${sample_filename} NAME_WE)
-    OPENCV_DEFINE_CPP_EXAMPLE(${sample}  ${sample_filename})
+    if(NOT "${sample_filename}" MATCHES "real_time_pose_estimation/")
+        get_filename_component(sample ${sample_filename} NAME_WE)
+        OPENCV_DEFINE_CPP_EXAMPLE(${sample}  ${sample_filename})
+    endif()
   endforeach()
+
+  include("tutorial_code/calib3d/real_time_pose_estimation/CMakeLists.txt")
 endif()
 
 if(INSTALL_C_EXAMPLES AND NOT WIN32)

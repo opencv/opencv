@@ -107,11 +107,11 @@ namespace
 
         GpuMat src1;
         if (!isScalar1)
-            src1 = _src1.getGpuMat();
+            src1 = getInputMat(_src1, stream);
 
         GpuMat src2;
         if (!isScalar2)
-            src2 = _src2.getGpuMat();
+            src2 = getInputMat(_src2, stream);
 
         Mat scalar;
         if (isScalar1)
@@ -126,7 +126,7 @@ namespace
             scalar.convertTo(Mat_<double>(scalar.rows, scalar.cols, &val[0]), CV_64F);
         }
 
-        GpuMat mask = _mask.getGpuMat();
+        GpuMat mask = getInputMat(_mask, stream);
 
         const int sdepth = src1.empty() ? src2.depth() : src1.depth();
         const int cn = src1.empty() ? src2.channels() : src1.channels();
@@ -147,8 +147,7 @@ namespace
                 CV_Error(Error::StsUnsupportedFormat, "The device doesn't support double");
         }
 
-        _dst.create(size, CV_MAKE_TYPE(ddepth, cn));
-        GpuMat dst = _dst.getGpuMat();
+        GpuMat dst = getOutputMat(_dst, size, CV_MAKE_TYPE(ddepth, cn), stream);
 
         if (isScalar1)
             mat_scalar_func(src2, val, true, dst, mask, scale, stream, op);
@@ -156,6 +155,8 @@ namespace
             mat_scalar_func(src1, val, false, dst, mask, scale, stream, op);
         else
             mat_mat_func(src1, src2, dst, mask, scale, stream, op);
+
+        syncOutput(dst, _dst, stream);
     }
 }
 
@@ -196,27 +197,29 @@ void cv::cuda::multiply(InputArray _src1, InputArray _src2, OutputArray _dst, do
 {
     if (_src1.type() == CV_8UC4 && _src2.type() == CV_32FC1)
     {
-        GpuMat src1 = _src1.getGpuMat();
-        GpuMat src2 = _src2.getGpuMat();
+        GpuMat src1 = getInputMat(_src1, stream);
+        GpuMat src2 = getInputMat(_src2, stream);
 
         CV_Assert( src1.size() == src2.size() );
 
-        _dst.create(src1.size(), src1.type());
-        GpuMat dst = _dst.getGpuMat();
+        GpuMat dst = getOutputMat(_dst, src1.size(), src1.type(), stream);
 
         mulMat_8uc4_32f(src1, src2, dst, stream);
+
+        syncOutput(dst, _dst, stream);
     }
     else if (_src1.type() == CV_16SC4 && _src2.type() == CV_32FC1)
     {
-        GpuMat src1 = _src1.getGpuMat();
-        GpuMat src2 = _src2.getGpuMat();
+        GpuMat src1 = getInputMat(_src1, stream);
+        GpuMat src2 = getInputMat(_src2, stream);
 
         CV_Assert( src1.size() == src2.size() );
 
-        _dst.create(src1.size(), src1.type());
-        GpuMat dst = _dst.getGpuMat();
+        GpuMat dst = getOutputMat(_dst, src1.size(), src1.type(), stream);
 
         mulMat_16sc4_32f(src1, src2, dst, stream);
+
+        syncOutput(dst, _dst, stream);
     }
     else
     {
@@ -237,27 +240,29 @@ void cv::cuda::divide(InputArray _src1, InputArray _src2, OutputArray _dst, doub
 {
     if (_src1.type() == CV_8UC4 && _src2.type() == CV_32FC1)
     {
-        GpuMat src1 = _src1.getGpuMat();
-        GpuMat src2 = _src2.getGpuMat();
+        GpuMat src1 = getInputMat(_src1, stream);
+        GpuMat src2 = getInputMat(_src2, stream);
 
         CV_Assert( src1.size() == src2.size() );
 
-        _dst.create(src1.size(), src1.type());
-        GpuMat dst = _dst.getGpuMat();
+        GpuMat dst = getOutputMat(_dst, src1.size(), src1.type(), stream);
 
         divMat_8uc4_32f(src1, src2, dst, stream);
+
+        syncOutput(dst, _dst, stream);
     }
     else if (_src1.type() == CV_16SC4 && _src2.type() == CV_32FC1)
     {
-        GpuMat src1 = _src1.getGpuMat();
-        GpuMat src2 = _src2.getGpuMat();
+        GpuMat src1 = getInputMat(_src1, stream);
+        GpuMat src2 = getInputMat(_src2, stream);
 
         CV_Assert( src1.size() == src2.size() );
 
-        _dst.create(src1.size(), src1.type());
-        GpuMat dst = _dst.getGpuMat();
+        GpuMat dst = getOutputMat(_dst, src1.size(), src1.type(), stream);
 
         divMat_16sc4_32f(src1, src2, dst, stream);
+
+        syncOutput(dst, _dst, stream);
     }
     else
     {
@@ -389,15 +394,16 @@ void cv::cuda::rshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Strea
         {NppShift<CV_32S, 1, nppiRShiftC_32s_C1R>::call, 0, NppShift<CV_32S, 3, nppiRShiftC_32s_C3R>::call, NppShift<CV_32S, 4, nppiRShiftC_32s_C4R>::call},
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     CV_Assert( src.depth() < CV_32F );
     CV_Assert( src.channels() == 1 || src.channels() == 3 || src.channels() == 4 );
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
     funcs[src.depth()][src.channels() - 1](src, val, dst, StreamAccessor::getStream(stream));
+
+    syncOutput(dst, _dst, stream);
 }
 
 void cv::cuda::lshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream& stream)
@@ -412,15 +418,16 @@ void cv::cuda::lshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Strea
         {NppShift<CV_32S, 1, nppiLShiftC_32s_C1R>::call, 0, NppShift<CV_32S, 3, nppiLShiftC_32s_C3R>::call, NppShift<CV_32S, 4, nppiLShiftC_32s_C4R>::call},
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     CV_Assert( src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32S );
     CV_Assert( src.channels() == 1 || src.channels() == 3 || src.channels() == 4 );
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
     funcs[src.depth()][src.channels() - 1](src, val, dst, StreamAccessor::getStream(stream));
+
+    syncOutput(dst, _dst, stream);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -475,22 +482,24 @@ namespace
 
 void cv::cuda::magnitude(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
-    _dst.create(src.size(), CV_32FC1);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.size(), CV_32FC1, stream);
 
     npp_magnitude(src, dst, nppiMagnitude_32fc32f_C1R, StreamAccessor::getStream(stream));
+
+    syncOutput(dst, _dst, stream);
 }
 
 void cv::cuda::magnitudeSqr(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
-    _dst.create(src.size(), CV_32FC1);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.size(), CV_32FC1, stream);
 
     npp_magnitude(src, dst, nppiMagnitudeSqr_32fc32f_C1R, StreamAccessor::getStream(stream));
+
+    syncOutput(dst, _dst, stream);
 }
 
 #endif

@@ -53,6 +53,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // affine
 
 struct AffineMapPtr
@@ -146,6 +149,8 @@ warpPerspectivePtr(const SrcPtr& src, Size dstSize, const GpuMat_<float>& warpMa
 {
     return remapPtr(src, perspectiveMap(dstSize, warpMat));
 }
+
+//! @}
 
 }}
 

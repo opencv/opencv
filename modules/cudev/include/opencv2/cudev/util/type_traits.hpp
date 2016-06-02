@@ -52,6 +52,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // NullType
 
 struct NullType {};
@@ -163,6 +166,8 @@ template <typename A, typename B> struct LargerType
         >::type
     >::type type;
 };
+
+//! @}
 
 }}
 

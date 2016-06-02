@@ -47,12 +47,16 @@ namespace cv
 namespace ocl
 {
 
+//! @cond IGNORED
+
 struct ProgramEntry
 {
     const char* name;
     const char* programStr;
     const char* programHash;
 };
+
+//! @endcond
 
 }
 }

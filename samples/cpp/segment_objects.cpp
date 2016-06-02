@@ -1,4 +1,5 @@
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include <stdio.h>
@@ -62,12 +63,17 @@ int main(int argc, char** argv)
     VideoCapture cap;
     bool update_bg_model = true;
 
-    help();
-
-    if( argc < 2 )
+    CommandLineParser parser(argc, argv, "{help h||}{@input||}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string input = parser.get<std::string>("@input");
+    if (input.empty())
         cap.open(0);
     else
-        cap.open(std::string(argv[1]));
+        cap.open(input);
 
     if( !cap.isOpened() )
     {
@@ -78,7 +84,7 @@ int main(int argc, char** argv)
     Mat tmp_frame, bgmask, out_frame;
 
     cap >> tmp_frame;
-    if(!tmp_frame.data)
+    if(tmp_frame.empty())
     {
         printf("can not read data from the video source\n");
         return -1;
@@ -87,13 +93,13 @@ int main(int argc, char** argv)
     namedWindow("video", 1);
     namedWindow("segmented", 1);
 
-    Ptr<BackgroundSubtractorMOG> bgsubtractor=createBackgroundSubtractorMOG();
-    bgsubtractor->setNoiseSigma(10);
+    Ptr<BackgroundSubtractorMOG2> bgsubtractor=createBackgroundSubtractorMOG2();
+    bgsubtractor->setVarThreshold(10);
 
     for(;;)
     {
         cap >> tmp_frame;
-        if( !tmp_frame.data )
+        if( tmp_frame.empty() )
             break;
         bgsubtractor->apply(tmp_frame, bgmask, update_bg_model ? -1 : 0);
         refineSegments(tmp_frame, bgmask, out_frame);

@@ -50,7 +50,10 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -120,33 +123,33 @@ void cv::cuda::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst
 {
     (void) flags;
 
-    GpuMat src1 = _src1.getGpuMat();
-    GpuMat src2 = _src2.getGpuMat();
+    GpuMat src1 = getInputMat(_src1, stream);
+    GpuMat src2 = getInputMat(_src2, stream);
 
     CV_Assert( src1.type() == src2.type() && src1.type() == CV_32FC2 );
     CV_Assert( src1.size() == src2.size() );
 
-    _dst.create(src1.size(), CV_32FC2);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src1.size(), CV_32FC2, stream);
 
     if (conjB)
         gridTransformBinary(globPtr<float2>(src1), globPtr<float2>(src2), globPtr<float2>(dst), comlex_mul_conj(), stream);
     else
         gridTransformBinary(globPtr<float2>(src1), globPtr<float2>(src2), globPtr<float2>(dst), comlex_mul(), stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
 void cv::cuda::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, float scale, bool conjB, Stream& stream)
 {
     (void) flags;
 
-    GpuMat src1 = _src1.getGpuMat();
-    GpuMat src2 = _src2.getGpuMat();
+    GpuMat src1 = getInputMat(_src1, stream);
+    GpuMat src2 = getInputMat(_src2, stream);
 
     CV_Assert( src1.type() == src2.type() && src1.type() == CV_32FC2);
     CV_Assert( src1.size() == src2.size() );
 
-    _dst.create(src1.size(), CV_32FC2);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src1.size(), CV_32FC2, stream);
 
     if (conjB)
     {
@@ -160,6 +163,8 @@ void cv::cuda::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputAr
         op.scale = scale;
         gridTransformBinary(globPtr<float2>(src1), globPtr<float2>(src2), globPtr<float2>(dst), op, stream);
     }
+
+    syncOutput(dst, _dst, stream);
 }
 
 #endif

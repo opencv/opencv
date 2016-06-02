@@ -47,109 +47,105 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-double cv::cuda::norm(InputArray, int, InputArray, GpuMat&) { throw_no_cuda(); return 0.0; }
-double cv::cuda::norm(InputArray, InputArray, GpuMat&, int) { throw_no_cuda(); return 0.0; }
+double cv::cuda::norm(InputArray, int, InputArray) { throw_no_cuda(); return 0.0; }
+void cv::cuda::calcNorm(InputArray, OutputArray, int, InputArray, Stream&) { throw_no_cuda(); }
+double cv::cuda::norm(InputArray, InputArray, int) { throw_no_cuda(); return 0.0; }
+void cv::cuda::calcNormDiff(InputArray, InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-Scalar cv::cuda::sum(InputArray, InputArray, GpuMat&) { throw_no_cuda(); return Scalar(); }
-Scalar cv::cuda::absSum(InputArray, InputArray, GpuMat&) { throw_no_cuda(); return Scalar(); }
-Scalar cv::cuda::sqrSum(InputArray, InputArray, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::cuda::sum(InputArray, InputArray) { throw_no_cuda(); return Scalar(); }
+void cv::cuda::calcSum(InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
+Scalar cv::cuda::absSum(InputArray, InputArray) { throw_no_cuda(); return Scalar(); }
+void cv::cuda::calcAbsSum(InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
+Scalar cv::cuda::sqrSum(InputArray, InputArray) { throw_no_cuda(); return Scalar(); }
+void cv::cuda::calcSqrSum(InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
-void cv::cuda::minMax(InputArray, double*, double*, InputArray, GpuMat&) { throw_no_cuda(); }
-void cv::cuda::minMaxLoc(InputArray, double*, double*, Point*, Point*, InputArray, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::minMax(InputArray, double*, double*, InputArray) { throw_no_cuda(); }
+void cv::cuda::findMinMax(InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::minMaxLoc(InputArray, double*, double*, Point*, Point*, InputArray) { throw_no_cuda(); }
+void cv::cuda::findMinMaxLoc(InputArray, OutputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
-int cv::cuda::countNonZero(InputArray, GpuMat&) { throw_no_cuda(); return 0; }
+int cv::cuda::countNonZero(InputArray) { throw_no_cuda(); return 0; }
+void cv::cuda::countNonZero(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::cuda::reduce(InputArray, OutputArray, int, int, int, Stream&) { throw_no_cuda(); }
 
-void cv::cuda::meanStdDev(InputArray, Scalar&, Scalar&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::meanStdDev(InputArray, Scalar&, Scalar&) { throw_no_cuda(); }
+void cv::cuda::meanStdDev(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::cuda::rectStdDev(InputArray, InputArray, OutputArray, Rect, Stream&) { throw_no_cuda(); }
 
-void cv::cuda::normalize(InputArray, OutputArray, double, double, int, int, InputArray, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::normalize(InputArray, OutputArray, double, double, int, int, InputArray, Stream&) { throw_no_cuda(); }
 
-void cv::cuda::integral(InputArray, OutputArray, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::cuda::sqrIntegral(InputArray, OutputArray, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::cuda::integral(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::sqrIntegral(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 #else
-
-namespace
-{
-    class DeviceBuffer
-    {
-    public:
-        explicit DeviceBuffer(int count_ = 1) : count(count_)
-        {
-            cudaSafeCall( cudaMalloc(&pdev, count * sizeof(double)) );
-        }
-        ~DeviceBuffer()
-        {
-            cudaSafeCall( cudaFree(pdev) );
-        }
-
-        operator double*() {return pdev;}
-
-        void download(double* hptr)
-        {
-            double hbuf;
-            cudaSafeCall( cudaMemcpy(&hbuf, pdev, sizeof(double), cudaMemcpyDeviceToHost) );
-            *hptr = hbuf;
-        }
-        void download(double** hptrs)
-        {
-            AutoBuffer<double, 2 * sizeof(double)> hbuf(count);
-            cudaSafeCall( cudaMemcpy((void*)hbuf, pdev, count * sizeof(double), cudaMemcpyDeviceToHost) );
-            for (int i = 0; i < count; ++i)
-                *hptrs[i] = hbuf[i];
-        }
-
-    private:
-        double* pdev;
-        int count;
-    };
-}
 
 ////////////////////////////////////////////////////////////////////////
 // norm
 
-double cv::cuda::norm(InputArray _src, int normType, InputArray _mask, GpuMat& buf)
-{
-    GpuMat src = _src.getGpuMat();
-    GpuMat mask = _mask.getGpuMat();
+namespace cv { namespace cuda { namespace device {
 
+void normL2(cv::InputArray _src, cv::OutputArray _dst, cv::InputArray _mask, Stream& stream);
+
+void findMaxAbs(cv::InputArray _src, cv::OutputArray _dst, cv::InputArray _mask, Stream& stream);
+
+}}}
+
+void cv::cuda::calcNorm(InputArray _src, OutputArray dst, int normType, InputArray mask, Stream& stream)
+{
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
-    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size() && src.channels() == 1) );
+
+    GpuMat src = getInputMat(_src, stream);
 
     GpuMat src_single_channel = src.reshape(1);
 
     if (normType == NORM_L1)
-        return cuda::absSum(src_single_channel, mask, buf)[0];
+    {
+        calcAbsSum(src_single_channel, dst, mask, stream);
+    }
+    else if (normType == NORM_L2)
+    {
+        cv::cuda::device::normL2(src_single_channel, dst, mask, stream);
+    }
+    else // NORM_INF
+    {
+        cv::cuda::device::findMaxAbs(src_single_channel, dst, mask, stream);
+    }
+}
 
-    if (normType == NORM_L2)
-        return std::sqrt(cuda::sqrSum(src_single_channel, mask, buf)[0]);
+double cv::cuda::norm(InputArray _src, int normType, InputArray _mask)
+{
+    Stream& stream = Stream::Null();
 
-    // NORM_INF
-    double min_val, max_val;
-    cuda::minMax(src_single_channel, &min_val, &max_val, mask, buf);
-    return std::max(std::abs(min_val), std::abs(max_val));
+    HostMem dst;
+    calcNorm(_src, dst, normType, _mask, stream);
+
+    stream.waitForCompletion();
+
+    double val;
+    dst.createMatHeader().convertTo(Mat(1, 1, CV_64FC1, &val), CV_64F);
+
+    return val;
 }
 
 ////////////////////////////////////////////////////////////////////////
 // meanStdDev
 
-void cv::cuda::meanStdDev(InputArray _src, Scalar& mean, Scalar& stddev, GpuMat& buf)
+void cv::cuda::meanStdDev(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    if (!deviceSupports(FEATURE_SET_COMPUTE_13))
+        CV_Error(cv::Error::StsNotImplemented, "Not sufficient compute capebility");
+
+    const GpuMat src = getInputMat(_src, stream);
 
     CV_Assert( src.type() == CV_8UC1 );
 
-    if (!deviceSupports(FEATURE_SET_COMPUTE_13))
-        CV_Error(cv::Error::StsNotImplemented, "Not sufficient compute capebility");
+    GpuMat dst = getOutputMat(_dst, 1, 2, CV_64FC1, stream);
 
     NppiSize sz;
     sz.width  = src.cols;
     sz.height = src.rows;
-
-    DeviceBuffer dbuf(2);
 
     int bufSize;
 #if (CUDA_VERSION <= 4020)
@@ -158,14 +154,30 @@ void cv::cuda::meanStdDev(InputArray _src, Scalar& mean, Scalar& stddev, GpuMat&
     nppSafeCall( nppiMeanStdDevGetBufferHostSize_8u_C1R(sz, &bufSize) );
 #endif
 
-    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
+    BufferPool pool(stream);
+    GpuMat buf = pool.getBuffer(1, bufSize, CV_8UC1);
 
-    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, buf.ptr<Npp8u>(), dbuf, (double*)dbuf + 1) );
+    NppStreamHandler h(StreamAccessor::getStream(stream));
 
-    cudaSafeCall( cudaDeviceSynchronize() );
+    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, buf.ptr<Npp8u>(), dst.ptr<Npp64f>(), dst.ptr<Npp64f>() + 1) );
 
-    double* ptrs[2] = {mean.val, stddev.val};
-    dbuf.download(ptrs);
+    syncOutput(dst, _dst, stream);
+}
+
+void cv::cuda::meanStdDev(InputArray _src, Scalar& mean, Scalar& stddev)
+{
+    Stream& stream = Stream::Null();
+
+    HostMem dst;
+    meanStdDev(_src, dst, stream);
+
+    stream.waitForCompletion();
+
+    double vals[2];
+    dst.createMatHeader().copyTo(Mat(1, 2, CV_64FC1, &vals[0]));
+
+    mean = Scalar(vals[0]);
+    stddev = Scalar(vals[1]);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -173,13 +185,12 @@ void cv::cuda::meanStdDev(InputArray _src, Scalar& mean, Scalar& stddev, GpuMat&
 
 void cv::cuda::rectStdDev(InputArray _src, InputArray _sqr, OutputArray _dst, Rect rect, Stream& _stream)
 {
-    GpuMat src = _src.getGpuMat();
-    GpuMat sqr = _sqr.getGpuMat();
+    GpuMat src = getInputMat(_src, _stream);
+    GpuMat sqr = getInputMat(_sqr, _stream);
 
     CV_Assert( src.type() == CV_32SC1 && sqr.type() == CV_64FC1 );
 
-    _dst.create(src.size(), CV_32FC1);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.size(), CV_32FC1, _stream);
 
     NppiSize sz;
     sz.width = src.cols;
@@ -200,45 +211,8 @@ void cv::cuda::rectStdDev(InputArray _src, InputArray _sqr, OutputArray _dst, Re
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
-}
 
-////////////////////////////////////////////////////////////////////////
-// normalize
-
-void cv::cuda::normalize(InputArray _src, OutputArray dst, double a, double b, int norm_type, int dtype, InputArray mask, GpuMat& norm_buf, GpuMat& cvt_buf)
-{
-    GpuMat src = _src.getGpuMat();
-
-    double scale = 1, shift = 0;
-
-    if (norm_type == NORM_MINMAX)
-    {
-        double smin = 0, smax = 0;
-        double dmin = std::min(a, b), dmax = std::max(a, b);
-        cuda::minMax(src, &smin, &smax, mask, norm_buf);
-        scale = (dmax - dmin) * (smax - smin > std::numeric_limits<double>::epsilon() ? 1.0 / (smax - smin) : 0.0);
-        shift = dmin - smin * scale;
-    }
-    else if (norm_type == NORM_L2 || norm_type == NORM_L1 || norm_type == NORM_INF)
-    {
-        scale = cuda::norm(src, norm_type, mask, norm_buf);
-        scale = scale > std::numeric_limits<double>::epsilon() ? a / scale : 0.0;
-        shift = 0;
-    }
-    else
-    {
-        CV_Error(cv::Error::StsBadArg, "Unknown/unsupported norm type");
-    }
-
-    if (mask.empty())
-    {
-        src.convertTo(dst, dtype, scale, shift);
-    }
-    else
-    {
-        src.convertTo(cvt_buf, dtype, scale, shift);
-        cvt_buf.copyTo(dst, mask);
-    }
+    syncOutput(dst, _dst, _stream);
 }
 
 #endif

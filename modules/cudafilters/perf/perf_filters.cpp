@@ -53,7 +53,7 @@ DEF_PARAM_TEST(Sz_Type_KernelSz, cv::Size, MatType, int);
 
 PERF_TEST_P(Sz_Type_KernelSz, Blur,
             Combine(CUDA_TYPICAL_MAT_SIZES,
-                    Values(CV_8UC1, CV_8UC4),
+                    Values(CV_8UC1, CV_8UC4, CV_32FC1),
                     Values(3, 5, 7)))
 {
     declare.time(20.0);
@@ -373,5 +373,45 @@ PERF_TEST_P(Sz_Type_Op, MorphologyEx, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_
         TEST_CYCLE() cv::morphologyEx(src, dst, morphOp, ker);
 
         CPU_SANITY_CHECK(dst);
+    }
+}
+//////////////////////////////////////////////////////////////////////
+// MedianFilter
+//////////////////////////////////////////////////////////////////////
+// Median
+
+DEF_PARAM_TEST(Sz_KernelSz, cv::Size, int);
+
+//PERF_TEST_P(Sz_Type_KernelSz, Median, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_8UC1,CV_8UC1), Values(3, 5, 7, 9, 11, 13, 15)))
+PERF_TEST_P(Sz_KernelSz, Median, Combine(CUDA_TYPICAL_MAT_SIZES, Values(3, 5, 7, 9, 11, 13, 15)))
+{
+    declare.time(20.0);
+
+    const cv::Size size = GET_PARAM(0);
+    // const int type = GET_PARAM(1);
+    const int type = CV_8UC1;
+    const int kernel = GET_PARAM(1);
+
+    cv::Mat src(size, type);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_CUDA())
+    {
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
+
+        cv::Ptr<cv::cuda::Filter> median = cv::cuda::createMedianFilter(d_src.type(), kernel);
+
+        TEST_CYCLE() median->apply(d_src, dst);
+
+        SANITY_CHECK_NOTHING();
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::medianBlur(src,dst,kernel);
+
+        SANITY_CHECK_NOTHING();
     }
 }

@@ -4,6 +4,9 @@
 #include "precomp.hpp"
 #include "opencv2/core/core_c.h"
 
+namespace cv
+{
+
 class epnp {
  public:
   epnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& ipoints);
@@ -27,12 +30,12 @@ class epnp {
   {
       for(int i = 0; i < number_of_correspondences; i++)
       {
-          pws[3 * i    ] = opoints.at<OpointType>(0,i).x;
-          pws[3 * i + 1] = opoints.at<OpointType>(0,i).y;
-          pws[3 * i + 2] = opoints.at<OpointType>(0,i).z;
+          pws[3 * i    ] = opoints.at<OpointType>(i).x;
+          pws[3 * i + 1] = opoints.at<OpointType>(i).y;
+          pws[3 * i + 2] = opoints.at<OpointType>(i).z;
 
-          us[2 * i    ] = ipoints.at<IpointType>(0,i).x*fu + uc;
-          us[2 * i + 1] = ipoints.at<IpointType>(0,i).y*fv + vc;
+          us[2 * i    ] = ipoints.at<IpointType>(i).x*fu + uc;
+          us[2 * i + 1] = ipoints.at<IpointType>(i).y*fv + vc;
       }
   }
   double reprojection_error(const double R[3][3], const double t[3]);
@@ -77,5 +80,7 @@ class epnp {
   int max_nr;
   double * A1, * A2;
 };
+
+}
 
 #endif

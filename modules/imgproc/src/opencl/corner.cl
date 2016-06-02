@@ -114,25 +114,23 @@ __kernel void corner(__global const float * Dx, int dx_step, int dx_offset, int 
     int dst_startX = gX * (THREADS-ksX+1) + dst_x_off;
     int dst_startY = (gY << 1) + dst_y_off;
 
-    float dx_data[ksY+1],dy_data[ksY+1], data[3][ksY+1];
+    float data[3][ksY+1];
     __local float temp[6][THREADS];
 
 #ifdef BORDER_CONSTANT
     for (int i=0; i < ksY+1; i++)
     {
         bool dx_con = dx_startX+col >= 0 && dx_startX+col < dx_whole_cols && dx_startY+i >= 0 && dx_startY+i < dx_whole_rows;
-        int indexDx = (dx_startY+i)*(dx_step>>2)+(dx_startX+col);
+        int indexDx = mad24(dx_startY+i, dx_step>>2, dx_startX+col);
         float dx_s = dx_con ? Dx[indexDx] : 0.0f;
-        dx_data[i] = dx_s;
 
         bool dy_con = dy_startX+col >= 0 && dy_startX+col < dy_whole_cols && dy_startY+i >= 0 && dy_startY+i < dy_whole_rows;
-        int indexDy = (dy_startY+i)*(dy_step>>2)+(dy_startX+col);
+        int indexDy = mad24(dy_startY+i, dy_step>>2, dy_startX+col);
         float dy_s = dy_con ? Dy[indexDy] : 0.0f;
-        dy_data[i] = dy_s;
 
-        data[0][i] = dx_data[i] * dx_data[i];
-        data[1][i] = dx_data[i] * dy_data[i];
-        data[2][i] = dy_data[i] * dy_data[i];
+        data[0][i] = dx_s * dx_s;
+        data[1][i] = dx_s * dy_s;
+        data[2][i] = dy_s * dy_s;
     }
 #else
     int clamped_col = min(2*dst_cols, col);
@@ -141,16 +139,16 @@ __kernel void corner(__global const float * Dx, int dx_step, int dx_offset, int 
         int dx_selected_row = dx_startY+i, dx_selected_col = dx_startX+clamped_col;
         EXTRAPOLATE(dx_selected_row, dx_whole_rows)
         EXTRAPOLATE(dx_selected_col, dx_whole_cols)
-        dx_data[i] = Dx[dx_selected_row * (dx_step>>2) + dx_selected_col];
+        float dx_s = Dx[mad24(dx_selected_row, dx_step>>2, dx_selected_col)];
 
         int dy_selected_row = dy_startY+i, dy_selected_col = dy_startX+clamped_col;
         EXTRAPOLATE(dy_selected_row, dy_whole_rows)
         EXTRAPOLATE(dy_selected_col, dy_whole_cols)
-        dy_data[i] = Dy[dy_selected_row * (dy_step>>2) + dy_selected_col];
+        float dy_s = Dy[mad24(dy_selected_row, dy_step>>2, dy_selected_col)];
 
-        data[0][i] = dx_data[i] * dx_data[i];
-        data[1][i] = dx_data[i] * dy_data[i];
-        data[2][i] = dy_data[i] * dy_data[i];
+        data[0][i] = dx_s * dx_s;
+        data[1][i] = dx_s * dy_s;
+        data[2][i] = dy_s * dy_s;
     }
 #endif
     float sum0 = 0.0f, sum1 = 0.0f, sum2 = 0.0f;
@@ -180,7 +178,7 @@ __kernel void corner(__global const float * Dx, int dx_step, int dx_offset, int 
         col += anX;
         int posX = dst_startX - dst_x_off + col - anX;
         int posY = (gly << 1);
-        int till = (ksX + 1)%2;
+        int till = (ksX + 1) & 1;
         float tmp_sum[6] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
         for (int k=0; k<6; k++)
         {
@@ -210,7 +208,7 @@ __kernel void corner(__global const float * Dx, int dx_step, int dx_offset, int 
             float a = tmp_sum[0] * 0.5f;
             float b = tmp_sum[2];
             float c = tmp_sum[4] * 0.5f;
-            *(__global float *)(dst + dst_index) = (float)((a+c) - sqrt((a-c)*(a-c) + b*b));
+            *(__global float *)(dst + dst_index) = (float)((a+c) - native_sqrt((a-c)*(a-c) + b*b));
         }
         if (posX < dst_cols && (posY + 1) < dst_rows)
         {
@@ -218,7 +216,7 @@ __kernel void corner(__global const float * Dx, int dx_step, int dx_offset, int 
             float a = tmp_sum[1] * 0.5f;
             float b = tmp_sum[3];
             float c = tmp_sum[5] * 0.5f;
-            *(__global float *)(dst + dst_index) = (float)((a+c) - sqrt((a-c)*(a-c) + b*b));
+            *(__global float *)(dst + dst_index) = (float)((a+c) - native_sqrt((a-c)*(a-c) + b*b));
         }
 #else
 #error "No such corners type"

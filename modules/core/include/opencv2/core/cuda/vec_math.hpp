@@ -46,6 +46,12 @@
 #include "vec_traits.hpp"
 #include "saturate_cast.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
 
@@ -918,5 +924,7 @@ CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC(atan2, ::atan2, double, double, double)
 #undef CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC
 
 }}} // namespace cv { namespace cuda { namespace device
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_VECMATH_HPP__

@@ -3,7 +3,7 @@
 * findTransformECC that implements the image alignment ECC algorithm
 *
 *
-* The demo loads an image (defaults to fruits.jpg) and it artificially creates
+* The demo loads an image (defaults to ../data/fruits.jpg) and it artificially creates
 * a template image based on the given motion type. When two images are given,
 * the first image is the input image and the second one defines the template image.
 * In the latter case, you can also parse the warp's initialization.
@@ -13,6 +13,7 @@
 * Authors: G. Evangelidis, INRIA, Grenoble, France
 *          M. Asbach, Fraunhofer IAIS, St. Augustin, Germany
 */
+#include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/video.hpp>
 #include <opencv2/imgproc.hpp>
@@ -43,7 +44,7 @@ static void draw_warped_roi(Mat& image, const int width, const int height, Mat& 
 
 
 const std::string keys =
-    "{@inputImage    | fruits.jpg    | input image filename }"
+    "{@inputImage    | ../data/fruits.jpg | input image filename }"
     "{@templateImage |               | template image filename (optional)}"
     "{@inputWarp     |               | input warp (matrix) filename (optional)}"
     "{n numOfIter    | 50            | ECC's iterations }"
@@ -52,6 +53,7 @@ const std::string keys =
     "{m motionType   | affine        | type of motion (translation, euclidean, affine, homography) }"
     "{v verbose      | 0             | display initial and final images }"
     "{w warpedImfile | warpedECC.png | warped input image }"
+    "{h help | | print help message }"
 ;
 
 
@@ -63,7 +65,7 @@ static void help(void)
         " are given, the initialization of the warp by command line parsing is possible. "
         "If inputWarp is missing, the identity transformation initializes the algorithm. \n" << endl;
 
-    cout << "\nUsage example (one image): \n./ecc fruits.jpg -o=outWarp.ecc "
+    cout << "\nUsage example (one image): \n./ecc ../data/fruits.jpg -o=outWarp.ecc "
         "-m=euclidean -e=1e-6 -N=70 -v=1 \n" << endl;
 
     cout << "\nUsage example (two images with initialization): \n./ecc yourInput.png yourTemplate.png "
@@ -175,12 +177,17 @@ int main (const int argc, const char * argv[])
     CommandLineParser parser(argc, argv, keys);
     parser.about("ECC demo");
 
-    if (argc<2) {
+    if (argc < 2) {
         parser.printMessage();
         help();
         return 1;
     }
-
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        help();
+        return 1;
+    }
     string imgFile = parser.get<string>(0);
     string tempImgFile = parser.get<string>(1);
     string inWarpFile = parser.get<string>(2);
@@ -191,7 +198,11 @@ int main (const int argc, const char * argv[])
     int verbose = parser.get<int>("v");
     string finalWarp = parser.get<string>("o");
     string warpedImFile = parser.get<string>("w");
-
+    if (!parser.check())
+    {
+        parser.printErrors();
+        return -1;
+    }
     if (!(warpType == "translation" || warpType == "euclidean"
         || warpType == "affine" || warpType == "homography"))
     {

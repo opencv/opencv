@@ -52,12 +52,13 @@ namespace
 {
     // first four bytes, should be the same in little endian
     const float FLO_TAG_FLOAT = 202021.25f;  // check for this when READING the file
-    const char FLO_TAG_STRING[] = "PIEH";    // use this when WRITING the file
 
+#ifdef DUMP
     // binary file format for flow data specified here:
     // http://vision.middlebury.edu/flow/data/
     void writeOpticalFlowToFile(const Mat_<Point2f>& flow, const string& fileName)
     {
+        const char FLO_TAG_STRING[] = "PIEH";    // use this when WRITING the file
         ofstream file(fileName.c_str(), ios_base::binary);
 
         file << FLO_TAG_STRING;
@@ -76,6 +77,7 @@ namespace
             }
         }
     }
+#endif
 
     // binary file format for flow data specified here:
     // http://vision.middlebury.edu/flow/data/
@@ -106,6 +108,7 @@ namespace
                 flow(i, j) = u;
             }
         }
+        file.close();
     }
 
     bool isFlowCorrect(Point2f u)
@@ -164,7 +167,7 @@ TEST(Video_calcOpticalFlowDual_TVL1, Regression)
     ASSERT_EQ(gold.rows, flow.rows);
     ASSERT_EQ(gold.cols, flow.cols);
 
-    const double err = calcRMSE(gold, flow);
+    double err = calcRMSE(gold, flow);
     EXPECT_LE(err, MAX_RMSE);
 #endif
 }

@@ -43,6 +43,12 @@
 #ifndef OPENCV_CUDA_WARP_REDUCE_HPP__
 #define OPENCV_CUDA_WARP_REDUCE_HPP__
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     template <class T>
@@ -64,5 +70,7 @@ namespace cv { namespace cuda { namespace device
         return ptr[tid - lane];
     }
 }}} // namespace cv { namespace cuda { namespace cudev {
+
+//! @endcond
 
 #endif /* OPENCV_CUDA_WARP_REDUCE_HPP__ */

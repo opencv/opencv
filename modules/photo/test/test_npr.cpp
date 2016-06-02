@@ -47,6 +47,7 @@
 using namespace cv;
 using namespace std;
 
+static const double numerical_precision = 100.;
 
 TEST(Photo_NPR_EdgePreserveSmoothing_RecursiveFilter, regression)
 {
@@ -60,8 +61,9 @@ TEST(Photo_NPR_EdgePreserveSmoothing_RecursiveFilter, regression)
     Mat result;
     edgePreservingFilter(source,result,1);
 
-    imwrite(folder + "smoothened_RF.png", result);
-
+    Mat reference = imread(folder + "smoothened_RF_reference.png");
+    double error = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(error, numerical_precision);
 }
 
 TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, regression)
@@ -76,7 +78,9 @@ TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, regression)
     Mat result;
     edgePreservingFilter(source,result,2);
 
-    imwrite(folder + "smoothened_NCF.png", result);
+    Mat reference = imread(folder + "smoothened_NCF_reference.png");
+    double error = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(error, numerical_precision);
 
 }
 
@@ -92,8 +96,9 @@ TEST(Photo_NPR_DetailEnhance, regression)
     Mat result;
     detailEnhance(source,result);
 
-    imwrite(folder + "detail_enhanced.png", result);
-
+    Mat reference = imread(folder + "detail_enhanced_reference.png");
+    double error = cvtest::norm(reference, result, NORM_L1);
+    EXPECT_LE(error, numerical_precision);
 }
 
 TEST(Photo_NPR_PencilSketch, regression)
@@ -105,12 +110,16 @@ TEST(Photo_NPR_PencilSketch, regression)
 
     ASSERT_FALSE(source.empty()) << "Could not load input image " << original_path;
 
-    Mat result,result1;
-    pencilSketch(source,result,result1, 10, 0.1f, 0.03f);
+    Mat pencil_result, color_pencil_result;
+    pencilSketch(source,pencil_result, color_pencil_result, 10, 0.1f, 0.03f);
 
-    imwrite(folder + "pencil_sketch.png", result);
-    imwrite(folder + "color_pencil_sketch.png", result1);
+    Mat pencil_reference = imread(folder + "pencil_sketch_reference.png", 0 /* == grayscale*/);
+    double pencil_error = norm(pencil_reference, pencil_result, NORM_L1);
+    EXPECT_LE(pencil_error, numerical_precision);
 
+    Mat color_pencil_reference = imread(folder + "color_pencil_sketch_reference.png");
+    double color_pencil_error = cvtest::norm(color_pencil_reference, color_pencil_result, NORM_L1);
+    EXPECT_LE(color_pencil_error, numerical_precision);
 }
 
 TEST(Photo_NPR_Stylization, regression)
@@ -125,6 +134,8 @@ TEST(Photo_NPR_Stylization, regression)
     Mat result;
     stylization(source,result);
 
-    imwrite(folder + "stylized.png", result);
+    Mat stylized_reference = imread(folder + "stylized_reference.png");
+    double stylized_error = cvtest::norm(stylized_reference, result, NORM_L1);
+    EXPECT_LE(stylized_error, numerical_precision);
 
 }

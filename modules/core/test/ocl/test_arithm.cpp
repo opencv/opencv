@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #include <cmath>
@@ -157,6 +157,7 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         Border maskBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(mask, mask_roi, roiSize, maskBorder, CV_8UC1, 0, 2);
         cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
+        *mask.ptr(0) = 255; // prevent test case with mask filled 0 only
 
         val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
                          rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
@@ -174,9 +175,12 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst2);
     }
 
-    void Near(double threshold = 0.)
+    void Near(double threshold = 0., bool relative = false)
     {
-        OCL_EXPECT_MATS_NEAR(dst1, threshold);
+        if (!relative)
+            OCL_EXPECT_MATS_NEAR(dst1, threshold);
+        else
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst1, threshold);
     }
 
     void Near1(double threshold = 0.)
@@ -327,7 +331,11 @@ OCL_TEST_P(Mul, Mat_Scale)
         OCL_OFF(cv::multiply(src1_roi, src2_roi, dst1_roi, val[0]));
         OCL_ON(cv::multiply(usrc1_roi, usrc2_roi, udst1_roi, val[0]));
 
+#ifdef ANDROID
+        Near(udst1_roi.depth() >= CV_32F ? 2e-1 : 1);
+#else
         Near(udst1_roi.depth() >= CV_32F ? 1e-3 : 1);
+#endif
     }
 }
 
@@ -340,7 +348,10 @@ OCL_TEST_P(Mul, Mat_Scalar_Scale)
         OCL_OFF(cv::multiply(src1_roi, val, dst1_roi, val[0]));
         OCL_ON(cv::multiply(usrc1_roi, val, udst1_roi, val[0]));
 
-        Near(udst1_roi.depth() >= CV_32F ? 1e-2 : 1);
+        if (udst1_roi.depth() >= CV_32F)
+            Near(1e-6, true);
+        else
+            Near(1);
     }
 }
 
@@ -829,7 +840,7 @@ OCL_TEST_P(Pow, Mat)
 {
     static const double pows[] = { -4, -1, -2.5, 0, 1, 2, 3.7, 4 };
 
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < 1/*test_loop_times*/; j++)
         for (int k = 0, size = sizeof(pows) / sizeof(double); k < size; ++k)
         {
             SCOPED_TRACE(pows[k]);
@@ -1149,7 +1160,7 @@ OCL_TEST_P(MinMaxIdx, Mat)
         int p1[2], p2[2], up1[2], up2[2];
         double minv, maxv, uminv, umaxv;
 
-        if(src1_roi.channels() > 1)
+        if (cn > 1)
         {
             OCL_OFF(cv::minMaxIdx(src2_roi, &minv, &maxv) );
             OCL_ON(cv::minMaxIdx(usrc2_roi, &uminv, &umaxv));
@@ -1164,7 +1175,8 @@ OCL_TEST_P(MinMaxIdx, Mat)
 
             EXPECT_DOUBLE_EQ(minv, uminv);
             EXPECT_DOUBLE_EQ(maxv, umaxv);
-            for( int i = 0; i < 2; i++)
+
+            for (int i = 0; i < 2; i++)
             {
                 EXPECT_EQ(p1[i], up1[i]);
                 EXPECT_EQ(p2[i], up2[i]);
@@ -1202,7 +1214,7 @@ OCL_TEST_P(MinMaxIdx_Mask, Mat)
 
 static bool relativeError(double actual, double expected, double eps)
 {
-    return std::abs(actual - expected) / actual < eps;
+    return std::abs(actual - expected) < eps*(1 + std::abs(actual));
 }
 
 typedef ArithmTestBase Norm;
@@ -1229,7 +1241,7 @@ OCL_TEST_P(Norm, NORM_INF_1arg_mask)
         OCL_OFF(const double cpuRes = cv::norm(src1_roi, NORM_INF, mask_roi));
         OCL_ON(const double gpuRes = cv::norm(usrc1_roi, NORM_INF, umask_roi));
 
-        EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        EXPECT_NEAR(cpuRes, gpuRes, 0.2);
     }
 }
 
@@ -1292,6 +1304,8 @@ OCL_TEST_P(Norm, NORM_INF_2args)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_INF;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1299,7 +1313,7 @@ OCL_TEST_P(Norm, NORM_INF_2args)
             OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type));
             OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type));
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
 
@@ -1310,6 +1324,8 @@ OCL_TEST_P(Norm, NORM_INF_2args_mask)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_INF;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1317,7 +1333,7 @@ OCL_TEST_P(Norm, NORM_INF_2args_mask)
             OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type, mask_roi));
             OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type, umask_roi));
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
 
@@ -1327,6 +1343,8 @@ OCL_TEST_P(Norm, NORM_L1_2args)
         for (int j = 0; j < test_loop_times; j++)
         {
             generateTestData();
+
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
 
             int type = NORM_L1;
             if (relative == 1)
@@ -1346,6 +1364,8 @@ OCL_TEST_P(Norm, NORM_L1_2args_mask)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_L1;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1364,6 +1384,8 @@ OCL_TEST_P(Norm, NORM_L2_2args)
         {
             generateTestData();
 
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
+
             int type = NORM_L2;
             if (relative == 1)
                 type |= NORM_RELATIVE;
@@ -1381,6 +1403,8 @@ OCL_TEST_P(Norm, NORM_L2_2args_mask)
         for (int j = 0; j < test_loop_times; j++)
         {
             generateTestData();
+
+            SCOPED_TRACE(relative ? "NORM_RELATIVE" : "");
 
             int type = NORM_L2;
             if (relative == 1)
@@ -1406,7 +1430,7 @@ OCL_TEST_P(UMatDot, Mat)
         OCL_OFF(const double cpuRes = src1_roi.dot(src2_roi));
         OCL_ON(const double gpuRes = usrc1_roi.dot(usrc2_roi));
 
-        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-5);
     }
 }
 
@@ -1533,7 +1557,49 @@ OCL_TEST_P(InRange, Scalar)
 
 //////////////////////////////// ConvertScaleAbs ////////////////////////////////////////////////
 
-typedef ArithmTestBase ConvertScaleAbs;
+PARAM_TEST_CASE(ConvertScaleAbs, MatDepth, Channels, bool)
+{
+    int depth;
+    int cn;
+    bool use_roi;
+    cv::Scalar val;
+
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
+    }
+
+    virtual void generateTestData()
+    {
+        const int stype = CV_MAKE_TYPE(depth, cn);
+        const int dtype = CV_MAKE_TYPE(CV_8U, cn);
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, stype, -11, 11); // FIXIT: Test with minV, maxV
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, dtype, 5, 16);
+
+        val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
+                         rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
+    }
+
+    void Near(double threshold = 0.)
+    {
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
+    }
+
+};
+
 
 OCL_TEST_P(ConvertScaleAbs, Mat)
 {
@@ -1541,10 +1607,10 @@ OCL_TEST_P(ConvertScaleAbs, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::convertScaleAbs(src1_roi, dst1_roi, val[0], val[1]));
-        OCL_ON(cv::convertScaleAbs(usrc1_roi, udst1_roi, val[0], val[1]));
+        OCL_OFF(cv::convertScaleAbs(src_roi, dst_roi, val[0], val[1]));
+        OCL_ON(cv::convertScaleAbs(usrc_roi, udst_roi, val[0], val[1]));
 
-        Near(depth <= CV_32S ? 1 : 1e-6);
+        Near(1);
     }
 }
 
@@ -1690,7 +1756,7 @@ OCL_TEST_P(ReduceSum, Mat)
         OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_SUM, dtype));
         OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_SUM, dtype));
 
-        double eps = ddepth <= CV_32S ? 1 : 1e-4;
+        double eps = ddepth <= CV_32S ? 1 : 7e-4;
         OCL_EXPECT_MATS_NEAR(dst, eps);
     }
 }
@@ -1736,7 +1802,7 @@ OCL_TEST_P(ReduceAvg, Mat)
         OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_AVG, dtype));
         OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_AVG, dtype));
 
-        double eps = ddepth <= CV_32S ? 1 : 5e-6;
+        double eps = ddepth <= CV_32S ? 1 : 6e-6;
         OCL_EXPECT_MATS_NEAR(dst, eps);
     }
 }
@@ -1818,6 +1884,22 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceMin, Combine(testing::Values(std::make
                                                                        std::make_pair<MatDepth, MatDepth>(CV_64F, CV_64F)),
                                                        OCL_ALL_CHANNELS, testing::Values(0, 1), Bool()));
 
+
+// T-API BUG (haveOpenCL() is false): modules/core/src/matrix.cpp:212: error: (-215) u->refcount == 0 in function deallocate
+OCL_TEST(Normalize, DISABLED_regression_5876_inplace_change_type)
+{
+    double initial_values[] = {1, 2, 5, 4, 3};
+    float result_values[] = {0, 0.25, 1, 0.75, 0.5};
+    Mat m(Size(5, 1), CV_64FC1, initial_values);
+    Mat result(Size(5, 1), CV_32FC1, result_values);
+
+    UMat um; m.copyTo(um);
+    UMat uresult; result.copyTo(uresult);
+
+    OCL_ON(normalize(um, um, 1, 0, NORM_MINMAX, CV_32F));
+
+    EXPECT_EQ(0, cvtest::norm(um, uresult, NORM_INF));
+}
 
 } } // namespace cvtest::ocl
 

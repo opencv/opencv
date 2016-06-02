@@ -1,9 +1,0 @@
-############################
-OpenCV API Reference
-############################
-
-.. toctree::
-   :maxdepth: 2
-
-   core/doc/intro.rst
-@OPENCV_REFMAN_TOC@

@@ -46,6 +46,8 @@
 #include "../common.hpp"
 #include "../vec_traits.hpp"
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     namespace type_traits_detail
@@ -183,5 +185,7 @@ namespace cv { namespace cuda { namespace device
         };
     } // namespace type_traits_detail
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_TYPE_TRAITS_DETAIL_HPP__

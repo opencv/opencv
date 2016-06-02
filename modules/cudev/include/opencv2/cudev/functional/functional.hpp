@@ -54,6 +54,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // Function Objects
 
 template <typename _Arg, typename _Result> struct unary_function
@@ -872,6 +875,8 @@ template <typename F> struct IsBinaryFunction
 
     enum { value = (sizeof(check(makeF())) == sizeof(Yes)) };
 };
+
+//! @}
 
 }}
 
