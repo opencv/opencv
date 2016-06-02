@@ -53,6 +53,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // UnaryTransformPtr
 
 template <class SrcPtr, class Op> struct UnaryTransformPtr
@@ -145,6 +148,8 @@ transformPtr(const Src1Ptr& src1, const Src2Ptr& src2, const Op& op)
 template <class Src1Ptr, class Src2Ptr, class Op> struct PtrTraits< BinaryTransformPtrSz<Src1Ptr, Src2Ptr, Op> > : PtrTraitsBase<BinaryTransformPtrSz<Src1Ptr, Src2Ptr, Op>, BinaryTransformPtr<Src1Ptr, Src2Ptr, Op> >
 {
 };
+
+//! @}
 
 }}
 

@@ -49,7 +49,7 @@ Mat cv::superres::arrGetMat(InputArray arr, Mat& buf)
 {
     switch (arr.kind())
     {
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         arr.getGpuMat().download(buf);
         return buf;
 
@@ -66,7 +66,7 @@ UMat cv::superres::arrGetUMat(InputArray arr, UMat& buf)
 {
     switch (arr.kind())
     {
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         arr.getGpuMat().download(buf);
         return buf;
 
@@ -83,7 +83,7 @@ GpuMat cv::superres::arrGetGpuMat(InputArray arr, GpuMat& buf)
 {
     switch (arr.kind())
     {
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         return arr.getGpuMat();
 
     case _InputArray::OPENGL_BUFFER:
@@ -184,7 +184,7 @@ namespace
 
         switch (src.kind())
         {
-        case _InputArray::GPU_MAT:
+        case _InputArray::CUDA_GPU_MAT:
             #ifdef HAVE_OPENCV_CUDAIMGPROC
                 cuda::cvtColor(src.getGpuMat(), dst.getGpuMatRef(), code, cn);
             #else
@@ -205,11 +205,11 @@ namespace
 
         static const double maxVals[] =
         {
-            std::numeric_limits<uchar>::max(),
-            std::numeric_limits<schar>::max(),
-            std::numeric_limits<ushort>::max(),
-            std::numeric_limits<short>::max(),
-            std::numeric_limits<int>::max(),
+            (double)std::numeric_limits<uchar>::max(),
+            (double)std::numeric_limits<schar>::max(),
+            (double)std::numeric_limits<ushort>::max(),
+            (double)std::numeric_limits<short>::max(),
+            (double)std::numeric_limits<int>::max(),
             1.0,
             1.0,
         };
@@ -218,7 +218,7 @@ namespace
 
         switch (src.kind())
         {
-        case _InputArray::GPU_MAT:
+        case _InputArray::CUDA_GPU_MAT:
             src.getGpuMat().convertTo(dst.getGpuMatRef(), depth, scale);
             break;
 

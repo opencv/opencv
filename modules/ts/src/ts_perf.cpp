@@ -1,5 +1,16 @@
 #include "precomp.hpp"
 
+#include <map>
+#include <iostream>
+#include <fstream>
+
+#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #ifdef HAVE_CUDA
 #include "opencv2/core/cuda.hpp"
 #endif
@@ -31,10 +42,14 @@ static double       param_time_limit;
 static int          param_threads;
 static bool         param_write_sanity;
 static bool         param_verify_sanity;
+#ifdef CV_COLLECT_IMPL_DATA
+static bool         param_collect_impl;
+#endif
+extern bool         test_ipp_check;
+
 #ifdef HAVE_CUDA
 static int          param_cuda_device;
 #endif
-
 
 #ifdef ANDROID
 static int          param_affinity_mask;
@@ -54,6 +69,8 @@ static void setCurrentThreadAffinityMask(int mask)
     }
 }
 #endif
+
+static double perf_stability_criteria = 0.03; // 3%
 
 namespace {
 
@@ -168,7 +185,11 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
         return;
     }
 
+#ifndef WINRT
     const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
+#else
+    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
+#endif
     const char *path_separator = "/";
 
     if (data_path_dir)
@@ -421,9 +442,9 @@ static int countViolations(const cv::Mat& expected, const cv::Mat& actual, const
 
     if (v > 0 && max_violation != 0 && max_allowed != 0)
     {
-        int loc[10];
+        int loc[10] = {0};
         cv::minMaxIdx(maximum, 0, max_allowed, 0, loc, mask);
-        *max_violation = diff64f.at<double>(loc[1], loc[0]);
+        *max_violation = diff64f.at<double>(loc[0], loc[1]);
     }
 
     return v;
@@ -631,6 +652,82 @@ void performance_metrics::clear()
     terminationReason = TERM_UNKNOWN;
 }
 
+/*****************************************************************************************\
+*                                   Performance validation results
+\*****************************************************************************************/
+
+static bool perf_validation_enabled = false;
+
+static std::string perf_validation_results_directory;
+static std::map<std::string, float> perf_validation_results;
+static std::string perf_validation_results_outfile;
+
+static double perf_validation_criteria = 0.03; // 3 %
+static double perf_validation_time_threshold_ms = 0.1;
+static int perf_validation_idle_delay_ms = 3000; // 3 sec
+
+static void loadPerfValidationResults(const std::string& fileName)
+{
+    perf_validation_results.clear();
+    std::ifstream infile(fileName.c_str());
+    while (!infile.eof())
+    {
+        std::string name;
+        float value = 0;
+        if (!(infile >> value))
+        {
+            if (infile.eof())
+                break; // it is OK
+            std::cout << "ERROR: Can't load performance validation results from " << fileName << "!" << std::endl;
+            return;
+        }
+        infile.ignore(1);
+        if (!(std::getline(infile, name)))
+        {
+            std::cout << "ERROR: Can't load performance validation results from " << fileName << "!" << std::endl;
+            return;
+        }
+        if (!name.empty() && name[name.size() - 1] == '\r') // CRLF processing on Linux
+            name.resize(name.size() - 1);
+        perf_validation_results[name] = value;
+    }
+    std::cout << "Performance validation results loaded from " << fileName << " (" << perf_validation_results.size() << " entries)" << std::endl;
+}
+
+static void savePerfValidationResult(const std::string& name, float value)
+{
+    perf_validation_results[name] = value;
+}
+
+static void savePerfValidationResults()
+{
+    if (!perf_validation_results_outfile.empty())
+    {
+        std::ofstream outfile((perf_validation_results_directory + perf_validation_results_outfile).c_str());
+        std::map<std::string, float>::const_iterator i;
+        for (i = perf_validation_results.begin(); i != perf_validation_results.end(); ++i)
+        {
+            outfile << i->second << ';';
+            outfile << i->first << std::endl;
+        }
+        outfile.close();
+        std::cout << "Performance validation results saved (" << perf_validation_results.size() << " entries)" << std::endl;
+    }
+}
+
+class PerfValidationEnvironment : public ::testing::Environment
+{
+public:
+    virtual ~PerfValidationEnvironment() {}
+    virtual void SetUp() {}
+
+    virtual void TearDown()
+    {
+        savePerfValidationResults();
+    }
+};
+
+
 
 /*****************************************************************************************\
 *                                   ::perf::TestBase
@@ -662,6 +759,8 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_list_impls             |false    |list available implementation variants and exit}"
         "{   perf_run_cpu                |false    |deprecated, equivalent to --perf_impl=plain}"
         "{   perf_strategy               |default  |specifies performance measuring strategy: default, base or simple (weak restrictions)}"
+        "{   perf_read_validation_results |        |specifies file name with performance results from previous run}"
+        "{   perf_write_validation_results |       |specifies file name to write performance validation results}"
 #ifdef ANDROID
         "{   perf_time_limit             |6.0      |default time limit for a single test (in seconds)}"
         "{   perf_affinity_mask          |0        |set affinity mask for the main thread}"
@@ -670,6 +769,12 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_time_limit             |3.0      |default time limit for a single test (in seconds)}"
 #endif
         "{   perf_max_deviation          |1.0      |}"
+#ifdef HAVE_IPP
+        "{   perf_ipp_check              |false    |check whether IPP works without failures}"
+#endif
+#ifdef CV_COLLECT_IMPL_DATA
+        "{   perf_collect_impl           |false    |collect info about executed implementations}"
+#endif
         "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
         "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
@@ -678,7 +783,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     ;
 
     cv::CommandLineParser args(argc, argv, command_line_keys);
-    if (args.has("help"))
+    if (args.get<bool>("help"))
     {
         args.printMessage();
         return;
@@ -686,7 +791,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 
     ::testing::AddGlobalTestEnvironment(new PerfEnvironment);
 
-    param_impl          = args.has("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
+    param_impl          = args.get<bool>("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
     std::string perf_strategy = args.get<std::string>("perf_strategy");
     if (perf_strategy == "default")
     {
@@ -711,15 +816,22 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_seed          = args.get<unsigned int>("perf_seed");
     param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
-    param_write_sanity  = args.has("perf_write_sanity");
-    param_verify_sanity = args.has("perf_verify_sanity");
-    param_threads  = args.get<int>("perf_threads");
+    param_write_sanity  = args.get<bool>("perf_write_sanity");
+    param_verify_sanity = args.get<bool>("perf_verify_sanity");
+
+#ifdef HAVE_IPP
+    test_ipp_check      = !args.get<bool>("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+#endif
+    param_threads       = args.get<int>("perf_threads");
+#ifdef CV_COLLECT_IMPL_DATA
+    param_collect_impl  = args.get<bool>("perf_collect_impl");
+#endif
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
 #endif
 
-    bool param_list_impls = args.has("perf_list_impls");
+    bool param_list_impls = args.get<bool>("perf_list_impls");
 
     if (param_list_impls)
     {
@@ -738,9 +850,16 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         exit(1);
     }
 
+#ifdef CV_COLLECT_IMPL_DATA
+    if(param_collect_impl)
+        cv::setUseCollection(1);
+    else
+        cv::setUseCollection(0);
+#endif
+
 #ifdef HAVE_CUDA
 
-    bool printOnly        = args.has("perf_cuda_info_only");
+    bool printOnly        = args.get<bool>("perf_cuda_info_only");
 
     if (printOnly)
         exit(0);
@@ -768,10 +887,34 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     }
 #endif
 
+    {
+#ifndef WINRT
+        const char* path = getenv("OPENCV_PERF_VALIDATION_DIR");
+#else
+        const char* path = OPENCV_PERF_VALIDATION_DIR;
+#endif
+        if (path)
+            perf_validation_results_directory = path;
+    }
+
+    std::string fileName_perf_validation_results_src = args.get<std::string>("perf_read_validation_results");
+    if (!fileName_perf_validation_results_src.empty())
+    {
+        perf_validation_enabled = true;
+        loadPerfValidationResults(perf_validation_results_directory + fileName_perf_validation_results_src);
+    }
+
+    perf_validation_results_outfile = args.get<std::string>("perf_write_validation_results");
+    if (!perf_validation_results_outfile.empty())
+    {
+        perf_validation_enabled = true;
+        ::testing::AddGlobalTestEnvironment(new PerfValidationEnvironment());
+    }
+
     if (!args.check())
     {
         args.printErrors();
-        return;
+        exit(1);
     }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
@@ -857,7 +1000,9 @@ TestBase::TestBase(): testStrategy(PERF_STRATEGY_DEFAULT), declare(this)
 {
     lastTime = totalTime = timeLimit = 0;
     nIters = currentIter = runsPerIteration = 0;
+    minIters = param_min_samples;
     verified = false;
+    perfValidationStage = 0;
 }
 #ifdef _MSC_VER
 # pragma warning(pop)
@@ -983,7 +1128,7 @@ bool TestBase::next()
                 has_next = false;
                 break;
             }
-            if (currentIter < param_min_samples)
+            if (currentIter < minIters)
             {
                 has_next = true;
                 break;
@@ -991,13 +1136,99 @@ bool TestBase::next()
 
             calcMetrics();
 
-            double criteria = 0.03;  // 3%
             if (fabs(metrics.mean) > 1e-6)
-                has_next = metrics.stddev > criteria * fabs(metrics.mean);
+                has_next = metrics.stddev > perf_stability_criteria * fabs(metrics.mean);
             else
                 has_next = true;
         }
     } while (false);
+
+    if (perf_validation_enabled && !has_next)
+    {
+        calcMetrics();
+        double median_ms = metrics.median * 1000.0f / metrics.frequency;
+
+        const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+        std::string name = (test_info == 0) ? "" :
+                std::string(test_info->test_case_name()) + "--" + test_info->name();
+
+        if (!perf_validation_results.empty() && !name.empty())
+        {
+            std::map<std::string, float>::iterator i = perf_validation_results.find(name);
+            bool isSame = false;
+            bool found = false;
+            bool grow = false;
+            if (i != perf_validation_results.end())
+            {
+                found = true;
+                double prev_result = i->second;
+                grow = median_ms > prev_result;
+                isSame = fabs(median_ms - prev_result) <= perf_validation_criteria * fabs(median_ms);
+                if (!isSame)
+                {
+                    if (perfValidationStage == 0)
+                    {
+                        printf("Performance is changed (samples = %d, median):\n    %.2f ms (current)\n    %.2f ms (previous)\n", (int)times.size(), median_ms, prev_result);
+                    }
+                }
+            }
+            else
+            {
+                if (perfValidationStage == 0)
+                    printf("New performance result is detected\n");
+            }
+            if (!isSame)
+            {
+                if (perfValidationStage < 2)
+                {
+                    if (perfValidationStage == 0 && currentIter <= minIters * 3 && currentIter < nIters)
+                    {
+                        unsigned int new_minIters = std::max(minIters * 5, currentIter * 3);
+                        printf("Increase minIters from %u to %u\n", minIters, new_minIters);
+                        minIters = new_minIters;
+                        has_next = true;
+                        perfValidationStage++;
+                    }
+                    else if (found && currentIter >= nIters &&
+                            median_ms > perf_validation_time_threshold_ms &&
+                            (grow || metrics.stddev > perf_stability_criteria * fabs(metrics.mean)))
+                    {
+                        printf("Performance is unstable, it may be a result of overheat problems\n");
+                        printf("Idle delay for %d ms... \n", perf_validation_idle_delay_ms);
+#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#ifndef WINRT_8_0
+                        Sleep(perf_validation_idle_delay_ms);
+#else
+                        WaitForSingleObjectEx(GetCurrentThread(), perf_validation_idle_delay_ms, FALSE);
+#endif
+#else
+                        usleep(perf_validation_idle_delay_ms * 1000);
+#endif
+                        has_next = true;
+                        minIters = std::min(minIters * 5, nIters);
+                        // reset collected samples
+                        currentIter = 0;
+                        times.clear();
+                        metrics.clear();
+                        perfValidationStage += 2;
+                    }
+                    if (!has_next)
+                    {
+                        printf("Assume that current result is valid\n");
+                    }
+                }
+                else
+                {
+                    printf("Re-measured performance result: %.2f ms\n", median_ms);
+                }
+            }
+        }
+
+        if (!has_next && !name.empty())
+        {
+            savePerfValidationResult(name, (float)median_ms);
+        }
+    }
 
 #ifdef ANDROID
     if (log_power_checkpoints)
@@ -1202,9 +1433,10 @@ void TestBase::validateMetrics()
     else if (getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         double mean = metrics.mean * 1000.0f / metrics.frequency;
+        double median = metrics.median * 1000.0f / metrics.frequency;
         double stddev = metrics.stddev * 1000.0f / metrics.frequency;
         double percents = stddev / mean * 100.f;
-        printf("[ PERFSTAT ]    (samples = %d, mean = %.2f, stddev = %.2f (%.1f%%))\n", (int)metrics.samples, mean, stddev, percents);
+        printf("[ PERFSTAT ]    (samples = %d, mean = %.2f, median = %.2f, stddev = %.2f (%.1f%%))\n", (int)metrics.samples, mean, median, stddev, percents);
     }
     else
     {
@@ -1237,6 +1469,28 @@ void TestBase::reportMetrics(bool toJUnitXML)
         RecordProperty("gstddev", cv::format("%.6f", m.gstddev).c_str());
         RecordProperty("mean", cv::format("%.0f", m.mean).c_str());
         RecordProperty("stddev", cv::format("%.0f", m.stddev).c_str());
+#ifdef CV_COLLECT_IMPL_DATA
+        if(param_collect_impl)
+        {
+            RecordProperty("impl_ipp", (int)(implConf.ipp || implConf.icv));
+            RecordProperty("impl_ocl", (int)implConf.ocl);
+            RecordProperty("impl_plain", (int)implConf.plain);
+
+            std::string rec_line;
+            std::vector<cv::String> rec;
+            rec_line.clear();
+            rec = implConf.GetCallsForImpl(CV_IMPL_IPP|CV_IMPL_MT);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            rec = implConf.GetCallsForImpl(CV_IMPL_IPP);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            RecordProperty("impl_rec_ipp", rec_line.c_str());
+
+            rec_line.clear();
+            rec = implConf.GetCallsForImpl(CV_IMPL_OCL);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            RecordProperty("impl_rec_ocl", rec_line.c_str());
+        }
+#endif
     }
     else
     {
@@ -1270,6 +1524,29 @@ void TestBase::reportMetrics(bool toJUnitXML)
             LOGD("termination reason:  unknown");
             break;
         };
+
+#ifdef CV_COLLECT_IMPL_DATA
+        if(param_collect_impl)
+        {
+            LOGD("impl_ipp =%11d", (int)(implConf.ipp || implConf.icv));
+            LOGD("impl_ocl =%11d", (int)implConf.ocl);
+            LOGD("impl_plain =%11d", (int)implConf.plain);
+
+            std::string rec_line;
+            std::vector<cv::String> rec;
+            rec_line.clear();
+            rec = implConf.GetCallsForImpl(CV_IMPL_IPP|CV_IMPL_MT);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            rec = implConf.GetCallsForImpl(CV_IMPL_IPP);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            LOGD("impl_rec_ipp =%s", rec_line.c_str());
+
+            rec_line.clear();
+            rec = implConf.GetCallsForImpl(CV_IMPL_OCL);
+            for(int i=0; i<rec.size();i++ ){rec_line += rec[i].c_str(); rec_line += " ";}
+            LOGD("impl_rec_ocl =%s", rec_line.c_str());
+        }
+#endif
 
         LOGD("bytesIn   =%11lu", (unsigned long)m.bytesIn);
         LOGD("bytesOut  =%11lu", (unsigned long)m.bytesOut);
@@ -1338,6 +1615,30 @@ void TestBase::TearDown()
     const char* value_param = test_info->value_param();
     if (value_param) printf("[ VALUE    ] \t%s\n", value_param), fflush(stdout);
     if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
+
+#ifdef CV_COLLECT_IMPL_DATA
+    if(param_collect_impl)
+    {
+        implConf.ShapeUp();
+        printf("[ I. FLAGS ] \t");
+        if(implConf.ipp_mt)
+        {
+            if(implConf.icv) {printf("ICV_MT "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_IPP|CV_IMPL_MT); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+            if(implConf.ipp) {printf("IPP_MT "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_IPP|CV_IMPL_MT); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+        }
+        else
+        {
+            if(implConf.icv) {printf("ICV "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_IPP); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+            if(implConf.ipp) {printf("IPP "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_IPP); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+        }
+        if(implConf.ocl) {printf("OCL "); std::vector<cv::String> fun = implConf.GetCallsForImpl(CV_IMPL_OCL); printf("("); for(int i=0; i<fun.size();i++ ){printf("%s ", fun[i].c_str());} printf(") "); }
+        if(implConf.plain) printf("PLAIN ");
+        if(!(implConf.ipp_mt || implConf.icv || implConf.ipp || implConf.ocl || implConf.plain))
+            printf("ERROR ");
+        printf("\n");
+        fflush(stdout);
+    }
+#endif
     reportMetrics(true);
 }
 
@@ -1349,7 +1650,11 @@ std::string TestBase::getDataPath(const std::string& relativePath)
         throw PerfEarlyExitException();
     }
 
+#ifndef WINRT
     const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
+#else
+    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
+#endif
     const char *path_separator = "/";
 
     std::string path;
@@ -1386,7 +1691,15 @@ void TestBase::RunPerfTestBody()
 {
     try
     {
+#ifdef CV_COLLECT_IMPL_DATA
+        if(param_collect_impl)
+            implConf.Reset();
+#endif
         this->PerfTestBody();
+#ifdef CV_COLLECT_IMPL_DATA
+        if(param_collect_impl)
+            implConf.GetImpl();
+#endif
     }
     catch(PerfSkipTestException&)
     {

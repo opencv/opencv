@@ -41,310 +41,277 @@
  //M*/
 
 #include "precomp.hpp"
+#include "upnp.h"
+#include "dls.h"
 #include "epnp.h"
 #include "p3p.h"
 #include "opencv2/calib3d/calib3d_c.h"
 
 #include <iostream>
-using namespace cv;
 
-bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
-                  InputArray _cameraMatrix, InputArray _distCoeffs,
-                  OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
+namespace cv
+{
+
+bool solvePnP( InputArray _opoints, InputArray _ipoints,
+               InputArray _cameraMatrix, InputArray _distCoeffs,
+               OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
 {
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
-    _rvec.create(3, 1, CV_64F);
-    _tvec.create(3, 1, CV_64F);
-    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
-    if (flags == EPNP)
+    Mat rvec, tvec;
+    if( flags != SOLVEPNP_ITERATIVE )
+        useExtrinsicGuess = false;
+
+    if( useExtrinsicGuess )
     {
-        cv::Mat undistortedPoints;
-        cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        int rtype = _rvec.type(), ttype = _tvec.type();
+        Size rsize = _rvec.size(), tsize = _tvec.size();
+        CV_Assert( (rtype == CV_32F || rtype == CV_64F) &&
+                   (ttype == CV_32F || ttype == CV_64F) );
+        CV_Assert( (rsize == Size(1, 3) || rsize == Size(3, 1)) &&
+                   (tsize == Size(1, 3) || tsize == Size(3, 1)) );
+    }
+    else
+    {
+        _rvec.create(3, 1, CV_64F);
+        _tvec.create(3, 1, CV_64F);
+    }
+    rvec = _rvec.getMat();
+    tvec = _tvec.getMat();
+
+    Mat cameraMatrix0 = _cameraMatrix.getMat();
+    Mat distCoeffs0 = _distCoeffs.getMat();
+    Mat cameraMatrix = Mat_<double>(cameraMatrix0);
+    Mat distCoeffs = Mat_<double>(distCoeffs0);
+    bool result = false;
+
+    if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
+    {
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         epnp PnP(cameraMatrix, opoints, undistortedPoints);
 
-        cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        Mat R;
         PnP.compute_pose(R, tvec);
-        cv::Rodrigues(R, rvec);
-        return true;
+        Rodrigues(R, rvec);
+        result = true;
     }
-    else if (flags == P3P)
+    else if (flags == SOLVEPNP_P3P)
     {
         CV_Assert( npoints == 4);
-        cv::Mat undistortedPoints;
-        cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         p3p P3Psolver(cameraMatrix);
 
-        cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-        bool result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
+        Mat R;
+        result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
         if (result)
-            cv::Rodrigues(R, rvec);
-        return result;
+            Rodrigues(R, rvec);
     }
-    else if (flags == ITERATIVE)
+    else if (flags == SOLVEPNP_ITERATIVE)
     {
         CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
         CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-        CvMat c_rvec = _rvec.getMat(), c_tvec = _tvec.getMat();
+        CvMat c_rvec = rvec, c_tvec = tvec;
         cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
                                      c_distCoeffs.rows*c_distCoeffs.cols ? &c_distCoeffs : 0,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
-        return true;
+        result = true;
     }
-    else
-        CV_Error(CV_StsBadArg, "The flags argument must be one of CV_ITERATIVE or CV_EPNP");
-    return false;
-}
-
-namespace cv
-{
-    namespace pnpransac
+    /*else if (flags == SOLVEPNP_DLS)
     {
-        const int MIN_POINTS_COUNT = 4;
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
-        static void project3dPoints(const Mat& points, const Mat& rvec, const Mat& tvec, Mat& modif_points)
-        {
-            modif_points.create(1, points.cols, CV_32FC3);
-            Mat R(3, 3, CV_64FC1);
-            Rodrigues(rvec, R);
-            Mat transformation(3, 4, CV_64F);
-            Mat r = transformation.colRange(0, 3);
-            R.copyTo(r);
-            Mat t = transformation.colRange(3, 4);
-            tvec.copyTo(t);
-            transform(points, modif_points, transformation);
-        }
+        dls PnP(opoints, undistortedPoints);
 
-        struct CameraParameters
-        {
-            void init(Mat _intrinsics, Mat _distCoeffs)
-            {
-                _intrinsics.copyTo(intrinsics);
-                _distCoeffs.copyTo(distortion);
-            }
-
-            Mat intrinsics;
-            Mat distortion;
-        };
-
-        struct Parameters
-        {
-            int iterationsCount;
-            float reprojectionError;
-            int minInliersCount;
-            bool useExtrinsicGuess;
-            int flags;
-            CameraParameters camera;
-        };
-
-        static void pnpTask(const std::vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
-                     const Parameters& params, std::vector<int>& inliers, Mat& rvec, Mat& tvec,
-                     const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
-        {
-            Mat modelObjectPoints(1, MIN_POINTS_COUNT, CV_32FC3), modelImagePoints(1, MIN_POINTS_COUNT, CV_32FC2);
-            for (int i = 0, colIndex = 0; i < (int)pointsMask.size(); i++)
-            {
-                if (pointsMask[i])
-                {
-                    Mat colModelImagePoints = modelImagePoints(Rect(colIndex, 0, 1, 1));
-                    imagePoints.col(i).copyTo(colModelImagePoints);
-                    Mat colModelObjectPoints = modelObjectPoints(Rect(colIndex, 0, 1, 1));
-                    objectPoints.col(i).copyTo(colModelObjectPoints);
-                    colIndex = colIndex+1;
-                }
-            }
-
-            //filter same 3d points, hang in solvePnP
-            double eps = 1e-10;
-            int num_same_points = 0;
-            for (int i = 0; i < MIN_POINTS_COUNT; i++)
-                for (int j = i + 1; j < MIN_POINTS_COUNT; j++)
-                {
-                    if (norm(modelObjectPoints.at<Vec3f>(0, i) - modelObjectPoints.at<Vec3f>(0, j)) < eps)
-                        num_same_points++;
-                }
-            if (num_same_points > 0)
-                return;
-
-            Mat localRvec, localTvec;
-            rvecInit.copyTo(localRvec);
-            tvecInit.copyTo(localTvec);
-
-            solvePnP(modelObjectPoints, modelImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec,
-                     params.useExtrinsicGuess, params.flags);
-
-
-            std::vector<Point2f> projected_points;
-            projected_points.resize(objectPoints.cols);
-            projectPoints(objectPoints, localRvec, localTvec, params.camera.intrinsics, params.camera.distortion, projected_points);
-
-            Mat rotatedPoints;
-            project3dPoints(objectPoints, localRvec, localTvec, rotatedPoints);
-
-            std::vector<int> localInliers;
-            for (int i = 0; i < objectPoints.cols; i++)
-            {
-                Point2f p(imagePoints.at<Vec2f>(0, i)[0], imagePoints.at<Vec2f>(0, i)[1]);
-                if ((norm(p - projected_points[i]) < params.reprojectionError)
-                    && (rotatedPoints.at<Vec3f>(0, i)[2] > 0)) //hack
-                {
-                    localInliers.push_back(i);
-                }
-            }
-
-            if (localInliers.size() > inliers.size())
-            {
-                resultsMutex.lock();
-
-                inliers.clear();
-                inliers.resize(localInliers.size());
-                memcpy(&inliers[0], &localInliers[0], sizeof(int) * localInliers.size());
-                localRvec.copyTo(rvec);
-                localTvec.copyTo(tvec);
-
-                resultsMutex.unlock();
-            }
-        }
-
-        class PnPSolver
-        {
-        public:
-            void operator()( const BlockedRange& r ) const
-            {
-                std::vector<char> pointsMask(objectPoints.cols, 0);
-                memset(&pointsMask[0], 1, MIN_POINTS_COUNT );
-                for( int i=r.begin(); i!=r.end(); ++i )
-                {
-                    generateVar(pointsMask);
-                    pnpTask(pointsMask, objectPoints, imagePoints, parameters,
-                            inliers, rvec, tvec, initRvec, initTvec, syncMutex);
-                    if ((int)inliers.size() >= parameters.minInliersCount)
-                    {
-#ifdef HAVE_TBB
-                        tbb::task::self().cancel_group_execution();
-#else
-                        break;
-#endif
-                    }
-                }
-            }
-            PnPSolver(const Mat& _objectPoints, const Mat& _imagePoints, const Parameters& _parameters,
-                      Mat& _rvec, Mat& _tvec, std::vector<int>& _inliers):
-            objectPoints(_objectPoints), imagePoints(_imagePoints), parameters(_parameters),
-            rvec(_rvec), tvec(_tvec), inliers(_inliers)
-            {
-                rvec.copyTo(initRvec);
-                tvec.copyTo(initTvec);
-
-                generator.state = theRNG().state; //to control it somehow...
-            }
-        private:
-            PnPSolver& operator=(const PnPSolver&);
-
-            const Mat& objectPoints;
-            const Mat& imagePoints;
-            const Parameters& parameters;
-            Mat &rvec, &tvec;
-            std::vector<int>& inliers;
-            Mat initRvec, initTvec;
-
-            static RNG generator;
-            static Mutex syncMutex;
-
-            void generateVar(std::vector<char>& mask) const
-            {
-                int size = (int)mask.size();
-                for (int i = 0; i < size; i++)
-                {
-                    int i1 = generator.uniform(0, size);
-                    int i2 = generator.uniform(0, size);
-                    char curr = mask[i1];
-                    mask[i1] = mask[i2];
-                    mask[i2] = curr;
-                }
-            }
-        };
-
-        Mutex PnPSolver::syncMutex;
-        RNG PnPSolver::generator;
-
+        Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        bool result = PnP.compute_pose(R, tvec);
+        if (result)
+            Rodrigues(R, rvec);
+        return result;
     }
+    else if (flags == SOLVEPNP_UPNP)
+    {
+        upnp PnP(cameraMatrix, opoints, ipoints);
+
+        Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        PnP.compute_pose(R, tvec);
+        Rodrigues(R, rvec);
+        return true;
+    }*/
+    else
+        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
+    return result;
 }
 
-void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
+class PnPRansacCallback : public PointSetRegistrator::Callback
+{
+
+public:
+
+    PnPRansacCallback(Mat _cameraMatrix=Mat(3,3,CV_64F), Mat _distCoeffs=Mat(4,1,CV_64F), int _flags=SOLVEPNP_ITERATIVE,
+            bool _useExtrinsicGuess=false, Mat _rvec=Mat(), Mat _tvec=Mat() )
+        : cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs), flags(_flags), useExtrinsicGuess(_useExtrinsicGuess),
+          rvec(_rvec), tvec(_tvec) {}
+
+    /* Pre: True */
+    /* Post: compute _model with given points an return number of found models */
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    {
+        Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
+
+        bool correspondence = solvePnP( _m1, _m2, cameraMatrix, distCoeffs,
+                                            rvec, tvec, useExtrinsicGuess, flags );
+
+        Mat _local_model;
+        hconcat(rvec, tvec, _local_model);
+        _local_model.copyTo(_model);
+
+        return correspondence;
+    }
+
+    /* Pre: True */
+    /* Post: fill _err with projection errors */
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    {
+
+        Mat opoints = _m1.getMat(), ipoints = _m2.getMat(), model = _model.getMat();
+
+        int i, count = opoints.checkVector(3);
+        Mat _rvec = model.col(0);
+        Mat _tvec = model.col(1);
+
+
+        Mat projpoints(count, 2, CV_32FC1);
+        projectPoints(opoints, _rvec, _tvec, cameraMatrix, distCoeffs, projpoints);
+
+        const Point2f* ipoints_ptr = ipoints.ptr<Point2f>();
+        const Point2f* projpoints_ptr = projpoints.ptr<Point2f>();
+
+        _err.create(count, 1, CV_32FC1);
+        float* err = _err.getMat().ptr<float>();
+
+        for ( i = 0; i < count; ++i)
+            err[i] = (float)norm( ipoints_ptr[i] - projpoints_ptr[i] );
+
+    }
+
+
+    Mat cameraMatrix;
+    Mat distCoeffs;
+    int flags;
+    bool useExtrinsicGuess;
+    Mat rvec;
+    Mat tvec;
+};
+
+bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         InputArray _cameraMatrix, InputArray _distCoeffs,
                         OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
-                        int iterationsCount, float reprojectionError, int minInliersCount,
+                        int iterationsCount, float reprojectionError, double confidence,
                         OutputArray _inliers, int flags)
 {
-    Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
-    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
+
+    Mat opoints0 = _opoints.getMat(), ipoints0 = _ipoints.getMat();
+    Mat opoints, ipoints;
+    if( opoints0.depth() == CV_64F || !opoints0.isContinuous() )
+        opoints0.convertTo(opoints, CV_32F);
+    else
+        opoints = opoints0;
+    if( ipoints0.depth() == CV_64F || !ipoints0.isContinuous() )
+        ipoints0.convertTo(ipoints, CV_32F);
+    else
+        ipoints = ipoints0;
+
+    int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
+    CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
 
     CV_Assert(opoints.isContinuous());
-    CV_Assert(opoints.depth() == CV_32F);
+    CV_Assert(opoints.depth() == CV_32F || opoints.depth() == CV_64F);
     CV_Assert((opoints.rows == 1 && opoints.channels() == 3) || opoints.cols*opoints.channels() == 3);
     CV_Assert(ipoints.isContinuous());
-    CV_Assert(ipoints.depth() == CV_32F);
+    CV_Assert(ipoints.depth() == CV_32F || ipoints.depth() == CV_64F);
     CV_Assert((ipoints.rows == 1 && ipoints.channels() == 2) || ipoints.cols*ipoints.channels() == 2);
 
     _rvec.create(3, 1, CV_64FC1);
     _tvec.create(3, 1, CV_64FC1);
-    Mat rvec = _rvec.getMat();
-    Mat tvec = _tvec.getMat();
 
-    Mat objectPoints = opoints.reshape(3, 1), imagePoints = ipoints.reshape(2, 1);
+    Mat rvec = useExtrinsicGuess ? _rvec.getMat() : Mat(3, 1, CV_64FC1);
+    Mat tvec = useExtrinsicGuess ? _tvec.getMat() : Mat(3, 1, CV_64FC1);
+    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
-    if (minInliersCount <= 0)
-        minInliersCount = objectPoints.cols;
-    cv::pnpransac::Parameters params;
-    params.iterationsCount = iterationsCount;
-    params.minInliersCount = minInliersCount;
-    params.reprojectionError = reprojectionError;
-    params.useExtrinsicGuess = useExtrinsicGuess;
-    params.camera.init(cameraMatrix, distCoeffs);
-    params.flags = flags;
+    int model_points = 5;
+    int ransac_kernel_method = SOLVEPNP_EPNP;
 
-    std::vector<int> localInliers;
-    Mat localRvec, localTvec;
-    rvec.copyTo(localRvec);
-    tvec.copyTo(localTvec);
-
-    if (objectPoints.cols >= pnpransac::MIN_POINTS_COUNT)
+    if( npoints == 4 )
     {
-        parallel_for(BlockedRange(0,iterationsCount), cv::pnpransac::PnPSolver(objectPoints, imagePoints, params,
-                                                                               localRvec, localTvec, localInliers));
+        model_points = 4;
+        ransac_kernel_method = SOLVEPNP_P3P;
     }
 
-    if (localInliers.size() >= (size_t)pnpransac::MIN_POINTS_COUNT)
+    Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
+    cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, ransac_kernel_method, useExtrinsicGuess, rvec, tvec);
+
+    double param1 = reprojectionError;                // reprojection error
+    double param2 = confidence;                       // confidence
+    int param3 = iterationsCount;                     // number maximum iterations
+
+    Mat _local_model(3, 2, CV_64FC1);
+    Mat _mask_local_inliers(1, opoints.rows, CV_8UC1);
+
+    // call Ransac
+    int result = createRANSACPointSetRegistrator(cb, model_points,
+        param1, param2, param3)->run(opoints, ipoints, _local_model, _mask_local_inliers);
+
+    if( result > 0 )
     {
-        if (flags != P3P)
-        {
-            int i, pointsCount = (int)localInliers.size();
-            Mat inlierObjectPoints(1, pointsCount, CV_32FC3), inlierImagePoints(1, pointsCount, CV_32FC2);
-            for (i = 0; i < pointsCount; i++)
-            {
-                int index = localInliers[i];
-                Mat colInlierImagePoints = inlierImagePoints(Rect(i, 0, 1, 1));
-                imagePoints.col(index).copyTo(colInlierImagePoints);
-                Mat colInlierObjectPoints = inlierObjectPoints(Rect(i, 0, 1, 1));
-                objectPoints.col(index).copyTo(colInlierObjectPoints);
-            }
-            solvePnP(inlierObjectPoints, inlierImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec, true, flags);
-        }
-        localRvec.copyTo(rvec);
-        localTvec.copyTo(tvec);
-        if (_inliers.needed())
-            Mat(localInliers).copyTo(_inliers);
+        vector<Point3d> opoints_inliers;
+        vector<Point2d> ipoints_inliers;
+        opoints = opoints.reshape(3);
+        ipoints = ipoints.reshape(2);
+        opoints.convertTo(opoints_inliers, CV_64F);
+        ipoints.convertTo(ipoints_inliers, CV_64F);
+
+        const uchar* mask = _mask_local_inliers.ptr<uchar>();
+        int npoints1 = compressElems(&opoints_inliers[0], mask, 1, npoints);
+        compressElems(&ipoints_inliers[0], mask, 1, npoints);
+
+        opoints_inliers.resize(npoints1);
+        ipoints_inliers.resize(npoints1);
+        result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
+                          distCoeffs, rvec, tvec, false, flags == SOLVEPNP_P3P ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+    }
+
+    if( result <= 0 || _local_model.rows <= 0)
+    {
+        _rvec.assign(rvec);    // output rotation vector
+        _tvec.assign(tvec);    // output translation vector
+
+        if( _inliers.needed() )
+            _inliers.release();
+
+        return false;
     }
     else
     {
-        tvec.setTo(Scalar(0));
-        Mat R = Mat::eye(3, 3, CV_64F);
-        Rodrigues(R, rvec);
-        if( _inliers.needed() )
-            _inliers.release();
+        _rvec.assign(_local_model.col(0));    // output rotation vector
+        _tvec.assign(_local_model.col(1));    // output translation vector
     }
-    return;
+
+    if(_inliers.needed())
+    {
+        Mat _local_inliers;
+        for (int i = 0; i < npoints; ++i)
+        {
+            if((int)_mask_local_inliers.at<uchar>(i) != 0) // inliers mask
+                _local_inliers.push_back(i);    // output inliers vector
+        }
+        _local_inliers.copyTo(_inliers);
+    }
+    return true;
+}
+
 }

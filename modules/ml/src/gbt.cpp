@@ -2,6 +2,8 @@
 #include "precomp.hpp"
 #include <time.h>
 
+#if 0
+
 #define pCvSeq CvSeq*
 #define pCvDTreeNode CvDTreeNode*
 
@@ -241,7 +243,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         for (int i=1; i<n; ++i)
         {
             int k = 0;
-            while ((int(orig_response->data.fl[i]) - class_labels->data.i[k]) && (k<j))
+            while ((k<j) && (int(orig_response->data.fl[i]) - class_labels->data.i[k]))
                 k++;
             if (k == j)
             {
@@ -266,6 +268,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
                 sample_idx = cvCreateMat( 1, sample_idx_len, CV_32S );
                 for (int i=0; i<sample_idx_len; ++i)
                     sample_idx->data.i[i] = _sample_idx->data.i[i];
+                std::sort(sample_idx->data.i, sample_idx->data.i + sample_idx_len);
             } break;
             case CV_8S:
             case CV_8U:
@@ -282,7 +285,6 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
             } break;
             default: CV_Error(CV_StsUnmatchedFormats, "_sample_idx should be a 32sC1, 8sC1 or 8uC1 vector.");
         }
-        std::sort(sample_idx->data.fl, sample_idx->data.fl + sample_idx_len);
     }
     else
     {
@@ -1272,13 +1274,18 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
         return -FLT_MAX;
 
     float* pred_resp = 0;
+    bool needsFreeing = false;
+
     if (resp)
     {
         resp->resize(n);
         pred_resp = &((*resp)[0]);
     }
     else
+    {
         pred_resp = new float[n];
+        needsFreeing = true;
+    }
 
     Sample_predictor predictor = Sample_predictor(this, pred_resp, _data->get_values(),
             _data->get_missing(), _sample_idx);
@@ -1310,6 +1317,9 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
         }
         err = err / (float)n;
     }
+
+    if (needsFreeing)
+        delete[]pred_resp;
 
     return err;
 }
@@ -1359,3 +1369,5 @@ float CvGBTrees::predict( const cv::Mat& sample, const cv::Mat& _missing,
     return predict(&_sample, _missing.empty() ? 0 : &miss, 0,
                    slice==cv::Range::all() ? CV_WHOLE_SEQ : cvSlice(slice.start, slice.end), k);
 }
+
+#endif

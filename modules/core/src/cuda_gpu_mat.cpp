@@ -49,7 +49,7 @@ using namespace cv::cuda;
 cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
-    datastart((uchar*)data_), dataend((uchar*)data_),
+    datastart((uchar*)data_), dataend((const uchar*)data_),
     allocator(defaultAllocator())
 {
     size_t minstep = cols * elemSize();
@@ -75,7 +75,7 @@ cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t st
 cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(size_.height), cols(size_.width),
     step(step_), data((uchar*)data_), refcount(0),
-    datastart((uchar*)data_), dataend((uchar*)data_),
+    datastart((uchar*)data_), dataend((const uchar*)data_),
     allocator(defaultAllocator())
 {
     size_t minstep = cols * elemSize();
@@ -260,7 +260,7 @@ namespace
     {
         const int area = rows * cols;
 
-        if (obj.empty() || obj.type() != type || !obj.isContinuous() || obj.size().area() < area)
+        if (obj.empty() || obj.type() != type || !obj.isContinuous() || obj.size().area() != area)
             obj.create(1, area, type);
 
         obj = obj.reshape(obj.channels(), rows);
@@ -275,12 +275,12 @@ void cv::cuda::createContinuous(int rows, int cols, int type, OutputArray arr)
         ::createContinuousImpl(rows, cols, type, arr.getMatRef());
         break;
 
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         ::createContinuousImpl(rows, cols, type, arr.getGpuMatRef());
         break;
 
-    case _InputArray::CUDA_MEM:
-        ::createContinuousImpl(rows, cols, type, arr.getCudaMemRef());
+    case _InputArray::CUDA_HOST_MEM:
+        ::createContinuousImpl(rows, cols, type, arr.getHostMemRef());
         break;
 
     default:
@@ -329,12 +329,12 @@ void cv::cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
         ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getMatRef());
         break;
 
-    case _InputArray::GPU_MAT:
+    case _InputArray::CUDA_GPU_MAT:
         ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getGpuMatRef());
         break;
 
-    case _InputArray::CUDA_MEM:
-        ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getCudaMemRef());
+    case _InputArray::CUDA_HOST_MEM:
+        ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getHostMemRef());
         break;
 
     default:
@@ -342,12 +342,73 @@ void cv::cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
     }
 }
 
-GpuMat cv::cuda::allocMatFromBuf(int rows, int cols, int type, GpuMat& mat)
+GpuMat cv::cuda::getInputMat(InputArray _src, Stream& stream)
 {
-    if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
-        return mat(Rect(0, 0, cols, rows));
+    GpuMat src;
 
-    return mat = GpuMat(rows, cols, type);
+#ifndef HAVE_CUDA
+    (void) _src;
+    (void) stream;
+    throw_no_cuda();
+#else
+    if (_src.kind() == _InputArray::CUDA_GPU_MAT)
+    {
+        src = _src.getGpuMat();
+    }
+    else if (!_src.empty())
+    {
+        BufferPool pool(stream);
+        src = pool.getBuffer(_src.size(), _src.type());
+        src.upload(_src, stream);
+    }
+#endif
+
+    return src;
+}
+
+GpuMat cv::cuda::getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream)
+{
+    GpuMat dst;
+
+#ifndef HAVE_CUDA
+    (void) _dst;
+    (void) rows;
+    (void) cols;
+    (void) type;
+    (void) stream;
+    throw_no_cuda();
+#else
+    if (_dst.kind() == _InputArray::CUDA_GPU_MAT)
+    {
+        _dst.create(rows, cols, type);
+        dst = _dst.getGpuMat();
+    }
+    else
+    {
+        BufferPool pool(stream);
+        dst = pool.getBuffer(rows, cols, type);
+    }
+#endif
+
+    return dst;
+}
+
+void cv::cuda::syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream)
+{
+#ifndef HAVE_CUDA
+    (void) dst;
+    (void) _dst;
+    (void) stream;
+    throw_no_cuda();
+#else
+    if (_dst.kind() != _InputArray::CUDA_GPU_MAT)
+    {
+        if (stream)
+            dst.download(_dst, stream);
+        else
+            dst.download(_dst);
+    }
+#endif
 }
 
 #ifndef HAVE_CUDA

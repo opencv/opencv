@@ -51,6 +51,9 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab
+//! @{
+
 class CV_EXPORTS IFrameSource
 {
 public:
@@ -82,6 +85,8 @@ public:
 private:
     Ptr<IFrameSource> impl;
 };
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

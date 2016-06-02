@@ -1177,7 +1177,7 @@ force_int:
                         int val, is_hex = d == 'x';
                         c = ptr[3];
                         ptr[3] = '\0';
-                        val = strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
+                        val = (int)strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
                         ptr[3] = c;
                         if( endptr == ptr + is_hex )
                             buf[len++] = 'x';
@@ -2217,7 +2217,6 @@ icvXMLParse( CvFileStorage* fs )
     ptr = icvXMLSkipSpaces( fs, ptr, CV_XML_INSIDE_TAG );
 
     if( memcmp( ptr, "<?xml", 5 ) != 0 )
-
         CV_PARSE_ERROR( "Valid XML should start with \'<?xml ...?>\'" );
 
     ptr = icvXMLParseTag( fs, ptr, &key, &list, &tag_type );
@@ -2652,7 +2651,6 @@ CV_IMPL CvFileStorage*
 cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, const char* encoding )
 {
     CvFileStorage* fs = 0;
-    char* xml_buf = 0;
     int default_block_size = 1 << 18;
     bool append = (flags & 3) == CV_STORAGE_APPEND;
     bool mem = (flags & CV_STORAGE_MEMORY) != 0;
@@ -2693,7 +2691,10 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             (dot_pos[3] == '\0' || (cv_isdigit(dot_pos[3]) && dot_pos[4] == '\0')) )
         {
             if( append )
+            {
+                cvReleaseFileStorage( &fs );
                 CV_Error(CV_StsNotImplemented, "Appending data to compressed file is not implemented" );
+            }
             isGZ = true;
             compression = dot_pos[3];
             if( compression )
@@ -2714,6 +2715,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             if( !fs->gzfile )
                 goto _exit_;
             #else
+            cvReleaseFileStorage( &fs );
             CV_Error(CV_StsNotImplemented, "There is no compressed file storage support in this configuration");
             #endif
         }
@@ -2766,7 +2768,10 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                     if( strcmp( encoding, "UTF-16" ) == 0 ||
                         strcmp( encoding, "utf-16" ) == 0 ||
                         strcmp( encoding, "Utf-16" ) == 0 )
+                    {
+                        cvReleaseFileStorage( &fs );
                         CV_Error( CV_StsBadArg, "UTF-16 XML encoding is not supported! Use 8-bit encoding\n");
+                    }
 
                     CV_Assert( strlen(encoding) < 1000 );
                     char buf[1100];
@@ -2784,11 +2789,11 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                 int last_occurence = -1;
                 xml_buf_size = MIN(xml_buf_size, int(file_size));
                 fseek( fs->file, -xml_buf_size, SEEK_END );
-                xml_buf = (char*)cvAlloc( xml_buf_size+2 );
+                char* xml_buf = (char*)cvAlloc( xml_buf_size+2 );
                 // find the last occurence of </opencv_storage>
                 for(;;)
                 {
-                    int line_offset = ftell( fs->file );
+                    int line_offset = (int)ftell( fs->file );
                     char* ptr0 = icvGets( fs, xml_buf, xml_buf_size ), *ptr;
                     if( !ptr0 )
                         break;
@@ -2802,8 +2807,12 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                         ptr += strlen(substr);
                     }
                 }
+                cvFree( &xml_buf );
                 if( last_occurence < 0 )
+                {
+                    cvReleaseFileStorage( &fs );
                     CV_Error( CV_StsError, "Could not find </opencv_storage> in the end of file.\n" );
+                }
                 icvCloseFile( fs );
                 fs->file = fopen( fs->filename, "r+t" );
                 fseek( fs->file, last_occurence, SEEK_SET );
@@ -2877,10 +2886,18 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
 
         //mode = cvGetErrMode();
         //cvSetErrMode( CV_ErrModeSilent );
-        if( fs->fmt == CV_STORAGE_FORMAT_XML )
-            icvXMLParse( fs );
-        else
-            icvYMLParse( fs );
+        try
+        {
+            if( fs->fmt == CV_STORAGE_FORMAT_XML )
+                icvXMLParse( fs );
+            else
+                icvYMLParse( fs );
+        }
+        catch (...)
+        {
+            cvReleaseFileStorage( &fs );
+            throw;
+        }
         //cvSetErrMode( mode );
 
         // release resources that we do not need anymore
@@ -2905,7 +2922,6 @@ _exit_:
         }
     }
 
-    cvFree( &xml_buf );
     return  fs;
 }
 
@@ -5201,7 +5217,7 @@ FileStorage& operator << (FileStorage& fs, const String& str)
     }
     else if( fs.state == NAME_EXPECTED + INSIDE_MAP )
     {
-        if( !cv_isalpha(*_str) )
+        if (!cv_isalpha(*_str) && *_str != '_')
             CV_Error_( CV_StsError, ("Incorrect element name %s", _str) );
         fs.elname = str;
         fs.state = VALUE_EXPECTED + INSIDE_MAP;
@@ -5255,6 +5271,25 @@ void FileStorage::writeObj( const String& name, const void* obj )
     cvWrite( fs, name.size() > 0 ? name.c_str() : 0, obj );
 }
 
+void FileStorage::write( const String& name, double val )
+{
+    *this << name << val;
+}
+
+void FileStorage::write( const String& name, const String& val )
+{
+    *this << name << val;
+}
+
+void FileStorage::write( const String& name, InputArray val )
+{
+    *this << name << val.getMat();
+}
+
+void FileStorage::writeComment( const String& comment, bool append )
+{
+    cvWriteComment(fs, comment.c_str(), append ? 1 : 0);
+}
 
 FileNode FileStorage::operator[](const String& nodename) const
 {
@@ -5549,7 +5584,7 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
 
 void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints)
 {
-    internal::WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
+    cv::internal::WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
 
     int i, npoints = (int)keypoints.size();
     for( i = 0; i < npoints; i++ )
@@ -5577,6 +5612,35 @@ void read(const FileNode& node, std::vector<KeyPoint>& keypoints)
         keypoints.push_back(kpt);
     }
 }
+
+
+void write(FileStorage& fs, const String& objname, const std::vector<DMatch>& matches)
+{
+    cv::internal::WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
+
+    int i, n = (int)matches.size();
+    for( i = 0; i < n; i++ )
+    {
+        const DMatch& m = matches[i];
+        cv::write(fs, m.queryIdx);
+        cv::write(fs, m.trainIdx);
+        cv::write(fs, m.imgIdx);
+        cv::write(fs, m.distance);
+    }
+}
+
+void read(const FileNode& node, std::vector<DMatch>& matches)
+{
+    matches.resize(0);
+    FileNodeIterator it = node.begin(), it_end = node.end();
+    for( ; it != it_end; )
+    {
+        DMatch m;
+        it >> m.queryIdx >> m.trainIdx >> m.imgIdx >> m.distance;
+        matches.push_back(m);
+    }
+}
+
 
 int FileNode::type() const { return !node ? NONE : (node->tag & TYPE_MASK); }
 bool FileNode::isNamed() const { return !node ? false : (node->tag & NAMED) != 0; }

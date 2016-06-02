@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
+/*M//////////////////////////////////////////////////////////////////////////////
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
 //  By downloading, copying, installing or using the software you agree to
@@ -36,67 +36,9 @@
 // and on any theory of liability, whether in contract, strict liability,
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
-
-
 /////////////////////////////////////////////////////////////////////////////////
-//
-// Image class which provides a thin layer around an IplImage.  The goals
-// of the class design are:
-//    1. All the data has explicit ownership to avoid memory leaks
-//    2. No hidden allocations or copies for performance.
-//    3. Easy access to OpenCV methods (which will access IPP if available)
-//    4. Can easily treat external data as an image
-//    5. Easy to create images which are subsets of other images
-//    6. Fast pixel access which can take advantage of number of channels
-//          if known at compile time.
-//
-// The WImage class is the image class which provides the data accessors.
-// The 'W' comes from the fact that it is also a wrapper around the popular
-// but inconvenient IplImage class. A WImage can be constructed either using a
-// WImageBuffer class which allocates and frees the data,
-// or using a WImageView class which constructs a subimage or a view into
-// external data.  The view class does no memory management.  Each class
-// actually has two versions, one when the number of channels is known at
-// compile time and one when it isn't.  Using the one with the number of
-// channels specified can provide some compile time optimizations by using the
-// fact that the number of channels is a constant.
-//
-// We use the convention (c,r) to refer to column c and row r with (0,0) being
-// the upper left corner.  This is similar to standard Euclidean coordinates
-// with the first coordinate varying in the horizontal direction and the second
-// coordinate varying in the vertical direction.
-// Thus (c,r) is usually in the domain [0, width) X [0, height)
-//
-// Example usage:
-// WImageBuffer3_b  im(5,7);  // Make a 5X7 3 channel image of type uchar
-// WImageView3_b  sub_im(im, 2,2, 3,3); // 3X3 submatrix
-// vector<float> vec(10, 3.0f);
-// WImageView1_f user_im(&vec[0], 2, 5);  // 2X5 image w/ supplied data
-//
-// im.SetZero();  // same as cvSetZero(im.Ipl())
-// *im(2, 3) = 15;  // Modify the element at column 2, row 3
-// MySetRand(&sub_im);
-//
-// // Copy the second row into the first.  This can be done with no memory
-// // allocation and will use SSE if IPP is available.
-// int w = im.Width();
-// im.View(0,0, w,1).CopyFrom(im.View(0,1, w,1));
-//
-// // Doesn't care about source of data since using WImage
-// void MySetRand(WImage_b* im) { // Works with any number of channels
-//   for (int r = 0; r < im->Height(); ++r) {
-//     float* row = im->Row(r);
-//     for (int c = 0; c < im->Width(); ++c) {
-//        for (int ch = 0; ch < im->Channels(); ++ch, ++row) {
-//          *row = uchar(rand() & 255);
-//        }
-//     }
-//   }
-// }
-//
-// Functions that are not part of the basic image allocation, viewing, and
-// access should come from OpenCV, except some useful functions that are not
-// part of OpenCV can be found in wimage_util.h
+//M*/
+
 #ifndef __OPENCV_CORE_WIMAGE_HPP__
 #define __OPENCV_CORE_WIMAGE_HPP__
 
@@ -105,6 +47,9 @@
 #ifdef __cplusplus
 
 namespace cv {
+
+//! @addtogroup core
+//! @{
 
 template <typename T> class WImage;
 template <typename T> class WImageBuffer;
@@ -165,12 +110,63 @@ typedef WImageC<ushort, 3>        WImage3_16u;
 typedef WImageViewC<ushort, 3>    WImageView3_16u;
 typedef WImageBufferC<ushort, 3>  WImageBuffer3_16u;
 
-//
-// WImage definitions
-//
-// This WImage class gives access to the data it refers to.  It can be
-// constructed either by allocating the data with a WImageBuffer class or
-// using the WImageView class to refer to a subimage or outside data.
+/** @brief Image class which provides a thin layer around an IplImage.
+
+The goals of the class design are:
+
+    -# All the data has explicit ownership to avoid memory leaks
+    -# No hidden allocations or copies for performance.
+    -# Easy access to OpenCV methods (which will access IPP if available)
+    -# Can easily treat external data as an image
+    -# Easy to create images which are subsets of other images
+    -# Fast pixel access which can take advantage of number of channels if known at compile time.
+
+The WImage class is the image class which provides the data accessors. The 'W' comes from the fact
+that it is also a wrapper around the popular but inconvenient IplImage class. A WImage can be
+constructed either using a WImageBuffer class which allocates and frees the data, or using a
+WImageView class which constructs a subimage or a view into external data. The view class does no
+memory management. Each class actually has two versions, one when the number of channels is known
+at compile time and one when it isn't. Using the one with the number of channels specified can
+provide some compile time optimizations by using the fact that the number of channels is a
+constant.
+
+We use the convention (c,r) to refer to column c and row r with (0,0) being the upper left corner.
+This is similar to standard Euclidean coordinates with the first coordinate varying in the
+horizontal direction and the second coordinate varying in the vertical direction. Thus (c,r) is
+usually in the domain [0, width) X [0, height)
+
+Example usage:
+@code
+WImageBuffer3_b  im(5,7);  // Make a 5X7 3 channel image of type uchar
+WImageView3_b  sub_im(im, 2,2, 3,3); // 3X3 submatrix
+vector<float> vec(10, 3.0f);
+WImageView1_f user_im(&vec[0], 2, 5);  // 2X5 image w/ supplied data
+
+im.SetZero();  // same as cvSetZero(im.Ipl())
+*im(2, 3) = 15;  // Modify the element at column 2, row 3
+MySetRand(&sub_im);
+
+// Copy the second row into the first.  This can be done with no memory
+// allocation and will use SSE if IPP is available.
+int w = im.Width();
+im.View(0,0, w,1).CopyFrom(im.View(0,1, w,1));
+
+// Doesn't care about source of data since using WImage
+void MySetRand(WImage_b* im) { // Works with any number of channels
+for (int r = 0; r < im->Height(); ++r) {
+ float* row = im->Row(r);
+ for (int c = 0; c < im->Width(); ++c) {
+    for (int ch = 0; ch < im->Channels(); ++ch, ++row) {
+      *row = uchar(rand() & 255);
+    }
+ }
+}
+}
+@endcode
+
+Functions that are not part of the basic image allocation, viewing, and access should come from
+OpenCV, except some useful functions that are not part of OpenCV can be found in wimage_util.h
+*/
 template<typename T>
 class WImage
 {
@@ -252,10 +248,10 @@ protected:
 };
 
 
-
-// Image class when both the pixel type and number of channels
-// are known at compile time.  This wrapper will speed up some of the operations
-// like accessing individual pixels using the () operator.
+/** Image class when both the pixel type and number of channels
+are known at compile time.  This wrapper will speed up some of the operations
+like accessing individual pixels using the () operator.
+*/
 template<typename T, int C>
 class WImageC : public WImage<T>
 {
@@ -292,12 +288,9 @@ protected:
     }
 };
 
-//
-// WImageBuffer definitions
-//
-// Image class which owns the data, so it can be allocated and is always
-// freed.  It cannot be copied but can be explicity cloned.
-//
+/** Image class which owns the data, so it can be allocated and is always
+freed.  It cannot be copied but can be explicity cloned.
+*/
 template<typename T>
 class WImageBuffer : public WImage<T>
 {
@@ -352,8 +345,8 @@ private:
     void operator=(const WImageBuffer&);
 };
 
-// Like a WImageBuffer class but when the number of channels is known
-// at compile time.
+/** Like a WImageBuffer class but when the number of channels is known at compile time.
+*/
 template<typename T, int C>
 class WImageBufferC : public WImageC<T, C>
 {
@@ -409,14 +402,10 @@ private:
     void operator=(const WImageBufferC&);
 };
 
-//
-// WImageView definitions
-//
-// View into an image class which allows treating a subimage as an image
-// or treating external data as an image
-//
-template<typename T>
-class WImageView : public WImage<T>
+/** View into an image class which allows treating a subimage as an image or treating external data
+as an image
+*/
+template<typename T> class WImageView : public WImage<T>
 {
 public:
     typedef typename WImage<T>::BaseType BaseType;
@@ -518,15 +507,9 @@ inline int WImage<float>::Depth() const {return IPL_DEPTH_32F; }
 template<>
 inline int WImage<double>::Depth() const {return IPL_DEPTH_64F; }
 
-//
-// Pure virtual destructors still need to be defined.
-//
 template<typename T> inline WImage<T>::~WImage() {}
 template<typename T, int C> inline WImageC<T, C>::~WImageC() {}
 
-//
-// Allocate ImageData
-//
 template<typename T>
 inline void WImageBuffer<T>::Allocate(int width, int height, int nchannels)
 {
@@ -547,9 +530,6 @@ inline void WImageBufferC<T, C>::Allocate(int width, int height)
     }
 }
 
-//
-// ImageView methods
-//
 template<typename T>
 WImageView<T>::WImageView(WImage<T>* img, int c, int r, int width, int height)
         : WImage<T>(0)
@@ -613,6 +593,8 @@ template<typename T, int C>
 WImageViewC<T, C> WImageC<T, C>::View(int c, int r, int width, int height) {
     return WImageViewC<T, C>(this, c, r, width, height);
 }
+
+//! @} core
 
 }  // end of namespace
 

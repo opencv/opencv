@@ -12,7 +12,7 @@
 #include <iostream>
 #include <string>
 #include <opencv2/ts.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <opencv2/stitching.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
 #include <opencv2/stitching/detail/blenders.hpp>

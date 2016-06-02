@@ -43,7 +43,7 @@ The references are:
 
 #include "precomp.hpp"
 #include "fast_score.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_features2d.hpp"
 
 #if defined _MSC_VER
 # pragma warning( disable : 4127)
@@ -250,6 +250,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
     }
 }
 
+#ifdef HAVE_OPENCL
 template<typename pt>
 struct cmp_pt
 {
@@ -262,7 +263,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
     UMat img = _img.getUMat();
     if( img.cols < 7 || img.rows < 7 )
         return false;
-    size_t globalsize[] = { img.cols-6, img.rows-6 };
+    size_t globalsize[] = { (size_t)img.cols-6, (size_t)img.rows-6 };
 
     ocl::Kernel fastKptKernel("FAST_findKeypoints", ocl::features2d::fast_oclsrc);
     if (fastKptKernel.empty())
@@ -306,7 +307,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
         if (fastNMSKernel.empty())
             return false;
 
-        size_t globalsize_nms[] = { counter };
+        size_t globalsize_nms[] = { (size_t)counter };
         if( !fastNMSKernel.args(ocl::KernelArg::PtrReadOnly(kp1),
                                 ocl::KernelArg::PtrReadWrite(kp2),
                                 ocl::KernelArg::ReadOnly(img),
@@ -326,13 +327,18 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 
     return true;
 }
-
+#endif
 
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
+#ifdef HAVE_OPENCL
   if( ocl::useOpenCL() && _img.isUMat() && type == FastFeatureDetector::TYPE_9_16 &&
       ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000))
-      return;
+  {
+    CV_IMPL_ADD(CV_IMPL_OCL);
+    return;
+  }
+#endif
 
   switch(type) {
     case FastFeatureDetector::TYPE_5_8:
@@ -343,7 +349,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
       break;
     case FastFeatureDetector::TYPE_9_16:
 #ifdef HAVE_TEGRA_OPTIMIZATION
-      if(tegra::FAST(_img, keypoints, threshold, nonmax_suppression))
+      if(tegra::useTegra() && tegra::FAST(_img, keypoints, threshold, nonmax_suppression))
         break;
 #endif
       FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);
@@ -356,30 +362,72 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 {
     FAST(_img, keypoints, threshold, nonmax_suppression, FastFeatureDetector::TYPE_9_16);
 }
-/*
- *   FastFeatureDetector
- */
-FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression )
-    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type(FastFeatureDetector::TYPE_9_16)
-{}
 
-FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression, int _type )
-: threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
-{}
 
-void FastFeatureDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) const
+class FastFeatureDetector_Impl : public FastFeatureDetector
 {
-    Mat mask = _mask.getMat(), grayImage;
-    UMat ugrayImage;
-    _InputArray gray = _image;
-    if( _image.type() != CV_8U )
+public:
+    FastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, int _type )
+    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
+    {}
+
+    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask )
     {
-        _OutputArray ogray = _image.isUMat() ? _OutputArray(ugrayImage) : _OutputArray(grayImage);
-        cvtColor( _image, ogray, COLOR_BGR2GRAY );
-        gray = ogray;
+        Mat mask = _mask.getMat(), grayImage;
+        UMat ugrayImage;
+        _InputArray gray = _image;
+        if( _image.type() != CV_8U )
+        {
+            _OutputArray ogray = _image.isUMat() ? _OutputArray(ugrayImage) : _OutputArray(grayImage);
+            cvtColor( _image, ogray, COLOR_BGR2GRAY );
+            gray = ogray;
+        }
+        FAST( gray, keypoints, threshold, nonmaxSuppression, type );
+        KeyPointsFilter::runByPixelsMask( keypoints, mask );
     }
-    FAST( gray, keypoints, threshold, nonmaxSuppression, type );
-    KeyPointsFilter::runByPixelsMask( keypoints, mask );
+
+    void set(int prop, double value)
+    {
+        if(prop == THRESHOLD)
+            threshold = cvRound(value);
+        else if(prop == NONMAX_SUPPRESSION)
+            nonmaxSuppression = value != 0;
+        else if(prop == FAST_N)
+            type = cvRound(value);
+        else
+            CV_Error(Error::StsBadArg, "");
+    }
+
+    double get(int prop) const
+    {
+        if(prop == THRESHOLD)
+            return threshold;
+        if(prop == NONMAX_SUPPRESSION)
+            return nonmaxSuppression;
+        if(prop == FAST_N)
+            return type;
+        CV_Error(Error::StsBadArg, "");
+        return 0;
+    }
+
+    void setThreshold(int threshold_) { threshold = threshold_; }
+    int getThreshold() const { return threshold; }
+
+    void setNonmaxSuppression(bool f) { nonmaxSuppression = f; }
+    bool getNonmaxSuppression() const { return nonmaxSuppression; }
+
+    void setType(int type_) { type = type_; }
+    int getType() const { return type; }
+
+    int threshold;
+    bool nonmaxSuppression;
+    int type;
+};
+
+Ptr<FastFeatureDetector> FastFeatureDetector::create( int threshold, bool nonmaxSuppression, int type )
+{
+    return makePtr<FastFeatureDetector_Impl>(threshold, nonmaxSuppression, type);
 }
+
 
 }

@@ -49,6 +49,12 @@
 #include "type_traits.hpp"
 #include "device_functions.h"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     // Function Objects
@@ -785,5 +791,7 @@ namespace cv { namespace cuda { namespace device
 #define OPENCV_CUDA_TRANSFORM_FUNCTOR_TRAITS(type) \
     template <> struct TransformFunctorTraits< type > : DefaultTransformFunctorTraits< type >
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_FUNCTIONAL_HPP__

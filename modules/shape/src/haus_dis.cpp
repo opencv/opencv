@@ -60,8 +60,6 @@ public:
     {
     }
 
-    virtual AlgorithmInfo* info() const { return 0; }
-
     //! the main operator
     virtual float computeDistance(InputArray contour1, InputArray contour2);
 
@@ -79,6 +77,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "distance" << distanceFlag
            << "rank" << rankProportion;

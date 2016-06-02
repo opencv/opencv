@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // saturate_cast
 
 namespace vec_math_detail
@@ -930,6 +933,8 @@ CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC(atan2, ::atan2, float, double, double)
 CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC(atan2, ::atan2, double, double, double)
 
 #undef CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC
+
+//! @}
 
 }}
 

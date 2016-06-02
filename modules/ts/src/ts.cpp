@@ -62,6 +62,8 @@
 
 #else
 #include <unistd.h>
+#include <signal.h>
+#include <setjmp.h>
 #endif
 
 namespace cvtest
@@ -111,9 +113,6 @@ static void SEHTranslator( unsigned int /*u*/, EXCEPTION_POINTERS* pExp )
 #endif
 
 #else
-
-#include <signal.h>
-#include <setjmp.h>
 
 static const int tsSigId[] = { SIGSEGV, SIGBUS, SIGFPE, SIGILL, SIGABRT, -1 };
 
@@ -450,7 +449,11 @@ static int tsErrorCallback( int status, const char* func_name, const char* err_m
 
 void TS::init( const string& modulename )
 {
+#ifndef WINRT
     char* datapath_dir = getenv("OPENCV_TEST_DATA_PATH");
+#else
+    char* datapath_dir = OPENCV_TEST_DATA_PATH;
+#endif
 
     if( datapath_dir )
     {
@@ -657,5 +660,38 @@ void smoothBorder(Mat& img, const Scalar& color, int delta)
 }
 
 } //namespace cvtest
+
+bool test_ipp_check = false;
+
+void checkIppStatus()
+{
+    if (test_ipp_check)
+    {
+        int status = cv::ipp::getIppStatus();
+        EXPECT_LE(0, status) << cv::ipp::getIppErrorLocation().c_str();
+    }
+}
+
+void parseCustomOptions(int argc, char **argv)
+{
+    const char * const command_line_keys =
+        "{ ipp test_ipp_check |false    |check whether IPP works without failures }"
+        "{ h   help           |false    |print help info                          }";
+
+    cv::CommandLineParser parser(argc, argv, command_line_keys);
+    if (parser.get<bool>("help"))
+    {
+        std::cout << "\nAvailable options besides google test option: \n";
+        parser.printMessage();
+    }
+
+    test_ipp_check = parser.get<bool>("test_ipp_check");
+    if (!test_ipp_check)
+#ifndef WINRT
+        test_ipp_check = getenv("OPENCV_IPP_CHECK") != NULL;
+#else
+        test_ipp_check = false;
+#endif
+}
 
 /* End of file. */

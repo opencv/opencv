@@ -56,6 +56,22 @@
 #  include "opencv2/objdetect.hpp"
 #endif
 
+#ifdef HAVE_OPENCV_CALIB3D
+#  include "opencv2/calib3d.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_CUDAARITHM
+#  include "opencv2/cudaarithm.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_CUDAFILTERS
+#  include "opencv2/cudafilters.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#  include "opencv2/cudaimgproc.hpp"
+#endif
+
 #include "opencv2/core/private.cuda.hpp"
 #include "opencv2/cudalegacy/private.hpp"
 

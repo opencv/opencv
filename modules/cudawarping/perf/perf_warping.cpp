@@ -253,7 +253,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, WarpAffine,
     const double aplha = CV_PI / 4;
     const double mat[2 * 3] =
     {
-        std::cos(aplha), -std::sin(aplha), src.cols / 2,
+        std::cos(aplha), -std::sin(aplha), static_cast<double>(src.cols) / 2.0,
         std::sin(aplha),  std::cos(aplha), 0
     };
     const cv::Mat M(2, 3, CV_64F, (void*) mat);
@@ -301,7 +301,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, WarpPerspective,
     declare.in(src, WARMUP_RNG);
 
     const double aplha = CV_PI / 4;
-    double mat[3][3] = { {std::cos(aplha), -std::sin(aplha), src.cols / 2},
+    double mat[3][3] = { {std::cos(aplha), -std::sin(aplha), static_cast<double>(src.cols) / 2.0},
                          {std::sin(aplha),  std::cos(aplha), 0},
                          {0.0,              0.0,             1.0}};
     const cv::Mat M(3, 3, CV_64F, (void*) mat);
@@ -322,88 +322,6 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, WarpPerspective,
         TEST_CYCLE() cv::warpPerspective(src, dst, M, size, interpolation, borderMode);
 
         CPU_SANITY_CHECK(dst);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
-// BuildWarpPlaneMaps
-
-PERF_TEST_P(Sz, BuildWarpPlaneMaps,
-            CUDA_TYPICAL_MAT_SIZES)
-{
-    const cv::Size size = GetParam();
-
-    const cv::Mat K = cv::Mat::eye(3, 3, CV_32FC1);
-    const cv::Mat R = cv::Mat::ones(3, 3, CV_32FC1);
-    const cv::Mat T = cv::Mat::zeros(1, 3, CV_32F);
-
-    if (PERF_RUN_CUDA())
-    {
-        cv::cuda::GpuMat map_x;
-        cv::cuda::GpuMat map_y;
-
-        TEST_CYCLE() cv::cuda::buildWarpPlaneMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, T, 1.0, map_x, map_y);
-
-        CUDA_SANITY_CHECK(map_x);
-        CUDA_SANITY_CHECK(map_y);
-    }
-    else
-    {
-        FAIL_NO_CPU();
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
-// BuildWarpCylindricalMaps
-
-PERF_TEST_P(Sz, BuildWarpCylindricalMaps,
-            CUDA_TYPICAL_MAT_SIZES)
-{
-    const cv::Size size = GetParam();
-
-    const cv::Mat K = cv::Mat::eye(3, 3, CV_32FC1);
-    const cv::Mat R = cv::Mat::ones(3, 3, CV_32FC1);
-
-    if (PERF_RUN_CUDA())
-    {
-        cv::cuda::GpuMat map_x;
-        cv::cuda::GpuMat map_y;
-
-        TEST_CYCLE() cv::cuda::buildWarpCylindricalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
-
-        CUDA_SANITY_CHECK(map_x);
-        CUDA_SANITY_CHECK(map_y);
-    }
-    else
-    {
-        FAIL_NO_CPU();
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
-// BuildWarpSphericalMaps
-
-PERF_TEST_P(Sz, BuildWarpSphericalMaps,
-            CUDA_TYPICAL_MAT_SIZES)
-{
-    const cv::Size size = GetParam();
-
-    const cv::Mat K = cv::Mat::eye(3, 3, CV_32FC1);
-    const cv::Mat R = cv::Mat::ones(3, 3, CV_32FC1);
-
-    if (PERF_RUN_CUDA())
-    {
-        cv::cuda::GpuMat map_x;
-        cv::cuda::GpuMat map_y;
-
-        TEST_CYCLE() cv::cuda::buildWarpSphericalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
-
-        CUDA_SANITY_CHECK(map_x);
-        CUDA_SANITY_CHECK(map_y);
-    }
-    else
-    {
-        FAIL_NO_CPU();
     }
 }
 
@@ -512,42 +430,5 @@ PERF_TEST_P(Sz_Depth_Cn, PyrUp,
         TEST_CYCLE() cv::pyrUp(src, dst);
 
         CPU_SANITY_CHECK(dst);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
-// ImagePyramidGetLayer
-
-PERF_TEST_P(Sz_Depth_Cn, ImagePyramidGetLayer,
-            Combine(CUDA_TYPICAL_MAT_SIZES,
-                    Values(CV_8U, CV_16U, CV_32F),
-                    CUDA_CHANNELS_1_3_4))
-{
-    const cv::Size size = GET_PARAM(0);
-    const int depth = GET_PARAM(1);
-    const int channels = GET_PARAM(2);
-
-    const int type = CV_MAKE_TYPE(depth, channels);
-
-    cv::Mat src(size, type);
-    declare.in(src, WARMUP_RNG);
-
-    const int nLayers = 3;
-    const cv::Size dstSize(size.width / 2 + 10, size.height / 2 + 10);
-
-    if (PERF_RUN_CUDA())
-    {
-        const cv::cuda::GpuMat d_src(src);
-        cv::cuda::GpuMat dst;
-
-        cv::Ptr<cv::cuda::ImagePyramid> d_pyr = cv::cuda::createImagePyramid(d_src, nLayers);
-
-        TEST_CYCLE() d_pyr->getLayer(dst, dstSize);
-
-        CUDA_SANITY_CHECK(dst);
-    }
-    else
-    {
-        FAIL_NO_CPU();
     }
 }

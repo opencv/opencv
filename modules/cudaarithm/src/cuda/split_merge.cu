@@ -50,7 +50,10 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 ////////////////////////////////////////////////////////////////////////
@@ -92,20 +95,18 @@ namespace
 
     void mergeImpl(const GpuMat* src, size_t n, cv::OutputArray _dst, Stream& stream)
     {
-        CV_DbgAssert( src != 0 );
-        CV_DbgAssert( n > 0 && n <= 4 );
+        CV_Assert( src != 0 );
+        CV_Assert( n > 0 && n <= 4 );
 
         const int depth = src[0].depth();
         const cv::Size size = src[0].size();
 
-#ifdef _DEBUG
         for (size_t i = 0; i < n; ++i)
         {
             CV_Assert( src[i].size() == size );
             CV_Assert( src[i].depth() == depth );
             CV_Assert( src[i].channels() == 1 );
         }
-#endif
 
         if (n == 1)
         {
@@ -123,8 +124,7 @@ namespace
 
             const int channels = static_cast<int>(n);
 
-            _dst.create(size, CV_MAKE_TYPE(depth, channels));
-            GpuMat dst = _dst.getGpuMat();
+            GpuMat dst = getOutputMat(_dst, size, CV_MAKE_TYPE(depth, channels), stream);
 
             const func_t func = funcs[channels - 2][CV_ELEM_SIZE(depth) / 2];
 
@@ -132,6 +132,8 @@ namespace
                 CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported channel count or data type");
 
             func(src, dst, stream);
+
+            syncOutput(dst, _dst, stream);
         }
     }
 }
@@ -203,12 +205,12 @@ namespace
             {SplitFunc<4, uchar>::call, SplitFunc<4, ushort>::call, SplitFunc<4, int>::call, 0, SplitFunc<4, double>::call}
         };
 
-        CV_DbgAssert( dst != 0 );
+        CV_Assert( dst != 0 );
 
         const int depth = src.depth();
         const int channels = src.channels();
 
-        CV_DbgAssert( channels <= 4 );
+        CV_Assert( channels <= 4 );
 
         if (channels == 0)
             return;
@@ -233,13 +235,13 @@ namespace
 
 void cv::cuda::split(InputArray _src, GpuMat* dst, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
     splitImpl(src, dst, stream);
 }
 
 void cv::cuda::split(InputArray _src, std::vector<GpuMat>& dst, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
     dst.resize(src.channels());
     if (src.channels() > 0)
         splitImpl(src, &dst[0], stream);

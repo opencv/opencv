@@ -63,9 +63,8 @@ PERF_TEST_P(Sz_Depth, HistEvenC1,
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
-        cv::cuda::GpuMat d_buf;
 
-        TEST_CYCLE() cv::cuda::histEven(d_src, dst, d_buf, 30, 0, 180);
+        TEST_CYCLE() cv::cuda::histEven(d_src, dst, 30, 0, 180);
 
         CUDA_SANITY_CHECK(dst);
     }
@@ -106,9 +105,8 @@ PERF_TEST_P(Sz_Depth, HistEvenC4,
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat d_hist[4];
-        cv::cuda::GpuMat d_buf;
 
-        TEST_CYCLE() cv::cuda::histEven(d_src, d_hist, d_buf, histSize, lowerLevel, upperLevel);
+        TEST_CYCLE() cv::cuda::histEven(d_src, d_hist, histSize, lowerLevel, upperLevel);
 
         cv::Mat cpu_hist0, cpu_hist1, cpu_hist2, cpu_hist3;
         d_hist[0].download(cpu_hist0);
@@ -167,9 +165,8 @@ PERF_TEST_P(Sz, EqualizeHist,
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
-        cv::cuda::GpuMat d_buf;
 
-        TEST_CYCLE() cv::cuda::equalizeHist(d_src, dst, d_buf);
+        TEST_CYCLE() cv::cuda::equalizeHist(d_src, dst);
 
         CUDA_SANITY_CHECK(dst);
     }

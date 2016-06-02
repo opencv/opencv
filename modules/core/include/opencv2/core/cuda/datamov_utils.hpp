@@ -45,6 +45,12 @@
 
 #include "common.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 200
@@ -101,5 +107,7 @@ namespace cv { namespace cuda { namespace device
 
     #endif // __CUDA_ARCH__ >= 200
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_DATAMOV_UTILS_HPP__

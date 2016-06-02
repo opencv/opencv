@@ -17,6 +17,7 @@
 #include <signal.h>
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core.hpp"
 #include <iostream>
@@ -27,17 +28,23 @@ using namespace cv;
 
 int main(int argc, char* argv[])
 {
-    if(argc < 2)
+    cv::CommandLineParser parser(argc, argv, "{help h||show help message}{@image||input image}");
+    if (parser.has("help"))
     {
-        cout << "usage: " << argv[0] << " <Input image> "  << endl;
+        parser.printMessage();
+        exit(0);
+    }
+    if (parser.get<string>("@image").empty())
+    {
+        parser.printMessage();
         exit(0);
     }
 
+    Mat I = imread(parser.get<string>("@image"));
+
     int num,type;
 
-    Mat I = imread(argv[1]);
-
-    if(!I.data)
+    if(I.empty())
     {
         cout <<  "Image not found" << endl;
         exit(0);

@@ -6,12 +6,13 @@
 
 #include "cvconfig.h"
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
 
 #ifdef _MSC_VER
-#pragma warning( disable: 4127 )
+#pragma warning( disable: 4127 ) // conditional expression is constant
+#pragma warning( disable: 4503 ) // decorated name length exceeded, name was truncated
 #endif
 
 #define GTEST_DONT_DEFINE_FAIL      0
@@ -25,6 +26,7 @@
 #define GTEST_DONT_DEFINE_TEST      0
 
 #include "opencv2/ts/ts_gtest.h"
+#include "opencv2/ts/ts_ext.hpp"
 
 #ifndef GTEST_USES_SIMPLE_RE
 #  define GTEST_USES_SIMPLE_RE 0
@@ -32,6 +34,9 @@
 #ifndef GTEST_USES_POSIX_RE
 #  define GTEST_USES_POSIX_RE 0
 #endif
+
+#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+#define GET_PARAM(k) std::tr1::get< k >(GetParam())
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
@@ -159,8 +164,11 @@ CV_EXPORTS void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop);
 CV_EXPORTS void compare(const Mat& src, double s, Mat& dst, int cmpop);
 CV_EXPORTS void gemm(const Mat& src1, const Mat& src2, double alpha,
                      const Mat& src3, double beta, Mat& dst, int flags);
-    CV_EXPORTS void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& shift );
+CV_EXPORTS void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& shift );
 CV_EXPORTS double crossCorr(const Mat& src1, const Mat& src2);
+CV_EXPORTS void threshold( const Mat& src, Mat& dst, double thresh, double maxval, int thresh_type );
+CV_EXPORTS void minMaxIdx( InputArray _img, double* minVal, double* maxVal,
+                    Point* minLoc, Point* maxLoc, InputArray _mask );
 
 struct CV_EXPORTS MatInfo
 {
@@ -380,7 +388,7 @@ public:
         FAIL_HANG=-13,
 
         // unexpected response on passing bad arguments to the tested function
-        // (the function crashed, proceed succesfully (while it should not), or returned
+        // (the function crashed, proceed successfully (while it should not), or returned
         // error code that is different from what is expected)
         FAIL_BAD_ARG_CHECK=-14,
 
@@ -390,7 +398,7 @@ public:
         // the test has been skipped because it is not in the selected subset of the tests to run,
         // because it has been run already within the same run with the same parameters, or because
         // of some other reason and this is not considered as an error.
-        // Normally TS::run() (or overrided method in the derived class) takes care of what
+        // Normally TS::run() (or overridden method in the derived class) takes care of what
         // needs to be run, so this code should not occur.
         SKIPPED=1
     };
@@ -553,23 +561,26 @@ CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 #endif
 #endif
 
-#if defined(HAVE_OPENCL) && !defined(CV_BUILD_OCL_MODULE)
+#ifdef HAVE_OPENCL
 namespace cvtest { namespace ocl {
 void dumpOpenCLDevice();
-}}
+} }
 #define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
 #else
 #define TEST_DUMP_OCL_INFO
 #endif
 
+void parseCustomOptions(int argc, char **argv);
+
 #define CV_TEST_MAIN(resourcesubdir, ...) \
 int main(int argc, char **argv) \
 { \
+    __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     cvtest::TS::ptr()->init(resourcesubdir); \
     ::testing::InitGoogleTest(&argc, argv); \
     cvtest::printVersionInfo(); \
-    __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     TEST_DUMP_OCL_INFO \
+    parseCustomOptions(argc, argv); \
     return RUN_ALL_TESTS(); \
 }
 
@@ -583,3 +594,102 @@ int main(int argc, char **argv) \
 #endif
 
 #include "opencv2/ts/ts_perf.hpp"
+
+#ifdef WINRT
+#ifndef __FSTREAM_EMULATED__
+#define __FSTREAM_EMULATED__
+#include <stdlib.h>
+#include <fstream>
+#include <sstream>
+
+#undef ifstream
+#undef ofstream
+#define ifstream ifstream_emulated
+#define ofstream ofstream_emulated
+
+namespace std {
+
+class ifstream : public stringstream
+{
+    FILE* f;
+public:
+    ifstream(const char* filename, ios_base::openmode mode = ios_base::in)
+        : f(NULL)
+    {
+        string modeStr("r");
+        printf("Open file (read): %s\n", filename);
+        if (mode & ios_base::binary)
+            modeStr += "b";
+        f = fopen(filename, modeStr.c_str());
+
+        if (f == NULL)
+        {
+            printf("Can't open file: %s\n", filename);
+            return;
+        }
+        fseek(f, 0, SEEK_END);
+        size_t sz = ftell(f);
+        if (sz > 0)
+        {
+            char* buf = (char*) malloc(sz);
+            fseek(f, 0, SEEK_SET);
+            if (fread(buf, 1, sz, f) == sz)
+            {
+                this->str(std::string(buf, sz));
+            }
+            free(buf);
+        }
+    }
+
+    ~ifstream() { close(); }
+    bool is_open() const { return f != NULL; }
+    void close()
+    {
+        if (f)
+            fclose(f);
+        f = NULL;
+        this->str("");
+    }
+};
+
+class ofstream : public stringstream
+{
+    FILE* f;
+public:
+    ofstream(const char* filename, ios_base::openmode mode = ios_base::out)
+    : f(NULL)
+    {
+        open(filename, mode);
+    }
+    ~ofstream() { close(); }
+    void open(const char* filename, ios_base::openmode mode = ios_base::out)
+    {
+        string modeStr("w+");
+        if (mode & ios_base::trunc)
+            modeStr = "w";
+        if (mode & ios_base::binary)
+            modeStr += "b";
+        f = fopen(filename, modeStr.c_str());
+        printf("Open file (write): %s\n", filename);
+        if (f == NULL)
+        {
+            printf("Can't open file (write): %s\n", filename);
+            return;
+        }
+    }
+    bool is_open() const { return f != NULL; }
+    void close()
+    {
+        if (f)
+        {
+            fwrite(reinterpret_cast<const char *>(this->str().c_str()), this->str().size(), 1, f);
+            fclose(f);
+        }
+        f = NULL;
+        this->str("");
+    }
+};
+
+} // namespace std
+#endif // __FSTREAM_EMULATED__
+#endif // WINRT

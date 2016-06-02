@@ -72,7 +72,7 @@ void CV_BRISKTest::run( int )
   cvtColor(image1, gray1, COLOR_BGR2GRAY);
   cvtColor(image2, gray2, COLOR_BGR2GRAY);
 
-  Ptr<FeatureDetector> detector = Algorithm::create<FeatureDetector>("Feature2D.BRISK");
+  Ptr<FeatureDetector> detector = BRISK::create();
 
   vector<KeyPoint> keypoints1;
   vector<KeyPoint> keypoints2;

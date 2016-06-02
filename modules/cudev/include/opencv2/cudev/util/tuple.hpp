@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 using tuple_detail::tuple;
 using tuple_detail::tuple_size;
 using tuple_detail::get;
@@ -74,6 +77,8 @@ template <class Tuple, template <typename T> class CvtOp> struct ConvertTuple
 {
     typedef typename tuple_detail::ConvertTuple<Tuple, tuple_size<Tuple>::value, CvtOp>::type type;
 };
+
+//! @}
 
 }}
 

@@ -1,5 +1,6 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 #include <stdio.h>
 using namespace cv;
 
@@ -15,9 +16,14 @@ static Scalar randomColor(RNG& rng)
     return Scalar(icolor&255, (icolor>>8)&255, (icolor>>16)&255);
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    help();
+    cv::CommandLineParser parser(argc, argv, "{help h||}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     char wndname[] = "Drawing Demo";
     const int NUMBER = 100;
     const int DELAY = 5;

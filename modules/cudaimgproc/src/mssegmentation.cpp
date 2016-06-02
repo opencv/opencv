@@ -43,7 +43,7 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::cuda::meanShiftSegmentation(InputArray, OutputArray, int, int, int, TermCriteria) { throw_no_cuda(); }
+void cv::cuda::meanShiftSegmentation(InputArray, OutputArray, int, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -222,7 +222,7 @@ inline int dist2(const cv::Vec2s& lhs, const cv::Vec2s& rhs)
 } // anonymous namespace
 
 
-void cv::cuda::meanShiftSegmentation(InputArray _src, OutputArray _dst, int sp, int sr, int minsize, TermCriteria criteria)
+void cv::cuda::meanShiftSegmentation(InputArray _src, OutputArray _dst, int sp, int sr, int minsize, TermCriteria criteria, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
 
@@ -235,7 +235,10 @@ void cv::cuda::meanShiftSegmentation(InputArray _src, OutputArray _dst, int sp, 
 
     // Perform mean shift procedure and obtain region and spatial maps
     GpuMat d_rmap, d_spmap;
-    cuda::meanShiftProc(src, d_rmap, d_spmap, sp, sr, criteria);
+    cuda::meanShiftProc(src, d_rmap, d_spmap, sp, sr, criteria, stream);
+
+    stream.waitForCompletion();
+
     Mat rmap(d_rmap);
     Mat spmap(d_spmap);
 

@@ -55,6 +55,7 @@
 #include "opencv2/ts/cuda_perf.hpp"
 
 #include "opencv2/cudaoptflow.hpp"
+#include "opencv2/cudaarithm.hpp"
 #include "opencv2/video.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY

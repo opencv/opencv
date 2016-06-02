@@ -45,6 +45,12 @@
 
 #include "common.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     template<typename T, int N> struct TypeVec;
@@ -276,5 +282,7 @@ namespace cv { namespace cuda { namespace device
         static __device__ __host__ __forceinline__ char8 make(const schar* v) {return make_char8(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);}
     };
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_VEC_TRAITS_HPP__

@@ -57,6 +57,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class Policy, class SrcPtr, typename DstType, class UnOp, class MaskPtr>
 __host__ void gridTransformUnary_(const SrcPtr& src, GpuMat_<DstType>& dst, const UnOp& op, const MaskPtr& mask, Stream& stream = Stream::Null())
 {
@@ -535,6 +538,8 @@ __host__ void gridTransformTuple(const SrcPtr& src, const tuple< GlobPtrSz<D0>, 
 {
     gridTransformTuple_<DefaultTransformPolicy>(src, dst, op, stream);
 }
+
+//! @}
 
 }}
 

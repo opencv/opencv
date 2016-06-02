@@ -159,10 +159,10 @@ static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyP
     if( !(flags & DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS) )
     {
         Mat _outImg1 = outImg( Rect(0, 0, img1size.width, img1size.height) );
-        drawKeypoints( _outImg1, keypoints1, _outImg1, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
+        drawKeypoints( _outImg1, keypoints1, _outImg1, singlePointColor, flags | DrawMatchesFlags::DRAW_OVER_OUTIMG );
 
         Mat _outImg2 = outImg( Rect(img1size.width, 0, img2size.width, img2size.height) );
-        drawKeypoints( _outImg2, keypoints2, _outImg2, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
+        drawKeypoints( _outImg2, keypoints2, _outImg2, singlePointColor, flags | DrawMatchesFlags::DRAW_OVER_OUTIMG );
     }
 }
 

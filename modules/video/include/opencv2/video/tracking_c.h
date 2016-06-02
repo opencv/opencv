@@ -50,6 +50,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup video_c
+  @{
+*/
+
 /****************************************************************************************\
 *                                  Motion Analysis                                       *
 \****************************************************************************************/
@@ -218,6 +222,7 @@ CVAPI(const CvMat*)  cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement
 #define cvKalmanUpdateByTime  cvKalmanPredict
 #define cvKalmanUpdateByMeasurement cvKalmanCorrect
 
+/** @} video_c */
 
 #ifdef __cplusplus
 } // extern "C"

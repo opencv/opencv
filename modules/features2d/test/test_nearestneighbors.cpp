@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014, Itseez Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -66,13 +67,13 @@ protected:
     virtual void run( int start_from );
     virtual void createModel( const Mat& data ) = 0;
     virtual int findNeighbors( Mat& points, Mat& neighbors ) = 0;
-    virtual int checkGetPoins( const Mat& data );
+    virtual int checkGetPoints( const Mat& data );
     virtual int checkFindBoxed();
     virtual int checkFind( const Mat& data );
     virtual void releaseModel() = 0;
 };
 
-int NearestNeighborTest::checkGetPoins( const Mat& )
+int NearestNeighborTest::checkGetPoints( const Mat& )
 {
    return cvtest::TS::OK;
 }
@@ -126,11 +127,11 @@ int NearestNeighborTest::checkFind( const Mat& data )
 void NearestNeighborTest::run( int /*start_from*/ ) {
     int code = cvtest::TS::OK, tempCode;
     Mat desc( featuresCount, dims, CV_32FC1 );
-    randu( desc, Scalar(minValue), Scalar(maxValue) );
+    ts->get_rng().fill( desc, RNG::UNIFORM, minValue, maxValue );
 
     createModel( desc );
 
-    tempCode = checkGetPoins( desc );
+    tempCode = checkGetPoints( desc );
     if( tempCode != cvtest::TS::OK )
     {
         ts->printf( cvtest::TS::LOG, "bad accuracy of GetPoints \n" );
@@ -157,95 +158,10 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
 }
 
 //--------------------------------------------------------------------------------
-class CV_KDTreeTest_CPP : public NearestNeighborTest
-{
-public:
-    CV_KDTreeTest_CPP() {}
-protected:
-    virtual void createModel( const Mat& data );
-    virtual int checkGetPoins( const Mat& data );
-    virtual int findNeighbors( Mat& points, Mat& neighbors );
-    virtual int checkFindBoxed();
-    virtual void releaseModel();
-    KDTree* tr;
-};
-
-
-void CV_KDTreeTest_CPP::createModel( const Mat& data )
-{
-    tr = new KDTree( data, false );
-}
-
-int CV_KDTreeTest_CPP::checkGetPoins( const Mat& data )
-{
-    Mat res1( data.size(), data.type() ),
-        res3( data.size(), data.type() );
-    Mat idxs( 1, data.rows, CV_32SC1 );
-    for( int pi = 0; pi < data.rows; pi++ )
-    {
-        idxs.at<int>(0, pi) = pi;
-        // 1st way
-        const float* point = tr->getPoint(pi);
-        for( int di = 0; di < data.cols; di++ )
-            res1.at<float>(pi, di) = point[di];
-    }
-
-    // 3d way
-    tr->getPoints( idxs, res3 );
-
-    if( cvtest::norm( res1, data, NORM_L1) != 0 ||
-        cvtest::norm( res3, data, NORM_L1) != 0)
-        return cvtest::TS::FAIL_BAD_ACCURACY;
-    return cvtest::TS::OK;
-}
-
-int CV_KDTreeTest_CPP::checkFindBoxed()
-{
-    vector<float> min( dims, static_cast<float>(minValue)), max(dims, static_cast<float>(maxValue));
-    vector<int> indices;
-    tr->findOrthoRange( min, max, indices );
-    // TODO check indices
-    if( (int)indices.size() != featuresCount)
-        return cvtest::TS::FAIL_BAD_ACCURACY;
-    return cvtest::TS::OK;
-}
-
-int CV_KDTreeTest_CPP::findNeighbors( Mat& points, Mat& neighbors )
-{
-    const int emax = 20;
-    Mat neighbors2( neighbors.size(), CV_32SC1 );
-    int j;
-    for( int pi = 0; pi < points.rows; pi++ )
-    {
-        // 1st way
-        Mat nrow = neighbors.row(pi);
-        tr->findNearest( points.row(pi), neighbors.cols, emax, nrow );
-
-        // 2nd way
-        vector<int> neighborsIdx2( neighbors2.cols, 0 );
-        tr->findNearest( points.row(pi), neighbors2.cols, emax, neighborsIdx2 );
-        vector<int>::const_iterator it2 = neighborsIdx2.begin();
-        for( j = 0; it2 != neighborsIdx2.end(); ++it2, j++ )
-            neighbors2.at<int>(pi,j) = *it2;
-    }
-
-    // compare results
-    if( cvtest::norm( neighbors, neighbors2, NORM_L1 ) != 0 )
-        return cvtest::TS::FAIL_BAD_ACCURACY;
-
-    return cvtest::TS::OK;
-}
-
-void CV_KDTreeTest_CPP::releaseModel()
-{
-    delete tr;
-}
-
-//--------------------------------------------------------------------------------
 class CV_FlannTest : public NearestNeighborTest
 {
 public:
-    CV_FlannTest() {}
+    CV_FlannTest() : NearestNeighborTest(), index(NULL) { }
 protected:
     void createIndex( const Mat& data, const IndexParams& params );
     int knnSearch( Mat& points, Mat& neighbors );
@@ -256,6 +172,9 @@ protected:
 
 void CV_FlannTest::createIndex( const Mat& data, const IndexParams& params )
 {
+    // release previously allocated index
+    releaseModel();
+
     index = new Index( data, params );
 }
 
@@ -322,7 +241,11 @@ int CV_FlannTest::radiusSearch( Mat& points, Mat& neighbors )
 
 void CV_FlannTest::releaseModel()
 {
-    delete index;
+    if (index)
+    {
+        delete index;
+        index = NULL;
+    }
 }
 
 //---------------------------------------
@@ -402,7 +325,6 @@ void CV_FlannSavedIndexTest::createModel(const cv::Mat &data)
     remove( filename.c_str() );
 }
 
-TEST(Features2d_KDTree_CPP, regression) { CV_KDTreeTest_CPP test; test.safe_run(); }
 TEST(Features2d_FLANN_Linear, regression) { CV_FlannLinearIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_KMeans, regression) { CV_FlannKMeansIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_KDTree, regression) { CV_FlannKDTreeIndexTest test; test.safe_run(); }

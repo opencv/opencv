@@ -60,6 +60,9 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab
+//! @{
+
 class CV_EXPORTS StabilizerBase
 {
 public:
@@ -188,6 +191,8 @@ protected:
     std::vector<Mat> motions2_;
     Mat suppressedFrame_;
 };
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

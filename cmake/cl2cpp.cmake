@@ -1,5 +1,13 @@
+if (NOT EXISTS "${CL_DIR}")
+  message(FATAL_ERROR "Specified wrong OpenCL kernels directory: ${CL_DIR}")
+endif()
+
 file(GLOB cl_list "${CL_DIR}/*.cl" )
 list(SORT cl_list)
+
+if (NOT cl_list)
+  message(FATAL_ERROR "Can't find OpenCL kernels in directory: ${CL_DIR}")
+endif()
 
 string(REPLACE ".cpp" ".hpp" OUTPUT_HPP "${OUTPUT}")
 get_filename_component(OUTPUT_HPP_NAME "${OUTPUT_HPP}" NAME)
@@ -16,7 +24,10 @@ endif()
 set(STR_CPP "// This file is auto-generated. Do not edit!
 
 #include \"precomp.hpp\"
+#include \"cvconfig.h\"
 #include \"${OUTPUT_HPP_NAME}\"
+
+#ifdef HAVE_OPENCL
 
 namespace cv
 {
@@ -28,8 +39,11 @@ ${nested_namespace_start}
 
 set(STR_HPP "// This file is auto-generated. Do not edit!
 
+#include \"opencv2/core/ocl.hpp\"
 #include \"opencv2/core/ocl_genbase.hpp\"
 #include \"opencv2/core/opencl/ocl_defs.hpp\"
+
+#ifdef HAVE_OPENCL
 
 namespace cv
 {
@@ -73,8 +87,8 @@ foreach(cl ${cl_list})
   set(STR_HPP "${STR_HPP}${STR_HPP_DECL}")
 endforeach()
 
-set(STR_CPP "${STR_CPP}}\n${nested_namespace_end}}\n")
-set(STR_HPP "${STR_HPP}}\n${nested_namespace_end}}\n")
+set(STR_CPP "${STR_CPP}}\n${nested_namespace_end}}\n#endif\n")
+set(STR_HPP "${STR_HPP}}\n${nested_namespace_end}}\n#endif\n")
 
 file(WRITE "${OUTPUT}" "${STR_CPP}")
 

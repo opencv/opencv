@@ -6,6 +6,7 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <iostream>
 #include <string.h>
@@ -140,7 +141,7 @@ static UMat drawSquaresBoth( const UMat& image,
 int main(int argc, char** argv)
 {
     const char* keys =
-        "{ i input    | pic1.png           | specify input image }"
+        "{ i input    | ../data/pic1.png   | specify input image }"
         "{ o output   | squares_output.jpg | specify output save path}"
         "{ h help     | false              | print help message }"
         "{ m cpu_mode | false              | run without OpenCL }";

@@ -11,12 +11,12 @@
 #
 #    Or you can search for specific OpenCV modules:
 #
-#    FIND_PACKAGE(OpenCV REQUIRED core highgui)
+#    FIND_PACKAGE(OpenCV REQUIRED core imgcodecs)
 #
 #    If the module is found then OPENCV_<MODULE>_FOUND is set to TRUE.
 #
 #    This file will define the following variables:
-#      - OpenCV_LIBS                     : The list of libraries to links against.
+#      - OpenCV_LIBS                     : The list of libraries to link against.
 #      - OpenCV_LIB_DIR                  : The directory(es) where lib files are. Calling LINK_DIRECTORIES
 #                                          with this path is NOT needed.
 #      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
@@ -47,7 +47,7 @@ endif()
 
 if(NOT DEFINED OpenCV_STATIC)
   # look for global setting
-  if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+  if(BUILD_SHARED_LIBS)
     set(OpenCV_STATIC OFF)
   else()
     set(OpenCV_STATIC ON)
@@ -65,6 +65,9 @@ if(MSVC)
   if(CMAKE_CL_64)
     set(OpenCV_ARCH x64)
     set(OpenCV_TBB_ARCH intel64)
+  elseif((CMAKE_GENERATOR MATCHES "ARM") OR ("${arch_hint}" STREQUAL "ARM") OR (CMAKE_VS_EFFECTIVE_PLATFORMS MATCHES "ARM|arm"))
+    # see Modules/CmakeGenericSystem.cmake
+    set(OpenCV_ARCH ARM)
   else()
     set(OpenCV_ARCH x86)
     set(OpenCV_TBB_ARCH ia32)
@@ -79,6 +82,8 @@ if(MSVC)
     set(OpenCV_RUNTIME vc11)
   elseif(MSVC_VERSION EQUAL 1800)
     set(OpenCV_RUNTIME vc12)
+  elseif(MSVC_VERSION EQUAL 1900)
+    set(OpenCV_RUNTIME vc14)
   endif()
 elseif(MINGW)
   set(OpenCV_RUNTIME mingw)
@@ -86,7 +91,7 @@ elseif(MINGW)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
                   OUTPUT_VARIABLE OPENCV_GCC_TARGET_MACHINE
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(CMAKE_OPENCV_GCC_TARGET_MACHINE MATCHES "64")
+  if(OPENCV_GCC_TARGET_MACHINE MATCHES "amd64|x86_64|AMD64")
     set(MINGW64 1)
     set(OpenCV_ARCH x64)
   else()
@@ -104,7 +109,12 @@ if(NOT OpenCV_FIND_QUIETLY)
   message(STATUS "OpenCV STATIC: ${OpenCV_STATIC}")
 endif()
 
-get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH CACHE)
+if(CMAKE_VERSION VERSION_LESS "2.8.12")
+  get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH CACHE)
+else()
+  get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY CACHE)
+endif()
+
 if(OpenCV_RUNTIME AND OpenCV_ARCH)
   if(OpenCV_STATIC AND EXISTS "${OpenCV_CONFIG_PATH}/${OpenCV_ARCH}/${OpenCV_RUNTIME}/staticlib/OpenCVConfig.cmake")
     if(OpenCV_CUDA AND EXISTS "${OpenCV_CONFIG_PATH}/gpu/${OpenCV_ARCH}/${OpenCV_RUNTIME}/staticlib/OpenCVConfig.cmake")
@@ -124,8 +134,8 @@ endif()
 if(OpenCV_LIB_PATH AND EXISTS "${OpenCV_LIB_PATH}/OpenCVConfig.cmake")
   set(OpenCV_LIB_DIR_OPT "${OpenCV_LIB_PATH}" CACHE PATH "Path where release OpenCV libraries are located" FORCE)
   set(OpenCV_LIB_DIR_DBG "${OpenCV_LIB_PATH}" CACHE PATH "Path where debug OpenCV libraries are located" FORCE)
-  set(OpenCV_3RDPARTY_LIB_DIR_OPT "${OpenCV_LIB_PATH}" CACHE PATH "Path where release 3rdpaty OpenCV dependencies are located" FORCE)
-  set(OpenCV_3RDPARTY_LIB_DIR_DBG "${OpenCV_LIB_PATH}" CACHE PATH "Path where debug 3rdpaty OpenCV dependencies are located" FORCE)
+  set(OpenCV_3RDPARTY_LIB_DIR_OPT "${OpenCV_LIB_PATH}" CACHE PATH "Path where release 3rdparty OpenCV dependencies are located" FORCE)
+  set(OpenCV_3RDPARTY_LIB_DIR_DBG "${OpenCV_LIB_PATH}" CACHE PATH "Path where debug 3rdparty OpenCV dependencies are located" FORCE)
 
   include("${OpenCV_LIB_PATH}/OpenCVConfig.cmake")
 
@@ -159,7 +169,7 @@ if(OpenCV_LIB_PATH AND EXISTS "${OpenCV_LIB_PATH}/OpenCVConfig.cmake")
 else()
   if(NOT OpenCV_FIND_QUIETLY)
     message(WARNING
-"Found OpenCV Windows Pack but it has not binaries compatible with your configuration.
+"Found OpenCV Windows Pack but it has no binaries compatible with your configuration.
 You should manually point CMake variable OpenCV_DIR to your build of OpenCV library."
     )
   endif()

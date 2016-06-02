@@ -47,6 +47,12 @@
 #include "utility.hpp"
 #include "detail/transform_detail.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     template <typename T, typename D, typename UnOp, typename Mask>
@@ -63,5 +69,7 @@ namespace cv { namespace cuda { namespace device
         transform_detail::TransformDispatcher<VecTraits<T1>::cn == 1 && VecTraits<T2>::cn == 1 && VecTraits<D>::cn == 1 && ft::smart_shift != 1>::call(src1, src2, dst, op, mask, stream);
     }
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_TRANSFORM_HPP__

@@ -392,15 +392,15 @@ int CV_HuMomentsTest::prepare_test_case( int test_case_idx )
 
 void CV_HuMomentsTest::run_func()
 {
-    cvGetHuMoments( (CvMoments*)test_mat[INPUT][0].data,
-                    (CvHuMoments*)test_mat[OUTPUT][0].data );
+    cvGetHuMoments( test_mat[INPUT][0].ptr<CvMoments>(),
+                    test_mat[OUTPUT][0].ptr<CvHuMoments>() );
 }
 
 
 void CV_HuMomentsTest::prepare_to_validation( int /*test_case_idx*/ )
 {
-    CvMoments* m = (CvMoments*)test_mat[INPUT][0].data;
-    CvHuMoments* hu = (CvHuMoments*)test_mat[REF_OUTPUT][0].data;
+    CvMoments* m = test_mat[INPUT][0].ptr<CvMoments>();
+    CvHuMoments* hu = test_mat[REF_OUTPUT][0].ptr<CvHuMoments>();
 
     double inv_m00 = m->inv_sqrt_m00*m->inv_sqrt_m00;
     double s2 = inv_m00*inv_m00; /* 1./(m00 ^ (2/2 + 1)) */

@@ -1,4 +1,4 @@
-SET(OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_highgui)
+SET(OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui)
 
 ocv_check_dependencies(${OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS})
 
@@ -8,7 +8,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   project("${project}_samples")
 
-  ocv_include_modules(${OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules_recurse(${OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS})
 
   # ---------------------------------------------
   #      Define executable targets
@@ -17,7 +17,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     set(the_target "example_${project}_${name}")
     add_executable(${the_target} ${srcs})
 
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS})
+    ocv_target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_DIRECTX_SAMPLES_REQUIRED_DEPS})
 
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "${project}-example-${name}"
@@ -31,7 +31,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       if(MSVC AND NOT BUILD_SHARED_LIBS)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
       endif()
-      install(TARGETS ${the_target} RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${project}" COMPONENT main)
+      install(TARGETS ${the_target} RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${project}" COMPONENT samples)
     endif()
   ENDMACRO()
 

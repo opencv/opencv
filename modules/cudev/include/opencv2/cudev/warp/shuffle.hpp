@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 #if CV_CUDEV_ARCH >= 300
 
 // shfl
@@ -418,6 +421,8 @@ CV_CUDEV_SHFL_XOR_VEC_INST(double)
 #undef CV_CUDEV_SHFL_XOR_VEC_INST
 
 #endif // CV_CUDEV_ARCH >= 300
+
+//! @}
 
 }}
 

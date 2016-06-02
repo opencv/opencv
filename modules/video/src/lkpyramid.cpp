@@ -43,7 +43,7 @@
 #include <float.h>
 #include <stdio.h>
 #include "lkpyramid.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_video.hpp"
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -58,7 +58,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
     dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::calcSharrDeriv(src, dst))
+    if (tegra::useTegra() && tegra::calcSharrDeriv(src, dst))
         return;
 #endif
 
@@ -311,11 +311,11 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         int x, y;
         for( y = 0; y < winSize.height; y++ )
         {
-            const uchar* src = (const uchar*)I.data + (y + iprevPt.y)*stepI + iprevPt.x*cn;
-            const deriv_type* dsrc = (const deriv_type*)derivI.data + (y + iprevPt.y)*dstep + iprevPt.x*cn2;
+            const uchar* src = I.ptr() + (y + iprevPt.y)*stepI + iprevPt.x*cn;
+            const deriv_type* dsrc = derivI.ptr<deriv_type>() + (y + iprevPt.y)*dstep + iprevPt.x*cn2;
 
-            deriv_type* Iptr = (deriv_type*)(IWinBuf.data + y*IWinBuf.step);
-            deriv_type* dIptr = (deriv_type*)(derivIWinBuf.data + y*derivIWinBuf.step);
+            deriv_type* Iptr = IWinBuf.ptr<deriv_type>(y);
+            deriv_type* dIptr = derivIWinBuf.ptr<deriv_type>(y);
 
             x = 0;
 
@@ -541,9 +541,9 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
             for( y = 0; y < winSize.height; y++ )
             {
-                const uchar* Jptr = (const uchar*)J.data + (y + inextPt.y)*stepJ + inextPt.x*cn;
-                const deriv_type* Iptr = (const deriv_type*)(IWinBuf.data + y*IWinBuf.step);
-                const deriv_type* dIptr = (const deriv_type*)(derivIWinBuf.data + y*derivIWinBuf.step);
+                const uchar* Jptr = J.ptr() + (y + inextPt.y)*stepJ + inextPt.x*cn;
+                const deriv_type* Iptr = IWinBuf.ptr<deriv_type>(y);
+                const deriv_type* dIptr = derivIWinBuf.ptr<deriv_type>(y);
 
                 x = 0;
 
@@ -725,8 +725,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
             for( y = 0; y < winSize.height; y++ )
             {
-                const uchar* Jptr = (const uchar*)J.data + (y + inextPoint.y)*stepJ + inextPoint.x*cn;
-                const deriv_type* Iptr = (const deriv_type*)(IWinBuf.data + y*IWinBuf.step);
+                const uchar* Jptr = J.ptr() + (y + inextPoint.y)*stepJ + inextPoint.x*cn;
+                const deriv_type* Iptr = IWinBuf.ptr<deriv_type>(y);
 
                 for( x = 0; x < winSize.width*cn; x++ )
                 {
@@ -837,6 +837,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
     return maxLevel;
 }
 
+#ifdef HAVE_OPENCL
 namespace cv
 {
     class PyrLKOpticalFlow
@@ -895,8 +896,8 @@ namespace cv
             int pitchAlign = (int)ocl::Device::getDefault().imagePitchAlignment();
             if (pitchAlign>0)
             {
-                prevPyr[0] = UMat(prevImg.rows,(prevImg.cols+pitchAlign-1)&(-pitchAlign),prevImg.type()).colRange(0,prevImg.cols);
-                nextPyr[0] = UMat(nextImg.rows,(nextImg.cols+pitchAlign-1)&(-pitchAlign),nextImg.type()).colRange(0,nextImg.cols);
+                prevPyr[0] = UMat(prevImg.rows,(prevImg.cols+pitchAlign-1)&(-pitchAlign),CV_32FC1).colRange(0,prevImg.cols);
+                nextPyr[0] = UMat(nextImg.rows,(nextImg.cols+pitchAlign-1)&(-pitchAlign),CV_32FC1).colRange(0,nextImg.cols);
                 for (int level = 1; level <= maxLevel; ++level)
                 {
                     int cols,rows;
@@ -976,7 +977,7 @@ namespace cv
             int ptcount, int level)
         {
             size_t localThreads[3]  = { 8, 8};
-            size_t globalThreads[3] = { 8 * ptcount, 8};
+            size_t globalThreads[3] = { 8 * (size_t)ptcount, 8};
             char calcErr = (0 == level) ? 1 : 0;
 
             cv::String build_options;
@@ -1009,7 +1010,7 @@ namespace cv
             idxArg = kernel.set(idxArg, (int)winSize.height); // int c_winSize_y
             idxArg = kernel.set(idxArg, (int)iters); // int c_iters
             idxArg = kernel.set(idxArg, (char)calcErr); //char calcErr
-            return kernel.run(2, globalThreads, localThreads, false);
+            return kernel.run(2, globalThreads, localThreads, true); // sync=true because ocl::Image2D lifetime is not handled well for temp UMat
         }
     private:
         inline static bool isDeviceCPU()
@@ -1084,6 +1085,7 @@ namespace cv
         return opticalFlow.sparse(_prevImg.getUMat(), _nextImg.getUMat(), _prevPts.getUMat(), umatNextPts, umatStatus, umatErr);
     }
 };
+#endif
 
 void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
@@ -1092,11 +1094,16 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            TermCriteria criteria,
                            int flags, double minEigThreshold )
 {
+#ifdef HAVE_OPENCL
     bool use_opencl = ocl::useOpenCL() &&
                       (_prevImg.isUMat() || _nextImg.isUMat()) &&
                       ocl::Image2D::isFormatSupported(CV_32F, 1, false);
     if ( use_opencl && ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, flags/*, minEigThreshold*/))
+    {
+        CV_IMPL_ADD(CV_IMPL_OCL);
         return;
+    }
+#endif
 
     Mat prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<cv::detail::deriv_type>::depth;
@@ -1120,13 +1127,13 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
     Mat nextPtsMat = _nextPts.getMat();
     CV_Assert( nextPtsMat.checkVector(2, CV_32F, true) == npoints );
 
-    const Point2f* prevPts = (const Point2f*)prevPtsMat.data;
-    Point2f* nextPts = (Point2f*)nextPtsMat.data;
+    const Point2f* prevPts = prevPtsMat.ptr<Point2f>();
+    Point2f* nextPts = nextPtsMat.ptr<Point2f>();
 
     _status.create((int)npoints, 1, CV_8U, -1, true);
     Mat statusMat = _status.getMat(), errMat;
     CV_Assert( statusMat.isContinuous() );
-    uchar* status = statusMat.data;
+    uchar* status = statusMat.ptr();
     float* err = 0;
 
     for( i = 0; i < npoints; i++ )
@@ -1137,7 +1144,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         _err.create((int)npoints, 1, CV_32F, -1, true);
         errMat = _err.getMat();
         CV_Assert( errMat.isContinuous() );
-        err = (float*)errMat.data;
+        err = errMat.ptr<float>();
     }
 
     std::vector<Mat> prevPyr, nextPyr;
@@ -1230,7 +1237,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         {
             Size imgSize = prevPyr[level * lvlStep1].size();
             Mat _derivI( imgSize.height + winSize.height*2,
-                imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.data );
+                imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.ptr() );
             derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
             calcSharrDeriv(prevPyr[level * lvlStep1], derivI);
             copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT|BORDER_ISOLATED);

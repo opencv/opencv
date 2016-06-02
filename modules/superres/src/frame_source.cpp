@@ -80,7 +80,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 //////////////////////////////////////////////////////
 // VideoFrameSource & CameraFrameSource
 
-#ifndef HAVE_OPENCV_HIGHGUI
+#ifndef HAVE_OPENCV_VIDEOIO
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
@@ -96,7 +96,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
     return Ptr<FrameSource>();
 }
 
-#else // HAVE_OPENCV_HIGHGUI
+#else // HAVE_OPENCV_VIDEOIO
 
 namespace
 {
@@ -116,7 +116,7 @@ namespace
     {
         if (_frame.kind() == _InputArray::MAT)
             vc_ >> _frame.getMatRef();
-        else if(_frame.kind() == _InputArray::GPU_MAT)
+        else if(_frame.kind() == _InputArray::CUDA_GPU_MAT)
         {
             vc_ >> frame_;
             arrCopy(frame_, _frame);
@@ -126,7 +126,7 @@ namespace
         else
         {
             // should never get here
-            CV_Assert(0);
+            CV_Error(Error::StsBadArg, "Failed to detect input frame kind" );
         }
     }
 
@@ -187,7 +187,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
     return makePtr<CameraFrameSource>(deviceId);
 }
 
-#endif // HAVE_OPENCV_HIGHGUI
+#endif // HAVE_OPENCV_VIDEOIO
 
 //////////////////////////////////////////////////////
 // VideoFrameSource_CUDA
@@ -226,7 +226,7 @@ namespace
 
     void VideoFrameSource_CUDA::nextFrame(OutputArray _frame)
     {
-        if (_frame.kind() == _InputArray::GPU_MAT)
+        if (_frame.kind() == _InputArray::CUDA_GPU_MAT)
         {
             bool res = reader_->nextFrame(_frame.getGpuMatRef());
             if (!res)
@@ -250,7 +250,7 @@ namespace
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video_CUDA(const String& fileName)
 {
-    return makePtr<VideoFrameSource>(fileName);
+    return makePtr<VideoFrameSource_CUDA>(fileName);
 }
 
 #endif // HAVE_OPENCV_CUDACODEC

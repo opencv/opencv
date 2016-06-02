@@ -71,6 +71,8 @@
 #  endif
 #endif
 
+//! @cond IGNORED
+
 namespace cv
 {
 #ifdef HAVE_TBB
@@ -127,54 +129,12 @@ namespace cv
     CV_EXPORTS const char* currentParallelFramework();
 } //namespace cv
 
-#define CV_INIT_ALGORITHM(classname, algname, memberinit) \
-    static inline ::cv::Algorithm* create##classname##_hidden() \
-    { \
-        return new classname; \
-    } \
-    \
-    static inline ::cv::Ptr< ::cv::Algorithm> create##classname##_ptr_hidden() \
-    { \
-        return ::cv::makePtr<classname>(); \
-    } \
-    \
-    static inline ::cv::AlgorithmInfo& classname##_info() \
-    { \
-        static ::cv::AlgorithmInfo classname##_info_var(algname, create##classname##_hidden); \
-        return classname##_info_var; \
-    } \
-    \
-    static ::cv::AlgorithmInfo& classname##_info_auto = classname##_info(); \
-    \
-    ::cv::AlgorithmInfo* classname::info() const \
-    { \
-        static volatile bool initialized = false; \
-        \
-        if( !initialized ) \
-        { \
-            initialized = true; \
-            classname obj; \
-            memberinit; \
-        } \
-        return &classname##_info(); \
-    }
-
-
-
 /****************************************************************************************\
 *                                  Common declarations                                   *
 \****************************************************************************************/
 
 /* the alignment of all the allocated buffers */
 #define  CV_MALLOC_ALIGN    16
-
-#ifdef __GNUC__
-#  define CV_DECL_ALIGNED(x) __attribute__ ((aligned (x)))
-#elif defined _MSC_VER
-#  define CV_DECL_ALIGNED(x) __declspec(align(x))
-#else
-#  define CV_DECL_ALIGNED(x)
-#endif
 
 /* IEEE754 constants and macros */
 #define  CV_TOGGLE_FLT(x) ((x)^((int)(x) < 0 ? 0x7fffffff : 0))
@@ -204,19 +164,50 @@ namespace cv
 CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int unroll_to = 0);
 }
 
+// property implementation macros
+
+#define CV_IMPL_PROPERTY_RO(type, name, member) \
+    inline type get##name() const { return member; }
+
+#define CV_HELP_IMPL_PROPERTY(r_type, w_type, name, member) \
+    CV_IMPL_PROPERTY_RO(r_type, name, member) \
+    inline void set##name(w_type val) { member = val; }
+
+#define CV_HELP_WRAP_PROPERTY(r_type, w_type, name, internal_name, internal_obj) \
+    r_type get##name() const { return internal_obj.get##internal_name(); } \
+    void set##name(w_type val) { internal_obj.set##internal_name(val); }
+
+#define CV_IMPL_PROPERTY(type, name, member) CV_HELP_IMPL_PROPERTY(type, type, name, member)
+#define CV_IMPL_PROPERTY_S(type, name, member) CV_HELP_IMPL_PROPERTY(type, const type &, name, member)
+
+#define CV_WRAP_PROPERTY(type, name, internal_name, internal_obj)  CV_HELP_WRAP_PROPERTY(type, type, name, internal_name, internal_obj)
+#define CV_WRAP_PROPERTY_S(type, name, internal_name, internal_obj) CV_HELP_WRAP_PROPERTY(type, const type &, name, internal_name, internal_obj)
+
+#define CV_WRAP_SAME_PROPERTY(type, name, internal_obj) CV_WRAP_PROPERTY(type, name, name, internal_obj)
+#define CV_WRAP_SAME_PROPERTY_S(type, name, internal_obj) CV_WRAP_PROPERTY_S(type, name, name, internal_obj)
 
 /****************************************************************************************\
 *                     Structures and macros for integration with IPP                     *
 \****************************************************************************************/
 
 #ifdef HAVE_IPP
-#  ifdef HAVE_IPP_ICV_ONLY
-#    include "ipp_redefine.h"
-#    include "ippicv.h"
-#  else
-#    include "ipp.h"
-#  endif
-#  define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR)
+#include "ipp.h"
+
+#ifndef IPP_VERSION_UPDATE // prior to 7.1
+#define IPP_VERSION_UPDATE 0
+#endif
+
+#define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR*10 + IPP_VERSION_UPDATE)
+
+// General define for ipp function disabling
+#define IPP_DISABLE_BLOCK 0
+
+#ifdef CV_MALLOC_ALIGN
+#undef CV_MALLOC_ALIGN
+#endif
+#define CV_MALLOC_ALIGN 32 // required for AVX optimization
+
+#define setIppErrorStatus() cv::ipp::setIppStatus(-1, CV_Func, __FILE__, __LINE__)
 
 static inline IppiSize ippiSize(int width, int height)
 {
@@ -230,6 +221,18 @@ static inline IppiSize ippiSize(const cv::Size & _size)
     return size;
 }
 
+static inline IppiPoint ippiPoint(const cv::Point & _point)
+{
+    IppiPoint point = { _point.x, _point.y };
+    return point;
+}
+
+static inline IppiPoint ippiPoint(int x, int y)
+{
+    IppiPoint point = { x, y };
+    return point;
+}
+
 static inline IppiBorderType ippiGetBorderType(int borderTypeNI)
 {
     return borderTypeNI == cv::BORDER_CONSTANT ? ippBorderConst :
@@ -239,9 +242,142 @@ static inline IppiBorderType ippiGetBorderType(int borderTypeNI)
         borderTypeNI == cv::BORDER_REFLECT ? ippBorderMirrorR : (IppiBorderType)-1;
 }
 
+static inline IppDataType ippiGetDataType(int depth)
+{
+    return depth == CV_8U ? ipp8u :
+        depth == CV_8S ? ipp8s :
+        depth == CV_16U ? ipp16u :
+        depth == CV_16S ? ipp16s :
+        depth == CV_32S ? ipp32s :
+        depth == CV_32F ? ipp32f :
+        depth == CV_64F ? ipp64f : (IppDataType)-1;
+}
+
+// IPP temporary buffer hepler
+template<typename T>
+class IppAutoBuffer
+{
+public:
+    IppAutoBuffer() { m_pBuffer = NULL; }
+    IppAutoBuffer(int size) { Alloc(size); }
+    ~IppAutoBuffer() { Release(); }
+    T* Alloc(int size) { m_pBuffer = (T*)ippMalloc(size); return m_pBuffer; }
+    void Release() { if(m_pBuffer) ippFree(m_pBuffer); }
+    inline operator T* () { return (T*)m_pBuffer;}
+    inline operator const T* () const { return (const T*)m_pBuffer;}
+private:
+    // Disable copy operations
+    IppAutoBuffer(IppAutoBuffer &) {};
+    IppAutoBuffer& operator =(const IppAutoBuffer &) {return *this;};
+
+    T* m_pBuffer;
+};
+
 #else
-#  define IPP_VERSION_X100 0
+#define IPP_VERSION_X100 0
 #endif
+
+// There shoud be no API difference in OpenCV between ICV and IPP since 9.0
+#if (defined HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 900
+#undef HAVE_IPP_ICV_ONLY
+#endif
+
+#ifdef HAVE_IPP_ICV_ONLY
+#define HAVE_ICV 1
+#else
+#define HAVE_ICV 0
+#endif
+
+#if defined HAVE_IPP
+#if IPP_VERSION_X100 >= 900
+#define IPP_INITIALIZER(FEAT)                           \
+{                                                       \
+    if(FEAT)                                            \
+        ippSetCpuFeatures(FEAT);                        \
+    else                                                \
+        ippInit();                                      \
+}
+#elif IPP_VERSION_X100 >= 800
+#define IPP_INITIALIZER(FEAT)                           \
+{                                                       \
+    ippInit();                                          \
+}
+#else
+#define IPP_INITIALIZER(FEAT)                           \
+{                                                       \
+    ippStaticInit();                                    \
+}
+#endif
+
+#ifdef CVAPI_EXPORTS
+#define IPP_INITIALIZER_AUTO                            \
+struct __IppInitializer__                               \
+{                                                       \
+    __IppInitializer__()                                \
+    {IPP_INITIALIZER(cv::ipp::getIppFeatures())}        \
+};                                                      \
+static struct __IppInitializer__ __ipp_initializer__;
+#else
+#define IPP_INITIALIZER_AUTO
+#endif
+#else
+#define IPP_INITIALIZER
+#define IPP_INITIALIZER_AUTO
+#endif
+
+#define CV_IPP_CHECK_COND (cv::ipp::useIPP())
+#define CV_IPP_CHECK() if(CV_IPP_CHECK_COND)
+
+#ifdef HAVE_IPP
+
+#ifdef CV_IPP_RUN_VERBOSE
+#define CV_IPP_RUN_(condition, func, ...)                                   \
+    {                                                                       \
+        if (cv::ipp::useIPP() && (condition) && func)                       \
+        {                                                                   \
+            printf("%s: IPP implementation is running\n", CV_Func);         \
+            fflush(stdout);                                                 \
+            CV_IMPL_ADD(CV_IMPL_IPP);                                       \
+            return __VA_ARGS__;                                             \
+        }                                                                   \
+        else                                                                \
+        {                                                                   \
+            printf("%s: Plain implementation is running\n", CV_Func);       \
+            fflush(stdout);                                                 \
+        }                                                                   \
+    }
+#elif defined CV_IPP_RUN_ASSERT
+#define CV_IPP_RUN_(condition, func, ...)                                   \
+    {                                                                       \
+        if (cv::ipp::useIPP() && (condition))                               \
+        {                                                                   \
+            if(func)                                                        \
+            {                                                               \
+                CV_IMPL_ADD(CV_IMPL_IPP);                                   \
+            }                                                               \
+            else                                                            \
+            {                                                               \
+                setIppErrorStatus();                                        \
+                CV_Error(cv::Error::StsAssert, #func);                      \
+            }                                                               \
+            return __VA_ARGS__;                                             \
+        }                                                                   \
+    }
+#else
+#define CV_IPP_RUN_(condition, func, ...)                                   \
+    if (cv::ipp::useIPP() && (condition) && func)                           \
+    {                                                                       \
+        CV_IMPL_ADD(CV_IMPL_IPP);                                           \
+        return __VA_ARGS__;                                                 \
+    }
+#endif
+
+#else
+#define CV_IPP_RUN_(condition, func, ...)
+#endif
+
+#define CV_IPP_RUN(condition, func, ...) CV_IPP_RUN_(condition, func, __VA_ARGS__)
+
 
 #ifndef IPPI_CALL
 #  define IPPI_CALL(func) CV_Assert((func) >= 0)
@@ -287,111 +423,15 @@ typedef enum CvStatus
 }
 CvStatus;
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+namespace tegra {
 
+CV_EXPORTS bool useTegra();
+CV_EXPORTS void setUseTegra(bool flag);
 
-/****************************************************************************************\
-*                                  Auxiliary algorithms                                  *
-\****************************************************************************************/
-
-namespace cv
-{
-
-// This function splits the input sequence or set into one or more equivalence classes and
-// returns the vector of labels - 0-based class indexes for each element.
-// predicate(a,b) returns true if the two sequence elements certainly belong to the same class.
-//
-// The algorithm is described in "Introduction to Algorithms"
-// by Cormen, Leiserson and Rivest, the chapter "Data structures for disjoint sets"
-template<typename _Tp, class _EqPredicate> int
-partition( const std::vector<_Tp>& _vec, std::vector<int>& labels,
-           _EqPredicate predicate=_EqPredicate())
-{
-    int i, j, N = (int)_vec.size();
-    const _Tp* vec = &_vec[0];
-
-    const int PARENT=0;
-    const int RANK=1;
-
-    std::vector<int> _nodes(N*2);
-    int (*nodes)[2] = (int(*)[2])&_nodes[0];
-
-    // The first O(N) pass: create N single-vertex trees
-    for(i = 0; i < N; i++)
-    {
-        nodes[i][PARENT]=-1;
-        nodes[i][RANK] = 0;
-    }
-
-    // The main O(N^2) pass: merge connected components
-    for( i = 0; i < N; i++ )
-    {
-        int root = i;
-
-        // find root
-        while( nodes[root][PARENT] >= 0 )
-            root = nodes[root][PARENT];
-
-        for( j = 0; j < N; j++ )
-        {
-            if( i == j || !predicate(vec[i], vec[j]))
-                continue;
-            int root2 = j;
-
-            while( nodes[root2][PARENT] >= 0 )
-                root2 = nodes[root2][PARENT];
-
-            if( root2 != root )
-            {
-                // unite both trees
-                int rank = nodes[root][RANK], rank2 = nodes[root2][RANK];
-                if( rank > rank2 )
-                    nodes[root2][PARENT] = root;
-                else
-                {
-                    nodes[root][PARENT] = root2;
-                    nodes[root2][RANK] += rank == rank2;
-                    root = root2;
-                }
-                CV_Assert( nodes[root][PARENT] < 0 );
-
-                int k = j, parent;
-
-                // compress the path from node2 to root
-                while( (parent = nodes[k][PARENT]) >= 0 )
-                {
-                    nodes[k][PARENT] = root;
-                    k = parent;
-                }
-
-                // compress the path from node to root
-                k = i;
-                while( (parent = nodes[k][PARENT]) >= 0 )
-                {
-                    nodes[k][PARENT] = root;
-                    k = parent;
-                }
-            }
-        }
-    }
-
-    // Final O(N) pass: enumerate classes
-    labels.resize(N);
-    int nclasses = 0;
-
-    for( i = 0; i < N; i++ )
-    {
-        int root = i;
-        while( nodes[root][PARENT] >= 0 )
-            root = nodes[root][PARENT];
-        // re-use the rank as the class label
-        if( nodes[root][RANK] >= 0 )
-            nodes[root][RANK] = ~nclasses++;
-        labels[i] = ~nodes[root][RANK];
-    }
-
-    return nclasses;
 }
+#endif
 
-} // namespace cv
+//! @endcond
 
 #endif // __OPENCV_CORE_PRIVATE_HPP__

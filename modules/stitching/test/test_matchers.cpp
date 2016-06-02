@@ -42,7 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_XFEATURES2D
 
 using namespace cv;
 using namespace std;

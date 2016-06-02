@@ -228,7 +228,7 @@ int CV_MorphologyBaseTest::prepare_test_case( int test_case_idx )
     if( shape == CV_SHAPE_CUSTOM )
     {
         eldata.resize(aperture_size.width*aperture_size.height);
-        uchar* src = test_mat[INPUT][1].data;
+        const uchar* src = test_mat[INPUT][1].ptr();
         int srcstep = (int)test_mat[INPUT][1].step;
         int i, j, nonzero = 0;
 
@@ -549,6 +549,68 @@ void CV_SobelTest::prepare_to_validation( int /*test_case_idx*/ )
     Mat kernel = cvtest::calcSobelKernel2D( dx, dy, _aperture_size, 0 );
     cvtest::filter2D( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], test_mat[REF_OUTPUT][0].depth(),
                       kernel, anchor, 0, BORDER_REPLICATE);
+}
+
+
+/////////////// spatialGradient ///////////////
+
+class CV_SpatialGradientTest : public CV_DerivBaseTest
+{
+public:
+    CV_SpatialGradientTest();
+
+protected:
+    void prepare_to_validation( int test_case_idx );
+    void run_func();
+    void get_test_array_types_and_sizes( int test_case_idx,
+        vector<vector<Size> >& sizes, vector<vector<int> >& types );
+    int ksize;
+};
+
+CV_SpatialGradientTest::CV_SpatialGradientTest() {
+    test_array[OUTPUT].push_back(NULL);
+    test_array[REF_OUTPUT].push_back(NULL);
+    inplace = false;
+}
+
+
+void CV_SpatialGradientTest::get_test_array_types_and_sizes( int test_case_idx,
+                                                             vector<vector<Size> >& sizes,
+                                                             vector<vector<int> >& types )
+{
+    CV_DerivBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
+
+    sizes[OUTPUT][1] = sizes[REF_OUTPUT][1] = sizes[OUTPUT][0];
+
+    // Inputs are only CV_8UC1 for now
+    types[INPUT][0] = CV_8UC1;
+
+    // Outputs are only CV_16SC1 for now
+    types[OUTPUT][0] = types[OUTPUT][1] = types[REF_OUTPUT][0]
+                     = types[REF_OUTPUT][1] = CV_16SC1;
+
+    ksize = 3;
+    border = BORDER_DEFAULT; // TODO: Add BORDER_REPLICATE
+}
+
+
+void CV_SpatialGradientTest::run_func()
+{
+    spatialGradient( test_mat[INPUT][0], test_mat[OUTPUT][0],
+                     test_mat[OUTPUT][1], ksize, border );
+}
+
+void CV_SpatialGradientTest::prepare_to_validation( int /*test_case_idx*/ )
+{
+    int dx, dy;
+
+    dx = 1; dy = 0;
+    Sobel( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], CV_16SC1, dx, dy, ksize,
+           1, 0, border );
+
+    dx = 0; dy = 1;
+    Sobel( test_mat[INPUT][0], test_mat[REF_OUTPUT][1], CV_16SC1, dx, dy, ksize,
+           1, 0, border );
 }
 
 
@@ -1773,6 +1835,7 @@ TEST(Imgproc_Dilate, accuracy) { CV_DilateTest test; test.safe_run(); }
 TEST(Imgproc_MorphologyEx, accuracy) { CV_MorphExTest test; test.safe_run(); }
 TEST(Imgproc_Filter2D, accuracy) { CV_FilterTest test; test.safe_run(); }
 TEST(Imgproc_Sobel, accuracy) { CV_SobelTest test; test.safe_run(); }
+TEST(Imgproc_SpatialGradient, accuracy) { CV_SpatialGradientTest test; test.safe_run(); }
 TEST(Imgproc_Laplace, accuracy) { CV_LaplaceTest test; test.safe_run(); }
 TEST(Imgproc_Blur, accuracy) { CV_BlurTest test; test.safe_run(); }
 TEST(Imgproc_GaussianBlur, accuracy) { CV_GaussianBlurTest test; test.safe_run(); }
@@ -1917,4 +1980,38 @@ TEST(Imgproc_Blur, borderTypes)
     EXPECT_EQ(expected_dst.type(), dst.type());
     EXPECT_EQ(expected_dst.size(), dst.size());
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
+}
+
+TEST(Imgproc_Morphology, iterated)
+{
+    RNG& rng = theRNG();
+    for( int iter = 0; iter < 30; iter++ )
+    {
+        int width = rng.uniform(5, 33);
+        int height = rng.uniform(5, 33);
+        int cn = rng.uniform(1, 5);
+        int iterations = rng.uniform(1, 11);
+        int op = rng.uniform(0, 2);
+        Mat src(height, width, CV_8UC(cn)), dst0, dst1, dst2;
+
+        randu(src, 0, 256);
+        if( op == 0 )
+            dilate(src, dst0, Mat(), Point(-1,-1), iterations);
+        else
+            erode(src, dst0, Mat(), Point(-1,-1), iterations);
+
+        for( int i = 0; i < iterations; i++ )
+            if( op == 0 )
+                dilate(i == 0 ? src : dst1, dst1, Mat(), Point(-1,-1), 1);
+            else
+                erode(i == 0 ? src : dst1, dst1, Mat(), Point(-1,-1), 1);
+
+        Mat kern = getStructuringElement(MORPH_RECT, Size(3,3));
+        if( op == 0 )
+            dilate(src, dst2, kern, Point(-1,-1), iterations);
+        else
+            erode(src, dst2, kern, Point(-1,-1), iterations);
+        ASSERT_EQ(0.0, norm(dst0, dst1, NORM_INF));
+        ASSERT_EQ(0.0, norm(dst0, dst2, NORM_INF));
+    }
 }

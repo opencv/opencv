@@ -7,6 +7,7 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/video.hpp"
 #include "opencv2/cudaoptflow.hpp"
+#include "opencv2/cudaarithm.hpp"
 
 using namespace std;
 using namespace cv;
@@ -44,8 +45,8 @@ static void colorizeFlow(const Mat &u, const Mat &v, Mat &dst)
 int main(int argc, char **argv)
 {
     CommandLineParser cmd(argc, argv,
-            "{ l left  | | specify left image }"
-            "{ r right | | specify right image }"
+            "{ l left  | ../data/basketball1.png | specify left image }"
+            "{ r right | ../data/basketball2.png | specify right image }"
             "{ h help  | | print help message }");
 
     cmd.about("Farneback's optical flow sample.");
@@ -70,8 +71,8 @@ int main(int argc, char **argv)
     if (frameL.empty() || frameR.empty()) return -1;
 
     GpuMat d_frameL(frameL), d_frameR(frameR);
-    GpuMat d_flowx, d_flowy;
-    FarnebackOpticalFlow d_calc;
+    GpuMat d_flow;
+    Ptr<cuda::FarnebackOpticalFlow> d_calc = cuda::FarnebackOpticalFlow::create();
     Mat flowxy, flowx, flowy, image;
 
     bool running = true, gpuMode = true;
@@ -86,17 +87,21 @@ int main(int argc, char **argv)
         if (gpuMode)
         {
             tc0 = getTickCount();
-            d_calc(d_frameL, d_frameR, d_flowx, d_flowy);
+            d_calc->calc(d_frameL, d_frameR, d_flow);
             tc1 = getTickCount();
-            d_flowx.download(flowx);
-            d_flowy.download(flowy);
+
+            GpuMat planes[2];
+            cuda::split(d_flow, planes);
+
+            planes[0].download(flowx);
+            planes[1].download(flowy);
         }
         else
         {
             tc0 = getTickCount();
             calcOpticalFlowFarneback(
-                        frameL, frameR, flowxy, d_calc.pyrScale, d_calc.numLevels, d_calc.winSize,
-                        d_calc.numIters, d_calc.polyN, d_calc.polySigma, d_calc.flags);
+                        frameL, frameR, flowxy, d_calc->getPyrScale(), d_calc->getNumLevels(), d_calc->getWinSize(),
+                        d_calc->getNumIters(), d_calc->getPolyN(), d_calc->getPolySigma(), d_calc->getFlags());
             tc1 = getTickCount();
 
             Mat planes[] = {flowx, flowy};

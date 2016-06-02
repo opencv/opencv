@@ -51,16 +51,4 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_CUDAARITHM
-#  include "opencv2/cudaarithm.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDAFILTERS
-#  include "opencv2/cudafilters.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDAIMGPROC
-#  include "opencv2/cudaimgproc.hpp"
-#endif
-
 #endif /* __OPENCV_PRECOMP_H__ */

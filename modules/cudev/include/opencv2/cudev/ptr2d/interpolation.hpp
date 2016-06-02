@@ -55,6 +55,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // Nearest
 
 template <class SrcPtr> struct NearestInterPtr
@@ -379,6 +382,8 @@ __host__ CommonAreaInterPtrSz<typename PtrTraits<SrcPtr>::ptr_type> interArea(co
 template <class SrcPtr> struct PtrTraits< CommonAreaInterPtrSz<SrcPtr> > : PtrTraitsBase<CommonAreaInterPtrSz<SrcPtr>, CommonAreaInterPtr<SrcPtr> >
 {
 };
+
+//! @}
 
 }}
 

@@ -173,6 +173,7 @@ void Domain_Filter::compute_Rfilter(Mat &output, Mat &hz, float sigma_h)
 {
     int h = output.rows;
     int w = output.cols;
+    int channel = output.channels();
 
     float a = (float) exp((-1.0 * sqrt(2.0)) / sigma_h);
 
@@ -185,11 +186,15 @@ void Domain_Filter::compute_Rfilter(Mat &output, Mat &hz, float sigma_h)
         for(int j=0;j<w;j++)
             V.at<float>(i,j) = pow(a,hz.at<float>(i,j));
 
-    for(int i=0; i<h; i++)
+   for(int i=0; i<h; i++)
     {
         for(int j =1; j < w; j++)
         {
-           temp.at<float>(i,j) = temp.at<float>(i,j) + (temp.at<float>(i,j-1) - temp.at<float>(i,j)) * V.at<float>(i,j);
+            for(int c = 0; c<channel; c++)
+            {
+                temp.at<float>(i,j*channel+c) = temp.at<float>(i,j*channel+c) +
+                    (temp.at<float>(i,(j-1)*channel+c) - temp.at<float>(i,j*channel+c)) * V.at<float>(i,j);
+            }
         }
     }
 
@@ -197,7 +202,11 @@ void Domain_Filter::compute_Rfilter(Mat &output, Mat &hz, float sigma_h)
     {
         for(int j =w-2; j >= 0; j--)
         {
-           temp.at<float>(i,j) = temp.at<float>(i,j) + (temp.at<float>(i,j+1) - temp.at<float>(i,j)) * V.at<float>(i,j+1);
+            for(int c = 0; c<channel; c++)
+            {
+                temp.at<float>(i,j*channel+c) = temp.at<float>(i,j*channel+c) +
+                    (temp.at<float>(i,(j+1)*channel+c) - temp.at<float>(i,j*channel+c))*V.at<float>(i,j+1);
+            }
         }
     }
 

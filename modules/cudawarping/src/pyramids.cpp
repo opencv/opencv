@@ -50,8 +50,6 @@ using namespace cv::cuda;
 void cv::cuda::pyrDown(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 void cv::cuda::pyrUp(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-Ptr<ImagePyramid> cv::cuda::createImagePyramid(InputArray, int, Stream&) { throw_no_cuda(); return Ptr<ImagePyramid>(); }
-
 #else // HAVE_CUDA
 
 //////////////////////////////////////////////////////////////////////////////
@@ -76,7 +74,7 @@ void cv::cuda::pyrDown(InputArray _src, OutputArray _dst, Stream& stream)
         {0 /*pyrDown_gpu<schar>*/, 0 /*pyrDown_gpu<schar2>*/ , 0 /*pyrDown_gpu<schar3>*/, 0 /*pyrDown_gpu<schar4>*/},
         {pyrDown_gpu<ushort>     , 0 /*pyrDown_gpu<ushort2>*/, pyrDown_gpu<ushort3>     , pyrDown_gpu<ushort4>     },
         {pyrDown_gpu<short>      , 0 /*pyrDown_gpu<short2>*/ , pyrDown_gpu<short3>      , pyrDown_gpu<short4>      },
-        {0 /*pyrDown_gpu<int>*/  , 0 /*pyrDown_gpu<int2>*/   , 0 /*pyrDown_gpu<int3>*/  , 0 /*pyrDown_gpu<int4>*/  },
+        {pyrDown_gpu<int>        , 0 /*pyrDown_gpu<int2>*/   , pyrDown_gpu<int3>        , pyrDown_gpu<int4>        },
         {pyrDown_gpu<float>      , 0 /*pyrDown_gpu<float2>*/ , pyrDown_gpu<float3>      , pyrDown_gpu<float4>      }
     };
 
@@ -133,112 +131,4 @@ void cv::cuda::pyrUp(InputArray _src, OutputArray _dst, Stream& stream)
     func(src, dst, StreamAccessor::getStream(stream));
 }
 
-//////////////////////////////////////////////////////////////////////////////
-// ImagePyramid
-
-#ifdef HAVE_OPENCV_CUDALEGACY
-
-namespace
-{
-    class ImagePyramidImpl : public ImagePyramid
-    {
-    public:
-        ImagePyramidImpl(InputArray img, int nLayers, Stream& stream);
-
-        void getLayer(OutputArray outImg, Size outRoi, Stream& stream = Stream::Null()) const;
-
-    private:
-        GpuMat layer0_;
-        std::vector<GpuMat> pyramid_;
-        int nLayers_;
-    };
-
-    ImagePyramidImpl::ImagePyramidImpl(InputArray _img, int numLayers, Stream& stream)
-    {
-        GpuMat img = _img.getGpuMat();
-
-        CV_Assert( img.depth() <= CV_32F && img.channels() <= 4 );
-
-        img.copyTo(layer0_, stream);
-
-        Size szLastLayer = img.size();
-        nLayers_ = 1;
-
-        if (numLayers <= 0)
-            numLayers = 255; // it will cut-off when any of the dimensions goes 1
-
-        pyramid_.resize(numLayers);
-
-        for (int i = 0; i < numLayers - 1; ++i)
-        {
-            Size szCurLayer(szLastLayer.width / 2, szLastLayer.height / 2);
-
-            if (szCurLayer.width == 0 || szCurLayer.height == 0)
-                break;
-
-            ensureSizeIsEnough(szCurLayer, img.type(), pyramid_[i]);
-            nLayers_++;
-
-            const GpuMat& prevLayer = i == 0 ? layer0_ : pyramid_[i - 1];
-
-            cv::cuda::device::pyramid::downsampleX2(prevLayer, pyramid_[i], img.depth(), img.channels(), StreamAccessor::getStream(stream));
-
-            szLastLayer = szCurLayer;
-        }
-    }
-
-    void ImagePyramidImpl::getLayer(OutputArray _outImg, Size outRoi, Stream& stream) const
-    {
-        CV_Assert( outRoi.width <= layer0_.cols && outRoi.height <= layer0_.rows && outRoi.width > 0 && outRoi.height > 0 );
-
-        ensureSizeIsEnough(outRoi, layer0_.type(), _outImg);
-        GpuMat outImg = _outImg.getGpuMat();
-
-        if (outRoi.width == layer0_.cols && outRoi.height == layer0_.rows)
-        {
-            layer0_.copyTo(outImg, stream);
-            return;
-        }
-
-        float lastScale = 1.0f;
-        float curScale;
-        GpuMat lastLayer = layer0_;
-        GpuMat curLayer;
-
-        for (int i = 0; i < nLayers_ - 1; ++i)
-        {
-            curScale = lastScale * 0.5f;
-            curLayer = pyramid_[i];
-
-            if (outRoi.width == curLayer.cols && outRoi.height == curLayer.rows)
-            {
-                curLayer.copyTo(outImg, stream);
-            }
-
-            if (outRoi.width >= curLayer.cols && outRoi.height >= curLayer.rows)
-                break;
-
-            lastScale = curScale;
-            lastLayer = curLayer;
-        }
-
-        cv::cuda::device::pyramid::interpolateFrom1(lastLayer, outImg, outImg.depth(), outImg.channels(), StreamAccessor::getStream(stream));
-    }
-}
-
 #endif
-
-Ptr<ImagePyramid> cv::cuda::createImagePyramid(InputArray img, int nLayers, Stream& stream)
-{
-#ifndef HAVE_OPENCV_CUDALEGACY
-    (void) img;
-    (void) nLayers;
-    (void) stream;
-    throw_no_cuda();
-    return Ptr<ImagePyramid>();
-#else
-    return Ptr<ImagePyramid>(new ImagePyramidImpl(img, nLayers, stream));
-#endif
-}
-
-#endif // HAVE_CUDA

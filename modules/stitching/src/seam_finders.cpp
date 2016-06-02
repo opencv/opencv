@@ -82,6 +82,11 @@ void PairwiseSeamFinder::run()
     }
 }
 
+void VoronoiSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                             std::vector<UMat> &masks)
+{
+    PairwiseSeamFinder::find(src, corners, masks);
+}
 
 void VoronoiSeamFinder::find(const std::vector<Size> &sizes, const std::vector<Point> &corners,
                              std::vector<UMat> &masks)
@@ -110,7 +115,7 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
     Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
 
     Size img1 = sizes_[first], img2 = sizes_[second];
-    Mat mask1 = masks_[first].getMat(ACCESS_READ), mask2 = masks_[second].getMat(ACCESS_READ);
+    Mat mask1 = masks_[first].getMat(ACCESS_RW), mask2 = masks_[second].getMat(ACCESS_RW);
     Point tl1 = corners_[first], tl2 = corners_[second];
 
     // Cut submasks with some gap
@@ -1321,7 +1326,7 @@ void GraphCutSeamFinder::find(const std::vector<UMat> &src, const std::vector<Po
 }
 
 
-#ifdef HAVE_OPENCV_CUDA
+#ifdef HAVE_OPENCV_CUDALEGACY
 void GraphCutSeamFinderGpu::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
                                  std::vector<UMat> &masks)
 {

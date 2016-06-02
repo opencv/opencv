@@ -50,7 +50,10 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
@@ -60,16 +63,15 @@ void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& m
 
 void cv::cuda::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
 {
-    GpuMat src = _src.getGpuMat();
-    GpuMat mask = _mask.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
+    GpuMat mask = getInputMat(_mask, stream);
 
     const int depth = src.depth();
 
     CV_DbgAssert( depth <= CV_32F );
     CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
 
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
 
     if (mask.empty())
     {
@@ -125,6 +127,8 @@ void cv::cuda::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, 
             gridTransformUnary(vsrc, vdst, bit_not<uchar>(), singleMaskChannels(globPtr<uchar>(mask), src.channels()), stream);
         }
     }
+
+    syncOutput(dst, _dst, stream);
 }
 
 //////////////////////////////////////////////////////////////////////////////

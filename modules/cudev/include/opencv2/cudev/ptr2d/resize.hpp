@@ -54,6 +54,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class SrcPtr> struct ResizePtr
 {
     typedef typename PtrTraits<SrcPtr>::value_type value_type;
@@ -97,6 +100,8 @@ __host__ ResizePtrSz<typename PtrTraits<SrcPtr>::ptr_type> resizePtr(const SrcPt
 template <class SrcPtr> struct PtrTraits< ResizePtrSz<SrcPtr> > : PtrTraitsBase<ResizePtrSz<SrcPtr>, ResizePtr<SrcPtr> >
 {
 };
+
+//! @}
 
 }}
 

@@ -66,15 +66,16 @@ namespace tvl1flow
         dy(y, x) = 0.5f * (src(::min(y + 1, src.rows - 1), x) - src(::max(y - 1, 0), x));
     }
 
-    void centeredGradient(PtrStepSzf src, PtrStepSzf dx, PtrStepSzf dy)
+    void centeredGradient(PtrStepSzf src, PtrStepSzf dx, PtrStepSzf dy, cudaStream_t stream)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
-        centeredGradientKernel<<<grid, block>>>(src, dx, dy);
+        centeredGradientKernel<<<grid, block, 0, stream>>>(src, dx, dy);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (!stream)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -164,7 +165,10 @@ namespace tvl1flow
         rho(y, x) = I1wVal - I1wxVal * u1Val - I1wyVal * u2Val - I0Val;
     }
 
-    void warpBackward(PtrStepSzf I0, PtrStepSzf I1, PtrStepSzf I1x, PtrStepSzf I1y, PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf I1w, PtrStepSzf I1wx, PtrStepSzf I1wy, PtrStepSzf grad, PtrStepSzf rho)
+    void warpBackward(PtrStepSzf I0, PtrStepSzf I1, PtrStepSzf I1x, PtrStepSzf I1y,
+                      PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf I1w, PtrStepSzf I1wx,
+                      PtrStepSzf I1wy, PtrStepSzf grad, PtrStepSzf rho,
+                      cudaStream_t stream)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(I0.cols, block.x), divUp(I0.rows, block.y));
@@ -173,10 +177,11 @@ namespace tvl1flow
         bindTexture(&tex_I1x, I1x);
         bindTexture(&tex_I1y, I1y);
 
-        warpBackwardKernel<<<grid, block>>>(I0, u1, u2, I1w, I1wx, I1wy, grad, rho);
+        warpBackwardKernel<<<grid, block, 0, stream>>>(I0, u1, u2, I1w, I1wx, I1wy, grad, rho);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (!stream)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -209,9 +214,11 @@ namespace tvl1flow
 
     __global__ void estimateUKernel(const PtrStepSzf I1wx, const PtrStepf I1wy,
                               const PtrStepf grad, const PtrStepf rho_c,
-                              const PtrStepf p11, const PtrStepf p12, const PtrStepf p21, const PtrStepf p22,
-                              PtrStepf u1, PtrStepf u2, PtrStepf error,
-                              const float l_t, const float theta, const bool calcError)
+                              const PtrStepf p11, const PtrStepf p12,
+                              const PtrStepf p21, const PtrStepf p22,
+                              const PtrStepf p31, const PtrStepf p32,
+                              PtrStepf u1, PtrStepf u2, PtrStepf u3, PtrStepf error,
+                              const float l_t, const float theta, const float gamma, const bool calcError)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -224,46 +231,59 @@ namespace tvl1flow
         const float gradVal = grad(y, x);
         const float u1OldVal = u1(y, x);
         const float u2OldVal = u2(y, x);
+        const float u3OldVal = gamma ? u3(y, x) : 0;
 
-        const float rho = rho_c(y, x) + (I1wxVal * u1OldVal + I1wyVal * u2OldVal);
+        const float rho = rho_c(y, x) + (I1wxVal * u1OldVal + I1wyVal * u2OldVal + gamma * u3OldVal);
 
         // estimate the values of the variable (v1, v2) (thresholding operator TH)
 
         float d1 = 0.0f;
         float d2 = 0.0f;
+        float d3 = 0.0f;
 
         if (rho < -l_t * gradVal)
         {
             d1 = l_t * I1wxVal;
             d2 = l_t * I1wyVal;
+            if (gamma)
+                d3 = l_t * gamma;
         }
         else if (rho > l_t * gradVal)
         {
             d1 = -l_t * I1wxVal;
             d2 = -l_t * I1wyVal;
+            if (gamma)
+                d3 = -l_t * gamma;
         }
         else if (gradVal > numeric_limits<float>::epsilon())
         {
             const float fi = -rho / gradVal;
             d1 = fi * I1wxVal;
             d2 = fi * I1wyVal;
+            if (gamma)
+                d3 = fi * gamma;
         }
 
         const float v1 = u1OldVal + d1;
         const float v2 = u2OldVal + d2;
+        const float v3 = u3OldVal + d3;
 
         // compute the divergence of the dual variable (p1, p2)
 
         const float div_p1 = divergence(p11, p12, y, x);
         const float div_p2 = divergence(p21, p22, y, x);
+        const float div_p3 = gamma ? divergence(p31, p32, y, x) : 0;
 
         // estimate the values of the optical flow (u1, u2)
 
         const float u1NewVal = v1 + theta * div_p1;
         const float u2NewVal = v2 + theta * div_p2;
+        const float u3NewVal = gamma ? v3 + theta * div_p3 : 0;
 
         u1(y, x) = u1NewVal;
         u2(y, x) = u2NewVal;
+        if (gamma)
+            u3(y, x) = u3NewVal;
 
         if (calcError)
         {
@@ -275,17 +295,19 @@ namespace tvl1flow
 
     void estimateU(PtrStepSzf I1wx, PtrStepSzf I1wy,
                    PtrStepSzf grad, PtrStepSzf rho_c,
-                   PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22,
-                   PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf error,
-                   float l_t, float theta, bool calcError)
+                   PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32,
+                   PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3, PtrStepSzf error,
+                   float l_t, float theta, float gamma, bool calcError,
+                   cudaStream_t stream)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(I1wx.cols, block.x), divUp(I1wx.rows, block.y));
 
-        estimateUKernel<<<grid, block>>>(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, u1, u2, error, l_t, theta, calcError);
+        estimateUKernel<<<grid, block, 0, stream>>>(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, p31, p32, u1, u2, u3, error, l_t, theta, gamma, calcError);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (!stream)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -294,7 +316,8 @@ namespace tvl1flow
 
 namespace tvl1flow
 {
-    __global__ void estimateDualVariablesKernel(const PtrStepSzf u1, const PtrStepf u2, PtrStepf p11, PtrStepf p12, PtrStepf p21, PtrStepf p22, const float taut)
+    __global__ void estimateDualVariablesKernel(const PtrStepSzf u1, const PtrStepf u2, const PtrStepSzf u3,
+                                                PtrStepf p11, PtrStepf p12, PtrStepf p21, PtrStepf p22, PtrStepf p31, PtrStepf p32, const float taut, const float gamma)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -308,27 +331,41 @@ namespace tvl1flow
         const float u2x = u2(y, ::min(x + 1, u1.cols - 1)) - u2(y, x);
         const float u2y = u2(::min(y + 1, u1.rows - 1), x) - u2(y, x);
 
+        const float u3x = gamma ? u3(y, ::min(x + 1, u1.cols - 1)) - u3(y, x) : 0;
+        const float u3y = gamma ? u3(::min(y + 1, u1.rows - 1), x) - u3(y, x) : 0;
+
         const float g1 = ::hypotf(u1x, u1y);
         const float g2 = ::hypotf(u2x, u2y);
+        const float g3 = gamma ? ::hypotf(u3x, u3y) : 0;
 
         const float ng1 = 1.0f + taut * g1;
         const float ng2 = 1.0f + taut * g2;
+        const float ng3 = gamma ? 1.0f + taut * g3 : 0;
 
         p11(y, x) = (p11(y, x) + taut * u1x) / ng1;
         p12(y, x) = (p12(y, x) + taut * u1y) / ng1;
         p21(y, x) = (p21(y, x) + taut * u2x) / ng2;
         p22(y, x) = (p22(y, x) + taut * u2y) / ng2;
+        if (gamma)
+        {
+            p31(y, x) = (p31(y, x) + taut * u3x) / ng3;
+            p32(y, x) = (p32(y, x) + taut * u3y) / ng3;
+        }
     }
 
-    void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, float taut)
+    void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf u3,
+                               PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, PtrStepSzf p31, PtrStepSzf p32,
+                               float taut, float gamma,
+                               cudaStream_t stream)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(u1.cols, block.x), divUp(u1.rows, block.y));
 
-        estimateDualVariablesKernel<<<grid, block>>>(u1, u2, p11, p12, p21, p22, taut);
+        estimateDualVariablesKernel<<<grid, block, 0, stream>>>(u1, u2, u3, p11, p12, p21, p22, p31, p32, taut, gamma);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (!stream)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 

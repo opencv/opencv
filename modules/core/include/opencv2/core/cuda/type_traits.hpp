@@ -45,6 +45,12 @@
 
 #include "detail/type_traits_detail.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct IsSimpleParameter
@@ -78,5 +84,7 @@ namespace cv { namespace cuda { namespace device
             T, typename type_traits_detail::AddParameterType<T>::type>::type ParameterType;
     };
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_TYPE_TRAITS_HPP__

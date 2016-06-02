@@ -45,20 +45,28 @@
     __global const uchar * src##i##ptr, int src##i##_step, int src##i##_offset,
 #define DECLARE_OUTPUT_MAT(i) \
     __global uchar * dst##i##ptr, int dst##i##_step, int dst##i##_offset,
+#define DECLARE_INDEX(i) \
+    int src##i##_index = mad24(src##i##_step, y0, mad24(x, (int)sizeof(T) * scn##i, src##i##_offset)); \
+    int dst##i##_index = mad24(dst##i##_step, y0, mad24(x, (int)sizeof(T) * dcn##i, dst##i##_offset));
 #define PROCESS_ELEM(i) \
-    int src##i##_index = mad24(src##i##_step, y, mad24(x, (int)sizeof(T) * scn##i, src##i##_offset)); \
     __global const T * src##i = (__global const T *)(src##i##ptr + src##i##_index); \
-    int dst##i##_index = mad24(dst##i##_step, y, mad24(x, (int)sizeof(T) * dcn##i, dst##i##_offset)); \
     __global T * dst##i = (__global T *)(dst##i##ptr + dst##i##_index); \
-    dst##i[0] = src##i[0];
+    dst##i[0] = src##i[0]; \
+    src##i##_index += src##i##_step; \
+    dst##i##_index += dst##i##_step;
 
-__kernel void mixChannels(DECLARE_INPUT_MATS DECLARE_OUTPUT_MATS int rows, int cols)
+__kernel void mixChannels(DECLARE_INPUT_MAT_N DECLARE_OUTPUT_MAT_N int rows, int cols, int rowsPerWI)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < cols && y < rows)
+    if (x < cols)
     {
-        PROCESS_ELEMS
+        DECLARE_INDEX_N
+
+        for (int y = y0, y1 = min(y0 + rowsPerWI, rows); y < y1; ++y)
+        {
+            PROCESS_ELEM_N
+        }
     }
 }

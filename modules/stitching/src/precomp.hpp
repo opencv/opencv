@@ -59,6 +59,7 @@
 #include "opencv2/stitching.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
+#include "opencv2/stitching/detail/timelapsers.hpp"
 #include "opencv2/stitching/detail/camera.hpp"
 #include "opencv2/stitching/detail/exposure_compensate.hpp"
 #include "opencv2/stitching/detail/matchers.hpp"
@@ -82,12 +83,12 @@
 #  include "opencv2/cudafeatures2d.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_CUDA
-#  include "opencv2/cuda.hpp"
+#ifdef HAVE_OPENCV_CUDALEGACY
+#  include "opencv2/cudalegacy.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/cuda.hpp"
+#ifdef HAVE_OPENCV_XFEATURES2D
+#  include "opencv2/xfeatures2d/cuda.hpp"
 #endif
 
 #include "../../imgproc/src/gcgraph.hpp"

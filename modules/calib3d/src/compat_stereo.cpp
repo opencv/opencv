@@ -92,18 +92,18 @@ void cvFindStereoCorrespondenceBM( const CvArr* leftarr, const CvArr* rightarr,
 
     CV_Assert( state != 0 );
 
-    cv::Ptr<cv::StereoMatcher> sm = cv::createStereoBM(state->numberOfDisparities,
+    cv::Ptr<cv::StereoBM> sm = cv::StereoBM::create(state->numberOfDisparities,
                                                        state->SADWindowSize);
-    sm->set("preFilterType", state->preFilterType);
-    sm->set("preFilterSize", state->preFilterSize);
-    sm->set("preFilterCap", state->preFilterCap);
-    sm->set("SADWindowSize", state->SADWindowSize);
-    sm->set("numDisparities", state->numberOfDisparities > 0 ? state->numberOfDisparities : 64);
-    sm->set("textureThreshold", state->textureThreshold);
-    sm->set("uniquenessRatio", state->uniquenessRatio);
-    sm->set("speckleRange", state->speckleRange);
-    sm->set("speckleWindowSize", state->speckleWindowSize);
-    sm->set("disp12MaxDiff", state->disp12MaxDiff);
+    sm->setPreFilterType(state->preFilterType);
+    sm->setPreFilterSize(state->preFilterSize);
+    sm->setPreFilterCap(state->preFilterCap);
+    sm->setBlockSize(state->SADWindowSize);
+    sm->setNumDisparities(state->numberOfDisparities > 0 ? state->numberOfDisparities : 64);
+    sm->setTextureThreshold(state->textureThreshold);
+    sm->setUniquenessRatio(state->uniquenessRatio);
+    sm->setSpeckleRange(state->speckleRange);
+    sm->setSpeckleWindowSize(state->speckleWindowSize);
+    sm->setDisp12MaxDiff(state->disp12MaxDiff);
 
     sm->compute(left, right, disp);
 }

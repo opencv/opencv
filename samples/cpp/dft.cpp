@@ -1,6 +1,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <stdio.h>
@@ -13,21 +14,25 @@ static void help()
     printf("\nThis program demonstrated the use of the discrete Fourier transform (dft)\n"
            "The dft of an image is taken and it's power spectrum is displayed.\n"
            "Usage:\n"
-            "./dft [image_name -- default lena.jpg]\n");
+            "./dft [image_name -- default ../data/lena.jpg]\n");
 }
 
 const char* keys =
 {
-    "{@image|lena.jpg|input image file}"
+    "{help h||}{@image|../data/lena.jpg|input image file}"
 };
 
 int main(int argc, const char ** argv)
 {
     help();
     CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     string filename = parser.get<string>(0);
-
-    Mat img = imread(filename.c_str(), IMREAD_GRAYSCALE);
+    Mat img = imread(filename, IMREAD_GRAYSCALE);
     if( img.empty() )
     {
         help();

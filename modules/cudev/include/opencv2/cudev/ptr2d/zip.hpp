@@ -52,6 +52,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <class PtrTuple> struct ZipPtr;
 
 template <class Ptr0, class Ptr1> struct ZipPtr< tuple<Ptr0, Ptr1> > : tuple<Ptr0, Ptr1>
@@ -167,6 +170,8 @@ zipPtr(const Ptr0& ptr0, const Ptr1& ptr1, const Ptr2& ptr2, const Ptr3& ptr3)
 template <class PtrTuple> struct PtrTraits< ZipPtrSz<PtrTuple> > : PtrTraitsBase<ZipPtrSz<PtrTuple>, ZipPtr<PtrTuple> >
 {
 };
+
+//! @}
 
 }}
 

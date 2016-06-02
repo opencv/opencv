@@ -191,8 +191,8 @@ public:
  *                  If only a roi needs to be selected, use
  *                  lsd_ptr->detect(image(roi), ..., lines);
  *                  lines += Scalar(roi.x, roi.y, roi.x, roi.y);
- * @param _lines    Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
- *                          Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
+ * @param _lines    Return: A vector of Vec4i or Vec4f elements specifying the beginning and ending point of a line.
+ *                          Where Vec4i/Vec4f is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                          Returned lines are strictly oriented depending on the gradient.
  * @param width     Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param prec      Return: Vector of precisions with which the lines are found.
@@ -286,8 +286,8 @@ private:
 /**
  * Detect lines in the whole input image.
  *
- * @param lines         Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
- *                              Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
+ * @param lines         Return: A vector of Vec4f elements specifying the beginning and ending point of a line.
+ *                              Where Vec4f is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                              Returned lines are strictly oriented depending on the gradient.
  * @param widths        Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param precisions    Return: Vector of precisions with which the lines are found.
@@ -297,7 +297,7 @@ private:
  *                                  * 0 corresponds to 1 mean false alarm
  *                                  * 1 corresponds to 0.1 mean false alarms
  */
-    void flsd(std::vector<Vec4i>& lines,
+    void flsd(std::vector<Vec4f>& lines,
               std::vector<double>& widths, std::vector<double>& precisions,
               std::vector<double>& nfas);
 
@@ -418,14 +418,14 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     // Convert image to double
     img.convertTo(image, CV_64FC1);
 
-    std::vector<Vec4i> lines;
+    std::vector<Vec4f> lines;
     std::vector<double> w, p, n;
     w_needed = _width.needed();
     p_needed = _prec.needed();
-    n_needed = _nfa.needed();
-
-    CV_Assert((!_nfa.needed()) ||                              // NFA InputArray will be filled _only_ when
-              (_nfa.needed() && doRefine >= LSD_REFINE_ADV));  // REFINE_ADV type LineSegmentDetectorImpl object is created.
+    if (doRefine < LSD_REFINE_ADV)
+        n_needed = false;
+    else
+        n_needed = _nfa.needed();
 
     flsd(lines, w, p, n);
 
@@ -435,7 +435,7 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     if(n_needed) Mat(n).copyTo(_nfa);
 }
 
-void LineSegmentDetectorImpl::flsd(std::vector<Vec4i>& lines,
+void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
     std::vector<double>& widths, std::vector<double>& precisions,
     std::vector<double>& nfas)
 {
@@ -476,7 +476,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4i>& lines,
     for(size_t i = 0, list_size = list.size(); i < list_size; ++i)
     {
         unsigned int adx = list[i].p.x + list[i].p.y * img_width;
-        if((used.data[adx] == NOTUSED) && (angles_data[adx] != NOTDEF))
+        if((used.ptr()[adx] == NOTUSED) && (angles_data[adx] != NOTDEF))
         {
             int reg_size;
             double reg_angle;
@@ -518,7 +518,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4i>& lines,
             }
 
             //Store the relevant data
-            lines.push_back(Vec4i(int(rec.x1), int(rec.y1), int(rec.x2), int(rec.y2)));
+            lines.push_back(Vec4f(float(rec.x1), float(rec.y1), float(rec.x2), float(rec.y2)));
             if(w_needed) widths.push_back(rec.width);
             if(p_needed) precisions.push_back(rec.p);
             if(n_needed && doRefine >= LSD_REFINE_ADV) nfas.push_back(log_nfa);
@@ -640,7 +640,7 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
     reg[0].x = s.x;
     reg[0].y = s.y;
     int addr = s.x + s.y * img_width;
-    reg[0].used = used.data + addr;
+    reg[0].used = used.ptr() + addr;
     reg_angle = angles_data[addr];
     reg[0].angle = reg_angle;
     reg[0].modgrad = modgrad_data[addr];
@@ -660,15 +660,15 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
             int c_addr = xx_min + yy * img_width;
             for(int xx = xx_min; xx <= xx_max; ++xx, ++c_addr)
             {
-                if((used.data[c_addr] != USED) &&
+                if((used.ptr()[c_addr] != USED) &&
                    (isAligned(c_addr, reg_angle, prec)))
                 {
                     // Add point
-                    used.data[c_addr] = USED;
+                    used.ptr()[c_addr] = USED;
                     RegionPoint& region_point = reg[reg_size];
                     region_point.x = xx;
                     region_point.y = yy;
-                    region_point.used = &(used.data[c_addr]);
+                    region_point.used = &(used.ptr()[c_addr]);
                     region_point.modgrad = modgrad_data[c_addr];
                     const double& angle = angles_data[c_addr];
                     region_point.angle = angle;
@@ -1067,13 +1067,17 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     double left_x = min_y->p.x, right_x = min_y->p.x;
 
     // Loop around all points in the region and count those that are aligned.
-    int min_iter = std::max(min_y->p.y, 0);
-    int max_iter = std::min(max_y->p.y, img_height - 1);
+    int min_iter = min_y->p.y;
+    int max_iter = max_y->p.y;
     for(int y = min_iter; y <= max_iter; ++y)
     {
+        if (y < 0 || y >= img_height) continue;
+
         int adx = y * img_width + int(left_x);
         for(int x = int(left_x); x <= int(right_x); ++x, ++adx)
         {
+            if (x < 0 || x >= img_width) continue;
+
             ++total_pts;
             if(isAligned(adx, rec.theta, rec.prec))
             {
@@ -1172,13 +1176,14 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
 
     Mat _lines;
     _lines = lines.getMat();
+    int N = _lines.checkVector(4);
 
     // Draw segments
-    for(int i = 0; i < _lines.size().width; ++i)
+    for(int i = 0; i < N; ++i)
     {
-        const Vec4i& v = _lines.at<Vec4i>(i);
-        Point b(v[0], v[1]);
-        Point e(v[2], v[3]);
+        const Vec4f& v = _lines.at<Vec4f>(i);
+        Point2f b(v[0], v[1]);
+        Point2f e(v[2], v[3]);
         line(_image.getMatRef(), b, e, Scalar(0, 0, 255), 1);
     }
 }
@@ -1197,17 +1202,20 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
     Mat _lines2;
     _lines1 = lines1.getMat();
     _lines2 = lines2.getMat();
+    int N1 = _lines1.checkVector(4);
+    int N2 = _lines2.checkVector(4);
+
     // Draw segments
-    for(int i = 0; i < _lines1.size().width; ++i)
+    for(int i = 0; i < N1; ++i)
     {
-        Point b(_lines1.at<Vec4i>(i)[0], _lines1.at<Vec4i>(i)[1]);
-        Point e(_lines1.at<Vec4i>(i)[2], _lines1.at<Vec4i>(i)[3]);
+        Point2f b(_lines1.at<Vec4f>(i)[0], _lines1.at<Vec4f>(i)[1]);
+        Point2f e(_lines1.at<Vec4f>(i)[2], _lines1.at<Vec4f>(i)[3]);
         line(I1, b, e, Scalar::all(255), 1);
     }
-    for(int i = 0; i < _lines2.size().width; ++i)
+    for(int i = 0; i < N2; ++i)
     {
-        Point b(_lines2.at<Vec4i>(i)[0], _lines2.at<Vec4i>(i)[1]);
-        Point e(_lines2.at<Vec4i>(i)[2], _lines2.at<Vec4i>(i)[3]);
+        Point2f b(_lines2.at<Vec4f>(i)[0], _lines2.at<Vec4f>(i)[1]);
+        Point2f e(_lines2.at<Vec4f>(i)[2], _lines2.at<Vec4f>(i)[3]);
         line(I2, b, e, Scalar::all(255), 1);
     }
 
@@ -1224,16 +1232,16 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
 
         for (unsigned int i = 0; i < I1.total(); ++i)
         {
-            uchar i1 = I1.data[i];
-            uchar i2 = I2.data[i];
+            uchar i1 = I1.ptr()[i];
+            uchar i2 = I2.ptr()[i];
             if (i1 || i2)
             {
                 unsigned int base_idx = i * 3;
-                if (i1) img.data[base_idx] = 255;
-                else img.data[base_idx] = 0;
-                img.data[base_idx + 1] = 0;
-                if (i2) img.data[base_idx + 2] = 255;
-                else img.data[base_idx + 2] = 0;
+                if (i1) img.ptr()[base_idx] = 255;
+                else img.ptr()[base_idx] = 0;
+                img.ptr()[base_idx + 1] = 0;
+                if (i2) img.ptr()[base_idx + 2] = 255;
+                else img.ptr()[base_idx + 2] = 0;
             }
         }
     }

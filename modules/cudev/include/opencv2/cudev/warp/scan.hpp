@@ -52,6 +52,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 template <typename T>
 __device__ T warpScanInclusive(T data, volatile T* smem, uint tid)
 {
@@ -93,6 +96,8 @@ __device__ __forceinline__ T warpScanExclusive(T data, volatile T* smem, uint ti
 {
     return warpScanInclusive(data, smem, tid) - data;
 }
+
+//! @}
 
 }}
 

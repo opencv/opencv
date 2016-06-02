@@ -45,40 +45,123 @@
 #include "fast_nlmeans_multi_denoising_invoker.hpp"
 #include "fast_nlmeans_denoising_opencl.hpp"
 
-void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
-                               int templateWindowSize, int searchWindowSize)
+template<typename ST, typename IT, typename UIT, typename D>
+static void fastNlMeansDenoising_( const Mat& src, Mat& dst, const std::vector<float>& h,
+                                   int templateWindowSize, int searchWindowSize)
 {
-    CV_OCL_RUN(_src.dims() <= 2 && (_src.isUMat() || _dst.isUMat()),
-               ocl_fastNlMeansDenoising(_src, _dst, h, templateWindowSize, searchWindowSize))
+    int hn = (int)h.size();
+    double granularity = (double)std::max(1., (double)dst.total()/(1 << 17));
 
-    Mat src = _src.getMat();
-    _dst.create(src.size(), src.type());
-    Mat dst = _dst.getMat();
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::fastNlMeansDenoising(src, dst, h, templateWindowSize, searchWindowSize))
-        return;
-#endif
-
-    switch (src.type()) {
-        case CV_8U:
+    switch (CV_MAT_CN(src.type())) {
+        case 1:
             parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<uchar>(
-                    src, dst, templateWindowSize, searchWindowSize, h));
+                          FastNlMeansDenoisingInvoker<ST, IT, UIT, D, int>(
+                              src, dst, templateWindowSize, searchWindowSize, &h[0]),
+                          granularity);
             break;
-        case CV_8UC2:
-            parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<cv::Vec2b>(
-                    src, dst, templateWindowSize, searchWindowSize, h));
+        case 2:
+            if (hn == 1)
+                parallel_for_(cv::Range(0, src.rows),
+                              FastNlMeansDenoisingInvoker<Vec<ST, 2>, IT, UIT, D, int>(
+                                  src, dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            else
+                parallel_for_(cv::Range(0, src.rows),
+                              FastNlMeansDenoisingInvoker<Vec<ST, 2>, IT, UIT, D, Vec2i>(
+                                  src, dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
             break;
-        case CV_8UC3:
-            parallel_for_(cv::Range(0, src.rows),
-                FastNlMeansDenoisingInvoker<cv::Vec3b>(
-                    src, dst, templateWindowSize, searchWindowSize, h));
+        case 3:
+            if (hn == 1)
+                parallel_for_(cv::Range(0, src.rows),
+                              FastNlMeansDenoisingInvoker<Vec<ST, 3>, IT, UIT, D, int>(
+                                  src, dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            else
+                parallel_for_(cv::Range(0, src.rows),
+                              FastNlMeansDenoisingInvoker<Vec<ST, 3>, IT, UIT, D, Vec3i>(
+                                  src, dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            break;
+        case 4:
+            if (hn == 1)
+                parallel_for_(cv::Range(0, src.rows),
+                              FastNlMeansDenoisingInvoker<Vec<ST, 4>, IT, UIT, D, int>(
+                                  src, dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            else
+                parallel_for_(cv::Range(0, src.rows),
+                              FastNlMeansDenoisingInvoker<Vec<ST, 4>, IT, UIT, D, Vec4i>(
+                                  src, dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
             break;
         default:
             CV_Error(Error::StsBadArg,
-                "Unsupported image format! Only CV_8UC1, CV_8UC2 and CV_8UC3 are supported");
+                     "Unsupported number of channels! Only 1, 2, 3, and 4 are supported");
+    }
+}
+
+void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
+                               int templateWindowSize, int searchWindowSize)
+{
+    fastNlMeansDenoising(_src, _dst, std::vector<float>(1, h),
+                         templateWindowSize, searchWindowSize);
+}
+
+void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, const std::vector<float>& h,
+                               int templateWindowSize, int searchWindowSize, int normType)
+{
+    int hn = (int)h.size(), type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert(hn == 1 || hn == cn);
+
+    Size src_size = _src.size();
+    CV_OCL_RUN(_src.dims() <= 2 && (_src.isUMat() || _dst.isUMat()) &&
+               src_size.width > 5 && src_size.height > 5, // low accuracy on small sizes
+               ocl_fastNlMeansDenoising(_src, _dst, &h[0], hn,
+                                        templateWindowSize, searchWindowSize, normType))
+
+    Mat src = _src.getMat();
+    _dst.create(src_size, src.type());
+    Mat dst = _dst.getMat();
+
+    switch (normType) {
+        case NORM_L2:
+#ifdef HAVE_TEGRA_OPTIMIZATION
+            if(hn == 1 && tegra::useTegra() &&
+               tegra::fastNlMeansDenoising(src, dst, h[0], templateWindowSize, searchWindowSize))
+                return;
+#endif
+            switch (depth) {
+                case CV_8U:
+                    fastNlMeansDenoising_<uchar, int, unsigned, DistSquared>(src, dst, h,
+                                                                             templateWindowSize,
+                                                                             searchWindowSize);
+                    break;
+                default:
+                    CV_Error(Error::StsBadArg,
+                             "Unsupported depth! Only CV_8U is supported for NORM_L2");
+            }
+            break;
+        case NORM_L1:
+            switch (depth) {
+                case CV_8U:
+                    fastNlMeansDenoising_<uchar, int, unsigned, DistAbs>(src, dst, h,
+                                                                         templateWindowSize,
+                                                                         searchWindowSize);
+                    break;
+                case CV_16U:
+                    fastNlMeansDenoising_<ushort, int64, uint64, DistAbs>(src, dst, h,
+                                                                          templateWindowSize,
+                                                                          searchWindowSize);
+                    break;
+                default:
+                    CV_Error(Error::StsBadArg,
+                             "Unsupported depth! Only CV_8U and CV_16U are supported for NORM_L1");
+            }
+            break;
+        default:
+            CV_Error(Error::StsBadArg,
+                     "Unsupported norm type! Only NORM_L2 and NORM_L1 are supported");
     }
 }
 
@@ -87,26 +170,27 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
                                       int templateWindowSize, int searchWindowSize)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-
+    Size src_size = _src.size();
     if (type != CV_8UC3 && type != CV_8UC4)
     {
-        CV_Error(Error::StsBadArg, "Type of input image should be CV_8UC3!");
+        CV_Error(Error::StsBadArg, "Type of input image should be CV_8UC3 or CV_8UC4!");
         return;
     }
 
-    CV_OCL_RUN(_src.dims() <= 2 && (_dst.isUMat() || _src.isUMat()),
+    CV_OCL_RUN(_src.dims() <= 2 && (_dst.isUMat() || _src.isUMat()) &&
+                src_size.width > 5 && src_size.height > 5, // low accuracy on small sizes
                 ocl_fastNlMeansDenoisingColored(_src, _dst, h, hForColorComponents,
                                                 templateWindowSize, searchWindowSize))
 
     Mat src = _src.getMat();
-    _dst.create(src.size(), type);
+    _dst.create(src_size, type);
     Mat dst = _dst.getMat();
 
     Mat src_lab;
     cvtColor(src, src_lab, COLOR_LBGR2Lab);
 
-    Mat l(src.size(), CV_8U);
-    Mat ab(src.size(), CV_8UC2);
+    Mat l(src_size, CV_MAKE_TYPE(depth, 1));
+    Mat ab(src_size, CV_MAKE_TYPE(depth, 2));
     Mat l_ab[] = { l, ab };
     int from_to[] = { 0,0, 1,1, 2,2 };
     mixChannels(&src_lab, 1, l_ab, 2, from_to, 3);
@@ -115,7 +199,7 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     fastNlMeansDenoising(ab, ab, hForColorComponents, templateWindowSize, searchWindowSize);
 
     Mat l_ab_denoised[] = { l, ab };
-    Mat dst_lab(src.size(), CV_MAKE_TYPE(depth, 3));
+    Mat dst_lab(src_size, CV_MAKE_TYPE(depth, 3));
     mixChannels(l_ab_denoised, 2, &dst_lab, 1, from_to, 3);
 
     cvtColor(dst_lab, dst, COLOR_Lab2LBGR, cn);
@@ -154,9 +238,84 @@ static void fastNlMeansDenoisingMultiCheckPreconditions(
         }
 }
 
+template<typename ST, typename IT, typename UIT, typename D>
+static void fastNlMeansDenoisingMulti_( const std::vector<Mat>& srcImgs, Mat& dst,
+                                        int imgToDenoiseIndex, int temporalWindowSize,
+                                        const std::vector<float>& h,
+                                        int templateWindowSize, int searchWindowSize)
+{
+    int hn = (int)h.size();
+    double granularity = (double)std::max(1., (double)dst.total()/(1 << 16));
+
+    switch (srcImgs[0].type())
+    {
+        case CV_8U:
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
+                          FastNlMeansMultiDenoisingInvoker<uchar, IT, UIT, D, int>(
+                              srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                              dst, templateWindowSize, searchWindowSize, &h[0]),
+                          granularity);
+            break;
+        case CV_8UC2:
+            if (hn == 1)
+                parallel_for_(cv::Range(0, srcImgs[0].rows),
+                              FastNlMeansMultiDenoisingInvoker<Vec<ST, 2>, IT, UIT, D, int>(
+                                  srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                                  dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            else
+                parallel_for_(cv::Range(0, srcImgs[0].rows),
+                              FastNlMeansMultiDenoisingInvoker<Vec<ST, 2>, IT, UIT, D, Vec2i>(
+                                  srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                                  dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            break;
+        case CV_8UC3:
+            if (hn == 1)
+                parallel_for_(cv::Range(0, srcImgs[0].rows),
+                              FastNlMeansMultiDenoisingInvoker<Vec<ST, 3>, IT, UIT, D, int>(
+                                  srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                                  dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            else
+                parallel_for_(cv::Range(0, srcImgs[0].rows),
+                              FastNlMeansMultiDenoisingInvoker<Vec<ST, 3>, IT, UIT, D, Vec3i>(
+                                  srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                                  dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            break;
+        case CV_8UC4:
+            if (hn == 1)
+                parallel_for_(cv::Range(0, srcImgs[0].rows),
+                              FastNlMeansMultiDenoisingInvoker<Vec<ST, 4>, IT, UIT, D, int>(
+                                  srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                                  dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            else
+                parallel_for_(cv::Range(0, srcImgs[0].rows),
+                              FastNlMeansMultiDenoisingInvoker<Vec<ST, 4>, IT, UIT, D, Vec4i>(
+                                  srcImgs, imgToDenoiseIndex, temporalWindowSize,
+                                  dst, templateWindowSize, searchWindowSize, &h[0]),
+                              granularity);
+            break;
+        default:
+            CV_Error(Error::StsBadArg,
+                "Unsupported image format! Only CV_8U, CV_8UC2, CV_8UC3 and CV_8UC4 are supported");
+    }
+}
+
 void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _dst,
                                     int imgToDenoiseIndex, int temporalWindowSize,
                                     float h, int templateWindowSize, int searchWindowSize)
+{
+    fastNlMeansDenoisingMulti(_srcImgs, _dst, imgToDenoiseIndex, temporalWindowSize,
+                              std::vector<float>(1, h), templateWindowSize, searchWindowSize);
+}
+
+void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _dst,
+                                    int imgToDenoiseIndex, int temporalWindowSize,
+                                    const std::vector<float>& h,
+                                    int templateWindowSize, int searchWindowSize, int normType)
 {
     std::vector<Mat> srcImgs;
     _srcImgs.getMatVector(srcImgs);
@@ -165,32 +324,52 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
         srcImgs, imgToDenoiseIndex,
         temporalWindowSize, templateWindowSize, searchWindowSize);
 
+    int hn = (int)h.size();
+    int type = srcImgs[0].type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert(hn == 1 || hn == cn);
+
     _dst.create(srcImgs[0].size(), srcImgs[0].type());
     Mat dst = _dst.getMat();
 
-    switch (srcImgs[0].type())
-    {
-        case CV_8U:
-            parallel_for_(cv::Range(0, srcImgs[0].rows),
-                FastNlMeansMultiDenoisingInvoker<uchar>(
-                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
-                    dst, templateWindowSize, searchWindowSize, h));
+    switch (normType) {
+        case NORM_L2:
+            switch (depth) {
+                case CV_8U:
+                    fastNlMeansDenoisingMulti_<uchar, int, unsigned,
+                                               DistSquared>(srcImgs, dst,
+                                                            imgToDenoiseIndex, temporalWindowSize,
+                                                            h,
+                                                            templateWindowSize, searchWindowSize);
+                    break;
+                default:
+                    CV_Error(Error::StsBadArg,
+                             "Unsupported depth! Only CV_8U is supported for NORM_L2");
+            }
             break;
-        case CV_8UC2:
-            parallel_for_(cv::Range(0, srcImgs[0].rows),
-                FastNlMeansMultiDenoisingInvoker<cv::Vec2b>(
-                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
-                    dst, templateWindowSize, searchWindowSize, h));
-            break;
-        case CV_8UC3:
-            parallel_for_(cv::Range(0, srcImgs[0].rows),
-                FastNlMeansMultiDenoisingInvoker<cv::Vec3b>(
-                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
-                    dst, templateWindowSize, searchWindowSize, h));
+        case NORM_L1:
+            switch (depth) {
+                case CV_8U:
+                    fastNlMeansDenoisingMulti_<uchar, int, unsigned,
+                                               DistAbs>(srcImgs, dst,
+                                                        imgToDenoiseIndex, temporalWindowSize,
+                                                        h,
+                                                        templateWindowSize, searchWindowSize);
+                    break;
+                case CV_16U:
+                    fastNlMeansDenoisingMulti_<ushort, int64, uint64,
+                                               DistAbs>(srcImgs, dst,
+                                                        imgToDenoiseIndex, temporalWindowSize,
+                                                        h,
+                                                        templateWindowSize, searchWindowSize);
+                    break;
+                default:
+                    CV_Error(Error::StsBadArg,
+                             "Unsupported depth! Only CV_8U and CV_16U are supported for NORM_L1");
+            }
             break;
         default:
             CV_Error(Error::StsBadArg,
-                "Unsupported matrix format! Only uchar, Vec2b, Vec3b are supported");
+                     "Unsupported norm type! Only NORM_L2 and NORM_L1 are supported");
     }
 }
 
@@ -209,9 +388,10 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
     _dst.create(srcImgs[0].size(), srcImgs[0].type());
     Mat dst = _dst.getMat();
 
+    int type = srcImgs[0].type(), depth = CV_MAT_DEPTH(type);
     int src_imgs_size = static_cast<int>(srcImgs.size());
 
-    if (srcImgs[0].type() != CV_8UC3)
+    if (type != CV_8UC3)
     {
         CV_Error(Error::StsBadArg, "Type of input images should be CV_8UC3!");
         return;
@@ -225,9 +405,9 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
     std::vector<Mat> ab(src_imgs_size);
     for (int i = 0; i < src_imgs_size; i++)
     {
-        src_lab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC3);
-        l[i] = Mat::zeros(srcImgs[0].size(), CV_8UC1);
-        ab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC2);
+        src_lab[i] = Mat::zeros(srcImgs[0].size(), type);
+        l[i] = Mat::zeros(srcImgs[0].size(), CV_MAKE_TYPE(depth, 1));
+        ab[i] = Mat::zeros(srcImgs[0].size(), CV_MAKE_TYPE(depth, 2));
         cvtColor(srcImgs[i], src_lab[i], COLOR_LBGR2Lab);
 
         Mat l_ab[] = { l[i], ab[i] };

@@ -40,6 +40,7 @@
  //
  //M*/
 
+#include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include <limits>
 //#define DEBUG_CIRCLES
@@ -65,10 +66,10 @@ void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 
 }
 #endif
 
-void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> points, const Size &patternSz, std::vector<Point2f> &patternPoints)
+void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> &points, const Size &patternSz, std::vector<Point2f> &patternPoints)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::hierarchicalClustering(points, patternSz, patternPoints))
+    if(tegra::useTegra() && tegra::hierarchicalClustering(points, patternSz, patternPoints))
         return;
 #endif
     int j, n = (int)points.size();
@@ -128,13 +129,13 @@ void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f>
     }
 
     patternPoints.reserve(clusters[patternClusterIdx].size());
-    for(std::list<size_t>::iterator it = clusters[patternClusterIdx].begin(); it != clusters[patternClusterIdx].end(); it++)
+    for(std::list<size_t>::iterator it = clusters[patternClusterIdx].begin(); it != clusters[patternClusterIdx].end();++it)
     {
         patternPoints.push_back(points[*it]);
     }
 }
 
-void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, cv::Size _patternSize, std::vector<Point2f>& centers)
+void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> &points, cv::Size _patternSize, std::vector<Point2f>& centers)
 {
   patternSize = _patternSize;
   centers.clear();
@@ -319,7 +320,7 @@ void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &
 
   std::vector<Point2f>::const_iterator firstCornerIterator = std::find(hull2f.begin(), hull2f.end(), firstCorner);
   sortedCorners.clear();
-  for(std::vector<Point2f>::const_iterator it = firstCornerIterator; it != hull2f.end(); it++)
+  for(std::vector<Point2f>::const_iterator it = firstCornerIterator; it != hull2f.end();++it)
   {
     std::vector<Point2f>::const_iterator itCorners = std::find(corners.begin(), corners.end(), *it);
     if(itCorners != corners.end())
@@ -327,7 +328,7 @@ void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &
       sortedCorners.push_back(*it);
     }
   }
-  for(std::vector<Point2f>::const_iterator it = hull2f.begin(); it != firstCornerIterator; it++)
+  for(std::vector<Point2f>::const_iterator it = hull2f.begin(); it != firstCornerIterator;++it)
   {
     std::vector<Point2f>::const_iterator itCorners = std::find(corners.begin(), corners.end(), *it);
     if(itCorners != corners.end())
@@ -492,21 +493,21 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
   const int n = (int)getVerticesCount();
   distanceMatrix.create(n, n, CV_32SC1);
   distanceMatrix.setTo(infinity);
-  for (Vertices::const_iterator it1 = vertices.begin(); it1 != vertices.end(); it1++)
+  for (Vertices::const_iterator it1 = vertices.begin(); it1 != vertices.end();++it1)
   {
     distanceMatrix.at<int> ((int)it1->first, (int)it1->first) = 0;
-    for (Neighbors::const_iterator it2 = it1->second.neighbors.begin(); it2 != it1->second.neighbors.end(); it2++)
+    for (Neighbors::const_iterator it2 = it1->second.neighbors.begin(); it2 != it1->second.neighbors.end();++it2)
     {
       CV_Assert( it1->first != *it2 );
       distanceMatrix.at<int> ((int)it1->first, (int)*it2) = edgeWeight;
     }
   }
 
-  for (Vertices::const_iterator it1 = vertices.begin(); it1 != vertices.end(); it1++)
+  for (Vertices::const_iterator it1 = vertices.begin(); it1 != vertices.end();++it1)
   {
-    for (Vertices::const_iterator it2 = vertices.begin(); it2 != vertices.end(); it2++)
+    for (Vertices::const_iterator it2 = vertices.begin(); it2 != vertices.end();++it2)
     {
-      for (Vertices::const_iterator it3 = vertices.begin(); it3 != vertices.end(); it3++)
+      for (Vertices::const_iterator it3 = vertices.begin(); it3 != vertices.end();++it3)
       {
       int i1 = (int)it1->first, i2 = (int)it2->first, i3 = (int)it3->first;
         int val1 = distanceMatrix.at<int> (i2, i3);
@@ -617,10 +618,10 @@ void CirclesGridFinder::rng2gridGraph(Graph &rng, std::vector<cv::Point2f> &vect
   for (size_t i = 0; i < rng.getVerticesCount(); i++)
   {
     Graph::Neighbors neighbors1 = rng.getNeighbors(i);
-    for (Graph::Neighbors::iterator it1 = neighbors1.begin(); it1 != neighbors1.end(); it1++)
+    for (Graph::Neighbors::iterator it1 = neighbors1.begin(); it1 != neighbors1.end(); ++it1)
     {
       Graph::Neighbors neighbors2 = rng.getNeighbors(*it1);
-      for (Graph::Neighbors::iterator it2 = neighbors2.begin(); it2 != neighbors2.end(); it2++)
+      for (Graph::Neighbors::iterator it2 = neighbors2.begin(); it2 != neighbors2.end(); ++it2)
       {
         if (i < *it2)
         {

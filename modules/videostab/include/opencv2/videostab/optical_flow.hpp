@@ -55,6 +55,9 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab
+//! @{
+
 class CV_EXPORTS ISparseOptFlowEstimator
 {
 public:
@@ -118,7 +121,7 @@ public:
              cuda::GpuMat &status);
 
 private:
-    cuda::PyrLKOpticalFlow optFlowEstimator_;
+    Ptr<cuda::SparsePyrLKOpticalFlow> optFlowEstimator_;
     cuda::GpuMat frame0_, frame1_, points0_, points1_, status_, errors_;
 };
 
@@ -133,11 +136,13 @@ public:
             OutputArray errors);
 
 private:
-    cuda::PyrLKOpticalFlow optFlowEstimator_;
+    Ptr<cuda::DensePyrLKOpticalFlow> optFlowEstimator_;
     cuda::GpuMat frame0_, frame1_, flowX_, flowY_, errors_;
 };
 
 #endif
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

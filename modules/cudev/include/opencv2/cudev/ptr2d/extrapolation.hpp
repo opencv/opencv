@@ -52,6 +52,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // BrdConstant
 
 template <class SrcPtr> struct BrdConstant
@@ -195,12 +198,12 @@ struct BrdWrap
 {
     __device__ __forceinline__ static int idx_low(int i, int len)
     {
-        return (i >= 0) * i + (i < 0) * (i - ((i - len + 1) / len) * len);
+        return (i >= 0) ? i : (i - ((i - len + 1) / len) * len);
     }
 
     __device__ __forceinline__ static int idx_high(int i, int len)
     {
-        return (i < len) * i + (i >= len) * (i % len);
+        return (i < len) ? i : (i % len);
     }
 };
 
@@ -213,6 +216,8 @@ __host__ BrdBase<BrdWrap, typename PtrTraits<SrcPtr>::ptr_type> brdWrap(const Sr
     b.cols = getCols(src);
     return b;
 }
+
+//! @}
 
 }}
 

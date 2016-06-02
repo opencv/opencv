@@ -47,6 +47,12 @@
 #include "vec_traits.hpp"
 #include "vec_math.hpp"
 
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     //////////////////////////////////////////////////////////////
@@ -626,12 +632,12 @@ namespace cv { namespace cuda { namespace device
 
         __device__ __forceinline__ int idx_row_low(int y) const
         {
-            return (y >= 0) * y + (y < 0) * (y - ((y - height + 1) / height) * height);
+            return (y >= 0) ? y : (y - ((y - height + 1) / height) * height);
         }
 
         __device__ __forceinline__ int idx_row_high(int y) const
         {
-            return (y < height) * y + (y >= height) * (y % height);
+            return (y < height) ? y : (y % height);
         }
 
         __device__ __forceinline__ int idx_row(int y) const
@@ -641,12 +647,12 @@ namespace cv { namespace cuda { namespace device
 
         __device__ __forceinline__ int idx_col_low(int x) const
         {
-            return (x >= 0) * x + (x < 0) * (x - ((x - width + 1) / width) * width);
+            return (x >= 0) ? x : (x - ((x - width + 1) / width) * width);
         }
 
         __device__ __forceinline__ int idx_col_high(int x) const
         {
-            return (x < width) * x + (x >= width) * (x % width);
+            return (x < width) ? x : (x % width);
         }
 
         __device__ __forceinline__ int idx_col(int x) const
@@ -710,5 +716,7 @@ namespace cv { namespace cuda { namespace device
         D val;
     };
 }}} // namespace cv { namespace cuda { namespace cudev
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_BORDER_INTERPOLATE_HPP__

@@ -53,16 +53,16 @@ Ptr<CannyEdgeDetector> cv::cuda::createCannyEdgeDetector(double, double, int, bo
 
 namespace canny
 {
-    void calcMagnitude(PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad);
-    void calcMagnitude(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad);
+    void calcMagnitude(PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad, cudaStream_t stream);
+    void calcMagnitude(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad, cudaStream_t stream);
 
-    void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh);
+    void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh, cudaStream_t stream);
 
-    void edgesHysteresisLocal(PtrStepSzi map, short2* st1);
+    void edgesHysteresisLocal(PtrStepSzi map, short2* st1, cudaStream_t stream);
 
-    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2);
+    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2, cudaStream_t stream);
 
-    void getEdges(PtrStepSzi map, PtrStepSzb dst);
+    void getEdges(PtrStepSzi map, PtrStepSzb dst, cudaStream_t stream);
 }
 
 namespace
@@ -76,8 +76,8 @@ namespace
             old_apperture_size_ = -1;
         }
 
-        void detect(InputArray image, OutputArray edges);
-        void detect(InputArray dx, InputArray dy, OutputArray edges);
+        void detect(InputArray image, OutputArray edges, Stream& stream);
+        void detect(InputArray dx, InputArray dy, OutputArray edges, Stream& stream);
 
         void setLowThreshold(double low_thresh) { low_thresh_ = low_thresh; }
         double getLowThreshold() const { return low_thresh_; }
@@ -93,6 +93,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
+            writeFormat(fs);
             fs << "name" << "Canny_CUDA"
             << "low_thresh" << low_thresh_
             << "high_thresh" << high_thresh_
@@ -111,7 +112,7 @@ namespace
 
     private:
         void createBuf(Size image_size);
-        void CannyCaller(GpuMat& edges);
+        void CannyCaller(GpuMat& edges, Stream& stream);
 
         double low_thresh_;
         double high_thresh_;
@@ -128,7 +129,7 @@ namespace
         int old_apperture_size_;
     };
 
-    void CannyImpl::detect(InputArray _image, OutputArray _edges)
+    void CannyImpl::detect(InputArray _image, OutputArray _edges, Stream& stream)
     {
         GpuMat image = _image.getGpuMat();
 
@@ -150,24 +151,24 @@ namespace
             image.locateROI(wholeSize, ofs);
             GpuMat srcWhole(wholeSize, image.type(), image.datastart, image.step);
 
-            canny::calcMagnitude(srcWhole, ofs.x, ofs.y, dx_, dy_, mag_, L2gradient_);
+            canny::calcMagnitude(srcWhole, ofs.x, ofs.y, dx_, dy_, mag_, L2gradient_, StreamAccessor::getStream(stream));
         }
         else
         {
 #ifndef HAVE_OPENCV_CUDAFILTERS
             throw_no_cuda();
 #else
-            filterDX_->apply(image, dx_);
-            filterDY_->apply(image, dy_);
+            filterDX_->apply(image, dx_, stream);
+            filterDY_->apply(image, dy_, stream);
 
-            canny::calcMagnitude(dx_, dy_, mag_, L2gradient_);
+            canny::calcMagnitude(dx_, dy_, mag_, L2gradient_, StreamAccessor::getStream(stream));
 #endif
         }
 
-        CannyCaller(edges);
+        CannyCaller(edges, stream);
     }
 
-    void CannyImpl::detect(InputArray _dx, InputArray _dy, OutputArray _edges)
+    void CannyImpl::detect(InputArray _dx, InputArray _dy, OutputArray _edges, Stream& stream)
     {
         GpuMat dx = _dx.getGpuMat();
         GpuMat dy = _dy.getGpuMat();
@@ -176,8 +177,8 @@ namespace
         CV_Assert( dy.type() == dx.type() && dy.size() == dx.size() );
         CV_Assert( deviceSupports(SHARED_ATOMICS) );
 
-        dx.copyTo(dx_);
-        dy.copyTo(dy_);
+        dx.copyTo(dx_, stream);
+        dy.copyTo(dy_, stream);
 
         if (low_thresh_ > high_thresh_)
             std::swap(low_thresh_, high_thresh_);
@@ -187,9 +188,9 @@ namespace
         _edges.create(dx.size(), CV_8UC1);
         GpuMat edges = _edges.getGpuMat();
 
-        canny::calcMagnitude(dx_, dy_, mag_, L2gradient_);
+        canny::calcMagnitude(dx_, dy_, mag_, L2gradient_, StreamAccessor::getStream(stream));
 
-        CannyCaller(edges);
+        CannyCaller(edges, stream);
     }
 
     void CannyImpl::createBuf(Size image_size)
@@ -215,16 +216,16 @@ namespace
         ensureSizeIsEnough(1, image_size.area(), CV_16SC2, st2_);
     }
 
-    void CannyImpl::CannyCaller(GpuMat& edges)
+    void CannyImpl::CannyCaller(GpuMat& edges, Stream& stream)
     {
         map_.setTo(Scalar::all(0));
-        canny::calcMap(dx_, dy_, mag_, map_, static_cast<float>(low_thresh_), static_cast<float>(high_thresh_));
+        canny::calcMap(dx_, dy_, mag_, map_, static_cast<float>(low_thresh_), static_cast<float>(high_thresh_), StreamAccessor::getStream(stream));
 
-        canny::edgesHysteresisLocal(map_, st1_.ptr<short2>());
+        canny::edgesHysteresisLocal(map_, st1_.ptr<short2>(), StreamAccessor::getStream(stream));
 
-        canny::edgesHysteresisGlobal(map_, st1_.ptr<short2>(), st2_.ptr<short2>());
+        canny::edgesHysteresisGlobal(map_, st1_.ptr<short2>(), st2_.ptr<short2>(), StreamAccessor::getStream(stream));
 
-        canny::getEdges(map_, edges);
+        canny::getEdges(map_, edges, StreamAccessor::getStream(stream));
     }
 }
 

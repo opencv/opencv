@@ -41,19 +41,19 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/hal/hal.hpp"
 
 using namespace cv;
 
 namespace {
 
-template<typename _Tp> static inline bool
-decomposeCholesky(_Tp* A, size_t astep, int m)
+static inline bool decomposeCholesky(double* A, size_t astep, int m)
 {
-    if (!Cholesky(A, astep, m, 0, 0, 0))
+    if (!hal::Cholesky64f(A, astep, m, 0, 0, 0))
         return false;
     astep /= sizeof(A[0]);
     for (int i = 0; i < m; ++i)
-        A[i*astep + i] = (_Tp)(1./A[i*astep + i]);
+        A[i*astep + i] = (double)(1./A[i*astep + i]);
     return true;
 }
 
@@ -67,7 +67,7 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
 {
     CV_Assert(H.type() == CV_64F && H.size() == Size(3, 3));
 
-    const double* h = reinterpret_cast<const double*>(H.data);
+    const double* h = H.ptr<double>();
 
     double d1, d2; // Denominators
     double v1, v2; // Focal squares value candidates

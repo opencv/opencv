@@ -57,6 +57,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // resize
 
 template <class SrcPtr>
@@ -165,6 +168,8 @@ transpose_(const SrcPtr& src)
     body.src = src;
     return makeExpr(body);
 }
+
+//! @}
 
 }}
 

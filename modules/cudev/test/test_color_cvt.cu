@@ -69,7 +69,7 @@ enum {
         GpuMat_<SelectIf<dst_cn == 1, uchar, uchar ## dst_cn>::type> dstb = src_space ## _to_ ## dst_space ## _(d_srcb); \
         Mat dstb_gold; \
         cv::cvtColor(srcb, dstb_gold, COLOR_ ## src_space ## 2 ## dst_space); \
-        EXPECT_MAT_NEAR(dstb_gold, dstb, 1.0); \
+        EXPECT_MAT_NEAR(dstb_gold, dstb, 2.0); \
         Mat bgrf = randomMat(size, CV_32FC3, 0, 1); \
         Mat srcf; \
         cv::cvtColor(bgrf, srcf, COLOR_BGR ## 2 ## src_space, src_cn); \
@@ -77,7 +77,7 @@ enum {
         GpuMat_<SelectIf<dst_cn == 1, float, float ## dst_cn>::type> dstf = src_space ## _to_ ## dst_space ## _(d_srcf); \
         Mat dstf_gold; \
         cv::cvtColor(srcf, dstf_gold, COLOR_ ## src_space ## 2 ## dst_space); \
-        EXPECT_MAT_NEAR(dstf_gold, dstf, 1.0); \
+        EXPECT_MAT_NEAR(dstf_gold, dstf, 2.0); \
     }
 
 // RGB <-> BGR

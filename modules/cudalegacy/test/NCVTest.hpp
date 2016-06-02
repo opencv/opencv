@@ -214,12 +214,12 @@ private:
         stream << "====================================================" << std::endl << std::endl;
         stream << "Test initialization report: " << std::endl;
         for (std::map<std::string,std::string>::iterator it=report.statsText.begin();
-             it != report.statsText.end(); it++)
+             it != report.statsText.end(); ++it)
         {
             stream << it->first << "=" << it->second << std::endl;
         }
         for (std::map<std::string,Ncv32u>::iterator it=report.statsNums.begin();
-            it != report.statsNums.end(); it++)
+            it != report.statsNums.end(); ++it)
         {
             stream << it->first << "=" << it->second << std::endl;
         }

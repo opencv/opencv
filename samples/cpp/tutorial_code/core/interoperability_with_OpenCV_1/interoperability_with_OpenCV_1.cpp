@@ -1,13 +1,16 @@
+//! [head]
 #include <stdio.h>
 #include <iostream>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include "opencv2/imgcodecs.hpp"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/utility.hpp>
 
 using namespace cv;  // The new C++ interface API is inside this namespace. Import it.
 using namespace std;
+//! [head]
 
 static void help( char* progName)
 {
@@ -16,20 +19,22 @@ static void help( char* progName)
         << "Also contains example for image read, spliting the planes, merging back and "  << endl
         << " color conversion, plus iterating through pixels. "                            << endl
         << "Usage:" << endl
-        << progName << " [image-name Default: lena.jpg]"                           << endl << endl;
+        << progName << " [image-name Default: ../data/lena.jpg]"                   << endl << endl;
 }
 
+//! [start]
 // comment out the define to use only the latest C++ API
 #define DEMO_MIXED_API_USE
 
 #ifdef DEMO_MIXED_API_USE
 #  include <opencv2/highgui/highgui_c.h>
+#  include <opencv2/imgcodecs/imgcodecs_c.h>
 #endif
 
 int main( int argc, char** argv )
 {
     help(argv[0]);
-    const char* imagename = argc > 1 ? argv[1] : "lena.jpg";
+    const char* imagename = argc > 1 ? argv[1] : "../data/lena.jpg";
 
 #ifdef DEMO_MIXED_API_USE
     Ptr<IplImage> IplI(cvLoadImage(imagename));      // Ptr<T> is a safe ref-counting pointer class
@@ -47,15 +52,19 @@ int main( int argc, char** argv )
         return -1;
     }
 #endif
+//! [start]
 
+    //! [new]
     // convert image to YUV color space. The output image will be created automatically.
     Mat I_YUV;
     cvtColor(I, I_YUV, COLOR_BGR2YCrCb);
 
     vector<Mat> planes;    // Use the STL's vector structure to store multiple Mat objects
     split(I_YUV, planes);  // split the image into separate color planes (Y U V)
+    //! [new]
 
 #if 1 // change it to 0 if you want to see a blurred and noisy version of this processing
+    //! [scanning]
     // Mat scanning
     // Method 1. process Y plane using an iterator
     MatIterator_<uchar> it = planes[0].begin<uchar>(), it_end = planes[0].end<uchar>();
@@ -78,9 +87,11 @@ int main( int argc, char** argv )
             Vxy =        saturate_cast<uchar>((Vxy-128)/2 + 128);
         }
     }
+    //! [scanning]
 
 #else
 
+    //! [noisy]
     Mat noisyI(I.size(), CV_8U);           // Create a matrix of the specified size and type
 
     // Fills the matrix with normally distributed random values (around number with deviation off).
@@ -115,12 +126,13 @@ int main( int argc, char** argv )
 
     // Mat::mul replaces cvMul(). Again, no temporary arrays are created in case of simple expressions.
     planes[0] = planes[0].mul(planes[0], 1./255);
+    //! [noisy]
 #endif
 
 
+    //! [end]
     merge(planes, I_YUV);                // now merge the results back
     cvtColor(I_YUV, I, COLOR_YCrCb2BGR);  // and produce the output RGB image
-
 
     namedWindow("image with grain", WINDOW_AUTOSIZE);   // use this to create images
 
@@ -131,6 +143,7 @@ int main( int argc, char** argv )
 #else
     imshow("image with grain", I); // the new MATLAB style function show
 #endif
+    //! [end]
     waitKey();
 
     // Tip: No memory freeing is required!

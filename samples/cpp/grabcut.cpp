@@ -1,3 +1,4 @@
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
@@ -21,10 +22,10 @@ static void help()
         "\tleft mouse button - set rectangle\n"
         "\n"
         "\tCTRL+left mouse button - set GC_BGD pixels\n"
-        "\tSHIFT+left mouse button - set CG_FGD pixels\n"
+        "\tSHIFT+left mouse button - set GC_FGD pixels\n"
         "\n"
         "\tCTRL+right mouse button - set GC_PR_BGD pixels\n"
-        "\tSHIFT+right mouse button - set CG_PR_FGD pixels\n" << endl;
+        "\tSHIFT+right mouse button - set GC_PR_FGD pixels\n" << endl;
 }
 
 const Scalar RED = Scalar(0,0,255);
@@ -275,15 +276,16 @@ static void on_mouse( int event, int x, int y, int flags, void* param )
 
 int main( int argc, char** argv )
 {
-    if( argc!=2 )
+    cv::CommandLineParser parser(argc, argv, "{help h||}{@input||}");
+    if (parser.has("help"))
     {
         help();
-        return 1;
+        return 0;
     }
-    string filename = argv[1];
+    string filename = parser.get<string>("@input");
     if( filename.empty() )
     {
-        cout << "\nDurn, couldn't read in " << argv[1] << endl;
+        cout << "\nDurn, empty filename" << endl;
         return 1;
     }
     Mat image = imread( filename, 1 );

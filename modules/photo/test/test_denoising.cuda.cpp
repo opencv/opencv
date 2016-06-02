@@ -81,7 +81,7 @@ TEST(CUDA_BruteForceNonLocalMeans, Regression)
     cv::resize(bgr_gold, bgr_gold, cv::Size(256, 256));
     cv::resize(gray_gold, gray_gold, cv::Size(256, 256));
 
-    EXPECT_MAT_NEAR(bgr_gold, dbgr, 1e-4);
+    EXPECT_MAT_NEAR(bgr_gold, dbgr, 1);
     EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
 }
 
@@ -99,10 +99,9 @@ TEST(CUDA_FastNonLocalMeans, Regression)
     cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
 
     GpuMat dbgr, dgray;
-    cv::cuda::FastNonLocalMeansDenoising fnlmd;
 
-    fnlmd.simpleMethod(GpuMat(gray),  dgray, 20);
-    fnlmd.labMethod(GpuMat(bgr),  dbgr, 20, 10);
+    cv::cuda::fastNlMeansDenoising(GpuMat(gray),  dgray, 20);
+    cv::cuda::fastNlMeansDenoisingColored(GpuMat(bgr),  dbgr, 20, 10);
 
 #if 0
     dumpImage("../gpu/denoising/fnlm_denoised_lena_bgr.png", cv::Mat(dbgr));

@@ -50,167 +50,25 @@
 namespace cv
 {
 
-/****************************************************************************************\
-*                     LU & Cholesky implementation for small matrices                    *
-\****************************************************************************************/
-
-template<typename _Tp> static inline int
-LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
-{
-    int i, j, k, p = 1;
-    astep /= sizeof(A[0]);
-    bstep /= sizeof(b[0]);
-
-    for( i = 0; i < m; i++ )
-    {
-        k = i;
-
-        for( j = i+1; j < m; j++ )
-            if( std::abs(A[j*astep + i]) > std::abs(A[k*astep + i]) )
-                k = j;
-
-        if( std::abs(A[k*astep + i]) < std::numeric_limits<_Tp>::epsilon() )
-            return 0;
-
-        if( k != i )
-        {
-            for( j = i; j < m; j++ )
-                std::swap(A[i*astep + j], A[k*astep + j]);
-            if( b )
-                for( j = 0; j < n; j++ )
-                    std::swap(b[i*bstep + j], b[k*bstep + j]);
-            p = -p;
-        }
-
-        _Tp d = -1/A[i*astep + i];
-
-        for( j = i+1; j < m; j++ )
-        {
-            _Tp alpha = A[j*astep + i]*d;
-
-            for( k = i+1; k < m; k++ )
-                A[j*astep + k] += alpha*A[i*astep + k];
-
-            if( b )
-                for( k = 0; k < n; k++ )
-                    b[j*bstep + k] += alpha*b[i*bstep + k];
-        }
-
-        A[i*astep + i] = -d;
-    }
-
-    if( b )
-    {
-        for( i = m-1; i >= 0; i-- )
-            for( j = 0; j < n; j++ )
-            {
-                _Tp s = b[i*bstep + j];
-                for( k = i+1; k < m; k++ )
-                    s -= A[i*astep + k]*b[k*bstep + j];
-                b[i*bstep + j] = s*A[i*astep + i];
-            }
-    }
-
-    return p;
-}
-
-
 int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    return LUImpl(A, astep, m, b, bstep, n);
+    return hal::LU32f(A, astep, m, b, bstep, n);
 }
-
 
 int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    return LUImpl(A, astep, m, b, bstep, n);
+    return hal::LU64f(A, astep, m, b, bstep, n);
 }
-
-
-template<typename _Tp> static inline bool
-CholImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
-{
-    _Tp* L = A;
-    int i, j, k;
-    double s;
-    astep /= sizeof(A[0]);
-    bstep /= sizeof(b[0]);
-
-    for( i = 0; i < m; i++ )
-    {
-        for( j = 0; j < i; j++ )
-        {
-            s = A[i*astep + j];
-            for( k = 0; k < j; k++ )
-                s -= L[i*astep + k]*L[j*astep + k];
-            L[i*astep + j] = (_Tp)(s*L[j*astep + j]);
-        }
-        s = A[i*astep + i];
-        for( k = 0; k < j; k++ )
-        {
-            double t = L[i*astep + k];
-            s -= t*t;
-        }
-        if( s < std::numeric_limits<_Tp>::epsilon() )
-            return false;
-        L[i*astep + i] = (_Tp)(1./std::sqrt(s));
-    }
-
-    if( !b )
-        return true;
-
-    // LLt x = b
-    // 1: L y = b
-    // 2. Lt x = y
-
-    /*
-     [ L00             ]  y0   b0
-     [ L10 L11         ]  y1 = b1
-     [ L20 L21 L22     ]  y2   b2
-     [ L30 L31 L32 L33 ]  y3   b3
-
-     [ L00 L10 L20 L30 ]  x0   y0
-     [     L11 L21 L31 ]  x1 = y1
-     [         L22 L32 ]  x2   y2
-     [             L33 ]  x3   y3
-    */
-
-    for( i = 0; i < m; i++ )
-    {
-        for( j = 0; j < n; j++ )
-        {
-            s = b[i*bstep + j];
-            for( k = 0; k < i; k++ )
-                s -= L[i*astep + k]*b[k*bstep + j];
-            b[i*bstep + j] = (_Tp)(s*L[i*astep + i]);
-        }
-    }
-
-    for( i = m-1; i >= 0; i-- )
-    {
-        for( j = 0; j < n; j++ )
-        {
-            s = b[i*bstep + j];
-            for( k = m-1; k > i; k-- )
-                s -= L[k*astep + i]*b[k*bstep + j];
-            b[i*bstep + j] = (_Tp)(s*L[i*astep + i]);
-        }
-    }
-
-    return true;
-}
-
 
 bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    return CholImpl(A, astep, m, b, bstep, n);
+    return hal::Cholesky32f(A, astep, m, b, bstep, n);
 }
 
 bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    return CholImpl(A, astep, m, b, bstep, n);
+    return hal::Cholesky64f(A, astep, m, b, bstep, n);
 }
-
 
 template<typename _Tp> static inline _Tp hypot(_Tp a, _Tp b)
 {
@@ -664,7 +522,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
     {
         sd = i < n ? W[i] : 0;
 
-        while( sd <= minval )
+        for( int ii = 0; ii < 100 && sd <= minval; ii++ )
         {
             // if we got a zero singular value, then in order to get the corresponding left singular vector
             // we generate a random vector, project it to the previously computed left singular vectors,
@@ -689,7 +547,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
                         At[i*astep + k] = t;
                         asum += std::abs(t);
                     }
-                    asum = asum ? 1/asum : 0;
+                    asum = asum > eps*100 ? 1/asum : 0;
                     for( k = 0; k < m; k++ )
                         At[i*astep + k] *= asum;
                 }
@@ -703,7 +561,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
             sd = std::sqrt(sd);
         }
 
-        s = (_Tp)(1/sd);
+        s = (_Tp)(sd > minval ? 1/sd : 0.);
         for( k = 0; k < m; k++ )
             At[i*astep + k] *= s;
     }
@@ -725,11 +583,11 @@ template<typename T1, typename T2, typename T3> static void
 MatrAXPY( int m, int n, const T1* x, int dx,
          const T2* a, int inca, T3* y, int dy )
 {
-    int i, j;
+    int i;
     for( i = 0; i < m; i++, x += dx, y += dy )
     {
         T2 s = a[i*inca];
-        j=0;
+        int j = 0;
          #if CV_ENABLE_UNROLLED
         for(; j <= n - 4; j += 4 )
         {
@@ -859,7 +717,7 @@ double cv::determinant( InputArray _mat )
     double result = 0;
     int type = mat.type(), rows = mat.rows;
     size_t step = mat.step;
-    const uchar* m = mat.data;
+    const uchar* m = mat.ptr();
 
     CV_Assert( !mat.empty() );
     CV_Assert( mat.rows == mat.cols && (type == CV_32F || type == CV_64F));
@@ -882,11 +740,11 @@ double cv::determinant( InputArray _mat )
             Mat a(rows, rows, CV_32F, (uchar*)buffer);
             mat.copyTo(a);
 
-            result = LU((float*)a.data, a.step, rows, 0, 0, 0);
+            result = hal::LU32f(a.ptr<float>(), a.step, rows, 0, 0, 0);
             if( result )
             {
                 for( int i = 0; i < rows; i++ )
-                    result *= ((const float*)(a.data + a.step*i))[i];
+                    result *= a.at<float>(i,i);
                 result = 1./result;
             }
         }
@@ -906,11 +764,11 @@ double cv::determinant( InputArray _mat )
             Mat a(rows, rows, CV_64F, (uchar*)buffer);
             mat.copyTo(a);
 
-            result = LU((double*)a.data, a.step, rows, 0, 0, 0);
+            result = hal::LU64f(a.ptr<double>(), a.step, rows, 0, 0, 0);
             if( result )
             {
                 for( int i = 0; i < rows; i++ )
-                    result *= ((const double*)(a.data + a.step*i))[i];
+                    result *= a.at<double>(i,i);
                 result = 1./result;
             }
         }
@@ -949,16 +807,16 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
         AutoBuffer<uchar> _buf((m*nm + nm + nm*n)*esz + sizeof(double));
         uchar* buf = alignPtr((uchar*)_buf, (int)esz);
         Mat u(m, nm, type, buf);
-        Mat w(nm, 1, type, u.data + m*nm*esz);
-        Mat vt(nm, n, type, w.data + nm*esz);
+        Mat w(nm, 1, type, u.ptr() + m*nm*esz);
+        Mat vt(nm, n, type, w.ptr() + nm*esz);
 
         SVD::compute(src, w, u, vt);
         SVD::backSubst(w, u, vt, Mat(), _dst);
         return type == CV_32F ?
-            (((float*)w.data)[0] >= FLT_EPSILON ?
-             ((float*)w.data)[n-1]/((float*)w.data)[0] : 0) :
-            (((double*)w.data)[0] >= DBL_EPSILON ?
-             ((double*)w.data)[n-1]/((double*)w.data)[0] : 0);
+            (w.ptr<float>()[0] >= FLT_EPSILON ?
+             w.ptr<float>()[n-1]/w.ptr<float>()[0] : 0) :
+            (w.ptr<double>()[0] >= DBL_EPSILON ?
+             w.ptr<double>()[n-1]/w.ptr<double>()[0] : 0);
     }
 
     CV_Assert( m == n );
@@ -968,17 +826,17 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
         AutoBuffer<uchar> _buf((n*n*2 + n)*esz + sizeof(double));
         uchar* buf = alignPtr((uchar*)_buf, (int)esz);
         Mat u(n, n, type, buf);
-        Mat w(n, 1, type, u.data + n*n*esz);
-        Mat vt(n, n, type, w.data + n*esz);
+        Mat w(n, 1, type, u.ptr() + n*n*esz);
+        Mat vt(n, n, type, w.ptr() + n*esz);
 
         eigen(src, w, vt);
         transpose(vt, u);
         SVD::backSubst(w, u, vt, Mat(), _dst);
         return type == CV_32F ?
-        (((float*)w.data)[0] >= FLT_EPSILON ?
-         ((float*)w.data)[n-1]/((float*)w.data)[0] : 0) :
-        (((double*)w.data)[0] >= DBL_EPSILON ?
-         ((double*)w.data)[n-1]/((double*)w.data)[0] : 0);
+        (w.ptr<float>()[0] >= FLT_EPSILON ?
+         w.ptr<float>()[n-1]/w.ptr<float>()[0] : 0) :
+        (w.ptr<double>()[0] >= DBL_EPSILON ?
+         w.ptr<double>()[n-1]/w.ptr<double>()[0] : 0);
     }
 
     CV_Assert( method == DECOMP_LU || method == DECOMP_CHOLESKY );
@@ -988,8 +846,8 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
 
     if( n <= 3 )
     {
-        uchar* srcdata = src.data;
-        uchar* dstdata = dst.data;
+        const uchar* srcdata = src.ptr();
+        uchar* dstdata = dst.ptr();
         size_t srcstep = src.step;
         size_t dststep = dst.step;
 
@@ -1169,13 +1027,13 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
     setIdentity(dst);
 
     if( method == DECOMP_LU && type == CV_32F )
-        result = LU((float*)src1.data, src1.step, n, (float*)dst.data, dst.step, n) != 0;
+        result = hal::LU32f(src1.ptr<float>(), src1.step, n, dst.ptr<float>(), dst.step, n) != 0;
     else if( method == DECOMP_LU && type == CV_64F )
-        result = LU((double*)src1.data, src1.step, n, (double*)dst.data, dst.step, n) != 0;
+        result = hal::LU64f(src1.ptr<double>(), src1.step, n, dst.ptr<double>(), dst.step, n) != 0;
     else if( method == DECOMP_CHOLESKY && type == CV_32F )
-        result = Cholesky((float*)src1.data, src1.step, n, (float*)dst.data, dst.step, n);
+        result = hal::Cholesky32f(src1.ptr<float>(), src1.step, n, dst.ptr<float>(), dst.step, n);
     else
-        result = Cholesky((double*)src1.data, src1.step, n, (double*)dst.data, dst.step, n);
+        result = hal::Cholesky64f(src1.ptr<double>(), src1.step, n, dst.ptr<double>(), dst.step, n);
 
     if( !result )
         dst = Scalar(0);
@@ -1212,9 +1070,9 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
         #define bf(y) ((float*)(bdata + y*src2step))[0]
         #define bd(y) ((double*)(bdata + y*src2step))[0]
 
-        uchar* srcdata = src.data;
-        uchar* bdata = _src2.data;
-        uchar* dstdata = dst.data;
+        const uchar* srcdata = src.ptr();
+        const uchar* bdata = _src2.ptr();
+        uchar* dstdata = dst.ptr();
         size_t srcstep = src.step;
         size_t src2step = _src2.step;
         size_t dststep = dst.step;
@@ -1407,16 +1265,16 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
     if( method == DECOMP_LU )
     {
         if( type == CV_32F )
-            result = LU(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb) != 0;
+            result = hal::LU32f(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb) != 0;
         else
-            result = LU(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb) != 0;
+            result = hal::LU64f(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb) != 0;
     }
     else if( method == DECOMP_CHOLESKY )
     {
         if( type == CV_32F )
-            result = Cholesky(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb);
+            result = hal::Cholesky32f(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb);
         else
-            result = Cholesky(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb);
+            result = hal::Cholesky64f(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb);
     }
     else
     {
@@ -1557,13 +1415,17 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
     {
         if( !at )
         {
-            transpose(temp_u, _u);
-            temp_v.copyTo(_vt);
+            if( _u.needed() )
+                transpose(temp_u, _u);
+            if( _vt.needed() )
+                temp_v.copyTo(_vt);
         }
         else
         {
-            transpose(temp_v, _u);
-            temp_u.copyTo(_vt);
+            if( _u.needed() )
+                transpose(temp_v, _u);
+            if( _vt.needed() )
+                temp_u.copyTo(_vt);
         }
     }
 }
@@ -1705,23 +1567,23 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
         eigen(src, evals, evects);
         if( evects0.data != evects.data )
         {
-            uchar* p = evects0.data;
+            const uchar* p = evects0.ptr();
             evects.convertTo(evects0, evects0.type());
-            CV_Assert( p == evects0.data );
+            CV_Assert( p == evects0.ptr() );
         }
     }
     else
         eigen(src, evals);
     if( evals0.data != evals.data )
     {
-        uchar* p = evals0.data;
+        const uchar* p = evals0.ptr();
         if( evals0.size() == evals.size() )
             evals.convertTo(evals0, evals0.type());
         else if( evals0.type() == evals.type() )
             cv::transpose(evals, evals0);
         else
             cv::Mat(evals.t()).convertTo(evals0, evals0.type());
-        CV_Assert( p == evals0.data );
+        CV_Assert( p == evals0.ptr() );
     }
 }
 
@@ -1739,7 +1601,7 @@ cvSVD( CvArr* aarr, CvArr* warr, CvArr* uarr, CvArr* varr, int flags )
     cv::SVD svd;
 
     if( w.size() == cv::Size(nm, 1) )
-        svd.w = cv::Mat(nm, 1, type, w.data );
+        svd.w = cv::Mat(nm, 1, type, w.ptr() );
     else if( w.isContinuous() )
         svd.w = w;
 
@@ -1762,7 +1624,7 @@ cvSVD( CvArr* aarr, CvArr* warr, CvArr* uarr, CvArr* varr, int flags )
         ((m != n && (svd.u.size() == cv::Size(mn, mn) ||
         svd.vt.size() == cv::Size(mn, mn))) ? cv::SVD::FULL_UV : 0));
 
-    if( u.data )
+    if( !u.empty() )
     {
         if( flags & CV_SVD_U_T )
             cv::transpose( svd.u, u );
@@ -1773,7 +1635,7 @@ cvSVD( CvArr* aarr, CvArr* warr, CvArr* uarr, CvArr* varr, int flags )
         }
     }
 
-    if( v.data )
+    if( !v.empty() )
     {
         if( !(flags & CV_SVD_V_T) )
             cv::transpose( svd.vt, v );

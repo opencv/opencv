@@ -83,7 +83,7 @@
 ///////////*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_video.hpp"
 
 namespace cv
 {
@@ -142,8 +142,9 @@ public:
         fCT = defaultfCT2;
         nShadowDetection =  defaultnShadowDetection2;
         fTau = defaultfTau;
-
+#ifdef HAVE_OPENCL
         opencl_ON = true;
+#endif
     }
     //! the full constructor that takes the length of the history,
     // the number of gaussian mixtures, the background ratio parameter and the noise strength
@@ -168,8 +169,9 @@ public:
         nShadowDetection =  defaultnShadowDetection2;
         fTau = defaultfTau;
         name_ = "BackgroundSubtractor.MOG2";
-
+#ifdef HAVE_OPENCL
         opencl_ON = true;
+#endif
     }
     //! the destructor
     ~BackgroundSubtractorMOG2Impl() {}
@@ -188,11 +190,15 @@ public:
 
         int nchannels = CV_MAT_CN(frameType);
         CV_Assert( nchannels <= CV_CN_MAX );
+        CV_Assert( nmixtures <= 255);
 
+#ifdef HAVE_OPENCL
         if (ocl::useOpenCL() && opencl_ON)
         {
-            kernel_apply.create("mog2_kernel", ocl::video::bgfg_mog2_oclsrc, format("-D CN=%d -D NMIXTURES=%d", nchannels, nmixtures));
-            kernel_getBg.create("getBackgroundImage2_kernel", ocl::video::bgfg_mog2_oclsrc, format( "-D CN=%d -D NMIXTURES=%d", nchannels, nmixtures));
+            create_ocl_apply_kernel();
+
+            bool isFloat = CV_MAKETYPE(CV_32F,nchannels) == frameType;
+            kernel_getBg.create("getBackgroundImage2_kernel", ocl::video::bgfg_mog2_oclsrc, format( "-D CN=%d -D FL=%d -D NMIXTURES=%d", nchannels, isFloat, nmixtures));
 
             if (kernel_apply.empty() || kernel_getBg.empty())
                 opencl_ON = false;
@@ -213,10 +219,11 @@ public:
             u_mean.setTo(Scalar::all(0));
 
             //make the array for keeping track of the used modes per pixel - all zeros at start
-            u_bgmodelUsedModes.create(frameSize, CV_32FC1);
+            u_bgmodelUsedModes.create(frameSize, CV_8UC1);
             u_bgmodelUsedModes.setTo(cv::Scalar::all(0));
         }
         else
+#endif
         {
             // for each gaussian mixture of each pixel bg model we store ...
             // the mixture weight (w),
@@ -228,8 +235,6 @@ public:
             bgmodelUsedModes = Scalar::all(0);
         }
     }
-
-    virtual AlgorithmInfo* info() const { return 0; }
 
     virtual int getHistory() const { return history; }
     virtual void setHistory(int _nframes) { history = _nframes; }
@@ -259,7 +264,19 @@ public:
     virtual void setComplexityReductionThreshold(double ct) { fCT = (float)ct; }
 
     virtual bool getDetectShadows() const { return bShadowDetection; }
-    virtual void setDetectShadows(bool detectshadows) { bShadowDetection = detectshadows; }
+    virtual void setDetectShadows(bool detectshadows)
+    {
+        if ((bShadowDetection && detectshadows) || (!bShadowDetection && !detectshadows))
+            return;
+        bShadowDetection = detectshadows;
+#ifdef HAVE_OPENCL
+        if (!kernel_apply.empty())
+        {
+            create_ocl_apply_kernel();
+            CV_Assert( !kernel_apply.empty() );
+        }
+#endif
+    }
 
     virtual int getShadowValue() const { return nShadowDetection; }
     virtual void setShadowValue(int value) { nShadowDetection = (uchar)value; }
@@ -269,6 +286,7 @@ public:
 
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
         << "history" << history
         << "nmixtures" << nmixtures
@@ -307,6 +325,7 @@ protected:
     Mat bgmodel;
     Mat bgmodelUsedModes;//keep track of number of modes per pixel
 
+#ifdef HAVE_OPENCL
     //for OCL
 
     mutable bool opencl_ON;
@@ -318,6 +337,7 @@ protected:
 
     mutable ocl::Kernel kernel_apply;
     mutable ocl::Kernel kernel_getBg;
+#endif
 
     int nframes;
     int history;
@@ -370,8 +390,14 @@ protected:
 
     String name_;
 
+    template <typename T, int CN>
+    void getBackgroundImage_intern(OutputArray backgroundImage) const;
+
+#ifdef HAVE_OPENCL
     bool ocl_getBackgroundImage(OutputArray backgroundImage) const;
     bool ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate=-1);
+    void create_ocl_apply_kernel();
+#endif
 };
 
 struct GaussBGStatModel2Params
@@ -677,7 +703,7 @@ public:
                 nmodes = nNewModes;
 
                 //make new mode if needed and exit
-                if( !fitsPDF )
+                if( !fitsPDF && alphaT > 0.f )
                 {
                     // replace the weakest or add a new one
                     int mode = nmodes == nmixtures ? nmixtures-1 : nmodes++;
@@ -745,15 +771,10 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
 
-    UMat fgmask(_image.size(), CV_32SC1);
-
-    fgmask.setTo(cv::Scalar::all(1));
+    _fgmask.create(_image.size(), CV_8U);
+    UMat fgmask = _fgmask.getUMat();
 
     const double alpha1 = 1.0f - learningRate;
-
-    int detectShadows_flag = 0;
-    if(bShadowDetection)
-        detectShadows_flag = 1;
 
     UMat frame = _image.getUMat();
 
@@ -762,16 +783,15 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
 
     int idxArg = 0;
     idxArg = kernel_apply.set(idxArg, ocl::KernelArg::ReadOnly(frame));
-    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::ReadWriteNoSize(u_bgmodelUsedModes));
-    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::ReadWriteNoSize(u_weight));
-    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::ReadWriteNoSize(u_mean));
-    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::ReadWriteNoSize(u_variance));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_bgmodelUsedModes));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_weight));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_mean));
+    idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_variance));
     idxArg = kernel_apply.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(fgmask));
 
     idxArg = kernel_apply.set(idxArg, (float)learningRate);        //alphaT
     idxArg = kernel_apply.set(idxArg, (float)alpha1);
     idxArg = kernel_apply.set(idxArg, (float)(-learningRate*fCT));   //prune
-    idxArg = kernel_apply.set(idxArg, detectShadows_flag);
 
     idxArg = kernel_apply.set(idxArg, (float)varThreshold); //c_Tb
     idxArg = kernel_apply.set(idxArg, backgroundRatio);     //c_TB
@@ -780,37 +800,36 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
     idxArg = kernel_apply.set(idxArg, varMax);
     idxArg = kernel_apply.set(idxArg, fVarInit);
     idxArg = kernel_apply.set(idxArg, fTau);
-    kernel_apply.set(idxArg, nShadowDetection);
+    if (bShadowDetection)
+        kernel_apply.set(idxArg, nShadowDetection);
 
-    size_t globalsize[] = {frame.cols, frame.rows, 1};
-
-    if (!(kernel_apply.run(2, globalsize, NULL, true)))
-        return false;
-
-    _fgmask.create(_image.size(),CV_8U);
-    UMat temp = _fgmask.getUMat();
-    fgmask.convertTo(temp, CV_8U);
-
-    return true;
+    size_t globalsize[] = {(size_t)frame.cols, (size_t)frame.rows, 1};
+    return kernel_apply.run(2, globalsize, NULL, true);
 }
 
 bool BackgroundSubtractorMOG2Impl::ocl_getBackgroundImage(OutputArray _backgroundImage) const
 {
-    CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3);
-
     _backgroundImage.create(frameSize, frameType);
     UMat dst = _backgroundImage.getUMat();
 
     int idxArg = 0;
-    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnly(u_bgmodelUsedModes));
-    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(u_weight));
-    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(u_mean));
-    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(dst));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::PtrReadOnly(u_bgmodelUsedModes));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::PtrReadOnly(u_weight));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::PtrReadOnly(u_mean));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::WriteOnly(dst));
     kernel_getBg.set(idxArg, backgroundRatio);
 
-    size_t globalsize[2] = {u_bgmodelUsedModes.cols, u_bgmodelUsedModes.rows};
+    size_t globalsize[2] = {(size_t)u_bgmodelUsedModes.cols, (size_t)u_bgmodelUsedModes.rows};
 
     return kernel_getBg.run(2, globalsize, NULL, false);
+}
+
+void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
+{
+    int nchannels = CV_MAT_CN(frameType);
+    bool isFloat = CV_MAKETYPE(CV_32F,nchannels) == frameType;
+    String opts = format("-D CN=%d -D FL=%d -D NMIXTURES=%d%s", nchannels, isFloat, nmixtures, bShadowDetection ? " -D SHADOW_DETECT" : "");
+    kernel_apply.create("mog2_kernel", ocl::video::bgfg_mog2_oclsrc, opts);
 }
 
 #endif
@@ -822,6 +841,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
     if( needToInitialize )
         initialize(_image.size(), _image.type());
 
+#ifdef HAVE_OPENCL
     if (opencl_ON)
     {
         CV_OCL_RUN(opencl_ON, ocl_apply(_image, _fgmask, learningRate))
@@ -829,6 +849,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
         opencl_ON = false;
         initialize(_image.size(), _image.type());
     }
+#endif
 
     Mat image = _image.getMat();
     _fgmask.create( image.size(), CV_8U );
@@ -840,9 +861,9 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 
     parallel_for_(Range(0, image.rows),
                   MOG2Invoker(image, fgmask,
-                              (GMM*)bgmodel.data,
-                              (float*)(bgmodel.data + sizeof(GMM)*nmixtures*image.rows*image.cols),
-                              bgmodelUsedModes.data, nmixtures, (float)learningRate,
+                              bgmodel.ptr<GMM>(),
+                              (float*)(bgmodel.ptr() + sizeof(GMM)*nmixtures*image.rows*image.cols),
+                              bgmodelUsedModes.ptr(), nmixtures, (float)learningRate,
                               (float)varThreshold,
                               backgroundRatio, varThresholdGen,
                               fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
@@ -850,64 +871,71 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
                               image.total()/(double)(1 << 16));
 }
 
-void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImage) const
+template <typename T, int CN>
+void BackgroundSubtractorMOG2Impl::getBackgroundImage_intern(OutputArray backgroundImage) const
 {
-    if (opencl_ON)
-    {
-        CV_OCL_RUN(opencl_ON, ocl_getBackgroundImage(backgroundImage))
-
-        opencl_ON = false;
-        return;
-    }
-
-    int nchannels = CV_MAT_CN(frameType);
-    CV_Assert( nchannels == 3 );
-    Mat meanBackground(frameSize, CV_8UC3, Scalar::all(0));
-
+    Mat meanBackground(frameSize, frameType, Scalar::all(0));
     int firstGaussianIdx = 0;
-    const GMM* gmm = (GMM*)bgmodel.data;
-    const Vec3f* mean = reinterpret_cast<const Vec3f*>(gmm + frameSize.width*frameSize.height*nmixtures);
+    const GMM* gmm = bgmodel.ptr<GMM>();
+    const float* mean = reinterpret_cast<const float*>(gmm + frameSize.width*frameSize.height*nmixtures);
+    Vec<float,CN> meanVal(0.f);
     for(int row=0; row<meanBackground.rows; row++)
     {
         for(int col=0; col<meanBackground.cols; col++)
         {
             int nmodes = bgmodelUsedModes.at<uchar>(row, col);
-            Vec3f meanVal;
             float totalWeight = 0.f;
             for(int gaussianIdx = firstGaussianIdx; gaussianIdx < firstGaussianIdx + nmodes; gaussianIdx++)
             {
                 GMM gaussian = gmm[gaussianIdx];
-                meanVal += gaussian.weight * mean[gaussianIdx];
+                size_t meanPosition = gaussianIdx*CN;
+                for(int chn = 0; chn < CN; chn++)
+                {
+                    meanVal(chn) += gaussian.weight * mean[meanPosition + chn];
+                }
                 totalWeight += gaussian.weight;
 
                 if(totalWeight > backgroundRatio)
                     break;
             }
+            float invWeight = 1.f/totalWeight;
 
-            meanVal *= (1.f / totalWeight);
-            meanBackground.at<Vec3b>(row, col) = Vec3b(meanVal);
+            meanBackground.at<Vec<T,CN> >(row, col) = Vec<T,CN>(meanVal * invWeight);
+            meanVal = 0.f;
+
             firstGaussianIdx += nmixtures;
         }
     }
+    meanBackground.copyTo(backgroundImage);
+}
 
-    switch(CV_MAT_CN(frameType))
+void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImage) const
+{
+    CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_32FC1 || frameType == CV_32FC3);
+
+#ifdef HAVE_OPENCL
+    if (opencl_ON)
     {
-    case 1:
-    {
-        std::vector<Mat> channels;
-        split(meanBackground, channels);
-        channels[0].copyTo(backgroundImage);
-        break;
+        CV_OCL_RUN(opencl_ON, ocl_getBackgroundImage(backgroundImage))
+
+        opencl_ON = false;
     }
+#endif
 
-    case 3:
+    switch(frameType)
     {
-        meanBackground.copyTo(backgroundImage);
+    case CV_8UC1:
+        getBackgroundImage_intern<uchar,1>(backgroundImage);
         break;
-    }
-
-    default:
-        CV_Error(Error::StsUnsupportedFormat, "");
+    case CV_8UC3:
+        getBackgroundImage_intern<uchar,3>(backgroundImage);
+        break;
+    case CV_32FC1:
+        getBackgroundImage_intern<float,1>(backgroundImage);
+        break;
+    case CV_32FC3:
+        getBackgroundImage_intern<float,3>(backgroundImage);
+        break;
     }
 }
 

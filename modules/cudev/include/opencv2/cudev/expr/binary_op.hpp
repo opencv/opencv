@@ -58,6 +58,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 // Binary Operations
 
 #define CV_CUDEV_EXPR_BINOP_INST(op, functor) \
@@ -229,6 +232,8 @@ CV_CUDEV_EXPR_BINOP_INST(<<, bit_lshift)
 CV_CUDEV_EXPR_BINOP_INST(>>, bit_rshift)
 
 #undef CV_CUDEV_EXPR_BINOP_INST
+
+//! @}
 
 }}
 

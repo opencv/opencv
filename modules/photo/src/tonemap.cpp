@@ -47,6 +47,12 @@
 namespace cv
 {
 
+inline void log_(const Mat& src, Mat& dst)
+{
+    max(src, Scalar::all(1e-4), dst);
+    log(dst, dst);
+}
+
 class TonemapImpl : public Tonemap
 {
 public:
@@ -77,6 +83,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma;
     }
@@ -122,7 +129,7 @@ public:
         Mat gray_img;
         cvtColor(img, gray_img, COLOR_RGB2GRAY);
         Mat log_img;
-        log(gray_img, log_img);
+        log_(gray_img, log_img);
         float mean = expf(static_cast<float>(sum(log_img)[0]) / log_img.total());
         gray_img /= mean;
         log_img.release();
@@ -155,6 +162,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "bias" << bias
@@ -205,7 +213,7 @@ public:
         Mat gray_img;
         cvtColor(img, gray_img, COLOR_RGB2GRAY);
         Mat log_img;
-        log(gray_img, log_img);
+        log_(gray_img, log_img);
         Mat map_img;
         bilateralFilter(log_img, map_img, -1, sigma_color, sigma_space);
 
@@ -236,6 +244,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "contrast" << contrast
@@ -289,7 +298,7 @@ public:
         Mat gray_img;
         cvtColor(img, gray_img, COLOR_RGB2GRAY);
         Mat log_img;
-        log(gray_img, log_img);
+        log_(gray_img, log_img);
 
         float log_mean = static_cast<float>(sum(log_img)[0] / log_img.total());
         double log_min, log_max;
@@ -333,6 +342,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "intensity" << intensity
@@ -383,7 +393,7 @@ public:
         Mat gray_img;
         cvtColor(img, gray_img, COLOR_RGB2GRAY);
         Mat log_img;
-        log(gray_img, log_img);
+        log_(gray_img, log_img);
 
         std::vector<Mat> x_contrast, y_contrast;
         getContrast(log_img, x_contrast, y_contrast);
@@ -440,6 +450,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "scale" << scale
@@ -504,8 +515,11 @@ protected:
 
     void calculateSum(std::vector<Mat>& x_contrast, std::vector<Mat>& y_contrast, Mat& sum)
     {
-        sum = Mat::zeros(x_contrast[x_contrast.size() - 1].size(), CV_32F);
-        for(int i = (int)x_contrast.size() - 1; i >= 0; i--)
+        if (x_contrast.empty())
+            return;
+        const int last = (int)x_contrast.size() - 1;
+        sum = Mat::zeros(x_contrast[last].size(), CV_32F);
+        for(int i = last; i >= 0; i--)
         {
             Mat grad_x, grad_y;
             getGradient(x_contrast[i], grad_x, 1);

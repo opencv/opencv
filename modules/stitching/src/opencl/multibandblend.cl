@@ -221,8 +221,18 @@
 #if defined(DEFINE_feed)
 
 #define workType TYPE(weight_T1, src_CN)
+
+#if src_DEPTH == 3 && src_CN == 3
+#define convertSrcToWorkType convert_float3
+#else
 #define convertSrcToWorkType CONVERT_TO(workType)
+#endif
+
+#if dst_DEPTH == 3 && dst_CN == 3
+#define convertToDstType convert_short3
+#else
 #define convertToDstType CONVERT_TO(dst_T) // sat_rte provides incompatible results with CPU path
+#endif
 
 __kernel void feed(
         DECLARE_MAT_ARG(src), DECLARE_MAT_ARG(weight),
@@ -250,9 +260,15 @@ __kernel void feed(
 
 #if defined(DEFINE_normalizeUsingWeightMap)
 
+#if mat_DEPTH == 3 && mat_CN == 3
+#define workType float3
+#define convertSrcToWorkType convert_float3
+#define convertToDstType convert_short3
+#else
 #define workType TYPE(weight_T1, mat_CN)
 #define convertSrcToWorkType CONVERT_TO(workType)
 #define convertToDstType CONVERT_TO(mat_T) // sat_rte provides incompatible results with CPU path
+#endif
 
 #if weight_DEPTH >= CV_32F
 #define WEIGHT_EPS 1e-5f

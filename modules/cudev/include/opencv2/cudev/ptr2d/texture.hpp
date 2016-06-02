@@ -92,6 +92,9 @@ namespace
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 #if CUDART_VERSION >= 5050
 
 template <typename T> struct TexturePtr
@@ -247,6 +250,8 @@ template <typename T> struct PtrTraits< Texture<T> > : PtrTraitsBase<Texture<T>,
 };
 
 #endif
+
+//! @}
 
 }}
 

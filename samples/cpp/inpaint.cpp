@@ -1,3 +1,4 @@
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/photo/photo.hpp"
@@ -13,7 +14,7 @@ static void help()
             << "with surrounding image areas.\n"
             "Using OpenCV version %s\n" << CV_VERSION << "\n"
     "Usage:\n"
-        "./inpaint [image_name -- Default fruits.jpg]\n" << endl;
+        "./inpaint [image_name -- Default ../data/fruits.jpg]\n" << endl;
 
     cout << "Hot keys: \n"
         "\tESC - quit the program\n"
@@ -46,15 +47,19 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"fruits.jpg";
+    cv::CommandLineParser parser(argc, argv, "{help h||}{@image|../data/fruits.jpg|}");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string filename = parser.get<string>("@image");
     Mat img0 = imread(filename, -1);
     if(img0.empty())
     {
         cout << "Couldn't open the image " << filename << ". Usage: inpaint <image_name>\n" << endl;
         return 0;
     }
-
-    help();
 
     namedWindow( "image", 1 );
 

@@ -47,8 +47,33 @@
 #include "opencv2/opencv_modules.hpp"
 #include "clp.hpp"
 
-#ifdef HAVE_OPENCV_CUDA
-#  include "opencv2/cuda.hpp"
+#include "opencv2/core/private.cuda.hpp"
+
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+        namespace cv { namespace cuda {
+            static void compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_no_cuda(); }
+        }}
+    #else
+        namespace cv { namespace cuda { namespace device { namespace globmotion {
+            int compactPoints(int N, float *points0, float *points1, const uchar *mask);
+        }}}}
+        namespace cv { namespace cuda {
+            static void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask)
+            {
+                CV_Assert(points0.rows == 1 && points1.rows == 1 && mask.rows == 1);
+                CV_Assert(points0.type() == CV_32FC2 && points1.type() == CV_32FC2 && mask.type() == CV_8U);
+                CV_Assert(points0.cols == mask.cols && points1.cols == mask.cols);
+
+                int npoints = points0.cols;
+                int remaining = cv::cuda::device::globmotion::compactPoints(
+                        npoints, (float*)points0.data, (float*)points1.data, mask.data);
+
+                points0 = points0.colRange(0, remaining);
+                points1 = points1.colRange(0, remaining);
+            }
+        }}
+    #endif
 #endif
 
 namespace cv
@@ -430,7 +455,7 @@ Mat estimateGlobalMotionRansac(
     {
         subset0.resize(ninliersMax);
         subset1.resize(ninliersMax);
-        for (int i = 0, j = 0; i < npoints; ++i)
+        for (int i = 0, j = 0; i < npoints && j < ninliersMax ; ++i)
         {
             p0 = points0_[i];
             p1 = points1_[i];
@@ -518,6 +543,9 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
 #else
 
     CV_Assert(motionModel() <= MM_AFFINE && motionModel() != MM_RIGID);
+
+    if(npoints <= 0)
+        return Mat::eye(3, 3, CV_32F);
 
     // prepare LP problem
 
@@ -671,7 +699,7 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
-    setDetector(makePtr<GoodFeaturesToTrackDetector>());
+    setDetector(GFTTDetector::create());
     setOpticalFlowEstimator(makePtr<SparsePyrLkOptFlowEstimator>());
     setOutlierRejector(makePtr<NullOutlierRejector>());
 }
@@ -736,8 +764,7 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
     return motionEstimator_->estimate(pointsPrevGood_, pointsGood_, ok);
 }
 
-
-#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
 
 KeypointBasedMotionEstimatorGpu::KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
@@ -812,7 +839,7 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const cuda::GpuMat &frame0, const 
     return motionEstimator_->estimate(hostPointsPrev_, hostPoints_, ok);
 }
 
-#endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
 
 
 Mat getMotion(int from, int to, const std::vector<Mat> &motions)

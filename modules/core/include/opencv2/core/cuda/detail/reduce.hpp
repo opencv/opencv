@@ -47,6 +47,8 @@
 #include "../warp.hpp"
 #include "../warp_shuffle.hpp"
 
+//! @cond IGNORED
+
 namespace cv { namespace cuda { namespace device
 {
     namespace reduce_detail
@@ -273,7 +275,7 @@ namespace cv { namespace cuda { namespace device
             template <typename Pointer, typename Reference, class Op>
             static __device__ void reduce(Pointer smem, Reference val, unsigned int tid, Op op)
             {
-            #if __CUDA_ARCH__ >= 300
+            #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
                 (void) smem;
                 (void) tid;
 
@@ -296,7 +298,7 @@ namespace cv { namespace cuda { namespace device
             {
                 const unsigned int laneId = Warp::laneId();
 
-            #if __CUDA_ARCH__ >= 300
+            #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
                 Unroll<16, Pointer, Reference, Op>::loopShfl(val, op, warpSize);
 
                 if (laneId == 0)
@@ -319,7 +321,7 @@ namespace cv { namespace cuda { namespace device
 
                 if (tid < 32)
                 {
-                #if __CUDA_ARCH__ >= 300
+                #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
                     Unroll<M / 2, Pointer, Reference, Op>::loopShfl(val, op, M);
                 #else
                     Unroll<M / 2, Pointer, Reference, Op>::loop(smem, val, tid, op);
@@ -357,5 +359,7 @@ namespace cv { namespace cuda { namespace device
         };
     }
 }}}
+
+//! @endcond
 
 #endif // __OPENCV_CUDA_REDUCE_DETAIL_HPP__

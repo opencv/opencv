@@ -51,6 +51,9 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab
+//! @{
+
 template <typename T> inline T& at(int idx, std::vector<T> &items)
 {
     return items[cv::borderInterpolate(idx, static_cast<int>(items.size()), cv::BORDER_WRAP)];
@@ -60,6 +63,8 @@ template <typename T> inline const T& at(int idx, const std::vector<T> &items)
 {
     return items[cv::borderInterpolate(idx, static_cast<int>(items.size()), cv::BORDER_WRAP)];
 }
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

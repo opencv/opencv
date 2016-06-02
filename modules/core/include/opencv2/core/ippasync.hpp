@@ -1,3 +1,47 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                          License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2015, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
 #ifndef __OPENCV_CORE_IPPASYNC_HPP__
 #define __OPENCV_CORE_IPPASYNC_HPP__
 
@@ -12,7 +56,16 @@ namespace cv
 
 namespace hpp
 {
-    //convert OpenCV data type to hppDataType
+
+/** @addtogroup core_ipp
+This section describes conversion between OpenCV and [Intel&reg; IPP Asynchronous
+C/C++](http://software.intel.com/en-us/intel-ipp-preview) library. [Getting Started
+Guide](http://registrationcenter.intel.com/irc_nas/3727/ipp_async_get_started.htm) help you to
+install the library, configure header and library build paths.
+ */
+//! @{
+
+    //! convert OpenCV data type to hppDataType
     inline int toHppType(const int cvType)
     {
         int depth = CV_MAT_DEPTH(cvType);
@@ -26,7 +79,7 @@ namespace hpp
         return hppType;
     }
 
-    //convert hppDataType to OpenCV data type
+    //! convert hppDataType to OpenCV data type
     inline int toCvType(const int hppType)
     {
         int cvType = hppType == HPP_DATA_TYPE_8U ? CV_8U :
@@ -39,6 +92,15 @@ namespace hpp
         return cvType;
     }
 
+    /** @brief Convert hppiMatrix to Mat.
+
+    This function allocates and initializes new matrix (if needed) that has the same size and type as
+    input matrix. Supports CV_8U, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F.
+    @param src input hppiMatrix.
+    @param dst output matrix.
+    @param accel accelerator instance (see hpp::getHpp for the list of acceleration framework types).
+    @param cn number of channels.
+     */
     inline void copyHppToMat(hppiMatrix* src, Mat& dst, hppAccel accel, int cn)
     {
         hppDataType type;
@@ -67,7 +129,15 @@ namespace hpp
         CV_Assert( sts == HPP_STATUS_NO_ERROR);
     }
 
-    //create cv::Mat from hppiMatrix
+    /** @brief Create Mat from hppiMatrix.
+
+    This function allocates and initializes the Mat that has the same size and type as input matrix.
+    Supports CV_8U, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F.
+    @param src input hppiMatrix.
+    @param accel accelerator instance (see hpp::getHpp for the list of acceleration framework types).
+    @param cn number of channels.
+    @sa howToUseIPPAconversion, hpp::copyHppToMat, hpp::getHpp.
+     */
     inline Mat getMat(hppiMatrix* src, hppAccel accel, int cn)
     {
         Mat dst;
@@ -75,7 +145,26 @@ namespace hpp
         return dst;
     }
 
-    //create hppiMatrix from cv::Mat
+    /** @brief Create hppiMatrix from Mat.
+
+    This function allocates and initializes the hppiMatrix that has the same size and type as input
+    matrix, returns the hppiMatrix*.
+
+    If you want to use zero-copy for GPU you should to have 4KB aligned matrix data. See details
+    [hppiCreateSharedMatrix](http://software.intel.com/ru-ru/node/501697).
+
+    Supports CV_8U, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F.
+
+    @note The hppiMatrix pointer to the image buffer in system memory refers to the src.data. Control
+    the lifetime of the matrix and don't change its data, if there is no special need.
+    @param src input matrix.
+    @param accel accelerator instance. Supports type:
+    -   **HPP_ACCEL_TYPE_CPU** - accelerated by optimized CPU instructions.
+    -   **HPP_ACCEL_TYPE_GPU** - accelerated by GPU programmable units or fixed-function
+        accelerators.
+    -   **HPP_ACCEL_TYPE_ANY** - any acceleration or no acceleration available.
+    @sa howToUseIPPAconversion, hpp::getMat
+     */
     inline hppiMatrix* getHpp(const Mat& src, hppAccel accel)
     {
         int htype = toHppType(src.type());
@@ -98,6 +187,7 @@ namespace hpp
         return hppiCreateMatrix(htype, src.cols*cn, src.rows, src.data, (hpp32s)(src.step));;
     }
 
+//! @}
 }}
 
 #endif

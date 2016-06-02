@@ -50,7 +50,10 @@
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
+using namespace cv;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 namespace
@@ -133,7 +136,7 @@ void cv::cuda::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bo
         {    copyMakeBorderImpl<float , 1>  , 0 /*copyMakeBorderImpl<float , 2>*/,     copyMakeBorderImpl<float , 3>  ,     copyMakeBorderImpl<float  ,4>  }
     };
 
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, stream);
 
     const int depth = src.depth();
     const int cn = src.channels();
@@ -141,8 +144,7 @@ void cv::cuda::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bo
     CV_Assert( depth <= CV_32F && cn <= 4 );
     CV_Assert( borderType == BORDER_REFLECT_101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP );
 
-    _dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, src.rows + top + bottom, src.cols + left + right, src.type(), stream);
 
     const func_t func = funcs[depth][cn - 1];
 
@@ -150,6 +152,8 @@ void cv::cuda::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bo
         CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
 
     func(src, dst, top, left, borderType, value, stream);
+
+    syncOutput(dst, _dst, stream);
 }
 
 #endif

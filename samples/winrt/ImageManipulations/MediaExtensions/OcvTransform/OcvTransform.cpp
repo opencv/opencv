@@ -8,8 +8,11 @@
 #include "OcvTransform.h"
 #include "bufferlock.h"
 
-#include "opencv2\core\core.hpp"
-#include "opencv2\imgproc\imgproc.hpp"
+#include <opencv2\core\core.hpp>
+#include <opencv2\imgproc\imgproc.hpp>
+#include <opencv2\features2d\features2d.hpp>
+
+
 
 using namespace Microsoft::WRL;
 
@@ -117,13 +120,24 @@ HRESULT OcvImageManipulations::SetProperties(ABI::Windows::Foundation::Collectio
 
     if (found)
     {
-        IInspectable* value;
-        spSetting->Lookup(key, &value);
+        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValue> spPropVal;
+        Microsoft::WRL::ComPtr<IInspectable> spInsp;
 
-        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IReference<int>> ref;
-        hr = value->QueryInterface(IID_PPV_ARGS(&ref));
-        int effect = InvalidEffect;
-        hr = ref->get_Value(&effect);
+        spSetting->Lookup(key, spInsp.ReleaseAndGetAddressOf());
+
+        hr = spInsp.As(&spPropVal);
+        if (hr != S_OK)
+        {
+            return hr;
+        }
+
+        INT32 effect;
+        hr = spPropVal->GetInt32(&effect);
+        if (hr != S_OK)
+        {
+            return hr;
+        }
+
         if ((effect >= 0) && (effect < InvalidEffect))
         {
             m_TransformType = (ProcessingType)effect;

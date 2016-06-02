@@ -41,11 +41,13 @@
 //M*/
 
 #include "precomp.hpp"
+#include "cascadedetect.hpp"
 #include "opencv2/core/core_c.h"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_objdetect.hpp"
 
 #include <cstdio>
 #include <iterator>
+#include <limits>
 
 /****************************************************************************************\
       The code below is implementation of HOG (Histogram-of-Oriented Gradients)
@@ -123,7 +125,7 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
         for (int j = 0; j < blocks_per_img.width; ++j)
         {
             const float *src = &svmDetector[0] + (j * blocks_per_img.height + i) * block_hist_size;
-            float *dst = (float*)detector_reordered.data + (i * blocks_per_img.width + j) * block_hist_size;
+            float *dst = detector_reordered.ptr<float>() + (i * blocks_per_img.width + j) * block_hist_size;
             for (size_t k = 0; k < block_hist_size; ++k)
                 dst[k] = src[k];
         }
@@ -153,6 +155,10 @@ bool HOGDescriptor::read(FileNode& obj)
     obj["L2HysThreshold"] >> L2HysThreshold;
     obj["gammaCorrection"] >> gammaCorrection;
     obj["nlevels"] >> nlevels;
+    if (obj["signedGradient"].empty())
+        signedGradient = false;
+    else
+        obj["signedGradient"] >> signedGradient;
 
     FileNode vecNode = obj["SVMDetector"];
     if( vecNode.isSeq() )
@@ -179,7 +185,8 @@ void HOGDescriptor::write(FileStorage& fs, const String& objName) const
        << "histogramNormType" << histogramNormType
        << "L2HysThreshold" << L2HysThreshold
        << "gammaCorrection" << gammaCorrection
-       << "nlevels" << nlevels;
+       << "nlevels" << nlevels
+       << "signedGradient" << signedGradient;
     if( !svmDetector.empty() )
         fs << "SVMDetector" << svmDetector;
     fs << "}";
@@ -212,6 +219,7 @@ void HOGDescriptor::copyTo(HOGDescriptor& c) const
     c.gammaCorrection = gammaCorrection;
     c.svmDetector = svmDetector;
     c.nlevels = nlevels;
+    c.signedGradient = signedGradient;
 }
 
 void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
@@ -297,15 +305,17 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
         xmap += 1;
     }
 
-    float angleScale = (float)(nbins/CV_PI);
+    float angleScale = signedGradient ? (float)(nbins/(2.0*CV_PI)) : (float)(nbins/CV_PI);
     for( y = 0; y < gradsize.height; y++ )
     {
-        const uchar* imgPtr  = img.data + img.step*ymap[y];
+        const uchar* imgPtr  = img.ptr(ymap[y]);
+        //In case subimage is used ptr() generates an assert for next and prev rows
+        //(see http://code.opencv.org/issues/4149)
         const uchar* prevPtr = img.data + img.step*ymap[y-1];
         const uchar* nextPtr = img.data + img.step*ymap[y+1];
 
-        float* gradPtr = (float*)grad.ptr(y);
-        uchar* qanglePtr = (uchar*)qangle.ptr(y);
+        float* gradPtr = grad.ptr<float>(y);
+        uchar* qanglePtr = qangle.ptr(y);
 
         if( cn == 1 )
         {
@@ -781,8 +791,8 @@ const float* HOGCache::getBlock(Point pt, float* buf)
     }
 
     int k, C1 = count1, C2 = count2, C4 = count4;
-    const float* gradPtr = (const float*)(grad.data + grad.step*pt.y) + pt.x*2;
-    const uchar* qanglePtr = qangle.data + qangle.step*pt.y + pt.x*2;
+    const float* gradPtr = grad.ptr<float>(pt.y) + pt.x*2;
+    const uchar* qanglePtr = qangle.ptr(pt.y) + pt.x*2;
 
 //    CV_Assert( blockHist != 0 );
     memset(blockHist, 0, sizeof(float) * blockHistogramSize);
@@ -1082,7 +1092,7 @@ static bool ocl_compute_gradients_8UC1(int height, int width, InputArray _img, f
     UMat img = _img.getUMat();
 
     size_t localThreads[3] = { NTHREADS, 1, 1 };
-    size_t globalThreads[3] = { width, height, 1 };
+    size_t globalThreads[3] = { (size_t)width, (size_t)height, 1 };
     char correctGamma = (correct_gamma) ? 1 : 0;
     int grad_quadstep = (int)grad.step >> 3;
     int qangle_elem_size = CV_ELEM_SIZE1(qangle.type());
@@ -1104,9 +1114,9 @@ static bool ocl_compute_gradients_8UC1(int height, int width, InputArray _img, f
     return k.run(2, globalThreads, localThreads, false);
 }
 
-static bool ocl_computeGradient(InputArray img, UMat grad, UMat qangle, int nbins, Size effect_size, bool gamma_correction)
+static bool ocl_computeGradient(InputArray img, UMat grad, UMat qangle, int nbins, Size effect_size, bool gamma_correction, bool signedGradient)
 {
-    float angleScale = (float)(nbins / CV_PI);
+    float angleScale = signedGradient ? (float)(nbins/(2.0*CV_PI)) : (float)(nbins/CV_PI);
 
     return ocl_compute_gradients_8UC1(effect_size.height, effect_size.width, img,
          angleScale, grad, qangle, gamma_correction, nbins);
@@ -1142,7 +1152,7 @@ static bool ocl_compute_hists(int nbins, int block_stride_x, int block_stride_y,
     int qangle_step = (int)qangle.step / qangle_elem_size;
 
     int blocks_in_group = 4;
-    size_t localThreads[3] = { blocks_in_group * 24, 2, 1 };
+    size_t localThreads[3] = { (size_t)blocks_in_group * 24, 2, 1 };
     size_t globalThreads[3] = {((img_block_width * img_block_height + blocks_in_group - 1)/blocks_in_group) * localThreads[0], 2, 1 };
 
     int hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12) * sizeof(float);
@@ -1214,7 +1224,7 @@ static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_
     }
     else
     {
-        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
         if(k.empty())
             return false;
         if(is_cpu)
@@ -1261,7 +1271,7 @@ static bool ocl_extract_descrs_by_rows(int win_height, int win_width, int block_
 
     int descriptors_quadstep = (int)descriptors.step >> 2;
 
-    size_t globalThreads[3] = { img_win_width * NTHREADS, img_win_height, 1 };
+    size_t globalThreads[3] = { (size_t)img_win_width * NTHREADS, (size_t)img_win_height, 1 };
     size_t localThreads[3] = { NTHREADS, 1, 1 };
 
     int idx = 0;
@@ -1295,7 +1305,7 @@ static bool ocl_extract_descrs_by_cols(int win_height, int win_width, int block_
 
     int descriptors_quadstep = (int)descriptors.step >> 2;
 
-    size_t globalThreads[3] = { img_win_width * NTHREADS, img_win_height, 1 };
+    size_t globalThreads[3] = { (size_t)img_win_width * NTHREADS, (size_t)img_win_height, 1 };
     size_t localThreads[3] = { NTHREADS, 1, 1 };
 
     int idx = 0;
@@ -1314,7 +1324,7 @@ static bool ocl_extract_descrs_by_cols(int win_height, int win_width, int block_
 }
 
 static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _descriptors, int descr_format, Size blockSize,
-                        Size cellSize, int nbins, Size blockStride, Size winSize, float sigma, bool gammaCorrection, double L2HysThreshold)
+                        Size cellSize, int nbins, Size blockStride, Size winSize, float sigma, bool gammaCorrection, double L2HysThreshold, bool signedGradient)
 {
     Size imgSize = _img.size();
     Size effect_size = imgSize;
@@ -1340,7 +1350,7 @@ static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _d
         for(int j=-8; j<8; j++)
             gaussian_lut.at<float>(idx++) = (8.f - fabs(j + 0.5f)) * (8.f - fabs(i + 0.5f)) / 64.f;
 
-    if(!ocl_computeGradient(_img, grad, qangle, nbins, effect_size, gammaCorrection))
+    if(!ocl_computeGradient(_img, grad, qangle, nbins, effect_size, gammaCorrection, signedGradient))
         return false;
 
     UMat gauss_w_lut;
@@ -1399,7 +1409,7 @@ void HOGDescriptor::compute(InputArray _img, std::vector<float>& descriptors,
 
     CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat(),
         ocl_compute(_img, winStride, descriptors, DESCR_FORMAT_COL_BY_COL, blockSize,
-        cellSize, nbins, blockStride, winSize, (float)getWinSigma(), gammaCorrection, L2HysThreshold))
+        cellSize, nbins, blockStride, winSize, (float)getWinSigma(), gammaCorrection, L2HysThreshold, signedGradient))
 
     Mat img = _img.getMat();
     HOGCache cache(this, img, padding, padding, nwindows == 0, cacheStride);
@@ -1451,6 +1461,7 @@ void HOGDescriptor::detect(const Mat& img,
     Size winStride, Size padding, const std::vector<Point>& locations) const
 {
     hits.clear();
+    weights.clear();
     if( svmDetector.empty() )
         return;
 
@@ -1581,7 +1592,7 @@ public:
         {
             double scale = levelScale[i];
             Size sz(cvRound(img.cols/scale), cvRound(img.rows/scale));
-            Mat smallerImg(sz, img.type(), smallerImgBuf.data);
+            Mat smallerImg(sz, img.type(), smallerImgBuf.ptr());
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
             else
@@ -1640,7 +1651,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
     {
     case 180:
         nthreads = 180;
-        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
         if(k.empty())
             return false;
         if(is_cpu)
@@ -1656,7 +1667,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
 
     case 252:
         nthreads = 256;
-        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
         if(k.empty())
             return false;
         if(is_cpu)
@@ -1672,7 +1683,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
 
     default:
         nthreads = 256;
-        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "-D WAVE_SIZE=32");
         if(k.empty())
             return false;
         if(is_cpu)
@@ -1693,8 +1704,8 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) /
         block_stride_x;
 
-    size_t globalThreads[3] = { img_win_width * nthreads, img_win_height, 1 };
-    size_t localThreads[3] = { nthreads, 1, 1 };
+    size_t globalThreads[3] = { (size_t)img_win_width * nthreads, (size_t)img_win_height, 1 };
+    size_t localThreads[3] = { (size_t)nthreads, 1, 1 };
 
     idx = k.set(idx, block_hist_size);
     idx = k.set(idx, img_win_width);
@@ -1712,7 +1723,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
 
 static bool ocl_detect(InputArray img, std::vector<Point> &hits, double hit_threshold, Size win_stride,
                        const UMat& oclSvmDetector, Size blockSize, Size cellSize, int nbins, Size blockStride, Size winSize,
-                       bool gammaCorrection, double L2HysThreshold, float sigma, float free_coef)
+                       bool gammaCorrection, double L2HysThreshold, float sigma, float free_coef, bool signedGradient)
 {
     hits.clear();
     if (oclSvmDetector.empty())
@@ -1741,7 +1752,7 @@ static bool ocl_detect(InputArray img, std::vector<Point> &hits, double hit_thre
         for(int j=-8; j<8; j++)
             gaussian_lut.at<float>(idx++) = (8.f - fabs(j + 0.5f)) * (8.f - fabs(i + 0.5f)) / 64.f;
 
-    if(!ocl_computeGradient(img, grad, qangle, nbins, effect_size, gammaCorrection))
+    if(!ocl_computeGradient(img, grad, qangle, nbins, effect_size, gammaCorrection, signedGradient))
         return false;
 
     UMat gauss_w_lut;
@@ -1782,7 +1793,7 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
                                               double hit_threshold, Size win_stride, double group_threshold,
                                               const UMat& oclSvmDetector, Size blockSize, Size cellSize,
                                               int nbins, Size blockStride, Size winSize, bool gammaCorrection,
-                                              double L2HysThreshold, float sigma, float free_coef)
+                                              double L2HysThreshold, float sigma, float free_coef, bool signedGradient)
 {
     std::vector<Rect> all_candidates;
     std::vector<Point> locations;
@@ -1797,14 +1808,14 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
         if (effect_size == imgSize)
         {
             if(!ocl_detect(_img, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
-                blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef))
+                blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef, signedGradient))
                 return false;
         }
         else
         {
             resize(_img, image_scale, effect_size);
             if(!ocl_detect(image_scale, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
-                blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef))
+                blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef, signedGradient))
                 return false;
         }
         Size scaled_win_size(cvRound(winSize.width * scale),
@@ -1813,7 +1824,9 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
             all_candidates.push_back(Rect(Point2d(locations[j]) * scale, scaled_win_size));
     }
     found_locations.assign(all_candidates.begin(), all_candidates.end());
-    cv::groupRectangles(found_locations, (int)group_threshold, 0.2);
+    groupRectangles(found_locations, (int)group_threshold, 0.2);
+    clipObjects(imgSize, found_locations, 0, 0);
+
     return true;
 }
 #endif //HAVE_OPENCL
@@ -1846,7 +1859,7 @@ void HOGDescriptor::detectMultiScale(
     CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && scale0 > 1 && winStride.width % blockStride.width == 0 &&
         winStride.height % blockStride.height == 0 && padding == Size(0,0) && _img.isUMat(),
         ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, finalThreshold, oclSvmDetector,
-        blockSize, cellSize, nbins, blockStride, winSize, gammaCorrection, L2HysThreshold, (float)getWinSigma(), free_coef));
+        blockSize, cellSize, nbins, blockStride, winSize, gammaCorrection, L2HysThreshold, (float)getWinSigma(), free_coef, signedGradient));
 
     std::vector<Rect> allCandidates;
     std::vector<double> tempScales;
@@ -1869,6 +1882,7 @@ void HOGDescriptor::detectMultiScale(
         groupRectangles_meanshift(foundLocations, foundWeights, foundScales, finalThreshold, winSize);
     else
         groupRectangles(foundLocations, foundWeights, (int)finalThreshold, 0.2);
+    clipObjects(imgSize, foundLocations, 0, &foundWeights);
 }
 
 void HOGDescriptor::detectMultiScale(InputArray img, std::vector<Rect>& foundLocations,
@@ -3282,7 +3296,7 @@ public:
             double scale = (*locations)[i].scale;
 
             Size sz(cvRound(img.cols / scale), cvRound(img.rows / scale));
-            Mat smallerImg(sz, img.type(), smallerImgBuf.data);
+            Mat smallerImg(sz, img.type(), smallerImgBuf.ptr());
 
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
@@ -3524,7 +3538,7 @@ void HOGDescriptor::groupRectangles(std::vector<cv::Rect>& rectList, std::vector
 
     std::vector<cv::Rect_<double> > rrects(nclasses);
     std::vector<int> numInClass(nclasses, 0);
-    std::vector<double> foundWeights(nclasses, DBL_MIN);
+    std::vector<double> foundWeights(nclasses, -std::numeric_limits<double>::max());
     int i, j, nlabels = (int)labels.size();
 
     for( i = 0; i < nlabels; i++ )

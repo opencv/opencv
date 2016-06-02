@@ -5,7 +5,7 @@
 // Copyright (C) 2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL

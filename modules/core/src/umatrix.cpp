@@ -10,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -41,11 +40,18 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
 
 ///////////////////////////////// UMat implementation ///////////////////////////////
 
 namespace cv {
+
+// forward decls, implementation is below in this file
+void setSize(UMat& m, int _dims, const int* _sz, const size_t* _steps,
+             bool autoSteps = false);
+
+void updateContinuityFlag(UMat& m);
+void finalizeHdr(UMat& m);
 
 // it should be a prime number for the best hash function
 enum { UMAT_NLOCKS = 31 };
@@ -54,25 +60,71 @@ static Mutex umatLocks[UMAT_NLOCKS];
 UMatData::UMatData(const MatAllocator* allocator)
 {
     prevAllocator = currAllocator = allocator;
-    urefcount = refcount = 0;
+    urefcount = refcount = mapcount = 0;
     data = origdata = 0;
-    size = 0; capacity = 0;
+    size = 0;
     flags = 0;
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
+    originalUMatData = NULL;
 }
 
 UMatData::~UMatData()
 {
     prevAllocator = currAllocator = 0;
     urefcount = refcount = 0;
+    CV_Assert(mapcount == 0);
     data = origdata = 0;
-    size = 0; capacity = 0;
+    size = 0;
     flags = 0;
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
+    if (originalUMatData)
+    {
+        UMatData* u = originalUMatData;
+        CV_XADD(&(u->urefcount), -1);
+        CV_XADD(&(u->refcount), -1);
+        bool showWarn = false;
+        if (u->refcount == 0)
+        {
+            if (u->urefcount > 0)
+                showWarn = true;
+            // simulate Mat::deallocate
+            if (u->mapcount != 0)
+            {
+                (u->currAllocator ? u->currAllocator : /* TODO allocator ? allocator :*/ Mat::getDefaultAllocator())->unmap(u);
+            }
+            else
+            {
+                // we don't do "map", so we can't do "unmap"
+            }
+        }
+        if (u->refcount == 0 && u->urefcount == 0) // oops, we need to free resources
+        {
+            showWarn = true;
+            // simulate UMat::deallocate
+            u->currAllocator->deallocate(u);
+        }
+#ifndef NDEBUG
+        if (showWarn)
+        {
+            static int warn_message_showed = 0;
+            if (warn_message_showed++ < 100)
+            {
+                fflush(stdout);
+                fprintf(stderr, "\n! OPENCV warning: getUMat()/getMat() call chain possible problem."
+                                "\n!                 Base object is dead, while nested/derived object is still alive or processed."
+                                "\n!                 Please check lifetime of UMat/Mat objects!\n");
+                fflush(stderr);
+            }
+        }
+#else
+        (void)showWarn;
+#endif
+        originalUMatData = NULL;
+    }
 }
 
 void UMatData::lock()
@@ -92,7 +144,7 @@ MatAllocator* UMat::getStdAllocator()
     if( ocl::haveOpenCL() && ocl::useOpenCL() )
         return ocl::getOpenCLAllocator();
 #endif
-    return Mat::getStdAllocator();
+    return Mat::getDefaultAllocator();
 }
 
 void swap( UMat& a, UMat& b )
@@ -124,8 +176,8 @@ void swap( UMat& a, UMat& b )
 }
 
 
-static inline void setSize( UMat& m, int _dims, const int* _sz,
-                            const size_t* _steps, bool autoSteps=false )
+void setSize( UMat& m, int _dims, const int* _sz,
+                            const size_t* _steps, bool autoSteps )
 {
     CV_Assert( 0 <= _dims && _dims <= CV_MAX_DIM );
     if( m.dims != _dims )
@@ -177,7 +229,8 @@ static inline void setSize( UMat& m, int _dims, const int* _sz,
     }
 }
 
-static void updateContinuityFlag(UMat& m)
+
+void updateContinuityFlag(UMat& m)
 {
     int i, j;
     for( i = 0; i < m.dims; i++ )
@@ -200,7 +253,7 @@ static void updateContinuityFlag(UMat& m)
 }
 
 
-static void finalizeHdr(UMat& m)
+void finalizeHdr(UMat& m)
 {
     updateContinuityFlag(m);
     int d = m.dims;
@@ -208,26 +261,67 @@ static void finalizeHdr(UMat& m)
         m.rows = m.cols = -1;
 }
 
+
 UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
 {
     UMat hdr;
     if(!data)
         return hdr;
-    UMatData* temp_u = u;
-    if(!temp_u)
+    Size wholeSize;
+    Point ofs;
+    locateROI(wholeSize, ofs);
+    Size sz(cols, rows);
+    if (ofs.x != 0 || ofs.y != 0)
     {
-        MatAllocator *a = allocator, *a0 = getStdAllocator();
+        Mat src = *this;
+        int dtop = ofs.y;
+        int dbottom = wholeSize.height - src.rows - ofs.y;
+        int dleft = ofs.x;
+        int dright = wholeSize.width - src.cols - ofs.x;
+        src.adjustROI(dtop, dbottom, dleft, dright);
+        return src.getUMat(accessFlags, usageFlags)(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
+    }
+    CV_Assert(data == datastart);
+
+    accessFlags |= ACCESS_RW;
+    UMatData* new_u = NULL;
+    {
+        MatAllocator *a = allocator, *a0 = getDefaultAllocator();
         if(!a)
             a = a0;
-        temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
-        temp_u->refcount = 1;
+        new_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
     }
-    UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags);
+    bool allocated = false;
+    try
+    {
+        allocated = UMat::getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
+    }
+    catch (const cv::Exception& e)
+    {
+        fprintf(stderr, "Exception: %s\n", e.what());
+    }
+    if (!allocated)
+    {
+        allocated = getDefaultAllocator()->allocate(new_u, accessFlags, usageFlags);
+        CV_Assert(allocated);
+    }
+    if (u != NULL)
+    {
+#ifdef HAVE_OPENCL
+        if (ocl::useOpenCL() && new_u->currAllocator == ocl::getOpenCLAllocator())
+        {
+            CV_Assert(new_u->tempUMat());
+        }
+#endif
+        new_u->originalUMatData = u;
+        CV_XADD(&(u->refcount), 1);
+        CV_XADD(&(u->urefcount), 1);
+    }
     hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);
     finalizeHdr(hdr);
-    hdr.u = temp_u;
-    hdr.offset = data - datastart;
+    hdr.u = new_u;
+    hdr.offset = 0; //data - datastart;
     hdr.addref();
     return hdr;
 }
@@ -251,6 +345,14 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
             return;
     }
 
+    int _sizes_backup[CV_MAX_DIM]; // #5991
+    if (_sizes == (this->size.p))
+    {
+        for(i = 0; i < d; i++ )
+            _sizes_backup[i] = _sizes[i];
+        _sizes = _sizes_backup;
+    }
+
     release();
     if( d == 0 )
         return;
@@ -261,8 +363,11 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
     if( total() > 0 )
     {
         MatAllocator *a = allocator, *a0 = getStdAllocator();
-        if(!a)
+        if (!a)
+        {
             a = a0;
+            a0 = Mat::getDefaultAllocator();
+        }
         try
         {
             u = a->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
@@ -566,26 +671,74 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
             return reshape(_cn, _newsz[0]);
     }
 
-    CV_Error(CV_StsNotImplemented, "");
+    if (isContinuous())
+    {
+        CV_Assert(_cn >= 0 && _newndims > 0 && _newndims <= CV_MAX_DIM && _newsz);
+
+        if (_cn == 0)
+            _cn = this->channels();
+        else
+            CV_Assert(_cn <= CV_CN_MAX);
+
+        size_t total_elem1_ref = this->total() * this->channels();
+        size_t total_elem1 = _cn;
+
+        AutoBuffer<int, 4> newsz_buf( (size_t)_newndims );
+
+        for (int i = 0; i < _newndims; i++)
+        {
+            CV_Assert(_newsz[i] >= 0);
+
+            if (_newsz[i] > 0)
+                newsz_buf[i] = _newsz[i];
+            else if (i < dims)
+                newsz_buf[i] = this->size[i];
+            else
+                CV_Error(CV_StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
+
+            total_elem1 *= (size_t)newsz_buf[i];
+        }
+
+        if (total_elem1 != total_elem1_ref)
+            CV_Error(CV_StsUnmatchedSizes, "Requested and source matrices have different count of elements");
+
+        UMat hdr = *this;
+        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
+        setSize(hdr, _newndims, (int*)newsz_buf, NULL, true);
+
+        return hdr;
+    }
+
+    CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
     // TBD
     return UMat();
 }
-
 
 Mat UMat::getMat(int accessFlags) const
 {
     if(!u)
         return Mat();
-    u->currAllocator->map(u, accessFlags | ACCESS_READ);
-    CV_Assert(u->data != 0);
-    Mat hdr(dims, size.p, type(), u->data + offset, step.p);
-    hdr.flags = flags;
-    hdr.u = u;
-    hdr.datastart = u->data;
-    hdr.data = hdr.datastart + offset;
-    hdr.datalimit = hdr.dataend = u->data + u->size;
-    CV_XADD(&hdr.u->refcount, 1);
-    return hdr;
+    // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
+    accessFlags |= ACCESS_RW;
+    UMatDataAutoLock autolock(u);
+    if(CV_XADD(&u->refcount, 1) == 0)
+        u->currAllocator->map(u, accessFlags);
+    if (u->data != 0)
+    {
+        Mat hdr(dims, size.p, type(), u->data + offset, step.p);
+        hdr.flags = flags;
+        hdr.u = u;
+        hdr.datastart = u->data;
+        hdr.data = u->data + offset;
+        hdr.datalimit = hdr.dataend = u->data + u->size;
+        return hdr;
+    }
+    else
+    {
+        CV_XADD(&u->refcount, -1);
+        CV_Assert(u->data != 0 && "Error mapping of UMat to host memory.");
+        return Mat();
+    }
 }
 
 void* UMat::handle(int accessFlags) const
@@ -593,15 +746,16 @@ void* UMat::handle(int accessFlags) const
     if( !u )
         return 0;
 
+    CV_Assert(u->refcount == 0);
+    CV_Assert(!u->deviceCopyObsolete() || u->copyOnMap());
+    if (u->deviceCopyObsolete())
+    {
+        u->currAllocator->unmap(u);
+    }
+
     if ((accessFlags & ACCESS_WRITE) != 0)
         u->markHostCopyObsolete(true);
 
-    // check flags: if CPU copy is newer, copy it back to GPU.
-    if( u->deviceCopyObsolete() )
-    {
-        CV_Assert(u->refcount == 0);
-        u->currAllocator->unmap(u);
-    }
     return u->handle;
 }
 
@@ -657,7 +811,7 @@ void UMat::copyTo(OutputArray _dst) const
     }
 
     Mat dst = _dst.getMat();
-    u->currAllocator->download(u, dst.data, dims, sz, srcofs, step.p, dst.step.p);
+    u->currAllocator->download(u, dst.ptr(), dims, sz, srcofs, step.p, dst.step.p);
 }
 
 void UMat::copyTo(OutputArray _dst, InputArray _mask) const
@@ -678,20 +832,28 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
 
         UMat dst = _dst.getUMat();
 
+        bool haveDstUninit = false;
         if( prevu != dst.u ) // do not leave dst uninitialized
-            dst = Scalar(0);
+            haveDstUninit = true;
 
-        ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc,
-                      format("-D COPY_TO_MASK -D T=%s -D scn=%d -D mcn=%d",
-                             ocl::memopTypeToStr(depth()), cn, mcn));
+        String opts = format("-D COPY_TO_MASK -D T1=%s -D scn=%d -D mcn=%d%s",
+                             ocl::memopTypeToStr(depth()), cn, mcn,
+                             haveDstUninit ? " -D HAVE_DST_UNINIT" : "");
+
+        ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc, opts);
         if (!k.empty())
         {
-            k.args(ocl::KernelArg::ReadOnlyNoSize(*this), ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
-                   ocl::KernelArg::WriteOnly(dst));
+            k.args(ocl::KernelArg::ReadOnlyNoSize(*this),
+                   ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
+                   haveDstUninit ? ocl::KernelArg::WriteOnly(dst) :
+                                   ocl::KernelArg::ReadWrite(dst));
 
-            size_t globalsize[2] = { cols, rows };
+            size_t globalsize[2] = { (size_t)cols, (size_t)rows };
             if (k.run(2, globalsize, NULL, false))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
         }
     }
 #endif
@@ -721,15 +883,15 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
     if( dims <= 2 && cn && _dst.isUMat() && ocl::useOpenCL() &&
             ((needDouble && doubleSupport) || !needDouble) )
     {
-        int wdepth = std::max(CV_32F, sdepth);
+        int wdepth = std::max(CV_32F, sdepth), rowsPerWI = 4;
 
         char cvt[2][40];
         ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
-                      format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s",
+                      format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s%s",
                              ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),
                              ocl::convertTypeStr(sdepth, wdepth, 1, cvt[0]),
                              ocl::convertTypeStr(wdepth, ddepth, 1, cvt[1]),
-                             doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", noScale ? " -D NO_SCALE" : ""));
         if (!k.empty())
         {
             UMat src = *this;
@@ -740,14 +902,19 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
             ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
                     dstarg = ocl::KernelArg::WriteOnly(dst, cn);
 
-            if (wdepth == CV_32F)
-                k.args(srcarg, dstarg, alphaf, betaf);
+            if (noScale)
+                k.args(srcarg, dstarg, rowsPerWI);
+            else if (wdepth == CV_32F)
+                k.args(srcarg, dstarg, alphaf, betaf, rowsPerWI);
             else
-                k.args(srcarg, dstarg, alpha, beta);
+                k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
 
-            size_t globalsize[2] = { dst.cols * cn, dst.rows };
+            size_t globalsize[2] = { (size_t)dst.cols * cn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
             if (k.run(2, globalsize, NULL, false))
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
+            }
         }
     }
 #endif
@@ -759,44 +926,51 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
     bool haveMask = !_mask.empty();
 #ifdef HAVE_OPENCL
-    int tp = type(), cn = CV_MAT_CN(tp);
+    int tp = type(), cn = CV_MAT_CN(tp), d = CV_MAT_DEPTH(tp);
 
     if( dims <= 2 && cn <= 4 && CV_MAT_DEPTH(tp) < CV_64F && ocl::useOpenCL() )
     {
         Mat value = _value.getMat();
         CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
-        double buf[4]={0,0,0,0};
-        convertAndUnrollScalar(value, tp, (uchar*)buf, 1);
+        int kercn = haveMask || cn == 3 ? cn : std::max(cn, ocl::predictOptimalVectorWidth(*this)),
+                kertp = CV_MAKE_TYPE(d, kercn);
 
-        int scalarcn = cn == 3 ? 4 : cn;
-        char opts[1024];
-        sprintf(opts, "-D dstT=%s -D dstST=%s -D dstT1=%s -D cn=%d", ocl::memopTypeToStr(tp),
-                ocl::memopTypeToStr(CV_MAKETYPE(tp,scalarcn)),
-                ocl::memopTypeToStr(CV_MAT_DEPTH(tp)), cn);
+        double buf[16] = { 0, 0, 0, 0, 0, 0, 0, 0,
+                           0, 0, 0, 0, 0, 0, 0, 0 };
+        convertAndUnrollScalar(value, tp, (uchar *)buf, kercn / cn);
+
+        int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+        String opts = format("-D dstT=%s -D rowsPerWI=%d -D dstST=%s -D dstT1=%s -D cn=%d",
+                             ocl::memopTypeToStr(kertp), rowsPerWI,
+                             ocl::memopTypeToStr(CV_MAKETYPE(d, scalarcn)),
+                             ocl::memopTypeToStr(d), kercn);
 
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
         {
-            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE1(tp)*scalarcn);
+            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE(d) * scalarcn);
             UMat mask;
 
             if( haveMask )
             {
                 mask = _mask.getUMat();
-                CV_Assert( mask.size() == size() && mask.type() == CV_8U );
-                ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
-                ocl::KernelArg dstarg = ocl::KernelArg::ReadWrite(*this);
+                CV_Assert( mask.size() == size() && mask.type() == CV_8UC1 );
+                ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
+                        dstarg = ocl::KernelArg::ReadWrite(*this);
                 setK.args(maskarg, dstarg, scalararg);
             }
             else
             {
-                ocl::KernelArg dstarg = ocl::KernelArg::WriteOnly(*this);
+                ocl::KernelArg dstarg = ocl::KernelArg::WriteOnly(*this, cn, kercn);
                 setK.args(dstarg, scalararg);
             }
 
-            size_t globalsize[] = { cols, rows };
-            if( setK.run(2, globalsize, 0, false) )
+            size_t globalsize[] = { (size_t)cols * cn / kercn, ((size_t)rows + rowsPerWI - 1) / rowsPerWI };
+            if( setK.run(2, globalsize, NULL, false) )
+            {
+                CV_IMPL_ADD(CV_IMPL_OCL);
                 return *this;
+            }
         }
     }
 #endif
@@ -836,7 +1010,10 @@ UMat UMat::mul(InputArray m, double scale) const
 
 static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 {
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type);
+    UMat src1 = _src1.getUMat().reshape(1), src2 = _src2.getUMat().reshape(1);
+
+    int type = src1.type(), depth = CV_MAT_DEPTH(type),
+            kercn = ocl::predictOptimalVectorWidth(src1, src2);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if ( !doubleSupport && depth == CV_64F )
@@ -853,13 +1030,18 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 
     char cvt[40];
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D dstT=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT -D WGS=%d -D WGS2_ALIGNED=%d%s",
-                         ocl::typeToStr(depth), ocl::typeToStr(ddepth), ddepth, ocl::convertTypeStr(depth, ddepth, 1, cvt),
-                         (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstTK=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT "
+                         "-D WGS=%d -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), ocl::typeToStr(depth),
+                         ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
+                         ddepth, ocl::convertTypeStr(depth, ddepth, kercn, cvt),
+                         (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src1.isContinuous() ? " -D HAVE_SRC_CONT" : "",
+                         _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "", kercn));
     if (k.empty())
         return false;
 
-    UMat src1 = _src1.getUMat().reshape(1), src2 = _src2.getUMat().reshape(1), db(1, dbsize, ddepth);
+    UMat db(1, dbsize, ddepth);
 
     ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
             src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),

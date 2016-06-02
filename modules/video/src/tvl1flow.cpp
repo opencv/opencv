@@ -73,7 +73,7 @@
 */
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_video.hpp"
 
 #include <limits>
 #include <iomanip>
@@ -86,7 +86,7 @@ using namespace cv;
 
 namespace {
 
-class OpticalFlowDual_TVL1 : public DenseOpticalFlow
+class OpticalFlowDual_TVL1 : public DualTVL1OpticalFlow
 {
 public:
     OpticalFlowDual_TVL1();
@@ -94,12 +94,24 @@ public:
     void calc(InputArray I0, InputArray I1, InputOutputArray flow);
     void collectGarbage();
 
-    AlgorithmInfo* info() const;
+    CV_IMPL_PROPERTY(double, Tau, tau)
+    CV_IMPL_PROPERTY(double, Lambda, lambda)
+    CV_IMPL_PROPERTY(double, Theta, theta)
+    CV_IMPL_PROPERTY(double, Gamma, gamma)
+    CV_IMPL_PROPERTY(int, ScalesNumber, nscales)
+    CV_IMPL_PROPERTY(int, WarpingsNumber, warps)
+    CV_IMPL_PROPERTY(double, Epsilon, epsilon)
+    CV_IMPL_PROPERTY(int, InnerIterations, innerIterations)
+    CV_IMPL_PROPERTY(int, OuterIterations, outerIterations)
+    CV_IMPL_PROPERTY(bool, UseInitialFlow, useInitialFlow)
+    CV_IMPL_PROPERTY(double, ScaleStep, scaleStep)
+    CV_IMPL_PROPERTY(int, MedianFiltering, medianFiltering)
 
 protected:
     double tau;
     double lambda;
     double theta;
+    double gamma;
     int nscales;
     int warps;
     double epsilon;
@@ -110,17 +122,20 @@ protected:
     int medianFiltering;
 
 private:
-    void procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2);
+    void procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2, Mat_<float>& u3);
 
+#ifdef HAVE_OPENCL
     bool procOneScale_ocl(const UMat& I0, const UMat& I1, UMat& u1, UMat& u2);
 
     bool calc_ocl(InputArray I0, InputArray I1, InputOutputArray flow);
+#endif
     struct dataMat
     {
         std::vector<Mat_<float> > I0s;
         std::vector<Mat_<float> > I1s;
         std::vector<Mat_<float> > u1s;
         std::vector<Mat_<float> > u2s;
+        std::vector<Mat_<float> > u3s;
 
         Mat_<float> I1x_buf;
         Mat_<float> I1y_buf;
@@ -137,20 +152,28 @@ private:
 
         Mat_<float> v1_buf;
         Mat_<float> v2_buf;
+        Mat_<float> v3_buf;
 
         Mat_<float> p11_buf;
         Mat_<float> p12_buf;
         Mat_<float> p21_buf;
         Mat_<float> p22_buf;
+        Mat_<float> p31_buf;
+        Mat_<float> p32_buf;
 
         Mat_<float> div_p1_buf;
         Mat_<float> div_p2_buf;
+        Mat_<float> div_p3_buf;
 
         Mat_<float> u1x_buf;
         Mat_<float> u1y_buf;
         Mat_<float> u2x_buf;
         Mat_<float> u2y_buf;
+        Mat_<float> u3x_buf;
+        Mat_<float> u3y_buf;
     } dm;
+
+#ifdef HAVE_OPENCL
     struct dataUMat
     {
         std::vector<UMat> I0s;
@@ -176,8 +199,10 @@ private:
         UMat diff_buf;
         UMat norm_buf;
     } dum;
+#endif
 };
 
+#ifdef HAVE_OPENCL
 namespace cv_ocl_tvl1flow
 {
     bool centeredGradient(const UMat &src, UMat &dx, UMat &dy);
@@ -197,7 +222,7 @@ namespace cv_ocl_tvl1flow
 
 bool cv_ocl_tvl1flow::centeredGradient(const UMat &src, UMat &dx, UMat &dy)
 {
-    size_t globalsize[2] = { src.cols, src.rows };
+    size_t globalsize[2] = { (size_t)src.cols, (size_t)src.rows };
 
     ocl::Kernel kernel;
     if (!kernel.create("centeredGradientKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
@@ -218,7 +243,7 @@ bool cv_ocl_tvl1flow::warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UM
     UMat &u1, UMat &u2, UMat &I1w, UMat &I1wx, UMat &I1wy,
     UMat &grad, UMat &rho)
 {
-    size_t globalsize[2] = { I0.cols, I0.rows };
+    size_t globalsize[2] = { (size_t)I0.cols, (size_t)I0.rows };
 
     ocl::Kernel kernel;
     if (!kernel.create("warpBackwardKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
@@ -262,7 +287,7 @@ bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
     UMat &p21, UMat &p22, UMat &u1,
     UMat &u2, UMat &error, float l_t, float theta, char calc_error)
 {
-    size_t globalsize[2] = { I1wx.cols, I1wx.rows };
+    size_t globalsize[2] = { (size_t)I1wx.cols, (size_t)I1wx.rows };
 
     ocl::Kernel kernel;
     if (!kernel.create("estimateUKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
@@ -303,7 +328,7 @@ bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
 bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
     UMat &p11, UMat &p12, UMat &p21, UMat &p22, float taut)
 {
-    size_t globalsize[2] = { u1.cols, u1.rows };
+    size_t globalsize[2] = { (size_t)u1.cols, (size_t)u1.rows };
 
     ocl::Kernel kernel;
     if (!kernel.create("estimateDualVariablesKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
@@ -334,6 +359,7 @@ bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
     return kernel.run(2, globalsize, NULL, false);
 
 }
+#endif
 
 OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
 {
@@ -343,6 +369,7 @@ OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
     nscales        = 5;
     warps          = 5;
     epsilon        = 0.01;
+    gamma          = 0.;
     innerIterations = 30;
     outerIterations = 10;
     useInitialFlow = false;
@@ -364,18 +391,20 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
     CV_Assert( I0.type() == I1.type() );
     CV_Assert( !useInitialFlow || (_flow.size() == I0.size() && _flow.type() == CV_32FC2) );
     CV_Assert( nscales > 0 );
-
+    bool use_gamma = gamma != 0;
     // allocate memory for the pyramid structure
     dm.I0s.resize(nscales);
     dm.I1s.resize(nscales);
     dm.u1s.resize(nscales);
     dm.u2s.resize(nscales);
+    dm.u3s.resize(nscales);
 
     I0.convertTo(dm.I0s[0], dm.I0s[0].depth(), I0.depth() == CV_8U ? 1.0 : 255.0);
     I1.convertTo(dm.I1s[0], dm.I1s[0].depth(), I1.depth() == CV_8U ? 1.0 : 255.0);
 
     dm.u1s[0].create(I0.size());
     dm.u2s[0].create(I0.size());
+    if (use_gamma) dm.u3s[0].create(I0.size());
 
     if (useInitialFlow)
     {
@@ -398,19 +427,25 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
 
     dm.v1_buf.create(I0.size());
     dm.v2_buf.create(I0.size());
+    dm.v3_buf.create(I0.size());
 
     dm.p11_buf.create(I0.size());
     dm.p12_buf.create(I0.size());
     dm.p21_buf.create(I0.size());
     dm.p22_buf.create(I0.size());
+    dm.p31_buf.create(I0.size());
+    dm.p32_buf.create(I0.size());
 
     dm.div_p1_buf.create(I0.size());
     dm.div_p2_buf.create(I0.size());
+    dm.div_p3_buf.create(I0.size());
 
     dm.u1x_buf.create(I0.size());
     dm.u1y_buf.create(I0.size());
     dm.u2x_buf.create(I0.size());
     dm.u2y_buf.create(I0.size());
+    dm.u3x_buf.create(I0.size());
+    dm.u3y_buf.create(I0.size());
 
     // create the scales
     for (int s = 1; s < nscales; ++s)
@@ -437,19 +472,19 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
             dm.u1s[s].create(dm.I0s[s].size());
             dm.u2s[s].create(dm.I0s[s].size());
         }
+        if (use_gamma) dm.u3s[s].create(dm.I0s[s].size());
     }
-
     if (!useInitialFlow)
     {
         dm.u1s[nscales - 1].setTo(Scalar::all(0));
         dm.u2s[nscales - 1].setTo(Scalar::all(0));
     }
-
+    if (use_gamma) dm.u3s[nscales - 1].setTo(Scalar::all(0));
     // pyramidal structure for computing the optical flow
     for (int s = nscales - 1; s >= 0; --s)
     {
         // compute the optical flow at the current scale
-        procOneScale(dm.I0s[s], dm.I1s[s], dm.u1s[s], dm.u2s[s]);
+        procOneScale(dm.I0s[s], dm.I1s[s], dm.u1s[s], dm.u2s[s], dm.u3s[s]);
 
         // if this was the last scale, finish now
         if (s == 0)
@@ -460,8 +495,9 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
         // zoom the optical flow for the next finer scale
         resize(dm.u1s[s], dm.u1s[s - 1], dm.I0s[s - 1].size());
         resize(dm.u2s[s], dm.u2s[s - 1], dm.I0s[s - 1].size());
+        if (use_gamma) resize(dm.u3s[s], dm.u3s[s - 1], dm.I0s[s - 1].size());
 
-        // scale the optical flow with the appropriate zoom factor
+        // scale the optical flow with the appropriate zoom factor (don't scale u3!)
         multiply(dm.u1s[s - 1], Scalar::all(1 / scaleStep), dm.u1s[s - 1]);
         multiply(dm.u2s[s - 1], Scalar::all(1 / scaleStep), dm.u2s[s - 1]);
     }
@@ -470,6 +506,7 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
     merge(uxy, 2, _flow);
 }
 
+#ifdef HAVE_OPENCL
 bool OpticalFlowDual_TVL1::calc_ocl(InputArray _I0, InputArray _I1, InputOutputArray _flow)
 {
     UMat I0 = _I0.getUMat();
@@ -569,6 +606,7 @@ bool OpticalFlowDual_TVL1::calc_ocl(InputArray _I0, InputArray _I1, InputOutputA
     merge(uxy, _flow);
     return true;
 }
+#endif
 
 ////////////////////////////////////////////////////////////
 // buildFlowMap
@@ -914,59 +952,69 @@ struct EstimateVBody : ParallelLoopBody
     Mat_<float> I1wy;
     Mat_<float> u1;
     Mat_<float> u2;
+    Mat_<float> u3;
     Mat_<float> grad;
     Mat_<float> rho_c;
     mutable Mat_<float> v1;
     mutable Mat_<float> v2;
+    mutable Mat_<float> v3;
     float l_t;
+    float gamma;
 };
 
 void EstimateVBody::operator() (const Range& range) const
 {
+    bool use_gamma = gamma != 0;
     for (int y = range.start; y < range.end; ++y)
     {
         const float* I1wxRow = I1wx[y];
         const float* I1wyRow = I1wy[y];
         const float* u1Row = u1[y];
         const float* u2Row = u2[y];
+        const float* u3Row = use_gamma?u3[y]:NULL;
         const float* gradRow = grad[y];
         const float* rhoRow = rho_c[y];
 
         float* v1Row = v1[y];
         float* v2Row = v2[y];
+        float* v3Row = use_gamma ? v3[y]:NULL;
 
         for (int x = 0; x < I1wx.cols; ++x)
         {
-            const float rho = rhoRow[x] + (I1wxRow[x] * u1Row[x] + I1wyRow[x] * u2Row[x]);
-
+            const float rho = use_gamma ? rhoRow[x] + (I1wxRow[x] * u1Row[x] + I1wyRow[x] * u2Row[x]) + gamma * u3Row[x] :
+                                          rhoRow[x] + (I1wxRow[x] * u1Row[x] + I1wyRow[x] * u2Row[x]);
             float d1 = 0.0f;
             float d2 = 0.0f;
-
+            float d3 = 0.0f;
             if (rho < -l_t * gradRow[x])
             {
                 d1 = l_t * I1wxRow[x];
                 d2 = l_t * I1wyRow[x];
+                if (use_gamma) d3 = l_t * gamma;
             }
             else if (rho > l_t * gradRow[x])
             {
                 d1 = -l_t * I1wxRow[x];
                 d2 = -l_t * I1wyRow[x];
+                if (use_gamma) d3 = -l_t * gamma;
             }
             else if (gradRow[x] > std::numeric_limits<float>::epsilon())
             {
                 float fi = -rho / gradRow[x];
                 d1 = fi * I1wxRow[x];
                 d2 = fi * I1wyRow[x];
+                if (use_gamma) d3 = fi * gamma;
             }
 
             v1Row[x] = u1Row[x] + d1;
             v2Row[x] = u2Row[x] + d2;
+            if (use_gamma) v3Row[x] = u3Row[x] + d3;
         }
     }
 }
 
-void estimateV(const Mat_<float>& I1wx, const Mat_<float>& I1wy, const Mat_<float>& u1, const Mat_<float>& u2, const Mat_<float>& grad, const Mat_<float>& rho_c,
-               Mat_<float>& v1, Mat_<float>& v2, float l_t)
+void estimateV(const Mat_<float>& I1wx, const Mat_<float>& I1wy, const Mat_<float>& u1, const Mat_<float>& u2, const Mat_<float>& u3, const Mat_<float>& grad, const Mat_<float>& rho_c,
+   Mat_<float>& v1, Mat_<float>& v2, Mat_<float>& v3, float l_t, float gamma)
 {
     CV_DbgAssert( I1wy.size() == I1wx.size() );
     CV_DbgAssert( u1.size() == I1wx.size() );
@@ -977,24 +1025,29 @@ void estimateV(const Mat_<float>& I1wx, const Mat_<float>& I1wy, const Mat_<floa
     CV_DbgAssert( v2.size() == I1wx.size() );
 
     EstimateVBody body;
-
+    bool use_gamma = gamma != 0;
     body.I1wx = I1wx;
     body.I1wy = I1wy;
     body.u1 = u1;
     body.u2 = u2;
+    if (use_gamma) body.u3 = u3;
     body.grad = grad;
     body.rho_c = rho_c;
     body.v1 = v1;
     body.v2 = v2;
+    if (use_gamma) body.v3 = v3;
     body.l_t = l_t;
-
+    body.gamma = gamma;
     parallel_for_(Range(0, I1wx.rows), body);
 }
 
 ////////////////////////////////////////////////////////////
 // estimateU
 
-float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>& div_p1, const Mat_<float>& div_p2, Mat_<float>& u1, Mat_<float>& u2, float theta)
+float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>& v3,
+            const Mat_<float>& div_p1, const Mat_<float>& div_p2, const Mat_<float>& div_p3,
+            Mat_<float>& u1, Mat_<float>& u2, Mat_<float>& u3,
+            float theta, float gamma)
 {
     CV_DbgAssert( v2.size() == v1.size() );
     CV_DbgAssert( div_p1.size() == v1.size() );
@@ -1003,25 +1056,32 @@ float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>&
     CV_DbgAssert( u2.size() == v1.size() );
 
     float error = 0.0f;
+    bool use_gamma = gamma != 0;
     for (int y = 0; y < v1.rows; ++y)
     {
         const float* v1Row = v1[y];
         const float* v2Row = v2[y];
+        const float* v3Row = use_gamma?v3[y]:NULL;
         const float* divP1Row = div_p1[y];
         const float* divP2Row = div_p2[y];
+        const float* divP3Row = use_gamma?div_p3[y]:NULL;
 
         float* u1Row = u1[y];
         float* u2Row = u2[y];
+        float* u3Row = use_gamma?u3[y]:NULL;
+
 
         for (int x = 0; x < v1.cols; ++x)
         {
             const float u1k = u1Row[x];
             const float u2k = u2Row[x];
+            const float u3k = use_gamma?u3Row[x]:0;
 
             u1Row[x] = v1Row[x] + theta * divP1Row[x];
             u2Row[x] = v2Row[x] + theta * divP2Row[x];
-
-            error += (u1Row[x] - u1k) * (u1Row[x] - u1k) + (u2Row[x] - u2k) * (u2Row[x] - u2k);
+            if (use_gamma) u3Row[x] = v3Row[x] + theta * divP3Row[x];
+            error += use_gamma?(u1Row[x] - u1k) * (u1Row[x] - u1k) + (u2Row[x] - u2k) * (u2Row[x] - u2k) + (u3Row[x] - u3k) * (u3Row[x] - u3k):
+                               (u1Row[x] - u1k) * (u1Row[x] - u1k) + (u2Row[x] - u2k) * (u2Row[x] - u2k);
         }
     }
 
@@ -1039,11 +1099,16 @@ struct EstimateDualVariablesBody : ParallelLoopBody
     Mat_<float> u1y;
     Mat_<float> u2x;
     Mat_<float> u2y;
+    Mat_<float> u3x;
+    Mat_<float> u3y;
     mutable Mat_<float> p11;
     mutable Mat_<float> p12;
     mutable Mat_<float> p21;
     mutable Mat_<float> p22;
+    mutable Mat_<float> p31;
+    mutable Mat_<float> p32;
     float taut;
+    bool use_gamma;
 };
 
 void EstimateDualVariablesBody::operator() (const Range& range) const
@@ -1054,11 +1119,15 @@ void EstimateDualVariablesBody::operator() (const Range& range) const
         const float* u1yRow = u1y[y];
         const float* u2xRow = u2x[y];
         const float* u2yRow = u2y[y];
+        const float* u3xRow = u3x[y];
+        const float* u3yRow = u3y[y];
 
         float* p11Row = p11[y];
         float* p12Row = p12[y];
         float* p21Row = p21[y];
         float* p22Row = p22[y];
+        float* p31Row = p31[y];
+        float* p32Row = p32[y];
 
         for (int x = 0; x < u1x.cols; ++x)
         {
@@ -1066,26 +1135,43 @@ void EstimateDualVariablesBody::operator() (const Range& range) const
             const float g2 = static_cast<float>(hypot(u2xRow[x], u2yRow[x]));
 
             const float ng1  = 1.0f + taut * g1;
-            const float ng2  = 1.0f + taut * g2;
+            const float ng2 =  1.0f + taut * g2;
 
             p11Row[x] = (p11Row[x] + taut * u1xRow[x]) / ng1;
             p12Row[x] = (p12Row[x] + taut * u1yRow[x]) / ng1;
             p21Row[x] = (p21Row[x] + taut * u2xRow[x]) / ng2;
             p22Row[x] = (p22Row[x] + taut * u2yRow[x]) / ng2;
+
+            if (use_gamma)
+            {
+                const float g3 = static_cast<float>(hypot(u3xRow[x], u3yRow[x]));
+                const float ng3 = 1.0f + taut * g3;
+                p31Row[x] = (p31Row[x] + taut * u3xRow[x]) / ng3;
+                p32Row[x] = (p32Row[x] + taut * u3yRow[x]) / ng3;
+            }
         }
     }
 }
 
-void estimateDualVariables(const Mat_<float>& u1x, const Mat_<float>& u1y, const Mat_<float>& u2x, const Mat_<float>& u2y,
-                           Mat_<float>& p11, Mat_<float>& p12, Mat_<float>& p21, Mat_<float>& p22, float taut)
+void estimateDualVariables(const Mat_<float>& u1x, const Mat_<float>& u1y,
+                     const Mat_<float>& u2x, const Mat_<float>& u2y,
+                     const Mat_<float>& u3x, const Mat_<float>& u3y,
+                           Mat_<float>& p11, Mat_<float>& p12,
+                     Mat_<float>& p21, Mat_<float>& p22,
+                     Mat_<float>& p31, Mat_<float>& p32,
+                     float taut, bool use_gamma)
 {
     CV_DbgAssert( u1y.size() == u1x.size() );
     CV_DbgAssert( u2x.size() == u1x.size() );
+    CV_DbgAssert( u3x.size() == u1x.size() );
     CV_DbgAssert( u2y.size() == u1x.size() );
+    CV_DbgAssert( u3y.size() == u1x.size() );
     CV_DbgAssert( p11.size() == u1x.size() );
     CV_DbgAssert( p12.size() == u1x.size() );
     CV_DbgAssert( p21.size() == u1x.size() );
     CV_DbgAssert( p22.size() == u1x.size() );
+    CV_DbgAssert( p31.size() == u1x.size() );
+    CV_DbgAssert( p32.size() == u1x.size() );
 
     EstimateDualVariablesBody body;
 
@@ -1093,15 +1179,21 @@ void estimateDualVariables(const Mat_<float>& u1x, const Mat_<float>& u1y, const
     body.u1y = u1y;
     body.u2x = u2x;
     body.u2y = u2y;
+    body.u3x = u3x;
+    body.u3y = u3y;
     body.p11 = p11;
     body.p12 = p12;
     body.p21 = p21;
     body.p22 = p22;
+    body.p31 = p31;
+    body.p32 = p32;
     body.taut = taut;
+    body.use_gamma = use_gamma;
 
     parallel_for_(Range(0, u1x.rows), body);
 }
 
+#ifdef HAVE_OPENCL
 bool OpticalFlowDual_TVL1::procOneScale_ocl(const UMat& I0, const UMat& I1, UMat& u1, UMat& u2)
 {
     using namespace cv_ocl_tvl1flow;
@@ -1189,8 +1281,9 @@ bool OpticalFlowDual_TVL1::procOneScale_ocl(const UMat& I0, const UMat& I1, UMat
     }
     return true;
 }
+#endif
 
-void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2)
+void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2, Mat_<float>& u3)
 {
     const float scaledEpsilon = static_cast<float>(epsilon * epsilon * I0.size().area());
 
@@ -1215,23 +1308,32 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
 
     Mat_<float> v1 = dm.v1_buf(Rect(0, 0, I0.cols, I0.rows));
     Mat_<float> v2 = dm.v2_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> v3 = dm.v3_buf(Rect(0, 0, I0.cols, I0.rows));
 
     Mat_<float> p11 = dm.p11_buf(Rect(0, 0, I0.cols, I0.rows));
     Mat_<float> p12 = dm.p12_buf(Rect(0, 0, I0.cols, I0.rows));
     Mat_<float> p21 = dm.p21_buf(Rect(0, 0, I0.cols, I0.rows));
     Mat_<float> p22 = dm.p22_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> p31 = dm.p31_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> p32 = dm.p32_buf(Rect(0, 0, I0.cols, I0.rows));
     p11.setTo(Scalar::all(0));
     p12.setTo(Scalar::all(0));
     p21.setTo(Scalar::all(0));
     p22.setTo(Scalar::all(0));
+    bool use_gamma = gamma != 0.;
+    if (use_gamma) p31.setTo(Scalar::all(0));
+    if (use_gamma) p32.setTo(Scalar::all(0));
 
     Mat_<float> div_p1 = dm.div_p1_buf(Rect(0, 0, I0.cols, I0.rows));
     Mat_<float> div_p2 = dm.div_p2_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> div_p3 = dm.div_p3_buf(Rect(0, 0, I0.cols, I0.rows));
 
     Mat_<float> u1x = dm.u1x_buf(Rect(0, 0, I0.cols, I0.rows));
     Mat_<float> u1y = dm.u1y_buf(Rect(0, 0, I0.cols, I0.rows));
     Mat_<float> u2x = dm.u2x_buf(Rect(0, 0, I0.cols, I0.rows));
     Mat_<float> u2y = dm.u2y_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> u3x = dm.u3x_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> u3y = dm.u3y_buf(Rect(0, 0, I0.cols, I0.rows));
 
     const float l_t = static_cast<float>(lambda * theta);
     const float taut = static_cast<float>(tau / theta);
@@ -1243,7 +1345,7 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
         remap(I1, I1w, flowMap1, flowMap2, INTER_CUBIC);
         remap(I1x, I1wx, flowMap1, flowMap2, INTER_CUBIC);
         remap(I1y, I1wy, flowMap1, flowMap2, INTER_CUBIC);
-
+        //calculate I1(x+u0) and its gradient
         calcGradRho(I0, I1w, I1wx, I1wy, u1, u2, grad, rho_c);
 
         float error = std::numeric_limits<float>::max();
@@ -1256,21 +1358,23 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
             for (int n_inner = 0; error > scaledEpsilon && n_inner < innerIterations; ++n_inner)
             {
                 // estimate the values of the variable (v1, v2) (thresholding operator TH)
-                estimateV(I1wx, I1wy, u1, u2, grad, rho_c, v1, v2, l_t);
+                estimateV(I1wx, I1wy, u1, u2, u3, grad, rho_c, v1, v2, v3, l_t, static_cast<float>(gamma));
 
-                // compute the divergence of the dual variable (p1, p2)
+                // compute the divergence of the dual variable (p1, p2, p3)
                 divergence(p11, p12, div_p1);
                 divergence(p21, p22, div_p2);
+                if (use_gamma) divergence(p31, p32, div_p3);
 
                 // estimate the values of the optical flow (u1, u2)
-                error = estimateU(v1, v2, div_p1, div_p2, u1, u2, static_cast<float>(theta));
+                error = estimateU(v1, v2, v3, div_p1, div_p2, div_p3, u1, u2, u3, static_cast<float>(theta), static_cast<float>(gamma));
 
                 // compute the gradient of the optical flow (Du1, Du2)
                 forwardGradient(u1, u1x, u1y);
                 forwardGradient(u2, u2x, u2y);
+                if (use_gamma) forwardGradient(u3, u3x, u3y);
 
-                // estimate the values of the dual variable (p1, p2)
-                estimateDualVariables(u1x, u1y, u2x, u2y, p11, p12, p21, p22, taut);
+                // estimate the values of the dual variable (p1, p2, p3)
+                estimateDualVariables(u1x, u1y, u2x, u2y, u3x, u3y, p11, p12, p21, p22, p31, p32, taut, use_gamma);
             }
         }
     }
@@ -1313,6 +1417,7 @@ void OpticalFlowDual_TVL1::collectGarbage()
     dm.u2x_buf.release();
     dm.u2y_buf.release();
 
+#ifdef HAVE_OPENCL
     //dataUMat structure dum
     dum.I0s.clear();
     dum.I1s.clear();
@@ -1336,35 +1441,12 @@ void OpticalFlowDual_TVL1::collectGarbage()
 
     dum.diff_buf.release();
     dum.norm_buf.release();
+#endif
 }
-
-
-CV_INIT_ALGORITHM(OpticalFlowDual_TVL1, "DenseOpticalFlow.DualTVL1",
-                  obj.info()->addParam(obj, "tau", obj.tau, false, 0, 0,
-                                       "Time step of the numerical scheme");
-                  obj.info()->addParam(obj, "lambda", obj.lambda, false, 0, 0,
-                                       "Weight parameter for the data term, attachment parameter");
-                  obj.info()->addParam(obj, "theta", obj.theta, false, 0, 0,
-                                       "Weight parameter for (u - v)^2, tightness parameter");
-                  obj.info()->addParam(obj, "nscales", obj.nscales, false, 0, 0,
-                                       "Number of scales used to create the pyramid of images");
-                  obj.info()->addParam(obj, "warps", obj.warps, false, 0, 0,
-                                       "Number of warpings per scale");
-                  obj.info()->addParam(obj, "medianFiltering", obj.medianFiltering, false, 0, 0,
-                                       "Median filter kernel size (1 = no filter) (3 or 5)");
-                  obj.info()->addParam(obj, "scaleStep", obj.scaleStep, false, 0, 0,
-                                       "Step between scales (<1)");
-                  obj.info()->addParam(obj, "epsilon", obj.epsilon, false, 0, 0,
-                                       "Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time");
-                  obj.info()->addParam(obj, "innerIterations", obj.innerIterations, false, 0, 0,
-                                       "inner iterations (between outlier filtering) used in the numerical scheme");
-                  obj.info()->addParam(obj, "outerIterations", obj.outerIterations, false, 0, 0,
-                                       "outer iterations (number of inner loops) used in the numerical scheme");
-                  obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow))
 
 } // namespace
 
-Ptr<DenseOpticalFlow> cv::createOptFlow_DualTVL1()
+Ptr<DualTVL1OpticalFlow> cv::createOptFlow_DualTVL1()
 {
     return makePtr<OpticalFlowDual_TVL1>();
 }

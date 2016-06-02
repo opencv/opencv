@@ -130,6 +130,12 @@ TEST_P(UMatBasicTests, swap)
 
 TEST_P(UMatBasicTests, base)
 {
+    const int align_mask = 3;
+    roi.x &= ~align_mask;
+    roi.y &= ~align_mask;
+    roi.width = (roi.width + align_mask) & ~align_mask;
+    roi &= Rect(0, 0, ua.cols, ua.rows);
+
     if(useRoi)
     {
         ua = UMat(ua,roi);
@@ -167,13 +173,13 @@ TEST_P(UMatBasicTests, base)
     ASSERT_EQ(ub.total(), total);
 }
 
-TEST_P(UMatBasicTests, DISABLED_copyTo)
+TEST_P(UMatBasicTests, copyTo)
 {
-    UMat roi_ua;
-    Mat roi_a;
     int i;
     if(useRoi)
     {
+        UMat roi_ua;
+        Mat roi_a;
         roi_ua = UMat(ua, roi);
         roi_a = Mat(a, roi);
         roi_a.copyTo(roi_ua);
@@ -224,7 +230,7 @@ TEST_P(UMatBasicTests, DISABLED_copyTo)
     }
 }
 
-TEST_P(UMatBasicTests, DISABLED_GetUMat)
+TEST_P(UMatBasicTests, GetUMat)
 {
     if(useRoi)
     {
@@ -237,9 +243,11 @@ TEST_P(UMatBasicTests, DISABLED_GetUMat)
         EXPECT_MAT_NEAR(ub, ua, 0);
     }
     {
-        Mat b;
-        b = a.getUMat(ACCESS_RW).getMat(ACCESS_RW);
-        EXPECT_MAT_NEAR(b, a, 0);
+        UMat u = a.getUMat(ACCESS_RW);
+        {
+            Mat b = u.getMat(ACCESS_RW);
+            EXPECT_MAT_NEAR(b, a, 0);
+        }
     }
     {
         Mat b;
@@ -247,13 +255,15 @@ TEST_P(UMatBasicTests, DISABLED_GetUMat)
         EXPECT_MAT_NEAR(b, a, 0);
     }
     {
-        UMat ub;
-        ub = ua.getMat(ACCESS_RW).getUMat(ACCESS_RW);
-        EXPECT_MAT_NEAR(ub, ua, 0);
+        Mat m = ua.getMat(ACCESS_RW);
+        {
+            UMat ub = m.getUMat(ACCESS_RW);
+            EXPECT_MAT_NEAR(ub, ua, 0);
+        }
     }
 }
 
-INSTANTIATE_TEST_CASE_P(UMat, UMatBasicTests, Combine(testing::Values(CV_8U), testing::Values(1, 2),
+INSTANTIATE_TEST_CASE_P(UMat, UMatBasicTests, Combine(testing::Values(CV_8U, CV_64F), testing::Values(1, 2),
     testing::Values(cv::Size(1, 1), cv::Size(1, 128), cv::Size(128, 1), cv::Size(128, 128), cv::Size(640, 480)), Bool()));
 
 //////////////////////////////////////////////////////////////// Reshape ////////////////////////////////////////////////////////////////////////
@@ -278,7 +288,7 @@ PARAM_TEST_CASE(UMatTestReshape,  int, int, Size, bool)
     }
 };
 
-TEST_P(UMatTestReshape, DISABLED_reshape)
+TEST_P(UMatTestReshape, reshape)
 {
     a = randomMat(size,type, -100, 100);
     a.copyTo(ua);
@@ -343,6 +353,73 @@ TEST_P(UMatTestReshape, DISABLED_reshape)
 }
 
 INSTANTIATE_TEST_CASE_P(UMat, UMatTestReshape, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, UMAT_TEST_SIZES, Bool() ));
+
+static void check_ndim_shape(const cv::UMat &mat, int cn, int ndims, const int *sizes)
+{
+    EXPECT_EQ(mat.channels(), cn);
+    EXPECT_EQ(mat.dims, ndims);
+
+    if (mat.dims != ndims)
+        return;
+
+    for (int i = 0; i < ndims; i++)
+        EXPECT_EQ(mat.size[i], sizes[i]);
+}
+
+TEST(UMatTestReshape, reshape_ndims_2)
+{
+    const cv::UMat A(8, 16, CV_8UC3);
+    cv::UMat B;
+
+    {
+        int new_sizes_mask[] = { 0, 3, 4, 4 };
+        int new_sizes_real[] = { 8, 3, 4, 4 };
+        ASSERT_NO_THROW(B = A.reshape(1, 4, new_sizes_mask));
+        check_ndim_shape(B, 1, 4, new_sizes_real);
+    }
+    {
+        int new_sizes[] = { 16, 8 };
+        ASSERT_NO_THROW(B = A.reshape(0, 2, new_sizes));
+        check_ndim_shape(B, 3, 2, new_sizes);
+        EXPECT_EQ(B.rows, new_sizes[0]);
+        EXPECT_EQ(B.cols, new_sizes[1]);
+    }
+    {
+        int new_sizes[] = { 2, 5, 1, 3 };
+        cv::UMat A_sliced = A(cv::Range::all(), cv::Range(0, 15));
+        ASSERT_ANY_THROW(A_sliced.reshape(4, 4, new_sizes));
+    }
+}
+
+TEST(UMatTestReshape, reshape_ndims_4)
+{
+    const int sizes[] = { 2, 6, 4, 12 };
+    const cv::UMat A(4, sizes, CV_8UC3);
+    cv::UMat B;
+
+    {
+        int new_sizes_mask[] = { 0, 864 };
+        int new_sizes_real[] = { 2, 864 };
+        ASSERT_NO_THROW(B = A.reshape(1, 2, new_sizes_mask));
+        check_ndim_shape(B, 1, 2, new_sizes_real);
+        EXPECT_EQ(B.rows, new_sizes_real[0]);
+        EXPECT_EQ(B.cols, new_sizes_real[1]);
+    }
+    {
+        int new_sizes_mask[] = { 4, 0, 0, 2, 3 };
+        int new_sizes_real[] = { 4, 6, 4, 2, 3 };
+        ASSERT_NO_THROW(B = A.reshape(0, 5, new_sizes_mask));
+        check_ndim_shape(B, 3, 5, new_sizes_real);
+    }
+    {
+        int new_sizes_mask[] = { 1, 1 };
+        ASSERT_ANY_THROW(A.reshape(0, 2, new_sizes_mask));
+    }
+    {
+        int new_sizes_mask[] = { 4, 6, 3, 3, 0 };
+        ASSERT_ANY_THROW(A.reshape(0, 5, new_sizes_mask));
+    }
+}
 
 ////////////////////////////////////////////////////////////////// ROI testing ///////////////////////////////////////////////////////////////
 
@@ -516,8 +593,105 @@ TEST_P(UMatTestUMatOperations, diag)
 
 INSTANTIATE_TEST_CASE_P(UMat, UMatTestUMatOperations, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, UMAT_TEST_SIZES, Bool()));
 
+
+/////////////////////////////////////////////////////////////// getUMat -> GetMat ///////////////////////////////////////////////////////////////////
+
+PARAM_TEST_CASE(getUMat, int, int, Size, bool)
+{
+    int type;
+    Size size;
+
+    virtual void SetUp()
+    {
+        int depth = GET_PARAM(0);
+        int cn    = GET_PARAM(1);
+        size      = GET_PARAM(2);
+        useOpenCL = GET_PARAM(3);
+
+        type = CV_MAKE_TYPE(depth, cn);
+
+        isOpenCL_enabled = cv::ocl::useOpenCL();
+        cv::ocl::setUseOpenCL(useOpenCL);
+    }
+
+    virtual void TearDown()
+    {
+        cv::ocl::setUseOpenCL(isOpenCL_enabled);
+    }
+
+    // UMat created from user allocated host memory (USE_HOST_PTR)
+    void custom_ptr_test(size_t align_base, size_t align_offset)
+    {
+        void* pData_allocated = new unsigned char [size.area() * CV_ELEM_SIZE(type) + (align_base + align_offset)];
+        void* pData = (char*)alignPtr(pData_allocated, (int)align_base) + align_offset;
+        size_t step = size.width * CV_ELEM_SIZE(type);
+
+        {
+            Mat m = Mat(size, type, pData, step);
+            m.setTo(cv::Scalar::all(2));
+
+            UMat u = m.getUMat(ACCESS_RW);
+            cv::add(u, cv::Scalar::all(2), u);
+
+            Mat d = u.getMat(ACCESS_READ);
+
+            Mat expected(m.size(), m.type(), cv::Scalar::all(4));
+            double norm = cvtest::norm(d, expected, NORM_INF);
+
+            EXPECT_EQ(0, norm);
+        }
+
+        delete[] (unsigned char*)pData_allocated;
+    }
+
+private:
+    bool useOpenCL;
+    bool isOpenCL_enabled;
+};
+
+TEST_P(getUMat, custom_ptr_align_4Kb)
+{
+    custom_ptr_test(4096, 0);
+}
+
+TEST_P(getUMat, custom_ptr_align_64b)
+{
+    custom_ptr_test(4096, 64);
+}
+
+TEST_P(getUMat, custom_ptr_align_none)
+{
+    custom_ptr_test(4096, cv::alignSize(CV_ELEM_SIZE(type), 4));
+}
+
+TEST_P(getUMat, self_allocated)
+{
+    Mat m = Mat(size, type);
+    m.setTo(cv::Scalar::all(2));
+
+    UMat u = m.getUMat(ACCESS_RW);
+    cv::add(u, cv::Scalar::all(2), u);
+
+    Mat d = u.getMat(ACCESS_READ);
+
+    Mat expected(m.size(), m.type(), cv::Scalar::all(4));
+    double norm = cvtest::norm(d, expected, NORM_INF);
+
+    EXPECT_EQ(0, norm);
+}
+
+INSTANTIATE_TEST_CASE_P(UMat, getUMat, Combine(
+        Values(CV_8U, CV_64F), // depth
+        Values(1, 3), // channels
+        Values(cv::Size(1, 1), cv::Size(255, 255), cv::Size(256, 256)), // Size
+        Bool() // useOpenCL
+));
+
+
+
 ///////////////////////////////////////////////////////////////// OpenCL ////////////////////////////////////////////////////////////////////////////
 
+#ifdef HAVE_OPENCL
 TEST(UMat, BufferPoolGrowing)
 {
 #ifdef _DEBUG
@@ -543,6 +717,7 @@ TEST(UMat, BufferPoolGrowing)
     else
         std::cout << "Skipped, no OpenCL" << std::endl;
 }
+#endif
 
 class CV_UMatTest :
         public cvtest::BaseTest
@@ -745,8 +920,47 @@ TEST(UMat, Sync)
     EXPECT_EQ(0, cvtest::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
 }
 
+TEST(UMat, SyncTemp)
+{
+    Mat m(10, 10, CV_8UC1);
+
+    {
+        UMat um = m.getUMat(ACCESS_WRITE);
+
+        {
+            Mat m2 = um.getMat(ACCESS_WRITE);
+            m2.setTo(cv::Scalar::all(17));
+        }
+
+        um.setTo(cv::Scalar::all(19));
+
+        EXPECT_EQ(0, cvtest::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
+    }
+}
+
+TEST(UMat, CopyToIfDeviceCopyIsObsolete)
+{
+    UMat um(7, 2, CV_8UC1);
+    Mat m(um.size(), um.type());
+    m.setTo(Scalar::all(0));
+
+    {
+        // make obsolete device copy of UMat
+        Mat temp = um.getMat(ACCESS_WRITE);
+        temp.setTo(Scalar::all(10));
+    }
+
+    m.copyTo(um);
+    um.setTo(Scalar::all(17));
+
+    EXPECT_EQ(0, cvtest::norm(um.getMat(ACCESS_READ), Mat(um.size(), um.type(), 17), NORM_INF));
+}
+
 TEST(UMat, setOpenCL)
 {
+#ifndef HAVE_OPENCL
+    return; // test skipped
+#else
     // save the current state
     bool useOCL = cv::ocl::useOpenCL();
 
@@ -784,6 +998,7 @@ TEST(UMat, setOpenCL)
 
     // reset state to the previous one
     cv::ocl::setUseOpenCL(useOCL);
+#endif
 }
 
 TEST(UMat, ReadBufferRect)
@@ -795,8 +1010,9 @@ TEST(UMat, ReadBufferRect)
     EXPECT_MAT_NEAR(t, t2, 0);
 }
 
+
 // Use iGPU or OPENCV_OPENCL_DEVICE=:CPU: to catch problem
-TEST(UMat, DISABLED_synchronization_map_unmap)
+TEST(UMat, synchronization_map_unmap)
 {
     class TestParallelLoopBody : public cv::ParallelLoopBody
     {
@@ -819,7 +1035,7 @@ TEST(UMat, DISABLED_synchronization_map_unmap)
     };
     try
     {
-        UMat u(1000, 1000, CV_32FC1);
+        UMat u(1000, 1000, CV_32FC1, Scalar::all(0));
         parallel_for_(cv::Range(0, 2), TestParallelLoopBody(u));
     }
     catch (const cv::Exception& e)
@@ -833,15 +1049,14 @@ TEST(UMat, DISABLED_synchronization_map_unmap)
     }
 }
 
-} } // namespace cvtest::ocl
 
-TEST(UMat, DISABLED_bug_with_unmap)
+TEST(UMat, async_unmap)
 {
     for (int i = 0; i < 20; i++)
     {
         try
         {
-            Mat m = Mat(1000, 1000, CV_8UC1);
+            Mat m = Mat(1000, 1000, CV_8UC1, Scalar::all(0));
             UMat u = m.getUMat(ACCESS_READ);
             UMat dst;
             add(u, Scalar::all(0), dst); // start async operation
@@ -861,7 +1076,8 @@ TEST(UMat, DISABLED_bug_with_unmap)
     }
 }
 
-TEST(UMat, DISABLED_bug_with_unmap_in_class)
+
+TEST(UMat, unmap_in_class)
 {
     class Logic
     {
@@ -874,7 +1090,7 @@ TEST(UMat, DISABLED_bug_with_unmap_in_class)
                 Mat dst;
                 m.convertTo(dst, CV_32FC1);
                 // some additional CPU-based per-pixel processing into dst
-                intermediateResult = dst.getUMat(ACCESS_READ);
+                intermediateResult = dst.getUMat(ACCESS_READ); // this violates lifetime of base(dst) / derived (intermediateResult) objects. Use copyTo?
                 std::cout << "data processed..." << std::endl;
             } // problem is here: dst::~Mat()
             std::cout << "leave ProcessData()" << std::endl;
@@ -885,7 +1101,7 @@ TEST(UMat, DISABLED_bug_with_unmap_in_class)
     };
     try
     {
-        Mat m = Mat(1000, 1000, CV_8UC1);
+        Mat m = Mat(1000, 1000, CV_8UC1, Scalar::all(0));
         Logic l;
         l.processData(m);
         UMat result = l.getResult();
@@ -902,12 +1118,105 @@ TEST(UMat, DISABLED_bug_with_unmap_in_class)
     }
 }
 
-TEST(UMat, Test_same_behaviour_read_and_read)
+
+TEST(UMat, map_unmap_counting)
+{
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+    std::cout << "Host memory: " << cv::ocl::Device::getDefault().hostUnifiedMemory() << std::endl;
+    Mat m(Size(10, 10), CV_8UC1, Scalar::all(0));
+    UMat um = m.getUMat(ACCESS_RW);
+    {
+        Mat d1 = um.getMat(ACCESS_RW);
+        Mat d2 = um.getMat(ACCESS_RW);
+        d1.release();
+    }
+    void* h = NULL;
+    EXPECT_NO_THROW(h = um.handle(ACCESS_RW));
+    std::cout << "Handle: " << h << std::endl;
+}
+
+
+///////////// oclCleanupCallback threadsafe check (#5062) /////////////////////
+
+// Case 1: reuse of old src Mat in OCL pipe. Hard to catch!
+OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
+{
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+    for (int j = 0; j < 100; j++)
+    {
+        const Size srcSize(320, 240);
+        const int type = CV_8UC1;
+        const int dtype = CV_16UC1;
+
+        Mat src(srcSize, type, Scalar::all(0));
+        Mat dst_ref(srcSize, dtype);
+
+        // Generate reference data as additional check
+        OCL_OFF(src.convertTo(dst_ref, dtype));
+        cv::ocl::setUseOpenCL(true); // restore OpenCL state
+
+        UMat dst(srcSize, dtype);
+
+        // Use multiple iterations to increase chance of data race catching
+        for(int k = 0; k < 10000; k++)
+        {
+            UMat tmpUMat = src.getUMat(ACCESS_RW);
+            tmpUMat.convertTo(dst, dtype);
+            ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
+        }
+
+        EXPECT_MAT_NEAR(dst_ref, dst, 1);
+        printf(".\n"); fflush(stdout);
+    }
+}
+
+// Case 2: concurent deallocation of UMatData between UMat and Mat deallocators. Hard to catch!
+OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
+{
+    if (!cv::ocl::useOpenCL())
+    {
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+    for (int j = 0; j < 100; j++)
+    {
+        const Size srcSize(320, 240);
+        const int type = CV_8UC1;
+        const int dtype = CV_16UC1;
+
+        // This test is only relevant for OCL
+        UMat dst(srcSize, dtype);
+
+        // Use multiple iterations to increase chance of data race catching
+        for(int k = 0; k < 10000; k++)
+        {
+            Mat src(srcSize, type, Scalar::all(0)); // Declare src inside loop now to catch its destruction on stack
+            {
+                UMat tmpUMat = src.getUMat(ACCESS_RW);
+                tmpUMat.convertTo(dst, dtype);
+            }
+            ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
+        }
+        printf(".\n"); fflush(stdout);
+    }
+}
+
+
+
+TEST(UMat, DISABLED_Test_same_behaviour_read_and_read)
 {
     bool exceptionDetected = false;
     try
     {
-        UMat u(Size(10, 10), CV_8UC1);
+        UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_READ);
         UMat dst;
         add(u, Scalar::all(1), dst);
@@ -925,7 +1234,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_read_and_write)
     bool exceptionDetected = false;
     try
     {
-        UMat u(Size(10, 10), CV_8UC1);
+        UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_READ);
         add(u, Scalar::all(1), u);
     }
@@ -941,7 +1250,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_read)
     bool exceptionDetected = false;
     try
     {
-        UMat u(Size(10, 10), CV_8UC1);
+        UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_WRITE);
         UMat dst;
         add(u, Scalar::all(1), dst);
@@ -958,7 +1267,7 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
     bool exceptionDetected = false;
     try
     {
-        UMat u(Size(10, 10), CV_8UC1);
+        UMat u(Size(10, 10), CV_8UC1, Scalar::all(0));
         Mat m = u.getMat(ACCESS_WRITE);
         add(u, Scalar::all(1), u);
     }
@@ -968,3 +1277,81 @@ TEST(UMat, DISABLED_Test_same_behaviour_write_and_write)
     }
     ASSERT_TRUE(exceptionDetected); // data race
 }
+
+TEST(UMat, mat_umat_sync)
+{
+    UMat u(10, 10, CV_8UC1, Scalar(1));
+    {
+        Mat m = u.getMat(ACCESS_RW).reshape(1);
+        m.setTo(Scalar(255));
+    }
+
+    UMat uDiff;
+    compare(u, 255, uDiff, CMP_NE);
+    ASSERT_EQ(0, countNonZero(uDiff));
+}
+
+TEST(UMat, testTempObjects_UMat)
+{
+    UMat u(10, 10, CV_8UC1, Scalar(1));
+    {
+        UMat u2 = u.getMat(ACCESS_RW).getUMat(ACCESS_RW);
+        u2.setTo(Scalar(255));
+    }
+
+    UMat uDiff;
+    compare(u, 255, uDiff, CMP_NE);
+    ASSERT_EQ(0, countNonZero(uDiff));
+}
+
+// Disabled due to failure in VS 2015:
+//  C++11 is enabled by default ==>
+//  destructors have implicit 'noexcept(true)' specifier ==>
+//  throwing exception from destructor is not handled correctly
+#if defined(_MSC_VER) && _MSC_VER >= 1900 /* MSVC 14 */
+TEST(UMat, DISABLED_testTempObjects_Mat)
+#else
+TEST(UMat, testTempObjects_Mat)
+#endif
+{
+    Mat m(10, 10, CV_8UC1, Scalar(1));
+    {
+        Mat m2;
+        ASSERT_ANY_THROW(m2 = m.getUMat(ACCESS_RW).getMat(ACCESS_RW));
+    }
+}
+
+TEST(UMat, testWrongLifetime_UMat)
+{
+    UMat u(10, 10, CV_8UC1, Scalar(1));
+    {
+        UMat u2 = u.getMat(ACCESS_RW).getUMat(ACCESS_RW);
+        u.release(); // base object
+        u2.release(); // derived object, should show warning message
+    }
+}
+
+TEST(UMat, testWrongLifetime_Mat)
+{
+    Mat m(10, 10, CV_8UC1, Scalar(1));
+    {
+        UMat u = m.getUMat(ACCESS_RW);
+        Mat m2 = u.getMat(ACCESS_RW);
+        m.release(); // base object
+        m2.release(); // map of derived object
+        u.release(); // derived object, should show warning message
+    }
+}
+
+TEST(UMat, DISABLED_regression_5991)
+{
+    int sz[] = {2,3,2};
+    UMat mat(3, sz, CV_32F, Scalar(1));
+    ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
+    EXPECT_EQ(sz[0], mat.size[0]);
+    EXPECT_EQ(sz[1], mat.size[1]);
+    EXPECT_EQ(sz[2], mat.size[2]);
+    EXPECT_EQ(0, cvtest::norm(mat.getMat(ACCESS_READ), Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
+}
+
+} } // namespace cvtest::ocl

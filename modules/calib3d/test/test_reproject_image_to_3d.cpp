@@ -138,11 +138,16 @@ protected:
             {
                 InT d = disp(y, x);
 
-                double from[4] = { x, y, d, 1 };
+                double from[4] = {
+                    static_cast<double>(x),
+                    static_cast<double>(y),
+                    static_cast<double>(d),
+                    1.0,
+                };
                 Mat_<double> res = Q * Mat_<double>(4, 1, from);
                 res /= res(3, 0);
 
-                out3d_t pixel_exp = *(Vec3d*)res.data;
+                out3d_t pixel_exp = *res.ptr<Vec3d>();
                 out3d_t pixel_out = _3dImg(y, x);
 
                 const int largeZValue = 10000; /* see documentation */

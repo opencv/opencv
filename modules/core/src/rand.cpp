@@ -511,8 +511,8 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     {
         _parambuf.allocate(cn*8 + n1 + n2);
         double* parambuf = _parambuf;
-        double* p1 = (double*)_param1.data;
-        double* p2 = (double*)_param2.data;
+        double* p1 = _param1.ptr<double>();
+        double* p2 = _param2.ptr<double>();
 
         if( !_param1.isContinuous() || _param1.type() != CV_64F || n1 != cn )
         {
@@ -625,7 +625,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         int esz = (int)CV_ELEM_SIZE(ptype);
 
         if( _param1.isContinuous() && _param1.type() == ptype )
-            mean = _param1.data;
+            mean = _param1.ptr();
         else
         {
             Mat tmp(_param1.size(), ptype, parambuf);
@@ -638,7 +638,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 mean[j] = mean[j - n1*esz];
 
         if( _param2.isContinuous() && _param2.type() == ptype )
-            stddev = _param2.data;
+            stddev = _param2.ptr();
         else
         {
             Mat tmp(_param2.size(), ptype, parambuf + cn);
@@ -731,8 +731,14 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 
 cv::RNG& cv::theRNG()
 {
-    return coreTlsData.get()->rng;
+    return getCoreTlsData().get()->rng;
 }
+
+void cv::setRNGSeed(int seed)
+{
+    theRNG() = RNG(static_cast<uint64>(seed));
+}
+
 
 void cv::randu(InputOutputArray dst, InputArray low, InputArray high)
 {
@@ -748,29 +754,35 @@ namespace cv
 {
 
 template<typename T> static void
-randShuffle_( Mat& _arr, RNG& rng, double iterFactor )
+randShuffle_( Mat& _arr, RNG& rng, double )
 {
-    int sz = _arr.rows*_arr.cols, iters = cvRound(iterFactor*sz);
+    unsigned sz = (unsigned)_arr.total();
     if( _arr.isContinuous() )
     {
-        T* arr = (T*)_arr.data;
-        for( int i = 0; i < iters; i++ )
+        T* arr = _arr.ptr<T>();
+        for( unsigned i = 0; i < sz; i++ )
         {
-            int j = (unsigned)rng % sz, k = (unsigned)rng % sz;
-            std::swap( arr[j], arr[k] );
+            unsigned j = (unsigned)rng % sz;
+            std::swap( arr[j], arr[i] );
         }
     }
     else
     {
-        uchar* data = _arr.data;
+        CV_Assert( _arr.dims <= 2 );
+        uchar* data = _arr.ptr();
         size_t step = _arr.step;
+        int rows = _arr.rows;
         int cols = _arr.cols;
-        for( int i = 0; i < iters; i++ )
+        for( int i0 = 0; i0 < rows; i0++ )
         {
-            int j1 = (unsigned)rng % sz, k1 = (unsigned)rng % sz;
-            int j0 = j1/cols, k0 = k1/cols;
-            j1 -= j0*cols; k1 -= k0*cols;
-            std::swap( ((T*)(data + step*j0))[j1], ((T*)(data + step*k0))[k1] );
+            T* p = _arr.ptr<T>(i0);
+            for( int j0 = 0; j0 < cols; j0++ )
+            {
+                unsigned k1 = (unsigned)rng % sz;
+                int i1 = (int)(k1 / cols);
+                int j1 = (int)(k1 - (unsigned)i1*(unsigned)cols);
+                std::swap( p[j0], ((T*)(data + step*i1))[j1] );
+            }
         }
     }
 }

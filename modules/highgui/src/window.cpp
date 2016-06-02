@@ -65,7 +65,10 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
             cvSetModeWindow_CARBON(name,prop_value);
         #elif defined (HAVE_COCOA)
             cvSetModeWindow_COCOA(name,prop_value);
+        #elif defined (WINRT)
+            cvSetModeWindow_WinRT(name, prop_value);
         #endif
+
     break;
 
     case CV_WND_PROP_AUTOSIZE:
@@ -104,6 +107,8 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetModeWindow_CARBON(name);
         #elif defined (HAVE_COCOA)
             return cvGetModeWindow_COCOA(name);
+        #elif defined (WINRT)
+            return cvGetModeWindow_WinRT(name);
         #else
             return -1;
         #endif
@@ -206,6 +211,16 @@ void cv::setTrackbarPos( const String& trackbarName, const String& winName, int 
     cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
 }
 
+void cv::setTrackbarMax(const String& trackbarName, const String& winName, int maxval)
+{
+    cvSetTrackbarMax(trackbarName.c_str(), winName.c_str(), maxval);
+}
+
+void cv::setTrackbarMin(const String& trackbarName, const String& winName, int minval)
+{
+    cvSetTrackbarMin(trackbarName.c_str(), winName.c_str(), minval);
+}
+
 int cv::getTrackbarPos( const String& trackbarName, const String& winName )
 {
     return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
@@ -292,7 +307,7 @@ void cv::imshow( const String& winname, InputArray _img )
 
         cv::ogl::Texture2D& tex = ownWndTexs[winname];
 
-        if (_img.kind() == _InputArray::GPU_MAT)
+        if (_img.kind() == _InputArray::CUDA_GPU_MAT)
         {
             cv::ogl::Buffer& buf = ownWndBufs[winname];
             buf.copyFrom(_img);
@@ -379,7 +394,8 @@ CV_IMPL void cvUpdateWindow(const char*)
 cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
 {
     CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
-    return *(cv::QtFont*)(&f);
+    void* pf = &f; // to suppress strict-aliasing
+    return *(cv::QtFont*)pf;
 }
 
 void cv::addText( const Mat& img, const String& text, Point org, const QtFont& font)
@@ -475,11 +491,12 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 
 #endif
 
-#if   defined(HAVE_WIN32UI)   // see window_w32.cpp
+#if   defined (HAVE_WIN32UI)  // see window_w32.cpp
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_carbon.cpp
 #elif defined (HAVE_CARBON)
-#elif defined (HAVE_QT)       //YV see window_QT.cpp
+#elif defined (HAVE_QT)       // see window_QT.cpp
+#elif defined (WINRT) && !defined (WINRT_8_0) // see window_winrt.cpp
 
 #else
 
@@ -490,6 +507,12 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 // version with a more capable one without a need to recompile dependent
 // applications or libraries.
 
+void cv::setWindowTitle(const String&, const String&)
+{
+    CV_Error(Error::StsNotImplemented, "The function is not implemented. "
+        "Rebuild the library with Windows, GTK+ 2.x or Carbon support. "
+        "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script");
+}
 
 #define CV_NO_GUI_ERROR(funcname) \
     cvError( CV_StsError, funcname, \
@@ -564,6 +587,16 @@ CV_IMPL int cvGetTrackbarPos( const char*, const char* )
 CV_IMPL void cvSetTrackbarPos( const char*, const char*, int )
 {
     CV_NO_GUI_ERROR( "cvSetTrackbarPos" );
+}
+
+CV_IMPL void cvSetTrackbarMax(const char*, const char*, int)
+{
+    CV_NO_GUI_ERROR( "cvSetTrackbarMax" );
+}
+
+CV_IMPL void cvSetTrackbarMin(const char*, const char*, int)
+{
+    CV_NO_GUI_ERROR( "cvSetTrackbarMin" );
 }
 
 CV_IMPL void* cvGetWindowHandle( const char* )

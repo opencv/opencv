@@ -56,9 +56,10 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        Log.d(TAG, "Creating and seting view");
+        Log.d(TAG, "Creating and setting view");
         mOpenCvCameraView = (CameraBridgeViewBase) new JavaCameraView(this, -1);
         setContentView(mOpenCvCameraView);
+        mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
         mPuzzle15 = new Puzzle15Processor();
         mPuzzle15.prepareNewGame();
@@ -76,7 +77,13 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
     public void onResume()
     {
         super.onResume();
-        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
+        if (!OpenCVLoader.initDebug()) {
+            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+        } else {
+            Log.d(TAG, "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
     }
 
     public void onDestroy() {

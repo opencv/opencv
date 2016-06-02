@@ -47,124 +47,162 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::cuda::FAST_CUDA::FAST_CUDA(int, bool, double) { throw_no_cuda(); }
-void cv::cuda::FAST_CUDA::operator ()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::cuda::FAST_CUDA::operator ()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::cuda::FAST_CUDA::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::cuda::FAST_CUDA::convertKeypoints(const Mat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::cuda::FAST_CUDA::release() { throw_no_cuda(); }
-int cv::cuda::FAST_CUDA::calcKeyPointsLocation(const GpuMat&, const GpuMat&) { throw_no_cuda(); return 0; }
-int cv::cuda::FAST_CUDA::getKeyPoints(GpuMat&) { throw_no_cuda(); return 0; }
+Ptr<cv::cuda::FastFeatureDetector> cv::cuda::FastFeatureDetector::create(int, bool, int, int) { throw_no_cuda(); return Ptr<cv::cuda::FastFeatureDetector>(); }
 
 #else /* !defined (HAVE_CUDA) */
-
-cv::cuda::FAST_CUDA::FAST_CUDA(int _threshold, bool _nonmaxSuppression, double _keypointsRatio) :
-    nonmaxSuppression(_nonmaxSuppression), threshold(_threshold), keypointsRatio(_keypointsRatio), count_(0)
-{
-}
-
-void cv::cuda::FAST_CUDA::operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
-{
-    if (image.empty())
-        return;
-
-    (*this)(image, mask, d_keypoints_);
-    downloadKeypoints(d_keypoints_, keypoints);
-}
-
-void cv::cuda::FAST_CUDA::downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints)
-{
-    if (d_keypoints.empty())
-        return;
-
-    Mat h_keypoints(d_keypoints);
-    convertKeypoints(h_keypoints, keypoints);
-}
-
-void cv::cuda::FAST_CUDA::convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints)
-{
-    if (h_keypoints.empty())
-        return;
-
-    CV_Assert(h_keypoints.rows == ROWS_COUNT && h_keypoints.elemSize() == 4);
-
-    int npoints = h_keypoints.cols;
-
-    keypoints.resize(npoints);
-
-    const short2* loc_row = h_keypoints.ptr<short2>(LOCATION_ROW);
-    const float* response_row = h_keypoints.ptr<float>(RESPONSE_ROW);
-
-    for (int i = 0; i < npoints; ++i)
-    {
-        KeyPoint kp(loc_row[i].x, loc_row[i].y, static_cast<float>(FEATURE_SIZE), -1, response_row[i]);
-        keypoints[i] = kp;
-    }
-}
-
-void cv::cuda::FAST_CUDA::operator ()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints)
-{
-    calcKeyPointsLocation(img, mask);
-    keypoints.cols = getKeyPoints(keypoints);
-}
 
 namespace cv { namespace cuda { namespace device
 {
     namespace fast
     {
-        int calcKeypoints_gpu(PtrStepSzb img, PtrStepSzb mask, short2* kpLoc, int maxKeypoints, PtrStepSzi score, int threshold);
-        int nonmaxSuppression_gpu(const short2* kpLoc, int count, PtrStepSzi score, short2* loc, float* response);
+        int calcKeypoints_gpu(PtrStepSzb img, PtrStepSzb mask, short2* kpLoc, int maxKeypoints, PtrStepSzi score, int threshold, cudaStream_t stream);
+        int nonmaxSuppression_gpu(const short2* kpLoc, int count, PtrStepSzi score, short2* loc, float* response, cudaStream_t stream);
     }
 }}}
 
-int cv::cuda::FAST_CUDA::calcKeyPointsLocation(const GpuMat& img, const GpuMat& mask)
+namespace
 {
-    using namespace cv::cuda::device::fast;
-
-    CV_Assert(img.type() == CV_8UC1);
-    CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == img.size()));
-
-    int maxKeypoints = static_cast<int>(keypointsRatio * img.size().area());
-
-    ensureSizeIsEnough(1, maxKeypoints, CV_16SC2, kpLoc_);
-
-    if (nonmaxSuppression)
+    class FAST_Impl : public cv::cuda::FastFeatureDetector
     {
-        ensureSizeIsEnough(img.size(), CV_32SC1, score_);
-        score_.setTo(Scalar::all(0));
+    public:
+        FAST_Impl(int threshold, bool nonmaxSuppression, int max_npoints);
+
+        virtual void detect(InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask);
+        virtual void detectAsync(InputArray _image, OutputArray _keypoints, InputArray _mask, Stream& stream);
+
+        virtual void convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints);
+
+        virtual void setThreshold(int threshold) { threshold_ = threshold; }
+        virtual int getThreshold() const { return threshold_; }
+
+        virtual void setNonmaxSuppression(bool f) { nonmaxSuppression_ = f; }
+        virtual bool getNonmaxSuppression() const { return nonmaxSuppression_; }
+
+        virtual void setMaxNumPoints(int max_npoints) { max_npoints_ = max_npoints; }
+        virtual int getMaxNumPoints() const { return max_npoints_; }
+
+        virtual void setType(int type) { CV_Assert( type == TYPE_9_16 ); }
+        virtual int getType() const { return TYPE_9_16; }
+
+    private:
+        int threshold_;
+        bool nonmaxSuppression_;
+        int max_npoints_;
+    };
+
+    FAST_Impl::FAST_Impl(int threshold, bool nonmaxSuppression, int max_npoints) :
+        threshold_(threshold), nonmaxSuppression_(nonmaxSuppression), max_npoints_(max_npoints)
+    {
     }
 
-    count_ = calcKeypoints_gpu(img, mask, kpLoc_.ptr<short2>(), maxKeypoints, nonmaxSuppression ? score_ : PtrStepSzi(), threshold);
-    count_ = std::min(count_, maxKeypoints);
+    void FAST_Impl::detect(InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask)
+    {
+        if (_image.empty())
+        {
+            keypoints.clear();
+            return;
+        }
 
-    return count_;
+        BufferPool pool(Stream::Null());
+        GpuMat d_keypoints = pool.getBuffer(ROWS_COUNT, max_npoints_, CV_16SC2);
+
+        detectAsync(_image, d_keypoints, _mask, Stream::Null());
+        convert(d_keypoints, keypoints);
+    }
+
+    void FAST_Impl::detectAsync(InputArray _image, OutputArray _keypoints, InputArray _mask, Stream& stream)
+    {
+        using namespace cv::cuda::device::fast;
+
+        const GpuMat img = _image.getGpuMat();
+        const GpuMat mask = _mask.getGpuMat();
+
+        CV_Assert( img.type() == CV_8UC1 );
+        CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == img.size()) );
+
+        BufferPool pool(stream);
+
+        GpuMat kpLoc = pool.getBuffer(1, max_npoints_, CV_16SC2);
+
+        GpuMat score;
+        if (nonmaxSuppression_)
+        {
+            score = pool.getBuffer(img.size(), CV_32SC1);
+            score.setTo(Scalar::all(0), stream);
+        }
+
+        int count = calcKeypoints_gpu(img, mask, kpLoc.ptr<short2>(), max_npoints_, score, threshold_, StreamAccessor::getStream(stream));
+        count = std::min(count, max_npoints_);
+
+        if (count == 0)
+        {
+            _keypoints.release();
+            return;
+        }
+
+        ensureSizeIsEnough(ROWS_COUNT, count, CV_32FC1, _keypoints);
+        GpuMat& keypoints = _keypoints.getGpuMatRef();
+
+        if (nonmaxSuppression_)
+        {
+            count = nonmaxSuppression_gpu(kpLoc.ptr<short2>(), count, score, keypoints.ptr<short2>(LOCATION_ROW), keypoints.ptr<float>(RESPONSE_ROW), StreamAccessor::getStream(stream));
+            if (count == 0)
+            {
+                keypoints.release();
+            }
+            else
+            {
+                keypoints.cols = count;
+            }
+        }
+        else
+        {
+            GpuMat locRow(1, count, kpLoc.type(), keypoints.ptr(0));
+            kpLoc.colRange(0, count).copyTo(locRow, stream);
+            keypoints.row(1).setTo(Scalar::all(0), stream);
+        }
+    }
+
+    void FAST_Impl::convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints)
+    {
+        if (_gpu_keypoints.empty())
+        {
+            keypoints.clear();
+            return;
+        }
+
+        Mat h_keypoints;
+        if (_gpu_keypoints.kind() == _InputArray::CUDA_GPU_MAT)
+        {
+            _gpu_keypoints.getGpuMat().download(h_keypoints);
+        }
+        else
+        {
+            h_keypoints = _gpu_keypoints.getMat();
+        }
+
+        CV_Assert( h_keypoints.rows == ROWS_COUNT );
+        CV_Assert( h_keypoints.elemSize() == 4 );
+
+        const int npoints = h_keypoints.cols;
+
+        keypoints.resize(npoints);
+
+        const short2* loc_row = h_keypoints.ptr<short2>(LOCATION_ROW);
+        const float* response_row = h_keypoints.ptr<float>(RESPONSE_ROW);
+
+        for (int i = 0; i < npoints; ++i)
+        {
+            KeyPoint kp(loc_row[i].x, loc_row[i].y, static_cast<float>(FEATURE_SIZE), -1, response_row[i]);
+            keypoints[i] = kp;
+        }
+    }
 }
 
-int cv::cuda::FAST_CUDA::getKeyPoints(GpuMat& keypoints)
+Ptr<cv::cuda::FastFeatureDetector> cv::cuda::FastFeatureDetector::create(int threshold, bool nonmaxSuppression, int type, int max_npoints)
 {
-    using namespace cv::cuda::device::fast;
-
-    if (count_ == 0)
-        return 0;
-
-    ensureSizeIsEnough(ROWS_COUNT, count_, CV_32FC1, keypoints);
-
-    if (nonmaxSuppression)
-        return nonmaxSuppression_gpu(kpLoc_.ptr<short2>(), count_, score_, keypoints.ptr<short2>(LOCATION_ROW), keypoints.ptr<float>(RESPONSE_ROW));
-
-    GpuMat locRow(1, count_, kpLoc_.type(), keypoints.ptr(0));
-    kpLoc_.colRange(0, count_).copyTo(locRow);
-    keypoints.row(1).setTo(Scalar::all(0));
-
-    return count_;
-}
-
-void cv::cuda::FAST_CUDA::release()
-{
-    kpLoc_.release();
-    score_.release();
-
-    d_keypoints_.release();
+    CV_Assert( type == TYPE_9_16 );
+    return makePtr<FAST_Impl>(threshold, nonmaxSuppression, max_npoints);
 }
 
 #endif /* !defined (HAVE_CUDA) */

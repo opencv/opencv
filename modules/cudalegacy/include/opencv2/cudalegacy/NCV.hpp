@@ -60,6 +60,8 @@
 //
 //==============================================================================
 
+//! @addtogroup cudalegacy
+//! @{
 
 /**
 * Compile-time assert namespace
@@ -203,6 +205,7 @@ struct NcvPoint2D32u
     __host__ __device__ NcvPoint2D32u(Ncv32u x_, Ncv32u y_) : x(x_), y(y_) {}
 };
 
+//! @cond IGNORED
 
 NCV_CT_ASSERT(sizeof(NcvBool) <= 4);
 NCV_CT_ASSERT(sizeof(Ncv64s) == 8);
@@ -221,6 +224,7 @@ NCV_CT_ASSERT(sizeof(NcvRect32u) == 4 * sizeof(Ncv32u));
 NCV_CT_ASSERT(sizeof(NcvSize32u) == 2 * sizeof(Ncv32u));
 NCV_CT_ASSERT(sizeof(NcvPoint2D32u) == 2 * sizeof(Ncv32u));
 
+//! @endcond
 
 //==============================================================================
 //
@@ -1023,6 +1027,6 @@ CV_EXPORTS NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst, Ncv32u dstStride, Nc
     NCVMatrixAlloc<type> name(alloc, width, height); \
     ncvAssertReturn(name.isMemAllocated(), err);
 
-
+//! @}
 
 #endif // _ncv_hpp_

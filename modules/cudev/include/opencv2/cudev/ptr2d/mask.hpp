@@ -51,6 +51,9 @@
 
 namespace cv { namespace cudev {
 
+//! @addtogroup cudev
+//! @{
+
 struct WithOutMask
 {
     typedef bool value_type;
@@ -97,6 +100,8 @@ singleMaskChannels(const MaskPtr& mask, int channels)
 template <class MaskPtr> struct PtrTraits< SingleMaskChannelsSz<MaskPtr> > : PtrTraitsBase<SingleMaskChannelsSz<MaskPtr>, SingleMaskChannels<MaskPtr> >
 {
 };
+
+//! @}
 
 }}
 

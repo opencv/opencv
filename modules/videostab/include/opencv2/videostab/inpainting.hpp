@@ -55,6 +55,9 @@ namespace cv
 namespace videostab
 {
 
+//! @addtogroup videostab
+//! @{
+
 class CV_EXPORTS InpainterBase
 {
 public:
@@ -200,6 +203,8 @@ CV_EXPORTS void calcFlowMask(
 CV_EXPORTS void completeFrameAccordingToFlow(
         const Mat &flowMask, const Mat &flowX, const Mat &flowY, const Mat &frame1, const Mat &mask1,
         float distThresh, Mat& frame0, Mat &mask0);
+
+//! @}
 
 } // namespace videostab
 } // namespace cv

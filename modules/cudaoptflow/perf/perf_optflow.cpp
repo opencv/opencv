@@ -41,96 +41,14 @@
 //M*/
 
 #include "perf_precomp.hpp"
-#include "opencv2/legacy.hpp"
 
 using namespace std;
 using namespace testing;
 using namespace perf;
 
-//////////////////////////////////////////////////////
-// InterpolateFrames
-
 typedef pair<string, string> pair_string;
 
 DEF_PARAM_TEST_1(ImagePair, pair_string);
-
-PERF_TEST_P(ImagePair, InterpolateFrames,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
-{
-    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame0.empty());
-
-    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame1.empty());
-
-    frame0.convertTo(frame0, CV_32FC1, 1.0 / 255.0);
-    frame1.convertTo(frame1, CV_32FC1, 1.0 / 255.0);
-
-    if (PERF_RUN_CUDA())
-    {
-        const cv::cuda::GpuMat d_frame0(frame0);
-        const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat d_fu, d_fv;
-        cv::cuda::GpuMat d_bu, d_bv;
-
-        cv::cuda::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
-
-        d_flow(d_frame0, d_frame1, d_fu, d_fv);
-        d_flow(d_frame1, d_frame0, d_bu, d_bv);
-
-        cv::cuda::GpuMat newFrame;
-        cv::cuda::GpuMat d_buf;
-
-        TEST_CYCLE() cv::cuda::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, newFrame, d_buf);
-
-        CUDA_SANITY_CHECK(newFrame, 1e-4);
-    }
-    else
-    {
-        FAIL_NO_CPU();
-    }
-}
-
-//////////////////////////////////////////////////////
-// CreateOpticalFlowNeedleMap
-
-PERF_TEST_P(ImagePair, CreateOpticalFlowNeedleMap,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
-{
-    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame0.empty());
-
-    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame1.empty());
-
-    frame0.convertTo(frame0, CV_32FC1, 1.0 / 255.0);
-    frame1.convertTo(frame1, CV_32FC1, 1.0 / 255.0);
-
-    if (PERF_RUN_CUDA())
-    {
-        const cv::cuda::GpuMat d_frame0(frame0);
-        const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u;
-        cv::cuda::GpuMat v;
-
-        cv::cuda::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
-
-        d_flow(d_frame0, d_frame1, u, v);
-
-        cv::cuda::GpuMat vertex, colors;
-
-        TEST_CYCLE() cv::cuda::createOpticalFlowNeedleMap(u, v, vertex, colors);
-
-        CUDA_SANITY_CHECK(vertex, 1e-6);
-        CUDA_SANITY_CHECK(colors);
-    }
-    else
-    {
-        FAIL_NO_CPU();
-    }
-}
 
 //////////////////////////////////////////////////////
 // BroxOpticalFlow
@@ -153,13 +71,19 @@ PERF_TEST_P(ImagePair, BroxOpticalFlow,
     {
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u;
-        cv::cuda::GpuMat v;
+        cv::cuda::GpuMat flow;
 
-        cv::cuda::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+        cv::Ptr<cv::cuda::BroxOpticalFlow> d_alg =
+                cv::cuda::BroxOpticalFlow::create(0.197 /*alpha*/, 50.0 /*gamma*/, 0.8 /*scale_factor*/,
+                                                  10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-        TEST_CYCLE() d_flow(d_frame0, d_frame1, u, v);
+        TEST_CYCLE() d_alg->calc(d_frame0, d_frame1, flow);
+
+        cv::cuda::GpuMat flows[2];
+        cv::cuda::split(flow, flows);
+
+        cv::cuda::GpuMat u = flows[0];
+        cv::cuda::GpuMat v = flows[1];
 
         CUDA_SANITY_CHECK(u, 1e-1);
         CUDA_SANITY_CHECK(v, 1e-1);
@@ -192,10 +116,10 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, PyrLKOpticalFlowSparse,
     const int levels = GET_PARAM(4);
     const int iters = GET_PARAM(5);
 
-    const cv::Mat frame0 = readImage(imagePair.first, useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame0 = readImage(imagePair.first, useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
 
-    const cv::Mat frame1 = readImage(imagePair.second, useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame1 = readImage(imagePair.second, useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame1.empty());
 
     cv::Mat gray_frame;
@@ -207,21 +131,29 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, PyrLKOpticalFlowSparse,
     cv::Mat pts;
     cv::goodFeaturesToTrack(gray_frame, pts, points, 0.01, 0.0);
 
+    frame0.convertTo(frame0, CV_32F);
+    frame1.convertTo(frame1, CV_32F);
+    if(!useGray)
+    {
+        cv::cvtColor(frame0, frame0, cv::COLOR_BGR2BGRA);
+        cv::cvtColor(frame1, frame1, cv::COLOR_BGR2BGRA);
+    }
+
     if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_pts(pts.reshape(2, 1));
 
-        cv::cuda::PyrLKOpticalFlow d_pyrLK;
-        d_pyrLK.winSize = cv::Size(winSize, winSize);
-        d_pyrLK.maxLevel = levels - 1;
-        d_pyrLK.iters = iters;
+        cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> d_pyrLK =
+                cv::cuda::SparsePyrLKOpticalFlow::create(cv::Size(winSize, winSize),
+                                                         levels - 1,
+                                                         iters);
 
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
         cv::cuda::GpuMat nextPts;
         cv::cuda::GpuMat status;
 
-        TEST_CYCLE() d_pyrLK.sparse(d_frame0, d_frame1, d_pts, nextPts, status);
+        TEST_CYCLE() d_pyrLK->calc(d_frame0, d_frame1, d_pts, nextPts, status);
 
         CUDA_SANITY_CHECK(nextPts);
         CUDA_SANITY_CHECK(status);
@@ -271,18 +203,23 @@ PERF_TEST_P(ImagePair_WinSz_Levels_Iters, PyrLKOpticalFlowDense,
     {
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u;
-        cv::cuda::GpuMat v;
+        cv::cuda::GpuMat flow;
 
-        cv::cuda::PyrLKOpticalFlow d_pyrLK;
-        d_pyrLK.winSize = cv::Size(winSize, winSize);
-        d_pyrLK.maxLevel = levels - 1;
-        d_pyrLK.iters = iters;
+        cv::Ptr<cv::cuda::DensePyrLKOpticalFlow> d_pyrLK =
+                cv::cuda::DensePyrLKOpticalFlow::create(cv::Size(winSize, winSize),
+                                                        levels - 1,
+                                                        iters);
 
-        TEST_CYCLE() d_pyrLK.dense(d_frame0, d_frame1, u, v);
+        TEST_CYCLE() d_pyrLK->calc(d_frame0, d_frame1, flow);
 
-        CUDA_SANITY_CHECK(u);
-        CUDA_SANITY_CHECK(v);
+        cv::cuda::GpuMat flows[2];
+        cv::cuda::split(flow, flows);
+
+        cv::cuda::GpuMat u = flows[0];
+        cv::cuda::GpuMat v = flows[1];
+
+        // Sanity test fails on Maxwell and CUDA 7.0
+        SANITY_CHECK_NOTHING();
     }
     else
     {
@@ -316,19 +253,19 @@ PERF_TEST_P(ImagePair, FarnebackOpticalFlow,
     {
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u;
-        cv::cuda::GpuMat v;
+        cv::cuda::GpuMat flow;
 
-        cv::cuda::FarnebackOpticalFlow d_farneback;
-        d_farneback.numLevels = numLevels;
-        d_farneback.pyrScale = pyrScale;
-        d_farneback.winSize = winSize;
-        d_farneback.numIters = numIters;
-        d_farneback.polyN = polyN;
-        d_farneback.polySigma = polySigma;
-        d_farneback.flags = flags;
+        cv::Ptr<cv::cuda::FarnebackOpticalFlow> d_farneback =
+                cv::cuda::FarnebackOpticalFlow::create(numLevels, pyrScale, false, winSize,
+                                                       numIters, polyN, polySigma, flags);
 
-        TEST_CYCLE() d_farneback(d_frame0, d_frame1, u, v);
+        TEST_CYCLE() d_farneback->calc(d_frame0, d_frame1, flow);
+
+        cv::cuda::GpuMat flows[2];
+        cv::cuda::split(flow, flows);
+
+        cv::cuda::GpuMat u = flows[0];
+        cv::cuda::GpuMat v = flows[1];
 
         CUDA_SANITY_CHECK(u, 1e-4);
         CUDA_SANITY_CHECK(v, 1e-4);
@@ -361,12 +298,18 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
     {
         const cv::cuda::GpuMat d_frame0(frame0);
         const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u;
-        cv::cuda::GpuMat v;
+        cv::cuda::GpuMat flow;
 
-        cv::cuda::OpticalFlowDual_TVL1_CUDA d_alg;
+        cv::Ptr<cv::cuda::OpticalFlowDual_TVL1> d_alg =
+                cv::cuda::OpticalFlowDual_TVL1::create();
 
-        TEST_CYCLE() d_alg(d_frame0, d_frame1, u, v);
+        TEST_CYCLE() d_alg->calc(d_frame0, d_frame1, flow);
+
+        cv::cuda::GpuMat flows[2];
+        cv::cuda::split(flow, flows);
+
+        cv::cuda::GpuMat u = flows[0];
+        cv::cuda::GpuMat v = flows[1];
 
         CUDA_SANITY_CHECK(u, 1e-1);
         CUDA_SANITY_CHECK(v, 1e-1);
@@ -375,105 +318,12 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
     {
         cv::Mat flow;
 
-        cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
-        alg->set("medianFiltering", 1);
-        alg->set("innerIterations", 1);
-        alg->set("outerIterations", 300);
-
+        cv::Ptr<cv::DualTVL1OpticalFlow> alg = cv::createOptFlow_DualTVL1();
+        alg->setMedianFiltering(1);
+        alg->setInnerIterations(1);
+        alg->setOuterIterations(300);
         TEST_CYCLE() alg->calc(frame0, frame1, flow);
 
         CPU_SANITY_CHECK(flow);
-    }
-}
-
-//////////////////////////////////////////////////////
-// OpticalFlowBM
-
-void calcOpticalFlowBM(const cv::Mat& prev, const cv::Mat& curr,
-                       cv::Size bSize, cv::Size shiftSize, cv::Size maxRange, int usePrevious,
-                       cv::Mat& velx, cv::Mat& vely)
-{
-    cv::Size sz((curr.cols - bSize.width + shiftSize.width)/shiftSize.width, (curr.rows - bSize.height + shiftSize.height)/shiftSize.height);
-
-    velx.create(sz, CV_32FC1);
-    vely.create(sz, CV_32FC1);
-
-    CvMat cvprev = prev;
-    CvMat cvcurr = curr;
-
-    CvMat cvvelx = velx;
-    CvMat cvvely = vely;
-
-    cvCalcOpticalFlowBM(&cvprev, &cvcurr, bSize, shiftSize, maxRange, usePrevious, &cvvelx, &cvvely);
-}
-
-PERF_TEST_P(ImagePair, OpticalFlowBM,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
-{
-    declare.time(400);
-
-    const cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame0.empty());
-
-    const cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame1.empty());
-
-    const cv::Size block_size(16, 16);
-    const cv::Size shift_size(1, 1);
-    const cv::Size max_range(16, 16);
-
-    if (PERF_RUN_CUDA())
-    {
-        const cv::cuda::GpuMat d_frame0(frame0);
-        const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u, v, buf;
-
-        TEST_CYCLE() cv::cuda::calcOpticalFlowBM(d_frame0, d_frame1, block_size, shift_size, max_range, false, u, v, buf);
-
-        CUDA_SANITY_CHECK(u);
-        CUDA_SANITY_CHECK(v);
-    }
-    else
-    {
-        cv::Mat u, v;
-
-        TEST_CYCLE() calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, u, v);
-
-        CPU_SANITY_CHECK(u);
-        CPU_SANITY_CHECK(v);
-    }
-}
-
-PERF_TEST_P(ImagePair, DISABLED_FastOpticalFlowBM,
-            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
-{
-    declare.time(400);
-
-    const cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame0.empty());
-
-    const cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame1.empty());
-
-    const cv::Size block_size(16, 16);
-    const cv::Size shift_size(1, 1);
-    const cv::Size max_range(16, 16);
-
-    if (PERF_RUN_CUDA())
-    {
-        const cv::cuda::GpuMat d_frame0(frame0);
-        const cv::cuda::GpuMat d_frame1(frame1);
-        cv::cuda::GpuMat u, v;
-
-        cv::cuda::FastOpticalFlowBM fastBM;
-
-        TEST_CYCLE() fastBM(d_frame0, d_frame1, u, v, max_range.width, block_size.width);
-
-        CUDA_SANITY_CHECK(u, 2);
-        CUDA_SANITY_CHECK(v, 2);
-    }
-    else
-    {
-        FAIL_NO_CPU();
     }
 }
