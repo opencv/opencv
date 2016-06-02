@@ -601,8 +601,6 @@ public:
 
     //! returns the currently observed element
     FileNode operator *() const;
-    //! accesses the currently observed element methods
-    FileNode operator ->() const;
 
     //! moves iterator to the next node
     FileNodeIterator& operator ++ ();
@@ -1202,7 +1200,6 @@ inline FileNodeIterator FileNode::begin() const { return FileNodeIterator(fs, no
 inline FileNodeIterator FileNode::end() const   { return FileNodeIterator(fs, node, size()); }
 inline void FileNode::readRaw( const String& fmt, uchar* vec, size_t len ) const { begin().readRaw( fmt, vec, len ); }
 inline FileNode FileNodeIterator::operator *() const  { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
-inline FileNode FileNodeIterator::operator ->() const { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
 inline String::String(const FileNode& fn): cstr_(0), len_(0) { read(fn, *this, *this); }
 
 //! @endcond
