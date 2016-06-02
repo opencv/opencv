@@ -70,15 +70,15 @@ for fname in glob.glob('left*.jpg'):
         corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
 
         # Find the rotation and translation vectors.
-        rvecs, tvecs, inliers = cv2.solvePnPRansac(objp, corners2, mtx, dist)
+        ret,rvecs, tvecs, inliers = cv2.solvePnP(objp, corners2, mtx, dist)
 
         # project 3D points to image plane
         imgpts, jac = cv2.projectPoints(axis, rvecs, tvecs, mtx, dist)
 
         img = draw(img,corners2,imgpts)
         cv2.imshow('img',img)
-        k = cv2.waitKey(0) & 0xff
-        if k == 's':
+        k = cv2.waitKey(0) & 0xFF
+        if k == ord('s'):
             cv2.imwrite(fname[:6]+'.png', img)
 
 cv2.destroyAllWindows()
