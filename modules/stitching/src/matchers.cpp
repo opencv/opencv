@@ -107,6 +107,32 @@ private:
 };
 
 
+struct FindFeaturesBody : ParallelLoopBody
+{
+    FindFeaturesBody(FeaturesFinder &finder, InputArrayOfArrays images,
+                     std::vector<ImageFeatures> &features, const std::vector<std::vector<cv::Rect> > *rois)
+            : finder_(finder), images_(images), features_(features), rois_(rois) {}
+
+    void operator ()(const Range &r) const
+    {
+        for (int i = r.start; i < r.end; ++i)
+        {
+            Mat image = images_.getMat(i);
+            if (rois_)
+                finder_(image, features_[i], (*rois_)[i]);
+            else
+                finder_(image, features_[i]);
+        }
+    }
+
+private:
+    FeaturesFinder &finder_;
+    InputArrayOfArrays images_;
+    std::vector<ImageFeatures> &features_;
+    const std::vector<std::vector<cv::Rect> > *rois_;
+};
+
+
 //////////////////////////////////////////////////////////////////////////////
 
 typedef std::set<std::pair<int,int> > MatchesSet;
@@ -317,6 +343,34 @@ void FeaturesFinder::operator ()(InputArray image, ImageFeatures &features, cons
         roi_features[i].descriptors.copyTo(subdescr);
         descr_offset += roi_features[i].descriptors.rows;
     }
+}
+
+
+void FeaturesFinder2::operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features)
+{
+    size_t count = images.total();
+    features.resize(count);
+
+    FindFeaturesBody body(*this, images, features, NULL);
+    if (is_thread_safe_)
+        parallel_for_(Range(0, static_cast<int>(count)), body);
+    else
+        body(Range(0, static_cast<int>(count)));
+}
+
+
+void FeaturesFinder2::operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features,
+                                  const std::vector<std::vector<cv::Rect> > &rois)
+{
+    CV_Assert(rois.size() == images.total());
+    size_t count = images.total();
+    features.resize(count);
+
+    FindFeaturesBody body(*this, images, features, &rois);
+    if (is_thread_safe_)
+        parallel_for_(Range(0, static_cast<int>(count)), body);
+    else
+        body(Range(0, static_cast<int>(count)));
 }
 
 
