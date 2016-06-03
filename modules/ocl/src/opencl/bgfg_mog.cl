@@ -369,7 +369,6 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global int* fgmask, __glob
         bool fitsPDF = false; //if it remains zero a new GMM mode will be added
 
         int nmodes = modesUsed[y * modesUsed_step + x];
-        int nNewModes = nmodes; //current number of modes in GMM
 
         float totalWeight = 0.0f;
 
@@ -429,8 +428,6 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global int* fgmask, __glob
         totalWeight = 1.f / totalWeight;
         for (int mode = 0; mode < nmodes; ++mode)
             weight[(mode * frame_row + y) * weight_step + x] *= totalWeight;
-
-        nmodes = nNewModes;
 
         if (!fitsPDF)
         {
