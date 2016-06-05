@@ -742,27 +742,29 @@ struct ConvertScaleFp16Op : public BaseElemWiseOp
     ConvertScaleFp16Op() : BaseElemWiseOp(1, FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)), nextRange(0) { }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        convertFp16(src[0], dst, true);
+        Mat m;
+        convertFp16(src[0], m);
+        convertFp16(m, dst);
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        convertFp16(src[0], dst, false);
+        cvtest::copy(src[0], dst);
     }
     int getRandomType(RNG&)
     {
-        // 0: FP32 -> FP16
-        // 1: FP16 -> FP32
+        // 0: FP32 -> FP16 -> FP32
+        // 1: FP16 -> FP32 -> FP16
         int srctype = (nextRange & 1) == 0 ? CV_32F : CV_16S;
         return srctype;
     }
     void getValueRange(int, double& minval, double& maxval)
     {
-        // 0: FP32 -> FP16
-        // 1: FP16 -> FP32
+        // 0: FP32 -> FP16 -> FP32
+        // 1: FP16 -> FP32 -> FP16
         if( (nextRange & 1) == 0 )
         {
-            // largest integer number that fp16 can express
-            maxval = 65504.f;
+            // largest integer number that fp16 can express exactly
+            maxval = 2048.f;
             minval = -maxval;
         }
         else

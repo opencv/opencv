@@ -5117,9 +5117,10 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
     }
 }
 
-void cv::convertFp16( InputArray _src, OutputArray _dst, bool useHW )
+void cv::convertFp16( InputArray _src, OutputArray _dst)
 {
-    if ( checkHardwareSupport(CV_CPU_FP16) == false)
+    bool useHW = true;
+    if ( checkHardwareSupport(CV_CPU_FP16) == false )
     {
         useHW = false;
     }
