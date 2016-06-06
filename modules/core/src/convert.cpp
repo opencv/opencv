@@ -4471,17 +4471,31 @@ static short convertFp16SW(float fp32)
 
     fp16Int16 result;
     result.i = 0;
-    if( 0x477ff000 <= ( a.i & 0x7fffffff ) )
+    unsigned int absolute = a.i & 0x7fffffff;
+    if( 0x477ff000 <= absolute )
     {
         // Inf in Fp16
         result.i = result.i | 0x7C00;
         if( exponent == 128 && significand != 0 )
         {
             // NaN
-            result.i = (short)(result.i | 0x200 | (significand >> kShiftSignificand));
+            result.i = (short)( result.i | 0x200 | ( significand >> kShiftSignificand ) );
         }
     }
-    else if ( ( a.i & 0x7fffffff ) <= 0x387fe000 )
+    else if ( absolute < 0x33000001 )
+    {
+        // too small for fp16
+        result.i = 0;
+    }
+    else if ( absolute < 0x33c00000 )
+    {
+        result.i = 1;
+    }
+    else if ( absolute < 0x34200001 )
+    {
+        result.i = 2;
+    }
+    else if ( absolute < 0x387fe000 )
     {
         // subnormal in Fp16
         int fp16Significand = significand | 0x800000;
@@ -4489,8 +4503,9 @@ static short convertFp16SW(float fp32)
         fp16Significand = fp16Significand >> bitShift;
 
         // special cases to round up
-        int threshold = 0x8000 + ( ( fp16Significand & 1 ) ? 0 : 1 );
-        if( threshold <= ( significand & 0xffff ) )
+        bitShift = exponent + 24;
+        unsigned int threshold = ( ( 0x400000 >> bitShift ) | ( ( ( significand & ( 0x800000 >> bitShift ) ) >> ( 126 - a.fmt.exponent ) ) ^ 1 ) );
+        if( threshold <= ( significand & ( 0xffffff >> ( exponent + 25 ) ) ) )
         {
             fp16Significand++;
         }
@@ -4500,7 +4515,7 @@ static short convertFp16SW(float fp32)
     {
         // usual situation
         // exponent
-        result.fmt.exponent = (exponent + kBiasFp16Exponent);
+        result.fmt.exponent = ( exponent + kBiasFp16Exponent );
 
         // significand;
         short fp16Significand = (short)(significand >> kShiftSignificand);
