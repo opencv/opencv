@@ -531,7 +531,6 @@ CV_16S to represent the bit depth.  If the input array is neither of them, it'll
 
 @param src input array.
 @param dst output array.
-@param useHW if possible use HW SIMD instruction to convert
 */
 CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
 
