@@ -161,7 +161,7 @@ public:
             double x = (m[i].x - cm.x)*sm.x, y = (m[i].y - cm.y)*sm.y;
             double X = (M[i].x - cM.x)*sM.x, Y = (M[i].y - cM.y)*sM.y;
             double Lx[] = { X, Y, 1, 0, 0, 0, -x*X, -x*Y, -x };
-            double Ly[] = { 0, 0, 0, X, Y, 1, -y*X, -y*Y, -y };
+            double Ly[] = { 0, 0, 0, -X, -Y, -1, y*X, y*Y, y };
             int j, k;
             for( j = 0; j < 9; j++ )
                 for( k = j; k < 9; k++ )
