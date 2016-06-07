@@ -1181,7 +1181,6 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
     cvConvert( &_t, tvec );
 }
 
-
 CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
                          const CvMat* imagePoints, const CvMat* npoints,
                          CvSize imageSize, CvMat* cameraMatrix,
@@ -1270,15 +1269,37 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
     cvConvert( &_a, cameraMatrix );
 }
 
+static void subMatrix(const cv::Mat& src, cv::Mat& dst, const std::vector<uchar>& cols,
+                      const std::vector<uchar>& rows) {
+    int nonzeros_cols = cv::countNonZero(cols);
+    cv::Mat tmp(src.rows, nonzeros_cols, CV_64FC1);
 
-/* finds intrinsic and extrinsic camera parameters
-   from a few views of known calibration pattern */
-CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
+    for (int i = 0, j = 0; i < (int)cols.size(); i++)
+    {
+        if (cols[i])
+        {
+            src.col(i).copyTo(tmp.col(j++));
+        }
+    }
+
+    int nonzeros_rows  = cv::countNonZero(rows);
+    dst.create(nonzeros_rows, nonzeros_cols, CV_64FC1);
+    for (int i = 0, j = 0; i < (int)rows.size(); i++)
+    {
+        if (rows[i])
+        {
+            tmp.row(i).copyTo(dst.row(j++));
+        }
+    }
+}
+
+static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
                     const CvMat* imagePoints, const CvMat* npoints,
                     CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs,
-                    CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
+                    CvMat* rvecs, CvMat* tvecs, CvMat* stdDevs,
+                    CvMat* perViewErrors, int flags, CvTermCriteria termCrit )
 {
-    const int NINTRINSIC = 18;
+    const int NINTRINSIC = CV_CALIB_NINTRINSIC;
     double reprojErr = 0;
 
     Matx33d A;
@@ -1338,6 +1359,20 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
+    if( stdDevs )
+    {
+        cn = CV_MAT_CN(stdDevs->type);
+        if( !CV_IS_MAT(stdDevs) ||
+            (CV_MAT_DEPTH(stdDevs->type) != CV_32F && CV_MAT_DEPTH(stdDevs->type) != CV_64F) ||
+            ((stdDevs->rows != (nimages*6 + NINTRINSIC) || stdDevs->cols*cn != 1) &&
+            (stdDevs->rows != 1 || stdDevs->cols != (nimages*6 + NINTRINSIC) || cn != 1)) )
+#define STR__(x) #x
+#define STR_(x) STR__(x)
+            CV_Error( CV_StsBadArg, "the output array of standard deviations vectors must be 1-channel "
+                "1x(n*6 + NINTRINSIC) or (n*6 + NINTRINSIC)x1 array, where n is the number of views,"
+                " NINTRINSIC = " STR_(CV_CALIB_NINTRINSIC));
+    }
+
     if( (CV_MAT_TYPE(cameraMatrix->type) != CV_32FC1 &&
         CV_MAT_TYPE(cameraMatrix->type) != CV_64FC1) ||
         cameraMatrix->rows != 3 || cameraMatrix->cols != 3 )
@@ -1367,6 +1402,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
 
     Mat matM( 1, total, CV_64FC3 );
     Mat _m( 1, total, CV_64FC2 );
+    Mat allErrors(1, total, CV_64FC2);
 
     if(CV_MAT_CN(objectPoints->type) == 3) {
         cvarrToMat(objectPoints).convertTo(matM, CV_64F);
@@ -1518,6 +1554,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         double* _errNorm = 0;
         bool proceed = solver.updateAlt( _param, _JtJ, _JtErr, _errNorm );
         double *param = solver.param->data.db, *pparam = solver.prevParam->data.db;
+        bool calcJ = solver.state == CvLevMarq::CALC_J || (!proceed && stdDevs);
 
         if( flags & CALIB_FIX_ASPECT_RATIO )
         {
@@ -1528,8 +1565,10 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         A(0, 0) = param[0]; A(1, 1) = param[1]; A(0, 2) = param[2]; A(1, 2) = param[3];
         std::copy(param + 4, param + 4 + 14, k);
 
-        if( !proceed )
+        if ( !proceed && !stdDevs && !perViewErrors )
             break;
+        else if ( !proceed && stdDevs )
+            cvZero(_JtJ);
 
         reprojErr = 0;
 
@@ -1543,6 +1582,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
 
             CvMat _Mi(matM.colRange(pos, pos + ni));
             CvMat _mi(_m.colRange(pos, pos + ni));
+            CvMat _me(allErrors.colRange(pos, pos + ni));
 
             _Je.resize(ni*2); _Ji.resize(ni*2); _err.resize(ni*2);
             CvMat _dpdr(_Je.colRange(0, 3));
@@ -1552,7 +1592,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
             CvMat _dpdk(_Ji.colRange(4, NINTRINSIC));
             CvMat _mp(_err.reshape(2, 1));
 
-            if( solver.state == CvLevMarq::CALC_J )
+            if( calcJ )
             {
                  cvProjectPoints2( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
                                   (flags & CALIB_FIX_FOCAL_LENGTH) ? 0 : &_dpdf,
@@ -1563,8 +1603,10 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                 cvProjectPoints2( &_Mi, &_ri, &_ti, &matA, &_k, &_mp );
 
             cvSub( &_mp, &_mi, &_mp );
+            if (perViewErrors || stdDevs)
+                cvCopy(&_mp, &_me);
 
-            if( solver.state == CvLevMarq::CALC_J )
+            if( calcJ )
             {
                 Mat JtJ(cvarrToMat(_JtJ)), JtErr(cvarrToMat(_JtErr));
 
@@ -1581,15 +1623,52 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         }
         if( _errNorm )
             *_errNorm = reprojErr;
+
+        if( !proceed )
+        {
+            if( stdDevs )
+            {
+                Mat mask = cvarrToMat(solver.mask);
+                int nparams_nz = countNonZero(mask);
+                Mat JtJinv, JtJN;
+                JtJN.create(nparams_nz, nparams_nz, CV_64F);
+                subMatrix(cvarrToMat(_JtJ), JtJN, mask, mask);
+                completeSymm(JtJN, false);
+                cv::invert(JtJN, JtJinv, DECOMP_SVD);
+                //sigma2 is deviation of the noise
+                //see any papers about variance of the least squares estimator for
+                //detailed description of the variance estimation methods
+                double sigma2 = norm(allErrors, NORM_L2SQR) / (total - nparams_nz);
+                Mat stdDevsM = cvarrToMat(stdDevs);
+                int j = 0;
+                for ( int s = 0; s < nparams; s++ )
+                    if( mask.data[s] )
+                    {
+                        stdDevsM.at<double>(s) = std::sqrt(JtJinv.at<double>(j,j) * sigma2);
+                        j++;
+                    }
+                    else
+                        stdDevsM.at<double>(s) = 0.;
+            }
+            break;
+        }
     }
 
     // 4. store the results
     cvConvert( &matA, cameraMatrix );
     cvConvert( &_k, distCoeffs );
 
-    for( i = 0; i < nimages; i++ )
+    for( i = 0, pos = 0; i < nimages; i++ )
     {
         CvMat src, dst;
+        if( perViewErrors )
+        {
+            ni = npoints->data.i[i*npstep];
+            perViewErrors->data.db[i] = std::sqrt(cv::norm(allErrors.colRange(pos, pos + ni),
+                                                           NORM_L2SQR) / ni);
+            pos+=ni;
+        }
+
         if( rvecs )
         {
             src = cvMat( 3, 1, CV_64F, solver.param->data.db + NINTRINSIC + i*6 );
@@ -1621,6 +1700,17 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     return std::sqrt(reprojErr/total);
 }
 
+
+/* finds intrinsic and extrinsic camera parameters
+   from a few views of known calibration pattern */
+CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
+                    const CvMat* imagePoints, const CvMat* npoints,
+                    CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs,
+                    CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
+{
+    return cvCalibrateCamera2Internal(objectPoints, imagePoints, npoints, imageSize, cameraMatrix,
+                                      distCoeffs, rvecs, tvecs, NULL, NULL, flags, termCrit);
+}
 
 void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
     double apertureWidth, double apertureHeight, double *fovx, double *fovy,
@@ -1772,7 +1862,7 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
         if( !(flags & (CV_CALIB_FIX_INTRINSIC|CV_CALIB_USE_INTRINSIC_GUESS)))
         {
             cvCalibrateCamera2( objectPoints, imagePoints[k],
-                npoints, imageSize, &K[k], &Dist[k], 0, 0, flags );
+                npoints, imageSize, &K[k], &Dist[k], NULL, NULL, flags );
         }
     }
 
@@ -3091,7 +3181,6 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
     }
 }
 
-
 static Mat prepareCameraMatrix(Mat& cameraMatrix0, int rtype)
 {
     Mat cameraMatrix = Mat::eye(3, 3, rtype);
@@ -3287,10 +3376,23 @@ cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,
 }
 
 
+
 double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
                             InputArrayOfArrays _imagePoints,
                             Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
                             OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags, TermCriteria criteria )
+{
+    return calibrateCamera(_objectPoints, _imagePoints, imageSize, _cameraMatrix, _distCoeffs,
+                                         _rvecs, _tvecs, noArray(), noArray(), noArray(), flags, criteria);
+}
+
+double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
+                            InputArrayOfArrays _imagePoints,
+                            Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
+                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
+                            OutputArray stdDeviationsIntrinsics,
+                            OutputArray stdDeviationsExtrinsics,
+                            OutputArray _perViewErrors, int flags, TermCriteria criteria )
 {
     int rtype = CV_64F;
     Mat cameraMatrix = _cameraMatrix.getMat();
@@ -3304,14 +3406,17 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
 
     int nimages = int(_objectPoints.total());
     CV_Assert( nimages > 0 );
-    Mat objPt, imgPt, npoints, rvecM, tvecM;
+    Mat objPt, imgPt, npoints, rvecM, tvecM, stdDeviationsM, errorsM;
 
-    bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
+    bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed(),
+            stddev_needed = stdDeviationsIntrinsics.needed(), errors_needed = _perViewErrors.needed(),
+            stddev_ext_needed = stdDeviationsExtrinsics.needed();
 
     bool rvecs_mat_vec = _rvecs.isMatVector();
     bool tvecs_mat_vec = _tvecs.isMatVector();
 
-    if( rvecs_needed ) {
+    if( rvecs_needed )
+    {
         _rvecs.create(nimages, 1, CV_64FC3);
 
         if(rvecs_mat_vec)
@@ -3320,7 +3425,8 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
             rvecM = _rvecs.getMat();
     }
 
-    if( tvecs_needed ) {
+    if( tvecs_needed )
+    {
         _tvecs.create(nimages, 1, CV_64FC3);
 
         if(tvecs_mat_vec)
@@ -3329,16 +3435,46 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
             tvecM = _tvecs.getMat();
     }
 
+    if( stddev_needed || stddev_ext_needed )
+    {
+        stdDeviationsM.create(nimages*6 + CV_CALIB_NINTRINSIC, 1, CV_64F);
+    }
+
+    if( errors_needed )
+    {
+        _perViewErrors.create(nimages, 1, CV_64F);
+        errorsM = _perViewErrors.getMat();
+    }
+
     collectCalibrationData( _objectPoints, _imagePoints, noArray(),
                             objPt, imgPt, 0, npoints );
     CvMat c_objPt = objPt, c_imgPt = imgPt, c_npoints = npoints;
     CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-    CvMat c_rvecM = rvecM, c_tvecM = tvecM;
+    CvMat c_rvecM = rvecM, c_tvecM = tvecM, c_stdDev = stdDeviationsM, c_errors = errorsM;
 
-    double reprojErr = cvCalibrateCamera2(&c_objPt, &c_imgPt, &c_npoints, imageSize,
+    double reprojErr = cvCalibrateCamera2Internal(&c_objPt, &c_imgPt, &c_npoints, imageSize,
                                           &c_cameraMatrix, &c_distCoeffs,
                                           rvecs_needed ? &c_rvecM : NULL,
-                                          tvecs_needed ? &c_tvecM : NULL, flags, criteria );
+                                          tvecs_needed ? &c_tvecM : NULL,
+                                          stddev_needed ? &c_stdDev : NULL,
+                                          errors_needed ? &c_errors : NULL, flags, criteria );
+
+    if( stddev_needed )
+    {
+        stdDeviationsIntrinsics.create(CV_CALIB_NINTRINSIC, 1, CV_64F);
+        Mat stdDeviationsIntrinsicsMat = stdDeviationsIntrinsics.getMat();
+        std::memcpy(stdDeviationsIntrinsicsMat.ptr(), stdDeviationsM.ptr(),
+                    CV_CALIB_NINTRINSIC*sizeof(double));
+    }
+
+    if ( stddev_ext_needed )
+    {
+        stdDeviationsExtrinsics.create(nimages*6, 1, CV_64F);
+        Mat stdDeviationsExtrinsicsMat = stdDeviationsExtrinsics.getMat();
+        std::memcpy(stdDeviationsExtrinsicsMat.ptr(),
+                    stdDeviationsM.ptr() + CV_CALIB_NINTRINSIC*sizeof(double),
+                    nimages*6*sizeof(double));
+    }
 
     // overly complicated and inefficient rvec/ tvec handling to support vector<Mat>
     for(int i = 0; i < nimages; i++ )
