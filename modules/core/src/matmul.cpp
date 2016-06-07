@@ -865,7 +865,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 }
 #endif
 
-static void _gemmImplInternal( Mat A, Mat B, double alpha,
+static void gemmImpl( Mat A, Mat B, double alpha,
            Mat C, double beta, Mat D, int flags )
 {
     const int block_lin_size = 128;
@@ -1411,7 +1411,7 @@ static void _gemmImplInternal( Mat A, Mat B, double alpha,
 }
 
 template <typename fptype>inline static void
-_callInternalGemmImpl(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
+callGemmImpl(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
           const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step, int m_a, int n_a, int n_d, int flags, int type)
 {
     CV_StaticAssert(GEMM_1_T == CV_HAL_GEMM_1_T, "Incompatible GEMM_1_T flag in HAL");
@@ -1469,7 +1469,7 @@ _callInternalGemmImpl(const fptype *src1, size_t src1_step, const fptype *src2, 
         C = Mat(c_m, c_n, type, (void*)src3, src3_step);
     Mat D(m_d, n_d, type, (void*)dst, dst_step);
 
-    _gemmImplInternal(A, B, alpha, C, beta, D, flags);
+    gemmImpl(A, B, alpha, C, beta, D, flags);
 }
 
 }
@@ -1480,7 +1480,7 @@ void cv::hal::gemm32f(const float* src1, size_t src1_step, const float* src2, si
 {
 
     CALL_HAL(gemm32f, cv_hal_gemm32f, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
-    _callInternalGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_32F);
+    callGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_32F);
 }
 
 void cv::hal::gemm64f(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
@@ -1488,7 +1488,7 @@ void cv::hal::gemm64f(const double* src1, size_t src1_step, const double* src2, 
                         int m_a, int n_a, int n_d, int flags)
 {
     CALL_HAL(gemm64f, cv_hal_gemm64f, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
-    _callInternalGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_64F);
+    callGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_64F);
 }
 
 CV_EXPORTS void cv::hal::gemm32fc(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
@@ -1496,7 +1496,7 @@ CV_EXPORTS void cv::hal::gemm32fc(const float* src1, size_t src1_step, const flo
                         int m_a, int n_a, int n_d, int flags)
 {
     CALL_HAL(gemm32fc, cv_hal_gemm32fc, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
-    _callInternalGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_32FC2);
+    callGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_32FC2);
 }
 
 CV_EXPORTS void cv::hal::gemm64fc(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
@@ -1504,7 +1504,7 @@ CV_EXPORTS void cv::hal::gemm64fc(const double* src1, size_t src1_step, const do
                         int m_a, int n_a, int n_d, int flags)
 {
     CALL_HAL(gemm64fc, cv_hal_gemm64fc, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
-    _callInternalGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_64FC2);
+    callGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_64FC2);
 }
 
 void cv::gemm( InputArray matA, InputArray matB, double alpha,
