@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>OpenCV.UWP.native.features2d</id>
+    <version>0.0.2-alpha</version>
+    <title>OpenCV Features2d (for UWP/C++)</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>OpenCV Features2d - 2D Features Framework (for UWP/C++)</summary>
+    <description>Contains DLLs and C++ header/import files for OpenCV Features2d module, for use in UWP apps. Features2d is for feature detection/description, descriptor matches, drawing function of keypoints and matches, and object categorization.</description>
+    <licenseUrl>https://raw.githubusercontent.com/Itseez/opencv/master/LICENSE</licenseUrl>
+    <projectUrl>http://docs.opencv.org/3.0.0/da/d9b/group__features2d.html</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ljw1004/opencv/vs2015-samples/vs2015/WS/10.0/NuPkg/opencv.uwp.png</iconUrl>
+    <tags>opencv UWP</tags>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.flann" version="0.0.2-alpha" />
+      <dependency id="OpenCV.UWP.native.imgproc" version="0.0.2-alpha" />
+    </dependencies>
+  </metadata>
+</package>

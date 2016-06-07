@@ -110,11 +110,13 @@
     <GenerateManifest>false</GenerateManifest>
     <OutDir>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\bin\Debug\</OutDir>
     <IntDir>winrt.dir\Debug\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <GenerateManifest>false</GenerateManifest>
     <OutDir>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\bin\Release\</OutDir>
     <IntDir>winrt.dir\Release\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <GenerateManifest>false</GenerateManifest>
@@ -175,6 +177,7 @@
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <AdditionalLibraryDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\lib\Debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opencv_imgcodecs300d.lib;opencv_core300d.lib;opencv_imgproc300d.lib;opencv_videoio300d.lib;opencv_objdetect300d.lib;WindowsApp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/lib/Debug/opencv_winrt.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
@@ -193,6 +196,8 @@
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <AdditionalLibraryDirectories>$(OCV2015_ROOT)\vs2015\WS\10.0\ARM\lib\Release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opencv_imgcodecs300.lib;opencv_core300.lib;opencv_imgproc300.lib;opencv_videoio300.lib;opencv_objdetect300.lib;WindowsApp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImportLibrary>$(OCV2015_ROOT)/vs2015/WS/10.0/ARM/lib/Release/opencv_winrt.lib</ImportLibrary>
+      <LinkTimeCodeGeneration />
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

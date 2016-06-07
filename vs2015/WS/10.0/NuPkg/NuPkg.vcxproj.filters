@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="OpenCV.uwp.native.core.nuspec" />
+    <None Include="OpenCV.uwp.native.imgproc.nuspec" />
+    <None Include="OpenCV.UWP.native.imgcodecs.nuspec" />
+    <None Include="generic.targets" />
+    <None Include="OpenCV.UWP.native.flann.nuspec" />
+    <None Include="OpenCV.UWP.native.ml.nuspec" />
+    <None Include="OpenCV.UWP.native.features2d.nuspec" />
+    <None Include="OpenCV.UWP.native.objdetect.nuspec" />
+    <None Include="OpenCV.UWP.native.photo.nuspec" />
+    <None Include="OpenCV.UWP.native.video.nuspec" />
+    <None Include="OpenCV.UWP.native.shape.nuspec" />
+    <None Include="OpenCV.UWP.native.videoio.nuspec" />
+    <None Include="OpenCV.UWP.native.calib3d.nuspec" />
+    <None Include="OpenCV.UWP.native.stitching.nuspec" />
+    <None Include="OpenCV.UWP.native.videostab.nuspec" />
+    <None Include="OpenCV.UWP.native.cvRT.nuspec" />
+    <None Include="OpenCV.UWP.native.cvRT.targets" />
+    <None Include="OpenCV.UWP.native.all.nuspec" />
+    <None Include="OpenCV.UWP.native.all.targets" />
+    <None Include="readme.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="opencv.uwp.png" />
+  </ItemGroup>
+</Project>

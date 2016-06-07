@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <OpenCVFixedPlatform Condition="'$(Platform)' == 'Win32'">x86</OpenCVFixedPlatform>
+    <OpenCVFixedPlatform Condition="'$(Platform)' != 'Win32'">$(Platform)</OpenCVFixedPlatform>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'UAP'">
+    <ReferenceCopyLocalPaths Condition="'$(Configuration)' == 'Release'" Include="$(MSBuildThisFileDirectory)..\..\runtimes\win10-$(OpenCVFixedPlatform)\native\XXX.dll" />
+    <ReferenceCopyLocalPaths Condition="'$(Configuration)' == 'Debug'"   Include="$(MSBuildThisFileDirectory)win10-$(OpenCVFixedPlatform)\XXXd.dll" />
+  </ItemGroup>
+
+  <ItemDefinitionGroup Condition="'$(TargetPlatformIdentifier)' == 'UAP'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)win10-$(OpenCVFixedPlatform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)' == 'Release'">XXX.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)' == 'Debug'">XXXd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

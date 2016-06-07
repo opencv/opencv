@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>OpenCV.UWP.native.core</id>
+    <version>0.0.2-alpha</version>
+    <title>OpenCV Core (for UWP/C++)</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>OpenCV Core - Core Functionality (for UWP/C++)</summary>
+    <description>Contains DLLs and C++ header/import files for OpenCV Core module, for use in UWP apps. Core defines the basic structures and interop; the rest of OpenCV depends upon in.</description>
+    <licenseUrl>https://raw.githubusercontent.com/Itseez/opencv/master/LICENSE</licenseUrl>
+    <projectUrl>http://docs.opencv.org/3.0.0/d0/de1/group__core.html</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ljw1004/opencv/vs2015-samples/vs2015/WS/10.0/NuPkg/opencv.uwp.png</iconUrl>
+    <tags>opencv UWP</tags>
+    <dependencies>
+    </dependencies>
+  </metadata>
+</package>

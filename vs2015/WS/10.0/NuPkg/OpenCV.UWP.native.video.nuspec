@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>OpenCV.UWP.native.video</id>
+    <version>0.0.2-alpha</version>
+    <title>OpenCV Video (for UWP/C++)</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>OpenCV Video - Video (for UWP/C++)</summary>
+    <description>Contains DLLs and C++ header/import files for OpenCV Video module, for use in UWP apps. Video is for motion analysis and object tracking.</description>
+    <licenseUrl>https://raw.githubusercontent.com/Itseez/opencv/master/LICENSE</licenseUrl>
+    <projectUrl>http://docs.opencv.org/3.0.0/d7/de9/group__video.html</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ljw1004/opencv/vs2015-samples/vs2015/WS/10.0/NuPkg/opencv.uwp.png</iconUrl>
+    <tags>opencv UWP</tags>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.imgproc" version="0.0.2-alpha" />
+    </dependencies>
+  </metadata>
+</package>

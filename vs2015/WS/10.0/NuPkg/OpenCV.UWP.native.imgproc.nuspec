@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>OpenCV.UWP.native.imgproc</id>
+    <version>0.0.2-alpha</version>
+    <title>OpenCV ImgProc (for UWP/C++)</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>OpenCV ImgProc - Image Processing (for UWP/C++)</summary>
+    <description>Contains DLLs and C++ header/import files for OpenCV ImgProc module, for use in UWP apps. ImgProc is for image filtering, transformations, drawing functions, color maps, histograms, structural analysis and shape description, motion analysis and object tracking, feature detection, object detection.</description>
+    <licenseUrl>https://raw.githubusercontent.com/Itseez/opencv/master/LICENSE</licenseUrl>
+    <projectUrl>http://docs.opencv.org/3.0.0/d7/dbd/group__imgproc.html</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ljw1004/opencv/vs2015-samples/vs2015/WS/10.0/NuPkg/opencv.uwp.png</iconUrl>
+    <tags>opencv UWP</tags>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.core" version="0.0.2-alpha" />
+    </dependencies>
+  </metadata>
+</package>

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>OpenCV.UWP.native.imgcodecs</id>
+    <version>0.0.2-alpha</version>
+    <title>OpenCV ImgCodecs (for UWP/C++)</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>OpenCV ImgCodecs - Image file reading and writing (for UWP/C++)</summary>
+    <description>Contains DLLs and C++ header/import files for OpenCV ImgCodecs module, for use in UWP apps. ImgCodecs has its own implementation for reading+writing JPEG and PNG files.</description>
+    <licenseUrl>https://raw.githubusercontent.com/Itseez/opencv/master/LICENSE</licenseUrl>
+    <projectUrl>http://docs.opencv.org/3.0.0/d4/da8/group__imgcodecs.html</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ljw1004/opencv/vs2015-samples/vs2015/WS/10.0/NuPkg/opencv.uwp.png</iconUrl>
+    <tags>opencv UWP</tags>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.imgproc" version="0.0.2-alpha" />
+    </dependencies>
+  </metadata>
+</package>

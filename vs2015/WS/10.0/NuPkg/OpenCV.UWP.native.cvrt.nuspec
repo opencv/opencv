@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>OpenCV.UWP.native.cvrt</id>
+    <version>0.0.2-alpha</version>
+    <title>OpenCV CvRT (for UWP/C++)</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>OpenCV CvRT - WinRT-specific functionality (for UWP/C++)</summary>
+    <description>Contains DLLs and WinMD files for OpenCV CvRT module, for use in UWP apps. CvRT contains a tiny ad-hoc set of WinRT-style wrappers.</description>
+    <licenseUrl>https://raw.githubusercontent.com/Itseez/opencv/master/LICENSE</licenseUrl>
+    <projectUrl>http://opencv.org/</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ljw1004/opencv/vs2015-samples/vs2015/WS/10.0/NuPkg/opencv.uwp.png</iconUrl>
+    <tags>opencv UWP</tags>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.videoio" version="0.0.2-alpha" />
+      <dependency id="OpenCV.UWP.native.objdetect" version="0.0.2-alpha" />
+    </dependencies>
+  </metadata>
+</package>

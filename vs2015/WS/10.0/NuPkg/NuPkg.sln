@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NuPkg", "NuPkg.vcxproj", "{F7A906BC-FE8F-418E-BCA7-823E64742E69}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|All = Debug|All
+		Release|All = Release|All
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F7A906BC-FE8F-418E-BCA7-823E64742E69}.Debug|All.ActiveCfg = Release|Win32
+		{F7A906BC-FE8F-418E-BCA7-823E64742E69}.Debug|All.Build.0 = Release|Win32
+		{F7A906BC-FE8F-418E-BCA7-823E64742E69}.Release|All.ActiveCfg = Release|Win32
+		{F7A906BC-FE8F-418E-BCA7-823E64742E69}.Release|All.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

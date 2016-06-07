@@ -1,0 +1,247 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="generic.targets" />
+    <None Include="OpenCV.UWP.native.all.nuspec" />
+    <None Include="OpenCV.UWP.native.all.targets" />
+    <None Include="OpenCV.UWP.native.calib3d.nuspec" />
+    <None Include="OpenCV.UWP.native.core.nuspec" />
+    <None Include="OpenCV.UWP.native.cvrt.nuspec" />
+    <None Include="OpenCV.UWP.native.cvrt.targets" />
+    <None Include="OpenCV.UWP.native.features2d.nuspec" />
+    <None Include="OpenCV.UWP.native.flann.nuspec" />
+    <None Include="OpenCV.UWP.native.imgcodecs.nuspec" />
+    <None Include="OpenCV.UWP.native.imgproc.nuspec" />
+    <None Include="OpenCV.UWP.native.ml.nuspec" />
+    <None Include="OpenCV.UWP.native.objdetect.nuspec" />
+    <None Include="OpenCV.UWP.native.photo.nuspec" />
+    <None Include="OpenCV.UWP.native.shape.nuspec" />
+    <None Include="OpenCV.UWP.native.stitching.nuspec" />
+    <None Include="OpenCV.UWP.native.video.nuspec" />
+    <None Include="OpenCV.UWP.native.videoio.nuspec" />
+    <None Include="OpenCV.UWP.native.videostab.nuspec" />
+    <None Include="packages.config" />
+    <None Include="readme.md" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{F7A906BC-FE8F-418E-BCA7-823E64742E69}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>NuPkg</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ItemGroup>
+    <Image Include="opencv.uwp.png" />
+  </ItemGroup>
+  <Target Name="AfterBuild">
+    <PropertyGroup>
+      <GithubUserId>Microsoft</GithubUserId>
+      <GithubRepository>opencv</GithubRepository>
+      <GithubCommitId>9a1b85431ad5d11eaba0b1220f1c1d9c1468aa45</GithubCommitId>
+      <GithubRoot>$(MSBuildThisFileDirectory.Replace('\vs2015\WS\10.0\NuPkg\',''))</GithubRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <OpenCVModule Include="core" />
+      <OpenCVModule Include="flann" />
+      <OpenCVModule Include="imgproc" />
+      <OpenCVModule Include="ml" />
+      <OpenCVModule Include="features2d" />
+      <OpenCVModule Include="video" />
+      <OpenCVModule Include="photo" />
+      <OpenCVModule Include="imgcodecs" />
+      <OpenCVModule Include="objdetect" />
+      <OpenCVModule Include="calib3d" />
+      <OpenCVModule Include="shape" />
+      <OpenCVModule Include="videoio" />
+      <OpenCVModule Include="stitching" />
+      <OpenCVModule Include="videostab" />
+      <!-- -->
+      <OpenCVCoreIncludeCore Include="..\include\opencv2\core\**\*.h*" />
+      <OpenCVCoreIncludeHal Include="..\include\opencv2\hal\**\*.h*" />
+      <OpenCVFlannInclude Include="..\include\opencv2\flann\**\*.h*" />
+      <OpenCVStitchingInclude Include="..\include\opencv2\stitching\**\*.h*" />
+      <OpenCVVideostabInclude Include="..\include\opencv2\videostab\**\*.h*" />
+    </ItemGroup>
+    <!-- -->
+    <Message Importance="high" Text="NuPkg: cvRT..." />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Release\opencv_winrt.dll" DestinationFolder="bin\OpenCV.UWP.native.cvrt\runtimes\win10-x86\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Release\opencv_winrt.pdb" DestinationFolder="bin\OpenCV.UWP.native.cvrt\runtimes\win10-x86\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Release\opencv_winrt.dll" DestinationFolder="bin\OpenCV.UWP.native.cvrt\runtimes\win10-x64\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Release\opencv_winrt.pdb" DestinationFolder="bin\OpenCV.UWP.native.cvrt\runtimes\win10-x64\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Release\opencv_winrt.dll" DestinationFolder="bin\OpenCV.UWP.native.cvrt\runtimes\win10-arm\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Release\opencv_winrt.pdb" DestinationFolder="bin\OpenCV.UWP.native.cvrt\runtimes\win10-arm\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Release\cvRT.winmd" DestinationFolder="bin\OpenCV.UWP.native.cvrt\lib\uap" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Debug\opencv_winrt.dll" DestinationFolder="bin\OpenCV.UWP.native.cvrt\build\native\win10-x86" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Debug\opencv_winrt.pdb" DestinationFolder="bin\OpenCV.UWP.native.cvrt\build\native\win10-x86" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Debug\opencv_winrt.dll" DestinationFolder="bin\OpenCV.UWP.native.cvrt\build\native\win10-x64" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Debug\opencv_winrt.pdb" DestinationFolder="bin\OpenCV.UWP.native.cvrt\build\native\win10-x64" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Debug\opencv_winrt.dll" DestinationFolder="bin\OpenCV.UWP.native.cvrt\build\native\win10-arm" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Debug\opencv_winrt.pdb" DestinationFolder="bin\OpenCV.UWP.native.cvrt\build\native\win10-arm" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="OpenCV.UWP.native.cvrt.targets" DestinationFolder="bin\OpenCV.UWP.native.cvrt\build\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="OpenCV.UWP.native.cvrt.nuspec" DestinationFolder="bin\OpenCV.UWP.native.cvrt" />
+    <Exec Command="powershell -ExecutionPolicy ByPass ..\..\packages\Pdb2Github.CommandLine.1.0.0\tools\github-sourceindexer.ps1 -dbgToolsPath ..\..\packages\Pdb2Github.CommandLine.1.0.0\tools -ignoreUnknown -symbolsFolder . -userId %22$(GithubUserId)%22 -repository %22$(GithubRepository)%22 -branch $(GithubCommitId) -sourcesRoot %22$(GithubRoot)%22" WorkingDirectory="bin\OpenCV.UWP.native.cvrt" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Release\opencv_winrt.pdb" DestinationFolder="bin\symbols\x86" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Release\opencv_winrt.pdb" DestinationFolder="bin\symbols\x64" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Release\opencv_winrt.pdb" DestinationFolder="bin\symbols\arm" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Debug\opencv_winrt.pdb" DestinationFolder="bin\symbols\x86\debug" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Debug\opencv_winrt.pdb" DestinationFolder="bin\symbols\x64\debug" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Debug\opencv_winrt.pdb" DestinationFolder="bin\symbols\arm\debug" />
+    <Exec Command="..\..\packages\NuGet.CommandLine.3.3.0\tools\NuGet.exe pack -symbols -OutputDirectory .." WorkingDirectory="bin\OpenCV.UWP.native.cvrt" Outputs="bin\*.nupkg" />
+    <!-- -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\opencv.hpp" DestinationFolder="bin\OpenCV.UWP.native.all\include\opencv2" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\cv.h" DestinationFolder="bin\OpenCV.UWP.native.all\include\opencv" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\cv.hpp" DestinationFolder="bin\OpenCV.UWP.native.all\include\opencv" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\cvaux.h" DestinationFolder="bin\OpenCV.UWP.native.all\include\opencv" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\cvaux.hpp" DestinationFolder="bin\OpenCV.UWP.native.all\include\opencv" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="OpenCV.UWP.native.all.targets" DestinationFolder="bin\OpenCV.UWP.native.all\build\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="OpenCV.UWP.native.all.nuspec" DestinationFolder="bin\OpenCV.UWP.native.all" />
+    <Exec Command="..\..\packages\NuGet.CommandLine.3.3.0\tools\NuGet.exe pack -symbols -OutputDirectory .." WorkingDirectory="bin\OpenCV.UWP.native.all" Outputs="bin\*.nupkg" />
+    <!-- -->
+    <!-- copy all module DLLs, PDBs, LIBs, .TARGETs, .NUSPECs, .HPP, and do pdb2github on the PDBs -->
+    <Message Importance="high" Text="NuPkg: Copying files..." />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Release\opencv_%(OpenCVModule.Identity)300.dll" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\runtimes\win10-x86\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Release\opencv_%(OpenCVModule.Identity)300.pdb" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\runtimes\win10-x86\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\lib\Release\opencv_%(OpenCVModule.Identity)300.lib" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-x86" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Debug\opencv_%(OpenCVModule.Identity)300d.dll" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-x86" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Debug\opencv_%(OpenCVModule.Identity)300d.pdb" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-x86" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\lib\Debug\opencv_%(OpenCVModule.Identity)300d.lib" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-x86" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Release\opencv_%(OpenCVModule.Identity)300.dll" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\runtimes\win10-x64\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Release\opencv_%(OpenCVModule.Identity)300.pdb" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\runtimes\win10-x64\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\lib\Release\opencv_%(OpenCVModule.Identity)300.lib" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-x64" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Debug\opencv_%(OpenCVModule.Identity)300d.dll" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-x64" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Debug\opencv_%(OpenCVModule.Identity)300d.pdb" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-x64" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\lib\Debug\opencv_%(OpenCVModule.Identity)300d.lib" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-x64" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Release\opencv_%(OpenCVModule.Identity)300.dll" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\runtimes\win10-arm\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Release\opencv_%(OpenCVModule.Identity)300.pdb" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\runtimes\win10-arm\native" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\lib\Release\opencv_%(OpenCVModule.Identity)300.lib" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-arm" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Debug\opencv_%(OpenCVModule.Identity)300d.dll" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-arm" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Debug\opencv_%(OpenCVModule.Identity)300d.pdb" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-arm" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\lib\Debug\opencv_%(OpenCVModule.Identity)300d.lib" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\win10-arm" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="OpenCV.UWP.native.%(OpenCVModule.Identity).nuspec" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)" />
+    <MakeDir Directories="bin\OpenCV.UWP.native.core\build\native" />
+    <Exec Command="powershell -Command %22(Get-Content ..\..\..\..\generic.targets) -replace 'XXX', 'opencv_%(OpenCVModule.Identity)300' | Out-File OpenCV.UWP.native.%(OpenCVModule.Identity).targets -encoding ASCII%22" WorkingDirectory="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native" Outputs="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\build\native\*.targets" />
+    <Message Importance="high" Text="NuPkg: fixing PDBs to point to github... " />
+    <Exec Command="powershell -ExecutionPolicy ByPass ..\..\packages\Pdb2Github.CommandLine.1.0.0\tools\github-sourceindexer.ps1 -dbgToolsPath ..\..\packages\Pdb2Github.CommandLine.1.0.0\tools -ignoreUnknown -symbolsFolder . -userId %22$(GithubUserId)%22 -repository %22$(GithubRepository)%22 -branch $(GithubCommitId) -sourcesRoot %22$(GithubRoot)%22" WorkingDirectory="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)" />
+    <!-- -->
+    <!-- also copy all PDBs into a second "symbols" directory and do pdb2github on them and zip them up -->
+    <Message Importance="high" Text="NuPkg: Assembling symbols.zip..." />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Release\opencv_%(OpenCVModule.Identity)300.pdb" DestinationFolder="bin\symbols\x86" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x86\bin\Debug\opencv_%(OpenCVModule.Identity)300d.pdb" DestinationFolder="bin\symbols\x86" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Release\opencv_%(OpenCVModule.Identity)300.pdb" DestinationFolder="bin\symbols\x64" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\x64\bin\Debug\opencv_%(OpenCVModule.Identity)300d.pdb" DestinationFolder="bin\symbols\x64" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Release\opencv_%(OpenCVModule.Identity)300.pdb" DestinationFolder="bin\symbols\arm" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\arm\bin\Debug\opencv_%(OpenCVModule.Identity)300d.pdb" DestinationFolder="bin\symbols\arm" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\%(OpenCVModule.Identity).hpp" DestinationFolder="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)\include\opencv2" />
+    <Message Importance="high" Text="NuPkg: pointing symbols.zip to github..." />
+    <Exec Command="powershell -ExecutionPolicy ByPass ..\..\packages\Pdb2Github.CommandLine.1.0.0\tools\github-sourceindexer.ps1 -dbgToolsPath ..\..\packages\Pdb2Github.CommandLine.1.0.0\tools -ignoreUnknown -symbolsFolder . -userId %22$(GithubUserId)%22 -repository %22$(GithubRepository)%22 -branch $(GithubCommitId) -sourcesRoot %22$(GithubRoot)%22" WorkingDirectory="bin\symbols" />
+    <Message Importance="high" Text="NuPkg: compressing symbols.zip..." />
+    <Exec Command="powershell -Command %22Compress-Archive -Path symbols -DestinationPath OpenCV.UWP.native.symbols.zip -Force%22" WorkingDirectory="bin" Outputs="bin\symbols.zip" />
+    <!-- -->
+    <Message Importance="high" Text="NuPkg: some additional files..." />
+    <!-- additional includes for core -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\hal.hpp" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv2" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\cvconfig.h" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv2" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\opencv_modules.hpp" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv2" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="@(OpenCVCoreIncludeCore)" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv2\core\%(RecursiveDir)" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="@(OpenCVCoreIncludeHal)" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv2\hal\%(RecursiveDir)" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\cvwimage.h" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\cxcore.h" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\cxcore.hpp" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\cxeigen.hpp" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\cxmisc.h" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\highgui.h" DestinationFolder="bin\OpenCV.UWP.native.core\include\opencv" />
+    <!-- additional includes for imgproc -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\imgproc\imgproc.hpp" DestinationFolder="bin\OpenCV.UWP.native.imgproc\include\opencv2\imgproc" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\imgproc\imgproc_c.h" DestinationFolder="bin\OpenCV.UWP.native.imgproc\include\opencv2\imgproc" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\imgproc\types_c.h" DestinationFolder="bin\OpenCV.UWP.native.imgproc\include\opencv2\imgproc" />
+    <!-- additional includes for flann -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="@(OpenCVFlannInclude)" DestinationFolder="bin\OpenCV.UWP.native.flann\include\opencv2\flann\%(RecursiveDir)" />
+    <!-- additional includes for ml -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\ml\ml.hpp" DestinationFolder="bin\OpenCV.UWP.native.ml\include\opencv2\ml" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv\ml.h" DestinationFolder="bin\OpenCV.UWP.native.ml\include\opencv" />
+    <!-- additional includes for features2d -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\features2d\features2d.hpp" DestinationFolder="bin\OpenCV.UWP.native.features2d\include\opencv2\features2d" />
+    <!-- additional includes for video -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\video\video.hpp" DestinationFolder="bin\OpenCV.UWP.native.video\include\opencv2\video" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\video\background_segm.hpp" DestinationFolder="bin\OpenCV.UWP.native.video\include\opencv2\video" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\video\tracking.hpp" DestinationFolder="bin\OpenCV.UWP.native.video\include\opencv2\video" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\video\tracking_c.h" DestinationFolder="bin\OpenCV.UWP.native.video\include\opencv2\video" />
+    <!-- additional includes for photo -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\photo\photo.hpp" DestinationFolder="bin\OpenCV.UWP.native.photo\include\opencv2\photo" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\photo\photo_c.h" DestinationFolder="bin\OpenCV.UWP.native.photo\include\opencv2\photo" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\photo\cuda.hpp" DestinationFolder="bin\OpenCV.UWP.native.photo\include\opencv2\photo" />
+    <!-- additional includes for imgcodecs -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\imgcodecs\imgcodecs.hpp" DestinationFolder="bin\OpenCV.UWP.native.imgcodecs\include\opencv2\imgcodecs" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\imgcodecs\imgcodecs_c.h" DestinationFolder="bin\OpenCV.UWP.native.imgcodecs\include\opencv2\imgcodecs" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\imgcodecs\ios.h" DestinationFolder="bin\OpenCV.UWP.native.imgcodecs\include\opencv2\imgcodecs" />
+    <!-- additional includes for objdetect -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\objdetect\objdetect.hpp" DestinationFolder="bin\OpenCV.UWP.native.objdetect\include\opencv2\objdetect" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\objdetect\objdetect_c.h" DestinationFolder="bin\OpenCV.UWP.native.objdetect\include\opencv2\objdetect" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\objdetect\detection_based_tracker.hpp" DestinationFolder="bin\OpenCV.UWP.native.objdetect\include\opencv2\objdetect" />
+    <!-- additional includes for calib3d -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\calib3d\calib3d.hpp" DestinationFolder="bin\OpenCV.UWP.native.calib3d\include\opencv2\calib3d" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\calib3d\calib3d_c.h" DestinationFolder="bin\OpenCV.UWP.native.calib3d\include\opencv2\calib3d" />
+    <!-- additional includes for shape -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\shape\shape.hpp" DestinationFolder="bin\OpenCV.UWP.native.shape\include\opencv2\shape" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\shape\emdL1.hpp" DestinationFolder="bin\OpenCV.UWP.native.shape\include\opencv2\shape" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\shape\hist_cost.hpp" DestinationFolder="bin\OpenCV.UWP.native.shape\include\opencv2\shape" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\shape\shape_distance.hpp" DestinationFolder="bin\OpenCV.UWP.native.shape\include\opencv2\shape" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\shape\shape_transformer.hpp" DestinationFolder="bin\OpenCV.UWP.native.shape\include\opencv2\shape" />
+    <!-- additional includes for videoio -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\videoio\videoio.hpp" DestinationFolder="bin\OpenCV.UWP.native.videoio\include\opencv2\videoio" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\videoio\videoio_c.h" DestinationFolder="bin\OpenCV.UWP.native.videoio\include\opencv2\videoio" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\videoio\cap_ios.h" DestinationFolder="bin\OpenCV.UWP.native.videoio\include\opencv2\videoio" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="..\include\opencv2\videoio\cap_winrt.hpp" DestinationFolder="bin\OpenCV.UWP.native.videoio\include\opencv2\videoio" />
+    <!-- additional includes for stitching -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="@(OpenCVStitchingInclude)" DestinationFolder="bin\OpenCV.UWP.native.stitching\include\opencv2\stitching\%(RecursiveDir)" />
+    <!-- additional includes for videostab -->
+    <Copy SkipUnchangedFiles="true" SourceFiles="@(OpenCVVideostabInclude)" DestinationFolder="bin\OpenCV.UWP.native.videostab\include\opencv2\videostab\%(RecursiveDir)" />
+    <!-- -->
+    <!-- package it all up into .nupkg -->
+    <Message Importance="high" Text="NuPkg: producing nupkgs..." />
+    <Exec Command="..\..\packages\NuGet.CommandLine.3.3.0\tools\NuGet.exe pack -symbols -OutputDirectory .." WorkingDirectory="bin\OpenCV.UWP.native.%(OpenCVModule.Identity)" Outputs="bin\*.nupkg" />
+    <!-- -->
+    <!-- the cvRT package is done differently... -->
+  </Target>
+</Project>

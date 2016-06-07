@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>OpenCV.UWP.native.videostab</id>
+    <version>0.0.2-alpha</version>
+    <title>OpenCV VideoStab (for UWP/C++)</title>
+    <authors>Lucian Wischik</authors>
+    <owners>Lucian Wischik</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>OpenCV VideoStab - Video Stabilization (for UWP/C++)</summary>
+    <description>Contains DLLs and C++ header/import files for OpenCV VideoStab module, for use in UWP apps. VideoStab provides global motion estimation and fast marching method that together can be used to solve the problem of video stabilization.</description>
+    <licenseUrl>https://raw.githubusercontent.com/Itseez/opencv/master/LICENSE</licenseUrl>
+    <projectUrl>http://docs.opencv.org/3.0.0/d9/d0c/group__calib3d.html</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ljw1004/opencv/vs2015-samples/vs2015/WS/10.0/NuPkg/opencv.uwp.png</iconUrl>
+    <tags>opencv UWP</tags>
+    <dependencies>
+      <dependency id="OpenCV.UWP.native.calib3d" version="0.0.2-alpha" />
+      <dependency id="OpenCV.UWP.native.video" version="0.0.2-alpha" />
+      <dependency id="OpenCV.UWP.native.photo" version="0.0.2-alpha" />
+      <dependency id="OpenCV.UWP.native.videoio" version="0.0.2-alpha" />
+    </dependencies>
+  </metadata>
+</package>
