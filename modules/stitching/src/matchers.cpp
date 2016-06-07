@@ -130,6 +130,9 @@ private:
     InputArrayOfArrays images_;
     std::vector<ImageFeatures> &features_;
     const std::vector<std::vector<cv::Rect> > *rois_;
+
+    // to cease visual studio warning
+    void operator =(const FindFeaturesBody&);
 };
 
 
