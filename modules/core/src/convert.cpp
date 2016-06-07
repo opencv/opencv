@@ -4504,7 +4504,7 @@ static short convertFp16SW(float fp32)
 
         // special cases to round up
         bitShift = exponent + 24;
-        unsigned int threshold = ( ( 0x400000 >> bitShift ) | ( ( ( significand & ( 0x800000 >> bitShift ) ) >> ( 126 - a.fmt.exponent ) ) ^ 1 ) );
+        int threshold = ( ( 0x400000 >> bitShift ) | ( ( ( significand & ( 0x800000 >> bitShift ) ) >> ( 126 - a.fmt.exponent ) ) ^ 1 ) );
         if( threshold <= ( significand & ( 0xffffff >> ( exponent + 25 ) ) ) )
         {
             fp16Significand++;
