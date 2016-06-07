@@ -4356,7 +4356,7 @@ struct Cvt_SIMD<float, int>
 
 #endif
 
-#if !(defined (__arm__) || defined (__aarch64__))
+#if !( ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) ) )
 // const numbers for floating points format
 const unsigned int kShiftSignificand    = 13;
 const unsigned int kMaskFp16Significand = 0x3ff;
@@ -4379,7 +4379,7 @@ union fp32Int32
 union fp16Int16
 {
     short i;
-#if defined (__arm__) || defined (__aarch64__)
+#if ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) )
     __fp16 h;
 #endif
     struct _fp16Format
@@ -4390,7 +4390,7 @@ union fp16Int16
     } fmt;
 };
 
-#if defined (__arm__) || defined (__aarch64__)
+#if ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) )
 static float convertFp16SW(short fp16)
 {
     // Fp16 -> Fp32
@@ -4452,7 +4452,7 @@ static float convertFp16SW(short fp16)
 }
 #endif
 
-#if defined (__arm__) || defined (__aarch64__)
+#if ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) )
 static short convertFp16SW(float fp32)
 {
     // Fp32 -> Fp16
