@@ -249,6 +249,38 @@ getAffineTransform, getPerspectiveTransform, findHomography
  */
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
+/** @brief Computes an optimal affine transformation between two 2D point sets.
+
+@param from First input 2D point set stored in std::vector or Mat.
+@param to Second input 2D point set of the same size and the same type as A.
+@param inliers_mask Output mask of good points (inliers) set by a robust method (RANSAC). Note that
+the input mask values are ignored.
+@param fullAffine If true, the function finds an optimal affine transformation with no additional
+restrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is
+limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
+@param inlierThreshold Maximum allowed error to treat a point pair as an inlier.
+@param maxIters The maximum number of RANSAC iterations.
+
+The function finds an optimal affine transform *[A|b]* (a 2 x 3 floating-point matrix) using the RANSAC algorithm that
+approximates best the affine transformation between two point sets.
+
+The problem is formulated as follows: you need to find a 2x2 matrix *A* and
+2x1 vector *b* so that:
+
+\f[[A^*|b^*] = arg  \min _{[A|b]}  \sum _i  \| \texttt{dst}[i] - A { \texttt{src}[i]}^T - b  \| ^2\f]
+where src[i] and dst[i] are the i-th points in src and dst, respectively
+\f$[A|b]\f$ can be either arbitrary (when fullAffine=true ) or have a form of
+\f[\begin{bmatrix} a_{11} & a_{12} & b_1  \\ -a_{12} & a_{11} & b_2  \end{bmatrix}\f]
+when fullAffine=false.
+
+@sa
+getAffineTransform, getPerspectiveTransform, findHomography, estimateRigidTransform
+ */
+CV_EXPORTS_W Mat findAffineTransform( InputArray from, InputArray to,
+                                      OutputArray inliers_mask = noArray(),
+                                      bool fullAffine = true,
+                                      double inlierThreshold = 0.05,
+                                      int maxIters = 500 );
 
 enum
 {
