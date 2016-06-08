@@ -4540,24 +4540,9 @@ static short convertFp16SW(float fp32)
 }
 #endif
 
-template<typename T, typename DT> static void
-cvtScaleHalfSW_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size)
-{
-    sstep /= sizeof(src[0]);
-    dstep /= sizeof(dst[0]);
-
-    for( ; size.height--; src += sstep, dst += dstep )
-    {
-        for ( int x = 0 ; x < size.width; x ++ )
-        {
-            dst[x] = convertFp16SW(src[x]);
-        }
-    }
-}
-
 // template for FP16 HW conversion function
 template<typename T, typename DT> static void
-cvtScaleHalfHW_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size)
+cvtScaleHalf_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size)
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
@@ -4573,77 +4558,105 @@ cvtScaleHalfHW_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size)
 }
 
 template<> void
-cvtScaleHalfHW_<float, short>( const float* src, size_t sstep, short* dst, size_t dstep, Size size)
+cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t dstep, Size size)
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-    for( ; size.height--; src += sstep, dst += dstep )
+    if( checkHardwareSupport(CV_FP16) )
     {
-        int x = 0;
-
-        if ( ( (intptr_t)dst & 0xf ) == 0 && ( (intptr_t)src & 0xf ) == 0 )
+        for( ; size.height--; src += sstep, dst += dstep )
         {
-#if CV_FP16
-            for ( ; x <= size.width - 4; x += 4)
+            int x = 0;
+
+            if ( ( (intptr_t)dst & 0xf ) == 0 && ( (intptr_t)src & 0xf ) == 0 )
             {
+#if CV_FP16
+                for ( ; x <= size.width - 4; x += 4)
+                {
 #if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
-                __m128 v_src = _mm_load_ps(src + x);
+                    __m128 v_src = _mm_load_ps(src + x);
 
-                __m128i v_dst = _mm_cvtps_ph(v_src, 0);
+                    __m128i v_dst = _mm_cvtps_ph(v_src, 0);
 
-                _mm_storel_epi64((__m128i *)(dst + x), v_dst);
+                    _mm_storel_epi64((__m128i *)(dst + x), v_dst);
 #elif defined __GNUC__ && (defined __arm__ || defined __aarch64__)
-                float32x4_t v_src = *(float32x4_t*)(src + x);
+                    float32x4_t v_src = *(float32x4_t*)(src + x);
 
-                float16x4_t v_dst = vcvt_f16_f32(v_src);
+                    float16x4_t v_dst = vcvt_f16_f32(v_src);
 
-                *(float16x4_t*)(dst + x) = v_dst;
+                    *(float16x4_t*)(dst + x) = v_dst;
+#endif
+                }
 #endif
             }
-#endif
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
         }
-        for ( ; x < size.width; x++ )
+    }
+    else
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
         {
-            dst[x] = convertFp16SW(src[x]);
+            int x = 0;
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
         }
     }
 }
 
 template<> void
-cvtScaleHalfHW_<short, float>( const short* src, size_t sstep, float* dst, size_t dstep, Size size)
+cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t dstep, Size size)
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-    for( ; size.height--; src += sstep, dst += dstep )
+    if( checkHardwareSupport(CV_FP16) )
     {
-        int x = 0;
-
-        if ( ( (intptr_t)dst & 0xf ) == 0 && ( (intptr_t)src & 0xf ) == 0 )
+        for( ; size.height--; src += sstep, dst += dstep )
         {
-#if CV_FP16
-            for ( ; x <= size.width - 4; x += 4)
+            int x = 0;
+
+            if ( ( (intptr_t)dst & 0xf ) == 0 && ( (intptr_t)src & 0xf ) == 0 && checkHardwareSupport(CV_CPU_FP16) )
             {
+#if CV_FP16
+                for ( ; x <= size.width - 4; x += 4)
+                {
 #if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
-                __m128i v_src = _mm_loadl_epi64((__m128i*)(src+x));
+                    __m128i v_src = _mm_loadl_epi64((__m128i*)(src+x));
 
-                __m128 v_dst = _mm_cvtph_ps(v_src);
+                    __m128 v_dst = _mm_cvtph_ps(v_src);
 
-                _mm_store_ps((dst + x), v_dst);
+                    _mm_store_ps((dst + x), v_dst);
 #elif defined __GNUC__ && (defined __arm__ || defined __aarch64__)
-                float16x4_t v_src = *(float16x4_t*)(src + x);
+                    float16x4_t v_src = *(float16x4_t*)(src + x);
 
-                float32x4_t v_dst = vcvt_f32_f16(v_src);
+                    float32x4_t v_dst = vcvt_f32_f16(v_src);
 
-                *(float32x4_t*)(dst + x) = v_dst;
+                    *(float32x4_t*)(dst + x) = v_dst;
+#endif
+                }
 #endif
             }
-#endif
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
         }
-        for ( ; x < size.width; x++ )
+    }
+    else
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
         {
-            dst[x] = convertFp16SW(src[x]);
+            int x = 0;
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
         }
     }
 }
@@ -4735,11 +4748,11 @@ static void cvtScaleAbs##suffix( const stype* src, size_t sstep, const uchar*, s
     tfunc(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
-#define DEF_CVT_SCALE_FP16_FUNC(suffix, stype, dtype, resource) \
-static void cvtScaleHalf##suffix##resource( const stype* src, size_t sstep, const uchar*, size_t, \
+#define DEF_CVT_SCALE_FP16_FUNC(suffix, stype, dtype) \
+static void cvtScaleHalf##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 dtype* dst, size_t dstep, Size size, double*) \
 { \
-    cvtScaleHalf##resource##_<stype,dtype>(src, sstep, dst, dstep, size); \
+    cvtScaleHalf##_<stype,dtype>(src, sstep, dst, dstep, size); \
 }
 
 #define DEF_CVT_SCALE_FUNC(suffix, stype, dtype, wtype) \
@@ -4798,10 +4811,8 @@ DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float)
 
-DEF_CVT_SCALE_FP16_FUNC(32f16f, float, short, SW)
-DEF_CVT_SCALE_FP16_FUNC(16f32f, short, float, SW)
-DEF_CVT_SCALE_FP16_FUNC(32f16f, float, short, HW)
-DEF_CVT_SCALE_FP16_FUNC(16f32f, short, float, HW)
+DEF_CVT_SCALE_FP16_FUNC(32f16f, float, short)
+DEF_CVT_SCALE_FP16_FUNC(16f32f, short, float)
 
 DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float)
 DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float)
@@ -4924,28 +4935,15 @@ static BinaryFunc getCvtScaleAbsFunc(int depth)
     return cvtScaleAbsTab[depth];
 }
 
-BinaryFunc getConvertFuncFp16(int ddepth, bool useHW)
+BinaryFunc getConvertFuncFp16(int ddepth)
 {
-    static BinaryFunc cvtTabHW[] =
+    static BinaryFunc cvtTab[] =
     {
         0, 0, 0,
-        (BinaryFunc)(cvtScaleHalf32f16fHW), 0, (BinaryFunc)(cvtScaleHalf16f32fHW),
+        (BinaryFunc)(cvtScaleHalf32f16f), 0, (BinaryFunc)(cvtScaleHalf16f32f),
         0, 0,
     };
-    static BinaryFunc cvtTabSW[] =
-    {
-        0, 0, 0,
-        (BinaryFunc)(cvtScaleHalf32f16fSW), 0, (BinaryFunc)(cvtScaleHalf16f32fSW),
-        0, 0,
-    };
-    if( useHW == true)
-    {
-        return cvtTabHW[CV_MAT_DEPTH(ddepth)];
-    }
-    else
-    {
-        return cvtTabSW[CV_MAT_DEPTH(ddepth)];
-    }
+    return cvtTab[CV_MAT_DEPTH(ddepth)];
 }
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth)
@@ -5134,12 +5132,6 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
 
 void cv::convertFp16( InputArray _src, OutputArray _dst)
 {
-    bool useHW = true;
-    if ( checkHardwareSupport(CV_CPU_FP16) == false )
-    {
-        useHW = false;
-    }
-
     Mat src = _src.getMat();
     int ddepth = 0;
 
@@ -5158,7 +5150,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst)
     int type = CV_MAKETYPE(ddepth, src.channels());
     _dst.create( src.dims, src.size, type );
     Mat dst = _dst.getMat();
-    BinaryFunc func = getConvertFuncFp16(ddepth, useHW);
+    BinaryFunc func = getConvertFuncFp16(ddepth);
     int cn = src.channels();
     CV_Assert( func != 0 );
 
