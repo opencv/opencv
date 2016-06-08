@@ -325,7 +325,7 @@ if(CPACK_GENERATOR STREQUAL "DEB")
     set(CHANGELOG_PACKAGE_NAME "${CPACK_DEBIAN_COMPONENT_${comp_upcase}_NAME}")
     configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/changelog.Debian.in" "${DEBIAN_CHANGELOG_OUT_FILE}" @ONLY)
 
-    execute_process(COMMAND "${GZIP_TOOL}" "-cf9" "${DEBIAN_CHANGELOG_OUT_FILE}"
+    execute_process(COMMAND "${GZIP_TOOL}" "-ncf9" "${DEBIAN_CHANGELOG_OUT_FILE}"
                     OUTPUT_FILE "${DEBIAN_CHANGELOG_OUT_FILE_GZ}"
                     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
 
@@ -337,7 +337,7 @@ if(CPACK_GENERATOR STREQUAL "DEB")
     set(CHANGELOG_OUT_FILE_GZ "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.gz")
     file(WRITE ${CHANGELOG_OUT_FILE} "Upstream changelog stub. See https://github.com/Itseez/opencv/wiki/ChangeLog")
 
-    execute_process(COMMAND "${GZIP_TOOL}" "-cf9" "${CHANGELOG_OUT_FILE}"
+    execute_process(COMMAND "${GZIP_TOOL}" "-ncf9" "${CHANGELOG_OUT_FILE}"
                     OUTPUT_FILE "${CHANGELOG_OUT_FILE_GZ}"
                     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
 
