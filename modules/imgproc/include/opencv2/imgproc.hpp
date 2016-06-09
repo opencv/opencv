@@ -1643,6 +1643,34 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
   An example on using the canny edge detector
 */
 
+/** @brief Finds edges in an image using the Canny algorithm with image gradient x and y as parameter @cite Canny86 .
+
+The function use edges as input image and marks them in the output map edges using the
+Canny algorithm. The smallest value between threshold1 and threshold2 is used for edge linking. The
+largest value is used to find initial segments of strong edges. See
+<http://en.wikipedia.org/wiki/Canny_edge_detector>
+
+@param dx short 16-bit input image.
+@param dy short 16-bit input image.
+@param edges output edge map; single channels 8-bit image, which has the same size as image .
+@param threshold1 first threshold for the hysteresis procedure.
+@param threshold2 second threshold for the hysteresis procedure.
+@param L2gradient a flag, indicating whether a more accurate \f$L_2\f$ norm
+\f$=\sqrt{(dI/dx)^2 + (dI/dy)^2}\f$ should be used to calculate the image gradient magnitude (
+L2gradient=true ), or whether the default \f$L_1\f$ norm \f$=|dI/dx|+|dI/dy|\f$ is enough (
+L2gradient=false ).
+ */
+CV_EXPORTS_W void Canny( InputArray _srcDx, InputArray _srcDy, OutputArray edges,
+                         double threshold1, double threshold2,
+                         bool L2gradient = false );
+
+//! @addtogroup imgproc_feature
+//! @{
+
+/** @example edge.cpp
+  An example on using the canny edge detector
+*/
+
 /** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
 
 The function finds edges in the input image image and marks them in the output map edges using the
