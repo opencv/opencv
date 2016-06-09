@@ -135,7 +135,7 @@ typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, int width, int height,
                        void*);
 
-BinaryFunc getConvertFuncFp16(int ddepth, bool useHW);
+BinaryFunc getConvertFuncFp16(int ddepth);
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
