@@ -29,7 +29,7 @@ if __name__ == '__main__':
     cimg = src.copy() # numpy function
 
     circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 10, np.array([]), 100, 30, 1, 30)
-    
+
     if circles != None: # Check if circles have been found and only then iterate over these and add them to the image
         a, b, c = circles.shape
         for i in range(b):
