@@ -75,6 +75,12 @@ set(OPENCV_MODULES_DISABLED_AUTO  "" CACHE INTERNAL "List of OpenCV modules impl
 set(OPENCV_MODULES_DISABLED_FORCE "" CACHE INTERNAL "List of OpenCV modules which can not be build in current configuration")
 unset(OPENCV_WORLD_MODULES CACHE)
 
+# set CMAKE_INSTALL_NAME_DIR if CMAKE_INSTALL_PREFIX isn't default value of "/usr/local"
+if(UNIX AND NOT ${CMAKE_INSTALL_PREFIX} STREQUAL "/usr/local")
+  set(CMAKE_INSTALL_NAME_DIR ${CMAKE_INSTALL_PREFIX}/lib)
+#  message ("setting CMAKE_INSTALL_NAME_DIR: ${CMAKE_INSTALL_NAME_DIR}")
+endif()
+
 # adds dependencies to OpenCV module
 # Usage:
 #   add_dependencies(opencv_<name> [REQUIRED] [<list of dependencies>] [OPTIONAL <list of modules>] [WRAP <list of wrappers>])
