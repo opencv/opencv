@@ -1435,9 +1435,10 @@ void cv::Canny( InputArray _srcDx, InputArray _srcDy, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 bool L2gradient )
 {
-    const int type = _srcDx.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    const int type = _srcDx.type(), cn = CV_MAT_CN(type);
     const Size size = _srcDx.size();
 
+    CV_Assert( _srcDx.depth() == CV_16SC1 && _srcDy.depth() == CV_16SC1 );
     _dst.create(size, CV_8U);
 
 

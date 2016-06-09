@@ -1650,8 +1650,8 @@ Canny algorithm. The smallest value between threshold1 and threshold2 is used fo
 largest value is used to find initial segments of strong edges. See
 <http://en.wikipedia.org/wiki/Canny_edge_detector>
 
-@param dx short 16-bit input image.
-@param dy short 16-bit input image.
+@param _srcDx short 16-bit x gradient input image.
+@param _srcDy short 16-bit y gradient input image.
 @param edges output edge map; single channels 8-bit image, which has the same size as image .
 @param threshold1 first threshold for the hysteresis procedure.
 @param threshold2 second threshold for the hysteresis procedure.
@@ -1664,6 +1664,7 @@ CV_EXPORTS_W void Canny( InputArray _srcDx, InputArray _srcDy, OutputArray edges
                          double threshold1, double threshold2,
                          bool L2gradient = false );
 
+//! @} imgproc_filter
 //! @addtogroup imgproc_feature
 //! @{
 

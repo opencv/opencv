@@ -43,12 +43,12 @@ static void CannyThreshold(int, void*)
     Canny( dx,dy, detected_edges, lowThresholdScharr, lowThresholdScharr*ratio );
     /// Using Canny's output as a mask, we display our result
     dst = Scalar::all(0);
-	src.copyTo(dst, detected_edges);
+    src.copyTo(dst, detected_edges);
     imshow(window_name2, dst);
     blur(src_gray, detected_edges, Size(3, 3));
     Canny( detected_edges, detected_edges, lowThresholdSobel, lowThresholdSobel*ratio, kernel_size );
     dst = Scalar::all(0);
-	src.copyTo(dst, detected_edges);
+    src.copyTo(dst, detected_edges);
     imshow(window_name1, dst);
 
 }
