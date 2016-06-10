@@ -1639,8 +1639,8 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example edge.cpp
-  An example on using the canny edge detector
+/** @example CannyDetectorWGradient.cpp
+  An example on using the canny edge detector with gradient image as parameter
 */
 
 /** @brief Finds edges in an image using the Canny algorithm with image gradient x and y as parameter @cite Canny86 .

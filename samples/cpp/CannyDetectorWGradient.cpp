@@ -1,6 +1,6 @@
 /**
- * @file CannyDetector_Demo.cpp
- * @brief Sample code showing how to detect edges using the Canny Detector
+ * @file CannyDetectorWGradient.cpp
+ * @brief Sample code showing how to detect edges using the Canny Detector with gradient as parameter
  * @author OpenCV team
  */
 
@@ -18,11 +18,13 @@ Mat src, src_gray;
 Mat dst, detected_edges;
 
 int edgeThresh = 1;
-int lowThreshold;
+int lowThresholdSobel;
+int lowThresholdScharr;
 int const max_lowThreshold = 100;
 int ratio = 3;
 int kernel_size = 3;
-const char* window_name = "Edge Map";
+const char* window_name1 = "Edge Map sobel";
+const char* window_name2 = "Edge Map Scharr";
 
 /**
  * @function CannyThreshold
@@ -33,14 +35,22 @@ static void CannyThreshold(int, void*)
     /// Reduce noise with a kernel 3x3
     blur( src_gray, detected_edges, Size(3,3) );
 
-    /// Canny detector
-    Canny( detected_edges, detected_edges, lowThreshold, lowThreshold*ratio, kernel_size );
+    /// Canny detector with scharr
+    Mat dx,dy;
 
+    Scharr(detected_edges,dx,CV_16S,1,0);
+    Scharr(detected_edges,dy,CV_16S,0,1);
+    Canny( dx,dy, detected_edges, lowThresholdScharr, lowThresholdScharr*ratio );
     /// Using Canny's output as a mask, we display our result
     dst = Scalar::all(0);
+    src.copyTo(dst, detected_edges);
+    imshow(window_name2, dst);
+    blur(src_gray, detected_edges, Size(3, 3));
+    Canny( detected_edges, detected_edges, lowThresholdSobel, lowThresholdSobel*ratio, kernel_size );
+    dst = Scalar::all(0);
+    src.copyTo(dst, detected_edges);
+    imshow(window_name1, dst);
 
-    src.copyTo( dst, detected_edges);
-    imshow( window_name, dst );
 }
 
 
@@ -62,10 +72,12 @@ int main( int, char** argv )
   cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create a window
-  namedWindow( window_name, WINDOW_AUTOSIZE );
+  namedWindow( window_name1, WINDOW_AUTOSIZE );
+  namedWindow( window_name2, WINDOW_AUTOSIZE );
 
   /// Create a Trackbar for user to enter threshold
-  createTrackbar( "Min Threshold:", window_name, &lowThreshold, max_lowThreshold, CannyThreshold );
+  createTrackbar( "Min Threshold Sobel:", window_name1, &lowThresholdSobel, max_lowThreshold, CannyThreshold );
+  createTrackbar( "Min Threshold Scharr:", window_name2, &lowThresholdScharr, max_lowThreshold*4, CannyThreshold );
 
   /// Show the image
   CannyThreshold(0, 0);
