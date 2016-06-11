@@ -2880,9 +2880,9 @@ public:
     //! copy operator
     MatConstIterator_& operator = (const MatConstIterator_& it);
     //! returns the current matrix element
-    _Tp operator *() const;
+    const _Tp& operator *() const;
     //! returns the i-th matrix element, relative to the current
-    _Tp operator [](ptrdiff_t i) const;
+    const _Tp& operator [](ptrdiff_t i) const;
 
     //! shifts the iterator forward by the specified number of elements
     MatConstIterator_& operator += (ptrdiff_t ofs);
