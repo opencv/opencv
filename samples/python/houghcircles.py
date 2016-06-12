@@ -35,7 +35,8 @@ if __name__ == '__main__':
         for i in range(b):
             cv2.circle(cimg, (circles[0][i][0], circles[0][i][1]), circles[0][i][2], (0, 0, 255), 3, cv2.LINE_AA)
             cv2.circle(cimg, (circles[0][i][0], circles[0][i][1]), 2, (0, 255, 0), 3, cv2.LINE_AA)  # draw center of circle
+            
+        cv2.imshow("detected circles", cimg)
 
     cv2.imshow("source", src)
-    cv2.imshow("detected circles", cimg)
     cv2.waitKey(0)
