@@ -40,9 +40,9 @@
 
 /*****************************************************************************
  *
- * CaptureDelegate Declaration.
+ * CaptureDelegate_AVFoundation Declaration.
  *
- * CaptureDelegate is notified on a separate thread by the OS whenever there
+ * CaptureDelegate_AVFoundation is notified on a separate thread by the OS whenever there
  *   is a new frame. When "updateImage" is called from the main thread, it
  *   copies this new frame into an IplImage, but only if this frame has not
  *   been copied before. When "getOutput" is called from the main thread,
@@ -52,7 +52,7 @@
 
 #define DISABLE_AUTO_RESTART 999
 
-@interface CaptureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
+@interface CaptureDelegate_AVFoundation : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     int newFrame;
     CVImageBufferRef  mCurrentImageBuffer;
@@ -76,16 +76,16 @@ fromConnection:(AVCaptureConnection *)connection;
 
 /*****************************************************************************
  *
- * CvCaptureCAM Declaration.
+ * CvCaptureCamera_AVFoundation Declaration.
  *
- * CvCaptureCAM is the instantiation of a capture source for cameras.
+ * CvCaptureCamera_AVFoundation is the instantiation of a capture source for cameras.
  *
  *****************************************************************************/
 
-class CvCaptureCAM : public CvCapture {
+class CvCaptureCamera_AVFoundation : public CvCapture {
     public:
-        CvCaptureCAM(int cameraNum = -1) ;
-        ~CvCaptureCAM();
+        CvCaptureCamera_AVFoundation(int cameraNum = -1) ;
+        ~CvCaptureCamera_AVFoundation();
         virtual bool grabFrame();
         virtual IplImage* retrieveFrame(int);
         virtual IplImage* queryFrame();
@@ -98,7 +98,7 @@ class CvCaptureCAM : public CvCapture {
         AVCaptureDeviceInput        *mCaptureDeviceInput;
         AVCaptureVideoDataOutput    *mCaptureDecompressedVideoOutput;
         AVCaptureDevice 						*mCaptureDevice;
-        CaptureDelegate							*capture;
+        CaptureDelegate_AVFoundation							*capture;
 
         int startCaptureDevice(int cameraNum);
         void stopCaptureDevice();
@@ -118,17 +118,17 @@ class CvCaptureCAM : public CvCapture {
 
 /*****************************************************************************
  *
- * CvCaptureFile Declaration.
+ * CvCaptureFile_AVFoundation Declaration.
  *
- * CvCaptureFile is the instantiation of a capture source for video files.
+ * CvCaptureFile_AVFoundation is the instantiation of a capture source for video files.
  *
  *****************************************************************************/
 
-class CvCaptureFile : public CvCapture {
+class CvCaptureFile_AVFoundation : public CvCapture {
     public:
 
-        CvCaptureFile(const char* filename) ;
-        ~CvCaptureFile();
+        CvCaptureFile_AVFoundation(const char* filename) ;
+        ~CvCaptureFile_AVFoundation();
         virtual bool grabFrame();
         virtual IplImage* retrieveFrame(int);
         virtual IplImage* queryFrame();
@@ -161,9 +161,9 @@ class CvCaptureFile : public CvCapture {
 
 /*****************************************************************************
  *
- * CvCaptureFile Declaration.
+ * CvVideoWriter_AVFoundation Declaration.
  *
- * CvCaptureFile is the instantiation of a capture source for video files.
+ * CvVideoWriter_AVFoundation is the instantiation of a video output class.
  *
  *****************************************************************************/
 
@@ -195,7 +195,7 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter{
 
 
 CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
-    CvCaptureFile *retval = new CvCaptureFile(filename);
+    CvCaptureFile_AVFoundation *retval = new CvCaptureFile_AVFoundation(filename);
 
     if(retval->didStart())
         return retval;
@@ -205,8 +205,8 @@ CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
 
 CvCapture* cvCreateCameraCapture_AVFoundation(int index ) {
 
-    CvCapture* retval = new CvCaptureCAM(index);
-    if (!((CvCaptureCAM *)retval)->didStart())
+    CvCapture* retval = new CvCaptureCamera_AVFoundation(index);
+    if (!((CvCaptureCamera_AVFoundation *)retval)->didStart())
         cvReleaseCapture(&retval);
     return retval;
 
@@ -221,13 +221,13 @@ CvVideoWriter* cvCreateVideoWriter_AVFoundation(const char* filename, int fourcc
 /********************** Implementation of Classes ****************************/
 /*****************************************************************************
  *
- * CvCaptureCAM Implementation.
+ * CvCaptureCamera_AVFoundation Implementation.
  *
- * CvCaptureCAM is the instantiation of a capture source for cameras.
+ * CvCaptureCamera_AVFoundation is the instantiation of a capture source for cameras.
  *
  *****************************************************************************/
 
-CvCaptureCAM::CvCaptureCAM(int cameraNum) {
+CvCaptureCamera_AVFoundation::CvCaptureCamera_AVFoundation(int cameraNum) {
     mCaptureSession = nil;
     mCaptureDeviceInput = nil;
     mCaptureDecompressedVideoOutput = nil;
@@ -250,21 +250,21 @@ CvCaptureCAM::CvCaptureCAM(int cameraNum) {
 
 }
 
-CvCaptureCAM::~CvCaptureCAM() {
+CvCaptureCamera_AVFoundation::~CvCaptureCamera_AVFoundation() {
     stopCaptureDevice();
     //cout << "Cleaned up camera." << endl;
 }
 
-int CvCaptureCAM::didStart() {
+int CvCaptureCamera_AVFoundation::didStart() {
     return started;
 }
 
 
-bool CvCaptureCAM::grabFrame() {
+bool CvCaptureCamera_AVFoundation::grabFrame() {
     return grabFrame(5);
 }
 
-bool CvCaptureCAM::grabFrame(double timeOut) {
+bool CvCaptureCamera_AVFoundation::grabFrame(double timeOut) {
 
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     double sleepTime = 0.005;
@@ -281,11 +281,11 @@ bool CvCaptureCAM::grabFrame(double timeOut) {
     return total <= timeOut;
 }
 
-IplImage* CvCaptureCAM::retrieveFrame(int) {
+IplImage* CvCaptureCamera_AVFoundation::retrieveFrame(int) {
     return [capture getOutput];
 }
 
-IplImage* CvCaptureCAM::queryFrame() {
+IplImage* CvCaptureCamera_AVFoundation::queryFrame() {
     while (!grabFrame()) {
         std::cout << "WARNING: Couldn't grab new frame from camera!!!" << std::endl;
         /*
@@ -297,7 +297,7 @@ IplImage* CvCaptureCAM::queryFrame() {
     return retrieveFrame(0);
 }
 
-void CvCaptureCAM::stopCaptureDevice() {
+void CvCaptureCamera_AVFoundation::stopCaptureDevice() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
     [mCaptureSession stopRunning];
@@ -311,10 +311,10 @@ void CvCaptureCAM::stopCaptureDevice() {
 
 }
 
-int CvCaptureCAM::startCaptureDevice(int cameraNum) {
+int CvCaptureCamera_AVFoundation::startCaptureDevice(int cameraNum) {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    capture = [[CaptureDelegate alloc] init];
+    capture = [[CaptureDelegate_AVFoundation alloc] init];
 
     AVCaptureDevice *device;
     NSArray* devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
@@ -413,7 +413,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     return 0;
 }
 
-void CvCaptureCAM::setWidthHeight() {
+void CvCaptureCamera_AVFoundation::setWidthHeight() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     NSDictionary* pixelBufferOptions = [NSDictionary dictionaryWithObjectsAndKeys:
         [NSNumber numberWithDouble:1.0*width], (id)kCVPixelBufferWidthKey,
@@ -476,7 +476,7 @@ enum {
 typedef NSInteger AVCaptureWhiteBalanceMode;
 */
 
-double CvCaptureCAM::getProperty(int property_id) const{
+double CvCaptureCamera_AVFoundation::getProperty(int property_id) const{
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
     /*
@@ -517,7 +517,7 @@ double CvCaptureCAM::getProperty(int property_id) const{
 
 }
 
-bool CvCaptureCAM::setProperty(int property_id, double value) {
+bool CvCaptureCamera_AVFoundation::setProperty(int property_id, double value) {
     switch (property_id) {
         case CV_CAP_PROP_FRAME_WIDTH:
             width = value;
@@ -615,9 +615,9 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
 
 /*****************************************************************************
  *
- * CaptureDelegate Implementation.
+ * CaptureDelegate_AVFoundation Implementation.
  *
- * CaptureDelegate is notified on a separate thread by the OS whenever there
+ * CaptureDelegate_AVFoundation is notified on a separate thread by the OS whenever there
  *   is a new frame. When "updateImage" is called from the main thread, it
  *   copies this new frame into an IplImage, but only if this frame has not
  *   been copied before. When "getOutput" is called from the main thread,
@@ -626,7 +626,7 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
  *****************************************************************************/
 
 
-@implementation CaptureDelegate
+@implementation CaptureDelegate_AVFoundation
 
 - (id)init {
     [super init];
@@ -757,13 +757,13 @@ fromConnection:(AVCaptureConnection *)connection{
 
 /*****************************************************************************
  *
- * CvCaptureFile Implementation.
+ * CvCaptureFile_AVFoundation Implementation.
  *
- * CvCaptureFile is the instantiation of a capture source for video files.
+ * CvCaptureFile_AVFoundation is the instantiation of a capture source for video files.
  *
  *****************************************************************************/
 
-CvCaptureFile::CvCaptureFile(const char* filename) {
+CvCaptureFile_AVFoundation::CvCaptureFile_AVFoundation(const char* filename) {
 
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
@@ -863,7 +863,7 @@ outputSettings:videoSettings]];
 [localpool drain];
 }
 
-CvCaptureFile::~CvCaptureFile() {
+CvCaptureFile_AVFoundation::~CvCaptureFile_AVFoundation() {
 
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     if (imagedata != NULL) free(imagedata);
@@ -874,11 +874,11 @@ CvCaptureFile::~CvCaptureFile() {
     [localpool drain];
 }
 
-int CvCaptureFile::didStart() {
+int CvCaptureFile_AVFoundation::didStart() {
     return started;
 }
 
-bool CvCaptureFile::grabFrame() {
+bool CvCaptureFile_AVFoundation::grabFrame() {
 
     //everything is done in queryFrame;
     currentFPS = movieFPS;
@@ -901,7 +901,7 @@ bool CvCaptureFile::grabFrame() {
 }
 
 
-IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
+IplImage* CvCaptureFile_AVFoundation::retrieveFramePixelBuffer() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
     if (mMovieReader.status != AVAssetReaderStatusReading){
@@ -977,16 +977,16 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
 }
 
 
-IplImage* CvCaptureFile::retrieveFrame(int) {
+IplImage* CvCaptureFile_AVFoundation::retrieveFrame(int) {
     return retrieveFramePixelBuffer();
 }
 
-IplImage* CvCaptureFile::queryFrame() {
+IplImage* CvCaptureFile_AVFoundation::queryFrame() {
     grabFrame();
     return retrieveFrame(0);
 }
 
-double CvCaptureFile::getFPS() {
+double CvCaptureFile_AVFoundation::getFPS() {
 
     /*
          if (mCaptureSession == nil) return 0;
@@ -1010,7 +1010,7 @@ double CvCaptureFile::getFPS() {
     return 30.0; //TODO: Debugging
 }
 
-double CvCaptureFile::getProperty(int /*property_id*/) const{
+double CvCaptureFile_AVFoundation::getProperty(int /*property_id*/) const{
 
     /*
          if (mCaptureSession == nil) return 0;
@@ -1051,7 +1051,7 @@ double CvCaptureFile::getProperty(int /*property_id*/) const{
     return 1.0; //Debugging
 }
 
-bool CvCaptureFile::setProperty(int /*property_id*/, double /*value*/) {
+bool CvCaptureFile_AVFoundation::setProperty(int /*property_id*/, double /*value*/) {
 
     /*
          if (mCaptureSession == nil) return false;
@@ -1103,9 +1103,9 @@ bool CvCaptureFile::setProperty(int /*property_id*/, double /*value*/) {
 
 /*****************************************************************************
  *
- * CvVideoWriter Implementation.
+ * CvVideoWriter_AVFoundation Implementation.
  *
- * CvVideoWriter is the instantiation of a video output class
+ * CvVideoWriter_AVFoundation is the instantiation of a video output class
  *
  *****************************************************************************/
 
