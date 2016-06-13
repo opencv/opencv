@@ -47,7 +47,7 @@ if __name__ == '__main__':
                 pt1 = ( int(x0+1000*(-b)), int(y0+1000*(a)) )
                 pt2 = ( int(x0-1000*(-b)), int(y0-1000*(a)) )
                 cv2.line(cdst, pt1, pt2, (0, 0, 255), 3, cv2.LINE_AA)
-                
+
             cv2.imshow("detected lines", cdst)
 
     cv2.imshow("source", src)
