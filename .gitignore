@@ -26,4 +26,4 @@ build/
 build_*
 lint.xml
 build.gradle
-src/
+/src
