@@ -95,9 +95,9 @@ Code
     -   Applies either a *Standard Hough Line Transform* or a *Probabilistic Line Transform*.
     -   Display the original image and the detected line in two windows.
 
--#  The sample code that we will explain can be downloaded from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/houghlines.cpp). A slightly fancier version
+-#  The sample code that we will explain can be downloaded from [here](https://github.com/opencv/opencv/tree/master/samples/cpp/houghlines.cpp). A slightly fancier version
     (which shows both Hough standard and probabilistic with trackbars for changing the threshold
-    values) can be found [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
+    values) can be found [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
     @include samples/cpp/houghlines.cpp
 
 Explanation

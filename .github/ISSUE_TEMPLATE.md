@@ -1,6 +1,6 @@
 <!--
 If you have a question rather than reporting a bug please go to http://answers.opencv.org where you get much faster responses.
-If you need further assistance please read [How To Contribute](https://github.com/Itseez/opencv/wiki/How_to_contribute).
+If you need further assistance please read [How To Contribute](https://github.com/opencv/opencv/wiki/How_to_contribute).
 
 This is a template helping you to create an issue which can be processed as quickly as possible. This is the bug reporting section for the OpenCV library.
 -->

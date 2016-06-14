@@ -5,7 +5,7 @@ set(FFMPEG_FILE_HASH_BIN32 "89c783eee1c47bfc733f08334ec2e31c")
 set(FFMPEG_FILE_HASH_BIN64 "35fe6ccdda6d7a04e9056b0d73b98e76")
 set(FFMPEG_FILE_HASH_CMAKE "8606f947a780071f8fcce8cbf39ceef5")
 
-set(FFMPEG_DOWNLOAD_URL ${OPENCV_FFMPEG_URL};$ENV{OPENCV_FFMPEG_URL};https://raw.githubusercontent.com/Itseez/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/)
+set(FFMPEG_DOWNLOAD_URL ${OPENCV_FFMPEG_URL};$ENV{OPENCV_FFMPEG_URL};https://raw.githubusercontent.com/opencv/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/)
 
 ocv_download(PACKAGE opencv_ffmpeg.dll
              HASH ${FFMPEG_FILE_HASH_BIN32}
