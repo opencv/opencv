@@ -8,8 +8,7 @@ function main ()
   # defaults
   BUILD_ABIS="arm7-android arm8-android"
   BUILD_ROOT=$OPENCV_PATH
-  INSTALL_PATH=$OPENCV_PATH
-  pushd $BUILD_ROOT
+  INSTALL_PATH=$OPENCV_PATH/install
 
   # number of parallel jobs
   if [ "${TRAVIS}" == "true" -a "${CI}" == "true" ] ; then
@@ -24,6 +23,7 @@ function main ()
     fi
   fi
 
+  pushd $BUILD_ROOT
   for i in "$@"
   do
   case $i in
@@ -50,23 +50,36 @@ function main ()
   esac
   done
 
+  [ ! -d ${INSTALL_PATH} ] && mkdir -p ${INSTALL_PATH}
   [[ -n "${BUILD_ABIS}" ]] && build_platform ${BUILD_ABIS}
   popd
 }
 
 function install_android_library ()
 # $1 install path
+# $2 debug or release
 {
   set +e
   pwd
+  if [[ "$2" == "Debug" ]] ; then
+    BUILD_TYPE_EXT=debug
+  else
+    BUILD_TYPE_EXT=release
+  fi
   cp -av $BUILD_ROOT/platforms/android/template/opencv-lib/* $1
   cp -av lint.xml $1
   cp -av bin/aidl $1/src/main
   cp -av bin/AndroidManifest.xml $1/src/main
-  cp -av install/sdk/native/3rdparty/libs/* $1/src/main/jniLibs
-  cp -av install/sdk/native/libs/* $1/src/main/jniLibs
-  cp -av install/sdk/native/jni $1/src/main
-  cp -av install/sdk/java/src/* $1/src/main/java
+  #cp -av install/sdk/native/3rdparty/libs/* $1/src/main/jniLibs
+  #mkdir -p $1/src/main/${BUILD_TYPE_EXT}/jnilibs
+  #cp -av install/sdk/native/libs/ $1/src/main/${BUILD_TYPE_EXT}/jnilibs
+  cp -av install/sdk/native/libs/ $1/src/main/jnilibs
+  #mkdir -p $1/src/main/${BUILD_TYPE_EXT}/jni
+  #cp -av install/sdk/native/jni/include $1/src/main/${BUILD_TYPE_EXT}/jni
+  cp -av install/sdk/native/jni/include $1/src/main/jni
+  #mkdir -p $1/src/main/${BUILD_TYPE_EXT}/java
+  #cp -av install/sdk/java/src/ $1/src/main/${BUILD_TYPE_EXT}/java
+  cp -av install/sdk/java/src/ $1/src/main/java
   cp -av install/sdk/java/res $1/src/main
   cp -av install/sdk/java/AndroidManifest.xml $1/src/main
   cp -av install/sdk/java/lint.xml $1
@@ -102,7 +115,7 @@ function build_target ()
   else
     make install/strip
   fi
-  [ "$TARGET_PLATFORM" == "android" ] && install_android_library $INSTALL_PATH
+  [ "$TARGET_PLATFORM" == "android" ] && install_android_library $INSTALL_PATH $2
   popd
 }
 
