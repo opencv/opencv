@@ -155,6 +155,8 @@ private:
     uint8_t  *mOutImagedata;
     IplImage *mOutImage;
     size_t    currSize;
+    int       mMode;
+    int       mFormat;
 
     bool setupReadingAt(CMTime position);
     IplImage* retrieveFramePixelBuffer();
@@ -169,10 +171,10 @@ private:
 
 /*****************************************************************************
  *
- * CvCaptureFile Declaration.
+ * CvVideoWriter_AVFoundation_Mac Declaration.
  *
- * CvCaptureFile is the instantiation of a capture source for video files.
- *
+ * CvVideoWriter_AVFoundation_Mac is the instantiation of a video output class
+*
  *****************************************************************************/
 
 class CvVideoWriter_AVFoundation_Mac : public CvVideoWriter{
@@ -675,6 +677,8 @@ CvCaptureFile::CvCaptureFile(const char* filename) {
     mOutImage = NULL;
     mOutImagedata = NULL;
     currSize = 0;
+    mMode = CV_CAP_MODE_BGR;
+    mFormat = CV_8UC3;
     mCurrentSampleBuffer = NULL;
     mGrabbedPixels = NULL;
     mFrameTimestamp = kCMTimeZero;
@@ -735,8 +739,27 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
         mTrackOutput = nil;
     }
 
-    OSType pixelFormat = kCVPixelFormatType_32BGRA;
-    //OSType pixelFormat = kCVPixelFormatType_422YpCbCr8;
+    // Capture in a pixel format that can be converted efficiently to the output mode.
+    OSType pixelFormat;
+    if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
+        // For CV_CAP_MODE_BGR, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's CV_YUV2BGR_YV12)
+        // kCVPixelFormatType_32ABGR is reportedly faster on OS X, but OpenCV doesn't have a CV_ABGR2BGR conversion.
+        // kCVPixelFormatType_24RGB is significanly slower than kCVPixelFormatType_32BGRA.
+        pixelFormat = kCVPixelFormatType_32BGRA;
+        mFormat = CV_8UC3;
+    } else if (mMode == CV_CAP_MODE_GRAY) {
+        // For CV_CAP_MODE_GRAY, read frames as 420v (faster than 420f or 422 -- at least for H.264 files)
+        pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
+        mFormat = CV_8UC1;
+    } else if (mMode == CV_CAP_MODE_YUYV) {
+        // For CV_CAP_MODE_YUYV, read frames directly as 422.
+        pixelFormat = kCVPixelFormatType_422YpCbCr8;
+        mFormat = CV_8UC2;
+    } else {
+        fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mMode);
+        return false;
+    }
+    
     NSDictionary *settings =
         @{
             (id)kCVPixelBufferPixelFormatTypeKey: @(pixelFormat)
@@ -744,6 +767,11 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     mTrackOutput = [[AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack: mAssetTrack
                                                                outputSettings: settings] retain];
 
+    if ( !mTrackOutput ) {
+        fprintf(stderr, "OpenCV: error in [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:outputSettings:]\n");
+        return false;
+    }
+    
     NSError *error = nil;
     mAssetReader = [[AVAssetReader assetReaderWithAsset: mAsset
                                                   error: &error] retain];
@@ -793,12 +821,23 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
     CVPixelBufferLockBaseAddress(mGrabbedPixels, 0);
-    void *baseaddress = CVPixelBufferGetBaseAddress(mGrabbedPixels);
 
-    size_t width = CVPixelBufferGetWidth(mGrabbedPixels);
-    size_t height = CVPixelBufferGetHeight(mGrabbedPixels);
-    size_t rowBytes = CVPixelBufferGetBytesPerRow(mGrabbedPixels);
+    void *baseaddress;
+    size_t width, height, rowBytes;
+    
     OSType pixelFormat = CVPixelBufferGetPixelFormatType(mGrabbedPixels);
+    
+    if (CVPixelBufferIsPlanar(mGrabbedPixels)) {
+        baseaddress = CVPixelBufferGetBaseAddressOfPlane(mGrabbedPixels, 0);
+        width = CVPixelBufferGetWidthOfPlane(mGrabbedPixels, 0);
+        height = CVPixelBufferGetHeightOfPlane(mGrabbedPixels, 0);
+        rowBytes = CVPixelBufferGetBytesPerRowOfPlane(mGrabbedPixels, 0);
+    } else {
+        baseaddress = CVPixelBufferGetBaseAddress(mGrabbedPixels);
+        width = CVPixelBufferGetWidth(mGrabbedPixels);
+        height = CVPixelBufferGetHeight(mGrabbedPixels);
+        rowBytes = CVPixelBufferGetBytesPerRow(mGrabbedPixels);
+    }
 
     if ( rowBytes == 0 ) {
         fprintf(stderr, "OpenCV: error: rowBytes == 0\n");
@@ -808,63 +847,143 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         return 0;
     }
 
-    if ( currSize != width*3*height ) {
-        currSize = width*3*height;
-        free(mOutImagedata);
-        mOutImagedata = reinterpret_cast<uint8_t*>(malloc(currSize));
-    }
-
-    if (mOutImage == NULL) {
-        mOutImage = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 3);
-    }
-    mOutImage->width = int(width);
-    mOutImage->height = int(height);
-    mOutImage->nChannels = 3;
-    mOutImage->depth = IPL_DEPTH_8U;
-    mOutImage->widthStep = int(width*3);
-    mOutImage->imageData = reinterpret_cast<char *>(mOutImagedata);
-    mOutImage->imageSize = int(currSize);
-
-    if ( pixelFormat == kCVPixelFormatType_32BGRA ) {
-        if (mDeviceImage == NULL) {
-            mDeviceImage = cvCreateImageHeader(cvSize(int(width),int(height)), IPL_DEPTH_8U, 4);
-        }
-        mDeviceImage->width = int(width);
-        mDeviceImage->height = int(height);
-        mDeviceImage->nChannels = 4;
-        mDeviceImage->depth = IPL_DEPTH_8U;
-        mDeviceImage->widthStep = int(rowBytes);
-        mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
-        mDeviceImage->imageSize = int(rowBytes*height);
-
-        cvCvtColor(mDeviceImage, mOutImage, CV_BGRA2BGR);
-    } else if ( pixelFormat == kCVPixelFormatType_422YpCbCr8 ) {
-        if ( currSize != width*3*height ) {
-            currSize = width*3*height;
-            free(mOutImagedata);
-            mOutImagedata = reinterpret_cast<uint8_t*>(malloc(currSize));
-        }
-
-        if (mDeviceImage == NULL) {
-            mDeviceImage = cvCreateImageHeader(cvSize(int(width),int(height)), IPL_DEPTH_8U, 2);
-        }
-        mDeviceImage->width = int(width);
-        mDeviceImage->height = int(height);
-        mDeviceImage->nChannels = 2;
-        mDeviceImage->depth = IPL_DEPTH_8U;
-        mDeviceImage->widthStep = int(rowBytes);
-        mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
-        mDeviceImage->imageSize = int(rowBytes*height);
-
-        cvCvtColor(mDeviceImage, mOutImage, CV_YUV2BGR_UYVY);
+    // Output image paramaters.
+    int outChannels;
+    if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
+        outChannels = 3;
+    } else if (mMode == CV_CAP_MODE_GRAY) {
+        outChannels = 1;
+    } else if (mMode == CV_CAP_MODE_YUYV) {
+        outChannels = 2;
     } else {
-        fprintf(stderr, "OpenCV: unknown pixel format 0x%08X\n", pixelFormat);
+        fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mMode);
         CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
         CVBufferRelease(mGrabbedPixels);
         mGrabbedPixels = NULL;
         return 0;
     }
+    
+    if ( currSize != width*outChannels*height ) {
+        currSize = width*outChannels*height;
+        free(mOutImagedata);
+        mOutImagedata = reinterpret_cast<uint8_t*>(malloc(currSize));
+    }
 
+    // Build the header for the output image.
+    if (mOutImage == NULL) {
+        mOutImage = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, outChannels);
+    }
+    mOutImage->width = int(width);
+    mOutImage->height = int(height);
+    mOutImage->nChannels = outChannels;
+    mOutImage->depth = IPL_DEPTH_8U;
+    mOutImage->widthStep = int(width*outChannels);
+    mOutImage->imageData = reinterpret_cast<char *>(mOutImagedata);
+    mOutImage->imageSize = int(currSize);
+
+    // Device image paramaters and conversion code.
+    // (Not all of these conversions are used in production, but they were all tested to find the fastest options.)
+    int deviceChannels;
+    int cvtCode;
+    
+    if ( pixelFormat == kCVPixelFormatType_32BGRA ) {
+        deviceChannels = 4;
+        
+        if (mMode == CV_CAP_MODE_BGR) {
+            cvtCode = CV_BGRA2BGR;
+        } else if (mMode == CV_CAP_MODE_RGB) {
+            cvtCode = CV_BGRA2RGB;
+        } else if (mMode == CV_CAP_MODE_GRAY) {
+            cvtCode = CV_BGRA2GRAY;
+        } else {
+            CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+            CVBufferRelease(mGrabbedPixels);
+            mGrabbedPixels = NULL;
+            fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
+            return 0;
+        }
+    } else if ( pixelFormat == kCVPixelFormatType_24RGB ) {
+        deviceChannels = 3;
+        
+        if (mMode == CV_CAP_MODE_BGR) {
+            cvtCode = CV_RGB2BGR;
+        } else if (mMode == CV_CAP_MODE_RGB) {
+            cvtCode = 0;
+        } else if (mMode == CV_CAP_MODE_GRAY) {
+            cvtCode = CV_RGB2GRAY;
+        } else {
+            CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+            CVBufferRelease(mGrabbedPixels);
+            mGrabbedPixels = NULL;
+            fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
+            return 0;
+        }
+    } else if ( pixelFormat == kCVPixelFormatType_422YpCbCr8 ) {    // 422 (2vuy, UYVY)
+        deviceChannels = 2;
+        
+        if (mMode == CV_CAP_MODE_BGR) {
+            cvtCode = CV_YUV2BGR_UYVY;
+        } else if (mMode == CV_CAP_MODE_RGB) {
+            cvtCode = CV_YUV2RGB_UYVY;
+        } else if (mMode == CV_CAP_MODE_GRAY) {
+            cvtCode = CV_YUV2GRAY_UYVY;
+        } else if (mMode == CV_CAP_MODE_YUYV) {
+            cvtCode = 0;    // Copy
+        } else {
+            CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+            CVBufferRelease(mGrabbedPixels);
+            mGrabbedPixels = NULL;
+            fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
+            return 0;
+        }
+    } else if ( pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange ||   // 420v
+                pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ) {   // 420f
+        // cvCvtColor(CV_YUV2GRAY_420) is expecting a single buffer with both the Y plane and the CrCb planes.
+        // So, lie about the height of the buffer.  cvCvtColor(CV_YUV2GRAY_420) will only read the first 2/3 of it.
+        height = height * 3 / 2;
+        deviceChannels = 1;
+        
+        if (mMode == CV_CAP_MODE_BGR) {
+            cvtCode = CV_YUV2BGR_YV12;
+        } else if (mMode == CV_CAP_MODE_RGB) {
+            cvtCode = CV_YUV2RGB_YV12;
+        } else if (mMode == CV_CAP_MODE_GRAY) {
+            cvtCode = CV_YUV2GRAY_420;
+        } else {
+            CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+            CVBufferRelease(mGrabbedPixels);
+            mGrabbedPixels = NULL;
+            fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
+            return 0;
+        }
+    } else {
+        fprintf(stderr, "OpenCV: unsupported pixel format 0x%08X\n", pixelFormat);
+        CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
+        CVBufferRelease(mGrabbedPixels);
+        mGrabbedPixels = NULL;
+        return 0;
+    }
+    
+    // Build the header for the device image.
+    if (mDeviceImage == NULL) {
+        mDeviceImage = cvCreateImageHeader(cvSize(int(width),int(height)), IPL_DEPTH_8U, deviceChannels);
+    }
+    mDeviceImage->width = int(width);
+    mDeviceImage->height = int(height);
+    mDeviceImage->nChannels = deviceChannels;
+    mDeviceImage->depth = IPL_DEPTH_8U;
+    mDeviceImage->widthStep = int(rowBytes);
+    mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
+    mDeviceImage->imageSize = int(rowBytes*height);
+    
+    // Convert the device image into the output image.
+    if (cvtCode == 0) {
+        // Copy.
+        cv::cvarrToMat(mDeviceImage).copyTo(cv::cvarrToMat(mOutImage));
+    } else {
+        cvCvtColor(mDeviceImage, mOutImage, cvtCode);
+    }
+    
     CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
 
     [localpool drain];
@@ -900,7 +1019,10 @@ double CvCaptureFile::getProperty(int property_id) const{
             t = [mAsset duration];
             return round((t.value * mAssetTrack.nominalFrameRate) / double(t.timescale));
         case CV_CAP_PROP_FORMAT:
-            return CV_8UC3;
+            return mFormat;
+        case CV_CAP_PROP_MODE:
+            return mMode;
+            break;
         default:
             break;
     }
@@ -933,6 +1055,28 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
             setupReadingAt(t);
             retval = true;
             break;
+        case CV_CAP_PROP_MODE:
+            int mode;
+            mode = cvRound(value);
+            if (mMode == mode) {
+                retval = true;
+            } else {
+                switch (mode) {
+                    case CV_CAP_MODE_BGR:
+                    case CV_CAP_MODE_RGB:
+                    case CV_CAP_MODE_GRAY:
+                    case CV_CAP_MODE_YUYV:
+                        mMode = mode;
+                        setupReadingAt(mFrameTimestamp);
+                        retval = true;
+                        break;
+                    default:
+                        fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mode);
+                        retval=false;
+                        break;
+                }
+            }
+            break;
         default:
             break;
     }
@@ -944,9 +1088,9 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
 
 /*****************************************************************************
  *
- * CvVideoWriter Implementation.
+ * CvVideoWriter_AVFoundation_Mac Implementation.
  *
- * CvVideoWriter is the instantiation of a video output class
+ * CvVideoWriter_AVFoundation_Mac is the instantiation of a video output class
  *
  *****************************************************************************/
 
