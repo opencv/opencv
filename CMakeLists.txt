@@ -602,26 +602,42 @@ endif()
 
 include(cmake/OpenCVDetectVTK.cmake)
 
-# -- Custom HAL replacement --
-# Package config in: OpenCV_HALConfig.cmake or opencv_hal-config.cmake
-# Use variables: OpenCV_HAL_LIBRARIES, OpenCV_HAL_HEADERS and OpenCV_HAL_INCLUDE_DIRS variables
-find_package(OpenCV_HAL NO_MODULE QUIET)
-set(_includes "")
-if (OpenCV_HAL_FOUND)
+
+# ----------------------------------------------------------------------------
+# OpenCV HAL
+# ----------------------------------------------------------------------------
+set(_hal_includes "")
+macro(ocv_hal_register HAL_LIBRARIES_VAR HAL_HEADERS_VAR HAL_INCLUDE_DIRS_VAR)
   # 1. libraries
-  foreach (l ${OpenCV_HAL_LIBRARIES})
-    get_filename_component(l "${l}" ABSOLUTE)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${l})
+  foreach (l ${${HAL_LIBRARIES_VAR}})
+    if(NOT TARGET ${l})
+      get_filename_component(l "${l}" ABSOLUTE)
+    endif()
+    list(APPEND OPENCV_HAL_LINKER_LIBS ${l})
   endforeach()
   # 2. headers
-  foreach (h ${OpenCV_HAL_HEADERS})
-    set(_includes "${_includes}\n#include \"${h}\"")
+  foreach (h ${${HAL_HEADERS_VAR}})
+    set(_hal_includes "${_hal_includes}\n#include \"${h}\"")
   endforeach()
   # 3. include paths
-  ocv_include_directories(${OpenCV_HAL_INCLUDE_DIRS})
+  ocv_include_directories(${${HAL_INCLUDE_DIRS_VAR}})
+endmacro()
+
+if(NOT DEFINED OpenCV_HAL)
+  set(OpenCV_HAL "OpenCV_HAL")
 endif()
+foreach(hal ${OpenCV_HAL})
+    ocv_debug_message(STATUS "OpenCV HAL: ${hal} ...")
+    ocv_clear_vars(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
+    find_package(${hal} NO_MODULE QUIET)
+    if(${hal}_FOUND)
+      ocv_hal_register(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "${hal} (ver ${${hal}_VERSION})")
+    endif()
+endforeach()
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
-unset(_includes)
+unset(_hal_includes)
+
 
 # ----------------------------------------------------------------------------
 # Add CUDA libraries (needed for apps/tools, samples)
@@ -1160,7 +1176,7 @@ endif(DEFINED WITH_VA_INTEL)
 status("    Use Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 status("    Use Cuda:"       HAVE_CUDA        THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
 status("    Use OpenCL:"     HAVE_OPENCL      THEN YES ELSE NO)
-status("    Use custom HAL:" OpenCV_HAL_FOUND THEN "YES (ver ${OpenCV_HAL_VERSION}, ${OpenCV_HAL_CONFIG})" ELSE "NO")
+status("    Use custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")
 
 if(HAVE_CUDA)
   status("")
