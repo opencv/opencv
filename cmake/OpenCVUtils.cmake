@@ -126,6 +126,7 @@ endfunction()
 # clears all passed variables
 macro(ocv_clear_vars)
   foreach(_var ${ARGN})
+    unset(${_var})
     unset(${_var} CACHE)
   endforeach()
 endmacro()
