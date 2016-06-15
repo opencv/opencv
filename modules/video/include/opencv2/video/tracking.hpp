@@ -226,7 +226,7 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next, In
 @param dst Second input 2D point set of the same size and the same type as A, or another image.
 @param fullAffine If true, the function finds an optimal affine transformation with no additional
 restrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is
-limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
+limited to combinations of translation, rotation, and uniform scaling (4 degrees of freedom).
 
 The function finds an optimal affine transform *[A|b]* (a 2 x 3 floating-point matrix) that
 approximates best the affine transformation between:
