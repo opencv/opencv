@@ -2287,7 +2287,8 @@ bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height,
     #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
         av_write_header(oc_);
     #else
-        avformat_write_header(oc_, NULL);
+        if (avformat_write_header(oc_, NULL) != 0)
+            return false;
     #endif
 
     return true;
