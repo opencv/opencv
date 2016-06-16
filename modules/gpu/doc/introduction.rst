@@ -59,4 +59,4 @@ While developing algorithms for multiple GPUs, note a data passing overhead. For
 With this algorithm, a dual GPU gave a 180
 %
 performance increase comparing to the single Fermi GPU. For a source code example, see
-https://github.com/Itseez/opencv/tree/master/samples/gpu/.
+https://github.com/opencv/opencv/tree/master/samples/gpu/.

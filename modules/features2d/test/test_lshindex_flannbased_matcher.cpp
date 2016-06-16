@@ -31,7 +31,7 @@
  For OpenCV2.4/OpenCV3.0
 
  Test for Pull Request # 3829
- https://github.com/Itseez/opencv/pull/3829
+ https://github.com/opencv/opencv/pull/3829
 
  This test code creates brute force matcher for accuracy of reference, and the test target matcher.
  Then, add() and train() transformed query image descriptors, and some outlier images descriptors to both matchers.
