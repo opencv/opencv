@@ -76,4 +76,4 @@ Since two types of sensor's data generators are supported (image generator and d
 
 For more information please refer to the example of usage intelperc_capture.cpp_ in ``opencv/samples/cpp`` folder.
 
-.. _intelperc_capture.cpp: https://github.com/Itseez/opencv/tree/master/samples/cpp/intelperc_capture.cpp
+.. _intelperc_capture.cpp: https://github.com/opencv/opencv/tree/master/samples/cpp/intelperc_capture.cpp

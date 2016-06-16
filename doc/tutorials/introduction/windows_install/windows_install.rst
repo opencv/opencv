@@ -46,7 +46,7 @@ You may find the content of this tutorial also inside the following videos: `Par
 
 .. warning:: These videos above are long-obsolete and contain inaccurate information. Be careful, since solutions described in those videos are no longer supported and may even break your install.
 
-If you are building your own libraries you can take the source files from our `Git repository <https://github.com/Itseez/opencv.git>`_.
+If you are building your own libraries you can take the source files from our `Git repository <https://github.com/opencv/opencv.git>`_.
 
 Building the OpenCV library from scratch requires a couple of tools installed beforehand:
 
@@ -128,7 +128,7 @@ Building the library
 
 #. Choose a directory in your file system, where you will download the OpenCV libraries to. I recommend creating a new one that has short path and no special charachters in it, for example :file:`D:/OpenCV`. For this tutorial I'll suggest you do so. If you use your own path and know, what you're doing -- it's OK.
 
-   a) Clone the repository to the selected directory. After clicking *Clone* button, a window will appear where you can select from what repository you want to download source files (https://github.com/Itseez/opencv.git) and to what directory (:file:`D:/OpenCV`).
+   a) Clone the repository to the selected directory. After clicking *Clone* button, a window will appear where you can select from what repository you want to download source files (https://github.com/opencv/opencv.git) and to what directory (:file:`D:/OpenCV`).
 
    #) Push the OK button and be patient as the repository is quite a heavy download. It will take some time depending on your Internet connection.
 

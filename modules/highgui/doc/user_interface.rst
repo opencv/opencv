@@ -224,7 +224,7 @@ Sets mouse handler for the specified window
 
     :param winname: Window name
 
-    :param onMouse: Mouse callback. See OpenCV samples, such as  https://github.com/Itseez/opencv/tree/master/samples/cpp/ffilldemo.cpp, on how to specify and use the callback.
+    :param onMouse: Mouse callback. See OpenCV samples, such as  https://github.com/opencv/opencv/tree/master/samples/cpp/ffilldemo.cpp, on how to specify and use the callback.
 
     :param userdata: The optional parameter passed to the callback.
 
