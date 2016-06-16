@@ -290,7 +290,7 @@ macro(add_android_project target path)
           set(android_proj_NATIVE_DEPS ${android_proj_NATIVE_DEPS} android)
         endif()
 
-        add_library(${JNI_LIB_NAME} MODULE ${android_proj_jni_files})
+        add_library(${JNI_LIB_NAME} SHARED ${android_proj_jni_files})
         target_link_libraries(${JNI_LIB_NAME} ${OPENCV_LINKER_LIBS} ${android_proj_NATIVE_DEPS})
 
         set_target_properties(${JNI_LIB_NAME} PROPERTIES
