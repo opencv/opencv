@@ -30,6 +30,7 @@ import cv2
 
 # local modules
 import video
+from video import presets
 import common
 from common import getsize, draw_keypoints
 from plane_tracker import PlaneTracker
@@ -37,7 +38,7 @@ from plane_tracker import PlaneTracker
 
 class App:
     def __init__(self, src):
-        self.cap = video.create_capture(src)
+        self.cap = video.create_capture(src, presets['book'])
         self.frame = None
         self.paused = False
         self.tracker = PlaneTracker()

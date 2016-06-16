@@ -314,8 +314,12 @@ inline _InputOutputArray::_InputOutputArray(const std::vector<UMat>& vec)
 
 inline _InputOutputArray::_InputOutputArray(const cuda::GpuMat& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_GPU_MAT + ACCESS_RW, &d_mat); }
+
 inline _InputOutputArray::_InputOutputArray(const std::vector<cuda::GpuMat>& d_mat)
-{	init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT + ACCESS_RW, &d_mat);}
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT + ACCESS_RW, &d_mat);}
+
+template<> inline _InputOutputArray::_InputOutputArray(std::vector<cuda::GpuMat>& d_mat)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT + ACCESS_RW, &d_mat);}
 
 inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
 { init(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER + ACCESS_RW, &buf); }
@@ -1165,6 +1169,9 @@ Mat::Mat(Mat&& m)
 inline
 Mat& Mat::operator = (Mat&& m)
 {
+    if (this == &m)
+      return *this;
+
     release();
     flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols; data = m.data;
     datastart = m.datastart; dataend = m.dataend; datalimit = m.datalimit; allocator = m.allocator;
@@ -3599,6 +3606,8 @@ UMat::UMat(UMat&& m)
 inline
 UMat& UMat::operator = (UMat&& m)
 {
+    if (this == &m)
+      return *this;
     release();
     flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols;
     allocator = m.allocator; usageFlags = m.usageFlags;

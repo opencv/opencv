@@ -889,7 +889,7 @@ output arrays.
 
 The function cv::mixChannels provides an advanced mechanism for shuffling image channels.
 
-cv::split and cv::merge and some forms of cv::cvtColor are partial cases of cv::mixChannels .
+cv::split,cv::merge,cv::extractChannel,cv::insertChannel and some forms of cv::cvtColor are partial cases of cv::mixChannels.
 
 In the example below, the code splits a 4-channel BGRA image into a 3-channel BGR (with B and R
 channels swapped) and a separate alpha-channel image:
@@ -923,7 +923,7 @@ src[0].channels() + src[1].channels()-1, and so on, the same scheme is used for 
 channels; as a special case, when fromTo[k\*2] is negative, the corresponding output channel is
 filled with zero .
 @param npairs number of index pairs in `fromTo`.
-@sa cv::split, cv::merge, cv::cvtColor
+@sa split, merge, extractChannel, insertChannel, cvtColor
 */
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
@@ -961,13 +961,19 @@ filled with zero .
 CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                               const std::vector<int>& fromTo);
 
-/** @brief extracts a single channel from src (coi is 0-based index)
-@todo document
+/** @brief Extracts a single channel from src (coi is 0-based index)
+@param src input array
+@param dst output array
+@param coi index of channel to extract
+@sa mixChannels, split
 */
 CV_EXPORTS_W void extractChannel(InputArray src, OutputArray dst, int coi);
 
-/** @brief inserts a single channel to dst (coi is 0-based index)
-@todo document
+/** @brief Inserts a single channel to dst (coi is 0-based index)
+@param src input array
+@param dst output array
+@param coi index of channel for insertion
+@sa mixChannels, merge
 */
 CV_EXPORTS_W void insertChannel(InputArray src, InputOutputArray dst, int coi);
 
@@ -2170,6 +2176,14 @@ is much faster to use this function to retrieve the generator and then use RNG::
 */
 CV_EXPORTS RNG& theRNG();
 
+/** @brief Sets state of default random number generator.
+
+The function sets state of default random number generator to custom value.
+@param seed new state for default random number generator
+@sa RNG, randu, randn
+*/
+CV_EXPORTS_W void setRNGSeed(int seed);
+
 /** @brief Generates a single uniformly-distributed random number or an array of random numbers.
 
 Non-template variant of the function fills the matrix dst with uniformly-distributed
@@ -2316,11 +2330,11 @@ public:
     The operator performs %PCA of the supplied dataset. It is safe to reuse
     the same PCA structure for multiple datasets. That is, if the structure
     has been previously used with another dataset, the existing internal
-    data is reclaimed and the new eigenvalues, @ref eigenvectors , and @ref
+    data is reclaimed and the new @ref eigenvalues, @ref eigenvectors and @ref
     mean are allocated and computed.
 
-    The computed eigenvalues are sorted from the largest to the smallest and
-    the corresponding eigenvectors are stored as eigenvectors rows.
+    The computed @ref eigenvalues are sorted from the largest to the smallest and
+    the corresponding @ref eigenvectors are stored as eigenvectors rows.
 
     @param data input samples stored as the matrix rows or as the matrix
     columns.
@@ -2400,11 +2414,17 @@ public:
      */
     void backProject(InputArray vec, OutputArray result) const;
 
-    /** @brief write and load PCA matrix
+    /** @brief write PCA objects
 
-*/
-    void write(FileStorage& fs ) const;
-    void read(const FileNode& fs);
+    Writes @ref eigenvalues @ref eigenvectors and @ref mean to specified FileStorage
+     */
+    void write(FileStorage& fs) const;
+
+    /** @brief load PCA objects
+
+    Loads @ref eigenvalues @ref eigenvectors and @ref mean from specified FileNode
+     */
+    void read(const FileNode& fn);
 
     Mat eigenvectors; //!< eigenvectors of the covariation matrix
     Mat eigenvalues; //!< eigenvalues of the covariation matrix
@@ -3028,6 +3048,7 @@ public:
     {
         FileStorage fs(filename, FileStorage::READ);
         FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
+        if (fn.empty()) return Ptr<_Tp>();
         Ptr<_Tp> obj = _Tp::create();
         obj->read(fn);
         return !obj->empty() ? obj : Ptr<_Tp>();
@@ -3059,6 +3080,9 @@ public:
     /** Returns the algorithm string identifier.
      This string is used as top level xml/yml node tag when the object is saved to a file or string. */
     CV_WRAP virtual String getDefaultName() const;
+
+protected:
+    void writeFormat(FileStorage& fs) const;
 };
 
 struct Param {

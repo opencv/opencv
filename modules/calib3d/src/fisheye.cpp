@@ -406,7 +406,7 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
     map2.create( size, map1.type() == CV_16SC2 ? CV_16UC1 : CV_32F );
 
     CV_Assert((K.depth() == CV_32F || K.depth() == CV_64F) && (D.depth() == CV_32F || D.depth() == CV_64F));
-    CV_Assert((P.depth() == CV_32F || P.depth() == CV_64F) && (R.depth() == CV_32F || R.depth() == CV_64F));
+    CV_Assert((P.empty() || P.depth() == CV_32F || P.depth() == CV_64F) && (R.empty() || R.depth() == CV_32F || R.depth() == CV_64F));
     CV_Assert(K.size() == Size(3, 3) && (D.empty() || D.total() == 4));
     CV_Assert(R.empty() || R.size() == Size(3, 3) || R.total() * R.channels() == 3);
     CV_Assert(P.empty() || P.size() == Size(3, 3) || P.size() == Size(4, 3));
@@ -794,13 +794,22 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
     if (K.needed()) cv::Mat(_K).convertTo(K, K.empty() ? CV_64FC1 : K.type());
     if (D.needed()) cv::Mat(finalParam.k).convertTo(D, D.empty() ? CV_64FC1 : D.type());
-    if (rvecs.kind()==_InputArray::STD_VECTOR_MAT)
+    if (rvecs.isMatVector())
     {
-        int i;
-        for( i = 0; i < (int)objectPoints.total(); i++ )
+        int N = (int)objectPoints.total();
+
+        if(rvecs.empty())
+            rvecs.create(N, 1, CV_64FC3);
+
+        if(tvecs.empty())
+            tvecs.create(N, 1, CV_64FC3);
+
+        for(int i = 0; i < N; i++ )
         {
-            rvecs.getMat(i)=omc[i];
-            tvecs.getMat(i)=Tc[i];
+            rvecs.create(3, 1, CV_64F, i, true);
+            tvecs.create(3, 1, CV_64F, i, true);
+            memcpy(rvecs.getMat(i).ptr(), omc[i].val, sizeof(Vec3d));
+            memcpy(tvecs.getMat(i).ptr(), Tc[i].val, sizeof(Vec3d));
         }
     }
     else
@@ -1295,12 +1304,12 @@ cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicPar
     CV_Assert(!imagePoints.empty() && imagePoints.type() == CV_64FC2);
 
     Mat distorted((int)imagePoints.total(), 1, CV_64FC2), undistorted;
-    const Vec2d* ptr   = imagePoints.ptr<Vec2d>(0);
-    Vec2d* ptr_d = distorted.ptr<Vec2d>(0);
+    const Vec2d* ptr   = imagePoints.ptr<Vec2d>();
+    Vec2d* ptr_d = distorted.ptr<Vec2d>();
     for (size_t i = 0; i < imagePoints.total(); ++i)
     {
         ptr_d[i] = (ptr[i] - param.c).mul(Vec2d(1.0 / param.f[0], 1.0 / param.f[1]));
-        ptr_d[i][0] = ptr_d[i][0] - param.alpha * ptr_d[i][1];
+        ptr_d[i][0] -= param.alpha * ptr_d[i][1];
     }
     cv::fisheye::undistortPoints(distorted, undistorted, Matx33d::eye(), param.k);
     return undistorted;
@@ -1308,12 +1317,11 @@ cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicPar
 
 void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
 {
-
     CV_Assert(!_objectPoints.empty() && _objectPoints.type() == CV_64FC3);
     CV_Assert(!_imagePoints.empty() && _imagePoints.type() == CV_64FC2);
 
-    Mat imagePointsNormalized = NormalizePixels(_imagePoints.t(), param).reshape(1).t();
-    Mat objectPoints = Mat(_objectPoints.t()).reshape(1).t();
+    Mat imagePointsNormalized = NormalizePixels(_imagePoints, param).reshape(1).t();
+    Mat objectPoints = _objectPoints.reshape(1).t();
     Mat objectPointsMean, covObjectPoints;
     Mat Rckk;
     int Np = imagePointsNormalized.cols;
@@ -1366,9 +1374,12 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         objectPoints.getMat(image_idx).convertTo(object,  CV_64FC3);
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
 
-        InitExtrinsics(image, object, param, omckk, Tckk);
+        bool imT = image.rows < image.cols;
+        bool obT = object.rows < object.cols;
 
-        ComputeExtrinsicRefine(image, object, omckk, Tckk, JJ_kk, maxIter, param, thresh_cond);
+        InitExtrinsics(imT ? image.t() : image, obT ? object.t() : object, param, omckk, Tckk);
+
+        ComputeExtrinsicRefine(!imT ? image.t() : image, !obT ? object.t() : object, omckk, Tckk, JJ_kk, maxIter, param, thresh_cond);
         if (check_cond)
         {
             SVD svd(JJ_kk, SVD::NO_UV);
@@ -1378,7 +1389,6 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         Tckk.reshape(3,1).copyTo(Tc.getMat().col(image_idx));
     }
 }
-
 
 void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
                       const IntrinsicParams& param,  InputArray omc, InputArray Tc,
@@ -1401,12 +1411,13 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
 
+        bool imT = image.rows < image.cols;
         Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
 
         std::vector<Point2d> x;
         Mat jacobians;
         projectPoints(object, x, om, T, param, jacobians);
-        Mat exkk = image.t() - Mat(x);
+        Mat exkk = (imT ? image.t() : image) - Mat(x);
 
         Mat A(jacobians.rows, 9, CV_64FC1);
         jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));
@@ -1460,11 +1471,13 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
 
+        bool imT = image.rows < image.cols;
+
         Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
 
         std::vector<Point2d> x;
         projectPoints(object, x, om, T, params, noArray());
-        Mat ex_ = image.t() - Mat(x);
+        Mat ex_ = (imT ? image.t() : image) - Mat(x);
         ex_.copyTo(ex.rowRange(ex_.rows * image_idx,  ex_.rows * (image_idx + 1)));
     }
 

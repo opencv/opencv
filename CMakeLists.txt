@@ -68,6 +68,10 @@ if(WINRT)
   endif()
 endif()
 
+if(POLICY CMP0020)
+  cmake_policy(SET CMP0020 OLD)
+endif()
+
 if(POLICY CMP0022)
   cmake_policy(SET CMP0022 OLD)
 endif()
@@ -598,30 +602,42 @@ endif()
 
 include(cmake/OpenCVDetectVTK.cmake)
 
-# -- Custom HAL replacement --
-set(_includes "")
-# assuming OPENCV_HAL_HEADERS and OPENCV_HAL_LIBS are lists of files:
-# option example: -DOPENCV_HAL_HEADERS="<some-path>/header1.h;<some-path>/header2.h"
-if (OPENCV_HAL_HEADERS AND OPENCV_HAL_LIBS)
-  foreach (h ${OPENCV_HAL_HEADERS})
-    get_filename_component(h "${h}" ABSOLUTE)
-    set(_includes "${_includes}\n#include \"${h}\"")
+
+# ----------------------------------------------------------------------------
+# OpenCV HAL
+# ----------------------------------------------------------------------------
+set(_hal_includes "")
+macro(ocv_hal_register HAL_LIBRARIES_VAR HAL_HEADERS_VAR HAL_INCLUDE_DIRS_VAR)
+  # 1. libraries
+  foreach (l ${${HAL_LIBRARIES_VAR}})
+    if(NOT TARGET ${l})
+      get_filename_component(l "${l}" ABSOLUTE)
+    endif()
+    list(APPEND OPENCV_HAL_LINKER_LIBS ${l})
   endforeach()
-  foreach (l ${OPENCV_HAL_LIBS})
-    get_filename_component(l "${l}" ABSOLUTE)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${l})
-    # TODO: install?
-    # ocv_install_target(${l} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  # 2. headers
+  foreach (h ${${HAL_HEADERS_VAR}})
+    set(_hal_includes "${_hal_includes}\n#include \"${h}\"")
   endforeach()
-else()
-  set(_includes "// using default HAL")
-  unset(OPENCV_HAL_HEADERS CACHE)
-  unset(OPENCV_HAL_LIBS CACHE)
+  # 3. include paths
+  ocv_include_directories(${${HAL_INCLUDE_DIRS_VAR}})
+endmacro()
+
+if(NOT DEFINED OpenCV_HAL)
+  set(OpenCV_HAL "OpenCV_HAL")
 endif()
-set(OPENCV_HAL_HEADERS "${OPENCV_HAL_HEADERS}" CACHE STRING "Headers with custom HAL implementation")
-set(OPENCV_HAL_LIBS "${OPENCV_HAL_LIBS}" CACHE STRING "Libraries with custom HAL implementation")
+foreach(hal ${OpenCV_HAL})
+    ocv_debug_message(STATUS "OpenCV HAL: ${hal} ...")
+    ocv_clear_vars(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
+    find_package(${hal} NO_MODULE QUIET)
+    if(${hal}_FOUND)
+      ocv_hal_register(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "${hal} (ver ${${hal}_VERSION})")
+    endif()
+endforeach()
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
-unset(_includes)
+unset(_hal_includes)
+
 
 # ----------------------------------------------------------------------------
 # Add CUDA libraries (needed for apps/tools, samples)
@@ -711,7 +727,7 @@ if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests_android.sh.in"
                    "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh" @ONLY)
     install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
-            DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT tests)
+            DESTINATION ./ COMPONENT tests)
   elseif(WIN32)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests_windows.cmd.in"
                    "${CMAKE_BINARY_DIR}/win-install/opencv_run_all_tests.cmd" @ONLY)
@@ -739,11 +755,11 @@ endif()
 if(ANDROID OR NOT UNIX)
   install(FILES ${OPENCV_LICENSE_FILE}
         PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
-        DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT libs)
+        DESTINATION ./ COMPONENT libs)
   if(OPENCV_README_FILE)
     install(FILES ${OPENCV_README_FILE}
             PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
-            DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT libs)
+            DESTINATION ./ COMPONENT libs)
   endif()
 endif()
 
@@ -1160,7 +1176,7 @@ endif(DEFINED WITH_VA_INTEL)
 status("    Use Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 status("    Use Cuda:"       HAVE_CUDA        THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
 status("    Use OpenCL:"     HAVE_OPENCL      THEN YES ELSE NO)
-status("    Use custom HAL:" OPENCV_HAL_HEADERS AND OPENCV_HAL_LIBS THEN "YES (${OPENCV_HAL_HEADERS}; ${OPENCV_HAL_LIBS})" ELSE "NO")
+status("    Use custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")
 
 if(HAVE_CUDA)
   status("")

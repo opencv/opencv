@@ -967,6 +967,24 @@ template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const s
     return seq;
 }
 
+template<>
+PyObject* pyopencv_from(const std::pair<int, double>& src)
+{
+    return Py_BuildValue("(id)", src.first, src.second);
+}
+
+template<typename _Tp, typename _Tr> struct pyopencvVecConverter<std::pair<_Tp, _Tr> >
+{
+    static bool to(PyObject* obj, std::vector<std::pair<_Tp, _Tr> >& value, const ArgInfo info)
+    {
+        return pyopencv_to_generic_vec(obj, value, info);
+    }
+
+    static PyObject* from(const std::vector<std::pair<_Tp, _Tr> >& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
 
 template<typename _Tp> struct pyopencvVecConverter<std::vector<_Tp> >
 {

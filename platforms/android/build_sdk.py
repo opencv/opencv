@@ -92,6 +92,7 @@ class Builder:
     def __init__(self, workdir, opencvdir):
         self.workdir = check_dir(workdir, create=True)
         self.opencvdir = check_dir(opencvdir)
+        self.extra_modules_path = None
         self.libdest = check_dir(os.path.join(self.workdir, "o4a"), create=True, clean=True)
         self.docdest = check_dir(os.path.join(self.workdir, "javadoc"), create=True, clean=True)
         self.resultdest = check_dir(os.path.join(self.workdir, "OpenCV-android-sdk"), create=True, clean=True)
@@ -133,9 +134,14 @@ class Builder:
             "-DANDROID_NATIVE_API_LEVEL=8",
             "-DANDROID_ABI='%s'" % abi.cmake_name,
             "-DWITH_TBB=ON",
-            "-DANDROID_TOOLCHAIN_NAME=%s" % abi.toolchain,
-            self.opencvdir
+            "-DANDROID_TOOLCHAIN_NAME=%s" % abi.toolchain
         ]
+
+        if self.extra_modules_path is not None:
+            cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.extra_modules_path)
+
+        cmd.append(self.opencvdir)
+
         if self.use_ccache == True:
             cmd.extend(["-DNDK_CCACHE=ccache", "-DENABLE_PRECOMPILED_HEADERS=OFF"])
         if do_install:
@@ -258,6 +264,7 @@ if __name__ == "__main__":
     parser.add_argument("opencv_dir", help="Path to OpenCV source dir")
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
+    parser.add_argument("--extra_modules_path", help="Path to extra modules to use for build")
     parser.add_argument('--sign_with', help="Sertificate to sign the Manager apk")
     parser.add_argument('--build_doc', action="store_true", help="Build javadoc")
     parser.add_argument('--no_ccache', action="store_true", help="Do not use ccache during library build")
@@ -276,6 +283,9 @@ if __name__ == "__main__":
     log.info("Android SDK path: %s", os.environ["ANDROID_SDK"])
 
     builder = Builder(args.work_dir, args.opencv_dir)
+
+    if args.extra_modules_path is not None:
+        builder.extra_modules_path = os.path.abspath(args.extra_modules_path)
 
     if args.no_ccache:
         builder.use_ccache = False

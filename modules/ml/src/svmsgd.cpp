@@ -153,7 +153,7 @@ void SVMSGDImpl::normalizeSamples(Mat &samples, Mat &average, float &multiplier)
 
     double normValue = norm(samples);
 
-    multiplier = static_cast<float>(sqrt(samples.total()) / normValue);
+    multiplier = static_cast<float>(sqrt(static_cast<double>(samples.total())) / normValue);
 
     samples *= multiplier;
 }
@@ -364,6 +364,7 @@ void SVMSGDImpl::write(FileStorage& fs) const
     if( !isTrained() )
         CV_Error( CV_StsParseError, "SVMSGD model data is invalid, it hasn't been trained" );
 
+    writeFormat(fs);
     writeParams( fs );
 
     fs << "weights" << weights_;

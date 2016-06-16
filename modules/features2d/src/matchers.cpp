@@ -1179,6 +1179,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
 
 void FlannBasedMatcher::write( FileStorage& fs) const
 {
+     writeFormat(fs);
      fs << "indexParams" << "[";
 
      if (indexParams)
