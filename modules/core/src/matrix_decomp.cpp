@@ -89,8 +89,6 @@ LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n, _Tp eps)
                 for( k = 0; k < n; k++ )
                     b[j*bstep + k] += alpha*b[i*bstep + k];
         }
-
-        A[i*astep + i] = -d;
     }
 
     if( b )
@@ -101,7 +99,7 @@ LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n, _Tp eps)
                 _Tp s = b[i*bstep + j];
                 for( k = i+1; k < m; k++ )
                     s -= A[i*astep + k]*b[k*bstep + j];
-                b[i*bstep + j] = s*A[i*astep + i];
+                b[i*bstep + j] = s/A[i*astep + i];
             }
     }
 
@@ -111,13 +109,19 @@ LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n, _Tp eps)
 
 int LU32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    return LUImpl(A, astep, m, b, bstep, n, FLT_EPSILON*10);
+    int output;
+    CALL_HAL_RET(LU32f, cv_hal_LU32f, output, A, astep, m, b, bstep, n)
+    output = LUImpl(A, astep, m, b, bstep, n, FLT_EPSILON*10);
+    return output;
 }
 
 
 int LU64f(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    return LUImpl(A, astep, m, b, bstep, n, DBL_EPSILON*100);
+    int output;
+    CALL_HAL_RET(LU64f, cv_hal_LU64f, output, A, astep, m, b, bstep, n)
+    output = LUImpl(A, astep, m, b, bstep, n, DBL_EPSILON*100);
+    return output;
 }
 
 template<typename _Tp> static inline bool
@@ -193,14 +197,17 @@ CholImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
     return true;
 }
 
-
 bool Cholesky32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
+    bool output;
+    CALL_HAL_RET(Cholesky32f, cv_hal_Cholesky32f, output, A, astep, m, b, bstep, n)
     return CholImpl(A, astep, m, b, bstep, n);
 }
 
 bool Cholesky64f(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
+    bool output;
+    CALL_HAL_RET(Cholesky64f, cv_hal_Cholesky64f, output, A, astep, m, b, bstep, n)
     return CholImpl(A, astep, m, b, bstep, n);
 }
 

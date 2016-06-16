@@ -570,11 +570,44 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
 
 static void JacobiSVD(float* At, size_t astep, float* W, float* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN, FLT_EPSILON*2);
+    hal::SVD32f(At, astep, W, NULL, astep, Vt, vstep, m, n, n1);
 }
 
 static void JacobiSVD(double* At, size_t astep, double* W, double* Vt, size_t vstep, int m, int n, int n1=-1)
 {
+    hal::SVD64f(At, astep, W, NULL, astep, Vt, vstep, m, n, n1);
+}
+
+template <typename fptype> static inline int
+decodeSVDParameters(const fptype* U, const fptype* Vt, int m, int n, int n1)
+{
+    int halSVDFlag = 0;
+    if(Vt == NULL)
+        halSVDFlag = CV_HAL_SVD_NO_UV;
+    else if(n1 <= 0 || n1 == n)
+    {
+        halSVDFlag = CV_HAL_SVD_SHORT_UV;
+        if(U == NULL)
+            halSVDFlag |= CV_HAL_SVD_MODIFY_A;
+    }
+    else if(n1 == m)
+    {
+        halSVDFlag = CV_HAL_SVD_FULL_UV;
+        if(U == NULL)
+            halSVDFlag |= CV_HAL_SVD_MODIFY_A;
+    }
+    return halSVDFlag;
+}
+
+void hal::SVD32f(float* At, size_t astep, float* W, float* U, size_t ustep, float* Vt, size_t vstep, int m, int n, int n1)
+{
+    CALL_HAL(SVD32f, cv_hal_SVD32f, At, astep, W, U, ustep, Vt, vstep, m, n, decodeSVDParameters(U, Vt, m, n, n1))
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN, FLT_EPSILON*2);
+}
+
+void hal::SVD64f(double* At, size_t astep, double* W, double* U, size_t ustep, double* Vt, size_t vstep, int m, int n, int n1)
+{
+    CALL_HAL(SVD64f, cv_hal_SVD64f, At, astep, W, U, ustep, Vt, vstep, m, n, decodeSVDParameters(U, Vt, m, n, n1))
     JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN, DBL_EPSILON*10);
 }
 
@@ -745,7 +778,6 @@ double cv::determinant( InputArray _mat )
             {
                 for( int i = 0; i < rows; i++ )
                     result *= a.at<float>(i,i);
-                result = 1./result;
             }
         }
     }
@@ -769,7 +801,6 @@ double cv::determinant( InputArray _mat )
             {
                 for( int i = 0; i < rows; i++ )
                     result *= a.at<double>(i,i);
-                result = 1./result;
             }
         }
     }
