@@ -298,9 +298,9 @@ namespace base64
         bool flush();
     private:
         static const size_t BUFFER_LEN = 120U;
+        uchar * dst_beg;
         uchar * dst_cur;
         uchar * dst_end;
-        uchar * dst_beg;
         std::vector<uchar> base64_buffer;
         uchar * src_beg;
         uchar * src_end;
@@ -1114,7 +1114,7 @@ static char* icvYMLParseBase64(CvFileStorage* fs, char* ptr, int indent, CvFileN
     std::string dt;
     int total_byte_size = -1;
     {
-        if (end - beg < base64::ENCODED_HEADER_SIZE)
+        if (end - beg < static_cast<int>(base64::ENCODED_HEADER_SIZE))
             CV_PARSE_ERROR("Unrecognized Base64 header");
 
         std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
@@ -1294,7 +1294,7 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
     if (is_binary_string)
     {
         /* for base64 string */
-        int indent = ptr - fs->buffer_start;
+        int indent = static_cast<int>(ptr - fs->buffer_start);
         ptr = icvYMLParseBase64(fs, ptr, indent, node);
     }
     else if( cv_isdigit(c) ||
@@ -2056,7 +2056,7 @@ static char* icvXMLParseBase64(CvFileStorage* fs, char* ptr, CvFileNode * node)
     std::string dt;
     int total_byte_size = -1;
     {
-        if (end - beg < base64::ENCODED_HEADER_SIZE)
+        if (end - beg < static_cast<int>(base64::ENCODED_HEADER_SIZE))
             CV_PARSE_ERROR("Unrecognized Base64 header");
 
         std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
@@ -3387,7 +3387,7 @@ static int
 icvCalcStructSize( const char* dt, int initial_size )
 {
     int size = icvCalcElemSize( dt, initial_size );
-    int elem_max_size = 0;
+    size_t elem_max_size = 0;
     for ( const char * type = dt; *type != '\0'; type++ ) {
         switch ( *type )
         {
@@ -3401,7 +3401,7 @@ icvCalcStructSize( const char* dt, int initial_size )
         default: break;
         }
     }
-    size = cvAlign( size, elem_max_size );
+    size = cvAlign( size, static_cast<int>(elem_max_size) );
     return size;
 }
 
@@ -6035,14 +6035,14 @@ void read(const FileNode& node, String& value, const String& default_value)
 #error "`char` should be 8 bit."
 #endif
 
-uint8_t const base64::base64_mapping[] =
+base64::uint8_t const base64::base64_mapping[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "0123456789+/";
 
-uint8_t const base64::base64_padding = '=';
+base64::uint8_t const base64::base64_padding = '=';
 
-uint8_t const base64::base64_demapping[] = {
+base64::uint8_t const base64::base64_demapping[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0, 62,  0,  0,  0, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,  0,  0,
@@ -6185,7 +6185,7 @@ size_t base64::base64_decode(char const * src, char * dst, size_t off, size_t cn
 bool base64::base64_valid(uint8_t const * src, size_t off, size_t cnt)
 {
     /* check parameters */
-    if (src == nullptr || src + off == nullptr)
+    if (src == 0 || src + off == 0)
         return false;
     if (cnt == 0U)
         cnt = std::strlen(reinterpret_cast<char const *>(src));
@@ -6205,7 +6205,7 @@ bool base64::base64_valid(uint8_t const * src, size_t off, size_t cnt)
 
     /* find illegal characters */
     for (uint8_t const * iter = beg; iter < end; iter++)
-        if (*iter < 0 || (!base64_demapping[(uint8_t)*iter] && *iter != base64_mapping[0]))
+        if (*iter > 126U || (!base64_demapping[(uint8_t)*iter] && *iter != base64_mapping[0]))
             return false;
 
     return true;
@@ -6308,8 +6308,8 @@ std::string base64::make_base64_header(int byte_size, const char * dt)
     oss << size << ' '
         << dt   << ' ';
     std::string buffer(oss.str());
-    if (buffer.size() > HEADER_SIZE)
-        CV_Assert(0); // error! header is too long
+    if (buffer.size() > HEADER_SIZE) {
+        CV_Assert(0); }
 
     buffer.reserve(HEADER_SIZE);
     while (buffer.size() < HEADER_SIZE)
@@ -6334,8 +6334,8 @@ base64::Base64ContextParser::Base64ContextParser(uchar * buffer, size_t size)
     , dst_end(buffer + size)
     , base64_buffer(BUFFER_LEN)
     , src_beg(0)
-    , src_end(0)
     , src_cur(0)
+    , src_end(0)
     , binary_buffer(base64_encode_buffer_size(BUFFER_LEN))
 {
     src_beg = binary_buffer.data();
@@ -6443,7 +6443,7 @@ public:
         while (beg < end) {
             /* collect binary data and copy to binary buffer */
             size_t len = std::min(end - beg, src_end - src_cur);
-            std::copy_n(beg, len, src_cur);
+           std::memcpy(src_cur, beg, len);
             beg     += len;
             src_cur += len;
 
@@ -6597,26 +6597,26 @@ public:
                     /* usually x_max and y_max won't change */
                     y_max     = (mat_iter)->rows;
                     x_max     = (mat_iter)->cols * (mat_iter)->elemSize();
-                    row_begin = (mat_iter)->ptr(y);
+                    row_begin = (mat_iter)->ptr(static_cast<int>(y));
                 }
             } else
-                row_begin = (mat_iter)->ptr(y);
+                row_begin = (mat_iter)->ptr(static_cast<int>(y));
         }
 
         return *this;
     }
 
-    inline explicit operator bool() const
+    inline operator bool() const
     {
         return mat_iter != mats.end();
     }
 
 private:
 
-    size_t x;
-    size_t x_max;
     size_t y;
     size_t y_max;
+    size_t x;
+    size_t x_max;
     std::vector<cv::Mat>::iterator mat_iter;
     std::vector<cv::Mat> mats;
 
@@ -6664,7 +6664,7 @@ public:
         return *this;
     }
 
-    inline explicit operator bool() const
+    inline operator bool() const
     {
         return cur < end;
     }
@@ -6696,8 +6696,7 @@ private:
 
             while (cnt-- > 0)
             {
-                to_binary_funcs.emplace_back();
-                elem_to_binary_t & pack = to_binary_funcs.back();
+                elem_to_binary_t pack;
 
                 size_t size = 0;
                 switch (type)
@@ -6728,9 +6727,11 @@ private:
                 default: { CV_Assert(0); break; }
                 };
 
-                offset = static_cast<size_t>(cvAlign(offset, size));
+                offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
                 pack.offset = offset;
                 offset += size;
+
+                to_binary_funcs.push_back(pack);
             }
         }
 
@@ -6738,8 +6739,8 @@ private:
     }
 
 private:
-    const uchar * cur;
     const uchar * beg;
+    const uchar * cur;
     const uchar * end;
 
     size_t step;
@@ -6809,7 +6810,7 @@ public:
         return *this;
     }
 
-    inline explicit operator bool() const
+    inline operator bool() const
     {
         return cur < end;
     }
@@ -6842,8 +6843,7 @@ private:
 
             while (cnt-- > 0)
             {
-                binary_to_funcs.emplace_back();
-                binary_to_filenode_t & pack = binary_to_funcs.back();
+                binary_to_filenode_t pack;
 
                 /* set func and offset */
                 size_t size = 0;
@@ -6875,9 +6875,9 @@ private:
                 default:  { CV_Assert(0); break; }
                 };
 
-                offset = static_cast<size_t>(cvAlign(offset, size));
+                offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
                 pack.offset = offset;
-                offset += size;
+                offset += static_cast<int>(size);
 
                 /* set type */
                 switch (type)
@@ -6892,6 +6892,8 @@ private:
                 case 'r':
                 default:  { CV_Assert(0); break; }
                 }
+
+                binary_to_funcs.push_back(pack);
             }
         }
 
@@ -6977,7 +6979,7 @@ void base64::cvWriteMat_Base64(cv::FileStorage & fs, cv::String const & name, cv
 
         {    /* [2][1]define base64 header */
             /* total byte size */
-            int size = mat.total() * mat.elemSize();
+            int size = static_cast<int>(mat.total() * mat.elemSize());
             std::string buffer = make_base64_header(size, dt);
             const uchar * beg = reinterpret_cast<const uchar *>(buffer.data());
             const uchar * end = beg + buffer.size();
