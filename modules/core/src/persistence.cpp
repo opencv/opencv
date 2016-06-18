@@ -298,7 +298,6 @@ namespace base64
         bool flush();
     private:
         static const size_t BUFFER_LEN = 120U;
-        uchar * dst_beg;
         uchar * dst_cur;
         uchar * dst_end;
         std::vector<uchar> base64_buffer;
@@ -6329,8 +6328,7 @@ bool base64::read_base64_header(std::string const & header, int & byte_size, std
  ***************************************************************************/
 
 base64::Base64ContextParser::Base64ContextParser(uchar * buffer, size_t size)
-    : dst_beg(buffer)
-    , dst_cur(buffer)
+    : dst_cur(buffer)
     , dst_end(buffer + size)
     , base64_buffer(BUFFER_LEN)
     , src_beg(0)
@@ -6840,7 +6838,7 @@ private:
     {
         size_t cnt = 0;
         char type = '\0';
-        int offset = 0;
+        size_t offset = 0;
 
         std::istringstream iss(dt);
         while (!iss.eof()) {
@@ -6888,7 +6886,7 @@ private:
 
                 offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
                 pack.offset = offset;
-                offset += static_cast<int>(size);
+                offset += size;
 
                 /* set type */
                 switch (type)
