@@ -1,10 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.javatechnics.opencv.org</groupId>
+    <groupId>opencv.org</groupId>
     <artifactId>opencv</artifactId>
     <packaging>bundle</packaging>
-    <version>3.1.0-SNAPSHOT</version>
+    <version>3.1.0</version>
     <name>Open CV</name>
     <licenses>
         <license>
@@ -34,7 +34,7 @@
         </dependency>
     </dependencies>
     <properties>
-        <build.directory>${project.basedir}/build</build.directory>
+        <build.directory>../../build</build.directory>
         <nativelibrary.name>libopencv_java${lib.version.string}.so</nativelibrary.name>
     </properties>
     <distributionManagement>
@@ -44,11 +44,10 @@
         </snapshotRepository>
     </distributionManagement>
     <build>
-        <directory>${project.basedir}/build/target</directory>
-        <outputDirectory>${build.directory}/src</outputDirectory>
-        <sourceDirectory>${build.directory}/src</sourceDirectory>
+        <directory>../../build/target</directory>
+        <outputDirectory>../../build/src</outputDirectory>
+        <sourceDirectory>../../build/src</sourceDirectory>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-clean-plugin</artifactId>
@@ -61,7 +60,6 @@
                     </filesets>
                 </configuration>
             </plugin>
-
             <plugin>
                 <groupId>com.github.maven-nar</groupId>
                 <artifactId>nar-maven-plugin</artifactId>
@@ -77,7 +75,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -94,7 +91,7 @@
                             <workingDirectory>${project.basedir}/scripts</workingDirectory>
                             <arguments>
                                 <argument>properties</argument>
-                                <argument>${project.basedir}/modules/core/include/opencv2/core/version.hpp</argument>
+                                <argument>../../../modules/core/include/opencv2/core/version.hpp</argument>
                                 <argument>${build.directory}</argument>
                                 <argument>build.properties</argument>
                             </arguments>
@@ -134,7 +131,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
@@ -216,7 +212,6 @@ To speed up the build you can try exporting MAKEFLAGS=-jX where X equals the num
                     <niceManifest>true</niceManifest>
                 </configuration>
             </plugin>
-
             <plugin>
                 <groupId>com.googlecode.cmake-maven-project</groupId>
                 <artifactId>cmake-maven-plugin</artifactId>
@@ -228,8 +223,8 @@ To speed up the build you can try exporting MAKEFLAGS=-jX where X equals the num
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <sourcePath>${project.basedir}</sourcePath>
-                            <targetPath>${project.basedir}/build</targetPath>
+                            <sourcePath>../..</sourcePath>
+                            <targetPath>../../build</targetPath>
                             <generator>Unix Makefiles</generator>
                             <options>
                                 <option>-DBUILD_SHARED_LIBS:BOOL=OFF</option>
@@ -242,12 +237,11 @@ To speed up the build you can try exporting MAKEFLAGS=-jX where X equals the num
                             <goal>compile</goal>
                         </goals>
                         <configuration>
-                            <projectDirectory>${project.basedir}/build</projectDirectory>
+                            <projectDirectory>../../build</projectDirectory>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
 </project>

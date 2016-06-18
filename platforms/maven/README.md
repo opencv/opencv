@@ -38,6 +38,8 @@ By default the following build directories are created.
 `<OpenCV_root_dir>/build/target`
 
 Under `build` are the standard OpenCV artifacts. Under `build/target` can be found the OSGi compatible Java bundle. When deploying the bundle into an OSGi framework e.g. [Apache Karaf](http://karaf.apache.org/), loading of the native library is automatically taken care of. The standard Java library as created by the CMake process is also available as specified in the existing OpenCV documentation.
+
+The Maven build is initiated from the directory contain the `pom.xml` file.
 #### x86 or x86_64 Architecture:
 Generally all that is required is the standard Maven command:
 
