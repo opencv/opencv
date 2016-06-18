@@ -3498,7 +3498,7 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
                     data += sizeof(size_t);
                     break;
                 default:
-                    CV_Assert(!"elem_type is not support.");
+                    CV_Error( CV_StsUnsupportedFormat, "Unsupported type" );
                     return;
                 }
 
@@ -3620,7 +3620,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                         data += sizeof(size_t);
                         break;
                     default:
-                        CV_Assert(0);
+                        CV_Error( CV_StsUnsupportedFormat, "Unsupported type" );
                         return;
                     }
                 }
@@ -3670,7 +3670,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                         data += sizeof(size_t);
                         break;
                     default:
-                        CV_Assert(0);
+                        CV_Error( CV_StsUnsupportedFormat, "Unsupported type" );
                         return;
                     }
                 }
