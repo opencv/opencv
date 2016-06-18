@@ -592,14 +592,14 @@ TEST(Core_InputOutput, filestorage_yml_base64)
     {   /* init */
 
         /* normal mat */
-        _2d_out = cv::Mat(1000, 1000, CV_8UC3, cvScalar(1U, 2U, 3U));
+        _2d_out = cv::Mat(100, 100, CV_8UC3, cvScalar(1U, 2U, 127U));
         for (int i = 0; i < _2d_out.rows; ++i)
             for (int j = 0; j < _2d_out.cols; ++j)
                 _2d_out.at<cv::Vec3b>(i, j)[1] = i % 256;
 
         /* 4d mat */
         const int Size[] = {4, 4, 4, 4};
-        cv::Mat _4d(4, Size, CV_32FC4);
+        cv::Mat _4d(4, Size, CV_64FC4, cvScalar(0.888, 0.111, 0.666, 0.444));
         const cv::Range ranges[] = {
             cv::Range(0, 2),
             cv::Range(0, 2),
@@ -654,14 +654,14 @@ TEST(Core_InputOutput, filestorage_xml_base64)
     {   /* init */
 
         /* normal mat */
-        _2d_out = cv::Mat(1000, 1000, CV_8UC3, cvScalar(1U, 2U, 3U));
+        _2d_out = cv::Mat(100, 100, CV_8UC3, cvScalar(1U, 2U, 127U));
         for (int i = 0; i < _2d_out.rows; ++i)
             for (int j = 0; j < _2d_out.cols; ++j)
                 _2d_out.at<cv::Vec3b>(i, j)[1] = i % 256;
 
         /* 4d mat */
         const int Size[] = {4, 4, 4, 4};
-        cv::Mat _4d(4, Size, CV_32FC4);
+        cv::Mat _4d(4, Size, CV_64FC4, cvScalar(0.888, 0.111, 0.666, 0.444));
         const cv::Range ranges[] = {
             cv::Range(0, 2),
             cv::Range(0, 2),
@@ -704,5 +704,5 @@ TEST(Core_InputOutput, filestorage_xml_base64)
     EXPECT_EQ(_nd_in.cols   , _nd_in.cols);
     EXPECT_EQ(_nd_in.dims   , _nd_in.dims);
     EXPECT_EQ(_nd_in.depth(), _nd_in.depth());
-    EXPECT_EQ(cv::countNonZero(cv::mean(_nd_in != _nd_out)), 0);
+    EXPECT_EQ(cv::countNonZero(cv::sum(_nd_in != _nd_out)), 0);
 }
