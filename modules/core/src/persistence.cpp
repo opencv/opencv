@@ -303,8 +303,8 @@ namespace base64
         uchar * dst_end;
         std::vector<uchar> base64_buffer;
         uchar * src_beg;
-        uchar * src_end;
         uchar * src_cur;
+        uchar * src_end;
         std::vector<uchar> binary_buffer;
     };
 
@@ -3498,7 +3498,7 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
                     data += sizeof(size_t);
                     break;
                 default:
-                    assert(0);
+                    CV_Assert(!"elem_type is not support.");
                     return;
                 }
 
@@ -3620,7 +3620,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                         data += sizeof(size_t);
                         break;
                     default:
-                        assert(0);
+                        CV_Assert(0);
                         return;
                     }
                 }
@@ -3670,7 +3670,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                         data += sizeof(size_t);
                         break;
                     default:
-                        assert(0);
+                        CV_Assert(0);
                         return;
                     }
                 }
@@ -6236,10 +6236,11 @@ size_t base64::base64_decode_buffer_size(size_t cnt)
 template<typename _uint_t> inline size_t base64::
 to_binary(_uint_t val, uchar * cur)
 {
+    size_t delta = CHAR_BIT;
     size_t cnt = sizeof(_uint_t);
     while (cnt --> static_cast<size_t>(0U)) {
         *cur++ = static_cast<uchar>(val);
-        val >>= CHAR_BIT;
+        val >>= delta;
     }
     return sizeof(_uint_t);
 }
@@ -6308,8 +6309,7 @@ std::string base64::make_base64_header(int byte_size, const char * dt)
     oss << size << ' '
         << dt   << ' ';
     std::string buffer(oss.str());
-    if (buffer.size() > HEADER_SIZE) {
-        CV_Assert(0); }
+    CV_Assert(buffer.size() < HEADER_SIZE);
 
     buffer.reserve(HEADER_SIZE);
     while (buffer.size() < HEADER_SIZE)
@@ -6563,7 +6563,7 @@ public:
         case CV_32F: { to_binary_func = to_binary<float> ; break; }
         case CV_64F: { to_binary_func = to_binary<double>; break; }
         case CV_USRTYPE1:
-        default:     { CV_Assert(0); break; }
+        default:     { CV_Assert(!"mat type is invalid"); break; }
         };
 
         /* check if empty */
@@ -6724,7 +6724,7 @@ private:
                     pack.func = to_binary<double>;
                     break;
                 case 'r':
-                default: { CV_Assert(0); break; }
+                default: { CV_Assert(!"type not support"); break; }
                 };
 
                 offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
@@ -6772,19 +6772,30 @@ public:
         CV_DbgAssert(*this);
 
         /* get current data */
-        uchar buffer[sizeof(double)] = {0};
-        functor_iter->func(cur + functor_iter->offset, buffer);
+        union
+        {
+            uchar mem[sizeof(double)];
+            uchar  u;
+            char   b;
+            ushort w;
+            short  s;
+            int    i;
+            float  f;
+            double d;
+        } buffer; /* for GCC -Wstrict-aliasing */
+        std::memset(buffer.mem, 0, sizeof(buffer));
+        functor_iter->func(cur + functor_iter->offset, buffer.mem);
 
         /* set node::data */
         switch (functor_iter->cv_type)
         {
-        case CV_8U : { dst.data.i = cv::saturate_cast<int>   (*reinterpret_cast<uchar  *>(buffer)); break;}
-        case CV_8S : { dst.data.i = cv::saturate_cast<int>   (*reinterpret_cast<char   *>(buffer)); break;}
-        case CV_16U: { dst.data.i = cv::saturate_cast<int>   (*reinterpret_cast<ushort *>(buffer)); break;}
-        case CV_16S: { dst.data.i = cv::saturate_cast<int>   (*reinterpret_cast<short  *>(buffer)); break;}
-        case CV_32S: { dst.data.i = cv::saturate_cast<int>   (*reinterpret_cast<int    *>(buffer)); break;}
-        case CV_32F: { dst.data.f = cv::saturate_cast<double>(*reinterpret_cast<float  *>(buffer)); break;}
-        case CV_64F: { dst.data.f = cv::saturate_cast<double>(*reinterpret_cast<double *>(buffer)); break;}
+        case CV_8U : { dst.data.i = cv::saturate_cast<int>   (buffer.u); break;}
+        case CV_8S : { dst.data.i = cv::saturate_cast<int>   (buffer.b); break;}
+        case CV_16U: { dst.data.i = cv::saturate_cast<int>   (buffer.w); break;}
+        case CV_16S: { dst.data.i = cv::saturate_cast<int>   (buffer.s); break;}
+        case CV_32S: { dst.data.i = cv::saturate_cast<int>   (buffer.i); break;}
+        case CV_32F: { dst.data.f = cv::saturate_cast<double>(buffer.f); break;}
+        case CV_64F: { dst.data.f = cv::saturate_cast<double>(buffer.d); break;}
         default: break;
         }
 
@@ -6872,8 +6883,8 @@ private:
                     pack.func = binary_to<double>;
                     break;
                 case 'r':
-                default:  { CV_Assert(0); break; }
-                };
+                default:  { CV_Assert(!"type not support"); break; }
+                }; // need a better way for outputting error.
 
                 offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
                 pack.offset = offset;
@@ -6890,8 +6901,8 @@ private:
                 case 'f': { pack.cv_type = CV_32F; break; }
                 case 'd': { pack.cv_type = CV_64F; break; }
                 case 'r':
-                default:  { CV_Assert(0); break; }
-                }
+                default:  { CV_Assert(!"type is not support"); break; }
+                } // need a better way for outputting error.
 
                 binary_to_funcs.push_back(pack);
             }
