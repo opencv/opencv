@@ -577,3 +577,124 @@ TEST(Core_InputOutput, FileStorageKey)
     const std::string expected = "%YAML:1.0\nkey1: value1\n_key2: value2\nkey_3: value3\n";
     ASSERT_STREQ(f.releaseAndGetString().c_str(), expected.c_str());
 }
+
+TEST(Core_InputOutput, filestorage_yml_compatibility)
+{
+    //EXPECT_ANY_THROW();
+}
+
+TEST(Core_InputOutput, filestorage_yml_base64)
+{
+    cv::Mat _em_out, _em_in;
+    cv::Mat _2d_out, _2d_in;
+    cv::Mat _nd_out, _nd_in;
+
+    {   /* init */
+
+        /* normal mat */
+        _2d_out = cv::Mat(1000, 1000, CV_8UC3, cvScalar(1U, 2U, 3U));
+        for (int i = 0; i < _2d_out.rows; ++i)
+            for (int j = 0; j < _2d_out.cols; ++j)
+                _2d_out.at<cv::Vec3b>(i, j)[1] = i % 256;
+
+        /* 4d mat */
+        const int Size[] = {4, 4, 4, 4};
+        cv::Mat _4d(4, Size, CV_32FC4);
+        const cv::Range ranges[] = { {0, 2}, {0, 2}, {1, 2}, {0, 2} };
+        _nd_out = _4d(ranges);
+    }
+
+    {   /* write */
+        cv::FileStorage fs("test.yml", cv::FileStorage::WRITE);
+        cv::cvWriteMat_Base64(fs, "normal_2d_mat", _2d_out);
+        cv::cvWriteMat_Base64(fs, "normal_nd_mat", _nd_out);
+        cv::cvWriteMat_Base64(fs, "empty_2d_mat", _em_out);
+        fs.release();
+    }
+
+    {   /* read */
+        cv::FileStorage fs("test.yml", cv::FileStorage::READ);
+        fs["empty_2d_mat"]  >> _em_in;
+        fs["normal_2d_mat"] >> _2d_in;
+        fs["normal_nd_mat"] >> _nd_in;
+        fs.release();
+    }
+
+    EXPECT_EQ(_em_in.rows   , _em_out.rows);
+    EXPECT_EQ(_em_in.cols   , _em_out.cols);
+    EXPECT_EQ(_em_in.dims   , _em_out.dims);
+    EXPECT_EQ(_em_in.depth(), _em_out.depth());
+    EXPECT_TRUE(_em_in.empty());
+
+    EXPECT_EQ(_2d_in.rows   , _2d_in.rows);
+    EXPECT_EQ(_2d_in.cols   , _2d_in.cols);
+    EXPECT_EQ(_2d_in.dims   , _2d_in.dims);
+    EXPECT_EQ(_2d_in.depth(), _2d_in.depth());
+    for(int i = 0; i < _2d_in.rows; ++i)
+        for (int j = 0; j < _2d_in.cols; ++j)
+            EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
+
+    EXPECT_EQ(_nd_in.rows   , _nd_in.rows);
+    EXPECT_EQ(_nd_in.cols   , _nd_in.cols);
+    EXPECT_EQ(_nd_in.dims   , _nd_in.dims);
+    EXPECT_EQ(_nd_in.depth(), _nd_in.depth());
+    EXPECT_EQ(cv::countNonZero(cv::mean(_nd_in != _nd_out)), 0);
+}
+
+TEST(Core_InputOutput, filestorage_xml_base64)
+{
+    cv::Mat _em_out, _em_in;
+    cv::Mat _2d_out, _2d_in;
+    cv::Mat _nd_out, _nd_in;
+
+    {   /* init */
+
+        /* normal mat */
+        _2d_out = cv::Mat(1000, 1000, CV_8UC3, cvScalar(1U, 2U, 3U));
+        for (int i = 0; i < _2d_out.rows; ++i)
+            for (int j = 0; j < _2d_out.cols; ++j)
+                _2d_out.at<cv::Vec3b>(i, j)[1] = i % 256;
+
+        /* 4d mat */
+        const int Size[] = {4, 4, 4, 4};
+        cv::Mat _4d(4, Size, CV_32FC4);
+        const cv::Range ranges[] = { {0, 2}, {0, 2}, {1, 2}, {0, 2} };
+        _nd_out = _4d(ranges);
+    }
+
+    {   /* write */
+        cv::FileStorage fs("test.xml", cv::FileStorage::WRITE);
+        cv::cvWriteMat_Base64(fs, "normal_2d_mat", _2d_out);
+        cv::cvWriteMat_Base64(fs, "normal_nd_mat", _nd_out);
+        cv::cvWriteMat_Base64(fs, "empty_2d_mat", _em_out);
+        fs.release();
+    }
+
+    {   /* read */
+        cv::FileStorage fs("test.xml", cv::FileStorage::READ);
+        fs["empty_2d_mat"]  >> _em_in;
+        fs["normal_2d_mat"] >> _2d_in;
+        fs["normal_nd_mat"] >> _nd_in;
+        fs.release();
+    }
+
+    EXPECT_EQ(_em_in.rows   , _em_out.rows);
+    EXPECT_EQ(_em_in.cols   , _em_out.cols);
+    EXPECT_EQ(_em_in.dims   , _em_out.dims);
+    EXPECT_EQ(_em_in.depth(), _em_out.depth());
+    EXPECT_TRUE(_em_in.empty());
+
+    EXPECT_EQ(_2d_in.rows   , _2d_in.rows);
+    EXPECT_EQ(_2d_in.cols   , _2d_in.cols);
+    EXPECT_EQ(_2d_in.dims   , _2d_in.dims);
+    EXPECT_EQ(_2d_in.depth(), _2d_in.depth());
+    for(int i = 0; i < _2d_in.rows; ++i)
+        for (int j = 0; j < _2d_in.cols; ++j)
+            EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
+
+    EXPECT_EQ(_nd_in.rows   , _nd_in.rows);
+    EXPECT_EQ(_nd_in.cols   , _nd_in.cols);
+    EXPECT_EQ(_nd_in.dims   , _nd_in.dims);
+    EXPECT_EQ(_nd_in.depth(), _nd_in.depth());
+    EXPECT_EQ(cv::countNonZero(cv::mean(_nd_in != _nd_out)), 0);
+}

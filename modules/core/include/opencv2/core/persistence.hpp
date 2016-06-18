@@ -1238,6 +1238,11 @@ inline String::String(const FileNode& fn): cstr_(0), len_(0) { read(fn, *this, *
 
 //! @endcond
 
+
+CV_EXPORTS void cvWriteRawData_Base64(::cv::FileStorage & fs, const void* _data, int len, const char* dt);
+
+CV_EXPORTS void cvWriteMat_Base64(::cv::FileStorage & fs, ::cv::String const & name, ::cv::Mat const & mat);
+
 } // cv
 
 #endif // __OPENCV_CORE_PERSISTENCE_HPP__
