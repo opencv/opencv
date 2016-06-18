@@ -600,7 +600,11 @@ TEST(Core_InputOutput, filestorage_yml_base64)
         /* 4d mat */
         const int Size[] = {4, 4, 4, 4};
         cv::Mat _4d(4, Size, CV_32FC4);
-        const cv::Range ranges[] = { {0, 2}, {0, 2}, {1, 2}, {0, 2} };
+        const cv::Range ranges[] = {
+            cv::Range(0, 2),
+            cv::Range(0, 2),
+            cv::Range(1, 2),
+            cv::Range(0, 2) };
         _nd_out = _4d(ranges);
     }
 
@@ -658,7 +662,11 @@ TEST(Core_InputOutput, filestorage_xml_base64)
         /* 4d mat */
         const int Size[] = {4, 4, 4, 4};
         cv::Mat _4d(4, Size, CV_32FC4);
-        const cv::Range ranges[] = { {0, 2}, {0, 2}, {1, 2}, {0, 2} };
+        const cv::Range ranges[] = {
+            cv::Range(0, 2),
+            cv::Range(0, 2),
+            cv::Range(1, 2),
+            cv::Range(0, 2) };
         _nd_out = _4d(ranges);
     }
 
