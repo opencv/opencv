@@ -128,8 +128,11 @@ endif()
 #  Part 3/3: ${BIN_DIR}/win-install/OpenCVConfig.cmake  -> For use within binary installers/packages
 # --------------------------------------------------------------------------------------------
 if(WIN32)
-  set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/include\" \"\${OpenCV_CONFIG_PATH}/include/opencv\"")
-  set(OpenCV2_INCLUDE_DIRS_CONFIGCMAKE "\"\"")
+
+  if (CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
+    set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/include\" \"\${OpenCV_CONFIG_PATH}/include/opencv\"")
+    set(OpenCV2_INCLUDE_DIRS_CONFIGCMAKE "\"\"")
+  endif ()
 
   exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/win-install/\"" OUTPUT_VARIABLE RET_VAL)
   if(USE_IPPICV)

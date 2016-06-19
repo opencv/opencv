@@ -116,11 +116,13 @@ else()
   get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY CACHE)
 endif()
 
-if(NOT WIN32 OR ANDROID)
+if(NOT (WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows) OR ANDROID)
   if(ANDROID)
+    # CONFIG_PATH=INSTALL_PATH/sdk/native/jni
     set(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../../..")
   else()
-    set(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../..")
+    # CONFIG_PATH=INSTALL_PATH/lib/cmake/opencv
+    set(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../../..")
   endif()
   # Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
   if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_LESS 2.8)
