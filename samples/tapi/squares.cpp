@@ -143,8 +143,8 @@ int main(int argc, char** argv)
     const char* keys =
         "{ i input    | ../data/pic1.png   | specify input image }"
         "{ o output   | squares_output.jpg | specify output save path}"
-        "{ h help     | false              | print help message }"
-        "{ m cpu_mode | false              | run without OpenCL }";
+        "{ h help     |                    | print help message }"
+        "{ m cpu_mode |                    | run without OpenCL }";
 
     CommandLineParser cmd(argc, argv, keys);
 
