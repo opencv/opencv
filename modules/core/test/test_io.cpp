@@ -610,9 +610,12 @@ TEST(Core_InputOutput, filestorage_yml_base64)
 
     {   /* write */
         cv::FileStorage fs("test.yml", cv::FileStorage::WRITE);
-        cv::cvWriteMat_Base64(fs, "normal_2d_mat", _2d_out);
-        cv::cvWriteMat_Base64(fs, "normal_nd_mat", _nd_out);
-        cv::cvWriteMat_Base64(fs, "empty_2d_mat", _em_out);
+        CvMat holder = _2d_out;
+        cv::cvWriteMat_Base64(*fs, "normal_2d_mat", &holder);
+        CvMatND holder_nd = _nd_out;
+        cv::cvWriteMatND_Base64(*fs, "normal_nd_mat", &holder_nd);
+        holder = _em_out;
+        cv::cvWriteMat_Base64(*fs, "empty_2d_mat", &holder);
         fs.release();
     }
 
@@ -672,9 +675,12 @@ TEST(Core_InputOutput, filestorage_xml_base64)
 
     {   /* write */
         cv::FileStorage fs("test.xml", cv::FileStorage::WRITE);
-        cv::cvWriteMat_Base64(fs, "normal_2d_mat", _2d_out);
-        cv::cvWriteMat_Base64(fs, "normal_nd_mat", _nd_out);
-        cv::cvWriteMat_Base64(fs, "empty_2d_mat", _em_out);
+        CvMat holder = _2d_out;
+        cv::cvWriteMat_Base64(*fs, "normal_2d_mat", &holder);
+        CvMatND holder_nd = _nd_out;
+        cv::cvWriteMatND_Base64(*fs, "normal_nd_mat", &holder_nd);
+        holder = _em_out;
+        cv::cvWriteMat_Base64(*fs, "empty_2d_mat", &holder);
         fs.release();
     }
 

@@ -89,6 +89,8 @@ the extension of the opened file, ".xml" for XML files and ".yml" or ".yaml" for
  */
 typedef struct CvFileStorage CvFileStorage;
 typedef struct CvFileNode CvFileNode;
+typedef struct CvMat CvMat;
+typedef struct CvMatND CvMatND;
 
 //! @} core_c
 
@@ -1239,9 +1241,11 @@ inline String::String(const FileNode& fn): cstr_(0), len_(0) { read(fn, *this, *
 //! @endcond
 
 
-CV_EXPORTS void cvWriteRawData_Base64(::cv::FileStorage & fs, const void* _data, int len, const char* dt);
+CV_EXPORTS void cvWriteRawData_Base64(FileStorage & fs, const void* _data, int len, const char* dt);
 
-CV_EXPORTS void cvWriteMat_Base64(::cv::FileStorage & fs, ::cv::String const & name, ::cv::Mat const & mat);
+CV_EXPORTS void cvWriteMat_Base64(::CvFileStorage* fs, const char* name, const ::CvMat* mat);
+
+CV_EXPORTS void cvWriteMatND_Base64(::CvFileStorage* fs, const char* name, const ::CvMatND* mat);
 
 } // cv
 
