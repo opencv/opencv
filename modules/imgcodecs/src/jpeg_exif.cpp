@@ -144,7 +144,7 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
     while( ( !feof( f ) ) && !exifFound )
     {
         count = fread( appMarker, sizeof(unsigned char), markerSize, f );
-        if(( count < markerSize ) || ((appMarker[0] == '\0') && (appMarker[1] == '\0')))
+        if(( count < markerSize ) || ((appMarker[0] == appMarker[1]) && (appMarker[1] == '\0')))
         {
             break;
         }
