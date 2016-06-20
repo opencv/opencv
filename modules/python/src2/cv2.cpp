@@ -1251,6 +1251,7 @@ static void OnChange(int pos, void *param)
 }
 
 #ifdef HAVE_OPENCV_HIGHGUI
+
 static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
 {
     PyObject *on_change;
@@ -1266,6 +1267,55 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
         return NULL;
     }
     ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
+    Py_RETURN_NONE;
+}
+#endif
+
+static void OnButtonChange(int state, void *param)
+{
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    PyObject *o = (PyObject*)param;
+    PyObject *args;
+    if(PyTuple_GetItem(o, 1) != NULL)
+    {
+        args = Py_BuildValue("(iO)", state, PyTuple_GetItem(o,1));
+    }
+    else
+    {
+        args = Py_BuildValue("(i)", state);
+    }
+
+    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
+    if (r == NULL)
+        PyErr_Print();
+    Py_DECREF(args);
+    PyGILState_Release(gstate);
+}
+
+#ifdef HAVE_OPENCV_HIGHGUI
+
+static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
+{
+    const char* keywords[] = {"buttonName", "onChange", "userData", "buttonType", "initialButtonState", NULL};
+    PyObject *on_change;
+    PyObject *userdata = NULL;
+    char* button_name;
+    int button_type = 0;
+    int initial_button_state = 0;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "sO|Oii", (char**)keywords, &button_name, &on_change, &userdata, &button_type, &initial_button_state))
+        return NULL;
+    if (!PyCallable_Check(on_change)) {
+        PyErr_SetString(PyExc_TypeError, "onChange must be callable");
+        return NULL;
+    }
+    if (userdata == NULL) {
+        userdata = Py_None;
+    }
+
+    ERRWRAP2(createButton(button_name, OnButtonChange, Py_BuildValue("OO", on_change, userdata), button_type, initial_button_state));
     Py_RETURN_NONE;
 }
 #endif
@@ -1300,6 +1350,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 static PyMethodDef special_methods[] = {
 #ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
+  {"createButton", (PyCFunction)pycvCreateButton, METH_VARARGS | METH_KEYWORDS, "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
   {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
 #endif
   {NULL, NULL},
