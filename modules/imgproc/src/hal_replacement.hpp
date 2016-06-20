@@ -46,6 +46,7 @@
 #define OPENCV_IMGPROC_HAL_REPLACEMENT_HPP
 
 #include "opencv2/core/hal/interface.h"
+#include "opencv2/imgproc/hal/interface.h"
 
 #if defined __GNUC__
 #  pragma GCC diagnostic push
