@@ -320,7 +320,7 @@ namespace base64
     /* sample */
 
     void cvWriteRawData_Base64(::cv::FileStorage & fs, const void* _data, int len, const char* dt);
-    void cvWriteMat_Base64(::cv::FileStorage & fs, ::cv::String const & name, ::cv::Mat const & mat);
+    void cvWriteMat_Base64(CvFileStorage * fs, const char * name, ::cv::Mat const & mat);
 }
 
 
@@ -6960,7 +6960,7 @@ void base64::cvWriteRawData_Base64(cv::FileStorage & fs, const void* _data, int 
     cvEndWriteStruct(*fs);
 }
 
-void base64::cvWriteMat_Base64(cv::FileStorage & fs, cv::String const & name, cv::Mat const & mat)
+void base64::cvWriteMat_Base64(CvFileStorage * fs, const char * name, cv::Mat const & mat)
 {
     char dt[4];
     ::icvEncodeFormat(CV_MAT_TYPE(mat.type()), dt);
@@ -6968,23 +6968,23 @@ void base64::cvWriteMat_Base64(cv::FileStorage & fs, cv::String const & name, cv
     {    /* [1]output other attr */
 
         if (mat.dims <= 2) {
-            cvStartWriteStruct(*fs, name.c_str(), CV_NODE_MAP, CV_TYPE_NAME_MAT);
+            cvStartWriteStruct(fs, name, CV_NODE_MAP, CV_TYPE_NAME_MAT);
 
-            cvWriteInt(*fs, "rows", mat.rows );
-            cvWriteInt(*fs, "cols", mat.cols );
+            cvWriteInt(fs, "rows", mat.rows );
+            cvWriteInt(fs, "cols", mat.cols );
         } else {
-            cvStartWriteStruct(*fs, name.c_str(), CV_NODE_MAP, CV_TYPE_NAME_MATND);
+            cvStartWriteStruct(fs, name, CV_NODE_MAP, CV_TYPE_NAME_MATND);
 
-            cvStartWriteStruct(*fs, "sizes", CV_NODE_SEQ | CV_NODE_FLOW);
-            cvWriteRawData(*fs, mat.size.p, mat.dims, "i");
-            cvEndWriteStruct(*fs);
+            cvStartWriteStruct(fs, "sizes", CV_NODE_SEQ | CV_NODE_FLOW);
+            cvWriteRawData(fs, mat.size.p, mat.dims, "i");
+            cvEndWriteStruct(fs);
         }
-        cvWriteString(*fs, "dt", ::icvEncodeFormat(CV_MAT_TYPE(mat.type()), dt ), 0 );
+        cvWriteString(fs, "dt", ::icvEncodeFormat(CV_MAT_TYPE(mat.type()), dt ), 0 );
     }
 
-    cvStartWriteStruct(*fs, "data", CV_NODE_SEQ, "binary");
+    cvStartWriteStruct(fs, "data", CV_NODE_SEQ, "binary");
     {    /* [2]deal with matrix's data */
-        Base64ContextEmitter emitter(*fs);
+        Base64ContextEmitter emitter(fs);
 
         {    /* [2][1]define base64 header */
             /* total byte size */
@@ -7002,10 +7002,10 @@ void base64::cvWriteMat_Base64(cv::FileStorage & fs, cv::String const & name, cv
             emitter.write(convertor);
         }
     }
-    cvEndWriteStruct(*fs);
+    cvEndWriteStruct(fs);
 
     {    /* [3]output end */
-        cvEndWriteStruct(*fs);
+        cvEndWriteStruct(fs);
     }
 }
 
@@ -7020,9 +7020,16 @@ namespace cv
         ::base64::cvWriteRawData_Base64(fs, _data, len, dt);
     }
 
-    void cvWriteMat_Base64(::cv::FileStorage & fs, ::cv::String const & name, ::cv::Mat const & mat)
+    void cvWriteMat_Base64(::CvFileStorage* fs, const char* name, const ::CvMat* mat)
     {
-        ::base64::cvWriteMat_Base64(fs, name, mat);
+        ::cv::Mat holder = ::cv::cvarrToMat(mat);
+        ::base64::cvWriteMat_Base64(fs, name, holder);
+    }
+
+    void cvWriteMatND_Base64(::CvFileStorage* fs, const char* name, const ::CvMatND* mat)
+    {
+        ::cv::Mat holder = ::cv::cvarrToMat(mat);
+        ::base64::cvWriteMat_Base64(fs, name, holder);
     }
 }
 
