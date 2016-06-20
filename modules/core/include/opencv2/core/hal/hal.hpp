@@ -49,17 +49,6 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/hal/interface.h"
 
-//! @cond IGNORED
-#define CALL_HAL(name, fun, ...) \
-    int res = fun(__VA_ARGS__); \
-    if (res == CV_HAL_ERROR_OK) \
-        return; \
-    else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
-        CV_Error_(cv::Error::StsInternal, \
-            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res));
-//! @endcond
-
-
 namespace cv { namespace hal {
 
 //! @addtogroup core_hal_functions
@@ -75,6 +64,21 @@ CV_EXPORTS int LU32f(float* A, size_t astep, int m, float* b, size_t bstep, int 
 CV_EXPORTS int LU64f(double* A, size_t astep, int m, double* b, size_t bstep, int n);
 CV_EXPORTS bool Cholesky32f(float* A, size_t astep, int m, float* b, size_t bstep, int n);
 CV_EXPORTS bool Cholesky64f(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+CV_EXPORTS void SVD32f(float* At, size_t astep, float* W, float* U, size_t ustep, float* Vt, size_t vstep, int m, int n, int flags);
+CV_EXPORTS void SVD64f(double* At, size_t astep, double* W, double* U, size_t ustep, double* Vt, size_t vstep, int m, int n, int flags);
+
+CV_EXPORTS void gemm32f(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
+                        float alpha, const float* src3, size_t src3_step, float beta, float* dst, size_t dst_step,
+                        int m_a, int n_a, int n_d, int flags);
+CV_EXPORTS void gemm64f(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
+                        double alpha, const double* src3, size_t src3_step, double beta, double* dst, size_t dst_step,
+                        int m_a, int n_a, int n_d, int flags);
+CV_EXPORTS void gemm32fc(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
+                        float alpha, const float* src3, size_t src3_step, float beta, float* dst, size_t dst_step,
+                        int m_a, int n_a, int n_d, int flags);
+CV_EXPORTS void gemm64fc(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
+                        double alpha, const double* src3, size_t src3_step, double beta, double* dst, size_t dst_step,
+                        int m_a, int n_a, int n_d, int flags);
 
 CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
 CV_EXPORTS float normL1_(const float* a, const float* b, int n);
