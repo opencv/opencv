@@ -472,7 +472,121 @@ inline int hal_ni_dctFree2D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 #define cv_hal_dctFree2D hal_ni_dctFree2D
 //! @endcond
 
+
+/**
+Performs \f$LU\f$ decomposition of square matrix \f$A=P*L*U\f$ (where \f$P\f$ is permutation matrix) and solves matrix equation \f$A*X=B\f$.
+Function returns the \f$sign\f$ of permutation \f$P\f$ via parameter info.
+@param src1 pointer to input matrix \f$A\f$ stored in row major order. After finish of work src1 contains at least \f$U\f$ part of \f$LU\f$
+decomposition which is appropriate for determainant calculation: \f$det(A)=sign*\prod_{j=1}^{M}a_{jj}\f$.
+@param src1_step number of bytes each matrix \f$A\f$ row occupies.
+@param m size of square matrix \f$A\f$.
+@param src2 pointer to \f$M\times N\f$ matrix \f$B\f$ which is the right-hand side of system \f$A*X=B\f$. \f$B\f$ stored in row major order.
+If src2 is null pointer only \f$LU\f$ decomposition will be performed. After finish of work src2 contains solution \f$X\f$ of system \f$A*X=B\f$.
+@param src2_step number of bytes each matrix \f$B\f$ row occupies.
+@param n number of right-hand vectors in \f$M\times N\f$ matrix \f$B\f$.
+@param info indicates success of decomposition. If *info is equals to zero decomposition failed, othervise *info is equals to \f$sign\f$.
+ */
+//! @addtogroup core_hal_interface_decomp_lu LU matrix decomposition
+//! @{
+inline int hal_ni_LU32f(float* src1, size_t src1_step, int m, float* src2, size_t src2_step, int n, int* info) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_LU64f(double* src1, size_t src1_step, int m, double* src2, size_t src2_step, int n, int* info) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
+
+/**
+Performs Cholesky decomposition of matrix \f$A = L*L^T\f$ and solves matrix equation \f$A*X=B\f$.
+@param src1 pointer to input matrix \f$A\f$ stored in row major order. After finish of work src1 contains lower triangular matrix \f$L\f$.
+@param src1_step number of bytes each matrix \f$A\f$ row occupies.
+@param m size of square matrix \f$A\f$.
+@param src2 pointer to \f$M\times N\f$ matrix \f$B\f$ which is the right-hand side of system \f$A*X=B\f$. B stored in row major order.
+If src2 is null pointer only Cholesky decomposition will be performed. After finish of work src2 contains solution \f$X\f$ of system \f$A*X=B\f$.
+@param src2_step number of bytes each matrix \f$B\f$ row occupies.
+@param n number of right-hand vectors in \f$M\times N\f$ matrix \f$B\f$.
+@param info indicates success of decomposition. If *info is false decomposition failed.
+ */
+
+//! @addtogroup core_hal_interface_decomp_cholesky Cholesky matrix decomposition
+//! @{
+inline int hal_ni_Cholesky32f(float* src1, size_t src1_step, int m, float* src2, size_t src2_step, int n, bool* info) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_Cholesky64f(double* src1, size_t src1_step, int m, double* src2, size_t src2_step, int n, bool* info) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+/**
+Performs singular value decomposition of \f$M\times N\f$(\f$M>N\f$) matrix \f$A = U*\Sigma*V^T\f$.
+@param src pointer to input \f$M\times N\f$ matrix \f$A\f$ stored in column major order.
+After finish of work src will be filled with rows of \f$U\f$ or not modified (depends of flag CV_HAL_SVD_MODIFY_A).
+@param src_step number of bytes each matrix \f$A\f$ column occupies.
+@param w pointer to array for singular values of matrix \f$A\f$ (i. e. first \f$N\f$ diagonal elements of matrix \f$\Sigma\f$).
+@param u pointer to output \f$M\times N\f$ or \f$M\times M\f$ matrix \f$U\f$ (size depends of flags). Pointer must be valid if flag CV_HAL_SVD_MODIFY_A not used.
+@param u_step number of bytes each matrix \f$U\f$ row occupies.
+@param vt pointer to array for \f$N\times N\f$ matrix \f$V^T\f$.
+@param vt_step number of bytes each matrix \f$V^T\f$ row occupies.
+@param m number fo rows in matrix \f$A\f$.
+@param n number of columns in matrix \f$A\f$.
+@param flags algorithm options (combination of CV_HAL_SVD_FULL_UV, ...).
+ */
+//! @addtogroup core_hal_interface_decomp_svd Singular value matrix decomposition
+//! @{
+inline int hal_ni_SVD32f(float* src, size_t src_step, float* w, float* u, size_t u_step, float* vt, size_t vt_step, int m, int n, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_SVD64f(double* src, size_t src_step, double* w, double* u, size_t u_step, double* vt, size_t vt_step, int m, int n, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+
+
+//! @cond IGNORED
+#define cv_hal_LU32f hal_ni_LU32f
+#define cv_hal_LU64f hal_ni_LU64f
+#define cv_hal_Cholesky32f hal_ni_Cholesky32f
+#define cv_hal_Cholesky64f hal_ni_Cholesky64f
+#define cv_hal_SVD32f hal_ni_SVD32f
+#define cv_hal_SVD64f hal_ni_SVD64f
+//! @endcond
+
+
+/**
+The function performs generalized matrix multiplication similar to the gemm functions in BLAS level 3:
+\f$D = \alpha*AB+\beta*C\f$
+
+@param src1 pointer to input \f$M\times N\f$ matrix \f$A\f$ or \f$A^T\f$ stored in row major order.
+@param src1_step number of bytes each matrix \f$A\f$ or \f$A^T\f$ row occupies.
+@param src2 pointer to input \f$N\times K\f$ matrix \f$B\f$ or \f$B^T\f$ stored in row major order.
+@param src2_step number of bytes each matrix \f$B\f$ or \f$B^T\f$ row occupies.
+@param alpha \f$\alpha\f$ multiplier before \f$AB\f$
+@param src3 pointer to input \f$M\times K\f$ matrix \f$C\f$ or \f$C^T\f$ stored in row major order.
+@param src3_step number of bytes each matrix \f$C\f$ or \f$C^T\f$ row occupies.
+@param beta \f$\beta\f$ multiplier before \f$C\f$
+@param dst pointer to input \f$M\times K\f$ matrix \f$D\f$ stored in row major order.
+@param dst_step number of bytes each matrix \f$D\f$ row occupies.
+@param m number of rows in matrix \f$A\f$ or \f$A^T\f$, equals to number of rows in matrix \f$D\f$
+@param n number of columns in matrix \f$A\f$ or \f$A^T\f$
+@param k number of columns in matrix \f$B\f$ or \f$B^T\f$, equals to number of columns in matrix \f$D\f$
+@param flags algorithm options (combination of CV_HAL_GEMM_1_T, ...).
+ */
+
+//! @addtogroup core_hal_interface_matrix_multiplication Matrix multiplication
+//! @{
+inline int hal_ni_gemm32f(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
+                          float alpha, const float* src3, size_t src3_step, float beta, float* dst, size_t dst_step,
+                          int m, int n, int k, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_gemm64f(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
+                          double alpha, const double* src3, size_t src3_step, double beta, double* dst, size_t dst_step,
+                          int m, int n, int k, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_gemm32fc(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
+                          float alpha, const float* src3, size_t src3_step, float beta, float* dst, size_t dst_step,
+                          int m, int n, int k, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_gemm64fc(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
+                          double alpha, const double* src3, size_t src3_step, double beta, double* dst, size_t dst_step,
+                          int m, int n, int k, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_gemm32f hal_ni_gemm32f
+#define cv_hal_gemm64f hal_ni_gemm64f
+#define cv_hal_gemm32fc hal_ni_gemm32fc
+#define cv_hal_gemm64fc hal_ni_gemm64fc
+//! @endcond
+
+//! @}
+
 
 #if defined __GNUC__
 #  pragma GCC diagnostic pop
@@ -480,6 +594,26 @@ inline int hal_ni_dctFree2D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 #  pragma warning( pop )
 #endif
 
+#include "hal_internal.hpp"
 #include "custom_hal.hpp"
+
+//! @cond IGNORED
+#define CALL_HAL_RET(name, fun, retval, ...) \
+    int res = fun(__VA_ARGS__, &retval); \
+    if (res == CV_HAL_ERROR_OK) \
+        return retval; \
+    else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
+        CV_Error_(cv::Error::StsInternal, \
+            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res));
+
+
+#define CALL_HAL(name, fun, ...) \
+    int res = fun(__VA_ARGS__); \
+    if (res == CV_HAL_ERROR_OK) \
+        return; \
+    else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
+        CV_Error_(cv::Error::StsInternal, \
+            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res));
+//! @endcond
 
 #endif

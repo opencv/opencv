@@ -86,8 +86,10 @@ if (POLICY CMP0042)
   cmake_policy(SET CMP0042 OLD)
 endif()
 
+include(cmake/OpenCVUtils.cmake)
+
 # must go before the project command
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
+ocv_update(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE)
   set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES} )
 endif()
@@ -99,8 +101,6 @@ project(OpenCV CXX C)
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
-
-include(cmake/OpenCVUtils.cmake)
 
 ocv_cmake_eval(DEBUG_PRE ONCE)
 
@@ -221,6 +221,7 @@ OCV_OPTION(WITH_VA             "Include VA support"                          OFF
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON   IF (UNIX AND NOT ANDROID) )
+OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              ON   IF (UNIX AND NOT ANDROID) )
 
 # OpenCV build components
 # ===================================================
@@ -303,50 +304,50 @@ include(cmake/OpenCVVersion.cmake)
 # ----------------------------------------------------------------------------
 
 # Save libs and executables in the same place
-set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output directory for applications" )
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output directory for applications")
 
-if (ANDROID)
-  if (ANDROID_ABI MATCHES "NEON")
+if(ANDROID)
+  if(ANDROID_ABI MATCHES "NEON")
     set(ENABLE_NEON ON)
   endif()
-  if (ANDROID_ABI MATCHES "VFPV3")
+  if(ANDROID_ABI MATCHES "VFPV3")
     set(ENABLE_VFPV3 ON)
   endif()
 endif()
 
 if(ANDROID OR WIN32)
-  set(OPENCV_DOC_INSTALL_PATH doc)
+  ocv_update(OPENCV_DOC_INSTALL_PATH doc)
 else()
-  set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
+  ocv_update(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
 endif()
 
 if(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
   if(DEFINED OpenCV_RUNTIME AND DEFINED OpenCV_ARCH)
-    set(OpenCV_INSTALL_BINARIES_PREFIX "${OpenCV_ARCH}/${OpenCV_RUNTIME}/")
+    ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "${OpenCV_ARCH}/${OpenCV_RUNTIME}/")
   else()
     message(STATUS "Can't detect runtime and/or arch")
-    set(OpenCV_INSTALL_BINARIES_PREFIX "")
+    ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "")
   endif()
 elseif(ANDROID)
-  set(OpenCV_INSTALL_BINARIES_PREFIX "sdk/native/")
+  ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "sdk/native/")
 else()
-  set(OpenCV_INSTALL_BINARIES_PREFIX "")
+  ocv_update(OpenCV_INSTALL_BINARIES_PREFIX "")
 endif()
 
 if(ANDROID)
-  set(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples/${ANDROID_NDK_ABI_NAME}")
 else()
-  set(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples")
+  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples")
 endif()
 
 if(ANDROID)
-  set(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin/${ANDROID_NDK_ABI_NAME}")
 else()
-  set(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin")
+  ocv_update(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin")
 endif()
 
 if(NOT OPENCV_TEST_INSTALL_PATH)
-  set(OPENCV_TEST_INSTALL_PATH "${OPENCV_BIN_INSTALL_PATH}")
+  ocv_update(OPENCV_TEST_INSTALL_PATH "${OPENCV_BIN_INSTALL_PATH}")
 endif()
 
 if (OPENCV_TEST_DATA_PATH)
@@ -355,66 +356,74 @@ endif()
 
 if(OPENCV_TEST_DATA_PATH AND NOT OPENCV_TEST_DATA_INSTALL_PATH)
   if(ANDROID)
-    set(OPENCV_TEST_DATA_INSTALL_PATH "sdk/etc/testdata")
+    ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "sdk/etc/testdata")
   elseif(WIN32)
-    set(OPENCV_TEST_DATA_INSTALL_PATH "testdata")
+    ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "testdata")
   else()
-    set(OPENCV_TEST_DATA_INSTALL_PATH "share/OpenCV/testdata")
+    ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "share/OpenCV/testdata")
   endif()
 endif()
 
 if(ANDROID)
-  set(LIBRARY_OUTPUT_PATH         "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
-  set(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
-  set(OPENCV_LIB_INSTALL_PATH     sdk/native/libs/${ANDROID_NDK_ABI_NAME})
-  set(OPENCV_3P_LIB_INSTALL_PATH  sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME})
-  set(OPENCV_CONFIG_INSTALL_PATH  sdk/native/jni)
-  set(OPENCV_INCLUDE_INSTALL_PATH sdk/native/jni/include)
-  set(OPENCV_SAMPLES_SRC_INSTALL_PATH samples/native)
-  set(OPENCV_OTHER_INSTALL_PATH   sdk/etc)
+  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(OPENCV_LIB_INSTALL_PATH     sdk/native/libs/${ANDROID_NDK_ABI_NAME})
+  ocv_update(OPENCV_3P_LIB_INSTALL_PATH  sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME})
+  ocv_update(OPENCV_CONFIG_INSTALL_PATH  sdk/native/jni)
+  ocv_update(OPENCV_INCLUDE_INSTALL_PATH sdk/native/jni/include)
+  ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH samples/native)
+  ocv_update(OPENCV_OTHER_INSTALL_PATH   sdk/etc)
 else()
-  set(LIBRARY_OUTPUT_PATH         "${OpenCV_BINARY_DIR}/lib")
-  set(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
+  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib")
+  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
 
   if(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
     if(OpenCV_STATIC)
-      set(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
+      ocv_update(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
     else()
-      set(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}lib${LIB_SUFFIX}")
+      ocv_update(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}lib${LIB_SUFFIX}")
     endif()
-    set(OPENCV_3P_LIB_INSTALL_PATH  "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
-    set(OPENCV_SAMPLES_SRC_INSTALL_PATH    samples/native)
-    set(OPENCV_JAR_INSTALL_PATH java)
-    set(OPENCV_OTHER_INSTALL_PATH   etc)
+    ocv_update(OPENCV_3P_LIB_INSTALL_PATH  "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
+    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH    samples/native)
+    ocv_update(OPENCV_JAR_INSTALL_PATH java)
+    ocv_update(OPENCV_OTHER_INSTALL_PATH   etc)
+    ocv_update(OPENCV_CONFIG_INSTALL_PATH  "")
   else()
-    set(OPENCV_LIB_INSTALL_PATH     lib${LIB_SUFFIX})
-    set(OPENCV_3P_LIB_INSTALL_PATH  share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH})
-    set(OPENCV_SAMPLES_SRC_INSTALL_PATH    share/OpenCV/samples)
-    set(OPENCV_JAR_INSTALL_PATH share/OpenCV/java)
-    set(OPENCV_OTHER_INSTALL_PATH   share/OpenCV)
-  endif()
-  set(OPENCV_INCLUDE_INSTALL_PATH "include")
+    ocv_update(OPENCV_LIB_INSTALL_PATH     lib${LIB_SUFFIX})
+    ocv_update(OPENCV_3P_LIB_INSTALL_PATH  share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH})
+    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH    share/OpenCV/samples)
+    ocv_update(OPENCV_JAR_INSTALL_PATH share/OpenCV/java)
+    ocv_update(OPENCV_OTHER_INSTALL_PATH   share/OpenCV)
 
-  math(EXPR SIZEOF_VOID_P_BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
-  if(LIB_SUFFIX AND NOT SIZEOF_VOID_P_BITS EQUAL LIB_SUFFIX)
-    set(OPENCV_CONFIG_INSTALL_PATH lib${LIB_SUFFIX}/cmake/opencv)
-  else()
-    set(OPENCV_CONFIG_INSTALL_PATH share/OpenCV)
+    if(NOT DEFINED OPENCV_CONFIG_INSTALL_PATH)
+      math(EXPR SIZEOF_VOID_P_BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
+      if(LIB_SUFFIX AND NOT SIZEOF_VOID_P_BITS EQUAL LIB_SUFFIX)
+        ocv_update(OPENCV_CONFIG_INSTALL_PATH lib${LIB_SUFFIX}/cmake/opencv)
+      else()
+        ocv_update(OPENCV_CONFIG_INSTALL_PATH share/OpenCV)
+      endif()
+    endif()
   endif()
+  ocv_update(OPENCV_INCLUDE_INSTALL_PATH "include")
 endif()
 
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
+ocv_update(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if(INSTALL_TO_MANGLED_PATHS)
   set(OPENCV_INCLUDE_INSTALL_PATH ${OPENCV_INCLUDE_INSTALL_PATH}/opencv-${OPENCV_VERSION})
-  string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" OPENCV_3P_LIB_INSTALL_PATH "${OPENCV_3P_LIB_INSTALL_PATH}")
-  string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" OPENCV_SAMPLES_SRC_INSTALL_PATH "${OPENCV_SAMPLES_SRC_INSTALL_PATH}")
-  string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" OPENCV_CONFIG_INSTALL_PATH "${OPENCV_CONFIG_INSTALL_PATH}")
-  string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" OPENCV_DOC_INSTALL_PATH "${OPENCV_DOC_INSTALL_PATH}")
-  string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" OPENCV_JAR_INSTALL_PATH "${OPENCV_JAR_INSTALL_PATH}")
-  string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" OPENCV_TEST_DATA_INSTALL_PATH "${OPENCV_TEST_DATA_INSTALL_PATH}")
-  string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" OPENCV_OTHER_INSTALL_PATH "${OPENCV_OTHER_INSTALL_PATH}")
+  foreach(v
+      OPENCV_3P_LIB_INSTALL_PATH
+      OPENCV_SAMPLES_SRC_INSTALL_PATH
+      OPENCV_CONFIG_INSTALL_PATH
+      OPENCV_DOC_INSTALL_PATH
+      OPENCV_JAR_INSTALL_PATH
+      OPENCV_TEST_DATA_INSTALL_PATH
+      OPENCV_OTHER_INSTALL_PATH
+    )
+    string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" ${v} "${${v}}")
+    string(REPLACE "opencv" "opencv-${OPENCV_VERSION}" ${v} "${${v}}")
+  endforeach()
 endif()
 
 
@@ -439,7 +448,7 @@ endif()
 # ----------------------------------------------------------------------------
 #  Path for build/platform -specific headers
 # ----------------------------------------------------------------------------
-set(OPENCV_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to create the platform-dependant cvconfig.h")
+ocv_update(OPENCV_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to create the platform-dependant cvconfig.h")
 ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 
 # ----------------------------------------------------------------------------
@@ -452,7 +461,7 @@ set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV
 # ----------------------------------------------------------------------------
 find_host_package(Git QUIET)
 
-if(GIT_FOUND)
+if(NOT DEFINED OPENCV_VCSVERSION AND GIT_FOUND)
   execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*"
     WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
     OUTPUT_VARIABLE OPENCV_VCSVERSION
@@ -463,7 +472,7 @@ if(GIT_FOUND)
   if(NOT GIT_RESULT EQUAL 0)
     set(OPENCV_VCSVERSION "unknown")
   endif()
-else()
+elseif(NOT DEFINED OPENCV_VCSVERSION)
   # We don't have git:
   set(OPENCV_VCSVERSION "unknown")
 endif()
@@ -602,26 +611,42 @@ endif()
 
 include(cmake/OpenCVDetectVTK.cmake)
 
-# -- Custom HAL replacement --
-# Package config in: OpenCV_HALConfig.cmake or opencv_hal-config.cmake
-# Use variables: OpenCV_HAL_LIBRARIES, OpenCV_HAL_HEADERS and OpenCV_HAL_INCLUDE_DIRS variables
-find_package(OpenCV_HAL NO_MODULE QUIET)
-set(_includes "")
-if (OpenCV_HAL_FOUND)
+
+# ----------------------------------------------------------------------------
+# OpenCV HAL
+# ----------------------------------------------------------------------------
+set(_hal_includes "")
+macro(ocv_hal_register HAL_LIBRARIES_VAR HAL_HEADERS_VAR HAL_INCLUDE_DIRS_VAR)
   # 1. libraries
-  foreach (l ${OpenCV_HAL_LIBRARIES})
-    get_filename_component(l "${l}" ABSOLUTE)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${l})
+  foreach (l ${${HAL_LIBRARIES_VAR}})
+    if(NOT TARGET ${l})
+      get_filename_component(l "${l}" ABSOLUTE)
+    endif()
+    list(APPEND OPENCV_HAL_LINKER_LIBS ${l})
   endforeach()
   # 2. headers
-  foreach (h ${OpenCV_HAL_HEADERS})
-    set(_includes "${_includes}\n#include \"${h}\"")
+  foreach (h ${${HAL_HEADERS_VAR}})
+    set(_hal_includes "${_hal_includes}\n#include \"${h}\"")
   endforeach()
   # 3. include paths
-  ocv_include_directories(${OpenCV_HAL_INCLUDE_DIRS})
+  ocv_include_directories(${${HAL_INCLUDE_DIRS_VAR}})
+endmacro()
+
+if(NOT DEFINED OpenCV_HAL)
+  set(OpenCV_HAL "OpenCV_HAL")
 endif()
+foreach(hal ${OpenCV_HAL})
+    ocv_debug_message(STATUS "OpenCV HAL: ${hal} ...")
+    ocv_clear_vars(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
+    find_package(${hal} NO_MODULE QUIET)
+    if(${hal}_FOUND)
+      ocv_hal_register(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "${hal} (ver ${${hal}_VERSION})")
+    endif()
+endforeach()
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
-unset(_includes)
+unset(_hal_includes)
+
 
 # ----------------------------------------------------------------------------
 # Add CUDA libraries (needed for apps/tools, samples)
@@ -1157,10 +1182,14 @@ if(DEFINED WITH_VA_INTEL)
 status("    Use Intel VA-API/OpenCL:"  HAVE_VA_INTEL       THEN "YES (MSDK: ${VA_INTEL_MSDK_ROOT}  OpenCL: ${VA_INTEL_IOCL_ROOT})" ELSE NO)
 endif(DEFINED WITH_VA_INTEL)
 
+if(DEFINED WITH_LAPACK)
+status("    Use Lapack:"      HAVE_LAPACK     THEN "YES" ELSE NO)
+endif(DEFINED WITH_LAPACK)
+
 status("    Use Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 status("    Use Cuda:"       HAVE_CUDA        THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
 status("    Use OpenCL:"     HAVE_OPENCL      THEN YES ELSE NO)
-status("    Use custom HAL:" OpenCV_HAL_FOUND THEN "YES (ver ${OpenCV_HAL_VERSION}, ${OpenCV_HAL_CONFIG})" ELSE "NO")
+status("    Use custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")
 
 if(HAVE_CUDA)
   status("")

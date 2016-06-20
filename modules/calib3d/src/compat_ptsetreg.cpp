@@ -241,6 +241,8 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
         cvNorm(param, prevParam, CV_RELATIVE_L2) < criteria.epsilon )
     {
         _param = param;
+        _JtJ = JtJ;
+        _JtErr = JtErr;
         state = DONE;
         return false;
     }
