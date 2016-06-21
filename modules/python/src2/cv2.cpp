@@ -1251,7 +1251,6 @@ static void OnChange(int pos, void *param)
 }
 
 #ifdef HAVE_OPENCV_HIGHGUI
-
 static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
 {
     PyObject *on_change;
@@ -1269,7 +1268,6 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
     ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
     Py_RETURN_NONE;
 }
-#endif
 
 static void OnButtonChange(int state, void *param)
 {
@@ -1293,8 +1291,6 @@ static void OnButtonChange(int state, void *param)
     Py_DECREF(args);
     PyGILState_Release(gstate);
 }
-
-#ifdef HAVE_OPENCV_HIGHGUI
 
 static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
 {
