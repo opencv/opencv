@@ -69,8 +69,8 @@ template<typename R> struct TheTest
         EXPECT_EQ(d, res);
 
         // zero, all
-        Data<R> resZ = RegTrait<R>::zero();
-        Data<R> resV = RegTrait<R>::all(8);
+        Data<R> resZ = V_RegTrait128<LaneType>::zero();
+        Data<R> resV = V_RegTrait128<LaneType>::all(8);
         for (int i = 0; i < R::nlanes; ++i)
         {
             EXPECT_EQ((LaneType)0, resZ[i]);
@@ -135,7 +135,7 @@ template<typename R> struct TheTest
     // v_expand and v_load_expand
     TheTest & test_expand()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
+        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
         Data<R> dataA;
         R a = dataA;
 
@@ -158,7 +158,7 @@ template<typename R> struct TheTest
 
     TheTest & test_expand_q()
     {
-        typedef typename RegTrait<R>::q_reg Rx4;
+        typedef typename V_RegTrait128<LaneType>::q_reg Rx4;
         Data<R> data;
         Data<Rx4> out = v_load_expand_q(data.d);
         const int n = Rx4::nlanes;
@@ -232,7 +232,7 @@ template<typename R> struct TheTest
 
     TheTest & test_mul_expand()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
+        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
         Data<R> dataA, dataB(2);
         R a = dataA, b = dataB;
         Rx2 c, d;
@@ -295,7 +295,7 @@ template<typename R> struct TheTest
 
     TheTest & test_dot_prod()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
+        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
         Data<R> dataA, dataB(2);
         R a = dataA, b = dataB;
 
@@ -361,7 +361,7 @@ template<typename R> struct TheTest
 
     TheTest & test_absdiff()
     {
-        typedef typename RegTrait<R>::u_reg Ru;
+        typedef typename V_RegTrait128<LaneType>::u_reg Ru;
         typedef typename Ru::lane_type u_type;
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min());
@@ -445,7 +445,7 @@ template<typename R> struct TheTest
     template <int s>
     TheTest & test_pack()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
+        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
         typedef typename Rx2::lane_type w_type;
         Data<Rx2> dataA, dataB;
         dataA += std::numeric_limits<LaneType>::is_signed ? -10 : 10;
@@ -480,8 +480,8 @@ template<typename R> struct TheTest
     template <int s>
     TheTest & test_pack_u()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
-        typedef typename RegTrait<Rx2>::int_reg Ri2;
+        typedef typename V_TypeTraits<LaneType>::w_type LaneType_w;
+        typedef typename V_RegTrait128<LaneType_w>::int_reg Ri2;
         typedef typename Ri2::lane_type w_type;
 
         Data<Ri2> dataA, dataB;
@@ -572,7 +572,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_math()
     {
-        typedef typename RegTrait<R>::int_reg Ri;
+        typedef typename V_RegTrait128<LaneType>::int_reg Ri;
         Data<R> data1, data2, data3;
         data1 *= 1.1;
         data2 += 10;
