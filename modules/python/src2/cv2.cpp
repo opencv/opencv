@@ -1303,7 +1303,7 @@ static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
     PyObject *userdata = NULL;
     char* button_name;
     int button_type = 0;
-    int initial_button_state = 0;
+    bool initial_button_state = false;
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "sO|Oii", (char**)keywords, &button_name, &on_change, &userdata, &button_type, &initial_button_state))
         return NULL;
