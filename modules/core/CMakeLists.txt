@@ -1,6 +1,7 @@
 set(the_description "The Core Functionality")
 ocv_add_module(core
-               PRIVATE_REQUIRED ${ZLIB_LIBRARIES} "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}" "${OPENCV_HAL_LINKER_LIBS}"
+               "${OPENCV_HAL_LINKER_LIBS}"
+               PRIVATE_REQUIRED ${ZLIB_LIBRARIES} "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
                OPTIONAL opencv_cudev
                WRAP java python)
 
