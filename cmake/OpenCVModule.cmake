@@ -859,7 +859,8 @@ macro(_ocv_create_module)
   endif()
 
   get_target_property(_target_type ${the_module} TYPE)
-  if("${_target_type}" STREQUAL "SHARED_LIBRARY" OR (NOT BUILD_SHARED_LIBS OR NOT INSTALL_CREATE_DISTRIB))
+  if(OPENCV_MODULE_${the_module}_CLASS STREQUAL "PUBLIC" AND
+      ("${_target_type}" STREQUAL "SHARED_LIBRARY" OR (NOT BUILD_SHARED_LIBS OR NOT INSTALL_CREATE_DISTRIB)))
     ocv_install_target(${the_module} EXPORT OpenCVModules OPTIONAL
       RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs
       LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs NAMELINK_SKIP
