@@ -79,7 +79,7 @@ function(ocv_gen_config TMP_DIR NESTED_PATH ROOT_NAME)
   install(FILES
       "${TMP_DIR}/OpenCVConfig-version.cmake"
       "${__tmp_nested}/OpenCVConfig.cmake"
-      DESTINATION "${CMAKE_INSTALL_PREFIX}/${__install_nested}" COMPONENT dev)
+      DESTINATION "${__install_nested}" COMPONENT dev)
 
   if(ROOT_NAME)
     # Root config file
@@ -87,7 +87,7 @@ function(ocv_gen_config TMP_DIR NESTED_PATH ROOT_NAME)
     install(FILES
         "${TMP_DIR}/OpenCVConfig-version.cmake"
         "${TMP_DIR}/OpenCVConfig.cmake"
-        DESTINATION "${CMAKE_INSTALL_PREFIX}/${OPENCV_CONFIG_INSTALL_PATH}" COMPONENT dev)
+        DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}" COMPONENT dev)
   endif()
 endfunction()
 
