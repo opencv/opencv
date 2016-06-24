@@ -122,23 +122,22 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
         Vec3d Xi = objectPoints.depth() == CV_32F ? (Vec3d)Xf[i] : Xd[i];
         Vec3d Y = aff*Xi;
 
-        Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
+        Vec2d x(Y[0], Y[1]);
+        const double &z = Y[2];
 
         double r2 = x.dot(x);
         double r = std::sqrt(r2);
+        double z2 = z*z, z3=z2*z;
 
-        // Angle of the incoming ray:
-        double theta = atan(r);
-
-        double theta2 = theta*theta, theta3 = theta2*theta, theta4 = theta2*theta2, theta5 = theta4*theta,
-                theta6 = theta3*theta3, theta7 = theta6*theta, theta8 = theta4*theta4, theta9 = theta8*theta;
-
-        double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
-
-        double inv_r = r > 1e-8 ? 1.0/r : 1;
-        double cdist = r > 1e-8 ? theta_d * inv_r : 1;
-
+        // theta_ is theta/r, where theta is the angle of the incoming ray.
+        // For positive z and small r, use Taylor approximation of atan2.
+        // The only singularity is for z<0 and r=0 (i.e., straight behind the camera).
+        double theta_ = r<1e-8*z ? (3*z2 - r2)/(3*z3) : atan2(r, z)/r;
+        double theta2 = theta_*theta_*r2, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8=theta4*theta4;
+        double s = (1. + theta2*k[0] + theta4*k[1] + theta6*k[2] + theta8*k[3]);
+        double cdist = theta_ * s;
         Vec2d xd1 = x * cdist;
+
         Vec2d xd3(xd1[0] + alpha*xd1[1], xd1[1]);
         Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
 
@@ -161,49 +160,40 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
             Matx33d dYdT_data = Matx33d::eye();
             const Vec3d *dYdT = (Vec3d*)dYdT_data.val;
 
-            //Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
-            Vec3d dxdom[2];
-            dxdom[0] = (1.0/Y[2]) * dYdom[0] - x[0]/Y[2] * dYdom[2];
-            dxdom[1] = (1.0/Y[2]) * dYdom[1] - x[1]/Y[2] * dYdom[2];
+            // double r2 = x.dot(x);
+            Vec3d dr2dom = 2 * (x[0] * dYdom[0] + x[1] * dYdom[1]);
+            Vec3d dr2dT  = 2 * (x[0] * dYdT[0]  + x[1] * dYdT[1]);
+            // double z = Y[2];
+            const Vec3d& dzdom = dYdom[2];
+            const Vec3d& dzdT  = dYdT[2];
 
-            Vec3d dxdT[2];
-            dxdT[0]  = (1.0/Y[2]) * dYdT[0] - x[0]/Y[2] * dYdT[2];
-            dxdT[1]  = (1.0/Y[2]) * dYdT[1] - x[1]/Y[2] * dYdT[2];
+            // double theta_ = r<1e-8*z ? 1/z - r2/(3*z*z*z) : atan2(r, z)/r;
+            double dtheta_dr2 = r<1e-8*z ? -1/(3*z3) : 1/(2*r2)*(z/(r2+z2) - theta_);
+            double dtheta_dz  = -1/(r2+z2);
 
-            //double r2 = x.dot(x);
-            Vec3d dr2dom = 2 * x[0] * dxdom[0] + 2 * x[1] * dxdom[1];
-            Vec3d dr2dT  = 2 * x[0] *  dxdT[0] + 2 * x[1] *  dxdT[1];
+            Vec3d dtheta_dom = dtheta_dr2 * dr2dom + dtheta_dz*dzdom;
+            Vec3d dtheta_dT  = dtheta_dr2 * dr2dT  + dtheta_dz*dzdT;
 
-            //double r = std::sqrt(r2);
-            double drdr2 = r > 1e-8 ? 1.0/(2*r) : 1;
-            Vec3d drdom = drdr2 * dr2dom;
-            Vec3d drdT  = drdr2 * dr2dT;
+            // double theta2 = theta_*theta_*r2;
+            Vec3d dtheta2dom = r2*2*theta_*dtheta_dom + theta_*theta_ * dr2dom;
+            Vec3d dtheta2dT  = r2*2*theta_*dtheta_dT  + theta_*theta_ * dr2dT;
 
-            // Angle of the incoming ray:
-            //double theta = atan(r);
-            double dthetadr = 1.0/(1+r2);
-            Vec3d dthetadom = dthetadr * drdom;
-            Vec3d dthetadT  = dthetadr *  drdT;
+            // double s = (1. + theta2*k[0] + theta4*k[1] + theta6*k[2] + theta8*k[3]);
+            double dsdtheta2 = k[0] + 2*theta2*k[1] + 3*theta4*k[2] + 4*theta6*k[3];
+            Vec4d dsdk = Vec4d(theta2, theta4, theta6, theta8);
 
-            //double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
-            double dtheta_ddtheta = 1 + 3*k[0]*theta2 + 5*k[1]*theta4 + 7*k[2]*theta6 + 9*k[3]*theta8;
-            Vec3d dtheta_ddom = dtheta_ddtheta * dthetadom;
-            Vec3d dtheta_ddT  = dtheta_ddtheta * dthetadT;
-            Vec4d dtheta_ddk  = Vec4d(theta3, theta5, theta7, theta9);
+            // double cdist = theta_ * s;
+            Vec3d dcdistdom = dtheta_dom * s + theta_ * dsdtheta2 * dtheta2dom;
+            Vec3d dcdistdT  = dtheta_dT  * s + theta_ * dsdtheta2 * dtheta2dT;
+            Vec4d dcdistdk  = theta_ * dsdk;
 
-            //double inv_r = r > 1e-8 ? 1.0/r : 1;
-            //double cdist = r > 1e-8 ? theta_d / r : 1;
-            Vec3d dcdistdom = inv_r * (dtheta_ddom - cdist*drdom);
-            Vec3d dcdistdT  = inv_r * (dtheta_ddT  - cdist*drdT);
-            Vec4d dcdistdk  = inv_r *  dtheta_ddk;
-
-            //Vec2d xd1 = x * cdist;
+            // Vec2d xd1 = x * cdist
             Vec4d dxd1dk[2];
             Vec3d dxd1dom[2], dxd1dT[2];
-            dxd1dom[0] = x[0] * dcdistdom + cdist * dxdom[0];
-            dxd1dom[1] = x[1] * dcdistdom + cdist * dxdom[1];
-            dxd1dT[0]  = x[0] * dcdistdT  + cdist * dxdT[0];
-            dxd1dT[1]  = x[1] * dcdistdT  + cdist * dxdT[1];
+            dxd1dom[0] = x[0] * dcdistdom + cdist * dYdom[0];
+            dxd1dom[1] = x[1] * dcdistdom + cdist * dYdom[1];
+            dxd1dT[0]  = x[0] * dcdistdT  + cdist * dYdT[0];
+            dxd1dT[1]  = x[1] * dcdistdT  + cdist * dYdT[1];
             dxd1dk[0]  = x[0] * dcdistdk;
             dxd1dk[1]  = x[1] * dcdistdk;
 
@@ -219,7 +209,7 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
 
             Vec2d dxd3dalpha(xd1[1], 0);
 
-            //final jacobian
+            //final Jacobian
             Jn[0].dom = f[0] * dxd3dom[0];
             Jn[1].dom = f[1] * dxd3dom[1];
 
@@ -238,7 +228,7 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
             Jn[0].dc = Vec2d(1, 0);
             Jn[1].dc = Vec2d(0, 1);
 
-            //step to jacobian rows for next point
+            //step two Jacobian rows for next point
             Jn += 2;
         }
     }
