@@ -1066,6 +1066,8 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
                         G_CALLBACK(icvOnMouse), window );
     g_signal_connect( window->widget, "motion-notify-event",
                         G_CALLBACK(icvOnMouse), window );
+    g_signal_connect( window->widget, "scroll-event",
+                        G_CALLBACK(icvOnMouse), window );
     g_signal_connect( window->frame, "delete-event",
                         G_CALLBACK(icvOnClose), window );
 #if defined(GTK_VERSION3)
@@ -1076,7 +1078,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
                         G_CALLBACK(cvImageWidget_expose), window );
 #endif //GTK_VERSION3
 
-    gtk_widget_add_events (window->widget, GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK) ;
+    gtk_widget_add_events (window->widget, GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK | GDK_SCROLL_MASK) ;
 
     gtk_widget_show( window->frame );
     gtk_window_set_title( GTK_WINDOW(window->frame), name );
@@ -1947,6 +1949,13 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         }
         state = event_button->state;
     }
+    else if( event->type == GDK_SCROLL )
+    {
+        GdkEventButton* event_button = (GdkEventButton*)event;
+
+        cv_event = CV_EVENT_MOUSEWHEEL;
+        state = event_button->state;
+    }
 
     if( cv_event >= 0 ){
         // scale point if image is scaled
@@ -1973,7 +1982,23 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 //        if((unsigned)pt.x < (unsigned)(image_widget->original_image->width) &&
 //           (unsigned)pt.y < (unsigned)(image_widget->original_image->height) )
         {
-            int flags = (state & GDK_SHIFT_MASK ? CV_EVENT_FLAG_SHIFTKEY : 0) |
+            int flags = 0;
+            if (state & GDK_SCROLL_MASK) {
+                cv_event = CV_EVENT_MOUSEMOVE;
+                int orient = CV_EVENT_MOUSEWHEEL;
+                switch(event->scroll.direction) {
+                case GDK_SCROLL_RIGHT: orient = CV_EVENT_MOUSEHWHEEL;
+                case GDK_SCROLL_UP:    flags |= ((1 << 16) | orient);
+                    break;
+                case GDK_SCROLL_LEFT:  orient = CV_EVENT_MOUSEHWHEEL;
+                case GDK_SCROLL_DOWN:  flags |= ((-1 << 16) | orient);
+                    break;
+                case GDK_SCROLL_SMOOTH: // to prevent make warning; TODO
+                    ;
+                };
+            };
+            flags = flags |
+                (state & GDK_SHIFT_MASK ? CV_EVENT_FLAG_SHIFTKEY : 0) |
                 (state & GDK_CONTROL_MASK ? CV_EVENT_FLAG_CTRLKEY : 0) |
                 (state & (GDK_MOD1_MASK|GDK_MOD2_MASK) ? CV_EVENT_FLAG_ALTKEY : 0) |
                 (state & GDK_BUTTON1_MASK ? CV_EVENT_FLAG_LBUTTON : 0) |
