@@ -183,6 +183,8 @@ typedef struct CvXMLStackRecord
 }
 CvXMLStackRecord;
 
+namespace base64 { class Base64Writer; }
+
 #define CV_XML_OPENING_TAG 1
 #define CV_XML_CLOSING_TAG 2
 #define CV_XML_EMPTY_TAG 3
@@ -239,6 +241,8 @@ typedef struct CvFileStorage
     const char* strbuf;
     size_t strbufsize, strbufpos;
     std::deque<char>* outbuf;
+
+    base64::Base64Writer * base64_writer;
 
     bool is_opened;
 }
@@ -318,6 +322,10 @@ namespace base64
     void make_seq(void * binary_data, int elem_cnt, const char * dt, CvSeq & seq);
 
     /* sample */
+
+    void cvStartWriteRawData_Base64(::CvFileStorage * fs, const char* name, int len, const char* dt);
+    void cvWriteRawData_Base64(::CvFileStorage * fs, const void* _data, int len);
+    void cvEndWriteRawData_Base64(::CvFileStorage * fs);
 
     void cvWriteRawData_Base64(::cv::FileStorage & fs, const void* _data, int len, const char* dt);
     void cvWriteMat_Base64(CvFileStorage * fs, const char * name, ::cv::Mat const & mat);
@@ -6414,14 +6422,14 @@ public:
         , binary_buffer(BUFFER_LEN)
         , base64_buffer(base64_encode_buffer_size(BUFFER_LEN))
         , src_beg(0)
-        , src_end(0)
         , src_cur(0)
+        , src_end(0)
     {
         src_beg = binary_buffer.data();
         src_end = src_beg + BUFFER_LEN;
         src_cur = src_beg;
 
-        // TODO: check if fs.state is valid.
+        CV_CHECK_OUTPUT_FILE_STORAGE(fs);
 
         ::icvFSFlush(file_storage);
     }
@@ -6515,8 +6523,8 @@ private:
     std::vector<uchar> binary_buffer;
     std::vector<uchar> base64_buffer;
     uchar * src_beg;
-    uchar * src_end;
     uchar * src_cur;
+    uchar * src_end;
 };
 
 class base64::MatToBinaryConvertor
@@ -6927,9 +6935,72 @@ private:
  * Wapper
  ***************************************************************************/
 
-void base64::make_seq(void * binary, int elem_cnt, const char * dt, CvSeq & seq)
+class base64::Base64Writer
 {
-    CvFileNode node;
+public:
+
+    Base64Writer(::CvFileStorage * fs, const char * name, int len, const char* dt)
+        : file_storage(fs)
+        , emitter(fs)
+        , remaining_data_length(len)
+        , data_type_string(dt)
+    {
+        CV_CHECK_OUTPUT_FILE_STORAGE(fs);
+
+        cvStartWriteStruct(fs, name, CV_NODE_SEQ, "binary");
+        icvFSFlush(fs);
+
+        /* output header */
+
+        /* total byte size(before encode) */
+        int size = len * ::icvCalcStructSize(dt, 0);
+
+        std::string buffer = make_base64_header(size, dt);
+        const uchar * beg = reinterpret_cast<const uchar *>(buffer.data());
+        const uchar * end = beg + buffer.size();
+
+        emitter.write(beg, end);
+    }
+
+    void write(const void* _data, int len)
+    {
+        CV_Assert(len >= 0);
+        CV_Assert(remaining_data_length >= static_cast<size_t>(len));
+        remaining_data_length -= static_cast<size_t>(len);
+
+        RawDataToBinaryConvertor convertor(_data, len, data_type_string);
+        emitter.write(convertor);
+    }
+
+    template<typename _to_binary_convertor_t> inline
+    void write(_to_binary_convertor_t & convertor, int data_length_of_convertor)
+    {
+        CV_Assert(data_length_of_convertor >= 0);
+        CV_Assert(remaining_data_length >= static_cast<size_t>(data_length_of_convertor));
+        remaining_data_length -= static_cast<size_t>(data_length_of_convertor);
+
+        emitter.write(convertor);
+    }
+
+    ~Base64Writer()
+    {
+        CV_Assert(remaining_data_length == 0U);
+        emitter.flush();
+        cvEndWriteStruct(file_storage);
+        icvFSFlush(file_storage);
+    }
+
+private:
+
+    ::CvFileStorage * file_storage;
+    Base64ContextEmitter emitter;
+    size_t remaining_data_length;
+    const char* data_type_string;
+};
+
+void base64::make_seq(void * binary, int elem_cnt, const char * dt, ::CvSeq & seq)
+{
+    ::CvFileNode node;
     node.info = 0;
     BinaryToCvSeqConvertor convertor(binary, elem_cnt, dt);
     while (convertor) {
@@ -6938,7 +7009,32 @@ void base64::make_seq(void * binary, int elem_cnt, const char * dt, CvSeq & seq)
     }
 }
 
-void base64::cvWriteRawData_Base64(cv::FileStorage & fs, const void* _data, int len, const char* dt)
+void base64::cvStartWriteRawData_Base64(::CvFileStorage * fs, const char* name, int len, const char* dt)
+{
+    CV_Assert(fs);
+    CV_CHECK_OUTPUT_FILE_STORAGE(fs);
+    CV_Assert(fs->base64_writer == 0);
+    fs->base64_writer = new Base64Writer(fs, name, len, dt);
+}
+
+void base64::cvWriteRawData_Base64(::CvFileStorage * fs, const void* _data, int len)
+{
+    CV_Assert(fs);
+    CV_CHECK_OUTPUT_FILE_STORAGE(fs);
+    CV_Assert(fs->base64_writer != 0);
+    fs->base64_writer->write(_data, len);
+}
+
+void base64::cvEndWriteRawData_Base64(::CvFileStorage * fs)
+{
+    CV_Assert(fs);
+    CV_CHECK_OUTPUT_FILE_STORAGE(fs);
+    CV_Assert(fs->base64_writer != 0);
+    delete fs->base64_writer;
+    fs->base64_writer = 0;
+}
+
+void base64::cvWriteRawData_Base64(::cv::FileStorage & fs, const void* _data, int len, const char* dt)
 {
     cvStartWriteStruct(*fs, fs.elname.c_str(), CV_NODE_SEQ, "binary");
     {
@@ -6960,7 +7056,7 @@ void base64::cvWriteRawData_Base64(cv::FileStorage & fs, const void* _data, int 
     cvEndWriteStruct(*fs);
 }
 
-void base64::cvWriteMat_Base64(CvFileStorage * fs, const char * name, cv::Mat const & mat)
+void base64::cvWriteMat_Base64(::CvFileStorage * fs, const char * name, ::cv::Mat const & mat)
 {
     char dt[4];
     ::icvEncodeFormat(CV_MAT_TYPE(mat.type()), dt);
@@ -6982,27 +7078,14 @@ void base64::cvWriteMat_Base64(CvFileStorage * fs, const char * name, cv::Mat co
         cvWriteString(fs, "dt", ::icvEncodeFormat(CV_MAT_TYPE(mat.type()), dt ), 0 );
     }
 
-    cvStartWriteStruct(fs, "data", CV_NODE_SEQ, "binary");
     {    /* [2]deal with matrix's data */
-        Base64ContextEmitter emitter(fs);
+        int len = static_cast<int>(mat.total());
+        MatToBinaryConvertor convertor(mat);
 
-        {    /* [2][1]define base64 header */
-            /* total byte size */
-            int size = static_cast<int>(mat.total() * mat.elemSize());
-            std::string buffer = make_base64_header(size, dt);
-            const uchar * beg = reinterpret_cast<const uchar *>(buffer.data());
-            const uchar * end = beg + buffer.size();
-
-            emitter.write(beg, end);
-        }
-
-        {    /* [2][2]base64 body */
-            MatToBinaryConvertor convertor(mat);
-
-            emitter.write(convertor);
-        }
+        cvStartWriteRawData_Base64(fs, "data", len, dt);
+        fs->base64_writer->write(convertor, len);
+        cvEndWriteRawData_Base64(fs);
     }
-    cvEndWriteStruct(fs);
 
     {    /* [3]output end */
         cvEndWriteStruct(fs);
@@ -7015,11 +7098,6 @@ void base64::cvWriteMat_Base64(CvFileStorage * fs, const char * name, cv::Mat co
 
 namespace cv
 {
-    void cvWriteRawData_Base64(::cv::FileStorage & fs, const void* _data, int len, const char* dt)
-    {
-        ::base64::cvWriteRawData_Base64(fs, _data, len, dt);
-    }
-
     void cvWriteMat_Base64(::CvFileStorage* fs, const char* name, const ::CvMat* mat)
     {
         ::cv::Mat holder = ::cv::cvarrToMat(mat);
@@ -7031,6 +7109,22 @@ namespace cv
         ::cv::Mat holder = ::cv::cvarrToMat(mat);
         ::base64::cvWriteMat_Base64(fs, name, holder);
     }
+
+    void cvStartWriteRawData_Base64(::CvFileStorage * fs, const char* name, int len, const char* dt)
+    {
+        ::base64::cvStartWriteRawData_Base64(fs, name, len, dt);
+    }
+
+    void cvWriteRawData_Base64(::CvFileStorage * fs, const void* _data, int len)
+    {
+        ::base64::cvWriteRawData_Base64(fs, _data, len);
+    }
+
+    void cvEndWriteRawData_Base64(::CvFileStorage * fs)
+    {
+        ::base64::cvEndWriteRawData_Base64(fs);
+    }
+
 }
 
 
