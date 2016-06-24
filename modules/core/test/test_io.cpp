@@ -632,14 +632,14 @@ protected:
                 /* raw data */
                 for (int i = 0; i < 1000; i++) {
                     data_t tmp;
-                    rawdata[i].u1 = 1;
-                    rawdata[i].u2 = 2;
-                    rawdata[i].i1 = 1;
-                    rawdata[i].i2 = 2;
-                    rawdata[i].i3 = 3;
-                    rawdata[i].d1 = 0.1;
-                    rawdata[i].d2 = 0.2;
-                    rawdata[i].i4 = i;
+                    tmp.u1 = 1;
+                    tmp.u2 = 2;
+                    tmp.i1 = 1;
+                    tmp.i2 = 2;
+                    tmp.i3 = 3;
+                    tmp.d1 = 0.1;
+                    tmp.d2 = 0.2;
+                    tmp.i4 = i;
                     rawdata.push_back(tmp);
                 }
             }
