@@ -580,7 +580,7 @@ TEST(Core_InputOutput, FileStorageKey)
 
 TEST(Core_InputOutput, filestorage_yml_compatibility)
 {
-    //EXPECT_ANY_THROW();
+    // TODO:
 }
 
 class CV_Base64IOTest : public cvtest::BaseTest
@@ -617,7 +617,7 @@ protected:
                 _2d_out = cv::Mat(100, 100, CV_8UC3, cvScalar(1U, 2U, 127U));
                 for (int i = 0; i < _2d_out.rows; ++i)
                     for (int j = 0; j < _2d_out.cols; ++j)
-                        _2d_out.at<cv::Vec3b>(i, j)[1] = i % 256;
+                        _2d_out.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
 
                 /* 4d mat */
                 const int Size[] = {4, 4, 4, 4};
@@ -677,7 +677,7 @@ protected:
             }
 
             for (int i = 0; i < 1000; i++) {
-                // TODO: Solve this bug
+                // TODO: Solve this bug in `cvReadRawData`
                 //EXPECT_EQ(rawdata[i].u1, 1);
                 //EXPECT_EQ(rawdata[i].u2, 2);
                 //EXPECT_EQ(rawdata[i].i1, 1);
@@ -717,10 +717,10 @@ protected:
 
 TEST(Core_InputOutput, filestorage_yml_base64)
 {
-    CV_Base64IOTest test("base64_test.yml"); test.safe_run();
+    CV_Base64IOTest test("base64_test_tmp_file.yml"); test.safe_run();
 }
 
 TEST(Core_InputOutput, filestorage_xml_base64)
 {
-    CV_Base64IOTest test("base64_test.xml"); test.safe_run();
+    CV_Base64IOTest test("base64_test_tmp_file.xml"); test.safe_run();
 }
