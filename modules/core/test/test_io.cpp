@@ -588,22 +588,23 @@ class CV_Base64IOTest : public cvtest::BaseTest
 private:
     std::string file_name;
 
+    struct data_t
+    {
+        uchar u1, u2;
+        int i1, i2, i3;
+        double d1, d2;
+        int i4;
+    };
+
 public:
-    CV_Base64IOTest(std::string const & file_name)
-        : file_name(file_name) {}
+    CV_Base64IOTest(std::string const & test_file_name)
+        : file_name(test_file_name) {}
     ~CV_Base64IOTest() {}
 protected:
     void run(int)
     {
         try
         {
-            struct data_t
-            {
-                uchar u1, u2;
-                int i1, i2, i3;
-                double d1, d2;
-                int i4;
-            };
             std::vector<data_t> rawdata;
 
             cv::Mat _em_out, _em_in;
@@ -629,8 +630,18 @@ protected:
                 _nd_out = _4d(ranges);
 
                 /* raw data */
-                for (int i = 0; i < 1000; i++)
-                    rawdata.push_back(data_t{1, 2, 1, 2, 3, 0.1, 0.2, i});
+                for (int i = 0; i < 1000; i++) {
+                    data_t tmp;
+                    rawdata[i].u1 = 1;
+                    rawdata[i].u2 = 2;
+                    rawdata[i].i1 = 1;
+                    rawdata[i].i2 = 2;
+                    rawdata[i].i3 = 3;
+                    rawdata[i].d1 = 0.1;
+                    rawdata[i].d2 = 0.2;
+                    rawdata[i].i4 = i;
+                    rawdata.push_back(tmp);
+                }
             }
 
             {   /* write */
@@ -642,7 +653,7 @@ protected:
                 holder = _em_out;
                 cv::cvWriteMat_Base64(*fs, "empty_2d_mat", &holder);
 
-                cv::cvStartWriteRawData_Base64(*fs, "rawdata", rawdata.size(), "2u3i2di");
+                cv::cvStartWriteRawData_Base64(*fs, "rawdata", static_cast<int>(rawdata.size()), "2u3i2di");
                 for (int i = 0; i < 10; i++)
                     cv::cvWriteRawData_Base64(*fs, rawdata.data() + i * 100, 100);
                 cv::cvEndWriteRawData_Base64(*fs);
