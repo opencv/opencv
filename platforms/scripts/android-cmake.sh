@@ -9,6 +9,7 @@ function main ()
   BUILD_ABIS="arm7-android arm8-android"
   BUILD_ROOT=$OPENCV_PATH
   INSTALL_PATH=$OPENCV_PATH/install
+  ENABLE_OPENCL=ON
 
   # number of parallel jobs
   if [ "${TRAVIS}" == "true" -a "${CI}" == "true" ] ; then
@@ -43,6 +44,10 @@ function main ()
       INSTALL_PATH="${i#*=}"
       shift
       ;;
+      -noCL|-nocl)
+      ENABLE_OPENCL=OFF
+      shift
+      ;;
       -h|--help|*)
       echo "`basename $0` [clean] remake cmake files [-t=,--targets=] x64-osx,arm7-android,arm8-android [-i=] install path"
       exit 0
@@ -61,28 +66,47 @@ function install_android_library ()
 {
   set +e
   pwd
+  INSTALL_ALL=$1
   if [[ "$2" == "Debug" ]] ; then
     BUILD_TYPE_EXT=debug
+    INSTALL_DIR=$1".debug"
   else
     BUILD_TYPE_EXT=release
+    INSTALL_DIR=$1".release"
   fi
-  cp -av $BUILD_ROOT/platforms/android/template/opencv-lib/* $1
-  cp -av lint.xml $1
-  cp -av bin/aidl $1/src/main
-  cp -av bin/AndroidManifest.xml $1/src/main
-  #cp -av install/sdk/native/3rdparty/libs/* $1/src/main/jniLibs
-  #mkdir -p $1/src/main/${BUILD_TYPE_EXT}/jnilibs
-  #cp -av install/sdk/native/libs/ $1/src/main/${BUILD_TYPE_EXT}/jnilibs
-  cp -av install/sdk/native/libs/ $1/src/main/jnilibs
+  [ ! -d ${INSTALL_DIR} ] && mkdir -p ${INSTALL_DIR}
+  [ -d install/sdk/native/libs/armeabi-v7a ] && rm -rf install/sdk/native/libs/armeabi-v7a
+  [ -d install/sdk/native/libs/armeabi-v7a-hard ] && mv install/sdk/native/libs/armeabi-v7a-hard install/sdk/native/libs/armeabi-v7a
+  [ -d install/sdk/native/3rdparty/libs/armeabi-v7a ] && rm -rf install/sdk/native/3rdparty/libs/armeabi-v7a
+  [ -d install/sdk/native/3rdparty/libs/armeabi-v7a-hard ] && mv install/sdk/native/3rdparty/libs/armeabi-v7a-hard install/sdk/native/3rdparty/libs/armeabi-v7a
+  
+  cp -av $BUILD_ROOT/platforms/android/template/opencv-lib/* ${INSTALL_DIR}
+  cp -av lint.xml ${INSTALL_DIR}
+  cp -av bin/aidl ${INSTALL_DIR}/src/main
+  cp -av bin/AndroidManifest.xml ${INSTALL_DIR}/src/main
+  
+  mkdir -p ${INSTALL_DIR}/src/main/jnilibs
+  #cp -av install/sdk/native/3rdparty/libs/* ${INSTALL_DIR}/src/main/jnilibs
+  
+  mkdir -p $1/src/main/${BUILD_TYPE_EXT}/jnilibs
+  cp -av install/sdk/native/libs/ ${INSTALL_ALL}/src/main/${BUILD_TYPE_EXT}/jnilibs
+  cp -av install/sdk/native/libs/ ${INSTALL_DIR}/src/main/jnilibs
+  
+  # scrub all .a library files
+  find ${INSTALL_ALL}* -name *.a | xargs -n 1 -t rm
+  find ${INSTALL_DIR}* -name *.a | xargs -n 1 -t rm
+  
   #mkdir -p $1/src/main/${BUILD_TYPE_EXT}/jni
   #cp -av install/sdk/native/jni/include $1/src/main/${BUILD_TYPE_EXT}/jni
-  cp -av install/sdk/native/jni/include $1/src/main/jni
-  #mkdir -p $1/src/main/${BUILD_TYPE_EXT}/java
-  #cp -av install/sdk/java/src/ $1/src/main/${BUILD_TYPE_EXT}/java
-  cp -av install/sdk/java/src/ $1/src/main/java
-  cp -av install/sdk/java/res $1/src/main
-  cp -av install/sdk/java/AndroidManifest.xml $1/src/main
-  cp -av install/sdk/java/lint.xml $1
+  cp -av install/sdk/native/jni/include ${INSTALL_DIR}/src/main/jni
+  
+  mkdir -p ${INSTALL_ALL}/src/main/${BUILD_TYPE_EXT}/java
+  cp -av install/sdk/java/src/ ${INSTALL_ALL}/src/main/${BUILD_TYPE_EXT}/java
+  
+  cp -av install/sdk/java/src/ ${INSTALL_DIR}/src/main/java
+  cp -av install/sdk/java/res ${INSTALL_DIR}/src/main
+  cp -av install/sdk/java/AndroidManifest.xml ${INSTALL_DIR}/src/main
+  cp -av install/sdk/java/lint.xml ${INSTALL_DIR}
   set -e
 }
 
@@ -134,7 +158,7 @@ function build_platform ()
      -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
      -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
      -DCMAKE_TOOLCHAIN_FILE=${BUILD_ROOT}/platforms/android/android.toolchain.cmake"
-    EXTRA_OPTIONS="-DWITH_OPENCL=ON -DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9"
+    EXTRA_OPTIONS="-DWITH_OPENCL=${ENABLE_OPENCL} -DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9"
     build_target "build/android/debug/arm7" Debug $TARGET_ABI $TARGET_PLATFORM
     build_target "build/android/release/arm7" Release $TARGET_ABI $TARGET_PLATFORM
     shift
@@ -145,7 +169,7 @@ function build_platform ()
      -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
      -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
      -DCMAKE_TOOLCHAIN_FILE=${BUILD_ROOT}/platforms/android/android.toolchain.cmake"
-    EXTRA_OPTIONS="-DWITH_OPENCL=ON -DANDROID_TOOLCHAIN_NAME=aarch64-linux-android-4.9"
+    EXTRA_OPTIONS="-DWITH_OPENCL=${ENABLE_OPENCL} -DANDROID_TOOLCHAIN_NAME=aarch64-linux-android-4.9"
     build_target "build/android/debug/arm8" Debug $TARGET_ABI $TARGET_PLATFORM
     build_target "build/android/release/arm8" Release $TARGET_ABI $TARGET_PLATFORM
     shift
@@ -154,7 +178,7 @@ function build_platform ()
     COMMON_OPTIONS="-DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_CUDA=OFF\
      -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF\
      -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF"
-    EXTRA_OPTIONS="-DWITH_OPENCL=OFF"
+    EXTRA_OPTIONS="-DWITH_OPENCL=${ENABLE_OPENCL}"
     build_target "build/osx/debug/x86_64/opencv" Debug $TARGET_ABI $TARGET_PLATFORM
     build_target "build/osx/release/x86_64/opencv" Release $TARGET_ABI $TARGET_PLATFORM
     shift

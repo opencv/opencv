@@ -3478,7 +3478,6 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     Size ssize = _src.size();
 
     CV_Assert( ssize.area() > 0 );
-    CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
     if( dsize.area() == 0 )
     {
         dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
@@ -3490,6 +3489,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         inv_scale_x = (double)dsize.width/ssize.width;
         inv_scale_y = (double)dsize.height/ssize.height;
     }
+    CV_Assert( inv_scale_x > 0 && inv_scale_y > 0 );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))

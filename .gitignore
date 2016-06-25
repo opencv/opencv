@@ -27,3 +27,4 @@ build_*
 lint.xml
 build.gradle
 /src
+/install*

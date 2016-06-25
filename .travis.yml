@@ -42,10 +42,10 @@ install:
 script:
   # By default Travis-ci executes './gradlew build connectedCheck' if no 'script:' section found.
   #- ./platforms/android/build_sdk.py build .
-  - ./platforms/scripts/cmake_android_arm_custom.sh
-  - ls -la build
+  - mkdir install
+  - ./platforms/scripts/android-cmake.sh -i=`pwd`/install
+  - ls -la install
 
 notifications:
   email:
     - builds@10imaging.com
-    - c0build@10imaging.com
