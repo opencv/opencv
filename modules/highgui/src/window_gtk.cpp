@@ -1993,8 +1993,10 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
                 case GDK_SCROLL_LEFT:  orient = CV_EVENT_MOUSEHWHEEL;
                 case GDK_SCROLL_DOWN:  flags |= ((-1 << 16) | orient);
                     break;
+#if (GTK_MAJOR_VERSION > 3 or (GTK_MAJOR_VERSION == 3 and GTK_MINOR_VERSION >= 4))
                 case GDK_SCROLL_SMOOTH: // to prevent make warning; TODO
                     ;
+#endif //GTK_MAJOR_VERSION > 3 or (GTK_MAJOR_VERSION == 3 and GTK_MINOR_VERSION >= 4)
                 };
             };
             flags = flags |
