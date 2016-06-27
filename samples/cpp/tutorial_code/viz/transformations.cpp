@@ -71,7 +71,7 @@ int main(int argn, char **argv)
     myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
 
     /// Let's assume camera has the following properties
-    Point3f cam_pos(3.0f,3.0f,3.0f), cam_focal_point(3.0f,3.0f,2.0f), cam_y_dir(-1.0f,0.0f,0.0f);
+    Vec3f cam_pos(3.0f,3.0f,3.0f), cam_focal_point(3.0f,3.0f,2.0f), cam_y_dir(-1.0f,0.0f,0.0f);
 
     /// We can get the pose of the cam using makeCameraPose
     Affine3f cam_pose = viz::makeCameraPose(cam_pos, cam_focal_point, cam_y_dir);
