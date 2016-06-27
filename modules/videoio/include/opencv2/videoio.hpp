@@ -66,6 +66,16 @@ namespace cv
 //! @{
 
 /** @brief Capture API backends.
+
+Select preferred API for a capture object.
+To be used in the constructor VideoCapture::VideoCapture or VideoCapture::open
+
+@note Backends are available only if they have been built with your OpenCV binaries.<br>
+Check in <tt>cvconfig.h</tt> to know which APIs are currently available (e.g. <tt>HAVE_MSMF, HAVE_VFW, HAVE_LIBV4L</tt>).
+To enable/disable APIs, you have to:
+  1. re-configure OpenCV using the appropriates CMake switches
+     (e.g. <tt>-DWITH_MSMF=ON -DWITH_VFW=ON ... </tt>) or checking related switch in cmake-gui
+  2. rebuild OpenCV itself
 */
 enum { CAP_ANY          = 0,            //!< Auto detect
        CAP_VFW          = 200,          //!< Video For Windows (platform native)
@@ -542,13 +552,13 @@ public:
     img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
 
     @param apiPreference preferred Capture API to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. CAP_FFMPEG or CAP_IMAGES
+    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES
     */
     CV_WRAP VideoCapture(const String& filename, int apiPreference);
 
     /** @overload
     @param index = camera_id + domain_offset (CAP_*). id of the video capturing device to open. If there is a single
-    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + CAP_MSMF
+    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + cv::CAP_MSMF
     */
     CV_WRAP VideoCapture(int index);
 
@@ -565,7 +575,7 @@ public:
 
     /** @overload
     @param index = camera_id + domain_offset (CAP_*). id of the video capturing device to open. If there is a single
-    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + CAP_MSMF
+    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + cv::CAP_MSMF
     */
     CV_WRAP virtual bool open(int index);
 
@@ -633,28 +643,26 @@ public:
     /** @brief Sets a property in the VideoCapture.
 
     @param propId Property identifier. It can be one of the following:
-     -   **CAP_PROP_POS_MSEC** Current position of the video file in milliseconds.
-     -   **CAP_PROP_POS_FRAMES** 0-based index of the frame to be decoded/captured next.
-     -   **CAP_PROP_POS_AVI_RATIO** Relative position of the video file: 0 - start of the
-         film, 1 - end of the film.
-     -   **CAP_PROP_FRAME_WIDTH** Width of the frames in the video stream.
-     -   **CAP_PROP_FRAME_HEIGHT** Height of the frames in the video stream.
-     -   **CAP_PROP_FPS** Frame rate.
-     -   **CAP_PROP_FOURCC** 4-character code of codec.
-     -   **CAP_PROP_FRAME_COUNT** Number of frames in the video file.
-     -   **CAP_PROP_FORMAT** Format of the Mat objects returned by retrieve() .
-     -   **CAP_PROP_MODE** Backend-specific value indicating the current capture mode.
-     -   **CAP_PROP_BRIGHTNESS** Brightness of the image (only for cameras).
-     -   **CAP_PROP_CONTRAST** Contrast of the image (only for cameras).
-     -   **CAP_PROP_SATURATION** Saturation of the image (only for cameras).
-     -   **CAP_PROP_HUE** Hue of the image (only for cameras).
-     -   **CAP_PROP_GAIN** Gain of the image (only for cameras).
-     -   **CAP_PROP_EXPOSURE** Exposure (only for cameras).
-     -   **CAP_PROP_CONVERT_RGB** Boolean flags indicating whether images should be converted
-         to RGB.
-     -   **CAP_PROP_WHITE_BALANCE** Currently unsupported
-     -   **CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported
-         by DC1394 v 2.x backend currently)
+    -   cv::CAP_PROP_POS_MSEC @copydoc cv::CAP_PROP_POS_MSEC
+    -   cv::CAP_PROP_POS_FRAMES @copydoc CAP_PROP_POS_FRAMES
+    -   cv::CAP_PROP_POS_AVI_RATIO @copydoc cv::CAP_PROP_POS_AVI_RATIO
+    -   cv::CAP_PROP_FRAME_WIDTH @copydoc cv::CAP_PROP_FRAME_WIDTH
+    -   cv::CAP_PROP_FRAME_HEIGHT @copydoc cv::CAP_PROP_FRAME_HEIGHT
+    -   cv::CAP_PROP_FPS @copydoc cv::CAP_PROP_FPS
+    -   cv::CAP_PROP_FOURCC @copydoc cv::CAP_PROP_FOURCC
+    -   cv::CAP_PROP_FRAME_COUNT @copydoc cv::CAP_PROP_FRAME_COUNT
+    -   cv::CAP_PROP_FORMAT @copydoc cv::CAP_PROP_FORMAT
+    -   cv::CAP_PROP_MODE @copydoc cv::CAP_PROP_MODE
+    -   cv::CAP_PROP_BRIGHTNESS @copydoc cv::CAP_PROP_BRIGHTNESS
+    -   cv::CAP_PROP_CONTRAST @copydoc cv::CAP_PROP_CONTRAST
+    -   cv::CAP_PROP_SATURATION @copydoc cv::CAP_PROP_SATURATION
+    -   cv::CAP_PROP_HUE @copydoc cv::CAP_PROP_HUE
+    -   cv::CAP_PROP_GAIN @copydoc cv::CAP_PROP_GAIN
+    -   cv::CAP_PROP_EXPOSURE @copydoc cv::CAP_PROP_EXPOSURE
+    -   cv::CAP_PROP_CONVERT_RGB @copydoc cv::CAP_PROP_CONVERT_RGB
+    -   cv::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CAP_PROP_WHITE_BALANCE_BLUE_U
+    -   cv::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CAP_PROP_WHITE_BALANCE_RED_V
+    -   cv::CAP_PROP_RECTIFICATION @copydoc cv::CAP_PROP_RECTIFICATION
     @param value Value of the property.
      */
     CV_WRAP virtual bool set(int propId, double value);
@@ -662,29 +670,26 @@ public:
     /** @brief Returns the specified VideoCapture property
 
     @param propId Property identifier. It can be one of the following:
-     -   **CAP_PROP_POS_MSEC** Current position of the video file in milliseconds or video
-         capture timestamp.
-     -   **CAP_PROP_POS_FRAMES** 0-based index of the frame to be decoded/captured next.
-     -   **CAP_PROP_POS_AVI_RATIO** Relative position of the video file: 0 - start of the
-         film, 1 - end of the film.
-     -   **CAP_PROP_FRAME_WIDTH** Width of the frames in the video stream.
-     -   **CAP_PROP_FRAME_HEIGHT** Height of the frames in the video stream.
-     -   **CAP_PROP_FPS** Frame rate.
-     -   **CAP_PROP_FOURCC** 4-character code of codec.
-     -   **CAP_PROP_FRAME_COUNT** Number of frames in the video file.
-     -   **CAP_PROP_FORMAT** Format of the Mat objects returned by retrieve() .
-     -   **CAP_PROP_MODE** Backend-specific value indicating the current capture mode.
-     -   **CAP_PROP_BRIGHTNESS** Brightness of the image (only for cameras).
-     -   **CAP_PROP_CONTRAST** Contrast of the image (only for cameras).
-     -   **CAP_PROP_SATURATION** Saturation of the image (only for cameras).
-     -   **CAP_PROP_HUE** Hue of the image (only for cameras).
-     -   **CAP_PROP_GAIN** Gain of the image (only for cameras).
-     -   **CAP_PROP_EXPOSURE** Exposure (only for cameras).
-     -   **CAP_PROP_CONVERT_RGB** Boolean flags indicating whether images should be converted
-         to RGB.
-     -   **CAP_PROP_WHITE_BALANCE** Currently not supported
-     -   **CAP_PROP_RECTIFICATION** Rectification flag for stereo cameras (note: only supported
-         by DC1394 v 2.x backend currently)
+    -   cv::CAP_PROP_POS_MSEC @copydoc cv::CAP_PROP_POS_MSEC
+    -   cv::CAP_PROP_POS_FRAMES @copydoc CAP_PROP_POS_FRAMES
+    -   cv::CAP_PROP_POS_AVI_RATIO @copydoc cv::CAP_PROP_POS_AVI_RATIO
+    -   cv::CAP_PROP_FRAME_WIDTH @copydoc cv::CAP_PROP_FRAME_WIDTH
+    -   cv::CAP_PROP_FRAME_HEIGHT @copydoc cv::CAP_PROP_FRAME_HEIGHT
+    -   cv::CAP_PROP_FPS @copydoc cv::CAP_PROP_FPS
+    -   cv::CAP_PROP_FOURCC @copydoc cv::CAP_PROP_FOURCC
+    -   cv::CAP_PROP_FRAME_COUNT @copydoc cv::CAP_PROP_FRAME_COUNT
+    -   cv::CAP_PROP_FORMAT @copydoc cv::CAP_PROP_FORMAT
+    -   cv::CAP_PROP_MODE @copydoc cv::CAP_PROP_MODE
+    -   cv::CAP_PROP_BRIGHTNESS @copydoc cv::CAP_PROP_BRIGHTNESS
+    -   cv::CAP_PROP_CONTRAST @copydoc cv::CAP_PROP_CONTRAST
+    -   cv::CAP_PROP_SATURATION @copydoc cv::CAP_PROP_SATURATION
+    -   cv::CAP_PROP_HUE @copydoc cv::CAP_PROP_HUE
+    -   cv::CAP_PROP_GAIN @copydoc cv::CAP_PROP_GAIN
+    -   cv::CAP_PROP_EXPOSURE @copydoc cv::CAP_PROP_EXPOSURE
+    -   cv::CAP_PROP_CONVERT_RGB @copydoc cv::CAP_PROP_CONVERT_RGB
+    -   cv::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CAP_PROP_WHITE_BALANCE_BLUE_U
+    -   cv::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CAP_PROP_WHITE_BALANCE_RED_V
+    -   cv::CAP_PROP_RECTIFICATION @copydoc cv::CAP_PROP_RECTIFICATION
 
     @note When querying a property that is not supported by the backend used by the VideoCapture
     class, value 0 is returned.
@@ -697,7 +702,7 @@ public:
     img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
 
     @param apiPreference preferred Capture API to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. CAP_FFMPEG or CAP_IMAGES
+    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES
 
     The methods first call VideoCapture::release to close the already opened file or camera.
      */
@@ -772,8 +777,8 @@ public:
     /** @brief Sets a property in the VideoWriter.
 
      @param propId Property identifier. It can be one of the following:
-     -   **VIDEOWRITER_PROP_QUALITY** Quality (0..100%) of the videostream encoded. Can be adjusted dynamically in some codecs.
-     -   **VIDEOWRITER_PROP_NSTRIPES** Number of stripes for parallel encoding
+     -   cv::VIDEOWRITER_PROP_QUALITY @copydoc cv::VIDEOWRITER_PROP_QUALITY
+     -   cv::VIDEOWRITER_PROP_NSTRIPES @copydoc cv::VIDEOWRITER_PROP_NSTRIPES
      @param value Value of the property.
      */
     CV_WRAP virtual bool set(int propId, double value);
@@ -781,9 +786,9 @@ public:
     /** @brief Returns the specified VideoWriter property
 
      @param propId Property identifier. It can be one of the following:
-     -   **VIDEOWRITER_PROP_QUALITY** Current quality of the encoded videostream.
-     -   **VIDEOWRITER_PROP_FRAMEBYTES** (Read-only) Size of just encoded video frame; note that the encoding order may be different from representation order.
-     -   **VIDEOWRITER_PROP_NSTRIPES** Number of stripes for parallel encoding
+     -   cv::VIDEOWRITER_PROP_QUALITY @copydoc cv::VIDEOWRITER_PROP_QUALITY
+     -   cv::VIDEOWRITER_PROP_FRAMEBYTES @copydoc VIDEOWRITER_PROP_FRAMEBYTES
+     -   cv::VIDEOWRITER_PROP_NSTRIPES @copydoc cv::VIDEOWRITER_PROP_NSTRIPES
 
      @note When querying a property that is not supported by the backend used by the VideoWriter
      class, value 0 is returned.
