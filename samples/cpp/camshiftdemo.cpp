@@ -20,6 +20,7 @@ Point origin;
 Rect selection;
 int vmin = 10, vmax = 256, smin = 30;
 
+// User draws box around object to track. This triggers CAMShift to start tracking
 static void onMouse( int event, int x, int y, int, void* )
 {
     if( selectObject )
@@ -42,7 +43,7 @@ static void onMouse( int event, int x, int y, int, void* )
     case EVENT_LBUTTONUP:
         selectObject = false;
         if( selection.width > 0 && selection.height > 0 )
-            trackObject = -1;
+            trackObject = -1;   // Set up CAMShift properties in main() loop
         break;
     }
 }
@@ -130,15 +131,16 @@ int main( int argc, const char** argv )
                 int ch[] = {0, 0};
                 hue.create(hsv.size(), hsv.depth());
                 mixChannels(&hsv, 1, &hue, 1, ch, 1);
-
-                if( trackObject < 0 )
+                
+                if( trackObject < 0 ) 
                 {
+                    // Object has been selected by user, set up CAMShift search properties once
                     Mat roi(hue, selection), maskroi(mask, selection);
                     calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
                     normalize(hist, hist, 0, 255, NORM_MINMAX);
 
                     trackWindow = selection;
-                    trackObject = 1;
+                    trackObject = 1;    // Don't set up again, unless user selects new ROI
 
                     histimg = Scalar::all(0);
                     int binW = histimg.cols / hsize;
@@ -155,7 +157,8 @@ int main( int argc, const char** argv )
                                    Scalar(buf.at<Vec3b>(i)), -1, 8 );
                     }
                 }
-
+                
+                // Perform CAMShift 
                 calcBackProject(&hue, 1, 0, hist, backproj, &phranges);
                 backproj &= mask;
                 RotatedRect trackBox = CamShift(backproj, trackWindow,
