@@ -90,11 +90,11 @@ if(NOT ${found})
         find_package(PythonLibs "${_version_major_minor}.${_version_patch}" EXACT)
       endif()
 
+      set(_include_path ${PYTHON_INCLUDE_PATH})
       if(PYTHONLIBS_FOUND)
         # Copy outputs
         set(_libs_found ${PYTHONLIBS_FOUND})
         set(_libraries ${PYTHON_LIBRARIES})
-        set(_include_path ${PYTHON_INCLUDE_PATH})
         set(_include_dirs ${PYTHON_INCLUDE_DIRS})
         set(_debug_libraries ${PYTHON_DEBUG_LIBRARIES})
         set(_libs_version_string ${PYTHONLIBS_VERSION_STRING})
