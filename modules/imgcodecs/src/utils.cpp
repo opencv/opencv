@@ -43,8 +43,8 @@
 #include "utils.hpp"
 
 #define  SCALE  14
-#define  cR  (int)(0.299*(1 << SCALE) + 0.5)
-#define  cG  (int)(0.587*(1 << SCALE) + 0.5)
+#define  cR  (int)(0.2126*(1 << SCALE) + 0.5)
+#define  cG  (int)(0.7152*(1 << SCALE) + 0.5)
 #define  cB  ((1 << SCALE) - cR - cG)
 
 void icvCvt_BGR2Gray_8u_C3C1R( const uchar* rgb, int rgb_step,

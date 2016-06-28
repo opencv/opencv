@@ -55,7 +55,7 @@ PERF_TEST_P(Size_Source_Fl, floodFill1, Combine(
     int b = 152;//(unsigned)theRNG() & 255;
     int g = 136;//(unsigned)theRNG() & 255;
     int r = 53;//(unsigned)theRNG() & 255;
-    newval = (colorType == IMREAD_COLOR) ? Scalar(b, g, r) : Scalar(r*0.299 + g*0.587 + b*0.114);
+    newval = (colorType == IMREAD_COLOR) ? Scalar(b, g, r) : Scalar(r*0.2126 + g*0.7152 + b*0.0722);
 
     Rect outputRect = Rect();
     Mat source = Mat();
