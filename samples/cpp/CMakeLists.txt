@@ -31,7 +31,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-missing-declarations")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function -Wno-missing-declarations")
   endif()
 
   # ---------------------------------------------
@@ -57,8 +58,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       ocv_target_link_libraries(${the_target} opencv_cudaarithm opencv_cudafilters)
     endif()
 
-    if(HAVE_opencv_ocl)
-      ocv_target_link_libraries(${the_target} opencv_ocl)
+    if("${srcs}" MATCHES "viz/" AND VTK_USE_FILE)
+      include(${VTK_USE_FILE})
+      ocv_target_link_libraries(${the_target} ${VTK_LIBRARIES})
+      add_definitions(-DUSE_VTK)
     endif()
 
     set_target_properties(${the_target} PROPERTIES
@@ -88,7 +91,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_list_filterout(cpp_samples "/gpu/")
   endif()
 
-  ocv_list_filterout(cpp_samples "viz")
+  if(NOT TARGET opencv_viz)
+    ocv_list_filterout(cpp_samples "/viz/")
+  endif()
 
   if(NOT HAVE_IPP_A)
     ocv_list_filterout(cpp_samples "/ippasync/")
