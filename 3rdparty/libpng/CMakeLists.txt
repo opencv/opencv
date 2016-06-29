@@ -15,7 +15,7 @@ file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
 if(ARM AND NEON)
-  list(APPEND lib_srcs arm/filter_neon.S)
+  list(APPEND lib_srcs arm/filter_neon.S arm/arm_init.c)
   add_definitions(-DPNG_ARM_NEON)
 endif()
 
