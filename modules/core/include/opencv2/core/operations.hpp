@@ -2558,10 +2558,10 @@ template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size
     if(_size <= size)
         return;
     deallocate();
+    size = _size;
     if(_size > fixed_size)
     {
         ptr = cv::allocate<_Tp>(_size);
-        size = _size;
     }
 }
 
