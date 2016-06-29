@@ -47,11 +47,12 @@ static void CannyThreshold(int, void*)
  */
 int main( int, char** argv )
 {
-  /// Load an image
-  src = imread( argv[1], IMREAD_COLOR );
+  //![load]
+  src = imread( argv[1], IMREAD_COLOR ); // Load an image
 
   if( src.empty() )
     { return -1; }
+  //![load]
 
   /// Create a matrix of the same type and size as src (for dst)
   dst.create( src.size(), src.type() );

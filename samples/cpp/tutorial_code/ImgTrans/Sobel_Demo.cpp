@@ -23,16 +23,17 @@ int main( int, char** argv )
   int delta = 0;
   int ddepth = CV_16S;
 
-  /// Load an image
-  src = imread( argv[1], IMREAD_COLOR );
+  //[load]
+  src = imread( argv[1], IMREAD_COLOR ); // Load an image
 
   if( src.empty() )
     { return -1; }
+  //[load]
 
   GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
 
   /// Convert it to gray
-  cvtColor( src, src_gray, COLOR_RGB2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create window
   namedWindow( window_name, WINDOW_AUTOSIZE );

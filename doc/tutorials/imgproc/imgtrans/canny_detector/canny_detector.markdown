@@ -100,13 +100,8 @@ Explanation
     -#  We set a maximum value for the lower Threshold of \f$100\f$.
 
 -#  Loads the source image:
-    @code{.cpp}
-    /// Load an image
-    src = imread( argv[1] );
+    @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp load
 
-    if( !src.data )
-      { return -1; }
-    @endcode
 -#  Create a matrix of the same type and size of *src* (to be *dst*)
     @code{.cpp}
     dst.create( src.size(), src.type() );

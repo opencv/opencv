@@ -124,19 +124,15 @@ Explanation
     int ddepth = CV_16S;
     @endcode
 -#  As usual we load our source image *src*:
-    @code{.cpp}
-    src = imread( argv[1] );
+    @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp load
 
-    if( !src.data )
-    { return -1; }
-    @endcode
 -#  First, we apply a @ref cv::GaussianBlur to our image to reduce the noise ( kernel size = 3 )
     @code{.cpp}
     GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
     @endcode
 -#  Now we convert our filtered image to grayscale:
     @code{.cpp}
-    cvtColor( src, src_gray, COLOR_RGB2GRAY );
+    cvtColor( src, src_gray, COLOR_BGR2GRAY );
     @endcode
 -#  Second, we calculate the "*derivatives*" in *x* and *y* directions. For this, we use the
     function @ref cv::Sobel as shown below:

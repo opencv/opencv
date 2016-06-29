@@ -66,7 +66,7 @@ Explanation
 
 -#  As usual we load our source image *src*:
     @code{.cpp}
-    src = imread( argv[1] );
+    src = imread( argv[1], IMREAD_COLOR );
 
     if( !src.data )
     { return -1;

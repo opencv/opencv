@@ -56,8 +56,8 @@ void on_trackbar( int, void* )
 int main( int argc, char** argv )
 {
   /// Read image ( same size, same type )
-  src1 = imread("../../images/LinuxLogo.jpg");
-  src2 = imread("../../images/WindowsLogo.jpg");
+  src1 = imread("../data/LinuxLogo.jpg");
+  src2 = imread("../data/WindowsLogo.jpg");
 
   if( !src1.data ) { printf("Error loading src1 \n"); return -1; }
   if( !src2.data ) { printf("Error loading src2 \n"); return -1; }
@@ -88,10 +88,10 @@ Explanation
 
 We only analyze the code that is related to Trackbar:
 
--#  First, we load 02 images, which are going to be blended.
+-#  First, we load two images, which are going to be blended.
     @code{.cpp}
-    src1 = imread("../../images/LinuxLogo.jpg");
-    src2 = imread("../../images/WindowsLogo.jpg");
+    src1 = imread("../data/LinuxLogo.jpg");
+    src2 = imread("../data/WindowsLogo.jpg");
     @endcode
 -#  To create a trackbar, first we have to create the window in which it is going to be located. So:
     @code{.cpp}
@@ -135,7 +135,7 @@ Result
 
     ![](images/Adding_Trackbars_Tutorial_Result_0.jpg)
 
--   As a manner of practice, you can also add 02 trackbars for the program made in
+-   As a manner of practice, you can also add two trackbars for the program made in
     @ref tutorial_basic_linear_transform. One trackbar to set \f$\alpha\f$ and another for \f$\beta\f$. The output might
     look like:
 
