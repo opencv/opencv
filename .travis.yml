@@ -1,3 +1,5 @@
+sudo: required
+dist: trusty
 language: android
 jdk: oraclejdk7
 before_install:
