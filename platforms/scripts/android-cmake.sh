@@ -75,10 +75,10 @@ function install_android_library ()
     INSTALL_DIR=$1".release"
   fi
   [ ! -d ${INSTALL_DIR} ] && mkdir -p ${INSTALL_DIR}
-  [ -d install/sdk/native/libs/armeabi-v7a ] && rm -rf install/sdk/native/libs/armeabi-v7a
-  [ -d install/sdk/native/libs/armeabi-v7a-hard ] && mv install/sdk/native/libs/armeabi-v7a-hard install/sdk/native/libs/armeabi-v7a
-  [ -d install/sdk/native/3rdparty/libs/armeabi-v7a ] && rm -rf install/sdk/native/3rdparty/libs/armeabi-v7a
-  [ -d install/sdk/native/3rdparty/libs/armeabi-v7a-hard ] && mv install/sdk/native/3rdparty/libs/armeabi-v7a-hard install/sdk/native/3rdparty/libs/armeabi-v7a
+  #[ -d install/sdk/native/libs/armeabi-v7a ] && rm -rf install/sdk/native/libs/armeabi-v7a
+  #[ -d install/sdk/native/libs/armeabi-v7a-hard ] && mv install/sdk/native/libs/armeabi-v7a-hard install/sdk/native/libs/armeabi-v7a
+  #[ -d install/sdk/native/3rdparty/libs/armeabi-v7a ] && rm -rf install/sdk/native/3rdparty/libs/armeabi-v7a
+  #[ -d install/sdk/native/3rdparty/libs/armeabi-v7a-hard ] && mv install/sdk/native/3rdparty/libs/armeabi-v7a-hard install/sdk/native/3rdparty/libs/armeabi-v7a
   
   cp -av $BUILD_ROOT/platforms/android/template/opencv-lib/* ${INSTALL_DIR}
   cp -av lint.xml ${INSTALL_DIR}
@@ -121,7 +121,7 @@ function build_target ()
   local TARGET_ABI=${3}
   local TARGET_PLATFORM=${4}
   local REBUILD_CMAKE=
-  [ "$TARGET_ABI" == "arm7" ] && TARGET_ABI="armeabi-v7a-hard with NEON"
+  [ "$TARGET_ABI" == "arm7" ] && TARGET_ABI="armeabi-v7a with NEON"
   [ "$TARGET_ABI" == "arm8" ] && TARGET_ABI="arm64-v8a"
   [ "$TARGET_PLATFORM" == "osx" ] && TARGET_ABI="x86_64"
   [ ! -d "$TARGET_DIR" ] && mkdir -p "$TARGET_DIR" && REBUILD_CMAKE=true
@@ -153,11 +153,14 @@ function build_platform ()
     echo "Building $1"
   case $i in
     arm7-android)
+#    COMMON_OPTIONS="-DCMAKE_VERBOSE_MAKEFILE=ON -DENABLE_NEON=ON -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_CUDA=OFF\
     COMMON_OPTIONS="-DENABLE_NEON=ON -DWITH_TBB=ON -DBUILD_TBB=ON -DWITH_CUDA=OFF\
      -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DENABLE_PRECOMPILED_HEADERS=OFF -DBUILD_ANDROID_EXAMPLES=OFF\
      -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
      -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
      -DCMAKE_TOOLCHAIN_FILE=${BUILD_ROOT}/platforms/android/android.toolchain.cmake"
+#     -DCMAKE_CXX_FLAGS_DEBUG=-fdebug-prefix-map=${HOME}=~\
+#     -DCMAKE_C_FLAGS_DEBUG=-fdebug-prefix-map=${HOME}=~"
     EXTRA_OPTIONS="-DWITH_OPENCL=${ENABLE_OPENCL} -DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.9"
     build_target "build/android/debug/arm7" Debug $TARGET_ABI $TARGET_PLATFORM
     build_target "build/android/release/arm7" Release $TARGET_ABI $TARGET_PLATFORM
@@ -169,6 +172,8 @@ function build_platform ()
      -DINSTALL_ANDROID_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF\
      -DANDROID_NATIVE_API_LEVEL=21 -DANDROID_SDK_TARGET=21 -DNDK_CCACHE=ccache -DANDROID_STL=gnustl_static\
      -DCMAKE_TOOLCHAIN_FILE=${BUILD_ROOT}/platforms/android/android.toolchain.cmake"
+#     -DCMAKE_CXX_FLAGS_DEBUG=-fdebug-prefix-map=${HOME}=~\
+#     -DCMAKE_C_FLAGS_DEBUG=-fdebug-prefix-map=${HOME}=~"
     EXTRA_OPTIONS="-DWITH_OPENCL=${ENABLE_OPENCL} -DANDROID_TOOLCHAIN_NAME=aarch64-linux-android-4.9"
     build_target "build/android/debug/arm8" Debug $TARGET_ABI $TARGET_PLATFORM
     build_target "build/android/release/arm8" Release $TARGET_ABI $TARGET_PLATFORM

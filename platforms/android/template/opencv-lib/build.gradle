@@ -16,8 +16,6 @@ model {
             ldFlags.add("-Wl,--no-warn-mismatch")
         }
         create("armeabi-v7a") {
-            cppFlags.addAll(["-mhard-float", "-D_NDK_MATH_NO_SOFTFP=1", "-mfloat-abi=hard"])
-            ldLibs.add("m_hard")
             ldFlags.add("-Wl,--no-warn-mismatch")
         }
     }
@@ -41,7 +39,8 @@ model {
         showAll = true
     }
     android.ndk {
-        moduleName "CVnative"
+        moduleName = "CVnative"
+		debuggable = true
         abiFilters.addAll(['armeabi-v7a', 'arm64-v8a'])
         CFlags.add("-v")
         cppFlags.add("-v")

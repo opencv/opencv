@@ -7,6 +7,7 @@ before_install:
   - export ANDROID_NDK=~/android-ndk-root
   - export ANDROID_SDK=${ANDROID_HOME}
   - export BUILD_DEBUG=true
+  - cmake --version
   - ls -la ${ANDROID_SDK}
   - ls -la
   - export
