@@ -1,8 +1,8 @@
 
 /* pngtrans.c - transforms the data in a row (used by both readers and writers)
  *
- * Last changed in libpng 1.5.11 [June 14, 2012]
- * Copyright (c) 1998-2012 Glenn Randers-Pehrson
+ * Last changed in libpng 1.5.19 [August 21, 2014]
+ * Copyright (c) 1998-2002,2004,2006-2014 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -452,7 +452,7 @@ png_do_strip_channel(png_row_infop row_info, png_bytep row, int at_start)
    {
       if (row_info->bit_depth == 8)
       {
-         if (at_start) /* Skip initial filler */
+         if (at_start != 0) /* Skip initial filler */
             ++sp;
          else          /* Skip initial channel and, for sp, the filler */
             sp += 2, ++dp;
@@ -466,7 +466,7 @@ png_do_strip_channel(png_row_infop row_info, png_bytep row, int at_start)
 
       else if (row_info->bit_depth == 16)
       {
-         if (at_start) /* Skip initial filler */
+         if (at_start != 0) /* Skip initial filler */
             sp += 2;
          else          /* Skip initial channel and, for sp, the filler */
             sp += 4, dp += 2;
@@ -492,7 +492,7 @@ png_do_strip_channel(png_row_infop row_info, png_bytep row, int at_start)
    {
       if (row_info->bit_depth == 8)
       {
-         if (at_start) /* Skip initial filler */
+         if (at_start != 0) /* Skip initial filler */
             ++sp;
          else          /* Skip initial channels and, for sp, the filler */
             sp += 4, dp += 3;
@@ -506,7 +506,7 @@ png_do_strip_channel(png_row_infop row_info, png_bytep row, int at_start)
 
       else if (row_info->bit_depth == 16)
       {
-         if (at_start) /* Skip initial filler */
+         if (at_start != 0) /* Skip initial filler */
             sp += 2;
          else          /* Skip initial channels and, for sp, the filler */
             sp += 8, dp += 6;

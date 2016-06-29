@@ -1,8 +1,8 @@
 
 /* pngerror.c - stub functions for i/o and memory allocation
  *
- * Last changed in libpng 1.5.8 [February 1, 2011]
- * Copyright (c) 1998-2011 Glenn Randers-Pehrson
+ * Last changed in libpng 1.5.19 [August 21, 2014]
+ * Copyright (c) 1998-2002,2004,2006-2014 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -161,7 +161,7 @@ png_format_number(png_const_charp start, png_charp end, int format,
          case PNG_NUMBER_FORMAT_02u:
             /* Expects at least 2 digits. */
             mincount = 2;
-            /* fall through */
+            /* FALL THROUGH */
 
          case PNG_NUMBER_FORMAT_u:
             *--end = digits[number % 10];
@@ -171,7 +171,7 @@ png_format_number(png_const_charp start, png_charp end, int format,
          case PNG_NUMBER_FORMAT_02x:
             /* This format expects at least two digits */
             mincount = 2;
-            /* fall through */
+            /* FALL THROUGH */
 
          case PNG_NUMBER_FORMAT_x:
             *--end = digits[number & 0xf];
@@ -193,7 +193,7 @@ png_format_number(png_const_charp start, png_charp end, int format,
           * drop the decimal point.  If the number is a true zero handle that
           * here.
           */
-         if (output)
+         if (output != 0)
             *--end = '.';
          else if (number == 0) /* and !output */
             *--end = '0';
@@ -578,6 +578,9 @@ png_longjmp,(png_structp png_ptr, int val),PNG_NORETURN)
    png_ptr->longjmp_fn(png_ptr->longjmp_buffer, val);
 #  endif
    }
+#else
+   PNG_UNUSED(png_ptr);
+   PNG_UNUSED(val);
 #endif
    /* Here if not setjmp support or if png_ptr is null. */
    PNG_ABORT();
