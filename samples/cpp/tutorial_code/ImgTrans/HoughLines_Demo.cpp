@@ -5,10 +5,9 @@
  */
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
-#include <stdio.h>
 
 using namespace cv;
 using namespace std;
@@ -39,7 +38,7 @@ void Probabilistic_Hough( int, void* );
 int main( int, char** argv )
 {
    /// Read the image
-   src = imread( argv[1], 1 );
+   src = imread( argv[1], IMREAD_COLOR );
 
    if( src.empty() )
      { help();

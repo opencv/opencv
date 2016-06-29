@@ -3,13 +3,10 @@
  * brief Sample code for simple filters
  * author OpenCV team
  */
-#include <iostream>
-#include <vector>
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -35,7 +32,7 @@ int main( void )
   namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Load the source image
-  src = imread( "../data/lena.jpg", 1 );
+  src = imread( "../data/lena.jpg", IMREAD_COLOR );
 
   if( display_caption( "Original Image" ) != 0 ) { return 0; }
 

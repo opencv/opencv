@@ -2,7 +2,7 @@
  * filestorage_sample demonstrate the usage of the opencv serialization functionality
  */
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include <iostream>
 #include <string>
 
