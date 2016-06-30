@@ -817,10 +817,10 @@ AutoBuffer<_Tp, fixed_size>::allocate(size_t _size)
         return;
     }
     deallocate();
+    sz = _size;
     if(_size > fixed_size)
     {
         ptr = new _Tp[_size];
-        sz = _size;
     }
 }
 
