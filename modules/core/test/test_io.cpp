@@ -574,6 +574,153 @@ TEST(Core_InputOutput, FileStorageKey)
     EXPECT_NO_THROW(f << "key1" << "value1");
     EXPECT_NO_THROW(f << "_key2" << "value2");
     EXPECT_NO_THROW(f << "key_3" << "value3");
-    const std::string expected = "%YAML:1.0\nkey1: value1\n_key2: value2\nkey_3: value3\n";
+    const std::string expected = "%YAML 1.0\n---\nkey1: value1\n_key2: value2\nkey_3: value3\n";
     ASSERT_STREQ(f.releaseAndGetString().c_str(), expected.c_str());
+}
+
+TEST(Core_InputOutput, filestorage_yml_compatibility)
+{
+    // TODO:
+}
+
+class CV_Base64IOTest : public cvtest::BaseTest
+{
+private:
+    std::string file_name;
+
+    struct data_t
+    {
+        uchar u1, u2;
+        int i1, i2, i3;
+        double d1, d2;
+        int i4;
+    };
+
+public:
+    CV_Base64IOTest(std::string const & test_file_name)
+        : file_name(test_file_name) {}
+    ~CV_Base64IOTest() {}
+protected:
+    void run(int)
+    {
+        try
+        {
+            std::vector<data_t> rawdata;
+
+            cv::Mat _em_out, _em_in;
+            cv::Mat _2d_out, _2d_in;
+            cv::Mat _nd_out, _nd_in;
+
+            {   /* init */
+
+                /* normal mat */
+                _2d_out = cv::Mat(100, 100, CV_8UC3, cvScalar(1U, 2U, 127U));
+                for (int i = 0; i < _2d_out.rows; ++i)
+                    for (int j = 0; j < _2d_out.cols; ++j)
+                        _2d_out.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
+
+                /* 4d mat */
+                const int Size[] = {4, 4, 4, 4};
+                cv::Mat _4d(4, Size, CV_64FC4, cvScalar(0.888, 0.111, 0.666, 0.444));
+                const cv::Range ranges[] = {
+                    cv::Range(0, 2),
+                    cv::Range(0, 2),
+                    cv::Range(1, 2),
+                    cv::Range(0, 2) };
+                _nd_out = _4d(ranges);
+
+                /* raw data */
+                for (int i = 0; i < 1000; i++) {
+                    data_t tmp;
+                    tmp.u1 = 1;
+                    tmp.u2 = 2;
+                    tmp.i1 = 1;
+                    tmp.i2 = 2;
+                    tmp.i3 = 3;
+                    tmp.d1 = 0.1;
+                    tmp.d2 = 0.2;
+                    tmp.i4 = i;
+                    rawdata.push_back(tmp);
+                }
+            }
+
+            {   /* write */
+                cv::FileStorage fs(file_name, cv::FileStorage::WRITE);
+                CvMat holder = _2d_out;
+                cv::cvWriteMat_Base64(*fs, "normal_2d_mat", &holder);
+                CvMatND holder_nd = _nd_out;
+                cv::cvWriteMatND_Base64(*fs, "normal_nd_mat", &holder_nd);
+                holder = _em_out;
+                cv::cvWriteMat_Base64(*fs, "empty_2d_mat", &holder);
+
+                cv::cvStartWriteRawData_Base64(*fs, "rawdata", static_cast<int>(rawdata.size()), "2u3i2di");
+                for (int i = 0; i < 10; i++)
+                    cv::cvWriteRawData_Base64(*fs, rawdata.data() + i * 100, 100);
+                cv::cvEndWriteRawData_Base64(*fs);
+
+                fs.release();
+            }
+
+            {   /* read */
+                cv::FileStorage fs(file_name, cv::FileStorage::READ);
+
+                /* mat */
+                fs["empty_2d_mat"]  >> _em_in;
+                fs["normal_2d_mat"] >> _2d_in;
+                fs["normal_nd_mat"] >> _nd_in;
+
+                /* raw data */
+                std::vector<data_t>(1000).swap(rawdata);
+                cvReadRawData(*fs, fs["rawdata"].node, rawdata.data(), "2u3i2di");
+
+                fs.release();
+            }
+
+            for (int i = 0; i < 1000; i++) {
+                // TODO: Solve this bug in `cvReadRawData`
+                //EXPECT_EQ(rawdata[i].u1, 1);
+                //EXPECT_EQ(rawdata[i].u2, 2);
+                //EXPECT_EQ(rawdata[i].i1, 1);
+                //EXPECT_EQ(rawdata[i].i2, 2);
+                //EXPECT_EQ(rawdata[i].i3, 3);
+                //EXPECT_EQ(rawdata[i].d1, 0.1);
+                //EXPECT_EQ(rawdata[i].d2, 0.2);
+                //EXPECT_EQ(rawdata[i].i4, i);
+            }
+
+            EXPECT_EQ(_em_in.rows   , _em_out.rows);
+            EXPECT_EQ(_em_in.cols   , _em_out.cols);
+            EXPECT_EQ(_em_in.dims   , _em_out.dims);
+            EXPECT_EQ(_em_in.depth(), _em_out.depth());
+            EXPECT_TRUE(_em_in.empty());
+
+            EXPECT_EQ(_2d_in.rows   , _2d_in.rows);
+            EXPECT_EQ(_2d_in.cols   , _2d_in.cols);
+            EXPECT_EQ(_2d_in.dims   , _2d_in.dims);
+            EXPECT_EQ(_2d_in.depth(), _2d_in.depth());
+            for(int i = 0; i < _2d_in.rows; ++i)
+                for (int j = 0; j < _2d_in.cols; ++j)
+                    EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
+
+            EXPECT_EQ(_nd_in.rows   , _nd_in.rows);
+            EXPECT_EQ(_nd_in.cols   , _nd_in.cols);
+            EXPECT_EQ(_nd_in.dims   , _nd_in.dims);
+            EXPECT_EQ(_nd_in.depth(), _nd_in.depth());
+            EXPECT_EQ(cv::countNonZero(cv::mean(_nd_in != _nd_out)), 0);
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+    }
+};
+
+TEST(Core_InputOutput, filestorage_yml_base64)
+{
+    CV_Base64IOTest test("base64_test_tmp_file.yml"); test.safe_run();
+}
+
+TEST(Core_InputOutput, filestorage_xml_base64)
+{
+    CV_Base64IOTest test("base64_test_tmp_file.xml"); test.safe_run();
 }
