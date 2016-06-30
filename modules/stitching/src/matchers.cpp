@@ -695,5 +695,72 @@ void BestOf2NearestRangeMatcher::operator ()(const std::vector<ImageFeatures> &f
 }
 
 
+void AffineBestOf2NearestMatcher::match(const cv::detail::ImageFeatures &features1,
+                                        const cv::detail::ImageFeatures &features2,
+                                        cv::detail::MatchesInfo &matches_info)
+{
+    (*impl_)(features1, features2, matches_info);
+
+    // Check if it makes sense to find transform
+    if (matches_info.matches.size() < static_cast<size_t>(num_matches_thresh1_))
+        return;
+
+    // Construct point-point correspondences for transform estimation
+    // Points are centered s.t. image center is (0,0) - do we need this?
+    cv::Mat src_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
+    cv::Mat dst_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
+    for (size_t i = 0; i < matches_info.matches.size(); ++i)
+    {
+        const cv::DMatch &m = matches_info.matches[i];
+
+        cv::Point2f p = features1.keypoints[static_cast<size_t>(m.queryIdx)].pt;
+        p.x -= features1.img_size.width * 0.5f;
+        p.y -= features1.img_size.height * 0.5f;
+        src_points.at<cv::Point2f>(0, static_cast<int>(i)) = p;
+
+        p = features2.keypoints[static_cast<size_t>(m.trainIdx)].pt;
+        p.x -= features2.img_size.width * 0.5f;
+        p.y -= features2.img_size.height * 0.5f;
+        dst_points.at<cv::Point2f>(0, static_cast<int>(i)) = p;
+    }
+
+    // Find pair-wise motion
+    // will be estimateAffine2D
+    // matches_info.H = estimateRigidTransform(src_points, dst_points,
+    //                                       matches_info.inliers_mask, false);
+
+    if (matches_info.H.empty()) {
+        // could not find trasformation
+        matches_info.confidence = 0;
+        matches_info.num_inliers = 0;
+        return;
+    }
+
+    // extend H to represent linear tranformation in homogeneous coordinates
+    matches_info.H.push_back(cv::Mat::zeros(1, 3, CV_64F));
+    matches_info.H.at<double>(2, 2) = 1;
+
+    /* TODO: should we handle determinant ~ 0 (can it happen due to agressive
+    * scaling?) */
+
+    // Find number of inliers
+    matches_info.num_inliers = 0;
+    for (size_t i = 0; i < matches_info.inliers_mask.size(); ++i)
+        if (matches_info.inliers_mask[i])
+            matches_info.num_inliers++;
+
+    // These coeffs are from paper M. Brown and D. Lowe. "Automatic Panoramic
+    // Image Stitching using Invariant Features"
+    matches_info.confidence =
+      matches_info.num_inliers / (8 + 0.3 * matches_info.matches.size());
+
+    /* should we remove matches between too close images? */
+    // matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
+
+    /* no need to rerun estimation on inliers only.estimateRigidTransform already did this for us.
+       This might be necessary for other functions (will be added later). */
+}
+
+
 } // namespace detail
 } // namespace cv
