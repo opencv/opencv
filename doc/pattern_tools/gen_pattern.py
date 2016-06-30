@@ -61,7 +61,7 @@ class PatternMaker:
 
   def save(self):
     c = canvas(self.g,width="%d%s"%(self.width,self.units),height="%d%s"%(self.height,self.units),viewBox="0 0 %d %d"%(self.width,self.height))
-    c.inkview(self.output)
+    c.save(self.output)
 
 
 def main():
