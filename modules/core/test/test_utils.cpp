@@ -223,13 +223,13 @@ TEST(CommandLineParser, positional_regression_5074_equal_sign)
 TEST(AutoBuffer, allocate_test)
 {
     AutoBuffer<int, 5> abuf(2);
-    EXPECT_EQ(2, abuf.size());
+    EXPECT_EQ(2u, abuf.size());
 
     abuf.allocate(4);
-    EXPECT_EQ(4, abuf.size());
+    EXPECT_EQ(4u, abuf.size());
 
     abuf.allocate(6);
-    EXPECT_EQ(6, abuf.size());
+    EXPECT_EQ(6u, abuf.size());
 }
 
 } // namespace
