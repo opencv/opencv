@@ -1,8 +1,8 @@
 
 /* pngpread.c - read a png file in push mode
  *
- * Last changed in libpng 1.5.11 [June 14, 2012]
- * Copyright (c) 1998-2012 Glenn Randers-Pehrson
+ * Last changed in libpng 1.5.23 [July 23, 2015]
+ * Copyright (c) 1998-2002,2004,2006-2015 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -19,7 +19,6 @@
 #define PNG_READ_SIG_MODE   0
 #define PNG_READ_CHUNK_MODE 1
 #define PNG_READ_IDAT_MODE  2
-#define PNG_SKIP_MODE       3
 #define PNG_READ_tEXt_MODE  4
 #define PNG_READ_zTXt_MODE  5
 #define PNG_READ_DONE_MODE  6
@@ -49,7 +48,7 @@ png_process_data_pause(png_structp png_ptr, int save)
       /* It's easiest for the caller if we do the save, then the caller doesn't
        * have to supply the same data again:
        */
-      if (save)
+      if (save != 0)
          png_push_save_buffer(png_ptr);
       else
       {
@@ -71,32 +70,15 @@ png_process_data_pause(png_structp png_ptr, int save)
 png_uint_32 PNGAPI
 png_process_data_skip(png_structp png_ptr)
 {
-   png_uint_32 remaining = 0;
-
-   if (png_ptr != NULL && png_ptr->process_mode == PNG_SKIP_MODE &&
-      png_ptr->skip_length > 0)
-   {
-      /* At the end of png_process_data the buffer size must be 0 (see the loop
-       * above) so we can detect a broken call here:
-       */
-      if (png_ptr->buffer_size != 0)
-         png_error(png_ptr,
-            "png_process_data_skip called inside png_process_data");
-
-      /* If is impossible for there to be a saved buffer at this point -
-       * otherwise we could not be in SKIP mode.  This will also happen if
-       * png_process_skip is called inside png_process_data (but only very
-       * rarely.)
-       */
-      if (png_ptr->save_buffer_size != 0)
-         png_error(png_ptr, "png_process_data_skip called with saved data");
-
-      remaining = png_ptr->skip_length;
-      png_ptr->skip_length = 0;
-      png_ptr->process_mode = PNG_READ_CHUNK_MODE;
-   }
-
-   return remaining;
+    /* TODO: Deprecate and remove this API.
+     * Somewhere the implementation of this seems to have been lost,
+     * or abandoned.  It was only to support some internal back-door access
+     * to png_struct) in libpng-1.4.x.
+     */
+   png_warning(png_ptr,
+       "png_process_data_skip is not implemented in any current version"
+       " of libpng");
+   return 0;
 }
 
 /* What we do with the incoming data depends on what we were previously
@@ -128,12 +110,6 @@ png_process_some_data(png_structp png_ptr, png_infop info_ptr)
          break;
       }
 
-      case PNG_SKIP_MODE:
-      {
-         png_push_crc_finish(png_ptr);
-         break;
-      }
-
       default:
       {
          png_ptr->buffer_size = 0;
@@ -151,7 +127,7 @@ png_process_some_data(png_structp png_ptr, png_infop info_ptr)
 void /* PRIVATE */
 png_push_read_sig(png_structp png_ptr, png_infop info_ptr)
 {
-   png_size_t num_checked = png_ptr->sig_bytes,
+   png_size_t num_checked = png_ptr->sig_bytes, /* SAFE, does not exceed 8 */
        num_to_check = 8 - num_checked;
 
    if (png_ptr->buffer_size < num_to_check)
@@ -564,76 +540,6 @@ png_push_read_chunk(png_structp png_ptr, png_infop info_ptr)
    png_ptr->mode &= ~PNG_HAVE_CHUNK_HEADER;
 }
 
-void /* PRIVATE */
-png_push_crc_skip(png_structp png_ptr, png_uint_32 skip)
-{
-   png_ptr->process_mode = PNG_SKIP_MODE;
-   png_ptr->skip_length = skip;
-}
-
-void /* PRIVATE */
-png_push_crc_finish(png_structp png_ptr)
-{
-   if (png_ptr->skip_length && png_ptr->save_buffer_size)
-   {
-      png_size_t save_size = png_ptr->save_buffer_size;
-      png_uint_32 skip_length = png_ptr->skip_length;
-
-      /* We want the smaller of 'skip_length' and 'save_buffer_size', but
-       * they are of different types and we don't know which variable has the
-       * fewest bits.  Carefully select the smaller and cast it to the type of
-       * the larger - this cannot overflow.  Do not cast in the following test
-       * - it will break on either 16 or 64 bit platforms.
-       */
-      if (skip_length < save_size)
-         save_size = (png_size_t)skip_length;
-
-      else
-         skip_length = (png_uint_32)save_size;
-
-      png_calculate_crc(png_ptr, png_ptr->save_buffer_ptr, save_size);
-
-      png_ptr->skip_length -= skip_length;
-      png_ptr->buffer_size -= save_size;
-      png_ptr->save_buffer_size -= save_size;
-      png_ptr->save_buffer_ptr += save_size;
-   }
-
-   if (png_ptr->skip_length && png_ptr->current_buffer_size)
-   {
-      png_size_t save_size = png_ptr->current_buffer_size;
-      png_uint_32 skip_length = png_ptr->skip_length;
-
-      /* We want the smaller of 'skip_length' and 'current_buffer_size', here,
-       * the same problem exists as above and the same solution.
-       */
-      if (skip_length < save_size)
-         save_size = (png_size_t)skip_length;
-
-      else
-         skip_length = (png_uint_32)save_size;
-
-      png_calculate_crc(png_ptr, png_ptr->current_buffer_ptr, save_size);
-
-      png_ptr->skip_length -= skip_length;
-      png_ptr->buffer_size -= save_size;
-      png_ptr->current_buffer_size -= save_size;
-      png_ptr->current_buffer_ptr += save_size;
-   }
-
-   if (!png_ptr->skip_length)
-   {
-      if (png_ptr->buffer_size < 4)
-      {
-         png_push_save_buffer(png_ptr);
-         return;
-      }
-
-      png_crc_finish(png_ptr, 0);
-      png_ptr->process_mode = PNG_READ_CHUNK_MODE;
-   }
-}
-
 void PNGCBAPI
 png_push_fill_buffer(png_structp png_ptr, png_bytep buffer, png_size_t length)
 {
@@ -896,6 +802,12 @@ png_process_IDAT_data(png_structp png_ptr, png_bytep buffer,
        * for why this doesn't happen at present with zlib 1.2.5).
        */
       ret = inflate(&png_ptr->zstream, Z_SYNC_FLUSH);
+
+      /* Hack, added in 1.5.18: the progressive reader does not reset
+       * png_ptr->zstream, so any attempt to use it after the last IDAT fails
+       * (silently).  This allows the read code to do the reset when required.
+       */
+      png_ptr->flags |= PNG_FLAG_ZSTREAM_PROGRESSIVE;
 
       /* Check for any failure before proceeding. */
       if (ret != Z_OK && ret != Z_STREAM_END)
@@ -1285,7 +1197,7 @@ png_progressive_combine_row (png_structp png_ptr, png_bytep old_row,
     * it must be png_ptr->row_buf+1
     */
    if (new_row != NULL)
-      png_combine_row(png_ptr, old_row, 1/*display*/);
+      png_combine_row(png_ptr, old_row, 1/*blocky display*/);
 }
 #endif /* PNG_READ_INTERLACING_SUPPORTED */
 
