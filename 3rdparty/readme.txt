@@ -14,8 +14,8 @@ libjpeg 8d (8.4)  -   The Independent JPEG Group's JPEG software.
                       HAVE_JPEG preprocessor flag must be set to make highgui use libjpeg.
                       On UNIX systems configure script takes care of it.
 ------------------------------------------------------------------------------------
-libpng 1.5.12     -   Portable Network Graphics library.
-                      Copyright (c) 2004, 2006-2012 Glenn Randers-Pehrson.
+libpng            -   Portable Network Graphics library.
+                      The license and copyright notes can be found in libpng/LICENSE.
                       See libpng home page http://www.libpng.org
                       for details and links to the source code
 

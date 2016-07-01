@@ -1,8 +1,8 @@
 diff --git a/3rdparty/libpng/pngpriv.h b/3rdparty/libpng/pngpriv.h
-index 07b2b0b..e7824b8 100644
+index 8bdcccc..0f1c638 100644
 --- a/3rdparty/libpng/pngpriv.h
 +++ b/3rdparty/libpng/pngpriv.h
-@@ -360,7 +360,7 @@ typedef PNG_CONST png_uint_16p FAR * png_const_uint_16pp;
+@@ -372,7 +372,7 @@
  
  /* Memory model/platform independent fns */
  #ifndef PNG_ABORT
@@ -11,7 +11,7 @@ index 07b2b0b..e7824b8 100644
  #    define PNG_ABORT() ExitProcess(0)
  #  else
  #    define PNG_ABORT() abort()
-@@ -378,7 +378,7 @@ typedef PNG_CONST png_uint_16p FAR * png_const_uint_16pp;
+@@ -390,7 +390,7 @@
  #  define png_memcpy  _fmemcpy
  #  define png_memset  _fmemset
  #else
