@@ -266,6 +266,12 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         if (pref) break;
 #endif
 
+#ifdef HAVE_AVFOUNDATION_MAC
+    case CV_CAP_AVFOUNDATION_MAC:
+        TRY_OPEN(capture, cvCreateCameraCapture_AVFoundation_Mac(index))
+        if (pref) break;
+#endif
+
 #ifdef HAVE_GIGE_API
     case CV_CAP_GIGANETIX:
         TRY_OPEN(capture, cvCreateCameraCapture_Giganetix(index))
@@ -334,6 +340,12 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
         if (apiPreference) break;
 #endif
 
+#ifdef HAVE_AVFOUNDATION_MAC
+    case CV_CAP_AVFOUNDATION_MAC:
+        TRY_OPEN(result, cvCreateFileCapture_AVFoundation_Mac(filename))
+        if (apiPreference) break;
+#endif
+
 #ifdef HAVE_OPENNI
     case CV_CAP_OPENNI:
         TRY_OPEN(result, cvCreateFileCapture_OpenNI (filename))
@@ -389,6 +401,10 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
 */
 #ifdef HAVE_AVFOUNDATION
     TRY_OPEN(result, cvCreateVideoWriter_AVFoundation(filename, fourcc, fps, frameSize, is_color))
+#endif
+
+#ifdef HAVE_AVFOUNDATION_MAC
+    TRY_OPEN(result, cvCreateVideoWriter_AVFoundation_Mac(filename, fourcc, fps, frameSize, is_color))
 #endif
 
 #if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)

@@ -3,11 +3,12 @@
 
 #ifdef HAVE_OPENCL
 
-#if defined(HAVE_XINE)     || \
-defined(HAVE_GSTREAMER)    || \
-defined(HAVE_QUICKTIME)    || \
-defined(HAVE_AVFOUNDATION) || \
-defined(HAVE_FFMPEG)       || \
+#if defined(HAVE_XINE)         || \
+defined(HAVE_GSTREAMER)        || \
+defined(HAVE_QUICKTIME)        || \
+defined(HAVE_AVFOUNDATION)     || \
+defined(HAVE_AVFOUNDATION_MAC) || \
+defined(HAVE_FFMPEG)           || \
 defined(WIN32)
 
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1

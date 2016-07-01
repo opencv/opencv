@@ -16,6 +16,9 @@
 /* AVFoundation video libraries */
 #cmakedefine HAVE_AVFOUNDATION
 
+/* AVFoundation (Mac) video libraries */
+#cmakedefine HAVE_AVFOUNDATION_MAC
+
 /* V4L capturing support */
 #cmakedefine HAVE_CAMV4L
 
