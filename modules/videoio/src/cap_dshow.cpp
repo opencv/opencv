@@ -2447,13 +2447,15 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
     VD->pAmMediaType->subtype     = mediatype;
 
     //buffer size
-    if (mediatype == MEDIASUBTYPE_RGB24)
-    {
-        VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight*3;
+    if (mediatype == MEDIASUBTYPE_RGB24){
+        VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight * 3;
     }
-    else
-    {
-        // For compressed data, the value can be zero.
+    else if ((mediatype == MEDIASUBTYPE_YUY2) || (mediatype == MEDIASUBTYPE_YVYU) ||
+        (mediatype == MEDIASUBTYPE_UYVY)){
+
+        VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight * 2;
+    }
+    else{
         VD->pAmMediaType->lSampleSize = 0;
     }
 
