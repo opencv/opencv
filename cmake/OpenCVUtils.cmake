@@ -30,6 +30,19 @@ function(ocv_cmake_eval var_name)
   endif()
 endfunction()
 
+macro(ocv_cmake_configure file_name var_name)
+  configure_file(${file_name} "${CMAKE_BINARY_DIR}/CMakeConfig-${var_name}.cmake" ${ARGN})
+  file(READ "${CMAKE_BINARY_DIR}/CMakeConfig-${var_name}.cmake" ${var_name})
+endmacro()
+
+macro(ocv_update VAR)
+  if(NOT DEFINED ${VAR})
+    set(${VAR} ${ARGN})
+  else()
+    #ocv_debug_message("Preserve old value for ${VAR}: ${${VAR}}")
+  endif()
+endmacro()
+
 # Search packages for host system instead of packages for target system
 # in case of cross compilation thess macro should be defined by toolchain file
 if(NOT COMMAND find_host_package)
@@ -69,6 +82,24 @@ macro(ocv_check_environment_variables)
       message(STATUS "Update variable ${_var} from environment: ${${_var}}")
     endif()
   endforeach()
+endmacro()
+
+macro(ocv_path_join result_var P1 P2_)
+  string(REGEX REPLACE "^[/]+" "" P2 "${P2_}")
+  if("${P1}" STREQUAL "" OR "${P1}" STREQUAL ".")
+    set(${result_var} "${P2}")
+  elseif("${P1}" STREQUAL "/")
+    set(${result_var} "/${P2}")
+  elseif("${P2}" STREQUAL "")
+    set(${result_var} "${P1}")
+  else()
+    set(${result_var} "${P1}/${P2}")
+  endif()
+  string(REGEX REPLACE "([/\\]?)[\\.][/\\]" "\\1" ${result_var} "${${result_var}}")
+  if("${${result_var}}" STREQUAL "")
+    set(${result_var} ".")
+  endif()
+  #message(STATUS "'${P1}' '${P2_}' => '${${result_var}}'")
 endmacro()
 
 # rename modules target to world if needed
@@ -359,7 +390,7 @@ macro(CHECK_MODULE module_name define)
 endmacro()
 
 
-set(OPENCV_BUILD_INFO_FILE "${OpenCV_BINARY_DIR}/version_string.tmp")
+set(OPENCV_BUILD_INFO_FILE "${CMAKE_BINARY_DIR}/version_string.tmp")
 file(REMOVE "${OPENCV_BUILD_INFO_FILE}")
 function(ocv_output_status msg)
   message(STATUS "${msg}")

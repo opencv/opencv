@@ -124,7 +124,7 @@ bool CvCapture_Images::grabFrame()
     }
 
     cvReleaseImage(&frame);
-    frame = cvLoadImage(str, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+    frame = cvLoadImage(str, CV_LOAD_IMAGE_UNCHANGED);
     if( frame )
         currentframe++;
 

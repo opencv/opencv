@@ -971,7 +971,8 @@ bool CvCapture_FFMPEG::grabFrame()
         {
             //picture_pts = picture->best_effort_timestamp;
             if( picture_pts == AV_NOPTS_VALUE_ )
-                picture_pts = packet.pts != AV_NOPTS_VALUE_ && packet.pts != 0 ? packet.pts : packet.dts;
+                picture_pts = picture->pkt_pts != AV_NOPTS_VALUE_ && picture->pkt_pts != 0 ? picture->pkt_pts : picture->pkt_dts;
+
             frame_number++;
             valid = true;
         }
