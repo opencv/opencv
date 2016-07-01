@@ -397,6 +397,27 @@ public:
     CV_WRAP virtual void collectGarbage() = 0;
 };
 
+/** @brief Base interface for sparse optical flow algorithms.
+ */
+class CV_EXPORTS_W SparseOpticalFlow : public Algorithm
+{
+public:
+    /** @brief Calculates a sparse optical flow.
+
+    @param prevImg First input image.
+    @param nextImg Second input image of the same size and the same type as prevImg.
+    @param prevPts Vector of 2D points for which the flow needs to be found.
+    @param nextPts Output vector of 2D points containing the calculated new positions of input features in the second image.
+    @param status Output status vector. Each element of the vector is set to 1 if the
+                  flow for the corresponding features has been found. Otherwise, it is set to 0.
+    @param err Optional output vector that contains error response for each point (inverse confidence).
+     */
+    CV_WRAP virtual void calc(InputArray prevImg, InputArray nextImg,
+                      InputArray prevPts, InputOutputArray nextPts,
+                      OutputArray status,
+                      OutputArray err = cv::noArray()) = 0;
+};
+
 /** @brief "Dual TV L1" Optical Flow Algorithm.
 
 The class implements the "Dual TV L1" optical flow algorithm described in @cite Zach2007 and
@@ -502,11 +523,101 @@ public:
     virtual int getMedianFiltering() const = 0;
     /** @copybrief getMedianFiltering @see getMedianFiltering */
     virtual void setMedianFiltering(int val) = 0;
+
+    /** @brief Creates instance of cv::DualTVL1OpticalFlow*/
+    static Ptr<DualTVL1OpticalFlow> create(
+                                            double tau = 0.25,
+                                            double lambda = 0.15,
+                                            double theta = 0.3,
+                                            int nscales = 5,
+                                            int warps = 5,
+                                            double epsilon = 0.01,
+                                            int innnerIterations = 30,
+                                            int outerIterations = 10,
+                                            double scaleStep = 0.8,
+                                            double gamma = 0.0,
+                                            int medianFiltering = 5,
+                                            bool useInitialFlow = false);
 };
 
 /** @brief Creates instance of cv::DenseOpticalFlow
 */
 CV_EXPORTS_W Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1();
+
+/** @brief Class computing a dense optical flow using the Gunnar Farneback’s algorithm.
+ */
+class CV_EXPORTS_W FarnebackOpticalFlow : public DenseOpticalFlow
+{
+public:
+    virtual int getNumLevels() const = 0;
+    virtual void setNumLevels(int numLevels) = 0;
+
+    virtual double getPyrScale() const = 0;
+    virtual void setPyrScale(double pyrScale) = 0;
+
+    virtual bool getFastPyramids() const = 0;
+    virtual void setFastPyramids(bool fastPyramids) = 0;
+
+    virtual int getWinSize() const = 0;
+    virtual void setWinSize(int winSize) = 0;
+
+    virtual int getNumIters() const = 0;
+    virtual void setNumIters(int numIters) = 0;
+
+    virtual int getPolyN() const = 0;
+    virtual void setPolyN(int polyN) = 0;
+
+    virtual double getPolySigma() const = 0;
+    virtual void setPolySigma(double polySigma) = 0;
+
+    virtual int getFlags() const = 0;
+    virtual void setFlags(int flags) = 0;
+
+    static Ptr<FarnebackOpticalFlow> create(
+            int numLevels = 5,
+            double pyrScale = 0.5,
+            bool fastPyramids = false,
+            int winSize = 13,
+            int numIters = 10,
+            int polyN = 5,
+            double polySigma = 1.1,
+            int flags = 0);
+};
+
+
+/** @brief Class used for calculating a sparse optical flow.
+
+The class can calculate an optical flow for a sparse feature set using the
+iterative Lucas-Kanade method with pyramids.
+
+@sa calcOpticalFlowPyrLK
+
+*/
+class CV_EXPORTS SparsePyrLKOpticalFlow : public SparseOpticalFlow
+{
+public:
+    virtual Size getWinSize() const = 0;
+    virtual void setWinSize(Size winSize) = 0;
+
+    virtual int getMaxLevel() const = 0;
+    virtual void setMaxLevel(int maxLevel) = 0;
+
+    virtual TermCriteria getTermCriteria() const = 0;
+    virtual void setTermCriteria(TermCriteria& crit) = 0;
+
+    virtual int getFlags() const = 0;
+    virtual void setFlags(int flags) = 0;
+
+    virtual double getMinEigThreshold() const = 0;
+    virtual void setMinEigThreshold(double minEigThreshold) = 0;
+
+    static Ptr<SparsePyrLKOpticalFlow> create(
+            Size winSize = Size(21, 21),
+            int maxLevel = 3, TermCriteria crit =
+            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
+            int flags = 0,
+            double minEigThreshold = 1e-4);
+};
 
 //! @} video_track
 
