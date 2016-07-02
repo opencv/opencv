@@ -5,7 +5,7 @@
     <artifactId>opencv</artifactId>
     <packaging>bundle</packaging>
     <version>3.1.0</version>
-    <name>Open CV</name>
+    <name>OpenCV</name>
     <licenses>
         <license>
             <name>License Agreement For Open Source Computer Vision Library (3-clause BSD License)</name>
@@ -132,6 +132,25 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>properties-maven-plugin</artifactId>
+                <version>1.0.0</version>
+                <executions>
+                    <execution>
+                        <id>set-arch-properties</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>read-project-properties</goal>
+                        </goals>
+                        <configuration>
+                            <files>
+                                <file>${build.directory}/build.properties</file>
+                            </files>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <version>1.4.1</version>
@@ -176,23 +195,20 @@ To speed up the build you can try exporting MAKEFLAGS=-jX where X equals the num
                             </rules>
                         </configuration>
                     </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>properties-maven-plugin</artifactId>
-                <version>1.0.0</version>
-                <executions>
                     <execution>
-                        <id>set-arch-properties</id>
                         <phase>process-resources</phase>
+                        <id>check-versions-match</id>
                         <goals>
-                            <goal>read-project-properties</goal>
+                            <goal>enforce</goal>
                         </goals>
                         <configuration>
-                            <files>
-                                <file>${build.directory}/build.properties</file>
-                            </files>
+                            <rules>
+                                <requireProperty>
+                                    <property>project.version</property>
+                                    <regex>${opencv.version}</regex>
+                                    <regexMessage>The Maven POM version ${project.version} does not match the extracted OpenCV version ${opencv.version}.</regexMessage>
+                                </requireProperty>
+                            </rules>
                         </configuration>
                     </execution>
                 </executions>
