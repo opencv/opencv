@@ -107,7 +107,7 @@ void cv::split(const Mat& src, Mat* mv)
     }
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
+    int total = (int)it.size, blocksize = std::min( cn <= 4 ? total : std::min(total, blocksize0) , INT_MAX / cn ) ;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
@@ -252,7 +252,7 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         arrays[k+1] = &mv[k];
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
+    int total = (int)it.size, blocksize = std::min( cn <= 4 ? total : std::min(total, blocksize0) , INT_MAX / cn );
     MergeFunc func = getMergeFunc(depth);
 
     for( i = 0; i < it.nplanes; i++, ++it )
