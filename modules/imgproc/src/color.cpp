@@ -93,6 +93,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include <limits>
+#include "hal_replacement.hpp"
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -171,32 +172,38 @@ class CvtColorLoop_Invoker : public ParallelLoopBody
     typedef typename Cvt::channel_type _Tp;
 public:
 
-    CvtColorLoop_Invoker(const Mat& _src, Mat& _dst, const Cvt& _cvt) :
-        ParallelLoopBody(), src(_src), dst(_dst), cvt(_cvt)
+    CvtColorLoop_Invoker(const uchar * src_data_, size_t src_step_, uchar * dst_data_, size_t dst_step_, int width_, const Cvt& _cvt) :
+        ParallelLoopBody(), src_data(src_data_), src_step(src_step_), dst_data(dst_data_), dst_step(dst_step_),
+        width(width_), cvt(_cvt)
     {
     }
 
     virtual void operator()(const Range& range) const
     {
-        const uchar* yS = src.ptr<uchar>(range.start);
-        uchar* yD = dst.ptr<uchar>(range.start);
+        const uchar* yS = src_data + static_cast<size_t>(range.start) * src_step;
+        uchar* yD = dst_data + static_cast<size_t>(range.start) * dst_step;
 
-        for( int i = range.start; i < range.end; ++i, yS += src.step, yD += dst.step )
-            cvt((const _Tp*)yS, (_Tp*)yD, src.cols);
+        for( int i = range.start; i < range.end; ++i, yS += src_step, yD += dst_step )
+            cvt(reinterpret_cast<const _Tp*>(yS), reinterpret_cast<_Tp*>(yD), width);
     }
 
 private:
-    const Mat& src;
-    Mat& dst;
+    const uchar * src_data;
+    size_t src_step;
+    uchar * dst_data;
+    size_t dst_step;
+    int width;
     const Cvt& cvt;
 
     const CvtColorLoop_Invoker& operator= (const CvtColorLoop_Invoker&);
 };
 
 template <typename Cvt>
-void CvtColorLoop(const Mat& src, Mat& dst, const Cvt& cvt)
+void CvtColorLoop(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, const Cvt& cvt)
 {
-    parallel_for_(Range(0, src.rows), CvtColorLoop_Invoker<Cvt>(src, dst, cvt), src.total()/(double)(1<<16) );
+    parallel_for_(Range(0, height),
+                  CvtColorLoop_Invoker<Cvt>(src_data, src_step, dst_data, dst_step, width, cvt),
+                  (width * height) / static_cast<double>(1<<16));
 }
 
 #if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
@@ -211,17 +218,17 @@ class CvtColorIPPLoop_Invoker :
 {
 public:
 
-    CvtColorIPPLoop_Invoker(const Mat& _src, Mat& _dst, const Cvt& _cvt, bool *_ok) :
-        ParallelLoopBody(), src(_src), dst(_dst), cvt(_cvt), ok(_ok)
+    CvtColorIPPLoop_Invoker(const uchar * src_data_, size_t src_step_, uchar * dst_data_, size_t dst_step_, int width_, const Cvt& _cvt, bool *_ok) :
+        ParallelLoopBody(), src_data(src_data_), src_step(src_step_), dst_data(dst_data_), dst_step(dst_step_), width(width_), cvt(_cvt), ok(_ok)
     {
         *ok = true;
     }
 
     virtual void operator()(const Range& range) const
     {
-        const void *yS = src.ptr<uchar>(range.start);
-        void *yD = dst.ptr<uchar>(range.start);
-        if( !cvt(yS, (int)src.step[0], yD, (int)dst.step[0], src.cols, range.end - range.start) )
+        const void *yS = src_data + src_step * range.start;
+        void *yD = dst_data + dst_step * range.start;
+        if( !cvt(yS, static_cast<int>(src_step), yD, static_cast<int>(dst_step), width, range.end - range.start) )
             *ok = false;
         else
         {
@@ -230,8 +237,11 @@ public:
     }
 
 private:
-    const Mat& src;
-    Mat& dst;
+    const uchar * src_data;
+    size_t src_step;
+    uchar * dst_data;
+    size_t dst_step;
+    int width;
     const Cvt& cvt;
     bool *ok;
 
@@ -239,25 +249,28 @@ private:
 };
 
 template <typename Cvt>
-bool CvtColorIPPLoop(const Mat& src, Mat& dst, const Cvt& cvt)
+bool CvtColorIPPLoop(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, const Cvt& cvt)
 {
     bool ok;
-    parallel_for_(Range(0, src.rows), CvtColorIPPLoop_Invoker<Cvt>(src, dst, cvt, &ok), src.total()/(double)(1<<16) );
+    parallel_for_(Range(0, height), CvtColorIPPLoop_Invoker<Cvt>(src_data, src_step, dst_data, dst_step, width, cvt, &ok), (width * height)/(double)(1<<16) );
     return ok;
 }
 
 template <typename Cvt>
-bool CvtColorIPPLoopCopy(Mat& src, Mat& dst, const Cvt& cvt)
+bool CvtColorIPPLoopCopy(const uchar * src_data, size_t src_step, int src_type, uchar * dst_data, size_t dst_step, int width, int height, const Cvt& cvt)
 {
     Mat temp;
-    Mat &source = src;
-    if( src.data == dst.data )
+    Mat src(Size(width, height), src_type, const_cast<uchar*>(src_data), src_step);
+    Mat source = src;
+    if( src_data == dst_data )
     {
         src.copyTo(temp);
         source = temp;
     }
     bool ok;
-    parallel_for_(Range(0, source.rows), CvtColorIPPLoop_Invoker<Cvt>(source, dst, cvt, &ok),
+    parallel_for_(Range(0, source.rows),
+                  CvtColorIPPLoop_Invoker<Cvt>(source.data, source.step, dst_data, dst_step,
+                                               source.cols, cvt, &ok),
                   source.total()/(double)(1<<16) );
     return ok;
 }
@@ -354,11 +367,13 @@ static ippiGeneralFunc ippiXYZ2RGBTab[] =
     0, (ippiGeneralFunc)ippiXYZToRGB_32f_C3R, 0, 0
 };
 
+#if IPP_DISABLE_BLOCK
 static ippiGeneralFunc ippiRGB2HSVTab[] =
 {
     (ippiGeneralFunc)ippiRGBToHSV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToHSV_16u_C3R, 0,
     0, 0, 0, 0
 };
+#endif
 
 static ippiGeneralFunc ippiHSV2RGBTab[] =
 {
@@ -6106,12 +6121,14 @@ const int ITUR_BT_601_CBV = -74448;
 template<int bIdx, int uIdx>
 struct YUV420sp2RGB888Invoker : ParallelLoopBody
 {
-    Mat* dst;
+    uchar * dst_data;
+    size_t dst_step;
+    int width;
     const uchar* my1, *muv;
-    int width, stride;
+    size_t stride;
 
-    YUV420sp2RGB888Invoker(Mat* _dst, int _stride, const uchar* _y1, const uchar* _uv)
-        : dst(_dst), my1(_y1), muv(_uv), width(_dst->cols), stride(_stride) {}
+    YUV420sp2RGB888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _uv)
+        : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), muv(_uv), stride(_stride) {}
 
     void operator()(const Range& range) const
     {
@@ -6128,15 +6145,10 @@ struct YUV420sp2RGB888Invoker : ParallelLoopBody
 
         const uchar* y1 = my1 + rangeBegin * stride, *uv = muv + rangeBegin * stride / 2;
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        if(tegra::useTegra() && tegra::cvtYUV4202RGB(bIdx, uIdx, 3, y1, uv, stride, dst->ptr<uchar>(rangeBegin), dst->step, rangeEnd - rangeBegin, dst->cols))
-            return;
-#endif
-
         for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, uv += stride)
         {
-            uchar* row1 = dst->ptr<uchar>(j);
-            uchar* row2 = dst->ptr<uchar>(j + 1);
+            uchar* row1 = dst_data + dst_step * j;
+            uchar* row2 = dst_data + dst_step * (j + 1);
             const uchar* y2 = y1 + stride;
 
             for (int i = 0; i < width; i += 2, row1 += 6, row2 += 6)
@@ -6175,12 +6187,14 @@ struct YUV420sp2RGB888Invoker : ParallelLoopBody
 template<int bIdx, int uIdx>
 struct YUV420sp2RGBA8888Invoker : ParallelLoopBody
 {
-    Mat* dst;
+    uchar * dst_data;
+    size_t dst_step;
+    int width;
     const uchar* my1, *muv;
-    int width, stride;
+    size_t stride;
 
-    YUV420sp2RGBA8888Invoker(Mat* _dst, int _stride, const uchar* _y1, const uchar* _uv)
-        : dst(_dst), my1(_y1), muv(_uv), width(_dst->cols), stride(_stride) {}
+    YUV420sp2RGBA8888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _uv)
+        : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), muv(_uv), stride(_stride) {}
 
     void operator()(const Range& range) const
     {
@@ -6197,15 +6211,10 @@ struct YUV420sp2RGBA8888Invoker : ParallelLoopBody
 
         const uchar* y1 = my1 + rangeBegin * stride, *uv = muv + rangeBegin * stride / 2;
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        if(tegra::useTegra() && tegra::cvtYUV4202RGB(bIdx, uIdx, 4, y1, uv, stride, dst->ptr<uchar>(rangeBegin), dst->step, rangeEnd - rangeBegin, dst->cols))
-            return;
-#endif
-
         for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, uv += stride)
         {
-            uchar* row1 = dst->ptr<uchar>(j);
-            uchar* row2 = dst->ptr<uchar>(j + 1);
+            uchar* row1 = dst_data + dst_step * j;
+            uchar* row2 = dst_data + dst_step * (j + 1);
             const uchar* y2 = y1 + stride;
 
             for (int i = 0; i < width; i += 2, row1 += 8, row2 += 8)
@@ -6248,20 +6257,22 @@ struct YUV420sp2RGBA8888Invoker : ParallelLoopBody
 template<int bIdx>
 struct YUV420p2RGB888Invoker : ParallelLoopBody
 {
-    Mat* dst;
+    uchar * dst_data;
+    size_t dst_step;
+    int width;
     const uchar* my1, *mu, *mv;
-    int width, stride;
+    size_t stride;
     int ustepIdx, vstepIdx;
 
-    YUV420p2RGB888Invoker(Mat* _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
-        : dst(_dst), my1(_y1), mu(_u), mv(_v), width(_dst->cols), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
+    YUV420p2RGB888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
+        : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), mu(_u), mv(_v), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
 
     void operator()(const Range& range) const
     {
         const int rangeBegin = range.start * 2;
         const int rangeEnd = range.end * 2;
 
-        int uvsteps[2] = {width/2, stride - width/2};
+        int uvsteps[2] = {width/2, static_cast<int>(stride) - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;
@@ -6276,8 +6287,8 @@ struct YUV420p2RGB888Invoker : ParallelLoopBody
 
         for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += uvsteps[(usIdx++) & 1], v1 += uvsteps[(vsIdx++) & 1])
         {
-            uchar* row1 = dst->ptr<uchar>(j);
-            uchar* row2 = dst->ptr<uchar>(j + 1);
+            uchar* row1 = dst_data + dst_step * j;
+            uchar* row2 = dst_data + dst_step * (j + 1);
             const uchar* y2 = y1 + stride;
 
             for (int i = 0; i < width / 2; i += 1, row1 += 6, row2 += 6)
@@ -6316,20 +6327,22 @@ struct YUV420p2RGB888Invoker : ParallelLoopBody
 template<int bIdx>
 struct YUV420p2RGBA8888Invoker : ParallelLoopBody
 {
-    Mat* dst;
+    uchar * dst_data;
+    size_t dst_step;
+    int width;
     const uchar* my1, *mu, *mv;
-    int width, stride;
+    size_t  stride;
     int ustepIdx, vstepIdx;
 
-    YUV420p2RGBA8888Invoker(Mat* _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
-        : dst(_dst), my1(_y1), mu(_u), mv(_v), width(_dst->cols), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
+    YUV420p2RGBA8888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
+        : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), mu(_u), mv(_v), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
 
     void operator()(const Range& range) const
     {
         int rangeBegin = range.start * 2;
         int rangeEnd = range.end * 2;
 
-        int uvsteps[2] = {width/2, stride - width/2};
+        int uvsteps[2] = {width/2, static_cast<int>(stride) - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;
@@ -6344,8 +6357,8 @@ struct YUV420p2RGBA8888Invoker : ParallelLoopBody
 
         for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += uvsteps[(usIdx++) & 1], v1 += uvsteps[(vsIdx++) & 1])
         {
-            uchar* row1 = dst->ptr<uchar>(j);
-            uchar* row2 = dst->ptr<uchar>(j + 1);
+            uchar* row1 = dst_data + dst_step * j;
+            uchar* row2 = dst_data + dst_step * (j + 1);
             const uchar* y2 = y1 + stride;
 
             for (int i = 0; i < width / 2; i += 1, row1 += 8, row2 += 8)
@@ -6388,70 +6401,78 @@ struct YUV420p2RGBA8888Invoker : ParallelLoopBody
 #define MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION (320*240)
 
 template<int bIdx, int uIdx>
-inline void cvtYUV420sp2RGB(Mat& _dst, int _stride, const uchar* _y1, const uchar* _uv)
+inline void cvtYUV420sp2RGB(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _uv)
 {
-    YUV420sp2RGB888Invoker<bIdx, uIdx> converter(&_dst, _stride, _y1,  _uv);
-    if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
-        parallel_for_(Range(0, _dst.rows/2), converter);
+    YUV420sp2RGB888Invoker<bIdx, uIdx> converter(dst_data, dst_step, dst_width, _stride, _y1,  _uv);
+    if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
+        parallel_for_(Range(0, dst_height/2), converter);
     else
-        converter(Range(0, _dst.rows/2));
+        converter(Range(0, dst_height/2));
 }
 
 template<int bIdx, int uIdx>
-inline void cvtYUV420sp2RGBA(Mat& _dst, int _stride, const uchar* _y1, const uchar* _uv)
+inline void cvtYUV420sp2RGBA(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _uv)
 {
-    YUV420sp2RGBA8888Invoker<bIdx, uIdx> converter(&_dst, _stride, _y1,  _uv);
-    if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
-        parallel_for_(Range(0, _dst.rows/2), converter);
+    YUV420sp2RGBA8888Invoker<bIdx, uIdx> converter(dst_data, dst_step, dst_width, _stride, _y1,  _uv);
+    if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
+        parallel_for_(Range(0, dst_height/2), converter);
     else
-        converter(Range(0, _dst.rows/2));
+        converter(Range(0, dst_height/2));
 }
 
 template<int bIdx>
-inline void cvtYUV420p2RGB(Mat& _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int ustepIdx, int vstepIdx)
+inline void cvtYUV420p2RGB(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int ustepIdx, int vstepIdx)
 {
-    YUV420p2RGB888Invoker<bIdx> converter(&_dst, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
-    if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
-        parallel_for_(Range(0, _dst.rows/2), converter);
+    YUV420p2RGB888Invoker<bIdx> converter(dst_data, dst_step, dst_width, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
+    if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
+        parallel_for_(Range(0, dst_height/2), converter);
     else
-        converter(Range(0, _dst.rows/2));
+        converter(Range(0, dst_height/2));
 }
 
 template<int bIdx>
-inline void cvtYUV420p2RGBA(Mat& _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int ustepIdx, int vstepIdx)
+inline void cvtYUV420p2RGBA(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int ustepIdx, int vstepIdx)
 {
-    YUV420p2RGBA8888Invoker<bIdx> converter(&_dst, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
-    if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
-        parallel_for_(Range(0, _dst.rows/2), converter);
+    YUV420p2RGBA8888Invoker<bIdx> converter(dst_data, dst_step, dst_width, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
+    if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
+        parallel_for_(Range(0, dst_height/2), converter);
     else
-        converter(Range(0, _dst.rows/2));
+        converter(Range(0, dst_height/2));
 }
 
 ///////////////////////////////////// RGB -> YUV420p /////////////////////////////////////
 
-template<int bIdx>
+template<int uIdx>
+inline void swapUV(uchar * &, uchar * &) {}
+template<>
+inline void swapUV<2>(uchar * & u, uchar * & v) { std::swap(u, v); }
+
+template<int bIdx, int uIdx>
 struct RGB888toYUV420pInvoker: public ParallelLoopBody
 {
-    RGB888toYUV420pInvoker( const Mat& src, Mat* dst, const int uIdx )
-        : src_(src),
-          dst_(dst),
-          uIdx_(uIdx) { }
+    RGB888toYUV420pInvoker(const uchar * _src_data, size_t _src_step, uchar * _dst_data, size_t _dst_step,
+                           int _src_width, int _src_height, int _scn)
+        : src_data(_src_data), src_step(_src_step),
+          dst_data(_dst_data), dst_step(_dst_step),
+          src_width(_src_width), src_height(_src_height),
+          scn(_scn) { }
 
     void operator()(const Range& rowRange) const
     {
-        const int w = src_.cols;
-        const int h = src_.rows;
+        const int w = src_width;
+        const int h = src_height;
 
-        const int cn = src_.channels();
+        const int cn = scn;
         for( int i = rowRange.start; i < rowRange.end; i++ )
         {
-            const uchar* row0 = src_.ptr<uchar>(2 * i);
-            const uchar* row1 = src_.ptr<uchar>(2 * i + 1);
+            const uchar* row0 = src_data + src_step * (2 * i);
+            const uchar* row1 = src_data + src_step * (2 * i + 1);
 
-            uchar* y = dst_->ptr<uchar>(2*i);
-            uchar* u = dst_->ptr<uchar>(h + i/2) + (i % 2) * (w/2);
-            uchar* v = dst_->ptr<uchar>(h + (i + h/2)/2) + ((i + h/2) % 2) * (w/2);
-            if( uIdx_ == 2 ) std::swap(u, v);
+            uchar* y = dst_data + dst_step * (2*i);
+            uchar* u = dst_data + dst_step * (h + i/2) + (i % 2) * (w/2);
+            uchar* v = dst_data + dst_step * (h + (i + h/2)/2) + ((i + h/2) % 2) * (w/2);
+
+            swapUV<uIdx>(u, v);
 
             for( int j = 0, k = 0; j < w * cn; j += 2 * cn, k++ )
             {
@@ -6469,8 +6490,8 @@ struct RGB888toYUV420pInvoker: public ParallelLoopBody
 
                 y[2*k + 0]            = saturate_cast<uchar>(y00 >> ITUR_BT_601_SHIFT);
                 y[2*k + 1]            = saturate_cast<uchar>(y01 >> ITUR_BT_601_SHIFT);
-                y[2*k + dst_->step + 0] = saturate_cast<uchar>(y10 >> ITUR_BT_601_SHIFT);
-                y[2*k + dst_->step + 1] = saturate_cast<uchar>(y11 >> ITUR_BT_601_SHIFT);
+                y[2*k + dst_step + 0] = saturate_cast<uchar>(y10 >> ITUR_BT_601_SHIFT);
+                y[2*k + dst_step + 1] = saturate_cast<uchar>(y11 >> ITUR_BT_601_SHIFT);
 
                 const int shifted128 = (128 << ITUR_BT_601_SHIFT);
                 int u00 = ITUR_BT_601_CRU * r00 + ITUR_BT_601_CGU * g00 + ITUR_BT_601_CBU * b00 + halfShift + shifted128;
@@ -6482,27 +6503,33 @@ struct RGB888toYUV420pInvoker: public ParallelLoopBody
         }
     }
 
-    static bool isFit( const Mat& src )
+    static bool isFit( int src_width, int src_height )
     {
-        return (src.total() >= 320*240);
+        return (src_width * src_height >= 320*240);
     }
 
 private:
     RGB888toYUV420pInvoker& operator=(const RGB888toYUV420pInvoker&);
 
-    const Mat& src_;
-    Mat* const dst_;
-    const int uIdx_;
+    const uchar * src_data;
+    size_t src_step;
+    uchar * dst_data;
+    size_t dst_step;
+    int src_width;
+    int src_height;
+    const int scn;
 };
 
 template<int bIdx, int uIdx>
-static void cvtRGBtoYUV420p(const Mat& src, Mat& dst)
+static void cvtRGBtoYUV420p(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int src_width, int src_height, int scn)
 {
-    RGB888toYUV420pInvoker<bIdx> colorConverter(src, &dst, uIdx);
-    if( RGB888toYUV420pInvoker<bIdx>::isFit(src) )
-        parallel_for_(Range(0, src.rows/2), colorConverter);
+    RGB888toYUV420pInvoker<bIdx, uIdx> colorConverter(src_data, src_step, dst_data, dst_step, src_width, src_height, scn);
+    if( RGB888toYUV420pInvoker<bIdx, uIdx>::isFit(src_width, src_height) )
+        parallel_for_(Range(0, src_height/2), colorConverter);
     else
-        colorConverter(Range(0, src.rows/2));
+        colorConverter(Range(0, src_height/2));
 }
 
 ///////////////////////////////////// YUV422 -> RGB /////////////////////////////////////
@@ -6510,12 +6537,16 @@ static void cvtRGBtoYUV420p(const Mat& src, Mat& dst)
 template<int bIdx, int uIdx, int yIdx>
 struct YUV422toRGB888Invoker : ParallelLoopBody
 {
-    Mat* dst;
-    const uchar* src;
-    int width, stride;
+    uchar * dst_data;
+    size_t dst_step;
+    const uchar * src_data;
+    size_t src_step;
+    int width;
 
-    YUV422toRGB888Invoker(Mat* _dst, int _stride, const uchar* _yuv)
-        : dst(_dst), src(_yuv), width(_dst->cols), stride(_stride) {}
+    YUV422toRGB888Invoker(uchar * _dst_data, size_t _dst_step,
+                          const uchar * _src_data, size_t _src_step,
+                          int _width)
+        : dst_data(_dst_data), dst_step(_dst_step), src_data(_src_data), src_step(_src_step), width(_width) {}
 
     void operator()(const Range& range) const
     {
@@ -6524,11 +6555,11 @@ struct YUV422toRGB888Invoker : ParallelLoopBody
 
         const int uidx = 1 - yIdx + uIdx * 2;
         const int vidx = (2 + uidx) % 4;
-        const uchar* yuv_src = src + rangeBegin * stride;
+        const uchar* yuv_src = src_data + rangeBegin * src_step;
 
-        for (int j = rangeBegin; j < rangeEnd; j++, yuv_src += stride)
+        for (int j = rangeBegin; j < rangeEnd; j++, yuv_src += src_step)
         {
-            uchar* row = dst->ptr<uchar>(j);
+            uchar* row = dst_data + dst_step * j;
 
             for (int i = 0; i < 2 * width; i += 4, row += 6)
             {
@@ -6556,12 +6587,16 @@ struct YUV422toRGB888Invoker : ParallelLoopBody
 template<int bIdx, int uIdx, int yIdx>
 struct YUV422toRGBA8888Invoker : ParallelLoopBody
 {
-    Mat* dst;
-    const uchar* src;
-    int width, stride;
+    uchar * dst_data;
+    size_t dst_step;
+    const uchar * src_data;
+    size_t src_step;
+    int width;
 
-    YUV422toRGBA8888Invoker(Mat* _dst, int _stride, const uchar* _yuv)
-        : dst(_dst), src(_yuv), width(_dst->cols), stride(_stride) {}
+    YUV422toRGBA8888Invoker(uchar * _dst_data, size_t _dst_step,
+                            const uchar * _src_data, size_t _src_step,
+                            int _width)
+        : dst_data(_dst_data), dst_step(_dst_step), src_data(_src_data), src_step(_src_step), width(_width) {}
 
     void operator()(const Range& range) const
     {
@@ -6570,11 +6605,11 @@ struct YUV422toRGBA8888Invoker : ParallelLoopBody
 
         const int uidx = 1 - yIdx + uIdx * 2;
         const int vidx = (2 + uidx) % 4;
-        const uchar* yuv_src = src + rangeBegin * stride;
+        const uchar* yuv_src = src_data + rangeBegin * src_step;
 
-        for (int j = rangeBegin; j < rangeEnd; j++, yuv_src += stride)
+        for (int j = rangeBegin; j < rangeEnd; j++, yuv_src += src_step)
         {
-            uchar* row = dst->ptr<uchar>(j);
+            uchar* row = dst_data + dst_step * j;
 
             for (int i = 0; i < 2 * width; i += 4, row += 8)
             {
@@ -6604,23 +6639,25 @@ struct YUV422toRGBA8888Invoker : ParallelLoopBody
 #define MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION (320*240)
 
 template<int bIdx, int uIdx, int yIdx>
-inline void cvtYUV422toRGB(Mat& _dst, int _stride, const uchar* _yuv)
+inline void cvtYUV422toRGB(uchar * dst_data, size_t dst_step, const uchar * src_data, size_t src_step,
+                           int width, int height)
 {
-    YUV422toRGB888Invoker<bIdx, uIdx, yIdx> converter(&_dst, _stride, _yuv);
-    if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION)
-        parallel_for_(Range(0, _dst.rows), converter);
+    YUV422toRGB888Invoker<bIdx, uIdx, yIdx> converter(dst_data, dst_step, src_data, src_step, width);
+    if (width * height >= MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION)
+        parallel_for_(Range(0, height), converter);
     else
-        converter(Range(0, _dst.rows));
+        converter(Range(0, height));
 }
 
 template<int bIdx, int uIdx, int yIdx>
-inline void cvtYUV422toRGBA(Mat& _dst, int _stride, const uchar* _yuv)
+inline void cvtYUV422toRGBA(uchar * dst_data, size_t dst_step, const uchar * src_data, size_t src_step,
+                           int width, int height)
 {
-    YUV422toRGBA8888Invoker<bIdx, uIdx, yIdx> converter(&_dst, _stride, _yuv);
-    if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION)
-        parallel_for_(Range(0, _dst.rows), converter);
+    YUV422toRGBA8888Invoker<bIdx, uIdx, yIdx> converter(dst_data, dst_step, src_data, src_step, width);
+    if (width * height >= MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION)
+        parallel_for_(Range(0, height), converter);
     else
-        converter(Range(0, _dst.rows));
+        converter(Range(0, height));
 }
 
 /////////////////////////// RGBA <-> mRGBA (alpha premultiplied) //////////////
@@ -7324,598 +7361,1025 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
 #endif
 
-#ifdef HAVE_IPP
-static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
+}
+
+//
+// HAL functions
+//
+
+namespace cv {
+namespace hal {
+
+// 8u, 16u, 32f
+void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
+                 uchar * dst_data, size_t dst_step,
+                 int width, int height,
+                 int depth, int scn, int dcn, bool swapBlue)
 {
-    int stype = src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
+    CALL_HAL(cvtBGRtoBGR, cv_hal_cvtBGRtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, scn, dcn, swapBlue);
 
-    Mat dst;
-    Size sz = src.size();
-
-    switch( code )
+#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
+    CV_IPP_CHECK()
     {
-#if IPP_VERSION_X100 >= 700
-        case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
-        case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:
-            CV_Assert( scn == 3 || scn == 4 );
-            dcn = code == CV_BGR2BGRA || code == CV_RGB2BGRA || code == CV_BGRA2RGBA ? 4 : 3;
-            _dst.create( sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if( code == CV_BGR2BGRA)
-            {
-                if ( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 0, 1, 2)) )
-                    return true;
-            }
-            else if( code == CV_BGRA2BGR )
-            {
-                if ( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiCopyAC4C3RTab[depth])) )
-                    return true;
-            }
-            else if( code == CV_BGR2RGBA )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 2, 1, 0)) )
-                    return true;
-            }
-            else if( code == CV_RGBA2BGR )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC4C3RTab[depth], 2, 1, 0)) )
-                    return true;
-            }
-            else if( code == CV_RGB2BGR )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
-                    return true;
-            }
+    if(scn == 3 && dcn == 4 && !swapBlue)
+    {
+        if ( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                             IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 0, 1, 2)) )
+            return;
+    }
+    else if(scn == 4 && dcn == 3 && !swapBlue)
+    {
+        if ( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                             IPPGeneralFunctor(ippiCopyAC4C3RTab[depth])) )
+            return;
+    }
+    else if(scn == 3 && dcn == 4 && swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 2, 1, 0)) )
+            return;
+    }
+    else if(scn == 4 && dcn == 3 && swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPReorderFunctor(ippiSwapChannelsC4C3RTab[depth], 2, 1, 0)) )
+            return;
+    }
+    else if(scn == 3 && dcn == 3 && swapBlue)
+    {
+        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, scn), dst_data, dst_step, width, height,
+                                IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
+            return;
+    }
 #if IPP_VERSION_X100 >= 810
-            else if( code == CV_RGBA2BGRA )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
-                    return true;
-            }
+    else if(scn == 4 && dcn == 4 && swapBlue)
+    {
+        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, scn), dst_data, dst_step, width, height,
+                                IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
+            return;
+    }
+    }
 #endif
-            return false;
 #endif
 
+    int blueIdx = swapBlue ? 2 : 0;
+    if( depth == CV_8U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<uchar>(scn, dcn, blueIdx));
+    else if( depth == CV_16U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<ushort>(scn, dcn, blueIdx));
+    else
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<float>(scn, dcn, blueIdx));
+}
+
+// only 8u
+void cvtBGRtoBGR5x5(const uchar * src_data, size_t src_step,
+                    uchar * dst_data, size_t dst_step,
+                    int width, int height,
+                    int scn, bool swapBlue, int greenBits)
+{
+    CALL_HAL(cvtBGRtoBGR5x5, cv_hal_cvtBGRtoBGR5x5, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, greenBits);
+
+#if defined(HAVE_IPP) && IPP_DISABLE_BLOCK // breaks OCL accuracy tests
+    CV_IPP_CHECK()
+    {
+    CV_SUPPRESS_DEPRECATED_START;
+    if (scn == 3 && greenBits == 6 && !swapBlue)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R)))
+            return;
+    }
+    else if (scn == 4 && greenBits == 6 && !swapBlue)
+    {
+        if (CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(CV_8U, scn), dst_data, dst_step, width, height,
+                                IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[CV_8U],
+                                                         (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 0, 1, 2, CV_8U)))
+            return;
+    }
+    else if (scn == 3 && greenBits == 6 && swapBlue)
+    {
+        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(CV_8U, scn), dst_data, dst_step, width, height,
+                                IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[CV_8U],
+                                                         (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 2, 1, 0, CV_8U)) )
+            return;
+    }
+    else if (scn == 4 && greenBits == 6 && swapBlue)
+    {
+        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(CV_8U, scn), dst_data, dst_step, width, height,
+                                IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[CV_8U],
+                                                         (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 2, 1, 0, CV_8U)) )
+            return;
+    }
+    CV_SUPPRESS_DEPRECATED_END;
+    }
+#endif
+
+    CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB5x5(scn, swapBlue ? 2 : 0, greenBits));
+}
+
+// only 8u
+void cvtBGR5x5toBGR(const uchar * src_data, size_t src_step,
+                    uchar * dst_data, size_t dst_step,
+                    int width, int height,
+                    int dcn, bool swapBlue, int greenBits)
+{
+    CALL_HAL(cvtBGR5x5toBGR, cv_hal_cvtBGR5x5toBGR, src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, greenBits);
+
+#if defined(HAVE_IPP) && IPP_VERSION_X100 < 900
+    CV_IPP_CHECK()
+    {
+    CV_SUPPRESS_DEPRECATED_START;
+    if (dcn == 3 && greenBits == 6 && !swapBlue)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R)))
+            return;
+    }
+    else if (dcn == 3 && greenBits == 6 && swapBlue)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
+                                                     ippiSwapChannelsC3RTab[CV_8U], 2, 1, 0, CV_8U)))
+            return;
+    }
+    else if (dcn == 4 && greenBits == 6 && !swapBlue)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
+                                                     ippiSwapChannelsC3C4RTab[CV_8U], 0, 1, 2, CV_8U)))
+            return;
+    }
+    else if (dcn == 4 && greenBits == 6 && swapBlue)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
+                                                     ippiSwapChannelsC3C4RTab[CV_8U], 2, 1, 0, CV_8U)))
+            return;
+    }
+    CV_SUPPRESS_DEPRECATED_END;
+    }
+#endif
+
+    CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB5x52RGB(dcn, swapBlue ? 2 : 0, greenBits));
+}
+
+// 8u, 16u, 32f
+void cvtBGRtoGray(const uchar * src_data, size_t src_step,
+                  uchar * dst_data, size_t dst_step,
+                  int width, int height,
+                  int depth, int scn, bool swapBlue)
+{
+    CALL_HAL(cvtBGRtoGray, cv_hal_cvtBGRtoGray, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue);
+
+#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
+    CV_IPP_CHECK()
+    {
+    if(depth == CV_32F && scn == 3 && !swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
+            return;
+    }
+    else if(depth == CV_32F && scn == 3 && swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
+            return;
+    }
+    else if(depth == CV_32F && scn == 4 && !swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPColor2GrayFunctor(ippiColor2GrayC4Tab[depth])) )
+            return;
+    }
+    else if(depth == CV_32F && scn == 4 && swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralFunctor(ippiRGB2GrayC4Tab[depth])) )
+            return;
+    }
+    }
+#endif
+
+    int blueIdx = swapBlue ? 2 : 0;
+    if( depth == CV_8U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<uchar>(scn, blueIdx, 0));
+    else if( depth == CV_16U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<ushort>(scn, blueIdx, 0));
+    else
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<float>(scn, blueIdx, 0));
+}
+
+// 8u, 16u, 32f
+void cvtGraytoBGR(const uchar * src_data, size_t src_step,
+                  uchar * dst_data, size_t dst_step,
+                  int width, int height,
+                  int depth, int dcn)
+{
+    CALL_HAL(cvtGraytoBGR, cv_hal_cvtGraytoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn);
+
+#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
+    CV_IPP_CHECK()
+    {
+    if(dcn == 3)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGray2BGRFunctor(ippiCopyP3C3RTab[depth])) )
+            return;
+    }
+    else if(dcn == 4)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGray2BGRAFunctor(ippiCopyP3C3RTab[depth], ippiSwapChannelsC3C4RTab[depth], depth)) )
+            return;
+    }
+    }
+#endif
+
+    if( depth == CV_8U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<uchar>(dcn));
+    else if( depth == CV_16U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<ushort>(dcn));
+    else
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<float>(dcn));
+}
+
+// only 8u
+void cvtBGR5x5toGray(const uchar * src_data, size_t src_step,
+                     uchar * dst_data, size_t dst_step,
+                     int width, int height,
+                     int greenBits)
+{
+    CALL_HAL(cvtBGR5x5toGray, cv_hal_cvtBGR5x5toGray, src_data, src_step, dst_data, dst_step, width, height, greenBits);
+    CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB5x52Gray(greenBits));
+}
+
+// only 8u
+void cvtGraytoBGR5x5(const uchar * src_data, size_t src_step,
+                     uchar * dst_data, size_t dst_step,
+                     int width, int height,
+                     int greenBits)
+{
+    CALL_HAL(cvtGraytoBGR5x5, cv_hal_cvtGraytoBGR5x5, src_data, src_step, dst_data, dst_step, width, height, greenBits);
+    CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB5x5(greenBits));
+}
+
+// 8u, 16u, 32f
+void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
+                 uchar * dst_data, size_t dst_step,
+                 int width, int height,
+                 int depth, int scn, bool swapBlue, bool isCbCr)
+{
+    CALL_HAL(cvtBGRtoYUV, cv_hal_cvtBGRtoYUV, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isCbCr);
+
+#if defined(HAVE_IPP) && IPP_DISABLE_BLOCK
+    CV_IPP_CHECK()
+    {
+    if (scn == 3 && depth == CV_8U && swapBlue && !isCbCr)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralFunctor((ippiGeneralFunc)ippiRGBToYUV_8u_C3R)))
+            return;
+    }
+    else if (scn == 3 && depth == CV_8U && !swapBlue && !isCbCr)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
+                                                     (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
+            return;
+    }
+    else if (scn == 4 && depth == CV_8U && swapBlue && !isCbCr)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                     (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 0, 1, 2, depth)))
+            return;
+    }
+    else if (scn == 4 && depth == CV_8U && !swapBlue && !isCbCr)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                     (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
+            return;
+    }
+    }
+#endif
+
+    static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
+    static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
+    const float* coeffs_f = isCbCr ? 0 : yuv_f;
+    const int* coeffs_i = isCbCr ? 0 : yuv_i;
+    int blueIdx = swapBlue ? 2 : 0;
+    if( depth == CV_8U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<uchar>(scn, blueIdx, coeffs_i));
+    else if( depth == CV_16U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<ushort>(scn, blueIdx, coeffs_i));
+    else
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_f<float>(scn, blueIdx, coeffs_f));
+}
+
+void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
+                 uchar * dst_data, size_t dst_step,
+                 int width, int height,
+                 int depth, int dcn, bool swapBlue, bool isCbCr)
+{
+    CALL_HAL(cvtYUVtoBGR, cv_hal_cvtYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isCbCr);
+
+
+#if defined(HAVE_IPP) && IPP_DISABLE_BLOCK
+    CV_IPP_CHECK()
+    {
+    if (dcn == 3 && depth == CV_8U && swapBlue && !isCbCr)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R)))
+            return;
+    }
+    else if (dcn == 3 && depth == CV_8U && !swapBlue && !isCbCr)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
+                                                               ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)))
+            return;
+    }
+    else if (dcn == 4 && depth == CV_8U && swapBlue && !isCbCr)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
+                                                               ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)))
+            return;
+    }
+    else if (dcn == 4 && depth == CV_8U && !swapBlue && !isCbCr)
+    {
+        if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
+                                                               ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)))
+            return;
+    }
+    }
+#endif
+
+    static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
+    static const int yuv_i[] = { 33292, -6472, -9519, 18678 };
+    const float* coeffs_f = isCbCr ? 0 : yuv_f;
+    const int* coeffs_i = isCbCr ? 0 : yuv_i;
+    int blueIdx = swapBlue ? 2 : 0;
+    if( depth == CV_8U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<uchar>(dcn, blueIdx, coeffs_i));
+    else if( depth == CV_16U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<ushort>(dcn, blueIdx, coeffs_i));
+    else
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_f<float>(dcn, blueIdx, coeffs_f));
+}
+
+void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,
+                 uchar * dst_data, size_t dst_step,
+                 int width, int height,
+                 int depth, int scn, bool swapBlue)
+{
+    CALL_HAL(cvtBGRtoXYZ, cv_hal_cvtBGRtoXYZ, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue);
+
+#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
+    CV_IPP_CHECK()
+    {
+    if(scn == 3 && depth != CV_32F && !swapBlue)
+    {
+        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, scn), dst_data, dst_step, width, height,
+                                IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
+            return;
+    }
+    else if(scn == 4 && depth != CV_32F && !swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
+            return;
+    }
+    else if(scn == 3 && depth != CV_32F && swapBlue)
+    {
+        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, scn), dst_data, dst_step, width, height,
+                                IPPGeneralFunctor(ippiRGB2XYZTab[depth])) )
+            return;
+    }
+    else if(scn == 4 && depth != CV_32F && swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 0, 1, 2, depth)) )
+            return;
+    }
+    }
+#endif
+
+    int blueIdx = swapBlue ? 2 : 0;
+    if( depth == CV_8U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2XYZ_i<uchar>(scn, blueIdx, 0));
+    else if( depth == CV_16U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2XYZ_i<ushort>(scn, blueIdx, 0));
+    else
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2XYZ_f<float>(scn, blueIdx, 0));
+}
+
+void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
+                 uchar * dst_data, size_t dst_step,
+                 int width, int height,
+                 int depth, int dcn, bool swapBlue)
+{
+    CALL_HAL(cvtXYZtoBGR, cv_hal_cvtXYZtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue);
+
+#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
+    CV_IPP_CHECK()
+    {
+    if(dcn == 3 && depth != CV_32F && !swapBlue)
+    {
+        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, 3), dst_data, dst_step, width, height,
+                                IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+            return;
+    }
+    else if(dcn == 4 && depth != CV_32F && !swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+            return;
+    }
+    if(dcn == 3 && depth != CV_32F && swapBlue)
+    {
+        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, 3), dst_data, dst_step, width, height,
+                                IPPGeneralFunctor(ippiXYZ2RGBTab[depth])) )
+            return;
+    }
+    else if(dcn == 4 && depth != CV_32F && swapBlue)
+    {
+        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                            IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+            return;
+    }
+    }
+#endif
+
+    int blueIdx = swapBlue ? 2 : 0;
+    if( depth == CV_8U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, XYZ2RGB_i<uchar>(dcn, blueIdx, 0));
+    else if( depth == CV_16U )
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, XYZ2RGB_i<ushort>(dcn, blueIdx, 0));
+    else
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, XYZ2RGB_f<float>(dcn, blueIdx, 0));
+}
+
+// 8u, 32f
+void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
+                 uchar * dst_data, size_t dst_step,
+                 int width, int height,
+                 int depth, int scn, bool swapBlue, bool isFullRange, bool isHSV)
+{
+    CALL_HAL(cvtBGRtoHSV, cv_hal_cvtBGRtoHSV, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isFullRange, isHSV);
+
+#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
+    CV_IPP_CHECK()
+    {
+    if (depth == CV_8U && isFullRange)
+    {
+        if (isHSV)
+        {
 #if IPP_DISABLE_BLOCK // breaks OCL accuracy tests
-        case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
-        case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
-            CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
-            _dst.create(sz, CV_8UC2);
-            dst = _dst.getMat();
-
-            CV_SUPPRESS_DEPRECATED_START
-
-            if (code == CV_BGR2BGR565 && scn == 3)
+            if(scn == 3 && !swapBlue)
             {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R)))
-                    return true;
+                if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKE_TYPE(depth, scn), dst_data, dst_step, width, height,
+                                        IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
+                    return;
             }
-            else if (code == CV_BGRA2BGR565 && scn == 4)
+            else if(scn == 4 && !swapBlue)
             {
-                if (CvtColorIPPLoopCopy(src, dst,
-                                        IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                        (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 0, 1, 2, depth)))
-                    return true;
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
+                    return;
             }
-            else if (code == CV_RGB2BGR565 && scn == 3)
+            else if(scn == 4 && swapBlue)
             {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                            (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 2, 1, 0, depth)) )
-                    return true;
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 0, 1, 2, depth)) )
+                    return;
             }
-            else if (code == CV_RGBA2BGR565 && scn == 4)
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                            (ippiGeneralFunc)ippiBGRToBGR565_8u16u_C3R, 2, 1, 0, depth)) )
-                    return true;
-            }
-            CV_SUPPRESS_DEPRECATED_END
-            return false;
 #endif
-
-#if IPP_VERSION_X100 < 900
-        case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
-        case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
-            if(dcn <= 0) dcn = (code==CV_BGR5652BGRA || code==CV_BGR5552BGRA || code==CV_BGR5652RGBA || code==CV_BGR5552RGBA) ? 4 : 3;
-            CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            CV_SUPPRESS_DEPRECATED_START
-            if (code == CV_BGR5652BGR && dcn == 3)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R)))
-                    return true;
-            }
-            else if (code == CV_BGR5652RGB && dcn == 3)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
-                                                                        ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)))
-                    return true;
-            }
-            else if (code == CV_BGR5652BGRA && dcn == 4)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
-                                                                        ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)))
-                    return true;
-            }
-            else if (code == CV_BGR5652RGBA && dcn == 4)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiBGR565ToBGR_16u8u_C3R,
-                                                                        ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)))
-                    return true;
-            }
-            CV_SUPPRESS_DEPRECATED_END
-            return false;
-#endif
-
-#if IPP_VERSION_X100 >= 700
-        case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
-            CV_Assert( scn == 3 || scn == 4 );
-            _dst.create(sz, CV_MAKETYPE(depth, 1));
-            dst = _dst.getMat();
-
-            if( code == CV_BGR2GRAY && depth == CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
-                    return true;
-            }
-            else if( code == CV_RGB2GRAY && depth == CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
-                    return true;
-            }
-            else if( code == CV_BGRA2GRAY && depth == CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC4Tab[depth])) )
-                    return true;
-            }
-            else if( code == CV_RGBA2GRAY && depth == CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC4Tab[depth])) )
-                    return true;
-            }
-            return false;
-
-        case CV_GRAY2BGR: case CV_GRAY2BGRA:
-            if( dcn <= 0 ) dcn = (code==CV_GRAY2BGRA) ? 4 : 3;
-            CV_Assert( scn == 1 && (dcn == 3 || dcn == 4));
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if( code == CV_GRAY2BGR )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGray2BGRFunctor(ippiCopyP3C3RTab[depth])) )
-                    return true;
-            }
-            else if( code == CV_GRAY2BGRA )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGray2BGRAFunctor(ippiCopyP3C3RTab[depth], ippiSwapChannelsC3C4RTab[depth], depth)) )
-                    return true;
-            }
-            return false;
-#endif
-
-#if IPP_DISABLE_BLOCK
-        case CV_BGR2YCrCb: case CV_RGB2YCrCb:
-        case CV_BGR2YUV: case CV_RGB2YUV:
-        {
-            CV_Assert( scn == 3 || scn == 4 );
-            static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
-            static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
-            const float* coeffs_f = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_f;
-            const int* coeffs_i = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_i;
-
-            _dst.create(sz, CV_MAKETYPE(depth, 3));
-            dst = _dst.getMat();
-
-            if (code == CV_RGB2YUV && scn == 3 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiRGBToYUV_8u_C3R)))
-                    return true;
-            }
-            else if (code == CV_BGR2YUV && scn == 3 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                        (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
-                    return true;
-            }
-            else if (code == CV_RGB2YUV && scn == 4 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                        (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 0, 1, 2, depth)))
-                    return true;
-            }
-            else if (code == CV_BGR2YUV && scn == 4 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                        (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
-                    return true;
-            }
-            return false;
         }
-#endif
-
-#if IPP_DISABLE_BLOCK
-        case CV_YCrCb2BGR: case CV_YCrCb2RGB:
-        case CV_YUV2BGR: case CV_YUV2RGB:
+        else
         {
-            if( dcn <= 0 ) dcn = 3;
-            CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
-            static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
-            static const int yuv_i[] = { 33292, -6472, -9519, 18678 };
-            const float* coeffs_f = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? 0 : yuv_f;
-            const int* coeffs_i = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? 0 : yuv_i;
-
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if (code == CV_YUV2RGB && dcn == 3 && depth == CV_8U)
+            if(scn == 3 && !swapBlue)
             {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R)))
-                    return true;
+                if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKE_TYPE(depth, scn), dst_data, dst_step, width, height,
+                                        IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
+                    return;
             }
-            else if (code == CV_YUV2BGR && dcn == 3 && depth == CV_8U)
+            else if(scn == 4 && !swapBlue)
             {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
-                                                                        ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)))
-                    return true;
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
+                    return;
             }
-            else if (code == CV_YUV2RGB && dcn == 4 && depth == CV_8U)
+            else if(scn == 3 && swapBlue)
             {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
-                                                                        ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)))
-                    return true;
+                if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKE_TYPE(depth, scn), dst_data, dst_step, width, height,
+                                        IPPGeneralFunctor(ippiRGB2HLSTab[depth])) )
+                    return;
             }
-            else if (code == CV_YUV2BGR && dcn == 4 && depth == CV_8U)
+            else if(scn == 4 && swapBlue)
             {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
-                                                                        ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)))
-                    return true;
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 0, 1, 2, depth)) )
+                    return;
             }
-            return false;
         }
+    }
+    }
 #endif
 
-#if IPP_VERSION_X100 >= 700
-        case CV_BGR2XYZ: case CV_RGB2XYZ:
-            CV_Assert( scn == 3 || scn == 4 );
-            _dst.create(sz, CV_MAKETYPE(depth, 3));
-            dst = _dst.getMat();
-
-            if( code == CV_BGR2XYZ && scn == 3 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
-                    return true;
-            }
-            else if( code == CV_BGR2XYZ && scn == 4 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
-                    return true;
-            }
-            else if( code == CV_RGB2XYZ && scn == 3 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2XYZTab[depth])) )
-                    return true;
-            }
-            else if( code == CV_RGB2XYZ && scn == 4 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 0, 1, 2, depth)) )
-                    return true;
-            }
-            return false;
-#endif
-
-#if IPP_VERSION_X100 >= 700
-        case CV_XYZ2BGR: case CV_XYZ2RGB:
-            if( dcn <= 0 ) dcn = 3;
-            CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
-
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if( code == CV_XYZ2BGR && dcn == 3 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                    return true;
-            }
-            else if( code == CV_XYZ2BGR && dcn == 4 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                    return true;
-            }
-            if( code == CV_XYZ2RGB && dcn == 3 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiXYZ2RGBTab[depth])) )
-                    return true;
-            }
-            else if( code == CV_XYZ2RGB && dcn == 4 && depth != CV_32F )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                    return true;
-            }
-            return false;
-#endif
-
-#if IPP_VERSION_X100 >= 700
-        case CV_BGR2HSV: case CV_RGB2HSV: case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL:
-        case CV_BGR2HLS: case CV_RGB2HLS: case CV_BGR2HLS_FULL: case CV_RGB2HLS_FULL:
-        {
-            CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
-            _dst.create(sz, CV_MAKETYPE(depth, 3));
-            dst = _dst.getMat();
-
-            if( depth == CV_8U || depth == CV_16U )
-            {
-#if IPP_DISABLE_BLOCK // breaks OCL accuracy tests
-                if( code == CV_BGR2HSV_FULL && scn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
-                        return true;
-                }
-                else if( code == CV_BGR2HSV_FULL && scn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
-                        return true;
-                }
-                else if( code == CV_RGB2HSV_FULL && scn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 0, 1, 2, depth)) )
-                        return true;
-                } else
-#endif
-                if( code == CV_RGB2HSV_FULL && scn == 3 && depth == CV_16U )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HSVTab[depth])) )
-                        return true;
-                }
-                else if( code == CV_BGR2HLS_FULL && scn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
-                        return true;
-                }
-                else if( code == CV_BGR2HLS_FULL && scn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
-                        return true;
-                }
-                else if( code == CV_RGB2HLS_FULL && scn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HLSTab[depth])) )
-                        return true;
-                }
-                else if( code == CV_RGB2HLS_FULL && scn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 0, 1, 2, depth)) )
-                        return true;
-                }
-            }
-            return false;
-        }
-#endif
-
-#if IPP_VERSION_X100 >= 700
-        case CV_HSV2BGR: case CV_HSV2RGB: case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL:
-        case CV_HLS2BGR: case CV_HLS2RGB: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
-        {
-            if( dcn <= 0 ) dcn = 3;
-            CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if( depth == CV_8U || depth == CV_16U )
-            {
-                if( code == CV_HSV2BGR_FULL && dcn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                        return true;
-                }
-                else if( code == CV_HSV2BGR_FULL && dcn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                        return true;
-                }
-                else if( code == CV_HSV2RGB_FULL && dcn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiHSV2RGBTab[depth])) )
-                        return true;
-                }
-                else if( code == CV_HSV2RGB_FULL && dcn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                        return true;
-                }
-                else if( code == CV_HLS2BGR_FULL && dcn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                        return true;
-                }
-                else if( code == CV_HLS2BGR_FULL && dcn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                        return true;
-                }
-                else if( code == CV_HLS2RGB_FULL && dcn == 3 )
-                {
-                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiHLS2RGBTab[depth])) )
-                        return true;
-                }
-                else if( code == CV_HLS2RGB_FULL && dcn == 4 )
-                {
-                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                        return true;
-                }
-            }
-            return false;
-        }
-#endif
-
-#if IPP_DISABLE_BLOCK
-        case CV_BGR2Lab: case CV_RGB2Lab: case CV_LBGR2Lab: case CV_LRGB2Lab:
-        case CV_BGR2Luv: case CV_RGB2Luv: case CV_LBGR2Luv: case CV_LRGB2Luv:
-        {
-            CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bool srgb = code == CV_BGR2Lab || code == CV_RGB2Lab ||
-                        code == CV_BGR2Luv || code == CV_RGB2Luv;
-
-            _dst.create(sz, CV_MAKETYPE(depth, 3));
-            dst = _dst.getMat();
-
-            if (code == CV_LBGR2Lab && scn == 3 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToLab_8u_C3R)))
-                    return true;
-            }
-            else if (code == CV_LBGR2Lab && scn == 4 && depth == CV_8U)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                        (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 0, 1, 2, depth)))
-                    return true;
-            }
-            else
-            if (code == CV_LRGB2Lab && scn == 3 && depth == CV_8U) // slower than OpenCV
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                        (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
-                    return true;
-            }
-            else if (code == CV_LRGB2Lab && scn == 4 && depth == CV_8U) // slower than OpenCV
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                        (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
-                    return true;
-            }
-            else if (code == CV_LRGB2Luv && scn == 3)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGBToLUVTab[depth])))
-                    return true;
-            }
-            else if (code == CV_LRGB2Luv && scn == 4)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                        ippiRGBToLUVTab[depth], 0, 1, 2, depth)))
-                    return true;
-            }
-            else if (code == CV_LBGR2Luv && scn == 3)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                                        ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
-                    return true;
-            }
-            else if (code == CV_LBGR2Luv && scn == 4)
-            {
-                if (CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                                        ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
-                    return true;
-            }
-            return false;
-        }
-#endif
-
-#if IPP_DISABLE_BLOCK
-        case CV_Lab2BGR: case CV_Lab2RGB: case CV_Lab2LBGR: case CV_Lab2LRGB:
-        case CV_Luv2BGR: case CV_Luv2RGB: case CV_Luv2LBGR: case CV_Luv2LRGB:
-        {
-            if( dcn <= 0 ) dcn = 3;
-            CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bool srgb = code == CV_Lab2BGR || code == CV_Lab2RGB ||
-                    code == CV_Luv2BGR || code == CV_Luv2RGB;
-
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if( code == CV_Lab2LBGR && dcn == 3 && depth == CV_8U)
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R)) )
-                    return true;
-            }
-            else if( code == CV_Lab2LBGR && dcn == 4 && depth == CV_8U )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
-                                    ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                    return true;
-            }
-            if( code == CV_Lab2LRGB && dcn == 3 && depth == CV_8U )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
-                                                                            ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                    return true;
-            }
-            else if( code == CV_Lab2LRGB && dcn == 4 && depth == CV_8U )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
-                                                                        ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                    return true;
-            }
-            if( code == CV_Luv2LRGB && dcn == 3 )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiLUVToRGBTab[depth])) )
-                    return true;
-            }
-            else if( code == CV_Luv2LRGB && dcn == 4 )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
-                                                                        ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
-                    return true;
-            }
-            if( code == CV_Luv2LBGR && dcn == 3 )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
-                                                                        ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
-                    return true;
-            }
-            else if( code == CV_Luv2LBGR && dcn == 4 )
-            {
-                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
-                                                                        ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
-                    return true;
-            }
-            return false;
-        }
-#endif
-
-        case CV_YUV2GRAY_420:
-        {
-            if (dcn <= 0) dcn = 1;
-
-            CV_Assert( dcn == 1 );
-            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
-
-            Size dstSz(sz.width, sz.height * 2 / 3);
-            _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if (ippStsNoErr == ippiCopy_8u_C1R(src.data, (int)src.step, dst.data, (int)dst.step,
-                    ippiSize(dstSz.width, dstSz.height)))
-                return true;
-            return false;
-        }
-
-        case CV_RGBA2mRGBA:
-        {
-            if (dcn <= 0) dcn = 4;
-            CV_Assert( scn == 4 && dcn == 4 );
-
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if( depth == CV_8U )
-            {
-                if (CvtColorIPPLoop(src, dst, IPPGeneralFunctor((ippiGeneralFunc)ippiAlphaPremul_8u_AC4R)))
-                    return true;
-                return false;
-            }
-
-            return false;
-        }
-
-        default:
-            return false;
+    int hrange = depth == CV_32F ? 360 : isFullRange ? 256 : 180;
+    int blueIdx = swapBlue ? 2 : 0;
+    if(isHSV)
+    {
+        if(depth == CV_8U)
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HSV_b(scn, blueIdx, hrange));
+        else
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HSV_f(scn, blueIdx, static_cast<float>(hrange)));
+    }
+    else
+    {
+        if( depth == CV_8U )
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HLS_b(scn, blueIdx, hrange));
+        else
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HLS_f(scn, blueIdx, static_cast<float>(hrange)));
     }
 }
+
+// 8u, 32f
+void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
+                        uchar * dst_data, size_t dst_step,
+                        int width, int height,
+                        int depth, int dcn, bool swapBlue, bool isFullRange, bool isHSV)
+{
+    CALL_HAL(cvtHSVtoBGR, cv_hal_cvtHSVtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isFullRange, isHSV);
+
+#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
+    CV_IPP_CHECK()
+    {
+    if (depth == CV_8U && isFullRange)
+    {
+        if (isHSV)
+        {
+            if(dcn == 3 && !swapBlue)
+            {
+                if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, 3), dst_data, dst_step, width, height,
+                                        IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            else if(dcn == 4 && !swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            else if(dcn == 3 && swapBlue)
+            {
+                if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, 3), dst_data, dst_step, width, height,
+                                        IPPGeneralFunctor(ippiHSV2RGBTab[depth])) )
+                    return;
+            }
+            else if(dcn == 4 && swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                    return;
+            }
+        }
+        else
+        {
+            if(dcn == 3 && !swapBlue)
+            {
+                if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, 3), dst_data, dst_step, width, height,
+                                        IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            else if(dcn == 4 && !swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            else if(dcn == 3 && swapBlue)
+            {
+                if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, 3), dst_data, dst_step, width, height,
+                                        IPPGeneralFunctor(ippiHLS2RGBTab[depth])) )
+                    return;
+            }
+            else if(dcn == 4 && swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                                    IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                    return;
+            }
+        }
+    }
+    }
 #endif
+
+    int hrange = depth == CV_32F ? 360 : isFullRange ? 255 : 180;
+    int blueIdx = swapBlue ? 2 : 0;
+    if(isHSV)
+    {
+        if( depth == CV_8U )
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HSV2RGB_b(dcn, blueIdx, hrange));
+        else
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HSV2RGB_f(dcn, blueIdx, static_cast<float>(hrange)));
+    }
+    else
+    {
+        if( depth == CV_8U )
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HLS2RGB_b(dcn, blueIdx, hrange));
+        else
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, HLS2RGB_f(dcn, blueIdx, static_cast<float>(hrange)));
+    }
+}
+
+// 8u, 32f
+void cvtBGRtoLab(const uchar * src_data, size_t src_step,
+                 uchar * dst_data, size_t dst_step,
+                 int width, int height,
+                 int depth, int scn, bool swapBlue, bool isLab, bool srgb)
+{
+    CALL_HAL(cvtBGRtoLab, cv_hal_cvtBGRtoLab, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isLab, srgb);
+
+#if defined(HAVE_IPP) && IPP_DISABLE_BLOCK
+    CV_IPP_CHECK()
+    {
+    if (!srgb)
+    {
+        if (isLab)
+        {
+            if (scn == 3 && depth == CV_8U && !swapBlue)
+            {
+                if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralFunctor((ippiGeneralFunc)ippiBGRToLab_8u_C3R)))
+                    return;
+            }
+            else if (scn == 4 && depth == CV_8U && !swapBlue)
+            {
+                if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                             (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 0, 1, 2, depth)))
+                    return;
+            }
+            else if (scn == 3 && depth == CV_8U && swapBlue) // slower than OpenCV
+            {
+                if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
+                                                             (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
+                    return;
+            }
+            else if (scn == 4 && depth == CV_8U && swapBlue) // slower than OpenCV
+            {
+                if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                             (ippiGeneralFunc)ippiBGRToLab_8u_C3R, 2, 1, 0, depth)))
+                    return;
+            }
+        }
+        else
+        {
+            if (scn == 3 && swapBlue)
+            {
+                if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralFunctor(ippiRGBToLUVTab[depth])))
+                    return;
+            }
+            else if (scn == 4 && swapBlue)
+            {
+                if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                             ippiRGBToLUVTab[depth], 0, 1, 2, depth)))
+                    return;
+            }
+            else if (scn == 3 && !swapBlue)
+            {
+                if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
+                                                             ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
+                    return;
+            }
+            else if (scn == 4 && !swapBlue)
+            {
+                if (CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
+                                                             ippiRGBToLUVTab[depth], 2, 1, 0, depth)))
+                    return;
+            }
+        }
+    }
+    }
+#endif
+
+
+    int blueIdx = swapBlue ? 2 : 0;
+    if(isLab)
+    {
+        if( depth == CV_8U )
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Lab_b(scn, blueIdx, 0, 0, srgb));
+        else
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Lab_f(scn, blueIdx, 0, 0, srgb));
+    }
+    else
+    {
+        if( depth == CV_8U )
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Luv_b(scn, blueIdx, 0, 0, srgb));
+        else
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Luv_f(scn, blueIdx, 0, 0, srgb));
+    }
+}
+
+// 8u, 32f
+void cvtLabtoBGR(const uchar * src_data, size_t src_step,
+                 uchar * dst_data, size_t dst_step,
+                 int width, int height,
+                 int depth, int dcn, bool swapBlue, bool isLab, bool srgb)
+{
+    CALL_HAL(cvtLabtoBGR, cv_hal_cvtLabtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isLab, srgb);
+
+#if defined(HAVE_IPP) && IPP_DISABLE_BLOCK
+    CV_IPP_CHECK()
+    {
+    if (!srgb)
+    {
+        if (isLab)
+        {
+            if( dcn == 3 && depth == CV_8U && !swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R)) )
+                    return;
+            }
+            else if( dcn == 4 && depth == CV_8U && !swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
+                                                             ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                    return;
+            }
+            if( dcn == 3 && depth == CV_8U && swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
+                                                             ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            else if( dcn == 4 && depth == CV_8U && swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralReorderFunctor((ippiGeneralFunc)ippiLabToBGR_8u_C3R,
+                                                             ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+        }
+        else
+        {
+            if( dcn == 3 && swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralFunctor(ippiLUVToRGBTab[depth])) )
+                    return;
+            }
+            else if( dcn == 4 && swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
+                                                             ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                    return;
+            }
+            if( dcn == 3 && !swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
+                                                             ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            else if( dcn == 4 && !swapBlue)
+            {
+                if( CvtColorIPPLoop(src_data, src_step, dst_data,dst_step, width, height,
+                                    IPPGeneralReorderFunctor(ippiLUVToRGBTab[depth],
+                                                             ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+        }
+    }
+    }
+#endif
+
+    int blueIdx = swapBlue ? 2 : 0;
+    if(isLab)
+    {
+        if( depth == CV_8U )
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Lab2RGB_b(dcn, blueIdx, 0, 0, srgb));
+        else
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Lab2RGB_f(dcn, blueIdx, 0, 0, srgb));
+    }
+    else
+    {
+        if( depth == CV_8U )
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Luv2RGB_b(dcn, blueIdx, 0, 0, srgb));
+        else
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Luv2RGB_f(dcn, blueIdx, 0, 0, srgb));
+    }
+}
+
+void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+                                uchar * dst_data, size_t dst_step,
+                                int dst_width, int dst_height,
+                                int dcn, bool swapBlue, int uIdx)
+{
+    CALL_HAL(cvtTwoPlaneYUVtoBGR, cv_hal_cvtTwoPlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+    int blueIdx = swapBlue ? 2 : 0;
+    const uchar* uv = src_data + src_step * static_cast<size_t>(dst_height);
+    switch(dcn*100 + blueIdx * 10 + uIdx)
+    {
+    case 300: cvtYUV420sp2RGB<0, 0> (dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
+    case 301: cvtYUV420sp2RGB<0, 1> (dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
+    case 320: cvtYUV420sp2RGB<2, 0> (dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
+    case 321: cvtYUV420sp2RGB<2, 1> (dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
+    case 400: cvtYUV420sp2RGBA<0, 0>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
+    case 401: cvtYUV420sp2RGBA<0, 1>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
+    case 420: cvtYUV420sp2RGBA<2, 0>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
+    case 421: cvtYUV420sp2RGBA<2, 1>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, uv); break;
+    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    };
+}
+
+void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+                                  uchar * dst_data, size_t dst_step,
+                                  int dst_width, int dst_height,
+                                  int dcn, bool swapBlue, int uIdx)
+{
+    CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+    const uchar* u = src_data + src_step * static_cast<size_t>(dst_height);
+    const uchar* v = src_data + src_step * static_cast<size_t>(dst_height + dst_height/4) + (dst_width/2) * ((dst_height % 4)/2);
+
+    int ustepIdx = 0;
+    int vstepIdx = dst_height % 4 == 2 ? 1 : 0;
+
+    if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
+    int blueIdx = swapBlue ? 2 : 0;
+
+    switch(dcn*10 + blueIdx)
+    {
+    case 30: cvtYUV420p2RGB<0>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, u, v, ustepIdx, vstepIdx); break;
+    case 32: cvtYUV420p2RGB<2>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, u, v, ustepIdx, vstepIdx); break;
+    case 40: cvtYUV420p2RGBA<0>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, u, v, ustepIdx, vstepIdx); break;
+    case 42: cvtYUV420p2RGBA<2>(dst_data, dst_step, dst_width, dst_height, src_step, src_data, u, v, ustepIdx, vstepIdx); break;
+    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    };
+}
+
+void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
+                           uchar * dst_data, size_t dst_step,
+                           int width, int height,
+                           int scn, bool swapBlue, int uIdx)
+{
+    CALL_HAL(cvtBGRtoThreePlaneYUV, cv_hal_cvtBGRtoThreePlaneYUV, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, uIdx);
+    int blueIdx = swapBlue ? 2 : 0;
+    switch(blueIdx + uIdx*10)
+    {
+    case 10: cvtRGBtoYUV420p<0, 1>(src_data, src_step, dst_data, dst_step, width, height, scn); break;
+    case 12: cvtRGBtoYUV420p<2, 1>(src_data, src_step, dst_data, dst_step, width, height, scn); break;
+    case 20: cvtRGBtoYUV420p<0, 2>(src_data, src_step, dst_data, dst_step, width, height, scn); break;
+    case 22: cvtRGBtoYUV420p<2, 2>(src_data, src_step, dst_data, dst_step, width, height, scn); break;
+    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    };
+}
+
+void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+                         uchar * dst_data, size_t dst_step,
+                         int width, int height,
+                         int dcn, bool swapBlue, int uIdx, int ycn)
+{
+    CALL_HAL(cvtOnePlaneYUVtoBGR, cv_hal_cvtOnePlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, uIdx, ycn);
+    int blueIdx = swapBlue ? 2 : 0;
+    switch(dcn*1000 + blueIdx*100 + uIdx*10 + ycn)
+    {
+    case 3000: cvtYUV422toRGB<0,0,0>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 3001: cvtYUV422toRGB<0,0,1>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 3010: cvtYUV422toRGB<0,1,0>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 3200: cvtYUV422toRGB<2,0,0>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 3201: cvtYUV422toRGB<2,0,1>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 3210: cvtYUV422toRGB<2,1,0>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 4000: cvtYUV422toRGBA<0,0,0>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 4001: cvtYUV422toRGBA<0,0,1>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 4010: cvtYUV422toRGBA<0,1,0>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 4200: cvtYUV422toRGBA<2,0,0>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 4201: cvtYUV422toRGBA<2,0,1>(dst_data, dst_step, src_data, src_step, width, height); break;
+    case 4210: cvtYUV422toRGBA<2,1,0>(dst_data, dst_step, src_data, src_step, width, height); break;
+    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    };
+}
+
+void cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_step,
+                             uchar * dst_data, size_t dst_step,
+                             int width, int height)
+{
+    CALL_HAL(cvtRGBAtoMultipliedRGBA, cv_hal_cvtRGBAtoMultipliedRGBA, src_data, src_step, dst_data, dst_step, width, height);
+
+#ifdef HAVE_IPP
+    CV_IPP_CHECK()
+    {
+    if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
+                        IPPGeneralFunctor((ippiGeneralFunc)ippiAlphaPremul_8u_AC4R)))
+        return;
+    }
+#endif
+
+    CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGBA2mRGBA<uchar>());
+}
+
+void cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step,
+                             uchar * dst_data, size_t dst_step,
+                             int width, int height)
+{
+    CALL_HAL(cvtMultipliedRGBAtoRGBA, cv_hal_cvtMultipliedRGBAtoRGBA, src_data, src_step, dst_data, dst_step, width, height);
+    CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, mRGBA2RGBA<uchar>());
+}
+
+}} // cv::hal::
+
+//
+// Helper functions
+//
+
+inline bool isHSV(int code)
+{
+    switch(code)
+    {
+    case CV_HSV2BGR: case CV_HSV2RGB: case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL:
+    case CV_BGR2HSV: case CV_RGB2HSV: case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL:
+        return true;
+    default:
+        return false;
+    }
+}
+
+inline bool isLab(int code)
+{
+    switch (code)
+    {
+    case CV_Lab2BGR: case CV_Lab2RGB: case CV_Lab2LBGR: case CV_Lab2LRGB:
+    case CV_BGR2Lab: case CV_RGB2Lab: case CV_LBGR2Lab: case CV_LRGB2Lab:
+        return true;
+    default:
+        return false;
+    }
+}
+
+inline bool issRGB(int code)
+{
+    switch (code)
+    {
+    case CV_BGR2Lab: case CV_RGB2Lab: case CV_BGR2Luv: case CV_RGB2Luv:
+    case CV_Lab2BGR: case CV_Lab2RGB: case CV_Luv2BGR: case CV_Luv2RGB:
+        return true;
+    default:
+        return false;
+    }
+}
+
+inline bool swapBlue(int code)
+{
+    switch (code)
+    {
+    case CV_BGR2BGRA: case CV_BGRA2BGR:
+    case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_BGRA2BGR565: case CV_BGRA2BGR555:
+    case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652BGRA: case CV_BGR5552BGRA:
+    case CV_BGR2GRAY: case CV_BGRA2GRAY:
+    case CV_BGR2YCrCb: case CV_BGR2YUV:
+    case CV_YCrCb2BGR: case CV_YUV2BGR:
+    case CV_BGR2XYZ: case CV_XYZ2BGR:
+    case CV_BGR2HSV: case CV_BGR2HLS: case CV_BGR2HSV_FULL: case CV_BGR2HLS_FULL:
+    case CV_YUV2BGR_YV12: case CV_YUV2BGRA_YV12: case CV_YUV2BGR_IYUV: case CV_YUV2BGRA_IYUV:
+    case CV_YUV2BGR_NV21: case CV_YUV2BGRA_NV21: case CV_YUV2BGR_NV12: case CV_YUV2BGRA_NV12:
+    case CV_Lab2BGR: case CV_Luv2BGR: case CV_Lab2LBGR: case CV_Luv2LBGR:
+    case CV_BGR2Lab: case CV_BGR2Luv: case CV_LBGR2Lab: case CV_LBGR2Luv:
+    case CV_HSV2BGR: case CV_HLS2BGR: case CV_HSV2BGR_FULL: case CV_HLS2BGR_FULL:
+    case CV_YUV2BGR_UYVY: case CV_YUV2BGRA_UYVY: case CV_YUV2BGR_YUY2:
+    case CV_YUV2BGRA_YUY2:  case CV_YUV2BGR_YVYU: case CV_YUV2BGRA_YVYU:
+    case CV_BGR2YUV_IYUV: case CV_BGRA2YUV_IYUV: case CV_BGR2YUV_YV12: case CV_BGRA2YUV_YV12:
+        return false;
+    default:
+        return true;
+    }
+}
+
+inline bool isFullRange(int code)
+{
+    switch (code)
+    {
+    case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL: case CV_BGR2HLS_FULL: case CV_RGB2HLS_FULL:
+    case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
+        return true;
+    default:
+        return false;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -7925,7 +8389,7 @@ static bool ipp_cvtColor( Mat &src, OutputArray _dst, int code, int dcn )
 void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
     int stype = _src.type();
-    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), bidx;
+    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), uidx, gbits, ycn;
 
     CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() && !(depth == CV_8U && (code == CV_Luv2BGR || code == CV_Luv2RGB)),
                 ocl_cvtColor(_src, _dst, code, dcn) )
@@ -7934,95 +8398,55 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     Size sz = src.size();
     CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
 
-    CV_IPP_RUN(true, ipp_cvtColor(src, _dst, code, dcn));
-
     switch( code )
     {
         case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
         case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:
             CV_Assert( scn == 3 || scn == 4 );
             dcn = code == CV_BGR2BGRA || code == CV_RGB2BGRA || code == CV_BGRA2RGBA ? 4 : 3;
-            bidx = code == CV_BGR2BGRA || code == CV_BGRA2BGR ? 0 : 2;
-
             _dst.create( sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-
-            if( depth == CV_8U )
-            {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-                if(tegra::useTegra() && tegra::cvtBGR2RGB(src, dst, bidx))
-                    break;
-#endif
-                CvtColorLoop(src, dst, RGB2RGB<uchar>(scn, dcn, bidx));
-            }
-            else if( depth == CV_16U )
-                CvtColorLoop(src, dst, RGB2RGB<ushort>(scn, dcn, bidx));
-            else
-                CvtColorLoop(src, dst, RGB2RGB<float>(scn, dcn, bidx));
+            hal::cvtBGRtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                             depth, scn, dcn, swapBlue(code));
             break;
 
         case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
         case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
             CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
+            gbits = code == CV_BGR2BGR565 || code == CV_RGB2BGR565 ||
+                    code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5;
             _dst.create(sz, CV_8UC2);
             dst = _dst.getMat();
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-            if(code == CV_BGR2BGR565 || code == CV_BGRA2BGR565 || code == CV_RGB2BGR565  || code == CV_RGBA2BGR565)
-                if(tegra::useTegra() && tegra::cvtRGB2RGB565(src, dst, code == CV_RGB2BGR565 || code == CV_RGBA2BGR565 ? 0 : 2))
-                    break;
-#endif
-
-            CvtColorLoop(src, dst, RGB2RGB5x5(scn,
-                      code == CV_BGR2BGR565 || code == CV_BGR2BGR555 ||
-                      code == CV_BGRA2BGR565 || code == CV_BGRA2BGR555 ? 0 : 2,
-                      code == CV_BGR2BGR565 || code == CV_RGB2BGR565 ||
-                      code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5 // green bits
-                                              ));
+            hal::cvtBGRtoBGR5x5(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                                scn, swapBlue(code), gbits);
             break;
 
         case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
         case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
             if(dcn <= 0) dcn = (code==CV_BGR5652BGRA || code==CV_BGR5552BGRA || code==CV_BGR5652RGBA || code==CV_BGR5552RGBA) ? 4 : 3;
             CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
+            gbits = code == CV_BGR5652BGR || code == CV_BGR5652RGB ||
+                    code == CV_BGR5652BGRA || code == CV_BGR5652RGBA ? 6 : 5;
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-
-            CvtColorLoop(src, dst, RGB5x52RGB(dcn,
-                      code == CV_BGR5652BGR || code == CV_BGR5552BGR ||
-                      code == CV_BGR5652BGRA || code == CV_BGR5552BGRA ? 0 : 2, // blue idx
-                      code == CV_BGR5652BGR || code == CV_BGR5652RGB ||
-                      code == CV_BGR5652BGRA || code == CV_BGR5652RGBA ? 6 : 5 // green bits
-                      ));
+            hal::cvtBGR5x5toBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                                dcn, swapBlue(code), gbits);
             break;
 
         case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
             dst = _dst.getMat();
-
-            bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
-
-            if( depth == CV_8U )
-            {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-                if(tegra::useTegra() && tegra::cvtRGB2Gray(src, dst, bidx))
-                    break;
-#endif
-                CvtColorLoop(src, dst, RGB2Gray<uchar>(scn, bidx, 0));
-            }
-            else if( depth == CV_16U )
-                CvtColorLoop(src, dst, RGB2Gray<ushort>(scn, bidx, 0));
-            else
-                CvtColorLoop(src, dst, RGB2Gray<float>(scn, bidx, 0));
+            hal::cvtBGRtoGray(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                              depth, scn, swapBlue(code));
             break;
 
         case CV_BGR5652GRAY: case CV_BGR5552GRAY:
             CV_Assert( scn == 2 && depth == CV_8U );
+            gbits = code == CV_BGR5652GRAY ? 6 : 5;
             _dst.create(sz, CV_8UC1);
             dst = _dst.getMat();
-
-            CvtColorLoop(src, dst, RGB5x52Gray(code == CV_BGR5652GRAY ? 6 : 5));
+            hal::cvtBGR5x5toGray(src.data, src.step, dst.data, dst.step, src.cols, src.rows, gbits);
             break;
 
         case CV_GRAY2BGR: case CV_GRAY2BGRA:
@@ -8030,235 +8454,87 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 1 && (dcn == 3 || dcn == 4));
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-
-            if( depth == CV_8U )
-            {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-                if(tegra::useTegra() && tegra::cvtGray2RGB(src, dst))
-                    break;
-#endif
-                CvtColorLoop(src, dst, Gray2RGB<uchar>(dcn));
-            }
-            else if( depth == CV_16U )
-                CvtColorLoop(src, dst, Gray2RGB<ushort>(dcn));
-            else
-                CvtColorLoop(src, dst, Gray2RGB<float>(dcn));
+            hal::cvtGraytoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, dcn);
             break;
 
         case CV_GRAY2BGR565: case CV_GRAY2BGR555:
             CV_Assert( scn == 1 && depth == CV_8U );
+            gbits = code == CV_GRAY2BGR565 ? 6 : 5;
             _dst.create(sz, CV_8UC2);
             dst = _dst.getMat();
-
-            CvtColorLoop(src, dst, Gray2RGB5x5(code == CV_GRAY2BGR565 ? 6 : 5));
+            hal::cvtGraytoBGR5x5(src.data, src.step, dst.data, dst.step, src.cols, src.rows, gbits);
             break;
 
         case CV_BGR2YCrCb: case CV_RGB2YCrCb:
         case CV_BGR2YUV: case CV_RGB2YUV:
-            {
             CV_Assert( scn == 3 || scn == 4 );
-            bidx = code == CV_BGR2YCrCb || code == CV_BGR2YUV ? 0 : 2;
-            static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
-            static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
-            const float* coeffs_f = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_f;
-            const int* coeffs_i = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_i;
-
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
-
-            if( depth == CV_8U )
-            {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-                if((code == CV_RGB2YCrCb || code == CV_BGR2YCrCb) && tegra::useTegra() && tegra::cvtRGB2YCrCb(src, dst, bidx))
-                    break;
-#endif
-                CvtColorLoop(src, dst, RGB2YCrCb_i<uchar>(scn, bidx, coeffs_i));
-            }
-            else if( depth == CV_16U )
-                CvtColorLoop(src, dst, RGB2YCrCb_i<ushort>(scn, bidx, coeffs_i));
-            else
-                CvtColorLoop(src, dst, RGB2YCrCb_f<float>(scn, bidx, coeffs_f));
-            }
+            hal::cvtBGRtoYUV(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                             depth, scn, swapBlue(code), code == CV_BGR2YCrCb || code == CV_RGB2YCrCb);
             break;
 
         case CV_YCrCb2BGR: case CV_YCrCb2RGB:
         case CV_YUV2BGR: case CV_YUV2RGB:
-            {
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
-            bidx = code == CV_YCrCb2BGR || code == CV_YUV2BGR ? 0 : 2;
-            static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
-            static const int yuv_i[] = { 33292, -6472, -9519, 18678 };
-            const float* coeffs_f = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? 0 : yuv_f;
-            const int* coeffs_i = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? 0 : yuv_i;
-
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-
-            if( depth == CV_8U )
-                CvtColorLoop(src, dst, YCrCb2RGB_i<uchar>(dcn, bidx, coeffs_i));
-            else if( depth == CV_16U )
-                CvtColorLoop(src, dst, YCrCb2RGB_i<ushort>(dcn, bidx, coeffs_i));
-            else
-                CvtColorLoop(src, dst, YCrCb2RGB_f<float>(dcn, bidx, coeffs_f));
-            }
+            hal::cvtYUVtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                             depth, dcn, swapBlue(code), code == CV_YCrCb2BGR || code == CV_YCrCb2RGB);
             break;
 
         case CV_BGR2XYZ: case CV_RGB2XYZ:
             CV_Assert( scn == 3 || scn == 4 );
-            bidx = code == CV_BGR2XYZ ? 0 : 2;
-
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
-
-            if( depth == CV_8U )
-                CvtColorLoop(src, dst, RGB2XYZ_i<uchar>(scn, bidx, 0));
-            else if( depth == CV_16U )
-                CvtColorLoop(src, dst, RGB2XYZ_i<ushort>(scn, bidx, 0));
-            else
-                CvtColorLoop(src, dst, RGB2XYZ_f<float>(scn, bidx, 0));
+            hal::cvtBGRtoXYZ(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, scn, swapBlue(code));
             break;
 
         case CV_XYZ2BGR: case CV_XYZ2RGB:
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
-            bidx = code == CV_XYZ2BGR ? 0 : 2;
-
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-
-            if( depth == CV_8U )
-                CvtColorLoop(src, dst, XYZ2RGB_i<uchar>(dcn, bidx, 0));
-            else if( depth == CV_16U )
-                CvtColorLoop(src, dst, XYZ2RGB_i<ushort>(dcn, bidx, 0));
-            else
-                CvtColorLoop(src, dst, XYZ2RGB_f<float>(dcn, bidx, 0));
+            hal::cvtXYZtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, dcn, swapBlue(code));
             break;
 
         case CV_BGR2HSV: case CV_RGB2HSV: case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL:
         case CV_BGR2HLS: case CV_RGB2HLS: case CV_BGR2HLS_FULL: case CV_RGB2HLS_FULL:
-            {
             CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bidx = code == CV_BGR2HSV || code == CV_BGR2HLS ||
-                code == CV_BGR2HSV_FULL || code == CV_BGR2HLS_FULL ? 0 : 2;
-            int hrange = depth == CV_32F ? 360 : code == CV_BGR2HSV || code == CV_RGB2HSV ||
-                code == CV_BGR2HLS || code == CV_RGB2HLS ? 180 : 256;
-
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
-
-            if( code == CV_BGR2HSV || code == CV_RGB2HSV ||
-                code == CV_BGR2HSV_FULL || code == CV_RGB2HSV_FULL )
-            {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-                if(tegra::useTegra() && tegra::cvtRGB2HSV(src, dst, bidx, hrange))
-                    break;
-#endif
-                if( depth == CV_8U )
-                    CvtColorLoop(src, dst, RGB2HSV_b(scn, bidx, hrange));
-                else
-                    CvtColorLoop(src, dst, RGB2HSV_f(scn, bidx, (float)hrange));
-            }
-            else
-            {
-                if( depth == CV_8U )
-                    CvtColorLoop(src, dst, RGB2HLS_b(scn, bidx, hrange));
-                else
-                    CvtColorLoop(src, dst, RGB2HLS_f(scn, bidx, (float)hrange));
-            }
-            }
+            hal::cvtBGRtoHSV(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                             depth, scn, swapBlue(code), isFullRange(code), isHSV(code));
             break;
 
         case CV_HSV2BGR: case CV_HSV2RGB: case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL:
         case CV_HLS2BGR: case CV_HLS2RGB: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
-            {
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bidx = code == CV_HSV2BGR || code == CV_HLS2BGR ||
-                code == CV_HSV2BGR_FULL || code == CV_HLS2BGR_FULL ? 0 : 2;
-            int hrange = depth == CV_32F ? 360 : code == CV_HSV2BGR || code == CV_HSV2RGB ||
-                code == CV_HLS2BGR || code == CV_HLS2RGB ? 180 : 255;
-
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-
-            if( code == CV_HSV2BGR || code == CV_HSV2RGB ||
-                code == CV_HSV2BGR_FULL || code == CV_HSV2RGB_FULL )
-            {
-                if( depth == CV_8U )
-                    CvtColorLoop(src, dst, HSV2RGB_b(dcn, bidx, hrange));
-                else
-                    CvtColorLoop(src, dst, HSV2RGB_f(dcn, bidx, (float)hrange));
-            }
-            else
-            {
-                if( depth == CV_8U )
-                    CvtColorLoop(src, dst, HLS2RGB_b(dcn, bidx, hrange));
-                else
-                    CvtColorLoop(src, dst, HLS2RGB_f(dcn, bidx, (float)hrange));
-            }
-            }
+            hal::cvtHSVtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                             depth, dcn, swapBlue(code), isFullRange(code), isHSV(code));
             break;
 
         case CV_BGR2Lab: case CV_RGB2Lab: case CV_LBGR2Lab: case CV_LRGB2Lab:
         case CV_BGR2Luv: case CV_RGB2Luv: case CV_LBGR2Luv: case CV_LRGB2Luv:
-            {
             CV_Assert( (scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bidx = code == CV_BGR2Lab || code == CV_BGR2Luv ||
-                   code == CV_LBGR2Lab || code == CV_LBGR2Luv ? 0 : 2;
-            bool srgb = code == CV_BGR2Lab || code == CV_RGB2Lab ||
-                        code == CV_BGR2Luv || code == CV_RGB2Luv;
-
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
-
-            if( code == CV_BGR2Lab || code == CV_RGB2Lab ||
-                code == CV_LBGR2Lab || code == CV_LRGB2Lab )
-            {
-                if( depth == CV_8U )
-                    CvtColorLoop(src, dst, RGB2Lab_b(scn, bidx, 0, 0, srgb));
-                else
-                    CvtColorLoop(src, dst, RGB2Lab_f(scn, bidx, 0, 0, srgb));
-            }
-            else
-            {
-                if( depth == CV_8U )
-                    CvtColorLoop(src, dst, RGB2Luv_b(scn, bidx, 0, 0, srgb));
-                else
-                    CvtColorLoop(src, dst, RGB2Luv_f(scn, bidx, 0, 0, srgb));
-            }
-            }
+            hal::cvtBGRtoLab(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                             depth, scn, swapBlue(code), isLab(code), issRGB(code));
             break;
 
         case CV_Lab2BGR: case CV_Lab2RGB: case CV_Lab2LBGR: case CV_Lab2LRGB:
         case CV_Luv2BGR: case CV_Luv2RGB: case CV_Luv2LBGR: case CV_Luv2LRGB:
-            {
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F) );
-            bidx = code == CV_Lab2BGR || code == CV_Luv2BGR ||
-                   code == CV_Lab2LBGR || code == CV_Luv2LBGR ? 0 : 2;
-            bool srgb = code == CV_Lab2BGR || code == CV_Lab2RGB ||
-                    code == CV_Luv2BGR || code == CV_Luv2RGB;
-
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-
-            if( code == CV_Lab2BGR || code == CV_Lab2RGB ||
-                code == CV_Lab2LBGR || code == CV_Lab2LRGB )
-            {
-                if( depth == CV_8U )
-                    CvtColorLoop(src, dst, Lab2RGB_b(dcn, bidx, 0, 0, srgb));
-                else
-                    CvtColorLoop(src, dst, Lab2RGB_f(dcn, bidx, 0, 0, srgb));
-            }
-            else
-            {
-                if( depth == CV_8U )
-                    CvtColorLoop(src, dst, Luv2RGB_b(dcn, bidx, 0, 0, srgb));
-                else
-                    CvtColorLoop(src, dst, Luv2RGB_f(dcn, bidx, 0, 0, srgb));
-            }
-            }
+            hal::cvtLabtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                             depth, dcn, swapBlue(code), isLab(code), issRGB(code));
             break;
 
         case CV_BayerBG2GRAY: case CV_BayerGB2GRAY: case CV_BayerRG2GRAY: case CV_BayerGR2GRAY:
@@ -8270,76 +8546,31 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case CV_YUV2BGR_NV21:  case CV_YUV2RGB_NV21:  case CV_YUV2BGR_NV12:  case CV_YUV2RGB_NV12:
         case CV_YUV2BGRA_NV21: case CV_YUV2RGBA_NV21: case CV_YUV2BGRA_NV12: case CV_YUV2RGBA_NV12:
-            {
-                // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
-                // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
-
-                if (dcn <= 0) dcn = (code==CV_YUV420sp2BGRA || code==CV_YUV420sp2RGBA || code==CV_YUV2BGRA_NV12 || code==CV_YUV2RGBA_NV12) ? 4 : 3;
-                const int bIdx = (code==CV_YUV2BGR_NV21 || code==CV_YUV2BGRA_NV21 || code==CV_YUV2BGR_NV12 || code==CV_YUV2BGRA_NV12) ? 0 : 2;
-                const int uIdx = (code==CV_YUV2BGR_NV21 || code==CV_YUV2BGRA_NV21 || code==CV_YUV2RGB_NV21 || code==CV_YUV2RGBA_NV21) ? 1 : 0;
-
-                CV_Assert( dcn == 3 || dcn == 4 );
-                CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
-
-                Size dstSz(sz.width, sz.height * 2 / 3);
-                _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-                dst = _dst.getMat();
-
-                int srcstep = (int)src.step;
-                const uchar* y = src.ptr();
-                const uchar* uv = y + srcstep * dstSz.height;
-
-                switch(dcn*100 + bIdx * 10 + uIdx)
-                {
-                    case 300: cvtYUV420sp2RGB<0, 0> (dst, srcstep, y, uv); break;
-                    case 301: cvtYUV420sp2RGB<0, 1> (dst, srcstep, y, uv); break;
-                    case 320: cvtYUV420sp2RGB<2, 0> (dst, srcstep, y, uv); break;
-                    case 321: cvtYUV420sp2RGB<2, 1> (dst, srcstep, y, uv); break;
-                    case 400: cvtYUV420sp2RGBA<0, 0>(dst, srcstep, y, uv); break;
-                    case 401: cvtYUV420sp2RGBA<0, 1>(dst, srcstep, y, uv); break;
-                    case 420: cvtYUV420sp2RGBA<2, 0>(dst, srcstep, y, uv); break;
-                    case 421: cvtYUV420sp2RGBA<2, 1>(dst, srcstep, y, uv); break;
-                    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
-                };
-            }
+            // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
+            // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
+            if (dcn <= 0) dcn = (code==CV_YUV420sp2BGRA || code==CV_YUV420sp2RGBA || code==CV_YUV2BGRA_NV12 || code==CV_YUV2RGBA_NV12) ? 4 : 3;
+            uidx = (code==CV_YUV2BGR_NV21 || code==CV_YUV2BGRA_NV21 || code==CV_YUV2RGB_NV21 || code==CV_YUV2RGBA_NV21) ? 1 : 0;
+            CV_Assert( dcn == 3 || dcn == 4 );
+            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
+            _dst.create(Size(sz.width, sz.height * 2 / 3), CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
+            hal::cvtTwoPlaneYUVtoBGR(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows,
+                                     dcn, swapBlue(code), uidx);
             break;
         case CV_YUV2BGR_YV12: case CV_YUV2RGB_YV12: case CV_YUV2BGRA_YV12: case CV_YUV2RGBA_YV12:
         case CV_YUV2BGR_IYUV: case CV_YUV2RGB_IYUV: case CV_YUV2BGRA_IYUV: case CV_YUV2RGBA_IYUV:
-            {
-                //http://www.fourcc.org/yuv.php#YV12 == yuv420p -> It comprises an NxM Y plane followed by (N/2)x(M/2) V and U planes.
-                //http://www.fourcc.org/yuv.php#IYUV == I420 -> It comprises an NxN Y plane followed by (N/2)x(N/2) U and V planes
-
-                if (dcn <= 0) dcn = (code==CV_YUV2BGRA_YV12 || code==CV_YUV2RGBA_YV12 || code==CV_YUV2RGBA_IYUV || code==CV_YUV2BGRA_IYUV) ? 4 : 3;
-                const int bIdx = (code==CV_YUV2BGR_YV12 || code==CV_YUV2BGRA_YV12 || code==CV_YUV2BGR_IYUV || code==CV_YUV2BGRA_IYUV) ? 0 : 2;
-                const int uIdx  = (code==CV_YUV2BGR_YV12 || code==CV_YUV2RGB_YV12 || code==CV_YUV2BGRA_YV12 || code==CV_YUV2RGBA_YV12) ? 1 : 0;
-
-                CV_Assert( dcn == 3 || dcn == 4 );
-                CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
-
-                Size dstSz(sz.width, sz.height * 2 / 3);
-                _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-                dst = _dst.getMat();
-
-                int srcstep = (int)src.step;
-                const uchar* y = src.ptr();
-                const uchar* u = y + srcstep * dstSz.height;
-                const uchar* v = y + srcstep * (dstSz.height + dstSz.height/4) + (dstSz.width/2) * ((dstSz.height % 4)/2);
-
-                int ustepIdx = 0;
-                int vstepIdx = dstSz.height % 4 == 2 ? 1 : 0;
-
-                if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
-
-                switch(dcn*10 + bIdx)
-                {
-                    case 30: cvtYUV420p2RGB<0>(dst, srcstep, y, u, v, ustepIdx, vstepIdx); break;
-                    case 32: cvtYUV420p2RGB<2>(dst, srcstep, y, u, v, ustepIdx, vstepIdx); break;
-                    case 40: cvtYUV420p2RGBA<0>(dst, srcstep, y, u, v, ustepIdx, vstepIdx); break;
-                    case 42: cvtYUV420p2RGBA<2>(dst, srcstep, y, u, v, ustepIdx, vstepIdx); break;
-                    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
-                };
-            }
+            //http://www.fourcc.org/yuv.php#YV12 == yuv420p -> It comprises an NxM Y plane followed by (N/2)x(M/2) V and U planes.
+            //http://www.fourcc.org/yuv.php#IYUV == I420 -> It comprises an NxN Y plane followed by (N/2)x(N/2) U and V planes
+            if (dcn <= 0) dcn = (code==CV_YUV2BGRA_YV12 || code==CV_YUV2RGBA_YV12 || code==CV_YUV2RGBA_IYUV || code==CV_YUV2BGRA_IYUV) ? 4 : 3;
+            uidx  = (code==CV_YUV2BGR_YV12 || code==CV_YUV2RGB_YV12 || code==CV_YUV2BGRA_YV12 || code==CV_YUV2RGBA_YV12) ? 1 : 0;
+            CV_Assert( dcn == 3 || dcn == 4 );
+            CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
+            _dst.create(Size(sz.width, sz.height * 2 / 3), CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
+            hal::cvtThreePlaneYUVtoBGR(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows,
+                                       dcn, swapBlue(code), uidx);
             break;
+
         case CV_YUV2GRAY_420:
             {
                 if (dcn <= 0) dcn = 1;
@@ -8350,74 +8581,41 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 Size dstSz(sz.width, sz.height * 2 / 3);
                 _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
                 dst = _dst.getMat();
+#ifdef HAVE_IPP
+                if (ippStsNoErr == ippiCopy_8u_C1R(src.data, (int)src.step, dst.data, (int)dst.step,
+                                                   ippiSize(dstSz.width, dstSz.height)))
+                    break;
+#endif
                 src(Range(0, dstSz.height), Range::all()).copyTo(dst);
             }
             break;
         case CV_RGB2YUV_YV12: case CV_BGR2YUV_YV12: case CV_RGBA2YUV_YV12: case CV_BGRA2YUV_YV12:
         case CV_RGB2YUV_IYUV: case CV_BGR2YUV_IYUV: case CV_RGBA2YUV_IYUV: case CV_BGRA2YUV_IYUV:
-            {
-                if (dcn <= 0) dcn = 1;
-                const int bIdx = (code == CV_BGR2YUV_IYUV || code == CV_BGRA2YUV_IYUV || code == CV_BGR2YUV_YV12 || code == CV_BGRA2YUV_YV12) ? 0 : 2;
-                const int uIdx = (code == CV_BGR2YUV_IYUV || code == CV_BGRA2YUV_IYUV || code == CV_RGB2YUV_IYUV || code == CV_RGBA2YUV_IYUV) ? 1 : 2;
-
-                CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
-                CV_Assert( dcn == 1 );
-                CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
-
-                Size dstSz(sz.width, sz.height / 2 * 3);
-                _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
-                dst = _dst.getMat();
-
-                switch(bIdx + uIdx*10)
-                {
-                    case 10: cvtRGBtoYUV420p<0, 1>(src, dst); break;
-                    case 12: cvtRGBtoYUV420p<2, 1>(src, dst); break;
-                    case 20: cvtRGBtoYUV420p<0, 2>(src, dst); break;
-                    case 22: cvtRGBtoYUV420p<2, 2>(src, dst); break;
-                    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
-                };
-            }
+            if (dcn <= 0) dcn = 1;
+            uidx = (code == CV_BGR2YUV_IYUV || code == CV_BGRA2YUV_IYUV || code == CV_RGB2YUV_IYUV || code == CV_RGBA2YUV_IYUV) ? 1 : 2;
+            CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
+            CV_Assert( dcn == 1 );
+            CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
+            _dst.create(Size(sz.width, sz.height / 2 * 3), CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
+            hal::cvtBGRtoThreePlaneYUV(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                                       scn, swapBlue(code), uidx);
             break;
         case CV_YUV2RGB_UYVY: case CV_YUV2BGR_UYVY: case CV_YUV2RGBA_UYVY: case CV_YUV2BGRA_UYVY:
         case CV_YUV2RGB_YUY2: case CV_YUV2BGR_YUY2: case CV_YUV2RGB_YVYU: case CV_YUV2BGR_YVYU:
         case CV_YUV2RGBA_YUY2: case CV_YUV2BGRA_YUY2: case CV_YUV2RGBA_YVYU: case CV_YUV2BGRA_YVYU:
-            {
-                //http://www.fourcc.org/yuv.php#UYVY
-                //http://www.fourcc.org/yuv.php#YUY2
-                //http://www.fourcc.org/yuv.php#YVYU
-
-                if (dcn <= 0) dcn = (code==CV_YUV2RGBA_UYVY || code==CV_YUV2BGRA_UYVY || code==CV_YUV2RGBA_YUY2 || code==CV_YUV2BGRA_YUY2 || code==CV_YUV2RGBA_YVYU || code==CV_YUV2BGRA_YVYU) ? 4 : 3;
-                const int bIdx = (code==CV_YUV2BGR_UYVY || code==CV_YUV2BGRA_UYVY || code==CV_YUV2BGR_YUY2 || code==CV_YUV2BGRA_YUY2 || code==CV_YUV2BGR_YVYU || code==CV_YUV2BGRA_YVYU) ? 0 : 2;
-                const int ycn  = (code==CV_YUV2RGB_UYVY || code==CV_YUV2BGR_UYVY || code==CV_YUV2RGBA_UYVY || code==CV_YUV2BGRA_UYVY) ? 1 : 0;
-                const int uIdx = (code==CV_YUV2RGB_YVYU || code==CV_YUV2BGR_YVYU || code==CV_YUV2RGBA_YVYU || code==CV_YUV2BGRA_YVYU) ? 1 : 0;
-
-                CV_Assert( dcn == 3 || dcn == 4 );
-                CV_Assert( scn == 2 && depth == CV_8U );
-
-                _dst.create(sz, CV_8UC(dcn));
-                dst = _dst.getMat();
-
-                switch(dcn*1000 + bIdx*100 + uIdx*10 + ycn)
-                {
-                    case 3000: cvtYUV422toRGB<0,0,0>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 3001: cvtYUV422toRGB<0,0,1>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 3010: cvtYUV422toRGB<0,1,0>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 3011: cvtYUV422toRGB<0,1,1>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 3200: cvtYUV422toRGB<2,0,0>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 3201: cvtYUV422toRGB<2,0,1>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 3210: cvtYUV422toRGB<2,1,0>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 3211: cvtYUV422toRGB<2,1,1>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 4000: cvtYUV422toRGBA<0,0,0>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 4001: cvtYUV422toRGBA<0,0,1>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 4010: cvtYUV422toRGBA<0,1,0>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 4011: cvtYUV422toRGBA<0,1,1>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 4200: cvtYUV422toRGBA<2,0,0>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 4201: cvtYUV422toRGBA<2,0,1>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 4210: cvtYUV422toRGBA<2,1,0>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    case 4211: cvtYUV422toRGBA<2,1,1>(dst, (int)src.step, src.ptr<uchar>()); break;
-                    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
-                };
-            }
+            //http://www.fourcc.org/yuv.php#UYVY
+            //http://www.fourcc.org/yuv.php#YUY2
+            //http://www.fourcc.org/yuv.php#YVYU
+            if (dcn <= 0) dcn = (code==CV_YUV2RGBA_UYVY || code==CV_YUV2BGRA_UYVY || code==CV_YUV2RGBA_YUY2 || code==CV_YUV2BGRA_YUY2 || code==CV_YUV2RGBA_YVYU || code==CV_YUV2BGRA_YVYU) ? 4 : 3;
+            ycn  = (code==CV_YUV2RGB_UYVY || code==CV_YUV2BGR_UYVY || code==CV_YUV2RGBA_UYVY || code==CV_YUV2BGRA_UYVY) ? 1 : 0;
+            uidx = (code==CV_YUV2RGB_YVYU || code==CV_YUV2BGR_YVYU || code==CV_YUV2RGBA_YVYU || code==CV_YUV2BGRA_YVYU) ? 1 : 0;
+            CV_Assert( dcn == 3 || dcn == 4 );
+            CV_Assert( scn == 2 && depth == CV_8U );
+            _dst.create(sz, CV_8UC(dcn));
+            dst = _dst.getMat();
+            hal::cvtOnePlaneYUVtoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+                                     dcn, swapBlue(code), uidx, ycn);
             break;
         case CV_YUV2GRAY_UYVY: case CV_YUV2GRAY_YUY2:
             {
@@ -8431,42 +8629,22 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             }
             break;
         case CV_RGBA2mRGBA:
-            {
-                if (dcn <= 0) dcn = 4;
-                CV_Assert( scn == 4 && dcn == 4 );
-
-                _dst.create(sz, CV_MAKETYPE(depth, dcn));
-                dst = _dst.getMat();
-
-                if( depth == CV_8U )
-                {
-                    CvtColorLoop(src, dst, RGBA2mRGBA<uchar>());
-                }
-                else
-                {
-                    CV_Error( CV_StsBadArg, "Unsupported image depth" );
-                }
-            }
+            if (dcn <= 0) dcn = 4;
+            CV_Assert( scn == 4 && dcn == 4 && depth == CV_8U );
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
+            hal::cvtRGBAtoMultipliedRGBA(src.data, src.step, dst.data, dst.step, src.cols, src.rows);
             break;
         case CV_mRGBA2RGBA:
-            {
-                if (dcn <= 0) dcn = 4;
-                CV_Assert( scn == 4 && dcn == 4 );
-
-                _dst.create(sz, CV_MAKETYPE(depth, dcn));
-                dst = _dst.getMat();
-
-                if( depth == CV_8U )
-                    CvtColorLoop(src, dst, mRGBA2RGBA<uchar>());
-                else
-                {
-                    CV_Error( CV_StsBadArg, "Unsupported image depth" );
-                }
-            }
+            if (dcn <= 0) dcn = 4;
+            CV_Assert( scn == 4 && dcn == 4 && depth == CV_8U );
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
+            hal::cvtMultipliedRGBAtoRGBA(src.data, src.step, dst.data, dst.step, src.cols, src.rows);
             break;
         default:
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
-    }
+        }
 }
 
 CV_IMPL void
