@@ -5,10 +5,9 @@
  */
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
-#include <stdio.h>
 
 using namespace std;
 using namespace cv;
@@ -27,11 +26,24 @@ void MatchingMethod( int, void* );
 /**
  * @function main
  */
-int main( int, char** argv )
+int main( int argc, char** argv )
 {
+  if (argc < 3)
+  {
+    cout << "Not enough parameters" << endl;
+    cout << "Usage:\n./MatchTemplate_Demo <image_name> <template_name>" << endl;
+    return -1;
+  }
+
   /// Load image and template
-  img = imread( argv[1], 1 );
-  templ = imread( argv[2], 1 );
+  img = imread( argv[1], IMREAD_COLOR );
+  templ = imread( argv[2], IMREAD_COLOR );
+
+  if(img.empty() || templ.empty())
+  {
+    cout << "Can't read one of the images" << endl;
+    return -1;
+  }
 
   /// Create windows
   namedWindow( image_window, WINDOW_AUTOSIZE );

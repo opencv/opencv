@@ -3,9 +3,9 @@
 */
 
 // OpenCV Headers
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 // C++ Standard Libraries
 #include <cmath>
@@ -159,8 +159,8 @@ int main( int argc, char* argv[] ){
      * Check input arguments
     */
     if( argc < 3 ){
-        cout << "usage: " << argv[0] << " <image> <dem>" << endl;
-        return 1;
+        cout << "usage: " << argv[0] << " <image_name> <dem_model_name>" << endl;
+        return -1;
     }
 
     // load the image (note that we don't have the projection information.  You will
