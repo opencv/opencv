@@ -61,6 +61,13 @@
     #include <GL/glu.h>
 #endif
 
+#ifndef BIT_ALLIN
+    #define BIT_ALLIN(x,y) ( ((x)&(y)) == (y) )
+#endif
+#ifndef BIT_MAP
+    #define BIT_MAP(x,y,z) ( ((x)&(y)) ? (z) : 0 )
+#endif
+
 // TODO Fix the initial window size when flags=0.  Right now the initial window is by default
 // 320x240 size.  A better default would be actual size of the image.  Problem
 // is determining desired window size with trackbars while still allowing resizing.
@@ -1006,6 +1013,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     CvWindow* window;
     int len;
+    int b_nautosize;
 
     cvInitSystem(1,(char**)&name);
     if( !name )
@@ -1087,11 +1095,11 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
         hg_windows->prev = window;
     hg_windows = window;
 
-    gtk_window_set_resizable( GTK_WINDOW(window->frame), (flags & CV_WINDOW_AUTOSIZE) == 0 );
-
+    int b_nautosize = ((flags & CV_WINDOW_AUTOSIZE) == 0);
+    gtk_window_set_resizable( GTK_WINDOW(window->frame), b_nautosize );
 
     // allow window to be resized
-    if( (flags & CV_WINDOW_AUTOSIZE)==0 ){
+    if( b_nautosize ){
         GdkGeometry geometry;
         geometry.min_width = 50;
         geometry.min_height = 50;
@@ -1819,7 +1827,7 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
 {
     int code = 0;
 
-    if ( (event->state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK && (event->keyval == GDK_s || event->keyval == GDK_S))
+    if ( BIT_ALLIN(event->state, GDK_CONTROL_MASK) && (event->keyval == GDK_s || event->keyval == GDK_S))
     {
         try
         {
@@ -2000,12 +2008,13 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
                 };
             };
             flags = flags |
-                (state & GDK_SHIFT_MASK ? CV_EVENT_FLAG_SHIFTKEY : 0) |
-                (state & GDK_CONTROL_MASK ? CV_EVENT_FLAG_CTRLKEY : 0) |
-                (state & (GDK_MOD1_MASK|GDK_MOD2_MASK) ? CV_EVENT_FLAG_ALTKEY : 0) |
-                (state & GDK_BUTTON1_MASK ? CV_EVENT_FLAG_LBUTTON : 0) |
-                (state & GDK_BUTTON2_MASK ? CV_EVENT_FLAG_MBUTTON : 0) |
-                (state & GDK_BUTTON3_MASK ? CV_EVENT_FLAG_RBUTTON : 0);
+                BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
+                BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
+                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)   |
+                BIT_MAP(state, GDK_MOD2_MASK,    CV_EVENT_FLAG_ALTKEY)   |
+                BIT_MAP(state, GDK_BUTTON1_MASK, CV_EVENT_FLAG_LBUTTON)  |
+                BIT_MAP(state, GDK_BUTTON2_MASK, CV_EVENT_FLAG_MBUTTON)  |
+                BIT_MAP(state, GDK_BUTTON3_MASK, CV_EVENT_FLAG_RBUTTON);
             window->on_mouse( cv_event, pt.x, pt.y, flags, window->on_mouse_param );
         }
     }
