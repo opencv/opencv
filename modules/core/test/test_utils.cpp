@@ -27,6 +27,7 @@ TEST(CommandLineParser, testFailure)
     parser.get<bool>("h");
     EXPECT_FALSE(parser.check());
 }
+
 TEST(CommandLineParser, testHas_noValues)
 {
     const char* argv[] = {"<bin>", "-h", "--info"};
@@ -216,6 +217,19 @@ TEST(CommandLineParser, positional_regression_5074_equal_sign)
     EXPECT_EQ("1=0", parser.get<String>(0));
     EXPECT_EQ("1=0", parser.get<String>("eq1"));
     EXPECT_TRUE(parser.check());
+}
+
+
+TEST(AutoBuffer, allocate_test)
+{
+    AutoBuffer<int, 5> abuf(2);
+    EXPECT_EQ(2, abuf.size());
+
+    abuf.allocate(4);
+    EXPECT_EQ(4, abuf.size());
+
+    abuf.allocate(6);
+    EXPECT_EQ(6, abuf.size());
 }
 
 } // namespace

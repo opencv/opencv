@@ -5,10 +5,9 @@
  */
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
-#include <stdio.h>
 
 using namespace cv;
 using namespace std;
@@ -24,10 +23,10 @@ int main( int, char** argv )
   const char* equalized_window = "Equalized Image";
 
   /// Load image
-  src = imread( argv[1], 1 );
+  src = imread( argv[1], IMREAD_COLOR );
 
   if( src.empty() )
-    { cout<<"Usage: ./Histogram_Demo <path_to_image>"<<endl;
+    { cout<<"Usage: ./EqualizeHist_Demo <path_to_image>"<<endl;
       return -1;
     }
 
