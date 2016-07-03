@@ -46,940 +46,1130 @@
 namespace cv
 {
 
-static void
-thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
+static void calc_thresh_table(const uchar* src, Size roi, const int srcStep, const int dstStep, const uchar* tab, int j_scalar, uchar* dst)
 {
-    int i, j, j_scalar = 0;
-    uchar tab[256];
-    Size roi = _src.size();
-    roi.width *= _src.channels();
-    size_t src_step = _src.step;
-    size_t dst_step = _dst.step;
-
-    if( _src.isContinuous() && _dst.isContinuous() )
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
     {
-        roi.width *= roi.height;
-        roi.height = 1;
-        src_step = dst_step = roi.width;
-    }
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::thresh_8u(_src, _dst, roi.width, roi.height, thresh, maxval, type))
-        return;
-#endif
-
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        IppiSize sz = { roi.width, roi.height };
-        CV_SUPPRESS_DEPRECATED_START
-        switch( type )
-        {
-        case THRESH_TRUNC:
-#ifndef HAVE_IPP_ICV_ONLY
-            if (_src.data == _dst.data && ippiThreshold_GT_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-#endif
-            if (ippiThreshold_GT_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO:
-#ifndef HAVE_IPP_ICV_ONLY
-            if (_src.data == _dst.data && ippiThreshold_LTVal_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-#endif
-            if (ippiThreshold_LTVal_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO_INV:
-#ifndef HAVE_IPP_ICV_ONLY
-            if (_src.data == _dst.data && ippiThreshold_GTVal_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-#endif
-            if (ippiThreshold_GTVal_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        }
-        CV_SUPPRESS_DEPRECATED_END
-    }
-#endif
-
-    switch( type )
-    {
-    case THRESH_BINARY:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = 0;
-        for( ; i < 256; i++ )
-            tab[i] = maxval;
-        break;
-    case THRESH_BINARY_INV:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = maxval;
-        for( ; i < 256; i++ )
-            tab[i] = 0;
-        break;
-    case THRESH_TRUNC:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = (uchar)i;
-        for( ; i < 256; i++ )
-            tab[i] = thresh;
-        break;
-    case THRESH_TOZERO:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = 0;
-        for( ; i < 256; i++ )
-            tab[i] = (uchar)i;
-        break;
-    case THRESH_TOZERO_INV:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = (uchar)i;
-        for( ; i < 256; i++ )
-            tab[i] = 0;
-        break;
-    default:
-        CV_Error( CV_StsBadArg, "Unknown threshold type" );
-    }
-
-#if CV_SSE2
-    if( checkHardwareSupport(CV_CPU_SSE2) )
-    {
-        __m128i _x80 = _mm_set1_epi8('\x80');
-        __m128i thresh_u = _mm_set1_epi8(thresh);
-        __m128i thresh_s = _mm_set1_epi8(thresh ^ 0x80);
-        __m128i maxval_ = _mm_set1_epi8(maxval);
-        j_scalar = roi.width & -8;
-
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            switch( type )
-            {
-            case THRESH_BINARY:
-                for( j = 0; j <= roi.width - 32; j += 32 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 16) );
-                    v0 = _mm_cmpgt_epi8( _mm_xor_si128(v0, _x80), thresh_s );
-                    v1 = _mm_cmpgt_epi8( _mm_xor_si128(v1, _x80), thresh_s );
-                    v0 = _mm_and_si128( v0, maxval_ );
-                    v1 = _mm_and_si128( v1, maxval_ );
-                    _mm_storeu_si128( (__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128( (__m128i*)(dst + j + 16), v1 );
-                }
-
-                for( ; j <= roi.width - 8; j += 8 )
-                {
-                    __m128i v0 = _mm_loadl_epi64( (const __m128i*)(src + j) );
-                    v0 = _mm_cmpgt_epi8( _mm_xor_si128(v0, _x80), thresh_s );
-                    v0 = _mm_and_si128( v0, maxval_ );
-                    _mm_storel_epi64( (__m128i*)(dst + j), v0 );
-                }
-                break;
-
-            case THRESH_BINARY_INV:
-                for( j = 0; j <= roi.width - 32; j += 32 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 16) );
-                    v0 = _mm_cmpgt_epi8( _mm_xor_si128(v0, _x80), thresh_s );
-                    v1 = _mm_cmpgt_epi8( _mm_xor_si128(v1, _x80), thresh_s );
-                    v0 = _mm_andnot_si128( v0, maxval_ );
-                    v1 = _mm_andnot_si128( v1, maxval_ );
-                    _mm_storeu_si128( (__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128( (__m128i*)(dst + j + 16), v1 );
-                }
-
-                for( ; j <= roi.width - 8; j += 8 )
-                {
-                    __m128i v0 = _mm_loadl_epi64( (const __m128i*)(src + j) );
-                    v0 = _mm_cmpgt_epi8( _mm_xor_si128(v0, _x80), thresh_s );
-                    v0 = _mm_andnot_si128( v0, maxval_ );
-                    _mm_storel_epi64( (__m128i*)(dst + j), v0 );
-                }
-                break;
-
-            case THRESH_TRUNC:
-                for( j = 0; j <= roi.width - 32; j += 32 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 16) );
-                    v0 = _mm_subs_epu8( v0, _mm_subs_epu8( v0, thresh_u ));
-                    v1 = _mm_subs_epu8( v1, _mm_subs_epu8( v1, thresh_u ));
-                    _mm_storeu_si128( (__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128( (__m128i*)(dst + j + 16), v1 );
-                }
-
-                for( ; j <= roi.width - 8; j += 8 )
-                {
-                    __m128i v0 = _mm_loadl_epi64( (const __m128i*)(src + j) );
-                    v0 = _mm_subs_epu8( v0, _mm_subs_epu8( v0, thresh_u ));
-                    _mm_storel_epi64( (__m128i*)(dst + j), v0 );
-                }
-                break;
-
-            case THRESH_TOZERO:
-                for( j = 0; j <= roi.width - 32; j += 32 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 16) );
-                    v0 = _mm_and_si128( v0, _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s ));
-                    v1 = _mm_and_si128( v1, _mm_cmpgt_epi8(_mm_xor_si128(v1, _x80), thresh_s ));
-                    _mm_storeu_si128( (__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128( (__m128i*)(dst + j + 16), v1 );
-                }
-
-                for( ; j <= roi.width - 8; j += 8 )
-                {
-                    __m128i v0 = _mm_loadl_epi64( (const __m128i*)(src + j) );
-                    v0 = _mm_and_si128( v0, _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s ));
-                    _mm_storel_epi64( (__m128i*)(dst + j), v0 );
-                }
-                break;
-
-            case THRESH_TOZERO_INV:
-                for( j = 0; j <= roi.width - 32; j += 32 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 16) );
-                    v0 = _mm_andnot_si128( _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s ), v0 );
-                    v1 = _mm_andnot_si128( _mm_cmpgt_epi8(_mm_xor_si128(v1, _x80), thresh_s ), v1 );
-                    _mm_storeu_si128( (__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128( (__m128i*)(dst + j + 16), v1 );
-                }
-
-                for( ; j <= roi.width - 8; j += 8 )
-                {
-                    __m128i v0 = _mm_loadl_epi64( (const __m128i*)(src + j) );
-                    v0 = _mm_andnot_si128( _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s ), v0 );
-                    _mm_storel_epi64( (__m128i*)(dst + j), v0 );
-                }
-                break;
-            }
-        }
-    }
-#elif CV_NEON
-    uint8x16_t v_thresh = vdupq_n_u8(thresh), v_maxval = vdupq_n_u8(maxval);
-
-    switch( type )
-    {
-    case THRESH_BINARY:
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
-                vst1q_u8(dst + j_scalar, vandq_u8(vcgtq_u8(vld1q_u8(src + j_scalar), v_thresh), v_maxval));
-        }
-        break;
-
-    case THRESH_BINARY_INV:
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
-                vst1q_u8(dst + j_scalar, vandq_u8(vcleq_u8(vld1q_u8(src + j_scalar), v_thresh), v_maxval));
-        }
-        break;
-
-    case THRESH_TRUNC:
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
-                vst1q_u8(dst + j_scalar, vminq_u8(vld1q_u8(src + j_scalar), v_thresh));
-        }
-        break;
-
-    case THRESH_TOZERO:
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
-            {
-                uint8x16_t v_src = vld1q_u8(src + j_scalar), v_mask = vcgtq_u8(v_src, v_thresh);
-                vst1q_u8(dst + j_scalar, vandq_u8(v_mask, v_src));
-            }
-        }
-        break;
-
-    case THRESH_TOZERO_INV:
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
-            {
-                uint8x16_t v_src = vld1q_u8(src + j_scalar), v_mask = vcleq_u8(v_src, v_thresh);
-                vst1q_u8(dst + j_scalar, vandq_u8(v_mask, v_src));
-            }
-        }
-        break;
-    default:
-        return CV_Error( CV_StsBadArg, "" );
-    }
-#endif
-
-    if( j_scalar < roi.width )
-    {
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-            j = j_scalar;
+        int j = j_scalar;
 #if CV_ENABLE_UNROLLED
-            for( ; j <= roi.width - 4; j += 4 )
-            {
-                uchar t0 = tab[src[j]];
-                uchar t1 = tab[src[j+1]];
+        for (; j <= roi.width - 4; j += 4)
+        {
+            uchar t0 = tab[src[j]];
+            uchar t1 = tab[src[j + 1]];
 
-                dst[j] = t0;
-                dst[j+1] = t1;
+            dst[j] = t0;
+            dst[j + 1] = t1;
 
-                t0 = tab[src[j+2]];
-                t1 = tab[src[j+3]];
+            t0 = tab[src[j + 2]];
+            t1 = tab[src[j + 3]];
 
-                dst[j+2] = t0;
-                dst[j+3] = t1;
-            }
+            dst[j + 2] = t0;
+            dst[j + 3] = t1;
+        }
 #endif
-            for( ; j < roi.width; j++ )
-                dst[j] = tab[src[j]];
+        for (; j < roi.width; j++)
+            dst[j] = tab[src[j]];
+    }
+}
+
+template<typename SrcType, int ThresholdType>
+inline void calc_thresh_primitive(const SrcType* /*src*/, const Size /*roi*/, const int /*srcStep*/, const int /*dstStep*/, const SrcType /*thresh*/, const SrcType /*maxval*/, int /*j_scalar*/, SrcType* /*dst*/)
+{
+}
+
+template<>
+void calc_thresh_primitive<uchar, THRESH_BINARY>(const uchar* src, const Size roi, const int srcStep, const int dstStep, const uchar thresh, const uchar maxval, int j_scalar, uchar* dst)
+{
+    const int thresh_pivot = thresh + 1;
+    uchar tab[256];
+    memset(tab, 0, thresh_pivot);
+    if (thresh_pivot < 256) {
+        memset(tab + thresh_pivot, maxval, 256 - thresh_pivot);
+    }
+
+    calc_thresh_table(src, roi, srcStep, dstStep, tab, j_scalar, dst);
+}
+
+template<>
+void calc_thresh_primitive<uchar, THRESH_BINARY_INV>(const uchar* src, const Size roi, const int srcStep, const int dstStep, const uchar thresh, const uchar maxval, int j_scalar, uchar* dst)
+{
+    const int thresh_pivot = thresh + 1;
+    uchar tab[256];
+    memset(tab, maxval, thresh_pivot);
+    if (thresh_pivot < 256) {
+        memset(tab + thresh_pivot, 0, 256 - thresh_pivot);
+    }
+
+    calc_thresh_table(src, roi, srcStep, dstStep, tab, j_scalar, dst);
+}
+
+template<>
+void calc_thresh_primitive<uchar, THRESH_TRUNC>(const uchar* src, const Size roi, const int srcStep, const int dstStep, const uchar thresh, const uchar /*maxval*/, int j_scalar, uchar* dst)
+{
+    const int thresh_pivot = thresh + 1;
+    uchar tab[256];
+    for (int i = 0; i < thresh_pivot; i++)
+        tab[i] = (uchar)i;
+    if (thresh_pivot < 256) {
+        memset(tab + thresh_pivot, thresh, 256 - thresh_pivot);
+    }
+
+    calc_thresh_table(src, roi, srcStep, dstStep, tab, j_scalar, dst);
+}
+
+template<>
+void calc_thresh_primitive<uchar, THRESH_TOZERO>(const uchar* src, const Size roi, const int srcStep, const int dstStep, const uchar thresh, const uchar /*maxval*/, int j_scalar, uchar* dst)
+{
+    const int thresh_pivot = thresh + 1;
+    uchar tab[256];
+    memset(tab, 0, thresh_pivot);
+    for (int i = thresh_pivot; i < 256; i++)
+        tab[i] = (uchar)i;
+
+    calc_thresh_table(src, roi, srcStep, dstStep, tab, j_scalar, dst);
+}
+
+template<>
+void calc_thresh_primitive<uchar, THRESH_TOZERO_INV>(const uchar* src, const Size roi, const int srcStep, const int dstStep, const uchar thresh, const uchar /*maxval*/, int j_scalar, uchar* dst)
+{
+    const int thresh_pivot = thresh + 1;
+    uchar tab[256];
+    for (int i = 0; i < thresh_pivot; i++)
+        tab[i] = (uchar)i;
+    if (thresh_pivot < 256) {
+        memset(tab + thresh_pivot, 0, 256 - thresh_pivot);
+    }
+
+    calc_thresh_table(src, roi, srcStep, dstStep, tab, j_scalar, dst);
+}
+
+template<typename SrcType>
+void calc_thresh_primitive_thresh_binary(const SrcType* src, const Size roi, const int srcStep, const int dstStep, const SrcType thresh, const SrcType maxval, int j_scalar, SrcType* dst)
+{
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (int j = j_scalar; j < roi.width; j++)
+            dst[j] = src[j] > thresh ? maxval : 0;
+    }
+}
+
+template<typename SrcType>
+void calc_thresh_primitive_thresh_binary_inv(const SrcType* src, const Size roi, const int srcStep, const int dstStep, const SrcType thresh, const SrcType maxval, int j_scalar, SrcType* dst)
+{
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (int j = j_scalar; j < roi.width; j++)
+            dst[j] = src[j] <= thresh ? maxval : 0;
+    }
+}
+
+template<typename SrcType>
+void calc_thresh_primitive_thresh_trunc(const SrcType* src, const Size roi, const int srcStep, const int dstStep, const SrcType thresh, const SrcType /*maxval*/, int j_scalar, SrcType* dst)
+{
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (int j = j_scalar; j < roi.width; j++)
+            dst[j] = std::min(src[j], thresh);
+    }
+}
+
+template<typename SrcType>
+void calc_thresh_primitive_thresh_tozero(const SrcType* src, const Size roi, const int srcStep, const int dstStep, const SrcType thresh, const SrcType /*maxval*/, int j_scalar, SrcType* dst)
+{
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (int j = j_scalar; j < roi.width; j++)
+        {
+            const SrcType v = src[j];
+            dst[j] = v > thresh ? v : 0;
         }
     }
 }
 
-
-static void
-thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
+template<typename SrcType>
+void calc_thresh_primitive_thresh_tozero_inv(const SrcType* src, const Size roi, const int srcStep, const int dstStep, const SrcType thresh, const SrcType /*maxval*/, int j_scalar, SrcType* dst)
 {
-    int i, j;
-    Size roi = _src.size();
-    roi.width *= _src.channels();
-    const short* src = _src.ptr<short>();
-    short* dst = _dst.ptr<short>();
-    size_t src_step = _src.step/sizeof(src[0]);
-    size_t dst_step = _dst.step/sizeof(dst[0]);
-
-#if CV_SSE2
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
-#endif
-
-    if( _src.isContinuous() && _dst.isContinuous() )
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
     {
-        roi.width *= roi.height;
-        roi.height = 1;
-        src_step = dst_step = roi.width;
+        for (int j = j_scalar; j < roi.width; j++)
+        {
+            const SrcType v = src[j];
+            dst[j] = v <= thresh ? v : 0;
+        }
     }
+}
+
+template<>
+inline void calc_thresh_primitive<short, THRESH_BINARY>(const short* src, const Size roi, const int srcStep, const int dstStep, const short thresh, const short maxval, int j_scalar, short* dst)
+{
+    calc_thresh_primitive_thresh_binary<short>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<short, THRESH_BINARY_INV>(const short* src, const Size roi, const int srcStep, const int dstStep, const short thresh, const short maxval, int j_scalar, short* dst)
+{
+    calc_thresh_primitive_thresh_binary_inv<short>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<short, THRESH_TRUNC>(const short* src, const Size roi, const int srcStep, const int dstStep, const short thresh, const short maxval, int j_scalar, short* dst)
+{
+    calc_thresh_primitive_thresh_trunc<short>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<short, THRESH_TOZERO>(const short* src, const Size roi, const int srcStep, const int dstStep, const short thresh, const short maxval, int j_scalar, short* dst)
+{
+    calc_thresh_primitive_thresh_tozero<short>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<short, THRESH_TOZERO_INV>(const short* src, const Size roi, const int srcStep, const int dstStep, const short thresh, const short maxval, int j_scalar, short* dst)
+{
+    calc_thresh_primitive_thresh_tozero_inv<short>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<float, THRESH_BINARY>(const float* src, const Size roi, const int srcStep, const int dstStep, const float thresh, const float maxval, int j_scalar, float* dst)
+{
+    calc_thresh_primitive_thresh_binary<float>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<float, THRESH_BINARY_INV>(const float* src, const Size roi, const int srcStep, const int dstStep, const float thresh, const float maxval, int j_scalar, float* dst)
+{
+    calc_thresh_primitive_thresh_binary_inv<float>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<float, THRESH_TRUNC>(const float* src, const Size roi, const int srcStep, const int dstStep, const float thresh, const float maxval, int j_scalar, float* dst)
+{
+    calc_thresh_primitive_thresh_trunc<float>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<float, THRESH_TOZERO>(const float* src, const Size roi, const int srcStep, const int dstStep, const float thresh, const float maxval, int j_scalar, float* dst)
+{
+    calc_thresh_primitive_thresh_tozero<float>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<float, THRESH_TOZERO_INV>(const float* src, const Size roi, const int srcStep, const int dstStep, const float thresh, const float maxval, int j_scalar, float* dst)
+{
+    calc_thresh_primitive_thresh_tozero_inv<float>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<double, THRESH_BINARY>(const double* src, const Size roi, const int srcStep, const int dstStep, const double thresh, const double maxval, int j_scalar, double* dst)
+{
+    calc_thresh_primitive_thresh_binary<double>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<double, THRESH_BINARY_INV>(const double* src, const Size roi, const int srcStep, const int dstStep, const double thresh, const double maxval, int j_scalar, double* dst)
+{
+    calc_thresh_primitive_thresh_binary_inv<double>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<double, THRESH_TRUNC>(const double* src, const Size roi, const int srcStep, const int dstStep, const double thresh, const double maxval, int j_scalar, double* dst)
+{
+    calc_thresh_primitive_thresh_trunc<double>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<double, THRESH_TOZERO>(const double* src, const Size roi, const int srcStep, const int dstStep, const double thresh, const double maxval, int j_scalar, double* dst)
+{
+    calc_thresh_primitive_thresh_tozero<double>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
+
+template<>
+inline void calc_thresh_primitive<double, THRESH_TOZERO_INV>(const double* src, const Size roi, const int srcStep, const int dstStep, const double thresh, const double maxval, int j_scalar, double* dst)
+{
+    calc_thresh_primitive_thresh_tozero_inv<double>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
+}
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::thresh_16s(_src, _dst, roi.width, roi.height, thresh, maxval, type))
-        return;
+template<typename SrcType>
+inline bool calc_thresh_tegra(const Mat& _src, const int width, const int height, SrcType thresh, SrcType maxval, const int type, Mat& _dst)
+{
+    return false;
+}
+
+template<>
+inline bool calc_thresh_tegra(const Mat& _src, const int width, const int height, uchar thresh, uchar maxval, const int type, Mat& _dst)
+{
+    return tegra::thresh_8u(_src, _dst, width, height, thresh, maxval, type);
+}
+
+template<>
+inline bool calc_thresh_tegra(const Mat& _src, const int width, const int height, short thresh, short maxval, const int type, Mat& _dst)
+{
+    return tegra::thresh_16s(_src, _dst, width, height, thresh, maxval, type);
+}
+
+template<>
+inline bool calc_thresh_tegra(const Mat& _src, const int width, const int height, float thresh, float maxval, const int type, Mat& _dst)
+{
+    return tegra::thresh_32f(_src, _dst, width, height, thresh, maxval, type);
+}
 #endif
 
 #if defined(HAVE_IPP)
+#ifndef HAVE_IPP_ICV_ONLY
+template<typename SrcType, int type>
+inline int calc_thresh_ipp_c1ir(const SrcType /*thresh*/, const IppiSize /*sz*/, const int /*dstStep*/, SrcType* /*dst*/)
+{
+    return -1;
+}
+
+template<>
+inline int calc_thresh_ipp_c1ir<uchar, THRESH_TRUNC>(const uchar thresh, const IppiSize sz, const int dstStep, uchar* dst)
+{
+    return ippiThreshold_GT_8u_C1IR(dst, dstStep, sz, thresh);
+}
+
+template<>
+inline int calc_thresh_ipp_c1ir<short, THRESH_TRUNC>(const short thresh, const IppiSize sz, const int dstStep, short* dst)
+{
+    return ippiThreshold_GT_16s_C1IR(dst, dstStep, sz, thresh);
+}
+
+template<>
+inline int calc_thresh_ipp_c1ir<uchar, THRESH_TOZERO>(const uchar thresh, const IppiSize sz, const int dstStep, uchar* dst)
+{
+    return ippiThreshold_LTVal_8u_C1IR(dst, dstStep, sz, thresh + 1, 0);
+}
+
+template<>
+inline int calc_thresh_ipp_c1ir<short, THRESH_TOZERO>(const short thresh, const IppiSize sz, const int dstStep, short* dst)
+{
+    return ippiThreshold_LTVal_16s_C1IR(dst, dstStep, sz, thresh + 1, 0);
+}
+
+template<>
+inline int calc_thresh_ipp_c1ir<uchar, THRESH_TOZERO_INV>(const uchar thresh, const IppiSize sz, const int dstStep, uchar* dst)
+{
+    return ippiThreshold_GTVal_8u_C1IR(dst, dstStep, sz, thresh, 0);
+}
+
+template<>
+inline int calc_thresh_ipp_c1ir<short, THRESH_TOZERO_INV>(const short thresh, const IppiSize sz, const int dstStep, short* dst)
+{
+    return ippiThreshold_GTVal_16s_C1IR(dst, dstStep, sz, thresh, 0);
+}
+#endif
+
+template<typename SrcType, int type>
+inline int calc_thresh_ipp_c1r(const SrcType* /*src*/, const int /*srcStep*/, const SrcType /*thresh*/, const IppiSize /*sz*/, const int /*dstStep*/, SrcType* /*dst*/)
+{
+    return -1;
+}
+
+template<>
+inline int calc_thresh_ipp_c1r<uchar, THRESH_TRUNC>(const uchar* src, const int srcStep, const uchar thresh, const IppiSize sz, const int dstStep, uchar* dst)
+{
+    return ippiThreshold_GT_8u_C1R(src, srcStep, dst, dstStep, sz, thresh);
+}
+
+template<>
+inline int calc_thresh_ipp_c1r<short, THRESH_TRUNC>(const short* src, const int srcStep, const short thresh, const IppiSize sz, const int dstStep, short* dst)
+{
+    return ippiThreshold_GT_16s_C1R(src, srcStep, dst, dstStep, sz, thresh);
+}
+
+template<>
+inline int calc_thresh_ipp_c1r<float, THRESH_TRUNC>(const float* src, const int srcStep, const float thresh, const IppiSize sz, const int dstStep, float* dst)
+{
+    return ippiThreshold_GT_32f_C1R(src, srcStep, dst, dstStep, sz, thresh);
+}
+
+template<>
+inline int calc_thresh_ipp_c1r<uchar, THRESH_TOZERO>(const uchar* src, const int srcStep, const uchar thresh, const IppiSize sz, const int dstStep, uchar* dst)
+{
+    return ippiThreshold_LTVal_8u_C1R(src, srcStep, dst, dstStep, sz, thresh + 1, 0);
+}
+
+template<>
+inline int calc_thresh_ipp_c1r<short, THRESH_TOZERO>(const short* src, const int srcStep, const short thresh, const IppiSize sz, const int dstStep, short* dst)
+{
+    return ippiThreshold_LTVal_16s_C1R(src, srcStep, dst, dstStep, sz, thresh + 1, 0);
+}
+
+template<>
+inline int calc_thresh_ipp_c1r<float, THRESH_TOZERO>(const float* src, const int srcStep, const float thresh, const IppiSize sz, const int dstStep, float* dst)
+{
+    return ippiThreshold_LTVal_32f_C1R(src, srcStep, dst, dstStep, sz, thresh + FLT_EPSILON, 0);
+}
+
+template<>
+inline int calc_thresh_ipp_c1r<uchar, THRESH_TOZERO_INV>(const uchar* src, const int srcStep, const uchar thresh, const IppiSize sz, const int dstStep, uchar* dst)
+{
+    return ippiThreshold_GTVal_8u_C1R(src, srcStep, dst, dstStep, sz, thresh, 0);
+}
+
+template<>
+inline int calc_thresh_ipp_c1r<short, THRESH_TOZERO_INV>(const short* src, const int srcStep, const short thresh, const IppiSize sz, const int dstStep, short* dst)
+{
+    return ippiThreshold_GTVal_16s_C1R(src, srcStep, dst, dstStep, sz, thresh, 0);
+}
+
+template<>
+inline int calc_thresh_ipp_c1r<float, THRESH_TOZERO_INV>(const float* src, const int srcStep, const float thresh, const IppiSize sz, const int dstStep, float* dst)
+{
+    return ippiThreshold_GTVal_32f_C1R(src, srcStep, dst, dstStep, sz, thresh, 0);
+}
+#endif
+
+template<typename SrcType, int ThresholdType, int SimdType>
+inline int calc_thresh_simd(const SrcType* /*src*/, const int /*srcStep*/, const SrcType /*thresh*/, const SrcType /*maxval*/, const Size /*roi*/, const int /*dstStep*/, SrcType* /*dst*/)
+{
+    return 0;
+}
+
+#if CV_SSE
+template<>
+int calc_thresh_simd<float, THRESH_BINARY, CV_CPU_SSE>(const float* src, const int srcStep, const float thresh, const float maxval, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    __m128 thresh4 = _mm_set1_ps(thresh);
+    __m128 maxval4 = _mm_set1_ps(maxval);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128 v0 = _mm_loadu_ps(src + j_scalar);
+            __m128 v1 = _mm_loadu_ps(src + j_scalar + 4);
+            v0 = _mm_cmpgt_ps(v0, thresh4);
+            v1 = _mm_cmpgt_ps(v1, thresh4);
+            v0 = _mm_and_ps(v0, maxval4);
+            v1 = _mm_and_ps(v1, maxval4);
+            _mm_storeu_ps(dst + j_scalar, v0);
+            _mm_storeu_ps(dst + j_scalar + 4, v1);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<float, THRESH_BINARY_INV, CV_CPU_SSE>(const float* src, const int srcStep, const float thresh, const float maxval, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    __m128 thresh4 = _mm_set1_ps(thresh);
+    __m128 maxval4 = _mm_set1_ps(maxval);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128 v0 = _mm_loadu_ps(src + j_scalar);
+            __m128 v1 = _mm_loadu_ps(src + j_scalar + 4);
+            v0 = _mm_cmple_ps(v0, thresh4);
+            v1 = _mm_cmple_ps(v1, thresh4);
+            v0 = _mm_and_ps(v0, maxval4);
+            v1 = _mm_and_ps(v1, maxval4);
+            _mm_storeu_ps(dst + j_scalar, v0);
+            _mm_storeu_ps(dst + j_scalar + 4, v1);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<float, THRESH_TRUNC, CV_CPU_SSE>(const float* src, const int srcStep, const float thresh, const float /*maxval*/, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    __m128 thresh4 = _mm_set1_ps(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128 v0 = _mm_loadu_ps(src + j_scalar);
+            __m128 v1 = _mm_loadu_ps(src + j_scalar + 4);
+            v0 = _mm_min_ps(v0, thresh4);
+            v1 = _mm_min_ps(v1, thresh4);
+            _mm_storeu_ps(dst + j_scalar, v0);
+            _mm_storeu_ps(dst + j_scalar + 4, v1);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<float, THRESH_TOZERO, CV_CPU_SSE>(const float* src, const int srcStep, const float thresh, const float /*maxval*/, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    __m128 thresh4 = _mm_set1_ps(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128 v0 = _mm_loadu_ps(src + j_scalar);
+            __m128 v1 = _mm_loadu_ps(src + j_scalar + 4);
+            v0 = _mm_and_ps(v0, _mm_cmpgt_ps(v0, thresh4));
+            v1 = _mm_and_ps(v1, _mm_cmpgt_ps(v1, thresh4));
+            _mm_storeu_ps(dst + j_scalar, v0);
+            _mm_storeu_ps(dst + j_scalar + 4, v1);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<float, THRESH_TOZERO_INV, CV_CPU_SSE>(const float* src, const int srcStep, const float thresh, const float /*maxval*/, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    __m128 thresh4 = _mm_set1_ps(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128 v0 = _mm_loadu_ps(src + j_scalar);
+            __m128 v1 = _mm_loadu_ps(src + j_scalar + 4);
+            v0 = _mm_and_ps(v0, _mm_cmple_ps(v0, thresh4));
+            v1 = _mm_and_ps(v1, _mm_cmple_ps(v1, thresh4));
+            _mm_storeu_ps(dst + j_scalar, v0);
+            _mm_storeu_ps(dst + j_scalar + 4, v1);
+        }
+    }
+
+    return j_scalar;
+}
+#endif
+
+#if CV_SSE2
+template<>
+int calc_thresh_simd<uchar, THRESH_BINARY, CV_CPU_SSE2>(const uchar* src, const int srcStep, const uchar thresh, const uchar maxval, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    __m128i _x80 = _mm_set1_epi8('\x80');
+    __m128i thresh_s = _mm_set1_epi8(thresh ^ 0x80);
+    __m128i maxval_ = _mm_set1_epi8(maxval);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 32; j_scalar += 32)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 16));
+            v0 = _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s);
+            v1 = _mm_cmpgt_epi8(_mm_xor_si128(v1, _x80), thresh_s);
+            v0 = _mm_and_si128(v0, maxval_);
+            v1 = _mm_and_si128(v1, maxval_);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 16), v1);
+        }
+
+        for (; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128i v0 = _mm_loadl_epi64((const __m128i*)(src + j_scalar));
+            v0 = _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s);
+            v0 = _mm_and_si128(v0, maxval_);
+            _mm_storel_epi64((__m128i*)(dst + j_scalar), v0);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<uchar, THRESH_BINARY_INV, CV_CPU_SSE2>(const uchar* src, const int srcStep, const uchar thresh, const uchar maxval, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    __m128i _x80 = _mm_set1_epi8('\x80');
+    __m128i thresh_s = _mm_set1_epi8(thresh ^ 0x80);
+    __m128i maxval_ = _mm_set1_epi8(maxval);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 32; j_scalar += 32)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 16));
+            v0 = _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s);
+            v1 = _mm_cmpgt_epi8(_mm_xor_si128(v1, _x80), thresh_s);
+            v0 = _mm_andnot_si128(v0, maxval_);
+            v1 = _mm_andnot_si128(v1, maxval_);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 16), v1);
+        }
+
+        for (; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128i v0 = _mm_loadl_epi64((const __m128i*)(src + j_scalar));
+            v0 = _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s);
+            v0 = _mm_andnot_si128(v0, maxval_);
+            _mm_storel_epi64((__m128i*)(dst + j_scalar), v0);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<uchar, THRESH_TRUNC, CV_CPU_SSE2>(const uchar* src, const int srcStep, const uchar thresh, const uchar /*maxval*/, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    __m128i thresh_u = _mm_set1_epi8(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 32; j_scalar += 32)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 16));
+            v0 = _mm_subs_epu8(v0, _mm_subs_epu8( v0, thresh_u));
+            v1 = _mm_subs_epu8(v1, _mm_subs_epu8( v1, thresh_u));
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 16), v1);
+        }
+
+        for(; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128i v0 = _mm_loadl_epi64((const __m128i*)(src + j_scalar));
+            v0 = _mm_subs_epu8(v0, _mm_subs_epu8( v0, thresh_u));
+            _mm_storel_epi64((__m128i*)(dst + j_scalar), v0);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<uchar, THRESH_TOZERO, CV_CPU_SSE2>(const uchar* src, const int srcStep, const uchar thresh, const uchar /*maxval*/, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    __m128i _x80 = _mm_set1_epi8('\x80');
+    __m128i thresh_s = _mm_set1_epi8(thresh ^ 0x80);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 32; j_scalar += 32)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 16));
+            v0 = _mm_and_si128(v0, _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s));
+            v1 = _mm_and_si128(v1, _mm_cmpgt_epi8(_mm_xor_si128(v1, _x80), thresh_s));
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 16), v1);
+        }
+
+        for (; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128i v0 = _mm_loadl_epi64((const __m128i*)(src + j_scalar));
+            v0 = _mm_and_si128(v0, _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s));
+            _mm_storel_epi64((__m128i*)(dst + j_scalar), v0);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<uchar, THRESH_TOZERO_INV, CV_CPU_SSE2>(const uchar* src, const int srcStep, const uchar thresh, const uchar /*maxval*/, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    __m128i _x80 = _mm_set1_epi8('\x80');
+    __m128i thresh_s = _mm_set1_epi8(thresh ^ 0x80);
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 32; j_scalar += 32)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 16));
+            v0 = _mm_andnot_si128(_mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s), v0);
+            v1 = _mm_andnot_si128(_mm_cmpgt_epi8(_mm_xor_si128(v1, _x80), thresh_s), v1);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 16), v1);
+        }
+
+        for (; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            __m128i v0 = _mm_loadl_epi64((const __m128i*)(src + j_scalar));
+            v0 = _mm_andnot_si128( _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s), v0);
+            _mm_storel_epi64((__m128i*)(dst + j_scalar), v0);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_BINARY, CV_CPU_SSE2>(const short* src, const int srcStep, const short thresh, const short maxval, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    __m128i thresh8 = _mm_set1_epi16(thresh);
+    __m128i maxval8 = _mm_set1_epi16(maxval);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 8));
+            v0 = _mm_cmpgt_epi16(v0, thresh8);
+            v1 = _mm_cmpgt_epi16(v1, thresh8);
+            v0 = _mm_and_si128(v0, maxval8);
+            v1 = _mm_and_si128(v1, maxval8);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 8), v1);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_BINARY_INV, CV_CPU_SSE2>(const short* src, const int srcStep, const short thresh, const short maxval, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    __m128i thresh8 = _mm_set1_epi16(thresh);
+    __m128i maxval8 = _mm_set1_epi16(maxval);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 8));
+            v0 = _mm_cmpgt_epi16(v0, thresh8);
+            v1 = _mm_cmpgt_epi16(v1, thresh8);
+            v0 = _mm_andnot_si128(v0, maxval8);
+            v1 = _mm_andnot_si128(v1, maxval8);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 8), v1);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_TRUNC, CV_CPU_SSE2>(const short* src, const int srcStep, const short thresh, const short /*maxval*/, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    __m128i thresh8 = _mm_set1_epi16(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 8));
+            v0 = _mm_min_epi16(v0, thresh8);
+            v1 = _mm_min_epi16(v1, thresh8);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 8), v1);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_TOZERO, CV_CPU_SSE2>(const short* src, const int srcStep, const short thresh, const short /*maxval*/, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    __m128i thresh8 = _mm_set1_epi16(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 8));
+            v0 = _mm_and_si128(v0, _mm_cmpgt_epi16(v0, thresh8));
+            v1 = _mm_and_si128(v1, _mm_cmpgt_epi16(v1, thresh8));
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 8), v1);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_TOZERO_INV, CV_CPU_SSE2>(const short* src, const int srcStep, const short thresh, const short /*maxval*/, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    __m128i thresh8 = _mm_set1_epi16(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+        {
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j_scalar));
+            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j_scalar + 8));
+            v0 = _mm_andnot_si128(_mm_cmpgt_epi16(v0, thresh8), v0);
+            v1 = _mm_andnot_si128(_mm_cmpgt_epi16(v1, thresh8), v1);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar), v0);
+            _mm_storeu_si128((__m128i*)(dst + j_scalar + 8), v1);
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+inline int calc_thresh_simd<float, THRESH_BINARY, CV_CPU_SSE2>(const float* src, const int srcStep, const float thresh, const float maxval, const Size roi, const int dstStep, float* dst)
+{
+    return calc_thresh_simd<float, THRESH_BINARY, CV_CPU_SSE>(src, srcStep, thresh, maxval, roi, dstStep, dst);
+}
+
+template<>
+inline int calc_thresh_simd<float, THRESH_BINARY_INV, CV_CPU_SSE2>(const float* src, const int srcStep, const float thresh, const float maxval, const Size roi, const int dstStep, float* dst)
+{
+    return calc_thresh_simd<float, THRESH_BINARY_INV, CV_CPU_SSE>(src, srcStep, thresh, maxval, roi, dstStep, dst);
+}
+
+template<>
+inline int calc_thresh_simd<float, THRESH_TRUNC, CV_CPU_SSE2>(const float* src, const int srcStep, const float thresh, const float maxval, const Size roi, const int dstStep, float* dst)
+{
+    return calc_thresh_simd<float, THRESH_TRUNC, CV_CPU_SSE>(src, srcStep, thresh, maxval, roi, dstStep, dst);
+}
+
+template<>
+inline int calc_thresh_simd<float, THRESH_TOZERO, CV_CPU_SSE2>(const float* src, const int srcStep, const float thresh, const float maxval, const Size roi, const int dstStep, float* dst)
+{
+    return calc_thresh_simd<float, THRESH_TOZERO, CV_CPU_SSE>(src, srcStep, thresh, maxval, roi, dstStep, dst);
+}
+
+template<>
+inline int calc_thresh_simd<float, THRESH_TOZERO_INV, CV_CPU_SSE2>(const float* src, const int srcStep, const float thresh, const float maxval, const Size roi, const int dstStep, float* dst)
+{
+    return calc_thresh_simd<float, THRESH_TOZERO_INV, CV_CPU_SSE>(src, srcStep, thresh, maxval, roi, dstStep, dst);
+}
+#endif
+
+#if CV_NEON
+template<>
+int calc_thresh_simd<uchar, THRESH_BINARY, CV_CPU_NEON>(const uchar* src, const int srcStep, const uchar thresh, const uchar maxval, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    uint8x16_t v_thresh = vdupq_n_u8(thresh);
+    uint8x16_t v_maxval = vdupq_n_u8(maxval);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+            vst1q_u8(dst + j_scalar, vandq_u8(vcgtq_u8(vld1q_u8(src + j_scalar), v_thresh), v_maxval));
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<uchar, THRESH_BINARY_INV, CV_CPU_NEON>(const uchar* src, const int srcStep, const uchar thresh, const uchar maxval, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    uint8x16_t v_thresh = vdupq_n_u8(thresh);
+    uint8x16_t v_maxval = vdupq_n_u8(maxval);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+            vst1q_u8(dst + j_scalar, vandq_u8(vcleq_u8(vld1q_u8(src + j_scalar), v_thresh), v_maxval));
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<uchar, THRESH_TRUNC, CV_CPU_NEON>(const uchar* src, const int srcStep, const uchar thresh, const uchar /*maxval*/, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    uint8x16_t v_thresh = vdupq_n_u8(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+            vst1q_u8(dst + j_scalar, vminq_u8(vld1q_u8(src + j_scalar), v_thresh));
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<uchar, THRESH_TOZERO, CV_CPU_NEON>(const uchar* src, const int srcStep, const uchar thresh, const uchar /*maxval*/, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    uint8x16_t v_thresh = vdupq_n_u8(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+        {
+            uint8x16_t v_src = vld1q_u8(src + j_scalar), v_mask = vcgtq_u8(v_src, v_thresh);
+            vst1q_u8(dst + j_scalar, vandq_u8(v_mask, v_src));
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<uchar, THRESH_TOZERO_INV, CV_CPU_NEON>(const uchar* src, const int srcStep, const uchar thresh, const uchar /*maxval*/, const Size roi, const int dstStep, uchar* dst)
+{
+    int j_scalar = 0;
+    uint8x16_t v_thresh = vdupq_n_u8(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+        {
+            uint8x16_t v_src = vld1q_u8(src + j_scalar), v_mask = vcleq_u8(v_src, v_thresh);
+            vst1q_u8(dst + j_scalar, vandq_u8(v_mask, v_src));
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_BINARY, CV_CPU_NEON>(const short* src, const int srcStep, const short thresh, const short maxval, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    int16x8_t v_thresh = vdupq_n_s16(thresh);
+    int16x8_t v_maxval = vdupq_n_s16(maxval);
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+
+        for (; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            uint16x8_t v_mask = vcgtq_s16(vld1q_s16(src + j_scalar), v_thresh);
+            vst1q_s16(dst + j_scalar, vandq_s16(vreinterpretq_s16_u16(v_mask), v_maxval));
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_BINARY_INV, CV_CPU_NEON>(const short* src, const int srcStep, const short thresh, const short maxval, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    int16x8_t v_thresh = vdupq_n_s16(thresh);
+    int16x8_t v_maxval = vdupq_n_s16(maxval);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            uint16x8_t v_mask = vcleq_s16(vld1q_s16(src + j_scalar), v_thresh);
+            vst1q_s16(dst + j_scalar, vandq_s16(vreinterpretq_s16_u16(v_mask), v_maxval));
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_TRUNC, CV_CPU_NEON>(const short* src, const int srcStep, const short thresh, const short /*maxval*/, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    int16x8_t v_thresh = vdupq_n_s16(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (; j_scalar <= roi.width - 8; j_scalar += 8)
+            vst1q_s16(dst + j_scalar, vminq_s16(vld1q_s16(src + j_scalar), v_thresh));
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_TOZERO, CV_CPU_NEON>(const short* src, const int srcStep, const short thresh, const short /*maxval*/, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    int16x8_t v_thresh = vdupq_n_s16(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src + j_scalar);
+            uint16x8_t v_mask = vcgtq_s16(v_src, v_thresh);
+            vst1q_s16(dst + j_scalar, vandq_s16(vreinterpretq_s16_u16(v_mask), v_src));
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<short, THRESH_TOZERO_INV, CV_CPU_NEON>(const short* src, const int srcStep, const short thresh, const short /*maxval*/, const Size roi, const int dstStep, short* dst)
+{
+    int j_scalar = 0;
+    int16x8_t v_thresh = vdupq_n_s16(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (; j_scalar <= roi.width - 8; j_scalar += 8)
+        {
+            int16x8_t v_src = vld1q_s16(src + j_scalar);
+            uint16x8_t v_mask = vcleq_s16(v_src, v_thresh);
+            vst1q_s16(dst + j_scalar, vandq_s16(vreinterpretq_s16_u16(v_mask), v_src));
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<float, THRESH_BINARY, CV_CPU_NEON>(const float* src, const int srcStep, const float thresh, const float maxval, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    float32x4_t v_thresh = vdupq_n_f32(thresh);
+    uint32x4_t v_maxval = vreinterpretq_u32_f32(vdupq_n_f32(maxval));
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 4; j_scalar += 4)
+        {
+            float32x4_t v_src = vld1q_f32(src + j_scalar);
+            uint32x4_t v_dst = vandq_u32(vcgtq_f32(v_src, v_thresh), v_maxval);
+            vst1q_f32(dst + j_scalar, vreinterpretq_f32_u32(v_dst));
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<float, THRESH_BINARY_INV, CV_CPU_NEON>(const float* src, const int srcStep, const float thresh, const float maxval, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    float32x4_t v_thresh = vdupq_n_f32(thresh);
+    uint32x4_t v_maxval = vreinterpretq_u32_f32(vdupq_n_f32(maxval));
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 4; j_scalar += 4)
+        {
+            float32x4_t v_src = vld1q_f32(src + j_scalar);
+            uint32x4_t v_dst = vandq_u32(vcleq_f32(v_src, v_thresh), v_maxval);
+            vst1q_f32(dst + j_scalar, vreinterpretq_f32_u32(v_dst));
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<float, THRESH_TRUNC, CV_CPU_NEON>(const float* src, const int srcStep, const float thresh, const float /*maxval*/, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    float32x4_t v_thresh = vdupq_n_f32(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 4; j_scalar += 4)
+            vst1q_f32(dst + j_scalar, vminq_f32(vld1q_f32(src + j_scalar), v_thresh));
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<float, THRESH_TOZERO, CV_CPU_NEON>(const float* src, const int srcStep, const float thresh, const float /*maxval*/, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    float32x4_t v_thresh = vdupq_n_f32(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 4; j_scalar += 4)
+        {
+            float32x4_t v_src = vld1q_f32(src + j_scalar);
+            uint32x4_t v_dst = vandq_u32(vcgtq_f32(v_src, v_thresh),
+                                         vreinterpretq_u32_f32(v_src));
+            vst1q_f32(dst + j_scalar, vreinterpretq_f32_u32(v_dst));
+        }
+    }
+
+    return j_scalar;
+}
+
+template<>
+int calc_thresh_simd<float, THRESH_TOZERO_INV, CV_CPU_NEON>(const float* src, const int srcStep, const float thresh, const float /*maxval*/, const Size roi, const int dstStep, float* dst)
+{
+    int j_scalar = 0;
+    float32x4_t v_thresh = vdupq_n_f32(thresh);
+
+    for (int i = 0; i < roi.height; i++, src += srcStep, dst += dstStep)
+    {
+        for (j_scalar = 0; j_scalar <= roi.width - 4; j_scalar += 4)
+        {
+            float32x4_t v_src = vld1q_f32(src + j_scalar);
+            uint32x4_t v_dst = vandq_u32(vcleq_f32(v_src, v_thresh),
+                                         vreinterpretq_u32_f32(v_src));
+            vst1q_f32(dst + j_scalar, vreinterpretq_f32_u32(v_dst));
+        }
+    }
+
+    return j_scalar;
+}
+#endif
+
+template<typename SrcType, int ThresholdType>
+#if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY)
+void calc_thresh(const SrcType* src, const int srcStep, const SrcType thresh, const SrcType maxval, const Size roi, const bool c1irFlag, const int dstStep, SrcType* dst)
+#else
+void calc_thresh(const SrcType* src, const int srcStep, const SrcType thresh, const SrcType maxval, const Size roi, const bool /*c1irFlag*/, const int dstStep, SrcType* dst)
+#endif
+{
+#if defined(HAVE_IPP)
     CV_IPP_CHECK()
     {
-        IppiSize sz = { roi.width, roi.height };
         CV_SUPPRESS_DEPRECATED_START
-        switch( type )
-        {
-        case THRESH_TRUNC:
+        IppiSize sz = {roi.width, roi.height};
 #ifndef HAVE_IPP_ICV_ONLY
-            if (_src.data == _dst.data && ippiThreshold_GT_16s_C1IR(dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-#endif
-            if (ippiThreshold_GT_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO:
-#ifndef HAVE_IPP_ICV_ONLY
-            if (_src.data == _dst.data && ippiThreshold_LTVal_16s_C1IR(dst, (int)dst_step*sizeof(dst[0]), sz, thresh + 1, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-#endif
-            if (ippiThreshold_LTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+1, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO_INV:
-#ifndef HAVE_IPP_ICV_ONLY
-            if (_src.data == _dst.data && ippiThreshold_GTVal_16s_C1IR(dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-#endif
-            if (ippiThreshold_GTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
+        if (c1irFlag && calc_thresh_ipp_c1ir<SrcType, ThresholdType>(thresh, sz, dstStep * sizeof(SrcType), dst) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
         }
-        CV_SUPPRESS_DEPRECATED_END
+#endif
+        if (calc_thresh_ipp_c1r<SrcType, ThresholdType>(src, srcStep * sizeof(SrcType), thresh, sz, dstStep * sizeof(SrcType), dst) >= 0)
+        {
+            CV_IMPL_ADD(CV_IMPL_IPP);
+            return;
+        }
+        setIppErrorStatus();
     }
+    CV_SUPPRESS_DEPRECATED_END
 #endif
 
-    switch( type )
-    {
-    case THRESH_BINARY:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-        {
-            j = 0;
-        #if CV_SSE2
-            if( useSIMD )
-            {
-                __m128i thresh8 = _mm_set1_epi16(thresh), maxval8 = _mm_set1_epi16(maxval);
-                for( ; j <= roi.width - 16; j += 16 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
-                    v0 = _mm_cmpgt_epi16( v0, thresh8 );
-                    v1 = _mm_cmpgt_epi16( v1, thresh8 );
-                    v0 = _mm_and_si128( v0, maxval8 );
-                    v1 = _mm_and_si128( v1, maxval8 );
-                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
-                }
-            }
-        #elif CV_NEON
-            int16x8_t v_thresh = vdupq_n_s16(thresh), v_maxval = vdupq_n_s16(maxval);
-
-            for( ; j <= roi.width - 8; j += 8 )
-            {
-                uint16x8_t v_mask = vcgtq_s16(vld1q_s16(src + j), v_thresh);
-                vst1q_s16(dst + j, vandq_s16(vreinterpretq_s16_u16(v_mask), v_maxval));
-            }
-        #endif
-
-            for( ; j < roi.width; j++ )
-                dst[j] = src[j] > thresh ? maxval : 0;
-        }
-        break;
-
-    case THRESH_BINARY_INV:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-        {
-            j = 0;
-        #if CV_SSE2
-            if( useSIMD )
-            {
-                __m128i thresh8 = _mm_set1_epi16(thresh), maxval8 = _mm_set1_epi16(maxval);
-                for( ; j <= roi.width - 16; j += 16 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
-                    v0 = _mm_cmpgt_epi16( v0, thresh8 );
-                    v1 = _mm_cmpgt_epi16( v1, thresh8 );
-                    v0 = _mm_andnot_si128( v0, maxval8 );
-                    v1 = _mm_andnot_si128( v1, maxval8 );
-                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
-                }
-            }
-        #elif CV_NEON
-            int16x8_t v_thresh = vdupq_n_s16(thresh), v_maxval = vdupq_n_s16(maxval);
-
-            for( ; j <= roi.width - 8; j += 8 )
-            {
-                uint16x8_t v_mask = vcleq_s16(vld1q_s16(src + j), v_thresh);
-                vst1q_s16(dst + j, vandq_s16(vreinterpretq_s16_u16(v_mask), v_maxval));
-            }
-        #endif
-
-            for( ; j < roi.width; j++ )
-                dst[j] = src[j] <= thresh ? maxval : 0;
-        }
-        break;
-
-    case THRESH_TRUNC:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-        {
-            j = 0;
-        #if CV_SSE2
-            if( useSIMD )
-            {
-                __m128i thresh8 = _mm_set1_epi16(thresh);
-                for( ; j <= roi.width - 16; j += 16 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
-                    v0 = _mm_min_epi16( v0, thresh8 );
-                    v1 = _mm_min_epi16( v1, thresh8 );
-                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
-                }
-            }
-        #elif CV_NEON
-            int16x8_t v_thresh = vdupq_n_s16(thresh);
-
-            for( ; j <= roi.width - 8; j += 8 )
-                vst1q_s16(dst + j, vminq_s16(vld1q_s16(src + j), v_thresh));
-        #endif
-
-            for( ; j < roi.width; j++ )
-                dst[j] = std::min(src[j], thresh);
-        }
-        break;
-
-    case THRESH_TOZERO:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-        {
-            j = 0;
-        #if CV_SSE2
-            if( useSIMD )
-            {
-                __m128i thresh8 = _mm_set1_epi16(thresh);
-                for( ; j <= roi.width - 16; j += 16 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
-                    v0 = _mm_and_si128(v0, _mm_cmpgt_epi16(v0, thresh8));
-                    v1 = _mm_and_si128(v1, _mm_cmpgt_epi16(v1, thresh8));
-                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
-                }
-            }
-        #elif CV_NEON
-            int16x8_t v_thresh = vdupq_n_s16(thresh);
-
-            for( ; j <= roi.width - 8; j += 8 )
-            {
-                int16x8_t v_src = vld1q_s16(src + j);
-                uint16x8_t v_mask = vcgtq_s16(v_src, v_thresh);
-                vst1q_s16(dst + j, vandq_s16(vreinterpretq_s16_u16(v_mask), v_src));
-            }
-        #endif
-
-            for( ; j < roi.width; j++ )
-            {
-                short v = src[j];
-                dst[j] = v > thresh ? v : 0;
-            }
-        }
-        break;
-
-    case THRESH_TOZERO_INV:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-        {
-            j = 0;
-        #if CV_SSE2
-            if( useSIMD )
-            {
-                __m128i thresh8 = _mm_set1_epi16(thresh);
-                for( ; j <= roi.width - 16; j += 16 )
-                {
-                    __m128i v0, v1;
-                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
-                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
-                    v0 = _mm_andnot_si128(_mm_cmpgt_epi16(v0, thresh8), v0);
-                    v1 = _mm_andnot_si128(_mm_cmpgt_epi16(v1, thresh8), v1);
-                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
-                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
-                }
-            }
-        #elif CV_NEON
-            int16x8_t v_thresh = vdupq_n_s16(thresh);
-
-            for( ; j <= roi.width - 8; j += 8 )
-            {
-                int16x8_t v_src = vld1q_s16(src + j);
-                uint16x8_t v_mask = vcleq_s16(v_src, v_thresh);
-                vst1q_s16(dst + j, vandq_s16(vreinterpretq_s16_u16(v_mask), v_src));
-            }
-        #endif
-            for( ; j < roi.width; j++ )
-            {
-                short v = src[j];
-                dst[j] = v <= thresh ? v : 0;
-            }
-        }
-        break;
-    default:
-        return CV_Error( CV_StsBadArg, "" );
-    }
-}
-
-
-static void
-thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
-{
-    int i, j;
-    Size roi = _src.size();
-    roi.width *= _src.channels();
-    const float* src = _src.ptr<float>();
-    float* dst = _dst.ptr<float>();
-    size_t src_step = _src.step/sizeof(src[0]);
-    size_t dst_step = _dst.step/sizeof(dst[0]);
-
+    int j_scalar = 0;
 #if CV_SSE2
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
-#endif
-
-    if( _src.isContinuous() && _dst.isContinuous() )
+    if (checkHardwareSupport(CV_CPU_SSE2))
     {
-        roi.width *= roi.height;
-        roi.height = 1;
+        j_scalar = calc_thresh_simd<SrcType, ThresholdType, CV_CPU_SSE2>(src, srcStep, thresh, maxval, roi, dstStep, dst);
     }
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::thresh_32f(_src, _dst, roi.width, roi.height, thresh, maxval, type))
-        return;
-#endif
-
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
+#elif CV_SSE
+    if (checkHardwareSupport(CV_CPU_SSE))
     {
-        IppiSize sz = { roi.width, roi.height };
-        switch( type )
-        {
-        case THRESH_TRUNC:
-            if (0 <= ippiThreshold_GT_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO:
-            if (0 <= ippiThreshold_LTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+FLT_EPSILON, 0))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO_INV:
-            if (0 <= ippiThreshold_GTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        }
+        j_scalar = calc_thresh_simd<SrcType, ThresholdType, CV_CPU_SSE>(src, srcStep, thresh, maxval, roi, dstStep, dst);
     }
-#endif
-
-    switch( type )
-    {
-        case THRESH_BINARY:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-#if CV_SSE2
-                if( useSIMD )
-                {
-                    __m128 thresh4 = _mm_set1_ps(thresh), maxval4 = _mm_set1_ps(maxval);
-                    for( ; j <= roi.width - 8; j += 8 )
-                    {
-                        __m128 v0, v1;
-                        v0 = _mm_loadu_ps( src + j );
-                        v1 = _mm_loadu_ps( src + j + 4 );
-                        v0 = _mm_cmpgt_ps( v0, thresh4 );
-                        v1 = _mm_cmpgt_ps( v1, thresh4 );
-                        v0 = _mm_and_ps( v0, maxval4 );
-                        v1 = _mm_and_ps( v1, maxval4 );
-                        _mm_storeu_ps( dst + j, v0 );
-                        _mm_storeu_ps( dst + j + 4, v1 );
-                    }
-                }
 #elif CV_NEON
-                float32x4_t v_thresh = vdupq_n_f32(thresh);
-                uint32x4_t v_maxval = vreinterpretq_u32_f32(vdupq_n_f32(maxval));
-
-                for( ; j <= roi.width - 4; j += 4 )
-                {
-                    float32x4_t v_src = vld1q_f32(src + j);
-                    uint32x4_t v_dst = vandq_u32(vcgtq_f32(v_src, v_thresh), v_maxval);
-                    vst1q_f32(dst + j, vreinterpretq_f32_u32(v_dst));
-                }
-#endif
-
-                for( ; j < roi.width; j++ )
-                    dst[j] = src[j] > thresh ? maxval : 0;
-            }
-            break;
-
-        case THRESH_BINARY_INV:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-#if CV_SSE2
-                if( useSIMD )
-                {
-                    __m128 thresh4 = _mm_set1_ps(thresh), maxval4 = _mm_set1_ps(maxval);
-                    for( ; j <= roi.width - 8; j += 8 )
-                    {
-                        __m128 v0, v1;
-                        v0 = _mm_loadu_ps( src + j );
-                        v1 = _mm_loadu_ps( src + j + 4 );
-                        v0 = _mm_cmple_ps( v0, thresh4 );
-                        v1 = _mm_cmple_ps( v1, thresh4 );
-                        v0 = _mm_and_ps( v0, maxval4 );
-                        v1 = _mm_and_ps( v1, maxval4 );
-                        _mm_storeu_ps( dst + j, v0 );
-                        _mm_storeu_ps( dst + j + 4, v1 );
-                    }
-                }
-#elif CV_NEON
-                float32x4_t v_thresh = vdupq_n_f32(thresh);
-                uint32x4_t v_maxval = vreinterpretq_u32_f32(vdupq_n_f32(maxval));
-
-                for( ; j <= roi.width - 4; j += 4 )
-                {
-                    float32x4_t v_src = vld1q_f32(src + j);
-                    uint32x4_t v_dst = vandq_u32(vcleq_f32(v_src, v_thresh), v_maxval);
-                    vst1q_f32(dst + j, vreinterpretq_f32_u32(v_dst));
-                }
-#endif
-
-                for( ; j < roi.width; j++ )
-                    dst[j] = src[j] <= thresh ? maxval : 0;
-            }
-            break;
-
-        case THRESH_TRUNC:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-#if CV_SSE2
-                if( useSIMD )
-                {
-                    __m128 thresh4 = _mm_set1_ps(thresh);
-                    for( ; j <= roi.width - 8; j += 8 )
-                    {
-                        __m128 v0, v1;
-                        v0 = _mm_loadu_ps( src + j );
-                        v1 = _mm_loadu_ps( src + j + 4 );
-                        v0 = _mm_min_ps( v0, thresh4 );
-                        v1 = _mm_min_ps( v1, thresh4 );
-                        _mm_storeu_ps( dst + j, v0 );
-                        _mm_storeu_ps( dst + j + 4, v1 );
-                    }
-                }
-#elif CV_NEON
-                float32x4_t v_thresh = vdupq_n_f32(thresh);
-
-                for( ; j <= roi.width - 4; j += 4 )
-                    vst1q_f32(dst + j, vminq_f32(vld1q_f32(src + j), v_thresh));
-#endif
-
-                for( ; j < roi.width; j++ )
-                    dst[j] = std::min(src[j], thresh);
-            }
-            break;
-
-        case THRESH_TOZERO:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-#if CV_SSE2
-                if( useSIMD )
-                {
-                    __m128 thresh4 = _mm_set1_ps(thresh);
-                    for( ; j <= roi.width - 8; j += 8 )
-                    {
-                        __m128 v0, v1;
-                        v0 = _mm_loadu_ps( src + j );
-                        v1 = _mm_loadu_ps( src + j + 4 );
-                        v0 = _mm_and_ps(v0, _mm_cmpgt_ps(v0, thresh4));
-                        v1 = _mm_and_ps(v1, _mm_cmpgt_ps(v1, thresh4));
-                        _mm_storeu_ps( dst + j, v0 );
-                        _mm_storeu_ps( dst + j + 4, v1 );
-                    }
-                }
-#elif CV_NEON
-                float32x4_t v_thresh = vdupq_n_f32(thresh);
-
-                for( ; j <= roi.width - 4; j += 4 )
-                {
-                    float32x4_t v_src = vld1q_f32(src + j);
-                    uint32x4_t v_dst = vandq_u32(vcgtq_f32(v_src, v_thresh),
-                                                 vreinterpretq_u32_f32(v_src));
-                    vst1q_f32(dst + j, vreinterpretq_f32_u32(v_dst));
-                }
-#endif
-
-                for( ; j < roi.width; j++ )
-                {
-                    float v = src[j];
-                    dst[j] = v > thresh ? v : 0;
-                }
-            }
-            break;
-
-        case THRESH_TOZERO_INV:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
-            {
-                j = 0;
-#if CV_SSE2
-                if( useSIMD )
-                {
-                    __m128 thresh4 = _mm_set1_ps(thresh);
-                    for( ; j <= roi.width - 8; j += 8 )
-                    {
-                        __m128 v0, v1;
-                        v0 = _mm_loadu_ps( src + j );
-                        v1 = _mm_loadu_ps( src + j + 4 );
-                        v0 = _mm_and_ps(v0, _mm_cmple_ps(v0, thresh4));
-                        v1 = _mm_and_ps(v1, _mm_cmple_ps(v1, thresh4));
-                        _mm_storeu_ps( dst + j, v0 );
-                        _mm_storeu_ps( dst + j + 4, v1 );
-                    }
-                }
-#elif CV_NEON
-                float32x4_t v_thresh = vdupq_n_f32(thresh);
-
-                for( ; j <= roi.width - 4; j += 4 )
-                {
-                    float32x4_t v_src = vld1q_f32(src + j);
-                    uint32x4_t v_dst = vandq_u32(vcleq_f32(v_src, v_thresh),
-                                                 vreinterpretq_u32_f32(v_src));
-                    vst1q_f32(dst + j, vreinterpretq_f32_u32(v_dst));
-                }
-#endif
-                for( ; j < roi.width; j++ )
-                {
-                    float v = src[j];
-                    dst[j] = v <= thresh ? v : 0;
-                }
-            }
-            break;
-        default:
-            return CV_Error( CV_StsBadArg, "" );
-    }
-}
-
-static void
-thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
-{
-    int i, j;
-    Size roi = _src.size();
-    roi.width *= _src.channels();
-    const double* src = _src.ptr<double>();
-    double* dst = _dst.ptr<double>();
-    size_t src_step = _src.step / sizeof(src[0]);
-    size_t dst_step = _dst.step / sizeof(dst[0]);
-
-    if (_src.isContinuous() && _dst.isContinuous())
+    if (checkHardwareSupport(CV_CPU_NEON))
     {
-        roi.width *= roi.height;
-        roi.height = 1;
+        j_scalar = calc_thresh_simd<SrcType, ThresholdType, CV_CPU_NEON>(src, srcStep, thresh, maxval, roi, dstStep, dst);
     }
+#endif
 
-    switch (type)
+    if (j_scalar < roi.width)
     {
-    case THRESH_BINARY:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
-        {
-            j = 0;
-
-            for (; j < roi.width; j++)
-                dst[j] = src[j] > thresh ? maxval : 0;
-        }
-        break;
-
-    case THRESH_BINARY_INV:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
-        {
-            j = 0;
-
-            for (; j < roi.width; j++)
-                dst[j] = src[j] <= thresh ? maxval : 0;
-        }
-        break;
-
-    case THRESH_TRUNC:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
-        {
-            j = 0;
-
-            for (; j < roi.width; j++)
-                dst[j] = std::min(src[j], thresh);
-        }
-        break;
-
-    case THRESH_TOZERO:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
-        {
-            j = 0;
-
-            for (; j < roi.width; j++)
-            {
-                double v = src[j];
-                dst[j] = v > thresh ? v : 0;
-            }
-        }
-        break;
-
-    case THRESH_TOZERO_INV:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
-        {
-            j = 0;
-
-            for (; j < roi.width; j++)
-            {
-                double v = src[j];
-                dst[j] = v <= thresh ? v : 0;
-            }
-        }
-        break;
-    default:
-        return CV_Error(CV_StsBadArg, "");
+        calc_thresh_primitive<SrcType, ThresholdType>(src, roi, srcStep, dstStep, thresh, maxval, j_scalar, dst);
     }
 }
 
@@ -1175,10 +1365,11 @@ getThreshVal_Triangle_8u( const Mat& _src )
     return thresh;
 }
 
+template <typename SrcType>
 class ThresholdRunner : public ParallelLoopBody
 {
 public:
-    ThresholdRunner(Mat _src, Mat _dst, double _thresh, double _maxval, int _thresholdType)
+    ThresholdRunner(Mat _src, Mat _dst, SrcType _thresh, SrcType _maxval, int _thresholdType)
     {
         src = _src;
         dst = _dst;
@@ -1196,21 +1387,45 @@ public:
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
 
-        if (srcStripe.depth() == CV_8U)
+        Size roi = srcStripe.size();
+        roi.width *= srcStripe.channels();
+        size_t src_step = srcStripe.step / sizeof(SrcType);
+        size_t dst_step = dstStripe.step / sizeof(SrcType);
+        if (srcStripe.isContinuous() && dstStripe.isContinuous())
         {
-            thresh_8u( srcStripe, dstStripe, (uchar)thresh, (uchar)maxval, thresholdType );
+            roi.width *= roi.height;
+            roi.height = 1;
+            src_step = dst_step = roi.width;
         }
-        else if( srcStripe.depth() == CV_16S )
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+        if (tegra::useTegra() && cals_thresh_tegra(srcStripe, roi.width, roi.height, thresh, maxval, thresholdType, dstStripe);
         {
-            thresh_16s( srcStripe, dstStripe, (short)thresh, (short)maxval, thresholdType );
+            return;
         }
-        else if( srcStripe.depth() == CV_32F )
+#endif
+
+        const SrcType* _src = srcStripe.ptr<SrcType>();
+        SrcType* _dst = dstStripe.ptr<SrcType>();
+        if (thresholdType == THRESH_BINARY)
         {
-            thresh_32f( srcStripe, dstStripe, (float)thresh, (float)maxval, thresholdType );
+            calc_thresh<SrcType, THRESH_BINARY>(_src, (int)src_step, thresh, maxval, roi, srcStripe.data == dstStripe.data, (int)dst_step, _dst);
         }
-        else if( srcStripe.depth() == CV_64F )
+        else if (thresholdType == THRESH_BINARY_INV)
         {
-            thresh_64f(srcStripe, dstStripe, thresh, maxval, thresholdType);
+            calc_thresh<SrcType, THRESH_BINARY_INV>(_src, (int)src_step, thresh, maxval, roi, srcStripe.data == dstStripe.data, (int)dst_step, _dst);
+        }
+        else if (thresholdType == THRESH_TRUNC)
+        {
+            calc_thresh<SrcType, THRESH_TRUNC>(_src, (int)src_step, thresh, maxval, roi, srcStripe.data == dstStripe.data, (int)dst_step, _dst);
+        }
+        else if (thresholdType == THRESH_TOZERO)
+        {
+            calc_thresh<SrcType, THRESH_TOZERO>(_src, (int)src_step, thresh, maxval, roi, srcStripe.data == dstStripe.data, (int)dst_step, _dst);
+        }
+        else if (thresholdType == THRESH_TOZERO_INV)
+        {
+            calc_thresh<SrcType, THRESH_TOZERO_INV>(_src, (int)src_step, thresh, maxval, roi, srcStripe.data == dstStripe.data, (int)dst_step, _dst);
         }
     }
 
@@ -1218,8 +1433,8 @@ private:
     Mat src;
     Mat dst;
 
-    double thresh;
-    double maxval;
+    SrcType thresh;
+    SrcType maxval;
     int thresholdType;
 };
 
@@ -1320,8 +1535,9 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 src.copyTo(dst);
             return thresh;
         }
-        thresh = ithresh;
-        maxval = imaxval;
+        parallel_for_(Range(0, dst.rows),
+                      ThresholdRunner<uchar>(src, dst, (uchar)ithresh, (uchar)imaxval, type),
+                      dst.total()/(double)(1<<16));
     }
     else if( src.depth() == CV_16S )
     {
@@ -1347,19 +1563,23 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 src.copyTo(dst);
             return thresh;
         }
-        thresh = ithresh;
-        maxval = imaxval;
+        parallel_for_(Range(0, dst.rows),
+                      ThresholdRunner<short>(src, dst, (short)ithresh, (short)imaxval, type),
+                      dst.total()/(double)(1<<16));
     }
-    else if( src.depth() == CV_32F )
-        ;
-    else if( src.depth() == CV_64F )
-        ;
+    else if( src.depth() == CV_32F ) {
+        parallel_for_(Range(0, dst.rows),
+                      ThresholdRunner<float>(src, dst, (float)thresh, (float)maxval, type),
+                      dst.total()/(double)(1<<16));
+    }
+    else if( src.depth() == CV_64F ) {
+        parallel_for_(Range(0, dst.rows),
+                      ThresholdRunner<double>(src, dst, thresh, maxval, type),
+                      dst.total()/(double)(1<<16));
+    }
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    parallel_for_(Range(0, dst.rows),
-                  ThresholdRunner(src, dst, thresh, maxval, type),
-                  dst.total()/(double)(1<<16));
     return thresh;
 }
 
