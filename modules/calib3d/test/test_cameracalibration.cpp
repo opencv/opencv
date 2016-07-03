@@ -949,8 +949,8 @@ void CV_CalibrationMatrixValuesTest::run(int)
         ny = goodAspectRatio;
     }
 
-    goodFovx = 2 * atan( imageSize.width / (2 * fx)) * 180.0 / CV_PI;
-    goodFovy = 2 * atan( imageSize.height / (2 * fy)) * 180.0 / CV_PI;
+    goodFovx = (atan2(cx, fx) + atan2(imageSize.width  - cx, fx)) * 180.0 / CV_PI;
+    goodFovy = (atan2(cy, fy) + atan2(imageSize.height - cy, fy)) * 180.0 / CV_PI;
 
     goodFocalLength = fx / nx;
 
