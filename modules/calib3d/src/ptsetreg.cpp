@@ -562,7 +562,7 @@ public:
             double a = F[0]*f.x + F[1]*f.y + F[2] - t.x;
             double b = F[3]*f.x + F[4]*f.y + F[5] - t.y;
 
-            errptr[i] = (float)std::sqrt(a*a + b*b);
+            errptr[i] = (float)(a*a + b*b);
         }
     }
 
