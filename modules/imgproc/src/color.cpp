@@ -8394,7 +8394,11 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() && !(depth == CV_8U && (code == CV_Luv2BGR || code == CV_Luv2RGB)),
                 ocl_cvtColor(_src, _dst, code, dcn) )
 
-    Mat src = _src.getMat(), dst;
+    Mat src, dst;
+    if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
+        _src.copyTo(src);
+    else
+        src = _src.getMat();
     Size sz = src.size();
     CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
 
