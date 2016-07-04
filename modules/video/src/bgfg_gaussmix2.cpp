@@ -309,7 +309,7 @@ struct MOG2Invoker : ParallelLoopBody
 
                 //internal:
                 bool fitsPDF = false;//if it remains zero a new GMM mode will be added
-                int nmodes = modesUsed[x], nNewModes = nmodes;//current number of modes in GMM
+                int nmodes = modesUsed[x];//current number of modes in GMM
                 float totalWeight = 0.f;
 
                 float* mean_m = mean;
@@ -414,8 +414,6 @@ struct MOG2Invoker : ParallelLoopBody
                 {
                     gmm[mode].weight *= totalWeight;
                 }
-
-                nmodes = nNewModes;
 
                 //make new mode if needed and exit
                 if( !fitsPDF )
