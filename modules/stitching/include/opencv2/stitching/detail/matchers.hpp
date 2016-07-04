@@ -97,12 +97,41 @@ protected:
     virtual void find(InputArray image, ImageFeatures &features) = 0;
 };
 
+/** @brief Feature finder with support for parallel processing
+
+@sa detail::SurfFeaturesFinder2 detail::OrbFeaturesFinder2
+*/
+// TODO OpenCV ABI 4.x
+class CV_EXPORTS FeaturesFinder2 : public FeaturesFinder
+{
+public:
+    FeaturesFinder2() : is_thread_safe_(false) {}
+    /** @brief Finds features in the given images in parallel.
+
+    @param images Source images
+    @param features Found features for each image
+    @param rois Regions of interest for each image
+
+    @sa detail::ImageFeatures, Rect_
+    */
+    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features,
+                     const std::vector<std::vector<cv::Rect> > &rois);
+    /** @overload */
+    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features);
+    /** @return True, if it's possible to use the same finder instance in parallel, false otherwise
+    */
+    bool isThreadSafe() const { return is_thread_safe_; }
+protected:
+    bool is_thread_safe_;
+};
+
 /** @brief SURF features finder.
 
 @sa detail::FeaturesFinder, SURF
 */
 class CV_EXPORTS SurfFeaturesFinder : public FeaturesFinder
 {
+    friend class SurfFeaturesFinder2;
 public:
     SurfFeaturesFinder(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
                        int num_octaves_descr = /*4*/3, int num_layers_descr = /*2*/4);
@@ -115,12 +144,37 @@ private:
     Ptr<Feature2D> surf;
 };
 
+/** @brief SURF features finder to use with FeaturesFinder2
+
+@sa detail::FeaturesFinder2, SURF
+*/
+class CV_EXPORTS SurfFeaturesFinder2 : public FeaturesFinder2
+{
+public:
+    SurfFeaturesFinder2(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
+                        int num_octaves_descr = /*4*/3, int num_layers_descr = /*2*/4)
+            : finder_(makePtr<SurfFeaturesFinder>(hess_thresh, num_octaves, num_layers,
+                                                  num_octaves_descr, num_layers_descr))
+    {
+        is_thread_safe_ = true;
+    }
+
+private:
+    void find(InputArray image, ImageFeatures &features)
+    {
+        finder_->find(image, features);
+    }
+
+    Ptr<SurfFeaturesFinder> finder_;
+};
+
 /** @brief ORB features finder. :
 
 @sa detail::FeaturesFinder, ORB
 */
 class CV_EXPORTS OrbFeaturesFinder : public FeaturesFinder
 {
+    friend class OrbFeaturesFinder2;
 public:
     OrbFeaturesFinder(Size _grid_size = Size(3,1), int nfeatures=1500, float scaleFactor=1.3f, int nlevels=5);
 
@@ -131,6 +185,27 @@ private:
     Size grid_size;
 };
 
+/** @brief ORB features finder to use with FeaturesFinder2
+
+@sa detail::FeaturesFinder, ORB
+*/
+class CV_EXPORTS OrbFeaturesFinder2 : public FeaturesFinder2
+{
+public:
+    OrbFeaturesFinder2(Size _grid_size = Size(3,1), int nfeatures=1500, float scaleFactor=1.3f, int nlevels=5)
+            : finder_(makePtr<OrbFeaturesFinder>(_grid_size, nfeatures, scaleFactor, nlevels))
+    {
+        is_thread_safe_ = true;
+    }
+
+private:
+    void find(InputArray image, ImageFeatures &features)
+    {
+        finder_->find(image, features);
+    }
+
+    Ptr<OrbFeaturesFinder> finder_;
+};
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
