@@ -42,6 +42,7 @@
 #include "precomp.hpp"
 
 #include "bm3d_denoising_invoker.hpp"
+#include "bm3d_denoising_transforms.hpp"
 
 template<typename ST, typename IT, typename UIT, typename D>
 static void bm3dDenoising_(const Mat& src, Mat& dst, const float& h,
@@ -57,7 +58,7 @@ static void bm3dDenoising_(const Mat& src, Mat& dst, const float& h,
                 src, dst, templateWindowSize, searchWindowSize, h),
             granularity);
         break;
-    case 2:
+    /*case 2:
         if (hn == 1)
             parallel_for_(cv::Range(0, src.rows),
                 Bm3dDenoisingInvoker<Vec<ST, 2>, IT, UIT, D, int>(
@@ -92,7 +93,7 @@ static void bm3dDenoising_(const Mat& src, Mat& dst, const float& h,
                 Bm3dDenoisingInvoker<Vec<ST, 4>, IT, UIT, D, Vec4i>(
                     src, dst, templateWindowSize, searchWindowSize, h),
                 granularity);
-        break;
+        break;*/
     default:
         CV_Error(Error::StsBadArg,
             "Unsupported number of channels! Only 1, 2, 3, and 4 are supported");
@@ -110,18 +111,13 @@ void cv::bm3dDenoising(
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(1 == cn);
 
-    Size src_size = _src.size();
+    Size srcSize = _src.size();
     Mat src = _src.getMat();
-    _dst.create(src_size, src.type());
+    _dst.create(srcSize, src.type());
     Mat dst = _dst.getMat();
 
     switch (normType) {
     case cv::NORM_L2:
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        if (hn == 1 && tegra::useTegra() &&
-            tegra::fastNlMeansDenoising(src, dst, h[0], templateWindowSize, searchWindowSize))
-            return;
-#endif
         switch (depth) {
         case CV_8U:
             bm3dDenoising_<uchar, int, unsigned, DistSquared>(src, dst, h,

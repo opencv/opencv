@@ -50,13 +50,42 @@
 
 using namespace cv;
 
+#define BM3D_BLOCK_SIZE 4
+#define BM3D_BLOCK_SIZE_SQ 16
+#define BM3D_MAX_3D_SIZE 8
+const float sqrt2 = std::sqrt(2);
+
+static float kThrMap2D[BM3D_BLOCK_SIZE_SQ] = {
+    0,          0.5,        1 / sqrt2,  1 / sqrt2,
+    0.5,        1,          sqrt2,      sqrt2,
+    1 / sqrt2,  sqrt2,      2,          2,
+    1 / sqrt2,  sqrt2,      2,          2
+};
+
+static const float kThrMap1D[(BM3D_MAX_3D_SIZE << 1) - 1] = {
+    1.0, //1 element
+    1 / sqrt2,  sqrt2, // 2 elements
+    0.5, 1.0, sqrt2, sqrt2,
+    sqrt2 / 4, 1.0 / sqrt2, 1, 1, sqrt2, sqrt2, sqrt2, sqrt2
+};
+
+static const float kCoeff[4] = {
+    1,
+    std::sqrt(2 * std::log(2)),
+    std::sqrt(2 * std::log(4)),
+    std::sqrt(2 * std::log(8))
+};
+
+const float kCoeff2D = std::sqrt(2 * std::log(BM3D_BLOCK_SIZE * BM3D_BLOCK_SIZE));
+
+
 template <typename T, typename IT, typename UIT, typename D, typename WT>
 struct Bm3dDenoisingInvoker :
     public ParallelLoopBody
 {
 public:
     Bm3dDenoisingInvoker(const Mat& src, Mat& dst,
-        int template_window_size, int search_window_size, const float &h);
+        int templateWindowSize, int searchWindowSize, const float &h);
 
     void operator() (const Range& range) const;
 
@@ -65,19 +94,33 @@ private:
 
     const Mat& src_;
     Mat& dst_;
+    Mat srcExtended_;
+    Mat dstExtended_;
+    Mat weights_;
 
-    Mat extended_src_;
-    int border_size_;
+    int borderSize_;
 
-    int template_window_size_;
-    int search_window_size_;
+    int templateWindowSize_;
+    int searchWindowSize_;
 
-    int template_window_half_size_;
-    int search_window_half_size_;
+    int halfTemplateWindowSize_;
+    int halfSearchWindowSize_;
+
+    int templateWindowSizeSq_;
+    int searchWindowSizeSq_;
 
     typename pixelInfo<WT>::sampleType fixed_point_mult_;
-    int almost_template_window_size_sq_bin_shift_;
+    int almost_templateWindowSizeSq_bin_shift_;
     std::vector<WT> almost_dist2weight_;
+
+    // Function pointers
+    void(*haarTransform2D)(T *ptr, short *dst, const short &step);
+    void(*inverseHaar2D)(short *src);
+
+    // Threshold maps
+    short *thrMap2D;
+    short *thrMap2Dpre;
+    short *thrMap1D;
 
     //void calcDistSumsForFirstElementInRow(
     //	int i, Array2d<int>& dist_sums,
@@ -102,32 +145,32 @@ inline int getNearestPowerOf2(int value)
 template <typename T, typename IT, typename UIT, typename D, typename WT>
 Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::Bm3dDenoisingInvoker(
     const Mat& src, Mat& dst,
-    int template_window_size,
-    int search_window_size,
+    int templateWindowSize,
+    int searchWindowSize,
     const float &h) :
     src_(src), dst_(dst)
 {
     CV_Assert(src.channels() == pixelInfo<T>::channels);
 
-    template_window_half_size_ = template_window_size / 2;
-    search_window_half_size_ = search_window_size / 2;
-    template_window_size_ = template_window_half_size_ * 2 + 1;
-    search_window_size_ = search_window_half_size_ * 2 + 1;
+    halfTemplateWindowSize_ = templateWindowSize >> 1;
+    halfSearchWindowSize_ = searchWindowSize >> 1;
+    templateWindowSize_ = halfTemplateWindowSize_ << 1;
+    searchWindowSize_ = halfSearchWindowSize_ << 1 + 1;
+    templateWindowSizeSq_ = templateWindowSize_ * templateWindowSize_;
 
-    border_size_ = search_window_half_size_ + template_window_half_size_;
-    copyMakeBorder(src_, extended_src_, border_size_, border_size_, border_size_, border_size_, BORDER_DEFAULT);
+    borderSize_ = halfSearchWindowSize_ + halfTemplateWindowSize_;
+    copyMakeBorder(src_, srcExtended_, borderSize_, borderSize_, borderSize_, borderSize_, BORDER_DEFAULT);
 
     const IT max_estimate_sum_value =
-        (IT)search_window_size_ * (IT)search_window_size_ * (IT)pixelInfo<T>::sampleMax();
+        (IT)searchWindowSize_ * (IT)searchWindowSize_ * (IT)pixelInfo<T>::sampleMax();
     fixed_point_mult_ = (int)std::min<IT>(std::numeric_limits<IT>::max() / max_estimate_sum_value,
         pixelInfo<WT>::sampleMax());
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
-    CV_Assert(template_window_size_ <= 46340); // sqrt(INT_MAX)
-    int template_window_size_sq = template_window_size_ * template_window_size_;
-    almost_template_window_size_sq_bin_shift_ = getNearestPowerOf2(template_window_size_sq);
-    double almost_dist2actual_dist_multiplier = ((double)(1 << almost_template_window_size_sq_bin_shift_)) / template_window_size_sq;
+    CV_Assert(templateWindowSize_ <= 46340); // sqrt(INT_MAX)
+    almost_templateWindowSizeSq_bin_shift_ = getNearestPowerOf2(templateWindowSizeSq_);
+    double almost_dist2actual_dist_multiplier = ((double)(1 << almost_templateWindowSizeSq_bin_shift_)) / templateWindowSizeSq_;
 
     int max_dist = D::template maxDist<T>();
     int almost_max_dist = (int)(max_dist / almost_dist2actual_dist_multiplier + 1);
@@ -143,108 +186,222 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::Bm3dDenoisingInvoker(
     // additional optimization init end
     if (dst_.empty())
         dst_ = Mat::zeros(src_.size(), src_.type());
+
+    //const int step = srcExtended_.step / sizeof(T);
+    //const int cstep = step - templateWindowSize_;
+    //const int csstep = step - searchWindowSize_;
+
+    ////cv::Mat dstExteded = cv::Mat::zeros(srcExtended_.size(), CV_32FC1);
+    ////cv::Mat weights = cv::Mat::zeros(srcExtended_.size(), CV_32FC1);
+
+    //const int dstStep = dstExtended_.step / sizeof(float);
+    //const int weiStep = dstExtended_.step / sizeof(float);
+    //const int dstcstep = dstStep - templateWindowSize_;
+    //const int weicstep = weiStep - templateWindowSize_;
+
+    // Precompute thresholds
+    const int hardThrPre2D = 0;
+    const int hardThr1D = h;
+    const int hardThr2D = h;
+    const int hardThrDC = 0.25;
+
+    // Threshold maps for 2D filtering
+    thrMap2D = new short[templateWindowSizeSq_];
+    thrMap2Dpre = new short[templateWindowSizeSq_];
+
+    ComputeThresholdMap2D(thrMap2D, kThrMap2D, hardThr2D, kCoeff2D, templateWindowSizeSq_, true);
+    ComputeThresholdMap2D(thrMap2Dpre, kThrMap2D, hardThrPre2D, kCoeff2D, templateWindowSizeSq_, false);
+
+    // Set DC components filtering
+    kThrMap2D[0] = hardThrDC;
+
+    // Threshold map for 1D filtering
+    thrMap1D = new short[templateWindowSizeSq_ * ((BM3D_MAX_3D_SIZE << 1) - 1)];
+    ComputeThresholdMap1D(thrMap1D, kThrMap1D, kThrMap2D, hardThr1D, kCoeff, templateWindowSizeSq_);
+
+    switch (templateWindowSize_)
+    {
+    case 4:
+        haarTransform2D = Haar4x4;
+        inverseHaar2D = InvHaar4x4;
+        break;
+    default:
+        CV_Error(Error::StsBadArg, "Unsupported template size! Currently supported is only size of 4.");
+    }
 }
 
 template <typename T, typename IT, typename UIT, typename D, typename WT>
 void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) const
 {
+    const int step = srcExtended_.step / sizeof(T);
+    const int cstep = step - templateWindowSize_;
+    const int csstep = step - searchWindowSize_;
+
+    const int dstStep = dstExtended_.step / sizeof(float);
+    const int weiStep = dstExtended_.step / sizeof(float);
+    const int dstcstep = dstStep - templateWindowSize_;
+    const int weicstep = weiStep - templateWindowSize_;
+
     int row_from = range.start;
     int row_to = range.end - 1;
 
-    // sums of cols anf rows for current pixel p
-    Array2d<int> dist_sums(search_window_size_, search_window_size_);
-
-    // for lazy calc optimization (sum of cols for current pixel)
-    Array3d<int> col_dist_sums(template_window_size_, search_window_size_, search_window_size_);
-
-    int first_col_num = -1;
-    // last elements of column sum (for each element in row)
-    Array3d<int> up_col_dist_sums(src_.cols, search_window_size_, search_window_size_);
-
-    for (int i = row_from; i <= row_to; i++)
+    for (int j = row_from; j <= row_to; ++j)
     {
-        for (int j = 0; j < src_.cols; j++)
+        // For shirnkage
+        short *r = new short[templateWindowSizeSq_];  // reference block
+        short **z = new short*[searchWindowSizeSq_];  // 3D array
+        for (int i = 0; i < searchWindowSizeSq_; ++i)
+            z[i] = new short[templateWindowSizeSq_];
+        int *dist = new short[templateWindowSizeSq_];
+        short *coords_x = new short[searchWindowSizeSq_];
+        short *coords_y = new short[searchWindowSizeSq_];
+
+        for (int i = 0; i < src_.cols; ++i)
         {
-            int search_window_y = i - search_window_half_size_;
-            int search_window_x = j - search_window_half_size_;
+            T *referencePatch = srcExtended_.ptr<T>(0) + step*(halfSearchWindowSize_ + j) + (halfSearchWindowSize_ + i);
+            T *currentPixel = srcExtended_.ptr<T>(0) + step*j + i;
 
-            // calc dist_sums
-            if (j == 0)
+            haarTransform2D(referencePatch, r, step);
+            HardThreshold2D(r, thrMap2Dpre);
+
+            int elementSize = 0;
+            for (int l = 0; l < searchWindowSize; ++l)
             {
-                //calcDistSumsForFirstElementInRow(i, dist_sums, col_dist_sums, up_col_dist_sums);
-                first_col_num = 0;
-            }
-            else
-            {
-                // calc cur dist_sums using previous dist_sums
-                if (i == row_from)
+                T *candidatePatch = currentPixel + step*l;
+                for (int k = 0; k < searchWindowSize; ++k)
                 {
-                    //calcDistSumsForElementInFirstRow(i, j, first_col_num,
-                    //	dist_sums, col_dist_sums, up_col_dist_sums);
-                }
-                else
-                {
-                    int ay = border_size_ + i;
-                    int ax = border_size_ + j + template_window_half_size_;
+                    haarTransform2D(candidatePatch + k, z[elementSize], step);
+                    HardThreshold2D(z[elementSize], thrMap2Dpre);
 
-                    int start_by = border_size_ + i - search_window_half_size_;
-                    int start_bx = border_size_ + j - search_window_half_size_ + template_window_half_size_;
+                    // Calc distance
+                    int e = 0;
+                    for (int n = templateWindowSizeSq_; n--;)
+                        e += (z[elementSize][n] - r[n]) * (z[elementSize][n] - r[n]);
+                    e /= templateWindowSizeSq_;
 
-                    T a_up = extended_src_.at<T>(ay - template_window_half_size_ - 1, ax);
-                    T a_down = extended_src_.at<T>(ay + template_window_half_size_, ax);
-
-                    // copy class member to local variable for optimization
-                    int search_window_size = search_window_size_;
-
-                    for (int y = 0; y < search_window_size; y++)
+                    // Increase the counter and save the distance
+                    if (e < bmThr)
                     {
-                        int * dist_sums_row = dist_sums.row_ptr(y);
-                        int * col_dist_sums_row = col_dist_sums.row_ptr(first_col_num, y);
-                        int * up_col_dist_sums_row = up_col_dist_sums.row_ptr(j, y);
+                        dist[elementSize] = 0;
 
-                        const T * b_up_ptr = extended_src_.ptr<T>(start_by - template_window_half_size_ - 1 + y);
-                        const T * b_down_ptr = extended_src_.ptr<T>(start_by + template_window_half_size_ + y);
-
-                        for (int x = 0; x < search_window_size; x++)
-                        {
-                            // remove from current pixel sum column sum with index "first_col_num"
-                            dist_sums_row[x] -= col_dist_sums_row[x];
-
-                            int bx = start_bx + x;
-                            col_dist_sums_row[x] = up_col_dist_sums_row[x] + D::template calcUpDownDist<T>(a_up, a_down, b_up_ptr[bx], b_down_ptr[bx]);
-
-                            dist_sums_row[x] += col_dist_sums_row[x];
-                            up_col_dist_sums_row[x] = col_dist_sums_row[x];
-                        }
+                        // Save coords
+                        coords_x[elementSize] = k;
+                        coords_y[elementSize] = l;
+                        ++elementSize;
                     }
                 }
-
-                first_col_num = (first_col_num + 1) % template_window_size_;
             }
 
-            // calc weights
-            IT estimation[pixelInfo<T>::channels], weights_sum[pixelInfo<WT>::channels];
-            for (int channel_num = 0; channel_num < pixelInfo<T>::channels; channel_num++)
-                estimation[channel_num] = 0;
-            for (int channel_num = 0; channel_num < pixelInfo<WT>::channels; channel_num++)
-                weights_sum[channel_num] = 0;
+            if (elementSize == 0)
+                continue;
 
-            for (int y = 0; y < search_window_size_; y++)
+            // Sort z by distance
+            for (int k = 0; k < elementSize; ++k)
             {
-                const T* cur_row_ptr = extended_src_.ptr<T>(border_size_ + search_window_y + y);
-                int* dist_sums_row = dist_sums.row_ptr(y);
-                for (int x = 0; x < search_window_size_; x++)
+                for (int l = k + 1; l < elementSize; ++l)
                 {
-                    int almostAvgDist = dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_;
-                    WT weight = almost_dist2weight_[almostAvgDist];
-                    T p = cur_row_ptr[border_size_ + search_window_x + x];
-                    incWithWeight<T, IT, WT>(estimation, weights_sum, weight, p);
+                    if (dist[l] < dist[k])
+                    {
+                        // swap pointers in z
+                        short *temp = z[k];
+                        z[k] = z[l];
+                        z[l] = temp;
+
+                        // swap dist
+                        std::swap(dist[k], dist[l]);
+
+                        // swap coords
+                        std::swap(coords_x[k], coords_x[l]);
+                        std::swap(coords_y[k], coords_y[l]);
+                    }
                 }
             }
 
-            divByWeightsSum<IT, UIT, pixelInfo<T>::channels, pixelInfo<WT>::channels>(estimation,
-                weights_sum);
-            dst_.at<T>(i, j) = saturateCastFromArray<T, IT>(estimation);
+            // Find the nearest power of 2 and cap the group size from the top
+            elementSize = getNearestPowerOf2(elementSize);
+            if (elementSize > BM3D_MAX_3D_SIZE)
+                elementSize = BM3D_MAX_3D_SIZE;
+
+            // Shrink in 2D
+            for (int k = 0; k < elementSize; ++k)
+                HardThreshold2D(z[k], thrMap2D);
+
+            // Transform and shrink 1D columns
+            short sumNonZero = 0;
+            short *thrMapPtr1D = thrMap1D + (elementSize - 1) * templateWindowSizeSq_;
+            switch (elementSize)
+            {
+            case 8:
+                for (int n = 0; n < templateWindowSizeSq_; n++)
+                {
+                    sumNonZero += HaarTransformShrink8(z, n, thrMapPtr1D);
+                    InverseHaarTransform8(z, n);
+                }
+                break;
+
+            case 4:
+                for (int n = 0; n < templateWindowSizeSq_; n++)
+                {
+                    sumNonZero += HaarTransformShrink4(z, n, thrMapPtr1D);
+                    InverseHaarTransform4(z, n);
+                }
+                break;
+
+            case 2:
+                for (int n = 0; n < templateWindowSizeSq_; n++)
+                {
+                    sumNonZero += HaarTransformShrink2(z, n, thrMapPtr1D);
+                    InverseHaarTransform2(z, n);
+                }
+                break;
+
+            case 1:
+                for (int n = 0; n < templateWindowSizeSq_; n++)
+                {
+                    shrink(z[0][n], sumNonZero, *thrMapPtr1D++);
+                }
+                break;
+            }
+
+
+            // Aggregate the results
+            ++sumNonZero;
+            float weight = 1.0 / (float)sumNonZero;
+
+            // Scale weight by element size
+            weight *= elementSize;
+            weight /= BM3D_MAX_3D_SIZE;
+
+            // Put patches back to their original positions
+            float *dstPtr = dstExtended_.ptr<float < (j)+i;
+            float *weiPtr = weights.ptr<float < (j)+i;
+
+            for (int l = 0; l < elementSize; ++l)
+            {
+                const int offset = coords_y[l] * dststep + coords_x[l];
+                float *d = dstPtr + offset;
+                float *dw = weiPtr + offset;
+
+                for (int n = 0; n < templateWindowSize_; ++n)
+                {
+                    for (int m = 0; m < templateWindowSize_; ++m)
+                    {
+                        float curWeight = weight;// *kernel[n * templateWindowSize_ + m];
+                        *d += z[l][n * templateWindowSize_ + m] * curWeight;
+                        *dw += curWeight;
+                        ++d, ++dw;
+                    }
+                    d += dstcstep;
+                    dw += weicstep;
+                }
+            } // i
+
+            delete[] r;
+            delete[] dist;
+            for (int i = 0; i < searchWindowSizeSq_; ++i)
+                delete[] z[i];
+            delete[] coords_x;
+            delete[] coords_y;
         }
     }
 }

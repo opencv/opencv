@@ -486,4 +486,52 @@ template <typename T, typename IT> static inline T saturateCastFromArray(IT* est
     return saturateCastFromArray_<T, IT>::f(estimation);
 }
 
+void ComputeThresholdMap2D(
+    short *thrMap2D,
+    float *kThrMap2D,
+    const float &hardThr2D,
+    const float &kCoeff2D,
+    const int &templateWindowSizeSq,
+    bool print)
+{
+    for (int jj = 0; jj < templateWindowSizeSq; ++jj)
+    {
+        float thr = kThrMap2D[jj] * hardThr2D * kCoeff2D;
+        if (thr > 32767)
+            thr = 32767;
+
+        thrMap2D[jj] = thr;
+    }
+}
+
+void ComputeThresholdMap1D(
+    short *thrMap1D,
+    const float *kThrMap1D,
+    float *kThrMap2D,
+    const float &hardThr1D,
+    const float *kCoeff,
+    const int &templateWindowSizeSq)
+{
+    short *thrMapPtr1D = thrMap1D;
+    for (int ii = 0; ii < 4; +ii)
+    {
+        for (int jj = 0; jj < templateWindowSizeSq; ++jj)
+        {
+            for (int ii1 = 0; ii1 < (1 << ii); ++ii1)
+            {
+                int indexIn1D = (1 << ii) - 1 + ii1;
+                int indexIn2D = jj;
+                int thr = kThrMap1D[indexIn1D] * kThrMap2D[indexIn2D] * hardThr1D * kCoeff[ii];
+                if (thr > 32767)
+                    thr = 32767;
+
+                if (jj == 0 && ii1 == 0)
+                    thr = 0;
+
+                *thrMapPtr1D++ = (short)thr;
+            }
+        }
+    }
+}
+
 #endif
