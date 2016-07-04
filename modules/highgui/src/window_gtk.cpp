@@ -1975,22 +1975,22 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         int orient = CV_EVENT_MOUSEWHEEL;
 #endif //GTK_VERSION3_4
 
-        cv_event = CV_EVENT_MOUSEWHEEL;
         state    = event->scroll.state;
 
         switch(event->scroll.direction) {
 #if defined(GTK_VERSION3_4)
-        case GDK_SCROLL_SMOOTH: flags |= (((int)delta << 16) | orient);
+        case GDK_SCROLL_SMOOTH: flags |= (((int)delta << 16));
             break;
 #endif //GTK_VERSION3_4
         case GDK_SCROLL_LEFT:  orient = CV_EVENT_MOUSEHWHEEL;
-        case GDK_SCROLL_UP:    flags |= ((-(int)1 << 16) | orient);
+        case GDK_SCROLL_UP:    flags |= ((-(int)1 << 16));
             break;
         case GDK_SCROLL_RIGHT: orient = CV_EVENT_MOUSEHWHEEL;
-        case GDK_SCROLL_DOWN:  flags |= (((int)1 << 16) | orient);
+        case GDK_SCROLL_DOWN:  flags |= (((int)1 << 16));
             break;
         default: ;
         };
+        cv_event = orient;
     }
 
     if( cv_event >= 0 )
