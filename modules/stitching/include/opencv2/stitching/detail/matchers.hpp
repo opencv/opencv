@@ -345,9 +345,7 @@ public:
         full_affine_(full_affine) {}
 
 protected:
-    void match(const cv::detail::ImageFeatures &features1,
-               const cv::detail::ImageFeatures &features2,
-               cv::detail::MatchesInfo &matches_info);
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info);
 
     bool full_affine_;
 };
