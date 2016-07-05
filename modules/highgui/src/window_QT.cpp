@@ -2637,7 +2637,7 @@ void DefaultViewPort::wheelEvent(QWheelEvent* evnt)
     icvmouseHandler(evnt, mouse_wheel, cv_event, flags);
     icvmouseProcessing(QPoingF(pt), cv_event, flags);
 
-    scaleView(evnt->delta() / 240.0, pt);
+    scaleView(delta / 240.0, pt);
     viewport()->update();
 
     QWidget::mouseWheel(evnt);
