@@ -513,7 +513,7 @@ void ComputeThresholdMap1D(
     const int &templateWindowSizeSq)
 {
     short *thrMapPtr1D = thrMap1D;
-    for (int ii = 0; ii < 4; +ii)
+    for (int ii = 0; ii < 4; ++ii)
     {
         for (int jj = 0; jj < templateWindowSizeSq; ++jj)
         {

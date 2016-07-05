@@ -50,13 +50,19 @@ static void bm3dDenoising_(const Mat& src, Mat& dst, const float& h,
 {
     int hn = 1;
     double granularity = (double)std::max(1., (double)dst.total() / (1 << 17));
+    cv::Mutex lock = cv::Mutex();
+
+    printf("Granularity: %.4f\n", granularity);
+    granularity = 1;
 
     switch (CV_MAT_CN(src.type())) {
     case 1:
+        printf("Entering Bm3dDenoisingInvoker...\n");
         parallel_for_(cv::Range(0, src.rows),
             Bm3dDenoisingInvoker<ST, IT, UIT, D, int>(
-                src, dst, templateWindowSize, searchWindowSize, h),
+                src, dst, templateWindowSize, searchWindowSize, h, lock),
             granularity);
+
         break;
     /*case 2:
         if (hn == 1)

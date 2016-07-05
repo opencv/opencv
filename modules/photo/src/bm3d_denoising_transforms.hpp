@@ -53,7 +53,7 @@ inline static void shrink(T &val, T &nonZeroCount, const short &threshold)
         ++nonZeroCount;
 }
 
-inline static void HardThreshold2D(short *dst, short *thrMap, const int &templateWindowSizeSq)
+inline static void hardThreshold2D(short *dst, short *thrMap, const int &templateWindowSizeSq)
 {
     for (int i = 1; i < templateWindowSizeSq; ++i)
     {
@@ -64,12 +64,12 @@ inline static void HardThreshold2D(short *dst, short *thrMap, const int &templat
 
 // Forward transform 4x4 block
 template <typename T>
-static void HaarColumn4x4(T *src, short *dst, const int &step)
+static void HaarColumn4x4(const T *src, short *dst, const int &step)
 {
-    T *src0 = src;
-    T *src1 = src + 1 * step;
-    T *src2 = src + 2 * step;
-    T *src3 = src + 3 * step;
+    const T *src0 = src;
+    const T *src1 = src + 1 * step;
+    const T *src2 = src + 2 * step;
+    const T *src3 = src + 3 * step;
 
     short sum0 = (*src0 + *src1 + 1) >> 1;
     short sum1 = (*src2 + *src3 + 1) >> 1;
@@ -86,7 +86,7 @@ static void HaarColumn4x4(T *src, short *dst, const int &step)
 }
 
 template <typename T>
-static void HaarRow4x4(T *src, short *dst)
+static void HaarRow4x4(const T *src, short *dst)
 {
     short sum0 = (src[0] + src[1] + 1) >> 1;
     short sum1 = (src[2] + src[3] + 1) >> 1;
@@ -103,7 +103,7 @@ static void HaarRow4x4(T *src, short *dst)
 }
 
 template <typename T>
-static void Haar4x4(T *ptr, short *dst, const short &step)
+static void Haar4x4(const T *ptr, short *dst, const short &step)
 {
     short temp[16];
 
@@ -120,7 +120,7 @@ static void Haar4x4(T *ptr, short *dst, const short &step)
     HaarRow4x4(temp + 3 * 4, dst + 3 * 4);
 }
 
-static void InvHaarColumn4x4(short * src, short *dst)
+static void InvHaarColumn4x4(short *src, short *dst)
 {
     short src0 = src[0 * 4] * 2;
     short src1 = src[1 * 4];
@@ -138,7 +138,7 @@ static void InvHaarColumn4x4(short * src, short *dst)
     dst[3 * 4] = (dif0 - src3) >> 1;
 }
 
-static void InvHaarRow4x4(short * src, short *dst)
+static void InvHaarRow4x4(short *src, short *dst)
 {
     short src0 = src[0] * 2;
     short src1 = src[1];

@@ -71,42 +71,42 @@ TEST(Photo_DenoisingBm3dGrayscale, regression)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     cv::Mat result;
-    //cv::bm3dDenoising(original, result, 10);
+    cv::bm3dDenoising(original, result, 1);
 
     DUMP(result, expected_path + ".res.png");
 
     ASSERT_EQ(0, cvtest::norm(result, expected, cv::NORM_L2));
 }
-
-#ifdef TEST_TRANSFORMS
-TEST(Photo_DenoisingBm3dTransforms, regression)
-{
-    const int templateWindowSize = 4;
-    const int templateWindowSizeSq = templateWindowSize * templateWindowSize;
-
-    uchar src[templateWindowSizeSq];
-    short dst[templateWindowSizeSq];
-
-    for (uchar i = 0; i < templateWindowSizeSq; ++i)
-    {
-        src[i] = i;
-    }
-
-    Haar4x4(src, dst, templateWindowSize);
-    InvHaar4x4(dst);
-
-    for (uchar i = 0; i < templateWindowSizeSq; ++i)
-        ASSERT_EQ(static_cast<short>(src[i]), dst[i]);
-}
-#endif
-
-TEST(Photo_Bm3dDenoising, speed)
-{
-    std::string imgname = std::string(cvtest::TS::ptr()->get_data_path()) + "shared/5MP.png";
-    Mat src = imread(imgname, 0), dst;
-
-    double t = (double)getTickCount();
-    //bm3dDenoising(src, dst, 5, 7, 21);
-    t = (double)getTickCount() - t;
-    printf("execution time: %gms\n", t*1000. / getTickFrequency());
-}
+//
+//#ifdef TEST_TRANSFORMS
+//TEST(Photo_DenoisingBm3dTransforms, regression)
+//{
+//    const int templateWindowSize = 4;
+//    const int templateWindowSizeSq = templateWindowSize * templateWindowSize;
+//
+//    uchar src[templateWindowSizeSq];
+//    short dst[templateWindowSizeSq];
+//
+//    for (uchar i = 0; i < templateWindowSizeSq; ++i)
+//    {
+//        src[i] = i;
+//    }
+//
+//    Haar4x4(src, dst, templateWindowSize);
+//    InvHaar4x4(dst);
+//
+//    for (uchar i = 0; i < templateWindowSizeSq; ++i)
+//        ASSERT_EQ(static_cast<short>(src[i]), dst[i]);
+//}
+//#endif
+//
+//TEST(Photo_Bm3dDenoising, speed)
+//{
+//    std::string imgname = std::string(cvtest::TS::ptr()->get_data_path()) + "shared/5MP.png";
+//    Mat src = imread(imgname, 0), dst;
+//
+//    double t = (double)getTickCount();
+//    bm3dDenoising(src, dst, 1);
+//    t = (double)getTickCount() - t;
+//    printf("execution time: %gms\n", t*1000. / getTickFrequency());
+//}
