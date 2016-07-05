@@ -131,18 +131,18 @@ const int INTER_REMAP_COEF_SCALE=1 << INTER_REMAP_COEF_BITS;
 static uchar NNDeltaTab_i[INTER_TAB_SIZE2][2];
 
 static float BilinearTab_f[INTER_TAB_SIZE2][2][2];
-static short BilinearTab_i[INTER_TAB_SIZE2][2][2];
+static int BilinearTab_i[INTER_TAB_SIZE2][2][2];
 
 #if CV_SSE2 || CV_NEON
-static short BilinearTab_iC4_buf[INTER_TAB_SIZE2+2][2][8];
-static short (*BilinearTab_iC4)[2][8] = (short (*)[2][8])alignPtr(BilinearTab_iC4_buf, 16);
+static int BilinearTab_iC4_buf[INTER_TAB_SIZE2+2][2][8];
+static int (*BilinearTab_iC4)[2][8] = (int (*)[2][8])alignPtr(BilinearTab_iC4_buf, 16);
 #endif
 
 static float BicubicTab_f[INTER_TAB_SIZE2][4][4];
-static short BicubicTab_i[INTER_TAB_SIZE2][4][4];
+static int BicubicTab_i[INTER_TAB_SIZE2][4][4];
 
 static float Lanczos4Tab_f[INTER_TAB_SIZE2][8][8];
-static short Lanczos4Tab_i[INTER_TAB_SIZE2][8][8];
+static int Lanczos4Tab_i[INTER_TAB_SIZE2][8][8];
 
 static inline void interpolateLinear( float x, float* coeffs )
 {
@@ -215,7 +215,7 @@ static const void* initInterTab2D( int method, bool fixpt )
 {
     static bool inittab[INTER_MAX+1] = {false};
     float* tab = 0;
-    short* itab = 0;
+    int* itab = 0;
     int ksize = 0;
     if( method == INTER_LINEAR )
         tab = BilinearTab_f[0][0], itab = BilinearTab_i[0][0], ksize=2;
@@ -245,7 +245,7 @@ static const void* initInterTab2D( int method, bool fixpt )
                     {
                         float v = vy*_tab[j*ksize + k2];
                         tab[k1*ksize + k2] = v;
-                        isum += itab[k1*ksize + k2] = saturate_cast<short>(v*INTER_REMAP_COEF_SCALE);
+                        isum += itab[k1*ksize + k2] = saturate_cast<int>(v*INTER_REMAP_COEF_SCALE);
                     }
                 }
 
@@ -262,9 +262,9 @@ static const void* initInterTab2D( int method, bool fixpt )
                                 Mk1 = k1, Mk2 = k2;
                         }
                     if( diff < 0 )
-                        itab[Mk1*ksize + Mk2] = (short)(itab[Mk1*ksize + Mk2] - diff);
+                        itab[Mk1*ksize + Mk2] = (int)(itab[Mk1*ksize + Mk2] - diff);
                     else
-                        itab[mk1*ksize + mk2] = (short)(itab[mk1*ksize + mk2] - diff);
+                        itab[mk1*ksize + mk2] = (int)(itab[mk1*ksize + mk2] - diff);
                 }
             }
         tab -= INTER_TAB_SIZE2*ksize*ksize;
@@ -359,7 +359,7 @@ public:
                 break;
             case 2:
                 for( x = 0; x < dsize.width; x++ )
-                    *(ushort*)(D + x*2) = *(ushort*)(S + x_ofs[x]);
+                    *(uint*)(D + x*2) = *(uint*)(S + x_ofs[x]);
                 break;
             case 3:
                 for( x = 0; x < dsize.width; x++, D += 3 )
@@ -375,8 +375,8 @@ public:
             case 6:
                 for( x = 0; x < dsize.width; x++, D += 6 )
                 {
-                    const ushort* _tS = (const ushort*)(S + x_ofs[x]);
-                    ushort* _tD = (ushort*)D;
+                    const uint* _tS = (const uint*)(S + x_ofs[x]);
+                    uint* _tD = (uint*)D;
                     _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
                 }
                 break;
@@ -462,7 +462,7 @@ struct VResizeLinearVec_32s8u
             return 0;
 
         const int** src = (const int**)_src;
-        const short* beta = (const short*)_beta;
+        const int* beta = (const int*)_beta;
         const int *S0 = src[0], *S1 = src[1];
         int x = 0;
         __m128i b0 = _mm_set1_epi16(beta[0]), b1 = _mm_set1_epi16(beta[1]);
@@ -547,12 +547,12 @@ template<int shiftval> struct VResizeLinearVec_32f16
         const float** src = (const float**)_src;
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1];
-        ushort* dst = (ushort*)_dst;
+        uint* dst = (uint*)_dst;
         int x = 0;
 
         __m128 b0 = _mm_set1_ps(beta[0]), b1 = _mm_set1_ps(beta[1]);
         __m128i preshift = _mm_set1_epi32(shiftval);
-        __m128i postshift = _mm_set1_epi16((short)shiftval);
+        __m128i postshift = _mm_set1_epi16((int)shiftval);
 
         if( (((size_t)S0|(size_t)S1)&15) == 0 )
             for( ; x <= width - 16; x += 16 )
@@ -694,7 +694,7 @@ struct VResizeCubicVec_32s8u
             return 0;
 
         const int** src = (const int**)_src;
-        const short* beta = (const short*)_beta;
+        const int* beta = (const int*)_beta;
         const int *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
         int x = 0;
         float scale = 1.f/(INTER_RESIZE_COEF_SCALE*INTER_RESIZE_COEF_SCALE);
@@ -791,12 +791,12 @@ template<int shiftval> struct VResizeCubicVec_32f16
         const float** src = (const float**)_src;
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        ushort* dst = (ushort*)_dst;
+        uint* dst = (uint*)_dst;
         int x = 0;
         __m128 b0 = _mm_set1_ps(beta[0]), b1 = _mm_set1_ps(beta[1]),
             b2 = _mm_set1_ps(beta[2]), b3 = _mm_set1_ps(beta[3]);
         __m128i preshift = _mm_set1_epi32(shiftval);
-        __m128i postshift = _mm_set1_epi16((short)shiftval);
+        __m128i postshift = _mm_set1_epi16((int)shiftval);
 
         for( ; x <= width - 8; x += 8 )
         {
@@ -904,7 +904,7 @@ struct VResizeLanczos4Vec_32f16u
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        short * dst = (short*)_dst;
+        int * dst = (int*)_dst;
         int x = 0;
         __m128 v_b0 = _mm_set1_ps(beta[0]), v_b1 = _mm_set1_ps(beta[1]),
                v_b2 = _mm_set1_ps(beta[2]), v_b3 = _mm_set1_ps(beta[3]),
@@ -955,7 +955,7 @@ struct VResizeLanczos4Vec_32f16s
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        short * dst = (short*)_dst;
+        int * dst = (int*)_dst;
         int x = 0;
         __m128 v_b0 = _mm_set1_ps(beta[0]), v_b1 = _mm_set1_ps(beta[1]),
                v_b2 = _mm_set1_ps(beta[2]), v_b3 = _mm_set1_ps(beta[3]),
@@ -1035,7 +1035,7 @@ struct VResizeLinearVec_32s8u
     int operator()(const uchar** _src, uchar* dst, const uchar* _beta, int width ) const
     {
         const int** src = (const int**)_src, *S0 = src[0], *S1 = src[1];
-        const short* beta = (const short*)_beta;
+        const int* beta = (const int*)_beta;
         int x = 0;
         int16x8_t v_b0 = vdupq_n_s16(beta[0]), v_b1 = vdupq_n_s16(beta[1]), v_delta = vdupq_n_s16(2);
 
@@ -1077,7 +1077,7 @@ struct VResizeLinearVec_32f16u
         const float** src = (const float**)_src;
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1];
-        ushort* dst = (ushort*)_dst;
+        uint* dst = (uint*)_dst;
         int x = 0;
 
         float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]);
@@ -1105,7 +1105,7 @@ struct VResizeLinearVec_32f16s
         const float** src = (const float**)_src;
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1];
-        short* dst = (short*)_dst;
+        int* dst = (int*)_dst;
         int x = 0;
 
         float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]);
@@ -1160,7 +1160,7 @@ struct VResizeCubicVec_32f16u
         const float** src = (const float**)_src;
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        ushort* dst = (ushort*)_dst;
+        uint* dst = (uint*)_dst;
         int x = 0;
         float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]),
                     v_b2 = vdupq_n_f32(beta[2]), v_b3 = vdupq_n_f32(beta[3]);
@@ -1191,7 +1191,7 @@ struct VResizeCubicVec_32f16s
         const float** src = (const float**)_src;
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        short* dst = (short*)_dst;
+        int* dst = (int*)_dst;
         int x = 0;
         float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]),
                     v_b2 = vdupq_n_f32(beta[2]), v_b3 = vdupq_n_f32(beta[3]);
@@ -1251,7 +1251,7 @@ struct VResizeLanczos4Vec_32f16u
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        ushort * dst = (ushort*)_dst;
+        uint * dst = (uint*)_dst;
         int x = 0;
         float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]),
                     v_b2 = vdupq_n_f32(beta[2]), v_b3 = vdupq_n_f32(beta[3]),
@@ -1296,7 +1296,7 @@ struct VResizeLanczos4Vec_32f16s
         const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        short * dst = (short*)_dst;
+        int * dst = (int*)_dst;
         int x = 0;
         float32x4_t v_b0 = vdupq_n_f32(beta[0]), v_b1 = vdupq_n_f32(beta[1]),
                     v_b2 = vdupq_n_f32(beta[2]), v_b3 = vdupq_n_f32(beta[3]),
@@ -1477,11 +1477,11 @@ struct VResizeLinear
 };
 
 template<>
-struct VResizeLinear<uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS*2>, VResizeLinearVec_32s8u>
+struct VResizeLinear<uchar, int, int, FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS*2>, VResizeLinearVec_32s8u>
 {
     typedef uchar value_type;
     typedef int buf_type;
-    typedef short alpha_type;
+    typedef int alpha_type;
 
     void operator()(const buf_type** src, value_type* dst, const alpha_type* beta, int width ) const
     {
@@ -1867,10 +1867,10 @@ public:
     {
     }
 
-    int operator() (const ushort * S, ushort * D, int w) const
+    int operator() (const uint * S, uint * D, int w) const
     {
         int dx = 0;
-        const ushort * S0 = S, * S1 = (const ushort *)((const uchar *)(S0) + step);
+        const uint * S0 = S, * S1 = (const uint *)((const uchar *)(S0) + step);
 
         uint32x4_t v_2 = vdupq_n_u32(2);
 
@@ -1917,10 +1917,10 @@ public:
     {
     }
 
-    int operator() (const short * S, short * D, int w) const
+    int operator() (const int * S, int * D, int w) const
     {
         int dx = 0;
-        const short * S0 = S, * S1 = (const short *)((const uchar *)(S0) + step);
+        const int * S0 = S, * S1 = (const int *)((const uchar *)(S0) + step);
 
         int32x4_t v_2 = vdupq_n_s32(2);
 
@@ -2119,14 +2119,14 @@ public:
         use_simd = checkHardwareSupport(CV_CPU_SSE2);
     }
 
-    int operator() (const ushort* S, ushort* D, int w) const
+    int operator() (const uint* S, uint* D, int w) const
     {
         if (!use_simd)
             return 0;
 
         int dx = 0;
-        const ushort* S0 = (const ushort*)S;
-        const ushort* S1 = (const ushort*)((const uchar*)(S) + step);
+        const uint* S0 = (const uint*)S;
+        const uint* S1 = (const uint*)((const uchar*)(S) + step);
         __m128i masklow = _mm_set1_epi32(0x0000ffff);
         __m128i zero = _mm_setzero_si128();
         __m128i delta2 = _mm_set1_epi32(2);
@@ -2207,14 +2207,14 @@ public:
         use_simd = checkHardwareSupport(CV_CPU_SSE2);
     }
 
-    int operator() (const short* S, short* D, int w) const
+    int operator() (const int* S, int* D, int w) const
     {
         if (!use_simd)
             return 0;
 
         int dx = 0;
-        const short* S0 = (const short*)S;
-        const short* S1 = (const short*)((const uchar*)(S) + step);
+        const int* S0 = (const int*)S;
+        const int* S1 = (const int*)((const uchar*)(S) + step);
         __m128i masklow = _mm_set1_epi32(0x0000ffff);
         __m128i zero = _mm_setzero_si128();
         __m128i delta2 = _mm_set1_epi32(2);
@@ -2342,8 +2342,8 @@ private:
 #else
 
 typedef ResizeAreaFastNoVec<uchar, uchar> ResizeAreaFastVec_SIMD_8u;
-typedef ResizeAreaFastNoVec<ushort, ushort> ResizeAreaFastVec_SIMD_16u;
-typedef ResizeAreaFastNoVec<short, short> ResizeAreaFastVec_SIMD_16s;
+typedef ResizeAreaFastNoVec<uint, uint> ResizeAreaFastVec_SIMD_16u;
+typedef ResizeAreaFastNoVec<int, int> ResizeAreaFastVec_SIMD_16s;
 typedef ResizeAreaFastNoVec<float, float> ResizeAreaFastVec_SIMD_32f;
 
 #endif
@@ -2943,9 +2943,9 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         // integer path is slower because of CPU part, so it's disabled
         if (depth == CV_8U && ((void)0, 0))
         {
-            AutoBuffer<uchar> _buffer((dsize.width + dsize.height)*(sizeof(int) + sizeof(short)*2));
+            AutoBuffer<uchar> _buffer((dsize.width + dsize.height)*(sizeof(int) + sizeof(int)*2));
             int* xofs = (int*)(uchar*)_buffer, * yofs = xofs + dsize.width;
-            short* ialpha = (short*)(yofs + dsize.height), * ibeta = ialpha + dsize.width*2;
+            int* ialpha = (int*)(yofs + dsize.height), * ibeta = ialpha + dsize.width*2;
             float fxx, fyy;
             int sx, sy;
 
@@ -2962,8 +2962,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                     fxx = 0, sx = ssize.width-1;
 
                 xofs[dx] = sx;
-                ialpha[dx*2 + 0] = saturate_cast<short>((1.f - fxx) * INTER_RESIZE_COEF_SCALE);
-                ialpha[dx*2 + 1] = saturate_cast<short>(fxx         * INTER_RESIZE_COEF_SCALE);
+                ialpha[dx*2 + 0] = saturate_cast<int>((1.f - fxx) * INTER_RESIZE_COEF_SCALE);
+                ialpha[dx*2 + 1] = saturate_cast<int>(fxx         * INTER_RESIZE_COEF_SCALE);
             }
 
             for (int dy = 0; dy < dsize.height; dy++)
@@ -2973,8 +2973,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                 fyy -= sy;
 
                 yofs[dy] = sy;
-                ibeta[dy*2 + 0] = saturate_cast<short>((1.f - fyy) * INTER_RESIZE_COEF_SCALE);
-                ibeta[dy*2 + 1] = saturate_cast<short>(fyy         * INTER_RESIZE_COEF_SCALE);
+                ibeta[dy*2 + 0] = saturate_cast<int>((1.f - fyy) * INTER_RESIZE_COEF_SCALE);
+                ibeta[dy*2 + 1] = saturate_cast<int>(fyy         * INTER_RESIZE_COEF_SCALE);
             }
 
             int wdepth = std::max(depth, CV_32S), wtype = CV_MAKETYPE(wdepth, cn);
@@ -3135,22 +3135,22 @@ void resize(int src_type,
     static ResizeFunc linear_tab[] =
     {
         resizeGeneric_<
-            HResizeLinear<uchar, int, short,
+            HResizeLinear<uchar, int, int,
                 INTER_RESIZE_COEF_SCALE,
                 HResizeLinearVec_8u32s>,
-            VResizeLinear<uchar, int, short,
+            VResizeLinear<uchar, int, int,
                 FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS*2>,
                 VResizeLinearVec_32s8u> >,
         0,
         resizeGeneric_<
-            HResizeLinear<ushort, float, float, 1,
+            HResizeLinear<uint, float, float, 1,
                 HResizeLinearVec_16u32f>,
-            VResizeLinear<ushort, float, float, Cast<float, ushort>,
+            VResizeLinear<uint, float, float, Cast<float, uint>,
                 VResizeLinearVec_32f16u> >,
         resizeGeneric_<
-            HResizeLinear<short, float, float, 1,
+            HResizeLinear<int, float, float, 1,
                 HResizeLinearVec_16s32f>,
-            VResizeLinear<short, float, float, Cast<float, short>,
+            VResizeLinear<int, float, float, Cast<float, int>,
                 VResizeLinearVec_32f16s> >,
         0,
         resizeGeneric_<
@@ -3169,18 +3169,18 @@ void resize(int src_type,
     static ResizeFunc cubic_tab[] =
     {
         resizeGeneric_<
-            HResizeCubic<uchar, int, short>,
-            VResizeCubic<uchar, int, short,
+            HResizeCubic<uchar, int, int>,
+            VResizeCubic<uchar, int, int,
                 FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS*2>,
                 VResizeCubicVec_32s8u> >,
         0,
         resizeGeneric_<
-            HResizeCubic<ushort, float, float>,
-            VResizeCubic<ushort, float, float, Cast<float, ushort>,
+            HResizeCubic<uint, float, float>,
+            VResizeCubic<uint, float, float, Cast<float, uint>,
             VResizeCubicVec_32f16u> >,
         resizeGeneric_<
-            HResizeCubic<short, float, float>,
-            VResizeCubic<short, float, float, Cast<float, short>,
+            HResizeCubic<int, float, float>,
+            VResizeCubic<int, float, float, Cast<float, int>,
             VResizeCubicVec_32f16s> >,
         0,
         resizeGeneric_<
@@ -3196,16 +3196,16 @@ void resize(int src_type,
 
     static ResizeFunc lanczos4_tab[] =
     {
-        resizeGeneric_<HResizeLanczos4<uchar, int, short>,
-            VResizeLanczos4<uchar, int, short,
+        resizeGeneric_<HResizeLanczos4<uchar, int, int>,
+            VResizeLanczos4<uchar, int, int,
             FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS*2>,
             VResizeNoVec> >,
         0,
-        resizeGeneric_<HResizeLanczos4<ushort, float, float>,
-            VResizeLanczos4<ushort, float, float, Cast<float, ushort>,
+        resizeGeneric_<HResizeLanczos4<uint, float, float>,
+            VResizeLanczos4<uint, float, float, Cast<float, uint>,
             VResizeLanczos4Vec_32f16u> >,
-        resizeGeneric_<HResizeLanczos4<short, float, float>,
-            VResizeLanczos4<short, float, float, Cast<float, short>,
+        resizeGeneric_<HResizeLanczos4<int, float, float>,
+            VResizeLanczos4<int, float, float, Cast<float, int>,
             VResizeLanczos4Vec_32f16s> >,
         0,
         resizeGeneric_<HResizeLanczos4<float, float, float>,
@@ -3221,8 +3221,8 @@ void resize(int src_type,
     {
         resizeAreaFast_<uchar, int, ResizeAreaFastVec<uchar, ResizeAreaFastVec_SIMD_8u> >,
         0,
-        resizeAreaFast_<ushort, float, ResizeAreaFastVec<ushort, ResizeAreaFastVec_SIMD_16u> >,
-        resizeAreaFast_<short, float, ResizeAreaFastVec<short, ResizeAreaFastVec_SIMD_16s> >,
+        resizeAreaFast_<uint, float, ResizeAreaFastVec<uint, ResizeAreaFastVec_SIMD_16u> >,
+        resizeAreaFast_<int, float, ResizeAreaFastVec<int, ResizeAreaFastVec_SIMD_16s> >,
         0,
         resizeAreaFast_<float, float, ResizeAreaFastVec_SIMD_32f>,
         resizeAreaFast_<double, double, ResizeAreaFastNoVec<double, double> >,
@@ -3231,8 +3231,8 @@ void resize(int src_type,
 
     static ResizeAreaFunc area_tab[] =
     {
-        resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>,
-        resizeArea_<short, float>, 0, resizeArea_<float, float>,
+        resizeArea_<uchar, float>, 0, resizeArea_<uint, float>,
+        resizeArea_<int, float>, 0, resizeArea_<float, float>,
         resizeArea_<double, double>, 0
     };
 
@@ -3363,9 +3363,9 @@ void resize(int src_type,
     int* xofs = (int*)(uchar*)_buffer;
     int* yofs = xofs + width;
     float* alpha = (float*)(yofs + dsize.height);
-    short* ialpha = (short*)alpha;
+    int* ialpha = (int*)alpha;
     float* beta = alpha + width*ksize;
-    short* ibeta = ialpha + width*ksize;
+    int* ibeta = ialpha + width*ksize;
     float cbuf[MAX_ESIZE];
 
     for( dx = 0; dx < dsize.width; dx++ )
@@ -3412,7 +3412,7 @@ void resize(int src_type,
         if( fixpt )
         {
             for( k = 0; k < ksize; k++ )
-                ialpha[dx*cn*ksize + k] = saturate_cast<short>(cbuf[k]*INTER_RESIZE_COEF_SCALE);
+                ialpha[dx*cn*ksize + k] = saturate_cast<int>(cbuf[k]*INTER_RESIZE_COEF_SCALE);
             for( ; k < cn*ksize; k++ )
                 ialpha[dx*cn*ksize + k] = ialpha[dx*cn*ksize + k - ksize];
         }
@@ -3454,7 +3454,7 @@ void resize(int src_type,
         if( fixpt )
         {
             for( k = 0; k < ksize; k++ )
-                ibeta[dy*ksize + k] = saturate_cast<short>(cbuf[k]*INTER_RESIZE_COEF_SCALE);
+                ibeta[dy*ksize + k] = saturate_cast<int>(cbuf[k]*INTER_RESIZE_COEF_SCALE);
         }
         else
         {
@@ -3540,7 +3540,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
     for( dy = 0; dy < dsize.height; dy++ )
     {
         T* D = _dst.ptr<T>(dy);
-        const short* XY = _xy.ptr<short>(dy);
+        const int* XY = _xy.ptr<int>(dy);
 
         if( cn == 1 )
         {
@@ -3620,7 +3620,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
 
 struct RemapNoVec
 {
-    int operator()( const Mat&, void*, const short*, const ushort*,
+    int operator()( const Mat&, void*, const int*, const uint*,
                     const void*, int ) const { return 0; }
 };
 
@@ -3628,8 +3628,8 @@ struct RemapNoVec
 
 struct RemapVec_8u
 {
-    int operator()( const Mat& _src, void* _dst, const short* XY,
-                    const ushort* FXY, const void* _wtab, int width ) const
+    int operator()( const Mat& _src, void* _dst, const int* XY,
+                    const uint* FXY, const void* _wtab, int width ) const
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
@@ -3638,7 +3638,7 @@ struct RemapVec_8u
             return 0;
 
         const uchar *S0 = _src.ptr(), *S1 = _src.ptr(1);
-        const short* wtab = cn == 1 ? (const short*)_wtab : &BilinearTab_iC4[0][0][0];
+        const int* wtab = cn == 1 ? (const int*)_wtab : &BilinearTab_iC4[0][0][0];
         uchar* D = (uchar*)_dst;
         __m128i delta = _mm_set1_epi32(INTER_REMAP_COEF_SCALE/2);
         __m128i xy2ofs = _mm_set1_epi32(cn + (sstep << 16));
@@ -3659,11 +3659,11 @@ struct RemapVec_8u
                 _mm_store_si128( (__m128i*)iofs0, xy0 );
                 _mm_store_si128( (__m128i*)iofs1, xy1 );
 
-                i0 = *(ushort*)(S0 + iofs0[0]) + (*(ushort*)(S0 + iofs0[1]) << 16);
-                i1 = *(ushort*)(S0 + iofs0[2]) + (*(ushort*)(S0 + iofs0[3]) << 16);
+                i0 = *(uint*)(S0 + iofs0[0]) + (*(uint*)(S0 + iofs0[1]) << 16);
+                i1 = *(uint*)(S0 + iofs0[2]) + (*(uint*)(S0 + iofs0[3]) << 16);
                 v0 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
-                i0 = *(ushort*)(S1 + iofs0[0]) + (*(ushort*)(S1 + iofs0[1]) << 16);
-                i1 = *(ushort*)(S1 + iofs0[2]) + (*(ushort*)(S1 + iofs0[3]) << 16);
+                i0 = *(uint*)(S1 + iofs0[0]) + (*(uint*)(S1 + iofs0[1]) << 16);
+                i1 = *(uint*)(S1 + iofs0[2]) + (*(uint*)(S1 + iofs0[3]) << 16);
                 v1 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
                 v0 = _mm_unpacklo_epi8(v0, z);
                 v1 = _mm_unpacklo_epi8(v1, z);
@@ -3678,11 +3678,11 @@ struct RemapVec_8u
                 v1 = _mm_madd_epi16(v1, b1);
                 v0 = _mm_add_epi32(_mm_add_epi32(v0, v1), delta);
 
-                i0 = *(ushort*)(S0 + iofs1[0]) + (*(ushort*)(S0 + iofs1[1]) << 16);
-                i1 = *(ushort*)(S0 + iofs1[2]) + (*(ushort*)(S0 + iofs1[3]) << 16);
+                i0 = *(uint*)(S0 + iofs1[0]) + (*(uint*)(S0 + iofs1[1]) << 16);
+                i1 = *(uint*)(S0 + iofs1[2]) + (*(uint*)(S0 + iofs1[3]) << 16);
                 v2 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
-                i0 = *(ushort*)(S1 + iofs1[0]) + (*(ushort*)(S1 + iofs1[1]) << 16);
-                i1 = *(ushort*)(S1 + iofs1[2]) + (*(ushort*)(S1 + iofs1[3]) << 16);
+                i0 = *(uint*)(S1 + iofs1[0]) + (*(uint*)(S1 + iofs1[1]) << 16);
+                i1 = *(uint*)(S1 + iofs1[2]) + (*(uint*)(S1 + iofs1[3]) << 16);
                 v3 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
                 v2 = _mm_unpacklo_epi8(v2, z);
                 v3 = _mm_unpacklo_epi8(v3, z);
@@ -3861,8 +3861,8 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
     for( dy = 0; dy < dsize.height; dy++ )
     {
         T* D = _dst.ptr<T>(dy);
-        const short* XY = _xy.ptr<short>(dy);
-        const ushort* FXY = _fxy.ptr<ushort>(dy);
+        const int* XY = _xy.ptr<int>(dy);
+        const uint* FXY = _fxy.ptr<uint>(dy);
         int X0 = 0;
         bool prevInlier = false;
 
@@ -4074,8 +4074,8 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
     for( dy = 0; dy < dsize.height; dy++ )
     {
         T* D = _dst.ptr<T>(dy);
-        const short* XY = _xy.ptr<short>(dy);
-        const ushort* FXY = _fxy.ptr<ushort>(dy);
+        const int* XY = _xy.ptr<int>(dy);
+        const uint* FXY = _fxy.ptr<uint>(dy);
 
         for( dx = 0; dx < dsize.width; dx++, D += cn )
         {
@@ -4179,8 +4179,8 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
     for( dy = 0; dy < dsize.height; dy++ )
     {
         T* D = _dst.ptr<T>(dy);
-        const short* XY = _xy.ptr<short>(dy);
-        const ushort* FXY = _fxy.ptr<ushort>(dy);
+        const int* XY = _xy.ptr<int>(dy);
+        const uint* FXY = _fxy.ptr<uint>(dy);
 
         for( dx = 0; dx < dsize.width; dx++, D += cn )
         {
@@ -4311,9 +4311,9 @@ public:
                     {
                         for( y1 = 0; y1 < brows; y1++ )
                         {
-                            short* XY = bufxy.ptr<short>(y1);
-                            const short* sXY = m1->ptr<short>(y+y1) + x*2;
-                            const ushort* sA = m2->ptr<ushort>(y+y1) + x;
+                            int* XY = bufxy.ptr<int>(y1);
+                            const int* sXY = m1->ptr<int>(y+y1) + x*2;
+                            const uint* sA = m2->ptr<uint>(y+y1) + x;
 
                             for( x1 = 0; x1 < bcols; x1++ )
                             {
@@ -4329,7 +4329,7 @@ public:
                     {
                         for( y1 = 0; y1 < brows; y1++ )
                         {
-                            short* XY = bufxy.ptr<short>(y1);
+                            int* XY = bufxy.ptr<int>(y1);
                             const float* sX = m1->ptr<float>(y+y1) + x;
                             const float* sY = m2->ptr<float>(y+y1) + x;
                             x1 = 0;
@@ -4359,8 +4359,8 @@ public:
 
                             for( ; x1 < bcols; x1++ )
                             {
-                                XY[x1*2] = saturate_cast<short>(sX[x1]);
-                                XY[x1*2+1] = saturate_cast<short>(sY[x1]);
+                                XY[x1*2] = saturate_cast<int>(sX[x1]);
+                                XY[x1*2+1] = saturate_cast<int>(sY[x1]);
                             }
                         }
                     }
@@ -4371,14 +4371,14 @@ public:
                 Mat bufa(_bufa, Rect(0, 0, bcols, brows));
                 for( y1 = 0; y1 < brows; y1++ )
                 {
-                    short* XY = bufxy.ptr<short>(y1);
-                    ushort* A = bufa.ptr<ushort>(y1);
+                    int* XY = bufxy.ptr<int>(y1);
+                    uint* A = bufa.ptr<uint>(y1);
 
                     if( m1->type() == CV_16SC2 && (m2->type() == CV_16UC1 || m2->type() == CV_16SC1) )
                     {
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
 
-                        const ushort* sA = m2->ptr<ushort>(y+y1) + x;
+                        const uint* sA = m2->ptr<uint>(y+y1) + x;
                         x1 = 0;
 
                     #if CV_NEON
@@ -4392,7 +4392,7 @@ public:
                     #endif
 
                         for( ; x1 < bcols; x1++ )
-                            A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
+                            A[x1] = (uint)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
                     else if( planar_input )
                     {
@@ -4459,9 +4459,9 @@ public:
                             int sx = cvRound(sX[x1]*INTER_TAB_SIZE);
                             int sy = cvRound(sY[x1]*INTER_TAB_SIZE);
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
-                            XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
-                            XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
-                            A[x1] = (ushort)v;
+                            XY[x1*2] = saturate_cast<int>(sx >> INTER_BITS);
+                            XY[x1*2+1] = saturate_cast<int>(sy >> INTER_BITS);
+                            A[x1] = (uint)v;
                         }
                     }
                     else
@@ -4493,9 +4493,9 @@ public:
                             int sx = cvRound(sXY[x1*2]*INTER_TAB_SIZE);
                             int sy = cvRound(sXY[x1*2+1]*INTER_TAB_SIZE);
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
-                            XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
-                            XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
-                            A[x1] = (ushort)v;
+                            XY[x1*2] = saturate_cast<int>(sx >> INTER_BITS);
+                            XY[x1*2+1] = saturate_cast<int>(sy >> INTER_BITS);
+                            A[x1] = (uint)v;
                         }
                     }
                 }
@@ -4799,33 +4799,33 @@ void cv::remap( InputArray _src, OutputArray _dst,
 {
     static RemapNNFunc nn_tab[] =
     {
-        remapNearest<uchar>, remapNearest<schar>, remapNearest<ushort>, remapNearest<short>,
+        remapNearest<uchar>, remapNearest<schar>, remapNearest<uint>, remapNearest<int>,
         remapNearest<int>, remapNearest<float>, remapNearest<double>, 0
     };
 
     static RemapFunc linear_tab[] =
     {
-        remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u, short>, 0,
-        remapBilinear<Cast<float, ushort>, RemapNoVec, float>,
-        remapBilinear<Cast<float, short>, RemapNoVec, float>, 0,
+        remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u, int>, 0,
+        remapBilinear<Cast<float, uint>, RemapNoVec, float>,
+        remapBilinear<Cast<float, int>, RemapNoVec, float>, 0,
         remapBilinear<Cast<float, float>, RemapNoVec, float>,
         remapBilinear<Cast<double, double>, RemapNoVec, float>, 0
     };
 
     static RemapFunc cubic_tab[] =
     {
-        remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE>, 0,
-        remapBicubic<Cast<float, ushort>, float, 1>,
-        remapBicubic<Cast<float, short>, float, 1>, 0,
+        remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, int, INTER_REMAP_COEF_SCALE>, 0,
+        remapBicubic<Cast<float, uint>, float, 1>,
+        remapBicubic<Cast<float, int>, float, 1>, 0,
         remapBicubic<Cast<float, float>, float, 1>,
         remapBicubic<Cast<double, double>, float, 1>, 0
     };
 
     static RemapFunc lanczos4_tab[] =
     {
-        remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE>, 0,
-        remapLanczos4<Cast<float, ushort>, float, 1>,
-        remapLanczos4<Cast<float, short>, float, 1>, 0,
+        remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, int, INTER_REMAP_COEF_SCALE>, 0,
+        remapLanczos4<Cast<float, uint>, float, 1>,
+        remapLanczos4<Cast<float, int>, float, 1>, 0,
         remapLanczos4<Cast<float, float>, float, 1>,
         remapLanczos4<Cast<double, double>, float, 1>, 0
     };
@@ -5013,13 +5013,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     {
         const float* src1f = m1->ptr<float>(y);
         const float* src2f = m2->ptr<float>(y);
-        const short* src1 = (const short*)src1f;
-        const ushort* src2 = (const ushort*)src2f;
+        const int* src1 = (const int*)src1f;
+        const uint* src2 = (const uint*)src2f;
 
         float* dst1f = dstmap1.ptr<float>(y);
         float* dst2f = dstmap2.ptr<float>(y);
-        short* dst1 = (short*)dst1f;
-        ushort* dst2 = (ushort*)dst2f;
+        int* dst1 = (int*)dst1f;
+        uint* dst2 = (uint*)dst2f;
         x = 0;
 
         if( m1type == CV_32FC1 && dstm1type == CV_16SC2 )
@@ -5063,8 +5063,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 for( ; x < size.width; x++ )
                 {
-                    dst1[x*2] = saturate_cast<short>(src1f[x]);
-                    dst1[x*2+1] = saturate_cast<short>(src2f[x]);
+                    dst1[x*2] = saturate_cast<int>(src1f[x]);
+                    dst1[x*2+1] = saturate_cast<int>(src2f[x]);
                 }
             }
             else
@@ -5145,9 +5145,9 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 {
                     int ix = saturate_cast<int>(src1f[x]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src2f[x]*INTER_TAB_SIZE);
-                    dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
-                    dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
-                    dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
+                    dst1[x*2] = saturate_cast<int>(ix >> INTER_BITS);
+                    dst1[x*2+1] = saturate_cast<int>(iy >> INTER_BITS);
+                    dst2[x] = (uint)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
                 }
             }
         }
@@ -5168,8 +5168,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 for( ; x < size.width; x++ )
                 {
-                    dst1[x*2] = saturate_cast<short>(src1f[x*2]);
-                    dst1[x*2+1] = saturate_cast<short>(src1f[x*2+1]);
+                    dst1[x*2] = saturate_cast<int>(src1f[x*2]);
+                    dst1[x*2+1] = saturate_cast<int>(src1f[x*2+1]);
                 }
             }
             else
@@ -5229,9 +5229,9 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 {
                     int ix = saturate_cast<int>(src1f[x*2]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src1f[x*2+1]*INTER_TAB_SIZE);
-                    dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
-                    dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
-                    dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
+                    dst1[x*2] = saturate_cast<int>(ix >> INTER_BITS);
+                    dst1[x*2+1] = saturate_cast<int>(iy >> INTER_BITS);
+                    dst2[x] = (uint)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
                 }
             }
         }
@@ -5327,7 +5327,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 int32x4_t v_fxy1, v_fxy2;
                 if (src2)
                 {
-                    int16x8_t v_src2 = vandq_s16(vld1q_s16((short *)src2 + x), v_mask2);
+                    int16x8_t v_src2 = vandq_s16(vld1q_s16((int *)src2 + x), v_mask2);
                     v_fxy1 = vmovl_s16(vget_low_s16(v_src2));
                     v_fxy2 = vmovl_s16(vget_high_s16(v_src2));
                 }
@@ -5401,7 +5401,7 @@ public:
     virtual void operator() (const Range& range) const
     {
         const int BLOCK_SZ = 64;
-        short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
+        int XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
         const int AB_BITS = MAX(10, (int)INTER_BITS);
         const int AB_SCALE = 1 << AB_BITS;
         int round_delta = interpolation == INTER_NEAREST ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2, x, y, x1, y1;
@@ -5428,7 +5428,7 @@ public:
 
                 for( y1 = 0; y1 < bh; y1++ )
                 {
-                    short* xy = XY + y1*bw*2;
+                    int* xy = XY + y1*bw*2;
                     int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE) + round_delta;
                     int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
 
@@ -5477,13 +5477,13 @@ public:
                         {
                             int X = (X0 + adelta[x+x1]) >> AB_BITS;
                             int Y = (Y0 + bdelta[x+x1]) >> AB_BITS;
-                            xy[x1*2] = saturate_cast<short>(X);
-                            xy[x1*2+1] = saturate_cast<short>(Y);
+                            xy[x1*2] = saturate_cast<int>(X);
+                            xy[x1*2+1] = saturate_cast<int>(Y);
                         }
                     }
                     else
                     {
-                        short* alpha = A + y1*bw;
+                        int* alpha = A + y1*bw;
                         x1 = 0;
                     #if CV_SSE2
                         if( useSSE2 )
@@ -5544,9 +5544,9 @@ public:
                         {
                             int X = (X0 + adelta[x+x1]) >> (AB_BITS - INTER_BITS);
                             int Y = (Y0 + bdelta[x+x1]) >> (AB_BITS - INTER_BITS);
-                            xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
-                            xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
-                            alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
+                            xy[x1*2] = saturate_cast<int>(X >> INTER_BITS);
+                            xy[x1*2+1] = saturate_cast<int>(Y >> INTER_BITS);
+                            alpha[x1] = (int)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
                                     (X & (INTER_TAB_SIZE-1)));
                         }
                     }
@@ -5885,7 +5885,7 @@ public:
     virtual void operator() (const Range& range) const
     {
         const int BLOCK_SZ = 32;
-        short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
+        int XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
         int x, y, x1, y1, width = dst.cols, height = dst.rows;
 
         int bh0 = std::min(BLOCK_SZ/2, height);
@@ -5918,7 +5918,7 @@ public:
 
                 for( y1 = 0; y1 < bh; y1++ )
                 {
-                    short* xy = XY + y1*bw*2;
+                    int* xy = XY + y1*bw*2;
                     double X0 = M[0]*x + M[1]*(y + y1) + M[2];
                     double Y0 = M[3]*x + M[4]*(y + y1) + M[5];
                     double W0 = M[6]*x + M[7]*(y + y1) + M[8];
@@ -6046,13 +6046,13 @@ public:
                             int X = saturate_cast<int>(fX);
                             int Y = saturate_cast<int>(fY);
 
-                            xy[x1*2] = saturate_cast<short>(X);
-                            xy[x1*2+1] = saturate_cast<short>(Y);
+                            xy[x1*2] = saturate_cast<int>(X);
+                            xy[x1*2+1] = saturate_cast<int>(Y);
                         }
                     }
                     else
                     {
-                        short* alpha = A + y1*bw;
+                        int* alpha = A + y1*bw;
                         x1 = 0;
 
                         #if CV_SSE4_1
@@ -6187,9 +6187,9 @@ public:
                             int X = saturate_cast<int>(fX);
                             int Y = saturate_cast<int>(fY);
 
-                            xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
-                            xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
-                            alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
+                            xy[x1*2] = saturate_cast<int>(X >> INTER_BITS);
+                            xy[x1*2+1] = saturate_cast<int>(Y >> INTER_BITS);
+                            alpha[x1] = (int)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
                                                 (X & (INTER_TAB_SIZE-1)));
                         }
                     }
