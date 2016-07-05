@@ -79,7 +79,7 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
 
 TEST(ParallelFeaturesFinder, IsSameWithSerial)
 {
-    Ptr<detail::FeaturesFinder2> para_finder = makePtr<detail::OrbFeaturesFinder2>();
+    Ptr<detail::FeaturesFinder> para_finder = makePtr<detail::OrbFeaturesFinder>();
     Ptr<detail::FeaturesFinder> serial_finder = makePtr<detail::OrbFeaturesFinder>();
     Mat img  = imread(string(cvtest::TS::ptr()->get_data_path()) + "stitching/a3.png", IMREAD_GRAYSCALE);
 

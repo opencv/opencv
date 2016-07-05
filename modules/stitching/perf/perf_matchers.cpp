@@ -18,7 +18,7 @@ PERF_TEST_P(FeaturesFinderVec, ParallelFeaturesFinder, NUMBER_IMAGES)
     vector<Mat> imgs(GetParam(), img);
     vector<detail::ImageFeatures> features(imgs.size());
 
-    Ptr<detail::FeaturesFinder2> featuresFinder = makePtr<detail::OrbFeaturesFinder2>();
+    Ptr<detail::FeaturesFinder> featuresFinder = makePtr<detail::OrbFeaturesFinder>();
 
     TEST_CYCLE()
     {
