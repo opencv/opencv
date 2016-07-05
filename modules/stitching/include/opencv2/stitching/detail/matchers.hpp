@@ -83,29 +83,6 @@ public:
     @sa detail::ImageFeatures, Rect_
     */
     void operator ()(InputArray image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
-    /** @brief Frees unused memory allocated before if there is any. */
-    virtual void collectGarbage() {}
-
-protected:
-    /** @brief This method must implement features finding logic in order to make the wrappers
-    detail::FeaturesFinder::operator()_ work.
-
-    @param image Source image
-    @param features Found features
-
-    @sa detail::ImageFeatures */
-    virtual void find(InputArray image, ImageFeatures &features) = 0;
-};
-
-/** @brief Feature finder with support for parallel processing
-
-@sa detail::SurfFeaturesFinder2 detail::OrbFeaturesFinder2
-*/
-// TODO OpenCV ABI 4.x
-class CV_EXPORTS FeaturesFinder2 : public FeaturesFinder
-{
-public:
-    FeaturesFinder2() : is_thread_safe_(false) {}
     /** @brief Finds features in the given images in parallel.
 
     @param images Source images
@@ -118,11 +95,28 @@ public:
                      const std::vector<std::vector<cv::Rect> > &rois);
     /** @overload */
     void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features);
-    /** @return True, if it's possible to use the same finder instance in parallel, false otherwise
-    */
+    /** @brief Frees unused memory allocated before if there is any. */
+    virtual void collectGarbage() {}
+
+    /* TODO OpenCV ABI 4.x
+    reimplement this as public method similar to FeaturesMatcher and remove private function hack
+    @return True, if it's possible to use the same finder instance in parallel, false otherwise
     bool isThreadSafe() const { return is_thread_safe_; }
+    */
+
 protected:
-    bool is_thread_safe_;
+    /** @brief This method must implement features finding logic in order to make the wrappers
+    detail::FeaturesFinder::operator()_ work.
+
+    @param image Source image
+    @param features Found features
+
+    @sa detail::ImageFeatures */
+    virtual void find(InputArray image, ImageFeatures &features) = 0;
+    /** @brief uses dynamic_cast to determine thread-safety
+    @return True, if it's possible to use the same finder instance in parallel, false otherwise
+    */
+    bool isThreadSafe() const;
 };
 
 /** @brief SURF features finder.
@@ -131,7 +125,6 @@ protected:
 */
 class CV_EXPORTS SurfFeaturesFinder : public FeaturesFinder
 {
-    friend class SurfFeaturesFinder2;
 public:
     SurfFeaturesFinder(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
                        int num_octaves_descr = /*4*/3, int num_layers_descr = /*2*/4);
@@ -144,37 +137,12 @@ private:
     Ptr<Feature2D> surf;
 };
 
-/** @brief SURF features finder to use with FeaturesFinder2
-
-@sa detail::FeaturesFinder2, SURF
-*/
-class CV_EXPORTS SurfFeaturesFinder2 : public FeaturesFinder2
-{
-public:
-    SurfFeaturesFinder2(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
-                        int num_octaves_descr = /*4*/3, int num_layers_descr = /*2*/4)
-            : finder_(makePtr<SurfFeaturesFinder>(hess_thresh, num_octaves, num_layers,
-                                                  num_octaves_descr, num_layers_descr))
-    {
-        is_thread_safe_ = true;
-    }
-
-private:
-    void find(InputArray image, ImageFeatures &features)
-    {
-        finder_->find(image, features);
-    }
-
-    Ptr<SurfFeaturesFinder> finder_;
-};
-
 /** @brief ORB features finder. :
 
 @sa detail::FeaturesFinder, ORB
 */
 class CV_EXPORTS OrbFeaturesFinder : public FeaturesFinder
 {
-    friend class OrbFeaturesFinder2;
 public:
     OrbFeaturesFinder(Size _grid_size = Size(3,1), int nfeatures=1500, float scaleFactor=1.3f, int nlevels=5);
 
@@ -183,28 +151,6 @@ private:
 
     Ptr<ORB> orb;
     Size grid_size;
-};
-
-/** @brief ORB features finder to use with FeaturesFinder2
-
-@sa detail::FeaturesFinder, ORB
-*/
-class CV_EXPORTS OrbFeaturesFinder2 : public FeaturesFinder2
-{
-public:
-    OrbFeaturesFinder2(Size _grid_size = Size(3,1), int nfeatures=1500, float scaleFactor=1.3f, int nlevels=5)
-            : finder_(makePtr<OrbFeaturesFinder>(_grid_size, nfeatures, scaleFactor, nlevels))
-    {
-        is_thread_safe_ = true;
-    }
-
-private:
-    void find(InputArray image, ImageFeatures &features)
-    {
-        finder_->find(image, features);
-    }
-
-    Ptr<OrbFeaturesFinder> finder_;
 };
 
 #ifdef HAVE_OPENCV_XFEATURES2D

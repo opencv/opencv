@@ -349,20 +349,20 @@ void FeaturesFinder::operator ()(InputArray image, ImageFeatures &features, cons
 }
 
 
-void FeaturesFinder2::operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features)
+void FeaturesFinder::operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features)
 {
     size_t count = images.total();
     features.resize(count);
 
     FindFeaturesBody body(*this, images, features, NULL);
-    if (is_thread_safe_)
+    if (isThreadSafe())
         parallel_for_(Range(0, static_cast<int>(count)), body);
     else
         body(Range(0, static_cast<int>(count)));
 }
 
 
-void FeaturesFinder2::operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features,
+void FeaturesFinder::operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features,
                                   const std::vector<std::vector<cv::Rect> > &rois)
 {
     CV_Assert(rois.size() == images.total());
@@ -370,10 +370,27 @@ void FeaturesFinder2::operator ()(InputArrayOfArrays images, std::vector<ImageFe
     features.resize(count);
 
     FindFeaturesBody body(*this, images, features, &rois);
-    if (is_thread_safe_)
+    if (isThreadSafe())
         parallel_for_(Range(0, static_cast<int>(count)), body);
     else
         body(Range(0, static_cast<int>(count)));
+}
+
+
+bool FeaturesFinder::isThreadSafe() const
+{
+    if (dynamic_cast<const SurfFeaturesFinder*>(this))
+    {
+        return true;
+    }
+    else if (dynamic_cast<const OrbFeaturesFinder*>(this))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 
