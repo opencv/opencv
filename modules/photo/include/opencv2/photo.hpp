@@ -319,17 +319,21 @@ CV_EXPORTS_W void denoise_TVL1(const std::vector<Mat>& observations,Mat& result,
 
 /** @brief Perform image denoising using Block-Matching and 3D-filtering algorithm
 <http://www.cs.tut.fi/~foi/3D-DFT/BM3DDEN_article.pdf> with several computational
-optimizations. Noise expected to be a gaussian white noise
+optimizations. Noise expected to be a gaussian white noise.
 
 @param src Input 8-bit 1-channel, 2-channel, 3-channel or 4-channel image.
-@param dst Output image with the same size and type as src .
+@param dst Output image with the same size and type as src.
+@param h Parameter regulating filter strength. Big h value perfectly removes noise but also
+removes image details, smaller h value preserves details but also preserves some noise.
 @param templateWindowSize Size in pixels of the template patch that is used for block-matching.
 Should be even. Recommended value 4 or 8 pixels
 @param searchWindowSize Size in pixels of the window that is used to perform block-matching.
 Should be odd. Affect performance linearly: greater searchWindowsSize - greater
-denoising time. Recommended value 16 pixels
-@param h Parameter regulating filter strength. Big h value perfectly removes noise but also
-removes image details, smaller h value preserves details but also preserves some noise
+denoising time. Recommended value 16 pixels.
+@param normType Norm used to calculate distance between blocks. L2 is slower than L1
+but yields more accurate results.
+@param transformType Type of the orthogonal transform used in collaborative filtering step.
+Currently only Haar transform is supported.
 
 This function expected to be applied to grayscale images. Advanced usage of this function
 can be manual denoising of colored image in different colorspaces.
@@ -340,7 +344,8 @@ CV_EXPORTS_W void bm3dDenoising(
     float h = 1,
     int templateWindowSize = 4,
     int searchWindowSize = 16,
-    int normType = cv::NORM_L2);
+    int normType = cv::NORM_L2,
+    int transformType = 0);
 
 //! @} photo_denoise
 

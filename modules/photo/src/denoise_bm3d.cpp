@@ -106,7 +106,8 @@ void cv::bm3dDenoising(
     float h,
     int templateWindowSize,
     int searchWindowSize,
-    int normType)
+    int normType,
+    int transformType)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(1 == cn);
