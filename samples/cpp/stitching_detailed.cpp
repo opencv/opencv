@@ -84,6 +84,10 @@ static void printUsage()
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
         "  --features (surf|orb)\n"
         "      Type of features used for images matching. The default is surf.\n"
+        "  --matcher (homography|affine)\n"
+        "      Matcher used for pairwise image matching.\n"
+        "  --estimator (homography|affine)\n"
+        "      Type of estimator used for transformation estimation.\n"
         "  --match_conf <float>\n"
         "      Confidence for feature matching step. The default is 0.65 for surf and 0.3 for orb.\n"
         "  --conf_thresh <float>\n"
@@ -138,6 +142,8 @@ double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
 string features_type = "surf";
+string matcher_type = "homography";
+string estimator_type = "homography";
 string ba_cost_func = "ray";
 string ba_refine_mask = "xxxxx";
 bool do_wave_correct = true;
@@ -212,6 +218,28 @@ static int parseCmdArgs(int argc, char** argv)
             features_type = argv[i + 1];
             if (features_type == "orb")
                 match_conf = 0.3f;
+            i++;
+        }
+        else if (string(argv[i]) == "--matcher")
+        {
+            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
+                matcher_type = argv[i + 1];
+            else
+            {
+                cout << "Bad --matcher flag value\n";
+                return -1;
+            }
+            i++;
+        }
+        else if (string(argv[i]) == "--estimator")
+        {
+            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
+                matcher_type = argv[i + 1];
+            else
+            {
+                cout << "Bad --estimator flag value\n";
+                return -1;
+            }
             i++;
         }
         else if (string(argv[i]) == "--match_conf")
@@ -465,18 +493,16 @@ int main(int argc, char* argv[])
     t = getTickCount();
 #endif
     vector<MatchesInfo> pairwise_matches;
-    if (range_width==-1)
-    {
-        BestOf2NearestMatcher matcher(try_cuda, match_conf);
-        matcher(features, pairwise_matches);
-        matcher.collectGarbage();
-    }
+    Ptr<FeaturesMatcher> matcher;
+    if (matcher_type == "affine")
+        matcher = makePtr<AffineBestOf2NearestMatcher>(false, try_cuda, match_conf);
+    else if (range_width==-1)
+        matcher = makePtr<BestOf2NearestMatcher>(try_cuda, match_conf);
     else
-    {
-        BestOf2NearestRangeMatcher matcher(range_width, try_cuda, match_conf);
-        matcher(features, pairwise_matches);
-        matcher.collectGarbage();
-    }
+        matcher = makePtr<BestOf2NearestRangeMatcher>(range_width, try_cuda, match_conf);
+
+    (*matcher)(features, pairwise_matches);
+    matcher->collectGarbage();
 
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
@@ -512,9 +538,14 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    HomographyBasedEstimator estimator;
+    Ptr<Estimator> estimator;
+    if (estimator_type == "affine")
+        estimator = makePtr<HomographyBasedEstimator>();
+    else
+        estimator = makePtr<AffineBasedEstimator>();
+
     vector<CameraParams> cameras;
-    if (!estimator(features, pairwise_matches, cameras))
+    if (!(*estimator)(features, pairwise_matches, cameras))
     {
         cout << "Homography estimation failed.\n";
         return -1;
