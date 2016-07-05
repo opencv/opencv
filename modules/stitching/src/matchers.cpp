@@ -725,9 +725,7 @@ void AffineBestOf2NearestMatcher::match(const cv::detail::ImageFeatures &feature
     }
 
     // Find pair-wise motion
-    // will be estimateAffine2D
-    // matches_info.H = estimateRigidTransform(src_points, dst_points,
-    //                                       matches_info.inliers_mask, false);
+    //estimateAffinePartial2D(src_points, dst_points, matches_info.H, matches_info.inliers_mask);
 
     if (matches_info.H.empty()) {
         // could not find trasformation
@@ -757,8 +755,36 @@ void AffineBestOf2NearestMatcher::match(const cv::detail::ImageFeatures &feature
     /* should we remove matches between too close images? */
     // matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
 
-    /* no need to rerun estimation on inliers only.estimateRigidTransform already did this for us.
-       This might be necessary for other functions (will be added later). */
+    // Check if we should try to refine motion
+    if (matches_info.num_inliers < num_matches_thresh2_)
+        return;
+
+    // Construct point-point correspondences for inliers only
+    src_points.create(1, matches_info.num_inliers, CV_32FC2);
+    dst_points.create(1, matches_info.num_inliers, CV_32FC2);
+    int inlier_idx = 0;
+    for (size_t i = 0; i < matches_info.matches.size(); ++i)
+    {
+        if (!matches_info.inliers_mask[i])
+            continue;
+
+        const DMatch& m = matches_info.matches[i];
+
+        Point2f p = features1.keypoints[m.queryIdx].pt;
+        p.x -= features1.img_size.width * 0.5f;
+        p.y -= features1.img_size.height * 0.5f;
+        src_points.at<Point2f>(0, inlier_idx) = p;
+
+        p = features2.keypoints[m.trainIdx].pt;
+        p.x -= features2.img_size.width * 0.5f;
+        p.y -= features2.img_size.height * 0.5f;
+        dst_points.at<Point2f>(0, inlier_idx) = p;
+
+        inlier_idx++;
+    }
+
+    // Rerun motion estimation on inliers only
+    //estimateAffinePartial2D(src_points, dst_points, matches_info.H, matches_info.inliers_mask);
 }
 
 
