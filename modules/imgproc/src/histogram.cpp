@@ -1188,6 +1188,7 @@ public:
 
     virtual void operator() (const Range & range) const
     {
+        Ipp32s levelNum = histSize + 1;
         Mat phist(hist->size(), hist->type(), Scalar::all(0));
 #if IPP_VERSION_X100 >= 900
         IppiSize roi = {src->cols, range.end - range.start};
@@ -1196,7 +1197,7 @@ public:
         IppiHistogramSpec *pSpec = NULL;
         Ipp8u *pBuffer = NULL;
 
-        if(ippiHistogramGetBufferSize(ipp8u, roi, &histSize, 1, 1, &specSize, &bufferSize) < 0)
+        if(ippiHistogramGetBufferSize(ipp8u, roi, &levelNum, 1, 1, &specSize, &bufferSize) < 0)
         {
             *ok = false;
             return;
@@ -1217,7 +1218,7 @@ public:
             return;
         }
 
-        if(ippiHistogramUniformInit(ipp8u, (Ipp32f*)&low, (Ipp32f*)&high, (Ipp32s*)&histSize, 1, pSpec) < 0)
+        if(ippiHistogramUniformInit(ipp8u, (Ipp32f*)&low, (Ipp32f*)&high, (Ipp32s*)&levelNum, 1, pSpec) < 0)
         {
             if(pSpec)   ippFree(pSpec);
             if(pBuffer) ippFree(pBuffer);
@@ -1233,7 +1234,7 @@ public:
 #else
         CV_SUPPRESS_DEPRECATED_START
         IppStatus status = ippiHistogramEven_8u_C1R(src->ptr(range.start), (int)src->step, ippiSize(src->cols, range.end - range.start),
-            phist.ptr<Ipp32s>(), (Ipp32s*)(Ipp32f*)*levels, histSize, (Ipp32s)low, (Ipp32s)high);
+            phist.ptr<Ipp32s>(), (Ipp32s*)(Ipp32f*)*levels, levelNum, (Ipp32s)low, (Ipp32s)high);
         CV_SUPPRESS_DEPRECATED_END
 #endif
         if(status < 0)
@@ -1282,7 +1283,7 @@ static bool ipp_calchist(const Mat* images, int nimages, const int* channels,
                 !accumulate && uniform)
         {
             ihist.setTo(Scalar::all(0));
-            AutoBuffer<Ipp32f> levels(histSize[0] + 1);
+            AutoBuffer<Ipp32f> levels(histSize[0]);
 
             bool ok = true;
             const Mat & src = images[0];
@@ -1290,7 +1291,7 @@ static bool ipp_calchist(const Mat* images, int nimages, const int* channels,
 #ifdef HAVE_CONCURRENCY
             nstripes = 1;
 #endif
-            IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0] + 1, ranges[0][0], ranges[0][1], &ok);
+            IPPCalcHistInvoker invoker(src, ihist, levels, histSize[0], ranges[0][0], ranges[0][1], &ok);
             Range range(0, src.rows);
             parallel_for_(range, invoker, nstripes);
 
