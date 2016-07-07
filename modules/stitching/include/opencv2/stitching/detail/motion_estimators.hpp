@@ -210,6 +210,26 @@ protected:
 };
 
 
+/** @brief Stub bundle adjuster that does nothing.
+ */
+class CV_EXPORTS NoBundleAdjuster : public BundleAdjusterBase
+{
+public:
+    NoBundleAdjuster() : BundleAdjusterBase(0, 0) {}
+
+private:
+    bool estimate(const std::vector<ImageFeatures> &, const std::vector<MatchesInfo> &,
+                  std::vector<CameraParams> &)
+    {
+        return true;
+    }
+    void setUpInitialCameraParams(const std::vector<CameraParams> &) {}
+    void obtainRefinedCameraParams(std::vector<CameraParams> &) const {}
+    void calcError(Mat &) {}
+    void calcJacobian(Mat &) {}
+};
+
+
 /** @brief Implementation of the camera parameters refinement algorithm which minimizes sum of the reprojection
 error squares
 
