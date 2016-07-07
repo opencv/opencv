@@ -45,9 +45,6 @@
 
 #include "precomp.hpp"
 #include "grfmts.hpp"
-#ifdef HAVE_GDCM
-#include "gdcm_dicom.hpp"
-#endif
 #undef min
 #undef max
 #include <iostream>

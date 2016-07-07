@@ -41,7 +41,9 @@
 //M*/
 
 #include "precomp.hpp"
-#include "gdcm_dicom.hpp"
+#include "grfmt_gdcm.hpp"
+
+#ifdef HAVE_GDCM
 
 #include <gdcmImageReader.h>
 
@@ -214,3 +216,5 @@ bool  DICOMDecoder::readData( Mat& csImage )
     return(bOK);
 }
 }
+
+#endif
