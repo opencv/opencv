@@ -2848,7 +2848,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
     bool useSortNet = ksize == 3 || (ksize == 5
 #if !(CV_SSE2 || CV_NEON)
-            && src0.depth() > CV_8U
+            && ( src0.depth() > CV_8U || src0.channels() == 2 || src0.channels() > 4 )
 #endif
         );
 
