@@ -578,6 +578,22 @@ TEST(Core_InputOutput, FileStorageKey)
     ASSERT_STREQ(f.releaseAndGetString().c_str(), expected.c_str());
 }
 
+TEST(Core_InputOutput, FileStorageSpaces)
+{
+    cv::FileStorage f("dummy.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    const int valueCount = 5;
+    std::string values[5] = { "", " ", " ", "  a", " some string" };
+    for (size_t i = 0; i < valueCount; i++) {
+        EXPECT_NO_THROW(f << cv::format("key%d", i) << values[i]);
+    }
+    cv::FileStorage f2(f.releaseAndGetString(), cv::FileStorage::READ | cv::FileStorage::MEMORY);
+    std::string valuesRead[valueCount];
+    for (size_t i = 0; i < valueCount; i++) {
+        EXPECT_NO_THROW(f2[cv::format("key%d", i)] >> valuesRead[i]);
+        ASSERT_STREQ(values[i].c_str(), valuesRead[i].c_str());
+    }
+}
+
 TEST(Core_InputOutput, filestorage_yml_compatibility)
 {
     // TODO:
