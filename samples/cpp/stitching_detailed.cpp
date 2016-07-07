@@ -93,7 +93,7 @@ static void printUsage()
         "  --conf_thresh <float>\n"
         "      Threshold for two images are from the same panorama confidence.\n"
         "      The default is 1.0.\n"
-        "  --ba (reproj|ray)\n"
+        "  --ba (no|reproj|ray)\n"
         "      Bundle adjustment cost function. The default is ray.\n"
         "  --ba_refine_mask (mask)\n"
         "      Set refinement mask for bundle adjustment. It looks like 'x_xxx',\n"
@@ -562,6 +562,7 @@ int main(int argc, char* argv[])
     Ptr<detail::BundleAdjusterBase> adjuster;
     if (ba_cost_func == "reproj") adjuster = makePtr<detail::BundleAdjusterReproj>();
     else if (ba_cost_func == "ray") adjuster = makePtr<detail::BundleAdjusterRay>();
+    else if (ba_cost_func == "no") adjuster = makePtr<NoBundleAdjuster>();
     else
     {
         cout << "Unknown bundle adjustment cost function: '" << ba_cost_func << "'.\n";
