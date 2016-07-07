@@ -63,11 +63,6 @@ endif()
 file(GLOB grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.hpp)
 file(GLOB grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.cpp)
 
-if(HAVE_GDCM)
-  list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/gdcm_dicom.hpp)
-  list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/gdcm_dicom.cpp)
-endif()
-
 list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/bitstrm.hpp)
 list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/bitstrm.cpp)
 list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/rgbe.hpp)

@@ -43,6 +43,10 @@
 #ifndef _GDCM_DICOM_H_
 #define _GDCM_DICOM_H_
 
+#include "cvconfig.h"
+
+#ifdef HAVE_GDCM
+
 #include "grfmt_base.hpp"
 
 namespace cv
@@ -67,5 +71,7 @@ protected:
 };
 
 }
+
+#endif
 
 #endif/*_GDCM_DICOM_H_*/
