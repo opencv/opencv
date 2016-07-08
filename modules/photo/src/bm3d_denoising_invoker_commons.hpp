@@ -488,14 +488,14 @@ template <typename ET, typename IT> struct saturateCastFromArray_<Vec<ET, 4>, IT
 #endif
 
 void ComputeThresholdMap1D(
-    short *thrMap1D,
-    const float *kThrMap1D,
-    float *kThrMap2D,
+    short *outThrMap1D,
+    const float *thrMap1D,
+    float *thrMap2D,
     const float &hardThr1D,
-    const float *kCoeff,
+    const float *coeff,
     const int &templateWindowSizeSq)
 {
-    short *thrMapPtr1D = thrMap1D;
+    short *thrMapPtr1D = outThrMap1D;
     for (int ii = 0; ii < 4; ++ii)
     {
 #ifdef DEBUG_PRINT
@@ -512,7 +512,7 @@ void ComputeThresholdMap1D(
             {
                 int indexIn1D = (1 << ii) - 1 + ii1;
                 int indexIn2D = jj;
-                int thr = static_cast<int>(kThrMap1D[indexIn1D] * kThrMap2D[indexIn2D] * hardThr1D * kCoeff[ii]);
+                int thr = static_cast<int>(thrMap1D[indexIn1D] * thrMap2D[indexIn2D] * hardThr1D * coeff[ii]);
                 if (thr > 32767)
                     thr = 32767;
 
