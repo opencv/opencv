@@ -14,10 +14,6 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64.*|AARCH64.*")
   set(AARCH64 TRUE)
 endif()
 
-if(ANDROID AND ARM)
-  set(WITH_TGPU ON CACHE BOOL "Enable Tegra GPGPU optimization")
-endif()
-
 set(TEGRA_COMPILER_FLAGS "")
 
 if(CMAKE_COMPILER_IS_GNUCXX)
@@ -39,36 +35,15 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   endif()
 endif()
 
-if(ARM OR AARCH64)
-  set(CHECK_TEGRA_HARDWARE_DEFAULT ON)
-else()
-  set(CHECK_TEGRA_HARDWARE_DEFAULT OFF)
-endif()
-set(CHECK_TEGRA_HARDWARE ${CHECK_TEGRA_HARDWARE_DEFAULT} CACHE BOOL
-    "Verify Tegra platform before running optimized code")
-
 string(REPLACE ";" " " TEGRA_COMPILER_FLAGS "${TEGRA_COMPILER_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${TEGRA_COMPILER_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TEGRA_COMPILER_FLAGS}")
-
-if(ANDROID_NATIVE_API_LEVEL LESS 9 AND (WITH_TGPU OR CHECK_TEGRA_HARDWARE))
-  message(FATAL_ERROR "GPU support and Hardware detector is not available for API levels below 9.
-Please disable Tegra GPU support and hardware detection or configure project for API level 9 or above.")
-endif()
 
 if(ARMEABI_V7A)
   if (CMAKE_COMPILER_IS_GNUCXX)
     set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-tree-vectorize" )
     set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-tree-vectorize" )
   endif()
-endif()
-
-if (CHECK_TEGRA_HARDWARE)
-  add_definitions(-DCHECK_TEGRA_HARDWARE)
-endif()
-
-if(WITH_TGPU)
-  add_definitions(-DHAVE_TGPU)
 endif()
 
 if(WITH_LOGS)
