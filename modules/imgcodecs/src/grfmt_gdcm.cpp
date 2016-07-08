@@ -45,7 +45,18 @@
 
 #ifdef HAVE_GDCM
 
+//#define DBG(...) printf(__VA_ARGS__)
+#define DBG(...)
+
 #include <gdcmImageReader.h>
+
+static const size_t preamble_skip = 128;
+static const size_t magic_len = 4;
+
+inline cv::String getMagic()
+{
+    return cv::String("\x44\x49\x43\x4D", 4);
+}
 
 namespace cv
 {
@@ -54,45 +65,22 @@ namespace cv
 
 DICOMDecoder::DICOMDecoder()
 {
-    /// DICOM preable is 128 bytes (can have any vale, defaults to x00) + 4 bytes magic number (DICM)
-    m_signature = "";
-    for(int iSize=0; iSize<128; iSize++)
-    {
-        m_signature = m_signature + "\xFF";
-    }
-
-    m_signature = m_signature + "\x44\x49\x43\x4D";
-
+    // DICOM preamble is 128 bytes (can have any value, defaults to 0) + 4 bytes magic number (DICM)
+    m_signature = String(preamble_skip, (char)'\x0') + getMagic();
     m_buf_supported = false;
-}
-
-
-DICOMDecoder::~DICOMDecoder()
-{
 }
 
 bool DICOMDecoder::checkSignature( const String& signature ) const
 {
-    size_t len = signatureLength();
-    bool bOK = signature.size() >= len;
-    for(int iIndex = 128; iIndex < len; iIndex++)
+    if (signature.size() >= preamble_skip + magic_len)
     {
-        if(signature[iIndex] == m_signature[iIndex])
+        if (signature.substr(preamble_skip, magic_len) == getMagic())
         {
-            continue;
-        }
-        else
-        {
-            bOK = false;
-            break;
+            return true;
         }
     }
-
-    return(bOK);
-}
-
-void  DICOMDecoder::close()
-{
+    DBG("GDCM | Signature does not match\n");
+    return false;
 }
 
 ImageDecoder DICOMDecoder::newDecoder() const
@@ -106,90 +94,66 @@ bool  DICOMDecoder::readHeader()
     csImageReader.SetFileName(m_filename.c_str());
     if(!csImageReader.Read())
     {
+        DBG("GDCM | Failed to open DICOM file\n");
         return(false);
     }
 
-    bool bOK = true;
-
     const gdcm::Image &csImage = csImageReader.GetImage();
-    if(        ( csImage.GetPhotometricInterpretation() == gdcm::PhotometricInterpretation::MONOCHROME1 )
-        ||    ( csImage.GetPhotometricInterpretation() == gdcm::PhotometricInterpretation::MONOCHROME2 )
-        )
+    bool bOK = true;
+    switch (csImage.GetPhotometricInterpretation().GetType())
     {
-        gdcm::PixelFormat ePixelFormat = csImage.GetPixelFormat();
-        if( ePixelFormat == gdcm::PixelFormat::INT8)
+        case gdcm::PhotometricInterpretation::MONOCHROME1:
+        case gdcm::PhotometricInterpretation::MONOCHROME2:
         {
-            m_type = CV_8SC1;
+            switch (csImage.GetPixelFormat().GetScalarType())
+            {
+                case gdcm::PixelFormat::INT8: m_type = CV_8SC1; break;
+                case gdcm::PixelFormat::UINT8: m_type = CV_8UC1; break;
+                case gdcm::PixelFormat::INT16: m_type = CV_16SC1; break;
+                case gdcm::PixelFormat::UINT16: m_type = CV_16UC1; break;
+                case gdcm::PixelFormat::INT32: m_type = CV_32SC1; break;
+                case gdcm::PixelFormat::FLOAT32: m_type = CV_32FC1; break;
+                case gdcm::PixelFormat::FLOAT64: m_type = CV_64FC1; break;
+                default: bOK = false; DBG("GDCM | Monochrome scalar type not supported\n"); break;
+            }
+            break;
         }
-        else if( ePixelFormat == gdcm::PixelFormat::UINT8)
+
+        case gdcm::PhotometricInterpretation::RGB:
         {
-            m_type = CV_8UC1;
+            switch (csImage.GetPixelFormat().GetScalarType())
+            {
+                case gdcm::PixelFormat::UINT8: m_type = CV_8UC3; break;
+                default: bOK = false; DBG("GDCM | RGB scalar type not supported\n"); break;
+            }
+            break;
         }
-        else if( ePixelFormat == gdcm::PixelFormat::INT16)
-        {
-            m_type = CV_16SC1;
-        }
-        else if( ePixelFormat == gdcm::PixelFormat::UINT16)
-        {
-            m_type = CV_16UC1;
-        }
-        else if( ePixelFormat == gdcm::PixelFormat::INT32)
-        {
-            m_type = CV_32SC1;
-        }
-        else if( ePixelFormat == gdcm::PixelFormat::FLOAT32)
-        {
-            m_type = CV_32FC1;
-        }
-        else if( ePixelFormat == gdcm::PixelFormat::FLOAT64)
-        {
-            m_type = CV_64FC1;
-        }
-        else if( ePixelFormat == gdcm::PixelFormat::INT12)
+
+        default:
         {
             bOK = false;
+            DBG("GDCM | PI not supported: %s\n", csImage.GetPhotometricInterpretation().GetString());
+            break;
         }
-        else if( ePixelFormat == gdcm::PixelFormat::UINT12)
-        {
-            bOK = false;
-        }
-        else if( ePixelFormat == gdcm::PixelFormat::UINT32)
-        {
-            bOK = false;
-        }
-        else if( ePixelFormat == gdcm::PixelFormat::SINGLEBIT)
-        {
-            bOK = false;
-        }
-        else
-        {
-            bOK = false;
-        }
-    }
-    else if( csImage.GetPhotometricInterpretation() == gdcm::PhotometricInterpretation::RGB )
-    {
-        gdcm::PixelFormat ePixelFormat = csImage.GetPixelFormat();
-        if( ePixelFormat == gdcm::PixelFormat::UINT8)
-        {
-            m_type = CV_8UC3;
-        }
-        else
-        {
-            bOK = false;
-        }
-    }
-    else
-    {
-        bOK = false;
     }
 
     if(bOK)
     {
+        unsigned int ndim = csImage.GetNumberOfDimensions();
+        if (ndim != 2)
+        {
+            DBG("GDCM | Invalid dimensions number: %d\n", ndim);
+            bOK = false;
+        }
+    }
+    if (bOK)
+    {
         const unsigned int *piDimension = csImage.GetDimensions();
-        m_width = piDimension[0];
-        m_height = piDimension[1];
+        m_height = piDimension[0];
+        m_width = piDimension[1];
         if( ( m_width <=0 )  || ( m_height <=0 ) )
         {
+            DBG("GDCM | Invalid dimensions: %d x %d\n", piDimension[0], piDimension[1]);
             bOK = false;
         }
     }
@@ -206,15 +170,28 @@ bool  DICOMDecoder::readData( Mat& csImage )
     csImageReader.SetFileName(m_filename.c_str());
     if(!csImageReader.Read())
     {
-        return(false);
+        DBG("GDCM | Failed to Read\n");
+        return false;
     }
 
-    bool bOK = true;
-    const gdcm::Image &csGDCMImage = csImageReader.GetImage();
-    bOK = csGDCMImage.GetBuffer((char*)csImage.ptr());
+    const gdcm::Image &img = csImageReader.GetImage();
 
-    return(bOK);
-}
+    unsigned long len = img.GetBufferLength();
+    if (len > csImage.elemSize() * csImage.total())
+    {
+        DBG("GDCM | Buffer is bigger than Mat: %ld > %ld * %ld\n", len, csImage.elemSize(), csImage.total());
+        return false;
+    }
+
+    if (!img.GetBuffer((char*)csImage.ptr()))
+    {
+        DBG("GDCM | Failed to GetBuffer\n");
+        return false;
+    }
+    DBG("GDCM | Read OK\n");
+    return true;
 }
 
-#endif
+}
+
+#endif // HAVE_GDCM
