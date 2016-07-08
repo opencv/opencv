@@ -271,7 +271,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
                     // Calc distance
                     int e = 0;
                     for (int n = blockSizeSq; n--;)
-                        e += (z[elementSize][n] - r[n]) * (z[elementSize][n] - r[n]);
+                        e += D::template calcDist<short>(z[elementSize][n], r[n]);
                     e /= blockSizeSq;
 
                     // Increase the counter and save the distance

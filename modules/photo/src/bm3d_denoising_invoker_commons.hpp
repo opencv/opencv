@@ -97,7 +97,7 @@ class DistAbs
     {
         static inline int f(const T a, const T b)
         {
-            return std::abs((int)(a - b));
+            return std::abs(a - b);
         }
     };
 
@@ -132,32 +132,6 @@ class DistAbs
         }
     };
 
-    template <typename T, typename WT> struct calcWeight_
-    {
-        static inline WT f(double dist, const float &h, WT fixed_point_mult)
-        {
-            double w = std::exp(-dist*dist / (h * h * pixelInfo<T>::channels));
-            if (std::isnan(w)) w = 1.0; // Handle h = 0.0
-
-            static const double WEIGHT_THRESHOLD = 0.001;
-            WT weight = (WT)cvRound(fixed_point_mult * w);
-            if (weight < WEIGHT_THRESHOLD * fixed_point_mult) weight = 0;
-
-            return weight;
-        }
-    };
-
-    template <typename T, typename ET, int n> struct calcWeight_<T, Vec<ET, n> >
-    {
-        static inline Vec<ET, n> f(double dist, const float &h, ET fixed_point_mult)
-        {
-            Vec<ET, n> res;
-            for (int i = 0; i < n; i++)
-                res[i] = calcWeight<T, ET>(dist, h, fixed_point_mult);
-            return res;
-        }
-    };
-
 public:
     template <typename T> static inline int calcDist(const T a, const T b)
     {
@@ -171,25 +145,6 @@ public:
         const T b = m.at<T>(i2, j2);
         return calcDist<T>(a, b);
     }
-
-    template <typename T>
-    static inline int calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
-    {
-        return calcDist<T>(a_down, b_down) - calcDist<T>(a_up, b_up);
-    };
-
-    template <typename T, typename WT>
-    static inline WT calcWeight(double dist, const float &h,
-        typename pixelInfo<WT>::sampleType fixed_point_mult)
-    {
-        return calcWeight_<T, WT>::f(dist, h, fixed_point_mult);
-    }
-
-    template <typename T>
-    static inline int maxDist()
-    {
-        return (int)pixelInfo<T>::sampleMax() * pixelInfo<T>::channels;
-    }
 };
 
 class DistSquared
@@ -198,7 +153,7 @@ class DistSquared
     {
         static inline int f(const T a, const T b)
         {
-            return (int)(a - b) * (int)(a - b);
+            return (a - b) * (a - b);
         }
     };
 
@@ -233,53 +188,6 @@ class DistSquared
         }
     };
 
-    template <typename T> struct calcUpDownDist_
-    {
-        static inline int f(T a_up, T a_down, T b_up, T b_down)
-        {
-            int A = a_down - b_down;
-            int B = a_up - b_up;
-            return (A - B)*(A + B);
-        }
-    };
-
-    template <typename ET, int n> struct calcUpDownDist_<Vec<ET, n> >
-    {
-    private:
-        typedef Vec<ET, n> T;
-    public:
-        static inline int f(T a_up, T a_down, T b_up, T b_down)
-        {
-            return calcDist<T>(a_down, b_down) - calcDist<T>(a_up, b_up);
-        }
-    };
-
-    template <typename T, typename WT> struct calcWeight_
-    {
-        static inline WT f(double dist, const float &h, WT fixed_point_mult)
-        {
-            double w = std::exp(-dist / (h * h * pixelInfo<T>::channels));
-            if (std::isnan(w)) w = 1.0; // Handle h = 0.0
-
-            static const double WEIGHT_THRESHOLD = 0.001;
-            WT weight = (WT)cvRound(fixed_point_mult * w);
-            if (weight < WEIGHT_THRESHOLD * fixed_point_mult) weight = 0;
-
-            return weight;
-        }
-    };
-
-    template <typename T, typename ET, int n> struct calcWeight_<T, Vec<ET, n> >
-    {
-        static inline Vec<ET, n> f(double dist, const float &h, ET fixed_point_mult)
-        {
-            Vec<ET, n> res;
-            for (int i = 0; i < n; i++)
-                res[i] = calcWeight<T, ET>(dist, h, fixed_point_mult);
-            return res;
-        }
-    };
-
 public:
     template <typename T> static inline int calcDist(const T a, const T b)
     {
@@ -292,26 +200,6 @@ public:
         const T a = m.at<T>(i1, j1);
         const T b = m.at<T>(i2, j2);
         return calcDist<T>(a, b);
-    }
-
-    template <typename T>
-    static inline int calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
-    {
-        return calcUpDownDist_<T>::f(a_up, a_down, b_up, b_down);
-    };
-
-    template <typename T, typename WT>
-    static inline WT calcWeight(double dist, const float &h,
-        typename pixelInfo<WT>::sampleType fixed_point_mult)
-    {
-        return calcWeight_<T, WT>::f(dist, h, fixed_point_mult);
-    }
-
-    template <typename T>
-    static inline int maxDist()
-    {
-        return (int)pixelInfo<T>::sampleMax() * (int)pixelInfo<T>::sampleMax() *
-            pixelInfo<T>::channels;
     }
 };
 

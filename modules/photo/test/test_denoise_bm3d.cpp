@@ -59,11 +59,11 @@
 #endif
 
 
-TEST(Photo_DenoisingBm3dGrayscale, regression)
+TEST(Photo_DenoisingBm3dGrayscale, regression_L2)
 {
     std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
     std::string original_path = folder + "lena_noised_gaussian_sigma=10.png";
-    std::string expected_path = folder + "lena_noised_gaussian_sigma=10.png";
+    std::string expected_path = folder + "lena_noised_denoised_bm3d_grayscale_l2_tw=4_sw=16_h=20_bm=50.png";
 
     cv::Mat original = cv::imread(original_path, cv::IMREAD_GRAYSCALE);
     cv::Mat expected = cv::imread(expected_path, cv::IMREAD_GRAYSCALE);
@@ -73,13 +73,34 @@ TEST(Photo_DenoisingBm3dGrayscale, regression)
 
     cv::Mat result;
     double t = (double)getTickCount();
-    cv::bm3dDenoising(original, result, 20, 4, 16, 50);
+    cv::bm3dDenoising(original, result, 20, 4, 16, 50, 8, cv::NORM_L2);
     t = (double)getTickCount() - t;
     printf("execution time: %gms\n", t*1000. / getTickFrequency());
 
-    original_path = folder + "lena_noised_noisy_bm3d_grayscale.png";
-    DUMP(original, original_path + ".res.png");
-    expected_path = folder + "lena_noised_denoised_bm3d_grayscale.png";
+    DUMP(result, expected_path + ".res.png");
+
+    ASSERT_EQ(0, cvtest::norm(result, expected, cv::NORM_L2));
+}
+
+TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
+{
+    std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
+    std::string original_path = folder + "lena_noised_gaussian_sigma=10.png";
+    std::string expected_path = folder + "lena_noised_denoised_bm3d_grayscale_l1_tw=4_sw=16_h=20_bm=50.png";
+
+    cv::Mat original = cv::imread(original_path, cv::IMREAD_GRAYSCALE);
+    cv::Mat expected = cv::imread(expected_path, cv::IMREAD_GRAYSCALE);
+
+    ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
+    ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
+
+    cv::Mat result;
+    double t = (double)getTickCount();
+    cv::bm3dDenoising(original, result, 20, 4, 16, 50, 8, cv::NORM_L1);
+    t = (double)getTickCount() - t;
+    printf("execution time: %gms\n", t*1000. / getTickFrequency());
+
+    expected_path = folder + "lena_noised_denoised_bm3d_grayscale_l1_tw=4_sw=16_h=20_bm=50";
     DUMP(result, expected_path + ".res.png");
 
     ASSERT_EQ(0, cvtest::norm(result, expected, cv::NORM_L2));
