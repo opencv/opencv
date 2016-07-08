@@ -54,42 +54,16 @@ namespace std {
 }
 #endif
 
-template <typename T> struct pixelInfo_
+// Returns largest power of 2 smaller than the input value
+inline int getLargestPowerOf2SmallerThan(unsigned x)
 {
-    static const int channels = 1;
-    typedef T sampleType;
-};
-
-template <typename ET, int n> struct pixelInfo_<Vec<ET, n> >
-{
-    static const int channels = n;
-    typedef ET sampleType;
-};
-
-template <typename T> struct pixelInfo : public pixelInfo_<T>
-{
-    typedef typename pixelInfo_<T>::sampleType sampleType;
-
-    static inline sampleType sampleMax()
-    {
-        return std::numeric_limits<sampleType>::max();
-    }
-
-    static inline sampleType sampleMin()
-    {
-        return std::numeric_limits<sampleType>::min();
-    }
-
-    static inline size_t sampleBytes()
-    {
-        return sizeof(sampleType);
-    }
-
-    static inline size_t sampleBits()
-    {
-        return 8 * sampleBytes();
-    }
-};
+    x = x | (x >> 1);
+    x = x | (x >> 2);
+    x = x | (x >> 4);
+    x = x | (x >> 8);
+    x = x | (x >> 16);
+    return x - (x >> 1);
+}
 
 class DistAbs
 {

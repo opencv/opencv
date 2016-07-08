@@ -200,9 +200,9 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
         zOrig[i] = new short[templateWindowSizeSq];
     }
 
-    for (int i = 0; i < maxGroupSize; ++i)
+    for (short i = 0; i < maxGroupSize; ++i)
     {
-        for (int j = 0; j < templateWindowSizeSq; ++j)
+        for (short j = 0; j < templateWindowSizeSq; ++j)
         {
             z[i][j] = (j + 1);
             zOrig[i][j] = z[i][j];
@@ -221,6 +221,19 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
 }
 
 #endif
+
+TEST(Photo_Bm3dDenoising, powerOf2)
+{
+    ASSERT_EQ(8, getLargestPowerOf2SmallerThan(9));
+    ASSERT_EQ(16, getLargestPowerOf2SmallerThan(21));
+    ASSERT_EQ(4, getLargestPowerOf2SmallerThan(7));
+    ASSERT_EQ(8, getLargestPowerOf2SmallerThan(8));
+    ASSERT_EQ(4, getLargestPowerOf2SmallerThan(5));
+    ASSERT_EQ(4, getLargestPowerOf2SmallerThan(4));
+    ASSERT_EQ(2, getLargestPowerOf2SmallerThan(3));
+    ASSERT_EQ(1, getLargestPowerOf2SmallerThan(1));
+    ASSERT_EQ(0, getLargestPowerOf2SmallerThan(0));
+}
 
 //TEST(Photo_Bm3dDenoising, speed)
 //{

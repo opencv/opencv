@@ -84,8 +84,10 @@ private:
     int templateWindowSizeSq_;
     int searchWindowSizeSq_;
 
-    // Constant values
+    // Block matching threshold
     const int hBM_;
+
+    // Maximum size of 3D group
     int groupSize_;
 
     // Function pointers
@@ -95,20 +97,6 @@ private:
     // Threshold map
     short *thrMap_;
 };
-
-/// Round up to next higher power of 2 (return x if it's already a power
-/// of 2).
-inline int getLargestPowerOf2SmallerThan(int x)
-{
-    if (x > 8)
-        return 8;
-    else if (x > 4)
-        return 4;
-    else if (x > 2)
-        return 2;
-    else
-        return x;
-}
 
 template <typename T, typename IT, typename UIT, typename D, typename WT>
 Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::Bm3dDenoisingInvoker(
@@ -121,10 +109,8 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::Bm3dDenoisingInvoker(
     const int &groupSize) :
     src_(src), dst_(dst), hBM_(hBM), groupSize_(groupSize)
 {
-    CV_Assert(src.channels() == pixelInfo<T>::channels);
-    CV_Assert(groupSize <= BM3D_MAX_3D_SIZE && groupSize > 0);
-
     groupSize_ = getLargestPowerOf2SmallerThan(groupSize);
+    CV_Assert(groupSize <= BM3D_MAX_3D_SIZE && groupSize > 0);
 
     halfTemplateWindowSize_ = templateWindowSize >> 1;
     halfSearchWindowSize_ = searchWindowSize >> 1;
@@ -201,6 +187,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
     const int searchWindowSizeSq = searchWindowSizeSq_;
     const int halfSearchWindowSize = halfSearchWindowSize_;
     const int hBM = hBM_;
+    const int groupSize = groupSize_;
 
     const int step = srcExtended_.step / sizeof(T);
     const int cstep = step - templateWindowSize_;
@@ -294,8 +281,8 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
 
             // Find the nearest power of 2 and cap the group size from the top
             elementSize = getLargestPowerOf2SmallerThan(elementSize);
-            if (elementSize > BM3D_MAX_3D_SIZE)
-                elementSize = BM3D_MAX_3D_SIZE;
+            if (elementSize > groupSize)
+                elementSize = groupSize;
 
             // Transform and shrink 1D columns
             short sumNonZero = 0;
