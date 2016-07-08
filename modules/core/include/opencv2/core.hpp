@@ -1433,14 +1433,11 @@ CV_EXPORTS_W void exp(InputArray src, OutputArray dst);
 
 /** @brief Calculates the natural logarithm of every array element.
 
-The function log calculates the natural logarithm of the absolute value
-of every element of the input array:
-\f[\texttt{dst} (I) =  \fork{\log |\texttt{src}(I)|}{if \(\texttt{src}(I) \ne 0\) }{\texttt{C}}{otherwise}\f]
+The function log calculates the natural logarithm of every element of the input array:
+\f[\texttt{dst} (I) =  \log (\texttt{src}(I)) \f]
 
-where C is a large negative number (about -700 in the current
-implementation). The maximum relative error is about 7e-6 for
-single-precision input and less than 1e-10 for double-precision input.
-Special values (NaN, Inf) are not handled.
+Output on zero, negative and special (NaN, Inf) values is undefined.
+
 @param src input array.
 @param dst output array of the same size and type as src .
 @sa exp, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
