@@ -330,6 +330,8 @@ Should be even. Recommended value 4 or 8 pixels
 @param searchWindowSize Size in pixels of the window that is used to perform block-matching.
 Should be odd. Affect performance linearly: greater searchWindowsSize - greater
 denoising time. Recommended value 16 pixels.
+@param blockMatchingThreshold Block matching threshold. The lower the threshold the higher
+the similarity required between the matched blocks.
 @param normType Norm used to calculate distance between blocks. L2 is slower than L1
 but yields more accurate results.
 @param transformType Type of the orthogonal transform used in collaborative filtering step.
@@ -344,6 +346,8 @@ CV_EXPORTS_W void bm3dDenoising(
     float h = 1,
     int templateWindowSize = 4,
     int searchWindowSize = 16,
+    int blockMatchingThreshold = 200,
+    int groupSize = 8,
     int normType = cv::NORM_L2,
     int transformType = 0);
 
