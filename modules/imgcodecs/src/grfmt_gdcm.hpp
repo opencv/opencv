@@ -56,22 +56,15 @@ namespace cv
 class DICOMDecoder : public BaseImageDecoder
 {
 public:
-
     DICOMDecoder();
-    ~DICOMDecoder();
-
     bool  readData( Mat& img );
     bool  readHeader();
-    void  close();
-
     ImageDecoder newDecoder() const;
     virtual bool checkSignature( const String& signature ) const;
-
-protected:
 };
 
 }
 
-#endif
+#endif // HAVE_GDCM
 
 #endif/*_GDCM_DICOM_H_*/
