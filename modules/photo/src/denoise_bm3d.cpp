@@ -45,24 +45,25 @@
 #include "bm3d_denoising_transforms.hpp"
 
 template<typename ST, typename IT, typename UIT, typename D>
-static void bm3dDenoising_(const Mat& src, Mat& dst, const float& h,
-    int templateWindowSize, int searchWindowSize)
+static void bm3dDenoising_(
+    const Mat& src,
+    Mat& dst,
+    const float& h,
+    const int &templateWindowSize,
+    const int &searchWindowSize,
+    const int &hBM,
+    const int &groupSize)
 {
-    int hn = 1;
     double granularity = (double)std::max(1., (double)dst.total() / (1 << 17));
-    cv::Mutex lock = cv::Mutex();
 
     printf("Granularity: %.4f\n", granularity);
-    granularity = 1;
 
     switch (CV_MAT_CN(src.type())) {
     case 1:
-        printf("Entering Bm3dDenoisingInvoker...\n");
         parallel_for_(cv::Range(0, src.rows),
             Bm3dDenoisingInvoker<ST, IT, UIT, D, int>(
-                src, dst, templateWindowSize, searchWindowSize, h, lock),
+                src, dst, templateWindowSize, searchWindowSize, h, hBM, groupSize),
             granularity);
-
         break;
     /*case 2:
         if (hn == 1)
@@ -112,6 +113,8 @@ void cv::bm3dDenoising(
     float h,
     int templateWindowSize,
     int searchWindowSize,
+    int blockMatchingThreshold,
+    int groupSize,
     int normType,
     int transformType)
 {
@@ -127,9 +130,14 @@ void cv::bm3dDenoising(
     case cv::NORM_L2:
         switch (depth) {
         case CV_8U:
-            bm3dDenoising_<uchar, int, unsigned, DistSquared>(src, dst, h,
+            bm3dDenoising_<uchar, int, unsigned, DistSquared>(
+                src,
+                dst,
+                h,
                 templateWindowSize,
-                searchWindowSize);
+                searchWindowSize,
+                blockMatchingThreshold,
+                groupSize);
             break;
         default:
             CV_Error(Error::StsBadArg,
@@ -139,14 +147,24 @@ void cv::bm3dDenoising(
     case cv::NORM_L1:
         switch (depth) {
         case CV_8U:
-            bm3dDenoising_<uchar, int, unsigned, DistAbs>(src, dst, h,
+            bm3dDenoising_<uchar, int, unsigned, DistAbs>(
+                src,
+                dst,
+                h,
                 templateWindowSize,
-                searchWindowSize);
+                searchWindowSize,
+                blockMatchingThreshold,
+                groupSize);
             break;
         case CV_16U:
-            bm3dDenoising_<ushort, int64, uint64, DistAbs>(src, dst, h,
+            bm3dDenoising_<ushort, int64, uint64, DistAbs>(
+                src,
+                dst,
+                h,
                 templateWindowSize,
-                searchWindowSize);
+                searchWindowSize,
+                blockMatchingThreshold,
+                groupSize);
             break;
         default:
             CV_Error(Error::StsBadArg,

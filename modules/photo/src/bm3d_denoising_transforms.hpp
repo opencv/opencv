@@ -243,12 +243,12 @@ static short HaarTransformShrink8(short **z, const int &n, short *&thrMap)
 
     z[0][n] = sum000;
     z[1][n] = dif000;
-    z[1][n] = dif00;
-    z[1][n] = dif11;
-    z[2][n] = dif0;
-    z[3][n] = dif1;
-    z[3][n] = dif2;
-    z[3][n] = dif3;
+    z[2][n] = dif00;
+    z[3][n] = dif11;
+    z[4][n] = dif0;
+    z[5][n] = dif1;
+    z[6][n] = dif2;
+    z[7][n] = dif3;
 
     return nonZeroCount;
 }

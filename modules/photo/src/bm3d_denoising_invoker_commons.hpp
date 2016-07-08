@@ -504,6 +504,12 @@ void ComputeThresholdMap2D(
     }
 }
 
+//#define DEBUG_PRINT
+
+#ifdef DEBUG_PRINT
+#include <iostream>
+#endif
+
 void ComputeThresholdMap1D(
     short *thrMap1D,
     const float *kThrMap1D,
@@ -515,8 +521,16 @@ void ComputeThresholdMap1D(
     short *thrMapPtr1D = thrMap1D;
     for (int ii = 0; ii < 4; ++ii)
     {
+#ifdef DEBUG_PRINT
+        std::cout << "group size: " << (1 << ii) << std::endl;
+#endif
         for (int jj = 0; jj < templateWindowSizeSq; ++jj)
         {
+#ifdef DEBUG_PRINT
+            if (jj % (int)std::sqrt(templateWindowSizeSq) == 0)
+                std::cout << std::endl;
+            std::cout << "\t";
+#endif
             for (int ii1 = 0; ii1 < (1 << ii); ++ii1)
             {
                 int indexIn1D = (1 << ii) - 1 + ii1;
@@ -529,8 +543,17 @@ void ComputeThresholdMap1D(
                     thr = 0;
 
                 *thrMapPtr1D++ = (short)thr;
+
+#ifdef DEBUG_PRINT
+                std::cout << thr << " ";
             }
+            std::cout << std::endl;
         }
+        std::cout << std::endl;
+#else
+           }
+        }
+#endif
     }
 }
 
