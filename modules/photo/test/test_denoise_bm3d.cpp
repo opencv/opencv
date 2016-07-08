@@ -72,7 +72,10 @@ TEST(Photo_DenoisingBm3dGrayscale, regression)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     cv::Mat result;
+    double t = (double)getTickCount();
     cv::bm3dDenoising(original, result, 20, 4, 16, 50);
+    t = (double)getTickCount() - t;
+    printf("execution time: %gms\n", t*1000. / getTickFrequency());
 
     original_path = folder + "lena_noised_noisy_bm3d_grayscale.png";
     DUMP(original, original_path + ".res.png");

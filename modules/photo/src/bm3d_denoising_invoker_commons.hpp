@@ -42,6 +42,8 @@
 #ifndef __OPENCV_BM3D_DENOISING_INVOKER_COMMONS_HPP__
 #define __OPENCV_BM3D_DENOISING_INVOKER_COMMONS_HPP__
 
+//#define DEBUG_PRINT
+
 using namespace cv;
 
 // std::isnan is a part of C++11 and it is not supported in MSVS2010/2012
@@ -481,31 +483,6 @@ template <typename ET, typename IT> struct saturateCastFromArray_<Vec<ET, 4>, IT
     }
 };
 
-template <typename T, typename IT> static inline T saturateCastFromArray(IT* estimation)
-{
-    return saturateCastFromArray_<T, IT>::f(estimation);
-}
-
-void ComputeThresholdMap2D(
-    short *thrMap2D,
-    float *kThrMap2D,
-    const float &hardThr2D,
-    const float &kCoeff2D,
-    const int &templateWindowSizeSq,
-    bool print)
-{
-    for (int jj = 0; jj < templateWindowSizeSq; ++jj)
-    {
-        float thr = kThrMap2D[jj] * hardThr2D * kCoeff2D;
-        if (thr > 32767)
-            thr = 32767;
-
-        thrMap2D[jj] = thr;
-    }
-}
-
-//#define DEBUG_PRINT
-
 #ifdef DEBUG_PRINT
 #include <iostream>
 #endif
@@ -535,7 +512,7 @@ void ComputeThresholdMap1D(
             {
                 int indexIn1D = (1 << ii) - 1 + ii1;
                 int indexIn2D = jj;
-                int thr = kThrMap1D[indexIn1D] * kThrMap2D[indexIn2D] * hardThr1D * kCoeff[ii];
+                int thr = static_cast<int>(kThrMap1D[indexIn1D] * kThrMap2D[indexIn2D] * hardThr1D * kCoeff[ii]);
                 if (thr > 32767)
                     thr = 32767;
 

@@ -120,6 +120,7 @@ void cv::bm3dDenoising(
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(1 == cn);
+    CV_Assert(0 == transformType);
 
     Size srcSize = _src.size();
     Mat src = _src.getMat();

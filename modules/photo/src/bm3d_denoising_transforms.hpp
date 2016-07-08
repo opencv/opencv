@@ -62,6 +62,37 @@ inline static void hardThreshold2D(short *dst, short *thrMap, const int &templat
     }
 }
 
+/// 1D and 2D threshold map coefficients. Implementation dependent, thus stored
+/// together with transforms.
+
+#define BM3D_MAX_3D_SIZE 8
+
+const float sqrt2 = std::sqrt(2.0f);
+
+// 2D map of threshold multipliers in case of 4x4 block size
+static float kThrMap4x4[16] = {
+    0.25f,           0.5f,       1.0f / sqrt2,    1.0f / sqrt2,
+    0.5f,            1.0f,       sqrt2,           sqrt2,
+    1.0f / sqrt2,    sqrt2,      2.0f,            2.0f,
+    1.0f / sqrt2,    sqrt2,      2.0f,            2.0f
+};
+
+// 1D map of threshold multipliers for up to 8 elements in a group
+static const float kThrMap1D[(BM3D_MAX_3D_SIZE << 1) - 1] = {
+    1.0f,  // 1 element
+    1.0f / sqrt2,    sqrt2, // 2 elements
+    0.5f,            1.0f,            sqrt2,       sqrt2,  // 4 elements
+    sqrt2 / 4.0f,    1.0f / sqrt2,    1.0f,        1.0f, sqrt2, sqrt2, sqrt2, sqrt2  // 8 elements
+};
+
+// 2D threshold multipliers for up to 8 elements in a group
+static const float kCoeff[4] = {
+    1.0f,                             // 1 element
+    std::sqrt(2.0f * std::log(2.0f)), // 2 elements
+    std::sqrt(2.0f * std::log(4.0f)), // 4 elements
+    std::sqrt(2.0f * std::log(8.0f))  // 8 elements
+};
+
 // Forward transform 4x4 block
 template <typename T>
 static void HaarColumn4x4(const T *src, short *dst, const int &step)
@@ -103,7 +134,7 @@ static void HaarRow4x4(const T *src, short *dst)
 }
 
 template <typename T>
-static void Haar4x4(const T *ptr, short *dst, const short &step)
+static void Haar4x4(const T *ptr, short *dst, const int &step)
 {
     short temp[16];
 
