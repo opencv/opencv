@@ -51,8 +51,6 @@
 
 using namespace cv;
 
-//#define VERIFY_TRANSFORMS
-
 template <typename T, typename IT, typename UIT, typename D, typename WT>
 struct Bm3dDenoisingInvoker :
     public ParallelLoopBody
@@ -175,24 +173,6 @@ inline Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::~Bm3dDenoisingInvoker()
 {
     delete[] thrMap_;
 }
-
-#if defined(DEBUG_PRINT) && defined(VERIFY_TRANFORMS)
-static void Display3D(short **z, const int &groupSize, const int &blockSize)
-{
-    std::cout << "groupSize: " << groupSize << std::endl;
-
-    for (int n = 0; n < groupSize; ++n)
-    {
-        for (int m = 0; m < blockSize * blockSize; ++m)
-        {
-            if (m % blockSize == 0)
-                std::cout << std::endl;
-            std::cout << z[n][m] << "\t";
-        }
-        std::cout << std::endl;
-    }
-}
-#endif
 
 template <typename T, typename IT, typename UIT, typename D, typename WT>
 void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) const
@@ -317,29 +297,6 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
             if (elementSize > BM3D_MAX_3D_SIZE)
                 elementSize = BM3D_MAX_3D_SIZE;
 
-#if defined(DEBUG_PRINT) && defined(VERIFY_TRANSFORMS)
-            std::cout << "z before transform:" << std::endl;
-            for (int l = 0; l < elementSize; ++l)
-            {
-                const int offset = coords_y[l] * step + coords_x[l];
-                const T *t = currentPixel + offset;
-                for (int n = 0; n < BM3D_BLOCK_SIZE; ++n)
-                {
-                    for (int m = 0; m < BM3D_BLOCK_SIZE; ++m)
-                    {
-                        std::cout << (int)*t << " ";
-                        ++t;
-                    }
-                    t += cstep;
-                    std::cout << std::endl;
-                }
-                std::cout << std::endl;
-            }
-
-            std::cout << "z after transform:" << std::endl;
-            Display3D(z, elementSize, blockSize);
-#endif
-
             // Transform and shrink 1D columns
             short sumNonZero = 0;
             short *thrMapPtr1D = thrMap_ + (elementSize - 1) * blockSizeSq;
@@ -380,19 +337,9 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
                 continue;
             }
 
-#if defined(DEBUG_PRINT) && defined(VERIFY_TRANSFORMS)
-            std::cout << "z after shrinkage:" << std::endl;
-            Display3D(z, elementSize, blockSize);
-#endif
-
             // Inverse 2D transform
             for (int n = elementSize; n--;)
                 inverseHaar2D(z[n]);
-
-#if defined(DEBUG_PRINT) && defined(VERIFY_TRANSFORMS)
-            std::cout << "z after inverse:" << std::endl;
-            Display3D(z, elementSize, blockSize);
-#endif
 
             // Aggregate the results
             ++sumNonZero;
@@ -411,15 +358,6 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
                 int offset = coords_y[l] * dstStep + coords_x[l];
                 float *d = dstPtr + offset;
                 float *dw = weiPtr + offset;
-
-#ifdef DEBUG_PRINT
-                int idx = jj * dstStep + i;
-                if (idx + offset + blockSize * dstcstep + blockSize >= size)
-                {
-                    printf("j = %d, i = %d, idx: %d\n", j, i, idx);
-                    printf("coords_x: %d, coords_y: %d\n", coords_x[l], coords_y[l]);
-                }
-#endif
 
                 for (int n = 0; n < blockSize; ++n)
                 {
