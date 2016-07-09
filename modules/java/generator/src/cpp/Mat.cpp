@@ -1868,7 +1868,7 @@ template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count,
     return res;
 }
 
-template<class ARRAY> static jint java_mat_put(JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, ARRAY vals)
+template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row, jint col, jint count, ARRAY vals)
 {
     static const char *method_name = JavaOpenCVTrait<ARRAY>::put;
     try {
@@ -1897,36 +1897,36 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
-    (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jbyteArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals)
 {
-  return java_mat_put(env, cls, self, row, col, count, vals);
+  return java_mat_put(env, self, row, col, count, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
-    (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jshortArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals)
 {
-  return java_mat_put(env, cls, self, row, col, count, vals);
+  return java_mat_put(env, self, row, col, count, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
-    (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jintArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals)
 {
-  return java_mat_put(env, cls, self, row, col, count, vals);
+  return java_mat_put(env, self, row, col, count, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
-    (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jfloatArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals)
 {
-  return java_mat_put(env, cls, self, row, col, count, vals);
+  return java_mat_put(env, self, row, col, count, vals);
 }
 
 } // extern "C"
@@ -1961,7 +1961,7 @@ template<typename T> static int mat_get(cv::Mat* m, int row, int col, int count,
     return res;
 }
 
-template<class ARRAY> static jint java_mat_get(JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, ARRAY vals) {
+template<class ARRAY> static jint java_mat_get(JNIEnv* env, jlong self, jint row, jint col, jint count, ARRAY vals) {
     static const char *method_name = JavaOpenCVTrait<ARRAY>::get;
     try {
         LOGD("%s", method_name);
@@ -1989,45 +1989,45 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetB
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetB
-    (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jbyteArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jbyteArray vals)
 {
-  return java_mat_get(env, cls, self, row, col, count, vals);
+  return java_mat_get(env, self, row, col, count, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetS
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetS
-    (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jshortArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals)
 {
-  return java_mat_get(env, cls, self, row, col, count, vals);
+  return java_mat_get(env, self, row, col, count, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetI
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetI
-    (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jintArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals)
 {
-  return java_mat_get(env, cls, self, row, col, count, vals);
+  return java_mat_get(env, self, row, col, count, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetF
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetF
-    (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jfloatArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals)
 {
-  return java_mat_get(env, cls, self, row, col, count, vals);
+  return java_mat_get(env, self, row, col, count, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetD
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals);
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetD
-    (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jdoubleArray vals)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals)
 {
-  return java_mat_get(env, cls, self, row, col, count, vals);
+  return java_mat_get(env, self, row, col, count, vals);
 }
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
