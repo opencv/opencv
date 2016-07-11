@@ -85,7 +85,7 @@ private:
     int searchWindowSizeSq_;
 
     // Block matching threshold
-    const int hBM_;
+    int hBM_;
 
     // Maximum size of 3D group
     int groupSize_;
@@ -107,7 +107,7 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::Bm3dDenoisingInvoker(
     const float &h,
     const int &hBM,
     const int &groupSize) :
-    src_(src), dst_(dst), hBM_(hBM), groupSize_(groupSize)
+    src_(src), dst_(dst), groupSize_(groupSize)
 {
     groupSize_ = getLargestPowerOf2SmallerThan(groupSize);
     CV_Assert(groupSize <= BM3D_MAX_3D_SIZE && groupSize > 0);
@@ -135,8 +135,11 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::Bm3dDenoisingInvoker(
     borderSize_ = halfSearchWindowSize_ + halfTemplateWindowSize_;
     copyMakeBorder(src_, srcExtended_, borderSize_, borderSize_, borderSize_, borderSize_, BORDER_DEFAULT);
 
-    // Precompute threshold map
+    // Allocate memory for threshold map
     thrMap_ = new short[templateWindowSizeSq_ * ((BM3D_MAX_3D_SIZE << 1) - 1)];
+
+    // Calculate block matching threshold
+    hBM_ = D::template calcBlockMatchingThreshold<int>(hBM, templateWindowSizeSq_);
 
     switch (templateWindowSize_)
     {
@@ -203,7 +206,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
     short **z = new short*[searchWindowSizeSq];  // 3D array
     for (int i = 0; i < searchWindowSizeSq; ++i)
         z[i] = new short[blockSizeSq];
-    short *dist = new short[searchWindowSizeSq];
+    int *dist = new int[searchWindowSizeSq];
 
     // Relative coordinates to the current search window
     short *coords_x = new short[searchWindowSizeSq];
@@ -239,12 +242,11 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
                     int e = 0;
                     for (int n = blockSizeSq; n--;)
                         e += D::template calcDist<short>(z[elementSize][n], r[n]);
-                    e /= blockSizeSq;
 
                     // Increase the counter and save the distance
                     if (e < hBM)
                     {
-                        dist[elementSize] = static_cast<short>(e);
+                        dist[elementSize] = e;
 
                         // Save coords
                         coords_x[elementSize] = k;

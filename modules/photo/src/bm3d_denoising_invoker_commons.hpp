@@ -113,6 +113,12 @@ public:
     }
 
     template <typename T>
+    static inline T calcBlockMatchingThreshold(const T &blockMatchThrL2, const T &blockSizeSq)
+    {
+        return (T)(std::sqrt((double)blockMatchThrL2) * blockSizeSq);
+    }
+
+    template <typename T>
     static inline int calcDist(const Mat& m, int i1, int j1, int i2, int j2)
     {
         const T a = m.at<T>(i1, j1);
@@ -166,6 +172,12 @@ public:
     template <typename T> static inline int calcDist(const T a, const T b)
     {
         return calcDist_<T>::f(a, b);
+    }
+
+    template <typename T>
+    static inline T calcBlockMatchingThreshold(const T &blockMatchThrL2, const T &blockSizeSq)
+    {
+        return blockMatchThrL2 * blockSizeSq;
     }
 
     template <typename T>
