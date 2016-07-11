@@ -96,11 +96,10 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
 
     cv::Mat result;
     double t = (double)getTickCount();
-    cv::bm3dDenoising(original, result, 20, 4, 16, 50, 8, cv::NORM_L1);
+    cv::bm3dDenoising(original, result, 10, 4, 16, 50, 8, cv::NORM_L1);
     t = (double)getTickCount() - t;
     printf("execution time: %gms\n", t*1000. / getTickFrequency());
 
-    expected_path = folder + "lena_noised_denoised_bm3d_grayscale_l1_tw=4_sw=16_h=20_bm=50";
     DUMP(result, expected_path + ".res.png");
 
     ASSERT_EQ(0, cvtest::norm(result, expected, cv::NORM_L2));
