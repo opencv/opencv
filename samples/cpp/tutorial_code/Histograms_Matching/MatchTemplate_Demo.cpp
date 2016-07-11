@@ -42,7 +42,7 @@ int main( int argc, char** argv )
 
   if(argc > 3) {
     use_mask = true;
-    mask = imread(argv[3], IMREAD_COLOR);
+    mask = imread( argv[3], IMREAD_COLOR );
   }
 
   if(img.empty() || templ.empty() || (use_mask && mask.empty()))
@@ -82,7 +82,7 @@ void MatchingMethod( int, void* )
   result.create( result_rows, result_cols, CV_32FC1 );
 
   /// Do the Matching and Normalize
-  bool method_accepts_mask = CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED;
+  bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
   if (use_mask && method_accepts_mask)
     { matchTemplate( img, templ, result, match_method, mask); }
   else

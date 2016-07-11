@@ -20,7 +20,7 @@ Template matching is a technique for finding areas of an image that match (are s
 template image (patch).
 
 While the patch must be a rectangle it may be that not all of the
-rectangle is relevent.  In such a case, a mask can be used to isolate the portion of the patch
+rectangle is relevant.  In such a case, a mask can be used to isolate the portion of the patch
 that should be used to find the match.
 
 ### How does it work?
@@ -60,7 +60,7 @@ that should be used to find the match.
 
     -#  **Source image (I):** The image in which we expect to find a match to the template image
     -#  **Template image (T):** The patch image which will be compared to the template image
-    -#  **Mask image (M):** The mask, a greyscale image that masks the template
+    -#  **Mask image (M):** The mask, a grayscale image that masks the template
 
 
 -   Only two matching methods currently accept a mask: CV_TM_SQDIFF and CV_TM_CCORR_NORMED (see
@@ -70,10 +70,13 @@ that should be used to find the match.
 -   The mask must have the same dimensions as the template
 
 
--   The mask should be a greyscale image where each pixel contains some value from black to white.
+-   The mask should be a grayscale image where each pixel contains some value from black to white.
     Pixels that are white are fully included in calculating the best match.  Pixels that are black
     are excluded from the match.  A value between black and white will include some of
-    the match proportion to how dark the pixel is.
+    the match in proportion to how dark the pixel is.  Although the image should be a grayscale whose
+    output from the file command should look something like: "PNG image data, 128 x 128, 8-bit gray
+    +alpha, non-interlaced", opencv will read the image into an rgb matrix that will be applied
+    during the image match.
 
     ![](images/Template_Matching_Mask_Example.jpg)
 
@@ -140,10 +143,14 @@ Explanation
     int match_method;
     int max_Trackbar = 5;
     @endcode
--#  Load the source image and template:
+-#  Load the source image, template, and optionally, if supported for the matching method, a mask:
     @code{.cpp}
-    img = imread( argv[1], IMREAD_COLOR );
-    templ = imread( argv[2], IMREAD_COLOR );
+     bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
+  if (use_mask && method_accepts_mask)
+    { matchTemplate( img, templ, result, match_method, mask); }
+  else
+    { matchTemplate( img, templ, result, match_method); }
+
     @endcode
 -#  Create the windows to show the results:
     @code{.cpp}
@@ -177,7 +184,7 @@ Explanation
     @endcode
 -#  Perform the template matching operation:
     @code{.cpp}
-    bool method_accepts_mask = CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED;
+    bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
     if (use_mask && method_accepts_mask)
         { matchTemplate( img, templ, result, match_method, mask); }
     else
