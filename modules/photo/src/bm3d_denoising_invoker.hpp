@@ -206,11 +206,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
     short **z = new short*[searchWindowSizeSq];  // 3D array
     for (int i = 0; i < searchWindowSizeSq; ++i)
         z[i] = new short[blockSizeSq];
-    int *dist = new int[searchWindowSizeSq];
-
-    // Relative coordinates to the current search window
-    short *coords_x = new short[searchWindowSizeSq];
-    short *coords_y = new short[searchWindowSizeSq];
+    BlockMatch<int, short> *bm = new BlockMatch<int, short>[searchWindowSizeSq];
 
 #ifdef DEBUG_PRINT
     printf("Entering the loop...\n");
@@ -243,16 +239,9 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
                     for (int n = blockSizeSq; n--;)
                         e += D::template calcDist<short>(z[elementSize][n], r[n]);
 
-                    // Increase the counter and save the distance
+                    // Save the distance, coordinate and increase the counter
                     if (e < hBM)
-                    {
-                        dist[elementSize] = e;
-
-                        // Save coords
-                        coords_x[elementSize] = k;
-                        coords_y[elementSize] = l;
-                        ++elementSize;
-                    }
+                        bm[elementSize++](e, k, l);
                 }
             }
 
@@ -264,7 +253,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
             {
                 for (int l = k + 1; l < elementSize; ++l)
                 {
-                    if (dist[l] < dist[k])
+                    if (bm[l].dist < bm[k].dist)
                     {
                         // swap pointers in z
                         short *temp = z[k];
@@ -272,11 +261,11 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
                         z[l] = temp;
 
                         // swap dist
-                        std::swap(dist[k], dist[l]);
+                        std::swap(bm[k].dist, bm[l].dist);
 
                         // swap coords
-                        std::swap(coords_x[k], coords_x[l]);
-                        std::swap(coords_y[k], coords_y[l]);
+                        std::swap(bm[k].coord_x, bm[l].coord_x);
+                        std::swap(bm[k].coord_y, bm[l].coord_y);
                     }
                 }
             }
@@ -344,7 +333,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
 
             for (int l = 0; l < elementSize; ++l)
             {
-                int offset = coords_y[l] * dstStep + coords_x[l];
+                int offset = bm[l].coord_y * dstStep + bm[l].coord_x;
                 float *d = dstPtr + offset;
                 float *dw = weiPtr + offset;
 
@@ -368,9 +357,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
     for (int i = 0; i < searchWindowSizeSq; ++i)
         delete[] z[i];
     delete[] z;
-    delete[] dist;
-    delete[] coords_x;
-    delete[] coords_y;
+    delete[] bm;
 
 #ifdef DEBUG_PRINT
     printf("Aggregate results...\n");

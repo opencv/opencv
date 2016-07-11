@@ -65,6 +65,25 @@ inline int getLargestPowerOf2SmallerThan(unsigned x)
     return x - (x >> 1);
 }
 
+template <typename DT, typename CT>
+struct BlockMatch
+{
+    // Block matching distance
+    DT dist;
+
+    // Relative coordinates to the current search window
+    CT coord_x;
+    CT coord_y;
+
+    // Overloaded operator for convenient assignment
+    void operator()(const DT &_dst, const CT &_coord_x, const CT &_coord_y)
+    {
+        dist = _dst;
+        coord_x = _coord_x;
+        coord_y = _coord_y;
+    }
+};
+
 class DistAbs
 {
     template <typename T>
