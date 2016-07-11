@@ -1664,6 +1664,19 @@ CV_EXPORTS_W void Canny( InputArray image, OutputArray edges,
                          double threshold1, double threshold2,
                          int apertureSize = 3, bool L2gradient = false );
 
+/** \overload
+
+Finds edges in an image using the Canny algorithm with custom image gradient.
+
+@param dx 16-bit x derivative of input image (CV_16SC1 or CV_16SC3).
+@param dy 16-bit y derivative of input image (same type as dx).
+@param edges,threshold1,threshold2,L2gradient See cv::Canny
+ */
+CV_EXPORTS_W void Canny( InputArray dx, InputArray dy,
+                         OutputArray edges,
+                         double threshold1, double threshold2,
+                         bool L2gradient = false );
+
 /** @brief Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
 The function is similar to cornerEigenValsAndVecs but it calculates and stores only the minimal

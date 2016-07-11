@@ -43,6 +43,10 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#ifdef _MSC_VER
+#pragma warning( disable: 4127 ) // conditional expression is constant
+#endif
+
 
 #if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
 #define USE_IPP_CANNY 1
@@ -53,6 +57,10 @@
 
 namespace cv
 {
+
+static void CannyImpl(Mat& dx_, Mat& dy_, Mat& _dst, double low_thresh, double high_thresh, bool L2gradient);
+
+
 #ifdef HAVE_IPP
 static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
 {
@@ -585,9 +593,7 @@ private:
 
 #endif
 
-} // namespace cv
-
-void cv::Canny( InputArray _src, OutputArray _dst,
+void Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 int aperture_size, bool L2gradient )
 {
@@ -683,13 +689,59 @@ while (borderPeaks.try_pop(m))
     if (!m[mapstep+1])  CANNY_PUSH_SERIAL(m + mapstep + 1);
 }
 
-#else
+// the final pass, form the final image
+const uchar* pmap = map + mapstep + 1;
+uchar* pdst = dst.ptr();
+for (int i = 0; i < src.rows; i++, pmap += mapstep, pdst += dst.step)
+{
+    for (int j = 0; j < src.cols; j++)
+        pdst[j] = (uchar)-(pmap[j] >> 1);
+}
 
+#else
     Mat dx(src.rows, src.cols, CV_16SC(cn));
     Mat dy(src.rows, src.cols, CV_16SC(cn));
 
     Sobel(src, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
     Sobel(src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+
+    CannyImpl(dx, dy, dst, low_thresh, high_thresh, L2gradient);
+#endif
+}
+
+void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
+                double low_thresh, double high_thresh,
+                bool L2gradient )
+{
+    CV_Assert(_dx.dims() == 2);
+    CV_Assert(_dx.type() == CV_16SC1 || _dx.type() == CV_16SC3);
+    CV_Assert(_dy.type() == _dx.type());
+    CV_Assert(_dx.sameSize(_dy));
+
+    if (low_thresh > high_thresh)
+        std::swap(low_thresh, high_thresh);
+
+    const int cn = _dx.channels();
+    const Size size = _dx.size();
+    _dst.create(size, CV_8U);
+    Mat dst = _dst.getMat();
+
+    Mat dx = _dx.getMat();
+    Mat dy = _dy.getMat();
+    if (cn > 1)
+    {
+        dx = dx.clone();
+        dy = dy.clone();
+    }
+
+    CannyImpl(dx, dy, dst, low_thresh, high_thresh, L2gradient);
+}
+
+static void CannyImpl(Mat& dx, Mat& dy, Mat& dst,
+    double low_thresh, double high_thresh, bool L2gradient)
+{
+    const int cn = dx.channels();
+    const int cols = dx.cols, rows = dx.rows;
 
     if (L2gradient)
     {
@@ -702,8 +754,8 @@ while (borderPeaks.try_pop(m))
     int low = cvFloor(low_thresh);
     int high = cvFloor(high_thresh);
 
-    ptrdiff_t mapstep = src.cols + 2;
-    AutoBuffer<uchar> buffer((src.cols+2)*(src.rows+2) + cn * mapstep * 3 * sizeof(int));
+    ptrdiff_t mapstep = cols + 2;
+    AutoBuffer<uchar> buffer((cols+2)*(rows+2) + cn * mapstep * 3 * sizeof(int));
 
     int* mag_buf[3];
     mag_buf[0] = (int*)(uchar*)buffer;
@@ -713,9 +765,9 @@ while (borderPeaks.try_pop(m))
 
     uchar* map = (uchar*)(mag_buf[2] + mapstep*cn);
     memset(map, 1, mapstep);
-    memset(map + mapstep*(src.rows + 1), 1, mapstep);
+    memset(map + mapstep*(rows + 1), 1, mapstep);
 
-    int maxsize = std::max(1 << 10, src.cols * src.rows / 10);
+    int maxsize = std::max(1 << 10, cols * rows / 10);
     std::vector<uchar*> stack(maxsize);
     uchar **stack_top = &stack[0];
     uchar **stack_bottom = &stack[0];
@@ -744,17 +796,17 @@ while (borderPeaks.try_pop(m))
     //   0 - the pixel might belong to an edge
     //   1 - the pixel can not belong to an edge
     //   2 - the pixel does belong to an edge
-    for (int i = 0; i <= src.rows; i++)
+    for (int i = 0; i <= rows; i++)
     {
         int* _norm = mag_buf[(i > 0) + 1] + 1;
-        if (i < src.rows)
+        if (i < rows)
         {
             short* _dx = dx.ptr<short>(i);
             short* _dy = dy.ptr<short>(i);
 
             if (!L2gradient)
             {
-                int j = 0, width = src.cols * cn;
+                int j = 0, width = cols * cn;
 #if CV_SSE2
                 if (haveSSE2)
                 {
@@ -788,7 +840,7 @@ while (borderPeaks.try_pop(m))
             }
             else
             {
-                int j = 0, width = src.cols * cn;
+                int j = 0, width = cols * cn;
 #if CV_SSE2
                 if (haveSSE2)
                 {
@@ -824,7 +876,7 @@ while (borderPeaks.try_pop(m))
 
             if (cn > 1)
             {
-                for(int j = 0, jn = 0; j < src.cols; ++j, jn += cn)
+                for(int j = 0, jn = 0; j < cols; ++j, jn += cn)
                 {
                     int maxIdx = jn;
                     for(int k = 1; k < cn; ++k)
@@ -834,7 +886,7 @@ while (borderPeaks.try_pop(m))
                     _dy[j] = _dy[maxIdx];
                 }
             }
-            _norm[-1] = _norm[src.cols] = 0;
+            _norm[-1] = _norm[cols] = 0;
         }
         else
             memset(_norm-1, 0, /* cn* */mapstep*sizeof(int));
@@ -845,7 +897,7 @@ while (borderPeaks.try_pop(m))
             continue;
 
         uchar* _map = map + mapstep*i + 1;
-        _map[-1] = _map[src.cols] = 1;
+        _map[-1] = _map[cols] = 1;
 
         int* _mag = mag_buf[1] + 1; // take the central row
         ptrdiff_t magstep1 = mag_buf[2] - mag_buf[1];
@@ -854,17 +906,17 @@ while (borderPeaks.try_pop(m))
         const short* _x = dx.ptr<short>(i-1);
         const short* _y = dy.ptr<short>(i-1);
 
-        if ((stack_top - stack_bottom) + src.cols > maxsize)
+        if ((stack_top - stack_bottom) + cols > maxsize)
         {
             int sz = (int)(stack_top - stack_bottom);
-            maxsize = std::max(maxsize * 3/2, sz + src.cols);
+            maxsize = std::max(maxsize * 3/2, sz + cols);
             stack.resize(maxsize);
             stack_bottom = &stack[0];
             stack_top = stack_bottom + sz;
         }
 
         int prev_flag = 0;
-        for (int j = 0; j < src.cols; j++)
+        for (int j = 0; j < cols; j++)
         {
             #define CANNY_SHIFT 15
             const int TG22 = (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5);
@@ -943,17 +995,17 @@ __ocv_canny_push:
         if (!m[mapstep+1])  CANNY_PUSH(m + mapstep + 1);
     }
 
-#endif
-
     // the final pass, form the final image
     const uchar* pmap = map + mapstep + 1;
     uchar* pdst = dst.ptr();
-    for (int i = 0; i < src.rows; i++, pmap += mapstep, pdst += dst.step)
+    for (int i = 0; i < rows; i++, pmap += mapstep, pdst += dst.step)
     {
-        for (int j = 0; j < src.cols; j++)
+        for (int j = 0; j < cols; j++)
             pdst[j] = (uchar)-(pmap[j] >> 1);
     }
 }
+
+} // namespace cv
 
 void cvCanny( const CvArr* image, CvArr* edges, double threshold1,
               double threshold2, int aperture_size )
