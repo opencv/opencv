@@ -375,8 +375,8 @@ void ComputeThresholdMap1D(
                 int indexIn1D = (1 << ii) - 1 + ii1;
                 int indexIn2D = jj;
                 int thr = static_cast<int>(thrMap1D[indexIn1D] * thrMap2D[indexIn2D] * hardThr1D * coeff[ii]);
-                if (thr > 32767)
-                    thr = 32767;
+                if (thr > std::numeric_limits<short>::max())
+                    thr = std::numeric_limits<short>::max();
 
                 if (jj == 0 && ii1 == 0)
                     thr = 0;
