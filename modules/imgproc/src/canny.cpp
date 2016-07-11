@@ -62,52 +62,68 @@ static void CannyImpl(Mat& dx_, Mat& dy_, Mat& _dst, double low_thresh, double h
 
 
 #ifdef HAVE_IPP
-static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
+template <bool useCustomDeriv>
+static bool ippCanny(const Mat& _src, const Mat& dx_, const Mat& dy_, Mat& _dst, float low, float high)
 {
 #if USE_IPP_CANNY
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
 
+    if (ippiCannyGetSize(roi, &size) < 0)
+        return false;
+
+    if (!useCustomDeriv)
+    {
 #if IPP_VERSION_X100 < 900
-    if (ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size) < 0)
-        return false;
-    if (ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
-        return false;
+        if (ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
+            return false;
+        size = std::max(size, size1);
+        if (ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
+            return false;
 #else
-    if (ippiFilterSobelNegVertBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size) < 0)
-        return false;
-    if (ippiFilterSobelHorizBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size1) < 0)
-        return false;
+        if (ippiFilterSobelNegVertBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size1) < 0)
+            return false;
+        size = std::max(size, size1);
+        if (ippiFilterSobelHorizBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size1) < 0)
+            return false;
 #endif
-
-    size = std::max(size, size1);
-
-    if (ippiCannyGetSize(roi, &size1) < 0)
-        return false;
-    size = std::max(size, size1);
+        size = std::max(size, size1);
+    }
 
     AutoBuffer<uchar> buf(size + 64);
     uchar* buffer = alignPtr((uchar*)buf, 32);
 
-    Mat _dx(_src.rows, _src.cols, CV_16S);
-    if( ippiFilterSobelNegVertBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
-                    _dx.ptr<short>(), (int)_dx.step, roi,
-                    ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
-        return false;
+    Mat dx, dy;
+    if (!useCustomDeriv)
+    {
+        Mat _dx(_src.rows, _src.cols, CV_16S);
+        if( ippiFilterSobelNegVertBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
+                        _dx.ptr<short>(), (int)_dx.step, roi,
+                        ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
+            return false;
 
-    Mat _dy(_src.rows, _src.cols, CV_16S);
-    if( ippiFilterSobelHorizBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
-                    _dy.ptr<short>(), (int)_dy.step, roi,
-                    ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
-        return false;
+        Mat _dy(_src.rows, _src.cols, CV_16S);
+        if( ippiFilterSobelHorizBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
+                        _dy.ptr<short>(), (int)_dy.step, roi,
+                        ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
+            return false;
 
-    if( ippiCanny_16s8u_C1R(_dx.ptr<short>(), (int)_dx.step,
-                               _dy.ptr<short>(), (int)_dy.step,
+        swap(dx, _dx);
+        swap(dy, _dy);
+    }
+    else
+    {
+        dx = dx_;
+        dy = dy_;
+    }
+
+    if( ippiCanny_16s8u_C1R(dx.ptr<short>(), (int)dx.step,
+                               dy.ptr<short>(), (int)dy.step,
                               _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0 )
         return false;
     return true;
 #else
-    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(low); CV_UNUSED(high);
+    CV_UNUSED(_src); CV_UNUSED(dx_); CV_UNUSED(dy_); CV_UNUSED(_dst); CV_UNUSED(low); CV_UNUSED(high);
     return false;
 #endif
 }
@@ -115,7 +131,8 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float high_thresh,
+template <bool useCustomDeriv>
+static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputArray _dst, float low_thresh, float high_thresh,
                       int aperture_size, bool L2gradient, int cn, const Size & size)
 {
     UMat map;
@@ -148,7 +165,8 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
     }
     int low = cvFloor(low_thresh), high = cvFloor(high_thresh);
 
-    if (aperture_size == 3 && !_src.isSubmatrix())
+    if (!useCustomDeriv &&
+        aperture_size == 3 && !_src.isSubmatrix())
     {
         /*
             stage1_with_sobel:
@@ -189,8 +207,16 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
                 Double thresholding
         */
         UMat dx, dy;
-        Sobel(_src, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
-        Sobel(_src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+        if (!useCustomDeriv)
+        {
+            Sobel(_src, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
+            Sobel(_src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+        }
+        else
+        {
+            dx = dx_;
+            dy = dy_;
+        }
 
         ocl::Kernel without_sobel("stage1_without_sobel", ocl::imgproc::canny_oclsrc,
                                     format("-D WITHOUT_SOBEL -D cn=%d -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
@@ -617,7 +643,7 @@ void Canny( InputArray _src, OutputArray _dst,
         std::swap(low_thresh, high_thresh);
 
     CV_OCL_RUN(_dst.isUMat() && (cn == 1 || cn == 3),
-               ocl_Canny(_src, _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
+               ocl_Canny<false>(_src, UMat(), UMat(), _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
@@ -626,7 +652,7 @@ void Canny( InputArray _src, OutputArray _dst,
         return;
 #endif
 
-    CV_IPP_RUN(USE_IPP_CANNY && (aperture_size == 3 && !L2gradient && 1 == cn), ippCanny(src, dst, (float)low_thresh, (float)high_thresh))
+    CV_IPP_RUN(USE_IPP_CANNY && (aperture_size == 3 && !L2gradient && 1 == cn), ippCanny<false>(src, Mat(), Mat(), dst, (float)low_thresh, (float)high_thresh))
 
 #ifdef HAVE_TBB
 
@@ -723,17 +749,23 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
 
     const int cn = _dx.channels();
     const Size size = _dx.size();
+
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_Canny<true>(UMat(), _dx.getUMat(), _dy.getUMat(), _dst, (float)low_thresh, (float)high_thresh, 0, L2gradient, cn, size))
+
     _dst.create(size, CV_8U);
     Mat dst = _dst.getMat();
 
     Mat dx = _dx.getMat();
     Mat dy = _dy.getMat();
+
+    CV_IPP_RUN(USE_IPP_CANNY && (!L2gradient && 1 == cn), ippCanny<true>(Mat(), dx, dy, dst, (float)low_thresh, (float)high_thresh))
+
     if (cn > 1)
     {
         dx = dx.clone();
         dy = dy.clone();
     }
-
     CannyImpl(dx, dy, dst, low_thresh, high_thresh, L2gradient);
 }
 
