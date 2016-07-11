@@ -1681,15 +1681,15 @@ void downsample_bilinear_8uc1(const Size2D &ssize, const Size2D &dsize,
                 vst1_u8(internal::getRowPtr(dstBase, dstStride, row) + col, vres);
 #else
                 /* ugly version matching to OpenCV's SSE optimization */
-                int16x4_t v1Ls = vshrn_n_s32(v1L, 5);
-                int16x4_t v1Hs = vshrn_n_s32(v1H, 5);
-                int16x4_t v2Ls = vshrn_n_s32(v2L, 5);
-                int16x4_t v2Hs = vshrn_n_s32(v2H, 5);
+                int16x4_t v1Ls = vshrn_n_s32(v1L, 4);
+                int16x4_t v1Hs = vshrn_n_s32(v1H, 4);
+                int16x4_t v2Ls = vshrn_n_s32(v2L, 4);
+                int16x4_t v2Hs = vshrn_n_s32(v2H, 4);
 
                 int16x8_t v1s = vqdmulhq_s16(vcombine_s16(v1Ls, v1Hs), vrw);
                 int16x8_t v2s = vqdmulhq_s16(vcombine_s16(v2Ls, v2Hs), vrW);
 
-                int16x8_t vsum = vaddq_s16(v1s, v2s);
+                int16x8_t vsum = vaddq_s16(vshrq_n_s16(v1s,1), vshrq_n_s16(v2s,1));
                 uint8x8_t vres = vqrshrun_n_s16(vsum, 2);
 
                 vst1_u8(internal::getRowPtr(dstBase, dstStride, row) + col, vres);
@@ -1736,15 +1736,15 @@ void downsample_bilinear_8uc1(const Size2D &ssize, const Size2D &dsize,
                 vst1_u8(internal::getRowPtr(dstBase, dstStride, row) + col + 8, vres);
 #else
                 /* ugly version matching to OpenCV's SSE optimization */
-                int16x4_t v1Ls = vshrn_n_s32(v1L, 5);
-                int16x4_t v1Hs = vshrn_n_s32(v1H, 5);
-                int16x4_t v2Ls = vshrn_n_s32(v2L, 5);
-                int16x4_t v2Hs = vshrn_n_s32(v2H, 5);
+                int16x4_t v1Ls = vshrn_n_s32(v1L, 4);
+                int16x4_t v1Hs = vshrn_n_s32(v1H, 4);
+                int16x4_t v2Ls = vshrn_n_s32(v2L, 4);
+                int16x4_t v2Hs = vshrn_n_s32(v2H, 4);
 
                 int16x8_t v1s = vqdmulhq_s16(vcombine_s16(v1Ls, v1Hs), vrw);
                 int16x8_t v2s = vqdmulhq_s16(vcombine_s16(v2Ls, v2Hs), vrW);
 
-                int16x8_t vsum = vaddq_s16(v1s, v2s);
+                int16x8_t vsum = vaddq_s16(vshrq_n_s16(v1s,1), vshrq_n_s16(v2s,1));
                 uint8x8_t vres = vqrshrun_n_s16(vsum, 2);
 
                 vst1_u8(internal::getRowPtr(dstBase, dstStride, row) + col + 8, vres);
@@ -1836,15 +1836,15 @@ downsample_bilinear_8uc1_col_loop8:
             vst1_u8(internal::getRowPtr(dstBase, dstStride, row) + col, vres);
 #else
             /* ugly version matching to OpenCV's SSE optimization */
-            int16x4_t v1Ls = vshrn_n_s32(v1L, 5);
-            int16x4_t v1Hs = vshrn_n_s32(v1H, 5);
-            int16x4_t v2Ls = vshrn_n_s32(v2L, 5);
-            int16x4_t v2Hs = vshrn_n_s32(v2H, 5);
+            int16x4_t v1Ls = vshrn_n_s32(v1L, 4);
+            int16x4_t v1Hs = vshrn_n_s32(v1H, 4);
+            int16x4_t v2Ls = vshrn_n_s32(v2L, 4);
+            int16x4_t v2Hs = vshrn_n_s32(v2H, 4);
 
             int16x8_t v1s = vqdmulhq_s16(vcombine_s16(v1Ls, v1Hs), vrw);
             int16x8_t v2s = vqdmulhq_s16(vcombine_s16(v2Ls, v2Hs), vrW);
 
-            int16x8_t vsum = vaddq_s16(v1s, v2s);
+            int16x8_t vsum = vaddq_s16(vshrq_n_s16(v1s,1), vshrq_n_s16(v2s,1));
             uint8x8_t vres = vqrshrun_n_s16(vsum, 2);
 
             vst1_u8(internal::getRowPtr(dstBase, dstStride, row) + col, vres);
