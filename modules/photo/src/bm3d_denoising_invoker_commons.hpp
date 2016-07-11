@@ -67,7 +67,8 @@ inline int getLargestPowerOf2SmallerThan(unsigned x)
 
 class DistAbs
 {
-    template <typename T> struct calcDist_
+    template <typename T>
+    struct calcDist_
     {
         static inline int f(const T a, const T b)
         {
@@ -75,7 +76,8 @@ class DistAbs
         }
     };
 
-    template <typename ET> struct calcDist_<Vec<ET, 2> >
+    template <typename ET>
+    struct calcDist_<Vec<ET, 2> >
     {
         static inline int f(const Vec<ET, 2> a, const Vec<ET, 2> b)
         {
@@ -83,7 +85,8 @@ class DistAbs
         }
     };
 
-    template <typename ET> struct calcDist_<Vec<ET, 3> >
+    template <typename ET>
+    struct calcDist_<Vec<ET, 3> >
     {
         static inline int f(const Vec<ET, 3> a, const Vec<ET, 3> b)
         {
@@ -94,7 +97,8 @@ class DistAbs
         }
     };
 
-    template <typename ET> struct calcDist_<Vec<ET, 4> >
+    template <typename ET>
+    struct calcDist_<Vec<ET, 4> >
     {
         static inline int f(const Vec<ET, 4> a, const Vec<ET, 4> b)
         {
@@ -107,7 +111,8 @@ class DistAbs
     };
 
 public:
-    template <typename T> static inline int calcDist(const T a, const T b)
+    template <typename T>
+    static inline int calcDist(const T a, const T b)
     {
         return calcDist_<T>::f(a, b);
     }
@@ -129,7 +134,8 @@ public:
 
 class DistSquared
 {
-    template <typename T> struct calcDist_
+    template <typename T>
+    struct calcDist_
     {
         static inline int f(const T a, const T b)
         {
@@ -137,7 +143,8 @@ class DistSquared
         }
     };
 
-    template <typename ET> struct calcDist_<Vec<ET, 2> >
+    template <typename ET>
+    struct calcDist_<Vec<ET, 2> >
     {
         static inline int f(const Vec<ET, 2> a, const Vec<ET, 2> b)
         {
@@ -145,7 +152,8 @@ class DistSquared
         }
     };
 
-    template <typename ET> struct calcDist_<Vec<ET, 3> >
+    template <typename ET>
+    struct calcDist_<Vec<ET, 3> >
     {
         static inline int f(const Vec<ET, 3> a, const Vec<ET, 3> b)
         {
@@ -156,7 +164,8 @@ class DistSquared
         }
     };
 
-    template <typename ET> struct calcDist_<Vec<ET, 4> >
+    template <typename ET>
+    struct calcDist_<Vec<ET, 4> >
     {
         static inline int f(const Vec<ET, 4> a, const Vec<ET, 4> b)
         {
@@ -169,7 +178,8 @@ class DistSquared
     };
 
 public:
-    template <typename T> static inline int calcDist(const T a, const T b)
+    template <typename T>
+    static inline int calcDist(const T a, const T b)
     {
         return calcDist_<T>::f(a, b);
     }
@@ -186,174 +196,6 @@ public:
         const T a = m.at<T>(i1, j1);
         const T b = m.at<T>(i2, j2);
         return calcDist<T>(a, b);
-    }
-};
-
-template <typename T, typename IT, typename WT> struct incWithWeight_
-{
-    static inline void f(IT* estimation, IT* weights_sum, WT weight, T p)
-    {
-        estimation[0] += (IT)weight * p;
-        weights_sum[0] += (IT)weight;
-    }
-};
-
-template <typename ET, typename IT, typename WT> struct incWithWeight_<Vec<ET, 2>, IT, WT>
-{
-    static inline void f(IT* estimation, IT* weights_sum, WT weight, Vec<ET, 2> p)
-    {
-        estimation[0] += (IT)weight * p[0];
-        estimation[1] += (IT)weight * p[1];
-        weights_sum[0] += (IT)weight;
-    }
-};
-
-template <typename ET, typename IT, typename WT> struct incWithWeight_<Vec<ET, 3>, IT, WT>
-{
-    static inline void f(IT* estimation, IT* weights_sum, WT weight, Vec<ET, 3> p)
-    {
-        estimation[0] += (IT)weight * p[0];
-        estimation[1] += (IT)weight * p[1];
-        estimation[2] += (IT)weight * p[2];
-        weights_sum[0] += (IT)weight;
-    }
-};
-
-template <typename ET, typename IT, typename WT> struct incWithWeight_<Vec<ET, 4>, IT, WT>
-{
-    static inline void f(IT* estimation, IT* weights_sum, WT weight, Vec<ET, 4> p)
-    {
-        estimation[0] += (IT)weight * p[0];
-        estimation[1] += (IT)weight * p[1];
-        estimation[2] += (IT)weight * p[2];
-        estimation[3] += (IT)weight * p[3];
-        weights_sum[0] += (IT)weight;
-    }
-};
-
-template <typename ET, typename IT, typename EW> struct incWithWeight_<Vec<ET, 2>, IT, Vec<EW, 2> >
-{
-    static inline void f(IT* estimation, IT* weights_sum, Vec<EW, 2> weight, Vec<ET, 2> p)
-    {
-        estimation[0] += (IT)weight[0] * p[0];
-        estimation[1] += (IT)weight[1] * p[1];
-        weights_sum[0] += (IT)weight[0];
-        weights_sum[1] += (IT)weight[1];
-    }
-};
-
-template <typename ET, typename IT, typename EW> struct incWithWeight_<Vec<ET, 3>, IT, Vec<EW, 3> >
-{
-    static inline void f(IT* estimation, IT* weights_sum, Vec<EW, 3> weight, Vec<ET, 3> p)
-    {
-        estimation[0] += (IT)weight[0] * p[0];
-        estimation[1] += (IT)weight[1] * p[1];
-        estimation[2] += (IT)weight[2] * p[2];
-        weights_sum[0] += (IT)weight[0];
-        weights_sum[1] += (IT)weight[1];
-        weights_sum[2] += (IT)weight[2];
-    }
-};
-
-template <typename ET, typename IT, typename EW> struct incWithWeight_<Vec<ET, 4>, IT, Vec<EW, 4> >
-{
-    static inline void f(IT* estimation, IT* weights_sum, Vec<EW, 4> weight, Vec<ET, 4> p)
-    {
-        estimation[0] += (IT)weight[0] * p[0];
-        estimation[1] += (IT)weight[1] * p[1];
-        estimation[2] += (IT)weight[2] * p[2];
-        estimation[3] += (IT)weight[3] * p[3];
-        weights_sum[0] += (IT)weight[0];
-        weights_sum[1] += (IT)weight[1];
-        weights_sum[2] += (IT)weight[2];
-        weights_sum[3] += (IT)weight[3];
-    }
-};
-
-template <typename T, typename IT, typename WT>
-static inline void incWithWeight(IT* estimation, IT* weights_sum, WT weight, T p)
-{
-    return incWithWeight_<T, IT, WT>::f(estimation, weights_sum, weight, p);
-}
-
-template <typename IT, typename UIT, int nc, int nw> struct divByWeightsSum_
-{
-    static inline void f(IT* estimation, IT* weights_sum);
-};
-
-template <typename IT, typename UIT> struct divByWeightsSum_<IT, UIT, 1, 1>
-{
-    static inline void f(IT* estimation, IT* weights_sum)
-    {
-        estimation[0] = (static_cast<UIT>(estimation[0]) + weights_sum[0] / 2) / weights_sum[0];
-    }
-};
-
-template <typename IT, typename UIT, int n> struct divByWeightsSum_<IT, UIT, n, 1>
-{
-    static inline void f(IT* estimation, IT* weights_sum)
-    {
-        for (size_t i = 0; i < n; i++)
-            estimation[i] = (static_cast<UIT>(estimation[i]) + weights_sum[0] / 2) / weights_sum[0];
-    }
-};
-
-template <typename IT, typename UIT, int n> struct divByWeightsSum_<IT, UIT, n, n>
-{
-    static inline void f(IT* estimation, IT* weights_sum)
-    {
-        for (size_t i = 0; i < n; i++)
-            estimation[i] = (static_cast<UIT>(estimation[i]) + weights_sum[i] / 2) / weights_sum[i];
-    }
-};
-
-template <typename IT, typename UIT, int nc, int nw>
-static inline void divByWeightsSum(IT* estimation, IT* weights_sum)
-{
-    return divByWeightsSum_<IT, UIT, nc, nw>::f(estimation, weights_sum);
-}
-
-template <typename T, typename IT> struct saturateCastFromArray_
-{
-    static inline T f(IT* estimation)
-    {
-        return saturate_cast<T>(estimation[0]);
-    }
-};
-
-template <typename ET, typename IT> struct saturateCastFromArray_<Vec<ET, 2>, IT>
-{
-    static inline Vec<ET, 2> f(IT* estimation)
-    {
-        Vec<ET, 2> res;
-        res[0] = saturate_cast<ET>(estimation[0]);
-        res[1] = saturate_cast<ET>(estimation[1]);
-        return res;
-    }
-};
-
-template <typename ET, typename IT> struct saturateCastFromArray_<Vec<ET, 3>, IT>
-{
-    static inline Vec<ET, 3> f(IT* estimation)
-    {
-        Vec<ET, 3> res;
-        res[0] = saturate_cast<ET>(estimation[0]);
-        res[1] = saturate_cast<ET>(estimation[1]);
-        res[2] = saturate_cast<ET>(estimation[2]);
-        return res;
-    }
-};
-
-template <typename ET, typename IT> struct saturateCastFromArray_<Vec<ET, 4>, IT>
-{
-    static inline Vec<ET, 4> f(IT* estimation)
-    {
-        Vec<ET, 4> res;
-        res[0] = saturate_cast<ET>(estimation[0]);
-        res[1] = saturate_cast<ET>(estimation[1]);
-        res[2] = saturate_cast<ET>(estimation[2]);
-        res[3] = saturate_cast<ET>(estimation[3]);
-        return res;
     }
 };
 
