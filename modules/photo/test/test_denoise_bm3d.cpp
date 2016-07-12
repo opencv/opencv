@@ -106,7 +106,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
 
 #ifdef TEST_TRANSFORMS
 
-TEST(Photo_DenoisingBm3dTransforms, regression_2D)
+TEST(Photo_DenoisingBm3dTransforms, regression_2D_4x4)
 {
     const int templateWindowSize = 4;
     const int templateWindowSizeSq = templateWindowSize * templateWindowSize;
@@ -122,6 +122,27 @@ TEST(Photo_DenoisingBm3dTransforms, regression_2D)
 
     Haar4x4(src, dst, templateWindowSize);
     InvHaar4x4(dst);
+
+    for (uchar i = 0; i < templateWindowSizeSq; ++i)
+        ASSERT_EQ(static_cast<short>(src[i]), dst[i]);
+}
+
+TEST(Photo_DenoisingBm3dTransforms, regression_2D_8x8)
+{
+    const int templateWindowSize = 8;
+    const int templateWindowSizeSq = templateWindowSize * templateWindowSize;
+
+    uchar src[templateWindowSizeSq];
+    short dst[templateWindowSizeSq];
+
+    // Initialize array
+    for (uchar i = 0; i < templateWindowSizeSq; ++i)
+    {
+        src[i] = i;
+    }
+
+    Haar8x8(src, dst, templateWindowSize);
+    InvHaar8x8(dst);
 
     for (uchar i = 0; i < templateWindowSizeSq; ++i)
         ASSERT_EQ(static_cast<short>(src[i]), dst[i]);

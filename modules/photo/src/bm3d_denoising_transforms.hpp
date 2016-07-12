@@ -72,18 +72,30 @@ const float sqrt2 = std::sqrt(2.0f);
 
 // 2D map of threshold multipliers in case of 4x4 block size
 static float kThrMap4x4[16] = {
-    0.25f,           0.5f,       1.0f / sqrt2,    1.0f / sqrt2,
+    0.25f,           0.5f,       sqrt2 / 2.0f,    sqrt2 / 2.0f,
     0.5f,            1.0f,       sqrt2,           sqrt2,
-    1.0f / sqrt2,    sqrt2,      2.0f,            2.0f,
-    1.0f / sqrt2,    sqrt2,      2.0f,            2.0f
+    sqrt2 / 2.0f,    sqrt2,      2.0f,            2.0f,
+    sqrt2 / 2.0f,    sqrt2,      2.0f,            2.0f
+};
+
+// 2D map of threshold multipliers in case of 8x8 block size
+static float kThrMap8x8[64] = {
+    0.125f,       0.25f,        sqrt2 / 4.0f, sqrt2 / 4.0f, 0.5f,  0.5f,  0.5f,  0.5f,
+    0.25f,        0.5f,         sqrt2 / 2.0f, sqrt2 / 2.0f, 1.0f,  1.0f,  1.0f,  1.0f,
+    sqrt2 / 4.0f, sqrt2 / 2.0f, 1.0f,         1.0f,         sqrt2, sqrt2, sqrt2, sqrt2,
+    sqrt2 / 4.0f, sqrt2 / 2.0f, 1.0f,         1.0f,         sqrt2, sqrt2, sqrt2, sqrt2,
+    0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f,
+    0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f,
+    0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f,
+    0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f
 };
 
 // 1D map of threshold multipliers for up to 8 elements in a group
 static const float kThrMap1D[(BM3D_MAX_3D_SIZE << 1) - 1] = {
     1.0f,  // 1 element
-    1.0f / sqrt2,    sqrt2, // 2 elements
+    sqrt2 / 2.0f,    sqrt2, // 2 elements
     0.5f,            1.0f,            sqrt2,       sqrt2,  // 4 elements
-    sqrt2 / 4.0f,    1.0f / sqrt2,    1.0f,        1.0f, sqrt2, sqrt2, sqrt2, sqrt2  // 8 elements
+    sqrt2 / 4.0f,    sqrt2 / 2.0f,    1.0f,        1.0f,  sqrt2, sqrt2, sqrt2, sqrt2  // 8 elements
 };
 
 // 2D threshold multipliers for up to 8 elements in a group
@@ -93,6 +105,8 @@ static const float kCoeff[4] = {
     std::sqrt(2.0f * std::log(4.0f)), // 4 elements
     std::sqrt(2.0f * std::log(8.0f))  // 8 elements
 };
+
+/// Transforms for 4x4 2D block
 
 // Forward transform 4x4 block
 template <typename T, typename TT>
@@ -117,8 +131,8 @@ inline static void HaarColumn4x4(const T *src, TT *dst, const int &step)
     dst[3 * 4] = dif1;
 }
 
-template <typename T, typename TT>
-inline static void HaarRow4x4(const T *src, TT *dst)
+template <typename TT>
+inline static void HaarRow4x4(const TT *src, TT *dst)
 {
     TT sum0 = (src[0] + src[1] + 1) >> 1;
     TT sum1 = (src[2] + src[3] + 1) >> 1;
@@ -196,6 +210,165 @@ inline static void InvHaar4x4(TT *src)
         InvHaarRow4x4(temp + i * 4, src + i * 4);
 }
 
+/// Transforms for 8x8 2D block
+
+template <typename T, typename TT>
+inline static void HaarColumn8x8(const T *src, TT *dst, const int &step)
+{
+    const T *src0 = src;
+    const T *src1 = src + 1 * step;
+    const T *src2 = src + 2 * step;
+    const T *src3 = src + 3 * step;
+    const T *src4 = src + 4 * step;
+    const T *src5 = src + 5 * step;
+    const T *src6 = src + 6 * step;
+    const T *src7 = src + 7 * step;
+
+    TT sum0 = (*src0 + *src1 + 1) >> 1;
+    TT sum1 = (*src2 + *src3 + 1) >> 1;
+    TT sum2 = (*src4 + *src5 + 1) >> 1;
+    TT sum3 = (*src6 + *src7 + 1) >> 1;
+    TT dif0 = *src0 - *src1;
+    TT dif1 = *src2 - *src3;
+    TT dif2 = *src4 - *src5;
+    TT dif3 = *src6 - *src7;
+
+    TT sum00 = (sum0 + sum1 + 1) >> 1;
+    TT sum11 = (sum2 + sum3 + 1) >> 1;
+    TT dif00 = sum0 - sum1;
+    TT dif11 = sum2 - sum3;
+
+    TT sum000 = (sum00 + sum11 + 1) >> 1;
+    TT dif000 = sum00 - sum11;
+
+    dst[0 * 8] = sum000;
+    dst[1 * 8] = dif000;
+    dst[2 * 8] = dif00;
+    dst[3 * 8] = dif11;
+    dst[4 * 8] = dif0;
+    dst[5 * 8] = dif1;
+    dst[6 * 8] = dif2;
+    dst[7 * 8] = dif3;
+}
+
+template <typename TT>
+inline static void HaarRow8x8(const TT *src, TT *dst)
+{
+    TT sum0 = (src[0] + src[1] + 1) >> 1;
+    TT sum1 = (src[2] + src[3] + 1) >> 1;
+    TT sum2 = (src[4] + src[5] + 1) >> 1;
+    TT sum3 = (src[6] + src[7] + 1) >> 1;
+    TT dif0 = src[0] - src[1];
+    TT dif1 = src[2] - src[3];
+    TT dif2 = src[4] - src[5];
+    TT dif3 = src[6] - src[7];
+
+    TT sum00 = (sum0 + sum1 + 1) >> 1;
+    TT sum11 = (sum2 + sum3 + 1) >> 1;
+    TT dif00 = sum0 - sum1;
+    TT dif11 = sum2 - sum3;
+
+    TT sum000 = (sum00 + sum11 + 1) >> 1;
+    TT dif000 = sum00 - sum11;
+
+    dst[0] = sum000;
+    dst[1] = dif000;
+    dst[2] = dif00;
+    dst[3] = dif11;
+    dst[4] = dif0;
+    dst[5] = dif1;
+    dst[6] = dif2;
+    dst[7] = dif3;
+}
+
+template <typename T, typename TT>
+inline static void Haar8x8(const T *ptr, TT *dst, const int &step)
+{
+    TT temp[64];
+
+    // Transform columns first
+    for (int i = 0; i < 8; ++i)
+        HaarColumn8x8(ptr + i, temp + i, step);
+
+    // Then transform rows
+    for (int i = 0; i < 8; ++i)
+        HaarRow8x8(temp + i * 8, dst + i * 8);
+}
+
+template <typename T>
+inline static void InvHaarColumn8x8(T *src, T *dst)
+{
+    T src0 = src[0] * 2;
+    T src1 = src[1 * 8];
+    T src2 = src[2 * 8];
+    T src3 = src[3 * 8];
+    T src4 = src[4 * 8];
+    T src5 = src[5 * 8];
+    T src6 = src[6 * 8];
+    T src7 = src[7 * 8];
+
+    T sum0 = src0 + src1;
+    T dif0 = src0 - src1;
+
+    T sum00 = sum0 + src2;
+    T dif00 = sum0 - src2;
+    T sum11 = dif0 + src3;
+    T dif11 = dif0 - src3;
+
+    dst[0 * 8] = (sum00 + src4) >> 1;
+    dst[1 * 8] = (sum00 - src4) >> 1;
+    dst[2 * 8] = (dif00 + src5) >> 1;
+    dst[3 * 8] = (dif00 - src5) >> 1;
+    dst[4 * 8] = (sum11 + src6) >> 1;
+    dst[5 * 8] = (sum11 - src6) >> 1;
+    dst[6 * 8] = (dif11 + src7) >> 1;
+    dst[7 * 8] = (dif11 - src7) >> 1;
+}
+
+template <typename T>
+inline static void InvHaarRow8x8(T *src, T *dst)
+{
+    T src0 = src[0] * 2;
+    T src1 = src[1];
+    T src2 = src[2];
+    T src3 = src[3];
+    T src4 = src[4];
+    T src5 = src[5];
+    T src6 = src[6];
+    T src7 = src[7];
+
+    T sum0 = src0 + src1;
+    T dif0 = src0 - src1;
+
+    T sum00 = sum0 + src2;
+    T dif00 = sum0 - src2;
+    T sum11 = dif0 + src3;
+    T dif11 = dif0 - src3;
+
+    dst[0] = (sum00 + src4) >> 1;
+    dst[1] = (sum00 - src4) >> 1;
+    dst[2] = (dif00 + src5) >> 1;
+    dst[3] = (dif00 - src5) >> 1;
+    dst[4] = (sum11 + src6) >> 1;
+    dst[5] = (sum11 - src6) >> 1;
+    dst[6] = (dif11 + src7) >> 1;
+    dst[7] = (dif11 - src7) >> 1;
+}
+
+template <typename TT>
+inline static void InvHaar8x8(TT *src)
+{
+    TT temp[64];
+
+    // Invert columns first
+    for (int i = 0; i < 8; ++i)
+        InvHaarColumn8x8(src + i, temp + i);
+
+    // Then invert rows
+    for (int i = 0; i < 8; ++i)
+        InvHaarRow8x8(temp + i * 8, src + i * 8);
+}
+
 /// 1D forward transformations
 
 template <typename T, typename DT, typename CT>
@@ -240,24 +413,24 @@ inline static short HaarTransformShrink4(BlockMatch<T, DT, CT> *z, const int &n,
 }
 
 template <typename T, typename DT, typename CT>
-inline static short HaarTransformShrink8(BlockMatch<T, DT, CT> *z, const int &n, short *&thrMap)
+inline static short HaarTransformShrink8(BlockMatch<T, DT, CT> *z, const int &n, T *&thrMap)
 {
-    short sum0 = (z[0][n] + z[1][n] + 1) >> 1;
-    short sum1 = (z[2][n] + z[3][n] + 1) >> 1;
-    short sum2 = (z[4][n] + z[5][n] + 1) >> 1;
-    short sum3 = (z[6][n] + z[7][n] + 1) >> 1;
-    short dif0 = z[0][n] - z[1][n];
-    short dif1 = z[2][n] - z[3][n];
-    short dif2 = z[4][n] - z[5][n];
-    short dif3 = z[6][n] - z[7][n];
+    T sum0 = (z[0][n] + z[1][n] + 1) >> 1;
+    T sum1 = (z[2][n] + z[3][n] + 1) >> 1;
+    T sum2 = (z[4][n] + z[5][n] + 1) >> 1;
+    T sum3 = (z[6][n] + z[7][n] + 1) >> 1;
+    T dif0 = z[0][n] - z[1][n];
+    T dif1 = z[2][n] - z[3][n];
+    T dif2 = z[4][n] - z[5][n];
+    T dif3 = z[6][n] - z[7][n];
 
-    short sum00 = (sum0 + sum1 + 1) >> 1;
-    short sum11 = (sum2 + sum3 + 1) >> 1;
-    short dif00 = sum0 - sum1;
-    short dif11 = sum2 - sum3;
+    T sum00 = (sum0 + sum1 + 1) >> 1;
+    T sum11 = (sum2 + sum3 + 1) >> 1;
+    T dif00 = sum0 - sum1;
+    T dif11 = sum2 - sum3;
 
-    short sum000 = (sum00 + sum11 + 1) >> 1;
-    short dif000 = sum00 - sum11;
+    T sum000 = (sum00 + sum11 + 1) >> 1;
+    T dif000 = sum00 - sum11;
 
     short nonZeroCount = 0;
     shrink(sum000, nonZeroCount, *thrMap++);

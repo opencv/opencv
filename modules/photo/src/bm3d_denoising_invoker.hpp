@@ -150,6 +150,14 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
         haarTransform2D = Haar4x4;
         inverseHaar2D = InvHaar4x4;
         break;
+    case 8:
+        // Precompute threshold map
+        ComputeThresholdMap1D(thrMap_, kThrMap1D, kThrMap8x8, h, kCoeff, templateWindowSizeSq_);
+
+        // Select transforms
+        haarTransform2D = Haar8x8;
+        inverseHaar2D = InvHaar8x8;
+        break;
     default:
         CV_Error(Error::StsBadArg,
             "Unsupported template size! Only 1, 2 and 4 are supported currently.");
