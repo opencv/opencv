@@ -1,9 +1,7 @@
 /*
  * 3calibration.cpp -- Calibrate 3 cameras in a horizontal line together.
  */
-/**********************************************************/
-/* The New Comments ***************************************/
-/**********************************************************/
+
 
 #include "opencv2/calib3d.hpp"
 #include "opencv2/imgproc.hpp"
