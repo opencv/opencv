@@ -48,8 +48,8 @@
 #define TEST_TRANSFORMS
 
 #ifdef TEST_TRANSFORMS
-#include "..\..\photo\src\bm3d_denoising_transforms.hpp"
 #include "..\..\photo\src\bm3d_denoising_invoker.hpp"
+#include "..\..\photo\src\bm3d_denoising_transforms.hpp"
 #endif
 
 #ifdef DUMP_RESULTS
@@ -57,7 +57,6 @@
 #else
 #  define DUMP(image, path)
 #endif
-
 
 TEST(Photo_DenoisingBm3dGrayscale, regression_L2)
 {
@@ -72,10 +71,10 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     cv::Mat result;
-    double t = (double)getTickCount();
+    double t = (double)cv::getTickCount();
     cv::bm3dDenoising(original, result, 10, 4, 16, 2500, 8, cv::NORM_L2);
-    t = (double)getTickCount() - t;
-    printf("execution time: %gms\n", t*1000. / getTickFrequency());
+    t = (double)cv::getTickCount() - t;
+    printf("execution time: %gms\n", t*1000. / cv::getTickFrequency());
 
     DUMP(result, expected_path + ".res.png");
 
@@ -95,10 +94,10 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     cv::Mat result;
-    double t = (double)getTickCount();
+    double t = (double)cv::getTickCount();
     cv::bm3dDenoising(original, result, 10, 4, 16, 2500, 8, cv::NORM_L1);
-    t = (double)getTickCount() - t;
-    printf("execution time: %gms\n", t*1000. / getTickFrequency());
+    t = (double)cv::getTickCount() - t;
+    printf("execution time: %gms\n", t*1000. / cv::getTickFrequency());
 
     DUMP(result, expected_path + ".res.png");
 
@@ -128,14 +127,15 @@ TEST(Photo_DenoisingBm3dTransforms, regression_2D)
         ASSERT_EQ(static_cast<short>(src[i]), dst[i]);
 }
 
+template <typename T, typename DT, typename CT>
 static void Test1dTransform(
-    short *thrMap,
+    T *thrMap,
     int groupSize,
     int templateWindowSizeSq,
-    short **z,
-    short **zOrig,
-    short (*HaarTransformShrink)(short **z, const int &n, short *&thrMap),
-    void (*InverseHaarTransform)(short **src, const int &n),
+    BlockMatch<T, DT, CT> *bm,
+    BlockMatch<T, DT, CT> *bmOrig,
+    short (*HaarTransformShrink)(BlockMatch<T, DT, CT> *bm, const int &n, T *&thrMap),
+    void (*InverseHaarTransform)(BlockMatch<T, DT, CT> *src, const int &n),
     int expectedNonZeroCount = -1)
 {
     if (expectedNonZeroCount < 0)
@@ -143,31 +143,19 @@ static void Test1dTransform(
 
     // Test group size
     short sumNonZero = 0;
-    short *thrMapPtr1D = thrMap + (groupSize - 1) * templateWindowSizeSq;
+    T *thrMapPtr1D = thrMap + (groupSize - 1) * templateWindowSizeSq;
     for (int n = 0; n < templateWindowSizeSq; n++)
     {
-        sumNonZero += HaarTransformShrink(z, n, thrMapPtr1D);
-        InverseHaarTransform(z, n);
+        sumNonZero += HaarTransformShrink(bm, n, thrMapPtr1D);
+        InverseHaarTransform(bm, n);
     }
-
-    //// Print
-    //for (int i = 0; i < groupSize; ++i)
-    //{
-    //    for (int j = 0; j < templateWindowSizeSq; ++j)
-    //    {
-    //        if (j % 4 == 0)
-    //            std::cout << std::endl;
-    //        std::cout << z[i][j] << " (" << zOrig[i][j] << ") ";
-    //    }
-    //    std::cout << std::endl;
-    //}
 
     // Assert transform
     if (expectedNonZeroCount == groupSize * templateWindowSizeSq)
     {
         for (int i = 0; i < groupSize; ++i)
             for (int j = 0; j < templateWindowSizeSq; ++j)
-                ASSERT_EQ(z[i][j], zOrig[i][j]);
+                ASSERT_EQ(bm[i][j], bmOrig[i][j]);
     }
 
     // Assert shrinkage
@@ -191,35 +179,39 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
     ComputeThresholdMap1D(thrMapShrinkage, kThrMap1D, kThrMap4x4, h, kCoeff, templateWindowSizeSq);
 
     // Generate some data
-    short **z = new short*[maxGroupSize];
-    short **zOrig = new short*[maxGroupSize];
+    BlockMatch<short, int, short> *bm = new BlockMatch<short, int, short>[maxGroupSize];
+    BlockMatch<short, int, short> *bmOrig = new BlockMatch<short, int, short>[maxGroupSize];
     for (int i = 0; i < maxGroupSize; ++i)
     {
-        z[i] = new short[templateWindowSizeSq];
-        zOrig[i] = new short[templateWindowSizeSq];
+        bm[i].init(templateWindowSizeSq);
+        bmOrig[i].init(templateWindowSizeSq);
     }
 
     for (short i = 0; i < maxGroupSize; ++i)
     {
         for (short j = 0; j < templateWindowSizeSq; ++j)
         {
-            z[i][j] = (j + 1);
-            zOrig[i][j] = z[i][j];
+            bm[i][j] = (j + 1);
+            bmOrig[i][j] = bm[i][j];
         }
     }
 
     // Verify transforms
-    Test1dTransform(thrMapTransform, 2, templateWindowSizeSq, z, zOrig, HaarTransformShrink2, InverseHaarTransform2);
-    Test1dTransform(thrMapTransform, 4, templateWindowSizeSq, z, zOrig, HaarTransformShrink4, InverseHaarTransform4);
-    Test1dTransform(thrMapTransform, 8, templateWindowSizeSq, z, zOrig, HaarTransformShrink8, InverseHaarTransform8);
+    Test1dTransform<short, int, short>(thrMapTransform, 2, templateWindowSizeSq, bm, bmOrig,
+        HaarTransformShrink2<short, int, short>, InverseHaarTransform2<short, int, short>);
+    Test1dTransform<short, int, short>(thrMapTransform, 4, templateWindowSizeSq, bm, bmOrig,
+        HaarTransformShrink4<short, int, short>, InverseHaarTransform4<short, int, short>);
+    Test1dTransform<short, int, short>(thrMapTransform, 8, templateWindowSizeSq, bm, bmOrig,
+        HaarTransformShrink8<short, int, short>, InverseHaarTransform8<short, int, short>);
 
     // Verify shrinkage
-    Test1dTransform(thrMapShrinkage, 2, templateWindowSizeSq, z, zOrig, HaarTransformShrink2, InverseHaarTransform2, 6);
-    Test1dTransform(thrMapShrinkage, 4, templateWindowSizeSq, z, zOrig, HaarTransformShrink4, InverseHaarTransform4, 6);
-    Test1dTransform(thrMapShrinkage, 8, templateWindowSizeSq, z, zOrig, HaarTransformShrink8, InverseHaarTransform8, 6);
+    Test1dTransform<short, int, short>(thrMapShrinkage, 2, templateWindowSizeSq, bm, bmOrig,
+        HaarTransformShrink2<short, int, short>, InverseHaarTransform2<short, int, short>, 6);
+    Test1dTransform<short, int, short>(thrMapShrinkage, 4, templateWindowSizeSq, bm, bmOrig,
+        HaarTransformShrink4<short, int, short>, InverseHaarTransform4<short, int, short>, 6);
+    Test1dTransform<short, int, short>(thrMapShrinkage, 8, templateWindowSizeSq, bm, bmOrig,
+        HaarTransformShrink8<short, int, short>, InverseHaarTransform8<short, int, short>, 6);
 }
-
-#endif
 
 TEST(Photo_Bm3dDenoising, powerOf2)
 {
@@ -233,6 +225,8 @@ TEST(Photo_Bm3dDenoising, powerOf2)
     ASSERT_EQ(1, getLargestPowerOf2SmallerThan(1));
     ASSERT_EQ(0, getLargestPowerOf2SmallerThan(0));
 }
+
+#endif
 
 //TEST(Photo_Bm3dDenoising, speed)
 //{
