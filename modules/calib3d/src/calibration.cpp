@@ -3189,9 +3189,10 @@ static Mat prepareCameraMatrix(Mat& cameraMatrix0, int rtype)
     return cameraMatrix;
 }
 
-static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype)
+static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype, int outputSize = 14)
 {
-    Mat distCoeffs = Mat::zeros(distCoeffs0.cols == 1 ? Size(1, 14) : Size(14, 1), rtype);
+    CV_Assert((int)distCoeffs0.total() <= outputSize);
+    Mat distCoeffs = Mat::zeros(distCoeffs0.cols == 1 ? Size(1, outputSize) : Size(outputSize, 1), rtype);
     if( distCoeffs0.size() == Size(1, 4) ||
        distCoeffs0.size() == Size(1, 5) ||
        distCoeffs0.size() == Size(1, 8) ||
@@ -3398,7 +3399,8 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
     Mat cameraMatrix = _cameraMatrix.getMat();
     cameraMatrix = prepareCameraMatrix(cameraMatrix, rtype);
     Mat distCoeffs = _distCoeffs.getMat();
-    distCoeffs = prepareDistCoeffs(distCoeffs, rtype);
+    distCoeffs = (flags & CALIB_THIN_PRISM_MODEL) && !(flags & CALIB_TILTED_MODEL)  ? prepareDistCoeffs(distCoeffs, rtype, 12) :
+                                                      prepareDistCoeffs(distCoeffs, rtype);
     if( !(flags & CALIB_RATIONAL_MODEL) &&
     (!(flags & CALIB_THIN_PRISM_MODEL)) &&
     (!(flags & CALIB_TILTED_MODEL)))
